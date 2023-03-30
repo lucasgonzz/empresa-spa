@@ -1,0 +1,150 @@
+$spaceamounts: (0, 1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 75, 100, 105, 110, 115, 120, 130, 140, 150, 300); // Adjust this to include the pixel amounts you need.
+$spaceamountsnegatives: (-15, -10, -5, 0); // Adjust this to include the pixel amounts you need.
+$spaceamountsBorder: (none, 1, 2, 3, 4, 5); // Adjust this to include the pixel amounts you need.
+$breakPoints: (0, 576, 768, 992, 1200);
+$sides: (top, bottom, left, right); // Leave this variable alone
+$columns: (1,2,3,4,5,6,7,8,9,10,11,12);
+
+.margin-bottom-since-lg {
+	@media screen and (max-width: 992px) {
+		margin-bottom: 1em
+	}
+}
+
+.w-100 {
+	width: 100%;
+}
+
+.d-b{
+	display: block !important
+}
+
+.f-w-0{
+	font-weight: normal
+}
+
+.c-p{
+	cursor: pointer;
+}
+.c-n {
+	cursor: normal;
+}
+
+.c-w{
+	color:  #FFF
+}
+
+.c-g{
+	color: #363636
+}
+
+.p-r{
+	position: relative;
+}
+
+@each $space in $spaceamounts{
+	.m-#{$space} {
+      	margin: #{$space}px !important;
+    }
+	.p-#{$space} {
+      	padding: #{$space}px !important;
+    }
+}
+
+// @each $col in $columns{
+// 	.col-#{$col} {
+// 		display: flex;
+// 		justify-content: flex-start !important;
+//     }
+// }
+
+@each $space in $spaceamountsnegatives {
+  	@each $side in $sides {
+	    .m-#{str-slice($side, 0, 1)}-#{$space} {
+	      margin-#{$side}: #{$space}px !important;
+	    }
+	    .p-#{str-slice($side, 0, 1)}-#{$space} {
+	      padding-#{$side}: #{$space}px !important;
+		}
+	}
+}
+
+@each $space in $spaceamountsBorder{
+  	@each $side in $sides {
+  		@if $space == 'none' {
+		    .b-#{str-slice($side, 0, 1)}-#{$space} {
+		      border-#{$side}: #{$space} !important;
+		    }
+  		}@else{
+		    .b-#{str-slice($side, 0, 1)}-#{$space} {
+		      border-#{$side}: #{$space}px !important;
+		    }
+  		}
+  	}
+}
+
+@each $space in $spaceamounts {
+  	@each $side in $sides {
+	    .m-#{str-slice($side, 0, 1)}-#{$space} {
+	      margin-#{$side}: #{$space}px !important;
+	    }
+	  
+	    .p-#{str-slice($side, 0, 1)}-#{$space} {
+	      padding-#{$side}: #{$space}px !important;
+		}
+  	}
+}
+
+@each $space in $spaceamounts {
+	@each $breakPoint in $breakPoints {
+  		@each $side in $sides {
+			@if $breakPoint == 576 {
+				.m-sm-#{str-slice($side, 0, 1)}-#{$space} {
+					@media only screen and (min-width: #{$breakPoint}px){
+		  				margin-#{$side}: #{$space}px !important;
+					}
+				}
+				.p-sm-#{str-slice($side, 0, 1)}-#{$space} {
+					@media only screen and (min-width: #{$breakPoint}px){
+		  				padding-#{$side}: #{$space}px !important;
+					}
+				}				
+			} @else if $breakPoint == 768 {
+				.m-md-#{str-slice($side, 0, 1)}-#{$space} {
+					@media only screen and (min-width: #{$breakPoint}px){
+		  				margin-#{$side}: #{$space}px !important;
+					}
+				}
+				.p-md-#{str-slice($side, 0, 1)}-#{$space} {
+					@media only screen and (min-width: #{$breakPoint}px){
+		  				padding-#{$side}: #{$space}px !important;
+					}
+				}	
+			} @else if $breakPoint == 992 {
+				.m-lg-#{str-slice($side, 0, 1)}-#{$space} {
+					@media only screen and (min-width: #{$breakPoint}px){
+		  				margin-#{$side}: #{$space}px !important;
+					}
+				}
+				.p-lg-#{str-slice($side, 0, 1)}-#{$space} {
+					@media only screen and (min-width: #{$breakPoint}px){
+		  				padding-#{$side}: #{$space}px !important;
+					}
+				}	
+			} @else if $breakPoint == 1200 {
+				.m-xl-#{str-slice($side, 0, 1)}-#{$space} {
+					@media only screen and (min-width: #{$breakPoint}px){
+		  				margin-#{$side}: #{$space}px !important;
+					}
+				}
+				.p-xl-#{str-slice($side, 0, 1)}-#{$space} {
+					@media only screen and (min-width: #{$breakPoint}px){
+		  				padding-#{$side}: #{$space}px !important;
+					}
+				}	
+			}
+    	}
+  	}
+}
+
+

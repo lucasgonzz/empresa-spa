@@ -1,0 +1,33 @@
+[class^='icon-']:before
+	position: relative
+	top: .15em
+	margin-right: .1em
+	margin-left: .1em
+
+*:focus
+	outline: none
+
+.apretable
+	transition: all .2s
+	&:active
+		transform: scale(.9)
+
+
+#app 
+	font-family: Roboto, Helvetica, Arial, sans-serif
+	-webkit-font-smoothing: antialiased
+	-moz-osx-font-smoothing: grayscale
+	text-align: center
+	.container-fluid
+		background: #E7E7E7
+		min-height: 90vh
+		// @media screen and (min-width: 768px)
+		// 	margin-top: 1em
+		.btn-update
+			margin-bottom: 1em
+			@media screen and (max-width: 768px)
+			margin-top: 1em
+		.row 
+			justify-content: center
+			[class^='col']
+				// background: #FFF

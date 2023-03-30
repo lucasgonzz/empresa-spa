@@ -1,0 +1,101 @@
+.cont-models 
+	display: flex
+	flex-wrap: wrap
+	.model 
+		@media screen and (max-width: 768px)
+			width: 98%
+			margin: 0 1% 1em
+		@media screen and (min-width: 768px) and (max-width: 992px)
+			width: 31%
+			margin: 0 1% 1em
+		@media screen and (min-width: 992px)
+			width: 23%
+			margin: 0 1% 1em
+			// max-height: 350px
+			// overflow-y: hidden
+			// &:hover 
+			// 	max-height: 1000px
+
+.model
+	position: relative
+	display: flex
+	@media screen and (max-width: 768px)
+		flex-direction: row
+	@media screen and (min-width: 768px)
+		flex-direction: column
+	cursor: pointer
+	border-radius: 5px !important
+	padding: 0 !important
+	height: min-content
+	box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px
+	&:hover
+		.btn-remove-product
+			display: block
+	.btn-remove-product
+		color: #333 
+		position: absolute
+		top: .1em
+		right: .1em
+		font-size: 1.3em
+		cursor: pointer
+		@media screen and (min-width: 992px)
+			display: none
+	.title
+		@media screen and (max-width: 768px)
+			padding-top: 50%
+		@media screen and (min-width: 768px)
+			padding-top: 100%
+		width: 100%
+		position: relative
+		display: flex
+		justify-content: center
+		align-items: center
+		margin: 0 !important
+		p 
+			padding: 0 .5em
+			position: absolute
+			top: 50%
+			transform: translatey(-50%)
+			font-size: 1.6em
+			font-weight: bold
+			text-align: center
+	.vue-load-image 
+		@media screen and (max-width: 768px)
+			width: 30% 
+			padding: 5px
+			.spinner-border
+				margin: 3em 0
+		@media screen and (min-width: 768px)
+			width: 100% 
+			.spinner-border
+				margin: 6em 0
+		img 
+			width: 100%
+			@media screen and (max-width: 768px)
+				border-radius: 5px 
+			@media screen and (min-width: 768px)
+				border-radius: 5px 5px 0 0 
+	.data 
+		@media screen and (max-width: 768px)
+			width: 70% 
+			display: flex
+			flex-direction: column
+		@media screen and (min-width: 768px)
+			width: 100% 
+		padding: 1em 1em 0
+		.price 
+			font-size: 1.5em
+			color: rgba(0,0,0,.7)
+		.description
+			color: rgba(0,0,0,.7)
+		.buyer 
+			font-size: 1.2em
+			font-weight: bold
+		p 
+			text-align: left
+
+.model.img-full
+	.vue-load-image 
+		width: 100%
+		padding: 0
+

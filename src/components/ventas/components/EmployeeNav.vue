@@ -1,0 +1,70 @@
+<template>
+	<b-row
+	v-if="show">
+		<b-col
+		cols="12">
+			<horizontal-nav
+			:items="items"
+			set_sub_view
+			:show_display="false"></horizontal-nav>
+		</b-col>
+	</b-row>
+</template>
+<script>
+import moment from 'moment'
+
+import HorizontalNav from '@/common-vue/components/horizontal-nav/Index'
+export default {
+	name: 'EmployeeNav',
+	components: {
+		HorizontalNav,
+	},
+	computed: {
+		sales() {
+			return this.$store.state.sale.models
+		},
+		employees() {
+			return this.$store.state.employee.models
+		},
+		selected_employee() {
+			return this.$store.state.sale.selected_employee
+		},
+		show() {
+			return !this.user.owner_id && this.employees.length
+		},
+		items() {
+			let items = []
+			let text 
+			items.push({name: 'todos'})
+			items.push(this.countSales(this.user, false))
+			this.employees.forEach(employee => {
+				items.push(this.countSales(employee))
+			})
+			return items
+		},
+		selected_address() {
+			return this.$store.state.sale.selected_address
+		},
+	},
+	methods: {
+		countSales(user, is_employee = true) {
+			let user_result = {...user}
+			let sales
+			if (is_employee) {
+				sales = this.sales.filter(sale => {
+					return sale.employee_id && sale.employee_id == user.id 
+				})
+			} else {
+				sales = this.sales.filter(sale => {
+					return !sale.employee_id
+				})
+			}
+			if (sales.length) {
+				user_result.name += ' ('+ sales.length + ')'
+			}
+			user_result.route_value = user.name
+			return user_result
+		},
+	}
+}
+</script>
