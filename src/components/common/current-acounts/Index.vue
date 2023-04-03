@@ -23,6 +23,13 @@
     <model-index
     model_name="provider_order"></model-index>  
 
+    <model-index
+    model_name="sale">
+        <template v-slot:model_modal_header="props">
+            <sale-details></sale-details>
+        </template>
+    </model-index>  
+
     <!-- <model 
     size="xl"
     show_btn_pdf
@@ -101,6 +108,7 @@ export default {
         List,
         BtnPagoNotaCredito,
         ModelIndex: () => import('@/common-vue/components/model/Index'),
+        SaleDetails: () => import('@/components/ventas/modals/details/Index'),
     },
     computed: {
         title() {

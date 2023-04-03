@@ -4,7 +4,7 @@ export default {
 			text: 'Imagen',
 			key: 'image_url',
 			type: 'image',
-			image_cropp: false,
+			crop_aspect_ratio: 4/1,
 		},
 		{
 			text: 'Imagen para movil',

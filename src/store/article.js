@@ -23,7 +23,7 @@ export default {
 		until_date: '',
 
 		page: 1,
-		per_page: 5,
+		per_page: 100,
 		total_pages: 1, 
 
 		models: [],

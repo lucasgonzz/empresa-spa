@@ -64,7 +64,7 @@
 				<slot name="buttons"></slot>
 			</div>
 			<div
-			class="align-center m-l-15"
+			class="align-center m-l-15 m-t-15 m-lg-t-0"
 			v-if="ask_selectable">
 				<b-form-checkbox
 				:unchecked-value="false"

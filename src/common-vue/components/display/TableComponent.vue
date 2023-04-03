@@ -475,6 +475,8 @@ export default {
 		width: 100px
 	input, textarea
 		width: 200px
+	td 
+		text-align: left
 	.cont-edit 
 		display: flex
 		flex-direction: row

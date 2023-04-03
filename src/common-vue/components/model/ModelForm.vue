@@ -208,6 +208,10 @@
 							@click="clear(prop)">
 								Limpiar
 							</b-button>
+							<p
+							v-if="prop.prop_info">
+								{{ propInfo(prop) }}
+							</p>
 						</div>
 
 						<!-- <hr> -->
@@ -340,6 +344,12 @@ export default {
 		},
 	},
 	methods: {
+		propInfo(prop) {
+			let array = prop.prop_info.model_prop.split('.')
+			if (this.model[array[0]] && this.model[array[0]][array[1]]) {
+				return prop.prop_info.text+' '+this.model[array[0]][array[1]]
+			}
+		},
 		useSearch(prop) {
 			return prop.type == 'search'
 			return prop.type == 'search' || (prop.belongs_to_many && !prop.belongs_to_many.related_with_all && !prop.type == 'checkbox' && !prop.belongs_to_many.can_not_modify)

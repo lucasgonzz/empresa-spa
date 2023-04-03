@@ -1,5 +1,6 @@
 <template>
 	<b-alert
+	class="m-t-15"
 	:show="loading">
 		Espere a que terminen de descargarse los articulos para el correcto funcionamiento de esta seccion.
 		<b-progress 

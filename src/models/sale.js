@@ -53,6 +53,10 @@ export default {
 						key: 'amount',
 					},
 					{
+						text: 'U/D',
+						key: 'returned_amount',
+					},
+					{
 						text: 'Descuento',
 						key: 'discount',
 					},

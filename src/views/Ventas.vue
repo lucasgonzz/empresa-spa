@@ -26,14 +26,12 @@
 	show_models_if_empty
 	show_previus_days
 	:show_btn_create="false"
+	:show_modal="false"
 	model_name="sale">
 		<template v-slot:display_top>
 			<address-nav></address-nav>
 			<employee-nav></employee-nav>
 			<total></total>	
-		</template>
-		<template v-slot:model_modal_header="props">
-			<sale-details></sale-details>
 		</template>
 		<template v-slot:default="props">
 			<budget-order-production-info
@@ -52,7 +50,6 @@ export default {
 	components: {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 		CurrentAcounts: () => import('@/components/common/current-acounts/Index'),
-		SaleDetails: () => import('@/components/ventas/modals/details/Index'),
 		AddressNav: () => import('@/components/ventas/components/AddressNav'),
 		EmployeeNav: () => import('@/components/ventas/components/EmployeeNav'),
 		Total: () => import('@/components/ventas/components/Total'),

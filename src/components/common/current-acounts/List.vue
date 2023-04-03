@@ -71,7 +71,14 @@ export default {
             this.$bvModal.show('update-debe')
         },
         showDetails(current_acount) {
-            if (current_acount.sale) {
+             if (current_acount.status == 'nota_credito' || current_acount.status == 'pago_from_client') {
+                let model_id = current_acount.client_id
+                if (current_acount.provider_id) {
+                    model_id = current_acount.provider_id
+                }
+                let link = process.env.VUE_APP_API_URL+'/current-acount/pdf/'+current_acount.id+'/'+model_id
+                window.open(link)
+            } else if (current_acount.sale) {
                 this.setModel(current_acount.sale, 'sale')
                 setTimeout(() => {
                     this.$bvModal.show('sale')

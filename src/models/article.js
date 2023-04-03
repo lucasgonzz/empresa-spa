@@ -46,6 +46,10 @@ export default {
 			key: 'cost_in_dollars',
 			type: 'checkbox',
 			use_to_update: true,
+			prop_info: {
+				text: 'Valor: ',
+				model_prop: 'provider.dolar',
+			},
 		},
 		{
 			text: 'margen de ganancia',
@@ -104,6 +108,7 @@ export default {
 			type: 'search',
 			use_to_show_in_search_modal: true,
 			use_to_update: true,
+			use_store_models: true,
 		},
 		// {
 		// 	text: 'precio en dolar del proveedor',

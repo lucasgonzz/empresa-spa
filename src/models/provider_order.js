@@ -55,7 +55,9 @@ export default {
 					{
 						text: 'Costo',
 						key: 'cost',
-						value: '',
+						value: {
+							key: 'cost',
+						},
 						type: 'number'
 					},
 					{

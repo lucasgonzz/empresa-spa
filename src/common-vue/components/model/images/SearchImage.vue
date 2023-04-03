@@ -5,6 +5,7 @@ size="lg"
 title="Buscar imagenes"
 id="search-image">
 	<b-form-input
+	class="m-b-15"
 	id="search-image-input"
 	placeholder="Buscar imagenes"
 	@keyup.enter="search"
@@ -24,9 +25,12 @@ id="search-image">
 				class="b-r-1"
 				:src="image">
 
-		        <b-spinner
+				<div 
 				slot="preloader"
-		        variant="primary"></b-spinner>
+				class="all-center-child">
+			        <b-spinner
+			        variant="primary"></b-spinner>
+				</div>
 
 				<div slot="error">Imagen no encontrada</div>
 			</vue-load-image>	
@@ -81,9 +85,31 @@ export default {
 				})
 			})
 		},
-		setImage(image) {
-			this.$emit('setImage', image)
-			this.$bvModal.hide('search-image')
+		setImage(image_url) {
+			this.$bvModal.hide('search-image') 
+			this.$emit('setImageUrl', image_url) 
+			// console.log('holas')
+			// return 
+			// this.loading = true
+			// this.$api.post('save-pre-image', {
+			// 	image_url: image_url 
+			// })
+			// .then(res => {
+			// 	this.loading = false
+			// 	if (res.data.image_saved) {
+			// 		this.$bvModal.hide('search-image')
+			// 		setTimeout(() => {
+			// 			this.$emit('setImage', res.data.image_url)
+			// 		}, 500)
+			// 	} else {
+			// 		this.$toast.error('Hubo un error al guardar la imagen')
+			// 	}
+			// })
+			// .catch(err => {
+			// 	this.loading = false
+			// 	console.log(err)
+			// 	this.$toast.error('Hubo un error al guardar la imagen')
+			// })
 		},
 	}
 }
