@@ -71,6 +71,11 @@ export default {
 		},
 	},
 	methods: {
+		getModelFromId(model_name, model_id) {
+			this.modelsStoreFromName(model_name).find(model => {
+				return model.id == model_id
+			})
+		},
 		getImageUploadUrl(prop) {
 			let url = process.env.VUE_APP_API_URL+'/api/set-image/'
 			if (prop.type == 'images') {
@@ -180,6 +185,9 @@ export default {
 			}
 			if (property.is_image || property.is_images) {
 				return false
+			}
+			if (property.if_has_extencion) {
+				return this.hasExtencion(property.if_has_extencion)
 			}
 			if (property.v_if) {
 				let array = property.v_if[0].split('.')
@@ -327,11 +335,17 @@ export default {
 					prop_name = 'nombre'
 				}
 				if (model[prop.key]) {
+					if (prop.use_store_models) {
+						return this.$store.state[relationship].models.find(_model => {
+							return _model.id == model[prop.key]
+						})[prop_name]
+					} else {
+						return model[relationship][prop_name] 
+					}
 					// let _model = this.$store.state[relationship].models.find(model_ => {
 					// 	return model_.id == model[prop.key]
 					// })
 					// return _model[prop_name]
-					return model[relationship][prop_name] 
 				} else {
 					return 'S/A'
 				}

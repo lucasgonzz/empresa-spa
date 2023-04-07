@@ -25,6 +25,7 @@ export default {
 			type: 'text',
 			use_to_check_if_is_repeat: true,
 			use_to_show_in_search_modal: true,
+			not_show: true,
 		},
 		{
 			text: 'nombre',
@@ -32,6 +33,7 @@ export default {
 			type: 'text',
 			is_title: true,
 			use_to_show_in_search_modal: true,
+			table_width: 'lg',
 		},
 		{
 			text: 'costo',
@@ -50,6 +52,13 @@ export default {
 				text: 'Valor: ',
 				model_prop: 'provider.dolar',
 			},
+			not_show: true,
+		},
+		{
+			text: 'Costo Real', 
+			function: 'costoReal',
+			not_show: true, 
+			if_has_extencion: 'article.costo_real',
 		},
 		{
 			text: 'margen de ganancia',
@@ -57,6 +66,7 @@ export default {
 			type: 'text',
 			type_to_update: 'number',
 			use_to_update: true,
+			not_show: true,
 		},
 		{
 			text: 'precio',
@@ -80,6 +90,7 @@ export default {
 			type: 'text',
 			only_show: true,
 			is_date: true,
+			not_show: true,
 		},
 		{
 			text: 'stock',
@@ -91,16 +102,20 @@ export default {
 			text: 'stock minimo',
 			key: 'stock_min',
 			type: 'number',
+			not_show: true,
 		},
 		{
 			text: 'Disponible en la tienda',
 			key: 'online',
 			type: 'checkbox',
+			value: 1,
+			not_show: true,
 		},
 		{
 			text: 'Destacado',
 			key: 'featured',
 			type: 'checkbox',
+			not_show: true,
 		},
 		{
 			text: 'proveedor',
@@ -119,11 +134,12 @@ export default {
 			text: 'Aplicar margen de ganancia del proveedor',
 			key: 'apply_provider_percentage_gain',
 			type: 'checkbox',
-			v_if: ['provider.percentage_gain', '!=', null]
+			v_if: ['provider.percentage_gain', '!=', null],
 			// show_if: {
 			// 	model_prop_name: 'provider',
 			// 	model_prop: 'percentage_gain',
 			// }
+			not_show: true,
 		},
 		{
 			text: 'Lista de precios',
@@ -133,6 +149,7 @@ export default {
 				store: 'provider',
 				model_prop: 'provider_price_lists',
 			},
+			not_show: true,
 		},
 		{
 			text: 'categoria',
@@ -140,6 +157,7 @@ export default {
 			type: 'search',
 			use_to_show_in_search_modal: true,
 			use_to_update: true,
+			not_show: true,
 		},
 		{
 			text: 'sub categoria',
@@ -148,6 +166,7 @@ export default {
 			depends_on: 'category_id',
 			use_to_show_in_search_modal: true,
 			use_to_update: true,
+			not_show: true,
 		},
 		{
 			text: 'iva',
@@ -160,11 +179,15 @@ export default {
 			key: 'brand_id',
 			type: 'search',
 			use_to_show_in_search_modal: true,
+			not_show: true,
+			not_show: true,
 		},
 		{
 			text: 'Condicion',
 			key: 'condition_id',
 			type: 'select',
+			not_show: true,
+			not_show: true,
 		},
 		{
 			text: 'Depositos',
@@ -176,9 +199,11 @@ export default {
 					{
 						text: 'Cantidad',
 						key: 'value',
+						type: 'number',
 					},
 				],
 			},
+			not_show: true,
 		},
 		{
 			text: 'Talles',
@@ -186,7 +211,8 @@ export default {
 			type: 'checkbox',
 			store: 'size',
 			belongs_to_many: {
-			}
+			},
+			not_show: true,
 		},
 		{
 			text: 'Colores',
@@ -194,7 +220,8 @@ export default {
 			type: 'checkbox',
 			store: 'color',
 			belongs_to_many: {
-			}
+			},
+			not_show: true,
 		},
 		{
 			text: 'Descuentos',
@@ -203,6 +230,7 @@ export default {
 				text: 'Descuento',
 				model_name: 'article_discount',
 			},
+			not_show: true,
 		},
 		{
 			text: 'Descripciones',
@@ -211,6 +239,7 @@ export default {
 				text: 'Descripcion',
 				model_name: 'description',
 			},
+			not_show: true,
 		},
 	],
 	singular_model_name_spanish: 'Articulo',

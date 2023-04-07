@@ -104,12 +104,8 @@ export default {
 				{ key: 'price', label: 'Precio' },
 				{ key: 'name', label: 'Nombre' },
 				{ key: 'amount', label: 'Cantidad' },
+				{ key: 'discount', label: 'Descuento' },
 			]
-			if (this.hasExtencion('sales.articles.discounts')) {
-				fields.push(
-					{ key: 'discount', label: 'Descuento' },
-				)
-			}
 			if (this.index_previus_sales > 0) {
 				fields.push(
 					{ key: 'returned_amount', label: 'U. Devueltas' },

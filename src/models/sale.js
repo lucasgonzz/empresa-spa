@@ -72,6 +72,16 @@ export default {
 				],
 			}
 		},
+		{
+			text: 'Servicios',
+			key: 'services',
+			type: 'has_many',
+			has_many: {
+				text: 'Servicio',
+				model_name: 'service',
+				show_btn_create: false,
+			}
+		}
 	],
 	singular_model_name_spanish: 'Venta',
 	plural_model_name_spanish: 'Ventas',

@@ -255,7 +255,7 @@
 		v-if="!from_has_many"
 		name="buttons">
 			<btn-loader
-			v-if="hasPermission()"
+			v-if="hasPermission"
 			@clicked="save"
 			:loader="loading"
 			text="Guardar"></btn-loader>
@@ -328,11 +328,20 @@ export default {
 			type: Array,
 			default: () => []
 		},
+		hasPermission: {
+			type: Boolean,
+			default: true,
+		},
+	},
+	created() {
+		// console.log('se creo modelForm')
+		this.setPropsToShowInBelongsToMany()
 	},
 	data() {
 		return {
 			loading: false,
 			saving_belongs_to_many: false,
+			props_to_show_in_belongs_to_many: [],
 		}
 	},
 	computed: {
@@ -360,26 +369,59 @@ export default {
 			})
 			this.model[prop.key].splice(index, 1)
 		},
-		propsToShowInBelongsToMany(prop) {
-			let to_show 
-			if (prop.belongs_to_many.props_to_show) {
-				to_show = prop.belongs_to_many.props_to_show
-			} else {
-				to_show = this.modelPropertiesFromName(prop.store)
-			}
-			if (prop.belongs_to_many.pivot_props_to_show) {
-				let map = prop.belongs_to_many.pivot_props_to_show.map(_prop => {
-					return {
-						..._prop,
-						from_pivot: true,
+		setPropsToShowInBelongsToMany() {
+			console.log('setPropsToShowInBelongsToMany')
+			this.properties.forEach(prop => {
+				if (prop.belongs_to_many && !prop.belongs_to_many.related_with_all && (!prop.type || prop.type != 'checkbox')) {
+					let to_show 
+					if (prop.belongs_to_many.props_to_show) {
+						to_show = prop.belongs_to_many.props_to_show
+					} else {
+						to_show = this.modelPropertiesFromName(prop.store)
 					}
-				})
-				to_show = to_show.concat(map)
-			}
-			console.log('to_show')
-			console.log(to_show)
-			return to_show
+					if (prop.belongs_to_many.pivot_props_to_show) {
+						let map = prop.belongs_to_many.pivot_props_to_show.map(_prop => {
+							return {
+								..._prop,
+								from_pivot: true,
+							}
+						})
+						to_show = to_show.concat(map)
+					}
+					this.props_to_show_in_belongs_to_many.push({
+						prop_key: prop.key,
+						to_show,
+					}) 
+				}
+			})
+			console.log('props_to_show_in_belongs_to_many')
+			console.log(this.props_to_show_in_belongs_to_many)
 		},
+		propsToShowInBelongsToMany(prop) {
+			return this.props_to_show_in_belongs_to_many.find(_prop => {
+				return _prop.prop_key == prop.key 
+			}).to_show
+		},
+		// propsToShowInBelongsToMany(prop) {
+		// 	let to_show 
+		// 	if (prop.belongs_to_many.props_to_show) {
+		// 		to_show = prop.belongs_to_many.props_to_show
+		// 	} else {
+		// 		to_show = this.modelPropertiesFromName(prop.store)
+		// 	}
+		// 	if (prop.belongs_to_many.pivot_props_to_show) {
+		// 		let map = prop.belongs_to_many.pivot_props_to_show.map(_prop => {
+		// 			return {
+		// 				..._prop,
+		// 				from_pivot: true,
+		// 			}
+		// 		})
+		// 		to_show = to_show.concat(map)
+		// 	}
+		// 	console.log('to_show')
+		// 	console.log(to_show)
+		// 	return to_show
+		// },
 		isDisabled(prop) {
 			if (prop.disabled && !this.form_to_filter) {
 				return true 
@@ -548,17 +590,17 @@ export default {
 				}
 			}
 		},
-		hasPermission() {
-			console.log('check_permissions: '+this.check_permissions)
-			if (this.check_permissions) {
-				if (!this.model.id) {
-					return this.can(this.model_name+'.store')
-				} else if (this.model.id) {
-					return this.can(this.model_name+'.update')
-				}
-			}
-			return true 
-		},
+		// hasPermission() {
+		// 	console.log('check_permissions: '+this.check_permissions)
+		// 	if (this.check_permissions) {
+		// 		if (!this.model.id) {
+		// 			return this.can(this.model_name+'.store')
+		// 		} else if (this.model.id) {
+		// 			return this.can(this.model_name+'.update')
+		// 		}
+		// 	}
+		// 	return true 
+		// },
 		getModelToSend() {
 			let model_to_send = {
 				...this.model

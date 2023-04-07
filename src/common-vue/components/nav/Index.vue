@@ -26,6 +26,7 @@
                 class="ml-auto">
 
                     <slot name="right_dropdown"></slot>
+                    <help-dropdown></help-dropdown>
 
                     <b-nav-item-dropdown 
                     v-if="authenticated"
@@ -69,6 +70,7 @@ export default {
         Mobile: () => import('@/common-vue/components/nav/Mobile'),
         NavItems: () => import('@/common-vue/components/nav/NavItems'),
         UpdateModels: () => import('@/common-vue/components/UpdateModels'),
+        HelpDropdown: () => import('@/common-vue/components/nav/HelpDropdown'),
     },
     computed: {
         show() {

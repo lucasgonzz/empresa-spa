@@ -6,24 +6,28 @@ export default {
 				this.$store.commit(model_name+'/setSelectedModel', selected_model)
 			}
 		},
-		setModel(model, model_name, properties_to_override = []) {
+		setModel(model, model_name, properties_to_override = [], show_modal = true) {
 			let properties = this.getSelectProps(model, model_name)
 			properties = properties.concat(this.getPivotProperties(model, model_name))
 			properties = this.overrideProperties(properties, properties_to_override)
 			// console.log(properties)
 			
-			this.$store.commit('auth/setMessage', 'Cargando formulario')
-			this.$store.commit('auth/setLoading', true)
+			if (show_modal) {
+				this.$store.commit('auth/setMessage', 'Cargando formulario')
+				this.$store.commit('auth/setLoading', true)
+			}			
 			setTimeout(() => {
 				this.$store.commit(model_name+'/setModel', {
 					model, 
 					properties
 				})
-				this.$bvModal.show(model_name)
-				setTimeout(() => {
-					this.$store.commit('auth/setLoading', false)
-					this.$store.commit('auth/setMessage', '')
-				}, 100)
+				if (show_modal) {
+					this.$bvModal.show(model_name)
+					setTimeout(() => {
+						this.$store.commit('auth/setLoading', false)
+						this.$store.commit('auth/setMessage', '')
+					}, 100)
+				}
 			}, 100)
 		},
 		getSelectProps(model, model_name) {

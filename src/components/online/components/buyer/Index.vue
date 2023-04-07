@@ -1,6 +1,7 @@
 <template>
 	<view-component
 	v-if="view == 'clientes'"
+	show_filter_modal
 	model_name="buyer"></view-component>
 </template>
 <script>

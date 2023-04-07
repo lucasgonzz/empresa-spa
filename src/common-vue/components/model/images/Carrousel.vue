@@ -25,7 +25,7 @@
 			<vue-load-image>
 				<img
 				slot="image"
-				class="slide-img s-2 b-r-1 m-b-15" 
+				class="s-2 b-r-1" 
 				:src="image[image_url_prop_name]">
 				
 		        <b-spinner
@@ -96,11 +96,15 @@ export default {
 }
 </script>
 <style scoped lang="sass">
+.VueCarousel-inner
+	height: 50vh !important
 .VueCarousel-slide
 	position: relative
 	display: flex
 	align-items: center
 	justify-content: center
+	height: 50vh !important
+	padding: 20px 0
 	&:hover > .btn-delete 
 		display: block
 	.btn-delete 
@@ -111,11 +115,12 @@ export default {
 		transform: translateX(-50%)
 		display: none 
 
-.slide-img
-	max-width: 100%
-	@media screen and (max-width: 992px)
-		max-height: 70vh
-	@media screen and (min-width: 992px)
-		max-height: 50vh
-		// max-height: calc(100vh - 150px)
+	img 
+		max-width: 100%
+		@media screen and (max-width: 992px)
+			max-height: 70vh
+		@media screen and (min-width: 992px)
+			max-height: 50vh
+			// max-height: 50vh
+			// max-height: calc(100vh - 150px)
 </style>

@@ -1,12 +1,12 @@
 <template>
 <b-modal
-v-if="sale"
+v-if="sale.articles"
 title="Actualizar precios"
 hide-footer
 size="lg"
 id="update-prices">
 	<b-table
-	class="shadow-2 b-r-1"
+	class="s-2 b-r-1" 
 	head-variant="dark"
 	:fields="fields"
 	:items="items">
@@ -24,7 +24,7 @@ id="update-prices">
 </b-modal>
 </template>
 <script>
-import BtnLoader from '@/components/common/BtnLoader2'
+import BtnLoader from '@/common-vue/components/BtnLoader'
 export default {
 	components: {
 		BtnLoader,
@@ -36,7 +36,7 @@ export default {
 	},
 	computed: {
 		sale() {
-			return this.$store.state.sale.details 
+			return this.$store.state.sale.model 
 		},
 		articles() {
 			return this.$store.state.article.models 
@@ -50,23 +50,26 @@ export default {
 		},
 		items() {
 			let items = []
+			let item 
 			this.sale.articles.forEach(article => {
-				items.push({
+				item = {
 					is_article: true,
 					id: article.id,
 					name: article.name,
 					actual_price: article.pivot.price,
-					price_vender: this.getActualPrice(article)
-				})
+				}
+				item.price_vender = this.getActualPrice(item)
+				items.push(item)
 			})
 			this.sale.services.forEach(service => {
-				items.push({
+				item = {
 					is_service: true,
 					id: service.id,
 					name: service.name,
 					actual_price: service.pivot.price,
-					price_vender: this.getActualPrice(service)
-				})
+				}
+				item.price_vender = this.getActualPrice(item)
+				items.push(item)
 			})
 			return items 
 		},
@@ -93,7 +96,7 @@ export default {
 				this.$toast.success('Precios actualizados')
 				this.addModel('sale', res.data.model)
 				this.$bvModal.hide('update-prices')
-				this.$bvModal.hide('sale-details')
+				this.$bvModal.hide('sale')
 			})
 			.catch(err => {
 				console.log(err)

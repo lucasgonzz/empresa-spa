@@ -5,7 +5,7 @@
 <script>
 export default {
 	components: {
-		Model: () => import('@/common-vue/components/model/Index')
+		Model: () => import('@/common-vue/components/ModalModel')
 	},
 }
 </script>

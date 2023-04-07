@@ -76,7 +76,10 @@ export default {
 				this.loading = false
 				res.json()
 				.then(body => {
-					if (body.items.length) {
+					console.log(body.searchInformation.totalResults)
+					if (body.searchInformation.totalResults == 0) {
+						this.$toast.error('No se encontraron resultados, prueba con otras palabras por favor')
+					} else if (body.items.length) {
 						this.images_result = []
 						body.items.forEach(item => {
 							this.images_result.push(item.link)

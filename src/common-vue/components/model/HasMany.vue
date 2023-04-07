@@ -18,8 +18,8 @@
 	    :model_name="prop.has_many.model_name"></table-component>
 	    
 		<b-button
-		v-if="!prop.has_many.models_from_parent_prop && parent_model.id"
-		class="m-t-15" 
+		v-if="!prop.has_many.models_from_parent_prop && (typeof prop.has_many.show_btn_create == 'undefined' || prop.has_many.show_btn_create)"
+		class="m-t-15"  
 		@click="create(prop.has_many.model_name, parent_model)"
 		size="sm"
 		variant="outline-primary">

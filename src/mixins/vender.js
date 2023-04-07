@@ -191,11 +191,10 @@ export default {
 		},
 		checkRegister(article) {
 			if (!article || typeof article == 'undefined') {
-				let bar_code = this.getBarCode(this.article.bar_code)
-				console.log(this.article)
-				if (bar_code != '') {
-					this.setNewArticle({name: '', bar_code})
+				if (this.article.bar_code && this.getBarCode(this.article.bar_code) != '') {
+					this.setNewArticle({name: '', bar_code: this.getBarCode(this.article.bar_code)})
 				} else {
+					console.log('se mostro modal')
 					this.setNewArticle({name: this.article.name})
 				}
 				return false

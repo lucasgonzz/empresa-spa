@@ -21,6 +21,8 @@
 	
 	<current-acounts></current-acounts>
 
+	<update-prices></update-prices>
+
 	<view-component
 	:models_to_show="sales_to_show"
 	show_models_if_empty
@@ -54,6 +56,7 @@ export default {
 		EmployeeNav: () => import('@/components/ventas/components/EmployeeNav'),
 		Total: () => import('@/components/ventas/components/Total'),
 		BudgetOrderProductionInfo: () => import('@/components/ventas/components/BudgetOrderProductionInfo'),
+		UpdatePrices: () => import('@/components/ventas/modals/update-prices/Index'),
 	},
 	beforeRouteLeave(to, from, next) {
 		this.$store.commit('sale/setSelected', [])

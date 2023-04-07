@@ -1,5 +1,6 @@
 <template>
 	<div
+	v-if="is_owner"
 	class="cont-total-ventas">
 		<div>
 			<p

@@ -9,6 +9,7 @@
 		@setSelected="setSelected"
 		:show_selected="false"
 		:model="article"
+		:save_if_not_exist="false"
 		:str_limint="3"
 		:prop="{text: 'Articulo', key: 'article_id', store: 'article'}"></search-component>
 	</b-col>

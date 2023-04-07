@@ -23,11 +23,11 @@
 		class="title">
 			<p
 			v-for="title in titles">
-				<span
+				<!-- <span
 				class="prop-text"
 				v-if="titles.length >= 2 && propertyText(model, title)">
 					{{ title.text }}
-				</span>
+				</span> -->
 				{{ title.title_prefix }}
 				{{ propertyText(model, title) }}
 			</p>
@@ -43,17 +43,17 @@
 				</strong>
 			</p>
 			<div
-			v-if="show_created_at">
+			v-if="_show_created_at">
 				<p>
 					Creado:
 					<strong>
 						{{ date(model.created_at) }}
 					</strong>
 				</p>
-				<p>
-					{{ since(model.created_at) }}
-				</p>
 			</div>
+			<p>
+				{{ since(model.created_at) }}
+			</p>
 		</div>
 		<div
 		v-if="pivot && pivot.properties_to_set">
@@ -90,6 +90,12 @@ export default {
 		pivot_model: Object,
 	},
 	computed: {
+		_show_created_at() {
+			if (this.$store.state[this.model_name].from_dates) {
+				return false 
+			}
+			return this.show_created_at
+		},
 		style() {
 			let prop = this.getBorderColorProperty(this.model_name)
 			let color 
@@ -159,18 +165,19 @@ export default {
 		width: 300px
 	// width: 300px
 	display: flex
-	flex-direction: column 
+	flex-direction: row  
 	margin: 1em 1%
 	background: #FFF
 	border-radius: 12px
 	.title 
 		font-size: 30px 
 		font-weight: bold
-		height: 200px
+		// height: 200px
 		display: flex
 		flex-direction: column
 		justify-content: center
 		align-items: center
+		padding: 0 10px
 		p 
 			display: flex
 			flex-direction: row

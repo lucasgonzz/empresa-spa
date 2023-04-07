@@ -56,7 +56,7 @@ export default {
 	},
 	methods: {
 		showCharts() {
-			this.setModel(this.model, 'article')
+			this.setModel(this.model, 'article', [], false)
 			this.$bvModal.show('article-charts')
 		},
 		setFeatured() {
@@ -111,5 +111,5 @@ export default {
 </script>
 <style lang="sass">
 .buttons-listado
-	width: 250px	
+	width: 125px	
 </style>

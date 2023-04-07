@@ -74,6 +74,7 @@
 							</span>
 						</b-button>
 						<span
+						:class="width(prop)"
 						v-else>
 							<span
 							v-if="prop.from_pivot">
@@ -338,6 +339,12 @@ export default {
 		},
 	},
 	methods: {
+		width(prop) {
+			if (prop.table_width && prop.table_width == 'lg') {
+				return 'width-300'
+			}
+			return ''
+		},
 		hasColor(model) {
 			if (this.model_name) {
 				let prop = this.getBorderColorProperty(this.model_name)
@@ -365,27 +372,31 @@ export default {
 			return _class
 		},
 		onRowSelected(items) {
-			console.log('onRowSelected. _select_mode: '+this._select_mode)
-			if (this._select_mode == 'single' && items.length && this.set_model_on_row_selected) {
-				console.log(1)
-				let model = this.models.find(_model => {
-					return _model.id == items[0].id
-				})
-				this.$emit('onRowSelected', model)
-				this.$refs.tableComponent.clearSelected()
-				this.setModel(model, this.model_name)
-			} else if (this._select_mode == 'multi' && !this.isTheSameSelection(items) && !this.is_from_keydown) {
-				console.log(2)
-				if (this.set_selected_models) {
-					let items_to_set = []
-					let item_to_add = []
-					items.forEach(item => {
-						item_to_add = this.models.find(_model => _model.id == item.id)
-						items_to_set.push(item_to_add)
+			console.log('this.is_from_keydown: '+this.is_from_keydown)
+			if (!this.is_from_keydown) {
+				if (this._select_mode == 'single' && items.length) {
+					console.log(1)
+					let model = this.models.find(_model => {
+						return _model.id == items[0].id
 					})
-					this.$store.commit(this.model_name+'/setSelected', items_to_set)
+					this.$emit('onRowSelected', model)
+					if (this.set_model_on_row_selected) {
+						this.$refs.tableComponent.clearSelected()
+						this.setModel(model, this.model_name)
+					}
+				} else if (this._select_mode == 'multi' && !this.isTheSameSelection(items) && !this.is_from_keydown) {
+					console.log(2)
+					if (this.set_selected_models) {
+						let items_to_set = []
+						let item_to_add = []
+						items.forEach(item => {
+							item_to_add = this.models.find(_model => _model.id == item.id)
+							items_to_set.push(item_to_add)
+						})
+						this.$store.commit(this.model_name+'/setSelected', items_to_set)
+					}
+					this.last_selection = items
 				}
-				this.last_selection = items
 			}
 		},
 		isTheSameSelection(items) {
@@ -475,8 +486,11 @@ export default {
 		width: 100px
 	input, textarea
 		width: 200px
-	td 
+	th, td 
 		text-align: left
+	.width-300
+		display: inline-block
+		width: 300px
 	.cont-edit 
 		display: flex
 		flex-direction: row

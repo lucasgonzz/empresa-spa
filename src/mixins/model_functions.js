@@ -4,6 +4,23 @@ export default {
 		getFunctionValue(prop, model) {
 			return this[prop.function](model)
 		},
+        costoReal(article){
+            let cost = Number(article.cost) 
+            if (article.cost_in_dollars) {
+                if (article.provider_id && this.getModelFromId('provider', article.provider_id).dolar) {
+                    cost = cost * Number(this.getModelFromId('provider', article.provider_id).dolar)
+                } else {
+                    cost = cost * Number(this.owner.dollar) 
+                }
+            }
+            article.article_discounts.forEach(discount => {
+                cost -= cost * Number(discount.percentage / 100)
+            })
+            if (article.iva) {
+                cost += cost * Number(article.iva.percentage / 100)
+            }
+            return this.price(cost)
+        },
         orderTotal(model, formated = true) {
             let total = 0 
             model.articles.forEach(article => {

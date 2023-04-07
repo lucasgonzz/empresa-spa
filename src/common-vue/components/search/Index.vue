@@ -35,6 +35,7 @@
 					class="input-search"
 					:id="id"
 					@click="callSearchModal"
+					@keyup="callSearchModal"
 					v-model="query"
 					:placeholder="_placeholder"></b-form-input>
 				</div>
@@ -219,11 +220,13 @@ export default {
 		},
 		setSelectedModelProp() {
 			if (this.show_selected) {
-				if (this.model && this.model[this.modelNameFromRelationKey(this.prop)]) {
+				if (this.model && this.model[this.prop.key]) {
 					if (this.prop.use_store_models) {
+						console.log('entrooo')
 						let model = this.$store.state[this.modelNameFromRelationKey(this.prop)].models.find(_model => {
 							return _model.id == this.model[this.prop.key]
 						})
+						console.log(model)
 						this.selected_model = model
 					} else {
 						this.selected_model = this.model[this.modelNameFromRelationKey(this.prop)]

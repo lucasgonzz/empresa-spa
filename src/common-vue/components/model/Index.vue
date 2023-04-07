@@ -18,6 +18,7 @@
 
 			<model-form
 			@modelSaved="modelSaved"
+			:hasPermission="hasPermission"
 			:show_btn_remove_belongs_to_many="show_btn_remove_belongs_to_many"
 			:has_many_parent_model="has_many_parent_model"
 			:has_many_parent_model_name="has_many_parent_model_name"
@@ -105,6 +106,17 @@ export default {
 		ModelForm,
 	},
 	computed: {
+		hasPermission() {
+			console.log('check_permissions: '+this.check_permissions)
+			if (this.check_permissions) {
+				if (!this.model.id) {
+					return this.can(this.model_name+'.store')
+				} else if (this.model.id) {
+					return this.can(this.model_name+'.update')
+				}
+			}
+			return true 
+		},
 		model() {
 			return this.modelStoreFromName(this.model_name)
 		},

@@ -10,6 +10,7 @@ hide-footer
 	v-model="file"
 	variant="primary"
 	:state="Boolean(file)"
+	@change="upload"
 	placeholder="Seleccione la imagen o arrastrala hasta aquí"
 	drop-placeholder="Solta la imagen aqui..."
 	></b-form-file>

@@ -302,3 +302,6 @@
 .icon-charts:before {
   content: "\5f";
 }
+.icon-external-link:before {
+  content: "\60";
+}
