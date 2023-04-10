@@ -115,8 +115,8 @@ export default {
 				state.models.splice(index, 1, value)
 			}
 			if (state.use_local_storage && typeof value.update_local_storage == 'undefined') {
-				window.localStorage.setItem(state.model_name, JSON.stringify(state.models))
-				window.localStorage.setItem(state.model_name+'_updated', moment().format('YYYY-MM-DD hh:mm:ss'))
+				window.localStorage.setItem(state.model_name+'_user_id_'+window.localStorage.getItem('user_id'), JSON.stringify(state.models))
+				window.localStorage.setItem(state.model_name+'_updated_user_id_'+window.localStorage.getItem('user_id'), moment().format('YYYY-MM-DD HH:mm:ss'))
 			}
 
 			index = state.filtered.findIndex(item => {
@@ -135,6 +135,11 @@ export default {
 				return model.id == state.delete.id
 			})
 			state.models.splice(index, 1)
+
+			if (state.use_local_storage) {
+				window.localStorage.setItem(state.model_name+'_user_id_'+window.localStorage.getItem('user_id'), JSON.stringify(state.models))
+				window.localStorage.setItem(state.model_name+'_updated_user_id_'+window.localStorage.getItem('user_id'), moment().format('YYYY-MM-DD HH:mm:ss'))
+			}
 
 			// Filtereds
 			index = state.filtered.findIndex(model => {
@@ -220,7 +225,7 @@ export default {
 				commit('setPage', 1)
 				commit('setModels', [])
 				if (state.use_local_storage) {
-					let local_storage_models = window.localStorage.getItem(state.model_name)
+					let local_storage_models = window.localStorage.getItem(state.model_name+'_user_id_'+window.localStorage.getItem('user_id'))
 					if (local_storage_models) { 
 						commit('setModels', JSON.parse(local_storage_models))
 					}
@@ -248,7 +253,7 @@ export default {
 				url += '/'+state.until_date
 			}
 			if (state.use_local_storage) {
-				url += '/'+window.localStorage.getItem(state.model_name+'_updated')
+				url += '/'+window.localStorage.getItem(state.model_name+'_updated_user_id_'+window.localStorage.getItem('user_id'))
 			}
 			if (state.use_per_page) {
 				url += '?page='+state.page 
@@ -276,8 +281,8 @@ export default {
 						commit('setLoading', false)
 						commit('setPage', 1)
 						if (state.use_local_storage) {
-							window.localStorage.setItem(state.model_name+'_updated', moment().format('YYYY-MM-DD hh:mm:ss'))
-							window.localStorage.setItem(state.model_name, JSON.stringify(state.models))
+							window.localStorage.setItem(state.model_name+'_user_id_'+window.localStorage.getItem('user_id'), JSON.stringify(state.models))
+							dispatch('getDeletedModels')
 						}
 					}
 				} else {
@@ -289,6 +294,21 @@ export default {
 				commit('setLoading', false)
 				console.log(err)
 			})
+		},
+		getDeletedModels({state, commit}) {
+			return axios.get(`/api/${generals.methods.routeString(state.model_name)}/deleted-models/${window.localStorage.getItem(state.model_name+'_updated_user_id_'+window.localStorage.getItem('user_id'))}`)
+			.then(res => {
+				console.log('deletedModels')
+				console.log(res.data.models)
+				res.data.models.forEach(model => {
+					commit('setDelete', model)
+					commit('delete')
+				})
+				window.localStorage.setItem(state.model_name+'_updated_user_id_'+window.localStorage.getItem('user_id'), moment().format('YYYY-MM-DD HH:mm:ss'))
+			})	
+			.catch(err => {
+				console.log(err)
+			})		
 		},
 		delete({ commit, state }) {
 			return axios.delete(`/api/${generals.methods.routeString(state.model_name)}/${state.delete.id}`)

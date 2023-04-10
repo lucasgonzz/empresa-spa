@@ -18,6 +18,7 @@ export default {
 		},
 		setUser(state, value) {
 			state.user = value
+			window.localStorage.setItem('user_id', state.user.id)
 			console.log(state.user)
 		},
 		setLoading(state, value) {

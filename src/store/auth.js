@@ -29,6 +29,9 @@ export default {
 		setUser(state, user) {
 			if (user && user.owner_id) {
 				user.addresses = user.owner_addresses
+				window.localStorage.setItem('user_id', user.owner_id)
+			} else if (user) {
+				window.localStorage.setItem('user_id', user.id)
 			}
 			state.user = user
 		},
