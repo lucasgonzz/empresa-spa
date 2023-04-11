@@ -88,6 +88,14 @@ export default {
 						type: 'select',
 						value: 0,
 					})
+					console.log('aca')
+					console.log({
+						label: this.propText(prop),
+						key: prop.key,
+						store: prop.store,
+						type: 'select',
+						value: 0,
+					})
 					// this.form[prop.key] = 0 
 				} else if (prop.type == 'search') {
 					this.form.push({

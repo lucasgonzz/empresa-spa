@@ -3,6 +3,7 @@
 	model_name="article"
 	:props_to_send="props_to_send"
 	:advises="advises"
+	:identifications="identifications"
 	:columns="columns"
 	:actions="actions">
 		<select-provider
@@ -79,6 +80,12 @@ export default {
 				index++
 			})
 			return columns
+		},
+		identifications() {
+			return [
+				'Código de Barras',
+				'Código de Proveedor',
+			]
 		},
 		actions() {
 			return [

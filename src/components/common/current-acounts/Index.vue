@@ -15,10 +15,18 @@
     <payment-methods-details></payment-methods-details>  
 
     <model-index
-    model_name="budget"></model-index>  
+    model_name="budget">
+        <template v-slot:default="props">
+            <budget-modal-buttons></budget-modal-buttons>
+        </template>
+    </model-index>  
 
     <model-index
-    model_name="order_production"></model-index>  
+    model_name="order_production">
+        <template v-slot:default="props">
+            <order-production-modal-buttons></order-production-modal-buttons>
+        </template>
+    </model-index>  
 
     <model-index
     model_name="provider_order"></model-index>  
@@ -109,6 +117,8 @@ export default {
         BtnPagoNotaCredito,
         ModelIndex: () => import('@/common-vue/components/model/Index'),
         SaleDetails: () => import('@/components/ventas/modals/details/Index'),
+        BudgetModalButtons: () => import('@/components/budget/components/ModalButtons'),
+        OrderProductionModalButtons: () => import('@/components/produccion/components/order-productions/ModalButtons'),
     },
     computed: {
         title() {

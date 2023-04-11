@@ -33,6 +33,9 @@ export default {
 			} else if (user) {
 				window.localStorage.setItem('user_id', user.id)
 			}
+			if (!user) {
+				window.localStorage.clear()
+			}
 			state.user = user
 		},
 		setSelectedAddress(state, value) {

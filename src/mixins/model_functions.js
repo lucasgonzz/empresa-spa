@@ -7,7 +7,7 @@ export default {
         costoReal(article){
             let cost = Number(article.cost) 
             if (article.cost_in_dollars) {
-                if (article.provider_id && this.getModelFromId('provider', article.provider_id).dolar) {
+                if (article.provider_id && this.getModelFromId('provider', article.provider_id) && this.getModelFromId('provider', article.provider_id).dolar) {
                     cost = cost * Number(this.getModelFromId('provider', article.provider_id).dolar)
                 } else {
                     cost = cost * Number(this.owner.dollar) 

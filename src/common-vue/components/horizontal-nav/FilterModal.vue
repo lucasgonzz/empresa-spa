@@ -180,7 +180,7 @@ export default {
 		initFilter() {	
 			this.filters = []
 			this.props.forEach(prop => {
-				if (prop.type == 'number') {
+				if ((prop.filter_type && prop.filter_type == 'number') || prop.type == 'number') {
 					this.filters.push({
 						label: this.propText(prop),
 						type: 'number',

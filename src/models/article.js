@@ -5,6 +5,8 @@ export default {
 			key: 'num',
 			type: 'text',
 			not_show_on_form: true,
+			filter_modal_position: 7,
+			filter_type: 'number',
 		},
 		{
 			text: 'Imagenes',
@@ -18,6 +20,7 @@ export default {
 			type: 'text',
 			use_to_check_if_is_repeat: true,
 			use_to_show_in_search_modal: true,
+			filter_modal_position: 1,
 		},
 		{
 			text: 'Codigo de Proveedor',
@@ -26,6 +29,7 @@ export default {
 			use_to_check_if_is_repeat: true,
 			use_to_show_in_search_modal: true,
 			not_show: true,
+			filter_modal_position: 8,
 		},
 		{
 			text: 'nombre',
@@ -34,6 +38,7 @@ export default {
 			is_title: true,
 			use_to_show_in_search_modal: true,
 			table_width: 'lg',
+			filter_modal_position: 2,
 		},
 		{
 			text: 'costo',
@@ -42,6 +47,8 @@ export default {
 			type: 'text',
 			is_price: true,
 			use_to_update: true,
+			filter_modal_position: 9,
+			filter_type: 'number',
 		},
 		{
 			text: 'costo en dolares',
@@ -67,6 +74,8 @@ export default {
 			type_to_update: 'number',
 			use_to_update: true,
 			not_show: true,
+			filter_modal_position: 11,
+			filter_type: 'number',
 		},
 		{
 			text: 'precio',
@@ -75,6 +84,8 @@ export default {
 			type_to_update: 'number',
 			is_price: true,
 			use_to_update: true,
+			filter_modal_position: 10,
+			filter_type: 'number',
 		},
 		{
 			text: 'Precio final',
@@ -124,6 +135,7 @@ export default {
 			use_to_show_in_search_modal: true,
 			use_to_update: true,
 			use_store_models: true,
+			filter_modal_position: 3,
 		},
 		// {
 		// 	text: 'precio en dolar del proveedor',
@@ -158,6 +170,7 @@ export default {
 			use_to_show_in_search_modal: true,
 			use_to_update: true,
 			not_show: true,
+			filter_modal_position: 4,
 		},
 		{
 			text: 'sub categoria',
@@ -167,6 +180,7 @@ export default {
 			use_to_show_in_search_modal: true,
 			use_to_update: true,
 			not_show: true,
+			filter_modal_position: 5,
 		},
 		{
 			text: 'iva',
@@ -181,6 +195,7 @@ export default {
 			use_to_show_in_search_modal: true,
 			not_show: true,
 			not_show: true,
+			filter_modal_position: 6,
 		},
 		{
 			text: 'Condicion',

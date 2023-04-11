@@ -25,6 +25,22 @@ hide-footer>
 			Opcion 2. Tambien puede tomar un archivo Excel ya existente, e indicar que columna de su archivo corresponde a que propiedad. 
 		</strong>
 	</p>
+	<!-- <div>
+		<hr>
+		<p>
+			<strong>
+				Se usaran los siguientes campos para identificar cada {{ singular(model_name) }}
+			</strong>
+		</p>
+		<p>
+			1- Código propio
+		</p>
+		<p
+		v-for="(identification, index) in identifications"
+		:key="index">
+			{{ index }}- {{ identification }}
+		</p>
+	</div> -->
 	<div>
 		<b-button
 		class="m-b-15 m-t-15"
@@ -158,6 +174,12 @@ export default {
 			default: null
 		},
 		advises: {
+			type: Array,
+			default() {
+				return []
+			}
+		},
+		identifications: {
 			type: Array,
 			default() {
 				return []

@@ -72,9 +72,13 @@ export default {
 	},
 	methods: {
 		getModelFromId(model_name, model_id) {
-			this.modelsStoreFromName(model_name).find(model => {
+			let model = this.modelsStoreFromName(model_name).find(model => {
 				return model.id == model_id
 			})
+			if (typeof model != 'undefined') {
+				return model 
+			}
+			return null
 		},
 		getImageUploadUrl(prop) {
 			let url = process.env.VUE_APP_API_URL+'/api/set-image/'
@@ -263,10 +267,12 @@ export default {
 		propsToFilterInModal(model_name) {
 			let props = this.modelPropertiesFromName(model_name)
 			let to_filter = props.filter(prop => {
-				return prop.use_to_filter_in_modal
+				return prop.filter_modal_position
 			})
 			if (to_filter.length) {
-				return to_filter
+				return to_filter.sort((a, b) => {
+					return a.filter_modal_position - b.filter_modal_position
+				})
 			}
 			return props
 		},
@@ -336,9 +342,15 @@ export default {
 				}
 				if (model[prop.key]) {
 					if (prop.use_store_models) {
-						return this.$store.state[relationship].models.find(_model => {
+						// console.log('use_store_models, relationship: '+relationship)
+						let finded_model = this.$store.state[relationship].models.find(_model => {
+							// console.log('comparando '+_model.id+' con '+model[prop.key])
 							return _model.id == model[prop.key]
-						})[prop_name]
+						})
+						if (typeof finded_model != 'undefined') {
+							return finded_model[prop_name]	
+						}
+						return null
 					} else {
 						return model[relationship][prop_name] 
 					}
