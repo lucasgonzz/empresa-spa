@@ -32,6 +32,7 @@ hide-footer
 export default {
 	props: {
 		model_name: String,
+		loading: Boolean,
 	},
 	components: {
 		SearchComponent: () => import('@/common-vue/components/search/Index'),
@@ -45,7 +46,6 @@ export default {
 	data() {
 		return {
 			form: [],
-			loading: false,
 		}
 	},
 	created() {
@@ -53,7 +53,6 @@ export default {
 	},
 	methods: {
 		update() {
-			console.log(this.$store.state[this.model_name].filters[4])
 			this.$emit('update', this.form)
 		},
 		setForm() {

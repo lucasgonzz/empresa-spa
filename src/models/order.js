@@ -36,6 +36,14 @@ export default {
 			show: true,
 		},
 		{
+			text: 'Descuento Met Pago',
+			key: 'payment_method_discount',
+			type: '',
+			only_show: true,
+			value: '',
+			show: true,
+		},
+		{
 			text: 'Notas',
 			key: 'description',
 			type: '',
@@ -74,6 +82,7 @@ export default {
 						text: 'Precio',
 						key: 'price',
 						type: 'number',
+						is_price: true,
 						show: true,
 					},
 					{

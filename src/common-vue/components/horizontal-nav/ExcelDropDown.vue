@@ -12,7 +12,7 @@
 		<b-dropdown-item
 		v-if="can_export"
 		@click="exportModels">
-			<i class="icon-download"></i>
+			<i class="icon-upload"></i>
 			Exportar {{ plural(model_name) }}
 		</b-dropdown-item>
 		<b-dropdown-item

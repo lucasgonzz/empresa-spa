@@ -34,6 +34,9 @@ export default {
                     total -= model.cupon.amount
                 }
             }
+            if (model.payment_method_discount) {
+                total -= total * model.payment_method_discount / 100
+            }
             if (formated) {
                 return dates.methods.price(total)
             } 

@@ -27,7 +27,7 @@ export default {
 		columns() {
 			let columns = [
 				{
-					text: 'Codigo',
+					text: 'Numero',
 				},
 				{
 					text: 'Codigo de barras',
@@ -64,7 +64,7 @@ export default {
 				},
 				{
 					text: 'Descuentos',
-					description: 'Separe los diferentes descuentos con un guion (-)',
+					description: 'Separe los diferentes descuentos con un guion bajo ( _ )',
 				},
 				{
 					text: 'Precio',

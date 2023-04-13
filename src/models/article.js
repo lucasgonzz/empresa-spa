@@ -96,6 +96,14 @@ export default {
 			use_to_show_in_search_modal: true,
 		},
 		{
+			text: 'Precio final anterior',
+			key: 'previus_final_price',
+			type: 'number',
+			only_show: true,
+			is_price: true,
+			use_to_show_in_search_modal: true,
+		},
+		{
 			text: 'Precio final actualizado',
 			key: 'final_price_updated_at',
 			type: 'text',

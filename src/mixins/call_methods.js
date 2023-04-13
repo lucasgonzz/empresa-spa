@@ -26,6 +26,8 @@ export default [
     'sale',
     'order_production_status',
     'address',
+    'order',
+    'online_price_type',
     'buyer',
     'article',
 ]

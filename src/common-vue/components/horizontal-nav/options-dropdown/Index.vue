@@ -2,6 +2,7 @@
 	<div>
 		<update
 		@update="update"
+		:loading="loading"
 		:model_name="model_name"></update>	
 
 		<confirm
@@ -49,6 +50,7 @@ export default {
 		return {
 			is_from: '',
 			from_filter: false,
+			loading: false,
 		}
 	},
 	methods: {
@@ -71,6 +73,7 @@ export default {
 				models_id: this.selecteds_id,
 			})
 			.then(res => {
+				this.loading = false 
 				res.data.models.forEach(model => {
 					this.$store.commit(this.model_name+'/add', model)
 				})

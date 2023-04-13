@@ -46,6 +46,11 @@ export default {
 			show: true,
 		},
 		{
+			text: 'Precios en la Tienda',
+			key: 'online_price_type_id',
+			type: 'select',
+		},
+		{
 			text: 'Instagram',
 			key: 'instagram',
 			type: 'text',
@@ -56,6 +61,13 @@ export default {
 			text: 'Facebook',
 			key: 'facebook',
 			type: 'text',
+			value: '',
+			show: true,
+		},
+		{
+			text: 'Placeholder de Nota para los pedidos',
+			key: 'order_description',
+			type: 'textarea',
 			value: '',
 			show: true,
 		},

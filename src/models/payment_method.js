@@ -17,6 +17,12 @@ export default {
 			required: false,
 		},
 		{
+			text: 'Descuento',
+			key: 'discount',
+			type: 'number',
+			value: '',
+		},
+		{
 			text: 'Tipo',
 			key: 'payment_method_type_id',
 			type: 'select',
