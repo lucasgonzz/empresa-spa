@@ -4,6 +4,8 @@
 
 	<articles-loading-advise></articles-loading-advise>
 
+	<current-acounts></current-acounts>
+
 	<nav-component></nav-component>
  
 	<client></client>	
@@ -18,6 +20,7 @@ export default {
 		NewArticle: () => import('@/components/vender/modals/NewArticle'),
 		
 		// Componentes
+		CurrentAcounts: () => import('@/components/common/current-acounts/Index'),
 		ArticlesLoadingAdvise: () => import('@/components/common/ArticlesLoadingAdvise'),
 		NavComponent: () => import('@/components/vender/components/NavComponent'),
 		Client: () => import('@/components/vender/components/client/Index'),

@@ -340,6 +340,8 @@ export default {
 				} else if (this.idiom == 'es') {
 					prop_name = 'nombre'
 				}
+				// console.log('prop:')
+				// console.log(prop)
 				if (model[prop.key]) {
 					if (prop.use_store_models) {
 						// console.log('use_store_models, relationship: '+relationship)

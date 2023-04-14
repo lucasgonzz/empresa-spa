@@ -3,7 +3,7 @@ export default {
 		{
 			text: 'Condicion Frente al IVA',
 			key: 'iva_condition_id',
-			type: 'text',
+			type: 'select',
 			is_title: true,
 		},
 		{

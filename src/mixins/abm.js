@@ -1,20 +1,34 @@
 export default {
 	computed: {
-		models() {
+		abm_views() {
 			return [
-				'category',
-				'sub_category',
-				'brand',
-				'order_production_status',
-				'delivery_zone',
-				'payment_method',
-				'discount',
-				'surchage',
-				'price_type',
-				'afip_information',
-    			'order_production_status',
-    			'address',
-    			'title',
+				{
+					view: 'generales',
+					models: [
+						'category',
+						'sub_category',
+						'brand',
+						'discount',
+						'surchage',
+						'order_production_status',
+						'price_type',
+    					'address',
+					],
+				},
+				{
+					view: 'facturacion',
+					models: [
+						'afip_information',
+					]
+				},
+				{
+					view: 'tienda',
+					models: [
+						'delivery_zone',
+						'payment_method',
+		    			'title',
+					]
+				},
 			]
 		},
 	}

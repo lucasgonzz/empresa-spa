@@ -4,6 +4,7 @@
 		<b-col
 		cols="12">
 			<horizontal-nav
+			class="m-b-15"
 			:items="items"
 			set_sub_view
 			:show_display="false"></horizontal-nav>

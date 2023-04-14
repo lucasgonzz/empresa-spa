@@ -3,10 +3,24 @@
 	v-if="authenticated">
 		<b-col>
 			<horizontal-nav
+			v-if="has_views"
+			:show_display="false"
+			@setSelected="setSelectedView"
+			set_view
+			:items="views"></horizontal-nav>
+
+			<horizontal-nav
+			:show_display="false"
+			@setSelected="setSelected"
+			:set_view="has_views ? false : true"
+			:set_sub_view="has_views ? true : false"
+			:items="items"></horizontal-nav>
+
+			<!-- <horizontal-nav
 			:show_display="false"
 			@setSelected="setSelected"
 			set_view
-			:items="items"></horizontal-nav>
+			:items="items"></horizontal-nav> -->
 			
 			<view-component
 			show_filter_modal
@@ -29,20 +43,57 @@ export default {
 		}
 	},
 	computed: {
+		has_views() {
+			return typeof this.models == 'undefined'
+		},
+		views() {
+			let views = []
+			this.abm_views.forEach(view => {
+				views.push({
+					name: view.view,
+				})
+			})
+			return views 
+		},
 		items() {
 			let items = []
-			this.models.forEach(model => {
-				if (!model.check_permissions || typeof model.check_permissions == 'undefined' || this.can(model.replaceAll(' ', '_')+'.index')) {
-					items.push({
-						name: this.plural(model),
-						call_models: model,
-					})
-				}
-			})
+			if (this.has_views) {
+				this.abm_views.forEach(view => {
+					if (this.view == view.view) {
+						view.models.forEach(model => {
+							if (this.checkModel(model)) {
+								items.push({
+									name: this.plural(model),
+									call_models: model,
+								})
+							}
+						})
+					}
+				})
+			} else {
+				this.models.forEach(model => {
+					if (this.checkModel(model)) {
+						items.push({
+							name: this.plural(model),
+							call_models: model,
+						})
+					}
+				})
+			}
 			return items
 		}
 	},
 	methods: {
+		setSelectedView(item) {
+			let view = this.abm_views.find(_view => _view.view == this.view)
+			let model_name = view.models[0]
+			console.log('model_name: '+model_name)
+			this.$router.push({params: {sub_view: (this.routeString(this.plural(model_name)))}})
+			this.selected_model = model_name
+		},
+		checkModel(model, items) {
+			return (!model.check_permissions || typeof model.check_permissions == 'undefined' || this.can(model.replaceAll(' ', '_')+'.index')) 
+		},
 		setSelected(item) {
 			this.selected_model = item.call_models
 		},

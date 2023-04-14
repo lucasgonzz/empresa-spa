@@ -91,7 +91,8 @@ export default [
 		text: 'ABM',
 		name: 'abm',
 		params: {
-			view: 'categorias',
+			view: 'generales',
+			sub_view: 'categorias',
 			model_name: 'category',
 		},
 	},

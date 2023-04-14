@@ -23,6 +23,7 @@ hide-footer>
         <b-form-input
         type="number"
         min="0"
+        id="monto-pago"
         @keydown.enter="hacerPago"
         :placeholder="placeholder"
         v-model="pago.haber"></b-form-input>

@@ -20,7 +20,7 @@ const routes = [
         component: () => import('@/common-vue/views/Configuration')
     },
     {
-        path: '/abm/:view?',
+        path: '/abm/:view?/:sub_view?',
         name: 'abm',
         component: () => import('@/common-vue/views/Abm')
     },
