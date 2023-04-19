@@ -90,49 +90,50 @@ $color: ''
     $background: #FFF
     $color: #000
 
-.navbar 
-    background: #FFF
-    height: 60px
-    padding: 0 1em !important
-    background: $background
-    box-shadow: rgba(50, 50, 93, 0.25) 0px 2px 5px -1px, rgba(0, 0, 0, 0.3) 0px 1px 3px -1px
+.nav-component
+    .navbar 
+        background: #FFF
+        height: 60px
+        padding: 0 1em !important
+        background: $background
+        box-shadow: rgba(50, 50, 93, 0.25) 0px 2px 5px -1px, rgba(0, 0, 0, 0.3) 0px 1px 3px -1px
 
-    .navbar-brand
-        padding: 0
-        img 
-            width: 50px
+        .navbar-brand
+            padding: 0
+            img 
+                width: 50px
 
-    .navbar-toggler 
-        border: none
-        color: $color !important
+        .navbar-toggler 
+            border: none
+            color: $color !important
 
-    .navbar-nav 
-        @media screen and (min-width: 768px)
-            align-items: center
-
-    .navbar-collapse
-        justify-content: space-between
-
-    .nav-item 
-        .nav-link
-            background: none
-            color: lighten($color, 50) !important
-            @media screen and (max-width: 768px)
-                text-align: left !important
-                padding: .5em 1.5em
-        &:hover
-            .nav-link 
-                font-weight: bold
-    .active-item
-        .nav-link 
-            @media screen and (max-width: 768px)
-                color: $color !important
-                background: $blue !important
+        .navbar-nav 
             @media screen and (min-width: 768px)
-                color: $blue !important
-                font-size: 1.2em
-                font-weight: bold
-    .dropdown 
-        a 
-            color: rgba(0,0,0,.7)
+                align-items: center
+
+        .navbar-collapse
+            justify-content: space-between
+
+        .nav-item 
+            .nav-link
+                background: none
+                color: lighten($color, 50) !important
+                @media screen and (max-width: 768px)
+                    text-align: left !important
+                    padding: .5em 1.5em
+            &:hover
+                .nav-link 
+                    font-weight: bold
+        .active-item
+            .nav-link 
+                @media screen and (max-width: 768px)
+                    color: $color !important
+                    background: $blue !important
+                @media screen and (min-width: 768px)
+                    color: $blue !important
+                    font-size: 1.2em
+                    font-weight: bold
+        .dropdown 
+            a 
+                color: rgba(0,0,0,.7)
 </style>

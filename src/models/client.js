@@ -48,7 +48,7 @@ export default {
 			key: 'address',
 			type: 'text',
 			value: '',
-			show: true,
+			not_show: true,
 			use_to_filter_in_modal: true,
 		},
 		{
@@ -57,6 +57,7 @@ export default {
 			type: 'select',
 			value: 0,
 			show: true,
+			not_show: true,
 			use_to_filter_in_modal: true,
 		},
 		{
@@ -79,15 +80,15 @@ export default {
 			text: 'Razon social',
 			key: 'razon_social',
 			type: 'text',
+			not_show: true,
 			value: '',
-			show: true,
 		},
 		{
 			text: 'Condicion frente al IVA',
 			key: 'iva_condition_id',
 			type: 'select',
 			value: 0,
-			show: false,
+			not_show: true,
 			use_to_filter_in_modal: true,
 		},
 		{
@@ -102,7 +103,7 @@ export default {
 			key: 'seller_id',
 			type: 'select',
 			value: 0,
-			show: true,
+			not_show: true,
 		},
 	],
 	plural_model_name_spanish: 'Clientes',

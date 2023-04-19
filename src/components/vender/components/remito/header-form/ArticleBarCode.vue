@@ -4,6 +4,7 @@
 	cols="12"
 	:lg="col_header_lg">
 		<b-form-input
+		class="d-none d-lg-block"
 		id="article-bar-code"
 		v-model="article.bar_code"
 		autocomplete="off" 
@@ -11,6 +12,9 @@
 		@keydown.shift="callVender"
 		@keydown.enter="setArticle"
 		placeholder="Ingrese el codigo de barras"></b-form-input>
+
+		<!-- <bar-code-scanner
+		@setBarCode="setBarCode"></bar-code-scanner> -->
 
 		<!-- <select-component
 		id="article-bar-code"
@@ -28,6 +32,9 @@
 import vender from '@/mixins/vender'
 export default {
 	mixins: [vender],
+	components: {
+		BarCodeScanner: () => import('@/components/vender/components/remito/header-form/BarCodeScanner'),
+	},
 	computed: {
 		article() {
 			return this.$store.state.vender.article
@@ -37,6 +44,12 @@ export default {
 		},
 	},
 	methods: {
+		setBarCode(bar_code) {
+			let article = this.articles.find(article => {
+				return article.bar_code && article.bar_code == this.getBarCode(bar_code)
+			})
+			this.setVenderArticle(article)
+		},
 		setArticle() {
 			if (this.article.bar_code != '') {
 				let article = this.articles.find(article => {

@@ -69,6 +69,12 @@ export default {
 			}
 			return false
 		},
+		use_home_page() {
+			if (typeof process.env.VUE_APP_USE_HOME_PAGE != 'undefined' && process.env.VUE_APP_USE_HOME_PAGE) {
+				return true
+			}
+			return false
+		},
 	},
 	methods: {
 		getModelFromId(model_name, model_id) {
@@ -201,12 +207,21 @@ export default {
 				if (array[1]) {
 					sub_prop = array[1]
 				}
-				if (model[prop]) {
+				if (model[prop] || property.v_if_from_models_store) {
 					// if (sub_prop && model[prop][sub_prop]) {
-					if (sub_prop) {
-						prop_to_check = model[prop][sub_prop]
-					}  else {
-						prop_to_check = model[prop]
+					if (property.v_if_from_models_store) {
+						if (sub_prop) {
+							let model_from_store = this.getModelFromId(prop, model[prop+'_id'])
+							if (model_from_store) {
+								prop_to_check =  model_from_store[sub_prop]
+							}
+						} 
+					} else {
+						if (sub_prop) {
+							prop_to_check = model[prop][sub_prop]
+						} else {
+							prop_to_check = model[prop]
+						}
 					}
 					// console.log('prop_to_check en '+prop.text)
 					// console.log(prop_to_check)

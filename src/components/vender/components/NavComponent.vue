@@ -1,5 +1,6 @@
 <template>
 	<horizontal-nav
+	class="m-b-15 m-md-b-0"
 	set_view
 	:show_display="false"
 	:items="items"></horizontal-nav>

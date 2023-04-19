@@ -61,25 +61,53 @@ export default {
         },
 		totalSale(sale, formated = true) {
 			let total = 0
+            let total_item = 0
 			sale.articles.forEach(article => {
-				total += this.getTotalItem(article, true)
+				total_item = this.getTotalItem(article, true)
+                // if (sale.discounts) {
+                    sale.discounts.forEach(discount => {
+                        total_item -= total_item * Number(discount.pivot.percentage) / 100    
+                    })
+                // }
+                sale.surchages.forEach(surchage => {
+                    total_item += total_item * Number(surchage.pivot.percentage) / 100    
+                })
+                total += total_item
 			})
 			sale.services.forEach(service => {
-				total += this.getTotalItem(service, true)
+				total_item = this.getTotalItem(service, true)
+                if (sale.discounts_in_services) {
+                    sale.discounts.forEach(discount => {
+                        total_item -= total_item * Number(discount.pivot.percentage) / 100    
+                    })
+                }
+                if (sale.surchages_in_services) {
+                    sale.surchages.forEach(surchage => {
+                        total_item += total_item * Number(surchage.pivot.percentage) / 100    
+                    })
+                }
+                total += total_item
 			})
 			sale.combos.forEach(combo => {
-				total += this.getTotalItem(combo, true)
-			})
-            if (sale.discounts.length) {
+				total_item = this.getTotalItem(combo, true)
                 sale.discounts.forEach(discount => {
-                    total -= total * discount.pivot.percentage / 100
+                    total_item -= total_item * Number(discount.pivot.percentage) / 100    
                 })
-            }
-            if (sale.surchages.length) {
                 sale.surchages.forEach(surchage => {
-                    total += total * surchage.pivot.percentage / 100
+                    total_item += total_item * Number(surchage.pivot.percentage) / 100    
                 })
-            }
+                total += total_item
+			})
+            // if (sale.discounts.length) {
+            //     sale.discounts.forEach(discount => {
+            //         total -= total * discount.pivot.percentage / 100
+            //     })
+            // }
+            // if (sale.surchages.length) {
+            //     sale.surchages.forEach(surchage => {
+            //         total += total * surchage.pivot.percentage / 100
+            //     })
+            // }
             if (formated) {
                 return dates.methods.price(total)
             }

@@ -27,6 +27,15 @@ hide-footer>
         @keydown.enter="hacerPago"
         :placeholder="placeholder"
         v-model="pago.haber"></b-form-input>
+        <b-button
+        size="sm"
+        variant="primary"
+        class="m-t-10"
+        v-if="route_name == 'vender' && maked_sale"
+        @click="setTotalSale">
+            <i class="icon-check"></i>
+            Pago el total
+        </b-button>
     </b-form-group>
     <b-form-group>
         <b-form-textarea
@@ -58,6 +67,9 @@ export default {
     components: {
         PaymentMethods,
     	BtnLoader,
+    },
+    created() {
+        console.log('pago creado')
     },
     data() {
         return {
@@ -97,8 +109,14 @@ export default {
         to_pay() {
             return this.$store.state.current_acount.to_pay
         },
+        maked_sale() {
+            return this.$store.state.vender.sale 
+        },
     },
     methods: {
+        setTotalSale() {
+            this.pago.haber = this.totalSale(this.maked_sale, false)
+        },
     	hacerPago() {
             if (this.check()) {
         		this.loading = true

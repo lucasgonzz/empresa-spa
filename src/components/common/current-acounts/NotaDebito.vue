@@ -2,7 +2,7 @@
 <b-modal 
 v-if="from_model" 
 id="current-acounts-nota-debito" 
-title="Nota Credito" 
+title="Nota Debito" 
 hide-footer>
     <b-form-group>
         <b-form-input

@@ -2,6 +2,7 @@
 	<div
 	class="login-form">
 		<img 
+		@click="clickImage"
 		src="@/assets/logo.png">
 		<p class="title">
 			Iniciar sesion
@@ -87,6 +88,12 @@ export default {
 				return false
 			}
 			return true 
+		},
+		clickImage() {
+			console.log(this.use_home_page)
+			if (this.use_home_page) {
+				this.$router.push({name: 'home'})
+			}
 		}
 	}
 }

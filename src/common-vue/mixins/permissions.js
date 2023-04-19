@@ -22,7 +22,7 @@ export default {
 	        return has_permission
 		},
 		checkPermissionForCurrentRoute() {
-			if (this.$route.path == '/' || this.$route.path == '/login') {
+			if (this.$route.path == '/' || this.$route.path == '/login' || (this.use_home_page && this.route_name == 'home')) {
 				console.log('estaba en la ruta /')
 				this.redirect()
 			} else {

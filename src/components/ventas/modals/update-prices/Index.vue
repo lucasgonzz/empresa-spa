@@ -56,7 +56,7 @@ export default {
 					is_article: true,
 					id: article.id,
 					name: article.name,
-					actual_price: article.pivot.price,
+					actual_price: this.price(article.pivot.price),
 				}
 				item.price_vender = this.getActualPrice(item)
 				items.push(item)

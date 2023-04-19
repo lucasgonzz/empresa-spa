@@ -26,12 +26,17 @@ export default {
         this.$store.dispatch('auth/me')
         .then(() => {
             if (!this.authenticated) {
-                this.$router.replace({name: 'login'})
+                if (this.route_name != 'login' && !this.use_home_page) {
+                    this.$router.replace({name: 'login'})
+                } else if (this.route_name != 'login' && this.route_name != 'home') {
+                    this.$router.replace({name: 'home'})
+                }
             }
         })
     },
     watch: {
         authenticated() {
+            console.log('watch de authenticated')
             if (!this.authenticated) {
                 if (this.route_name != 'passwordReset' && this.route_name != 'login') {
                     this.$router.replace({name: 'login'})

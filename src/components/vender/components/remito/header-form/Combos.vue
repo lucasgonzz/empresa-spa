@@ -1,6 +1,6 @@
 <template>
 	<b-col
-	v-if="hasExtencion('combos')"
+	v-if="authenticated && hasExtencion('combos')"
 	cols="12"
 	class="margin-bottom-since-lg"
 	:lg="col_lg_extencions">

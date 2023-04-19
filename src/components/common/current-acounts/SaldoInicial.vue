@@ -1,5 +1,6 @@
 <template>
 <b-modal 
+v-if="from_model"
 id="saldo-inicial" 
 title="Saldo inicial" 
 hide-footer>

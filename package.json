@@ -19,6 +19,7 @@
     "register-service-worker": "^1.7.1",
     "vue": "^2.6.11",
     "vue-advanced-cropper": "^1.11.6",
+    "vue-barcode-reader": "^0.0.3",
     "vue-carousel": "^0.18.0",
     "vue-chartjs": "^3.5.1",
     "vue-cookies": "^1.8.2",

@@ -5,12 +5,8 @@
 		<b-button
 		@click="pago"
 		variant="primary">
-			Anotar Pago
-		</b-button>
-		<b-button
-		@click="pago(true)"
-		variant="success">
 			<i class="icon-dolar"></i>
+			Anotar Pago
 		</b-button>
 	</b-button-group>
 </template>
@@ -22,17 +18,10 @@ export default {
 		},
 	},
 	methods: {
-		pago(with_total = false) {
+		pago() {
 			this.$store.commit('current_acount/setFromModelName', 'client')
 			this.$store.commit('current_acount/setFromModel', this.maked_sale.client)
 			this.$bvModal.show('current-acounts-pago')
-			setTimeout(() => {
-				if (with_total) {
-					document.getElementById('monto-pago').value = this.totalSale(this.maked_sale, false)
-				} else {
-					document.getElementById('monto-pago').value = ''
-				}
-			}, 200)
 		}
 	}
 }
