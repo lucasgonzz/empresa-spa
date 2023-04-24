@@ -1,4 +1,4 @@
-export default {
+	export default {
 	methods: {
 		isImageProp(prop) {
 			return prop.type == 'image' || prop.type == 'images'

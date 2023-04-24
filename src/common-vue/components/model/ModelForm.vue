@@ -113,13 +113,21 @@
 								</b-form-radio>
 							</div>
 
-							<b-form-input
+							<div
 							v-else-if="prop.type == 'text' || prop.type == 'number' || prop.type == 'password'"
-					        :disabled="isDisabled(prop)"
-							:placeholder="'Ingresar '+propText(prop)"
-							:type="prop.type"
-							@keyup.enter="clieckEnter(prop)"
-							v-model="model[prop.key]"></b-form-input>
+							class="d-flex w-100">
+								<b-form-input
+						        :disabled="isDisabled(prop)"
+								:placeholder="'Ingresar '+propText(prop)"
+								:type="prop.type"
+								@keyup.enter="clieckEnter(prop)"
+								v-model="model[prop.key]"></b-form-input>
+
+								<bar-code-scanner
+								class="m-l-10"
+								v-if="prop.use_bar_code_scanner && hasExtencion('bar_code_scanner')"
+								@setBarCode="setBarCode"></bar-code-scanner>
+							</div>
 
 							<b-form-textarea
 							v-else-if="prop.type == 'textarea'"
@@ -168,6 +176,19 @@
 							variant="primary">
 								<i class="icon-plus"></i>
 								{{ btnText(prop) }}
+							</b-button>
+							
+							<b-button
+							v-else-if="prop.button"
+							:variant="prop.button.variant"
+							@click="callMethod(prop, model)">
+								<i
+								v-if="prop.button.icon"
+								:class="'icon-'+prop.button.icon"></i>
+								<span
+								v-else>
+									{{ propertyText(model, prop) }}
+								</span>
 							</b-button>
 
 							<div
@@ -353,6 +374,10 @@ export default {
 		},
 	},
 	methods: {
+		setBarCode(bar_code) {
+			let prop = this.getBarCodeProp(this.model_name)
+			this.model[prop.key] = bar_code 
+		},
 		propInfo(prop) {
 			let array = prop.prop_info.model_prop.split('.')
 			if (this.model[array[0]] && this.model[array[0]][array[1]]) {
@@ -658,6 +683,7 @@ export default {
 		Images,
 		BtnLoader,
 		BtnDelete,
+		BarCodeScanner: () => import('@/common-vue/components/bar-code-scanner/Index'),
 	}
 }
 </script>

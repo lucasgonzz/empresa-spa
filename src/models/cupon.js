@@ -1,6 +1,14 @@
 export default {
 	properties: [
 		{
+			text: 'N°',
+			key: 'num',
+			type: 'text',
+			not_show_on_form: true,
+			filter_modal_position: 7,
+			filter_type: 'number',
+		},
+		{
 			text: 'Codigo',
 			key: 'code',
 			type: 'text',
@@ -11,15 +19,19 @@ export default {
 			text: 'Cantidad en pesos',
 			key: 'amount',
 			type: 'number',
-			value: '',
+			value: null,
 			show: true,
+			v_if: ['percentage', '=', null],
+			v_if_not_check_if_null: true,
 		},
 		{
 			text: 'Porcentaje de descuento',
 			key: 'percentage',
 			type: 'number',
-			value: '',
+			value: null,
 			show: true,
+			v_if: ['amount', '=', null],
+			v_if_not_check_if_null: true,
 		},
 		{
 			text: 'Compra minima',
@@ -31,6 +43,6 @@ export default {
 	],
 	singular_model_name_spanish: 'Cupon',
 	plural_model_name_spanish: 'Cupones',
-	create_model_name_spanish: 'Nueva cupon',
+	create_model_name_spanish: 'Nuevo cupon',
 	text_delete: 'el',
 }

@@ -23,7 +23,7 @@
 <script>
 export default {
 	components: {
-		NavComponent: () => import('@/components/home/components/Nav'),
+		NavComponent: () => import('@/components/home/components/nav/Index'),
 		LeftVideo: () => import('@/components/home/components/LeftVideo'),
 		RightForm: () => import('@/components/home/components/RightForm'),
 	}

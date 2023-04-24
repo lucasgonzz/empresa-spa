@@ -1,5 +1,6 @@
 <template>
-	<b-row>
+	<b-row
+	v-if="user">
 		<b-col
 		cols="12"
 		class="col-nav">
@@ -22,7 +23,7 @@ export default {
 			let items = []
 			if (this.can('order.index')) {
 				items.push({
-					name: 'pedidos',
+					name: 'pedidos', 
 					call_models: 'order',
 				})
 			}
@@ -36,6 +37,12 @@ export default {
 				items.push({
 					name: 'mensajes',
 					// call_models: 'buyer/getModels',
+				})
+			}
+			if (this.can('cupon.index')) {
+				items.push({
+					name: 'cupones',
+					call_models: 'cupon',
 				})
 			}
 			return items 

@@ -445,20 +445,6 @@ export default {
 		showBtn(prop, model) {
 			return prop.button_to
 		},
-		callMethod(prop, item) {
-			if (prop.commit) {
-				this.$store.commit(prop.commit, item)
-			}
-			if (prop.modal) {
-				this.$bvModal.show(prop.modal)
-			}
-			if (prop.button && prop.button.emit) {
-				this.$emit(prop.button.emit, item)
-			}
-			if (prop.button && prop.button.function) {
-				this.getFunctionValue(prop.button, item)
-			}
-		},
 		// clicked(model) {
 		// 		console.log(1)
 		// 	if (this.set_model_on_row_selected) {

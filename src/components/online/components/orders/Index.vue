@@ -1,5 +1,6 @@
 <template>
 	<div>
+		<payment-details></payment-details>
 		<cancel-order></cancel-order>
 		<view-component
 		v-if="view == 'pedidos'"
@@ -18,6 +19,7 @@
 export default {
 	components: {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
+		PaymentDetails: () => import('@/components/online/modals/orders/payment-details/Index'),  
 		CancelOrder: () => import('@/components/online/modals/orders/CancelOrder'),  
 		BtnStatus: () => import('@/components/online/components/orders/BtnStatus'), 
 		BtnCancel: () => import('@/components/online/components/orders/BtnCancel'),

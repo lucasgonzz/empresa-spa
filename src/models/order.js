@@ -29,19 +29,26 @@ export default {
 		{
 			text: 'Metodo de pago',
 			key: 'payment_method_id',
+			button: {
+				variant: 'primary',
+				function: 'orderPaymentMethodDetails',
+			},
 			store: 'payment_method',
-			type: '',
-			only_show: true,
-			value: '',
 			show: true,
 		},
 		{
 			text: 'Descuento Met Pago',
 			key: 'payment_method_discount',
+			only_show: true,
+			not_show: true,
+		},
+		{
+			text: 'Recargo Met Pago',
+			key: 'payment_method_surchage',
 			type: '',
 			only_show: true,
 			value: '',
-			show: true,
+			not_show: true,
 		},
 		{
 			text: 'Notas',

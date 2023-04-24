@@ -3,13 +3,22 @@
 	class="col-buttons"
 	cols="12"
 	lg="3">
-		<b-form-input
-		type="number"
-		min="1"
-		id="article-amount"
-		v-model="article.amount"
-		@keydown.enter="addArticleToSale"
-		placeholder="Cantidad"></b-form-input>
+		<div class="d-flex w-100">
+			<b-form-input
+			type="number"
+			min="1"
+			id="article-amount"
+			v-model="article.amount"
+			@keydown="callAddArticleToSale"
+			@keydown.enter="addArticleToSale"
+			placeholder="Cantidad"></b-form-input>
+			<b-button 
+			class="d-lg-none m-l-10"
+			@click="callAddArticleToSale(false)"
+			variant="primary">
+				<i class="icon-check"></i>
+			</b-button>
+		</div>
 	</b-col>
 </template>
 <script>
@@ -32,6 +41,13 @@ export default {
             return this.$store.state.vender.previus_sales.previus_sale
         },
 	},
+	methods: {
+		callAddArticleToSale(check_enter = true) {
+			if (!check_enter || e.key == 'Enter') {
+				this.addArticleToSale()
+			}
+		}
+	}
 }
 </script>
 <style scoped lang="sass">

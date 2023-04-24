@@ -97,6 +97,11 @@ export default {
 			type: 'checkbox',
 		},
 		{
+			text: 'Recargos a los precios en la Tienda',
+			key: 'online_price_surchage',
+			type: 'integer',
+		},
+		{
 			text: 'Imagen por defecto para los articulos sin Imagenes',
 			key: 'default_article_image_url',
 			type: 'image',

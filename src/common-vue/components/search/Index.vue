@@ -184,16 +184,18 @@ export default {
 			}
 		},
 		setModelsToSearch() {
-			console.log('setModelsToSearch')
+			console.log('setModelsToSearch') 
 			let models = []
 			if (this.prop && this.prop.depends_on && this.model) {
-			 	models = this.modelsStoreFromName(this.model_name)
-				models = models.filter(_model => {
-					console.log('model')
-					console.log(this.model)
-					console.log('comparado '+_model[this.prop.depends_on]+' con '+this.model[this.prop.depends_on])
-					return _model[this.prop.depends_on] == this.model[this.prop.depends_on]
-				})
+				if (!this.prop.search_depends_on_from_api) {
+				 	models = this.modelsStoreFromName(this.model_name)
+					models = models.filter(_model => {
+						console.log('model')
+						console.log(this.model)
+						console.log('comparado '+_model[this.prop.depends_on]+' con '+this.model[this.prop.depends_on])
+						return _model[this.prop.depends_on] == this.model[this.prop.depends_on]
+					})
+				}
 			} else if (this.prop && this.prop.is_between) {
 				if (this.prop.is_between.parent_model_prop) {
 					if (this.model[this.prop.is_between.parent_model_prop] && this.model[this.prop.is_between.parent_model_prop][this.prop.is_between.model_prop].length) {

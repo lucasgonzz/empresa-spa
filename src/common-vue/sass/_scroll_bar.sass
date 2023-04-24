@@ -5,7 +5,10 @@
 
 
 *::-webkit-scrollbar 
-	width: 12px
+	@media screen and (max-width: 992px)
+		width: 6px
+	@media screen and (min-width: 992px)
+		width: 8px
 	height: 12px
 
 *::-webkit-scrollbar-track 

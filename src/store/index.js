@@ -53,6 +53,7 @@ import payment_method_type from '@/store/payment_method_type'
 import configuration from '@/store/configuration'
 import service from '@/store/service'
 import online_price_type from '@/store/online_price_type'
+import order_payment_method_detail from '@/store/order_payment_method_detail'
 
 Vue.use(Vuex)
 
@@ -116,5 +117,6 @@ export default new Vuex.Store({
         configuration,
         service,
         online_price_type,
+        order_payment_method_detail,
     }
 })

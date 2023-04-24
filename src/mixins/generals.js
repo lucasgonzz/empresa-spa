@@ -26,16 +26,18 @@ export default {
     },
     methods: {
         hasExtencion(slug, check_has_one_extencion_permission = true) {
-            if (this.is_owner) {
-                let index = this.user.extencions.findIndex(extencion => {
-                    return extencion.slug == slug
-                })
-                return index != -1
-            } else {
-                let index = this.user.owner_extencions.findIndex(extencion => {
-                    return extencion.slug == slug
-                })
-                return index != -1
+            if (this.authenticated) {
+                if (this.is_owner) {
+                    let index = this.user.extencions.findIndex(extencion => {
+                        return extencion.slug == slug
+                    })
+                    return index != -1
+                } else {
+                    let index = this.user.owner_extencions.findIndex(extencion => {
+                        return extencion.slug == slug
+                    })
+                    return index != -1
+                }
             }
         },
         getPriceVender(item, from_pivot = false) {

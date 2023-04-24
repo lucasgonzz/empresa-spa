@@ -75,8 +75,37 @@ export default {
 			}
 			return false
 		},
+		use_help_dropdown() {
+			if (typeof process.env.VUE_APP_USE_HELP_DROPDOWN != 'undefined' && process.env.VUE_APP_USE_HELP_DROPDOWN) {
+				return true
+			}
+			return false
+		},
 	},
 	methods: {
+		getBarCodeProp(model_name) {
+			let prop = this.modelPropertiesFromName(model_name).find(_prop => {
+				return _prop.use_bar_code_scanner
+			})
+			if (typeof prop != 'undefined') {
+				return prop 
+			}
+			return null
+		},
+		callMethod(prop, item) {
+			if (prop.commit) {
+				this.$store.commit(prop.commit, item)
+			}
+			if (prop.modal) {
+				this.$bvModal.show(prop.modal)
+			}
+			if (prop.button && prop.button.emit) {
+				this.$emit(prop.button.emit, item)
+			}
+			if (prop.button && prop.button.function) {
+				this.getFunctionValue(prop.button, item)
+			}
+		},
 		getModelFromId(model_name, model_id) {
 			let model = this.modelsStoreFromName(model_name).find(model => {
 				return model.id == model_id
@@ -207,7 +236,10 @@ export default {
 				if (array[1]) {
 					sub_prop = array[1]
 				}
-				if (model[prop] || property.v_if_from_models_store) {
+				console.log('prop_to_check en '+property.text)
+				console.log(property)
+				console.log('v_if_not_check_if_null en '+property.v_if_not_check_if_null)
+				if (property.v_if_not_check_if_null || model[prop] || property.v_if_from_models_store) {
 					// if (sub_prop && model[prop][sub_prop]) {
 					if (property.v_if_from_models_store) {
 						if (sub_prop) {
@@ -222,9 +254,9 @@ export default {
 						} else {
 							prop_to_check = model[prop]
 						}
-					}
-					// console.log('prop_to_check en '+prop.text)
-					// console.log(prop_to_check)
+					} 
+					console.log('entro, prop_to_check:')
+					console.log(prop_to_check) 
 					if (typeof prop_to_check == 'String') {
 						prop_to_check = prop_to_check.toLowerCase()
 					}
@@ -243,31 +275,25 @@ export default {
 			}
 			return true 
 		},
-		propsToFilter(model_name) {
-			let props = this.modelPropertiesFromName(model_name)
-			let to_filter = props.filter(prop => {
+		propToFilter(model_name) {
+			let prop = this.modelPropertiesFromName(model_name).find(prop => {
 				return prop.use_in_search_modal
 			})
-			if (to_filter.length) {
-				return to_filter
+			if (typeof prop != 'undefined') {
+				return prop
 			} else {
 				if (this.idiom == 'en') {
-					return [
-						{
-							key: 'name',
-							text: 'Nombre',
-						}
-					]
+					return {
+						key: 'name',
+						text: 'Nombre',
+					}
 				} else if (this.idiom == 'es') {
-					return [
-						{
-							key: 'nombre',
-							text: 'Nombre',
-						}
-					]
+					return {
+						key: 'nombre',
+						text: 'Nombre',
+					}
 				}
 			}
-			return props
 		},
 		propsToShowInSearchModal(model_name) {
 			let props = this.modelPropertiesFromName(model_name)

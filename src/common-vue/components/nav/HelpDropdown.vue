@@ -1,7 +1,7 @@
 <template>
     <b-nav-item-dropdown 
-    v-if="items.length"
-    calss="help-dropdown"
+    v-if="use_help_dropdown && items.length"
+    class="help-dropdown"
     right>
         <template #button-content>
             Ayuda
@@ -38,7 +38,7 @@ export default {
 }
 </script>
 <style lang="sass">
-.help-dropdown
+.help-dropdown 
     &:marker 
-        display: none
+        display: none !important
 </style>

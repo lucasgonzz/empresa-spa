@@ -26,12 +26,19 @@
 			<b-form-group
 			v-if="filter.type == 'text' || filter.type == 'textarea'"
 			:label="filter.label">
-				<b-form-input
-				@keyup.enter="search"
-				class="m-b-15"
-				:id="'search-modal-'+filter.key"
-				v-model="filter.value"
-				:placeholder="'Ingrese '+filter.text"></b-form-input>
+				<div class="d-flex">
+					<b-form-input
+					@keyup.enter="search"
+					class="m-b-15"
+					:id="'search-modal-'+filter.key"
+					v-model="filter.value"
+					:placeholder="'Ingrese '+filter.text"></b-form-input>
+
+					<bar-code-scanner
+					class="m-l-10"
+					v-if="filter.use_bar_code_scanner && hasExtencion('bar_code_scanner')"
+					@setBarCode="setBarCode"></bar-code-scanner>
+				</div>
 			</b-form-group>
 
 			<div
@@ -115,6 +122,7 @@ export default {
 	},
 	components: {
 		SearchComponent,
+		BarCodeScanner: () => import('@/common-vue/components/bar-code-scanner/Index'),
 	},
 	data() {
 		return {
@@ -138,6 +146,17 @@ export default {
 		this.setSelectOptions()
 	},
 	methods: {
+		setBarCode(bar_code) {
+			let prop = this.getBarCodeProp(this.model_name)
+			let filter = this.filters.find(_filter => {
+				return _filter.key == prop.key 
+			})
+			let index = this.filters.findIndex(_filter => {
+				return _filter.key == prop.key 
+			})
+			filter.value = bar_code
+			this.filters.splice(index, filter)
+		},
 		initProps() {
 			this.props = this.propsToFilterInModal(this.model_name)
 		},
@@ -210,6 +229,7 @@ export default {
 						text: this.propText(prop),
 						store: prop.store,
 						key: prop.key,
+						use_bar_code_scanner: prop.use_bar_code_scanner,
 						value: '',
 					})
 				} else if (prop.type == 'boolean') {

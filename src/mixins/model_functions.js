@@ -21,12 +21,24 @@ export default {
             }
             return this.price(cost)
         },
+        orderPaymentMethodDetails(model) {
+            if (model.payment_method && model.payment_method.name == 'MercadoPago') {
+                this.$store.dispatch('order_payment_method_detail/getModel', model)
+                this.$bvModal.show('order-payment-method-details')
+            }
+        },
         orderTotal(model, formated = true) {
             let total = 0 
             model.articles.forEach(article => {
                 let total_article = article.pivot.price * article.pivot.amount
                 total += total_article
             })
+            if (model.payment_method_discount) {
+                total -= total * model.payment_method_discount / 100
+            }
+            if (model.payment_method_surchage) {
+                total += total * model.payment_method_surchage / 100
+            }
             if (model.cupon) {
                 if (model.cupon.percentage) {
                     total -= total * model.cupon.percentage / 100
@@ -34,8 +46,8 @@ export default {
                     total -= model.cupon.amount
                 }
             }
-            if (model.payment_method_discount) {
-                total -= total * model.payment_method_discount / 100
+            if (model.delivery_zone && model.delivery_zone.price) {
+                total += Number(model.delivery_zone.price)
             }
             if (formated) {
                 return dates.methods.price(total)

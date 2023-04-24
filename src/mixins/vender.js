@@ -145,7 +145,7 @@ export default {
 				})
 			}
 		},
-		setVenderArticle(article) {
+		setVenderArticle(article, from_mobile = false) {
 			// this.articles.slice(0,33).forEach(art => {
 			// 	this.addArticleForSale(art)
 			// })
@@ -161,9 +161,13 @@ export default {
 					amount: '',
 				}
 				this.$store.commit('vender/setArticle', article_to_add)
+				let time = 500
+				if (from_mobile) {
+					time = 700
+				}
 				setTimeout(() => {
 					document.getElementById('article-amount').focus()
-				}, 500)
+				}, time)
 			}
 		},
 		addArticleToSale() {

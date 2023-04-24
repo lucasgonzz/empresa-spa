@@ -10,7 +10,9 @@
             </b-navbar-brand>
 
             <div
-            class="d-lg-none">
+            class="cont-bars d-lg-none">
+                <help-dropdown></help-dropdown>
+
                 <b-navbar-toggle target="nav-mobile">
                     <i class="icon-bars"></i>
                 </b-navbar-toggle>
@@ -91,6 +93,10 @@ $color: ''
     $color: #000
 
 .nav-component
+    .cont-bars
+        display: flex
+        .help-dropdown 
+            margin-top: -26px
     .navbar 
         background: #FFF
         height: 60px
