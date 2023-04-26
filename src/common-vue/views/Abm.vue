@@ -59,7 +59,7 @@ export default {
 			let items = []
 			if (this.has_views) {
 				this.abm_views.forEach(view => {
-					if (this.view == view.view) {
+					if (this.view == this.routeString(view.view)) {
 						view.models.forEach(model => {
 							if (this.checkModel(model)) {
 								items.push({
@@ -85,7 +85,7 @@ export default {
 	},
 	methods: {
 		setSelectedView(item) {
-			let view = this.abm_views.find(_view => _view.view == this.view)
+			let view = this.abm_views.find(_view => this.routeString(_view.view) == this.view)
 			let model_name = view.models[0]
 			console.log('model_name: '+model_name)
 			this.$router.push({params: {sub_view: (this.routeString(this.plural(model_name)))}})

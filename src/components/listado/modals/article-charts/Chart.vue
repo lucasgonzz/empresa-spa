@@ -26,7 +26,7 @@ export default {
 				labels: labels,
 				datasets: [
 					{
-						label: 'Unidades vendidad de '+this.article.name,
+						label: 'Unidades vendidas',
 						backgroundColor: '#f87979',
 						data: data,
 					}

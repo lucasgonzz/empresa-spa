@@ -83,6 +83,47 @@ export default {
 		},
 	},
 	methods: {
+		propType(prop, model) {
+			if (prop.type_if) {
+				let array = prop.type_if.condition.split('.')
+				let prop_to_check
+				let model_prop = array[0]
+				let sub_prop = null
+				if (array[1]) {
+					sub_prop = array[1]
+				}
+				console.log('type_if en '+prop.text)
+				
+				if (sub_prop) {
+					prop_to_check = model[model_prop][sub_prop]
+				} else {
+					prop_to_check = model[model_prop]
+				}
+				console.log('prop_to_check:')
+				console.log(prop_to_check) 
+				let result 
+				if (prop_to_check) {
+					prop_to_check = prop_to_check.toLowerCase()
+				}
+				if (prop.type_if.operator == '=') {
+					result = prop_to_check == prop.type_if.value
+				} else if (prop.type_if.operator == '<') {
+					result = prop_to_check < prop.type_if.value
+				} else if (prop.type_if.operator == '>') {
+					result = prop_to_check > prop.type_if.value
+				} else if (prop.type_if.operator == '!=') {
+					result = prop_to_check != prop.type_if.value
+				}
+				if (result) {
+					console.log('return then: '+prop.type_if.then)
+					return prop.type_if.then
+				} else {
+					console.log('return else: '+prop.type_if.else)
+					return prop.type_if.else
+				}
+			}
+			return prop.type 
+		},
 		getBarCodeProp(model_name) {
 			let prop = this.modelPropertiesFromName(model_name).find(_prop => {
 				return _prop.use_bar_code_scanner
@@ -157,6 +198,18 @@ export default {
 		saveIfNotExist(prop) {
 			if (prop.save_if_not_exist == false) {
 				return false 
+			}
+			return true
+		},
+		autoSelect(prop) {
+			if (prop.auto_select == false) {
+				return false 
+			}
+			return true
+		},
+		clearQuery(prop) {
+			if (prop.clear_query == false) {
+				return false  
 			}
 			return true
 		},

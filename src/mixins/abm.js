@@ -22,7 +22,7 @@ export default {
 					]
 				},
 				{
-					view: 'tienda',
+					view: 'tienda online',
 					models: [
 						'delivery_zone',
 						'payment_method',

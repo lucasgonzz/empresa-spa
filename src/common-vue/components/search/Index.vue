@@ -131,6 +131,12 @@ export default {
 			return false
 		},
 	},
+	watch: {
+		model() {
+			console.log('CAMBIO MODEL')
+			this.setSelectedModelProp()
+		},
+	},
 	created() {
 		this.setSelectedModelProp()
 	},
@@ -222,7 +228,11 @@ export default {
 		},
 		setSelectedModelProp() {
 			if (this.show_selected) {
-				if (this.model && this.model[this.prop.key]) {
+				if (this.prop.set_model_on_click_or_prop_with_query_if_null) {
+					this.query = this.model[this.prop.key]
+					this.selected_model = null
+					console.log('ENTRO PAPA: '+this.query)
+				} else if (this.model && this.model[this.prop.key]) {
 					if (this.prop.use_store_models) {
 						console.log('entrooo')
 						let model = this.$store.state[this.modelNameFromRelationKey(this.prop)].models.find(_model => {
@@ -233,12 +243,6 @@ export default {
 					} else {
 						this.selected_model = this.model[this.modelNameFromRelationKey(this.prop)]
 					}
-					// this.selected_model = this.model[this.modelNameFromRelationKey(this.prop)]
-					// if (this.idiom == 'es') {
-					// 	this.query = this.model[this.modelNameFromRelationKey(this.prop)].nombre
-					// } else {
-					// 	this.query = this.model[this.modelNameFromRelationKey(this.prop)].name
-					// }
 				} 
 			} 
 		},

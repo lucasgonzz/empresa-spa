@@ -21,6 +21,33 @@ export default {
             }
             return this.price(cost)
         },
+        getProductionMovementCost(production_movement) {
+            let total = 0
+            console.log('getProductionMovementCost')
+            console.log(production_movement)
+            if (production_movement.article) {
+                let recipe = this.modelsStoreFromName('recipe').find(recipe => {
+                    return recipe.article_id == production_movement.article_id 
+                })
+                console.log('recipe')
+                console.log(recipe)
+                if (typeof recipe != 'undefined') {
+                    recipe.articles.forEach(article => {
+                        if (article.pivot.order_production_status_id == production_movement.order_production_status_id) {
+                            total += Number(article.final_price) * Number(article.pivot.amount) * Number(production_movement.amount) 
+                        } 
+                    })
+                }
+            }
+            return this.price(total) 
+        },
+        getRecipeCost(recipe) {
+            let total = 0
+            recipe.articles.forEach(article => {
+                total += Number(article.final_price) * Number(article.pivot.amount)
+            })
+            return this.price(total) 
+        },
         orderPaymentMethodDetails(model) {
             if (model.payment_method && model.payment_method.name == 'MercadoPago') {
                 this.$store.dispatch('order_payment_method_detail/getModel', model)

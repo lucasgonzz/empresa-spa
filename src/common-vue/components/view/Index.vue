@@ -24,56 +24,42 @@
     		</template>
     	</model>
 
-		<b-row>
-			<b-col
-			cols="12"
-			:xl="col_xl">
-				<slot name="header"></slot>
-				<horizontal-nav
-				:ask_selectable="ask_selectable"
-				:show_excel_drop_down="show_excel_drop_down"
-				:check_permissions="check_permissions"
-				:show_filter_modal="show_filter_modal"
-				:show_btn_create="_show_btn_create"
-				:show_plus_dropdown="show_plus_dropdown"
-				:show_display="show_display"
-				:model_name="model_name">
-					<template v-slot:btn_create>
-						<slot name="horizontal_nav_btn_create"></slot>
-					</template>
-					<template v-slot:buttons>
-						<slot name="horizontal_nav_buttons"></slot>
-					</template>
-				</horizontal-nav>
-			</b-col>
-			<b-col
-			cols="12"
-			:xl="col_xl">
-				<slot name="body"></slot>
-			</b-col>
-			<b-col
-			v-if="can_show_list"
-			class="col-full-width-sm"
-			cols="12"
-			:xl="col_xl">
-				<list
-				:order_list_by="order_list_by"
-				:check_permissions="check_permissions"
-				:models_to_show="models_to_show"
-				:show_models_if_empty="show_models_if_empty"
-				:show_previus_days="show_previus_days"
-				:show_search_nav="show_search_nav"
-				:model_name="model_name"
-				@clicked="clicked">
-					<template v-slot:display_top>
-						<slot name="display_top"></slot>
-					</template>
-					<template v-slot:default="slotProps">
-						<slot :model="slotProps.model"></slot>
-					</template>
-				</list>
-			</b-col>
-		</b-row>
+		<slot name="header"></slot>
+		<horizontal-nav
+		:ask_selectable="ask_selectable"
+		:show_excel_drop_down="show_excel_drop_down"
+		:check_permissions="check_permissions"
+		:show_filter_modal="show_filter_modal"
+		:show_btn_create="_show_btn_create"
+		:show_plus_dropdown="show_plus_dropdown"
+		:show_display="show_display"
+		:model_name="model_name">
+			<template v-slot:btn_create>
+				<slot name="horizontal_nav_btn_create"></slot>
+			</template>
+			<template v-slot:buttons>
+				<slot name="horizontal_nav_buttons"></slot>
+			</template>
+		</horizontal-nav>
+	
+		<slot name="body"></slot>
+		
+		<list
+		:order_list_by="order_list_by"
+		:check_permissions="check_permissions"
+		:models_to_show="models_to_show"
+		:show_models_if_empty="show_models_if_empty"
+		:show_previus_days="show_previus_days"
+		:show_search_nav="show_search_nav"
+		:model_name="model_name"
+		@clicked="clicked">
+			<template v-slot:display_top>
+				<slot name="display_top"></slot>
+			</template>
+			<template v-slot:default="slotProps">
+				<slot :model="slotProps.model"></slot>
+			</template>
+		</list>
 	</div>
 </template>
 <script>

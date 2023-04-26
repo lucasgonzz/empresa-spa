@@ -1,7 +1,6 @@
 <template>
 	<div
-	class="images m-b-15"
-	v-if="model.id">
+	class="images m-b-15">
 
 		<!-- <image-width 
 		v-if="use_crop"></image-width> -->

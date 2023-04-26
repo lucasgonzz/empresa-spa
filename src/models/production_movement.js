@@ -26,6 +26,10 @@ export default {
 			key: 'amount',
 			type: 'number',
 		},
+		{
+			text: 'Costo de produccion',
+			function: 'getProductionMovementCost',
+		},
 	],
 	singular_model_name_spanish: 'Movimiento de Produccion',
 	plural_model_name_spanish: 'Movimientos de Produccion',

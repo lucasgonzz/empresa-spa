@@ -86,6 +86,11 @@ export default {
 			show: true,
 		},
 		{
+			text: 'Ofrecer opcion de envio en la Tienda',
+			key: 'has_delivery',
+			type: 'checkbox',
+		},
+		{
 			text: 'Mostrar articulos sin Stock en la Tienda',
 			key: 'show_articles_without_stock',
 			type: 'checkbox',
@@ -99,7 +104,7 @@ export default {
 		{
 			text: 'Recargos a los precios en la Tienda',
 			key: 'online_price_surchage',
-			type: 'integer',
+			type: 'number',
 		},
 		{
 			text: 'Imagen por defecto para los articulos sin Imagenes',

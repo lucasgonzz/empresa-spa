@@ -1,5 +1,6 @@
 <template>
-	<b-row>
+	<b-row
+	v-if="user">
 		<b-col>
 			<horizontal-nav
 			:items="items"

@@ -64,74 +64,56 @@ export default {
 				...this.coordinates,
 				image_url: this.image_url,
 				model_name: this.model_name,
-				id: this.model.id,
+				model_id: this.model.id,
 			})
 			.then(res => {
 				this.loading = false
 				if (this.model_name == 'user') {
 					this.$store.commit('auth/setUser', res.data.model)
 				} else {
-					this.$store.commit(this.model_name+'/add', res.data.model)
 					this.$bvModal.hide('cropper-'+this.prop.key)
-					this.$bvModal.hide(this.model_name)
-					if (this.has_many_parent_model) {
-						let index = this.has_many_parent_model[this.has_many_prop.key].findIndex(model => {
-							return model.id == this.model.id 
-						})
-						if (index != -1) {
-							this.has_many_parent_model[this.has_many_prop.key].splice(index, 1, res.data.model)
+					if (res.data.model) {
+						this.$bvModal.hide(this.model_name)
+						this.$store.commit(this.model_name+'/add', res.data.model)
+						if (this.has_many_parent_model) {
+							let index = this.has_many_parent_model[this.has_many_prop.key].findIndex(model => {
+								return model.id == this.model.id 
+							})
+							if (index != -1) {
+								this.has_many_parent_model[this.has_many_prop.key].splice(index, 1, res.data.model)
+							}
+						}
+						this.$toast.success('Imagen actualizada')
+					} else {
+						if (this.prop.type == 'images') {
+							if (this.model.childrens) {
+								this.model.childrens.push({
+									model_name: this.prop.key,
+									temporal_id: res.data.image_model.temporal_id,
+									is_imageable: true,
+								})
+							} else {
+								this.model.childrens = []
+								this.model.childrens.push({
+									model_name: this.prop.key,
+									temporal_id: res.data.image_model.temporal_id,
+									is_imageable: true,
+								})
+							}
+							console.log('childrens')
+							console.log(this.model.childrens)
+							this.model[this.prop.key].push(res.data.image_model)
+						} else {
+							console.log('aca')
+							this.model[this.prop.key] = res.data.image_url
 						}
 					}
-					this.$toast.success('Imagen actualizada')
 				}
 			})
 			.catch(err => {
 				this.loading = false
 				console.log(err)
 			})
-			// return
-			// this.canvas.toBlob((blob) => {
-			// 	const url = URL.createObjectURL(blob);
-
-			// 	var formdata  = new FormData();
-			// 	formdata.append('image_url_to_delete', this.image_url);
-			// 	formdata.append('image_url', blob);
-			// 	formdata.append('model_name', this.model_name);
-			// 	formdata.append('id', this.model.id);
-
-			// 	let config = {headers: { 'content-type': 'multipart/form-data' }}
-
-			// 	this.$api.post(this.getImageUploadUrl(this.prop), formdata, config)
-			// 	.then(res => {
-			// 		this.loading = false
-			// 		console.log(res)
-			// 	})
-			// 	.catch(err => {
-			// 		this.loading = false
-			// 		console.log(err)
-			// 	})
-			// })
-
-			// this.canvas.toBlob(blob => {
-				// let reader = new FileReader()
-				// reader.readAsDataURL(blob)
-				// reader.onload = () => {
-					// let base64 = reader.result 
-					// this.$api.post(this.getImageUploadUrl(this.prop), {
-					// 	image_url: this.canvas.toDataURL(),
-					// 	model_name: this.model_name,
-					// 	id: this.model.id,
-					// })
-					// .then(res => {
-					// 	this.loading = false
-					// 	console.log(res)
-					// })
-					// .catch(err => {
-					// 	this.loading = false
-					// 	console.log(err)
-					// })
-				// }
-			// })
 		},
 	},
 }

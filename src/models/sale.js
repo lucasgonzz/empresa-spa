@@ -19,6 +19,7 @@ export default {
 			text: 'Met Pago',
 			key: 'current_acount_payment_method_id',
 			type: 'select',
+			value: 3,
 			v_if: ['client_id', '=', null],
 		},
 		{

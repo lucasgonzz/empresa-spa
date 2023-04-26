@@ -8,7 +8,7 @@
 		<b-form-row
 		class="m-b-0">
 			<b-col
-			v-for="(prop, index) in properties"
+			v-for="(prop, index) in properties_formated"
 			v-if="showProperty(prop, model, false, true)"
 			:md="getCol(prop, 6, input_full_width)"
 			:lg="getCol(prop, 4, input_full_width)"
@@ -51,15 +51,6 @@
 							
 							<div
 							v-else-if="useSearch(prop)">
-								<!-- <search-component
-								class="m-b-15"
-								@setSelected="setSelected"
-								:model_name="modelNameFromRelationKey(prop)"
-								:model="model"
-								show_btn_create
-								clear_query
-								:save_if_not_exist="saveIfNotExist(prop)"
-								:prop="prop"></search-component> -->
 								<search-component
 								class="m-b-15"
 								:id="model_name+'-'+prop.key"
@@ -67,8 +58,9 @@
 								:model_name="modelNameFromRelationKey(prop)"
 								:model="model"
 								show_btn_create
-								clear_query
+								:clear_query="clearQuery(prop)" 
 								:save_if_not_exist="saveIfNotExist(prop)"
+								:auto_select="autoSelect(prop)"
 								:prop="prop"></search-component>
 							</div>
 
@@ -120,6 +112,7 @@
 						        :disabled="isDisabled(prop)"
 								:placeholder="'Ingresar '+propText(prop)"
 								:type="prop.type"
+								@keyup="checkWatch(prop)"
 								@keyup.enter="clieckEnter(prop)"
 								v-model="model[prop.key]"></b-form-input>
 
@@ -357,6 +350,7 @@ export default {
 	created() {
 		// console.log('se creo modelForm')
 		this.setPropsToShowInBelongsToMany()
+		this.setPropsTypes()
 	},
 	data() {
 		return {
@@ -374,6 +368,19 @@ export default {
 		},
 	},
 	methods: {
+		checkWatch(prop) {
+			if (prop.watch_for) {
+				console.log('watch_for en '+prop.text)
+				let index_porp_for_update_type = this.properties_formated.findIndex(_prop => {
+					return _prop.key == prop.watch_for
+				})
+				let prop_for_update_type = {
+					...this.properties_formated[index_porp_for_update_type],
+				}
+				prop_for_update_type.type = this.propType(prop_for_update_type, this.model)
+				this.properties_formated.splice(index_porp_for_update_type, 1, prop_for_update_type)
+			}
+		},
 		setBarCode(bar_code) {
 			let prop = this.getBarCodeProp(this.model_name)
 			this.model[prop.key] = bar_code 
@@ -386,7 +393,7 @@ export default {
 		},
 		useSearch(prop) {
 			return prop.type == 'search'
-			return prop.type == 'search' || (prop.belongs_to_many && !prop.belongs_to_many.related_with_all && !prop.type == 'checkbox' && !prop.belongs_to_many.can_not_modify)
+			return this.propType(prop, this.model) == 'search' || (prop.belongs_to_many && !prop.belongs_to_many.related_with_all && !this.propType(prop, this.model) == 'checkbox' && !prop.belongs_to_many.can_not_modify)
 		},
 		removeModel(prop, model) {
 			let index = this.model[prop.key].findIndex(_model => {
@@ -427,26 +434,29 @@ export default {
 				return _prop.prop_key == prop.key 
 			}).to_show
 		},
-		// propsToShowInBelongsToMany(prop) {
-		// 	let to_show 
-		// 	if (prop.belongs_to_many.props_to_show) {
-		// 		to_show = prop.belongs_to_many.props_to_show
-		// 	} else {
-		// 		to_show = this.modelPropertiesFromName(prop.store)
-		// 	}
-		// 	if (prop.belongs_to_many.pivot_props_to_show) {
-		// 		let map = prop.belongs_to_many.pivot_props_to_show.map(_prop => {
-		// 			return {
-		// 				..._prop,
-		// 				from_pivot: true,
-		// 			}
-		// 		})
-		// 		to_show = to_show.concat(map)
-		// 	}
-		// 	console.log('to_show')
-		// 	console.log(to_show)
-		// 	return to_show
-		// },
+		setPropsTypes() {
+			this.properties_formated = []
+			let prop_formated
+			let type
+			this.properties.forEach(prop => {
+				prop_formated = {
+					...prop,
+				}
+				type = this.propType(prop, this.model)
+				prop_formated.type = type 
+				if (prop.type_if) {
+					let index_prop_for_watch = this.properties_formated.findIndex(_prop => {
+						return _prop.key == prop.type_if.condition
+					})
+					let prop_for_watch = this.properties_formated[index_prop_for_watch]
+					prop_for_watch.watch_for = prop.key
+					this.properties_formated.splice(index_prop_for_watch, 1, prop_for_watch) 
+				}
+				this.properties_formated.push(prop_formated)
+			})
+			console.log('properties_formated')
+			console.log(this.properties_formated)
+		},
 		isDisabled(prop) {
 			if (prop.disabled && !this.form_to_filter) {
 				return true 
@@ -526,6 +536,12 @@ export default {
 				this.setBelongsToManyPivotProps(prop, model_to_add, result)
 			} else if (prop.has_many && prop.has_many.models_from_parent_prop) {
 				this.model[prop.key].unshift(result.model)
+			} else if (prop.set_model_on_click_or_prop_with_query_if_null) {
+				if (result.model) {
+					this.setModel(result.model, this.model_name, [], false)
+				} else {
+					this.model[prop.key] = result.query 
+				}
 			} else {
 				this.$set(this.model, result.prop.key, result.model.id)
 				this.$set(this.model, this.modelNameFromRelationKey(result.prop), result.model)
@@ -599,13 +615,31 @@ export default {
 					.then(res => {
 						this.loading = false 
 						this.$toast.success('Guardado')
+						let created_model = res.data.model 
 						if (this.has_many_parent_model) {
-							this.$set(this.has_many_parent_model, this.has_many_prop.key, this.has_many_parent_model[this.has_many_prop.key].concat([res.data.model]))
+							this.$set(this.has_many_parent_model, this.has_many_prop.key, this.has_many_parent_model[this.has_many_prop.key].concat([created_model]))
+							if (!this.has_many_parent_model.id) {
+								if (this.has_many_parent_model.childrens) {
+									this.has_many_parent_model.childrens.push({
+										model_name: this.has_many_prop.has_many.model_name,
+										temporal_id: created_model.temporal_id
+									})
+									console.log('se agrego el id '+created_model.temporal_id)
+								} else {
+									this.has_many_parent_model.childrens = []
+									console.log('se creo la prop childrens')
+									this.has_many_parent_model.childrens.push({
+										model_name: this.has_many_prop.has_many.model_name,
+										temporal_id: created_model.temporal_id
+									})
+									console.log('se agrego el id '+created_model.temporal_id)
+								}
+							}
 						} else {
-							this.$store.commit(this.replaceGuion(this.model_name)+'/add', res.data.model)
+							this.$store.commit(this.replaceGuion(this.model_name)+'/add', created_model)
 						}
 						this.$bvModal.hide(this.model_name)
-						this.callActions(res.data.model)
+						this.callActions(created_model)
 					})
 					.catch(err => {
 						console.log(err)
@@ -643,7 +677,7 @@ export default {
 			let ok = true
 			this.properties.forEach(prop => {
 				if (prop.required) {
-					if (ok && prop.type == 'select' && this.model[prop.key] == 0) {
+					if (ok && this.propType(prop, this.model) == 'select' && this.model[prop.key] == 0) {
 						this.$toast.error('Ingrese '+this.propText(prop))
 						ok = false
 					} else if (ok && this.model[prop.key] == '') {
@@ -661,7 +695,7 @@ export default {
 				})
 				if (typeof finded != 'undefined' && (!this.model.id || this.model.id != finded.id)) {
 					this.$toast.warning('Ya hay un '+this.singular(this.model_name)+' con este '+this.propText(prop))
-					this.setModel(finded, this.model_name)
+					this.setModel(finded, this.model_name, [], false)
 				}
 			} 
 		},

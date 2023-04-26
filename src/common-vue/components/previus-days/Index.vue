@@ -3,33 +3,30 @@
 v-if="has_permission">
 	<modal-from-dates
 	:model_name="model_name"></modal-from-dates>
-	<b-row>
-		<b-col
-		cols="12"
-		md="3">
+	<div
+	class="cont-previus-days">
+		<div
+		class="cont-title">
 			<title-component
 			:model_name="model_name"
 			:clear_selected="clear_selected"
 			v-if="show_title"></title-component>
-		</b-col>
-		<b-col
-		cols="12"
-		md="6">
+		</div>
+		<div
+		class="cont-nav">
 			<week-days-nav
 			:model_name="model_name"></week-days-nav>
-		</b-col>
-		<b-col
-		class="col-btn"
-		v-if="show_modal"
-		cols="12"
-		md="3">
+		</div>
+		<div
+		class="cont-btn"
+		v-if="show_modal">
 			<b-button
 			variant="primary"
 			v-b-modal="'from-date'">
 				Por fecha
 			</b-button>
-		</b-col>
-	</b-row>
+		</div>
+	</div>
 </div>
 </template>
 <script>
@@ -68,12 +65,27 @@ export default {
 }
 </script>
 <style scoped lang="sass">
-.row
+.cont-previus-days
 	margin-bottom: 15px
-.col-btn
 	display: flex
-	@media screen and (max-width: 768px)
-		align-items: center
-	@media screen and (min-width: 768px)
-		align-items: flex-end
+	flex-direction: row 
+	align-items: center
+	flex-wrap: wrap
+	.cont-title, .cont-btn
+		@media screen and (max-width: 992px)
+			width: 100%
+		@media screen and (min-width: 992px)
+			width: 25%
+	.cont-nav
+		@media screen and (max-width: 992px)
+			width: 100%
+		@media screen and (min-width: 992px)
+			width: 50%
+.cont-btn
+	display: flex
+	flex-direction: row 
+	@media screen and (max-width: 992px)
+		justify-content: center
+	@media screen and (min-width: 992px)
+		justify-content: flex-end
 </style>

@@ -101,6 +101,14 @@ export default {
 						})
 						properties_to_add.push(propertye_to_add)
 					}
+				} else if (prop.type == 'images') {
+					if (!model) {
+						let propertye_to_add = {
+							key: prop.key,
+							value: [], 
+						}
+						properties_to_add.push(propertye_to_add)
+					}
 				}
 			})
 			// console.log('properties_to_add:')

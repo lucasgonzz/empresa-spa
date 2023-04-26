@@ -46,6 +46,14 @@ export default {
 						show: true,
 						show_in_input_if: ['status', '=', 'inactive']
 					},
+					{
+						text: 'Precio',
+						key: 'final_price',
+						type: 'text',
+						is_price: true,
+						show: true,
+						show_in_input_if: ['status', '=', 'inactive'],
+					},
 				],
 				properties_to_set: [
 					{
@@ -76,7 +84,11 @@ export default {
 						},
 					],
 				},
-			}
+			},
+		},
+		{
+			text: 'Costo de produccion',
+			function: 'getRecipeCost',
 		},
 	],
 	singular_model_name_spanish: 'Receta',

@@ -4,6 +4,7 @@ export default [
     'brand',
     'category',
     'condition',
+    'recipe',
     'iva',
     'iva_condition',
     'provider',

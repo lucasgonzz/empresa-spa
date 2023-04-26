@@ -10,6 +10,9 @@
 </template>
 <style lang="sass">
 .left-video
+	display: flex
+	flex-direction: column
+	align-items: center
 	h1 
 		font-size: 28px
 		line-height: 36px
@@ -17,7 +20,5 @@
 		font-weight: 800
 		color: rgb(68, 68, 68)
 		margin-bottom: 15px
-		@media screen and (min-width: 992px)
 		margin-top: 80px
-		// margin: 0px auto
 </style>
