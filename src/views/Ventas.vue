@@ -26,7 +26,7 @@
 	<view-component
 	:models_to_show="sales_to_show"
 	show_models_if_empty
-	show_previus_days
+	:show_previus_days="show_previus_days"
 	:show_btn_create="false"
 	:show_modal="false"
 	model_name="sale">
@@ -61,6 +61,14 @@ export default {
 	beforeRouteLeave(to, from, next) {
 		this.$store.commit('sale/setSelected', [])
 		next()
+	},
+	computed: {
+		show_previus_days() {
+			if (this.hasExtencion('sales.hide')) {
+				return this.$route.name == 'VentasAll'
+			} 
+			return true
+		}
 	},
 }
 </script>

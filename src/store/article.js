@@ -14,6 +14,7 @@ export default {
 
 		use_per_page: true,
 		use_local_storage: true,
+		local_storage_canceled: false,
 		// Se usa cuando es belongs_to_many_from_dates. Por ejemplo para ver los pagos de un cliente
 		// plural_model_name: '',
 		// selected_model: null,
@@ -24,7 +25,7 @@ export default {
 		until_date: '',
 
 		page: 1,
-		per_page: 100,
+		per_page: 200,
 		total_pages: 1, 
 
 		models: [],
@@ -45,6 +46,12 @@ export default {
 		loading: false,
 	},
 	mutations: {
+		setLocalStorage(state, value) {
+			state.use_local_storage = value 
+		},
+		setLocalStorageCanceled(state, value) {
+			state.local_storage_canceled = value 
+		},
 		setLoading(state, value) {
 			state.loading = value
 		},
@@ -111,12 +118,16 @@ export default {
 			})
 			if (index == -1) {
 				state.models.unshift(value)
+				// console.log('se agrego al final, models quedaron asi:')
+				// console.log(state.models)
 			} else {
 				state.models.splice(index, 1, value)
 			}
 			if (state.use_local_storage && typeof value.update_local_storage == 'undefined') {
 				window.localStorage.setItem(state.model_name+'_user_id_'+window.localStorage.getItem('user_id'), JSON.stringify(state.models))
 				window.localStorage.setItem(state.model_name+'_updated_user_id_'+window.localStorage.getItem('user_id'), moment().format('YYYY-MM-DD HH:mm:ss'))
+				// console.log('se actualizo localStorage')
+				// console.log(window.localStorage.getItem(state.model_name+'_user_id_'+window.localStorage.getItem('user_id')))
 			}
 
 			index = state.filtered.findIndex(item => {
@@ -255,6 +266,9 @@ export default {
 			if (state.use_local_storage) {
 				url += '/'+window.localStorage.getItem(state.model_name+'_updated_user_id_'+window.localStorage.getItem('user_id'))
 			}
+			if (state.local_storage_canceled) {
+				url += '/null'
+			}
 			if (state.use_per_page) {
 				url += '?page='+state.page 
 			}
@@ -264,6 +278,11 @@ export default {
 					let loaded_models = res.data.models.data
 					if (res.data.models.current_page == 1) {
 						commit('setTotalPages', res.data.models.last_page)
+						if (res.data.models.last_page > 25 && state.use_local_storage) {
+							commit('setLocalStorage', false)
+							commit('setLocalStorageCanceled', true)
+							console.log('se cancelo localStorage porque hay '+state.total_pages+' paginas')
+						}
 					}
 					console.log('se cargo '+state.model_name+' page: '+state.page)
 					commit('incrementPage')

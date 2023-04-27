@@ -117,7 +117,7 @@
 								v-model="model[prop.key]"></b-form-input>
 
 								<bar-code-scanner
-								class="m-l-10"
+								class="m-l-5"
 								v-if="prop.use_bar_code_scanner && hasExtencion('bar_code_scanner')"
 								@setBarCode="setBarCode"></bar-code-scanner>
 							</div>

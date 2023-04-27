@@ -169,6 +169,7 @@ export default {
 			text: 'Aplicar margen de ganancia del proveedor',
 			key: 'apply_provider_percentage_gain',
 			type: 'checkbox',
+			value: 1,
 			v_if: ['provider.percentage_gain', '!=', null],
 			v_if_from_models_store: true,
 			// show_if: {

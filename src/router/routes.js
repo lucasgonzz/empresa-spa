@@ -37,6 +37,19 @@ export default [
 		}
 	},
 	{
+		text: 'Ventas',
+		path: '/ventas-completas',
+		name: 'VentasAll',
+		model_name: 'sale',
+		component: '@/views/Ventas',
+		can: 'sale.index',
+		params: {
+			view: 'todas',
+			sub_view: 'todos',
+		},
+		not_show: true,
+	},
+	{
 		text: 'Proveedores',
 		path: '/proveedores',
 		model_name: 'provider',

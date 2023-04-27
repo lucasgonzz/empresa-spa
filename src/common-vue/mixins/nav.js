@@ -4,6 +4,9 @@ export default {
 	methods: {
 		showRoute(route) {
 			let show = true 
+			if (route.not_show) {
+				return false
+			}
 			if (route.check_is_owner) {
 				show = this.is_owner 
 			}

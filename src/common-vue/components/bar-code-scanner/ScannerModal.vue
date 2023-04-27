@@ -80,10 +80,26 @@ export default {
             navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: 'environment' } })
             .then(stream => {
                 this.source = stream
+                this.setVideoProps()
             })
             .catch(error => this.errorHandler(error))
             this.selectBarcodeDetector()
             // this.scanning = true
+        },
+        setVideoProps() {
+            let bar_code = document.getElementsByClassName('barcode-scanner')[0]
+            console.log('bar_code element')
+            console.log(document.getElementsByClassName('barcode-scanner'))
+            console.log(bar_code)
+            let child = bar_code.childNodes[0]
+            console.log('child element')
+            console.log(child)
+            let video = child.childNodes[4]
+            console.log('video element')
+            console.log(video)
+            vide.setAttribute('playsInline', '')
+            vide.setAttribute('muted', '')
+            vide.setAttribute('autoPlay', '')
         },
         scanned(barcodes) {
             if (barcodes.length) {
