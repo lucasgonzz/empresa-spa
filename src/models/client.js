@@ -57,7 +57,6 @@ export default {
 			type: 'select',
 			value: 0,
 			show: true,
-			not_show: true,
 			use_to_filter_in_modal: true,
 		},
 		{

@@ -54,6 +54,9 @@ import configuration from '@/store/configuration'
 import service from '@/store/service'
 import online_price_type from '@/store/online_price_type'
 import order_payment_method_detail from '@/store/order_payment_method_detail'
+import report from '@/store/report'
+import credit_card from '@/store/credit_card'
+import credit_card_payment_plan from '@/store/credit_card_payment_plan'
 
 Vue.use(Vuex)
 
@@ -118,5 +121,8 @@ export default new Vuex.Store({
         service,
         online_price_type,
         order_payment_method_detail,
+        report,
+        credit_card,
+        credit_card_payment_plan,
     }
 })

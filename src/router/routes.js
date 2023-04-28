@@ -93,6 +93,16 @@ export default [
 			'recipe',
 		]
 	},
+	{
+		text: 'Caja',
+		path: '/caja',
+		name: 'caja',
+		model_name: 'report',
+		component: '@/views/Caja',
+		params: {
+			view: 'reportes',
+		},
+	},
 	// {
 	// 	text: 'Ventas',
 	// 	path: '/ventas',

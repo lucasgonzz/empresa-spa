@@ -27,6 +27,8 @@ export default [
     'sale',
     'order_production_status',
     'address',
+    // 'credit_card',
+    // 'credit_card_payment_plan',
     'order',
     'online_price_type',
     'buyer',

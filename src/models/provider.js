@@ -37,11 +37,13 @@ export default {
 			text: 'Correo',
 			key: 'email',
 			type: 'text',
+			not_show: true,
 		},
 		{
 			text: 'Razon social',
 			key: 'razon_social',
 			type: 'text',
+			not_show: true,
 		},
 		{
 			text: 'Cuit',
@@ -71,7 +73,8 @@ export default {
 			has_many: {
 				text: 'Lista de precios',
 				model_name: 'provider_price_list',
-			}
+			},
+			not_show: true,
 		},
 	],
 	singular_model_name_spanish: 'Proveedor',

@@ -15,6 +15,7 @@ v-if="has_permission">
 		<div
 		class="cont-nav">
 			<week-days-nav
+			:model_name_for_get_models="model_name_for_get_models"
 			:model_name="model_name"></week-days-nav>
 		</div>
 		<div
@@ -55,6 +56,10 @@ export default {
     	show_title: {
     		type: Boolean,
     		default: true,
+    	},
+    	model_name_for_get_models: {
+    		type: String,
+    		default: null,
     	},
     },
     computed: {

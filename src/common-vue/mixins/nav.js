@@ -75,7 +75,7 @@ export default {
 			return ''
 		},
 		getRouteName(route) {
-			if (route.model_name) {
+			if (route.model_name && typeof route.name == 'undefined') {
 				return route.model_name
 			} 
 			return route.name

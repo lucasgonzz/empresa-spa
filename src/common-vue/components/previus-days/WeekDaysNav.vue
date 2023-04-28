@@ -74,6 +74,7 @@ export default {
 	name: 'WeekDaysNav',
     props: {
     	model_name: String,
+    	model_name_for_get_models: String,
     	clear_selected: {
     		type: Boolean,
     		default: false
@@ -108,7 +109,11 @@ export default {
 		},
 		getDays() {
 			this.loading = true 
-			this.$api.get(`previus-day/${this.routeString(this.model_name)}/${this.index}`)
+			let model_name = this.model_name
+			if (this.model_name_for_get_models) {
+				model_name = this.model_name_for_get_models
+			}
+			this.$api.get(`previus-day/${this.routeString(model_name)}/${this.index}`)
 			.then(res => {
 				this.loading = false
 				let days = res.data.days
@@ -138,7 +143,7 @@ export default {
 		},
 		changeFromDate(date) { 
 			if (this.clear_selected) {
-				this.$store.commit('sale/setSelected', [])
+				this.$store.commit(this.model_name+'/setSelected', [])
 			}
 			if (typeof this.$store.state[this.model_name].filtered != 'undefined') {
 				this.$store.commit(this.model_name+'/setFiltered', [])
