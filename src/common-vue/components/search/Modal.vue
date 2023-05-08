@@ -240,14 +240,16 @@ export default {
 		enterSelect() { 
 			if (!this.loading) {
 				if (this.selected_index != -1 && this.results.length) {
-					this.$emit('setSelected', this.results[this.selected_index])
+					// this.$emit('setSelected', this.results[this.selected_index])
+					this.emitSetSelected(this.results[this.selected_index])
 				} else if (this.save_if_not_exist) {
 					this.saveIfNotExist()
 				} else {
-					this.$emit('setSelected', null)
+					this.emitSetSelected(null)
+					// this.$emit('setSelected', null)
 				}
-				this.results = []
-				this.$bvModal.hide(this.modal_id)
+				// this.results = []
+				// this.$bvModal.hide(this.modal_id)
 			} else {
 				this.$toast.error('Espere a que termine la busqueda, por favor')
 			}
@@ -310,10 +312,22 @@ export default {
 		},	
 		onRowSelected(model) {
 			console.log('onRowSelected')
+			this.emitSetSelected(model)
+			// this.$emit('setNotShowModel', true)
+			// this.$emit('setSelected', model)
+			// this.results = []
+			// this.$bvModal.hide(this.modal_id)
+		},
+		emitSetSelected(model) {
+			console.log('emitSetSelected')
+			this.$emit('setNotShowModel', true)
 			this.$emit('setSelected', model)
 			this.results = []
 			this.$bvModal.hide(this.modal_id)
-		}
+			setTimeout(() => {
+				this.$emit('setNotShowModel', false)
+			}, 500)
+		},
 	}
 }
 </script>

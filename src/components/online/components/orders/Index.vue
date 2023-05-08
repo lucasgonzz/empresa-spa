@@ -5,6 +5,7 @@
 		<view-component
 		v-if="view == 'pedidos'"
 		show_previus_days
+		show_btn_pdf 
 		:show_btn_delete="false"
 		order_list_by="order_status"
 		model_name="order">

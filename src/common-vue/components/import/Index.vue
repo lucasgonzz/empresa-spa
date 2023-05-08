@@ -111,6 +111,7 @@
 								type="number"
 								v-model="column.position"></b-form-input>
 								<b-form-checkbox
+								v-if="canIgnore(column)"
 								class="m-t-10"
 								:unchecked_value="0"
 								:value="1"
@@ -232,7 +233,7 @@ export default {
 			return 'Importar '+this.plural(this.model_name)
 		},
 		id() {
-			return 'import-'+this.model_name
+			return 'import-'+this.model_name 
 		},
 	},
 	data() {
@@ -250,6 +251,9 @@ export default {
 		}
 	},
 	methods: {
+		canIgnore(column) {
+			return typeof column.can_not_ignore == 'undefined'
+		},
 		setColumn(a, index) {
 			let last_columns_position = 0
 			this.columns_.forEach(column => {
@@ -280,6 +284,7 @@ export default {
 					description: column.description,
 					position: position,
 					ignored: 0,
+					can_not_ignore: typeof column.can_not_ignore != 'undefined' ? true : undefined,
 				})
 				position++
 			})
@@ -305,8 +310,8 @@ export default {
 			this.columns_.forEach(column => {
 				if (!column.ignored) {
 					form_data.append('prop_'+column.text, column.position)
-					index++
 				} else {
+					// form_data.append('prop_ignore_'+column.text, column.position)
 					console.log('Se ignoro '+column.text)
 				}
 			})

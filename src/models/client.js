@@ -8,6 +8,7 @@ export default {
 			show: true,
 			not_show_on_form: true,
 			use_to_filter_in_search: true,
+			filter_modal_position: 8,
 		},
 		{
 			text: 'Nombre',
@@ -17,6 +18,7 @@ export default {
 			show: true,
 			use_to_filter_in_search: true,
 			use_to_filter_in_modal: true,
+			filter_modal_position: 1,
 		},
 		{
 			text: 'Saldo',
@@ -27,6 +29,7 @@ export default {
 			show: true,
 			is_price: true,
 			use_to_filter_in_modal: true,
+			filter_modal_position: 2,
 		},
 		{
 			text: 'Telefono',
@@ -41,7 +44,7 @@ export default {
 			key: 'email',
 			type: 'text',
 			value: '',
-			show: false,
+			not_show: true,
 		},
 		{
 			text: 'Direccion',
@@ -57,7 +60,9 @@ export default {
 			type: 'select',
 			value: 0,
 			show: true,
+			use_store_models: true,
 			use_to_filter_in_modal: true,
+			filter_modal_position: 6,
 		},
 		{
 			text: 'Localidad',
@@ -65,7 +70,9 @@ export default {
 			type: 'select',
 			value: 0,
 			show: true,
+			use_store_models: true,
 			use_to_filter_in_modal: true,
+			filter_modal_position: 4,
 		},
 		{
 			text: 'Cuit',
@@ -74,6 +81,7 @@ export default {
 			value: '',
 			show: true,
 			use_to_filter_in_search: true,
+			filter_modal_position: 5,
 		},
 		{
 			text: 'Razon social',
@@ -88,7 +96,9 @@ export default {
 			type: 'select',
 			value: 0,
 			not_show: true,
+			use_store_models: true,
 			use_to_filter_in_modal: true,
+			filter_modal_position: 7,
 		},
 		{
 			text: 'Descripcion',
@@ -103,6 +113,8 @@ export default {
 			type: 'select',
 			value: 0,
 			not_show: true,
+			use_store_models: true,
+			filter_modal_position: 3,
 		},
 	],
 	plural_model_name_spanish: 'Clientes',

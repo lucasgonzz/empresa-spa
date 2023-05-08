@@ -59,6 +59,16 @@ export default {
 			console.log(this.coordinates)
 		},
 		uploadImage() {
+
+			// let cropData = this.$refs.cropper.getCropData()
+			// cropData.x = Math.round(cropData.x * 100) / 100
+			// cropData.y = Math.round(cropData.y * 100) / 100
+			// cropData.width = Math.round(cropData.width * 100) / 100
+			// cropData.height = Math.round(cropData.height * 100) / 100
+
+			console.log('cropData')
+			console.log(cropData)
+
 			this.loading = true
 			this.$api.post(this.getImageUploadUrl(this.prop), {
 				...this.coordinates,

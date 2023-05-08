@@ -57,6 +57,10 @@ import order_payment_method_detail from '@/store/order_payment_method_detail'
 import report from '@/store/report'
 import credit_card from '@/store/credit_card'
 import credit_card_payment_plan from '@/store/credit_card_payment_plan'
+import commission from '@/store/commission'
+import seller_commission from '@/store/seller_commission'
+import sale_type from '@/store/sale_type'
+import chart from '@/store/chart'
 
 Vue.use(Vuex)
 
@@ -124,5 +128,9 @@ export default new Vuex.Store({
         report,
         credit_card,
         credit_card_payment_plan,
+        commission,
+        seller_commission,
+        sale_type,
+        chart,
     }
 })

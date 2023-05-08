@@ -62,12 +62,16 @@
 							</p>
 						</div>
 						<b-button
-						v-else-if="prop.button"
+						v-else-if="showProperty(prop, models[data.index]) && prop.button"
 						:variant="prop.button.variant"
 						@click="callMethod(prop, models[data.index])">
 							<i
 							v-if="prop.button.icon"
 							:class="'icon-'+prop.button.icon"></i>
+							<span
+							v-else-if="prop.button.button_text">
+								{{ prop.button.button_text }}
+							</span>
 							<span
 							v-else>
 								{{ propertyText(models[data.index], prop) }}
@@ -87,9 +91,9 @@
 						</span>
 					</template>
 
-					<template #cell(created_at)="data">
+					<template #cell(updated_at)="data">
 						<span>
-							{{ date(models[data.index].created_at) }}
+							{{ date(models[data.index].updated_at) }}
 						</span>
 					</template>
 
@@ -245,6 +249,10 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+		show_created_at: {
+			type: Boolean,
+			default: true,
+		},
 	},
 	data() {
 		return {
@@ -301,10 +309,12 @@ export default {
 				})
 			})
 
-			fields.push({
-				key: 'created_at',
-				label: 'Creado',
-			})
+			if (this.show_created_at) {
+				fields.push({
+					key: 'updated_at',
+					label: 'Actualizado',
+				})
+			}
 
 			if (this.show_pivot_created_at) {
 				fields.push({

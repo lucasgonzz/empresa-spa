@@ -2,14 +2,14 @@
 <div 
 class="buttons-listado">
 	<!-- Online -->
-	<btn-loader
+	<!-- <btn-loader
 	v-if="has_online"
 	@clicked="setArticleOnline(model)"
 	:variant="isArticleOnline(model)"
 	size="sm"
 	icon="not"
 	:block="false"
-	:loader="loading_online"></btn-loader>
+	:loader="loading_online"></btn-loader> -->
 
 	<btn-loader
 	v-if="has_online"

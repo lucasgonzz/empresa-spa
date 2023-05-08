@@ -447,7 +447,7 @@ export default {
 							return finded_model[prop_name]	
 						}
 						return null
-					} else {
+					} else if (model[relationship] && model[relationship][prop_name]) {
 						return model[relationship][prop_name] 
 					}
 					// let _model = this.$store.state[relationship].models.find(model_ => {

@@ -11,6 +11,8 @@ class="p-l-20 p-r-20">
     :show_btn_edit="false"
     @showDetails="showDetails">
         <template v-slot:default="slotProps">
+            <btn-payment-methods-info
+            :model="slotProps.model"></btn-payment-methods-info>
             <b-button
             size="sm"
             v-if="canDelete(slotProps.model)"
@@ -30,6 +32,7 @@ export default {
     mixins: [current_acounts],
     components: {
         TableComponent,
+        BtnPaymentMethodsInfo: () => import('@/components/common/current-acounts/BtnPaymentMethodsInfo')
     },
     computed: {
         model_name() {

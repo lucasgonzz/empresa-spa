@@ -161,6 +161,9 @@ export default {
 			},
 			set(value) {
 				this.$store.commit(this.model_name+'/setIsSelecteable', value)
+				if (!this.is_selectable) {
+					this.$store.commit(this.model_name+'/setSelected', [])
+				}
 			},
 		},
 		can_filter_modal() {

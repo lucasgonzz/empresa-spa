@@ -15,9 +15,11 @@ export default {
 			let columns = [
 				{
 					text: 'Codigo',
+					can_not_ignore: true,
 				},
 				{
 					text: 'Nombre',
+					can_not_ignore: true,
 				},
 				{
 					text: 'Telefono',
@@ -47,6 +49,9 @@ export default {
 					text: 'Descripcion',
 				},
 				{
+					text: 'Vendedor',
+				},
+				{
 					text: 'Tipo de precio',
 				},
 			]
@@ -61,6 +66,7 @@ export default {
 			return [
 				'price_type/getModels',
 				'location/getModels',
+				'seller/getModels',
 			]
 		},
  	},

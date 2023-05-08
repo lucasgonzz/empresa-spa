@@ -2,7 +2,8 @@
 	<b-row>
 		<b-col
 		cols="12">
-			<div>
+			<div
+			class="sale-details-buttons">
 				<btn-loader
 				class="m-r-10"
 				text="Actualizar venta"
@@ -173,4 +174,8 @@ export default {
 	div
 		display: flex
 		align-items: center
+.sale-details-buttons
+	.btn 
+		@media screen and (max-width: 992px)
+			margin-bottom: 15px
 </style>

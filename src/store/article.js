@@ -278,7 +278,7 @@ export default {
 					let loaded_models = res.data.models.data
 					if (res.data.models.current_page == 1) {
 						commit('setTotalPages', res.data.models.last_page)
-						if (res.data.models.last_page > 25 && state.use_local_storage) {
+						if (res.data.models.last_page > 15 && state.use_local_storage) {
 							commit('setLocalStorage', false)
 							commit('setLocalStorageCanceled', true)
 							console.log('se cancelo localStorage porque hay '+state.total_pages+' paginas')

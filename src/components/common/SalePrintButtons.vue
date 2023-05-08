@@ -2,14 +2,20 @@
 	<b-button-group
 	v-if="sale">
 		<b-button
-		@click="salePdf(sale.id, 0)"
+		@click="salePdf(sale.id, 0, 0)"
 		variant="outline-danger">
 			Sin precios
 		</b-button>
 		<b-button
-		@click="salePdf(sale.id, 1)"
+		@click="salePdf(sale.id, 1, 0)"
 		variant="danger">
 			Con precios
+		</b-button>
+		<b-button
+		v-if="commissions.length"
+		@click="salePdf(sale.id, 1, 1)"
+		variant="outline-danger">
+			Con Comisiones
 		</b-button>
 		<b-button
 		v-if="sale.afip_ticket"
@@ -29,14 +35,15 @@ export default {
 	props: {
 		sale: Object,
 	},
+	computed: {
+		commissions() {
+			return this.$store.state.commission.models
+		},
+	},
 	methods: {
-		salePdf(sale_id, with_prices) {
-			if (this.user_configuration.limit_items_in_sale_per_page) {
-				this.$bvModal.show('print-sales')
-			} else {
-	            let link = process.env.VUE_APP_API_URL+'/sale/pdf/'+sale_id+'/'+with_prices
-	            window.open(link)
-			}
+		salePdf(sale_id, with_prices, with_seller_commissions) {
+            let link = process.env.VUE_APP_API_URL+'/sale/pdf/'+sale_id+'/'+with_prices+'/'+with_seller_commissions
+            window.open(link) 
 		},
 		ticketPdf(sale_id) {
             let link = process.env.VUE_APP_API_URL+'/sale/ticket-pdf/'+sale_id

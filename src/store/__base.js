@@ -139,7 +139,7 @@ export default {
 				state.filtered.splice(index, 1)
 			}
 
-			if (state.selected_model) {
+			if (state.selected_model && state.selected_model[state.plural_model_name]) {
 				index = state.selected_model[state.plural_model_name].findIndex(model => {
 					return model.id == state.delete.id
 				})

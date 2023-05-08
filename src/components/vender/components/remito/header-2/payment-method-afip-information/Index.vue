@@ -5,6 +5,7 @@
 		<afip-information></afip-information>
 		<employee></employee>
 		<select-address></select-address>
+		<sale-type></sale-type>
 	</div>
 </template>
 <script>
@@ -14,6 +15,7 @@ export default {
 		AfipInformation: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/AfipInformation'),
 		Employee: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/Employee'),
 		SelectAddress: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/Address'),
+		SaleType: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/SaleType'),
 	}
 }
 </script>

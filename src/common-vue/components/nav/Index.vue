@@ -3,7 +3,7 @@
     v-if="show"
     class="nav-component">
         <b-navbar 
-        toggleable="md">
+        toggleable="lg">
             <b-navbar-brand
             :to="{name: route_index}">
                 <img src="@/assets/logo.png" alt="">

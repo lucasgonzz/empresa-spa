@@ -26,7 +26,11 @@
 		</list>
 
 		<footer-component
-		:model_name="model_name"></footer-component>
+		:model_name="model_name">
+			<template v-slot:footer_buttons>
+				<slot name="footer_buttons"></slot>
+			</template>
+		</footer-component>
 	</b-modal>
 </div>
 </template>

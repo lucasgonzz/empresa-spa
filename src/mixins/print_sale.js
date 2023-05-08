@@ -8,9 +8,10 @@ export default {
 		},
 	},
 	methods: {
-		salePdf(sale_id, with_prices) {
-            let link = process.env.VUE_APP_API_URL+'/sale/pdf/'+sale_id+'/'+with_prices
-            window.open(link)
+		salePdf(sale_id, with_prices, with_seller_commissions) {
+			console.log('with_seller_commissions '+with_seller_commissions) 
+            let link = process.env.VUE_APP_API_URL+'/sale/pdf/'+sale_id+'/'+with_prices+'/'+with_seller_commissions
+            window.open(link) 
 		},
 		ticketPdf(sale_id) {
             let link = process.env.VUE_APP_API_URL+'/sale/ticket-pdf/'+sale_id

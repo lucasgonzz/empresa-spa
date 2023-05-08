@@ -67,6 +67,9 @@ export default [
 		name: 'client',
 		component: '@/views/Client',
 		can: 'client.index',
+		params: {
+			view: 'clientes',
+		}
 	},
 	{
 		text: 'Presupuestos',

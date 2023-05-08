@@ -1,5 +1,6 @@
 <template>
-	<div>
+	<div
+	v-if="view == 'reportes'">
 		<previus-days
 		model_name_for_get_models="sale"
 		model_name="report"></previus-days>

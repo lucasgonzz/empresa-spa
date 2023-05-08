@@ -1,11 +1,13 @@
 <template>
 	<div 
 	class="j-end">
-		<b-button
-		@click="create(model_name)"
-		variant="primary">
-			Nuevo {{ singular(model_name) }}
-		</b-button>
+		<slot name="footer_buttons">
+			<b-button
+			@click="create(model_name)"
+			variant="primary">
+				Nuevo {{ singular(model_name) }}
+			</b-button>
+		</slot>
 	</div>
 </template>
 <script>

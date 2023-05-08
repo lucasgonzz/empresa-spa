@@ -21,9 +21,9 @@ export default {
 			if (this.can('caja.reports')) {
 				items.push({name: 'reportes', action: 'report/getModels'})
 			}
-			// if (this.can('caja.charts')) {
-			// 	items.push({name: 'estadisticas'})
-			// } 
+			if (this.can('caja.charts')) {
+				items.push({name: 'estadisticas', action: 'chart/getModels'})
+			} 
 			return items
 		}
 	},

@@ -31,10 +31,10 @@ export default {
 		afip_information_id: 0,
 		employee_id: 0,
 		address_id: 0,
+		sale_type_id: 0,
 
 		returned_articles: [],
 
-		sale_type: null,
 		vendiendo: false,
 		sale: null,
 	},
@@ -130,8 +130,8 @@ export default {
 				state.returned_articles.splice(index, 1, value)
 			}
 		},
-		setSaleType(state, value) {
-			state.sale_type = value
+		setSaleTypeId(state, value) {
+			state.sale_type_id = value
 		},
 		setClient(state, value) {
 			state.client = value
@@ -210,7 +210,7 @@ export default {
 				surchages_id: state.surchages_id,
 				save_current_acount: state.save_current_acount,
 				make_current_acount_pago: state.make_current_acount_pago,
-				sale_type: state.sale_type,
+				sale_type_id: state.sale_type_id,
 				discounts_in_services: state.discounts_in_services,
 				surchages_in_services: state.surchages_in_services,
 				current_acount_payment_method_id: state.current_acount_payment_method_id,
@@ -226,7 +226,7 @@ export default {
 				commit('setItems', [])
 				commit('setDiscountsId', [])
 				commit('setSurchagesId', [])
-				commit('setSaleType', 1)
+				// commit('setSaleTypeId', 1)
 				commit('setClient', null)
 				commit('setTotal', 0)
 				commit('sale/add', sale, {root: true})

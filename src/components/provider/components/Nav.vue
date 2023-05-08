@@ -20,10 +20,10 @@ export default {
 		items() {
 			let items = []
 			if (this.can('provider.index') || this.can('provider.create')) {
-				items.push({name: 'proveedores', action: 'provider/getModels'})
+				items.push({name: 'proveedores', call_models: 'provider'})
 			}
 			if (this.can('provider_order.index') || this.can('provider_order.create')) {
-				items.push({name: 'pedidos', action: 'provider_order/getModels'})
+				items.push({name: 'pedidos', call_models: 'provider_order'})
 			} 
 			return items
 		}

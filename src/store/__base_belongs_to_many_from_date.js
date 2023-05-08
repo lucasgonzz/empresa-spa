@@ -3,25 +3,32 @@ axios.defaults.withCredentials = true
 axios.defaults.baseURL = process.env.VUE_APP_API_URL
 
 import moment from 'moment'
-import generals from '@/mixins/common-vue/generals'
+import generals from '@/common-vue/mixins/generals'
 export default {
 	namespaced: true,
 	state: {
 		model_name: '',
-		plural_model_name: '',
+		from_dates: true,
+		is_selecteable: false,
+
+		// Se usa cuando es belongs_to_many_from_dates. Por ejemplo para ver los pagos de un cliente
+		plural_model_name: 's',
+		selected_model: null,
+		from_date: moment().subtract(1, 'months').format('YYYY-MM-DD'),
+		until_date: moment().format('YYYY-MM-DD'),
+ 
+		// from_date: moment().format('YYYY-MM-DD'),
+		// until_date: '',
 
 		models: [],
 		model: {},
 		selected: [],
 		filtered: [],
 		is_filtered: false,
-		selected_model: null,
-
-		from_date: moment().subtract(1, 'months').format('YYYY-MM-DD'),
-		until_date: moment().format('YYYY-MM-DD'),
 
 		delete: null,
-		delete_image: null,
+		delete_image_prop: null,
+		delete_image_model: null,
 		
 		prop_model_to_delete: null,
 
@@ -63,6 +70,9 @@ export default {
 				state.models = []
 			}
 		},
+		setSelectedModel(state, value) {
+			state.selected_model = value 
+		},
 		setSelected(state, value) {
 			state.selected = value
 		},
@@ -71,9 +81,6 @@ export default {
 		},
 		setIsFiltered(state, value) {
 			state.is_filtered = value
-		},
-		setSelectedModel(state, value) {
-			state.selected_model = value 
 		},
 		add(state, value) {
 			let index = state.models.findIndex(item => {
@@ -96,13 +103,32 @@ export default {
 			state.delete = value
 		},
 		delete(state) {
-			let index = state.selected_model[state.plural_model_name].findIndex(model => {
+			// Models
+			let index = state.models.findIndex(model => {
 				return model.id == state.delete.id
 			})
-			state.selected_model[state.plural_model_name].splice(index, 1)
+			state.models.splice(index, 1)
+
+			// Filtereds
+			index = state.filtered.findIndex(model => {
+				return model.id == state.delete.id
+			})
+			if (index != -1) {
+				state.models.splice(index, 1)
+			}
+
+			if (state.selected_model && state.selected_model[state.plural_model_name]) {
+				index = state.selected_model[state.plural_model_name].findIndex(model => {
+					return model.id == state.delete.id
+				})
+				state.selected_model[state.plural_model_name].splice(index, 1)
+			}
 		},
-		setDeleteImage(state, value) {
-			state.delete_image = value
+		setDeleteImageProp(state, value) {
+			state.delete_image_prop = value
+		},
+		setDeleteImageModel(state, value) {
+			state.delete_image_model = value
 		},
 		deleteImage(state, value) {
 			let index = state.models.images.findIndex(model => {
@@ -134,7 +160,17 @@ export default {
 	actions: {
 		getModels({ commit, state }) {
 			commit('setLoading', true)
-			let url = '/api/'+generals.methods.routeString(state.model_name)+'/'+state.selected_model.id+'/'+state.from_date
+			let url = '/api/'+generals.methods.routeString(state.model_name)
+			if (state.plural_model_name) {
+				if (state.selected_model) {
+					url += '/'+state.selected_model.id
+				} else {
+					url += '/0'
+				}
+			}
+			if (state.from_dates) {
+				url += '/'+state.from_date
+			} 
 			if (state.until_date != '') {
 				url += '/'+state.until_date
 			}
@@ -157,8 +193,17 @@ export default {
 				console.log(err)
 			})
 		},
-		deleteImage({ commit, state }) {
-			return axios.delete(`/api/delete-current-image/${generals.methods.routeString(state.model_name)}/${state.model.id}`)
+		deleteImageProp({ commit, state }) {
+			return axios.delete(`/api/delete-image-prop/${generals.methods.routeString(state.model_name)}/${state.model.id}/${state.delete_image_prop}`)
+			.then((res) => {
+				commit('add', res.data.model)
+			})
+			.catch((err) => {
+				console.log(err)
+			})
+		},
+		deleteImageModel({ commit, state }) {
+			return axios.delete(`/api/delete-image-model/${generals.methods.routeString(state.model_name)}/${state.model.id}/${state.delete_image_model.id}`)
 			.then((res) => {
 				commit('add', res.data.model)
 			})

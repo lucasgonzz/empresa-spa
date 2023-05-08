@@ -16,6 +16,7 @@ export default {
 			text: 'Categoria',
 			key: 'category_id',
 			type: 'search',
+			use_store_models: true,
 		},
 	],
 	singular_model_name_spanish: 'Sub Categoria',

@@ -179,6 +179,10 @@
 								v-if="prop.button.icon"
 								:class="'icon-'+prop.button.icon"></i>
 								<span
+								v-else-if="prop.button.button_text">
+									{{ prop.button.button_text }}
+								</span>
+								<span
 								v-else>
 									{{ propertyText(model, prop) }}
 								</span>

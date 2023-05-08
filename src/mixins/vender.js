@@ -30,12 +30,6 @@ export default {
         maked_sale() {
             return this.$store.state.vender.sale
         },
-		sale_types() {
-			return this.$store.state.sale_types.sale_types
-		},
-		has_discounts_or_sale_types() {
-            return this.discounts.length || this.sale_types.length
-		},
 		save_current_acount: {
 			get() {
 				return this.$store.state.vender.save_current_acount
@@ -106,6 +100,14 @@ export default {
 			}, 
 			set(value) {
 				this.$store.commit('vender/setAddressId', value)
+			},
+		},
+		sale_type_id: {
+			get() {
+				return this.$store.state.vender.sale_type_id
+			}, 
+			set(value) {
+				this.$store.commit('vender/setSaleTypeId', value)
 			},
 		},
 	},

@@ -19,6 +19,7 @@
 		:show_btn_create="show_btn_create"
 		@callSearchModal="callSearchModal"
 		@setQuery="setQuery"
+		@setNotShowModel="setNotShowModel"
 		@setSelected="setSelected"></search-modal>
 
 		<div
@@ -115,6 +116,7 @@ export default {
 			models_to_search: [],
 			preview_results: [],
 			selected_model: null,
+			not_show_modal: false,
 		}
 	},
 	computed: {
@@ -141,6 +143,10 @@ export default {
 		this.setSelectedModelProp()
 	},
 	methods: {
+		setNotShowModel(value) {
+			console.log('SETEANDO not_show_modal con '+value)
+			this.not_show_modal = value
+		},
 		modelSaved(model) {
 			if (this.prop.is_between) {
 				if (this.prop.is_between.parent_model_prop) {
@@ -190,7 +196,7 @@ export default {
 			}
 		},
 		setModelsToSearch() {
-			console.log('setModelsToSearch') 
+			// console.log('setModelsToSearch') 
 			let models = []
 			if (this.prop && this.prop.depends_on && this.model) {
 				if (!this.prop.search_depends_on_from_api) {
@@ -224,7 +230,6 @@ export default {
 				models = this.modelsStoreFromName(this.model_name)
 			}
 			this.models_to_search = models 
-			console.log(this.models_to_search) 
 		},
 		setSelectedModelProp() {
 			if (this.show_selected) {
@@ -250,12 +255,16 @@ export default {
 			this.query = value 
 		},
 		callSearchModal() {
-			this.setModelsToSearch()
-			this.setPreviewResults()
-			this.$bvModal.show(this.id+'-search-modal')
-			setTimeout(() => {
-				document.getElementById(this.id+'-search-modal-input').focus()
-			}, 100)
+			console.log('CALL SEARCH MODAL')
+			console.log('not_show_modal: '+this.not_show_modal)
+			if (!this.not_show_modal) {
+				this.setModelsToSearch()
+				this.setPreviewResults()
+				this.$bvModal.show(this.id+'-search-modal')
+				setTimeout(() => {
+					document.getElementById(this.id+'-search-modal-input').focus()
+				}, 100)
+			}
 		},
 		setSelected(model) {
 			this.selected_model = model 

@@ -28,15 +28,19 @@ export default {
 			let columns = [
 				{
 					text: 'Numero',
+					can_not_ignore: true,
 				},
 				{
 					text: 'Codigo de barras',
+					can_not_ignore: true,
 				},
 				{
 					text: 'Codigo de proveedor',
+					can_not_ignore: true,
 				},
 				{
 					text: 'Nombre',
+					can_not_ignore: true,
 				},
 				{
 					text: 'Categoria',

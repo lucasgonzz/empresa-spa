@@ -11,7 +11,7 @@
     "@undecaf/vue-barcode-scanner": "^0.9.3",
     "axios": "^1.2.1",
     "bootstrap-vue": "^2.23.1",
-    "chart.js": "^2.9.3",
+    "chart.js": "^2.9.4",
     "core-js": "^3.6.5",
     "laravel-echo": "^1.8.1",
     "moment": "^2.29.4",

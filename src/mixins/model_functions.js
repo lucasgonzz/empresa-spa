@@ -4,6 +4,17 @@ export default {
 		getFunctionValue(prop, model) {
 			return this[prop.function](model)
 		},
+        showSellerCommissionSale(seller_commission) {
+            this.$store.commit('auth/setMessage', 'Cargando venta')
+            this.$store.commit('auth/setLoading', true)
+            this.$api.get('sale/'+seller_commission.sale_id)
+            .then(res => {
+                this.setModel(res.data.model, 'sale')
+            })
+            .catch(err => {
+                console.log(err)
+            })
+        },
         costoReal(article){
             let cost = Number(article.cost) 
             if (article.cost_in_dollars) {

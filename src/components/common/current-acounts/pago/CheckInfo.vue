@@ -1,7 +1,7 @@
 <template>
 	<div 
 	v-if="payment_method.current_acount_payment_method_id == 1"
-	class="check card-moderna p-15 m-t-15">
+	class="check card-moderna p-15 m-t-15 s-2 b-r-1">
 		<b-form-row>
 			<b-col
 			cols="12">
@@ -54,5 +54,7 @@ export default {
 </script>
 <style lang="sass">
 .check 
-	padding: 15px !important
+	[class^='col-']
+		margin-bottom: 10px !important
+
 </style>
