@@ -2,12 +2,19 @@
 	<div
 	class="features">
 		<div class="titles">
-			<h4>
+			<h4
+			class="animate__animated animate__fadeIn">
 				Conoce nuestros Planes
 			</h4>
-			<!-- <h5>
-				Accede a todas las funcionalidades solo con tu plan.
-			</h5> -->
+			<h5>
+				Tenes 1 mes de prueba GRATIS.
+			</h5>
+			<h5>
+				Sin tarjetas de credito.
+			</h5>
+			<h5>
+				No cobramos ninguna instalacion.
+			</h5>
 		</div>
 		<div class="cont-features">
 			<plan

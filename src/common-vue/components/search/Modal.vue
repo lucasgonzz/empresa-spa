@@ -23,7 +23,8 @@ hide-footer
 			:prop="prop"
 			:model_name="model_name"></btn-create-model>
 		</div>
-		<div>
+		<div
+		v-if="!saving_if_not_exist">
 			<div
 			v-if="loading || results.length">
 				<p
@@ -57,8 +58,14 @@ hide-footer
 			</div>
 		</div>
 		<div
+		class="all-center-md"
 		v-if="saving_if_not_exist">
-			Guardando
+			<b-spinner
+			variant="primary"></b-spinner>
+			<span
+			class="p-l-15">
+				Guardando {{ singular(model_name) }}
+			</span>
 		</div>
 	</div>
 </b-modal>
@@ -149,7 +156,7 @@ export default {
 			this.$emit('callSearchModal')
 		},
 		callSearch(e) {
-			if (e.key != 'ArrowDown' && e.key != 'ArrowUp') {
+			if (e.key != 'ArrowDown' && e.key != 'ArrowUp' && e.key != 'Enter') {
 				this.loading = true 
 				if (this.interval) {
 		            window.clearInterval(this.interval)
@@ -289,6 +296,7 @@ export default {
 				} else {
 					this.$store.commit(this.model_name+'/add', res.data.model)
 				}
+				this.$bvModal.hide(this.modal_id)
 			})
 			.catch(err => {
 				this.saving_if_not_exist = false

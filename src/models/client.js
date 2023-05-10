@@ -67,9 +67,7 @@ export default {
 		{
 			text: 'Localidad',
 			key: 'location_id',
-			type: 'select',
-			value: 0,
-			show: true,
+			type: 'search',
 			use_store_models: true,
 			use_to_filter_in_modal: true,
 			filter_modal_position: 4,

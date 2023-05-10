@@ -269,7 +269,7 @@
 		
 		<slot :model="model"></slot>
 
-		<slot 
+		<!-- <slot 
 		v-if="!from_has_many"
 		name="buttons">
 			<btn-loader
@@ -285,7 +285,7 @@
 			:model_name="model_name"
 			:model="model"
 			:modal="'delete-'+model_name"></btn-delete>
-		</slot>
+		</slot> -->
 		
 	</div>
 </template>
@@ -297,7 +297,7 @@ import Cards from '@/common-vue/components/display/cards/Index'
 import TableComponent from '@/common-vue/components/display/TableComponent'
 import Images from '@/common-vue/components/model/images/Index'
 import BtnLoader from '@/common-vue/components/BtnLoader'
-import BtnDelete from '@/common-vue/components/BtnDelete'
+// import BtnDelete from '@/common-vue/components/BtnDelete'
 import Model from '@/common-vue/components/model/Index'
 
 import model_functions from '@/common-vue/mixins/model_functions'
@@ -579,80 +579,81 @@ export default {
 			if (prop.use_to_check_if_is_repeat) {
 				this.checkIsRepeat(prop)
 			} else {
-				this.save()
+				// this.save()
+				this.$emit('save')
 			}
 		},
-		save() {
-			if (this.check() && !this.loading) {
-				this.loading = true 
-				let route = this.routeString(this.model_name)
-				let model_to_send = this.getModelToSend()
-				if (this.model.id) {
-					this.$api.put(route+'/'+this.model.id, model_to_send)
-					.then(res => {
-						this.loading = false 
-						this.$toast.success('Actualizado')
-						if (this.has_many_parent_model) {
-							let index = this.has_many_parent_model[this.has_many_prop.key].findIndex(model => {
-								return model.id == this.model.id 
-							})
-							if (index != -1) {
-								this.has_many_parent_model[this.has_many_prop.key].splice(index, 1, res.data.model)
-							}
-						} else {
-							if (this.model_name == 'user') {
-								this.$store.commit('auth/setUser', res.data.model)
-							} else {
-								this.$store.commit(this.replaceGuion(this.model_name)+'/add', res.data.model)
-							}
-						}
-						this.$bvModal.hide(this.model_name)
-						this.callActions(res.data.model)
-					})
-					.catch(err => {
-						console.log(err)
-						this.$toast.error('Hubo un Error')
-						this.loading = false
-					})
-				} else {
-					this.$api.post(route, model_to_send)
-					.then(res => {
-						this.loading = false 
-						this.$toast.success('Guardado')
-						let created_model = res.data.model 
-						if (this.has_many_parent_model) {
-							this.$set(this.has_many_parent_model, this.has_many_prop.key, this.has_many_parent_model[this.has_many_prop.key].concat([created_model]))
-							if (!this.has_many_parent_model.id) {
-								if (this.has_many_parent_model.childrens) {
-									this.has_many_parent_model.childrens.push({
-										model_name: this.has_many_prop.has_many.model_name,
-										temporal_id: created_model.temporal_id
-									})
-									console.log('se agrego el id '+created_model.temporal_id)
-								} else {
-									this.has_many_parent_model.childrens = []
-									console.log('se creo la prop childrens')
-									this.has_many_parent_model.childrens.push({
-										model_name: this.has_many_prop.has_many.model_name,
-										temporal_id: created_model.temporal_id
-									})
-									console.log('se agrego el id '+created_model.temporal_id)
-								}
-							}
-						} else {
-							this.$store.commit(this.replaceGuion(this.model_name)+'/add', created_model)
-						}
-						this.$bvModal.hide(this.model_name)
-						this.callActions(created_model)
-					})
-					.catch(err => {
-						console.log(err)
-						this.$toast.error('Hubo un error')
-						this.loading = false
-					})
-				}
-			}
-		},
+		// save() {
+		// 	if (this.check() && !this.loading) {
+		// 		this.loading = true 
+		// 		let route = this.routeString(this.model_name)
+		// 		let model_to_send = this.getModelToSend()
+		// 		if (this.model.id) {
+		// 			this.$api.put(route+'/'+this.model.id, model_to_send)
+		// 			.then(res => {
+		// 				this.loading = false 
+		// 				this.$toast.success('Actualizado')
+		// 				if (this.has_many_parent_model) {
+		// 					let index = this.has_many_parent_model[this.has_many_prop.key].findIndex(model => {
+		// 						return model.id == this.model.id 
+		// 					})
+		// 					if (index != -1) {
+		// 						this.has_many_parent_model[this.has_many_prop.key].splice(index, 1, res.data.model)
+		// 					}
+		// 				} else {
+		// 					if (this.model_name == 'user') {
+		// 						this.$store.commit('auth/setUser', res.data.model)
+		// 					} else {
+		// 						this.$store.commit(this.replaceGuion(this.model_name)+'/add', res.data.model)
+		// 					}
+		// 				}
+		// 				this.$bvModal.hide(this.model_name)
+		// 				this.callActions(res.data.model)
+		// 			})
+		// 			.catch(err => {
+		// 				console.log(err)
+		// 				this.$toast.error('Hubo un Error')
+		// 				this.loading = false
+		// 			})
+		// 		} else {
+		// 			this.$api.post(route, model_to_send)
+		// 			.then(res => {
+		// 				this.loading = false 
+		// 				this.$toast.success('Guardado')
+		// 				let created_model = res.data.model 
+		// 				if (this.has_many_parent_model) {
+		// 					this.$set(this.has_many_parent_model, this.has_many_prop.key, this.has_many_parent_model[this.has_many_prop.key].concat([created_model]))
+		// 					if (!this.has_many_parent_model.id) {
+		// 						if (this.has_many_parent_model.childrens) {
+		// 							this.has_many_parent_model.childrens.push({
+		// 								model_name: this.has_many_prop.has_many.model_name,
+		// 								temporal_id: created_model.temporal_id
+		// 							})
+		// 							console.log('se agrego el id '+created_model.temporal_id)
+		// 						} else {
+		// 							this.has_many_parent_model.childrens = []
+		// 							console.log('se creo la prop childrens')
+		// 							this.has_many_parent_model.childrens.push({
+		// 								model_name: this.has_many_prop.has_many.model_name,
+		// 								temporal_id: created_model.temporal_id
+		// 							})
+		// 							console.log('se agrego el id '+created_model.temporal_id)
+		// 						}
+		// 					}
+		// 				} else {
+		// 					this.$store.commit(this.replaceGuion(this.model_name)+'/add', created_model)
+		// 				}
+		// 				this.$bvModal.hide(this.model_name)
+		// 				this.callActions(created_model)
+		// 			})
+		// 			.catch(err => {
+		// 				console.log(err)
+		// 				this.$toast.error('Hubo un error')
+		// 				this.loading = false
+		// 			})
+		// 		}
+		// 	}
+		// },
 		// hasPermission() {
 		// 	console.log('check_permissions: '+this.check_permissions)
 		// 	if (this.check_permissions) {
@@ -664,34 +665,34 @@ export default {
 		// 	}
 		// 	return true 
 		// },
-		getModelToSend() {
-			let model_to_send = {
-				...this.model
-			}
-			let store = this.$store.state[this.model_name]
-			if (typeof store != 'undefined') {
-				let selected_model = this.$store.state[this.model_name].selected_model 
-				if (typeof selected_model != 'undefined') {
-					model_to_send.model_id = selected_model.id 
-				}
-			}
-			return model_to_send
-		},
-		check() {
-			let ok = true
-			this.properties.forEach(prop => {
-				if (prop.required) {
-					if (ok && this.propType(prop, this.model) == 'select' && this.model[prop.key] == 0) {
-						this.$toast.error('Ingrese '+this.propText(prop))
-						ok = false
-					} else if (ok && this.model[prop.key] == '') {
-						this.$toast.error('Ingrese '+this.propText(prop))
-						ok = false
-					}
-				} 
-			})
-			return ok
-		},
+		// getModelToSend() {
+		// 	let model_to_send = {
+		// 		...this.model
+		// 	}
+		// 	let store = this.$store.state[this.model_name]
+		// 	if (typeof store != 'undefined') {
+		// 		let selected_model = this.$store.state[this.model_name].selected_model 
+		// 		if (typeof selected_model != 'undefined') {
+		// 			model_to_send.model_id = selected_model.id 
+		// 		}
+		// 	}
+		// 	return model_to_send
+		// },
+		// check() {
+		// 	let ok = true
+		// 	this.properties.forEach(prop => {
+		// 		if (prop.required) {
+		// 			if (ok && this.propType(prop, this.model) == 'select' && this.model[prop.key] == 0) {
+		// 				this.$toast.error('Ingrese '+this.propText(prop))
+		// 				ok = false
+		// 			} else if (ok && this.model[prop.key] == '') {
+		// 				this.$toast.error('Ingrese '+this.propText(prop))
+		// 				ok = false
+		// 			}
+		// 		} 
+		// 	})
+		// 	return ok
+		// },
 		checkIsRepeat(prop) {
 			if (prop.use_to_check_if_is_repeat) {
 				let finded = this.modelsStoreFromName(this.model_name).find(model => {
@@ -703,12 +704,12 @@ export default {
 				}
 			} 
 		},
-		callActions(model) {
-			this.actions_after_save.forEach(action => {
-				this.$store.dispatch(action)
-			})
-			this.$emit('modelSaved', model)
-		}
+		// callActions(model) {
+		// 	this.actions_after_save.forEach(action => {
+		// 		this.$store.dispatch(action)
+		// 	})
+		// 	this.$emit('modelSaved', model)
+		// }
 	},
 	components: {
 		ModelComponent: () => import('@/common-vue/components/model/Index'),
@@ -720,7 +721,7 @@ export default {
 		TableComponent,
 		Images,
 		BtnLoader,
-		BtnDelete,
+		// BtnDelete,
 		BarCodeScanner: () => import('@/common-vue/components/bar-code-scanner/Index'),
 	}
 }

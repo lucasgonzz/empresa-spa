@@ -58,8 +58,7 @@ export default {
 		{
 			text: 'Localidad',
 			key: 'location_id',
-			type: 'select',
-			value: 0,
+			type: 'search',
 		},
 		{
 			text: 'IVA',

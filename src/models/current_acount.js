@@ -18,13 +18,20 @@ export default {
 			text: 'Numero',
 			key: 'numero',
 			type: 'text',
-			value: '',
-			show: true,
-			title_prefix: 'Rec N°',
+			// value: '',
+			// show: true,
+			// title_prefix: 'Rec N°',
+			// function: 'showSellerCommissionSale',
 			button: {
 				variant: 'info',
 				emit: 'showDetails',
 			}
+		},
+		{
+			text: 'Estado',
+			key: 'status',
+			type: 'text',
+			function: 'currentAcountStatus',
 		},
 		{
 			text: 'Debe',

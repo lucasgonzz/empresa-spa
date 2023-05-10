@@ -1,13 +1,13 @@
 <template>
 	<div
 	class="w-100">
-		<div class="plan">
+		<div class="plan animate__animated animate__fadeIn">
 			<h2>
 				{{ plan.title  }}
 			</h2>
 			<div class="cont-plan">
 				<div class="plan-price">
-					<i class="icon-user"></i>
+					<img src="@/assets/access.png" alt="">
 					<p
 					class="plan-title">
 						Acceso a todas las funciones
@@ -15,10 +15,11 @@
 					<p
 					class="price">
 						{{ plan.price }}
+						<span>/mes</span>
 					</p>
 				</div>
 				<div class="user-price">
-					<i class="icon-user"></i>
+					<img src="@/assets/userplus.png" alt="">
 					<p
 					class="plan-title">
 						Cada usuario extra
@@ -26,10 +27,11 @@
 					<p
 					class="price">
 						{{ plan.user_price }}
+						<span>/mes</span>
 					</p>
 				</div>
 				<div class="online-price">
-					<i class="icon-user"></i>
+					<img src="@/assets/tienda3.png" alt="">
 					<p
 					class="plan-title">
 						Tu propia Tienda Online
@@ -37,6 +39,7 @@
 					<p
 					class="price">
 						{{ plan.online_price }}
+						<span>/mes</span>
 					</p>
 				</div>
 			</div>
@@ -59,14 +62,23 @@ export default {
 	h2
 		text-align: left 
 		margin: 30px 0 
+		@media screen and (max-width: 992px)
+			text-align: center 
+	img 
+		width: 100px
 	.cont-plan
 		width: 100%
 		display: flex
 		flex-direction: row 
-		justify-content: space-around
+		justify-content: space-between
 		// border: 2px solid #000
+		@media screen and (min-width: 992px)
+			padding: 0 100px
 		@media screen and (max-width: 992px)
 			flex-wrap: wrap 
+			& > div 
+				width: 100%
+				margin-bottom: 30px
 		[class^='icon-']
 			font-size: 60px
 		.plan-title 
@@ -74,10 +86,14 @@ export default {
 			font-size: 18px
 			// margin-bottom: 0
 			margin: 20px 0
+			@media screen and (max-width: 992px)
+				margin: 10px 0
 		.price 
 			color: rgba(0, 0, 0, .6)
 			// font-weight: bold 
 			font-size: 40px
+			span 
+				font-size: 20px
 	
 
 </style>

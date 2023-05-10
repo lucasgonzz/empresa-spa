@@ -4,6 +4,18 @@ export default {
 		getFunctionValue(prop, model) {
 			return this[prop.function](model)
 		},
+        currentAcountStatus(current_acount) {
+            if (current_acount.status == 'sin_pagar') {
+                return 'Sin pagar'
+            }
+            if (current_acount.status == 'pagandose') {
+                return 'Pagandose ('+this.price(current_acount.pagandose)+')'
+            }
+            if (current_acount.status == 'pagado') {
+                return 'Pagado'
+            }
+            return null
+        },
         showSellerCommissionSale(seller_commission) {
             this.$store.commit('auth/setMessage', 'Cargando venta')
             this.$store.commit('auth/setLoading', true)

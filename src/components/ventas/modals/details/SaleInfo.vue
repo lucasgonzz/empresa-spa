@@ -22,7 +22,7 @@
 				@click="printDeliveredArticles"
 				variant="outline-danger">
 					<i class="icon-print"></i>
-					Imprimir U entregadas
+					U entregadas
 				</b-button>
 				<sale-print-buttons
 				:sale="sale_details"></sale-print-buttons>

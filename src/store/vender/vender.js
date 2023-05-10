@@ -27,7 +27,7 @@ export default {
 		save_afip_ticket: 0,
 		discounts_in_services: 0,
 		surchages_in_services: 0,
-		current_acount_payment_method_id: 0,
+		current_acount_payment_method_id: 3,
 		afip_information_id: 0,
 		employee_id: 0,
 		address_id: 0,

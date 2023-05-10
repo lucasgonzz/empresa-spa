@@ -54,8 +54,8 @@ export default {
 <style lang="sass">
 .home 
 	.row 
-		@media screen and (min-width: 992px)
-			height: 100vh !important
+		align-items: start
+		min-height: 100vh !important
 	.row-features 
 		background: #F7F7F7
 </style>

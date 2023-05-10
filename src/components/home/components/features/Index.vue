@@ -1,6 +1,6 @@
 <template>
 	<div
-	class="features">
+	class="features animate__animated animate__wobble">
 		<div class="titles">
 			<h4>
 				Conoce nuestros Modulos
@@ -30,38 +30,58 @@ export default {
 		features() {
 			return [
 				{
+					img: 'stock5.png',
 					title: 'Inventario',
 					items: [
-						'Stock',
-						'Estadisticas de venta',
-						'Costos en dolares',
-						'Costos en dolares segun proveedor',
-						'Margenes de ganancia',
-						'Margenes de ganancia segun proveedor',
+						'Estadisticas de venta.',
+						'Costos en dolares.',
+						'Costos en dolares segun proveedor.',
+						'Margenes de ganancia.',
+						'Margenes de ganancia segun proveedor.',
 					],
 				},
 				{
+					img: 'venta.png',
 					title: 'Vender',
 					items: [
-						'Articulos del inventario y servicios',
-						'Clientes y cuenta corriente',
-						'Precios segun lista de precios del Cliente',
-						'Notas de debito',
+						'Crea Ventas con Articulos del inventario y servicios.',
+						'Factura desde el sistema.',
+						'Clientes y cuenta corriente.',
+						'Precios segun lista de precios del Cliente.',
+						'Notas de debito.',
 					],
 				},
 				{
-					title: 'Ventas',
+					img: 'stock2.png',
+					title: 'Stock',
 					items: [
-						'Listado'
+						'Actualizado al comprar o vender productos.',
+						'Dividi tu inventario por Proveedores, Categorias, Marca, etc.',	
 					],
 				},
 				{
+					img: 'provider.png',
 					title: 'Proveedores',
 					items: [
-						'Articulos del inventario y servicios',
-						'Clientes y cuenta corriente',
-						'Precios segun lista de precios del Cliente',
-						'Notas de debito',
+						'Da de alta Pedidos a tus proveedores.',
+						'Cuenta corriente para cada proveedor.',
+					],
+				},
+				{
+					img: 'charts.png',
+					title: 'Informes',
+					items: [
+						'Estadisticas de los productos, categorias y localidades con mas ventas.',
+						'Rendimiento de ventas por cada articulo.',
+					],
+				},
+				{
+					img: 'tienda2.png',
+					title: 'Tienda Online',
+					items: [
+						'Tene tu propia tienda personalizada bajo el dominio de tu empresa (mi-empresa.com.ar).',
+						'Exibi los articulos que vos quieras, con los precios en tiempo real.',
+						'Actualizacion automatica de stock luego de realizar una venta a travez de la Tienda.'
 					],
 				},
 			]

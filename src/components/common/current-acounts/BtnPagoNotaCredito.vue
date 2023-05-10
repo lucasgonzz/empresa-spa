@@ -13,16 +13,16 @@
             Nota de credito
         </b-button>
         <b-button
-        v-if="show_btn"
+        v-if="pago_para_esta"
         class="m-l-10"
         @click="setToPay()"
         variant="primary">
-            Registrar pago para esta
+            Registrar pago para {{ pago_para_esta.detalle }}
         </b-button>
         <b-button
         v-else
         class="m-l-10"
-        v-b-modal="'current-acounts-pago'"
+        @click="pago"
         variant="primary">
             Registrar pago
         </b-button>
@@ -33,20 +33,31 @@ import current_acounts from '@/mixins/current_acounts'
 export default {
     mixins: [current_acounts],
     computed: {
-        show_btn() {
+        pago_para_esta() {
             let status = ''
             if (this.selected_current_acounts.length) {
                 status = this.selected_current_acounts[this.selected_current_acounts.length - 1].status
             }
-            console.log(status)
-            return this.selected_current_acounts.length == 1 && (status == 'saldo_inicial' || status == 'sin_pagar' || status == 'pagandose') 
+            if (this.selected_current_acounts.length == 1 && (status == 'saldo_inicial' || status == 'sin_pagar' || status == 'pagandose')) {
+                return this.selected_current_acounts[0]
+            }
+            return null
         },
     },
     methods: {
         setToPay() {
             this.$store.commit('current_acount/setToPay', this.selected_current_acounts[0])
             this.$bvModal.show('current-acounts-pago')
+            setTimeout(() => {
+                document.getElementById('monto-pago').focus()
+            }, 500)
         },
+        pago() {
+            this.$bvModal.show('current-acounts-pago')
+            setTimeout(() => {
+                document.getElementById('monto-pago').focus()
+            }, 500)
+        }
     }
 }
 </script>

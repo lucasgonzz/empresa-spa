@@ -7,9 +7,10 @@ class="p-l-20 p-r-20">
     :properties="properties"
     :model_name="model_name"
     model_name_spanish="cuentas corrientes"
-    :set_model_on_click="false"
+    :set_model_on_row_selected="false"
     :show_btn_edit="false"
-    @showDetails="showDetails">
+    @showDetails="showDetails"
+    @onRowSelected="onRowSelected">
         <template v-slot:default="slotProps">
             <btn-payment-methods-info
             :model="slotProps.model"></btn-payment-methods-info>
@@ -74,6 +75,30 @@ export default {
             this.$bvModal.show('update-debe')
         },
         showDetails(current_acount) {
+            let model_name 
+            let model_id 
+            if (current_acount.sale_id) {
+                model_name = 'sale'
+                model_id = current_acount.sale_id
+            } else if (current_acount.budget_id) {
+                model_name = 'budget'
+                model_id = current_acount.budget_id
+            } else if (current_acount.provider_order_id) {
+                model_name = 'provider_order'
+                model_id = current_acount.provider_order_id
+            }
+            this.$store.commit('auth/setMessage', 'Cargando '+this.singular(model_name))
+            this.$store.commit('auth/setLoading', true)
+            this.$api.get(model_name+'/'+model_id)
+            .then(res => {
+                this.setModel(res.data.model, model_name)
+            })
+            .catch(err => {
+                console.log(err)
+            })
+        },
+        onRowSelected(current_acount) {
+            console.log(current_acount)
              if (current_acount.status == 'nota_credito' || current_acount.status == 'pago_from_client') {
                 let model_id = current_acount.client_id
                 if (current_acount.provider_id) {
@@ -81,20 +106,15 @@ export default {
                 }
                 let link = process.env.VUE_APP_API_URL+'/current-acount/pdf/'+current_acount.id+'/'+model_id
                 window.open(link)
-            } else if (current_acount.sale) {
-                this.setModel(current_acount.sale, 'sale')
-                setTimeout(() => {
-                    this.$bvModal.show('sale')
-                }, 100)
-            } else if (current_acount.budget) {
-                this.setModel(current_acount.budget, 'budget')
-            } else if (current_acount.order_production) {
-                this.setModel(current_acount.order_production, 'order_production')
-            } else if (current_acount.provider_order) {
-                this.setModel(current_acount.provider_order, 'provider_order')
-            } else if (current_acount.haber) {
-                this.showPaymentMethods(current_acount)
-            }
+            } else if (current_acount.sale_id) {
+                // this.setModel(current_acount.sale, 'sale')
+                // setTimeout(() => {
+                //     this.$bvModal.show('sale')
+                // }, 100)
+                this.$store.commit('current_acount/setSelected', [current_acount])
+            } else if (current_acount.status == 'sin_pagar') {
+                this.$store.commit('current_acount/setSelected', [current_acount])
+            } 
         },
         getDetalleColorText(current_acount) {
             if (current_acount.status == 'pagandose') {
