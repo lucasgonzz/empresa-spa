@@ -6,10 +6,10 @@ export default {
 		},
         currentAcountStatus(current_acount) {
             if (current_acount.status == 'sin_pagar') {
+                if (current_acount.pagandose > 0) {
+                    return 'Pagandose ('+this.price(current_acount.pagandose)+')'
+                }
                 return 'Sin pagar'
-            }
-            if (current_acount.status == 'pagandose') {
-                return 'Pagandose ('+this.price(current_acount.pagandose)+')'
             }
             if (current_acount.status == 'pagado') {
                 return 'Pagado'

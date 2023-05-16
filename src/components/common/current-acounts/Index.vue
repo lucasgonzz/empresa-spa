@@ -13,6 +13,7 @@
     <saldo-inicial></saldo-inicial>    
     <checks-details></checks-details>    
     <payment-methods-details></payment-methods-details>  
+    <pagado-por></pagado-por>  
 
     <model-index
     model_name="budget">
@@ -82,6 +83,7 @@ import Import from '@/components/common/current-acounts/Import.vue'
 import SaldoInicial from '@/components/common/current-acounts/SaldoInicial.vue'
 import ChecksDetails from '@/components/common/current-acounts/ChecksDetails.vue'
 import PaymentMethodsDetails from '@/components/common/current-acounts/payment-methods-details/Index'
+import PagadoPor from '@/components/common/current-acounts/pagado-por/Index'
 // import PrintBudget from '@/components/produccion/modals/budgets/Print'
 import Model from '@/common-vue/components/model/Index'
 
@@ -105,6 +107,7 @@ export default {
         SaldoInicial,
         ChecksDetails,
         PaymentMethodsDetails,
+        PagadoPor,
         // PrintBudget,
         Model,
         

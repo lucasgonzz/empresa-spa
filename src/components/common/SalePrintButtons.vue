@@ -2,25 +2,19 @@
 	<b-button-group
 	v-if="sale">
 		<b-button
-		@click="salePdf(sale.id, 0, 0, 0)"
+		@click="salePdf(sale.id, 0, 0)"
 		variant="outline-danger">
 			Sin precios
 		</b-button>
 		<b-button
-		@click="salePdf(sale.id, 1, 0, 0)"
+		@click="salePdf(sale.id, 1, 0)"
 		variant="danger">
 			Con precios
 		</b-button>
 		<b-button
-		@click="salePdf(sale.id, 1, 1, 0)"
+		@click="salePdf(sale.id, 1, 1)"
 		variant="outline-danger">
 			Con costos
-		</b-button>
-		<b-button
-		v-if="commissions.length"
-		@click="salePdf(sale.id, 1, 1, 1, 1)"
-		variant="danger">
-			Con Comisiones
 		</b-button>
 		<b-button
 		v-if="sale.afip_ticket"
@@ -46,8 +40,8 @@ export default {
 		},
 	},
 	methods: {
-		salePdf(sale_id, with_prices, with_costs, with_seller_commissions) {
-            let link = process.env.VUE_APP_API_URL+'/sale/pdf/'+sale_id+'/'+with_prices+'/'+with_costs+'/'+with_seller_commissions
+		salePdf(sale_id, with_prices, with_costs) {
+            let link = process.env.VUE_APP_API_URL+'/sale/pdf/'+sale_id+'/'+with_prices+'/'+with_costs
             window.open(link) 
 		},
 		ticketPdf(sale_id) {

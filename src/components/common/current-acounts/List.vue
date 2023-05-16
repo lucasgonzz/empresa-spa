@@ -10,6 +10,7 @@ class="p-l-20 p-r-20">
     :set_model_on_row_selected="false"
     :show_btn_edit="false"
     @showDetails="showDetails"
+    @showPagadoPor="showPagadoPor"
     @onRowSelected="onRowSelected">
         <template v-slot:default="slotProps">
             <btn-payment-methods-info
@@ -75,8 +76,16 @@ export default {
             this.$bvModal.show('update-debe')
         },
         showDetails(current_acount) {
-            let model_name 
+            let model_name = null
             let model_id 
+            if (current_acount.status == 'nota_credito' || current_acount.status == 'pago_from_client') {
+                let model_id = current_acount.client_id
+                if (current_acount.provider_id) {
+                    model_id = current_acount.provider_id
+                }
+                let link = process.env.VUE_APP_API_URL+'/current-acount/pdf/'+current_acount.id+'/'+model_id
+                window.open(link)
+            }
             if (current_acount.sale_id) {
                 model_name = 'sale'
                 model_id = current_acount.sale_id
@@ -87,26 +96,31 @@ export default {
                 model_name = 'provider_order'
                 model_id = current_acount.provider_order_id
             }
-            this.$store.commit('auth/setMessage', 'Cargando '+this.singular(model_name))
-            this.$store.commit('auth/setLoading', true)
-            this.$api.get(model_name+'/'+model_id)
-            .then(res => {
-                this.setModel(res.data.model, model_name)
-            })
-            .catch(err => {
-                console.log(err)
-            })
+            if (model_name) {
+                this.$store.commit('auth/setMessage', 'Cargando '+this.singular(model_name))
+                this.$store.commit('auth/setLoading', true)
+                this.$api.get(this.routeString(model_name)+'/'+model_id)
+                .then(res => {
+                    this.setModel(res.data.model, model_name)
+                })
+                .catch(err => {
+                    console.log(err)
+                })
+            }
+        },
+        showPagadoPor(current_acount) {
+            console.log(current_acount)
+            if (current_acount.debe) {
+                this.$store.commit('pagado_por/setDebeId', current_acount.id)
+            } else {
+                this.$store.commit('pagado_por/setHaberId', current_acount.id)
+            }
+            this.$store.dispatch('pagado_por/getModels', {model_name: this.from_model_name, model_id: this.from_model.id})
+            this.$bvModal.show('pagado-por')
         },
         onRowSelected(current_acount) {
             console.log(current_acount)
-             if (current_acount.status == 'nota_credito' || current_acount.status == 'pago_from_client') {
-                let model_id = current_acount.client_id
-                if (current_acount.provider_id) {
-                    model_id = current_acount.provider_id
-                }
-                let link = process.env.VUE_APP_API_URL+'/current-acount/pdf/'+current_acount.id+'/'+model_id
-                window.open(link)
-            } else if (current_acount.sale_id) {
+            if (current_acount.sale_id) {
                 // this.setModel(current_acount.sale, 'sale')
                 // setTimeout(() => {
                 //     this.$bvModal.show('sale')

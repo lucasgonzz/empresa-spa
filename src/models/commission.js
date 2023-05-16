@@ -31,10 +31,10 @@ export default {
 			type: 'number',
 		},
 		{
-			text: 'Vendedores',
-			key: 'sellers',
+			text: 'Para todos los Vendedores',
+			key: 'for_all_sellers',
 			type: 'search',
-			description: 'Si se agregan vendedores a esta comision, SIEMPRE se crearan las comisiones para esos Vendedores, independientemente de si el cliente de la venta pertenece o no a estos.',
+			description: 'Si se agregan vendedores, cuando una venta ingrese en el rango de descuentos, SIEMPRE se crearan las comisiones para estos Vendedores, independientemente de si el cliente de la venta pertenece o no a estos.',
 			store: 'seller',
 			belongs_to_many: {
 				props_to_show: [
@@ -49,6 +49,36 @@ export default {
 						key: 'percentage',
 						type: 'number',
 					}
+				],
+			}
+		},
+		{
+			text: 'Solo para los Vendedores',
+			key: 'for_only_sellers',
+			type: 'search',
+			description: 'Si se agregan vendedores, cuando una venta ingrese en el rango de descuentos, SOLO se crearan las comisiones para estos Vendedores, siempre y cuando el cliente de la venta pertenezca a estos vendedores.',
+			store: 'seller',
+			belongs_to_many: {
+				props_to_show: [
+					{
+						text: 'Nombre',
+						key: 'name',
+					},
+				],
+			}
+		},
+		{
+			text: 'Excepto para los Vendedores',
+			key: 'except_sellers',
+			type: 'search',
+			description: 'Si se agregan vendedores, cuando una venta ingrese en el rango de descuentos, aunque el cliente de la venta pertenezca a uno de los vendedores, no se creara su comision.',
+			store: 'seller',
+			belongs_to_many: {
+				props_to_show: [
+					{
+						text: 'Nombre',
+						key: 'name',
+					},
 				],
 			}
 		},

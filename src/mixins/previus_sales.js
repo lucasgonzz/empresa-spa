@@ -73,6 +73,9 @@ export default {
 				if (this.previus_sale.address_id) {
 					this.$store.commit('vender/setAddressId', this.previus_sale.address_id)
 				}
+				if (this.previus_sale.sale_type_id) {
+					this.$store.commit('vender/setSaleTypeId', this.previus_sale.sale_type_id)
+				}
 				this.setItemsPrices(false, true)
 				this.$store.commit('vender/setTotal')
 			})
@@ -91,6 +94,7 @@ export default {
 				surchages_in_services: this.surchages_in_services,
 				current_acount_payment_method_id: this.current_acount_payment_method_id,
 				afip_information_id: this.afip_information_id,
+				sale_type_id: this.sale_type_id,
 			})
 			.then(res => {
 				this.$toast.success('Venta actualizada')

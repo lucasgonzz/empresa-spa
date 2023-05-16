@@ -27,10 +27,12 @@ export default {
 	mixins: [previus_sales, vender],
 	methods: {
 		saveSale() {
-			if (this.index_previus_sales == 0) {
-				this.vender(false)
-			} else {
-				this.updateSale()
+			if (!this.loader) {
+				if (this.index_previus_sales == 0) {
+					this.vender(false)
+				} else {
+					this.updateSale()
+				}
 			}
 		},
 	},

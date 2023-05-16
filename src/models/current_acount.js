@@ -11,20 +11,19 @@ export default {
 			text: 'Detalle',
 			key: 'detalle',
 			type: 'text',
-			value: '',
-			show: true,
-		},
-		{
-			text: 'Numero',
-			key: 'numero',
-			type: 'text',
-			// value: '',
-			// show: true,
-			// title_prefix: 'Rec N°',
-			// function: 'showSellerCommissionSale',
 			button: {
 				variant: 'info',
 				emit: 'showDetails',
+			}
+		},
+		{
+			text: 'Info Pagos',
+			key: 'ver',
+			type: 'text',
+			button: {
+				variant: 'info',
+				emit: 'showPagadoPor',
+				button_text: 'Ver Info',
 			}
 		},
 		{

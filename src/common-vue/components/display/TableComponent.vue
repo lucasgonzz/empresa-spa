@@ -304,7 +304,7 @@ export default {
 			this.propertiesToShow(this.properties, true).forEach(prop => {
 				fields.push({
 					key: prop.key,
-					label: this.propText(prop),
+					label: this.propText(prop, true, true),
 					sortable: prop.sortable,
 				})
 			})

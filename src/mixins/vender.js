@@ -130,7 +130,7 @@ export default {
 			}
 		},
 		vender(print_ticket = false) {
-			if (this.items.length) {
+			if (this.check()) {
 				this.$store.commit('article/removeStock', this.items)
 				this.$store.dispatch('vender/vender', {
 					selected_address: this.selected_address
@@ -146,6 +146,17 @@ export default {
 					}
 				})
 			}
+		},
+		check() {
+			if (!this.items.length) {
+				this.$toast.error('Ingrese al menos un articulo o servicio')
+				return false 
+			}
+			if (this.$store.state.sale_type.models.length && this.sale_type_id == 0) {
+				this.$toast.error('Indique el tipo de venta')
+				return false 
+			} 
+			return true 
 		},
 		setVenderArticle(article, from_mobile = false) {
 			// this.articles.slice(0,33).forEach(art => {

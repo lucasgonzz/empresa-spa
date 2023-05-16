@@ -65,6 +65,7 @@ export default {
 				surchages_in_services: info.surchages_in_services,
 				current_acount_payment_method_id: info.current_acount_payment_method_id,
 				afip_information_id: info.afip_information_id,
+				sale_type_id: info.sale_type_id,
 			})
 			.then(res => {
 				commit('sale/add', res.data.model, {root: true})

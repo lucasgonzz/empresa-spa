@@ -18,6 +18,7 @@
 
 			<model-form
 			@modelSaved="modelSaved"
+			@save="save"
 			:hasPermission="hasPermission"
 			:show_btn_remove_belongs_to_many="show_btn_remove_belongs_to_many"
 			:has_many_parent_model="has_many_parent_model"

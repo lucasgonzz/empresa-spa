@@ -183,8 +183,11 @@ export default {
 			}
 			return this.modelPropertiesFromName(model_name)
 		},
-		propText(prop, capitalize = true) {
+		propText(prop, capitalize = true, from_table = false) {
 			let text 
+			if (from_table && prop.table_text) {
+				return prop.table_text
+			}
 			if (prop.text) {
 				text = prop.text 
 			} else {

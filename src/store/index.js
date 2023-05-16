@@ -61,6 +61,7 @@ import commission from '@/store/commission'
 import seller_commission from '@/store/seller_commission'
 import sale_type from '@/store/sale_type'
 import chart from '@/store/chart'
+import pagado_por from '@/store/pagado_por'
 
 Vue.use(Vuex)
 
@@ -132,5 +133,6 @@ export default new Vuex.Store({
         seller_commission,
         sale_type,
         chart,
+        pagado_por,
     }
 })

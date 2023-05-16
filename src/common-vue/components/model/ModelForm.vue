@@ -113,7 +113,7 @@
 								:placeholder="'Ingresar '+propText(prop)"
 								:type="prop.type"
 								@keyup="checkWatch(prop)"
-								@keyup.enter="clieckEnter(prop)"
+								@keyup.enter="clickEnter(prop)"
 								v-model="model[prop.key]"></b-form-input>
 
 								<bar-code-scanner
@@ -575,11 +575,10 @@ export default {
 			// this.model[prop.key].unshift(model_to_add)
 			console.log('se agrego')
 		},
-		clieckEnter(prop) {
+		clickEnter(prop) {
 			if (prop.use_to_check_if_is_repeat) {
 				this.checkIsRepeat(prop)
 			} else {
-				// this.save()
 				this.$emit('save')
 			}
 		},

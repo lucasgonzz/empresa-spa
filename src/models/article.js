@@ -16,6 +16,7 @@ export default {
 		},
 		{
 			text: 'Codigo de barras',
+			table_text: 'Cod Barras',
 			key: 'bar_code',
 			type: 'text',
 			value: null,
@@ -26,11 +27,11 @@ export default {
 		},
 		{
 			text: 'Codigo de Proveedor',
+			table_text: 'Cod Prov',
 			key: 'provider_code',
 			type: 'text',
 			use_to_check_if_is_repeat: true,
 			use_to_show_in_search_modal: true,
-			not_show: true,
 			filter_modal_position: 8,
 		},
 		{

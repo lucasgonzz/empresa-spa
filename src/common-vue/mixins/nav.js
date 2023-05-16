@@ -1,3 +1,4 @@
+import moment from 'moment'
 export default {
 	computed: {
 	},
@@ -44,6 +45,10 @@ export default {
 				} 
 				if (this.route_name == route.model_name) {
 					this.$store.dispatch(route.model_name+'/getModels')
+					if (this.$store.state[route.model_name].from_dates) {
+						this.$store.commit(route.model_name+'/setFromDate', moment().format('YYYY-MM-DD'))
+						this.$store.commit(route.model_name+'/setUntilDate', '')
+					}
 					console.log('Ya estaba en la ruta, llamando getModels')
 				} 
 				if (this.route_name != route.model_name) {

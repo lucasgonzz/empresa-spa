@@ -66,8 +66,8 @@ export default {
 			// cropData.width = Math.round(cropData.width * 100) / 100
 			// cropData.height = Math.round(cropData.height * 100) / 100
 
-			console.log('cropData')
-			console.log(cropData)
+			// console.log('cropData')
+			// console.log(cropData)
 
 			this.loading = true
 			this.$api.post(this.getImageUploadUrl(this.prop), {
