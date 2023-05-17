@@ -83,6 +83,21 @@ export default {
 		},
 	},
 	methods: {
+		getInputSize(prop) {
+			let _class = 'input-'
+			if (prop.size) {
+				if (prop.size == 'sm') {
+					_class += 'sm'
+				} else if (prop.size == 'md') {
+					_class += 'md'
+				} else if (prop.size == 'lg') {
+					_class += 'lg'
+				}
+			} else {
+				_class += 'md'
+			}
+			return _class
+		},
 		propType(prop, model) {
 			if (prop.type_if) {
 				let array = prop.type_if.condition.split('.')

@@ -16,6 +16,13 @@ export default {
             }
             return null
         },
+        totalBudgetItem(model) {
+            let total = Number(model.pivot.price) * Number(model.pivot.amount)
+            if (model.pivot.bonus) {
+                total -= total * Number(model.pivot.bonus) / 100
+            }
+            return this.price(total)
+        },
         showSellerCommissionSale(seller_commission) {
             this.$store.commit('auth/setMessage', 'Cargando venta')
             this.$store.commit('auth/setLoading', true)
@@ -239,6 +246,9 @@ export default {
                     total += total_article
                 })
             }
+            model.provider_order_extra_costs.forEach(extra_cost => {
+                total += Number(extra_cost.value)                
+            })
             if (formated) {
                 return dates.methods.price(total)
             } 

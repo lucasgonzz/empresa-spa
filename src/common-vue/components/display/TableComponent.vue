@@ -97,12 +97,21 @@
 						</span>
 					</template>
 
+					<!-- <template 
+					v-for="(prop, index) in propsToSet()"
+					v-slot:[toCellName(prop.key)]="data">
+						<table-pivot-props-to-set
+						:prop="prop"
+						:model="models[data.index]"></table-pivot-props-to-set>
+					</template> -->
+
 					<template #cell(pivot_created_at)="data">
 						<span
 						v-if="models[data.index].pivot">
 							{{ date(models[data.index].pivot.created_at) }}
 						</span>
 					</template>
+
 
 					<template #cell(edit)="data">
 						<div class="cont-edit">
@@ -157,6 +166,13 @@
 									size="sm">
 										{{ propText(prop) }}
 									</b-button>
+									<div
+									v-else-if="prop.function">
+										<p>
+											{{ prop.text }}
+										</p>
+										{{ getFunctionValue(prop, models[data.index]) }}
+									</div>
 								</div>
 							</div>
 							<slot :model="models[data.index]"></slot>
@@ -190,6 +206,7 @@ export default {
 	components: {
 		VueLoadImage,
 		BtnAddToShow,
+		TablePivotPropsToSet: () => import('@/common-vue/components/display/TablePivotPropsToSet'),
 	},
 	props: {
 		loading: {
@@ -322,6 +339,16 @@ export default {
 					label: 'Agregado',
 				})
 			}
+			// if (this.pivot && this.pivot.properties_to_set) {
+			// 	this.pivot.properties_to_set.forEach(prop => {
+			// 		fields.push({
+			// 			key: prop.key,
+			// 			function: prop.function,
+			// 			button: prop.button,
+			// 			label: prop.text,
+			// 		})
+			// 	})
+			// }
 			fields.push({
 				key: 'edit',
 				label: '',
@@ -366,21 +393,6 @@ export default {
 			}
 			return ''
 		},
-		getInputSize(prop) {
-			let _class = 'input-'
-			if (prop.size) {
-				if (prop.size == 'sm') {
-					_class += 'sm'
-				} else if (prop.size == 'md') {
-					_class += 'md'
-				} else if (prop.size == 'lg') {
-					_class += 'lg'
-				}
-			} else {
-				_class += 'md'
-			}
-			return _class
-		},
 		onRowSelected(items) {
 			console.log('this.is_from_keydown: '+this.is_from_keydown)
 			if (!this.is_from_keydown) {
@@ -418,24 +430,25 @@ export default {
 		},
 		propsToSet() {
 			let props = []
-			this.pivot.properties_to_set.forEach(prop => {
-				if (!prop.can || (prop.can && this.can(prop.can))) {
-					if (prop.from_store) {
-						let models = this.modelsStoreFromName(prop.store)
-						models.forEach(model => {
-							props.push({
-								type: prop.type,
-								text: model.name,
-								key: prop.store+'_'+model.id,
-								size: prop.size,
+			if (this.pivot) {
+				this.pivot.properties_to_set.forEach(prop => {
+					if (!prop.can || (prop.can && this.can(prop.can))) {
+						if (prop.from_store) {
+							let models = this.modelsStoreFromName(prop.store)
+							models.forEach(model => {
+								props.push({
+									type: prop.type,
+									text: model.name,
+									key: prop.store+'_'+model.id,
+									size: prop.size,
+								})
 							})
-						})
-					} else {
-						props.push(prop)
+						} else {
+							props.push(prop)
+						}
 					}
-				}
-			})
-			console.log(props)
+				})
+			}
 			return props 
 		},	
 		toCellName(slot) {

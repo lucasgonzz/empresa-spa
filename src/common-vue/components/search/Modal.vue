@@ -184,14 +184,17 @@ export default {
 				let results = []
 				this.searching = true
 
-				if (this.prop.search_depends_on_from_api) {
+				if (this.prop.search_from_api || this.prop.search_depends_on_from_api) {
 					console.log('enviando api')
-					this.$api.post('search-from-modal/'+this.model_name, {
+					let info = {
 						prop_to_filter: this.prop_to_filter,
-						depends_on_key: this.prop.depends_on,
-						depends_on_value: this.model[this.prop.depends_on],
 						query_value: this.query,
-					})
+					}
+					if (this.prop.depends_on) {
+						info.depends_on_key = this.prop.depends_on
+						info.depends_on_value = this.model[this.prop.depends_on]
+					}
+					this.$api.post('search-from-modal/'+this.model_name, info)
 					.then(res => {
 						console.log('llego desde api:')
 						console.log(res.data.models)

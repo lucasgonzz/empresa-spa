@@ -128,6 +128,14 @@ export default {
 			}
 		},
 		{
+			text: 'Costos Extra',
+			key: 'provider_order_extra_costs',
+			has_many: {
+				text: 'Cost Extra',
+				model_name: 'provider_order_extra_cost',
+			}
+		},
+		{
 			text: 'Estado',
 			key: 'provider_order_status_id',
 			store: 'provider_order_status',

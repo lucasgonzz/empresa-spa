@@ -571,8 +571,8 @@ export default {
 					}
 				})
 			}
-			this.$set(this.model, prop.key, this.model[prop.key].concat([model_to_add]))
-			// this.model[prop.key].unshift(model_to_add)
+			// this.$set(this.model, prop.key, this.model[prop.key].concat([model_to_add]))
+			this.model[prop.key].unshift(model_to_add)
 			console.log('se agrego')
 		},
 		clickEnter(prop) {

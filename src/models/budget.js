@@ -91,6 +91,11 @@ export default {
 						value: '',
 						type: 'textarea'
 					},
+					{
+						text: 'Total',
+						key: 'total_item',
+						function: 'totalBudgetItem',
+					},
 				],
 				save_if_not_exist: {
 					properties_to_send: [

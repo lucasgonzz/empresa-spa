@@ -189,7 +189,7 @@ export default {
 	data() {
 		return {
 			index_to_show: 1,
-			cant_models_to_show: 20,
+			cant_models_to_show: 40,
 		}
 	},
 	computed: {
