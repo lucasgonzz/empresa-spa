@@ -6,6 +6,7 @@ size="md"
 id="current-amounts">
 	<search-component
 	model_name="article"
+	:prop="{text: 'Articulo', key: 'article_id', store: 'article'}"
 	@setSelected="setSelected"/>
 
 	<div

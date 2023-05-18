@@ -38,6 +38,16 @@ class="buttons-listado">
 	class="m-l-10">
 		<i class="icon-chart"></i>
 	</b-button>
+
+	<b-button 
+	v-if="order_production_statuses.length"
+	variant="success"
+	size="sm"
+	@click="showArticleInRecipes()" 
+	class="m-l-10 m-t-10">
+		<i class="icon-chart"></i>
+		Recetas
+	</b-button>
 </div>
 </template>
 <script>
@@ -54,7 +64,16 @@ export default {
 			loading_online: 0,
 		}
 	},
+	computed: {
+		order_production_statuses() {
+			return this.$store.state.order_production_status.models 
+		},
+	},
 	methods: {
+		showArticleInRecipes() {
+			this.$store.dispatch('article_used_in_recipes/getModels', this.model)
+			this.$bvModal.show('article-used-in-recipes')
+		},
 		showCharts() {
 			this.setModel(this.model, 'article', [], false)
 			this.$bvModal.show('article-charts')

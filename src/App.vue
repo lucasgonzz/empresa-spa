@@ -1,5 +1,6 @@
 <template>
     <div id="app">
+        <update-features></update-features>
         <logo-loading></logo-loading>
         <nav-component></nav-component>
         <b-container
@@ -9,6 +10,7 @@
     </div>
 </template>
 <script>
+import UpdateFeatures from '@/components/common/UpdateFeatures'
 import LogoLoading from '@/common-vue/components/LogoLoading'
 import NavComponent from '@/components/nav/Index'
 
@@ -19,6 +21,7 @@ import broadcast from '@/mixins/broadcast'
 export default {
     mixins: [app, start_methods, broadcast],
     components: {
+        UpdateFeatures,
         LogoLoading, 
         NavComponent,
     },

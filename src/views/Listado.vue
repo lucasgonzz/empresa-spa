@@ -13,6 +13,7 @@
 
 	<import></import>
 	<charts></charts>
+	<article-used-in-recipes></article-used-in-recipes>
 
 	<view-component
 	show_filter_modal
@@ -75,6 +76,7 @@ export default {
 		Import: () => import('@/components/listado/modals/import/Index'),
 		Buttons: () => import('@/components/listado/components/Buttons'),
 		Charts: () => import('@/components/listado/modals/article-charts/Index'),
+		ArticleUsedInRecipes: () => import('@/components/listado/modals/article-used-in-recipes/Index'),
 		// ArticleCharts: () => import('@/components/listado/modals/article-charts/Index'),
 		// StockMin,
 		// Stock0,

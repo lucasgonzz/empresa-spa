@@ -63,6 +63,8 @@ import sale_type from '@/store/sale_type'
 import chart from '@/store/chart'
 import pagado_por from '@/store/pagado_por'
 import provider_order_extra_cost from '@/store/provider_order_extra_cost'
+import article_used_in_recipes from '@/store/article_used_in_recipes'
+import update_feature from '@/store/update_feature'
 
 Vue.use(Vuex)
 
@@ -136,5 +138,7 @@ export default new Vuex.Store({
         chart,
         pagado_por,
         provider_order_extra_cost,
+        article_used_in_recipes,
+        update_feature,
     }
 })
