@@ -183,11 +183,28 @@
 				:model_name="model_name"></btn-add-to-show> -->
 			</div>
 			<p 
-			v-else-if="!models.length && model_name"
+			v-else-if="!models.length && model_name && (!is_mobile || downloadOnMobile(model_name))"
 			class="text-with-icon">
 				<i class="icon-eye-slash"></i>
 				No hay {{ plural(model_name) }}
 			</p>
+			<div
+			v-else>
+				<p 
+				class="text-with-icon">
+					<i class="icon-exclamation"></i>
+					No se descargaron {{ plural(model_name) }} para optimizar el rendimiento en este dispositivo
+				</p>
+				<p>
+					Si lo prefiere, puede descargarlos
+				</p>
+				<b-button
+				@click="download"
+				block
+				variant="primary">
+					Descargar {{ plural(model_name) }}
+				</b-button>
+			</div>
 		</div>
 		<b-skeleton-table
 		class="s-2 b-r-1 animate__animated animate__fadeIn"
@@ -376,6 +393,9 @@ export default {
 		},
 	},
 	methods: {
+		download() {
+			this.$store.dispatch(this.model_name+'/getModels')
+		},
 		width(prop) {
 			if (prop.table_width && prop.table_width == 'lg') {
 				return 'width-300'

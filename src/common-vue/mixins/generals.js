@@ -1,7 +1,9 @@
 import moment from 'moment'
 moment.locale('es')
 import numeral from 'numeral'
+import VueScreenSize from 'vue-screen-size'
 export default {
+	mixins: [VueScreenSize.VueScreenSizeMixin],
 	computed: {
 		user() {
 			return this.$store.state.auth.user
@@ -81,8 +83,17 @@ export default {
 			}
 			return false
 		},
+		is_mobile() {
+			if (this.$vssWidth < '992') {
+				return true
+			}
+			return false
+		},
 	},
 	methods: {
+		downloadOnMobile(model_name) {
+			return typeof this.$store.state[model_name].not_download_on_mobile == 'undefined' || !this.$store.state[model_name].not_download_on_mobile
+		},
 		getInputSize(prop) {
 			let _class = 'input-'
 			if (prop.size) {

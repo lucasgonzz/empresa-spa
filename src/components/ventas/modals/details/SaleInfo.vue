@@ -128,7 +128,7 @@ export default {
 	},
 	methods: {
 		printDeliveredArticles() {
-			let link = process.env.VUE_APP_API_URL+'/sale/pdf/delivered-articles/'+this.sale_details.id 
+			let link = process.env.VUE_APP_API_URL+'/sale/delivered-articles-pdf/'+this.sale_details.id 
 			window.open(link)
 		},
 		updateSale(sale) {

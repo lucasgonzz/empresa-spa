@@ -4,14 +4,24 @@
     class="nav-component">
         <b-navbar 
         toggleable="lg">
-            <b-navbar-brand
-            :to="{name: route_index}">
-                <img src="@/assets/logo.png" alt="">
-            </b-navbar-brand>
+            <div>
+                <b-navbar-brand
+                :to="{name: route_index}">
+                    <img src="@/assets/logo.png" alt="">
+                </b-navbar-brand>
+
+                <b-button
+                class="m-r-10"
+                variant="outline-primary"
+                v-b-toggle.download-resources>
+                    <i class="icon-download"></i>
+                </b-button>
+            </div>
 
             <div
             class="cont-bars d-lg-none">
                 <help-dropdown></help-dropdown>
+                <slot name="right_dropdown"></slot>
 
                 <b-navbar-toggle target="nav-mobile">
                     <i class="icon-bars"></i>
@@ -60,6 +70,8 @@
         </b-navbar>
         <mobile></mobile>
 
+        <download-resources></download-resources>
+
         <update-models></update-models>
 
     </div>
@@ -70,6 +82,7 @@ export default {
     mixins: [nav],
     components: {
         Mobile: () => import('@/common-vue/components/nav/Mobile'),
+        DownloadResources: () => import('@/common-vue/components/download-resources/Index'),
         NavItems: () => import('@/common-vue/components/nav/NavItems'),
         UpdateModels: () => import('@/common-vue/components/UpdateModels'),
         HelpDropdown: () => import('@/common-vue/components/nav/HelpDropdown'),

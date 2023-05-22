@@ -74,6 +74,7 @@
 				</b-form-checkbox>
 			</div>
 			<options-dropdown
+			class="m-t-15 m-lg-t-0"
 			v-if="show_filter_modal"
 			:model_name="model_name"></options-dropdown>
 		</div>

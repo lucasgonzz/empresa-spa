@@ -1,4 +1,6 @@
 export default [
+    'article',
+    'task',
     'employee',
     'permission',
     'brand',
@@ -35,5 +37,5 @@ export default [
     'order',
     'online_price_type',
     'buyer',
-    'article',
+    'inventory_linkage_scope',
 ]

@@ -235,11 +235,7 @@ export default {
 			} else {
 				console.log('Esta repetido')
 				finded.amount = Number(finded.amount)
-				if (this.is_provider) {
-					finded.amount += Number(this.article.amount)
-				} else {
-					finded.amount++
-				}
+				finded.amount += Number(this.article.amount)
 				this.$store.commit('vender/updateItem', finded)
 				this.$store.commit('vender/setTotal')
 				this.clearArticle()

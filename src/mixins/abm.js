@@ -5,6 +5,7 @@ export default {
 				{
 					view: 'generales',
 					models: [
+						'task',
 						'category',
 						'sub_category',
 						'brand',
@@ -16,6 +17,7 @@ export default {
     					'address',
     					'commission',
     					'sale_type',
+    					'inventory_linkage',
 					],
 				},
 				{

@@ -49,6 +49,7 @@ export default {
 						'Clientes y cuenta corriente.',
 						'Precios segun lista de precios del Cliente.',
 						'Notas de debito.',
+						'Notas de credito.',
 					],
 				},
 				{

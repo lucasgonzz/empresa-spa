@@ -15,7 +15,6 @@ import LogoLoading from '@/common-vue/components/LogoLoading'
 import NavComponent from '@/components/nav/Index'
 
 import app from '@/common-vue/mixins/app'
-import call_methods from '@/mixins/call_methods'
 import start_methods from '@/mixins/start_methods'
 import broadcast from '@/mixins/broadcast'
 export default {
@@ -46,7 +45,7 @@ export default {
                 } 
             } else {
                 this.checkPermissionForCurrentRoute()
-                this.callMethods(call_methods)
+                this.callMethods()
                 this.listenChannels()
                 this.listenChannelsLocal()
                 this.startMethods()

@@ -5,6 +5,8 @@ import auth from '@/store/auth'
 import employee from '@/common-vue/store/employee'
 import permission from '@/common-vue/store/permission'
 import general from '@/common-vue/store/general'
+import download_resources from '@/common-vue/store/download_resources'
+
 import article from '@/store/article'
 import brand from '@/store/brand'
 import category from '@/store/category'
@@ -65,6 +67,9 @@ import pagado_por from '@/store/pagado_por'
 import provider_order_extra_cost from '@/store/provider_order_extra_cost'
 import article_used_in_recipes from '@/store/article_used_in_recipes'
 import update_feature from '@/store/update_feature'
+import task from '@/store/task'
+import inventory_linkage from '@/store/inventory_linkage'
+import inventory_linkage_scope from '@/store/inventory_linkage_scope'
 
 Vue.use(Vuex)
 
@@ -80,6 +85,7 @@ export default new Vuex.Store({
         employee,
         permission,
         general,
+        download_resources,
         article,
         brand,
         category,
@@ -140,5 +146,8 @@ export default new Vuex.Store({
         provider_order_extra_cost,
         article_used_in_recipes,
         update_feature,
+        task,
+        inventory_linkage,
+        inventory_linkage_scope,
     }
 })

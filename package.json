@@ -1,5 +1,5 @@
 {
-  "name": "ComercioCity",
+  "name": "EmpresaComercioCity",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -27,6 +27,7 @@
     "vue-load-image": "^0.1.12",
     "vue-router": "^3.2.0",
     "vue-toast-notification": "^0.6.3",
+    "vue-screen-size": "^1.0.1",
     "vuex": "^3.4.0"
   },
   "devDependencies": {

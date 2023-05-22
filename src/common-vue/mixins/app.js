@@ -27,16 +27,21 @@ export default {
                 location.replace(process.env.VUE_APP_APP_URL);
             }
         },
-        async callMethods(models) {
-            this.$store.commit('auth/setLoading', true)
+        callMethods() {
+            this.$store.commit('download_resources/setVisibility')
+            // setTimeout(() => {
+            //     this.$store.commit('download_resources/setStartDownload')
+            //     console.log('se puso setStartDownload')
+            // }, 1500)
+            // this.$store.commit('auth/setLoading', true)
 
-            for (var i = 0; i < models.length; i++) {
-                this.updateMessage('Descargando '+this.plural(models[i]))
-                await this.$store.dispatch(models[i]+'/getModels')
-            }
+            // for (var i = 0; i < models.length; i++) {
+            //     this.updateMessage('Descargando '+this.plural(models[i]))
+            //     await this.$store.dispatch(models[i]+'/getModels')
+            // }
             
-            this.$store.commit('auth/setLoading', false)
-            this.updateMessage('')
+            // this.$store.commit('auth/setLoading', false)
+            // this.updateMessage('')
         },
         updateMessage(message) {
             if (!this.there_is_update) {

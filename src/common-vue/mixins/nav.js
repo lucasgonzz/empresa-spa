@@ -39,7 +39,7 @@ export default {
 		setRoute(route) {
 			if (route.model_name) {
 				let models = this.$store.state[route.model_name].models 
-				if (!models.length) {
+				if (!models.length && (!this.is_mobile || this.downloadOnMobile(route.model_name))) {
 					this.$store.dispatch(route.model_name+'/getModels')
 					console.log('No tiene models, llamando getModels')
 				} 

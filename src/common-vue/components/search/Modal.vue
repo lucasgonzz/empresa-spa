@@ -184,7 +184,7 @@ export default {
 				let results = []
 				this.searching = true
 
-				if (this.prop.search_from_api || this.prop.search_depends_on_from_api) {
+				if (this.searchFromApi()) {
 					console.log('enviando api')
 					let info = {
 						prop_to_filter: this.prop_to_filter,
@@ -221,6 +221,18 @@ export default {
 				}
 			}
 		},
+		searchFromApi() {
+			if (this.prop.search_from_api || this.prop.search_depends_on_from_api) {
+				return true 
+			}
+			if (this.is_mobile && !this.downloadOnMobile(this.model_name) && !this.$store.state[this.model_name].models.length) {
+				return true 
+			}
+			if (this.$store.state[this.model_name].loading) {
+				return true 
+			}
+			return false
+		},
 		finishSearch() {
 			console.log('continua')
 			this.orderAlpabethic()
@@ -231,8 +243,6 @@ export default {
 		},
 		orderAlpabethic() {
 			this.results = this.results.sort((a, b) => {
-				console.log(a[this.prop_to_filter.key])
-				console.log(b[this.prop_to_filter.key])
 				return a[this.prop_to_filter.key].localeCompare(b[this.prop_to_filter.key])
 			})
 		},

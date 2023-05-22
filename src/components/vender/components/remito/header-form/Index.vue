@@ -1,5 +1,6 @@
 <template>
 <div
+v-if="user"
 class="m-b-15">
 	<b-row
 	v-if="show">
@@ -40,7 +41,7 @@ export default {
 			return this.$store.state.vender.items 
 		},
 		show() {
-			if (this.owner.max_items_in_sale && this.items.length == this.owner.max_items_in_sale) {
+			if (this.owner.max_items_in_sale && this.items.length >= this.owner.max_items_in_sale) {
 				return false 
 			} 
 			return true

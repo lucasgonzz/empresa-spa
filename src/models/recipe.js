@@ -90,6 +90,12 @@ export default {
 			text: 'Costo de produccion',
 			function: 'getRecipeCost',
 		},
+		{
+			text: 'Establecer costo del articulo en base a los costos de los insumos',
+			key: 'article_cost_from_recipe',
+			type: 'checkbox',
+			value: 0,
+		},
 	],
 	singular_model_name_spanish: 'Receta',
 	plural_model_name_spanish: 'Recetas',

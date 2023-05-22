@@ -7,10 +7,10 @@ import generals from '@/common-vue/mixins/generals'
 export default {
 	namespaced: true,
 	state: {
-		model_name: 'provider',
+		model_name: 'inventory_linkage_scope',
+		route_prefix: '',
 		from_dates: false,
 		is_selecteable: false,
-		not_download_on_mobile: true,
 
 		use_per_page: false,
 		// Se usa cuando es belongs_to_many_from_dates. Por ejemplo para ver los pagos de un cliente
@@ -23,12 +23,13 @@ export default {
 		until_date: '',
 
 		page: 1,
-		per_page: 25,
+		per_page: 50,
 		total_pages: 1, 
 
 		models: [],
 		model: {},
 		selected: [],
+		filters: [],
 		filtered: [],
 		is_filtered: false,
 
@@ -97,6 +98,9 @@ export default {
 		setFiltered(state, value) {
 			state.filtered = value
 		},
+		setFilters(state, value) {
+			state.filters = value
+		},
 		setIsFiltered(state, value) {
 			state.is_filtered = value
 		},
@@ -135,7 +139,7 @@ export default {
 				state.filtered.splice(index, 1)
 			}
 
-			if (state.selected_model) {
+			if (state.selected_model && state.selected_model[state.plural_model_name]) {
 				index = state.selected_model[state.plural_model_name].findIndex(model => {
 					return model.id == state.delete.id
 				})
@@ -174,6 +178,9 @@ export default {
 		setUntilDate(state, value) {
 			state.until_date = value
 		},
+		setIsSelecteable(state, value) {
+			state.is_selecteable = value
+		},
 	},
 	actions: {
 		getModels({commit, state, dispatch}) {
@@ -196,8 +203,11 @@ export default {
 					url += '/0'
 				}
 			} 
+			if (state.route_prefix) {
+				url += '/'+state.route_prefix
+			} 
 			if (state.from_dates) {
-				url += '/'+state.from_date
+				url += '/from-date/'+state.from_date
 			} 
 			if (state.until_date != '') {
 				url += '/'+state.until_date

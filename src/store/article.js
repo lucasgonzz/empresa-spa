@@ -11,9 +11,10 @@ export default {
 		route_prefix: 'index/from-status',
 		from_dates: false,
 		is_selecteable: false,
+		not_download_on_mobile: true,
 
 		use_per_page: true,
-		use_local_storage: true,
+		use_local_storage: false,
 		local_storage_canceled: false,
 		// Se usa cuando es belongs_to_many_from_dates. Por ejemplo para ver los pagos de un cliente
 		// plural_model_name: '',
@@ -300,12 +301,8 @@ export default {
 						commit('setLoading', false)
 						commit('setPage', 1)
 						if (state.use_local_storage) {
-							console.log('store_models para guardar en localStorage:')
-							console.log(state.models)
-							if (state.models[0].id < state.models[state.models.length-1].id) {
+							if (state.models.length && state.models[0].id < state.models[state.models.length-1].id) {
 								state.models = state.models.reverse()
-								console.log('reverse:')
-								console.log(state.models)
 							}
 							window.localStorage.setItem(state.model_name+'_user_id_'+window.localStorage.getItem('user_id'), JSON.stringify(state.models))
 							window.localStorage.setItem(state.model_name+'_updated_user_id_'+window.localStorage.getItem('user_id'), moment().format('YYYY-MM-DD HH:mm:ss'))
