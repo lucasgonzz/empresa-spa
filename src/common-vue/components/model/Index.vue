@@ -79,12 +79,16 @@ import ModelForm from '@/common-vue/components/model/ModelForm'
 export default {
 	name: 'ModelIndex',
 	props: {
+		model_name: {
+			type: String,
+		},
+		model_prop: {
+			type: Object,
+			default: null,
+		},
 		from_has_many: {
 			type: Boolean,
 			default: false,
-		},
-		model_name: {
-			type: String,
 		},
 		has_many_parent_model: {
 			type: Object,
@@ -111,6 +115,10 @@ export default {
 			default: () => []
 		},
 		show_btn_delete: {
+			type: Boolean,
+			default: true,
+		},
+		show_btn_create: {
 			type: Boolean,
 			default: true,
 		},
@@ -146,6 +154,10 @@ export default {
 		},
 		hasPermission() {
 			console.log('check_permissions: '+this.check_permissions)
+			console.log('show_btn_create: '+this.show_btn_create)
+			if (!this.show_btn_create) {
+				return false 
+			}
 			if (this.check_permissions) {
 				if (!this.model.id) {
 					return this.can(this.model_name+'.store')
@@ -156,6 +168,9 @@ export default {
 			return true 
 		},
 		model() {
+			if (this.model_prop) {
+				return this.model_prop 
+			}
 			return this.modelStoreFromName(this.model_name)
 		},
 		properties() {

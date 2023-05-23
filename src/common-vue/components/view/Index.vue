@@ -11,6 +11,7 @@
     	:check_permissions="check_permissions"
     	:show_btn_pdf="show_btn_pdf"
     	:show_btn_delete="show_btn_delete"
+    	:show_btn_create="show_btn_create"
     	:size="modal_size"
     	:model_name="model_name">
     		<template v-slot:model_modal_header="slotProps">

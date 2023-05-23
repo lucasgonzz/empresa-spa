@@ -11,6 +11,7 @@
 		:model="article"
 		:save_if_not_exist="false"
 		:str_limint="3"
+		:search_from_api="search_from_api"
 		:prop="{text: 'Articulo', key: 'article_id', store: 'article'}"></search-component>
 	</b-col>
 </template>
@@ -24,11 +25,17 @@ export default {
 	},
 	computed: {
 		articles() {
-			return this.$store.state.articles.articles
+			return this.$store.state.article.models
 		},
 		id() {
 			return 'article-sale-name'
 		},
+		search_from_api() {
+			if (!this.download_articles && !this.articles.length) {
+				return true
+			}
+			return false
+		}
 	},
 	methods: {
 		setSelected(result) {

@@ -33,6 +33,7 @@
     model_name="provider_order"></model-index>  
 
     <model-index
+    :show_btn_create="false"
     model_name="sale">
         <template v-slot:model_modal_header="props">
             <sale-details></sale-details>

@@ -66,6 +66,18 @@ Vue.mixin(app)
 import generals from './mixins/generals'
 Vue.mixin(generals)
 
+axios.interceptors.response.use(
+  function(response) { return response}, 
+  function(error) {
+    console.log('ERROR GLOBAL')
+    console.log(error)
+    if (error.response) {
+       document.dispatchEvent(
+        new CustomEvent('errorEvent', { detail: error })
+      )
+    }
+})
+
 
 
 Vue.config.productionTip = false

@@ -17,6 +17,7 @@
 		:models_to_search="models_to_search"
 		:save_if_not_exist="save_if_not_exist"
 		:show_btn_create="show_btn_create"
+		:search_from_api="search_from_api"
 		@callSearchModal="callSearchModal"
 		@setQuery="setQuery"
 		@setNotShowModel="setNotShowModel"
@@ -90,6 +91,10 @@ export default {
 			default: false,
 		},
 		show_btn_create: {
+			type: Boolean,
+			default: false,
+		},
+		search_from_api: {
 			type: Boolean,
 			default: false,
 		},

@@ -131,7 +131,11 @@ export default {
 		},
 		vender(print_ticket = false) {
 			if (this.check()) {
-				this.$store.commit('article/removeStock', this.items)
+				if ((!this.download_articles && !this.articles.length) || (this.is_mobile && !this.downloadOnMobile('article') && !this.articles.length)) {
+
+				} else {
+					this.$store.commit('article/removeStock', this.items)
+				}
 				this.$store.dispatch('vender/vender', {
 					selected_address: this.selected_address
 				})
@@ -167,7 +171,9 @@ export default {
 			// 		return article.bar_code == this.getBarCode(this.article.bar_code)
 			// 	})
 			// } 
-			console.log(article)
+			// if (from_mobile) {
+			// 	alert('setVenderArticle: '+article)
+			// }
 			if (this.checkRegister(article)) {
 				let article_to_add = {
 					...article,
@@ -176,7 +182,7 @@ export default {
 				this.$store.commit('vender/setArticle', article_to_add)
 				let time = 500
 				if (from_mobile) {
-					time = 700
+					time = 1000
 				}
 				setTimeout(() => {
 					document.getElementById('article-amount').focus()

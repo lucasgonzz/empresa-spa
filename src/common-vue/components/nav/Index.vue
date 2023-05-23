@@ -48,10 +48,16 @@
                         </template>
                         <b-dropdown-item 
                         v-if="is_owner"
-                        @click="toConfiguration">
+                        v-b-modal="'user'">
                             <i class="icon-configuration"></i>
                             Configuracion
                         </b-dropdown-item>
+                       <!--  <b-dropdown-item 
+                        v-if="is_owner"
+                        @click="toConfiguration">
+                            <i class="icon-configuration"></i>
+                            Configuracion
+                        </b-dropdown-item> -->
                         <b-dropdown-item 
                         @click="logout">
                             <i class="icon-logout"></i>
@@ -74,6 +80,8 @@
 
         <update-models></update-models>
 
+        <user-config></user-config>
+
     </div>
 </template>
 <script>
@@ -86,6 +94,7 @@ export default {
         NavItems: () => import('@/common-vue/components/nav/NavItems'),
         UpdateModels: () => import('@/common-vue/components/UpdateModels'),
         HelpDropdown: () => import('@/common-vue/components/nav/HelpDropdown'),
+        UserConfig: () => import('@/common-vue/components/nav/UserConfig'),
     },
     computed: {
         show() {

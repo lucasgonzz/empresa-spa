@@ -6,11 +6,23 @@ export default {
 			type: 'image',
 		},
 		{
+			text: 'Imagen por defecto para los articulos sin Imagenes',
+			key: 'default_article_image_url',
+			type: 'image',
+		},
+		{
 			text: 'Nombre',
 			key: 'name',
 			type: 'text',
 			value: '',
 			is_title: true,
+		},
+		{
+			text: 'Descargar articulos desde el arranque del sistema',
+			key: 'download_articles',
+			type: 'checkbox',
+			value: 0,
+			show: true,
 		},
 		{
 			text: 'N° documento',
@@ -105,11 +117,6 @@ export default {
 			text: 'Recargos a los precios en la Tienda',
 			key: 'online_price_surchage',
 			type: 'number',
-		},
-		{
-			text: 'Imagen por defecto para los articulos sin Imagenes',
-			key: 'default_article_image_url',
-			type: 'image',
 		},
 		// {
 		// 	text: 'Direccion',

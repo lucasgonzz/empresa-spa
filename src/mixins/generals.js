@@ -25,6 +25,9 @@ export default {
         },
     },
     methods: {
+        downloadArticles() {
+            return this.owner.download_articles
+        },
         hasExtencion(slug, check_has_one_extencion_permission = true) {
             if (this.authenticated) {
                 if (this.is_owner) {

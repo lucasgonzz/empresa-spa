@@ -100,6 +100,7 @@ export default {
 			type: Boolean,
 			default: true,
 		},
+		search_from_api: Boolean,
 	},
 	data() {
 		return {
@@ -222,6 +223,9 @@ export default {
 			}
 		},
 		searchFromApi() {
+			if (this.search_from_api) {
+				return true
+			}
 			if (this.prop.search_from_api || this.prop.search_depends_on_from_api) {
 				return true 
 			}

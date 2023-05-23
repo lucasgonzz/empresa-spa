@@ -45,14 +45,15 @@ export default {
 		async getArticleFromBarCode(bar_code) {
 			let article
 			bar_code = this.getBarCode(bar_code)
-			if ((this.is_mobile && !this.downloadOnMobile('article')) || this.$store.state.article.loading) {
-				console.log('se va a buscar del api')
+			if ((!this.download_articles && !this.articles.length) || (this.is_mobile && !this.downloadOnMobile('article') && !this.articles.length ) || this.$store.state.article.loading) {
+				console.log('se va a buscar del api el codigo '+bar_code)
 				await this.getArticleFromApi(bar_code)
-				console.log('siguio')
+				// alert('siguio')
 			} else {
 				this.finded_article = this.articles.find(article => {
 					return article.bar_code && article.bar_code == bar_code
 				})
+				// alert('Find in store: '+this.finded_article)
 			}
 		},
 		async setBarCode(bar_code) {
@@ -71,16 +72,16 @@ export default {
 				query_value: bar_code,
 			})
 			.then(res => {
-				console.log('termino api')
-				console.log(res)
 				if (res.data.models.length) {
-					console.log('llego resultado')
+					// alert('llego del api: '+res.data.models[0].name)
 					this.finded_article = res.data.models[0]
 				} else {
+					// alert('No se encontro nada en api: '+res.data)
 					this.finded_article = undefined
 				}
 			})
 			.catch(err => {
+				// alert('Error al buscar del api')
 				console.log(err)
 			})
 		}
