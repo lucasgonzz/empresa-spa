@@ -25,7 +25,7 @@ export default {
         },
     },
     methods: {
-        downloadArticles() {
+        downloadArticles() {  
             return this.owner.download_articles
         },
         hasExtencion(slug, check_has_one_extencion_permission = true) {

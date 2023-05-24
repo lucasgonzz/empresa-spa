@@ -74,7 +74,7 @@ export default {
 			let model_name
             for (var i = 0; i < this.models_to_download.length; i++) {
             	model_name = this.models_to_download[i].model_name
-            	if ((!this.is_mobile || this.downloadOnMobile(model_name)) && (model_name != 'article' || this.download_articles)) {
+            	if ((!this.is_mobile || this.downloadOnMobile(model_name)) && (model_name != 'article' || this.downloadArticles())) {
             		if (this.yaSeDescargaron(model_name)) {
 						this.models_to_download[i].downloaded = true
             		} else {

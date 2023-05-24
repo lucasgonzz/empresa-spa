@@ -45,7 +45,7 @@ export default {
 		async getArticleFromBarCode(bar_code) {
 			let article
 			bar_code = this.getBarCode(bar_code)
-			if ((!this.download_articles && !this.articles.length) || (this.is_mobile && !this.downloadOnMobile('article') && !this.articles.length ) || this.$store.state.article.loading) {
+			if ((!this.download_articles && (!this.articles.length || this.articles.length < 100)) || (this.is_mobile && !this.downloadOnMobile('article') && !this.articles.length ) || this.$store.state.article.loading) {
 				console.log('se va a buscar del api el codigo '+bar_code)
 				await this.getArticleFromApi(bar_code)
 				// alert('siguio')

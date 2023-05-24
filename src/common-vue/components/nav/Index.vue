@@ -12,6 +12,7 @@
 
                 <b-button
                 class="m-r-10"
+                size="sm"
                 variant="outline-primary"
                 v-b-toggle.download-resources>
                     <i class="icon-download"></i>
@@ -118,7 +119,8 @@ $color: ''
     .cont-bars
         display: flex
         .help-dropdown 
-            margin-top: -26px
+            // margin-top: -23px
+            list-style: none
     .navbar 
         background: #FFF
         height: 60px
@@ -149,6 +151,10 @@ $color: ''
                 @media screen and (max-width: 768px)
                     text-align: left !important
                     padding: .5em 1.5em
+                @media screen and (max-width: 1200px)
+                    font-size: 12px
+                @media screen and (min-width: 1200px)
+                    font-size: 14px
             &:hover
                 .nav-link 
                     font-weight: bold
@@ -159,7 +165,7 @@ $color: ''
                     background: $blue !important
                 @media screen and (min-width: 768px)
                     color: $blue !important
-                    font-size: 1.2em
+                    // font-size: 1.2em
                     font-weight: bold
         .dropdown 
             a 

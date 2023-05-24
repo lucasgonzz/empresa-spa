@@ -6,6 +6,7 @@ import employee from '@/common-vue/store/employee'
 import permission from '@/common-vue/store/permission'
 import general from '@/common-vue/store/general'
 import download_resources from '@/common-vue/store/download_resources'
+import error from '@/common-vue/store/error'
 
 import article from '@/store/article'
 import brand from '@/store/brand'
@@ -86,6 +87,7 @@ export default new Vuex.Store({
         permission,
         general,
         download_resources,
+        error,
         article,
         brand,
         category,
