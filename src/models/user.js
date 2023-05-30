@@ -118,6 +118,12 @@ export default {
 			key: 'online_price_surchage',
 			type: 'number',
 		},
+		{
+			text: 'Pausar la Tienda Online',
+			key: 'pausar_tienda_online',
+			type: 'checkbox',
+			description: 'Si se pausa la tienda online, no se mostrara el contenido de la misma y se informara al usuario.',
+		},
 		// {
 		// 	text: 'Direccion',
 		// 	key: 'address',

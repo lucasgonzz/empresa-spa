@@ -299,3 +299,9 @@ export default {
 	},
 }
 </script>
+<style lang="sass">
+.modal-body
+	.b-form-datepicker 
+		margin-bottom: 250px
+	// min-height: 500px
+</style>
