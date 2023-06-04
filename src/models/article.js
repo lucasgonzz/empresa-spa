@@ -283,6 +283,16 @@ export default {
 			},
 			not_show: true,
 		},
+		{
+			// text: 'Descripciones',
+			key: 'article_properties',
+			// has_many: {
+			// 	text: 'Descripcion',
+			// 	model_name: 'description',
+			// },
+			not_show: true,
+			not_show_on_form: true,
+		},
 	],
 	singular_model_name_spanish: 'Articulo',
 	plural_model_name_spanish: 'Articulos',

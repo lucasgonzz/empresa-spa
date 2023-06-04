@@ -5,6 +5,12 @@
 		<!-- <image-width 
 		v-if="use_crop"></image-width> -->
 
+		<select-image 
+		:prop="prop"
+		:model="model"
+		:model_name="model_name"
+		@setImageUrl="setImageUrl"></select-image>
+
 		<upload-image 
 		:prop="prop"
 		@setImageUrl="setImageUrl"></upload-image>
@@ -23,6 +29,7 @@
 		<div>
 			<one-image
 			v-if="prop.type == 'image'"
+			@uploadImage="uploadImage"
 			:has_many_parent_model="has_many_parent_model"
 			:has_many_prop="has_many_prop"
 			:model="model"
@@ -31,6 +38,7 @@
 
 			<carrousel
 			v-else
+			@uploadImage="uploadImage"
 			:model="model"
 			:prop="prop"
 			:model_name="model_name"></carrousel>
@@ -44,6 +52,7 @@ import Carrousel from '@/common-vue/components/model/images/Carrousel'
 export default {
 	props: ['model', 'model_name', 'prop', 'has_many_parent_model', 'has_many_prop'],
 	components: {
+		SelectImage: () => import('@/common-vue/components/model/images/SelectImage'),
 		Cropper: () => import('@/common-vue/components/model/images/Cropper'),
 		OneImage: () => import('@/common-vue/components/model/images/OneImage'),
 		Carrousel: () => import('@/common-vue/components/model/images/Carrousel'),
@@ -67,60 +76,12 @@ export default {
 			this.image_url = image_url
 			this.$bvModal.show('cropper-'+this.prop.key)
 		},
-		async setCropImage(image) {
-			this.uploadImage()
-			this.pre_image_url = image 
-			let div = document.getElementsByClassName('vicp-drop-area')
-			fetch(image, {
-				mode: 'cors'
-			})
-			.then(response => {
-				response.blob()
-				.then(blob => {
-					const file = new File([blob], 'image.jpeg', {type: 'image'})
-					console.log(file)
-
-
-					// setTimeout(() => {
-						let input = div[0].children[3]
-						console.log('input')
-						console.log(input)
-						const dataTransfer = new DataTransfer()
-						dataTransfer.items.add(file)
-						console.log('dataTransfer')
-						console.log(dataTransfer)
-						input.files = dataTransfer.files
-						input.dispatchEvent(new Event('change'))
-					// }, 500)
-				})
-			})
-			.catch(err => {
-				this.$toast.error('No se puede acceder a la imagen, intentelo con otra, por favor')
-				this.uploadImage()
-				this.$bvModal.show('search-image')
-				setTimeout(() => {
-					document.getElementById('search-image-input').focus()
-				}, 200)
-			})
-		},
 		
-		cropUploadSuccess(jsonData, field){
-			console.log('-------- upload success --------');
-			console.log(jsonData)
-			if (this.model_name == 'user') {
-				this.$store.commit('auth/setUser', jsonData.model)
+		uploadImage() {
+			if (this.prop.select_image_from) {
+				this.$bvModal.show('select-image-'+this.prop.key)
 			} else {
-				this.$store.commit(this.model_name+'/add', jsonData.model)
-				this.$bvModal.hide(this.model_name)
-				if (this.has_many_parent_model) {
-					let index = this.has_many_parent_model[this.has_many_prop.key].findIndex(model => {
-						return model.id == this.model.id 
-					})
-					if (index != -1) {
-						this.has_many_parent_model[this.has_many_prop.key].splice(index, 1, jsonData.model)
-					}
-				}
-				this.$toast.success('Imagen actualizada')
+				this.$bvModal.show('upload-image-'+this.prop.key)
 			}
 		},
 	}

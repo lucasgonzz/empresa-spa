@@ -129,12 +129,18 @@
 							:type="prop.type"
 							v-model="model[prop.key]"></b-form-textarea>
 
-							<b-form-select
-							v-else-if="prop.type == 'select'"
-							@change="setChange(prop)"
-					        :disabled="isDisabled(prop)"
-							v-model="model[prop.key]"
-							:options="getOptions(prop, model, model_name)"></b-form-select>
+
+							<div
+							v-else-if="prop.type == 'select'">
+						    	<model-component
+						    	:model_name="modelNameFromRelationKey(prop)"></model-component>
+
+								<b-form-select
+								@change="setChange(prop)"
+						        :disabled="isDisabled(prop)"
+								v-model="model[prop.key]"
+								:options="getOptions(prop, model, model_name)"></b-form-select>
+							</div>		
 
 							<b-form-checkbox
 							v-else-if="prop.type == 'checkbox'"
@@ -298,7 +304,7 @@ import TableComponent from '@/common-vue/components/display/TableComponent'
 import Images from '@/common-vue/components/model/images/Index'
 import BtnLoader from '@/common-vue/components/BtnLoader'
 // import BtnDelete from '@/common-vue/components/BtnDelete'
-import Model from '@/common-vue/components/model/Index'
+// import Model from '@/common-vue/components/model/Index'
 
 import model_functions from '@/common-vue/mixins/model_functions'
 export default {
@@ -345,10 +351,6 @@ export default {
 		actions_after_save: {
 			type: Array,
 			default: () => []
-		},
-		hasPermission: {
-			type: Boolean,
-			default: true,
 		},
 	},
 	created() {
@@ -476,6 +478,10 @@ export default {
 		setChange(prop) {
 			if (prop.on_change) {
 				this[prop.on_change](prop)
+			}
+			if (this.model[prop.key] == -10) {
+				console.log('entro a crear '+this.modelNameFromRelationKey(prop))
+				this.create(this.modelNameFromRelationKey(prop))
 			}
 		},
 		setPivotProps(prop) {
@@ -731,6 +737,8 @@ export default {
 		padding-bottom: 15px
 		margin-bottom: 15px
 		border-bottom: 1px solid rgba(0,0,0,.1)
+		&:nth-last-child(-n+2)
+			border-bottom: none
 	.custom-radio 
 		margin-bottom: 1em 
 		p 

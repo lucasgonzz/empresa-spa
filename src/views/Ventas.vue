@@ -26,6 +26,8 @@
 	<view-component
 	:models_to_show="sales_to_show"
 	show_models_if_empty
+	:show_btn_create="false"
+	:show_btn_save="false"
 	:show_previus_days="show_previus_days"
 	:show_modal="false"
 	model_name="sale">

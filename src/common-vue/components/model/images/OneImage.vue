@@ -89,7 +89,7 @@ export default {
 	},
 	methods: {
 		uploadImage() {
-			this.$bvModal.show('upload-image-'+this.prop.key)
+			this.$emit('uploadImage')
 		},
 		setDelete() {
 			this.$store.commit(this.model_name+'/setDeleteImageProp', this.prop.key)

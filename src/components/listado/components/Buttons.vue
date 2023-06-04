@@ -48,6 +48,19 @@ class="buttons-listado">
 		<i class="icon-chart"></i>
 		Recetas
 	</b-button>
+
+	<b-button 
+	:variant="getVariant()"
+	size="sm"
+	@click="showVariants()" 
+	class="m-l-10 m-t-10">
+		<b-badge
+		variant="danger"
+		v-if="model.article_variants.length">
+			{{ model.article_variants.length }}
+		</b-badge>
+		Variantes
+	</b-button>
 </div>
 </template>
 <script>
@@ -70,9 +83,21 @@ export default {
 		},
 	},
 	methods: {
+		getVariant() {
+			if (this.model.article_properties.length) {
+				return 'primary'
+			}
+			return 'outline-primary'
+		},
 		showArticleInRecipes() {
 			this.$store.dispatch('article_used_in_recipes/getModels', this.model)
 			this.$bvModal.show('article-used-in-recipes')
+		},
+		showVariants() {
+			this.setModel(this.model, 'article', [], false)
+			this.$store.commit('article_property/setModels', this.model.article_properties)
+			this.$store.commit('article_variant/setModels', this.model.article_variants)
+			this.$bvModal.show('article-variants')
 		},
 		showCharts() {
 			this.setModel(this.model, 'article', [], false)

@@ -11,9 +11,10 @@
     	:check_permissions="check_permissions"
     	:show_btn_pdf="show_btn_pdf"
     	:show_btn_delete="show_btn_delete"
-    	:show_btn_create="show_btn_create"
+    	:show_btn_save="show_btn_save"
     	:size="modal_size"
-    	:model_name="model_name">
+    	:model_name="model_name"
+    	:prop_to_send_on_save="prop_to_send_on_save">
     		<template v-slot:model_modal_header="slotProps">
     			<slot name="model_modal_header" :model="slotProps.model"></slot>
     		</template>
@@ -84,6 +85,10 @@ export default {
 			default: 'lg'
 		},
 		show_btn_create: {
+			type: Boolean,
+			default: true,
+		},
+		show_btn_save: {
 			type: Boolean,
 			default: true,
 		},
@@ -158,6 +163,10 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+		prop_to_send_on_save: {
+			type: Object,
+		 	default: null,
+		},
 	},
 	computed: {
 		show_view() {
@@ -194,10 +203,10 @@ export default {
 	},
 	methods: {
 		modelSaved(model) {
+			console.log('22222')
 			this.$emit('modelSaved', model)
 		},
 		clicked(model) {
-			console.log('22222')
 			this.$emit('clicked', model)
 		}
 	}

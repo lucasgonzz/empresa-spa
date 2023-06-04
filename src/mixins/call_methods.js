@@ -1,5 +1,7 @@
 export default [
     'article',
+    'article_property_type',
+    'article_property_value',
     'task',
     'employee',
     'permission',

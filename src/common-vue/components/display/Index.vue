@@ -218,11 +218,13 @@ export default {
 					// console.log('return filtered_models')
 					return filtered
 				}  
-				// console.log('return store_models')
+				console.log('return store_models')
 				return this.$store.state[this.model_name].models 
 			}
 		},
 		models_to_show() {
+			console.log('_models')
+			console.log(this._models)
 			return this._models.slice(0, (this.cant_models_to_show * this.index_to_show))
 		},
 		lists() {

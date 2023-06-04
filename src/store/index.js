@@ -71,6 +71,10 @@ import update_feature from '@/store/update_feature'
 import task from '@/store/task'
 import inventory_linkage from '@/store/inventory_linkage'
 import inventory_linkage_scope from '@/store/inventory_linkage_scope'
+import article_property from '@/store/article_property'
+import article_property_type from '@/store/article_property_type'
+import article_property_value from '@/store/article_property_value'
+import article_variant from '@/store/article_variant'
 
 Vue.use(Vuex)
 
@@ -151,5 +155,9 @@ export default new Vuex.Store({
         task,
         inventory_linkage,
         inventory_linkage_scope,
+        article_property,
+        article_property_type,
+        article_property_value,
+        article_variant,
     }
 })

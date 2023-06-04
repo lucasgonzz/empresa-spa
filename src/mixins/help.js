@@ -33,6 +33,10 @@ export default {
 							text: 'Exportar Excel',
 							url: 'https://youtu.be/oAus9iOg0LU'
 						},
+						{
+							text: 'Variantes de un articulo',
+							url: 'https://youtu.be/VE4S9L6kZ1o'
+						},
 					]	
 				},
 				{
@@ -62,6 +66,15 @@ export default {
 						{
 							text: 'Cuentas corrientes',
 							url: 'https://youtu.be/d5tUF0WbvQY'
+						},
+					]	
+				},
+				{
+					route_name: 'online',
+					items: [ 
+						{
+							text: 'Recibir un Pedido',
+							url: 'https://youtu.be/CvoMhBNU2m8'
 						},
 					]	
 				},

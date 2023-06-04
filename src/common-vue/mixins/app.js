@@ -30,6 +30,9 @@ export default {
         callMethods() {
             this.$store.commit('download_resources/setVisibility')
             // setTimeout(() => {
+            //     this.$store.commit('download_resources/setVisibility')
+            // }, 4000)
+            // setTimeout(() => {
             //     this.$store.commit('download_resources/setStartDownload')
             //     console.log('se puso setStartDownload')
             // }, 1500)

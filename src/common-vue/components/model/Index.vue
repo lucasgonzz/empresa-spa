@@ -19,7 +19,6 @@
 			<model-form
 			@modelSaved="modelSaved"
 			@save="save"
-			:hasPermission="hasPermission"
 			:show_btn_remove_belongs_to_many="show_btn_remove_belongs_to_many"
 			:has_many_parent_model="has_many_parent_model"
 			:has_many_parent_model_name="has_many_parent_model_name"
@@ -51,7 +50,7 @@
 				v-if="!from_has_many"
 				name="buttons">
 					<btn-loader
-					v-if="hasPermission"
+					v-if="can_save"
 					@clicked="save"
 					:loader="loading"
 					text="Guardar"></btn-loader>
@@ -118,7 +117,7 @@ export default {
 			type: Boolean,
 			default: true,
 		},
-		show_btn_create: {
+		show_btn_save: {
 			type: Boolean,
 			default: true,
 		},
@@ -130,6 +129,10 @@ export default {
 		show_btn_remove_belongs_to_many: {
 			type: Boolean,
 			default: true,
+		},
+		prop_to_send_on_save: {
+			type: Object,
+			default: null,
 		},
 	},
 	components: {
@@ -150,12 +153,14 @@ export default {
 			if (this.show_btn_delete && (this.check_can_delete || this.check_permissions)) {
 				return this.can(this.model_name+'.delete')
 			}
+			console.log('this.show_btn_delete')
+			console.log(this.show_btn_delete)
 			return this.show_btn_delete
 		},
-		hasPermission() {
+		can_save() {
 			console.log('check_permissions: '+this.check_permissions)
-			console.log('show_btn_create: '+this.show_btn_create)
-			if (!this.show_btn_create) {
+			console.log('show_btn_save: '+this.show_btn_save)
+			if (!this.show_btn_save) {
 				return false 
 			}
 			if (this.check_permissions) {
@@ -272,6 +277,9 @@ export default {
 				if (typeof selected_model != 'undefined') {
 					model_to_send.model_id = selected_model.id 
 				}
+			}
+			if (this.prop_to_send_on_save) {
+				model_to_send[this.prop_to_send_on_save.key] = this.prop_to_send_on_save.value
 			}
 			return model_to_send
 		},

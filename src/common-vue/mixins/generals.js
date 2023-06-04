@@ -643,7 +643,6 @@ export default {
 				})
 			} 
 			models.forEach(item => {
-				
 				let text = item[prop_name] 
 				if (prop.select_text_to_add) {
 					text += prop.select_text_to_add
@@ -653,6 +652,12 @@ export default {
 				}
 				options.push({value: item.id, text})
 			})
+			if (model_name) {
+				options.push({
+					value: -10,
+					text: this.create_spanish(this.modelNameFromRelationKey(prop))
+				})
+			}
 			return options
 		},
 		booleanOptions(prop, model = null) {
