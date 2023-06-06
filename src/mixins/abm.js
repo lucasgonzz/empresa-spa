@@ -3,24 +3,33 @@ export default {
 		abm_views() {
 			return [
 				{
-					view: 'generales',
+					view: 'listado',
 					models: [
-						'task',
 						'category',
 						'sub_category',
 						'brand',
-						'location',
-						'discount',
-						'surchage',
-						'order_production_status',
 						'price_type',
-    					'address',
-    					'commission',
-    					'sale_type',
     					'inventory_linkage',
     					'article_property_type',
     					'article_property_value',
 					],
+				},
+				{
+					view: 'ventas',
+					models: [
+						'discount',
+						'surchage',
+    					'commission',
+    					'sale_type',
+					],
+				},
+				{
+					view: 'generales',
+					models: [
+						'address',
+						'location',
+						'order_production_status',
+					]
 				},
 				{
 					view: 'facturacion',

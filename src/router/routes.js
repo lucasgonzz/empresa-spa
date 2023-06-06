@@ -23,6 +23,7 @@ export default [
 		params: {
 			view: 'remito',
 		},
+		if_has_extencion: 'comerciocity_interno',
 	},
 	{
 		text: 'Ventas',
@@ -59,6 +60,7 @@ export default [
 		params: {
 			view: 'proveedores',
 		},
+		if_has_extencion: 'comerciocity_interno',
 	},
 	{
 		text: 'Clientes',
@@ -69,7 +71,8 @@ export default [
 		can: 'client.index',
 		params: {
 			view: 'clientes',
-		}
+		},
+		if_has_extencion: 'comerciocity_interno',
 	},
 	{
 		text: 'Presupuestos',
@@ -78,7 +81,7 @@ export default [
 		name: 'budget',
 		component: '@/views/Budget',
 		can: 'budget.index',
-		if_has_extencion: 'budgets',
+		if_has_extencion: ['budgets', 'comerciocity_interno'],
 	},
 	{
 		text: 'Produccion',
@@ -89,7 +92,7 @@ export default [
 		params: {
 			view: 'ordenes',
 		},
-		if_has_extencion: 'production',
+		if_has_extencion: ['production', 'comerciocity_interno'],
 		can: [
 			'production_movement',
 			'order_production',
@@ -105,6 +108,7 @@ export default [
 		params: {
 			view: 'reportes',
 		},
+		if_has_extencion: 'comerciocity_interno',
 	},
 	// {
 	// 	text: 'Ventas',
@@ -117,7 +121,7 @@ export default [
 		text: 'ABM',
 		name: 'abm',
 		params: {
-			view: 'generales',
+			view: 'listado',
 			sub_view: 'categorias',
 			model_name: 'category',
 		},
@@ -128,6 +132,7 @@ export default [
 		path: '/empleados',
 		component: '@/common-vue/views/Employee',
 		check_is_owner: true,
+		if_has_extencion: 'comerciocity_interno',
 	},
 	{
 		text: 'Online',

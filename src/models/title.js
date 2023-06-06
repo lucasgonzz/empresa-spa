@@ -33,8 +33,8 @@ export default {
 			type: 'text',
 		},
 	],
-	singular_model_name_spanish: 'Titulo',
-	plural_model_name_spanish: 'Titulos',
+	singular_model_name_spanish: 'Banner',
+	plural_model_name_spanish: 'Banners',
 	create_model_name_spanish: 'Nuevo',
 	text_delete: 'el',
 }

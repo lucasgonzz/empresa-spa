@@ -76,6 +76,27 @@ export default {
 							text: 'Recibir un Pedido',
 							url: 'https://youtu.be/CvoMhBNU2m8'
 						},
+						{
+							text: 'Procesar Pedido',
+							url: 'https://youtu.be/ZTIg71a2Nts'
+						},
+						{
+							text: 'Cancelar Pedido',
+							url: 'https://youtu.be/NpWUaqPdUTs'
+						},
+					]	
+				},
+				{
+					route_name: 'abm',
+					items: [ 
+						{
+							text: 'Como usar esta seccion',
+							url: 'https://youtu.be/exEqDDxR2-s'
+						},
+						{
+							text: 'Tienda Online',
+							url: 'https://youtu.be/uv85NkjBWIQ'
+						},
 					]	
 				},
 			]

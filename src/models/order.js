@@ -18,6 +18,12 @@ export default {
 			show: true,
 		},
 		{
+			text: 'Para enviar',
+			key: 'deliver',
+			type: 'checkbox',
+			only_show: true,
+		},
+		{
 			text: 'Zona de envio',
 			key: 'delivery_zone_id',
 			store: 'delivery_zone',
@@ -25,6 +31,7 @@ export default {
 			only_show: true,
 			value: '',
 			show: true,
+			v_if: ['deliver', '=', '1'],
 		},
 		{
 			text: 'Metodo de pago',

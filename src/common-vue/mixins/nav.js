@@ -26,7 +26,16 @@ export default {
 				}
 			}
 			if (show && route.if_has_extencion) {
-				show = this.hasExtencion(route.if_has_extencion)
+				if (typeof route.if_has_extencion == 'string') {
+					show = this.hasExtencion(route.if_has_extencion)
+				} else {
+					console.log('if_has_extencion array en '+route.name)
+					route.if_has_extencion.forEach(extencion => {
+						if (!this.hasExtencion(extencion)) {
+							show = false
+						}
+					})
+				}
 			}
 			return show 
 		},
