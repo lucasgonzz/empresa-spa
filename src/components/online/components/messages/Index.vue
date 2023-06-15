@@ -5,12 +5,12 @@
 		class="messages"
 		v-show="view == 'mensajes'">
 			<b-col
-			class="col-chats s-2"
+			class="col-chats"
 			lg="3">
 				<chats></chats>
 			</b-col>
 			<b-col
-			class="col-messages s-2"
+			class="col-messages"
 			lg="9">
 				<conversation></conversation>
 			</b-col>
@@ -34,7 +34,7 @@ export default {
 }
 </script>
 <style lang="sass">
-$nav_height: 50px
+$nav_height: 60px
 $nav_margin: 1em
 $online_nav_height: 42px
 $online_nav_margin: 1em
@@ -42,10 +42,12 @@ $online_nav_margin: 1em
 	max-height: calc(100vh - 50px - 1em - 42px - 1em - 10px)
 	margin-bottom: 0 !important
 .col-messages
-	height: calc(100vh - 45px - 15px - 42px - 15px - 50px)
-	box-shadow: 3px 0px 12px -3px rgba(0,0,0,0.7)
-	-webkit-box-shadow: 3px 0px 12px -3px rgba(0,0,0,0.7)
-	-moz-box-shadow: 3px 0px 12px -3px rgba(0,0,0,0.7)
+	height: calc(100vh - $nav_height - 65px)
+	// height: calc(100vh - $nav_height - 15px - 42px - 15px - 50px)
+	border-left: 1px solid rgba(0, 0, 0, .3)
+	// box-shadow: 3px 0px 12px -3px rgba(0,0,0,0.7)
+	// -webkit-box-shadow: 3px 0px 12px -3px rgba(0,0,0,0.7)
+	// -moz-box-shadow: 3px 0px 12px -3px rgba(0,0,0,0.7)
 	// border-left: .1em solid rgba(51,51,51,.5)
 	// border-bottom: .1em solid rgba(51,51,51,.5)
 .col-chats

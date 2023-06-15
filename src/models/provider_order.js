@@ -73,6 +73,12 @@ export default {
 						type: 'checkbox'
 					},
 					{
+						text: 'Agregar articulo al sistema',
+						key: 'add_to_articles',
+						value: 1,
+						type: 'checkbox'
+					},
+					{
 						text: 'Actualizar costo en el sistema',
 						key: 'update_cost',
 						value: 1,

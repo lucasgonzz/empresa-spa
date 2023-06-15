@@ -89,8 +89,20 @@ export default {
 			}
 			return false
 		},
+		extra_config() {
+			if (this.has_extra_config) {
+				return require('@/mixins/extra_config').default
+			}
+		},
 	},
 	methods: {
+        has_extra_config() {
+            try {
+                require('@/mixins/extra_config')
+            } catch (ex) {
+                return false
+            }
+        },
 		downloadOnMobile(model_name) {
 			return typeof this.$store.state[model_name].not_download_on_mobile == 'undefined' || !this.$store.state[model_name].not_download_on_mobile
 		},

@@ -43,6 +43,23 @@
 					</p>
 				</div>
 			</div>
+			<p class="alcance">
+				Alcance
+			</p>
+			<div 
+			class="limits">
+				<div 
+				v-for="limit in plan.limits"
+				class="limit">
+					<img src="@/assets/check.png" alt="">
+					<span class="limit-title">
+						{{ limit.title }} 
+					</span>
+					<em class="text">
+						{{ limit.text }}
+					</em>
+				</div>
+			</div>
 		</div>
 		<hr>
 	</div>
@@ -94,6 +111,34 @@ export default {
 			font-size: 40px
 			span 
 				font-size: 20px
-	
+	.alcance 
+		font-size: 25px
+		margin: 50px 0 30px
+		// text-align: left
+	.limits 
+		display: flex
+		flex-direction: row
+		flex-wrap: wrap 
+		margin: auto
+		width: 100%
+		@media screen and (min-width: 768px)
+			width: 50%
+		.limit 
+			display: flex 
+			flex-direction: row 
+			width: 100%
+			align-items: center
+			img 
+				width: 30px
+				margin-right: 15px
+			.limit-title
+				width: 200px
+				text-align: left
+				font-weight: bold
+				width: calc(50% - 30px)
+				margin: 10px 0
+			.text 
+				width: 50%
+
 
 </style>

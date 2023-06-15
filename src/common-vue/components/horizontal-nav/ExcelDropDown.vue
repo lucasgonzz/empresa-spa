@@ -1,7 +1,10 @@
 <template>
 	<b-dropdown
 	right
+	split 
 	variant="primary"
+	v-if="can_create"
+	@click="setModel(null, model_name)"
 	:text="create_spanish(model_name)">
 		<b-dropdown-item
 		v-if="can_create"

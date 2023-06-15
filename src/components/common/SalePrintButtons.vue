@@ -1,33 +1,34 @@
 <template>
-	<b-button-group
+	<b-dropdown
+	variant="danger"
+	right
 	v-if="sale">
-		<b-button
-		@click="salePdf(sale.id, 0, 0)"
-		variant="outline-danger">
-			Sin precios
-		</b-button>
-		<b-button
-		@click="salePdf(sale.id, 1, 0)"
-		variant="danger">
-			Con precios
-		</b-button>
-		<b-button
-		@click="salePdf(sale.id, 1, 1)"
-		variant="outline-danger">
-			Con costos
-		</b-button>
-		<b-button
+		<template #button-content>
+			<i class="icon-print"></i>
+			Imprimir	
+		</template>
+		<b-dropdown-item
 		v-if="sale.afip_ticket"
-		@click="afipTicketPdf(sale.id)"
-		variant="outline-danger">
+		@click="afipTicketPdf(sale.id)">
 			Factura
-		</b-button>
-		<b-button
-		@click="ticketPdf(sale.id)"
-		variant="danger">
+		</b-dropdown-item>
+		<b-dropdown-item
+		@click="ticketPdf(sale.id)">
 			Ticket
-		</b-button>
-	</b-button-group>
+		</b-dropdown-item>
+		<b-dropdown-item
+		@click="salePdf(sale.id, 0, 0)">
+			Sin precios
+		</b-dropdown-item>
+		<b-dropdown-item
+		@click="salePdf(sale.id, 1, 0)">
+			Con precios
+		</b-dropdown-item>
+		<b-dropdown-item
+		@click="salePdf(sale.id, 1, 1)">
+			Con costos
+		</b-dropdown-item>
+	</b-dropdown>
 </template>
 <script>
 export default {

@@ -1,7 +1,6 @@
 <template>
-	<b-form 
-	@submit.prevent="getCurrentAcounts"
-	class="p-15"
+	<div 
+	class="nav-current-acounts p-15"
 	inline>
 		<label>Mostrar cuentas corrientes de </label>
 		<b-form-input
@@ -11,7 +10,7 @@
 		type="number"></b-form-input>
 		<label>meses atras</label>
 		<b-button
-		type="submit"
+		@click="getCurrentAcounts"
 		variant="primary"
 		class="m-l-15">
 			Buscar
@@ -38,16 +37,28 @@
 		variant="primary">
 			Saldo inicial
 		</b-button>
-	</b-form>
+		<btn-loader
+		:block="false"
+		:loader="checking"
+		class="m-l-15"
+		text="Chequear Saldos"
+		@clicked="checkSaldos">
+			
+		</btn-loader>
+	</div>
 </template>
 <script>
-import BtnLoader from '@/common-vue/components/BtnLoader'
 import current_acounts from '@/mixins/current_acounts'
 export default {
 	name: 'CurrentAcountsNav',
 	mixins: [current_acounts],
 	components: {
-		BtnLoader
+		BtnLoader: () => import('@/common-vue/components/BtnLoader'),
+	},
+	data() {
+		return {
+			checking: false
+		}
 	},
 	computed: {
 		months_ago: {
@@ -72,6 +83,17 @@ export default {
         }
 	},
 	methods: {
+		checkSaldos() {
+			this.checking = true 
+			this.$api.get('check-saldos/'+this.from_model_name+'/'+this.from_model.id)
+			.then(() => {
+				this.checking = false 
+				this.$store.dispatch('current_acount/getModels')
+			})
+			.catch(err => {
+				this.checking = false 
+			})
+		},
         saldoInicial() {
             // this.$store.commit('clients/setSaldoInicial', this.client)
             this.$bvModal.show('saldo-inicial')
@@ -97,7 +119,12 @@ export default {
 }
 </script>
 <style scoped lang="sass">
-.input 
-	width: 70px
-	margin: 0 1em
+.nav-current-acounts
+	display: flex
+	flex-direction: row 
+	justify-content: flex-start 
+	align-items: center 
+	.input 
+		width: 70px
+		margin: 0 1em
 </style>

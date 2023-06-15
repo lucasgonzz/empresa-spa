@@ -30,6 +30,8 @@
 	:show_btn_save="false"
 	:show_previus_days="show_previus_days"
 	:show_modal="false"
+    :not_show_delete_text="not_show_delete_text"
+    :delete_text="delete_text"
 	model_name="sale">
 		<template v-slot:display_top>
 			<address-nav></address-nav>
@@ -69,6 +71,17 @@ export default {
 				return this.$route.name == 'VentasAll'
 			} 
 			return true
+		},
+		model_to_delete() {
+			return this.$store.state.sale.delete 
+		},
+		not_show_delete_text() {
+			return this.delete && this.delete.afip_ticket
+		},
+		delete_text() {
+			if (this.delete && this.delete.afip_ticket) {
+				return 'Esta venta pertenece a una factura, si la elimina se generara una nota de credito por el total de la venta para anularla'
+			}
 		}
 	},
 }

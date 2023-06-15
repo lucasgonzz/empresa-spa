@@ -414,7 +414,7 @@ export default {
 			return ''
 		},
 		onRowSelected(items) {
-			console.log('this.is_from_keydown: '+this.is_from_keydown)
+			console.log('items.length: '+items.length)
 			if (!this.is_from_keydown) {
 				if (this._select_mode == 'single' && items.length) {
 					console.log(1)
@@ -426,6 +426,8 @@ export default {
 						this.$refs.tableComponent.clearSelected()
 						this.setModel(model, this.model_name)
 					}
+				} else if (this._select_mode == 'single' && !items.length) {
+					this.$emit('onRowSelected', this.models[0])
 				} else if (this._select_mode == 'multi' && !this.isTheSameSelection(items) && !this.is_from_keydown) {
 					console.log(2)
 					if (this.set_selected_models) {

@@ -80,6 +80,8 @@ export default {
 				this.loading = false
 				if (this.model_name == 'user') {
 					this.$store.commit('auth/setUser', res.data.model)
+					this.$toast.success('Imagen actualizada')
+					this.$bvModal.hide('cropper-'+this.prop.key)
 				} else {
 					this.$bvModal.hide('cropper-'+this.prop.key)
 					if (res.data.model) {

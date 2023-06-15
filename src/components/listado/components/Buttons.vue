@@ -20,15 +20,6 @@ class="buttons-listado">
 	:block="false" 
 	class="m-l-10"
 	:loader="loading_featured"></btn-loader>
-	
-	<!-- Proveedores -->
-	<!-- <b-button 
-	v-if="model.providers"
-	@click="providersHistory(model)"
-	size="sm"
-	class="m-l-10">
-		<i class="icon-users"></i>
-	</b-button> -->
 
 	<!-- Estadisticas -->
 	<b-button 
@@ -37,6 +28,15 @@ class="buttons-listado">
 	@click="showCharts()" 
 	class="m-l-10">
 		<i class="icon-chart"></i>
+	</b-button>
+
+	<!-- Historial de Proveedores -->
+	<b-button 
+	variant="secondary"
+	size="sm"
+	@click="providersHistory()" 
+	class="m-l-10">
+		<i class="icon-users"></i>
 	</b-button>
 
 	<b-button 
@@ -146,7 +146,6 @@ export default {
 			return 'danger'
 		},
 		providersHistory() {
-			// this.orderProvidersHistory(this.model)
 			this.$store.commit('article/setModel', {model: this.model, properties: []})
 			this.$bvModal.show('providers-history')
 		},

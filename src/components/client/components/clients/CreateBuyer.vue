@@ -1,6 +1,6 @@
 <template>
 	<btn-loader
-	v-if="!model.buyer"
+	v-if="model.id && !model.buyer"
 	variant="outline-primary"
 	:loader="loading"
 	@clicked="createBuyer"

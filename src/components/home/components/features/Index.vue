@@ -92,16 +92,6 @@ export default {
 </script>
 <style lang="sass">
 .features 
-	.titles 
-		margin-bottom: 50px
-		h4 
-			font-size: 55px 
-			// font-weight: bold 
-			margin: 60px 0
-		h5 
-			font-size: 25px
-			// margin-bottom: 15px 
-			color: rgba(0,0,0,.7)
 	.cont-features
 		display: flex 
 		flex-direction: row 

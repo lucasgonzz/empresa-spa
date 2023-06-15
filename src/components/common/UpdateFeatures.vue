@@ -3,6 +3,13 @@
 hide-footer
 title="Caracteristicas de la nueva version"
 id="update-features">
+	<p class="title">
+		Ante cualquier incoveniente con esta version, puede <strong>REGRESAR</strong> a la version <strong>ANTERIOR</strong> del sistema desde <a href="https://empresa-version-anterior.comerciocity.com" target="_blank">empresa-version-anterior.comerciocity.com</a>
+	</p>
+	<p
+	class="title">
+		Tene a mano este link apretando en el desplegable de tu nombre, en la ezquina superior derecha 
+	</p>
 	<div
 	v-for="feature in update_features">
 		<p>

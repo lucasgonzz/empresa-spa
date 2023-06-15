@@ -53,14 +53,14 @@ export default {
         },
         getProductionMovementCost(production_movement) {
             let total = 0
-            console.log('getProductionMovementCost')
-            console.log(production_movement)
+            // console.log('getProductionMovementCost')
+            // console.log(production_movement)
             if (production_movement.article) {
                 let recipe = this.modelsStoreFromName('recipe').find(recipe => {
                     return recipe.article_id == production_movement.article_id 
                 })
-                console.log('recipe')
-                console.log(recipe)
+                // console.log('recipe')
+                // console.log(recipe)
                 if (typeof recipe != 'undefined') {
                     recipe.articles.forEach(article => {
                         if (article.pivot.order_production_status_id == production_movement.order_production_status_id) {
@@ -113,6 +113,10 @@ export default {
         },
         sendWhatsApp(model) {
             window.open('https://wa.me/'+model.phone)
+        },
+        sendMessage(model) {
+            this.$store.commit('message/setSelectedBuyer', model)
+            this.$router.push({name: 'online', params: {view: 'mensajes'}})
         },
         budgetTotal(model, formated = true) {
             let total = 0 
@@ -205,6 +209,8 @@ export default {
             if (discount && discount != '') {
                 total -= total * Number(discount) / 100
             }
+            // console.log('getTotalItem')
+            // console.log(total)
             return total
         },
         showClientCurrentAcount(sale) {

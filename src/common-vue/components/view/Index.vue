@@ -8,13 +8,17 @@
     	v-if="show_modal"
     	:show_btn_remove_belongs_to_many="show_btn_remove_belongs_to_many"
     	@modelSaved="modelSaved"
+    	@modelDeleted="modelDeleted"
     	:check_permissions="check_permissions"
     	:show_btn_pdf="show_btn_pdf"
     	:show_btn_delete="show_btn_delete"
     	:show_btn_save="show_btn_save"
     	:size="modal_size"
     	:model_name="model_name"
-    	:prop_to_send_on_save="prop_to_send_on_save">
+    	:prop_to_send_on_save="prop_to_send_on_save"
+    	:emit_on_saved_instead_continue="emit_on_saved_instead_continue"
+    	:not_show_delete_text="not_show_delete_text"
+    	:delete_text="delete_text">
     		<template v-slot:model_modal_header="slotProps">
     			<slot name="model_modal_header" :model="slotProps.model"></slot>
     		</template>
@@ -167,6 +171,18 @@ export default {
 			type: Object,
 		 	default: null,
 		},
+		emit_on_saved_instead_continue: {
+			type: Boolean,
+			default: false,
+		},
+		not_show_delete_text: {
+			type: Boolean,
+			default: false,
+		},
+		delete_text: {
+			type: String,
+			default: null,
+		},
 	},
 	computed: {
 		show_view() {
@@ -205,6 +221,10 @@ export default {
 		modelSaved(model) {
 			console.log('22222')
 			this.$emit('modelSaved', model)
+		},
+		modelDeleted(model) {
+			console.log('modelo eliminado')
+			this.$emit('modelDeleted')
 		},
 		clicked(model) {
 			this.$emit('clicked', model)

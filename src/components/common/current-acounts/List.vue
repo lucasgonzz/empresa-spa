@@ -85,8 +85,7 @@ export default {
                 }
                 let link = process.env.VUE_APP_API_URL+'/current-acount/pdf/'+current_acount.id+'/'+model_id
                 window.open(link)
-            }
-            if (current_acount.sale_id) {
+            } else if (current_acount.sale_id) {
                 model_name = 'sale'
                 model_id = current_acount.sale_id
             } else if (current_acount.budget_id) {

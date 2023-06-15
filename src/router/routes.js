@@ -94,9 +94,9 @@ export default [
 		},
 		if_has_extencion: ['production', 'comerciocity_interno'],
 		can: [
-			'production_movement',
-			'order_production',
-			'recipe',
+			'production_movement.index',
+			'order_production.index',
+			'recipe.index',
 		]
 	},
 	{

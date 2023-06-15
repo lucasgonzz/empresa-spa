@@ -34,6 +34,8 @@
 
     <model-index
     :show_btn_create="false"
+    :not_show_delete_text="not_show_delete_text"
+    :delete_text="sale_delete_text"
     model_name="sale">
         <template v-slot:model_modal_header="props">
             <sale-details></sale-details>
@@ -145,6 +147,20 @@ export default {
                 'current_acount/delete',
                 'current_acount/getModels',
             ]
+        },
+        sale_to_delete() {
+            return this.$store.state.sale.delete 
+        },
+        not_show_delete_text() {
+            if (this.sale_to_delete && this.sale_to_delete.afip_ticket) {
+                return true 
+            }
+            return false
+        },
+        sale_delete_text() {
+            if (this.sale_to_delete && this.sale_to_delete.afip_ticket) {
+                return 'Esta venta pertenece a una factura, si la elimina se generara una nota de credito por el total de la venta para anularla'
+            }
         }
     },
 }

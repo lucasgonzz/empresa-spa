@@ -2,6 +2,9 @@
 	<div
 	v-if="model">
 	    <confirm
+	    @confimed="deleted"
+	    :not_show_delete_text="not_show_delete_text"
+	    :text="delete_text"
 	    :model_name="model_name"
 	    :actions="[model_name+'/delete']"
 	    :id="'delete-'+model_name"></confirm>
@@ -17,7 +20,6 @@
 			:model="model"></slot>
 
 			<model-form
-			@modelSaved="modelSaved"
 			@save="save"
 			:show_btn_remove_belongs_to_many="show_btn_remove_belongs_to_many"
 			:has_many_parent_model="has_many_parent_model"
@@ -134,6 +136,18 @@ export default {
 			type: Object,
 			default: null,
 		},
+		emit_on_saved_instead_continue: {
+			type: Boolean,
+			default: false,
+		},
+		not_show_delete_text: {
+			type: Boolean,
+			default: false,
+		},
+		delete_text: {
+			type: String,
+			default: null,
+		},
 	},
 	components: {
 		Confirm,
@@ -193,8 +207,8 @@ export default {
 		},
 	},
 	methods: {
-		modelSaved(model) {
-			this.$emit('modelSaved', model)
+		deleted() {
+			this.$emit('modelDeleted')
 		},
 		save() {
 			if (this.check() && !this.loading) {
@@ -234,28 +248,30 @@ export default {
 						this.loading = false 
 						this.$toast.success('Guardado')
 						let created_model = res.data.model 
-						if (this.has_many_parent_model) {
-							this.$set(this.has_many_parent_model, this.has_many_prop.key, this.has_many_parent_model[this.has_many_prop.key].concat([created_model]))
-							if (!this.has_many_parent_model.id) {
-								if (this.has_many_parent_model.childrens) {
-									this.has_many_parent_model.childrens.push({
-										model_name: this.has_many_prop.has_many.model_name,
-										temporal_id: created_model.temporal_id
-									})
-									console.log('se agrego el id '+created_model.temporal_id)
-								} else {
-									this.has_many_parent_model.childrens = []
-									console.log('se creo la prop childrens')
-									this.has_many_parent_model.childrens.push({
-										model_name: this.has_many_prop.has_many.model_name,
-										temporal_id: created_model.temporal_id
-									})
-									console.log('se agrego el id '+created_model.temporal_id)
+						if (!this.emit_on_saved_instead_continue) {
+							if (this.has_many_parent_model) {
+								this.$set(this.has_many_parent_model, this.has_many_prop.key, this.has_many_parent_model[this.has_many_prop.key].concat([created_model]))
+								if (!this.has_many_parent_model.id) {
+									if (this.has_many_parent_model.childrens) {
+										this.has_many_parent_model.childrens.push({
+											model_name: this.has_many_prop.has_many.model_name,
+											temporal_id: created_model.temporal_id
+										})
+										console.log('se agrego el id '+created_model.temporal_id)
+									} else {
+										this.has_many_parent_model.childrens = []
+										console.log('se creo la prop childrens')
+										this.has_many_parent_model.childrens.push({
+											model_name: this.has_many_prop.has_many.model_name,
+											temporal_id: created_model.temporal_id
+										})
+										console.log('se agrego el id '+created_model.temporal_id)
+									}
 								}
+							} else {
+								this.$store.commit(this.replaceGuion(this.model_name)+'/add', created_model)
 							}
-						} else {
-							this.$store.commit(this.replaceGuion(this.model_name)+'/add', created_model)
-						}
+						}	
 						this.$bvModal.hide(this.model_name)
 						this.callActions(created_model)
 					})

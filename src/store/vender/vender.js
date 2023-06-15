@@ -221,6 +221,7 @@ export default {
 			.then(res => {
 				console.log('vendido')
 				let sale = res.data.model
+				console.log(sale)
 				commit('setSale', sale)
 				commit('setVendiendo', false)
 				commit('setItems', [])

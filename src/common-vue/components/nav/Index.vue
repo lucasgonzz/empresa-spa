@@ -47,18 +47,19 @@
                         <template #button-content>
                             {{ user.name }}
                         </template>
-                        <b-dropdown-item 
+                        <configuration-dropdown></configuration-dropdown>
+                        <!-- <b-dropdown-item 
                         v-if="is_owner"
                         v-b-modal="'user'">
                             <i class="icon-configuration"></i>
                             Configuracion
-                        </b-dropdown-item>
-                       <!--  <b-dropdown-item 
-                        v-if="is_owner"
-                        @click="toConfiguration">
-                            <i class="icon-configuration"></i>
-                            Configuracion
                         </b-dropdown-item> -->
+
+                        <b-dropdown-divider
+                        v-if="is_owner"></b-dropdown-divider>
+
+                        <slot name="nav_dropdown"></slot>
+
                         <b-dropdown-item 
                         @click="logout">
                             <i class="icon-logout"></i>
@@ -96,6 +97,7 @@ export default {
         UpdateModels: () => import('@/common-vue/components/UpdateModels'),
         HelpDropdown: () => import('@/common-vue/components/nav/HelpDropdown'),
         UserConfig: () => import('@/common-vue/components/nav/UserConfig'),
+        ConfigurationDropdown: () => import('@/common-vue/components/nav/ConfigurationDropdown'),
     },
     computed: {
         show() {

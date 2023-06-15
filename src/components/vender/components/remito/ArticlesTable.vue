@@ -11,6 +11,17 @@ class="m-b-15 m-t-20">
 		striped 
 		responsive 
 		hover>
+			<template #cell(price)="data">
+				<b-input-group
+				class="input-price">
+					<b-form-input
+					@keyup="setTotal"
+					@click="setTotal" 
+					type="number"
+					min="0"
+					v-model="items[data.index].price_vender"></b-form-input>
+				</b-input-group>
+			</template>
 			<template #cell(amount)="data">
 				<b-input-group
 				class="input-discount">
@@ -131,7 +142,8 @@ export default {
 			this.items.forEach(item => {
 				item_to_add = {
 					id: item.id,
-					price: this.price(item.price_vender),
+					price: item.price_vender,
+					// price: this.price(item.price_vender),
 					name: item.name,
 					// amount: item.amount,
 					total: this.price(this.getTotalItem(item)),
@@ -223,6 +235,8 @@ export default {
 		margin-bottom: 5px
 		&:last-child
 			margin-right: 0
+.input-price
+	width: 170px
 .input-discount
 	width: 110px
 .options 

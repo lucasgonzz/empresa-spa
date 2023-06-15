@@ -5,7 +5,8 @@
 		</p>
 		<view-component
 		:show_display="false"
-		@modelSaved="modelSaved"
+		@modelSaved="setArticleVariants"
+		@modelDeleted="setArticleVariants"
 		model_name="article_property"
 		:prop_to_send_on_save="prop_to_send_on_save"></view-component>
 	</div>
@@ -32,19 +33,19 @@ export default {
 		},
 	},
 	methods: {
-		async modelSaved() {
+		async setArticleVariants() {
 			console.log('modelSaved article_properties')
 			console.log(this.article_properties)
 			var article_variants = new ArticleVariants(this.article, this.article_properties)
 			let variants = article_variants.getArticleVariants()
 			await this.saveVariants(variants)
-			console.log('siguio de saveVariants')
 			this.loadModel('article', this.article.id)
 		},
 
 		saveVariants(variants) {
 			return this.$api.post('article-variant', {
-				models: variants
+				models: variants,
+				article_id: this.article.id,
 			})
 			.then(res => {
 				console.log('se guardaron variants')

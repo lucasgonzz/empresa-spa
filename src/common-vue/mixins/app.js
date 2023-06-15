@@ -27,24 +27,13 @@ export default {
                 location.replace(process.env.VUE_APP_APP_URL);
             }
         },
-        callMethods() {
+        async callMethods() {
             this.$store.commit('download_resources/setVisibility')
-            // setTimeout(() => {
-            //     this.$store.commit('download_resources/setVisibility')
-            // }, 4000)
-            // setTimeout(() => {
-            //     this.$store.commit('download_resources/setStartDownload')
-            //     console.log('se puso setStartDownload')
-            // }, 1500)
-            // this.$store.commit('auth/setLoading', true)
-
-            // for (var i = 0; i < models.length; i++) {
-            //     this.updateMessage('Descargando '+this.plural(models[i]))
-            //     await this.$store.dispatch(models[i]+'/getModels')
-            // }
-            
-            // this.$store.commit('auth/setLoading', false)
-            // this.updateMessage('')
+            if (this.has_extra_config) {
+                for (var i = this.extra_config.length - 1; i >= 0; i--) {
+                    await this.$store.dispatch(this.extra_config[i]+'/getModels')
+                }
+            }
         },
         updateMessage(message) {
             if (!this.there_is_update) {

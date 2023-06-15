@@ -238,7 +238,7 @@ export default {
 		},
 		setSelectedModelProp() {
 			if (this.show_selected) {
-				if (this.prop.set_model_on_click_or_prop_with_query_if_null) {
+				if (this.prop && this.prop.set_model_on_click_or_prop_with_query_if_null) {
 					this.query = this.model[this.prop.key]
 					this.selected_model = null
 					console.log('ENTRO PAPA: '+this.query)

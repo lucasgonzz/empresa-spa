@@ -14,22 +14,28 @@ export default class ArticleVariants {
 	}
 
 	setPropertiesPositions() {
-		console.log('setPropertiesPositions')
-		console.log(this.properties)
-		for (var i = 0; i < this.properties.length; i++) {
-			this.properties_positions[i] = 0
-		}
-		this.last_position = this.properties.length - 1
-		if (this.properties.length > 1) {
-			this.property_position_iterando = this.properties.length - 2
+		if (this.properties.length) {
+			console.log('setPropertiesPositions')
+			console.log(this.properties)
+			for (var i = 0; i < this.properties.length; i++) {
+				this.properties_positions[i] = 0
+			}
+			this.last_position = this.properties.length - 1
+			if (this.properties.length > 1) {
+				this.property_position_iterando = this.properties.length - 2
+			} else {
+				this.property_position_iterando = 0
+			}
 		} else {
-			this.property_position_iterando = 0
+			return this.variants 
 		}
 	}
 
 	getArticleVariants() {
-		while (!this.finish) {
-			this.setNewVariant()
+		if (this.properties.length) {
+			while (!this.finish) {
+				this.setNewVariant()
+			}
 		}
 		return this.variants 
 	}

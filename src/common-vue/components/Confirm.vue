@@ -86,8 +86,8 @@ export default {
 					this.$bvModal.hide(this.id)
 					this.$bvModal.hide(this.model_name)
 				}
-				
 			}
+			this.$emit('confimed')
 		},
 	}
 }

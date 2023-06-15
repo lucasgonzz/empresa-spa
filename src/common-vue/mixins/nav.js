@@ -96,6 +96,11 @@ export default {
 		},
 		logout() {
 			this.$store.dispatch('auth/logout')
+			.then(() => {
+				require('@/mixins/call_methods').default.forEach(model_name => {
+					this.$store.commit(model_name+'/setModels', [])
+				}) 
+			})
 		},
 		toLogin() {
 			this.$router.push({name: 'Login'})

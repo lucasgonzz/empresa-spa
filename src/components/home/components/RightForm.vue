@@ -50,7 +50,11 @@ export default {
 			this.$axios.post('user', this.form)
 			.then(res => {
 				this.$store.commit('auth/setLoading', false)
-				this.$store.dispatch('auth/me')
+				if (res.data.repeated) {
+					this.$toast.error('Ya hay un usuario registrado con ese numero de documento')
+				} else {
+					this.$store.dispatch('auth/me')
+				}
 			}) 
 			.catch(err => {
 				console.log(err)

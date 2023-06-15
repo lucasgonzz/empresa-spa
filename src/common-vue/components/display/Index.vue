@@ -223,8 +223,8 @@ export default {
 			}
 		},
 		models_to_show() {
-			console.log('_models')
-			console.log(this._models)
+			// console.log('_models')
+			// console.log(this._models)
 			return this._models.slice(0, (this.cant_models_to_show * this.index_to_show))
 		},
 		lists() {

@@ -7,7 +7,7 @@ export default {
 			}
 		},
 		setModel(model, model_name, properties_to_override = [], show_modal = true) {
-			let properties = this.getSelectProps(model, model_name)
+			let properties = this.getSelectAndCheckboxProps(model, model_name)
 			properties = properties.concat(this.getPivotProperties(model, model_name))
 			properties = this.overrideProperties(properties, properties_to_override)
 			// console.log(properties)
@@ -30,11 +30,16 @@ export default {
 				}
 			}, 100)
 		},
-		getSelectProps(model, model_name) {
+		getSelectAndCheckboxProps(model, model_name) {
 			let properties = []
 			if (!model) {
 				this.modelPropertiesFromName(model_name).forEach(prop => {
 					if (prop.type == 'select' && !prop.value) {
+						properties.push({
+							...prop,
+							value: 0,
+						})
+					} else if (prop.type == 'checkbox' && !prop.value) {
 						properties.push({
 							...prop,
 							value: 0,

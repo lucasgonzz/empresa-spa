@@ -31,6 +31,15 @@ export default {
 			}
 		},
 		{
+			text: 'Mensaje',
+			key: 'meessage',
+			button: {
+				variant: 'primary',
+				icon: 'message',
+				function: 'sendMessage',
+			}
+		},
+		{
 			text: 'Ultimo login',
 			key: 'last_login',
 			type: 'date',
