@@ -11,6 +11,16 @@
 		<p class="m-0">
 			{{ items.length }} productos, {{ cantidad_unidades }} unidades
 		</p>
+		<p
+		class="m-0"
+		v-for="discount in sale_discounts">
+			<strong>-</strong> {{ discount.name }} {{ discount.percentage }}%
+		</p>
+		<p
+		class="m-0"
+		v-for="surchage in sale_surchages">
+			<strong>+</strong> {{ surchage.name }} {{ surchage.percentage }}%
+		</p>
 	</b-col>
 </template>
 <script>
@@ -32,6 +42,26 @@ export default {
 			})
 			cant = cant.toFixed(2)
 			return cant
+		},
+		sale_discounts () {
+			let sale_discounts_id = this.$store.state.vender.discounts_id
+			let discounts = []
+			this.$store.state.discount.models.forEach(discount => {
+				if (sale_discounts_id.includes(discount.id)) {
+					discounts.push(discount)
+				}
+			})
+			return discounts
+		},
+		sale_surchages () {
+			let sale_surchages_id = this.$store.state.vender.surchages_id
+			let surchages = []
+			this.$store.state.surchage.models.forEach(surchage => {
+				if (sale_surchages_id.includes(surchage.id)) {
+					surchages.push(surchage)
+				}
+			})
+			return surchages
 		},
 	}
 }

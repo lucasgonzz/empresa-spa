@@ -13,7 +13,8 @@ class="m-b-15 m-t-20">
 		hover>
 			<template #cell(price)="data">
 				<b-input-group
-				class="input-price">
+				v-if="can('article.vender.change_price')"
+				class="input-price m-b-10">
 					<b-form-input
 					@keyup="setTotal"
 					@click="setTotal" 
@@ -21,6 +22,9 @@ class="m-b-15 m-t-20">
 					min="0"
 					v-model="items[data.index].price_vender"></b-form-input>
 				</b-input-group>
+				<span>
+					{{ price(items[data.index].price_vender) }}
+				</span>
 			</template>
 			<template #cell(amount)="data">
 				<b-input-group
@@ -236,7 +240,7 @@ export default {
 		&:last-child
 			margin-right: 0
 .input-price
-	width: 170px
+	width: 150px
 .input-discount
 	width: 110px
 .options 

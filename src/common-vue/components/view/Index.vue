@@ -28,6 +28,12 @@
     		<template v-slot:belongs="slotProps">
     			<slot name="belongs" :model="slotProps.model"></slot>
     		</template>
+    		<template
+    		v-for="prop in properties"
+			v-slot:[prop.key]>
+				<slot :name="prop.key">
+				</slot>
+    		</template>
     	</model>
 
 		<slot name="header"></slot>

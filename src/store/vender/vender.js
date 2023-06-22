@@ -146,6 +146,7 @@ export default {
 				state.total = 0
 				let total_articles = 0
 				let total_services = 0
+				let new_items = []
 				state.items.forEach(item => {
 					item.total = model_functions.methods.getTotalItem(item)
 					if (item.is_service) {
@@ -154,6 +155,7 @@ export default {
 						total_articles += model_functions.methods.getTotalItem(item)
 					}
 					state.total += model_functions.methods.getTotalItem(item)
+					new_items.push(item)
 				})
 				if (state.discounts_id.length) {
 					let discounts = discounts_store.state.models 
@@ -183,6 +185,7 @@ export default {
 						}
 					})
 				}
+				state.items = new_items
 				state.total = total_articles + total_services
 			}
 		},

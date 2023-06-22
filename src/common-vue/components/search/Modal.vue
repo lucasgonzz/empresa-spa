@@ -226,7 +226,7 @@ export default {
 			if (this.search_from_api) {
 				return true
 			}
-			if (this.prop.search_from_api || this.prop.search_depends_on_from_api) {
+			if (this.prop && this.prop.search_from_api || this.prop.search_depends_on_from_api) {
 				return true 
 			}
 			if (this.is_mobile && !this.downloadOnMobile(this.model_name) && !this.$store.state[this.model_name].models.length) {
@@ -344,7 +344,6 @@ export default {
 			// this.$bvModal.hide(this.modal_id)
 		},
 		emitSetSelected(model) {
-			console.log('emitSetSelected')
 			this.$emit('setNotShowModel', true)
 			this.$emit('setSelected', model)
 			this.results = []

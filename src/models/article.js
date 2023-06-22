@@ -38,13 +38,13 @@ export default {
 			text: 'nombre',
 			key: 'name',
 			type: 'text',
-			type_if: {
-				condition: 'bar_code',
-				operator: '=',
-				value: null,
-				then: 'search',
-				else: 'text',
-			},
+			// type_if: {
+			// 	condition: 'bar_code',
+			// 	operator: '=',
+			// 	value: null,
+			// 	then: 'search',
+			// 	else: 'text',
+			// },
 			store: 'article',
 			save_if_not_exist: false,
 			set_model_on_click_or_prop_with_query_if_null: true,
@@ -91,6 +91,7 @@ export default {
 			not_show: true,
 			filter_modal_position: 11,
 			filter_type: 'number',
+			keep_after_create: true,
 		},
 		{
 			text: 'precio',
@@ -145,6 +146,7 @@ export default {
 			type: 'checkbox',
 			value: 1,
 			not_show: true,
+			keep_after_create: true,
 		},
 		{
 			text: 'Destacado',
@@ -160,6 +162,7 @@ export default {
 			use_to_update: true,
 			use_store_models: true,
 			filter_modal_position: 3,
+			keep_after_create: true,
 		},
 		// {
 		// 	text: 'precio en dolar del proveedor',
@@ -178,6 +181,7 @@ export default {
 			// 	model_prop: 'percentage_gain',
 			// }
 			not_show: true,
+			keep_after_create: true,
 		},
 		{
 			text: 'Lista de precios',
@@ -188,6 +192,7 @@ export default {
 				model_prop: 'provider_price_lists',
 			},
 			not_show: true,
+			// keep_after_create: true,
 		},
 		{
 			text: 'categoria',
@@ -197,6 +202,7 @@ export default {
 			use_to_update: true,
 			not_show: true,
 			filter_modal_position: 4,
+			// keep_after_create: true,
 		},
 		{
 			text: 'sub categoria',
@@ -207,6 +213,7 @@ export default {
 			use_to_update: true,
 			not_show: true,
 			filter_modal_position: 5,
+			// keep_after_create: true,
 		},
 		{
 			text: 'iva',
@@ -214,6 +221,7 @@ export default {
 			type: 'select',
 			use_to_show_in_search_modal: true,
 			not_show: true,
+			keep_after_create: true,
 		},
 		{
 			text: 'Marca',
@@ -223,6 +231,7 @@ export default {
 			not_show: true,
 			not_show: true,
 			filter_modal_position: 6,
+			keep_after_create: true,
 		},
 		{
 			text: 'Condicion',

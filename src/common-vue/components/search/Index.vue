@@ -114,6 +114,10 @@ export default {
 			type: Boolean,
 			default: true,
 		},
+		clear_query_on_model_change: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	data() {
 		return {
@@ -237,14 +241,14 @@ export default {
 			this.models_to_search = models 
 		},
 		setSelectedModelProp() {
+			console.log('watch de MDOEL')
 			if (this.show_selected) {
 				if (this.prop && this.prop.set_model_on_click_or_prop_with_query_if_null) {
 					this.query = this.model[this.prop.key]
 					this.selected_model = null
-					console.log('ENTRO PAPA: '+this.query)
+					console.log('entro aca')
 				} else if (this.model && this.model[this.prop.key]) {
 					if (this.prop.use_store_models) {
-						console.log('entrooo')
 						let model = this.$store.state[this.modelNameFromRelationKey(this.prop)].models.find(_model => {
 							return _model.id == this.model[this.prop.key]
 						})
@@ -255,13 +259,15 @@ export default {
 					}
 				} 
 			} 
+			if (this.clear_query_on_model_change) {
+				console.log('clear_query_on_model_change')
+				this.query = ''
+			}
 		},
 		setQuery(value) {
 			this.query = value 
 		},
 		callSearchModal() {
-			console.log('CALL SEARCH MODAL')
-			console.log('not_show_modal: '+this.not_show_modal)
 			if (!this.not_show_modal) {
 				this.setModelsToSearch()
 				this.setPreviewResults()
@@ -280,7 +286,7 @@ export default {
 			})
 			if (this.clear_query) {
 				this.query = ''
-				console.log('se limpio')
+				console.log('se limpio query')
 			}
 		},
 	}

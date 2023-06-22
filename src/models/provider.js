@@ -13,6 +13,12 @@ export default {
 			is_title: true,
 		},
 		{
+			text: 'Saldo',
+			key: 'saldo',
+			type: 'number',
+			only_show: true,
+		},
+		{
 			text: 'Margen de ganancia',
 			key: 'percentage_gain',
 			type: 'number',

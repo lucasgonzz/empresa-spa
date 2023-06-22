@@ -25,6 +25,9 @@
 		<template v-slot:default="props">
 			<buttons :model="props.model" />	
 		</template>
+		<template #name>
+			<name-input></name-input> 
+		</template>
 	</view-component>
 	
 	<!-- <article-images-colors></article-images-colors> -->
@@ -81,6 +84,7 @@ export default {
 		ArticleUsedInRecipes: () => import('@/components/listado/modals/article-used-in-recipes/Index'),
 		ArticleVariants: () => import('@/components/listado/modals/article-variants/Index'),
 		ProvidersHistory: () => import('@/components/listado/modals/providers-history/Index'),
+		NameInput: () => import('@/components/listado/components/NameInput'),
 		// ArticleCharts: () => import('@/components/listado/modals/article-charts/Index'),
 		// StockMin,
 		// Stock0,

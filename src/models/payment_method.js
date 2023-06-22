@@ -43,6 +43,15 @@ export default {
 			value: '',
 			v_if: ['payment_method_type_id', '!=', 0]
 		},
+		{
+			key: 'payment_method_installments',
+			text: 'Cuotas',
+			v_if: ['payment_method_type_id', '=', 2],
+			has_many: {
+				text: 'Cuotas',
+				model_name: 'payment_method_installment',
+			},
+		}
 
 	],
 	singular_model_name_spanish: 'Metodo de pago',

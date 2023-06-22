@@ -1,7 +1,6 @@
 <template>
 	<b-button
 	v-if="model.id"
-	block
 	variant="danger"
 	@click="callDelete">
 		Eliminar

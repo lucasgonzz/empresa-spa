@@ -331,8 +331,6 @@ export default {
 					sub_prop = array[1]
 				}
 				console.log('prop_to_check en '+property.text)
-				console.log(property)
-				console.log('v_if_not_check_if_null en '+property.v_if_not_check_if_null)
 				if (property.v_if_not_check_if_null || model[prop] || property.v_if_from_models_store) {
 					// if (sub_prop && model[prop][sub_prop]) {
 					if (property.v_if_from_models_store) {
