@@ -1,7 +1,6 @@
 <template>
     <div id="app">
         <error-modal></error-modal>
-        <update-features></update-features>
         <logo-loading></logo-loading>
         <nav-component></nav-component>
         <b-container
@@ -12,7 +11,6 @@
 </template>
 <script>
 import ErrorModal from '@/common-vue/components/error/Index'
-import UpdateFeatures from '@/components/common/UpdateFeatures'
 import LogoLoading from '@/common-vue/components/LogoLoading'
 import NavComponent from '@/components/nav/Index'
 
@@ -23,7 +21,6 @@ export default {
     mixins: [app, start_methods, broadcast],
     components: {
         ErrorModal,
-        UpdateFeatures,
         LogoLoading, 
         NavComponent,
     },

@@ -14,10 +14,12 @@ hide-footer
 		<b-form-select
 		v-else-if="prop.type == 'select'"
 		v-model="prop.value"
+		@chenge="setChange"
 		:options="getOptions(prop, form, prop.store)"></b-form-select>
 
 		<search-component
 		v-else-if="prop.type == 'search'"
+		:id="prop.store+'-'+prop.key"
 		:model_name="modelNameFromRelationKey(prop)"
 		:prop="prop"
 		@setSelected="setSelected"></search-component>
@@ -55,6 +57,10 @@ export default {
 		update() {
 			this.$emit('update', this.form)
 		},
+		setChange(value) {
+			console.log('setChange')
+			console.log(value)
+		},
 		setForm() {
 			this.properties_to_update.forEach(prop => {
 				if ((prop.type_to_update && prop.type_to_update == 'number') || prop.type == 'number') {
@@ -79,7 +85,7 @@ export default {
 						placeholder: 'Valor para setear '+this.propText(prop),
 						value: '',
 					})
-				} else if (prop.type == 'select' || prop.type == 'search') {
+				} else if (prop.type == 'select') {
 					this.form.push({
 						label: this.propText(prop),
 						key: prop.key, 
@@ -89,26 +95,29 @@ export default {
 						value: 0,
 					})
 					// this.form[prop.key] = 0 
-				} 
-				// else if (prop.type == 'search') {
-				// 	this.form.push({
-				// 		label: this.propText(prop),
-				// 		store: prop.store,
-				// 		depends_on: prop.depends_on,
-				// 		key: prop.key,
-				// 		type: 'search',
-				// 		value: '',
-				// 	})
-				// 	console.log('search para '+prop.key)
-				// 	// this.form[prop.key] = '' 
-				// }
+				} else if (prop.type == 'search') {
+					this.form.push({
+						label: this.propText(prop),
+						store: prop.store,
+						depends_on: prop.depends_on,
+						key: prop.key,
+						type: 'search',
+						value: '',
+					})
+					console.log('search para '+prop.key)
+					// this.form[prop.key] = '' 
+				}
 			})
 			console.log('form:')
 			console.log(this.form)
 		},
 		setSelected(result) {
-			console.log('result')
-			this.form[result.prop.key] = result.model
+			let index = this.form.findIndex(form => {
+				return form.key == result.prop.key  
+			})
+			this.form[index].value = result.model.id 
+			console.log(this.form[index])
+			
 		}
 	}
 }

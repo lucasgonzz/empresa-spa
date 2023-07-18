@@ -25,6 +25,11 @@
 import vender from '@/mixins/vender' 
 export default {
 	mixins: [vender],
+	created() {
+		setTimeout(() => {
+			document.getElementById('article-bar-code').focus()
+		}, 500)
+	},
 	components: {
 		BarCodeScanner: () => import('@/common-vue/components/bar-code-scanner/Index'),
 	},

@@ -94,6 +94,7 @@ export default new Vuex.Store({
         general,
         download_resources,
         error,
+        
         article,
         brand,
         category,

@@ -570,7 +570,7 @@ export default {
 					} else if (typeof prop_to_set.value === 'object') {
 						if (model_to_add[prop_to_set.value.key]) {
 							model_to_add.pivot[prop_to_set.key] = model_to_add[prop_to_set.value.key] 
-						} else {
+					} else {
 							model_to_add.pivot[prop_to_set.key] = prop_to_set.value.value_if_undefined
 						}
 					} else {
@@ -579,14 +579,18 @@ export default {
 				})
 			}
 			// this.$set(this.model, prop.key, this.model[prop.key].concat([model_to_add]))
-			this.model[prop.key].unshift(model_to_add)
+			console.log('se va a agregar:')
+			console.log(model_to_add)
+			this.model[prop.key].push(model_to_add)
 			console.log('se agrego')
+			console.log('quedo asi:')
+			console.log(this.model[prop.key])
 		},
 		clickEnter(prop) {
 			if (prop.use_to_check_if_is_repeat) {
 				this.checkIsRepeat(prop)
 			} else {
-				this.$emit('save')
+				this.$emit('save', {close: true})
 			}
 		},
 		// save() {

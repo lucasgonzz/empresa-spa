@@ -35,7 +35,7 @@ export default {
 				return this.$store.state.download_resources.visibility
 			},
 			set(value) {
-				this.$store.commit('download_resources/setVisibility')
+				// this.$store.commit('download_resources/setVisibility')
 			}
 		},
 		start_download() {

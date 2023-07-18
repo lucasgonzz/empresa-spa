@@ -54,6 +54,11 @@ export default {
 			description: 'Si se activa, el iva del articulo no impactara en el precio final del mismo',
 		},
 		{
+			text: 'Preguntar la cantidad en VENDER',
+			key: 'ask_amount_in_vender',
+			type: 'checkbox',
+		},
+		{
 			text: 'Valor dolar',
 			key: 'dollar',
 			type: 'text',

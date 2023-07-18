@@ -1,5 +1,6 @@
 <template>
 	<b-col
+	v-if="user.ask_amount_in_vender"
 	class="col-buttons"
 	cols="12"
 	lg="3">

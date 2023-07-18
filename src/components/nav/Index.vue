@@ -1,5 +1,6 @@
 <template>
 	<div>
+        <update-features></update-features>
 		<nav-component>
 			<template #right_dropdown>
 				<tasks-button></tasks-button>
@@ -26,6 +27,8 @@ export default {
 		Tasks: () => import('@/components/nav/tasks/modal/Index'),
 		OrderInfo: () => import('@/components/nav/OrderInfo'),
 		PaymentExpire: () => import('@/components/nav/PaymentExpire'),
+
+		UpdateFeatures: () => import('@/components/common/UpdateFeatures'),
 	},
 	methods: {
 		versionAnterior() {

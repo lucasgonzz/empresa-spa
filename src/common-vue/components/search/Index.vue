@@ -206,7 +206,7 @@ export default {
 		},
 		setModelsToSearch() {
 			// console.log('setModelsToSearch') 
-			let models = []
+			let models = []		
 			if (this.prop && this.prop.depends_on && this.model) {
 				if (!this.prop.search_depends_on_from_api) {
 				 	models = this.modelsStoreFromName(this.model_name)

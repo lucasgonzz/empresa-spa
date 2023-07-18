@@ -3,6 +3,9 @@ import sale_ticket from '@/mixins/sale_ticket'
 export default {
 	mixins: [clients, sale_ticket],
 	computed: {
+		total() {
+			return this.$store.state.vender.total
+		},
 		items() {
 			return this.$store.state.vender.items
 		},
@@ -22,10 +25,15 @@ export default {
 			return this.$store.state.vender.client
 		},
 		col_header_lg() {
+			let col
 			if (this.combos.length) {
-				return 2
+				col = 2
 			}
-			return 3
+			col = 3
+			if (!this.user.ask_amount_in_vender) {
+				col += 1
+			}
+			return col 
 		},
         maked_sale() {
             return this.$store.state.vender.sale
@@ -160,6 +168,10 @@ export default {
 				this.$toast.error('Indique el tipo de venta')
 				return false 
 			} 
+			if (this.afip_information_id && this.total >= 61500 && !this.client) {
+				this.$toast.error('El total de la venta supera los $61.500, debera indicar un cliente que posea CUIL o CUIT para poder realizar la factura')
+				return false
+			}
 			return true 
 		},
 		setVenderArticle(article, from_mobile = false) {
@@ -177,16 +189,24 @@ export default {
 			if (this.checkRegister(article)) {
 				let article_to_add = {
 					...article,
-					amount: '',
+				}
+				if (this.user.ask_amount_in_vender) {
+					article_to_add.amount = ''
+				} else {
+					article_to_add.amount = 1
 				}
 				this.$store.commit('vender/setArticle', article_to_add)
 				let time = 500
 				if (from_mobile) {
 					time = 1000
 				}
-				setTimeout(() => {
-					document.getElementById('article-amount').focus()
-				}, time)
+				if (this.user.ask_amount_in_vender) {
+					setTimeout(() => {
+						document.getElementById('article-amount').focus()
+					}, time)
+				} else {
+					this.addArticleToSale()
+				}
 			}
 		},
 		addArticleToSale() {
@@ -214,13 +234,18 @@ export default {
 		},
 		checkRegister(article) {
 			if (!article || typeof article == 'undefined') {
-				if (this.article.bar_code && this.getBarCode(this.article.bar_code) != '') {
-					this.setNewArticle({name: '', bar_code: this.getBarCode(this.article.bar_code)})
+				if (this.can('vender.create_article')) {
+					if (this.article.bar_code && this.getBarCode(this.article.bar_code) != '') {
+						this.setNewArticle({name: '', bar_code: this.getBarCode(this.article.bar_code)})
+					} else {
+						console.log('se mostro modal')
+						this.setNewArticle({name: this.article.name})
+					}
+					return false
 				} else {
-					console.log('se mostro modal')
-					this.setNewArticle({name: this.article.name})
+					this.$toast.error('Ese articulo no esta ingresado en el sistema')
+					return false
 				}
-				return false
 			}
 			return true
 		},
@@ -241,7 +266,11 @@ export default {
 			} else {
 				console.log('Esta repetido')
 				finded.amount = Number(finded.amount)
-				finded.amount += Number(this.article.amount)
+				let amount = this.article.amount
+				if (amount == '') {
+					amount = 1
+				}
+				finded.amount += Number(amount)
 				this.$store.commit('vender/updateItem', finded)
 				this.$store.commit('vender/setTotal')
 				this.clearArticle()
