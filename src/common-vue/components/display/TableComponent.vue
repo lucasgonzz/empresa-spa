@@ -64,7 +64,7 @@
 						<b-button
 						v-else-if="showProperty(prop, models[data.index]) && prop.button"
 						:variant="prop.button.variant"
-						@click="callMethod(prop, models[data.index])">
+						@click.stop="callMethod(prop, models[data.index])">
 							<i
 							v-if="prop.button.icon"
 							:class="'icon-'+prop.button.icon"></i>

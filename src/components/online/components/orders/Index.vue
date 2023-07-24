@@ -1,5 +1,6 @@
 <template>
 	<div>
+		<payment-card-info></payment-card-info>
 		<payment-details></payment-details>
 		<cancel-order></cancel-order>
 		<view-component
@@ -21,6 +22,7 @@
 export default {
 	components: {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
+		PaymentCardInfo: () => import('@/components/online/modals/orders/PaymentCardInfo'),  
 		PaymentDetails: () => import('@/components/online/modals/orders/payment-details/Index'),  
 		CancelOrder: () => import('@/components/online/modals/orders/CancelOrder'),  
 		BtnStatus: () => import('@/components/online/components/orders/BtnStatus'), 

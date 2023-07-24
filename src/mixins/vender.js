@@ -108,6 +108,7 @@ export default {
 			}, 
 			set(value) {
 				this.$store.commit('vender/setAddressId', value)
+				this.$cookies.set('address_id', value)
 			},
 		},
 		sale_type_id: {
@@ -244,6 +245,7 @@ export default {
 					return false
 				} else {
 					this.$toast.error('Ese articulo no esta ingresado en el sistema')
+					document.getElementById('article-bar-code').value = ''
 					return false
 				}
 			}

@@ -6,7 +6,16 @@ export default {
 			} else {
 				this.$store.commit('vender/setEmployeeId', 0)
 			}
+			this.checkAddressCookie()
 			this.checkUpdateFeaturesCookie()
+		},
+		checkAddressCookie() {
+			let cookie = this.$cookies.get('address_id')
+			console.log('address_id cookie:')
+			console.log(cookie)
+			if (cookie) {
+				this.$store.commit('vender/setAddressId', cookie)
+			}
 		},
 		checkUpdateFeaturesCookie() {
 			let cookie = this.$cookies.get('update_features_watched')

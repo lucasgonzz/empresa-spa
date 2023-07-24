@@ -90,6 +90,12 @@ export default {
 						type: 'text',
 						show: true,
 					},
+					{
+						text: 'Variante',
+						key: 'variant',
+						type: 'text',
+						show: true,
+					},
 				],
 				pivot_props_to_show: [
 					{

@@ -59,6 +59,11 @@ export default {
 			type: 'checkbox',
 		},
 		{
+			text: 'Ancho en milimetros de la comandera para imprimir los Tickets de Ventas',
+			key: 'sale_ticket_width',
+			type: 'number',
+		},
+		{
 			text: 'Valor dolar',
 			key: 'dollar',
 			type: 'text',

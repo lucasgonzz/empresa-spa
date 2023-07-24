@@ -33,6 +33,17 @@ export default {
 			type: 'number',
 		},
 		{
+			text: 'Descripcion',
+			key: 'description',
+			type: 'text',
+			description: 'Si se ingresa, este dato sera usado para identificarlo en la seccion VENDER',			
+		},
+		{
+			text: 'Direccion',
+			key: 'address_id',
+			type: 'select',
+		},
+		{
 			text: 'Modo produccion',
 			key: 'afip_ticket_production',
 			type: 'checkbox',

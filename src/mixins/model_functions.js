@@ -82,6 +82,10 @@ export default {
             if (model.payment_method && model.payment_method.name == 'MercadoPago') {
                 this.$store.dispatch('order_payment_method_detail/getModel', model)
                 this.$bvModal.show('order-payment-method-details')
+            } else if (model.payment_method && model.payment_method.name == 'Payway') {
+                console.log('mostrando payment-card-info')
+                this.setModel(model, 'order')
+                this.$bvModal.show('payment-card-info')
             }
         },
         orderTotal(model, formated = true) {
