@@ -1,6 +1,7 @@
+import set_employee_vender from '@/mixins/set_employee_vender'
 import vender from '@/mixins/vender'
 export default {
-	mixins: [vender],
+	mixins: [vender, set_employee_vender],
 	computed: {
 		updating() {
 			return this.$store.state.vender.previus_sales.updating
@@ -57,7 +58,7 @@ export default {
 					this.$store.commit('vender/setClient', this.previus_sale.client)
 					this.$store.commit('vender/setPriceType', this.previus_sale.client.price_type)
 				} else {
-					console.log('se seteo con null')
+					console.log('se seteo client con null')
 					this.$store.commit('vender/setClient', null)
 					this.$store.commit('vender/setPriceType', null)
 				}
@@ -81,8 +82,8 @@ export default {
 			})
 		},
 		updateSale() {
-			console.log('discounts_in_services')
-			console.log(this.discounts_in_services)
+			console.log('address_id')
+			console.log(this.address_id)
 			this.$store.dispatch('vender/previus_sales/updateSale', {
 				client_id: this.client ? this.client.id : null, 
 				discounts_id: this.discounts_id, 
@@ -95,6 +96,7 @@ export default {
 				current_acount_payment_method_id: this.current_acount_payment_method_id,
 				afip_information_id: this.afip_information_id,
 				sale_type_id: this.sale_type_id,
+				address_id: this.address_id,
 			})
 			.then(res => {
 				this.$toast.success('Venta actualizada')
@@ -112,6 +114,7 @@ export default {
 			this.$store.commit('vender/setSaveNotaCredito', 0)
 			this.$store.commit('vender/setNotaCreditoDescription', '')
 			this.$store.commit('vender/setTotal')
+			this.setEmployeeVender()
 		},
 		getItemsPreviusSale(sale) {
 			let items = []

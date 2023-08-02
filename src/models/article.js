@@ -241,6 +241,22 @@ export default {
 			not_show: true,
 		},
 		{
+			text: 'Stock por direccion',
+			key: 'addresses',
+			type: 'search',
+			store: 'address',
+			belongs_to_many: {
+				properties_to_set: [
+					{
+						text: 'Cantidad',
+						key: 'amount',
+						type: 'number',
+					},
+				],
+			},
+			not_show: true,
+		},
+		{
 			text: 'Depositos',
 			key: 'deposits',
 			type: 'search',
@@ -253,24 +269,6 @@ export default {
 						type: 'number',
 					},
 				],
-			},
-			not_show: true,
-		},
-		{
-			text: 'Talles',
-			key: 'sizes',
-			type: 'checkbox',
-			store: 'size',
-			belongs_to_many: {
-			},
-			not_show: true,
-		},
-		{
-			text: 'Colores',
-			key: 'colors',
-			type: 'checkbox',
-			store: 'color',
-			belongs_to_many: {
 			},
 			not_show: true,
 		},

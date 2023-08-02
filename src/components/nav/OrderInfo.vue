@@ -36,12 +36,18 @@ export default {
 		orders() {
 			return this.$store.state.order.models 
 		},
+		_unconfirmed_orders() {
+			return this.$store.state.order.unconfirmed_models 
+		},
         unconfirmed_orders() {
             if (this.has_online) {
                 let orders = this.orders.filter(order => {
                 	return order.order_status.name == 'Sin confirmar'
                 })
-                return orders 
+                let unconfirmed_orders = this._unconfirmed_orders.filter(order => {
+                	return order.order_status.name == 'Sin confirmar'
+                })
+                return orders.concat(unconfirmed_orders) 
             }
             return []
         },

@@ -164,6 +164,14 @@ export default {
 			show: true,
 		},
 		{
+			key: 'days_to_advise',
+			text: 'Avisarme si el pedido no fue RECIBIDO a partir de X dias desde que fue creado',
+			type: 'number',
+			placeholder: 'Ingrese los dias a partir de los cuales se le notificara',
+			value: 0,
+			show: true,
+		},
+		{
 			text: 'Total',
 			key: 'total',
 			function: 'providerOrderTotal',

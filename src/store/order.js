@@ -1,3 +1,5 @@
+// A este archivo se agrego la propiedad unconfirmed_models
+
 import axios from 'axios'
 axios.defaults.withCredentials = true
 axios.defaults.baseURL = process.env.VUE_APP_API_URL
@@ -27,6 +29,7 @@ export default {
 		total_pages: 1, 
 
 		models: [],
+		unconfirmed_models: [],
 		model: {},
 		selected: [],
 		filtered: [],
@@ -71,6 +74,9 @@ export default {
 		},
 		addModels(state, value) {
 			state.models = state.models.concat(value)
+		},
+		setUnconfirmedModels(state, value) {
+			state.unconfirmed_models = value 
 		},
 		incrementPage(state) {
 			state.page++
@@ -228,6 +234,16 @@ export default {
 					commit('setLoading', false)
 					commit('setModels', res.data.models)
 				}
+			})
+			.catch(err => {
+				commit('setLoading', false)
+				console.log(err)
+			})
+		},
+		getUnconfirmedModels({commit, state}) {
+			return axios.get('/api/'+generals.methods.routeString(state.model_name)+'/unconfirmed/models')
+			.then(res => {
+				commit('setUnconfirmedModels', res.data.models)
 			})
 			.catch(err => {
 				commit('setLoading', false)

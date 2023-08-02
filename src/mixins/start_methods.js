@@ -1,13 +1,13 @@
+import set_employee_vender from '@/mixins/set_employee_vender'
 export default {
+	mixins: [set_employee_vender],
 	methods: {
 		startMethods() {
-			if (!this.is_owner) {
-				this.$store.commit('vender/setEmployeeId', this.user.id)
-			} else {
-				this.$store.commit('vender/setEmployeeId', 0)
-			}
+			this.setEmployeeVender()
 			this.checkAddressCookie()
 			this.checkUpdateFeaturesCookie()
+			this.getUnconfirmedOrders()
+			this.getProviderOrdersDaysToAdvise()
 		},
 		checkAddressCookie() {
 			let cookie = this.$cookies.get('address_id')
@@ -30,6 +30,16 @@ export default {
 					this.$bvModal.show('update-features')
 				}, 3000)
 			} 
+		},
+		getUnconfirmedOrders() {
+			if (this.has_online) {
+				this.$store.dispatch('order/getUnconfirmedModels')
+			}
+		},
+		getProviderOrdersDaysToAdvise() {
+			if (this.has_online) {
+				this.$store.dispatch('provider_order/getDaysToAdvise')
+			}
 		},
 	}
 }

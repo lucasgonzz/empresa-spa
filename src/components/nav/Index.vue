@@ -17,6 +17,7 @@
 		<tasks></tasks>	
 		<payment-expire></payment-expire>
 		<order-info></order-info>
+		<provider-order-info></provider-order-info>
 	</div>
 </template>
 <script>
@@ -26,6 +27,7 @@ export default {
 		TasksButton: () => import('@/components/nav/tasks/TasksButton'),
 		Tasks: () => import('@/components/nav/tasks/modal/Index'),
 		OrderInfo: () => import('@/components/nav/OrderInfo'),
+		ProviderOrderInfo: () => import('@/components/nav/ProviderOrderInfo'),
 		PaymentExpire: () => import('@/components/nav/PaymentExpire'),
 
 		UpdateFeatures: () => import('@/components/common/UpdateFeatures'),

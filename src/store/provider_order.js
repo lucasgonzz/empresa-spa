@@ -1,3 +1,4 @@
+// Se agrego days_to_advise_models
 import axios from 'axios'
 axios.defaults.withCredentials = true
 axios.defaults.baseURL = process.env.VUE_APP_API_URL
@@ -25,6 +26,7 @@ export default {
 		per_page: 25,
 		total_pages: 1, 
 
+		days_to_advise_models: [],
 		models: [],
 		model: {},
 		selected: [],
@@ -70,6 +72,9 @@ export default {
 		},
 		addModels(state, value) {
 			state.models = state.models.concat(value)
+		},
+		setDaysToAdvise(state, value) {
+			state.days_to_advise_models = value
 		},
 		incrementPage(state) {
 			state.page++
@@ -224,6 +229,16 @@ export default {
 					commit('setLoading', false)
 					commit('setModels', res.data.models)
 				}
+			})
+			.catch(err => {
+				commit('setLoading', false)
+				console.log(err)
+			})
+		},
+		getDaysToAdvise({commit, state}) {
+			return axios.get('/api/'+generals.methods.routeString(state.model_name)+'/days-to-advise/not-received')
+			.then(res => {
+				commit('setDaysToAdvise', res.data.models)
 			})
 			.catch(err => {
 				commit('setLoading', false)
