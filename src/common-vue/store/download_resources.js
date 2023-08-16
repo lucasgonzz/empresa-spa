@@ -15,6 +15,7 @@ export default {
 		},
 		setStartDownload(state) {
 			state.start_download = !state.start_download
+			console.log('setStartDownload QUEDO EN '+state.start_download)
 		},
 		// setModels() {
 		// 	call_methods.forEach(model => {

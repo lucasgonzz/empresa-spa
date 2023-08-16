@@ -9,6 +9,7 @@
 			size="sm"
 			@click="clearSelected"
 			variant="outline-primary">
+				<i class="icon-cancel"></i>
 				Limpiar selección
 			</b-button>
 			<b-button

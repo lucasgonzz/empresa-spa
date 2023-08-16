@@ -6,10 +6,21 @@ hide-footer
 	<b-form-group
 	v-for="prop in form"
 	:label="prop.label">
-		<b-form-input
-		v-if="prop.type == 'number'"
-		:placeholder="prop.placeholder"
-		v-model="prop.value"></b-form-input>
+		<div
+		v-if="prop.type == 'number'">
+			<b-form-input
+			:placeholder="prop.placeholder"
+			v-model="prop.value"></b-form-input>
+
+			<b-form-checkbox
+			class="m-t-10"
+			v-if="typeof prop.round != 'undefined'"
+			v-model="prop.round"
+			:value="1"
+			:unchecked-value="0">
+				Redondear
+			</b-form-checkbox>
+		</div>
 
 		<b-form-select
 		v-else-if="prop.type == 'select'"
@@ -70,6 +81,7 @@ export default {
 						type: 'number',
 						placeholder: 'Porcentaje para disminuir '+this.propText(prop),
 						value: '',
+						round: 0,
 					})
 					this.form.push({
 						label: 'Aumentar el '+this.propText(prop),
@@ -77,6 +89,7 @@ export default {
 						type: 'number', 
 						placeholder: 'Porcentaje para aumentar '+this.propText(prop),
 						value: '',
+						round: 0,
 					})
 					this.form.push({
 						label: 'Setear el '+this.propText(prop),

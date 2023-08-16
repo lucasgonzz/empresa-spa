@@ -15,12 +15,6 @@
 			:set_view="has_views ? false : true"
 			:set_sub_view="has_views ? true : false"
 			:items="items"></horizontal-nav>
-
-			<!-- <horizontal-nav
-			:show_display="false"
-			@setSelected="setSelected"
-			set_view
-			:items="items"></horizontal-nav> -->
 			
 			<view-component
 			show_filter_modal
@@ -62,10 +56,15 @@ export default {
 					if (this.view == this.routeString(view.view)) {
 						view.models.forEach(model => {
 							if (this.checkModel(model)) {
-								items.push({
-									name: this.plural(model),
+								let item = {
 									call_models: model,
-								})
+								}
+								if (this.idiom == 'es') {
+									item.nombre = this.plural(model)
+								} else {
+									item.name = this.plural(model)
+								}
+								items.push(item)
 							}
 						})
 					}
@@ -73,10 +72,15 @@ export default {
 			} else {
 				this.models.forEach(model => {
 					if (this.checkModel(model)) {
-						items.push({
-							name: this.plural(model),
+						let item = {
 							call_models: model,
-						})
+						}
+						if (this.idiom == 'es') {
+							item.nombre = this.plural(model)
+						} else {
+							item.name = this.plural(model)
+						}
+						items.push(item)
 					}
 				})
 			}

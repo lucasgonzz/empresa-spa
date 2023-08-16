@@ -17,7 +17,8 @@
             </b-dropdown-item>
         </template>
         <b-dropdown-divider></b-dropdown-divider>
-        <b-dropdown-item>
+        <b-dropdown-item
+        v-b-modal="'update-password'">
             <i class="icon-user"></i>
             Cambiar contraseña
         </b-dropdown-item>

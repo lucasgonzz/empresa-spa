@@ -24,7 +24,6 @@ export default {
 		    		this.$store.commit('auth/setMessage', 'Instalando')
                 }
                 if (this.progress == 100) {
-					this.$cookies.set('update_features_watched', false, -1)
                     window.clearInterval(interval)
                     console.log('Se actualizo')
 		    		location.reload(true)

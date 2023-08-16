@@ -79,6 +79,7 @@ export default {
 	.cont-title, .cont-btn
 		@media screen and (max-width: 992px)
 			width: 100%
+			margin-top: 25px
 		@media screen and (min-width: 992px)
 			width: 25%
 	.cont-nav

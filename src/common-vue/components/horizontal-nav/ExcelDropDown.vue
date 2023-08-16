@@ -5,7 +5,7 @@
 	variant="primary"
 	v-if="can_create"
 	@click="setModel(null, model_name)"
-	:text="create_spanish(model_name)">
+	text="Crear">
 		<b-dropdown-item
 		v-if="can_create"
 		@click="setModel(null, model_name)">

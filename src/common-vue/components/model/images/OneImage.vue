@@ -24,7 +24,10 @@
 			        variant="success"></b-spinner>
 
 					<div slot="error">
-						Imagen no encontrada
+						<p
+						class="m-b-0">
+							Imagen no encontrada
+						</p>
 					</div>
 				</vue-load-image>
 			</div>

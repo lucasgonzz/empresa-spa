@@ -6,7 +6,6 @@
 			<div 
 			v-if="items"
 			class="horizontal-nav">
-
 				<div
 				class="item apretable"
 				v-for="(item, i) in items"
@@ -20,10 +19,10 @@
 						{{ item.alert }}
 					</b-badge>
 				</div>
-
 			</div>
+
 			<div
-			class="cont-buttons"
+			class="cont-buttons search-buttons"
 			v-if="show_filter_modal">
 				<filter-modal
 				:model_name="model_name"></filter-modal>
@@ -31,22 +30,21 @@
 				class="m-r-15">
 					<b-button
 					v-if="can_filter_modal"
-					variant="outline-primary"
+					variant="primary"
 					@click="filterModal">
 						<i class="icon-search"></i>
-						Buscar
 					</b-button>
 					<b-button
 					v-if="is_filtered"
 					@click="restartSearch"
 					variant="outline-success">
-						<i class="icon-undo"></i>
-						Restaurar
+						<i class="icon-history"></i>
 					</b-button>
 				</b-btn-group>	
 			</div>
+			
 			<div
-			class="cont-buttons">
+			class="cont-buttons create-buttons">
 				<slot name="btn_create">
 					<excel-drop-down
 					v-if="show_excel_drop_down"
@@ -60,9 +58,8 @@
 					:block="false"
 					:model_name="model_name"></btn-create>
 				</slot>
-
-				<slot name="buttons"></slot>
 			</div>
+
 			<div
 			class="align-center m-l-15 m-t-15 m-sm-t-0"
 			v-if="ask_selectable">
@@ -73,11 +70,15 @@
 					Seleccion multiple
 				</b-form-checkbox>
 			</div>
+
 			<options-dropdown
-			class="m-t-15 m-lg-t-0"
 			v-if="show_filter_modal"
 			:model_name="model_name"></options-dropdown>
+			
+			<slot name="horizontal_nav_center"></slot>
 		</div>
+ 
+		
 		<display-nav
 		v-if="show_display"
 		:model_name="model_name"
@@ -108,7 +109,7 @@ export default {
 		},
 		prop_name: {
 			type: String,
-			default: 'name',
+			default: null,
 		},
 		model_name: {
 			type: String,
@@ -145,7 +146,7 @@ export default {
 	},
 	created() {
 		if (!this.set_view && !this.set_sub_view) {
-			if (typeof this.items != 'undefined' && this.items.length && !this.selected_item) {
+			if (typeof this.items != 'undefined' && this.items && this.items.length && !this.selected_item) {
 				this.select(this.items[0])
 			}
 		}
@@ -194,12 +195,21 @@ export default {
 		is_filtered() {
 			return this.$store.state[this.model_name].is_filtered 
 		},
+		_prop_name() {
+			if (this.prop_name) {
+				return this.prop_name
+			}
+			if (this.idiom == 'es') {
+				return 'nombre'
+			}
+			return 'name'
+		}
 	},
 	methods: {
 		filterModal() {
 			this.$bvModal.show('filter-modal')
 			setTimeout(() => {
-				document.getElementById('search-modal-name').focus()
+				document.getElementById('search-modal-'+this.propsToFilterInModal(this.model_name)[0].key).focus()
 			}, 300)
 		},
 		restartSearch() {
@@ -262,13 +272,13 @@ export default {
 			}
 		},
 		value(item) {
-			return item[this.prop_name]
+			return item[this._prop_name]
 		},
 		routeValue(item) {
 			if (item.route_value) {
 				return item.route_value
 			}
-			return item[this.prop_name]
+			return item[this._prop_name]
 		},
 		isActive(item) {
 			if (this.selected) {
@@ -289,31 +299,23 @@ export default {
 	padding: 1em 0 0
 	justify-content: space-between
 	width: 100%
-	// & > div 
-	// 	width: 100%
+
 	.cont-left
 		display: flex
 		flex-direction: row
 		justify-content: flex-start
 		flex-wrap: wrap
 		max-width: 100%
-		@media screen and (max-width: 576px)
-			width: 100%
-			.cont-buttons
-				width: 100%
-				.btn-group
-					width: 100%
-					.btn 
-						width: 50%
-				.btn 
-					display: block
-					width: 100%
-					margin-bottom: 15px
+		.cont-buttons
+			display: flex 
+			flex-direction: row 
+			justify-content: flex-start
 .horizontal-nav
 	width: 100%
 	display: flex
 	overflow-x: scroll
 	overflow-y: hidden
+	padding-bottom: 5px
 	@media screen and (max-width: 576px)
 		&::-webkit-scrollbar 
 			-ms-overflow-style: none
@@ -330,13 +332,16 @@ export default {
 		transition: all .2s
 		font-size: 1em
 		white-space: nowrap 
-		color: rgba(0, 0, 0, .6) !important
+		@if ($theme == 'dark') 
+			color: rgba(255, 255, 255, .8) !important
+		@else 
+			color: rgba(0, 0, 0, .6) !important
+
 	.active 
 		font-weight: bold
-		// transform: scale(1.1)
-		color: #000 !important
 		border-bottom: 3px solid $blue
-		// box-shadow: 0px 3px 7px rgb(0 0 0 / 15%) !important
-		// webkit-box-shadow: 0px -2px 4px -1px rgba(0,0,0,.7)
-		// box-shadow: 0px -2px 4px -1px rgba(0,0,0,.7)
+		@if ($theme == 'dark') 
+			color: #fff !important
+		@else 
+			color: #000 !important
 </style>

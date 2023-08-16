@@ -1,6 +1,6 @@
 <template>
 <div
-class="m-t-15">
+class="m-l-15">
 	<b-button
 	class="m-r-15"
 	v-b-modal="'articles-stock-min'"
@@ -29,7 +29,6 @@ export default {
 		},
 		articles_stock_0() {
 			return this.articles.filter(article => {
-				console.log(article.stock)
 				return article.stock != null && article.stock <= 0
 			})
 		},

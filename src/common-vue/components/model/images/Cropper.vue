@@ -37,6 +37,11 @@ export default {
 	},
 	computed: {
 		stencil_props() {
+			if (this.aspect_ratio_disabled) {
+				return {
+					aspectRatio: 0,
+				}
+			}
 			if (this.prop.crop_aspect_ratio) {
 				return {
 					aspectRatio: this.prop.crop_aspect_ratio

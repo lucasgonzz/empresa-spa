@@ -9,13 +9,14 @@
 				class="s-2 b-r-1 animate__animated animate__fadeIn"
 				head-variant="dark"
 				responsive
-				:striped="striped"
+				:striped="_striped"
 				:fields="fields"
 				:items="items"
-				hover 
+				:hover="hover" 
 				selectable 
 				ref="tableComponent"
 				:select-mode="_select_mode"
+				:tbody-tr-class="rowClass"
 				@row-selected="onRowSelected">
 					<template 
 					v-for="prop in properties"
@@ -64,7 +65,7 @@
 						<b-button
 						v-else-if="showProperty(prop, models[data.index]) && prop.button"
 						:variant="prop.button.variant"
-						@click.stop="callMethod(prop, models[data.index])">
+						@click="callMethod(prop, models[data.index])">
 							<i
 							v-if="prop.button.icon"
 							:class="'icon-'+prop.button.icon"></i>
@@ -211,7 +212,7 @@
 		v-else
 		:rows="10" 
 		:columns="columns"
-		:table-props="{ bordered: true, striped: true }"
+		:table-props="skeleton_props"
 		></b-skeleton-table>
 	</div>
 </template>
@@ -287,6 +288,10 @@ export default {
 			type: Boolean,
 			default: true,
 		},
+		hover: {
+			type: Boolean,
+			default: true
+		},
 	},
 	data() {
 		return {
@@ -308,6 +313,21 @@ export default {
 		},
 	},
 	computed: {
+		skeleton_props() {
+			if (this.theme_dark) {
+				return { bordered: false, striped: false }
+			}
+			return { bordered: true, striped: true }
+		},
+		_striped() {
+			if (!this.striped) {
+				return false
+			}
+			if (this.app_theme == 'light') {
+				return true
+			}
+			return false
+		},
 		columns() {
 			let props = this.propertiesToShow(this.properties, true)
 			if (props.length) {
@@ -334,7 +354,6 @@ export default {
 		},
 		fields() {
 			let fields = []
-			console.log(this.propertiesToShow(this.properties, true))
 			this.propertiesToShow(this.properties, true).forEach(prop => {
 				fields.push({
 					key: prop.key,
@@ -386,13 +405,18 @@ export default {
 						item[prop.key] = this.propertyText(model, prop)
 					}
 				})
-				item._rowVariant = this.hasColor(model)
+				item._rowVariant = this.getColor(model)
 				items.push(item)
 			})
 			return items
 		},
 	},
 	methods: {
+		rowClass(item, type) {
+			if (this.model_name && this.hasColor(this.model_name)) {
+				return this[this.model_name+'GetColor'](this.models.find(model => model.id == item.id))
+			}
+		},
 		download() {
 			this.$store.dispatch(this.model_name+'/getModels')
 		},
@@ -402,7 +426,7 @@ export default {
 			}
 			return ''
 		},
-		hasColor(model) {
+		getColor(model) {
 			if (this.model_name) {
 				let prop = this.getBorderColorProperty(this.model_name)
 				if (prop && model[this.modelNameFromRelationKey(prop)]) {
@@ -511,17 +535,83 @@ export default {
 }
 </script>
 <style lang="sass">
+@import '@/sass/_custom.scss'
 .table 
-	background: #FFF
+	// background: #FFF
 	img 
 		width: 100px
 	input, textarea
 		width: 200px
 	th, td 
 		text-align: left
+		white-space: nowrap
+		@if ($table_font_small)
+			font-size: 1em
+			padding: 5px !important
+
+	tr
+		@if ($theme == 'dark')
+			color: rgb(189, 189, 189)
+			&:hover, &:active 
+				border: 2px solid $blue !important
+				& > td 
+					color: rgb(189, 189, 189) !important
+					background-color: rgba(0,0,0,.8) !important
+ 
+		@else
+			color: #000
+			&:hover, &:active 
+				border: 2px solid $blue !important
+				& > td 
+					color: #000 !important
+					background-color: #999999 !important
+
+	.b-table-row-selected 
+		border: 2px solid $blue !important
+		td 
+			@if ($theme == 'dark')
+				color: rgb(189, 189, 189) !important
+				background-color: rgba(0,0,0,.8) !important
+			@else 
+				// color: rgb(189, 189, 189) !important
+				background-color: #999999 !important
+
+
+	// th, td 
+	// 	white-space: nowrap
+	// 	font-weight: bold
+	// 	text-align: left
+		
+		th 
+			padding: 10px 15px
+			font-size: 17px
+			position: sticky
+			top: 0px
+			@if ($theme == 'dark')
+				color: rgb(189, 189, 189)
+				background: #2C2C2C
+				border-right: 1px solid rgba(255,255,255,.2)
+				border-bottom: 1px solid rgba(255,255,255,.2)
+				&:last-child(2)
+					border-right: 0 !important
+			@else
+				background: rgb(189, 189, 189)
+
+
+		td 
+			padding: 5px 15px
+			line-height: 25px
+			@if ($theme == 'dark')
+				background: #3E3E3E
+				border-bottom: 1px solid rgba(255,255,255,.2)
+			@else
+				background: rgb(189, 189, 189)
+				
+
 	.width-300
 		display: inline-block
 		width: 300px
+
 	.cont-edit 
 		display: flex
 		flex-direction: row

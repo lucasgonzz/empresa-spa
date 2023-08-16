@@ -32,17 +32,20 @@ export default {
 }
 </script>
 <style scoped lang="sass">
+@import '@/sass/_custom.scss'
 .container-logo
 	position: fixed
 	width: 100vw
 	height: 100vh
 	z-index: 10000
-	// background: rgba(0,0,0,.3)
-	background: #FFF
 	display: flex
 	flex-direction: column
 	justify-content: center
 	align-items: center
+	background: #FFF
+	@if ($theme == 'dark') 
+		background: #333
+
 	.logo
 		margin-bottom: 10px
 		z-index: 100

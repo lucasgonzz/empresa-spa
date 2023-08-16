@@ -31,7 +31,7 @@ export default {
             this.$store.commit('download_resources/setVisibility')
             setTimeout(() => {
                 this.$store.commit('download_resources/setVisibility')
-            }, 4000) 
+            }, 4000)
             if (this.has_extra_config) {
                 for (var i = this.extra_config.length - 1; i >= 0; i--) {
                     await this.$store.dispatch(this.extra_config[i]+'/getModels')

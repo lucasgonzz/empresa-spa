@@ -7,7 +7,7 @@
 		@click="callSetModel"
 		size="sm"
 		class="btn-create"
-		variant="outline-primary"> 
+		variant="primary"> 
 			<i class="icon-plus"></i>
 			{{ create_spanish(model_name) }}
 		</b-button>
@@ -52,4 +52,6 @@ export default {
 <style lang="sass">
 .btn-create
 	height: 100%
+	white-space: nowrap
+	margin-left: 10px
 </style>

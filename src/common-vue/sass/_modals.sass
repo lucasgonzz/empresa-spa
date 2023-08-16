@@ -1,3 +1,4 @@
+@import '@/sass/_custom.scss'
 .modal 
 	padding-left: 0 !important
 
@@ -6,3 +7,7 @@
 		max-width: 96% !important 
 	@media screen and (min-width: 576px)
 		max-width: 90% !important 
+
+	.modal-content
+		@if ($theme == 'dark')
+			border: 1px solid rgba(255, 255, 255, 0.3)

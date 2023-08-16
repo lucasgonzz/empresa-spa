@@ -54,6 +54,7 @@
 			</model-form>
 
 			<b-form-checkbox
+			v-if="show_limpiar_formulario"
 			:value="1"
 			:uncheked-value="0"
 			v-model="clear_model">
@@ -75,6 +76,7 @@
 						:modal="'delete-'+model_name"></btn-delete>
 
 						<btn-loader
+						class="m-l-10"
 						:block="false"
 						v-if="can_save"
 						@clicked="save"
@@ -190,6 +192,9 @@ export default {
 		}
 	},
 	computed: {
+		show_limpiar_formulario() {
+			return this.props_to_keep_after_create.length
+		},
 		loading: {
 			set(value) {
 				this.$store.commit('auth/setLoading', value)
@@ -328,7 +333,9 @@ export default {
 		},
 		closeModal(info) {
 			if (info.close) {
-				this.$bvModal.hide(this.model_name)
+				setTimeout(() => {
+					this.$bvModal.hide(this.model_name)
+				}, 100)
 			}
 		},
 		clearModel(info) {
@@ -390,6 +397,15 @@ export default {
 }
 </script>
 <style lang="sass">
+@import '@/sass/_custom.scss'
+@if ($theme == 'dark') 
+	.modal-content
+		background: #333 !important
+	.modal-header, .modal-header > .close
+		color: rgba(255, 255, 255, .9) !important
+@else 
+	.modal-content
+		color: rgba(0, 0, 0, .6) !important
 .modal-body
 	.b-form-datepicker 
 		margin-bottom: 250px

@@ -69,10 +69,7 @@
 					<hr>
 				</b-form-group>
 			</div>
-			<div
-			class="p-15">
-				<slot v-bind:model="model"></slot>
-			</div>
+			<slot name="table_right_options" v-bind:model="model"></slot>
 		</div>
 	</div>
 </template>
@@ -160,6 +157,7 @@ export default {
 }
 </script>
 <style lang="sass">
+@import '@/sass/_custom.scss'
 .card-component
 	@media screen and (max-width: 576px)
 		width: 98%
@@ -173,8 +171,8 @@ export default {
 	display: flex
 	flex-direction: row  
 	margin: 1em 1%
-	background: #FFF
 	border-radius: 12px
+	background: #FFF
 	.title 
 		font-size: 30px 
 		font-weight: bold
@@ -185,6 +183,7 @@ export default {
 		align-items: center
 		padding: 0 10px
 		p 
+			color: #333 !important
 			display: flex
 			flex-direction: row
 			line-height: 25px
@@ -199,6 +198,7 @@ export default {
 	.cont-props
 		padding: 1em
 		p 
+			color: #333 !important
 			text-align: left
 			margin-bottom: 0
 </style>

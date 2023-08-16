@@ -50,7 +50,7 @@ export default {
 		async getArticleFromBarCode(bar_code) {
 			let article
 			bar_code = this.getBarCode(bar_code)
-			if ((!this.download_articles && (!this.articles.length || this.articles.length < 100)) || (this.is_mobile && !this.downloadOnMobile('article') && !this.articles.length ) || this.$store.state.article.loading) {
+			if ((!this.download_articles && !this.articles.length) || (this.is_mobile && !this.downloadOnMobile('article') && !this.articles.length ) || this.$store.state.article.loading) {
 				console.log('se va a buscar del api el codigo '+bar_code)
 				await this.getArticleFromApi(bar_code)
 				// alert('siguio')
@@ -58,16 +58,21 @@ export default {
 				this.finded_article = this.articles.find(article => {
 					return article.bar_code && article.bar_code == bar_code
 				})
+				console.log('ENTRO 2')
+				console.log(this.finded_article)
 				// alert('Find in store: '+this.finded_article)
 			}
 		},
 		async setBarCode(bar_code) {
 			await this.getArticleFromBarCode(bar_code)
+			console.log('setVenderArticle')
 			this.setVenderArticle(this.finded_article, true) 
 		},
 		async setArticle() {
 			if (this.article.bar_code != '') {
 				await this.getArticleFromBarCode(this.article.bar_code)
+				console.log('sigue con setVenderArticle')
+				console.log(this.finded_article.name)
 				this.setVenderArticle(this.finded_article)
 			}
 		},

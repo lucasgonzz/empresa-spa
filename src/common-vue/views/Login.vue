@@ -1,15 +1,12 @@
 <template>
 	<b-row
-	class="all-center b-w">
+	class="all-center">
 		<b-col
 		cols="12"
 		md="6"
 		lg="5"
 		xl="4">
-			<div  
-			class="b-w">
-				<login-form></login-form>
-			</div>
+			<login-form></login-form>
 		</b-col>
 	</b-row>
 </template>

@@ -27,7 +27,7 @@ hide-footer>
 		:models="results"
 		:set_model_on_row_selected="false"
 		:striped="false"
-		@clicked="setSelected"></table-component>	
+		@onRowSelected="setSelected"></table-component>	
 	</div>
 	<div
 	v-else>
@@ -40,7 +40,7 @@ hide-footer>
 </template>
 <script>
 export default {
-	props: {
+	props: { 
 		prop: Object,
 		model: Object,
 	},
@@ -75,6 +75,8 @@ export default {
 			searching: false,
 			results: [],
 			selected_index: -1,
+
+			geocoder: null,
 		}
 	},
 	methods: {
@@ -103,26 +105,50 @@ export default {
 		},
 		search() {
 			console.log('buscando')
-			const geocoder = new google.maps.Geocoder()
-			geocoder.geocode({
-				address: this.query+' Argentina'
-			})
-			.then(res => {
-				this.results = res.results.map(result => {
+			console.log(this.$geocoder)
+
+			var addressObj = {
+			    address_line_1: this.query,
+			    address_line_2: '',
+			    // city:           'Mountain View',
+			    // state:          'CA',               // province also valid
+			    // zip_code:       '94043',            // postal_code also valid
+			    country:        'Argentina'
+			}
+			this.$geocoder.send(addressObj, response => { 
+				console.log(response)
+				this.results = response.results.map(response => {
 					return {
-						address: result.formatted_address,
-						geometry: result.geometry,
+						address: response.formatted_address,
+						geometry: response.geometry,
 					}
 				})
-				console.log(res.results)
 				this.searching = false
 				this.interval = null
 				this.loading = false 
 				this.setFirstSelectedRow()
 			})
-			.catch(err => {
-				console.log(err)
-			})
+
+			// const geocoder = new google.maps.Geocoder()
+			// google.maps.Geocoder.geocode({
+			// 	address: this.query+' Argentina'
+			// })
+			// .then(res => {
+			// 	this.results = res.results.map(result => {
+			// 		return {
+			// 			address: result.formatted_address,
+			// 			geometry: result.geometry,
+			// 		}
+			// 	})
+			// 	console.log(res.results)
+			// 	this.searching = false
+			// 	this.interval = null
+			// 	this.loading = false 
+			// 	this.setFirstSelectedRow()
+			// })
+			// .catch(err => {
+			// 	console.log(err)
+			// })
 		},
 		enterSelect() { 
 			if (!this.loading) {
@@ -148,8 +174,9 @@ export default {
 			console.log('setSelected')
 			console.log(result)
 			this.model[this.prop.key] = result.address 
-			this.model[this.prop.key+'_lat'] = result.geometry.location.lat()
-			this.model[this.prop.key+'_lng'] = result.geometry.location.lng()
+			this.model[this.prop.key+'_lat'] = result.geometry.location.lat
+			this.model[this.prop.key+'_lng'] = result.geometry.location.lng
+			this.$bvModal.hide(this.id)
 		}
 	}
 }

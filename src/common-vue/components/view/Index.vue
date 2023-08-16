@@ -45,18 +45,22 @@
 		:show_btn_create="_show_btn_create"
 		:show_plus_dropdown="show_plus_dropdown"
 		:show_display="show_display"
+		:items="horizontal_nav_items" 
+		:set_view="horizontal_nav_set_view"
+		:set_sub_view="horizontal_nav_set_sub_view"
 		:model_name="model_name">
 			<template v-slot:btn_create>
 				<slot name="horizontal_nav_btn_create"></slot>
 			</template>
-			<template v-slot:buttons>
-				<slot name="horizontal_nav_buttons"></slot>
+			<template v-slot:horizontal_nav_center>
+				<slot name="horizontal_nav_center"></slot>
 			</template>
 		</horizontal-nav>
 	
 		<slot name="body"></slot>
 		
 		<list
+		:table_height_para_restar="table_height_para_restar"
 		:order_list_by="order_list_by"
 		:check_permissions="check_permissions"
 		:models_to_show="models_to_show"
@@ -64,14 +68,17 @@
 		:show_previus_days="show_previus_days"
 		:show_search_nav="show_search_nav"
 		:model_name="model_name"
+		:set_table_height="set_table_height"
 		@clicked="clicked">
 			<template v-slot:display_top>
 				<slot name="display_top"></slot>
 			</template>
-			<template v-slot:default="slotProps">
-				<slot :model="slotProps.model"></slot>
+			<template v-slot:table_right_options="slotProps">
+				<slot name="table_right_options" :model="slotProps.model"></slot>
 			</template>
 		</list>
+
+		<slot name="view_footer"></slot>
 	</div>
 </template>
 <script>
@@ -138,6 +145,18 @@ export default {
 			type: Boolean,
 			default: true,
 		},
+		horizontal_nav_items: {
+			type: Array,
+			default: null,
+		},
+		horizontal_nav_set_view: {
+			type: Boolean,
+			default: false,
+		},
+		horizontal_nav_set_sub_view: {
+			type: Boolean,
+			default: false,
+		},
 		col_xl: {
 			type: String,
 			default: '12'
@@ -188,6 +207,14 @@ export default {
 		delete_text: {
 			type: String,
 			default: null,
+		},
+		table_height_para_restar: {
+			type: Number,
+			default: null,
+		},
+		set_table_height: {
+			type: Boolean,
+			default: true,
 		},
 	},
 	computed: {

@@ -8,16 +8,18 @@
 		<slot name="display_top"></slot>
 
 		<display
+		:table_height_para_restar="table_height_para_restar"
 		:order_list_by="order_list_by"
 		:check_permissions="check_permissions"
 		:models="models_to_show"
 		:model_name="model_name"
 		:show_models_if_empty="show_models_if_empty"
 		:properties="properties"
+		:set_table_height="set_table_height"
 		@clicked="clicked"
 		:model_name_spanish="model_name_spanish">
-			<template v-slot:default="slotProps">
-				<slot :model="slotProps.model"></slot>
+			<template v-slot:table_right_options="slotProps">
+				<slot name="table_right_options" :model="slotProps.model"></slot>
 			</template>
 		</display>
 	</div>
@@ -32,6 +34,10 @@ export default {
 		show_previus_days: Boolean,
 		show_search_nav: Boolean,
 		check_permissions: Boolean,
+		set_table_height: {
+			type: Boolean,
+			default: true,
+		},
 		models_to_show: {
 			type: Array,
 			default: () => {
@@ -44,6 +50,10 @@ export default {
 		},
 		order_list_by: {
 			type: String,
+			default: null,
+		},
+		table_height_para_restar: {
+			type: Number,
 			default: null,
 		},
 	},

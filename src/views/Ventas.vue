@@ -32,6 +32,7 @@
 	:show_modal="false"
     :not_show_delete_text="not_show_delete_text"
     :delete_text="delete_text"
+    :set_table_height="false"
 	model_name="sale">
 		<template v-slot:display_top>
 			<address-nav></address-nav>

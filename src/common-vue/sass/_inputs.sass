@@ -1,3 +1,5 @@
+@import '@/sass/_custom.scss'
+
 input, button, textarea, .input-group-prepend, select 
 	// box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px
 	// box-shadow: rgba(0, 0, 0, 0.16) 0px 1px 4px
@@ -9,3 +11,30 @@ input, button, textarea, .input-group-prepend, select
 	
 legend, .form-text, .custom-checkbox, label
 	text-align: left	
+
+
+@if ($theme == 'dark') 
+
+	// color: rgba(255,255,255,.9)
+	input, textarea, select, label, .b-form-datepicker, .custom-control-label
+		background: #333 !important
+		color: #FFF !important
+		&:disabled
+			background: #333
+			color: rgba(255,255,255,1)
+		&:placeholder, &:-ms-input-placeholder
+			// color: rgba(255,255,255,1)
+			color: red
+			opacity: 1
+		&:focus
+			background: #333
+
+	.col-form-label, .text-only-show
+		color: #FFF !important
+
+	.form-control
+		&::-webkit-input-placeholder
+			color: rgba(255,255,255,.7) !important
+
+	*::-webkit-input-placeholder
+		color: rgba(255,255,255,.7) !important

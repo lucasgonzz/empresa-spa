@@ -1,3 +1,5 @@
+@import '@/sass/_custom.scss'
+
 [class^='icon-']:before
 	position: relative
 	top: .15em
@@ -25,13 +27,11 @@
 	-moz-osx-font-smoothing: grayscale
 	text-align: center
 	.container-fluid
-		background: #FFF
-		// background: #E7E7E7
-		min-height: 90vh
-		.btn-update
-			margin-bottom: 1em
-			@media screen and (max-width: 768px)
-			margin-top: 1em
+		@if ($theme == 'dark') 
+			background: #333
+		@else
+			background: #FFF
+		// min-height: calc(100vh - 60px)
 		.row 
 			justify-content: center
 			[class^='col']

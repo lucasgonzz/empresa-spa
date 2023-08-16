@@ -259,6 +259,8 @@ export default {
 			}, 500)
 		},
 		isRepeat() {
+			console.log('isRepeat items:')
+			console.log(this.items)
 			let finded = this.items.find(item => {
 				return item.id == this.article.id
 			})

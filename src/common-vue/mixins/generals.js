@@ -59,6 +59,21 @@ export default {
 		route_to_redirect_if_unauthenticated() {
             return process.env.VUE_APP_ROUTE_TO_REDIRECT_IF_UNAUTHENTICATED
 		},
+		inputs_full_size() {
+            return typeof process.env.VUE_APP_INPUTS_FULL_SIZE != 'undefined' && process.env.VUE_APP_INPUTS_FULL_SIZE
+		},
+		aspect_ratio_disabled() {
+            return typeof process.env.VUE_APP_ASPECT_RATIO_DISABLED != 'undefined' && process.env.VUE_APP_ASPECT_RATIO_DISABLED
+		},
+		theme_dark() {
+            return typeof process.env.VUE_APP_THEME_DARK != 'undefined' && process.env.VUE_APP_THEME_DARK
+		},
+		app_theme() {
+			if (typeof process.env.VUE_APP_APP_THEME != 'undefined') {
+				return process.env.VUE_APP_APP_THEME
+			}
+			return 'light'
+		},
 		image_url_prop_name() {
 			if (process.env.VUE_APP_IMAGE_URL_PROP_NAME) {
 				return process.env.VUE_APP_IMAGE_URL_PROP_NAME
@@ -83,6 +98,25 @@ export default {
 			}
 			return false
 		},
+		has_extra_config() {
+			if (typeof process.env.VUE_APP_HAS_EXTRA_CONFIG != 'undefined' && process.env.VUE_APP_HAS_EXTRA_CONFIG) {
+				return true
+			}
+			return false
+		},
+		user_last_activity_minutes() {
+			if (typeof process.env.VUE_APP_USER_LAST_ACTIVITY_MINUTES != 'undefined') {
+				return VUE_APP_USER_LAST_ACTIVITY_MINUTES
+			}
+			return false
+		},
+		cant_models_to_show() {
+			if (typeof process.env.VUE_APP_CANT_MODELS_TO_SHOW != 'undefined') {
+				return process.env.VUE_APP_CANT_MODELS_TO_SHOW
+			}
+			return 30
+			// return 40
+		},
 		is_mobile() {
 			if (this.$vssWidth < '992') {
 				return true
@@ -93,16 +127,12 @@ export default {
 			if (this.has_extra_config) {
 				return require('@/mixins/extra_config').default
 			}
-		},
+		}, 
 	},
 	methods: {
-        has_extra_config() {
-            try {
-                require('@/mixins/extra_config')
-            } catch (ex) {
-                return false
-            }
-        },
+		hasColor(model_name) {
+			return typeof require('@/models/'+model_name).default.color_display_function != 'undefined'
+		},
 		downloadOnMobile(model_name) {
 			return typeof this.$store.state[model_name].not_download_on_mobile == 'undefined' || !this.$store.state[model_name].not_download_on_mobile
 		},
@@ -130,15 +160,12 @@ export default {
 				if (array[1]) {
 					sub_prop = array[1]
 				}
-				console.log('type_if en '+prop.text)
 				
 				if (sub_prop) {
 					prop_to_check = model[model_prop][sub_prop]
 				} else {
 					prop_to_check = model[model_prop]
 				}
-				console.log('prop_to_check:')
-				console.log(prop_to_check) 
 				let result 
 				if (prop_to_check) {
 					prop_to_check = prop_to_check.toLowerCase()
@@ -153,10 +180,8 @@ export default {
 					result = prop_to_check != prop.type_if.value
 				}
 				if (result) {
-					console.log('return then: '+prop.type_if.then)
 					return prop.type_if.then
 				} else {
-					console.log('return else: '+prop.type_if.else)
 					return prop.type_if.else
 				}
 			}
@@ -208,7 +233,6 @@ export default {
                 let container = document.getElementById(el)
                 if (container) {
                     container.scrollTop = container.scrollHeight
-                    console.log('scrollBottom a '+container.scrollTop+' con '+container.scrollHeight)
                 }
             }, 200)
         },
@@ -256,7 +280,7 @@ export default {
 		},
 		getCol(prop, size, input_full_width = false) {
 			// if (this.input_full_width || this.useSearch(prop) || prop.has_many || (prop.belongs_to_many && prop.belongs_to_many.can_not_modify) || prop.type == 'image' || prop.type == 'images') {
-			if (input_full_width || prop.has_many || prop.belongs_to_many || prop.type == 'images') {
+			if (this.inputs_full_size || input_full_width || prop.has_many || prop.belongs_to_many || prop.type == 'images') {
 				return 12
 			} 
 			return size
@@ -313,6 +337,9 @@ export default {
 			if (check_show_on_form && property.not_show_on_form) {
 				return false
 			}
+			if (property.show_only_if_is_created && !model.id) {
+				return false
+			}
 			if (check_if_is_empty && ((!model[property.key] || model[property.key] == '') && !property.function )) {
 				return false
 			}
@@ -330,7 +357,6 @@ export default {
 				if (array[1]) {
 					sub_prop = array[1]
 				}
-				console.log('prop_to_check en '+property.text)
 				if (property.v_if_not_check_if_null || model[prop] || property.v_if_from_models_store) {
 					// if (sub_prop && model[prop][sub_prop]) {
 					if (property.v_if_from_models_store) {
@@ -347,8 +373,6 @@ export default {
 							prop_to_check = model[prop]
 						}
 					} 
-					console.log('entro, prop_to_check:')
-					console.log(prop_to_check) 
 					if (typeof prop_to_check == 'String') {
 						prop_to_check = prop_to_check.toLowerCase()
 					}
@@ -473,13 +497,9 @@ export default {
 				} else if (this.idiom == 'es') {
 					prop_name = 'nombre'
 				}
-				// console.log('prop:')
-				// console.log(prop)
 				if (model[prop.key]) {
 					if (prop.use_store_models) {
-						// console.log('use_store_models, relationship: '+relationship)
 						let finded_model = this.$store.state[relationship].models.find(_model => {
-							// console.log('comparando '+_model.id+' con '+model[prop.key])
 							return _model.id == model[prop.key]
 						})
 						if (typeof finded_model != 'undefined') {
@@ -532,8 +552,6 @@ export default {
 				return this.price(model[prop.key]) 
 			}
 			if (prop.type == 'search') {
-				// console.log('typeof de '+prop.key)
-				// console.log(typeof model[prop.key])
 				if (typeof model[prop.key] == 'array') {
 					return model[prop.key].length 
 				} else if (typeof model[prop.key] == 'object' && model[prop.key]) {
@@ -544,7 +562,7 @@ export default {
 					}
 				} 
 			}
-			if (prop.belongs_to_many) {
+			if (prop.belongs_to_many && typeof model[prop.key] != 'undefined') {
 				return model[prop.key].length
 			}
 			if (prop.has_many) {
@@ -637,14 +655,10 @@ export default {
 				} else if (prop.options_from_prop) {
 					let _model_name = prop.options_from_prop.split('.')[0]
 					let _prop = prop.options_from_prop.split('.')[1]
-					console.log('_model_name:' +_model_name)
-					console.log('_prop:' +_prop)
-					console.log('models:')
 					let _model = this.$store.state[_model_name].models.find(_model => {
 						return _model.id == model[_model_name+'_id']
 					})
 					models = _model[_prop]
-					console.log(models)
 				}
 			}
 			if (prop.depends_on && model) {
@@ -685,14 +699,20 @@ export default {
 		replaceGuion(string) {
 			return string.replaceAll('-', '_')
 		},
-		routeString(string, in_plural = false) {
+		routeString(string, in_plural = false, replace_guion_bajo = true) {
 			let result 
 			if (in_plural) {
 				result = this.modelPlural(string.toLowerCase().replaceAll(' ', '-'))
 			} else {
 				result = string.toLowerCase().replaceAll(' ', '-')
 			}
-			return result.replaceAll('_', '-')
+			if (replace_guion_bajo) {
+				return result.replaceAll('_', '-')
+			}
+			return result
+		},
+		routeToString(route) {
+			return route.replaceAll('-', ' ')
 		},
 		capitalize(str) {
 			return str.charAt(0).toUpperCase() + str.slice(1)

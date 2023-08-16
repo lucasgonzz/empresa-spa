@@ -7,6 +7,7 @@ import permission from '@/common-vue/store/permission'
 import general from '@/common-vue/store/general'
 import download_resources from '@/common-vue/store/download_resources'
 import error from '@/common-vue/store/error'
+import belongs_to_many from '@/common-vue/store/belongs_to_many'
 
 import article from '@/store/article'
 import brand from '@/store/brand'
@@ -94,6 +95,7 @@ export default new Vuex.Store({
         general,
         download_resources,
         error,
+        belongs_to_many,
         
         article,
         brand,

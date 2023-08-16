@@ -39,15 +39,15 @@ hide-footer
 				:loading="loading"
 				:models="results"
 				:model_name="model_name"
-				:set_model_on_row_selected="false"
 				:striped="false"
+				:set_model_on_row_selected="false"
 				@onRowSelected="onRowSelected"></table-component>	
 			</div>
 			<div
 			v-else>
 				<div class="text-with-icon">
-					<i class="icon-search"></i>
-					No se encontraron resultados. Precione ENTER
+					<i class="icon-eye-slash"></i>
+					No se encontraron resultados
 				</div>
 				<div 
 				v-if="prop && save_if_not_exist && query.length"

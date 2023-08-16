@@ -15,9 +15,8 @@
 			</template>
 		</nav-component>
 		<tasks></tasks>	
-		<payment-expire></payment-expire>
-		<order-info></order-info>
-		<provider-order-info></provider-order-info>
+
+		<alert-infos></alert-infos>
 	</div>
 </template>
 <script>
@@ -26,10 +25,7 @@ export default {
 		NavComponent: () => import('@/common-vue/components/nav/Index'),
 		TasksButton: () => import('@/components/nav/tasks/TasksButton'),
 		Tasks: () => import('@/components/nav/tasks/modal/Index'),
-		OrderInfo: () => import('@/components/nav/OrderInfo'),
-		ProviderOrderInfo: () => import('@/components/nav/ProviderOrderInfo'),
-		PaymentExpire: () => import('@/components/nav/PaymentExpire'),
-
+		AlertInfos: () => import('@/components/nav/alert-infos/Index'),
 		UpdateFeatures: () => import('@/components/common/UpdateFeatures'),
 	},
 	methods: {

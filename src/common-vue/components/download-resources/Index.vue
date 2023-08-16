@@ -95,6 +95,8 @@ export default {
 <style lang="sass">
 @import '@/sass/_custom.scss'
 #download-resources
+	@if ($theme == 'dark') 
+		background: #333 !important
 	padding: 20px
 	h4 	
 		margin: 15px 0

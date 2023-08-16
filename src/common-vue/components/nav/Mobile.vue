@@ -56,6 +56,8 @@ export default {
 <style lang="sass">
 @import '@/sass/_custom.scss'
 #nav-mobile
+	@if ($theme == 'dark')
+		background: #333 !important
 	img 
 		width: 50px
 	button

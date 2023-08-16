@@ -1,9 +1,7 @@
 <template>
 	<div
+	:id="id"
 	class="model-form">
-		<!-- <images
-		:model="model"
-		:model_name="model_name"></images>	 -->
 
 		<b-form-row
 		class="m-b-0">
@@ -39,9 +37,9 @@
 							<slot :name="prop.key">
 								<p
 								v-if="prop.only_show"
-								class="m-b-0 m-l-25">
+								class="m-b-0 m-l-25 text-only-show">
 									<strong 
-									v-if="propertyText(model, prop) != ''">
+									v-if="propertyText(model, prop) != '' || propertyText(model, prop) == 0">
 										{{ propertyText(model, prop) }}
 									</strong>
 									<span
@@ -77,11 +75,15 @@
 								:parent_model_name="model_name"
 								:prop="prop"></has-many>
 
-						        <b-form-datepicker
+						       <!--  <b-form-datepicker
 								v-else-if="prop.type == 'date'"
 						        placeholder="Fecha"
 						        :disabled="isDisabled(prop)"
-						        v-model="model[prop.key]"></b-form-datepicker>
+						        v-model="model[prop.key]"></b-form-datepicker> -->
+
+						        <date-picker
+						        @setDate="setDate"
+								v-else-if="prop.type == 'date'"></date-picker>
 
 								<div
 								v-else-if="prop.type == 'radio'">
@@ -107,6 +109,7 @@
 								</div>
 
 								<div
+								:id="model_name+'-'+prop.key"
 								v-else-if="prop.type == 'text' || prop.type == 'number' || prop.type == 'password'"
 								class="d-flex w-100">
 									<b-form-input
@@ -195,18 +198,18 @@
 								</b-button>
 
 								<div
+								class="m-l-15"
 						    	v-if="prop.belongs_to_many && !prop.belongs_to_many.related_with_all && (!prop.type || prop.type != 'checkbox')">
+
 									<table-component
 									:loading="false"
 									:models="model[prop.key]"
-									:properties="propsToShowInBelongsToMany(prop)"
 									:model_name="prop.store"
 									:pivot="prop.belongs_to_many"
-									:pivot_model="model"
 									:set_model_on_row_selected="false"
 									show_pivot_created_at
 									:show_btn_edit="false">
-										<template v-slot:default="slotProps">
+										<template v-slot:table_right_options="slotProps">
 											<slot name="belongs" :model="slotProps.model"></slot>
 											<b-button
 											v-if="show_btn_remove_belongs_to_many"
@@ -301,7 +304,7 @@ import SearchComponent from '@/common-vue/components/search/Index'
 import HasMany from '@/common-vue/components/model/HasMany'
 import BelongsToManyCheckbox from '@/common-vue/components/model/BelongsToManyCheckbox'
 import Cards from '@/common-vue/components/display/cards/Index'
-import TableComponent from '@/common-vue/components/display/TableComponent'
+import TableComponent from '@/common-vue/components/display/table/Index'
 import Images from '@/common-vue/components/model/images/Index'
 import BtnLoader from '@/common-vue/components/BtnLoader'
 // import BtnDelete from '@/common-vue/components/BtnDelete'
@@ -355,9 +358,7 @@ export default {
 		},
 	},
 	created() {
-		// console.log('se creo modelForm')
-		this.setPropsToShowInBelongsToMany()
-		// this.setPropsTypes()
+		this.setFocus()
 	},
 	data() {
 		return {
@@ -373,21 +374,30 @@ export default {
 			}
 			return this.show_btn_delete
 		},
+		id() {
+			return Math.random()+Date.now()
+		},
 	},
 	methods: {
-		// checkWatch(prop) {
-		// 	if (prop.watch_for) {
-		// 		console.log('watch_for en '+prop.text)
-		// 		let index_porp_for_update_type = this.properties_formated.findIndex(_prop => {
-		// 			return _prop.key == prop.watch_for
-		// 		})
-		// 		let prop_for_update_type = {
-		// 			...this.properties_formated[index_porp_for_update_type],
-		// 		}
-		// 		prop_for_update_type.type = this.propType(prop_for_update_type, this.model)
-		// 		this.properties_formated.splice(index_porp_for_update_type, 1, prop_for_update_type)
-		// 	}
-		// },
+		setFocus() {
+			setTimeout(() => {
+				let ok = false 
+				this.properties.forEach(prop => {
+					if (!ok) {
+						let element = document.getElementById(this.model_name+'-'+prop.key)
+						if (element) {
+							setTimeout(() => {
+								element.firstChild.focus()
+							}, 500)
+							ok = true 
+						}
+					}
+				})
+			}, 500)
+		},
+		setDate(result) {
+			this.model[result.prop.key] = result.value 
+		},
 		setBarCode(bar_code) {
 			let prop = this.getBarCodeProp(this.model_name)
 			this.model[prop.key] = bar_code 
@@ -408,62 +418,28 @@ export default {
 			})
 			this.model[prop.key].splice(index, 1)
 		},
-		setPropsToShowInBelongsToMany() {
-			console.log('setPropsToShowInBelongsToMany')
-			this.properties.forEach(prop => {
-				if (prop.belongs_to_many && !prop.belongs_to_many.related_with_all && (!prop.type || prop.type != 'checkbox')) {
-					let to_show 
-					if (prop.belongs_to_many.props_to_show) {
-						to_show = prop.belongs_to_many.props_to_show
-					} else {
-						to_show = this.modelPropertiesFromName(prop.store)
-					}
-					if (prop.belongs_to_many.pivot_props_to_show) {
-						let map = prop.belongs_to_many.pivot_props_to_show.map(_prop => {
-							return {
-								..._prop,
-								from_pivot: true,
-							}
-						})
-						to_show = to_show.concat(map)
-					}
-					this.props_to_show_in_belongs_to_many.push({
-						prop_key: prop.key,
-						to_show,
-					}) 
-				}
-			})
-			console.log('props_to_show_in_belongs_to_many')
-			console.log(this.props_to_show_in_belongs_to_many)
-		},
 		propsToShowInBelongsToMany(prop) {
-			return this.props_to_show_in_belongs_to_many.find(_prop => {
-				return _prop.prop_key == prop.key 
-			}).to_show
+			let props = []
+			if (prop.belongs_to_many.props_to_show) {
+				props = props.concat(prop.belongs_to_many.props_to_show)
+			} else {
+				if (prop.store) {
+					props = this.modelPropertiesFromName(prop.store)
+				} else {
+					props = this.modelPropertiesFromName(prop.belongs_to_many.model_name)
+				}
+			}
+			if (prop.belongs_to_many.properties_to_set) {
+				prop.belongs_to_many.properties_to_set.forEach(prop_to_set => {
+					console.log('se esta agregando '+prop_to_set.key)
+					props.push({
+						...prop_to_set,
+						is_pivot_prop: true,
+					})
+				})
+			}
+			return props
 		},
-		// setPropsTypes() {
-		// 	this.properties_formated = []
-		// 	let prop_formated
-		// 	let type
-		// 	this.properties.forEach(prop => {
-		// 		prop_formated = {
-		// 			...prop,
-		// 		}
-		// 		type = this.propType(prop, this.model)
-		// 		prop_formated.type = type 
-		// 		if (prop.type_if) {
-		// 			let index_prop_for_watch = this.properties_formated.findIndex(_prop => {
-		// 				return _prop.key == prop.type_if.condition
-		// 			})
-		// 			let prop_for_watch = this.properties_formated[index_prop_for_watch]
-		// 			prop_for_watch.watch_for = prop.key
-		// 			this.properties_formated.splice(index_prop_for_watch, 1, prop_for_watch) 
-		// 		}
-		// 		this.properties_formated.push(prop_formated)
-		// 	})
-		// 	console.log('properties_formated')
-		// 	console.log(this.properties_formated)
-		// },
 		isDisabled(prop) {
 			if (prop.disabled && !this.form_to_filter) {
 				return true 
@@ -507,12 +483,6 @@ export default {
 						this.model[prop_to_set.set] = finded[prop_to_set.set]
 					}
 				})
-				// this.model['packages'].forEach(model => {
-				// 	let selected_relationship = model['locations'].find(relationship => {
-				// 		return relationship.id == this.model['location_id']
-				// 	})
-				// 	model.pivot['price'] = selected_relationship.pivot['price']
-				// })
 			}
 		},
 		pivotModels(prop) {
@@ -570,7 +540,7 @@ export default {
 					} else if (typeof prop_to_set.value === 'object') {
 						if (model_to_add[prop_to_set.value.key]) {
 							model_to_add.pivot[prop_to_set.key] = model_to_add[prop_to_set.value.key] 
-					} else {
+						} else {
 							model_to_add.pivot[prop_to_set.key] = prop_to_set.value.value_if_undefined
 						}
 					} else {
@@ -578,131 +548,27 @@ export default {
 					}
 				})
 			}
-			// this.$set(this.model, prop.key, this.model[prop.key].concat([model_to_add]))
-			console.log('se va a agregar:')
-			console.log(model_to_add)
 			this.model[prop.key].push(model_to_add)
-			console.log('se agrego')
-			console.log('quedo asi:')
-			console.log(this.model[prop.key])
+			this.setTableFocus(prop)
+		},
+		setTableFocus(prop) {
+			if (prop.belongs_to_many.properties_to_set.length) {
+				setTimeout(() => {
+					let id = prop.belongs_to_many.model_name+'-'+prop.belongs_to_many.properties_to_set[0].key
+					let element = document.getElementById(id) 
+					// console.log('left scroll: '+element.scrollLeft)
+					element.focus()
+				}, 500)
+			}
 		},
 		clickEnter(prop) {
 			if (prop.use_to_check_if_is_repeat) {
 				this.checkIsRepeat(prop)
 			} else {
 				this.$emit('save', {close: true})
+				// this.$emit('save')
 			}
 		},
-		// save() {
-		// 	if (this.check() && !this.loading) {
-		// 		this.loading = true 
-		// 		let route = this.routeString(this.model_name)
-		// 		let model_to_send = this.getModelToSend()
-		// 		if (this.model.id) {
-		// 			this.$api.put(route+'/'+this.model.id, model_to_send)
-		// 			.then(res => {
-		// 				this.loading = false 
-		// 				this.$toast.success('Actualizado')
-		// 				if (this.has_many_parent_model) {
-		// 					let index = this.has_many_parent_model[this.has_many_prop.key].findIndex(model => {
-		// 						return model.id == this.model.id 
-		// 					})
-		// 					if (index != -1) {
-		// 						this.has_many_parent_model[this.has_many_prop.key].splice(index, 1, res.data.model)
-		// 					}
-		// 				} else {
-		// 					if (this.model_name == 'user') {
-		// 						this.$store.commit('auth/setUser', res.data.model)
-		// 					} else {
-		// 						this.$store.commit(this.replaceGuion(this.model_name)+'/add', res.data.model)
-		// 					}
-		// 				}
-		// 				this.$bvModal.hide(this.model_name)
-		// 				this.callActions(res.data.model)
-		// 			})
-		// 			.catch(err => {
-		// 				console.log(err)
-		// 				this.$toast.error('Hubo un Error')
-		// 				this.loading = false
-		// 			})
-		// 		} else {
-		// 			this.$api.post(route, model_to_send)
-		// 			.then(res => {
-		// 				this.loading = false 
-		// 				this.$toast.success('Guardado')
-		// 				let created_model = res.data.model 
-		// 				if (this.has_many_parent_model) {
-		// 					this.$set(this.has_many_parent_model, this.has_many_prop.key, this.has_many_parent_model[this.has_many_prop.key].concat([created_model]))
-		// 					if (!this.has_many_parent_model.id) {
-		// 						if (this.has_many_parent_model.childrens) {
-		// 							this.has_many_parent_model.childrens.push({
-		// 								model_name: this.has_many_prop.has_many.model_name,
-		// 								temporal_id: created_model.temporal_id
-		// 							})
-		// 							console.log('se agrego el id '+created_model.temporal_id)
-		// 						} else {
-		// 							this.has_many_parent_model.childrens = []
-		// 							console.log('se creo la prop childrens')
-		// 							this.has_many_parent_model.childrens.push({
-		// 								model_name: this.has_many_prop.has_many.model_name,
-		// 								temporal_id: created_model.temporal_id
-		// 							})
-		// 							console.log('se agrego el id '+created_model.temporal_id)
-		// 						}
-		// 					}
-		// 				} else {
-		// 					this.$store.commit(this.replaceGuion(this.model_name)+'/add', created_model)
-		// 				}
-		// 				this.$bvModal.hide(this.model_name)
-		// 				this.callActions(created_model)
-		// 			})
-		// 			.catch(err => {
-		// 				console.log(err)
-		// 				this.$toast.error('Hubo un error')
-		// 				this.loading = false
-		// 			})
-		// 		}
-		// 	}
-		// },
-		// hasPermission() {
-		// 	console.log('check_permissions: '+this.check_permissions)
-		// 	if (this.check_permissions) {
-		// 		if (!this.model.id) {
-		// 			return this.can(this.model_name+'.store')
-		// 		} else if (this.model.id) {
-		// 			return this.can(this.model_name+'.update')
-		// 		}
-		// 	}
-		// 	return true 
-		// },
-		// getModelToSend() {
-		// 	let model_to_send = {
-		// 		...this.model
-		// 	}
-		// 	let store = this.$store.state[this.model_name]
-		// 	if (typeof store != 'undefined') {
-		// 		let selected_model = this.$store.state[this.model_name].selected_model 
-		// 		if (typeof selected_model != 'undefined') {
-		// 			model_to_send.model_id = selected_model.id 
-		// 		}
-		// 	}
-		// 	return model_to_send
-		// },
-		// check() {
-		// 	let ok = true
-		// 	this.properties.forEach(prop => {
-		// 		if (prop.required) {
-		// 			if (ok && this.propType(prop, this.model) == 'select' && this.model[prop.key] == 0) {
-		// 				this.$toast.error('Ingrese '+this.propText(prop))
-		// 				ok = false
-		// 			} else if (ok && this.model[prop.key] == '') {
-		// 				this.$toast.error('Ingrese '+this.propText(prop))
-		// 				ok = false
-		// 			}
-		// 		} 
-		// 	})
-		// 	return ok
-		// },
 		checkIsRepeat(prop) {
 			if (prop.use_to_check_if_is_repeat) {
 				let finded = this.modelsStoreFromName(this.model_name).find(model => {
@@ -714,12 +580,6 @@ export default {
 				}
 			} 
 		},
-		// callActions(model) {
-		// 	this.actions_after_save.forEach(action => {
-		// 		this.$store.dispatch(action)
-		// 	})
-		// 	this.$emit('modelSaved', model)
-		// }
 	},
 	components: {
 		ModelComponent: () => import('@/common-vue/components/model/Index'),
@@ -733,15 +593,20 @@ export default {
 		BtnLoader,
 		// BtnDelete,
 		BarCodeScanner: () => import('@/common-vue/components/bar-code-scanner/Index'),
+		DatePicker: () => import('@/common-vue/components/model/form/DatePicker'),
 	}
 }
 </script>
 <style lang="sass">
+@import '@/sass/_custom.scss'
 .model-form 
 	[class^='col-']
-		padding-bottom: 15px
-		margin-bottom: 15px
-		border-bottom: 1px solid rgba(0,0,0,.1)
+		padding-bottom: 7px
+		margin-bottom: 7px
+		@if ($theme == 'dark')
+			border-bottom: 1px solid rgba(255,255,255,.2)
+		@else
+			border-bottom: 1px solid rgba(0,0,0,.1)
 		&:nth-last-child(-n+2)
 			border-bottom: none
 	.custom-radio 
@@ -756,7 +621,10 @@ export default {
 		margin-bottom: 0 !important
 	hr 
 		width: 100%
+		@if ($theme == 'dark')
+			border-top: 1px solid red !important 
 	.function-value
-		font-size: 1.5em
+		// font-size: 1.5em
 		font-weight: bold
+		margin-left: 25px
 </style>

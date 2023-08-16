@@ -5,6 +5,7 @@
         <nav-component></nav-component>
         <b-container
         fluid>
+            <payment-expire></payment-expire>
             <router-view/>
         </b-container>
     </div>
@@ -23,6 +24,7 @@ export default {
         ErrorModal,
         LogoLoading, 
         NavComponent,
+        PaymentExpire: () => import('@/components/nav/PaymentExpire'),
     },
     created() {
         this.$store.dispatch('auth/me')

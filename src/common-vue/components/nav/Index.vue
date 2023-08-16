@@ -2,6 +2,7 @@
     <div
     v-if="show"
     class="nav-component">
+        <btn-scroll-top></btn-scroll-top>
         <b-navbar 
         toggleable="lg">
             <div>
@@ -84,6 +85,8 @@
 
         <user-config></user-config>
 
+        <update-password></update-password>
+
     </div>
 </template>
 <script>
@@ -98,6 +101,8 @@ export default {
         HelpDropdown: () => import('@/common-vue/components/nav/HelpDropdown'),
         UserConfig: () => import('@/common-vue/components/nav/UserConfig'),
         ConfigurationDropdown: () => import('@/common-vue/components/nav/ConfigurationDropdown'),
+        UpdatePassword: () => import('@/common-vue/components/nav/UpdatePassword'),
+        BtnScrollTop: () => import('@/common-vue/components/nav/BtnScrollTop'),
     },
     computed: {
         show() {

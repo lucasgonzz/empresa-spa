@@ -19,8 +19,8 @@
 				:pivot="pivot"
 				:pivot_model="pivot_model"
 				@clicked="clicked">
-					<template v-slot:default="props">
-						<slot :model="props.model"></slot>
+					<template v-slot:table_right_options="props">
+						<slot name="table_right_options" :model="props.model"></slot>
 					</template>
 				</card-component>
 			</div>

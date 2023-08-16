@@ -24,7 +24,7 @@
 	ask_selectable
 	show_excel_drop_down
 	model_name="article">
-		<template #header>
+		<template #horizontal_nav_center>
 			<stock-info-buttons></stock-info-buttons>
 		</template>
 

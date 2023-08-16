@@ -99,13 +99,17 @@ export default {
 }
 </script>
 <style lang="sass">
+@import '@/sass/_custom'
 .login-form
 	img 
 		width: 130px
 		// margin-bottom: 1em
 	@media screen and (min-width: 768px)
-		background: #FFF
+		@if ($theme == 'dark')
+			background: #333
+		@else 
+			background: #FFF
 		padding: 15px
 		border-radius: 5px
-		box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px
+		// box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px
 </style>

@@ -13,7 +13,6 @@
 	    :id="'delete-'+prop.key"></confirm>
 	    
 	    <table-component
-	    :has_many_parent_model="parent_model"
 	    :models="parent_model[prop.key]"
 	    :model_name="prop.has_many.model_name"></table-component>
 	    
@@ -22,14 +21,15 @@
 		class="m-t-15"  
 		@click="create(prop.has_many.model_name, parent_model)"
 		size="sm"
-		variant="outline-primary">
+		variant="primary">
+			<i class="icon-check"></i>
 			Agregar {{ singular(prop.has_many.model_name) }}
 		</b-button>
 	</div>
 </template>
 <script>
 import BtnLoader from '@/common-vue/components/BtnLoader'
-import TableComponent from '@/common-vue/components/display/TableComponent'
+import TableComponent from '@/common-vue/components/display/table/Index'
 
 import Confirm from '@/common-vue/components/Confirm'
 
