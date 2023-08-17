@@ -106,6 +106,8 @@ export default {
 			if (index == -1) {
 				state.models.unshift(value)
 			} else {
+				console.log('se actualizo esta venta:')
+				console.log(value)
 				state.models.splice(index, 1, value)
 			}
 

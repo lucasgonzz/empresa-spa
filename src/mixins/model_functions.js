@@ -190,7 +190,7 @@ export default {
             }
             return total
 		},
-        getTotalItem(item, from_pivot = false) {
+        getTotalItem(item, from_pivot = true) {
             let price 
             let amount 
             let discount

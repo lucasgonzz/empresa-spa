@@ -21,6 +21,7 @@
             </div>
 
             <div
+            v-if="is_mobile"
             class="cont-bars d-lg-none">
                 <help-dropdown></help-dropdown>
                 <slot name="right_dropdown"></slot>

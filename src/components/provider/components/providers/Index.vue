@@ -11,7 +11,7 @@
 		show_excel_drop_down
 		:show_previus_days="false">
 
-			<template v-slot:default="slotProps">
+			<template v-slot:table_right_options="slotProps">
 				<btn-current-acounts
 				:model="slotProps.model"
 				model_name="provider"></btn-current-acounts>

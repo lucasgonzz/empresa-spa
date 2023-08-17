@@ -79,7 +79,7 @@
 				No hay {{ plural(model_name) }}
 			</p>
 			<div 
-			v-if="models_to_show.length"
+			v-if="models_to_show.length && show_buttons_scroll"
 			class="scroll-buttons">
 				<div 
 				@click="scrollLeft"
@@ -151,6 +151,7 @@ export default {
 		return {
 			index_to_show: 1,
 			busy: false,
+			show_buttons_scroll: false,
 		}
 	},
 	computed: {
@@ -177,10 +178,26 @@ export default {
 		},
 		props() {
 			let props = []
-			if (this.pivot && this.pivot.props_to_show) {
-				this.pivot.props_to_show.forEach(prop_to_show => {
-					props.push(prop_to_show)
-				})
+			 if (this.properties) {
+				props = this.propertiesToShow(this.properties, true)
+			} else if (!this.pivot || (this.pivot && !this.pivot.props_to_show)) {
+			 	props = this.propertiesToShow(this.modelPropertiesFromName(this.model_name), true)
+			}
+			if (this.pivot) {
+				if (this.pivot.props_to_show) {
+					this.pivot.props_to_show.forEach(prop_to_show => {
+						props.push(prop_to_show)
+					})
+				}
+				if (this.pivot.pivot_props_to_show) {
+					this.pivot.pivot_props_to_show.forEach(prop_to_show => {
+						props.push({
+							...prop_to_show,
+							is_pivot_prop: true,
+							only_show: true,
+						})
+					})
+				}
 				if (this.pivot.properties_to_set) {
 					this.pivot.properties_to_set.forEach(prop_to_set => {
 						props.push({
@@ -189,11 +206,15 @@ export default {
 						})
 					})
 				}
-			} else if (this.properties) {
-				props = this.propertiesToShow(this.properties, true)
 			} else {
-			 	props = this.propertiesToShow(this.modelPropertiesFromName(this.model_name), true)
+				props.push({
+					key: 'updated_at',
+					text: 'Actualizado',
+					is_date: true,
+				})
 			}
+			console.log('props')
+			console.log(props)
 			return props 
 		},
 		fields() {
@@ -206,21 +227,16 @@ export default {
 				})
 			})
 
-			if (!this.pivot) {
-				fields.push({
-					key: 'updated_at',
-					label: 'Actualizado',
-				})
-			} else {
-				fields.push({
-					key: 'pivot_created_at',
-					label: 'Agregado',
-				})
-			}
-			fields.push({
-				key: 'edit',
-				label: '',
-			})
+			// if (!this.pivot) {
+			// 	fields.push({
+			// 		key: 'updated_at',
+			// 		label: 'Actualizado',
+			// 	})
+			// } 
+			// fields.push({
+			// 	key: 'edit',
+			// 	label: '',
+			// })
 			return fields 
 		},
 		columns() {
@@ -263,11 +279,11 @@ export default {
 	methods: {
 		scrollLeft() {
 			let table = document.getElementById(this.id)
-			table.scrollLeft -= 70
+			table.scrollLeft -= 300
 		},
 		scrollRight() {
 			let table = document.getElementById(this.id)
-			table.scrollLeft += 70
+			table.scrollLeft += 300
 		},
 		loadMore($state) {
 			console.log('loadMore')
@@ -296,6 +312,8 @@ export default {
 						}
 						table.style.height = height +'px'
 						// table.style.max_height = height +'px'
+
+						this.setShowButtonsScroll()
 					}, 500)
 				} else {
 					setTimeout(() => {
@@ -303,6 +321,17 @@ export default {
 						this.setHeight()
 					}, 300)
 				}
+			}
+		},
+		setShowButtonsScroll() {
+			let cont_table =  document.getElementById(this.id)
+			let table = cont_table.firstChild
+			console.log('cont_table: '+cont_table.width)
+			console.log('table: '+table.offsetWidth)
+			if (cont_table.offsetWidth < table.offsetWidth) {
+				this.show_buttons_scroll = true 
+			} else {
+				this.show_buttons_scroll = false
 			}
 		},
 	}
@@ -404,8 +433,8 @@ export default {
 		flex-direction: row 
 		justify-content: center 
 		.scroll-button	
-			width: 50px
-			height: 50px
+			width: 30px
+			height: 30px
 			background: $blue 
 			border-radius: 50%
 			margin-right: 10px

@@ -1,49 +1,52 @@
 <template>
-	<div>
-		<div
-		class="has-many-nav">
-			<div class="date-picker">
-				<p>
-					Desde
-				</p>
-			    <b-form-datepicker
-			    class="input-date-picker"
-			    placeholder="Fecha inicio"
-			    v-model="from_date"></b-form-datepicker>
-			</div>
-			<div class="date-picker">
-			    <p>
-			    	Hasta
-			    </p>
-			    <b-form-datepicker
-			    placeholder="Fecha fin"
-			    class="input-date-picker"
-			    v-model="until_date"></b-form-datepicker>
-			</div>
-			<div
-			class="btns">
-			    <b-button
-			    @click="getCharts"
-			    variant="primary">
-			    	Buscar
-			    </b-button>
-			</div>
-		</div>
+	<div
+	class="j-start align-end">
+
+		<from-until-dates
+		:from_date="from_date"
+		:until_date="until_date"
+		@setFrom="setFrom"
+		@setUntil="setUntil"></from-until-dates>
+
+	    <b-button
+	    class="m-b-15 m-l-15"
+	    @click="getCharts"
+	    variant="primary">
+	    	Buscar
+	    </b-button>
+
 		<hr>
 	</div>
 </template>
 <script>
 import moment from 'moment' 
 export default {
+	components: {
+		FromUntilDates: () => import('@/common-vue/components/model/form/FromUntilDates')
+	},
+	computed: {
+		from_date() {
+			return moment().startOf('month').format('YYYY-MM-DD')
+		},
+		until_date() {
+			return moment().format('YYYY-MM-DD')
+		},
+	},
 	data() {
 		return {
-			from_date: moment().subtract(1, 'months').format('YYYY-MM-DD'),
-			until_date: moment().format('YYYY-MM-DD'),
+			from: '',
+			_until: '',
 		}
 	},
 	methods: {
+		setFrom(date) {
+			this.from = date.value
+		},
+		setUntil(date) {
+			this._until = date.value
+		},
 		getCharts() {
-			this.$emit('getCharts', {from_date: this.from_date, until_date: this.until_date})
+			this.$emit('getCharts', {from_date: this.from, until_date: this._until})
 		},
 	}
 }
@@ -51,21 +54,7 @@ export default {
 <style lang="sass">
 .has-many-nav
 	display: flex
+	flex-direction: row 
+	justify-content: flex-start
 	align-items: flex-end
-	@media screen and (max-width: 992px)
-		flex-direction: column
-	@media screen and (min-width: 992px)
-		justify-content: flex-start 
-	.btns
-		display: flex
-		flex-direction: columns
-	.date-picker
-		p 
-			margin-bottom: 0
-		@media screen and (max-width: 992px) 
-			width: 100%
-			margin-bottom: 15px
-		@media screen and (min-width: 992px) 
-			width: 400px
-			margin-right: 15px
 </style>

@@ -556,9 +556,9 @@ export default {
 				setTimeout(() => {
 					let id = prop.belongs_to_many.model_name+'-'+prop.belongs_to_many.properties_to_set[0].key
 					let element = document.getElementById(id) 
-					// console.log('left scroll: '+element.scrollLeft)
+					console.log('id: '+id)
 					element.focus()
-				}, 500)
+				}, 1000)
 			}
 		},
 		clickEnter(prop) {

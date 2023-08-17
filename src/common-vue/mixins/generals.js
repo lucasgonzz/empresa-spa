@@ -106,7 +106,7 @@ export default {
 		},
 		user_last_activity_minutes() {
 			if (typeof process.env.VUE_APP_USER_LAST_ACTIVITY_MINUTES != 'undefined') {
-				return VUE_APP_USER_LAST_ACTIVITY_MINUTES
+				return process.env.VUE_APP_USER_LAST_ACTIVITY_MINUTES
 			}
 			return false
 		},
@@ -487,7 +487,11 @@ export default {
 				return null
 			}
 			if (prop.function) {
-				return this.getFunctionValue(prop, model)
+				let value = this.getFunctionValue(prop, model)
+				if (prop.is_price) {
+					return this.price(value)
+				}
+				return value
 			}
 			if (this.isRelationKey(prop)) {
 				let relationship = this.modelNameFromRelationKey(prop, false, false)

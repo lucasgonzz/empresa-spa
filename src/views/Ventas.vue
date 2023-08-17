@@ -1,24 +1,5 @@
 <template>
 <div id="ventas">	
-	<!-- <sellers></sellers>
-	<commissioners></commissioners>
-	
-	<sale-details></sale-details>
-	<update-prices></update-prices>
-
-	<print-sales></print-sales>  -->
-
-<!-- COMPONENTS -->
-	<!-- <previus-days></previus-days>
-
-	<total-dropdown-print-info></total-dropdown-print-info>
-
-	<address-nav></address-nav>
-	<employee-nav></employee-nav>
-
-	<table-sales 
-	@selectAllSales="selectAllSales"></table-sales> -->
-	
 	<current-acounts></current-acounts>
 
 	<update-prices></update-prices>
@@ -32,14 +13,13 @@
 	:show_modal="false"
     :not_show_delete_text="not_show_delete_text"
     :delete_text="delete_text"
-    :set_table_height="false"
 	model_name="sale">
 		<template v-slot:display_top>
 			<address-nav></address-nav>
 			<employee-nav></employee-nav>
 			<total></total>	
 		</template>
-		<template v-slot:default="props">
+		<template v-slot:table_right_options="props">
 			<budget-order-production-info
 			:model="props.model" />
 		</template>

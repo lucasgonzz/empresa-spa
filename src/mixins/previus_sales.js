@@ -97,6 +97,7 @@ export default {
 				afip_information_id: this.afip_information_id,
 				sale_type_id: this.sale_type_id,
 				address_id: this.address_id,
+				employee_id: this.employee_id,
 			})
 			.then(res => {
 				this.$toast.success('Venta actualizada')

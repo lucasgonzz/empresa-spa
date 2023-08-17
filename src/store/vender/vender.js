@@ -148,13 +148,13 @@ export default {
 				let total_services = 0
 				let new_items = []
 				state.items.forEach(item => {
-					item.total = model_functions.methods.getTotalItem(item)
+					item.total = model_functions.methods.getTotalItem(item, false)
 					if (item.is_service) {
-						total_services += model_functions.methods.getTotalItem(item)
+						total_services += model_functions.methods.getTotalItem(item, false)
 					} else if (item.is_article) {
-						total_articles += model_functions.methods.getTotalItem(item)
+						total_articles += model_functions.methods.getTotalItem(item, false)
 					}
-					state.total += model_functions.methods.getTotalItem(item)
+					state.total += model_functions.methods.getTotalItem(item, false)
 					new_items.push(item)
 				})
 				if (state.discounts_id.length) {

@@ -1,7 +1,7 @@
 <template>
 	<b-button
 	:size="size"
-	@click="clicked"
+	@click.stop="clicked"
 	:block="block"
 	:variant="variant">
 		<span 

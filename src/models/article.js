@@ -246,6 +246,7 @@ export default {
 			type: 'search',
 			store: 'address',
 			belongs_to_many: {
+				model_name: 'address',
 				properties_to_set: [
 					{
 						text: 'Cantidad',

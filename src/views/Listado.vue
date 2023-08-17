@@ -28,7 +28,7 @@
 			<stock-info-buttons></stock-info-buttons>
 		</template>
 
-		<template v-slot:default="props">
+		<template v-slot:table_right_options="props">
 			<buttons :model="props.model" />	
 		</template>
 		<template #name>

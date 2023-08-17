@@ -22,6 +22,12 @@ export default {
 			type: 'select',
 		},
 		{
+			text: 'Deposito',
+			key: 'address_id',
+			type: 'select',
+			description: 'Si se selecciona, se descontara el stock del deposito correspondiente, siempre y cuando los articulos tengan indicado stock en la direccion, de lo contrario, se descontara del stock global del articulo',
+		},
+		{
 			text: 'Cantidad',
 			key: 'amount',
 			type: 'number',

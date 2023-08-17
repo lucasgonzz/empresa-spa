@@ -43,7 +43,12 @@ export default {
 			belongs_to_many: {
 				props_to_show: [
 					{
-						text: 'Nombree',
+						text: 'Codigo de barras',
+						key: 'bar_code',	
+						show: true,
+					},
+					{
+						text: 'Nombre',
 						key: 'name',	
 						show: true,
 					},
@@ -69,6 +74,7 @@ export default {
 					{
 						text: 'Total',
 						function: 'getTotalItem',
+						is_price: true,
 					},
 				],
 			}

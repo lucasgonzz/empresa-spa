@@ -1,7 +1,7 @@
 <template>
 	<b-button
 	class="m-l-15"
-	@click="showCurrentAcounts()"
+	@click.stop="showCurrentAcounts()"
 	variant="success">
 		C/C
 	</b-button> 

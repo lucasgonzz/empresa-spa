@@ -67,6 +67,7 @@ export default {
 				afip_information_id: info.afip_information_id,
 				sale_type_id: info.sale_type_id,
 				address_id: info.address_id,
+				employee_id: info.employee_id,
 			})
 			.then(res => {
 				commit('sale/add', res.data.model, {root: true})

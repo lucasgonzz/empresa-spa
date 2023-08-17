@@ -18,7 +18,7 @@
 	    		:model="slotProps.model"></create-buyer>
 			</template>
 
-			<template v-slot:default="slotProps">
+			<template v-slot:table_right_options="slotProps">
 				<btn-current-acounts
 				:model="slotProps.model"
 				model_name="client"></btn-current-acounts>

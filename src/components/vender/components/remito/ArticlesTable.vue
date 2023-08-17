@@ -150,7 +150,7 @@ export default {
 					// price: this.price(item.price_vender),
 					name: item.name,
 					// amount: item.amount,
-					total: this.price(this.getTotalItem(item)),
+					total: this.price(this.getTotalItem(item, false)),
 				}
 				items.push(item_to_add)
 			})

@@ -25,7 +25,7 @@ class="buttons-listado">
 	<b-button 
 	variant="primary"
 	size="sm"
-	@click="showCharts()" 
+	@click.stop="showCharts()" 
 	class="m-l-10">
 		<i class="icon-chart"></i>
 	</b-button>
@@ -34,7 +34,7 @@ class="buttons-listado">
 	<b-button 
 	variant="secondary"
 	size="sm"
-	@click="providersHistory()" 
+	@click.stop="providersHistory()" 
 	class="m-l-10">
 		<i class="icon-users"></i>
 	</b-button>
@@ -43,8 +43,8 @@ class="buttons-listado">
 	v-if="order_production_statuses.length"
 	variant="success"
 	size="sm"
-	@click="showArticleInRecipes()" 
-	class="m-l-10 m-t-10">
+	@click.stop="showArticleInRecipes()" 
+	class="m-l-10">
 		<i class="icon-chart"></i>
 		Recetas
 	</b-button>
@@ -52,8 +52,8 @@ class="buttons-listado">
 	<b-button 
 	:variant="getVariant()"
 	size="sm"
-	@click="showVariants()" 
-	class="m-l-10 m-t-10">
+	@click.stop="showVariants()" 
+	class="m-l-10">
 		<b-badge
 		variant="danger"
 		v-if="model.article_variants.length">
@@ -110,7 +110,6 @@ export default {
 				this.$toast.success('Articulo actualizado')
 				this.loading_featured = false 
 				this.$store.commit('article/add', res.data.model)
-				this.$store.commit('article/setToShow')
 			})
 			.catch(err => {
 				this.$toast.error('Error al agregar articulo en destacados')
@@ -131,7 +130,6 @@ export default {
 				this.$toast.success('Articulo actualizado')
 				this.loading_online = 0
 				this.$store.commit('article/add', res.data.model)
-				this.$store.commit('article/setToShow')
 			})
 			.catch(err => {
 				this.$toast.error('Error al actualizar articulo')
@@ -154,5 +152,5 @@ export default {
 </script>
 <style lang="sass">
 .buttons-listado
-	width: 125px	
+	margin-left: 15px
 </style>

@@ -4,6 +4,7 @@
 		<nav-component>
 			<template #right_dropdown>
 				<tasks-button></tasks-button>
+				<alert-infos></alert-infos>
 			</template>
 			<template #nav_dropdown>
                 <b-dropdown-item
@@ -16,7 +17,6 @@
 		</nav-component>
 		<tasks></tasks>	
 
-		<alert-infos></alert-infos>
 	</div>
 </template>
 <script>
