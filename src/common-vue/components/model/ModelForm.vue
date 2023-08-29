@@ -514,6 +514,7 @@ export default {
 			let prop = result.prop
 			if (prop.belongs_to_many) {
 				let model_to_add = result.model 
+				this.checkBelongsToManyExist(prop, model_to_add, result)
 				this.setBelongsToManyPivotProps(prop, model_to_add, result)
 			} else if (prop.has_many && prop.has_many.models_from_parent_prop) {
 				this.model[prop.key].unshift(result.model)
@@ -526,6 +527,14 @@ export default {
 			} else {
 				this.$set(this.model, result.prop.key, result.model.id)
 				this.$set(this.model, this.modelNameFromRelationKey(result.prop), result.model)
+			}
+		},
+		checkBelongsToManyExist(prop, model_to_add) {
+			let finded = this.model[prop.key].find(model => {
+				return model.id == model_to_add.id 
+			})
+			if (typeof finded != 'undefined') {
+				this.$toast.error('Se agrego el artiuclo, pero YA HABIA SIDO AGREGADO')
 			}
 		},
 		setBelongsToManyPivotProps(prop, model_to_add, result) {
@@ -549,12 +558,12 @@ export default {
 				})
 			}
 			this.model[prop.key].push(model_to_add)
-			this.setTableFocus(prop)
+			this.setTableFocus(prop, model_to_add)
 		},
-		setTableFocus(prop) {
+		setTableFocus(prop, model_to_add) {
 			if (prop.belongs_to_many.properties_to_set.length) {
 				setTimeout(() => {
-					let id = prop.belongs_to_many.model_name+'-'+prop.belongs_to_many.properties_to_set[0].key
+					let id = prop.belongs_to_many.model_name+'-'+prop.belongs_to_many.properties_to_set[0].key+'-'+model_to_add.id
 					let element = document.getElementById(id) 
 					console.log('id: '+id)
 					element.focus()

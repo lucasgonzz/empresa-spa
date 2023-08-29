@@ -39,6 +39,15 @@ class="buttons-listado">
 		<i class="icon-users"></i>
 	</b-button>
 
+	<!-- Ventas -->
+	<b-button 
+	variant="primary"
+	size="sm"
+	@click.stop="showSales()" 
+	class="m-l-10">
+		Ventas
+	</b-button>
+
 	<b-button 
 	v-if="order_production_statuses.length"
 	variant="success"
@@ -102,6 +111,11 @@ export default {
 		showCharts() {
 			this.setModel(this.model, 'article', [], false)
 			this.$bvModal.show('article-charts')
+		},
+		showSales() {
+			console.log('¿asd')
+			this.setModel(this.model, 'article', [], false)
+			this.$bvModal.show('article-sales')
 		},
 		setFeatured() {
 			this.loading_featured = true

@@ -1,14 +1,30 @@
 <template>
 	<div
 	class="home">
-		<b-row
-		class="row-first row-full-heigth">
+		<b-row>
 			<b-col
-			class="m-lg-b-50"
 			cols="12"
 			xl="9">
 				<nav-component></nav-component>
 			</b-col>
+		</b-row>
+		<b-row
+		class="row-banner">
+			<b-col
+			cols="12"
+			lg="5"
+			md="6">
+				<left-title></left-title>
+			</b-col>
+			<b-col
+			cols="12"
+			lg="5"
+			md="6">
+				<right-video></right-video>
+			</b-col>
+		</b-row>
+		<b-row
+		class="row-first row-full-heigth">
 			<b-col
 			cols="12"
 			lg="7" 
@@ -42,7 +58,7 @@
 		class="row-dark row-full-heigth">
 			<b-col
 			cols="12"
-			xl="9">
+			xl="10">
 				<plans></plans>
 			</b-col>
 		</b-row>
@@ -51,6 +67,8 @@
 <script>
 export default {
 	components: {
+		LeftTitle: () => import('@/components/home/components/banner/LeftTitle'),
+		RightVideo: () => import('@/components/home/components/banner/RightVideo'),
 		NavComponent: () => import('@/components/home/components/nav/Index'),
 		LeftVideo: () => import('@/components/home/components/LeftVideo'),
 		RightForm: () => import('@/components/home/components/RightForm'),
@@ -62,6 +80,14 @@ export default {
 </script>
 <style lang="sass">
 .home 
+
+	.row-banner
+		background: #007bff
+		@media screen and (max-width: 992px)
+			height: calc(100vh - 100px)
+		@media screen and (min-width: 992px)
+			height: calc(100vh - 100px - 200px)
+
 	.row-dark
 		background: #F7F7F7
 

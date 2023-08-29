@@ -74,7 +74,7 @@ export default {
 	},
 	methods: {
 		inputId(prop) {
-			return this.model_name+'-'+prop.key 
+			return this.model_name+'-'+prop.key+'-'+this.model.id
 		},
 		changeFocus(prop) {
 			let props = Object.keys(this.model.pivot)

@@ -13,6 +13,7 @@
 
 	<import></import>
 	<charts></charts>
+	<article-sales></article-sales>
 	<article-used-in-recipes></article-used-in-recipes>
 	<article-variants></article-variants>
 	<providers-history></providers-history>
@@ -64,6 +65,7 @@ export default {
 		StockInfoButtons: () => import('@/components/listado/components/StockInfoButtons'),
 		Buttons: () => import('@/components/listado/components/Buttons'),
 		Charts: () => import('@/components/listado/modals/article-charts/Index'),
+		ArticleSales: () => import('@/components/listado/modals/article-sales/Index'),
 		ArticleUsedInRecipes: () => import('@/components/listado/modals/article-used-in-recipes/Index'),
 		ArticleVariants: () => import('@/components/listado/modals/article-variants/Index'),
 		ProvidersHistory: () => import('@/components/listado/modals/providers-history/Index'),

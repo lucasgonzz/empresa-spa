@@ -7,23 +7,23 @@ export default {
 				'Facturación ',
 				'E-commerce propio',
 				'Módulo de producción ',
-				'Clientes y cuentas corriente',
+				'Clientes y c/corriente',
 				'Presupuestos ',
-				'Proveedores y cuentas corriente',
+				'Proveedores y c/corriente',
 				'Pedidos a proveedores ',
 				'Actualización de ventas',
 				'Copias de seguridad diarias',
-				'Stock por sucursales/depósitos',
+				'Stock por sucursales',
 				'Estadísticas y métricas',
-				'Listas de precios para cada cliente',
+				'Listas de precios',
 				'Empleados con permisos',
-				'Acceso desde aplicación móvil',
+				'Aplicación móvil',
 				'Fotos automáticas',
 				'Ayuda con la integración ',
 				'Soporte y atención al cliente',
 				'Cierre de caja',
-				'Exportar e importar excel',
-				// 'Exportar e importar excel de artículos, clientes y proveedores',
+				'Compatibilidad con Excel',
+				// 'Compatibilidad con Excel de artículos, clientes y proveedores',
 			]
 		},
 		plans() {
@@ -54,7 +54,7 @@ export default {
 							value: 'No',
 						},
 						{
-							title: 'Clientes y cuentas corriente',
+							title: 'Clientes y c/corriente',
 							value: 'No',
 						},
 						{
@@ -62,7 +62,7 @@ export default {
 							value: 'No',
 						},
 						{
-							title: 'Proveedores y cuentas corriente',
+							title: 'Proveedores y c/corriente',
 							value: 'No',
 						},
 						{
@@ -78,7 +78,7 @@ export default {
 							value: 'Si',
 						},
 						{
-							title: 'Stock por sucursales/depósitos',
+							title: 'Stock por sucursales',
 							value: 'No',
 						},
 						{
@@ -86,7 +86,7 @@ export default {
 							value: 'No',
 						},
 						{
-							title: 'Listas de precios para cada cliente',
+							title: 'Listas de precios',
 							description: 'Cuando se indique el cliente en una venta, los precios de la misma se calcularán en base a la lista de precios del cliente, lo mismo para cuando ese cliente acceda al e-commerce desde su cuenta',
 							value: 'No',
 						},
@@ -95,7 +95,7 @@ export default {
 							value: 'No',
 						},
 						{
-							title: 'Acceso desde aplicación móvil',
+							title: 'Aplicación móvil',
 							value: 'Si',
 						},
 						{
@@ -112,12 +112,12 @@ export default {
 							value: 'Si',
 						},
 						{
-							title: 'Exportar e importar excel con lista de artículos, clientes y proveedores',
-							value: 'No',
-						},
-						{
 							title: 'Cierre de caja',
 							value: 'Si',
+						},
+						{
+							title: 'Compatibilidad con Excel',
+							value: 'No',
 						},
 					]
 				},
@@ -147,7 +147,7 @@ export default {
 							value: 'No',
 						},
 						{
-							title: 'Clientes y cuentas corriente',
+							title: 'Clientes y c/corriente',
 							value: 'Si',
 						},
 						{
@@ -155,7 +155,7 @@ export default {
 							value: 'Si',
 						},
 						{
-							title: 'Proveedores y cuentas corriente',
+							title: 'Proveedores y c/corriente',
 							value: 'Si',
 						},
 						{
@@ -171,7 +171,7 @@ export default {
 							value: 'Si',
 						},
 						{
-							title: 'Stock por sucursales/depósitos',
+							title: 'Stock por sucursales',
 							value: 'Si',
 						},
 						{
@@ -179,7 +179,7 @@ export default {
 							value: 'Si',
 						},
 						{
-							title: 'Listas de precios para cada cliente',
+							title: 'Listas de precios',
 							description: 'Cuando se indique el cliente en una venta, los precios de la misma se calcularán en base a la lista de precios del cliente, lo mismo para cuando ese cliente acceda al e-commerce desde su cuenta',
 							value: 'Si',
 						},
@@ -189,13 +189,13 @@ export default {
 							value: '$800 por mes',
 						},
 						{
-							title: 'Acceso desde aplicación móvil',
+							title: 'Aplicación móvil',
 							value: 'Si',
 						},
 						{
 							title: 'Fotos automáticas',
 							description: 'Sacadas desde Google',
-							value: 'No',
+							value: 'Si',
 						},
 						{
 							title: 'Ayuda con la integración',
@@ -206,7 +206,7 @@ export default {
 							value: 'Si',
 						},
 						{
-							title: 'Exportar e importar excel con lista de artículos, clientes y proveedores',
+							title: 'Compatibilidad con Excel',
 							value: 'Si',
 						},
 						{
@@ -217,7 +217,7 @@ export default {
 				},
 				{
 					name: 'Empresa',
-					price: '$6.000',
+					price: '$7.000',
 					features: [
 						{
 							title: 'Sucursales/depósitos',
@@ -241,7 +241,7 @@ export default {
 							value: 'Si',
 						},
 						{
-							title: 'Clientes y cuentas corriente',
+							title: 'Clientes y c/corriente',
 							value: 'Si',
 						},
 						{
@@ -249,7 +249,7 @@ export default {
 							value: 'Si',
 						},
 						{
-							title: 'Proveedores y cuentas corriente',
+							title: 'Proveedores y c/corriente',
 							value: 'Si',
 						},
 						{
@@ -265,7 +265,7 @@ export default {
 							value: 'Si',
 						},
 						{
-							title: 'Stock por sucursales/depósitos',
+							title: 'Stock por sucursales',
 							value: 'Si',
 						},
 						{
@@ -273,7 +273,7 @@ export default {
 							value: 'Si',
 						},
 						{
-							title: 'Listas de precios para cada cliente',
+							title: 'Listas de precios',
 							description: 'Cuando se indique el cliente en una venta, los precios de la misma se calcularán en base a la lista de precios del cliente, lo mismo para cuando ese cliente acceda al e-commerce desde su cuenta',
 							value: 'Si',
 						},
@@ -283,13 +283,13 @@ export default {
 							value: '$1000 por mes',
 						},
 						{
-							title: 'Acceso desde aplicación móvil',
+							title: 'Aplicación móvil',
 							value: 'Si',
 						},
 						{
 							title: 'Fotos automáticas',
 							description: 'Sacadas desde Google',
-							value: 'No',
+							value: 'Si',
 						},
 						{
 							title: 'Ayuda con la integración',
@@ -300,7 +300,7 @@ export default {
 							value: 'Si',
 						},
 						{
-							title: 'Exportar e importar excel con lista de artículos, clientes y proveedores',
+							title: 'Compatibilidad con Excel',
 							value: 'Si',
 						},
 						{

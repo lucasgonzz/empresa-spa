@@ -354,12 +354,12 @@ export default {
 	
 	.common-table
 		position: relative
-		// border-collapse: separate
 		border-spacing: 0px
 		width: 100%
 
 		thead 
 			position: relative
+			z-index: 900
 
 		thead, tbody 
 			min-width: 100%
@@ -371,13 +371,11 @@ export default {
 				color: #000
 
 		th, td 
-			white-space: nowrap
+			// white-space: nowrap
 			text-align: left
-			// overflow-wrap: normal		
-			// text-overflow: ellipsis
-			// display: inline-block
 			
 		th 
+			white-space: nowrap
 			padding: 10px 15px
 			font-size: 17px
 			position: sticky
@@ -400,6 +398,10 @@ export default {
 			padding: 5px 15px
 			line-height: 25px
 			font-size: 1em
+			max-width: 500px
+			&:last-child 
+				white-space: nowrap
+				max-width: 2000px
 			@if ($theme == 'dark')
 				background: #1d1d1d
 				border-bottom: 1px solid rgba(255,255,255,.2)

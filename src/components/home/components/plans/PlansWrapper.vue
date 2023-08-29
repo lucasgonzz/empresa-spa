@@ -14,7 +14,7 @@
 
 		<div
 		class="plans-wrapper"
-		v-else-if>
+		v-if="!is_mobile">
 			<div>
 				<div
 				class="feature-title"
@@ -79,8 +79,12 @@ export default {
 	.feature-title
 		text-align: left
 		max-width: 300px
+
 		font-size: 17px
+		
 		color: rgba(0,0,0,.5)
 		margin: 10px 0
+
+		border-bottom: 1px solid rgba(0,0,0,.3)
 
 </style>

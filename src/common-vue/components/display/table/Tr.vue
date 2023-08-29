@@ -4,7 +4,9 @@
 	:class="rowClass(model)">
 		<td
 		v-for="(prop, index) in props">
-			<div class="cont-tr">
+			<div 
+			:class="index == props.length-1 ? 'cont-tr-full-width' : ''"
+			class="cont-tr">
 				
 				<pivot-prop
 				v-if="prop.is_pivot_prop"
@@ -185,10 +187,16 @@ export default {
 </script>
 <style lang="sass">
 .cont-tr
+	width: 100%
 	display: flex 
 	flex-direction: row 
 	justify-content: space-between
 	align-items: center
+	white-space: normal
+
+.cont-tr-full-width
+	white-space: nowrap
+
 	.input-sm 
 		width: 70px !important
 	.input-md 

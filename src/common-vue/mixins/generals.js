@@ -115,7 +115,7 @@ export default {
 				return process.env.VUE_APP_CANT_MODELS_TO_SHOW
 			}
 			return 30
-			// return 40
+			// return 5
 		},
 		is_mobile() {
 			if (this.$vssWidth < '992') {

@@ -10,6 +10,19 @@ id="search-image">
 	placeholder="Buscar imagenes"
 	@keyup.enter="search"
 	v-model="query"></b-form-input>
+
+	<b-button
+	@click="setBarCode"
+	variant="primary">
+		Con el Codigo
+	</b-button>
+	<b-button
+	class="m-l-15"
+	@click="setName"
+	variant="primary">
+		Con el Nombre
+	</b-button>
+
 	<div
 	v-if="!loading">
 		<div 
@@ -67,6 +80,14 @@ export default {
 			loading: false,
 		}
 	},
+	created() {
+		console.log('SE CREO MODAL')
+	},
+	computed: {
+		article() {
+			return this.$store.state.article.model 
+		},
+	},
 	methods: {
 		async search() {
 			this.images_result = null
@@ -91,28 +112,16 @@ export default {
 		setImage(image_url) {
 			this.$bvModal.hide('search-image') 
 			this.$emit('setImageUrl', image_url) 
-			// console.log('holas')
-			// return 
-			// this.loading = true
-			// this.$api.post('save-pre-image', {
-			// 	image_url: image_url 
-			// })
-			// .then(res => {
-			// 	this.loading = false
-			// 	if (res.data.image_saved) {
-			// 		this.$bvModal.hide('search-image')
-			// 		setTimeout(() => {
-			// 			this.$emit('setImage', res.data.image_url)
-			// 		}, 500)
-			// 	} else {
-			// 		this.$toast.error('Hubo un error al guardar la imagen')
-			// 	}
-			// })
-			// .catch(err => {
-			// 	this.loading = false
-			// 	console.log(err)
-			// 	this.$toast.error('Hubo un error al guardar la imagen')
-			// })
+		},
+		setBarCode() {
+			if (this.article.bar_code) {
+				this.query = this.article.bar_code
+				this.search()
+			}
+		},
+		setName() {
+			this.query = this.article.name
+			this.search()
 		},
 	}
 }

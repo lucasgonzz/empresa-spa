@@ -4,11 +4,11 @@
 		<div
 		v-if="!loading">
 			<div
-			v-if="models.length"
+			v-if="models_to_show.length"
 			:class="_class"
 			class="cont-cards">
 				<card-component
-				v-for="model in models"
+				v-for="model in models_to_show"
 				:key="model.id"
 				:properties="properties"
 				:show_created_at="show_created_at"
@@ -23,9 +23,16 @@
 						<slot name="table_right_options" :model="props.model"></slot>
 					</template>
 				</card-component>
+
+				<div 
+				v-if="busy">
+					Cargando...
+				</div>
+
+				<div v-infinite-scroll="loadMore" infinite-scroll-disabled="busy" infinite-scroll-distance="10"></div>
 			</div>
 			<p 
-			v-else-if="!models.length"
+			v-else-if="!models_to_show.length"
 			class="text-with-icon">
 				<i class="icon-eye-slash"></i>
 				No hay {{ plural(model_name) }}
@@ -44,6 +51,7 @@
 <script>
 import CardComponent from '@/common-vue/components/display/cards/CardComponent'
 import CardSkeleton from '@/common-vue/components/display/cards/CardSkeleton'
+import infiniteScroll from 'vue-infinite-scroll'
 export default {
 	props: {
 		loading: Boolean,
@@ -74,9 +82,16 @@ export default {
 			default: false,
 		},
 	},
+	directives: {infiniteScroll},
 	components: {
 		CardComponent,
 		CardSkeleton,
+	},
+	data() {
+		return {
+			index_to_show: 1,
+			busy: false,
+		}
 	},
 	computed: { 
 		_class() {
@@ -84,6 +99,22 @@ export default {
 				return 'full-card'
 			}
 			return ''
+		},
+		models_to_show() {
+			let to_show = this.models.slice(0, (this.cant_models_to_show * this.index_to_show))
+			return to_show
+		},
+		loadMore($state) {
+			console.log('loadMore')
+			if (this.models_to_show.length < this.models.length) {
+				console.log('entro loadMore')
+				this.busy = true;
+
+				setTimeout(() => {
+					this.index_to_show++
+					this.busy = false;
+				}, 300);
+			}
 		},
 	},
 	methods: {

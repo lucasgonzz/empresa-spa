@@ -101,6 +101,8 @@ export default {
 							key: prop.key,
 							value: [], 
 						}
+						console.log('all_models_for_relation')
+						console.log(all_models_for_relation)
 						all_models_for_relation.forEach(model_to_relation => {
 							propertye_to_add.value.push(this.getRelationToAdd(model, prop, model_to_relation))
 						})
@@ -123,7 +125,6 @@ export default {
 			return properties_to_add
 		},
 		getRelationToAdd(model, prop, model_to_relation) {
-			console.log('agregando '+model_to_relation.name)
 			let model_relation_to_add = {
 				...model_to_relation,
 			}

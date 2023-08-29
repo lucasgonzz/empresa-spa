@@ -10,7 +10,7 @@
 		v-for="feature in plan.features"
 		class="plan-feature">
 			<p
-			class="d-lg-none feature-title">
+			class="feature-title d-lg-none">
 				{{ feature.title }}
 			</p>
 			<p>
@@ -29,11 +29,17 @@ export default {
 <style lang="sass">
 @import '@/sass/_custom'
 .plan 
-	border-right: 1px solid rgba(0, 0, 0, .4)
-	padding: 0 25px
-	&:last-child 
-		border-right: none 
-
+	
+	@media screen and (max-width: 992px)
+		border: 1px solid lighten($blue, 30)
+		border-radius: 7px
+		padding: 25px
+	@media screen and (min-width: 992px)
+		padding: 0 25px
+		border-right: 1px solid rgba(0, 0, 0, .4)
+		&:last-child 
+			border-right: none 
+	
 	p 
 		margin-bottom: 0
 
@@ -56,13 +62,24 @@ export default {
 	.plan-feature
 		text-align: center 
 		font-weight: bold 
+
 		font-size: 17px
+
 		margin: 10px 0
+		
+		display: flex 
+		flex-direction: row 
+		justify-content: space-between
+		align-items: center	
 		@media screen and (max-width: 992px)
 			border-bottom: 1px solid rgba(0,0,0,.3)
 			padding-bottom: 10px
 			font-weight: normal 
 
+		@media screen and (min-width: 992px)
+			border-bottom: 1px solid rgba(0,0,0,.3)
+
 			.feature-title
 				color: rgba(0,0,0,.3)
+
 </style>

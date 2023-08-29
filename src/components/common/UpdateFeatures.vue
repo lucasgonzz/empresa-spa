@@ -8,7 +8,7 @@ id="update-features">
 	</p>
 	<p
 	class="title">
-		Tene a mano este link apretando en el desplegable de tu nombre, en la ezquina superior derecha 
+		Tene a mano este link apretando en el desplegable de tu nombre, en la esquina superior derecha 
 	</p>
 	<div
 	v-for="feature in update_features">
