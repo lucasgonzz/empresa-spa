@@ -1,6 +1,6 @@
 <template>
 	<div 
-	class="register-form">
+	class="register-form animate__animated animate__wobble">
 		<h4>
 			Arranca tu prueba gratis ahora
 		</h4>
@@ -70,6 +70,8 @@ export default {
 .register-form
 	padding: 30px
 	// max-width: 500px
+	@media screen and (max-width: 992px)
+		margin-top: 25px
 	@media screen and (min-width: 992px)
 		border-radius: 15px
 		box-shadow: rgba(68, 68, 68, 0.06) 0px 54px 125px, rgba(68, 68, 68, 0.04) 0px 4.44956px 24.0676px, rgba(68, 68, 68, 0.03) 0px -0.0333488px 4.06435px

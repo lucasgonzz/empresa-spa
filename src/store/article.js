@@ -104,6 +104,16 @@ export default {
 		setSelected(state, value) {
 			state.selected = value
 		},
+		addSelected(state, value) {
+			let index = state.selected.findIndex(selected_model => {
+				return selected_model.id == value.id 
+			})
+			if (index != -1) {
+				state.selected.splice(index, 1)
+			} else {
+				state.selected.push(value)
+			}
+		},
 		setFilters(state, value) {
 			state.filters = value
 		},

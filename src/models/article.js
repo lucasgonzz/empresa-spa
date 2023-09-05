@@ -62,7 +62,7 @@ export default {
 			type: 'text',
 			is_price: true,
 			use_to_update: true,
-			filter_modal_position: 9,
+			filter_modal_position: 10,
 			filter_type: 'number',
 		},
 		{
@@ -89,7 +89,7 @@ export default {
 			type_to_update: 'number',
 			use_to_update: true,
 			not_show: true,
-			filter_modal_position: 11,
+			filter_modal_position: 12,
 			filter_type: 'number',
 			keep_after_create: true,
 		},
@@ -100,7 +100,7 @@ export default {
 			type_to_update: 'number',
 			is_price: true,
 			use_to_update: true,
-			filter_modal_position: 10,
+			filter_modal_position: 11,
 			filter_type: 'number',
 		},
 		{
@@ -110,6 +110,7 @@ export default {
 			only_show: true,
 			is_price: true,
 			use_to_show_in_search_modal: true,
+			filter_modal_position: 9,
 		},
 		{
 			text: 'Precio final anterior',

@@ -14,6 +14,23 @@ Vue.prototype.$scrollToTop = (() => {
   }, 100)
 }) 
 
+
+// Vue Scroll To
+var VueScrollTo = require('vue-scrollto');
+Vue.use(VueScrollTo, {
+  container: "body",
+  duration: 1000,
+  easing: "ease",
+  offset: -50,
+  force: true,
+  cancelable: true,
+  onStart: false,
+  onDone: false,
+  onCancel: false,
+  x: false,
+  y: true
+ })
+
 // Laravel-echo
 window.Pusher = require('pusher-js');
 import Echo from "laravel-echo"

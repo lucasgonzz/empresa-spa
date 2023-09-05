@@ -1,6 +1,5 @@
 <template>
-	<div
-	class="table-pivot-props">
+	<div>
 		<b-form-group
 		v-if="prop.type == 'text' || prop.type == 'textarea' || prop.type == 'number' || prop.type == 'select' || prop.type == 'checkbox' || prop.type == 'date' || prop.only_show"
 		class="pivot-input">
@@ -101,11 +100,10 @@ export default {
 }
 </script>
 <style lang="sass">
-.table-pivot-props
-	.input-sm 
-		width: 70px !important
-	.input-md 
-		width: 150px !important
-	.input-lg
-		width: 300px !important
+.input-sm 
+	width: 70px !important
+.input-md 
+	width: 150px !important
+.input-lg
+	width: 350px !important
 </style>

@@ -55,6 +55,9 @@
 			<template v-slot:horizontal_nav_center>
 				<slot name="horizontal_nav_center"></slot>
 			</template>
+			<template #options_drop_down>
+				<slot name="options_drop_down"></slot>
+			</template>
 		</horizontal-nav>
 	
 		<slot name="body"></slot>

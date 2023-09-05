@@ -31,9 +31,11 @@ export default {
 .plan 
 	
 	@media screen and (max-width: 992px)
-		border: 1px solid lighten($blue, 30)
+		border: 2px solid lighten($blue, 30)
 		border-radius: 7px
 		padding: 25px
+		box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px
+		background: #FFF
 	@media screen and (min-width: 992px)
 		padding: 0 25px
 		border-right: 1px solid rgba(0, 0, 0, .4)

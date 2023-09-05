@@ -61,7 +61,7 @@
 				<b-button
 				v-else-if="showProperty(prop, model) && prop.button"
 				:variant="prop.button.variant"
-				@click="callMethod(prop, model)">
+				@click.stop="callMethod(prop, model)">
 					<i
 					v-if="prop.button.icon"
 					:class="'icon-'+prop.button.icon"></i>
@@ -131,15 +131,30 @@ export default {
 			if (this.model_name && this.hasColor(this.model_name)) {
 				return this[this.model_name+'GetColor'](model)
 			}
+			if (this.isSelected(model)) {
+				return 'selected-row'
+			}
+		},
+		isSelected(model) {
+			let is_selecteable = this.$store.state[this.model_name].is_selecteable
+			if (typeof is_selecteable != 'undefined' && is_selecteable) {
+				let index = this.$store.state[this.model_name].selected.findIndex(_model => {
+					return _model.id == model.id 
+				})
+				if (index != -1) {
+					return true 
+				}
+			}
+			return false
 		},
 		onRowSelected(model) {
 			if (this.select_mode == 'single') {
-				console.log('onRowSelected')
-				console.log(this.pivot)
 				this.$emit('onRowSelected', model)
 				if (this.set_model_on_row_selected) {
 					this.setModel(model, this.model_name)
 				}
+			} else {
+				this.$store.commit(this.model_name+'/addSelected', model)
 			}
 		},
 		showInput(prop, model) {
@@ -186,6 +201,8 @@ export default {
 }
 </script>
 <style lang="sass">
+@import '@/sass/_custom'
+
 .cont-tr
 	width: 100%
 	display: flex 
@@ -193,6 +210,9 @@ export default {
 	justify-content: space-between
 	align-items: center
 	white-space: normal
+
+.selected-row
+	border: 5px solid $blue 
 
 .cont-tr-full-width
 	white-space: nowrap

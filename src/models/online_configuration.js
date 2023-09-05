@@ -52,6 +52,11 @@ export default {
 			description: 'En caso de que un articulo tenga stock = 0 (no aplica para los articulos con stock sin especificar), se mostrara un aviso de "Producto agotado" y no se dejara agregar al carrito'
 		},
 		{
+			text: 'Cuando el stock este sin especificar, es igual a 0',
+			key: 'stock_null_equal_0',
+			type: 'checkbox',
+		},
+		{
 			text: 'Mostrar articulos sin imagenes en la Tienda',
 			key: 'show_articles_without_images',
 			type: 'checkbox',

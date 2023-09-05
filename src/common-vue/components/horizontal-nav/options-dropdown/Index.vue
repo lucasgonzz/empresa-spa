@@ -14,13 +14,21 @@
 		<options-dropdown
 		@setUpdate="setUpdate"
 		@setDelete="setDelete"
-		:model_name="model_name"></options-dropdown>
+		:model_name="model_name">
+			<template #options_drop_down>
+				<slot name="options_drop_down"></slot>
+			</template>
+		</options-dropdown>
 
 		<options-dropdown
 		@setUpdate="setUpdate"
 		@setDelete="setDelete"
 		from_filter
-		:model_name="model_name"></options-dropdown>
+		:model_name="model_name">
+			<template #options_drop_down>
+				<slot name="options_drop_down"></slot>
+			</template>
+		</options-dropdown>
 	</div>
 </template>
 <script>
@@ -102,6 +110,7 @@ export default {
 					this.$store.commit(this.model_name+'/delete')
 				})
 				this.$toast.success(this.plural(this.model_name)+' eliminados')
+				this.$store.commit(this.model_name+'/setSelected', [])
 				this.$bvModal.hide('update-props')
 			})
 			.catch(err => {

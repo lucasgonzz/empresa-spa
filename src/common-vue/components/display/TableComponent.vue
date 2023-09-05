@@ -543,11 +543,13 @@ export default {
 	input, textarea
 		width: 200px
 	th, td 
+		white-space: wrap
 		text-align: left
-		white-space: nowrap
 		@if ($table_font_small)
 			font-size: 1em
 			padding: 5px !important
+		span 
+			white-space: wrap
 
 	tr
 		@if ($theme == 'dark')

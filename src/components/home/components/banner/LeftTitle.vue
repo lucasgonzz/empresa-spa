@@ -5,8 +5,11 @@
 			El sistema perfecto para organizar tu negocio
 		</h1>
 		<h3>
-			Con ComercioCity lleva el control de inventario, clientes, e-commerce, vendedores...
+			Con ComercioCity lleva el control de INVENTARIO, CLIENTES, PROVEEDORES, E-COMMERCE, VENDEDORES y mucho mas...
 		</h3>
+		<!-- <h3>
+			Sistema de Gestion, Facturacion y Venta Online. 
+		</h3> -->
 	</div>
 </template>
 <style lang="sass">
@@ -16,7 +19,7 @@
 	display: flex 
 	flex-direction: column 
 	justify-content: center 
-	align-items: center
+	align-items: flex-start
 
 	h1 
 		font-weight: bold 
@@ -35,6 +38,11 @@
 		text-align: left
 		color: #fff
 		font-size: 18px
-		font-weight: 400
+		font-weight: 500
 		line-height: 25px
+
+		@media screen and (max-width: 992px)
+			text-align: center
+		@media screen and (min-width: 992px)
+			text-align: left
 </style>

@@ -3,14 +3,21 @@ export default {
 		is_online_view() {
 			return this.route_name == 'online'
 		},
-		_unconfirmed_orders() {
-			return this.$store.state.order.unconfirmed_models 
-		},
+        orders() {
+            return this.$store.state.order.models 
+        },
+        _unconfirmed_orders() {
+            return this.$store.state.order.unconfirmed_models 
+        },
         unconfirmed_orders() {
             if (this.has_online) {
-                return this._unconfirmed_orders.filter(order => {
-                	return order.order_status.name == 'Sin confirmar'
+                let _unconfirmed_orders = this._unconfirmed_orders.filter(order => {
+                    return order.order_status.name == 'Sin confirmar'
                 })
+                let unconfirmed_orders = this.orders.filter(order => {
+                    return order.order_status.name == 'Sin confirmar'
+                })
+                return _unconfirmed_orders.concat(unconfirmed_orders)
             }
             return []
         },
@@ -20,7 +27,7 @@ export default {
             	this.$store.state.buyer.models.forEach(model => {
             		model.messages.forEach(message => {
             			if (message.from_buyer && !message.read) {
-            				messages_not_read++
+            				// messages_not_read++
             				messages_not_read.push(message)
             			}
             		})

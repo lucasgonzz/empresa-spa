@@ -14,7 +14,7 @@
 		</p>
 		<p
 		v-else-if="days_before_expire > 0">
-			Quedan {{ days_before_expire }} para que venza tu suscripcion
+			Quedan {{ days_before_expire }} dias para que venza tu suscripcion
 		</p>
 		<p
 		class="m-b-0">

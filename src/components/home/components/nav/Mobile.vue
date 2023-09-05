@@ -2,12 +2,13 @@
 <b-sidebar
 id="nav-home-mobile" 
 shadow>
-    <b-button
-    :to="{name: 'login'}"
-    variant="primary">
-        Iniciar sesion
-    </b-button>
+    <scroll-buttons></scroll-buttons>
 </b-sidebar>
 </template>
-<style lang="sass">
-</style>
+<script>
+export default {
+    components: {
+        ScrollButtons: () => import('@/components/home/components/nav/ScrollButtons'),
+    },
+}
+</script>

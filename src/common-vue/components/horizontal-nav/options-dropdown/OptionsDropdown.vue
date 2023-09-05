@@ -15,6 +15,8 @@
 			<i class="icon-trash"></i>
 			Eliminar
 		</b-dropdown-item>
+		<slot
+		name="options_drop_down"></slot>
 	</b-dropdown>
 </template>
 <script>

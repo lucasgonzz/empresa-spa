@@ -83,6 +83,8 @@
 
 						        <date-picker
 						        @setDate="setDate"
+						        :prop="prop"
+						        :value="model[prop.key]"
 								v-else-if="prop.type == 'date'"></date-picker>
 
 								<div
@@ -396,6 +398,8 @@ export default {
 			}, 500)
 		},
 		setDate(result) {
+			console.log('result')
+			console.log(result)
 			this.model[result.prop.key] = result.value 
 		},
 		setBarCode(bar_code) {

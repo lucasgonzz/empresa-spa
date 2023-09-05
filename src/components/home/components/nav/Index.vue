@@ -11,6 +11,9 @@
                     <img src="@/assets/logo.png" alt="">
                 </b-navbar-brand>
 
+                <scroll-buttons
+                class="d-none d-lg-flex"></scroll-buttons>
+
                 <div
                 class="d-lg-none">
                     <b-navbar-toggle target="nav-home-mobile">
@@ -34,6 +37,7 @@
 <script>
 export default {
     components: {
+        ScrollButtons: () => import('@/components/home/components/nav/ScrollButtons'),
         Mobile: () => import('@/components/home/components/nav/Mobile'),
     },
 }

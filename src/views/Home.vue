@@ -50,7 +50,8 @@
 		class="row-dark-2">
 			<b-col
 			cols="12"
-			xl="9">
+			lg="9"
+			xl="7">
 				<clients></clients>
 			</b-col>
 		</b-row>
@@ -62,6 +63,8 @@
 				<plans></plans>
 			</b-col>
 		</b-row>
+
+		<btn-whats-app></btn-whats-app>			
 	</div>
 </template>
 <script>
@@ -75,6 +78,7 @@ export default {
 		Features: () => import('@/components/home/components/features/Index'),
 		Clients: () => import('@/components/home/components/clients/Index'),
 		Plans: () => import('@/components/home/components/plans/Index'),
+		BtnWhatsApp: () => import('@/components/home/components/BtnWhatsApp'),
 	}
 }
 </script>
@@ -82,7 +86,9 @@ export default {
 .home 
 
 	.row-banner
-		background: #007bff
+		// background: #007bff
+		background: rgb(0,123,255)
+		background: linear-gradient(90deg, rgba(0,123,255,1) 0%, rgba(0,123,255,1) 27%, rgba(155,203,255,1) 100%)
 		@media screen and (max-width: 992px)
 			height: calc(100vh - 100px)
 		@media screen and (min-width: 992px)
@@ -95,23 +101,20 @@ export default {
 		background: #F1F1F1
 
 	.row-full-heigth
-		align-items: start
+		align-items: center
 		min-height: 100vh !important
 
 
 	.titles 
 		margin-bottom: 50px
 		h4 
-			font-size: 55px 
-			// font-weight: bold 
+			font-size: 2em 
 			margin: 60px 0
-		h6 
-			font-size: 30px 
-			// font-weight: bold 
-			margin: 40px 0
-			color: rgba(0,0,0,.7)
 		h5 
-			font-size: 25px
-			// margin-bottom: 15px 
+			font-size: 1.5em
+			color: rgba(0,0,0,.7)
+		h6 
+			font-size: 1.3em
+			margin: 40px 0
 			color: rgba(0,0,0,.7)
 </style>

@@ -95,6 +95,9 @@ export default {
 		setSelected(state, value) {
 			state.selected = value
 		},
+		addSelected(state, value) {
+			state.selected.push(value)
+		},
 		setFiltered(state, value) {
 			state.filtered = value
 		},

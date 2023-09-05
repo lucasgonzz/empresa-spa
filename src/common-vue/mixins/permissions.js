@@ -49,6 +49,10 @@ export default {
 					console.log('tiene permiso para '+route.can)
 					route_to_redirect = route
 					break
+				} else {
+					console.log('la ruta no necesita permiso')
+					route_to_redirect = route
+					break
 				} 
 			}
 			if (route_to_redirect) {

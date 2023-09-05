@@ -1,5 +1,7 @@
 <template>
-	<div class="client s-1">
+	<div 
+	@click="toClient"
+	class="client">
 		<img 
 		v-if="client.image_url"
 		:src="client.image_url">
@@ -23,23 +25,25 @@ export default {
 </script>
 <style lang="sass">
 .client 
-	@media screen and (max-width: 768px) 
-		width: 300px
-		height: 300px
-		margin: 15px
-	@media screen and (min-width: 768px) 
-		width: 31%
-		margin: 1%
 	background: #FFF
+	border-radius: 50%
+	width: 150px
+	height: 150px
+	// margin: 15px
 	display: flex 
+	flex-direction: row 
 	justify-content: center 
-	align-items: center 
-	border-radius: 5px
-	img 
-		width: 100%
-		border-radius: 5px
+	align-items: center
+	box-shadow: rgba(0, 0, 0, 0.16) 0px 1px 4px 
+	cursor: pointer
+	&:hover 
+		transform: scale(1.07)
+		transition: all .2s
+	img
+		width: 68% 
+		height: auto
 	p 
-		font-size: 25px
-		font-weight: bold 
 		margin-bottom: 0
+		font-size: 20px
+		font-weight: bold
 </style>

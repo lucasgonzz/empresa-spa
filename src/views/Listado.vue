@@ -28,6 +28,9 @@
 		<template #horizontal_nav_center>
 			<stock-info-buttons></stock-info-buttons>
 		</template>
+		<template #options_drop_down>
+			<article-ticket-option-drop-down></article-ticket-option-drop-down>
+		</template>
 
 		<template v-slot:table_right_options="props">
 			<buttons :model="props.model" />	
@@ -71,6 +74,7 @@ export default {
 		ProvidersHistory: () => import('@/components/listado/modals/providers-history/Index'),
 		NameInput: () => import('@/components/listado/components/NameInput'),
 		StockInfo: () => import('@/components/listado/modals/stock-info/Index'),
+		ArticleTicketOptionDropDown: () => import('@/components/listado/components/ArticleTicketOptionDropDown'),
 	},
 	beforeRouteLeave(to, from, next) {
 		this.$store.commit('article/setSelected', [])

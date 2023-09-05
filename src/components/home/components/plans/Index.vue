@@ -1,6 +1,7 @@
 <template>
 	<div
-	class="features">
+	id="plans"
+	class="plans">
 		<div class="titles">
 			<h4
 			class="animate__animated animate__fadeIn">

@@ -5,7 +5,7 @@
 		v-if="!loading"
 		class="cont-table">
 			<table
-			v-if="models_to_show.length"
+			v-if="models.length"
 			class="common-table">
 				<thead>
 					<tr>
@@ -49,7 +49,7 @@
 					<template
 					v-else>
 						<tr-component
-						v-for="(model, i) in models_to_show"
+						v-for="(model, i) in models"
 						:key="i"
 						:model="model"
 						:pivot="pivot"
@@ -63,12 +63,12 @@
 							</template>
 						</tr-component>
 
-						<div 
+						<!-- <div 
 						v-if="busy">
 							Cargando...
 						</div>
 
-						<div v-infinite-scroll="loadMore" infinite-scroll-disabled="busy" infinite-scroll-distance="10"></div>
+						<div v-infinite-scroll="loadMore" infinite-scroll-disabled="busy" infinite-scroll-distance="10"></div> -->
 					</template>
 				</tbody>
 			</table>
@@ -79,7 +79,7 @@
 				No hay {{ plural(model_name) }}
 			</p>
 			<div 
-			v-if="models_to_show.length && show_buttons_scroll"
+			v-if="models.length && show_buttons_scroll"
 			class="scroll-buttons">
 				<div 
 				@click="scrollLeft"
@@ -94,7 +94,7 @@
 			</div>
 		</div>
 		<b-skeleton-table
-		class="s-2 b-r-1 animate__animated animate__fadeIn"
+		class="s-2 b-r-1 m-t-15 animate__animated animate__fadeIn"
 		v-else
 		:rows="10" 
 		:columns="columns"
@@ -155,21 +155,17 @@ export default {
 		}
 	},
 	computed: {
-		models_to_show() {
-			let to_show = this.models.slice(0, (this.cant_models_to_show * this.index_to_show))
-			return to_show
-		},
+		// models_to_show() {
+		// 	let to_show = this.models.slice(0, (this.cant_models_to_show * this.index_to_show))
+		// 	return to_show
+		// },
 		_select_mode() {
 			if (this.model_name) {
 				let is_selecteable = this.$store.state[this.model_name].is_selecteable
-				if (this.select_mode === null) {
-					if (typeof is_selecteable != 'undefined') {
-						if (is_selecteable) {
-							return 'multi'
-						}
-					}
-					return 'single'
-				} 
+				if (typeof is_selecteable != 'undefined' && is_selecteable) {
+					return 'multi'
+				}
+				return 'single'
 			}
 			return this.select_mode
 		},
@@ -298,6 +294,7 @@ export default {
 			}
 		},
 		setHeight() {
+			let intentos = 0 
 			if (this.set_table_height && !this.loading) {
 				let table = document.getElementById(this.id)
 				if (table) {
@@ -317,8 +314,13 @@ export default {
 					}, 500)
 				} else {
 					setTimeout(() => {
-						console.log('no estaba la tabla, voy a llamar denuvo a setHeight')
-						this.setHeight()
+						if (intentos < 5) {
+							console.log('no estaba la tabla, voy a llamar denuvo a setHeight')
+							intentos++
+							this.setHeight()
+						} else {
+							console.log('no llamo mas')
+						}
 					}, 300)
 				}
 			}

@@ -114,8 +114,7 @@ export default {
 			if (typeof process.env.VUE_APP_CANT_MODELS_TO_SHOW != 'undefined') {
 				return process.env.VUE_APP_CANT_MODELS_TO_SHOW
 			}
-			return 30
-			// return 5
+			return 40
 		},
 		is_mobile() {
 			if (this.$vssWidth < '992') {
@@ -492,6 +491,9 @@ export default {
 					return this.price(value)
 				}
 				return value
+			}
+			if (prop.belongs_to_many) {
+				return model[prop.key].length
 			}
 			if (this.isRelationKey(prop)) {
 				let relationship = this.modelNameFromRelationKey(prop, false, false)

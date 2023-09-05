@@ -73,7 +73,11 @@
 
 			<options-dropdown
 			v-if="show_filter_modal"
-			:model_name="model_name"></options-dropdown>
+			:model_name="model_name">
+				<template #options_drop_down>
+					<slot name="options_drop_down"></slot>
+				</template>
+			</options-dropdown>
 			
 			<slot name="horizontal_nav_center"></slot>
 		</div>

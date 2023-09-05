@@ -3,15 +3,17 @@
 	class="cont-date-picker">
 		<label
 		v-if="label">
-			{{ label }}
+			{{ label }} 
 		</label>
 		<input 
 		@change="setDate"
 		v-model="date_value"
-		type="date" name="dateofbirth" class="custom-date-picker">
+		type="date" 
+		class="custom-date-picker">
 	</div>
 </template>
 <script>
+import moment from 'moment'
 export default {
 	props: {
 		label: {
@@ -29,7 +31,7 @@ export default {
 	},
 	created() {
 		if (this.value) {
-			this.date_value = this.value 
+			this.date_value = moment(this.value, 'YYYY-MM-DD').format('YYYY-MM-DD') 
 			this.setDate()
 		}
 	},
@@ -54,23 +56,15 @@ export default {
 	flex-direction: column;
 	margin-bottom: 15px;
 }
-.custom-date-picker::-webkit-inner-spin-button {
-	display: none !important;
-}
-.custom-date-picker::-webkit-calendar-picker-indicator {
-  	opacity: 0 !important;
-}
 
 label {
   	display: block !important;
 }
 .custom-date-picker {
-/*	background: #fff url(https://cdn1.iconfinder.com/data/icons/cc_mono_icon_set/blacks/16x16/calendar_2.png)  97% 50% no-repeat  !important;*/
 	border: 1px solid #c4c4c4 !important;
 	border-radius: 5px !important;
 	background-color: #fff !important;
-	padding: 3px 5px !important;
-	box-shadow: inset 0 3px 6px rgba(0,0,0,0.1) !important;
+	padding: 0.375rem 0.75rem !important;
 	width: 190px !important;
 	color: #333 !important;
 }

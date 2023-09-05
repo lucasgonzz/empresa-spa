@@ -1,19 +1,29 @@
 <template>
 	<div
+	id="clients"
 	class="m-b-50">
 		<div class="titles">
 			<h6>
 				Algunos de nuestros clientes
 			</h6>
 		</div>
+
+		<div class="clients">
+			<div class="cont-clients">
+				<client
+				v-for="client in clients"
+				:client="client"></client>	
+			</div>
+		</div>
 		
-		<vue-horizontal-list 
+		
+		<!-- <vue-horizontal-list 
 		:items="clients" :options="options">
 			<template v-slot:default="{ item }">
 				<client
 				:client="item"></client>	
 			</template>
-		</vue-horizontal-list>
+		</vue-horizontal-list> -->
 	</div>
 </template>
 <script>
@@ -27,8 +37,9 @@ export default {
 			clients: [],
 			options: {
 				responsive: [
-					{ end: 768, size: 3 },
-					{ start: 768, size: 5 },
+					{ start: 0, end: 768, size: 1 },
+					{ start: 768, end: 992, size: 3 },
+					{ start: 992, size: 5 },
 				],
 				item: {
 					// css class to inject into each individual item
@@ -73,6 +84,21 @@ export default {
 </script>
 <style lang="sass">
 .clients 
-	display: flex 
-	flex-direction: row 
+	overflow-x: auto
+	width: 100%
+	.cont-clients 
+		display: flex 
+		@media screen and (max-width: 768px) 
+			// width: 4000px
+			padding-bottom: 15px
+			flex-direction: column
+			flex-wrap: wrap
+			justify-content: flex-start
+			align-items: space-between
+			overflow-x: auto
+			height: 700px
+		@media screen and (min-width: 768px) 
+			flex-wrap: wrap 
+			flex-direction: row
+			justify-content: flex-start
 </style>

@@ -6,7 +6,9 @@ id="article-sales"
 size="lg"
 hide-footer>
 	<model-component
-	model_name="sale"></model-component>	
+	model_name="sale">
+		
+	</model-component>	
 
 	<nav-component
 	@getSales="getSales"></nav-component>

@@ -127,7 +127,7 @@ export default {
 					features: [
 						{
 							title: 'Sucursales/depósitos',
-							value: '3',
+							value: '2',
 						},
 						{
 							title: 'Ventas por mes',

@@ -85,6 +85,12 @@ export default {
 						type: 'checkbox'
 					},
 					{
+						text: 'Actualizar proveedor en el sistema',
+						key: 'update_provider',
+						value: 1,
+						type: 'checkbox'
+					},
+					{
 						text: 'Iva',
 						key: 'iva_id',
 						value: 0,
@@ -169,7 +175,7 @@ export default {
 			type: 'number',
 			placeholder: 'Ingrese los dias a partir de los cuales se le notificara',
 			value: 0,
-			show: true,
+			not_show: true,
 		},
 		{
 			text: 'Total',

@@ -127,9 +127,7 @@ export default {
 			}
 			return this.$store.state[this.model_name].loading
 		},
-		_models() {
-			console.log('models:')
-			console.log(this.models)
+		models_to_show() {
 			if ((this.models.length || this.show_models_if_empty) && !this.is_filtered) {
 				console.log('return models que vinieron por props')
 				return this.models
@@ -140,11 +138,8 @@ export default {
 					return filtered
 				}  
 				console.log('return store_models')
-				return this.$store.state[this.model_name].models 
+				return this.$store.state[this.model_name].models.slice(0, this.cant_models_to_show) 
 			}
-		},
-		models_to_show() {
-			return this._models 
 		},
 		lists() {
 			if (this.order_list_by) {
