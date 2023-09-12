@@ -160,8 +160,22 @@ export default {
 	methods: {
 		setReturnedArticles(item) {
 			this.setTotal()
-			this.$store.commit('vender/addReturnedArticle', item)
+			this.addReturnedArticle(item)
 			this.setNotaCreditoDescription()
+		},
+		addReturnedArticle(item) {
+			let article_to_add = {
+				...item 
+			}
+
+			let previus_returned_article = this.previus_returned_articles.find(article => {
+				return article.id == item.id
+			})
+
+			if (typeof previus_returned_article != 'undefined') {
+				article_to_add.returned_amount -= previus_returned_article.pivot.returned_amount
+			}
+			this.$store.commit('vender/addReturnedArticle', article_to_add)
 		},
 		setNotaCreditoDescription() {
 			this.nota_credito_description = ''

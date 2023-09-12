@@ -33,9 +33,10 @@
     model_name="provider_order"></model-index>  
 
     <model-index
-    :show_btn_create="false"
+    :show_btn_save="false"
     :not_show_delete_text="not_show_delete_text"
     :delete_text="sale_delete_text"
+    :show_btn_remove_belongs_to_many="false"
     model_name="sale">
         <template v-slot:model_modal_header="props">
             <sale-details></sale-details>

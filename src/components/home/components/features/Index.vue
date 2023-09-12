@@ -54,6 +54,13 @@ export default {
 					],
 				},
 				{
+					img: 'factura1.png',
+					title: 'Facturacion',
+					items: [
+						'Estamos vinculados a los servicios de AFIP, para que puedas elegir facturar cualquier venta que hagas.',
+					],
+				},
+				{
 					img: 'stock2.png',
 					title: 'Stock',
 					items: [
@@ -106,13 +113,6 @@ export default {
 						'Asigna imágenes a tus artículos buscadas automáticamente desde internet, según su código o nombre.',
 						'No vas a tener que tomarlas vos mismo ni descargarlas para luego subirlas a nuestro sistema.',
 						'Integramos la potencia del buscador de Google para hacer todo el proceso desde nuestro sistema, y ahorrarte todo el proceso.'
-					],
-				},
-				{
-					img: 'factura1.png',
-					title: 'Facturacion',
-					items: [
-						'Estamos vinculados a los servicios de AFIP, para que puedas elegir facturar cualquier venta que hagas.',
 					],
 				},
 				{

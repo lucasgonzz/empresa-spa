@@ -14,7 +14,7 @@
 		:title="title"
 		scrollable
 		:id="model_name">
-
+			
 			<slot 
 			name="model_modal_header"
 			:model="model"></slot>
@@ -230,7 +230,14 @@ export default {
 			if (this.model_prop) {
 				return this.model_prop 
 			}
-			return this.modelStoreFromName(this.model_name)
+			if (this.hasFullReactivity(this.model_name)) {
+				return this.modelStoreFromName(this.model_name)
+			} else {
+				let model = this.modelStoreFromName(this.model_name)
+				return {
+					...model
+				}
+			}
 		},
 		properties() {
 			return this.modelPropertiesFromName(this.model_name)

@@ -3,17 +3,17 @@
 	class="scroll-buttons">
 		<div 
 		@click="scrollTo('#plans')"
-		class="scroll-button">
+		class="scroll-button d-none d-lg-block">
 			Precios
 		</div>
 		<div 
 		@click="scrollTo('#features')"
-		class="scroll-button">
+		class="scroll-button d-none d-lg-block">
 			Funcionalidades
 		</div>
 		<div 
 		@click="scrollTo('#clients')"
-		class="scroll-button">
+		class="scroll-button d-none d-lg-block">
 			Clientes
 		</div>
 		<div 

@@ -129,6 +129,9 @@ export default {
 		}, 
 	},
 	methods: {
+		hasFullReactivity(model_name) {
+			return typeof require('@/models/'+model_name).default.full_reactivity != 'undefined'
+		},
 		hasColor(model_name) {
 			return typeof require('@/models/'+model_name).default.color_display_function != 'undefined'
 		},

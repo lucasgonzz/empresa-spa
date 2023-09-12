@@ -258,22 +258,22 @@ export default {
 			},
 			not_show: true,
 		},
-		{
-			text: 'Depositos',
-			key: 'deposits',
-			type: 'search',
-			store: 'deposit',
-			belongs_to_many: {
-				properties_to_set: [
-					{
-						text: 'Cantidad',
-						key: 'value',
-						type: 'number',
-					},
-				],
-			},
-			not_show: true,
-		},
+		// {
+		// 	text: 'Depositos',
+		// 	key: 'deposits',
+		// 	type: 'search',
+		// 	store: 'deposit',
+		// 	belongs_to_many: {
+		// 		properties_to_set: [
+		// 			{
+		// 				text: 'Cantidad',
+		// 				key: 'value',
+		// 				type: 'number',
+		// 			},
+		// 		],
+		// 	},
+		// 	not_show: true,
+		// },
 		{
 			text: 'Descuentos',
 			key: 'article_discounts',
@@ -307,4 +307,5 @@ export default {
 	plural_model_name_spanish: 'Articulos',
 	create_model_name_spanish: 'Nuevo',
 	text_delete: 'el',
+	full_reactivity: true,
 }

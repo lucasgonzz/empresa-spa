@@ -1,6 +1,6 @@
 <template>
 <b-modal
-:title="'Historial de Proveedores de '+article.name"
+:title="'Historial de Proveedores y Stock de '+article.name"
 hide-footer
 size="lg"
 id="providers-history">

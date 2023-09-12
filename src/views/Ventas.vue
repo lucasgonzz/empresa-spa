@@ -7,9 +7,8 @@
 	<view-component
 	:models_to_show="sales_to_show"
 	show_models_if_empty
-	:show_btn_create="false"
-	:show_btn_save="false"
 	:show_previus_days="show_previus_days"
+	:show_btn_create="false"
 	:show_modal="false"
     :not_show_delete_text="not_show_delete_text"
     :delete_text="delete_text"

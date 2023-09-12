@@ -1,6 +1,6 @@
 <template>
 	<b-card
-	class="s b-r-5"
+	class="s-1 b-r-5"
 	v-if="returned_articles.length"
 	header="Nota de credito">
 		<b-form-checkbox

@@ -118,6 +118,10 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+		set_selected_model_with_model_prop: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	data() {
 		return {
@@ -190,10 +194,10 @@ export default {
 			}, 200)
 		},
 		clearSelected() {
-			if (this.model) {
+			if (this.model && this.prop && !this.set_selected_model_with_model_prop) {
 				this.model[this.prop.store] = null
 				this.model[this.prop.key] = null
-			}
+			} 
 			this.selected_model = null
 			this.query = ''
 			this.$emit('clearSelected')
@@ -232,11 +236,12 @@ export default {
 			this.models_to_search = models 
 		},
 		setSelectedModelProp() {
+			console.log('setSelectedModelProp')
 			if (this.show_selected) {
 				if (this.prop && this.prop.set_model_on_click_or_prop_with_query_if_null) {
 					this.query = this.model[this.prop.key]
 					this.selected_model = null
-				} else if (this.model && this.model[this.prop.key]) {
+				} else if (this.model && this.prop && this.model[this.prop.key]) {
 					if (this.prop.use_store_models) {
 						let model = this.$store.state[this.modelNameFromRelationKey(this.prop)].models.find(_model => {
 							return _model.id == this.model[this.prop.key]
@@ -245,7 +250,13 @@ export default {
 					} else {
 						this.selected_model = this.model[this.modelNameFromRelationKey(this.prop)]
 					}
-				} 
+				} else if (this.set_selected_model_with_model_prop && this.model) {
+					console.log('entro en set_selected_model_with_model_prop')
+					this.selected_model = this.model 
+					console.log(this.selected_model)
+				} else if (this.set_selected_model_with_model_prop) {
+					this.selected_model = null
+				}
 			} 
 			if (this.clear_query_on_model_change) {
 				console.log('clear_query_on_model_change')

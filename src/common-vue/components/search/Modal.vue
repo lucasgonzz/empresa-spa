@@ -17,7 +17,7 @@ hide-footer
 			:id="_id+'-search-modal-input'"
 			:placeholder="_placeholder"></b-form-input>
 			<btn-create-model
-			v-if="show_btn_create && (!prop.has_many || (prop.has_many && !prop.has_many.models_from_parent_prop))"
+			v-if="show_btn_create && prop && (!prop.has_many || (prop.has_many && !prop.has_many.models_from_parent_prop))"
 			@callSearchModal="callSearchModal"
 			:model="model"
 			:prop="prop"
@@ -191,7 +191,7 @@ export default {
 						prop_to_filter: this.prop_to_filter,
 						query_value: this.query,
 					}
-					if (this.prop.depends_on) {
+					if (this.prop && this.prop.depends_on) {
 						info.depends_on_key = this.prop.depends_on
 						info.depends_on_value = this.model[this.prop.depends_on]
 					}
@@ -226,7 +226,7 @@ export default {
 			if (this.search_from_api) {
 				return true
 			}
-			if (this.prop && this.prop.search_from_api || this.prop.search_depends_on_from_api) {
+			if (this.prop && (this.prop.search_from_api || this.prop.search_depends_on_from_api)) {
 				return true 
 			}
 			if (this.is_mobile && !this.downloadOnMobile(this.model_name) && !this.$store.state[this.model_name].models.length) {

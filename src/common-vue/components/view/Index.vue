@@ -35,7 +35,6 @@
 				</slot>
     		</template>
     	</model>
-
 		<slot name="header"></slot>
 		<horizontal-nav
 		:ask_selectable="ask_selectable"

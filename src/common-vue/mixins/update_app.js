@@ -12,6 +12,7 @@ export default {
 	},
 	methods: {
 		updateApp() {
+			this.$cookies.set('update_features_watched', false, -1)
 			this.there_is_update = true
 		    console.log('Se llamo updateApp')
 		    this.$store.commit('auth/setMessage', 'Descargando actualizacion')

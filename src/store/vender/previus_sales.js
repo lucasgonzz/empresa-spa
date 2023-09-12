@@ -5,8 +5,9 @@ import previus_sales from '@/store/vender/previus_sales'
 import mixin_vender from '@/mixins/vender'
 export default {
 	namespaced: true,
-	state: {
+	state: { 
 		previus_sale: {},
+		previus_returned_articles: [],
 		index: 0,
 		loading_previus: false,
 		loading_next: false,
@@ -24,6 +25,9 @@ export default {
 		},
 		setPreviusSale(state, value) {
 			state.previus_sale = value
+		},
+		setPreviusReturnedArticles(state, value) {
+			state.previus_returned_articles = value
 		},
 		setLoadingPrevius(state, value) {
 			state.loading_previus = value
@@ -60,6 +64,7 @@ export default {
 				discounts_id: info.discounts_id,
 				surchages_id: info.surchages_id,
 				save_nota_credito: info.save_nota_credito,
+				returned_articles: info.returned_articles,
 				nota_credito_description: info.nota_credito_description,
 				discounts_in_services: info.discounts_in_services,
 				surchages_in_services: info.surchages_in_services,

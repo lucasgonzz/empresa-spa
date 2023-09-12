@@ -4,10 +4,11 @@
 			<search-component
 			class="m-b-15"
 			@setSelected="setSelected"
-			:model="_vender"
+			:prop="{text: 'Cliente', key: 'client_id'}"
+			:model="_vender.client"
 			model_name="client"
 			show_btn_create
-			:prop="{text: 'Cliente', key: 'client_id'}"
+			set_selected_model_with_model_prop
 			@clearSelected="clearSelected"></search-component>
 		</div>
 		<!-- <b-button

@@ -19,9 +19,18 @@ hide-footer>
 		v-if="!loading">
 			<div
 			v-if="results.length">
+				<h5>
+					Unidades totales vendidas: <strong>{{ cantidad_total }}</strong>
+				</h5>
 				<table-component
 				model_name="sale"
-				:models="results"></table-component>
+				:models="results">
+					<template #table_right_options="data">
+						<span class="p-l-15">
+							Cantidad: {{ getArticleAmountInSale(data.model) }}
+						</span>
+					</template>
+				</table-component>
 			</div>
 			<p
 			v-else
@@ -57,6 +66,15 @@ export default {
 		model() {
 			return this.$store.state.article.model 
 		},
+		cantidad_total() {
+			let total = 0
+			if (this.results) {
+				this.results.forEach(sale => {
+					total += this.getArticleAmountInSale(sale)
+				})
+			}
+			return total
+		}
 	},
 	data() {
 		return {
@@ -82,6 +100,12 @@ export default {
 				this.$toast.error('Error al cargar ventas')
 				console.log(err)
 			})
+		},
+		getArticleAmountInSale(sale) {
+			let article = sale.articles.find(article => {
+				return article.id == this.model.id 
+			})
+			return article.pivot.amount - article.pivot.returned_amount
 		}
 	}
 }

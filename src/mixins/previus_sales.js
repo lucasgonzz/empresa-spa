@@ -21,6 +21,9 @@ export default {
 		save_nota_credito() {
 			return this.$store.state.vender.save_nota_credito
 		},
+		returned_articles() {
+			return this.$store.state.vender.returned_articles
+		},
 		nota_credito_description: {
 			get() {
 				return this.$store.state.vender.nota_credito_description
@@ -34,6 +37,9 @@ export default {
 		},
 		previus_sale() {
 			return this.$store.state.vender.previus_sales.previus_sale
+		},
+		previus_returned_articles() {
+			return this.$store.state.vender.previus_sales.previus_returned_articles
 		},
 	},
 	methods: {
@@ -78,18 +84,29 @@ export default {
 					this.$store.commit('vender/setSaleTypeId', this.previus_sale.sale_type_id)
 				}
 				this.setItemsPrices(false, true)
+				this.setPreviusReturnedArticles()
 				this.$store.commit('vender/setTotal')
 			})
 		},
+		setPreviusReturnedArticles() {
+			let returned_articles = []
+			this.previus_sale.articles.forEach(article => {
+				if (article.pivot.returned_amount) {
+					returned_articles.push(article)
+				}
+			})
+			console.log('setPreviusReturnedArticles')
+			console.log(returned_articles)
+			this.$store.commit('vender/previus_sales/setPreviusReturnedArticles', returned_articles)
+		},
 		updateSale() {
-			console.log('address_id')
-			console.log(this.address_id)
 			this.$store.dispatch('vender/previus_sales/updateSale', {
 				client_id: this.client ? this.client.id : null, 
 				discounts_id: this.discounts_id, 
 				surchages_id: this.surchages_id, 
 				items: this.items, 
 				save_nota_credito: this.save_nota_credito,
+				returned_articles: this.returned_articles,
 				nota_credito_description: this.nota_credito_description,
 				discounts_in_services: this.discounts_in_services,
 				surchages_in_services: this.surchages_in_services,

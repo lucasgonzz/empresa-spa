@@ -3,9 +3,9 @@
 	id="clients"
 	class="m-b-50">
 		<div class="titles">
-			<h6>
+			<h4>
 				Algunos de nuestros clientes
-			</h6>
+			</h4>
 		</div>
 
 		<div class="clients">

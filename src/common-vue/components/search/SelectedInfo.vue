@@ -1,7 +1,7 @@
 <template>
 	<div
 	class="m-t-10"
-	v-if="show_selected && selected_model && prop && !prop.belongs_to_many && (!prop.has_many || (prop.has_many && !prop.has_many.models_from_parent_prop))">
+	v-if="show_selected && selected_model && (!prop || (prop && !prop.belongs_to_many && (!prop.has_many || (prop.has_many && !prop.has_many.models_from_parent_prop))))">
 		<div
 		class="a-center">
 			<b-button

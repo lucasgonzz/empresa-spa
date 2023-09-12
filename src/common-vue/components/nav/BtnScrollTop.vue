@@ -4,6 +4,7 @@
 	:class="scroll_bottom ? 'show-btn' : ''"
 	class="btn-top c-p">
 		<i class="icon-top"></i>
+		<i class="icon-up"></i>
 	</div>
 </template>
 <script>
