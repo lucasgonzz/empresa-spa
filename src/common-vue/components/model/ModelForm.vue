@@ -158,6 +158,7 @@
 
 								<google-geocoder
 								v-else-if="prop.type == 'google_geocoder'"
+								:model_name="model_name"
 								:prop="prop"
 								:model="model"></google-geocoder>
 
@@ -514,6 +515,7 @@ export default {
 			return this.capitalize(this.propText(prop))
 		},
 		setSelected(result) {
+			console.log('---------setSelected------------')
 			console.log(result)
 			let prop = result.prop
 			if (prop.belongs_to_many) {
@@ -522,15 +524,18 @@ export default {
 				this.setBelongsToManyPivotProps(prop, model_to_add, result)
 			} else if (prop.has_many && prop.has_many.models_from_parent_prop) {
 				this.model[prop.key].unshift(result.model)
+				this.setModel(this.model, this.model_name, [], false)
 			} else if (prop.set_model_on_click_or_prop_with_query_if_null) {
 				if (result.model) {
 					this.setModel(result.model, this.model_name, [], false)
 				} else {
 					this.model[prop.key] = result.query 
+					this.setModel(this.model, this.model_name, [], false)
 				}
 			} else {
 				this.$set(this.model, result.prop.key, result.model.id)
 				this.$set(this.model, this.modelNameFromRelationKey(result.prop), result.model)
+				this.setModel(this.model, this.model_name, [], false)
 			}
 		},
 		checkBelongsToManyExist(prop, model_to_add) {
@@ -545,7 +550,11 @@ export default {
 			if (prop.belongs_to_many.properties_to_set) {
 				model_to_add.pivot = {}
 				prop.belongs_to_many.properties_to_set.forEach(prop_to_set => {
-					if (prop_to_set.from_store) {
+					if (prop_to_set.set_with_function) {
+						console.log('set_with_function '+prop_to_set.set_with_function)
+						console.log(this[prop_to_set.set_with_function](this.model, model_to_add))
+						model_to_add.pivot[prop_to_set.key] = this[prop_to_set.set_with_function](this.model, model_to_add)
+					} else if (prop_to_set.from_store) {
 						let models = this.modelsStoreFromName(prop_to_set.store)
 						models.forEach(model => {
 							model_to_add.pivot[prop_to_set.store+'_'+model.id] = ''
@@ -562,10 +571,11 @@ export default {
 				})
 			}
 			this.model[prop.key].push(model_to_add)
+			// this.setModel(this.model, this.model_name, [], false)
 			this.setTableFocus(prop, model_to_add)
 		},
 		setTableFocus(prop, model_to_add) {
-			if (prop.belongs_to_many.properties_to_set.length) {
+			if (prop.belongs_to_many.properties_to_set && prop.belongs_to_many.properties_to_set.length) {
 				setTimeout(() => {
 					let id = prop.belongs_to_many.model_name+'-'+prop.belongs_to_many.properties_to_set[0].key+'-'+model_to_add.id
 					let element = document.getElementById(id) 

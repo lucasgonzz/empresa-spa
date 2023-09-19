@@ -64,6 +64,8 @@
 			</b-col>
 		</b-row>
 
+		<footer-component></footer-component>
+
 		<btn-whats-app></btn-whats-app>			
 	</div>
 </template>
@@ -78,6 +80,7 @@ export default {
 		Features: () => import('@/components/home/components/features/Index'),
 		Clients: () => import('@/components/home/components/clients/Index'),
 		Plans: () => import('@/components/home/components/plans/Index'),
+		FooterComponent: () => import('@/components/home/components/footer/Index'),
 		BtnWhatsApp: () => import('@/components/home/components/BtnWhatsApp'),
 	}
 }

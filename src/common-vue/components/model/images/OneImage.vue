@@ -104,6 +104,16 @@ export default {
 					return _model.id == this.model.id 
 				})
 				model[this.prop.key] = null
+			} else {
+				this.actions.forEach(action => {
+					console.log('dispatch '+action)
+					this.$store.dispatch(action)
+					// .then(() => {
+					// 	console.log('se emitio')
+					// 	this.setModel(this.model, this.model_name)
+					// })
+				})
+				this.$bvModal.hide(this.model_name)
 			}
 		}
 	}

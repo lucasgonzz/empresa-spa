@@ -4,6 +4,13 @@ export default {
 		getFunctionValue(prop, model) {
 			return this[prop.function](model)
 		},
+        setBudgetArticlePrice(budget, article) {
+            if (budget.client) {
+                this.$store.commit('vender/setPriceType', budget.client.price_type)
+                return this.setPriceType(article, article.final_price)
+            } 
+            return article.final_price
+        },
         currentAcountStatus(current_acount) {
             if (current_acount.status == 'sin_pagar') {
                 if (current_acount.pagandose > 0) {
@@ -21,6 +28,7 @@ export default {
             if (model.pivot.bonus) {
                 total -= total * Number(model.pivot.bonus) / 100
             }
+            console.log('totalBudgetItem '.total)
             return this.price(total)
         },
         showSellerCommissionSale(seller_commission) {
@@ -124,13 +132,33 @@ export default {
         },
         budgetTotal(model, formated = true) {
             let total = 0 
-            model.articles.forEach(article => {
-                let total_article = article.pivot.price * article.pivot.amount
-                if (article.pivot.bonus) {
-                    total_article = total_article - (total_article * article.pivot.bonus / 100)
-                }
-                total += total_article
-            })
+            if (model.articles) {
+                model.articles.forEach(article => {
+                    let total_article = article.pivot.price * article.pivot.amount
+                    if (article.pivot.bonus) {
+                        total_article = total_article - (total_article * article.pivot.bonus / 100)
+                    }
+                    total += total_article
+                })
+            }
+            if (model.discounts) {
+                model.discounts.forEach(discount => {
+                    if (discount.pivot) {
+                        total -= total * discount.pivot.percentage / 100
+                    } else {
+                        total -= total * discount.percentage / 100
+                    }
+                }) 
+            }
+            if (model.surchages) {
+                model.surchages.forEach(surchage => {
+                    if (surchage.pivot) {
+                        total += total * surchage.pivot.percentage / 100
+                    } else {
+                        total += total * surchage.percentage / 100
+                    }
+                }) 
+            }
             if (formated) {
                 return dates.methods.price(total)
             } 

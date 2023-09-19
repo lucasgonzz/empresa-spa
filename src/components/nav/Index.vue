@@ -30,7 +30,7 @@ export default {
 	},
 	methods: {
 		versionAnterior() {
-			window.open('https://empresa-version-anterior.comerciocity.com')
+			window.open('https://empresa.comerciocity.com')
 		}
 	}
 }

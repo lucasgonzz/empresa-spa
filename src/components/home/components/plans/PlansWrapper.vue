@@ -18,8 +18,8 @@
 			<div>
 				<div
 				class="feature-title"
-				v-for="feature in features">
-					{{ feature }}
+				v-for="feature in plan_features">
+					{{ feature.name }}
 				</div>
 			</div>
 			<plan
@@ -31,6 +31,11 @@
 <script>
 import plans from '@/mixins/plans'
 export default {
+	created() {
+		this.$store.dispatch('plan/getModels')
+		this.$store.dispatch('plan_feature/getModels')
+		this.$store.dispatch('dolar/getDolar')
+	},
 	mixins: [plans], 
 	components: {
 		VueHorizontalList: () => import('vue-horizontal-list'),
@@ -78,7 +83,8 @@ export default {
 	
 	.feature-title
 		text-align: left
-		max-width: 300px
+		// max-width: 350px 
+		text-wrap: nowrap
 
 		font-size: 17px
 		

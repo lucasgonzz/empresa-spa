@@ -92,7 +92,7 @@ export default {
 		async search() {
 			this.images_result = null
 			this.loading = true
-			fetch('https://www.googleapis.com/customsearch/v1?key=AIzaSyC4sUC-MuEDsMNoIQqwUPmYWZmw74rsHOI&cx=c442e5f346f314951&searchType=image&q='+this.query)
+			fetch('https://www.googleapis.com/customsearch/v1?key=AIzaSyDOdbUFHZhD0I2DWoYVR6CQnKurqYY5rcQ&cx=c442e5f346f314951&searchType=image&q='+this.query)
 			.then(res => {
 				this.loading = false
 				res.json()

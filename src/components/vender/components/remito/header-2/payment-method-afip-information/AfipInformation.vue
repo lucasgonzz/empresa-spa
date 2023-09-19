@@ -1,13 +1,19 @@
 <template>
-	<b-form-select
-	v-model="afip_information_id" 
-	:options="options"></b-form-select> 
+	<div>
+		<b-form-select
+		:class="facturando ? 'verde' : 'rojo'"
+		v-model="afip_information_id" 
+		:options="options"></b-form-select> 
+	</div>
 </template>
 <script>
 import vender from '@/mixins/vender'
 export default {
 	mixins: [vender],
 	computed: {
+		facturando() {
+			return this.afip_information_id != 0
+		},
 		options() {
 			let options = [
 				{
@@ -44,3 +50,10 @@ export default {
 	}
 }
 </script>
+<style lang="sass">
+@import '@/sass/_custom'
+.rojo 
+	border: 3px solid $red
+.verde 
+	border: 3px solid $green
+</style>

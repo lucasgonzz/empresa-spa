@@ -1,7 +1,7 @@
 <template>
 	<div
 	id="plans"
-	class="plans">
+	class="plans m-b-50">
 		<div class="titles">
 			<h4
 			class="animate__animated animate__fadeIn">

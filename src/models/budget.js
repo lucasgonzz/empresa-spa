@@ -71,7 +71,8 @@ export default {
 						text: 'Precio',
 						key: 'price',
 						value: {key: 'final_price', value_if_undefined: ''},
-						type: 'number'
+						type: 'number',
+						set_with_function: 'setBudgetArticlePrice',
 					},
 					{
 						text: 'Cantidad',
@@ -106,6 +107,44 @@ export default {
 					], 
 					not_add_to_store_models: true,
 				}
+			}
+		},
+		{
+			text: 'Descuentos',
+			key: 'discounts',
+			type: 'search',
+			store: 'discount',
+			belongs_to_many: {
+				model_name: 'discount',
+				props_to_show: [
+					{
+						text: 'Nombre',
+						key: 'name',
+					},
+					{
+						text: 'Porcentaje',
+						key: 'percentage',
+					},
+				],
+			}
+		},
+		{
+			text: 'Recargos',
+			key: 'surchages',
+			store: 'surchage',
+			type: 'search',
+			belongs_to_many: {
+				model_name: 'surchage',
+				props_to_show: [
+					{
+						text: 'Nombre',
+						key: 'name',
+					},
+					{
+						text: 'Porcentaje',
+						key: 'percentage',
+					},
+				],
 			}
 		},
 		{

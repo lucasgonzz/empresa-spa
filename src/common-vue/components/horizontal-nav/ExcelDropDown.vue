@@ -4,8 +4,11 @@
 	split 
 	variant="primary"
 	v-if="can_create"
-	@click="setModel(null, model_name)"
-	text="Crear">
+	@click="setModel(null, model_name)">
+		<template #button-content>
+			<i class="icon-plus"></i>
+			Crear
+		</template>
 		<b-dropdown-item
 		v-if="can_create"
 		@click="setModel(null, model_name)">

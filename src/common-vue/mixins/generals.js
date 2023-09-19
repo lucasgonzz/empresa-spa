@@ -741,14 +741,16 @@ export default {
 		hour_from_time(d) {
 			return moment(d, 'HH:mm:ss').format('HH:mm')
 		},
-		price(p, with_decimals = true) {
+		price(p, with_decimals = true, quitar_decimales_solo_si_no_es_00 = true) {
 			if (p) {
 				let price = numeral(p).format('$0,0.00')
 				if (with_decimals) {
 					return price
 				} else {
-					if (price.substr(price.length-2, price.length) == '00') {
+					if (!quitar_decimales_solo_si_no_es_00 || price.substr(price.length-2, price.length) == '00') {
 						return price.substr(0, price.length-3)
+					} else {
+						return price 
 					}
 				}
 			}

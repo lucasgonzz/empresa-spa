@@ -4,7 +4,7 @@ hide-footer
 title="Caracteristicas de la nueva version"
 id="update-features">
 	<p class="title">
-		Ante cualquier incoveniente con esta version, puede <strong>REGRESAR</strong> a la version <strong>ANTERIOR</strong> del sistema desde <a href="https://empresa-version-anterior.comerciocity.com" target="_blank">empresa-version-anterior.comerciocity.com</a>
+		Ante cualquier incoveniente con esta version, puede <strong>REGRESAR</strong> a la version <strong>ANTERIOR</strong> del sistema desde <a href="https://empresa.comerciocity.com" target="_blank">empresa.comerciocity.com</a>
 	</p>
 	<p
 	class="title">

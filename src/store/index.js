@@ -78,6 +78,9 @@ import article_property_value from '@/store/article_property_value'
 import article_variant from '@/store/article_variant'
 import online_configuration from '@/store/online_configuration'
 import payment_method_installment from '@/store/payment_method_installment'
+import plan from '@/store/plan'
+import plan_feature from '@/store/plan_feature'
+import dolar from '@/store/dolar'
 
 Vue.use(Vuex)
 
@@ -166,5 +169,8 @@ export default new Vuex.Store({
         article_variant,
         online_configuration,
         payment_method_installment,
+        plan,
+        plan_feature,
+        dolar,
     }
 })

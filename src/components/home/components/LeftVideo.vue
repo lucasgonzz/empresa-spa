@@ -1,6 +1,6 @@
 <template>
 	<div
-	class="left-video animate__animated animate__wobble">
+	class="left-video animate__animated animate__bounce">
 		<h1>
 			Conoce la interfaz simple e intuitiva que hace a nuestros clientes elegirnos 
 		</h1>

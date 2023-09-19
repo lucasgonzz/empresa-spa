@@ -152,6 +152,7 @@ export default {
 			index_to_show: 1,
 			busy: false,
 			show_buttons_scroll: false,
+			intentos: 0,
 		}
 	},
 	computed: {
@@ -294,7 +295,6 @@ export default {
 			}
 		},
 		setHeight() {
-			let intentos = 0 
 			if (this.set_table_height && !this.loading) {
 				let table = document.getElementById(this.id)
 				if (table) {
@@ -314,9 +314,10 @@ export default {
 					}, 500)
 				} else {
 					setTimeout(() => {
-						if (intentos < 5) {
+						if (this.intentos < 5) {
 							console.log('no estaba la tabla, voy a llamar denuvo a setHeight')
-							intentos++
+							this.intentos++
+							console.log('this.intentos: '+this.intentos)
 							this.setHeight()
 						} else {
 							console.log('no llamo mas')

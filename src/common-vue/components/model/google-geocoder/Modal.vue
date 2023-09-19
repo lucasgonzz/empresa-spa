@@ -43,6 +43,7 @@ export default {
 	props: { 
 		prop: Object,
 		model: Object,
+		model_name: String,
 	},
 	components: {
 		TableComponent: () => import('@/common-vue/components/display/TableComponent'),
@@ -176,6 +177,7 @@ export default {
 			this.model[this.prop.key] = result.address 
 			this.model[this.prop.key+'_lat'] = result.geometry.location.lat
 			this.model[this.prop.key+'_lng'] = result.geometry.location.lng
+			this.setModel(this.model, this.model_name, [], false)
 			this.$bvModal.hide(this.id)
 		}
 	}

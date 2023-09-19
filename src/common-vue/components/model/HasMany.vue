@@ -22,7 +22,7 @@
 		@click="create(prop.has_many.model_name, parent_model)"
 		size="sm"
 		variant="primary">
-			<i class="icon-check"></i>
+			<i class="icon-plus"></i>
 			Agregar {{ singular(prop.has_many.model_name) }}
 		</b-button>
 	</div>

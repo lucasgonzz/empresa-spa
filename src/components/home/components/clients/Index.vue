@@ -4,7 +4,7 @@
 	class="m-b-50">
 		<div class="titles">
 			<h4>
-				Algunos de nuestros clientes
+				Clientes destacados
 			</h4>
 		</div>
 

@@ -2,6 +2,7 @@
 <div>
 	<modal
 	:prop="prop"
+	:model_name="model_name"
 	:model="model"></modal>	
 	<b-form-input
 	:placeholder="'Ingresar '+propText(prop)"
@@ -17,6 +18,7 @@ export default {
 	props: {
 		prop: Object,
 		model: Object,
+		model_name: String,
 	},
 	methods: {
 		showModal() {

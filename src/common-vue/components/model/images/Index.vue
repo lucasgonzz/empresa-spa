@@ -2,9 +2,6 @@
 	<div
 	class="images m-b-15">
 
-		<!-- <image-width 
-		v-if="use_crop"></image-width> -->
-
 		<select-image 
 		:prop="prop"
 		:model="model"
@@ -13,6 +10,8 @@
 
 		<upload-image 
 		:prop="prop"
+		:model_name="model_name"
+		:model="model"
 		@setImageUrl="setImageUrl"></upload-image>
 
 		<search-image 
