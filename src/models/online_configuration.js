@@ -6,6 +6,11 @@ export default {
 			type: 'select',
 		},
 		{
+			text: 'Registrarse para comprar',
+			key: 'register_to_buy',
+			type: 'checkbox',
+		},
+		{
 			text: 'Instagram',
 			key: 'instagram',
 			type: 'text',

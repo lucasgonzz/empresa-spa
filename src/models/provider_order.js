@@ -164,7 +164,7 @@ export default {
 		},
 		{
 			key: 'total_from_provider_order_afip_tickets',
-			text: 'Total de las boletas',
+			text: 'Total de las facturas',
 			type: 'checkbox',
 			value: 0,
 			show: true,

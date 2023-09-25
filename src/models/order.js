@@ -34,6 +34,12 @@ export default {
 			v_if: ['deliver', '=', '1'],
 		},
 		{
+			text: 'Direccion',
+			key: 'address',
+			function: 'getOrderAddress',
+			v_if: ['deliver', '=', '1'],
+		},
+		{
 			text: 'Metodo de pago',
 			key: 'payment_method_id',
 			button: {

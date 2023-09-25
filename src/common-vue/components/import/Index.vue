@@ -26,8 +26,9 @@
 			Comience por descargar el archivo modelo con los títulos de las columnas que ComercioCity necesita para importar los datos de sus {{ plural(model_name) }}.
 		</p>
 		<b-button
+		v-if="file_name"
 		class="m-t-10"
-		href="/files/articulos-base.xlsx" download
+		:href="'/files/'+file_name+'.xlsx'" download
 		variant="success">
 			Descargar el archivo modelo
 		</b-button>
@@ -223,6 +224,10 @@ export default {
 			default() {
 				return []
 			}
+		},
+		file_name: {
+			type: String,
+			default: null,
 		},
 	},
 	created() {

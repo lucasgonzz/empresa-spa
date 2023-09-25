@@ -69,18 +69,21 @@ export default {
 	actions: {
 		me({commit}) {
 			commit('setLoading', true)
-			return axios.get('/api/user')
-			.then(res => {
-				console.log(res.data.user)
-				commit('setLoading', false)
-				commit('setAuthenticated', true)
-				commit('setUser', res.data.user)
-				// commit('setUserWorkdaysId')
-			})
-			.catch(() => {
-				commit('setLoading', false)
-				commit('setAuthenticated', false)
-				commit('setUser', null)
+			axios.get('/sanctum/csrf-cookie')
+			.then(() => {
+				return axios.get('/api/user')
+				.then(res => {
+					console.log(res.data.user)
+					commit('setLoading', false)
+					commit('setAuthenticated', true)
+					commit('setUser', res.data.user)
+					// commit('setUserWorkdaysId')
+				})
+				.catch(() => {
+					commit('setLoading', false)
+					commit('setAuthenticated', false)
+					commit('setUser', null)
+				})
 			})
 		},
 		logout({ commit }) {

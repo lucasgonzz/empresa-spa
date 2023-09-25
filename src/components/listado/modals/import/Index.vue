@@ -2,6 +2,7 @@
 	<import-component
 	model_name="article"
 	:props_to_send="props_to_send"
+	file_name="articulos-base"
 	:advises="advises"
 	:identifications="identifications"
 	:columns="columns"

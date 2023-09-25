@@ -1,6 +1,7 @@
 <template>
 	<import-component
 	model_name="client"
+	file_name="clientes-base"
 	:columns="columns"
 	:actions="actions">
 	</import-component>
@@ -14,7 +15,7 @@ export default {
 		columns() {
 			let columns = [
 				{
-					text: 'Codigo',
+					text: 'Numero',
 					can_not_ignore: true,
 				},
 				{

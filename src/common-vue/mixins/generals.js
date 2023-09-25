@@ -281,8 +281,7 @@ export default {
 			return true
 		},
 		getCol(prop, size, input_full_width = false) {
-			// if (this.input_full_width || this.useSearch(prop) || prop.has_many || (prop.belongs_to_many && prop.belongs_to_many.can_not_modify) || prop.type == 'image' || prop.type == 'images') {
-			if (this.inputs_full_size || input_full_width || prop.has_many || prop.belongs_to_many || prop.type == 'images') {
+			if (this.inputs_full_size || input_full_width || prop.has_many || prop.belongs_to_many || prop.type == 'images' || prop.input_full_width) {
 				return 12
 			} 
 			return size

@@ -4,6 +4,11 @@ export default {
 		getFunctionValue(prop, model) {
 			return this[prop.function](model)
 		},
+        getOrderAddress(prop, model) {
+            if (this.model.address) {
+                return this.model.address.street+' '+this.model.address.street_number
+            }
+        },
         setBudgetArticlePrice(budget, article) {
             if (budget.client) {
                 this.$store.commit('vender/setPriceType', budget.client.price_type)

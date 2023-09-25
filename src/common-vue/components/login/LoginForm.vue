@@ -77,6 +77,7 @@ export default {
 					console.log(err)
 					this.loading = false 
 					this.$toast.error('Error al ingresar')
+					this.$toast.error(err)
 				})
 			}
 		},

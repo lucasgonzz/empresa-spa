@@ -2,7 +2,7 @@ import moment from 'moment'
 export default {
     computed: {
         has_online() {
-            return this.can('online.orders') || this.can('online.questions') || this.can('online.buyers') || this.can('online.messages') || this.can('online.cupons')
+            return this.can('order.index') 
         },
         user_configuration() {
             if (this.is_owner) {

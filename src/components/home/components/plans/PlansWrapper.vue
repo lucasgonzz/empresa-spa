@@ -1,31 +1,41 @@
 <template>
 	<div
 	class="p-15">
-		
-		<vue-horizontal-list 
-		v-if="is_mobile"
-		:items="plans" :options="options">
-			<template v-slot:default="{ item }">
-				<plan
-				:plan="item"></plan>	
-			</template>
-		</vue-horizontal-list>
 
-
-		<div
-		class="plans-wrapper"
-		v-if="!is_mobile">
-			<div>
-				<div
-				class="feature-title"
-				v-for="feature in plan_features">
-					{{ feature.name }}
-				</div>
-			</div>
-			<plan
-			v-for="plan in plans"
-			:plan="plan"></plan>	
+		<div 
+		v-if="loading"
+		class="all-center-md">
+			<b-spinner
+			variant="primary"></b-spinner>
 		</div>
+		<div
+		v-else>
+			<vue-horizontal-list 
+			v-if="is_mobile"
+			:items="plans" :options="options">
+				<template v-slot:default="{ item }">
+					<plan
+					:plan="item"></plan>	
+				</template>
+			</vue-horizontal-list>
+
+
+			<div
+			class="plans-wrapper"
+			v-if="!is_mobile">
+				<div>
+					<div
+					class="feature-title"
+					v-for="feature in plan_features">
+						{{ feature.name }}
+					</div>
+				</div>
+				<plan
+				v-for="plan in plans"
+				:plan="plan"></plan>	
+			</div>
+		</div>
+		
 	</div>
 </template>
 <script>

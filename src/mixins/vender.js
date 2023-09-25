@@ -108,7 +108,7 @@ export default {
 			}, 
 			set(value) {
 				this.$store.commit('vender/setAddressId', value)
-				this.$cookies.set('address_id', value)
+				this.$cookies.set('address_id', value, '3y')
 			},
 		},
 		sale_type_id: {

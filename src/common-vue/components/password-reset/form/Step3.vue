@@ -61,6 +61,8 @@ export default {
 					...this.register_user,
 				})
 				.then(() => {
+					this.loading = false
+					this.$router.push({name: this.route_index})
 					this.$store.dispatch('auth/me')
 				})
 				.catch(err => {

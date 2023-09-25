@@ -109,11 +109,12 @@ export default {
 			text-align: center
 			letter-spacing: 2px
 			color: $blue 
+			font-size: 40px
 
-			@media screen and (max-width: 1200px)
-				font-size: 50px
-			@media screen and (min-width: 1200px)
-				font-size: 50px
+			// @media screen and (max-width: 1200px)
+			// 	font-size: 40px
+			// @media screen and (min-width: 1200px)
+			// 	font-size: 50px
 
 		span 
 			font-size: 12px

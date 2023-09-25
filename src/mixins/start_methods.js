@@ -37,9 +37,7 @@ export default {
 			}
 		},
 		getProviderOrdersDaysToAdvise() {
-			if (this.has_online) {
-				this.$store.dispatch('provider_order/getDaysToAdvise')
-			}
+			this.$store.dispatch('provider_order/getDaysToAdvise')
 		},
 	}
 }

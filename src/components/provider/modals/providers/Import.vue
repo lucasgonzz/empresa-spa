@@ -1,6 +1,7 @@
 <template>
 	<import-component
 	model_name="provider"
+	file_name="proveedores-base"
 	:columns="columns"
 	:actions="actions">
 	</import-component> 
@@ -14,7 +15,7 @@ export default {
 		columns() {
 			let columns = [
 				{ 
-					text: 'Codigo',
+					text: 'Numero',
 				},
 				{
 					text: 'Nombre',
@@ -32,7 +33,7 @@ export default {
 					text: 'Email',
 				},
 				{
-					text: 'Condicion de IVA',
+					text: 'Condicion frente al IVA',
 				},
 				{
 					text: 'Razon social',
@@ -42,6 +43,9 @@ export default {
 				},
 				{
 					text: 'Observaciones',
+				},
+				{
+					text: 'Saldo actual',
 				},
 			]
 			return columns
