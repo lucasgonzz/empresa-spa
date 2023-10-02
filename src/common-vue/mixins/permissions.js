@@ -1,15 +1,26 @@
 import routes from '@/router/routes'
 export default {
 	methods: {
+		getRouteName(route) {
+			if (route.name) {
+				return route.name 
+			}
+			if (route.model_name) {
+				return route.model_name 
+			}
+		},
 		can(permission_slug) {
 			let has_permission = false
 		    if (this.is_owner) {
 		        has_permission = true
 		    }
+		    if (this.user.admin_access) {
+		        has_permission = true
+		    }
 			if (!has_permission) {
 				has_permission = this.hasPermissionTo(permission_slug)
 			}
-			// console.log('permiso para '+permission_slug+': '+has_permission)
+			console.log('permiso para '+permission_slug+': '+has_permission)
 			return has_permission
 		},
 		hasPermissionTo(permission_slug) {
@@ -41,7 +52,7 @@ export default {
 			let route_to_redirect = null
 			for (var i = 0; i < routes.length; i++) {
 				route = routes[i]
-				console.log('viendo permiso para la ruta '+route.name+', permission_slug: '+routes[i].can) 
+				console.log('viendo permiso para la ruta '+this.getRouteName(route)+', permission_slug: '+routes[i].can) 
 				if (route.check_is_owner && this.is_owner) {
 					route_to_redirect = route
 					break
@@ -57,9 +68,9 @@ export default {
 			}
 			if (route_to_redirect) {
 				if (route_to_redirect.params) {
-					this.$router.push({name: route.name, params: route_to_redirect.params})
+					this.$router.push({name: this.getRouteName(route_to_redirect), params: route_to_redirect.params})
 				} else {
-					this.$router.push({name: route.name})
+					this.$router.push({name: this.getRouteName(route_to_redirect)})
 				}
 			} else {
 				console.log('NO TIENE PERMISO PARA NINGUNA RUTA')

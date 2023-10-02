@@ -1,7 +1,7 @@
 <template>
 	<b-card
 	class="s-1 b-r-5"
-	v-if="returned_articles.length"
+	v-if="returned_items.length"
 	header="Nota de credito">
 		<b-form-checkbox
 		:value="1"
@@ -11,7 +11,7 @@
 		</b-form-checkbox>
 		<p
 		class="m-b-0 m-l-10"
-		v-for="article in returned_articles"
+		v-for="article in returned_items"
 		:key="article.id">
 			<i class="icon-right"></i>
 			{{ article.returned_amount }} unidades devueltas de {{ article.name }}
@@ -27,8 +27,8 @@
 <script>
 export default {
 	computed: {
-		returned_articles() {
-			return this.$store.state.vender.returned_articles
+		returned_items() {
+			return this.$store.state.vender.returned_items
 		},
 		nota_credito_description: {
 			get() {

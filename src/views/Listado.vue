@@ -30,6 +30,7 @@
 		</template>
 		<template #options_drop_down>
 			<article-ticket-option-drop-down></article-ticket-option-drop-down>
+			<articles-pdf-option-drop-down></articles-pdf-option-drop-down>
 		</template>
 
 		<template v-slot:table_right_options="props">
@@ -75,7 +76,8 @@ export default {
 		NameInput: () => import('@/components/listado/components/NameInput'),
 		StockInfo: () => import('@/components/listado/modals/stock-info/Index'),
 		ArticleTicketOptionDropDown: () => import('@/components/listado/components/ArticleTicketOptionDropDown'),
-	},
+		ArticlesPdfOptionDropDown: () => import('@/components/listado/components/ArticlesPdfOptionDropDown'),
+	}, 
 	beforeRouteLeave(to, from, next) {
 		this.$store.commit('article/setSelected', [])
 		next()

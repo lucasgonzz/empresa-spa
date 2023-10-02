@@ -21,8 +21,8 @@ export default {
 		save_nota_credito() {
 			return this.$store.state.vender.save_nota_credito
 		},
-		returned_articles() {
-			return this.$store.state.vender.returned_articles
+		returned_items() {
+			return this.$store.state.vender.returned_items
 		},
 		nota_credito_description: {
 			get() {
@@ -40,6 +40,9 @@ export default {
 		},
 		previus_returned_articles() {
 			return this.$store.state.vender.previus_sales.previus_returned_articles
+		},
+		previus_returned_services() {
+			return this.$store.state.vender.previus_sales.previus_returned_services
 		},
 	},
 	methods: {
@@ -85,6 +88,7 @@ export default {
 				}
 				this.setItemsPrices(false, true)
 				this.setPreviusReturnedArticles()
+				this.setPreviusReturnedServices()
 				this.$store.commit('vender/setTotal')
 			})
 		},
@@ -99,6 +103,17 @@ export default {
 			console.log(returned_articles)
 			this.$store.commit('vender/previus_sales/setPreviusReturnedArticles', returned_articles)
 		},
+		setPreviusReturnedServices() {
+			let returned_services = []
+			this.previus_sale.services.forEach(service => {
+				if (service.pivot.returned_amount) {
+					returned_services.push(service)
+				}
+			})
+			console.log('setPreviusReturnedArticles')
+			console.log(returned_services)
+			this.$store.commit('vender/previus_sales/setPreviusReturnedServices', returned_services)
+		},
 		updateSale() {
 			this.$store.dispatch('vender/previus_sales/updateSale', {
 				client_id: this.client ? this.client.id : null, 
@@ -106,7 +121,7 @@ export default {
 				surchages_id: this.surchages_id, 
 				items: this.items, 
 				save_nota_credito: this.save_nota_credito,
-				returned_articles: this.returned_articles,
+				returned_items: this.returned_items,
 				nota_credito_description: this.nota_credito_description,
 				discounts_in_services: this.discounts_in_services,
 				surchages_in_services: this.surchages_in_services,
@@ -128,7 +143,7 @@ export default {
 			this.$store.commit('vender/setDiscountsId', [])
 			this.$store.commit('vender/setSurchagesId', [])
 			this.$store.commit('vender/setClient', null)
-			this.$store.commit('vender/setReturnedArticles', [])
+			this.$store.commit('vender/setReturnedItems', [])
 			this.$store.commit('vender/setSaveNotaCredito', 0)
 			this.$store.commit('vender/setNotaCreditoDescription', '')
 			this.$store.commit('vender/setTotal')
@@ -173,6 +188,7 @@ export default {
 				// item.price = Number(service.pivot.price)
 				item.discount = Number(service.pivot.discount)
 				item.amount = Number(service.pivot.amount)
+				item.returned_amount = Number(service.pivot.returned_amount)
 				item_to_add = {
 					...item,
 					is_service: true,

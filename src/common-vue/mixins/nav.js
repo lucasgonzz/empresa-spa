@@ -1,20 +1,28 @@
 import moment from 'moment'
 export default {
 	computed: {
+        show_nav() {
+            return this.authenticated && this.route_name != 'login' && this.route_name != 'passwordReset'
+        },
 	},
 	methods: {
+        setConfig(config_model_name) {
+            this.setModel(this.$store.state[config_model_name].models[0], config_model_name)
+            this.$bvModal.show(config_model_name)
+        },
 		showRoute(route) {
+			console.log('--------------')
 			let show = true 
 			if (route.not_show) {
 				return false
 			}
 			if (route.check_is_owner) {
+				console.log('check_is_owner para la ruta '+this.getRouteName(route))
 				show = this.is_owner 
 			}
 			if (show && route.can) {
-				// console.log('typeof route.can de '+this.getRouteName(route))
-				// console.log(typeof route.can)
 				if (typeof route.can == 'object') {
+					console.log('can array para la ruta '+this.getRouteName(route))
 					show = false 
 					route.can.forEach(_can => {
 						if (!show) {
@@ -22,14 +30,16 @@ export default {
 						}
 					})
 				} else {
+					console.log('can para la ruta '+this.getRouteName(route))
 					show = this.can(route.can)
 				}
 			}
 			if (show && route.if_has_extencion) {
 				if (typeof route.if_has_extencion == 'string') {
+					console.log('hasExtencion para la ruta '+this.getRouteName(route))
 					show = this.hasExtencion(route.if_has_extencion)
 				} else {
-					console.log('if_has_extencion array en '+route.name)
+					console.log('if_has_extencion array en '+this.getRouteName(route))
 					route.if_has_extencion.forEach(extencion => {
 						if (!this.hasExtencion(extencion)) {
 							show = false

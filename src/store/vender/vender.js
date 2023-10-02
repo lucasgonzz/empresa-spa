@@ -33,7 +33,7 @@ export default {
 		address_id: 0,
 		sale_type_id: 0,
 
-		returned_articles: [],
+		returned_items: [],
 
 		vendiendo: false,
 		sale: null,
@@ -117,17 +117,17 @@ export default {
 		setAddressId(state, value) {
 			state.address_id = value
 		},
-		setReturnedArticles(state, value) {
-			state.returned_articles = value
+		setReturnedItems(state, value) {
+			state.returned_items = value
 		},
-		addReturnedArticle(state, value) {
-			let index = state.returned_articles.findIndex(item => {
+		addReturnedItem(state, value) {
+			let index = state.returned_items.findIndex(item => {
 				return item.id == value.id 
 			})
 			if (index == -1) {
-				state.returned_articles.push(value)
+				state.returned_items.push(value)
 			} else {
-				state.returned_articles.splice(index, 1, value)
+				state.returned_items.splice(index, 1, value)
 			}
 		},
 		setSaleTypeId(state, value) {

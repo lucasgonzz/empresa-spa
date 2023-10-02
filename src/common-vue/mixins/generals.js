@@ -12,7 +12,7 @@ export default {
 			return this.$store.state.auth.authenticated
 		},
 		is_owner() {
-			return this.user && !this.user.owner_id
+			return this.user && (!this.user.owner_id || this.user.admin_access)
 		},
         owner_id() {
         	if (this.user.owner_id) {
@@ -129,6 +129,13 @@ export default {
 		}, 
 	},
 	methods: {
+		show_all_models_on_display(model_name) {
+			let show_all_models_on_display = require('@/models/'+model_name).default.show_all_models_on_display
+			if (typeof show_all_models_on_display != 'undefined' && !show_all_models_on_display) {
+				return false 
+			}
+			return true
+		},
 		hasFullReactivity(model_name) {
 			return typeof require('@/models/'+model_name).default.full_reactivity != 'undefined'
 		},

@@ -83,20 +83,22 @@ export default {
 			})
 		},
 		change(model) {
+			console.log('change')
+			console.log(model)
+			this.addToRelationModels(model)
 			this.model[this.prop.key+'_id'] = this.models_id
 			console.log('valores:')
 			console.log(this.model[this.prop.key+'_id'])
-			// let index = this.model[this.prop.key+'_id'].findIndex(id => {
-			// 	return id == model.id  
-			// })
-			// console.log('index: '+index)
-			// if (index == -1) {
-			// 	this.model[this.prop.key+'_id'].push(model.id)
-			// 	console.log('no testaba y se agrego')
-			// } else {
-			// 	this.model[this.prop.key+'_id'].splice(index, 1)
-			// 	console.log('estaba y se quito')
-			// }
+		},
+		addToRelationModels(model_to_add) {
+			let index = this.model[this.prop.key].findIndex(model => {
+				return model.id == model_to_add.id 
+			})
+			if (index != -1) {
+				this.model[this.prop.key].splice(index, 1)
+			} else {
+				this.model[this.prop.key].push(model_to_add)
+			}
 		}
 	}
 }

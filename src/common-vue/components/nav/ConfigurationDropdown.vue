@@ -25,14 +25,8 @@
     </b-dropdown-group>
 </template>
 <script>
+import nav from '@/common-vue/mixins/nav'
 export default {
-    methods: {
-        setConfig(config_model_name) {
-            console.log(config_model_name)
-            console.log(this.$store.state[config_model_name].models[0])
-            this.setModel(this.$store.state[config_model_name].models[0], config_model_name)
-            this.$bvModal.show(config_model_name)
-        }
-    }
+    mixins: [nav],
 }
 </script>

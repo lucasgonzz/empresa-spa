@@ -86,4 +86,5 @@ export default {
 	plural_model_name_spanish: 'Proveedores',
 	create_model_name_spanish: 'Nuevo proveedor',
 	text_delete: 'el',
+	show_all_models_on_display: false,
 }

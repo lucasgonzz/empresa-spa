@@ -127,4 +127,5 @@ export default {
 	singular_model_name_spanish: 'Cliente',
 	create_model_name_spanish: 'Nuevo cliente',
 	text_delete: 'el',
+	show_all_models_on_display: false,
 }

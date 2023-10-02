@@ -8,6 +8,7 @@ export default {
 	state: { 
 		previus_sale: {},
 		previus_returned_articles: [],
+		previus_returned_services: [],
 		index: 0,
 		loading_previus: false,
 		loading_next: false,
@@ -28,6 +29,9 @@ export default {
 		},
 		setPreviusReturnedArticles(state, value) {
 			state.previus_returned_articles = value
+		},
+		setPreviusReturnedServices(state, value) {
+			state.previus_returned_services = value
 		},
 		setLoadingPrevius(state, value) {
 			state.loading_previus = value
@@ -64,7 +68,7 @@ export default {
 				discounts_id: info.discounts_id,
 				surchages_id: info.surchages_id,
 				save_nota_credito: info.save_nota_credito,
-				returned_articles: info.returned_articles,
+				returned_items: info.returned_items,
 				nota_credito_description: info.nota_credito_description,
 				discounts_in_services: info.discounts_in_services,
 				surchages_in_services: info.surchages_in_services,

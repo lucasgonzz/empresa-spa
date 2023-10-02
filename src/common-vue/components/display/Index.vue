@@ -39,10 +39,10 @@
 			</template>
 		</cards-component>
 
-		<!-- <btn-add-to-show
+		<btn-add-to-show
 		@add="add"
-		:models="_models"
-		:models_to_show="models_to_show"></btn-add-to-show> -->
+		:models="models"
+		:models_to_show="models_to_show"></btn-add-to-show>
 	</div>
 </template>
 <script>
@@ -138,6 +138,9 @@ export default {
 					return filtered
 				}  
 				console.log('return store_models')
+				if (this.show_all_models_on_display(this.model_name)) {
+					return this.$store.state[this.model_name].models
+				}
 				return this.$store.state[this.model_name].models.slice(0, this.cant_models_to_show) 
 			}
 		},

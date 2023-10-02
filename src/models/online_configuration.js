@@ -11,6 +11,11 @@ export default {
 			type: 'checkbox',
 		},
 		{
+			text: 'Scroll infinito en el Inicio',
+			key: 'scroll_infinito_en_home',
+			type: 'checkbox',
+		},
+		{
 			text: 'Instagram',
 			key: 'instagram',
 			type: 'text',

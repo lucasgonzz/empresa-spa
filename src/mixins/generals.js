@@ -30,6 +30,10 @@ export default {
         },
         hasExtencion(slug, check_has_one_extencion_permission = true) {
             if (this.authenticated) {
+                let index = this.owner.extencions.findIndex(extencion => {
+                    return extencion.slug == slug
+                })
+                return index != -1 
                 if (this.is_owner) {
                     let index = this.user.extencions.findIndex(extencion => {
                         return extencion.slug == slug

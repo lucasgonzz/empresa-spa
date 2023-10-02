@@ -27,6 +27,7 @@ hide-footer>
 		:models="results"
 		:set_model_on_row_selected="false"
 		:striped="false"
+		prop_to_check="address"
 		@onRowSelected="setSelected"></table-component>	
 	</div>
 	<div
@@ -81,6 +82,20 @@ export default {
 		}
 	},
 	methods: {
+		selectUp() {
+			if (this.selected_index > 0) {
+				this.selected_index--
+			} else {
+				this.selected_index = this.results.length-1
+			}
+		},	
+		selectDown() {
+			if (this.selected_index < this.results.length-1) {
+				this.selected_index++
+			} else {
+				this.selected_index = 0
+			}
+		},
 		callSearch(e) {
 			if (e.key != 'ArrowDown' && e.key != 'ArrowUp') {
 				this.loading = true 
@@ -172,7 +187,7 @@ export default {
 			}, 100)
 		},
 		setSelected(result) {
-			console.log('setSelected')
+			console.log('setSelectedss')
 			console.log(result)
 			this.model[this.prop.key] = result.address 
 			this.model[this.prop.key+'_lat'] = result.geometry.location.lat

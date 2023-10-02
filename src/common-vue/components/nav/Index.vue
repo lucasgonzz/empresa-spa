@@ -1,6 +1,6 @@
 <template>
     <div
-    v-if="show"
+    v-if="show_nav"
     class="nav-component">
         <btn-scroll-top></btn-scroll-top>
         <b-navbar 
@@ -105,11 +105,6 @@ export default {
         UpdatePassword: () => import('@/common-vue/components/nav/UpdatePassword'),
         BtnScrollTop: () => import('@/common-vue/components/nav/BtnScrollTop'),
     },
-    computed: {
-        show() {
-            return this.authenticated && this.route_name != 'login' && this.route_name != 'passwordReset'
-        }
-    }
 }
 </script>
 <style lang="sass">

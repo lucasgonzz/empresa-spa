@@ -53,13 +53,28 @@
 
 			</model-form>
 
-			<b-form-checkbox
-			v-if="show_limpiar_formulario"
-			:value="1"
-			:uncheked-value="0"
-			v-model="clear_model">
-				Limpiar formulario
-			</b-form-checkbox>
+			<div
+			v-if="show_limpiar_formulario">
+				<b-form-checkbox
+				:value="1"
+				:uncheked-value="0"
+				v-model="clear_model">
+					Limpiar formulario
+				</b-form-checkbox>
+				<div
+				class="p-l-20"
+				v-if="!clear_model">
+					<h5
+					class="m-t-15">
+						Se mantendran las siguientes propiedades:
+					</h5>
+					<p
+					class="m-b-0"
+					v-for="prop in props_to_keep_after_create">
+						{{ prop.text }}
+					</p>
+				</div>
+			</div>
 
 			<template v-slot:modal-footer>
 				<slot 
@@ -349,8 +364,6 @@ export default {
 			if (!info.close) {
 				let properties_to_override = []
 				if (!this.clear_model) {
-					// console.log('props_to_keep_after_create')
-					// console.log(this.props_to_keep_after_create)
 					this.props_to_keep_after_create.forEach(prop => {
 						properties_to_override.push({
 							key: prop.key,

@@ -176,6 +176,7 @@ export default {
 		props() {
 			let props = []
 			 if (this.properties) {
+				console.log('ENOTR ACA')
 				props = this.propertiesToShow(this.properties, true)
 			} else if (!this.pivot || (this.pivot && !this.pivot.props_to_show)) {
 			 	props = this.propertiesToShow(this.modelPropertiesFromName(this.model_name), true)
@@ -237,12 +238,15 @@ export default {
 			return fields 
 		},
 		columns() {
-			let props = this.propertiesToShow(this.properties, true)
-			if (props.length) {
-				if (props.length > 6) {
+			// console.log('COLUMNS')
+			// console.log('properties')
+			// console.log(this.properties)
+			// let props = this.propertiesToShow(this.properties, true)
+			if (this.props.length) {
+				if (this.props.length > 6) {
 					return 6
 				}
-				return props.length
+				return this.props.length
 			}
 			return 2
 		},

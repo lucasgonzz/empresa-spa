@@ -9,6 +9,7 @@ export default {
 			text: 'Valor',
 			key: 'value',
 			type: 'number',
+			is_price: true,
 		},
 	],
 	singular_model_name_spanish: 'Costo Extra',

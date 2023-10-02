@@ -7,6 +7,8 @@
 		</p>
 
 		<display
+		:loading="loading"
+		:set_table_height="false"
 		show_models_if_empty
 		:show_created_at="false"
 		:models="models_to_show"

@@ -7,19 +7,28 @@ id="modal-alert">
 	v-for="order in unconfirmed_orders"
 	@click="toOrders()"
 	class="alert-info apretable">
-		Pedido sin confirmar de {{ order.buyer.name }} en la fecha {{ date(order.created_at) }}
+		<span
+		v-if="order.buyer">
+			Pedido sin confirmar de {{ order.buyer.name }} en la fecha {{ date(order.created_at) }}
+		</span>
 	</div>
 	<div 
 	v-for="message in messages_not_read"
 	@click="toMessages()"
 	class="alert-info apretable">
-		Mensaje sin leer de {{ message.buyer.name }} en la fecha {{ date(message.created_at) }}
+		<span
+		v-if="message.buyer">
+			Mensaje sin leer de {{ message.buyer.name }} en la fecha {{ date(message.created_at) }}
+		</span>
 	</div>
 	<div 
 	v-for="provider_order in provider_order_days_to_advise"
 	@click="toProviderOrders()"
 	class="alert-info apretable">
-		Pedido de proveedor sin recibir de {{ provider_order.provider.name }} en la fecha {{ date(provider_order.created_at) }}
+		<span
+		v-if="provider_order.provider">
+			Pedido de proveedor sin recibir de {{ provider_order.provider.name }} en la fecha {{ date(provider_order.created_at) }}
+		</span>
 	</div>
 </b-modal>
 </template>

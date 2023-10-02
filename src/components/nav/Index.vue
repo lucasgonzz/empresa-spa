@@ -1,7 +1,7 @@
 <template>
 	<div>
         <update-features></update-features>
-		<nav-component>
+		<!-- <nav-component>
 			<template #right_dropdown>
 				<tasks-button></tasks-button>
 				<alert-infos></alert-infos>
@@ -14,7 +14,8 @@
                 </b-dropdown-item>
         		<b-dropdown-divider></b-dropdown-divider>
 			</template>
-		</nav-component>
+		</nav-component> -->
+		<nav-vertical></nav-vertical>
 		<tasks></tasks>	
 
 	</div>
@@ -23,6 +24,7 @@
 export default {
 	components: {
 		NavComponent: () => import('@/common-vue/components/nav/Index'),
+		NavVertical: () => import('@/common-vue/components/nav-vertical/Index'),
 		TasksButton: () => import('@/components/nav/tasks/TasksButton'),
 		Tasks: () => import('@/components/nav/tasks/modal/Index'),
 		AlertInfos: () => import('@/components/nav/alert-infos/Index'),

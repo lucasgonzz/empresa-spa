@@ -53,8 +53,8 @@ class="m-b-15 m-t-20">
 				<b-input-group
 				class="input-discount">
 					<b-form-input
-					@keyup="setReturnedArticles(items[data.index])"
-					@click="setReturnedArticles(items[data.index])"
+					@keyup="setReturnedItems(items[data.index])"
+					@click="setReturnedItems(items[data.index])"
 					type="number"
 					min="0"
 					v-model="items[data.index].returned_amount"></b-form-input>
@@ -158,32 +158,43 @@ export default {
 		},
 	},
 	methods: {
-		setReturnedArticles(item) {
+		setReturnedItems(item) {
 			this.setTotal()
-			this.addReturnedArticle(item)
+			this.addReturnedItem(item)
 			this.setNotaCreditoDescription()
 		},
-		addReturnedArticle(item) {
-			let article_to_add = {
-				...item 
+		addReturnedItem(_item) {
+			let item = {
+				..._item 
 			}
 
-			let previus_returned_article = this.previus_returned_articles.find(article => {
-				return article.id == item.id
-			})
+			if (item.is_article) {
+				let previus_returned_article = this.previus_returned_articles.find(article => {
+					return article.id == item.id
+				})
 
-			if (typeof previus_returned_article != 'undefined') {
-				article_to_add.returned_amount -= previus_returned_article.pivot.returned_amount
+				if (typeof previus_returned_article != 'undefined') {
+					item.returned_amount -= previus_returned_article.pivot.returned_amount
+				}
+			} else if (item.is_service) {
+				let previus_returned_item = this.previus_returned_services.find(service => {
+					return service.id == item.id
+				})
+
+				if (typeof previus_returned_item != 'undefined') {
+					item.returned_amount -= previus_returned_item.pivot.returned_amount
+				}
 			}
-			this.$store.commit('vender/addReturnedArticle', article_to_add)
+
+			this.$store.commit('vender/addReturnedItem', item)
 		},
 		setNotaCreditoDescription() {
 			this.nota_credito_description = ''
-			this.returned_articles.forEach(article => {
+			this.returned_items.forEach(item => {
 				if (this.nota_credito_description == '') {
-					this.nota_credito_description = 'Devolucion de: '+article.returned_amount+' '+article.name 
+					this.nota_credito_description = 'Devolucion de: '+item.returned_amount+' '+item.name 
 				} else {
-					this.nota_credito_description += ', '+article.returned_amount+' '+article.name 
+					this.nota_credito_description += ', '+item.returned_amount+' '+item.name 
 				}
 			})
 		},

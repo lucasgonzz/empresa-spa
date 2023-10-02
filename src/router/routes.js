@@ -9,10 +9,10 @@ export default [
 	{
 		text: 'Listado',
 		path: '/listado-de-articulos',
-		name: 'article',
 		model_name: 'article',
 		component: '@/views/Listado',
 		can: 'article.index',
+		image_url: 'nav-icons/listado.png',
 	},
 	{
 		text: 'Vender',
@@ -24,18 +24,18 @@ export default [
 			view: 'remito',
 		},
 		if_has_extencion: 'comerciocity_interno',
+		image_url: 'nav-icons/vender.png',
 	},
 	{
-		text: 'Ventas',
 		path: '/ventas',
-		name: 'sale',
 		model_name: 'sale',
 		component: '@/views/Ventas',
 		can: 'sale.index',
 		params: {
 			view: 'todas',
 			sub_view: 'todos',
-		}
+		},
+		image_url: 'nav-icons/ventas.png',
 	},
 	{
 		text: 'Ventas',
@@ -51,37 +51,34 @@ export default [
 		not_show: true,
 	},
 	{
-		text: 'Proveedores',
 		path: '/proveedores',
 		model_name: 'provider',
-		name: 'provider',
 		component: '@/views/Provider',
 		can: 'provider.index',
 		params: {
 			view: 'proveedores',
 		},
 		if_has_extencion: 'comerciocity_interno',
+		image_url: 'nav-icons/proveedores.png',
 	},
 	{
-		text: 'Clientes',
 		path: '/clientes',
 		model_name: 'client',
-		name: 'client',
 		component: '@/views/Client',
 		can: 'client.index',
 		params: {
 			view: 'clientes',
 		},
 		if_has_extencion: 'comerciocity_interno',
+		image_url: 'nav-icons/clientes.png',
 	},
 	{
-		text: 'Presupuestos',
 		path: '/presupuestos',
 		model_name: 'budget',
-		name: 'budget',
 		component: '@/views/Budget',
 		can: 'budget.index',
 		if_has_extencion: ['budgets', 'comerciocity_interno'],
+		image_url: 'nav-icons/presupuestos.png',
 	},
 	{
 		text: 'Produccion',
@@ -97,7 +94,8 @@ export default [
 			'production_movement.index',
 			'order_production.index',
 			'recipe.index',
-		]
+		],
+		image_url: 'nav-icons/produccion.png',
 	},
 	{
 		text: 'Caja',
@@ -109,14 +107,8 @@ export default [
 			view: 'reportes',
 		},
 		if_has_extencion: 'comerciocity_interno',
+		image_url: 'nav-icons/caja.png',
 	},
-	// {
-	// 	text: 'Ventas',
-	// 	path: '/ventas',
-	// 	name: 'ventas',
-	// 	component: '@/views/Ventas',
-	// 	can: 'sale.index',
-	// },
 	{
 		text: 'ABM',
 		name: 'abm',
@@ -125,6 +117,7 @@ export default [
 			sub_view: 'categorias',
 			model_name: 'category',
 		},
+		image_url: 'nav-icons/abm.png',
 	},
 	{
 		model_name: 'employee',
@@ -133,6 +126,7 @@ export default [
 		component: '@/common-vue/views/Employee',
 		check_is_owner: true,
 		if_has_extencion: 'comerciocity_interno',
+		image_url: 'nav-icons/empleados.png',
 	},
 	{
 		text: 'Online',
@@ -146,6 +140,7 @@ export default [
 		can: [
 			'order.index',
 			'buyer.index',
-		]
+		],
+		image_url: 'nav-icons/tienda.png',
 	},
 ]

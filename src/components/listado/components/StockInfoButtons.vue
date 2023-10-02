@@ -1,5 +1,6 @@
 <template>
 <div
+v-if="is_owner"
 class="m-l-15">
 	<b-button
 	class="m-r-15"
@@ -14,6 +15,21 @@ class="m-l-15">
 	v-if="articles_stock_0.length">
 		{{ articles_stock_0.length }} sin stock 
 	</b-button>
+	<b-button-group
+	class="m-l-15">
+		<b-button
+		title="¿De donde viene este dato?"
+		v-b-popover.hover.bottom="'Sumamos los costos de los articulos multiplicados por su tock, siempre que tengan los articulos tengan asigando un stock y sea mayor a 0'" 
+		variant="outline-success">
+			Costos: {{ price(total.cost) }}  
+		</b-button>
+		<b-button
+		title="¿De donde viene este dato?"
+		v-b-popover.hover.bottom="'Sumamos los precios finales de los articulos multiplicados por su tock, siempre que tengan los articulos tengan asigando un stock y sea mayor a 0'" 
+		variant="success">
+			Precios: {{ price(total.final_price) }}  
+		</b-button>
+	</b-button-group>
 </div>
 </template>
 <script>
@@ -21,6 +37,21 @@ export default {
 	computed: {
 		articles() {
 			return this.$store.state.article.models
+		},
+		total() {
+			let total = {
+				cost: 0,
+				final_price: 0
+			}
+			this.articles.forEach(article => {
+				if (article.stock && article.stock > 0) {
+					if (article.cost) {
+						total.cost += article.cost * article.stock
+					}
+					total.final_price += article.final_price * article.stock
+				}
+			})
+			return total
 		},
 		articles_stock_min() {
 			return this.articles.filter(article => {

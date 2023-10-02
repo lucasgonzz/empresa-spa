@@ -3,27 +3,56 @@
 	class="payment-expire-card s-2 m-t-15 scale-up-center"
 	show
 	v-if="authenticated && is_owner && days_before_expire < 3">
-		<div class="header">
-			<img src="@/assets/pago.png" alt="">
-			<p
-			v-if="days_before_expire < 0">
-				Tu licencia del sistema <strong>A EXPIRADO</strong>, realiza tu pago para que podamos seguir <strong>respaldando la informacion</strong> de tu empresa
+		<img src="@/assets/pago.png" alt="">
+		<div>
+			<div class="tiempo-de-pagar">
+				<p
+				v-if="days_before_expire < 0">
+					Tu licencia del sistema <strong>A EXPIRADO</strong>, realiza tu pago para que podamos seguir <strong>respaldando la informacion</strong> de tu empresa
+				</p>
+				<p 
+				v-else-if="days_before_expire == 0">
+					<strong>
+						HOY ES EL ULTIMO DIA PARA PAGAR TU SUSCRIPCION
+					</strong>
+				</p>
+				<p
+				v-else-if="days_before_expire > 0">
+					Quedan {{ days_before_expire }} dias para que venza tu suscripcion
+				</p>
+			</div>
+
+			<p>
+				Licencia de uso para tu plan {{ owner.plan.name }}: <strong>USD {{ owner.plan.price }}</strong>
 			</p>
-			<p 
-			v-if="days_before_expire == 0">
-				HOY ES EL ULTIMO DIA PARA PAGAR TU SUSCRIPCION
-			</p>
+			<div
+			v-if="employees.length">
+				<p>
+					Usuario extra (empleados): <strong>USD {{ owner.plan.user_price }}</strong>
+				</p>
+				<p>
+					Cantidad de usuarios extra: <strong>{{ employees.length }} (USD {{ owner.plan.user_price * employees.length }})</strong>
+				</p>
+			</div>
+
 			<p
-			v-else-if="days_before_expire > 0">
-				Quedan {{ days_before_expire }} dias para que venza tu suscripcion
+			v-if="owner.online">
+				E-commerce: <strong>USD {{ owner.plan.e_commerce }}</strong>
+			</p>
+
+			<p
+			v-if="owner.plan_discount">
+				Tu cuenta tiene asignado un descuento del <strong>{{ owner.plan_discount }}%</strong>
+			</p>
+
+			<p>
+				El total a pagar por tu Plan {{ owner.plan.name }} es de <strong>USD {{ price(total) }}</strong>, cotizado al promedio del valor del dolar en el dia de hoy de <strong>{{ price(dolar) }} ARS</strong> equivale a <strong>{{ price(total * dolar) }} ARS</strong>
+			</p>
+
+			<p>
+				Podes realizar el pago del sistema enviando una transferencia a nuestro alias: <strong>comerciocity</strong>
 			</p>
 		</div>
-		<p>
-			El total a pagar por tu Plan {{ owner.plan.name }} es de {{ total }}
-		</p>
-		<p>
-			Podes realizar el pago del sistema enviando una transferencia a nuestro alias: <strong>comerciocity</strong>
-		</p>
 	</div>
 </template>
 <script>
@@ -43,11 +72,17 @@ export default {
 			return moment().diff(this.owner.payment_expired_at, 'days') * -1
 		},
 		total() {
-			let total = this.owner.plan.price * this.dolar
+			let total = this.owner.plan.price 
 			this.employees.forEach(employee => {
-				total += 1000
+				total += this.owner.plan.user_price
 			})
-			return this.price(total)
+			if (this.owner.online) {
+				total += this.owner.plan.e_commerce 
+			}
+			if (this.owner.plan_discount) {
+				total -= total * this.owner.plan_discount / 100 
+			}
+			return total
 		}
 	},
 }
@@ -59,29 +94,29 @@ export default {
 	border: 5px solid $red
 	margin: auto
 	border-radius: 8px
-	.header 
-		display: flex 
-		flex-direction: row 
-		justify-content: flex-start
-		align-items: center 
-		img 
-			width: 200px
-		p 
-			font-weight: bold
-			margin-bottom: 0
+	display: flex 
+	flex-direction: row 
+	justify-content: flex-start
+	align-items: flex-start
+	padding: 10px 0 
+	img 
+		width: 200px
+	p 
+		margin-bottom: 10px
+		text-align: left
 
-.scale-up-center 
-	-webkit-animation: scale-up-center 2s ease-in infinite alternate forwards
-	animation: scale-up-center 2s ease-in infinite alternate forwards
+// .scale-up-center 
+// 	-webkit-animation: scale-up-center 2s ease-in infinite alternate forwards
+// 	animation: scale-up-center 2s ease-in infinite alternate forwards
 
-@-webkit-keyframes scale-up-center 
-	0% 
-		-webkit-transform: scale(0.7)
-		transform: scale(0.7)
+// @-webkit-keyframes scale-up-center 
+// 	0% 
+// 		-webkit-transform: scale(0.7)
+// 		transform: scale(0.7)
 
-	10% 
-		-webkit-transform: scale(1)
-		transform: scale(1)
+// 	10% 
+// 		-webkit-transform: scale(1)
+// 		transform: scale(1)
 
 
 @keyframes scale-up-center 

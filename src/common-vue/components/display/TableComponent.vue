@@ -292,6 +292,10 @@ export default {
 			type: Boolean,
 			default: true
 		},
+		prop_to_check: {
+			type: String,
+			default: 'id',
+		},
 	},
 	data() {
 		return {
@@ -438,13 +442,15 @@ export default {
 			return ''
 		},
 		onRowSelected(items) {
-			console.log('items.length: '+items.length)
+			// console.log('items.length: '+items.length)
 			if (!this.is_from_keydown) {
 				if (this._select_mode == 'single' && items.length) {
-					console.log(1)
+					console.log('items')
+					console.log(items[0])
 					let model = this.models.find(_model => {
-						return _model.id == items[0].id
+						return _model[this.prop_to_check] == items[0][this.prop_to_check]
 					})
+					console.log(model)
 					this.$emit('onRowSelected', model)
 					if (this.set_model_on_row_selected) {
 						this.$refs.tableComponent.clearSelected()
@@ -543,18 +549,16 @@ export default {
 	input, textarea
 		width: 200px
 	th, td 
-		white-space: wrap
 		text-align: left
+		white-space: nowrap
 		@if ($table_font_small)
 			font-size: 1em
 			padding: 5px !important
-		span 
-			white-space: wrap
 
 	tr
 		@if ($theme == 'dark')
 			color: rgb(189, 189, 189)
-			&:hover, &:active 
+			&:hover 
 				border: 2px solid $blue !important
 				& > td 
 					color: rgb(189, 189, 189) !important
@@ -562,21 +566,12 @@ export default {
  
 		@else
 			color: #000
-			&:hover, &:active 
-				border: 2px solid $blue !important
-				& > td 
-					color: #000 !important
-					background-color: #999999 !important
 
 	.b-table-row-selected 
 		border: 2px solid $blue !important
 		td 
-			@if ($theme == 'dark')
-				color: rgb(189, 189, 189) !important
-				background-color: rgba(0,0,0,.8) !important
-			@else 
-				// color: rgb(189, 189, 189) !important
-				background-color: #999999 !important
+			color: rgb(189, 189, 189) !important
+			background-color: rgba(0,0,0,.8) !important
 
 
 	// th, td 

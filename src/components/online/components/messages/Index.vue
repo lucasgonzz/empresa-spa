@@ -1,9 +1,9 @@
 <template>
-	<div>
+	<div
+	v-if="view == 'mensajes'">
 		<chats-modal></chats-modal>	
 		<b-row
-		class="messages"
-		v-show="view == 'mensajes'">
+		class="messages">
 			<b-col
 			class="col-chats"
 			lg="3">

@@ -48,6 +48,7 @@ export default {
 	computed: {
 		show_previus_days() {
 			if (this.hasExtencion('sales.hide')) {
+				console.log('ENTRO EN LA hasExtencion sales.hide')
 				return this.$route.name == 'VentasAll'
 			} 
 			return true

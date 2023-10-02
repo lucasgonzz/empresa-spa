@@ -18,6 +18,12 @@ export default {
 			type: 'text',
 		},
 		{
+			text: 'Acceso de ADMINISTRADOR',
+			key: 'admin_access',
+			type: 'checkbox',
+			description: 'Si se activa, el usuario tendra el mismo nivel de acceso al sistema que la cuenta administrador, por lo que no hara falta asignar permisos, ya que los tendra a todos.'
+		},
+		{
 			text: 'Permisos',
 			key: 'permissions',
 			type: 'checkbox',
