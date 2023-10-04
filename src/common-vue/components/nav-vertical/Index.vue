@@ -20,7 +20,7 @@ v-if="show_nav">
 	    :key="i"
 	    :class="isActiveRoute(route)"
 		class="route apretable"
-	    @click="setRoute(route)">
+	    @click="callSetRoute(route)">
 	    	{{ routeText(route) }}
 	    	<img 
 	    	v-if="route.image_url"
@@ -77,6 +77,14 @@ export default {
 		},
 	},
 	methods: {
+		callSetRoute(route) {
+			this.setRoute(route)
+			if (this.show_nav_mobile) {
+				setTimeout(() => {
+					this.show_nav_mobile = false 
+				}, 2000)
+			}
+		},
 		image(route) {
 			return require('@/assets/'+route.image_url) 
 		},

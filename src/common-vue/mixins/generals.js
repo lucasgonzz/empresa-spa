@@ -12,7 +12,7 @@ export default {
 			return this.$store.state.auth.authenticated
 		},
 		is_owner() {
-			return this.user && (!this.user.owner_id || this.user.admin_access)
+			return this.user && !this.user.owner_id
 		},
         owner_id() {
         	if (this.user.owner_id) {

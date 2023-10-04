@@ -18,7 +18,7 @@ export default {
 			}
 			if (route.check_is_owner) {
 				console.log('check_is_owner para la ruta '+this.getRouteName(route))
-				show = this.is_owner 
+				show = this.is_owner || this.user.admin_access
 			}
 			if (show && route.can) {
 				if (typeof route.can == 'object') {

@@ -6,7 +6,7 @@ axios.defaults.baseURL = process.env.VUE_APP_API_URL
 export default {
 	namespaced: true,
 	state: {
-		authenticated: false,
+		authenticated: null,
 		permissions: [],
 		user: null,
 		selected_address: null,

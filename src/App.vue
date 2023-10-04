@@ -28,15 +28,19 @@ export default {
     },
     created() {
         this.$store.dispatch('auth/me')
-        .then(() => {
-            if (!this.authenticated) {
-                if (this.route_name != 'login' && !this.use_home_page) {
-                    this.$router.replace({name: 'login'})
-                } else if (this.route_name != 'login' && this.route_name != 'home') {
-                    this.$router.replace({name: 'home'})
-                }
-            }
-        })
+        // .then(() => {
+        //     setTimeout(() => {
+        //         if (!this.authenticated) {
+        //             console.log(12333333333)
+        //             if (this.route_name != 'login' && !this.use_home_page) {
+        //                 this.$router.replace({name: 'login'})
+        //             } else if (this.route_name != 'login' && this.route_name != 'home') {
+        //                 console.log('VA POR ACA')
+        //                 this.$router.replace({name: 'home'})
+        //             }
+        //         }
+        //     }, 500)
+        // })
     },
     watch: {
         authenticated() {

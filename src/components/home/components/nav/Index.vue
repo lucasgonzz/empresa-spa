@@ -43,6 +43,11 @@ export default {
 }
 </script>
 <style lang="sass">
+// .container-fluid
+//     @media screen and (max-width: 768px)
+//         padding-top: 30px !important
+//     @media screen and (min-width: 768px)
+//         padding-left: 0 !important
 .nav-home 
     display: flex
     flex-direction: row 

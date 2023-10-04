@@ -83,11 +83,12 @@ export default {
 			})
 		},
 		change(model) {
-			console.log('change')
-			console.log(model)
+			// console.log('change')
+			// console.log(model)
 			this.addToRelationModels(model)
-			this.model[this.prop.key+'_id'] = this.models_id
-			console.log('valores:')
+			// this.model[this.prop.key+'_id'] = this.models_id
+			// console.log('valores:')
+			this.$set(this.model, this.prop.key+'_id', this.models_id)
 			console.log(this.model[this.prop.key+'_id'])
 		},
 		addToRelationModels(model_to_add) {

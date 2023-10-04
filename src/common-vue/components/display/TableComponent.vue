@@ -561,8 +561,8 @@ export default {
 			&:hover 
 				border: 2px solid $blue !important
 				& > td 
-					color: rgb(189, 189, 189) !important
-					background-color: rgba(0,0,0,.8) !important
+					color: #FFF !important
+					background-color: rgba(0,0,0,.7) !important
  
 		@else
 			color: #000
@@ -570,8 +570,8 @@ export default {
 	.b-table-row-selected 
 		border: 2px solid $blue !important
 		td 
-			color: rgb(189, 189, 189) !important
-			background-color: rgba(0,0,0,.8) !important
+			color: #FFF !important
+			background-color: rgba(0,0,0,.7) !important
 
 
 	// th, td 

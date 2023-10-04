@@ -16,7 +16,7 @@
 		</div>
 		
 	    <div
-	    v-if="is_owner">
+	    v-if="is_owner || user.admin_access">
 			<p 
 			class="item-title">
 				<i class="icon-down"></i>

@@ -52,14 +52,16 @@ export default {
 			let route_to_redirect = null
 			for (var i = 0; i < routes.length; i++) {
 				route = routes[i]
-				console.log('viendo permiso para la ruta '+this.getRouteName(route)+', permission_slug: '+routes[i].can) 
-				if (route.check_is_owner && this.is_owner) {
+				console.log('viendo permiso para la ruta '+this.getRouteName(route)+', permission_slug: '+route.can) 
+				if (route.check_is_owner && (this.is_owner || this.user.admin_access)) {
 					route_to_redirect = route
 					break
-				} else if (route.can && this.can(route.can)) {
-					console.log('tiene permiso para '+route.can)
-					route_to_redirect = route
-					break
+				} else if (route.can) {
+					if (this.can(route.can)) {
+						console.log('tiene permiso para '+route.can)
+						route_to_redirect = route
+						break
+					}
 				} else {
 					console.log('la ruta no necesita permiso')
 					route_to_redirect = route
@@ -84,7 +86,7 @@ export default {
 				console.log('por buscar la ruta: '+this.route_name)
 				let finded_route = routes.find(route => {
 					// console.log('comparando '+route.name+' con '+this.route_name)
-					return route.name == this.route_name 
+					return this.getRouteName(route) == this.route_name 
 				})
 				console.log('finded_route:')
 				console.log(finded_route)
