@@ -14,7 +14,7 @@
 				@keyup.enter="changeFocus()"
 				@keyup.tab="changeFocus()"
 				:class="getInputSize(prop)"
-				v-if="prop.type == 'textarea'"
+				v-if="showProp(prop) && prop.type == 'textarea'"
 				:type="prop.type"
 				:placeholder="'Ingrese '+propText(prop)"
 				v-model="model.pivot[prop.key]"></b-form-textarea>
@@ -23,7 +23,7 @@
 				:id="inputId(prop)"
 				@keyup.enter="changeFocus()"
 				@keyup.tab="changeFocus()"
-				v-else-if="prop.type == 'select'"
+				v-else-if="showProp(prop) && prop.type == 'select'"
 				v-model="model.pivot[prop.key]"
 				:class="getInputSize(prop)"
 				:options="getOptions({key: prop.key, text: propText(prop), select_prop_name: prop.select_prop_name})"></b-form-select>
@@ -32,7 +32,7 @@
 				:id="inputId(prop)"
 				@keyup.enter="changeFocus()"
 				@keyup.tab="changeFocus()"
-				v-else-if="prop.type == 'checkbox'"
+				v-else-if="showProp(prop) && prop.type == 'checkbox'"
 				:value="1"
 				:unchecked-value="0"
 				v-model="model.pivot[prop.key]">
@@ -42,7 +42,7 @@
 				:id="inputId(prop)"
 				@keyup.enter="changeFocus()"
 				@keyup.tab="changeFocus()"
-				v-else
+				v-else-if="showProp(prop)"
 				:type="prop.type"
 				:class="getInputSize(prop)"
 				:placeholder="'Ingrese '+propText(prop)"
@@ -72,6 +72,18 @@ export default {
 		cont_table_id: String,
 	},
 	methods: {
+		showProp(prop) {
+			if (prop.v_if) {
+				if (prop.v_if.b_t_many_model_prop) {
+					if (prop.v_if.check_array_length) {
+						console.log('se va a chequear el model:')
+						console.log(this.model)
+						return this.model[prop.v_if.b_t_many_model_prop].length 
+					}
+				}
+			}
+			return true 
+		},
 		inputId(prop) {
 			return this.model_name+'-'+prop.key+'-'+this.model.id
 		},

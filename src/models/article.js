@@ -156,6 +156,12 @@ export default {
 			not_show: true,
 		},
 		{
+			text: 'En oferta',
+			key: 'in_offer',
+			type: 'checkbox',
+			not_show: true,
+		},
+		{
 			text: 'proveedor',
 			key: 'provider_id',
 			type: 'search',

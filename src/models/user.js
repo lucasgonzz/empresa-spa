@@ -59,6 +59,13 @@ export default {
 			type: 'checkbox',
 		},
 		{
+			text: 'Metodo de pago por defecto en VENDER',
+			key: 'default_current_acount_payment_method_id',
+			type: 'select',
+			store: 'current_acount_payment_method',
+			description: 'Si se elige, despues de cada venta el valor del metodo de pago se seteara con este valor',
+		},
+		{
 			text: 'Ancho en milimetros de la comandera para imprimir los Tickets de Ventas',
 			key: 'sale_ticket_width',
 			type: 'number',

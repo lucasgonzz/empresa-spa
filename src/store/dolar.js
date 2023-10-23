@@ -32,7 +32,7 @@ export default {
 				console.log('dolar:')
 				res.json()
 				.then(data => {
-					console.log(data)
+					console.log(data.blue.value_avg)
 					commit('setPromedio', data.blue.value_avg)
 				})
 			})

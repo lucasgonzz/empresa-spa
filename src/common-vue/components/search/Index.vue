@@ -18,6 +18,7 @@
 		:save_if_not_exist="save_if_not_exist"
 		:show_btn_create="show_btn_create"
 		:search_from_api="search_from_api"
+		:props_to_show="props_to_show"
 		@callSearchModal="callSearchModal"
 		@setQuery="setQuery"
 		@setNotShowModel="setNotShowModel"
@@ -97,6 +98,10 @@ export default {
 		search_from_api: {
 			type: Boolean,
 			default: false,
+		},
+		props_to_show: {
+			type: Array,
+			default: null,
 		},
 		show_selected: {
 			type: Boolean,

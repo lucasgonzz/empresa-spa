@@ -295,6 +295,9 @@ export default {
 							})
 							if (index != -1) {
 								this.has_many_parent_model[this.has_many_prop.key].splice(index, 1, res.data.model)
+							} else {
+								this.has_many_parent_model[this.has_many_prop.key].push(res.data.model)
+								this.setModel(this.has_many_parent_model, this.has_many_parent_model_name)
 							}
 						} else {
 							if (this.model_name == 'user') {
@@ -320,6 +323,7 @@ export default {
 						if (!this.emit_on_saved_instead_continue) {
 							if (this.has_many_parent_model) {
 								this.$set(this.has_many_parent_model, this.has_many_prop.key, this.has_many_parent_model[this.has_many_prop.key].concat([created_model]))
+								this.setModel(this.has_many_parent_model, this.has_many_parent_model_name)
 								if (!this.has_many_parent_model.id) {
 									if (this.has_many_parent_model.childrens) {
 										this.has_many_parent_model.childrens.push({

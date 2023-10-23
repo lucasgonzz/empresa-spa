@@ -154,10 +154,16 @@ export default {
 					}
 					this.$store.commit('vender/previus_sales/setIndex', 0)
 					this.$store.commit('vender/previus_sales/setPreviusSale', {})
+					this.setDefaultPaymentMethod()
 					if (this.maked_sale.client_id) {
 						this.loadModel('client', this.maked_sale.client_id)
 					}
 				})
+			}
+		},
+		setDefaultPaymentMethod() {
+			if (this.owner.default_current_acount_payment_method_id) {
+				this.$store.commit('vender/setCurrentAcountPaymentMethodId', this.owner.default_current_acount_payment_method_id)
 			}
 		},
 		check() {

@@ -44,6 +44,7 @@
 		:show_btn_create="_show_btn_create"
 		:show_plus_dropdown="show_plus_dropdown"
 		:show_display="show_display"
+		:change_from_dates_option="change_from_dates_option"
 		:items="horizontal_nav_items" 
 		:set_view="horizontal_nav_set_view"
 		:set_sub_view="horizontal_nav_set_sub_view"
@@ -146,6 +147,10 @@ export default {
 		show_display: {
 			type: Boolean,
 			default: true,
+		},
+		change_from_dates_option: {
+			type: Boolean,
+			default: false,
 		},
 		horizontal_nav_items: {
 			type: Array,

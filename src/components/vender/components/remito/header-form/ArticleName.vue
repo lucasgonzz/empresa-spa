@@ -12,6 +12,7 @@
 		:save_if_not_exist="false"
 		:str_limint="3"
 		:search_from_api="search_from_api"
+		:props_to_show="props_to_show"
 		:prop="{text: 'Articulo', key: 'article_id', store: 'article'}"></search-component>
 	</b-col>
 </template>
@@ -35,6 +36,33 @@ export default {
 				return true
 			}
 			return false
+		},
+		price_types() {
+			return this.$store.state.price_type.models 
+		},
+		props_to_show() {
+			if (this.price_types.length) {
+				return [
+					{
+						text: 'N°',
+						key: 'num',	
+					},
+					{
+						text: 'Imagen',
+						key: 'images',
+						type: 'images',	
+					},
+					{
+						text: 'Nombre',
+						key: 'name',	
+					},
+					{
+						text: 'Stock',
+						key: 'stock',	
+					},
+				]
+			} 
+			return null
 		}
 	},
 	methods: {

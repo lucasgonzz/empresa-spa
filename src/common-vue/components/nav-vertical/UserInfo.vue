@@ -70,7 +70,6 @@ export default {
 		flex-direction: row 
 		align-items: center 
 		justify-content: flex-start 
-		opacity: 0
 		padding: 7px 0
 		font-size: 13px
 		cursor: pointer
@@ -78,6 +77,9 @@ export default {
 			background: $blue 
 		i 
 			padding: 0 10px 0 20px
+		
+		@media screen and (min-width: 768px)
+			opacity: 0
 	
 	.item-title 
 		text-align: left

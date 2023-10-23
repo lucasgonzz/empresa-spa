@@ -14,6 +14,9 @@ export default {
 		is_owner() {
 			return this.user && !this.user.owner_id
 		},
+		is_admin() {
+			return this.user && (this.is_owner || this.user.admin_access)
+		},
         owner_id() {
         	if (this.user.owner_id) {
         		return this.user.owner_id
@@ -560,7 +563,7 @@ export default {
 				return this.since(model[prop.key] )
 			}
 			let array = prop.key.split('.')
-			if (model[array[0]] && array[1]) {
+			if (model && model[array[0]] && array[1]) {
 				return model[array[0]][array[1]]
 			}
 			if (prop.is_price) {

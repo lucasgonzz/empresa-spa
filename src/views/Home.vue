@@ -95,7 +95,7 @@ export default {
 		@media screen and (max-width: 992px)
 			height: calc(100vh - 100px)
 		@media screen and (min-width: 992px)
-			height: calc(100vh - 100px - 200px)
+			height: calc(100vh - 100px)
 
 	.row-dark
 		background: #F7F7F7

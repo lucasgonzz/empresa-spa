@@ -1,9 +1,16 @@
 <template>
-	<b-dropdown-item
-	@click="pdf">
-		<i class="icon-tag"></i>
-		Generar PDF
-	</b-dropdown-item>
+	<div>
+		<b-dropdown-item
+		@click="pdf">
+			<i class="icon-tag"></i>
+			PDF con imagenes
+		</b-dropdown-item>
+		<b-dropdown-item
+		@click="listaPdf">
+			<i class="icon-tag"></i>
+			Lista PDF
+		</b-dropdown-item>
+	</div>
 </template>
 <script>
 export default {
@@ -16,18 +23,27 @@ export default {
 		},
 	},
 	methods: {
-		pdf() {
+		getIds() {
 			let ids = []
 			let articles
 			if (this.selected.length) {
 				articles = this.selected
-			} else if (this.filtered.length) {
+			} else if (this.filtered.length) { 
 				articles = this.filtered
 			}
 			articles.forEach(article => {
 				ids.push(article.id)
 			})
+			return ids
+		},
+		pdf() {
+			let ids = this.getIds()
 			let link = process.env.VUE_APP_API_URL+'/article/pdf/'+ids.join('-') 
+			window.open(link)
+		},
+		listaPdf() {
+			let ids = this.getIds()
+			let link = process.env.VUE_APP_API_URL+'/article/list-pdf/'+ids.join('-') 
 			window.open(link)
 		}
 	}

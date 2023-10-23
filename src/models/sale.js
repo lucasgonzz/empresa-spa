@@ -82,12 +82,37 @@ export default {
 		{
 			text: 'Servicios',
 			key: 'services',
-			type: 'has_many',
-			has_many: {
-				text: 'Servicio',
+			store: 'service',
+			belongs_to_many: {
 				model_name: 'service',
-				show_btn_create: false,
+				props_to_show: [
+					{
+						text: 'Nombre',
+						key: 'name',
+					},
+				],
+				pivot_props_to_show: [
+					{
+						text: 'Precio',
+						key: 'price',
+						is_price: true,
+					},
+					{
+						text: 'Cantidad',
+						key: 'amount',
+					},
+					{
+						text: 'U/D',
+						key: 'returned_amount',
+					},
+				]
 			}
+			// type: 'has_many',
+			// has_many: {
+			// 	text: 'Servicio',
+			// 	model_name: 'service',
+			// 	show_btn_create: false,
+			// }
 		}
 	],
 	singular_model_name_spanish: 'Venta',

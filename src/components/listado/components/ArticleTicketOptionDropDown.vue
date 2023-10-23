@@ -21,11 +21,8 @@ export default {
 			let articles
 			if (this.selected.length) {
 				articles = this.selected
-				console.log('nonon')
 			} else if (this.filtered.length) {
 				articles = this.filtered
-				console.log('asdasdad')
-				console.log(articles)
 			}
 			articles.forEach(article => {
 				ids.push(article.id)

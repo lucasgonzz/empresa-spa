@@ -15,7 +15,11 @@
         		<b-dropdown-divider></b-dropdown-divider>
 			</template>
 		</nav-component> -->
-		<nav-vertical></nav-vertical>
+		<nav-vertical>
+			<template #nav_top>
+				<alert-infos></alert-infos>
+			</template>
+		</nav-vertical>
 		<tasks></tasks>	
 
 	</div>

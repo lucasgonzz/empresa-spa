@@ -96,7 +96,14 @@ export default {
 			state.selected = value
 		},
 		addSelected(state, value) {
-			state.selected.push(value)
+			let index = state.selected.findIndex(selected_model => {
+				return selected_model.id == value.id 
+			})
+			if (index != -1) {
+				state.selected.splice(index, 1)
+			} else {
+				state.selected.push(value)
+			}
 		},
 		setFiltered(state, value) {
 			state.filtered = value
@@ -183,6 +190,9 @@ export default {
 		},
 		setIsSelecteable(state, value) {
 			state.is_selecteable = value
+		},
+		setFromDates(state, value) {
+			state.from_dates = value
 		},
 	},
 	actions: {

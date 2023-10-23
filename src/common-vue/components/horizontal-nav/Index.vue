@@ -61,7 +61,7 @@
 			</div>
 
 			<div
-			class="align-center m-l-15 m-t-15 m-sm-t-0"
+			class="align-center m-l-15"
 			v-if="ask_selectable">
 				<b-form-checkbox
 				:unchecked-value="false"
@@ -85,6 +85,7 @@
 		
 		<display-nav
 		v-if="show_display"
+		:change_from_dates_option="change_from_dates_option"
 		:model_name="model_name"
 		@setDisplay="setDisplay"></display-nav>
 
@@ -107,6 +108,10 @@ export default {
 	},
 	props: {
 		items: Array,
+		change_from_dates_option: {
+			type: Boolean,
+			default: false,
+		},
 		show_btn_create: {
 			type: Boolean,
 			default: false,
@@ -308,6 +313,7 @@ export default {
 		display: flex
 		flex-direction: row
 		justify-content: flex-start
+		align-items: center
 		flex-wrap: wrap
 		max-width: 100%
 		.cont-buttons

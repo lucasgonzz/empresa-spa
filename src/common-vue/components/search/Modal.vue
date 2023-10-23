@@ -100,6 +100,10 @@ export default {
 			type: Boolean,
 			default: true,
 		},
+		props_to_show: {
+			type: Array,
+			default: null
+		},
 		search_from_api: Boolean,
 	},
 	data() {
@@ -122,6 +126,9 @@ export default {
 	},
 	computed: {
 		properties() {
+			if (this.props_to_show) {
+				return this.props_to_show 
+			}
 			return this.propsToShowInSearchModal(this.model_name)
 		},
 		modal_id() {

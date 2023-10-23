@@ -6,8 +6,10 @@
 		<view-component 
 		v-if="view == 'pedidos'"
 		model_name="provider_order"
-		show_filter_modal
-		show_previus_days>
+		order_list_by="provider_order_status"
+		change_from_dates_option
+		:show_previus_days="show_previus_days"
+		show_filter_modal>
 		</view-component>
 	</div>
 </template>
@@ -16,6 +18,11 @@ export default {
 	components: {
 		Import: () => import('@/components/provider/modals/orders/Import'),
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
+	},
+	computed: {
+		show_previus_days() {
+			return this.$store.state.provider_order.from_dates
+		},
 	},
 }
 </script>

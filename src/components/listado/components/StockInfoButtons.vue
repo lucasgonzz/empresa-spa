@@ -1,7 +1,6 @@
 <template>
 <div
-v-if="is_owner"
-class="m-l-15">
+class="m-l-0 m-sm-l-15 m-t-10 m-b-10 m-md-b-0 m-md-t-0">
 	<b-button
 	class="m-r-15"
 	v-b-modal="'articles-stock-min'"
@@ -16,7 +15,8 @@ class="m-l-15">
 		{{ articles_stock_0.length }} sin stock 
 	</b-button>
 	<b-button-group
-	class="m-l-15">
+	v-if="is_admin"
+	class="m-l-15 d-none d-lg-inline-block">
 		<b-button
 		title="¿De donde viene este dato?"
 		v-b-popover.hover.bottom="'Sumamos los costos de los articulos multiplicados por su tock, siempre que tengan los articulos tengan asigando un stock y sea mayor a 0'" 

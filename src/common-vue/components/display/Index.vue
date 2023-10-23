@@ -144,26 +144,6 @@ export default {
 				return this.$store.state[this.model_name].models.slice(0, this.cant_models_to_show) 
 			}
 		},
-		lists() {
-			if (this.order_list_by) {
-				let models_from_order_by = this.$store.state[this.order_list_by].models
-				let lists = []
-				let list
-				models_from_order_by.forEach(model => {
-					list = {}
-					if (this.idiom == 'es') {
-						list.name = model.nombre
-					} else {
-						list.name = model.name
-					}
-					list.models = this.$store.state[this.model_name].models.filter(_model => {
-						return _model[this.order_list_by+'_id'] == model.id 
-					})
-					lists.push(list)
-				})
-				return lists
-			} 
-		}
 	},
 	methods: {
 		clicked(model) {

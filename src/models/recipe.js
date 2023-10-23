@@ -24,6 +24,7 @@ export default {
 			key: 'articles',
 			belongs_to_many: {
 				model_name: 'article',
+				order_list_by: 'order_production_status', 
 				props_to_show: [
 					{
 						text: 'Nombre',
@@ -67,6 +68,16 @@ export default {
 						key: 'amount',
 						value: '',
 						type: 'number'
+					},
+					{
+						text: 'Deposito',
+						key: 'address_id',
+						value: 0,
+						v_if: {
+							b_t_many_model_prop: 'addresses',
+							check_array_length: true,
+						},
+						type: 'select'
 					},
 					{
 						text: 'Notas',

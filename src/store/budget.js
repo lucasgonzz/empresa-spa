@@ -177,6 +177,9 @@ export default {
 		setIsSelecteable(state, value) {
 			state.is_selecteable = value
 		},
+		setFromDates(state, value) {
+			state.from_dates = value
+		},
 	},
 	actions: {
 		getModels({commit, state, dispatch}) {

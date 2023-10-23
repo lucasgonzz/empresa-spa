@@ -26,6 +26,7 @@
 								:colspan="props.length + 2">
 									{{ list.name }} 
 									<b-badge
+									v-if="list.models.length"
 									variant="danger"
 									class="m-l-10">
 										{{ list.models.length }}
@@ -117,6 +118,10 @@ export default {
 		order_list_by: {
 			type: String,
 			default: null
+		},
+		order_list_from_pivot: {
+			type: Boolean,
+			default: false,
 		},
 		select_mode: {
 			type: String,
@@ -263,10 +268,28 @@ export default {
 						list.name = model.name
 					}
 					list.models = this.models.filter(_model => {
-						return _model[this.order_list_by+'_id'] == model.id 
+						if (this.order_list_from_pivot) {
+							return _model.pivot[this.order_list_by+'_id'] == model.id 
+						} else {
+							return _model[this.order_list_by+'_id'] == model.id 
+						}
 					})
 					lists.push(list)
 				})
+
+				// Sin asignar
+				list = {}
+				list.name = 'Sin asignar'
+				list.models = this.models.filter(_model => {
+					if (this.order_list_from_pivot) {
+						return _model.pivot[this.order_list_by+'_id'] == null || _model.pivot[this.order_list_by+'_id'] == 0
+					} else {
+						return _model[this.order_list_by+'_id'] == null || _model[this.order_list_by+'_id'] == 0 
+					}
+				})
+				if (list.models.length) {
+					lists.push(list)
+				}
 				return lists
 			} 
 		},

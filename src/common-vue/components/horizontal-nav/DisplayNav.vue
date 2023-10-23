@@ -2,6 +2,21 @@
 	<div 
 	class="display-nav"> 
 		<div   
+		v-if="change_from_dates_option"
+		:class="isSelectedFromDates(true)"
+		@click="setFromDates(true)"
+		class="item apretable">
+			Por fecha
+		</div>
+		<div   
+		v-if="change_from_dates_option"
+		:class="isSelectedFromDates(false)"
+		@click="setFromDates(false)"
+		class="item apretable">
+			Historico
+		</div>
+
+		<div   
 		:class="isSelected('cards')"
 		@click="setDisplay('cards')"
 		class="item apretable">
@@ -19,6 +34,7 @@
 export default {
 	props: {
 		model_name: String,
+		change_from_dates_option: Boolean,
 	},
 	computed: {
 		current_display() {
@@ -26,6 +42,13 @@ export default {
 		},
 	},
 	methods: {
+		isSelectedFromDates(value) {
+			return this.$store.state[this.model_name].from_dates == value ? 'selected-from-dates' : ''
+		},
+		setFromDates(value) {
+			this.$store.commit(this.model_name+'/setFromDates', value)
+			this.$store.dispatch(this.model_name+'/getModels')
+		},
 		setDisplay(display) {
 			this.$emit('setDisplay', display)
 			if (this.current_display == display) {
@@ -65,4 +88,8 @@ export default {
 		i
 			color: $blue
 			border-bottom: 3px solid $blue
+
+	.selected-from-dates
+		border-bottom: 3px solid $blue
+		font-weight: bold
 </style>

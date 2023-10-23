@@ -31,7 +31,7 @@ export default {
 			return this.$store.state.sale.selected_employee
 		},
 		show() {
-			return !this.user.owner_id && this.employees.length
+			return (this.is_owner || this.user.admin_access) && this.employees.length
 		},
 		items() {
 			let items = []

@@ -1,5 +1,6 @@
 <template>
 	<div
+	class="j-end p-t-10 p-b-10 p-r-5"
 	v-if="authenticated">
 		<modal-alert></modal-alert>
 

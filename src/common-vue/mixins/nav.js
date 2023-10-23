@@ -1,9 +1,15 @@
 import moment from 'moment'
+import routes from '@/router/routes'
 export default {
 	computed: {
         show_nav() {
             return this.authenticated && this.route_name != 'login' && this.route_name != 'passwordReset'
         },
+        selected_route() {
+        	return routes.find(route => {
+        		return this.getRouteName(route) == this.route_name
+        	})
+        }
 	},
 	methods: {
         setConfig(config_model_name) {
