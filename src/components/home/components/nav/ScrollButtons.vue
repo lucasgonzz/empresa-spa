@@ -49,4 +49,5 @@ export default {
 		.scroll-button
 			padding: 0 15px
 			cursor: pointer
+			color: #FFF 
 </style>

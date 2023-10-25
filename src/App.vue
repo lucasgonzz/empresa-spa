@@ -3,6 +3,7 @@
         <error-modal></error-modal>
         <logo-loading></logo-loading>
         <nav-component></nav-component>
+        <btn-scroll-top></btn-scroll-top>
         <b-container
         fluid>
             <payment-expire></payment-expire>
@@ -14,6 +15,7 @@
 import ErrorModal from '@/common-vue/components/error/Index'
 import LogoLoading from '@/common-vue/components/LogoLoading'
 import NavComponent from '@/components/nav/Index'
+import BtnScrollTop from '@/common-vue/components/nav/BtnScrollTop'
 
 import app from '@/common-vue/mixins/app'
 import start_methods from '@/mixins/start_methods'
@@ -24,6 +26,7 @@ export default {
         ErrorModal,
         LogoLoading, 
         NavComponent,
+        BtnScrollTop,
         PaymentExpire: () => import('@/components/nav/PaymentExpire'),
     },
     created() {
@@ -46,9 +49,7 @@ export default {
         authenticated() {
             console.log('watch de authenticated')
             if (!this.authenticated) {
-                if (this.route_name != 'passwordReset' && this.route_name != 'login') {
-                    this.$router.replace({name: 'login'})
-                } 
+                this.$router.replace({name: 'home'})
             } else {
                 this.checkPermissionForCurrentRoute()
                 this.callMethods()

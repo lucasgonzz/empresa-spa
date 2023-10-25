@@ -2,7 +2,7 @@
 	<div 
 	@click="toWhatsApp"
 	:class="scroll_bottom ? 'appear' : 'disappear'"
-	class="btn-whatsapp s-1">
+	class="btn-whatsapp btn-whatsapp-fixed s-1">
 		<img src="@/assets/whastapp.png">
 		<p>
 			Pregunta lo que necesites...
@@ -31,15 +31,13 @@ export default {
 	},
 	methods: {
 		toWhatsApp() {
-			window.open('https://api.whatsapp.com/send?phone=3413356848')
+			window.open('https://api.whatsapp.com/send?phone=3444622139')
 		}
 	}
 }
 </script>
 <style lang="sass">
 .btn-whatsapp
-	position: fixed
-	bottom: 20px
 	display: flex 
 	flex-direction: row 
 	justify-content: space-between
@@ -47,7 +45,6 @@ export default {
 	background: #25D366
 	padding: 10px
 	border-radius: 7px
-	z-index: 1000
 	cursor: pointer 
 	&:hover 
 		background: darken(#25D366, 10)
@@ -67,6 +64,11 @@ export default {
 	p 
 		margin-bottom: 0
 		color: #FFF
+
+.btn-whatsapp-fixed
+	position: fixed
+	bottom: 20px
+	z-index: 1000
 
 .appear 
 	transition: all .5s ease-out

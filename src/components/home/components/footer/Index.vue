@@ -81,7 +81,7 @@ export default {
 	},
 	methods: {
 		toWhatsapp() {
-			window.open('https://api.whatsapp.com/send?phone=3413356848')
+			window.open('https://api.whatsapp.com/send?phone=3444622139')
 		},
 		toFacebook() {
 			window.open('https://www.facebook.com/profile.php?id=61550702650795')

@@ -35,19 +35,19 @@ export default {
 	transform: translateX(60px)
 	position: fixed
 	right: 0px
-	bottom: 20px
+	bottom: 120px
 	background: $blue
-	width: 60px
-	height: 60px
+	width: 50px
+	height: 50px
 	z-index: 1000
 	display: flex 
 	align-items: center 
 	justify-content: center
-	border-radius: 50%
+	border-radius: 7px
 	transition: all .2s
 	i
 		font-size: 30px
 		color: #FFF
 .show-btn
-	transform: translateX(-80px)
+	transform: translateX(-15px)
 </style>

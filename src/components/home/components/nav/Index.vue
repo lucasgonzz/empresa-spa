@@ -3,6 +3,7 @@
     class="w-100">
         <mobile></mobile> 
         <div
+        :class="scroll_bottom ? 'nav-scroll' : ''"
         class="nav-home"> 
             <b-navbar 
             toggleable="md">
@@ -40,23 +41,68 @@ export default {
         ScrollButtons: () => import('@/components/home/components/nav/ScrollButtons'),
         Mobile: () => import('@/components/home/components/nav/Mobile'),
     },
+    data() {
+        return {
+            scroll: 0,
+            scroll_bottom: false,
+        }
+    },
+    created() {
+        window.addEventListener('scroll', () => {
+            if (this.scroll < window.scrollY) {
+                if (window.scrollY >= 30) {
+                    this.scroll_bottom = true
+                }
+            } else {
+                if (window.scrollY <= 400) {
+                    this.scroll_bottom = false
+                }
+            } 
+            this.scroll = window.scrollY
+        })
+    },
 }
 </script>
 <style lang="sass">
-// .container-fluid
-//     @media screen and (max-width: 768px)
-//         padding-top: 30px !important
-//     @media screen and (min-width: 768px)
-//         padding-left: 0 !important
+@import "@/sass/_custom"
+.nav-scroll 
+    background: darken($blue, 10) 
+    height: 80px !important
+    // .scroll-button
+    //     color: #000 !important
+    // i 
+    //     color: #000 !important
+    .navbar-brand
+        background: #fefefe
+        border-radius: 5px
+        padding: 5px 0
+
+    .btn-login
+        background: none
+        border: 2px solid #FFF
+        &:hover 
+            background: #FFF
+            color: $blue
+
 .nav-home 
+    transition: all .4s
     display: flex
     flex-direction: row 
-    background: #FFF
     height: 100px
     width: 100% 
+    position: fixed 
+    left: 0
+    top: 0
+    z-index: 500
+    @media screen and (max-width: 768px) 
+        padding: 0 30px
+    @media screen and (min-width: 768px) 
+        padding: 0 100px
+    
     .navbar
         width: 100%
         padding: 0
+
     .navbar-brand
         padding: 0
         img 
@@ -64,6 +110,9 @@ export default {
 
     .navbar-toggler 
         border: none
+        i 
+            color: #FFF
+            font-size: 25px
 
     .navbar-nav 
         @media screen and (min-width: 768px)
@@ -73,8 +122,8 @@ export default {
         justify-content: space-between
 
     .btn-login
-        padding: 15px
+        padding: 10px 15px
         width: 150px
-        border-radius: 50px
+        border-radius: 7px
         font-size: 1em
 </style>

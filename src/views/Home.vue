@@ -10,20 +10,22 @@
 		</b-row>
 		<b-row
 		class="row-banner">
+			<div class="row-banner-gradient"></div>
 			<b-col
 			cols="12"
-			lg="5"
-			md="6">
+			md="8"
+			xl="5">
 				<left-title></left-title>
 			</b-col>
 			<b-col
 			cols="12"
-			lg="5"
-			md="6">
-				<right-video></right-video>
+			md="8"
+			xl="4">
+				<!-- <right-video></right-video> -->
+				<somos-diferentes></somos-diferentes>
 			</b-col>
 		</b-row>
-		<b-row
+		<!-- <b-row
 		class="row-first row-full-heigth">
 			<b-col
 			cols="12"
@@ -37,7 +39,7 @@
 			xl="4">
 				<right-form></right-form>
 			</b-col>
-		</b-row>
+		</b-row> -->
 		<b-row
 		class="row-dark row-full-heigth">
 			<b-col
@@ -55,14 +57,16 @@
 				<clients></clients>
 			</b-col>
 		</b-row>
-		<b-row
+		<!-- <b-row
 		class="row-dark row-full-heigth">
 			<b-col
 			cols="12"
 			xl="10">
 				<plans></plans>
 			</b-col>
-		</b-row>
+		</b-row> -->
+
+		<prices></prices>	
 
 		<footer-component></footer-component>
 
@@ -74,12 +78,14 @@ export default {
 	components: {
 		LeftTitle: () => import('@/components/home/components/banner/LeftTitle'),
 		RightVideo: () => import('@/components/home/components/banner/RightVideo'),
+		SomosDiferentes: () => import('@/components/home/components/banner/SomosDiferentes'),
 		NavComponent: () => import('@/components/home/components/nav/Index'),
 		LeftVideo: () => import('@/components/home/components/LeftVideo'),
 		RightForm: () => import('@/components/home/components/RightForm'),
 		Features: () => import('@/components/home/components/features/Index'),
 		Clients: () => import('@/components/home/components/clients/Index'),
 		Plans: () => import('@/components/home/components/plans/Index'),
+		Prices: () => import('@/components/home/components/prices/Index'),
 		FooterComponent: () => import('@/components/home/components/footer/Index'),
 		BtnWhatsApp: () => import('@/components/home/components/BtnWhatsApp'),
 	}
@@ -90,12 +96,30 @@ export default {
 
 	.row-banner
 		// background: #007bff
-		background: rgb(0,123,255)
-		background: linear-gradient(90deg, rgba(0,123,255,1) 0%, rgba(0,123,255,1) 27%, rgba(155,203,255,1) 100%)
-		@media screen and (max-width: 992px)
-			height: calc(100vh - 100px)
-		@media screen and (min-width: 992px)
-			height: calc(100vh - 100px)
+		// background: rgb(0,123,255)
+		// background: linear-gradient(90deg, rgba(0,123,255,1) 0%, rgba(0,123,255,1) 27%, rgba(155,203,255,1) 100%)
+		background-image: url('~@/assets/banner-programacion.jpg')
+		background-repeat: no-repeat
+		background-size: cover
+		padding-top: 100px
+		height: 100vh
+		// @media screen and (max-width: 992px)
+		// 	height: calc(100vh - 100px)
+		// @media screen and (min-width: 992px)
+			// height: calc(100vh - 100px)
+
+	.row-banner-gradient
+		// margin-top: 100px
+		width: 100% 
+		height: 100% 
+		position: absolute 
+		top: 0 
+		left: 0
+		background: rgb(0,0,0)
+		background: radial-gradient(circle, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 13%, rgba(0,0,0,0.9) 100%, rgba(0,0,0,0.9) 100%)
+		background-attachment: fixed
+		// background: linear-gradient(-50deg,#58c3ff 0,#004de6 40%,#003bb1 100%)
+
 
 	.row-dark
 		background: #F7F7F7

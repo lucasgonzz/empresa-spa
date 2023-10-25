@@ -151,6 +151,8 @@ export default {
 	z-index: 1000
 	background: #444
 	overflow-y: auto
+	-ms-overflow-style: none
+	scrollbar-width: none
 	&::-webkit-scrollbar 
 		display: none
 
