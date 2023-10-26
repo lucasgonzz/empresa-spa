@@ -73,6 +73,18 @@ export default {
 	components: {
 		VueLoadImage,
 	},
+	mounted() {
+		this.$root.$on('bv::modal::show', (bvEvent, modalId) => {
+			if (modalId == 'search-image') {
+				if (this.article.bar_code) {
+					this.query = this.article.bar_code
+				} else {
+					this.query = this.article.name
+				}
+				this.search()
+			}
+		})
+	},
 	data() {
 		return {
 			query: '',

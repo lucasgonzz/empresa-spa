@@ -1,6 +1,6 @@
 <template>
 	<div 
-	class="display-nav"> 
+	class="display-nav m-t-15 m-sm-t-0"> 
 		<div   
 		v-if="change_from_dates_option"
 		:class="isSelectedFromDates(true)"

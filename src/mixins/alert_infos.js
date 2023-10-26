@@ -6,18 +6,18 @@ export default {
         orders() {
             return this.$store.state.order.models 
         },
-        _unconfirmed_orders() {
+        unconfirmed_orders_history() {
             return this.$store.state.order.unconfirmed_models 
         },
         unconfirmed_orders() {
             if (this.has_online) {
-                let _unconfirmed_orders = this._unconfirmed_orders.filter(order => {
-                    return order.order_status.name == 'Sin confirmar'
+                let unconfirmed_orders_history = this.unconfirmed_orders_history.filter(order => {
+                    return order.order_status.name == 'Sin confirmar' && order.buyer
                 })
                 let unconfirmed_orders = this.orders.filter(order => {
-                    return order.order_status.name == 'Sin confirmar'
+                    return order.order_status.name == 'Sin confirmar' && order.buyer
                 })
-                return _unconfirmed_orders.concat(unconfirmed_orders)
+                return unconfirmed_orders_history.concat(unconfirmed_orders)
             }
             return []
         },
@@ -26,8 +26,7 @@ export default {
             	let messages_not_read = []
             	this.$store.state.buyer.models.forEach(model => {
             		model.messages.forEach(message => {
-            			if (message.from_buyer && !message.read) {
-            				// messages_not_read++
+            			if (message.from_buyer && !message.read && message.buyer) {
             				messages_not_read.push(message)
             			}
             		})

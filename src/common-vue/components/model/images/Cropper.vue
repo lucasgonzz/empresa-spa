@@ -11,11 +11,24 @@
 		:src="image_url"
 		:stencil-props="stencil_props"
 		@change="change"/>
-		<btn-loader
-		class="m-t-15"
-		@clicked="uploadImage"
-		:loader="loading"
-		text="Guardar"></btn-loader>
+
+		<b-btn-group
+		class="w-100">
+			<btn-loader
+			:block="false"
+			class="m-t-15"
+			variant="outline-primary"
+			@clicked="uploadImage(false)"
+			:loader="loading_not_cropp"
+			text="Guardar SIN Recortar"></btn-loader>
+			
+			<btn-loader
+			:block="false"
+			class="m-t-15"
+			@clicked="uploadImage(true)"
+			:loader="loading_cropp"
+			text="Guardar"></btn-loader>
+		</b-btn-group>
 	</b-modal>
 </template>
 <script>
@@ -54,26 +67,33 @@ export default {
 	},
 	data() {
 		return {
-			loading: false,
+			loading_cropp: false,
+			loading_not_cropp: false,
 			coordinates: null,
 		}
 	},
 	methods: {
 		change({ coordinates, canvas }) {
 			this.coordinates = coordinates 
-			console.log(this.coordinates)
 		},
-		uploadImage() {
+		uploadImage(cropped) {
 
-			this.loading = true
-			this.$api.post(this.getImageUploadUrl(this.prop), {
-				...this.coordinates,
-				image_url: this.image_url,
-				model_name: this.model_name,
-				model_id: this.model.id,
-			})
+			let params = {}
+			if (cropped) {
+				this.loading_cropp = true
+				params = {
+					...this.coordinates,
+				}
+			} else {
+				this.loading_not_cropp = true
+			}
+			params.image_url = this.image_url,
+			params.model_name = this.model_name,
+			params.model_id = this.model.id,
+			this.$api.post(this.getImageUploadUrl(this.prop), params)
 			.then(res => {
-				this.loading = false
+				this.loading_cropp = false
+				this.loading_not_cropp = false
 				if (this.model_name == 'user') {
 					this.$store.commit('auth/setUser', res.data.model)
 					this.$toast.success('Imagen actualizada')

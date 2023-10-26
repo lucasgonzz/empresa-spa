@@ -1,8 +1,8 @@
 <template>
 	<div
-	class="scroll-buttons">
+	class="nav-scroll-buttons">
 		<div 
-		@click="scrollTo('#plans')"
+		@click="scrollTo('#prices')"
 		class="scroll-button d-none d-lg-block">
 			Precios
 		</div>
@@ -36,7 +36,7 @@ export default {
 }
 </script>
 <style lang="sass">
-.scroll-buttons 
+.nav-scroll-buttons 
 	display: flex
 	@media screen and (max-width: 992px) 
 		flex-direction: column
