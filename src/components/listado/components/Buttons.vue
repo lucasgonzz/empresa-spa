@@ -34,9 +34,9 @@ class="buttons-listado">
 	<b-button 
 	variant="secondary"
 	size="sm"
-	@click.stop="providersHistory()" 
+	@click.stop="stockMovements()" 
 	class="m-l-10">
-		<i class="icon-users"></i>
+		<i class="icon-database"></i>
 	</b-button>
 
 	<!-- Ventas -->
@@ -157,9 +157,9 @@ export default {
 			}
 			return 'danger'
 		},
-		providersHistory() {
+		stockMovements() {
 			this.$store.commit('article/setModel', {model: this.model, properties: []})
-			this.$bvModal.show('providers-history')
+			this.$bvModal.show('stock-movement-modal-info')
 		},
 	}
 }

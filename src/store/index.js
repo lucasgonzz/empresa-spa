@@ -1,6 +1,6 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
-
+ 
 import auth from '@/store/auth'
 import employee from '@/common-vue/store/employee'
 import permission from '@/common-vue/store/permission'
@@ -8,6 +8,7 @@ import general from '@/common-vue/store/general'
 import download_resources from '@/common-vue/store/download_resources'
 import error from '@/common-vue/store/error'
 import belongs_to_many from '@/common-vue/store/belongs_to_many'
+import user from '@/common-vue/store/user'
 
 import article from '@/store/article'
 import brand from '@/store/brand'
@@ -99,6 +100,7 @@ export default new Vuex.Store({
         download_resources,
         error,
         belongs_to_many,
+        user,
         
         article,
         brand,

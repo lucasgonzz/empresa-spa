@@ -2,7 +2,7 @@
 	<div
 	class="w-100">
 		<previus-days
-		v-if="show_previus_days"
+		v-if="show_previus_days_"
 		:model_name="model_name"></previus-days>
 
 		<slot name="display_top"></slot>
@@ -69,6 +69,9 @@ export default {
 		},
 		properties() {
 			return require(`@/models/${this.model_name}`).default.properties 
+		},
+		show_previus_days_() {
+			return this.$store.state[this.model_name].from_dates
 		}
 	},
 	methods: {

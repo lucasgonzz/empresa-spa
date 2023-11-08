@@ -201,6 +201,24 @@ export default {
 			})
 			state.items.splice(index, 1, item)
 		},
+		incrementFilterPage(state) {
+			state.filter_page++
+		},
+		setFilterPage(state, value) {
+			state.filter_page = value 
+		},
+		setTotalFilterPages(state, value) {
+			state.total_filter_pages = value 
+		},
+		setTotalFilterResults(state, value) {
+			state.total_filter_results = value 
+		},
+		addFiltered(state, value) {
+			state.filtered = state.filtered.concat(value)
+		},
+		setLoadingFiltered(state, value) {
+			state.loading_filtered = value 
+		},
 	},
 	actions: {
 		vender({ commit, state }, info) {

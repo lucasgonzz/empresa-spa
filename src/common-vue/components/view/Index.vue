@@ -18,7 +18,8 @@
     	:prop_to_send_on_save="prop_to_send_on_save"
     	:emit_on_saved_instead_continue="emit_on_saved_instead_continue"
     	:not_show_delete_text="not_show_delete_text"
-    	:delete_text="delete_text">
+    	:delete_text="delete_text"
+    	:save_check_function="save_check_function">
     		<template v-slot:model_modal_header="slotProps">
     			<slot name="model_modal_header" :model="slotProps.model"></slot>
     		</template>
@@ -57,6 +58,9 @@
 			</template>
 			<template #options_drop_down>
 				<slot name="options_drop_down"></slot>
+			</template>
+			<template #excel_drop_down_options>
+				<slot name="excel_drop_down_options"></slot>
 			</template>
 		</horizontal-nav>
 	
@@ -222,6 +226,10 @@ export default {
 		set_table_height: {
 			type: Boolean,
 			default: true,
+		},
+		save_check_function: {
+			type: String,
+			default: null,
 		},
 	},
 	computed: {

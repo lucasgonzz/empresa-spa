@@ -22,6 +22,12 @@
 			<template v-slot:table_right_options="slotProps">
 				<slot name="table_right_options" :model="slotProps.model"></slot>
 			</template>
+			<template #btn_add_to_show>
+				<btn-add-to-show
+				v-if="show_btn_add_to_show"
+				:model_name="model_name"
+				@add="addModelsToShow"></btn-add-to-show>
+			</template>
 		</table-component>
 
 		<cards-component
@@ -39,16 +45,11 @@
 			</template>
 		</cards-component>
 
-		<btn-add-to-show
-		@add="add"
-		:models="models"
-		:models_to_show="models_to_show"></btn-add-to-show>
 	</div>
 </template>
 <script>
 import TableComponent from '@/common-vue/components/display/table/Index'
 import CardsComponent from '@/common-vue/components/display/cards/Index'
-import BtnAddToShow from '@/common-vue/components/BtnAddToShow'
 export default {
 	props: {
 		loading: {
@@ -108,7 +109,7 @@ export default {
 	},
 	data() {
 		return {
-			index_to_show: 1,
+			index_to_show: 30,
 		}
 	},
 	computed: {
@@ -128,37 +129,64 @@ export default {
 			return this.$store.state[this.model_name].loading
 		},
 		models_to_show() {
-			if ((this.models.length || this.show_models_if_empty) && !this.is_filtered) {
+			if (this.is_from_models_que_vinieron_por_props) {
 				console.log('return models que vinieron por props')
 				return this.models
 			} else {
-				if (typeof this.is_filtered != 'undefined' && this.is_filtered) {
+				if (this.is_from_filter) {
 					let filtered = this.$store.state[this.model_name].filtered 
 					console.log('return filtered_models')
 					return filtered
 				}  
 				console.log('return store_models')
-				if (this.show_all_models_on_display(this.model_name)) {
-					return this.$store.state[this.model_name].models
-				}
-				return this.$store.state[this.model_name].models.slice(0, this.cant_models_to_show) 
+				// if (this.show_all_models_on_display(this.model_name)) {
+				// 	return this.$store.state[this.model_name].models
+				// }
+				return this.$store.state[this.model_name].models.slice(0, this.index_to_show) 
 			}
+		},
+		is_from_models_que_vinieron_por_props() {
+			return (this.models.length || this.show_models_if_empty) && !this.is_filtered
+		},
+		is_from_filter() {
+			return typeof this.is_filtered != 'undefined' && this.is_filtered
+		},
+		show_btn_add_to_show() {
+			if (this.is_from_models_que_vinieron_por_props) {
+				return false
+			} else if (this.is_from_filter) {
+				return this.filter_page < this.total_filter_pages
+			} else {
+				// console.log('models_to_show: '+this.models_to_show.length)
+				// console.log('state: '+this.$store.state[this.model_name].models.length)
+				return this.models_to_show.length < this.$store.state[this.model_name].models.length
+			}
+		},
+		filter_page() {
+			return this.$store.state[this.model_name].filter_page
+		},
+		total_filter_pages() {
+			return this.$store.state[this.model_name].total_filter_pages
 		},
 	},
 	methods: {
 		clicked(model) {
 			this.$emit('clicked', model)
 		},
-		add() {
-			this.index_to_show++
+		addModelsToShow() {
+			if (this.is_from_filter) {
+				this.$store.dispatch(this.model_name+'/loadMoreFiltered')
+			} else {
+				this.index_to_show += 30
+			}
 		}
 	},
 	components: {
 		ColorInfo: () => import('@/common-vue/components/display/ColorInfo'),
 		LoadPagesInfo: () => import('@/common-vue/components/display/LoadPagesInfo'),
+		BtnAddToShow: () => import('@/common-vue/components/display/BtnAddToShow'),
 		TableComponent,
 		CardsComponent,
-		BtnAddToShow,
 	}
 }
 </script>

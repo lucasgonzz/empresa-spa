@@ -161,18 +161,23 @@ export default {
 			this.props = this.propsToFilterInModal(this.model_name)
 		},
 		search() {
+			this.$store.commit(this.model_name+'/setFilterPage', 1)
 			this.$store.commit(this.model_name+'/setFilters', this.filters)
 			this.$store.commit(this.model_name+'/setLoading', true)
 			this.$store.commit(this.model_name+'/setFromDate', '')
 			this.$bvModal.hide('filter-modal')
-			this.$api.post('search/'+this.model_name, {
+			this.$api.post('search/'+this.model_name+'/null/1', {
 				props: this.props,
 				filters: this.filters,
 			})
 			.then(res => {
+				console.log('RRES')
+				console.log(res.data.data)
 				this.$store.commit(this.model_name+'/setLoading', false)
 				this.$store.commit(this.model_name+'/setIsFiltered', true) 
-				this.$store.commit(this.model_name+'/setFiltered', res.data.models)
+				this.$store.commit(this.model_name+'/setFiltered', res.data.data)
+				this.$store.commit(this.model_name+'/setTotalFilterPages', res.data.last_page)
+				this.$store.commit(this.model_name+'/setTotalFilterResults', res.data.total)
 				this.clearFilter()
 			})
 			.catch(err => {

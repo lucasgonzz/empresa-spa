@@ -1,6 +1,34 @@
 import dates from '@/common-vue/mixins/dates'
 export default {
 	methods: {
+        checkOrderArticlesAddresses() {
+            let ok = true
+            let order = this.$store.state.order.model 
+            order.articles.forEach(order_article => {
+                let store_article = this.$store.state.article.models.find(_article => {
+                    return _article.id == order_article.id 
+                })
+                if (store_article.addresses.length && !order_article.pivot.address_id) {
+                    this.$toast.error('Indique deposito para el articulo '+order_article.name)
+                    ok = false 
+                } 
+            })
+            return ok
+        },
+        checkProviderOrderArticlesAddresses() {
+            let ok = true
+            let provider_order = this.$store.state.provider_order.model 
+            provider_order.articles.forEach(order_article => {
+                let store_article = this.$store.state.article.models.find(_article => {
+                    return _article.id == order_article.id 
+                })
+                if (store_article.addresses.length && order_article.pivot.address_id == 0) {
+                    this.$toast.error('Indique deposito para el articulo '+order_article.name)
+                    ok = false 
+                } 
+            })
+            return ok
+        },
 		getFunctionValue(prop, model) {
 			return this[prop.function](model)
 		},

@@ -1,19 +1,20 @@
 <template>
 	<div
 	class="j-end p-t-10 p-b-10 p-r-5"
-	v-if="authenticated">
+	v-if="authenticated && alerts > 0">
 		<modal-alert></modal-alert>
-
-		<b-button 
-		variant="danger"
-		v-if="alerts > 0"
-		v-b-modal="'modal-alert'"
-		class="apretable">
-			<strong>
-				<i class="icon-info"></i>
-				{{ alerts }}
-			</strong>
-		</b-button>
+		<div
+		v-b-modal="'modal-alert'" 
+		class="route">
+			Alertas
+			<b-button 
+			variant="danger"
+			class="apretable">
+				<strong>
+					{{ alerts }}
+				</strong>
+			</b-button>
+		</div>
 	</div>
 </template>
 <script>

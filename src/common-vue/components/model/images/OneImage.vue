@@ -99,6 +99,7 @@ export default {
 			this.$bvModal.show('delete-'+this.model_name+'-image-'+this.prop.key)
 		},
 		deleteFromHasMany() {
+			console.log('deleteFromHasMany')
 			if (this.has_many_parent_model) {
 				let model = this.has_many_parent_model[this.has_many_prop.key].find(_model => {
 					return _model.id == this.model.id 
@@ -108,10 +109,6 @@ export default {
 				this.actions.forEach(action => {
 					console.log('dispatch '+action)
 					this.$store.dispatch(action)
-					// .then(() => {
-					// 	console.log('se emitio')
-					// 	this.setModel(this.model, this.model_name)
-					// })
 				})
 				this.$bvModal.hide(this.model_name)
 			}

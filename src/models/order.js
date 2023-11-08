@@ -79,6 +79,12 @@ export default {
 				can_not_modify: true,
 				props_to_show: [
 					{
+						text: 'Imagen',
+						key: 'images',
+						type: 'images',
+						show: true,
+					},
+					{
 						text: 'Nombre',
 						key: 'name',
 						type: 'textarea',
@@ -111,13 +117,27 @@ export default {
 						is_price: true,
 						show: true,
 					},
+				],
+				properties_to_set: [
 					{
 						text: 'Cantidad',
 						key: 'amount',
 						type: 'number',
 						show: true,
 					},
+					{
+						text: 'Deposito',
+						key: 'address_id',
+						value: 0,
+						v_if: {
+							b_t_many_model_prop: 'addresses',
+							check_array_length: true,
+							check_on_store_models: 'article',
+						},
+						type: 'select'
+					},
 				]
+
 			}
 		},
 		{

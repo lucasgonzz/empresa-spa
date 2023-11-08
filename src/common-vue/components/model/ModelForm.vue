@@ -56,6 +56,7 @@
 									@setSelected="setSelected"
 									:model_name="modelNameFromRelationKey(prop)"
 									:model="model"
+									:model_name_for_search_on_models="model_name"
 									show_btn_create
 									:clear_query="clearQuery(prop)" 
 									:save_if_not_exist="saveIfNotExist(prop)"

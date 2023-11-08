@@ -26,4 +26,7 @@ export default {
 }
 </script>
 <style lang="sass">
+.chats-container
+	max-height: calc(100vh - 100px)
+	overflow-y: auto 
 </style>

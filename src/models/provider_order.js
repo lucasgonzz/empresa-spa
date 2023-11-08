@@ -12,10 +12,12 @@ export default {
 			type: 'search',
 			value: 0,
 			is_title: true,
+			required: true,
 		},
 		{
 			text: 'Articulos',
 			store: 'article',
+			search_on_models_by: 'name',
 			type: 'search',
 			key: 'articles',
 			belongs_to_many: {
@@ -65,6 +67,17 @@ export default {
 						key: 'received_cost',
 						value: '',
 						type: 'number'
+					},
+					{
+						text: 'Deposito',
+						key: 'address_id',
+						value: 0,
+						v_if: {
+							b_t_many_model_prop: 'addresses',
+							check_array_length: true,
+							check_on_store_models: 'article',
+						},
+						type: 'select'
 					},
 					{
 						text: 'Costo en dolares',

@@ -63,6 +63,10 @@ export default {
 						key: 'returned_amount',
 					},
 					{
+						text: 'U/E',
+						key: 'delivered_amount',
+					},
+					{
 						text: 'Descuento',
 						key: 'discount',
 					},

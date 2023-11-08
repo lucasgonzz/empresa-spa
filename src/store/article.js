@@ -35,6 +35,10 @@ export default {
 		filters: [],
 		filtered: [],
 		is_filtered: false,
+		filter_page: 1,
+		total_filter_pages: null,
+		total_filter_results: 0,
+		loading_filtered: false,
 
 		delete: null,
 		delete_image_prop: null,
@@ -236,7 +240,25 @@ export default {
 					}
 				}
 			})
-		}
+		},
+		incrementFilterPage(state) {
+			state.filter_page++
+		},
+		setFilterPage(state, value) {
+			state.filter_page = value 
+		},
+		setTotalFilterPages(state, value) {
+			state.total_filter_pages = value 
+		},
+		setTotalFilterResults(state, value) {
+			state.total_filter_results = value 
+		},
+		addFiltered(state, value) {
+			state.filtered = state.filtered.concat(value)
+		},
+		setLoadingFiltered(state, value) {
+			state.loading_filtered = value 
+		},
 	},
 	actions: {
 		getModels({commit, state, dispatch}) {
@@ -327,6 +349,21 @@ export default {
 			.catch(err => {
 				commit('setLoading', false)
 				console.log(err)
+			})
+		},
+		loadMoreFiltered({state, commit}) {
+			commit('setLoadingFiltered', true)
+			commit('incrementFilterPage')
+			return axios.post(`/api/search/${generals.methods.routeString(state.model_name)}/null/1?page=${state.filter_page}`, {
+				filters: state.filters,
+			})
+			.then(res => {
+				commit('setLoadingFiltered', false)
+				commit('addFiltered', res.data.data)
+			})
+			.catch(err => {
+				console.log(err)
+				commit('setLoadingFiltered', false)
 			})
 		},
 		getDeletedModels({state, commit}) {

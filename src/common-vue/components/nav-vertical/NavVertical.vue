@@ -181,7 +181,7 @@ export default {
 		transition: all .2s
 		&:hover 
 			background: $blue 
-			border-radius: 0 5px 5px 0
+			// border-radius: 0 5px 5px 0
 			span 
 				transition: all .2s 
 				transform: scale(1.2)

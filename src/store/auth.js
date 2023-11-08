@@ -65,6 +65,24 @@ export default {
 		setScheduleEdit(state, value) {
 			state.schedule_edit = value
 		},
+		incrementFilterPage(state) {
+			state.filter_page++
+		},
+		setFilterPage(state, value) {
+			state.filter_page = value 
+		},
+		setTotalFilterPages(state, value) {
+			state.total_filter_pages = value 
+		},
+		setTotalFilterResults(state, value) {
+			state.total_filter_results = value 
+		},
+		addFiltered(state, value) {
+			state.filtered = state.filtered.concat(value)
+		},
+		setLoadingFiltered(state, value) {
+			state.loading_filtered = value 
+		},
 	},
 	actions: {
 		me({commit}) {
@@ -97,7 +115,17 @@ export default {
             .catch(err => {
                 console.log(err)
             })
-		}
+		},
+		deleteImage({ commit, state }) {
+			// return axios.delete(`/api/delete-current-image/user/${state.user.id}`)
+			return axios.delete(`/api/delete-image-prop/user/${state.user.id}/image_url`)
+			.then((res) => {
+				commit('setUser', res.data.model)
+			})
+			.catch((err) => {
+				console.log(err)
+			})
+		},
 	},
 	modules: {
 	}

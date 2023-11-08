@@ -113,12 +113,12 @@ export default {
 			}
 			return false
 		},
-		cant_models_to_show() {
-			if (typeof process.env.VUE_APP_CANT_MODELS_TO_SHOW != 'undefined') {
-				return process.env.VUE_APP_CANT_MODELS_TO_SHOW
-			}
-			return 40
-		},
+		// cant_models_to_show() {
+		// 	if (typeof process.env.VUE_APP_CANT_MODELS_TO_SHOW != 'undefined') {
+		// 		return process.env.VUE_APP_CANT_MODELS_TO_SHOW
+		// 	}
+		// 	return 40
+		// },
 		is_mobile() {
 			if (this.$vssWidth < '992') {
 				return true
@@ -132,6 +132,28 @@ export default {
 		}, 
 	},
 	methods: {
+		getOriginalModel(model_name, model){
+			return this.$store.state[model_name].models.find(model_ => {
+				return model_.id == model.id 
+			}) 
+		},
+		removeRelationFiltered(model_name, model, relation) {
+			let original_model = this.getOriginalModel(model_name, model)
+
+			let updated_relations = model[relation]
+
+			model[relation] = original_model[relation]
+
+			updated_relations.forEach(updated_relation => {
+				let index = model[relation].findIndex(_relation => {
+					return _relation.id == updated_relation.id 
+				})
+				model[relation].splice(index, 1, updated_relation)
+			})
+
+			this.setModel(model, model_name, [], false)
+			this.$store.commit(model_name+'/removeRelationFiltered', relation)
+		},
 		show_all_models_on_display(model_name) {
 			let show_all_models_on_display = require('@/models/'+model_name).default.show_all_models_on_display
 			if (typeof show_all_models_on_display != 'undefined' && !show_all_models_on_display) {

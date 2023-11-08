@@ -50,7 +50,11 @@
 					v-if="show_excel_drop_down"
 					:check_permissions="check_permissions"
 					:can_create="can_create"
-					:model_name="model_name"></excel-drop-down>
+					:model_name="model_name">
+						<template #excel_drop_down_options>
+							<slot name="excel_drop_down_options"></slot>
+						</template>
+					</excel-drop-down>
 
 					<btn-create
 					v-else-if="show_btn_create && can_create"
@@ -224,6 +228,7 @@ export default {
 		restartSearch() {
 			this.$store.commit(this.model_name+'/setIsFiltered', false)
 			this.$store.commit(this.model_name+'/setFiltered', [])
+			this.$store.commit(this.model_name+'/setFilterPage', 1)
 		},
 		setDisplay(display) {
 			this.$emit('setDisplay', display)

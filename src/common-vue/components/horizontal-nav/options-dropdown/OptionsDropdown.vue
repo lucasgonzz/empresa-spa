@@ -28,7 +28,7 @@ export default {
 	computed: {
 		text_dropdown() {
 			if (this.from_filter) {
-				return this.$store.state[this.model_name].filtered.length+' filtrados'
+				return this.$store.state[this.model_name].total_filter_results+' filtrados'
 			}
 			return this.$store.state[this.model_name].selected.length+' seleccionados'
 		},

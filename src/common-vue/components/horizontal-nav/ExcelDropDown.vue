@@ -27,6 +27,7 @@
 			<i class="icon-download"></i>
 			Importar {{ plural(model_name) }}
 		</b-dropdown-item>
+		<slot name="excel_drop_down_options"></slot>
 	</b-dropdown>
 </template>
 <script>

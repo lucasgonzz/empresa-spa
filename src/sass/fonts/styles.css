@@ -305,3 +305,9 @@
 .icon-external-link:before {
   content: "\60";
 }
+.icon-lock-1:before {
+  content: "\7b";
+}
+.icon-database:before {
+  content: "\7d";
+}

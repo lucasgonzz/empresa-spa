@@ -76,9 +76,16 @@ export default {
 			if (prop.v_if) {
 				if (prop.v_if.b_t_many_model_prop) {
 					if (prop.v_if.check_array_length) {
-						console.log('se va a chequear el model:')
-						console.log(this.model)
-						return this.model[prop.v_if.b_t_many_model_prop].length 
+						let model = this.model
+						if (prop.v_if.check_on_store_models) {
+							console.log('buscando model para checkprop desde store')
+							model = this.$store.state[prop.v_if.check_on_store_models].models.find(_model => {
+								return _model.id == this.model.id 
+							})
+						}
+						console.log('model:')
+						console.log(model)
+						return model[prop.v_if.b_t_many_model_prop].length 
 					}
 				}
 			}

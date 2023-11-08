@@ -47,21 +47,23 @@ export default {
 	},
 	methods: {
 		updateStatus() {
-			this.loading = true
-			this.$api.put(`/order/update-status/${this.model.id}`, {
-				order_status_id: this.getStatusId()
-			})
-			.then(res => {
-				this.loading = false
-				// this.$store.dispatch('online/messages/getMessages', this.model.buyer_id)
-				this.$store.commit('order/add', res.data.model)
-				// this.$store.commit('order/setToShow')
-				this.$bvModal.hide('order')
-			})
-			.catch(err => {
-				this.loading = false
-				console.log(err)
-			})
+			if (this.checkOrderArticlesAddresses()) {
+				this.loading = true
+				this.$api.put(`/order/update-status/${this.model.id}`, {
+					order_status_id: this.getStatusId()
+				})
+				.then(res => {
+					this.loading = false
+					// this.$store.dispatch('online/messages/getMessages', this.model.buyer_id)
+					this.$store.commit('order/add', res.data.model)
+					// this.$store.commit('order/setToShow')
+					this.$bvModal.hide('order')
+				})
+				.catch(err => {
+					this.loading = false
+					console.log(err)
+				})
+			}
 		},
 		getStatusId() {
 			let name 

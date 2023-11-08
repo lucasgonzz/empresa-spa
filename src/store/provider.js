@@ -12,7 +12,7 @@ export default {
 		is_selecteable: false,
 		not_download_on_mobile: true,
 
-		use_per_page: false,
+		use_per_page: true,
 		// Se usa cuando es belongs_to_many_from_dates. Por ejemplo para ver los pagos de un cliente
 		// plural_model_name: '',
 		// selected_model: null,
@@ -23,7 +23,7 @@ export default {
 		until_date: '',
 
 		page: 1,
-		per_page: 25,
+		per_page: 100,
 		total_pages: 1, 
 
 		models: [],
@@ -31,6 +31,10 @@ export default {
 		selected: [],
 		filtered: [],
 		is_filtered: false,
+		filter_page: 1,
+		total_filter_pages: null,
+		total_filter_results: 0,
+		loading_filtered: false,
 
 		delete: null,
 		delete_image_prop: null,
@@ -173,6 +177,24 @@ export default {
 		},
 		setUntilDate(state, value) {
 			state.until_date = value
+		},
+		incrementFilterPage(state) {
+			state.filter_page++
+		},
+		setFilterPage(state, value) {
+			state.filter_page = value 
+		},
+		setTotalFilterPages(state, value) {
+			state.total_filter_pages = value 
+		},
+		setTotalFilterResults(state, value) {
+			state.total_filter_results = value 
+		},
+		addFiltered(state, value) {
+			state.filtered = state.filtered.concat(value)
+		},
+		setLoadingFiltered(state, value) {
+			state.loading_filtered = value 
 		},
 	},
 	actions: {

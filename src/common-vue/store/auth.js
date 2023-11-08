@@ -69,7 +69,8 @@ export default {
             })
 		},
 		deleteImage({ commit, state }) {
-			return axios.delete(`/api/delete-current-image/user/${state.user.id}`)
+			// return axios.delete(`/api/delete-current-image/user/${state.user.id}`)
+			return axios.delete(`/api/delete-image-prop/user/${state.user.id}/image_url`)
 			.then((res) => {
 				commit('setUser', res.data.model)
 			})

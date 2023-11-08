@@ -22,7 +22,8 @@
 				</p>
 			</div>
 
-			<p>
+			<p
+			v-if="owner.plan">
 				Licencia de uso para tu plan {{ owner.plan.name }}: <strong>USD {{ owner.plan.price }}</strong>
 			</p>
 			<div

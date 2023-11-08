@@ -2,11 +2,7 @@ import axios from 'axios'
 export default {
 	namespaced: true,
 	state: {
-		dolar: {
-			compra: 0,
-			venta: 0,
-			promedio: 0,
-		},
+		promedio: 0,
 	},
 	mutations: {
 		setPromedio(state, value) {
@@ -24,6 +20,24 @@ export default {
 		// 	console.log('dolar:')
 		// 	console.log(state.dolar)
 		// },
+		incrementFilterPage(state) {
+			state.filter_page++
+		},
+		setFilterPage(state, value) {
+			state.filter_page = value 
+		},
+		setTotalFilterPages(state, value) {
+			state.total_filter_pages = value 
+		},
+		setTotalFilterResults(state, value) {
+			state.total_filter_results = value 
+		},
+		addFiltered(state, value) {
+			state.filtered = state.filtered.concat(value)
+		},
+		setLoadingFiltered(state, value) {
+			state.loading_filtered = value 
+		},
 	},
 	actions: {
 		getDolar({ commit }) {

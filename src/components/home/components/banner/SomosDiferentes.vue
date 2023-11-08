@@ -4,6 +4,7 @@
 		<h3>
 			Conoce lo que nos hace <strong>UNICOS</strong>
 		</h3>
+
 		<div 
 		@click="scrollTo('#prices')"
 		class="button m-t-15">
@@ -29,6 +30,10 @@ export default {
 	flex-direction: column
 	justify-content: center
 	align-items: center
+
+	img 
+		width: 600px
+
 	h3 
 		color: #FFF
 		strong	

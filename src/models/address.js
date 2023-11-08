@@ -8,6 +8,13 @@ export default {
 			use_in_select: true,
 			is_title: true,
 		},
+		{
+			text: 'Deposito por defecto',
+			key: 'default_address',
+			type: 'checkbox',
+			value: 0,
+			description: 'Si se marca, este deeposito se ofrecera como opcion por defecto a la hora de indicar el deposito para cualquier articulo',
+		},
 	],
 	singular_model_name_spanish: 'Direccion',
 	plural_model_name_spanish: 'Direcciones',

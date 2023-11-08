@@ -9,6 +9,7 @@
 		order_list_by="provider_order_status"
 		change_from_dates_option
 		:show_previus_days="show_previus_days"
+		save_check_function="checkProviderOrderArticlesAddresses"
 		show_filter_modal>
 		</view-component>
 	</div>

@@ -36,6 +36,10 @@ class="m-l-0 m-sm-l-15 m-t-10 m-b-10 m-md-b-0 m-md-t-0">
 export default {
 	computed: {
 		articles() {
+			if (this.$store.state.article.is_filtered) {
+				console.log('sumando precios de filtrados')
+				return this.$store.state.article.filtered
+			}
 			return this.$store.state.article.models
 		},
 		total() {

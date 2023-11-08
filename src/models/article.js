@@ -226,7 +226,7 @@ export default {
 		},
 		{
 			text: 'iva',
-			key: 'iva_id',
+			key: 'iva_id', 
 			type: 'select',
 			use_store_models: true,
 			use_to_show_in_search_modal: true,
@@ -254,18 +254,34 @@ export default {
 		{
 			text: 'Stock por direccion',
 			key: 'addresses',
+			only_show: true,
 			type: 'search',
 			store: 'address',
 			belongs_to_many: {
 				model_name: 'address',
-				properties_to_set: [
+				props_to_show: [
+					{
+						text: 'Deposito',
+						key: 'street',
+					},
+				],
+				pivot_props_to_show: [
 					{
 						text: 'Cantidad',
 						key: 'amount',
-						type: 'number',
 					},
 				],
 			},
+			not_show: true,
+		},
+		{
+			text: 'Movimientos de Stock',
+			type: 'button',
+			button: {
+				button_text: 'Mover stock entre depositos',
+				variant: 'primary',
+			},
+			modal: 'address-movement',
 			not_show: true,
 		},
 		// {

@@ -192,6 +192,10 @@ export default {
 			type: String,
 			default: null,
 		},
+		save_check_function: {
+			type: String,
+			default: null,
+		},
 	},
 	components: {
 		Confirm,
@@ -409,7 +413,19 @@ export default {
 					}
 				} 
 			})
+			this.checkRelationsFiltered()
+			if (this.save_check_function) {
+				ok = this[this.save_check_function]()
+			}
 			return ok
+		},
+		checkRelationsFiltered() {
+			let relations_filtered = this.$store.state[this.model_name].relations_filtered
+			if (typeof relations_filtered != 'undefined' && relations_filtered.length) {
+				relations_filtered.forEach(relation_filtered => {
+					this.removeRelationFiltered(this.model_name, this.model, relation_filtered)
+				})
+			}
 		},
 		callActions(model) {
 			this.actions_after_save.forEach(action => {

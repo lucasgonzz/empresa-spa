@@ -31,6 +31,10 @@ export default {
 		selected: [],
 		filtered: [],
 		is_filtered: false,
+		filter_page: 1,
+		total_filter_pages: null,
+		total_filter_results: 0,
+		loading_filtered: false,
 
 		delete: null,
 		delete_image_prop: null,
@@ -179,6 +183,24 @@ export default {
 		},
 		setFromDates(state, value) {
 			state.from_dates = value
+		},
+		incrementFilterPage(state) {
+			state.filter_page++
+		},
+		setFilterPage(state, value) {
+			state.filter_page = value 
+		},
+		setTotalFilterPages(state, value) {
+			state.total_filter_pages = value 
+		},
+		setTotalFilterResults(state, value) {
+			state.total_filter_results = value 
+		},
+		addFiltered(state, value) {
+			state.filtered = state.filtered.concat(value)
+		},
+		setLoadingFiltered(state, value) {
+			state.loading_filtered = value 
 		},
 	},
 	actions: {

@@ -42,6 +42,27 @@
 					v-model="query"
 					:placeholder="_placeholder"></b-form-input>
 				</div>
+				<div 
+				v-if="prop && prop.search_on_models_by"
+				class="cont-search-on-models">
+					<div
+					class="m-r-10 icon"
+					v-if="on_models_searched"
+					@click="resetModels">
+						<i class="icon-redo"></i>
+					</div>
+					<div 
+					v-else
+					:class="is_disabled ? 'bg-gray' : 'bg-withe'"
+					class="icon">
+						<i class="icon-search"></i>
+					</div>
+					<b-form-input
+					class="input-search"
+					@keyup="searchOnModels"
+					v-model="search_query"
+					:placeholder="_placeholder_search"></b-form-input>
+				</div>
 			</div>
 		</div>
 		<selected-info
@@ -127,10 +148,15 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+		model_name_for_search_on_models: {
+			type: String,
+			default: null,
+		},
 	},
 	data() {
 		return {
 			query: '',
+			search_query: '',
 			models_to_search: [],
 			preview_results: [],
 			selected_model: null,
@@ -142,7 +168,10 @@ export default {
 			if (this.placeholder) {
 				return this.placeholder
 			}
-			return 'Buscar '+this.singular(this.model_name)
+			return 'Agregar '+this.singular(this.model_name)
+		},
+		_placeholder_search() {
+			return 'Buscar dentro de '+this.plural(this.model_name)
 		},
 		is_disabled() {
 			if (this.prop && this.prop.only_show) {
@@ -150,16 +179,55 @@ export default {
 			}
 			return false
 		},
+		on_models_searched() {
+			let relations_filtered = this.$store.state[this.model_name_for_search_on_models].relations_filtered
+			if (typeof relations_filtered != 'undefined') {
+				let finded = relations_filtered.find(relation => {
+					return relation == this.prop.key
+				})
+				console.log('on_models_searched')
+				console.log(typeof finded != 'undefined')
+				return typeof finded != 'undefined'
+			}			
+			return false
+		}
 	},
 	watch: {
 		model() {
+			console.log('cambio model en search')
 			this.setSelectedModelProp()
 		},
+		index_to_update() {
+			console.log('cambio index_to_update en search')
+			this.setSelectedModelProp()
+		}
 	},
 	created() {
 		this.setSelectedModelProp()
+		this.$parent.$on('updateSearch', this.updateSearch())
 	},
 	methods: {
+		searchOnModels() {
+			if (this.prop && this.search_query.length > 1) {
+				this.resetModels(false)
+				let results = this.getOriginalModel(this.model_name_for_search_on_models, this.model)[this.prop.key].filter(model => {
+					return model[this.prop.search_on_models_by].toLowerCase().includes(this.search_query.toLowerCase())
+				})
+				this.$set(this.model, this.prop.key, results)
+				this.setModel(this.model, this.model_name_for_search_on_models, [], false)
+				this.$store.commit(this.model_name_for_search_on_models+'/addRelationFiltered', this.prop.key)
+			}
+		},
+		resetModels(clear_query = true) {
+			this.removeRelationFiltered(this.model_name_for_search_on_models, this.model, this.prop.key)
+			if (clear_query) {
+				this.search_query = ''
+			}
+		},
+		updateSearch() {
+			console.log('updateSearch en child')
+			this.setSelectedModelProp()
+		},
 		setNotShowModel(value) {
 			this.not_show_modal = value
 		},
@@ -243,11 +311,17 @@ export default {
 		setSelectedModelProp() {
 			console.log('setSelectedModelProp para '+this.model_name)
 			if (this.show_selected) {
+				console.log('------ entrooooo primero')
+				console.log('model')
+				console.log(this.model)
+				console.log('prop')
+				console.log(this.prop)
 				if (this.prop && this.prop.set_model_on_click_or_prop_with_query_if_null) {
 					console.log(this.prop.key+' ENTRO EN 1')
 					this.query = this.model[this.prop.key]
 					this.selected_model = null
 				} else if (this.model && this.prop && this.model[this.prop.key]) {
+					console.log('entroooooo---------')
 					if (this.prop.use_store_models) {
 						let model = this.$store.state[this.modelNameFromRelationKey(this.prop)].models.find(_model => {
 							return _model.id == this.model[this.prop.key]
@@ -269,6 +343,7 @@ export default {
 					console.log(this.prop.key+' ENTRO EN 5')
 					this.selected_model = null
 				}
+				console.log('sigue por aca')
 			} 
 			if (this.clear_query_on_model_change) {
 				console.log('clear_query_on_model_change')
@@ -319,6 +394,17 @@ export default {
 		box-shadow: 0 2px 4px rgb(0 0 0 / 15%) !important
 		border: 1px solid #ced4da
 		border-radius: 0.25rem 
+
+	.cont-search-on-models
+		width: 40%
+		position: relative
+		display: flex
+		flex-direction: row
+		box-shadow: 0 2px 4px rgb(0 0 0 / 15%) !important
+		border: 1px solid #ced4da
+		border-radius: 0.25rem 
+		margin-left: 15px
+
 	.icon 
 		background: #FFF
 		width: 40px

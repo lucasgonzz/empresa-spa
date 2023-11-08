@@ -150,6 +150,7 @@ export default {
 		onRowSelected(model) {
 			if (this.select_mode == 'single') {
 				this.$emit('onRowSelected', model)
+				console.log('se emitio onRowSelected desde tr')
 				if (this.set_model_on_row_selected) {
 					this.setModel(model, this.model_name)
 				}

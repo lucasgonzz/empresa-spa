@@ -17,6 +17,9 @@
 	<article-used-in-recipes></article-used-in-recipes>
 	<article-variants></article-variants>
 	<providers-history></providers-history>
+	<stock-movement></stock-movement>
+	<address-movement></address-movement>
+	<stock-movement-modal-info></stock-movement-modal-info>
 
 	<stock-info></stock-info>
 
@@ -24,7 +27,11 @@
 	show_filter_modal
 	ask_selectable
 	show_excel_drop_down
+	@addressMovement="addressMovement"
 	model_name="article">
+		<template #excel_drop_down_options>
+			<clients-excel></clients-excel>
+		</template>
 		<template #horizontal_nav_center>
 			<stock-info-buttons></stock-info-buttons>
 		</template>
@@ -38,6 +45,9 @@
 		</template>
 		<template #name>
 			<name-input></name-input> 
+		</template>
+		<template #stock>
+			<stock-input></stock-input> 
 		</template>
 	</view-component>
 	
@@ -66,6 +76,7 @@ export default {
 	components: {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 		Import: () => import('@/components/listado/modals/import/Index'),
+		ClientsExcel: () => import('@/components/listado/components/ClientsExcel'),
 		StockInfoButtons: () => import('@/components/listado/components/StockInfoButtons'),
 		Buttons: () => import('@/components/listado/components/Buttons'),
 		Charts: () => import('@/components/listado/modals/article-charts/Index'),
@@ -73,7 +84,11 @@ export default {
 		ArticleUsedInRecipes: () => import('@/components/listado/modals/article-used-in-recipes/Index'),
 		ArticleVariants: () => import('@/components/listado/modals/article-variants/Index'),
 		ProvidersHistory: () => import('@/components/listado/modals/providers-history/Index'),
+		StockMovement: () => import('@/components/listado/modals/stock-movement/Index'),
+		AddressMovement: () => import('@/components/listado/modals/address-movement/Index'),
+		StockMovementModalInfo: () => import('@/components/listado/modals/stock-movement-modal-info/Index'),
 		NameInput: () => import('@/components/listado/components/NameInput'),
+		StockInput: () => import('@/components/listado/components/StockInput'),
 		StockInfo: () => import('@/components/listado/modals/stock-info/Index'),
 		ArticleTicketOptionDropDown: () => import('@/components/listado/components/ArticleTicketOptionDropDown'),
 		ArticlesPdfOptionDropDown: () => import('@/components/listado/components/ArticlesPdfOptionDropDown'),
@@ -82,5 +97,10 @@ export default {
 		this.$store.commit('article/setSelected', [])
 		next()
 	},
+	methods: {
+		addressMovement() {
+			console.log('addressMovement')
+		}
+	}
 }
 </script>

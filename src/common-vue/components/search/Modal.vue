@@ -316,7 +316,7 @@ export default {
 				this.saving_if_not_exist = false
 				this.$toast.success(this.singular(this.model_name)+' creado')
 				this.$emit('setSelected', res.data.model)
-				if (this.prop.belongs_to_many && this.prop.belongs_to_many.save_if_not_exist && this.prop.belongs_to_many.save_if_not_exist.not_add_to_store_models) {
+				if (this.prop && this.prop.belongs_to_many && this.prop.belongs_to_many.save_if_not_exist && this.prop.belongs_to_many.save_if_not_exist.not_add_to_store_models) {
 				} else {
 					this.$store.commit(this.model_name+'/add', res.data.model)
 				}

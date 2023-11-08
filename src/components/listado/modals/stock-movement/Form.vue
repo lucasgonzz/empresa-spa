@@ -1,0 +1,150 @@
+<template>
+	<div>
+		<b-form-group
+		label="Cantidad">
+			<b-form-input
+			v-model="amount_"
+			placeholder="Ingrese cantidad"></b-form-input>
+		</b-form-group>
+
+		<b-form-group
+		v-if="amount_ >= 1"
+		label="Proveedor">
+			<search-component
+			ref="search_component"
+			:model="article"
+			:prop="{key: 'provider_id', text: 'Proveedor', use_store_models: true}"
+			id="stock-movement-search-povider"
+			@setSelected="setSelectedProvider"
+			model_name="provider"
+			show_btn_create
+			clear_query 
+			save_if_not_exist
+			auto_select></search-component>
+		</b-form-group>
+
+
+
+		<b-form-group
+		v-if="addresses.length"
+		label="Deposito DESTINO">
+			<b-form-select
+			v-model="to_address_id"
+			:options="getOptions({key: 'to_address_id', text: 'Deposito', store: 'address'})"></b-form-select>
+		</b-form-group>
+
+		<b-form-group
+		label="Observaciones">
+			<b-form-textarea
+			v-model="observations"
+			placeholder="Ingerse alguna observacion..."></b-form-textarea>
+		</b-form-group>
+
+		<btn-loader
+		@clicked="save"
+		:loader="loading"
+		text="Guardar"></btn-loader>
+	</div>
+</template>
+<script>
+import { ref } from 'vue'
+export default {
+	components: {
+		SearchComponent: () => import('@/common-vue/components/search/Index'),
+		BtnLoader: () => import('@/common-vue/components/BtnLoader'),
+	},
+	computed: {
+		article() {
+			return this.$store.state.article.model 
+		},
+		addresses() {
+			return this.$store.state.address.models
+		},
+		providers() {
+			return this.$store.state.provider.models
+		},
+	},
+	data() {
+		return {
+			to_address_id: 0,
+			amount_: '',
+			observations: '',
+			loading: false,
+		}
+	},
+	created() {
+		this.$root.$on('bv::modal::show', (bvEvent, modal_id) => {
+			if (modal_id == 'stock-movement') {
+				this.setDefaultAddress() 
+			}
+		})
+	},
+	methods: {
+		setSelectedProvider(result) {
+			this.$set(this.article, 'provider', result.model)
+			this.article.provider_id = result.model.id
+		},
+		save() {
+			if (this.check()) {
+				this.loading = true 
+				this.$api.post('stock-movement', {
+					model_id: this.article.id, 
+					amount: this.amount_,
+					observations: this.observations,
+					provider_id: this.article.provider_id,
+					to_address_id: this.to_address_id,
+				})
+				.then(res => {
+					this.loading = false 
+					this.$toast.success('Movimiento guardado')
+					this.$bvModal.hide('stock-movement') 
+					this.setTemporalId(res.data.model)
+					if (this.article.id) {
+						this.$bvModal.hide('article') 
+					}
+					this.article.stock = this.amount_
+				})
+				.catch(err => {
+					this.loading = false 
+					console.log(err)
+				})
+			}
+		},
+		check() {
+			if (this.article.addresses.length && this.to_address_id == 0) {
+				this.$toast.error('Indique el deposito')
+				return false 
+			}
+			return true
+		},
+		setTemporalId(created_stock_movement) {
+			if (!this.article.id) {
+				if (!this.article.childrens) {
+					this.$set(this.article, 'childrens', [])
+				}
+				let new_childrens = [{
+					model_name: 'stock_movement',
+					temporal_id: created_stock_movement.temporal_id
+				}]
+				this.$set(this.article, 'childrens', this.article.childrens.concat(new_childrens))
+				console.log('childrens:')
+				console.log(this.article.childrens)
+			}
+		},
+		setDefaultAddress() {
+			console.log('setDefaultAddress')
+			if (this.to_address_id == 0) {
+				let default_address = this.$store.state.address.models.find(model => {
+					return model.default_address
+				})
+				if (typeof default_address != 'undefined') {
+					this.to_address_id = null 
+					this.to_address_id = default_address.id 
+					console.log('to_address_id')
+					console.log(this.to_address_id)
+				}
+			}
+		},
+	}
+}
+</script>

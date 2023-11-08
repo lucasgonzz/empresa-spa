@@ -119,6 +119,11 @@ export default {
 				this.$store.commit('vender/setSaleTypeId', value)
 			},
 		},
+		articulos_con_depositos() {
+			return this.items.filter(item => {
+				return item.is_article && item.addresses.length
+			})
+		},
 	},
 	methods: {
 		setItemsPrices(only_the_last = false, from_pivot = false) {
@@ -178,6 +183,12 @@ export default {
 			if (this.afip_information_id && this.total >= 61500 && !this.client) {
 				this.$toast.error('El total de la venta supera los $61.500, debera indicar un cliente que posea CUIL o CUIT para poder realizar la factura')
 				return false
+			}
+			if (this.address_id == 0 && this.articulos_con_depositos.length) {
+				this.$toast.error('Hay '+this.articulos_con_depositos.length+' articulos con stock en diferentes depositos')
+				this.$toast.error('Indique la DIRECCION de la venta para restar el stock en los depositos que correspondan')
+				return false
+
 			}
 			return true 
 		},

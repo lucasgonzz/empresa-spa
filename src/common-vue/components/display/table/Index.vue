@@ -72,6 +72,7 @@
 						<div v-infinite-scroll="loadMore" infinite-scroll-disabled="busy" infinite-scroll-distance="10"></div> -->
 					</template>
 				</tbody>
+				<slot name="btn_add_to_show"></slot>
 			</table>
 			<p 
 			v-else
