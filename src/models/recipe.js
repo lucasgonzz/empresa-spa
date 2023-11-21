@@ -99,6 +99,13 @@ export default {
 			},
 		},
 		{
+			text: 'Deposito para las unidades producidas',
+			key: 'address_id',
+			type: 'select',
+			v_if_function: 'articleRecipeHasAddresses',
+			value: 0,
+		},
+		{
 			text: 'Costo de produccion',
 			function: 'getRecipeCost',
 		},

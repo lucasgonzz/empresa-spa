@@ -15,7 +15,9 @@
 </div> 
 </template>
 <script>
+import vender from '@/mixins/vender'
 export default {
+	mixins: [vender],
 	components: {  
 		NewArticle: () => import('@/components/vender/modals/NewArticle'),
 		
@@ -27,24 +29,9 @@ export default {
 		Remito: () => import('@/components/vender/components/remito/Index'),
 		BtnSave: () => import('@/components/vender/components/BtnSave'),
 	},
-	// computed: {
-	// 	items() {
-	// 		return this.$store.state.vender.items
-	// 	}
-	// },
-	// beforeRouteLeave(to, from, next) {
-	// 	if (this.items.length) {
-	// 		let leave = window.confirm('Conservar esta venta con sus articulos')
-	// 		if (leave) {
-	// 			next()
-	// 		} else {
-	// 			// this.clearVender()
-	// 			next()
-	// 		}
-	// 	} else {
-	// 		next()
-	// 	}
-	// },
+	created() {
+		this.setDefaultArticles()
+	},
 }
 </script>
 <style scoped lang="sass">

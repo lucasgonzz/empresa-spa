@@ -367,6 +367,9 @@ export default {
 		// --------------------------------- Model ---------------------------------
 
 		showProperty(property, model, check_if_is_empty, check_show_on_form = false) {
+			if (property.v_if_function) {
+				return this[property.v_if_function](property, model)
+			}
 			if (check_show_on_form && property.not_show_on_form) {
 				return false
 			}

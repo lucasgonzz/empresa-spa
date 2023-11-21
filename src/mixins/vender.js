@@ -15,6 +15,9 @@ export default {
 		articles() {
 			return this.$store.state.article.models
 		},
+		loading_articles() {
+			return this.$store.state.article.loading
+		},
 		article() {
 			return this.$store.state.vender.article
 		},
@@ -126,6 +129,40 @@ export default {
 		},
 	},
 	methods: {
+
+		// Defautl Articles
+		setDefaultArticles() {
+			if (this.authenticated && this.hasExtencion('articles_default_in_vender')) {
+				if (this.articles.length && !this.loading_articles) {
+					console.log('entro a setear articulos por defecto')
+					let articles = this.articles.filter(article => {
+						return article.default_in_vender
+					})
+					articles.forEach(article => {
+						let article_to_add = {
+							...article,
+							amount: ''
+						}
+						console.log('agregando por defecto a vender: '+article_to_add.name)
+						this.$store.commit('vender/setArticle', article_to_add)
+						this.addArticleToSale(false)
+					})
+				} else {
+					console.log('no seteo articulos por defecto')
+					setTimeout(() => {
+						console.log('volviendo a llamar')
+						this.setDefaultArticles()
+					}, 2000)
+				}
+			} else if (this.hasExtencion('articles_default_in_vender')) {
+				console.log('2 no seteo articulos por defecto')
+				setTimeout(() => {
+					console.log('2 volviendo a llamar')
+					this.setDefaultArticles()
+				}, 2000)
+			}
+		},
+
 		setItemsPrices(only_the_last = false, from_pivot = false) {
 			if (only_the_last) {
 				console.log('setenado precio el ultimo')
@@ -163,6 +200,7 @@ export default {
 					if (this.maked_sale.client_id) {
 						this.loadModel('client', this.maked_sale.client_id)
 					}
+					this.setDefaultArticles()
 				})
 			}
 		},
@@ -172,6 +210,9 @@ export default {
 			}
 		},
 		check() {
+			if (this.hasExtencion('articles_default_in_vender')) {
+				this.checkDefaultArticles()
+			}
 			if (!this.items.length) {
 				this.$toast.error('Ingrese al menos un articulo o servicio')
 				return false 
@@ -188,9 +229,19 @@ export default {
 				this.$toast.error('Hay '+this.articulos_con_depositos.length+' articulos con stock en diferentes depositos')
 				this.$toast.error('Indique la DIRECCION de la venta para restar el stock en los depositos que correspondan')
 				return false
-
 			}
 			return true 
+		},
+		checkDefaultArticles() {
+			let default_articles = this.items.filter(item => {
+				return item.is_article 
+						&& item.default_in_vender 
+						&& item.amount == ''
+			})
+			default_articles.forEach(article => {
+				console.log('quitando article_default con amount 0 '+article.name)
+				this.$store.commit('vender/removeItem', article)
+			})
 		},
 		setVenderArticle(article, from_mobile = false) {
 			// this.articles.slice(0,33).forEach(art => {
@@ -227,13 +278,13 @@ export default {
 				}
 			}
 		},
-		addArticleToSale() {
-			if (!this.isRepeat()) {
-				this.addArticleAndSetTotal()
-			} 
+		addArticleToSale(set_amount = true) {
+			if (!this.isRepeat(set_amount)) {
+				this.addArticleAndSetTotal(set_amount)
+			}
 		},
-		addArticleAndSetTotal() {
-			if (this.article.amount == '') {
+		addArticleAndSetTotal(set_amount) {
+			if (set_amount && this.article.amount == '') {
 				this.article.amount = 1
 			} 
 			let item = {
@@ -275,7 +326,7 @@ export default {
 				document.getElementById('new-article-price').focus()
 			}, 500)
 		},
-		isRepeat() {
+		isRepeat(set_amount) {
 			console.log('isRepeat items:')
 			console.log(this.items)
 			let finded = this.items.find(item => {
@@ -286,23 +337,35 @@ export default {
 				return false
 			} else {
 				console.log('Esta repetido')
-				finded.amount = Number(finded.amount)
-				let amount = this.article.amount
-				if (amount == '') {
-					amount = 1
-				}
-				finded.amount += Number(amount)
-				this.$store.commit('vender/updateItem', finded)
-				this.$store.commit('vender/setTotal')
 				this.clearArticle()
+				if (set_amount) {
+					finded.amount = Number(finded.amount)
+					let amount = this.article.amount
+					if (amount == '') {
+						amount = 1
+					}
+					finded.amount += Number(amount)
+					this.$store.commit('vender/updateItem', finded)
+					this.$store.commit('vender/setTotal')
+					// this.clearArticle()
+				}
 				return true
 			}
 		},
 		clearArticle() {
 			this.$store.commit('vender/setArticle', null)
-			document.getElementById('article-bar-code').focus()
-			document.getElementById('search-article').value = ''
-			console.log('Se limpio articulo')
+			let bar_code = document.getElementById('article-bar-code')
+			if (bar_code) {
+				bar_code.focus()
+				document.getElementById('search-article').value = ''
+				console.log('Se limpio articulo')
+			} else {
+				console.log('No se limpio article')
+				setTimeout(() => {
+					console.log('Llamando denuevo')
+					this.clearArticle()
+				}, 500)
+			}
 		},
 	}
 }

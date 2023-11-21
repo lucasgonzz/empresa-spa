@@ -3,6 +3,7 @@
 		<b-form-group
 		label="Cantidad">
 			<b-form-input
+			id="stock-movement-amount"
 			v-model="amount_"
 			placeholder="Ingrese cantidad"></b-form-input>
 		</b-form-group>

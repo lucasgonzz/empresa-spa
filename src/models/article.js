@@ -133,6 +133,7 @@ export default {
 			text: 'stock',
 			key: 'stock',
 			type: 'number',
+			filter_modal_position: 13,
 			use_to_show_in_search_modal: true,
 		},
 		{
@@ -250,6 +251,13 @@ export default {
 			type: 'select',
 			not_show: true,
 			not_show: true,
+		},
+		{
+			text: 'Por defecto en VENDER',
+			key: 'default_in_vender',
+			type: 'checkbox',
+			not_show: true,
+			if_has_extencion: 'articles_default_in_vender',
 		},
 		{
 			text: 'Stock por direccion',

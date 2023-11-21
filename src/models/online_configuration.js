@@ -16,6 +16,12 @@ export default {
 			type: 'checkbox',
 		},
 		{
+			text: 'Guardar venta despues de entregar Pedido',
+			key: 'save_sale_after_finish_order',
+			description: 'Si se activa, se descontara el stock despues de confirmar un pedido, y se generara la venta una vez entregado',
+			type: 'checkbox',
+		},
+		{
 			text: 'Instagram',
 			key: 'instagram',
 			type: 'text',

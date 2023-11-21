@@ -8,7 +8,7 @@ export default {
 			show: true,
 			not_show_on_form: true,
 			use_to_filter_in_search: true,
-			filter_modal_position: 8,
+			filter_modal_position: 9,
 		},
 		{
 			text: 'Nombre',
@@ -53,6 +53,7 @@ export default {
 			value: '',
 			not_show: true,
 			use_to_filter_in_modal: true,
+			filter_modal_position: 5,
 		},
 		{
 			text: 'Tipo de precio',
@@ -62,7 +63,7 @@ export default {
 			show: true,
 			use_store_models: true,
 			use_to_filter_in_modal: true,
-			filter_modal_position: 6,
+			filter_modal_position: 7,
 		},
 		{
 			text: 'Localidad',
@@ -79,7 +80,7 @@ export default {
 			value: '',
 			show: true,
 			use_to_filter_in_search: true,
-			filter_modal_position: 5,
+			filter_modal_position: 6,
 		},
 		{
 			text: 'Cuil',
@@ -104,7 +105,7 @@ export default {
 			not_show: true,
 			use_store_models: true,
 			use_to_filter_in_modal: true,
-			filter_modal_position: 7,
+			filter_modal_position: 8,
 		},
 		{
 			text: 'Descripcion',

@@ -1,18 +1,30 @@
 import dates from '@/common-vue/mixins/dates'
 export default {
 	methods: {
+        articleRecipeHasAddresses(prop, recipe) {
+            if (recipe.article) {
+                let store_article = this.$store.state.article.models.find(_article => {
+                    return _article.id == recipe.article_id 
+                })
+                return store_article.addresses.length 
+            }
+            return false 
+        },
         checkOrderArticlesAddresses() {
             let ok = true
-            let order = this.$store.state.order.model 
-            order.articles.forEach(order_article => {
-                let store_article = this.$store.state.article.models.find(_article => {
-                    return _article.id == order_article.id 
+            console.log(this.owner)
+            if (this.owner.online_configuration.save_sale_after_finish_order) {
+                let order = this.$store.state.order.model 
+                order.articles.forEach(order_article => {
+                    let store_article = this.$store.state.article.models.find(_article => {
+                        return _article.id == order_article.id 
+                    })
+                    if (store_article.addresses.length && !order_article.pivot.address_id) {
+                        this.$toast.error('Indique deposito para el articulo '+order_article.name)
+                        ok = false 
+                    } 
                 })
-                if (store_article.addresses.length && !order_article.pivot.address_id) {
-                    this.$toast.error('Indique deposito para el articulo '+order_article.name)
-                    ok = false 
-                } 
-            })
+            }
             return ok
         },
         checkProviderOrderArticlesAddresses() {

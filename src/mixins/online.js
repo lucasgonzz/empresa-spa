@@ -27,8 +27,10 @@ export default {
 			let buyer = this.buyers.find(b => {
 				return b.id == message.buyer_id
 			})
-			buyer.messages.push(message)
-			this.$store.commit('buyer/add', buyer)
+			if (typeof buyer != 'undefined') {
+				buyer.messages.push(message)
+				this.$store.commit('buyer/add', buyer)
+			}
 		},
 		hasPaymentUpdated(order) {
 			if (order.payment) {

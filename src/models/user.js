@@ -66,6 +66,12 @@ export default {
 			description: 'Si se elige, despues de cada venta el valor del metodo de pago se seteara con este valor',
 		},
 		{
+			text: 'Descontar stock en los insumos recien cuando se supera el estado de produccion',
+			key: 'discount_stock_from_recipe_after_advance_to_next_status',
+			type: 'checkbox',
+			description: 'Si se activa, los insumos del estado 1 se descontaran cuando el articulo a producir avance al estado 2. Si no se activa, los insumos del estado 1 se descontaran ni bien el articulo a producir llegue al estado 1',
+		},
+		{
 			text: 'Ancho en milimetros de la comandera para imprimir los Tickets de Ventas',
 			key: 'sale_ticket_width',
 			type: 'number',

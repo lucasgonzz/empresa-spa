@@ -4,13 +4,12 @@
 		placeholder="Stock">
 			<b-form-input
 			v-model="model.stock"
-			:disabled="addresses.length > 0"></b-form-input>
+			disabled></b-form-input>
 		</b-form-group>
 		<b-button
-		v-if="addresses.length > 0"
 		class="m-t-10"
 		size="sm"
-		v-b-modal="'stock-movement'"
+		@click="stockMovement"
 		variant="primary">
 			<span
 			v-if="model.id">
@@ -33,5 +32,13 @@ export default {
 			return this.$store.state.address.models 
 		},
 	},
+	methods: {
+		stockMovement() {
+			this.$bvModal.show('stock-movement')
+			setTimeout(() => {
+				document.getElementById('stock-movement-amount').focus()
+			}, 500)	
+		} 
+	}
 }
 </script>

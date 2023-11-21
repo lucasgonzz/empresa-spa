@@ -27,6 +27,7 @@ export default {
 	mixins: [previus_sales, vender],
 	methods: {
 		saveSale() {
+			console.log('se llamo saveSale')
 			if (!this.loader) {
 				if (this.index_previus_sales == 0) {
 					this.vender(false)

@@ -89,10 +89,16 @@ export default {
 }
 </script>
 <style lang="sass">
+@import '@/sass/_custom'
 #chats-list 
 	.chat 
 		display: flex
 		flex-direction: row 
 		align-items: center
 		justify-content: flex-start
+
+	.active-chat 
+		font-weight: bold
+		color: #FFF
+		background: $blue 
 </style>
