@@ -1,58 +1,67 @@
 <template>
 	<div
-	class="payment-expire-card s-2 m-t-15 scale-up-center"
+	class="m-t-15 scale-up-center"
 	show
 	v-if="authenticated && is_owner && days_before_expire < 3">
-		<img src="@/assets/pago.png" alt="">
-		<div>
-			<div class="tiempo-de-pagar">
+		<div
+		class="p-l-15"
+		v-if="days_before_expire > 0">
+			Quedan {{ days_before_expire }} dias para que venza tu suscripcion. El total a pagar es de: <strong>{{ price(owner.total_a_pagar) }}</strong>
+		</div>
+		<div
+		class="payment-expire-card s-2"
+		v-else>
+			<img src="@/assets/pago.png" alt="">
+			<div>
+				<div class="tiempo-de-pagar">
+					<p
+					v-if="days_before_expire < 0">
+						Tu licencia del sistema <strong>A EXPIRADO</strong>, realiza tu pago para que podamos seguir <strong>respaldando la informacion</strong> de tu empresa
+					</p>
+					<p 
+					v-else-if="days_before_expire == 0">
+						<strong>
+							HOY ES EL ULTIMO DIA PARA PAGAR TU SUSCRIPCION
+						</strong>
+					</p>
+					<p
+					v-else-if="days_before_expire > 0">
+						Quedan {{ days_before_expire }} dias para que venza tu suscripcion
+					</p>
+				</div>
+
 				<p
-				v-if="days_before_expire < 0">
-					Tu licencia del sistema <strong>A EXPIRADO</strong>, realiza tu pago para que podamos seguir <strong>respaldando la informacion</strong> de tu empresa
+				v-if="owner.plan">
+					Licencia de uso para tu plan {{ owner.plan.name }}: <strong>{{ price(owner.total_a_pagar) }}</strong>
 				</p>
-				<p 
-				v-else-if="days_before_expire == 0">
-					<strong>
-						HOY ES EL ULTIMO DIA PARA PAGAR TU SUSCRIPCION
-					</strong>
-				</p>
+				<!-- <div
+				v-if="employees.length">
+					<p>
+						Usuario extra (empleados): <strong>USD {{ owner.plan.user_price }}</strong>
+					</p>
+					<p>
+						Cantidad de usuarios extra: <strong>{{ employees.length }} (USD {{ owner.plan.user_price * employees.length }})</strong>
+					</p>
+				</div>
+
 				<p
-				v-else-if="days_before_expire > 0">
-					Quedan {{ days_before_expire }} dias para que venza tu suscripcion
+				v-if="owner.online">
+					E-commerce: <strong>USD {{ owner.plan.e_commerce }}</strong>
+				</p>
+
+				<p
+				v-if="owner.plan_discount">
+					Tu cuenta tiene asignado un descuento del <strong>{{ owner.plan_discount }}%</strong>
+				</p>
+
+				<p>
+					El total a pagar por tu Plan {{ owner.plan.name }} es de <strong>USD {{ price(total) }}</strong>, cotizado al promedio del valor del dolar en el dia de hoy de <strong>{{ price(dolar) }} ARS</strong> equivale a <strong>{{ price(total * dolar) }} ARS</strong>
+				</p> -->
+
+				<p>
+					Podes realizar el pago del sistema enviando una transferencia a nuestro alias: <strong>comerciocity</strong>
 				</p>
 			</div>
-
-			<p
-			v-if="owner.plan">
-				Licencia de uso para tu plan {{ owner.plan.name }}: <strong>USD {{ owner.plan.price }}</strong>
-			</p>
-			<div
-			v-if="employees.length">
-				<p>
-					Usuario extra (empleados): <strong>USD {{ owner.plan.user_price }}</strong>
-				</p>
-				<p>
-					Cantidad de usuarios extra: <strong>{{ employees.length }} (USD {{ owner.plan.user_price * employees.length }})</strong>
-				</p>
-			</div>
-
-			<p
-			v-if="owner.online">
-				E-commerce: <strong>USD {{ owner.plan.e_commerce }}</strong>
-			</p>
-
-			<p
-			v-if="owner.plan_discount">
-				Tu cuenta tiene asignado un descuento del <strong>{{ owner.plan_discount }}%</strong>
-			</p>
-
-			<p>
-				El total a pagar por tu Plan {{ owner.plan.name }} es de <strong>USD {{ price(total) }}</strong>, cotizado al promedio del valor del dolar en el dia de hoy de <strong>{{ price(dolar) }} ARS</strong> equivale a <strong>{{ price(total * dolar) }} ARS</strong>
-			</p>
-
-			<p>
-				Podes realizar el pago del sistema enviando una transferencia a nuestro alias: <strong>comerciocity</strong>
-			</p>
 		</div>
 	</div>
 </template>

@@ -23,10 +23,13 @@ export default {
         },
         messages_not_read() {
             if (this.has_online) {
+                // console.log('messages_not_read')
             	let messages_not_read = []
-            	this.$store.state.buyer.models.forEach(model => {
-            		model.messages.forEach(message => {
-            			if (message.from_buyer && !message.read && message.buyer) {
+            	this.$store.state.buyer.models.forEach(buyer => {
+            		buyer.messages.forEach(message => {
+                        // console.log(message)
+            			if (message.from_buyer && !message.read && message.buyer_id) {
+                            message.buyer = buyer
             				messages_not_read.push(message)
             			}
             		})

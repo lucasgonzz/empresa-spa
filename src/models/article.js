@@ -290,6 +290,18 @@ export default {
 				variant: 'primary',
 			},
 			modal: 'address-movement',
+			v_if_prop_length: 'addresses',
+			not_show: true,
+		},
+		{
+			text: 'Comenzar a utilizar depositos',
+			type: 'button',
+			button: {
+				button_text: 'Repartir stock global entre depositos',
+				variant: 'primary',
+			},
+			modal: 'create-article-addresses',
+			v_if_prop_not_length: 'addresses',
 			not_show: true,
 		},
 		// {

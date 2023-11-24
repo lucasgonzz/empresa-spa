@@ -54,6 +54,11 @@ export default {
 			description: 'Si se activa, el iva del articulo no impactara en el precio final del mismo',
 		},
 		{
+			text: 'Valor dolar',
+			key: 'dollar',
+			type: 'text',
+		},
+		{
 			text: 'Preguntar la cantidad en VENDER',
 			key: 'ask_amount_in_vender',
 			type: 'checkbox',
@@ -77,9 +82,9 @@ export default {
 			type: 'number',
 		},
 		{
-			text: 'Valor dolar',
-			key: 'dollar',
-			type: 'text',
+			text: 'Informacion para mostrar en los tickets de los articulos',
+			key: 'article_ticket_info_id',
+			type: 'select',
 		},
 		// {
 		// 	text: 'Direccion',

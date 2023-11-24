@@ -4,6 +4,7 @@ export default {
 			text: 'N°',
 			key: 'num',
 			not_show_on_form: true,
+			filter_modal_position: 1,
 		},
 		{
 			text: 'Proveedor',
@@ -13,6 +14,7 @@ export default {
 			value: 0,
 			is_title: true,
 			required: true,
+			filter_modal_position: 2,
 		},
 		{
 			text: 'Articulos',
@@ -167,6 +169,7 @@ export default {
 			type: 'select',
 			value: 1,
 			show: true,
+			filter_modal_position: 3,
 		},
 		{
 			key: 'total_with_iva',

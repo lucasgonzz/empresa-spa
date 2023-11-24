@@ -211,7 +211,7 @@ export default {
 		},
 		addFiltered(state, value) {
 			state.filtered = state.filtered.concat(value)
-		}
+		},
 		incrementFilterPage(state) {
 			state.filter_page++
 		},

@@ -21,6 +21,22 @@ export default {
 			value: '',
 			show: true,
 		},
+		{
+			text: 'Sub Categorias',
+			key: 'sub_categories',
+			type: 'search',
+			store: 'sub_category',
+			belongs_to_many: {
+				model_name: 'sub_category',
+				properties_to_set: [
+					{
+						label: 'Porcentaje',
+						key: 'percentage',
+						type: 'number',
+					}
+				],
+			}
+		},
 	],
 	singular_model_name_spanish: 'Tipo de precio',
 	plural_model_name_spanish: 'Tipos de precio',

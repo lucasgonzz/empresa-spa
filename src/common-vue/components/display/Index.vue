@@ -137,11 +137,11 @@ export default {
 					let filtered = this.$store.state[this.model_name].filtered 
 					console.log('return filtered_models')
 					return filtered
-				}  
+				} else if (this.order_list_by) {
+					console.log('return todos los models porque es por order_list_by')
+					return this.$store.state[this.model_name].models
+				}
 				console.log('return store_models')
-				// if (this.show_all_models_on_display(this.model_name)) {
-				// 	return this.$store.state[this.model_name].models
-				// }
 				return this.$store.state[this.model_name].models.slice(0, this.index_to_show) 
 			}
 		},

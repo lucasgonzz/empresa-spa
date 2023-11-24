@@ -19,7 +19,7 @@ export default {
                     let store_article = this.$store.state.article.models.find(_article => {
                         return _article.id == order_article.id 
                     })
-                    if (store_article.addresses.length && !order_article.pivot.address_id) {
+                    if (typeof store_article != 'undefined' && store_article.addresses.length && !order_article.pivot.address_id) {
                         this.$toast.error('Indique deposito para el articulo '+order_article.name)
                         ok = false 
                     } 
@@ -34,7 +34,7 @@ export default {
                 let store_article = this.$store.state.article.models.find(_article => {
                     return _article.id == order_article.id 
                 })
-                if (store_article.addresses.length && order_article.pivot.address_id == 0) {
+                if (typeof store_article != 'undefined' && store_article.addresses.length && order_article.pivot.address_id == 0) {
                     this.$toast.error('Indique deposito para el articulo '+order_article.name)
                     ok = false 
                 } 

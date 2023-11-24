@@ -20,6 +20,7 @@
 	<stock-movement></stock-movement>
 	<address-movement></address-movement>
 	<stock-movement-modal-info></stock-movement-modal-info>
+	<create-article-addresses></create-article-addresses>
 
 	<stock-info></stock-info>
 
@@ -87,6 +88,7 @@ export default {
 		StockMovement: () => import('@/components/listado/modals/stock-movement/Index'),
 		AddressMovement: () => import('@/components/listado/modals/address-movement/Index'),
 		StockMovementModalInfo: () => import('@/components/listado/modals/stock-movement-modal-info/Index'),
+		CreateArticleAddresses: () => import('@/components/listado/modals/create-article-addresses/Index'),
 		NameInput: () => import('@/components/listado/components/NameInput'),
 		StockInput: () => import('@/components/listado/components/StockInput'),
 		StockInfo: () => import('@/components/listado/modals/stock-info/Index'),

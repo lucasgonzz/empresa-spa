@@ -132,6 +132,7 @@ export default {
 
 		// Defautl Articles
 		setDefaultArticles() {
+			console.log('setDefaultArticles')
 			if (this.authenticated && this.hasExtencion('articles_default_in_vender')) {
 				if (this.articles.length && !this.loading_articles) {
 					console.log('entro a setear articulos por defecto')
@@ -141,7 +142,8 @@ export default {
 					articles.forEach(article => {
 						let article_to_add = {
 							...article,
-							amount: ''
+							amount: '',
+							price_vender: '',
 						}
 						console.log('agregando por defecto a vender: '+article_to_add.name)
 						this.$store.commit('vender/setArticle', article_to_add)
@@ -149,18 +151,20 @@ export default {
 					})
 				} else {
 					console.log('no seteo articulos por defecto')
-					setTimeout(() => {
-						console.log('volviendo a llamar')
-						this.setDefaultArticles()
-					}, 2000)
+					this.volver_a_llamar_default_articles()
 				}
+			} else if (!this.authenticated) {
+				console.log('No seteo articulos por defecto por unauthenticated')
+				this.volver_a_llamar_default_articles()
 			} else if (this.hasExtencion('articles_default_in_vender')) {
-				console.log('2 no seteo articulos por defecto')
-				setTimeout(() => {
-					console.log('2 volviendo a llamar')
-					this.setDefaultArticles()
-				}, 2000)
+				this.volver_a_llamar_default_articles()
 			}
+		},
+		volver_a_llamar_default_articles() {
+			setTimeout(() => {
+				console.log('2 volviendo a llamar')
+				this.setDefaultArticles()
+			}, 2000)
 		},
 
 		setItemsPrices(only_the_last = false, from_pivot = false) {
@@ -236,10 +240,10 @@ export default {
 			let default_articles = this.items.filter(item => {
 				return item.is_article 
 						&& item.default_in_vender 
-						&& item.amount == ''
+						&& item.price_vender == ''
 			})
 			default_articles.forEach(article => {
-				console.log('quitando article_default con amount 0 '+article.name)
+				console.log('quitando article_default con price null '+article.name)
 				this.$store.commit('vender/removeItem', article)
 			})
 		},
@@ -278,13 +282,13 @@ export default {
 				}
 			}
 		},
-		addArticleToSale(set_amount = true) {
-			if (!this.isRepeat(set_amount)) {
-				this.addArticleAndSetTotal(set_amount)
+		addArticleToSale(set_price = true) {
+			if (!this.isRepeat(!set_price)) {
+				this.addArticleAndSetTotal(set_price)
 			}
 		},
-		addArticleAndSetTotal(set_amount) {
-			if (set_amount && this.article.amount == '') {
+		addArticleAndSetTotal(set_price) {
+			if (this.article.amount == '') {
 				this.article.amount = 1
 			} 
 			let item = {
@@ -294,7 +298,7 @@ export default {
 			this.$store.commit('vender/addItem', item)
 			if (this.index_previus_sales > 0) {
 				this.setItemsPrices(true, false)
-			} else {
+			} else if (set_price) {
 				this.setItemsPrices(true)
 			}
 			this.$store.commit('vender/setTotal')
@@ -326,7 +330,7 @@ export default {
 				document.getElementById('new-article-price').focus()
 			}, 500)
 		},
-		isRepeat(set_amount) {
+		isRepeat(is_default_article) {
 			console.log('isRepeat items:')
 			console.log(this.items)
 			let finded = this.items.find(item => {
@@ -338,7 +342,7 @@ export default {
 			} else {
 				console.log('Esta repetido')
 				this.clearArticle()
-				if (set_amount) {
+				if (!is_default_article) {
 					finded.amount = Number(finded.amount)
 					let amount = this.article.amount
 					if (amount == '') {

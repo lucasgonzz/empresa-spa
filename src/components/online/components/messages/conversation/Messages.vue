@@ -106,6 +106,8 @@ export default {
 	padding: .5em
 	margin-bottom: 1em
 	width: 300px
+	.text
+		text-align: left
 	.since
 		font-size: .7em
 		text-align: right

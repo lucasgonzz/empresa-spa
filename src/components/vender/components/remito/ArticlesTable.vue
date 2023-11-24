@@ -159,9 +159,16 @@ export default {
 	},
 	methods: {
 		setReturnedItems(item) {
+			this.checkReturnedItemMaxAmount(item)
 			this.setTotal()
 			this.addReturnedItem(item)
 			this.setNotaCreditoDescription()
+		},
+		checkReturnedItemMaxAmount(item) {
+			if (item.returned_amount > item.amount) {
+				this.$toast.error('No se pueden devolver mas unidades de las que se compraron')
+				item.returned_amount = item.amount
+			}
 		},
 		addReturnedItem(_item) {
 			let item = {

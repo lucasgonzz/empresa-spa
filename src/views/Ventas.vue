@@ -5,6 +5,8 @@
 	<update-prices></update-prices>
 
 	<view-component
+	show_filter_modal
+	ask_selectable
 	:models_to_show="sales_to_show"
 	show_models_if_empty
 	:show_previus_days="show_previus_days"
@@ -50,8 +52,13 @@ export default {
 			if (this.hasExtencion('sales.hide')) {
 				console.log('ENTRO EN LA hasExtencion sales.hide')
 				return this.$route.name == 'VentasAll'
-			} 
+			} else if (this.is_filtered) {
+				return false
+			}
 			return true
+		},
+		is_filtered() {
+			return this.$store.state.sale.is_filtered 
 		},
 		model_to_delete() {
 			return this.$store.state.sale.delete 

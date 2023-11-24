@@ -235,6 +235,7 @@ export default {
 				this.$store.commit(prop.commit, item)
 			}
 			if (prop.modal) {
+				console.log('abriendo modal: '+prop.modal)
 				this.$bvModal.show(prop.modal)
 			}
 			if (prop.button && prop.button.emit) {
@@ -384,6 +385,12 @@ export default {
 			}
 			if (property.if_has_extencion) {
 				return this.hasExtencion(property.if_has_extencion)
+			}
+			if (property.v_if_prop_not_length) {
+				return !model[property.v_if_prop_not_length].length
+			}
+			if (property.v_if_prop_length) {
+				return model[property.v_if_prop_length].length
 			}
 			if (property.v_if) {
 				let array = property.v_if[0].split('.')

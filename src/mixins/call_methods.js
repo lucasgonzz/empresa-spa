@@ -40,4 +40,5 @@ export default [
     'online_price_type',
     'buyer',
     'inventory_linkage_scope',
+    'article_ticket_info',
 ]

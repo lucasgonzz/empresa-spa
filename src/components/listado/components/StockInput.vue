@@ -9,6 +9,7 @@
 		<b-button
 		class="m-t-10"
 		size="sm"
+		:disabled="disabled"
 		@click="stockMovement"
 		variant="primary">
 			<span
@@ -30,6 +31,12 @@ export default {
 		},
 		addresses() {
 			return this.$store.state.address.models 
+		},
+		disabled() {
+			if (!this.model.id && this.model.stock) {
+				return true 
+			}
+			return false
 		},
 	},
 	methods: {

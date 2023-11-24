@@ -100,10 +100,27 @@ export default {
 					this.$toast.success('Movimiento guardado')
 					this.$bvModal.hide('stock-movement') 
 					this.setTemporalId(res.data.model)
-					if (this.article.id) {
-						this.$bvModal.hide('article') 
+					if (!this.article.id) {
+						this.article.stock = this.amount_
 					}
-					this.article.stock = this.amount_
+					if (this.article.id) {
+						this.article.stock += Number(this.amount_)
+
+						if (this.article.addresses.length) {
+							let store_article = this.$store.state.article.models.find(_article => {
+								return _article.id == this.article.id
+							})
+							// this.setModel(this.article, 'article')
+							console.log('se va a actualizar addresses con')
+							console.log(store_article.addresses)
+							this.setModel(store_article, 'article')
+							// setTimeout(() => {
+							// 	console.log(store_article.addresses)
+							// 	this.setModel(store_article, 'article')
+							// 	// this.$set(store_article, 'addresses', store_article.addresses)
+							// }, 2000)
+						}
+					}
 				})
 				.catch(err => {
 					this.loading = false 

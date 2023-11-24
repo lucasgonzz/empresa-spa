@@ -3,7 +3,9 @@ export default {
 		{
 			text: 'N°',
 			key: 'num',
+			type: 'number',
 			not_show_on_form: true,
+			filter_modal_position: 1,
 		},
 		{
 			key: 'total',
@@ -25,11 +27,14 @@ export default {
 		{
 			text: 'Cliente',
 			key: 'client_id',
+			type: 'search',
+			store: 'client',
 			only_show: true,
 			v_if: ['client_id', '!=', null],
 			button: {
 				function: 'showClientCurrentAcount',
 			},
+			filter_modal_position: 2,
 		},
 		{
 			text: 'Empleado',

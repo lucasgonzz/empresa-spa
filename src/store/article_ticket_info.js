@@ -7,8 +7,9 @@ import generals from '@/common-vue/mixins/generals'
 export default {
 	namespaced: true,
 	state: {
-		model_name: 'sale',
-		from_dates: true,
+		model_name: 'article_ticket_info',
+		route_prefix: '',
+		from_dates: false,
 		is_selecteable: false,
 
 		use_per_page: false,
@@ -22,18 +23,21 @@ export default {
 		until_date: '',
 
 		page: 1,
-		per_page: 25,
+		per_page: 50,
 		total_pages: 1, 
 
 		models: [],
 		model: {},
 		selected: [],
+		filters: [],
 		filtered: [],
 		is_filtered: false,
 		filter_page: 1,
 		total_filter_pages: null,
 		total_filter_results: 0,
 		loading_filtered: false,
+		filter_page: 1,
+		total_filter_pages: null,
 
 		delete: null,
 		delete_image_prop: null,
@@ -107,11 +111,11 @@ export default {
 				state.selected.push(value)
 			}
 		},
-		setFilters(state, value) {
-			state.filters = value
-		},
 		setFiltered(state, value) {
 			state.filtered = value
+		},
+		setFilters(state, value) {
+			state.filters = value
 		},
 		setIsFiltered(state, value) {
 			state.is_filtered = value
@@ -123,8 +127,6 @@ export default {
 			if (index == -1) {
 				state.models.unshift(value)
 			} else {
-				console.log('se actualizo esta venta:')
-				console.log(value)
 				state.models.splice(index, 1, value)
 			}
 
@@ -153,7 +155,7 @@ export default {
 				state.filtered.splice(index, 1)
 			}
 
-			if (state.selected_model) {
+			if (state.selected_model && state.selected_model[state.plural_model_name]) {
 				index = state.selected_model[state.plural_model_name].findIndex(model => {
 					return model.id == state.delete.id
 				})
@@ -195,6 +197,21 @@ export default {
 		setIsSelecteable(state, value) {
 			state.is_selecteable = value
 		},
+		setFromDates(state, value) {
+			state.from_dates = value
+		},
+		incrementFilterPage(state) {
+			state.filter_page++
+		},
+		setFilterPage(state, value) {
+			state.filter_page = value 
+		},
+		setTotalFilterPages(state, value) {
+			state.total_filter_pages = value 
+		},
+		addFiltered(state, value) {
+			state.filtered = state.filtered.concat(value)
+		},
 		incrementFilterPage(state) {
 			state.filter_page++
 		},
@@ -235,6 +252,9 @@ export default {
 					url += '/0'
 				}
 			} 
+			if (state.route_prefix) {
+				url += '/'+state.route_prefix
+			} 
 			if (state.from_dates) {
 				url += '/from-date/'+state.from_date
 			} 
@@ -267,6 +287,18 @@ export default {
 			})
 			.catch(err => {
 				commit('setLoading', false)
+				console.log(err)
+			})
+		},
+		loadMoreFiltered({state, commit}) {
+			commit('incrementFilterPage')
+			return axios.post(`/api/search/${generals.methods.routeString(state.model_name)}/null/1?page=${state.filter_page}`, {
+				filters: state.filters,
+			})
+			.then(res => {
+				commit('addFiltered', res.data.data)
+			})
+			.catch(err => {
 				console.log(err)
 			})
 		},

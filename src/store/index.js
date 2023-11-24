@@ -82,6 +82,7 @@ import payment_method_installment from '@/store/payment_method_installment'
 import plan from '@/store/plan'
 import plan_feature from '@/store/plan_feature'
 import dolar from '@/store/dolar'
+import article_ticket_info from '@/store/article_ticket_info'
 
 Vue.use(Vuex)
 
@@ -174,5 +175,6 @@ export default new Vuex.Store({
         plan,
         plan_feature,
         dolar,
+        article_ticket_info,
     }
 })

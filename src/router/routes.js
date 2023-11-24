@@ -81,6 +81,21 @@ export default [
 		image_url: 'nav-icons/presupuestos.png',
 	},
 	{
+		text: 'Online',
+		name: 'online',
+		path: '/online',
+		component: '@/views/Online',
+		params: {
+			view: 'pedidos',
+		},
+		if_has_extencion: 'online',
+		can: [
+			'order.index',
+			'buyer.index',
+		],
+		image_url: 'nav-icons/tienda.png',
+	},
+	{
 		text: 'Produccion',
 		path: '/produccion',
 		name: 'produccion',
@@ -128,20 +143,5 @@ export default [
 		check_is_owner: true,
 		if_has_extencion: 'comerciocity_interno',
 		image_url: 'nav-icons/empleados.png',
-	},
-	{
-		text: 'Online',
-		name: 'online',
-		path: '/online',
-		component: '@/views/Online',
-		params: {
-			view: 'pedidos',
-		},
-		if_has_extencion: 'online',
-		can: [
-			'order.index',
-			'buyer.index',
-		],
-		image_url: 'nav-icons/tienda.png',
 	},
 ]

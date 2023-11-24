@@ -55,7 +55,6 @@ export default {
                 let limit 
                 if (this.price_type_vender) {
                     limit = this.price_type_vender
-                    console.log('position limit de vender: '+limit.position)
                 } else {
                     let last_position = 0
                     this.price_types_with_position.forEach(price_type => {
@@ -65,13 +64,26 @@ export default {
                         }
                     })
                 }
+                console.log('position limit de vender: '+limit.position)
                 this.price_types_with_position.forEach(price_type => {
                     if (price_type.position <= limit.position) {
-                        price = Number(price) + Number(price * price_type.percentage / 100) 
+                        price = Number(price) + Number(price * this.getPriceTypePercetage(price_type, item) / 100) 
                     }
                 })
             }
             return price
+        },
+        getPriceTypePercetage(price_type, item) {
+            let sub_category_from_price_type = price_type.sub_categories.find(_sub_category => {
+                return _sub_category.id == item.sub_category_id 
+            })
+            if (typeof sub_category_from_price_type != 'undefined') {
+                console.log('Se va a sumar el '+sub_category_from_price_type.pivot.percentage+'% de '+sub_category_from_price_type.name+' '+price_type.name)
+                console.log(Number(sub_category_from_price_type.pivot.percentage))
+                return Number(sub_category_from_price_type.pivot.percentage)
+            }
+            console.log('No hay porcentaje para '+price_type.name+' y la sub_category del articulo, sumando el '+price_type.percentage)
+            return Number(price_type.percentage)
         },
         checkService(item) {
             if (item.is_service) {

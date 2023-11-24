@@ -11,7 +11,7 @@
 			variant="danger"
 			class="apretable">
 				<strong>
-					{{ alerts }}
+					{{ alerts }} 
 				</strong>
 			</b-button>
 		</div>
