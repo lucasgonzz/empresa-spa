@@ -104,7 +104,7 @@ export default {
 						this.article.stock = this.amount_
 					}
 					if (this.article.id) {
-						this.article.stock += Number(this.amount_)
+						this.article.stock = Number(this.article.stock) + Number(this.amount_)
 
 						if (this.article.addresses.length) {
 							let store_article = this.$store.state.article.models.find(_article => {

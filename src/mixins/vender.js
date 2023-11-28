@@ -341,7 +341,6 @@ export default {
 				return false
 			} else {
 				console.log('Esta repetido')
-				this.clearArticle()
 				if (!is_default_article) {
 					finded.amount = Number(finded.amount)
 					let amount = this.article.amount
@@ -353,6 +352,7 @@ export default {
 					this.$store.commit('vender/setTotal')
 					// this.clearArticle()
 				}
+				this.clearArticle()
 				return true
 			}
 		},

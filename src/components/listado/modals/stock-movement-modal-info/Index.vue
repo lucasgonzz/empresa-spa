@@ -34,6 +34,7 @@ export default {
 		this.$root.$on('bv::modal::show', (bvEvent, modal_id) => {
 			console.log('SE ABRIO MODAL')
 			if (modal_id == 'stock-movement-modal-info') {
+				console.log('y era stock-movement-modal-info')
 				this.getStockMovements() 
 			}
 		})
@@ -62,6 +63,10 @@ export default {
 					key: 'to_address',
 				},
 				{
+					label: 'Empleado',
+					key: 'employee',
+				},
+				{
 					label: 'Observaciones',
 					key: 'observations',
 				},
@@ -80,6 +85,7 @@ export default {
 					provider: this.getRelation('provider', 'provider_id', 'name', model),
 					from_address: this.getRelation('address', 'from_address_id', 'street', model),
 					to_address: this.getRelation('address', 'to_address_id', 'street', model),
+					employee: this.getEmployee(model),
 					observations: model.observations,
 					created_at: this.date(model.created_at),
 				})
@@ -91,6 +97,21 @@ export default {
 		},
 	},
 	methods: {
+		getEmployee(stock_movement) {
+			let employee_id = stock_movement.employee_id
+			if (employee_id) {
+				if (employee_id == this.owner.id) {
+					return this.owner.name 
+				}
+				let employee = this.$store.state.employee.models.find(employee => {
+					return employee.id == employee_id
+				})
+				if (typeof employee != 'undefined') {
+					return employee.name 
+				}
+			}
+			return null
+		},
 		getRelation(store, prop_name, prop_to_return, stock_movement) {
 			if (stock_movement[prop_name]) {
 				let model = this.$store.state[store].models.find(_model => {
@@ -104,6 +125,7 @@ export default {
 		},
 		getStockMovements() {
 			if (!this.loading) {
+				console.log('getStockMovements')
 				this.loading = true 
 				this.$api.get('stock-movement/'+this.article.id)
 				.then(res => {

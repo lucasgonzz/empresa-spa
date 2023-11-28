@@ -71,8 +71,8 @@ export default {
 			this.$bvModal.show(this.model_name+'-delete-models')
 		},
 		update(form) {
-			console.log(form)
-			console.log(this.$store.state[this.model_name].filters[4])
+			// console.log(form)
+			// console.log(this.$store.state[this.model_name].filters[4])
 			this.loading = true
 			this.$api.put('update/'+this.model_name, {
 				from_filter: this.from_filter,
