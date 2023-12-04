@@ -7,6 +7,8 @@ import generals from '@/common-vue/mixins/generals'
 export default {
 	namespaced: true,
 	state: {
+		employee_id: null,
+
 		model_name: 'report',
 		route_prefix: '',
 		from_dates: true,
@@ -48,6 +50,9 @@ export default {
 		loading: false,
 	},
 	mutations: {
+		setEmployeeId(state, value) {
+			state.employee_id = value 
+		},
 		setLoading(state, value) {
 			state.loading = value
 		},
@@ -233,7 +238,10 @@ export default {
 			} 
 			if (state.until_date != '') {
 				url += '/'+state.until_date
+			} else {
+				url += '/0'
 			}
+			url += '/'+state.employee_id
 			if (state.use_per_page) {
 				url += '?page='+state.page 
 			}

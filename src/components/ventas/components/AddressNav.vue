@@ -15,17 +15,16 @@
 import moment from 'moment'
 
 import HorizontalNav from '@/common-vue/components/horizontal-nav/Index'
+import sale from '@/mixins/sale'
 export default {
 	name: 'AddressNav',
+	mixins: [sale],
 	components: {
 		HorizontalNav,
 	},
 	computed: {
 		show() {
 			return this.addresses.length >= 2
-		},
-		sales() {
-			return this.$store.state.sale.models 
 		},
 		addresses() {
 			return this.$store.state.address.models 

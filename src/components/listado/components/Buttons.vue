@@ -30,13 +30,22 @@ class="buttons-listado">
 		<i class="icon-chart"></i>
 	</b-button>
 
-	<!-- Historial de Proveedores -->
+	<!-- Movimientos de stock -->
 	<b-button 
 	variant="secondary"
 	size="sm"
 	@click.stop="stockMovements()" 
 	class="m-l-10">
 		<i class="icon-database"></i>
+	</b-button>
+
+	<!-- Cammbios de precios -->
+	<b-button 
+	variant="secondary"
+	size="sm"
+	@click.stop="priceChanges()" 
+	class="m-l-10">
+		<i class="icon-dolar"></i>
 	</b-button>
 
 	<!-- Ventas -->
@@ -160,6 +169,10 @@ export default {
 		stockMovements() {
 			this.$store.commit('article/setModel', {model: this.model, properties: []})
 			this.$bvModal.show('stock-movement-modal-info')
+		},
+		priceChanges() {
+			this.$store.commit('article/setModel', {model: this.model, properties: []})
+			this.$bvModal.show('price-changes')
 		},
 	}
 }

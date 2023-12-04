@@ -78,7 +78,9 @@ export default {
 		},
 		{
 			text: 'Costo Real', 
-			function: 'costoReal',
+			key: 'costo_real',
+			only_show: true,
+			is_price: true,
 			not_show: true, 
 			if_has_extencion: 'article.costo_real',
 		},

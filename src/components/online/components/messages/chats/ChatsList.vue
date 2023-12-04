@@ -80,6 +80,19 @@ export default {
 				}
 				this.setMessagesRead(buyer)
 				this.$bvModal.hide('chats')
+				this.messagesScrollBottom()
+			}
+		},
+		messagesScrollBottom() {
+			let cont_messages = document.getElementById('container-messages')
+			console.log('cont_messages')
+			console.log(cont_messages)
+			if (cont_messages) {
+				setTimeout(() => {
+					cont_messages.scrollTop = cont_messages.scrollHeight;
+				}, 500)
+			} else {
+				console.log('NO SE HIZO SCROLL')
 			}
 		},
 		activeChat(buyer) {

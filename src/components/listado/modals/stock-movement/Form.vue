@@ -105,6 +105,7 @@ export default {
 					}
 					if (this.article.id) {
 						this.article.stock = Number(this.article.stock) + Number(this.amount_)
+						console.log('el stock es '+Number(this.article.stock)+' mas '+Number(this.amount_))
 
 						if (this.article.addresses.length) {
 							let store_article = this.$store.state.article.models.find(_article => {
@@ -113,7 +114,7 @@ export default {
 							// this.setModel(this.article, 'article')
 							console.log('se va a actualizar addresses con')
 							console.log(store_article.addresses)
-							this.setModel(store_article, 'article')
+							this.setModel(store_article, 'article', [], false)
 							// setTimeout(() => {
 							// 	console.log(store_article.addresses)
 							// 	this.setModel(store_article, 'article')

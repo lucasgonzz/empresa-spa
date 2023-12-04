@@ -1,6 +1,6 @@
 <template>
 	<div
-	v-if="is_owner"
+	v-if="is_owner || is_admin"
 	class="cont-total-ventas">
 		<div>
 			<p

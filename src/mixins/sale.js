@@ -1,6 +1,18 @@
 export default {
 	computed: {
+		_sales() {
+			return this.$store.state.sale.models 
+		},
+		filtered() {
+			return this.$store.state.sale.filtered 
+		},
+		is_filtered() {
+			return this.$store.state.sale.is_filtered 
+		},
 		sales() {
+			if (this.is_filtered) {
+				return this.filtered
+			}
 			return this.$store.state.sale.models 
 		},
 		addresses() {
@@ -18,7 +30,7 @@ export default {
 					sales = this.sales 
 				} else {
 					let address = this.addresses.find(model => {
-						return model.street.toLowerCase() == this.view.replaceAll('-', ' ') .toLowerCase()
+						return model.street.toLowerCase() == this.view.replaceAll('-', ' ').toLowerCase()
 					})
 					sales = this.sales.filter(sale => {
 						return sale.address_id == address.id 
@@ -27,10 +39,11 @@ export default {
 
 				if (this.sub_view != 'todos') {
 					let employee = this.employees.find(model => {
-						return model.name.toLowerCase() == this.sub_view.replaceAll('-', ' ') .toLowerCase()
+						// console.log('comparando '+model.name.toLowerCase()+' con '+this.sub_view.replaceAll('-', ' ').toLowerCase())
+						return model.name.toLowerCase() == this.sub_view.replaceAll('-', ' ').toLowerCase()
 					})
 					if (typeof employee == 'undefined') {
-						console.log('dueño')
+						// console.log('dueño')
 						sales = sales.filter(sale => {
 							return !sale.employee_id
 						})	

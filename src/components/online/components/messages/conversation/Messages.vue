@@ -106,6 +106,7 @@ export default {
 	padding: .5em
 	margin-bottom: 1em
 	width: 300px
+	background: #FFF
 	.text
 		text-align: left
 	.since

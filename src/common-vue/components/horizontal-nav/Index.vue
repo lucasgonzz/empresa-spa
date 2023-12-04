@@ -296,7 +296,7 @@ export default {
 		},
 		isActive(item) {
 			if (this.selected) {
-				if (this.selected.toLowerCase() == this.routeString(this.routeValue(item))) {
+				if (this.selected+''.toLowerCase() == this.routeString(this.routeValue(item))) {
 					return 'active'
 				}
 			} 

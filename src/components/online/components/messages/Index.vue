@@ -44,6 +44,8 @@ $online_nav_margin: 1em
 .col-messages
 	height: calc(100vh - 70px)
 	border-left: 1px solid rgba(0, 0, 0, .3)
+	background: #F3F2F2
+	
 .col-chats
 	padding-bottom: 1em
 	@media screen and (max-width: 992px)

@@ -15,15 +15,14 @@
 import moment from 'moment'
 
 import HorizontalNav from '@/common-vue/components/horizontal-nav/Index'
+import sale from '@/mixins/sale' 
 export default {
 	name: 'EmployeeNav',
+	mixins: [sale],
 	components: {
 		HorizontalNav,
 	},
 	computed: {
-		sales() {
-			return this.$store.state.sale.models
-		},
 		employees() {
 			return this.$store.state.employee.models
 		},
