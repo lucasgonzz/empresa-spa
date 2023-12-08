@@ -56,6 +56,7 @@ export default {
 			let client = result.model 
 			this.$store.commit('vender/setClient', client)
 			if (client.price_type) {
+				console.log('el cliente tiene price_type: '+client.price_type)
 				let price_type = this.price_types.find(model => {
 					return model.id == client.price_type_id 
 				})

@@ -145,9 +145,11 @@ export default {
 							amount: '',
 							price_vender: '',
 						}
-						console.log('agregando por defecto a vender: '+article_to_add.name)
-						this.$store.commit('vender/setArticle', article_to_add)
-						this.addArticleToSale(false)
+						if (!this.ya_esta_en_los_articulos_para_vender(article_to_add)) {
+							console.log('agregando por defecto a vender: '+article_to_add.name)
+							this.$store.commit('vender/setArticle', article_to_add)
+							this.addArticleToSale(false)
+						}
 					})
 				} else {
 					console.log('no seteo articulos por defecto')
@@ -159,6 +161,12 @@ export default {
 			} else if (this.hasExtencion('articles_default_in_vender')) {
 				this.volver_a_llamar_default_articles()
 			}
+		},
+		ya_esta_en_los_articulos_para_vender(article) {
+			let index = this.items.findIndex(item => {
+				return item.id == article.id 
+			})
+			return index != -1
 		},
 		volver_a_llamar_default_articles() {
 			setTimeout(() => {
@@ -175,7 +183,9 @@ export default {
 			} else {
 				console.log('seteando todos los precios. from_pivot: '+from_pivot)
 				this.items.forEach(item => {
-					item.price_vender = this.getPriceVender(item, from_pivot) 
+					if (!item.default_in_vender) {
+						item.price_vender = this.getPriceVender(item, from_pivot) 
+					}
 				})
 			}
 		},

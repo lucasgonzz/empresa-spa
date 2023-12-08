@@ -10,17 +10,7 @@ id="error">
 	class="text-center">
 		Se ha producido un error en el sistema
 	</p>
-	<div 
-	v-if="loading"
-	class="all-center-md">
-		<b-spinner
-		variant="primary"></b-spinner>
-		<p>
-			Notificando al administrador
-		</p>
-	</div>
-	<div
-	v-else>
+	<div>
 		<p 
 		class="text-with-icon">
 			<i class="icon-check"></i>
@@ -57,18 +47,9 @@ export default {
 	},
     methods: {
         errorEvent(event) {
-            console.log('LLEGO')
-            let error = event.detail
-            if (error.response.data.message != 'Unauthenticated.' && this.authenticated && error.response && error.response.data && error.response.data.message) {
-            	console.log('entro')
-	            this.$bvModal.show('error')
-	            this.error = error 
-            	console.log(this.error)
-	            this.sendError()
-            } else {
-            	console.log('no entor en error')
-            	console.log(this.authenticated)
-            }
+        	if (error.response.data.message != 'Unauthenticated.' && this.authenticated && error.response && error.response.data && error.response.data.message) {
+	        	this.$bvModal.show('error')
+        	}
         },
         sendError() {
         	this.loading = true 
