@@ -310,7 +310,7 @@ export default {
 	display: flex
 	flex-wrap: wrap
 	align-items: center
-	padding: 1em 0 0
+	// padding: 1em 0 0
 	justify-content: space-between
 	width: 100%
 
@@ -325,6 +325,9 @@ export default {
 			display: flex 
 			flex-direction: row 
 			justify-content: flex-start
+
+		& > div 
+			margin-top: 1em
 .horizontal-nav
 	width: 100%
 	display: flex

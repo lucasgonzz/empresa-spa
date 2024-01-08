@@ -349,7 +349,7 @@ export default {
 			// this.$store.commit(model_name+'/setToShow')
 		},
 		plural(model_name) {
-			return require('@/models/'+model_name).default.plural_model_name_spanish
+			return require('@/models/'+model_name+'.js').default.plural_model_name_spanish
 		},
 		singular(model_name) {
 			return require('@/models/'+model_name).default.singular_model_name_spanish

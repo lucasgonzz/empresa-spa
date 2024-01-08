@@ -26,6 +26,9 @@
 <script>
 export default {
 	computed: {
+		previus_sale() {
+			return this.$store.state.vender.previus_sales.previus_sale
+		},
 		total() {
 			return this.$store.state.vender.total
 		},
@@ -43,7 +46,11 @@ export default {
 			cant = cant.toFixed(2)
 			return cant
 		},
-		sale_discounts () {
+		sale_discounts() {
+			if (this.previus_sale.id) {
+				return this.previus_sale.discounts
+			} 
+
 			let sale_discounts_id = this.$store.state.vender.discounts_id
 			let discounts = []
 			this.$store.state.discount.models.forEach(discount => {
@@ -53,7 +60,11 @@ export default {
 			})
 			return discounts
 		},
-		sale_surchages () {
+		sale_surchages() {
+			if (this.previus_sale.id) {
+				return this.previus_sale.surchages
+			} 
+
 			let sale_surchages_id = this.$store.state.vender.surchages_id
 			let surchages = []
 			this.$store.state.surchage.models.forEach(surchage => {

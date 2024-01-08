@@ -3,11 +3,12 @@
 	class="w-100">
 		<previus-days
 		v-if="show_previus_days_"
+		:check_permissions="check_permissions_previus_days"
 		:model_name="model_name"></previus-days>
 
 		<slot name="display_top"></slot>
-
 		<display
+		:set_model_on_row_selected="set_model_on_row_selected"
 		:table_height_para_restar="table_height_para_restar"
 		:order_list_by="order_list_by"
 		:check_permissions="check_permissions"
@@ -17,6 +18,7 @@
 		:properties="properties"
 		:set_table_height="set_table_height"
 		@clicked="clicked"
+		:slice_models="slice_models"
 		:model_name_spanish="model_name_spanish">
 			<template v-slot:table_right_options="slotProps">
 				<slot name="table_right_options" :model="slotProps.model"></slot>
@@ -56,6 +58,18 @@ export default {
 			type: Number,
 			default: null,
 		},
+		set_model_on_row_selected: {
+			type: Boolean,
+			default: true,  
+		},
+    	check_permissions_previus_days: {
+    		type: Boolean,
+    		default: true,
+    	},
+		slice_models: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	computed: {
 		to_show() {
@@ -76,8 +90,7 @@ export default {
 	},
 	methods: {
 		clicked(model) {
-			console.log('22222')
-			this.$emit('cliecked', model)
+			this.$emit('clicked', model)
 		}
 	},
 	components: {

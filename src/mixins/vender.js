@@ -133,6 +133,9 @@ export default {
 		// Defautl Articles
 		setDefaultArticles() {
 			console.log('setDefaultArticles')
+			if (this.index_previus_sales > 0) {
+				return
+			}
 			if (this.authenticated && this.hasExtencion('articles_default_in_vender')) {
 				if (this.articles.length && !this.loading_articles) {
 					console.log('entro a setear articulos por defecto')
@@ -199,7 +202,9 @@ export default {
 				if ((!this.download_articles && !this.articles.length) || (this.is_mobile && !this.downloadOnMobile('article') && !this.articles.length)) {
 
 				} else {
-					this.$store.commit('article/removeStock', this.items)
+					if (!this.to_check && !this.checked) {
+						this.$store.commit('article/removeStock', this.items)
+					}
 				}
 				this.$store.dispatch('vender/vender', {
 					selected_address: this.selected_address
@@ -210,11 +215,17 @@ export default {
 					}
 					this.$store.commit('vender/previus_sales/setIndex', 0)
 					this.$store.commit('vender/previus_sales/setPreviusSale', {})
+					this.$store.commit('vender/setToCheck', 0)
+					this.$store.commit('vender/setChecked', 0)
+					this.$store.commit('vender/setConfirmed', 0)
 					this.setDefaultPaymentMethod()
 					if (this.maked_sale.client_id) {
 						this.loadModel('client', this.maked_sale.client_id)
 					}
 					this.setDefaultArticles()
+					if (this.view != 'remito') {
+						this.$router.push({name: 'vender', params: {view: 'remito'}})
+					}
 				})
 			}
 		},

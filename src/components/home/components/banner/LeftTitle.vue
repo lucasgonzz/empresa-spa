@@ -2,10 +2,10 @@
 	<div
 	class="left-title">
 		<h1>
-			El sistema perfecto para organizar tu negocio
+			Organizamos y automatizamos tu empresa en menos de 2 meses
 		</h1>
 		<h3>
-			Con ComercioCity lleva el control de INVENTARIO, CLIENTES, PROVEEDORES, E-COMMERCE, VENDEDORES y mucho mas...
+			Nos encargamos de implementar y poner en marcha una version personalizada de nuestro sistema. Desde el sistema ERP para gestion interna, paneles de control y un e-commerce, TODO AUTOMATIZADO. 
 		</h3>
 		<!-- <h3>
 			Sistema de Gestion, Facturacion y Venta Online. 

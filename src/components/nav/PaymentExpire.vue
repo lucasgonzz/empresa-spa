@@ -2,7 +2,7 @@
 	<div
 	class="m-t-15 scale-up-center"
 	show
-	v-if="authenticated && is_owner && days_before_expire < 3">
+	v-if="authenticated && days_before_expire < 3">
 		<div
 		class="p-l-15"
 		v-if="days_before_expire > 0">

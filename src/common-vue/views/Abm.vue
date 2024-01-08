@@ -18,6 +18,7 @@
 			
 			<view-component
 			show_filter_modal
+			:check_permissions="false"
 			:model_name="selected_model"></view-component>
 		</b-col>
 	</b-row>

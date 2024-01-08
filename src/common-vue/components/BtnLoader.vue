@@ -2,6 +2,7 @@
 	<b-button
 	:size="size"
 	@click.stop="clicked"
+	:disabled="disabled"
 	:block="block"
 	:variant="variant">
 		<span 
@@ -45,6 +46,10 @@ export default {
 		prop_to_send_on_emit: {
 			type: Object,
 			default: null
+		},
+		disabled: {
+			type: Boolean,
+			default: false
 		},
 	},
 	methods: {

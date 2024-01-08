@@ -19,6 +19,9 @@ export default {
 		client: null,
 		discounts_id: [],
 		surchages_id: [],
+		to_check: 0,
+		checked: 0,
+		confirmed: 0,
 		price_type: null,
 		save_current_acount: 1,
 		make_current_acount_pago: 0,
@@ -80,6 +83,15 @@ export default {
 		},
 		addSurchageId(state, value) {
 			state.surchages_id.push(value)
+		},
+		setToCheck(state, value) {
+			state.to_check = value
+		},
+		setChecked(state, value) {
+			state.checked = value
+		},
+		setConfirmed(state, value) {
+			state.confirmed = value
 		},
 		setPriceType(state, value) {
 			state.price_type = value
@@ -159,6 +171,14 @@ export default {
 				})
 				if (state.discounts_id.length) {
 					let discounts = discounts_store.state.models 
+					if (previus_sales.state.previus_sale.id) {
+						discounts = previus_sales.state.previus_sale.discounts.map(discount => {
+							return {
+								...discount,
+								percentage: discount.pivot.percentage
+							}
+						})
+					}
 					let sale_discounts = []
 					state.discounts_id.forEach(id => {
 						sale_discounts.push(discounts.find(item => item.id == id))
@@ -174,6 +194,14 @@ export default {
 				}
 				if (state.surchages_id.length) {
 					let surchages = surchages_store.state.models 
+					if (previus_sales.state.previus_sale.id) {
+						surchages = previus_sales.state.previus_sale.surchages.map(surchage => {
+							return {
+								...surchage,
+								percentage: surchage.pivot.percentage
+							}
+						})
+					}
 					let sale_surchages = []
 					state.surchages_id.forEach(id => {
 						sale_surchages.push(surchages.find(item => item.id == id))
@@ -238,6 +266,9 @@ export default {
 				afip_information_id: state.afip_information_id,
 				employee_id: state.employee_id,
 				address_id: state.address_id,
+				to_check: state.to_check,
+				checked: state.checked,
+				confirmed: state.confirmed,
 			})
 			.then(res => {
 				console.log('vendido')

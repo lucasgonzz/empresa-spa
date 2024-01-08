@@ -9,7 +9,7 @@
 				text="Actualizar venta"
 				:block="false"
 				:loader="loading_index"
-				@clicked="updateSale(sale_details)" />
+				@clicked="setPreviusSale(sale_details)" />
 				<b-button
 				v-b-modal="'update-prices'"
 				class="m-r-10"
@@ -118,7 +118,6 @@ export default {
 	data() {
 		return {
 			loading: false,
-			loading_index: false,
 		}
 	},
 	computed: {
@@ -131,20 +130,6 @@ export default {
 			let link = process.env.VUE_APP_API_URL+'/sale/delivered-articles-pdf/'+this.sale_details.id 
 			window.open(link)
 		},
-		updateSale(sale) {
-			this.loading_index = true 
-			this.$api.get('previus-next-index/sale/'+sale.id)
-			.then(res => {
-				this.loading_index = false
-				this.$store.commit('vender/previus_sales/setIndex', res.data.index)
-				this.callGetSale()
-				this.$router.push({name: 'vender', params: {view: 'remito'}})
-			})
-			.catch(err => {
-				this.loading_index = false
-				console.log(err)
-			})
-		},	
 		saveCurrentAcount() {
 			this.loading = true 
 			this.$api.put('sale/save-current-acount/'+this.sale_details.id)

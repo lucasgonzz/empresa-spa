@@ -189,6 +189,9 @@ export default {
 		setFromDate(state, value) {
 			state.from_date = value
 		},
+		setFromDates(state, value) {
+			state.from_dates = value
+		},
 		setUntilDate(state, value) {
 			state.until_date = value
 		},

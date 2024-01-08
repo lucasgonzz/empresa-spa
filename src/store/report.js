@@ -7,7 +7,7 @@ import generals from '@/common-vue/mixins/generals'
 export default {
 	namespaced: true,
 	state: {
-		employee_id: null,
+		employee_id: 'todos',
 
 		model_name: 'report',
 		route_prefix: '',

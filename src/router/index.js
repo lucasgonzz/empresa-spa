@@ -40,15 +40,25 @@ const routes = [
         name: 'vender',
         component: () => import('@/views/Vender')
     },
-    // {
-    //     path: '/ingresar-articulo',
-    //     name: 'ingresar',
-    //     component: () => import('@/views/Ingresar')
-    // },
+    {
+        path: '/panel-de-control/:view?/:sub_view?',
+        name: 'panel',
+        component: () => import('@/views/PanelDeControl')
+    },
     {
         path: '/listado-de-articulos',
         name: 'article',
         component: () => import('@/views/Listado')
+    },
+    {
+        path: '/deposito-para-checkear',
+        name: 'deposito-para-checkear',
+        component: () => import('@/views/DepositoParaCheckear')
+    },
+    {
+        path: '/deposito-checkeadas',
+        name: 'deposito-checkeadas',
+        component: () => import('@/views/DepositoCheckeadas')
     },
     {
         path: '/ventas/:view?/:sub_view?',

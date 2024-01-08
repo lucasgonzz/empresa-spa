@@ -95,6 +95,9 @@ export default {
 				sale_type_id: info.sale_type_id,
 				address_id: info.address_id,
 				employee_id: info.employee_id,
+				to_check: info.to_check,
+				checked: info.checked,
+				confirmed: info.confirmed,
 			})
 			.then(res => {
 				commit('sale/add', res.data.model, {root: true})

@@ -442,7 +442,8 @@ export default {
 			return ''
 		},
 		onRowSelected(items) {
-			// console.log('items.length: '+items.length)
+			console.log('onRowSelected items:')
+			console.log(items)
 			if (!this.is_from_keydown) {
 				if (this._select_mode == 'single' && items.length) {
 					console.log('items')
@@ -457,6 +458,7 @@ export default {
 						this.setModel(model, this.model_name)
 					}
 				} else if (this._select_mode == 'single' && !items.length) {
+					console.log('onRowSelected table component')
 					this.$emit('onRowSelected', this.models[0])
 				} else if (this._select_mode == 'multi' && !this.isTheSameSelection(items) && !this.is_from_keydown) {
 					console.log(2)

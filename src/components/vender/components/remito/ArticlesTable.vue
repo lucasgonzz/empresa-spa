@@ -3,12 +3,11 @@
 class="m-b-15 m-t-20">
 	<b-col>
 		<b-table 
-		class="s-2 b-r-1"
+		class="b-r-1"
 		v-if="items.length"
 		:items="table_items" 
 		head-variant="dark" 
 		:fields="fields" 
-		striped 
 		responsive 
 		hover>
 			<template #cell(price)="data">
@@ -30,6 +29,7 @@ class="m-b-15 m-t-20">
 				<b-input-group
 				class="input-discount">
 					<b-form-input
+					:disabled="previus_sale != null && previus_sale.to_check == 1"
 					@keyup="setTotal"
 					@click="setTotal"
 					type="number"
@@ -49,6 +49,28 @@ class="m-b-15 m-t-20">
 					v-model="items[data.index].discount"></b-form-input>
 				</b-input-group>
 			</template>
+
+			<template #cell(checked_amount)="data">
+				<strong
+				class="text-danger p-b-10"
+				v-if="items[data.index].checked_amount && items[data.index].checked_amount == items[data.index].amount">
+					Se elimino
+				</strong>
+				<b-input-group
+				:class="checked_amount_input_class(items[data.index])"
+				class="input-checked-amount">
+					<div 
+					class="prepend">
+						<i class='icon-edit'></i>
+					</div>
+					<b-form-input
+					:disabled="!previus_sale.to_check"
+					type="number"
+					min="0"
+					v-model="items[data.index].checked_amount"></b-form-input> 
+				</b-input-group>
+			</template>
+
 			<template #cell(returned_amount)="data">
 				<b-input-group
 				class="input-discount">
@@ -122,9 +144,16 @@ export default {
 				{ key: 'discount', label: 'Descuento' },
 			]
 			if (this.index_previus_sales > 0) {
-				fields.push(
-					{ key: 'returned_amount', label: 'U. Devueltas' },
-				)
+				if (this.hasExtencion('check_sales') && !this.previus_sale.confirmed && (this.previus_sale.to_check || this.previus_sale.checked)) {
+					fields.push(
+						{ key: 'checked_amount', label: 'U. chequeadas' },
+					)
+				}
+				if (!this.hasExtencion('check_sales') || (!this.previus_sale.to_check && !this.previus_sale.checked)) {
+					fields.push(
+						{ key: 'returned_amount', label: 'U. Devueltas' },
+					)
+				}
 				if (this.hasExtencion('acopios')) {
 					fields.push(
 						{ key: 'delivered_amount', label: 'U. Entregadas' },
@@ -158,6 +187,11 @@ export default {
 		},
 	},
 	methods: {
+		checked_amount_input_class(item) {
+			if (this.previus_sale.checked && item.checked_amount) {
+				return 'input-checked-amount-danger'
+			}
+		},
 		setReturnedItems(item) {
 			this.checkReturnedItemMaxAmount(item)
 			this.setTotal()
@@ -168,11 +202,13 @@ export default {
 			if (item.returned_amount > item.amount) {
 				this.$toast.error('No se pueden devolver mas unidades de las que se compraron')
 				item.returned_amount = item.amount
+			} else {
+				item.return_to_stock = item.returned_amount
 			}
 		},
 		addReturnedItem(_item) {
 			let item = {
-				..._item 
+				..._item,
 			}
 
 			if (item.is_article) {
@@ -249,7 +285,12 @@ export default {
 	},
 }
 </script>
-<style scoped lang="sass">
+<style lang="sass">
+@import '@/sass/_custom'
+
+.input-discount
+	width: 110px !important
+
 .td-price 
 	position: relative
 	font-weight: bold
@@ -273,8 +314,22 @@ export default {
 			margin-right: 0
 .input-price
 	width: 150px
-.input-discount
-	width: 110px
+
+.input-checked-amount
+	width: 125px
+	.prepend
+		width: 40px
+		background: #e9ecef
+		display: flex 
+		align-items: center 
+		justify-content: center
+		border: 1px solid #ced4da
+		border-radius: .25rem 0 0 .25rem
+
+.input-checked-amount-danger
+	border: 4px solid darken($red, 10)
+	border-radius: .25rem
+
 .options 
 	width: 140px
 </style>

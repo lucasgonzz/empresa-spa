@@ -51,6 +51,10 @@ export default {
 					key: 'amount',
 				},
 				{
+					label: 'Stock Resultante',
+					key: 'stock_resultante',
+				},
+				{
 					label: 'Proveedor',
 					key: 'provider',
 				},
@@ -82,6 +86,7 @@ export default {
 				items.push({
 					concepto: model.concepto,
 					amount: model.amount,
+					stock_resultante: model.stock_resultante,
 					provider: this.getRelation('provider', 'provider_id', 'name', model),
 					from_address: this.getRelation('address', 'from_address_id', 'street', model),
 					to_address: this.getRelation('address', 'to_address_id', 'street', model),

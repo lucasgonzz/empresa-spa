@@ -4,12 +4,19 @@ th
 .table-active
 	border: 3px solid $blue 
 
+tbody
+	border: 2px solid #DDDDDD
+	border-top: none
+	border-radius: 0 0 10px 10px
+
 table tbody tr
 	white-space: nowrap
+	@if ($theme == 'light')
+		background-color: #FFF !important
 	@if ($theme == 'dark') 
 		background-color: #333
 		font-weight: bold
-		color: rgba(255, 255, 255, .9)
+		color: rgba(255, 255, 255, .9) 
 		&:hover 
 			background-color: rgba(51,51,51,.8) !important
 			color: rgba(255, 255, 255, 1) !important
@@ -17,3 +24,9 @@ table tbody tr
 table thead th
 	@if ($theme == 'dark') 
 		background-color: #333
+
+
+.modal-table-full-height
+	.cont-table 
+		width: 100% !important
+		max-height: 80vh !important

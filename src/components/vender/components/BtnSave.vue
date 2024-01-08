@@ -6,6 +6,7 @@ class="j-center m-t-25">
 	cols="12"
 	lg="6">
 		<btn-loader 
+		:disabled="loader"
 		class="m-b-30"
 		icon="check"
 		text="Guardar venta"
@@ -28,7 +29,7 @@ export default {
 	methods: {
 		saveSale() {
 			console.log('se llamo saveSale')
-			if (!this.loader) {
+			if (!this.loader && this.check()) {
 				if (this.index_previus_sales == 0) {
 					this.vender(false)
 				} else {
@@ -36,6 +37,17 @@ export default {
 				}
 			}
 		},
+		check() {
+			if (this.previus_sale.id != 'undefined' && this.previus_sale.to_check && !this.checked) {
+				this.$toast.error('Indique la venta como checkeada')
+				return false
+			}
+			if (this.previus_sale.id != 'undefined' && this.previus_sale.checked && !this.to_check && !this.confirmed) {
+				this.$toast.error('Indique la venta para checkear')
+				return false
+			}
+			return true
+		}
 	},
 	computed: {
 		save_afip_ticket: {

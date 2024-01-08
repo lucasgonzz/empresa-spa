@@ -6,6 +6,8 @@
 		<color-info
 		:model_name="model_name"></color-info>
 		<table-component
+		@onRowSelected="clicked"
+		:set_model_on_row_selected="set_model_on_row_selected"
 		:order_list_by="order_list_by"
 		:properties="properties"
 		:loading="loading_prop"
@@ -106,6 +108,14 @@ export default {
 			type: Boolean,
 			default: true,
 		},
+		set_model_on_row_selected: {
+			type: Boolean,
+			default: true,
+		},
+		slice_models: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	data() {
 		return {
@@ -130,7 +140,12 @@ export default {
 		},
 		models_to_show() {
 			if (this.is_from_models_que_vinieron_por_props) {
-				console.log('return models que vinieron por props')
+				if (this.slice_models) {
+					console.log('return models que vinieron por props SLICE:')
+					console.log(this.models.slice(0, this.index_to_show) )
+					return this.models.slice(0, this.index_to_show) 
+				}
+				console.log('return models que vinieron por props:')
 				return this.models
 			} else {
 				if (this.is_from_filter) {
@@ -152,13 +167,16 @@ export default {
 			return typeof this.is_filtered != 'undefined' && this.is_filtered
 		},
 		show_btn_add_to_show() {
-			if (this.is_from_models_que_vinieron_por_props) {
+			if (this.is_from_models_que_vinieron_por_props && !this.slice_models) {
 				return false
 			} else if (this.is_from_filter) {
 				return this.filter_page < this.total_filter_pages
 			} else {
 				// console.log('models_to_show: '+this.models_to_show.length)
 				// console.log('state: '+this.$store.state[this.model_name].models.length)
+				if (this.is_from_models_que_vinieron_por_props && this.slice_models) {
+					return this.models_to_show.length < this.models.length
+				}
 				return this.models_to_show.length < this.$store.state[this.model_name].models.length
 			}
 		},

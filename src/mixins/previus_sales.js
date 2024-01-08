@@ -15,6 +15,15 @@ export default {
 		surchages_id() {
 			return this.$store.state.vender.surchages_id
 		},
+		to_check() {
+			return this.$store.state.vender.to_check
+		},
+		checked() {
+			return this.$store.state.vender.checked
+		},
+		confirmed() {
+			return this.$store.state.vender.confirmed
+		},
 		items() {
 			return this.$store.state.vender.items
 		},
@@ -45,10 +54,35 @@ export default {
 			return this.$store.state.vender.previus_sales.previus_returned_services
 		},
 	},
+	data() {
+		return {
+			loading_index: false,
+		}
+	},
 	methods: {
+		setPreviusSale(sale) {
+			console.log('updateSale:')
+			console.log(sale)
+			this.loading_index = true 
+			this.$api.get('previus-next-index/sale/'+sale.id)
+			.then(res => {
+				this.loading_index = false
+				this.$store.commit('vender/previus_sales/setIndex', res.data.index)
+				this.callGetSale()
+				console.log('redirigiendo a vender')
+				this.$router.push({name: 'vender', params: {view: 'remito'}})
+			})
+			.catch(err => {
+				this.loading_index = false
+				console.log(err)
+			})
+		},	
 		callGetSale() {
+			console.log('callGetSale')
 			this.$store.dispatch('vender/previus_sales/getSale')
 			.then(() => {
+				console.log('llego previus sale')
+				console.log(this.previus_sale)
 				let items = this.getItemsPreviusSale(this.previus_sale)
 				this.$store.commit('vender/setItems', items)
 				if (this.previus_sale.discounts.length) {
@@ -86,6 +120,10 @@ export default {
 				if (this.previus_sale.sale_type_id) {
 					this.$store.commit('vender/setSaleTypeId', this.previus_sale.sale_type_id)
 				}
+				console.log('voy a setear to_check con '+this.previus_sale.to_check)
+				this.$store.commit('vender/setToCheck', this.previus_sale.to_check)
+				this.$store.commit('vender/setChecked', this.previus_sale.checked)
+				this.$store.commit('vender/setConfirmed', this.previus_sale.confirmed)
 				this.setItemsPrices(false, true)
 				this.setPreviusReturnedArticles()
 				this.setPreviusReturnedServices()
@@ -130,6 +168,9 @@ export default {
 				sale_type_id: this.sale_type_id,
 				address_id: this.address_id,
 				employee_id: this.employee_id,
+				to_check: this.to_check,
+				checked: this.checked,
+				confirmed: this.confirmed,
 			})
 			.then(res => {
 				this.$toast.success('Venta actualizada')
@@ -139,6 +180,9 @@ export default {
 		cancelPreviusSale() {
 			this.$store.commit('vender/previus_sales/setIndex', 0)
 			this.$store.commit('vender/previus_sales/setPreviusSale', {})
+			this.$store.commit('vender/setToCheck', 0)
+			this.$store.commit('vender/setChecked', 0)
+			this.$store.commit('vender/setConfirmed', 0)
 			this.$store.commit('vender/setItems', [])
 			this.$store.commit('vender/setDiscountsId', [])
 			this.$store.commit('vender/setSurchagesId', [])
@@ -147,6 +191,9 @@ export default {
 			this.$store.commit('vender/setSaveNotaCredito', 0)
 			this.$store.commit('vender/setNotaCreditoDescription', '')
 			this.$store.commit('vender/setTotal')
+			if (this.view != 'remito') {
+				this.$router.push({name: 'vender', params: {view: 'remito'}})
+			}
 			this.setEmployeeVender()
 		},
 		getItemsPreviusSale(sale) {
@@ -161,6 +208,7 @@ export default {
 				item.price = Number(article.price)
 				item.discount = Number(article.pivot.discount)
 				item.amount = Number(article.pivot.amount)
+				item.checked_amount = Number(article.pivot.checked_amount)
 				item.returned_amount = Number(article.pivot.returned_amount)
 				item.delivered_amount = Number(article.pivot.delivered_amount)
 				item_to_add = {

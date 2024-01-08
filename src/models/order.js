@@ -1,6 +1,14 @@
 export default {
 	properties: [ 
 		{
+			text: 'N°',
+			key: 'num',
+			type: 'text',
+			not_show_on_form: true,
+			filter_modal_position: 7,
+			filter_type: 'number',
+		},
+		{
 			text: 'Cliente',
 			key: 'buyer_id',
 			store: 'buyer',

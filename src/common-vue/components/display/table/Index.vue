@@ -35,6 +35,7 @@
 							</tr>	
 							<tr-component
 							v-for="model in list.models"
+							@onRowSelected="onRowSelected"
 							:model="model"
 							:pivot="pivot"
 							:select_mode="_select_mode"
@@ -57,6 +58,7 @@
 						:select_mode="_select_mode"
 						:model_name="model_name"
 						:props="props"
+						@onRowSelected="onRowSelected"
 						:set_model_on_row_selected="set_model_on_row_selected"
 						:cont_table_id="id">
 							<template v-slot:table_right_options="slotProps">
@@ -302,6 +304,9 @@ export default {
 		}
 	},
 	methods: {
+		onRowSelected(model) {
+			this.$emit('onRowSelected', model)
+		},
 		scrollLeft() {
 			let table = document.getElementById(this.id)
 			table.scrollLeft -= 300
@@ -352,6 +357,8 @@ export default {
 						}
 					}, 300)
 				}
+			} else {
+				console.log('No se ejecuto setHeight')
 			}
 		},
 		setShowButtonsScroll() {
@@ -439,8 +446,8 @@ export default {
 				font-weight: bold
 			@else
 				border-bottom: 1px solid rgba(0,0,0,.2)
-				background: #f1f3f4
-
+				// background: #f1f3f4
+				background: #FFF 
 
 		.list-title td
 			position: sticky
@@ -481,7 +488,7 @@ export default {
 
 .modal-content
 	.cont-table
-		width: 98% !important
+		width: 98% 
 		max-height: 50vh
 		// margin-left: -15px
 		margin-top: 15px

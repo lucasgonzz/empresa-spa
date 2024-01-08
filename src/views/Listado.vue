@@ -20,6 +20,7 @@
 	<stock-movement></stock-movement>
 	<address-movement></address-movement>
 	<stock-movement-modal-info></stock-movement-modal-info>
+	<confirm-reset-stock></confirm-reset-stock>
 	
 	<create-article-addresses></create-article-addresses>
 
@@ -38,10 +39,12 @@
 		</template>
 		<template #horizontal_nav_center>
 			<stock-info-buttons></stock-info-buttons>
+			<bar-code-search></bar-code-search>
 		</template>
 		<template #options_drop_down>
 			<article-ticket-option-drop-down></article-ticket-option-drop-down>
 			<articles-pdf-option-drop-down></articles-pdf-option-drop-down>
+			<reset-stock-option-drop-down></reset-stock-option-drop-down>
 		</template>
 
 		<template v-slot:table_right_options="props">
@@ -82,6 +85,7 @@ export default {
 		Import: () => import('@/components/listado/modals/import/Index'),
 		ClientsExcel: () => import('@/components/listado/components/ClientsExcel'),
 		StockInfoButtons: () => import('@/components/listado/components/StockInfoButtons'),
+		BarCodeSearch: () => import('@/components/listado/components/BarCodeSearch'),
 		Buttons: () => import('@/components/listado/components/Buttons'),
 		Charts: () => import('@/components/listado/modals/article-charts/Index'),
 		ArticleSales: () => import('@/components/listado/modals/article-sales/Index'),
@@ -98,6 +102,8 @@ export default {
 		StockInfo: () => import('@/components/listado/modals/stock-info/Index'),
 		ArticleTicketOptionDropDown: () => import('@/components/listado/components/ArticleTicketOptionDropDown'),
 		ArticlesPdfOptionDropDown: () => import('@/components/listado/components/ArticlesPdfOptionDropDown'),
+		ResetStockOptionDropDown: () => import('@/components/listado/components/ResetStockOptionDropDown'),
+		ConfirmResetStock: () => import('@/components/listado/modals/ConfirmResetStock'),
 	}, 
 	beforeRouteLeave(to, from, next) {
 		this.$store.commit('article/setSelected', [])

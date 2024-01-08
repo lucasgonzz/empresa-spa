@@ -9,13 +9,25 @@
 		v-model="save_nota_credito">
 			Guardar nota de credito por los siguientes items
 		</b-form-checkbox>
-		<p
-		class="m-b-0 m-l-10"
-		v-for="article in returned_items"
-		:key="article.id">
-			<i class="icon-right"></i>
-			{{ article.returned_amount }} unidades devueltas de {{ article.name }}
-		</p>
+
+		<b-table 
+		class="b-r-1 m-t-15"
+		:items="items" 
+		head-variant="dark" 
+		:fields="fields" 
+		responsive 
+		hover>
+			<template #cell(return_to_stock)="data">
+				<b-input-group
+				class="input-discount">
+					<b-form-input
+					type="number"
+					min="0"
+					v-model="items[data.index].return_to_stock"></b-form-input>
+				</b-input-group>
+			</template>
+		</b-table>
+
 		<b-form-group
 		class="m-t-15"
 		label="Descripcion">
@@ -45,7 +57,17 @@ export default {
 			set(value) {
 				this.$store.commit('vender/setSaveNotaCredito', value)
 			}
-		}
+		},
+		fields() {
+			return [
+				{ key: 'name', label: 'Nombre' },
+				{ key: 'returned_amount', label: 'U. Devueltas' },
+				{ key: 'return_to_stock', label: 'Devolver al Stock' },
+			]
+		},
+		items() {
+			return this.returned_items
+		},
 	},
 }
 </script>

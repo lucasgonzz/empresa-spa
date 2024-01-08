@@ -149,8 +149,9 @@ export default {
 		},
 		onRowSelected(model) {
 			if (this.select_mode == 'single') {
-				this.$emit('onRowSelected', model)
 				console.log('se emitio onRowSelected desde tr')
+				console.log(model)
+				this.$emit('onRowSelected', model)
 				if (this.set_model_on_row_selected) {
 					this.setModel(model, this.model_name)
 				}
@@ -213,7 +214,11 @@ export default {
 	white-space: normal
 
 .selected-row
-	border: 5px solid $blue 
+	font-weight: bold 
+	color: #FFF !important
+	td 
+		background: $blue !important
+
 
 .cont-tr-full-width
 	white-space: nowrap

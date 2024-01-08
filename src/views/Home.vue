@@ -13,41 +13,38 @@
 			<div class="row-banner-gradient"></div>
 			<b-col
 			cols="12"
-			md="8"
-			xl="5">
+			md="8">
 				<left-title></left-title>
 			</b-col>
-			<b-col
-			cols="12"
-			md="8"
-			xl="4">
-				<!-- <right-video></right-video> -->
-				<somos-diferentes></somos-diferentes>
-			</b-col>
 		</b-row>
-		<!-- <b-row
-		class="row-first row-full-heigth">
-			<b-col
-			cols="12"
-			lg="7" 
-			xl="5">
-				<left-video></left-video>
-			</b-col>
-			<b-col
-			cols="12"
-			lg="5"
-			xl="4">
-				<right-form></right-form>
-			</b-col>
-		</b-row> -->
+	
 		<b-row
 		class="row-dark row-full-heigth">
+			<b-col
+			cols="12"
+			xl="9">
+				<como-hacemos></como-hacemos>
+			</b-col>
+		</b-row>
+	
+		<b-row
+		class="row-dark-2 row-full-heigth">
 			<b-col
 			cols="12"
 			xl="9">
 				<features></features>
 			</b-col>
 		</b-row>
+		<b-row
+		class="row-dark">
+			<b-col
+			cols="12"
+			lg="9"
+			xl="7">
+				<casos-de-exito></casos-de-exito>
+			</b-col>
+		</b-row>
+
 		<b-row
 		class="row-dark-2">
 			<b-col
@@ -82,7 +79,9 @@ export default {
 		NavComponent: () => import('@/components/home/components/nav/Index'),
 		LeftVideo: () => import('@/components/home/components/LeftVideo'),
 		RightForm: () => import('@/components/home/components/RightForm'),
+		ComoHacemos: () => import('@/components/home/components/como-hacemos/Index'),
 		Features: () => import('@/components/home/components/features/Index'),
+		CasosDeExito: () => import('@/components/home/components/casos-de-exito/Index'),
 		Clients: () => import('@/components/home/components/clients/Index'),
 		Plans: () => import('@/components/home/components/plans/Index'),
 		Prices: () => import('@/components/home/components/prices/Index'),

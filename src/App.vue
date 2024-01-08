@@ -31,19 +31,6 @@ export default {
     },
     created() {
         this.$store.dispatch('auth/me')
-        // .then(() => {
-        //     setTimeout(() => {
-        //         if (!this.authenticated) {
-        //             console.log(12333333333)
-        //             if (this.route_name != 'login' && !this.use_home_page) {
-        //                 this.$router.replace({name: 'login'})
-        //             } else if (this.route_name != 'login' && this.route_name != 'home') {
-        //                 console.log('VA POR ACA')
-        //                 this.$router.replace({name: 'home'})
-        //             }
-        //         }
-        //     }, 500)
-        // })
     },
     watch: {
         authenticated() {
@@ -64,6 +51,7 @@ export default {
 <style lang="sass">
 @import "./sass/fonts/styles.css"
 @import '@/common-vue/sass/app.sass'
+@import '@/sass/app.sass'
 @import '@/sass/_custom.scss'
 
 </style>

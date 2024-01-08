@@ -83,6 +83,8 @@ import plan from '@/store/plan'
 import plan_feature from '@/store/plan_feature'
 import dolar from '@/store/dolar'
 import article_ticket_info from '@/store/article_ticket_info'
+import check from '@/store/check'
+import panel_control from '@/store/panel_control/index'
 
 Vue.use(Vuex)
 
@@ -176,5 +178,7 @@ export default new Vuex.Store({
         plan_feature,
         dolar,
         article_ticket_info,
+        check,
+        panel_control,
     }
 })

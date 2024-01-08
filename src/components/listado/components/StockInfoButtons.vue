@@ -1,6 +1,6 @@
 <template>
 <div
-class="m-l-0 m-sm-l-15 m-t-10 m-b-10 m-md-b-0 m-md-t-0">
+class="m-l-0 m-sm-l-15 m-t-10 m-b-10 m-md-b-0 m-md-t-0 m-r-15">
 	<b-button
 	class="m-r-15"
 	v-b-modal="'articles-stock-min'"
@@ -33,15 +33,10 @@ class="m-l-0 m-sm-l-15 m-t-10 m-b-10 m-md-b-0 m-md-t-0">
 </div>
 </template>
 <script>
+import article_stock_info from '@/mixins/article_stock_info'
 export default {
+	mixins: [article_stock_info],
 	computed: {
-		articles() {
-			if (this.$store.state.article.is_filtered) {
-				console.log('sumando precios de filtrados')
-				return this.$store.state.article.filtered
-			}
-			return this.$store.state.article.models
-		},
 		total() {
 			let total = {
 				cost: 0,
@@ -56,16 +51,6 @@ export default {
 				}
 			})
 			return total
-		},
-		articles_stock_min() {
-			return this.articles.filter(article => {
-				return article.stock && article.stock_min && article.stock <= article.stock_min  
-			})
-		},
-		articles_stock_0() {
-			return this.articles.filter(article => {
-				return article.stock != null && article.stock <= 0
-			})
 		},
 	},
 }

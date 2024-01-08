@@ -10,9 +10,10 @@
 		:show_selected="false"
 		:model="article"
 		:save_if_not_exist="false"
-		:str_limint="3"
+		:str_limint="1"
 		:search_from_api="search_from_api"
 		:props_to_show="props_to_show"
+		:props_to_filter="['num']"
 		:prop="{text: 'Articulo', key: 'article_id', store: 'article'}"></search-component>
 	</b-col>
 </template>
@@ -42,7 +43,7 @@ export default {
 		},
 		props_to_show() {
 			if (this.price_types.length) {
-				return [
+				let props = [
 					{
 						text: 'N°',
 						key: 'num',	
@@ -61,6 +62,15 @@ export default {
 						key: 'stock',	
 					},
 				]
+				// if (this.client) {
+				// 	props.push({
+				// 		{
+				// 			text: 'Stock',
+				// 			key: 'stock',	
+				// 		},
+				// 	})
+				// }
+				return props
 			} 
 			return null
 		}

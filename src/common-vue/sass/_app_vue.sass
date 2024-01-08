@@ -26,12 +26,13 @@
 	-webkit-font-smoothing: antialiased
 	-moz-osx-font-smoothing: grayscale
 	text-align: center
+	// padding-bottom: 20px
+	@if ($theme == 'dark') 
+		background: #333
+	@else
+		background: #EEEEEE
 	.container-fluid
-		@if ($theme == 'dark') 
-			background: #333
-		@else
-			background: #FFF
-		// min-height: calc(100vh - 60px)
+		min-height: 100vh
 		.row 
 			justify-content: center
 			[class^='col']

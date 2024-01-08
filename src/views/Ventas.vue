@@ -4,6 +4,8 @@
 
 	<update-prices></update-prices>
 
+	<confirm-afip-tickets></confirm-afip-tickets>
+
 	<view-component
 	show_filter_modal
 	ask_selectable
@@ -23,9 +25,12 @@
 		<template v-slot:table_right_options="props">
 			<budget-order-production-info
 			:model="props.model" />
+		</template> 
+		<template #options_drop_down>
+			<option-dropdown-afip-ticket></option-dropdown-afip-ticket>
 		</template>
 	</view-component>
-</div> 
+</div>  
 </template>
 <script>
 import clients from '@/mixins/clients'
@@ -34,7 +39,7 @@ import afip_ticket from '@/mixins/afip_ticket'
 import sale from '@/mixins/sale'
 export default {
 	mixins: [clients, print_sale, afip_ticket, sale],
-	components: {
+	components: { 
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 		CurrentAcounts: () => import('@/components/common/current-acounts/Index'),
 		AddressNav: () => import('@/components/ventas/components/AddressNav'),
@@ -42,6 +47,8 @@ export default {
 		Total: () => import('@/components/ventas/components/Total'),
 		BudgetOrderProductionInfo: () => import('@/components/ventas/components/BudgetOrderProductionInfo'),
 		UpdatePrices: () => import('@/components/ventas/modals/update-prices/Index'),
+		OptionDropdownAfipTicket: () => import('@/components/ventas/components/OptionDropdownAfipTicket'),
+		ConfirmAfipTickets: () => import('@/components/ventas/modals/ConfirmAfipTickets'),
 	},
 	beforeRouteLeave(to, from, next) {
 		this.$store.commit('sale/setSelected', [])

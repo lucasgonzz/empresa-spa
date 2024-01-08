@@ -61,10 +61,17 @@ export default {
     		type: String,
     		default: null,
     	},
+    	check_permissions: {
+    		type: Boolean,
+    		default: true,
+    	},
     },
     computed: {
     	has_permission() {
-    		return this.can(this.model_name+'.index.previus_days')
+    		if (this.check_permissions) {
+    			return this.can(this.model_name+'.index.previus_days')
+    		}
+    		return true
     	}
     }
 }

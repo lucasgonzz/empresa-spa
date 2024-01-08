@@ -3,11 +3,24 @@ export default {
 	mixins: [set_employee_vender],
 	methods: {
 		startMethods() {
+			this.checkUserAppUrl()
 			this.setEmployeeVender()
 			this.checkAddressCookie()
 			this.checkUpdateFeaturesCookie()
 			this.getUnconfirmedOrders()
 			this.getProviderOrdersDaysToAdvise()
+		},
+		checkUserAppUrl() {
+			console.log('checkUserAppUrl')
+			console.log(location.href)
+			if (this.owner.app_url && this.owner.app_url != location.href) {
+				alert('Su empresa tiene que ingresar desde el siguiente LINK: '+this.owner.app_url+'. Precio ACEPTAR para ser redirigido.')
+				console.log('cerrando sesion')
+				this.$store.dispatch('auth/logout')
+				setTimeout(() => {
+        			location.replace(this.owner.app_url)
+				}, 2000)
+			}
 		},
 		checkAddressCookie() {
 			let cookie = this.$cookies.get('address_id')

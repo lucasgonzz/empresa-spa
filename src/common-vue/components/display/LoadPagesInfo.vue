@@ -1,7 +1,8 @@
 <template>
 	<b-alert
-	class="m-t-15 s-2"
+	class="m-t-15 s-2 m-b-15"
 	:show="loading">
+		<slot></slot>
 		<span
 		v-if="value < 100">
 			Descargando {{ plural(model_name) }}, aguarde por favor

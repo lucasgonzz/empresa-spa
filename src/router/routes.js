@@ -27,6 +27,24 @@ export default [
 		image_url: 'nav-icons/vender.png',
 	},
 	{
+		path: '/deposito-para-checkear',
+		text: 'Deposito',
+		name: 'deposito-para-checkear',
+		component: '@/views/DepositoParaCheckear',
+		can: 'deposito_para_checkear',
+		image_url: 'nav-icons/ventas-to-check.png',
+		if_has_extencion: 'check_sales',
+	},
+	{
+		path: '/deposito-checkeadas',
+		text: 'Checkeadas',
+		name: 'deposito-checkeadas',
+		component: '@/views/DepositoCheckeadas',
+		can: 'deposito_checkeadas',
+		image_url: 'nav-icons/ventas-checked.png',
+		if_has_extencion: 'check_sales',
+	},
+	{
 		path: '/ventas',
 		model_name: 'sale',
 		component: '@/views/Ventas',
@@ -71,6 +89,17 @@ export default [
 		},
 		if_has_extencion: 'comerciocity_interno',
 		image_url: 'nav-icons/clientes.png',
+	},
+	{
+		text: 'Panel de Control',
+		path: '/panel-de-control',
+		component: '@/views/PanelDeControl',
+		image_url: 'nav-icons/caja.png',
+		name: 'panel',
+		params: {
+			view: 'proveedores',
+			sub_view: 'rendimiento-general',
+		},
 	},
 	{
 		path: '/presupuestos',
@@ -133,6 +162,7 @@ export default [
 			sub_view: 'categorias',
 			model_name: 'category',
 		},
+		can: 'abm',
 		image_url: 'nav-icons/abm.png',
 	},
 	{

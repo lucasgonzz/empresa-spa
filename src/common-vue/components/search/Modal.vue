@@ -104,6 +104,9 @@ export default {
 			type: Array,
 			default: null
 		},
+		props_to_filter: {
+			type: Array,
+		},
 		search_from_api: Boolean,
 	},
 	data() {
@@ -115,6 +118,7 @@ export default {
 			results: [],
 			selected_index: -1,
 			saving_if_not_exist: false,
+			esperando: false,
 		}
 	},
 	watch: {
@@ -166,6 +170,7 @@ export default {
 		callSearch(e) {
 			if (e.key != 'ArrowDown' && e.key != 'ArrowUp' && e.key != 'Enter') {
 				this.loading = true 
+				this.esperando = false 
 				if (this.interval) {
 		            window.clearInterval(this.interval)
 					this.interval = null
@@ -181,14 +186,23 @@ export default {
 						}		
 					}, 500)
 				} else {
+					// console.log('VIENE POR ACA')
+					// this.esperando = true 
+					// setTimeout(() => {
+					// 	if (this.esperando && this.query.length) {
+					// 		this.search(true)
+					// 	} else {
+					// 		console.log('paso el tiempo pero esperando ya estaba en false')
+					// 	}
+					// }, 2000)
 					this.loading = false 
 				}
 			}
 		},
-		search() {
+		search(ignore_srt_limit = false) {
 			console.log('BUSCANDO')
 			this.results = []
-			if (this.query.length >= this.str_limint) {
+			if (this.query.length >= this.str_limint || ignore_srt_limit) {
 				let results = []
 				this.searching = true
 
@@ -215,7 +229,35 @@ export default {
 				} else {
 					results = this.models_to_search.filter(model => {
 						let value = ''+model[this.prop_to_filter.key]
-						return value && value.toLowerCase().includes(this.query.toLowerCase())
+						let query_array = this.query.toLowerCase().split(' ')
+
+						let coincide = query_array.every((palabra) =>
+							value.toLowerCase().includes(palabra)
+						)
+
+						if (this.props_to_filter.length && !coincide) {
+							this.props_to_filter.forEach(prop_to_filter => {
+								if (!coincide) {
+									value = ''+model[prop_to_filter]
+									coincide = query_array.every((palabra) =>
+										value.toLowerCase().includes(palabra)
+									)
+									// coincide = value && value.toLowerCase().includes(this.query.toLowerCase())
+								}
+							})
+						}
+
+						// let coincide = value && value.toLowerCase().includes(this.query.toLowerCase())
+
+						// if (this.props_to_filter.length && !coincide) {
+						// 	this.props_to_filter.forEach(prop_to_filter => {
+						// 		if (!coincide) {
+						// 			value = ''+model[prop_to_filter]
+						// 			coincide = value && value.toLowerCase().includes(this.query.toLowerCase())
+						// 		}
+						// 	})
+						// }
+						return coincide
 					})
 					results = results.filter(model => {
 						let index = this.results.findIndex(result => {
@@ -225,6 +267,29 @@ export default {
 					})
 
 					this.results = this.results.concat(results)
+
+					let ids = []
+					let repetidos = []
+					this.results.forEach(result => {
+						if (result.id) {
+							if (ids.includes(result.id)) {
+								repetidos.push(result.id)
+							} else {
+								ids.push(result.id)
+							}
+						}
+					})
+
+					repetidos.forEach(id_repetido => {
+						let index = this.results.findIndex(result => {
+							return result.id == id_repetido
+						})
+						this.results.splice(index, 1)
+					})
+
+					console.log('results:')
+					console.log(this.results)
+					
 					this.finishSearch()
 				}
 			}
@@ -245,7 +310,7 @@ export default {
 			return false
 		},
 		finishSearch() {
-			console.log('continua')
+			console.log('finishSearch')
 			this.orderAlpabethic()
 			this.searching = false
 			this.interval = null
@@ -258,8 +323,10 @@ export default {
 			})
 		},
 		setFirstSelectedRow() {
+			console.log('setFirstSelectedRow')
 			if (this.auto_select) {
 				setTimeout(() => {
+					console.log('this.selected_index = -1')
 					this.selected_index = -1
 					setTimeout(() => {
 						this.selected_index = 0
@@ -343,7 +410,7 @@ export default {
 			}
 		},	
 		onRowSelected(model) {
-			console.log('onRowSelected')
+			console.log('onRowSelected para SEARCH MODAL')
 			this.emitSetSelected(model)
 			// this.$emit('setNotShowModel', true)
 			// this.$emit('setSelected', model)

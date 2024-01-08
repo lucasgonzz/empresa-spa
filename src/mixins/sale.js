@@ -13,7 +13,9 @@ export default {
 			if (this.is_filtered) {
 				return this.filtered
 			}
-			return this.$store.state.sale.models 
+			return this.$store.state.sale.models.filter(sale => {
+				return !sale.to_check && !sale.checked
+			}) 
 		},
 		addresses() {
 			return this.$store.state.address.models 

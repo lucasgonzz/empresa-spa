@@ -19,6 +19,7 @@
 		:show_btn_create="show_btn_create"
 		:search_from_api="search_from_api"
 		:props_to_show="props_to_show"
+		:props_to_filter="props_to_filter"
 		@callSearchModal="callSearchModal"
 		@setQuery="setQuery"
 		@setNotShowModel="setNotShowModel"
@@ -151,6 +152,12 @@ export default {
 		model_name_for_search_on_models: {
 			type: String,
 			default: null,
+		},
+		props_to_filter: {
+			type: Array,
+			default: () => {
+				return []
+			}
 		},
 	},
 	data() {

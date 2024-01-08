@@ -70,12 +70,15 @@
 		:table_height_para_restar="table_height_para_restar"
 		:order_list_by="order_list_by"
 		:check_permissions="check_permissions"
+		:check_permissions_previus_days="check_permissions_previus_days"
 		:models_to_show="models_to_show"
 		:show_models_if_empty="show_models_if_empty"
 		:show_previus_days="show_previus_days"
 		:show_search_nav="show_search_nav"
 		:model_name="model_name"
 		:set_table_height="set_table_height"
+		:set_model_on_row_selected="set_model_on_row_selected"
+		:slice_models="slice_models"
 		@clicked="clicked">
 			<template v-slot:display_top>
 				<slot name="display_top"></slot>
@@ -230,6 +233,18 @@ export default {
 		save_check_function: {
 			type: String,
 			default: null,
+		},
+		set_model_on_row_selected: {
+			type: Boolean,
+			default: true,
+		},
+    	check_permissions_previus_days: {
+    		type: Boolean,
+    		default: true,
+    	},
+		slice_models: {
+			type: Boolean,
+			default: false,
 		},
 	},
 	computed: {
