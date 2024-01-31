@@ -50,20 +50,41 @@
 		<i class="icon-eye-slash"></i>
 		No hay imagenes
 	</p>
-	<b-button-group>
+	<div
+	class="cont-btn-input"
+	v-if="show_btn_google">
 		<b-button
 		size="sm"
 		variant="outline-primary"
 		@click="searchImage">
 			Buscar imagen en Google
 		</b-button>
-		<b-button
-		size="sm"
-		variant="outline-primary"
-		@click="uploadImage">
-			Buscar imagen en este equipo 
-		</b-button>
-	</b-button-group>
+
+		<b-form-file
+		:id="input_file_name"
+		class="m-b-15 file-reader-input-with-button"
+		browse-text="Buscar"
+		v-model="file"
+		variant="primary"
+		:state="Boolean(file)"
+		@change="upload"
+		placeholder="Seleccione la imagen o arrastrala hasta aquí"
+		drop-placeholder="Solta la imagen aqui..."
+		></b-form-file>
+
+	</div>
+	<b-form-file
+	v-else
+	:id="input_file_name"
+	class="file-reader-input"
+	browse-text="Buscar"
+	v-model="file"
+	variant="primary"
+	:state="Boolean(file)"
+	@change="upload"
+	placeholder="Seleccione la imagen o arrastrala hasta aquí"
+	drop-placeholder="Solta la imagen aqui..."
+	></b-form-file>
 </div>
 </template>
 <script>
@@ -78,9 +99,34 @@ export default {
 	    Carousel,
 	    Slide
 	},
+	computed: {
+		show_btn_google() {
+			return typeof this.prop.not_show_google_search_option == 'undefined'
+		},
+		input_file_name() {
+			return this.model_name+'-'+this.prop.key+'-input-file-drop'
+		}
+	},
+	data() {
+		return {
+			file: null,
+		}
+	},
 	methods: {
-		uploadImage() {
-			this.$emit('uploadImage')
+		upload(event) {
+			var file = document.getElementById(this.input_file_name).files[0];
+			if (typeof file == 'undefined') {
+				file = event.dataTransfer.files[0];		
+			}
+			var reader  = new FileReader();
+			reader.readAsDataURL(file)
+			let that = this
+			reader.onloadend = function () {
+				that.$emit('setImageUrl', reader.result)
+				that.$bvModal.hide('upload-image-'+that.model.id+'-'+that.model.nombre+'-'+that.prop.key)
+				that.file = null
+
+			}
 		},
 		setDelete(image) {
 			this.$store.commit(this.model_name+'/setDeleteImageModel', image)
@@ -123,4 +169,22 @@ export default {
 			max-height: 50vh
 			// max-height: 50vh
 			// max-height: calc(100vh - 150px)
+
+.cont-btn-input
+	display: flex 
+	flex-direction: row 
+	align-items: center 
+	justify-content: flex-start
+	
+	button 
+		padding: 8px
+
+	.file-reader-input-with-button
+		width: 200px !important
+		margin: 15px 0
+
+.file-reader-input
+	width: 100% !important
+	margin: 15px 0
+
 </style>

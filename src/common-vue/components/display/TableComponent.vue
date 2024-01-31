@@ -602,6 +602,9 @@ export default {
 		td 
 			padding: 5px 15px
 			line-height: 25px
+			span 
+				word-wrap: break-word
+
 			@if ($theme == 'dark')
 				background: #3E3E3E
 				border-bottom: 1px solid rgba(255,255,255,.2)

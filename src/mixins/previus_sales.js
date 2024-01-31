@@ -53,6 +53,9 @@ export default {
 		previus_returned_services() {
 			return this.$store.state.vender.previus_sales.previus_returned_services
 		},
+		observations() {
+			return this.$store.state.vender.observations
+		},
 	},
 	data() {
 		return {
@@ -120,6 +123,7 @@ export default {
 				if (this.previus_sale.sale_type_id) {
 					this.$store.commit('vender/setSaleTypeId', this.previus_sale.sale_type_id)
 				}
+				this.$store.commit('vender/setObservations', this.previus_sale.observations)
 				console.log('voy a setear to_check con '+this.previus_sale.to_check)
 				this.$store.commit('vender/setToCheck', this.previus_sale.to_check)
 				this.$store.commit('vender/setChecked', this.previus_sale.checked)
@@ -171,6 +175,7 @@ export default {
 				to_check: this.to_check,
 				checked: this.checked,
 				confirmed: this.confirmed,
+				observations: this.observations,
 			})
 			.then(res => {
 				this.$toast.success('Venta actualizada')
@@ -191,6 +196,7 @@ export default {
 			this.$store.commit('vender/setSaveNotaCredito', 0)
 			this.$store.commit('vender/setNotaCreditoDescription', '')
 			this.$store.commit('vender/setTotal')
+			this.$store.commit('vender/setObservations', '')
 			if (this.view != 'remito') {
 				this.$router.push({name: 'vender', params: {view: 'remito'}})
 			}

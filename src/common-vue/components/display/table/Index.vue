@@ -45,6 +45,11 @@
 								<template v-slot:table_right_options="slotProps">
 									<slot name="table_right_options" :model="model"></slot>
 								</template>
+								<template
+								v-for="prop in properties"
+								v-slot:[prop.key]>
+									<slot :model="model" :name="'table-prop-'+prop.key"></slot>
+								</template>
 							</tr-component>
 						</template>
 					</template>
@@ -63,6 +68,11 @@
 						:cont_table_id="id">
 							<template v-slot:table_right_options="slotProps">
 								<slot name="table_right_options" :model="model"></slot>
+							</template>
+							<template
+							v-for="prop in properties"
+							v-slot:[prop.key]>
+								<slot :model="model" :name="'table-prop-'+prop.key"></slot>
 							</template>
 						</tr-component>
 
@@ -154,6 +164,10 @@ export default {
 	},
 	created() {
 		this.setHeight()
+		let that = this
+		window.addEventListener('resize', function(event) {
+			that.setHeight()
+		}, true);
 	},
 	data() {
 		return {

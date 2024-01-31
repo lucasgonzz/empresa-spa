@@ -38,6 +38,7 @@
 			<carrousel
 			v-else
 			@uploadImage="uploadImage"
+			@setImageUrl="setImageUrl"
 			:model="model"
 			:prop="prop"
 			:model_name="model_name"></carrousel>
@@ -73,14 +74,15 @@ export default {
 	methods: {
 		setImageUrl(image_url) {
 			this.image_url = image_url
-			this.$bvModal.show('cropper-'+this.prop.key)
+			this.$bvModal.show('cropper-'+this.model.id+'-'+this.model.nombre+'-'+this.prop.key)
+			// this.$bvModal.show('cropper-'+this.prop.key)
 		},
 		
 		uploadImage() {
 			if (this.prop.select_image_from) {
 				this.$bvModal.show('select-image-'+this.prop.key)
 			} else {
-				this.$bvModal.show('upload-image-'+this.prop.key)
+				this.$bvModal.show('upload-image-'+this.model.id+'-'+this.prop.key)
 			}
 		},
 	}

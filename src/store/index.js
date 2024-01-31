@@ -85,6 +85,8 @@ import dolar from '@/store/dolar'
 import article_ticket_info from '@/store/article_ticket_info'
 import check from '@/store/check'
 import panel_control from '@/store/panel_control/index'
+import me_li_order from '@/store/me_li_order'
+import me_li_payment from '@/store/me_li_payment'
 
 Vue.use(Vuex)
 
@@ -180,5 +182,7 @@ export default new Vuex.Store({
         article_ticket_info,
         check,
         panel_control,
+        me_li_order,
+        me_li_payment,
     }
 })

@@ -34,6 +34,9 @@ export default [
 		can: 'deposito_para_checkear',
 		image_url: 'nav-icons/ventas-to-check.png',
 		if_has_extencion: 'check_sales',
+		params: {
+			view: 'para-checkear',
+		},
 	},
 	{
 		path: '/deposito-checkeadas',
@@ -123,6 +126,20 @@ export default [
 			'buyer.index',
 		],
 		image_url: 'nav-icons/tienda.png',
+	},
+	{
+		text: 'MercadoLibre',
+		name: 'mercado_libre',
+		path: '/mercado-libre',
+		component: '@/views/MercadoLibre',
+		params: {
+			view: 'pedidos',
+		},
+		if_has_extencion: 'mercado_libre',
+		can: [
+			'mercado_libre.orders',
+		],
+		image_url: 'nav-icons/mercado_libre.png',
 	},
 	{
 		text: 'Produccion',

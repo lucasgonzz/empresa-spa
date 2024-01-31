@@ -1,6 +1,6 @@
 <template>
 <div
-class="m-l-0 m-sm-l-15 m-t-10 m-b-10 m-md-b-0 m-md-t-0 m-r-15">
+class="m-l-0 m-sm-l-15 m-t-15 m-r-15">
 	<b-button
 	class="m-r-15"
 	v-b-modal="'articles-stock-min'"

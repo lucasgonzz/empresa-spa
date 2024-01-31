@@ -1,6 +1,11 @@
 import dates from '@/common-vue/mixins/dates'
 export default {
 	methods: {
+        saleGetColor(sale) {
+            if (this.route_name == 'deposito-para-checkear' && sale.printed) {
+                return 'sale-printed'
+            }
+        },
         articleRecipeHasAddresses(prop, recipe) {
             if (recipe.article) {
                 let store_article = this.$store.state.article.models.find(_article => {

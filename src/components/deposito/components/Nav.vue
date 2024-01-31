@@ -16,7 +16,7 @@ export default {
 					name: 'para checkear'
 				},
 				{
-					name: 'checkeadas'
+					name: 'confirmadas'
 				},
 			]
 			return items 

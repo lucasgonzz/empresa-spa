@@ -5,6 +5,10 @@ v-if="view == 'remito'">
 	<total-previus-sales></total-previus-sales>
 	<header-2></header-2>
 	<previus-sale-data></previus-sale-data>
+
+	<observations></observations>
+
+
 	<articles-table></articles-table>
 </div>
 </template>
@@ -14,6 +18,7 @@ import TotalPreviusSales from '@/components/vender/components/remito/total-previ
 import Header2 from '@/components/vender/components/remito/header-2/Index'
 import ArticlesTable from '@/components/vender/components/remito/ArticlesTable.vue'
 import PreviusSaleData from '@/components/vender/components/remito/PreviusSaleData.vue'
+import Observations from '@/components/vender/components/client/Observations'
 export default {
 	components: {
 		HeaderForm,
@@ -21,6 +26,7 @@ export default {
 		Header2,
 		ArticlesTable, 	
 		PreviusSaleData, 
+		Observations,
 	}
 }
 </script>

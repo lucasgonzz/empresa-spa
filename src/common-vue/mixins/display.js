@@ -6,29 +6,39 @@ export default {
 				this.$store.commit(model_name+'/setSelectedModel', selected_model)
 			}
 		},
-		setModel(model, model_name, properties_to_override = [], show_modal = true) {
-			let properties = this.getSelectAndCheckboxProps(model, model_name)
-			properties = properties.concat(this.getPivotProperties(model, model_name))
-			properties = this.overrideProperties(properties, properties_to_override)
-			// console.log(properties)
-			
-			if (show_modal) {
-				this.$store.commit('auth/setMessage', 'Cargando formulario')
-				this.$store.commit('auth/setLoading', true)
-			}			
-			setTimeout(() => {
+		setModel(model, model_name, properties_to_override = [], show_modal = true, show_pre_view = true) {
+			if (this.usePreView(model_name) && show_pre_view) {
 				this.$store.commit(model_name+'/setModel', {
 					model, 
-					properties
+					properties: [],
 				})
+				this.$bvModal.show(model_name+'-pre-view')
+			} else {
+				this.$bvModal.hide(model_name+'-pre-view')
+
+				let properties = this.getSelectAndCheckboxProps(model, model_name)
+				properties = properties.concat(this.getPivotProperties(model, model_name))
+				properties = this.overrideProperties(properties, properties_to_override)
+				// console.log(properties)
+				
 				if (show_modal) {
-					this.$bvModal.show(model_name)
-					setTimeout(() => {
-						this.$store.commit('auth/setLoading', false)
-						this.$store.commit('auth/setMessage', '')
-					}, 100)
-				}
-			}, 100)
+					this.$store.commit('auth/setMessage', 'Cargando formulario')
+					this.$store.commit('auth/setLoading', true)
+				}			
+				setTimeout(() => {
+					this.$store.commit(model_name+'/setModel', {
+						model, 
+						properties
+					})
+					if (show_modal) {
+						this.$bvModal.show(model_name)
+						setTimeout(() => {
+							this.$store.commit('auth/setLoading', false)
+							this.$store.commit('auth/setMessage', '')
+						}, 30)
+					}
+				}, 30)
+			}
 		},
 		getSelectAndCheckboxProps(model, model_name) {
 			let properties = []

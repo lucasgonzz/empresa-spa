@@ -24,10 +24,11 @@
 			auto_select></search-component>
 		</b-form-group>
 
-
-
+		<p
+		v-if="addresses.length && !article.addresses.length"
+		>Para indicar el deposito, primero divida el stock global del articulo hacia el o los depositos correspondientes</p>
 		<b-form-group
-		v-if="addresses.length"
+		v-if="addresses.length && article.addresses.length"
 		label="Deposito DESTINO">
 			<b-form-select
 			v-model="to_address_id"
@@ -108,18 +109,14 @@ export default {
 						console.log('el stock es '+Number(this.article.stock)+' mas '+Number(this.amount_))
 
 						if (this.article.addresses.length) {
-							let store_article = this.$store.state.article.models.find(_article => {
-								return _article.id == this.article.id
-							})
-							// this.setModel(this.article, 'article')
-							console.log('se va a actualizar addresses con')
-							console.log(store_article.addresses)
-							this.setModel(store_article, 'article', [], false)
-							// setTimeout(() => {
-							// 	console.log(store_article.addresses)
-							// 	this.setModel(store_article, 'article')
-							// 	// this.$set(store_article, 'addresses', store_article.addresses)
-							// }, 2000)
+							setTimeout(() => {
+								let store_article = this.$store.state.article.models.find(_article => {
+									return _article.id == this.article.id
+								})
+								console.log('se va a actualizar addresses con')
+								console.log(store_article.addresses)
+								this.setModel(store_article, 'article', [], false)
+							}, 1500)
 						}
 					}
 				})

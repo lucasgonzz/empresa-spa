@@ -15,7 +15,7 @@
     	label="Seleccione el punto de venta desde el cual se van a emitir las facturas">
 	    	<b-form-select
 	    	v-model="afip_information_id"
-			:options="getOptions({key: 'afip_information_id', text: 'Punto de Venta'})"></b-form-select>
+			:options="options"></b-form-select>
     	</b-form-group>
 
     	<b-button
@@ -61,6 +61,30 @@ export default {
 		Confirm: () => import('@/common-vue/components/Confirm'),
 	},
 	computed: {
+		afip_information() {
+			return this.$store.state.afip_information.models 
+		},
+		options() {
+			let options = [
+				{
+					value: 0,
+					text: 'Seleccione Punto de Venta'
+				}
+			]
+			let text 
+			this.afip_information.forEach(afip_information => {
+				if (afip_information.description) {
+					text = afip_information.description
+				} else {
+					text = afip_information.razon_social 	
+				}
+				options.push({
+					value: afip_information.id,
+					text
+				})
+			})
+			return options
+		},
 		selected_sales() {
 			return this.$store.state.sale.selected
 		},

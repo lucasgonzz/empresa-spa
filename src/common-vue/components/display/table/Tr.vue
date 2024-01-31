@@ -4,99 +4,101 @@
 	:class="rowClass(model)">
 		<td
 		v-for="(prop, index) in props">
-			<div 
-			:class="index == props.length-1 ? 'cont-tr-full-width' : ''"
-			class="cont-tr">
-				
-				<pivot-prop
-				v-if="prop.is_pivot_prop"
-				:cont_table_id="cont_table_id"
-				:model="model"
-				:index="index"
-				:model_name="model_name"
-				:prop="prop"></pivot-prop>
+			<slot :name="prop.key">
+				<div 
+				:class="index == props.length-1 ? 'cont-tr-full-width' : ''"
+				class="cont-tr">
+					
+					<pivot-prop
+					v-if="prop.is_pivot_prop"
+					:cont_table_id="cont_table_id"
+					:model="model"
+					:index="index"
+					:model_name="model_name"
+					:prop="prop"></pivot-prop>
 
-				<vue-load-image
-				v-else-if="isImageProp(prop) && imageUrl(model, prop)"
-				class="img-fluid">
-					<img 
-					slot="image"
-					:src="imageUrl(model, prop)">
+					<vue-load-image
+					v-else-if="isImageProp(prop) && imageUrl(model, prop)"
+					class="img-fluid">
+						<img 
+						slot="image"
+						:src="imageUrl(model, prop)">
 
-			        <b-spinner
-					slot="preloader"
-			        variant="primary"></b-spinner>
+				        <b-spinner
+						slot="preloader"
+				        variant="primary"></b-spinner>
 
-					<div slot="error">Imagen no encontrada</div>
-				</vue-load-image>
+						<div slot="error">Imagen no encontrada</div>
+					</vue-load-image>
 
 
-				<div
-				v-else-if="showInput(prop, model)">
-					<b-form-textarea
-					v-if="prop.type == 'textarea'"
-					:class="getInputSize(prop)"
-					:placeholder="propertyText(model, prop)"
-					v-model="model[prop.key]"></b-form-textarea>
+					<div
+					v-else-if="showInput(prop, model)">
+						<b-form-textarea
+						v-if="prop.type == 'textarea'"
+						:class="getInputSize(prop)"
+						:placeholder="propertyText(model, prop)"
+						v-model="model[prop.key]"></b-form-textarea>
 
-					<b-form-input
-					v-if="prop.type == 'text'"
-					:class="getInputSize(prop)"
-					:placeholder="propertyText(model, prop)"
-					v-model="model[prop.key]"></b-form-input>
+						<b-form-input
+						v-if="prop.type == 'text'"
+						:class="getInputSize(prop)"
+						:placeholder="propertyText(model, prop)"
+						v-model="model[prop.key]"></b-form-input>
 
-					<p
-					v-if="prop.type == 'checkbox'">
+						<p
+						v-if="prop.type == 'checkbox'">
+							<span
+							v-if="model[prop.key]">
+								Si
+							</span>
+							<span
+							v-else>
+								No
+							</span>
+						</p>
+					</div>
+
+					<b-button
+					v-else-if="showProperty(prop, model) && prop.button"
+					:variant="prop.button.variant"
+					@click.stop="callMethod(prop, model)">
+						<i
+						v-if="prop.button.icon"
+						:class="'icon-'+prop.button.icon"></i>
+
 						<span
-						v-if="model[prop.key]">
-							Si
+						v-else-if="prop.button.button_text">
+							{{ prop.button.button_text }}
 						</span>
+						
 						<span
 						v-else>
-							No
+							{{ propertyText(model, prop) }}
 						</span>
-					</p>
-				</div>
-
-				<b-button
-				v-else-if="showProperty(prop, model) && prop.button"
-				:variant="prop.button.variant"
-				@click.stop="callMethod(prop, model)">
-					<i
-					v-if="prop.button.icon"
-					:class="'icon-'+prop.button.icon"></i>
-
-					<span
-					v-else-if="prop.button.button_text">
-						{{ prop.button.button_text }}
-					</span>
+					</b-button>
 					
-					<span
-					v-else>
-						{{ propertyText(model, prop) }}
-					</span>
-				</b-button>
-				
 
-				<template
-				v-else>
-					<template
-					v-if="prop.from_pivot">
-						{{ propertyText(model.pivot, prop) }}
-					</template>
 					<template
 					v-else>
-						{{ propertyText(model, prop) }}
+						<template
+						v-if="prop.from_pivot">
+							{{ propertyText(model.pivot, prop) }}
+						</template>
+						<template
+						v-else>
+							{{ propertyText(model, prop) }}
+						</template>
 					</template>
-				</template>
 
-				<template
-				v-if="index == props.length-1">
-					<slot name="table_right_options" :model="model">
-						&nbsp
-					</slot>
-				</template>
-			</div>
+					<template
+					v-if="index == props.length-1">
+						<slot name="table_right_options" :model="model">
+							&nbsp
+						</slot>
+					</template>
+				</div>
+			</slot>
 		</td>
 		<!-- <td>
 			<span

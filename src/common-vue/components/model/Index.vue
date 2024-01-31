@@ -11,9 +11,14 @@
 
 		<b-modal
 		:size="size"
-		:title="title"
 		scrollable
 		:id="model_name">
+
+			<template #modal-title>
+				<slot name="model_modal_title">
+					{{ title }}
+				</slot>
+			</template>
 			
 			<slot 
 			name="model_modal_header"
@@ -47,8 +52,8 @@
 
 				<template
 				v-for="prop in properties"
-				v-slot:[prop.key]>
-					<slot :name="prop.key"></slot>
+				v-slot:[prop.key]="props">
+					<slot :name="prop.key" :model="props.model"></slot>
 				</template>
 
 			</model-form>
@@ -93,7 +98,7 @@
 						<btn-loader
 						class="m-l-10"
 						:block="false"
-						v-if="can_save"
+						v-if="can_save && show_only_guardar"
 						@clicked="save"
 						:prop_to_send_on_emit="{close: false}"
 						:loader="loading"
@@ -196,6 +201,10 @@ export default {
 			type: String,
 			default: null,
 		},
+		show_only_guardar: {
+			type: Boolean,
+			default: true,
+		},
 	},
 	components: {
 		Confirm,
@@ -264,7 +273,10 @@ export default {
 		title() {
 			if (this.model.id) {
 				let text = 'Actualizar '+this.singular(this.model_name).toLowerCase()
-				if (this.model.num) {
+				let prop_title = this.prop_to_show_in_modal_title(this.model_name)
+				if (prop_title) {
+					text += ' '+ this.model[prop_title]
+				} else if (this.model.num) {
 					text += ' N° '+this.model.num
 				}
 				return text
@@ -282,7 +294,7 @@ export default {
 			this.$emit('modelDeleted')
 		},
 		save(info) {
-			console.log(info)
+			// this.setPropsValues()
 			if (this.check() && !this.loading) {
 				this.$store.commit('auth/setMessage', 'Guardando')
 				this.loading = true 
@@ -400,6 +412,28 @@ export default {
 			}
 			return model_to_send
 		},
+		setPropsValues() {
+			this.properties.forEach(prop => {
+				if (
+					(prop.type == 'text' 
+					|| prop.type == 'textarea' 
+					|| prop.type == 'date' 
+					|| prop.type == 'search' 
+					|| prop.type == 'select')
+
+					&& typeof prop.not_show_on_form == 'undefined' && typeof prop.show_only_if_is_created == 'undefined') {
+					let input = document.getElementById(this.model_name+'-'+prop.key)
+					if (prop.type == 'search') {
+						this.model[prop.key] = input.getAttribute('model_id')
+						console.log('input de '+prop.text)
+						console.log(input)
+						console.log('se le puso el value de '+input.getAttribute('model_id'))
+					} else {
+						this.model[prop.key] = input.value
+					}
+				}
+			})
+		},
 		check() {
 			let ok = true
 			this.properties.forEach(prop => {
@@ -425,6 +459,7 @@ export default {
 				relations_filtered.forEach(relation_filtered => {
 					this.removeRelationFiltered(this.model_name, this.model, relation_filtered)
 				})
+				this.$store.commit(this.model_name+'/setDeletedModelsFromRelationsFiltered', [])
 			}
 		},
 		callActions(model) {
@@ -440,7 +475,7 @@ export default {
 @import '@/sass/_custom.scss'
 @if ($theme == 'dark') 
 	.modal-content
-		background: #333 !important
+		background: #1d1d1d !important
 	.modal-header, .modal-header > .close
 		color: rgba(255, 255, 255, .9) !important
 @else 

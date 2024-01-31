@@ -22,7 +22,7 @@ export default {
 			value: null,
 			use_to_check_if_is_repeat: true,
 			use_to_show_in_search_modal: true,
-			filter_modal_position: 1,
+			// filter_modal_position: 1,
 			use_bar_code_scanner: true,
 		},
 		{
@@ -147,6 +147,14 @@ export default {
 		{
 			text: 'Disponible en la tienda',
 			key: 'online',
+			type: 'checkbox',
+			value: 1,
+			not_show: true,
+			keep_after_create: true,
+		},
+		{
+			text: 'Disponible en Mercado Libre',
+			key: 'mercado_libre',
 			type: 'checkbox',
 			value: 1,
 			not_show: true,

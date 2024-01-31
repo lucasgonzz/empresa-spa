@@ -2,7 +2,7 @@
 	<b-button
 	:size="size"
 	@click.stop="clicked"
-	:disabled="disabled"
+	:disabled="loader"
 	:block="block"
 	:variant="variant">
 		<span 

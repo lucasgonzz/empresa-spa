@@ -29,6 +29,7 @@ export default {
 	},
 	methods: {
 		search() {
+			this.$store.commit('article/setFiltered', [])
 			let articles = this.articles.filter(article => {
 				return article.bar_code == this.bar_code
 			})

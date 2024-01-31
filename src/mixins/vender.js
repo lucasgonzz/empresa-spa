@@ -198,7 +198,9 @@ export default {
 			}
 		},
 		vender(print_ticket = false) {
-			if (this.check()) {
+			console.log('se llamo a vender')
+			if (this.check_vender()) {
+				console.log('paso check')
 				if ((!this.download_articles && !this.articles.length) || (this.is_mobile && !this.downloadOnMobile('article') && !this.articles.length)) {
 
 				} else {
@@ -234,7 +236,9 @@ export default {
 				this.$store.commit('vender/setCurrentAcountPaymentMethodId', this.owner.default_current_acount_payment_method_id)
 			}
 		},
-		check() {
+		check_vender() {
+			console.log('check antes de vender')
+			console.log(this.hasExtencion('articles_default_in_vender'))
 			if (this.hasExtencion('articles_default_in_vender')) {
 				this.checkDefaultArticles()
 			}
@@ -258,7 +262,12 @@ export default {
 			return true 
 		},
 		checkDefaultArticles() {
+			console.log('checkDefaultArticles')
 			let default_articles = this.items.filter(item => {
+				console.log('checkeando '+item.name)
+				console.log(item.is_article)
+				console.log(item.default_in_vender)
+				console.log(item.price_vender)
 				return item.is_article 
 						&& item.default_in_vender 
 						&& item.price_vender == ''

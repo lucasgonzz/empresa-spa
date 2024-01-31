@@ -132,12 +132,30 @@ export default {
 		}, 
 	},
 	methods: {
+		get_table_prop_slot_name(prop) {
+			return 'table-prop-'+prop.key
+		},
+		prop_to_show_in_modal_title(model_name) {
+			let prop_to_show_in_modal_title = require('@/models/'+model_name).default.prop_to_show_in_modal_title
+			return typeof prop_to_show_in_modal_title != 'undefined' ? prop_to_show_in_modal_title : null
+		},
+		checkButton(prop, model) {
+			console.log('checkButton')
+			return (prop.type == 'radio') && model[prop.key] != prop.value
+		},
+		getLabel(prop) {
+			return this.capitalize(this.propText(prop))
+		},
+		usePreView(model_name) {
+			return typeof require('@/models/'+model_name).default.pre_view != 'undefined'
+		},
 		getOriginalModel(model_name, model){
 			return this.$store.state[model_name].models.find(model_ => {
 				return model_.id == model.id 
 			}) 
 		},
 		removeRelationFiltered(model_name, model, relation) {
+			console.log('removeRelationFiltered para '+model_name)
 			let original_model = this.getOriginalModel(model_name, model)
 
 			let updated_relations = model[relation]
@@ -148,11 +166,39 @@ export default {
 				let index = model[relation].findIndex(_relation => {
 					return _relation.id == updated_relation.id 
 				})
-				model[relation].splice(index, 1, updated_relation)
+				if (index != -1) {
+					console.log('actualizando de la relacion el modelo: ')
+					model[relation].splice(index, 1, updated_relation)
+				} else {
+					console.log('quitando de la relacion el modelo: ')
+					console.log(updated_relation)
+					model[relation].splice(index, 1)
+				}
 			})
+
+			this.removeDeletedModelsFromRelationFiltered(model_name, model)
 
 			this.setModel(model, model_name, [], false)
 			this.$store.commit(model_name+'/removeRelationFiltered', relation)
+		},
+
+
+		// Aca se ve si hay modelos eliminados en los resultados de busqueda dentro de la relacion, 
+		// y si los hay los elimina de la relacion original del modelo
+		removeDeletedModelsFromRelationFiltered(model_name, model) {
+			let deleted_models = this.$store.state[model_name].deleted_models_from_relations_filtered
+			if (typeof deleted_models != 'undefined') {
+				console.log('removeDeletedModelsFromRelationFiltered para '+model_name)
+				deleted_models.forEach(deleted_model => {
+					let index = model[deleted_model.relation].findIndex(relation_model => {
+						return relation_model.id == deleted_model.id 
+					})
+					if (index != -1) {
+						model[deleted_model.relation].splice(index, 1)
+						console.log('eliminando el indice '+index+' de '+deleted_model.relation)
+					}
+				})
+			}
 		},
 		show_all_models_on_display(model_name) {
 			let show_all_models_on_display = require('@/models/'+model_name).default.show_all_models_on_display
@@ -626,7 +672,8 @@ export default {
 					return ''
 				}
 			}
-			return model[prop.key] 
+			return model[prop.key]
+			// return model[prop.key].replace(/\n/g, '<br>')
 		},
 		isRelationKey(prop) {
 			let last = ''

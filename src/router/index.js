@@ -51,7 +51,7 @@ const routes = [
         component: () => import('@/views/Listado')
     },
     {
-        path: '/deposito-para-checkear',
+        path: '/deposito-para-checkear/:view',
         name: 'deposito-para-checkear',
         component: () => import('@/views/DepositoParaCheckear')
     },
@@ -99,6 +99,11 @@ const routes = [
         path: '/online/:view?/:sub_view?/:chat_id?',
         name: 'online',
         component: () => import('@/views/Online')
+    },
+    {
+        path: '/mercado-libre/:view?',
+        name: 'mercado_libre',
+        component: () => import('@/views/MercadoLibre')
     },
     // {
     //     path: '/ventas',

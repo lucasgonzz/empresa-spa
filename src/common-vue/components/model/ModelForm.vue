@@ -13,6 +13,7 @@
 			:xl="getCol(prop, 3, input_full_width)"
 			:key="'model-prop-'+index">
 				<b-form-group
+				:class="colorLabel(prop)"
 				:description="prop.description">
 					<label
 					class="form-label">
@@ -22,7 +23,7 @@
 						<i 
 						v-else
 						class="icon-right"></i>
-						<strong>{{ label(prop) }}</strong>
+						<strong>{{ getLabel(prop) }}</strong>
 					</label>
 					<div>
 						<images
@@ -36,11 +37,12 @@
 						v-else>
 							<slot :name="prop.key">
 								<p
-								v-if="prop.only_show"
+								v-if="prop.only_show || prop.from_pre_view"
 								class="m-b-0 m-l-25 text-only-show">
 									<strong 
+									:class="colorLabel(prop)"
+									v-html="propertyText(model, prop, false, !prop.from_pre_view)"
 									v-if="propertyText(model, prop) != '' || propertyText(model, prop) == 0">
-										{{ propertyText(model, prop) }}
 									</strong>
 									<span
 									v-else>
@@ -70,16 +72,10 @@
 								:model="model"
 								:prop="prop"></belongs-to-many-checkbox>
 
-								<has-many
-								v-else-if="prop.has_many"
-								:parent_model="model"
-								:parent_model_name="model_name"
-								:prop="prop"></has-many>
-
 						       <!--  <b-form-datepicker
 								v-else-if="prop.type == 'date'"
 						        placeholder="Fecha"
-						        :disabled="isDisabled(prop)"
+						        :disabled="isDisabled(prop, form_to_filter)"
 						        v-model="model[prop.key]"></b-form-datepicker> -->
 
 						        <date-picker
@@ -116,7 +112,7 @@
 								v-else-if="prop.type == 'text' || prop.type == 'number' || prop.type == 'password'"
 								class="d-flex w-100">
 									<b-form-input
-							        :disabled="isDisabled(prop)"
+							        :disabled="isDisabled(prop, form_to_filter)"
 									:placeholder="'Ingresar '+propText(prop)"
 									:type="prop.type"
 									@keyup.enter="clickEnter(prop)"
@@ -130,8 +126,9 @@
 
 								<b-form-textarea
 								v-else-if="prop.type == 'textarea'"
-						        :disabled="isDisabled(prop)"
+						        :disabled="isDisabled(prop, form_to_filter)"
 								:placeholder="'Ingresar '+propText(prop)"
+								:rows="10"
 								:type="prop.type"
 								v-model="model[prop.key]"></b-form-textarea>
 
@@ -143,14 +140,14 @@
 
 									<b-form-select
 									@change="setChange(prop)"
-							        :disabled="isDisabled(prop)"
+							        :disabled="isDisabled(prop, form_to_filter)"
 									v-model="model[prop.key]"
 									:options="getOptions(prop, model, model_name)"></b-form-select>
 								</div>		
 
 								<b-form-checkbox
 								v-else-if="prop.type == 'checkbox'"
-						        :disabled="isDisabled(prop)"
+						        :disabled="isDisabled(prop, form_to_filter)"
 								v-model="model[prop.key]"
 								:value="1"
 								:unchecked-value="0">
@@ -200,6 +197,12 @@
 										{{ propertyText(model, prop) }}
 									</span>
 								</b-button>
+								
+								<p
+								class="function-value"
+								v-else-if="prop.function">
+									{{ getFunctionValue(prop, model) }}
+								</p>
 
 								<div
 								class="m-l-15"
@@ -228,11 +231,11 @@
 									</table-component>	
 								</div>
 
-								<p
-								class="function-value"
-								v-else-if="prop.function">
-									{{ getFunctionValue(prop, model) }}
-								</p>
+								<has-many
+								v-else-if="prop.has_many"
+								:parent_model="model"
+								:parent_model_name="model_name"
+								:prop="prop"></has-many>
 
 								<b-button
 								v-if="(prop.type == 'radio') && model[prop.key] != prop.value"
@@ -385,6 +388,17 @@ export default {
 		},
 	},
 	methods: {
+		colorLabel(prop) {
+			if (prop.color_function) {
+				return this[prop.color_function](this.model)
+			}
+		},
+		isDisabled(prop, form_to_filter = false) {
+			if (prop.disabled && !form_to_filter) {
+				return true 
+			}
+			return false
+		},
 		setFocus() {
 			setTimeout(() => {
 				let ok = false 
@@ -425,6 +439,20 @@ export default {
 				return _model.id == model.id 
 			})
 			this.model[prop.key].splice(index, 1)
+			this.check_relations_filtered(prop, model)
+		},
+		check_relations_filtered(prop, deleted_model) {
+			let relations_filtered = this.$store.state[this.model_name].relations_filtered
+			if (typeof relations_filtered != 'undefined') {
+				let relation_filtered = relations_filtered.find(relation => {
+					return relation == prop.key 
+				})
+				if (typeof relation_filtered != 'undefined') {
+					console.log('SE ESTA FILTRANDO ESTA RELACION')
+					deleted_model.relation = prop.key
+					this.$store.commit(this.model_name+'/addDeletedModelsFromRelationFiltered', deleted_model)
+				}
+			}
 		},
 		propsToShowInBelongsToMany(prop) {
 			let props = []
@@ -447,12 +475,6 @@ export default {
 				})
 			}
 			return props
-		},
-		isDisabled(prop) {
-			if (prop.disabled && !this.form_to_filter) {
-				return true 
-			}
-			return false
 		},
 		clear(prop) {
 			this.model[prop.key] = prop.value 
@@ -514,9 +536,6 @@ export default {
 			this.$store.commit(prop.store+'/setModel', {model: null, properties: properties})
 			this.$bvModal.show(this.routeString(this.modelNameFromRelationKey(prop)))
 		},
-		label(prop) {
-			return this.capitalize(this.propText(prop))
-		},
 		setSelected(result) {
 			console.log('---------setSelected------------')
 			console.log(result)
@@ -545,6 +564,8 @@ export default {
 			let finded = this.model[prop.key].find(model => {
 				return model.id == model_to_add.id 
 			})
+			console.log('checkBelongsToManyExist finded:')
+			console.log(finded)
 			if (typeof finded != 'undefined') {
 				this.$toast.error('Se agrego el artiuclo, pero YA HABIA SIDO AGREGADO')
 			}

@@ -30,6 +30,12 @@
 				:model_name="model_name"
 				@add="addModelsToShow"></btn-add-to-show>
 			</template>
+			
+			<template
+			v-for="prop in properties"
+			v-slot:[get_table_prop_slot_name(prop)]="props">
+				<slot :name="'table-prop-'+prop.key" :model="props.model"></slot>
+			</template>
 		</table-component>
 
 		<cards-component

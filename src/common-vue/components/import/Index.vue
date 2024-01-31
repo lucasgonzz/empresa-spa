@@ -253,6 +253,7 @@ export default {
 			positions_seted: false,
 			create_and_edit: 1,
 			show_history: false,
+			limite_filas: 100,
 		}
 	},
 	methods: {
@@ -303,9 +304,8 @@ export default {
 			})
 			this.positions_seted = false
 		},	
-		upload() {
+		async upload() {
 			this.loading = true
-			let config = {headers: { 'content-type': 'multipart/form-data' }}
 			let form_data = new FormData();
 			form_data.append('models', this.file)
 			form_data.append('start_row', this.start_row)
@@ -325,8 +325,20 @@ export default {
 					form_data.append(key, this.props_to_send[key])
 				})
 			}
-			this.$api.post(this.routeString(this.model_name)+'/excel/import', form_data, config)
-			.then(res => {
+
+			if (this.finish_row > this.limite_filas) {
+				console.log('se van a partir las solicitudes')
+				for (var solicitud = 1; solicitud <= this.finish_row / this.limite_filas; solicitud++) {
+					console.log('solicitud n° '+solicitud)
+					let start_row = this.start_row * solicitud
+					let finish_row = start_row + this.limite_filas
+					// AXIOS
+
+					form_data.append('start_row', start_row)
+					form_data.append('finish_row', finish_row)
+					await this.sendRequest(form_data)
+				}
+				console.log('terminaron de enviarse las solicitudes')
 				this.loading = false
 				this.file = null
 				this.$bvModal.hide(this.id)
@@ -334,7 +346,25 @@ export default {
 				this.actions.forEach(action => {
 					this.$store.dispatch(action)
 				})
-				console.log(res)
+			} else {
+				await this.sendRequest(form_data)
+				console.log('terminaron de enviarse las solicitudes')
+				this.loading = false
+				this.file = null
+				this.$bvModal.hide(this.id)
+				this.$store.dispatch(this.model_name+'/getModels')
+				this.actions.forEach(action => {
+					this.$store.dispatch(action)
+				})
+			}
+		},
+		sendRequest(form_data) {
+			console.log('enviando solicitud')
+			let config = {headers: { 'content-type': 'multipart/form-data' }}
+
+			return this.$api.post(this.routeString(this.model_name)+'/excel/import', form_data, config)
+			.then(res => {
+				console.log('se envio')
 			})
 			.catch(err => {
 				this.loading = false

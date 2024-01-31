@@ -381,7 +381,14 @@ export default {
 				this.query = ''
 				console.log('se limpio query')
 			}
+			this.setInputValue()
 		},
+		setInputValue() {
+			let input = document.getElementById(this.id)
+			console.log('setInputValue search input')
+			console.log(input)
+			input.setAttribute('model_id', this.selected_model.id)
+		}
 	}
 }
 </script>

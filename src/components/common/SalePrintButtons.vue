@@ -9,23 +9,23 @@
 		</template>
 		<b-dropdown-item
 		v-if="sale.afip_ticket"
-		@click="afipTicketPdf(sale.id)">
+		@click.stop="afipTicketPdf(sale.id)">
 			Factura
 		</b-dropdown-item>
 		<b-dropdown-item
-		@click="ticketPdf(sale.id)">
+		@click.stop="ticketPdf(sale.id)">
 			Ticket
 		</b-dropdown-item>
 		<b-dropdown-item
-		@click="salePdf(sale.id, 0, 0)">
+		@click.stop="salePdf(sale.id, 0, 0)">
 			Sin precios
 		</b-dropdown-item>
 		<b-dropdown-item
-		@click="salePdf(sale.id, 1, 0)">
+		@click.stop="salePdf(sale.id, 1, 0)">
 			Con precios
 		</b-dropdown-item>
 		<b-dropdown-item
-		@click="salePdf(sale.id, 1, 1)">
+		@click.stop="salePdf(sale.id, 1, 1)">
 			Con costos
 		</b-dropdown-item>
 	</b-dropdown>

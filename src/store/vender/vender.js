@@ -35,6 +35,7 @@ export default {
 		employee_id: 0,
 		address_id: 0,
 		sale_type_id: 0,
+		observations: '',
 
 		returned_items: [],
 
@@ -144,6 +145,9 @@ export default {
 		},
 		setSaleTypeId(state, value) {
 			state.sale_type_id = value
+		},
+		setObservations(state, value) {
+			state.observations = value
 		},
 		setClient(state, value) {
 			state.client = value
@@ -269,6 +273,7 @@ export default {
 				to_check: state.to_check,
 				checked: state.checked,
 				confirmed: state.confirmed,
+				observations: state.observations,
 			})
 			.then(res => {
 				console.log('vendido')
@@ -281,6 +286,7 @@ export default {
 				commit('setSurchagesId', [])
 				// commit('setSaleTypeId', 1)
 				commit('setClient', null)
+				commit('setObservations', '')
 				commit('setTotal', 0)
 				commit('sale/add', sale, {root: true})
 			})

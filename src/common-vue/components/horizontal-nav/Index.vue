@@ -327,7 +327,7 @@ export default {
 			justify-content: flex-start
 
 		& > div 
-			margin-top: 1em
+			margin-top: 15px
 .horizontal-nav
 	width: 100%
 	display: flex

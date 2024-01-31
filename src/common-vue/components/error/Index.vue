@@ -46,7 +46,7 @@ export default {
 		}
 	},
     methods: {
-        errorEvent(event) {
+        errorEvent(error) {
         	if (error.response.data.message != 'Unauthenticated.' && this.authenticated && error.response && error.response.data && error.response.data.message) {
 	        	this.$bvModal.show('error')
         	}

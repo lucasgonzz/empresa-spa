@@ -36,7 +36,9 @@ export default {
 			let items = []
 			let text 
 			items.push({name: 'todos'})
-			items.push(this.countSales(this.user, false))
+			if (this.is_owner) {
+				items.push(this.countSales(this.user, false))
+			}
 			this.employees.forEach(employee => {
 				items.push(this.countSales(employee))
 			})

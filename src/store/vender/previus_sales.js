@@ -80,6 +80,8 @@ export default {
 		},
 		updateSale({ commit, state }, info) {
 			commit('setUpdating', true)
+			console.log('observations:')
+			console.log(info.observations)
 			return axios.put('/api/sale/'+state.previus_sale.id, {
 				client_id: info.client_id,
 				items: info.items,
@@ -98,6 +100,7 @@ export default {
 				to_check: info.to_check,
 				checked: info.checked,
 				confirmed: info.confirmed,
+				observations: info.observations,
 			})
 			.then(res => {
 				commit('sale/add', res.data.model, {root: true})

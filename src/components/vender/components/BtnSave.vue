@@ -31,6 +31,7 @@ export default {
 			console.log('se llamo saveSale')
 			if (!this.loader && this.check()) {
 				if (this.index_previus_sales == 0) {
+					console.log('llamando a vender')
 					this.vender(false)
 				} else {
 					this.updateSale()

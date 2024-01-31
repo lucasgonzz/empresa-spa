@@ -23,6 +23,12 @@
 			<template v-slot:table_right_options="slotProps">
 				<slot name="table_right_options" :model="slotProps.model"></slot>
 			</template>
+			
+			<template
+			v-for="prop in properties"
+			v-slot:[get_table_prop_slot_name(prop)]="props">
+				<slot :name="'table-prop-'+prop.key" :model="props.model"></slot>
+			</template>
 		</display>
 	</div>
 </template>
@@ -82,7 +88,12 @@ export default {
 			return this.$store.state[this.model_name].models
 		},
 		properties() {
-			return require(`@/models/${this.model_name}`).default.properties 
+			let props = require(`@/models/${this.model_name}`).default.properties
+			let props_ordenadas = props.filter(prop => prop.table_position)
+			if (props_ordenadas.length) {
+				return props_ordenadas.sort((a, b) => a.table_position - b.table_position)
+			} 
+			return props
 		},
 		show_previus_days_() {
 			return this.$store.state[this.model_name].from_dates

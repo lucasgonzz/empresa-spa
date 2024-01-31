@@ -19,7 +19,12 @@
     	:emit_on_saved_instead_continue="emit_on_saved_instead_continue"
     	:not_show_delete_text="not_show_delete_text"
     	:delete_text="delete_text"
-    	:save_check_function="save_check_function">
+    	:save_check_function="save_check_function"
+    	:show_only_guardar="show_only_guardar">
+    		<template #model_modal_title>
+    			<slot name="model_modal_title"></slot>
+    		</template>
+    		
     		<template v-slot:model_modal_header="slotProps">
     			<slot name="model_modal_header" :model="slotProps.model"></slot>
     		</template>
@@ -31,8 +36,8 @@
     		</template>
     		<template
     		v-for="prop in properties"
-			v-slot:[prop.key]>
-				<slot :name="prop.key">
+			v-slot:[prop.key]="props">
+				<slot :name="prop.key" :model="props.model">
 				</slot>
     		</template>
     	</model>
@@ -86,6 +91,11 @@
 			<template v-slot:table_right_options="slotProps">
 				<slot name="table_right_options" :model="slotProps.model"></slot>
 			</template>
+    		<template
+    		v-for="prop in properties"
+			v-slot:[get_table_prop_slot_name(prop)]="props">
+				<slot :name="'table-prop-'+prop.key" :model="props.model"></slot>
+    		</template>
 		</list>
 
 		<slot name="view_footer"></slot>
@@ -245,6 +255,10 @@ export default {
 		slice_models: {
 			type: Boolean,
 			default: false,
+		},
+		show_only_guardar: {
+			type: Boolean,
+			default: true,
 		},
 	},
 	computed: {
