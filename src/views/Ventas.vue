@@ -50,6 +50,9 @@ export default {
 		OptionDropdownAfipTicket: () => import('@/components/ventas/components/OptionDropdownAfipTicket'),
 		ConfirmAfipTickets: () => import('@/components/ventas/modals/ConfirmAfipTickets'),
 	},
+	created() {
+		this.$store.commit('sale/setFromDates', true)
+	},
 	beforeRouteLeave(to, from, next) {
 		this.$store.commit('sale/setSelected', [])
 		next()

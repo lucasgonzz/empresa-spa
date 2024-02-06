@@ -30,6 +30,7 @@ export default {
 	created() {
 		this.$store.commit('sale/setIsSelecteable', false)
 		this.$store.commit('sale/setSelected', [])
+		this.$store.commit('sale/setFromDates', false)
 	},
 	components: {
 		Confirm: () => import('@/common-vue/components/Confirm'),

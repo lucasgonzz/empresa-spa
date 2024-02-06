@@ -5,6 +5,7 @@ show_filter_modal
 change_from_dates_option
 order_list_by="budget_status"
 :show_previus_days="show_previus_days"
+:check_permissions_previus_days="false"
 model_name="budget">
 	<template v-slot:modal_buttons="props">
 		<modal-buttons></modal-buttons>

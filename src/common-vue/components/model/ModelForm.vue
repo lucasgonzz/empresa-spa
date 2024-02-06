@@ -542,8 +542,9 @@ export default {
 			let prop = result.prop
 			if (prop.belongs_to_many) {
 				let model_to_add = result.model 
-				this.checkBelongsToManyExist(prop, model_to_add, result)
-				this.setBelongsToManyPivotProps(prop, model_to_add, result)
+				if (this.checkBelongsToManyExist(prop, model_to_add, result)) {
+					this.setBelongsToManyPivotProps(prop, model_to_add, result)
+				}
 			} else if (prop.has_many && prop.has_many.models_from_parent_prop) {
 				this.model[prop.key].unshift(result.model)
 				this.setModel(this.model, this.model_name, [], false)
@@ -567,8 +568,10 @@ export default {
 			console.log('checkBelongsToManyExist finded:')
 			console.log(finded)
 			if (typeof finded != 'undefined') {
-				this.$toast.error('Se agrego el artiuclo, pero YA HABIA SIDO AGREGADO')
+				this.$toast.error('El articulo YA HABIA SIDO AGREGADO')
+				return false
 			}
+			return true
 		},
 		setBelongsToManyPivotProps(prop, model_to_add, result) {
 			if (prop.belongs_to_many.properties_to_set) {

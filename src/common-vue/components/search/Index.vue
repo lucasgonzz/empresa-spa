@@ -376,6 +376,7 @@ export default {
 				model,
 				prop: this.prop,
 				query: this.query,				
+				received_model: this.model,				
 			})
 			if (this.clear_query) {
 				this.query = ''

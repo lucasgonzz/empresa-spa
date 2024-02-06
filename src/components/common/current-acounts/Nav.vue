@@ -43,8 +43,14 @@
 		class="m-l-15"
 		text="Chequear Saldos"
 		@clicked="checkSaldos">
-			
 		</btn-loader>
+
+		<!-- <b-button
+		class="m-l-15"
+		@click="print"
+		variant="danger">
+			Saldo inicial
+		</b-button> -->
 	</div>
 </template>
 <script>

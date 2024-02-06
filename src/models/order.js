@@ -125,6 +125,12 @@ export default {
 						is_price: true,
 						show: true,
 					},
+					{
+						text: 'Notas',
+						key: 'notes',
+						type: 'text',
+						show: true,
+					},
 				],
 				properties_to_set: [
 					{
