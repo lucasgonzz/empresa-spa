@@ -269,6 +269,7 @@ export default {
 		removeItem(article) {
 			this.$store.commit('vender/removeItem', article)
 			this.$store.commit('vender/setTotal')
+			document.getElementById('article-bar-code').focus()
 		},
 		calculateTotalFromAmount(article) {
 			article.calculate_from_total = false

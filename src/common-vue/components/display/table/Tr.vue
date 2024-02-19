@@ -130,12 +130,14 @@ export default {
 	},
 	methods: {
 		rowClass(model) {
+			let color = ''
 			if (this.model_name && this.hasColor(this.model_name)) {
-				return this[this.model_name+'GetColor'](model)
+				color += this[this.model_name+'GetColor'](model)
 			}
 			if (this.isSelected(model)) {
-				return 'selected-row'
+				color += ' selected-row'
 			}
+			return color 
 		},
 		isSelected(model) {
 			let is_selecteable = this.$store.state[this.model_name].is_selecteable

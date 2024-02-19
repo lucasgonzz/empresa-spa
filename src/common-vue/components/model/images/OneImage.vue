@@ -40,13 +40,18 @@
 			variant="outline-danger">
 				Eliminar imagen
 			</b-button>
-			<b-button
-			size="sm"
-			block 
-			variant="outline-primary"
-			@click="uploadImage">
-				Cambiar imagen
-			</b-button>
+
+			<b-form-file
+			class="file-reader-input"
+			:id="input_file_name"
+			browse-text="Buscar"
+			v-model="file"
+			variant="primary"
+			:state="Boolean(file)"
+			@change="upload"
+			placeholder="Seleccione la imagen o arrastrala hasta aquí"
+			drop-placeholder="Solta la imagen aqui..."
+			></b-form-file>
 		</div>
 		<div
 		v-else>
@@ -56,13 +61,17 @@
 				No hay imagen
 			</p>
 
-			<b-button
-			size="sm"
-			block 
-			variant="outline-primary"
-			@click="uploadImage">
-				Agregar imagen
-			</b-button>
+			<b-form-file
+			class="file-reader-input"
+			:id="input_file_name"
+			browse-text="Buscar"
+			v-model="file"
+			variant="primary"
+			:state="Boolean(file)"
+			@change="upload"
+			placeholder="Seleccione la imagen o arrastrala hasta aquí"
+			drop-placeholder="Solta la imagen aqui..."
+			></b-form-file>
 		</div>
 
 	</div>
@@ -89,10 +98,33 @@ export default {
 			} 
 			return [this.model_name+'/deleteImageProp']
 		},
+		input_file_name() {
+			return this.model_name+'-'+this.prop.key+'-input-file-drop'
+		}
+	},
+	data() {
+		return {
+			file: null,
+		}
 	},
 	methods: {
 		uploadImage() {
 			this.$emit('uploadImage')
+		},
+		upload(event) {
+			var file = document.getElementById(this.input_file_name).files[0];
+			if (typeof file == 'undefined') {
+				file = event.dataTransfer.files[0];		
+			}
+			var reader  = new FileReader();
+			reader.readAsDataURL(file)
+			let that = this
+			reader.onloadend = function () {
+				that.$emit('setImageUrl', reader.result)
+				// that.$bvModal.hide('upload-image-'+that.model.id+'-'+that.model.nombre+'-'+that.prop.key)
+				that.file = null
+
+			}
 		},
 		setDelete() {
 			this.$store.commit(this.model_name+'/setDeleteImageProp', this.prop.key)

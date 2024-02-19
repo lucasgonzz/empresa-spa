@@ -16,19 +16,10 @@
 			Buscar
 		</b-button>
 		<b-button 
-		v-if="can_print"
 		@click="print"
 		variant="danger"
 		class="m-l-15"> 
 			<i class="icon-print"></i>
-			<span
-			v-show="is_selected_printable">
-				esta sola
-			</span>
-			<span
-			v-show="!selected_current_acounts.length">
-				todas
-			</span>
 		</b-button>
 		<b-button
 		v-if="from_model.current_acounts_count == 0"
@@ -108,17 +99,7 @@ export default {
 			this.$store.dispatch('current_acount/getModels')
 		},
 		print() {
-			let link = ''
-			if (this.selected_current_acounts.length) {
-				let ids = []
-				this.selected_current_acounts.forEach(current_acount => {
-					ids.push(current_acount.id)
-				})
-            	link = process.env.VUE_APP_API_URL+'/current-acount/pdf/'+ids.join('-')+'/'+this.from_model_name
-			} else {
-            	link = process.env.VUE_APP_API_URL+'/current-acount/pdf/'+this.from_model_name+'/'+this.from_model.id+
-            	'/'+this.months_ago
-			}
+            let link = process.env.VUE_APP_API_URL+'/current-acount/pdf/'+this.from_model_name+'/'+this.from_model.id+'/'+this.months_ago
             window.open(link)
 		},
 	}

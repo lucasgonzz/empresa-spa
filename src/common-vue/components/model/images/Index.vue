@@ -29,6 +29,7 @@
 			<one-image
 			v-if="prop.type == 'image'"
 			@uploadImage="uploadImage"
+			@setImageUrl="setImageUrl"
 			:has_many_parent_model="has_many_parent_model"
 			:has_many_prop="has_many_prop"
 			:model="model"

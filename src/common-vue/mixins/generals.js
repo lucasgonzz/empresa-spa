@@ -764,7 +764,11 @@ export default {
 				})
 			} 
 			models.forEach(item => {
-				let text = item[prop_name] 
+				let text = '' 
+				if (prop.select_start_text_prop_to_add) {
+					text += item[prop.select_start_text_prop_to_add] + ' '
+				}
+				text += item[prop_name]  
 				if (prop.select_text_to_add) {
 					text += prop.select_text_to_add
 				}

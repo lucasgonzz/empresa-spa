@@ -128,6 +128,11 @@ export default {
 			})
 		},
 	},
+	data() {
+		return {
+			interval: null,
+		}
+	},
 	methods: {
 
 		// Defautl Articles
@@ -201,7 +206,7 @@ export default {
 			console.log('se llamo a vender')
 			if (this.check_vender()) {
 				console.log('paso check')
-				if ((!this.download_articles && !this.articles.length) || (this.is_mobile && !this.downloadOnMobile('article') && !this.articles.length)) {
+				if (!this.download_articles || (this.is_mobile && !this.downloadOnMobile('article') && !this.articles.length)) {
 
 				} else {
 					if (!this.to_check && !this.checked) {
@@ -225,11 +230,77 @@ export default {
 						this.loadModel('client', this.maked_sale.client_id)
 					}
 					this.setDefaultArticles()
+					this.sendAfipTicket()
 					if (this.view != 'remito') {
 						this.$router.push({name: 'vender', params: {view: 'remito'}})
 					}
 				})
+				.catch(err => {
+					this.$toast.error('Error al guardar venta')
+				})
 			}
+		},
+		sendAfipTicket() {
+			if (this.afip_information_id) {
+				this.interval = window.setInterval(() => {
+					this.ticket_demorado()	
+				}, 3000)
+
+				let el = document.getElementById('loading-afip-ticket')
+				el.classList.add('loading-afip-ticket-active')
+
+				this.$api.post('afip-ticket', {
+					sale_id: this.maked_sale.id,
+					afip_information_id: this.afip_information_id
+				})
+				.then(res => {
+
+		            window.clearInterval(this.interval)
+					this.interval = null
+
+					document.getElementById('loading-afip-ticket').classList.remove('loading-afip-ticket-demorado')
+
+					let ok = true
+					if (res.data.result.observations) {
+						this.$toast.error('Error al facturar')
+						this.$store.commit('vender/setAfipResult', res.data.result.observations)
+						res.data.result.observations.forEach(obs => {
+							this.$toast.error(obs)
+						})
+						ok = false
+					}
+					if (res.data.result.errors) {
+						this.$toast.error('Error al facturar')
+						this.$store.commit('vender/setAfipResult', res.data.result.errors)
+						res.data.result.errors.forEach(obs => {
+							this.$toast.error(obs)
+						})
+						ok = false
+					}
+					if (ok) {
+						this.$store.commit('sale/add', res.data.sale)
+						this.$store.commit('vender/setSale', res.data.sale)
+
+						document.getElementById('loading-afip-ticket').classList.add('loading-afip-ticket-success')
+
+						setTimeout(() => {
+							document.getElementById('loading-afip-ticket').classList.remove('loading-afip-ticket-active')
+							
+							setTimeout(() => {
+								document.getElementById('loading-afip-ticket').classList.remove('loading-afip-ticket-success')
+							}, 500)
+						}, 2000)
+					}
+				})
+				.catch(err => {
+					// this.$bvModal.hide('loading-afip-ticket')
+					console.log(err)
+					this.$toast.error('Error al facturar')
+				})
+			}
+		},
+		ticket_demorado() {
+			document.getElementById('loading-afip-ticket').classList.add('loading-afip-ticket-demorado')
 		},
 		setDefaultPaymentMethod() {
 			if (this.owner.default_current_acount_payment_method_id) {
@@ -252,6 +323,10 @@ export default {
 			} 
 			if (this.afip_information_id && this.total >= 61500 && !this.client) {
 				this.$toast.error('El total de la venta supera los $61.500, debera indicar un cliente que posea CUIL o CUIT para poder realizar la factura')
+				return false
+			}
+			if (this.afip_information_id && this.client && this.client.iva_condition_id && this.client.iva_condition_id == 1 && !this.client.cuit) {
+				this.$toast.error('Para emitir comprobante tipo A, debe indicar el CUIT del cliente')
 				return false
 			}
 			if (this.address_id == 0 && this.articulos_con_depositos.length) {

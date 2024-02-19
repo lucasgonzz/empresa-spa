@@ -41,6 +41,8 @@ export default {
 
 		vendiendo: false,
 		sale: null,
+
+		afip_results: null,
 	},
 	mutations: {
 		setItems(state, value) {
@@ -250,6 +252,9 @@ export default {
 		},
 		setLoadingFiltered(state, value) {
 			state.loading_filtered = value 
+		},
+		setAfipResult(state, value) {
+			state.afip_results = value 
 		},
 	},
 	actions: {

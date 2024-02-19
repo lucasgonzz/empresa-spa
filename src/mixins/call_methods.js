@@ -1,4 +1,5 @@
 export default [
+    'afip_information',
     'article',
     'article_property_type',
     'article_property_value',
@@ -31,7 +32,6 @@ export default [
     'delivery_zone',
     'price_type',
     'budget_status',
-    'afip_information',
     'sale',
     'order_production_status',
     // 'credit_card',

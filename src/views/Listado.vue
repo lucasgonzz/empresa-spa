@@ -45,6 +45,7 @@
 			<article-ticket-option-drop-down></article-ticket-option-drop-down>
 			<articles-pdf-option-drop-down></articles-pdf-option-drop-down>
 			<reset-stock-option-drop-down></reset-stock-option-drop-down>
+			<seleccion-especial></seleccion-especial>
 		</template>
 
 		<template v-slot:table_right_options="props">
@@ -104,6 +105,7 @@ export default {
 		ArticlesPdfOptionDropDown: () => import('@/components/listado/components/ArticlesPdfOptionDropDown'),
 		ResetStockOptionDropDown: () => import('@/components/listado/components/ResetStockOptionDropDown'),
 		ConfirmResetStock: () => import('@/components/listado/modals/ConfirmResetStock'),
+		SeleccionEspecial: () => import('@/components/listado/components/SeleccionEspecial'),
 	}, 
 	beforeRouteLeave(to, from, next) {
 		this.$store.commit('article/setSelected', [])

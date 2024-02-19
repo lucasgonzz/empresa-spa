@@ -91,6 +91,14 @@ export default {
 			use_to_filter_in_search: true,
 		},
 		{
+			text: 'Dni',
+			key: 'dni',
+			type: 'text',
+			value: '',
+			show: true,
+			use_to_filter_in_search: true,
+		},
+		{
 			text: 'Razon social',
 			key: 'razon_social',
 			type: 'text',

@@ -2,6 +2,8 @@
 <div id="vender">
 	<new-article></new-article>
 
+	<loading-afip-ticket></loading-afip-ticket>
+
 	<articles-loading-advise></articles-loading-advise>
 
 	<current-acounts></current-acounts>
@@ -20,6 +22,7 @@ export default {
 	mixins: [vender],
 	components: {  
 		NewArticle: () => import('@/components/vender/modals/NewArticle'),
+		LoadingAfipTicket: () => import('@/components/vender/modals/LoadingAfipTicket'),
 		
 		// Componentes
 		CurrentAcounts: () => import('@/components/common/current-acounts/Index'),

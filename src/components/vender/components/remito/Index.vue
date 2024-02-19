@@ -18,7 +18,7 @@ import TotalPreviusSales from '@/components/vender/components/remito/total-previ
 import Header2 from '@/components/vender/components/remito/header-2/Index'
 import ArticlesTable from '@/components/vender/components/remito/ArticlesTable.vue'
 import PreviusSaleData from '@/components/vender/components/remito/PreviusSaleData.vue'
-import Observations from '@/components/vender/components/client/Observations'
+import Observations from '@/components/vender/components/remito/Observations'
 export default {
 	components: {
 		HeaderForm,

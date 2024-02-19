@@ -54,7 +54,7 @@ export default {
 <style lang="sass">
 @import '@/sass/_custom'
 .rojo 
-	border: 4px solid $red
+	background: $red !important
 .verde 
-	border: 4px solid $green
+	background: $green !important
 </style>

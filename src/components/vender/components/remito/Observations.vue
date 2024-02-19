@@ -1,5 +1,6 @@
 <template>
 	<b-form-group
+	v-if="hasExtencion('sale.observations')"
 	label="Observaciones">
 		<b-form-textarea
 		v-model="observations"

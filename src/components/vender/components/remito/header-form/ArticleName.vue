@@ -33,7 +33,7 @@ export default {
 			return 'article-sale-name'
 		},
 		search_from_api() {
-			if (!this.download_articles && !this.articles.length) {
+			if (!this.download_articles) {
 				return true
 			}
 			return false

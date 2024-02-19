@@ -2,7 +2,7 @@
 	<b-button
 	:size="size"
 	@click.stop="clicked"
-	:disabled="loader"
+	:disabled="_disabled"
 	:block="block"
 	:variant="variant">
 		<span 
@@ -50,6 +50,20 @@ export default {
 		disabled: {
 			type: Boolean,
 			default: false
+		},
+	},
+	computed: {
+		_disabled() {
+			if (this.disabled) {
+				return this.disabled
+			}
+			if (this.loader == 0) {
+				return false
+			}
+			if (this.loader == 1) {
+				return true
+			}
+			return this.loader
 		},
 	},
 	methods: {
