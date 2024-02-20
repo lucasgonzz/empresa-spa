@@ -295,18 +295,24 @@ export default {
 			}
 		},
 		searchFromApi() {
+			console.log('searchFromApi asd')
 			if (this.search_from_api) {
+				console.log(1)
 				return true
 			}
 			if (this.prop && (this.prop.search_from_api || this.prop.search_depends_on_from_api)) {
+				console.log(2)
 				return true 
 			}
 			if (this.is_mobile && !this.downloadOnMobile(this.model_name) && !this.$store.state[this.model_name].models.length) {
+				console.log(3)
 				return true 
 			}
 			if (this.$store.state[this.model_name].loading) {
+				console.log(4)
 				return true 
 			}
+			console.log(false)
 			return false
 		},
 		finishSearch() {

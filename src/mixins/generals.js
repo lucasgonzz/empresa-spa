@@ -23,11 +23,11 @@ export default {
         price_type_vender() {
             return this.$store.state.vender.price_type
         },
-    },
-    methods: {
-        downloadArticles() {  
+        download_articles() {  
             return this.owner.download_articles
         },
+    },
+    methods: {
         hasExtencion(slug, check_has_one_extencion_permission = true) {
             if (this.authenticated) {
                 let index = this.owner.extencions.findIndex(extencion => {

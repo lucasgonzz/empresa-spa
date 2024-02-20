@@ -33,9 +33,11 @@ export default {
 			return 'article-sale-name'
 		},
 		search_from_api() {
-			if (!this.download_articles) {
+			if (!this.owner.download_articles) {
+				console.log('SI SE BUSCA POR API')
 				return true
 			}
+			console.log('NO SE BUSCA POR API')
 			return false
 		},
 		price_types() {
