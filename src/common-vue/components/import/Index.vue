@@ -176,9 +176,22 @@
 		@clicked="upload"
 		text="Importar"
 		:loader="loading"></btn-loader>
+		
+		
+		<div
+		class="m-t-15 text-primary text-center"
+		v-if="varias_solicitudes && loading">
+			<b-progress 
+			class="m-b-10"
+			variant="primary" :value="solicitud_numero" :max="cantidad_solicitudes" show-progress animated></b-progress>
+			<strong>
+				Por favor aguarde, esto podria tardar unos minutos...
+			</strong>
+		</div>
+
 		<p
 		class="m-t-15 text-primary text-center"
-		v-if="loading">
+		v-else-if="!varias_solicitudes && loading">
 			<strong>
 				Por favor aguarde, esto podria tardar unos minutos...
 			</strong>
@@ -247,13 +260,17 @@ export default {
 			file: null,
 			start_row: 2,
 			finish_row: '',
+			finish_row_original: '',
 			percentage: '',
 			provider_id: 0,
 			columns_: [], 
 			positions_seted: false,
 			create_and_edit: 1,
 			show_history: false,
-			limite_filas: 100,
+			limite_filas: 20,
+			cantidad_solicitudes: 0,
+			solicitud_numero: 0,
+			varias_solicitudes: false,
 		}
 	},
 	methods: {
@@ -307,6 +324,8 @@ export default {
 		async upload() {
 			this.loading = true
 			let form_data = new FormData();
+			console.log('file:')
+			console.log(this.file)
 			form_data.append('models', this.file)
 			form_data.append('start_row', this.start_row)
 			form_data.append('finish_row', this.finish_row)
@@ -327,15 +346,28 @@ export default {
 			}
 
 			if (this.finish_row > this.limite_filas) {
-				console.log('se van a partir las solicitudes')
-				for (var solicitud = 1; solicitud <= this.finish_row / this.limite_filas; solicitud++) {
+				this.varias_solicitudes = true
+				this.cantidad_solicitudes = this.finish_row / this.limite_filas
+				this.finish_row_original = Number(this.finish_row)
+				console.log('se van a partir las solicitudes en '+this.cantidad_solicitudes)
+				for (var solicitud = 1; solicitud <= this.cantidad_solicitudes; solicitud++) {
 					console.log('solicitud n° '+solicitud)
-					let start_row = this.start_row * solicitud
-					let finish_row = start_row + this.limite_filas
-					// AXIOS
 
-					form_data.append('start_row', start_row)
-					form_data.append('finish_row', finish_row)
+					this.solicitud_numero = solicitud
+					
+					if (solicitud == 1) {
+						this.finish_row = Number(this.start_row) + Number(this.limite_filas)
+					} else {
+						this.start_row = this.finish_row + 1
+						this.finish_row = this.start_row + Number(this.limite_filas)
+						if (this.finish_row > this.finish_row_original) {
+							console.log('finish_row estaba en '+this.finish_row+', se paso y se puso en el original de '+this.finish_row_original)
+							this.finish_row = this.finish_row_original
+						}
+					}
+
+					form_data.set('start_row', this.start_row)
+					form_data.set('finish_row', this.finish_row)
 					await this.sendRequest(form_data)
 				}
 				console.log('terminaron de enviarse las solicitudes')
@@ -347,6 +379,7 @@ export default {
 					this.$store.dispatch(action)
 				})
 			} else {
+				this.varias_solicitudes = false
 				await this.sendRequest(form_data)
 				console.log('terminaron de enviarse las solicitudes')
 				this.loading = false

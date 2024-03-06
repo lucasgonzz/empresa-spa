@@ -149,6 +149,9 @@ export default {
 		usePreView(model_name) {
 			return typeof require('@/models/'+model_name).default.pre_view != 'undefined'
 		},
+		form_disabled_to_edit(model_name) {
+			return typeof require('@/models/'+model_name).default.form_disabled_to_edit != 'undefined'
+		},
 		getOriginalModel(model_name, model){
 			return this.$store.state[model_name].models.find(model_ => {
 				return model_.id == model.id 

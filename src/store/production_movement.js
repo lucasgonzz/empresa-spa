@@ -172,6 +172,9 @@ export default {
 		setDisplay(state, value) {
 			state.display = value 
 		},
+		setFromDates(state, value) {
+			state.from_dates = value
+		},
 		setFromDate(state, value) {
 			state.from_date = value
 		},

@@ -3,14 +3,26 @@
 id="loading-afip-ticket">
 	<div
 	v-if="afip_results && afip_results.length">
-		<h5>
-			Ocurrio algo inesperado
-		</h5>
+
+		<div
+		class="text-with-icon-sm text-danger">
+			<i class="icon-cancel"></i>
+			<strong>
+				Ocurrio algo inesperado
+			</strong>
+		</div>
 		<p
+		class="text-left"
 		v-for="result in afip_results">
 			<i class="icon-right"></i>
 			{{ result.Msg }}
 		</p>
+		<b-button
+		@click="ocultar_tarjeta"
+		variant="primary"
+		block>
+			Cerrar
+		</b-button>
 	</div>
 
 	<div
@@ -52,7 +64,9 @@ id="loading-afip-ticket">
 </div>
 </template>
 <script>
+import afip_ticket from '@/mixins/afip_ticket'
 export default {
+	mixins: [afip_ticket],
 	computed: {
 		afip_results() {
 			return this.$store.state.vender.afip_results
@@ -65,7 +79,7 @@ export default {
 
 #loading-afip-ticket
 	width: 500px
-	height: 250px
+	// height: 250px
 	position: fixed 
 	bottom: 50px
 	right: -500px

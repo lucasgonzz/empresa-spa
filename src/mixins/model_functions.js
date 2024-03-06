@@ -6,6 +6,16 @@ export default {
                 return 'sale-printed'
             }
         },
+        articles_to_search_in_recipe() {
+            let articles = [] 
+            this.$store.state.recipe.models.forEach(recipe => {
+                articles.push(recipe.article)
+            })
+            return articles
+        },
+        get_articles_para_checkear_from_articles_pre_import(articles_pre_import) {
+            return articles_pre_import.articles.length
+        },
         articleRecipeHasAddresses(prop, recipe) {
             if (recipe.article) {
                 let store_article = this.$store.state.article.models.find(_article => {
@@ -109,16 +119,12 @@ export default {
             }
             return this.price(cost)
         },
-        getProductionMovementCost(production_movement) {
+        getProductionMovementCostMateriales(production_movement, formated = true) {
             let total = 0
-            // console.log('getProductionMovementCost')
-            // console.log(production_movement)
             if (production_movement.article) {
                 let recipe = this.modelsStoreFromName('recipe').find(recipe => {
                     return recipe.article_id == production_movement.article_id 
                 })
-                // console.log('recipe')
-                // console.log(recipe)
                 if (typeof recipe != 'undefined') {
                     recipe.articles.forEach(article => {
                         if (article.pivot.order_production_status_id == production_movement.order_production_status_id) {
@@ -127,13 +133,68 @@ export default {
                     })
                 }
             }
+            if (formated) {
+                return this.price(total) 
+            }
+            return total
+        },
+        getProductionMovementCostManoDeObra(production_movement, formated = true) {
+            let total = 0
+            if (production_movement.article) {
+                let recipe = this.modelsStoreFromName('recipe').find(recipe => {
+                    return recipe.article_id == production_movement.article_id 
+                })
+                if (typeof recipe != 'undefined') {
+                    recipe.articles.forEach(article => {
+                        if (article.pivot.order_production_status_id == production_movement.order_production_status_id) {
+                            console.log('article costo_mano_de_obra')
+                            console.log(article.costo_mano_de_obra)
+                            if (article.costo_mano_de_obra) {
+                                total += Number(article.costo_mano_de_obra) * Number(article.pivot.amount) * Number(production_movement.amount) 
+                            }
+                        } 
+                    })
+                }
+            }
+            if (formated) {
+                return this.price(total) 
+            }
+            return total
+        },
+        getProductionMovementCostNeto(production_movement) {
+            let total = 0
+            if (production_movement.article) {
+                total += this.getProductionMovementCostMateriales(production_movement, false)            
+                total += this.getProductionMovementCostManoDeObra(production_movement, false)            
+            }
             return this.price(total) 
         },
-        getRecipeCost(recipe) {
+        get_recipe_cost_materiales(recipe, formated = true) {
             let total = 0
             recipe.articles.forEach(article => {
                 total += Number(article.final_price) * Number(article.pivot.amount)
             })
+            if (formated) {
+                return this.price(total) 
+            }
+            return total
+        },
+        get_recipe_cost_mano_de_obra(recipe, formated = true) {
+            let total = 0
+            recipe.articles.forEach(article => {
+                if (article.costo_mano_de_obra) {
+                    total += Number(article.costo_mano_de_obra) * Number(article.pivot.amount)
+                }
+            })
+            if (formated) {
+                return this.price(total) 
+            }
+            return total
+        },
+        get_recipe_cost_neto(recipe) {
+            let total = 0
+            total += this.get_recipe_cost_materiales(recipe, false)
+            total += this.get_recipe_cost_mano_de_obra(recipe, false)
             return this.price(total) 
         },
         orderPaymentMethodDetails(model) {
@@ -279,8 +340,19 @@ export default {
                 discount = item.pivot.discount
                 returned_amount = item.pivot.returned_amount
             } else {
-                price = item.price_vender 
-                amount = item.amount
+                if (item.calculated_price_vender) {
+                    price = item.calculated_price_vender 
+                    amount = 1
+                    // if (item.amount == '') {
+                    //     amount = 1
+                    // } else {
+                    //     amount = item.amount
+                    // }
+                    // console.log('')
+                } else {
+                    price = item.price_vender 
+                    amount = item.amount
+                }
                 discount = item.discount
                 returned_amount = item.returned_amount
             }

@@ -77,6 +77,15 @@ export default {
 			not_show: true,
 		},
 		{
+			// text: 'costo_mano_de_obra',
+			key: 'costo_mano_de_obra',
+			type_to_update: 'number',
+			type: 'text',
+			is_price: true,
+			if_has_extencion: 'production',
+			not_show: true,
+		},
+		{
 			text: 'Costo Real', 
 			key: 'costo_real',
 			only_show: true,

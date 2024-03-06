@@ -16,7 +16,7 @@
 			Historico
 		</div>
 
-		<div   
+		<!-- <div   
 		:class="isSelected('cards')"
 		@click="setDisplay('cards')"
 		class="item apretable">
@@ -27,7 +27,7 @@
 		@click="setDisplay('table')"
 		class="item apretable">
 			<i class="icon-list"></i>
-		</div>
+		</div> -->
 	</div>
 </template>
 <script>

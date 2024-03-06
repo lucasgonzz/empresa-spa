@@ -21,6 +21,8 @@ export default {
 		RendimientoPorProveedor: () => import('@/components/panel-control/components/proveedores/rendimiento-por-proveedor/Index'),
 	},
 	created() {
+		console.log('article_performances:')
+		console.log(this.article_performances)
 		if (!this.article_performances.length) {
 			console.log('SE MANDO A LLAMAR article_performance')
 			this.$store.dispatch('panel_control/getModels')

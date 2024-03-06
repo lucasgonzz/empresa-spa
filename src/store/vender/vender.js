@@ -51,6 +51,15 @@ export default {
 		addItem(state, value) {
 			state.items.unshift(value)
 		},
+		replceItem(state, value) {
+			let index = state.items.findIndex(item => {
+				return item.id == value.id 
+			})
+			if (index != -1) {
+				console.log('quitando item')
+				state.items.splice(index, 1, value)
+			} 
+		},
 		setArticle(state, value) { 
 			if (!value) {
 				state.article.bar_code = ''
@@ -176,15 +185,17 @@ export default {
 					new_items.push(item)
 				})
 				if (state.discounts_id.length) {
+
 					let discounts = discounts_store.state.models 
-					if (previus_sales.state.previus_sale.id) {
-						discounts = previus_sales.state.previus_sale.discounts.map(discount => {
-							return {
-								...discount,
-								percentage: discount.pivot.percentage
-							}
-						})
-					}
+					
+					// if (previus_sales.state.previus_sale.id) {
+					// 	discounts = previus_sales.state.previus_sale.discounts.map(discount => {
+					// 		return {
+					// 			...discount,
+					// 			percentage: discount.pivot.percentage
+					// 		}
+					// 	})
+					// }
 					let sale_discounts = []
 					state.discounts_id.forEach(id => {
 						sale_discounts.push(discounts.find(item => item.id == id))
@@ -200,14 +211,14 @@ export default {
 				}
 				if (state.surchages_id.length) {
 					let surchages = surchages_store.state.models 
-					if (previus_sales.state.previus_sale.id) {
-						surchages = previus_sales.state.previus_sale.surchages.map(surchage => {
-							return {
-								...surchage,
-								percentage: surchage.pivot.percentage
-							}
-						})
-					}
+					// if (previus_sales.state.previus_sale.id) {
+					// 	surchages = previus_sales.state.previus_sale.surchages.map(surchage => {
+					// 		return {
+					// 			...surchage,
+					// 			percentage: surchage.pivot.percentage
+					// 		}
+					// 	})
+					// }
 					let sale_surchages = []
 					state.surchages_id.forEach(id => {
 						sale_surchages.push(surchages.find(item => item.id == id))

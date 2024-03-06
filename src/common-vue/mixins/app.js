@@ -8,6 +8,7 @@ import display from '@/common-vue/mixins/display'
 import model_functions from '@/common-vue/mixins/model_functions'
 import broadcast from '@/common-vue/mixins/broadcast'
 import _model_functions from '@/mixins/model_functions'
+import route_functions from '@/mixins/route_functions'
 export default {
     mixins: [
         generals,
@@ -19,6 +20,7 @@ export default {
         model_functions,
         broadcast,
         _model_functions,
+        route_functions,
     ],
     methods: {
         redirectIfWww() {

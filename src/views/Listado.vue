@@ -28,6 +28,8 @@
 
 	<stock-info></stock-info>
 
+	<articles-pre-import-modal></articles-pre-import-modal>
+
 	<view-component
 	show_filter_modal
 	ask_selectable
@@ -35,7 +37,8 @@
 	@addressMovement="addressMovement"
 	model_name="article">
 		<template #excel_drop_down_options>
-			<clients-excel></clients-excel>
+			<excel-para-clientes></excel-para-clientes>
+			<articles-pre-imports></articles-pre-imports>
 		</template>
 		<template #horizontal_nav_center>
 			<stock-info-buttons></stock-info-buttons>
@@ -84,7 +87,11 @@ export default {
 	components: {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 		Import: () => import('@/components/listado/modals/import/Index'),
-		ClientsExcel: () => import('@/components/listado/components/ClientsExcel'),
+		ExcelParaClientes: () => import('@/components/listado/components/excel-dropdown-options/ExcelParaClientes'),
+		ArticlesPreImports: () => import('@/components/listado/components/excel-dropdown-options/ArticlesPreImports'),
+
+		ArticlesPreImportModal: () => import('@/components/listado/modals/articles-pre-import/Index'),
+
 		StockInfoButtons: () => import('@/components/listado/components/StockInfoButtons'),
 		BarCodeSearch: () => import('@/components/listado/components/BarCodeSearch'),
 		Buttons: () => import('@/components/listado/components/Buttons'),

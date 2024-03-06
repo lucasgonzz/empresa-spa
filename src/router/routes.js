@@ -147,9 +147,7 @@ export default [
 		name: 'produccion',
 		component: '@/views/Produccion',
 		can: 'produccion.index',
-		params: {
-			view: 'ordenes',
-		},
+		function: 'toProduccion',
 		if_has_extencion: ['production', 'comerciocity_interno'],
 		can: [
 			'production_movement.index',

@@ -87,6 +87,7 @@ import check from '@/store/check'
 import panel_control from '@/store/panel_control/index'
 import me_li_order from '@/store/me_li_order'
 import me_li_payment from '@/store/me_li_payment'
+import articles_pre_import from '@/store/articles_pre_import'
 
 Vue.use(Vuex)
 
@@ -184,5 +185,6 @@ export default new Vuex.Store({
         panel_control,
         me_li_order,
         me_li_payment,
+        articles_pre_import,
     }
 })

@@ -34,8 +34,10 @@ export default {
 				return article.bar_code == this.bar_code
 			})
 			this.$store.commit('article/setIsFiltered', true)
-			this.$store.commit('article/setFiltered', articles)
 			this.bar_code = ''
+			setTimeout(() => {
+				this.$store.commit('article/setFiltered', articles)
+			}, 500)
 		}
 	}
 }

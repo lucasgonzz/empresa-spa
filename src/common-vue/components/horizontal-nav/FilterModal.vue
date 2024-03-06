@@ -20,6 +20,7 @@
 				@setSelected="setSelected"
 				:model_name="modelNameFromRelationKey(filter)"
 				:model="model_for_pass_to_search"
+				:search_function="filter.search_function"
 				:prop="filter"></search-component>
 			</b-form-group>
 
@@ -254,6 +255,7 @@ export default {
 						store: prop.store,
 						key: prop.key,
 						depends_on: prop.depends_on,
+						search_function: prop.search_function,
 						value: 0,
 					})
 				}

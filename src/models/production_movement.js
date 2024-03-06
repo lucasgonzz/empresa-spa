@@ -15,6 +15,7 @@ export default {
 			text: 'Articulo',
 			key: 'article_id',
 			type: 'search',
+			required: true,
 		},
 		{
 			text: 'Estado de Produccion',
@@ -33,12 +34,26 @@ export default {
 			type: 'number',
 		},
 		{
-			text: 'Costo de produccion',
-			function: 'getProductionMovementCost',
+			text: 'Notas',
+			key: 'notes',
+			type: 'textarea',
+		},
+		{
+			text: 'Costo de produccion MATERIALES',
+			function: 'getProductionMovementCostMateriales',
+		},
+		{
+			text: 'Costo de produccion MANO DE OBRA',
+			function: 'getProductionMovementCostManoDeObra',
+		},
+		{
+			text: 'Costo de produccion NETO',
+			function: 'getProductionMovementCostNeto',
 		},
 	],
 	singular_model_name_spanish: 'Movimiento de Produccion',
 	plural_model_name_spanish: 'Movimientos de Produccion',
 	create_model_name_spanish: 'Nuevo',
 	text_delete: 'el',
+	form_disabled_to_edit: true,
 }

@@ -1,6 +1,6 @@
 <template>
 	<div
-	class="options">
+	class="options-panel-control">
 
 		<span
 		class="p-md-r-10 m-b-15 m-md-b-0">

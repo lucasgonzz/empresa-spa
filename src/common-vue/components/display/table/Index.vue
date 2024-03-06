@@ -156,6 +156,10 @@ export default {
 			type: Boolean,
 			default: true,
 		},
+		show_actualizado: {
+			type: Boolean,
+			default: true,
+		},
 		models: Array,
 		loading: Boolean,
 		model_name: String,
@@ -226,7 +230,7 @@ export default {
 						})
 					})
 				}
-			} else {
+			} else if (this.show_actualizado) {
 				props.push({
 					key: 'updated_at',
 					text: 'Actualizado',

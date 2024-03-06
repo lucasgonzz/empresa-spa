@@ -35,7 +35,9 @@ export default {
 			console.log('SE ABRIO MODAL')
 			if (modal_id == 'stock-movement-modal-info') {
 				console.log('y era stock-movement-modal-info')
-				this.getStockMovements() 
+				setTimeout(() => {
+					this.getStockMovements() 
+				}, 500)
 			}
 		})
 	},
@@ -129,8 +131,9 @@ export default {
 			return ''
 		},
 		getStockMovements() {
+			console.log('getStockMovements, loading: '+this.loading)
 			if (!this.loading) {
-				console.log('getStockMovements')
+				console.log('Entro, loading: '+this.loading)
 				this.loading = true 
 				this.$api.get('stock-movement/'+this.article.id)
 				.then(res => {

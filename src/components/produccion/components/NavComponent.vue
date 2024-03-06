@@ -19,10 +19,11 @@ export default {
 	computed: {
 		items() {
 			let items = []
-			if (this.can('production_movement.index') || this.can('production_movement.create')) {
+			if (this.hasExtencion('production.production_movement') && this.can('production_movement.index') || this.can('production_movement.create')) {
 				items.push({name: 'Movimientos', call_models: 'production_movement'})
+				items.push({name: 'Cantidades actuales'})
 			}
-			if (this.can('order_production.index') || this.can('order_production.create')) {
+			if (this.hasExtencion('production.order_production') && (this.can('order_production.index') || this.can('order_production.create'))) {
 				items.push({name: 'Ordenes', call_models: 'order_production'})
 			} 
 			if (this.can('recipe.index') || this.can('recipe.create')) {

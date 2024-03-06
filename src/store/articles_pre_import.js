@@ -2,29 +2,17 @@ import axios from 'axios'
 axios.defaults.withCredentials = true
 axios.defaults.baseURL = process.env.VUE_APP_API_URL
 
-import provider from '@/store/panel_control/provider/index'
-import provider_store from '@/store/provider'
 import moment from 'moment'
 import generals from '@/common-vue/mixins/generals'
 export default {
 	namespaced: true,
 	state: {
-		model_name: 'article_performance',
+		model_name: 'articles_pre_import',
 		route_prefix: '',
-		meses_atras: 12,
 		from_dates: false,
 		is_selecteable: false,
 
-		provider_articles: [],
-		unidades_vendidas: [],
-		selected_article: null,
-		order: 'mayor-a-menor',
-		current_page: 0,
-		provider_articles_per_page: 10,
-		selected_provider: null,
-		providers_formated: [],
-
-		use_per_page: true,
+		use_per_page: false,
 		// Se usa cuando es belongs_to_many_from_dates. Por ejemplo para ver los pagos de un cliente
 		// plural_model_name: '',
 		// selected_model: null,
@@ -35,7 +23,7 @@ export default {
 		until_date: '',
 
 		page: 1,
-		per_page: 100,
+		per_page: 50,
 		total_pages: 1, 
 
 		models: [],
@@ -242,90 +230,6 @@ export default {
 		setLoadingFiltered(state, value) {
 			state.loading_filtered = value 
 		},
-		setMesesAtras(state, value) {
-			state.meses_atras = value
-		},
-		decrementMesesAtras(state, value) {
-			state.meses_atras--
-		},
-		setProviderArticles(state, value) {
-			state.provider_articles = value 
-		},
-		setProviderArticlesUnidadesVendidas(state, value) {
-			state.unidades_vendidas = value 
-		},
-		setSelectedArticle(state, value) {
-			state.selected_article = value 
-		},
-		setOrder(state, value) {
-			state.order = value 
-		},
-		setCurrentPage(state, value) {
-			state.current_page = value 
-		},
-		incrementCurrentPage(state, value) {
-			state.current_page++ 
-		},
-		decrementCurrentPage(state, value) {
-			state.current_page-- 
-		},
-		setProviderArticlesPerPage(state, value) {
-			state.provider_articles_per_page = value 
-		},
-		setSelectedProvider(state, value) {
-			state.selected_provider = value 
-		},
-		setProvidersFormated(state, query = null) {
-			let providers_formated = []
-			provider_store.state.models.forEach(provider => {
-				if (query) {
-					if (provider.name.toLowerCase().includes(query.toLowerCase())) {
-						providers_formated[provider.id] = {
-							id: provider.id,
-							name: provider.name,
-							// cost: 0,
-							// price: 0,
-							total_costs: 0,
-							total_prices: 0,
-							unidades_vendidas: 0,
-						}
-					}
-				} else {
-					providers_formated[provider.id] = {
-						id: provider.id,
-						name: provider.name,
-						// cost: 0,
-						// price: 0,
-						total_costs: 0,
-						total_prices: 0,
-						unidades_vendidas: 0,
-					}
-				}
-			})
-
-			state.models.forEach(article_performance => {
-				if (providers_formated[article_performance.provider_id]) {
-					if (article_performance.cost) {
-						// providers_formated[article_performance.provider_id].cost += Number(article_performance.cost) 
-						providers_formated[article_performance.provider_id].total_costs += Number(article_performance.cost) * Number(article_performance.amount) 
-					}
-					if (article_performance.price) {
-						// providers_formated[article_performance.provider_id].price += Number(article_performance.price) 
-						providers_formated[article_performance.provider_id].total_prices += Number(article_performance.price) * Number(article_performance.amount) 
-					}
-					if (article_performance.amount) {
-						providers_formated[article_performance.provider_id].unidades_vendidas += Number(article_performance.amount) 
-					}
-				}
-			})
-
-			console.log('rentabilidad providers_formated')
-			console.log(providers_formated)
-			providers_formated = providers_formated.filter(Boolean)
-			console.log(providers_formated)
-
-			state.providers_formated = providers_formated
-		},
 	},
 	actions: {
 		getModels({commit, state, dispatch}) {
@@ -348,7 +252,6 @@ export default {
 					url += '/0'
 				}
 			} 
-			url += '/'+state.meses_atras
 			if (state.route_prefix) {
 				url += '/'+state.route_prefix
 			} 
@@ -368,20 +271,14 @@ export default {
 					if (res.data.models.current_page == 1) {
 						commit('setTotalPages', res.data.models.last_page)
 					}
-					console.log('se cargo '+state.model_name+' meses_atras: '+state.meses_atras+' page: '+state.page)
+					console.log('se cargo '+state.model_name+' page: '+state.page)
 					commit('incrementPage')
 					commit('addModels', loaded_models)
 					if (loaded_models.length == state.per_page) {
 						dispatch('_getModels')
 					} else {
+						commit('setLoading', false)
 						commit('setPage', 1)
-						if (state.meses_atras == 0) {
-							commit('setLoading', false)
-							commit('setMesesAtras', 12)
-						} else {
-							commit('decrementMesesAtras')
-							dispatch('_getModels')
-						}
 					}
 				} else {
 					commit('setLoading', false)
@@ -442,7 +339,4 @@ export default {
 			})
 		}
 	},
-	modules: {
-		provider,
-	}
 }

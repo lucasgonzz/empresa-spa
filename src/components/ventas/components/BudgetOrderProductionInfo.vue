@@ -16,6 +16,11 @@
 		v-else-if="model.afip_ticket">
 			Factura N° {{ model.afip_ticket.cbte_numero }}
 		</span>
+		<strong
+		class="text-danger"
+		v-if="model.afip_errors.length">
+			{{ model.afip_errors.length }} errores
+		</strong>
 	</div>
 </template>
 <script>

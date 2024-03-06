@@ -12,16 +12,56 @@ class="m-b-15 m-t-20">
 		hover>
 			<template #cell(price)="data">
 				<b-input-group
-				v-if="can('article.vender.change_price')"
+				v-if="can('article.vender.change_price') || items[data.index].default_in_vender"
 				class="input-price m-b-10">
-					<b-form-input
-					@keyup="setTotal"
-					@click="setTotal" 
-					type="number"
-					min="0"
-					v-model="items[data.index].price_vender"></b-form-input>
+
+					<div class="cont-input-price">
+						<b-form-input
+						@keyup="setTotal"
+						@keyup.enter="add_varios_precios(items[data.index], true)"
+						@click="setTotal" 
+						type="number"
+						:id="'price-vender-'+items[data.index].id"
+						min="0"
+						v-model="items[data.index].price_vender"></b-form-input>
+
+						<div
+						class="varios-precios"
+						v-if="items[data.index].varios_precios">
+							<div
+							v-for="otro_precio in items[data.index].varios_precios"
+							class="otro-precio">
+								<b-form-input 
+								@keyup.enter.stop="calculate_price_vender(items[data.index])"
+								v-model="otro_precio.price_vender"
+								type="number" />
+
+								<b-form-input 
+								class="input-amount"
+								v-model="otro_precio.amount"
+								:min="1"
+								@change="enter_amount(items[data.index])"
+								@keyup.enter.prevent="enter_amount(items[data.index])"
+								placeholder="Cantidad"
+								type="number" />
+
+								<b-button
+								size="sm"
+								@click="remove_otro_precio(items[data.index], otro_precio)"
+								variant="danger">
+									<i class="icon-trash"></i>
+								</b-button>
+							</div>
+						</div>
+					</div>
+
 				</b-input-group>
-				<span>
+				<span
+				v-if="items[data.index].calculated_price_vender">
+					{{ price(items[data.index].calculated_price_vender) }}
+				</span>
+				<span
+				v-else>
 					{{ price(items[data.index].price_vender) }}
 				</span>
 			</template>
@@ -64,6 +104,7 @@ class="m-b-15 m-t-20">
 						<i class='icon-edit'></i>
 					</div>
 					<b-form-input
+					@keyup="setCheckedItems(items[data.index])"
 					:disabled="!previus_sale.to_check"
 					type="number"
 					min="0"
@@ -187,16 +228,79 @@ export default {
 		},
 	},
 	methods: {
+		add_varios_precios(item, hacer_caso = false) {
+			console.log('hacer_caso')
+			console.log(hacer_caso)
+			if (hacer_caso) {
+				console.log('add_varios_precios')
+				if (typeof item.varios_precios == 'undefined') {
+					item.varios_precios = []
+				}
+				item.varios_precios.unshift({
+					price_vender: item.price_vender,
+					amount: '',
+					id: item.varios_precios.length,
+					// article_id: item.id,
+				})
+
+				this.calculate_price_vender(item)
+				item.price_vender = ''
+			}
+		},
+		enter_amount(item) {
+			console.log('enter_amount')
+			this.calculate_price_vender(item)
+		},
+		calculate_price_vender(item) {
+			let calculated_price_vender = 0
+			let amount = 1
+			item.varios_precios.forEach(otro_precio => {
+				if (otro_precio.amount != '') {
+					amount = Number(otro_precio.amount)
+				} else {
+					amount = 1
+				}
+				calculated_price_vender += (Number(otro_precio.price_vender) * amount)
+			})
+			console.log('calculated_price_vender')
+			console.log(calculated_price_vender)
+
+			item.calculated_price_vender = calculated_price_vender
+			this.$store.commit('vender/replceItem', item)
+			this.$store.commit('vender/setTotal')
+
+			setTimeout(() => {
+				document.getElementById('price-vender-'+item.id).focus()
+			}, 300)
+		},
+		remove_otro_precio(item, otro_precio) {
+			let index = item.varios_precios.findIndex(_otro_precio => {
+				return _otro_precio.id == otro_precio.id 
+			})
+
+			item.varios_precios.splice(index, 1)
+			this.$store.commit('vender/replceItem', item)
+			this.calculate_price_vender(item) 
+		},
 		checked_amount_input_class(item) {
 			if (this.previus_sale.checked && item.checked_amount) {
 				return 'input-checked-amount-danger'
 			}
+		},
+		setCheckedItems(item) {
+			this.check_checked_item_max_amount(item)
 		},
 		setReturnedItems(item) {
 			this.checkReturnedItemMaxAmount(item)
 			this.setTotal()
 			this.addReturnedItem(item)
 			this.setNotaCreditoDescription()
+		},
+		check_checked_item_max_amount(item) {
+			if (item.checked_amount >= item.amount) {
+				this.$toast.error('Solo indique la cantidad de unidades checkeadas, si es menor a la cantidad original')
+				item.checked_amount = 0
+			} 
 		},
 		checkReturnedItemMaxAmount(item) {
 			if (item.returned_amount > item.amount) {
@@ -294,7 +398,7 @@ export default {
 
 .td-price 
 	position: relative
-	font-weight: bold
+	font-weight: bold		
 
 
 .ticket-price 
@@ -313,8 +417,33 @@ export default {
 		margin-bottom: 5px
 		&:last-child
 			margin-right: 0
+
 .input-price
 	width: 150px
+
+	.cont-input-price
+		display: flex 
+		flex-direction: column 
+
+		.varios-precios
+			display: flex 
+			flex-direction: column
+
+			.otro-precio
+				display: flex 
+				flex-direction: row
+				justify-content: space-between 
+				margin-top: 10px
+
+				input 
+					width: 150px
+
+				.input-amount					
+						margin: 0 10px
+						width: 90px
+
+
+
 
 .input-checked-amount
 	width: 125px

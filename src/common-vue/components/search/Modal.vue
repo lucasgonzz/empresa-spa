@@ -108,6 +108,10 @@ export default {
 			type: Array,
 		},
 		search_from_api: Boolean,
+		search_function: {
+			type: String,
+			default: null,
+		},
 	},
 	data() {
 		return {
@@ -227,7 +231,16 @@ export default {
 						console.log(err)
 					})
 				} else {
-					results = this.models_to_search.filter(model => {
+					console.log('search_function:')
+					console.log(this.search_function)
+
+					let models_to_search = this.models_to_search
+					if (this.search_function) {
+						models_to_search = this[this.search_function]()
+						console.log('Los models_to_search ahora son:')
+						console.log(models_to_search)
+					} 
+					results = models_to_search.filter(model => {
 						let value = ''+model[this.prop_to_filter.key]
 						let query_array = this.query.toLowerCase().split(' ')
 
@@ -247,16 +260,7 @@ export default {
 							})
 						}
 
-						// let coincide = value && value.toLowerCase().includes(this.query.toLowerCase())
-
-						// if (this.props_to_filter.length && !coincide) {
-						// 	this.props_to_filter.forEach(prop_to_filter => {
-						// 		if (!coincide) {
-						// 			value = ''+model[prop_to_filter]
-						// 			coincide = value && value.toLowerCase().includes(this.query.toLowerCase())
-						// 		}
-						// 	})
-						// }
+						
 						return coincide
 					})
 					results = results.filter(model => {

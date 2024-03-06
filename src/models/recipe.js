@@ -12,6 +12,7 @@ export default {
 			is_title: true,
 			show: true,
 			value: '',
+			search_function: 'articles_to_search_in_recipe',
 		},
 		{
 			text: 'Insumos',
@@ -27,6 +28,12 @@ export default {
 				model_name: 'article',
 				order_list_by: 'order_production_status', 
 				props_to_show: [
+					{
+						text: 'N°',
+						key: 'num',
+						type: 'tex',
+						show: true,
+					},
 					{
 						text: 'Nombre',
 						key: 'name',
@@ -51,6 +58,14 @@ export default {
 					{
 						text: 'Precio',
 						key: 'final_price',
+						type: 'text',
+						is_price: true,
+						show: true,
+						show_in_input_if: ['status', '=', 'inactive'],
+					},
+					{
+						text: 'Costo M. Obra',
+						key: 'costo_mano_de_obra',
 						type: 'text',
 						is_price: true,
 						show: true,
@@ -106,11 +121,19 @@ export default {
 			value: 0,
 		},
 		{
-			text: 'Costo de produccion',
-			function: 'getRecipeCost',
+			text: 'Costo de produccion MATERIALES',
+			function: 'get_recipe_cost_materiales',
 		},
 		{
-			text: 'Establecer costo del articulo en base a los costos de los insumos',
+			text: 'Costo de produccion MANO DE OBRA',
+			function: 'get_recipe_cost_mano_de_obra',
+		},
+		{
+			text: 'Costo de produccion NETO',
+			function: 'get_recipe_cost_neto',
+		},
+		{
+			text: 'Establecer costo del articulo en base a los costos de produccion NETO',
 			key: 'article_cost_from_recipe',
 			type: 'checkbox',
 			value: 0,

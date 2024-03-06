@@ -397,6 +397,9 @@ export default {
 			if (prop.disabled && !form_to_filter) {
 				return true 
 			}
+			if (this.form_disabled_to_edit(this.model_name) && this.model.id) {
+				return true
+			}
 			return false
 		},
 		setFocus() {

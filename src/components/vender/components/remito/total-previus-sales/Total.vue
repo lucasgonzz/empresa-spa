@@ -47,9 +47,9 @@ export default {
 			return cant
 		},
 		sale_discounts() {
-			if (this.previus_sale.id) {
-				return this.previus_sale.discounts
-			} 
+			// if (this.previus_sale.id) {
+			// 	return this.previus_sale.discounts
+			// } 
 
 			let sale_discounts_id = this.$store.state.vender.discounts_id
 			let discounts = []
@@ -61,9 +61,9 @@ export default {
 			return discounts
 		},
 		sale_surchages() {
-			if (this.previus_sale.id) {
-				return this.previus_sale.surchages
-			} 
+			// if (this.previus_sale.id) {
+			// 	return this.previus_sale.surchages
+			// } 
 
 			let sale_surchages_id = this.$store.state.vender.surchages_id
 			let surchages = []

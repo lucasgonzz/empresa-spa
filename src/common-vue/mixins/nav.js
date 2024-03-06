@@ -62,7 +62,9 @@ export default {
 			return this.plural(route.model_name)
 		},
 		setRoute(route) {
-			if (route.model_name) {
+			if (route.function) {
+				this[route.function]()
+			} else if (route.model_name) {
 				let models = this.$store.state[route.model_name].models 
 				if (!models.length && (!this.is_mobile || this.downloadOnMobile(route.model_name)) && (route.model_name != 'article' || this.download_articles)) {
 					this.$store.dispatch(route.model_name+'/getModels')

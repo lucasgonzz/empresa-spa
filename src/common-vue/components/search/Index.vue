@@ -20,6 +20,7 @@
 		:search_from_api="search_from_api"
 		:props_to_show="props_to_show"
 		:props_to_filter="props_to_filter"
+		:search_function="search_function"
 		@callSearchModal="callSearchModal"
 		@setQuery="setQuery"
 		@setNotShowModel="setNotShowModel"
@@ -159,6 +160,10 @@ export default {
 				return []
 			}
 		},
+		search_function: {
+			type: String,
+			default: null,
+		},
 	},
 	data() {
 		return {
@@ -289,7 +294,9 @@ export default {
 		},
 		setModelsToSearch() {
 			let models = []		
-			if (this.prop && this.prop.depends_on && this.model) {
+			if (this.prop && this.prop.search_function) {
+				models = this[this.prop.search_function]()
+			} else if (this.prop && this.prop.depends_on && this.model) {
 				if (!this.prop.search_depends_on_from_api) {
 				 	models = this.modelsStoreFromName(this.model_name)
 					models = models.filter(_model => {
