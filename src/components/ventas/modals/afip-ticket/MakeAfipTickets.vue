@@ -107,20 +107,36 @@ export default {
 				this.$bvModal.show('make-afip-tickets')
 				
 				for (var i = 0; i < this.selected_sales.length; i++) {
-					console.log('enviando sale_id: '+this.selected_sales[i].id)
-					let res = await this.$api.post('afip-ticket', {
-						sale_id: this.selected_sales[i].id,
-						afip_information_id: this.afip_information_id
-					})
-					console.log('se facturo sale_id: '+this.selected_sales[i].id)
-					this.$store.commit('sale/add', res.data.sale)
-					this.afip_tickets_for_make[i].maked = true
-					// .catch(err => {
-					// 	this.$toast.error('Error al emitir factura para la venta N° '+this.selected_sales[i].num)
-					// 	this.afip_tickets_for_make = []
-					// })
+					console.log('i: '+i)	
+					try {
+						let res = await this.send_request(i)
+						console.log('i: '+i)
+						console.log(res)
+						console.log(i)
+						console.log(this.selected_sales)
+						console.log(this.selected_sales[i])
+						console.log('se facturo sale_id: '+this.selected_sales[i].id)
+						this.$store.commit('sale/add', res.data.sale)
+						this.afip_tickets_for_make[i].maked = true
+					} catch (err) {
+						console.log('errror:')
+						console.log(error)
+					}
+					
 				}
 			}
+		},
+		send_request(index) {
+			console.log('send_request i: '+index)
+			console.log('enviando sale_id: '+this.selected_sales[index].id)
+			return this.$api.post('afip-ticket', {
+				sale_id: this.selected_sales[index].id,
+				afip_information_id: this.afip_information_id
+			})
+			.catch(err => {
+				this.$toast.error('Error al emitir factura para la venta N° '+this.selected_sales[index].num)
+				this.afip_tickets_for_make[index].maked = false
+			})
 		},
 		check() {
 			if (this.afip_information_id == 0) {

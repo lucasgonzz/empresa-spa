@@ -7,12 +7,12 @@
 		class="d-flex w-100">
 			<b-form-input
 			id="article-bar-code"
-			v-model="article.bar_code"
+			v-model="article.codigo"
 			autocomplete="off" 
 			ref="articleBarCode"
 			@keydown.shift="callVender"
 			@keydown.enter="setArticle"
-			placeholder="Ingrese el codigo de barras"></b-form-input>
+			:placeholder="placeholder"></b-form-input>
 
 			<bar-code-scanner
 			class="m-l-10"
@@ -40,6 +40,15 @@ export default {
 		articles() {
 			return this.$store.state.article.models
 		},
+		usar_codigo_proveedor() {
+			return this.hasExtencion('codigo_proveedor_en_vender')
+		},
+		placeholder() {
+			if (this.usar_codigo_proveedor) {
+				return 'Ingrese el codigo de proveedor'
+			}
+			return 'Ingrese el codigo de barras'
+		},
 	},
 	data() {
 		return {
@@ -47,38 +56,56 @@ export default {
 		}
 	},
 	methods: {
-		async getArticleFromBarCode(bar_code) {
+		async getArticleFromCodigo(codigo) {
 			let article
-			bar_code = this.getBarCode(bar_code)
+			codigo = this.getBarCode(codigo)
 			if ((!this.download_articles && !this.articles.length) || (this.is_mobile && !this.downloadOnMobile('article') && !this.articles.length ) || this.$store.state.article.loading) {
-				console.log('se va a buscar del api el codigo '+bar_code)
-				await this.getArticleFromApi(bar_code)
+				console.log('se va a buscar del api el codigo '+codigo)
+				await this.getArticleFromApi(codigo)
 				// alert('siguio')
 			} else {
 				this.finded_article = this.articles.find(article => {
-					return article.bar_code && article.bar_code == bar_code
+					return this.check_article(article, codigo)
 				})
 				console.log('ENTRO 2')
 				console.log(this.finded_article)
 				// alert('Find in store: '+this.finded_article)
 			}
 		},
+		check_article(article, codigo) {
+			if (this.usar_codigo_proveedor) {
+				// console.log('comparando '+article.provider_code+' con '+codigo)
+				return article.provider_code && article.provider_code.toLowerCase() == codigo.toLowerCase()
+			} else {
+				return article.bar_code && article.bar_code == codigo
+			} 
+		},
 		async setBarCode(bar_code) {
-			await this.getArticleFromBarCode(bar_code)
+			await this.getArticleFromCodigo(bar_code)
 			console.log('setVenderArticle')
 			this.setVenderArticle(this.finded_article, true) 
 		},
 		async setArticle() {
-			if (this.article.bar_code != '') {
-				await this.getArticleFromBarCode(this.article.bar_code)
-				console.log('sigue con setVenderArticle')
-				console.log(this.finded_article.name)
-				this.setVenderArticle(this.finded_article)
+			if (this.article.codigo != '') {
+				await this.getArticleFromCodigo(this.article.codigo)
+				if (typeof this.finded_article != 'undefined') {
+					console.log('sigue con setVenderArticle')
+					console.log(this.finded_article.name)
+					this.setVenderArticle(this.finded_article)
+				} else {
+					this.$toast.error('No se encontro articulo')
+				}
 			}
 		},
 		getArticleFromApi(bar_code) {
+			let prop_to_filter = {} 
+			if (this.usar_codigo_proveedor) {
+				prop_to_filter.key = 'provider_code'
+			} else {
+				prop_to_filter.key = 'bar_code'
+			}
 			return this.$api.post('search-from-modal/article', {
-				prop_to_filter: {key: 'bar_code'},
+				prop_to_filter: prop_to_filter,
 				query_value: bar_code,
 			})
 			.then(res => {

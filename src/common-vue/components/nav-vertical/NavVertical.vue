@@ -160,7 +160,7 @@ export default {
 		transform: translateX(-200px)
 
 	@media screen and (min-width: 768px)
-		transform: translateX(-150px)
+		transform: translateX(-155px)
 		&:hover
 			transform: translateX(0px)
 			& .user-info .item, & .user-info hr  
@@ -188,7 +188,7 @@ export default {
 		&:active 
 			transform: translateX(20px)
 		img 
-			width: 40px
+			width: 35px
 
 	.active-item
 		background: $blue 

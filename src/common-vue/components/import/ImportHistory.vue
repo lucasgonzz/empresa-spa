@@ -10,6 +10,7 @@ id="import-history">
 		variant="primary"></b-spinner>
 	</div>
 	<b-table
+	head-variant="dark"
 	v-else
 	:fields="fields"
 	:items="items">

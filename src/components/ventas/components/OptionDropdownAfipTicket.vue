@@ -13,6 +13,7 @@ export default {
 			return this.$store.state.sale.selected
 		},
 		has_afip_ticket() {
+			return false
 			let sales = this.selected_sales.filter(sale => {
 				return sale.afip_ticket
 			})

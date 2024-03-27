@@ -131,6 +131,7 @@ export default {
 	},
 	data() {
 		return {
+			intentos_volver_a_llamar_default_articles: 0,
 			interval: null,
 		}
 	},
@@ -178,10 +179,12 @@ export default {
 			return index != -1
 		},
 		volver_a_llamar_default_articles() {
-			setTimeout(() => {
-				console.log('2 volviendo a llamar')
-				this.setDefaultArticles()
-			}, 2000)
+			if (this.intentos_volver_a_llamar_default_articles < 5) {
+				setTimeout(() => {
+					this.intentos_volver_a_llamar_default_articles++
+					this.setDefaultArticles()
+				}, 2000)
+			}
 		},
 
 		setItemsPrices(only_the_last = false, from_pivot = false) {
@@ -227,7 +230,7 @@ export default {
 					this.$store.commit('vender/setChecked', 0)
 					this.$store.commit('vender/setConfirmed', 0)
 					this.setDefaultPaymentMethod()
-					if (this.maked_sale.client_id) {
+					if (this.maked_sale.client_id && this.maked_sale.save_current_acount) {
 						this.loadModel('client', this.maked_sale.client_id)
 					}
 					this.setDefaultArticles()

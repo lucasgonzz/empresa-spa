@@ -61,7 +61,8 @@
 					</div>
 					<b-form-input
 					class="input-search"
-					@keyup="searchOnModels"
+					@keyup.enter="searchOnModels"
+					@keyup="limpiar_busqueda_por_borrar"
 					v-model="search_query"
 					:placeholder="_placeholder_search"></b-form-input>
 				</div>
@@ -230,6 +231,11 @@ export default {
 				this.$store.commit(this.model_name_for_search_on_models+'/addRelationFiltered', this.prop.key)
 			}
 		},
+		limpiar_busqueda_por_borrar() {
+			if (this.prop && this.search_query.length == 0) {
+				this.resetModels()
+			}
+		},
 		resetModels(clear_query = true) {
 			this.removeRelationFiltered(this.model_name_for_search_on_models, this.model, this.prop.key)
 			if (clear_query) {
@@ -294,8 +300,9 @@ export default {
 		},
 		setModelsToSearch() {
 			let models = []		
-			if (this.prop && this.prop.search_function) {
-				models = this[this.prop.search_function]()
+			if (this.search_function) {
+			// if (this.prop && this.prop.search_function) {
+				models = this[this.search_function]()
 			} else if (this.prop && this.prop.depends_on && this.model) {
 				if (!this.prop.search_depends_on_from_api) {
 				 	models = this.modelsStoreFromName(this.model_name)

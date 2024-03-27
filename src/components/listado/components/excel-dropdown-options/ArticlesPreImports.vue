@@ -1,10 +1,13 @@
 <template>
-	<b-dropdown-item
-	v-if="show"
-	@click="getPreImports">
-		<i class="icon-download"></i>
-		Pre Importaciones
-	</b-dropdown-item>
+	<div>
+		<b-dropdown-divider></b-dropdown-divider>
+		<b-dropdown-item
+		v-if="show"
+		@click="getPreImports">
+			<i class="icon-eye"></i>
+			Pre Importaciones
+		</b-dropdown-item>
+	</div>
 </template>
 <script>
 export default {

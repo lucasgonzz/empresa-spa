@@ -1,5 +1,7 @@
 export default [
     'afip_information',
+    'article_pre_import_range',
+    'unidad_medida',
     'article',
     'article_property_type',
     'article_property_value',

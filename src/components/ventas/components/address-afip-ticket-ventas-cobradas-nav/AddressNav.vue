@@ -1,35 +1,25 @@
 <template>
-	<b-row
-	v-if="show">
-		<b-col
-		cols="12">
-			<horizontal-nav
-			:items="items"
-			prop_name="street"
-			:set_view="true"
-			:show_display="false"></horizontal-nav>
-		</b-col>
-	</b-row>
+	<horizontal-nav
+	:items="items"
+	prop_name="street"
+	:set_view="true"
+	:show_display="false"></horizontal-nav>
 </template>
 <script>
-import moment from 'moment'
-
 import HorizontalNav from '@/common-vue/components/horizontal-nav/Index'
 import sale from '@/mixins/sale'
 export default {
-	name: 'AddressNav',
 	mixins: [sale],
 	components: {
 		HorizontalNav,
 	},
 	computed: {
-		show() {
-			return this.addresses.length >= 2
-		},
 		addresses() {
 			return this.$store.state.address.models 
 		},
 		items() {
+			console.log('addresses')
+			console.log(this.addresses)
 			let items = []
 			items.push({street: 'todas'})
 			this.addresses.forEach(address => {

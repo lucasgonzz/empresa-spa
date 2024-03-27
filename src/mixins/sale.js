@@ -23,11 +23,18 @@ export default {
 		employees() {
 			return this.$store.state.employee.models 
 		},
+		ventas_cobradas() {
+			return this.$store.state.sale.ventas_cobradas_show_option
+		},
+		afip_ticket_show_option() {
+			return this.$store.state.sale.afip_ticket_show_option
+		},
 		sales_to_show() {
+			let sales = []
 			if (this.view == 'todas' && this.sub_view == 'todos') {
-				return this.sales 
+				sales = this.sales 
 			} else {
-				let sales = []
+				// let sales = []
 				if (this.view == 'todas') {
 					sales = this.sales 
 				} else {
@@ -55,8 +62,35 @@ export default {
 						})
 					}
 				}
-				return sales 
 			}
+
+			if (this.ventas_cobradas == 'solo-cobradas') {
+				sales = sales.filter(sale => {
+					return !sale.client_id || this.tiene_cuenta_corriente_cobrada(sale)
+				})
+				console.log('solo-cobradas')
+			} else if (this.ventas_cobradas == 'solo-sin-cobrar') {
+				sales = sales.filter(sale => {
+					return sale.client_id && (!sale.current_acount || sale.current_acount.status != 'pagado')
+				})
+			}
+
+			if (this.afip_ticket_show_option == 'solo-con-factura') {
+				sales = sales.filter(sale => {
+					return sale.afip_ticket 
+				})
+			} else if (this.afip_ticket_show_option == 'solo-sin-factura') {
+				sales = sales.filter(sale => {
+					return !sale.afip_ticket 
+				})
+			}
+
+			return sales 
 		}
 	},
+	methods: {
+		tiene_cuenta_corriente_cobrada(sale) {
+			return sale.current_acount && sale.current_acount.status == 'pagado'
+		}
+	}
 }

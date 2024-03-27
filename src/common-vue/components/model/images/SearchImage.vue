@@ -81,7 +81,9 @@ export default {
 				} else {
 					this.query = this.article.name
 				}
-				this.search()
+				setTimeout(() => {
+					this.search() 
+				}, 300)
 			}
 		})
 	},
@@ -102,25 +104,28 @@ export default {
 	},
 	methods: {
 		async search() {
-			this.images_result = null
-			this.loading = true
-			fetch('https://www.googleapis.com/customsearch/v1?key=AIzaSyC4sUC-MuEDsMNoIQqwUPmYWZmw74rsHOI&cx=c442e5f346f314951&searchType=image&q='+this.query)
-			// fetch('https://www.googleapis.com/customsearch/v1?key=AIzaSyDOdbUFHZhD0I2DWoYVR6CQnKurqYY5rcQ&cx=c442e5f346f314951&searchType=image&q='+this.query)
-			.then(res => {
-				this.loading = false
-				res.json()
-				.then(body => {
-					console.log(body.searchInformation.totalResults)
-					if (body.searchInformation.totalResults == 0) {
-						this.$toast.error('No se encontraron resultados, prueba con otras palabras por favor')
-					} else if (body.items.length) {
-						this.images_result = []
-						body.items.forEach(item => {
-							this.images_result.push(item.link)
-						})
-					} 
+			if (!this.loading) {
+				console.log('Bucando imagen')
+				this.images_result = null
+				this.loading = true
+				fetch('https://www.googleapis.com/customsearch/v1?key=AIzaSyC4sUC-MuEDsMNoIQqwUPmYWZmw74rsHOI&cx=c442e5f346f314951&searchType=image&q='+this.query)
+				// fetch('https://www.googleapis.com/customsearch/v1?key=AIzaSyDOdbUFHZhD0I2DWoYVR6CQnKurqYY5rcQ&cx=c442e5f346f314951&searchType=image&q='+this.query)
+				.then(res => {
+					this.loading = false
+					res.json()
+					.then(body => {
+						console.log(body.searchInformation.totalResults)
+						if (body.searchInformation.totalResults == 0) {
+							this.$toast.error('No se encontraron resultados, prueba con otras palabras por favor')
+						} else if (body.items.length) {
+							this.images_result = []
+							body.items.forEach(item => {
+								this.images_result.push(item.link)
+							})
+						} 
+					})
 				})
-			})
+			}
 		},
 		setImage(image_url) {
 			this.$bvModal.hide('search-image') 

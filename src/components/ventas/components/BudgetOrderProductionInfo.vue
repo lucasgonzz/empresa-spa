@@ -14,10 +14,19 @@
 		</span>
 		<span
 		v-else-if="model.afip_ticket">
-			Factura N° {{ model.afip_ticket.cbte_numero }}
+			<span
+			v-if="model.afip_ticket.cae">
+				Factura N° {{ model.afip_ticket.cbte_numero }}
+			</span>
+			<span
+			class="text-danger"
+			v-else>
+				Factura N° {{ model.afip_ticket.cbte_numero }}
+			</span>
 		</span>
 		<strong
-		class="text-danger"
+		@click.stop="showErrors"
+		class="text-danger c-p"
 		v-if="model.afip_errors.length">
 			{{ model.afip_errors.length }} errores
 		</strong>
@@ -28,5 +37,11 @@ export default {
 	props: {
 		model: Object,
 	},
+	methods: {
+		showErrors() {
+			this.setModel(this.model, 'sale', [], false, false)
+			this.$bvModal.show('afip-ticket-errors')
+		}
+	}
 }
 </script>

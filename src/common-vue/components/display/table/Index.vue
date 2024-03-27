@@ -278,6 +278,7 @@ export default {
 		},
 		lists() {
 			if (this.order_list_by) {
+				console.log('calculando lists:')
 				let models_from_order_by = this.$store.state[this.order_list_by].models
 				let lists = []
 				let list
@@ -311,6 +312,7 @@ export default {
 				if (list.models.length) {
 					lists.push(list)
 				}
+				console.log(lists)
 				return lists
 			} 
 		},
@@ -490,6 +492,7 @@ export default {
 		display: flex 
 		flex-direction: row 
 		justify-content: center 
+		z-index: 2000
 		.scroll-button	
 			width: 30px
 			height: 30px

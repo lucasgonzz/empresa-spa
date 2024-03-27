@@ -7,6 +7,17 @@ export default [
 	// 	can: 'article.store',
 	// },
 	{
+		text: 'Reportes',
+		path: '/reportes',
+		component: '@/views/Reportes',
+		image_url: 'nav-icons/caja.png',
+		name: 'reportes',
+		can: 'reportes',
+		params: {
+			view: 'generales',
+		},
+	},
+	{
 		text: 'Listado',
 		path: '/listado-de-articulos',
 		model_name: 'article',

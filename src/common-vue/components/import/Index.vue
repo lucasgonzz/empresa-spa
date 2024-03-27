@@ -39,24 +39,6 @@
 			</strong>
 		</p>
 		<hr>	
-		<div>
-			<p>
-				<strong>
-					Operaciones a realizar
-				</strong>
-			</p>
-			<b-form-radio
-			:value="0"
-			v-model="create_and_edit">
-				Solo editar {{ plural(model_name) }} existentes
-			</b-form-radio>
-			<b-form-radio
-			:value="1"
-			v-model="create_and_edit">
-				Cargar nuevos {{ plural(model_name) }} y editar existentes
-			</b-form-radio>
-		</div>
-		<hr>	
 		<div>	
 			<p>
 				<strong>
@@ -158,13 +140,39 @@
 
 		<hr>
 
+
+		<div>
+			<p>
+				<strong>
+					Operaciones a realizar
+				</strong>
+			</p>
+			<b-form-radio
+			class="radio-option"
+			:value="0"
+			size="lg"
+			v-model="create_and_edit">
+				Solo editar {{ plural(model_name) }} existentes
+			</b-form-radio>
+			<b-form-radio
+			class="radio-option"
+			:value="1"
+			size="lg"
+			v-model="create_and_edit">
+				Cargar nuevos {{ plural(model_name) }} y editar existentes
+			</b-form-radio>
+		</div>
+		<hr>	
+
 		<b-form-group
 		label="Archivo Excel para importar">
 			<b-form-file
 			browse-text="Buscar"
+			:id="'input-file-'+this.model_name"
 			v-model="file"
 			variant="primary"
 			:state="Boolean(file)"
+			@change="onFileChange"
 			placeholder="Seleccione el archivo o arrastralo hasta aquí"
 			drop-placeholder="Solta el archivo aqui..."
 			></b-form-file>
@@ -184,8 +192,13 @@
 			<b-progress 
 			class="m-b-10"
 			variant="primary" :value="solicitud_numero" :max="cantidad_solicitudes" show-progress animated></b-progress>
-			<strong>
-				Por favor aguarde, esto podria tardar unos minutos...
+			<strong
+			v-if="!demora_de_todas_las_solicitud">
+				Por favor aguarde, calculando demora...
+			</strong>
+			<strong
+			v-else>
+				Por favor aguarde, quedan {{ demora_de_todas_las_solicitud.toFixed(0) }} segundos...
 			</strong>
 		</div>
 
@@ -200,6 +213,8 @@
 </div>
 </template>
 <script>
+// let XLSX = require('xlsx')
+import * as XLSX from 'xlsx/xlsx.mjs'
 import Advises from '@/common-vue/components/import/Advises'
 import BtnLoader from '@/common-vue/components/BtnLoader'
 export default { 
@@ -245,6 +260,10 @@ export default {
 	},
 	created() {
 		this.setPositions()
+		// setTimeout(() => {
+		// 	const inputFile = document.getElementById('input-file-'+this.model_name)
+		// 	inputFile.addEventListener('change', handleFileChange)
+		// }, 500)
 	},
 	computed: {
 		title() {
@@ -253,6 +272,12 @@ export default {
 		id() {
 			return 'import-'+this.model_name 
 		},
+		limite_filas() {
+			if (this.is_local) {
+				return 20
+			}
+			return 150
+		}
 	},
 	data() {
 		return {
@@ -265,15 +290,77 @@ export default {
 			provider_id: 0,
 			columns_: [], 
 			positions_seted: false,
-			create_and_edit: 1,
+			create_and_edit: null,
 			show_history: false,
-			limite_filas: 20,
+
 			cantidad_solicitudes: 0,
 			solicitud_numero: 0,
 			varias_solicitudes: false,
+			es_la_ultima_solicitud: false,
+			import_history_id: null,
+			pre_import_id: null,
+			hubo_un_error: false,
+
+			es_la_primera_solicitud: false,
+			inicio_primera_solicitud: 0,		
+			fin_primera_solicitud: 0,		
+			demora_de_todas_las_solicitud: 0,
+			temporizador: null
 		}
 	},
 	methods: {
+		onFileChange(event) {
+			if (this.finish_row == '') {
+				let file 
+				if (!event.target.files) {
+					file = event.dataTransfer.files[0]	
+					console.log('vino desde drop')	
+				} else if (event.target.files && event.target.files.length > 0) {
+					file = event.target.files[0]
+				} 
+				this.getNumRows(file)
+			}
+		},
+		getNumRows(file) {
+
+			const reader = new FileReader()
+			let that = this
+			reader.onload = function(e) {
+
+				const data = new Uint8Array(e.target.result)
+				const workbook = XLSX.read(data, { type: 'array' })
+				const sheetName = workbook.SheetNames[0]
+				const worksheet = workbook.Sheets[sheetName]
+				const range = XLSX.utils.decode_range(worksheet['!ref'])
+				let rowCount = 0
+
+				console.log('range:')
+				console.log(range)
+
+				let ultima_fila_con_contenido = 1
+				for (let fila = range.s.r; fila <= range.e.r; ++fila) {
+					for (let C = range.s.c; C <= range.e.c; ++C) {
+						const cellAddress = { c: C, r: fila }
+						const cellRef = XLSX.utils.encode_cell(cellAddress)
+						const cell = worksheet[cellRef]
+						if (cell && cell.v !== null && cell.v !== '') {
+							ultima_fila_con_contenido = fila + 1
+							break
+						} 
+					}
+					// if (!isEmpty) {
+						rowCount++
+					// }
+				}
+
+				console.log("Cantidad de filas:", rowCount)
+				console.log("ultima_fila_con_contenido:", ultima_fila_con_contenido)
+				that.finish_row = ultima_fila_con_contenido
+				console.log('finish_row: '+that.finish_row)
+
+			}
+			reader.readAsArrayBuffer(file)
+		},
 		canIgnore(column) {
 			return typeof column.can_not_ignore == 'undefined'
 		},
@@ -322,74 +409,113 @@ export default {
 			this.positions_seted = false
 		},	
 		async upload() {
-			this.loading = true
-			let form_data = new FormData();
-			console.log('file:')
-			console.log(this.file)
-			form_data.append('models', this.file)
-			form_data.append('start_row', this.start_row)
-			form_data.append('finish_row', this.finish_row)
-			form_data.append('create_and_edit', this.create_and_edit)
-			let index = 0
-			this.columns_.forEach(column => {
-				if (!column.ignored) {
-					form_data.append('prop_'+column.text, column.position)
-				} else {
-					// form_data.append('prop_ignore_'+column.text, column.position)
-					console.log('Se ignoro '+column.text)
-				}
-			})
-			if (this.props_to_send) {
-				Object.keys(this.props_to_send).forEach(key => {
-					form_data.append(key, this.props_to_send[key])
-				})
-			}
+			if (this.check()) {
 
-			if (this.finish_row > this.limite_filas) {
-				this.varias_solicitudes = true
-				this.cantidad_solicitudes = this.finish_row / this.limite_filas
-				this.finish_row_original = Number(this.finish_row)
-				console.log('se van a partir las solicitudes en '+this.cantidad_solicitudes)
-				for (var solicitud = 1; solicitud <= this.cantidad_solicitudes; solicitud++) {
-					console.log('solicitud n° '+solicitud)
-
-					this.solicitud_numero = solicitud
-					
-					if (solicitud == 1) {
-						this.finish_row = Number(this.start_row) + Number(this.limite_filas)
+				this.loading = true
+				let form_data = new FormData()
+				// console.log('file:')
+				// console.log(this.file)
+				form_data.append('models', this.file)
+				form_data.append('start_row', this.start_row)
+				form_data.append('finish_row', this.finish_row)
+				form_data.append('create_and_edit', this.create_and_edit)
+				let index = 0
+				this.columns_.forEach(column => {
+					if (!column.ignored) {
+						form_data.append('prop_'+column.text, column.position)
 					} else {
-						this.start_row = this.finish_row + 1
-						this.finish_row = this.start_row + Number(this.limite_filas)
-						if (this.finish_row > this.finish_row_original) {
-							console.log('finish_row estaba en '+this.finish_row+', se paso y se puso en el original de '+this.finish_row_original)
-							this.finish_row = this.finish_row_original
+						// form_data.append('prop_ignore_'+column.text, column.position)
+						console.log('Se ignoro '+column.text)
+					}
+				})
+				if (this.props_to_send) {
+					Object.keys(this.props_to_send).forEach(key => {
+						form_data.append(key, this.props_to_send[key])
+					})
+				}
+
+				console.log('finish_row final: '+this.finish_row)
+
+				if (this.finish_row > this.limite_filas) {
+					this.varias_solicitudes = true
+					this.cantidad_solicitudes = Math.ceil(this.finish_row / this.limite_filas)
+					this.finish_row_original = Number(this.finish_row)
+					console.log('se van a partir las solicitudes en '+this.cantidad_solicitudes)
+
+					this.fila_inicio = Number(this.start_row)
+					this.fila_fin = Number(this.finish_row)
+
+					for (var solicitud = 1; solicitud <= this.cantidad_solicitudes; solicitud++) {
+
+						if (solicitud == 1) {
+							this.es_la_primera_solicitud = true
+							this.inicio_primera_solicitud = new Date();
+						} else {
+							this.es_la_primera_solicitud = false
+						}
+
+						if (!this.hubo_un_error) {
+							console.log('solicitud n° '+solicitud)
+							form_data.append('import_history_id', this.import_history_id)
+							form_data.append('pre_import_id', this.pre_import_id)
+
+							if (solicitud == this.cantidad_solicitudes) {
+								this.es_la_ultima_solicitud = true
+							}
+
+
+							this.solicitud_numero = solicitud
+							
+							if (solicitud == 1) {
+								this.fila_fin = Number(this.fila_inicio) + Number(this.limite_filas)
+							} else {
+								this.fila_inicio = this.fila_fin + 1
+								this.fila_fin = this.fila_inicio + Number(this.limite_filas)
+								if (this.fila_fin > this.finish_row_original) {
+
+									console.log('fila_fin estaba en '+this.fila_fin+', se paso y se puso en el finish_row_original de '+this.finish_row_original)
+									this.fila_fin = this.finish_row_original
+								}
+							}
+
+							console.log('fila_inicio: '+this.fila_inicio)
+							console.log('fila_fin: '+this.fila_fin)
+							console.log('import_history_id: '+this.import_history_id)
+							console.log('pre_import_id: '+this.pre_import_id)
+
+							form_data.set('start_row', this.fila_inicio)
+							form_data.set('finish_row', this.fila_fin)
+							await this.sendRequest(form_data)
 						}
 					}
-
-					form_data.set('start_row', this.start_row)
-					form_data.set('finish_row', this.finish_row)
+					console.log('terminaron de enviarse las solicitudes')
+					this.loading = false
+					this.file = null
+					this.$bvModal.hide(this.id)
+					this.$store.dispatch(this.model_name+'/getModels')
+					this.actions.forEach(action => {
+						this.$store.dispatch(action)
+					})
+				} else {
+					this.varias_solicitudes = false
 					await this.sendRequest(form_data)
+					console.log('terminaron de enviarse las solicitudes')
+					this.loading = false
+					this.file = null
+					this.$bvModal.hide(this.id)
+					this.$store.dispatch(this.model_name+'/getModels')
+					this.actions.forEach(action => {
+						this.$store.dispatch(action)
+					})
 				}
-				console.log('terminaron de enviarse las solicitudes')
-				this.loading = false
-				this.file = null
-				this.$bvModal.hide(this.id)
-				this.$store.dispatch(this.model_name+'/getModels')
-				this.actions.forEach(action => {
-					this.$store.dispatch(action)
-				})
-			} else {
-				this.varias_solicitudes = false
-				await this.sendRequest(form_data)
-				console.log('terminaron de enviarse las solicitudes')
-				this.loading = false
-				this.file = null
-				this.$bvModal.hide(this.id)
-				this.$store.dispatch(this.model_name+'/getModels')
-				this.actions.forEach(action => {
-					this.$store.dispatch(action)
-				})
 			}
+		},
+		check() {
+			if (this.create_and_edit === null) {
+				this.$toast.error('Indique las Operaciones a realizar')
+				return false 
+			}
+			return true
 		},
 		sendRequest(form_data) {
 			console.log('enviando solicitud')
@@ -398,15 +524,71 @@ export default {
 			return this.$api.post(this.routeString(this.model_name)+'/excel/import', form_data, config)
 			.then(res => {
 				console.log('se envio')
+				console.log(res)
+
+				if (this.es_la_primera_solicitud) {
+					this.fin_primera_solicitud = new Date();
+					let demora_primer_solicitud = (this.fin_primera_solicitud - this.inicio_primera_solicitud) / 1000
+					console.log('La primer solicitud tardo:')
+					console.log(demora_primer_solicitud)
+
+					this.demora_de_todas_las_solicitud = demora_primer_solicitud * this.cantidad_solicitudes
+
+					console.log('Todo tardaria:')
+					console.log(this.demora_de_todas_las_solicitud )
+
+					this.empezar_contador()
+				}
+
+				if (this.es_la_ultima_solicitud) {
+					this.import_history_id = null
+					this.pre_import_id = null
+					this.es_la_ultima_solicitud = false
+					this.start_row = 2
+					this.finish_row = ''
+					this.demora_de_todas_las_solicitud = 0
+					console.log('es_la_ultima_solicitud: '+this.es_la_ultima_solicitud)
+					console.log('import_history_id: '+this.import_history_id)
+					console.log('pre_import_id: '+this.import_history_id)
+				} else {
+					this.import_history_id = res.data.import_history_id
+					this.pre_import_id = res.data.pre_import_id
+				}
 			})
 			.catch(err => {
 				this.loading = false
+				this.import_history_id = null
+				this.pre_import_id = null
 				console.log(err)
+				this.hubo_un_error = true
+				this.limpiar_temporizador()
 			})
 		},
 		showHistory() {
 			this.show_history = !this.show_history
 			this.$bvModal.show('import-history')
+		},
+		empezar_contador() {
+			console.log('entro en empezar_contador')
+			let that = this 
+			this.temporizador = setInterval(function() {
+				console.log('demora_de_todas_las_solicitud:')
+				console.log(that.demora_de_todas_las_solicitud)
+				if (that.demora_de_todas_las_solicitud > 0) {
+					that.demora_de_todas_las_solicitud -= 1; // Restar un segundo al contador
+					console.log('Tiempo restante:', that.demora_de_todas_las_solicitud, 'segundos');
+				}
+
+				if (that.demora_de_todas_las_solicitud <= 0) {
+					that.limpiar_temporizador()
+					console.log('Todas las solicitudes han finalizado');
+				}
+			}, 1000);
+		},
+		limpiar_temporizador() {
+			if (this.temporizador) {
+				clearInterval(this.temporizador); // Detener el temporizador
+			}
 		}
 	}
 }
@@ -428,4 +610,8 @@ export default {
 		margin-bottom: 0
 		font-size: .8em
 		color: rgba(0,0,0,.8)
+
+	.radio-option
+		font-size: 30px
+
 </style>

@@ -9,6 +9,7 @@ class="p-l-20 p-r-20">
     model_name_spanish="cuentas corrientes"
     :set_model_on_row_selected="false"
     :show_btn_edit="false"
+    emit_selected_with_model_empty
     @showDetails="showDetails"
     @showPagadoPor="showPagadoPor"
     @onRowSelected="onRowSelected">
@@ -118,12 +119,9 @@ export default {
             this.$bvModal.show('pagado-por')
         },
         onRowSelected(current_acount) {
-            console.log(current_acount)
-            if (current_acount.sale_id) {
-                // this.setModel(current_acount.sale, 'sale')
-                // setTimeout(() => {
-                //     this.$bvModal.show('sale')
-                // }, 100)
+            if (!current_acount) {
+                this.$store.commit('current_acount/setSelected', [])
+            } else if (current_acount.sale_id) {
                 this.$store.commit('current_acount/setSelected', [current_acount])
             } else if (current_acount.status == 'sin_pagar') {
                 this.$store.commit('current_acount/setSelected', [current_acount])

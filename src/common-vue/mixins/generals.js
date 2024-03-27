@@ -157,48 +157,79 @@ export default {
 				return model_.id == model.id 
 			}) 
 		},
-		removeRelationFiltered(model_name, model, relation) {
-			console.log('removeRelationFiltered para '+model_name)
+		removeRelationFiltered(model_name, model, nombre_relacion) {
+			console.log('removeRelationFiltered para '+model_name+' en la relacion '+nombre_relacion)
+
+			console.log(model)
+
+			// original_model tiene la relacion como estaba un un principio
 			let original_model = this.getOriginalModel(model_name, model)
 
-			let updated_relations = model[relation]
+			// Se guardan las relaciones ya filtradas
+			let modelos_filtrados = model[nombre_relacion]
 
-			model[relation] = original_model[relation]
+			// Aca se setea la relacion del modelo a como estaba en un principio
+			model[nombre_relacion] = original_model[nombre_relacion]
 
-			updated_relations.forEach(updated_relation => {
-				let index = model[relation].findIndex(_relation => {
-					return _relation.id == updated_relation.id 
+			console.log('relacion original:')
+			console.log(original_model[nombre_relacion])
+
+			console.log('modelos_filtrados:')
+			console.log(modelos_filtrados)
+
+
+			modelos_filtrados.forEach(modelo_filtrado => {
+				let index = model[nombre_relacion].findIndex(modelo_original => {
+					return modelo_original.id == modelo_filtrado.id 
 				})
+				
 				if (index != -1) {
-					console.log('actualizando de la relacion el modelo: ')
-					model[relation].splice(index, 1, updated_relation)
+					/* 
+						Aca se actauliza el modelo de la relacion con los datos del modelo filtrado
+						En caso de que cuando se filtro se le alla cambiado alguna propiedad,
+					 	Entonces se reemplaza en la relacion original
+					 */
+					console.log('actualizando modelo filtrado en la relacion: ')
+					if (modelo_filtrado.name) {
+						console.log(modelo_filtrado.name)
+					}
+					model[nombre_relacion].splice(index, 1, modelo_filtrado)
 				} else {
 					console.log('quitando de la relacion el modelo: ')
-					console.log(updated_relation)
-					model[relation].splice(index, 1)
+					if (modelo_filtrado.name) {
+						console.log(modelo_filtrado.name)
+					}
+					model[nombre_relacion].splice(index, 1)
 				}
 			})
 
-			this.removeDeletedModelsFromRelationFiltered(model_name, model)
+			this.quitar_modelos_eliminados_de_las_relaciones_filtradas(model_name, model)
 
 			this.setModel(model, model_name, [], false)
-			this.$store.commit(model_name+'/removeRelationFiltered', relation)
+			this.$store.commit(model_name+'/removeRelationFiltered', nombre_relacion)
 		},
 
 
 		// Aca se ve si hay modelos eliminados en los resultados de busqueda dentro de la relacion, 
 		// y si los hay los elimina de la relacion original del modelo
-		removeDeletedModelsFromRelationFiltered(model_name, model) {
+		quitar_modelos_eliminados_de_las_relaciones_filtradas(model_name, model) {
 			let deleted_models = this.$store.state[model_name].deleted_models_from_relations_filtered
 			if (typeof deleted_models != 'undefined') {
-				console.log('removeDeletedModelsFromRelationFiltered para '+model_name)
+				console.log('quitar_modelos_eliminados_de_las_relaciones_filtradas para '+model_name)
+				console.log(deleted_models)
 				deleted_models.forEach(deleted_model => {
 					let index = model[deleted_model.relation].findIndex(relation_model => {
 						return relation_model.id == deleted_model.id 
 					})
 					if (index != -1) {
+						console.log('ENTROOOO')
+						console.log(index)
+						console.log(model[deleted_model.relation])
+						console.log(model[deleted_model.relation][index])
 						model[deleted_model.relation].splice(index, 1)
-						console.log('eliminando el indice '+index+' de '+deleted_model.relation)
+						if (typeof model[deleted_model.relation][index] != 'undefined') {
+							console.log('eliminando '+model[deleted_model.relation][index].name+' de '+deleted_model.relation)
+						}
 					}
 				})
 			}

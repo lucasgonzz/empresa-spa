@@ -82,6 +82,10 @@ export default {
 			console.log(result)
 			this.article.name = result.query
 			this.setVenderArticle(result.model)
+			if (this.owner.ask_amount_in_vender) {
+				let input = document.getElementById('search-article')
+				input.value = result.model.name
+			}
 		},
 	}
 }

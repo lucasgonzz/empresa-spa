@@ -85,6 +85,7 @@ class="m-b-15 m-t-20">
 					@keyup="setTotal"
 					@click="setTotal"
 					type="number"
+					:placeholder="get_max_discount(items[data.index])"
 					min="0"
 					v-model="items[data.index].discount"></b-form-input>
 				</b-input-group>
@@ -228,6 +229,24 @@ export default {
 		},
 	},
 	methods: {
+		get_max_discount(item) {
+			if (item.cost) {
+				var costo = Number(item.cost);
+				var precioVenta = Number(item.price_vender);
+
+				// Calcula el porcentaje de ganancia actual
+				var porcentajeGanancia = ((precioVenta - costo) / costo) * 100;
+
+				// Calcula el nuevo precio de venta después de aplicar el descuento máximo
+				var nuevoPrecioVenta = costo;
+
+				// Calcula el porcentaje de descuento máximo
+				var porcentajeDescuentoMaximo = 100 - ((nuevoPrecioVenta / precioVenta) * 100);
+				
+				return porcentajeDescuentoMaximo.toFixed(2)+''
+			}
+			return ''
+		},
 		add_varios_precios(item, hacer_caso = false) {
 			console.log('hacer_caso')
 			console.log(hacer_caso)
@@ -394,7 +413,7 @@ export default {
 @import '@/sass/_custom'
 
 .input-discount
-	width: 110px !important
+	width: 130px !important
 
 .td-price 
 	position: relative

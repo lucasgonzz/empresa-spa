@@ -44,8 +44,19 @@ export default {
 		display: 'table',
 
 		loading: false,
+
+		ventas_cobradas_show_option: 'cobradas-y-no-cobradas',
+		afip_ticket_show_option: 'con-y-sin-factura',
 	},
 	mutations: {
+		setVentasCobradasShowOption(state, value) {
+			state.ventas_cobradas_show_option = value
+		},
+		setAfipTicketShowOption(state, value) {
+			state.afip_ticket_show_option = value
+		},
+
+
 		setLoading(state, value) {
 			state.loading = value
 		},

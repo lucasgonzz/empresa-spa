@@ -36,6 +36,8 @@ export default {
 			setTimeout(() => {
 				this.ocutlar_mensaje_exitoso()
 				this.ocultar_mensaje_demorado()
+
+				this.$store.commit('vender/setAfipResult', [])
 			}, 500)
 		},
 		sendAfipTicket() {
@@ -84,6 +86,7 @@ export default {
 				})
 				.catch(err => {
 					// this.$bvModal.hide('loading-afip-ticket')
+		            window.clearInterval(this.interval)
 					console.log(err)
 					if (err.message == 'Request failed with status code 500') {
 						this.$store.commit('vender/setAfipResult', [{Msg: 'Ocurrio un error en el servidor de AFIP'}])

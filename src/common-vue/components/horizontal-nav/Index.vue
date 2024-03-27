@@ -334,11 +334,15 @@ export default {
 	overflow-x: scroll
 	overflow-y: hidden
 	padding-bottom: 5px
-	@media screen and (max-width: 576px)
-		&::-webkit-scrollbar 
-			-ms-overflow-style: none
-			scrollbar-width: none
-			display: none
+
+	-webkit-scrollbar 
+		-ms-overflow-style: none
+		scrollbar-width: none
+		display: none !important
+		
+	-ms-overflow-style: none
+	scrollbar-width: none
+
 	.buttons 
 		display: flex
 

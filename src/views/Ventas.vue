@@ -4,7 +4,9 @@
 
 	<update-prices></update-prices>
 
-	<confirm-afip-tickets></confirm-afip-tickets>
+	<make-afip-tickets></make-afip-tickets>
+
+	<afip-ticket-show-errors></afip-ticket-show-errors>
 
 	<view-component
 	show_filter_modal
@@ -18,7 +20,7 @@
     :delete_text="delete_text"
 	model_name="sale">
 		<template v-slot:display_top>
-			<address-nav></address-nav>
+			<address-afip-ticket-ventas-cobradas-nav></address-afip-ticket-ventas-cobradas-nav>
 			<employee-nav></employee-nav>
 			<total></total>	
 		</template>
@@ -42,13 +44,14 @@ export default {
 	components: { 
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 		CurrentAcounts: () => import('@/components/common/current-acounts/Index'),
-		AddressNav: () => import('@/components/ventas/components/AddressNav'),
+		AddressAfipTicketVentasCobradasNav: () => import('@/components/ventas/components/address-afip-ticket-ventas-cobradas-nav/Index'),
 		EmployeeNav: () => import('@/components/ventas/components/EmployeeNav'),
 		Total: () => import('@/components/ventas/components/Total'),
 		BudgetOrderProductionInfo: () => import('@/components/ventas/components/BudgetOrderProductionInfo'),
 		UpdatePrices: () => import('@/components/ventas/modals/update-prices/Index'),
 		OptionDropdownAfipTicket: () => import('@/components/ventas/components/OptionDropdownAfipTicket'),
-		ConfirmAfipTickets: () => import('@/components/ventas/modals/ConfirmAfipTickets'),
+		MakeAfipTickets: () => import('@/components/ventas/modals/afip-ticket/MakeAfipTickets'),
+		AfipTicketShowErrors: () => import('@/components/ventas/modals/afip-ticket/ShowErrors'),
 	},
 	created() {
 		this.$store.commit('sale/setFromDates', true)

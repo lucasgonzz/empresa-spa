@@ -44,6 +44,13 @@ hide-footer>
         v-model="pago.description"></b-form-textarea>
     </b-form-group>
 
+    <b-form-group>
+        <b-form-input
+        @keydown.enter="hacerPago"
+        placeholder="Numero orden de compra"
+        v-model="pago.numero_orden_de_compra"></b-form-input>
+    </b-form-group>
+
     <hr>
  
     <payment-methods

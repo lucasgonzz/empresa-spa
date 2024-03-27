@@ -5,7 +5,7 @@ export default {
 			key: 'num',
 			type: 'text',
 			not_show_on_form: true,
-			filter_modal_position: 7,
+			filter_modal_position: 8,
 			filter_type: 'number',
 		},
 		{
@@ -32,7 +32,7 @@ export default {
 			type: 'text',
 			use_to_check_if_is_repeat: true,
 			use_to_show_in_search_modal: true,
-			filter_modal_position: 8,
+			filter_modal_position: 2,
 		},
 		{
 			text: 'nombre',
@@ -154,6 +154,12 @@ export default {
 			not_show: true,
 		},
 		{
+			key: 'unidad_medida_id',
+			type: 'select',
+			not_show: true,
+			use_store_models: true,
+		},
+		{
 			text: 'Disponible en la tienda',
 			key: 'online',
 			type: 'checkbox',
@@ -188,7 +194,7 @@ export default {
 			use_to_show_in_search_modal: true,
 			use_to_update: true,
 			use_store_models: true,
-			filter_modal_position: 3,
+			filter_modal_position: 4,
 			keep_after_create: true,
 		},
 		// {
@@ -229,7 +235,7 @@ export default {
 			use_store_models: true,
 			use_to_update: true,
 			not_show: true,
-			filter_modal_position: 4,
+			filter_modal_position: 5,
 			keep_after_create: true,
 		},
 		{
@@ -241,7 +247,7 @@ export default {
 			use_store_models: true,
 			use_to_update: true,
 			not_show: true,
-			filter_modal_position: 5,
+			filter_modal_position: 6,
 			keep_after_create: true,
 		},
 		{
@@ -261,14 +267,13 @@ export default {
 			use_store_models: true,
 			not_show: true,
 			not_show: true,
-			filter_modal_position: 6,
+			filter_modal_position: 7,
 			keep_after_create: true,
 		},
 		{
 			text: 'Condicion',
 			key: 'condition_id',
 			type: 'select',
-			not_show: true,
 			not_show: true,
 		},
 		{

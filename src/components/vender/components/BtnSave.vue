@@ -9,7 +9,7 @@ class="j-center m-t-25">
 		:disabled="loader"
 		class="m-b-30"
 		icon="check"
-		text="Guardar venta"
+		:text="text_btn"
 		:loader="loader"
 		size="lg"
 		@clicked="saveSale" />
@@ -51,6 +51,12 @@ export default {
 		}
 	},
 	computed: {
+		text_btn() {
+			if (this.index_previus_sales == 0) {
+				return 'Guardar venta'
+			}
+			return 'ACTUALIZAR venta'
+		},
 		save_afip_ticket: {
 			get() {
 				return this.$store.state.vender.save_afip_ticket

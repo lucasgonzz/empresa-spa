@@ -41,6 +41,11 @@ const routes = [
         component: () => import('@/views/Vender')
     },
     {
+        path: '/reportes/:view?',
+        name: 'reportes',
+        component: () => import('@/views/Reportes')
+    },
+    {
         path: '/panel-de-control/:view?/:sub_view?',
         name: 'panel',
         component: () => import('@/views/PanelDeControl')

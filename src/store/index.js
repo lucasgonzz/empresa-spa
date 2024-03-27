@@ -88,6 +88,10 @@ import panel_control from '@/store/panel_control/index'
 import me_li_order from '@/store/me_li_order'
 import me_li_payment from '@/store/me_li_payment'
 import articles_pre_import from '@/store/articles_pre_import'
+import reportes from '@/store/reportes/index'
+import article_pre_import_range from '@/store/article_pre_import_range'
+import unidad_medida from '@/store/unidad_medida'
+import cheque from '@/store/cheque'
 
 Vue.use(Vuex)
 
@@ -186,5 +190,9 @@ export default new Vuex.Store({
         me_li_order,
         me_li_payment,
         articles_pre_import,
+        reportes,
+        article_pre_import_range,
+        unidad_medida,
+        cheque,
     }
 })

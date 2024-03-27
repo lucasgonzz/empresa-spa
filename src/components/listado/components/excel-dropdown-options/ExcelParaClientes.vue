@@ -1,10 +1,14 @@
 <template>
-	<b-dropdown-item
-	v-if="show"
-	@click="exportModels">
-		<i class="icon-download"></i>
-		Excel Clientes
-	</b-dropdown-item>
+	<div
+	v-if="show">
+		<b-dropdown-divider></b-dropdown-divider>
+		
+		<b-dropdown-item
+		@click="exportModels">
+			<i class="icon-users"></i>
+			Excel para Clientes
+		</b-dropdown-item>
+	</div>
 </template>
 <script>
 export default {

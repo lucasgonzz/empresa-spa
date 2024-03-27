@@ -78,6 +78,10 @@ export default {
 					text: 'Moneda',
 					description: 'USD para Dolares, ARS para pesos (ARS por defecto)',
 				},
+				{
+					text: 'Unidad medida',
+					description: 'Por defecto es UNIDAD',
+				},
 			]
 			let index = 1
 			columns.forEach(column => {

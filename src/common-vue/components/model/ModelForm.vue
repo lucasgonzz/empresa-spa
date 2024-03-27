@@ -600,7 +600,10 @@ export default {
 					}
 				})
 			}
+			console.log('se va a agregar este modelo:')
+			console.log(model_to_add)
 			this.model[prop.key].push(model_to_add)
+			this.$set(this.model, prop.key, this.model[prop.key])
 			// this.setModel(this.model, this.model_name, [], false)
 			this.setTableFocus(prop, model_to_add)
 		},

@@ -12,7 +12,8 @@ export default {
     					'inventory_linkage',
     					'article_property_type',
     					'article_property_value',
-    					'deposit',
+    					'article_pre_import_range',
+    					// 'deposit',
 					],
 				},
 				{

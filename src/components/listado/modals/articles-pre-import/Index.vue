@@ -26,7 +26,7 @@
 export default {
 	components: {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
-		ArticulosQueSubieronDePrecioModal: () => import('@/components/listado/modals/articles-pre-import/articulos_que_subieron_de_precio_modal'),
+		ArticulosQueSubieronDePrecioModal: () => import('@/components/listado/modals/articles-pre-import/modal-articulos-que-subieron-de-precio/Index'),
 	},
 	computed: {
 		show_previus_days() {
@@ -38,7 +38,9 @@ export default {
 			console.log('clicked')
 			console.log(model)
 			this.setModel(model, 'articles_pre_import', [], false, false)
-			this.$bvModal.show('articulos-que-subieron-de-precio')
+			// setTimeout(() => {
+				this.$bvModal.show('articulos-que-subieron-de-precio')
+			// }, 300)
 		},
 	},
 }

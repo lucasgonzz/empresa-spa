@@ -296,6 +296,10 @@ export default {
 			type: String,
 			default: 'id',
 		},
+		emit_selected_with_model_empty: {
+			type: Boolean,
+			default: false
+		},
 	},
 	data() {
 		return {
@@ -459,7 +463,13 @@ export default {
 					}
 				} else if (this._select_mode == 'single' && !items.length) {
 					console.log('onRowSelected table component')
-					this.$emit('onRowSelected', this.models[0])
+
+					if (this.emit_selected_with_model_empty) {
+						this.$emit('onRowSelected', null)
+					} else {
+						this.$emit('onRowSelected', this.models[0])
+					}
+
 				} else if (this._select_mode == 'multi' && !this.isTheSameSelection(items) && !this.is_from_keydown) {
 					console.log(2)
 					if (this.set_selected_models) {
