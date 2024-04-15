@@ -4,6 +4,21 @@ title="Alertas"
 hide-footer
 id="modal-alert">
 	<div 
+	v-for="sale in ventas_sin_cobrar"
+	class="alert-info danger apretable">
+		<strong>Venta sin cobrar N° {{ sale.num }}</strong> 
+		<span
+		v-if="sale.client">
+			, de {{ sale.client.name }} 
+		</span>
+		hace {{ since(sale.created_at) }}
+		<p
+		v-if="sale.employee">
+			Empleado: {{ sale.employee.name }}
+		</p>
+	</div>
+
+	<div 
 	v-for="order in unconfirmed_orders"
 	@click="toOrders()"
 	v-if="order.buyer"
@@ -57,5 +72,6 @@ export default {
 	cursor: pointer
 	&:last-child 
 		margin-bottom: 0
+
 </style>
 	

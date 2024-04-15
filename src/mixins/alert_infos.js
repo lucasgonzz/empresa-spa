@@ -39,7 +39,10 @@ export default {
             return []
         },
         provider_order_days_to_advise() {
-			return this.$store.state.provider_order.days_to_advise_models 
+            return this.$store.state.provider_order.days_to_advise_models 
+        },
+        ventas_sin_cobrar() {
+            return this.$store.state.sale.ventas_sin_cobrar.models 
         },
 	},
 }

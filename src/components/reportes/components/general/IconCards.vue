@@ -99,9 +99,9 @@ export default {
 		deuda_clientes() {
 			let deuda = 0
 			this.clients.forEach(client => {
-				console.log('sumando '+client.saldo+' de '+client.name)
 				if (client.saldo && client.saldo > 0) {
-					deuda += client.saldo
+					console.log('sumando '+client.saldo+' de '+client.name)
+					deuda += Number(client.saldo)
 					console.log('deuda:')
 					console.log(deuda)
 				}

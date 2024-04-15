@@ -306,7 +306,7 @@ export default {
 			// if (from_mobile) {
 			// 	alert('setVenderArticle: '+article)
 			// }
-			if (this.checkRegister(article)) {
+			if (this.checkRegister(article) && this.check_stock(article)) {
 				let article_to_add = {
 					...article,
 				}
@@ -369,6 +369,16 @@ export default {
 				}
 			}
 			return true
+		},
+		check_stock(article) {
+			if (this.hasExtencion('check_article_stock_en_vender')) {
+				if (article.stock === null || article.stock > 0) {
+					return true 
+				}
+				this.$toast.error('Articulo sin stock, NO se agrego')
+				return false 
+			}
+			return true 
 		},
 		setNewArticle(article) {
 			this.$store.commit('vender/setNewArticle', article)

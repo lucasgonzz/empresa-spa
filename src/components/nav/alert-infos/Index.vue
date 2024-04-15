@@ -26,7 +26,7 @@ export default {
 	},
 	computed: {
 		alerts() {
-			return this.unconfirmed_orders.length + this.messages_not_read.length + this.provider_order_days_to_advise.length
+			return this.unconfirmed_orders.length + this.messages_not_read.length + this.provider_order_days_to_advise.length + this.ventas_sin_cobrar.length
 		}
 	},
 }

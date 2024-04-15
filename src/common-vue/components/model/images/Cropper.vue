@@ -144,7 +144,10 @@ export default {
 			})
 			.catch(err => {
 				this.loading = false
+				this.loading_cropp = false
+				this.loading_not_cropp = false
 				console.log(err)
+				this.$toast.error('Error al recortar, pruebe seleccionando otro area')
 			})
 		},
 	},

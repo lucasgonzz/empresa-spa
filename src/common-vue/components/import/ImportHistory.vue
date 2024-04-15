@@ -1,6 +1,7 @@
 <template>
 <b-modal
 hide-footer
+size="lg"
 title="Historial de importaciones"
 id="import-history">
 	<div 
@@ -38,11 +39,11 @@ export default {
 		items() {
 			let items = []
 			this.models.forEach(model => {
-				console.log(model)
 				items.push({
 					created_at: this.date(model.created_at)+' '+this.hour(model.created_at),
 					created_models: model.created_models,
 					updated_models: model.updated_models,
+					provider_id: model.provider_id ? this.getModelFromId('provider', model.provider_id).name : null,
 					employee_id: model.user_id == model.employee_id ? this.user.name : this.getModelFromId('employee', model.employee_id),
 				})
 			})
@@ -61,6 +62,10 @@ export default {
 				{
 					key: 'updated_models',
 					label: 'Actualizados',
+				},
+				{
+					key: 'provider_id',
+					label: 'Proveedor',
 				},
 				{
 					key: 'employee_id',

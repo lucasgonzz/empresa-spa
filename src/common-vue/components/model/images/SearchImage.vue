@@ -101,6 +101,12 @@ export default {
 		article() {
 			return this.$store.state.article.model 
 		},
+		google_api_key() {
+			if (this.user.google_custom_search_api_key) {
+				return this.user.google_custom_search_api_key
+			}
+			return 'AIzaSyC4sUC-MuEDsMNoIQqwUPmYWZmw74rsHOI'
+		}
 	},
 	methods: {
 		async search() {
@@ -108,7 +114,8 @@ export default {
 				console.log('Bucando imagen')
 				this.images_result = null
 				this.loading = true
-				fetch('https://www.googleapis.com/customsearch/v1?key=AIzaSyC4sUC-MuEDsMNoIQqwUPmYWZmw74rsHOI&cx=c442e5f346f314951&searchType=image&q='+this.query)
+				let url = 'https://www.googleapis.com/customsearch/v1?key='+this.google_api_key+'&cx=c442e5f346f314951&searchType=image&q='+this.query
+				fetch(url)
 				// fetch('https://www.googleapis.com/customsearch/v1?key=AIzaSyDOdbUFHZhD0I2DWoYVR6CQnKurqYY5rcQ&cx=c442e5f346f314951&searchType=image&q='+this.query)
 				.then(res => {
 					this.loading = false

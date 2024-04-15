@@ -33,7 +33,7 @@
     		</template>
     		<template v-slot:belongs="slotProps">
     			<slot name="belongs" :model="slotProps.model"></slot>
-    		</template>
+    		</template> 
     		<template
     		v-for="prop in properties"
 			v-slot:[prop.key]="props">

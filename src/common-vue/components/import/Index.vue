@@ -292,6 +292,7 @@ export default {
 			positions_seted: false,
 			create_and_edit: null,
 			show_history: false,
+			archivo_excel_path: null,
 
 			cantidad_solicitudes: 0,
 			solicitud_numero: 0,
@@ -310,16 +311,14 @@ export default {
 	},
 	methods: {
 		onFileChange(event) {
-			if (this.finish_row == '') {
-				let file 
-				if (!event.target.files) {
-					file = event.dataTransfer.files[0]	
-					console.log('vino desde drop')	
-				} else if (event.target.files && event.target.files.length > 0) {
-					file = event.target.files[0]
-				} 
-				this.getNumRows(file)
-			}
+			let file 
+			if (!event.target.files) {
+				file = event.dataTransfer.files[0]	
+				console.log('vino desde drop')	
+			} else if (event.target.files && event.target.files.length > 0) {
+				file = event.target.files[0]
+			} 
+			this.getNumRows(file)
 		},
 		getNumRows(file) {
 
@@ -440,21 +439,30 @@ export default {
 					this.varias_solicitudes = true
 					this.cantidad_solicitudes = Math.ceil(this.finish_row / this.limite_filas)
 					this.finish_row_original = Number(this.finish_row)
-					console.log('se van a partir las solicitudes en '+this.cantidad_solicitudes)
+					console.log('se van a partir las solicitudes en: ')
+					console.log(this.cantidad_solicitudes)
 
 					this.fila_inicio = Number(this.start_row)
 					this.fila_fin = Number(this.finish_row)
 
 					for (var solicitud = 1; solicitud <= this.cantidad_solicitudes; solicitud++) {
 
+						console.log('entro con solicitud N° '+solicitud)
 						if (solicitud == 1) {
 							this.es_la_primera_solicitud = true
 							this.inicio_primera_solicitud = new Date();
 						} else {
 							this.es_la_primera_solicitud = false
+							form_data.delete('models')
+							if (!form_data.has('archivo_excel_path')) {
+								form_data.append('archivo_excel_path', this.archivo_excel_path)
+							}
 						}
 
+						console.log('hubo_un_error: '+this.hubo_un_error)
+
 						if (!this.hubo_un_error) {
+
 							console.log('solicitud n° '+solicitud)
 							form_data.append('import_history_id', this.import_history_id)
 							form_data.append('pre_import_id', this.pre_import_id)
@@ -491,6 +499,7 @@ export default {
 					console.log('terminaron de enviarse las solicitudes')
 					this.loading = false
 					this.file = null
+					this.archivo_excel_path = null
 					this.$bvModal.hide(this.id)
 					this.$store.dispatch(this.model_name+'/getModels')
 					this.actions.forEach(action => {
@@ -535,7 +544,9 @@ export default {
 					this.demora_de_todas_las_solicitud = demora_primer_solicitud * this.cantidad_solicitudes
 
 					console.log('Todo tardaria:')
-					console.log(this.demora_de_todas_las_solicitud )
+					console.log(this.demora_de_todas_las_solicitud)
+
+					this.archivo_excel_path = res.data.archivo_excel_path
 
 					this.empezar_contador()
 				}
@@ -569,14 +580,14 @@ export default {
 			this.$bvModal.show('import-history')
 		},
 		empezar_contador() {
-			console.log('entro en empezar_contador')
+			// console.log('entro en empezar_contador')
 			let that = this 
 			this.temporizador = setInterval(function() {
-				console.log('demora_de_todas_las_solicitud:')
-				console.log(that.demora_de_todas_las_solicitud)
+				// console.log('demora_de_todas_las_solicitud:')
+				// console.log(that.demora_de_todas_las_solicitud)
 				if (that.demora_de_todas_las_solicitud > 0) {
 					that.demora_de_todas_las_solicitud -= 1; // Restar un segundo al contador
-					console.log('Tiempo restante:', that.demora_de_todas_las_solicitud, 'segundos');
+					// console.log('Tiempo restante:', that.demora_de_todas_las_solicitud, 'segundos');
 				}
 
 				if (that.demora_de_todas_las_solicitud <= 0) {

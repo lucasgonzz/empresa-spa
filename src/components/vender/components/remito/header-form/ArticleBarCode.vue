@@ -10,7 +10,7 @@
 			v-model="article.codigo"
 			autocomplete="off" 
 			ref="articleBarCode"
-			@keydown.shift="callVender"
+			@keydown.shift="_callVender"
 			@keydown.enter="setArticle"
 			:placeholder="placeholder"></b-form-input>
 
@@ -56,9 +56,16 @@ export default {
 		}
 	},
 	methods: {
+		_callVender() {
+			if (!this.usar_codigo_proveedor) {
+				this.callVender()
+			}
+		},
 		async getArticleFromCodigo(codigo) {
 			let article
-			codigo = this.getBarCode(codigo)
+			if (!this.usar_codigo_proveedor) {
+				codigo = this.getBarCode(codigo)
+			}
 			if ((!this.download_articles && !this.articles.length) || (this.is_mobile && !this.downloadOnMobile('article') && !this.articles.length ) || this.$store.state.article.loading) {
 				console.log('se va a buscar del api el codigo '+codigo)
 				await this.getArticleFromApi(codigo)

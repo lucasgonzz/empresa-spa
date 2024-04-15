@@ -15,6 +15,18 @@ export default {
 			search_function: 'articles_to_search_in_recipe',
 		},
 		{
+			text: 'Imagen',
+			key: 'article_image',
+			type: 'image',
+			not_show_on_form: true,
+		},
+		{
+			text: 'Observaciones',
+			key: 'observations',
+			type: 'textarea',
+			value: '',
+		},
+		{
 			text: 'Insumos',
 			store: 'article',
 			type: 'search',

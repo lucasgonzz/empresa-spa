@@ -70,6 +70,19 @@ export default {
 			store: 'current_acount_payment_method',
 			description: 'Si se elige, despues de cada venta el valor del metodo de pago se seteara con este valor',
 		},
+
+
+		{
+			text: 'Dias a partir de los cuales ALERTAR a los EMPLEADOS sobre las ventas no cobradas',
+			key: 'dias_alertar_empleados_ventas_no_cobradas',
+			type: 'number',
+		},
+		{
+			text: 'Dias a partir de los cuales ALERTAR a los ADMINISTRADORES sobre las ventas no cobradas',
+			key: 'dias_alertar_administradores_ventas_no_cobradas',
+			type: 'number',
+		},
+
 		{
 			text: 'Descontar stock en los insumos recien cuando se supera el estado de produccion',
 			key: 'discount_stock_from_recipe_after_advance_to_next_status',

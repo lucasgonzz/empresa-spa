@@ -9,6 +9,12 @@ export default {
 			this.checkUpdateFeaturesCookie()
 			this.getUnconfirmedOrders()
 			this.getProviderOrdersDaysToAdvise()
+			this.get_ventas_sin_cobrar()
+		},
+		get_ventas_sin_cobrar() {
+			if (this.owner.dias_alertar_empleados_ventas_no_cobradas) {
+				this.$store.dispatch('sale/ventas_sin_cobrar/getModels')
+			}
 		},
 		checkUserAppUrl() {
 			console.log('checkUserAppUrl')

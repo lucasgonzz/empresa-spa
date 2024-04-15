@@ -29,7 +29,7 @@ import current_acount_payment_method from '@/store/current_acount_payment_method
 import client from '@/store/client'
 import seller from '@/store/seller'
 import price_type from '@/store/price_type'
-import sale from '@/store/sale'
+import sale from '@/store/sale/index'
 import provider_order from '@/store/provider_order'
 import provider_order_status from '@/store/provider_order_status'
 import provider_order_afip_ticket from '@/store/provider_order_afip_ticket'
