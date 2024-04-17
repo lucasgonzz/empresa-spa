@@ -7,6 +7,7 @@ export default {
 			}
 		},
 		setModel(model, model_name, properties_to_override = [], show_modal = true, show_pre_view = true) {
+			console.log('show_modal: '+show_modal)
 			if (this.usePreView(model_name) && show_pre_view) {
 				this.$store.commit(model_name+'/setModel', {
 					model, 
@@ -20,17 +21,20 @@ export default {
 				properties = properties.concat(this.getPivotProperties(model, model_name))
 				properties = this.overrideProperties(properties, properties_to_override)
 				// console.log(properties)
+				console.log('show_modal: '+show_modal)
 				
 				if (show_modal) {
 					this.$store.commit('auth/setMessage', 'Cargando formulario')
 					this.$store.commit('auth/setLoading', true)
 				}			
 				setTimeout(() => {
+					console.log('show_modal: '+show_modal)
 					this.$store.commit(model_name+'/setModel', {
 						model, 
 						properties
 					})
 					if (show_modal) {
+						console.log('MOSTRANDO MODAL PARA '+model_name)
 						this.$bvModal.show(model_name)
 						setTimeout(() => {
 							this.$store.commit('auth/setLoading', false)

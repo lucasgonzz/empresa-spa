@@ -8,6 +8,8 @@
 
 	<afip-ticket-show-errors></afip-ticket-show-errors>
 
+	<sale-modifications></sale-modifications>
+
 	<view-component
 	show_filter_modal
 	ask_selectable
@@ -27,6 +29,9 @@
 		<template v-slot:table_right_options="props">
 			<budget-order-production-info
 			:model="props.model" />
+
+			<btn-sale-modifications
+			:model="props.model"></btn-sale-modifications>
 		</template> 
 		<template #options_drop_down>
 			<option-dropdown-afip-ticket></option-dropdown-afip-ticket>
@@ -45,6 +50,8 @@ export default {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 		CurrentAcounts: () => import('@/components/common/current-acounts/Index'),
 		AddressAfipTicketVentasCobradasNav: () => import('@/components/ventas/components/address-afip-ticket-ventas-cobradas-nav/Index'),
+		SaleModifications: () => import('@/components/ventas/modals/sale-modifications/Index'),
+		BtnSaleModifications: () => import('@/components/ventas/components/BtnSaleModifications'),
 		EmployeeNav: () => import('@/components/ventas/components/EmployeeNav'),
 		Total: () => import('@/components/ventas/components/Total'),
 		BudgetOrderProductionInfo: () => import('@/components/ventas/components/BudgetOrderProductionInfo'),
