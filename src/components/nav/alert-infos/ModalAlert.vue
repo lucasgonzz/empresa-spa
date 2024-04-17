@@ -9,7 +9,7 @@ id="modal-alert">
 		<strong>Venta sin cobrar N° {{ sale.num }}</strong> 
 		<span
 		v-if="sale.client">
-			, de {{ sale.client.name }} 
+			, de {{ sale.client.name }} ({{ price(sale.current_acount.debe) }})
 		</span>
 		hace {{ since(sale.created_at) }}
 		<p

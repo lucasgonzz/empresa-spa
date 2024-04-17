@@ -24,6 +24,18 @@ export default {
 			description: 'Si se activa, el usuario tendra el mismo nivel de acceso al sistema que la cuenta administrador, por lo que no hara falta asignar permisos, ya que los tendra a todos.'
 		},
 		{
+			text: 'Dias a partir de los cuales alertar sobre las ventas no cobradas',
+			key: 'dias_alertar_empleados_ventas_no_cobradas',
+			type: 'number',
+			description: 'Si se deja en blanco, va a ser el valor que se establecio desde la configuracion para todos los empleados',
+		},
+		{
+			text: 'Ver las ventas no cobradas de TODOS los empleados',
+			key: 'ver_alertas_de_todos_los_empleados',
+			type: 'checkbox',
+			description: 'Si no se activa, solo podra ver las alertas sin cobrar de SUS PROPIAS VENTAS. Si se activa, vera las alertas de TODOS los empleados',
+		},
+		{
 			text: 'Permisos',
 			key: 'permissions',
 			type: 'checkbox',
