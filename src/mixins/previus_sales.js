@@ -214,9 +214,9 @@ export default {
 				item.price = Number(article.price)
 				item.discount = Number(article.pivot.discount)
 				item.amount = Number(article.pivot.amount)
-				item.checked_amount = Number(article.pivot.checked_amount)
-				item.returned_amount = Number(article.pivot.returned_amount)
-				item.delivered_amount = Number(article.pivot.delivered_amount)
+				item.checked_amount = this.get_pivot_amount(article.pivot.checked_amount)
+				item.returned_amount = this.get_pivot_amount(article.pivot.returned_amount)
+				item.delivered_amount = this.get_pivot_amount(article.pivot.delivered_amount)
 				item_to_add = {
 					...item,
 					is_article: true,
@@ -252,5 +252,11 @@ export default {
 			console.log(items)
 			return items
 		},
+		get_pivot_amount(amount) {
+			if (amount === null) {
+				return ''
+			}
+			return Number(amount)
+		}
 	}
 }

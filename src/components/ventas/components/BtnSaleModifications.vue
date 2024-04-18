@@ -12,8 +12,11 @@ export default {
 	},
 	methods: {
 		show() {
-			this.setModel(this.model, 'sale', [], false, false) 
-			this.$bvModal.show('sale-modifications')
+			console.log('se va a setear la venta con la N° '+this.model.num)
+			this.setModel(this.model, 'sale', [], false, false)
+			setTimeout(() => {
+				this.$bvModal.show('sale-modifications')
+			}, 500)
 		}
 	}
 }
