@@ -36,19 +36,29 @@
 	show_excel_drop_down
 	@addressMovement="addressMovement"
 	model_name="article">
+
 		<template #excel_drop_down_options>
 			<excel-para-clientes></excel-para-clientes>
 			<articles-pre-imports></articles-pre-imports>
 		</template>
+
 		<template #horizontal_nav_center>
 			<stock-info-buttons></stock-info-buttons>
 			<bar-code-search></bar-code-search>
 		</template>
+		
 		<template #options_drop_down>
+			
 			<article-ticket-option-drop-down></article-ticket-option-drop-down>
+			
 			<articles-pdf-option-drop-down></articles-pdf-option-drop-down>
-			<reset-stock-option-drop-down></reset-stock-option-drop-down>
+			
 			<seleccion-especial></seleccion-especial>
+			
+			<excel-export></excel-export>
+			
+			<reset-stock-option-drop-down></reset-stock-option-drop-down>
+
 		</template>
 
 		<template v-slot:table_right_options="props">
@@ -108,11 +118,14 @@ export default {
 		NameInput: () => import('@/components/listado/components/NameInput'),
 		StockInput: () => import('@/components/listado/components/StockInput'),
 		StockInfo: () => import('@/components/listado/modals/stock-info/Index'),
-		ArticleTicketOptionDropDown: () => import('@/components/listado/components/ArticleTicketOptionDropDown'),
-		ArticlesPdfOptionDropDown: () => import('@/components/listado/components/ArticlesPdfOptionDropDown'),
-		ResetStockOptionDropDown: () => import('@/components/listado/components/ResetStockOptionDropDown'),
+
+		// Dropdown options
+		ArticleTicketOptionDropDown: () => import('@/components/listado/components/selected-filtered-options/ArticleTicketOptionDropDown'),
+		ArticlesPdfOptionDropDown: () => import('@/components/listado/components/selected-filtered-options/ArticlesPdfOptionDropDown'),
+		ResetStockOptionDropDown: () => import('@/components/listado/components/selected-filtered-options/ResetStockOptionDropDown'),
+		SeleccionEspecial: () => import('@/components/listado/components/selected-filtered-options/SeleccionEspecial'),
+		ExcelExport: () => import('@/components/listado/components/selected-filtered-options/ExcelExport'),
 		ConfirmResetStock: () => import('@/components/listado/modals/ConfirmResetStock'),
-		SeleccionEspecial: () => import('@/components/listado/components/SeleccionEspecial'),
 	}, 
 	beforeRouteLeave(to, from, next) {
 		this.$store.commit('article/setSelected', [])

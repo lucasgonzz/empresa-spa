@@ -573,6 +573,7 @@ export default {
 				console.log(err)
 				this.hubo_un_error = true
 				this.limpiar_temporizador()
+				this.$toast.error('Error al importar Excel')
 			})
 		},
 		showHistory() {

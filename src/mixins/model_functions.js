@@ -21,7 +21,9 @@ export default {
                 let store_article = this.$store.state.article.models.find(_article => {
                     return _article.id == recipe.article_id 
                 })
-                return store_article.addresses.length 
+                if (typeof store_article != 'undefined') {
+                    return store_article.addresses.length 
+                }
             }
             return false 
         },

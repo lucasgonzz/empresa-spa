@@ -12,6 +12,10 @@
 				{{ link }}
 			</p>
 		</b-modal>
+		<b-dropdown-divider></b-dropdown-divider>
+		<b-dropdown-text>
+			Pagina Web
+		</b-dropdown-text>
 
 		<b-dropdown-item
 		@click="generateLink">

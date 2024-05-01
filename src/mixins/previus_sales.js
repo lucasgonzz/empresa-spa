@@ -212,8 +212,8 @@ export default {
 				item.pivot = article.pivot
 				item.cost = Number(article.pivot.cost)
 				item.price = Number(article.price)
-				item.discount = Number(article.pivot.discount)
 				item.amount = Number(article.pivot.amount)
+				item.discount = this.get_pivot_amount(article.pivot.discount)
 				item.checked_amount = this.get_pivot_amount(article.pivot.checked_amount)
 				item.returned_amount = this.get_pivot_amount(article.pivot.returned_amount)
 				item.delivered_amount = this.get_pivot_amount(article.pivot.delivered_amount)

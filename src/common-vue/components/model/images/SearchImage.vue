@@ -102,8 +102,9 @@ export default {
 			return this.$store.state.article.model 
 		},
 		google_api_key() {
-			if (this.user.google_custom_search_api_key) {
-				return this.user.google_custom_search_api_key
+			if (this.owner.google_custom_search_api_key) {
+				console.log('google_api_key del owner: '+this.owner.google_custom_search_api_key)
+				return this.owner.google_custom_search_api_key
 			}
 			return 'AIzaSyC4sUC-MuEDsMNoIQqwUPmYWZmw74rsHOI'
 		}
@@ -131,6 +132,10 @@ export default {
 							})
 						} 
 					})
+				})
+				.catch(err => {
+					this.loading = false
+					this.$toast.error('Limite de busqueda diaria')
 				})
 			}
 		},

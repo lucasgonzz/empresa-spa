@@ -10,7 +10,7 @@
 		:show_selected="false"
 		:model="article"
 		:save_if_not_exist="false"
-		:str_limint="1"
+		:str_limint="str_limint"
 		:search_from_api="search_from_api"
 		:props_to_show="props_to_show"
 		:props_to_filter="['num']"
@@ -26,6 +26,9 @@ export default {
 		SearchComponent,
 	},
 	computed: {
+		str_limint() {
+			return this.owner.str_limint_en_vender
+		},
 		articles() {
 			return this.$store.state.article.models
 		},

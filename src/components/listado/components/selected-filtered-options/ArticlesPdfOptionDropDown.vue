@@ -1,5 +1,9 @@
 <template>
 	<div>
+		<b-dropdown-divider></b-dropdown-divider>
+		<b-dropdown-text>
+			Documentos PDF
+		</b-dropdown-text>
 		<b-dropdown-item
 		@click="pdf">
 			<i class="icon-tag"></i>

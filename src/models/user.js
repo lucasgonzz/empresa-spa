@@ -64,6 +64,11 @@ export default {
 			type: 'checkbox',
 		},
 		{
+			text: 'Cantidad de letras del nombre a partir de las cuales buscar en VENDER',
+			key: 'str_limint_en_vender',
+			type: 'number',
+		},
+		{
 			text: 'Metodo de pago por defecto en VENDER',
 			key: 'default_current_acount_payment_method_id',
 			type: 'select',

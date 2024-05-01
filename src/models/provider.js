@@ -16,6 +16,7 @@ export default {
 			text: 'Saldo',
 			key: 'saldo',
 			type: 'number',
+			is_price: true,
 			only_show: true,
 		},
 		{

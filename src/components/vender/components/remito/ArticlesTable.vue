@@ -136,6 +136,7 @@ class="m-b-15 m-t-20">
 			<template #cell(options)="data">
 				<div class="options">
 					<b-button 
+					v-if="previus_sale === null || !previus_sale.to_check"
 					@click="removeItem(items[data.index])"
 					variant="danger"
 					class="btn-options"
@@ -243,7 +244,7 @@ export default {
 				// Calcula el porcentaje de descuento máximo
 				var porcentajeDescuentoMaximo = 100 - ((nuevoPrecioVenta / precioVenta) * 100);
 				
-				return porcentajeDescuentoMaximo.toFixed(2)+''
+				return '('+porcentajeDescuentoMaximo.toFixed(2)+')'
 			}
 			return ''
 		},
@@ -302,9 +303,37 @@ export default {
 			this.calculate_price_vender(item) 
 		},
 		checked_amount_input_class(item) {
-			if (this.previus_sale.checked && item.checked_amount) {
+			console.log('checked_amount_input_class '+item.name)
+			console.log(typeof item.checked_amount)
+			console.log(item.checked_amount)
+
+
+			console.log('Es 0:')
+			console.log(this.es_0(item))
+
+			console.log('no es_null')
+			console.log(!this.es_null(item))
+
+			console.log('no es_string_vacio')
+			console.log(!this.es_string_vacio(item))
+
+			console.log('no es_undefined')
+			console.log(!this.es_undefined(item))
+			if (this.previus_sale.checked && (this.es_0(item) || (!this.es_null(item) && !this.es_string_vacio(item) && !this.es_undefined(item)))) {
 				return 'input-checked-amount-danger'
 			}
+		},
+		es_0(item) {
+			return typeof item.checked_amount == 'number' && item.checked_amount == 0
+		},
+		es_null(item) {
+			return item.checked_amount === null
+		},
+		es_string_vacio(item) {
+			return typeof item.checked_amount == 'string' && item.checked_amount == ''
+		},
+		es_undefined(item) {
+			return typeof item.checked_amount == 'undefined'
 		},
 		setCheckedItems(item) {
 			this.check_checked_item_max_amount(item)

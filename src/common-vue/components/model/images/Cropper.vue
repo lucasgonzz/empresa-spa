@@ -97,9 +97,10 @@ export default {
 				if (this.model_name == 'user') {
 					this.$store.commit('auth/setUser', res.data.model)
 					this.$toast.success('Imagen actualizada')
-					this.$bvModal.hide('cropper-'+this.prop.key)
+					this.$bvModal.hide('cropper-'+this.model.id+'-'+this.model.nombre+'-'+this.prop.key)
 				} else {
-					this.$bvModal.hide('cropper-'+this.prop.key)
+					this.$bvModal.hide('cropper-'+this.model.id+'-'+this.model.nombre+'-'+this.prop.key)
+
 					if (res.data.model) {
 						this.$bvModal.hide(this.model_name)
 						this.$store.commit(this.model_name+'/add', res.data.model)

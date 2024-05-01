@@ -1,8 +1,8 @@
 <template>
-	<div>
+	<div
+	v-if="show">
 		<b-dropdown-divider></b-dropdown-divider>
 		<b-dropdown-item
-		v-if="show"
 		@click="getPreImports">
 			<i class="icon-eye"></i>
 			Pre Importaciones

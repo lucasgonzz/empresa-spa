@@ -2,9 +2,9 @@
 <b-modal
 hide-footer
 size="lg"
-title="Modificaciones"
+:title="title"
 id="sale-modification-articles-info">
-	<p class="title">
+	<p>
 		Articulos antes de actualizar
 	</p>
 	<b-table
@@ -12,7 +12,7 @@ id="sale-modification-articles-info">
 	responsive
 	:fields="fields"
 	:items="articulos_antes_de_actualizar"></b-table>
-	<p class="title">
+	<p>
 		Articulos despues de actualizar
 	</p>
 	<b-table
@@ -36,6 +36,10 @@ export default {
 				{
 					key: 'cantidad',
 				},
+				{
+					label: 'U. chequeadas',
+					key: 'unidades_chequeadas',
+				},
 			]
 		},
 		articulos_antes_de_actualizar() {
@@ -46,6 +50,7 @@ export default {
 
 						nombre : article.name,
 						cantidad : article.pivot.amount,
+						unidades_chequeadas : article.pivot.checked_amount,
 					
 					})
 				})
@@ -60,12 +65,19 @@ export default {
 
 						nombre : article.name,
 						cantidad : article.pivot.amount,
+						unidades_chequeadas : article.pivot.checked_amount,
 					
 					})
 				})
 			}
 			return items
 		},
+		title() {
+			if (this.sale_modification) {
+				return 'Modificaciones al pasar de "'+this.sale_modification.estado_antes_de_actualizar+'" hacia "'+this.sale_modification.estado_despues_de_actualizar+'"'
+			}
+			return ''
+		}
 	},
 }
 </script>

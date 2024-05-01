@@ -1,9 +1,12 @@
 <template>
-	<b-dropdown-item
-	@click="tickets">
-		<i class="icon-tag"></i>
-		Tickets
-	</b-dropdown-item>
+	<div>
+		<b-dropdown-divider></b-dropdown-divider>
+		<b-dropdown-item
+		@click="tickets">
+			<i class="icon-tag"></i>
+			Etiquetas
+		</b-dropdown-item>
+	</div>
 </template>
 <script>
 export default {
