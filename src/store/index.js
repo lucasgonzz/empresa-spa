@@ -9,6 +9,7 @@ import download_resources from '@/common-vue/store/download_resources'
 import error from '@/common-vue/store/error'
 import belongs_to_many from '@/common-vue/store/belongs_to_many'
 import user from '@/common-vue/store/user'
+import global_notification from '@/common-vue/store/global_notification'
 
 import article from '@/store/article'
 import brand from '@/store/brand'
@@ -111,6 +112,7 @@ export default new Vuex.Store({
         error,
         belongs_to_many,
         user,
+        global_notification,
         
         article,
         brand,

@@ -15,6 +15,11 @@ id="import-history">
 	v-else
 	:fields="fields"
 	:items="items">
+		<template #cell(observations)="data">
+			<b-form-textarea
+			:column="15"
+			v-model="models[data.index].observations"></b-form-textarea>
+		</template>
 	</b-table>
 </b-modal>
 </template>
@@ -43,8 +48,8 @@ export default {
 					created_at: this.date(model.created_at)+' '+this.hour(model.created_at),
 					created_models: model.created_models,
 					updated_models: model.updated_models,
-					provider_id: model.provider_id ? this.getModelFromId('provider', model.provider_id).name : null,
-					employee_id: model.user_id == model.employee_id ? this.user.name : this.getModelFromId('employee', model.employee_id),
+					provider_id: model.provider_id ? this.getProvider(model) : null,
+					employee_id: model.user_id == model.employee_id ? this.user.name : this.getModelFromId('employee', model.employee_id).name,
 				})
 			})
 			return items 
@@ -71,10 +76,21 @@ export default {
 					key: 'employee_id',
 					label: 'Realizado por',
 				},
+				{
+					key: 'observations',
+					label: 'Observaciones',
+				},
 			]
 		}
 	},
 	methods: {
+		getProvider(model) {
+			let provider = this.getModelFromId('provider', model.provider_id)
+			if (typeof provider != 'undefined' && provider !== null && provider.name) {
+				return provider.name
+			} 
+			return null
+		},
 		getModels() {
 			this.loading = true 
 			this.$api.get('import-history/'+this.model_name)

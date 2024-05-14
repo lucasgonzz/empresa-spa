@@ -24,6 +24,7 @@ export default {
 		confirmed: 0,
 		price_type: null,
 		save_current_acount: 1,
+		omitir_en_cuenta_corriente: 0,
 		make_current_acount_pago: 0,
 		save_nota_credito: 0,
 		nota_credito_description: '',
@@ -37,6 +38,9 @@ export default {
 		sale_type_id: 0,
 		observations: '',
 
+		guardar_como_presupuesto: 0,
+		budget: null,
+
 		returned_items: [],
 
 		vendiendo: false,
@@ -45,8 +49,16 @@ export default {
 		afip_results: null,
 	},
 	mutations: {
+		setGuardarComoPresupuesto(state, value) {
+			state.guardar_como_presupuesto = value 
+		},
+		setBudget(state, value) {
+			state.budget = value 
+		},
 		setItems(state, value) {
+			console.log('vender/setItems')
 			state.items = value
+			console.log(state.items)
 		},
 		addItem(state, value) {
 			state.items.unshift(value)
@@ -110,6 +122,9 @@ export default {
 		},
 		setSaveCurrentAcount(state, value) {
 			state.save_current_acount = value
+		},
+		set_omitir_en_cuenta_corriente(state, value) {
+			state.omitir_en_cuenta_corriente = value 
 		},
 		setMakeCurrentAcountPago(state, value) {
 			state.make_current_acount_pago = value
@@ -290,6 +305,7 @@ export default {
 				checked: state.checked,
 				confirmed: state.confirmed,
 				observations: state.observations,
+				omitir_en_cuenta_corriente: state.omitir_en_cuenta_corriente,
 			})
 			.then(res => {
 				console.log('vendido')

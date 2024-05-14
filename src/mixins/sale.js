@@ -76,6 +76,7 @@ export default {
 			}
 
 			if (this.afip_ticket_show_option == 'solo-con-factura') {
+				console.log('entro solo-con-factura')
 				sales = sales.filter(sale => {
 					return sale.afip_ticket 
 				})

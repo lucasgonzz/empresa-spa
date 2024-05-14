@@ -1,6 +1,6 @@
 <template>
 	<b-col
-	v-if="hasExtencion('check_sales')"
+	v-if="hasExtencion('check_sales') && !guardar_como_presupuesto"
 	cols="12"
 	class="col-total check-sale">
 		<!-- <p
@@ -45,6 +45,9 @@ import previus_sales from '@/mixins/previus_sales'
 export default {
 	mixins: [previus_sales],
 	computed: {
+		guardar_como_presupuesto() {
+			return this.$store.state.vender.guardar_como_presupuesto
+		},
 		disabled_to_check() {
 			if (this.confirmed || (this.to_check && typeof this.previus_sale.id != 'undefined')) {
 				return true 

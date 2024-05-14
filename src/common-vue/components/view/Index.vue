@@ -82,6 +82,7 @@
 		:show_search_nav="show_search_nav"
 		:model_name="model_name"
 		:set_table_height="set_table_height"
+		:mostrar_models_que_vinienen_por_prop_siempre="mostrar_models_que_vinienen_por_prop_siempre"
 		:set_model_on_row_selected="set_model_on_row_selected"
 		:slice_models="slice_models"
 		@clicked="clicked">
@@ -239,6 +240,10 @@ export default {
 		set_table_height: {
 			type: Boolean,
 			default: true,
+		},
+		mostrar_models_que_vinienen_por_prop_siempre: {
+			type: Boolean,
+			default: false,
 		},
 		save_check_function: {
 			type: String,

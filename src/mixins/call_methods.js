@@ -1,6 +1,7 @@
 export default [
     'afip_information',
     'article_pre_import_range',
+    'price_type',
     'unidad_medida',
     'article',
     'article_property_type',
@@ -24,7 +25,6 @@ export default [
     'location',
     'current_acount_payment_method',
     'seller',
-    'price_type',
     'provider_order_status',
     'order_status',
     'payment_method',
@@ -32,7 +32,6 @@ export default [
     // 'commission',
     'commission',
     'delivery_zone',
-    'price_type',
     'budget_status',
     'sale',
     'order_production_status',

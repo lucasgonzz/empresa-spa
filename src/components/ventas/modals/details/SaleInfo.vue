@@ -89,15 +89,15 @@
 		</b-col>
 		<div 
 		class="m-t-15"
-		v-if="!sale_details.save_current_acount && !sale_details.budget && !sale_details.order_production && sale_details.client">
+		v-if="sale_details.omitir_en_cuenta_corriente && sale_details.client">
 			<p>
 				Esta venta no genero movimiento en la cuenta corriente de {{ sale_details.client.name }}
 			</p>
-			<btn-loader 
+			<!-- <btn-loader 
 			:block="false" 
 			@clicked="saveCurrentAcount"
 			:loader="loading"
-			text="Generar cuenta corriente" />
+			text="Generar cuenta corriente" /> -->
 		</div>
 		<!-- <client-info
 		class="m-15"

@@ -64,6 +64,12 @@ export default {
 		index_previus_sales() {
 			return this.$store.state.vender.previus_sales.index
 		},
+		price_type_vender() {
+			return this.$store.state.vender.price_type
+		},
+		budget() {
+			return this.$store.state.vender.budget
+		},
 		discounts_in_services: {
 			get() {
 				return this.$store.state.vender.discounts_in_services
@@ -128,6 +134,9 @@ export default {
 				return item.is_article && item.addresses.length
 			})
 		},
+		guardar_como_presupuesto() {
+			return this.$store.state.vender.guardar_como_presupuesto
+		},
 	},
 	data() {
 		return {
@@ -136,6 +145,27 @@ export default {
 		}
 	},
 	methods: {
+
+		setPriceType() {
+            if (this.price_types_with_position.length) {
+                let price_type_para_vender 
+                if (this.client && this.client.price_type) {
+                    price_type_para_vender = this.client.price_type
+                } else {
+                    let last_position = 0
+                    this.price_types_with_position.forEach(price_type => {
+                        if (price_type.position > last_position) {
+                            price_type_para_vender = price_type
+                            last_position = price_type.position
+                        }
+                    })
+                }
+                console.log('price_type para vender:')
+                console.log(price_type_para_vender)
+                this.$store.commit('vender/setPriceType', price_type_para_vender)
+            }
+
+		},
 
 		// Defautl Articles
 		setDefaultArticles() {
@@ -194,6 +224,7 @@ export default {
 				last_item.price_vender = this.getPriceVender(last_item) 
 			} else {
 				console.log('seteando todos los precios. from_pivot: '+from_pivot)
+				console.log(this.items)
 				this.items.forEach(item => {
 					if (!item.default_in_vender) {
 						item.price_vender = this.getPriceVender(item, from_pivot) 
@@ -229,6 +260,7 @@ export default {
 					this.$store.commit('vender/setToCheck', 0)
 					this.$store.commit('vender/setChecked', 0)
 					this.$store.commit('vender/setConfirmed', 0)
+					this.$store.commit('vender/set_omitir_en_cuenta_corriente', 0)
 					this.setDefaultPaymentMethod()
 					if (this.maked_sale.client_id && this.maked_sale.save_current_acount) {
 						this.loadModel('client', this.maked_sale.client_id)
@@ -330,9 +362,33 @@ export default {
 			}
 		},
 		addArticleToSale(set_price = true) {
-			if (!this.isRepeat(!set_price)) {
+			if (!this.isRepeat(!set_price) && this.check_article_stock()) {
 				this.addArticleAndSetTotal(set_price)
 			}
+		},
+		check_article_stock() {
+			let ok = true
+			if (!this.guardar_como_presupuesto && this.hasExtencion('check_article_stock_en_vender')) {
+				let cantidad_para_vender = this.article.amount
+				if (cantidad_para_vender == '') {
+					cantidad_para_vender = 1
+				}
+				let store_article = this.$store.state.article.models.find(_article => {
+					return _article.id == this.article.id
+				})
+				if (typeof store_article != 'undefined') {
+					if (store_article.stock && Number(store_article.stock) < Number(cantidad_para_vender)) {
+						ok = false 
+						console.log('stock:')
+						console.log(Number(store_article.stock))
+						
+						console.log('cantidad_para_vender:')
+						console.log(Number(cantidad_para_vender))
+						this.$toast.error('Solo hay '+store_article.stock+' en stock')
+					}
+				}
+			}
+			return ok
 		},
 		addArticleAndSetTotal(set_price) {
 			if (this.article.amount == '') {
@@ -371,7 +427,7 @@ export default {
 			return true
 		},
 		check_stock(article) {
-			if (this.hasExtencion('check_article_stock_en_vender')) {
+			if (!this.guardar_como_presupuesto && this.hasExtencion('check_article_stock_en_vender')) {
 				if (article.stock === null || article.stock > 0) {
 					return true 
 				}

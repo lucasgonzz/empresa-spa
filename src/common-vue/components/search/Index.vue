@@ -300,7 +300,7 @@ export default {
 		},
 		setModelsToSearch() {
 			let models = []		
-			if (this.search_function) {
+			if (this.search_function && typeof this.search_function != 'undefined') {
 			// if (this.prop && this.prop.search_function) {
 				models = this[this.search_function]()
 			} else if (this.prop && this.prop.depends_on && this.model) {
@@ -412,47 +412,47 @@ export default {
 .search-component
 	width: 100%
 	// display: flex
-	.cont-search-input-btn
-		display: flex
-		width: 100%
-	.cont-search
-		width: 100%
-		position: relative
-		display: flex
-		flex-direction: row
-		box-shadow: 0 2px 4px rgb(0 0 0 / 15%) !important
-		border: 1px solid #ced4da
-		border-radius: 0.25rem 
+.cont-search-input-btn
+	display: flex
+	width: 100%
+.cont-search
+	width: 100%
+	position: relative
+	display: flex
+	flex-direction: row
+	box-shadow: 0 2px 4px rgb(0 0 0 / 15%) !important
+	border: 1px solid #ced4da
+	border-radius: 0.25rem 
 
-	.cont-search-on-models
-		width: 40%
-		position: relative
-		display: flex
-		flex-direction: row
-		box-shadow: 0 2px 4px rgb(0 0 0 / 15%) !important
-		border: 1px solid #ced4da
-		border-radius: 0.25rem 
-		margin-left: 15px
+.cont-search-on-models
+	width: 40%
+	position: relative
+	display: flex
+	flex-direction: row
+	box-shadow: 0 2px 4px rgb(0 0 0 / 15%) !important
+	border: 1px solid #ced4da
+	border-radius: 0.25rem 
+	margin-left: 15px
 
-	.icon 
-		background: #FFF
-		width: 40px
-		display: flex
-		flex-direction: row
-		align-items: center
-		font-size: 1.2em
-		justify-content: flex-end
-		border-radius: 0.25rem 0 0 0.25rem
+.icon 
+	background: #FFF
+	width: 40px
+	display: flex
+	flex-direction: row
+	align-items: center
+	font-size: 1.2em
+	justify-content: flex-end
+	border-radius: 0.25rem 0 0 0.25rem
+	i
+		color: rgba(0, 0, 0, .6)
+	@if ($theme == 'dark') 
+		background: #333 !important
 		i
-			color: rgba(0, 0, 0, .6)
-		@if ($theme == 'dark') 
-			background: #333 !important
-			i
-				color: #FFF
-	.bg-gray 
-		background: #e9ecef !important
-	.input-search
-		border-radius: 0 0.25rem 0.25rem 0 
-		box-shadow: none !important
-		border: none !important
+			color: #FFF
+.bg-gray 
+	background: #e9ecef !important
+.input-search
+	border-radius: 0 0.25rem 0.25rem 0 
+	box-shadow: none !important
+	border: none !important
 </style>

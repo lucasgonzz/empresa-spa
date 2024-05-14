@@ -37,36 +37,31 @@ export default {
             }
         },
         getPriceVender(item, from_pivot = false) {
-            console.log('getPriceVender item')
-            console.log(item)
+            console.log('getPriceVender')
             let price 
             if (from_pivot) {
                 price = item.pivot.price 
                 console.log('from_pivot: '+price)
             } else {
+                console.log('va a llamar a apicar_tipos_de_precio')
                 price = item.final_price
-                price = this.setPriceType(item, price)
+                price = this.apicar_tipos_de_precio(item, price)
             }
             console.log('return price: '+price)
             return price
         },
-        setPriceType(item, price) {
+        apicar_tipos_de_precio(item, price) {
+            console.log('apicar_tipos_de_precio')
+            console.log('price:')
+            console.log(price)
+
+            console.log('price_types_with_position:')
+            console.log(this.price_types_with_position)
             if (this.price_types_with_position.length && this.checkService(item)) {
-                let limit 
-                if (this.price_type_vender) {
-                    limit = this.price_type_vender
-                } else {
-                    let last_position = 0
-                    this.price_types_with_position.forEach(price_type => {
-                        if (price_type.position > last_position) {
-                            limit = price_type
-                            last_position = price_type.position
-                        }
-                    })
-                }
-                console.log('position limit de vender: '+limit.position)
+               
+                console.log('position limit de vender: '+this.price_type_vender.position)
                 this.price_types_with_position.forEach(price_type => {
-                    if (price_type.position <= limit.position) {
+                    if (price_type.position <= this.price_type_vender.position) {
                         price = Number(price) + Number(price * this.getPriceTypePercetage(price_type, item) / 100) 
                     }
                 })

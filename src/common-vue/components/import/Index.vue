@@ -276,7 +276,7 @@ export default {
 			if (this.is_local) {
 				return 20
 			}
-			return 150
+			return 70
 		}
 	},
 	data() {
@@ -308,6 +308,15 @@ export default {
 			demora_de_todas_las_solicitud: 0,
 			temporizador: null
 		}
+	},
+	mounted() {
+	    this.$root.$on('bv::modal::show', (bvEvent, modalId) => {
+	        if (modalId === this.id) {
+				this.hubo_un_error = false
+				this.demora_de_todas_las_solicitud = 0
+				console.log('Se puso hubo_un_error en '+this.hubo_un_error)
+	        }
+	    })
 	},
 	methods: {
 		onFileChange(event) {
@@ -435,6 +444,23 @@ export default {
 
 				console.log('finish_row final: '+this.finish_row)
 
+
+				this.varias_solicitudes = false
+				await this.sendRequest(form_data)
+				console.log('terminaron de enviarse las solicitudes')
+				this.loading = false
+				this.file = null
+				this.$bvModal.hide(this.id)
+				this.$toast.success('Estamos precesando tu archivo, te notificaremos cuando termine', {
+					duration: 7000
+				})
+				// this.$store.dispatch(this.model_name+'/getModels')
+				// this.actions.forEach(action => {
+				// 	this.$store.dispatch(action)
+				// })
+
+				return
+
 				if (this.finish_row > this.limite_filas) {
 					this.varias_solicitudes = true
 					this.cantidad_solicitudes = Math.ceil(this.finish_row / this.limite_filas)
@@ -452,10 +478,12 @@ export default {
 							this.es_la_primera_solicitud = true
 							this.inicio_primera_solicitud = new Date();
 						} else {
-							this.es_la_primera_solicitud = false
-							form_data.delete('models')
-							if (!form_data.has('archivo_excel_path')) {
-								form_data.append('archivo_excel_path', this.archivo_excel_path)
+							if (this.model_name == 'article') {
+								this.es_la_primera_solicitud = false
+								form_data.delete('models')
+								if (!form_data.has('archivo_excel_path')) {
+									form_data.append('archivo_excel_path', this.archivo_excel_path)
+								}
 							}
 						}
 
@@ -524,6 +552,23 @@ export default {
 				this.$toast.error('Indique las Operaciones a realizar')
 				return false 
 			}
+			if (this.model_name == 'article') {
+				let columna_proveedor = this.columns_.find(column => {
+					return column.text == 'Proveedor'
+				})
+
+				if (typeof columna_proveedor != 'undefined') {
+
+					if (columna_proveedor.position == '' && this.props_to_send.provider_id == 0) {
+						if (confirm('No ha indicado ningun proveedor')) {
+							return true
+						} else {
+							return false
+						}
+						
+					}
+				}
+			}
 			return true
 		},
 		sendRequest(form_data) {
@@ -534,6 +579,7 @@ export default {
 			.then(res => {
 				console.log('se envio')
 				console.log(res)
+				return
 
 				if (this.es_la_primera_solicitud) {
 					this.fin_primera_solicitud = new Date();

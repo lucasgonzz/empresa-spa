@@ -82,57 +82,78 @@ export default {
 		},	
 		callGetSale() {
 			console.log('callGetSale')
+			this.$store.commit('auth/setMessage', 'Cargando venta')
+			this.$store.commit('auth/setLoading', true)
 			this.$store.dispatch('vender/previus_sales/getSale')
 			.then(() => {
-				console.log('llego previus sale')
+
+				console.log('previus_sale despues de llamar a previus_sales/getSale')
 				console.log(this.previus_sale)
-				let items = this.getItemsPreviusSale(this.previus_sale)
-				this.$store.commit('vender/setItems', items)
-				if (this.previus_sale.discounts.length) {
-					let discounts = this.previus_sale.discounts.map(discount => discount.id)
-					this.$store.commit('vender/setDiscountsId', discounts)
-				} else {
-					this.$store.commit('vender/setDiscountsId', [])
-				}
-				if (this.previus_sale.surchages.length) {
-					let surchages = this.previus_sale.surchages.map(discount => discount.id)
-					this.$store.commit('vender/setSurchagesId', surchages)
-				} else {
-					this.$store.commit('vender/setSurchagesId', [])
-				}
-				if (this.previus_sale.client) {
-					this.$store.commit('vender/setClient', this.previus_sale.client)
-					this.$store.commit('vender/setPriceType', this.previus_sale.client.price_type)
-				} else {
-					console.log('se seteo client con null')
-					this.$store.commit('vender/setClient', null)
-					this.$store.commit('vender/setPriceType', null)
-				}
-				if (this.previus_sale.current_acount_payment_method_id) {
-					this.$store.commit('vender/setCurrentAcountPaymentMethodId', this.previus_sale.current_acount_payment_method_id)
-				}
-				if (this.previus_sale.afip_information_id) {
-					this.$store.commit('vender/setAfipInformationId', this.previus_sale.afip_information_id)
-				}
-				if (this.previus_sale.employee_id) {
-					this.$store.commit('vender/setEmployeeId', this.previus_sale.employee_id)
-				}
-				if (this.previus_sale.address_id) {
-					this.$store.commit('vender/setAddressId', this.previus_sale.address_id)
-				}
-				if (this.previus_sale.sale_type_id) {
-					this.$store.commit('vender/setSaleTypeId', this.previus_sale.sale_type_id)
-				}
-				this.$store.commit('vender/setObservations', this.previus_sale.observations)
-				console.log('voy a setear to_check con '+this.previus_sale.to_check)
-				this.$store.commit('vender/setToCheck', this.previus_sale.to_check)
-				this.$store.commit('vender/setChecked', this.previus_sale.checked)
-				this.$store.commit('vender/setConfirmed', this.previus_sale.confirmed)
-				this.setItemsPrices(false, true)
-				this.setPreviusReturnedArticles()
-				this.setPreviusReturnedServices()
-				this.$store.commit('vender/setTotal')
+
+				setTimeout(() => {
+					this.$store.commit('auth/setLoading', false)
+					
+					this.set_datos_para_actualizar_en_vender(this.previus_sale)
+
+					this.$store.commit('vender/setToCheck', this.previus_sale.to_check)
+					this.$store.commit('vender/setChecked', this.previus_sale.checked)
+					this.$store.commit('vender/setConfirmed', this.previus_sale.confirmed)
+
+					this.setPreviusReturnedArticles()
+					this.setPreviusReturnedServices()
+				}, 500)
 			})
+			.catch(err => {
+				this.$toast.error('Error')
+				console.log(err)
+				this.$store.commit('auth/setLoading', false)
+			})
+		},
+		set_datos_para_actualizar_en_vender(model) {
+			console.log('set_datos_para_actualizar_en_vender model')
+			console.log(model)
+			let items = this.getItemsPreviusSale(model)
+			this.$store.commit('vender/setItems', items)
+			if (model.discounts.length) {
+				let discounts = model.discounts.map(discount => discount.id)
+				this.$store.commit('vender/setDiscountsId', discounts)
+			} else {
+				this.$store.commit('vender/setDiscountsId', [])
+			}
+			if (model.surchages.length) {
+				let surchages = model.surchages.map(discount => discount.id)
+				this.$store.commit('vender/setSurchagesId', surchages)
+			} else {
+				this.$store.commit('vender/setSurchagesId', [])
+			}
+			if (model.client) {
+				this.$store.commit('vender/setClient', model.client)
+				this.$store.commit('vender/setPriceType', model.client.price_type)
+			} else {
+				console.log('se seteo client con null')
+				this.$store.commit('vender/setClient', null)
+				this.$store.commit('vender/setPriceType', null)
+			}
+			if (model.current_acount_payment_method_id) {
+				this.$store.commit('vender/setCurrentAcountPaymentMethodId', model.current_acount_payment_method_id)
+			}
+			if (model.afip_information_id) {
+				this.$store.commit('vender/setAfipInformationId', model.afip_information_id)
+			}
+			if (model.employee_id) {
+				this.$store.commit('vender/setEmployeeId', model.employee_id)
+			}
+			if (model.address_id) {
+				this.$store.commit('vender/setAddressId', model.address_id)
+			}
+			if (model.sale_type_id) {
+				this.$store.commit('vender/setSaleTypeId', model.sale_type_id)
+			}
+			this.$store.commit('vender/setObservations', model.observations)
+
+			this.setItemsPrices(false, true)
+
+			this.$store.commit('vender/setTotal')
 		},
 		setPreviusReturnedArticles() {
 			let returned_articles = []
@@ -197,18 +218,22 @@ export default {
 			this.$store.commit('vender/setNotaCreditoDescription', '')
 			this.$store.commit('vender/setTotal')
 			this.$store.commit('vender/setObservations', '')
+			this.$store.commit('vender/setBudget', null)
+			this.$store.commit('vender/setGuardarComoPresupuesto', 0)
+			this.setPriceType()
 			if (this.view != 'remito') {
 				this.$router.push({name: 'vender', params: {view: 'remito'}})
 			}
 			this.setEmployeeVender()
 		},
-		getItemsPreviusSale(sale) {
+		getItemsPreviusSale(model) {
 			let items = []
 			let item = {}
 			let item_to_add 
-			sale.articles.forEach(article => {
+			model.articles.forEach(article => {
 				item.id = article.id
 				item.name = article.name
+				item.status = article.status
 				item.pivot = article.pivot
 				item.cost = Number(article.pivot.cost)
 				item.price = Number(article.price)
@@ -223,32 +248,37 @@ export default {
 				}
 				items.push(item_to_add)
 			})
-			sale.combos.forEach(combo => {
-				item.id = combo.id
-				item.name = combo.name
-				item.pivot = article.pivot
-				// item.price = Number(combo.pivot.price)
-				item.amount = Number(combo.pivot.amount)
-				item_to_add = {
-					...item,
-					is_combo: true,
-				}
-				items.push(item_to_add)
-			})
-			sale.services.forEach(service => {
-				item.id = service.id
-				item.name = service.name
-				item.pivot = service.pivot
-				// item.price = Number(service.pivot.price)
-				item.discount = Number(service.pivot.discount)
-				item.amount = Number(service.pivot.amount)
-				item.returned_amount = Number(service.pivot.returned_amount)
-				item_to_add = {
-					...item,
-					is_service: true,
-				}
-				items.push(item_to_add)
-			})
+			if (model.combos) {
+				model.combos.forEach(combo => {
+					item.id = combo.id
+					item.name = combo.name
+					item.pivot = article.pivot
+					// item.price = Number(combo.pivot.price)
+					item.amount = Number(combo.pivot.amount)
+					item_to_add = {
+						...item,
+						is_combo: true,
+					}
+					items.push(item_to_add)
+				})
+			}
+			if (model.services) {
+				model.services.forEach(service => {
+					item.id = service.id
+					item.name = service.name
+					item.pivot = service.pivot
+					// item.price = Number(service.pivot.price)
+					item.discount = Number(service.pivot.discount)
+					item.amount = Number(service.pivot.amount)
+					item.returned_amount = Number(service.pivot.returned_amount)
+					item_to_add = {
+						...item,
+						is_service: true,
+					}
+					items.push(item_to_add)
+				})
+			}
+			console.log('items para setear en VENDER:')
 			console.log(items)
 			return items
 		},

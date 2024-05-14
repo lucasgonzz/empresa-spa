@@ -34,7 +34,15 @@ export default {
 	},
 	created() {
 		this.setDefaultArticles()
+
+		this.setPriceType()
 	},
+	watch: {
+		price_types() {
+			console.log('cambiaron los tipos de precios, llamando a setPriceType')
+			this.setPriceType()
+		}
+	}
 }
 </script>
 <style scoped lang="sass">

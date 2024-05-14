@@ -37,7 +37,19 @@ export default {
                     }, 500)
                 }
             })
-            console.log('esuchando update_models.'+this.owner_id)
+            this.Echo.channel('global_notification.'+this.owner_id)
+            .notification((notification) => {
+                console.log(notification)
+                if (!notification.is_only_for_auth_user || notification.is_only_for_auth_user != this.user.id) {
+                    
+                    this.$store.commit('global_notification/set_functions_to_execute', notification.functions_to_execute)
+                    this.$store.commit('global_notification/set_message_text', notification.message_text)
+                    this.$store.commit('global_notification/set_color_variant', notification.color_variant)
+
+                    this.$bvModal.show('global-notification')
+
+                }
+            })
 		},
 	}
 }

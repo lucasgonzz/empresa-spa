@@ -77,6 +77,21 @@ class="m-b-15 m-t-20">
 					v-model="items[data.index].amount"></b-form-input>
 				</b-input-group>
 			</template>
+
+			<!-- <template #cell(unidades_individuales)="data">
+				<b-input-group
+				class="unidades-individuales">
+					<b-form-input
+					type="number"
+					min="0"
+					placeholder="Div Por"></b-form-input>
+					<b-form-input
+					type="number"
+					min="0"
+					placeholder="Div En"></b-form-input>
+				</b-input-group>
+			</template> -->
+
 			<template #cell(discount)="data">
 				<b-input-group
 				class="input-discount"
@@ -184,6 +199,7 @@ export default {
 				{ key: 'price', label: 'Precio' },
 				{ key: 'name', label: 'Nombre' },
 				{ key: 'amount', label: 'Cantidad' },
+				// { key: 'unidades_individuales', label: 'U. Individuales' },
 				{ key: 'discount', label: 'Descuento' },
 			]
 			if (this.index_previus_sales > 0) {
@@ -443,6 +459,9 @@ export default {
 
 .input-discount
 	width: 130px !important
+
+.unidades-individuales
+	width: 180px !important
 
 .td-price 
 	position: relative

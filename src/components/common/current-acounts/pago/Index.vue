@@ -141,6 +141,8 @@ export default {
                     this.updateClient(this.from_model)
                     this.loadModel(this.from_model_name, this.from_model.id)
                     this.clear()
+
+                    this.update_ventas()
         		})
         		.catch(err => {
         			this.loading = false
@@ -149,6 +151,11 @@ export default {
         		})
             }
     	},
+        update_ventas() {
+            if (this.$store.state.sale.is_filtered) {
+                // this.$store.dispatch()
+            }
+        },
         check() {
             if (this.pago.haber == '') {
                 this.$toast.error('Ingrese el importe del pago')

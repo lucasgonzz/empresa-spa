@@ -26,6 +26,8 @@ export default {
 		},
 		setPreviusSale(state, value) {
 			state.previus_sale = value
+			console.log('store/setPreviusSale')
+			console.log(state.previus_sale)
 		},
 		setPreviusReturnedArticles(state, value) {
 			state.previus_returned_articles = value

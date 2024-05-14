@@ -22,6 +22,7 @@ export default {
 			search_on_models_by: 'name',
 			type: 'search',
 			key: 'articles',
+			search_from_api_function: 'search_from_api_in_provider_order',
 			belongs_to_many: {
 				model_name: 'article',
 				create_if_not_exist: true,

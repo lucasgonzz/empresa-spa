@@ -8,6 +8,7 @@ id="articulos-que-subieron-de-precio">
 	<article-pre-import-ranges></article-pre-import-ranges>
 
 	<b-table
+	responsive
 	:fields="properties"
 	head-variant="dark"
 	:items="items">

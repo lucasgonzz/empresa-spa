@@ -16,6 +16,8 @@ export default {
 			key: 'article_id',
 			type: 'search',
 			required: true,
+			search_function: 'articles_to_search_in_recipe',
+			search_function_for_model_form: 'articles_to_search_in_recipe',
 		},
 		{
 			text: 'Estado de Produccion',

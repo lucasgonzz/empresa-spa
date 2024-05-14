@@ -8,14 +8,26 @@ hide-footer
 	class="search-component-modal">
 		<div class="header">
 			<b-form-input
-			@keyup="callSearch"
 			@keydown.enter="enterSelect"
 			@keydown.up="selectUp"
 			@keydown.down="selectDown"
+			@keydown.shift="search"
 			class="input-search-modal"
 			v-model="query"
 			:id="_id+'-search-modal-input'"
 			:placeholder="_placeholder"></b-form-input>
+
+			<b-button
+			@click="search"
+			class="m-l-10"
+			variant="primary">
+				<div
+				class="j-center">
+					<i class="icon-search p-r-5"></i>
+					(shift)
+				</div>
+			</b-button>
+
 			<btn-create-model
 			v-if="show_btn_create && prop && (!prop.has_many || (prop.has_many && !prop.has_many.models_from_parent_prop))"
 			@callSearchModal="callSearchModal"
@@ -41,6 +53,7 @@ hide-footer
 				:model_name="model_name"
 				:striped="false"
 				:set_model_on_row_selected="false"
+				:no_hacer_seleccion="no_hacer_seleccion"
 				@onRowSelected="onRowSelected"></table-component>	
 			</div>
 			<div
@@ -123,6 +136,7 @@ export default {
 			selected_index: -1,
 			saving_if_not_exist: false,
 			esperando: false,
+			no_hacer_seleccion: false,
 		}
 	},
 	watch: {
@@ -203,10 +217,17 @@ export default {
 				}
 			}
 		},
-		search(ignore_srt_limit = false) {
-			console.log('BUSCANDO')
+		search() {
+			console.log('BUSCANDO, str_limint: '+this.str_limint)
 			this.results = []
-			if (this.query.length >= this.str_limint || ignore_srt_limit) {
+
+			if (this.loading) {
+				this.$toast.error('Espere a que finalice la busqueda, por favor')
+				return
+			} 
+
+			if (this.query.length >= this.str_limint) {
+				this.loading = true 
 				let results = []
 				this.searching = true
 
@@ -228,14 +249,16 @@ export default {
 						this.finishSearch()
 					})
 					.catch(err => {
+						this.loading = false
 						console.log(err)
+						this.$toast.error('Error al buscar')
 					})
 				} else {
 					console.log('search_function:')
 					console.log(this.search_function)
 
 					let models_to_search = this.models_to_search
-					if (this.search_function) {
+					if (this.search_function && typeof this.search_function != 'undefined') {
 						models_to_search = this[this.search_function]()
 						console.log('Los models_to_search ahora son:')
 						console.log(models_to_search)
@@ -296,27 +319,28 @@ export default {
 					
 					this.finishSearch()
 				}
+			} else {
+				this.$toast.error('Ingrese al menos '+this.str_limint+' letras')
 			}
 		},
 		searchFromApi() {
-			console.log('searchFromApi asd')
+			console.log('searchFromApi')
+			// return true
 			if (this.search_from_api) {
-				console.log(1)
 				return true
 			}
+			if (this.prop && this.prop.search_from_api_function) {
+				return this[this.prop.search_from_api_function]()
+			}
 			if (this.prop && (this.prop.search_from_api || this.prop.search_depends_on_from_api)) {
-				console.log(2)
 				return true 
 			}
 			if (this.is_mobile && !this.downloadOnMobile(this.model_name) && !this.$store.state[this.model_name].models.length) {
-				console.log(3)
 				return true 
 			}
 			if (this.$store.state[this.model_name].loading) {
-				console.log(4)
 				return true 
 			}
-			console.log(false)
 			return false
 		},
 		finishSearch() {
@@ -333,7 +357,8 @@ export default {
 			})
 		},
 		setFirstSelectedRow() {
-			console.log('setFirstSelectedRow')
+			this.no_hacer_seleccion = true
+			console.log('-> setFirstSelectedRow')
 			if (this.auto_select) {
 				setTimeout(() => {
 					console.log('this.selected_index = -1')
@@ -341,6 +366,7 @@ export default {
 					setTimeout(() => {
 						this.selected_index = 0
 						console.log('se autoselecciono la primer fila')
+						this.no_hacer_seleccion = false
 					}, 100)
 				}, 100)
 			}

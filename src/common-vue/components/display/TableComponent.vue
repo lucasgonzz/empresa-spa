@@ -231,6 +231,10 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+		no_hacer_seleccion: {
+			type: Boolean,
+			default: false,
+		},
 		models: Array,
 		model_name: {
 			type: String,
@@ -315,7 +319,7 @@ export default {
 				this.$refs.tableComponent.selectRow(this.selected_index)
 				setTimeout(() => {
 					this.is_from_keydown = false
-				}, 200)
+				}, 500)
 				console.log('se selecciono la fila '+this.selected_index)
 			}
 		},
@@ -429,6 +433,8 @@ export default {
 			this.$store.dispatch(this.model_name+'/getModels')
 		},
 		width(prop) {
+			return ''
+			
 			if (prop.table_width && prop.table_width == 'lg') {
 				return 'width-300'
 			}
@@ -448,7 +454,9 @@ export default {
 		onRowSelected(items) {
 			console.log('onRowSelected items:')
 			console.log(items)
-			if (!this.is_from_keydown) {
+			console.log('is_from_keydown')
+			console.log(this.is_from_keydown)
+			if (!this.is_from_keydown && !this.no_hacer_seleccion) {
 				if (this._select_mode == 'single' && items.length) {
 					console.log('items')
 					console.log(items[0])
@@ -614,6 +622,9 @@ export default {
 			line-height: 25px
 			span 
 				word-wrap: break-word
+				// max-width: 200px
+
+
 
 			@if ($theme == 'dark')
 				background: #3E3E3E

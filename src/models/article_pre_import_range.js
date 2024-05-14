@@ -1,12 +1,6 @@
 export default {
 	properties: [
 		{
-			text: 'Nombre',
-			key: 'name',
-			type: 'text',
-			is_title: true,
-		},
-		{
 			text: 'Minimo',
 			key: 'min',
 			type: 'number',

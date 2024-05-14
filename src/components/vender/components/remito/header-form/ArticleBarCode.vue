@@ -66,7 +66,7 @@ export default {
 			if (!this.usar_codigo_proveedor) {
 				codigo = this.getBarCode(codigo)
 			}
-			if ((!this.download_articles && !this.articles.length) || (this.is_mobile && !this.downloadOnMobile('article') && !this.articles.length ) || this.$store.state.article.loading) {
+			if (!this.download_articles || (this.is_mobile && !this.downloadOnMobile('article') && !this.articles.length ) || this.$store.state.article.loading) {
 				console.log('se va a buscar del api el codigo '+codigo)
 				await this.getArticleFromApi(codigo)
 				// alert('siguio')
@@ -98,13 +98,24 @@ export default {
 				if (typeof this.finded_article != 'undefined') {
 					console.log('sigue con setVenderArticle')
 					console.log(this.finded_article.name)
+
+					this.set_nombre_en_input()
+
 					this.setVenderArticle(this.finded_article)
 				} else {
 					this.$toast.error('No se encontro articulo')
 				}
 			}
 		},
+		set_nombre_en_input() {
+			let input = document.getElementById('search-article')
+			if (typeof input != 'undefined') {
+				input.value = this.finded_article.name
+			}
+		},
 		getArticleFromApi(bar_code) {
+			this.$store.commit('auth/setMessage', 'Buscando articulo')
+			this.$store.commit('auth/setLoading', true)
 			let prop_to_filter = {} 
 			if (this.usar_codigo_proveedor) {
 				prop_to_filter.key = 'provider_code'
@@ -116,6 +127,7 @@ export default {
 				query_value: bar_code,
 			})
 			.then(res => {
+				this.$store.commit('auth/setLoading', false)
 				if (res.data.models.length) {
 					// alert('llego del api: '+res.data.models[0].name)
 					this.finded_article = res.data.models[0]
@@ -125,7 +137,8 @@ export default {
 				}
 			})
 			.catch(err => {
-				// alert('Error al buscar del api')
+				this.$store.commit('auth/setLoading', false)
+				alert('Error al buscar articulo')
 				console.log(err)
 			})
 		}

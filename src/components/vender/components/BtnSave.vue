@@ -20,17 +20,20 @@ class="j-center m-t-25">
 import BtnLoader from '@/common-vue/components/BtnLoader'
 import previus_sales from '@/mixins/previus_sales'
 import vender from '@/mixins/vender'
+import vender_presupuestos from '@/mixins/vender_presupuestos'
 export default {
 	name: 'ButtonClients',
 	components: {
 		BtnLoader,
 	},
-	mixins: [previus_sales, vender],
+	mixins: [previus_sales, vender, vender_presupuestos],
 	methods: {
 		saveSale() {
 			console.log('se llamo saveSale')
 			if (!this.loader && this.check()) {
-				if (this.index_previus_sales == 0) {
+				if (this.guardar_como_presupuesto) {
+					this.guardar_presupuesto()
+				} else if (this.index_previus_sales == 0) {
 					console.log('llamando a vender')
 					this.vender(false)
 				} else {
@@ -39,6 +42,12 @@ export default {
 			}
 		},
 		check() {
+			if (this.guardar_como_presupuesto) {
+				if (!this.client) {
+					this.$toast.error('Indique un CLIENTE para el Presupuesto')
+					return false
+				}
+			}
 			if (this.previus_sale.id != 'undefined' && this.previus_sale.to_check && !this.checked) {
 				this.$toast.error('Indique la venta como checkeada')
 				return false
@@ -48,10 +57,16 @@ export default {
 				return false
 			}
 			return true
-		}
+		},
 	},
 	computed: {
+		guardar_como_presupuesto() {
+			return this.$store.state.vender.guardar_como_presupuesto
+		},
 		text_btn() {
+			if (this.guardar_como_presupuesto) {
+				return 'Guardar Presupuesto'
+			}
 			if (this.index_previus_sales == 0) {
 				return 'Guardar venta'
 			}

@@ -6,6 +6,9 @@ export default {
                 return 'sale-printed'
             }
         },
+        search_from_api_in_provider_order() {
+            return !this.owner.download_articles
+        },
         articles_to_search_in_recipe() {
             let articles = [] 
             this.$store.state.recipe.models.forEach(recipe => {

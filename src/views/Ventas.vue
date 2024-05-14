@@ -20,6 +20,7 @@
 	:show_modal="false"
     :not_show_delete_text="not_show_delete_text"
     :delete_text="delete_text"
+    mostrar_models_que_vinienen_por_prop_siempre
 	model_name="sale">
 		<template v-slot:display_top>
 			<address-afip-ticket-ventas-cobradas-nav></address-afip-ticket-ventas-cobradas-nav>

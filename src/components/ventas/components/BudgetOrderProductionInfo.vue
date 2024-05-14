@@ -24,12 +24,14 @@
 				Factura N° {{ model.afip_ticket.cbte_numero }}
 			</span>
 		</span>
-		<strong
+		<b-button
+		size="sm"
 		@click.stop="showErrors"
-		class="text-danger c-p"
+		variant="danger"
+		class="m-l-10"
 		v-if="model.afip_errors.length">
 			{{ model.afip_errors.length }} errores
-		</strong>
+		</b-button>
 	</div>
 </template>
 <script>

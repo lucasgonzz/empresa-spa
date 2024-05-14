@@ -7,6 +7,10 @@ export default {
 			not_show_on_form: true,
 		},
 		{
+			key: 'actualizar_en_vender',
+			text: 'Actualizar desde VENDER',
+		},
+		{
 			text: 'Cliente',
 			key: 'client_id',
 			store: 'client',
@@ -15,6 +19,7 @@ export default {
 			is_title: true,
 			show_btn_create: true,
 			use_to_filter_in_modal: true,
+			only_show: true,
 		},
 		{
 			text: 'Fecha de inicio',
@@ -39,6 +44,7 @@ export default {
 			store: 'article',
 			key: 'articles',
 			type: 'search',
+			only_show: true,
 			belongs_to_many: {
 				model_name: 'article',
 				create_if_not_exist: true,

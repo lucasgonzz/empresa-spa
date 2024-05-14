@@ -17,7 +17,7 @@
 				:loader="loading_next"
 				@clicked="setIndexAndCallgetSale(false)" />
 				<btn-loader
-				v-if="index_previus_sales > 0"
+				v-if="index_previus_sales > 0 || budget"
 				text="Cancelar"
 				:block="false"
 				:loader="false"
@@ -52,6 +52,9 @@ export default {
 		},
 		special_prices() {
 			return this.$store.state.special_prices.special_prices
+		},
+		budget() {
+			return this.$store.state.vender.budget
 		},
 		offset() {
 			if (this.special_prices.length) {

@@ -1,6 +1,7 @@
 <template>
 	<div>
-		<div>
+		<div
+		v-if="index_previus_sales == 0 && !budget">
 			<search-component
 			class="m-b-15"
 			@setSelected="setSelected"
@@ -11,13 +12,14 @@
 			set_selected_model_with_model_prop
 			@clearSelected="clearSelected"></search-component>
 		</div>
-		<!-- <b-button
-		v-if="client"
-		class="m-b-15"
-		variant="outline-primary"
-		@click="removeClient">
-			Quitar cliente seleccionado
-		</b-button> -->
+		<div
+		v-else-if="client">
+			<p
+			class="selected-client">
+				<i class="icon-user"></i>
+				Cliente seleccionado: {{ client.name }}
+			</p>
+		</div>
 	</div>
 </template>
 <script>
@@ -55,17 +57,11 @@ export default {
 		setSelected(result) {
 			let client = result.model 
 			this.$store.commit('vender/setClient', client)
-			if (client.price_type) {
-				console.log('el cliente tiene price_type: '+client.price_type)
-				let price_type = this.price_types.find(model => {
-					return model.id == client.price_type_id 
-				})
-				this.$store.commit('vender/setPriceType', price_type)
-			}
+			this.setPriceType()
 		},
 		clearSelected() {
 			this.$store.commit('vender/setClient', null)
-			this.$store.commit('vender/setPriceType', null)
+			this.setPriceType()
 		},
 	}
 }
@@ -80,4 +76,8 @@ export default {
 	& > div 
 		margin-bottom: 0 !important 
 		width: 80%
+
+.selected-client
+	font-size: 20px
+	font-weight: bold
 </style>

@@ -2,12 +2,14 @@
 <div
 v-if="view == 'remito'">
 	<header-form></header-form>
+
 	<total-previus-sales></total-previus-sales>
+
 	<header-2></header-2>
+	
 	<previus-sale-data></previus-sale-data>
 
 	<observations></observations>
-
 
 	<articles-table></articles-table>
 </div>

@@ -131,4 +131,6 @@ export default {
 		background: #FFD800
 	.rojo, .table-rojo
 		background: #CC1818
+	.azul, .table-azul
+		background: #3A7AD2
 </style>

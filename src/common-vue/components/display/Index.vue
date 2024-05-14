@@ -5,6 +5,7 @@
 		:model_name="model_name"></load-pages-info>
 		<color-info
 		:model_name="model_name"></color-info>
+
 		<table-component
 		@onRowSelected="clicked"
 		:set_model_on_row_selected="set_model_on_row_selected"
@@ -122,6 +123,10 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+		mostrar_models_que_vinienen_por_prop_siempre: {
+			type: Boolean,
+			default: false,
+		}
 	},
 	data() {
 		return {
@@ -145,6 +150,9 @@ export default {
 			return this.$store.state[this.model_name].loading
 		},
 		models_to_show() {
+			console.log('models_to_show display component:')
+			console.log('is_from_models_que_vinieron_por_props:')
+			console.log(this.is_from_models_que_vinieron_por_props)
 			if (this.is_from_models_que_vinieron_por_props) {
 				if (this.slice_models) {
 					console.log('return models que vinieron por props SLICE:')
@@ -167,7 +175,8 @@ export default {
 			}
 		},
 		is_from_models_que_vinieron_por_props() {
-			return (this.models.length || this.show_models_if_empty) && !this.is_filtered
+			// return (this.models.length || this.show_models_if_empty) || !this.is_filtered
+			return  this.mostrar_models_que_vinienen_por_prop_siempre || ((this.models.length || this.show_models_if_empty) && !this.is_filtered)
 		},
 		is_from_filter() {
 			return typeof this.is_filtered != 'undefined' && this.is_filtered

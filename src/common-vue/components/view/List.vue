@@ -12,6 +12,7 @@
 		:table_height_para_restar="table_height_para_restar"
 		:order_list_by="order_list_by"
 		:check_permissions="check_permissions"
+		:mostrar_models_que_vinienen_por_prop_siempre="mostrar_models_que_vinienen_por_prop_siempre"
 		:models="models_to_show"
 		:model_name="model_name"
 		:show_models_if_empty="show_models_if_empty"
@@ -46,6 +47,7 @@ export default {
 			type: Boolean,
 			default: true,
 		},
+		mostrar_models_que_vinienen_por_prop_siempre: Boolean,
 		models_to_show: {
 			type: Array,
 			default: () => {

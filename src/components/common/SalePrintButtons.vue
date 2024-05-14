@@ -17,16 +17,20 @@
 			Ticket
 		</b-dropdown-item>
 		<b-dropdown-item
-		@click.stop="salePdf(sale.id, 0, 0)">
+		@click.stop="salePdf(sale.id, 0, 0, 0)">
 			Sin precios
 		</b-dropdown-item>
 		<b-dropdown-item
-		@click.stop="salePdf(sale.id, 1, 0)">
+		@click.stop="salePdf(sale.id, 1, 0, 0)">
 			Con precios
 		</b-dropdown-item>
 		<b-dropdown-item
-		@click.stop="salePdf(sale.id, 1, 1)">
+		@click.stop="salePdf(sale.id, 1, 1, 0)">
 			Con costos
+		</b-dropdown-item>
+		<b-dropdown-item
+		@click.stop="salePdf(sale.id, 1, 0, 1)">
+			Precios Netos
 		</b-dropdown-item>
 	</b-dropdown>
 </template>
@@ -41,8 +45,8 @@ export default {
 		},
 	},
 	methods: {
-		salePdf(sale_id, with_prices, with_costs) {
-            let link = process.env.VUE_APP_API_URL+'/sale/pdf/'+sale_id+'/'+with_prices+'/'+with_costs
+		salePdf(sale_id, with_prices, with_costs, precios_netos) {
+            let link = process.env.VUE_APP_API_URL+'/sale/pdf/'+sale_id+'/'+with_prices+'/'+with_costs+'/'+precios_netos
             window.open(link) 
 		},
 		ticketPdf(sale_id) {

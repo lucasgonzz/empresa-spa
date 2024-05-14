@@ -8,6 +8,7 @@
 			<b-form-input
 			type="number"
 			min="1"
+			:disabled="disabled"
 			id="article-amount"
 			v-model="article.amount"
 			@keydown.enter="addArticleToSale"
@@ -40,6 +41,9 @@ export default {
         previus_sale() {
             return this.$store.state.vender.previus_sales.previus_sale
         },
+        disabled() {
+        	return this.article == null || typeof this.article == 'undefined' || (this.article.name == '' && this.article.bar_code == '')
+        }
 	},
 	methods: {
 		callAddArticleToSale() {

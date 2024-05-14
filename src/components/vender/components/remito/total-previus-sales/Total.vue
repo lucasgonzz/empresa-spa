@@ -3,29 +3,40 @@
 	cols="12"
 	lg="6"
 	class="col-total">
-		<p class="m-0">
-			<strong class="total">
-				Total: {{ price(total) }}
-			</strong>
-		</p>
-		<p class="m-0">
-			{{ items.length }} productos, {{ cantidad_unidades }} unidades
-		</p>
-		<p
-		class="m-0"
-		v-for="discount in sale_discounts">
-			<strong>-</strong> {{ discount.name }} {{ discount.percentage }}%
-		</p>
-		<p
-		class="m-0"
-		v-for="surchage in sale_surchages">
-			<strong>+</strong> {{ surchage.name }} {{ surchage.percentage }}%
-		</p>
+		<div
+		class="cont-total">
+			<p class="m-0">
+				<strong class="total">
+					Total: {{ price(total) }}
+				</strong>
+			</p>
+			<p class="m-0">
+				{{ items.length }} productos, {{ cantidad_unidades }} unidades
+			</p>
+			<p
+			class="m-0"
+			v-for="discount in sale_discounts">
+				<strong>-</strong> {{ discount.name }} {{ discount.percentage }}%
+			</p>
+			<p
+			class="m-0"
+			v-for="surchage in sale_surchages">
+				<strong>+</strong> {{ surchage.name }} {{ surchage.percentage }}%
+			</p>
+		</div>
+		<h5
+		class="price-type-name text-success"
+		v-if="price_type_vender">
+		    Lista {{ price_type_vender.name }}
+		</h5>
 	</b-col>
 </template>
 <script>
 export default {
 	computed: {
+        price_type_vender() {
+            return this.$store.state.vender.price_type
+        },
 		previus_sale() {
 			return this.$store.state.vender.previus_sales.previus_sale
 		},
@@ -80,12 +91,23 @@ export default {
 <style lang="sass">
 .col-total
 	display: flex
-	flex-direction: column
+	flex-direction: row 
+	justify-content: flex-start !important
 	align-items: flex-start
-	justify-content: flex-start
-	.total 
-		font-size: 1.5rem
-	@media screen and (min-width: 768px)
-		p 
-			text-align: left
+
+	.cont-total
+		flex-direction: column
+		align-items: flex-start
+		justify-content: flex-start
+		.total 
+			font-size: 1.5rem
+		@media screen and (min-width: 768px)
+			p 
+				text-align: left
+
+	.price-type-name
+		font-size: 20px
+		align-self: center
+		font-weight: bold
+		margin-left: 50px
 </style>

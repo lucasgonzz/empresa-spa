@@ -30,12 +30,16 @@ export default {
 			loading: false,
 		}
 	},
-	created() {
+	mounted() {
 		this.$root.$on('bv::modal::show', (bvEvent, modal_id) => {
 			console.log('SE ABRIO MODAL')
 			if (modal_id == 'price-changes') {
 				console.log('y era price-changes')
-				this.getPriceChanges() 
+				setTimeout(() => {
+					if (!this.loading) {
+						this.getPriceChanges() 
+					}
+				}, 500)
 			}
 		})
 	},

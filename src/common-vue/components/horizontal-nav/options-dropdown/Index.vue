@@ -97,6 +97,9 @@ export default {
 		deleteModels() {
 			this.$store.commit('auth/setMessage', 'Eliminando '+this.plural(this.model_name))
 			this.$store.commit('auth/setLoading', true)
+			console.log('por acaaa')
+			console.log('filter_form')
+			console.log(this.$store.state[this.model_name].filters)
 			this.$api.put('delete/'+this.model_name, {
 				from_filter: this.from_filter,
 				filter_form: this.$store.state[this.model_name].filters,

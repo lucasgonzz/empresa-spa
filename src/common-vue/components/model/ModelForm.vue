@@ -59,6 +59,7 @@
 									:model_name="modelNameFromRelationKey(prop)"
 									:model="model"
 									:model_name_for_search_on_models="model_name"
+									:search_function="prop.search_function_for_model_form"
 									show_btn_create
 									:clear_query="clearQuery(prop)" 
 									:save_if_not_exist="saveIfNotExist(prop)"

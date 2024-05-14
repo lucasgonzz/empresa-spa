@@ -7,6 +7,11 @@ order_list_by="budget_status"
 :show_previus_days="show_previus_days"
 :check_permissions_previus_days="false"
 model_name="budget">
+
+	<template v-slot:actualizar_en_vender="props">
+		<btn-actualizar-en-vender></btn-actualizar-en-vender>
+	</template>
+
 	<template v-slot:modal_buttons="props">
 		<modal-buttons></modal-buttons>
 	</template>
@@ -16,6 +21,7 @@ model_name="budget">
 export default {
 	components: {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
+		BtnActualizarEnVender: () => import('@/components/budget/components/BtnActualizarEnVender'),
 		ModalButtons: () => import('@/components/budget/components/ModalButtons'),
 	},
 	computed: {
