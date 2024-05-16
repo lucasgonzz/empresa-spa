@@ -37,7 +37,8 @@ export default {
 			return this.$store.state.vender.client
 		},
 		disabled() {
-			if (this.previus_sale.id || this.budget !== null) {
+			if (this.budget !== null) {
+			// if (this.previus_sale.id || this.budget !== null) {
 				return true
 			}
 			return false

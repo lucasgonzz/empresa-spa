@@ -6,7 +6,9 @@
 		:afip_data="afip_data"
 		:client_model="client_model"></modal-result>
 
-		<div class="buscar-por-cuit m-b-15">
+		<div 
+		v-if="index_previus_sales == 0 && !budget"
+		class="buscar-por-cuit m-b-15">
 			<div class="cont-search">
 				<div 
 				class="bg-withe icon">
@@ -23,7 +25,9 @@
 	</div>
 </template>
 <script>
+import vender from '@/mixins/vender'
 export default {
+	mixins: [vender],
 	components: {
 		ModalResult: () => import('@/components/vender/components/client/buscar-por-cuit/ModalResult'),
 	},

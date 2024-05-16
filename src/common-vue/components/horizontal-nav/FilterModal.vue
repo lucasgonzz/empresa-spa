@@ -93,6 +93,23 @@
 				v-model="filter.value"></b-form-select>
 			</b-form-group>
 
+
+			<!-- Checkbox para traer los VACIOS/EN BLANCO -->
+
+			<b-form-group
+			class="m-b-15"
+			v-if="filter.type != 'boolean' 
+					&& (filter.type != 'number' || filter.number_type == 'max')">
+				<b-form-checkbox
+				v-model="filter.en_blanco"
+				:value="1"
+				:unchecked-value="0">
+					Que este EN BLANCO
+				</b-form-checkbox>
+			</b-form-group>
+
+			<hr>
+
 		</div>
 
 		<template #modal-footer>
@@ -197,6 +214,7 @@ export default {
 					} else if (filter_to_add.type == 'text' || filter_to_add.type == 'textarea' || filter_to_add.type == 'number') {
 						filter_to_add.value = ''
 					}
+					filter_to_add.en_blanco = 0
 					new_filters.push(filter_to_add)
 				})
 				this.filters = new_filters
@@ -278,3 +296,8 @@ export default {
 	}
 }
 </script>
+<style lang="sass">
+#filter-modal
+	.form-group
+		margin-bottom: 0 !important
+</style>

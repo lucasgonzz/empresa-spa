@@ -149,7 +149,11 @@ export default {
 			if (model.sale_type_id) {
 				this.$store.commit('vender/setSaleTypeId', model.sale_type_id)
 			}
+			if (model.numero_orden_de_compra) {
+				this.$store.commit('vender/set_numero_orden_de_compra', model.numero_orden_de_compra)
+			}
 			this.$store.commit('vender/setObservations', model.observations)
+			this.$store.commit('vender/set_omitir_en_cuenta_corriente', model.omitir_en_cuenta_corriente)
 
 			this.setItemsPrices(false, true)
 
@@ -197,6 +201,8 @@ export default {
 				checked: this.checked,
 				confirmed: this.confirmed,
 				observations: this.observations,
+				numero_orden_de_compra: this.numero_orden_de_compra,
+				omitir_en_cuenta_corriente: this.omitir_en_cuenta_corriente,
 			})
 			.then(res => {
 				this.$toast.success('Venta actualizada')
@@ -204,22 +210,9 @@ export default {
 			})
 		},
 		cancelPreviusSale() {
-			this.$store.commit('vender/previus_sales/setIndex', 0)
-			this.$store.commit('vender/previus_sales/setPreviusSale', {})
-			this.$store.commit('vender/setToCheck', 0)
-			this.$store.commit('vender/setChecked', 0)
-			this.$store.commit('vender/setConfirmed', 0)
-			this.$store.commit('vender/setItems', [])
-			this.$store.commit('vender/setDiscountsId', [])
-			this.$store.commit('vender/setSurchagesId', [])
-			this.$store.commit('vender/setClient', null)
-			this.$store.commit('vender/setReturnedItems', [])
-			this.$store.commit('vender/setSaveNotaCredito', 0)
-			this.$store.commit('vender/setNotaCreditoDescription', '')
-			this.$store.commit('vender/setTotal')
-			this.$store.commit('vender/setObservations', '')
-			this.$store.commit('vender/setBudget', null)
-			this.$store.commit('vender/setGuardarComoPresupuesto', 0)
+
+			this.limpiar_vender()
+
 			this.setPriceType()
 			if (this.view != 'remito') {
 				this.$router.push({name: 'vender', params: {view: 'remito'}})

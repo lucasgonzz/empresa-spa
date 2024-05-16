@@ -12,7 +12,7 @@
 
 			<buscar-por-cuit></buscar-por-cuit>
 
-			<guardar-en-cuenta-corriente></guardar-en-cuenta-corriente>
+			<omitir-en-cuenta-corriente></omitir-en-cuenta-corriente>
 
 			<guardar-como-presupuesto></guardar-como-presupuesto>
 
@@ -28,7 +28,7 @@
 import TotalPreviusSales from '@/components/vender/components/remito/total-previus-sales/Index.vue'
 import SelectClient from '@/components/vender/components/client/SelectClient'
 import BuscarPorCuit from '@/components/vender/components/client/buscar-por-cuit/Index'
-import GuardarEnCuentaCorriente from '@/components/vender/components/client/GuardarEnCuentaCorriente'
+import OmitirEnCuentaCorriente from '@/components/vender/components/client/OmitirEnCuentaCorriente'
 import GuardarComoPresupuesto from '@/components/vender/components/client/GuardarComoPresupuesto'
 import Discounts from '@/components/vender/components/client/Discounts'
 import Surchages from '@/components/vender/components/client/Surchages'
@@ -38,7 +38,7 @@ export default {
 		TotalPreviusSales,
 		SelectClient,
 		BuscarPorCuit,
-		GuardarEnCuentaCorriente,
+		OmitirEnCuentaCorriente,
 		GuardarComoPresupuesto,
 		Discounts,
 		Surchages,

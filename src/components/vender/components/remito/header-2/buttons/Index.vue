@@ -1,6 +1,7 @@
 <template>
 	<div
 	class="vender-buttons">
+		<numero-orden-de-compra></numero-orden-de-compra>
 		<pago></pago>
 		<print></print>
 	</div>
@@ -8,6 +9,7 @@
 <script>
 export default {
 	components: {
+		NumeroOrdenDeCompra: () => import('@/components/vender/components/remito/header-2/buttons/NumeroOrdenDeCompra'),
 		Pago: () => import('@/components/vender/components/remito/header-2/buttons/Pago'),
 		Print: () => import('@/components/vender/components/remito/header-2/buttons/Print'),
 	},

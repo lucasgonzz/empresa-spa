@@ -103,6 +103,8 @@ export default {
 				checked: info.checked,
 				confirmed: info.confirmed,
 				observations: info.observations,
+				numero_orden_de_compra: info.numero_orden_de_compra,
+				omitir_en_cuenta_corriente: info.omitir_en_cuenta_corriente,
 			})
 			.then(res => {
 				commit('sale/add', res.data.model, {root: true})

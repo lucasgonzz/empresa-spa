@@ -37,6 +37,7 @@ export default {
 		address_id: 0,
 		sale_type_id: 0,
 		observations: '',
+		numero_orden_de_compra: '',
 
 		guardar_como_presupuesto: 0,
 		budget: null,
@@ -175,6 +176,9 @@ export default {
 		setObservations(state, value) {
 			state.observations = value
 		},
+		set_numero_orden_de_compra(state, value) {
+			state.numero_orden_de_compra = value
+		},
 		setClient(state, value) {
 			state.client = value
 		},
@@ -306,6 +310,7 @@ export default {
 				confirmed: state.confirmed,
 				observations: state.observations,
 				omitir_en_cuenta_corriente: state.omitir_en_cuenta_corriente,
+				numero_orden_de_compra: state.numero_orden_de_compra,
 			})
 			.then(res => {
 				console.log('vendido')
@@ -313,13 +318,13 @@ export default {
 				console.log(sale)
 				commit('setSale', sale)
 				commit('setVendiendo', false)
-				commit('setItems', [])
-				commit('setDiscountsId', [])
-				commit('setSurchagesId', [])
-				// commit('setSaleTypeId', 1)
-				commit('setClient', null)
-				commit('setObservations', '')
-				commit('setTotal', 0)
+				// commit('setItems', [])
+				// commit('setDiscountsId', [])
+				// commit('setSurchagesId', [])
+				// // commit('setSaleTypeId', 1)
+				// commit('setClient', null)
+				// commit('setObservations', '')
+				// commit('setTotal', 0)
 				commit('sale/add', sale, {root: true})
 			})
 			.catch(err => {

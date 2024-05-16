@@ -78,19 +78,23 @@ class="m-b-15 m-t-20">
 				</b-input-group>
 			</template>
 
-			<!-- <template #cell(unidades_individuales)="data">
+			<template #cell(unidades_individuales)="data">
 				<b-input-group
 				class="unidades-individuales">
 					<b-form-input
 					type="number"
 					min="0"
+					@keyup.enter="calcular_precio_por_unidades_individuales(items[data.index])"
+					v-model="items[data.index].unidades_individuales"
 					placeholder="Div Por"></b-form-input>
 					<b-form-input
 					type="number"
 					min="0"
+					@keyup.enter="calcular_precio_por_unidades_individuales(items[data.index])"
+					v-model="items[data.index].unidades_individuales_en_esta_venta"
 					placeholder="Div En"></b-form-input>
 				</b-input-group>
-			</template> -->
+			</template>
 
 			<template #cell(discount)="data">
 				<b-input-group
@@ -199,9 +203,13 @@ export default {
 				{ key: 'price', label: 'Precio' },
 				{ key: 'name', label: 'Nombre' },
 				{ key: 'amount', label: 'Cantidad' },
-				// { key: 'unidades_individuales', label: 'U. Individuales' },
 				{ key: 'discount', label: 'Descuento' },
 			]
+			// if (this.hasExtencion('unidades_individuales_en_articulos')) {
+			// 	fields.push(
+			// 		{ key: 'unidades_individuales', label: 'U. Individuales' },
+			// 	)
+			// }
 			if (this.index_previus_sales > 0) {
 				if (this.hasExtencion('check_sales') && !this.previus_sale.confirmed && (this.previus_sale.to_check || this.previus_sale.checked)) {
 					fields.push(
@@ -246,6 +254,11 @@ export default {
 		},
 	},
 	methods: {
+		calcular_precio_por_unidades_individuales(item) {
+			let precio = Number(item.price_vender)
+			let precio_por_unidad = precio / Number(item.unidades_individuales)
+			let precio_de_las_unidades_vendidas = precio_por_unidad * Number(item.unidades_individuales_en_esta_venta)
+		},
 		get_max_discount(item) {
 			if (item.cost) {
 				var costo = Number(item.cost);

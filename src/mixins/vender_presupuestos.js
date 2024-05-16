@@ -1,4 +1,6 @@
+import vender_mixin from '@/mixins/vender'
 export default {
+	mixins: [vender_mixin],
 	computed: {
 		client() {
 			return this.$store.state.vender.client
@@ -63,6 +65,10 @@ export default {
 				this.$store.commit('auth/setMessage', '')
 				this.$store.commit('auth/setLoading', false)
 				this.$toast.error('Error al guardar Presupuesto')
+				console.log(err)
+				this.$toast.error('Codigo: '+err.code+'. Detalle: '+err.message, {
+					duration: 100000,
+				})
 			})
 		},
 		crear() {
@@ -90,26 +96,11 @@ export default {
 				this.$store.commit('auth/setMessage', '')
 				this.$store.commit('auth/setLoading', false)
 				this.$toast.error('Error al guardar Presupuesto')
+				console.log(err)
+				this.$toast.error('Codigo: '+err.code+'. Detalle: '+err.message, {
+					duration: 100000,
+				})
 			})
-		},
-		limpiar_vender() {
-			this.$store.commit('vender/previus_sales/setIndex', 0)
-			this.$store.commit('vender/previus_sales/setPreviusSale', {})
-			this.$store.commit('vender/setToCheck', 0)
-			this.$store.commit('vender/setChecked', 0)
-			this.$store.commit('vender/setConfirmed', 0)
-			this.$store.commit('vender/setItems', [])
-			this.$store.commit('vender/setDiscountsId', [])
-			this.$store.commit('vender/setSurchagesId', [])
-			this.$store.commit('vender/setClient', null)
-			this.$store.commit('vender/setReturnedItems', [])
-			this.$store.commit('vender/setSaveNotaCredito', 0)
-			this.$store.commit('vender/setNotaCreditoDescription', '')
-			this.$store.commit('vender/setTotal')
-			this.$store.commit('vender/setObservations', '')
-			this.$store.commit('vender/setGuardarComoPresupuesto', 0)
-			this.$store.commit('vender/setBudget', null)
-			this.$store.commit('vender/setPriceType', null)
 		},
 
 		get_discounts() {

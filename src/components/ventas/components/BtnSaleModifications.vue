@@ -1,5 +1,6 @@
 <template>
 	<b-button
+	class="m-l-10"
 	@click.stop="show"
 	variant="primary">
 		Mod

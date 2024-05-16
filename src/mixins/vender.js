@@ -70,6 +70,12 @@ export default {
 		budget() {
 			return this.$store.state.vender.budget
 		},
+		numero_orden_de_compra() {
+			return this.$store.state.vender.numero_orden_de_compra
+		},
+		omitir_en_cuenta_corriente() {
+			return this.$store.state.vender.omitir_en_cuenta_corriente
+		},
 		discounts_in_services: {
 			get() {
 				return this.$store.state.vender.discounts_in_services
@@ -255,12 +261,10 @@ export default {
 					if (this.view == 'remito') {
 						document.getElementById('article-bar-code').focus()
 					}
-					this.$store.commit('vender/previus_sales/setIndex', 0)
-					this.$store.commit('vender/previus_sales/setPreviusSale', {})
-					this.$store.commit('vender/setToCheck', 0)
-					this.$store.commit('vender/setChecked', 0)
-					this.$store.commit('vender/setConfirmed', 0)
-					this.$store.commit('vender/set_omitir_en_cuenta_corriente', 0)
+					
+					this.limpiar_vender()
+
+
 					this.setDefaultPaymentMethod()
 					if (this.maked_sale.client_id && this.maked_sale.save_current_acount) {
 						this.loadModel('client', this.maked_sale.client_id)
@@ -275,6 +279,28 @@ export default {
 					this.$toast.error('Error al guardar venta')
 				})
 			}
+		},
+		limpiar_vender() {
+			this.$store.commit('vender/previus_sales/setIndex', 0)
+			this.$store.commit('vender/previus_sales/setPreviusSale', {})
+			this.$store.commit('vender/setToCheck', 0)
+			this.$store.commit('vender/setChecked', 0)
+			this.$store.commit('vender/setConfirmed', 0)
+			this.$store.commit('vender/setItems', [])
+			this.$store.commit('vender/setDiscountsId', [])
+			this.$store.commit('vender/setSurchagesId', [])
+			this.$store.commit('vender/setClient', null)
+			this.$store.commit('vender/setReturnedItems', [])
+			this.$store.commit('vender/setSaveNotaCredito', 0)
+			this.$store.commit('vender/setNotaCreditoDescription', '')
+			this.$store.commit('vender/setTotal')
+			this.$store.commit('vender/setObservations', '')
+			this.$store.commit('vender/setGuardarComoPresupuesto', 0)
+			this.$store.commit('vender/setBudget', null)
+			this.$store.commit('vender/setPriceType', null)
+			this.$store.commit('vender/setPriceType', null)
+			this.$store.commit('vender/set_numero_orden_de_compra', '')
+			this.$store.commit('vender/set_omitir_en_cuenta_corriente', 0)
 		},
 		setDefaultPaymentMethod() {
 			if (this.owner.default_current_acount_payment_method_id) {
