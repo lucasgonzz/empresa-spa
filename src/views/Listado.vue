@@ -64,12 +64,15 @@
 		<template v-slot:table_right_options="props">
 			<buttons :model="props.model" />	
 		</template>
+
 		<template #name>
 			<name-input></name-input> 
 		</template>
+
 		<template #stock>
 			<stock-input></stock-input> 
 		</template>
+
 	</view-component>
 	
 	<!-- <article-images-colors></article-images-colors> -->

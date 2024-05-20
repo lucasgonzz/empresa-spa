@@ -53,7 +53,7 @@ export default {
 				})
 			} else if (this.view == 'confirmadas') {
 				return this.sales.filter(sale => {
-					return sale.confirmed 
+					return sale.confirmed && sale.terminada == 0
 				})
 			}
 		},

@@ -36,6 +36,12 @@
 	    	<img 
 	    	v-if="route.image_url"
 	    	:src="image(route)">
+
+	    	<b-badge
+	    	variant="danger"
+	    	v-if="route.budget_function && get_function_value(route) > 0">
+	    		{{ get_function_value(route) }}
+	    	</b-badge>
 		</div>
 
 		<div 
@@ -59,8 +65,9 @@
 <script>
 import nav from '@/common-vue/mixins/nav'
 import routes from '@/router/routes'
+import nav_functions from '@/mixins/nav_functions'
 export default {
-	mixins: [nav],
+	mixins: [nav, nav_functions],
 	components: {
         DownloadResources: () => import('@/common-vue/components/download-resources/Index'),
         UserInfo: () => import('@/common-vue/components/nav-vertical/UserInfo'),
@@ -93,6 +100,9 @@ export default {
 		},
 	},
 	methods: {
+		get_function_value(route) {
+			return this[route.budget_function]()
+		},
 		callSetRoute(route) {
 			this.setRoute(route)
 			if (this.show_nav_mobile) {
@@ -189,6 +199,17 @@ export default {
 			transform: translateX(20px)
 		img 
 			width: 35px
+
+
+		.badge 
+			width: 35px
+			height: 35px
+			margin-right: 1.5px
+			display: flex 
+			align-items: center 
+			justify-content: center
+			font-size: 17px
+
 
 	.active-item
 		background: $blue 

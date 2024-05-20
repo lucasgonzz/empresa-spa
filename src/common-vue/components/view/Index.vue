@@ -41,7 +41,9 @@
 				</slot>
     		</template>
     	</model>
+
 		<slot name="header"></slot>
+		
 		<horizontal-nav
 		:ask_selectable="ask_selectable"
 		:show_excel_drop_down="show_excel_drop_down"

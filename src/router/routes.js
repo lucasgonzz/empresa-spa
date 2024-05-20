@@ -7,6 +7,16 @@ export default [
 	// 	can: 'article.store',
 	// },
 	{
+		text: 'Alertas',
+		path: '/alertas',
+		component: '@/views/Alertas',
+		budget_function: 'alerts_count',
+		name: 'alertas',
+		params: {
+			view: 'cobros',
+		},
+	},
+	{
 		text: 'Reportes',
 		path: '/reportes',
 		component: '@/views/Reportes',

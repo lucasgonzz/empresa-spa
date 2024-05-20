@@ -82,6 +82,7 @@ export default {
 	},
 	methods: {
 		setSelected(result) {
+			console.log('llego este resultado:')
 			console.log(result)
 			this.article.name = result.query
 			this.setVenderArticle(result.model)

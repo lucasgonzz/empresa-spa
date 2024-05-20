@@ -2,7 +2,8 @@
 	<div>
 		<!-- bar_code: {{ model.bar_code }} {{ typeof model.bar_code }} -->
 		<search-component
-		v-if="!model.bar_code || model.bar_code == ''"
+		v-if="(!model.bar_code || model.bar_code == '') 
+		&& (!model.provider_code || model.provider_code == '')"
 		@setSelected="setSelected"
 		:auto_select="false"
 		:save_if_not_exist="false"
