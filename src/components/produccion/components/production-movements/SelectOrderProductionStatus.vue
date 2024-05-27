@@ -54,11 +54,13 @@ export default {
 	},
 	methods: {
 		set_cantidades_actuales() {
+			this.$store.commit('auth/setMessage', 'Obteniendo informacion')
+			this.$store.commit('auth/setLoading', true)
+
 			if (this.production_movement.article_id)
 			this.$api.get('production-movement/current-amounts/'+this.production_movement.article_id)
 			.then(res => {
-				console.log('acaaaaaa')
-				console.log(res.data.response)
+				this.$store.commit('auth/setLoading', false)
 
 				this.cantidades_actuales = res.data.response
 				this.set_solo_primer_movimiento_disponible()
@@ -69,6 +71,7 @@ export default {
 			})
 			.catch(err => {
 				// this.loading = false
+				this.$store.commit('auth/setLoading', false)
 				this.$toast.error('Hubo un error al buscar')
 				console.log(err)
 			})
@@ -96,29 +99,32 @@ export default {
 
 		set_options_desde() {
 			console.log('set_options_desde')
+
 			let options = [{
 				value: 0,
 				text: 'Seleccione Estado'
 			}]
-			// if (!this.solo_primer_movimiento_disponible) {
-				options.push({
-					value: -1,
-					text: 'Es para el PRIMER ESTADO',
-				})
-				this.cantidades_actuales.forEach(cantidades_actual => {
-					if (cantidades_actual.current_amount > 0 && !this.es_el_utlimo_estado(cantidades_actual.order_production_status)) {
-						options.push({
-							value: cantidades_actual.order_production_status.id,
-							text: cantidades_actual.order_production_status.name+' ('+cantidades_actual.current_amount+')',
-						})
-					}
-				})
-			// }
+
+			options.push({
+				value: -1,
+				text: 'Es para el PRIMER ESTADO',
+			})
+			this.cantidades_actuales.forEach(cantidades_actual => {
+				if (cantidades_actual.current_amount > 0 && !this.es_el_utlimo_estado(cantidades_actual.order_production_status)) {
+					options.push({
+						value: cantidades_actual.order_production_status.id,
+						text: cantidades_actual.order_production_status.name+' ('+cantidades_actual.current_amount+')',
+					})
+				}
+			})
+
 			console.log(options)
 			this.options_desde = options
 		},
 		set_options_hacia() {
-			console.log('set_options_hacia')
+
+			this.set_order_production_status_desde()
+
 			let options = [{
 				value: 0,
 				text: 'Seleccione Estado'
@@ -159,7 +165,24 @@ export default {
 			}
 			console.log(options)
 			this.options_hacia = options
-		}
+		},
+		
+		/*
+			Metodo para obtener el "estado_desde" y almacenarlo en el store
+			Para despues usarlo para chequear que la cantidad del movimiento a crear
+			no sea mayor que la de este estado
+		*/
+		set_order_production_status_desde() {
+
+			let estado_desde_seleccionado = this.cantidades_actuales.find(cantidad_actual => {
+				return cantidad_actual.order_production_status.id == this.desde_estado_id
+			})
+
+			if (typeof estado_desde_seleccionado != 'undefined') {
+				this.$store.commit('production_movement/set_order_production_status_desde', estado_desde_seleccionado)
+			}
+
+		},
 	}
 }
 </script>

@@ -1,6 +1,7 @@
 <template>
 	<div>
 		<b-button
+		v-if="view == 'confirmadas'"
 		class="m-l-15"
 		variant="success"
 		@click.stop="terminada">

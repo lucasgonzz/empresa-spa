@@ -55,6 +55,7 @@ export default {
             }, 500)
         },
         pago() {
+            this.$store.commit('current_acount/setToPay', null)
             this.$bvModal.show('current-acounts-pago')
             setTimeout(() => {
                 document.getElementById('monto-pago').focus()

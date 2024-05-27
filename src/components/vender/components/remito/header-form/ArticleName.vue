@@ -13,7 +13,7 @@
 		:str_limint="str_limint"
 		:search_from_api="search_from_api"
 		:props_to_show="props_to_show"
-		:props_to_filter="['num']"
+		:props_to_filter="['num', 'name']"
 		:prop="{text: 'Articulo', key: 'article_id', store: 'article'}"></search-component>
 	</b-col>
 </template>

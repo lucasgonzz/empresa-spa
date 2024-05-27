@@ -235,8 +235,6 @@ export default {
 			if (this.show_btn_delete && (this.check_can_delete || this.check_permissions)) {
 				return this.can(this.model_name+'.delete')
 			}
-			console.log('this.show_btn_delete')
-			console.log(this.show_btn_delete)
 			return this.show_btn_delete
 		},
 		can_save() {

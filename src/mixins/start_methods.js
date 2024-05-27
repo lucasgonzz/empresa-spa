@@ -3,13 +3,23 @@ export default {
 	mixins: [set_employee_vender],
 	methods: {
 		startMethods() {
+			console.log('llamando startMethods')
+
 			this.checkUserAppUrl()
+			
 			this.setEmployeeVender()
+			
 			this.checkAddressCookie()
+			
 			this.checkUpdateFeaturesCookie()
+			
 			this.getUnconfirmedOrders()
+			
 			this.getProviderOrdersDaysToAdvise()
+			
 			this.get_ventas_sin_cobrar()
+
+			this.get_buyers_and_set_messages_not_read()
 		},
 		get_ventas_sin_cobrar() {
 			if (this.owner.dias_alertar_empleados_ventas_no_cobradas) {
@@ -58,5 +68,14 @@ export default {
 		getProviderOrdersDaysToAdvise() {
 			this.$store.dispatch('provider_order/getDaysToAdvise')
 		},
+		get_buyers_and_set_messages_not_read() {
+			console.log('get_buyers_and_set_messages_not_read')
+			this.$store.dispatch('buyer/getModels')
+			.then(() => {
+				console.log('llegaron los buyers, mandando setChatsToShow')
+				this.$store.commit('message/setChatsToShow')
+				console.log('setChatsToShow mandado')
+			})
+		}
 	}
 }

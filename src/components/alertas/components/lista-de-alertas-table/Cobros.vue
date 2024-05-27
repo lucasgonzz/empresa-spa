@@ -1,24 +1,36 @@
 <template>
 	<div>
 
-		<current-acounts></current-acounts>
+		<div
+		v-if="view == 'cobros'">
 
-		<b-table
-		v-if="view == 'cobros'"
-		class="m-t-20"
-		head-variant="dark"
-		:fields="fields"
-		:items="items">
+			<current-acounts></current-acounts>
 
-			<template #cell(cliente)="data">
-				<b-button
-				@click="showCurrentAcounts(ventas_sin_cobrar[data.index])"
-				variant="success">
-					{{ ventas_sin_cobrar[data.index].client.name }}
-				</b-button>
-			</template>
+			<b-table
+			v-if="ventas_sin_cobrar.length"
+			head-variant="dark"
+			:fields="fields"
+			:items="items">
 
-		</b-table>
+				<template #cell(cliente)="data">
+					<b-button
+					@click="showCurrentAcounts(ventas_sin_cobrar[data.index])"
+					variant="success">
+						{{ client_name(ventas_sin_cobrar[data.index]) }}
+					</b-button>
+				</template>
+
+			</b-table>
+
+			<div 
+			v-else
+			class="text-with-icon">
+				No hay ventas por cobrar
+				<i class="icon-eye-slash"></i>
+			</div>
+
+		</div>
+
 	</div>
 
 </template>
@@ -37,7 +49,7 @@ export default {
 					key: 'venta',
 				},
 				{
-					key: 'saldo',
+					key: 'pagandose',
 				},
 				{
 					key: 'hace',
@@ -52,9 +64,9 @@ export default {
 
 			this.ventas_sin_cobrar.forEach(sale => {
 				items.push({
-					cliente: sale.client.name,
-					venta: 'N° '+sale.num,
-					saldo: this.price(sale.client.saldo),
+					cliente: null,
+					venta: 'N° '+sale.num+' ('+this.price(sale.current_acount.debe)+')',
+					pagandose: this.price(sale.current_acount.pagandose)+' (faltan '+ this.lo_que_falta_pagarse(sale) +')',
 					hace: this.since(sale.created_at),
 					fecha: this.date(sale.created_at),
 				})
@@ -69,6 +81,15 @@ export default {
 		},
 	},
 	methods: {
+		client_name(sale) {
+			if (sale.client) {
+				return sale.client.name+' ( '+ this.price(sale.client.saldo) +' )'
+			}
+			return 'NO HAY'
+		},
+		lo_que_falta_pagarse(sale) {
+			return this.price(Number(sale.current_acount.debe) - Number(sale.current_acount.pagandose))
+		},
 		showCurrentAcounts(sale) {
 			this.showClientCurrentAcount(sale)
 		}

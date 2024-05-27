@@ -2,7 +2,10 @@
 	<div>
 
 		<horizontal-nav
+		class="m-b-40"
+		@setSelected="setSelectedView"
 		set_view
+		emitir_setSelected_al_inicio
 		:show_display="false"
 		:items="nav_items"></horizontal-nav>
 
@@ -36,14 +39,52 @@ export default {
 				},
 				{
 					name: 'Mensajes',	
-					alert: this.messages_not_read.length	
+					alert: this.messages_not_read	
 				},
 			]
 		},
 		
 	},
 	methods: {
-		clicked(model) {
+		setSelectedView(item) {
+			console.log('setSelectedView')
+			console.log(this.view)
+			console.log(item)
+			if (this.view == this.routeString(item.name)) {
+				
+				this.$store.commit('auth/setMessage', 'Cargando informacion')
+				this.$store.commit('auth/setLoading', true)
+
+				if (this.view == 'cobros') {
+					this.$store.dispatch('sale/ventas_sin_cobrar/getModels')
+					.then(() => {
+						this.$store.commit('auth/setLoading', false)
+					})
+				}
+
+				if (this.view == 'pedidos-proveedor') {
+					this.$store.dispatch('provider_order/getDaysToAdvise')
+					.then(() => {
+						this.$store.commit('auth/setLoading', false)
+					})
+				}
+
+				if (this.view == 'pedidos-online'){
+					this.$store.dispatch('order/getUnconfirmedModels')
+					.then(() => {
+						this.$store.commit('auth/setLoading', false)
+					})
+				} 
+
+				if (this.view == 'mensajes') {
+					this.$store.dispatch('buyer/getModels')
+					.then(() => {
+						this.$store.commit('message/setChatsToShow')
+						this.$store.commit('auth/setLoading', false)
+					})
+				}
+
+			}
 		}
 	}
 }

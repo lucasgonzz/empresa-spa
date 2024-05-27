@@ -380,6 +380,12 @@ export default {
             this.$store.dispatch('current_acount/getModels')
             this.$bvModal.show('current-acounts')
         },
+        showProviderCurrentAcount(provider_order) {
+            this.$store.commit('current_acount/setFromModelName', 'provider')
+            this.$store.commit('current_acount/setFromModel', provider_order.provider)
+            this.$store.dispatch('current_acount/getModels')
+            this.$bvModal.show('current-acounts')
+        },
         providerOrderTotal(model, formated = true) {
             let total = 0 
             if (model.total_from_provider_order_afip_tickets) {

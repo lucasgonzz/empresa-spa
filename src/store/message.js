@@ -72,6 +72,11 @@ export default {
 			state.selected_article = value
 		},
 		setChatsToShow(state, value = null) {
+			/*
+				* Busco los buyers ya descargados
+				y filtro los que tengan mensajes (leidos o sin leer)
+				y ordeno los buyers en base a la fecha del ultimo mensaje
+			*/
 			let buyers = []
 			buyers_store.state.models.forEach(buyer => {
 				if (buyer.messages.length) {

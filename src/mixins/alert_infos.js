@@ -1,4 +1,6 @@
+import online from '@/mixins/online'
 export default {
+    mixins: [online],
 	computed: {
 		is_online_view() {
 			return this.route_name == 'online'
@@ -23,18 +25,24 @@ export default {
         },
         messages_not_read() {
             if (this.has_online) {
-                // console.log('messages_not_read')
-            	let messages_not_read = []
-            	this.$store.state.buyer.models.forEach(buyer => {
-            		buyer.messages.forEach(message => {
-                        // console.log(message)
-            			if (message.from_buyer && !message.read && message.buyer_id) {
-                            message.buyer = buyer
-            				messages_not_read.push(message)
-            			}
-            		})
-            	})
-            	return messages_not_read
+            	let messages_not_read = 0
+                this.$store.state.message.chats_to_show.forEach(chats_to_show => {
+
+                    messages_not_read += this.messagesNotRead(chats_to_show)
+
+                })
+                return messages_not_read
+                // let messages_not_read = []
+            	// this.$store.state.buyer.models.forEach(buyer => {
+            	// 	buyer.messages.forEach(message => {
+                //         // console.log(message)
+            	// 		if (message.from_buyer && !message.read && message.buyer_id) {
+                //             message.buyer = buyer
+            	// 			messages_not_read.push(message)
+            	// 		}
+            	// 	})
+            	// })
+            	// return messages_not_read
             }
             return []
         },

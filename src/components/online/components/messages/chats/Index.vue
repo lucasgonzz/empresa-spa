@@ -4,7 +4,7 @@
 		<b-button
 		block
 		variant="primary"
-		class="d-md-none m-t-15"
+		class="d-lg-none m-t-15"
 		v-b-modal="'chats'">
 			Buscar chat
 		</b-button>

@@ -233,14 +233,9 @@ export default {
 
 				if (this.searchFromApi()) {
 					console.log('enviando api')
-					let info = {
-						prop_to_filter: this.prop_to_filter,
-						query_value: this.query,
-					}
-					if (this.prop && this.prop.depends_on) {
-						info.depends_on_key = this.prop.depends_on
-						info.depends_on_value = this.model[this.prop.depends_on]
-					}
+
+					let info = this.get_info_param()
+
 					this.$api.post('search-from-modal/'+this.model_name, info)
 					.then(res => {
 						console.log('llego desde api:')
@@ -322,6 +317,30 @@ export default {
 			} else {
 				this.$toast.error('Ingrese al menos '+this.str_limint+' letras')
 			}
+		},
+		get_info_param() {
+			let info = {
+				query_value: this.query,
+			}
+
+			let props_to_filter = []
+
+			if (this.props_to_filter.length) {
+				this.props_to_filter.forEach(prop_to_filter => {
+					props_to_filter.push(prop_to_filter)
+				})
+			} else {
+				props_to_filter.push(this.prop_to_filter.key)
+			}
+
+			info.props_to_filter = props_to_filter
+
+			if (this.prop && this.prop.depends_on) {
+				info.depends_on_key = this.prop.depends_on
+				info.depends_on_value = this.model[this.prop.depends_on]
+			}
+
+			return info
 		},
 		searchFromApi() {
 			console.log('searchFromApi')

@@ -156,6 +156,10 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+		emitir_setSelected_al_inicio: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	created() {
 		if (!this.set_view && !this.set_sub_view) {
@@ -237,6 +241,9 @@ export default {
 			return this.capitalize(this.value(item))
 		},
 		select(item) {
+			if (this.emitir_setSelected_al_inicio) {
+				this.$emit('setSelected', item)
+			}
 			if (item.is_for_create) {
 				this.setModel(null, item.is_for_create, this.modelPropertiesFromName(item.is_for_create))
 				return
@@ -266,7 +273,9 @@ export default {
 				}
 			} 
 			this.selected_item = item.name
-			this.$emit('setSelected', item)
+			if (!this.emitir_setSelected_al_inicio) {
+				this.$emit('setSelected', item)
+			}
 		},
 		callMethods(item, only_if_empty = false) {
 			if (item.action) {

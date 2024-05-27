@@ -7,6 +7,18 @@ import generals from '@/common-vue/mixins/generals'
 export default {
 	namespaced: true,
 	state: {
+
+		/* ----------------------------------------------
+			
+			Propiedades personalizadas
+
+		*/
+		
+		order_production_status_desde: null,
+		
+
+		// ----------------------------------------------
+
 		model_name: 'production_movement',
 		route_prefix: '',
 		from_dates: true,
@@ -47,6 +59,9 @@ export default {
 		loading: false,
 	},
 	mutations: {
+		set_order_production_status_desde(state, value) {
+			state.order_production_status_desde = value 
+		},
 		setLoading(state, value) {
 			state.loading = value
 		},

@@ -158,7 +158,7 @@ export default {
 			this.initFilter()
 		},
 	},
-	created() {	
+	mounted() {	
 		this.initProps()
 		this.initFilter()
 		this.setSelectOptions()
@@ -221,6 +221,7 @@ export default {
 			}
 		},
 		initFilter() {	
+			console.log('initFilter:')
 			this.filters = []
 			this.props.forEach(prop => {
 				if ((prop.filter_type && prop.filter_type == 'number') || prop.type == 'number') {
@@ -278,6 +279,8 @@ export default {
 					})
 				}
 			})
+			console.log('this.filters:')
+			console.log(this.filters)
 		},
 		setSelectOptions() {
 			this.filters.forEach(filter => {

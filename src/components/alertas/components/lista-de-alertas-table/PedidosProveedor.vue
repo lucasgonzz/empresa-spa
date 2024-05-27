@@ -1,32 +1,42 @@
 <template>
 	<div>
-		<b-table
-		v-if="view == 'pedidos-proveedor'"
-		class="m-t-20"
-		head-variant="dark"
-		:fields="fields"
-		:items="items">
+		<div
+		v-if="view == 'pedidos-proveedor'">
 
-			<template #cell(cliente)="data">
-				<b-button
-				variant="success">
-					{{ ventas_sin_cobrar[data.index].client.name }}
-				</b-button>
-			</template>
+			<current-acounts></current-acounts>
+			
+			<b-table
+			v-if="pedidos_sin_llegar.length"
+			head-variant="dark"
+			:fields="fields"
+			:items="items">
 
-			<template #cell(venta)="data">
-				<b-button
-				variant="primary">
-					Venta N° 23947
-				</b-button>
-			</template>
+				<template #cell(proveedor)="data">
+					<b-button
+					@click="showCurrentAcounts(pedidos_sin_llegar[data.index])"
+					variant="success">
+						{{ pedidos_sin_llegar[data.index].provider.name }}
+					</b-button>
+				</template>
 
-		</b-table>
+			</b-table>
+
+			<div 
+			v-else
+			class="text-with-icon">
+				No hay pedidos sin llegar
+				<i class="icon-eye-slash"></i>
+			</div>
+
+		</div>
 	</div>
 
 </template>
 <script>
 export default {
+	components: {
+		CurrentAcounts: () => import('@/components/common/current-acounts/Index'),
+	},
 	computed: {
 		fields() {
 			return [
@@ -54,7 +64,7 @@ export default {
 				items.push({
 					proveedor: provider_order.provider.name,
 					pedido: provider_order.num,
-					saldo: provider_order.provider.saldo,
+					saldo: this.price(provider_order.provider.saldo),
 					hace: this.since(provider_order.created_at),
 					fecha: this.date(provider_order.created_at),
 				})
@@ -67,6 +77,11 @@ export default {
 		pedidos_sin_llegar() {
 			return this.$store.state.provider_order.days_to_advise_models
 		},
+	},
+	methods: {
+		showCurrentAcounts(provider_order) {
+			this.showProviderCurrentAcount(provider_order)
+		}
 	}
 }
 </script>

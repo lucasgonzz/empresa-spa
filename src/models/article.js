@@ -22,7 +22,7 @@ export default {
 			value: null,
 			use_to_check_if_is_repeat: true,
 			use_to_show_in_search_modal: true,
-			// filter_modal_position: 1,
+			filter_modal_position: 1,
 			use_bar_code_scanner: true,
 		},
 		{
