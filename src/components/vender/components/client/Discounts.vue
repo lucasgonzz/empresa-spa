@@ -29,6 +29,7 @@
 					{{ discount.name }} {{ discount.percentage }}%
 				</b-form-checkbox>
 			</b-form-group>
+
 			<b-form-group
 			v-if="common_discounts.length"
 			label="Descuentos comunes">
@@ -38,8 +39,25 @@
 				:value="discount.id"
 				v-model="sale_discounts">
 					{{ discount.name }} {{ discount.percentage }}%
+
+					<span
+					v-if="discount.deleted_at">
+						(actualmente eliminado)
+					</span>
+
+					<span
+					v-else-if="discount.updated_percentage">
+						({{ discount.updated_percentage }}% en este momento)
+					</span>
+
+					<p
+					class="text-muted"
+					v-if="!discount.deleted_at && discount.updated_percentage">
+						En caso de querer usar el valor actual del descuento ({{ discount.updated_percentage }}%), desmarcar para quitar el descuento, guardar la venta sin el descuento, y editar la venta para agregarle el descuento con el valor actualizado.
+					</p>
 				</b-form-checkbox>
 			</b-form-group>
+
 			<hr>
 			<b-form-group
 			label="Descuentos en los servicios">

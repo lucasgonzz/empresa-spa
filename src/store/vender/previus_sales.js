@@ -87,8 +87,8 @@ export default {
 			return axios.put('/api/sale/'+state.previus_sale.id, {
 				client_id: info.client_id,
 				items: info.items,
-				discounts_id: info.discounts_id,
-				surchages_id: info.surchages_id,
+				discounts: info.discounts,
+				surchages: info.surchages,
 				save_nota_credito: info.save_nota_credito,
 				returned_items: info.returned_items,
 				nota_credito_description: info.nota_credito_description,

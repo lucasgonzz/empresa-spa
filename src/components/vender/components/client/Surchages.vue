@@ -18,6 +18,7 @@
 					Recargos
 				</b-button>
 			</div>
+
 			<b-form-group>
 				<b-form-checkbox
 				v-for="surchage in surchages"
@@ -25,8 +26,25 @@
 				:value="surchage.id"
 				v-model="sale_surchages">
 					{{ surchage.name }} {{ surchage.percentage }}%
+
+					<span
+					v-if="surchage.deleted_at">
+						(actualmente eliminado)
+					</span>
+
+					<span
+					v-else-if="surchage.updated_percentage">
+						({{ surchage.updated_percentage }}% en este momento)
+					</span>
+
+					<p
+					class="text-muted"
+					v-if="!surchage.deleted_at && surchage.updated_percentage">
+						En caso de querer usar el valor actual del recargo ({{ surchage.updated_percentage }}%), desmarcar para quitar el recargo, guardar la venta sin el recargo, y editar la venta para agregarle el recargo con el valor actualizado.
+					</p>
 				</b-form-checkbox>
 			</b-form-group>
+
 			<hr>
 			<b-form-group
 			label="Recargos en los servicios">

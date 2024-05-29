@@ -260,7 +260,7 @@ export default {
 			let precio_de_las_unidades_vendidas = precio_por_unidad * Number(item.unidades_individuales_en_esta_venta)
 		},
 		get_max_discount(item) {
-			if (item.cost) {
+			if (item.cost && this.hasExtencion('maximo_descuento_posible_por_articulo_en_vender')) {
 				var costo = Number(item.cost);
 				var precioVenta = Number(item.price_vender);
 

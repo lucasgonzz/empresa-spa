@@ -205,22 +205,25 @@ export default {
 				})
 				if (state.discounts_id.length) {
 
-					let discounts = discounts_store.state.models 
-					
-					// if (previus_sales.state.previus_sale.id) {
-					// 	discounts = previus_sales.state.previus_sale.discounts.map(discount => {
-					// 		return {
-					// 			...discount,
-					// 			percentage: discount.pivot.percentage
-					// 		}
-					// 	})
-					// }
+					let discounts_store_ = discounts_store.state.models 
+
 					let sale_discounts = []
-					state.discounts_id.forEach(id => {
-						sale_discounts.push(discounts.find(item => item.id == id))
+					
+
+					state.discounts_id.forEach(discount_id => {
+
+						let discount_to_add = discounts_store_.find(_discount => _discount.id == discount_id)
+
+						sale_discounts.push(discount_to_add)
+
 					}) 
+
+
 					console.log('sale_discounts')
 					console.log(sale_discounts)
+
+
+
 					sale_discounts.forEach(discount => {
 						total_articles -= total_articles * Number(discount.percentage) / 100 
 						if (state.discounts_in_services) {
@@ -239,9 +242,11 @@ export default {
 					// 	})
 					// }
 					let sale_surchages = []
+					
 					state.surchages_id.forEach(id => {
 						sale_surchages.push(surchages.find(item => item.id == id))
 					}) 
+
 					sale_surchages.forEach(_surchage => {
 						total_articles += total_articles * Number(_surchage.percentage) / 100 
 						if (state.surchages_in_services) {
@@ -294,8 +299,8 @@ export default {
 				save_afip_ticket: state.save_afip_ticket,
 				items: state.items,
 				client_id: state.client ? state.client.id : null ,
-				discounts_id: state.discounts_id,
-				surchages_id: state.surchages_id,
+				discounts: info.discounts,
+				surchages: info.surchages,
 				save_current_acount: state.save_current_acount,
 				make_current_acount_pago: state.make_current_acount_pago,
 				sale_type_id: state.sale_type_id,

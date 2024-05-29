@@ -109,20 +109,80 @@ export default {
 				this.$store.commit('auth/setLoading', false)
 			})
 		},
+		set_discounts_store_with_pivot_percetage(previus_discounts) {
+
+			previus_discounts.forEach(previus_discount => {
+
+				let store_discount = this.$store.state.discount.models.find(discount => {
+					return discount.id == previus_discount.id 
+				})
+
+				if (typeof store_discount == 'undefined') {
+					previus_discount.percentage = previus_discount.pivot.percentage
+					this.$store.commit('discount/add', previus_discount)
+				} else {
+
+					if (previus_discount.pivot.percentage != store_discount.percentage) {
+
+						store_discount.updated_percentage = store_discount.percentage
+						store_discount.percentage = previus_discount.pivot.percentage
+
+					}
+
+				}
+
+			})
+
+		},
+		set_surchages_store_with_pivot_percetage(previus_surchages) {
+
+			previus_surchages.forEach(previus_surchage => {
+
+				let store_surchage = this.$store.state.surchage.models.find(surchage => {
+					return surchage.id == previus_surchage.id 
+				})
+
+				if (typeof store_surchage == 'undefined') {
+					previus_surchage.percentage = previus_surchage.pivot.percentage
+					this.$store.commit('surchage/add', previus_surchage)
+				} else {
+
+					if (previus_surchage.pivot.percentage != store_surchage.percentage) {
+
+						store_surchage.updated_percentage = store_surchage.percentage
+						store_surchage.percentage = previus_surchage.pivot.percentage
+
+					}
+
+				}
+
+			})
+
+		},
 		set_datos_para_actualizar_en_vender(model) {
 			console.log('set_datos_para_actualizar_en_vender model')
 			console.log(model)
 			let items = this.getItemsPreviusSale(model)
 			this.$store.commit('vender/setItems', items)
 			if (model.discounts.length) {
+				
+				this.set_discounts_store_with_pivot_percetage(model.discounts)
+
 				let discounts = model.discounts.map(discount => discount.id)
+
 				this.$store.commit('vender/setDiscountsId', discounts)
+
 			} else {
 				this.$store.commit('vender/setDiscountsId', [])
 			}
 			if (model.surchages.length) {
+
+				this.set_surchages_store_with_pivot_percetage(model.surchages)
+
 				let surchages = model.surchages.map(discount => discount.id)
+
 				this.$store.commit('vender/setSurchagesId', surchages)
+
 			} else {
 				this.$store.commit('vender/setSurchagesId', [])
 			}
@@ -184,8 +244,8 @@ export default {
 		updateSale() {
 			this.$store.dispatch('vender/previus_sales/updateSale', {
 				client_id: this.client ? this.client.id : null, 
-				discounts_id: this.discounts_id, 
-				surchages_id: this.surchages_id, 
+				discounts: this.get_discounts(), 
+				surchages: this.get_surchages(), 
 				items: this.items, 
 				save_nota_credito: this.save_nota_credito,
 				returned_items: this.returned_items,

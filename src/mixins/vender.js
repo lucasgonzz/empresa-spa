@@ -4,6 +4,12 @@ import afip_ticket from '@/mixins/afip_ticket'
 export default {
 	mixins: [clients, sale_ticket, afip_ticket],
 	computed: {
+		discounts() {
+			return this.$store.state.discount.models
+		},
+		surchages() {
+			return this.$store.state.surchage.models
+		},
 		total() {
 			return this.$store.state.vender.total
 		},
@@ -243,6 +249,34 @@ export default {
 				this.vender()
 			}
 		},
+		get_discounts() {
+			let discounts = []
+
+			this.discounts_id.forEach(discount_id => {
+				let store_discount = this.$store.state.discount.models.find(discount => {
+					return discount.id == discount_id
+				})
+				if (typeof store_discount != 'undefined') {
+					discounts.push(store_discount)
+				}
+			})
+
+			return discounts
+		},
+		get_surchages() {
+			let surchages = []
+
+			this.surchages_id.forEach(surchage_id => {
+				let store_surchage = this.$store.state.surchage.models.find(surchage => {
+					return surchage.id == surchage_id
+				})
+				if (typeof store_surchage != 'undefined') {
+					surchages.push(store_surchage)
+				}
+			})
+
+			return surchages
+		},
 		vender(print_ticket = false) {
 			console.log('se llamo a vender')
 			if (this.check_vender()) {
@@ -255,7 +289,9 @@ export default {
 					}
 				}
 				this.$store.dispatch('vender/vender', {
-					selected_address: this.selected_address
+					selected_address: this.selected_address,
+					discounts: this.get_discounts(),
+					surchages: this.get_surchages(),
 				})
 				.then(() => {
 					if (this.view == 'remito') {
@@ -301,6 +337,40 @@ export default {
 			this.$store.commit('vender/setPriceType', null)
 			this.$store.commit('vender/set_numero_orden_de_compra', '')
 			this.$store.commit('vender/set_omitir_en_cuenta_corriente', 0)
+
+			this.limpiar_descuentos()
+
+			this.limpiar_recargos()
+		},
+		limpiar_descuentos() {
+
+			this.discounts.forEach(discount => {
+				if (discount.deleted_at) {
+					console.log('sacando el descuento eliminado '+discount.name)
+					this.$store.commit('discount/setDelete', discount)
+					this.$store.commit('discount/delete')
+				} else if (discount.updated_percentage) {
+					console.log('se puso el porcentaje actualizado del descuento '+discount.name)
+					discount.percentage = discount.updated_percentage
+					discount.updated_percentage = null
+				}
+			})
+
+		},
+		limpiar_recargos() {
+
+			this.surchages.forEach(surchage => {
+				if (surchage.deleted_at) {
+					console.log('sacando el recargo eliminado '+surchage.name)
+					this.$store.commit('surchage/setDelete', surchage)
+					this.$store.commit('surchage/delete')
+				} else if (surchage.updated_percentage) {
+					console.log('se puso el porcentaje actualizado del recargo '+surchage.name)
+					surchage.percentage = surchage.updated_percentage
+					surchage.updated_percentage = null
+				}
+			})
+
 		},
 		setDefaultPaymentMethod() {
 			if (this.owner.default_current_acount_payment_method_id) {
