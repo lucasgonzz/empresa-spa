@@ -34,4 +34,7 @@ export default {
 		@media screen and (min-width: 768px)
 			width: 200px
 			margin-right: 15px
+			
+
+			
 </style>
