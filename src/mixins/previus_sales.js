@@ -99,6 +99,9 @@ export default {
 					this.$store.commit('vender/setChecked', this.previus_sale.checked)
 					this.$store.commit('vender/setConfirmed', this.previus_sale.confirmed)
 
+					this.$store.commit('vender/setDiscountsInServices', this.previus_sale.discounts_in_services)
+					this.$store.commit('vender/setSurchagesInServices', this.previus_sale.surchages_in_services)
+
 					this.setPreviusReturnedArticles()
 					this.setPreviusReturnedServices()
 				}, 500)
