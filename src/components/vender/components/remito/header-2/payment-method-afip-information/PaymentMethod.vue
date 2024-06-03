@@ -4,13 +4,14 @@
 	v-model="current_acount_payment_method_id"
 	:options="getOptions({key: 'current_acount_payment_method_id', text: 'Metodo de pago'})">
 	</b-form-select>
-		<b-button 
-		class="mb-2" 
-		variant="outline-primary" 
-		v-b-modal="'payment-method-modal'">
-			<i class="icon-plus"></i>
-			Agregar métodos de pago
-		</b-button>
+
+	<b-button 
+	class="mb-2 m-r-15" 
+	variant="outline-primary" 
+	v-b-modal="'payment-method-modal'">
+		<i class="icon-plus"></i>
+		Agregar métodos de pago
+	</b-button>
 
 	<PaymentMethodModal ref="paymentMethodModal"></PaymentMethodModal>
 </div>
