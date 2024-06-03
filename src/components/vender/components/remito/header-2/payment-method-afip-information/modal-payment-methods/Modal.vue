@@ -22,9 +22,9 @@
 			
 			<!-- Lista de métodos de pago -->
 			<b-form-group
-				v-for="(payment_method, index) in payment_methods"
-				:key="payment_method.id"
-				:label="payment_method.name+' ('+ price(metodos_de_pago_seleccionados[payment_method.id]) +')'">
+			v-for="(payment_method, index) in payment_methods"
+			:key="payment_method.id"
+			:label="payment_method.name+' ('+ price(metodos_de_pago_seleccionados[payment_method.id]) +')'">
 				<div class="d-flex">
 					<b-form-input
 						type="number"
@@ -86,30 +86,27 @@ export default {
 		},
 		set_total_repartido(payment_method_id) {
 
-			console.log('set_total_repartido con payment_method_id:')
-			console.log(payment_method_id)
 
+			/* 
+				Si es undefined, es porque se llamo desde la liea 104
+				Entonces sigue de largo y setea	total_repartido con get_suma_de_metodos_de_pagos
+			*/
 			if (typeof payment_method_id != 'undefined') {
-
-				// let monto_ingresado = this.metodos_de_pago_seleccionados[payment_method_id]
-
-				// let nuevo_total_repartido = this.total_repartido + Number(monto_ingresado)
 
 				let nuevo_total_repartido = this.get_suma_de_metodos_de_pagos()
 
 				if (nuevo_total_repartido > this.total_a_repartir) {
 
 					this.$set(this.metodos_de_pago_seleccionados, payment_method_id, '')
+
 					this.$toast.error('Con este monto estas superando el TOTAL A REPARTIR')
+
 					this.set_total_repartido()
 
 					return false
 				}
 
-			} else {
-				console.log('no entro')
 			}
-
 
 			this.total_repartido = this.get_suma_de_metodos_de_pagos()
 
