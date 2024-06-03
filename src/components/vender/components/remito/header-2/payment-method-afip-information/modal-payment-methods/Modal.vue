@@ -18,7 +18,7 @@
 						v-model.number="metodos_de_pago_seleccionados[payment_method.id]"
 						placeholder="Ingrese el monto">
 					</b-form-input>
-					<b-button
+					<b-button	
 						variant="outline-primary"
 						class="ml-2 p-2 btn-total"
 						size="sm"
