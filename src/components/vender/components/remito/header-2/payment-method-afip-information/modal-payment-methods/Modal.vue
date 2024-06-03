@@ -14,7 +14,7 @@
 				<div class="d-flex">
 					<b-form-input
 						type="number"
-						@keypress="set_total_inputs"
+						@blur="set_total_inputs(payment_method.id)"
 						v-model.number="metodos_de_pago_seleccionados[payment_method.id]"
 						placeholder="Ingrese el monto">
 					</b-form-input>
@@ -78,38 +78,34 @@ export default {
 	// 	this.total_a_repartir = this.total_vender;
 	// },
 	methods: {
-		set_total_inputs() {
+		set_total_inputs(payment_method_id) {
+			const input_value = this.metodos_de_pago_seleccionados[payment_method_id];
+				if (input_value > this.total_a_repartir) {
+					this.metodos_de_pago_seleccionados[payment_method_id] = this.total_a_repartir;
+				}
+			
 			this.suma_de_los_inputs = 0;
 
-			for (const metodo_de_pago_id in this.metodos_de_pago_seleccionados) {
-				
-				const monto_del_metodo_de_pago = Number(this.metodos_de_pago_seleccionados[metodo_de_pago_id]);
-
-
-				console.log('this.suma_de_los_inputs: '+this.suma_de_los_inputs)
-				console.log('monto_del_metodo_de_pago: '+monto_del_metodo_de_pago)
-				console.log('total_a_repartir: '+this.total_a_repartir)
-
-				if (this.suma_de_los_inputs + monto_del_metodo_de_pago > this.total_a_repartir) {
-					this.$toast.error('NO')
-				} else {
-					this.suma_de_los_inputs += monto_del_metodo_de_pago;
-				}
-				
+				for (const metodo_de_pago_id in this.metodos_de_pago_seleccionados) {
 					
-				this.suma_de_los_inputs += monto_del_metodo_de_pago;
-			}
+					const monto_del_metodo_de_pago = Number(this.metodos_de_pago_seleccionados[metodo_de_pago_id]);
+					this.suma_de_los_inputs += monto_del_metodo_de_pago;
+					
+				}	
 
+			this.total_a_repartir = this.total_vender - this.suma_de_los_inputs;
 		},
+
 		
 		agregarTotal(payment_method_id) {
 			if (this.total_a_repartir !== 0) {
-				this.$set(this.metodos_de_pago_seleccionados, payment_method_id, this.total_a_repartir);
-				this.total_a_repartir = 0;
-				console.log('se puso en total_a_repartir en '+this.total_a_repartir+' desde agregarTotal')
-				this.set_total_inputs()
+					this.$set(this.metodos_de_pago_seleccionados, payment_method_id, this.total_a_repartir);
+					this.total_a_repartir = this.total_vender - this.suma_de_los_inputs;
+					console.log('se puso en total_a_repartir en ' + this.total_a_repartir + ' desde agregarTotal');
+					this.set_total_inputs();
 			}
 		},
+
 		guardarMetodosPago() {
 			const resultado = [];
 			for (const [key, value] of Object.entries(this.metodos_de_pago_seleccionados)) {
