@@ -18,6 +18,7 @@
 				Sobrante para repartir: {{ price(total_a_repartir - total_repartido) }}
 			</p>
 
+			<hr>
 			
 			<!-- Lista de métodos de pago -->
 			<b-form-group
@@ -90,16 +91,18 @@ export default {
 
 			if (typeof payment_method_id != 'undefined') {
 
-				let monto_ingresado = this.metodos_de_pago_seleccionados[payment_method_id]
+				// let monto_ingresado = this.metodos_de_pago_seleccionados[payment_method_id]
 
-				let nuevo_total_repartido = this.total_repartido + Number(monto_ingresado)
+				// let nuevo_total_repartido = this.total_repartido + Number(monto_ingresado)
+
+				let nuevo_total_repartido = this.get_suma_de_metodos_de_pagos()
 
 				if (nuevo_total_repartido > this.total_a_repartir) {
 
 					this.$set(this.metodos_de_pago_seleccionados, payment_method_id, '')
 					this.$toast.error('Con este monto estas superando el TOTAL A REPARTIR')
 					this.set_total_repartido()
-					
+
 					return false
 				}
 
@@ -108,14 +111,18 @@ export default {
 			}
 
 
-			this.total_repartido = 0;
+			this.total_repartido = this.get_suma_de_metodos_de_pagos()
+
+		},
+
+		get_suma_de_metodos_de_pagos() {
+			let total_repartido = 0
 
 			this.metodos_de_pago_seleccionados.forEach(monto_metodos_de_pago_seleccionado => {
-				console.log('sumando '+monto_metodos_de_pago_seleccionado)
-				this.total_repartido += Number(monto_metodos_de_pago_seleccionado)
+				total_repartido += Number(monto_metodos_de_pago_seleccionado)
 			})
 
-			console.log(this.metodos_de_pago_seleccionados)
+			return total_repartido
 		},
 
 		
