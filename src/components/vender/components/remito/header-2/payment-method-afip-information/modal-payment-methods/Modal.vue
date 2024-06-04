@@ -15,7 +15,7 @@
 			<p 
 			:class="total_repartido == total_a_repartir ? '' : 'text-danger'"
 			class="total-a-repartir">
-				Sobrante para repartir: {{ price(total_a_repartir - total_repartido) }}
+				Sobrante para repartir: {{price(sobrante_a_repartir)}}
 			</p>
 
 			<hr>
@@ -72,6 +72,9 @@ export default {
 		total_vender() {
 			return this.$store.state.vender.total;
 		},
+		sobrante_a_repartir(){
+			return this.total_a_repartir - this.total_repartido;
+		}
 	},
 	watch: {
         total_vender() {
@@ -132,14 +135,27 @@ export default {
 			}
 		},
 
+		check(){
+			if(this.sobrante_a_repartir > 0){
+				this.$toast.error('Todavia faltan repartir: ' + this.price(this.sobrante_a_repartir))
+				return false
+			}else{
+				return true
+			}
+		},
+
 		guardarMetodosPago() {
-			const resultado = [];
+			const array_con_los_metodos_de_pago = [];
 			for (const [key, value] of Object.entries(this.metodos_de_pago_seleccionados)) {
 				if (value !== 0 && value !=='') {
-					resultado.push({ id: key, monto: value });
+					array_con_los_metodos_de_pago.push({ id:key , monto: value });
 				}
 			}
-			console.log(resultado);
+			console.log(array_con_los_metodos_de_pago);
+			if(this.check()){
+				this.$store.commit('vender/setSelectedPaymentMethods', array_con_los_metodos_de_pago);
+				this.$bvModal.hide('payment-method-modal')
+			}
 		},
 	},
 };

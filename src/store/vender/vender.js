@@ -43,6 +43,7 @@ export default {
 		budget: null,
 
 		returned_items: [],
+		seletected_payment_methods: [],
 
 		vendiendo: false,
 		sale: null,
@@ -50,6 +51,9 @@ export default {
 		afip_results: null,
 	},
 	mutations: {
+		setSelectedPaymentMethods(state, value){
+			state.seletected_payment_methods = value
+		},
 		setGuardarComoPresupuesto(state, value) {
 			state.guardar_como_presupuesto = value 
 		},
@@ -316,6 +320,7 @@ export default {
 				observations: state.observations,
 				omitir_en_cuenta_corriente: state.omitir_en_cuenta_corriente,
 				numero_orden_de_compra: state.numero_orden_de_compra,
+				metodos_de_pago_seleccionados: state.seletected_payment_methods,
 			})
 			.then(res => {
 				console.log('vendido')
