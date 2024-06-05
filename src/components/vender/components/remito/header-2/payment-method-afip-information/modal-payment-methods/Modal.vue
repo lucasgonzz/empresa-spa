@@ -154,6 +154,7 @@ export default {
 			console.log(array_con_los_metodos_de_pago);
 			if(this.check()){
 				this.$store.commit('vender/setSelectedPaymentMethods', array_con_los_metodos_de_pago);
+				this.$store.commit('vender/setCurrentAcountPaymentMethodId', null);
 				this.$bvModal.hide('payment-method-modal')
 			}
 		},
