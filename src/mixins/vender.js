@@ -380,6 +380,10 @@ export default {
 		setDefaultPaymentMethod() {
 			if (this.owner.default_current_acount_payment_method_id) {
 				this.$store.commit('vender/setCurrentAcountPaymentMethodId', this.owner.default_current_acount_payment_method_id)
+			}else{
+				if (this.current_acount_payment_method_id == null) {
+					this.current_acount_payment_method_id = 3;
+				}
 			}
 		},
 		check_vender() {
