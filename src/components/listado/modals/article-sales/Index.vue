@@ -5,10 +5,16 @@ id="article-sales"
 :title="'Ventas de '+model.name"
 size="lg"
 hide-footer>
-	<model-component
-	model_name="sale">
-		
-	</model-component>	
+
+    <model-component
+    :show_btn_save="false"
+    :show_btn_delete="false"
+    :show_btn_remove_belongs_to_many="false"
+    model_name="sale">
+        <template v-slot:model_modal_header="props">
+            <sale-details></sale-details>
+        </template>
+    </model-component>  
 
 	<nav-component
 	@getSales="getSales"></nav-component>
@@ -61,6 +67,7 @@ export default {
 		ModelComponent: () => import('@/common-vue/components/model/Index'),
 		NavComponent: () => import('@/components/listado/modals/article-sales/Nav'),
 		TableComponent: () => import('@/common-vue/components/display/table/Index'),
+        SaleDetails: () => import('@/components/ventas/modals/details/Index'),
 	},
 	computed: {
 		model() {

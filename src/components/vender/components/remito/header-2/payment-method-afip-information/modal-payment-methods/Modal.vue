@@ -30,6 +30,7 @@
 						type="number"
 						@keyup="set_total_repartido(payment_method.id)"
 						@change="set_total_repartido(payment_method.id)"
+						:min="0"
 						v-model.number="metodos_de_pago_seleccionados[payment_method.id]"
 						placeholder="Ingrese el monto">
 					</b-form-input>
@@ -129,7 +130,15 @@ export default {
 		agregarTotal(payment_method_id) {
 			if (this.total_repartido < this.total_a_repartir) {
 
-				this.metodos_de_pago_seleccionados[payment_method_id] = this.total_a_repartir - this.total_repartido
+				let monto_previo = this.metodos_de_pago_seleccionados[payment_method_id]
+
+				if (typeof monto_previo == 'undefined') {
+					monto_previo = 0
+				} else {
+					monto_previo = Number(monto_previo)
+				}
+
+				this.metodos_de_pago_seleccionados[payment_method_id] = this.total_a_repartir - (this.total_repartido - monto_previo)
 
 				this.set_total_repartido();
 			}
