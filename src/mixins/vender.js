@@ -300,13 +300,16 @@ export default {
 					
 					this.limpiar_vender()
 
-
 					this.setDefaultPaymentMethod()
+
 					if (this.maked_sale.client_id && this.maked_sale.save_current_acount) {
 						this.loadModel('client', this.maked_sale.client_id)
 					}
+
 					this.setDefaultArticles()
+
 					this.sendAfipTicket()
+
 					if (this.view != 'remito') {
 						this.$router.push({name: 'vender', params: {view: 'remito'}})
 					}
@@ -334,7 +337,6 @@ export default {
 			this.$store.commit('vender/setGuardarComoPresupuesto', 0)
 			this.$store.commit('vender/setBudget', null)
 			this.$store.commit('vender/setPriceType', null)
-			this.$store.commit('vender/setPriceType', null)
 			this.$store.commit('vender/set_numero_orden_de_compra', '')
 			this.$store.commit('vender/set_omitir_en_cuenta_corriente', 0)
 
@@ -346,6 +348,8 @@ export default {
 			this.limpiar_descuentos()
 
 			this.limpiar_recargos()
+
+			this.setPriceType()
 		},
 		limpiar_descuentos() {
 

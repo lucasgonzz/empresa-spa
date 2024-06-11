@@ -4,6 +4,7 @@ import Vuex from 'vuex'
 import auth from '@/store/auth'
 import employee from '@/common-vue/store/employee'
 import permission from '@/common-vue/store/permission'
+import extencion from '@/common-vue/store/extencion'
 import general from '@/common-vue/store/general'
 import download_resources from '@/common-vue/store/download_resources'
 import error from '@/common-vue/store/error'
@@ -107,6 +108,7 @@ export default new Vuex.Store({
         auth,
         employee,
         permission,
+        extencion,
         general,
         download_resources,
         error,

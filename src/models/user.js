@@ -104,6 +104,15 @@ export default {
 			key: 'article_ticket_info_id',
 			type: 'select',
 		},
+		{
+			// text: 'Extenciones',
+			// key: 'extencions',
+			// type: 'checkbox',
+			// store: 'extencion',
+			// belongs_to_many: {
+			// 	// order_by: 'model_name',
+			// }
+		},
 		// {
 		// 	text: 'Direccion',
 		// 	key: 'address',

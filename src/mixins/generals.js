@@ -59,7 +59,8 @@ export default {
             console.log(this.price_types_with_position)
             if (this.price_types_with_position.length && this.checkService(item)) {
                
-                console.log('position limit de vender: '+this.price_type_vender.position)
+                console.log('price_type_vender:')
+                console.log(this.price_type_vender)
                 this.price_types_with_position.forEach(price_type => {
                     if (price_type.position <= this.price_type_vender.position) {
                         price = Number(price) + Number(price * this.getPriceTypePercetage(price_type, item) / 100) 

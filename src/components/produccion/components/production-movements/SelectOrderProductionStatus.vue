@@ -54,27 +54,29 @@ export default {
 	},
 	methods: {
 		set_cantidades_actuales() {
-			this.$store.commit('auth/setMessage', 'Obteniendo informacion')
-			this.$store.commit('auth/setLoading', true)
+			if (this.production_movement.article_id) {
+				this.$store.commit('auth/setMessage', 'Obteniendo informacion')
+				this.$store.commit('auth/setLoading', true)
 
-			if (this.production_movement.article_id)
-			this.$api.get('production-movement/current-amounts/'+this.production_movement.article_id)
-			.then(res => {
-				this.$store.commit('auth/setLoading', false)
+				if (this.production_movement.article_id)
+				this.$api.get('production-movement/current-amounts/'+this.production_movement.article_id)
+				.then(res => {
+					this.$store.commit('auth/setLoading', false)
 
-				this.cantidades_actuales = res.data.response
-				this.set_solo_primer_movimiento_disponible()
+					this.cantidades_actuales = res.data.response
+					this.set_solo_primer_movimiento_disponible()
 
-				this.set_options_desde()
+					this.set_options_desde()
 
-				this.set_options_hacia()
-			})
-			.catch(err => {
-				// this.loading = false
-				this.$store.commit('auth/setLoading', false)
-				this.$toast.error('Hubo un error al buscar')
-				console.log(err)
-			})
+					this.set_options_hacia()
+				})
+				.catch(err => {
+					// this.loading = false
+					this.$store.commit('auth/setLoading', false)
+					this.$toast.error('Hubo un error al buscar')
+					console.log(err)
+				})
+			}
 		},
 		set_solo_primer_movimiento_disponible() {
 			if (this.cantidades_actuales.length == 0) {

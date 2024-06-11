@@ -24,24 +24,30 @@ id="stock-movement-modal-info">
 </template>
 <script>
 export default {
-	data() {
-		return {
-			stock_movements: [],
-			loading: false,
-		}
-	},
-	mounted() {
-		this.$root.$on('bv::modal::show', (bvEvent, modal_id) => {
-			console.log('SE ABRIO MODAL')
-			if (modal_id == 'stock-movement-modal-info') {
-				console.log('y era stock-movement-modal-info')
-				setTimeout(() => {
-					this.getStockMovements() 
-				}, 500)
-			}
-		})
-	},
+	// data() {
+	// 	return {
+	// 		stock_movements: [],
+	// 		loading: false,
+	// 	}
+	// },
+	// mounted() {
+	// 	this.$root.$on('bv::modal::show', (bvEvent, modal_id) => {
+	// 		console.log('SE ABRIO MODAL')
+	// 		if (modal_id == 'stock-movement-modal-info') {
+	// 			console.log('y era stock-movement-modal-info')
+	// 			setTimeout(() => {
+	// 				this.getStockMovements() 
+	// 			}, 500)
+	// 		}
+	// 	})
+	// },
 	computed: {
+		stock_movements() {
+			return this.$store.state.article.stock_movement.models 
+		},
+		loading() {
+			return this.$store.state.article.stock_movement.loading 
+		},
 		fields() {
 			return [
 				{
@@ -130,22 +136,22 @@ export default {
 			}
 			return ''
 		},
-		getStockMovements() {
-			console.log('getStockMovements, loading: '+this.loading)
-			if (!this.loading) {
-				console.log('Entro, loading: '+this.loading)
-				this.loading = true 
-				this.$api.get('stock-movement/'+this.article.id)
-				.then(res => {
-					this.loading = false 
-					this.stock_movements = res.data.models 
-				})
-				.catch(err => {
-					this.loading = false 
-					this.$toast.error(err)
-				})
-			}
-		}
+		// getStockMovements() {
+		// 	console.log('getStockMovements, loading: '+this.loading)
+		// 	if (!this.loading) {
+		// 		console.log('Entro, loading: '+this.loading)
+		// 		this.loading = true 
+		// 		this.$api.get('stock-movement/'+this.article.id)
+		// 		.then(res => {
+		// 			this.loading = false 
+		// 			this.stock_movements = res.data.models 
+		// 		})
+		// 		.catch(err => {
+		// 			this.loading = false 
+		// 			this.$toast.error(err)
+		// 		})
+		// 	}
+		// }
 	}
 }
 </script>

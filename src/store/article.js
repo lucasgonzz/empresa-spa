@@ -4,8 +4,13 @@ axios.defaults.baseURL = process.env.VUE_APP_API_URL
 
 import moment from 'moment'
 import generals from '@/common-vue/mixins/generals'
+
+import stock_movement from '@/store/article/stock_movement'
 export default {
 	namespaced: true,
+	modules: {
+		stock_movement,
+	},
 	state: {
 		model_name: 'article',
 		route_prefix: 'index/from-status',

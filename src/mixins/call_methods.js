@@ -1,4 +1,5 @@
 export default [
+    // 'extencion',
     'afip_information',
     'article_pre_import_range',
     'price_type',

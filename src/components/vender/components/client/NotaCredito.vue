@@ -1,7 +1,7 @@
 <template>
 	<b-card
 	class="s-1 b-r-5"
-	v-if="returned_items.length"
+	v-if="returned_items.length && client"
 	header="Nota de credito">
 		<b-form-checkbox
 		:value="1"
@@ -39,6 +39,9 @@
 <script>
 export default {
 	computed: {
+		client() {
+			return this.$store.state.vender.client
+		},
 		returned_items() {
 			return this.$store.state.vender.returned_items
 		},

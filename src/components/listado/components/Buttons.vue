@@ -169,6 +169,7 @@ export default {
 		stockMovements() {
 			this.$store.commit('article/setModel', {model: this.model, properties: []})
 			this.$bvModal.show('stock-movement-modal-info')
+			this.$store.dispatch('article/stock_movement/getModels', this.model)
 		},
 		priceChanges() {
 			this.$store.commit('article/setModel', {model: this.model, properties: []})

@@ -56,7 +56,7 @@ export default {
 	},
 	methods: {
 		set_show_btn_delete() {
-			if (this.model.id) {
+			if (this.model.id && this.model.article_id) {
 				
 				this.show_btn_delete = false
 
