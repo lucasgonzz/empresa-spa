@@ -48,14 +48,19 @@ export default {
 					return false
 				}
 			}
-			if (this.previus_sale.id != 'undefined' && this.previus_sale.to_check && !this.checked) {
+			if (typeof this.previus_sale.id != 'undefined' && this.previus_sale.to_check && !this.checked) {
 				this.$toast.error('Indique la venta como checkeada')
 				return false
 			}
-			if (this.previus_sale.id != 'undefined' && this.previus_sale.checked && !this.to_check && !this.confirmed) {
+			if (typeof this.previus_sale.id != 'undefined' && this.previus_sale.checked && !this.to_check && !this.confirmed) {
 				this.$toast.error('Indique la venta para checkear')
 				return false
 			}
+
+			if (typeof this.previus_sale.id != 'undefined' && !this.checkear_metodos_de_pago_en_previus_sale()) {
+				return false
+			}
+
 			return true
 		},
 	},

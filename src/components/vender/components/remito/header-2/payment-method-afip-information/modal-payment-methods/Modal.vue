@@ -1,69 +1,76 @@
-	<template>
-		<b-modal id="payment-method-modal" title="Métodos de pago" hide-footer>
-			
-			<!-- Total a repartir -->
-			<p class="total-a-repartir">
-				Total a repartir: {{ price(total_a_repartir) }}
-			</p>
+<template>
+	<b-modal id="payment-method-modal" title="Métodos de pago" hide-footer>
+		
+		<!-- Total a repartir -->
+		<p class="total-a-repartir">
+			Total a repartir: {{ price(total_a_repartir) }}
+		</p>
 
-			<p 
-			:class="total_repartido == total_a_repartir ? 'text-success' : ''"
-			class="total-a-repartir">
-				Total repartido: {{ price(total_repartido) }}
-			</p>
+		<p 
+		:class="total_repartido == total_a_repartir ? 'text-success' : ''"
+		class="total-a-repartir">
+			Total repartido: {{ price(total_repartido) }}
+		</p>
 
-			<p 
-			:class="total_repartido == total_a_repartir ? '' : 'text-danger'"
-			class="total-a-repartir">
-				Sobrante para repartir: {{price(sobrante_a_repartir)}}
-			</p>
+		<p 
+		:class="total_repartido == total_a_repartir ? '' : 'text-danger'"
+		class="total-a-repartir">
+			Sobrante para repartir: {{price(sobrante_a_repartir)}}
+		</p>
 
+		<hr>
+		
+		<!-- Lista de métodos de pago -->
+		<b-form-group
+		v-for="(payment_method, index) in payment_methods"
+		:key="payment_method.id"
+		:label="payment_method.name+' ('+ price(metodos_de_pago_seleccionados[payment_method.id]) +')'">
+			<div class="d-flex">
+				<b-form-input
+					type="number"
+					@keyup="set_total_repartido(payment_method.id)"
+					@change="set_total_repartido(payment_method.id)"
+					:min="0"
+					v-model.number="metodos_de_pago_seleccionados[payment_method.id]"
+					placeholder="Ingrese el monto">
+				</b-form-input>
+				<b-button	
+					variant="outline-primary"
+					class="ml-2 p-2 btn-total"
+					size="sm"
+					@click="agregarTotal(payment_method.id)"
+					:disabled="total_a_repartir === 0">
+					Agregar total
+				</b-button>
+			</div>
 			<hr>
-			
-			<!-- Lista de métodos de pago -->
-			<b-form-group
-			v-for="(payment_method, index) in payment_methods"
-			:key="payment_method.id"
-			:label="payment_method.name+' ('+ price(metodos_de_pago_seleccionados[payment_method.id]) +')'">
-				<div class="d-flex">
-					<b-form-input
-						type="number"
-						@keyup="set_total_repartido(payment_method.id)"
-						@change="set_total_repartido(payment_method.id)"
-						:min="0"
-						v-model.number="metodos_de_pago_seleccionados[payment_method.id]"
-						placeholder="Ingrese el monto">
-					</b-form-input>
-					<b-button	
-						variant="outline-primary"
-						class="ml-2 p-2 btn-total"
-						size="sm"
-						@click="agregarTotal(payment_method.id)"
-						:disabled="total_a_repartir === 0">
-						Agregar total
-					</b-button>
-				</div>
-				<hr>
-			</b-form-group>
+		</b-form-group>
 
-			<!-- Botón para guardar -->
-			<b-button
-				@click="guardarMetodosPago"
-				block
-				variant="primary">
-				Guardar
-			</b-button>
+		<!-- Botón para guardar -->
+		<b-button
+			@click="guardarMetodosPago"
+			block
+			variant="primary">
+			Guardar
+		</b-button>
+		<b-button
+			@click="cancelar"
+			block
+			variant="danger">
+			Cancelar
+		</b-button>
 
-		</b-modal>
-	</template>
-	
-	<script>
+	</b-modal>
+</template>
+<script>
+import vender_current_acount_payment_methods from '@/mixins/vender_current_acount_payment_methods'
 export default {
+	mixins: [vender_current_acount_payment_methods],
 	data() {
 		return {
-			total_a_repartir: 0,
-			total_repartido: 0,
-			metodos_de_pago_seleccionados: [],
+			// total_a_repartir: 0,
+			// total_repartido: 0,
+			// metodos_de_pago_seleccionados: [],
 		};
 	},
 	computed: {
@@ -73,21 +80,23 @@ export default {
 		total_vender() {
 			return this.$store.state.vender.total;
 		},
-		sobrante_a_repartir(){
-			return this.total_a_repartir - this.total_repartido;
-		}
+		index_previus_sale() {
+			return this.$store.state.vender.previus_sales.index
+		},
 	},
 	watch: {
         total_vender() {
-        	this.init()
+        	this.total_a_repartir = this.total_vender
+        	
+        	if (this.index_previus_sale == 0) {
+        		this.metodos_de_pago_seleccionados = []
+        		this.total_repartido = 0
+        	} else {
+        		this.set_total_desde_previus_sale()
+        	}
         },
     },
 	methods: {
-		init() {
-        	this.total_a_repartir = this.total_vender
-        	this.total_repartido = 0
-        	this.metodos_de_pago_seleccionados = []
-		},
 		set_total_repartido(payment_method_id) {
 
 
@@ -144,29 +153,11 @@ export default {
 			}
 		},
 
-		check(){
-			if(this.sobrante_a_repartir > 0){
-				this.$toast.error('Todavia faltan repartir: ' + this.price(this.sobrante_a_repartir))
-				return false
-			}else{
-				return true
-			}
-		},
+		cancelar() {
+			this.$store.commit('vender/setCurrentAcountPaymentMethodId', 3)
+			this.$bvModal.hide('payment-method-modal')
+		}
 
-		guardarMetodosPago() {
-			const array_con_los_metodos_de_pago = [];
-			for (const [key, value] of Object.entries(this.metodos_de_pago_seleccionados)) {
-				if (value !== 0 && value !=='') {
-					array_con_los_metodos_de_pago.push({ id:key , monto: value });
-				}
-			}
-			console.log(array_con_los_metodos_de_pago);
-			if(this.check()){
-				this.$store.commit('vender/setSelectedPaymentMethods', array_con_los_metodos_de_pago);
-				this.$store.commit('vender/setCurrentAcountPaymentMethodId', null);
-				this.$bvModal.hide('payment-method-modal')
-			}
-		},
 	},
 };
 </script>

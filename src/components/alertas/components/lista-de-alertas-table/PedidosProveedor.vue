@@ -8,6 +8,7 @@
 			<b-table
 			v-if="pedidos_sin_llegar.length"
 			head-variant="dark"
+			responsive
 			:fields="fields"
 			:items="items">
 

@@ -2,7 +2,10 @@
 import axios from 'axios'
 axios.defaults.withCredentials = true
 axios.defaults.baseURL = process.env.VUE_APP_API_URL
+
 import previus_sales from '@/store/vender/previus_sales'
+import current_acount_payment_methods from '@/store/vender/current_acount_payment_methods'
+
 import discounts_store from '@/store/discount'
 import surchages_store from '@/store/surchage'
 import mixin_vender from '@/mixins/vender'
@@ -43,7 +46,7 @@ export default {
 		budget: null,
 
 		returned_items: [],
-		seletected_payment_methods: [],
+		selected_payment_methods: [],
 
 		vendiendo: false,
 		sale: null,
@@ -52,7 +55,7 @@ export default {
 	},
 	mutations: {
 		setSelectedPaymentMethods(state, value){
-			state.seletected_payment_methods = value
+			state.selected_payment_methods = value
 		},
 		setGuardarComoPresupuesto(state, value) {
 			state.guardar_como_presupuesto = value 
@@ -320,7 +323,7 @@ export default {
 				observations: state.observations,
 				omitir_en_cuenta_corriente: state.omitir_en_cuenta_corriente,
 				numero_orden_de_compra: state.numero_orden_de_compra,
-				metodos_de_pago_seleccionados: state.seletected_payment_methods,
+				metodos_de_pago_seleccionados: state.selected_payment_methods,
 			})
 			.then(res => {
 				console.log('vendido')
@@ -345,5 +348,6 @@ export default {
 	},
 	modules: {
 		previus_sales,
+		current_acount_payment_methods,
 	}
 }

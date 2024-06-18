@@ -6,6 +6,7 @@
 			<b-table
 			v-if="chats_sin_leer.length"
 			head-variant="dark"
+			responsive
 			:fields="fields"
 			:items="items">
 			</b-table>

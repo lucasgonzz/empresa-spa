@@ -10,6 +10,7 @@
 		:loading="loading"
 		:set_table_height="false"
 		show_models_if_empty
+		:set_model_on_click="false"
 		:show_created_at="false"
 		:models="models_to_show"
 		:model_name="model_name"></display>	

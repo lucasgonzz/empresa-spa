@@ -56,6 +56,9 @@ export default {
 		observations() {
 			return this.$store.state.vender.observations
 		},
+		selected_payment_methods() {
+			return this.$store.state.vender.selected_payment_methods
+		},
 	},
 	data() {
 		return {
@@ -94,6 +97,8 @@ export default {
 					this.$store.commit('auth/setLoading', false)
 					
 					this.set_datos_para_actualizar_en_vender(this.previus_sale)
+
+					// Cuando cambia el total, seteo los metodos de pago desde el modal
 
 					this.$store.commit('vender/setToCheck', this.previus_sale.to_check)
 					this.$store.commit('vender/setChecked', this.previus_sale.checked)
@@ -197,8 +202,11 @@ export default {
 				this.$store.commit('vender/setClient', null)
 				this.$store.commit('vender/setPriceType', null)
 			}
+			this.setPriceType()
 			if (model.current_acount_payment_method_id) {
 				this.$store.commit('vender/setCurrentAcountPaymentMethodId', model.current_acount_payment_method_id)
+			} else {
+				this.$store.commit('vender/setCurrentAcountPaymentMethodId', 0)
 			}
 			if (model.afip_information_id) {
 				this.$store.commit('vender/setAfipInformationId', model.afip_information_id)
@@ -266,21 +274,34 @@ export default {
 				observations: this.observations,
 				numero_orden_de_compra: this.numero_orden_de_compra,
 				omitir_en_cuenta_corriente: this.omitir_en_cuenta_corriente,
+				metodos_de_pago_seleccionados: this.selected_payment_methods,
 			})
 			.then(res => {
 				this.$toast.success('Venta actualizada')
 				this.cancelPreviusSale()
+			})
+			.catch(err => {
+				this.$toast.error('Error al actualizar venta')
 			})
 		},
 		cancelPreviusSale() {
 
 			this.limpiar_vender()
 
+			this.setDefaultPaymentMethod()
+
 			this.setPriceType()
 			if (this.view != 'remito') {
 				this.$router.push({name: 'vender', params: {view: 'remito'}})
 			}
 			this.setEmployeeVender()
+
+			this.limpiar_methodos_de_pago_seleccionados()
+		},
+		limpiar_methodos_de_pago_seleccionados() {
+			this.$store.commit('vender/current_acount_payment_methods/set_metodos_de_pago_seleccionados', [])
+			this.$store.commit('vender/current_acount_payment_methods/set_total_a_repartir', 0)
+			this.$store.commit('vender/current_acount_payment_methods/set_total_repartido', 0)
 		},
 		getItemsPreviusSale(model) {
 			let items = []
@@ -343,6 +364,17 @@ export default {
 				return ''
 			}
 			return Number(amount)
+		},
+		checkear_metodos_de_pago_en_previus_sale() {
+			console.log('checkear_metodos_de_pago_en_previus_sale')
+			if (!this.current_acount_payment_method_id) {
+
+				if (!this.guardarMetodosPago()) {
+					return false 
+				} 
+
+			} 
+			return true
 		}
 	}
 }

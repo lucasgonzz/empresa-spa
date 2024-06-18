@@ -9,6 +9,7 @@
 			<b-table
 			v-if="ventas_sin_cobrar.length"
 			head-variant="dark"
+			responsive
 			:fields="fields"
 			:items="items">
 

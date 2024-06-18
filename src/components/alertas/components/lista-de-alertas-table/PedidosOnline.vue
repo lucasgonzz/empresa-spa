@@ -6,6 +6,7 @@
 			<b-table
 			v-if="pedidos_sin_confirmar.length"
 			head-variant="dark"
+			responsive
 			:fields="fields"
 			:items="items">
 

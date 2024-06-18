@@ -85,6 +85,7 @@ export default {
 			console.log('observations:')
 			console.log(info.observations)
 			return axios.put('/api/sale/'+state.previus_sale.id, {
+				metodos_de_pago_seleccionados: info.metodos_de_pago_seleccionados,
 				client_id: info.client_id,
 				items: info.items,
 				discounts: info.discounts,

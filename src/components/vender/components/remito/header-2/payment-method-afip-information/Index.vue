@@ -27,13 +27,23 @@ export default {
 		flex-direction: column 
 	@media screen and (min-width: 768px)
 		flex-direction: row 
-	select
+	select, .cont-select
 		margin-bottom: 10px
 		@media screen and (max-width: 768px)
 			width: 100%
 		@media screen and (min-width: 768px)
 			width: 200px
 			margin-right: 15px
+
+	.cont-select 
+		display: flex
+		flex-direction: row 
+		justify-content: space-between
+		align-items: center 
+
+
+		& > select 
+			width: 75%
 			
 
 			

@@ -1,8 +1,9 @@
 import clients from '@/mixins/clients'
 import sale_ticket from '@/mixins/sale_ticket'
 import afip_ticket from '@/mixins/afip_ticket'
+import vender_current_acount_payment_methods from '@/mixins/vender_current_acount_payment_methods'
 export default {
-	mixins: [clients, sale_ticket, afip_ticket],
+	mixins: [clients, sale_ticket, afip_ticket, vender_current_acount_payment_methods],
 	computed: {
 		discounts() {
 			return this.$store.state.discount.models
@@ -339,6 +340,8 @@ export default {
 			this.$store.commit('vender/setPriceType', null)
 			this.$store.commit('vender/set_numero_orden_de_compra', '')
 			this.$store.commit('vender/set_omitir_en_cuenta_corriente', 0)
+			
+			this.$store.commit('vender/setSelectedPaymentMethods', [])
 
 			this.$store.commit('vender/setDiscountsInServices', 0)
 			this.$store.commit('vender/setSurchagesInServices', 0)
@@ -384,8 +387,8 @@ export default {
 		setDefaultPaymentMethod() {
 			if (this.owner.default_current_acount_payment_method_id) {
 				this.$store.commit('vender/setCurrentAcountPaymentMethodId', this.owner.default_current_acount_payment_method_id)
-			}else{
-				if (this.current_acount_payment_method_id == null) {
+			} else {
+				if (!this.current_acount_payment_method_id) {
 					this.current_acount_payment_method_id = 3;
 				}
 			}
@@ -393,6 +396,17 @@ export default {
 		check_vender() {
 			console.log('check antes de vender')
 			console.log(this.hasExtencion('articles_default_in_vender'))
+
+			if (!this.current_acount_payment_method_id) {
+
+				if (!this.guardarMetodosPago()) {
+					return false 
+				} 
+
+			} 
+
+			console.log('-> Ya chequeo los metodos de pago')
+
 			if (this.hasExtencion('articles_default_in_vender')) {
 				this.checkDefaultArticles()
 			}

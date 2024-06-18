@@ -1,6 +1,7 @@
 export default [
     // 'extencion',
     'afip_information',
+    'current_acount_payment_method',
     'article_pre_import_range',
     'price_type',
     'order_production_status',
@@ -25,7 +26,6 @@ export default [
     'iva_condition',
     'sub_category',
     'location',
-    'current_acount_payment_method',
     'seller',
     'provider_order_status',
     'order_status',
