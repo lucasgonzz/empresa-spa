@@ -20,17 +20,12 @@ class="cont-select">
 		v-else
 		class="icon-plus"></i>
 	</b-button>
-
-	<PaymentMethodModal ref="paymentMethodModal"></PaymentMethodModal>
 </div>
 </template>
 <script>
 import vender from '@/mixins/vender'
 export default {
 	mixins: [vender],
-	components: {
-		PaymentMethodModal: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/modal-payment-methods/Modal')	
-	},
 	computed: {
 		selected_payment_methods() {
 			return this.$store.state.vender.selected_payment_methods

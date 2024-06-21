@@ -66,19 +66,12 @@
 import vender_current_acount_payment_methods from '@/mixins/vender_current_acount_payment_methods'
 export default {
 	mixins: [vender_current_acount_payment_methods],
-	data() {
-		return {
-			// total_a_repartir: 0,
-			// total_repartido: 0,
-			// metodos_de_pago_seleccionados: [],
-		};
-	},
 	computed: {
 		payment_methods() {
-			return this.$store.state.current_acount_payment_method.models;
+			return this.$store.state.current_acount_payment_method.models
 		},
 		total_vender() {
-			return this.$store.state.vender.total;
+			return this.$store.state.vender.total
 		},
 		index_previus_sale() {
 			return this.$store.state.vender.previus_sales.index
@@ -86,6 +79,7 @@ export default {
 	},
 	watch: {
         total_vender() {
+        	console.log('-> cambio total_vender a '+this.total_vender)
         	this.total_a_repartir = this.total_vender
         	
         	if (this.index_previus_sale == 0) {
@@ -149,7 +143,7 @@ export default {
 
 				this.metodos_de_pago_seleccionados[payment_method_id] = this.total_a_repartir - (this.total_repartido - monto_previo)
 
-				this.set_total_repartido();
+				this.set_total_repartido()
 			}
 		},
 
@@ -159,7 +153,7 @@ export default {
 		}
 
 	},
-};
+}
 </script>
 	
 <style>

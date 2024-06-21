@@ -216,6 +216,8 @@ export default {
 			}
 			if (model.address_id) {
 				this.$store.commit('vender/setAddressId', model.address_id)
+			} else {
+				this.$store.commit('vender/setAddressId', 0)
 			}
 			if (model.sale_type_id) {
 				this.$store.commit('vender/setSaleTypeId', model.sale_type_id)

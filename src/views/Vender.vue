@@ -8,6 +8,8 @@
 
 	<current-acounts></current-acounts>
 
+	<payment-methods-modal></payment-methods-modal>
+
 	<nav-component></nav-component>
  
 	<client></client>	
@@ -21,6 +23,7 @@ import vender from '@/mixins/vender'
 export default {
 	mixins: [vender],
 	components: {  
+		PaymentMethodsModal: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/modal-payment-methods/Modal'),
 		NewArticle: () => import('@/components/vender/modals/NewArticle'),
 		LoadingAfipTicket: () => import('@/components/vender/modals/LoadingAfipTicket'),
 		

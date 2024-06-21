@@ -263,6 +263,7 @@ export default {
 				}
 				state.items = new_items
 				state.total = total_articles + total_services
+				console.log('se puso el total en '+state.total)
 			}
 		},
 		removeItem(state, item) {
