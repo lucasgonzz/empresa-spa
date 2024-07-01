@@ -6,6 +6,8 @@
 
 			<current-acounts></current-acounts>
 
+			<ventas-sin-cobrar></ventas-sin-cobrar>
+
 			<b-table
 			v-if="ventas_sin_cobrar.length"
 			head-variant="dark"
@@ -18,6 +20,15 @@
 					@click="showCurrentAcounts(ventas_sin_cobrar[data.index])"
 					variant="success">
 						{{ client_name(ventas_sin_cobrar[data.index]) }}
+					</b-button>
+				</template>
+
+
+				<template #cell(ventas_sin_cobrar)="data">
+					<b-button
+					@click="showVentasSinCobrar(ventas_sin_cobrar[data.index].ventas_sin_cobrar)"
+					variant="success">
+						{{ ventas_sin_cobrar[data.index].ventas_sin_cobrar.length }} ventas
 					</b-button>
 				</template>
 
@@ -39,6 +50,7 @@
 export default {
 	components: {
 		CurrentAcounts: () => import('@/components/common/current-acounts/Index'),
+		VentasSinCobrar: () => import('@/components/alertas/modals/cobros/VentasSinCobrar'),
 	},
 	computed: {
 		fields() {
@@ -47,29 +59,17 @@ export default {
 					key: 'cliente',
 				},
 				{
-					key: 'venta',
-				},
-				{
-					key: 'pagandose',
-				},
-				{
-					key: 'hace',
-				},
-				{
-					key: 'fecha',
+					key: 'ventas_sin_cobrar',
 				},
 			]
 		},
 		items() {
 			let items = []
 
-			this.ventas_sin_cobrar.forEach(sale => {
+			this.ventas_sin_cobrar.forEach(alerta => {
 				items.push({
 					cliente: null,
-					venta: 'N° '+sale.num+' ('+this.price(sale.current_acount.debe)+')',
-					pagandose: this.price(sale.current_acount.pagandose)+' (faltan '+ this.lo_que_falta_pagarse(sale) +')',
-					hace: this.since(sale.created_at),
-					fecha: this.date(sale.created_at),
+					ventas_sin_cobrar: null,
 				})
 			})
 
@@ -87,6 +87,10 @@ export default {
 				return sale.client.name+' ( '+ this.price(sale.client.saldo) +' )'
 			}
 			return 'NO HAY'
+		},
+		showVentasSinCobrar(ventas) {
+			this.$store.commit('sale/ventas_sin_cobrar/setVentasSinCobrar', ventas)
+			this.$bvModal.show('ventas-sin-cobrar')
 		},
 		lo_que_falta_pagarse(sale) {
 			return this.price(Number(sale.current_acount.debe) - Number(sale.current_acount.pagandose))

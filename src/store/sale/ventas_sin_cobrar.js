@@ -6,10 +6,14 @@ export default {
 	namespaced: true,
 	state: {
 		models: [],
+		ventas_sin_cobrar: [],
 	},
 	mutations: {
 		setModels(state, value) {
 			state.models = value 
+		},
+		setVentasSinCobrar(state, value) {
+			state.ventas_sin_cobrar = value 
 		},
 	},
 	actions: {

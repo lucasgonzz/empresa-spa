@@ -63,6 +63,14 @@ export default {
 			key: 'ask_amount_in_vender',
 			type: 'checkbox',
 		},
+
+		{
+			text: 'Imagen de cabecera en PDF',
+			key: 'image_pdf_header_url',
+			type: 'image',
+			crop_aspect_ratio: 4/1,
+		},
+
 		{
 			text: 'Cantidad de letras del nombre a partir de las cuales buscar en VENDER',
 			key: 'str_limint_en_vender',
@@ -104,7 +112,7 @@ export default {
 			key: 'article_ticket_info_id',
 			type: 'select',
 		},
-		{
+		// {
 			// text: 'Extenciones',
 			// key: 'extencions',
 			// type: 'checkbox',
@@ -112,7 +120,7 @@ export default {
 			// belongs_to_many: {
 			// 	// order_by: 'model_name',
 			// }
-		},
+		// },
 		// {
 		// 	text: 'Direccion',
 		// 	key: 'address',

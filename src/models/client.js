@@ -117,13 +117,12 @@ export default {
 		},
 
 		{
-			text: 'Pasar las ventas a la Cuenta Corriente sin esperar a facturar',
+			text: 'Pasar las ventas a la C/C sin esperar a facturar',
 			key: 'pasar_ventas_a_la_cuenta_corriente_sin_esperar_a_facturar',
 			if_has_extencion: 'guardad_cuenta_corriente_despues_de_facturar',
 			type: 'checkbox',
 			description: 'Si se activa, se cargara el saldo a la cuenta corriente inmediatamente guardada la venta',
 			value: 0,
-			show: true,
 		},
 		
 		{

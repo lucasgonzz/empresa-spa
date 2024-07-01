@@ -1,17 +1,38 @@
+import moment from 'moment'
 export default {
 	methods: {
 		listenChannels() {
             this.Echo.channel('added_model.'+this.owner_id)
             .notification((notification) => {
-                console.log('added_model: '+this.routeString(notification.model_name))
+                let model_name = notification.model_name
+                console.log('added_model: '+this.routeString(model_name))
+
                 if (!notification.check_added_by || notification.added_by != this.user.id) {
-                    this.$api.get(this.routeString(notification.model_name)+'/'+notification.model_id)
-                    .then(res => {
-                        this.$store.commit(notification.model_name.toLowerCase()+'/add', res.data.model)
-                    })
-                    .catch(err => {
-                        console.log(err)
-                    })
+
+                    /* 
+                        * Si se buscan los modelos por fecha, no lo agrego
+                        * Para evitar que por ejemplo se agregue una venta del dia actual cuando estan viendo 
+                        las ventas de otra fecha
+                    
+                    */
+                    if (this.store_use_from_dates(model_name)) {
+                        console.log('el modelo '+model_name+' usa from_dates')
+                        console.log('comparando '+this.get_from_date(model_name)+' con '+moment().format('YYYY-MM-DD'))
+                    }
+                    if (!this.store_use_from_dates(model_name)
+                        || this.get_from_date(model_name) == moment().format('YYYY-MM-DD')) {
+
+                        console.log('se va a agregar')
+                        this.$api.get(this.routeString(model_name)+'/'+notification.model_id)
+                        .then(res => {
+                            this.$store.commit(model_name.toLowerCase()+'/add', res.data.model)
+                        })
+                        .catch(err => {
+                            console.log(err)
+                        })
+
+                    }
+
                 } else {
                     console.log('Ya estaba')
                 }

@@ -360,7 +360,11 @@ export default {
 						if (this.table_height_para_restar) {
 							height -= this.table_height_para_restar
 						}
-						table.style.height = height +'px'
+						if (height > 400) {
+							table.style.height = height +'px'
+						} else {
+							console.log('no se puso height porque era solo de '+height)
+						}
 						// table.style.max_height = height +'px'
 
 						this.setShowButtonsScroll()

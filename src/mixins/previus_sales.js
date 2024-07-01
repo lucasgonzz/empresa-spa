@@ -369,7 +369,7 @@ export default {
 		},
 		checkear_metodos_de_pago_en_previus_sale() {
 			console.log('checkear_metodos_de_pago_en_previus_sale')
-			if (!this.current_acount_payment_method_id) {
+			if (!this.current_acount_payment_method_id && !this.previus_sale.client_id) {
 
 				if (!this.guardarMetodosPago()) {
 					return false 

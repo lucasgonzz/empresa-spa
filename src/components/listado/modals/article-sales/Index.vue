@@ -25,15 +25,16 @@ hide-footer>
 		v-if="!loading">
 			<div
 			v-if="results.length">
-				<h5>
-					Unidades totales vendidas: <strong>{{ cantidad_total }}</strong>
-				</h5>
+
+				<extra-information
+				:results="results"></extra-information>
+
 				<table-component
 				model_name="sale"
 				:models="results">
 					<template #table_right_options="data">
 						<span class="p-l-15">
-							Cantidad: {{ getArticleAmountInSale(data.model) }}
+							Cantidad: {{ getArticleAmountInSale(data.model, model) }}
 						</span>
 					</template>
 				</table-component>
@@ -62,10 +63,13 @@ hide-footer>
 </b-modal>
 </template>
 <script>
+import article_sales from '@/mixins/article_sales'
 export default {
+	mixins: [article_sales],
 	components: {
 		ModelComponent: () => import('@/common-vue/components/model/Index'),
 		NavComponent: () => import('@/components/listado/modals/article-sales/Nav'),
+		ExtraInformation: () => import('@/components/listado/modals/article-sales/ExtraInformation'),
 		TableComponent: () => import('@/common-vue/components/display/table/Index'),
         SaleDetails: () => import('@/components/ventas/modals/details/Index'),
 	},
@@ -73,15 +77,6 @@ export default {
 		model() {
 			return this.$store.state.article.model 
 		},
-		cantidad_total() {
-			let total = 0
-			if (this.results) {
-				this.results.forEach(sale => {
-					total += this.getArticleAmountInSale(sale)
-				})
-			}
-			return total
-		}
 	},
 	data() {
 		return {
@@ -108,12 +103,6 @@ export default {
 				console.log(err)
 			})
 		},
-		getArticleAmountInSale(sale) {
-			let article = sale.articles.find(article => {
-				return article.id == this.model.id 
-			})
-			return article.pivot.amount - article.pivot.returned_amount
-		}
 	}
 }
 </script>

@@ -53,13 +53,13 @@ export default {
 					text: 'Pagos de clientes (ctas ctes)',
 					img: 'pagado_mostrador',
 					value: this.price(this.ingresos_pagos_de_cuentas_corrientes),
-					description: 'Total pagado HOY por tus clientes, de ventas que hayan realizado en el pasado'
+					description: 'Total pagado en C/C por tus clientes, de ventas que hayan realizado en el pasado'
 				},
 				{
 					text: 'Ingresos NETOS',
 					img: 'ingresos-netos',
 					value: this.price(this.ingresos_pagos_de_cuentas_corrientes + this.pagado_en_mostrador),
-					description: 'Suma de lo que se vendio en mostrador y las deudas que pagaron HOY tus clientes (lo que deberia haber en la caja)',
+					description: 'Suma de: lo que se vendio en mostrador + lo que pagaron en C/C tus clientes (lo que deberia haber en la caja)',
 				},
 				{
 					text: 'Gastos',

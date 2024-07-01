@@ -67,12 +67,28 @@ export default {
 			}
 			fields = fields.concat([
 				{	
+					key: 'total_pago',
+					label: 'Total del Pago',
+				},
+				{	
+					key: 'fondos_iniciales',
+					label: 'Fondos iniciales',
+				},
+				{	
+					key: 'a_cubrir',
+					label: 'Remanente a cubrir',
+				},
+				{	
 					key: 'pagado',
 					label: 'Aporte del Pago',
 				},
 				{	
-					key: 'total_pago',
-					label: 'Total del Pago',
+					key: 'nuevos_fondos',
+					label: 'Fondos resultantes',
+				},
+				{	
+					key: 'remantente',
+					label: 'Nuevo remanente',
 				},
 				{	
 					key: 'created_at',
@@ -86,9 +102,13 @@ export default {
 			this.models.forEach(model => {
 				items.push({
 					debe: model.debe.detalle,
-					haber: 'Pago N°'+model.haber.num_receipt,
+					haber: model.haber.detalle,
+					a_cubrir: this.price(model.a_cubrir),
+					fondos_iniciales: this.price(model.fondos_iniciales),
+					nuevos_fondos: this.price(model.nuevos_fondos),
 					pagado: this.price(model.pagado),
 					total_pago: this.price(model.total_pago),
+					remantente: this.price(model.remantente),
 					created_at: this.getCreatedAt(model),
 				})
 			})

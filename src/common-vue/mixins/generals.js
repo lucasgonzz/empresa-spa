@@ -132,6 +132,21 @@ export default {
 		}, 
 	},
 	methods: {
+		store_use_from_dates(model_name) {
+			model_name = model_name.toLowerCase()
+			let from_dates = this.$store.state[model_name].from_dates
+
+			if (typeof from_dates == 'undefined' || !from_dates) {
+				return false
+			}
+			return true
+		},
+		get_from_date(model_name) {
+			model_name = model_name.toLowerCase()
+			let date = this.$store.state[model_name].from_date
+
+			return moment(date).format('YYYY-MM-DD')
+		},
 		get_table_prop_slot_name(prop) {
 			return 'table-prop-'+prop.key
 		},

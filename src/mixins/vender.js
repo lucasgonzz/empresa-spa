@@ -2,8 +2,9 @@ import clients from '@/mixins/clients'
 import sale_ticket from '@/mixins/sale_ticket'
 import afip_ticket from '@/mixins/afip_ticket'
 import vender_current_acount_payment_methods from '@/mixins/vender_current_acount_payment_methods'
+import start_methods from '@/mixins/start_methods'
 export default {
-	mixins: [clients, sale_ticket, afip_ticket, vender_current_acount_payment_methods],
+	mixins: [clients, sale_ticket, afip_ticket, vender_current_acount_payment_methods, start_methods],
 	computed: {
 		discounts() {
 			return this.$store.state.discount.models
@@ -131,6 +132,7 @@ export default {
 			}, 
 			set(value) {
 				this.$store.commit('vender/setAddressId', value)
+				console.log('se seteo la cookie')
 				this.$cookies.set('address_id', value, '3y')
 			},
 		},
@@ -347,6 +349,8 @@ export default {
 			this.$store.commit('vender/setSurchagesInServices', 0)
 
 			this.$store.commit('vender/set_omitir_en_cuenta_corriente', 0)
+
+			this.checkAddressCookie()
 
 			this.limpiar_descuentos()
 
