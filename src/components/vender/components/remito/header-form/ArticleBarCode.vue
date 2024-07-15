@@ -2,7 +2,7 @@
 	<b-col
 	class="col-bar-code margin-bottom-since-lg"
 	cols="12"
-	:lg="col_header_lg">
+	:md="col_header_lg">
 		<div
 		class="d-flex w-100">
 			<b-form-input
@@ -116,21 +116,21 @@ export default {
 		getArticleFromApi(bar_code) {
 			this.$store.commit('auth/setMessage', 'Buscando articulo')
 			this.$store.commit('auth/setLoading', true)
-			let prop_to_filter = {} 
+			let prop_to_filter 
 			if (this.usar_codigo_proveedor) {
-				prop_to_filter.key = 'provider_code'
+				prop_to_filter = 'provider_code'
 			} else {
-				prop_to_filter.key = 'bar_code'
+				prop_to_filter = 'bar_code'
 			}
 			return this.$api.post('search-from-modal/article', {
-				prop_to_filter: prop_to_filter,
+				props_to_filter: [prop_to_filter],
 				query_value: bar_code,
 			})
 			.then(res => {
 				this.$store.commit('auth/setLoading', false)
-				if (res.data.models.length) {
+				if (res.data.models.data.length) {
 					// alert('llego del api: '+res.data.models[0].name)
-					this.finded_article = res.data.models[0]
+					this.finded_article = res.data.models.data[0]
 				} else {
 					// alert('No se encontro nada en api: '+res.data)
 					this.finded_article = undefined

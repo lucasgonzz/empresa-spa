@@ -6,6 +6,7 @@ export default {
 			type: 'text',
 			not_show_on_form: true,
 			filter_modal_position: 8,
+			use_to_show_in_search_modal: true,
 			filter_type: 'number',
 		},
 		{

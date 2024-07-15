@@ -12,6 +12,11 @@ export default {
 			function: 'totalSale',
 		},
 		{
+			key: 'total_facturado',
+			function: 'total_facturado',
+			v_if: ['afip_ticket', '!=', null],
+		},
+		{
 			text: 'Hora',
 			key: 'created_at',
 			is_hour: true,
@@ -136,7 +141,12 @@ export default {
 						text: 'Monto',
 						key: 'amount',
 						is_price: true,
-					}
+					},
+					{
+						text: 'Descuento',
+						key: 'discount_amount',
+						is_price: true,
+					},
 				],
 			}
 		},

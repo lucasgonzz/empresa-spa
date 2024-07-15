@@ -12,6 +12,8 @@ import belongs_to_many from '@/common-vue/store/belongs_to_many'
 import user from '@/common-vue/store/user'
 import global_notification from '@/common-vue/store/global_notification'
 
+import chart from '@/store/chart/index'
+
 import article from '@/store/article'
 import brand from '@/store/brand'
 import category from '@/store/category'
@@ -67,7 +69,7 @@ import credit_card_payment_plan from '@/store/credit_card_payment_plan'
 import commission from '@/store/commission'
 import seller_commission from '@/store/seller_commission'
 import sale_type from '@/store/sale_type'
-import chart from '@/store/chart'
+// import chart from '@/store/chart'
 import pagado_por from '@/store/pagado_por'
 import provider_order_extra_cost from '@/store/provider_order_extra_cost'
 import article_used_in_recipes from '@/store/article_used_in_recipes'
@@ -94,6 +96,10 @@ import reportes from '@/store/reportes/index'
 import article_pre_import_range from '@/store/article_pre_import_range'
 import unidad_medida from '@/store/unidad_medida'
 import cheque from '@/store/cheque'
+import expense from '@/store/expense'
+import expense_concept from '@/store/expense_concept'
+import current_acount_payment_method_discount from '@/store/current_acount_payment_method_discount'
+import afip_selected_payment_method from '@/store/afip_selected_payment_method'
 
 Vue.use(Vuex)
 
@@ -115,6 +121,8 @@ export default new Vuex.Store({
         belongs_to_many,
         user,
         global_notification,
+
+        chart,
         
         article,
         brand,
@@ -171,7 +179,7 @@ export default new Vuex.Store({
         commission,
         seller_commission,
         sale_type,
-        chart,
+        // chart,
         pagado_por,
         provider_order_extra_cost,
         article_used_in_recipes,
@@ -198,5 +206,9 @@ export default new Vuex.Store({
         article_pre_import_range,
         unidad_medida,
         cheque,
+        expense,
+        expense_concept,
+        current_acount_payment_method_discount,
+        afip_selected_payment_method,
     }
 })

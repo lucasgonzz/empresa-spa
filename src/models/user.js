@@ -84,6 +84,11 @@ export default {
 			description: 'Si se elige, despues de cada venta el valor del metodo de pago se seteara con este valor',
 		},
 
+		{
+			text: 'Omitir siempre las ventas en la c/c de los clientes',
+			key: 'siempre_omitir_en_cuenta_corriente',
+			type: 'checkbox',
+		},
 
 		{
 			text: 'Dias a partir de los cuales ALERTAR a los EMPLEADOS sobre las ventas no cobradas',
@@ -106,6 +111,11 @@ export default {
 			text: 'Ancho en milimetros de la comandera para imprimir los Tickets de Ventas',
 			key: 'sale_ticket_width',
 			type: 'number',
+		},
+		{
+			text: 'Descripcion para mostrar en Tickets de Ventas',
+			key: 'sale_ticket_description',
+			type: 'textarea',
 		},
 		{
 			text: 'Informacion para mostrar en los tickets de los articulos',

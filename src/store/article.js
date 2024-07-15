@@ -234,7 +234,7 @@ export default {
 					index = state.models.findIndex(item => {
 						return item.id == article.id
 					})
-					if (state_model != 'undefined' && state_model.stock) {
+					if (typeof state_model != 'undefined' && state_model.stock) {
 						stock_resultante = state_model.stock - article.amount
 						if (stock_resultante > 0) {
 							state_model.stock = stock_resultante

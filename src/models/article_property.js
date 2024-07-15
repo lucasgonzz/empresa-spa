@@ -4,7 +4,6 @@ export default {
 			text: 'Propiedad',
 			key: 'article_property_type_id',
 			type: 'select',
-			store: 'article_property_type',
 			use_store_models: true,
 		},
 		{

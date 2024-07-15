@@ -7,6 +7,8 @@ export default {
 		total_a_repartir: 0,
 		total_repartido: 0,
 		metodos_de_pago_seleccionados: [],
+
+		watch_activado: true,
 	},
 	mutations: {
 		set_total_a_repartir(state, value) {
@@ -17,6 +19,9 @@ export default {
 		},
 		set_metodos_de_pago_seleccionados(state, value) {
 			state.metodos_de_pago_seleccionados = value 
+		},
+		set_watch_activado(state, value) {
+			state.watch_activado = value 
 		},
 	},
 	actions: {

@@ -5,7 +5,7 @@ export default {
 	extends: Bar,
 	computed: { 
 		metodos_de_pago() {  
-			return this.$store.state.reportes.metodos_de_pago
+			return this.$store.state.reportes.model.ingresos_mostrador
 		},
 		loading() {  
 			return this.$store.state.reportes.loading
@@ -34,12 +34,17 @@ export default {
 
 			console.log('setChart')
 
+			if (typeof this.metodos_de_pago == 'undefined' || !this.metodos_de_pago) {
+				return 
+			}
+			console.log(this.metodos_de_pago)
+
 			let labels = []
 			let data = []
 			
 			this.metodos_de_pago.forEach(metodo_de_pago => {
-				labels.push(metodo_de_pago.nombre)
-				data.push(metodo_de_pago.total)	
+				labels.push(metodo_de_pago.name)
+				data.push(metodo_de_pago.pivot.amount)	
 			})
 
 			let datasets = [{

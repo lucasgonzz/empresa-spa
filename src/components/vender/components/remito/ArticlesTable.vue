@@ -17,9 +17,10 @@ class="m-b-15 m-t-20">
 
 					<div class="cont-input-price">
 						<b-form-input
-						@keyup="setTotal"
+						@key
+						up="callSetTotal"
 						@keyup.enter="add_varios_precios(items[data.index], true)"
-						@click="setTotal" 
+						@click="callSetTotal" 
 						type="number"
 						:id="'price-vender-'+items[data.index].id"
 						min="0"
@@ -70,8 +71,8 @@ class="m-b-15 m-t-20">
 				class="input-discount">
 					<b-form-input
 					:disabled="previus_sale != null && previus_sale.to_check == 1"
-					@keyup="setTotal"
-					@click="setTotal"
+					@keyup="callSetTotal"
+					@click="callSetTotal"
 					type="number"
 					min="0"
 					v-model="items[data.index].amount"></b-form-input>
@@ -101,8 +102,8 @@ class="m-b-15 m-t-20">
 				class="input-discount"
 				prepend="%">
 					<b-form-input
-					@keyup="setTotal"
-					@click="setTotal"
+					@keyup="callSetTotal"
+					@click="callSetTotal"
 					type="number"
 					:placeholder="get_max_discount(items[data.index])"
 					min="0"
@@ -178,14 +179,16 @@ class="m-b-15 m-t-20">
 </template>
 <script>
 import vender from '@/mixins/vender'
+import vender_set_total from '@/mixins/vender_set_total'
 import previus_sales from '@/mixins/previus_sales'
 export default {
-	mixins: [vender, previus_sales],
+	mixins: [vender, vender_set_total, previus_sales],
 	watch: {
 		special_price_id() {
 			console.log('watcher de special_price_id')
 			this.setArticlesPrice()
-			this.$store.commit('vender/setTotal')
+			this.setTotal()
+			// this.$store.commit('vender/setTotal')
 		},
 	},
 	computed: {
@@ -254,6 +257,9 @@ export default {
 		},
 	},
 	methods: {
+		callSetTotal() {
+			this.setTotal()
+		},
 		calcular_precio_por_unidades_individuales(item) {
 			let precio = Number(item.price_vender)
 			let precio_por_unidad = precio / Number(item.unidades_individuales)
@@ -316,7 +322,9 @@ export default {
 
 			item.calculated_price_vender = calculated_price_vender
 			this.$store.commit('vender/replceItem', item)
-			this.$store.commit('vender/setTotal')
+
+			this.setTotal()
+			// this.$store.commit('vender/setTotal')
 
 			setTimeout(() => {
 				document.getElementById('price-vender-'+item.id).focus()
@@ -422,9 +430,9 @@ export default {
 				}
 			})
 		},
-		setTotal() {
-			this.$store.commit('vender/setTotal')
-		},
+		// setTotal() {
+		// 	this.$store.commit('vender/setTotal')
+		// },
 		updatePrice(article) {
 			this.$store.commit('vender/setUpdatePrice', article)
 			this.$bvModal.show('update-price')
@@ -435,13 +443,15 @@ export default {
 		up(item) {
 			item.amount++
 			this.$store.commit('vender/updateItem', item)
-			this.$store.commit('vender/setTotal')
+			this.setTotal()
+			// this.$store.commit('vender/setTotal')
 		},
 		down(item) {
 			if (item.amount > 1) {
 				item.amount--
 				this.$store.commit('vender/updateItem', item)
-				this.$store.commit('vender/setTotal')
+				this.setTotal()
+				// this.$store.commit('vender/setTotal')
 			} else {
 				// toastr.error('No se pueden restar mas unidades')
 				this.removeItem(article)
@@ -449,7 +459,8 @@ export default {
 		},
 		removeItem(article) {
 			this.$store.commit('vender/removeItem', article)
-			this.$store.commit('vender/setTotal')
+			this.setTotal()
+			// this.$store.commit('vender/setTotal')
 			document.getElementById('article-bar-code').focus()
 		},
 		calculateTotalFromAmount(article) {

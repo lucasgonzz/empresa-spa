@@ -42,6 +42,7 @@ export default {
 			text: 'Direccion',
 			key: 'address_id',
 			type: 'select',
+			use_store_models: true,
 		},
 		{
 			text: 'Modo produccion',

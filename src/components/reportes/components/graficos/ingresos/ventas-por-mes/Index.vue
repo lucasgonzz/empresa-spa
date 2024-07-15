@@ -1,17 +1,18 @@
 <template>
 	<div 
+	v-if="rango_temporal == 'rango-de-fechas'"
 	class="chart-card">
 		<div class="header">
-			<h4>Deudas de Clientes</h4>
+			<h4>Vendido por mes</h4>
 		</div>
-		
-		<chart></chart>
-	</div> 
+
+		<chart-ventas></chart-ventas>
+	</div>
 </template>
 <script>
 export default {
 	components: { 
-		Chart: () => import('@/components/reportes/components/clientes/grafico-deudas-de-clientes/Chart'),
+		ChartVentas: () => import('@/components/reportes/components/graficos/ingresos/ventas-por-mes/ChartVentas'),
 	},
 	computed: {
 		rango_temporal() {

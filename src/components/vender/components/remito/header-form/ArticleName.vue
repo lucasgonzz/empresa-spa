@@ -1,7 +1,7 @@
 <template>
 	<b-col
 	cols="12"
-	:lg="col_header_lg"
+	:md="col_header_lg"
 	class="col-autocomplete margin-bottom-since-lg">
 		<search-component
 		id="search-article"
@@ -13,7 +13,7 @@
 		:str_limint="str_limint"
 		:search_from_api="search_from_api"
 		:props_to_show="props_to_show"
-		:props_to_filter="['num', 'name']"
+		:props_to_filter="['num', 'name', 'provider_code']"
 		:prop="{text: 'Articulo', key: 'article_id', store: 'article'}"></search-component>
 	</b-col>
 </template>

@@ -1,6 +1,9 @@
 export default [
     // 'extencion',
+    'afip_selected_payment_method',
+    'current_acount_payment_method_discount',
     'afip_information',
+    'expense_concept',
     'current_acount_payment_method',
     'article_pre_import_range',
     'price_type',

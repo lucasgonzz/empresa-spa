@@ -1,24 +1,27 @@
 <template>
-	<b-alert
-	class="m-t-15 s-2 m-b-15"
-	:show="loading">
-		<slot></slot>
-		<span
-		v-if="value < 100">
-			Descargando {{ plural(model_name) }}, aguarde por favor
-		</span>
-		<span
-		v-else>
-			Organizando {{ plural(model_name) }}
-		</span>
-		<b-progress 
-		class="m-t-15 progress-vender"
-		:value="value" 
-		variant="primary" 
-		show-progress
-		striped 
-		animated></b-progress>
-	</b-alert>
+	<div
+	class="p-t-15">
+		<b-alert
+		class="s-2 m-b-15"
+		:show="loading">
+			<slot></slot>
+			<span
+			v-if="value < 100">
+				Descargando {{ plural(model_name) }}, aguarde por favor
+			</span>
+			<span
+			v-else>
+				Organizando {{ plural(model_name) }}
+			</span>
+			<b-progress 
+			class="m-t-15 progress-vender"
+			:value="value" 
+			variant="primary" 
+			show-progress
+			striped 
+			animated></b-progress>
+		</b-alert>
+	</div>
 </template>
 <script>
 export default {

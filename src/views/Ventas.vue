@@ -28,7 +28,7 @@
 			<total></total>	
 		</template>
 		<template v-slot:table_right_options="props">
-			<budget-order-production-info
+			<table-buttons
 			:model="props.model" />
 
 			<btn-sale-modifications
@@ -55,7 +55,7 @@ export default {
 		BtnSaleModifications: () => import('@/components/ventas/components/BtnSaleModifications'),
 		EmployeeNav: () => import('@/components/ventas/components/EmployeeNav'),
 		Total: () => import('@/components/ventas/components/Total'),
-		BudgetOrderProductionInfo: () => import('@/components/ventas/components/BudgetOrderProductionInfo'),
+		TableButtons: () => import('@/components/ventas/components/table-buttons/Index'),
 		UpdatePrices: () => import('@/components/ventas/modals/update-prices/Index'),
 		OptionDropdownAfipTicket: () => import('@/components/ventas/components/OptionDropdownAfipTicket'),
 		MakeAfipTickets: () => import('@/components/ventas/modals/afip-ticket/MakeAfipTickets'),

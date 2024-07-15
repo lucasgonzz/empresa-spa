@@ -39,6 +39,10 @@ export default {
 		this.setDefaultArticles()
 
 		this.setPriceType()
+
+		this.setDefaultPaymentMethod()
+
+		this.set_omitir_en_cuenta_corriente()
 	},
 	watch: {
 		price_types() {

@@ -24,7 +24,10 @@ export default {
 		items() {
 			let items = []
 			items.push({
-				name: 'generales',
+				name: 'ingresos',
+			})
+			items.push({
+				name: 'gastos',
 			})
 			items.push({
 				name: 'clientes',

@@ -20,9 +20,10 @@ hide-footer>
 <script>
 import BtnLoader from '@/common-vue/components/BtnLoader'
 import vender from '@/mixins/vender'
+import vender_set_total from '@/mixins/vender_set_total'
 export default {
 	props: ['service'],
-	mixins: [vender],
+	mixins: [vender, vender_set_total],
 	components: {
 		BtnLoader,
 	},
@@ -50,7 +51,8 @@ export default {
 					} else {
 						this.setItemsPrices(true)
 					}
-					this.$store.commit('vender/setTotal')
+					this.setTotal()
+					// this.$store.commit('vender/setTotal')
 					this.$bvModal.hide('service')
 					this.service.name = ''
 					this.service.price = ''

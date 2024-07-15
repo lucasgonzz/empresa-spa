@@ -8,7 +8,10 @@
 		<employee-nav></employee-nav>
 
 		<ingresos></ingresos>	
-		<egresos></egresos>	
+
+		<devoluciones></devoluciones>		
+
+		<!-- <egresos></egresos>	 -->
 	</div> 
 </template>
 <script>
@@ -17,6 +20,7 @@ export default {
 		PreviusDays: () => import('@/common-vue/components/previus-days/Index'),
 		EmployeeNav: () => import('@/components/caja/components/reports/EmployeeNav'),
 		Ingresos: () => import('@/components/caja/components/reports/Ingresos'),
+		Devoluciones: () => import('@/components/caja/components/reports/Devoluciones'),
 		Egresos: () => import('@/components/caja/components/reports/Egresos'),
 	},
 	created() {

@@ -55,6 +55,10 @@ export default {
 @import '@/sass/_custom'
 .rojo 
 	background: $red !important
+	color: #FFF !important
+	font-weight: bold !important
 .verde 
 	background: $green !important
+	color: #FFF !important
+	font-weight: bold !important
 </style>

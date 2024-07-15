@@ -4,15 +4,15 @@ import moment from 'moment'
 export default {
 	extends: Bar,
 	computed: { 
-		ventas_por_mes() {  
-			return this.$store.state.reportes.ventas_por_mes
+		meses_anteriores() {  
+			return this.$store.state.reportes.meses_anteriores
 		},
 		loading() {  
 			return this.$store.state.reportes.loading
 		},
 	},
 	watch: {
-		ventas_por_mes() {
+		meses_anteriores() {
 			console.log('wacth chart')
 			this.setChart()
 		},
@@ -37,14 +37,14 @@ export default {
 			let labels = []
 			let data = []
 			
-			this.ventas_por_mes.forEach(ventas_por_mes => {
-				labels.push(ventas_por_mes.mes)
-				data.push(ventas_por_mes.total_vendido)	
+			this.meses_anteriores.forEach(meses_anteriores => {
+				labels.push(meses_anteriores.fecha)
+				data.push(meses_anteriores.total_vendido)	
 			})
 
 			let datasets = [{
 				label: 'Total vendido',
-				backgroundColor: '#007bff',
+				backgroundColor: '#333',
 				data: data,
 			}]
 

@@ -3,7 +3,7 @@
 	v-if="authenticated && hasExtencion('combos')"
 	cols="12"
 	class="margin-bottom-since-lg"
-	:lg="col_header_lg">
+	:md="col_header_lg">
 		<search-component
 		id="select-combo"
 		model_name="combo"

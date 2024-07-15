@@ -2,7 +2,7 @@ import axios from 'axios'
 axios.defaults.withCredentials = true
 axios.defaults.baseURL = process.env.VUE_APP_API_URL
 
-// import provider from '@/store/reportes/'
+import moment from 'moment'
 export default {
 	namespaced: true,
 	state: {
@@ -10,9 +10,11 @@ export default {
 
 		loading: false,
 
-		mes_inicio: '',
-		mes_fin: '',
+		mes_inicio: moment().subtract(4, 'months').format('YYYY-MM'),
+		mes_fin: moment().format('YYYY-MM'),
 
+		model: {},
+		meses_anteriores: [],
 				
 		total_vendido		  : 0,
 		pagado_en_mostrador   : 0,
@@ -31,6 +33,12 @@ export default {
 	mutations: {
 		setLoading(state, value) {
 			state.loading = value 
+		},
+		setModel(state, value) {
+			state.model = value 
+		},
+		setMesesAnteriores(state, value) {
+			state.meses_anteriores = value 
 		},
 
 		setRangoTemporal(state, value) {
@@ -95,7 +103,7 @@ export default {
 
 			commit('setLoading', true)
 
-			let link = 'api/reportes'
+			let link = 'api/company-performance'
 
 			if (state.rango_temporal == 'rango-de-fechas') {
 				link += '/'+state.mes_inicio+'/'+state.mes_fin
@@ -104,28 +112,29 @@ export default {
 			axios.get(link)
 			.then(res => {
 				console.log('reportes/getReportes')
-				console.log(res)
+				console.log(res.data)
 
 				commit('setLoading', false)
-				
-				commit('setLoading', false)
 
-				commit('setTotalVendido', res.data.total_vendido)
-				commit('setPagadoEnMostrador', res.data.pagado_en_mostrador)
-				commit('setACuentasCorrientes', res.data.a_cuentas_corrientes)
-				commit('setIngresosPagosDeCuentasCorrientes', res.data.ingresos_pagos_de_cuentas_corrientes)
+				commit('setModel', res.data.model)
+				commit('setMesesAnteriores', res.data.meses_anteriores)
 
-				commit('setGastos', res.data.gastos)
-				commit('setRentabilidad', res.data.rentabilidad)
-				commit('setArticulosVendidos', res.data.articulos_vendidos)
-				commit('setCantidadVentas', res.data.cantidad_ventas)
+				// commit('setTotalVendido', res.data.total_vendido)
+				// commit('setPagadoEnMostrador', res.data.pagado_en_mostrador)
+				// commit('setACuentasCorrientes', res.data.a_cuentas_corrientes)
+				// commit('setIngresosPagosDeCuentasCorrientes', res.data.ingresos_pagos_de_cuentas_corrientes)
 
-				commit('setMetodosDePago', res.data.metodos_de_pago)
+				// commit('setGastos', res.data.gastos)
+				// commit('setRentabilidad', res.data.rentabilidad)
+				// commit('setArticulosVendidos', res.data.articulos_vendidos)
+				// commit('setCantidadVentas', res.data.cantidad_ventas)
 
-				if (state.rango_temporal == 'rango-de-fechas') {
-					commit('setVentasPorMes', res.data.ventas_por_mes)
-					commit('setGastosPorMes', res.data.gastos_por_mes)
-				}
+				// commit('setMetodosDePago', res.data.metodos_de_pago)
+
+				// if (state.rango_temporal == 'rango-de-fechas') {
+				// 	commit('setVentasPorMes', res.data.ventas_por_mes)
+				// 	commit('setGastosPorMes', res.data.gastos_por_mes)
+				// }
 			})
 			.catch(err => {
 				console.log(err)

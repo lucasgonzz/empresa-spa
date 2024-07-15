@@ -14,7 +14,7 @@ export default [
 		name: 'reportes',
 		can: 'reportes',
 		params: {
-			view: 'generales',
+			view: 'ingresos',
 		},
 	},
 	{
@@ -113,6 +113,12 @@ export default [
 		},
 		if_has_extencion: 'comerciocity_interno',
 		image_url: 'nav-icons/clientes.png',
+	},
+	{
+		path: '/gastos',
+		model_name: 'expense',
+		component: '@/views/Expense',
+		image_url: 'nav-icons/expenses.png',
 	},
 	{
 		text: 'Panel de Control',

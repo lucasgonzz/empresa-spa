@@ -1,18 +1,11 @@
 <template>
-	<div
-	v-if="view == 'generales'">
+	<div>
 
 		<div
 		v-if="!loading">
 			<rango-temporal></rango-temporal>
 	 
 			<icon-cards></icon-cards>
-
-			<!-- Se vendieron 1.000, de los cuales 700 fueron a cuenta corriente -->
-
-			<!-- Ingresaron 700 por pagos de cuentas corrientes -->
-			
-			<graficos></graficos>
 
 		</div>
 
@@ -23,7 +16,6 @@
 			variant="primary"></b-spinner>
 		</div>
 
-
 	</div>
 </template>
 <script>
@@ -31,7 +23,6 @@ export default {
 	components: {
 		RangoTemporal: () => import('@/components/reportes/components/general/RangoTemporal'),
 		IconCards: () => import('@/components/reportes/components/general/IconCards'),
-		Graficos: () => import('@/components/reportes/components/general/graficos/Index'),
 	},
 	computed: {
 		loading() {

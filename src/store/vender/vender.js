@@ -10,6 +10,8 @@ import discounts_store from '@/store/discount'
 import surchages_store from '@/store/surchage'
 import mixin_vender from '@/mixins/vender'
 import model_functions from '@/mixins/model_functions'
+import mixin_payment_methods from '@/mixins/vender_current_acount_payment_methods'
+
 export default {
 	namespaced: true,
 	state: {
@@ -52,8 +54,17 @@ export default {
 		sale: null,
 
 		afip_results: null,
+
+		discount_percentage: null,
+		discount_amount: null,
 	},
 	mutations: {
+		set_payment_method_discount_percentage(state, value) {
+			state.discount_percentage = value
+		},
+		set_payment_method_discount_amount(state, value) {
+			state.discount_amount = value
+		},
 		setSelectedPaymentMethods(state, value){
 			state.selected_payment_methods = value
 		},
@@ -193,78 +204,68 @@ export default {
 			state.sale = value
 		},
 		setTotal(state, total = null) {
-			if (total) {
-				state.total = total
-			} else {
-				state.total = 0
-				let total_articles = 0
-				let total_services = 0
-				let new_items = []
-				state.items.forEach(item => {
-					item.total = model_functions.methods.getTotalItem(item, false)
-					if (item.is_service) {
-						total_services += model_functions.methods.getTotalItem(item, false)
-					} else if (item.is_article) {
-						total_articles += model_functions.methods.getTotalItem(item, false)
-					}
-					state.total += model_functions.methods.getTotalItem(item, false)
-					new_items.push(item)
-				})
-				if (state.discounts_id.length) {
+			state.total = total
+			// if (total) {
+			// 	state.total = total
+			// } else {
+			// 	state.total = 0
+			// 	let total_articles = 0
+			// 	let total_services = 0
+			// 	let new_items = []
+			// 	state.items.forEach(item => {
+			// 		item.total = model_functions.methods.getTotalItem(item, false)
+			// 		if (item.is_service) {
+			// 			total_services += model_functions.methods.getTotalItem(item, false)
+			// 		} else if (item.is_article) {
+			// 			total_articles += model_functions.methods.getTotalItem(item, false)
+			// 		}
+			// 		state.total += model_functions.methods.getTotalItem(item, false)
+			// 		new_items.push(item)
+			// 	})
+			// 	if (state.discounts_id.length) {
 
-					let discounts_store_ = discounts_store.state.models 
+			// 		let discounts_store_ = discounts_store.state.models 
 
-					let sale_discounts = []
+			// 		let sale_discounts = []
 					
 
-					state.discounts_id.forEach(discount_id => {
+			// 		state.discounts_id.forEach(discount_id => {
 
-						let discount_to_add = discounts_store_.find(_discount => _discount.id == discount_id)
+			// 			let discount_to_add = discounts_store_.find(_discount => _discount.id == discount_id)
 
-						sale_discounts.push(discount_to_add)
+			// 			sale_discounts.push(discount_to_add)
 
-					}) 
+			// 		}) 
 
-
-					console.log('sale_discounts')
-					console.log(sale_discounts)
-
-
-
-					sale_discounts.forEach(discount => {
-						total_articles -= total_articles * Number(discount.percentage) / 100 
-						if (state.discounts_in_services) {
-							total_services -= total_services * Number(discount.percentage) / 100 
-						}
-					})
-				}
-				if (state.surchages_id.length) {
-					let surchages = surchages_store.state.models 
-					// if (previus_sales.state.previus_sale.id) {
-					// 	surchages = previus_sales.state.previus_sale.surchages.map(surchage => {
-					// 		return {
-					// 			...surchage,
-					// 			percentage: surchage.pivot.percentage
-					// 		}
-					// 	})
-					// }
-					let sale_surchages = []
+			// 		sale_discounts.forEach(discount => {
+			// 			total_articles -= total_articles * Number(discount.percentage) / 100 
+			// 			if (state.discounts_in_services) {
+			// 				total_services -= total_services * Number(discount.percentage) / 100 
+			// 			}
+			// 		})
+			// 	}
+			// 	if (state.surchages_id.length) {
+			// 		let surchages = surchages_store.state.models 
 					
-					state.surchages_id.forEach(id => {
-						sale_surchages.push(surchages.find(item => item.id == id))
-					}) 
+			// 		let sale_surchages = []
+					
+			// 		state.surchages_id.forEach(id => {
+			// 			sale_surchages.push(surchages.find(item => item.id == id))
+			// 		}) 
 
-					sale_surchages.forEach(_surchage => {
-						total_articles += total_articles * Number(_surchage.percentage) / 100 
-						if (state.surchages_in_services) {
-							total_services += total_services * Number(_surchage.percentage) / 100 
-						}
-					})
-				}
-				state.items = new_items
-				state.total = total_articles + total_services
-				console.log('se puso el total en '+state.total)
-			}
+			// 		sale_surchages.forEach(_surchage => {
+			// 			total_articles += total_articles * Number(_surchage.percentage) / 100 
+			// 			if (state.surchages_in_services) {
+			// 				total_services += total_services * Number(_surchage.percentage) / 100 
+			// 			}
+			// 		})
+			// 	}
+			// 	state.items = new_items
+			// 	state.total = total_articles + total_services
+
+			// 	state.total = mixin_payment_methods.methods.aplicar_current_acount_payment_method_discounts(total)
+			// 	console.log('se puso el total en '+state.total)
+			// }
 		},
 		removeItem(state, item) {
 			let index = state.items.findIndex(i => {
@@ -325,6 +326,9 @@ export default {
 				omitir_en_cuenta_corriente: state.omitir_en_cuenta_corriente,
 				numero_orden_de_compra: state.numero_orden_de_compra,
 				metodos_de_pago_seleccionados: state.selected_payment_methods,
+				discount_percentage: state.discount_percentage,
+				discount_amount: state.discount_amount,
+				total: state.total,
 			})
 			.then(res => {
 				console.log('vendido')

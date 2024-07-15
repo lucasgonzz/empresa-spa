@@ -34,43 +34,43 @@ export default {
 				{
 					text: 'Ventas',
 					img: 'ventas',
-					value: this.price(this.total_vendido),
+					value: this.price(this.model.total_vendido),
 					description: 'Total vendido, haya sido o no pagado',
 				},
 				{
 					text: 'Pagado en mostrador',
 					img: 'pagado_mostrador2',
-					value: this.price(this.pagado_en_mostrador),
+					value: this.price(this.model.total_pagado_mostrador),
 					description: 'Total vendido en mostrador (sin asignar cliente), y por ende, pagado en el momento',
 				},
 				{
 					text: 'A cuentas corrientes',
 					img: 'a_cuentas_corrientes',
-					value: this.price(this.a_cuentas_corrientes),
+					value: this.price(this.model.total_vendido_a_cuenta_corriente),
 					description: 'Total vendido a tus clientes, pero que no se pago'
 				},
 				{
 					text: 'Pagos de clientes (ctas ctes)',
 					img: 'pagado_mostrador',
-					value: this.price(this.ingresos_pagos_de_cuentas_corrientes),
+					value: this.price(this.model.total_pagado_a_cuenta_corriente),
 					description: 'Total pagado en C/C por tus clientes, de ventas que hayan realizado en el pasado'
 				},
 				{
 					text: 'Ingresos NETOS',
 					img: 'ingresos-netos',
-					value: this.price(this.ingresos_pagos_de_cuentas_corrientes + this.pagado_en_mostrador),
+					value: this.price(this.model.total_pagado_a_cuenta_corriente + this.total_pagado_mostrador),
 					description: 'Suma de: lo que se vendio en mostrador + lo que pagaron en C/C tus clientes (lo que deberia haber en la caja)',
 				},
 				{
 					text: 'Gastos',
 					img: 'gastos',
-					value: this.price(this.gastos),
+					value: this.price(this.model.total_gastos),
 					description: 'Suma de los pedidos hechos a proveedores',
 				},
 				{
 					text: 'Rentabilidad',
 					img: 'rentabilidad',
-					value: this.price(this.rentabilidad),
+					value: this.price(this.model.rentabilidad),
 					description: 'Diferencia entre las VENTAS menos los GASTOS',
 				},
 				{
@@ -78,6 +78,12 @@ export default {
 					img: 'deuda-clientes',
 					value: this.price(this.deuda_clientes),
 					description: 'Sumatoria de los saldos de tus clientes',
+				},
+				{
+					text: 'Devoluciones',
+					img: 'devoluciones', 
+					value: this.price(this.model.total_devolucion),
+					description: 'Sumatoria de las devoluciones de tus clientes (notas de credito)',
 				},
 				// {
 				// 	text: 'Articulos vendidos',
@@ -107,6 +113,9 @@ export default {
 				}
 			})
 			return deuda
+		},
+		model() {
+			return this.$store.state.reportes.model
 		},
 		total_vendido() {
 			return this.$store.state.reportes.total_vendido

@@ -24,8 +24,9 @@
 </template>
 <script>
 import vender from '@/mixins/vender'
+import vender_set_total from '@/mixins/vender_set_total'
 export default {
-	mixins: [vender],
+	mixins: [vender, vender_set_total],
 	components: {
 		SearchComponent: () => import('@/common-vue/components/search/Index'),
 	}, 
@@ -49,7 +50,8 @@ export default {
 			} else {
 				this.setItemsPrices(false, false)
 			}
-			this.$store.commit('vender/setTotal') 
+			this.setTotal() 
+			// this.$store.commit('vender/setTotal') 
 			console.log('watch client')
 		},
 	},

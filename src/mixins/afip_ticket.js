@@ -41,7 +41,7 @@ export default {
 			}, 500)
 		},
 		sendAfipTicket() {
-			if (this.afip_information_id) {
+			if (this.afip_information_id && this.maked_sale.total_a_facturar > 0) {
 				this.interval = window.setInterval(() => {
 					this.ticket_demorado()	
 				}, 5000)
@@ -92,6 +92,9 @@ export default {
 						this.$store.commit('vender/setAfipResult', [{Msg: 'Ocurrio un error en el servidor de AFIP'}])
 					}
 					this.$toast.error('Error al facturar')
+					setTimeout(() => {
+						this.ocultar_tarjeta()
+					}, 2000)
 				})
 			}
 		},

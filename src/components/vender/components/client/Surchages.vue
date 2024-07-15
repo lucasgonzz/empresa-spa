@@ -61,8 +61,9 @@
 <script>
 import Surchages from '@/components/vender/modals/clients/Surchages'
 import vender from '@/mixins/vender'
+import vender_set_total from '@/mixins/vender_set_total'
 export default {
-	mixins: [vender],
+	mixins: [vender, vender_set_total],
 	components: {
 		Surchages,
 	},
@@ -76,7 +77,8 @@ export default {
 			},
 			set(value) {
 				this.$store.commit('vender/setSurchagesId', value)
-				this.$store.commit('vender/setTotal')
+				this.setTotal()
+				// this.$store.commit('vender/setTotal')
 			}
 		}
 	}

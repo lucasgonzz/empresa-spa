@@ -1,9 +1,9 @@
 <template>
 	<b-col
 	v-if="user.ask_amount_in_vender"
-	class="col-buttons"
+	class="col-buttons m-b-15 m-lg-b-0"
 	cols="12"
-	lg="3">
+	md="3">
 		<div class="d-flex w-100">
 			<b-form-input
 			type="number"
@@ -14,7 +14,7 @@
 			@keydown.enter="addArticleToSale"
 			placeholder="Cantidad"></b-form-input>
 			<b-button 
-			class="d-lg-none m-l-10"
+			class="d-md-none m-l-10"
 			@click="callAddArticleToSale"
 			variant="primary">
 				<i class="icon-check"></i>

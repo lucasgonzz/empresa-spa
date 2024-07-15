@@ -4,8 +4,21 @@ import moment from 'moment'
 export default {
 	extends: Bar,
 	computed: { 
-		clients() {  
-			return this.$store.state.client.models
+		metodos_de_pago() {  
+			return this.$store.state.reportes.model.ingresos_cuenta_corriente
+		},
+		loading() {  
+			return this.$store.state.reportes.loading
+		},
+	},
+	watch: {
+		gastos_por_mes() {
+			console.log('wacth chart')
+			this.setChart()
+		},
+		loading() {
+			console.log('wacth chart')
+			this.setChart()
 		},
 	},
 	data() {
@@ -21,16 +34,20 @@ export default {
 
 			console.log('setChart')
 
+			if (typeof this.metodos_de_pago == 'undefined') {
+				return
+			}
+
 			let labels = []
 			let data = []
 			
-			this.clients.forEach(client => {
-				labels.push(client.name)
-				data.push(client.saldo)	
+			this.metodos_de_pago.forEach(metodo_de_pago => {
+				labels.push(metodo_de_pago.name)
+				data.push(metodo_de_pago.pivot.amount)	
 			})
 
 			let datasets = [{
-				label: 'Deuda',
+				label: 'Importe',
 				backgroundColor: '#007bff',
 				data: data,
 			}]
@@ -49,7 +66,7 @@ export default {
 					callbacks: {
 						label: function(tooltipItem, data) {
 							// console.log('entorooooo')
-							// return that.price(Math.round(tooltipItem.yLabel))
+							return that.price(Math.round(tooltipItem.yLabel))
 						}
 					}
 				}

@@ -1,6 +1,6 @@
 <template>
 	<b-row
-	class="row-rango-temporal m-t-15 m-b-15">
+	class="row-rango-temporal p-t-15 m-b-15">
 		<b-col
 		cols="12">
 			<div class="cont-selects">

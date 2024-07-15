@@ -3,7 +3,7 @@
 	v-if="!budget"
 	class="m-b-15 m-lg-b-0" 
 	cols="12"
-	:lg="col_header_lg">
+	:md="col_header_lg">
 		<service
 		:service="service"></service>	
 		<b-form-input

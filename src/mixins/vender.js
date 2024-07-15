@@ -3,8 +3,9 @@ import sale_ticket from '@/mixins/sale_ticket'
 import afip_ticket from '@/mixins/afip_ticket'
 import vender_current_acount_payment_methods from '@/mixins/vender_current_acount_payment_methods'
 import start_methods from '@/mixins/start_methods'
+import vender_set_total from '@/mixins/vender_set_total'
 export default {
-	mixins: [clients, sale_ticket, afip_ticket, vender_current_acount_payment_methods, start_methods],
+	mixins: [vender_set_total, clients, sale_ticket, afip_ticket, vender_current_acount_payment_methods, start_methods],
 	computed: {
 		discounts() {
 			return this.$store.state.discount.models
@@ -90,7 +91,8 @@ export default {
 			}, 
 			set(value) {
 				this.$store.commit('vender/setDiscountsInServices', value)
-				this.$store.commit('vender/setTotal')
+				this.setTotal()
+				// this.$store.commit('vender/setTotal')
 			},
 		},
 		surchages_in_services: {
@@ -99,7 +101,8 @@ export default {
 			}, 
 			set(value) {
 				this.$store.commit('vender/setSurchagesInServices', value)
-				this.$store.commit('vender/setTotal')
+				this.setTotal()
+				// this.$store.commit('vender/setTotal')
 			},
 		},
 		current_acount_payment_method_id: {
@@ -156,6 +159,8 @@ export default {
 	data() {
 		return {
 			intentos_volver_a_llamar_default_articles: 0,
+			intentos_volver_a_llamar_default_payment_method: 0,
+			intentos_volver_a_llamar_set_omitir_en_cuenta_corriente: 0,
 			interval: null,
 		}
 	},
@@ -305,6 +310,8 @@ export default {
 
 					this.setDefaultPaymentMethod()
 
+					this.set_omitir_en_cuenta_corriente()
+
 					if (this.maked_sale.client_id && this.maked_sale.save_current_acount) {
 						this.loadModel('client', this.maked_sale.client_id)
 					}
@@ -335,7 +342,7 @@ export default {
 			this.$store.commit('vender/setReturnedItems', [])
 			this.$store.commit('vender/setSaveNotaCredito', 0)
 			this.$store.commit('vender/setNotaCreditoDescription', '')
-			this.$store.commit('vender/setTotal')
+			// this.$store.commit('vender/setTotal')
 			this.$store.commit('vender/setObservations', '')
 			this.$store.commit('vender/setGuardarComoPresupuesto', 0)
 			this.$store.commit('vender/setBudget', null)
@@ -349,6 +356,8 @@ export default {
 			this.$store.commit('vender/setSurchagesInServices', 0)
 
 			this.$store.commit('vender/set_omitir_en_cuenta_corriente', 0)
+			
+			this.setTotal()
 
 			this.checkAddressCookie()
 
@@ -388,22 +397,55 @@ export default {
 			})
 
 		},
-		setDefaultPaymentMethod() {
-			if (this.owner.default_current_acount_payment_method_id) {
-				this.$store.commit('vender/setCurrentAcountPaymentMethodId', this.owner.default_current_acount_payment_method_id)
+		set_omitir_en_cuenta_corriente() {
+			if (this.authenticated) {
+				if (this.owner.siempre_omitir_en_cuenta_corriente) {
+					this.$store.commit('vender/set_omitir_en_cuenta_corriente', 1)
+				} 
 			} else {
-				if (!this.current_acount_payment_method_id) {
-					this.current_acount_payment_method_id = 3;
+				this.volver_a_llamar_set_omitir_en_cuenta_corriente()
+			}
+
+		},
+		volver_a_llamar_set_omitir_en_cuenta_corriente() {
+			if (this.intentos_volver_a_llamar_set_omitir_en_cuenta_corriente < 5) {
+				setTimeout(() => {
+					this.intentos_volver_a_llamar_set_omitir_en_cuenta_corriente++
+					this.set_omitir_en_cuenta_corriente()
+				}, 2000)
+			}
+		},
+
+
+		setDefaultPaymentMethod() {
+			if (this.authenticated) {
+				if (this.owner.default_current_acount_payment_method_id) {
+					this.$store.commit('vender/setCurrentAcountPaymentMethodId', this.owner.default_current_acount_payment_method_id)
+				} else {
+					if (!this.current_acount_payment_method_id) {
+						this.current_acount_payment_method_id = 3;
+					}
 				}
+			} else {
+				this.volver_a_llamar_default_payment_method()
+			}
+		},
+		volver_a_llamar_default_payment_method() {
+			if (this.intentos_volver_a_llamar_default_payment_method < 5) {
+				setTimeout(() => {
+					this.intentos_volver_a_llamar_default_payment_method++
+					this.setDefaultPaymentMethod()
+				}, 2000)
 			}
 		},
 		check_vender() {
 			console.log('check antes de vender')
 			console.log(this.hasExtencion('articles_default_in_vender'))
 
-			if (!this.current_acount_payment_method_id) {
+			if (!this.current_acount_payment_method_id && !this.client) {
 
-				if (!this.guardarMetodosPago()) {
+				if (!this.check_sobrante_a_repartir()) {
+				// if (!this.guardarMetodosPago()) {
 					return false 
 				} 
 
@@ -531,7 +573,8 @@ export default {
 			} else if (set_price) {
 				this.setItemsPrices(true)
 			}
-			this.$store.commit('vender/setTotal')
+			this.setTotal()
+			// this.$store.commit('vender/setTotal')
 			console.log('Se agrego item')
 			this.clearArticle()
 		},
@@ -589,7 +632,9 @@ export default {
 					}
 					finded.amount += Number(amount)
 					this.$store.commit('vender/updateItem', finded)
-					this.$store.commit('vender/setTotal')
+
+					this.setTotal()
+					// this.$store.commit('vender/setTotal')
 					// this.clearArticle()
 				}
 				this.clearArticle()

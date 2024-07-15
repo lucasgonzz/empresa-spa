@@ -74,8 +74,9 @@
 <script>
 import Discounts from '@/components/vender/modals/clients/Discounts'
 import vender from '@/mixins/vender'
+import vender_set_total from '@/mixins/vender_set_total'
 export default {
-	mixins: [vender],
+	mixins: [vender, vender_set_total],
 	components: {
 		Discounts,
 	},
@@ -99,7 +100,8 @@ export default {
 			},
 			set(value) {
 				this.$store.commit('vender/setDiscountsId', value)
-				this.$store.commit('vender/setTotal')
+				this.setTotal()
+				// this.$store.commit('vender/setTotal')
 			}
 		}
 	}

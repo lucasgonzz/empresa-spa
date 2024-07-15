@@ -2,7 +2,7 @@
 	<div 
 	class="chart-card">
 		<div class="header">
-			<h4>Metodos de Pago | Ventas mostrador y pagos de clientes</h4>
+			<h4>Ingresos Cuenta Corriente</h4>
 		</div>
 
 		<chart></chart>
@@ -11,7 +11,7 @@
 <script>
 export default {
 	components: { 
-		Chart: () => import('@/components/reportes/components/general/graficos/metodos-de-pago/Chart'),
+		Chart: () => import('@/components/reportes/components/graficos/ingresos/ingresos-cuenta-corriente-metodos-de-pago/Chart'),
 	},
 }
 </script>

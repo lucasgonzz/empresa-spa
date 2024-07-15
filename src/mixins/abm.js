@@ -21,6 +21,7 @@ export default {
 					models: [
 						'discount',
 						'surchage',
+						'current_acount_payment_method_discount',
     					'commission',
     					'sale_type',
 					],
@@ -37,7 +38,14 @@ export default {
 					view: 'facturacion',
 					models: [
 						'afip_information',
+						'afip_selected_payment_method',
 					]
+				},
+				{
+					view: 'gastos',
+					models: [
+						'expense_concept',
+					],
 				},
 				{
 					view: 'tienda online',

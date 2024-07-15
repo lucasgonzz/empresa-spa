@@ -7,15 +7,16 @@
 				<btn-loader
 				class="m-r-10"
 				text="Actualizar venta"
+				:disabled="sale_details.afip_ticket ? true : false"
 				:block="false"
 				:loader="loading_index"
 				@clicked="setPreviusSale(sale_details)" />
-				<b-button
+				<!-- <b-button
 				v-b-modal="'update-prices'"
 				class="m-r-10"
 				variant="outline-primary">
 					Actualizar precios
-				</b-button>
+				</b-button> -->
 				<b-button
 				class="m-r-10"
 				v-if="hasExtencion('acopios')"

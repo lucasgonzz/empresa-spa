@@ -92,7 +92,7 @@
 				<i class="icon-eye-slash"></i>
 				No hay {{ plural(model_name) }}
 			</p>
-			<div 
+			<!-- <div 
 			v-if="models.length && show_buttons_scroll"
 			class="scroll-buttons">
 				<div 
@@ -105,7 +105,7 @@
 				class="scroll-button">
 					<i class="icon-right"></i>
 				</div>
-			</div>
+			</div> -->
 		</div>
 		<b-skeleton-table
 		class="s-2 b-r-1 m-t-15 animate__animated animate__fadeIn"
@@ -364,6 +364,9 @@ export default {
 							table.style.height = height +'px'
 						} else {
 							console.log('no se puso height porque era solo de '+height)
+							if (table.style.height < 500) {
+								table.style.height = '500px'
+							}
 						}
 						// table.style.max_height = height +'px'
 
@@ -490,7 +493,7 @@ export default {
 			width: 100px
 
 	.scroll-buttons
-		position: absolute 
+		position: relative 
 		bottom: 40px
 		right: 40px
 		display: flex 

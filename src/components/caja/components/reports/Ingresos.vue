@@ -2,7 +2,7 @@
 	<div>
 
 		<p
-		class="title text-left">
+		class="title m-b-0 text-left">
 			Ingresos
 		</p>
 

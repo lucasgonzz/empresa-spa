@@ -1,7 +1,8 @@
 import set_employee_vender from '@/mixins/set_employee_vender'
 import vender from '@/mixins/vender'
+import vender_set_total from '@/mixins/vender_set_total'
 export default {
-	mixins: [vender, set_employee_vender],
+	mixins: [vender, set_employee_vender, vender_set_total],
 	computed: {
 		updating() {
 			return this.$store.state.vender.previus_sales.updating
@@ -230,7 +231,8 @@ export default {
 
 			this.setItemsPrices(false, true)
 
-			this.$store.commit('vender/setTotal')
+			// this.$store.commit('vender/setTotal')
+			this.setTotal()
 		},
 		setPreviusReturnedArticles() {
 			let returned_articles = []

@@ -11,7 +11,7 @@ hide-footer
 			@keydown.enter="enterSelect"
 			@keydown.up="selectUp"
 			@keydown.down="selectDown"
-			@keydown.shift="search"
+			@keydown.ctrl="search"
 			class="input-search-modal"
 			v-model="query"
 			:id="_id+'-search-modal-input'"
@@ -24,7 +24,7 @@ hide-footer
 				<div
 				class="j-center">
 					<i class="icon-search p-r-5"></i>
-					(shift)
+					(Ctrl)
 				</div>
 			</b-button>
 
@@ -39,11 +39,28 @@ hide-footer
 		v-if="!saving_if_not_exist">
 			<div
 			v-if="loading || results.length">
-				<p
-				class="results-title">
-					<i class="icon-down"></i>
-					Resultados
-				</p>
+
+				<div class="j-between align-center m-t-15">
+
+					<p
+					class="results-title m-0">
+						<i class="icon-down"></i>
+						Resultados 
+						<span
+						v-if="total_results > 0">
+							({{ total_results }})
+						</span>
+					</p>
+
+					<pagination
+					:total_pages="total_pages"
+					:total_results="total_results"
+					:per_page="per_page"
+					:current_page="current_page"
+					:loading="loading"
+					@setCurrentPage="setCurrentPage"></pagination>	
+				</div>
+
 				<table-component
 				:properties="properties"
 				:selected_index="selected_index"
@@ -88,7 +105,8 @@ import TableComponent from '@/common-vue/components/display/TableComponent'
 export default {
 	components: {
 		TableComponent,
-		BtnCreateModel: () => import('@/common-vue/components/search/BtnCreateModel')
+		BtnCreateModel: () => import('@/common-vue/components/search/BtnCreateModel'),
+		Pagination: () => import('@/common-vue/components/search/Pagination'),
 	},
 	props: {
 		_id: String,
@@ -137,6 +155,11 @@ export default {
 			saving_if_not_exist: false,
 			esperando: false,
 			no_hacer_seleccion: false,
+
+			per_page: 25,
+			current_page: null,
+			total_pages: null,
+			total_results: 0,
 		}
 	},
 	watch: {
@@ -182,6 +205,10 @@ export default {
 		},
 	},
 	methods: {
+		setCurrentPage(page) {
+			this.current_page = page 
+			this.search(true)
+		},
 		callSearchModal() {
 			this.$emit('callSearchModal')
 		},
@@ -217,7 +244,7 @@ export default {
 				}
 			}
 		},
-		search() {
+		search(from_pagination = false) {
 			console.log('BUSCANDO, str_limint: '+this.str_limint)
 			this.results = []
 
@@ -234,13 +261,20 @@ export default {
 				if (this.searchFromApi()) {
 					console.log('enviando api')
 
+					if (!from_pagination || typeof from_pagination == 'object') {
+						this.current_page = 1
+					}
+
 					let info = this.get_info_param()
 
-					this.$api.post('search-from-modal/'+this.model_name, info)
+					this.$api.post('search-from-modal/'+this.model_name+'?page='+this.current_page, info)
 					.then(res => {
 						console.log('llego desde api:')
 						console.log(res.data.models)
-						this.results = res.data.models 
+						this.results = res.data.models.data 
+						this.total_pages = res.data.models.last_page
+						this.total_results = res.data.models.total
+
 						this.finishSearch()
 					})
 					.catch(err => {
@@ -311,6 +345,7 @@ export default {
 
 					console.log('results:')
 					console.log(this.results)
+					this.total_results = this.results.length
 					
 					this.finishSearch()
 				}

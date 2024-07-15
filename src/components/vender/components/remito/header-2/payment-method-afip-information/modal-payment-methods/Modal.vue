@@ -76,17 +76,25 @@ export default {
 		index_previus_sale() {
 			return this.$store.state.vender.previus_sales.index
 		},
+		watch_activado() {
+			return this.$store.state.vender.current_acount_payment_methods.watch_activado
+		},
 	},
 	watch: {
-        total_vender() {
+        total_vender() { 
         	console.log('-> cambio total_vender a '+this.total_vender)
-        	this.total_a_repartir = this.total_vender
-        	
-        	if (this.index_previus_sale == 0) {
-        		this.metodos_de_pago_seleccionados = []
-        		this.total_repartido = 0
+        	console.log('watch_activado: '+this.watch_activado)
+        	if (this.watch_activado) {
+	        	this.total_a_repartir = this.total_vender
+	        	
+	        	if (this.index_previus_sale == 0) {
+	        		this.metodos_de_pago_seleccionados = []
+	        		this.total_repartido = 0
+	        	} else {
+	        		this.set_total_desde_previus_sale()
+	        	}
         	} else {
-        		this.set_total_desde_previus_sale()
+        		console.log('NO PASO NADA porque watch_activado esta en: '+this.watch_activado)
         	}
         },
     },
