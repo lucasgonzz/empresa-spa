@@ -145,6 +145,8 @@ export default {
 			model_name = model_name.toLowerCase()
 			let date = this.$store.state[model_name].from_date
 
+			console.log('from_date de '+model_name+': '+date)
+
 			return moment(date).format('YYYY-MM-DD')
 		},
 		get_table_prop_slot_name(prop) {
@@ -155,7 +157,6 @@ export default {
 			return typeof prop_to_show_in_modal_title != 'undefined' ? prop_to_show_in_modal_title : null
 		},
 		checkButton(prop, model) {
-			console.log('checkButton')
 			return (prop.type == 'radio') && model[prop.key] != prop.value
 		},
 		getLabel(prop) {
@@ -173,9 +174,7 @@ export default {
 			}) 
 		},
 		removeRelationFiltered(model_name, model, nombre_relacion) {
-			console.log('removeRelationFiltered para '+model_name+' en la relacion '+nombre_relacion)
 
-			console.log(model)
 
 			// original_model tiene la relacion como estaba un un principio
 			let original_model = this.getOriginalModel(model_name, model)
@@ -186,11 +185,7 @@ export default {
 			// Aca se setea la relacion del modelo a como estaba en un principio
 			model[nombre_relacion] = original_model[nombre_relacion]
 
-			console.log('relacion original:')
-			console.log(original_model[nombre_relacion])
 
-			console.log('modelos_filtrados:')
-			console.log(modelos_filtrados)
 
 
 			modelos_filtrados.forEach(modelo_filtrado => {
@@ -204,15 +199,11 @@ export default {
 						En caso de que cuando se filtro se le alla cambiado alguna propiedad,
 					 	Entonces se reemplaza en la relacion original
 					 */
-					console.log('actualizando modelo filtrado en la relacion: ')
 					if (modelo_filtrado.name) {
-						console.log(modelo_filtrado.name)
 					}
 					model[nombre_relacion].splice(index, 1, modelo_filtrado)
 				} else {
-					console.log('quitando de la relacion el modelo: ')
 					if (modelo_filtrado.name) {
-						console.log(modelo_filtrado.name)
 					}
 					model[nombre_relacion].splice(index, 1)
 				}
@@ -230,20 +221,13 @@ export default {
 		quitar_modelos_eliminados_de_las_relaciones_filtradas(model_name, model) {
 			let deleted_models = this.$store.state[model_name].deleted_models_from_relations_filtered
 			if (typeof deleted_models != 'undefined') {
-				console.log('quitar_modelos_eliminados_de_las_relaciones_filtradas para '+model_name)
-				console.log(deleted_models)
 				deleted_models.forEach(deleted_model => {
 					let index = model[deleted_model.relation].findIndex(relation_model => {
 						return relation_model.id == deleted_model.id 
 					})
 					if (index != -1) {
-						console.log('ENTROOOO')
-						console.log(index)
-						console.log(model[deleted_model.relation])
-						console.log(model[deleted_model.relation][index])
 						model[deleted_model.relation].splice(index, 1)
 						if (typeof model[deleted_model.relation][index] != 'undefined') {
-							console.log('eliminando '+model[deleted_model.relation][index].name+' de '+deleted_model.relation)
 						}
 					}
 				})
@@ -330,7 +314,6 @@ export default {
 				this.$store.commit(prop.commit, item)
 			}
 			if (prop.modal) {
-				console.log('abriendo modal: '+prop.modal)
 				this.$bvModal.show(prop.modal)
 			}
 			if (prop.button && prop.button.emit) {
@@ -430,7 +413,7 @@ export default {
 			return null
 		},
 		loadModel(model_name, id) {
-			this.$api.get(model_name+'/'+id)
+			return this.$api.get(model_name+'/'+id)
 			.then(res => {
 				this.$store.commit(model_name+'/add', res.data.model)
 				this.$toast.success(this.singular(model_name)+' actualizado')
@@ -826,12 +809,12 @@ export default {
 				}
 				options.push({value: item.id, text})
 			})
-			if (model_name) {
-				options.push({
-					value: -10,
-					text: this.create_spanish(this.modelNameFromRelationKey(prop))
-				})
-			}
+			// if (model_name) {
+			// 	options.push({
+			// 		value: -10,
+			// 		text: this.create_spanish(this.modelNameFromRelationKey(prop))
+			// 	})
+			// }
 			return options
 		},
 		booleanOptions(prop, model = null) {

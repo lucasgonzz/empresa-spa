@@ -149,7 +149,24 @@ export default {
 		},
 		articulos_con_depositos() {
 			return this.items.filter(item => {
-				return item.is_article && item.addresses.length
+				if (item.is_article) {
+					if (item.addresses.length) {
+						return true 
+					}  
+					if (item.article_variants.length) {
+
+						let has_addresses = false
+						item.article_variants.forEach(variant => {
+
+							if (variant.addresses.length) {
+								has_addresses = true 
+							}
+						})
+
+						return has_addresses
+					}
+				}
+				return false
 			})
 		},
 		guardar_como_presupuesto() {
@@ -442,6 +459,10 @@ export default {
 			console.log('check antes de vender')
 			console.log(this.hasExtencion('articles_default_in_vender'))
 
+			if (!this.check_article_variants()) {
+				return false
+			}
+
 			if (!this.current_acount_payment_method_id && !this.client) {
 
 				if (!this.check_sobrante_a_repartir()) {
@@ -479,6 +500,16 @@ export default {
 			}
 			return true 
 		},
+		check_article_variants() {
+			let ok = true
+			this.items.forEach(item => {
+				if (item.article_variants.length && item.article_variant_id == 0) {
+					ok = false 
+					this.$toast.error('Indique la variante de '+item.name)
+				}
+			})
+			return ok
+		},
 		checkDefaultArticles() {
 			console.log('checkDefaultArticles')
 			let default_articles = this.items.filter(item => {
@@ -510,6 +541,7 @@ export default {
 			if (this.checkRegister(article) && this.check_stock(article)) {
 				let article_to_add = {
 					...article,
+					article_variant_id: 0,
 				}
 				if (this.user.ask_amount_in_vender) {
 					article_to_add.amount = ''
@@ -622,6 +654,9 @@ export default {
 			if (typeof finded == 'undefined') {
 				console.log('No esta repetido')
 				return false
+			} else if (finded.article_variants.length) {
+				console.log('esta repetido pero tiene variantes')
+				return false
 			} else {
 				console.log('Esta repetido')
 				if (!is_default_article) {
@@ -645,6 +680,7 @@ export default {
 			this.$store.commit('vender/setArticle', null)
 			let bar_code = document.getElementById('article-bar-code')
 			if (bar_code) {
+				bar_code.value = ''
 				bar_code.focus()
 				document.getElementById('search-article').value = ''
 				console.log('Se limpio articulo')

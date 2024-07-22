@@ -315,10 +315,12 @@ export default {
 				item.id = article.id
 				item.name = article.name
 				item.status = article.status
+				item.article_variants = article.article_variants
 				item.pivot = article.pivot
 				item.cost = Number(article.pivot.cost)
 				item.price = Number(article.price)
 				item.amount = Number(article.pivot.amount)
+				item.article_variant_id = Number(article.pivot.article_variant_id)
 				item.discount = this.get_pivot_amount(article.pivot.discount)
 				item.checked_amount = this.get_pivot_amount(article.pivot.checked_amount)
 				item.returned_amount = this.get_pivot_amount(article.pivot.returned_amount)

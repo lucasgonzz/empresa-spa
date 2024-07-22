@@ -66,6 +66,20 @@ class="m-b-15 m-t-20">
 					{{ price(items[data.index].price_vender) }}
 				</span>
 			</template>
+
+
+			
+			<template #cell(article_variant_id)="data">
+				<b-input-group
+				v-if="items[data.index].article_variants.length"
+				class="input-discount">
+					<b-form-select
+					:options="article_variant_options(items[data.index])"
+					v-model="items[data.index].article_variant_id"></b-form-select>
+				</b-input-group>
+			</template>
+
+			
 			<template #cell(amount)="data">
 				<b-input-group
 				class="input-discount">
@@ -205,6 +219,7 @@ export default {
 			let fields = [
 				{ key: 'price', label: 'Precio' },
 				{ key: 'name', label: 'Nombre' },
+				{ key: 'article_variant_id', label: 'Variante' },
 				{ key: 'amount', label: 'Cantidad' },
 				{ key: 'discount', label: 'Descuento' },
 			]
@@ -260,6 +275,23 @@ export default {
 		callSetTotal() {
 			this.setTotal()
 		},
+
+		article_variant_options(item) {
+			let options = [{
+				value: 0,
+				text: 'Variante'
+			}]
+
+			item.article_variants.forEach(article_variant => {
+				options.push({
+					value: article_variant.id,
+					text: article_variant.variant_description
+				})
+			})
+
+			return options
+		},
+
 		calcular_precio_por_unidades_individuales(item) {
 			let precio = Number(item.price_vender)
 			let precio_por_unidad = precio / Number(item.unidades_individuales)

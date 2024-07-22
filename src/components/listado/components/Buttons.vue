@@ -11,7 +11,21 @@ class="buttons-listado">
 	:block="false"
 	:loader="loading_online"></btn-loader> -->
 
-	<btn-loader
+	<b-button 
+	v-if="show_variants" 
+	:variant="getVariant()"
+	size="sm"
+	@click.stop="showVariants()" 
+	class="m-l-10">
+		<b-badge
+		variant="danger"
+		v-if="model.article_variants.length">
+			{{ model.article_variants.length }}
+		</b-badge>
+		Variantes
+	</b-button>
+
+	<!-- <btn-loader
 	v-if="has_online"
 	@clicked="setFeatured(model)"
 	:variant="isFeatured(model)"
@@ -19,16 +33,30 @@ class="buttons-listado">
 	icon="check"
 	:block="false" 
 	class="m-l-10"
-	:loader="loading_featured"></btn-loader>
+	:loader="loading_featured"></btn-loader> -->
 
 	<!-- Estadisticas -->
-	<b-button 
+	<!-- <b-button 
 	variant="primary"
 	size="sm"
 	@click.stop="showCharts()" 
 	class="m-l-10">
 		<i class="icon-chart"></i>
+	</b-button> -->
+
+
+
+	<!-- Movimientos de depositos -->
+	<b-button 
+	variant="outline-secondary"
+	size="sm"
+	v-if="show_btn_mover_stock"
+	@click.stop="show_address_movement" 
+	class="m-l-10">
+		<i class="icon-refresh"></i>
 	</b-button>
+
+
 
 	<!-- Movimientos de stock -->
 	<b-button 
@@ -66,19 +94,6 @@ class="buttons-listado">
 		<i class="icon-chart"></i>
 		Recetas
 	</b-button>
-
-	<b-button 
-	:variant="getVariant()"
-	size="sm"
-	@click.stop="showVariants()" 
-	class="m-l-10">
-		<b-badge
-		variant="danger"
-		v-if="model.article_variants.length">
-			{{ model.article_variants.length }}
-		</b-badge>
-		Variantes
-	</b-button>
 </div>
 </template>
 <script>
@@ -99,8 +114,38 @@ export default {
 		order_production_statuses() {
 			return this.$store.state.order_production_status.models 
 		},
+		show_variants() {
+			if (this.model.article_variants.length
+				|| (
+					this.model.stock === null
+					|| this.model.stock == 0
+					)
+				) {
+				return true
+			}
+			return false
+		},
+        show_btn_mover_stock() {
+            if (this.model.addresses && this.model.addresses.length) {
+                return true 
+            }
+            if (this.model.article_variants && this.model.article_variants.length) {
+                let show = false
+                this.model.article_variants.forEach(article_variant => {
+                    if (article_variant.addresses.length) {
+                        show = true 
+                    }
+                })
+                return show
+            }
+            return false
+        },
 	},
 	methods: {
+		show_address_movement() {
+			this.setModel(this.model, 'article', [], false)
+			this.$bvModal.show('address-movement')
+		},
 		getVariant() {
 			if (this.model.article_properties.length) {
 				return 'primary'

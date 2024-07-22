@@ -59,6 +59,10 @@ export default {
 					key: 'amount',
 				},
 				{
+					label: 'Variante',
+					key: 'article_variant',
+				},
+				{
 					label: 'Stock Resultante',
 					key: 'stock_resultante',
 				},
@@ -94,6 +98,7 @@ export default {
 				items.push({
 					concepto: model.concepto,
 					amount: model.amount,
+					article_variant: model.article_variant ? model.article_variant.variant_description : null,
 					stock_resultante: model.stock_resultante,
 					provider: this.getRelation('provider', 'provider_id', 'name', model),
 					from_address: this.getRelation('address', 'from_address_id', 'street', model),

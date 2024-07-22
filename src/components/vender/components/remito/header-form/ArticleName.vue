@@ -86,11 +86,30 @@ export default {
 			console.log(result)
 			this.article.name = result.query
 			this.setVenderArticle(result.model)
+
+			this.set_codigo_input_value(result.model)
+
 			if (this.owner.ask_amount_in_vender) {
 				let input = document.getElementById('search-article')
 				input.value = result.model.name
 			}
 		},
+		set_codigo_input_value(finded_article) {
+			if (typeof finded_article != 'undefined') {
+
+				let input = document.getElementById('article-bar-code')
+
+				if (this.hasExtencion('codigo_proveedor_en_vender')) {
+					
+					input.value = finded_article.provider_code
+					console.log('se puso el codigo de proveedor: '+finded_article.provider_code)
+				} else {
+
+					input.value = finded_article.bar_code
+
+				}
+			}
+		}
 	}
 }
 </script>

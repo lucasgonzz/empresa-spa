@@ -15,23 +15,25 @@ export default {
                         las ventas de otra fecha
                     
                     */
-                    if (this.store_use_from_dates(model_name)) {
-                        console.log('el modelo '+model_name+' usa from_dates')
-                        console.log('comparando '+this.get_from_date(model_name)+' con '+moment().format('YYYY-MM-DD'))
-                    }
-                    if (!this.store_use_from_dates(model_name)
-                        || this.get_from_date(model_name) == moment().format('YYYY-MM-DD')) {
 
-                        console.log('se va a agregar')
-                        this.$api.get(this.routeString(model_name)+'/'+notification.model_id)
-                        .then(res => {
+                    this.$api.get(this.routeString(model_name)+'/'+notification.model_id)
+                    .then(res => {
+
+                        let model_to_add = res.data.model
+
+                        if (!this.store_use_from_dates(model_name)
+                            || this.get_from_date(model_name) == moment(model_to_add.created_at).format('YYYY-MM-DD')) {
+
                             this.$store.commit(model_name.toLowerCase()+'/add', res.data.model)
-                        })
-                        .catch(err => {
-                            console.log(err)
-                        })
+                        } else {
+                            console.log('No se agrego, fecha que se esta viendo: '+this.get_from_date(model_name))
+                            console.log('Fecha del que llego: '+moment(model_to_add.created_at).format('YYYY-MM-DD'))
+                        }
 
-                    }
+                    })
+                    .catch(err => {
+                        console.log(err)
+                    })
 
                 } else {
                     console.log('Ya estaba')

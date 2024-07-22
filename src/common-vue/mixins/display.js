@@ -7,7 +7,6 @@ export default {
 			}
 		},
 		setModel(model, model_name, properties_to_override = [], show_modal = true, show_pre_view = true) {
-			console.log('show_modal: '+show_modal)
 			if (this.usePreView(model_name) && show_pre_view) {
 				this.$store.commit(model_name+'/setModel', {
 					model, 
@@ -20,21 +19,17 @@ export default {
 				let properties = this.getSelectAndCheckboxProps(model, model_name)
 				properties = properties.concat(this.getPivotProperties(model, model_name))
 				properties = this.overrideProperties(properties, properties_to_override)
-				// console.log(properties)
-				console.log('show_modal: '+show_modal)
 				
 				if (show_modal) {
 					this.$store.commit('auth/setMessage', 'Cargando formulario')
 					this.$store.commit('auth/setLoading', true)
 				}			
 				setTimeout(() => {
-					console.log('show_modal: '+show_modal)
 					this.$store.commit(model_name+'/setModel', {
 						model, 
 						properties
 					})
 					if (show_modal) {
-						console.log('MOSTRANDO MODAL PARA '+model_name)
 						this.$bvModal.show(model_name)
 						setTimeout(() => {
 							this.$store.commit('auth/setLoading', false)
@@ -70,7 +65,6 @@ export default {
 					return prop.key == prop_to_override.key 
 				}) 
 				if (index != -1) {
-					console.log('reemplzacando '+prop_to_override.key)
 					properties.splice(index, 1, prop_to_override)
 				} else {
 					properties.push(prop_to_override)
@@ -115,8 +109,6 @@ export default {
 							key: prop.key,
 							value: [], 
 						}
-						console.log('all_models_for_relation')
-						console.log(all_models_for_relation)
 						all_models_for_relation.forEach(model_to_relation => {
 							propertye_to_add.value.push(this.getRelationToAdd(model, prop, model_to_relation))
 						})
@@ -132,9 +124,7 @@ export default {
 					}
 				}
 			})
-			// console.log('properties_to_add:')
 			// properties_to_add.forEach(prop => {
-			// 	console.table(prop)
 			// })
 			return properties_to_add
 		},
@@ -147,7 +137,6 @@ export default {
 					return r.id == model_to_relation.id 
 				})
 				if (typeof pivot_to_set != 'undefined') {
-					console.log('Ya tenia '+model_to_relation.name)
 					model_relation_to_add.pivot = pivot_to_set.pivot
 				} else {
 					this.setPivot(prop, model, model_relation_to_add, model_to_relation)
@@ -155,8 +144,6 @@ export default {
 			} else {
 				this.setPivot(prop, model, model_relation_to_add, model_to_relation)
 			}
-			console.log('Quedo asi:')
-			console.log(model_relation_to_add)
 			return model_relation_to_add
 		},
 		setPivot(prop, model, model_relation_to_add, model_to_relation) {

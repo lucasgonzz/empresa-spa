@@ -78,7 +78,7 @@ export default {
 						v_if: {
 							b_t_many_model_prop: 'addresses',
 							check_array_length: true,
-							check_on_store_models: 'article',
+							// check_on_store_models: 'article',
 						},
 						type: 'select'
 					},

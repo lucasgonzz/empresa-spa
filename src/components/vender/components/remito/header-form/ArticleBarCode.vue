@@ -23,6 +23,7 @@
 </template>
 <script>
 import vender from '@/mixins/vender' 
+import error from '@/assets/sonidos/error.mp3'
 export default {
 	mixins: [vender],
 	created() {
@@ -45,9 +46,9 @@ export default {
 		},
 		placeholder() {
 			if (this.usar_codigo_proveedor) {
-				return 'Ingrese el codigo de proveedor'
+				return 'Cod proveedor'
 			}
-			return 'Ingrese el codigo de barras'
+			return 'Cod barras'
 		},
 	},
 	data() {
@@ -103,7 +104,19 @@ export default {
 
 					this.setVenderArticle(this.finded_article)
 				} else {
+
+                    var audio = new Audio(error);
+                    audio.play()
+
+                    setTimeout(() => {
+                    	audio.play()
+                    }, 1000)
+
 					this.$toast.error('No se encontro articulo')
+
+					let input = document.getElementById('article-bar-code')
+					input.value = ''
+
 				}
 			}
 		},

@@ -198,8 +198,6 @@ export default {
 				let finded = relations_filtered.find(relation => {
 					return relation == this.prop.key
 				})
-				console.log('on_models_searched')
-				console.log(typeof finded != 'undefined')
 				return typeof finded != 'undefined'
 			}			
 			return false
@@ -207,11 +205,9 @@ export default {
 	},
 	watch: {
 		model() {
-			console.log('cambio model en search')
 			this.setSelectedModelProp()
 		},
 		index_to_update() {
-			console.log('cambio index_to_update en search')
 			this.setSelectedModelProp()
 		}
 	},
@@ -243,7 +239,6 @@ export default {
 			}
 		},
 		updateSearch() {
-			console.log('updateSearch en child')
 			this.setSelectedModelProp()
 		},
 		setNotShowModel(value) {
@@ -252,11 +247,6 @@ export default {
 		modelSaved(model) {
 			if (this.prop.is_between) {
 				if (this.prop.is_between.parent_model_prop) {
-					console.log('modelSaved')
-					console.log('model:')
-					console.log(this.model)
-					console.log('prop:')
-					console.log(this.prop)
 					let index = this.model[this.prop.is_between.parent_model_prop][this.prop.is_between.model_prop].findIndex(_model => {
 						return _model.id == model.id 
 					})
@@ -330,44 +320,26 @@ export default {
 			this.models_to_search = models 
 		},
 		setSelectedModelProp() {
-			console.log('setSelectedModelProp para '+this.model_name)
 			if (this.show_selected) {
-				console.log('------ entrooooo primero')
-				console.log('model')
-				console.log(this.model)
-				console.log('prop')
-				console.log(this.prop)
 				if (this.prop && this.prop.set_model_on_click_or_prop_with_query_if_null) {
-					console.log(this.prop.key+' ENTRO EN 1')
 					this.query = this.model[this.prop.key]
 					this.selected_model = null
 				} else if (this.model && this.prop && this.model[this.prop.key]) {
-					console.log('entroooooo---------')
 					if (this.prop.use_store_models) {
 						let model = this.$store.state[this.modelNameFromRelationKey(this.prop)].models.find(_model => {
 							return _model.id == this.model[this.prop.key]
 						})
-						console.log(this.prop.key+' ENTRO EN 2')
 						this.selected_model = model
-						console.log('selected_model:')
-						console.log(model)
 					} else {
-						console.log(this.prop.key+' ENTRO EN 3')
 						this.selected_model = this.model[this.modelNameFromRelationKey(this.prop)]
 					}
 				} else if (this.set_selected_model_with_model_prop && this.model) {
-					console.log('entro en set_selected_model_with_model_prop')
-					console.log(this.prop.key+' ENTRO EN 4')
 					this.selected_model = this.model 
-					console.log(this.selected_model)
 				} else if (this.set_selected_model_with_model_prop) {
-					console.log(this.prop.key+' ENTRO EN 5')
 					this.selected_model = null
 				}
-				console.log('sigue por aca')
 			} 
 			if (this.clear_query_on_model_change) {
-				console.log('clear_query_on_model_change')
 				this.query = ''
 			}
 		},
@@ -394,14 +366,11 @@ export default {
 			})
 			if (this.clear_query) {
 				this.query = ''
-				console.log('se limpio query')
 			}
 			this.setInputValue()
 		},
 		setInputValue() {
 			let input = document.getElementById(this.id)
-			console.log('setInputValue search input')
-			console.log(input)
 			input.setAttribute('model_id', this.selected_model.id)
 		}
 	}

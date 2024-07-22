@@ -1,6 +1,15 @@
 import dates from '@/common-vue/mixins/dates'
 export default {
 	methods: {
+        show_btn_repartir_stock(prop, article) {
+            if (!article.addresses.length 
+                && article.stock != null
+                && article.stock > 0
+                && !article.article_variants.length) {
+                return true 
+            }
+            return false
+        },
         saleGetColor(sale) {
             if (this.route_name == 'deposito-para-checkear' && sale.printed) {
                 return 'sale-printed'

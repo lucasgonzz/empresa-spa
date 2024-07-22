@@ -401,6 +401,9 @@ export default {
 			if (this.form_disabled_to_edit(this.model_name) && this.model.id) {
 				return true
 			}
+			if (prop.type == 'select' && prop.disabled_if_not_0 && this.model[prop.key] != 0) {
+				return true
+			}
 			return false
 		},
 		setFocus() {
@@ -420,8 +423,6 @@ export default {
 			}, 500)
 		},
 		setDate(result) {
-			console.log('result')
-			console.log(result)
 			this.model[result.prop.key] = result.value 
 		},
 		setBarCode(bar_code) {
@@ -452,7 +453,6 @@ export default {
 					return relation == prop.key 
 				})
 				if (typeof relation_filtered != 'undefined') {
-					console.log('SE ESTA FILTRANDO ESTA RELACION')
 					deleted_model.relation = prop.key
 					this.$store.commit(this.model_name+'/addDeletedModelsFromRelationFiltered', deleted_model)
 				}
@@ -471,7 +471,6 @@ export default {
 			}
 			if (prop.belongs_to_many.properties_to_set) {
 				prop.belongs_to_many.properties_to_set.forEach(prop_to_set => {
-					console.log('se esta agregando '+prop_to_set.key)
 					props.push({
 						...prop_to_set,
 						is_pivot_prop: true,
@@ -491,7 +490,6 @@ export default {
 				this[prop.on_change](prop)
 			}
 			if (this.model[prop.key] == -10) {
-				console.log('entro a crear '+this.modelNameFromRelationKey(prop))
 				this.create(this.modelNameFromRelationKey(prop))
 			}
 		},
@@ -499,7 +497,6 @@ export default {
 			if (this.model[prop.key] && this.model[prop.key] != 0) {
 				prop.properties_to_set_on_change.forEach(prop_to_set => {
 					if (prop_to_set.relation_to_set) {
-						console.log(prop_to_set.relation_to_set)
 						this.model[prop_to_set.relation_to_set].forEach(model => {
 							let selected_relationship = model[prop_to_set.find_on].find(relationship => {
 								return relationship.id == this.model[prop.key]
@@ -536,18 +533,19 @@ export default {
 					value: this.model[_prop]
 				})
 			})
-			console.log(properties)
 			this.$store.commit(prop.store+'/setModel', {model: null, properties: properties})
 			this.$bvModal.show(this.routeString(this.modelNameFromRelationKey(prop)))
 		},
 		setSelected(result) {
-			console.log('---------setSelected------------')
-			console.log(result)
+
 			let prop = result.prop
 			if (prop.belongs_to_many) {
 				let model_to_add = result.model 
 				if (this.checkBelongsToManyExist(prop, model_to_add, result)) {
+
+
 					this.setBelongsToManyPivotProps(prop, model_to_add, result)
+
 				}
 			} else if (prop.has_many && prop.has_many.models_from_parent_prop) {
 				this.model[prop.key].unshift(result.model)
@@ -562,6 +560,7 @@ export default {
 			} else {
 				this.$set(this.model, result.prop.key, result.model.id)
 				this.$set(this.model, this.modelNameFromRelationKey(result.prop), result.model)
+
 				this.setModel(this.model, this.model_name, [], false)
 			}
 		},
@@ -569,8 +568,6 @@ export default {
 			let finded = this.model[prop.key].find(model => {
 				return model.id == model_to_add.id 
 			})
-			console.log('checkBelongsToManyExist finded:')
-			console.log(finded)
 			if (typeof finded != 'undefined') {
 				this.$toast.error('El articulo YA HABIA SIDO AGREGADO')
 				return false
@@ -582,8 +579,6 @@ export default {
 				model_to_add.pivot = {}
 				prop.belongs_to_many.properties_to_set.forEach(prop_to_set => {
 					if (prop_to_set.set_with_function) {
-						console.log('set_with_function '+prop_to_set.set_with_function)
-						console.log(this[prop_to_set.set_with_function](this.model, model_to_add))
 						model_to_add.pivot[prop_to_set.key] = this[prop_to_set.set_with_function](this.model, model_to_add)
 					} else if (prop_to_set.from_store) {
 						let models = this.modelsStoreFromName(prop_to_set.store)
@@ -601,11 +596,8 @@ export default {
 					}
 				})
 			}
-			console.log('se va a agregar este modelo:')
-			console.log(model_to_add)
 			this.model[prop.key].push(model_to_add)
 			this.$set(this.model, prop.key, this.model[prop.key])
-			// this.setModel(this.model, this.model_name, [], false)
 			this.setTableFocus(prop, model_to_add)
 		},
 		setTableFocus(prop, model_to_add) {
@@ -613,7 +605,6 @@ export default {
 				setTimeout(() => {
 					let id = prop.belongs_to_many.model_name+'-'+prop.belongs_to_many.properties_to_set[0].key+'-'+model_to_add.id
 					let element = document.getElementById(id) 
-					console.log('id: '+id)
 					element.focus()
 				}, 1000)
 			}

@@ -7,7 +7,7 @@
 				<btn-loader
 				class="m-r-10"
 				text="Actualizar venta"
-				:disabled="sale_details.afip_ticket ? true : false"
+				:disabled="disabled_update"
 				:block="false"
 				:loader="loading_index"
 				@clicked="setPreviusSale(sale_details)" />
@@ -124,6 +124,18 @@ export default {
 	computed: {
 		sale_details() {
 			return this.$store.state.sale.model 
+		},
+		disabled_update() {
+			if (this.sale_details.afip_ticket) {
+				return true 
+			}
+			if (this.current_acount_payment_method_discounts.length) {
+				return true 
+			}
+			return false
+		},
+		current_acount_payment_method_discounts() {
+			return this.$store.state.current_acount_payment_method_discount.models 
 		},
 	},
 	methods: {

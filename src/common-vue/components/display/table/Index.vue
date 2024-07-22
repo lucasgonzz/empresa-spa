@@ -202,7 +202,6 @@ export default {
 		props() {
 			let props = []
 			 if (this.properties) {
-				console.log('ENOTR ACA')
 				props = this.propertiesToShow(this.properties, true)
 			} else if (!this.pivot || (this.pivot && !this.pivot.props_to_show)) {
 			 	props = this.propertiesToShow(this.modelPropertiesFromName(this.model_name), true)
@@ -237,8 +236,6 @@ export default {
 					is_date: true,
 				})
 			}
-			console.log('props')
-			console.log(props)
 			return props 
 		},
 		fields() {
@@ -264,9 +261,6 @@ export default {
 			return fields 
 		},
 		columns() {
-			// console.log('COLUMNS')
-			// console.log('properties')
-			// console.log(this.properties)
 			// let props = this.propertiesToShow(this.properties, true)
 			if (this.props.length) {
 				if (this.props.length > 6) {
@@ -278,7 +272,6 @@ export default {
 		},
 		lists() {
 			if (this.order_list_by) {
-				console.log('calculando lists:')
 				let models_from_order_by = this.$store.state[this.order_list_by].models
 				let lists = []
 				let list
@@ -312,14 +305,12 @@ export default {
 				if (list.models.length) {
 					lists.push(list)
 				}
-				console.log(lists)
 				return lists
 			} 
 		},
 	},
 	watch: {
 		loading() {
-			console.log('watch loading y setHeight')
 			this.setHeight()
 		}
 	},
@@ -336,9 +327,7 @@ export default {
 			table.scrollLeft += 300
 		},
 		loadMore($state) {
-			console.log('loadMore')
 			if (this.models_to_show.length < this.models.length) {
-				console.log('entro loadMore')
 				this.busy = true;
 
 				setTimeout(() => {
@@ -352,19 +341,21 @@ export default {
 				let table = document.getElementById(this.id)
 				if (table) {
 					setTimeout(() => {
-						console.log('window: '+window.innerHeight)
-						console.log('table_top: '+table.offsetTop)
-						console.log(window.innerHeight - table.offsetTop +'px')
 						let height = window.innerHeight - (Number(table.offsetTop))
 						// height -= 50
 						if (this.table_height_para_restar) {
 							height -= this.table_height_para_restar
 						}
-						if (height > 400) {
+						console.log('setHeight de '+this.model_name)
+						if (height > 500) {
+							console.log('aplicando height calculado de '+height)
 							table.style.height = height +'px'
 						} else {
-							console.log('no se puso height porque era solo de '+height)
+							console.log('no se aplico height calculado de '+height)
+							console.log('la tabla tiene height de '+table.style.height)
+
 							if (table.style.height < 500) {
+								console.log('se aplico height de 500')
 								table.style.height = '500px'
 							}
 						}
@@ -373,26 +364,22 @@ export default {
 						this.setShowButtonsScroll()
 					}, 500)
 				} else {
-					setTimeout(() => {
-						if (this.intentos < 5) {
-							console.log('no estaba la tabla, voy a llamar denuvo a setHeight')
-							this.intentos++
-							console.log('this.intentos: '+this.intentos)
-							this.setHeight()
-						} else {
-							console.log('no llamo mas')
-						}
-					}, 300)
+					this.volver_a_llamar_set_height()
 				}
-			} else {
-				console.log('No se ejecuto setHeight')
-			}
+			} 
+		},
+		volver_a_llamar_set_height() {
+
+			setTimeout(() => {
+				if (this.intentos < 5) {
+					this.intentos++
+					this.setHeight()
+				} 
+			}, 300)
 		},
 		setShowButtonsScroll() {
 			let cont_table =  document.getElementById(this.id)
 			let table = cont_table.firstChild
-			console.log('cont_table: '+cont_table.width)
-			console.log('table: '+table.offsetWidth)
 			if (cont_table.offsetWidth < table.offsetWidth) {
 				this.show_buttons_scroll = true 
 			} else {

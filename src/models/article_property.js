@@ -4,6 +4,7 @@ export default {
 			text: 'Propiedad',
 			key: 'article_property_type_id',
 			type: 'select',
+			disabled_if_not_0: true,
 			use_store_models: true,
 		},
 		{
@@ -26,5 +27,6 @@ export default {
 	singular_model_name_spanish: 'Propiedad de Articulo',
 	plural_model_name_spanish: 'Propiedades de Articulo',
 	create_model_name_spanish: 'Nueva',
+	full_reactivity: true,
 	text_delete: 'la',
 }

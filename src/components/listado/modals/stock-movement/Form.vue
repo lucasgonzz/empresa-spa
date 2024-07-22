@@ -24,17 +24,35 @@
 			auto_select></search-component>
 		</b-form-group>
 
-		<p
-		v-if="addresses.length && !article.addresses.length"
-		>Para indicar el deposito, primero divida el stock global del articulo hacia el o los depositos correspondientes</p>
+
+
+		<!-- Variante -->
 		<b-form-group
-		v-if="addresses.length && article.addresses.length"
+		v-if="article.article_variants.length"
+		label="Variante">
+			<b-form-select
+			v-model="article_variant_id"
+			:options="article_variant_options"></b-form-select>
+		</b-form-group>
+
+
+
+		<!-- Direcciones -->
+		<p
+		v-if="addresses.length && (!article.addresses.length && (article.stock || article.stock > 0))"
+		>Para indicar el deposito, primero divida el stock global del articulo hacia el o los depositos correspondientes</p>
+
+		<b-form-group
+		v-if="addresses.length && (article.addresses.length || article.article_variants.length || (!article.stock || article.stock == 0))"
 		label="Deposito DESTINO">
 			<b-form-select
 			v-model="to_address_id"
 			:options="getOptions({key: 'to_address_id', text: 'Deposito', store: 'address'})"></b-form-select>
 		</b-form-group>
 
+
+
+		<!-- Observaciones -->
 		<b-form-group
 		label="Observaciones">
 			<b-form-textarea
@@ -65,10 +83,25 @@ export default {
 		providers() {
 			return this.$store.state.provider.models
 		},
+		article_variant_options() {
+			let options = [{
+				value: 0,
+				text: 'Seleccione Variante'
+			}]
+
+			this.article.article_variants.forEach(article_variant => {
+				options.push({
+					value: article_variant.id,
+					text: article_variant.variant_description,
+				})
+			})
+			return options
+		}
 	},
 	data() {
 		return {
 			to_address_id: 0,
+			article_variant_id: 0,
 			amount_: '',
 			observations: '',
 			loading: false,
@@ -95,6 +128,7 @@ export default {
 					observations: this.observations,
 					provider_id: this.article.provider_id,
 					to_address_id: this.to_address_id,
+					article_variant_id: this.article_variant_id,
 				})
 				.then(res => {
 					this.loading = false 
@@ -105,19 +139,20 @@ export default {
 						this.article.stock = this.amount_
 					}
 					if (this.article.id) {
-						this.article.stock = Number(this.article.stock) + Number(this.amount_)
-						console.log('el stock es '+Number(this.article.stock)+' mas '+Number(this.amount_))
 
-						if (this.article.addresses.length) {
-							setTimeout(() => {
-								let store_article = this.$store.state.article.models.find(_article => {
-									return _article.id == this.article.id
-								})
-								console.log('se va a actualizar addresses con')
-								console.log(store_article.addresses)
-								this.setModel(store_article, 'article', [], false)
-							}, 1500)
-						}
+						this.loadModel('article', this.article.id)
+						// this.article.stock = Number(this.article.stock) + Number(this.amount_)
+
+						// if (this.article.addresses.length) {
+						// 	setTimeout(() => {
+						// 		let store_article = this.$store.state.article.models.find(_article => {
+						// 			return _article.id == this.article.id
+						// 		})
+						// 		console.log('se va a actualizar addresses con')
+						// 		console.log(store_article.addresses)
+						// 		this.setModel(store_article, 'article', [], false)
+						// 	}, 1500)
+						// }
 					}
 				})
 				.catch(err => {
@@ -128,6 +163,22 @@ export default {
 		},
 		check() {
 			if (this.article.addresses.length && this.to_address_id == 0) {
+				this.$toast.error('Indique el deposito')
+				return false 
+			}
+
+			if (this.article.article_variants.length 
+				&& !this.article_variant_id) {
+
+				this.$toast.error('Indique la variante')
+				return false 
+			}
+
+			if (this.article.article_variants.length 
+				&& this.article.article_variants[0].addresses.length
+				&& this.to_address_id == 0
+				) {
+
 				this.$toast.error('Indique el deposito')
 				return false 
 			}

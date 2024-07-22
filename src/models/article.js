@@ -307,17 +307,18 @@ export default {
 			},
 			not_show: true,
 		},
-		{
-			text: 'Movimientos de Stock',
-			type: 'button',
-			button: {
-				button_text: 'Mover stock entre depositos',
-				variant: 'primary',
-			},
-			modal: 'address-movement',
-			v_if_prop_length: 'addresses',
-			not_show: true,
-		},
+		// {
+		// 	text: 'Movimientos de Stock',
+		// 	type: 'button',
+		// 	button: {
+		// 		button_text: 'Mover stock entre depositos',
+		// 		variant: 'primary',
+		// 	},
+		// 	modal: 'address-movement',
+		// 	// v_if_prop_length: 'addresses',
+		// 	v_if_function: 'show_btn_mover_stock',
+		// 	not_show: true,
+		// },
 		{
 			text: 'Comenzar a utilizar depositos',
 			type: 'button',
@@ -326,7 +327,7 @@ export default {
 				variant: 'primary',
 			},
 			modal: 'create-article-addresses',
-			v_if_prop_not_length: 'addresses',
+			v_if_function: 'show_btn_repartir_stock',
 			not_show: true,
 		},
 		// {

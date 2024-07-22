@@ -41,7 +41,7 @@ export default {
 					text: 'Pagado en mostrador',
 					img: 'pagado_mostrador2',
 					value: this.price(this.model.total_pagado_mostrador),
-					description: 'Total vendido en mostrador (sin asignar cliente), y por ende, pagado en el momento',
+					description: 'Total vendido y pagado en el momento, sin pasar a c/c',
 				},
 				{
 					text: 'A cuentas corrientes',

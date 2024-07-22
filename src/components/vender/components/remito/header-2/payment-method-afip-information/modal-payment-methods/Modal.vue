@@ -82,8 +82,6 @@ export default {
 	},
 	watch: {
         total_vender() { 
-        	console.log('-> cambio total_vender a '+this.total_vender)
-        	console.log('watch_activado: '+this.watch_activado)
         	if (this.watch_activado) {
 	        	this.total_a_repartir = this.total_vender
 	        	

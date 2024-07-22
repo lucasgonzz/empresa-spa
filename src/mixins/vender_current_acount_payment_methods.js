@@ -56,27 +56,18 @@ export default {
 			let payment_methods_para_modal = []
 			let total_repartido = 0
 
-
-			console.log('this.previus_sale.current_acount_payment_methods:')
-			console.log(this.previus_sale.current_acount_payment_methods)
-			
 			this.previus_sale.current_acount_payment_methods.forEach(payment_method => {
 				payment_methods_para_modal[payment_method.id] = payment_method.pivot.amount 
 				total_repartido += Number(payment_method.pivot.amount)
 			})
 
-			console.log('payment_methods_para_modal')
-			console.log(payment_methods_para_modal)
-
-			
 			let payment_methods_para_vender = this.limpiar_array(payment_methods_para_modal)
-			console.log('payment_methods_para_vender:')
-			console.log(payment_methods_para_vender)
 
 			this.$store.commit('vender/current_acount_payment_methods/set_metodos_de_pago_seleccionados', payment_methods_para_modal)
 			this.$store.commit('vender/current_acount_payment_methods/set_total_repartido', total_repartido)
 			this.$store.commit('vender/setSelectedPaymentMethods', payment_methods_para_vender);
 
+			this.setTotal()
 		},
 
 		check_sobrante_a_repartir(){

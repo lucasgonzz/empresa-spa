@@ -53,8 +53,16 @@ export default {
 		},
 		setModel(state, value) {
 			if (value.model) {
+				console.log('setModel en article_property')
+				console.log('model:')
+				console.log(value.model)
+				
 				state.model = value.model
 				if (value.properties.length) {
+
+					console.log('properties:')
+					console.log(value.properties)
+
 					value.properties.forEach(prop => {
 						state.model[prop.key] = prop.value 
 					})

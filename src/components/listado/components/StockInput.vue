@@ -7,6 +7,7 @@
 			disabled></b-form-input>
 		</b-form-group>
 		<b-button
+		v-if="model.id"
 		class="m-t-10"
 		size="sm"
 		:disabled="disabled"
@@ -21,6 +22,12 @@
 				Asignar stock
 			</span>
 		</b-button>
+
+		<p
+		class="m-t-10"
+		v-else>
+			Primero cree el articulo para asignar el stock
+		</p>
 	</div>
 </template>
 <script>

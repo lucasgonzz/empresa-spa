@@ -64,10 +64,13 @@ export default {
 					console.log('se guardo address '+this.addresses[i].street)
 				}
 				console.log('salio del forEaach')
-				this.loading = false 
-				this.$bvModal.hide('create-article-addresses') 
-				this.$bvModal.hide('article') 
-				this.form = {}
+				this.loadModel('article', this.model.id)
+				.then(() => {
+					this.loading = false 
+					this.$bvModal.hide('create-article-addresses') 
+					this.$bvModal.hide('article') 
+					this.form = {}
+				})
 			}
 		},
 		saveAddress(address) {

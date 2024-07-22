@@ -283,8 +283,9 @@ export default {
 						this.$toast.error('Error al buscar')
 					})
 				} else {
-					console.log('search_function:')
-					console.log(this.search_function)
+					
+					console.log('this.models_to_search')
+					console.log(this.models_to_search)
 
 					let models_to_search = this.models_to_search
 					if (this.search_function && typeof this.search_function != 'undefined') {
@@ -292,6 +293,7 @@ export default {
 						console.log('Los models_to_search ahora son:')
 						console.log(models_to_search)
 					} 
+
 					results = models_to_search.filter(model => {
 						let value = ''+model[this.prop_to_filter.key]
 						let query_array = this.query.toLowerCase().split(' ')
@@ -378,8 +380,6 @@ export default {
 			return info
 		},
 		searchFromApi() {
-			console.log('searchFromApi')
-			// return true
 			if (this.search_from_api) {
 				return true
 			}

@@ -60,7 +60,7 @@ export default {
 		aplicar_discounts() {
 			if (this.discounts_id.length) {
 
-				let discounts_store_ = discounts_store.state.models 
+				let discounts_store_ = this.discounts_store.state.models 
 
 				let sale_discounts = []
 

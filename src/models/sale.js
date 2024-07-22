@@ -65,6 +65,10 @@ export default {
 				],
 				pivot_props_to_show: [
 					{
+						text: 'Variante',
+						key: 'variant_description',
+					},
+					{
 						text: 'Cantidad',
 						key: 'amount',
 					},
