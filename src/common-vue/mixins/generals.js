@@ -120,7 +120,7 @@ export default {
 		// 	return 40
 		// },
 		is_mobile() {
-			if (this.$vssWidth < '992') {
+			if (this.$vssWidth < '700') {
 				return true
 			}
 			return false

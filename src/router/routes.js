@@ -12,7 +12,7 @@ export default [
 		component: '@/views/Reportes',
 		image_url: 'nav-icons/caja.png',
 		name: 'reportes',
-		can: 'reportes',
+		can: 'reportes.index',
 		params: {
 			view: 'ingresos',
 		},
@@ -114,11 +114,23 @@ export default [
 		if_has_extencion: 'comerciocity_interno',
 		image_url: 'nav-icons/clientes.png',
 	},
+	// {
+	// 	text: 'Agenda',
+	// 	path: '/agenda',
+	// 	model_name: 'pending',
+	// 	component: '@/views/Pending',
+	// 	image_url: 'nav-icons/pendings.png',
+	// 	can: 'pending.index',
+	// 	params: {
+	// 		view: 'por-realizar',
+	// 	},
+	// },
 	{
 		path: '/gastos',
 		model_name: 'expense',
 		component: '@/views/Expense',
 		image_url: 'nav-icons/expenses.png',
+		can: 'expense.index',
 	},
 	{
 		text: 'Panel de Control',

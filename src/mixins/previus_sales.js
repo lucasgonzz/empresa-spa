@@ -60,6 +60,15 @@ export default {
 		selected_payment_methods() {
 			return this.$store.state.vender.selected_payment_methods
 		},
+		sub_total() {
+			return this.$store.state.vender.sub_total
+		},
+		total() {
+			return this.$store.state.vender.total
+		},
+		current_acount_payment_method_discounts() {
+			return this.$store.state.current_acount_payment_method_discount.models 
+		},
 	},
 	data() {
 		return {
@@ -67,6 +76,15 @@ export default {
 		}
 	},
 	methods: {
+		disabled_update(sale = null) {
+			if (sale && sale.afip_ticket) {
+				return true 
+			}
+			if (this.current_acount_payment_method_discounts.length) {
+				return true 
+			}
+			return false
+		},
 		setPreviusSale(sale) {
 			console.log('updateSale:')
 			console.log(sale)
@@ -279,6 +297,8 @@ export default {
 				numero_orden_de_compra: this.numero_orden_de_compra,
 				omitir_en_cuenta_corriente: this.omitir_en_cuenta_corriente,
 				metodos_de_pago_seleccionados: this.selected_payment_methods,
+				sub_total: this.sub_total,
+				total: this.total,
 			})
 			.then(res => {
 				this.$toast.success('Venta actualizada')
@@ -303,6 +323,7 @@ export default {
 			this.limpiar_methodos_de_pago_seleccionados()
 		},
 		limpiar_methodos_de_pago_seleccionados() {
+			return
 			this.$store.commit('vender/current_acount_payment_methods/set_metodos_de_pago_seleccionados', [])
 			this.$store.commit('vender/current_acount_payment_methods/set_total_a_repartir', 0)
 			this.$store.commit('vender/current_acount_payment_methods/set_total_repartido', 0)

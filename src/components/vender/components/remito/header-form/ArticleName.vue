@@ -85,9 +85,10 @@ export default {
 			console.log('llego este resultado:')
 			console.log(result)
 			this.article.name = result.query
-			this.setVenderArticle(result.model)
-
+			
 			this.set_codigo_input_value(result.model)
+
+			this.setVenderArticle(result.model)
 
 			if (this.owner.ask_amount_in_vender) {
 				let input = document.getElementById('search-article')

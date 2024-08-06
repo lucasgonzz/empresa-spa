@@ -4,7 +4,7 @@ import moment from 'moment'
 export default {
 	extends: Bar,
 	computed: { 
-		metodos_de_pago() {  
+		expense_concepts() {  
 			return this.$store.state.reportes.model.expense_concepts
 		},
 		loading() {  
@@ -32,13 +32,17 @@ export default {
 	methods: {
 		setChart() {	
 
+			if (typeof this.expense_concepts == 'undefined') {
+				return
+			}
+
 			console.log('setChart gastos')
-			console.log(this.metodos_de_pago)
+			console.log(this.expense_concepts)
 
 			let labels = []
 			let data = []
 			
-			this.metodos_de_pago.forEach(metodo_de_pago => {
+			this.expense_concepts.forEach(metodo_de_pago => {
 				labels.push(metodo_de_pago.name)
 				data.push(metodo_de_pago.pivot.amount)	
 			})

@@ -23,18 +23,49 @@ export default {
 	computed: {
 		items() {
 			let items = []
-			items.push({
-				name: 'ingresos',
-			})
-			items.push({
-				name: 'gastos',
-			})
-			items.push({
-				name: 'clientes',
-			})
-			items.push({
-				name: 'cheques',
-			})
+
+			if (this.can('reportes.ingresos')) {
+
+				items.push({
+					name: 'ingresos',
+				})
+			}
+
+			if (this.can('reportes.sucursales.index')) {
+
+				items.push({
+					name: 'sucursales',
+				})
+			}
+
+			if (this.can('reportes.empleados.index')) {
+
+				items.push({
+					name: 'empleados',
+				})
+			}
+
+			if (this.can('reportes.gastos')) {
+
+				items.push({
+					name: 'gastos',
+				})
+			}
+
+			if (this.can('reportes.clientes')) {
+
+				items.push({
+					name: 'clientes',
+				})
+			}
+
+			if (this.can('reportes.cheques')) {
+
+				items.push({
+					name: 'cheques',
+				})
+			}
+			
 			return items 
 		},
 		loading() {

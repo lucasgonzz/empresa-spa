@@ -63,9 +63,6 @@ export default {
 					if (res.data.result.observations) {
 						this.$toast.error('Error al facturar')
 						this.$store.commit('vender/setAfipResult', res.data.result.observations)
-						// res.data.result.observations.forEach(obs => {
-						// 	this.$toast.error(obs)
-						// })
 						ok = false
 					}
 					if (res.data.result.errors) {
@@ -82,6 +79,9 @@ export default {
 						setTimeout(() => {
 							this.ocultar_tarjeta()
 						}, 2000)
+					} else {
+
+						this.ocultar_tarjeta()
 					}
 				})
 				.catch(err => {

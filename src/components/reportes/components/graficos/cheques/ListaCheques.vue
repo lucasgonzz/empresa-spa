@@ -15,6 +15,12 @@
 				<p class="cobro">
 					Cobro: {{ date(cheque.payment_date) }}
 				</p>
+				<p class="cobro">
+					Registrado el {{ date(cheque.current_acount.created_at) }}
+				</p>
+				<p class="cobro">
+					Cliente: {{ cheque.current_acount.client.name }}
+				</p>
 			</div>
 		</div>
 		<div
@@ -49,6 +55,7 @@ export default {
 	flex-direction: row 
 	justify-content: flex-start
 	align-items: center
+	flex-wrap: wrap
 
 .cheque 
 	margin: 10px

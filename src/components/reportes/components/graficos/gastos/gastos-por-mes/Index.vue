@@ -3,7 +3,7 @@
 	v-if="rango_temporal == 'rango-de-fechas'"
 	class="chart-card">
 		<div class="header">
-			<h4>Resumen de gastos</h4>
+			<h4>Gastos por mes</h4>
 		</div>
 
 		<chart></chart>
@@ -12,7 +12,7 @@
 <script>
 export default {
 	components: { 
-		Chart: () => import('@/components/reportes/components/general/graficos/gastos-por-mes/Chart'),
+		Chart: () => import('@/components/reportes/components/graficos/gastos/gastos-por-mes/Chart'),
 	},
 	computed: {
 		rango_temporal() {

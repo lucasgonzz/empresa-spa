@@ -3,6 +3,7 @@
 
 		<div
 		v-if="!loading">
+
 			<rango-temporal></rango-temporal>
 	 
 			<icon-cards></icon-cards>
@@ -21,7 +22,7 @@
 <script>
 export default {
 	components: {
-		RangoTemporal: () => import('@/components/reportes/components/general/RangoTemporal'),
+		RangoTemporal: () => import('@/components/reportes/components/general/select-date/Index'),
 		IconCards: () => import('@/components/reportes/components/general/IconCards'),
 	},
 	computed: {

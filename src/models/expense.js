@@ -1,3 +1,4 @@
+import moment from 'moment'
 export default {
 	properties: [
 		{
@@ -24,6 +25,13 @@ export default {
 			key: 'current_acount_payment_method_id',
 			type: 'select',
 			use_store_models: true,
+		},
+		{
+			text: 'Fecha',
+			key: 'created_at',
+			type: 'date',
+			value: moment().format('YYYY-MM-DD'),
+			not_show: true,
 		},
 		{
 			text: 'Observaciones',

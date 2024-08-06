@@ -65,13 +65,19 @@ class="m-b-15 m-t-20">
 				v-else>
 					{{ price(items[data.index].price_vender) }}
 				</span>
+
+				<strong
+				v-if="price_with_payment_method_discount(items[data.index])"
+				class="text-success">
+					{{ price_with_payment_method_discount(items[data.index]) }}
+				</strong>
 			</template>
 
 
 			
 			<template #cell(article_variant_id)="data">
 				<b-input-group
-				v-if="items[data.index].article_variants.length"
+				v-if="items[data.index].is_article && items[data.index].article_variants.length"
 				class="input-discount">
 					<b-form-select
 					:options="article_variant_options(items[data.index])"
@@ -221,8 +227,14 @@ export default {
 				{ key: 'name', label: 'Nombre' },
 				{ key: 'article_variant_id', label: 'Variante' },
 				{ key: 'amount', label: 'Cantidad' },
-				{ key: 'discount', label: 'Descuento' },
 			]
+			
+			if (this.can('vender.article_discount')) {
+				fields.push({ 
+					key: 'discount', label: 'Descuento' 
+				})
+			}
+
 			// if (this.hasExtencion('unidades_individuales_en_articulos')) {
 			// 	fields.push(
 			// 		{ key: 'unidades_individuales', label: 'U. Individuales' },
@@ -274,6 +286,28 @@ export default {
 	methods: {
 		callSetTotal() {
 			this.setTotal()
+		},
+
+		price_with_payment_method_discount(item) {
+
+			if (this.current_acount_payment_method_discounts.length) {
+
+				if (this.vender_current_acount_payment_method_id) {
+
+					let monto_descuento = this.get_monto_descuento(item.price_vender, this.vender_current_acount_payment_method_id)
+
+					console.log('monto_descuento:')
+					console.log(monto_descuento)
+
+					if (!monto_descuento) {
+						return null
+					}
+
+					return this.price(item.price_vender - monto_descuento)
+				}
+			}
+
+			return null
 		},
 
 		article_variant_options(item) {

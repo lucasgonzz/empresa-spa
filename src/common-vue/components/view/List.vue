@@ -98,6 +98,9 @@ export default {
 			return props
 		},
 		show_previus_days_() {
+			if (this.show_previus_days !== null) {
+				return this.show_previus_days
+			}
 			return this.$store.state[this.model_name].from_dates
 		}
 	},

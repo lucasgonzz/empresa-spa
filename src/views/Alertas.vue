@@ -24,24 +24,35 @@ export default {
 	computed: {
 		nav_items() {
 
-			return [
+			let items = [
 				{
 					name: 'Cobros',
 					alert: this.ventas_sin_cobrar.length	
 				},
-				{
+			]
+
+			if (this.can('alerts.provider_orders')) {
+				items.push({
 					name: 'Pedidos Proveedor',	
 					alert: this.provider_order_days_to_advise.length	
-				},
-				{
+				})
+			}
+
+			if (this.can('alerts.orders')) {
+				items.push({
 					name: 'Pedidos Online',	
 					alert: this.unconfirmed_orders.length	
-				},
-				{
+				})
+			}
+
+			if (this.can('alerts.messages')) {
+				items.push({
 					name: 'Mensajes',	
-					alert: this.messages_not_read	
-				},
-			]
+					alert: this.messages_not_read		
+				})
+			}
+
+			return items
 		},
 		
 	},

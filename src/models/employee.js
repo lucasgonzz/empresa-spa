@@ -36,6 +36,12 @@ export default {
 			description: 'Si no se activa, solo podra ver las alertas sin cobrar de SUS PROPIAS VENTAS. Si se activa, vera las alertas de TODOS los empleados',
 		},
 		{
+			text: 'Sucursal',
+			key: 'address_id',
+			type: 'select',
+			use_store_models: true,
+		},
+		{
 			text: 'Permisos',
 			key: 'permissions',
 			type: 'checkbox',

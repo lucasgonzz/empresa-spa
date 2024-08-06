@@ -1,5 +1,7 @@
 <template>
-	<div class="icon-cards">
+	<div 
+	v-if="can('reportes.cards')"
+	class="icon-cards">
 		<template
 		v-if="!loading">
 			<div
@@ -58,20 +60,20 @@ export default {
 				{
 					text: 'Ingresos NETOS',
 					img: 'ingresos-netos',
-					value: this.price(this.model.total_pagado_a_cuenta_corriente + this.total_pagado_mostrador),
+					value: this.price(this.model.total_ingresos),
 					description: 'Suma de: lo que se vendio en mostrador + lo que pagaron en C/C tus clientes (lo que deberia haber en la caja)',
 				},
 				{
 					text: 'Gastos',
 					img: 'gastos',
 					value: this.price(this.model.total_gastos),
-					description: 'Suma de los pedidos hechos a proveedores',
+					description: 'Suma de los GASTOS',
 				},
 				{
 					text: 'Rentabilidad',
 					img: 'rentabilidad',
-					value: this.price(this.model.rentabilidad),
-					description: 'Diferencia entre las VENTAS menos los GASTOS',
+					value: this.price(this.model.total_ingresos - this.model.total_gastos),
+					description: 'Diferencia entre los INGRESOS NETOS menos los GASTOS',
 				},
 				{
 					text: 'Deudas de Clientes',
@@ -94,7 +96,7 @@ export default {
 				{
 					text: 'Cantidad de ventas',
 					img: 'cantidad_ventas',
-					value: this.cantidad_ventas,
+					value: this.model.cantidad_ventas,
 				},
 			]
 			return cards
@@ -160,9 +162,15 @@ export default {
 	flex-wrap: wrap
 
 	.icon-card
-		width: 200px
+		@media screen and (max-width: 700px) 
+			width: 45%
+			margin: 2.5%
+			
+		@media screen and (min-width: 700px) 
+			width: 250px
+			margin: 10px
+		
 		height: 200px
-		margin: 10px
 		background: #FFF
 		border: 2px solid rgba(0, 0, 0, .3)
 		border-radius: 8px
@@ -171,7 +179,9 @@ export default {
 		align-items: center 
 		justify-content: space-around
 		transition: all .2s
-		// overflow-y: hidden
+		overflow: hidden
+		position: relative // Añadido para contener el contenido absoluto
+
 
 		&:hover 
 			transform: scale(1.1)
@@ -201,6 +211,11 @@ export default {
 			display: none
 			padding: 10px
 			text-align: left
+			position: absolute // Absoluto para superponerse
+			top: 0 // Ubicación de la descripción dentro de la tarjeta
+			box-sizing: border-box // Incluye el padding en el ancho total
+			background: rgba(255, 255, 255, 0.9) // Fondo semitransparente
+			font-weight: bold
 
 
 

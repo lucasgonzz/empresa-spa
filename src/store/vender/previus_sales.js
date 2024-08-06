@@ -106,6 +106,8 @@ export default {
 				observations: info.observations,
 				numero_orden_de_compra: info.numero_orden_de_compra,
 				omitir_en_cuenta_corriente: info.omitir_en_cuenta_corriente,
+				sub_total: info.sub_total,
+				total: info.total,
 			})
 			.then(res => {
 				commit('sale/add', res.data.model, {root: true})

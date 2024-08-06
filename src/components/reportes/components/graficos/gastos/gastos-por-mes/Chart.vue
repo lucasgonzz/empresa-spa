@@ -4,15 +4,18 @@ import moment from 'moment'
 export default {
 	extends: Bar,
 	computed: { 
-		gastos_por_mes() {  
-			return this.$store.state.reportes.gastos_por_mes
+		meses_anteriores() {  
+			return this.$store.state.reportes.meses_anteriores
 		},
 		loading() {  
 			return this.$store.state.reportes.loading
 		},
+		expense_concepts() {
+			return this.$store.state.expense_concept.models 
+		}
 	},
 	watch: {
-		gastos_por_mes() {
+		meses_anteriores() {
 			console.log('wacth chart')
 			this.setChart()
 		},
@@ -24,6 +27,8 @@ export default {
 	data() {
 		return {
 			per_page: 10,
+			// paleta_de_colores: ['#FF6384', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'],
+			paleta_de_colores: ['#FF6384', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#FF6B6B', '#8C9EFF', '#FFD54F', '#4DB6AC', '#BA68C8', '#FF8A65'],
 		}
 	},
 	mounted() {
@@ -32,21 +37,58 @@ export default {
 	methods: {
 		setChart() {	
 
-			console.log('setChart')
+			if (typeof this.meses_anteriores == 'undefined') {
+				return
+			}
 
 			let labels = []
-			let data = []
-			
-			this.gastos_por_mes.forEach(gastos_por_mes => {
-				labels.push(gastos_por_mes.mes)
-				data.push(gastos_por_mes.total_gastado)	
+			let total_gastos = []
+
+			let datasets_expense_concepts = []
+
+			this.expense_concepts.forEach(expense_concept => {
+				
+				datasets_expense_concepts[expense_concept.id] = {
+					expense_concept_name: expense_concept.name,
+					meses: [] 
+				}
+
 			})
+			
+			this.meses_anteriores.forEach(meses_anterior => {
+				labels.push(meses_anterior.fecha)
+				total_gastos.push(meses_anterior.total_gastos)
+
+				meses_anterior.expense_concepts.forEach(expense_concept => {
+
+					datasets_expense_concepts[expense_concept.id].meses.push(expense_concept.pivot.amount)
+				})	
+
+			})
+
+			console.log('data total_gastos:')
+			console.log(total_gastos)
+
+			console.log('data datasets_expense_concepts:')
+			console.log(datasets_expense_concepts)
 
 			let datasets = [{
 				label: 'Total gastado',
 				backgroundColor: '#007bff',
-				data: data,
+				data: total_gastos,
 			}]
+
+			let index = 0
+			datasets_expense_concepts.forEach(dataset => {
+				
+				datasets.push({
+					label: dataset.expense_concept_name,
+					backgroundColor: this.paleta_de_colores[index],
+					data: dataset.meses 
+				})
+
+				index++
+			})
 
 			let that = this
 			this.renderChart({

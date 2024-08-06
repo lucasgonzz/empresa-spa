@@ -5,6 +5,13 @@
 	class="col-total">
 		<div
 		class="cont-total">
+			<p 
+			v-if="sub_total != total"
+			class="m-0">
+				<strong class="sub-total">
+					Sub Total: {{ price(sub_total) }}
+				</strong>
+			</p>
 			<p class="m-0">
 				<strong class="total">
 					Total: {{ price(total) }}
@@ -39,6 +46,9 @@ export default {
         },
 		previus_sale() {
 			return this.$store.state.vender.previus_sales.previus_sale
+		},
+		sub_total() {
+			return this.$store.state.vender.sub_total
 		},
 		total() {
 			return this.$store.state.vender.total

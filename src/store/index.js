@@ -100,6 +100,9 @@ import expense from '@/store/expense'
 import expense_concept from '@/store/expense_concept'
 import current_acount_payment_method_discount from '@/store/current_acount_payment_method_discount'
 import afip_selected_payment_method from '@/store/afip_selected_payment_method'
+import unidad_frecuencia from '@/store/unidad_frecuencia'
+import pending from '@/store/pending'
+import pending_completed from '@/store/pending_completed'
 
 Vue.use(Vuex)
 
@@ -210,5 +213,8 @@ export default new Vuex.Store({
         expense_concept,
         current_acount_payment_method_discount,
         afip_selected_payment_method,
+        unidad_frecuencia,
+        pending,
+        pending_completed,
     }
 })

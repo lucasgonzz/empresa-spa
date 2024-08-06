@@ -16,8 +16,8 @@ export default {
 		// Se usa cuando es belongs_to_many_from_dates. Por ejemplo para ver los pagos de un cliente
 		// plural_model_name: '',
 		// selected_model: null,
-		from_date: moment().subtract(1, 'months').format('YYYY-MM-DD'),
-		until_date: moment().format('YYYY-MM-DD'),
+		from_date: moment().startOf('month').format('YYYY-MM-DD'),
+		until_date: moment().endOf('month').format('YYYY-MM-DD'),
 
 		// until_date: moment().format('YYYY-MM-DD'),
 		// from_date: moment().startOf('month').format('YYYY-MM-DD'),

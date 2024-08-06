@@ -37,9 +37,14 @@ export default {
 			return this.$store.state.sale.loading  
 		},
 		total() {
+			console.log('Total:')
 			let total = 0
 			this.sales_to_show.forEach(model => {
-				total += this.totalSale(model, false)
+				console.log('sumando:')
+				console.log(Number(this.totalSale(model, false)))
+				total += Number(this.totalSale(model, false))
+				console.log('total va en:')
+				console.log(total)
 			})
 			return this.price(total) 
 		},

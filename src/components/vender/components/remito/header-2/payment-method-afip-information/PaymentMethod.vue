@@ -26,23 +26,26 @@ class="cont-select">
 </template>
 <script>
 import vender from '@/mixins/vender'
-import vender_set_total from '@/mixins/vender_set_total'
+import select_payment_methods from '@/mixins/vender/select_payment_methods'
 export default {
-	mixins: [vender, vender_set_total],
+	mixins: [vender, select_payment_methods],
 	computed: {
 		selected_payment_methods() {
 			return this.$store.state.vender.selected_payment_methods
 		},
-		// cantidad_de_metodos_de_pago() {
-		// 	let array_limpio = this.metodos_de_pago_seleccionados.filter(monto => monto !== undefined && monto !== null && monto !== '')
-		// 	return array_limpio.length
-		// }
 	},
 	methods: {
 		set_payment_methods() {
 			this.$store.commit('vender/setCurrentAcountPaymentMethodId', 0)
-			this.$store.commit('vender/setSelectedPaymentMethods', [])
+
+			this.$store.commit('vender/current_acount_payment_methods/set_payment_methods', [])
+
+			this.$store.commit('vender/current_acount_payment_methods_with_discounts/set_payment_methods', [])
+
+			this.init_modal_payment_metohds()
+			
 			this.setTotal()
+			
 			this.$bvModal.show('payment-method-modal')
 		},
 		set_payment_methods_null() {

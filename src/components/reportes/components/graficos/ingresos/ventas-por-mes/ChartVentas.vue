@@ -34,19 +34,55 @@ export default {
 
 			console.log('setChart')
 
+			if (typeof this.meses_anteriores == 'undefined') {
+				return 
+			}
+
 			let labels = []
-			let data = []
+
+			let total_vendido = []
+			let total_ingresos = []
+			let total_vendido_a_cuenta_corriente = []
+			let total_pagado_a_cuenta_corriente = []
+			let total_pagado_mostrador = []
 			
 			this.meses_anteriores.forEach(meses_anteriores => {
 				labels.push(meses_anteriores.fecha)
-				data.push(meses_anteriores.total_vendido)	
+				total_vendido.push(meses_anteriores.total_vendido)	
+				total_ingresos.push(meses_anteriores.total_ingresos)
+				total_vendido_a_cuenta_corriente.push(meses_anteriores.total_vendido_a_cuenta_corriente)	
+				total_pagado_a_cuenta_corriente.push(meses_anteriores.total_pagado_a_cuenta_corriente)	
+				total_pagado_mostrador.push(meses_anteriores.total_pagado_mostrador)	
 			})
 
-			let datasets = [{
-				label: 'Total vendido',
-				backgroundColor: '#333',
-				data: data,
-			}]
+			let datasets = [
+				{
+					label: 'Total vendido',
+					backgroundColor: '#007bff',
+					data: total_vendido,
+				},
+				{
+					label: 'Vendido a C/C',
+					backgroundColor: '#dc3545',
+					data: total_vendido_a_cuenta_corriente,
+				},
+				{
+					label: 'Ingresos por C/C',
+					backgroundColor: '#28a745',
+					data: total_pagado_a_cuenta_corriente,
+				},
+				{
+					label: 'Ingresos mostrador',
+					backgroundColor: '#ffc107',
+					data: total_pagado_mostrador,
+				},
+				{
+					label: 'Total ingresos',
+					backgroundColor: '#9966FF',
+					// backgroundColor: '#383838',
+					data: total_ingresos,
+				},
+			]
 
 			let that = this
 			this.renderChart({

@@ -1,6 +1,20 @@
+import moment from 'moment'
 import dates from '@/common-vue/mixins/dates'
 export default {
 	methods: {
+        pending_tiempo_restantes(pending) {
+            if (pending.fecha_realizacion) {
+
+                console.log('fecha_realizacion de '+pending.detalle+': '+pending.fecha_realizacion)
+                if (moment(pending.fecha_realizacion).isBefore(moment())) {
+
+                    return 'VENCIDO '+this.since(pending.fecha_realizacion)
+                } 
+                
+                return this.until(pending.fecha_realizacion)
+            }
+            return null
+        },
         show_btn_repartir_stock(prop, article) {
             if (!article.addresses.length 
                 && article.stock != null
@@ -60,10 +74,10 @@ export default {
             let ok = true
             let provider_order = this.$store.state.provider_order.model 
             provider_order.articles.forEach(order_article => {
-                let store_article = this.$store.state.article.models.find(_article => {
-                    return _article.id == order_article.id 
-                })
-                if (typeof store_article != 'undefined' && store_article.addresses.length && order_article.pivot.address_id == 0) {
+                // let store_article = this.$store.state.article.models.find(_article => {
+                //     return _article.id == order_article.id 
+                // })
+                if (order_article.addresses.length && order_article.pivot.address_id == 0) {
                     this.$toast.error('Indique deposito para el articulo '+order_article.name)
                     ok = false 
                 } 
@@ -294,55 +308,63 @@ export default {
 		totalSale(sale, formated = true) {
 			let total = 0
             let total_item = 0
-            if (!sale.nota_credito_afip_ticket) {
-    			sale.articles.forEach(article => {
-    				total_item = this.getTotalItem(article, true)
-                    // if (sale.discounts) {
-                        sale.discounts.forEach(discount => {
-                            total_item -= total_item * Number(discount.pivot.percentage) / 100    
-                        })
-                    // }
-                    sale.surchages.forEach(surchage => {
-                        total_item += total_item * Number(surchage.pivot.percentage) / 100    
-                    })
-                    total += total_item
-    			})
-    			sale.services.forEach(service => {
-    				total_item = this.getTotalItem(service, true)
-                    if (sale.discounts_in_services) {
-                        sale.discounts.forEach(discount => {
-                            total_item -= total_item * Number(discount.pivot.percentage) / 100    
-                        })
-                    }
-                    if (sale.surchages_in_services) {
+
+            if (sale.total) {
+                total = sale.total 
+            } else {
+                
+                if (!sale.nota_credito_afip_ticket) {
+        			sale.articles.forEach(article => {
+        				total_item = this.getTotalItem(article, true)
+                        // if (sale.discounts) {
+                            sale.discounts.forEach(discount => {
+                                total_item -= total_item * Number(discount.pivot.percentage) / 100    
+                            })
+                        // }
                         sale.surchages.forEach(surchage => {
                             total_item += total_item * Number(surchage.pivot.percentage) / 100    
                         })
-                    }
-                    total += total_item
-    			})
-    			sale.combos.forEach(combo => {
-    				total_item = this.getTotalItem(combo, true)
-                    sale.discounts.forEach(discount => {
-                        total_item -= total_item * Number(discount.pivot.percentage) / 100    
+                        total += total_item
+        			})
+        			sale.services.forEach(service => {
+        				total_item = this.getTotalItem(service, true)
+                        if (sale.discounts_in_services) {
+                            sale.discounts.forEach(discount => {
+                                total_item -= total_item * Number(discount.pivot.percentage) / 100    
+                            })
+                        }
+                        if (sale.surchages_in_services) {
+                            sale.surchages.forEach(surchage => {
+                                total_item += total_item * Number(surchage.pivot.percentage) / 100    
+                            })
+                        }
+                        total += total_item
+        			})
+        			sale.combos.forEach(combo => {
+        				total_item = this.getTotalItem(combo, true)
+                        sale.discounts.forEach(discount => {
+                            total_item -= total_item * Number(discount.pivot.percentage) / 100    
+                        })
+                        sale.surchages.forEach(surchage => {
+                            total_item += total_item * Number(surchage.pivot.percentage) / 100    
+                        })
+                        total += total_item
+        			})
+                    sale.current_acount_payment_methods.forEach(payment_method => {
+                        if (payment_method.pivot.discount_amount) {
+                            total -= Number(payment_method.pivot.discount_amount)
+                        }
                     })
-                    sale.surchages.forEach(surchage => {
-                        total_item += total_item * Number(surchage.pivot.percentage) / 100    
-                    })
-                    total += total_item
-    			})
-                sale.current_acount_payment_methods.forEach(payment_method => {
-                    if (payment_method.pivot.discount_amount) {
-                        total -= Number(payment_method.pivot.discount_amount)
-                    }
-                })
+                }
             }
+
             if (formated) {
                 return dates.methods.price(total)
             }
             return total
 		},
         total_facturado(sale) {
+            return this.price(sale.total_a_facturar)
             if (sale.afip_ticket) {
                 return this.price(sale.afip_ticket.importe_total)
             }
@@ -361,28 +383,21 @@ export default {
                 if (item.calculated_price_vender) {
                     price = item.calculated_price_vender 
                     amount = 1
-                    // if (item.amount == '') {
-                    //     amount = 1
-                    // } else {
-                    //     amount = item.amount
-                    // }
-                    // console.log('')
+                    
                 } else {
                     price = item.price_vender 
                     amount = item.amount
                 }
                 discount = item.discount
-                returned_amount = item.returned_amount
+                // returned_amount = item.returned_amount
             }
-            if (returned_amount > 0) {
-                amount -= returned_amount
-            }
+            // if (returned_amount > 0) {
+                // amount -= returned_amount
+            // }
             let total = price * amount
             if (discount && discount != '') {
                 total -= total * Number(discount) / 100
             }
-            // console.log('getTotalItem')
-            // console.log(total)
             return total
         },
         showClientCurrentAcount(sale) {
@@ -406,24 +421,34 @@ export default {
                 })
             } else {
                 model.articles.forEach(article => {
+                    let total_article = 0
                     let cost = article.pivot.cost 
-                    if (article.pivot.received_cost) {
-                        cost = article.pivot.received_cost
-                    }
-                    if (article.pivot.cost_in_dollars) {
-                        if (model.provider.dolar) {
-                            cost = cost * model.provider.dolar 
+                    if (cost) {
+
+                        if (article.pivot.received_cost) {
+                            cost = article.pivot.received_cost
+                        }
+                        if (article.pivot.cost_in_dollars) {
+                            if (model.provider.dolar) {
+                                cost = cost * model.provider.dolar 
+                            } 
                         } 
-                    } 
-                    let total_article = cost * article.pivot.received
-                    if (model.total_with_iva && article.pivot.iva_id && article.pivot.iva_id != 0) {
-                        let iva = this.modelsStoreFromName('iva').find(model => {
-                            return model.id == article.pivot.iva_id
-                        })
-                        if (typeof iva != 'undefined' && iva.percentage != 'Exento' && iva.percentage != 'No Gravado' && iva.percentage != 0) {
-                            total_article += total_article * iva.percentage / 100       
-                        } 
+
+                        total_article = cost * article.pivot.received
+
+                        if (model.total_with_iva && article.pivot.iva_id && article.pivot.iva_id != 0) {
+                            let iva = this.modelsStoreFromName('iva').find(model => {
+                                return model.id == article.pivot.iva_id
+                            })
+                            if (typeof iva != 'undefined' && iva.percentage != 'Exento' && iva.percentage != 'No Gravado' && iva.percentage != 0) {
+                                total_article += total_article * iva.percentage / 100       
+                            } 
+                        }
+                    } else {
+
+                        total_article = Number(article.pivot.price) * Number(article.pivot.received)
                     }
+                    
                     if (article.pivot.bonus) {
                         total_article = total_article - (total_article * article.pivot.bonus / 100)
                     }

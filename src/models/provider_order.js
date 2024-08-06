@@ -72,6 +72,14 @@ export default {
 						type: 'number'
 					},
 					{
+						text: 'Precio',
+						key: 'price',
+						value: {
+							key: 'price',
+						},
+						type: 'number'
+					},
+					{
 						text: 'Deposito',
 						key: 'address_id',
 						value: 0,
@@ -191,7 +199,7 @@ export default {
 			text: 'Avisarme si el pedido no fue RECIBIDO a partir de X dias desde que fue creado',
 			type: 'number',
 			placeholder: 'Ingrese los dias a partir de los cuales se le notificara',
-			value: 0,
+			value: '',
 			not_show: true,
 		},
 		{

@@ -18,11 +18,12 @@ export default {
 				this.$store.commit('vender/current_acount_payment_methods/set_total_repartido', value)
 			}
 		},
-		metodos_de_pago_seleccionados: {
+		modal_payment_methods: {
 			get() {
 				return this.$store.state.vender.current_acount_payment_methods.metodos_de_pago_seleccionados
 			},
 			set(value) {
+				console.log('se esta llamando desde aca')
 				this.$store.commit('vender/current_acount_payment_methods/set_metodos_de_pago_seleccionados', value)
 			}
 		},
@@ -33,14 +34,17 @@ export default {
 		previus_sale() {
 			return this.$store.state.vender.previus_sales.previus_sale
 		},
+		current_acount_payment_methods() {
+			return this.$store.state.current_acount_payment_method.models
+		},
 		current_acount_payment_method_discounts() {
 			return this.$store.state.current_acount_payment_method_discount.models
 		},
 		vender_current_acount_payment_method_id() {
 			return this.$store.state.vender.current_acount_payment_method_id
 		},
-		selected_payment_methods() {
-			return this.$store.state.vender.selected_payment_methods
+		modal_payment_metohds() {
+			return this.$store.state.vender.current_acount_payment_methods.metodos_de_pago_seleccionados
 		},
 	},
 	data() {
@@ -50,6 +54,18 @@ export default {
 		}
 	},
 	methods: {
+		init_modal_payment_metohds() {
+			let payment_methods = []
+			this.current_acount_payment_methods.forEach(payment_method => {
+				payment_methods.push({
+					...payment_method,
+					amount: ''
+				})
+			})
+			console.log('init_modal_payment_metohds:')
+			console.log(payment_methods)
+			this.$store.commit('vender/current_acount_payment_methods/set_metodos_de_pago_seleccionados', payment_methods)
+		},
 		set_total_desde_previus_sale() {
 			console.log('set_total_desde_previus_sale')
 
@@ -98,25 +114,44 @@ export default {
 
 		guardarMetodosPago() {
 
-			let array_con_los_metodos_de_pago = this.limpiar_array(this.metodos_de_pago_seleccionados)
+			let array_con_los_metodos_de_pago = this.modal_payment_metohds
 
+			console.log('antes de entrar')
 			if (this.check_sobrante_a_repartir()) {
+				
 				this.$store.commit('vender/setSelectedPaymentMethods', array_con_los_metodos_de_pago);
 				this.$store.commit('vender/setCurrentAcountPaymentMethodId', 0);
-				this.$bvModal.hide('payment-method-modal')
-				// this.aplicar_current_acount_payment_method_discounts()
+				
 				this.$store.commit('vender/current_acount_payment_methods/set_watch_activado', false);
-				console.log('se puso set_watch_activado en false')
+
 				this.setTotal()
+				console.log('paso setTotal')
+				
+				if (this.current_acount_payment_method_discounts.length) {
+
+					this.set_payment_methods_with_discounts(array_con_los_metodos_de_pago)
+					console.log('ENTRO')
+
+					// this.$bvModal.show('payment-methods-with-discounts-modal')
+				} else {
+
+					this.$bvModal.hide('payment-method-modal')
+				}
 
 				setTimeout(() => {
 					this.$store.commit('vender/current_acount_payment_methods/set_watch_activado', true);
-					console.log('se puso set_watch_activado en true')
 				}, 1000)
+
 				return true 
 			}
 			console.log('No paso guardarMetodosPago')
 			return false 
+		},
+
+		set_payment_methods_with_discounts(array_con_los_metodos_de_pago) {
+			console.log('se setearon payment_methods con descuentos:')
+			console.log(array_con_los_metodos_de_pago)
+			this.$store.commit('vender/current_acount_payment_methods_with_discounts/set_metodos_de_pago_seleccionados', array_con_los_metodos_de_pago)
 		},
 
 		limpiar_descuentos_anteriores() {
@@ -124,7 +159,7 @@ export default {
 			this.discount_amount = null
 		},
 
-		aplicar_current_acount_payment_method_discounts(total) {
+		_aplicar_current_acount_payment_method_discounts(total) {
 
 			if (this.current_acount_payment_method_discounts.length) {
 
@@ -141,11 +176,13 @@ export default {
 					this.$store.commit('vender/set_payment_method_discount_percentage', this.discount_percentage)
 					this.$store.commit('vender/set_payment_method_discount_amount', this.discount_amount)
 
-				} else if (this.selected_payment_methods.length) {
+				} else if (this.modal_payment_metohds.length) {
 					
-					this.selected_payment_methods.forEach(selected_payment_method => {
+					this.modal_payment_metohds.forEach(selected_payment_method => {
 						
-						descuento = this.get_monto_descuento(selected_payment_method.monto, Number(selected_payment_method.id), selected_payment_method)
+						descuento = this.get_monto_descuento(selected_payment_method.amount, Number(selected_payment_method.id), selected_payment_method)
+
+						selected_payment_method.monto_descuento = descuento 
 
 						total -= descuento
 

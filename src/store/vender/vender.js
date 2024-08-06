@@ -5,10 +5,9 @@ axios.defaults.baseURL = process.env.VUE_APP_API_URL
 
 import previus_sales from '@/store/vender/previus_sales'
 import current_acount_payment_methods from '@/store/vender/current_acount_payment_methods'
+import current_acount_payment_methods_with_discounts from '@/store/vender/current_acount_payment_methods_with_discounts'
 
-import discounts_store from '@/store/discount'
-import surchages_store from '@/store/surchage'
-import mixin_vender from '@/mixins/vender'
+// import mixin_vender from '@/mixins/vender'
 import model_functions from '@/mixins/model_functions'
 import mixin_payment_methods from '@/mixins/vender_current_acount_payment_methods'
 
@@ -19,6 +18,17 @@ export default {
 		article: {bar_code: '', provider_code: '', num: '', name: '', amount: ''},
 		new_article: '',
 		article_for_sale: {},
+
+		/* 
+			sub_total es la suma de la venta 
+			sin aplicar descuentos de los metodos de pago
+		*/
+		sub_total: 0,
+
+		/* 
+			total es la suma de la venta 
+			aplicando descuentos de los metodos de pago
+		*/
 		total: 0,
 		
 		client: null,
@@ -203,69 +213,11 @@ export default {
 		setSale(state, value) {
 			state.sale = value
 		},
+		setSubTotal(state, sub_total = null) {
+			state.sub_total = sub_total
+		},
 		setTotal(state, total = null) {
 			state.total = total
-			// if (total) {
-			// 	state.total = total
-			// } else {
-			// 	state.total = 0
-			// 	let total_articles = 0
-			// 	let total_services = 0
-			// 	let new_items = []
-			// 	state.items.forEach(item => {
-			// 		item.total = model_functions.methods.getTotalItem(item, false)
-			// 		if (item.is_service) {
-			// 			total_services += model_functions.methods.getTotalItem(item, false)
-			// 		} else if (item.is_article) {
-			// 			total_articles += model_functions.methods.getTotalItem(item, false)
-			// 		}
-			// 		state.total += model_functions.methods.getTotalItem(item, false)
-			// 		new_items.push(item)
-			// 	})
-			// 	if (state.discounts_id.length) {
-
-			// 		let discounts_store_ = discounts_store.state.models 
-
-			// 		let sale_discounts = []
-					
-
-			// 		state.discounts_id.forEach(discount_id => {
-
-			// 			let discount_to_add = discounts_store_.find(_discount => _discount.id == discount_id)
-
-			// 			sale_discounts.push(discount_to_add)
-
-			// 		}) 
-
-			// 		sale_discounts.forEach(discount => {
-			// 			total_articles -= total_articles * Number(discount.percentage) / 100 
-			// 			if (state.discounts_in_services) {
-			// 				total_services -= total_services * Number(discount.percentage) / 100 
-			// 			}
-			// 		})
-			// 	}
-			// 	if (state.surchages_id.length) {
-			// 		let surchages = surchages_store.state.models 
-					
-			// 		let sale_surchages = []
-					
-			// 		state.surchages_id.forEach(id => {
-			// 			sale_surchages.push(surchages.find(item => item.id == id))
-			// 		}) 
-
-			// 		sale_surchages.forEach(_surchage => {
-			// 			total_articles += total_articles * Number(_surchage.percentage) / 100 
-			// 			if (state.surchages_in_services) {
-			// 				total_services += total_services * Number(_surchage.percentage) / 100 
-			// 			}
-			// 		})
-			// 	}
-			// 	state.items = new_items
-			// 	state.total = total_articles + total_services
-
-			// 	state.total = mixin_payment_methods.methods.aplicar_current_acount_payment_method_discounts(total)
-			// 	console.log('se puso el total en '+state.total)
-			// }
 		},
 		removeItem(state, item) {
 			let index = state.items.findIndex(i => {
@@ -325,9 +277,10 @@ export default {
 				observations: state.observations,
 				omitir_en_cuenta_corriente: state.omitir_en_cuenta_corriente,
 				numero_orden_de_compra: state.numero_orden_de_compra,
-				metodos_de_pago_seleccionados: state.selected_payment_methods,
+				selected_payment_methods: state.selected_payment_methods,
 				discount_percentage: state.discount_percentage,
 				discount_amount: state.discount_amount,
+				sub_total: state.sub_total,
 				total: state.total,
 			})
 			.then(res => {
@@ -354,5 +307,6 @@ export default {
 	modules: {
 		previus_sales,
 		current_acount_payment_methods,
+		current_acount_payment_methods_with_discounts,
 	}
 }

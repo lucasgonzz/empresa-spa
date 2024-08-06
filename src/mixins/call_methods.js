@@ -1,5 +1,6 @@
 export default [
     // 'extencion',
+    'unidad_frecuencia',
     'afip_selected_payment_method',
     'current_acount_payment_method_discount',
     'afip_information',

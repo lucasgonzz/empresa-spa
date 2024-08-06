@@ -8,6 +8,7 @@
 			:prop="{text: 'Cliente', key: 'client_id'}"
 			:model="_vender.client"
 			model_name="client"
+			:props_to_filter="['num', 'name', 'phone']"
 			show_btn_create
 			set_selected_model_with_model_prop
 			@clearSelected="clearSelected"></search-component>

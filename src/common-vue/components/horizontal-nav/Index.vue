@@ -340,7 +340,7 @@ export default {
 .horizontal-nav
 	width: 100%
 	display: flex
-	overflow-x: scroll
+	overflow-x: auto
 	overflow-y: hidden
 	padding-bottom: 5px
 

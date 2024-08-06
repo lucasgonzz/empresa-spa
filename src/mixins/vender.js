@@ -1,11 +1,11 @@
 import clients from '@/mixins/clients'
 import sale_ticket from '@/mixins/sale_ticket'
 import afip_ticket from '@/mixins/afip_ticket'
-import vender_current_acount_payment_methods from '@/mixins/vender_current_acount_payment_methods'
+import select_payment_methods from '@/mixins/vender/select_payment_methods'
 import start_methods from '@/mixins/start_methods'
 import vender_set_total from '@/mixins/vender_set_total'
 export default {
-	mixins: [vender_set_total, clients, sale_ticket, afip_ticket, vender_current_acount_payment_methods, start_methods],
+	mixins: [vender_set_total, clients, sale_ticket, afip_ticket, select_payment_methods, start_methods],
 	computed: {
 		discounts() {
 			return this.$store.state.discount.models
@@ -369,6 +369,8 @@ export default {
 			
 			this.$store.commit('vender/setSelectedPaymentMethods', [])
 
+			this.$store.commit('vender/current_acount_payment_methods/set_payment_methods', [])
+
 			this.$store.commit('vender/setDiscountsInServices', 0)
 			this.$store.commit('vender/setSurchagesInServices', 0)
 
@@ -463,7 +465,8 @@ export default {
 				return false
 			}
 
-			if (!this.current_acount_payment_method_id && !this.client) {
+			if (!this.current_acount_payment_method_id 
+				&& (!this.client || this.omitir_en_cuenta_corriente)) {
 
 				if (!this.check_sobrante_a_repartir()) {
 				// if (!this.guardarMetodosPago()) {
@@ -503,7 +506,7 @@ export default {
 		check_article_variants() {
 			let ok = true
 			this.items.forEach(item => {
-				if (item.article_variants.length && item.article_variant_id == 0) {
+				if (item.is_article && item.article_variants.length && item.article_variant_id == 0) {
 					ok = false 
 					this.$toast.error('Indique la variante de '+item.name)
 				}

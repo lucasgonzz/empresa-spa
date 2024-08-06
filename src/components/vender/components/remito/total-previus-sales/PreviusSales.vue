@@ -1,5 +1,6 @@
 <template>
 	<b-col
+	v-if="!disabled_update()"
 	cols="12"
 	lg="6"
 	class="j-end">

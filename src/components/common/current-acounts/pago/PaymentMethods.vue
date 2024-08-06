@@ -6,6 +6,7 @@
 				Metodos de pago
 			</strong>
 		</p>
+
 		<div
 		v-for="(payment_method, index) in pago.current_acount_payment_methods"
 		:key="index">
@@ -15,7 +16,9 @@
 				v-model="payment_method.current_acount_payment_method_id"
 				:options="options"></b-form-select> 
 			</b-form-group>
+
 			<b-form-input
+			@keyup="setTotal"
 			v-model="payment_method.amount"
 			placeholder="Monto"></b-form-input>
 
@@ -94,9 +97,19 @@ export default {
 		},
 		remove(index) {
 			this.pago.current_acount_payment_methods.splice(index, 1)
+			this.setTotal()
 		},
 		label(index) {
 			return 'Metodo de pago '+(index+1)
+		},
+		setTotal() {
+			let total = 0
+
+			this.pago.current_acount_payment_methods.forEach(payment_method => {
+				total += Number(payment_method.amount)
+			})
+
+			this.pago.haber = total
 		}
 	}
 }

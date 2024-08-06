@@ -120,6 +120,11 @@ const routes = [
         name: 'mercado_libre',
         component: () => import('@/views/MercadoLibre')
     },
+    {
+        path: '/agenda/:view?',
+        name: 'pending',
+        component: () => import('@/views/Pending')
+    },
     // {
     //     path: '/ventas',
     //     name: 'ventas',

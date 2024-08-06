@@ -21,6 +21,7 @@ hide-footer>
     </b-form-group>
     <b-form-group>
         <b-form-input
+        disabled
         type="number"
         min="0"
         id="monto-pago"
@@ -111,7 +112,7 @@ export default {
             return `Cuentas corriente de ${this.from_model.name}`
         },
         placeholder() {
-            return `Ingrese el pago de ${this.from_model.name}`
+            return `Monto total del pago de ${this.from_model.name}`
         },
         to_pay() {
             return this.$store.state.current_acount.to_pay

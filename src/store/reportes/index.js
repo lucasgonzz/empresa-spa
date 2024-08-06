@@ -106,7 +106,13 @@ export default {
 			let link = 'api/company-performance'
 
 			if (state.rango_temporal == 'rango-de-fechas') {
+
 				link += '/'+state.mes_inicio+'/'+state.mes_fin
+
+			} else if (state.rango_temporal == 'dia-en-especifico') {
+
+				link += '/'+state.mes_inicio
+
 			}
 
 			axios.get(link)
