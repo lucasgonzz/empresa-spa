@@ -34,6 +34,7 @@
 	show_filter_modal
 	ask_selectable
 	show_excel_drop_down
+	:properties_to_show="properties_to_show"
 	@addressMovement="addressMovement"
 	model_name="article">
 
@@ -73,29 +74,26 @@
 			<stock-input></stock-input> 
 		</template>
 
+		<template #table-prop-stock="props">
+			<stock-btn
+			:article="props.model"></stock-btn>
+		</template>
+
+		<template
+		v-for="address in addresses"
+		v-slot:[get_table_address_prop(address)]="props">
+			{{ get_address_stock(props.model, address) }}
+		</template>
+
 	</view-component>
-	
-	<!-- <article-images-colors></article-images-colors> -->
-
-	<!-- <articles-pdf></articles-pdf> -->
-	<!-- <prices-lists></prices-lists> -->
-	<!-- <create-prices-list></create-prices-list> -->
-	<!-- <combos></combos> -->
-
-	<!-- <stock-info></stock-info>
-	
-	<articles-loading-advise></articles-loading-advise> -->
-
-	<!-- <header-listado></header-listado> -->
-	<!-- <filtered-selected></filtered-selected> -->
-
-	<!-- <list></list> -->
 	
 </div>
 </template>
 
 <script>
+import addresses_columns from '@/mixins/listado/addresses_columns'
 export default {
+	mixins: [addresses_columns],
 	name: 'Lisado',
 	components: {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
@@ -121,6 +119,7 @@ export default {
 		NameInput: () => import('@/components/listado/components/NameInput'),
 		StockInput: () => import('@/components/listado/components/StockInput'),
 		StockInfo: () => import('@/components/listado/modals/stock-info/Index'),
+		StockBtn: () => import('@/components/listado/components/StockBtn'),
 
 		// Dropdown options
 		ArticleTicketOptionDropDown: () => import('@/components/listado/components/selected-filtered-options/ArticleTicketOptionDropDown'),

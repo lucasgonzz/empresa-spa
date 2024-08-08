@@ -47,4 +47,5 @@ export default {
 	plural_model_name_spanish: 'Pendientes',
 	create_model_name_spanish: 'Nueva Pendiente',
 	text_delete: 'el',
+	color_display_function: true,
 }

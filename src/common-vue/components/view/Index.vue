@@ -74,6 +74,7 @@
 		<slot name="body"></slot>
 		
 		<list
+		:properties_to_show="properties_to_show"
 		:table_height_para_restar="table_height_para_restar"
 		:order_list_by="order_list_by"
 		:check_permissions="check_permissions"
@@ -266,6 +267,10 @@ export default {
 		show_only_guardar: {
 			type: Boolean,
 			default: true,
+		},
+		properties_to_show: {
+			type: Array,
+			default: null,
 		},
 	},
 	computed: {

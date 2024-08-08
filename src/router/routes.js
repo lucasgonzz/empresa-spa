@@ -114,17 +114,17 @@ export default [
 		if_has_extencion: 'comerciocity_interno',
 		image_url: 'nav-icons/clientes.png',
 	},
-	// {
-	// 	text: 'Agenda',
-	// 	path: '/agenda',
-	// 	model_name: 'pending',
-	// 	component: '@/views/Pending',
-	// 	image_url: 'nav-icons/pendings.png',
-	// 	can: 'pending.index',
-	// 	params: {
-	// 		view: 'por-realizar',
-	// 	},
-	// },
+	{
+		text: 'Agenda',
+		path: '/agenda',
+		model_name: 'pending',
+		component: '@/views/Pending',
+		image_url: 'nav-icons/pendings.png',
+		can: 'pending.index',
+		params: {
+			view: 'por-realizar',
+		},
+	},
 	{
 		path: '/gastos',
 		model_name: 'expense',

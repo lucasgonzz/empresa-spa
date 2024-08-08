@@ -7,6 +7,10 @@ import generals from '@/common-vue/mixins/generals'
 export default {
 	namespaced: true,
 	state: {
+
+		dias_restantes_en_amarillo: 2,
+		modal_recurrente_abierto: false,
+
 		model_name: 'pending',
 		route_prefix: '',
 		from_dates: true,
@@ -50,6 +54,12 @@ export default {
 		loading: false,
 	},
 	mutations: {
+		set_dias_restantes_en_amarillo(state, value) {
+			state.dias_restantes_en_amarillo = value 
+		},
+		set_modal_recurrente_abierto(state, value) {
+			state.modal_recurrente_abierto = value 
+		},
 		setLoading(state, value) {
 			state.loading = value
 		},

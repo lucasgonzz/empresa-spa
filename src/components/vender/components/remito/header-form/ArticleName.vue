@@ -47,7 +47,7 @@ export default {
 			return this.$store.state.price_type.models 
 		},
 		props_to_show() {
-			if (this.price_types.length) {
+			if (this.price_types.length || this.current_acount_payment_method_discounts.length) {
 				let props = [
 					{
 						text: 'N°',
@@ -67,17 +67,29 @@ export default {
 						key: 'stock',	
 					},
 				]
-				// if (this.client) {
-				// 	props.push({
-				// 		{
-				// 			text: 'Stock',
-				// 			key: 'stock',	
-				// 		},
-				// 	})
-				// }
+
+				if (this.current_acount_payment_method_discounts.length) {
+
+					props.push({
+						text: 'Precio',
+						key: 'final_price',
+					})
+
+					this.current_acount_payment_method_discounts.forEach(payment_method => {
+						props.push({
+							text: payment_method.current_acount_payment_method.name,
+							key: 'payment_method_'+payment_method.current_acount_payment_method_id,
+							function: 'get_price_with_discount_in_vender',
+						})
+					})
+				}
+
 				return props
 			} 
 			return null
+		},
+		current_acount_payment_method_discounts() {
+			return this.$store.state.current_acount_payment_method_discount.models 
 		}
 	},
 	methods: {

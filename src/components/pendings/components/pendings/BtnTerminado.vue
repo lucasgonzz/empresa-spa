@@ -1,7 +1,7 @@
 <template>
 	<div
 	class="cont-btn-terminado"
-	v-if="model.id">
+	v-if="model.id && !modal_recurrente_abierto">
 		
 		<btn-loader
 		@clicked="terminar"
@@ -20,6 +20,9 @@ export default {
 	computed: {
 		model() {
 			return this.$store.state.pending.model 
+		},
+		modal_recurrente_abierto() {
+			return this.$store.state.pending.modal_recurrente_abierto
 		},
 	},
 	data() {

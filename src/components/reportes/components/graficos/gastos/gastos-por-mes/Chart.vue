@@ -28,7 +28,7 @@ export default {
 		return {
 			per_page: 10,
 			// paleta_de_colores: ['#FF6384', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'],
-			paleta_de_colores: ['#FF6384', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#FF6B6B', '#8C9EFF', '#FFD54F', '#4DB6AC', '#BA68C8', '#FF8A65'],
+			paleta_de_colores:['#FF5733', '#4CAF50', '#2196F3', '#FFD700', '#9C27B0', '#E91E63', '#FF6F61', '#81C784', '#64B5F6', '#FFD966', '#BA68C8', '#F06292', '#FF8C42', '#AED581', '#90CAF9', '#FFE066', '#CE93D8', '#F48FB1', '#FFB085', '#C5E1A5', '#BBDEFB', '#FFF176', '#E1BEE7', '#F8BBD0', '#9E9E9E', '#BDBDBD', '#E0E0E0', '#F5F5F5', '#6A1B9A', '#FFEB3B' ],
 		}
 	},
 	mounted() {

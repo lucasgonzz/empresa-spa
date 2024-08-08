@@ -78,7 +78,7 @@ export default {
 
 			let datasets = [
 				{
-					label: 'Total vendido',
+					label: 'Total ingresos',
 					backgroundColor: '#007bff',
 					data: total_vendido,
 				},

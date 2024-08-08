@@ -64,6 +64,12 @@ export default {
 				sub_total = this.total_articles + this.total_services
 
 				total = this.aplicar_current_acount_payment_method_discounts(sub_total)
+
+				if (this.owner.redondear_centenas_en_vender) {
+					console.log('total sin redondear:')
+					console.log(total)
+					total = this.redondear_centenas(total)
+				}
 				
 			}
 			this.$store.commit('vender/setSubTotal', sub_total)
@@ -71,6 +77,9 @@ export default {
 			
 			console.log('se puso el sub_total en '+sub_total)
 			console.log('se puso el total en '+total)
+		},
+		redondear_centenas(num) {
+			return Math.ceil(num / 100) * 100;
 		},
 		aplicar_discounts() {
 			if (this.discounts_id.length) {

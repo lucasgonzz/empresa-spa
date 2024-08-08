@@ -91,6 +91,12 @@ export default {
 		},
 
 		{
+			text: 'Redondear de a centenas el Total en VENDER',
+			key: 'redondear_centenas_en_vender',
+			type: 'checkbox',
+		},
+
+		{
 			text: 'Dias a partir de los cuales ALERTAR a los EMPLEADOS sobre las ventas no cobradas',
 			key: 'dias_alertar_empleados_ventas_no_cobradas',
 			type: 'number',

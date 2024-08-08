@@ -15,7 +15,9 @@
 				<p class="cobro">
 					Cobro: {{ date(cheque.payment_date) }}
 				</p>
-				<p class="cobro">
+				<p 
+				v-if="cheque.current_acount"
+				class="cobro">
 					Registrado el {{ date(cheque.current_acount.created_at) }}
 				</p>
 				<p class="cobro">

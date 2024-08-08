@@ -1,6 +1,6 @@
 <template>
 <div
-class="j-start">
+class="cont-rango-de-fechas">
 	<b-form-group
 	v-if="rango_temporal == 'rango-de-fechas'"
 	label="Desde">
@@ -48,3 +48,12 @@ export default {
 	},
 }
 </script>
+<style lang="sass">
+.cont-rango-de-fechas
+	display: flex 
+	@media screen and (max-width: 825px)
+		flex-direction: column 
+		align-items: flex-start		
+	@media screen and (min-width: 825px)
+		flex-direction: row 
+</style>

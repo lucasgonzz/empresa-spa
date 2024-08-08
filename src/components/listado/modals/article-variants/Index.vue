@@ -4,6 +4,9 @@
 size="lg"
 id="article-variants"
 hide-footer>
+
+	<variants-stock></variants-stock>
+
 	<article-properties></article-properties>
 
 	<article-variants></article-variants>
@@ -12,6 +15,7 @@ hide-footer>
 <script>
 export default {
 	components: {
+		VariantsStock: () => import('@/components/listado/modals/article-variants/VariantsStock'),
 		ArticleProperties: () => import('@/components/listado/modals/article-variants/ArticleProperties'),
 		ArticleVariants: () => import('@/components/listado/modals/article-variants/ArticleVariants'),
 	},

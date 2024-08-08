@@ -2,11 +2,37 @@ import moment from 'moment'
 import dates from '@/common-vue/mixins/dates'
 export default {
 	methods: {
+        get_price_with_discount_in_vender(article, prop) {
+            console.log('get_price_with_discount_in_vender article:')
+            console.log(article)
+            console.log(prop)
+            if (typeof article != 'undefined' && typeof prop != 'undefined') {
+
+                console.log('payment_method id: '+prop.key.substr(15))
+                return this.get_monto_descuento(article.price_vender, prop.key.substr(15))
+            }
+        },
+        pendingGetColor(pending) {
+            if (pending.fecha_realizacion) {
+
+                if (this.pending_vencido(pending)) {
+
+                    return 'pending-vencida'
+                }
+
+                let dias_restantes_en_amarillo = this.$store.state.pending.dias_restantes_en_amarillo
+
+                if (moment(pending.fecha_realizacion).diff(moment(), 'days') < dias_restantes_en_amarillo) {
+
+                    return 'pending-amarillo'
+                }
+            }
+        },
         pending_tiempo_restantes(pending) {
             if (pending.fecha_realizacion) {
 
                 console.log('fecha_realizacion de '+pending.detalle+': '+pending.fecha_realizacion)
-                if (moment(pending.fecha_realizacion).isBefore(moment())) {
+                if (this.pending_vencido(pending)) {
 
                     return 'VENCIDO '+this.since(pending.fecha_realizacion)
                 } 
@@ -14,6 +40,9 @@ export default {
                 return this.until(pending.fecha_realizacion)
             }
             return null
+        },
+        pending_vencido(pending) {
+            return moment(pending.fecha_realizacion).isBefore(moment())
         },
         show_btn_repartir_stock(prop, article) {
             if (!article.addresses.length 

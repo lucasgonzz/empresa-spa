@@ -169,6 +169,7 @@
 									</b-button>
 									<div
 									v-else-if="prop.function">
+										asd
 										<p>
 											{{ prop.text }}
 										</p>

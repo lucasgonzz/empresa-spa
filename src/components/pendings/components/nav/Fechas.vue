@@ -1,5 +1,5 @@
 <template>
-	<div class="cont-selects m-t-15">
+	<div class="cont-selects m-t-15 m-b-10">
 
 		<b-form-group
 		label="Desde">

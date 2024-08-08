@@ -1,6 +1,8 @@
 <template> 
 <view-component
 v-if="view == 'realizados'"
+:show_btn_save="false"
+:check_permissions="false"
 model_name="pending_completed">
 	<template #header>
 		<fechas 

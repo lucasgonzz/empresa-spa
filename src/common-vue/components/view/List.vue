@@ -78,6 +78,10 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+		properties_to_show: {
+			type: Array,
+			default: null,
+		},
 	},
 	computed: {
 		to_show() {
@@ -90,12 +94,10 @@ export default {
 			return this.$store.state[this.model_name].models
 		},
 		properties() {
-			let props = require(`@/models/${this.model_name}`).default.properties
-			let props_ordenadas = props.filter(prop => prop.table_position)
-			if (props_ordenadas.length) {
-				return props_ordenadas.sort((a, b) => a.table_position - b.table_position)
-			} 
-			return props
+			if (this.properties_to_show) {
+				return this.properties_to_show
+			}
+			return this.get_properties_to_show_ordenadas(this.model_name)
 		},
 		show_previus_days_() {
 			if (this.show_previus_days !== null) {

@@ -132,7 +132,15 @@ export default {
 		}, 
 	},
 	methods: {
-		store_use_from_dates(model_name) {
+		get_properties_to_show_ordenadas(model_name) {
+			let props = require(`@/models/${model_name}`).default.properties
+			let props_ordenadas = props.filter(prop => prop.table_position)
+			if (props_ordenadas.length) {
+				return props_ordenadas.sort((a, b) => a.table_position - b.table_position)
+			} 
+			return props
+		},
+		store_use_from_dates(model_name) { 
 			model_name = model_name.toLowerCase()
 			let from_dates = this.$store.state[model_name].from_dates
 

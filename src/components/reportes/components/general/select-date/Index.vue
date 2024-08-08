@@ -78,11 +78,19 @@ export default {
 <style lang="sass">
 .cont-selects
 	display: flex 
-	flex-direction: row 
-	align-items: flex-end
+	@media screen and (max-width: 825px)
+		flex-direction: column 
+		align-items: flex-start		
+	@media screen and (min-width: 825px)
+		flex-direction: row 
+		align-items: flex-end
 
 	.form-group
-		margin-bottom: 0 !important
+		@media screen and (max-width: 825px)
+			margin-bottom: 10px !important
+		@media screen and (min-width: 825px)
+			margin-bottom: 0 !important
+
 		margin-right: 15px
 
 		.cont-date-picker

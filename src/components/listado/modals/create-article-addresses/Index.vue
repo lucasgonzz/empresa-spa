@@ -64,7 +64,7 @@ export default {
 					console.log('se guardo address '+this.addresses[i].street)
 				}
 				console.log('salio del forEaach')
-				this.loadModel('article', this.model.id)
+				this.loadModel('article', this.article.id)
 				.then(() => {
 					this.loading = false 
 					this.$bvModal.hide('create-article-addresses') 
