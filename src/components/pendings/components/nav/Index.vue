@@ -24,10 +24,12 @@ export default {
 			let items = [
 				{
 					'name': 'Por realizar',
-					'alert': this.pendings.length
+					'alert': this.pendings.length,
+					'action': 'pending/getModels',
 				},
 				{
-					'name': 'Realizados'
+					'name': 'Realizados',
+					'action': 'pending_completed/getModels',
 				},
 			]
 			return items

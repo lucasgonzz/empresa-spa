@@ -388,16 +388,6 @@ export default {
 					label: 'Agregado',
 				})
 			}
-			// if (this.pivot && this.pivot.properties_to_set) {
-			// 	this.pivot.properties_to_set.forEach(prop => {
-			// 		fields.push({
-			// 			key: prop.key,
-			// 			function: prop.function,
-			// 			button: prop.button,
-			// 			label: prop.text,
-			// 		})
-			// 	})
-			// }
 			fields.push({
 				key: 'edit',
 				label: '',

@@ -176,6 +176,9 @@ export default {
 		form_disabled_to_edit(model_name) {
 			return typeof require('@/models/'+model_name).default.form_disabled_to_edit != 'undefined'
 		},
+		form_disabled_to_edit_function(model_name) {
+			return typeof require('@/models/'+model_name).default.form_disabled_to_edit_function != 'undefined'
+		},
 		getOriginalModel(model_name, model){
 			return this.$store.state[model_name].models.find(model_ => {
 				return model_.id == model.id 

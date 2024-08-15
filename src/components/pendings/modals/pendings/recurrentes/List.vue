@@ -2,6 +2,7 @@
 	
 	<display
 	:models="recurrentes"
+	mostrar_models_que_vinienen_por_prop_siempre
 	:model_name="model_name"
 	:loading="loading"
 	:properties="modelPropertiesFromName(model_name)">

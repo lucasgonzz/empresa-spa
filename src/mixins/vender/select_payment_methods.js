@@ -57,6 +57,16 @@ export default {
 		}
 	},
 	methods: {
+        get_price_with_discount_in_vender(article, prop) {
+            console.log('get_price_with_discount_in_vender article:')
+            console.log(article)
+            console.log(prop)
+            if (typeof article != 'undefined' && typeof prop != 'undefined') {
+
+                console.log('payment_method id: '+prop.key.substr(15))
+                return this.get_monto_descuento(article.price_vender, prop.key.substr(15))
+            }
+        },
 		init_modal_payment_metohds() {
 
 			let payment_methods = []
@@ -141,6 +151,8 @@ export default {
 
 				} else {
 
+					this.set_payment_methods()
+
 					this.$bvModal.hide('payment-method-modal')
 				}
 
@@ -170,6 +182,24 @@ export default {
 			})
 			
 			this.$store.commit('vender/current_acount_payment_methods_with_discounts/set_payment_methods', payment_methods)
+
+		},
+
+		set_payment_methods() {
+
+			let payment_methods = []
+
+			this.modal_payment_metohds.forEach(payment_method => {
+
+				if (payment_method.amount) {
+
+					payment_methods.push({
+						...payment_method,
+					})
+				}
+			})
+			
+			this.$store.commit('vender/setSelectedPaymentMethods', payment_methods);
 
 		},
 

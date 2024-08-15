@@ -33,18 +33,43 @@ export default {
 		selected_payment_methods() {
 			return this.$store.state.vender.selected_payment_methods
 		},
+		payment_methods_seteados() {
+
+			console.log('payment_methods_seteados:')
+			let seteados = false 
+
+			console.log(this.selected_payment_methods)
+			this.selected_payment_methods.forEach(payment_method => {
+
+				if (payment_method.amount) {
+
+					seteados = true 
+				}
+			})
+
+			return seteados
+		},
 	},
 	methods: {
 		set_payment_methods() {
-			this.$store.commit('vender/setCurrentAcountPaymentMethodId', 0)
 
-			this.$store.commit('vender/current_acount_payment_methods/set_payment_methods', [])
+			if (this.sobrante_a_repartir != 0) {
+			// if (!this.payment_methods_seteados) {
 
-			this.$store.commit('vender/current_acount_payment_methods_with_discounts/set_payment_methods', [])
 
-			this.init_modal_payment_metohds()
-			
-			this.setTotal()
+				this.$store.commit('vender/setCurrentAcountPaymentMethodId', 0)
+
+				this.$store.commit('vender/current_acount_payment_methods/set_payment_methods', [])
+
+				this.$store.commit('vender/current_acount_payment_methods_with_discounts/set_payment_methods', [])
+
+				this.$store.commit('vender/setSelectedPaymentMethods', [])
+
+				this.init_modal_payment_metohds()
+				
+				this.setTotal()
+			} 
+
 			
 			this.$bvModal.show('payment-method-modal')
 		},

@@ -1,8 +1,8 @@
-import model_functions from '@/mixins/model_functions'
+// import model_functions from '@/mixins/model_functions'
 export default {
-	mixins: [model_functions],
+	// mixins: [model_functions],
 	computed: {
-		items() {
+		vender_items() {
 			return this.$store.state.vender.items 
 		},
 		discounts_id() {
@@ -44,7 +44,7 @@ export default {
 				
 				let new_items = []
 
-				this.items.forEach(item => {
+				this.vender_items.forEach(item => {
 					item.total = this.getTotalItem(item, false)
 					if (item.is_service) {
 						this.total_services += this.getTotalItem(item, false)

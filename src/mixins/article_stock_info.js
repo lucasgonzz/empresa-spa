@@ -1,9 +1,15 @@
 export default {
 	computed: {
+		is_filtered() {
+			return this.$store.state.article.is_filtered
+		},
+		filtered() {
+			return this.$store.state.article.filtered
+		},
 		articles() {
-			if (this.$store.state.article.is_filtered) {
+			if (this.is_filtered) {
 				console.log('sumando precios de filtrados')
-				return this.$store.state.article.filtered
+				return this.filtered
 			}
 			return this.$store.state.article.models
 		},

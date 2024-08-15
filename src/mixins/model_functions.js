@@ -1,15 +1,22 @@
 import moment from 'moment'
 import dates from '@/common-vue/mixins/dates'
+import select_payment_methods from '@/mixins/vender/select_payment_methods'
 export default {
+    mixins: [select_payment_methods],
 	methods: {
+        disabled_edit_pending(pending) {
+            if (pending.es_recurrente) {
+                console.log('no se puede editar el pending '+pending.detalle)
+                return true
+            }
+            console.log('SI se puede editar el pending '+pending.detalle)
+            return false
+        },
         get_price_with_discount_in_vender(article, prop) {
-            console.log('get_price_with_discount_in_vender article:')
-            console.log(article)
-            console.log(prop)
             if (typeof article != 'undefined' && typeof prop != 'undefined') {
 
-                console.log('payment_method id: '+prop.key.substr(15))
-                return this.get_monto_descuento(article.price_vender, prop.key.substr(15))
+                let monto_descuento = this.get_monto_descuento(article.final_price, prop.key.substr(15))
+                return this.price(Number(article.final_price) - Number(monto_descuento))
             }
         },
         pendingGetColor(pending) {
@@ -22,7 +29,7 @@ export default {
 
                 let dias_restantes_en_amarillo = this.$store.state.pending.dias_restantes_en_amarillo
 
-                if (moment(pending.fecha_realizacion).diff(moment(), 'days') < dias_restantes_en_amarillo) {
+                if (moment(pending.fecha_realizacion).diff(moment().startOf('day'), 'days') <= dias_restantes_en_amarillo) {
 
                     return 'pending-amarillo'
                 }
@@ -42,7 +49,7 @@ export default {
             return null
         },
         pending_vencido(pending) {
-            return moment(pending.fecha_realizacion).isBefore(moment())
+            return moment(pending.fecha_realizacion).isBefore(moment().startOf('day'))
         },
         show_btn_repartir_stock(prop, article) {
             if (!article.addresses.length 
@@ -114,7 +121,7 @@ export default {
             return ok
         },
 		getFunctionValue(prop, model) {
-			return this[prop.function](model)
+			return this[prop.function](model, prop)
 		},
         getOrderAddress(prop, model) {
             if (this.model.address) {

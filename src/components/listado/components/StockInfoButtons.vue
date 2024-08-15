@@ -19,13 +19,13 @@ class="m-l-0 m-sm-l-15 m-t-15 m-r-15">
 	class="m-l-15 d-none d-lg-inline-block">
 		<b-button
 		title="¿De donde viene este dato?"
-		v-b-popover.hover.bottom="'Sumamos los costos de los articulos multiplicados por su tock, siempre que tengan los articulos tengan asigando un stock y sea mayor a 0'" 
+		v-b-popover.hover.bottom="'Sumamos los costos de los articulos multiplicados por su tock, siempre que los articulos tengan asigando un stock y sea mayor a 0'+aclaracion" 
 		variant="outline-success">
 			Costos: {{ price(total.cost) }}  
 		</b-button>
 		<b-button
 		title="¿De donde viene este dato?"
-		v-b-popover.hover.bottom="'Sumamos los precios finales de los articulos multiplicados por su tock, siempre que tengan los articulos tengan asigando un stock y sea mayor a 0'" 
+		v-b-popover.hover.bottom="'Sumamos los precios finales de los articulos multiplicados por su tock, siempre que los articulos tengan asigando un stock y sea mayor a 0'+aclaracion" 
 		variant="success">
 			Precios: {{ price(total.final_price) }}  
 		</b-button>
@@ -52,6 +52,18 @@ export default {
 			})
 			return total
 		},
+		total_results() {
+			return this.$store.state.article.total_filter_results
+		},
+		total_filter_pages() {
+			return this.$store.state.article.total_filter_pages
+		},
+		aclaracion() {
+			if (this.is_filtered) {
+				return '. Solo se estan sumando '+this.filtered.length+' articulos de los '+this.total_results+' de la consulta. Continue descargando los siguientes resultados para aproximarse al total.'
+			}
+			return ''
+		}
 	},
 }
 </script>

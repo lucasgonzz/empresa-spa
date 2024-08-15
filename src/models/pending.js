@@ -39,6 +39,11 @@ export default {
 			use_store_models: true,
 		},
 		{
+			text: 'Monto del gasto',
+			key: 'expense_amount',
+			type: 'number',
+		},
+		{
 			key: 'notas',
 			type: 'textarea',
 		},
@@ -48,4 +53,5 @@ export default {
 	create_model_name_spanish: 'Nueva Pendiente',
 	text_delete: 'el',
 	color_display_function: true,
+	form_disabled_to_edit_function: 'disabled_edit_pending',
 }

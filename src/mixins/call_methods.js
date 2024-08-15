@@ -1,5 +1,6 @@
 export default [
     // 'extencion',
+    'address',
     'unidad_frecuencia',
     'afip_selected_payment_method',
     'current_acount_payment_method_discount',
@@ -18,7 +19,6 @@ export default [
     'client',
     'employee',
     'permission',
-    'address',
     'sale_type',
     'discount',
     'surchage',

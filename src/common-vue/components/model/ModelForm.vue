@@ -401,6 +401,13 @@ export default {
 			if (this.form_disabled_to_edit(this.model_name) && this.model.id) {
 				return true
 			}
+			if (this.form_disabled_to_edit_function(this.model_name) && this.model.id) {
+				console.log('entro a form_disabled_to_edit_function')
+				let function_name = require('@/models/'+this.model_name).default.form_disabled_to_edit_function
+				console.log('function_name:')
+				console.log(function_name)
+				return this[function_name](this.model)
+			}
 			if (prop.type == 'select' && prop.disabled_if_not_0 && this.model[prop.key] != 0) {
 				return true
 			}
