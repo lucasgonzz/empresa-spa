@@ -95,6 +95,8 @@ export default {
 		},
 		properties() {
 			if (this.properties_to_show) {
+				console.log('properties_to_show: ')
+				console.log(this.properties_to_show)
 				return this.properties_to_show
 			}
 			return this.get_properties_to_show_ordenadas(this.model_name)

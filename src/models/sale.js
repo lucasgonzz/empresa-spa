@@ -53,8 +53,13 @@ export default {
 			belongs_to_many: {
 				props_to_show: [
 					{
-						text: 'Codigo de barras',
+						text: 'Cod barras',
 						key: 'bar_code',	
+						show: true,
+					},
+					{
+						text: 'Cod Prov',
+						key: 'provider_code',	
 						show: true,
 					},
 					{

@@ -76,7 +76,7 @@ export default {
 		{
 			text: 'Cuit',
 			key: 'cuit',
-			type: 'text',
+			type: 'number',
 			value: '',
 			show: true,
 			use_to_filter_in_search: true,
@@ -85,7 +85,7 @@ export default {
 		{
 			text: 'Cuil',
 			key: 'cuil',
-			type: 'text',
+			type: 'number',
 			value: '',
 			show: true,
 			use_to_filter_in_search: true,
@@ -93,7 +93,7 @@ export default {
 		{
 			text: 'Dni',
 			key: 'dni',
-			type: 'text',
+			type: 'number',
 			value: '',
 			show: true,
 			use_to_filter_in_search: true,

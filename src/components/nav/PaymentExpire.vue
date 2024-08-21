@@ -69,7 +69,7 @@
 import moment from 'moment'
 export default {
 	created() {
-		this.$store.dispatch('dolar/getDolar')
+		// this.$store.dispatch('dolar/getDolar')
 	},
 	computed: {
 		dolar() {

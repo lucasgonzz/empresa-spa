@@ -14,6 +14,17 @@ export default {
         today() {
             return moment().format('YYYY-MM-DD')
         },
+        current_acount_payment_method_discounts() {
+            return this.$store.state.current_acount_payment_method_discount.models
+        },
+        current_acount_payment_method_id: {
+            get() {
+                return this.$store.state.vender.current_acount_payment_method_id
+            }, 
+            set(value) {
+                this.$store.commit('vender/setCurrentAcountPaymentMethodId', value)
+            },
+        },
         price_types() {
             return this.$store.state.price_type.models
         },
@@ -45,10 +56,26 @@ export default {
             } else {
                 console.log('va a llamar a apicar_tipos_de_precio')
                 price = item.final_price
+
+                // price = this.redondear(item, price)
                 price = this.apicar_tipos_de_precio(item, price)
+                price = this.apicar_descuento_metodo_de_pago(item, price)
+
+                price = this.redondear(price)
             }
             console.log('return price: '+price)
             return price
+        },
+        redondear(price) {
+            console.log('redondear: '+this.price(price))
+            if (this.owner.redondear_centenas_en_vender) {
+                price = this.redondear_centenas(price)
+                console.log('quedo en '+this.price(price))
+            }
+            return price
+        },
+        redondear_centenas(num) {
+            return Math.ceil(num / 100) * 100;
         },
         apicar_tipos_de_precio(item, price) {
             console.log('apicar_tipos_de_precio')
@@ -66,6 +93,15 @@ export default {
                         price = Number(price) + Number(price * this.getPriceTypePercetage(price_type, item) / 100) 
                     }
                 })
+            }
+            return price
+        },
+        apicar_descuento_metodo_de_pago(item, price) {
+            if (this.current_acount_payment_method_discounts.length 
+                && this.current_acount_payment_method_id) {
+
+                console.log('apicar_descuento_metodo_de_pago')
+                price = this.aplicar_monto_descuento(price, this.current_acount_payment_method_id)
             }
             return price
         },

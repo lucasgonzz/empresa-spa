@@ -36,9 +36,9 @@ export default {
 		current_acount_payment_methods() {
 			return this.$store.state.current_acount_payment_method.models
 		},
-		current_acount_payment_method_discounts() {
-			return this.$store.state.current_acount_payment_method_discount.models
-		},
+		// current_acount_payment_method_discounts() {
+		// 	return this.$store.state.current_acount_payment_method_discount.models
+		// },
 		vender_current_acount_payment_method_id() {
 			return this.$store.state.vender.current_acount_payment_method_id
 		},
@@ -57,16 +57,16 @@ export default {
 		}
 	},
 	methods: {
-        get_price_with_discount_in_vender(article, prop) {
-            console.log('get_price_with_discount_in_vender article:')
-            console.log(article)
-            console.log(prop)
-            if (typeof article != 'undefined' && typeof prop != 'undefined') {
+        // get_price_with_discount_in_vender(article, prop) {
+        //     console.log('get_price_with_discount_in_vender article:')
+        //     console.log(article)
+        //     console.log(prop)
+        //     if (typeof article != 'undefined' && typeof prop != 'undefined') {
 
-                console.log('payment_method id: '+prop.key.substr(15))
-                return this.get_monto_descuento(article.price_vender, prop.key.substr(15))
-            }
-        },
+        //         console.log('payment_method id: '+prop.key.substr(15))
+        //         return this.get_monto_descuento(article.price_vender, prop.key.substr(15))
+        //     }
+        // },
 		init_modal_payment_metohds() {
 
 			let payment_methods = []
@@ -216,16 +216,7 @@ export default {
 
 				this.limpiar_descuentos_anteriores()
 
-				if (this.vender_current_acount_payment_method_id) {
-
-					descuento = this.get_monto_descuento(total, this.vender_current_acount_payment_method_id)
-
-					total -= descuento
-
-					this.$store.commit('vender/set_payment_method_discount_percentage', this.discount_percentage)
-					this.$store.commit('vender/set_payment_method_discount_amount', this.discount_amount)
-
-				} else if (this.modal_payment_metohds.length) {
+				if (this.modal_payment_metohds.length) {
 					
 					this.modal_payment_metohds.forEach(selected_payment_method => {
 						
@@ -247,6 +238,27 @@ export default {
 			return total
 		},
 
+		aplicar_monto_descuento(total, current_acount_payment_method_id, selected_payment_method = null) {
+			let monto_descuento = 0
+
+			let descuento = this.get_payment_method_discount(current_acount_payment_method_id)
+
+			if (typeof descuento != 'undefined') {
+				monto_descuento = total * Number(descuento.discount_percentage) / 100
+
+				this.discount_percentage = descuento.discount_percentage
+				this.discount_amount = monto_descuento
+
+				// if (selected_payment_method) {
+				// 	selected_payment_method.discount_percentage = descuento.discount_percentage
+				// 	selected_payment_method.discount_amount = monto_descuento
+				// }
+			} else {
+				this.limpiar_descuentos_anteriores()
+			}
+
+			return total - monto_descuento
+		},
 		get_monto_descuento(total, current_acount_payment_method_id, selected_payment_method = null) {
 			let monto_descuento = 0
 

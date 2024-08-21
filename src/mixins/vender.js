@@ -105,14 +105,14 @@ export default {
 				// this.$store.commit('vender/setTotal')
 			},
 		},
-		current_acount_payment_method_id: {
-			get() {
-				return this.$store.state.vender.current_acount_payment_method_id
-			}, 
-			set(value) {
-				this.$store.commit('vender/setCurrentAcountPaymentMethodId', value)
-			},
-		},
+		// current_acount_payment_method_id: {
+		// 	get() {
+		// 		return this.$store.state.vender.current_acount_payment_method_id
+		// 	}, 
+		// 	set(value) {
+		// 		this.$store.commit('vender/setCurrentAcountPaymentMethodId', value)
+		// 	},
+		// },
 		afip_information_id: {
 			get() {
 				return this.$store.state.vender.afip_information_id

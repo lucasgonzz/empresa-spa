@@ -8,12 +8,14 @@ export default {
 			filter_modal_position: 8,
 			use_to_show_in_search_modal: true,
 			filter_type: 'number',
+			// table_position: 1,
 		},
 		{
 			text: 'Imagenes',
 			key: 'images',
 			type: 'images',
 			use_to_show_in_search_modal: true,
+			// table_position: 2,
 		},
 		{
 			text: 'Codigo de barras',
@@ -25,6 +27,7 @@ export default {
 			use_to_show_in_search_modal: true,
 			filter_modal_position: 1,
 			use_bar_code_scanner: true,
+			// table_position: 3,
 		},
 		{
 			text: 'Codigo de Proveedor',
@@ -34,6 +37,7 @@ export default {
 			use_to_check_if_is_repeat: true,
 			use_to_show_in_search_modal: true,
 			filter_modal_position: 2,
+			// table_position: 4,
 		},
 		{
 			text: 'nombre',
@@ -55,6 +59,7 @@ export default {
 			use_to_show_in_search_modal: true,
 			table_width: 'lg',
 			filter_modal_position: 2,
+			// table_position: 5,
 		},
 		{
 			text: 'costo',
@@ -65,6 +70,7 @@ export default {
 			use_to_update: true,
 			filter_modal_position: 10,
 			filter_type: 'number',
+			// table_position: 8,
 		},
 		{
 			text: 'costo en dolares',
@@ -114,6 +120,7 @@ export default {
 			use_to_update: true,
 			filter_modal_position: 11,
 			filter_type: 'number',
+			// table_position: 9,
 		},
 		{
 			text: 'Precio final',
@@ -123,6 +130,7 @@ export default {
 			is_price: true,
 			use_to_show_in_search_modal: true,
 			filter_modal_position: 9,
+			// table_position: 10,
 		},
 		{
 			text: 'Precio final anterior',
@@ -147,6 +155,7 @@ export default {
 			type: 'number',
 			filter_modal_position: 13,
 			use_to_show_in_search_modal: true,
+			// table_position: 7,
 		},
 		{
 			text: 'stock minimo',
@@ -197,6 +206,7 @@ export default {
 			use_store_models: true,
 			filter_modal_position: 4,
 			keep_after_create: true,
+			// table_position: 6,
 		},
 		// {
 		// 	text: 'precio en dolar del proveedor',

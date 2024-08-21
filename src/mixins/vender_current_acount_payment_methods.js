@@ -169,9 +169,7 @@ export default {
 
 				if (this.vender_current_acount_payment_method_id) {
 
-					descuento = this.get_monto_descuento(total, this.vender_current_acount_payment_method_id)
-
-					total -= descuento
+					total = this.aplicar_monto_descuento(total, this.vender_current_acount_payment_method_id)
 
 					this.$store.commit('vender/set_payment_method_discount_percentage', this.discount_percentage)
 					this.$store.commit('vender/set_payment_method_discount_amount', this.discount_amount)
@@ -180,11 +178,9 @@ export default {
 					
 					this.modal_payment_metohds.forEach(selected_payment_method => {
 						
-						descuento = this.get_monto_descuento(selected_payment_method.amount, Number(selected_payment_method.id), selected_payment_method)
+						total = this.aplicar_monto_descuento(selected_payment_method.amount, Number(selected_payment_method.id), selected_payment_method)
 
-						selected_payment_method.monto_descuento = descuento 
-
-						total -= descuento
+						selected_payment_method.monto_descuento = this.getr_monto_descuento(selected_payment_method.amount, Number(selected_payment_method.id), selected_payment_method) 
 
 						selected_payment_method.discount_percentage = this.discount_percentage
 						selected_payment_method.discount_amount = this.discount_amount
@@ -197,7 +193,7 @@ export default {
 			return total
 		},
 
-		get_monto_descuento(total, current_acount_payment_method_id, selected_payment_method = null) {
+		aplicar_monto_descuento(total, current_acount_payment_method_id, selected_payment_method = null) {
 			let monto_descuento = 0
 
 			let descuento = this.get_payment_method_discount(current_acount_payment_method_id)
@@ -215,6 +211,18 @@ export default {
 			} else {
 				this.limpiar_descuentos_anteriores()
 			}
+
+			return total - monto_descuento
+		},
+		get_monto_descuento(total, current_acount_payment_method_id, selected_payment_method = null) {
+			let monto_descuento = 0
+
+			let descuento = this.get_payment_method_discount(current_acount_payment_method_id)
+
+			if (typeof descuento != 'undefined') {
+				monto_descuento = total * Number(descuento.discount_percentage) / 100
+
+			} 
 
 			return monto_descuento
 		},

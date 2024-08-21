@@ -59,6 +59,10 @@ export default {
 						type: 'images',	
 					},
 					{
+						text: 'Cod Prov',
+						key: 'provider_code',	
+					},
+					{
 						text: 'Nombre',
 						key: 'name',	
 					},
@@ -73,6 +77,7 @@ export default {
 					props.push({
 						text: 'Precio',
 						key: 'final_price',
+						function: 'get_price_formateado',
 					})
 
 					this.current_acount_payment_method_discounts.forEach(payment_method => {

@@ -12,11 +12,20 @@ export default {
             console.log('SI se puede editar el pending '+pending.detalle)
             return false
         },
+
+        // Se llama para mostrar el precio en la tabla de resultados en modal vender
+        get_price_formateado(article, prop) {
+
+            return this.price(article.final_price)
+        },
         get_price_with_discount_in_vender(article, prop) {
             if (typeof article != 'undefined' && typeof prop != 'undefined') {
 
-                let monto_descuento = this.get_monto_descuento(article.final_price, prop.key.substr(15))
-                return this.price(Number(article.final_price) - Number(monto_descuento))
+                let price = article.final_price
+
+                price = this.aplicar_monto_descuento(price, prop.key.substr(15))
+                
+                return this.price(this.redondear(price))
             }
         },
         pendingGetColor(pending) {

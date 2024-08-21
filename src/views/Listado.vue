@@ -74,15 +74,26 @@
 			<stock-input></stock-input> 
 		</template>
 
+		<template #table-prop-price="props">
+			<article-price
+			:article="props.model"></article-price> 
+		</template>
+
 		<template #table-prop-stock="props">
 			<stock-btn
 			:article="props.model"></stock-btn>
-		</template>
+		</template> 
 
 		<template
 		v-for="address in addresses"
 		v-slot:[get_table_address_prop(address)]="props">
 			{{ get_address_stock(props.model, address) }}
+		</template>
+		
+		<template
+		v-for="payment_method_discount in current_acount_payment_method_discounts"
+		v-slot:[get_table_paymen_discount_prop(payment_method_discount)]="props">
+			{{ get_payment_discount(props.model, payment_method_discount) }}
 		</template>
 
 	</view-component>
@@ -91,9 +102,9 @@
 </template>
 
 <script>
-import addresses_columns from '@/mixins/listado/addresses_columns'
+import payment_method_discounts_addresses_columns from '@/mixins/listado/payment_method_discounts_addresses_columns'
 export default {
-	mixins: [addresses_columns],
+	mixins: [payment_method_discounts_addresses_columns],
 	name: 'Lisado',
 	components: {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
@@ -120,6 +131,7 @@ export default {
 		StockInput: () => import('@/components/listado/components/StockInput'),
 		StockInfo: () => import('@/components/listado/modals/stock-info/Index'),
 		StockBtn: () => import('@/components/listado/components/StockBtn'),
+		ArticlePrice: () => import('@/components/listado/components/ArticlePrice'),
 
 		// Dropdown options
 		ArticleTicketOptionDropDown: () => import('@/components/listado/components/selected-filtered-options/ArticleTicketOptionDropDown'),

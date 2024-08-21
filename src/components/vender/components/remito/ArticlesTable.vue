@@ -65,12 +65,6 @@ class="m-b-15 m-t-20">
 				v-else>
 					{{ price(items[data.index].price_vender) }}
 				</span>
-
-				<strong
-				v-if="price_with_payment_method_discount(items[data.index])"
-				class="text-success">
-					{{ price_with_payment_method_discount(items[data.index]) }}
-				</strong>
 			</template>
 
 
@@ -286,28 +280,6 @@ export default {
 	methods: {
 		callSetTotal() {
 			this.setTotal()
-		},
-
-		price_with_payment_method_discount(item) {
-
-			if (this.current_acount_payment_method_discounts.length) {
-
-				if (this.vender_current_acount_payment_method_id) {
-
-					let monto_descuento = this.get_monto_descuento(item.price_vender, this.vender_current_acount_payment_method_id)
-
-					console.log('monto_descuento:')
-					console.log(monto_descuento)
-
-					if (!monto_descuento) {
-						return null
-					}
-
-					return this.price(item.price_vender - monto_descuento)
-				}
-			}
-
-			return null
 		},
 
 		article_variant_options(item) {
