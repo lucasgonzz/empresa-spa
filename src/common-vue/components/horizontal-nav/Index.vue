@@ -50,6 +50,7 @@
 					v-if="show_excel_drop_down"
 					:check_permissions="check_permissions"
 					:can_create="can_create"
+					:has_permission_create_dropdown="has_permission_create_dropdown"
 					:model_name="model_name">
 						<template #excel_drop_down_options>
 							<slot name="excel_drop_down_options"></slot>
@@ -149,6 +150,10 @@ export default {
 			default: false,
 		},
 		check_permissions: {
+			type: Boolean,
+			default: false,
+		},
+		has_permission_create_dropdown: {
 			type: Boolean,
 			default: false,
 		},

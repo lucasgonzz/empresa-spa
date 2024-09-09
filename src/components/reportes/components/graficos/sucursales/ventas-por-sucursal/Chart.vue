@@ -119,6 +119,32 @@ export default {
 				labels: labels,
 				datasets: datasets,
 			}, {
+				plugins: {
+					datalabels: { 
+						anchor: 'end',
+						align: 'top',
+						color: '#000',
+						font: {
+							weight: 'bold',
+							family: 'Roboto',
+							size: 11,	
+						},
+						formatter: function(value) {
+							if (that.is_mobile) {
+								return null
+							}
+							let price = Math.round(value)
+
+							if (price != 0) {
+								return that.price(price)
+							}
+							return null
+						},
+						offset: function(context) {
+							return -19	
+						}
+					},
+				},
 				maintainAspectRatio: false,
 				onClick: function (event, elements, chart) {
 					// let provider = providers[elements[0]._index]

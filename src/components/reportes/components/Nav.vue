@@ -59,6 +59,13 @@ export default {
 				})
 			}
 
+			if (this.can('reportes.articulos')) {
+
+				items.push({
+					name: 'articulos',
+				})
+			}
+
 			if (this.can('reportes.cheques')) {
 
 				items.push({

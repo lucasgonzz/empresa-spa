@@ -73,6 +73,7 @@ export default [
 		model_name: 'sale',
 		component: '@/views/Ventas',
 		can: 'sale.index',
+		function: 'toSales',
 		params: {
 			view: 'todas',
 			sub_view: 'todos',

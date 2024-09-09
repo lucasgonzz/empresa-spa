@@ -2,7 +2,7 @@
 	<div 
 	class="chart-card">
 		<div class="header">
-			<h4>Vendido por mes</h4>
+			<h4>Rendimiento por mes</h4>
 		</div>
 
 		<chart-ventas></chart-ventas>

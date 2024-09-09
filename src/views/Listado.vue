@@ -29,11 +29,11 @@
 	<stock-info></stock-info>
 
 	<articles-pre-import-modal></articles-pre-import-modal>
-
 	<view-component
 	show_filter_modal
 	ask_selectable
 	show_excel_drop_down
+	:has_permission_create_dropdown="has_permission_create_dropdown"
 	:properties_to_show="properties_to_show"
 	@addressMovement="addressMovement"
 	model_name="article">
@@ -50,15 +50,7 @@
 		
 		<template #options_drop_down>
 			
-			<article-ticket-option-drop-down></article-ticket-option-drop-down>
-			
-			<articles-pdf-option-drop-down></articles-pdf-option-drop-down>
-			
-			<seleccion-especial></seleccion-especial>
-			
-			<excel-export></excel-export>
-			
-			<reset-stock-option-drop-down></reset-stock-option-drop-down>
+			<drop-down-options></drop-down-options>
 
 		</template>
 
@@ -74,6 +66,16 @@
 			<stock-input></stock-input> 
 		</template>
 
+		
+		<template
+		v-for="price_type in price_types"
+		v-slot:[get_model_form_price_type_slot(price_type)]="props">
+			<price-type-input
+			:article="props.model"
+			:price_type="price_type"></price-type-input>
+		</template>
+
+
 		<template #table-prop-price="props">
 			<article-price
 			:article="props.model"></article-price> 
@@ -83,6 +85,13 @@
 			<stock-btn
 			:article="props.model"></stock-btn>
 		</template> 
+
+
+		<template
+		v-for="price_type in price_types"
+		v-slot:[get_table_price_type_prop(price_type)]="props">
+			{{ get_price_type_price(props.model, price_type) }}
+		</template>
 
 		<template
 		v-for="address in addresses"
@@ -134,16 +143,23 @@ export default {
 		ArticlePrice: () => import('@/components/listado/components/ArticlePrice'),
 
 		// Dropdown options
-		ArticleTicketOptionDropDown: () => import('@/components/listado/components/selected-filtered-options/ArticleTicketOptionDropDown'),
-		ArticlesPdfOptionDropDown: () => import('@/components/listado/components/selected-filtered-options/ArticlesPdfOptionDropDown'),
-		ResetStockOptionDropDown: () => import('@/components/listado/components/selected-filtered-options/ResetStockOptionDropDown'),
-		SeleccionEspecial: () => import('@/components/listado/components/selected-filtered-options/SeleccionEspecial'),
-		ExcelExport: () => import('@/components/listado/components/selected-filtered-options/ExcelExport'),
+		DropDownOptions: () => import('@/components/listado/components/selected-filtered-options/Index'),
+		// ArticleTicketOptionDropDown: () => import('@/components/listado/components/selected-filtered-options/ArticleTicketOptionDropDown'),
+		// ArticlesPdfOptionDropDown: () => import('@/components/listado/components/selected-filtered-options/ArticlesPdfOptionDropDown'),
+		// ResetStockOptionDropDown: () => import('@/components/listado/components/selected-filtered-options/ResetStockOptionDropDown'),
+		// SeleccionEspecial: () => import('@/components/listado/components/selected-filtered-options/SeleccionEspecial'),
+		// ExcelExport: () => import('@/components/listado/components/selected-filtered-options/ExcelExport'),
 		ConfirmResetStock: () => import('@/components/listado/modals/ConfirmResetStock'),
+		PriceTypeInput: () => import('@/components/listado/components/PriceTypeInput'),
 	}, 
 	beforeRouteLeave(to, from, next) {
 		this.$store.commit('article/setSelected', [])
 		next()
+	},
+	computed: {
+		has_permission_create_dropdown() {
+			return this.authenticated && this.can('article.export_excel_clients')
+		},
 	},
 	methods: {
 		addressMovement() {

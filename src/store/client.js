@@ -30,6 +30,7 @@ export default {
 		model: {},
 		selected: [],
 		filtered: [],
+		filters: [],
 		is_filtered: false,
 		filter_page: 1,
 		total_filter_pages: null,
@@ -97,6 +98,9 @@ export default {
 		},
 		setSelected(state, value) {
 			state.selected = value
+		},
+		setFilters(state, value) {
+			state.filters = value
 		},
 		setFiltered(state, value) {
 			state.filtered = value

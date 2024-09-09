@@ -8,6 +8,22 @@ export default {
 					this.$router.push({name: 'produccion', params: {view: 'movimientos'}})
 				}
 			}
+		},
+		toSales() {
+			if (this.user) {
+				let from_dates = this.$store.state.sale.from_dates
+				
+				// Si entra, es porque se llamo el historico desde Deposito
+				if (!from_dates) {
+
+					this.$store.commit('sale/setFromDates', true)
+				}
+				
+				this.$store.dispatch('sale/getModels')
+				
+				this.$router.push({name: 'sale', params: {view: 'todas', sub_view: 'todos'}})
+
+			}
 		}
 	}
 }

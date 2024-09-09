@@ -41,25 +41,47 @@ export default {
 			let labels = []
 
 			let total_vendido = []
-			let total_ingresos = []
+			let deuda_clientes = []
+			let ingresos_brutos = []
+			let ingresos_netos = []
+			let rentabilidad = []
+			let gastos = []
 			let total_vendido_a_cuenta_corriente = []
 			let total_pagado_a_cuenta_corriente = []
 			let total_pagado_mostrador = []
+			let iva_vendido = []
+			let iva_comprado = []
+			let total_comprado = []
+			let total_pagado_a_proveedores = []
 			
 			this.meses_anteriores.forEach(meses_anteriores => {
 				labels.push(meses_anteriores.fecha)
 				total_vendido.push(meses_anteriores.total_vendido)	
-				total_ingresos.push(meses_anteriores.total_ingresos)
+				deuda_clientes.push(meses_anteriores.deuda_clientes)	
+				ingresos_brutos.push(meses_anteriores.total_vendido)
+				ingresos_netos.push(meses_anteriores.ingresos_netos)
+				rentabilidad.push(meses_anteriores.rentabilidad)
+				gastos.push(meses_anteriores.total_gastos)
 				total_vendido_a_cuenta_corriente.push(meses_anteriores.total_vendido_a_cuenta_corriente)	
 				total_pagado_a_cuenta_corriente.push(meses_anteriores.total_pagado_a_cuenta_corriente)	
 				total_pagado_mostrador.push(meses_anteriores.total_pagado_mostrador)	
+
+				iva_vendido.push(meses_anteriores.total_facturado)	
+				iva_comprado.push(meses_anteriores.total_iva_comprado)	
+				total_comprado.push(meses_anteriores.total_comprado)	
+				total_pagado_a_proveedores.push(meses_anteriores.total_pagado_a_proveedores)	
 			})
 
 			let datasets = [
 				{
-					label: 'Total vendido',
+					label: 'Ingresos Brutos',
 					backgroundColor: '#007bff',
 					data: total_vendido,
+				},
+				{
+					label: 'Deuda clientes',
+					backgroundColor: '#4f4f4f',
+					data: deuda_clientes,
 				},
 				{
 					label: 'Vendido a C/C',
@@ -68,7 +90,7 @@ export default {
 				},
 				{
 					label: 'Ingresos por C/C',
-					backgroundColor: '#28a745',
+					backgroundColor: '#662c29',
 					data: total_pagado_a_cuenta_corriente,
 				},
 				{
@@ -77,10 +99,45 @@ export default {
 					data: total_pagado_mostrador,
 				},
 				{
-					label: 'Total ingresos',
+					label: 'Caja',
 					backgroundColor: '#9966FF',
 					// backgroundColor: '#383838',
-					data: total_ingresos,
+					data: ingresos_brutos,
+				},
+				{
+					label: 'Utilidad',
+					backgroundColor: '#ff8b00',
+					data: ingresos_netos,
+				},
+				{
+					label: 'Gastos',
+					backgroundColor: '#BA68C8',
+					data: gastos,
+				},
+				{
+					label: 'Ingresos Netos',
+					backgroundColor: '#236b73',
+					data: rentabilidad,
+				},
+				{
+					label: 'Iva Venta',
+					backgroundColor: '#E2C456',
+					data: iva_vendido,
+				},
+				{
+					label: 'Iva Compra',
+					backgroundColor: '#118000',
+					data: iva_comprado,
+				},
+				{
+					label: 'Comprado Proveedores',
+					backgroundColor: '#bf7c0f',
+					data: total_comprado,
+				},
+				{
+					label: 'Pagado Proveedores',
+					backgroundColor: '#565485', 
+					data: total_pagado_a_proveedores,
 				},
 			]
 
@@ -89,6 +146,19 @@ export default {
 				labels: labels,
 				datasets: datasets,
 			}, {
+				plugins: {
+					datalabels: { 
+						anchor: 'end',
+						align: 'top',
+						color: '#333',
+						font: {
+							weight: 'bold',
+						},
+						formatter: function(value, context) {
+							return null
+						},
+					},
+				},
 				maintainAspectRatio: false,
 				onClick: function (event, elements, chart) {
 					// let provider = providers[elements[0]._index]
@@ -96,10 +166,19 @@ export default {
 				},
 				tooltips: {
 					callbacks: {
-						label: function(tooltipItem, data) {
-							// console.log('entorooooo')
-							return that.price(Math.round(tooltipItem.yLabel))
-						}
+						// label: function(tooltipItem, data) {
+						// 	let price = Math.round(tooltipItem.yLabel)
+
+						// 	if (price != 0) {
+						// 		return that.price(price)
+						// 	}
+						// 	return null
+						// }
+						label: function (tooltipItem, data) {
+							const datasetLabel = data.datasets[tooltipItem.datasetIndex].label || '';
+							const value = tooltipItem.yLabel;
+							return `${datasetLabel}: ${that.price(value)}`;
+						},
 					}
 				}
 			})

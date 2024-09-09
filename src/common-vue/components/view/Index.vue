@@ -9,6 +9,7 @@
     	:show_btn_remove_belongs_to_many="show_btn_remove_belongs_to_many"
     	@modelSaved="modelSaved"
     	@modelDeleted="modelDeleted"
+    	:properties_to_show="properties_to_show"
     	:check_permissions="check_permissions"
     	:show_btn_pdf="show_btn_pdf"
     	:show_btn_delete="show_btn_delete"
@@ -47,6 +48,7 @@
 		<horizontal-nav
 		:ask_selectable="ask_selectable"
 		:show_excel_drop_down="show_excel_drop_down"
+		:has_permission_create_dropdown="has_permission_create_dropdown"
 		:check_permissions="check_permissions"
 		:show_filter_modal="show_filter_modal"
 		:show_btn_create="_show_btn_create"
@@ -143,7 +145,7 @@ export default {
 		},
 		show_previus_days: {
 			type: Boolean,
-			default: false,
+			default: null,
 		},
 		show_search_nav: {
 			type: Boolean,
@@ -213,6 +215,10 @@ export default {
 			default: true,
 		},
 		show_excel_drop_down: {
+			type: Boolean,
+			default: false,
+		},
+		has_permission_create_dropdown: {
 			type: Boolean,
 			default: false,
 		},
@@ -297,6 +303,9 @@ export default {
 			return this.$store.state[this.model_name].display
 		},
 		properties() {
+			if (this.properties_to_show) {
+				return this.properties_to_show
+			}
 			return require(`@/models/${this.model_name}`).default.properties 
 		},
 		_show_btn_create() {

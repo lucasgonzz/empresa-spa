@@ -58,6 +58,24 @@ export default {
 				labels: labels,
 				datasets: datasets,
 			}, {
+				plugins: {
+					datalabels: { 
+						anchor: 'end',
+						align: 'top',
+						color: '#FFF',
+						font: {
+							weight: 'bold',
+							family: 'Roboto',
+							size: 11,	
+						},
+						formatter: function(value) {
+							return that.price(Math.round(value)); // Usa tu método price() para formatear
+						},
+						offset: function(context) {
+							return -20
+						}
+					},
+				},
 				maintainAspectRatio: false,
 				onClick: function (event, elements, chart) {
 					// let provider = providers[elements[0]._index]

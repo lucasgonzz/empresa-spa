@@ -19,12 +19,13 @@ class="m-b-15 m-t-20">
 						<b-form-input
 						@key
 						up="callSetTotal"
+						placeholder="Personalizado"
 						@keyup.enter="add_varios_precios(items[data.index], true)"
 						@click="callSetTotal" 
 						type="number"
 						:id="'price-vender-'+items[data.index].id"
 						min="0"
-						v-model="items[data.index].price_vender"></b-form-input>
+						v-model="items[data.index].price_vender_personalizado"></b-form-input>
 
 						<div
 						class="varios-precios"
@@ -125,6 +126,13 @@ class="m-b-15 m-t-20">
 				</b-input-group>
 			</template>
 
+			<template #cell(price_type_personalizado_id)="data">
+				
+				<price-type
+				:item="items[data.index]"></price-type>
+			
+			</template>
+
 			<template #cell(checked_amount)="data">
 				<strong
 				class="text-danger p-b-10"
@@ -197,6 +205,9 @@ import vender_set_total from '@/mixins/vender_set_total'
 import previus_sales from '@/mixins/previus_sales'
 export default {
 	mixins: [vender, vender_set_total, previus_sales],
+	components: {
+		PriceType: () => import('@/components/vender/components/remito/table-slots/PriceType'),
+	},
 	watch: {
 		special_price_id() {
 			console.log('watcher de special_price_id')
@@ -226,6 +237,12 @@ export default {
 			if (this.can('vender.article_discount')) {
 				fields.push({ 
 					key: 'discount', label: 'Descuento' 
+				})
+			}
+			
+			if (this.hasExtencion('cambiar_price_type_en_vender')) {
+				fields.push({ 
+					key: 'price_type_personalizado_id', label: 'Lista' 
 				})
 			}
 
@@ -322,22 +339,20 @@ export default {
 			return ''
 		},
 		add_varios_precios(item, hacer_caso = false) {
-			console.log('hacer_caso')
-			console.log(hacer_caso)
 			if (hacer_caso) {
 				console.log('add_varios_precios')
 				if (typeof item.varios_precios == 'undefined') {
 					item.varios_precios = []
 				}
 				item.varios_precios.unshift({
-					price_vender: item.price_vender,
+					price_vender: item.price_vender_personalizado,
 					amount: '',
 					id: item.varios_precios.length,
 					// article_id: item.id,
 				})
 
 				this.calculate_price_vender(item)
-				item.price_vender = ''
+				item.price_vender_personalizado = ''
 			}
 		},
 		enter_amount(item) {
@@ -347,6 +362,7 @@ export default {
 		calculate_price_vender(item) {
 			let calculated_price_vender = 0
 			let amount = 1
+
 			item.varios_precios.forEach(otro_precio => {
 				if (otro_precio.amount != '') {
 					amount = Number(otro_precio.amount)

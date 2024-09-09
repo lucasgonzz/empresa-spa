@@ -36,7 +36,7 @@ export default {
 			return 'article-sale-name'
 		},
 		search_from_api() {
-			if (!this.owner.download_articles) {
+			if (!this.download_articles) {
 				console.log('SI SE BUSCA POR API')
 				return true
 			}

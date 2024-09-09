@@ -1,12 +1,14 @@
 <template>
-	<div 
-	class="chart-card">
-		<div class="header">
-			<h4>Ingresos mostrador</h4>
-		</div>
+	<div class="chart-wrapper">
+		<div 
+		class="chart-card">
+			<div class="header">
+				<h4>Ingresos mostrador</h4>
+			</div>
 
-		<chart></chart>
-	</div> 
+			<chart></chart>
+		</div> 
+	</div>
 </template>
 <script>
 export default {

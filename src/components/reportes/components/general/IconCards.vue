@@ -34,7 +34,7 @@ export default {
 		cards() {
 			let cards = [
 				{
-					text: 'Ventas',
+					text: 'Ingresos brutos',
 					img: 'ventas',
 					value: this.price(this.model.total_vendido),
 					description: 'Total vendido, haya sido o no pagado',
@@ -58,10 +58,22 @@ export default {
 					description: 'Total pagado en C/C por tus clientes, de ventas que hayan realizado en el pasado'
 				},
 				{
-					text: 'Ingresos NETOS',
-					img: 'ingresos-netos',
+					text: 'Caja',
+					img: 'ingresos_brutos',
 					value: this.price(this.model.total_ingresos),
 					description: 'Suma de: lo que se vendio en mostrador + lo que pagaron en C/C tus clientes (lo que deberia haber en la caja)',
+				},
+				{
+					text: 'Utilidad',
+					img: 'ingresos_netos',
+					value: this.price(this.model.ingresos_netos),
+					description: 'Ingresos Brutos - Costo de la mercaderia',
+				},
+				{
+					text: 'Ingresos Netos',
+					img: 'rentabilidad',
+					value: this.price(this.model.rentabilidad),
+					description: 'UTILIDAD menos los GASTOS',
 				},
 				{
 					text: 'Gastos',
@@ -70,16 +82,10 @@ export default {
 					description: 'Suma de los GASTOS',
 				},
 				{
-					text: 'Rentabilidad',
-					img: 'rentabilidad',
-					value: this.price(this.model.total_ingresos - this.model.total_gastos),
-					description: 'Diferencia entre los INGRESOS NETOS menos los GASTOS',
-				},
-				{
 					text: 'Deudas de Clientes',
 					img: 'deuda-clientes',
 					value: this.price(this.deuda_clientes),
-					description: 'Sumatoria de los saldos de tus clientes',
+					description: 'Sumatoria de los saldos ACTUALES de tus clientes (EN VIVO)',
 				},
 				{
 					text: 'Devoluciones',
@@ -97,6 +103,30 @@ export default {
 					text: 'Cantidad de ventas',
 					img: 'cantidad_ventas',
 					value: this.model.cantidad_ventas,
+				},
+				{
+					text: 'Iva Vendido',
+					img: 'iva_vendido', 
+					value: this.price(this.model.total_facturado),
+					description: 'Sumatoria de los importes de todas las facturas emitidas',
+				},
+				{
+					text: 'Iva Comprado',
+					img: 'iva_comprado', 
+					value: this.price(this.model.total_iva_comprado),
+					description: 'Sumatoria de los totales de las facturas de los pedidos a proveedores',
+				},
+				{
+					text: 'Total Comprado',
+					img: 'comprado', 
+					value: this.price(this.model.total_comprado),
+					description: 'Sumatoria de los totales de los pedidos a proveedores',
+				},
+				{
+					text: 'Total Pagado',
+					img: 'pagado', 
+					value: this.price(this.model.total_pagado_a_proveedores),
+					description: 'Sumatoria de los pagos hechos a proveedores',
 				},
 			]
 			return cards

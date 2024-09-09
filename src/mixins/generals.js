@@ -35,6 +35,13 @@ export default {
             return this.$store.state.vender.price_type
         },
         download_articles() {  
+            let env_var = process.env.VUE_APP_DOWNLOAD_ARTICLES
+            if (typeof env_var != 'undefined') {
+                if (env_var === 'true') {
+                    return true
+                }
+                return false
+            }
             return this.owner.download_articles
         },
     },
@@ -48,22 +55,30 @@ export default {
             }
         },
         getPriceVender(item, from_pivot = false) {
-            console.log('getPriceVender')
+            console.log('getPriceVender para '+item.name)
+
             let price 
-            if (from_pivot) {
+
+            if (item.price_vender_personalizado) {
+
+                price = item.price_vender_personalizado
+
+            } else if (from_pivot && item.pivot && item.pivot.price) {
+
                 price = item.pivot.price 
-                console.log('from_pivot: '+price)
+            
             } else {
-                console.log('va a llamar a apicar_tipos_de_precio')
+
                 price = item.final_price
 
-                // price = this.redondear(item, price)
                 price = this.apicar_tipos_de_precio(item, price)
+
                 price = this.apicar_descuento_metodo_de_pago(item, price)
 
                 price = this.redondear(price)
             }
-            console.log('return price: '+price)
+            price = Number(price)
+            console.log(this.price(price))
             return price
         },
         redondear(price) {
@@ -78,22 +93,41 @@ export default {
             return Math.ceil(num / 100) * 100;
         },
         apicar_tipos_de_precio(item, price) {
-            console.log('apicar_tipos_de_precio')
-            console.log('price:')
-            console.log(price)
 
-            console.log('price_types_with_position:')
-            console.log(this.price_types_with_position)
-            if (this.price_types_with_position.length && this.checkService(item)) {
-               
-                console.log('price_type_vender:')
-                console.log(this.price_type_vender)
-                this.price_types_with_position.forEach(price_type => {
-                    if (price_type.position <= this.price_type_vender.position) {
-                        price = Number(price) + Number(price * this.getPriceTypePercetage(price_type, item) / 100) 
-                    }
+            console.log('apicar_tipos_de_precio:')
+            if (this.hasExtencion('cambiar_price_type_en_vender')) {
+
+                let price_vender_id = this.price_type_vender.id 
+
+                if (item.price_type_personalizado_id) {
+
+                    price_vender_id = item.price_type_personalizado_id
+                }
+
+                let article_price_type = item.price_types.find(price_type => {
+                    return price_type.id == price_vender_id 
                 })
+
+                console.log('article_price_type:')
+                console.log(article_price_type)
+
+                if (typeof article_price_type != 'undefined') {
+
+                    price = article_price_type.pivot.final_price
+                }
+
+            } else {
+
+                if (this.price_types_with_position.length && this.checkService(item)) {
+                   
+                    this.price_types_with_position.forEach(price_type => {
+                        if (price_type.position <= this.price_type_vender.position) {
+                            price = Number(price) + Number(price * this.getPriceTypePercetage(price_type, item) / 100) 
+                        }
+                    })
+                }
             }
+
             return price
         },
         apicar_descuento_metodo_de_pago(item, price) {

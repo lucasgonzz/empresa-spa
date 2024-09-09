@@ -1,6 +1,8 @@
 <script>
 import { Bar } from 'vue-chartjs'
 import moment from 'moment'
+import 'chartjs-plugin-datalabels'
+
 export default {
 	extends: Bar,
 	computed: { 
@@ -58,7 +60,30 @@ export default {
 				labels: labels,
 				datasets: datasets,
 			}, {
-				maintainAspectRatio: false,
+				plugins: {
+					datalabels: { 
+						anchor: 'end',
+						align: 'top',
+						color: '#FFF',
+						font: {
+							weight: 'bold',
+						},
+						formatter: function(value) {
+							if (that.is_mobile) {
+								return null
+							}
+							if (value != 0) {
+
+								return that.price(Math.round(value)); // Usa tu método price() para formatear
+							}
+							return null
+						},
+						offset: function(context) {
+							return -19	
+						}
+					},
+				},
+				maintainAspectRatio: false,	
 				onClick: function (event, elements, chart) {
 					// let provider = providers[elements[0]._index]
 					// that.setSelectedProvider(provider)
@@ -66,8 +91,12 @@ export default {
 				tooltips: {
 					callbacks: {
 						label: function(tooltipItem, data) {
-							// console.log('entorooooo')
-							return that.price(Math.round(tooltipItem.yLabel))
+							let price = Math.round(tooltipItem.yLabel)
+
+							if (price != 0) {
+								return that.price(price)
+							}
+							return null
 						}
 					}
 				}

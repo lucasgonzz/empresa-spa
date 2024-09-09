@@ -3,6 +3,7 @@ axios.defaults.withCredentials = true
 axios.defaults.baseURL = process.env.VUE_APP_API_URL
 
 import moment from 'moment'
+import article_performance from '@/store/reportes/article_performance'
 export default {
 	namespaced: true,
 	state: {
@@ -149,6 +150,6 @@ export default {
 		}
 	},
 	modules: {
-		// provider,
+		article_performance,
 	}
 }

@@ -57,6 +57,29 @@ export default {
 				labels: labels,
 				datasets: datasets,
 			}, {
+				plugins: {
+					datalabels: { 
+						anchor: 'end',
+						align: 'top',
+						color: '#FFF',
+						font: {
+							weight: 'bold',
+						},
+						formatter: function(value) {
+							if (that.is_mobile) {
+								return null
+							}
+							if (value != 0) {
+
+								return that.price(Math.round(value)); // Usa tu método price() para formatear
+							}
+							return null
+						},
+						offset: function(context) {
+							return -19	
+						}
+					},
+				},
 				maintainAspectRatio: false,
 				onClick: function (event, elements, chart) {
 					// let provider = providers[elements[0]._index]

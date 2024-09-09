@@ -763,7 +763,7 @@ export default {
 			}
 			return null
 		},
-		getOptions(prop, model = null, model_name = null) {
+		getOptions(prop, model = null, model_name = null, add_opcion_0 = true) {
 			let store 
 			if (prop.store) {
 				store = prop.store
@@ -785,9 +785,13 @@ export default {
 			} 
 
 			let options = []
-			options.push({
-				value: 0, text: 'Seleccione '+this.propText(prop) 
-			})
+
+			if (add_opcion_0) {
+				options.push({
+					value: 0, text: 'Seleccione '+this.propText(prop) 
+				})
+			}
+
 			if (prop.options_from_selected_model_prop) {
 				let selected_model = this.$store.state[model_name].selected_model
 				if (selected_model) {

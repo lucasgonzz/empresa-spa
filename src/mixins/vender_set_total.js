@@ -14,6 +14,9 @@ export default {
 		discounts_in_services() {
 			return this.$store.state.vender.discounts_in_services 
 		},
+		budget() {
+			return this.$store.state.vender.budget 
+		},
 		surchages_in_services() {
 			return this.$store.state.vender.surchages_in_services 
 		},
@@ -22,6 +25,9 @@ export default {
 		},
 		surchages_store() {
 			return this.$store.state.surchage.models 
+		},
+		from_pivot() {
+			return this.index_previus_sales != 0 || this.budget
 		},
 	},
 	data() {
@@ -44,7 +50,7 @@ export default {
 				
 				let new_items = []
 
-				this.setItemsPrices()
+				this.setItemsPrices(false, this.from_pivot)
 
 				this.vender_items.forEach(item => {
 					item.total = this.getTotalItem(item, false)

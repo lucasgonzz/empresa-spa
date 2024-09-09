@@ -54,7 +54,7 @@ export default {
 	        		this.total_repartido = 0
 	        	} else {
 	        		
-	        		this.set_total_desde_previus_sale()
+	        		// this.set_total_desde_previus_sale()
 	        	}
         	} else {
         		console.log('NO PASO NADA porque watch_activado esta en: '+this.watch_activado)

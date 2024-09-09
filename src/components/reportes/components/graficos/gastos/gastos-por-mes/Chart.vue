@@ -95,16 +95,28 @@ export default {
 				labels: labels,
 				datasets: datasets,
 			}, {
-				maintainAspectRatio: false,
-				onClick: function (event, elements, chart) {
-					// let provider = providers[elements[0]._index]
-					// that.setSelectedProvider(provider)
+				plugins: {
+					datalabels: { 
+						anchor: 'end',
+						align: 'top',
+						color: '#000',
+						font: {
+							weight: 'bold',
+							family: 'Roboto',
+							size: 9,	
+						},
+						formatter: function(value, context) {
+							return null
+						},
+					},
 				},
+				maintainAspectRatio: false,
 				tooltips: {
 					callbacks: {
 						label: function(tooltipItem, data) {
-							// console.log('entorooooo')
-							return that.price(Math.round(tooltipItem.yLabel))
+							const datasetLabel = data.datasets[tooltipItem.datasetIndex].label || '';
+							const value = tooltipItem.yLabel;
+							return `${datasetLabel}: ${that.price(value)}`;
 						}
 					}
 				}

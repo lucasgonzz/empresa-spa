@@ -9,7 +9,6 @@ import current_acount_payment_methods_with_discounts from '@/store/vender/curren
 
 // import mixin_vender from '@/mixins/vender'
 import model_functions from '@/mixins/model_functions'
-import mixin_payment_methods from '@/mixins/vender_current_acount_payment_methods'
 
 export default {
 	namespaced: true,
@@ -281,6 +280,7 @@ export default {
 				discount_percentage: state.discount_percentage,
 				discount_amount: state.discount_amount,
 				sub_total: state.sub_total,
+				price_type_id: state.price_type ? state.price_type.id : null,
 				total: state.total,
 			})
 			.then(res => {

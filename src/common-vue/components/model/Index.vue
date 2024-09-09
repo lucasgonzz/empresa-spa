@@ -205,6 +205,10 @@ export default {
 			type: Boolean,
 			default: true,
 		},
+		properties_to_show: {
+			type: Array,
+			default: () => null
+		},
 	},
 	components: {
 		Confirm,
@@ -266,6 +270,9 @@ export default {
 			}
 		},
 		properties() {
+			if (this.properties_to_show) {
+				return this.properties_to_show
+			}
 			return this.modelPropertiesFromName(this.model_name)
 		},
 		title() {

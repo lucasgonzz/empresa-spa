@@ -75,7 +75,7 @@ export default {
             }
         },
         search_from_api_in_provider_order() {
-            return !this.owner.download_articles
+            return !this.download_articles
         },
         articles_to_search_in_recipe() {
             let articles = [] 
@@ -136,13 +136,6 @@ export default {
             if (this.model.address) {
                 return this.model.address.street+' '+this.model.address.street_number
             }
-        },
-        setBudgetArticlePrice(budget, article) {
-            if (budget.client) {
-                this.$store.commit('vender/setPriceType', budget.client.price_type)
-                return this.setPriceType(article, article.final_price)
-            } 
-            return article.final_price
         },
         currentAcountStatus(current_acount) {
             if (current_acount.status == 'sin_pagar') {
@@ -425,6 +418,9 @@ export default {
                 discount = item.pivot.discount
                 returned_amount = item.pivot.returned_amount
             } else {
+
+                // calculated_price_vender es el que se usa
+                // cuando agergo varios precios
                 if (item.calculated_price_vender) {
                     price = item.calculated_price_vender 
                     amount = 1
@@ -434,11 +430,8 @@ export default {
                     amount = item.amount
                 }
                 discount = item.discount
-                // returned_amount = item.returned_amount
             }
-            // if (returned_amount > 0) {
-                // amount -= returned_amount
-            // }
+           
             let total = price * amount
             if (discount && discount != '') {
                 total -= total * Number(discount) / 100

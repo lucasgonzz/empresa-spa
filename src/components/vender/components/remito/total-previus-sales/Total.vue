@@ -31,19 +31,17 @@
 				<strong>+</strong> {{ surchage.name }} {{ surchage.percentage }}%
 			</p>
 		</div>
-		<h5
-		class="price-type-name text-success"
-		v-if="price_type_vender">
-		    Lista {{ price_type_vender.name }}
-		</h5>
+		<price-type></price-type>
 	</b-col>
 </template>
 <script>
+import vender from '@/mixins/vender'
 export default {
+	mixins: [vender],
+	components: {
+		PriceType: () => import('@/components/vender/components/remito/total-previus-sales/price-type/Index'),
+	},
 	computed: {
-        price_type_vender() {
-            return this.$store.state.vender.price_type
-        },
 		previus_sale() {
 			return this.$store.state.vender.previus_sales.previus_sale
 		},

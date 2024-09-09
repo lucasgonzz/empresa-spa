@@ -1,11 +1,13 @@
 <template>
-	<div 
-	class="chart-card">
-		<div class="header">
-			<h4>Vendido por sucursal</h4>
-		</div>
+	<div class="chart-wrapper">
+		<div 
+		class="chart-card">
+			<div class="header">
+				<h4>Vendido por sucursal</h4>
+			</div>
 
-		<chart></chart>
+			<chart></chart>
+		</div>
 	</div>
 </template>
 <script>

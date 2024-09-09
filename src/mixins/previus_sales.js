@@ -83,6 +83,9 @@ export default {
 			if (this.current_acount_payment_method_discounts.length) {
 				return true 
 			}
+			if (this.hasExtencion('articulo_margen_de_ganancia_segun_lista_de_precios')) {
+				return true 
+			}
 			return false
 		},
 		setPreviusSale(sale) {
@@ -215,13 +218,21 @@ export default {
 			}
 			if (model.client) {
 				this.$store.commit('vender/setClient', model.client)
-				this.$store.commit('vender/setPriceType', model.client.price_type)
 			} else {
 				console.log('se seteo client con null')
 				this.$store.commit('vender/setClient', null)
 				this.$store.commit('vender/setPriceType', null)
 			}
-			this.setPriceType()
+
+			if (model.price_type) {
+				console.log('setenaod price type con:')
+				console.log(model.price_type)
+				this.$store.commit('vender/setPriceType', model.price_type)
+			} else {
+				this.$store.commit('vender/setPriceType', null)
+			}
+
+			// this.setPriceType()
 			if (model.current_acount_payment_method_id) {
 				this.$store.commit('vender/setCurrentAcountPaymentMethodId', model.current_acount_payment_method_id)
 			} else {
@@ -247,7 +258,7 @@ export default {
 			this.$store.commit('vender/setObservations', model.observations)
 			this.$store.commit('vender/set_omitir_en_cuenta_corriente', model.omitir_en_cuenta_corriente)
 
-			this.setItemsPrices(false, true)
+			// this.setItemsPrices(false, true)
 
 			// this.$store.commit('vender/setTotal')
 			this.setTotal()
@@ -346,6 +357,7 @@ export default {
 				item.checked_amount = this.get_pivot_amount(article.pivot.checked_amount)
 				item.returned_amount = this.get_pivot_amount(article.pivot.returned_amount)
 				item.delivered_amount = this.get_pivot_amount(article.pivot.delivered_amount)
+				item.price_type_personalizado_id = this.get_price_type_personalizado_id(article)
 				item_to_add = {
 					...item,
 					is_article: true,
@@ -391,6 +403,12 @@ export default {
 				return ''
 			}
 			return Number(amount)
+		},
+		get_price_type_personalizado_id(item) {
+			if (!item.pivot.price_type_personalizado_id) {
+				return 0
+			}
+			return item.pivot.price_type_personalizado_id
 		},
 		checkear_metodos_de_pago_en_previus_sale() {
 			console.log('checkear_metodos_de_pago_en_previus_sale')

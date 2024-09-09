@@ -186,6 +186,7 @@ export default {
 		setPriceType() {
             if (this.price_types_with_position.length) {
                 let price_type_para_vender 
+                
                 if (this.client && this.client.price_type) {
                     price_type_para_vender = this.client.price_type
                 } else {
@@ -601,6 +602,7 @@ export default {
 			let item = {
 				...this.article,
 				is_article: true,
+				price_type_personalizado_id: 0,
 			}
 			this.$store.commit('vender/addItem', item)
 			if (this.index_previus_sales > 0) {

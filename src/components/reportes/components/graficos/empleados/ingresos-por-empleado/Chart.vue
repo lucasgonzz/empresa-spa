@@ -102,6 +102,24 @@ export default {
 				labels: labels,
 				datasets: datasets,
 			}, {
+				plugins: {
+					datalabels: { 
+						color: '#000',
+						font: {
+							weight: 'bold',
+							family: 'Roboto',
+							size: 11,	
+						},
+						formatter: function(value) {
+							let price = Math.round(value)
+							
+							if (price != 0) {
+								return that.price(price)
+							}
+							return null
+						},
+					},
+				},
 				maintainAspectRatio: false,
 				onClick: function (event, elements, chart) {
 					// let provider = providers[elements[0]._index]

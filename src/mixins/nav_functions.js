@@ -3,7 +3,21 @@ export default {
 	mixins: [alert_infos],
 	methods: {
 		alerts_count() {
-			return Number(this.unconfirmed_orders.length) + Number(this.messages_not_read) + Number(this.provider_order_days_to_advise.length) + Number(this.ventas_sin_cobrar.length)
+			let total = 0
+			
+			if (this.can('alerts.provider_orders')) {
+				total += Number(this.provider_order_days_to_advise.length)
+			}
+			
+			if (this.can('alerts.orders')) {
+				total += Number(this.unconfirmed_orders.length)
+			}
+			
+			if (this.can('alerts.messages')) {
+				total += Number(this.messages_not_read)
+			}
+
+			return  total
 		}
 	}
 }
