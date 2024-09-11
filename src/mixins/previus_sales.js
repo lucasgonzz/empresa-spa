@@ -66,6 +66,9 @@ export default {
 		total() {
 			return this.$store.state.vender.total
 		},
+		seller_id() {
+			return this.$store.state.vender.seller_id
+		},
 		current_acount_payment_method_discounts() {
 			return this.$store.state.current_acount_payment_method_discount.models 
 		},
@@ -233,6 +236,9 @@ export default {
 			}
 
 			// this.setPriceType()
+			
+			this.$store.commit('vender/setSellerId', model.seller_id)
+			
 			if (model.current_acount_payment_method_id) {
 				this.$store.commit('vender/setCurrentAcountPaymentMethodId', model.current_acount_payment_method_id)
 			} else {
@@ -308,6 +314,7 @@ export default {
 				numero_orden_de_compra: this.numero_orden_de_compra,
 				omitir_en_cuenta_corriente: this.omitir_en_cuenta_corriente,
 				metodos_de_pago_seleccionados: this.selected_payment_methods,
+				seller_id: this.seller_id,
 				sub_total: this.sub_total,
 				total: this.total,
 			})

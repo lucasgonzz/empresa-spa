@@ -15,7 +15,7 @@
 			<i class="icon-eye"></i>
 			Historial de importaciones
 		</b-button>
-		<hr>
+		<!-- <hr>
 		<p>
 			<strong>
 				Opcion 1. Descargar el archivo Modelo en formato Excel
@@ -37,7 +37,7 @@
 			<strong>
 				Opcion 2. Tambien puede tomar un archivo Excel ya existente, e indicar que columna de su archivo corresponde a que propiedad. 
 			</strong>
-		</p>
+		</p> -->
 		<hr>	
 		<div>	
 			<p>

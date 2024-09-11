@@ -67,6 +67,20 @@ export default {
 
                 price = item.pivot.price 
             
+            } else if (this.hasExtencion('articulos_precios_en_blanco') && item.is_article) {
+
+                let afip_information_id = this.$store.state.vender.afip_information_id
+
+                if (afip_information_id) {
+
+                    console.log('usando precio en blanco')
+                    price = item.final_price_blanco
+                    
+                } else {
+
+                    price = item.final_price
+                }
+
             } else {
 
                 price = item.final_price

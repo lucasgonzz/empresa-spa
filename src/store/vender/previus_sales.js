@@ -108,6 +108,7 @@ export default {
 				omitir_en_cuenta_corriente: info.omitir_en_cuenta_corriente,
 				sub_total: info.sub_total,
 				total: info.total,
+				seller_id: info.seller_id,
 			})
 			.then(res => {
 				commit('sale/add', res.data.model, {root: true})

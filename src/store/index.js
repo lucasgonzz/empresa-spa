@@ -104,6 +104,12 @@ import unidad_frecuencia from '@/store/unidad_frecuencia'
 import pending from '@/store/pending'
 import pending_completed from '@/store/pending_completed'
 
+import article_discount_blanco from '@/store/article_discount_blanco'
+import article_surchage from '@/store/article_surchage'
+import article_surchage_blanco from '@/store/article_surchage_blanco'
+
+import tipo_envase from '@/store/tipo_envase'
+
 Vue.use(Vuex)
 
 export default new Vuex.Store({
@@ -216,5 +222,11 @@ export default new Vuex.Store({
         unidad_frecuencia,
         pending,
         pending_completed,
+
+        article_discount_blanco,
+        article_surchage,
+        article_surchage_blanco,
+
+        tipo_envase,
     }
 })

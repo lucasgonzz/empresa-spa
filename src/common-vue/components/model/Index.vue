@@ -488,6 +488,6 @@ export default {
 		color: rgba(0, 0, 0, .6) !important
 .modal-body
 	.b-form-datepicker 
-		margin-bottom: 250px
+		// margin-bottom: 250px
 	// min-height: 500px
 </style>

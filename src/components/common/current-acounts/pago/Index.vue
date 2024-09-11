@@ -55,6 +55,7 @@ hide-footer>
     <hr>
  
     <payment-methods
+    @hacerPago="hacerPago"
     :pago="pago"></payment-methods>
 
 	<btn-loader
@@ -159,29 +160,40 @@ export default {
         },
         check() {
             if (this.pago.haber == '') {
-                this.$toast.error('Ingrese el importe del pago')
-                return false
+
+                let input = document.getElementsByClassName('payment-method-amount')[0]                
+               
+                if (input.value != '') {
+                    this.pago.haber = input.value
+                    console.log('Se puso el pago de '+input.value)
+                } else {
+
+                    this.$toast.error('Ingrese el importe del pago')
+                    return false
+                }
+
             }
-            if (this.pago.current_acount_payment_method_id == 1) {
-                this.pago.checks.forEach(check => {
-                    if (check.bank == '') {
+            this.pago.current_acount_payment_methods.forEach(payment_method => {
+
+                if (payment_method.id == 1) {
+                    if (payment_method.bank == '') {
                         this.$toast.error('Ingrese el banco del cheque')
                         return false 
                     }
-                    if (check.payment_date == '') {
+                    if (payment_method.payment_date == '') {
                         this.$toast.error('Ingrese la fecha de corbo del cheque')
                         return false
                     } 
-                    if (check.amount == '') {
+                    if (payment_method.amount == '') {
                         this.$toast.error('Ingrese imorte del cheque')
                         return false
                     }
-                    if (check.num == '') {
+                    if (payment_method.num == '') {
                         this.$toast.error('Ingrese el numero del cheque')
                         return false
                     }
-                })
-            }
+                }
+            })
             return true
         },
         clear() {

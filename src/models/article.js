@@ -103,7 +103,7 @@ export default {
 		{
 			text: 'margen de ganancia',
 			key: 'percentage_gain',
-			type: 'text',
+			type: 'number',
 			type_to_update: 'number',
 			use_to_update: true,
 			not_show: true,
@@ -111,6 +111,20 @@ export default {
 			filter_type: 'number',
 			keep_after_create: true,
 		},
+
+
+		{
+			text: 'margen de ganancia BLANCO',
+			key: 'percentage_gain_blanco',
+			type: 'number',
+			if_has_extencion: 'articulos_precios_en_blanco',
+			type_to_update: 'number',
+			use_to_update: true,
+			not_show: true,
+			filter_modal_position: 12,
+			filter_type: 'number',
+		},
+
 		{
 			text: 'precio',
 			key: 'price',
@@ -131,6 +145,18 @@ export default {
 			use_to_show_in_search_modal: true,
 			filter_modal_position: 9,
 			// table_position: 10,
+		},
+
+
+		{
+			text: 'Precio final BLANCO',
+			key: 'final_price_blanco',
+			type: 'number',
+			if_has_extencion: 'articulos_precios_en_blanco',
+			only_show: true,
+			is_price: true,
+			use_to_show_in_search_modal: true,
+			filter_modal_position: 9,
 		},
 		{
 			text: 'Precio final anterior',
@@ -163,12 +189,12 @@ export default {
 			type: 'number',
 			not_show: true,
 		},
-		{
-			key: 'unidad_medida_id',
-			type: 'select',
-			not_show: true,
-			use_store_models: true,
-		},
+		// {
+		// 	key: 'unidad_medida_id',
+		// 	type: 'select',
+		// 	not_show: true,
+		// 	use_store_models: true,
+		// },
 		{
 			text: 'Disponible en la tienda',
 			key: 'online',
@@ -177,14 +203,14 @@ export default {
 			not_show: true,
 			keep_after_create: true,
 		},
-		{
-			text: 'Disponible en Mercado Libre',
-			key: 'mercado_libre',
-			type: 'checkbox',
-			value: 1,
-			not_show: true,
-			keep_after_create: true,
-		},
+		// {
+		// 	text: 'Disponible en Mercado Libre',
+		// 	key: 'mercado_libre',
+		// 	type: 'checkbox',
+		// 	value: 1,
+		// 	not_show: true,
+		// 	keep_after_create: true,
+		// },
 		{
 			text: 'Destacado',
 			key: 'featured',
@@ -227,17 +253,17 @@ export default {
 			not_show: true,
 			keep_after_create: true,
 		},
-		{
-			text: 'Lista de precios',
-			key: 'provider_price_list_id',
-			type: 'search',
-			is_between: {
-				store: 'provider',
-				model_prop: 'provider_price_lists',
-			},
-			not_show: true,
-			// keep_after_create: true,
-		},
+		// {
+		// 	text: 'Lista de precios',
+		// 	key: 'provider_price_list_id',
+		// 	type: 'search',
+		// 	is_between: {
+		// 		store: 'provider',
+		// 		model_prop: 'provider_price_lists',
+		// 	},
+		// 	not_show: true,
+		// 	// keep_after_create: true,
+		// },
 		{
 			text: 'categoria',
 			key: 'category_id',
@@ -281,12 +307,35 @@ export default {
 			filter_modal_position: 7,
 			keep_after_create: true,
 		},
+
+		// Propiedades de distribuidora
 		{
-			text: 'Condicion',
-			key: 'condition_id',
-			type: 'select',
+			text: 'U x Bulto',
+			key: 'unidades_por_bulto',
+			type: 'text',
 			not_show: true,
+			if_has_extencion: 'articulos_con_propiedades_de_distribuidora',
 		},
+		{
+			key: 'contenido',
+			type: 'text',
+			not_show: true,
+			if_has_extencion: 'articulos_con_propiedades_de_distribuidora',
+		},
+		{
+			text: 'Tipo de envase',
+			key: 'tipo_envase_id',
+			type: 'select',
+			use_store_models: true,
+			not_show: true,
+			if_has_extencion: 'articulos_con_propiedades_de_distribuidora',
+		},
+		// {
+		// 	text: 'Condicion',
+		// 	key: 'condition_id',
+		// 	type: 'select',
+		// 	not_show: true,
+		// },
 		{
 			text: 'Por defecto en VENDER',
 			key: 'default_in_vender',
@@ -294,29 +343,29 @@ export default {
 			not_show: true,
 			if_has_extencion: 'articles_default_in_vender',
 		},
-		{
-			text: 'Stock por direccion',
-			key: 'addresses',
-			only_show: true,
-			type: 'search',
-			store: 'address',
-			belongs_to_many: {
-				model_name: 'address',
-				props_to_show: [
-					{
-						text: 'Deposito',
-						key: 'street',
-					},
-				],
-				pivot_props_to_show: [
-					{
-						text: 'Cantidad',
-						key: 'amount',
-					},
-				],
-			},
-			not_show: true,
-		},
+		// {
+		// 	text: 'Stock por direccion',
+		// 	key: 'addresses',
+		// 	only_show: true,
+		// 	type: 'search',
+		// 	store: 'address',
+		// 	belongs_to_many: {
+		// 		model_name: 'address',
+		// 		props_to_show: [
+		// 			{
+		// 				text: 'Deposito',
+		// 				key: 'street',
+		// 			},
+		// 		],
+		// 		pivot_props_to_show: [
+		// 			{
+		// 				text: 'Cantidad',
+		// 				key: 'amount',
+		// 			},
+		// 		],
+		// 	},
+		// 	not_show: true,
+		// },
 		// {
 		// 	text: 'Movimientos de Stock',
 		// 	type: 'button',
@@ -365,6 +414,40 @@ export default {
 			},
 			not_show: true,
 		},
+
+		{
+			text: 'Descuentos en BLANCO',
+			key: 'article_discounts_blanco',
+			if_has_extencion: 'articulos_precios_en_blanco',
+			has_many: {
+				text: 'Descuento',
+				model_name: 'article_discount_blanco',
+			},
+			not_show: true,
+		},
+
+
+		{
+			text: 'Recargos',
+			key: 'article_surchages',
+			has_many: {
+				text: 'Recargo',
+				model_name: 'article_surchage',
+			},
+			not_show: true,
+		},
+
+		{
+			text: 'Recargos en BLANCO',
+			key: 'article_surchages_blanco',
+			if_has_extencion: 'articulos_precios_en_blanco',
+			has_many: {
+				text: 'Recargo',
+				model_name: 'article_surchage_blanco',
+			},
+			not_show: true,
+		},
+
 		{
 			text: 'Descripciones',
 			key: 'descriptions',

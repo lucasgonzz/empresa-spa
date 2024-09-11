@@ -18,8 +18,10 @@
 			</b-form-group>
 
 			<b-form-input
+			@keyup.enter="hacerPago"
 			@keyup="setTotal"
 			v-model="payment_method.amount"
+			class="payment-method-amount"
 			placeholder="Monto"></b-form-input>
 
 			<check-info
@@ -92,6 +94,9 @@ export default {
 		}
 	},
 	methods: {
+		hacerPago() {
+			this.$emit('hacerPago')
+		},
 		add() {
 			this.pago.current_acount_payment_methods.push({...this.payment_method})
 		},

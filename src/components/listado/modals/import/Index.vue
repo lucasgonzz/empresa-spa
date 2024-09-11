@@ -72,6 +72,10 @@ export default {
 					description: 'Separe los diferentes descuentos con un guion bajo ( _ )',
 				},
 				{
+					text: 'Recargos',
+					description: 'Separe los diferentes recargos con un guion bajo ( _ )',
+				},
+				{
 					text: 'Precio',
 				},
 				{
@@ -83,6 +87,21 @@ export default {
 					description: 'Por defecto es UNIDAD',
 				},
 			]
+
+
+			// if (this.hasExtencion('articulos_con_propiedades_de_distribuidora')) {
+
+			// 	columns.push({
+			// 		text: 'Tipo de envase',
+			// 	})
+			// 	columns.push({
+			// 		text: 'Contenido',
+			// 	})
+			// 	columns.push({
+			// 		text: 'U x Bulto',
+			// 	})
+			// }
+
 			let index = 1
 			columns.forEach(column => {
 				column.column = index

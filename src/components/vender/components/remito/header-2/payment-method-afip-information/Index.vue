@@ -6,6 +6,7 @@
 		<employee></employee>
 		<select-address></select-address>
 		<sale-type></sale-type>
+		<seller></seller>
 	</div>
 </template>
 <script>
@@ -16,6 +17,7 @@ export default {
 		Employee: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/Employee'),
 		SelectAddress: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/Address'),
 		SaleType: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/SaleType'),
+		Seller: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/Seller'),
 	}
 }
 </script>

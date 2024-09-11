@@ -25,6 +25,18 @@ export default {
 			type: 'number',
 		},
 		{
+			text: '% de comision ventas en NEGRO',
+			key: 'porcentaje_comision_negro',
+			type: 'number',
+			if_has_extencion: 'comision_por_proveedores',
+		},
+		{
+			text: '% de comision ventas en BLANCO',
+			key: 'porcentaje_comision_blanco',
+			type: 'number',
+			if_has_extencion: 'comision_por_proveedores',
+		},
+		{
 			text: 'Valor dolar',
 			key: 'dolar',
 			type: 'number',

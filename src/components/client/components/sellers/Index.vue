@@ -22,7 +22,7 @@
 			<template v-slot:table_right_options="slotProps">
 				<b-button
 				variant="success"
-				@click="showSellerComissions(slotProps.model)">
+				@click.stop="showSellerComissions(slotProps.model)">
 					Comisiones
 				</b-button>
 			</template>

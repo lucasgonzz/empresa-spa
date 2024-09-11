@@ -47,6 +47,12 @@ export default {
 			only_show: true,
 		},
 		{
+			text: 'Vendedor',
+			key: 'seller_id',
+			use_store_models: true,
+			only_show: true,
+		},
+		{
 			text: 'Articulos',
 			key: 'articles',
 			store: 'article',

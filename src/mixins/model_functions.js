@@ -18,6 +18,16 @@ export default {
 
             return this.price(article.final_price)
         },
+        
+        btn_comision_venta(seller_commission, prop) {
+
+            if (seller_commission.sale) {
+                return 'Venta N° '+seller_commission.sale.num
+            } else if (seller_commission.sale_id) {
+                return 'Ver venta'
+            }
+            return ''
+        },
         get_price_with_discount_in_vender(article, prop) {
             if (typeof article != 'undefined' && typeof prop != 'undefined') {
 
@@ -61,7 +71,8 @@ export default {
             return moment(pending.fecha_realizacion).isBefore(moment().startOf('day'))
         },
         show_btn_repartir_stock(prop, article) {
-            if (!article.addresses.length 
+            if (article.id
+                && !article.addresses.length 
                 && article.stock != null
                 && article.stock > 0
                 && !article.article_variants.length) {

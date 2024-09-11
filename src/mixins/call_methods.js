@@ -1,6 +1,7 @@
 export default [
     // 'extencion',
     'current_acount_payment_method_discount',
+    'tipo_envase',
     'address',
     'article',
     'unidad_frecuencia',

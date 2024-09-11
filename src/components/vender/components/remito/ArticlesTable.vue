@@ -240,7 +240,8 @@ export default {
 				})
 			}
 			
-			if (this.hasExtencion('cambiar_price_type_en_vender')) {
+			if (this.hasExtencion('cambiar_price_type_en_vender')
+				&& this.price_types.length) {
 				fields.push({ 
 					key: 'price_type_personalizado_id', label: 'Lista' 
 				})

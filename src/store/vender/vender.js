@@ -56,6 +56,8 @@ export default {
 		guardar_como_presupuesto: 0,
 		budget: null,
 
+		seller_id: 0,
+
 		returned_items: [],
 		selected_payment_methods: [],
 
@@ -82,6 +84,9 @@ export default {
 		},
 		setBudget(state, value) {
 			state.budget = value 
+		},
+		setSellerId(state, value) {
+			state.seller_id = value 
 		},
 		setItems(state, value) {
 			console.log('vender/setItems')
@@ -282,6 +287,7 @@ export default {
 				sub_total: state.sub_total,
 				price_type_id: state.price_type ? state.price_type.id : null,
 				total: state.total,
+				seller_id: state.seller_id,
 			})
 			.then(res => {
 				console.log('vendido')

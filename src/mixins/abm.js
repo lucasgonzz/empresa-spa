@@ -9,6 +9,7 @@ export default {
 						'sub_category',
 						'brand',
 						'price_type',
+						'tipo_envase',
     					'inventory_linkage',
     					'article_property_type',
     					'article_property_value',

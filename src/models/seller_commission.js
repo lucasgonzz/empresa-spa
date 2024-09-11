@@ -17,8 +17,8 @@ export default {
 			button: {
 				variant: 'primary',
 				function: 'showSellerCommissionSale',
-				button_text: 'Ver venta',
 			},
+			function: 'btn_comision_venta'
 		},
 		{
 			text: 'Vendedor',

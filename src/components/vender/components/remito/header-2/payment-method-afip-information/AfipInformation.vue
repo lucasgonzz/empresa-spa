@@ -4,6 +4,7 @@
 		:disabled="index_previus_sales > 0"
 		:class="facturando ? 'verde' : 'rojo'"
 		v-model="afip_information_id" 
+		@change="setTotal(null)"
 		:options="options"></b-form-select> 
 	</div>
 </template>
