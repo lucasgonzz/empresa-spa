@@ -629,7 +629,11 @@ export default {
 				return model[prop.key].length
 			}
 			if (this.isRelationKey(prop)) {
-				let relationship = this.modelNameFromRelationKey(prop, false, false)
+				let relationship = this.modelNameFromRelationKey(prop, false, true)
+
+				// Creo que me la mande, lo comente porque me daba error al obtener el nombre
+				// para la relacion from_address en deposit_movements
+				// let relationship = this.modelNameFromRelationKey(prop, false, false)
 				let prop_name = 'name'
 				if (prop.relation_prop_name) {
 					prop_name = prop.relation_prop_name
@@ -638,6 +642,7 @@ export default {
 				}
 				if (model[prop.key]) {
 					if (prop.use_store_models) {
+						console.log('relationship: '+relationship)
 						let finded_model = this.$store.state[relationship].models.find(_model => {
 							return _model.id == model[prop.key]
 						})
@@ -770,6 +775,8 @@ export default {
 			} else {
 				store = prop.key.substring(0, prop.key.length-3)
 			}
+			console.log('getOptions para')
+			console.log(store) 
 			let models = this.$store.state[store].models
 			let prop_name
 			let prop_to_use_in_select = this.getPropToUseInSelect(store)

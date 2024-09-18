@@ -286,7 +286,8 @@ export default {
 			this.filters.forEach(filter => {
 				if (filter.type == 'select') {
 					this.filter_model[filter.key] = filter.value 
-					this.$set(this.select_options, filter.key, this.getOptions({key: filter.key, text: filter.label, depends_on: filter.depends_on}, this.filter_model))
+					this.$set(this.select_options, filter.key, this.getOptions({key: filter.key,  text: filter.label, depends_on: filter.depends_on}, this.filter_model))
+					// this.$set(this.select_options, filter.key, this.getOptions({key: filter.key, store: filter.store,  text: filter.label, depends_on: filter.depends_on}, this.filter_model))
 				}
 			})
 		},

@@ -1,6 +1,6 @@
-// import model_functions from '@/mixins/model_functions'
+// import cuotas from '@/mixins/vender/cuotas'
 export default {
-	// mixins: [model_functions],
+	// mixins: [cuotas],
 	computed: {
 		vender_items() {
 			return this.$store.state.vender.items 
@@ -28,6 +28,18 @@ export default {
 		},
 		from_pivot() {
 			return this.index_previus_sales != 0 || this.budget
+		},
+		cuota_descuento() {
+			return this.$store.state.vender.cuota_descuento 
+		},
+		cuota_recargo() {
+			return this.$store.state.vender.cuota_recargo 
+		},
+		monto_credito() {
+			return this.$store.state.vender.monto_credito 
+		},
+		selected_payment_methods() {
+			return this.$store.state.vender.selected_payment_methods 
 		},
 	},
 	data() {
@@ -74,11 +86,9 @@ export default {
 
 				total = this.aplicar_current_acount_payment_method_discounts(sub_total)
 
-				// if (this.owner.redondear_centenas_en_vender) {
-				// 	console.log('total sin redondear:')
-				// 	console.log(total)
-				// 	total = this.redondear_centenas(total)
-				// }
+				this.set_monto_credito(total)
+
+				total = this.aplicar_cuotas(total)
 				
 			}
 			this.$store.commit('vender/setSubTotal', sub_total)
@@ -86,6 +96,75 @@ export default {
 			
 			console.log('se puso el sub_total en '+sub_total)
 			console.log('se puso el total en '+total)
+		},
+		aplicar_cuotas(total) { 
+
+
+			if (this.monto_credito) {
+
+				/* 
+					monto_credito_real: 
+						Hace referencia al monto de credito con
+							el descuento
+							o el recargo
+						Aplicados
+				*/
+
+				let monto_credito_real = null
+
+				if (this.cuota_descuento) {
+
+					let monto_descuento = this.monto_credito * Number(this.cuota_descuento) / 100
+
+					monto_credito_real = this.monto_credito - monto_descuento
+
+					this.$store.commit('vender/set_cuota_monto_descuento', monto_descuento)
+
+					total -= monto_descuento
+				
+				} else if (this.cuota_recargo) {
+
+					let monto_recargo = this.monto_credito * Number(this.cuota_recargo) / 100
+
+					monto_credito_real = this.monto_credito + monto_descuento
+				
+					this.$store.commit('vender/set_cuota_monto_recargo', monto_recargo)
+
+					total += monto_recargo
+				}
+
+				this.$store.commit('vender/set_monto_credito_real', monto_credito_real)
+			}
+
+			return total
+		},
+		set_monto_credito(total) {
+
+			let monto_credito = null
+
+			if (this.vender_current_acount_payment_method_id) {
+
+				if (this.vender_current_acount_payment_method_id == 5) {
+
+					monto_credito = total  
+				}
+
+			} else if (this.selected_payment_methods.length) {
+
+				let credito = this.selected_payment_methods.find(payment_method => payment_method.id == 5)
+
+				if (typeof credito != 'undefined') {
+
+					monto_credito = credito.amount 
+				}
+
+			} 
+
+			console.log('set_monto_credito:')
+			console.log(monto_credito)
+
+			this.$store.commit('vender/set_monto_credito', monto_credito)
+
 		},
 		aplicar_discounts() {
 			if (this.discounts_id.length) {

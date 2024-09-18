@@ -29,19 +29,28 @@ export default {
 		selected_employee() {
 			return this.$store.state.sale.selected_employee
 		},
-		show() {
-			return (this.is_owner || this.user.admin_access) && this.employees.length
+		show() { 
+			return this.employees.length
 		},
 		items() {
 			let items = []
 			let text 
-			items.push({name: 'todos'})
-			if (this.is_owner) {
-				items.push(this.countSales(this.user, false))
+
+			if (this.can('sale.index.employees.all')) {
+				items.push({name: 'todos'})
+				if (this.is_owner) {
+					items.push(this.countSales(this.user, false))
+				}
+				this.employees.forEach(employee => {
+					items.push(this.countSales(employee))
+				})
+
+			} else if (this.can('sale.index.employees.only_your')) {
+
+				items.push(this.countSales(this.user))
+
 			}
-			this.employees.forEach(employee => {
-				items.push(this.countSales(employee))
-			})
+
 			return items
 		},
 		selected_address() {

@@ -53,6 +53,11 @@ export default {
 			only_show: true,
 		},
 		{
+			text: 'Cuotas',
+			key: 'cantidad_cuotas',
+			only_show: true,
+		},
+		{
 			text: 'Articulos',
 			key: 'articles',
 			store: 'article',

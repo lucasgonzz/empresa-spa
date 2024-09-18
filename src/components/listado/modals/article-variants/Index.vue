@@ -15,7 +15,7 @@ hide-footer>
 <script>
 export default {
 	components: {
-		VariantsStock: () => import('@/components/listado/modals/article-variants/VariantsStock'),
+		VariantsStock: () => import('@/components/listado/modals/article-variants/variant-stock/Index'),
 		ArticleProperties: () => import('@/components/listado/modals/article-variants/ArticleProperties'),
 		ArticleVariants: () => import('@/components/listado/modals/article-variants/ArticleVariants'),
 	},

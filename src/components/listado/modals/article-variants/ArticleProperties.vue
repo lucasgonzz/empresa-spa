@@ -8,6 +8,7 @@
 		@modelSaved="setArticleVariants"
 		@modelDeleted="setArticleVariants"
 		model_name="article_property"
+		:check_permissions="false"
 		:prop_to_send_on_save="prop_to_send_on_save"></view-component>
 	</div>
 </template>

@@ -46,6 +46,9 @@
 		<template #horizontal_nav_center>
 			<stock-info-buttons></stock-info-buttons>
 			<bar-code-search></bar-code-search>
+
+			<deposit-movements></deposit-movements>
+
 		</template>
 		
 		<template #options_drop_down>
@@ -96,7 +99,9 @@
 		<template
 		v-for="address in addresses"
 		v-slot:[get_table_address_prop(address)]="props">
-			{{ get_address_stock(props.model, address) }}
+			<address-stock
+			:article="props.model"
+			:address="address"></address-stock>
 		</template>
 		
 		<template
@@ -139,18 +144,17 @@ export default {
 		NameInput: () => import('@/components/listado/components/NameInput'),
 		StockInput: () => import('@/components/listado/components/StockInput'),
 		StockInfo: () => import('@/components/listado/modals/stock-info/Index'),
-		StockBtn: () => import('@/components/listado/components/StockBtn'),
+		StockBtn: () => import('@/components/listado/components/table-props/stock-btn/Index'),
 		ArticlePrice: () => import('@/components/listado/components/ArticlePrice'),
 
 		// Dropdown options
 		DropDownOptions: () => import('@/components/listado/components/selected-filtered-options/Index'),
-		// ArticleTicketOptionDropDown: () => import('@/components/listado/components/selected-filtered-options/ArticleTicketOptionDropDown'),
-		// ArticlesPdfOptionDropDown: () => import('@/components/listado/components/selected-filtered-options/ArticlesPdfOptionDropDown'),
-		// ResetStockOptionDropDown: () => import('@/components/listado/components/selected-filtered-options/ResetStockOptionDropDown'),
-		// SeleccionEspecial: () => import('@/components/listado/components/selected-filtered-options/SeleccionEspecial'),
-		// ExcelExport: () => import('@/components/listado/components/selected-filtered-options/ExcelExport'),
 		ConfirmResetStock: () => import('@/components/listado/modals/ConfirmResetStock'),
 		PriceTypeInput: () => import('@/components/listado/components/PriceTypeInput'),
+
+		DepositMovements: () => import('@/components/listado/components/deposit-movements/Index'),
+
+		AddressStock: () => import('@/components/listado/components/table-props/address-stock/Index'),
 	}, 
 	beforeRouteLeave(to, from, next) {
 		this.$store.commit('article/setSelected', [])

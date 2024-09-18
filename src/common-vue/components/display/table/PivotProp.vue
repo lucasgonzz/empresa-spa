@@ -83,8 +83,6 @@ export default {
 								return _model.id == this.model.id 
 							})
 						}
-						console.log('model:')
-						console.log(model)
 						return model[prop.v_if.b_t_many_model_prop].length 
 					}
 				}
@@ -102,7 +100,12 @@ export default {
 
 			let id = props[index + 1]
 			let element = document.getElementById(this.model_name+'-'+id)
-			element.focus()
+
+			if (typeof element != 'undefined') {
+
+				element.focus()
+			}
+
 
 			this.updateTableScroll(element)
 		},

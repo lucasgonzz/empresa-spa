@@ -20,10 +20,43 @@ export default {
 				}
 				
 				this.$store.dispatch('sale/getModels')
+
+				let sucursal = this.get_address_param()
+
+				let empelado = this.get_employee_param()
 				
-				this.$router.push({name: 'sale', params: {view: 'todas', sub_view: 'todos'}})
+				this.$router.push({name: 'sale', params: {view: sucursal, sub_view: empelado}})
 
 			}
-		}
+		},
+		get_address_param() {
+			let sucursal = 'todas' 
+
+			if (!this.can('sale.index.addresses.all')
+				&& this.can('sale.index.addresses.only_your')) {
+
+				if (this.user.address_id) {
+					let user_address = this.$store.state.address.models.find(address => address.id == this.user.address_id)
+					
+					if (typeof user_address != 'undefined') {
+
+						sucursal = this.routeString(user_address.street)
+					}
+				}
+			}
+
+			return sucursal
+		},
+		get_employee_param() {
+			let empleado = 'todos' 
+ 
+			if (!this.can('sale.index.employees.all')
+				&& this.can('sale.index.employees.only_your')) {
+
+				empleado = this.routeString(this.user.name)
+			}
+
+			return empleado
+		},
 	}
 }

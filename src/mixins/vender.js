@@ -379,7 +379,7 @@ export default {
 			this.$store.commit('vender/set_omitir_en_cuenta_corriente', 0)
 			
 			this.$store.commit('vender/setSellerId', 0)
-			
+
 			this.setTotal()
 
 			this.checkAddressCookie()
@@ -388,7 +388,15 @@ export default {
 
 			this.limpiar_recargos()
 
+			this.limpiar_cuotas()
+
 			this.setPriceType()
+		},
+		limpiar_cuotas() {
+			this.$store.commit('vender/set_cuota_id', 0)
+			this.$store.commit('vender/set_cantidad_cuotas', null)
+			this.$store.commit('vender/set_cuota_descuento', null)
+			this.$store.commit('vender/set_cuota_recargo', null)
 		},
 		limpiar_descuentos() {
 
@@ -556,9 +564,9 @@ export default {
 					article_to_add.amount = 1
 				}
 				this.$store.commit('vender/setArticle', article_to_add)
-				let time = 500
+				let time = 200
 				if (from_mobile) {
-					time = 1000
+					time = 700
 				}
 				if (this.user.ask_amount_in_vender) {
 					setTimeout(() => {

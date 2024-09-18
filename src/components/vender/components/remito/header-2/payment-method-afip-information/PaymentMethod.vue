@@ -65,6 +65,8 @@ export default {
 
 				this.$store.commit('vender/setSelectedPaymentMethods', [])
 
+				this.limpiar_cuotas()
+
 				this.init_modal_payment_metohds()
 				
 				this.setTotal()
@@ -75,8 +77,24 @@ export default {
 		},
 		set_payment_methods_null() {
 			this.$store.commit('vender/setSelectedPaymentMethods', [])
+			this.$store.commit('vender/current_acount_payment_methods/set_payment_methods', [])
+
+			this.limpiar_cuotas()
+
 			this.setTotal()
-		}
+		},
+		limpiar_cuotas() {
+
+			this.$store.commit('vender/set_cuota_id', 0)
+			this.$store.commit('vender/set_monto_credito', 0)
+			this.$store.commit('vender/set_cantidad_cuotas', 0)
+
+			this.$store.commit('vender/set_cuota_descuento', null)
+			this.$store.commit('vender/set_cuota_recargo', null)
+			this.$store.commit('vender/set_cuota_monto_descuento', null)
+			this.$store.commit('vender/set_cuota_monto_recargo', null)
+		},
+
 	}
 }
 </script>

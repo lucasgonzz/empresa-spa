@@ -157,10 +157,21 @@ export default {
 			this.$bvModal.show('article-used-in-recipes')
 		},
 		showVariants() {
+			this.$store.commit('auth/setMessage', 'Cargando')
+			this.$store.commit('auth/setLoading', true)
+
 			this.setModel(this.model, 'article', [], false)
 			this.$store.commit('article_property/setModels', this.model.article_properties)
 			this.$store.commit('article_variant/setModels', this.model.article_variants)
-			this.$bvModal.show('article-variants')
+			
+			this.$store.commit('article/edit_variants_stock/set_variants_to_update', [])
+			
+			setTimeout(() => {
+
+				this.$bvModal.show('article-variants')
+				this.$store.commit('auth/setLoading', false)
+			}, 500)
+
 		},
 		showCharts() {
 			this.setModel(this.model, 'article', [], false)

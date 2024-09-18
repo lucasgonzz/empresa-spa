@@ -223,7 +223,8 @@ export default {
 						descuento = this.get_monto_descuento(selected_payment_method.amount, Number(selected_payment_method.id), selected_payment_method)
 
 						this.$set(selected_payment_method, 'monto_descuento', descuento)
-						// selected_payment_method.monto_descuento = descuento 
+
+						console.log('descontando '+descuento+' de '+selected_payment_method.name)
 
 						total -= descuento
 

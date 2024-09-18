@@ -110,6 +110,11 @@ import article_surchage_blanco from '@/store/article_surchage_blanco'
 
 import tipo_envase from '@/store/tipo_envase'
 
+import deposit_movement from '@/store/deposit_movement'
+import deposit_movement_status from '@/store/deposit_movement_status'
+
+import cuota from '@/store/cuota'
+
 Vue.use(Vuex)
 
 export default new Vuex.Store({
@@ -228,5 +233,10 @@ export default new Vuex.Store({
         article_surchage_blanco,
 
         tipo_envase,
+
+        deposit_movement,
+        deposit_movement_status,
+
+        cuota,
     }
 })

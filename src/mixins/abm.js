@@ -14,6 +14,7 @@ export default {
     					'article_property_type',
     					'article_property_value',
     					'article_pre_import_range',
+    					'deposit_movement_status',
     					// 'deposit',
 					],
 				},
@@ -22,6 +23,7 @@ export default {
 					models: [
 						'discount',
 						'surchage',
+						'cuota',
 						'current_acount_payment_method_discount',
     					'commission',
     					'sale_type',

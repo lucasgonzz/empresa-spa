@@ -63,12 +63,20 @@ export default {
 		group_by() {
 			let group_by = []
 			let last_group_by = ''
+
 			this.modelsStoreFromName(this.prop.store).forEach(model => {
-				if (model[this.prop.belongs_to_many.order_by] != last_group_by) {
+
+				let group_by_name = model[this.prop.belongs_to_many.order_by]
+
+				if (group_by_name != last_group_by
+					&& !this.ya_esta_agregado(group_by, group_by_name)) {
+
 					group_by.push(model[this.prop.belongs_to_many.order_by])
 					last_group_by = model[this.prop.belongs_to_many.order_by]
 				}
 			})
+			console.log('group_by:')
+			console.log(group_by)
 			return group_by
 		},
 	},
@@ -100,7 +108,12 @@ export default {
 			} else {
 				this.model[this.prop.key].push(model_to_add)
 			}
-		}
+		},
+		ya_esta_agregado(group_by, group_by_name) {
+
+			let index = group_by.findIndex(_group_by => _group_by == group_by_name)
+			return index != -1
+		},
 	}
 }
 </script>

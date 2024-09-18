@@ -304,7 +304,11 @@ export default {
 				this.$store.commit('auth/setMessage', 'Guardando')
 				this.loading = true 
 				let route = this.routeString(this.model_name)
+				// let model_to_send = this.model 
 				let model_to_send = this.getModelToSend()
+				
+				console.log('model_to_send:')
+				console.log(model_to_send)
 				if (this.model.id) {
 					this.$api.put(route+'/'+this.model.id, model_to_send)
 					.then(res => {
@@ -325,6 +329,8 @@ export default {
 								this.$store.commit('auth/setUser', res.data.model)
 							} else {
 								this.$store.commit(this.replaceGuion(this.model_name)+'/add', res.data.model)
+								console.log('se agrego este '+this.model_name+': ')
+								console.log(res.data.model)
 							}
 						}
 						this.closeModal(info)
@@ -423,19 +429,23 @@ export default {
 					(prop.type == 'text' 
 					|| prop.type == 'textarea' 
 					|| prop.type == 'date' 
-					|| prop.type == 'search' 
+					// || prop.type == 'checkbox' 
 					|| prop.type == 'select')
 
 					&& typeof prop.not_show_on_form == 'undefined' && typeof prop.show_only_if_is_created == 'undefined') {
+				
 					let input = document.getElementById(this.model_name+'-'+prop.key)
-					if (prop.type == 'search') {
-						this.model[prop.key] = input.getAttribute('model_id')
-						console.log('input de '+prop.text)
-						console.log(input)
-						console.log('se le puso el value de '+input.getAttribute('model_id'))
-					} else {
+
+					console.log('input de '+prop.key+':')
+					console.log(input)
+
+					if (input) {
+					
+						console.log('se va a poner el value de:')
+						console.log(input.value)
 						this.model[prop.key] = input.value
-					}
+					} 
+
 				}
 			})
 		},

@@ -18,13 +18,24 @@ export default {
 			return this.$store.state.address.models 
 		},
 		items() {
-			console.log('addresses')
-			console.log(this.addresses)
 			let items = []
-			items.push({street: 'todas'})
-			this.addresses.forEach(address => {
-				items.push(this.countSales(address))
-			})
+
+			if (this.can('sale.index.addresses.all')) {
+
+				items.push({street: 'todas'})
+				this.addresses.forEach(address => {
+					items.push(this.countSales(address))
+				})
+
+			} else if (this.can('sale.index.addresses.only_your')) {
+
+				let employee_address = this.addresses.find(address => address.id == this.user.address_id)
+
+				if (typeof employee_address != 'undefined') {
+					items.push(this.countSales(employee_address))
+				}
+			}
+
 			return items
 		},
 	},

@@ -109,10 +109,10 @@
 								</div>
 
 								<div
-								:id="model_name+'-'+prop.key"
 								v-else-if="prop.type == 'text' || prop.type == 'number' || prop.type == 'password'"
 								class="d-flex w-100">
 									<b-form-input
+									:id="model_name+'-'+prop.key"
 							        :disabled="isDisabled(prop, form_to_filter)"
 									:placeholder="'Ingresar '+propText(prop)"
 									:type="prop.type"
@@ -126,6 +126,7 @@
 								</div>
 
 								<b-form-textarea
+								:id="model_name+'-'+prop.key"
 								v-else-if="prop.type == 'textarea'"
 						        :disabled="isDisabled(prop, form_to_filter)"
 								:placeholder="'Ingresar '+propText(prop)"
@@ -140,6 +141,7 @@
 							    	:model_name="modelNameFromRelationKey(prop)"></model-component>
 
 									<b-form-select
+									:id="model_name+'-'+prop.key"
 									@change="setChange(prop)"
 							        :disabled="isDisabled(prop, form_to_filter)"
 									v-model="model[prop.key]"
@@ -147,6 +149,7 @@
 								</div>		
 
 								<b-form-checkbox
+								:id="model_name+'-'+prop.key"
 								v-else-if="prop.type == 'checkbox'"
 						        :disabled="isDisabled(prop, form_to_filter)"
 								v-model="model[prop.key]"
@@ -499,6 +502,7 @@ export default {
 			if (this.model[prop.key] == -10) {
 				this.create(this.modelNameFromRelationKey(prop))
 			}
+			// this.$set(this.model, prop.key, this.model[prop.key])
 		},
 		setPivotProps(prop) {
 			if (this.model[prop.key] && this.model[prop.key] != 0) {
@@ -550,7 +554,6 @@ export default {
 				let model_to_add = result.model 
 				if (this.checkBelongsToManyExist(prop, model_to_add, result)) {
 
-
 					this.setBelongsToManyPivotProps(prop, model_to_add, result)
 
 				}
@@ -572,6 +575,8 @@ export default {
 			}
 		},
 		checkBelongsToManyExist(prop, model_to_add) {
+			console.log('checkBelongsToManyExist')
+			console.log(this.model)
 			let finded = this.model[prop.key].find(model => {
 				return model.id == model_to_add.id 
 			})
@@ -603,9 +608,27 @@ export default {
 					}
 				})
 			}
+			console.log('*********************')
+			console.log('asi estaba antes de agregar '+prop.key)
+			console.log(this.model)
+
+
 			this.model[prop.key].push(model_to_add)
-			this.$set(this.model, prop.key, this.model[prop.key])
+			// this.$set(this.model, prop.key, this.model[prop.key])
+
 			this.setTableFocus(prop, model_to_add)
+
+			this.$store.commit(this.model_name+'/setModel', {
+				model: {
+					...this.model
+				},
+				properties: []
+			})
+
+			console.log('asi quedo despues de agregar '+prop.key)
+			console.log(this.model)
+			console.log('*********************')
+
 		},
 		setTableFocus(prop, model_to_add) {
 			if (prop.belongs_to_many.properties_to_set && prop.belongs_to_many.properties_to_set.length) {
@@ -613,7 +636,7 @@ export default {
 					let id = prop.belongs_to_many.model_name+'-'+prop.belongs_to_many.properties_to_set[0].key+'-'+model_to_add.id
 					let element = document.getElementById(id) 
 					element.focus()
-				}, 1000)
+				}, 300)
 			}
 		},
 		clickEnter(prop) {

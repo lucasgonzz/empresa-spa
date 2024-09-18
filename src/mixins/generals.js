@@ -96,10 +96,8 @@ export default {
             return price
         },
         redondear(price) {
-            console.log('redondear: '+this.price(price))
             if (this.owner.redondear_centenas_en_vender) {
                 price = this.redondear_centenas(price)
-                console.log('quedo en '+this.price(price))
             }
             return price
         },

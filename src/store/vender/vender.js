@@ -30,6 +30,19 @@ export default {
 		*/
 		total: 0,
 		
+
+		cuota_id: 0,
+		monto_credito: 0, 
+		cantidad_cuotas: 0,
+		cuota_descuento: null,
+		cuota_recargo: null,
+
+		cuota_monto_descuento: null,
+		cuota_monto_recargo: null,
+
+		monto_credito_real: null,
+
+
 		client: null,
 		discounts_id: [],
 		surchages_id: [],
@@ -223,6 +236,30 @@ export default {
 		setTotal(state, total = null) {
 			state.total = total
 		},
+		set_cuota_id(state, value) {
+			state.cuota_id = value 
+		},
+		set_monto_credito(state, value) {
+			state.monto_credito = value 
+		},
+		set_cantidad_cuotas(state, value) {
+			state.cantidad_cuotas = value 
+		},
+		set_cuota_descuento(state, value) {
+			state.cuota_descuento = value 
+		},
+		set_cuota_recargo(state, value) {
+			state.cuota_recargo = value 
+		},
+		set_cuota_monto_descuento(state, value) {
+			state.cuota_monto_descuento = value 
+		},
+		set_cuota_monto_recargo(state, value) {
+			state.cuota_monto_recargo = value 
+		},
+		set_monto_credito_real(state, value) {
+			state.monto_credito_real = value 
+		},
 		removeItem(state, item) {
 			let index = state.items.findIndex(i => {
 				return i.id == item.id
@@ -288,6 +325,11 @@ export default {
 				price_type_id: state.price_type ? state.price_type.id : null,
 				total: state.total,
 				seller_id: state.seller_id,
+				cuota_id: state.cuota_id,
+				cantidad_cuotas: state.cantidad_cuotas,
+				cuota_descuento: state.cuota_descuento,
+				cuota_recargo: state.cuota_recargo,
+				monto_credito_real: state.monto_credito_real,
 			})
 			.then(res => {
 				console.log('vendido')

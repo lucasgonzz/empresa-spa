@@ -1,5 +1,6 @@
 <template>
-	<div>
+	<div
+	class="j-center">
 		{{ article.stock }}
 		<b-button
 		size="sm"
@@ -9,25 +10,17 @@
 			<i class="icon-edit"></i>
 		</b-button>
 
-		<b-button
-		v-if="addresses.length"
-		size="sm"
-		class="m-l-10"
-		@click.stop="edit_addresses"
-		variant="success">
-			<i class="icon-refresh"></i>
-		</b-button>
+		<edit-addresses-stock-btn
+		:article="article"></edit-addresses-stock-btn>
 	</div>
 </template>
 <script>
 export default {
+	components: {
+		EditAddressesStockBtn: () => import('@/components/listado/components/table-props/stock-btn/EditAddressesStockBtn'),
+	},
 	props: {
 		article: Object,
-	},
-	computed: {
-		addresses() {
-			return this.$store.state.address.models 
-		},
 	},
 	methods: {
 		stockMovement() {
@@ -40,9 +33,6 @@ export default {
 				document.getElementById('stock-movement-amount').focus()
 			}, 500)	
 		},
-		edit_addresses() {
-			this.$store.commit('article/edit_addresses_stock/set_article', this.article)
-		}
 	}
 }
 </script>

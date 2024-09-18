@@ -1,6 +1,8 @@
 export default [
     // 'extencion',
     'current_acount_payment_method_discount',
+    'deposit_movement_status',
+    'cuota',
     'tipo_envase',
     'address',
     'article',
