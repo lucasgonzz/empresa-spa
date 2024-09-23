@@ -197,17 +197,15 @@ export default [
 		image_url: 'nav-icons/produccion.png',
 	},
 	{
-		text: 'Caja',
-		path: '/caja',
+		text: 'Cajas',
+		path: '/cajas',
 		name: 'caja',
-		model_name: 'report',
+		model_name: 'caja',
 		component: '@/views/Caja',
-		params: {
-			view: 'reportes',
-		},
 		if_has_extencion: 'comerciocity_interno',
-		image_url: 'nav-icons/caja.png',
-		can: 'caja.reports',
+		image_url: 'nav-icons/cajas.png',
+		call_models_always: true,
+		// can: 'caja.reports',
 	},
 	{
 		text: 'ABM',

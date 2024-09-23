@@ -8,6 +8,7 @@
 
 		<slot name="display_top"></slot>
 		<display
+		:show_actualizado="show_actualizado"
 		:set_model_on_row_selected="set_model_on_row_selected"
 		:table_height_para_restar="table_height_para_restar"
 		:order_list_by="order_list_by"
@@ -81,6 +82,10 @@ export default {
 		properties_to_show: {
 			type: Array,
 			default: null,
+		},
+		show_actualizado: {
+			type: Boolean,
+			default: true,
 		},
 	},
 	computed: {

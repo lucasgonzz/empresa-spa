@@ -74,6 +74,7 @@ export default {
 			this.current_acount_payment_methods.forEach(payment_method => {
 				payment_methods.push({
 					...payment_method,
+					caja_id: 0,
 					amount: ''
 				})
 			})
@@ -151,7 +152,7 @@ export default {
 
 				} else {
 
-					this.set_payment_methods()
+					this.set_vender_payment_methods()
 
 					this.$bvModal.hide('payment-method-modal')
 				}
@@ -185,7 +186,7 @@ export default {
 
 		},
 
-		set_payment_methods() {
+		set_vender_payment_methods() {
 
 			let payment_methods = []
 

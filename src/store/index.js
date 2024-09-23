@@ -115,6 +115,16 @@ import deposit_movement_status from '@/store/deposit_movement_status'
 
 import cuota from '@/store/cuota'
 
+import caja from '@/store/caja'
+import apertura_caja from '@/store/apertura_caja'
+import movimiento_caja from '@/store/movimiento_caja'
+import concepto_movimiento_caja from '@/store/concepto_movimiento_caja'
+
+import default_payment_method_caja from '@/store/default_payment_method_caja'
+
+import movimiento_entre_caja from '@/store/movimiento_entre_caja'
+
+
 Vue.use(Vuex)
 
 export default new Vuex.Store({
@@ -238,5 +248,14 @@ export default new Vuex.Store({
         deposit_movement_status,
 
         cuota,
+
+        caja,
+        apertura_caja,
+        movimiento_caja,
+        concepto_movimiento_caja,
+
+        default_payment_method_caja,
+
+        movimiento_entre_caja,
     }
 })

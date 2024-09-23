@@ -46,6 +46,12 @@ export default {
         },
     },
     methods: {
+        get_perfil_usuario(id) {
+            if (id == this.owner_id) {
+                return this.owner 
+            }
+            return this.$store.state.employee.models.find(employee => employee.id == id)
+        },
         hasExtencion(slug, check_has_one_extencion_permission = true) {
             if (this.authenticated) {
                 let index = this.owner.extencions.findIndex(extencion => {
@@ -116,17 +122,21 @@ export default {
                     price_vender_id = item.price_type_personalizado_id
                 }
 
-                let article_price_type = item.price_types.find(price_type => {
-                    return price_type.id == price_vender_id 
-                })
+                if (item.is_article) {
+                    
+                    let article_price_type = item.price_types.find(price_type => {
+                        return price_type.id == price_vender_id 
+                    })
 
-                console.log('article_price_type:')
-                console.log(article_price_type)
+                    console.log('article_price_type:')
+                    console.log(article_price_type)
 
-                if (typeof article_price_type != 'undefined') {
+                    if (typeof article_price_type != 'undefined') {
 
-                    price = article_price_type.pivot.final_price
+                        price = article_price_type.pivot.final_price
+                    }
                 }
+
 
             } else {
 

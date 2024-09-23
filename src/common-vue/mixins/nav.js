@@ -65,12 +65,15 @@ export default {
 			if (route.function) {
 				this[route.function]()
 			} else if (route.model_name) {
+
 				let models = this.$store.state[route.model_name].models 
+
 				if (!models.length && (!this.is_mobile || this.downloadOnMobile(route.model_name)) && (route.model_name != 'article' || this.download_articles)) {
 					this.$store.dispatch(route.model_name+'/getModels')
 					// console.log('No tiene models, llamando getModels')
 				} 
-				if (this.route_name == route.model_name) {
+
+				if (route.call_models_always || this.route_name == route.model_name) {
 					this.$store.dispatch(route.model_name+'/getModels')
 					if (this.$store.state[route.model_name].from_dates) {
 						this.$store.commit(route.model_name+'/setFromDate', moment().format('YYYY-MM-DD'))

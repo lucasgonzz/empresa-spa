@@ -2,6 +2,7 @@
 <div
 class="cont-select">
 	<b-form-select
+	:disabled="disabled"
 	v-model="current_acount_payment_method_id"
 	@change="set_payment_methods_null"
 	:options="getOptions({key: 'current_acount_payment_method_id', text: 'Metodo de pago'})">
@@ -9,7 +10,8 @@ class="cont-select">
 
 
 	<!-- Boton para metodoS de pago -->
-	<b-button 
+	<b-button
+	:disabled="disabled" 
 	class="mb-2" 
 	variant="outline-primary"
 	@click="set_payment_methods">
@@ -30,6 +32,12 @@ import select_payment_methods from '@/mixins/vender/select_payment_methods'
 export default {
 	mixins: [vender, select_payment_methods],
 	computed: {
+		disabled() {
+			if (this.client && !this.omitir_en_cuenta_corriente) {
+				return true 
+			}
+			return false
+		},
 		selected_payment_methods() {
 			return this.$store.state.vender.selected_payment_methods
 		},
@@ -54,8 +62,6 @@ export default {
 		set_payment_methods() {
 
 			if (this.sobrante_a_repartir != 0) {
-			// if (!this.payment_methods_seteados) {
-
 
 				this.$store.commit('vender/setCurrentAcountPaymentMethodId', 0)
 

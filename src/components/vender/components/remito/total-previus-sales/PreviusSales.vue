@@ -1,6 +1,6 @@
 <template>
 	<b-col
-	v-if="!disabled_update()"
+	v-if="se_puede_actualizar_venta()"
 	cols="12"
 	lg="6"
 	class="j-end">

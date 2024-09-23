@@ -380,6 +380,8 @@ export default {
 			
 			this.$store.commit('vender/setSellerId', 0)
 
+			this.$store.commit('vender/set_caja_id', 0)
+
 			this.setTotal()
 
 			this.checkAddressCookie()
@@ -477,6 +479,10 @@ export default {
 				return false
 			}
 
+			if (!this.check_cajas()) {
+				return false
+			}
+
 			if (!this.current_acount_payment_method_id 
 				&& (!this.client || this.omitir_en_cuenta_corriente)) {
 
@@ -515,6 +521,21 @@ export default {
 			}
 			return true 
 		},
+		check_cajas() {
+			if (this.cajas.length) {
+
+				if (!this.cajas_abiertas.length) {
+					this.$toast.error('Habra al menos una CAJA para poder indicarla en esta venta')
+					return false 
+				}
+
+				if (!this.$store.state.vender.caja_id) {
+					this.$toast.error('Indique una CAJA para esta venta')
+					return false 
+				}
+			}
+			return true 
+		},	
 		check_article_variants() {
 			let ok = true
 			this.items.forEach(item => {

@@ -29,6 +29,8 @@ export default {
 			aplicando descuentos de los metodos de pago
 		*/
 		total: 0,
+
+		caja_id: 0,
 		
 
 		cuota_id: 0,
@@ -236,6 +238,9 @@ export default {
 		setTotal(state, total = null) {
 			state.total = total
 		},
+		set_caja_id(state, value) {
+			state.caja_id = value 
+		},
 		set_cuota_id(state, value) {
 			state.cuota_id = value 
 		},
@@ -330,6 +335,7 @@ export default {
 				cuota_descuento: state.cuota_descuento,
 				cuota_recargo: state.cuota_recargo,
 				monto_credito_real: state.monto_credito_real,
+				caja_id: state.caja_id,
 			})
 			.then(res => {
 				console.log('vendido')

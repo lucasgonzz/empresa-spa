@@ -10,11 +10,18 @@
 		<div
 		v-for="(payment_method, index) in pago.current_acount_payment_methods"
 		:key="index">
+		
 			<b-form-group
 			:label="label(index)">
 				<b-form-select
 				v-model="payment_method.current_acount_payment_method_id"
 				:options="options"></b-form-select> 
+			</b-form-group>
+		
+			<b-form-group>
+				<b-form-select
+				v-model="payment_method.caja_id"
+				:options="get_cajas_abiertas_options()"></b-form-select> 
 			</b-form-group>
 
 			<b-form-input
@@ -62,6 +69,27 @@ export default {
 	},
 	props: ['pago'],
 	computed: {
+		// cajas() {
+		// 	return this.$store.state.caja.models 
+		// },
+		// caja_options() {
+		// 	let cajas_abiertas = this.cajas.filter(caja => caja.abierta)
+
+		// 	let options = []
+		// 	options.push({
+		// 		value: 0,
+		// 		text: 'Seleccione Caja'
+		// 	})
+
+		// 	cajas_abiertas.forEach(caja => {
+		// 		options.push({
+		// 			value: caja.id,
+		// 			text: caja.name
+		// 		})
+		// 	})
+
+		// 	return options
+		// },
 		payment_methods() {
 			return this.$store.state.current_acount_payment_method.models
 		},
@@ -90,6 +118,7 @@ export default {
                 num: '',
                 credit_card_id: 0,
                 credit_card_payment_plan_id: 0,
+                caja_id: 0,
 			}
 		}
 	},
@@ -98,7 +127,10 @@ export default {
 			this.$emit('hacerPago')
 		},
 		add() {
-			this.pago.current_acount_payment_methods.push({...this.payment_method})
+			this.pago.current_acount_payment_methods.push({
+				...this.payment_method,
+				caja_id: 0,
+			})
 		},
 		remove(index) {
 			this.pago.current_acount_payment_methods.splice(index, 1)

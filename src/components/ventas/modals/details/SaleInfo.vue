@@ -5,7 +5,7 @@
 			<div
 			class="sale-details-buttons">
 				<btn-loader
-				v-if="!disabled_update(sale_details)"
+				v-if="se_puede_actualizar_venta(sale_details)"
 				class="m-r-10"
 				text="Actualizar venta"
 				:block="false"

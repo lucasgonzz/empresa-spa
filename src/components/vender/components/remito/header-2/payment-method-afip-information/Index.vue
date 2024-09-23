@@ -8,6 +8,7 @@
 		<sale-type></sale-type>
 		<seller></seller>
 		<cuotas></cuotas>
+		<caja></caja>
 		<total-info></total-info>
 	</div>
 </template>
@@ -22,6 +23,7 @@ export default {
 		Seller: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/Seller'),
 		Cuotas: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/Cuotas'),
 		TotalInfo: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/total-info/Index'),
+		Caja: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/Caja'),
 	}
 }
 </script>

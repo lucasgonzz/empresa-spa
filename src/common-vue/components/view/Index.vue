@@ -17,6 +17,7 @@
     	:size="modal_size"
     	:model_name="model_name"
     	:prop_to_send_on_save="prop_to_send_on_save"
+    	:props_to_send_on_save="props_to_send_on_save"
     	:emit_on_saved_instead_continue="emit_on_saved_instead_continue"
     	:not_show_delete_text="not_show_delete_text"
     	:delete_text="delete_text"
@@ -76,6 +77,7 @@
 		<slot name="body"></slot>
 		
 		<list
+		:show_actualizado="show_actualizado"
 		:properties_to_show="properties_to_show"
 		:table_height_para_restar="table_height_para_restar"
 		:order_list_by="order_list_by"
@@ -230,6 +232,10 @@ export default {
 			type: Object,
 		 	default: null,
 		},
+		props_to_send_on_save: {
+			type: Array,
+			default: () => []
+		},
 		emit_on_saved_instead_continue: {
 			type: Boolean,
 			default: false,
@@ -277,6 +283,10 @@ export default {
 		properties_to_show: {
 			type: Array,
 			default: null,
+		},
+		show_actualizado: {
+			type: Boolean,
+			default: true,
 		},
 	},
 	computed: {

@@ -8,6 +8,7 @@
 
 		<table-component
 		@onRowSelected="clicked"
+		:show_actualizado="show_actualizado"
 		:set_model_on_row_selected="set_model_on_row_selected"
 		:order_list_by="order_list_by"
 		:properties="properties"
@@ -126,7 +127,11 @@ export default {
 		mostrar_models_que_vinienen_por_prop_siempre: {
 			type: Boolean,
 			default: false,
-		}
+		},
+		show_actualizado: {
+			type: Boolean,
+			default: true,
+		},
 	},
 	data() {
 		return {

@@ -95,6 +95,7 @@ export default {
                     num: '',
                     credit_card_id: 0,
                     credit_card_payment_plan_id: 0,
+                    caja_id: 0,
                 }],
                 // checks: [
                 //     {

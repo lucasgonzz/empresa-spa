@@ -50,6 +50,9 @@ export default {
 		loading: false,
 	},
 	mutations: {
+		set_route_prefix(state, value) {
+			state.route_prefix = value 
+		},
 		setLoading(state, value) {
 			state.loading = value
 		},

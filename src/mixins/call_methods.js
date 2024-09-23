@@ -1,8 +1,11 @@
 export default [
     // 'extencion',
     'current_acount_payment_method_discount',
+    'default_payment_method_caja',
     'deposit_movement_status',
     'cuota',
+    'concepto_movimiento_caja',
+    'caja',
     'tipo_envase',
     'address',
     'article',

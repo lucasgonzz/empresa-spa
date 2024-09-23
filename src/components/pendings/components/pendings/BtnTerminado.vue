@@ -47,7 +47,7 @@ export default {
 				})
 				.catch(err => {
 					this.loading = false
-					this.$toast.success('Error al marcar como finalizado')
+					this.$toast.error('Error al marcar como finalizado')
 					console.log(err)
 				})
 			}

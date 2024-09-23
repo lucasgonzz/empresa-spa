@@ -17,13 +17,14 @@ export default {
     					'deposit_movement_status',
     					// 'deposit',
 					],
-				},
+				}, 
 				{
 					view: 'ventas',
 					models: [
 						'discount',
 						'surchage',
 						'cuota',
+						'default_payment_method_caja',
 						'current_acount_payment_method_discount',
     					'commission',
     					'sale_type',

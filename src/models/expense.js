@@ -27,6 +27,12 @@ export default {
 			use_store_models: true,
 		},
 		{
+			text: 'Caja',
+			key: 'caja_id',
+			type: 'select',
+			get_options_function: 'get_cajas_abiertas_options',
+		},
+		{
 			text: 'Fecha',
 			key: 'created_at',
 			type: 'date',

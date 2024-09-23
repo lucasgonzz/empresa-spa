@@ -185,6 +185,10 @@ export default {
 			type: Object,
 			default: null,
 		},
+		props_to_send_on_save: {
+			type: Array,
+			default: () => []
+		},
 		emit_on_saved_instead_continue: {
 			type: Boolean,
 			default: false,
@@ -418,8 +422,18 @@ export default {
 					model_to_send.model_id = selected_model.id 
 				}
 			}
+
 			if (this.prop_to_send_on_save) {
 				model_to_send[this.prop_to_send_on_save.key] = this.prop_to_send_on_save.value
+			}
+
+			if (this.props_to_send_on_save.length) {
+				console.log('agregando props_to_send_on_save:')
+				console.log(this.props_to_send_on_save)
+				this.props_to_send_on_save.forEach(prop_to_send => {
+
+					model_to_send[prop_to_send.key] = prop_to_send.value
+				}) 
 			}
 			return model_to_send
 		},

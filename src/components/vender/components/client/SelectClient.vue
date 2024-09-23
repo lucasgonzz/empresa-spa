@@ -61,10 +61,22 @@ export default {
 			let client = result.model 
 			this.$store.commit('vender/setClient', client)
 			this.setPriceType()
+
+			this.bloquear_metodo_de_pago()
+		},
+		bloquear_metodo_de_pago() {
+			if (!this.omitir_en_cuenta_corriente) {
+				this.$store.commit('vender/setCurrentAcountPaymentMethodId', 0)
+				this.$store.commit('vender/setSelectedPaymentMethods', [])
+			}
+		},
+		habilitar_metodo_de_pago() {
+			this.$store.commit('vender/setCurrentAcountPaymentMethodId', 3)
 		},
 		clearSelected() {
 			this.$store.commit('vender/setClient', null)
 			this.setPriceType()
+			this.habilitar_metodo_de_pago()
 		},
 	}
 }

@@ -23,6 +23,10 @@
 					Agregar total
 				</b-button>
 			</div>
+
+			<select-caja
+			:payment_method="payment_method"></select-caja>
+
 			<p
 			class="m-t-10 m-l-10"
 			v-if="payment_method.monto_descuento">
@@ -39,7 +43,9 @@
 import select_payment_methods from '@/mixins/vender/select_payment_methods'
 export default {
 	mixins: [select_payment_methods],
-
+	components: {
+		SelectCaja: () => import('@/components/vender/modals/payment-methods/select-payment-methods/SelectCaja'),
+	},
 	methods: {
 
 		set_total_repartido(payment_method) {

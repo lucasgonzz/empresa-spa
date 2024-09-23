@@ -79,17 +79,30 @@ export default {
 		}
 	},
 	methods: {
-		disabled_update(sale = null) {
-			if (sale && sale.afip_ticket) {
-				return true 
+		se_puede_actualizar_venta(sale = null) {
+
+			if (sale) {
+
+				if (sale.afip_ticket) {
+
+					return false 
+				}
+
+				if (!sale.current_acount) {
+
+					return false
+				}
 			}
-			if (this.current_acount_payment_method_discounts.length) {
-				return true 
-			}
+
 			if (this.hasExtencion('articulo_margen_de_ganancia_segun_lista_de_precios')) {
-				return true 
+				
+				return false 
 			}
-			return false
+
+			return true
+			// if (this.current_acount_payment_method_discounts.length) {
+			// 	return true 
+			// }
 		},
 		setPreviusSale(sale) {
 			console.log('updateSale:')

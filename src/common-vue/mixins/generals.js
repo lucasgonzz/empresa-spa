@@ -677,7 +677,11 @@ export default {
 				return 'No'
 			}
 			if (prop.is_date) {
-				return this.date(model[prop.key] )
+				if (prop.show_full_date) {
+
+					return this.date(model[prop.key], true)
+				}
+				return this.date(model[prop.key])
 			}
 			// if (prop.button && prop.button.icon) {
 			// 	return '<i class="icon-'+prop.button.icon+'"></i>'
@@ -770,13 +774,16 @@ export default {
 		},
 		getOptions(prop, model = null, model_name = null, add_opcion_0 = true) {
 			let store 
+
+			if (prop.get_options_function) {
+				return this[prop.get_options_function](prop, model)
+			}
+
 			if (prop.store) {
 				store = prop.store
 			} else {
 				store = prop.key.substring(0, prop.key.length-3)
 			}
-			console.log('getOptions para')
-			console.log(store) 
 			let models = this.$store.state[store].models
 			let prop_name
 			let prop_to_use_in_select = this.getPropToUseInSelect(store)

@@ -3,7 +3,32 @@ import dates from '@/common-vue/mixins/dates'
 import select_payment_methods from '@/mixins/vender/select_payment_methods'
 export default {
     mixins: [select_payment_methods],
+    computed: {
+        cajas() {
+            return this.$store.state.caja.models
+        },
+        cajas_abiertas() {
+            return this.cajas.filter(caja => caja.abierta)
+        },
+    },
 	methods: {
+        get_cajas_abiertas_options(prop, model){
+
+            let options = [{
+                value: 0,
+                text: 'Seleccione Caja'
+            }]
+
+            this.cajas_abiertas.forEach(caja => {
+
+                options.push({
+                    value: caja.id,
+                    text: caja.name+' ('+this.price(caja.saldo)+')',
+                })
+            })
+
+            return options
+        },
         disabled_edit_pending(pending) {
             if (pending.es_recurrente) {
                 console.log('no se puede editar el pending '+pending.detalle)
