@@ -30,6 +30,7 @@ export default {
 			text: 'Caja',
 			key: 'caja_id',
 			type: 'select',
+			use_store_models: true,
 			get_options_function: 'get_cajas_abiertas_options',
 		},
 		{

@@ -1,10 +1,8 @@
 <template>
-
 	<b-form-select
 	v-if="pagado_al_contado"
 	v-model="caja_id" 
 	:options="get_caja_options(vender_payment_method_id)"></b-form-select> 
-
 </template>
 <script>
 import cajas from '@/mixins/vender/cajas'
@@ -16,6 +14,12 @@ export default {
 		},
 		vender_payment_method_id() {
 			return this.$store.state.vender.current_acount_payment_method_id
+		},
+		client() {
+			return this.$store.state.vender.client 
+		},
+		omitir_en_cuenta_corriente() {
+			return this.$store.state.vender.omitir_en_cuenta_corriente 
 		},
 		caja_id: {
 			get() {

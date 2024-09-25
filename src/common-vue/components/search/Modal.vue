@@ -143,6 +143,13 @@ export default {
 			type: String,
 			default: null,
 		},
+		limpiar_resultados_de_busqueda: {
+			type: Boolean,
+			default: true,
+		},
+		set_first_row_selected: {
+			type: Boolean,
+		},
 	},
 	data() {
 		return {
@@ -166,8 +173,10 @@ export default {
 		preview_results() {
 			console.log('seteando con preview_results')
 			this.results = this.preview_results
-			this.setFirstSelectedRow()
 		},
+		set_first_row_selected() {
+			this.setFirstSelectedRow()
+		}
 	},
 	computed: {
 		properties() {
@@ -208,6 +217,18 @@ export default {
 		setCurrentPage(page) {
 			this.current_page = page 
 			this.search(true)
+			this.foco_en_input()
+		},
+		foco_en_input() {
+			let input_name = this._id+'-search-modal-input'
+			let input = document.getElementById(input_name)
+			
+			if (input) {
+
+				setTimeout(() => {
+					input.focus()
+				}, 500)
+			}
 		},
 		callSearchModal() {
 			this.$emit('callSearchModal')
@@ -509,8 +530,12 @@ export default {
 		},
 		emitSetSelected(model) {
 			this.$emit('setNotShowModel', true)
-			this.$emit('setSelected', model)
-			this.results = []
+			this.$emit('setSelected', model, this.results)
+
+			if (this.limpiar_resultados_de_busqueda) {
+
+				this.results = []
+			}
 			this.$bvModal.hide(this.modal_id)
 			setTimeout(() => {
 				this.$emit('setNotShowModel', false)

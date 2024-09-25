@@ -51,6 +51,7 @@ export default {
 			key: 'seller_id',
 			use_store_models: true,
 			only_show: true,
+			not_show: true,
 		},
 		{
 			text: 'Cuotas',

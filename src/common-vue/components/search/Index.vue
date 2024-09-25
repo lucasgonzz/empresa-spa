@@ -6,6 +6,8 @@
 
 		<search-modal
 		:_id="id"
+		:set_first_row_selected="set_first_row_selected"
+		:limpiar_resultados_de_busqueda="limpiar_resultados_de_busqueda"
 		:query_value="query"
 		:prop="prop"
 		:auto_select="auto_select"
@@ -165,6 +167,10 @@ export default {
 			type: String,
 			default: null,
 		},
+		limpiar_resultados_de_busqueda: {
+			type: Boolean,
+			default: true,
+		},
 	},
 	data() {
 		return {
@@ -174,6 +180,7 @@ export default {
 			preview_results: [],
 			selected_model: null,
 			not_show_modal: false,
+			set_first_row_selected: false,
 		}
 	},
 	computed: {
@@ -285,7 +292,10 @@ export default {
 		},
 		setPreviewResults() {
 			if (this.show_preview_results) {
-				this.preview_results = this.models_to_search.slice(0, 20)
+				if (this.limpiar_resultados_de_busqueda) {
+
+					this.preview_results = this.models_to_search.slice(0, 20)
+				} 
 			}
 		},
 		setModelsToSearch() {
@@ -348,6 +358,9 @@ export default {
 		},
 		callSearchModal() {
 			if (!this.not_show_modal) {
+
+				this.set_first_row_selected = !this.set_first_row_selected
+
 				this.setModelsToSearch()
 				this.setPreviewResults()
 				this.$bvModal.show(this.id+'-search-modal')
@@ -356,13 +369,16 @@ export default {
 				}, 100)
 			}
 		},
-		setSelected(model) {
+		setSelected(model, results) {
+			console.log('se va a emitir setSelected con results:')
+			console.log(results)
 			this.selected_model = model 
 			this.$emit('setSelected', {
 				model,
 				prop: this.prop,
 				query: this.query,				
 				received_model: this.model,				
+				results: results,				
 			})
 			if (this.clear_query) {
 				this.query = ''

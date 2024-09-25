@@ -5,6 +5,12 @@ export default {
 		alerts_count() {
 			let total = 0
 			
+			total += this.ventas_sin_cobrar.length
+
+			if (this.can('alerts.provider_orders')) {
+				total += Number(this.provider_order_days_to_advise.length)
+			}
+			
 			if (this.can('alerts.provider_orders')) {
 				total += Number(this.provider_order_days_to_advise.length)
 			}
@@ -13,9 +19,6 @@ export default {
 				total += Number(this.unconfirmed_orders.length)
 			}
 			
-			if (this.can('alerts.messages')) {
-				total += Number(this.messages_not_read)
-			}
 
 			return  total
 		}

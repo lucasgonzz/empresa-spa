@@ -3,6 +3,7 @@
 v-if="view == 'realizados'"
 :show_btn_save="false"
 :check_permissions="false"
+:show_previus_days="false"
 model_name="pending_completed">
 	<template #header>
 		<fechas 

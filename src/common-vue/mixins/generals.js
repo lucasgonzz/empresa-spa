@@ -134,12 +134,34 @@ export default {
 	methods: {
 		get_properties_to_show_ordenadas(model_name) {
 			let props = require(`@/models/${model_name}`).default.properties
+
+			props = this.check_extencions(props)
+
 			let props_ordenadas = props.filter(prop => prop.table_position)
 			if (props_ordenadas.length) {
 				return props_ordenadas.sort((a, b) => a.table_position - b.table_position)
 			} 
 			return props
 		},
+		check_extencions(props) {
+			let props_result = []
+
+			props.forEach(prop => {
+
+				if (prop.if_has_extencion) {
+
+					if (this.hasExtencion(prop.if_has_extencion)) {
+
+						props_result.push(prop)
+					}
+
+				} else {
+					props_result.push(prop)
+				}
+			})
+
+			return props_result
+		},	
 		store_use_from_dates(model_name) { 
 			model_name = model_name.toLowerCase()
 			let from_dates = this.$store.state[model_name].from_dates

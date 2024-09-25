@@ -424,7 +424,7 @@ export default {
 						let element = document.getElementById(this.model_name+'-'+prop.key)
 						if (element) {
 							setTimeout(() => {
-								element.firstChild.focus()
+								element.focus()
 							}, 500)
 							ok = true 
 						}

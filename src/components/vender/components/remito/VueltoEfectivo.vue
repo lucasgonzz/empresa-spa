@@ -4,7 +4,7 @@
 	v-if="monto_efectivo > 0">
 		
 		<h5>
-			Calcular vuelto
+			Calcular vuelto ({{ price(monto_efectivo) }})
 		</h5>
 
 		<b-input-group
@@ -29,6 +29,12 @@ export default {
 		total() {
 			return this.$store.state.vender.total 
 		},
+		client() {
+			return this.$store.state.vender.client 
+		},
+		omitir_en_cuenta_corriente() {
+			return this.$store.state.vender.omitir_en_cuenta_corriente 
+		},
 		paga_con_efectivo() {
 
 			if (this.total <= 0) {
@@ -37,6 +43,10 @@ export default {
 
 		},
 		monto_efectivo() {
+
+			if (this.client && !this.omitir_en_cuenta_corriente) {
+				return 0
+			}
 
 			if (this.payment_method_id != 0) {
 

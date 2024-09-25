@@ -45,7 +45,7 @@
 
 		<template #horizontal_nav_center>
 			<stock-info-buttons></stock-info-buttons>
-			<bar-code-search></bar-code-search>
+			<buscador-header></buscador-header>
 
 			<deposit-movements></deposit-movements>
 
@@ -129,7 +129,7 @@ export default {
 		ArticlesPreImportModal: () => import('@/components/listado/modals/articles-pre-import/Index'),
 
 		StockInfoButtons: () => import('@/components/listado/components/StockInfoButtons'),
-		BarCodeSearch: () => import('@/components/listado/components/BarCodeSearch'),
+		BuscadorHeader: () => import('@/components/listado/components/buscador-header/Index'),
 		Buttons: () => import('@/components/listado/components/Buttons'),
 		Charts: () => import('@/components/listado/modals/article-charts/Index'),
 		ArticleSales: () => import('@/components/listado/modals/article-sales/Index'),

@@ -38,14 +38,17 @@ export default {
 			return this.$store.state.vender.client
 		},
 		col_header_lg() {
-			let col
-			if (this.combos.length) {
-				col = 2
-			}
-			col = 3
+			let col = 3
 			if (!this.user.ask_amount_in_vender) {
 				col += 1
 			}
+			if (this.hasExtencion('no_usar_codigos_de_barra')) {
+				col += 3
+			}
+			return col 
+		},
+		services_col_header_lg() {
+			let col = 3
 			return col 
 		},
         maked_sale() {
@@ -715,19 +718,56 @@ export default {
 		},
 		clearArticle() {
 			this.$store.commit('vender/setArticle', null)
-			let bar_code = document.getElementById('article-bar-code')
-			if (bar_code) {
-				bar_code.value = ''
-				bar_code.focus()
-				document.getElementById('search-article').value = ''
-				console.log('Se limpio articulo')
+
+			this.limpiar_codigo()
+
+			this.limpiar_nombre()
+
+		},
+		limpiar_codigo() {
+
+			if (!this.hasExtencion('no_usar_codigos_de_barra')) {
+				
+				let bar_code = document.getElementById('article-bar-code')
+
+				if (bar_code) {
+
+					bar_code.value = ''
+					bar_code.focus()
+					console.log('Se limpio codigo')
+
+				} else {
+					console.log('No se limpio codigo')
+					setTimeout(() => {
+						console.log('Llamando denuevo')
+						this.limpiar_codigo()
+					}, 500)
+				}
+			}
+
+		}, 
+		limpiar_nombre() {
+
+			let search_name = document.getElementById('search-article')
+
+			if (search_name) {
+
+				search_name.value = ''
+
+				console.log('Se limpio nombre')
+
+				if (this.hasExtencion('no_usar_codigos_de_barra')) {
+					search_name.focus()
+				}
+
 			} else {
-				console.log('No se limpio article')
+				console.log('No se limpio nombre')
 				setTimeout(() => {
 					console.log('Llamando denuevo')
-					this.clearArticle()
+					this.limpiar_nombre()
 				}, 500)
 			}
-		},
+
+		}
 	}
 }

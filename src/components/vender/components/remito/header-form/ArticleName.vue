@@ -7,6 +7,7 @@
 		id="search-article"
 		model_name="article"
 		@setSelected="setSelected"
+		:limpiar_resultados_de_busqueda="false"
 		:show_selected="false"
 		:model="article"
 		:save_if_not_exist="false"
@@ -98,9 +99,8 @@ export default {
 		}
 	},
 	methods: {
-		setSelected(result) {
-			console.log('llego este resultado:')
-			console.log(result)
+		setSelected(result, results) {
+
 			this.article.name = result.query
 			
 			this.set_codigo_input_value(result.model)
@@ -117,15 +117,22 @@ export default {
 
 				let input = document.getElementById('article-bar-code')
 
-				if (this.hasExtencion('codigo_proveedor_en_vender')) {
+				console.log('input:::')
+				console.log(input)
+
+				if (input) {
 					
-					input.value = finded_article.provider_code
-					console.log('se puso el codigo de proveedor: '+finded_article.provider_code)
-				} else {
+					if (this.hasExtencion('codigo_proveedor_en_vender')) {
+						
+						input.value = finded_article.provider_code
+						console.log('se puso el codigo de proveedor: '+finded_article.provider_code)
+					} else {
 
-					input.value = finded_article.bar_code
+						input.value = finded_article.bar_code
 
+					}
 				}
+
 			}
 		}
 	}

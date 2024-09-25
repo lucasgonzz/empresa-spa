@@ -2,6 +2,7 @@
 	<b-col
 	class="col-bar-code margin-bottom-since-lg"
 	cols="12"
+	v-if="!hasExtencion('no_usar_codigos_de_barra')"
 	:md="col_header_lg">
 		<div
 		class="d-flex w-100">

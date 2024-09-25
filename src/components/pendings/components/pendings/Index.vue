@@ -4,6 +4,7 @@ v-if="view == 'por-realizar'"
 :show_btn_save="show_model_buttons"
 :show_btn_delete="show_model_buttons"
 :check_permissions="false"
+:show_previus_days="false"
 model_name="pending">
 
 	<template #modals>

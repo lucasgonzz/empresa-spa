@@ -205,7 +205,7 @@ export default [
 		if_has_extencion: 'comerciocity_interno',
 		image_url: 'nav-icons/cajas.png',
 		call_models_always: true,
-		// can: 'caja.reports',
+		can: 'caja.index',
 	},
 	{
 		text: 'ABM',
