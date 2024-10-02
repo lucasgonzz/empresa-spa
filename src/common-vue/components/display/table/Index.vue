@@ -209,7 +209,17 @@ export default {
 			if (this.pivot) {
 				if (this.pivot.props_to_show) {
 					this.pivot.props_to_show.forEach(prop_to_show => {
-						props.push(prop_to_show)
+
+						if (prop_to_show.if_has_extencion) {
+
+							if (this.hasExtencion(prop_to_show.if_has_extencion)) {
+
+								props.push(prop_to_show)
+							}
+						} else {
+
+							props.push(prop_to_show)
+						}
 					})
 				}
 				if (this.pivot.pivot_props_to_show) {
@@ -223,10 +233,25 @@ export default {
 				}
 				if (this.pivot.properties_to_set) {
 					this.pivot.properties_to_set.forEach(prop_to_set => {
-						props.push({
-							...prop_to_set,
-							is_pivot_prop: true,
-						})
+
+
+						if (prop_to_set.if_has_extencion) {
+
+							if (this.hasExtencion(prop_to_set.if_has_extencion)) {
+
+								props.push({
+									...prop_to_set,
+									is_pivot_prop: true,
+								})
+							}
+						} else {
+
+							props.push({
+								...prop_to_set,
+								is_pivot_prop: true,
+							})
+						}
+						
 					})
 				}
 			} else if (this.show_actualizado) {

@@ -1,5 +1,6 @@
 <template>
-	<div>
+	<div
+	class="m-l-10">
 		<btn-loader
 		v-if="caja.abierta"
 		:loader="loading"

@@ -35,7 +35,7 @@ export default {
 			if (this.download_articles) {
 
 				let articles = this.articles.filter(article => {
-					return article.name.toLowerCase().includes(this.name.toLowerCase())
+					return article && article.name && article.name.toLowerCase().includes(this.name.toLowerCase())
 				})
 
 				this.$store.commit('article/setIsFiltered', true)

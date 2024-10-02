@@ -2,6 +2,9 @@ import online from '@/mixins/online'
 export default {
     mixins: [online],
 	computed: {
+        deposit_movements_en_curso() {
+            return this.$store.state.deposit_movement.en_curso.models 
+        },
 		is_online_view() {
 			return this.route_name == 'online'
 		},

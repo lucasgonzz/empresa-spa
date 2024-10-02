@@ -44,6 +44,7 @@ export default {
 
 		monto_credito_real: null,
 
+		afip_tipo_comprobante_id: 0,
 
 		client: null,
 		discounts_id: [],
@@ -265,6 +266,9 @@ export default {
 		set_monto_credito_real(state, value) {
 			state.monto_credito_real = value 
 		},
+		set_afip_tipo_comprobante_id(state, value) {
+			state.afip_tipo_comprobante_id = value 
+		},
 		removeItem(state, item) {
 			let index = state.items.findIndex(i => {
 				return i.id == item.id
@@ -336,6 +340,7 @@ export default {
 				cuota_recargo: state.cuota_recargo,
 				monto_credito_real: state.monto_credito_real,
 				caja_id: state.caja_id,
+				afip_tipo_comprobante_id: state.afip_tipo_comprobante_id,
 			})
 			.then(res => {
 				console.log('vendido')

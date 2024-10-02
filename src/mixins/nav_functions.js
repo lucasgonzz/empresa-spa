@@ -11,13 +11,15 @@ export default {
 				total += Number(this.provider_order_days_to_advise.length)
 			}
 			
-			if (this.can('alerts.provider_orders')) {
-				total += Number(this.provider_order_days_to_advise.length)
-			}
-			
 			if (this.can('alerts.orders')) {
 				total += Number(this.unconfirmed_orders.length)
 			}
+			
+			if (this.can('alerts.messages')) {
+				total += Number(this.messages_not_read)
+			}
+			
+			total += Number(this.deposit_movements_en_curso.length)
 			
 
 			return  total

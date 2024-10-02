@@ -134,6 +134,7 @@ export default {
 					this.loading = false 
 					this.$toast.success('Movimiento guardado')
 					this.$bvModal.hide('stock-movement') 
+					this.$bvModal.hide('article') 
 					this.setTemporalId(res.data.model)
 					if (!this.article.id) {
 						this.article.stock = this.amount_

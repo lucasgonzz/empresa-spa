@@ -1,7 +1,7 @@
 <template>
 	<div
 	class="cont-inputs"
-	v-if="article.id">
+	v-if="article.id && article_price_type">
 
 		<b-input-group
 		prepend="%">

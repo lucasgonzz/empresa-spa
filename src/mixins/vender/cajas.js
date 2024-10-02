@@ -10,12 +10,26 @@ export default {
 			return this.$store.state.default_payment_method_caja.models 
 		},
 	},
+	data() {
+		return {
+			cajas_habilitadas: 0,
+			count_se_habilitaron_las_cajas: {
+				payment_method_id: 0,
+				address_id: 0,
+				count: 0,
+			},
+		}
+	},
 	methods: {
-		get_cajas_habilitadas(payment_method_id) {
+		set_cajas_habilitadas(payment_method_id) {
 
-			// let cajas_abiertas = this.cajas.filter(caja => caja.abierta)
+			this.count_se_habilitaron_las_cajas.payment_method_id = payment_method_id
+			
+			this.count_se_habilitaron_las_cajas.address_id = this.vender_address_id
 
-			let cajas_habilitadas = this.cajas_abiertas.filter(caja => {
+			this.count_se_habilitaron_las_cajas.count++
+
+			this.cajas_habilitadas = this.cajas_abiertas.filter(caja => {
 				
 				let payment_method_vender = caja.current_acount_payment_methods.find(payment_method => {
 					
@@ -33,29 +47,55 @@ export default {
 
 			console.log('caja_default')
 			console.log(caja_default)
+
 			// Si existe una caja por defecto, ordénala primero
 			if (caja_default) {
 
+
 				console.log('se va a poner caja por defecto id: '+caja_default.caja_id)
+
+				console.log('count_se_habilitaron_las_cajas: '+this.count_se_habilitaron_las_cajas.count)
 
 				this.$store.commit('vender/set_caja_id', caja_default.caja_id)
 				
-				cajas_habilitadas.sort((a, b) => {
+				this.cajas_habilitadas.sort((a, b) => {
 					if (a.id === caja_default.caja_id) return -1
 					if (b.id === caja_default.caja_id) return 1
 					return 0
 				})
 			}
 
-			return cajas_habilitadas
 		},
 		get_caja_options(payment_method_id) {
+
 			let options = [{
 				value: 0,
 				text: 'Seleccione caja'
 			}]
 
-			this.get_cajas_habilitadas(payment_method_id).forEach(caja => {
+
+			if (this.count_se_habilitaron_las_cajas.count < 3) {
+				
+				this.set_cajas_habilitadas(payment_method_id)
+			} else {
+
+				if (this.count_se_habilitaron_las_cajas.payment_method_id != payment_method_id) {
+
+					console.log('cambio el metodo de pago en cajas, se va a volver a llamar a set_cajas_habilitadas')
+					this.count_se_habilitaron_las_cajas.count = 0
+					this.set_cajas_habilitadas(payment_method_id)
+				}
+
+				if (this.count_se_habilitaron_las_cajas.address_id != this.vender_address_id) {
+
+					console.log('cambio address_id en cajas, se va a volver a llamar a set_cajas_habilitadas')
+					this.count_se_habilitaron_las_cajas.count = 0
+					this.set_cajas_habilitadas(payment_method_id)
+				}
+			}
+
+
+			this.cajas_habilitadas.forEach(caja => {
 
 				options.push({
 					value: caja.id,

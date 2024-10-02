@@ -1,6 +1,6 @@
 <template>
 	<b-button
-	class="m-r-10"
+	class="m-l-10"
 	@click.stop="show_aperturas"
 	variant="outline-primary">
 		Aperturas
@@ -13,6 +13,11 @@ export default {
 	},
 	methods: {
 		show_aperturas() {
+
+			this.$store.commit('caja/setModel', {
+				model: this.caja,
+				properties: [],
+			})
 
 			this.$store.commit('apertura_caja/set_route_prefix', this.caja.id)
 			this.$store.dispatch('apertura_caja/getModels')

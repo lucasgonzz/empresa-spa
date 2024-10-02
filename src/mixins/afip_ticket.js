@@ -60,16 +60,19 @@ export default {
 					this.ocultar_mensaje_demorado()
 
 					let ok = true
-					if (res.data.result.observations) {
-						this.$toast.error('Error al facturar')
-						this.$store.commit('vender/setAfipResult', res.data.result.observations)
-						ok = false
-					}
+					
+					// if (res.data.result.observations) {
+					// 	this.$toast.error('Error al facturar')
+					// 	this.$store.commit('vender/setAfipResult', res.data.result.observations)
+					// 	ok = false
+					// }
+
 					if (res.data.result.errors) {
 						this.$toast.error('Error al facturar')
 						this.$store.commit('vender/setAfipResult', res.data.result.errors)
 						ok = false
 					}
+
 					if (ok) {
 						this.$store.commit('sale/add', res.data.sale)
 						this.$store.commit('vender/setSale', res.data.sale)

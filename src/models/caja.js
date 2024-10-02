@@ -17,6 +17,22 @@ export default {
 			}
 		},
 		{
+			text: 'Empleados con acceso',
+			store: 'employee',
+			search_on_models_by: 'name',
+			type: 'search',
+			key: 'users',
+			belongs_to_many: {
+				model_name: 'users',
+				props_to_show: [
+					{
+						text: 'Nombre',
+						key: 'name',
+					}
+				],
+			}
+		},
+		{
 			key: 'abierta',
 			type: 'checkbox',
 			only_show: true,

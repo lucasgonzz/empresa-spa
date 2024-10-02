@@ -16,7 +16,7 @@
 export default { 
 	components: {
 		PaymentMethod: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/PaymentMethod'),
-		AfipInformation: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/AfipInformation'),
+		AfipInformation: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/afip-information/Index'),
 		Employee: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/Employee'),
 		SelectAddress: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/Address'),
 		SaleType: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/SaleType'),

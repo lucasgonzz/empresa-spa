@@ -52,6 +52,13 @@ export default {
 				})
 			}
 
+			if (this.hasExtencion('deposit_movements')) {
+				items.push({
+					name: 'Movimientos de depositos',	
+					alert: this.deposit_movements_en_curso.length		
+				})
+			}
+
 			return items
 		},
 		
@@ -91,6 +98,13 @@ export default {
 					this.$store.dispatch('buyer/getModels')
 					.then(() => {
 						this.$store.commit('message/setChatsToShow')
+						this.$store.commit('auth/setLoading', false)
+					})
+				}
+
+				if (this.view == 'movimientos-de-depositos') {
+					this.$store.dispatch('deposit_movement/en_curso/getModels')
+					.then(() => {
 						this.$store.commit('auth/setLoading', false)
 					})
 				}

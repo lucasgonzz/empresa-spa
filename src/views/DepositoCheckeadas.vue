@@ -8,7 +8,7 @@
 		<view-component
 		:models_to_show="sales_to_show"
 		show_models_if_empty
-		show_previus_days
+		:show_previus_days="show_previus_days"
 		:show_btn_create="false"
 		change_from_dates_option
 		:show_modal="false"
@@ -46,6 +46,9 @@ export default {
 				return sale.checked 
 			})
 		},
+		show_previus_days() {
+			return this.$store.state.sale.from_dates
+		}
 	},
 	methods: {
 		clicked(model) {

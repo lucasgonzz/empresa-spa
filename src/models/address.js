@@ -9,6 +9,25 @@ export default {
 			is_title: true,
 		},
 		{
+			text: 'Numero',
+			key: 'street_number',
+			type: 'text',
+			value: '',
+			is_title: true,
+		},
+		{
+			text: 'Ciudad',
+			key: 'city',
+			type: 'text',
+			value: '',
+		},
+		{
+			text: 'Provincia',
+			key: 'province',
+			type: 'text',
+			value: '',
+		},
+		{
 			text: 'Deposito por defecto',
 			key: 'default_address',
 			type: 'checkbox',

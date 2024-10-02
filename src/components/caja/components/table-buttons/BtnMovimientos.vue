@@ -1,7 +1,7 @@
 <template>
 	<b-button
 	v-if="caja.abierta"
-	class="m-r-10"
+	class="m-l-10"
 	@click.stop="show_movimientos"
 	variant="primary">
 		Mov

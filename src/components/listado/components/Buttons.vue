@@ -115,13 +115,16 @@ export default {
 			return this.$store.state.order_production_status.models 
 		},
 		show_variants() {
-			if (this.model.article_variants.length
-				|| (
-					this.model.stock === null
-					|| this.model.stock == 0
-					)
-				) {
-				return true
+			if (this.hasExtencion('article_variants')) {
+				
+				if (this.model.article_variants.length
+					|| (
+						this.model.stock === null
+						|| this.model.stock == 0
+						)
+					) {
+					return true
+				}
 			}
 			return false
 		},

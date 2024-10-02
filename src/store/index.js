@@ -34,7 +34,7 @@ import client from '@/store/client'
 import seller from '@/store/seller'
 import price_type from '@/store/price_type'
 import sale from '@/store/sale/index'
-import provider_order from '@/store/provider_order'
+import provider_order from '@/store/provider_order/index'
 import provider_order_status from '@/store/provider_order_status'
 import provider_order_afip_ticket from '@/store/provider_order_afip_ticket'
 import order from '@/store/order'
@@ -107,10 +107,10 @@ import pending_completed from '@/store/pending_completed'
 import article_discount_blanco from '@/store/article_discount_blanco'
 import article_surchage from '@/store/article_surchage'
 import article_surchage_blanco from '@/store/article_surchage_blanco'
-
+ 
 import tipo_envase from '@/store/tipo_envase'
 
-import deposit_movement from '@/store/deposit_movement'
+import deposit_movement from '@/store/deposit_movement/index'
 import deposit_movement_status from '@/store/deposit_movement_status'
 
 import cuota from '@/store/cuota'
@@ -123,6 +123,10 @@ import concepto_movimiento_caja from '@/store/concepto_movimiento_caja'
 import default_payment_method_caja from '@/store/default_payment_method_caja'
 
 import movimiento_entre_caja from '@/store/movimiento_entre_caja'
+
+import consultora_de_precio from '@/store/consultora_de_precio'
+
+import afip_tipo_comprobante from '@/store/afip_tipo_comprobante'
 
 
 Vue.use(Vuex)
@@ -257,5 +261,9 @@ export default new Vuex.Store({
         default_payment_method_caja,
 
         movimiento_entre_caja,
+
+        consultora_de_precio,
+
+        afip_tipo_comprobante,
     }
 })

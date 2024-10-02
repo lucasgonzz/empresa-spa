@@ -26,7 +26,7 @@
 				v-else-if="showProp(prop) && prop.type == 'select'"
 				v-model="model.pivot[prop.key]"
 				:class="getInputSize(prop)"
-				:options="getOptions({key: prop.key, text: propText(prop), select_prop_name: prop.select_prop_name})"></b-form-select>
+				:options="getOptions({key: prop.key, text: propText(prop), select_prop_name: prop.select_prop_name, get_options_function: prop.get_options_function}, model)"></b-form-select>
 
 				<b-form-checkbox
 				:id="inputId(prop)"
@@ -86,6 +86,10 @@ export default {
 						return model[prop.v_if.b_t_many_model_prop].length 
 					}
 				}
+			}
+
+			if (prop.if_has_extencion) {
+				return this.hasExtencion(prop.if_has_extencion)
 			}
 			return true 
 		},

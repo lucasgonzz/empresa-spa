@@ -125,6 +125,11 @@ const routes = [
         name: 'pending',
         component: () => import('@/views/Pending')
     },
+    {
+        path: '/consultora-de-precios/:view?',
+        name: 'consultora_de_precios',
+        component: () => import('@/views/ConsultoraDePrecios')
+    },
     // {
     //     path: '/ventas',
     //     name: 'ventas',

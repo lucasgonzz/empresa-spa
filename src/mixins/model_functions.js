@@ -12,7 +12,26 @@ export default {
         },
     },
 	methods: {
-        get_cajas_abiertas_options(prop, model){
+        get_variants_for_deposit_movement(prop, article) {
+            console.log('get_variants_for_deposit_movement, article:')
+            console.log(article)
+
+            let options = [{
+                value: 0,
+                text: 'Variante'
+            }]
+
+            article.article_variants.forEach(variant => {
+
+                options.push({
+                    value: variant.id,
+                    text: variant.variant_description
+                })
+            })
+
+            return options
+        },
+        get_cajas_abiertas_options(prop, model) {
 
             let options = [{
                 value: 0,
@@ -23,7 +42,8 @@ export default {
 
                 options.push({
                     value: caja.id,
-                    text: caja.name+' ('+this.price(caja.saldo)+')',
+                    text: caja.name,
+                    // text: caja.name+' ('+this.price(caja.saldo)+')',
                 })
             })
 
@@ -153,16 +173,20 @@ export default {
         },
         checkProviderOrderArticlesAddresses() {
             let ok = true
-            let provider_order = this.$store.state.provider_order.model 
-            provider_order.articles.forEach(order_article => {
-                // let store_article = this.$store.state.article.models.find(_article => {
-                //     return _article.id == order_article.id 
-                // })
-                if (order_article.addresses.length && order_article.pivot.address_id == 0) {
-                    this.$toast.error('Indique deposito para el articulo '+order_article.name)
-                    ok = false 
-                } 
-            })
+
+            // console.log('checkProviderOrderArticlesAddresses')
+
+            // let provider_order = this.$store.state.provider_order.model
+
+            // console.log('address_id: '+provider_order.address_id)
+            
+            // let addresses = this.$store.state.address.models 
+
+            // if (addresses.length && !provider_order.address_id) {
+            //     this.$toast.error('Indique deposito')
+            //     ok = false 
+            // }
+
             return ok
         },
 		getFunctionValue(prop, model) {
@@ -486,7 +510,7 @@ export default {
             this.$store.dispatch('current_acount/getModels')
             this.$bvModal.show('current-acounts')
         },
-        providerOrderTotal(model, formated = true) {
+        provider_order_total(model, formated = true) {
             let total = 0 
             if (model.total_from_provider_order_afip_tickets) {
                 model.provider_order_afip_tickets.forEach(afip_ticket => {
@@ -494,21 +518,20 @@ export default {
                     console.log('sumando '+afip_ticket.total+' de la boleta al total de '+total)
                 })
             } else {
+
                 model.articles.forEach(article => {
                     let total_article = 0
                     let cost = article.pivot.cost 
+
                     if (cost) {
 
-                        if (article.pivot.received_cost) {
-                            cost = article.pivot.received_cost
-                        }
                         if (article.pivot.cost_in_dollars) {
                             if (model.provider.dolar) {
                                 cost = cost * model.provider.dolar 
                             } 
                         } 
 
-                        total_article = cost * article.pivot.received
+                        total_article = cost * article.pivot.amount
 
                         if (model.total_with_iva && article.pivot.iva_id && article.pivot.iva_id != 0) {
                             let iva = this.modelsStoreFromName('iva').find(model => {
@@ -532,9 +555,14 @@ export default {
             model.provider_order_extra_costs.forEach(extra_cost => {
                 total += Number(extra_cost.value)                
             })
+
+            this.$store.commit('provider_order/totales/set_total', total)
+            console.log('seteando total de provider_order con: ')
+            console.log(total)
             if (formated) {
                 return dates.methods.price(total)
             } 
+
             return total  
         },
 	}

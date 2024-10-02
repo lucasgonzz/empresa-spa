@@ -28,7 +28,7 @@
 		class="m-l-10"
 		@click.stop="edit_addresses"
 		variant="outline-success">
-			<i class="icon-edit"></i>
+			<i class="icon-location"></i>
 		</b-button>
 	</div>
 </template>

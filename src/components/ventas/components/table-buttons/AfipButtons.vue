@@ -25,10 +25,11 @@
 		<b-button
 		size="sm"
 		@click.stop="showErrors"
-		variant="danger"
+		variant="warning"
 		class="m-l-10"
 		v-if="model.afip_errors.length">
-			{{ model.afip_errors.length }} errores
+			<i class="icon-eye"></i>
+			{{ model.afip_errors.length }}
 		</b-button>
 	</div>
 </template>

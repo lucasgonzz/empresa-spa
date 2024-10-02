@@ -1,5 +1,6 @@
 <template>
-	<div>
+	<div
+	class="info-apertura-caja">
 		<div
 		class="j-between">
 			<p
@@ -35,6 +36,17 @@
 				Saldo cierre: {{ price(apertura_caja.saldo_cierre) }}
 			</p>
 		</div>
+
+		<div
+		class="j-between">
+			<p>
+				Total ingresos: {{ price(total_ingresos) }}
+			</p>
+
+			<p>
+				Total egresos: {{ price(total_egresos) }}
+			</p>
+		</div>
 		<hr>
 	</div>
 </template>
@@ -44,6 +56,37 @@ export default {
 		apertura_caja() {
 			return this.$store.state.apertura_caja.model 
 		},
+		total_ingresos() {
+
+			let total = 0
+
+			this.apertura_caja.movimientos_caja.forEach(movimiento_caja => {
+				if (movimiento_caja.ingreso) {
+
+					total += Number(movimiento_caja.ingreso)
+				}
+			})
+
+			return total
+		},
+		total_egresos() {
+
+			let total = 0
+
+			this.apertura_caja.movimientos_caja.forEach(movimiento_caja => {
+				if (movimiento_caja.egreso) {
+
+					total += Number(movimiento_caja.egreso)
+				}
+			})
+
+			return total
+		},
 	},
 }
 </script>
+<style lang="sass">
+.info-apertura-caja
+	width: 500px
+	
+</style>

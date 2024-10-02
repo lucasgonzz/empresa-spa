@@ -17,6 +17,37 @@ export default {
 			filter_modal_position: 2,
 		},
 		{
+			text: 'Actualizar precios',
+			key: 'update_prices',
+			type: 'checkbox',
+			value: 1,
+			show: true,
+		},
+		{
+			text: 'Generar movimientos de Stock',
+			key: 'update_stock',
+			type: 'checkbox',
+			value: 1,
+			show: true,
+		},
+		{
+			text: 'Generar movimiento en Cuenta Corriente',
+			key: 'generate_current_acount',
+			type: 'checkbox',
+			value: 1,
+			show: true,
+		},
+		{
+			text: 'Deposito',
+			key: 'address_id',
+			type: 'select',
+			use_store_models: true,
+			select_prop_name: 'street',
+			show: true,
+			value: 0,
+			disabled_if_not_0: true,
+		},
+		{
 			text: 'Articulos',
 			store: 'article',
 			search_on_models_by: 'name',
@@ -65,12 +96,12 @@ export default {
 						},
 						type: 'number'
 					},
-					{
-						text: 'Costo Recibido',
-						key: 'received_cost',
-						value: '',
-						type: 'number'
-					},
+					// {
+					// 	text: 'Costo Recibido',
+					// 	key: 'received_cost',
+					// 	value: '',
+					// 	type: 'number'
+					// },
 					{
 						text: 'Precio',
 						key: 'price',
@@ -80,46 +111,57 @@ export default {
 						type: 'number'
 					},
 					{
-						text: 'Deposito',
-						key: 'address_id',
-						value: 0,
-						v_if: {
-							b_t_many_model_prop: 'addresses',
-							check_array_length: true,
-							// check_on_store_models: 'article',
-						},
-						type: 'select'
+						text: 'Bonif',
+						key: 'discount',
+						type: 'number',
 					},
+					// {
+					// 	text: 'Deposito',
+					// 	key: 'address_id',
+					// 	value: 0,
+					// 	v_if: {
+					// 		b_t_many_model_prop: 'addresses',
+					// 		check_array_length: true,
+					// 		// check_on_store_models: 'article',
+					// 	},
+					// 	type: 'select'
+					// },
 					{
 						text: 'Costo en dolares',
 						key: 'cost_in_dollars',
-						value: 0,
+						if_has_extencion: 'costo_en_dolares',
+						// value: 0,
+						value: {
+							key: 'cost_in_dollars',
+						},
 						type: 'checkbox'
 					},
-					{
-						text: 'Agregar articulo al sistema',
-						key: 'add_to_articles',
-						value: 1,
-						type: 'checkbox'
-					},
-					{
-						text: 'Actualizar costo en el sistema',
-						key: 'update_cost',
-						value: 1,
-						type: 'checkbox'
-					},
-					{
-						text: 'Actualizar proveedor en el sistema',
-						key: 'update_provider',
-						value: 1,
-						type: 'checkbox'
-					},
+					// {
+					// 	text: 'Agregar articulo al sistema',
+					// 	key: 'add_to_articles',
+					// 	value: 1,
+					// 	type: 'checkbox'
+					// },
+					// {
+					// 	text: 'Actualizar costo en el sistema',
+					// 	key: 'update_cost',
+					// 	value: 1,
+					// 	type: 'checkbox'
+					// },
+					// {
+					// 	text: 'Actualizar proveedor en el sistema',
+					// 	key: 'update_provider',
+					// 	value: 1,
+					// 	type: 'checkbox'
+					// },
 					{
 						text: 'Iva',
 						key: 'iva_id',
-						value: 0,
 						type: 'select',
 						select_prop_name: 'percentage',
+						value: {
+							key: 'iva_id',
+						},
 						size: 'md',
 					},
 					{
@@ -128,12 +170,12 @@ export default {
 						value: '',
 						type: 'textarea'
 					},
-					{
-						text: 'Recibidas',
-						key: 'received',
-						value: 0,
-						type: 'number',
-					},
+					// {
+					// 	text: 'Recibidas',
+					// 	key: 'received',
+					// 	value: 0,
+					// 	type: 'number',
+					// },
 					// {
 					// 	text: 'Ediar',
 					// 	type: 'button',
@@ -203,10 +245,35 @@ export default {
 			not_show: true,
 		},
 		{
+			text: 'Sub Total',
+			key: 'sub_total',
+			type: 'number',
+			only_show: true,
+			is_price: true,
+			not_show: true,
+		},
+		{
+			text: 'Total Descuentos',
+			key: 'total_descuento',
+			type: 'number',
+			only_show: true,
+			is_price: true,
+			not_show: true,
+		},
+		{
+			text: 'Total IVA',
+			key: 'total_iva',
+			type: 'number',
+			only_show: true,
+			is_price: true,
+			not_show: true,
+		},
+		{
 			text: 'Total',
 			key: 'total',
-			function: 'providerOrderTotal',
-			value: '',
+			type: 'number',
+			only_show: true,
+			is_price: true,
 			show: true,
 		},
 	],

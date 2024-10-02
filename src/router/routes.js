@@ -133,17 +133,17 @@ export default [
 		image_url: 'nav-icons/expenses.png',
 		can: 'expense.index',
 	},
-	{
-		text: 'Panel de Control',
-		path: '/panel-de-control',
-		component: '@/views/PanelDeControl',
-		image_url: 'nav-icons/caja.png',
-		name: 'panel',
-		params: {
-			view: 'proveedores',
-			sub_view: 'rendimiento-general',
-		},
-	},
+	// {
+	// 	text: 'Panel de Control',
+	// 	path: '/panel-de-control',
+	// 	component: '@/views/PanelDeControl',
+	// 	image_url: 'nav-icons/caja.png',
+	// 	name: 'panel',
+	// 	params: {
+	// 		view: 'proveedores',
+	// 		sub_view: 'rendimiento-general',
+	// 	},
+	// },
 	{
 		path: '/presupuestos',
 		model_name: 'budget',
@@ -226,5 +226,13 @@ export default [
 		check_is_owner: true,
 		if_has_extencion: 'comerciocity_interno',
 		image_url: 'nav-icons/empleados.png',
+	},
+	{
+		text: 'Cons. Precios',
+		path: '/consultora-de-precios',
+		name: 'consultora_de_precios',
+		component: '@/views/ConsultoraDePrecios',
+		if_has_extencion: 'consultora_de_precios',
+		image_url: 'nav-icons/consulta_precios.png',
 	},
 ]

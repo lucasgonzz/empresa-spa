@@ -230,9 +230,14 @@ export default {
 			let fields = [
 				{ key: 'price', label: 'Precio' },
 				{ key: 'name', label: 'Nombre' },
-				{ key: 'article_variant_id', label: 'Variante' },
 				{ key: 'amount', label: 'Cantidad' },
 			]
+
+			if (this.hasExtencion('article_variants')) {
+				fields.push({ 
+					key: 'article_variant_id', label: 'Variante'
+				})
+			}
 			
 			if (this.can('vender.article_discount')) {
 				fields.push({ 

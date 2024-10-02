@@ -1,13 +1,13 @@
 <template>
 	<div
 	class="j-center">
-		{{ article.stock }}
+			
 		<b-button
 		size="sm"
 		class="m-l-10"
 		@click.stop="stockMovement"
-		variant="primary">
-			<i class="icon-edit"></i>
+		variant="outline-primary">
+			{{ article.stock }}
 		</b-button>
 
 		<edit-addresses-stock-btn

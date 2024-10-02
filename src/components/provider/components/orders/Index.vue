@@ -9,6 +9,7 @@
 		order_list_by="provider_order_status"
 		change_from_dates_option
 		:show_previus_days="show_previus_days"
+		:props_to_send_on_save="props_to_send_on_save"
 		save_check_function="checkProviderOrderArticlesAddresses"
 		show_filter_modal>
 		</view-component>
@@ -24,6 +25,17 @@ export default {
 		show_previus_days() {
 			return this.$store.state.provider_order.from_dates
 		},
+		total() {
+			return this.$store.state.provider_order.totales.total 
+		},
+		props_to_send_on_save() {
+			return [
+				{
+					key: 'total',
+					value: this.total
+				}
+			]
+		}
 	},
 }
 </script>

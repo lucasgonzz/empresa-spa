@@ -8,6 +8,8 @@
 		<movimientos></movimientos>	
 
 		<view-component
+		:models_to_show="models_to_show"
+		show_models_if_empty
 		model_name="caja">
 
 			<template #horizontal_nav_center>
@@ -32,6 +34,36 @@ export default {
 		MovimientosEntreCajas: () => import('@/components/caja/modals/movimientos-entre-cajas/Index'),
 		Aperturas: () => import('@/components/caja/modals/aperturas/Index'),
 		Movimientos: () => import('@/components/caja/modals/movimientos/Index'),
+	},
+	computed: {
+		cajas() {
+			return this.$store.state.caja.models 
+		},
+		models_to_show() {
+
+			if (this.is_admin) {
+
+				console.log('es admin para cajas')
+
+				return this.cajas 
+			}
+
+			let cajas = []
+
+			this.cajas.forEach(caja => {
+
+				let has_permission = caja.users.find(user => user.id == this.user.id)
+
+				if (typeof has_permission != 'undefined') {
+
+					console.log('agregando la caja '+caja.name)
+
+					cajas.push(caja)
+				}
+			})
+
+			return cajas 
+		}
 	}
 }
 </script>

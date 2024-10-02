@@ -85,7 +85,8 @@ export default {
 							b_t_many_model_prop: 'article_variants',
 							check_array_length: true,
 						},
-						type: 'select'
+						type: 'select',
+						get_options_function: 'get_variants_for_deposit_movement',
 					},
 				],
 			}

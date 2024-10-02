@@ -9,6 +9,8 @@
 
 		<mensajes></mensajes>
 
+		<deposit-movements></deposit-movements>
+
 	</div>
 </template>
 <script>
@@ -18,6 +20,7 @@ export default {
 		PedidosProveedor: () => import('@/components/alertas/components/lista-de-alertas-table/PedidosProveedor'),
 		PedidosOnline: () => import('@/components/alertas/components/lista-de-alertas-table/PedidosOnline'),
 		Mensajes: () => import('@/components/alertas/components/lista-de-alertas-table/Mensajes'),
+		DepositMovements: () => import('@/components/alertas/components/lista-de-alertas-table/DepositMovements'),
 	}
 }
 </script>

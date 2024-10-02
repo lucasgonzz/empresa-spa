@@ -430,7 +430,7 @@ export default {
 						}
 					}
 				})
-			}, 500)
+			}, 300)
 		},
 		setDate(result) {
 			this.model[result.prop.key] = result.value 

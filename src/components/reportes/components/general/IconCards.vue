@@ -5,18 +5,28 @@
 		<template
 		v-if="!loading">
 			<div
-			v-for="card in cards" 
-			class="icon-card">
-				<img :src="img_url(card)">
-				<p class="text">
-					{{ card.text }}
-				</p>
-				<p class="value">
-					{{ card.value }}
-				</p>
-				<p class="description">
-					{{ card.description }}
-				</p>
+			class="card-group"
+			v-for="group in card_groups">
+				<h6>
+					{{ group.group_name }}
+				</h6>
+
+				<div class="cards-wrapper">
+					<div
+					v-for="card in group.cards" 
+					class="icon-card">
+						<img :src="img_url(card)">
+						<p class="text">
+							{{ card.text }}
+						</p>
+						<p class="value">
+							{{ card.value }}
+						</p>
+						<p class="description">
+							{{ card.description }}
+						</p>
+					</div>
+				</div>
 			</div>
 		</template>
 
@@ -31,105 +41,165 @@
 <script>
 export default {
 	computed: {
-		cards() {
-			let cards = [
+		card_groups() {
+			let card_groups = [
 				{
-					text: 'Ingresos brutos',
-					img: 'ventas',
-					value: this.price(this.model.total_vendido),
-					description: 'Total vendido, haya sido o no pagado',
+					group_name: 'Ventas',
+					// group_name: 'Ingresos',
+					cards: [
+						{
+							text: 'Ingresos brutos',
+							img: 'ventas',
+							value: this.price(this.model.total_vendido),
+							description: 'Total vendido, haya sido o no pagado',
+						},
+						{
+							text: 'Pagado en mostrador',
+							img: 'pagado_mostrador2',
+							value: this.price(this.model.total_pagado_mostrador),
+							description: 'Total vendido y pagado en el momento, sin pasar a c/c',
+						},
+						{
+							text: 'A cuentas corrientes',
+							img: 'a_cuentas_corrientes',
+							value: this.price(this.model.total_vendido_a_cuenta_corriente),
+							description: 'Total vendido a tus clientes, pero que no se pago'
+						},
+						{
+							text: 'Pagos de clientes (ctas ctes)',
+							img: 'pagado_mostrador',
+							value: this.price(this.model.total_pagado_a_cuenta_corriente),
+							description: 'Total pagado en C/C por tus clientes, de ventas que hayan realizado en el pasado'
+						},
+						{
+							text: 'Cantidad de ventas',
+							img: 'cantidad_ventas',
+							value: this.model.cantidad_ventas,
+						},
+					]
 				},
 				{
-					text: 'Pagado en mostrador',
-					img: 'pagado_mostrador2',
-					value: this.price(this.model.total_pagado_mostrador),
-					description: 'Total vendido y pagado en el momento, sin pasar a c/c',
-				},
-				{
-					text: 'A cuentas corrientes',
-					img: 'a_cuentas_corrientes',
-					value: this.price(this.model.total_vendido_a_cuenta_corriente),
-					description: 'Total vendido a tus clientes, pero que no se pago'
-				},
-				{
-					text: 'Pagos de clientes (ctas ctes)',
-					img: 'pagado_mostrador',
-					value: this.price(this.model.total_pagado_a_cuenta_corriente),
-					description: 'Total pagado en C/C por tus clientes, de ventas que hayan realizado en el pasado'
-				},
-				{
-					text: 'Caja',
-					img: 'ingresos_brutos',
-					value: this.price(this.model.total_ingresos),
-					description: 'Suma de: lo que se vendio en mostrador + lo que pagaron en C/C tus clientes (lo que deberia haber en la caja)',
-				},
-				{
-					text: 'Utilidad',
-					img: 'ingresos_netos',
-					value: this.price(this.model.ingresos_netos),
-					description: 'Ingresos Brutos - Costo de la mercaderia',
-				},
-				{
-					text: 'Ingresos Netos',
-					img: 'rentabilidad',
-					value: this.price(this.model.rentabilidad),
-					description: 'UTILIDAD menos los GASTOS',
-				},
-				{
-					text: 'Gastos',
-					img: 'gastos',
-					value: this.price(this.model.total_gastos),
-					description: 'Suma de los GASTOS',
-				},
-				{
-					text: 'Deudas de Clientes',
-					img: 'deuda-clientes',
-					value: this.price(this.deuda_clientes),
-					description: 'Sumatoria de los saldos ACTUALES de tus clientes (EN VIVO)',
-				},
-				{
-					text: 'Devoluciones',
-					img: 'devoluciones', 
-					value: this.price(this.model.total_devolucion),
-					description: 'Sumatoria de las devoluciones de tus clientes (notas de credito)',
+					group_name: 'Dinero',
+					// group_name: 'Tesoreria',
+					cards: [
+						{
+							text: 'Caja',
+							img: 'ingresos_brutos',
+							value: this.price(this.model.total_ingresos),
+							description: 'Suma de: lo que se vendio en mostrador + lo que pagaron en C/C tus clientes (lo que deberia haber en la caja)',
+						},
+						{
+							text: 'Utilidad',
+							img: 'ingresos_netos',
+							value: this.price(this.model.ingresos_netos),
+							description: 'Ingresos Brutos - Costo de la mercaderia',
+						},
+						{
+							text: 'Ingresos Netos',
+							img: 'rentabilidad',
+							value: this.price(this.model.rentabilidad),
+							description: 'UTILIDAD menos los GASTOS',
+						},
+					],
 				},
 				// {
-				// 	text: 'Articulos vendidos',
-				// 	img: 'productos',
-				// 	value: this.articulos_vendidos,
-				// 	description: 'Cantidad',
+				// 	group_name: 'Analisis',
+				// 	cards: [
+				// 		{
+				// 			text: 'Utilidad',
+				// 			img: 'ingresos_netos',
+				// 			value: this.price(this.model.ingresos_netos),
+				// 			description: 'Ingresos Brutos - Costo de la mercaderia',
+				// 		},
+				// 		{
+				// 			text: 'Ingresos Netos',
+				// 			img: 'rentabilidad',
+				// 			value: this.price(this.model.rentabilidad),
+				// 			description: 'UTILIDAD menos los GASTOS',
+				// 		},
+				// 	],
 				// },
 				{
-					text: 'Cantidad de ventas',
-					img: 'cantidad_ventas',
-					value: this.model.cantidad_ventas,
+					group_name: 'Gastos',
+					cards: [
+						{
+							text: 'Gastos',
+							img: 'gastos',
+							value: this.price(this.model.total_gastos),
+							description: 'Suma de los GASTOS',
+						},
+						{
+							text: 'Devoluciones',
+							img: 'devoluciones', 
+							value: this.price(this.model.total_devolucion),
+							description: 'Sumatoria de las devoluciones de tus clientes (notas de credito)',
+						},
+					],
 				},
 				{
-					text: 'Iva Vendido',
-					img: 'iva_vendido', 
-					value: this.price(this.model.total_facturado),
-					description: 'Sumatoria de los importes de todas las facturas emitidas',
+					group_name: 'Egresos',
+					cards: [
+						{
+							text: 'Total Comprado',
+							img: 'comprado', 
+							value: this.price(this.model.total_comprado),
+							description: 'Sumatoria de los totales de los pedidos a proveedores',
+						},
+						{
+							text: 'Total Pagado',
+							img: 'pagado', 
+							value: this.price(this.model.total_pagado_a_proveedores),
+							description: 'Sumatoria de los pagos hechos a proveedores',
+						},
+					],
 				},
+
+
 				{
-					text: 'Iva Comprado',
-					img: 'iva_comprado', 
-					value: this.price(this.model.total_iva_comprado),
-					description: 'Sumatoria de los totales de las facturas de los pedidos a proveedores',
+					group_name: 'Facturacion',
+					cards: [
+						{
+							text: 'Iva Debito',
+							img: 'iva_vendido', 
+							value: this.price(this.model.total_facturado),
+							description: 'Sumatoria de los importes de IVA de todos los articulos vendidos en ventas Facturadas',
+						},
+
+						/*
+							Aca tengo que sumar el total de las facturas, o la suma del iva de cada articulo
+						*/
+						{
+							text: 'Iva Credito',
+							img: 'iva_comprado', 
+							value: this.price(this.model.total_iva_comprado),
+							description: 'Sumatoria de los totales de IVA de las facturas de los pedidos a proveedores',
+						},
+
+						{
+							text: 'Iva a Pagar',
+							img: 'iva_comprado', 
+							value: this.price(this.model.total_facturado - this.model.total_iva_comprado),
+							description: 'Diferencia entre IVA Debito menos el IVA Credito',
+						},
+					],
 				},
+
+
+
 				{
-					text: 'Total Comprado',
-					img: 'comprado', 
-					value: this.price(this.model.total_comprado),
-					description: 'Sumatoria de los totales de los pedidos a proveedores',
-				},
-				{
-					text: 'Total Pagado',
-					img: 'pagado', 
-					value: this.price(this.model.total_pagado_a_proveedores),
-					description: 'Sumatoria de los pagos hechos a proveedores',
+					group_name: 'Clientes',
+					cards: [
+						{
+							text: 'Deudas de Clientes',
+							img: 'deuda-clientes',
+							value: this.price(this.deuda_clientes),
+							description: 'Sumatoria de los saldos ACTUALES de tus clientes (EN VIVO)',
+						},
+					],
 				},
 			]
-			return cards
+
+			return card_groups
 		},
 		clients() {
 			return this.$store.state.client.models 
@@ -188,8 +258,22 @@ export default {
 <style lang="sass">
 .icon-cards
 	display: flex 
-	flex-direction: row 
-	flex-wrap: wrap
+	flex-direction: column 
+	// flex-wrap: wrap
+
+	.card-group
+		display: flex 
+		flex-direction: column
+
+		h6 
+			font-size: 25px
+			text-align: left
+			font-weight: bold 
+			margin: 30px 0 20px
+
+		.cards-wrapper
+			display: flex 
+			flex-direction: row
 
 	.icon-card
 		@media screen and (max-width: 700px) 

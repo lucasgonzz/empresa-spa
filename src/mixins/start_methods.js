@@ -19,7 +19,12 @@ export default {
 			
 			this.get_ventas_sin_cobrar()
 
+			this.get_deposit_movements_en_curso()
+
 			this.get_buyers_and_set_messages_not_read()
+		},
+		get_deposit_movements_en_curso() {
+			this.$store.dispatch('deposit_movement/en_curso/getModels')
 		},
 		get_ventas_sin_cobrar() {
 			if (this.owner.dias_alertar_empleados_ventas_no_cobradas) {

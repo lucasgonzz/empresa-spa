@@ -124,6 +124,14 @@ export default {
 				this.$store.commit('vender/setAfipInformationId', value)
 			},
 		},
+		afip_tipo_comprobante_id: {
+			get() {
+				return this.$store.state.vender.afip_tipo_comprobante_id
+			}, 
+			set(value) {
+				this.$store.commit('vender/set_afip_tipo_comprobante_id', value)
+			},
+		},
 		employee_id: {
 			get() {
 				return this.$store.state.vender.employee_id
@@ -306,7 +314,7 @@ export default {
 
 			return surchages
 		},
-		vender(print_ticket = false) {
+		vender() {
 			console.log('se llamo a vender')
 			if (this.check_vender()) {
 				console.log('paso check')
@@ -324,7 +332,10 @@ export default {
 				})
 				.then(() => {
 					if (this.view == 'remito') {
-						document.getElementById('article-bar-code').focus()
+						let bar_code_input = document.getElementById('article-bar-code')
+						if (bar_code_input) {
+							bar_code_input.focus()
+						}
 					}
 					
 					this.limpiar_vender()
@@ -384,6 +395,8 @@ export default {
 			this.$store.commit('vender/setSellerId', 0)
 
 			this.$store.commit('vender/set_caja_id', 0)
+			
+			this.$store.commit('vender/set_afip_tipo_comprobante_id', 0)
 
 			this.setTotal()
 
@@ -521,6 +534,48 @@ export default {
 				this.$toast.error('Hay '+this.articulos_con_depositos.length+' articulos con stock en diferentes depositos')
 				this.$toast.error('Indique la DIRECCION de la venta para restar el stock en los depositos que correspondan')
 				return false
+			}
+			if (this.afip_information_id) {
+				
+				if (!this.afip_tipo_comprobante_id) {
+
+					this.$toast.error('Indique el Tipo de Comprobante a Facturar')
+					return false
+				}
+
+				if (this.afip_tipo_comprobante_id == 1 
+					|| this.afip_tipo_comprobante_id == 4
+					|| this.afip_tipo_comprobante_id == 5) {
+
+					if (!this.client) {
+
+						this.$toast.error('Para Factura A, debe indicar un Cliente')
+						return false
+					}
+
+					if (!this.client.cuit) {
+
+						this.$toast.error('Para Factura A, el Cliente debe tener asignado un CUIT')
+						return false
+					}
+				}
+
+				if (this.total >= 344488) {
+						
+
+					if (!this.client) {
+
+						this.$toast.error('Para montos mayores a $344.488, debe indicar el receptor')
+						return false
+					}			
+
+					if (!this.client.dni && !this.client.cuit) {
+
+						this.$toast.error('Para montos mayores a $344.488, el cliente debe tener asignado un CUIT o DNI')
+						return false
+					}					
+				}
+			
 			}
 			return true 
 		},

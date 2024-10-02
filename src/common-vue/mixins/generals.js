@@ -445,8 +445,8 @@ export default {
 			}
 			return null
 		},
-		loadModel(model_name, id) {
-			return this.$api.get(model_name+'/'+id)
+		loadModel(model_name, id, param_url = '/') {
+			return this.$api.get(this.routeString(model_name)+param_url+id)
 			.then(res => {
 				this.$store.commit(model_name+'/add', res.data.model)
 				this.$toast.success(this.singular(model_name)+' actualizado')

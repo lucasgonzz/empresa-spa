@@ -81,6 +81,7 @@ export default {
 				text: 'Valor: ',
 				model_prop: 'provider.dolar',
 			},
+			if_has_extencion: 'costo_en_dolares',
 			not_show: true,
 		},
 		{
