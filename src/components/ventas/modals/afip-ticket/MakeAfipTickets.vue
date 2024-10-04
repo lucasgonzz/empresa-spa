@@ -18,6 +18,13 @@
 			:options="options"></b-form-select>
     	</b-form-group>
 
+    	<b-form-group
+    	label="Seleccione el tipo de comprobante">
+	    	<b-form-select
+	    	v-model="afip_tipo_comprobante_id"
+			:options="getOptions({key: 'afip_tipo_comprobante_id', text: 'Tipo Comprobante'})"></b-form-select>
+    	</b-form-group>
+
     	<b-button
     	block 
     	variant="primary"
@@ -95,6 +102,7 @@ export default {
 	data() {
 		return {
 			afip_information_id: 0,
+			afip_tipo_comprobante_id: 0,
 			afip_tickets_for_make: [],
 		}
 	},
@@ -131,7 +139,8 @@ export default {
 			console.log('enviando sale_id: '+this.selected_sales[index].id)
 			return this.$api.post('afip-ticket', {
 				sale_id: this.selected_sales[index].id,
-				afip_information_id: this.afip_information_id
+				afip_information_id: this.afip_information_id,
+				afip_tipo_comprobante_id: this.afip_tipo_comprobante_id,
 			})
 			.catch(err => {
 				this.$toast.error('Error al emitir factura para la venta N° '+this.selected_sales[index].num)
@@ -141,6 +150,10 @@ export default {
 		check() {
 			if (this.afip_information_id == 0) {
 				this.$toast.error('Seleccione un punto de venta')				
+				return false
+			}
+			if (this.afip_tipo_comprobante_id == 0) {
+				this.$toast.error('Seleccione un tipo de comprobante')				
 				return false
 			}
 			return true

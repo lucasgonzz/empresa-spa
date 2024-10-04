@@ -37,16 +37,6 @@ export default {
 		client() {
 			return this.$store.state.vender.client
 		},
-		col_header_lg() {
-			let col = 3
-			if (!this.user.ask_amount_in_vender) {
-				col += 1
-			}
-			if (this.hasExtencion('no_usar_codigos_de_barra')) {
-				col += 3
-			}
-			return col 
-		},
 		services_col_header_lg() {
 			let col = 3
 			return col 
@@ -193,6 +183,24 @@ export default {
 		}
 	},
 	methods: {
+
+		col_header_lg(es_para_name_input = false) {
+			
+			let col = 4
+
+			if (!this.user.ask_amount_in_vender) {
+				col += 2
+			}
+
+			if (this.hasExtencion('no_usar_codigos_de_barra')) {
+				col += 3
+			}
+
+			// if (es_para_name_input) {
+			// 	col += 1
+			// }
+			return col 
+		},
 
 		setPriceType() {
             if (this.price_types_with_position.length) {
@@ -587,7 +595,20 @@ export default {
 					return false 
 				}
 
-				if (!this.$store.state.vender.caja_id) {
+				if (
+					!this.$store.state.vender.caja_id
+					&& (
+						!this.$store.state.vender.client
+						|| this.$store.state.vender.omitir_en_cuenta_corriente
+					)
+				) {
+
+					console.log('entro con client:')
+					console.log(this.$store.state.vender.client)
+
+					console.log('entro con omitir_en_cuenta_corriente:')
+					console.log(this.$store.state.vender.omitir_en_cuenta_corriente)
+
 					this.$toast.error('Indique una CAJA para esta venta')
 					return false 
 				}

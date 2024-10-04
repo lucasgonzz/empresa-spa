@@ -12,6 +12,11 @@ export default {
         },
     },
 	methods: {
+        get_hora_from_created_at(model) {
+            if (model.created_at) {
+                return moment(model.created_at).format('h:mm')
+            }
+        },
         get_variants_for_deposit_movement(prop, article) {
             console.log('get_variants_for_deposit_movement, article:')
             console.log(article)

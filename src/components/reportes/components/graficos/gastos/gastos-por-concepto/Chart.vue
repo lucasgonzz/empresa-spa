@@ -1,8 +1,10 @@
 <script>
 import { Bar } from 'vue-chartjs'
 import moment from 'moment'
+import font_control from '@/mixins/reportes/font_control'
 export default {
 	extends: Bar,
+	mixins: [font_control],
 	computed: { 
 		expense_concepts() {  
 			return this.$store.state.reportes.model.expense_concepts
@@ -66,7 +68,7 @@ export default {
 						font: {
 							weight: 'bold',
 							family: 'Roboto',
-							size: 11,	
+							size: this.font_size,
 						},
 						formatter: function(value) {
 							return that.price(Math.round(value)); // Usa tu método price() para formatear

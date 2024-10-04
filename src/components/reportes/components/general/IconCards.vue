@@ -177,7 +177,7 @@ export default {
 
 						{
 							text: 'Iva a Pagar',
-							img: 'iva_comprado', 
+							img: 'iva_diferencia', 
 							value: this.price(this.model.total_facturado - this.model.total_iva_comprado),
 							description: 'Diferencia entre IVA Debito menos el IVA Credito',
 						},
@@ -274,6 +274,7 @@ export default {
 		.cards-wrapper
 			display: flex 
 			flex-direction: row
+			flex-wrap: wrap 
 
 	.icon-card
 		@media screen and (max-width: 700px) 

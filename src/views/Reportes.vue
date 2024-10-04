@@ -10,7 +10,7 @@
 <script>
 export default {
 	components: {
-		NavComponent: () => import('@/components/reportes/components/Nav'),
+		NavComponent: () => import('@/components/reportes/components/nav/Index'),
 		General: () => import('@/components/reportes/components/general/Index'),
 		Graficos: () => import('@/components/reportes/components/graficos/Index'),
 	},

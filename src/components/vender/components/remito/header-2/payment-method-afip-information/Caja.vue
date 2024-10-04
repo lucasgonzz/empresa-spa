@@ -1,6 +1,7 @@
 <template>
+		
 	<b-form-select
-	v-if="pagado_al_contado"
+	v-if="pagado_al_contado && !selected_payment_methods.length"
 	v-model="caja_id" 
 	:options="get_caja_options(vender_payment_method_id)"></b-form-select> 
 </template>
@@ -11,6 +12,9 @@ export default {
 	computed: {
 		pagado_al_contado() {
 			return !this.client || this.omitir_en_cuenta_corriente
+		},
+		selected_payment_methods() {
+			return this.$store.state.vender.selected_payment_methods
 		},
 		vender_payment_method_id() {
 			return this.$store.state.vender.current_acount_payment_method_id

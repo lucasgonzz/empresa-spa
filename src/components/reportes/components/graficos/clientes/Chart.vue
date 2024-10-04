@@ -2,9 +2,10 @@
 import { Bar } from 'vue-chartjs'
 import moment from 'moment'
 import chart from '@/mixins/chart'
+import font_control from '@/mixins/reportes/font_control'
 export default {
 	extends: Bar,
-	mixins: [chart],
+	mixins: [chart, font_control],
 	computed: { 
 		clients() {  
 			return this.$store.state.client.models
@@ -58,6 +59,24 @@ export default {
 				labels: labels,
 				datasets: datasets,
 			}, {
+				plugins: {
+					datalabels: { 
+						color: '#000',
+						font: {
+							weight: 'bold',
+							family: 'Roboto',
+							size: this.font_size,
+						},
+						formatter: function(value) {
+							let price = Math.round(value)
+							
+							if (price != 0) {
+								return that.price(price)
+							}
+							return null
+						},
+					},
+				},
 				maintainAspectRatio: false,
 				onClick: function (event, elements, chart) {
 					// let provider = providers[elements[0]._index]

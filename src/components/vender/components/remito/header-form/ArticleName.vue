@@ -1,7 +1,7 @@
 <template>
 	<b-col
 	cols="12"
-	:md="col_header_lg"
+	:md="col_header_lg(true)"
 	class="col-autocomplete margin-bottom-since-lg">
 		<search-component
 		id="search-article"

@@ -244,6 +244,8 @@ export default {
 				console.log('setenaod price type con:')
 				console.log(model.price_type)
 				this.$store.commit('vender/setPriceType', model.price_type)
+			} else if (model.client && model.client.price_type_id) {
+				this.$store.commit('vender/setPriceType', model.client.price_type_id)
 			} else {
 				this.$store.commit('vender/setPriceType', null)
 			}

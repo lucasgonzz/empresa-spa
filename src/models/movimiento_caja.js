@@ -7,6 +7,12 @@ export default {
 			use_store_models: true,
 		},
 		{
+			key: 'hora',
+			type: 'date',
+			only_show: true,
+			function: 'get_hora_from_created_at',
+		},
+		{
 			key: 'ingreso',
 			type: 'number',
 			is_price: true,

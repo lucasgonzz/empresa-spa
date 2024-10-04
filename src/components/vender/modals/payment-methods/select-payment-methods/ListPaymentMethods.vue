@@ -23,8 +23,9 @@
 					Agregar total
 				</b-button>
 			</div>
-
+			
 			<select-caja
+			v-if="!payment_methods_with_discounts.length"
 			:payment_method="payment_method"></select-caja>
 
 			<p
@@ -45,6 +46,11 @@ export default {
 	mixins: [select_payment_methods],
 	components: {
 		SelectCaja: () => import('@/components/vender/modals/payment-methods/select-payment-methods/SelectCaja'),
+	},
+	computed: {
+		payment_methods_with_discounts() {
+			return this.$store.state.current_acount_payment_method_discount.models
+		},
 	},
 	methods: {
 

@@ -3,7 +3,7 @@
 	v-if="user.ask_amount_in_vender"
 	class="col-buttons m-b-15 m-lg-b-0"
 	cols="12"
-	md="3">
+	md="2">
 		<div class="d-flex w-100">
 			<b-form-input
 			type="number"

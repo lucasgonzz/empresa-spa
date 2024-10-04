@@ -1,8 +1,10 @@
 <script>
 import { Bar } from 'vue-chartjs'
 import moment from 'moment'
+import font_control from '@/mixins/reportes/font_control'
 export default {
 	extends: Bar,
+	mixins: [font_control],
 	computed: { 
 		metodos_de_pago() {  
 			return this.$store.state.reportes.model.ingresos_cuenta_corriente
@@ -59,11 +61,12 @@ export default {
 			}, {
 				plugins: {
 					datalabels: { 
-						anchor: 'end',
-						align: 'top',
-						color: '#FFF',
+						// anchor: 'end',
+						// align: 'top',
+						color: '#000',
 						font: {
 							weight: 'bold',
+							size: this.font_size,
 						},
 						formatter: function(value) {
 							if (that.is_mobile) {

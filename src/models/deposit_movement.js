@@ -49,6 +49,7 @@ export default {
 			store: 'article',
 			search_on_models_by: 'name',
 			type: 'search',
+			search_from_api_function: 'search_from_api_in_provider_order',
 			key: 'articles',
 			belongs_to_many: {
 				model_name: 'article',

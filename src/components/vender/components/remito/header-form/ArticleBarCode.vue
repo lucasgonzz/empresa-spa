@@ -3,7 +3,7 @@
 	class="col-bar-code margin-bottom-since-lg"
 	cols="12"
 	v-if="!hasExtencion('no_usar_codigos_de_barra')"
-	:md="col_header_lg">
+	:md="3">
 		<div
 		class="d-flex w-100">
 			<b-form-input

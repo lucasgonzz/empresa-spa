@@ -1,8 +1,10 @@
 <script>
 import { Bar } from 'vue-chartjs'
 import moment from 'moment'
+import font_control from '@/mixins/reportes/font_control'
 export default {
 	extends: Bar,
+	mixins: [font_control],
 	computed: { 
 		meses_anteriores() {  
 			return this.$store.state.reportes.meses_anteriores
@@ -103,7 +105,7 @@ export default {
 						font: {
 							weight: 'bold',
 							family: 'Roboto',
-							size: 9,	
+							size: this.font_size,
 						},
 						formatter: function(value, context) {
 							return null

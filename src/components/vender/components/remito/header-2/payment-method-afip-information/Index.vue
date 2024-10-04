@@ -35,7 +35,7 @@ export default {
 		flex-direction: column 
 	@media screen and (min-width: 768px)
 		flex-direction: row 
-	select, .cont-select
+	select, .cont-select, .input-group
 		margin-bottom: 10px
 		@media screen and (max-width: 768px)
 			width: 100%

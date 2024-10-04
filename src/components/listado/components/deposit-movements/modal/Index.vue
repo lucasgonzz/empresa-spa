@@ -12,6 +12,11 @@
 			:show_btn_save="se_puede_modificar"
 			:show_btn_delete="se_puede_modificar"
 			:show_previus_days="show_previus_days">
+
+				<template #modal_buttons>
+					<pdf-button></pdf-button>		
+				</template>
+
 			</view-component>
 		</div>
 	</b-modal>
@@ -20,6 +25,7 @@
 export default {
 	components: {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
+		PdfButton: () => import('@/components/listado/components/deposit-movements/modal/PdfButton'),
 	},
 	computed: {
 		show_previus_days() {

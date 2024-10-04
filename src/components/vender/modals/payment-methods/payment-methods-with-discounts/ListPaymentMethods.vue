@@ -24,6 +24,10 @@
 					Agregar total
 				</b-button>
 			</div>
+			
+			<select-caja
+			:payment_method="payment_method"></select-caja>
+			
 			<hr>
 		</b-form-group>
 	</div>
@@ -32,6 +36,9 @@
 import payment_methods_with_discounts from '@/mixins/vender/payment_methods_with_discounts'
 export default {
 	mixins: [payment_methods_with_discounts],
+	components: {
+		SelectCaja: () => import('@/components/vender/modals/payment-methods/select-payment-methods/SelectCaja'),
+	},
 	methods: {
 
 		set_total_repartido(payment_method) {

@@ -9,7 +9,6 @@
 		</b-col>
 		
 		<b-col
-		lg="6"
 		cols="12">
 			<gastos-por-concepto></gastos-por-concepto>
 		</b-col>

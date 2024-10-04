@@ -1,16 +1,9 @@
 <template>
-	<b-row
-	v-if="user">
-		<b-col 
-		cols="12"
-		class="col-nav">
-			<horizontal-nav
-			@setSelected="setSelected"
-			set_view
-			:show_display="false"
-			:items="items"></horizontal-nav>
-		</b-col>
-	</b-row>
+	<horizontal-nav
+	@setSelected="setSelected"
+	set_view
+	:show_display="false"
+	:items="items"></horizontal-nav>
 </template>
 <script>
 import article_performance from '@/mixins/article_performance'
