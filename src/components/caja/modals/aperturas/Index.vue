@@ -1,7 +1,7 @@
 <template>
 	<b-modal
 	size="lg"
-	title="Aperturas"
+	:title="title"
 	hide-footer
 	id="aperturas-caja">
 		<view-component
@@ -22,6 +22,16 @@ export default {
 	components: {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 		TableButtons: () => import('@/components/caja/modals/aperturas/table-buttons/Index'),
+	},
+	computed: {
+		caja() {
+			return this.$store.state.caja.model 
+		},
+		title() {
+			if (this.caja) {
+				return 'Aperturas de '+this.caja.name
+			}
+		},
 	},
 	methods: {
 		clicked(apertura_caja) {

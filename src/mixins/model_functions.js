@@ -88,6 +88,13 @@ export default {
                 return this.price(this.redondear(price))
             }
         },
+        cajaGetColor(caja) {
+            if (caja.abierta) {
+
+                return 'caja-abierta'
+            }
+            return 'caja-cerrada'
+        },
         pendingGetColor(pending) {
             if (pending.fecha_realizacion) {
 

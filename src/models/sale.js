@@ -59,6 +59,20 @@ export default {
 			only_show: true,
 		},
 		{
+			text: 'Lista de Precios',
+			key: 'price_type_id',
+			use_store_models: true,
+			not_show: true,
+			only_show: true,
+		},
+		{
+			text: 'Caja destino',
+			key: 'caja_id',
+			use_store_models: true,
+			not_show: true,
+			only_show: true,
+		},
+		{
 			text: 'Articulos',
 			key: 'articles',
 			store: 'article',
@@ -115,6 +129,28 @@ export default {
 			}
 		},
 		{
+			text: 'Metodos de Pago',
+			key: 'current_acount_payment_methods',
+			store: 'current_acount_payment_method',
+			type: 'search',
+			only_show: true,
+			belongs_to_many: {
+				model_name: 'current_acount_payment_method',
+				pivot_props_to_show: [
+					{
+						text: 'Monto',
+						key: 'amount',
+						is_price: true,
+					},
+					{
+						text: 'Descuento',
+						key: 'discount_amount',
+						is_price: true,
+					},
+				],
+			}
+		},
+		{
 			text: 'Servicios',
 			key: 'services',
 			store: 'service',
@@ -148,28 +184,6 @@ export default {
 			// 	model_name: 'service',
 			// 	show_btn_create: false,
 			// }
-		},
-		{
-			text: 'Metodos de Pago',
-			key: 'current_acount_payment_methods',
-			store: 'current_acount_payment_method',
-			type: 'search',
-			only_show: true,
-			belongs_to_many: {
-				model_name: 'current_acount_payment_method',
-				pivot_props_to_show: [
-					{
-						text: 'Monto',
-						key: 'amount',
-						is_price: true,
-					},
-					{
-						text: 'Descuento',
-						key: 'discount_amount',
-						is_price: true,
-					},
-				],
-			}
 		},
 	],
 	singular_model_name_spanish: 'Venta',

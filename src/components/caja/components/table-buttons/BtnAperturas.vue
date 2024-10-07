@@ -1,8 +1,7 @@
 <template>
 	<b-button
 	class="m-l-10"
-	@click.stop="show_aperturas"
-	variant="outline-primary">
+	@click.stop="show_aperturas">
 		Aperturas
 	</b-button>
 </template>

@@ -94,10 +94,10 @@ export default {
 				}
 			}
 
-			if (this.hasExtencion('articulo_margen_de_ganancia_segun_lista_de_precios')) {
+			// if (this.hasExtencion('articulo_margen_de_ganancia_segun_lista_de_precios')) {
 				
-				return false 
-			}
+			// 	return false 
+			// }
 
 			return true
 			// if (this.current_acount_payment_method_discounts.length) {

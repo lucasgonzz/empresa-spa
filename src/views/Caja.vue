@@ -7,6 +7,8 @@
 
 		<movimientos></movimientos>	
 
+		<sale-modal></sale-modal>
+
 		<view-component
 		:models_to_show="models_to_show"
 		show_models_if_empty
@@ -31,6 +33,7 @@ export default {
 		HorizontalNavCenter: () => import('@/components/caja/components/horizontal-nav-center/Index'),
 		TableButtons: () => import('@/components/caja/components/table-buttons/Index'),
 
+		SaleModal: () => import('@/components/caja/modals/sale-modal/Index'),
 		MovimientosEntreCajas: () => import('@/components/caja/modals/movimientos-entre-cajas/Index'),
 		Aperturas: () => import('@/components/caja/modals/aperturas/Index'),
 		Movimientos: () => import('@/components/caja/modals/movimientos/Index'),
@@ -67,3 +70,15 @@ export default {
 	}
 }
 </script>
+<style lang="sass">
+@import '@/sass/_custom'
+.caja-abierta
+	td 
+		background: lighten($green, 25%) !important
+
+
+.caja-cerrada
+	td 
+		background: lighten($red, 25%) !important
+		// background: ligthen($green, 10%) !important
+</style>

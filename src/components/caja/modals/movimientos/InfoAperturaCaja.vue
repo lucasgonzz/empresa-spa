@@ -5,46 +5,46 @@
 		class="j-between">
 			<p
 			v-if="get_perfil_usuario(apertura_caja.apertura_employee_id)">
-				Abierta por: {{ get_perfil_usuario(apertura_caja.apertura_employee_id).name }}
+				Abierta por: <strong>{{ get_perfil_usuario(apertura_caja.apertura_employee_id).name }}</strong>
 			</p>
 			<p
 			v-if="apertura_caja.cierre_employee_id">
-				Cerrada por: {{ get_perfil_usuario(apertura_caja.cierre_employee_id).name }}
+				Cerrada por: <strong>{{ get_perfil_usuario(apertura_caja.cierre_employee_id).name }}</strong>
 			</p>
 		</div>
 		<div
 		class="j-between">
 			
 			<p>
-				Fecha apertura: {{ date(apertura_caja.created_at, true) }}
+				Fecha apertura: <strong>{{ date(apertura_caja.created_at, true) }}</strong>
 			</p>
 
 			<p
 			v-if="apertura_caja.cerrada_at">
-				Fecha cierre: {{ date(apertura_caja.cerrada_at, true) }}
+				Fecha cierre: <strong>{{ date(apertura_caja.cerrada_at, true) }}</strong>
 			</p>
 		</div>
 
 		<div
 		class="j-between">
 			<p>
-				Saldo apertura: {{ price(apertura_caja.saldo_apertura) }}
+				Saldo apertura: <strong>{{ price(apertura_caja.saldo_apertura) }}</strong>
 			</p>
 
 			<p
 			v-if="apertura_caja.saldo_cierre">
-				Saldo cierre: {{ price(apertura_caja.saldo_cierre) }}
+				Saldo cierre: <strong>{{ price(apertura_caja.saldo_cierre) }}</strong>
 			</p>
 		</div>
 
 		<div
 		class="j-between">
 			<p>
-				Total ingresos: {{ price(total_ingresos) }}
+				Total ingresos: <strong>{{ price(total_ingresos) }}</strong>
 			</p>
 
 			<p>
-				Total egresos: {{ price(total_egresos) }}
+				Total egresos: <strong>{{ price(total_egresos) }}</strong>
 			</p>
 		</div>
 		<hr>
@@ -60,12 +60,15 @@ export default {
 
 			let total = 0
 
-			this.apertura_caja.movimientos_caja.forEach(movimiento_caja => {
-				if (movimiento_caja.ingreso) {
+			if (this.apertura_caja && this.apertura_caja.movimientos_caja) {
+				
+				this.apertura_caja.movimientos_caja.forEach(movimiento_caja => {
+					if (movimiento_caja.ingreso) {
 
-					total += Number(movimiento_caja.ingreso)
-				}
-			})
+						total += Number(movimiento_caja.ingreso)
+					}
+				})
+			}
 
 			return total
 		},
@@ -73,12 +76,16 @@ export default {
 
 			let total = 0
 
-			this.apertura_caja.movimientos_caja.forEach(movimiento_caja => {
-				if (movimiento_caja.egreso) {
+			if (this.apertura_caja && this.apertura_caja.movimientos_caja) {
 
-					total += Number(movimiento_caja.egreso)
-				}
-			})
+				this.apertura_caja.movimientos_caja.forEach(movimiento_caja => {
+					if (movimiento_caja.egreso) {
+
+						total += Number(movimiento_caja.egreso)
+					}
+				})
+			}
+
 
 			return total
 		},

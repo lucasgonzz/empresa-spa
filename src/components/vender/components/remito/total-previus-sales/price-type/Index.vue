@@ -3,6 +3,7 @@
 	v-if="price_type_vender">
 		<b-form-select
 		class="m-l-15"
+		:disabled="is_disabled"
 		v-if="hasExtencion('cambiar_price_type_en_vender')"
 		v-model="price_type_id"
 		@change="set_price_type"
@@ -30,6 +31,9 @@ export default {
 		},
 	},
 	computed: {
+		is_disabled() {
+			return this.index_previus_sales != 0
+		},
 		price_types() {
 			return this.$store.state.price_type.models 
 		},

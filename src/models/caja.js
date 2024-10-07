@@ -61,5 +61,6 @@ export default {
 	singular_model_name_spanish: 'Caja',
 	plural_model_name_spanish: 'Cajas',
 	create_model_name_spanish: 'Nueva Caja',
+	color_display_function: true,
 	text_delete: 'la',
 }
