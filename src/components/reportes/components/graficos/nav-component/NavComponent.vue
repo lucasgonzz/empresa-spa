@@ -1,7 +1,7 @@
 <template>
 	<horizontal-nav
 	@setSelected="setSelected"
-	set_view
+	set_sub_view
 	:show_display="false"
 	:items="items"></horizontal-nav>
 </template>

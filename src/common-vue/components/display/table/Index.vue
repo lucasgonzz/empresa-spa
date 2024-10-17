@@ -87,7 +87,7 @@
 				<slot name="btn_add_to_show"></slot>
 			</table>
 			<p 
-			v-else
+			v-else-if="show_empty_text"
 			class="text-with-icon">
 				<i class="icon-eye-slash"></i>
 				No hay {{ plural(model_name) }}
@@ -165,6 +165,10 @@ export default {
 		model_name: String,
 		set_model_on_click: Boolean,
 		on_click_set_property: String,
+		show_empty_text: {
+			type: Boolean,
+			default: true,
+		},
 	},
 	created() {
 		this.setHeight()

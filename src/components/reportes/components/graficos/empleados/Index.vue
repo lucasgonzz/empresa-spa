@@ -1,6 +1,6 @@
 <template>
 	<div
-	v-if="view == 'empleados'">
+	v-if="sub_view == 'empleados'">
 
 		<ingresos-por-empleado></ingresos-por-empleado>
 

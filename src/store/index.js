@@ -129,6 +129,13 @@ import consultora_de_precio from '@/store/consultora_de_precio'
 import afip_tipo_comprobante from '@/store/afip_tipo_comprobante'
 
 
+// Lo importo solo para que me ande en table-component
+// Es real esta en reportes/article_purchase
+import article_purchase from '@/store/article_purchase'
+
+import inventory_performance from '@/store/inventory_performance'
+
+
 Vue.use(Vuex)
 
 export default new Vuex.Store({
@@ -265,5 +272,9 @@ export default new Vuex.Store({
         consultora_de_precio,
 
         afip_tipo_comprobante,
+
+        article_purchase,
+
+        inventory_performance,
     }
 })

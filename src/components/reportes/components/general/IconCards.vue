@@ -22,6 +22,11 @@
 						<p class="value">
 							{{ card.value }}
 						</p>
+						<p 
+						v-if="card.extra"
+						class="extra">
+							{{ card.extra }}
+						</p>
 						<p class="description">
 							{{ card.description }}
 						</p>
@@ -58,12 +63,14 @@ export default {
 							img: 'pagado_mostrador2',
 							value: this.price(this.model.total_pagado_mostrador),
 							description: 'Total vendido y pagado en el momento, sin pasar a c/c',
+							extra: this.porcentaje_mostrador,
 						},
 						{
 							text: 'A cuentas corrientes',
 							img: 'a_cuentas_corrientes',
 							value: this.price(this.model.total_vendido_a_cuenta_corriente),
-							description: 'Total vendido a tus clientes, pero que no se pago'
+							description: 'Total vendido a tus clientes, pero que no se pago',
+							extra: this.porcentaje_a_cuenta_corriente,
 						},
 						{
 							text: 'Pagos de clientes (ctas ctes)',
@@ -200,6 +207,24 @@ export default {
 			]
 
 			return card_groups
+		},
+		porcentaje_mostrador() {
+			if (this.model.total_vendido == 0) {
+				return null
+			}
+
+			let porcentaje = Number(this.model.total_pagado_mostrador) * 100 / Number(this.model.total_vendido)
+
+			return '('+ Math.round(porcentaje) +'%)'
+		},
+		porcentaje_a_cuenta_corriente() {
+			if (this.model.total_vendido == 0) {
+				return null
+			}
+
+			let porcentaje = Number(this.model.total_vendido_a_cuenta_corriente) * 100 / Number(this.model.total_vendido)
+			
+			return '('+ Math.round(porcentaje) +'%)'
 		},
 		clients() {
 			return this.$store.state.client.models 

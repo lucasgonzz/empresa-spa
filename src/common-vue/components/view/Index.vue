@@ -77,6 +77,7 @@
 		<slot name="body"></slot>
 		
 		<list
+		:show_empty_text="show_empty_text"
 		:show_actualizado="show_actualizado"
 		:properties_to_show="properties_to_show"
 		:table_height_para_restar="table_height_para_restar"
@@ -285,6 +286,10 @@ export default {
 			default: null,
 		},
 		show_actualizado: {
+			type: Boolean,
+			default: true,
+		},
+		show_empty_text: {
 			type: Boolean,
 			default: true,
 		},

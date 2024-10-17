@@ -21,7 +21,8 @@
 		:set_table_height="set_table_height"
 		@clicked="clicked"
 		:slice_models="slice_models"
-		:model_name_spanish="model_name_spanish">
+		:model_name_spanish="model_name_spanish"
+		:show_empty_text="show_empty_text">
 			<template v-slot:table_right_options="slotProps">
 				<slot name="table_right_options" :model="slotProps.model"></slot>
 			</template>
@@ -87,6 +88,7 @@ export default {
 			type: Boolean,
 			default: true,
 		},
+		show_empty_text: Boolean,
 	},
 	computed: {
 		to_show() {

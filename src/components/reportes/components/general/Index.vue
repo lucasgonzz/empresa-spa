@@ -1,11 +1,12 @@
 <template>
-	<div>
+	<div
+	v-if="view == 'generales'">
 
 		<div
 		v-if="!loading">
 
-			<rango-temporal></rango-temporal>
-	 
+			<!-- <rango-temporal></rango-temporal> -->
+	  
 			<icon-cards></icon-cards>
 
 		</div>

@@ -14,7 +14,7 @@ export default [
 		name: 'reportes',
 		can: 'reportes.index',
 		params: {
-			view: 'ingresos',
+			view: 'generales',
 		},
 	},
 	{

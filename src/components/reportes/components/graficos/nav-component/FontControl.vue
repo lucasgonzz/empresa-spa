@@ -5,6 +5,7 @@
 			<b-form-input
 			type="number"
 			@keydown.enter="set_font_size"
+			@click="set_font_size"
 			v-model="font_size"></b-form-input>
 		</b-input-group>
 	</div>

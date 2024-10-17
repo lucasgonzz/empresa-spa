@@ -84,27 +84,32 @@ export default {
 					label: 'Deuda clientes',
 					backgroundColor: '#4f4f4f',
 					data: deuda_clientes,
+					hidden: true,
 				},
 				{
 					label: 'Vendido a C/C',
 					backgroundColor: '#dc3545',
 					data: total_vendido_a_cuenta_corriente,
+					hidden: true,
 				},
 				{
 					label: 'Ingresos por C/C',
 					backgroundColor: '#662c29',
 					data: total_pagado_a_cuenta_corriente,
+					hidden: true,
 				},
 				{
 					label: 'Ingresos mostrador',
 					backgroundColor: '#ffc107',
 					data: total_pagado_mostrador,
+					hidden: true,
 				},
 				{
 					label: 'Caja',
 					backgroundColor: '#9966FF',
 					// backgroundColor: '#383838',
 					data: ingresos_brutos,
+					hidden: true,
 				},
 				{
 					label: 'Utilidad',
@@ -120,26 +125,31 @@ export default {
 					label: 'Ingresos Netos',
 					backgroundColor: '#236b73',
 					data: rentabilidad,
+					hidden: true,
 				},
 				{
 					label: 'Iva Venta',
 					backgroundColor: '#E2C456',
 					data: iva_vendido,
+					hidden: true,
 				},
 				{
 					label: 'Iva Compra',
 					backgroundColor: '#118000',
 					data: iva_comprado,
+					hidden: true,
 				},
 				{
 					label: 'Comprado Proveedores',
 					backgroundColor: '#bf7c0f',
 					data: total_comprado,
+					hidden: true,
 				},
 				{
 					label: 'Pagado Proveedores',
 					backgroundColor: '#565485', 
 					data: total_pagado_a_proveedores,
+					hidden: true,
 				},
 			]
 

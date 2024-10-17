@@ -8,6 +8,7 @@
 
 		<table-component
 		@onRowSelected="clicked"
+		:show_empty_text="show_empty_text"
 		:show_actualizado="show_actualizado"
 		:set_model_on_row_selected="set_model_on_row_selected"
 		:order_list_by="order_list_by"
@@ -129,6 +130,10 @@ export default {
 			default: false,
 		},
 		show_actualizado: {
+			type: Boolean,
+			default: true,
+		},
+		show_empty_text: {
 			type: Boolean,
 			default: true,
 		},

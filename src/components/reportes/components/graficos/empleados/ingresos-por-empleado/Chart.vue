@@ -47,9 +47,12 @@ export default {
 
 			let labels = []
 
+			let total_ingresado = []
+
 			let total_vendido = []
 
 			let payment_methods_labes = []
+
 			this.payment_methods.forEach(payment_method => {
 
 				payment_methods_labes[payment_method.id] = {
@@ -61,6 +64,7 @@ export default {
 			
 			labels.push(this.user_prop.user.name)
 
+			total_ingresado.push(this.user_prop.total_ingresado)
 			total_vendido.push(this.user_prop.total_vendido)
 
 			let amount 
@@ -80,9 +84,14 @@ export default {
 
 			let datasets = [
 				{
+					label: 'Total vendido',
+					backgroundColor: '#4CAF50',
+					data: total_vendido,
+				},
+				{
 					label: 'Total ingresos',
 					backgroundColor: '#007bff',
-					data: total_vendido,
+					data: total_ingresado,
 				},
 			]
 

@@ -1,6 +1,6 @@
 <template>
 	<b-row
-	v-if="view == 'sucursales'"
+	v-if="sub_view == 'sucursales'"
 	class="j-start">
 
 		<!-- <b-col

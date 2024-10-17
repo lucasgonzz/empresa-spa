@@ -1,6 +1,9 @@
 <template>
-	<div>
+	<div
+	v-if="view == 'graficos'">
 		
+		<nav-component></nav-component>
+
 		<ingresos></ingresos>
 
 		<sucursales></sucursales>	
@@ -19,6 +22,7 @@
 <script>
 export default {
 	components: {
+		NavComponent: () => import('@/components/reportes/components/graficos/nav-component/Index'),
 		Ingresos: () => import('@/components/reportes/components/graficos/ingresos/Index'),
 		Sucursales: () => import('@/components/reportes/components/graficos/sucursales/Index'),
 		Empleados: () => import('@/components/reportes/components/graficos/empleados/Index'),

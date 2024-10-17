@@ -5,6 +5,7 @@ axios.defaults.baseURL = process.env.VUE_APP_API_URL
 import moment from 'moment'
 import article_performance from '@/store/reportes/article_performance'
 import font from '@/store/reportes/font'
+import article_purchase from '@/store/reportes/article_purchase'
 export default {
 	namespaced: true,
 	state: {
@@ -153,5 +154,6 @@ export default {
 	modules: {
 		article_performance,
 		font,
+		article_purchase,
 	}
 }

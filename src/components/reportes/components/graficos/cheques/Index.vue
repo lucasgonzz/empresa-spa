@@ -1,6 +1,6 @@
 <template>
 	<div
-	v-if="view == 'cheques'">
+	v-if="sub_view == 'cheques'">
 
 		<buscador></buscador>
 

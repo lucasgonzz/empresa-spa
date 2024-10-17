@@ -72,13 +72,14 @@ export default {
 						show_in_input_if: ['status', '=', 'inactive']
 					},
 				],
-				properties_to_set: [
+				pivot_props_to_show: [
 					{
 						text: 'Precio',
 						key: 'price',
-						value: {key: 'final_price', value_if_undefined: ''},
+						// value: {key: 'final_price', value_if_undefined: ''},
 						type: 'number',
-						set_with_function: 'setBudgetArticlePrice',
+						is_price: true,
+						// set_with_function: 'setBudgetArticlePrice',
 					},
 					{
 						text: 'Cantidad',
@@ -87,17 +88,17 @@ export default {
 						type: 'number'
 					},
 					{
-						text: 'Bonif',
+						text: 'Desc',
 						key: 'bonus',
 						value: '',
 						type: 'number'
 					},
-					{
-						text: 'Ubicacion',
-						key: 'location',
-						value: '',
-						type: 'textarea'
-					},
+					// {
+					// 	text: 'Ubicacion',
+					// 	key: 'location',
+					// 	value: '',
+					// 	type: 'textarea'
+					// },
 					{
 						text: 'Total',
 						key: 'total_item',

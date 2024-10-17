@@ -51,7 +51,7 @@ const routes = [
         component: () => import('@/views/Expense')
     },
     {
-        path: '/reportes/:view?',
+        path: '/reportes/:view?/:sub_view?',
         name: 'reportes',
         component: () => import('@/views/Reportes')
     },

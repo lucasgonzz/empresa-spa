@@ -26,7 +26,7 @@
 
 	<price-changes></price-changes>
 
-	<stock-info></stock-info>
+	<!-- <stock-info></stock-info> -->
 
 	<articles-pre-import-modal></articles-pre-import-modal>
 	<view-component
@@ -36,6 +36,7 @@
 	:has_permission_create_dropdown="has_permission_create_dropdown"
 	:properties_to_show="properties_to_show"
 	@addressMovement="addressMovement"
+	:show_empty_text="show_empty_text"
 	model_name="article">
 
 		<template #excel_drop_down_options>
@@ -44,7 +45,7 @@
 		</template>
 
 		<template #horizontal_nav_center>
-			<stock-info-buttons></stock-info-buttons>
+			<!-- <stock-info-buttons></stock-info-buttons> -->
 			<buscador-header></buscador-header>
 
 			<deposit-movements></deposit-movements>
@@ -54,6 +55,12 @@
 		<template #options_drop_down>
 			
 			<drop-down-options></drop-down-options>
+
+		</template>
+
+		<template #body>
+			
+			<inventory-performance></inventory-performance>
 
 		</template>
 
@@ -128,7 +135,7 @@ export default {
 
 		ArticlesPreImportModal: () => import('@/components/listado/modals/articles-pre-import/Index'),
 
-		StockInfoButtons: () => import('@/components/listado/components/StockInfoButtons'),
+		// StockInfoButtons: () => import('@/components/listado/components/StockInfoButtons'),
 		BuscadorHeader: () => import('@/components/listado/components/buscador-header/Index'),
 		Buttons: () => import('@/components/listado/components/Buttons'),
 		Charts: () => import('@/components/listado/modals/article-charts/Index'),
@@ -143,7 +150,7 @@ export default {
 		PriceChanges: () => import('@/components/listado/modals/price-changes/Index'),
 		NameInput: () => import('@/components/listado/components/NameInput'),
 		StockInput: () => import('@/components/listado/components/StockInput'),
-		StockInfo: () => import('@/components/listado/modals/stock-info/Index'),
+		// StockInfo: () => import('@/components/listado/modals/stock-info/Index'),
 		StockBtn: () => import('@/components/listado/components/table-props/stock-btn/Index'),
 		ArticlePrice: () => import('@/components/listado/components/ArticlePrice'),
 
@@ -151,6 +158,8 @@ export default {
 		DropDownOptions: () => import('@/components/listado/components/selected-filtered-options/Index'),
 		ConfirmResetStock: () => import('@/components/listado/modals/ConfirmResetStock'),
 		PriceTypeInput: () => import('@/components/listado/components/PriceTypeInput'),
+
+		InventoryPerformance: () => import('@/components/listado/components/inventory-performance/Index'),
 
 		DepositMovements: () => import('@/components/listado/components/deposit-movements/Index'),
 
@@ -163,6 +172,9 @@ export default {
 	computed: {
 		has_permission_create_dropdown() {
 			return this.authenticated && this.can('article.export_excel_clients')
+		},
+		show_empty_text() {
+			return this.$store.state.article.is_filtered
 		},
 	},
 	methods: {

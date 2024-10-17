@@ -1,5 +1,6 @@
 <template>
-	<div>
+	<div
+	class="m-l-15 m-t-15">
 		<name-search
 		v-if="hasExtencion('no_usar_codigos_de_barra')"></name-search>
 		<barcode-search

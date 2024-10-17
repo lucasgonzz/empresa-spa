@@ -1,12 +1,12 @@
 <template>
 	<b-col
-	v-if="!budget"
 	class="m-b-15 m-lg-b-0" 
 	cols="12"
 	:md="services_col_header_lg">
 		<service
 		:service="service"></service>	
 		<b-form-input
+		:disabled="budget"
 		@keyup.enter="setService"
 		v-model="service.name"
 		placeholder="Servicio"></b-form-input>

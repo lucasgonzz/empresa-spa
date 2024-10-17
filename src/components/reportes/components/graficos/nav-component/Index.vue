@@ -16,8 +16,8 @@
 <script>
 export default {
 	components: {
-		NavComponent: () => import('@/components/reportes/components/nav/NavComponent'),
-		FontControl: () => import('@/components/reportes/components/nav/FontControl'),
+		NavComponent: () => import('@/components/reportes/components/graficos/nav-component/NavComponent'),
+		FontControl: () => import('@/components/reportes/components/graficos/nav-component/FontControl'),
 	},
 }
 </script>

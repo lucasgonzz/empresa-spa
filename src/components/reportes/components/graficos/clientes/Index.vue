@@ -1,6 +1,6 @@
 <template>
 	<div
-	v-if="view == 'clientes'">
+	v-if="sub_view == 'clientes'">
 
 		<div class="chart-card">
 			<div class="header">
