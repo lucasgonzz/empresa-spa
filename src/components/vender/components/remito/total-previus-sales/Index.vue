@@ -2,6 +2,7 @@
 <b-row
 class="row-total-card-previus-sales m-b-15 j-start">
 	<total></total>	
+
 	<previus-sales></previus-sales>
 	
 	<check-sale></check-sale>	

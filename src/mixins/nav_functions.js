@@ -19,6 +19,10 @@ export default {
 				total += Number(this.messages_not_read)
 			}
 			
+			if (this.can('alerts.problemas_al_facturar')) {
+				total += Number(this.problemas_al_facturar.length)
+			}
+			
 			total += Number(this.deposit_movements_en_curso.length)
 			
 

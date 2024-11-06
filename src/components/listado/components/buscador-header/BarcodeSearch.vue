@@ -45,35 +45,35 @@ export default {
 
 			} else {
 
-				let filters = [
-					{
-						type: 'text',
-						key: 'bar_code',
-						text: 'Codigo de barras',
-						value: this.bar_code,
-					}
-				]
+				// let filters = [
+				// 	{
+				// 		type: 'text',
+				// 		key: 'bar_code',
+				// 		text: 'Codigo de barras',
+				// 		igual_que: this.bar_code,
+				// 	}
+				// ]
 
-				console.log('se va a buscar con esto:')
-				console.log(filters)
+				// console.log('se va a buscar con esto:')
+				// console.log(filters)
 
 				this.$store.commit('article/setFilterPage', 1)
-				this.$store.commit('article/setFilters', filters)
+				// this.$store.commit('article/setFilters', filters)
 				this.$store.commit('article/setLoading', true)
 				this.$store.commit('article/setFromDate', '')
 
-				this.$api.post('search/'+'article/null/1', {
-					filters: filters,
-				})
+				this.$api.get('vender/buscar-articulo-por-codido/'+this.bar_code)
 				.then(res => {
-					console.log(res.data.data)
+					console.log(res.data.article)
+					this.bar_code = ''
 					this.$store.commit('article/setLoading', false)
 					this.$store.commit('article/setIsFiltered', true) 
-					this.$store.commit('article/setFiltered', res.data.data)
-					this.$store.commit('article/setTotalFilterPages', res.data.last_page)
-					this.$store.commit('article/setTotalFilterResults', res.data.total)
+					this.$store.commit('article/setFiltered', [res.data.article])
+					this.$store.commit('article/setTotalFilterPages', 1)
+					this.$store.commit('article/setTotalFilterResults', 1)
 				})
 				.catch(err => {
+					this.$store.commit('article/setLoading', false)
 					console.log(err)
 					this.$toast.error('Error al buscar')
 				})

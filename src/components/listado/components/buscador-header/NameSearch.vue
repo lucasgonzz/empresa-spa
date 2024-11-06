@@ -51,7 +51,7 @@ export default {
 						type: 'text',
 						key: 'name',
 						text: 'Nombre',
-						value: this.name,
+						que_contenga: this.name,
 					}
 				]
 

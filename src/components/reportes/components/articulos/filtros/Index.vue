@@ -42,6 +42,16 @@ export default {
 		CantidadResultados: () => import('@/components/reportes/components/articulos/filtros/CantidadResultados'),
 		Orden: () => import('@/components/reportes/components/articulos/filtros/Orden'),
 		BtnBuscar: () => import('@/components/reportes/components/articulos/filtros/BtnBuscar'),
+	},
+	created() {
+		this.limpiar_filtros()
+	},
+	methods: {
+		limpiar_filtros() {
+			this.$store.commit('reportes/article_purchase/set_category_id', null)
+			this.$store.commit('reportes/article_purchase/set_client_id', null)
+			this.$store.commit('reportes/article_purchase/set_provider_id', null)
+		}
 	}
 }
 </script>

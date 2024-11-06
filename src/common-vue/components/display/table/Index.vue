@@ -4,6 +4,12 @@
 		:id="id"
 		v-if="!loading"
 		class="cont-table">
+
+			<pagination
+			v-if="!pivot"
+			@filtrar="filtrar"
+			:model_name="model_name"></pagination>	
+
 			<table
 			v-if="models.length"
 			class="common-table">
@@ -11,7 +17,36 @@
 					<tr>
 						<th
 						v-for="field in fields">
-							{{ field.label }}
+
+							<div class="cont-th">
+								<span v-html="field.label"></span>
+
+								<div
+								v-if="!pivot && usar_filtros"
+								class="cont-filter-buttons">
+									
+									<ordenar
+									class="m-l-10"
+									@filtrar="filtrar"
+									:model_name="model_name"
+									:key="field.key"
+									:field="field"></ordenar>	
+
+									<btn-filter
+									:model_name="model_name"
+									@toggleFilter="toggleFilter"
+									:field="field"></btn-filter>
+								</div>
+
+
+								<filter-component
+								v-if="!pivot && usar_filtros"
+								@limpiar_show_filters="limpiar_show_filters"
+								@filtrar="filtrar"
+								v-show="show_filters[field.key]"
+								:model_name="model_name"
+								:field="field"></filter-component>
+							</div>	
 						</th>
 					</tr>
 				</thead>
@@ -122,6 +157,10 @@ export default {
 	directives: {infiniteScroll},
 	components: {
 		TrComponent: () => import('@/common-vue/components/display/table/Tr'),
+		FilterComponent: () => import('@/common-vue/components/display/table/filter/Index'),
+		Ordenar: () => import('@/common-vue/components/display/table/Ordenar'),
+		BtnFilter: () => import('@/common-vue/components/display/table/BtnFilter'),
+		Pagination: () => import('@/common-vue/components/display/table/pagination/Index'),
 	},
 	props: {
 		properties: {
@@ -169,13 +208,20 @@ export default {
 			type: Boolean,
 			default: true,
 		},
+		usar_filtros: {
+			type: Boolean,
+			default: true,
+		},
 	},
 	created() {
+		console.log('se creo tabla')
 		this.setHeight()
 		let that = this
 		window.addEventListener('resize', function(event) {
 			that.setHeight()
 		}, true);
+
+		this.set_fields()
 	},
 	data() {
 		return {
@@ -183,6 +229,8 @@ export default {
 			busy: false,
 			show_buttons_scroll: false,
 			intentos: 0,
+			fields: [],
+			show_filters: {},
 		}
 	},
 	computed: {
@@ -204,6 +252,7 @@ export default {
 			return Math.random()+'-'+this.model_name
 		},
 		props() {
+			console.log('calculando props')
 			let props = []
 			 if (this.properties) {
 				props = this.propertiesToShow(this.properties, true)
@@ -258,37 +307,29 @@ export default {
 						
 					})
 				}
-			} else if (this.show_actualizado) {
+			} 
+			else {
 				props.push({
-					key: 'updated_at',
-					text: 'Actualizado',
-					is_date: true,
+					key: 'table_right_options',
+					text: '',
+					no_usar_en_filtros: true,
 				})
 			}
 			return props 
 		},
-		fields() {
-			let fields = []
-			this.props.forEach(prop => {
-				fields.push({
-					key: prop.key,
-					label: this.propText(prop, true, true),
-					sortable: prop.sortable,
-				})
-			})
+		// fields() {
+		// 	let fields = []
+		// 	this.props.forEach(prop => {
+		// 		fields.push({
+		// 			key: prop.key,
+		// 			label: this.propText(prop, true, true),
+		// 			sortable: prop.sortable,
+		// 			type: prop.type_to_update ? prop.type_to_update : prop.type
+		// 		})
+		// 	})
 
-			// if (!this.pivot) {
-			// 	fields.push({
-			// 		key: 'updated_at',
-			// 		label: 'Actualizado',
-			// 	})
-			// } 
-			// fields.push({
-			// 	key: 'edit',
-			// 	label: '',
-			// })
-			return fields 
-		},
+		// 	return fields 
+		// },
 		columns() {
 			// let props = this.propertiesToShow(this.properties, true)
 			if (this.props.length) {
@@ -341,9 +382,133 @@ export default {
 	watch: {
 		loading() {
 			this.setHeight()
+		},
+		model_name() {
+			this.set_fields()
+		},
+		props() {
+			this.set_fields()
+		},
+		models() {
+			this.setHeight()
 		}
 	},
 	methods: {
+		filtrar() {
+			let filters = this.$store.state[this.model_name].filters
+			let current_page = this.$store.state[this.model_name].filter_page
+			console.log('filters:')
+			console.log(filters)
+			
+			this.limpiar_show_filters()
+			
+			this.$store.commit('auth/setMessage', 'Filtrando '+this.plural(this.model_name))
+			this.$store.commit('auth/setLoading', true)
+
+
+			this.$api.post('search/'+this.model_name+'/null/1?page='+current_page, { 
+				filters: filters
+			})
+			.then(res => {
+				this.$store.commit('auth/setLoading', false)
+
+				console.log('resultados::')
+				console.log(res)
+
+				if (res.data.data.length) {
+
+					// this.$store.commit(this.model_name+'/setFilters', [])
+					
+					this.$store.commit(this.model_name+'/setIsFiltered', true) 
+					this.$store.commit(this.model_name+'/setFiltered', res.data.data)
+					this.$store.commit(this.model_name+'/setTotalFilterPages', res.data.last_page)
+					this.$store.commit(this.model_name+'/setTotalFilterResults', res.data.total)
+					// this.$store.commit(this.model_name+'/setFilterPage', 1)
+
+					// this.local_field.igual_que = null;
+					// this.local_field.que_contenga = null;
+					// this.local_field.menor_que = null;
+					// this.local_field.mayor_que = null;
+				} else {
+
+					this.$toast.error('No se encontraron resultados')
+				}
+
+
+			})
+			.catch(err => {
+				this.$store.commit('auth/setLoading', false)
+				this.$toast.error('Error al buscar')
+			})
+		},
+		toggleFilter(field_key) {
+			if (this.show_filters[field_key]) {
+				this.$set(this.show_filters, field_key, false);
+			} else {
+				// Si no está visible, oculta todos los filtros y muestra solo el seleccionado
+				this.show_filters = {}; // Reinicia el objeto show_filters
+				this.$set(this.show_filters, field_key, true); // Activa solo el seleccionado
+			}
+		},
+		limpiar_show_filters() {
+			this.show_filters = {}; 
+		},
+		set_fields() {
+
+			console.log('set_fields:')
+
+			this.fields = []
+			this.props.forEach(prop => {
+				this.fields.push({
+					key: prop.key,
+					label: this.propText(prop, true, true),
+					sortable: prop.sortable,
+					type: prop.type_to_update ? prop.type_to_update : prop.type
+				})
+			})
+			console.log(this.fields)
+
+			this.set_filters()
+		},
+		set_filters() {
+
+			if (this.pivot) {
+				return
+			}
+
+			console.log('set_filters')
+
+			console.log('props:')
+			console.log(this.props)
+
+			let filters = []
+
+			this.props.forEach(prop => {
+				if (typeof prop.no_usar_en_filtros == 'undefined'
+					&& prop.type != 'images'
+					&& prop.type != 'image'
+					&& !prop.belongs_to_many
+				) {
+
+					console.log('agregando filtro para '+prop.text)
+
+					filters.push({
+						key: prop.key,
+						label: this.propText(prop, true, true),
+						type: prop.type_to_update ? prop.type_to_update : prop.type,
+						igual_que: prop.type == 'select' ? 0 : '',
+						checkbox: -1,
+					})
+				} else {
+					console.log('NO SE AGREGO filtro para '+prop.text)
+				}
+			})
+
+			console.log('filters:')
+			console.log(filters)
+			
+			this.$store.commit(this.model_name+'/setFilters', filters)
+		},
 		onRowSelected(model) {
 			this.$emit('onRowSelected', model)
 		},
@@ -454,32 +619,48 @@ export default {
 		th, td 
 			// white-space: nowrap
 			text-align: left
-			
-		th 
-			white-space: nowrap
-			padding: 10px 15px
-			font-size: 17px
+			min-width: 150px
+
+		th  
 			position: sticky
 			top: 0px
-			font-weight: bold
-			background: #2C2C2C
-			color: #f1f3f4
-			@if ($theme == 'dark')
-				border-left: 1px solid rgba(255,255,255,.2)
-				border-bottom: 1px solid rgba(255,255,255,.2)
-				&:first-child
-					border-left: 0 !important
-				&:last-child
-					border-left: 0 !important
-			@else 
-				border-bottom: 1px solid rgba(0,0,0,.6)
 
+			.cont-th
+
+				// margin: -1px
+				position: relative
+				display: flex  
+				flex-direction: row
+				justify-content: space-between
+				white-space: nowrap
+				padding: 10px 15px
+				font-size: 17px
+				font-weight: bold
+				background: #2C2C2C
+				color: #f1f3f4
+				
+				@if ($theme == 'dark')
+					border-left: 1px solid rgba(255,255,255,.2)
+					border-bottom: 1px solid rgba(255,255,255,.2)
+					&:first-child
+						border-left: 0 !important
+					&:last-child
+						border-left: 0 !important
+				@else 
+					border-bottom: 1px solid rgba(0,0,0,.6)
+
+
+				&.hovered .filter-component
+					opacity: 1
+					pointer-events: auto
 
 		td 
 			padding: 5px 15px
 			line-height: 25px
 			font-size: 1em
+			width: 500px
 			max-width: 500px
+			overflow-wrap: break-word
 			&:last-child 
 				white-space: nowrap
 				max-width: 2000px
@@ -491,6 +672,14 @@ export default {
 				border-bottom: 1px solid rgba(0,0,0,.2)
 				// background: #f1f3f4
 				background: #FFF 
+
+
+		.cont-filter-buttons
+			display: flex  
+			flex-direction: row 
+			margin: -3px 0
+
+
 
 		.list-title td
 			position: sticky
@@ -533,8 +722,11 @@ export default {
 .modal-content
 	.cont-table
 		width: 98% 
+		min-height: 300px
 		max-height: 50vh
 		// margin-left: -15px
 		margin-top: 15px
+
+
 
 </style>

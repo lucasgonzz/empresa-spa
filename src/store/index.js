@@ -135,6 +135,12 @@ import article_purchase from '@/store/article_purchase'
 
 import inventory_performance from '@/store/inventory_performance'
 
+import nota_credito from '@/store/nota_credito'
+import pago_de_cliente from '@/store/pago_de_cliente'
+
+// Con afip_ticket cargo los problemas al facturar (facturas con errores y sin cae)
+import afip_ticket from '@/store/afip_ticket'
+
 
 Vue.use(Vuex)
 
@@ -276,5 +282,10 @@ export default new Vuex.Store({
         article_purchase,
 
         inventory_performance,
+
+        nota_credito,
+        pago_de_cliente,
+
+        afip_ticket,
     }
 })

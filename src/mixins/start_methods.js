@@ -22,6 +22,39 @@ export default {
 			this.get_deposit_movements_en_curso()
 
 			this.get_buyers_and_set_messages_not_read()
+
+			this.get_problemas_al_facturar()
+
+			this.get_articles_por_defecto()
+
+			this.get_ultimos_articulos_actualizados()
+		},
+		get_ultimos_articulos_actualizados() {
+			if (!this.owner.download_articles) {
+
+				this.$api.get('articles-ultimos-actualizados')
+				.then(res => {
+					this.$store.commit('article/addModels', res.data.models)
+				})
+				.catch(err => {
+					this.$toast.error('error al cargar ultimos articulos actualizados')
+				})
+			}
+		},
+		get_articles_por_defecto() {
+			if (this.hasExtencion('articles_default_in_vender') 
+				&& !this.owner.download_articles) {
+
+				this.$api.get('articles-por-defecto')
+				.then(res => {
+					console.log('articles-por-defecto:')
+					console.log(res.data.models)
+					this.$store.commit('article/addModels', res.data.models)
+				})
+				.catch(err => {
+					this.$toast.error('error al cargar articulos por defecto')
+				})
+			}
 		},
 		get_deposit_movements_en_curso() {
 			this.$store.dispatch('deposit_movement/en_curso/getModels')
@@ -81,6 +114,9 @@ export default {
 				this.$store.commit('message/setChatsToShow')
 				console.log('setChatsToShow mandado')
 			})
+		},
+		get_problemas_al_facturar() {
+			this.$store.dispatch('afip_ticket/get_problemas_al_facturar')
 		}
 	}
 }

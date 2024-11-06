@@ -48,58 +48,78 @@ export default {
 			return this.$store.state.price_type.models 
 		},
 		props_to_show() {
-			if (this.price_types.length || this.current_acount_payment_method_discounts.length) {
-				let props = [
-					{
-						text: 'N°',
-						key: 'num',	
-					},
-					{
-						text: 'Imagen',
-						key: 'images',
-						type: 'images',	
-					},
-					{
-						text: 'Cod Prov',
-						key: 'provider_code',	
-					},
-					{
-						text: 'Nombre',
-						key: 'name',	
-					},
-					{
-						text: 'Stock',
-						key: 'stock',	
-					},
-				]
+			
+			let props = [
+				{
+					text: 'N°',
+					key: 'num',	
+				},
+				{
+					text: 'Imagen',
+					key: 'images',
+					type: 'images',	
+				},
+				{
+					text: 'Cod Prov',
+					key: 'provider_code',	
+				},
+				{
+					text: 'Nombre',
+					key: 'name',	
+				},
+			]
 
-				if (this.current_acount_payment_method_discounts.length) {
+			if (!this.price_types.length) {
 
+				props.push({
+					text: 'Precio',
+					key: 'final_price',
+					function: 'get_price_formateado',
+				})
+			}
+
+			if (this.current_acount_payment_method_discounts.length) {
+
+				this.current_acount_payment_method_discounts.forEach(payment_method => {
 					props.push({
-						text: 'Precio',
-						key: 'final_price',
-						function: 'get_price_formateado',
+						text: payment_method.current_acount_payment_method.name,
+						key: 'payment_method_'+payment_method.current_acount_payment_method_id,
+						function: 'get_price_with_discount_in_vender',
 					})
+				})
+			}
 
-					this.current_acount_payment_method_discounts.forEach(payment_method => {
-						props.push({
-							text: payment_method.current_acount_payment_method.name,
-							key: 'payment_method_'+payment_method.current_acount_payment_method_id,
-							function: 'get_price_with_discount_in_vender',
-						})
+			if (this.addresses.length) {
+
+				this.addresses.forEach(address => {
+					props.push({
+						text: address.street,
+						key: 'address_'+address.id,
+						function: 'get_address_stock_in_vender',
 					})
-				}
+				})
+			} else {
 
-				return props
-			} 
-			return null
+				props.push({
+					text: 'Stock',
+					key: 'stock',
+				})
+			}
+
+			return props
 		},
 		current_acount_payment_method_discounts() {
 			return this.$store.state.current_acount_payment_method_discount.models 
-		}
+		},
+		addresses() {
+			return this.$store.state.address.models 
+		},
 	},
 	methods: {
 		setSelected(result, results) {
+
+			console.log('setSelected:')
+			console.log(result)
 
 			this.article.name = result.query
 			
@@ -112,23 +132,20 @@ export default {
 				input.value = result.model.name
 			}
 		},
-		set_codigo_input_value(finded_article) {
-			if (typeof finded_article != 'undefined') {
+		set_codigo_input_value(result) {
+			if (typeof result != 'undefined' && result !== null) {
 
 				let input = document.getElementById('article-bar-code')
-
-				console.log('input:::')
-				console.log(input)
 
 				if (input) {
 					
 					if (this.hasExtencion('codigo_proveedor_en_vender')) {
 						
-						input.value = finded_article.provider_code
-						console.log('se puso el codigo de proveedor: '+finded_article.provider_code)
+						input.value = result.provider_code
+						console.log('se puso el codigo de proveedor: '+result.provider_code)
 					} else {
 
-						input.value = finded_article.bar_code
+						input.value = result.bar_code
 
 					}
 				}

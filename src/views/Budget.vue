@@ -37,6 +37,9 @@ export default {
 			return this.budget_model && this.budget_model.budget_status_id == 1
 		}
 	},
+	created() {
+		this.$store.dispatch('budget/getModels')
+	},
 	methods: {
 		modelSaved(model) {
 			if (model.client_id && model.budget_status_id && model.budget_status.name == 'Confirmado') {

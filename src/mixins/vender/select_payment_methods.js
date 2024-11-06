@@ -161,6 +161,8 @@ export default {
 					this.$store.commit('vender/current_acount_payment_methods/set_watch_activado', true);
 				}, 1000)
 
+				this.$store.commit('vender/set_caja_id', 0)
+
 				return true 
 			}
 			console.log('No paso guardarMetodosPago')

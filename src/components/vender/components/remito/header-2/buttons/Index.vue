@@ -1,6 +1,10 @@
 <template>
 	<div
 	class="vender-buttons">
+
+		<vuelto-efectivo></vuelto-efectivo>
+
+
 		<numero-orden-de-compra></numero-orden-de-compra>
 		<pago></pago>
 		<print></print>
@@ -12,6 +16,7 @@ export default {
 		NumeroOrdenDeCompra: () => import('@/components/vender/components/remito/header-2/buttons/NumeroOrdenDeCompra'),
 		Pago: () => import('@/components/vender/components/remito/header-2/buttons/Pago'),
 		Print: () => import('@/components/vender/components/remito/header-2/buttons/Print'),
+		VueltoEfectivo: () => import('@/components/vender/components/remito/VueltoEfectivo'),
 	},
 }
 </script>

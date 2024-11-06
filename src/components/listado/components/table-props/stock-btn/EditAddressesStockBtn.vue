@@ -50,6 +50,22 @@ export default {
 	},
 	methods: {
 		edit_addresses() {
+
+			this.addresses.forEach(address => {
+
+				let article_address = this.article.addresses.find(_address => _address.id == address.id)
+
+				if (typeof article_address == 'undefined') {
+
+					this.article.addresses.push({
+						...address,
+						pivot: {
+							amount: ''
+						}
+					})
+				}
+			})
+
 			this.$store.commit('article/edit_addresses_stock/set_article', this.article)
 		},
 		cancel() {
@@ -66,7 +82,8 @@ export default {
 			.then(res => {
 				this.$store.commit('article/edit_addresses_stock/set_article', null)
 				this.$store.commit('auth/setLoading', false)
-				this.$toast.success('Actualizado correctamente')
+				// this.$toast.success('Actualizado correctamente')
+				this.loadModel('article', this.article.id)
 			})
 			.catch(err => {
 				this.$store.commit('article/edit_addresses_stock/set_article', null)

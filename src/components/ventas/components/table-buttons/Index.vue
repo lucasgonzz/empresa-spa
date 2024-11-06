@@ -4,7 +4,7 @@
 		:model="model"></text-info>
 
 		<afip-buttons
-		:model="model"></afip-buttons>
+		:sale="model"></afip-buttons>
 	</div>
 </template>
 <script>

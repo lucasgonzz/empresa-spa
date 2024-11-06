@@ -92,7 +92,9 @@
 					</template>
 
 					<template
-					v-if="index == props.length-1">
+					v-if="prop.key == 'table_right_options'">
+					<!-- <template
+					v-if="index == props.length-1"> -->
 						<slot name="table_right_options" :model="model">
 							&nbsp
 						</slot>
@@ -213,9 +215,11 @@ export default {
 	width: 100%
 	display: flex 
 	flex-direction: row 
-	justify-content: space-between
+	justify-content: flex-start // Cambia a flex-start para permitir que el contenido ocupe el espacio disponible
 	align-items: center
-	white-space: normal
+	white-space: nowrap // Esto evitará que el texto se rompa en múltiples líneas
+	overflow: hidden // Asegúrate de que el contenido no sobresalga
+	text-overflow: ellipsis // Para agregar puntos suspensivos si el texto es demasiado largo
 
 .selected-row
 	font-weight: bold 

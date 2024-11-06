@@ -86,7 +86,7 @@ class="buttons-listado">
 	</b-button>
 
 	<b-button 
-	v-if="order_production_statuses.length"
+	v-if="hasExtencion('produccion')"
 	variant="success"
 	size="sm"
 	@click.stop="showArticleInRecipes()" 

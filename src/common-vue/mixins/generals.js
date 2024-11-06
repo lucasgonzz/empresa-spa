@@ -129,11 +129,35 @@ export default {
 			if (this.has_extra_config) {
 				return require('@/mixins/extra_config').default
 			}
-		}, 
+		},  
 	},
 	methods: {
-		get_properties_to_show_ordenadas(model_name) {
+		show_model(model_name, model_id) {
+            this.$store.commit('auth/setMessage', 'Cargando '+this.singular(model_name))
+            this.$store.commit('auth/setLoading', true)
+            this.$api.get(this.routeString(model_name)+'/'+model_id)
+            .then(res => {
+                this.setModel(res.data.model, model_name)
+            })
+            .catch(err => {
+                console.log(err)
+            })
+		},
+		get_properties_to_show(model_name) {
 			let props = require(`@/models/${model_name}`).default.properties
+
+			props = this.check_extencions(props)
+
+			return props
+		},
+		get_properties_to_show_ordenadas(model_name) {
+
+			let props = this.$store.state[model_name].props_to_show
+
+			if (typeof props == 'undefined') {
+				props = require(`@/models/${model_name}`).default.properties
+
+			}
 
 			props = this.check_extencions(props)
 
@@ -393,12 +417,17 @@ export default {
 		},
 		propText(prop, capitalize = true, from_table = false) {
 			let text 
+
+			if (prop.key == 'table_right_options') {
+				return '&nbsp'
+			}
+
 			if (from_table && prop.table_text) {
 				return prop.table_text
 			}
 			if (prop.text) {
 				text = prop.text 
-			} else {
+			} else if (prop.key) {
 				text = prop.key.replaceAll('_', ' ')
 			}
 			if (capitalize) {
@@ -664,13 +693,13 @@ export default {
 				}
 				if (model[prop.key]) {
 					if (prop.use_store_models) {
-						console.log('relationship: '+relationship)
 						let finded_model = this.$store.state[relationship].models.find(_model => {
 							return _model.id == model[prop.key]
 						})
 						if (typeof finded_model != 'undefined') {
 							return finded_model[prop_name]	
 						}
+						console.log('no se encontro la relacion para '+relationship)
 						return null
 					} else if (model[relationship] && model[relationship][prop_name]) {
 						return model[relationship][prop_name] 
@@ -759,7 +788,7 @@ export default {
 		propertiesToShow(props, with_title_and_images = true) {
 			if (with_title_and_images) {
 				return props.filter(prop => {
-					return this.canProp(prop) && (typeof prop.not_show == 'undefined' || prop.is_title)
+					return this.canProp(prop) && (typeof prop.not_show == 'undefined' || !prop.not_show || prop.is_title)
 					// return this.canProp(prop) && prop.type != 'search' && (typeof prop.not_show == 'undefined' || prop.is_title)
 				})
 			} else {

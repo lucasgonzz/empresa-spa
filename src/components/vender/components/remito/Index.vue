@@ -12,8 +12,6 @@ v-if="view == 'remito'">
 	<observations></observations>
 
 	<articles-table></articles-table>
-
-	<vuelto-efectivo></vuelto-efectivo>
 </div>
 </template>
 <script>
@@ -31,7 +29,6 @@ export default {
 		ArticlesTable, 	
 		PreviusSaleData, 
 		Observations,
-		VueltoEfectivo: () => import('@/components/vender/components/remito/VueltoEfectivo'),
 	}
 }
 </script>

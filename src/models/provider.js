@@ -3,7 +3,7 @@ export default {
 		{
 			text: 'N°',
 			key: 'num',
-			type: 'text',
+			type: 'number',
 			not_show_on_form: true,
 		},
 		{
@@ -85,15 +85,15 @@ export default {
 			type: 'select',
 			value: 0,
 		},
-		{
-			text: 'Listas de precios',
-			key: 'provider_price_lists',
-			has_many: {
-				text: 'Lista de precios',
-				model_name: 'provider_price_list',
-			},
-			not_show: true,
-		},
+		// {
+		// 	text: 'Listas de precios',
+		// 	key: 'provider_price_lists',
+		// 	has_many: {
+		// 		text: 'Lista de precios',
+		// 		model_name: 'provider_price_list',
+		// 	},
+		// 	not_show: true,
+		// },
 	],
 	singular_model_name_spanish: 'Proveedor',
 	plural_model_name_spanish: 'Proveedores',

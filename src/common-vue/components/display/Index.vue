@@ -8,6 +8,7 @@
 
 		<table-component
 		@onRowSelected="clicked"
+		:usar_filtros="usar_filtros"
 		:show_empty_text="show_empty_text"
 		:show_actualizado="show_actualizado"
 		:set_model_on_row_selected="set_model_on_row_selected"
@@ -28,10 +29,10 @@
 				<slot name="table_right_options" :model="slotProps.model"></slot>
 			</template>
 			<template #btn_add_to_show>
-				<btn-add-to-show
+				<!-- <btn-add-to-show
 				v-if="show_btn_add_to_show"
 				:model_name="model_name"
-				@add="addModelsToShow"></btn-add-to-show>
+				@add="addModelsToShow"></btn-add-to-show> -->
 			</template>
 			
 			<template
@@ -134,6 +135,10 @@ export default {
 			default: true,
 		},
 		show_empty_text: {
+			type: Boolean,
+			default: true,
+		},
+		usar_filtros: {
 			type: Boolean,
 			default: true,
 		},

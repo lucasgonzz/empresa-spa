@@ -14,7 +14,8 @@ export default {
 			button: {
 				variant: 'info',
 				emit: 'showDetails',
-			}
+			},
+			// function: 'current_acount_btn_text'
 		},
 		{
 			text: 'Info Pagos',

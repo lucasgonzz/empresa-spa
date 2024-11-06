@@ -1,5 +1,5 @@
 <template>
-	<div class="cont-dias-restantes">
+	<div class="cont-dias-restantes align-center j-start">
 		<span>
 			Mostrar en amarillo cuando falten
 		</span>
@@ -27,13 +27,8 @@ export default {
 </script>
 <style lang="sass">
 .cont-dias-restantes
-	display: flex 
-	flex-direction: row 
-	justify-content: center 
-	align-items: center 
-	margin-top: 15px 
-	margin-left: 15px
-
+	// display: flex 
+	// flex-direction: row 
 
 	input 
 		width: 70px

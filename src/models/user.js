@@ -65,11 +65,19 @@ export default {
 		},
 
 		{
+			text: 'Imprimir cabecera en PDF de articulos',
+			key: 'header_articulos_pdf',
+			type: 'checkbox',
+		},
+
+		{
 			text: 'Imagen de cabecera en PDF',
 			key: 'image_pdf_header_url',
 			type: 'image',
 			crop_aspect_ratio: 4/1,
 		},
+
+
 
 		{
 			text: 'Cantidad de letras del nombre a partir de las cuales buscar en VENDER',

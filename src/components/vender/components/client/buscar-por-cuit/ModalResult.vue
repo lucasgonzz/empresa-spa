@@ -80,6 +80,10 @@ export default {
 					key: 'location_id',
 					value: location_id,
 				},
+				{
+					key: 'iva_condition_id',
+					value: 1,
+				},
 			]
 
 			console.log('properties_to_override:')

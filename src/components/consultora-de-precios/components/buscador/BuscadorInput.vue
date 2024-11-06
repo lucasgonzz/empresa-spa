@@ -19,7 +19,7 @@ export default {
 			this.$store.commit('auth/setLoading', true)
 			this.$store.commit('auth/setMessage', 'Buscando')
 
-			this.$api.get('consultora-de-precio/buscador/'+this.codigo)
+			this.$api.get('vender/buscar-articulo-por-codido/'+this.codigo)
 			.then(res => {
 				this.$store.commit('auth/setLoading', false)
 
@@ -31,9 +31,11 @@ export default {
 
 					this.$toast.error('No se encontro articulo')
 					this.$store.commit('consultora_de_precio/set_article', null)
+					this.$store.commit('consultora_de_precio/set_variant', null)
 				} else {
 
 					this.$store.commit('consultora_de_precio/set_article', resultado)
+					this.$store.commit('consultora_de_precio/set_variant', res.data.variant)
 				}
 
 				this.resetear_buscador()

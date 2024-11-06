@@ -51,13 +51,22 @@ export default {
 
 		ventas_cobradas_show_option: 'cobradas-y-no-cobradas',
 		afip_ticket_show_option: 'con-y-sin-factura',
+		payment_method_show_option: 'todos',
+
+		props_to_show: [],
 	},
 	mutations: {
+		set_props_to_show(state, value) {
+			state.props_to_show = value
+		},
 		setVentasCobradasShowOption(state, value) {
 			state.ventas_cobradas_show_option = value
 		},
 		setAfipTicketShowOption(state, value) {
 			state.afip_ticket_show_option = value
+		},
+		set_payment_method_show_option(state, value) {
+			state.payment_method_show_option = value
 		},
 
 
@@ -124,6 +133,17 @@ export default {
 		},
 		setFilters(state, value) {
 			state.filters = value
+		},
+		addFilter(state, filter_to_add) {
+			let index = state.filters.findIndex(filter => {
+				return filter.key == filter_to_add.key
+			})
+
+			if (index == -1) {
+				state.filters.unshift(filter_to_add)
+			} else {
+				state.filters.splice(index, 1, filter_to_add)
+			}
 		},
 		setFiltered(state, value) {
 			state.filtered = value

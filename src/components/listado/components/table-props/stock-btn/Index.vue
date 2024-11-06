@@ -7,7 +7,14 @@
 		class="m-l-10"
 		@click.stop="stockMovement"
 		variant="outline-primary">
-			{{ article.stock }}
+			<span
+			v-if="article.stock !== null">
+				{{ article.stock }}
+			</span> 
+			<span
+			v-else>
+				Asignar Stock
+			</span> 
 		</b-button>
 
 		<edit-addresses-stock-btn

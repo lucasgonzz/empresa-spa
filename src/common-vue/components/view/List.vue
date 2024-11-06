@@ -3,11 +3,13 @@
 	class="w-100">
 		<previus-days
 		v-if="show_previus_days_"
+		:model_name_for_get_models="model_name_for_get_models"
 		:check_permissions="check_permissions_previus_days"
 		:model_name="model_name"></previus-days>
 
 		<slot name="display_top"></slot>
 		<display
+		:usar_filtros="usar_filtros"
 		:show_actualizado="show_actualizado"
 		:set_model_on_row_selected="set_model_on_row_selected"
 		:table_height_para_restar="table_height_para_restar"
@@ -88,7 +90,15 @@ export default {
 			type: Boolean,
 			default: true,
 		},
+		model_name_for_get_models: {
+			type: String,
+			default: null,
+		},
 		show_empty_text: Boolean,
+		usar_filtros: {
+			type: Boolean,
+			default: true,
+		},
 	},
 	computed: {
 		to_show() {
@@ -109,10 +119,16 @@ export default {
 			return this.get_properties_to_show_ordenadas(this.model_name)
 		},
 		show_previus_days_() {
+			if (this.se_esta_filtrando) {
+				return false
+			}
 			if (this.show_previus_days !== null) {
 				return this.show_previus_days
 			}
 			return this.$store.state[this.model_name].from_dates
+		},
+		se_esta_filtrando() {
+			return this.$store.state[this.model_name].is_filtered
 		}
 	},
 	methods: {

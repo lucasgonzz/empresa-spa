@@ -17,9 +17,12 @@ model_name="pending">
 	</template>
 
 	<template #horizontal_nav_center>
-		<set-dias-restantes-en-amarillo></set-dias-restantes-en-amarillo>
+		<div class="j-between">
+			
+			<set-dias-restantes-en-amarillo></set-dias-restantes-en-amarillo>
 
-		<btn-recurrentes></btn-recurrentes>
+			<btn-recurrentes></btn-recurrentes>
+		</div>
 	</template>
 
 	<template #model_modal_header>

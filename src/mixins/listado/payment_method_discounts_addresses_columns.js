@@ -6,8 +6,56 @@ export default {
 		price_types() {
 			return this.$store.state.price_type.models 
 		},
-		properties_to_show() {
-			let props = this.get_properties_to_show_ordenadas('article')
+		props_to_show() {
+			return this.$store.state.article.props_to_show 
+		},
+	},
+	data() {
+		return {
+			properties_to_show: [],
+		}
+	},
+	watch: {
+		// addresses() {
+		// 	this.set_properties_to_show()
+		// },
+		price_types() {
+			console.log('Se va a llamar desde price_types')
+			this.set_properties_to_show()
+		},
+		props_to_show() {
+			console.log('Se va a llamar desde props_to_show')
+			this.set_properties_to_show()
+		},
+	},
+	created() {
+		// console.log('Se va a llamar desde CREATED')
+		// this.set_properties_to_show()
+	},
+	methods: {
+		set_properties_to_show() {
+
+			let props = []
+
+			if (this.props_to_show.length) {
+
+				props = this.props_to_show
+			} else {
+
+				props = this.get_properties_to_show_ordenadas('article')
+			}
+
+			console.log('Empieza con estas props:')
+			console.log(props)
+
+
+			if (!this.owner.online) {
+				props = props.filter(prop => prop.key != 'images')
+			}
+
+			if (this.hasExtencion('no_usar_codigos_de_barra')) {
+				props = props.filter(prop => prop.key != 'bar_code')
+			}
 
 			if (this.authenticated && this.hasExtencion('articulo_margen_de_ganancia_segun_lista_de_precios')) {
 
@@ -23,6 +71,7 @@ export default {
 							text: price_type.name,
 							key: 'price_type_'+price_type.id,
 							type: 'text',
+							no_usar_en_filtros: true,
 							// not_show_on_form: true,
 						})
 					}
@@ -41,6 +90,7 @@ export default {
 							key: 'payment_method_discount_'+dicount.id,
 							type: 'text',
 							not_show_on_form: true,
+							no_usar_en_filtros: true,
 						})
 					}
 				})
@@ -50,23 +100,37 @@ export default {
 
 				if (this.no_esta_agregada('address_', address, props)) {
 
-					console.log('agregando la direccion '+address.street)
+					// console.log('agregando la direccion '+address.street)
 					props.push({
 						text: address.street,
 						key: 'address_'+address.id,
 						type: 'text',
 						not_show_on_form: true,
+						no_usar_en_filtros: true,
 					})
 				}
 			})
 
+			// props.push({
+			// 	text: 'Creado',
+			// 	key: 'created_at',
+			// 	type: 'date',
+			// 	is_date: true,
+			// 	not_show_on_form: true,
+			// })
+			// props.push({
+			// 	text: 'Actualizado',
+			// 	key: 'updated_at',
+			// 	type: 'date',
+			// 	is_date: true,
+			// 	not_show_on_form: true,
+			// })
+
 			console.log('Listado props:')
 			console.log(props)
 
-			return props 
+			this.properties_to_show = props
 		},
-	},
-	methods: {
 		no_esta_agregada(model_name, model, props) {
 			let prop = props.find(_prop => {
 				return _prop.key == model_name+model.id 

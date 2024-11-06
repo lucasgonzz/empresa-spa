@@ -23,19 +23,7 @@ export default {
 	},
 	methods: {
 		show_sale() {
-			let model_name = 'sale'
-
-			// this.setModel(this.movimiento_caja.sale, 'sale', [], true, false) 
-
-	        this.$store.commit('auth/setMessage', 'Cargando '+this.singular(model_name))
-	        this.$store.commit('auth/setLoading', true)
-	        this.$api.get(this.routeString(model_name)+'/'+this.movimiento_caja.sale_id)
-	        .then(res => {
-	            this.setModel(res.data.model, model_name)
-	        })
-	        .catch(err => {
-	            console.log(err)
-	        })
+            this.show_model('sale', this.movimiento_caja.sale_id)
 		}
 	}
 }

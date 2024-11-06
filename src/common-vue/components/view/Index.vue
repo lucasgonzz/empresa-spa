@@ -9,7 +9,7 @@
     	:show_btn_remove_belongs_to_many="show_btn_remove_belongs_to_many"
     	@modelSaved="modelSaved"
     	@modelDeleted="modelDeleted"
-    	:properties_to_show="properties_to_show"
+    	:properties_to_show="properties_for_model_modal"
     	:check_permissions="check_permissions"
     	:show_btn_pdf="show_btn_pdf"
     	:show_btn_delete="show_btn_delete"
@@ -45,8 +45,32 @@
     	</model>
 
 		<slot name="header"></slot>
+
+		<view-header
+		v-if="show_view_header"
+		:show_btn_create="show_btn_create"
+		:show_excel_drop_down="show_excel_drop_down"
+		:check_permissions="check_permissions"
+		:has_permission_create_dropdown="has_permission_create_dropdown"
+		:ask_selectable="ask_selectable"
+		:change_from_dates_option="change_from_dates_option"
+		:model_name="model_name">
+			<template v-slot:btn_create>
+				<slot name="horizontal_nav_btn_create"></slot>
+			</template>
+			<template v-slot:horizontal_nav_center>
+				<slot name="horizontal_nav_center"></slot>
+			</template>
+			<template #options_drop_down>
+				<slot name="options_drop_down"></slot>
+			</template>
+			<template #excel_drop_down_options>
+				<slot name="excel_drop_down_options"></slot>
+			</template>
+		</view-header>
 		
 		<horizontal-nav
+		v-else
 		:ask_selectable="ask_selectable"
 		:show_excel_drop_down="show_excel_drop_down"
 		:has_permission_create_dropdown="has_permission_create_dropdown"
@@ -77,6 +101,8 @@
 		<slot name="body"></slot>
 		
 		<list
+		:usar_filtros="usar_filtros"
+		:model_name_for_get_models="model_name_for_get_models"
 		:show_empty_text="show_empty_text"
 		:show_actualizado="show_actualizado"
 		:properties_to_show="properties_to_show"
@@ -121,6 +147,7 @@ export default {
 
 		List,
 		HorizontalNav,
+		ViewHeader: () => import('@/common-vue/components/view/header/Index'),
 	},
 	props: {
 		model_name: {
@@ -293,6 +320,18 @@ export default {
 			type: Boolean,
 			default: true,
 		},
+		model_name_for_get_models: {
+			type: String,
+			default: null,
+		},
+		show_view_header: {
+			type: Boolean,
+			default: true,
+		},
+		usar_filtros: {
+			type: Boolean,
+			default: true,
+		},
 	},
 	computed: {
 		show_view() {
@@ -322,6 +361,9 @@ export default {
 				return this.properties_to_show
 			}
 			return require(`@/models/${this.model_name}`).default.properties 
+		},
+		properties_for_model_modal() {
+			return this.get_properties_to_show(this.model_name)
 		},
 		_show_btn_create() {
 			if (this.check_can_create) {

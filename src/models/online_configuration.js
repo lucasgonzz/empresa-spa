@@ -36,7 +36,7 @@ export default {
 			show: true,
 		},
 		{
-			text: 'Placeholder de Nota para los pedidos',
+			text: 'Nota para los pedidos',
 			key: 'order_description',
 			type: 'textarea',
 			value: '',

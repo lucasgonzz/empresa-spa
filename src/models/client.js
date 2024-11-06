@@ -3,7 +3,7 @@ export default {
 		{
 			text: 'N°',
 			key: 'num',
-			type: 'text',
+			type: 'number',
 			value: '',
 			show: true,
 			not_show_on_form: true,

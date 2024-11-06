@@ -126,6 +126,11 @@ const routes = [
         component: () => import('@/views/Pending')
     },
     {
+        path: '/comprobantes/:view?',
+        name: 'comprobantes',
+        component: () => import('@/views/Comprobantes')
+    },
+    {
         path: '/consultora-de-precios/:view?',
         name: 'consultora_de_precios',
         component: () => import('@/views/ConsultoraDePrecios')

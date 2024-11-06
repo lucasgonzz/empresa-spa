@@ -4,6 +4,8 @@ export default {
 		listenChannels() {
             this.Echo.channel('added_model.'+this.owner_id)
             .notification((notification) => {
+                console.log('notification: ')
+                console.log(notification)
                 let model_name = notification.model_name
                 console.log('added_model: '+this.routeString(model_name))
 

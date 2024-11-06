@@ -27,10 +27,32 @@ export default {
 		display: 'table',
 
 		loading: false,
+
+		props_to_show: [],
 	},
 	mutations: {
+		set_props_to_show(state, value) {
+			state.props_to_show = value
+		},
 		setLoading(state, value) {
 			state.loading = value
+		},
+		setFilters(state, value) {
+			state.filters = value
+		},
+		addFilter(state, filter_to_add) {
+			let index = state.filters.findIndex(filter => {
+				return filter.key == filter_to_add.key
+			})
+
+			if (index == -1) {
+				state.filters.unshift(filter_to_add)
+			} else {
+				state.filters.splice(index, 1, filter_to_add)
+			}
+		},
+		setFiltered(state, value) {
+			state.filtered = value
 		},
 		setModel(state, value) {
 			if (value.model) {

@@ -41,6 +41,9 @@ export default {
 		selected_payment_methods() {
 			return this.$store.state.vender.selected_payment_methods 
 		},
+		descuento() {
+			return this.$store.state.vender.descuento 
+		},
 	},
 	data() {
 		return {
@@ -74,6 +77,8 @@ export default {
 					// total += this.getTotalItem(item, false)
 					new_items.push(item)
 				})
+
+				this.aplicar_descuento()
 
 				this.aplicar_discounts()
 
@@ -165,6 +170,16 @@ export default {
 
 			this.$store.commit('vender/set_monto_credito', monto_credito)
 
+		},
+		aplicar_descuento() {
+			if (this.descuento) {
+
+				this.total_articles -= this.total_articles * Number(this.descuento) / 100 
+				
+				// if (this.discounts_in_services) {
+				// 	this.total_services -= this.total_services * Number(discount.percentage) / 100 
+				// }
+			}
 		},
 		aplicar_discounts() {
 			if (this.discounts_id.length) {

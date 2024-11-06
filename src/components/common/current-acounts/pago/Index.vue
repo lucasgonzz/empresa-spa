@@ -125,7 +125,11 @@ export default {
     },
     methods: {
         setTotalSale() {
-            this.pago.haber = this.totalSale(this.maked_sale, false)
+            this.pago.haber = this.maked_sale.total
+
+            let input = document.getElementsByClassName('payment-method-amount')[0]                
+            input.value = this.selected_current_acounts[0].debe
+            input.focus()
         },
     	hacerPago() {
             if (this.check()) {

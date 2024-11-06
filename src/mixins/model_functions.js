@@ -12,6 +12,29 @@ export default {
         },
     },
 	methods: {
+        // current_acount_btn_text(current_acount, prop) {
+        //     console.log('current_acount_btn_text')
+        //     console.log(current_acount)
+        //     console.log(prop)
+        //     if (current_acount)
+        // },
+        get_hora(model, prop) {
+            return this.hour(model.created_at)
+        },
+        get_address_stock_in_vender(article, prop) {
+            if (typeof article != 'undefined' && typeof prop != 'undefined') {
+
+                let address_id = prop.key.substr(8)
+
+                let article_address = article.addresses.find(address => address.id == address_id)
+
+                if (typeof article_address != 'undefined') {
+
+                    return article_address.pivot.amount
+                } 
+                return null
+            }
+        },
         get_hora_from_created_at(model) {
             if (model.created_at) {
                 return moment(model.created_at).format('h:mm')

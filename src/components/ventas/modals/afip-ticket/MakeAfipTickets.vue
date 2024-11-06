@@ -132,6 +132,9 @@ export default {
 					}
 					
 				}
+
+				this.$store.commit('sale/setIsSelecteable', 0)
+				this.$store.commit('sale/addSelected', [])
 			}
 		},
 		send_request(index) {

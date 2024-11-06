@@ -61,6 +61,11 @@ export default {
 			use_store_models: true,
 		},
 		{
+			key: 'puede_guardar_ventas_sin_cliente',
+			type: 'checkbox',
+			if_has_extencion: 'check_guardar_ventas_con_cliente',
+		},
+		{
 			text: 'Permisos',
 			key: 'permissions',
 			type: 'checkbox',

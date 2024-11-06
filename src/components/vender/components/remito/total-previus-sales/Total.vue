@@ -21,6 +21,11 @@
 				{{ items.length }} productos, {{ cantidad_unidades }} unidades
 			</p>
 			<p
+			v-if="descuento"
+			class="m-0">
+				<strong>- {{ Math.round(descuento) }}%</strong>
+			</p>
+			<p
 			class="m-0"
 			v-for="discount in sale_discounts">
 				<strong>-</strong> {{ discount.name }} {{ discount.percentage }}%
@@ -31,6 +36,9 @@
 				<strong>+</strong> {{ surchage.name }} {{ surchage.percentage }}%
 			</p>
 		</div>
+
+		<forzar-total></forzar-total>
+		
 		<price-type></price-type>
 	</b-col>
 </template>
@@ -40,6 +48,7 @@ export default {
 	mixins: [vender],
 	components: {
 		PriceType: () => import('@/components/vender/components/remito/total-previus-sales/price-type/Index'),
+		ForzarTotal: () => import('@/components/vender/components/remito/total-previus-sales/forzar-total/Index'),
 	},
 	computed: {
 		previus_sale() {
@@ -93,6 +102,9 @@ export default {
 			})
 			return surchages
 		},
+		descuento() {
+			return this.$store.state.vender.descuento
+		}
 	}
 }
 </script>

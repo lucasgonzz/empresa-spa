@@ -30,6 +30,7 @@
 
 	<articles-pre-import-modal></articles-pre-import-modal>
 	<view-component
+	show_view_header
 	show_filter_modal
 	ask_selectable
 	show_excel_drop_down
@@ -45,10 +46,12 @@
 		</template>
 
 		<template #horizontal_nav_center>
-			<!-- <stock-info-buttons></stock-info-buttons> -->
-			<buscador-header></buscador-header>
+			<div class="j-end">
+				
+				<buscador-header></buscador-header>
 
-			<deposit-movements></deposit-movements>
+				<deposit-movements></deposit-movements>
+			</div>
 
 		</template>
 		

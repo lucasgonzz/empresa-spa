@@ -5,6 +5,10 @@
 			<p 
 			class="name">
 				{{ article.name }}	
+				<span
+				v-if="variant">
+					{{ variant.variant_description }}
+				</span>
 			</p>
 
 			<p 
@@ -37,7 +41,10 @@ export default {
 	computed: {
 		article() {
 			return this.$store.state.consultora_de_precio.article 
-		}
+		},
+		variant() {
+			return this.$store.state.consultora_de_precio.variant 
+		},
 	},
 	methods: {
 		get_price_with_discount(payment_discount) {

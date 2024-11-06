@@ -2,6 +2,9 @@ import online from '@/mixins/online'
 export default {
     mixins: [online],
 	computed: {
+        problemas_al_facturar() {
+            return this.$store.state.afip_ticket.problemas_al_facturar 
+        },
         deposit_movements_en_curso() {
             return this.$store.state.deposit_movement.en_curso.models 
         },

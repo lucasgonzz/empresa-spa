@@ -29,6 +29,9 @@ export default {
 		afip_ticket_show_option() {
 			return this.$store.state.sale.afip_ticket_show_option
 		},
+		payment_method_show_option() {
+			return this.$store.state.sale.payment_method_show_option
+		},
 		sales_to_show() {
 			let sales = []
 			if (this.view == 'todas' && this.sub_view == 'todos') {
@@ -83,6 +86,23 @@ export default {
 			} else if (this.afip_ticket_show_option == 'solo-sin-factura') {
 				sales = sales.filter(sale => {
 					return !sale.afip_ticket 
+				})
+			}
+
+			if (this.payment_method_show_option != 'todos') {
+
+				sales = sales.filter(sale => {
+					let has_payment_method = false 
+
+					let payment_method = sale.current_acount_payment_methods.find(_payment_method => {
+						return _payment_method.id == this.payment_method_show_option
+					}) 
+
+					if (typeof payment_method != 'undefined') {
+
+						return true 
+					}
+					return false
 				})
 			}
 

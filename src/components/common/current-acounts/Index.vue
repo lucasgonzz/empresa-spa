@@ -32,16 +32,7 @@
     <model-index
     model_name="provider_order"></model-index>  
 
-    <model-index
-    :show_btn_save="false"
-    :not_show_delete_text="not_show_delete_text"
-    :delete_text="sale_delete_text"
-    :show_btn_remove_belongs_to_many="false"
-    model_name="sale">
-        <template v-slot:model_modal_header="props">
-            <sale-details></sale-details>
-        </template>
-    </model-index>  
+    <sale-modal></sale-modal>
 
     <!-- <model 
     size="xl"
@@ -126,6 +117,7 @@ export default {
         SaleDetails: () => import('@/components/ventas/modals/details/Index'),
         BudgetModalButtons: () => import('@/components/budget/components/ModalButtons'),
         OrderProductionModalButtons: () => import('@/components/produccion/components/order-productions/ModalButtons'),
+        SaleModal: () => import('@/components/common/SaleModal'),
     },
     computed: {
         title() {
@@ -149,20 +141,6 @@ export default {
                 'current_acount/getModels',
             ]
         },
-        sale_to_delete() {
-            return this.$store.state.sale.delete 
-        },
-        not_show_delete_text() {
-            if (this.sale_to_delete && this.sale_to_delete.afip_ticket) {
-                return true 
-            }
-            return false
-        },
-        sale_delete_text() {
-            if (this.sale_to_delete && this.sale_to_delete.afip_ticket) {
-                return 'Esta venta pertenece a una factura, si la elimina se generara una nota de credito por el total de la venta para anularla'
-            }
-        }
     },
 }
 </script>

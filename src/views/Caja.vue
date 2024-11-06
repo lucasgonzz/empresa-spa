@@ -33,7 +33,7 @@ export default {
 		HorizontalNavCenter: () => import('@/components/caja/components/horizontal-nav-center/Index'),
 		TableButtons: () => import('@/components/caja/components/table-buttons/Index'),
 
-		SaleModal: () => import('@/components/caja/modals/sale-modal/Index'),
+		SaleModal: () => import('@/components/common/SaleModal'),
 		MovimientosEntreCajas: () => import('@/components/caja/modals/movimientos-entre-cajas/Index'),
 		Aperturas: () => import('@/components/caja/modals/aperturas/Index'),
 		Movimientos: () => import('@/components/caja/modals/movimientos/Index'),

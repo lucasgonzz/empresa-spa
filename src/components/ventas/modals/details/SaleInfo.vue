@@ -11,12 +11,7 @@
 				:block="false"
 				:loader="loading_index"
 				@clicked="setPreviusSale(sale_details)" />
-				<!-- <b-button
-				v-b-modal="'update-prices'"
-				class="m-r-10"
-				variant="outline-primary">
-					Actualizar precios
-				</b-button> -->
+			
 				<b-button
 				class="m-r-10"
 				v-if="hasExtencion('acopios')"
@@ -27,6 +22,11 @@
 				</b-button>
 				<sale-print-buttons
 				:sale="sale_details"></sale-print-buttons>
+
+				<btn-facturar></btn-facturar>
+
+				<btn-nota-credito></btn-nota-credito>
+
 			</div>
 		</b-col>
 		<b-col 
@@ -94,16 +94,7 @@
 			<p>
 				Esta venta no genero movimiento en la cuenta corriente de {{ sale_details.client.name }}
 			</p>
-			<!-- <btn-loader 
-			:block="false" 
-			@clicked="saveCurrentAcount"
-			:loader="loading"
-			text="Generar cuenta corriente" /> -->
 		</div>
-		<!-- <client-info
-		class="m-15"
-		v-if="sale_details.client"
-		:client="sale_details.client"></client-info> -->
 	</b-row>
 </template>
 <script>
@@ -114,6 +105,8 @@ export default {
 	components: {
 		BtnLoader: () => import('@/common-vue/components/BtnLoader'),
 		SalePrintButtons: () => import('@/components/common/SalePrintButtons'),
+		BtnFacturar: () => import('@/components/ventas/modals/details/BtnFacturar'),
+		BtnNotaCredito: () => import('@/components/ventas/modals/details/BtnNotaCredito'),
 		// ClientInfo: () => import('@/components/common/ClientInfo'),
 	},
 	data() {

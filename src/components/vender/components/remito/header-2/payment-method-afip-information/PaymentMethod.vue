@@ -71,6 +71,8 @@ export default {
 
 				this.$store.commit('vender/setSelectedPaymentMethods', [])
 
+				this.$store.commit('vender/set_caja_id', 0)
+
 				this.limpiar_cuotas()
 
 				this.init_modal_payment_metohds()

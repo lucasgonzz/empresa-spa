@@ -8,6 +8,9 @@ export default {
 		budget() {
 			return this.$store.state.vender.budget
 		},
+		total() {
+			return this.$store.state.vender.total
+		},
 		observations() {
 			return this.$store.state.vender.observations
 		},
@@ -46,6 +49,7 @@ export default {
 				'start_at'                  : this.budget.start_at,
 				'finish_at'                 : this.budget.finish_at,
 				'observations'              : this.observations,
+				'total'              		: this.total,
 
 				// Id 1 es el estado "sin confirmar"
 				'budget_status_id'          : this.budget.budget_status_id,
@@ -77,6 +81,7 @@ export default {
 				'start_at'                  : null,
 				'finish_at'                 : null,
 				'observations'              : this.observations,
+				'total'              		: this.total,
 
 				// Id 1 es el estado "sin confirmar"
 				'budget_status_id'          : 1, 

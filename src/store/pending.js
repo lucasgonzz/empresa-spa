@@ -52,8 +52,13 @@ export default {
 		display: 'table',
 
 		loading: false,
+		
+		props_to_show: [],
 	},
 	mutations: {
+		set_props_to_show(state, value) {
+			state.props_to_show = value
+		},
 		set_dias_restantes_en_amarillo(state, value) {
 			state.dias_restantes_en_amarillo = value 
 		},

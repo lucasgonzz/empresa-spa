@@ -5,7 +5,7 @@
     	:model_name="model_name"></model>
 
 		<search-modal
-		:_id="id"
+		:_id="_id"
 		:set_first_row_selected="set_first_row_selected"
 		:limpiar_resultados_de_busqueda="limpiar_resultados_de_busqueda"
 		:query_value="query"
@@ -40,7 +40,7 @@
 					<b-form-input
 					:disabled="is_disabled"
 					class="input-search"
-					:id="id"
+					:id="_id"
 					@click="callSearchModal"
 					@keyup="callSearchModal"
 					v-model="query"
@@ -91,7 +91,7 @@ export default {
 	props: {
 		id: {
 			type: String,
-			default: 'search-input',
+			default: null,
 		},
 		model: {
 			type: Object,
@@ -184,6 +184,12 @@ export default {
 		}
 	},
 	computed: {
+		_id() {
+			if (this.id) {
+				return this.id 
+			}
+			return this.model_name
+		},
 		_placeholder() {
 			if (this.placeholder) {
 				return this.placeholder
@@ -363,9 +369,9 @@ export default {
 
 				this.setModelsToSearch()
 				this.setPreviewResults()
-				this.$bvModal.show(this.id+'-search-modal')
+				this.$bvModal.show(this._id+'-search-modal')
 				setTimeout(() => {
-					document.getElementById(this.id+'-search-modal-input').focus()
+					document.getElementById(this._id+'-search-modal-input').focus()
 				}, 100)
 			}
 		},
@@ -386,7 +392,7 @@ export default {
 			this.setInputValue()
 		},
 		setInputValue() {
-			let input = document.getElementById(this.id)
+			let input = document.getElementById(this._id)
 			input.setAttribute('model_id', this.selected_model.id)
 		}
 	}

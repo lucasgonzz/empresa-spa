@@ -29,5 +29,8 @@ export default {
 		BtnStatus: () => import('@/components/online/components/orders/BtnStatus'), 
 		BtnCancel: () => import('@/components/online/components/orders/BtnCancel'),
 	},
+	created() {
+		this.$store.dispatch('order/getModels')
+	}
 }
 </script>

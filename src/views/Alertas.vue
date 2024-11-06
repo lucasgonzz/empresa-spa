@@ -59,6 +59,13 @@ export default {
 				})
 			}
 
+			if (this.can('alerts.problemas_al_facturar')) {
+				items.push({
+					name: 'Facturacion',	
+					alert: this.problemas_al_facturar.length		
+				})
+			}
+
 			return items
 		},
 		
@@ -104,6 +111,13 @@ export default {
 
 				if (this.view == 'movimientos-de-depositos') {
 					this.$store.dispatch('deposit_movement/en_curso/getModels')
+					.then(() => {
+						this.$store.commit('auth/setLoading', false)
+					})
+				}
+
+				if (this.view == 'facturacion') {
+					this.$store.dispatch('afip_ticket/get_problemas_al_facturar')
 					.then(() => {
 						this.$store.commit('auth/setLoading', false)
 					})

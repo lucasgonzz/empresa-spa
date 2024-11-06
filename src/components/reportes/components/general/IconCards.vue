@@ -55,27 +55,27 @@ export default {
 						{
 							text: 'Ingresos brutos',
 							img: 'ventas',
-							value: this.price(this.model.total_vendido),
+							value: this.price(this.model.total_vendido, false),
 							description: 'Total vendido, haya sido o no pagado',
 						},
 						{
 							text: 'Pagado en mostrador',
 							img: 'pagado_mostrador2',
-							value: this.price(this.model.total_pagado_mostrador),
+							value: this.price(this.model.total_pagado_mostrador, false),
 							description: 'Total vendido y pagado en el momento, sin pasar a c/c',
 							extra: this.porcentaje_mostrador,
 						},
 						{
 							text: 'A cuentas corrientes',
 							img: 'a_cuentas_corrientes',
-							value: this.price(this.model.total_vendido_a_cuenta_corriente),
+							value: this.price(this.model.total_vendido_a_cuenta_corriente, false),
 							description: 'Total vendido a tus clientes, pero que no se pago',
 							extra: this.porcentaje_a_cuenta_corriente,
 						},
 						{
 							text: 'Pagos de clientes (ctas ctes)',
 							img: 'pagado_mostrador',
-							value: this.price(this.model.total_pagado_a_cuenta_corriente),
+							value: this.price(this.model.total_pagado_a_cuenta_corriente, false),
 							description: 'Total pagado en C/C por tus clientes, de ventas que hayan realizado en el pasado'
 						},
 						{
@@ -92,19 +92,19 @@ export default {
 						{
 							text: 'Caja',
 							img: 'ingresos_brutos',
-							value: this.price(this.model.total_ingresos),
+							value: this.price(this.model.total_ingresos, false),
 							description: 'Suma de: lo que se vendio en mostrador + lo que pagaron en C/C tus clientes (lo que deberia haber en la caja)',
 						},
 						{
 							text: 'Utilidad',
 							img: 'ingresos_netos',
-							value: this.price(this.model.ingresos_netos),
+							value: this.price(this.model.ingresos_netos, false),
 							description: 'Ingresos Brutos - Costo de la mercaderia',
 						},
 						{
 							text: 'Ingresos Netos',
 							img: 'rentabilidad',
-							value: this.price(this.model.rentabilidad),
+							value: this.price(this.model.rentabilidad, false),
 							description: 'UTILIDAD menos los GASTOS',
 						},
 					],
@@ -132,13 +132,13 @@ export default {
 						{
 							text: 'Gastos',
 							img: 'gastos',
-							value: this.price(this.model.total_gastos),
+							value: this.price(this.model.total_gastos, false),
 							description: 'Suma de los GASTOS',
 						},
 						{
 							text: 'Devoluciones',
 							img: 'devoluciones', 
-							value: this.price(this.model.total_devolucion),
+							value: this.price(this.model.total_devolucion, false),
 							description: 'Sumatoria de las devoluciones de tus clientes (notas de credito)',
 						},
 					],
@@ -149,13 +149,13 @@ export default {
 						{
 							text: 'Total Comprado',
 							img: 'comprado', 
-							value: this.price(this.model.total_comprado),
+							value: this.price(this.model.total_comprado, false),
 							description: 'Sumatoria de los totales de los pedidos a proveedores',
 						},
 						{
 							text: 'Total Pagado',
 							img: 'pagado', 
-							value: this.price(this.model.total_pagado_a_proveedores),
+							value: this.price(this.model.total_pagado_a_proveedores, false),
 							description: 'Sumatoria de los pagos hechos a proveedores',
 						},
 					],
@@ -168,7 +168,7 @@ export default {
 						{
 							text: 'Iva Debito',
 							img: 'iva_vendido', 
-							value: this.price(this.model.total_facturado),
+							value: this.price(this.model.total_facturado, false),
 							description: 'Sumatoria de los importes de IVA de todos los articulos vendidos en ventas Facturadas',
 						},
 
@@ -178,14 +178,14 @@ export default {
 						{
 							text: 'Iva Credito',
 							img: 'iva_comprado', 
-							value: this.price(this.model.total_iva_comprado),
+							value: this.price(this.model.total_iva_comprado, false),
 							description: 'Sumatoria de los totales de IVA de las facturas de los pedidos a proveedores',
 						},
 
 						{
 							text: 'Iva a Pagar',
 							img: 'iva_diferencia', 
-							value: this.price(this.model.total_facturado - this.model.total_iva_comprado),
+							value: this.price(this.model.total_facturado - this.model.total_iva_comprado, false),
 							description: 'Diferencia entre IVA Debito menos el IVA Credito',
 						},
 					],
@@ -199,7 +199,7 @@ export default {
 						{
 							text: 'Deudas de Clientes',
 							img: 'deuda-clientes',
-							value: this.price(this.deuda_clientes),
+							value: this.price(this.deuda_clientes, false),
 							description: 'Sumatoria de los saldos ACTUALES de tus clientes (EN VIVO)',
 						},
 					],

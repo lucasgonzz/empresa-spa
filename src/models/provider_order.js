@@ -21,21 +21,21 @@ export default {
 			key: 'update_prices',
 			type: 'checkbox',
 			value: 1,
-			show: true,
+			not_show: true,
 		},
 		{
 			text: 'Generar movimientos de Stock',
 			key: 'update_stock',
 			type: 'checkbox',
 			value: 1,
-			show: true,
+			not_show: true,
 		},
 		{
 			text: 'Generar movimiento en Cuenta Corriente',
 			key: 'generate_current_acount',
 			type: 'checkbox',
 			value: 1,
-			show: true,
+			not_show: true,
 		},
 		{
 			text: 'Deposito',
@@ -211,7 +211,8 @@ export default {
 			has_many: {
 				text: 'Cost Extra',
 				model_name: 'provider_order_extra_cost',
-			}
+			},
+			not_show: true,
 		},
 		{
 			text: 'Estado',
@@ -219,22 +220,22 @@ export default {
 			store: 'provider_order_status',
 			type: 'select',
 			value: 1,
-			show: true,
 			filter_modal_position: 3,
+			not_show: true,
 		},
 		{
 			key: 'total_with_iva',
 			text: 'Total con IVA',
 			type: 'checkbox',
 			value: 1,
-			show: true,
+			not_show: true,
 		},
 		{
 			key: 'total_from_provider_order_afip_tickets',
 			text: 'Total de las facturas',
 			type: 'checkbox',
 			value: 0,
-			show: true,
+			not_show: true,
 		},
 		{
 			key: 'days_to_advise',

@@ -97,15 +97,7 @@ export default {
                 model_id = current_acount.provider_order_id
             }
             if (model_name) {
-                this.$store.commit('auth/setMessage', 'Cargando '+this.singular(model_name))
-                this.$store.commit('auth/setLoading', true)
-                this.$api.get(this.routeString(model_name)+'/'+model_id)
-                .then(res => {
-                    this.setModel(res.data.model, model_name)
-                })
-                .catch(err => {
-                    console.log(err)
-                })
+                this.show_model(model_name, model_id)
             }
         },
         showPagadoPor(current_acount) {

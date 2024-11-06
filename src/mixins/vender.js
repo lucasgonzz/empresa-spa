@@ -231,12 +231,17 @@ export default {
 				return
 			}
 			if (this.authenticated && this.hasExtencion('articles_default_in_vender')) {
-				if (this.articles.length && !this.loading_articles) {
-					console.log('entro a setear articulos por defecto')
-					let articles = this.articles.filter(article => {
+				let articles = this.$store.state.article.models
+
+				if (articles.length && !this.loading_articles) {
+
+					let articles_por_defecto = this.$store.state.article.models.filter(article => {
 						return article.default_in_vender
 					})
-					articles.forEach(article => {
+					console.log('articles_por_defecto por defecto:')
+					console.log(articles_por_defecto)
+
+					articles_por_defecto.forEach(article => {
 						let article_to_add = {
 							...article,
 							amount: '',
@@ -246,6 +251,9 @@ export default {
 							console.log('agregando por defecto a vender: '+article_to_add.name)
 							this.$store.commit('vender/setArticle', article_to_add)
 							this.addArticleToSale(false)
+						} else {
+							console.log('el articulos '+article.name+' ya estaba en items:')
+							console.log(this.items)
 						}
 					})
 				} else {
@@ -377,8 +385,11 @@ export default {
 			this.$store.commit('vender/setChecked', 0)
 			this.$store.commit('vender/setConfirmed', 0)
 			this.$store.commit('vender/setItems', [])
+
+			this.$store.commit('vender/set_descuento', null)
 			this.$store.commit('vender/setDiscountsId', [])
 			this.$store.commit('vender/setSurchagesId', [])
+
 			this.$store.commit('vender/setClient', null)
 			this.$store.commit('vender/setReturnedItems', [])
 			this.$store.commit('vender/setSaveNotaCredito', 0)
@@ -402,7 +413,7 @@ export default {
 			
 			this.$store.commit('vender/setSellerId', 0)
 
-			this.$store.commit('vender/set_caja_id', 0)
+			// this.$store.commit('vender/set_caja_id', 0)
 			
 			this.$store.commit('vender/set_afip_tipo_comprobante_id', 0)
 
@@ -519,6 +530,11 @@ export default {
 
 			console.log('-> Ya chequeo los metodos de pago')
 
+			if (this.check_guardar_ventas_con_cliente()) {
+				this.$toast.error('Asigne un cliente para esta venta')
+				return false
+			}
+
 			if (this.hasExtencion('articles_default_in_vender')) {
 				this.checkDefaultArticles()
 			}
@@ -544,6 +560,11 @@ export default {
 				return false
 			}
 			if (this.afip_information_id) {
+
+				// Esto es para Feito, si es efectivo, no pide que se indique el tipo de comprobante
+				if (this.check_metodos_de_pago_para_facturar()) {
+					return true
+				}
 				
 				if (!this.afip_tipo_comprobante_id) {
 
@@ -587,6 +608,36 @@ export default {
 			}
 			return true 
 		},
+		check_guardar_ventas_con_cliente() {
+			if (this.hasExtencion('check_guardar_ventas_con_cliente')) {
+
+				if (!this.client) {
+
+					if (!this.user.puede_guardar_ventas_sin_cliente
+						&& !this.is_admin) {
+
+						return true 
+					}
+				}
+			}
+			return false
+		},
+		check_metodos_de_pago_para_facturar() {
+			let metodos_de_pago_para_facturar = this.$store.state.afip_selected_payment_method.models 
+
+			let metodo_de_pago_se_factura = false
+
+			if (this.current_acount_payment_method_id && metodos_de_pago_para_facturar.length) {
+
+				metodos_de_pago_para_facturar.forEach(metodo_de_pago => {
+					if (metodo_de_pago.id == this.current_acount_payment_method_id) {
+						metodo_de_pago_se_factura = true
+					}
+				})
+			}
+
+			return metodo_de_pago_se_factura
+		},	
 		check_cajas() {
 			if (this.cajas.length) {
 
@@ -597,6 +648,7 @@ export default {
 
 				if (
 					!this.$store.state.vender.caja_id
+					&& this.selected_payment_methods.length == 0
 					&& (
 						!this.$store.state.vender.client
 						|| this.$store.state.vender.omitir_en_cuenta_corriente
@@ -656,7 +708,7 @@ export default {
 			if (this.checkRegister(article) && this.check_stock(article)) {
 				let article_to_add = {
 					...article,
-					article_variant_id: 0,
+					article_variant_id: article.variant_id ? article.variant_id : 0,
 				}
 				if (this.user.ask_amount_in_vender) {
 					article_to_add.amount = ''
@@ -710,11 +762,19 @@ export default {
 			if (this.article.amount == '') {
 				this.article.amount = 1
 			} 
+
+			console.log('addArticleAndSetTotal article:')
+			console.log(this.article)
+
 			let item = {
 				...this.article,
 				is_article: true,
 				price_type_personalizado_id: 0,
 			}
+
+			console.log('se va a agregar este item:')
+			console.log(item)
+
 			this.$store.commit('vender/addItem', item)
 			if (this.index_previus_sales > 0) {
 				this.setItemsPrices(true, false)

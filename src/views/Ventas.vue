@@ -7,6 +7,7 @@
 	<make-afip-tickets></make-afip-tickets>
 
 	<afip-ticket-show-errors></afip-ticket-show-errors>
+	<afip-ticket-show-observations></afip-ticket-show-observations>
 
 	<sale-modifications></sale-modifications>
 
@@ -19,7 +20,6 @@
 	:show_btn_create="false"
 	:show_modal="false"
     :not_show_delete_text="not_show_delete_text"
-    :delete_text="delete_text"
     mostrar_models_que_vinienen_por_prop_siempre
 	model_name="sale">
 		<template v-slot:display_top>
@@ -60,6 +60,7 @@ export default {
 		OptionDropdownAfipTicket: () => import('@/components/ventas/components/OptionDropdownAfipTicket'),
 		MakeAfipTickets: () => import('@/components/ventas/modals/afip-ticket/MakeAfipTickets'),
 		AfipTicketShowErrors: () => import('@/components/ventas/modals/afip-ticket/ShowErrors'),
+		AfipTicketShowObservations: () => import('@/components/ventas/modals/afip-ticket/ShowObservations'),
 	},
 	created() {
 		this.$store.commit('sale/setFromDates', true)
@@ -87,11 +88,6 @@ export default {
 		not_show_delete_text() {
 			return this.delete && this.delete.afip_ticket
 		},
-		delete_text() {
-			if (this.delete && this.delete.afip_ticket) {
-				return 'Esta venta pertenece a una factura, si la elimina se generara una nota de credito por el total de la venta para anularla'
-			}
-		}
 	},
 }
 </script>

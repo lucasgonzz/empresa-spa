@@ -130,23 +130,20 @@ export default {
 		getArticleFromApi(bar_code) {
 			this.$store.commit('auth/setMessage', 'Buscando articulo')
 			this.$store.commit('auth/setLoading', true)
-			let prop_to_filter 
-			if (this.usar_codigo_proveedor) {
-				prop_to_filter = 'provider_code'
-			} else {
-				prop_to_filter = 'bar_code'
-			}
-			return this.$api.post('search-from-modal/article', {
-				props_to_filter: [prop_to_filter],
-				query_value: bar_code,
-			})
+			
+			return this.$api.get('vender/buscar-articulo-por-codido/'+bar_code)
 			.then(res => {
 				this.$store.commit('auth/setLoading', false)
-				if (res.data.models.data.length) {
-					// alert('llego del api: '+res.data.models[0].name)
-					this.finded_article = res.data.models.data[0]
+				console.log('llego esto:')
+				console.log(res.data)
+				if (res.data.article) {
+					this.finded_article = res.data.article
+
+					if (res.data.variant_id) {
+						this.finded_article.variant_id = res.data.variant_id
+					}
+
 				} else {
-					// alert('No se encontro nada en api: '+res.data)
 					this.finded_article = undefined
 				}
 			})

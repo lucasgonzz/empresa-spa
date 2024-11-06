@@ -1,5 +1,7 @@
 <template>
-	<div class="logo-empresa">
+	<div 
+	v-if="authenticated"
+	class="logo-empresa">
 		
 		<img :src="owner.image_url">
 	</div>

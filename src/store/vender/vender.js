@@ -46,6 +46,8 @@ export default {
 
 		afip_tipo_comprobante_id: 0,
 
+		descuento: null,
+
 		client: null,
 		discounts_id: [],
 		surchages_id: [],
@@ -144,6 +146,9 @@ export default {
 		},
 		setVendiendo(state, value) {
 			state.vendiendo = value
+		},
+		set_descuento(state, value) {
+			state.descuento = value
 		},
 		setDiscountsId(state, value) {
 			state.discounts_id = value
@@ -341,6 +346,7 @@ export default {
 				monto_credito_real: state.monto_credito_real,
 				caja_id: state.caja_id,
 				afip_tipo_comprobante_id: state.afip_tipo_comprobante_id,
+				descuento: state.descuento,
 			})
 			.then(res => {
 				console.log('vendido')

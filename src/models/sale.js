@@ -8,19 +8,27 @@ export default {
 			filter_modal_position: 1,
 		},
 		{
+			text: 'Total',
 			key: 'total',
+			type: 'number',
+			only_show: true,
 			function: 'totalSale',
 		},
 		{
+			text: 'Total Facturado',
+			type: 'number',
 			key: 'total_facturado',
 			function: 'total_facturado',
+			only_show: true,
 			v_if: ['afip_ticket', '!=', null],
 		},
 		{
 			text: 'Hora',
-			key: 'created_at',
-			is_hour: true,
+			key: 'hora',
+			function: 'get_hora',
+			// is_hour: true,
 			only_show: true,
+			no_usar_en_filtros: true,
 		},
 		{
 			text: 'Met Pago',
@@ -28,6 +36,7 @@ export default {
 			type: 'select',
 			value: 3,
 			v_if: ['client_id', '=', null],
+			no_usar_en_filtros: true,
 		},
 		{
 			text: 'Cliente',
@@ -44,6 +53,7 @@ export default {
 		{
 			text: 'Empleado',
 			key: 'employee_id',
+			type: 'search',
 			only_show: true,
 		},
 		{
@@ -56,6 +66,7 @@ export default {
 		{
 			text: 'Cuotas',
 			key: 'cantidad_cuotas',
+			type: 'number',
 			only_show: true,
 		},
 		{
@@ -69,6 +80,13 @@ export default {
 			text: 'Caja destino',
 			key: 'caja_id',
 			use_store_models: true,
+			not_show: true,
+			only_show: true,
+			if_has_extencion: 'cajas',
+		},
+		{
+			text: 'Descuento',
+			key: 'descuento',
 			not_show: true,
 			only_show: true,
 		},
@@ -104,14 +122,6 @@ export default {
 						key: 'amount',
 					},
 					{
-						text: 'U/D',
-						key: 'returned_amount',
-					},
-					{
-						text: 'U/E',
-						key: 'delivered_amount',
-					},
-					{
 						text: 'Descuento',
 						key: 'discount',
 					},
@@ -125,8 +135,17 @@ export default {
 						function: 'getTotalItem',
 						is_price: true,
 					},
+					{
+						text: 'U/D',
+						key: 'returned_amount',
+					},
+					{
+						text: 'U/E',
+						key: 'delivered_amount',
+					},
 				],
-			}
+			},
+			no_usar_en_filtros: true,
 		},
 		{
 			text: 'Metodos de Pago',
@@ -148,7 +167,8 @@ export default {
 						is_price: true,
 					},
 				],
-			}
+			},
+			no_usar_en_filtros: true,
 		},
 		{
 			text: 'Servicios',
@@ -177,7 +197,8 @@ export default {
 						key: 'returned_amount',
 					},
 				]
-			}
+			},
+			no_usar_en_filtros: true,
 			// type: 'has_many',
 			// has_many: {
 			// 	text: 'Servicio',

@@ -9,6 +9,7 @@
 			model_name="deposit_movement"
 			order_list_by="deposit_movement_status"
 			change_from_dates_option
+			:check_permissions="false"
 			:show_btn_save="se_puede_modificar"
 			:show_btn_delete="se_puede_modificar"
 			:show_previus_days="show_previus_days">

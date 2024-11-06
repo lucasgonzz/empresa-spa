@@ -1,6 +1,6 @@
 <template>
 	<b-row
-	v-if="!is_filtered"
+	v-if="!is_filtered && is_admin"
 	class="m-t-15">
 
 		<b-col
@@ -55,51 +55,3 @@ export default {
 	},
 }
 </script>
-<style lang="sass">
-.inventario-card
-	background: #FFF
-	border-radius: 7px
-	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06) 
-
-	.header	
-		border-bottom: 1px solid rgba(0, 0, 0, 0.1)
-		background: rgba(0, 0, 0, 0.03)
-		display: flex  
-		flex-direction: row  
-		justify-content: flex-start
-		align-items: center
-		padding: 6px 15px
-		font-size: 18px
-		font-weight: bold 
-
-
-	.body  
-		padding: 6px 15px
-
-		.info  
-			display: flex   
-			flex-direction: row  
-			justify-content: space-between
-			align-items: center
-
-			p  
-				margin: 0
-
-			.nombre 
-				font-size: 15px
-
-
-			.valor  
-				font-size: 25px
-
-
-			.aclaracion
-				margin-top: 10px 
-				padding-top: 10px 
-				border-top: 1px solid rgba(0, 0, 0, 0.1)
-				font-weight: bold 
-				color: rgba(0,0,0,.8)
-				font-size: 15px
-				text-align: left
-
-</style>

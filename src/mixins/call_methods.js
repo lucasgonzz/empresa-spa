@@ -24,7 +24,7 @@ export default [
     'unidad_medida',
     'article_property_type',
     'article_property_value',
-    'task',
+    // 'task',
     'provider',
     'client',
     'employee',

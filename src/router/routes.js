@@ -202,7 +202,7 @@ export default [
 		name: 'caja',
 		model_name: 'caja',
 		component: '@/views/Caja',
-		if_has_extencion: 'comerciocity_interno',
+		if_has_extencion: 'cajas',
 		image_url: 'nav-icons/cajas.png',
 		call_models_always: true,
 		can: 'caja.index',
@@ -226,6 +226,16 @@ export default [
 		check_is_owner: true,
 		if_has_extencion: 'comerciocity_interno',
 		image_url: 'nav-icons/empleados.png',
+	},
+	{
+		text: 'Comprobantes',
+		path: '/comprobantes',
+		name: 'comprobantes',
+		component: '@/views/Comprobantes',
+		image_url: 'nav-icons/comprobantes.png',
+		params: {
+			view: 'notas-de-credito',
+		},
 	},
 	{
 		text: 'Cons. Precios',

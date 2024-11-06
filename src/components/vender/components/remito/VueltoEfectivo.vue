@@ -103,7 +103,8 @@ export default {
 <style lang="sass">
 .vuelto-efectivo
 	width: 300px
-	margin: auto
+	// margin: auto
+	margin-right: 15px 
 	padding: 15px
 
 	.vuelto

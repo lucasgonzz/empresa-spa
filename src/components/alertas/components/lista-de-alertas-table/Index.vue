@@ -11,6 +11,8 @@
 
 		<deposit-movements></deposit-movements>
 
+		<problemas-al-facturar></problemas-al-facturar>
+
 	</div>
 </template>
 <script>
@@ -21,6 +23,7 @@ export default {
 		PedidosOnline: () => import('@/components/alertas/components/lista-de-alertas-table/PedidosOnline'),
 		Mensajes: () => import('@/components/alertas/components/lista-de-alertas-table/Mensajes'),
 		DepositMovements: () => import('@/components/alertas/components/lista-de-alertas-table/DepositMovements'),
+		ProblemasAlFacturar: () => import('@/components/alertas/components/lista-de-alertas-table/ProblemasAlFacturar'),
 	}
 }
 </script>

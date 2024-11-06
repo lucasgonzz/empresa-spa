@@ -69,10 +69,10 @@
 			class="align-center m-l-15"
 			v-if="ask_selectable">
 				<b-form-checkbox
-				:unchecked-value="false"
-				:value="true"
-				v-model="is_selectable">
-					Seleccion multiple
+				:unchecked-value="0"
+				:value="1"
+				v-model="is_selecteable">
+					Seleccion
 				</b-form-checkbox>
 			</div>
 
@@ -179,13 +179,13 @@ export default {
 		}
 	},
 	computed: {
-		is_selectable: {
+		is_selecteable: {
 			get() {
-				return this.$store.state[this.model_name].is_selectable
+				return this.$store.state[this.model_name].is_selecteable
 			},
 			set(value) {
 				this.$store.commit(this.model_name+'/setIsSelecteable', value)
-				if (!this.is_selectable) {
+				if (!this.is_selecteable) {
 					this.$store.commit(this.model_name+'/setSelected', [])
 				}
 			},

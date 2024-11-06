@@ -1,7 +1,7 @@
 <template>
 	<div 
 	v-if="model"
-	class="inventario-card">
+	class="custom-card">
 		<div class="header">
 			Valor del Inventario
 		</div>

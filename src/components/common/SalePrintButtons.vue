@@ -25,6 +25,7 @@
 			Con precios
 		</b-dropdown-item>
 		<b-dropdown-item
+		v-if="is_admin"
 		@click.stop="salePdf(sale.id, 1, 1, 0)">
 			Con costos
 		</b-dropdown-item>
