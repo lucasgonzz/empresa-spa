@@ -8,6 +8,7 @@ hide-footer
 	class="search-component-modal">
 		<div class="header">
 			<b-form-input
+			autocomplete="off"
 			@keydown.enter="enterSelect"
 			@keydown.up="selectUp"
 			@keydown.down="selectDown"
@@ -149,6 +150,12 @@ export default {
 		},
 		set_first_row_selected: {
 			type: Boolean,
+		},
+		props_extras: {
+			type: Array,
+			default: () => {
+				return  []
+			}
 		},
 	},
 	data() {
@@ -316,6 +323,7 @@ export default {
 					} 
 
 					results = models_to_search.filter(model => {
+
 						let value = ''+model[this.prop_to_filter.key]
 						let query_array = this.query.toLowerCase().split(' ')
 
@@ -331,6 +339,20 @@ export default {
 										value.toLowerCase().includes(palabra)
 									)
 									// coincide = value && value.toLowerCase().includes(this.query.toLowerCase())
+								}
+							})
+						}
+
+						if (this.props_extras.length) {
+
+							this.props_extras.forEach(prop_extra => {
+
+								console.log('tiene que tener '+prop_extra.key+' igual a '+prop_extra.value)
+
+								if (model[prop_extra.key]
+									&& model[prop_extra.key] != prop_extra.value) {
+
+									coincide = false  
 								}
 							})
 						}

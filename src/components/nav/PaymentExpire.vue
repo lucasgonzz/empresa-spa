@@ -14,6 +14,9 @@
 			<img src="@/assets/pago.png" alt="">
 			<div>
 				<div class="tiempo-de-pagar">
+					<p>
+						El total a pagar es de: <strong>{{ price(owner.total_a_pagar) }}</strong>
+					</p>
 					<p
 					v-if="days_before_expire < 0">
 						Tu licencia del sistema <strong>A EXPIRADO</strong>, realiza tu pago para que podamos seguir <strong>respaldando la informacion</strong> de tu empresa

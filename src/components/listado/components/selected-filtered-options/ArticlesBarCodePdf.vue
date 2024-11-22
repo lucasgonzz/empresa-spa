@@ -8,13 +8,18 @@
 	</div>
 </template>
 <script>
+import alert_filtrados from '@/mixins/listado/alert_filtrados'
 export default {
+	mixins: [alert_filtrados],
 	computed: {
 		selected() {
 			return this.$store.state.article.selected 
 		},
-		filtered() {
-			return this.$store.state.article.filtered 
+		// filtered() {
+		// 	return this.$store.state.article.filtered 
+		// },
+		total_filter_results() {
+			return this.$store.state.article.total_filter_results 
 		},
 	},
 	methods: {
@@ -24,6 +29,7 @@ export default {
 			if (this.selected.length) {
 				articles = this.selected
 			} else if (this.filtered.length) {
+				this.alert_filtrados()
 				articles = this.filtered
 			}
 			articles.forEach(article => {

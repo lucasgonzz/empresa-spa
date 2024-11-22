@@ -134,8 +134,6 @@ export default {
 				setTimeout(() => {
 					this.$store.commit('auth/setLoading', false)
 					
-					this.set_datos_para_actualizar_en_vender(this.previus_sale)
-
 					// Cuando cambia el total, seteo los metodos de pago desde el modal
 
 					this.$store.commit('vender/setToCheck', this.previus_sale.to_check)
@@ -145,6 +143,8 @@ export default {
 					this.$store.commit('vender/setDiscountsInServices', this.previus_sale.discounts_in_services)
 					this.$store.commit('vender/setSurchagesInServices', this.previus_sale.surchages_in_services)
 
+					this.set_datos_para_actualizar_en_vender(this.previus_sale)
+					
 					this.setPreviusReturnedArticles()
 					this.setPreviusReturnedServices()
 				}, 500)

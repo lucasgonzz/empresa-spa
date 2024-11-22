@@ -212,6 +212,10 @@ export default {
 			type: Boolean,
 			default: true,
 		},
+		add_created_at: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	created() {
 		console.log('se creo tabla')
@@ -258,6 +262,22 @@ export default {
 				props = this.propertiesToShow(this.properties, true)
 			} else if (!this.pivot || (this.pivot && !this.pivot.props_to_show)) {
 			 	props = this.propertiesToShow(this.modelPropertiesFromName(this.model_name), true)
+				
+				if (this.add_created_at) {
+
+					props.push({
+						key: 'created_at',
+						text: 'Creado',
+						type: 'date',
+						is_date: true,
+					})
+					props.push({
+						key: 'updated_at',
+						text: 'Actualizado',
+						type: 'date',
+						is_date: true,
+					})
+				}
 			}
 			if (this.pivot) {
 				if (this.pivot.props_to_show) {
@@ -308,13 +328,13 @@ export default {
 					})
 				}
 			} 
-			else {
-				props.push({
-					key: 'table_right_options',
-					text: '',
-					no_usar_en_filtros: true,
-				})
-			}
+
+			props.push({
+				key: 'table_right_options',
+				text: '',
+				no_usar_en_filtros: true,
+			})
+			
 			return props 
 		},
 		// fields() {
@@ -469,6 +489,14 @@ export default {
 			console.log(this.fields)
 
 			this.set_filters()
+
+			this.restart_filters()
+		},
+		restart_filters() {
+			this.$store.commit(this.model_name+'/setIsFiltered', false)
+			this.$store.commit(this.model_name+'/setFiltered', [])
+			this.$store.commit(this.model_name+'/setFilterPage', 1)
+			this.$store.commit(this.model_name+'/setTotalFilterPages', 1)
 		},
 		set_filters() {
 

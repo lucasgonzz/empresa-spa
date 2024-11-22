@@ -2,7 +2,8 @@
 	<b-button
 	class="m-l-10"
 	@click.stop="show"
-	variant="primary">
+	size="sm"
+	variant="outline-primary">
 		Mod
 	</b-button>
 </template>

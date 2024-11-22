@@ -1,5 +1,6 @@
 export default [
     // 'extencion',
+    'address',
     'provider_order_status',
     'afip_tipo_comprobante',
     'order_status',
@@ -12,7 +13,6 @@ export default [
     'concepto_movimiento_caja',
     'caja',
     'tipo_envase',
-    'address',
     'article',
     'unidad_frecuencia',
     'afip_selected_payment_method',

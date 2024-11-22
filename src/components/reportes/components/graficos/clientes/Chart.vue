@@ -61,6 +61,7 @@ export default {
 			}, {
 				plugins: {
 					datalabels: { 
+						align: 'top',
 						color: '#000',
 						font: {
 							weight: 'bold',
@@ -75,6 +76,9 @@ export default {
 							}
 							return null
 						},
+						offset: function(context) {
+							return 0
+						}
 					},
 				},
 				maintainAspectRatio: false,

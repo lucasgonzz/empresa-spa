@@ -31,8 +31,9 @@ class="p-l-20 p-r-20">
 import TableComponent from '@/common-vue/components/display/TableComponent'
 
 import current_acounts from '@/mixins/current_acounts' 
+import print from '@/mixins/current_acounts/print' 
 export default {
-    mixins: [current_acounts],
+    mixins: [current_acounts, print],
     components: {
         TableComponent,
         BtnPaymentMethodsInfo: () => import('@/components/common/current-acounts/BtnPaymentMethodsInfo')
@@ -80,12 +81,7 @@ export default {
             let model_name = null
             let model_id 
             if (current_acount.status == 'nota_credito' || current_acount.status == 'pago_from_client') {
-                let model_id = current_acount.client_id
-                if (current_acount.provider_id) {
-                    model_id = current_acount.provider_id
-                }
-                let link = process.env.VUE_APP_API_URL+'/current-acount/pdf/'+current_acount.id+'/'+model_id
-                window.open(link)
+                this.printPago(current_acount)
             } else if (current_acount.sale_id) {
                 model_name = 'sale'
                 model_id = current_acount.sale_id

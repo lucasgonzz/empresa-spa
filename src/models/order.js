@@ -169,7 +169,7 @@ export default {
 			key: 'total',
 			function: 'orderTotal',
 			value: '',
-			is_price: true,
+			// is_price: true,
 			show: true,
 		},
 	],

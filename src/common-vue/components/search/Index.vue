@@ -23,6 +23,7 @@
 		:props_to_show="props_to_show"
 		:props_to_filter="props_to_filter"
 		:search_function="search_function"
+		:props_extras="props_extras"
 		@callSearchModal="callSearchModal"
 		@setQuery="setQuery"
 		@setNotShowModel="setNotShowModel"
@@ -170,6 +171,12 @@ export default {
 		limpiar_resultados_de_busqueda: {
 			type: Boolean,
 			default: true,
+		},
+		props_extras: {
+			type: Array,
+			default: () => {
+				return  []
+			}
 		},
 	},
 	data() {

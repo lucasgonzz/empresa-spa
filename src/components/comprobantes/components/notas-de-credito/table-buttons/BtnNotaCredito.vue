@@ -4,6 +4,7 @@
 		variant="primary"
 		@click.stop="print" 
 		v-if="nota_credito.afip_ticket">
+			<i class="icon-print"></i>
 			Factura N° {{ nota_credito.afip_ticket.cbte_numero }}
 		</b-button>
 	</div>

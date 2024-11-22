@@ -9,6 +9,7 @@
 				<b-form-input
 				@keyup.enter="search"
 				v-model="bar_code"
+				id="bar-code-search"
 				placeholder="Codigo de barras"
 				class="input-search"></b-form-input>
 			</div>
@@ -27,7 +28,17 @@ export default {
 			return this.$store.state.article.models 
 		},
 	},
+	mounted() {
+		this.$root.$on('article-modal-closed', this.modal_cerrado);
+	},	
+	beforeDestroy() {
+		// Limpiar el oyente para evitar fugas de memoria
+		this.$root.$off("article-modal-closed", this.modal_cerrado);
+	},
 	methods: {
+		modal_cerrado() { 
+			document.getElementById('bar-code-search').focus()
+		},
 		search() {
 
 			this.$store.commit('article/setFiltered', [])
@@ -45,17 +56,6 @@ export default {
 
 			} else {
 
-				// let filters = [
-				// 	{
-				// 		type: 'text',
-				// 		key: 'bar_code',
-				// 		text: 'Codigo de barras',
-				// 		igual_que: this.bar_code,
-				// 	}
-				// ]
-
-				// console.log('se va a buscar con esto:')
-				// console.log(filters)
 
 				this.$store.commit('article/setFilterPage', 1)
 				// this.$store.commit('article/setFilters', filters)
@@ -64,13 +64,16 @@ export default {
 
 				this.$api.get('vender/buscar-articulo-por-codido/'+this.bar_code)
 				.then(res => {
-					console.log(res.data.article)
+					let article = res.data.article
+					console.log(article)
 					this.bar_code = ''
 					this.$store.commit('article/setLoading', false)
 					this.$store.commit('article/setIsFiltered', true) 
-					this.$store.commit('article/setFiltered', [res.data.article])
+					this.$store.commit('article/setFiltered', [article])
 					this.$store.commit('article/setTotalFilterPages', 1)
 					this.$store.commit('article/setTotalFilterResults', 1)
+
+					this.$store.commit('article/add_filtered_from_buscador', article)
 				})
 				.catch(err => {
 					this.$store.commit('article/setLoading', false)

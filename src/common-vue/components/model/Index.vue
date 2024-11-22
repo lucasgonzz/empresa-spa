@@ -10,6 +10,7 @@
 	    :id="'delete-'+model_name"></confirm>
 
 		<b-modal
+		@hidden="onModalClosed"
 		:size="size"
 		scrollable
 		:id="model_name">
@@ -299,6 +300,9 @@ export default {
 		}
 	},
 	methods: {
+		onModalClosed() {
+			this.$root.$emit(this.model_name+'-modal-closed');
+		},
 		deleted() {
 			this.$emit('modelDeleted')
 		},

@@ -741,20 +741,31 @@ export default {
 				if (cantidad_para_vender == '') {
 					cantidad_para_vender = 1
 				}
-				let store_article = this.$store.state.article.models.find(_article => {
-					return _article.id == this.article.id
-				})
-				if (typeof store_article != 'undefined') {
-					if (store_article.stock && Number(store_article.stock) < Number(cantidad_para_vender)) {
-						ok = false 
-						console.log('stock:')
-						console.log(Number(store_article.stock))
-						
-						console.log('cantidad_para_vender:')
-						console.log(Number(cantidad_para_vender))
-						this.$toast.error('Solo hay '+store_article.stock+' en stock')
-					}
+
+				if (this.article.stock && Number(this.article.stock) < Number(cantidad_para_vender)) {
+					ok = false 
+					console.log('stock:')
+					console.log(Number(this.article.stock))
+					
+					console.log('cantidad_para_vender:')
+					console.log(Number(cantidad_para_vender))
+					this.$toast.error('Solo hay '+this.article.stock+' en stock')
 				}
+
+				// let store_article = this.$store.state.article.models.find(_article => {
+				// 	return _article.id == this.article.id
+				// })
+				// if (typeof store_article != 'undefined') {
+				// 	if (store_article.stock && Number(store_article.stock) < Number(cantidad_para_vender)) {
+				// 		ok = false 
+				// 		console.log('stock:')
+				// 		console.log(Number(store_article.stock))
+						
+				// 		console.log('cantidad_para_vender:')
+				// 		console.log(Number(cantidad_para_vender))
+				// 		this.$toast.error('Solo hay '+store_article.stock+' en stock')
+				// 	}
+				// }
 			}
 			return ok
 		},

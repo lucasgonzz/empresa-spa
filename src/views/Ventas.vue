@@ -28,15 +28,17 @@
 			<total></total>	
 		</template>
 		<template v-slot:table_right_options="props">
-			<table-buttons
-			:model="props.model" />
+			<div class="j-start">
+				<table-buttons
+				:model="props.model" />
 
-			<btn-sale-modifications
-			:model="props.model"></btn-sale-modifications>
+				<btn-sale-modifications
+				:model="props.model"></btn-sale-modifications>
+			</div>
 		</template> 
-		<template #options_drop_down>
+		<!-- <template #options_drop_down>
 			<option-dropdown-afip-ticket></option-dropdown-afip-ticket>
-		</template>
+		</template> -->
 	</view-component>
 </div>  
 </template>

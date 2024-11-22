@@ -1,5 +1,6 @@
 <template>
 	<b-button
+	v-if="article.article_variants.length"
 	@click="actualizar"
 	variant="primary">
 		Actualizar Stock

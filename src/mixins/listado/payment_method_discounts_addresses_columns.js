@@ -79,35 +79,51 @@ export default {
 				})
 			}
 
+			// Encuentra la posición de la propiedad 'final_price'
+			const final_price_index = props.findIndex(prop => prop.key === 'final_price');
+			let insertIndex = final_price_index + 1;
+
 			if (this.current_acount_payment_method_discounts.length) {
 
 				this.current_acount_payment_method_discounts.forEach(dicount => {
 
 					if (this.no_esta_agregada('payment_method_discount_', dicount, props)) {
 
-						props.push({
+						props.splice(insertIndex, 0, {
 							text: dicount.current_acount_payment_method.name,
 							key: 'payment_method_discount_'+dicount.id,
 							type: 'text',
 							not_show_on_form: true,
 							no_usar_en_filtros: true,
-						})
+						});
 					}
 				})
 			}
+
+			// Encuentra la posición de la propiedad 'stock'
+			const stockIndex = props.findIndex(prop => prop.key === 'stock');
+			insertIndex = stockIndex + 1;
 
 			this.addresses.forEach(address => {
 
 				if (this.no_esta_agregada('address_', address, props)) {
 
-					// console.log('agregando la direccion '+address.street)
-					props.push({
+					props.splice(insertIndex, 0, {
 						text: address.street,
-						key: 'address_'+address.id,
+						key: 'address_' + address.id,
 						type: 'text',
 						not_show_on_form: true,
 						no_usar_en_filtros: true,
-					})
+					});
+
+					// console.log('agregando la direccion '+address.street)
+					// props.push({
+					// 	text: address.street,
+					// 	key: 'address_'+address.id,
+					// 	type: 'text',
+					// 	not_show_on_form: true,
+					// 	no_usar_en_filtros: true,
+					// })
 				}
 			})
 

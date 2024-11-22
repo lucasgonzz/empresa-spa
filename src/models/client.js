@@ -56,6 +56,15 @@ export default {
 			filter_modal_position: 5,
 		},
 		{
+			text: 'Sucursal',
+			key: 'address_id',
+			relation_prop_name: 'street',
+			use_store_models: true,
+			type: 'select',
+			value: 0,
+			if_has_extencion: 'filtrar_clientes_por_sucursal_en_vender',
+		},
+		{
 			text: 'Tipo de precio',
 			key: 'price_type_id',
 			type: 'select',

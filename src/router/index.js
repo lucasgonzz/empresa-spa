@@ -126,7 +126,7 @@ const routes = [
         component: () => import('@/views/Pending')
     },
     {
-        path: '/comprobantes/:view?',
+        path: '/comprobantes/:view?/:sub_view?',
         name: 'comprobantes',
         component: () => import('@/views/Comprobantes')
     },

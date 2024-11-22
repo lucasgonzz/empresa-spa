@@ -8,7 +8,9 @@
     id="confirm-reset-stock"></confirm>
 </template>
 <script>
+import alert_filtrados from '@/mixins/listado/alert_filtrados'
 export default {
+	mixins: [alert_filtrados],
 	components: {
 		Confirm: () => import('@/common-vue/components/Confirm'),
 	},
@@ -27,6 +29,7 @@ export default {
 			if (this.selected.length) {
 				articles = this.selected
 			} else if (this.filtered.length) {
+				this.alert_filtrados()
 				articles = this.filtered
 			}
 			articles.forEach(article => {
@@ -40,6 +43,9 @@ export default {
 			.then(() => {
 				this.$store.commit('auth/setLoading', false)
 				this.$toast.success('Stock reseteado')
+				ids.forEach(id => {
+					this.loadModel('article', id)
+				})
 			})
 			.catch(err => {
 				this.$store.commit('auth/setLoading', false)

@@ -112,6 +112,7 @@
 								v-else-if="prop.type == 'text' || prop.type == 'number' || prop.type == 'password'"
 								class="d-flex w-100">
 									<b-form-input
+									autocomplete="off"
 									:id="model_name+'-'+prop.key"
 							        :disabled="isDisabled(prop, form_to_filter)"
 									:placeholder="'Ingresar '+propText(prop)"
@@ -126,6 +127,7 @@
 								</div>
 
 								<b-form-textarea
+								autocomplete="off"
 								:id="model_name+'-'+prop.key"
 								v-else-if="prop.type == 'textarea'"
 						        :disabled="isDisabled(prop, form_to_filter)"

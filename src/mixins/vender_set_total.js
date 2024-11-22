@@ -11,14 +11,26 @@ export default {
 		surchages_id() {
 			return this.$store.state.vender.surchages_id 
 		},
-		discounts_in_services() {
-			return this.$store.state.vender.discounts_in_services 
+		discounts_in_services: {
+			get() {
+				return this.$store.state.vender.discounts_in_services
+			}, 
+			set(value) {
+				this.$store.commit('vender/setDiscountsInServices', value)
+				this.setTotal()
+			},
 		},
 		budget() {
 			return this.$store.state.vender.budget 
 		},
-		surchages_in_services() {
-			return this.$store.state.vender.surchages_in_services 
+		surchages_in_services: {
+			get() {
+				return this.$store.state.vender.surchages_in_services
+			}, 
+			set(value) {
+				this.$store.commit('vender/setSurchagesInServices', value)
+				this.setTotal()
+			},
 		},
 		discounts_store() {
 			return this.$store.state.discount.models 

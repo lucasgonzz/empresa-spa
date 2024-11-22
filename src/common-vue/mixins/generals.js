@@ -666,6 +666,7 @@ export default {
 			return this.$store.state[model_name].models
 		},
 		propertyText(model, prop, from_pivot = false) {
+			// console.log('propertyText para '+prop.key)
 			if (prop.type == 'images' || prop.type == 'image') {
 				return null
 			}
@@ -680,6 +681,7 @@ export default {
 				return model[prop.key].length
 			}
 			if (this.isRelationKey(prop)) {
+				// console.log('isRelationKey')
 				let relationship = this.modelNameFromRelationKey(prop, false, true)
 
 				// Creo que me la mande, lo comente porque me daba error al obtener el nombre
@@ -691,15 +693,18 @@ export default {
 				} else if (this.idiom == 'es') {
 					prop_name = 'nombre'
 				}
+				// console.log('prop_name: '+prop_name)
 				if (model[prop.key]) {
 					if (prop.use_store_models) {
 						let finded_model = this.$store.state[relationship].models.find(_model => {
 							return _model.id == model[prop.key]
 						})
 						if (typeof finded_model != 'undefined') {
+							// console.log('encontro: ')
+							// console.log(finded_model)
 							return finded_model[prop_name]	
 						}
-						console.log('no se encontro la relacion para '+relationship)
+						// console.log('no se encontro la relacion para '+relationship)
 						return null
 					} else if (model[relationship] && model[relationship][prop_name]) {
 						return model[relationship][prop_name] 

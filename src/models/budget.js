@@ -121,6 +121,7 @@ export default {
 			key: 'discounts',
 			type: 'search',
 			store: 'discount',
+			only_show: true,
 			belongs_to_many: {
 				model_name: 'discount',
 				props_to_show: [
@@ -140,6 +141,7 @@ export default {
 			key: 'surchages',
 			store: 'surchage',
 			type: 'search',
+			only_show: true,
 			belongs_to_many: {
 				model_name: 'surchage',
 				props_to_show: [

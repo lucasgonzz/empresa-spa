@@ -17,6 +17,8 @@ export default {
 		edit_variants_stock,
 	},
 	state: {
+		filtered_from_buscador: [],
+
 		model_name: 'article',
 		route_prefix: 'index/from-status',
 		from_dates: false,
@@ -72,6 +74,22 @@ export default {
 		setLocalStorageCanceled(state, value) {
 			state.local_storage_canceled = value 
 		},
+
+		add_filtered_from_buscador(state, value) {
+			let index = state.filtered_from_buscador.findIndex(filter => {
+				return filter.key == value.key
+			})
+
+			if (index == -1) {
+				state.filtered_from_buscador.unshift(value)
+			} else {
+				state.filtered_from_buscador.splice(index, 1, value)
+			}
+		},
+		filtered_from_buscador(state, value) {
+			state.filtered_from_buscador = value 
+		},
+
 		setLoading(state, value) {
 			state.loading = value
 		},

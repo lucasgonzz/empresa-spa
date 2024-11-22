@@ -10,6 +10,7 @@
 			model_name="client"
 			:props_to_filter="['num', 'name', 'phone']"
 			show_btn_create
+			:props_extras="props_extras"
 			set_selected_model_with_model_prop
 			@clearSelected="clearSelected"></search-component>
 		</div>
@@ -43,6 +44,17 @@ export default {
 				
 			}
 		},
+		props_extras() {
+			if (this.hasExtencion('filtrar_clientes_por_sucursal_en_vender')) {
+				return [
+					{
+						key: 'address_id',
+						value: this.address_id
+					}
+				]
+			}
+			return []
+		}
 	},
 	watch: {
 		client() {

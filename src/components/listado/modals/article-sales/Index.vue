@@ -31,6 +31,8 @@ hide-footer>
 
 				<table-component
 				model_name="sale"
+				:usar_filtros="false"
+				add_created_at
 				:models="results">
 					<template #table_right_options="data">
 						<span class="p-l-15">

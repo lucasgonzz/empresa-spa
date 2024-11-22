@@ -373,7 +373,7 @@ export default {
         orderTotal(model, formated = true) {
             let total = 0 
             model.articles.forEach(article => {
-                let total_article = article.pivot.price * article.pivot.amount
+                let total_article = Number(article.pivot.price) * Number(article.pivot.amount)
                 total += total_article
             })
             if (model.payment_method_discount) {

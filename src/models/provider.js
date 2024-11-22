@@ -29,12 +29,14 @@ export default {
 			key: 'porcentaje_comision_negro',
 			type: 'number',
 			if_has_extencion: 'comision_por_proveedores',
+			not_show: true,
 		},
 		{
 			text: '% de comision ventas en BLANCO',
 			key: 'porcentaje_comision_blanco',
 			type: 'number',
 			if_has_extencion: 'comision_por_proveedores',
+			not_show: true,
 		},
 		{
 			text: 'Valor dolar',

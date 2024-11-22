@@ -6,7 +6,7 @@
 			v-model="model.stock"
 			disabled></b-form-input>
 		</b-form-group>
-		<b-button
+		<!-- <b-button
 		v-if="model.id"
 		class="m-t-10"
 		size="sm"
@@ -21,7 +21,7 @@
 			v-else>
 				Asignar stock
 			</span>
-		</b-button>
+		</b-button> -->
 
 		<p
 		class="m-t-10"
