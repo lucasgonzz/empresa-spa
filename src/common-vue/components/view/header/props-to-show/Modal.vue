@@ -1,5 +1,6 @@
 <template>
 	<b-modal
+	v-if="usa_props_to_show"
 	title="Propiedades para mostrar"
 	hide-footer
 	id="props-to-show">
@@ -57,6 +58,13 @@ export default {
 		}
 	},
 	computed: {
+		usa_props_to_show() {
+			if (this.$store._mutations[this.model_name+'/set_props_to_show']) {
+				return true
+			}
+			console.warn(`La mutación set_props_to_show no está definida en el store.`);
+			return false
+		},
 		all_properties() {
 			let props = require(`@/models/${this.model_name}`).default.properties
 			
@@ -84,15 +92,21 @@ export default {
 	},
 	watch: {
 		model_name() {
-			this.set_props_to_show()
+			if (this.usa_props_to_show) {
 
-			this.set_selected_props()
+				this.set_props_to_show()
+
+				this.set_selected_props()
+			}
 		},
 	},
 	created() {
-		this.set_props_to_show()
+		if (this.usa_props_to_show) {
 
-		this.set_selected_props()
+			this.set_props_to_show()
+
+			this.set_selected_props()
+		}
 	},
 	methods: {
 
@@ -138,6 +152,7 @@ export default {
 			console.log(default_props_to_show)
 
 			this.$store.commit(this.model_name+'/set_props_to_show', default_props_to_show)
+			
 		},
 
 		// Agrega esas propiedades por defecto al array de propiedades seleccionadas

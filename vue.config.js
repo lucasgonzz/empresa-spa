@@ -24,6 +24,7 @@ module.exports = {
     },
 	devServer: {
     	host: 'empresa.local',
+    	// port: '8081'
     	port: '8080'
     },
 	pwa: {

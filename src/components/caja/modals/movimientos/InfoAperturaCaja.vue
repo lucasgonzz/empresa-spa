@@ -40,11 +40,11 @@
 		<div
 		class="j-between">
 			<p>
-				Total ingresos: <strong>{{ price(total_ingresos) }}</strong>
+				Total ingresos: <strong>{{ price(apertura_caja.total_ingresos) }}</strong>
 			</p>
 
 			<p>
-				Total egresos: <strong>{{ price(total_egresos) }}</strong>
+				Total egresos: <strong>{{ price(apertura_caja.total_egresos) }}</strong>
 			</p>
 		</div>
 		<hr>
@@ -56,39 +56,39 @@ export default {
 		apertura_caja() {
 			return this.$store.state.apertura_caja.model 
 		},
-		total_ingresos() {
+		// total_ingresos() {
 
-			let total = 0
+		// 	let total = 0
 
-			if (this.apertura_caja && this.apertura_caja.movimientos_caja) {
+		// 	if (this.apertura_caja && this.apertura_caja.movimientos_caja) {
 				
-				this.apertura_caja.movimientos_caja.forEach(movimiento_caja => {
-					if (movimiento_caja.ingreso) {
+		// 		this.apertura_caja.movimientos_caja.forEach(movimiento_caja => {
+		// 			if (movimiento_caja.ingreso) {
 
-						total += Number(movimiento_caja.ingreso)
-					}
-				})
-			}
+		// 				total += Number(movimiento_caja.ingreso)
+		// 			}
+		// 		})
+		// 	}
 
-			return total
-		},
-		total_egresos() {
+		// 	return total
+		// },
+		// total_egresos() {
 
-			let total = 0
+		// 	let total = 0
 
-			if (this.apertura_caja && this.apertura_caja.movimientos_caja) {
+		// 	if (this.apertura_caja && this.apertura_caja.movimientos_caja) {
 
-				this.apertura_caja.movimientos_caja.forEach(movimiento_caja => {
-					if (movimiento_caja.egreso) {
+		// 		this.apertura_caja.movimientos_caja.forEach(movimiento_caja => {
+		// 			if (movimiento_caja.egreso) {
 
-						total += Number(movimiento_caja.egreso)
-					}
-				})
-			}
+		// 				total += Number(movimiento_caja.egreso)
+		// 			}
+		// 		})
+		// 	}
 
 
-			return total
-		},
+		// 	return total
+		// },
 	},
 }
 </script>

@@ -33,6 +33,11 @@ export default {
 			return this.$store.state.vender.total 
 		},
 	},
+	watch: {
+		total() {
+			this.final_price = ''
+		},
+	},
 	methods: {
 		calcular_descuento() {
 			let porcentaje_descuento = ((Number(this.total) - Number(this.final_price)) / Number(this.total)) * 100

@@ -4,7 +4,7 @@
 		:disabled="index_previus_sales > 0"
 		:class="facturando ? 'verde' : 'rojo'"
 		v-model="afip_information_id" 
-		@change="setTotal(null)"
+		@change="change"
 		:options="options"></b-form-select> 
 	</div>
 </template>
@@ -12,6 +12,19 @@
 import vender from '@/mixins/vender'
 export default {
 	mixins: [vender],
+	methods: {
+		change() {
+			this.setTotal()
+
+			if (this.afip_information_id) {
+
+				this.afip_tipo_comprobante_id = 2 
+			} else {
+
+				this.afip_tipo_comprobante_id = 0 
+			}
+		},
+	},
 	computed: {
 		facturando() {
 			return this.afip_information_id != 0

@@ -3,7 +3,7 @@
 	class="p-t-15">
 		<b-col
 		class="j-start"
-		lg="6">
+		xl="8">
 			
 			<props-to-show
 			:model_name="model_name"></props-to-show>
@@ -46,7 +46,7 @@
 		</b-col>
 		
 		<b-col
-		lg="6">
+		xl="4">
 			<div class="j-end">
 				
 				<slot name="horizontal_nav_center"></slot>

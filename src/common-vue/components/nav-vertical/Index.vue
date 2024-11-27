@@ -6,6 +6,10 @@ v-if="show_nav">
 			<slot name="nav_top">
 			</slot>
 		</template>
+		<template #nav_bottom>
+			<slot name="nav_bottom">
+			</slot>
+		</template>
 	</nav-vertical>
 
     <global-notification></global-notification>

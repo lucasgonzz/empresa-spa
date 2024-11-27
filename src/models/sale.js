@@ -32,11 +32,7 @@ export default {
 		},
 		{
 			text: 'Met Pago',
-			key: 'current_acount_payment_method_id',
-			type: 'select',
-			value: 3,
-			v_if: ['client_id', '=', null],
-			no_usar_en_filtros: true,
+			function: 'get_sale_payment_methods',
 		},
 		{
 			text: 'Cliente',
@@ -169,6 +165,7 @@ export default {
 				],
 			},
 			no_usar_en_filtros: true,
+			not_show: true,
 		},
 		{
 			text: 'Servicios',

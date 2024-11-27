@@ -59,15 +59,23 @@ export default {
 					key: 'images',
 					type: 'images',	
 				},
-				{
-					text: 'Cod Prov',
-					key: 'provider_code',	
-				},
-				{
-					text: 'Nombre',
-					key: 'name',	
-				},
 			]
+
+			if (!this.hasExtencion('no_usar_codigos_de_barra')) {
+				props.push({
+					text: 'Cod Barras',
+					key: 'bar_code',
+				})
+			}
+
+			props.push({
+				text: 'Cod Prov',
+				key: 'provider_code',
+			})
+			props.push({
+				text: 'Nombre',
+				key: 'name',	
+			})
 
 			if (!this.price_types.length) {
 

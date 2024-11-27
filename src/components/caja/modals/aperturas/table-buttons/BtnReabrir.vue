@@ -3,6 +3,7 @@
 	v-if="se_puede_reabrir"
 	@clicked="reabirir_caja"
 	variant="success"
+	class="m-l-10"
 	text="Re abrir"
 	:loader="loading">
 	</btn-loader>

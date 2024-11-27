@@ -11,7 +11,7 @@
 		:disabled="disabled"
 		:unchecked-value="0"
 		v-model="omitir_en_cuenta_corriente">
-			OMITIR en cuenta corriente
+			{{ text }}
 		</b-form-checkbox>
 
 	</b-card>
@@ -19,6 +19,12 @@
 <script>
 export default {
 	computed: {
+		text() {
+			if (this.owner.text_omitir_cc) {
+				return this.owner.text_omitir_cc
+			}
+			return 'OMITIR en cuenta corriente'
+		},
 		omitir_en_cuenta_corriente: {
 			set(value) {
 				this.$store.commit('vender/set_omitir_en_cuenta_corriente', value)

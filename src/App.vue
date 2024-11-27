@@ -20,8 +20,9 @@ import BtnScrollTop from '@/common-vue/components/nav/BtnScrollTop'
 import app from '@/common-vue/mixins/app'
 import start_methods from '@/mixins/start_methods'
 import broadcast from '@/mixins/broadcast'
+import check_version from '@/mixins/check_version'
 export default {
-    mixins: [app, start_methods, broadcast],
+    mixins: [app, start_methods, broadcast, check_version],
     components: {
         ErrorModal,
         LogoLoading, 
@@ -38,6 +39,7 @@ export default {
             if (!this.authenticated) {
                 this.$router.replace({name: 'home'})
             } else {
+                this.check_version()
                 this.checkPermissionForCurrentRoute()
                 this.callMethods()
                 this.listenChannels()

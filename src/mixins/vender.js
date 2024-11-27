@@ -4,8 +4,9 @@ import afip_ticket from '@/mixins/afip_ticket'
 import select_payment_methods from '@/mixins/vender/select_payment_methods'
 import start_methods from '@/mixins/start_methods'
 import vender_set_total from '@/mixins/vender_set_total'
+import sonido_error from '@/mixins/sonido_error' 
 export default {
-	mixins: [vender_set_total, clients, sale_ticket, afip_ticket, select_payment_methods, start_methods],
+	mixins: [sonido_error, vender_set_total, clients, sale_ticket, afip_ticket, select_payment_methods, start_methods],
 	computed: {
 		discounts() {
 			return this.$store.state.discount.models
@@ -291,9 +292,9 @@ export default {
 				console.log('seteando todos los precios. from_pivot: '+from_pivot)
 				console.log(this.items)
 				this.items.forEach(item => {
-					if (!item.default_in_vender) {
+					// if (!item.default_in_vender) {
 						item.price_vender = this.getPriceVender(item, from_pivot) 
-					}
+					// }
 				})
 			}
 		},
@@ -373,7 +374,10 @@ export default {
 					}
 				})
 				.catch(err => {
-					this.$toast.error('Error al guardar venta')
+					this.sonido_error()
+					this.$toast.error('Error al guardar venta', {
+						duration: 10000
+					})
 					this.$toast.error(err)
 				})
 			}
@@ -415,7 +419,7 @@ export default {
 
 			// this.$store.commit('vender/set_caja_id', 0)
 			
-			this.$store.commit('vender/set_afip_tipo_comprobante_id', 0)
+			// this.$store.commit('vender/set_afip_tipo_comprobante_id', 0)
 
 			this.setTotal()
 

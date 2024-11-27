@@ -17,7 +17,7 @@ export default {
 		edit_variants_stock,
 	},
 	state: {
-		filtered_from_buscador: [],
+		add_buscador_to_selected: false,
 
 		model_name: 'article',
 		route_prefix: 'index/from-status',
@@ -65,6 +65,9 @@ export default {
 		props_to_show: [],
 	},
 	mutations: {
+		set_add_buscador_to_selected(state, value) {
+			state.add_buscador_to_selected = value
+		},
 		set_props_to_show(state, value) {
 			state.props_to_show = value
 		},
@@ -75,20 +78,6 @@ export default {
 			state.local_storage_canceled = value 
 		},
 
-		add_filtered_from_buscador(state, value) {
-			let index = state.filtered_from_buscador.findIndex(filter => {
-				return filter.key == value.key
-			})
-
-			if (index == -1) {
-				state.filtered_from_buscador.unshift(value)
-			} else {
-				state.filtered_from_buscador.splice(index, 1, value)
-			}
-		},
-		filtered_from_buscador(state, value) {
-			state.filtered_from_buscador = value 
-		},
 
 		setLoading(state, value) {
 			state.loading = value

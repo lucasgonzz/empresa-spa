@@ -18,6 +18,15 @@ export default {
         //     console.log(prop)
         //     if (current_acount)
         // },
+        get_sale_payment_methods(sale, prop) {
+            let metodos = ''
+
+            sale.current_acount_payment_methods.forEach(payment_method => {
+                metodos += payment_method.name + ' '
+            })
+
+            return metodos
+        },
         get_hora(model, prop) {
             return this.hour(model.created_at)
         },

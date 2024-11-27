@@ -24,7 +24,7 @@
 </template>
 <script>
 import vender from '@/mixins/vender' 
-import error from '@/assets/sonidos/error.mp3'
+// import sonido_error from '@/mixins/sonido_error' 
 export default {
 	mixins: [vender],
 	created() {
@@ -106,12 +106,14 @@ export default {
 					this.setVenderArticle(this.finded_article)
 				} else {
 
-                    var audio = new Audio(error);
-                    audio.play()
+                    // var audio = new Audio(error);
+                    // audio.play()
 
-                    setTimeout(() => {
-                    	audio.play()
-                    }, 1000)
+                    // setTimeout(() => {
+                    // 	audio.play()
+                    // }, 1000)
+
+					this.sonido_error()
 
 					this.$toast.error('No se encontro articulo')
 

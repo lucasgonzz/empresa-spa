@@ -35,6 +35,18 @@ export default {
 			not_show: true,
 		},
 		{
+			text: 'Version por defecto',
+			key: 'default_version',
+			type: 'text',
+			not_show: true,
+		},
+		{
+			text: 'Version estable',
+			key: 'estable_version',
+			type: 'text',
+			not_show: true,
+		},
+		{
 			text: 'Acceso de ADMINISTRADOR',
 			key: 'admin_access',
 			type: 'checkbox',

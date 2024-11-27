@@ -1,5 +1,5 @@
 <template>
-	<div class="search-component bar-code-search s d-none d-lg-block">
+	<div class="search-component bar-code-search s">
 		<div class="cont-search-input-btn">
 			<div class="cont-search">
 				<div 

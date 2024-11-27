@@ -48,6 +48,18 @@ export default {
 			show: true,
 		},
 		{
+			text: 'Version por defecto',
+			key: 'default_version',
+			type: 'text',
+			not_show: true,
+		},
+		{
+			text: 'Version estable',
+			key: 'estable_version',
+			type: 'text',
+			not_show: true,
+		},
+		{
 			text: 'Iva ya incluido en los precios',
 			key: 'iva_included',
 			type: 'checkbox',
@@ -77,7 +89,11 @@ export default {
 			crop_aspect_ratio: 4/1,
 		},
 
-
+		{
+			text: 'Texto para OMITIR en C/C',
+			key: 'text_omitir_cc',
+			type: 'text',
+		},
 
 		{
 			text: 'Cantidad de letras del nombre a partir de las cuales buscar en VENDER',

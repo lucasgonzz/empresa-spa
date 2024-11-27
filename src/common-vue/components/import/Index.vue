@@ -9,13 +9,15 @@
 	:title="title"
 	:id="id"
 	hide-footer>
+
 		<b-button
 		@click="showHistory"
 		variant="primary">
 			<i class="icon-eye"></i>
 			Historial de importaciones
 		</b-button>
-		<!-- <hr>
+
+		<hr>
 		<p>
 			<strong>
 				Opcion 1. Descargar el archivo Modelo en formato Excel
@@ -26,9 +28,8 @@
 			Comience por descargar el archivo modelo con los títulos de las columnas que ComercioCity necesita para importar los datos de sus {{ plural(model_name) }}.
 		</p>
 		<b-button
-		v-if="file_name"
 		class="m-t-10"
-		:href="'/files/'+file_name+'.xlsx'" download
+		@click="base_export"
 		variant="success">
 			Descargar el archivo modelo
 		</b-button>
@@ -37,7 +38,8 @@
 			<strong>
 				Opcion 2. Tambien puede tomar un archivo Excel ya existente, e indicar que columna de su archivo corresponde a que propiedad. 
 			</strong>
-		</p> -->
+		</p>
+
 		<hr>	
 		<div>	
 			<p>
@@ -319,6 +321,10 @@ export default {
 	    })
 	},
 	methods: {
+		base_export() {
+			let url = process.env.VUE_APP_API_URL+'/'+this.model_name+'-base/excel/export'
+			window.open(url)		
+		},
 		onFileChange(event) {
 			let file 
 			if (!event.target.files) {

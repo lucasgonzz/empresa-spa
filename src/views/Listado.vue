@@ -26,6 +26,9 @@
 
 	<price-changes></price-changes>
 
+	<inventory-performance></inventory-performance>
+
+
 	<!-- <stock-info></stock-info> -->
 
 	<articles-pre-import-modal></articles-pre-import-modal>
@@ -47,10 +50,13 @@
 
 		<template #horizontal_nav_center>
 			<div class="j-end">
+
+				<btn-inventory-performance></btn-inventory-performance>
 				
 				<buscador-header></buscador-header>
 
 				<deposit-movements></deposit-movements>
+
 			</div>
 
 		</template>
@@ -58,12 +64,6 @@
 		<template #options_drop_down>
 			
 			<drop-down-options></drop-down-options>
-
-		</template>
-
-		<template #body>
-			
-			<inventory-performance></inventory-performance>
 
 		</template>
 
@@ -139,6 +139,8 @@ export default {
 		ArticlesPreImportModal: () => import('@/components/listado/modals/articles-pre-import/Index'),
 
 		// StockInfoButtons: () => import('@/components/listado/components/StockInfoButtons'),
+		
+		BtnInventoryPerformance: () => import('@/components/listado/components/BtnInventoryPerformance'),
 		BuscadorHeader: () => import('@/components/listado/components/buscador-header/Index'),
 		Buttons: () => import('@/components/listado/components/Buttons'),
 		Charts: () => import('@/components/listado/modals/article-charts/Index'),
@@ -162,7 +164,7 @@ export default {
 		ConfirmResetStock: () => import('@/components/listado/modals/ConfirmResetStock'),
 		PriceTypeInput: () => import('@/components/listado/components/PriceTypeInput'),
 
-		InventoryPerformance: () => import('@/components/listado/components/inventory-performance/Index'),
+		InventoryPerformance: () => import('@/components/listado/modals/inventory-performance/Index'),
 
 		DepositMovements: () => import('@/components/listado/components/deposit-movements/Index'),
 

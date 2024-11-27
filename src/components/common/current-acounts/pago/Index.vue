@@ -77,8 +77,16 @@ export default {
         PaymentMethods,
     	BtnLoader,
     },
-    created() {
-        console.log('pago creado')
+    mounted() {
+        this.$root.$on('bv::modal::show', (bvEvent, modalId) => {
+            if (modalId === 'current-acounts-pago') {
+                console.log('pago creado')
+
+                setTimeout(() => {
+                    this.focus_primer_payment_method()
+                }, 500)
+            }
+        })
     },
     data() {
         return {
@@ -88,7 +96,7 @@ export default {
                 created_at: '',
                 haber: '',
                 current_acount_payment_methods: [{
-                    current_acount_payment_method_id: 0,
+                    current_acount_payment_method_id: 3,
                     amount: '',
                     bank: '',
                     payment_date: '',
@@ -124,12 +132,15 @@ export default {
         },
     },
     methods: {
+        focus_primer_payment_method() {
+            let input = document.getElementsByClassName('payment-method-amount')[0]          
+            input.focus()
+        },
         setTotalSale() {
             this.pago.haber = this.maked_sale.total
 
             let input = document.getElementsByClassName('payment-method-amount')[0]                
-            input.value = this.selected_current_acounts[0].debe
-            input.focus()
+            input.value = this.maked_sale.total
         },
     	hacerPago() {
             if (this.check()) {

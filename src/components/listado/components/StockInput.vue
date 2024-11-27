@@ -25,7 +25,7 @@
 
 		<p
 		class="m-t-10"
-		v-else>
+		v-if="typeof model.id == 'undefined'">
 			Primero cree el articulo para asignar el stock
 		</p>
 	</div>

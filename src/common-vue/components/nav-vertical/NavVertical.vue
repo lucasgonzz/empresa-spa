@@ -44,6 +44,8 @@
 	    	</b-badge>
 		</div>
 
+		<slot name="nav_bottom"></slot>
+
 		<div 
 	    v-b-toggle.download-resources
 		class="route apretable">

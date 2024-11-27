@@ -1,5 +1,7 @@
 <template>
-	<div>
+	<div
+	class="d-none d-lg-flex">
+		<add-to-selected></add-to-selected>
 		<name-search
 		v-if="hasExtencion('no_usar_codigos_de_barra')"></name-search>
 		<barcode-search
@@ -9,6 +11,7 @@
 <script>
 export default {
 	components: {
+		AddToSelected: () => import('@/components/listado/components/buscador-header/AddToSelected'),
 		NameSearch: () => import('@/components/listado/components/buscador-header/NameSearch'),
 		BarcodeSearch: () => import('@/components/listado/components/buscador-header/BarcodeSearch'),
 	}

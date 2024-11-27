@@ -17,11 +17,9 @@ class="m-b-15 m-t-20">
 
 					<div class="cont-input-price">
 						<b-form-input
-						@key
-						up="callSetTotal"
 						placeholder="Personalizado"
 						@keyup.enter="add_varios_precios(items[data.index], true)"
-						@click="callSetTotal" 
+						@keyup="callSetTotal" 
 						type="number"
 						:id="'price-vender-'+items[data.index].id"
 						min="0"

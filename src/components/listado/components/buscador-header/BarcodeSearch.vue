@@ -1,5 +1,5 @@
 <template>
-	<div class="search-component bar-code-search s d-none d-lg-block">
+	<div class="search-component bar-code-search s">
 		<div class="cont-search-input-btn">
 			<div class="cont-search">
 				<div 
@@ -27,6 +27,10 @@ export default {
 		articles() {
 			return this.$store.state.article.models 
 		},
+
+		add_buscador_to_selected() {
+			return this.$store.state.article.add_buscador_to_selected
+		}
 	},
 	mounted() {
 		this.$root.$on('article-modal-closed', this.modal_cerrado);
@@ -65,7 +69,6 @@ export default {
 				this.$api.get('vender/buscar-articulo-por-codido/'+this.bar_code)
 				.then(res => {
 					let article = res.data.article
-					console.log(article)
 					this.bar_code = ''
 					this.$store.commit('article/setLoading', false)
 					this.$store.commit('article/setIsFiltered', true) 
@@ -73,7 +76,7 @@ export default {
 					this.$store.commit('article/setTotalFilterPages', 1)
 					this.$store.commit('article/setTotalFilterResults', 1)
 
-					this.$store.commit('article/add_filtered_from_buscador', article)
+					this.set_add_buscador_to_selected(article)
 				})
 				.catch(err => {
 					this.$store.commit('article/setLoading', false)
@@ -81,6 +84,16 @@ export default {
 					this.$toast.error('Error al buscar')
 				})
 
+			}
+		},
+		set_add_buscador_to_selected(article) {
+			console.log('set_add_buscador_to_selected: ')
+			console.log(this.add_buscador_to_selected)
+			if (this.add_buscador_to_selected) {
+				console.log('AGREGANDO')
+				this.$store.commit('article/addSelected', article)
+			} else {
+				console.log('NO SE AGREGANDO')
 			}
 		}
 	}
