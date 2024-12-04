@@ -1,7 +1,7 @@
 $spaceamounts: (0, 1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 100, 105, 110, 115, 120, 130, 140, 150, 300); // Adjust this to include the pixel amounts you need.
 $spaceamountsnegatives: (-15, -10, -5, 0); // Adjust this to include the pixel amounts you need.
 $spaceamountsBorder: (none, 1, 2, 3, 4, 5); // Adjust this to include the pixel amounts you need.
-$breakPoints: (0, 576, 768, 992, 1200);
+$breakPoints: (0, 576, 768, 992, 1450);
 $sides: (top, bottom, left, right); // Leave this variable alone
 $columns: (1,2,3,4,5,6,7,8,9,10,11,12);
 
@@ -131,7 +131,7 @@ $columns: (1,2,3,4,5,6,7,8,9,10,11,12);
 		  				padding-#{$side}: #{$space}px !important;
 					}
 				}	
-			} @else if $breakPoint == 1200 {
+			} @else if $breakPoint == 1450 {
 				.m-xl-#{str-slice($side, 0, 1)}-#{$space} {
 					@media only screen and (min-width: #{$breakPoint}px){
 		  				margin-#{$side}: #{$space}px !important;

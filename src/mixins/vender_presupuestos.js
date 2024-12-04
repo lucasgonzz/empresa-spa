@@ -11,6 +11,9 @@ export default {
 		total() {
 			return this.$store.state.vender.total
 		},
+		address_id() {
+			return this.$store.state.vender.address_id
+		},
 		observations() {
 			return this.$store.state.vender.observations
 		},
@@ -28,6 +31,9 @@ export default {
 		},
 		items() {
 			return this.$store.state.vender.items 
+		},
+		price_type() {
+			return this.$store.state.vender.price_type
 		},
 		articles() {
 			return this.items.filter(item => item.is_article)
@@ -50,6 +56,7 @@ export default {
 				'finish_at'                 : this.budget.finish_at,
 				'observations'              : this.observations,
 				'total'              		: this.total,
+				'address_id'              	: this.address_id,
 
 				// Id 1 es el estado "sin confirmar"
 				'budget_status_id'          : this.budget.budget_status_id,
@@ -78,10 +85,12 @@ export default {
 		crear() {
 			this.$api.post('budget', {
 				'client_id'                 : this.client.id,
+				'price_type_id'				: this.get_price_type_id(),	
 				'start_at'                  : null,
 				'finish_at'                 : null,
 				'observations'              : this.observations,
 				'total'              		: this.total,
+				'address_id'              	: this.address_id,
 
 				// Id 1 es el estado "sin confirmar"
 				'budget_status_id'          : 1, 
@@ -106,6 +115,12 @@ export default {
 					duration: 100000,
 				})
 			})
+		},
+		get_price_type_id() {
+			if (this.price_type) {
+				return this.price_type.id  
+			}
+			return null
 		},
 
 		get_discounts() {
@@ -148,6 +163,7 @@ export default {
 					pivot: {
 						amount: article.amount,
 						price: article.price_vender,
+						price_type_personalizado_id: article.price_type_personalizado_id,
 						bonus: typeof article.discount != 'undefined' ? article.discount : null,
 						location: null,
 					}

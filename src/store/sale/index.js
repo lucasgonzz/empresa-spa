@@ -11,6 +11,8 @@ export default {
     	ventas_sin_cobrar,
     },
 	state: {
+		from_depositos: 0,
+
 		model_name: 'sale',
 		from_dates: true,
 		is_selecteable: false,
@@ -32,6 +34,7 @@ export default {
 		models: [],
 		model: {},
 		selected: [],
+		filters: [],
 		filtered: [],
 		is_filtered: false,
 		filter_page: 1,
@@ -56,6 +59,9 @@ export default {
 		props_to_show: [],
 	},
 	mutations: {
+		set_from_depositos(state, value) {
+			state.from_depositos = value 
+		},
 		set_props_to_show(state, value) {
 			state.props_to_show = value
 		},
@@ -273,9 +279,13 @@ export default {
 					url += '/0'
 				}
 			} 
+			
+			url += '/from-date/'+state.from_depositos
+			
 			if (state.from_dates) {
-				url += '/from-date/'+state.from_date
-			} 
+				url += '/'+state.from_date
+			}
+			
 			if (state.until_date != '') {
 				url += '/'+state.until_date
 			}

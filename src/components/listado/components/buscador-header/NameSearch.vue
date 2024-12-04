@@ -84,8 +84,3 @@ export default {
 	}
 }
 </script>
-<style lang="sass">
-.bar-code-search
-	// margin-left: 15px
-	width: 300px
-</style>

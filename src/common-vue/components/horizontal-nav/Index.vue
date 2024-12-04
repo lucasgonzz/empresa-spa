@@ -76,13 +76,13 @@
 				</b-form-checkbox>
 			</div>
 
-			<options-dropdown
+			<!-- <options-dropdown
 			v-if="show_filter_modal"
 			:model_name="model_name">
 				<template #options_drop_down>
 					<slot name="options_drop_down"></slot>
 				</template>
-			</options-dropdown>
+			</options-dropdown> -->
 			
 			<slot name="horizontal_nav_center"></slot>
 		</div>
@@ -109,7 +109,7 @@ export default {
 		FilterModal,
 		ExcelDropDown,
 		DisplayNav,
-		OptionsDropdown: () => import('@/common-vue/components/horizontal-nav/options-dropdown/Index'),
+		// OptionsDropdown: () => import('@/common-vue/components/horizontal-nav/options-dropdown/Index'),
 	},
 	props: {
 		items: Array,

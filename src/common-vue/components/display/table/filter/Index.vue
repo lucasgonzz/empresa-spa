@@ -118,7 +118,7 @@ export default {
 	width: 200px
 	top: 100%
 	left: 0px
-	z-index: 10000
+	z-index: 100000
 	// left: 50%
 	// transform: translateX(-50%)
 	// pointer-events: none

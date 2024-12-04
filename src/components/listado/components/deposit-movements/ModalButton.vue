@@ -3,7 +3,7 @@
 	class="m-l-15"
 	@click="show_modal">
 		<i class="icon-refresh"></i>
-		Mov. Depositos
+		Depositos
 	</b-button>
 </template>
 <script>

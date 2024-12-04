@@ -363,7 +363,16 @@ export default {
 			return require(`@/models/${this.model_name}`).default.properties 
 		},
 		properties_for_model_modal() {
-			return this.get_properties_to_show(this.model_name)
+			// Agrego para que retorne properties_to_show para los precios de pack en el modal
+			// if (this.properties_to_show) {
+			// 	return this.properties_to_show
+			// }
+
+			let props = this.get_properties_to_show(this.model_name)
+ 
+			props = this.check_propiedades_extras(props)
+
+			return props
 		},
 		_show_btn_create() {
 			if (this.check_can_create) {
@@ -373,6 +382,16 @@ export default {
 		}
 	},
 	methods: {
+		check_propiedades_extras(props) {
+			if (this.properties_to_show) {
+				this.properties_to_show.forEach(prop => {
+					if (prop.propiedad_extra_para_modal) {
+						props.push(prop)
+					}
+				})
+			}
+			return props
+		},
 		modelSaved(model) {
 			console.log('22222')
 			this.$emit('modelSaved', model)

@@ -1,12 +1,13 @@
 <template>
 	<b-row>
 		<b-col
-		lg="6"
+		xl="6"
 		cols="12">
 			<address-nav></address-nav>
 		</b-col>
 		<b-col
-		lg="6"
+		class="m-t-10 m-xl-t-0"
+		xl="6"
 		cols="12">
 			<afip-ticket-nav></afip-ticket-nav>
 		</b-col>

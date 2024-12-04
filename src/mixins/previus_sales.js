@@ -88,7 +88,14 @@ export default {
 					return false 
 				}
 
-				if (!sale.current_acount) {
+				if (sale.caja_id 
+					&& sale.caja_id != 0) {
+
+					return false
+				}
+
+				if (sale.current_acount_payment_methods.length
+					&& sale.current_acount_payment_methods.length > 1) {
 
 					return false
 				}
@@ -111,10 +118,16 @@ export default {
 			this.$api.get('previus-next-index/sale/'+sale.id)
 			.then(res => {
 				this.loading_index = false
-				this.$store.commit('vender/previus_sales/setIndex', res.data.index)
-				this.callGetSale()
-				console.log('redirigiendo a vender')
-				this.$router.push({name: 'vender', params: {view: 'remito'}})
+				
+				if (res.data.actualizandose_por) {
+					this.$toast.error('Se esta actualizando por '+res.data.actualizandose_por.name)
+				} else {
+
+					this.$store.commit('vender/previus_sales/setIndex', res.data.index)
+					this.callGetSale()
+					console.log('redirigiendo a vender')
+					this.$router.push({name: 'vender', params: {view: 'remito'}})
+				}
 			})
 			.catch(err => {
 				this.loading_index = false
@@ -259,6 +272,12 @@ export default {
 			} else {
 				this.$store.commit('vender/setCurrentAcountPaymentMethodId', 0)
 			}
+
+			if (model.current_acount_payment_methods
+				&& model.current_acount_payment_methods.length == 1) {
+				this.$store.commit('vender/setCurrentAcountPaymentMethodId', model.current_acount_payment_methods[0].id)
+			} 
+
 			if (model.afip_information_id) {
 				this.$store.commit('vender/setAfipInformationId', model.afip_information_id)
 			}
@@ -343,6 +362,8 @@ export default {
 		},
 		cancelPreviusSale() {
 
+			this.clear_actualizandose_por()
+
 			this.limpiar_vender()
 
 			this.setDefaultPaymentMethod()
@@ -353,7 +374,19 @@ export default {
 			}
 			this.setEmployeeVender()
 
-			this.limpiar_methodos_de_pago_seleccionados()
+			// this.limpiar_methodos_de_pago_seleccionados()
+
+		},
+		clear_actualizandose_por() {
+			if (this.previus_sale
+				&& this.previus_sale.id 
+				&& !this.budget) {
+				
+				this.$api.put('sale-clear-actualizandose-por/'+this.previus_sale.id)
+				.catch(err => {
+					this.$toast.error('Error al limpiar venta')
+				})
+			}
 		},
 		limpiar_methodos_de_pago_seleccionados() {
 			return

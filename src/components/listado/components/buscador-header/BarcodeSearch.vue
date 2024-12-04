@@ -52,10 +52,18 @@ export default {
 				let articles = this.articles.filter(article => {
 					return article.bar_code == this.bar_code
 				})
+
 				this.$store.commit('article/setIsFiltered', true)
+				this.$store.commit('article/setFilterPage', 1)
+				this.$store.commit('article/setLoading', true)
+
 				this.bar_code = ''
 				setTimeout(() => {
+					this.$store.commit('article/setLoading', false)
 					this.$store.commit('article/setFiltered', articles)
+					this.$store.commit('article/setTotalFilterPages', 1)
+					this.$store.commit('article/setTotalFilterResults', 1)
+					this.set_add_buscador_to_selected(articles[0])
 				}, 500)
 
 			} else {
@@ -102,5 +110,5 @@ export default {
 <style lang="sass">
 .bar-code-search
 	// margin-left: 15px
-	width: 300px
+	width: 200px
 </style>

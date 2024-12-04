@@ -13,7 +13,6 @@
 
 	<view-component
 	show_filter_modal
-	ask_selectable
 	:models_to_show="sales_to_show"
 	show_models_if_empty
 	:show_previus_days="show_previus_days"
@@ -65,7 +64,9 @@ export default {
 		AfipTicketShowObservations: () => import('@/components/ventas/modals/afip-ticket/ShowObservations'),
 	},
 	created() {
+		this.$store.commit('sale/set_from_depositos', 0)
 		this.$store.commit('sale/setFromDates', true)
+		this.$store.dispatch('sale/getModels')
 	},
 	beforeRouteLeave(to, from, next) {
 		this.$store.commit('sale/setSelected', [])

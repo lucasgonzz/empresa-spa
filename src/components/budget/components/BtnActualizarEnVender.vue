@@ -1,5 +1,6 @@
 <template>
 	<b-button
+	:disabled="budget.budget_status_id == 2"
 	variant="primary"
 	@click="update">
 		Actualizar en VENDER
@@ -18,12 +19,12 @@ export default {
 		update() {
 			console.log('this.budget')
 			console.log(this.budget)
+            this.$store.commit('vender/setBudget', this.budget)
 			this.set_datos_para_actualizar_en_vender(this.budget)
             this.$store.commit('vender/setToCheck', 0)
             this.$store.commit('vender/setChecked', 0)
             this.$store.commit('vender/setConfirmed', 0)
             this.$store.commit('vender/setGuardarComoPresupuesto', 1)
-            this.$store.commit('vender/setBudget', this.budget)
             this.$router.push({name: 'vender', params: {view: 'remito'}})
 		}
 	}

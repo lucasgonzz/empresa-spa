@@ -2,7 +2,6 @@
 	<div
 	:id="id"
 	class="model-form">
-
 		<b-form-row
 		class="m-b-0">
 			<b-col
@@ -372,7 +371,7 @@ export default {
 			default: () => []
 		},
 	},
-	created() {
+	mounted() {
 		this.setFocus()
 	},
 	data() {
@@ -424,7 +423,7 @@ export default {
 				this.properties.forEach(prop => {
 					if (!ok) {
 						let element = document.getElementById(this.model_name+'-'+prop.key)
-						if (element) {
+						if (element && prop.type == 'text') {
 							setTimeout(() => {
 								element.focus()
 							}, 500)

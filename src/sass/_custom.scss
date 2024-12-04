@@ -5,6 +5,14 @@ $nav_theme: 'dark';
 $theme: 'light';
 $table_font_small: true;
 
+$grid-breakpoints: (
+  xs: 0,
+  sm: 576px,
+  md: 768px,
+  lg: 992px,
+  xl: 1450px
+);
+
 @import 'node_modules/bootstrap/scss/bootstrap.scss';
 @import 'node_modules/bootstrap-vue/src/index.scss';
 

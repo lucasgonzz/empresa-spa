@@ -11,7 +11,6 @@
 			:model_name="model_name"></pagination>	
 
 			<table
-			v-if="models.length"
 			class="common-table">
 				<thead>
 					<tr>
@@ -38,7 +37,6 @@
 									:field="field"></btn-filter>
 								</div>
 
-
 								<filter-component
 								v-if="!pivot && usar_filtros"
 								@limpiar_show_filters="limpiar_show_filters"
@@ -46,11 +44,13 @@
 								v-show="show_filters[field.key]"
 								:model_name="model_name"
 								:field="field"></filter-component>
+
 							</div>	
 						</th>
 					</tr>
 				</thead>
-				<tbody>
+				<tbody
+				v-if="models.length">
 					<template
 					v-if="order_list_by">
 						<template
@@ -121,8 +121,8 @@
 				</tbody>
 				<slot name="btn_add_to_show"></slot>
 			</table>
-			<p 
-			v-else-if="show_empty_text"
+			<p
+			v-if="!models.length && show_empty_text"
 			class="text-with-icon">
 				<i class="icon-eye-slash"></i>
 				No hay {{ plural(model_name) }}
@@ -216,6 +216,13 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+	},
+	mounted() {
+		setTimeout(() => {
+
+			this.scroll_margenes()
+
+		}, 1000)
 	},
 	created() {
 		console.log('se creo tabla')
@@ -459,6 +466,7 @@ export default {
 			.catch(err => {
 				this.$store.commit('auth/setLoading', false)
 				this.$toast.error('Error al buscar')
+				this.$toast.error(err)
 			})
 		},
 		toggleFilter(field_key) {
@@ -469,6 +477,8 @@ export default {
 				this.show_filters = {}; // Reinicia el objeto show_filters
 				this.$set(this.show_filters, field_key, true); // Activa solo el seleccionado
 			}
+			console.log('show_filters:')
+			console.log(this.show_filters)
 		},
 		limpiar_show_filters() {
 			this.show_filters = {}; 
@@ -490,17 +500,25 @@ export default {
 
 			this.set_filters()
 
-			this.restart_filters()
+			// this.restart_filtereds()
 		},
-		restart_filters() {
+		restart_filtereds() {
 			this.$store.commit(this.model_name+'/setIsFiltered', false)
 			this.$store.commit(this.model_name+'/setFiltered', [])
 			this.$store.commit(this.model_name+'/setFilterPage', 1)
 			this.$store.commit(this.model_name+'/setTotalFilterPages', 1)
 		},
+		filtros_ya_iniciados() {
+			console.log('filtros_ya_iniciados para '+this.model_name)
+			return this.$store.state[this.model_name].filters.length
+		},
 		set_filters() {
 
 			if (this.pivot) {
+				return
+			}
+
+			if (this.filtros_ya_iniciados()) {
 				return
 			}
 
@@ -516,6 +534,7 @@ export default {
 					&& prop.type != 'images'
 					&& prop.type != 'image'
 					&& !prop.belongs_to_many
+					&& !prop.has_many
 				) {
 
 					console.log('agregando filtro para '+prop.text)
@@ -608,6 +627,53 @@ export default {
 				this.show_buttons_scroll = false
 			}
 		},
+		scroll_margenes() {
+		    const contTable = document.getElementById(this.id);
+		    if (!contTable) return;
+
+		    console.log('scroll_margenes table:', contTable);
+
+		    let scrollDirection = null;
+		    let isScrolling = false;
+
+		    const startScroll = () => {
+		        if (isScrolling) return; // Evita duplicar la animación
+
+		        isScrolling = true;
+		        const scroll = () => {
+		            if (!scrollDirection) {
+		                isScrolling = false;
+		                return; // Detiene si no hay dirección
+		            }
+
+		            contTable.scrollLeft += scrollDirection === 'right' ? 20 : -20; // Ajusta velocidad aquí
+		            requestAnimationFrame(scroll); // Llama al siguiente cuadro
+		        };
+		        scroll();
+		    };
+
+		    const stopScroll = () => {
+		        scrollDirection = null;
+		    };
+
+		    const handleMouseMove = (e) => {
+		        const { left, right } = contTable.getBoundingClientRect();
+		        const margin = 70; // Ancho de los márgenes
+
+		        if (e.clientX < left + margin) {
+		            scrollDirection = 'left';
+		            startScroll();
+		        } else if (e.clientX > right - margin) {
+		            scrollDirection = 'right';
+		            startScroll();
+		        } else {
+		            stopScroll();
+		        }
+		    };
+
+		    contTable.addEventListener('mousemove', handleMouseMove);
+		    contTable.addEventListener('mouseleave', stopScroll);
+		},
 	}
 }
 </script>
@@ -619,6 +685,28 @@ export default {
 	overflow-y: scroll
 	margin-left: -15px
 	margin-top: 15px
+	position: relative
+
+	&::before,
+	&::after 
+		content: ''
+		position: absolute
+		// top: 0
+		// height: calc(100% + 30px)
+		width: 70px /* Ancho de los márgenes */
+		z-index: 1000
+		background: rgba(0,0,0,.3)
+	
+
+	&::before 
+		left: 50px
+		cursor: w-resize
+	
+
+	&::after 
+		right: 0
+		cursor: e-resize
+	
 
 	.b-skeleton-table
 		@if ($theme == 'dark')

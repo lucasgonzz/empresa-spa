@@ -39,6 +39,7 @@ export default {
 	},
 	data() {
 		return {
+			// per_page: 5,
 			per_page: 50,
 			currentPage: 1,
 			se_inicio_nueva_busqueda: false,

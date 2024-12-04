@@ -59,33 +59,29 @@ export default {
 
 					this.ocultar_mensaje_demorado()
 
-					let ok = true
-					
-					// if (res.data.result.observations) {
-					// 	this.$toast.error('Error al facturar')
-					// 	this.$store.commit('vender/setAfipResult', res.data.result.observations)
-					// 	ok = false
-					// }
+					let sale = res.data.sale
 
-					if (res.data.result.errors) {
-						this.$toast.error('Error al facturar')
-						this.$store.commit('vender/setAfipResult', res.data.result.errors)
-						ok = false
+					this.$store.commit('sale/add', sale)
+					this.$store.commit('vender/setSale', sale)
+
+					if (sale.afip_errors.length) {
+						this.$toast.error('Afip informo errores', {
+							duration: 6000
+						})
 					}
 
-					if (ok) {
-						this.$store.commit('sale/add', res.data.sale)
-						this.$store.commit('vender/setSale', res.data.sale)
+					if (sale.afip_observations.length) {
+						this.$toast.error('Afip informo observaciones', {
+							duration: 6000
+						})
+					}
 
-						this.mostrar_mensaje_exitoso()
+					this.mostrar_mensaje_exitoso()
 
-						setTimeout(() => {
-							this.ocultar_tarjeta()
-						}, 2000)
-					} else {
-
+					setTimeout(() => {
 						this.ocultar_tarjeta()
-					}
+					}, 2000)
+					
 				})
 				.catch(err => {
 					// this.$bvModal.hide('loading-afip-ticket')

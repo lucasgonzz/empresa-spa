@@ -72,6 +72,10 @@ export default {
 							key: 'price_type_'+price_type.id,
 							type: 'text',
 							no_usar_en_filtros: true,
+
+							// Con esto hago que se agregue a las propiedades
+							// para el modal component del Model
+							propiedad_extra_para_modal: true,
 							// not_show_on_form: true,
 						})
 					}

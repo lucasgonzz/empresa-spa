@@ -1,15 +1,28 @@
 <template>
-	<b-button 
-	class="m-l-10"
-	size="sm"
-	v-if="filter"
-	:variant="filtro_usado ? 'success' : 'outline-primary'"
-	@click="toggleFilter(field.key)">
-		<i class="icon-search"></i>
-	</b-button>
+	<b-button-group
+	v-if="filter">
+		
+		<b-button 
+		class="m-l-10"
+		size="sm"
+		:variant="filtro_usado ? 'success' : 'outline-primary'"
+		@click="toggleFilter(field.key)">
+			<i class="icon-search"></i>
+		</b-button>
+
+		<b-button 
+		size="sm"
+		v-if="filtro_usado"
+		variant="danger"
+		@click="call_limpiar_filtro(field.key)">
+			<i class="icon-undo"></i>
+		</b-button>
+	</b-button-group>
 </template>
 <script>
+import filters from '@/common-vue/mixins/filters'
 export default {
+	mixins: [filters],
 	props: {
 		field: Object,
 		model_name: String,
@@ -19,7 +32,8 @@ export default {
 			let filter = this.$store.state[this.model_name].filters.find(_filter => _filter.key == this.field.key)
 
 			if (typeof filter != 'undefined') {
-				console.log('retornando filtro actualizado')
+				console.log('retornando filtro actualizado de '+filter.key)
+				console.log(filter)
 				return filter  
 			}
 			return null
@@ -31,11 +45,18 @@ export default {
 					|| (this.filter.menor_que && this.filter.menor_que != '') 
 					|| (this.filter.igual_que && this.filter.igual_que != '')
 					|| (this.filter.checkbox && this.filter.checkbox != -1)
+					|| (this.filter.en_blanco)
 			}
 			return false
 		}
 	},
 	methods: {
+		call_limpiar_filtro() {
+			let filter = this.limpiar_filtro(this.filter)
+			console.log('agregando filtro limpiado:')
+			console.log(filter)
+			this.$store.commit(this.model_name+'/addFilter', filter)
+		},
 		toggleFilter() {
 			this.$emit('toggleFilter', this.field.key)
 		}

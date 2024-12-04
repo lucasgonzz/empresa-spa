@@ -21,9 +21,9 @@
 </div> 
 </template>
 <script>
-import vender from '@/mixins/vender'
+import previus_sales from '@/mixins/previus_sales'
 export default {
-	mixins: [vender],
+	mixins: [previus_sales],
 	components: {  
 		SelectPaymentMethods: () => import('@/components/vender/modals/payment-methods/select-payment-methods/Index'),
 		PaymentMethodsWithDiscounts: () => import('@/components/vender/modals/payment-methods/payment-methods-with-discounts/Index'),
@@ -46,6 +46,15 @@ export default {
 		this.setDefaultPaymentMethod()
 
 		this.set_omitir_en_cuenta_corriente()
+	},
+	beforeRouteLeave(to, from, next) {
+		this.$store.commit('sale/setSelected', [])
+
+		if (this.index_previus_sales != 0) {
+
+			this.cancelPreviusSale()
+		}
+		next()
 	},
 	watch: {
 		price_types() {

@@ -36,7 +36,7 @@
     <b-modal
     hide-footer
     title="Emitiendo facturas"
-    size="sm"
+    size="md"
     id="make-afip-tickets">
     	<div 
     	v-for="afip_ticket in afip_tickets_for_make"
@@ -57,6 +57,13 @@
 	    		<strong
 	    		class="p-l-5"
 	    		v-if="afip_ticket.maked">| Factura emitida</strong>
+
+	    		<strong
+	    		class="p-l-5 text-danger"
+	    		v-if="afip_ticket.errors">| Con errores</strong>
+	    		<strong
+	    		class="p-l-5 text-danger"
+	    		v-if="afip_ticket.observations">| Con Observaciones</strong>
     		</div>
     	</div>
     </b-modal>
@@ -123,18 +130,31 @@ export default {
 						console.log(i)
 						console.log(this.selected_sales)
 						console.log(this.selected_sales[i])
+
 						console.log('se facturo sale_id: '+this.selected_sales[i].id)
+
 						this.$store.commit('sale/add', res.data.sale)
+
 						this.afip_tickets_for_make[i].maked = true
+
+						if (res.data.sale.afip_errors.length) {
+							this.afip_tickets_for_make[i].errors = true
+						}
+						if (res.data.sale.afip_observations.length) {
+							this.afip_tickets_for_make[i].observations = true
+						}
+
 					} catch (err) {
 						console.log('errror:')
-						console.log(error)
+						console.log(err)
 					}
 					
 				}
 
 				this.$store.commit('sale/setIsSelecteable', 0)
-				this.$store.commit('sale/addSelected', [])
+				this.$store.commit('sale/setSelected', [])
+				this.$bvModal.hide('confirm-make-afip-tickets')
+				this.$bvModal.hide('sale')
 			}
 		},
 		send_request(index) {
@@ -166,6 +186,8 @@ export default {
 				this.afip_tickets_for_make.push({
 					sale: sale,
 					maked: false,
+					errors: false,
+					observations: false,
 				})
 			})
 			console.log('afip_tickets_for_make')

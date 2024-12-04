@@ -206,8 +206,15 @@ export default {
 		setPriceType() {
             if (this.price_types_with_position.length) {
                 let price_type_para_vender 
+
+                console.log('setPriceType budget:')
+                console.log(this.budget)
+                if (this.budget 
+                	&& this.budget.price_type) {
+                	price_type_para_vender = this.budget.price_type
+                	console.log('usando price_type de budget')
                 
-                if (this.client && this.client.price_type) {
+                } else if (this.client && this.client.price_type) {
                     price_type_para_vender = this.client.price_type
                 } else {
                     let last_position = 0

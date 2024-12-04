@@ -48,6 +48,7 @@ export default {
 					created_at: this.date(model.created_at)+' '+this.hour(model.created_at),
 					created_models: model.created_models,
 					updated_models: model.updated_models,
+					error_message: model.error_message,
 					provider_id: model.provider_id ? this.getProvider(model) : null,
 					employee_id: model.user_id == model.employee_id ? this.user.name : this.getModelFromId('employee', model.employee_id).name,
 				})
@@ -71,6 +72,10 @@ export default {
 				{
 					key: 'provider_id',
 					label: 'Proveedor',
+				},
+				{
+					key: 'error_message',
+					label: 'Errores',
 				},
 				{
 					key: 'employee_id',

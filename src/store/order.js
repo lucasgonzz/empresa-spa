@@ -32,6 +32,7 @@ export default {
 		unconfirmed_models: [],
 		model: {},
 		selected: [],
+		filters: [],
 		filtered: [],
 		is_filtered: false,
 		filter_page: 1,

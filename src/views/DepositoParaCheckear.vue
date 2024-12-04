@@ -32,9 +32,11 @@ import previus_sales from '@/mixins/previus_sales'
 export default {
 	mixins: [previus_sales],
 	created() {
+		this.$store.commit('sale/set_from_depositos', 1)
 		this.$store.commit('sale/setIsSelecteable', false)
 		this.$store.commit('sale/setSelected', [])
 		this.$store.commit('sale/setFromDates', false)
+		this.$store.dispatch('sale/getModels')
 	},
 	components: {
 		Confirm: () => import('@/common-vue/components/Confirm'),

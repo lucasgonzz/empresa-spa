@@ -18,11 +18,12 @@ import NavComponent from '@/components/nav/Index'
 import BtnScrollTop from '@/common-vue/components/nav/BtnScrollTop'
 
 import app from '@/common-vue/mixins/app'
+import check_online from '@/common-vue/mixins/check_online'
 import start_methods from '@/mixins/start_methods'
 import broadcast from '@/mixins/broadcast'
 import check_version from '@/mixins/check_version'
 export default {
-    mixins: [app, start_methods, broadcast, check_version],
+    mixins: [app, start_methods, broadcast, check_version, check_online],
     components: {
         ErrorModal,
         LogoLoading, 
@@ -39,6 +40,7 @@ export default {
             if (!this.authenticated) {
                 this.$router.replace({name: 'home'})
             } else {
+                this.check_online()
                 this.check_version()
                 this.checkPermissionForCurrentRoute()
                 this.callMethods()

@@ -2,6 +2,7 @@
 	<horizontal-nav
 	set_view
 	:show_display="false"
+	@setSelected="setSelected"
 	:items="items"></horizontal-nav>
 </template>
 <script>
@@ -22,5 +23,11 @@ export default {
 			return items 
 		},
 	},
+	methods: {
+		setSelected() {
+			console.log('setSelected')
+			this.$store.dispatch('sale/getModels')
+		}
+	}
 }
 </script>

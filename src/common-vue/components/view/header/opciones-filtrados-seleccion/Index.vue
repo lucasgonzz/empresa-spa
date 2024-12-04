@@ -12,6 +12,7 @@
 		@deleteModels="deleteModels"></confirm>	
 
 		<options-dropdown
+		:check_permissions="check_permissions"
 		@setUpdate="setUpdate"
 		@setDelete="setDelete"
 		:model_name="model_name">
@@ -21,6 +22,7 @@
 		</options-dropdown>
 
 		<options-dropdown
+		:check_permissions="check_permissions"
 		@setUpdate="setUpdate"
 		@setDelete="setDelete"
 		from_filter
@@ -35,11 +37,12 @@
 export default {
 	props: {
 		model_name: String,
+		check_permissions: Boolean,
 	},
 	components: {
-		Update: () => import('@/common-vue/components/horizontal-nav/options-dropdown/Update'),
+		Update: () => import('@/common-vue/components/view/header/opciones-filtrados-seleccion/Update'),
 		Confirm: () => import('@/common-vue/components/Confirm'),
-		OptionsDropdown: () => import('@/common-vue/components/horizontal-nav/options-dropdown/OptionsDropdown'),
+		OptionsDropdown: () => import('@/common-vue/components/view/header/opciones-filtrados-seleccion/OptionsDropdown'),
 	},
 	computed: {
 		delete_text() {

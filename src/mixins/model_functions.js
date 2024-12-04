@@ -21,9 +21,16 @@ export default {
         get_sale_payment_methods(sale, prop) {
             let metodos = ''
 
-            sale.current_acount_payment_methods.forEach(payment_method => {
-                metodos += payment_method.name + ' '
-            })
+            if (sale.current_acount_payment_method) {
+                metodos = sale.current_acount_payment_method.name
+            
+            } else {
+
+                sale.current_acount_payment_methods.forEach(payment_method => {
+                    metodos += payment_method.name + ' '
+                })
+            }
+
 
             return metodos
         },

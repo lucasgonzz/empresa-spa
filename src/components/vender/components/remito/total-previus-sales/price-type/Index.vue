@@ -32,7 +32,14 @@ export default {
 	},
 	computed: {
 		is_disabled() {
-			return this.index_previus_sales != 0
+			if (this.index_previus_sales != 0) {
+				return true 
+			}
+
+			if (this.budget) {
+				return true
+			}
+			return false
 		},
 		price_types() {
 			return this.$store.state.price_type.models 

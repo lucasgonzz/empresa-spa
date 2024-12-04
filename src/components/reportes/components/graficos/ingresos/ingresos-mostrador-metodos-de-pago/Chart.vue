@@ -64,7 +64,7 @@ export default {
 				plugins: {
 					datalabels: { 
 						// anchor: 'end',
-						// align: 'top',
+						align: 'top',
 						color: '#000',
 						font: {
 							weight: 'bold',
@@ -81,7 +81,7 @@ export default {
 							return null
 						},
 						offset: function(context) {
-							return -19	
+							return 12
 						}
 					},
 				},

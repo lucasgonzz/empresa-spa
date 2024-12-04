@@ -1,7 +1,7 @@
 <template>
 		
 	<b-form-select
-	v-if="pagado_al_contado && !selected_payment_methods.length"
+	v-if="cajas.length && pagado_al_contado && !selected_payment_methods.length"
 	v-model="caja_id" 
 	:options="get_caja_options(vender_payment_method_id)"></b-form-select> 
 </template>
@@ -10,6 +10,9 @@ import cajas from '@/mixins/vender/cajas'
 export default {
 	mixins: [cajas],
 	computed: {
+		cajas() {
+			return this.$store.state.caja.models
+		},
 		pagado_al_contado() {
 			return !this.client || this.omitir_en_cuenta_corriente
 		},

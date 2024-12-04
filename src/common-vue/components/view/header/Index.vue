@@ -2,8 +2,9 @@
 	<b-row
 	class="p-t-15">
 		<b-col
-		class="j-start"
-		xl="8">
+		class="j-start m-b-25 m-xl-b-0"
+		lg="6"
+		xl="3">
 			
 			<props-to-show
 			:model_name="model_name"></props-to-show>
@@ -32,8 +33,15 @@
 			<btn-seleccion
 			:model_name="model_name"
 			:ask_selectable="ask_selectable"></btn-seleccion>
+		</b-col>
+
+		<b-col
+		class="d-flex j-sm-center j-lg-end j-xl-start m-b-25 m-xl-b-0"
+		lg="6"
+		xl="4">
 
 			<opciones-filtrados-seleccion
+			:check_permissions="check_permissions"
 			:model_name="model_name">
 				<template #options_drop_down>
 					<slot name="options_drop_down"></slot>
@@ -46,7 +54,7 @@
 		</b-col>
 		
 		<b-col
-		xl="4">
+		xl="5">
 			<div class="j-end">
 				
 				<slot name="horizontal_nav_center"></slot>

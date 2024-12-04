@@ -24,6 +24,7 @@ export default {
 		model: {},
 		selected: [],
 		filtered: [],
+		filters: [],
 		is_filtered: false,
 
 		delete: null,

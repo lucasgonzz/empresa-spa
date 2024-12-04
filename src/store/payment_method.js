@@ -29,6 +29,7 @@ export default {
 		models: [],
 		model: {},
 		selected: [],
+		filters: [],
 		filtered: [],
 		is_filtered: false,
 		filter_page: 1,

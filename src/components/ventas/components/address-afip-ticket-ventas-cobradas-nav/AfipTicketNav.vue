@@ -6,12 +6,10 @@
 		:options="afip_ticket_options"></b-form-select>
 
 		<b-form-select
-		class="m-l-15"
 		v-model="ventas_cobradas_show_option"
 		:options="ventas_cobradas_options"></b-form-select>
 
 		<b-form-select
-		class="m-l-15"
 		v-model="payment_method_show_option"
 		:options="payment_methods_options"></b-form-select>
 	</div>
@@ -101,8 +99,25 @@ export default {
 <style lang="sass">
 .afip-ticket-ventas-cobradas-nav
 	display: flex
-	flex-direction: row
 	justify-content: flex-end
+
+	@media screen and (max-width: 800px)
+		// flex-direction: column
+		flex-wrap: wrap
+		justify-content: space-around
+
+	align-items: center 
+	flex-direction: row
+	width: 100%
+
 	select 
 		width: 250px
+		margin-left: 15px
+		&:first-child
+			margin-left: 0
+
+		@media screen and (max-width: 800px)
+			width: 45%
+			margin-left: 0
+			margin-bottom: 10px
 </style>

@@ -1,6 +1,6 @@
 <template>
 	<div
-	class="d-none d-lg-flex">
+	class="align-center">
 		<add-to-selected></add-to-selected>
 		<name-search
 		v-if="hasExtencion('no_usar_codigos_de_barra')"></name-search>
