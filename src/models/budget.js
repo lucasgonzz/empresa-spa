@@ -48,6 +48,14 @@ export default {
 		// 	filterable: true,
 		// },
 		{
+			text: 'Total',
+			key: 'total',
+			function: 'budgetTotal',
+			value: '',
+			is_price: true,
+			show: true,
+		},
+		{
 			text: 'Articulos',
 			store: 'article',
 			key: 'articles',
@@ -130,6 +138,7 @@ export default {
 			type: 'search',
 			store: 'discount',
 			only_show: true,
+			not_show: true,
 			belongs_to_many: {
 				model_name: 'discount',
 				props_to_show: [
@@ -149,6 +158,7 @@ export default {
 			key: 'surchages',
 			store: 'surchage',
 			type: 'search',
+			not_show: true,
 			only_show: true,
 			belongs_to_many: {
 				model_name: 'surchage',
@@ -179,14 +189,6 @@ export default {
 			show: true,
 			filterable: true,
 			use_to_filter_in_modal: true,
-		},
-		{
-			text: 'Total',
-			key: 'total',
-			function: 'budgetTotal',
-			value: '',
-			is_price: true,
-			show: true,
 		},
 	],
 	singular_model_name_spanish: 'Presupuesto',

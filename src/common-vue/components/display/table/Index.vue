@@ -646,6 +646,8 @@ export default {
 		                return; // Detiene si no hay dirección
 		            }
 
+		            console.log('scroleando')
+
 		            contTable.scrollLeft += scrollDirection === 'right' ? 20 : -20; // Ajusta velocidad aquí
 		            requestAnimationFrame(scroll); // Llama al siguiente cuadro
 		        };

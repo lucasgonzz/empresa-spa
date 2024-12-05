@@ -64,6 +64,7 @@ export default {
 			key: 'cantidad_cuotas',
 			type: 'number',
 			only_show: true,
+			not_show: true,
 		},
 		{
 			text: 'Lista de Precios',

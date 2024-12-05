@@ -90,6 +90,12 @@ export default {
 						type: 'number'
 					},
 					{
+						text: 'Cantidad pedida',
+						key: 'amount_pedida',
+						value: '',
+						type: 'number'
+					},
+					{
 						text: 'Costo',
 						key: 'cost',
 						value: {
@@ -97,12 +103,6 @@ export default {
 						},
 						type: 'number'
 					},
-					// {
-					// 	text: 'Costo Recibido',
-					// 	key: 'received_cost',
-					// 	value: '',
-					// 	type: 'number'
-					// },
 					{
 						text: 'Precio',
 						key: 'price',
@@ -116,17 +116,6 @@ export default {
 						key: 'discount',
 						type: 'number',
 					},
-					// {
-					// 	text: 'Deposito',
-					// 	key: 'address_id',
-					// 	value: 0,
-					// 	v_if: {
-					// 		b_t_many_model_prop: 'addresses',
-					// 		check_array_length: true,
-					// 		// check_on_store_models: 'article',
-					// 	},
-					// 	type: 'select'
-					// },
 					{
 						text: 'Costo en dolares',
 						key: 'cost_in_dollars',
@@ -137,24 +126,12 @@ export default {
 						},
 						type: 'checkbox'
 					},
-					// {
-					// 	text: 'Agregar articulo al sistema',
-					// 	key: 'add_to_articles',
-					// 	value: 1,
-					// 	type: 'checkbox'
-					// },
-					// {
-					// 	text: 'Actualizar costo en el sistema',
-					// 	key: 'update_cost',
-					// 	value: 1,
-					// 	type: 'checkbox'
-					// },
-					// {
-					// 	text: 'Actualizar proveedor en el sistema',
-					// 	key: 'update_provider',
-					// 	value: 1,
-					// 	type: 'checkbox'
-					// },
+					{
+						text: 'Actualizar proveedor en el sistema',
+						key: 'update_provider',
+						value: 0,
+						type: 'checkbox'
+					},
 					{
 						text: 'Iva',
 						key: 'iva_id',

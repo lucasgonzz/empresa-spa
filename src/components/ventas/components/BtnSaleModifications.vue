@@ -1,5 +1,6 @@
 <template>
 	<b-button
+	v-if="model.sale_modifications_count > 0"
 	class="m-l-10"
 	@click.stop="show"
 	size="sm"

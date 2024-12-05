@@ -8,6 +8,7 @@
 		<view-component
 		:models_to_show="sales_to_show"
 		show_models_if_empty
+		:properties_to_show="properties_to_show"
 		:show_previus_days="show_previus_days"
 		:show_btn_create="false"
 		change_from_dates_option
@@ -29,8 +30,9 @@
 </template>
 <script>
 import previus_sales from '@/mixins/previus_sales'
+import depositos from '@/mixins/sale/depositos'
 export default {
-	mixins: [previus_sales],
+	mixins: [previus_sales, depositos],
 	created() {
 		this.$store.commit('sale/set_from_depositos', 1)
 		this.$store.commit('sale/setIsSelecteable', false)
