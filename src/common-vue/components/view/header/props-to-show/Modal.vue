@@ -117,11 +117,14 @@ export default {
 			this.all_properties.forEach(prop => {
 				this.selected_props.push(prop.key)
 			})
+			console.log('marcar_todo')
+			console.log(this.selected_props.length)
 		},
 
 		save() {
 			let props_to_show = []
 
+			console.log('selected_props: '+this.selected_props.length)
 			this.all_properties.forEach(prop => {
 
 				if (this.selected_props.includes(prop.key)) {
@@ -135,31 +138,66 @@ export default {
 
 			this.$store.commit(this.model_name+'/set_props_to_show', props_to_show)
 
-			console.log('props_to_show:')
-			console.log(props_to_show)
+			this.guardar_cookies(props_to_show)
 
 			this.$bvModal.hide('props-to-show')
+		},
+
+		guardar_cookies(props_to_show) {
+			let nombre_cookie = 'props_to_show-'+this.model_name
+
+			// this.$cookies.remove(nombre_cookie)
+
+			localStorage.setItem(nombre_cookie, JSON.stringify(props_to_show))
+			
+			console.log('se guardaron cookies: '+props_to_show.length)
+			console.log(props_to_show)
+			console.log('las cookies quedaron asi: '+JSON.parse(localStorage.getItem(nombre_cookie)).length)
 		},
 
 		// Setea las propeidades para mostrar en base al archivo del model
 		set_props_to_show() {
 
-			console.log('set_props_to_show:')
-
 			let default_props_to_show = this.all_properties.filter(prop => !prop.not_show)
 
-			console.log('default_props_to_show:')
-			console.log(default_props_to_show)
-
 			this.$store.commit(this.model_name+'/set_props_to_show', default_props_to_show)
-			
+
+			this.check_cookies()
 		},
+
+
+		// Chequea si hay cookies con un orden es especifico
+		check_cookies() {
+			let cookies = this.get_cookies()
+
+			cookies.forEach(cookie => {
+				
+				this.$store.commit(cookie.model_name+'/set_props_to_show', cookie.props_to_show)
+			})
+		},
+		get_cookies() {
+
+		    const props_to_show = Object.keys(localStorage).filter(name => name.startsWith("props_to_show-"));
+
+		    let cookies = [];
+		    
+		    props_to_show.forEach(name => {
+		    	let model_name = name.replace("props_to_show-", ""); // Elimina "props_to_show-"
+		    	let cookie = {
+		    		model_name: model_name,
+		    		props_to_show: JSON.parse(localStorage.getItem(name))
+		    	}
+		      	cookies.push(cookie)
+
+		    });
+
+		    return cookies;
+		},	
 
 		// Agrega esas propiedades por defecto al array de propiedades seleccionadas
 		set_selected_props() {
 
 			console.log('set_selected_props:')
-
 
 			this.selected_props = []
 

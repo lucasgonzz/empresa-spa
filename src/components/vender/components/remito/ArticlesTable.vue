@@ -84,10 +84,11 @@ class="m-b-15 m-t-20">
 				class="input-discount">
 					<b-form-input
 					:disabled="previus_sale != null && previus_sale.to_check == 1"
-					@keyup="callSetTotal"
-					@click="callSetTotal"
+					@keyup="callSetTotal(true, items[data.index])"
+					@click="callSetTotal(true, items[data.index])"
 					type="number"
 					min="0"
+					:dusk="'amount_'+data.index"
 					v-model="items[data.index].amount"></b-form-input>
 				</b-input-group>
 			</template>
@@ -189,6 +190,7 @@ class="m-b-15 m-t-20">
 		<div 
 		v-else>
 			<p
+			dusk="text_remito"
 			class="text-with-icon-2">
 				<i class="icon-clipboard"></i>
 				Remito en blanco
@@ -198,9 +200,9 @@ class="m-b-15 m-t-20">
 </b-row>
 </template>
 <script>
-import vender from '@/mixins/vender'
+import vender from '@/mixins/vender/index'
 import vender_set_total from '@/mixins/vender_set_total'
-import previus_sales from '@/mixins/previus_sales'
+import previus_sales from '@/mixins/vender/previus_sale/index'
 export default {
 	mixins: [vender, vender_set_total, previus_sales],
 	components: {
@@ -208,7 +210,6 @@ export default {
 	},
 	watch: {
 		special_price_id() {
-			console.log('watcher de special_price_id')
 			this.setArticlesPrice()
 			this.setTotal()
 			// this.$store.commit('vender/setTotal')
@@ -299,7 +300,12 @@ export default {
 		},
 	},
 	methods: {
-		callSetTotal() {
+		callSetTotal(from_amount_input = false, item = null) {
+
+			if (from_amount_input) {
+				item = this.check_price_type_ranges(item)
+				this.$store.commit('vender/replceItem', item)
+			}
 			this.setTotal()
 		},
 
@@ -344,7 +350,6 @@ export default {
 		},
 		add_varios_precios(item, hacer_caso = false) {
 			if (hacer_caso) {
-				console.log('add_varios_precios')
 				if (typeof item.varios_precios == 'undefined') {
 					item.varios_precios = []
 				}
@@ -360,7 +365,6 @@ export default {
 			}
 		},
 		enter_amount(item) {
-			console.log('enter_amount')
 			this.calculate_price_vender(item)
 		},
 		calculate_price_vender(item) {
@@ -375,8 +379,6 @@ export default {
 				}
 				calculated_price_vender += (Number(otro_precio.price_vender) * amount)
 			})
-			console.log('calculated_price_vender')
-			console.log(calculated_price_vender)
 
 			item.calculated_price_vender = calculated_price_vender
 			this.$store.commit('vender/replceItem', item)
@@ -398,22 +400,7 @@ export default {
 			this.calculate_price_vender(item) 
 		},
 		checked_amount_input_class(item) {
-			console.log('checked_amount_input_class '+item.name)
-			console.log(typeof item.checked_amount)
-			console.log(item.checked_amount)
 
-
-			console.log('Es 0:')
-			console.log(this.es_0(item))
-
-			console.log('no es_null')
-			console.log(!this.es_null(item))
-
-			console.log('no es_string_vacio')
-			console.log(!this.es_string_vacio(item))
-
-			console.log('no es_undefined')
-			console.log(!this.es_undefined(item))
 			if (this.previus_sale.checked && (this.es_0(item) || (!this.es_null(item) && !this.es_string_vacio(item) && !this.es_undefined(item)))) {
 				return 'input-checked-amount-danger'
 			}

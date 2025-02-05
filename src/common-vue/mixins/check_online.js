@@ -10,7 +10,7 @@ export default {
 			
 		},
 		handleOffline() {
-			alert('Se perdió la conexión a internet, espere a que se restablezca la conexión para continuar usando el sistema por favor')
+			alert('Se PERDIO la conexión a INTERNET, ESPERE a que se restablezca para continuar usando el SISTEMA, por favor')
 		},
 	}
 }

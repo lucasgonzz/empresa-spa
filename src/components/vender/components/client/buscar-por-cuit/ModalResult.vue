@@ -59,10 +59,8 @@ export default {
 	methods: {
 		async setCreateClient() {
 			this.loading = true
-			console.log('setCreateClient')
 			let location_id = await this.getLocalidad()
 
-			console.log('sigue con properties_to_override')
 			let properties_to_override = [
 				{
 					key: 'name',
@@ -86,8 +84,6 @@ export default {
 				},
 			]
 
-			console.log('properties_to_override:')
-			console.log(properties_to_override)
 
 			this.cerrar()
 
@@ -96,7 +92,6 @@ export default {
 		},
 		getLocalidad() {
 
-			console.log('getLocalidad')
 
 			let localidad = this.$store.state.location.models.find(location => {
 				return location.name == this.afip_data.localidad
@@ -105,15 +100,12 @@ export default {
 				return localidad.id
 			} else {
 
-				console.log('no habia localidad, por crearla')
 				return new Promise((resolve, reject) => {
 
 					this.$api.post('location', {
 						'name': this.afip_data.localidad
 					})
 					.then(res => {
-						console.log('se creo la localidad:')
-						console.log(res.data.model)
 						this.$store.commit('location/add', res.data.model)
 						resolve(res.data.model.id)
 					})

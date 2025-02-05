@@ -44,7 +44,6 @@ export default {
 	},
 	watch: {
         total_vender() { 
-        	console.log('watch de total_vender en payment-methods-with-discounts')
         	this.total_a_repartir_with_discounts = this.total_vender
         	
         	if (this.index_previus_sale == 0) {

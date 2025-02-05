@@ -11,7 +11,7 @@ export default {
 			
 			this.checkAddressCookie()
 			
-			this.checkUpdateFeaturesCookie()
+			// this.checkUpdateFeaturesCookie()
 			
 			this.getUnconfirmedOrders()
 			
@@ -28,6 +28,20 @@ export default {
 			this.get_articles_por_defecto()
 
 			this.get_ultimos_articulos_actualizados()
+
+			// Llamo cada 1 minuto a peidos online
+			this.escuchar_orders()
+		},
+		escuchar_orders() {
+			if (this.owner.online) {
+
+				setInterval(() => {
+					if (this.$route.name != 'online') {
+						
+						this.$store.dispatch('order/getUnconfirmedModels')
+					}
+				}, 60000)
+			}
 		},
 		get_ultimos_articulos_actualizados() {
 			if (!this.owner.download_articles) {

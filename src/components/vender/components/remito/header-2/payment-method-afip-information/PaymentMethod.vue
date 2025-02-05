@@ -27,11 +27,19 @@ class="cont-select">
 </div>
 </template>
 <script>
-import vender from '@/mixins/vender'
+// import vender from '@/mixins/vender'
 import select_payment_methods from '@/mixins/vender/select_payment_methods'
 export default {
-	mixins: [vender, select_payment_methods],
+	mixins: [select_payment_methods],
 	computed: {
+		current_acount_payment_method_id: {
+			get(){
+				return this.$store.state.vender.current_acount_payment_method_id
+			},
+			set(value) {
+				this.$store.commit('vender/setCurrentAcountPaymentMethodId', value)
+			},
+		},
 		disabled() {
 			if (this.client && !this.omitir_en_cuenta_corriente) {
 				return true 
@@ -43,10 +51,8 @@ export default {
 		},
 		payment_methods_seteados() {
 
-			console.log('payment_methods_seteados:')
 			let seteados = false 
 
-			console.log(this.selected_payment_methods)
 			this.selected_payment_methods.forEach(payment_method => {
 
 				if (payment_method.amount) {

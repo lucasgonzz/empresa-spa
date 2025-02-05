@@ -8,6 +8,7 @@ hide-footer
 	:show_btn_pdf="show_btn_pdf"
 	:show_previus_days="false"
 	:models_to_show="models_to_show"
+	:check_permissions="check_permissions"
 	:model_name="model_name">
 		<template #header>
 			<slot name="header"></slot>
@@ -32,6 +33,10 @@ export default {
 			default() {
 				return []
 			} 
+		},
+		check_permissions: {
+			type: Boolean,
+			default: true,
 		},
 		show_models_if_empty: Boolean,
 	},

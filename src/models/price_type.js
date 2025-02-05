@@ -22,6 +22,32 @@ export default {
 			show: true,
 		},
 		{
+			text: 'Categorias',
+			store: 'category',
+			search_on_models_by: 'name',
+			type: 'search',
+			key: 'categories',
+			belongs_to_many: {
+				model_name: 'category',
+				props_to_show: [
+					{
+						text: 'Nombre',
+						key: 'name',
+						type: 'text',
+						show: true,
+					},
+				],
+				properties_to_set: [
+					{
+						text: 'Margen de ganancia',
+						key: 'percentage',
+						value: '',
+						type: 'number'
+					},
+				],
+			}
+		},
+		{
 			text: 'Sub Categorias',
 			key: 'sub_categories',
 			type: 'search',

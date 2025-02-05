@@ -41,6 +41,9 @@ export default {
         route_name() {
             return this.$route.name
         },
+        testing_dusk() {
+            return process.env.VUE_APP_TESTING_DUSK
+        },
         idiom() {
             return process.env.VUE_APP_IDIOM
         },
@@ -228,6 +231,11 @@ export default {
 		getOriginalModel(model_name, model){
 			return this.$store.state[model_name].models.find(model_ => {
 				return model_.id == model.id 
+			}) 
+		},
+		get_store_model(model_name, id){
+			return this.$store.state[model_name].models.find(model_ => {
+				return model_.id == id 
 			}) 
 		},
 		removeRelationFiltered(model_name, model, nombre_relacion) {

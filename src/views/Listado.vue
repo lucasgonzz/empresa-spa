@@ -57,6 +57,8 @@
 
 				<deposit-movements></deposit-movements>
 
+				<!-- <combos></combos> -->
+
 			</div>
 
 		</template>
@@ -167,6 +169,8 @@ export default {
 		InventoryPerformance: () => import('@/components/listado/modals/inventory-performance/Index'),
 
 		DepositMovements: () => import('@/components/listado/components/deposit-movements/Index'),
+
+		Combos: () => import('@/components/listado/components/combos/Index'),
 
 		AddressStock: () => import('@/components/listado/components/table-props/address-stock/Index'),
 	}, 

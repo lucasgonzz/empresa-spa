@@ -10,6 +10,7 @@
 				class="item apretable"
 				v-for="(item, i) in items"
 				:key="i"
+				:dusk="value(item)"
 				@click="select(item)"
 				:class="isActive(item)">
 					{{ itemName(item) }}

@@ -102,6 +102,7 @@
 		
 		<list
 		:usar_filtros="usar_filtros"
+		:papelera="papelera"
 		:model_name_for_get_models="model_name_for_get_models"
 		:show_empty_text="show_empty_text"
 		:show_actualizado="show_actualizado"
@@ -331,6 +332,10 @@ export default {
 		usar_filtros: {
 			type: Boolean,
 			default: true,
+		},
+		papelera: {
+			type: Boolean,
+			default: false,
 		},
 	},
 	computed: {

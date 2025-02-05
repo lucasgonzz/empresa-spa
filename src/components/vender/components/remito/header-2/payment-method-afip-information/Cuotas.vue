@@ -20,8 +20,6 @@ export default {
 			}, 
 			set(_cuota_id) {
 
-				console.log('_cuota_id:')
-				console.log(_cuota_id)
 
 				let cuota_id = null
 				let cantidad_cuotas = null

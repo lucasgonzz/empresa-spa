@@ -4,12 +4,6 @@
 	no-close-on-backdrop
 	title="Métodos de pago" 
 	hide-footer>
-	<!-- <b-modal 
-	id="payment-method-modal" 
-	no-close-on-backdrop
-	title="Métodos de pago" 
-	hide-header-close
-	hide-footer> -->
 
 		<totales></totales>	
 
@@ -44,9 +38,7 @@ export default {
 	},
 	watch: {
         sub_total_vender() { 
-        	console.log('watch de sub_total en select-payment-methods')
         	if (this.watch_activado) {
-        		console.log('watch de sub_total')
 	        	this.total_a_repartir = this.sub_total_vender
 	        	
 	        	if (this.index_previus_sale == 0) {
@@ -56,8 +48,6 @@ export default {
 	        		
 	        		// this.set_total_desde_previus_sale()
 	        	}
-        	} else {
-        		console.log('NO PASO NADA porque watch_activado esta en: '+this.watch_activado)
         	}
         },
     },

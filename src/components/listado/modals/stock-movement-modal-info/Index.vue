@@ -96,7 +96,7 @@ export default {
 			let items = []
 			this.stock_movements.forEach(model => {
 				items.push({
-					concepto: model.concepto,
+					concepto: this.get_store_model('concepto_stock_movement', model.concepto_stock_movement_id).name,
 					amount: model.amount,
 					article_variant: model.article_variant ? model.article_variant.variant_description : null,
 					stock_resultante: model.stock_resultante,

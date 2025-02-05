@@ -21,9 +21,13 @@
 </div> 
 </template>
 <script>
-import previus_sales from '@/mixins/previus_sales'
+import price_types from '@/mixins/vender/price_types'
+import default_articles from '@/mixins/vender/default_articles'
+import default_payment_method from '@/mixins/vender/default_payment_method'
+import omitir_en_cuenta_corriente from '@/mixins/vender/omitir_en_cuenta_corriente'
+import previus_sale from '@/mixins/vender/previus_sale/index'
 export default {
-	mixins: [previus_sales],
+	mixins: [price_types, default_articles, default_payment_method, omitir_en_cuenta_corriente, previus_sale],
 	components: {  
 		SelectPaymentMethods: () => import('@/components/vender/modals/payment-methods/select-payment-methods/Index'),
 		PaymentMethodsWithDiscounts: () => import('@/components/vender/modals/payment-methods/payment-methods-with-discounts/Index'),
@@ -39,7 +43,7 @@ export default {
 		BtnSave: () => import('@/components/vender/components/BtnSave'),
 	},
 	created() {
-		this.setDefaultArticles()
+		this.set_default_articles()
 
 		this.setPriceType()
 

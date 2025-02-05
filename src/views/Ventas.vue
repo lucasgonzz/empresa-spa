@@ -44,10 +44,10 @@
 <script>
 import clients from '@/mixins/clients'
 import print_sale from '@/mixins/print_sale'
-import afip_ticket from '@/mixins/afip_ticket'
+// import afip_ticket from '@/mixins/afip_ticket'
 import sale from '@/mixins/sale'
 export default {
-	mixins: [clients, print_sale, afip_ticket, sale],
+	mixins: [clients, print_sale, sale],
 	components: { 
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 		CurrentAcounts: () => import('@/components/common/current-acounts/Index'),

@@ -31,13 +31,14 @@
 <script>
 import BtnLoader from '@/common-vue/components/BtnLoader'
 import Vender from '@/mixins/vender'
-import previus_sales from '@/mixins/previus_sales'
+import previus_sales from '@/mixins/vender/previus_sale/index'
+import se_puede_actualizar from '@/mixins/vender/previus_sale/se_puede_actualizar'
 export default {
 	name: 'PreviusSales',
 	components: {
 		BtnLoader
 	},
-	mixins: [Vender, previus_sales],
+	mixins: [Vender, previus_sales, se_puede_actualizar],
 	computed: {
 		previus_sale() {
 			return this.$store.state.vender.previus_sales.previus_sale

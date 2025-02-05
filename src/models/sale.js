@@ -145,6 +145,33 @@ export default {
 			no_usar_en_filtros: true,
 		},
 		{
+			if_has_extencion: 'combos',
+			text: 'Combos',
+			key: 'combos',
+			store: 'combo',
+			belongs_to_many: {
+				model_name: 'combo',
+				props_to_show: [
+					{
+						text: 'Nombre',
+						key: 'name',
+					},
+				],
+				pivot_props_to_show: [
+					{
+						text: 'Precio',
+						key: 'price',
+						is_price: true,
+					},
+					{
+						text: 'Cantidad',
+						key: 'amount',
+					},
+				]
+			},
+			no_usar_en_filtros: true,
+		},
+		{
 			text: 'Metodos de Pago',
 			key: 'current_acount_payment_methods',
 			store: 'current_acount_payment_method',
@@ -197,12 +224,6 @@ export default {
 				]
 			},
 			no_usar_en_filtros: true,
-			// type: 'has_many',
-			// has_many: {
-			// 	text: 'Servicio',
-			// 	model_name: 'service',
-			// 	show_btn_create: false,
-			// }
 		},
 	],
 	singular_model_name_spanish: 'Venta',

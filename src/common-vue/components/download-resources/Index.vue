@@ -32,6 +32,9 @@ export default {
 	computed: {
 		visibility: {
 			get() {
+				if (this.testing_dusk) {
+					return false
+				}
 				return this.$store.state.download_resources.visibility
 			},
 			set(value) {

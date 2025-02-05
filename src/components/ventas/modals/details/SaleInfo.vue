@@ -6,6 +6,7 @@
 			class="sale-details-buttons">
 				<btn-loader
 				v-if="se_puede_actualizar_venta(sale_details)"
+				dusk="btn_actualizar_venta"
 				class="m-r-10"
 				text="Actualizar venta"
 				:block="false"

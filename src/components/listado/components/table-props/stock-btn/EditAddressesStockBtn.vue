@@ -1,6 +1,6 @@
 <template>
 	<div
-	v-if="addresses.length && !article.article_variants.length">
+	v-if="!article.article_variants.length">
 	
 		<div
 		v-if="se_esta_editando_stock">
@@ -16,6 +16,7 @@
 			<b-button
 			size="sm"
 			class="m-l-10"
+			dusk="btn_guardar_depositos"
 			@click.stop="actualizar"
 			variant="success">
 				<i class="icon-check"></i>
@@ -23,9 +24,10 @@
 		</div>
 
 		<b-button
-		v-else-if="article.addresses.length"
+		v-else
 		size="sm"
 		class="m-l-10"
+		dusk="btn_editar_depositos"
 		@click.stop="edit_addresses"
 		variant="outline-success">
 			<i class="icon-location"></i>

@@ -326,54 +326,71 @@ export default {
 			window.open(url)		
 		},
 		onFileChange(event) {
-			let file 
-			if (!event.target.files) {
-				file = event.dataTransfer.files[0]	
-				console.log('vino desde drop')	
-			} else if (event.target.files && event.target.files.length > 0) {
-				file = event.target.files[0]
-			} 
-			this.getNumRows(file)
+		    this.$store.commit('auth/setMessage', 'Cargando archivo...');
+		    this.$store.commit('auth/setLoading', true);
+
+		    let file;
+		    if (!event.target.files) {
+		        file = event.dataTransfer.files[0];
+		        console.log('Vino desde drop');
+		    } else if (event.target.files && event.target.files.length > 0) {
+		        file = event.target.files[0];
+		    }
+
+		    // Llamar al procesamiento del archivo
+		    this.processFile(file)
+		        .then(() => {
+		            console.log('Archivo procesado con éxito.');
+		        })
+		        .catch((error) => {
+		            console.error('Error al procesar el archivo:', error);
+		            this.$store.commit('auth/setMessage', 'Ocurrió un error al procesar el archivo.');
+		        })
+		        .finally(() => {
+		            this.$store.commit('auth/setLoading', false);
+		        });
 		},
-		getNumRows(file) {
+		async processFile(file) {
+		    return new Promise((resolve, reject) => {
+		        const reader = new FileReader();
+		        reader.onload = (e) => {
+		            try {
+		                const data = new Uint8Array(e.target.result);
+		                const workbook = XLSX.read(data, { type: 'array' });
+		                const sheetName = workbook.SheetNames[0];
+		                const worksheet = workbook.Sheets[sheetName];
+		                const range = XLSX.utils.decode_range(worksheet['!ref']);
+		                let rowCount = 0;
 
-			const reader = new FileReader()
-			let that = this
-			reader.onload = function(e) {
+		                console.log('Range:', range);
 
-				const data = new Uint8Array(e.target.result)
-				const workbook = XLSX.read(data, { type: 'array' })
-				const sheetName = workbook.SheetNames[0]
-				const worksheet = workbook.Sheets[sheetName]
-				const range = XLSX.utils.decode_range(worksheet['!ref'])
-				let rowCount = 0
+		                let ultima_fila_con_contenido = 1;
+		                for (let fila = range.s.r; fila <= range.e.r; ++fila) {
+		                    for (let C = range.s.c; C <= range.e.c; ++C) {
+		                        const cellAddress = { c: C, r: fila };
+		                        const cellRef = XLSX.utils.encode_cell(cellAddress);
+		                        const cell = worksheet[cellRef];
+		                        if (cell && cell.v !== null && cell.v !== '') {
+		                            ultima_fila_con_contenido = fila + 1;
+		                            break;
+		                        }
+		                    }
+		                    rowCount++;
+		                }
 
-				console.log('range:')
-				console.log(range)
+		                console.log('Cantidad de filas:', rowCount);
+		                console.log('Última fila con contenido:', ultima_fila_con_contenido);
 
-				let ultima_fila_con_contenido = 1
-				for (let fila = range.s.r; fila <= range.e.r; ++fila) {
-					for (let C = range.s.c; C <= range.e.c; ++C) {
-						const cellAddress = { c: C, r: fila }
-						const cellRef = XLSX.utils.encode_cell(cellAddress)
-						const cell = worksheet[cellRef]
-						if (cell && cell.v !== null && cell.v !== '') {
-							ultima_fila_con_contenido = fila + 1
-							break
-						} 
-					}
-					// if (!isEmpty) {
-						rowCount++
-					// }
-				}
+		                this.finish_row = ultima_fila_con_contenido;
+		                console.log('Finish_row:', this.finish_row);
 
-				console.log("Cantidad de filas:", rowCount)
-				console.log("ultima_fila_con_contenido:", ultima_fila_con_contenido)
-				that.finish_row = ultima_fila_con_contenido
-				console.log('finish_row: '+that.finish_row)
-
-			}
-			reader.readAsArrayBuffer(file)
+		                resolve();
+		            } catch (err) {
+		                reject(err);
+		            }
+		        };
+		        reader.readAsArrayBuffer(file);
+		    });
 		},
 		canIgnore(column) {
 			return typeof column.can_not_ignore == 'undefined'

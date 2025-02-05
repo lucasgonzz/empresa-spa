@@ -40,7 +40,7 @@ export default {
 				this.$store.commit('vender/setAfipResult', [])
 			}, 500)
 		},
-		sendAfipTicket() {
+		facturar_venta() {
 			if (this.afip_information_id && this.maked_sale.total_a_facturar > 0) {
 				this.interval = window.setInterval(() => {
 					this.ticket_demorado()	

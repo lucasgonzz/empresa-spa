@@ -7,8 +7,11 @@
 	@click="call_set_model">
 		<template 
 		#button-content>
-			<i class="icon-plus"></i>
-			Crear
+			<span
+			:dusk="'btn_create_'+model_name">
+				<i class="icon-plus"></i>
+				Crear
+			</span>
 		</template>
 		<b-dropdown-item
 		v-if="can_create"

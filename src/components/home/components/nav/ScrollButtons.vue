@@ -18,6 +18,7 @@
 		</div>
 		<div 
 		@click="toLogin"
+		id="login-btn"
 		class="scroll-button d-lg-none">
 	        Iniciar sesion
 		</div>

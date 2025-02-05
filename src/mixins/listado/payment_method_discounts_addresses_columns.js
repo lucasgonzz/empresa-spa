@@ -57,94 +57,26 @@ export default {
 				props = props.filter(prop => prop.key != 'bar_code')
 			}
 
-			if (this.authenticated && this.hasExtencion('articulo_margen_de_ganancia_segun_lista_de_precios')) {
+			if (this.authenticated 
+				&& (
+					this.hasExtencion('articulo_margen_de_ganancia_segun_lista_de_precios')
+					|| this.hasExtencion('lista_de_precios_por_categoria')
+					)
+				) {
 
-				props = props.filter(prop => prop.key != 'percentage_gain')
-				props = props.filter(prop => prop.key != 'price')
-				props = props.filter(prop => prop.key != 'final_price')
-
-				this.price_types.forEach(price_type => {
-
-					if (this.no_esta_agregada('price_type_', price_type, props)) {
-
-						props.push({
-							text: price_type.name,
-							key: 'price_type_'+price_type.id,
-							type: 'text',
-							no_usar_en_filtros: true,
-
-							// Con esto hago que se agregue a las propiedades
-							// para el modal component del Model
-							propiedad_extra_para_modal: true,
-							// not_show_on_form: true,
-						})
-					}
-					
-				})
+				props = this.add_price_types(props)
+				
 			}
-
-			// Encuentra la posición de la propiedad 'final_price'
-			const final_price_index = props.findIndex(prop => prop.key === 'final_price');
-			let insertIndex = final_price_index + 1;
 
 			if (this.current_acount_payment_method_discounts.length) {
 
-				this.current_acount_payment_method_discounts.forEach(dicount => {
-
-					if (this.no_esta_agregada('payment_method_discount_', dicount, props)) {
-
-						props.splice(insertIndex, 0, {
-							text: dicount.current_acount_payment_method.name,
-							key: 'payment_method_discount_'+dicount.id,
-							type: 'text',
-							not_show_on_form: true,
-							no_usar_en_filtros: true,
-						});
-					}
-				})
+				props = this.add_payment_methods_discounts(props)
+				
 			}
 
-			// Encuentra la posición de la propiedad 'stock'
-			const stockIndex = props.findIndex(prop => prop.key === 'stock');
-			insertIndex = stockIndex + 1;
 
-			this.addresses.forEach(address => {
 
-				if (this.no_esta_agregada('address_', address, props)) {
-
-					props.splice(insertIndex, 0, {
-						text: address.street,
-						key: 'address_' + address.id,
-						type: 'text',
-						not_show_on_form: true,
-						no_usar_en_filtros: true,
-					});
-
-					// console.log('agregando la direccion '+address.street)
-					// props.push({
-					// 	text: address.street,
-					// 	key: 'address_'+address.id,
-					// 	type: 'text',
-					// 	not_show_on_form: true,
-					// 	no_usar_en_filtros: true,
-					// })
-				}
-			})
-
-			// props.push({
-			// 	text: 'Creado',
-			// 	key: 'created_at',
-			// 	type: 'date',
-			// 	is_date: true,
-			// 	not_show_on_form: true,
-			// })
-			// props.push({
-			// 	text: 'Actualizado',
-			// 	key: 'updated_at',
-			// 	type: 'date',
-			// 	is_date: true,
-			// 	not_show_on_form: true,
-			// })
+			props = this.add_addresses(props)
 
 			console.log('Listado props:')
 			console.log(props)
@@ -215,6 +147,134 @@ export default {
 
 				return stock_in_address
 			}
+		},
+
+
+		add_addresses(props) {
+
+			// Encuentra la posición de alguna de estas props
+			let props_a_partir_de_las_cuales_agregar = [
+				'stock',
+				'name',
+				'price',
+				'cost',
+				'provider_order',
+				'bar_code',
+				'images',
+				'num',
+			]
+
+			let insertIndex = this.get_index(props, props_a_partir_de_las_cuales_agregar)
+
+			this.addresses.forEach(address => {
+
+				if (this.no_esta_agregada('address_', address, props)) {
+
+					props.splice(insertIndex, 0, {
+						text: address.street,
+						key: 'address_' + address.id,
+						type: 'text',
+						not_show_on_form: true,
+						no_usar_en_filtros: true,
+					});
+
+				}
+			})
+
+			return props
+		},
+
+		add_payment_methods_discounts(props) {
+
+			// Encuentra la posición de alguna de estas props
+			let props_a_partir_de_las_cuales_agregar = [
+				'cost',
+				'price',
+				'name',
+				'provider_order',
+				'bar_code',
+				'images',
+				'num',
+			]
+
+			let insertIndex = this.get_index(props, props_a_partir_de_las_cuales_agregar)
+			
+			this.current_acount_payment_method_discounts.forEach(dicount => {
+
+				if (this.no_esta_agregada('payment_method_discount_', dicount, props)) {
+
+					props.splice(insertIndex, 0, {
+						text: dicount.current_acount_payment_method.name,
+						key: 'payment_method_discount_'+dicount.id,
+						type: 'text',
+						not_show_on_form: true,
+						no_usar_en_filtros: true,
+					});
+				}
+			})
+		},
+		add_price_types(props) {
+
+			// Encuentra la posición de alguna de estas props
+			let props_a_partir_de_las_cuales_agregar = [
+				'cost',
+				'price',
+				'name',
+				'provider_order',
+				'bar_code',
+				'images',
+				'num',
+			]
+
+			let insertIndex = this.get_index(props, props_a_partir_de_las_cuales_agregar)
+
+			props = props.filter(prop => prop.key != 'percentage_gain')
+			props = props.filter(prop => prop.key != 'price')
+			props = props.filter(prop => prop.key != 'final_price')
+
+			this.price_types.forEach(price_type => {
+
+				if (this.no_esta_agregada('price_type_', price_type, props)) {
+
+					props.splice(insertIndex, 0, {							
+						text: price_type.name,
+						key: 'price_type_'+price_type.id,
+						type: 'text',
+						no_usar_en_filtros: true,
+
+						// Con esto hago que se agregue a las propiedades
+						// para el modal component del Model
+						propiedad_extra_para_modal: true,
+						// not_show_on_form: true,
+					})
+				}
+				
+			})
+
+			return props
+		},
+
+		get_index(props, props_a_partir_de_las_cuales_agregar) {
+
+			let index = -1
+			
+			let prop_index = 0
+
+			while (
+				index == -1 
+				&& prop_index < props_a_partir_de_las_cuales_agregar.length) 
+			{
+				let prop = props_a_partir_de_las_cuales_agregar[prop_index]	
+				
+				prop_index++
+
+				index = props.findIndex(_prop => _prop.key === prop)
+			}
+
+			// Aumento el index en 1 para que se muestre en la siguiente posicion 
+			index++
+
+			return index 
 		}
-	}
+	},
 }

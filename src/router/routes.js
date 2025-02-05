@@ -245,4 +245,15 @@ export default [
 		if_has_extencion: 'consultora_de_precios',
 		image_url: 'nav-icons/consulta_precios.png',
 	},
+	{
+		text: 'Papelera',
+		path: '/papelera',
+		name: 'papelera',
+		params: {
+			view: 'articulos',
+		},
+		component: '@/views/Papelera',
+		image_url: 'nav-icons/papelera.png',
+		check_is_owner: true,
+	},
 ]

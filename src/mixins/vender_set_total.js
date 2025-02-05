@@ -1,6 +1,6 @@
-// import cuotas from '@/mixins/vender/cuotas'
+import set_items_prices from '@/mixins/vender/set_items_prices'
 export default {
-	// mixins: [cuotas],
+	mixins: [set_items_prices],
 	computed: {
 		vender_items() {
 			return this.$store.state.vender.items 
@@ -61,6 +61,7 @@ export default {
 		return {
 			total_articles: 0,
 			total_services: 0,
+			total_combos: 0,
 		}
 	},
 	methods: {
@@ -74,32 +75,57 @@ export default {
 				
 				this.total_articles = 0
 				this.total_services = 0
+				this.total_combos = 0
 				
 				let new_items = []
 
 				this.setItemsPrices(false, this.from_pivot)
 
 				this.vender_items.forEach(item => {
-					item.total = this.getTotalItem(item, false)
+					console.log('vender_items:')
+					console.log(item.is_article)
+					console.log(item.is_service)
+					console.log(item.is_combo)
 					if (item.is_service) {
+
 						this.total_services += this.getTotalItem(item, false)
+
 					} else if (item.is_article) {
+
+						console.log('price de '+item.name)
+						console.log(this.getTotalItem(item, false))
+
 						this.total_articles += this.getTotalItem(item, false)
+
+					} else if (item.is_combo) {
+
+						this.total_combos += this.getTotalItem(item, false)
+
 					}
 					// total += this.getTotalItem(item, false)
 					new_items.push(item)
 				})
+
+				console.log('total 1:')
+				console.log(this.total_articles)
 
 				this.aplicar_descuento()
 
 				this.aplicar_discounts()
 
 				this.aplicar_surchages()
+
+				console.log('total 2:')
+				console.log(this.total_articles)
 				
 				this.$store.commit('vender/setItems', new_items)
 				
-				sub_total = this.total_articles + this.total_services
-				total = this.total_articles + this.total_services
+				sub_total = this.total_articles + this.total_services + this.total_combos
+				total = this.total_articles + this.total_services + this.total_combos
+
+
+				console.log('total 3:')
+				console.log(this.total)
 
 				total = this.aplicar_current_acount_payment_method_discounts(sub_total)
 

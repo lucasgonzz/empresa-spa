@@ -205,23 +205,21 @@ export default {
             }
             return false 
         },
-        checkOrderArticlesAddresses() {
-            let ok = true
-            console.log(this.owner)
-            if (this.owner.online_configuration.save_sale_after_finish_order) {
-                let order = this.$store.state.order.model 
-                order.articles.forEach(order_article => {
-                    let store_article = this.$store.state.article.models.find(_article => {
-                        return _article.id == order_article.id 
-                    })
-                    if (typeof store_article != 'undefined' && store_article.addresses.length && !order_article.pivot.address_id) {
-                        this.$toast.error('Indique deposito para el articulo '+order_article.name)
-                        ok = false 
-                    } 
-                })
-            }
-            return ok
-        },
+        // checkOrderArticlesAddresses() {
+        //     let ok = true
+        //     console.log(this.owner)
+        //     if (this.owner.online_configuration.save_sale_after_finish_order) {
+        //         let order = this.$store.state.order.model 
+        //         let addresses = this.$store.state.address.models 
+                
+        //         if (addresses.length && !order.address_id) {
+                    
+        //             this.$toast.error('Indique un deposito')
+        //             ok = false 
+        //         } 
+        //     }
+        //     return ok
+        // },
         checkProviderOrderArticlesAddresses() {
             let ok = true
 

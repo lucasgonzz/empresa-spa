@@ -8,10 +8,10 @@
 		class="d-flex w-100">
 			<b-form-input
 			id="article-bar-code"
-			v-model="article.codigo"
+			dusk="article_bar_code"
+			v-model="item_vender.codigo"
 			autocomplete="off" 
 			ref="articleBarCode"
-			@keydown.shift="_callVender"
 			@keydown.enter="setArticle"
 			:placeholder="placeholder"></b-form-input>
 
@@ -23,10 +23,11 @@
 	</b-col>
 </template>
 <script>
-import vender from '@/mixins/vender' 
-// import sonido_error from '@/mixins/sonido_error' 
+import vender from '@/mixins/vender/index' 
+import guardar_venta from '@/mixins/vender/guardar_venta/index' 
+import sonido_error from '@/mixins/sonido_error' 
 export default {
-	mixins: [vender],
+	mixins: [vender, guardar_venta, sonido_error],
 	created() {
 		setTimeout(() => {
 			document.getElementById('article-bar-code').focus()
@@ -36,8 +37,8 @@ export default {
 		BarCodeScanner: () => import('@/common-vue/components/bar-code-scanner/Index'),
 	},
 	computed: {
-		article() {
-			return this.$store.state.vender.article
+		item() {
+			return this.$store.state.vender.item
 		},
 		articles() {
 			return this.$store.state.article.models
@@ -60,7 +61,7 @@ export default {
 	methods: {
 		_callVender() {
 			if (!this.usar_codigo_proveedor) {
-				this.callVender()
+				this.guardar_venta()
 			}
 		},
 		async getArticleFromCodigo(codigo) {
@@ -69,21 +70,17 @@ export default {
 				codigo = this.getBarCode(codigo)
 			}
 			if (!this.download_articles || (this.is_mobile && !this.downloadOnMobile('article') && !this.articles.length ) || this.$store.state.article.loading) {
-				console.log('se va a buscar del api el codigo '+codigo)
 				await this.getArticleFromApi(codigo)
 				// alert('siguio')
 			} else {
 				this.finded_article = this.articles.find(article => {
 					return this.check_article(article, codigo)
 				})
-				console.log('ENTRO 2')
-				console.log(this.finded_article)
 				// alert('Find in store: '+this.finded_article)
 			}
 		},
 		check_article(article, codigo) {
 			if (this.usar_codigo_proveedor) {
-				// console.log('comparando '+article.provider_code+' con '+codigo)
 				return article.provider_code && article.provider_code.toLowerCase() == codigo.toLowerCase()
 			} else {
 				return article.bar_code && article.bar_code == codigo
@@ -91,19 +88,19 @@ export default {
 		},
 		async setBarCode(bar_code) {
 			await this.getArticleFromCodigo(bar_code)
-			console.log('setVenderArticle')
-			this.setVenderArticle(this.finded_article, true) 
+			this.finded_article.is_article = true
+
+			this.set_item_vender(this.finded_article, true) 
 		},
 		async setArticle() {
-			if (this.article.codigo != '') {
-				await this.getArticleFromCodigo(this.article.codigo)
+			if (this.item_vender.codigo != '') {
+				await this.getArticleFromCodigo(this.item_vender.codigo)
 				if (typeof this.finded_article != 'undefined') {
-					console.log('sigue con setVenderArticle')
-					console.log(this.finded_article.name)
 
 					this.set_nombre_en_input()
 
-					this.setVenderArticle(this.finded_article)
+					this.finded_article.is_article = true
+					this.set_item_vender(this.finded_article)
 				} else {
 
                     // var audio = new Audio(error);
@@ -136,8 +133,6 @@ export default {
 			return this.$api.get('vender/buscar-articulo-por-codido/'+bar_code)
 			.then(res => {
 				this.$store.commit('auth/setLoading', false)
-				console.log('llego esto:')
-				console.log(res.data)
 				if (res.data.article) {
 					this.finded_article = res.data.article
 
@@ -152,7 +147,6 @@ export default {
 			.catch(err => {
 				this.$store.commit('auth/setLoading', false)
 				alert('Error al buscar articulo')
-				console.log(err)
 			})
 		}
 	}

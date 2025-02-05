@@ -57,10 +57,12 @@
 		label="Observaciones">
 			<b-form-textarea
 			v-model="observations"
+			dusk="stock-movement-observations"
 			placeholder="Ingerse alguna observacion..."></b-form-textarea>
 		</b-form-group>
 
 		<btn-loader
+		dusk="btn_guardar_stock_movement"
 		@clicked="save"
 		:loader="loading"
 		text="Guardar"></btn-loader>

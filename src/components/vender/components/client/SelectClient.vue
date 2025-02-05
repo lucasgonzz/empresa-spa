@@ -4,6 +4,7 @@
 		v-if="index_previus_sales == 0 && !budget">
 			<search-component
 			class="m-b-15"
+			id="select_client_vender"
 			@setSelected="setSelected"
 			:prop="{text: 'Cliente', key: 'client_id'}"
 			:model="_vender.client"
@@ -25,10 +26,13 @@
 	</div>
 </template>
 <script>
-import vender from '@/mixins/vender'
+// import vender from '@/mixins/vender'
 import vender_set_total from '@/mixins/vender_set_total'
+import price_types from '@/mixins/vender/price_types'
+import computed from '@/mixins/vender/computed'
 export default {
-	mixins: [vender, vender_set_total],
+	mixins: [price_types, vender_set_total, computed],
+	// mixins: [vender, vender_set_total],
 	components: {
 		SearchComponent: () => import('@/common-vue/components/search/Index'),
 	}, 
@@ -65,7 +69,6 @@ export default {
 			}
 			this.setTotal() 
 			// this.$store.commit('vender/setTotal') 
-			console.log('watch client')
 		},
 	},
 	methods: {

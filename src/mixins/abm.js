@@ -7,6 +7,7 @@ export default {
 					models: [
 						'category',
 						'sub_category',
+						'combo',
 						'brand',
 						'price_type',
 						'tipo_envase',
@@ -23,6 +24,8 @@ export default {
 					models: [
 						'discount',
 						'surchage',
+						'category_price_type_range',
+						'article_price_type_group',
 						'cuota',
 						'default_payment_method_caja',
 						'current_acount_payment_method_discount',

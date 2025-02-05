@@ -26,6 +26,7 @@
                     <div></div>
         			<b-button
                     class="btn-login"
+                    dusk="login-btn"
                     :to="{name: 'login'}"
                     variant="primary">
         				Iniciar sesion

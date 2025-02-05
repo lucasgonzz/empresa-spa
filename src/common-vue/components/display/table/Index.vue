@@ -3,6 +3,7 @@
 		<div
 		:id="id"
 		v-if="!loading"
+		:dusk="'table-'+model_name"
 		class="cont-table">
 
 			<pagination
@@ -216,6 +217,10 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+		papelera: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	mounted() {
 		setTimeout(() => {
@@ -414,7 +419,7 @@ export default {
 			this.set_fields()
 		},
 		props() {
-			this.set_fields()
+			this.set_fields(true)
 		},
 		models() {
 			this.setHeight()
@@ -433,8 +438,10 @@ export default {
 			this.$store.commit('auth/setLoading', true)
 
 
+
 			this.$api.post('search/'+this.model_name+'/null/1?page='+current_page, { 
-				filters: filters
+				filters: filters,
+				papelera: this.papelera
 			})
 			.then(res => {
 				this.$store.commit('auth/setLoading', false)
@@ -444,18 +451,33 @@ export default {
 
 				if (res.data.data.length) {
 
-					// this.$store.commit(this.model_name+'/setFilters', [])
-					
-					this.$store.commit(this.model_name+'/setIsFiltered', true) 
-					this.$store.commit(this.model_name+'/setFiltered', res.data.data)
-					this.$store.commit(this.model_name+'/setTotalFilterPages', res.data.last_page)
-					this.$store.commit(this.model_name+'/setTotalFilterResults', res.data.total)
-					// this.$store.commit(this.model_name+'/setFilterPage', 1)
+					let papelera = ''
 
-					// this.local_field.igual_que = null;
-					// this.local_field.que_contenga = null;
-					// this.local_field.menor_que = null;
-					// this.local_field.mayor_que = null;
+					if (this.papelera) {
+						papelera = 'papelera/'
+					}
+
+					this.$store.commit(papelera+this.model_name+'/setIsFiltered', true) 
+					this.$store.commit(papelera+this.model_name+'/setFiltered', res.data.data)
+					this.$store.commit(papelera+this.model_name+'/setTotalFilterPages', res.data.last_page)
+					this.$store.commit(papelera+this.model_name+'/setTotalFilterResults', res.data.total)
+
+					// if (this.papelera) {
+
+					// 	this.$store.commit(this.model_name+'/setIsFiltered', true) 
+					// 	this.$store.commit(this.model_name+'/setFiltered', res.data.data)
+					// 	this.$store.commit(this.model_name+'/setTotalFilterPages', res.data.last_page)
+					// 	this.$store.commit(this.model_name+'/setTotalFilterResults', res.data.total)
+
+					// } else {
+
+					// 	this.$store.commit(this.model_name+'/setIsFiltered', true) 
+					// 	this.$store.commit(this.model_name+'/setFiltered', res.data.data)
+					// 	this.$store.commit(this.model_name+'/setTotalFilterPages', res.data.last_page)
+					// 	this.$store.commit(this.model_name+'/setTotalFilterResults', res.data.total)
+					// }
+
+					
 				} else {
 
 					this.$toast.error('No se encontraron resultados')
@@ -483,7 +505,7 @@ export default {
 		limpiar_show_filters() {
 			this.show_filters = {}; 
 		},
-		set_fields() {
+		set_fields(cambiaron_las_props = false) {
 
 			console.log('set_fields:')
 
@@ -498,7 +520,7 @@ export default {
 			})
 			console.log(this.fields)
 
-			this.set_filters()
+			this.set_filters(cambiaron_las_props)
 
 			// this.restart_filtereds()
 		},
@@ -512,13 +534,13 @@ export default {
 			console.log('filtros_ya_iniciados para '+this.model_name)
 			return this.$store.state[this.model_name].filters.length
 		},
-		set_filters() {
+		set_filters(cambiaron_las_props) {
 
 			if (this.pivot) {
 				return
 			}
 
-			if (this.filtros_ya_iniciados()) {
+			if (this.filtros_ya_iniciados() && !cambiaron_las_props) {
 				return
 			}
 
@@ -541,6 +563,7 @@ export default {
 
 					filters.push({
 						key: prop.key,
+						store: prop.store,
 						label: this.propText(prop, true, true),
 						type: prop.type_to_update ? prop.type_to_update : prop.type,
 						igual_que: prop.type == 'select' ? 0 : '',

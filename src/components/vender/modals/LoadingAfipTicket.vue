@@ -64,7 +64,7 @@ id="loading-afip-ticket">
 </div>
 </template>
 <script>
-import afip_ticket from '@/mixins/afip_ticket'
+import afip_ticket from '@/mixins/vender/guardar_venta/facturar'
 export default {
 	mixins: [afip_ticket],
 	computed: {

@@ -13,7 +13,9 @@
 				</strong>
 			</p>
 			<p class="m-0">
-				<strong class="total">
+				<strong 
+				dusk="total"
+				class="total">
 					Total: {{ price(total) }}
 				</strong>
 			</p>

@@ -8,6 +8,7 @@
 
 		<table-component
 		@onRowSelected="clicked"
+		:papelera="papelera"
 		:usar_filtros="usar_filtros"
 		:show_empty_text="show_empty_text"
 		:show_actualizado="show_actualizado"
@@ -142,10 +143,14 @@ export default {
 			type: Boolean,
 			default: true,
 		},
+		papelera: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	data() {
 		return {
-			index_to_show: 30,
+			index_to_show: 100,
 		}
 	},
 	computed: {
@@ -165,27 +170,30 @@ export default {
 			return this.$store.state[this.model_name].loading
 		},
 		models_to_show() {
-			console.log('models_to_show display component:')
-			console.log('is_from_models_que_vinieron_por_props:')
-			console.log(this.is_from_models_que_vinieron_por_props)
 			if (this.is_from_models_que_vinieron_por_props) {
 				if (this.slice_models) {
-					console.log('return models que vinieron por props SLICE:')
 					console.log(this.models.slice(0, this.index_to_show) )
 					return this.models.slice(0, this.index_to_show) 
 				}
-				console.log('return models que vinieron por props:')
 				return this.models
 			} else {
+				if (this.papelera) {
+					console.log('retornando papelera:')
+					if (this.is_from_filter) {
+						let filtered = this.$store.state.papelera[this.model_name].filtered 
+						return filtered
+					} else if (this.order_list_by) {
+						return this.$store.state.papelera[this.model_name].models
+					}
+					return this.$store.state.papelera[this.model_name].models.slice(0, this.index_to_show) 
+				}
+
 				if (this.is_from_filter) {
 					let filtered = this.$store.state[this.model_name].filtered 
-					console.log('return filtered_models')
 					return filtered
 				} else if (this.order_list_by) {
-					console.log('return todos los models porque es por order_list_by')
 					return this.$store.state[this.model_name].models
 				}
-				console.log('return store_models')
 				return this.$store.state[this.model_name].models.slice(0, this.index_to_show) 
 			}
 		},

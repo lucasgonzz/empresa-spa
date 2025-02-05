@@ -53,7 +53,7 @@ export default {
             return this.$store.state.employee.models.find(employee => employee.id == id)
         },
         hasExtencion(slug, check_has_one_extencion_permission = true) {
-            if (this.authenticated) {
+            if (this.authenticated && this.owner) {
                 let index = this.owner.extencions.findIndex(extencion => {
                     return extencion.slug == slug
                 })
@@ -113,14 +113,25 @@ export default {
         apicar_tipos_de_precio(item, price) {
 
             console.log('apicar_tipos_de_precio:')
+                
             if (this.hasExtencion('cambiar_price_type_en_vender')) {
 
-                let price_vender_id = this.price_type_vender.id 
+                let price_vender_id
+
+                if (this.price_type_vender) {
+                    price_vender_id = this.price_type_vender.id 
+                }
 
                 if (item.price_type_personalizado_id) {
 
+                    console.log('price_vender_personalizado: '+item.price_type_personalizado_id)
+
                     price_vender_id = item.price_type_personalizado_id
                 }
+
+                console.log('is_article: '+item.is_article)
+                console.log('item.price_types: ')
+                console.log(item.price_types)
 
                 if (item.is_article) {
                     
@@ -128,11 +139,9 @@ export default {
                         return price_type.id == price_vender_id 
                     })
 
-                    console.log('article_price_type:')
-                    console.log(article_price_type)
-
                     if (typeof article_price_type != 'undefined') {
 
+                        console.log('usando precio de la lista de precios personalizada: '+article_price_type.pivot.final_price)
                         price = article_price_type.pivot.final_price
                     }
                 }
@@ -143,6 +152,8 @@ export default {
                 if (this.price_types_with_position.length && this.checkService(item)) {
                    
                     this.price_types_with_position.forEach(price_type => {
+                        console.log('price_type:')
+                        console.log(price_type)
                         if (price_type.position <= this.price_type_vender.position) {
                             price = Number(price) + Number(price * this.getPriceTypePercetage(price_type, item) / 100) 
                         }

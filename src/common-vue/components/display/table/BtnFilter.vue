@@ -32,8 +32,6 @@ export default {
 			let filter = this.$store.state[this.model_name].filters.find(_filter => _filter.key == this.field.key)
 
 			if (typeof filter != 'undefined') {
-				console.log('retornando filtro actualizado de '+filter.key)
-				console.log(filter)
 				return filter  
 			}
 			return null

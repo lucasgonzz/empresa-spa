@@ -41,12 +41,12 @@ export default {
 			show: true,
 			v_if: ['deliver', '=', '1'],
 		},
-		{
-			text: 'Direccion',
-			key: 'address',
-			function: 'getOrderAddress',
-			v_if: ['deliver', '=', '1'],
-		},
+		// {
+		// 	text: 'Direccion',
+		// 	key: 'address',
+		// 	function: 'getOrderAddress',
+		// 	v_if: ['deliver', '=', '1'],
+		// },
 		{
 			text: 'Metodo de pago',
 			key: 'payment_method_id',
@@ -78,6 +78,13 @@ export default {
 			only_show: true,
 			value: '',
 			show: true,
+		},
+		{
+			text: 'Deposito',
+			key: 'address_id',
+			type: 'select',
+			use_store_models: true,
+			select_prop_name: 'street',
 		},
 		{
 			text: 'Articulos',

@@ -2,6 +2,11 @@
 	<div
 	class="m-t-15"
 	v-if="model.order_status.name != 'Cancelado' && model.order_status.name != 'Entregado'">
+		<p
+		class="text-center m-t-10 text-danger"
+		v-if="disabled">
+			Indique el deposito para poder continuar
+		</p>
 		<btn-loader
 		:loader="loading"
 		:text="text"
@@ -18,6 +23,7 @@ export default {
 	data() {
 		return {
 			loading: false,
+			status_message: 'Indique el deposito para poder continuar',
 		}
 	},
 	computed: {
@@ -44,26 +50,34 @@ export default {
 		order_statuses() {
 			return this.$store.state.order_status.models 
 		},
+		disabled() {
+			if (this.$store.state.address.models.length && !this.model.address_id) {
+				return true
+			}
+			return false
+		}
 	},
 	methods: {
 		updateStatus() {
-			if (this.checkOrderArticlesAddresses()) {
-				this.loading = true
-				this.$api.put(`/order/update-status/${this.model.id}`, {
-					order_status_id: this.getStatusId()
-				})
-				.then(res => {
-					this.loading = false
-					// this.$store.dispatch('online/messages/getMessages', this.model.buyer_id)
-					this.$store.commit('order/add', res.data.model)
-					// this.$store.commit('order/setToShow')
-					this.$bvModal.hide('order')
-				})
-				.catch(err => {
-					this.loading = false
-					console.log(err)
-				})
+			if (this.disabled) {
+				this.$toast.error(this.status_message)
+				return
 			}
+			this.loading = true
+			this.$api.put(`/order/update-status/${this.model.id}`, {
+				order_status_id: this.getStatusId()
+			})
+			.then(res => {
+				this.loading = false
+				// this.$store.dispatch('online/messages/getMessages', this.model.buyer_id)
+				this.$store.commit('order/add', res.data.model)
+				// this.$store.commit('order/setToShow')
+				this.$bvModal.hide('order')
+			})
+			.catch(err => {
+				this.loading = false
+				console.log(err)
+			})
 		},
 		getStatusId() {
 			let name 

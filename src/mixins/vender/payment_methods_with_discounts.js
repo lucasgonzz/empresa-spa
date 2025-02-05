@@ -34,9 +34,6 @@ export default {
 	methods: {
 
 		check_sobrante_a_repartir_with_discounts(){
-			console.log('check_sobrante_a_repartir with_discounts')
-			console.log('sobrante_a_repartir_with_discounts:')
-			console.log(this.sobrante_a_repartir_with_discounts)
 
 			if (this.sobrante_a_repartir_with_discounts != 0) {
 
@@ -51,7 +48,6 @@ export default {
 				return false
 			} 
 
-			console.log('aprobo check_sobrante_a_repartir')
 			return true
 		},
 

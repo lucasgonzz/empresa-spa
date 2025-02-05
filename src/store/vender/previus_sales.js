@@ -116,6 +116,7 @@ export default {
 			})
 			.catch(err => {
 				commit('setUpdating', false)
+				alert('Error al actualizar venta')
 				console.log(err)
 			})
 		},

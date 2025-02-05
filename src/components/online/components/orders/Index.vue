@@ -10,7 +10,6 @@
 		:show_btn_delete="false"
 		:show_btn_create="false"
 		order_list_by="order_status"
-		save_check_function="checkOrderArticlesAddresses"
 		model_name="order">
 			<template v-slot:modal_buttons="slotProps">
 				<btn-status />

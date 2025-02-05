@@ -12,30 +12,29 @@ class="j-center m-t-25">
 		:text="text_btn"
 		:loader="loader"
 		size="lg"
+		dusk="btn_vender"
 		@clicked="saveSale" />
 	</b-col>
 </b-row>
 </template>
 <script>
 import BtnLoader from '@/common-vue/components/BtnLoader'
-import previus_sales from '@/mixins/previus_sales'
-import vender from '@/mixins/vender'
+import previus_sales from '@/mixins/vender/previus_sale/index'
+import guardar_venta from '@/mixins/vender/guardar_venta/index'
 import vender_presupuestos from '@/mixins/vender_presupuestos'
 export default {
 	name: 'ButtonClients',
 	components: {
 		BtnLoader,
 	},
-	mixins: [previus_sales, vender, vender_presupuestos],
+	mixins: [previus_sales, guardar_venta, vender_presupuestos],
 	methods: {
 		saveSale() {
-			console.log('se llamo saveSale')
 			if (!this.loader && this.check()) {
 				if (this.guardar_como_presupuesto) {
 					this.guardar_presupuesto()
 				} else if (this.index_previus_sales == 0) {
-					console.log('llamando a vender')
-					this.vender(false)
+					this.guardar_venta(false)
 				} else {
 					this.updateSale()
 				}
@@ -87,6 +86,19 @@ export default {
 		},
 		items() {
 			return this.$store.state.vender.items
+		},
+
+		updating() {
+			return this.$store.state.vender.previus_sales.updating
+		},
+		updating() {
+			return this.$store.state.vender.previus_sales.updating
+		},
+		index_previus_sales() {
+			return this.$store.state.vender.previus_sales.index
+		},
+		vendiendo() {
+			return this.$store.state.vender.vendiendo
 		},
 		loader() {
 			if (this.index_previus_sales == 0) {

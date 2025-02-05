@@ -53,10 +53,11 @@
 </template>
 <script>
 import select_payment_methods from '@/mixins/vender/select_payment_methods'
-import vender from '@/mixins/vender'
+import default_payment_method from '@/mixins/vender/default_payment_method'
+// import vender from '@/mixins/vender'
 
 export default {
-	mixins: [select_payment_methods, vender],
+	mixins: [select_payment_methods, default_payment_method],
 	computed: {
 		payment_methods_with_discounts() {
 			return this.$store.state.vender.current_acount_payment_methods_with_discounts.payment_methods

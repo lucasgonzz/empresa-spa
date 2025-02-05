@@ -12,6 +12,7 @@
 				{{ article.stock }}
 			</span> 
 			<span
+			dusk="btn_asignar_stock"
 			v-else>
 				Asignar Stock
 			</span> 

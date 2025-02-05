@@ -45,16 +45,11 @@ export default {
 					&& caja_default.address_id == this.vender_address_id
 			})
 
-			console.log('caja_default')
-			console.log(caja_default)
-
 			// Si existe una caja por defecto, ordénala primero
 			if (caja_default) {
 
 
-				console.log('se va a poner caja por defecto id: '+caja_default.caja_id)
 
-				console.log('count_se_habilitaron_las_cajas: '+this.count_se_habilitaron_las_cajas.count)
 
 				this.$store.commit('vender/set_caja_id', caja_default.caja_id)
 				
@@ -81,14 +76,12 @@ export default {
 
 				if (this.count_se_habilitaron_las_cajas.payment_method_id != payment_method_id) {
 
-					console.log('cambio el metodo de pago en cajas, se va a volver a llamar a set_cajas_habilitadas')
 					this.count_se_habilitaron_las_cajas.count = 0
 					this.set_cajas_habilitadas(payment_method_id)
 				}
 
 				if (this.count_se_habilitaron_las_cajas.address_id != this.vender_address_id) {
 
-					console.log('cambio address_id en cajas, se va a volver a llamar a set_cajas_habilitadas')
 					this.count_se_habilitaron_las_cajas.count = 0
 					this.set_cajas_habilitadas(payment_method_id)
 				}

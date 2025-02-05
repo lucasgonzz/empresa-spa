@@ -1,6 +1,8 @@
 <template>
-	<div>
-		<surchages></surchages>	
+	<div
+	v-if="puede_usar_discount_surchages">
+		<surchages
+		v-if="puede_crear_discount_surchages"></surchages>	
 		<b-card
 		class="m-b-15 b-r-1 shadow">
 			<div
@@ -62,8 +64,9 @@
 import Surchages from '@/components/vender/modals/clients/Surchages'
 import vender from '@/mixins/vender'
 import vender_set_total from '@/mixins/vender_set_total'
+import discount_surchage_permissions from '@/mixins/vender/discount_surchage_permissions'
 export default {
-	mixins: [vender, vender_set_total],
+	mixins: [vender, vender_set_total, discount_surchage_permissions],
 	components: {
 		Surchages,
 	},

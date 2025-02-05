@@ -1,5 +1,6 @@
 <template>
 	<model
+	:check_permissions="false"
 	model_name="discount"></model>
 </template>
 <script>

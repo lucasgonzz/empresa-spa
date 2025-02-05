@@ -135,6 +135,11 @@ const routes = [
         name: 'consultora_de_precios',
         component: () => import('@/views/ConsultoraDePrecios')
     },
+    {
+        path: '/papelera/:view?',
+        name: 'papelera',
+        component: () => import('@/views/Papelera')
+    },
     // {
     //     path: '/ventas',
     //     name: 'ventas',

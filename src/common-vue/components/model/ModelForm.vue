@@ -648,17 +648,61 @@ export default {
 				// this.$emit('save')
 			}
 		},
-		checkIsRepeat(prop) {
-			if (prop.use_to_check_if_is_repeat) {
-				let finded = this.modelsStoreFromName(this.model_name).find(model => {
-					return model[prop.key] && model[prop.key].toLowerCase() == this.model[prop.key].toLowerCase()
-				})
-				if (typeof finded != 'undefined' && (!this.model.id || this.model.id != finded.id)) {
-					this.$toast.warning('Ya hay un '+this.singular(this.model_name)+' con este '+this.propText(prop))
-					this.setModel(finded, this.model_name, [], false)
-				}
-			} 
-		},
+		async checkIsRepeat(prop) {
+		    if (prop.use_to_check_if_is_repeat) {
+		        let finded = undefined;
+
+		        if (prop.chequear_buscando_desde_api) {
+		            // Construir los filtros
+		            let filters = [
+		                {
+		                    type: 'text',
+		                    igual_que: this.model[prop.key].toLowerCase(),
+		                    key: prop.key
+		                }
+		            ];
+
+		            // Mostrar mensaje y activar loading
+		            this.$store.commit('auth/setMessage', 'Chequeando ' + prop.text);
+		            this.$store.commit('auth/setLoading', true);
+
+		            try {
+		                // Llamada a la API y esperar la respuesta
+		                const res = await this.$api.post('search/' + this.model_name, {
+		                    filters
+		                });
+
+		                this.$store.commit('auth/setLoading', false);
+
+		                let models = res.data.models;
+		                if (models.length) {
+		                    console.log('Hay finded:');
+		                    finded = models[0];
+		                    console.log(models[0]);
+		                }
+		            } catch (err) {
+		                this.$store.commit('auth/setLoading', false);
+		                this.$toast.error('Error al chequear ' + prop.text);
+		                console.log(err);
+		            }
+		        } else {
+		            // Buscar localmente
+		            finded = this.modelsStoreFromName(this.model_name).find(model => {
+		                return model[prop.key] && model[prop.key].toLowerCase() == this.model[prop.key].toLowerCase();
+		            });
+		        }
+
+		        console.log('finded:');
+		        console.log(finded);
+
+		        // Validar si se encontró un modelo repetido
+		        if (typeof finded != 'undefined' && (!this.model.id || this.model.id != finded.id)) {
+		            this.$toast.warning('Ya hay un ' + this.singular(this.model_name) + ' con este ' + this.propText(prop));
+		            this.setModel(finded, this.model_name, [], false);
+		        }
+		    }
+		}
+
 	},
 	components: {
 		ModelComponent: () => import('@/common-vue/components/model/Index'),

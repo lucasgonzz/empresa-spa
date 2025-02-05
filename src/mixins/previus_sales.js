@@ -101,15 +101,7 @@ export default {
 				}
 			}
 
-			// if (this.hasExtencion('articulo_margen_de_ganancia_segun_lista_de_precios')) {
-				
-			// 	return false 
-			// }
-
 			return true
-			// if (this.current_acount_payment_method_discounts.length) {
-			// 	return true 
-			// }
 		},
 		setPreviusSale(sale) {
 			console.log('updateSale:')
@@ -119,7 +111,10 @@ export default {
 			.then(res => {
 				this.loading_index = false
 				
-				if (res.data.actualizandose_por) {
+				if (
+					res.data.actualizandose_por
+					&& res.data.actualizandose_por.id != this.user.id
+				) {
 					this.$toast.error('Se esta actualizando por '+res.data.actualizandose_por.name)
 				} else {
 
@@ -423,7 +418,7 @@ export default {
 				model.combos.forEach(combo => {
 					item.id = combo.id
 					item.name = combo.name
-					item.pivot = article.pivot
+					item.pivot = combo.pivot
 					// item.price = Number(combo.pivot.price)
 					item.amount = Number(combo.pivot.amount)
 					item_to_add = {

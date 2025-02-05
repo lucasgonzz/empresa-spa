@@ -1,6 +1,7 @@
 <template>
 	<b-button
 	class="m-l-15"
+	dusk="btn_deposit_movements"
 	@click="show_modal">
 		<i class="icon-refresh"></i>
 		Depositos

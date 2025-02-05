@@ -1,6 +1,9 @@
 export default [
     // 'extencion',
     'address',
+    'concepto_stock_movement',
+    'category_price_type_range',
+    'article_price_type_group',
     'provider_order_status',
     'afip_tipo_comprobante',
     'order_status',

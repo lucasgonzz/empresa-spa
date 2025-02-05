@@ -1,6 +1,6 @@
 <template>
 	<div
-	v-if="price_type_vender">
+	v-if="show">
 		<b-form-select
 		class="m-l-15"
 		:disabled="is_disabled"
@@ -22,15 +22,29 @@ export default {
 	mixins: [vender],
 	created() {
 		setTimeout(() => {
-			this.price_type_id = this.price_type_vender.id
+			if (this.price_type_vender) {
+
+				this.price_type_id = this.price_type_vender.id
+			}
 		}, 500)
 	},
 	watch: {
 		price_type_vender() {
-			this.price_type_id = this.price_type_vender.id
+			if (this.price_type_vender) {
+
+				this.price_type_id = this.price_type_vender.id
+			}
 		},
 	},
 	computed: {
+		show() {
+			if (this.price_type_vender) {
+				if (!this.hasExtencion('lista_de_precios_por_rango_de_cantidad_vendida')) {
+					return true 
+				}
+			}
+			return false
+		},
 		is_disabled() {
 			if (this.index_previus_sales != 0) {
 				return true 

@@ -20,6 +20,7 @@ hide-footer
 
 			<b-button
 			@click="search"
+			dusk="btn_search"
 			class="m-l-10"
 			variant="primary">
 				<div

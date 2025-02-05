@@ -43,7 +43,7 @@
 	</b-col>
 </template>
 <script>
-import previus_sales from '@/mixins/previus_sales'
+import previus_sales from '@/mixins/vender/previus_sale/index'
 export default {
 	mixins: [previus_sales],
 	computed: {
@@ -104,7 +104,6 @@ export default {
 				return this.$store.state.vender.checked
 			},
 			set(value) {
-				console.log('por mandar setChecked con '+value)
 				this.$store.commit('vender/setChecked', value)
 			}
 		},
@@ -119,13 +118,11 @@ export default {
 	},
 	methods: {
 		setValue(value) {
-			console.log('set value '+value)
 			if (value == 'to_check') {
 				this.checked = 0
 				this.confirmed = 0
 			}
 			if (value == 'checked') {
-				console.log('se puiso checked')
 				this.to_check = 0
 				this.confirmed = 0
 			}

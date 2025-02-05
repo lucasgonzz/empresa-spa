@@ -3,6 +3,7 @@
 	:disabled="index_previus_sales > 0"
 	v-if="addresses.length > 1"
 	v-model="address_id" 
+	dusk="address_id"
 	:options="getOptions({key: 'address_id', text: 'Direccion'})"></b-form-select> 
 </template>
 <script>

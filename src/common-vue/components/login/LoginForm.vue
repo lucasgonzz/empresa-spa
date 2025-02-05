@@ -11,13 +11,18 @@
 			<b-form-input
 			@keyup.enter="login"
 			v-model="form[attempt_prop]"
+			name="dni"
+			id="dni"
+			dusk="dni"
 			:placeholder="'Ingrese su '+attempt_text"></b-form-input>
 		</b-form-group>
 		<b-form-group>
 			<b-form-input
 			@keyup.enter="login"
 			v-model="form.password"
+			name="password"
 			type="password"
+			dusk="password"
 			placeholder="Contraseña"></b-form-input>
 		</b-form-group>
 		<b-form-group>
@@ -32,6 +37,7 @@
 		class="m-b-15"
 		@clicked="login"
 		text="Ingresar"
+		name="login"
 		:loader="loading"></btn-loader>
 		<b-button
 		size="sm"

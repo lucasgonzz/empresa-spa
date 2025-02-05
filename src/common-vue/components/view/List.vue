@@ -9,6 +9,7 @@
 
 		<slot name="display_top"></slot>
 		<display
+		:papelera="papelera"
 		:usar_filtros="usar_filtros"
 		:show_actualizado="show_actualizado"
 		:set_model_on_row_selected="set_model_on_row_selected"
@@ -98,6 +99,10 @@ export default {
 		usar_filtros: {
 			type: Boolean,
 			default: true,
+		},
+		papelera: {
+			type: Boolean,
+			default: false,
 		},
 	},
 	computed: {

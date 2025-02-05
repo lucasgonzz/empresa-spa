@@ -110,6 +110,7 @@
 						:block="false"
 						v-if="can_save"
 						@clicked="save"
+						:dusk="'btn_guardar_'+model_name"
 						:prop_to_send_on_emit="{close: true}"
 						:loader="loading"
 						text="Guardar y cerrar"></btn-loader>

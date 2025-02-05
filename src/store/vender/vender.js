@@ -14,7 +14,7 @@ export default {
 	namespaced: true,
 	state: {
 		items: [],
-		article: {bar_code: '', provider_code: '', num: '', name: '', amount: ''},
+		item: {bar_code: '', provider_code: '', num: '', name: '', amount: ''},
 		new_article: '',
 		article_for_sale: {},
 
@@ -116,20 +116,36 @@ export default {
 		},
 		replceItem(state, value) {
 			let index = state.items.findIndex(item => {
-				return item.id == value.id 
+				if (
+					value
+					&& item.is_article && value.is_article
+					&& item.id == value.id	
+				) {
+					return true
+				}
+				if (
+					value
+					&& item.is_combo && value.is_combo
+					&& item.id == value.id	
+				) {
+					return true
+				}
+				return false
 			})
 			if (index != -1) {
 				console.log('quitando item')
 				state.items.splice(index, 1, value)
 			} 
 		},
-		setArticle(state, value) { 
+		setItem(state, value) { 
 			if (!value) {
-				state.article.bar_code = ''
-				state.article.name = ''
-				state.article.amount = ''
+				state.item = {
+					bar_code: '',
+					name: '',
+					amount: '',
+				}
 			} else {
-				state.article = value
+				state.item = value
 			}
 		},
 		addCombo(state, value) {

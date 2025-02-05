@@ -1,12 +1,11 @@
 import clients from '@/mixins/clients'
 import sale_ticket from '@/mixins/sale_ticket'
-import afip_ticket from '@/mixins/afip_ticket'
 import select_payment_methods from '@/mixins/vender/select_payment_methods'
 import start_methods from '@/mixins/start_methods'
 import vender_set_total from '@/mixins/vender_set_total'
 import sonido_error from '@/mixins/sonido_error' 
 export default {
-	mixins: [sonido_error, vender_set_total, clients, sale_ticket, afip_ticket, select_payment_methods, start_methods],
+	mixins: [sonido_error, vender_set_total, clients, sale_ticket, select_payment_methods, start_methods],
 	computed: {
 		discounts() {
 			return this.$store.state.discount.models
@@ -39,8 +38,10 @@ export default {
 			return this.$store.state.vender.client
 		},
 		services_col_header_lg() {
-			let col = 3
-			return col 
+			if (this.hasExtencion('combos')) {
+				return 2
+			}
+			return 3
 		},
         maked_sale() {
             return this.$store.state.vender.sale
@@ -149,28 +150,7 @@ export default {
 				this.$store.commit('vender/setSaleTypeId', value)
 			},
 		},
-		articulos_con_depositos() {
-			return this.items.filter(item => {
-				if (item.is_article) {
-					if (item.addresses.length) {
-						return true 
-					}  
-					if (item.article_variants.length) {
-
-						let has_addresses = false
-						item.article_variants.forEach(variant => {
-
-							if (variant.addresses.length) {
-								has_addresses = true 
-							}
-						})
-
-						return has_addresses
-					}
-				}
-				return false
-			})
-		},
+		
 		guardar_como_presupuesto() {
 			return this.$store.state.vender.guardar_como_presupuesto
 		},
@@ -189,6 +169,10 @@ export default {
 			
 			let col = 4
 
+			if (this.hasExtencion('combos')) {
+				col -= 1
+			}
+
 			if (!this.user.ask_amount_in_vender) {
 				col += 2
 			}
@@ -201,35 +185,6 @@ export default {
 			// 	col += 1
 			// }
 			return col 
-		},
-
-		setPriceType() {
-            if (this.price_types_with_position.length) {
-                let price_type_para_vender 
-
-                console.log('setPriceType budget:')
-                console.log(this.budget)
-                if (this.budget 
-                	&& this.budget.price_type) {
-                	price_type_para_vender = this.budget.price_type
-                	console.log('usando price_type de budget')
-                
-                } else if (this.client && this.client.price_type) {
-                    price_type_para_vender = this.client.price_type
-                } else {
-                    let last_position = 0
-                    this.price_types_with_position.forEach(price_type => {
-                        if (price_type.position > last_position) {
-                            price_type_para_vender = price_type
-                            last_position = price_type.position
-                        }
-                    })
-                }
-                console.log('price_type para vender:')
-                console.log(price_type_para_vender)
-                this.$store.commit('vender/setPriceType', price_type_para_vender)
-            }
-
 		},
 
 		// Defautl Articles
@@ -476,47 +431,6 @@ export default {
 			})
 
 		},
-		set_omitir_en_cuenta_corriente() {
-			if (this.authenticated) {
-				if (this.owner.siempre_omitir_en_cuenta_corriente) {
-					this.$store.commit('vender/set_omitir_en_cuenta_corriente', 1)
-				} 
-			} else {
-				this.volver_a_llamar_set_omitir_en_cuenta_corriente()
-			}
-
-		},
-		volver_a_llamar_set_omitir_en_cuenta_corriente() {
-			if (this.intentos_volver_a_llamar_set_omitir_en_cuenta_corriente < 5) {
-				setTimeout(() => {
-					this.intentos_volver_a_llamar_set_omitir_en_cuenta_corriente++
-					this.set_omitir_en_cuenta_corriente()
-				}, 2000)
-			}
-		},
-
-
-		setDefaultPaymentMethod() {
-			if (this.authenticated) {
-				if (this.owner.default_current_acount_payment_method_id) {
-					this.$store.commit('vender/setCurrentAcountPaymentMethodId', this.owner.default_current_acount_payment_method_id)
-				} else {
-					if (!this.current_acount_payment_method_id) {
-						this.current_acount_payment_method_id = 3;
-					}
-				}
-			} else {
-				this.volver_a_llamar_default_payment_method()
-			}
-		},
-		volver_a_llamar_default_payment_method() {
-			if (this.intentos_volver_a_llamar_default_payment_method < 5) {
-				setTimeout(() => {
-					this.intentos_volver_a_llamar_default_payment_method++
-					this.setDefaultPaymentMethod()
-				}, 2000)
-			}
-		},
 		check_vender() {
 			console.log('check antes de vender')
 			console.log(this.hasExtencion('articles_default_in_vender'))
@@ -619,36 +533,8 @@ export default {
 			}
 			return true 
 		},
-		check_guardar_ventas_con_cliente() {
-			if (this.hasExtencion('check_guardar_ventas_con_cliente')) {
-
-				if (!this.client) {
-
-					if (!this.user.puede_guardar_ventas_sin_cliente
-						&& !this.is_admin) {
-
-						return true 
-					}
-				}
-			}
-			return false
-		},
-		check_metodos_de_pago_para_facturar() {
-			let metodos_de_pago_para_facturar = this.$store.state.afip_selected_payment_method.models 
-
-			let metodo_de_pago_se_factura = false
-
-			if (this.current_acount_payment_method_id && metodos_de_pago_para_facturar.length) {
-
-				metodos_de_pago_para_facturar.forEach(metodo_de_pago => {
-					if (metodo_de_pago.id == this.current_acount_payment_method_id) {
-						metodo_de_pago_se_factura = true
-					}
-				})
-			}
-
-			return metodo_de_pago_se_factura
-		},	
+		
+		
 		check_cajas() {
 			if (this.cajas.length) {
 
@@ -678,16 +564,6 @@ export default {
 			}
 			return true 
 		},	
-		check_article_variants() {
-			let ok = true
-			this.items.forEach(item => {
-				if (item.is_article && item.article_variants.length && item.article_variant_id == 0) {
-					ok = false 
-					this.$toast.error('Indique la variante de '+item.name)
-				}
-			})
-			return ok
-		},
 		checkDefaultArticles() {
 			console.log('checkDefaultArticles')
 			let default_articles = this.items.filter(item => {
@@ -705,17 +581,7 @@ export default {
 			})
 		},
 		setVenderArticle(article, from_mobile = false) {
-			// this.articles.slice(0,33).forEach(art => {
-			// 	this.addArticleForSale(art)
-			// })
-			// if (typeof article == 'undefined' && this.article.bar_code != '') {
-			// 	article = this.articles.find(article => {
-			// 		return article.bar_code == this.getBarCode(this.article.bar_code)
-			// 	})
-			// } 
-			// if (from_mobile) {
-			// 	alert('setVenderArticle: '+article)
-			// }
+			
 			if (this.checkRegister(article) && this.check_stock(article)) {
 				let article_to_add = {
 					...article,
@@ -794,6 +660,8 @@ export default {
 				price_type_personalizado_id: 0,
 			}
 
+			item = this.check_price_type_ranges(item)
+
 			console.log('se va a agregar este item:')
 			console.log(item)
 
@@ -808,6 +676,63 @@ export default {
 			console.log('Se agrego item')
 			this.clearArticle()
 		},
+		// check_price_type_ranges(item) {
+			
+		// 	if (this.hasExtencion('lista_de_precios_por_rango_de_cantidad_vendida')) {
+
+		// 		let price_type_id = this.get_price_type_range(item)
+
+		// 		if (price_type_id) {
+
+		// 			item.price_type_personalizado_id = price_type_id
+		// 		}
+		// 	}
+
+		// 	return item 
+		// },
+		// get_price_type_range(item) {
+
+		// 	console.log('se sigue llamando desde el mixin viejo')
+			
+		// 	let amount = item.amount 
+
+		//     const { category_id, sub_category_id } = item;
+
+		//     // Filtrar rangos que coincidan con la categoría o subcategoría del artículo
+		    
+		//     let price_ranges = this.$store.state.category_price_type_range.models  
+
+		//     const matching_ranges = price_ranges.filter(range => {
+		//         return (
+		//             (range.category_id === category_id || range.sub_category_id === sub_category_id) &&
+		//             range.min <= amount &&
+		//             (range.max === null || range.max >= amount)
+		//         );
+		//     });
+
+		//     // Si hay coincidencias, tomar el rango más específico
+		//     if (matching_ranges.length > 0) {
+
+		//         // Ordenar por prioridad: subcategoría primero, luego categoría
+		//         matching_ranges.sort((a, b) => {
+		//             if (a.sub_category_id && !b.sub_category_id) {
+		//                 return -1; // Prioridad a la subcategoría
+		//             }
+		//             if (!a.sub_category_id && b.sub_category_id) {
+		//                 return 1;
+		//             }
+		//             return b.minQuantity - a.minQuantity; // Ordenar por minQuantity descendente
+		//         });
+
+		//         console.log('concidio con el rango:')
+		//         console.log(matching_ranges[0])
+
+		//         return matching_ranges[0].price_type_id;
+		//     }
+
+		//     // Si no hay coincidencias, retornar null o un valor por defecto
+		//     return null;
+		// },
 		checkRegister(article) {
 			if (!article || typeof article == 'undefined') {
 				if (this.can('vender.create_article')) {

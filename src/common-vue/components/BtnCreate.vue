@@ -1,5 +1,6 @@
 <template>
 	<b-button
+	:dusk="'btn_create_'+model_name"
 	:class="with_margin ? 'm-b-15' : ''"
 	@click="create"
 	:block="block ? true : false" 

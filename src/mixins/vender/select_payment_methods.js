@@ -1,6 +1,7 @@
 import vender_set_total from '@/mixins/vender_set_total'
+import payment_methods from '@/mixins/vender/guardar_venta/chequeos/payment_methods'
 export default {
-	mixins: [vender_set_total],
+	mixins: [vender_set_total, payment_methods],
 	computed: {
 		total_a_repartir: {
 			get() {
@@ -113,27 +114,7 @@ export default {
 			this.setTotal()
 		},
 
-		check_sobrante_a_repartir(){
-			console.log('check_sobrante_a_repartir')
-			console.log('sobrante_a_repartir: ')
-			console.log(this.sobrante_a_repartir)
-
-			if (this.sobrante_a_repartir != 0) {
-
-				if (this.sobrante_a_repartir > 0) {
-					
-					this.$toast.error('Todavia faltan repartir ' + this.price(this.sobrante_a_repartir))
-				} else {
-					
-					this.$toast.error('Se repartieron ' + this.price(Math.abs(this.sobrante_a_repartir)) + ' de mas')
-				}
-
-				return false
-			} 
-
-			console.log('aprobo check_sobrante_a_repartir')
-			return true
-		},
+		
 
 		guardarMetodosPago() {
 

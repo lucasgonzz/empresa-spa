@@ -6,6 +6,7 @@
 			<div
 			v-if="models.length">
 				<b-table
+				:dusk="'table-results-'+model_name"
 				class="s-2 b-r-1 animate__animated animate__fadeIn"
 				head-variant="dark"
 				responsive

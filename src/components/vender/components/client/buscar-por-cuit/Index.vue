@@ -46,7 +46,6 @@ export default {
 			this.$api.get('client/get-afip-information-by-cuit/'+this.cuit)
 			.then(res => {
 				this.$store.commit('auth/setLoading', false)
-				console.log(res)
 				let data = res.data 
 				if (data.hubo_un_error) {
 					this.$toast.error('Afip dice: '+data.error, {

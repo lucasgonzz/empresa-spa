@@ -14,6 +14,8 @@ import global_notification from '@/common-vue/store/global_notification'
 
 import chart from '@/store/chart/index'
 
+import papelera from '@/store/papelera/index'
+
 import article from '@/store/article'
 import brand from '@/store/brand'
 import category from '@/store/category'
@@ -141,6 +143,12 @@ import pago_de_cliente from '@/store/pago_de_cliente'
 // Con afip_ticket cargo los problemas al facturar (facturas con errores y sin cae)
 import afip_ticket from '@/store/afip_ticket'
 
+import category_price_type_range from '@/store/category_price_type_range'
+import article_price_type_group from '@/store/article_price_type_group'
+
+
+import concepto_stock_movement from '@/store/concepto_stock_movement'
+
 
 Vue.use(Vuex)
 
@@ -164,6 +172,8 @@ export default new Vuex.Store({
         global_notification,
 
         chart,
+
+        papelera,
         
         article,
         brand,
@@ -287,5 +297,10 @@ export default new Vuex.Store({
         pago_de_cliente,
 
         afip_ticket,
+
+        category_price_type_range,
+        article_price_type_group,
+
+        concepto_stock_movement,
     }
 })
