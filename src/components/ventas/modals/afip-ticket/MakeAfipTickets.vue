@@ -4,6 +4,7 @@
     hide-footer
     title="Confirmar"
     size="md"
+    @hidden="quitar_seleccionable"
     id="confirm-make-afip-tickets">
     	<h5>
     		{{ text_confirm }}
@@ -14,6 +15,7 @@
     	<b-form-group
     	label="Seleccione el punto de venta desde el cual se van a emitir las facturas">
 	    	<b-form-select
+	    	id="select_punto_de_venta"
 	    	v-model="afip_information_id"
 			:options="options"></b-form-select>
     	</b-form-group>
@@ -21,6 +23,7 @@
     	<b-form-group
     	label="Seleccione el tipo de comprobante">
 	    	<b-form-select
+	    	id="select_tipo_comprobante"
 	    	v-model="afip_tipo_comprobante_id"
 			:options="getOptions({key: 'afip_tipo_comprobante_id', text: 'Tipo Comprobante'})"></b-form-select>
     	</b-form-group>
@@ -28,6 +31,7 @@
     	<b-button
     	block 
     	variant="primary"
+    	id="btn_enviar_a_facturar"
     	@click="makeAfipTicket">
     		Emitir Facturas
     	</b-button>
@@ -114,6 +118,10 @@ export default {
 		}
 	},
 	methods: {
+		quitar_seleccionable() {
+			this.$store.commit('sale/setIsSelecteable', false)
+			this.$store.commit('sale/setSelected', [])
+		},	
 		async makeAfipTicket() {
 			if (this.check()) {
 				this.afip_tickets_for_make = []
@@ -151,10 +159,14 @@ export default {
 					
 				}
 
-				this.$store.commit('sale/setIsSelecteable', 0)
-				this.$store.commit('sale/setSelected', [])
-				this.$bvModal.hide('confirm-make-afip-tickets')
-				this.$bvModal.hide('sale')
+				setTimeout(() => {
+
+					this.$store.commit('sale/setIsSelecteable', 0)
+					this.$store.commit('sale/setSelected', [])
+					this.$bvModal.hide('confirm-make-afip-tickets')
+					this.$bvModal.hide('sale')
+				}, 2000)
+
 			}
 		},
 		send_request(index) {

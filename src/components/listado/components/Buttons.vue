@@ -50,9 +50,10 @@ class="buttons-listado">
 	<b-button 
 	variant="outline-secondary"
 	size="sm"
+	dusk="btn-movimiento-depositos"
 	v-if="show_btn_mover_stock"
 	@click.stop="show_address_movement" 
-	class="m-l-10">
+	class="m-l-10 btn-movimiento-depositos">
 		<i class="icon-refresh"></i>
 	</b-button>
 
@@ -62,8 +63,9 @@ class="buttons-listado">
 	<b-button 
 	variant="secondary"
 	size="sm"
+	dusk="btn-stock-movements"
 	@click.stop="stockMovements()" 
-	class="m-l-10">
+	class="m-l-10 btn-stock-movement">
 		<i class="icon-database"></i>
 	</b-button>
 

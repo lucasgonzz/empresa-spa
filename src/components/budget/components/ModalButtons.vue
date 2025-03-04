@@ -1,7 +1,7 @@
 <template>
 	<div>
 		<btn-loader
-		v-if="model.budget_status && model.budget_status.name == 'Confirmado' && !model.order_production"
+		v-if="show_btn_produccion"
 		variant="outline-primary"
 		:loader="loading"
 		text="Crear orden de produccion"
@@ -37,6 +37,17 @@ export default {
 		},
 		model() {
 			return this.$store.state[this.model_name].model
+		},
+		show_btn_produccion() {
+			if (
+				this.model.budget_status 
+				&& this.model.budget_status.name == 'Confirmado' 
+				&& !this.model.order_production
+				&& this.hasExtencion('production')
+			) {
+				return true
+			}
+			return false
 		},
 	},
 	data() {

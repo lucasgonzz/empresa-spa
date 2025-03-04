@@ -11,13 +11,18 @@
 		:disabled="disabled"
 		:unchecked-value="0"
 		v-model="omitir_en_cuenta_corriente">
-			{{ text }}
+			<span
+			id="omitir_en_cuenta_corriente">
+				{{ text }}
+			</span>
 		</b-form-checkbox>
 
 	</b-card>
 </template>
 <script>
+import default_payment_method from '@/mixins/vender/default_payment_method'
 export default {
+	mixins: [default_payment_method],
 	computed: {
 		text() {
 			if (this.owner.text_omitir_cc) {
@@ -28,6 +33,9 @@ export default {
 		omitir_en_cuenta_corriente: {
 			set(value) {
 				this.$store.commit('vender/set_omitir_en_cuenta_corriente', value)
+				if (value == 1) {
+					this.setDefaultPaymentMethod()
+				}
 			},
 			get() {
 				return this.$store.state.vender.omitir_en_cuenta_corriente

@@ -4,7 +4,6 @@
 
 	<update-prices></update-prices>
 
-	<make-afip-tickets></make-afip-tickets>
 
 	<afip-ticket-show-errors></afip-ticket-show-errors>
 	<afip-ticket-show-observations></afip-ticket-show-observations>
@@ -59,7 +58,6 @@ export default {
 		TableButtons: () => import('@/components/ventas/components/table-buttons/Index'),
 		UpdatePrices: () => import('@/components/ventas/modals/update-prices/Index'),
 		OptionDropdownAfipTicket: () => import('@/components/ventas/components/OptionDropdownAfipTicket'),
-		MakeAfipTickets: () => import('@/components/ventas/modals/afip-ticket/MakeAfipTickets'),
 		AfipTicketShowErrors: () => import('@/components/ventas/modals/afip-ticket/ShowErrors'),
 		AfipTicketShowObservations: () => import('@/components/ventas/modals/afip-ticket/ShowObservations'),
 	},

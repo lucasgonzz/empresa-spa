@@ -29,10 +29,10 @@
 	</div>
 </template>
 <script>
-import previus_sales from '@/mixins/previus_sales'
+import previus_sale from '@/mixins/vender/previus_sale/index'
 import depositos from '@/mixins/sale/depositos'
 export default {
-	mixins: [previus_sales, depositos],
+	mixins: [previus_sale, depositos],
 	created() {
 		this.$store.commit('sale/set_from_depositos', 1)
 		this.$store.commit('sale/setIsSelecteable', false)

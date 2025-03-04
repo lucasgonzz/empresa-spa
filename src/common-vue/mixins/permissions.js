@@ -10,6 +10,9 @@ export default {
 			}
 		},
 		can(permission_slug) {
+			if (!this.authenticated) {
+				return false
+			}
 			let has_permission = false
 		    if (this.is_owner) {
 		        has_permission = true

@@ -22,7 +22,7 @@ export default {
 		{
 			text: 'Margen de ganancia',
 			key: 'percentage_gain',
-			type: 'number',
+			type: 'text',
 		},
 		{
 			text: '% de comision ventas en NEGRO',

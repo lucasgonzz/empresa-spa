@@ -2,6 +2,7 @@
 	<div>
 		<b-form-input
 		class="input-address-stock"
+		:id="'input-address-stock-'+address.id"
 		:dusk="article.name+'-'+address.id"
 		type="number"
 		@click.stop

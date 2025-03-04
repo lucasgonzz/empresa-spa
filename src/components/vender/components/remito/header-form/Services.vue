@@ -7,6 +7,7 @@
 		:service="service"></service>	
 		<b-form-input
 		:disabled="budget"
+		id="service_name"
 		@keyup.enter="setService"
 		v-model="service.name"
 		placeholder="Servicio"></b-form-input>
@@ -34,7 +35,7 @@ export default {
 			if (this.check()) {
 				this.$bvModal.show('service')
 				setTimeout(() => {
-					document.getElementById('service-price').focus()
+					document.getElementById('service_price').focus()
 				}, 500)
 			}
 		},

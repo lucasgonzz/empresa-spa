@@ -3,7 +3,6 @@
 		<div
 		:id="id"
 		v-if="!loading"
-		:dusk="'table-'+model_name"
 		class="cont-table">
 
 			<pagination
@@ -12,6 +11,7 @@
 			:model_name="model_name"></pagination>	
 
 			<table
+			:id="'table-'+model_name"
 			class="common-table">
 				<thead>
 					<tr>
@@ -272,9 +272,21 @@ export default {
 			let props = []
 			 if (this.properties) {
 				props = this.propertiesToShow(this.properties, true)
-			} else if (!this.pivot || (this.pivot && !this.pivot.props_to_show)) {
+
+				if (this.papelera) {
+					props.splice(1, 0, {
+						text: 'Eliminado',
+						key: 'deleted_at',
+						type: 'date',
+						is_date: true,
+					})
+				}
+
+			} else if (
+				!this.pivot 
+				|| (this.pivot && !this.pivot.props_to_show)
+				) {
 			 	props = this.propertiesToShow(this.modelPropertiesFromName(this.model_name), true)
-				
 				if (this.add_created_at) {
 
 					props.push({

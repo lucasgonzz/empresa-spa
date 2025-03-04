@@ -13,6 +13,7 @@
 			:key="'model-prop-'+index">
 				<b-form-group
 				:class="colorLabel(prop)"
+				:id="'form-group-'+prop.key"
 				:description="prop.description">
 					<label
 					class="form-label">

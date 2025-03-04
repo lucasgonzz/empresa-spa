@@ -18,6 +18,7 @@ id="address-movement">
 		<b-form-group
 		label="Deposito ORIGEN">
 			<b-form-select
+			id="from_address_id"
 			v-model="from_address_id"
 			:options="from_address_options"></b-form-select>
 		</b-form-group>
@@ -25,6 +26,7 @@ id="address-movement">
 		<b-form-group
 		label="Deposito DESTINO">
 			<b-form-select
+			id="to_address_id"
 			v-model="to_address_id"
 			:options="to_address_options"></b-form-select>
 		</b-form-group>
@@ -35,6 +37,7 @@ id="address-movement">
 		<b-form-group
 		label="Cantidad">
 			<b-form-input
+			id="amount"
 			placeholder="Ingerse la cantidad de stock para mover"
 			v-model="amount_"></b-form-input>
 		</b-form-group>
@@ -48,6 +51,7 @@ id="address-movement">
 
 		<btn-loader
 		@clicked="save"
+		dusk="btn_guardar_movimiento_deposito"
 		:loader="loading"
 		text="Guardar"></btn-loader>
 </b-modal>
@@ -266,7 +270,7 @@ export default {
 					from_address_id: this.from_address_id,
 					to_address_id: this.to_address_id,
 					article_variant_id: this.article_variant_id,
-					is_movimiento_de_depositos: true,
+					concepto_stock_movement_name: 'Mov manual entre depositos',
 				})
 				.then(res => {
 

@@ -3,6 +3,7 @@
 	v-if="is_filtered"
 	@click="restartSearch"
 	class="m-l-10"
+	id="btn_restart_filter"
 	variant="outline-success">
 		<i class="icon-history"></i>
 	</b-button>

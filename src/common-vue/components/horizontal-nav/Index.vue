@@ -72,6 +72,7 @@
 				<b-form-checkbox
 				:unchecked-value="0"
 				:value="1"
+				variant="warning"
 				v-model="is_selecteable">
 					Seleccion
 				</b-form-checkbox>

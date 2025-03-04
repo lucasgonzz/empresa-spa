@@ -94,6 +94,14 @@ export default [
 		not_show: true,
 	},
 	{
+		text: 'Devoluciones',
+		path: '/devoluciones',
+		name: 'devoluciones',
+		component: '@/views/Devoluciones',
+		can: 'return.store',
+		image_url: 'iconos-reportes/devoluciones.png',
+	},
+	{
 		path: '/proveedores',
 		model_name: 'provider',
 		component: '@/views/Provider',

@@ -14,6 +14,8 @@
 			</b-button>
 			<b-button
 			variant="link"
+			class="edit-btn"
+			:id="'btn_edit_selected_'+model_name"
 			@click="setModel(selected_model_to_show, model_name)">
 				<i class="icon-right"></i>
 				{{ selected_model_name }}

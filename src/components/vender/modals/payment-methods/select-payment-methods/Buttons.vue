@@ -37,6 +37,7 @@
 			<b-button
 			v-else 
 			@click="guardarMetodosPago"
+			id="btn_guardar_payment_methods"
 			block
 			variant="primary">
 				Guardar

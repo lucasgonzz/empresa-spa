@@ -89,7 +89,7 @@
 					<b-btn-group
 					class="w-100">
 						<btn-delete
-						v-if="_show_btn_delete"
+						v-if="!papelera && _show_btn_delete"
 						:has_many_prop="has_many_prop"
 						:has_many_parent_model_name="has_many_parent_model_name"
 						:model_name="model_name" 
@@ -99,7 +99,7 @@
 						<btn-loader
 						class="m-l-10"
 						:block="false"
-						v-if="can_save && show_only_guardar"
+						v-if="!papelera && can_save && show_only_guardar"
 						@clicked="save"
 						:prop_to_send_on_emit="{close: false}"
 						:loader="loading"
@@ -108,12 +108,21 @@
 
 						<btn-loader
 						:block="false"
-						v-if="can_save"
+						v-if="!papelera && can_save"
 						@clicked="save"
 						:dusk="'btn_guardar_'+model_name"
 						:prop_to_send_on_emit="{close: true}"
 						:loader="loading"
 						text="Guardar y cerrar"></btn-loader>
+
+						<btn-loader
+						:block="false"
+						v-if="papelera && show_btn_restaurar"
+						variant="success"
+						@clicked="restaurar"
+						:prop_to_send_on_emit="{close: true}"
+						:loader="restaurando"
+						text="Restaurar"></btn-loader>
 					</b-btn-group>
 				</slot>
 			</template>
@@ -215,6 +224,14 @@ export default {
 			type: Array,
 			default: () => null
 		},
+		papelera: {
+			type: Boolean,
+			default: false,
+		},
+		show_btn_restaurar: {
+			type: Boolean,
+			default: true,
+		},
 	},
 	components: {
 		Confirm,
@@ -227,6 +244,7 @@ export default {
 	data() {
 		return {
 			clear_model: 1,
+			restaurando: false,
 		}
 	},
 	computed: {
@@ -301,6 +319,22 @@ export default {
 		}
 	},
 	methods: {
+		restaurar() {
+			if (confirm('¿Seguro que quiere restaurar este elemento?')) {
+				
+				this.restaurando = true
+				this.$api.put('papelera/restaurar/'+this.model_name+'/'+this.model.id)
+				.then(res => {
+					this.restaurando = false
+					this.$toast.success('Restaurado') 
+					this.$bvModal.hide(this.model_name)
+				})
+				.catch(err => {
+					this.restaurando = false
+					this.$toast.error('Error al restaurar')
+				})
+			}
+		},
 		onModalClosed() {
 			this.$root.$emit(this.model_name+'-modal-closed');
 		},
@@ -470,6 +504,7 @@ export default {
 		},
 		check() {
 			let ok = true
+			let numero = null
 			this.properties.forEach(prop => {
 				if (prop.required) {
 					if (ok && this.propType(prop, this.model) == 'select' && this.model[prop.key] == 0) {
@@ -480,6 +515,20 @@ export default {
 						ok = false
 					}
 				} 
+
+				if (
+					(
+						prop.type == 'number'
+						|| prop.filter_type == 'number'
+					)
+					&& this.model[prop.key]
+				) {
+					numero = ''+this.model[prop.key]
+					if (numero.includes(',')) {
+						numero = numero.replace(',', '.')
+						this.model[prop.key] = numero
+					}
+				}
 			})
 			this.checkRelationsFiltered()
 			if (this.save_check_function) {

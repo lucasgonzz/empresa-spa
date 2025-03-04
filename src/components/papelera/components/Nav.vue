@@ -21,7 +21,10 @@ export default {
 			let items = [
 				{
 					name: 'articulos'
-				}
+				},
+				{
+					name: 'ventas'
+				},
 			]
 			
 			return items
@@ -29,12 +32,12 @@ export default {
 	},
 	methods: {
 		setSelected(item) {
-			// if (item.name == 'lista') {
-			// 	this.$store.dispatch('providers/getModels')
-			// }
-			// if (item.name == 'pedidos') {
-			// 	this.$store.dispatch('providers/orders/getModels')
-			// }
+			if (item.name == 'articulos') {
+				this.$store.dispatch('papelera/article/getModels')
+			}
+			if (item.name == 'ventas') {
+				this.$store.dispatch('papelera/sale/getModels')
+			}
 		},
 	}
 }

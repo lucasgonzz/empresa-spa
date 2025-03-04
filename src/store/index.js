@@ -149,6 +149,8 @@ import article_price_type_group from '@/store/article_price_type_group'
 
 import concepto_stock_movement from '@/store/concepto_stock_movement'
 
+import devoluciones from '@/store/devoluciones'
+
 
 Vue.use(Vuex)
 
@@ -302,5 +304,7 @@ export default new Vuex.Store({
         article_price_type_group,
 
         concepto_stock_movement,
+
+        devoluciones,
     }
 })

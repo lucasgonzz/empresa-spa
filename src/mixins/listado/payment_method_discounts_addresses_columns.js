@@ -45,11 +45,12 @@ export default {
 				props = this.get_properties_to_show_ordenadas('article')
 			}
 
-			console.log('Empieza con estas props:')
-			console.log(props)
 
 
-			if (!this.owner.online) {
+			if (
+				!this.owner.online
+				&& !this.hasExtencion('imagenes')
+			) {
 				props = props.filter(prop => prop.key != 'images')
 			}
 
@@ -74,12 +75,7 @@ export default {
 				
 			}
 
-
-
 			props = this.add_addresses(props)
-
-			console.log('Listado props:')
-			console.log(props)
 
 			this.properties_to_show = props
 		},
@@ -132,6 +128,8 @@ export default {
 
 			if (article.article_variants.length) {
 
+				console.log('sumando address de las variants')
+
 				let stock_in_address = 0
 
 				article.article_variants.forEach(variant => {
@@ -163,6 +161,7 @@ export default {
 				'images',
 				'num',
 			]
+
 
 			let insertIndex = this.get_index(props, props_a_partir_de_las_cuales_agregar)
 
@@ -212,6 +211,8 @@ export default {
 					});
 				}
 			})
+
+			return props
 		},
 		add_price_types(props) {
 

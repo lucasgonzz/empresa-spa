@@ -34,13 +34,16 @@ export default {
 
 			if (this.sobrante_a_repartir != 0) {
 
-				if (this.sobrante_a_repartir > 0) {
+				this.$toast.error('Seleccione Metodo de Pago', {
+					duration: 5000
+				})
+				// if (this.sobrante_a_repartir > 0) {
 					
-					this.$toast.error('Todavia faltan repartir ' + this.price(this.sobrante_a_repartir))
-				} else {
+				// 	this.$toast.error('Todavia faltan repartir ' + this.price(this.sobrante_a_repartir))
+				// } else {
 					
-					this.$toast.error('Se repartieron ' + this.price(Math.abs(this.sobrante_a_repartir)) + ' de mas')
-				}
+				// 	this.$toast.error('Se repartieron ' + this.price(Math.abs(this.sobrante_a_repartir)) + ' de mas')
+				// }
 
 				return false
 			} 

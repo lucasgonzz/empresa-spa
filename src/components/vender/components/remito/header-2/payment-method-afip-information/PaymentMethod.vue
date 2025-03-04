@@ -14,6 +14,7 @@ class="cont-select">
 	:disabled="disabled" 
 	class="mb-2" 
 	variant="outline-primary"
+	id="btn_set_payment_methods"
 	@click="set_payment_methods">
 		<b-badge
 		variant="primary"

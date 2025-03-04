@@ -19,7 +19,7 @@
 			</b-form-group>
 		
 			<b-form-group
-			v-if="hasExtencion('cajas')">
+			v-if="hasExtencion('cajas') && cajas.length">
 				<b-form-select
 				v-model="payment_method.caja_id"
 				:options="get_cajas_abiertas_options()"></b-form-select> 
@@ -70,9 +70,9 @@ export default {
 	},
 	props: ['pago'],
 	computed: {
-		// cajas() {
-		// 	return this.$store.state.caja.models 
-		// },
+		cajas() {
+			return this.$store.state.caja.models 
+		},
 		// caja_options() {
 		// 	let cajas_abiertas = this.cajas.filter(caja => caja.abierta)
 

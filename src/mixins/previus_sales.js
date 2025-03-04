@@ -419,6 +419,7 @@ export default {
 					item.id = combo.id
 					item.name = combo.name
 					item.pivot = combo.pivot
+					item.articles = combo.articles
 					// item.price = Number(combo.pivot.price)
 					item.amount = Number(combo.pivot.amount)
 					item_to_add = {

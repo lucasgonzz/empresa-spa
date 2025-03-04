@@ -16,11 +16,11 @@
 			</span>
 
 			<b-button
+			v-for="nota_credito_afip_ticket in sale.nota_credito_afip_tickets"
 			variant="danger"
 			class="m-l-5"
-			@click.stop="nota_credito_afip_ticket"
-			v-if="sale.nota_credito_afip_ticket">
-				N/C N° {{ sale.nota_credito_afip_ticket.cbte_numero }}
+			@click.stop="print_nota_credito_afip_ticket">
+				N/C N° {{ nota_credito_afip_ticket.cbte_numero }}
 			</b-button>
 
 		<!-- Observaciones -->
@@ -62,7 +62,7 @@ export default {
 			this.setModel(this.sale, 'sale', [], false, false)
 			this.$bvModal.show('afip-ticket-errors')
 		},
-		nota_credito_afip_ticket() {
+		print_nota_credito_afip_ticket() {
 			let link = process.env.VUE_APP_API_URL+'/current-acount/pdf/'+this.sale.nota_credito_afip_ticket.nota_credito_id+'/0'
 			window.open(link)
 		},

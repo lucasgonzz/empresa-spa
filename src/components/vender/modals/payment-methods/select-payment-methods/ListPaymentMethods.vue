@@ -7,6 +7,7 @@
 			<div class="d-flex">
 				<b-form-input
 				type="number"
+				:id="'input_payment_method_'+payment_method.id"
 				@keyup="set_total_repartido(payment_method)"
 				@change="set_total_repartido(payment_method)"
 				:min="0"
@@ -18,14 +19,14 @@
 				variant="outline-primary"
 				class="ml-2 p-2 btn-total"
 				size="sm"
+				:id="'btn_agregar_total_payment_method_'+payment_method.id"
 				@click="agregarTotal(payment_method)"
 				:disabled="total_a_repartir === 0">
 					Agregar total
 				</b-button>
 			</div>
-			
 			<select-caja
-			v-if="!payment_methods_with_discounts.length"
+			v-if="cajas.length > 0 && !payment_methods_with_discounts.length"
 			:payment_method="payment_method"></select-caja>
 
 			<p
@@ -48,6 +49,9 @@ export default {
 		SelectCaja: () => import('@/components/vender/modals/payment-methods/select-payment-methods/SelectCaja'),
 	},
 	computed: {
+		cajas() {
+			return this.$store.state.caja.models 
+		},
 		payment_methods_with_discounts() {
 			return this.$store.state.current_acount_payment_method_discount.models
 		},

@@ -39,6 +39,8 @@ export default {
 	watch: {
         sub_total_vender() { 
         	if (this.watch_activado) {
+
+        		this.$store.commit('vender/setSelectedPaymentMethods', []) 
 	        	this.total_a_repartir = this.sub_total_vender
 	        	
 	        	if (this.index_previus_sale == 0) {

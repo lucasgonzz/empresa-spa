@@ -1,14 +1,19 @@
 <template>
-	<btn-loader
-	v-if="!sale_details.afip_ticket || tiene_error_de_factura"
-	class="m-l-15"
-	text="Emitir Factura"
-	icon="clipboard"
-	:block="false"
-	@clicked="facturar"
-	:loader="loading"
-	variant="primary">
-	</btn-loader>
+	<div>
+		<make-afip-tickets></make-afip-tickets>
+		
+		<btn-loader
+		v-if="!sale_details.afip_ticket || tiene_error_de_factura"
+		class="m-l-15"
+		text="Emitir Factura"
+		icon="clipboard"
+		id="btn_facturar"
+		:block="false"
+		@clicked="facturar"
+		:loader="loading"
+		variant="primary">
+		</btn-loader>
+	</div>
 </template>
 <script>
 import afip_ticket from '@/mixins/sale/afip_ticket'
@@ -16,6 +21,7 @@ export default {
 	mixins: [afip_ticket],
 	components: {
 		BtnLoader: () => import('@/common-vue/components/BtnLoader'),
+		MakeAfipTickets: () => import('@/components/ventas/modals/afip-ticket/MakeAfipTickets'),
 	},
 	computed: {
 		sale_details() {

@@ -6,7 +6,7 @@ hide-footer>
 	<b-form-group
 	:label="'Precio para el servicio '+service.name">
 		<b-form-input
-		id="service-price"
+		id="service_price"
 		@keyup.enter="saveService"
 		v-model="service.price"
 		placeholder="Ingrese el precio del servicio"></b-form-input>

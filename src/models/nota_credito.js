@@ -27,6 +27,49 @@ export default {
 			only_show: true,
 			type: 'text',
 		},
+		{
+			text: 'Articulos',
+			key: 'articles',
+			store: 'article',
+			belongs_to_many: {
+				props_to_show: [
+					{
+						text: 'Cod barras',
+						key: 'bar_code',	
+						show: true,
+					},
+					{
+						text: 'Cod Prov',
+						key: 'provider_code',	
+						show: true,
+					},
+					{
+						text: 'Nombre',
+						key: 'name',	
+						show: true,
+					},
+				],
+				pivot_props_to_show: [
+					{
+						text: 'Variante',
+						key: 'variant_description',
+					},
+					{
+						text: 'Cantidad',
+						key: 'amount',
+					},
+					{
+						text: 'Descuento',
+						key: 'discount',
+					},
+					{
+						text: 'Precio',
+						key: 'price',
+						is_price: true,
+					},
+				],
+			},
+		},
 	],
 	singular_model_name_spanish: 'Nota de Credito',
 	plural_model_name_spanish: 'Nota de Credito',

@@ -14,6 +14,8 @@
     	:show_btn_pdf="show_btn_pdf"
     	:show_btn_delete="show_btn_delete"
     	:show_btn_save="show_btn_save"
+    	:papelera="papelera"
+    	:show_btn_restaurar="show_btn_restaurar"
     	:size="modal_size"
     	:model_name="model_name"
     	:prop_to_send_on_save="prop_to_send_on_save"
@@ -336,6 +338,10 @@ export default {
 		papelera: {
 			type: Boolean,
 			default: false,
+		},
+		show_btn_restaurar: {
+			type: Boolean,
+			default: true,
 		},
 	},
 	computed: {

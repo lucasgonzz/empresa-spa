@@ -7,6 +7,7 @@ class="p-l-20 p-r-20">
     :properties="properties"
     :model_name="model_name"
     model_name_spanish="cuentas corrientes"
+    id="table-current-acounts"
     :set_model_on_row_selected="false"
     :show_btn_edit="false"
     emit_selected_with_model_empty

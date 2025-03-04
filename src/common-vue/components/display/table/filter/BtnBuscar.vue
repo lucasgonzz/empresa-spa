@@ -1,6 +1,7 @@
 <template>
 	<b-button
 	block
+	:id="field.key+'_btn_filtrar'"
 	@click="filtrar"
 	variant="primary">
 		Filtrar

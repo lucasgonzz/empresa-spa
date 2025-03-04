@@ -82,10 +82,6 @@ export default {
 				this.setItemsPrices(false, this.from_pivot)
 
 				this.vender_items.forEach(item => {
-					console.log('vender_items:')
-					console.log(item.is_article)
-					console.log(item.is_service)
-					console.log(item.is_combo)
 					if (item.is_service) {
 
 						this.total_services += this.getTotalItem(item, false)
@@ -236,6 +232,7 @@ export default {
 
 				sale_discounts.forEach(discount => {
 					this.total_articles -= this.total_articles * Number(discount.percentage) / 100 
+					this.total_combos -= this.total_combos * Number(discount.percentage) / 100 
 					if (this.discounts_in_services) {
 						this.total_services -= this.total_services * Number(discount.percentage) / 100 
 					}
@@ -255,6 +252,7 @@ export default {
 
 				sale_surchages.forEach(_surchage => {
 					this.total_articles += this.total_articles * Number(_surchage.percentage) / 100 
+					this.total_combos += this.total_combos * Number(_surchage.percentage) / 100 
 					if (this.surchages_in_services) {
 						this.total_services += this.total_services * Number(_surchage.percentage) / 100 
 					}

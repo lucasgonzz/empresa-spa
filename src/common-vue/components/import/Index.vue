@@ -68,6 +68,7 @@
 			block
 			size="sm"
 			variant="outline-primary"
+			id="limpiar_posiciones"
 			@click="setPositions">
 				<span
 				v-if="positions_seted">
@@ -88,13 +89,16 @@
 						class="cont-inputs">
 							<span
 							class="btn btn-link"
-							@click="setColumn(column, index)">
-								{{ column.text }}
+							@click="setColumn(index)">
+								{{ column.text }} {{ column.position }}
 							</span>
 							<div>
+
 								<b-form-input
-								type="number"
-								v-model="column.position"></b-form-input>
+								:id="column.text.replaceAll(' ', '_')+'-position'"
+								@keyup="set_position(index)"
+								v-model="column.letra"></b-form-input>
+
 								<b-form-checkbox
 								v-if="canIgnore(column)"
 								class="m-t-10"
@@ -154,14 +158,20 @@
 			:value="0"
 			size="lg"
 			v-model="create_and_edit">
-				Solo editar {{ plural(model_name) }} existentes
+				<span
+				id="solo_actualizar">
+					Solo editar {{ plural(model_name) }} existentes
+				</span>
 			</b-form-radio>
 			<b-form-radio
 			class="radio-option"
 			:value="1"
 			size="lg"
 			v-model="create_and_edit">
-				Cargar nuevos {{ plural(model_name) }} y editar existentes
+				<span
+				id="cargar_y_actualizar">
+					Cargar nuevos {{ plural(model_name) }} y editar existentes
+				</span>
 			</b-form-radio>
 		</div>
 		<hr>	
@@ -182,6 +192,7 @@
 
 		<hr>
 		<btn-loader
+		id="btn_importar"
 		:disabled="!file"
 		@clicked="upload"
 		text="Importar"
@@ -321,6 +332,22 @@ export default {
 	    })
 	},
 	methods: {
+		number_to_excel_column(n) {
+		    let column = '';
+		    while (n > 0) {
+		        let remainder = (n - 1) % 26;
+		        column = String.fromCharCode(65 + remainder) + column;
+		        n = Math.floor((n - 1) / 26);
+		    }
+		    return column;
+		},
+		excel_column_to_number(column) {
+		    let number = 0;
+		    for (let i = 0; i < column.length; i++) {
+		        number = number * 26 + (column.charCodeAt(i) - 64);
+		    }
+		    return number;
+		},
 		base_export() {
 			let url = process.env.VUE_APP_API_URL+'/'+this.model_name+'-base/excel/export'
 			window.open(url)		
@@ -395,19 +422,43 @@ export default {
 		canIgnore(column) {
 			return typeof column.can_not_ignore == 'undefined'
 		},
-		setColumn(a, index) {
-			let last_columns_position = 0
+		setColumn(index) {
+
+			let ultima_position = 0
+			let position = null
+
 			this.columns_.forEach(column => {
-				column = Number(column.position)
-				if (column != '') {
-					if (column > last_columns_position) {
-						last_columns_position = column  
+
+				if (column.position != '') {
+					position = Number(column.position)
+					if (position > ultima_position) {
+						ultima_position = position  
 					}
 				}
 			}) 
-			last_columns_position++
-			this.columns_[index].position = last_columns_position
+			ultima_position++
+			this.columns_[index].position = ultima_position
+			this.columns_[index].letra = this.number_to_excel_column(ultima_position)
+			this.print_columns()
 		},
+		set_position(index) {
+			let column = this.columns_[index]
+			if (column && column.letra) {
+
+				let position = this.excel_column_to_number(column.letra)
+				this.columns_[index].position = position
+			}
+
+			this.print_columns()
+		},	
+
+		print_columns() {
+
+			this.columns_.forEach(column => {
+				console.log(column.text+': '+column.position+' - ')+column.letra
+			})
+		},
+
 		setPositions() {
 			if (this.positions_seted) {
 				this.clear()
@@ -418,16 +469,25 @@ export default {
 		setColumnsPositions() {
 			this.columns_ = []
 			let position = 1
+			let letra 
 			console.log(this.columns_)
 			this.columns.forEach(column => {
+				
+				letra = this.number_to_excel_column(position)
+
 				this.columns_.push({
 					text: column.text,
 					description: column.description,
+					letra: letra,
 					position: position,
 					ignored: 0,
 					can_not_ignore: typeof column.can_not_ignore != 'undefined' ? true : undefined,
 				})
-				position++
+				if (column.saltear_posiciones) {
+					position += column.saltear_posiciones
+				} else {
+					position++
+				}
 			})
 			this.positions_seted = true
 		},
@@ -435,6 +495,7 @@ export default {
 			let index = 0
 			this.columns_.forEach(column => {
 				column.position = ''
+				column.letra = ''
 				column.ignored = 0
 			})
 			this.positions_seted = false

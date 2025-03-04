@@ -3,15 +3,18 @@
 	v-if="show"
 	class="m-l-15"
 	right
-	variant="primary"
+	:id="id"
+	:variant="variant"
 	:text="text_dropdown">
 		<b-dropdown-item
 		v-if="puede_actualizar"
+		id="btn_actualizar"
 		@click="setUpdate">
 			<i class="icon-undo"></i>
 			Actualizar
 		</b-dropdown-item>
 		<b-dropdown-item
+		id="btn_eliminar"
 		v-if="puede_eliminar"
 		@click="setDelete"> 
 			<i class="icon-trash"></i>
@@ -29,6 +32,18 @@ export default {
 		check_permissions: Boolean,
 	},
 	computed: {
+		id() {
+			if (this.from_filter) {
+				return 'btn_filtrados_dropdown'
+			}
+			return 'btn_seleccionados_dropdown'
+		},
+		variant() {
+			if (this.from_filter) {
+				return 'primary'
+			}
+			return 'warning'
+		},
 		puede_eliminar() { 
 			if (this.check_permissions) {
 				return this.can(this.model_name+'.delete')

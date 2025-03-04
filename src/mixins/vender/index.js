@@ -77,13 +77,27 @@ export default {
 
 
 		check_amount_vacia() {
+			console.log('check_amount_vacia. amount:')
+			console.log(this.item_vender.amount)
 			if (this.item_vender.amount == '') {
-				this.item_vender.amount = 1
+
+				let valor_input = document.getElementById('article-amount').value 
+
+				if (valor_input == '') {
+
+					this.item_vender.amount = 1
+				} else {
+
+					this.item_vender.amount = valor_input
+				}
 			}
 		},
 
 
 		add_item_to_sale() {
+
+			console.log('add_item_to_sale. amount:')
+			console.log(this.item_vender.amount)
 
 
 			// if (this.item_vender.amount == '') {
@@ -96,7 +110,6 @@ export default {
 			}
 
 			item = this.check_price_type_ranges(item)
-
 
 			this.$store.commit('vender/addItem', item)
 

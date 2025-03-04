@@ -9,6 +9,7 @@ hide-footer
 		<div
 		v-if="prop.type == 'number'">
 			<b-form-input
+			:id="prop.key"
 			:placeholder="prop.placeholder"
 			v-model="prop.value"></b-form-input>
 
@@ -37,6 +38,7 @@ hide-footer
 	</b-form-group>
 	<btn-loader
 	@clicked="update"
+	id="btn_send_actualizar"
 	text="Actualizar"
 	:loader="loading"></btn-loader>
 </b-modal>
@@ -67,12 +69,17 @@ export default {
 	methods: {
 		update() {
 			this.$emit('update', this.form)
+
+			setTimeout(() => {
+				this.setForm()
+			}, 2000)
 		},
 		setChange(value) {
 			console.log('setChange')
 			console.log(value)
 		},
 		setForm() {
+			this.form = []
 			this.properties_to_update.forEach(prop => {
 				if ((prop.type_to_update && prop.type_to_update == 'number') || prop.type == 'number') {
 					this.form.push({

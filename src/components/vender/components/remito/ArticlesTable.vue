@@ -226,11 +226,21 @@ export default {
 			return this.$store.state.vender.combos
 		},
 		fields() {
-			let fields = [
+			let fields = []
+
+			if (this.hasExtencion('bar_codes_in_vender_table')) {
+
+				fields.push({ 
+					key: 'bar_code', label: 'Codigo'
+				})
+			}
+			
+			fields = fields.concat([
 				{ key: 'price', label: 'Precio' },
 				{ key: 'name', label: 'Nombre' },
 				{ key: 'amount', label: 'Cantidad' },
-			]
+			])
+
 
 			if (this.hasExtencion('article_variants')) {
 				fields.push({ 
@@ -288,6 +298,7 @@ export default {
 			this.items.forEach(item => {
 				item_to_add = {
 					id: item.id,
+					bar_code: item.bar_code,
 					price: item.price_vender,
 					// price: this.price(item.price_vender),
 					name: item.name,

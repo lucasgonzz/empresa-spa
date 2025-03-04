@@ -123,6 +123,8 @@ export default {
 			console.log(model)
 			let items = this.getItemsPreviusSale(model)
 			this.$store.commit('vender/setItems', items)
+			console.log('quedaron estos items:')
+			console.log(items)
 			if (model.discounts.length) {
 				
 				this.set_discounts_store_with_pivot_percetage(model.discounts)
@@ -240,7 +242,7 @@ export default {
 				observations: this.observations,
 				numero_orden_de_compra: this.numero_orden_de_compra,
 				omitir_en_cuenta_corriente: this.omitir_en_cuenta_corriente,
-				metodos_de_pago_seleccionados: this.selected_payment_methods,
+				selected_payment_methods: this.selected_payment_methods,
 				seller_id: this.seller_id,
 				sub_total: this.sub_total,
 				total: this.total,
@@ -282,6 +284,7 @@ export default {
 			let item_to_add 
 			model.articles.forEach(article => {
 				item.id = article.id
+				item.bar_code = article.bar_code
 				item.name = article.name
 				item.status = article.status
 				item.article_variants = article.article_variants
@@ -305,6 +308,7 @@ export default {
 				model.combos.forEach(combo => {
 					item.id = combo.id
 					item.name = combo.name
+					item.articles = combo.articles
 					item.pivot = combo.pivot
 					// item.price = Number(combo.pivot.price)
 					item.amount = Number(combo.pivot.amount)

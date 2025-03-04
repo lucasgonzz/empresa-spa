@@ -3,8 +3,6 @@
 	:sale="sale"></sale-print-buttons>
 </template>
 <script>
-import vender from '@/mixins/vender'
-import previus_sales from '@/mixins/previus_sales'
 import print_sale from '@/mixins/print_sale'
 export default {
 	mixins: [print_sale],

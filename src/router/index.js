@@ -140,6 +140,11 @@ const routes = [
         name: 'papelera',
         component: () => import('@/views/Papelera')
     },
+    {
+        path: '/devoluciones/:view?',
+        name: 'devoluciones',
+        component: () => import('@/views/Devoluciones')
+    },
     // {
     //     path: '/ventas',
     //     name: 'ventas',

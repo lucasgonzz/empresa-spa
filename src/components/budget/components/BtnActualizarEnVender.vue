@@ -7,9 +7,9 @@
 	</b-button>
 </template>
 <script>
-import previus_sales from '@/mixins/previus_sales'
+import previus_sale from '@/mixins/vender/previus_sale/index'
 export default {
-	mixins: [previus_sales],
+	mixins: [previus_sale],
 	computed: {
 		budget() {
 			return this.$store.state.budget.model 

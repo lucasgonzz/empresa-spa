@@ -40,23 +40,28 @@
 				:key="discount.id"
 				:value="discount.id"
 				v-model="sale_discounts">
-					{{ discount.name }} {{ discount.percentage }}%
 
-					<span
-					v-if="discount.deleted_at">
-						(actualmente eliminado)
-					</span>
+					<div
+					:id="'discount_'+discount.id">
+						{{ discount.name }} {{ discount.percentage }}%
 
-					<span
-					v-else-if="discount.updated_percentage">
-						({{ discount.updated_percentage }}% en este momento)
-					</span>
+						<span
+						v-if="discount.deleted_at">
+							(actualmente eliminado)
+						</span>
 
-					<p
-					class="text-muted"
-					v-if="!discount.deleted_at && discount.updated_percentage">
-						En caso de querer usar el valor actual del descuento ({{ discount.updated_percentage }}%), desmarcar para quitar el descuento, guardar la venta sin el descuento, y editar la venta para agregarle el descuento con el valor actualizado.
-					</p>
+						<span
+						v-else-if="discount.updated_percentage">
+							({{ discount.updated_percentage }}% en este momento)
+						</span>
+
+						<p
+						class="text-muted"
+						v-if="!discount.deleted_at && discount.updated_percentage">
+							En caso de querer usar el valor actual del descuento ({{ discount.updated_percentage }}%), desmarcar para quitar el descuento, guardar la venta sin el descuento, y editar la venta para agregarle el descuento con el valor actualizado.
+						</p>
+						
+					</div>
 				</b-form-checkbox>
 			</b-form-group>
 
@@ -67,7 +72,10 @@
 				:value="1"
 				:unchecked-value="0"
 				v-model="discounts_in_services">
-					Aplicar descuentos en los servicios
+					<span
+					id="aplicar_descuentos_a_servicios">
+						Aplicar descuentos en los servicios
+					</span>
 				</b-form-checkbox>
 			</b-form-group>
 		</b-card>

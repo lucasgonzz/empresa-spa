@@ -14,6 +14,7 @@
 				<div class="cards-wrapper">
 					<div
 					v-for="card in group.cards" 
+					:id="card.id ? card.id : ''"
 					class="icon-card">
 						<img :src="img_url(card)">
 						<p class="text">
@@ -167,7 +168,8 @@ export default {
 					cards: [
 						{
 							text: 'Iva Debito',
-							img: 'iva_vendido', 
+							img: 'iva_vendido',
+							id: 'iva_debito', 
 							value: this.price(this.model.total_facturado, false),
 							description: 'Sumatoria de los importes de IVA de todos los articulos vendidos en ventas Facturadas',
 						},
@@ -177,6 +179,7 @@ export default {
 						*/
 						{
 							text: 'Iva Credito',
+							id: 'iva_credito', 
 							img: 'iva_comprado', 
 							value: this.price(this.model.total_iva_comprado, false),
 							description: 'Sumatoria de los totales de IVA de las facturas de los pedidos a proveedores',
@@ -184,6 +187,7 @@ export default {
 
 						{
 							text: 'Iva a Pagar',
+							id: 'iva_diferencia', 
 							img: 'iva_diferencia', 
 							value: this.price(this.model.total_facturado - this.model.total_iva_comprado, false),
 							description: 'Diferencia entre IVA Debito menos el IVA Credito',

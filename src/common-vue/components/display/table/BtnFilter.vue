@@ -5,6 +5,7 @@
 		<b-button 
 		class="m-l-10"
 		size="sm"
+		:id="'btn_filter_'+field.key"
 		:variant="filtro_usado ? 'success' : 'outline-primary'"
 		@click="toggleFilter(field.key)">
 			<i class="icon-search"></i>

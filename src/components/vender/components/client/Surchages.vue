@@ -27,23 +27,28 @@
 				:key="surchage.id"
 				:value="surchage.id"
 				v-model="sale_surchages">
-					{{ surchage.name }} {{ surchage.percentage }}%
 
-					<span
-					v-if="surchage.deleted_at">
-						(actualmente eliminado)
-					</span>
+					<div
+					:id="'surchage_'+surchage.id">
+						
+						{{ surchage.name }} {{ surchage.percentage }}%
 
-					<span
-					v-else-if="surchage.updated_percentage">
-						({{ surchage.updated_percentage }}% en este momento)
-					</span>
+						<span
+						v-if="surchage.deleted_at">
+							(actualmente eliminado)
+						</span>
 
-					<p
-					class="text-muted"
-					v-if="!surchage.deleted_at && surchage.updated_percentage">
-						En caso de querer usar el valor actual del recargo ({{ surchage.updated_percentage }}%), desmarcar para quitar el recargo, guardar la venta sin el recargo, y editar la venta para agregarle el recargo con el valor actualizado.
-					</p>
+						<span
+						v-else-if="surchage.updated_percentage">
+							({{ surchage.updated_percentage }}% en este momento)
+						</span>
+
+						<p
+						class="text-muted"
+						v-if="!surchage.deleted_at && surchage.updated_percentage">
+							En caso de querer usar el valor actual del recargo ({{ surchage.updated_percentage }}%), desmarcar para quitar el recargo, guardar la venta sin el recargo, y editar la venta para agregarle el recargo con el valor actualizado.
+						</p>
+					</div>
 				</b-form-checkbox>
 			</b-form-group>
 
@@ -54,7 +59,10 @@
 				:value="1"
 				:unchecked-value="0"
 				v-model="surchages_in_services">
-					Aplicar recargos en los servicios
+					<span
+					id="aplicar_recargos_a_servicios">
+						Aplicar recargos en los servicios
+					</span>
 				</b-form-checkbox>
 			</b-form-group>
 		</b-card>

@@ -99,10 +99,11 @@
 	</b-row>
 </template>
 <script>
-import previus_sales from '@/mixins/previus_sales'
+import previus_sale from '@/mixins/vender/previus_sale/index'
+import se_puede_actualizar from '@/mixins/vender/previus_sale/se_puede_actualizar'
 import print_sale from '@/mixins/print_sale'
 export default {
-	mixins: [previus_sales, print_sale],
+	mixins: [previus_sale, print_sale, se_puede_actualizar],
 	components: {
 		BtnLoader: () => import('@/common-vue/components/BtnLoader'),
 		SalePrintButtons: () => import('@/components/common/SalePrintButtons'),
@@ -155,6 +156,9 @@ export default {
 		display: flex
 		align-items: center
 .sale-details-buttons
+	display: flex  
+	flex-direction: row
+	justify-content: flex-start
 	.btn 
 		@media screen and (max-width: 992px)
 			margin-bottom: 15px

@@ -7,6 +7,9 @@
 			</div>
 
 			<chart></chart>
+			<div id="chart-data" v-show="false">
+		    	este es el valor
+		    </div>
 		</div> 
 	</div>
 </template>

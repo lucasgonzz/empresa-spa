@@ -10,7 +10,7 @@ export default {
 		model_name: 'provider',
 		from_dates: false,
 		is_selecteable: false,
-		not_download_on_mobile: true,
+		// not_download_on_mobile: true,
 
 		use_per_page: true,
 		// Se usa cuando es belongs_to_many_from_dates. Por ejemplo para ver los pagos de un cliente

@@ -141,6 +141,8 @@ export default {
 
             let input = document.getElementsByClassName('payment-method-amount')[0]                
             input.value = this.maked_sale.total
+
+            this.pago.current_acount_payment_methods[0].amount = this.maked_sale.total
         },
     	hacerPago() {
             if (this.check()) {

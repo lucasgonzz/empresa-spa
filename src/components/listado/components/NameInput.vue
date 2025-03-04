@@ -14,7 +14,7 @@
 
 		<b-form-input
 		placeholder="Ingrese el nombre"
-		dusk="article_name"
+		id="article-name"
 		v-model="model.name"
 		v-else></b-form-input>
 

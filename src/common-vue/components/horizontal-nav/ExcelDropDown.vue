@@ -2,6 +2,7 @@
 	<b-dropdown
 	right
 	split 
+	:id="'dropdown_'+model_name"
 	variant="primary"
 	v-if="can_create || has_permission_create_dropdown"
 	@click="call_set_model">
@@ -27,6 +28,7 @@
 		</b-dropdown-item>
 		<b-dropdown-item
 		v-if="can_import"
+		id="btn_import"
 		v-b-modal="'import-'+model_name">
 			<i class="icon-download"></i>
 			Importar {{ plural(model_name) }}

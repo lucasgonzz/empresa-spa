@@ -1,6 +1,7 @@
 <template>
 	<b-button
 	class="m-l-15"
+	:id="'btn-current-acount-'+model.id"
 	@click.stop="showCurrentAcounts()"
 	variant="success">
 		C/C

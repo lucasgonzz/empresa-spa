@@ -167,6 +167,9 @@ export default {
 			if (this.loading) {
 				return this.loading
 			}
+			if (this.papelera) {
+				return this.$store.state.papelera[this.model_name].loading
+			}
 			return this.$store.state[this.model_name].loading
 		},
 		models_to_show() {

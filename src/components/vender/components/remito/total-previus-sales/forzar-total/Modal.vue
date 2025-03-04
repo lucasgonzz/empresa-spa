@@ -13,6 +13,7 @@
 
 		<b-button
 		block
+		id="btn_calcular_descuento"
 		@click="calcular_descuento"
 		variant="primary">
 			Calcular Descuento

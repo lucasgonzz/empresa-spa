@@ -1,10 +1,14 @@
 <template>
 	<div>
 		<b-form-group
+		id="form-group-stock"
 		placeholder="Stock">
-			<b-form-input
+			<span>
+				{{ model.stock }}
+			</span>
+			<!-- <b-form-input
 			v-model="model.stock"
-			disabled></b-form-input>
+			disabled></b-form-input> -->
 		</b-form-group>
 		<!-- <b-button
 		v-if="model.id"

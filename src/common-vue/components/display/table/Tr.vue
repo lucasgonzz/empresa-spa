@@ -223,9 +223,9 @@ export default {
 
 .selected-row
 	font-weight: bold 
-	color: #FFF !important
+	// color: #FFF !important
 	td 
-		background: $blue !important
+		background: $yellow !important
 
 
 .cont-tr-full-width

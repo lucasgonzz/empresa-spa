@@ -5,6 +5,7 @@
 		<b-button
 		size="sm"
 		class="m-l-10"
+		id="btn_asignar_stock"
 		@click.stop="stockMovement"
 		variant="outline-primary">
 			<span
@@ -12,7 +13,6 @@
 				{{ article.stock }}
 			</span> 
 			<span
-			dusk="btn_asignar_stock"
 			v-else>
 				Asignar Stock
 			</span> 

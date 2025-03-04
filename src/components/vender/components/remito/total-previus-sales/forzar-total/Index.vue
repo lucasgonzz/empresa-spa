@@ -7,6 +7,7 @@
 		variant="success"
 		size="sm"
 		class="m-l-15"
+		id="btn_forzar_total"
 		@click="modal">
 			Forzar
 		</b-button>

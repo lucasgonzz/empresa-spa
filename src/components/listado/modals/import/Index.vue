@@ -85,29 +85,58 @@ export default {
 				{
 					text: 'Unidad medida',
 					description: 'Por defecto es UNIDAD',
+					saltear_posiciones: 4,
 				},
 			]
 
 
-			// if (this.hasExtencion('articulos_con_propiedades_de_distribuidora')) {
+			if (this.hasExtencion('articulos_con_propiedades_de_distribuidora')) {
 
-			// 	columns.push({
-			// 		text: 'Tipo de envase',
-			// 	})
-			// 	columns.push({
-			// 		text: 'Contenido',
-			// 	})
-			// 	columns.push({
-			// 		text: 'U x Bulto',
-			// 	})
-			// }
+				columns.push({
+					text: 'Tipo de envase',
+				})
+				columns.push({
+					text: 'Contenido',
+				})
+				columns.push({
+					text: 'U x Bulto',
+				})
+			}
 
-			let index = 1
-			columns.forEach(column => {
-				column.column = index
-				index++
+			this.addresses.forEach(address => {
+				columns.push({
+					text: address.street,
+				})
 			})
+
+
+			if (this.hasExtencion('articulo_margen_de_ganancia_segun_lista_de_precios')) {
+
+				this.price_types.forEach(price_type => {
+					columns.push({
+						text: '% '+price_type.name,
+						saltear_posiciones: 3,
+					})
+				})
+				
+			}
+
+			// let index = 1
+			// columns.forEach(column => {
+			// 	column.column = index
+			// 	if (column.saltear_posiciones) {
+			// 		index += column.saltear_posiciones
+			// 	} else {
+			// 		index++
+			// 	}
+			// })
 			return columns
+		},
+		addresses() {
+			return this.$store.state.address.models
+		},
+		price_types() {
+			return this.$store.state.price_type.models
 		},
 		identifications() {
 			return [

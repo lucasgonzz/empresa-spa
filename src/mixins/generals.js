@@ -53,7 +53,11 @@ export default {
             return this.$store.state.employee.models.find(employee => employee.id == id)
         },
         hasExtencion(slug, check_has_one_extencion_permission = true) {
-            if (this.authenticated && this.owner) {
+            if (
+                this.authenticated 
+                && this.owner
+                && this.owner.extencions
+            ) {
                 let index = this.owner.extencions.findIndex(extencion => {
                     return extencion.slug == slug
                 })
@@ -79,7 +83,7 @@ export default {
 
                 if (afip_information_id) {
 
-                    console.log('usando precio en blanco')
+                    // console.log('usando precio en blanco')
                     price = item.final_price_blanco
                     
                 } else {
@@ -98,7 +102,7 @@ export default {
                 price = this.redondear(price)
             }
             price = Number(price)
-            console.log(this.price(price))
+            // console.log(this.price(price))
             return price
         },
         redondear(price) {
@@ -112,7 +116,7 @@ export default {
         },
         apicar_tipos_de_precio(item, price) {
 
-            console.log('apicar_tipos_de_precio:')
+            // console.log('apicar_tipos_de_precio:')
                 
             if (this.hasExtencion('cambiar_price_type_en_vender')) {
 
@@ -124,14 +128,14 @@ export default {
 
                 if (item.price_type_personalizado_id) {
 
-                    console.log('price_vender_personalizado: '+item.price_type_personalizado_id)
+                    // console.log('price_vender_personalizado: '+item.price_type_personalizado_id)
 
                     price_vender_id = item.price_type_personalizado_id
                 }
 
-                console.log('is_article: '+item.is_article)
-                console.log('item.price_types: ')
-                console.log(item.price_types)
+                // console.log('is_article: '+item.is_article)
+                // console.log('item.price_types: ')
+                // console.log(item.price_types)
 
                 if (item.is_article) {
                     
@@ -141,7 +145,7 @@ export default {
 
                     if (typeof article_price_type != 'undefined') {
 
-                        console.log('usando precio de la lista de precios personalizada: '+article_price_type.pivot.final_price)
+                        // console.log('usando precio de la lista de precios personalizada: '+article_price_type.pivot.final_price)
                         price = article_price_type.pivot.final_price
                     }
                 }
@@ -152,8 +156,6 @@ export default {
                 if (this.price_types_with_position.length && this.checkService(item)) {
                    
                     this.price_types_with_position.forEach(price_type => {
-                        console.log('price_type:')
-                        console.log(price_type)
                         if (price_type.position <= this.price_type_vender.position) {
                             price = Number(price) + Number(price * this.getPriceTypePercetage(price_type, item) / 100) 
                         }
@@ -167,7 +169,7 @@ export default {
             if (this.current_acount_payment_method_discounts.length 
                 && this.current_acount_payment_method_id) {
 
-                console.log('apicar_descuento_metodo_de_pago')
+                // console.log('apicar_descuento_metodo_de_pago')
                 price = this.aplicar_monto_descuento(price, this.current_acount_payment_method_id)
             }
             return price
@@ -177,11 +179,11 @@ export default {
                 return _sub_category.id == item.sub_category_id 
             })
             if (typeof sub_category_from_price_type != 'undefined') {
-                console.log('Se va a sumar el '+sub_category_from_price_type.pivot.percentage+'% de '+sub_category_from_price_type.name+' '+price_type.name)
-                console.log(Number(sub_category_from_price_type.pivot.percentage))
+                // console.log('Se va a sumar el '+sub_category_from_price_type.pivot.percentage+'% de '+sub_category_from_price_type.name+' '+price_type.name)
+                // console.log(Number(sub_category_from_price_type.pivot.percentage))
                 return Number(sub_category_from_price_type.pivot.percentage)
             }
-            console.log('No hay porcentaje para '+price_type.name+' y la sub_category del articulo, sumando el '+price_type.percentage)
+            // console.log('No hay porcentaje para '+price_type.name+' y la sub_category del articulo, sumando el '+price_type.percentage)
             return Number(price_type.percentage)
         },
         checkService(item) {
