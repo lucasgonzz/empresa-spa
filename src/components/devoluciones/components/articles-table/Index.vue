@@ -126,50 +126,6 @@ export default {
 		set_total_devolucion() {
 
 			this.$store.commit('devoluciones/set_total_devolucion')
-			return
-			
-			let total_devolucion = 0
-			
-			this.articles.forEach(article => {
-
-				let unidades_devueltas = Number(article.returned_amount)
-
-				if (article.ya_devueltas) {
-					unidades_devueltas -= Number(article.ya_devueltas)
-				}
-
-				console.log('unidades_devueltas: '+unidades_devueltas)
-				if (unidades_devueltas > 0) {
-
-					let total_article = article.price_vender * unidades_devueltas
-					console.log('total_article: '+total_article)
-					
-					if (article.pivot.discount) {
-
-						total_article -= total_article * article.pivot.discount / 100
-					}	
-
-					if (this.sale) {
-
-						this.sale.discounts.forEach(discount => {
-
-							total_article -= total_article * discount.pivot.percentage / 100
-						})
-
-						this.sale.surchages.forEach(surchage => {
-
-							total_article += total_article * surchage.pivot.percentage / 100
-						})
-					}
-
-
-					total_devolucion += total_article
-
-					article.unidades_devueltas = unidades_devueltas
-				}
-			})
-
-			this.$store.commit('devoluciones/set_total_devolucion', total_devolucion)
 		}
 	}
 }

@@ -26,6 +26,7 @@ export default {
 	},
 	computed: {
 		columns() {
+			console.log('Calculando columnas para importar:')
 			let columns = [
 				{
 					text: 'Numero',
@@ -85,7 +86,7 @@ export default {
 				{
 					text: 'Unidad medida',
 					description: 'Por defecto es UNIDAD',
-					saltear_posiciones: 4,
+					saltear_posiciones: 1,
 				},
 			]
 
@@ -115,7 +116,7 @@ export default {
 				this.price_types.forEach(price_type => {
 					columns.push({
 						text: '% '+price_type.name,
-						saltear_posiciones: 3,
+						saltear_posiciones: 2,
 					})
 				})
 				
@@ -130,6 +131,7 @@ export default {
 			// 		index++
 			// 	}
 			// })
+			console.log(columns)
 			return columns
 		},
 		addresses() {

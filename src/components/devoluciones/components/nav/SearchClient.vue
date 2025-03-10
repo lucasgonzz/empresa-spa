@@ -5,6 +5,7 @@
 	disabled
 	id="select_client_devoluciones"
 	@setSelected="setSelected"
+	@clearSelected="clearSelected"
 	:prop="{text: 'Cliente', key: 'client_id'}"
 	:model="client"
 	model_name="client"
@@ -27,6 +28,9 @@ export default {
 	methods: {
 		setSelected(result) {
 			this.$store.commit('devoluciones/set_client', result.model)
+		},
+		clearSelected() {
+			this.$store.commit('devoluciones/set_client', null)
 		}
 	}
 }

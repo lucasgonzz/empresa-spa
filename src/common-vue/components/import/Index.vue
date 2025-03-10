@@ -90,13 +90,14 @@
 							<span
 							class="btn btn-link"
 							@click="setColumn(index)">
-								{{ column.text }} {{ column.position }}
+								{{ column.text }} 
 							</span>
 							<div>
 
 								<b-form-input
 								:id="column.text.replaceAll(' ', '_')+'-position'"
 								@keyup="set_position(index)"
+								maxlength="1"
 								v-model="column.letra"></b-form-input>
 
 								<b-form-checkbox
@@ -271,13 +272,6 @@ export default {
 			default: null,
 		},
 	},
-	created() {
-		this.setPositions()
-		// setTimeout(() => {
-		// 	const inputFile = document.getElementById('input-file-'+this.model_name)
-		// 	inputFile.addEventListener('change', handleFileChange)
-		// }, 500)
-	},
 	computed: {
 		title() {
 			return 'Importar '+this.plural(this.model_name)
@@ -323,15 +317,31 @@ export default {
 		}
 	},
 	mounted() {
+		console.log('Modal Import mounted')
 	    this.$root.$on('bv::modal::show', (bvEvent, modalId) => {
 	        if (modalId === this.id) {
 				this.hubo_un_error = false
 				this.demora_de_todas_las_solicitud = 0
 				console.log('Se puso hubo_un_error en '+this.hubo_un_error)
+				this.setColumnsPositions()
 	        }
 	    })
 	},
+	watch: {
+		columns() {
+			console.log('watch de columns')
+			this.setColumnsPositions()
+		},
+	},
 	methods: {
+		check_letra(index) {
+			let letra = this.columns_[index].letra.toUpperCase()
+
+			console.log('check_letra:')
+			console.log(this.columns_[index].letra)
+			console.log(letra)
+			this.columns_[index].letra = letra
+		},
 		number_to_excel_column(n) {
 		    let column = '';
 		    while (n > 0) {
@@ -442,6 +452,9 @@ export default {
 			this.print_columns()
 		},
 		set_position(index) {
+			
+			this.check_letra(index)
+
 			let column = this.columns_[index]
 			if (column && column.letra) {
 
@@ -467,6 +480,7 @@ export default {
 			}
 		},
 		setColumnsPositions() {
+			console.log('Seteando posiciones')
 			this.columns_ = []
 			let position = 1
 			let letra 
@@ -483,10 +497,9 @@ export default {
 					ignored: 0,
 					can_not_ignore: typeof column.can_not_ignore != 'undefined' ? true : undefined,
 				})
+				position++
 				if (column.saltear_posiciones) {
 					position += column.saltear_posiciones
-				} else {
-					position++
 				}
 			})
 			this.positions_seted = true
@@ -499,6 +512,7 @@ export default {
 				column.ignored = 0
 			})
 			this.positions_seted = false
+			console.log('Limpiando posiciones')
 		},	
 		async upload() {
 			if (this.check()) {

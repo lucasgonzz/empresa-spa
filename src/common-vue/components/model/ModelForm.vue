@@ -56,6 +56,7 @@
 									class="m-b-15"
 									:id="model_name+'-'+prop.key"
 									@setSelected="setSelected"
+									:props_to_filter="props_to_filter(prop)"
 									:model_name="modelNameFromRelationKey(prop)"
 									:model="model"
 									:model_name_for_search_on_models="model_name"
@@ -394,6 +395,15 @@ export default {
 		},
 	},
 	methods: {
+		props_to_filter(prop) {
+			if (
+				prop.belongs_to_many
+				&& prop.belongs_to_many.props_to_filter
+			) {
+				return prop.belongs_to_many.props_to_filter
+			}
+			return []
+		},	
 		colorLabel(prop) {
 			if (prop.color_function) {
 				return this[prop.color_function](this.model)
@@ -427,7 +437,7 @@ export default {
 						if (element && prop.type == 'text') {
 							setTimeout(() => {
 								element.focus()
-							}, 500)
+							}, 200)
 							ok = true 
 						}
 					}
@@ -579,12 +589,18 @@ export default {
 		checkBelongsToManyExist(prop, model_to_add) {
 			console.log('checkBelongsToManyExist')
 			console.log(this.model)
-			let finded = this.model[prop.key].find(model => {
-				return model.id == model_to_add.id 
-			})
-			if (typeof finded != 'undefined') {
-				this.$toast.error('El articulo YA HABIA SIDO AGREGADO')
-				return false
+			if (
+				typeof prop.belongs_to_many.check_ya_esta_agregado == 'undefined'
+				|| prop.belongs_to_many.check_ya_esta_agregado
+			) {
+				
+				let finded = this.model[prop.key].find(model => {
+					return model.id == model_to_add.id 
+				})
+				if (typeof finded != 'undefined') {
+					this.$toast.error('El articulo YA HABIA SIDO AGREGADO')
+					return false
+				}
 			}
 			return true
 		},
@@ -614,7 +630,6 @@ export default {
 			console.log('asi estaba antes de agregar '+prop.key)
 			console.log(this.model)
 
-
 			this.model[prop.key].push(model_to_add)
 			// this.$set(this.model, prop.key, this.model[prop.key])
 
@@ -637,7 +652,9 @@ export default {
 				setTimeout(() => {
 					let id = prop.belongs_to_many.model_name+'-'+prop.belongs_to_many.properties_to_set[0].key+'-'+model_to_add.id
 					let element = document.getElementById(id) 
-					element.focus()
+					if (element) {
+						element.focus()
+					}
 				}, 300)
 			}
 		},

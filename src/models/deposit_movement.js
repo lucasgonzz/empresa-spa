@@ -55,6 +55,7 @@ export default {
 			key: 'articles',
 			belongs_to_many: {
 				model_name: 'article',
+				check_ya_esta_agregado: false,
 				props_to_show: [
 					{
 						text: 'Codigo de barras',
@@ -91,6 +92,12 @@ export default {
 						type: 'select',
 						get_options_function: 'get_variants_for_deposit_movement',
 					},
+				],
+				props_to_filter: [
+					'num',
+					'provider_code',
+					'bar_code',
+					'name'
 				],
 			}
 		},

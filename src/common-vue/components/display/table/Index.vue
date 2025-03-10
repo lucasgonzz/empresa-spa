@@ -543,7 +543,6 @@ export default {
 			this.$store.commit(this.model_name+'/setTotalFilterPages', 1)
 		},
 		filtros_ya_iniciados() {
-			console.log('filtros_ya_iniciados para '+this.model_name)
 			return this.$store.state[this.model_name].filters.length
 		},
 		set_filters(cambiaron_las_props) {
@@ -552,11 +551,13 @@ export default {
 				return
 			}
 
+			console.log('set_filters de '+this.model_name)
+
 			if (this.filtros_ya_iniciados() && !cambiaron_las_props) {
+				console.log('Filtros ya iniciados')
 				return
 			}
 
-			console.log('set_filters')
 
 			console.log('props:')
 			console.log(this.props)
@@ -571,7 +572,7 @@ export default {
 					&& !prop.has_many
 				) {
 
-					console.log('agregando filtro para '+prop.text)
+					console.log('agregando filtro para '+prop.text+'. Type: '+prop.type)
 
 					filters.push({
 						key: prop.key,
@@ -768,6 +769,11 @@ export default {
 				color: #f1f3f4
 			@else
 				color: #000
+
+			&:hover  
+				font-weight: bold
+				td 
+					background: rgba(0, 0, 0, .2)
 
 		th, td 
 			// white-space: nowrap

@@ -21,7 +21,7 @@ export default {
 			text: 'Actualizar precios',
 			key: 'update_prices',
 			type: 'checkbox',
-			value: 1,
+			value: 0,
 			not_show: true,
 		},
 		{

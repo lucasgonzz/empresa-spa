@@ -35,7 +35,8 @@ export default {
 		add_article(state, value) {
 			state.articles.push(value) 
 		},
-		set_total_devolucion(state, value) {
+		set_total_devolucion_manual(state, value) {
+			console.log('set_total_devolucion_manual: '+value)
 			state.total_devolucion = value 
 		},
 		set_regresar_stock(state, value) {
@@ -125,6 +126,8 @@ export default {
 					article.unidades_devueltas = unidades_devueltas
 				}
 			})
+
+			console.log('set_total_devolucion: '+total_devolucion)
 
 			state.total_devolucion = total_devolucion
 		}

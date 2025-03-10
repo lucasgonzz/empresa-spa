@@ -98,7 +98,7 @@ export default [
 		path: '/devoluciones',
 		name: 'devoluciones',
 		component: '@/views/Devoluciones',
-		can: 'return.store',
+		can: 'devolucion.store', 
 		image_url: 'iconos-reportes/devoluciones.png',
 	},
 	{

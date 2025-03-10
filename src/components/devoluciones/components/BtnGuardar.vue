@@ -78,7 +78,8 @@ export default {
 		},
 		check() {
 			if (
-				this.addresses.length
+				this.regresar_stock
+				&& this.addresses.length
 				&& !this.address_id
 			) {
 				this.$toast.error('Indique el deposito destino')

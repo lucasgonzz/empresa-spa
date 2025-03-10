@@ -8,6 +8,10 @@
 		show_excel_drop_down
 		model_name="client">
 
+			<template #options_drop_down>
+				<btn-pdf></btn-pdf>
+			</template>
+
 			<template
 			v-slot:modal_buttons="slotProps">
 	    		<comercio-city-user  
@@ -39,6 +43,7 @@ export default {
 		CreateBuyer: () => import('@/components/client/components/clients/CreateBuyer'),
 		SaldosClientesFiltrados: () => import('@/components/client/components/clients/SaldosClientesFiltrados'),
 		Import: () => import('@/components/client/components/clients/Import'),
+		BtnPdf: () => import('@/components/client/components/clients/BtnPdf'),
 	}
 }
 </script>

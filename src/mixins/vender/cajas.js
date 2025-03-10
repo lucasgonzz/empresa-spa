@@ -30,13 +30,19 @@ export default {
 			this.count_se_habilitaron_las_cajas.count++
 
 			this.cajas_habilitadas = this.cajas_abiertas.filter(caja => {
-				
-				let payment_method_vender = caja.current_acount_payment_methods.find(payment_method => {
-					
-					return payment_method.id == payment_method_id
-				})
 
-				return typeof payment_method_vender != 'undefined'
+				if (caja.current_acount_payment_methods.length) {
+
+					let payment_method_vender = caja.current_acount_payment_methods.find(payment_method => {
+						
+						return payment_method.id == payment_method_id
+					})
+
+					return typeof payment_method_vender != 'undefined'
+				}
+
+				return true
+				
 			})
 
 			// Obtén la caja por defecto

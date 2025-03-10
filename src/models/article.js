@@ -173,7 +173,7 @@ export default {
 		{
 			text: 'Precio final actualizado',
 			key: 'final_price_updated_at',
-			type: 'text',
+			type: 'date',
 			only_show: true,
 			is_date: true,
 			not_show: true,
@@ -191,6 +191,13 @@ export default {
 			key: 'stock_min',
 			type: 'number',
 			not_show: true,
+		},
+		{
+			text: 'stock actualizado',
+			key: 'stock_updated_at',
+			type: 'date',
+			only_show: true,
+			is_date: true,
 		},
 		// {
 		// 	key: 'unidad_medida_id',
