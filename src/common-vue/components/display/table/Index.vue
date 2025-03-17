@@ -771,7 +771,7 @@ export default {
 				color: #000
 
 			&:hover  
-				font-weight: bold
+				// font-weight: bold
 				td 
 					background: rgba(0, 0, 0, .2)
 

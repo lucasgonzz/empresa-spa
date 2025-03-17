@@ -91,13 +91,23 @@ export default {
 			.then(() => {
 				return axios.get('/api/user')
 				.then(res => {
-					console.log(res.data.user)
 					commit('setLoading', false)
-					commit('setAuthenticated', true)
-					commit('setUser', res.data.user)
+					
+					console.log('auth/me::')
+					console.log(res)
+					console.log(typeof res.data.user)
+					console.log(res.data.user)
+					if (res && res.data.user) {
+						console.log('authenticado')
+						commit('setUser', res.data.user)
+						commit('setAuthenticated', true)
+					} else {
+						console.log('NO autenticado')
+					}
 					// commit('setUserWorkdaysId')
 				})
-				.catch(() => {
+				.catch(err => {
+					console.log('NO ESTA AUTH')
 					commit('setLoading', false)
 					commit('setAuthenticated', false)
 					commit('setUser', null)

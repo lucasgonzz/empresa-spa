@@ -10,6 +10,7 @@
 				<b-button
 				v-if="!payment_methods_with_discounts.length"
 				@click="guardarMetodosPago"
+				id="btn_payment_methods_calcular"
 				block
 				variant="primary">
 					Calcular
@@ -25,6 +26,7 @@
 
 					<b-button
 					@click="show_payment_methods_with_discounts"
+					id="btn_payment_methods_continuar"
 					block
 					variant="primary">
 						Continuar

@@ -33,9 +33,15 @@ export default {
 
 		set_item_vender(item, from_mobile = false) {
 
-
+			console.log('set_item_vender:')
+			console.log(item)
 			this.item_para_agregar = item  
-			this.item_para_agregar.article_variant_id = 0  
+
+			if (item.variant_id) {
+				this.item_para_agregar.article_variant_id = item.variant_id
+			} else {
+				this.item_para_agregar.article_variant_id = 0  
+			}
 
 			if (this.check_stock_mayor_a_cero(this.item_para_agregar)) {
 

@@ -12,19 +12,12 @@ export default {
 	methods: {
 		
 		check_price_type_ranges(item) {
-			
-			if (
-				item
-				&& this.hasExtencion('lista_de_precios_por_rango_de_cantidad_vendida')
-				&& item.is_article
-			) {
 
-				let price_type_id = this.get_price_type_range(item)
+			let price_type_id = this.get_price_type_range(item)
 
-				if (price_type_id) {
+			if (price_type_id) {
 
-					item.price_type_personalizado_id = price_type_id
-				}
+				item.price_type_personalizado_id = price_type_id
 			}
 
 			return item 

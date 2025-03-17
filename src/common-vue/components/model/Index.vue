@@ -94,6 +94,7 @@
 						:has_many_parent_model_name="has_many_parent_model_name"
 						:model_name="model_name" 
 						:model="model"
+						:dusk="'btn_eliminar_'+model_name"
 						:modal="'delete-'+model_name"></btn-delete>
 
 						<btn-loader
@@ -260,9 +261,15 @@ export default {
 			}
 		},
 		_show_btn_delete() {
+			// console.log('_show_btn_delete:')
+			// console.log('check_can_delete: '+this.check_can_delete)
+			// console.log('check_permissions: '+this.check_permissions)
+			// console.log('show_btn_delete: '+this.show_btn_delete)
 			if (this.show_btn_delete && (this.check_can_delete || this.check_permissions)) {
+				console.log('Chequeando permisos para eliminar '+this.model_name)
 				return this.can(this.model_name+'.delete')
 			}
+			console.log('NO SE ESTAN CHEQUEANDO permisos para eliminar '+this.model_name)
 			return this.show_btn_delete
 		},
 		can_save() {

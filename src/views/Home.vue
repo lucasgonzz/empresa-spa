@@ -35,7 +35,7 @@
 				<features></features>
 			</b-col>
 		</b-row>
-		<b-row
+		<!-- <b-row
 		class="row-dark">
 			<b-col
 			cols="12"
@@ -43,7 +43,7 @@
 			xl="7">
 				<casos-de-exito></casos-de-exito>
 			</b-col>
-		</b-row>
+		</b-row> -->
 
 		<b-row
 		class="row-dark-2">

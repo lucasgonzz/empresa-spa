@@ -71,8 +71,10 @@ export default {
 				.then(res => {
 					this.loading = false
 					if (res.data.login) {
-						this.$store.commit('auth/setAuthenticated', true)
+						console.log('login user:')
+						console.log(res.data.user)
 						this.$store.commit('auth/setUser', res.data.user)
+						this.$store.commit('auth/setAuthenticated', true)
 					} else if (res.data.user_last_activity) {
 						this.$toast.error('Su cuenta esta siendo utilizada en otro dispositivo, cierre la cuenta en el otro dispositivo. En caso de que la cuenta no este siendo utilizada en el otro dispositivo, espere '+this.user_last_activity_minutes+' minutos')
 					} else {

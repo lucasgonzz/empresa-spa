@@ -2,6 +2,7 @@
 	<b-button
 	v-if="article.article_variants.length"
 	@click="actualizar"
+	id="btn_actualizar_stock_variants"
 	variant="primary">
 		Actualizar Stock
 	</b-button>

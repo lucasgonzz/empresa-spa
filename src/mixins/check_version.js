@@ -20,8 +20,13 @@ export default {
 
 				if (!forceStable && currentHost !== default_version) {
 
-					alert("Serás redirigido a la versión correspondiente del sistema.");
-					window.location.href = default_version;
+					// alert("Serás redirigido a la versión correspondiente del sistema.");
+					this.$toast.error('Serás redirigido a la versión correspondiente del sistema.', {
+						position: 'top'
+					})
+					setTimeout(() => {
+						window.location.href = default_version;
+					}, 2000)
 				}
 			}
 

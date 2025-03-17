@@ -3,6 +3,7 @@
 class="cont-select">
 	<b-form-select
 	:disabled="disabled"
+	id="vender_payment_method_id"
 	v-model="current_acount_payment_method_id"
 	@change="set_payment_methods_null"
 	:options="getOptions({key: 'current_acount_payment_method_id', text: 'Metodo de pago'})">

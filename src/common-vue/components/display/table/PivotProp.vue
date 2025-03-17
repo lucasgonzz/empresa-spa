@@ -10,10 +10,9 @@
 			<div
 			v-else>
 				<b-form-textarea
-				:id="inputId(prop)"
 				@keyup.enter="changeFocus()"
 				@keyup.tab="changeFocus()"
-				:class="getInputSize(prop)"
+				:class="getInputSize(prop) && inputId(prop)"
 				v-if="showProp(prop) && prop.type == 'textarea'"
 				:type="prop.type"
 				:placeholder="'Ingrese '+propText(prop)"
@@ -25,11 +24,11 @@
 				@keyup.tab="changeFocus()"
 				v-else-if="showProp(prop) && prop.type == 'select'"
 				v-model="model.pivot[prop.key]"
-				:class="getInputSize(prop)"
+				:class="getInputSize(prop) && inputId(prop)"
 				:options="getOptions({key: prop.key, text: propText(prop), select_prop_name: prop.select_prop_name, get_options_function: prop.get_options_function}, model)"></b-form-select>
 
 				<b-form-checkbox
-				:id="inputId(prop)"
+				:class="inputId(prop)"
 				@keyup.enter="changeFocus()"
 				@keyup.tab="changeFocus()"
 				v-else-if="showProp(prop) && prop.type == 'checkbox'"
@@ -44,7 +43,7 @@
 				@keyup.tab="changeFocus()"
 				v-else-if="showProp(prop)"
 				:type="prop.type"
-				:class="getInputSize(prop)"
+				:class="getInputSize(prop) && inputId(prop)"
 				:placeholder="'Ingrese '+propText(prop)"
 				v-model="model.pivot[prop.key]"></b-form-input>
 			</div>
@@ -103,15 +102,16 @@ export default {
 			})
 
 			let id = props[index + 1]
-			let element = document.getElementById(this.model_name+'-'+id)
+			let elements = document.getElementsByClassName(this.model_name+'-'+id)
 
-			if (typeof element != 'undefined') {
+			if (elements.length) {
 
-				element.focus()
+				elements[elements.length-1].focus()
+	
+				this.updateTableScroll(elements[elements.length-1])
 			}
 
 
-			this.updateTableScroll(element)
 		},
 		updateTableScroll(element) {
 			let table = document.getElementById(this.cont_table_id)

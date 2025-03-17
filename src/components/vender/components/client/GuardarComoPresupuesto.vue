@@ -9,7 +9,10 @@
 		:disabled="disabled"
 		:unchecked-value="0"
 		v-model="guardar_como_presupuesto">
-			Guardar como PRESUPUESTO
+			<span
+			id="guardar_como_presupuesto">
+				Guardar como PRESUPUESTO
+			</span>
 		</b-form-checkbox>
 
 	</b-card>

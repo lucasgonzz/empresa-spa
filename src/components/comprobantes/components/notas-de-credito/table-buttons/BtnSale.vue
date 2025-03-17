@@ -3,7 +3,7 @@
 		<b-button
 		variant="primary"
 		@click.stop="show_sale" 
-		v-if="nota_credito.afip_ticket">
+		v-if="nota_credito.sale">
 			Venta N° {{ nota_credito.sale.num }}
 		</b-button>
 	</div> 

@@ -77,20 +77,32 @@ export default {
 			}
 		},
 		check() {
+			let ok = true
 			if (
 				this.regresar_stock
 				&& this.addresses.length
 				&& !this.address_id
 			) {
 				this.$toast.error('Indique el deposito destino')
-				return false
+				ok = false
 			}
 
 			if (this.total_devolucion == 0) {
 				this.$toast.error('Indique unidades devueltas')
-				return false
+				ok = false
 			}
-			return true
+
+			this.articles.forEach(article => {
+				if (
+					article.article_variants.length
+					&& !article.article_variant_id
+				) {
+					this.$toast.error('Indique variante de '+article.name)
+					ok = false
+				}
+			})
+
+			return ok
 		}
 	}
 }

@@ -4,6 +4,7 @@
 		:disabled="index_previus_sales > 0"
 		v-if="facturando"
 		v-model="afip_tipo_comprobante_id" 
+		id="afip_tipo_comprobante_id"
 		:options="getOptions({key: 'afip_tipo_comprobante_id', text: 'Tipo Comprobante'})"></b-form-select> 
 	</div>
 </template>

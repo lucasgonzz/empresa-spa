@@ -2,6 +2,7 @@
 	<b-button
 	:disabled="budget.budget_status_id == 2"
 	variant="primary"
+	id="btn_actualizar_en_vender"
 	@click="update">
 		Actualizar en VENDER
 	</b-button>

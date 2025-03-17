@@ -39,10 +39,16 @@ export default {
             return this.$store.state.vender.previus_sales.previus_sale
         },
         disabled() {
-        	if (this.testing_dusk) {
+        	if (this.is_local) {
         		return false
         	}
+        	
         	return this.item_vender == null || typeof this.item_vender == 'undefined' || (this.item_vender.name == '' && this.item_vender.bar_code == '')
+
+        	// if (this.testing_dusk) {
+        	// 	return false
+        	// }
+        	// return this.item_vender == null || typeof this.item_vender == 'undefined' || (this.item_vender.name == '' && this.item_vender.bar_code == '')
         }
 	},
 	methods: {

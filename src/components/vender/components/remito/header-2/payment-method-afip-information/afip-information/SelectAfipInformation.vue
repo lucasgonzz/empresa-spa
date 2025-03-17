@@ -5,6 +5,7 @@
 		:class="facturando ? 'verde' : 'rojo'"
 		v-model="afip_information_id" 
 		@change="change"
+		id="afip_information_id"
 		:options="options"></b-form-select> 
 	</div>
 </template>

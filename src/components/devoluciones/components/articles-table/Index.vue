@@ -20,6 +20,15 @@
 
 			</template>
 			
+			<template #cell(article_variant_id)="data">
+				
+				<b-form-select
+				:disabled="is_variant_disabled"
+				:options="article_variant_options(articles[data.index])"
+				v-model="articles[data.index].article_variant_id"></b-form-select>
+
+			</template>
+			
 			<template #cell(returned)="data">
 				
 				<div class="j-between">
@@ -56,7 +65,7 @@
 export default {
 	computed: {
 		fields() {
-			return [
+			let fields =  [
 				{
 					label: 'Codigo',
 					key: 'bar_code',
@@ -69,19 +78,30 @@ export default {
 					label: 'Precio',
 					key: 'price_vender',
 				},
-				// {
-				// 	label: 'Variante',
-				// 	key: 'article_variant',
-				// },
-				{
+			]
+
+			if (this.hasExtencion('article_variants')) {
+				fields.push({
+					label: 'Variante',
+					key: 'article_variant_id'
+				})
+			}
+
+			if (this.sale) {
+				fields.push({
 					label: 'Cant vendida',
 					key: 'amount',
-				},
+				})
+			}
+
+			fields = fields.concat([
 				{
 					label: 'Cant devuelta',
 					key: 'returned',
 				},
-			]
+			])
+
+			return fields
 		},
 		items() {
 			let items = []
@@ -91,6 +111,7 @@ export default {
 					name: article.name,
 					price_vender: this.price(article.price_vender),
 					amount: article.amount,
+					article_variant_id: article.article_variant_id,
 				})
 			})
 			// this.sale.services.forEach(service => {
@@ -112,6 +133,12 @@ export default {
 		articles() {
 			return this.$store.state.devoluciones.articles 
 		},
+		is_variant_disabled() {
+			if (this.sale) {
+				return true
+			}
+			return false
+		}
 	},
 	methods: {
 		remove_article(article) {
@@ -126,6 +153,21 @@ export default {
 		set_total_devolucion() {
 
 			this.$store.commit('devoluciones/set_total_devolucion')
+		},
+		article_variant_options(article) {
+			let options = [{
+				value: 0, 
+				text: 'Seleccione Variante' 
+			}]
+
+			article.article_variants.forEach(variant => {
+				options.push({
+					value: variant.id,
+					text: variant.variant_description
+				})
+			})
+
+			return options
 		}
 	}
 }

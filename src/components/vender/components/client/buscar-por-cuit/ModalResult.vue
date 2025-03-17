@@ -28,6 +28,7 @@
 		<btn-loader
 		v-else
 		:loader="loading"
+		id="crear_cliente"
 		text="Crear cliente y usar para esta venta"
 		@clicked="setCreateClient"></btn-loader>
 	</b-modal>

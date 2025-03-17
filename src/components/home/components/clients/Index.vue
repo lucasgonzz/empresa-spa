@@ -12,7 +12,7 @@
 			<div class="cont-clients">
 				<client
 				v-for="client in clients"
-				:client="client"></client>	
+				:_client="client"></client>	
 			</div>
 		</div>
 		

@@ -314,8 +314,16 @@ export default {
 		callSetTotal(from_amount_input = false, item = null) {
 
 			if (from_amount_input) {
-				item = this.check_price_type_ranges(item)
-				this.$store.commit('vender/replceItem', item)
+				
+				if (
+					item
+					&& this.hasExtencion('lista_de_precios_por_rango_de_cantidad_vendida')
+					&& item.is_article
+				) {
+					item = this.check_price_type_ranges(item)
+					this.$store.commit('vender/replceItem', item)
+				}
+				
 			}
 			this.setTotal()
 		},

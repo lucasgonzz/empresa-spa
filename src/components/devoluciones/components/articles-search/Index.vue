@@ -29,6 +29,7 @@ export default {
 				is_article: true,
 				price_vender: result.model.final_price,
 				amount: '',
+				article_variant_id: 0,
 				discount: '',
 				returned_amount: '',
 				ya_devueltas: null,
@@ -37,7 +38,15 @@ export default {
 			this.$store.commit('devoluciones/add_article', article)
 			console.log('articles:')
 			console.log(this.$store.state.devoluciones.articles)
-		}
+
+			this.limpiar_input()
+		},
+		limpiar_input() {
+			let input = document.getElementById('article')
+			if (input) {
+				input.value = ''
+			}
+		},
 	}
 }
 </script>

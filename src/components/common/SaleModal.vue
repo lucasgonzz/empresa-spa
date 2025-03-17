@@ -3,6 +3,7 @@
     :show_btn_save="false"
     :show_btn_remove_belongs_to_many="false"
     :delete_text="sale_delete_text"
+    check_permissions
     not_show_delete_text
     model_name="sale">
         <template v-slot:model_modal_header="props">
@@ -17,6 +18,12 @@ export default {
     components: {
         ModelIndex: () => import('@/common-vue/components/model/Index'),
         SaleDetails: () => import('@/components/ventas/modals/details/Index'),
+    },
+    props: {
+        show_btn_delete: {
+            type: Boolean,
+            default: false,
+        },
     },
     computed: {
         sale_to_delete() {

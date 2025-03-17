@@ -15,6 +15,7 @@ class="buttons-listado">
 	v-if="show_variants" 
 	:variant="getVariant()"
 	size="sm"
+	id="btn-variantes"
 	@click.stop="showVariants()" 
 	class="m-l-10">
 		<b-badge

@@ -11,6 +11,13 @@ export default {
                 return this.user.owner_configuration 
             }
         },
+        owner_extencions() {
+            if (this.is_owner) {
+                return this.user.extencions 
+            } else {
+                return this.user.owner_extencions 
+            }
+        },
         today() {
             return moment().format('YYYY-MM-DD')
         },
@@ -55,10 +62,9 @@ export default {
         hasExtencion(slug, check_has_one_extencion_permission = true) {
             if (
                 this.authenticated 
-                && this.owner
-                && this.owner.extencions
+                && this.owner_extencions
             ) {
-                let index = this.owner.extencions.findIndex(extencion => {
+                let index = this.owner_extencions.findIndex(extencion => {
                     return extencion.slug == slug
                 })
                 return index != -1 

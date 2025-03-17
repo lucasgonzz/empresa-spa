@@ -12,6 +12,9 @@
 			:models_to_show="models_to_show"
 			@modelSaved="modelSaved"
 			:show_previus_days="false">
+				<template #modal_buttons>
+					<pdf-button></pdf-button>		
+				</template>
 			</view-component>
 
 		</div>
@@ -22,6 +25,7 @@
 export default {
 	components: {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
+		PdfButton: () => import('@/components/listado/components/deposit-movements/modal/PdfButton'),
 	},
 	computed: {
 		models_to_show() {

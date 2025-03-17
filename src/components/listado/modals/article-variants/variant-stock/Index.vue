@@ -10,9 +10,9 @@
 			<template
 			v-for="address in addresses"
 			v-slot:[get_address_slot(address)]="props">
-				
 				<b-form-input
 				type="number"
+				:id="input_id(props, address)"
 				@keyup="update_variant_stock(props.model)"
 				@click="update_variant_stock(props.model)"
 				v-model="props.model['address_'+address.id]"></b-form-input>
@@ -84,6 +84,9 @@ export default {
 		},
 	},
 	methods: {
+		input_id(props, address) {
+			return props.model.variant.replaceAll(' ', '_')+'-'+address.id
+		},
 		get_address_slot(address) {
 
 			return 'table-prop-address_'+address.id

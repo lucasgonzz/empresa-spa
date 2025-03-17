@@ -147,6 +147,9 @@ export default {
 			} else {
 				state.item = value
 			}
+			
+			console.log('setItem:')
+			console.log(value)
 		},
 		addCombo(state, value) {
 			state.items.unshift(value)
@@ -155,6 +158,8 @@ export default {
 			state.new_article = value
 		},
 		addItem(state, item) {
+			console.log('addItem:')
+			console.log(item)
 			state.items.unshift(item)
 		},
 		setArticleForSale(state, value) {

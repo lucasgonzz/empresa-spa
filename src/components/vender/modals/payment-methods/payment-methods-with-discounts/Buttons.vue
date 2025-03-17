@@ -5,6 +5,7 @@
 		<b-button
 		@click="save_payment_methods_with_discounts"
 		block
+		id="btn_guardar_payment_methods_with_discount"
 		variant="primary">
 			Guardar
 		</b-button>

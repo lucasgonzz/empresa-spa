@@ -1,7 +1,8 @@
 <template>
 	<div>
 		
-		<sale-modal></sale-modal>
+		<sale-modal
+		:show_btn_delete="show_btn_delete_sale"></sale-modal>
 
 		<view-component 
 		:usar_filtros="false"
@@ -38,6 +39,11 @@ export default {
 		BtnNotaCredito: () => import('@/components/comprobantes/components/notas-de-credito/table-buttons/BtnNotaCredito'),
         SaleModal: () => import('@/components/common/SaleModal'),
 		PrintBtn: () => import('@/components/comprobantes/components/common/PrintBtn'),
+	},
+	computed: {
+		show_btn_delete_sale() {
+			return this.can('sale.delete')
+		},
 	},
 	created() {
 		this.$store.dispatch('nota_credito/getModels')

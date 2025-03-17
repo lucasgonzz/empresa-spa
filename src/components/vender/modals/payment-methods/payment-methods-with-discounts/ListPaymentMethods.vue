@@ -8,6 +8,7 @@
 			<div class="d-flex">
 				<b-form-input
 				type="number"
+				:id="'input_payment_method_with_discount_'+payment_method.id"
 				@keyup="set_total_repartido(payment_method)"
 				@change="set_total_repartido(payment_method)"
 				:min="0"
@@ -17,6 +18,7 @@
 
 				<b-button	
 				variant="outline-primary"
+				:id="'btn_agregar_total_payment_method_with_discount_'+payment_method.id"
 				class="ml-2 p-2 btn-total"
 				size="sm"
 				@click="agregarTotal(payment_method)"

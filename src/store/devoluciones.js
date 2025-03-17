@@ -72,6 +72,7 @@ export default {
 					is_article: true,
 					price_vender: article.pivot.price,
 					amount: article.pivot.amount,
+					article_variant_id: article.pivot.article_variant_id,
 					discount: article.pivot.discount,
 					returned_amount: article.pivot.returned_amount,
 					ya_devueltas: article.pivot.returned_amount,
@@ -97,7 +98,7 @@ export default {
 				}
 
 				console.log('unidades_devueltas: '+unidades_devueltas)
-				if (unidades_devueltas > 0) {
+				// if (unidades_devueltas > 0) {
 
 					let total_article = article.price_vender * unidades_devueltas
 					console.log('total_article: '+total_article)
@@ -124,7 +125,7 @@ export default {
 					total_devolucion += total_article
 
 					article.unidades_devueltas = unidades_devueltas
-				}
+				// }
 			})
 
 			console.log('set_total_devolucion: '+total_devolucion)
@@ -153,6 +154,11 @@ export default {
 					if (sale.client) {
 
 						commit('set_client', sale.client)
+					}
+
+					if (sale.address_id) {
+
+						commit('set_address_id', sale.address_id)
 					}
 
 					if (sale.afip_ticket) {

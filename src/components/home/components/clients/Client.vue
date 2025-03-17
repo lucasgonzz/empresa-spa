@@ -10,11 +10,11 @@
 		</div>
 		<div class="content">
 			<img 
-			v-if="client.image_url"
-			:src="client.image_url">
+			v-if="_client.image_url"
+			:src="_client.image_url">
 			<p
 			v-else>
-				{{ client.company_name }}
+				{{ _client.company_name }}
 			</p>
 		</div>
 	</div>
@@ -22,17 +22,17 @@
 <script>
 export default {
 	props: {
-		client: Object,
+		_client: Object,
 	},
 	computed: {
 		has_online() {
-			return this.client.online 
+			return this._client.online 
 		}
 	},
 	methods: {
 		toClient() {
-			if (this.client.online) {
-				window.open(this.client.online)
+			if (this._client.online) {
+				window.open(this._client.online)
 			}
 		},
 	}

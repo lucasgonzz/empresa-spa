@@ -650,10 +650,10 @@ export default {
 		setTableFocus(prop, model_to_add) {
 			if (prop.belongs_to_many.properties_to_set && prop.belongs_to_many.properties_to_set.length) {
 				setTimeout(() => {
-					let id = prop.belongs_to_many.model_name+'-'+prop.belongs_to_many.properties_to_set[0].key+'-'+model_to_add.id
-					let element = document.getElementById(id) 
-					if (element) {
-						element.focus()
+					let class_name = prop.belongs_to_many.model_name+'-'+prop.belongs_to_many.properties_to_set[0].key+'-'+model_to_add.id
+					let elements = document.getElementsByClassName(class_name) 
+					if (elements.length) {
+						elements[elements.length-1].focus()
 					}
 				}, 300)
 			}
