@@ -88,7 +88,7 @@ export default {
 
 					} else if (item.is_article) {
 
-						console.log('price de '+item.name)
+						// console.log('price de '+item.name)
 						console.log(this.getTotalItem(item, false))
 
 						this.total_articles += this.getTotalItem(item, false)
@@ -102,26 +102,16 @@ export default {
 					new_items.push(item)
 				})
 
-				console.log('total 1:')
-				console.log(this.total_articles)
-
 				this.aplicar_descuento()
 
 				this.aplicar_discounts()
 
 				this.aplicar_surchages()
 
-				console.log('total 2:')
-				console.log(this.total_articles)
-				
 				this.$store.commit('vender/setItems', new_items)
 				
 				sub_total = this.total_articles + this.total_services + this.total_combos
 				total = this.total_articles + this.total_services + this.total_combos
-
-
-				console.log('total 3:')
-				console.log(this.total)
 
 				total = this.aplicar_current_acount_payment_method_discounts(sub_total)
 

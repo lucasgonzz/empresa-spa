@@ -29,19 +29,32 @@ export default {
 
 			amount = this.check_article_price_type_group(item, amount)
 
+			console.log('amount para vender: '+amount)
+
 		    const { category_id, sub_category_id } = item;
 
 		    // Filtrar rangos que coincidan con la categoría o subcategoría del artículo
 		    
 		    let price_ranges = this.$store.state.category_price_type_range.models  
 
-		    const matching_ranges = price_ranges.filter(range => {
+		    let matching_ranges = price_ranges.filter(range => {
 		        return (
-		            (range.category_id === category_id || range.sub_category_id === sub_category_id) &&
-		            range.min <= amount &&
-		            (range.max === null || range.max >= amount)
+		            (
+		            	range.category_id === category_id || 
+		            	(
+		            		sub_category_id
+							&& range.sub_category_id
+		            		&& range.sub_category_id === sub_category_id
+		            	)
+		            )
+		            && range.min
+		            && range.min <= amount 
+		            && (range.max === null || range.max >= amount)
 		        );
 		    });
+
+		    console.log('coincide con estos rangos:')
+		    console.log(matching_ranges)
 
 
 		    // Si hay coincidencias, tomar el rango más específico
@@ -58,12 +71,22 @@ export default {
 		            return b.minQuantity - a.minQuantity; // Ordenar por minQuantity descendente
 		        });
 
+		        matching_ranges = matching_ranges.filter(range => {
+		        	if (range.sub_category_id) {
+		        		return range.sub_category_id == item.sub_category_id
+		        	}
+		        	return true
+		        })
+
 		        let selectedPriceTypeId = matching_ranges[0].price_type_id
 
 
 		        this.otros_articulos_relacionados.forEach(relatedItem => {
                     relatedItem.price_type_personalizado_id = selectedPriceTypeId;
                 });
+
+                console.log('se va a usar este rango:')
+                console.log(matching_ranges[0])
 
 		        return selectedPriceTypeId
 		    }

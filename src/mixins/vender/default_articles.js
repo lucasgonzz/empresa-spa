@@ -39,7 +39,8 @@ export default {
 					articles_por_defecto.forEach(article => {
 						let article_to_add = {
 							...article,
-							amount: '',
+							amount: 1,
+							// amount: '',
 							price_vender: '',
 							is_article: true,
 						}

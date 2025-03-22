@@ -37,6 +37,10 @@ export default {
 	methods: {
 		set_value() {
 			this.add_buscador_to_selected = !this.add_buscador_to_selected
+
+			if (!this.add_buscador_to_selected) {
+				this.$store.commit('article/setSelected', [])
+			}
 		}
 	}
 }
