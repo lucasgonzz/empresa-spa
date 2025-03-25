@@ -44,7 +44,7 @@ export default {
 			}
 		},
 		get_ultimos_articulos_actualizados() {
-			if (!this.owner.download_articles) {
+			if (!this.download_articles) {
 
 				this.$api.get('articles-ultimos-actualizados')
 				.then(res => {
