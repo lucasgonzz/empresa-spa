@@ -26,6 +26,10 @@
 		:slice_models="slice_models"
 		:model_name_spanish="model_name_spanish"
 		:show_empty_text="show_empty_text">
+		
+			<template v-slot:table_left_options="slotProps">
+				<slot name="table_left_options" :model="slotProps.model"></slot>
+			</template>
 			<template v-slot:table_right_options="slotProps">
 				<slot name="table_right_options" :model="slotProps.model"></slot>
 			</template>

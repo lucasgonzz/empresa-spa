@@ -46,6 +46,8 @@ export default {
 			select_prop_name: 'street',
 			show: true,
 			value: 0,
+			required: true,
+			required_if_models_length: 'address',
 			disabled_if_not_0: true,
 		},
 		{
@@ -58,6 +60,11 @@ export default {
 			belongs_to_many: {
 				model_name: 'article',
 				create_if_not_exist: true,
+				props_to_filter: [
+					'bar_code',
+					'provider_code',
+					'name',
+				],
 				props_to_show: [
 					{
 						text: 'Nombre',
@@ -202,25 +209,30 @@ export default {
 			not_show: true,
 		},
 		{
+			key: 'days_to_advise',
+			text: 'Avisarme si el pedido no fue RECIBIDO a partir de X dias desde que fue creado',
+			type: 'number',
+			placeholder: 'Ingrese los dias a partir de los cuales se le notificara',
+			value: '',
+			not_show: true,
+		},
+		{
+			group_title: 'Total',
+		},
+		{
 			key: 'total_with_iva',
 			text: 'Total con IVA',
 			type: 'checkbox',
 			value: 1,
+			description: 'Incluir el monto de IVA en el total del pedido',
 			not_show: true,
 		},
 		{
 			key: 'total_from_provider_order_afip_tickets',
 			text: 'Total de las facturas',
 			type: 'checkbox',
+			description: 'Calcular el total del pedido en base a las Facturas del pedido',
 			value: 0,
-			not_show: true,
-		},
-		{
-			key: 'days_to_advise',
-			text: 'Avisarme si el pedido no fue RECIBIDO a partir de X dias desde que fue creado',
-			type: 'number',
-			placeholder: 'Ingrese los dias a partir de los cuales se le notificara',
-			value: '',
 			not_show: true,
 		},
 		{

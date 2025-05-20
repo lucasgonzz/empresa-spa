@@ -38,6 +38,7 @@ export default {
 	},
 	computed: {
 		show() {
+			return this.hasExtencion('cambiar_price_type_en_vender')
 			if (this.price_type_vender) {
 				if (!this.hasExtencion('lista_de_precios_por_rango_de_cantidad_vendida')) {
 					return true 

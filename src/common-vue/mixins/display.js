@@ -20,6 +20,8 @@ export default {
 				properties = properties.concat(this.getPivotProperties(model, model_name))
 				properties = this.overrideProperties(properties, properties_to_override)
 				
+				properties = this.funcion_personalizada(properties)
+
 				if (show_modal) {
 					this.$store.commit('auth/setMessage', 'Cargando formulario')
 					this.$store.commit('auth/setLoading', true)
@@ -38,6 +40,17 @@ export default {
 					}
 				}, 30)
 			}
+		},
+		funcion_personalizada(properties) {
+			console.log('funcion_personalizada props:')
+			console.log(properties)
+			
+			return properties.map(prop => {
+				if (prop.funcion_personalizada) {
+					return this[prop.funcion_personalizada](prop)
+				}
+				return prop
+			})
 		},
 		getSelectAndCheckboxProps(model, model_name) {
 			let properties = []
@@ -107,6 +120,7 @@ export default {
 						let all_models_for_relation = this.modelsStoreFromName(prop.store)
 						let propertye_to_add = {
 							key: prop.key,
+							funcion_personalizada: prop.funcion_personalizada,
 							value: [], 
 						}
 						all_models_for_relation.forEach(model_to_relation => {

@@ -11,6 +11,35 @@ export default {
 			type: 'checkbox',
 		},
 		{
+			text: 'Plantilla',
+			key: 'online_template_id',
+			type: 'select',
+			use_store_models: true,
+		},
+		
+		{
+			text: 'Cantiad tarjetas en telefono',
+			key: 'cantidad_tarjetas_en_telefono',
+			type: 'number',
+		},
+		{
+			text: 'Cantiad tarjetas en tablet',
+			key: 'cantidad_tarjetas_en_tablet',
+			type: 'number',
+		},
+		{
+			text: 'Cantiad tarjetas en notebook',
+			key: 'cantidad_tarjetas_en_notebook',
+			type: 'number',
+		},
+		{
+			text: 'Cantiad tarjetas en escritorio',
+			key: 'cantidad_tarjetas_en_escritorio',
+			type: 'number',
+		},
+
+
+		{
 			text: 'Scroll infinito en el Inicio',
 			key: 'scroll_infinito_en_home',
 			type: 'checkbox',

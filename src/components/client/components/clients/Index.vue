@@ -26,7 +26,7 @@
 				<saldos-clientes-filtrados></saldos-clientes-filtrados>
 			</template>
 
-			<template v-slot:table_right_options="slotProps">
+			<template v-slot:table_left_options="slotProps">
 				<btn-current-acounts
 				:model="slotProps.model"
 				model_name="client"></btn-current-acounts>

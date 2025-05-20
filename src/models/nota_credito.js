@@ -70,6 +70,42 @@ export default {
 				],
 			},
 		},
+		{
+			text: 'Descuentos',
+			key: 'discounts',
+			store: 'discount',
+			type: 'search',
+			only_show: true,
+			belongs_to_many: {
+				model_name: 'discount',
+				pivot_props_to_show: [
+					{
+						text: 'Porcentaje',
+						key: 'percentage',
+					},
+				],
+			},
+			no_usar_en_filtros: true,
+			not_show: true,
+		},
+		{
+			text: 'Recargos',
+			key: 'surchages',
+			store: 'surchage',
+			type: 'search',
+			only_show: true,
+			belongs_to_many: {
+				model_name: 'surchage',
+				pivot_props_to_show: [
+					{
+						text: 'Porcentaje',
+						key: 'percentage',
+					},
+				],
+			},
+			no_usar_en_filtros: true,
+			not_show: true,
+		},
 	],
 	singular_model_name_spanish: 'Nota de Credito',
 	plural_model_name_spanish: 'Nota de Credito',

@@ -38,7 +38,10 @@ export default {
 			return this.$store.state.vender.client
 		},
 		services_col_header_lg() {
-			if (this.hasExtencion('combos')) {
+			if (
+				this.hasExtencion('combos')
+				|| this.hasExtencion('vinoteca')
+			) {
 				return 2
 			}
 			return 3
@@ -378,6 +381,8 @@ export default {
 			this.$store.commit('vender/set_omitir_en_cuenta_corriente', 0)
 			
 			this.$store.commit('vender/setSellerId', 0)
+			
+			this.$store.commit('vender/set_fecha_entrega', null)
 
 			// this.$store.commit('vender/set_caja_id', 0)
 			

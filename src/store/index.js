@@ -151,6 +151,21 @@ import concepto_stock_movement from '@/store/concepto_stock_movement'
 
 import devoluciones from '@/store/devoluciones'
 
+// Vinoteca
+import bodega from '@/store/bodega'
+import cepa from '@/store/cepa'
+import promocion_vinoteca from '@/store/promocion_vinoteca'
+
+import road_map from '@/store/road_map/index'
+import dealer from '@/store/dealer'
+
+import venta_terminada_commission from '@/store/venta_terminada_commission'
+
+import promocion_vinoteca_commission from '@/store/promocion_vinoteca_commission'
+
+import online_template from '@/store/online_template'
+import delivery_day from '@/store/delivery_day'
+
 
 Vue.use(Vuex)
 
@@ -306,5 +321,21 @@ export default new Vuex.Store({
         concepto_stock_movement,
 
         devoluciones,
+
+
+        // Vinoteca
+        bodega,
+        cepa,
+        promocion_vinoteca,
+
+        road_map,
+        dealer,
+
+        venta_terminada_commission,
+
+        promocion_vinoteca_commission,
+
+        online_template,
+        delivery_day,
     }
 })

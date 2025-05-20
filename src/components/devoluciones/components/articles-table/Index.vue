@@ -13,8 +13,8 @@
 			<template #cell(price_vender)="data">
 				
 				<b-form-input
-				@change="set_total_devolucion"
-				@keyup="set_total_devolucion"
+				@change="call_set_total_devolucion"
+				@keyup="call_set_total_devolucion"
 				type="number"
 				v-model="articles[data.index].price_vender"></b-form-input>
 
@@ -34,8 +34,8 @@
 				<div class="j-between">
 					
 					<b-form-input
-					@change="set_total_devolucion"
-					@keyup="set_total_devolucion"
+					@change="call_set_total_devolucion"
+					@keyup="call_set_total_devolucion"
 					type="number"
 					:min="minimo(articles[data.index])"
 					:max="articles[data.index].amount"
@@ -62,7 +62,9 @@
 	</div>
 </template>
 <script>
+import set_total from '@/mixins/devoluciones/set_total'
 export default {
+	mixins: [set_total],
 	computed: {
 		fields() {
 			let fields =  [
@@ -150,9 +152,9 @@ export default {
 			}
 			return 0
 		},
-		set_total_devolucion() {
-
-			this.$store.commit('devoluciones/set_total_devolucion')
+		call_set_total_devolucion() {
+			// this.$store.commit('devoluciones/set_total_devolucion')
+			this.set_total_devolucion()
 		},
 		article_variant_options(article) {
 			let options = [{

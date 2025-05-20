@@ -20,15 +20,27 @@ export default {
 					],
 				}, 
 				{
+					if_has_extencion: 'vinoteca',
+					view: 'vinoteca',
+					models: [
+						// 'promocion_vinoteca',
+						'bodega',
+						'cepa',
+					]
+				},
+				{
 					view: 'ventas',
 					models: [
 						'discount',
 						'surchage',
+						'dealer',
 						'category_price_type_range',
 						'article_price_type_group',
 						'cuota',
 						'default_payment_method_caja',
 						'current_acount_payment_method_discount',
+    					'venta_terminada_commission',
+    					'promocion_vinoteca_commission',
     					'commission',
     					'sale_type',
 					],
@@ -57,9 +69,10 @@ export default {
 				{
 					view: 'tienda online',
 					models: [
+		    			'title',
+						'delivery_day',
 						'delivery_zone',
 						'payment_method',
-		    			'title',
 					]
 				},
 			]

@@ -1,6 +1,6 @@
 <template>
 	<div
-	v-if="!article.article_variants.length">
+	v-if="!article.article_variants.length && addresses.length">
 	
 		<div
 		v-if="se_esta_editando_stock">

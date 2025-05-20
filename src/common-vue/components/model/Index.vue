@@ -90,6 +90,8 @@
 					class="w-100">
 						<btn-delete
 						v-if="!papelera && _show_btn_delete"
+						:solo_emitir_delete="solo_emitir_delete"
+						@press_delete_btn="press_delete_btn"
 						:has_many_prop="has_many_prop"
 						:has_many_parent_model_name="has_many_parent_model_name"
 						:model_name="model_name" 
@@ -233,6 +235,10 @@ export default {
 			type: Boolean,
 			default: true,
 		},
+		solo_emitir_delete: {
+			type: Boolean,
+			default: null,
+		},
 	},
 	components: {
 		Confirm,
@@ -266,15 +272,15 @@ export default {
 			// console.log('check_permissions: '+this.check_permissions)
 			// console.log('show_btn_delete: '+this.show_btn_delete)
 			if (this.show_btn_delete && (this.check_can_delete || this.check_permissions)) {
-				console.log('Chequeando permisos para eliminar '+this.model_name)
+				// console.log('Chequeando permisos para eliminar '+this.model_name)
 				return this.can(this.model_name+'.delete')
 			}
-			console.log('NO SE ESTAN CHEQUEANDO permisos para eliminar '+this.model_name)
+			// console.log('NO SE ESTAN CHEQUEANDO permisos para eliminar '+this.model_name)
 			return this.show_btn_delete
 		},
 		can_save() {
-			console.log('check_permissions: '+this.check_permissions)
-			console.log('show_btn_save: '+this.show_btn_save)
+			// console.log('check_permissions: '+this.check_permissions)
+			// console.log('show_btn_save: '+this.show_btn_save)
 			if (!this.show_btn_save) {
 				return false 
 			}
@@ -326,6 +332,9 @@ export default {
 		}
 	},
 	methods: {
+		press_delete_btn() {
+			this.$emit('press_delete_btn')
+		},
 		restaurar() {
 			if (confirm('¿Seguro que quiere restaurar este elemento?')) {
 				
@@ -348,17 +357,23 @@ export default {
 		deleted() {
 			this.$emit('modelDeleted')
 		},
-		save(info) {
-			// this.setPropsValues()
-			if (this.check() && !this.loading) {
+		async save(info) {
+			// this.setPropsValues()}
+			console.log('se mando check')
+			const isValid = await this.check();
+			console.log('llego esto de check:')
+			console.log(isValid)
+
+			if (isValid && !this.loading) {
+				console.log('mandando solicitud')
 				this.$store.commit('auth/setMessage', 'Guardando')
 				this.loading = true 
 				let route = this.routeString(this.model_name)
 				// let model_to_send = this.model 
 				let model_to_send = this.getModelToSend()
 				
-				console.log('model_to_send:')
-				console.log(model_to_send)
+				// console.log('model_to_send:')
+				// console.log(model_to_send)
 				if (this.model.id) {
 					this.$api.put(route+'/'+this.model.id, model_to_send)
 					.then(res => {
@@ -379,8 +394,8 @@ export default {
 								this.$store.commit('auth/setUser', res.data.model)
 							} else {
 								this.$store.commit(this.replaceGuion(this.model_name)+'/add', res.data.model)
-								console.log('se agrego este '+this.model_name+': ')
-								console.log(res.data.model)
+								// console.log('se agrego este '+this.model_name+': ')
+								// console.log(res.data.model)
 							}
 						}
 						this.closeModal(info)
@@ -399,24 +414,29 @@ export default {
 						let created_model = res.data.model 
 						if (!this.emit_on_saved_instead_continue) {
 							if (this.has_many_parent_model) {
+								
 								this.$set(this.has_many_parent_model, this.has_many_prop.key, this.has_many_parent_model[this.has_many_prop.key].concat([created_model]))
-								this.setModel(this.has_many_parent_model, this.has_many_parent_model_name)
+								
+								
 								if (!this.has_many_parent_model.id) {
 									if (this.has_many_parent_model.childrens) {
 										this.has_many_parent_model.childrens.push({
 											model_name: this.has_many_prop.has_many.model_name,
 											temporal_id: created_model.temporal_id
 										})
-										console.log('se agrego el id '+created_model.temporal_id)
+										// console.log('se agrego el id '+created_model.temporal_id)
 									} else {
 										this.has_many_parent_model.childrens = []
-										console.log('se creo la prop childrens')
+										// console.log('se creo la prop childrens')
 										this.has_many_parent_model.childrens.push({
 											model_name: this.has_many_prop.has_many.model_name,
 											temporal_id: created_model.temporal_id
 										})
-										console.log('se agrego el id '+created_model.temporal_id)
+										// console.log('se agrego el id '+created_model.temporal_id)
 									}
+								} else {
+									this.setModel(this.has_many_parent_model, this.has_many_parent_model_name)
+
 								}
 							} else {
 								this.$store.commit(this.replaceGuion(this.model_name)+'/add', created_model)
@@ -451,8 +471,8 @@ export default {
 							value: this.model[prop.key],
 						})
 					})
-					console.log('propiedades para mantener')
-					console.log(properties_to_override)
+					// console.log('propiedades para mantener')
+					// console.log(properties_to_override)
 				} 
 				this.setModel(null, this.model_name, properties_to_override, false)
 			}
@@ -474,8 +494,8 @@ export default {
 			}
 
 			if (this.props_to_send_on_save.length) {
-				console.log('agregando props_to_send_on_save:')
-				console.log(this.props_to_send_on_save)
+				// console.log('agregando props_to_send_on_save:')
+				// console.log(this.props_to_send_on_save)
 				this.props_to_send_on_save.forEach(prop_to_send => {
 
 					model_to_send[prop_to_send.key] = prop_to_send.value
@@ -496,52 +516,57 @@ export default {
 				
 					let input = document.getElementById(this.model_name+'-'+prop.key)
 
-					console.log('input de '+prop.key+':')
-					console.log(input)
-
 					if (input) {
-					
-						console.log('se va a poner el value de:')
-						console.log(input.value)
 						this.model[prop.key] = input.value
 					} 
 
 				}
 			})
 		},
-		check() {
-			let ok = true
-			let numero = null
-			this.properties.forEach(prop => {
-				if (prop.required) {
-					if (ok && this.propType(prop, this.model) == 'select' && this.model[prop.key] == 0) {
-						this.$toast.error('Ingrese '+this.propText(prop))
-						ok = false
-					} else if (ok && this.model[prop.key] == '') {
-						this.$toast.error('Ingrese '+this.propText(prop))
-						ok = false
-					}
-				} 
+		async check() {
+		    return new Promise((resolve) => {
+		        let ok = true;
+		        let numero = null;
 
-				if (
-					(
-						prop.type == 'number'
-						|| prop.filter_type == 'number'
-					)
-					&& this.model[prop.key]
-				) {
-					numero = ''+this.model[prop.key]
-					if (numero.includes(',')) {
-						numero = numero.replace(',', '.')
-						this.model[prop.key] = numero
-					}
-				}
-			})
-			this.checkRelationsFiltered()
-			if (this.save_check_function) {
-				ok = this[this.save_check_function]()
-			}
-			return ok
+		        this.properties.forEach(prop => {
+		            if (prop.required) {
+		            	if (
+		            		typeof prop.required_if_models_length != 'undefined'
+		            		&& !this.modelsStoreFromName(prop.required_if_models_length).length
+		            	) {
+
+		            	} else {
+
+			                if (ok && this.propType(prop, this.model) == 'select' && this.model[prop.key] == 0) {
+			                    this.$toast.error('Ingrese ' + this.propText(prop));
+			                    ok = false;
+			                } else if (ok && this.model[prop.key] == '') {
+			                    this.$toast.error('Ingrese ' + this.propText(prop));
+			                    ok = false;
+			                }
+		            	}
+		            }
+
+		            if ((prop.type == 'number' || prop.filter_type == 'number') && this.model[prop.key]) {
+		                numero = '' + this.model[prop.key];
+		                if (numero.includes(',')) {
+		                    numero = numero.replace(',', '.');
+		                    this.model[prop.key] = numero;
+		                }
+		            }
+		        });
+
+		        this.checkRelationsFiltered();
+		        if (this.save_check_function) {
+		        	console.log('save_check_function:')
+		        	console.log(this.save_check_function)
+		            ok = this[this.save_check_function]();
+		        }
+
+		        console.log('termino check: ')
+		        console.log(ok)
+		        resolve(ok); // Retorna true o false
+		    });
 		},
 		checkRelationsFiltered() {
 			let relations_filtered = this.$store.state[this.model_name].relations_filtered

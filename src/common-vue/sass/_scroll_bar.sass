@@ -1,23 +1,16 @@
 @import '@/sass/_custom.scss'
+
+
+
+
 * 
-	// scrollbar-width: auto
-	@if ($theme == 'dark')
-		scrollbar-color: $blue $background
-	@else
-		scrollbar-color: $blue #ffffff
+	scrollbar-width: auto !important /* Firefox */
+	-ms-overflow-style: auto !important /* IE 10+ */
+	scrollbar-color: $blue #ffffff
 
 
-// *::-webkit-scrollbar 
-	// @media screen and (max-width: 992px)
-	// 	width: 6px
-	// @media screen and (min-width: 992px)
-	// 	width: 8px
-	// height: 12px
-
-*::-webkit-scrollbar-track 
-	background: rgba(0,0,0,0)
-
-*::-webkit-scrollbar-thumb 
-	background-color: lighten($blue, 20)
-	// border-radius: 10px
-	// border: 2px solid #ffffff
+::-webkit-scrollbar 
+	background-color: $blue
+	display: initial !important
+	width: 8px
+	height: 8px

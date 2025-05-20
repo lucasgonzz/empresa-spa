@@ -4,7 +4,7 @@
 
 		<vuelto-efectivo></vuelto-efectivo>
 
-
+		<fecha-entrega></fecha-entrega>
 		<numero-orden-de-compra></numero-orden-de-compra>
 		<pago></pago>
 		<print></print>
@@ -13,6 +13,7 @@
 <script>
 export default {
 	components: {
+		FechaEntrega: () => import('@/components/vender/components/remito/header-2/buttons/FechaEntrega'),
 		NumeroOrdenDeCompra: () => import('@/components/vender/components/remito/header-2/buttons/NumeroOrdenDeCompra'),
 		Pago: () => import('@/components/vender/components/remito/header-2/buttons/Pago'),
 		Print: () => import('@/components/vender/components/remito/header-2/buttons/Print'),

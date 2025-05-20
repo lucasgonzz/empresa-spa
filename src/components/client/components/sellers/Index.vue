@@ -19,7 +19,7 @@
 		<view-component
 		show_filter_modal
 		model_name="seller">
-			<template v-slot:table_right_options="slotProps">
+			<template v-slot:table_left_options="slotProps">
 				<b-button
 				variant="success"
 				@click.stop="showSellerComissions(slotProps.model)">

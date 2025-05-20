@@ -44,22 +44,12 @@
 	model_name="article">
 
 		<template #excel_drop_down_options>
-			<excel-para-clientes></excel-para-clientes>
-			<articles-pre-imports></articles-pre-imports>
+			<excel-dropdown-options></excel-dropdown-options>
 		</template>
 
 		<template #horizontal_nav_center>
-			<div class="j-end">
 
-				<btn-inventory-performance></btn-inventory-performance>
-				
-				<buscador-header></buscador-header>
-
-				<deposit-movements></deposit-movements>
-
-				<!-- <combos></combos> -->
-
-			</div>
+			<horizontal-nav></horizontal-nav>
 
 		</template>
 		
@@ -135,15 +125,13 @@ export default {
 	components: {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 		Import: () => import('@/components/listado/modals/import/Index'),
-		ExcelParaClientes: () => import('@/components/listado/components/excel-dropdown-options/ExcelParaClientes'),
-		ArticlesPreImports: () => import('@/components/listado/components/excel-dropdown-options/ArticlesPreImports'),
 
+
+		ExcelDropdownOptions: () => import('@/components/listado/components/excel-dropdown-options/Index'),
 		ArticlesPreImportModal: () => import('@/components/listado/modals/articles-pre-import/Index'),
 
 		// StockInfoButtons: () => import('@/components/listado/components/StockInfoButtons'),
 		
-		BtnInventoryPerformance: () => import('@/components/listado/components/BtnInventoryPerformance'),
-		BuscadorHeader: () => import('@/components/listado/components/buscador-header/Index'),
 		Buttons: () => import('@/components/listado/components/Buttons'),
 		Charts: () => import('@/components/listado/modals/article-charts/Index'),
 		ArticleSales: () => import('@/components/listado/modals/article-sales/Index'),
@@ -168,11 +156,11 @@ export default {
 
 		InventoryPerformance: () => import('@/components/listado/modals/inventory-performance/Index'),
 
-		DepositMovements: () => import('@/components/listado/components/deposit-movements/Index'),
 
 		Combos: () => import('@/components/listado/components/combos/Index'),
 
 		AddressStock: () => import('@/components/listado/components/table-props/address-stock/Index'),
+		HorizontalNav: () => import('@/components/listado/components/horizontal-nav/Index'),
 	}, 
 	beforeRouteLeave(to, from, next) {
 		this.$store.commit('article/setSelected', [])

@@ -2,7 +2,7 @@ export default {
 	properties: [
 		{
 			text: 'N°',
-			key: 'num',
+			key: 'id',
 			type: 'number',
 			not_show_on_form: true,
 			filter_modal_position: 8,
@@ -16,6 +16,9 @@ export default {
 			type: 'images',
 			use_to_show_in_search_modal: true,
 			// table_position: 2,
+		},
+		{
+			group_title: 'Datos generales',
 		},
 		{
 			text: 'Codigo de barras',
@@ -64,6 +67,34 @@ export default {
 			// table_position: 5,
 		},
 		{
+			text: 'proveedor',
+			key: 'provider_id',
+			type: 'search',
+			use_to_show_in_search_modal: true,
+			use_to_update: true,
+			use_store_models: true,
+			filter_modal_position: 4,
+			keep_after_create: true,
+			// table_position: 6,
+		},
+		{
+			text: 'Aplicar margen de ganancia del proveedor',
+			key: 'apply_provider_percentage_gain',
+			type: 'checkbox',
+			value: 1,
+			v_if: ['provider.percentage_gain', '!=', null],
+			v_if_from_models_store: true,
+			not_show: true,
+			keep_after_create: true,
+			if_has_not_extencions: [
+				'articulo_margen_de_ganancia_segun_lista_de_precios',
+				'lista_de_precios_por_categoria',
+			],
+		},
+		{
+			group_title: 'Precio',
+		},
+		{
 			text: 'costo',
 			key: 'cost',
 			type_to_update: 'number',
@@ -104,6 +135,13 @@ export default {
 			if_has_extencion: 'article.costo_real',
 		},
 		{
+			text: 'U individuales',
+			key: 'unidades_individuales',
+			type: 'number',
+			not_show: true,
+			if_has_extencion: 'articulos_unidades_individuales',
+		},
+		{
 			text: 'margen de ganancia',
 			key: 'percentage_gain',
 			type: 'number',
@@ -113,6 +151,10 @@ export default {
 			filter_modal_position: 12,
 			filter_type: 'number',
 			keep_after_create: true,
+			if_has_not_extencions: [
+				'articulo_margen_de_ganancia_segun_lista_de_precios',
+				'lista_de_precios_por_categoria',
+			],
 		},
 
 
@@ -137,8 +179,24 @@ export default {
 			use_to_update: true,
 			filter_modal_position: 11,
 			filter_type: 'number',
+			if_has_not_extencions: [
+				'articulo_margen_de_ganancia_segun_lista_de_precios',
+				'lista_de_precios_por_categoria',
+			],
 			// table_position: 9,
 		},
+		{
+			text: 'Iva',
+			key: 'iva_id', 
+			type: 'select',
+			relation_prop_name: 'percentage',
+			use_store_models: true,
+			use_to_show_in_search_modal: true,
+			not_show: true,
+			keep_after_create: true,
+			value: 2,
+		},
+
 		{
 			text: 'Precio final',
 			key: 'final_price',
@@ -147,7 +205,40 @@ export default {
 			is_price: true,
 			use_to_show_in_search_modal: true,
 			filter_modal_position: 9,
+			class: 'final-price',
+			if_has_not_extencions: [
+				'articulo_margen_de_ganancia_segun_lista_de_precios',
+				'lista_de_precios_por_categoria',
+			],
 			// table_position: 10,
+		},
+
+
+
+		// Vinoteca
+		{
+			group_title: 'Basicas',
+			if_has_extencion: 'vinoteca',
+		},
+		{
+			text: 'Bodega',
+			key: 'bodega_id',
+			type: 'select',
+			use_store_models: true,
+			if_has_extencion: 'vinoteca',
+		},
+		{
+			text: 'Cepa',
+			key: 'cepa_id',
+			type: 'select',
+			use_store_models: true,
+			if_has_extencion: 'vinoteca',
+		},
+		{
+			text: 'Presentacion',
+			key: 'presentacion',
+			type: 'number',
+			if_has_extencion: 'vinoteca',
 		},
 
 
@@ -169,6 +260,10 @@ export default {
 			is_price: true,
 			use_to_show_in_search_modal: true,
 			not_show: true,
+			if_has_not_extencions: [
+				'articulo_margen_de_ganancia_segun_lista_de_precios',
+				'lista_de_precios_por_categoria',
+			],
 		},
 		{
 			text: 'Precio final actualizado',
@@ -177,6 +272,16 @@ export default {
 			only_show: true,
 			is_date: true,
 			not_show: true,
+			if_has_not_extencions: [
+				'articulo_margen_de_ganancia_segun_lista_de_precios',
+				'lista_de_precios_por_categoria',
+			],
+		},
+
+
+
+		{
+			group_title: 'Stock',
 		},
 		{
 			text: 'stock',
@@ -205,6 +310,52 @@ export default {
 		// 	not_show: true,
 		// 	use_store_models: true,
 		// },
+
+
+
+		{
+			group_title: 'Categoria',
+		},
+		{
+			text: 'categoria',
+			key: 'category_id',
+			type: 'search',
+			use_to_show_in_search_modal: true,
+			use_store_models: true,
+			use_to_update: true,
+			not_show: true,
+			filter_modal_position: 5,
+			keep_after_create: true,
+		},
+		{
+			text: 'sub categoria',
+			key: 'sub_category_id',
+			type: 'search',
+			depends_on: 'category_id',
+			use_to_show_in_search_modal: true,
+			use_store_models: true,
+			use_to_update: true,
+			not_show: true,
+			filter_modal_position: 6,
+			keep_after_create: true,
+		},
+		{
+			text: 'Marca',
+			key: 'brand_id',
+			type: 'search',
+			use_to_show_in_search_modal: true,
+			use_store_models: true,
+			not_show: true,
+			not_show: true,
+			filter_modal_position: 7,
+			keep_after_create: true,
+		},
+
+
+
+		{
+			group_title: 'Tienda online',
+		},
 		{
 			text: 'Disponible en la tienda',
 			key: 'online',
@@ -233,91 +384,6 @@ export default {
 			type: 'checkbox',
 			not_show: true,
 		},
-		{
-			text: 'proveedor',
-			key: 'provider_id',
-			type: 'search',
-			use_to_show_in_search_modal: true,
-			use_to_update: true,
-			use_store_models: true,
-			filter_modal_position: 4,
-			keep_after_create: true,
-			// table_position: 6,
-		},
-		// {
-		// 	text: 'precio en dolar del proveedor',
-		// 	key: 'provider_cost_in_dollars',
-		// 	type: 'checkbox',
-		// },
-		{
-			text: 'Aplicar margen de ganancia del proveedor',
-			key: 'apply_provider_percentage_gain',
-			type: 'checkbox',
-			value: 1,
-			v_if: ['provider.percentage_gain', '!=', null],
-			v_if_from_models_store: true,
-			// show_if: {
-			// 	model_prop_name: 'provider',
-			// 	model_prop: 'percentage_gain',
-			// }
-			not_show: true,
-			keep_after_create: true,
-		},
-		// {
-		// 	text: 'Lista de precios',
-		// 	key: 'provider_price_list_id',
-		// 	type: 'search',
-		// 	is_between: {
-		// 		store: 'provider',
-		// 		model_prop: 'provider_price_lists',
-		// 	},
-		// 	not_show: true,
-		// 	// keep_after_create: true,
-		// },
-		{
-			text: 'categoria',
-			key: 'category_id',
-			type: 'search',
-			use_to_show_in_search_modal: true,
-			use_store_models: true,
-			use_to_update: true,
-			not_show: true,
-			filter_modal_position: 5,
-			keep_after_create: true,
-		},
-		{
-			text: 'sub categoria',
-			key: 'sub_category_id',
-			type: 'search',
-			depends_on: 'category_id',
-			use_to_show_in_search_modal: true,
-			use_store_models: true,
-			use_to_update: true,
-			not_show: true,
-			filter_modal_position: 6,
-			keep_after_create: true,
-		},
-		{
-			text: 'iva',
-			key: 'iva_id', 
-			type: 'select',
-			relation_prop_name: 'percentage',
-			use_store_models: true,
-			use_to_show_in_search_modal: true,
-			not_show: true,
-			keep_after_create: true,
-		},
-		{
-			text: 'Marca',
-			key: 'brand_id',
-			type: 'search',
-			use_to_show_in_search_modal: true,
-			use_store_models: true,
-			not_show: true,
-			not_show: true,
-			filter_modal_position: 7,
-			keep_after_create: true,
-		},
 
 		// Propiedades de distribuidora
 		{
@@ -341,6 +407,10 @@ export default {
 			not_show: true,
 			if_has_extencion: 'articulos_con_propiedades_de_distribuidora',
 		},
+
+
+
+
 		// {
 		// 	text: 'Condicion',
 		// 	key: 'condition_id',
@@ -478,6 +548,42 @@ export default {
 			not_show: true,
 			not_show_on_form: true,
 			no_mostrar_nunca: true,
+		},
+
+
+		/* 
+			Esto lo uso para que cuando creo un nuevo articulo, 
+			se setee esta propiedad y la tenga disponible en el modal de articulo,
+			para que indiquen el marguen de ganancia para cada lista de precios.
+			Como si tienen la extencion articulo_margen_de_ganancia_segun_lista_de_precios
+			Como pack, electro_lacarra
+		*/
+		{
+			funcion_personalizada: 'set_article_price_types',
+			text: 'asd',
+			store: 'price_type',
+			type: 'search',
+			key: 'price_types',
+			belongs_to_many: {
+				related_with_all: true,
+				model_name: 'price_type',
+				properties_to_set: [
+					{
+						text: 'percentage',
+						key: 'percentage',
+						value: '',
+						type: 'number'
+					},
+					// {
+					// 	text: 'percentage',
+					// 	key: 'incluir_en_excel_para_clientes',
+					// 	value: 0,
+					// 	type: 'checkbox'
+					// },
+				],
+			},
+			not_show: true,
+			not_show_on_form: true,
 		},
 	],
 	singular_model_name_spanish: 'Articulo',

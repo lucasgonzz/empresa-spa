@@ -19,7 +19,14 @@ export default {
 
 			if (this.afip_information_id) {
 
-				this.afip_tipo_comprobante_id = 2 
+				let punto_de_venta = this.afip_informations.find(model => model.id == this.afip_information_id)
+
+				if (punto_de_venta.iva_condition.name == 'Monotributista') {
+					this.afip_tipo_comprobante_id = 3 
+				} else {
+					this.afip_tipo_comprobante_id = 2 
+				}
+				
 			} else {
 
 				this.afip_tipo_comprobante_id = 0 

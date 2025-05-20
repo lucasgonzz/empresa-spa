@@ -3,9 +3,9 @@
         <update-features></update-features>
 		
 		<nav-vertical>
-			<template #nav_bottom>
+			<!-- <template #nav_bottom>
 				<btn-version-estable></btn-version-estable>
-			</template>
+			</template> --> 
 		</nav-vertical>
 		
 		<tasks></tasks>	

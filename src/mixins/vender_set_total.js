@@ -62,6 +62,7 @@ export default {
 			total_articles: 0,
 			total_services: 0,
 			total_combos: 0,
+			total_promocion_vinoteca: 0,
 		}
 	},
 	methods: {
@@ -76,6 +77,7 @@ export default {
 				this.total_articles = 0
 				this.total_services = 0
 				this.total_combos = 0
+				this.total_promocion_vinoteca = 0
 				
 				let new_items = []
 
@@ -88,14 +90,17 @@ export default {
 
 					} else if (item.is_article) {
 
-						// console.log('price de '+item.name)
-						console.log(this.getTotalItem(item, false))
+						// console.log(this.getTotalItem(item, false))
 
 						this.total_articles += this.getTotalItem(item, false)
 
 					} else if (item.is_combo) {
 
 						this.total_combos += this.getTotalItem(item, false)
+
+					} else if (item.is_promocion_vinoteca) {
+
+						this.total_promocion_vinoteca += this.getTotalItem(item, false)
 
 					}
 					// total += this.getTotalItem(item, false)
@@ -110,8 +115,8 @@ export default {
 
 				this.$store.commit('vender/setItems', new_items)
 				
-				sub_total = this.total_articles + this.total_services + this.total_combos
-				total = this.total_articles + this.total_services + this.total_combos
+				sub_total = this.total_articles + this.total_services + this.total_combos + this.total_promocion_vinoteca
+				total = this.total_articles + this.total_services + this.total_combos + this.total_promocion_vinoteca
 
 				total = this.aplicar_current_acount_payment_method_discounts(sub_total)
 
@@ -123,8 +128,8 @@ export default {
 			this.$store.commit('vender/setSubTotal', sub_total)
 			this.$store.commit('vender/setTotal', total)
 			
-			console.log('se puso el sub_total en '+sub_total)
-			console.log('se puso el total en '+total)
+			// console.log('se puso el sub_total en '+sub_total)
+			// console.log('se puso el total en '+total)
 		},
 		aplicar_cuotas(total) { 
 
@@ -189,8 +194,8 @@ export default {
 
 			} 
 
-			console.log('set_monto_credito:')
-			console.log(monto_credito)
+			// console.log('set_monto_credito:')
+			// console.log(monto_credito)
 
 			this.$store.commit('vender/set_monto_credito', monto_credito)
 
@@ -223,6 +228,7 @@ export default {
 				sale_discounts.forEach(discount => {
 					this.total_articles -= this.total_articles * Number(discount.percentage) / 100 
 					this.total_combos -= this.total_combos * Number(discount.percentage) / 100 
+					this.total_promocion_vinoteca -= this.total_promocion_vinoteca * Number(discount.percentage) / 100 
 					if (this.discounts_in_services) {
 						this.total_services -= this.total_services * Number(discount.percentage) / 100 
 					}
@@ -243,6 +249,7 @@ export default {
 				sale_surchages.forEach(_surchage => {
 					this.total_articles += this.total_articles * Number(_surchage.percentage) / 100 
 					this.total_combos += this.total_combos * Number(_surchage.percentage) / 100 
+					this.total_promocion_vinoteca += this.total_promocion_vinoteca * Number(_surchage.percentage) / 100 
 					if (this.surchages_in_services) {
 						this.total_services += this.total_services * Number(_surchage.percentage) / 100 
 					}

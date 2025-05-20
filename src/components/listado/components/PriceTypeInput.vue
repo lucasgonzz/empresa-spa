@@ -1,8 +1,8 @@
 <template>
 	<div
 	class="cont-inputs"
-	v-if="article.id && article_price_type">
-
+	v-if="article_price_type">
+	
 		<b-input-group
 		prepend="%">
 			<b-form-input
@@ -13,13 +13,29 @@
 
 		<div
 		class="cont-prices m-t-10">
+
+			<div 
+			v-if="hasExtencion('elegir_si_incluir_lista_de_precios_de_excel')">
+				<b-form-checkbox
+				variant="success"
+				:value="1"
+				:unchecked-value="0"
+				v-model="article_price_type.pivot.incluir_en_excel_para_clientes"
+				size="sm">
+					Incluir en Excel
+				</b-form-checkbox>
+			</div>
 			
-			<div class="cont-price">
+			<div class="cont-price price">
 				{{ price(article_price_type.pivot.price) }}
 			</div>
 
-			<div class="cont-price con-iva">
+			<div class="cont-price cont-iva">
 				{{ price(article_price_type.pivot.final_price) }}
+			</div>
+
+			<div class="cont-price">
+				{{ price(article_price_type.pivot.previus_final_price) }}
 			</div>
 		</div>
 	</div>
@@ -63,8 +79,12 @@ export default {
 			padding: 2px 5px
 			color: rgba(0,0,0,.8)
 
-		.con-iva
+		.price
 			background: rgba(0,0,0,.6)
+			color: #FFF
+
+		.cont-iva
+			background: lighten(green, 10)
 			color: #FFF
 			font-weight: bold
 

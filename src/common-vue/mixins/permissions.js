@@ -86,14 +86,15 @@ export default {
 				return this.view+'.index' 
 			}
 			if (!route_name) {
-				// console.log('por buscar la ruta: '+this.route_name)
-				let finded_route = routes.find(route => {
-					console.log('comparando '+route.name+' con '+this.route_name)
-					return this.getRouteName(route) == this.route_name 
-				})
-				// console.log('finded_route:')
-				// console.log(finded_route)
-				return finded_route.can 
+
+				// let finded_route = routes.find(route => {
+				// 	return this.getRouteName(route) == this.route_name 
+				// })
+
+				if (this.selected_route) {
+					return this.selected_route.can
+				}
+				return null
 			}
 		}
 	}

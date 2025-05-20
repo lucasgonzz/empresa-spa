@@ -4,6 +4,8 @@
 
 		<sale-info></sale-info>
 
+		<discounts-surchages></discounts-surchages>
+
 		<hr>
 
 		<articles-search></articles-search>
@@ -20,6 +22,7 @@ export default {
 	components: {
 		NavComponent: () => import('@/components/devoluciones/components/nav/Index'),
 		SaleInfo: () => import('@/components/devoluciones/components/sale-info/Index'),
+		DiscountsSurchages: () => import('@/components/devoluciones/components/discounts-surchages/Index'),
 		ArticlesSearch: () => import('@/components/devoluciones/components/articles-search/Index'),
 		ArticlesTable: () => import('@/components/devoluciones/components/articles-table/Index'),
 		Options: () => import('@/components/devoluciones/components/options/Index'),

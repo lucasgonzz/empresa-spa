@@ -76,6 +76,16 @@ const routes = [
         component: () => import('@/views/DepositoCheckeadas')
     },
     {
+        path: '/por-entregar/:view',
+        name: 'por-entregar',
+        component: () => import('@/views/PorEntregar')
+    },
+    {
+        path: '/rutas',
+        name: 'rutas',
+        component: () => import('@/views/Rutas')
+    },
+    {
         path: '/ventas/:view?/:sub_view?',
         name: 'sale',
         component: () => import('@/views/Ventas')

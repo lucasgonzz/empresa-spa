@@ -146,7 +146,8 @@ export default {
 			})
 			.catch(err => {
 				this.$store.commit('auth/setLoading', false)
-				alert('Error al buscar articulo')
+				this.$toast.error('Error al buscar articulo')
+				alert(err)
 			})
 		}
 	}

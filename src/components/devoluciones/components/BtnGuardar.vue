@@ -1,6 +1,6 @@
 <template>
 	<b-button
-	class="m-t-15"
+	class="m-t-15 m-b-25"
 	v-if="articles.length"
 	block
 	@click="guardar"
@@ -40,6 +40,12 @@ export default {
 		facturar_nota_credito() {
 			return this.$store.state.devoluciones.facturar_nota_credito 
 		},
+		discounts_id() {
+			return this.$store.state.devoluciones.discounts_id 
+		},
+		surchages_id() {
+			return this.$store.state.devoluciones.surchages_id 
+		},
 	},
 	methods: {
 		guardar() {
@@ -60,6 +66,8 @@ export default {
 					generar_current_acount: this.generar_current_acount,
 					address_id: this.address_id,
 					facturar_nota_credito: this.facturar_nota_credito,
+					discounts: this.get_models_by_id('discount', this.discounts_id),
+					surchages: this.get_models_by_id('surchage', this.surchages_id),
 				})
 				.then(res => {
 					

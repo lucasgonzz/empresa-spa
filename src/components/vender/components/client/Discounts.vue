@@ -110,6 +110,8 @@ export default {
 				return this.$store.state.vender.discounts_id
 			},
 			set(value) {
+				console.log('value')
+				console.log(value)
 				this.$store.commit('vender/setDiscountsId', value)
 				this.setTotal()
 				// this.$store.commit('vender/setTotal')

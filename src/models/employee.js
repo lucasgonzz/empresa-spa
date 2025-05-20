@@ -73,6 +73,12 @@ export default {
 			use_store_models: true,
 		},
 		{
+			text: 'Perfil de Vendedor',
+			key: 'seller_id',
+			type: 'select',
+			use_store_models: true,
+		},
+		{
 			key: 'puede_guardar_ventas_sin_cliente',
 			type: 'checkbox',
 			if_has_extencion: 'check_guardar_ventas_con_cliente',

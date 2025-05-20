@@ -7,8 +7,10 @@
     	<model
     	v-if="show_modal"
     	:show_btn_remove_belongs_to_many="show_btn_remove_belongs_to_many"
+    	:solo_emitir_delete="solo_emitir_delete"
     	@modelSaved="modelSaved"
     	@modelDeleted="modelDeleted"
+    	@press_delete_btn="press_delete_btn"
     	:properties_to_show="properties_for_model_modal"
     	:check_permissions="check_permissions"
     	:show_btn_pdf="show_btn_pdf"
@@ -50,6 +52,7 @@
 
 		<view-header
 		v-if="show_view_header"
+		:show_btn_props_to_show="show_btn_props_to_show"
 		:show_btn_create="show_btn_create"
 		:show_excel_drop_down="show_excel_drop_down"
 		:check_permissions="check_permissions"
@@ -125,6 +128,9 @@
 		@clicked="clicked">
 			<template v-slot:display_top>
 				<slot name="display_top"></slot>
+			</template>
+			<template v-slot:table_left_options="slotProps">
+				<slot name="table_left_options" :model="slotProps.model"></slot>
 			</template>
 			<template v-slot:table_right_options="slotProps">
 				<slot name="table_right_options" :model="slotProps.model"></slot>
@@ -343,6 +349,14 @@ export default {
 			type: Boolean,
 			default: true,
 		},
+		solo_emitir_delete: {
+			type: Boolean,
+			default: null,
+		},
+		show_btn_props_to_show: {
+			type: Boolean,
+			default: true,
+		},
 	},
 	computed: {
 		show_view() {
@@ -396,8 +410,15 @@ export default {
 		check_propiedades_extras(props) {
 			if (this.properties_to_show) {
 				this.properties_to_show.forEach(prop => {
+
 					if (prop.propiedad_extra_para_modal) {
-						props.push(prop)
+
+						if (prop.index) {
+
+							props.splice(prop.index+3, 0, {...prop})
+						} else {
+							props.push(prop)
+						}
 					}
 				})
 			}
@@ -406,6 +427,9 @@ export default {
 		modelSaved(model) {
 			console.log('22222')
 			this.$emit('modelSaved', model)
+		},
+		press_delete_btn() {
+			this.$emit('press_delete_btn')
 		},
 		modelDeleted(model) {
 			console.log('modelo eliminado')

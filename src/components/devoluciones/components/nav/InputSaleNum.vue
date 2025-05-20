@@ -5,12 +5,14 @@
 		id="sale-num"
 		:disabled="venta_seleccionada"
 		placeholder="N° de Venta"
-		@keyup.enter="search_sale"
+		@keyup.enter="call_search_sale"
 		v-model="num_sale"></b-form-input>
 	</b-input-group>
 </template>
 <script>
+import set_from_sale from '@/mixins/devoluciones/set_from_sale'
 export default {
+	mixins: [set_from_sale],
 	computed: {
 		num_sale: {
 			get() {
@@ -37,14 +39,9 @@ export default {
 		},
 	},
 	methods: {
-		search_sale() {
+		call_search_sale() {
 
-			this.$store.dispatch('devoluciones/search_sale')
-			.then(() => {
-				if (!this.sale) {
-					this.$toast.error('No se encontro venta')
-				}
-			})
+			this.search_sale()
 		},
 	}
 }

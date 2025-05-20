@@ -109,6 +109,7 @@ export default {
 				sub_total: info.sub_total,
 				total: info.total,
 				seller_id: info.seller_id,
+				fecha_entrega: info.fecha_entrega,
 			})
 			.then(res => {
 				commit('sale/add', res.data.model, {root: true})

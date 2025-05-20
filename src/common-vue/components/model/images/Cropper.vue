@@ -125,7 +125,8 @@ export default {
 									is_imageable: true,
 								})
 							} else {
-								this.model.childrens = []
+								// this.model.childrens = []
+								this.$set(this.model, 'childrens', [])
 								this.model.childrens.push({
 									model_name: this.prop.key,
 									temporal_id: res.data.image_model.temporal_id,

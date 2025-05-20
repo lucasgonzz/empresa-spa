@@ -19,6 +19,11 @@
 				:select-mode="_select_mode"
 				:tbody-tr-class="rowClass"
 				@row-selected="onRowSelected">
+					<template v-slot:table_left_options="slotProps">
+						ad
+						<slot name="table_left_options" :model="model"></slot>
+					</template>
+
 					<template 
 					v-for="prop in properties"
 					:style="'border: 6px solid red !important'"

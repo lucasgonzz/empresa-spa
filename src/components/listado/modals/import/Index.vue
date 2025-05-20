@@ -91,6 +91,14 @@ export default {
 			]
 
 
+			if (this.hasExtencion('articulos_unidades_individuales')) {
+
+				columns.push({
+					text: 'U individuales',
+				})
+			}
+
+
 			if (this.hasExtencion('articulos_con_propiedades_de_distribuidora')) {
 
 				columns.push({

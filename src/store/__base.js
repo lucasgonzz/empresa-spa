@@ -271,7 +271,7 @@ export default {
 					url += '/0'
 				}
 			} 
-			if (state.route_prefix) {
+			if (state.route_prefix != '' || state.route_prefix == 0) {
 				url += '/'+state.route_prefix
 			} 
 			if (state.from_dates) {

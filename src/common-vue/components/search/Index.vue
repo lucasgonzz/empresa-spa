@@ -1,6 +1,7 @@
 <template>
 	<div>
     	<model
+    	v-if="show_btn_create"
     	@modelSaved="modelSaved"
     	:model_name="model_name"></model>
 
@@ -24,6 +25,7 @@
 		:props_to_filter="props_to_filter"
 		:search_function="search_function"
 		:props_extras="props_extras"
+		:emit_selected_with_null="emit_selected_with_null"
 		@callSearchModal="callSearchModal"
 		@setQuery="setQuery"
 		@setNotShowModel="setNotShowModel"
@@ -178,6 +180,14 @@ export default {
 				return  []
 			}
 		},
+		emit_selected_with_null: {
+			type: Boolean,
+			default: false,
+		},
+		init_query: {
+			type: String,
+			default: null,
+		},
 	},
 	data() {
 		return {
@@ -234,6 +244,9 @@ export default {
 	created() {
 		this.setSelectedModelProp()
 		this.$parent.$on('updateSearch', this.updateSearch())
+		if (this.init_query) {
+			this.query = this.init_query
+		}
 	},
 	methods: {
 		searchOnModels() {
@@ -399,8 +412,10 @@ export default {
 			this.setInputValue()
 		},
 		setInputValue() {
-			let input = document.getElementById(this._id)
-			input.setAttribute('model_id', this.selected_model.id)
+			if (this.selected_model) {
+				let input = document.getElementById(this._id)
+				input.setAttribute('model_id', this.selected_model.id)
+			}
 		}
 	}
 }

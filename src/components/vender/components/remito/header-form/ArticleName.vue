@@ -32,7 +32,10 @@ export default {
 			
 			let col = 4
 
-			if (this.hasExtencion('combos')) {
+			if (
+				this.hasExtencion('combos')
+				|| this.hasExtencion('vinoteca')
+			) {
 				col -= 1
 			}
 

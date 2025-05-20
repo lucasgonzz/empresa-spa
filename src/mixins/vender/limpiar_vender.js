@@ -13,6 +13,8 @@ export default {
 	},
 	methods: {
 		limpiar_vender() {
+			console.log('limpiar_vender')
+			
 			this.$store.commit('vender/previus_sales/setIndex', 0)
 			this.$store.commit('vender/previus_sales/setPreviusSale', {})
 			this.$store.commit('vender/setToCheck', 0)
@@ -46,6 +48,8 @@ export default {
 			this.$store.commit('vender/set_omitir_en_cuenta_corriente', 0)
 			
 			this.$store.commit('vender/setSellerId', 0)
+
+			this.$store.commit('vender/set_fecha_entrega', null)
 
 			// this.$store.commit('vender/set_caja_id', 0)
 			

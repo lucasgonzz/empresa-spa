@@ -6,6 +6,7 @@ export default {
 			type: 'number',
 			not_show_on_form: true,
 			filter_modal_position: 1,
+			use_in_search_modal: true,
 		},
 		{
 			text: 'Total',
@@ -31,6 +32,13 @@ export default {
 			no_usar_en_filtros: true,
 		},
 		{
+			text: 'Fecha Entrega',
+			key: 'fecha_entrega',
+			is_date: true,
+			only_show: true,
+			if_has_extencion: 'ventas_con_fecha_de_entrega',
+		},
+		{
 			text: 'Met Pago',
 			function: 'get_sale_payment_methods',
 		},
@@ -49,6 +57,7 @@ export default {
 		{
 			text: 'Empleado',
 			key: 'employee_id',
+			use_store_models: true,
 			type: 'search',
 			only_show: true,
 		},
@@ -151,6 +160,33 @@ export default {
 			store: 'combo',
 			belongs_to_many: {
 				model_name: 'combo',
+				props_to_show: [
+					{
+						text: 'Nombre',
+						key: 'name',
+					},
+				],
+				pivot_props_to_show: [
+					{
+						text: 'Precio',
+						key: 'price',
+						is_price: true,
+					},
+					{
+						text: 'Cantidad',
+						key: 'amount',
+					},
+				]
+			},
+			no_usar_en_filtros: true,
+		},
+		{
+			if_has_extencion: 'vinoteca',
+			text: 'Promociones',
+			key: 'promocion_vinotecas',
+			store: 'promocion_vinoteca',
+			belongs_to_many: {
+				model_name: 'promocion_vinotecas',
 				props_to_show: [
 					{
 						text: 'Nombre',

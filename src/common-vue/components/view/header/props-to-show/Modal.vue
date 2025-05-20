@@ -68,7 +68,9 @@ export default {
 		all_properties() {
 			let props = require(`@/models/${this.model_name}`).default.properties
 			
-			props = props.filter(prop => typeof prop.no_mostrar_nunca == 'undefined')
+			props = props.filter(prop => {
+				return typeof prop.group_title == 'undefined' && typeof prop.no_mostrar_nunca == 'undefined'
+			})
 			props = this.check_extencions(props)
 
 			props.push({
@@ -169,6 +171,8 @@ export default {
 		// Chequea si hay cookies con un orden es especifico
 		check_cookies() {
 			let cookies = this.get_cookies()
+			console.error('Hay Cookies:')
+			console.error(cookies)
 
 			cookies.forEach(cookie => {
 				

@@ -10,7 +10,6 @@
 		change_from_dates_option
 		:show_previus_days="show_previus_days"
 		:props_to_send_on_save="props_to_send_on_save"
-		save_check_function="checkProviderOrderArticlesAddresses"
 		show_filter_modal>
 		</view-component>
 	</div>

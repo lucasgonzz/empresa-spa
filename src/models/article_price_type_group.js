@@ -1,6 +1,11 @@
 export default {
 	properties: [
 		{
+			text: 'Nombre',
+			key: 'name',
+			type: 'text',
+		},
+		{
 			text: 'Articulos',
 			store: 'article',
 			search_on_models_by: 'name',

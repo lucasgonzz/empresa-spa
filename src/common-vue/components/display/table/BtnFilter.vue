@@ -52,8 +52,6 @@ export default {
 	methods: {
 		call_limpiar_filtro() {
 			let filter = this.limpiar_filtro(this.filter)
-			console.log('agregando filtro limpiado:')
-			console.log(filter)
 			this.$store.commit(this.model_name+'/addFilter', filter)
 		},
 		toggleFilter() {

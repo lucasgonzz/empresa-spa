@@ -21,6 +21,9 @@ export default {
 		client() {
 			return this.$store.state.vender.client
 		},
+		fecha_entrega() {
+			return this.$store.state.vender.fecha_entrega
+		},
 		preguntar_cantidad() {
 			return this.user.ask_amount_in_vender
 		},

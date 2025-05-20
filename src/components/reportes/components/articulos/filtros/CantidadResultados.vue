@@ -1,7 +1,7 @@
 <template>
 	<b-input-group
 	class="m-b-10 m-b-md-0"
-	prepend="Cantidad de resultados para mostrar:">
+	prepend="Cant para mostrar:">
 		<b-form-input
 		type="number"
 		placeholder="Cantidad de resultados para mostrar"

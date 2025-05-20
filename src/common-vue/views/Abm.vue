@@ -44,9 +44,21 @@ export default {
 		views() {
 			let views = []
 			this.abm_views.forEach(view => {
-				views.push({
-					name: view.view,
-				})
+				 
+				if (view.if_has_extencion) {
+					if (this.hasExtencion(view.if_has_extencion)) {
+
+						views.push({
+							name: view.view,
+						})
+					}
+				} else {
+
+					views.push({
+						name: view.view,
+					})
+				}
+				
 			})
 			return views 
 		},

@@ -13,9 +13,18 @@
 			Factura
 		</b-dropdown-item>
 		<b-dropdown-item
-		@click.stop="ticketPdf(sale.id)">
+		@click.stop="ticketPdf(sale)">
 			Ticket
 		</b-dropdown-item>
+		<b-dropdown-item
+		@click.stop="nuevo_ticket(sale)">
+			Ticket 2.0
+		</b-dropdown-item>
+		<!-- <b-dropdown-item
+		v-if="owner.tamano_letra"
+		@click.stop="ticketRaw(sale)">
+			Ticket 3
+		</b-dropdown-item> -->
 		<b-dropdown-item
 		@click.stop="salePdf(sale.id, 0, 0, 0)">
 			Sin precios
@@ -36,7 +45,9 @@
 	</b-dropdown>
 </template>
 <script>
+import print_ticket from '@/mixins/sale/print_ticket/index'
 export default {
+	mixins: [print_ticket],
 	props: {
 		sale: Object,
 	},
@@ -50,8 +61,17 @@ export default {
             let link = process.env.VUE_APP_API_URL+'/sale/pdf/'+sale_id+'/'+with_prices+'/'+with_costs+'/'+precios_netos
             window.open(link) 
 		},
-		ticketPdf(sale_id) {
-            let link = process.env.VUE_APP_API_URL+'/sale/ticket-pdf/'+sale_id
+		nuevo_ticket(sale) {
+			this.printTicket(sale)
+            // let link = process.env.VUE_APP_API_URL+'/sale/ticket-pdf/'+sale_id
+            // window.open(link)
+		},
+		ticketRaw(sale) {
+            let link = process.env.VUE_APP_API_URL+'/sale/ticket-raw/'+sale.id
+            window.open(link)
+		},
+		ticketPdf(sale) {
+            let link = process.env.VUE_APP_API_URL+'/sale/ticket-pdf/'+sale.id
             window.open(link)
 		},
 		afipTicketPdf(sale_id) {

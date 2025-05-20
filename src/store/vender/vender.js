@@ -86,8 +86,15 @@ export default {
 
 		discount_percentage: null,
 		discount_amount: null,
+
+		fecha_entrega: null,
 	},
 	mutations: {
+		set_fecha_entrega(state, value) {
+			state.fecha_entrega = value
+			console.log('se seteo fecha_entrega con:')
+			console.log(state.fecha_entrega)
+		},
 		set_payment_method_discount_percentage(state, value) {
 			state.discount_percentage = value
 		},
@@ -107,9 +114,9 @@ export default {
 			state.seller_id = value 
 		},
 		setItems(state, value) {
-			console.log('vender/setItems')
+			// console.log('vender/setItems')
 			state.items = value
-			console.log(state.items)
+			// console.log(state.items)
 		},
 		addItem(state, value) {
 			state.items.unshift(value)
@@ -368,6 +375,7 @@ export default {
 				caja_id: state.caja_id,
 				afip_tipo_comprobante_id: state.afip_tipo_comprobante_id,
 				descuento: state.descuento,
+				fecha_entrega: state.fecha_entrega,
 			})
 			.then(res => {
 				console.log('vendido')

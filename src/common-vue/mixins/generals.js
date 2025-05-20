@@ -135,6 +135,24 @@ export default {
 		},  
 	},
 	methods: {
+		html_text(text) {
+			return text.replace(/\n/g, '<br>');
+		},
+		get_models_by_id(model_name, models_id) {
+
+			let models = []
+
+			models_id.forEach(model_id => {
+				let store_model = this.$store.state[model_name].models.find(model => {
+					return model.id == model_id
+				})
+				if (typeof store_model != 'undefined') {
+					models.push(store_model)
+				}
+			})
+
+			return models
+		},
 		show_model(model_name, model_id) {
             this.$store.commit('auth/setMessage', 'Cargando '+this.singular(model_name))
             this.$store.commit('auth/setLoading', true)
@@ -179,6 +197,12 @@ export default {
 
 					if (this.hasExtencion(prop.if_has_extencion)) {
 
+						props_result.push(prop)
+					}
+
+				} else if (prop.if_has_not_extencions) {
+
+					if (this.check_has_not_extencions(prop)) {
 						props_result.push(prop)
 					}
 
@@ -426,7 +450,10 @@ export default {
 		propText(prop, capitalize = true, from_table = false) {
 			let text 
 
-			if (prop.key == 'table_right_options') {
+			if (
+				prop.key == 'table_right_options'
+				|| prop.key == 'table_left_options'
+			) {
 				return '&nbsp'
 			}
 
@@ -462,7 +489,7 @@ export default {
 			return true
 		},
 		getCol(prop, size, input_full_width = false) {
-			if (this.inputs_full_size || input_full_width || prop.has_many || prop.belongs_to_many || prop.type == 'images' || prop.input_full_width) {
+			if (prop.group_title || this.inputs_full_size || input_full_width || prop.has_many || prop.belongs_to_many || prop.type == 'images' || prop.input_full_width) {
 				return 12
 			} 
 			return size
@@ -534,6 +561,10 @@ export default {
 			if (property.if_has_extencion) {
 				return this.hasExtencion(property.if_has_extencion)
 			}
+			if (property.if_has_not_extencion) {
+				return this.check_has_not_extencions(property)
+			}
+
 			if (property.v_if_prop_not_length) {
 				return !model[property.v_if_prop_not_length].length
 			}
@@ -581,6 +612,19 @@ export default {
 				}
 			}
 			return true 
+		},
+		check_has_not_extencions(prop) {
+			let ok = true
+
+			prop.if_has_not_extencions.forEach(extencion => {
+
+				if (this.hasExtencion(extencion)) {
+
+					ok = false
+				}
+			})
+
+			return ok 
 		},
 		propToFilter(model_name) {
 			let prop = this.modelPropertiesFromName(model_name).find(prop => {
@@ -801,12 +845,12 @@ export default {
 		propertiesToShow(props, with_title_and_images = true) {
 			if (with_title_and_images) {
 				return props.filter(prop => {
-					return this.canProp(prop) && (typeof prop.not_show == 'undefined' || !prop.not_show || prop.is_title)
+					return typeof prop.group_title == 'undefined' && this.canProp(prop) && (typeof prop.not_show == 'undefined' || !prop.not_show || prop.is_title)
 					// return this.canProp(prop) && prop.type != 'search' && (typeof prop.not_show == 'undefined' || prop.is_title)
 				})
 			} else {
 				return props.filter(prop => {
-					return this.canProp(prop) && prop.type != 'search' && (typeof prop.not_show == 'undefined') && !prop.is_title && prop.type != 'image' && prop.type != 'images' 
+					return typeof prop.group_title == 'undefined' && this.canProp(prop) && prop.type != 'search' && (typeof prop.not_show == 'undefined') && !prop.is_title && prop.type != 'image' && prop.type != 'images' 
 				})
 			}
 		},

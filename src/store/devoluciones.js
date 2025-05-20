@@ -10,6 +10,9 @@ export default {
 		
 		sale: null,
 
+		discounts_id: [],
+		surchages_id: [],
+
 		articles: [],
 
 		total_devolucion: 0,
@@ -28,6 +31,18 @@ export default {
 		},
 		set_sale(state, value) {
 			state.sale = value 
+		},
+		set_discounts_id(state, value) {
+			state.discounts_id = value
+		},
+		add_discount_id(state, value) {
+			state.discounts_id.push(value)
+		},
+		set_surchages_id(state, value) {
+			state.surchages_id = value
+		},
+		add_surchage_id(state, value) {
+			state.surchages_id.push(value)
 		},
 		set_articles(state, value) {
 			state.articles = value 
@@ -85,53 +100,100 @@ export default {
 		},
 
 
-		set_total_devolucion(state) {
+		// set_total_devolucion(state) {
 
-			let total_devolucion = 0
+		// 	let total_devolucion = 0
 			
-			state.articles.forEach(article => {
+		// 	state.articles.forEach(article => {
 
-				let unidades_devueltas = Number(article.returned_amount)
+		// 		let unidades_devueltas = Number(article.returned_amount)
 
-				if (article.ya_devueltas) {
-					unidades_devueltas -= Number(article.ya_devueltas)
-				}
+		// 		if (article.ya_devueltas) {
+		// 			unidades_devueltas -= Number(article.ya_devueltas)
+		// 		}
 
-				console.log('unidades_devueltas: '+unidades_devueltas)
-				// if (unidades_devueltas > 0) {
+		// 		console.log('unidades_devueltas: '+unidades_devueltas)
+		// 		// if (unidades_devueltas > 0) {
 
-					let total_article = article.price_vender * unidades_devueltas
-					console.log('total_article: '+total_article)
+		// 			let total_article = article.price_vender * unidades_devueltas
+		// 			console.log('total_article: '+total_article)
 					
-					if (article.pivot.discount) {
+		// 			if (article.pivot.discount) {
 
-						total_article -= total_article * article.pivot.discount / 100
-					}	
+		// 				total_article -= total_article * article.pivot.discount / 100
+		// 			}	
 
-					if (state.sale) {
+		// 			if (state.sale) {
 
-						state.sale.discounts.forEach(discount => {
+		// 				state.sale.discounts.forEach(discount => {
 
-							total_article -= total_article * discount.pivot.percentage / 100
-						})
+		// 					total_article -= total_article * discount.pivot.percentage / 100
+		// 				})
 
-						state.sale.surchages.forEach(surchage => {
+		// 				state.sale.surchages.forEach(surchage => {
 
-							total_article += total_article * surchage.pivot.percentage / 100
-						})
-					}
+		// 					total_article += total_article * surchage.pivot.percentage / 100
+		// 				})
+		// 			}
 
 
-					total_devolucion += total_article
+		// 			total_devolucion += total_article
 
-					article.unidades_devueltas = unidades_devueltas
-				// }
-			})
+		// 			article.unidades_devueltas = unidades_devueltas
+		// 		// }
+		// 	})
 
-			console.log('set_total_devolucion: '+total_devolucion)
+		// 	if ()
 
-			state.total_devolucion = total_devolucion
-		}
+		// 	console.log('set_total_devolucion: '+total_devolucion)
+
+		// 	state.total_devolucion = total_devolucion
+		// },
+		
+		// aplicar_discounts() {
+		// 	if (this.discounts_id.length) {
+
+		// 		let discounts_store_ = this.discounts_store 
+
+		// 		let sale_discounts = []
+
+		// 		this.discounts_id.forEach(discount_id => {
+
+		// 			let discount_to_add = discounts_store_.find(_discount => _discount.id == discount_id)
+
+		// 			sale_discounts.push(discount_to_add)
+
+		// 		}) 
+
+		// 		sale_discounts.forEach(discount => {
+		// 			this.total_articles -= this.total_articles * Number(discount.percentage) / 100 
+		// 			this.total_combos -= this.total_combos * Number(discount.percentage) / 100 
+		// 			if (this.discounts_in_services) {
+		// 				this.total_services -= this.total_services * Number(discount.percentage) / 100 
+		// 			}
+		// 		})
+		// 	}
+
+		// },
+		// aplicar_surchages() {
+		// 	if (this.surchages_id.length) {
+		// 		let surchages = this.surchages_store 
+				
+		// 		let sale_surchages = []
+				
+		// 		this.surchages_id.forEach(id => {
+		// 			sale_surchages.push(surchages.find(item => item.id == id))
+		// 		}) 
+
+		// 		sale_surchages.forEach(_surchage => {
+		// 			this.total_articles += this.total_articles * Number(_surchage.percentage) / 100 
+		// 			this.total_combos += this.total_combos * Number(_surchage.percentage) / 100 
+		// 			if (this.surchages_in_services) {
+		// 				this.total_services += this.total_services * Number(_surchage.percentage) / 100 
+		// 			}
+		// 		})
+		// 	}
+		// }
 	},
 	actions: {
 

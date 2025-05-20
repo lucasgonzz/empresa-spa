@@ -4,7 +4,7 @@
 		v-if="view == 'confirmadas'"
 		class="m-l-15"
 		variant="success"
-		@click.stop="terminada">
+		@click.stop="terminada(sale)">
 			<i class="icon-check"></i>
 			Terminada
 		</b-button> 
@@ -25,7 +25,9 @@
 	</div>
 </template>
 <script>
+import marcar_como_terminada from '@/mixins/sale/marcar_como_terminada'
 export default {
+	mixins: [marcar_como_terminada],
 	props: {
 		sale: Object,
 	},
@@ -42,25 +44,6 @@ export default {
             let link = process.env.VUE_APP_API_URL+'/sale/pdf/'+this.sale.id+'/0/0/0/'+confirmed
             window.open(link) 
 		},
-		terminada() {
-			if (confirm('¿Esta seguro que quiere marcar la venta como terminada?')) {
-				this.$store.commit('auth/setMessage', 'Finalizando venta')
-				this.$store.commit('auth/setLoading', true)
-
-				this.$api.put('sale-set-terminada/'+this.sale.id)
-				.then(res => {
-					this.$toast.success('Venta actualizada')
-					this.$store.commit('auth/setLoading', false)
-					this.$store.commit('sale/add', res.data.sale)
-				})
-				.catch(err => {
-					console.log(err)
-					this.$store.commit('auth/setLoading', false)
-					this.$toast.error('Error al actualizar venta')
-				})
-
-			} 
-		}
 	}
 }
 </script>

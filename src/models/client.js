@@ -56,6 +56,15 @@ export default {
 			filter_modal_position: 5,
 		},
 		{
+			text: 'Google Maps',
+			key: 'link_google_maps',
+			type: 'text',
+			value: '',
+			not_show: true,
+			use_to_filter_in_modal: true,
+			filter_modal_position: 5,
+		},
+		{
 			text: 'Sucursal',
 			key: 'address_id',
 			relation_prop_name: 'street',

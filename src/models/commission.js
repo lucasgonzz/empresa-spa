@@ -10,6 +10,12 @@ export default {
 			use_to_filter_in_search: true,
 		},
 		{
+			text: 'Vendedor',
+			key: 'seller_id',
+			type: 'select',
+			use_store_models: true,
+		},
+		{
 			text: 'Desde',
 			key: 'from',
 			type: 'number',

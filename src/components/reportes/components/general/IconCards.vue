@@ -86,6 +86,27 @@ export default {
 						},
 					]
 				},
+			]
+
+			if (this.hasExtencion('cambiar_price_type_en_vender')) {
+				let group = {
+					group_name: 'Listas de precio',
+					cards: []
+				}
+
+				this.model.ingresos_brutos_price_types.forEach(price_type => {
+					group.cards.push({
+						text: price_type.name,
+						img: 'ventas',
+						value: this.price(price_type.pivot.total_vendido),
+						description: 'Suma de todas las ventas hechas con la lista de precios '+price_type.name
+					})
+				})
+
+				card_groups = card_groups.concat(group)
+			}
+
+			let resto_de_grupos = [
 				{
 					group_name: 'Dinero',
 					// group_name: 'Tesoreria',
@@ -209,6 +230,8 @@ export default {
 					],
 				},
 			]
+
+			card_groups = card_groups.concat(resto_de_grupos)
 
 			return card_groups
 		},

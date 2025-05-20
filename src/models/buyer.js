@@ -48,6 +48,18 @@ export default {
 			value: '',
 			show: true,
 		},
+		{
+			text: 'Contraseña',
+			key: 'visible_password',
+			type: 'text',
+		},
+		{
+			text: 'Perfil de VENDEDOR',
+			key: 'seller_id',
+			type: 'select',
+			use_store_models: true,
+			show: true,
+		},
 	],
 	singular_model_name_spanish: 'Cliente',
 	plural_model_name_spanish: 'Clientes',

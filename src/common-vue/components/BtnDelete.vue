@@ -8,9 +8,20 @@
 </template>
 <script>
 export default {
-	props: ['model_name', 'model', 'modal', 'has_many_parent_model_name', 'has_many_prop'],
+	props: [
+		'model_name',
+		'model',
+		'modal',
+		'has_many_parent_model_name',
+		'has_many_prop',
+		'solo_emitir_delete',
+	],
 	methods: {
 		callDelete() {
+			if (this.solo_emitir_delete) {
+				this.$emit('press_delete_btn')
+				return
+			}
 			if (!this.has_many_prop) {
 				this.$store.commit(this.model_name+'/setDelete', this.model)
 				this.$bvModal.show(this.modal)

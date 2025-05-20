@@ -7,6 +7,7 @@
 		xl="3">
 			
 			<props-to-show
+			v-if="show_btn_props_to_show"
 			:model_name="model_name"></props-to-show>
 
 			<slot name="btn_create">
@@ -110,6 +111,10 @@ export default {
 		change_from_dates_option: {
 			type: Boolean,
 			default: false,
+		},
+		show_btn_props_to_show: {
+			type: Boolean,
+			default: true,
 		},
 	}
 }

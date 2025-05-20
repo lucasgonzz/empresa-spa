@@ -216,6 +216,9 @@ export default {
 		},
 		add_price_types(props) {
 
+			console.log('agregando price_types a tabla listado')
+			console.log(this.hasExtencion('articulo_margen_de_ganancia_segun_lista_de_precios'))
+			console.log(this.hasExtencion('lista_de_precios_por_categoria'))
 			// Encuentra la posición de alguna de estas props
 			let props_a_partir_de_las_cuales_agregar = [
 				'cost',
@@ -236,7 +239,6 @@ export default {
 			this.price_types.forEach(price_type => {
 
 				if (this.no_esta_agregada('price_type_', price_type, props)) {
-
 					props.splice(insertIndex, 0, {							
 						text: price_type.name,
 						key: 'price_type_'+price_type.id,
@@ -246,6 +248,7 @@ export default {
 						// Con esto hago que se agregue a las propiedades
 						// para el modal component del Model
 						propiedad_extra_para_modal: true,
+						index: insertIndex,
 						// not_show_on_form: true,
 					})
 				}

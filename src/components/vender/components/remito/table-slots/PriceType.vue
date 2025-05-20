@@ -14,9 +14,19 @@ export default {
 	mixins: [vender],
 	computed: {
 		is_disabled() {
-			if (this.ya_estaba_en_la_venta) {
-				return true
+			// if (this.ya_estaba_en_la_venta) {
+			// 	return true
+			// }
+			
+			// Extencion de Golonorte
+			if (this.hasExtencion('lista_de_precios_por_rango_de_cantidad_vendida')) {
+
+				if (!this.is_admin) {
+
+					return true
+				}
 			}
+
 			return false
 		},
 		ya_estaba_en_la_venta() {

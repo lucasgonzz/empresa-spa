@@ -78,9 +78,14 @@
 							:model_name="model_name"
 							:props="props"
 							:set_model_on_row_selected="set_model_on_row_selected">
+								<template v-slot:table_left_options="slotProps">
+									<slot name="table_left_options" :model="model"></slot>
+								</template>
+
 								<template v-slot:table_right_options="slotProps">
 									<slot name="table_right_options" :model="model"></slot>
 								</template>
+								
 								<template
 								v-for="prop in properties"
 								v-slot:[prop.key]>
@@ -102,6 +107,9 @@
 						@onRowSelected="onRowSelected"
 						:set_model_on_row_selected="set_model_on_row_selected"
 						:cont_table_id="id">
+							<template v-slot:table_left_options="slotProps">
+								<slot name="table_left_options" :model="model"></slot>
+							</template>
 							<template v-slot:table_right_options="slotProps">
 								<slot name="table_right_options" :model="model"></slot>
 							</template>
@@ -270,6 +278,8 @@ export default {
 		props() {
 			console.log('calculando props')
 			let props = []
+
+
 			 if (this.properties) {
 				props = this.propertiesToShow(this.properties, true)
 
@@ -352,6 +362,14 @@ export default {
 					})
 				}
 			} 
+
+
+			
+			props.splice(0, 0, {
+				key: 'table_left_options',
+				text: '',
+				no_usar_en_filtros: true,
+			})
 
 			props.push({
 				key: 'table_right_options',
@@ -572,8 +590,6 @@ export default {
 					&& !prop.has_many
 				) {
 
-					console.log('agregando filtro para '+prop.text+'. Type: '+prop.type)
-
 					filters.push({
 						key: prop.key,
 						store: prop.store,
@@ -583,7 +599,7 @@ export default {
 						checkbox: -1,
 					})
 				} else {
-					console.log('NO SE AGREGO filtro para '+prop.text)
+					// console.log('NO SE AGREGO filtro para '+prop.text)
 				}
 			})
 
@@ -717,6 +733,12 @@ export default {
 </script>
 <style lang="sass">
 @import '@/sass/_custom'
+.form-group
+	.cont-table
+
+		th, td 
+			min-width: 150px
+
 .cont-table
 	width: calc(100% + 30px)
 	// display: inline-block
@@ -778,7 +800,7 @@ export default {
 		th, td 
 			// white-space: nowrap
 			text-align: left
-			min-width: 150px
+			// min-width: 150px
 
 		th  
 			position: sticky

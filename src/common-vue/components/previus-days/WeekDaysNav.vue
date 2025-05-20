@@ -113,7 +113,15 @@ export default {
 			if (this.model_name_for_get_models) {
 				model_name = this.model_name_for_get_models
 			}
-			this.$api.get(`previus-day/${this.routeString(model_name)}/${this.index}`)
+			let route = `previus-day/${this.routeString(model_name)}/${this.index}`
+
+			let date_param = 'created_at'
+			if (this.$store.state[this.model_name].date_param) {
+				date_param = this.$store.state[this.model_name].date_param
+			}
+			route += '/'+date_param
+
+			this.$api.get(route)
 			.then(res => {
 				this.loading = false
 				let days = res.data.days

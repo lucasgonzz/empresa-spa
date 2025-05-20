@@ -47,7 +47,7 @@ export default {
 	computed: {
 		delete_text() {
 			if (this.from_filter) {
-				return this.$store.state[this.model_name].filtered.length+' '+this.plural(this.model_name)
+				return this.$store.state[this.model_name].total_filter_results+' '+this.plural(this.model_name)
 			}
 			return this.$store.state[this.model_name].selected.length+' '+this.plural(this.model_name)
 		},

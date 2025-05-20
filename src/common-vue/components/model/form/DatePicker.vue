@@ -9,6 +9,7 @@
 		@change="setDate"
 		v-model="date_value"
 		type="date" 
+		:id="model_name+'_'+prop.key"
 		class="custom-date-picker">
 	</div>
 </template>
@@ -28,6 +29,7 @@ export default {
 			type: Object,
 			default: null
 		},
+		model_name: String,
 	},
 	created() {
 		if (this.value) {

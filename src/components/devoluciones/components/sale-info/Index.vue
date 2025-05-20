@@ -5,7 +5,7 @@
 		
 		<total></total>
 
-		<discounts></discounts>		
+		<!-- <discounts></discounts>		 -->
 	</div>
 </template>
 <script>

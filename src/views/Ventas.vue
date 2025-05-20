@@ -25,7 +25,7 @@
 			<employee-nav></employee-nav>
 			<total></total>	
 		</template>
-		<template v-slot:table_right_options="props">
+		<template v-slot:table_left_options="props">
 			<div class="j-start">
 				<table-buttons
 				:model="props.model" />

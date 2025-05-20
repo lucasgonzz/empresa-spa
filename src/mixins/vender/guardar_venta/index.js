@@ -45,15 +45,17 @@ export default {
 				// Aca antes descontaba el stock de los articulos ya descargados
 
 				this.$store.dispatch('vender/vender', {
-					discounts: this.get_discounts(),
-					surchages: this.get_surchages(),
+					discounts: this.get_models_by_id('discount', this.discounts_id),
+					surchages: this.get_models_by_id('surchage', this.surchages_id),
 				})
 				.then(() => {
+
+					console.log('CONTINUA POR ACA')
 
 					this.focus_bar_code()
 					
 					this.limpiar_vender()
-
+ 
 					this.setDefaultPaymentMethod()
 
 					this.set_omitir_en_cuenta_corriente()
@@ -91,36 +93,6 @@ export default {
 			if (this.view != 'remito') {
 				this.$router.push({name: 'vender', params: {view: 'remito'}})
 			}
-		},
-
-
-		get_discounts() {
-			let discounts = []
-
-			this.discounts_id.forEach(discount_id => {
-				let store_discount = this.$store.state.discount.models.find(discount => {
-					return discount.id == discount_id
-				})
-				if (typeof store_discount != 'undefined') {
-					discounts.push(store_discount)
-				}
-			})
-
-			return discounts
-		},
-		get_surchages() {
-			let surchages = []
-
-			this.surchages_id.forEach(surchage_id => {
-				let store_surchage = this.$store.state.surchage.models.find(surchage => {
-					return surchage.id == surchage_id
-				})
-				if (typeof store_surchage != 'undefined') {
-					surchages.push(store_surchage)
-				}
-			})
-
-			return surchages
 		},
 
 		focus_bar_code() {

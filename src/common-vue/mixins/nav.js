@@ -6,9 +6,25 @@ export default {
             return this.authenticated && this.route_name != 'login' && this.route_name != 'passwordReset'
         },
         selected_route() {
-        	return routes.find(route => {
-        		return this.getRouteName(route) == this.route_name
+        	let selected_route = null
+
+        	routes.forEach(route => {
+        		
+        		if (this.getRouteName(route) == this.route_name){
+        			selected_route = route 
+        		} else if (route.childrens) {
+
+        			let finded_child = route.childrens.find(child => {
+        				return this.getRouteName(child) == this.route_name
+        			})
+
+        			if (typeof finded_child != 'undefined') {
+	        			selected_route = finded_child 
+        			} 
+        		}
         	})
+
+        	return selected_route
         }
 	},
 	methods: {
@@ -27,18 +43,24 @@ export default {
 				show = this.is_owner || this.user.admin_access
 			}
 			if (show && route.can) {
-				if (typeof route.can == 'object') {
-					// console.log('can array para la ruta '+this.getRouteName(route))
-					show = false 
-					route.can.forEach(_can => {
-						if (!show) {
-							show = this.can(_can)
+
+				show = this.tiene_permiso_para_la_ruta(route)
+
+				if (route.childrens) {
+					let children_has_permision = false
+
+					route.childrens.forEach(children => {
+
+						if (!children_has_permision) {
+							children_has_permision = this.tiene_permiso_para_la_ruta(children)
 						}
 					})
-				} else {
-					// console.log('can para la ruta '+this.getRouteName(route))
-					show = this.can(route.can)
+
+					if (!show) {
+						show = children_has_permision
+					}
 				}
+
 			}
 			if (show && route.if_has_extencion) {
 				if (typeof route.if_has_extencion == 'string') {
@@ -54,6 +76,26 @@ export default {
 				}
 			}
 			return show 
+		},
+		tiene_permiso_para_la_ruta(route) {
+
+			let has_permission = true 
+
+			if (route.can) {
+				if (typeof route.can == 'object') {
+					has_permission = false 
+					route.can.forEach(_can => {
+						if (!has_permission) {
+							has_permission = this.can(_can)
+						}
+					})
+				} else {
+					// console.log('can para la ruta '+this.getRouteName(route))
+					has_permission = this.can(route.can)
+				}
+			}
+
+			return has_permission
 		},
 		routeText(route) {
 			if (route.text) {

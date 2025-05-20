@@ -1,6 +1,6 @@
 <template>
 	<div
-	class="vuelto-efectivo card"
+	class="vuelto-efectivo card m-b-10"
 	v-if="monto_efectivo > 0">
 		
 		<h5>

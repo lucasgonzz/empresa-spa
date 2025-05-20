@@ -7,6 +7,7 @@ class="m-b-15">
 		<article-bar-code></article-bar-code>
 		<article-name></article-name>
 		<combos></combos>
+		<promocion-vinoteca></promocion-vinoteca>
 		<services></services>
 		<amount></amount>	
 	</b-row>
@@ -34,6 +35,7 @@ export default {
 		ArticleName,
 		Combos,
 		Services,
+		PromocionVinoteca: () => import('@/components/vender/components/remito/header-form/PromocionVinoteca'),
 		Amount: () => import('@/components/vender/components/remito/header-form/Amount')
 	},
 	computed: {

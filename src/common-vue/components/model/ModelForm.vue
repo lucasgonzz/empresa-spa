@@ -11,258 +11,274 @@
 			:lg="getCol(prop, 4, input_full_width)"
 			:xl="getCol(prop, 3, input_full_width)"
 			:key="'model-prop-'+index">
-				<b-form-group
-				:class="colorLabel(prop)"
-				:id="'form-group-'+prop.key"
-				:description="prop.description">
-					<label
-					class="form-label">
-						<i 
-						v-if="prop.has_many"
-						class="icon-down"></i>
-						<i 
-						v-else
-						class="icon-right"></i>
-						<strong>{{ getLabel(prop) }}</strong>
-					</label>
-					<div>
-						<images
-						v-if="prop.type == 'image' || prop.type == 'images'"
-						:prop="prop"
-						:model="model"
-						:model_name="model_name"
-						:has_many_parent_model="has_many_parent_model"
-						:has_many_prop="has_many_prop"></images>
-						<div
-						v-else>
-							<slot :name="prop.key">
-								<p
-								v-if="prop.only_show || prop.from_pre_view"
-								class="m-b-0 m-l-25 text-only-show">
-									<strong 
-									:class="colorLabel(prop)"
-									v-html="propertyText(model, prop, false, !prop.from_pre_view)"
-									v-if="propertyText(model, prop) != '' || propertyText(model, prop) == 0">
-									</strong>
-									<span
-									v-else>
-										No hay
-									</span>
-								</p>
-								
-								<div
-								v-else-if="useSearch(prop)">
-									<search-component
-									class="m-b-15"
-									:id="model_name+'-'+prop.key"
-									@setSelected="setSelected"
-									:props_to_filter="props_to_filter(prop)"
-									:model_name="modelNameFromRelationKey(prop)"
-									:model="model"
-									:model_name_for_search_on_models="model_name"
-									:search_function="prop.search_function_for_model_form"
-									show_btn_create
-									:clear_query="clearQuery(prop)" 
-									:save_if_not_exist="saveIfNotExist(prop)"
-									:auto_select="autoSelect(prop)"
-									:prop="prop"></search-component>
-								</div>
-
-
-								<belongs-to-many-checkbox
-								v-else-if="prop.belongs_to_many && prop.type == 'checkbox'"
-								:model="model"
-								:prop="prop"></belongs-to-many-checkbox>
-
-						       <!--  <b-form-datepicker
-								v-else-if="prop.type == 'date'"
-						        placeholder="Fecha"
-						        :disabled="isDisabled(prop, form_to_filter)"
-						        v-model="model[prop.key]"></b-form-datepicker> -->
-
-						        <date-picker
-						        @setDate="setDate"
-						        :prop="prop"
-						        :value="model[prop.key]"
-								v-else-if="prop.type == 'date'"></date-picker>
-
-								<div
-								v-else-if="prop.type == 'radio'">
-									<b-form-radio
-									v-for="model_radio in modelsToSearch(prop, model)"
-									:key="prop.key+'-'+model_radio.id"
-									:value="model_radio.id"
-									:name="model_name+'-'+prop.key"
-									:id="prop.key+'-'+model_radio.id"
-									v-model="model[prop.key]">
-										<div
-										v-if="prop.props_to_show_in_radio">
-											<p
-											v-for="prop_to_show in prop.props_to_show_in_radio">
-												{{ model_radio[prop_to_show] }}
-											</p>
-										</div>
+				<div
+				v-if="prop.group_title">
+					<hr>
+					<h4>
+						{{ prop.group_title }}
+					</h4>
+				</div>
+				<div
+				v-else>
+					
+					<b-form-group
+					:class="colorLabel(prop)"
+					:id="'form-group-'+prop.key"
+					:description="prop.description">
+						<label
+						class="form-label">
+							<i 
+							v-if="prop.has_many"
+							class="icon-down"></i>
+							<i 
+							v-else
+							class="icon-right"></i>
+							<strong>{{ getLabel(prop) }}</strong>
+						</label>
+						<div>
+							<images
+							v-if="prop.type == 'image' || prop.type == 'images'"
+							:prop="prop"
+							:model="model"
+							:model_name="model_name"
+							:has_many_parent_model="has_many_parent_model"
+							:has_many_prop="has_many_prop"></images>
+							<div
+							v-else>
+								<slot :name="prop.key">
+									<p
+									v-if="prop.only_show || prop.from_pre_view"
+									:class="prop.class"
+									class="m-b-0 m-l-25 text-only-show">
+										<strong 
+										:class="colorLabel(prop)"
+										v-html="propertyText(model, prop, false, !prop.from_pre_view)"
+										v-if="propertyText(model, prop) != '' || propertyText(model, prop) == 0">
+										</strong>
 										<span
 										v-else>
-											{{ model_radio.name }}
+											No hay
 										</span>
-									</b-form-radio>
-								</div>
+									</p>
+									
+									<div
+									v-else-if="useSearch(prop)">
+										<search-component
+										class="m-b-15"
+										:id="model_name+'-'+prop.key"
+										:search_from_api="search_from_api(prop)"
+										@setSelected="setSelected"
+										:props_to_filter="props_to_filter(prop)"
+										:model_name="modelNameFromRelationKey(prop)"
+										:model="model"
+										show_btn_create
+										:props_to_show="props_to_show(prop)"
+										:str_limint="str_limint(prop)"
+										:model_name_for_search_on_models="model_name"
+										:search_function="prop.search_function_for_model_form"
+										:clear_query="clearQuery(prop)" 
+										:save_if_not_exist="saveIfNotExist(prop)"
+										:auto_select="autoSelect(prop)"
+										:prop="prop"></search-component>
+									</div>
 
-								<div
-								v-else-if="prop.type == 'text' || prop.type == 'number' || prop.type == 'password'"
-								class="d-flex w-100">
-									<b-form-input
+
+									<belongs-to-many-checkbox
+									v-else-if="prop.belongs_to_many && prop.type == 'checkbox'"
+									:model="model"
+									:prop="prop"></belongs-to-many-checkbox>
+
+							       <!--  <b-form-datepicker
+									v-else-if="prop.type == 'date'"
+							        placeholder="Fecha"
+							        :disabled="isDisabled(prop, form_to_filter)"
+							        v-model="model[prop.key]"></b-form-datepicker> -->
+
+							        <date-picker
+							        @setDate="setDate"
+							        :model_name="model_name"
+							        :prop="prop"
+							        :value="model[prop.key]"
+									v-else-if="prop.type == 'date'"></date-picker>
+
+									<div
+									v-else-if="prop.type == 'radio'">
+										<b-form-radio
+										v-for="model_radio in modelsToSearch(prop, model)"
+										:key="prop.key+'-'+model_radio.id"
+										:value="model_radio.id"
+										:name="model_name+'-'+prop.key"
+										:id="prop.key+'-'+model_radio.id"
+										v-model="model[prop.key]">
+											<div
+											v-if="prop.props_to_show_in_radio">
+												<p
+												v-for="prop_to_show in prop.props_to_show_in_radio">
+													{{ model_radio[prop_to_show] }}
+												</p>
+											</div>
+											<span
+											v-else>
+												{{ model_radio.name }}
+											</span>
+										</b-form-radio>
+									</div>
+
+									<div
+									v-else-if="prop.type == 'text' || prop.type == 'number' || prop.type == 'password'"
+									class="d-flex w-100">
+										<b-form-input
+										autocomplete="off"
+										:id="model_name+'-'+prop.key"
+								        :disabled="isDisabled(prop, form_to_filter)"
+										:placeholder="'Ingresar '+propText(prop)"
+										:type="prop.type"
+										@keyup.enter="clickEnter(prop)"
+										v-model="model[prop.key]"></b-form-input>
+
+										<bar-code-scanner
+										class="m-l-5"
+										v-if="prop.use_bar_code_scanner && hasExtencion('bar_code_scanner')"
+										@setBarCode="setBarCode"></bar-code-scanner>
+									</div>
+
+									<b-form-textarea
 									autocomplete="off"
 									:id="model_name+'-'+prop.key"
+									v-else-if="prop.type == 'textarea'"
 							        :disabled="isDisabled(prop, form_to_filter)"
 									:placeholder="'Ingresar '+propText(prop)"
+									:rows="10"
 									:type="prop.type"
-									@keyup.enter="clickEnter(prop)"
-									v-model="model[prop.key]"></b-form-input>
-
-									<bar-code-scanner
-									class="m-l-5"
-									v-if="prop.use_bar_code_scanner && hasExtencion('bar_code_scanner')"
-									@setBarCode="setBarCode"></bar-code-scanner>
-								</div>
-
-								<b-form-textarea
-								autocomplete="off"
-								:id="model_name+'-'+prop.key"
-								v-else-if="prop.type == 'textarea'"
-						        :disabled="isDisabled(prop, form_to_filter)"
-								:placeholder="'Ingresar '+propText(prop)"
-								:rows="10"
-								:type="prop.type"
-								v-model="model[prop.key]"></b-form-textarea>
+									v-model="model[prop.key]"></b-form-textarea>
 
 
-								<div
-								v-else-if="prop.type == 'select'">
-							    	<model-component
-							    	:model_name="modelNameFromRelationKey(prop)"></model-component>
+									<div
+									v-else-if="prop.type == 'select'">
+								    	<model-component
+								    	:model_name="modelNameFromRelationKey(prop)"></model-component>
 
-									<b-form-select
+										<b-form-select
+										:id="model_name+'-'+prop.key"
+										@change="setChange(prop)"
+								        :disabled="isDisabled(prop, form_to_filter)"
+										v-model="model[prop.key]"
+										:options="getOptions(prop, model, model_name)"></b-form-select>
+									</div>		
+
+									<b-form-checkbox
 									:id="model_name+'-'+prop.key"
-									@change="setChange(prop)"
+									v-else-if="prop.type == 'checkbox'"
 							        :disabled="isDisabled(prop, form_to_filter)"
 									v-model="model[prop.key]"
-									:options="getOptions(prop, model, model_name)"></b-form-select>
-								</div>		
+									:value="1"
+									:unchecked-value="0">
+										{{ propText(prop) }}
+									</b-form-checkbox>
 
-								<b-form-checkbox
-								:id="model_name+'-'+prop.key"
-								v-else-if="prop.type == 'checkbox'"
-						        :disabled="isDisabled(prop, form_to_filter)"
-								v-model="model[prop.key]"
-								:value="1"
-								:unchecked-value="0">
-									{{ propText(prop) }}
-								</b-form-checkbox>
+									<google-geocoder
+									v-else-if="prop.type == 'google_geocoder'"
+									:model_name="model_name"
+									:prop="prop"
+									:model="model"></google-geocoder>
 
-								<google-geocoder
-								v-else-if="prop.type == 'google_geocoder'"
-								:model_name="model_name"
-								:prop="prop"
-								:model="model"></google-geocoder>
+									<div
+									v-else-if="prop.type == 'boolean'">
+										<p
+										v-if="model[prop.key]">
+											Si
+										</p>
+										<p
+										v-else>
+											No
+										</p>
+									</div>
 
-								<div
-								v-else-if="prop.type == 'boolean'">
+									<b-button
+							    	v-else-if="prop.show_model"
+							    	class="m-r-15"
+							    	@click="_setModel(prop)"
+									variant="primary">
+										<i class="icon-plus"></i>
+										{{ btnText(prop) }}
+									</b-button>
+									
+									<b-button
+									v-else-if="prop.button"
+									:variant="prop.button.variant"
+									@click="callMethod(prop, model)">
+										<i
+										v-if="prop.button.icon"
+										:class="'icon-'+prop.button.icon"></i>
+										<span
+										v-else-if="prop.button.button_text">
+											{{ prop.button.button_text }}
+										</span>
+										<span
+										v-else>
+											{{ propertyText(model, prop) }}
+										</span>
+									</b-button>
+									
 									<p
-									v-if="model[prop.key]">
-										Si
+									class="function-value"
+									v-else-if="prop.function">
+										{{ getFunctionValue(prop, model) }}
 									</p>
+
+									<div
+									class="m-l-15"
+							    	v-if="prop.belongs_to_many && !prop.belongs_to_many.related_with_all && (!prop.type || prop.type != 'checkbox')">
+
+										<table-component
+										:loading="false"
+										:models="model[prop.key]"
+										:model_name="prop.store"
+										:pivot="prop.belongs_to_many"
+										:order_list_by="prop.belongs_to_many.order_list_by"
+										:order_list_from_pivot="true"
+										:set_model_on_row_selected="false"
+										show_pivot_created_at
+										:show_btn_edit="false">
+											<template v-slot:table_right_options="slotProps">
+												<slot name="belongs" :model="slotProps.model"></slot>
+												<b-button
+												v-if="show_btn_remove_belongs_to_many"
+												class="m-l-15"
+												variant="danger"
+												@click="removeModel(prop, slotProps.model)">
+													<i class="icon-trash"></i>
+												</b-button>
+											</template>  
+										</table-component>	
+									</div>
+
+									<has-many
+									v-else-if="prop.has_many"
+									:parent_model="model"
+									:parent_model_name="model_name"
+									:prop="prop"></has-many>
+
+									<b-button
+									v-if="(prop.type == 'radio') && model[prop.key] != prop.value"
+									variant="outline-primary"
+									size="sm"
+									@click="clear(prop)">
+										Limpiar
+									</b-button>
 									<p
-									v-else>
-										No
+									v-if="prop.prop_info">
+										{{ propInfo(prop) }}
 									</p>
-								</div>
+								</slot>
+							</div>
 
-								<b-button
-						    	v-else-if="prop.show_model"
-						    	class="m-r-15"
-						    	@click="_setModel(prop)"
-								variant="primary">
-									<i class="icon-plus"></i>
-									{{ btnText(prop) }}
-								</b-button>
-								
-								<b-button
-								v-else-if="prop.button"
-								:variant="prop.button.variant"
-								@click="callMethod(prop, model)">
-									<i
-									v-if="prop.button.icon"
-									:class="'icon-'+prop.button.icon"></i>
-									<span
-									v-else-if="prop.button.button_text">
-										{{ prop.button.button_text }}
-									</span>
-									<span
-									v-else>
-										{{ propertyText(model, prop) }}
-									</span>
-								</b-button>
-								
-								<p
-								class="function-value"
-								v-else-if="prop.function">
-									{{ getFunctionValue(prop, model) }}
-								</p>
+							<!-- <hr> -->
 
-								<div
-								class="m-l-15"
-						    	v-if="prop.belongs_to_many && !prop.belongs_to_many.related_with_all && (!prop.type || prop.type != 'checkbox')">
-
-									<table-component
-									:loading="false"
-									:models="model[prop.key]"
-									:model_name="prop.store"
-									:pivot="prop.belongs_to_many"
-									:order_list_by="prop.belongs_to_many.order_list_by"
-									:order_list_from_pivot="true"
-									:set_model_on_row_selected="false"
-									show_pivot_created_at
-									:show_btn_edit="false">
-										<template v-slot:table_right_options="slotProps">
-											<slot name="belongs" :model="slotProps.model"></slot>
-											<b-button
-											v-if="show_btn_remove_belongs_to_many"
-											class="m-l-15"
-											variant="danger"
-											@click="removeModel(prop, slotProps.model)">
-												<i class="icon-trash"></i>
-											</b-button>
-										</template>  
-									</table-component>	
-								</div>
-
-								<has-many
-								v-else-if="prop.has_many"
-								:parent_model="model"
-								:parent_model_name="model_name"
-								:prop="prop"></has-many>
-
-								<b-button
-								v-if="(prop.type == 'radio') && model[prop.key] != prop.value"
-								variant="outline-primary"
-								size="sm"
-								@click="clear(prop)">
-									Limpiar
-								</b-button>
-								<p
-								v-if="prop.prop_info">
-									{{ propInfo(prop) }}
-								</p>
-							</slot>
 						</div>
 
-						<!-- <hr> -->
-
-					</div>
-
-				</b-form-group>
+					</b-form-group>
+				</div>
 			</b-col>
 		</b-form-row>
 		
@@ -395,6 +411,24 @@ export default {
 		},
 	},
 	methods: {
+		search_from_api(prop) {
+			if (prop.search_from_api) {
+				return true
+			}
+			return false
+		},
+		str_limint(prop) {
+			if (prop.belongs_to_many && prop.belongs_to_many.str_limint) {
+				return prop.belongs_to_many.str_limint
+			}
+			return null
+		},
+		props_to_show(prop) {
+			if (prop.belongs_to_many && prop.belongs_to_many.props_to_show) {
+				return prop.belongs_to_many.props_to_show
+			}
+			return null
+		},
 		props_to_filter(prop) {
 			if (
 				prop.belongs_to_many
@@ -458,8 +492,12 @@ export default {
 			}
 		},
 		useSearch(prop) {
+			if (prop.no_editar_una_vez_creado_el_modelo) {
+				if (this.model.id) {
+					return false 
+				}
+			} 
 			return prop.type == 'search'
-			return this.propType(prop, this.model) == 'search' || (prop.belongs_to_many && !prop.belongs_to_many.related_with_all && !this.propType(prop, this.model) == 'checkbox' && !prop.belongs_to_many.can_not_modify)
 		},
 		removeModel(prop, model) {
 			let index = this.model[prop.key].findIndex(_model => {
@@ -717,8 +755,30 @@ export default {
 		        if (typeof finded != 'undefined' && (!this.model.id || this.model.id != finded.id)) {
 		            this.$toast.warning('Ya hay un ' + this.singular(this.model_name) + ' con este ' + this.propText(prop));
 		            this.setModel(finded, this.model_name, [], false);
+		        } else {
+		        	this.foco_input_siguiente(prop)
 		        }
 		    }
+		},
+		foco_input_siguiente(prop) {
+			console.log('foco_input_siguiente')
+			let index = this.properties.findIndex(_prop => {
+				return _prop.key == prop.key
+			})
+			console.log('index: '+index)
+			if (index != -1) {
+
+				let prop_siguiente = this.properties[index+1]
+				console.log('prop_siguiente: '+prop_siguiente.key)
+				let input = document.getElementById(this.model_name+'-'+prop_siguiente.key)
+				console.log('input: ')
+				console.log(input)
+				if (input) {
+					setTimeout(() => {
+						input.focus()
+					}, 200)
+				} 
+			}
 		}
 
 	},
@@ -744,10 +804,10 @@ export default {
 	[class^='col-']
 		padding-bottom: 7px
 		margin-bottom: 7px
-		@if ($theme == 'dark')
-			border-bottom: 1px solid rgba(255,255,255,.2)
-		@else
-			border-bottom: 1px solid rgba(0,0,0,.1)
+		// @if ($theme == 'dark')
+		// 	border-bottom: 1px solid rgba(255,255,255,.2)
+		// @else
+		// 	border-bottom: 1px solid rgba(0,0,0,.1)
 		&:nth-last-child(-n+2)
 			border-bottom: none
 	.custom-radio 

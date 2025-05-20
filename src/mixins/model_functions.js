@@ -18,6 +18,32 @@ export default {
         //     console.log(prop)
         //     if (current_acount)
         // },
+        set_article_price_types(_prop) {
+
+            console.log('set_article_price_types, _prop:')
+            console.log(_prop)
+
+            let prop = {
+                ..._prop,
+                value: []
+            }
+
+            let price_types = this.$store.state.price_type.models 
+
+            price_types.forEach(price_type => {
+                prop.value.push({
+                    ...price_type,
+                    pivot: {
+                        incluir_en_excel_para_clientes: price_type.incluir_en_lista_de_precios_de_excel
+                    }
+                })
+            })
+
+            console.log('asi quedo la prop:')
+            console.log(prop)
+
+            return prop 
+        },
         get_sale_payment_methods(sale, prop) {
             let metodos = ''
 
@@ -220,24 +246,6 @@ export default {
         //     }
         //     return ok
         // },
-        checkProviderOrderArticlesAddresses() {
-            let ok = true
-
-            // console.log('checkProviderOrderArticlesAddresses')
-
-            // let provider_order = this.$store.state.provider_order.model
-
-            // console.log('address_id: '+provider_order.address_id)
-            
-            // let addresses = this.$store.state.address.models 
-
-            // if (addresses.length && !provider_order.address_id) {
-            //     this.$toast.error('Indique deposito')
-            //     ok = false 
-            // }
-
-            return ok
-        },
 		getFunctionValue(prop, model) {
 			return this[prop.function](model, prop)
 		},

@@ -29,10 +29,10 @@ export default {
 
 			this.get_ultimos_articulos_actualizados()
 
-			// Llamo cada 1 minuto a peidos online
-			this.escuchar_orders()
+			// Llamo cada 20 segundos a peidos online
+			this.escuchar_orders_y_messages()
 		},
-		escuchar_orders() {
+		escuchar_orders_y_messages() {
 			if (this.owner.online) {
 
 				setInterval(() => {
@@ -40,7 +40,14 @@ export default {
 						
 						this.$store.dispatch('order/getUnconfirmedModels')
 					}
-				}, 60000)
+				}, 20000)
+
+				setInterval(() => {
+					if (this.$route.name != 'online') {
+						
+						this.get_buyers_and_set_messages_not_read()
+					}
+				}, 20000)
 			}
 		},
 		get_ultimos_articulos_actualizados() {

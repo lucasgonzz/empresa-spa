@@ -7,13 +7,19 @@ import limpiar_vender from '@/mixins/vender/limpiar_vender'
 import limpiar_actualizandose_por from '@/mixins/vender/previus_sale/limpiar_actualizandose_por'
 import price_types from '@/mixins/vender/price_types'
 import default_payment_method from '@/mixins/vender/default_payment_method'
+import price_ranges from '@/mixins/vender/price_ranges'
 export default {
-	mixins: [limpiar_vender, limpiar_actualizandose_por, price_types, vender_set_total, default_payment_method],
+	mixins: [price_ranges, limpiar_vender, limpiar_actualizandose_por, price_types, vender_set_total, default_payment_method],
 	// mixins: [vender, set_employee_vender, vender_set_total],
 	data() {
 		return {
 			loading_index: false,
 		}
+	},
+	computed: {
+		fecha_entrega() {
+			return this.$store.state.vender.fecha_entrega
+		},
 	},
 	methods: {
 		setPreviusSale(sale) {
@@ -194,6 +200,9 @@ export default {
 			if (model.numero_orden_de_compra) {
 				this.$store.commit('vender/set_numero_orden_de_compra', model.numero_orden_de_compra)
 			}
+			if (model.fecha_entrega) {
+				this.$store.commit('vender/set_fecha_entrega', model.fecha_entrega.split('T')[0])
+			}
 			this.$store.commit('vender/setObservations', model.observations)
 			this.$store.commit('vender/set_omitir_en_cuenta_corriente', model.omitir_en_cuenta_corriente)
 
@@ -246,6 +255,7 @@ export default {
 				seller_id: this.seller_id,
 				sub_total: this.sub_total,
 				total: this.total,
+				fecha_entrega: this.fecha_entrega,
 			})
 			.then(res => {
 				this.$toast.success('Venta actualizada')
@@ -298,10 +308,18 @@ export default {
 				item.returned_amount = this.get_pivot_amount(article.pivot.returned_amount)
 				item.delivered_amount = this.get_pivot_amount(article.pivot.delivered_amount)
 				item.price_type_personalizado_id = this.get_price_type_personalizado_id(article)
+				item.price_types = article.price_types
+				item.category_id = article.category_id
+				item.sub_category_id = article.sub_category_id
 				item_to_add = {
 					...item,
 					is_article: true,
 				}
+
+				if (!item_to_add.price_type_personalizado_id) {
+					item_to_add = this.check_price_type_ranges(item_to_add)
+				}
+
 				items.push(item_to_add)
 			})
 			if (model.combos) {
@@ -315,6 +333,21 @@ export default {
 					item_to_add = {
 						...item,
 						is_combo: true,
+					}
+					items.push(item_to_add)
+				})
+			}
+			if (model.promocion_vinotecas) {
+				model.promocion_vinotecas.forEach(promo => {
+					item.id = promo.id
+					item.name = promo.name
+					item.articles = promo.articles
+					item.pivot = promo.pivot
+					// item.price = Number(promo.pivot.price)
+					item.amount = Number(promo.pivot.amount)
+					item_to_add = {
+						...item,
+						is_promocion_vinoteca: true,
 					}
 					items.push(item_to_add)
 				})

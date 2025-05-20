@@ -1,5 +1,16 @@
 export default [
     // 'extencion',
+    
+    {
+        model_name: 'bodega',
+        if_has_extencion: 'vinoteca',
+    },
+    {
+        model_name: 'cepa',
+        if_has_extencion: 'vinoteca',
+    },
+
+    'online_template',
     'address',
     'client',
     'provider',
@@ -48,6 +59,7 @@ export default [
     'payment_method_type',
     // 'commission',
     'commission',
+    'delivery_day',
     'delivery_zone',
     'sale',
     // 'credit_card',

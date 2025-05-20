@@ -69,7 +69,7 @@ export default {
 
 			if (this.ventas_cobradas == 'solo-cobradas') {
 				sales = sales.filter(sale => {
-					return !sale.client_id || this.tiene_cuenta_corriente_cobrada(sale)
+					return this.venta_cobrada(sale)
 				})
 				console.log('solo-cobradas')
 			} else if (this.ventas_cobradas == 'solo-sin-cobrar') {
@@ -109,9 +109,4 @@ export default {
 			return sales 
 		}
 	},
-	methods: {
-		tiene_cuenta_corriente_cobrada(sale) {
-			return sale.current_acount && sale.current_acount.status == 'pagado'
-		}
-	}
 }

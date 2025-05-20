@@ -7,7 +7,9 @@
 	</b-button>
 </template>
 <script>
+import set_from_sale from '@/mixins/devoluciones/set_from_sale'
 export default {
+	mixins: [set_from_sale],
 	computed: {
 		sale_details() {
 			return this.$store.state.sale.model 
@@ -18,8 +20,7 @@ export default {
 			this.$store.commit('devoluciones/set_num_sale', this.sale_details.num)
 			this.$router.push({name: 'devoluciones'})
 
-			this.$store.dispatch('devoluciones/search_sale')
-			
+			this.search_sale()
 		}
 	}
 }

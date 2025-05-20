@@ -32,19 +32,28 @@ export default {
 			let articles
 			if (this.selected.length) {
 				articles = this.selected
-			} else if (this.filtered.length) { 
-				articles = this.filtered
-			}
+			} 
 			articles.forEach(article => {
 				ids.push(article.id)
 			})
-			return ids
+			return ids.join('-')
 		},
 		export_excel() {
-			
-			let jsonData = JSON.stringify(this.filters)
 
-			let link = process.env.VUE_APP_API_URL+'/article/excel/export?filters='+jsonData
+			let link = process.env.VUE_APP_API_URL+'/article/excel/export'
+			
+			if (this.selected.length) {
+				let ids = this.getIds() 
+				link += '?articles_id='+ids
+			} else {
+
+				let jsonData = JSON.stringify(this.filters)
+
+				link += '?filters='+jsonData
+			}
+
+			console.log(link)
+			
 			window.open(link)
 		},
 	}

@@ -9,10 +9,10 @@ hide-footer
 		<div class="header">
 			<b-form-input
 			autocomplete="off"
-			@keydown.enter="enterSelect"
+			@keydown="reset_ya_se_busco"
+			@keydown.enter="pulso_enter"
 			@keydown.up="selectUp"
 			@keydown.down="selectDown"
-			@keydown.ctrl="search"
 			class="input-search-modal"
 			v-model="query"
 			:id="_id+'-search-modal-input'"
@@ -26,7 +26,7 @@ hide-footer
 				<div
 				class="j-center">
 					<i class="icon-search p-r-5"></i>
-					(Ctrl)
+					(Enter)
 				</div>
 			</b-button>
 
@@ -158,6 +158,7 @@ export default {
 				return  []
 			}
 		},
+		emit_selected_with_null: Boolean,
 	},
 	data() {
 		return {
@@ -175,6 +176,8 @@ export default {
 			current_page: null,
 			total_pages: null,
 			total_results: 0,
+
+			ya_se_busco: true,
 		}
 	},
 	watch: {
@@ -287,6 +290,8 @@ export default {
 				let results = []
 				this.searching = true
 
+				this.foco_en_input()
+
 				if (this.searchFromApi()) {
 					console.log('enviando api')
 
@@ -296,8 +301,15 @@ export default {
 
 					let info = this.get_info_param()
 
-					this.$api.post('search-from-modal/'+this.model_name+'?page='+this.current_page, info)
+					let route = 'search-from-modal/'+this.model_name+'?page='+this.current_page
+
+					if (this.prop && this.prop.route_to_search) {
+						route = this.prop.route_to_search
+					}
+
+					this.$api.post(route, info)
 					.then(res => {
+						
 						console.log('llego desde api:')
 						console.log(res.data.models)
 						this.results = res.data.models.data 
@@ -448,11 +460,17 @@ export default {
 			this.interval = null
 			this.loading = false 
 			this.setFirstSelectedRow()
+			this.ya_se_busco = true
 		},
 		orderAlpabethic() {
-			this.results = this.results.sort((a, b) => {
-				return a[this.prop_to_filter.key].localeCompare(b[this.prop_to_filter.key])
-			})
+			if (this.prop_to_filter && this.prop_to_filter.key) {
+
+				console.log('orderAlpabethic')
+				console.log(this.prop_to_filter)
+				this.results = this.results.sort((a, b) => {
+					return a[this.prop_to_filter.key]+''.localeCompare(b[this.prop_to_filter.key])
+				})
+			}
 		},
 		setFirstSelectedRow() {
 			this.no_hacer_seleccion = true
@@ -469,19 +487,33 @@ export default {
 				}, 100)
 			}
 		},
-		enterSelect() { 
+		reset_ya_se_busco(event) {
+			console.log('reset_ya_se_busco')
+			const keys = ["Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"];
+			if (!keys.includes(event.key)) {
+				this.ya_se_busco = false
+			}
+		},
+		pulso_enter() {
+			if (!this.ya_se_busco) {
+				this.search()
+			} else {
+				this.seleccionar_resultado()
+			}
+		},
+		seleccionar_resultado() { 
 			if (!this.loading) {
 				if (this.selected_index != -1 && this.results.length) {
 					// this.$emit('setSelected', this.results[this.selected_index])
 					this.emitSetSelected(this.results[this.selected_index])
 				} else if (this.save_if_not_exist) {
 					this.saveIfNotExist()
-				} else {
+				} else if (this.emit_selected_with_null) {
 					this.emitSetSelected(null)
-					// this.$emit('setSelected', null)
+				} else {
+					this.$toast.error('No hay resultados seleccionados')
+					// this.emitSetSelected(null)
 				}
-				// this.results = []
-				// this.$bvModal.hide(this.modal_id)
 			} else {
 				this.$toast.error('Espere a que termine la busqueda, por favor')
 			}

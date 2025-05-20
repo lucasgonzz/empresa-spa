@@ -53,6 +53,20 @@ export default {
         },
     },
     methods: {
+        venta_cobrada(sale) {
+            if (!sale.client_id) {
+                return true
+            }
+            if (sale.omitir_en_cuenta_corriente) {
+                return true 
+            }
+            if (sale.current_acount) {
+                if (sale.current_acount.status == 'pagado') {
+                    return true 
+                }
+            } 
+            return false
+        },
         get_perfil_usuario(id) {
             if (id == this.owner_id) {
                 return this.owner 
@@ -72,6 +86,7 @@ export default {
         },
         getPriceVender(item, from_pivot = false) {
             console.log('getPriceVender para '+item.name)
+            console.log(item)
 
             let price 
 
@@ -79,7 +94,20 @@ export default {
 
                 price = item.price_vender_personalizado
 
-            } else if (from_pivot && item.pivot && item.pivot.price) {
+            } else if (
+                /*
+                    Si es golonorte, no se usa el precio del articulo al momento de crear la venta.
+                    Se omite este if y se aplica el precio actual de la lista de precio seleccionada
+                */
+                from_pivot 
+                && item.pivot 
+                && item.pivot.price
+                && !this.hasExtencion('lista_de_precios_por_rango_de_cantidad_vendida')
+                // && (
+                //     !this.hasExtencion('lista_de_precios_por_rango_de_cantidad_vendida')
+                //     || !item.price_type_personalizado_id
+                // )
+            ) {
 
                 price = item.pivot.price 
             
@@ -101,7 +129,7 @@ export default {
 
                 price = item.final_price
 
-                price = this.apicar_tipos_de_precio(item, price)
+                price = this.aplicar_tipos_de_precio(item, price)
 
                 price = this.apicar_descuento_metodo_de_pago(item, price)
 
@@ -120,52 +148,40 @@ export default {
         redondear_centenas(num) {
             return Math.ceil(num / 100) * 100;
         },
-        apicar_tipos_de_precio(item, price) {
+        aplicar_tipos_de_precio(item, price) {
 
-            // console.log('apicar_tipos_de_precio:')
-                
-            if (this.hasExtencion('cambiar_price_type_en_vender')) {
+            if (item.is_article) {
 
-                let price_vender_id
+                let price_vender_id = null
 
-                if (this.price_type_vender) {
-                    price_vender_id = this.price_type_vender.id 
+                if (this.hasExtencion('cambiar_price_type_en_vender')) {
+
+                    if (this.price_type_vender) {
+                        price_vender_id = this.price_type_vender.id 
+                    }
+
                 }
 
-                if (item.price_type_personalizado_id) {
+                if (this.hasExtencion('cambiar_price_type_en_vender_item_por_item')) {
 
-                    // console.log('price_vender_personalizado: '+item.price_type_personalizado_id)
+                    if (item.price_type_personalizado_id) {
 
-                    price_vender_id = item.price_type_personalizado_id
+                        price_vender_id = item.price_type_personalizado_id
+                    }
                 }
 
-                // console.log('is_article: '+item.is_article)
-                // console.log('item.price_types: ')
-                // console.log(item.price_types)
-
-                if (item.is_article) {
-                    
+                if (price_vender_id) {
+                        
                     let article_price_type = item.price_types.find(price_type => {
                         return price_type.id == price_vender_id 
                     })
 
                     if (typeof article_price_type != 'undefined') {
 
-                        // console.log('usando precio de la lista de precios personalizada: '+article_price_type.pivot.final_price)
                         price = article_price_type.pivot.final_price
+                    } else {
+                        console.log('No se encontro price type para '+item.name)
                     }
-                }
-
-
-            } else {
-
-                if (this.price_types_with_position.length && this.checkService(item)) {
-                   
-                    this.price_types_with_position.forEach(price_type => {
-                        if (price_type.position <= this.price_type_vender.position) {
-                            price = Number(price) + Number(price * this.getPriceTypePercetage(price_type, item) / 100) 
-                        }
-                    })
                 }
             }
 

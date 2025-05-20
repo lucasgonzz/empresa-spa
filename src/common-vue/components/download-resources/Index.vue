@@ -69,15 +69,26 @@ export default {
 				this.models_to_download.push({
 					downloaded: false,
 					downloading: false,
-					model_name: model,
+					model_name: typeof model == 'object' ? model.model_name : model,
+					if_has_extencion: typeof model == 'object' ? model.if_has_extencion : null,
 				})
 			})
 		},
 		async downloadModels() {
 			let model_name
+            console.log('downloadModels:')
             for (var i = 0; i < this.models_to_download.length; i++) {
             	model_name = this.models_to_download[i].model_name
             	
+        		if (this.models_to_download[i].if_has_extencion) {
+
+        			if (!this.hasExtencion(this.models_to_download[i].if_has_extencion)) {
+        				continue
+        			}
+        		}
+
+
+
             	if ((!this.is_mobile || this.downloadOnMobile(model_name)) && (model_name != 'article' || this.download_articles)) {
             		if (this.yaSeDescargaron(model_name)) {
 						this.models_to_download[i].downloaded = true
@@ -88,6 +99,7 @@ export default {
 						this.models_to_download[i].downloaded = true
             		}
             	}
+            	
             }
 		},
 		yaSeDescargaron(model_name) {

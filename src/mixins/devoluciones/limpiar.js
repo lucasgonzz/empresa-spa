@@ -10,6 +10,8 @@ export default {
 			this.$store.commit('devoluciones/set_generar_current_acount', 0)
 			this.$store.commit('devoluciones/set_regresar_stock', 1)
 			this.$store.commit('devoluciones/set_facturar_nota_credito', 0)
+			this.$store.commit('devoluciones/set_discounts_id', [])
+			this.$store.commit('devoluciones/set_surchages_id', [])
 		},
 	}
 }

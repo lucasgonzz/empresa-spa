@@ -25,7 +25,7 @@
 export default {
 	components: {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
-		PdfButton: () => import('@/components/listado/components/deposit-movements/modal/PdfButton'),
+		PdfButton: () => import('@/components/listado/components/horizontal-nav/deposit-movements/modal/PdfButton'),
 	},
 	computed: {
 		models_to_show() {

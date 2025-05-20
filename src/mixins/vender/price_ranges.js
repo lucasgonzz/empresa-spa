@@ -29,6 +29,7 @@ export default {
 
 			amount = this.check_article_price_type_group(item, amount)
 
+			console.log('articulo: '+item.name)
 			console.log('amount para vender: '+amount)
 
 		    const { category_id, sub_category_id } = item;
@@ -36,6 +37,12 @@ export default {
 		    // Filtrar rangos que coincidan con la categoría o subcategoría del artículo
 		    
 		    let price_ranges = this.$store.state.category_price_type_range.models  
+
+		    console.log('rangos para filtrar:')
+		    console.log(price_ranges)
+
+		    console.log('category_id: '+category_id)
+		    console.log('sub_category_id: '+sub_category_id)
 
 		    let matching_ranges = price_ranges.filter(range => {
 		        return (

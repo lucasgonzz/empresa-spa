@@ -1,12 +1,22 @@
 <template>
 	<div
-	class="m-t-15 scale-up-center"
+	class="p-t-50 scale-up-center"
 	show
-	v-if="authenticated && days_before_expire < 3">
+	v-if="user && authenticated && days_before_expire < 3">
+
+
+	    <confirm
+	    not_show_delete_text
+	    emit="-"
+	    backdrop
+	    btn_text="Entendido"
+	    text="Realice el pago del sistema para continuar usando el servicio"
+	    id="aviso-vencido"></confirm>
+
 		<div
 		class="p-l-15"
 		v-if="days_before_expire > 0">
-			Quedan {{ days_before_expire }} dias para que venza tu suscripcion. El total a pagar es de: <strong>{{ price(owner.total_a_pagar) }}</strong>
+			Quedan {{ days_before_expire }} dias para que venza tu suscripcion. El total a pagar es de: <strong>{{ price(total_a_pagar) }}</strong>
 		</div>
 		<div
 		class="payment-expire-card s-2"
@@ -15,7 +25,7 @@
 			<div>
 				<div class="tiempo-de-pagar">
 					<p>
-						El total a pagar es de: <strong>{{ price(owner.total_a_pagar) }}</strong>
+						El total a pagar es de: <strong>{{ price(total_a_pagar) }}</strong>
 					</p>
 					<p
 					v-if="days_before_expire < 0">
@@ -71,12 +81,34 @@
 <script>
 import moment from 'moment'
 export default {
-	created() {
-		// this.$store.dispatch('dolar/getDolar')
+	watch: {
+		authenticated() {
+			this.mostrar_alerta()
+		}
+	},
+	components: {
+		Confirm: () => import('@/common-vue/components/Confirm'),
+	},
+	methods: {
+		mostrar_alerta() {
+			if (this.days_before_expire < 1) {
+				setInterval(() => {
+					this.$bvModal.show('aviso-vencido')
+				}, 30000)
+			}
+		},
 	},
 	computed: {
 		dolar() {
 			return this.$store.state.dolar.promedio 
+		},
+		employees() {
+			return this.$store.state.employee.models 
+		},
+		total_a_pagar() {
+			let total = this.employees.length * 20
+			total = total * this.dolar 
+			return total 
 		},
 		employees() {
 			return this.$store.state.employee.models 
@@ -105,7 +137,7 @@ export default {
 .payment-expire-card
 	max-width: 700px
 	border: 5px solid $red
-	margin: auto
+	margin: 0 auto
 	border-radius: 8px
 	display: flex 
 	flex-direction: row 

@@ -100,14 +100,14 @@
 								maxlength="1"
 								v-model="column.letra"></b-form-input>
 
-								<b-form-checkbox
+								<!-- <b-form-checkbox
 								v-if="canIgnore(column)"
 								class="m-t-10"
 								:unchecked_value="0"
 								:value="1"
 								v-model="column.ignored">
 									Ignorar
-								</b-form-checkbox>
+								</b-form-checkbox> -->
 							</div>
 						</div>
 						<p
@@ -460,6 +460,9 @@ export default {
 
 				let position = this.excel_column_to_number(column.letra)
 				this.columns_[index].position = position
+			} else {
+
+				this.columns_[index].position = ''
 			}
 
 			this.print_columns()
@@ -548,6 +551,13 @@ export default {
 				console.log('terminaron de enviarse las solicitudes')
 				this.loading = false
 				this.file = null
+
+				this.start_row = 2
+				this.finish_row = ''
+				this.finish_row_original = ''
+				this.percentage = ''
+				this.provider_id = 0
+
 				this.$bvModal.hide(this.id)
 				this.$toast.success('Estamos precesando tu archivo, te notificaremos cuando termine', {
 					duration: 7000

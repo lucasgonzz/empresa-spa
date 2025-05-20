@@ -9,9 +9,10 @@
 	</b-button>
 </template>
 <script>
+import set_total from '@/mixins/devoluciones/set_total'
 import limpiar from '@/mixins/devoluciones/limpiar'
 export default {
-	mixins: [limpiar],
+	mixins: [set_total, limpiar],
 	computed: {
 		articles() {
 			return this.$store.state.devoluciones.articles
@@ -34,7 +35,7 @@ export default {
 				}
 			})
 
-			this.$store.commit('devoluciones/set_total_devolucion')
+			this.set_total_devolucion()
 		}
 	}
 }

@@ -1,5 +1,7 @@
 <template>
-<b-modal :id="id" hide-footer hide-header size="sm">
+<b-modal
+:no-close-on-backdrop="backdrop"
+:id="id" hide-footer hide-header size="sm">
 	<p
 	class="text-center">
 		{{ confirm_text }}
@@ -54,6 +56,10 @@ export default {
 		emit: {
 			type: String,
 			default: null,
+		},
+		backdrop: {
+			type: Boolean,
+			default: false,
 		},
 		model_name: String,
 	},

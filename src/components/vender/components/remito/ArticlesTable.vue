@@ -154,7 +154,7 @@ class="m-b-15 m-t-20">
 				</b-input-group>
 			</template>
 
-			<template #cell(returned_amount)="data">
+			<!-- <template #cell(returned_amount)="data">
 				<b-input-group
 				class="input-discount">
 					<b-form-input
@@ -164,7 +164,7 @@ class="m-b-15 m-t-20">
 					min="0"
 					v-model="items[data.index].returned_amount"></b-form-input>
 				</b-input-group>
-			</template>
+			</template> -->
 			<template #cell(delivered_amount)="data">
 				<b-input-group
 				class="input-discount">
@@ -254,7 +254,7 @@ export default {
 				})
 			}
 			
-			if (this.hasExtencion('cambiar_price_type_en_vender')
+			if (this.hasExtencion('cambiar_price_type_en_vender_item_por_item')
 				&& this.price_types.length) {
 				fields.push({ 
 					key: 'price_type_personalizado_id', label: 'Lista' 
@@ -272,11 +272,11 @@ export default {
 						{ key: 'checked_amount', label: 'U. chequeadas' },
 					)
 				}
-				if (!this.hasExtencion('check_sales') || (!this.previus_sale.to_check && !this.previus_sale.checked)) {
-					fields.push(
-						{ key: 'returned_amount', label: 'U. Devueltas' },
-					)
-				}
+				// if (!this.hasExtencion('check_sales') || (!this.previus_sale.to_check && !this.previus_sale.checked)) {
+				// 	fields.push(
+				// 		{ key: 'returned_amount', label: 'U. Devueltas' },
+				// 	)
+				// }
 				if (this.hasExtencion('acopios')) {
 					fields.push(
 						{ key: 'delivered_amount', label: 'U. Entregadas' },
