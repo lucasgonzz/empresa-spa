@@ -97,4 +97,5 @@ export default {
 	plural_model_name_spanish: 'Empleados',
 	create_model_name_spanish: 'Nuevo empleado',
 	text_delete: 'el',
+	full_reactivity: true,
 }

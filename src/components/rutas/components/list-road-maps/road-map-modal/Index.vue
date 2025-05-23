@@ -28,11 +28,17 @@ id="road_map">
 	<clientes
 	:road_map="road_map"></clientes>	
 
+
+	<btn-pdf
+	model_name="road_map"
+	:model="road_map"></btn-pdf>
+
 </b-modal>
 </template>
 <script>
 export default {
 	components: {
+		BtnPdf: () => import('@/common-vue/components/BtnPdf'),
 		Clientes: () => import('@/components/rutas/components/list-road-maps/road-map-modal/clientes/Index'),
 	},
 	computed: {

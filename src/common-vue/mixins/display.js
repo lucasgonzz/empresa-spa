@@ -61,7 +61,7 @@ export default {
 							...prop,
 							value: 0,
 						})
-					} else if (prop.type == 'checkbox' && !prop.value) {
+					} else if (prop.type == 'checkbox' && !prop.value && !prop.belongs_to_many) {
 						properties.push({
 							...prop,
 							value: 0,
@@ -97,8 +97,16 @@ export default {
 					}
 				} else if (prop.belongs_to_many && prop.type == 'checkbox') {
 					if (!model) {
+
+						// Esta de abajo no se si deberia ir
+						// properties_to_add.push({
+						// 	key: prop.key+'_id',
+						// 	value: []
+						// })
+
+
 						properties_to_add.push({
-							key: prop.key+'_id',
+							key: prop.key,
 							value: []
 						})
 					} else {

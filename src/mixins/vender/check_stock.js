@@ -16,6 +16,7 @@ export default {
 						return true 
 					}
 					this.$toast.error('Articulo sin stock, NO se agrego')
+					document.getElementById('article-bar-code').value = ''
 					return false 
 
 				} else if (item.is_combo) {

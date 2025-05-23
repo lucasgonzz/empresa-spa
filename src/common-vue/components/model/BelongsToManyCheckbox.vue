@@ -86,8 +86,8 @@ export default {
 	},
 	methods: {
 		setModelsId() {
-			this.model[this.prop.key+'_id'].forEach(model_id => {
-				this.models_id.push(model_id)
+			this.model[this.prop.key].forEach(model => {
+				this.models_id.push(model.id)
 			})
 		},
 		change(model) {
@@ -96,10 +96,12 @@ export default {
 			this.addToRelationModels(model)
 			// this.model[this.prop.key+'_id'] = this.models_id
 			// console.log('valores:')
-			this.$set(this.model, this.prop.key+'_id', this.models_id)
-			console.log(this.model[this.prop.key+'_id'])
+			// this.$set(this.model, this.prop.key, this.models_id)
+			console.log(this.model)
 		},
 		addToRelationModels(model_to_add) {
+			console.log(this.prop.key)
+			console.log(this.model[this.prop.key])
 			let index = this.model[this.prop.key].findIndex(model => {
 				return model.id == model_to_add.id 
 			})

@@ -47,7 +47,6 @@ export default {
                 console.log('ya se conecto')
 
                 await this.set_ticket_content();
-                // return
 
                 let config = this.qz.configs.create(this.impresora, {
                 // let config = this.qz.configs.create("XP-80", {

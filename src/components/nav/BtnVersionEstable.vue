@@ -3,8 +3,24 @@
 	v-if="show"
 	@click="to_version_anterior"
 	class="route">
-		Version Anterior 
-		<img src="@/assets/check.png" alt="">
+		<div 
+    	class="menu-trigger">
+    		
+    		<div
+    		class="ruta-principal">
+
+		    	<div>
+			    	<span
+			    	class="route-text">
+						Cambiar Version  
+			    	</span>
+		    	</div>
+
+				<img src="@/assets/check.png" alt="">
+
+    		</div>
+
+    	</div>
 	</div>
 </template>
 <script>
