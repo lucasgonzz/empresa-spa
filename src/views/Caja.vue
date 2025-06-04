@@ -19,7 +19,7 @@
 				<horizontal-nav-center></horizontal-nav-center>
 			</template>
 
-			<template #table_right_options="props">
+			<template #table_left_options="props">
 				<table-buttons
 				:caja="props.model"></table-buttons>
 			</template>

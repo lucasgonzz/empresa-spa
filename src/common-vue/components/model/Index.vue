@@ -416,7 +416,11 @@ export default {
 							if (this.has_many_parent_model) {
 								
 								this.$set(this.has_many_parent_model, this.has_many_prop.key, this.has_many_parent_model[this.has_many_prop.key].concat([created_model]))
+									
+								console.log('Se agrego al parent model '+this.has_many_prop.key)
 								
+								console.log('has_many_parent_model:')
+								console.log(this.has_many_parent_model)
 								
 								if (!this.has_many_parent_model.id) {
 									if (this.has_many_parent_model.childrens) {
@@ -424,20 +428,19 @@ export default {
 											model_name: this.has_many_prop.has_many.model_name,
 											temporal_id: created_model.temporal_id
 										})
-										// console.log('se agrego el id '+created_model.temporal_id)
+										console.log('se agrego el temporal id '+created_model.temporal_id)
 									} else {
 										this.has_many_parent_model.childrens = []
-										// console.log('se creo la prop childrens')
+										console.log('se creo la prop childrens')
 										this.has_many_parent_model.childrens.push({
 											model_name: this.has_many_prop.has_many.model_name,
 											temporal_id: created_model.temporal_id
 										})
 										// console.log('se agrego el id '+created_model.temporal_id)
 									}
-								} else {
-									this.setModel(this.has_many_parent_model, this.has_many_parent_model_name)
+								} 
+								this.setModel(this.has_many_parent_model, this.has_many_parent_model_name)
 
-								}
 							} else {
 								this.$store.commit(this.replaceGuion(this.model_name)+'/add', created_model)
 							}

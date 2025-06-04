@@ -174,6 +174,21 @@
 					Cargar nuevos {{ plural(model_name) }} y editar existentes
 				</span>
 			</b-form-radio>
+
+
+			<b-form-checkbox
+			v-if="model_name == 'article'"
+			class="radio-option"
+			:value="1"
+			:unchecked-value="0"
+			size="lg"
+			v-model="no_actualizar_articulos_de_otro_proveedor">
+				<span
+				id="cargar_y_actualizar">
+					No actualizar articulos que ya pertenezcan a otro proveedor
+				</span>
+			</b-form-checkbox>
+
 		</div>
 		<hr>	
 
@@ -298,6 +313,7 @@ export default {
 			columns_: [], 
 			positions_seted: false,
 			create_and_edit: null,
+			no_actualizar_articulos_de_otro_proveedor: 0,
 			show_history: false,
 			archivo_excel_path: null,
 
@@ -528,6 +544,8 @@ export default {
 				form_data.append('start_row', this.start_row)
 				form_data.append('finish_row', this.finish_row)
 				form_data.append('create_and_edit', this.create_and_edit)
+				form_data.append('no_actualizar_articulos_de_otro_proveedor', this.no_actualizar_articulos_de_otro_proveedor)
+
 				let index = 0
 				this.columns_.forEach(column => {
 					if (!column.ignored) {
@@ -566,93 +584,6 @@ export default {
 				// this.actions.forEach(action => {
 				// 	this.$store.dispatch(action)
 				// })
-
-				return
-
-				if (this.finish_row > this.limite_filas) {
-					this.varias_solicitudes = true
-					this.cantidad_solicitudes = Math.ceil(this.finish_row / this.limite_filas)
-					this.finish_row_original = Number(this.finish_row)
-					console.log('se van a partir las solicitudes en: ')
-					console.log(this.cantidad_solicitudes)
-
-					this.fila_inicio = Number(this.start_row)
-					this.fila_fin = Number(this.finish_row)
-
-					for (var solicitud = 1; solicitud <= this.cantidad_solicitudes; solicitud++) {
-
-						console.log('entro con solicitud N° '+solicitud)
-						if (solicitud == 1) {
-							this.es_la_primera_solicitud = true
-							this.inicio_primera_solicitud = new Date();
-						} else {
-							if (this.model_name == 'article') {
-								this.es_la_primera_solicitud = false
-								form_data.delete('models')
-								if (!form_data.has('archivo_excel_path')) {
-									form_data.append('archivo_excel_path', this.archivo_excel_path)
-								}
-							}
-						}
-
-						console.log('hubo_un_error: '+this.hubo_un_error)
-
-						if (!this.hubo_un_error) {
-
-							console.log('solicitud n° '+solicitud)
-							form_data.append('import_history_id', this.import_history_id)
-							form_data.append('pre_import_id', this.pre_import_id)
-
-							if (solicitud == this.cantidad_solicitudes) {
-								this.es_la_ultima_solicitud = true
-							}
-
-
-							this.solicitud_numero = solicitud
-							
-							if (solicitud == 1) {
-								this.fila_fin = Number(this.fila_inicio) + Number(this.limite_filas)
-							} else {
-								this.fila_inicio = this.fila_fin + 1
-								this.fila_fin = this.fila_inicio + Number(this.limite_filas)
-								if (this.fila_fin > this.finish_row_original) {
-
-									console.log('fila_fin estaba en '+this.fila_fin+', se paso y se puso en el finish_row_original de '+this.finish_row_original)
-									this.fila_fin = this.finish_row_original
-								}
-							}
-
-							console.log('fila_inicio: '+this.fila_inicio)
-							console.log('fila_fin: '+this.fila_fin)
-							console.log('import_history_id: '+this.import_history_id)
-							console.log('pre_import_id: '+this.pre_import_id)
-
-							form_data.set('start_row', this.fila_inicio)
-							form_data.set('finish_row', this.fila_fin)
-							await this.sendRequest(form_data)
-						}
-					}
-					console.log('terminaron de enviarse las solicitudes')
-					this.loading = false
-					this.file = null
-					this.archivo_excel_path = null
-					this.$bvModal.hide(this.id)
-					this.$store.dispatch(this.model_name+'/getModels')
-					this.actions.forEach(action => {
-						this.$store.dispatch(action)
-					})
-				} else {
-					this.varias_solicitudes = false
-					await this.sendRequest(form_data)
-					console.log('terminaron de enviarse las solicitudes')
-					this.loading = false
-					this.file = null
-					this.$bvModal.hide(this.id)
-					this.$store.dispatch(this.model_name+'/getModels')
-					this.actions.forEach(action => {
-						this.$store.dispatch(action)
-					})
-				}
 			}
 		},
 		check() {

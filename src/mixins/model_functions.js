@@ -18,6 +18,12 @@ export default {
         //     console.log(prop)
         //     if (current_acount)
         // },
+        article_iva_id() {
+            if (this.owner.default_article_iva_id) {
+                return this.owner.default_article_iva_id
+            }
+            return 2
+        },
         set_article_price_types(_prop) {
 
             console.log('set_article_price_types, _prop:')

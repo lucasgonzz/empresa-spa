@@ -3,9 +3,31 @@
 	title="Notificacion"
 	hide-footer
 	id="global-notification">
-		<h6 class="text-center m-t-15 m-b-25">
+		<h5 class="text-center m-t-15 m-b-25">
 			{{ message_text }}
-		</h6>
+		</h5>
+
+		<hr>
+		<div
+		v-for="info in info_to_show">
+			<h5 class="text-center m-t-15 m-b-15">
+				{{ info.title }}
+			</h5>
+			<div
+			v-if="info.parrafos">
+				<p
+				v-for="parrafo in info.parrafos">
+					{{ parrafo }}
+				</p>
+			</div>
+			<p
+			v-else>
+				{{ info.value }}
+			</p>
+		</div>
+
+		<hr
+		v-if="info_to_show.length">
 
 		<div class="buttons j-center">
 			<b-button
@@ -27,6 +49,9 @@ export default {
 		},
 		functions_to_execute() {
 			return this.$store.state.global_notification.functions_to_execute
+		},
+		info_to_show() {
+			return this.$store.state.global_notification.info_to_show
 		},
 	},
 	methods: {

@@ -81,6 +81,10 @@ export default {
 	methods: {
 		se_puede_actualizar_venta(sale = null) {
 
+			if (!this.hasPermissionTo('sale.update')) {
+				return false
+			}
+			
 			if (sale) {
 
 				if (sale.afip_ticket) {

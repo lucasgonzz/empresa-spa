@@ -4,6 +4,7 @@
 		label="Cantidad">
 			<b-form-input
 			id="stock-movement-amount"
+			@keyup.enter="save"
 			v-model="amount_"
 			placeholder="Ingrese cantidad"></b-form-input>
 		</b-form-group>

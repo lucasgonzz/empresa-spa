@@ -9,6 +9,7 @@
 	:actions="actions">
 		<select-provider
 		:props_to_send="props_to_send"></select-provider>
+
 	</import-component>
 </template>
 <script>

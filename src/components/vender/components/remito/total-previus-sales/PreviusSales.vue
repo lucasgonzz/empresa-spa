@@ -6,7 +6,7 @@
 	class="j-end">
 		<div class="m-l-5 d-none d-sm-block">
 			<b-button-group>
-				<btn-loader
+				<!-- <btn-loader
 				:loader="loading_previus"
 				icon="left"
 				:block="false"
@@ -16,7 +16,7 @@
 				icon="right"
 				:block="false"
 				:loader="loading_next"
-				@clicked="setIndexAndCallgetSale(false)" />
+				@clicked="setIndexAndCallgetSale(false)" /> -->
 				<btn-loader
 				v-if="index_previus_sales > 0 || budget"
 				text="Cancelar"

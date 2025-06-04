@@ -68,6 +68,7 @@ export default {
                 if (!notification.is_only_for_auth_user || notification.is_only_for_auth_user != this.user.id) {
                     
                     this.$store.commit('global_notification/set_functions_to_execute', notification.functions_to_execute)
+                    this.$store.commit('global_notification/set_info_to_show', notification.info_to_show)
                     this.$store.commit('global_notification/set_message_text', notification.message_text)
                     this.$store.commit('global_notification/set_color_variant', notification.color_variant)
 

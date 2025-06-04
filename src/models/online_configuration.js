@@ -16,24 +16,36 @@ export default {
 			type: 'select',
 			use_store_models: true,
 		},
+
+		{
+			text: 'Titulo seccion Quienes somos',
+			key: 'titulo_quienes_somos',
+			type: 'text',
+		},
+		{
+			text: 'Cantidad por defecto para agregar al carrito',
+			key: 'default_amount_add_to_cart',
+			type: 'number',
+		},
+
 		
 		{
-			text: 'Cantiad tarjetas en telefono',
+			text: 'Cantidad tarjetas en telefono',
 			key: 'cantidad_tarjetas_en_telefono',
 			type: 'number',
 		},
 		{
-			text: 'Cantiad tarjetas en tablet',
+			text: 'Cantidad tarjetas en tablet',
 			key: 'cantidad_tarjetas_en_tablet',
 			type: 'number',
 		},
 		{
-			text: 'Cantiad tarjetas en notebook',
+			text: 'Cantidad tarjetas en notebook',
 			key: 'cantidad_tarjetas_en_notebook',
 			type: 'number',
 		},
 		{
-			text: 'Cantiad tarjetas en escritorio',
+			text: 'Cantidad tarjetas en escritorio',
 			key: 'cantidad_tarjetas_en_escritorio',
 			type: 'number',
 		},

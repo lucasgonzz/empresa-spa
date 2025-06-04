@@ -57,9 +57,14 @@ export default {
 			if (!model) {
 				this.modelPropertiesFromName(model_name).forEach(prop => {
 					if (prop.type == 'select' && !prop.value) {
+						let value = 0
+						if (prop.value_function) {
+							console.error('value_function: '+prop.value_function)
+							value = this[prop.value_function]()
+						}
 						properties.push({
 							...prop,
-							value: 0,
+							value: value,
 						})
 					} else if (prop.type == 'checkbox' && !prop.value && !prop.belongs_to_many) {
 						properties.push({

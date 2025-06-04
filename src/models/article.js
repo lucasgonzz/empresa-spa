@@ -194,7 +194,9 @@ export default {
 			use_to_show_in_search_modal: true,
 			not_show: true,
 			keep_after_create: true,
-			value: 2,
+			// value: 2,
+			value_function: 'article_iva_id',
+			use_to_update: true,
 		},
 
 		{
@@ -217,7 +219,7 @@ export default {
 
 		// Vinoteca
 		{
-			group_title: 'Basicas',
+			group_title: 'Vinoteca',
 			if_has_extencion: 'vinoteca',
 		},
 		{
