@@ -11,6 +11,7 @@ export default {
 						'brand',
 						'price_type',
 						'tipo_envase',
+						'article_pdf_observation',
     					'inventory_linkage',
     					'article_property_type',
     					'article_property_value',

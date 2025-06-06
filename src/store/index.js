@@ -166,6 +166,8 @@ import promocion_vinoteca_commission from '@/store/promocion_vinoteca_commission
 import online_template from '@/store/online_template'
 import delivery_day from '@/store/delivery_day'
 
+import article_pdf_observation from '@/store/article_pdf_observation'
+
 
 Vue.use(Vuex)
 
@@ -337,5 +339,7 @@ export default new Vuex.Store({
 
         online_template,
         delivery_day,
+
+        article_pdf_observation,
     }
 })
