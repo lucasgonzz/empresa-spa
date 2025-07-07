@@ -354,9 +354,20 @@ export default {
 		},
 
 
+		{
+			text: 'Omitir en lista pdf',
+			key: 'omitir_en_lista_pdf',
+			type: 'checkbox',
+			value: 0,
+			not_show: true,
+			if_has_extencion: 'vinoteca',
+		},
+
+
 
 		{
 			group_title: 'Tienda online',
+			if_has_extencion: 'online',
 		},
 		{
 			text: 'Disponible en la tienda',
@@ -365,6 +376,7 @@ export default {
 			value: 1,
 			not_show: true,
 			keep_after_create: true,
+			if_has_extencion: 'online',
 		},
 		// {
 		// 	text: 'Disponible en Mercado Libre',
@@ -379,12 +391,14 @@ export default {
 			key: 'featured',
 			type: 'checkbox',
 			not_show: true,
+			if_has_extencion: 'online',
 		},
 		{
 			text: 'En oferta',
 			key: 'in_offer',
 			type: 'checkbox',
 			not_show: true,
+			if_has_extencion: 'online',
 		},
 
 		// Propiedades de distribuidora

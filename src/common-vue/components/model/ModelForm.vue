@@ -152,6 +152,11 @@
 									:type="prop.type"
 									v-model="model[prop.key]"></b-form-textarea>
 
+									<text-editor
+									:id="model_name+'-'+prop.key"
+									v-else-if="prop.type == 'texteditor'"
+									v-model="model[prop.key]"></text-editor>
+
 
 									<div
 									v-else-if="prop.type == 'select'">
@@ -786,6 +791,7 @@ export default {
 		ModelComponent: () => import('@/common-vue/components/model/Index'),
 		GoogleGeocoder: () => import('@/common-vue/components/model/google-geocoder/Index'),
 		SearchComponent: () => import('@/common-vue/components/search/Index'),
+		TextEditor: () => import('@/common-vue/components/model/form/TextEditor'),
 		HasMany,
 		BelongsToManyCheckbox,
 		Cards,

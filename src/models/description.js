@@ -10,7 +10,7 @@ export default {
 		{
 			text: 'Contenido',
 			key: 'content',
-			type: 'textarea',
+			type: 'texteditor',
 		},
 	],
 	singular_model_name_spanish: 'Descripcion',

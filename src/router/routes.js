@@ -293,7 +293,7 @@ export default [
 			'order_production.index',
 			'recipe.index',
 		],
-		image_url: 'nav-icons/produccion.png',
+		image_url: 'nuevos-nav-icons/produccion.png',
 	},
 	{
 		text: 'Tesoreria',

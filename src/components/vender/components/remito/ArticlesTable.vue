@@ -113,6 +113,7 @@ class="m-b-15 m-t-20">
 
 			<template #cell(discount)="data">
 				<b-input-group
+				v-if="items[data.index].is_article"
 				class="input-discount"
 				prepend="%">
 					<b-form-input

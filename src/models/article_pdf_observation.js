@@ -22,6 +22,11 @@ export default {
 			type: 'text',
 			description: 'Ingrese el codigo RGB separando los valores con un - (guion medio). Por ejemplo, para el blanco: 255-255-255'
 		},
+		{
+			text: 'Imagen',
+			key: 'image_url',
+			type: 'image',
+		},
 	],
 	singular_model_name_spanish: 'Observaciones para el PDF de articulos',
 	plural_model_name_spanish: 'Observaciones para el PDF de articulos',

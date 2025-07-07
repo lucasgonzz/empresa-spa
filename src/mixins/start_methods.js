@@ -27,7 +27,7 @@ export default {
 
 			this.get_articles_por_defecto()
 
-			this.get_ultimos_articulos_actualizados()
+			// this.get_ultimos_articulos_actualizados()
 
 			// Llamo cada 20 segundos a peidos online
 			this.escuchar_orders_y_messages()
@@ -50,18 +50,18 @@ export default {
 				}, 20000)
 			}
 		},
-		get_ultimos_articulos_actualizados() {
-			if (!this.download_articles) {
+		// get_ultimos_articulos_actualizados() {
+		// 	if (!this.download_articles) {
 
-				this.$api.get('articles-ultimos-actualizados')
-				.then(res => {
-					this.$store.commit('article/addModels', res.data.models)
-				})
-				.catch(err => {
-					this.$toast.error('error al cargar ultimos articulos actualizados')
-				})
-			}
-		},
+		// 		this.$api.get('articles-ultimos-actualizados')
+		// 		.then(res => {
+		// 			this.$store.commit('article/addModels', res.data.models)
+		// 		})
+		// 		.catch(err => {
+		// 			this.$toast.error('error al cargar ultimos articulos actualizados')
+		// 		})
+		// 	}
+		// },
 		get_articles_por_defecto() {
 			if (this.hasExtencion('articles_default_in_vender') 
 				&& !this.owner.download_articles) {

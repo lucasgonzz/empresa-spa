@@ -48,10 +48,10 @@ export default {
 			type: 'search',
 			store: 'client',
 			only_show: true,
-			v_if: ['client_id', '!=', null],
-			button: {
-				function: 'showClientCurrentAcount',
-			},
+			// v_if: ['client_id', '!=', null],
+			// button: {
+			// 	function: 'showClientCurrentAcount',
+			// },
 			filter_modal_position: 2,
 		},
 		{

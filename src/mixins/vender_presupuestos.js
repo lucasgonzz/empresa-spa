@@ -38,6 +38,12 @@ export default {
 		articles() {
 			return this.items.filter(item => item.is_article)
 		},
+		services() {
+			return this.items.filter(item => item.is_service)
+		},
+		promocion_vinotecas() {
+			return this.items.filter(item => item.is_promocion_vinoteca)
+		},
 	},
 	methods: {
 		guardar_presupuesto() {
@@ -57,6 +63,8 @@ export default {
 				'observations'              : this.observations,
 				'total'              		: this.total,
 				'address_id'              	: this.address_id,
+				'surchages_in_services'		: this.surchages_in_services,
+				'discounts_in_services'		: this.discounts_in_services,
 
 				// Id 1 es el estado "sin confirmar"
 				'budget_status_id'          : this.budget.budget_status_id,
@@ -64,6 +72,8 @@ export default {
 				'discounts'					: this.get_discounts(),
 				'surchages'					: this.get_surchages(),
 				'articles'					: this.get_articles(),
+				'services'					: this.get_services(),
+				'promocion_vinotecas'		: this.get_promocion_vinotecas(),
 			})
 			.then(res => {
 				this.$store.commit('auth/setMessage', '')
@@ -91,6 +101,8 @@ export default {
 				'observations'              : this.observations,
 				'total'              		: this.total,
 				'address_id'              	: this.address_id,
+				'surchages_in_services'		: this.surchages_in_services,
+				'discounts_in_services'		: this.discounts_in_services,
 
 				// Id 1 es el estado "sin confirmar"
 				'budget_status_id'          : 1, 
@@ -98,6 +110,8 @@ export default {
 				'discounts'					: this.get_discounts(),
 				'surchages'					: this.get_surchages(),
 				'articles'					: this.get_articles(),
+				'services'					: this.get_services(),
+				'promocion_vinotecas'		: this.get_promocion_vinotecas(),
 			})
 			.then(res => {
 				this.$store.commit('auth/setMessage', '')
@@ -171,6 +185,37 @@ export default {
 				console.log(articles)
 			})
 			return articles
-		}
+		},
+		get_services() {
+			console.log('get_services presupuesto')
+			let services = []
+			this.services.forEach(service => {
+				services.push({
+					id: service.id,
+					pivot: {
+						amount: service.amount,
+						price: service.price_vender,
+					}
+				})
+				console.log(services)
+			})
+			return services
+		},
+		get_promocion_vinotecas() {
+			console.log('get_promocion_vinotecas presupuesto')
+			let promocion_vinotecas = []
+			this.promocion_vinotecas.forEach(promo => {
+				promocion_vinotecas.push({
+					id: promo.id,
+					pivot: {
+						amount: promo.amount,
+						price: promo.price_vender,
+					}
+				})
+				console.log(promocion_vinotecas)
+			})
+			return promocion_vinotecas
+		},
+
 	}
 }

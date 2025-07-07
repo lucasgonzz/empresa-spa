@@ -1,5 +1,7 @@
 <template>
 <div id="ventas">	
+	<make-afip-tickets></make-afip-tickets>
+	
 	<current-acounts></current-acounts>
 
 	<update-prices></update-prices>
@@ -13,6 +15,8 @@
 	<view-component
 	show_filter_modal
 	:models_to_show="sales_to_show"
+	:show_actualizar_option="false"
+	ask_selectable
 	show_models_if_empty
 	:show_previus_days="show_previus_days"
 	:show_btn_create="false"
@@ -34,9 +38,14 @@
 				:model="props.model"></btn-sale-modifications>
 			</div>
 		</template> 
-		<!-- <template #options_drop_down>
+		<template #options_drop_down_seleccion>
 			<option-dropdown-afip-ticket></option-dropdown-afip-ticket>
-		</template> -->
+		</template>
+
+		<template #table-prop-client_id="props">
+			<client-btn
+			:sale="props.model"></client-btn>
+		</template>
 	</view-component>
 </div>  
 </template>
@@ -60,6 +69,10 @@ export default {
 		OptionDropdownAfipTicket: () => import('@/components/ventas/components/OptionDropdownAfipTicket'),
 		AfipTicketShowErrors: () => import('@/components/ventas/modals/afip-ticket/ShowErrors'),
 		AfipTicketShowObservations: () => import('@/components/ventas/modals/afip-ticket/ShowObservations'),
+
+		MakeAfipTickets: () => import('@/components/ventas/modals/afip-ticket/MakeAfipTickets'),
+		ClientBtn: () => import('@/components/ventas/components/ClientBtn'),
+
 	},
 	created() {
 		this.$store.commit('sale/set_from_depositos', 0)

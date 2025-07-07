@@ -1,7 +1,7 @@
 <template>
 	<b-input-group
 	class="w-300 m-b-10"
-	v-if="hasExtencion('ventas_con_fecha_de_entrega')"
+	v-if="hasExtencion('ventas_con_fecha_de_entrega') && !budget"
 	prepend="Fecha de Entrega">
 		<b-form-input
 		type="date"
@@ -11,6 +11,9 @@
 <script>
 export default {
 	computed: {
+		budget() {
+			return this.$store.state.vender.budget 
+		},
 		fecha_entrega: {
 			set(value) {
 				this.$store.commit('vender/set_fecha_entrega', value)

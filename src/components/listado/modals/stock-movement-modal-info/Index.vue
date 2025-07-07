@@ -3,7 +3,7 @@
     <sale-modal></sale-modal>
 	
 	<b-modal
-	:title="'Movimientos de Stock de '+article.name+' | N° '+article.num"
+	:title="'Movimientos de Stock de '+article.name+' | N° '+article.id"
 	hide-footer
 	size="lg"
 	id="stock-movement-modal-info">

@@ -1,6 +1,6 @@
 <template>
 	<div>
-		<make-afip-tickets></make-afip-tickets>
+		<!-- <make-afip-tickets></make-afip-tickets> -->
 		
 		<btn-loader
 		v-if="!sale_details.afip_ticket || tiene_error_de_factura"
@@ -21,7 +21,7 @@ export default {
 	mixins: [afip_ticket],
 	components: {
 		BtnLoader: () => import('@/common-vue/components/BtnLoader'),
-		MakeAfipTickets: () => import('@/components/ventas/modals/afip-ticket/MakeAfipTickets'),
+		// MakeAfipTickets: () => import('@/components/ventas/modals/afip-ticket/MakeAfipTickets'),
 	},
 	computed: {
 		sale_details() {

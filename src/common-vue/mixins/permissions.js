@@ -27,7 +27,13 @@ export default {
 			return has_permission
 		},
 		hasPermissionTo(permission_slug) {
+
+			if (this.is_admin) {
+				return true
+			}
+
 			let has_permission = false
+
 			this.user.permissions.forEach(permission => {
 	            if (permission.slug == permission_slug) {
 	                has_permission = true

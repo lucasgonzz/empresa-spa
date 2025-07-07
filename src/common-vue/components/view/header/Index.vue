@@ -42,10 +42,19 @@
 		xl="4">
 
 			<opciones-filtrados-seleccion
+			:show_actualizar_option="show_actualizar_option"
 			:check_permissions="check_permissions"
 			:model_name="model_name">
 				<template #options_drop_down>
 					<slot name="options_drop_down"></slot>
+				</template>
+
+				<template #options_drop_down_seleccion>
+					<slot name="options_drop_down_seleccion"></slot>
+				</template>
+
+				<template #options_drop_down_filtro>
+					<slot name="options_drop_down_filtro"></slot>
 				</template>
 			</opciones-filtrados-seleccion>
 			
@@ -116,6 +125,7 @@ export default {
 			type: Boolean,
 			default: true,
 		},
+		show_actualizar_option: Boolean,
 	}
 }
 </script>

@@ -42,9 +42,16 @@ export default {
 			disabled_if_not_0: true,
 		},
 		{
+			text: 'Disponible en la tienda',
+			key: 'online',
+			type: 'checkbox',
+			show: true,
+			value: 1,
+		},
+		{
 			text: 'Descripcion',
 			key: 'description',
-			type: 'textarea',
+			type: 'texteditor',
 		},
 		{
 			text: 'Articulos',

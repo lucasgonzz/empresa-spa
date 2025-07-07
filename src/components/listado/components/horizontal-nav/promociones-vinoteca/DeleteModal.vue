@@ -110,15 +110,20 @@ export default {
 			}
 		},
 		check() {
-			if (this.stock_a_eliminar == '' || this.stock_a_eliminar <= 0) {
-				this.$toast.error('Inrese la cantidad a eliminar de la promocion')
-				return false
+
+			if (this.model.stock && this.model.stock > 0) {
+
+				if (this.stock_a_eliminar == '' || this.stock_a_eliminar <= 0) {
+					this.$toast.error('Ingrese la cantidad a eliminar de la promocion')
+					return false
+				}
+				
+				if (this.stock_a_eliminar > this.model.stock) {
+					this.$toast.error('El stock a eliminar no puede ser mayor que el de la promo')
+					return false
+				}
 			}
 
-			if (this.stock_a_eliminar > this.model.stock) {
-				this.$toast.error('El stock a eliminar no puede ser mayor que el de la promo')
-				return false
-			}
 			return true
 		}
 	}

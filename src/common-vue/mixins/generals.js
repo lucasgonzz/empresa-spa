@@ -138,6 +138,11 @@ export default {
 		html_text(text) {
 			return text.replace(/\n/g, '<br>');
 		},
+	    strip_html(html) {
+	        const temp = document.createElement("div")
+	        temp.innerHTML = html
+	        return temp.textContent || temp.innerText || ""
+	    },
 		get_models_by_id(model_name, models_id) {
 
 			let models = []
@@ -831,6 +836,9 @@ export default {
 				} else {
 					return ''
 				}
+			}
+			if (prop.type == 'texteditor') {
+				return this.strip_html(model[prop.key])
 			}
 			return model[prop.key]
 			// return model[prop.key].replace(/\n/g, '<br>')

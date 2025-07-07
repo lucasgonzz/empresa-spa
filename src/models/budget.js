@@ -50,8 +50,6 @@ export default {
 		{
 			text: 'Total',
 			key: 'total',
-			function: 'budgetTotal',
-			value: '',
 			is_price: true,
 			show: true,
 		},
@@ -130,6 +128,80 @@ export default {
 					], 
 					not_add_to_store_models: true,
 				}
+			}
+		},
+		{
+			text: 'Servicios',
+			store: 'service',
+			key: 'services',
+			type: 'search',
+			only_show: true,
+			belongs_to_many: {
+				model_name: 'service',
+				props_to_show: [
+					{
+						text: 'Nombre',
+						key: 'name',
+						type: 'textarea',
+						show: true,
+					},
+				],
+				pivot_props_to_show: [
+					{
+						text: 'Precio',
+						key: 'price',
+						type: 'number',
+						is_price: true,
+					},
+					{
+						text: 'Cantidad',
+						key: 'amount',
+						value: '',
+						type: 'number'
+					},
+					{
+						text: 'Total',
+						key: 'total_item',
+						function: 'totalBudgetItem',
+					},
+				],
+			}
+		},
+		{
+			text: 'Promociones',
+			store: 'promocion_vinoteca',
+			key: 'promocion_vinotecas',
+			type: 'search',
+			only_show: true,
+			belongs_to_many: {
+				model_name: 'promocion_vinoteca',
+				props_to_show: [
+					{
+						text: 'Nombre',
+						key: 'name',
+						type: 'textarea',
+						show: true,
+					},
+				],
+				pivot_props_to_show: [
+					{
+						text: 'Precio',
+						key: 'price',
+						type: 'number',
+						is_price: true,
+					},
+					{
+						text: 'Cantidad',
+						key: 'amount',
+						value: '',
+						type: 'number'
+					},
+					{
+						text: 'Total',
+						key: 'total_item',
+						function: 'totalBudgetItem',
+					},
+				],
 			}
 		},
 		{

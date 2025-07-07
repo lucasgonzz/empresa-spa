@@ -119,8 +119,10 @@
 
 <script>
 import payment_method_discounts_addresses_columns from '@/mixins/listado/payment_method_discounts_addresses_columns'
+import actualizar_lista_de_articulos from '@/mixins/listado/actualizar_lista_de_articulos'
+
 export default {
-	mixins: [payment_method_discounts_addresses_columns],
+	mixins: [payment_method_discounts_addresses_columns, actualizar_lista_de_articulos],
 	name: 'Lisado',
 	components: {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
@@ -177,7 +179,10 @@ export default {
 	methods: {
 		addressMovement() {
 			console.log('addressMovement')
-		}
+		},
+	},
+	created() {
+		this.get_ultimos_articulos_actualizados()
 	}
 }
 </script>

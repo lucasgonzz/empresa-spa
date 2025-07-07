@@ -3,11 +3,26 @@
 	v-if="is_owner || is_admin"
 	class="cont-total-ventas">
 		<div>
-			<p
-			v-if="!loading"
-			class="total-ventas">
-				Total {{ total }}
-			</p>
+			<div
+			class="j-lg-start align-lg-center"
+			v-if="!loading">
+				<p
+				class="total-ventas">
+					Total {{ price(total) }}
+				</p>
+
+				<p
+				class="text-left m-b-0 m-md-l-10"
+				v-if="is_admin">
+					| Costos <strong>{{ price(total_cost) }}</strong>
+				</p> 
+
+				<p
+				class="text-left m-b-0 m-md-l-10"
+				v-if="is_admin">
+					| Ganancia <strong>{{ price(total - total_cost) }}</strong>
+				</p> 
+			</div>
 			<b-skeleton 
 			v-else
 			type="button"
@@ -41,7 +56,14 @@ export default {
 			this.sales_to_show.forEach(model => {
 				total += Number(this.totalSale(model, false))
 			})
-			return this.price(total) 
+			return total 
+		},
+		total_cost() {
+			let total = 0
+			this.sales_to_show.forEach(model => {
+				total += model.total_cost
+			})
+			return total 
 		},
 		cantidad_ventas() {
 			let total = 0
@@ -61,7 +83,7 @@ export default {
 	align-items: center
 	.total-ventas 
 		margin-bottom: 0
-		font-size: 30px 
+		font-size: 1.5em 
 		font-weight: bold 
 		text-align: left
 	.cantidad-ventas 

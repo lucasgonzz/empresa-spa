@@ -62,9 +62,6 @@ export default {
 					this.$store.commit('vender/setChecked', this.previus_sale.checked)
 					this.$store.commit('vender/setConfirmed', this.previus_sale.confirmed)
 
-					this.$store.commit('vender/setDiscountsInServices', this.previus_sale.discounts_in_services)
-					this.$store.commit('vender/setSurchagesInServices', this.previus_sale.surchages_in_services)
-
 					this.set_datos_para_actualizar_en_vender(this.previus_sale)
 					
 					this.setPreviusReturnedArticles()
@@ -131,6 +128,12 @@ export default {
 			this.$store.commit('vender/setItems', items)
 			console.log('quedaron estos items:')
 			console.log(items)
+
+
+
+			this.$store.commit('vender/setDiscountsInServices', model.discounts_in_services)
+			this.$store.commit('vender/setSurchagesInServices', model.surchages_in_services)
+
 			if (model.discounts.length) {
 				
 				this.set_discounts_store_with_pivot_percetage(model.discounts)

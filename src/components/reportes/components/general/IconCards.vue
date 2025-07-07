@@ -91,6 +91,7 @@ export default {
 			if (
 				this.hasExtencion('cambiar_price_type_en_vender')
 				&& !this.hasExtencion('lista_de_precios_por_categoria')
+				&& this.model.ingresos_brutos_price_types
 			) {
 				let group = {
 					group_name: 'Listas de precio',

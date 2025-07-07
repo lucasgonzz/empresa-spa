@@ -12,6 +12,7 @@
 		@deleteModels="deleteModels"></confirm>	
 
 		<options-dropdown
+		:show_actualizar_option="show_actualizar_option"
 		:check_permissions="check_permissions"
 		@setUpdate="setUpdate"
 		@setDelete="setDelete"
@@ -19,9 +20,14 @@
 			<template #options_drop_down>
 				<slot name="options_drop_down"></slot>
 			</template>
+
+			<template #options_drop_down_seleccion>
+				<slot name="options_drop_down_seleccion"></slot>
+			</template>
 		</options-dropdown>
 
 		<options-dropdown
+		:show_actualizar_option="show_actualizar_option"
 		:check_permissions="check_permissions"
 		@setUpdate="setUpdate"
 		@setDelete="setDelete"
@@ -29,6 +35,10 @@
 		:model_name="model_name">
 			<template #options_drop_down>
 				<slot name="options_drop_down"></slot>
+			</template>
+
+			<template #options_drop_down_filtro>
+				<slot name="options_drop_down_filtro"></slot>
 			</template>
 		</options-dropdown>
 	</div>
@@ -38,6 +48,7 @@ export default {
 	props: {
 		model_name: String,
 		check_permissions: Boolean,
+		show_actualizar_option: Boolean,
 	},
 	components: {
 		Update: () => import('@/common-vue/components/view/header/opciones-filtrados-seleccion/Update'),

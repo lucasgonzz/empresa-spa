@@ -52,6 +52,7 @@
 
 		<view-header
 		v-if="show_view_header"
+		:show_actualizar_option="show_actualizar_option"
 		:show_btn_props_to_show="show_btn_props_to_show"
 		:show_btn_create="show_btn_create"
 		:show_excel_drop_down="show_excel_drop_down"
@@ -66,9 +67,17 @@
 			<template v-slot:horizontal_nav_center>
 				<slot name="horizontal_nav_center"></slot>
 			</template>
+			
 			<template #options_drop_down>
 				<slot name="options_drop_down"></slot>
 			</template>
+			<template #options_drop_down_seleccion>
+				<slot name="options_drop_down_seleccion"></slot>
+			</template>
+			<template #options_drop_down_filtro>
+				<slot name="options_drop_down_filtro"></slot>
+			</template>
+
 			<template #excel_drop_down_options>
 				<slot name="excel_drop_down_options"></slot>
 			</template>
@@ -354,6 +363,10 @@ export default {
 			default: null,
 		},
 		show_btn_props_to_show: {
+			type: Boolean,
+			default: true,
+		},
+		show_actualizar_option: {
 			type: Boolean,
 			default: true,
 		},

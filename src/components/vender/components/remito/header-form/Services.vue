@@ -6,7 +6,6 @@
 		<service
 		:service="service"></service>	
 		<b-form-input
-		:disabled="budget"
 		id="service_name"
 		@keyup.enter="setService"
 		v-model="service.name"

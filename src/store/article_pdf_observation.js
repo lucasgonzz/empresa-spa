@@ -271,18 +271,21 @@ export default {
 					url += '/0'
 				}
 			} 
-			if (state.route_prefix != '' || state.route_prefix == 0) {
+			if (state.route_prefix != '' || state.route_prefix === 0) {
 				url += '/'+state.route_prefix
 			} 
 			if (state.from_dates) {
 				url += '/from-date/'+state.from_date
 			} 
 			if (state.until_date != '') {
+				console.log('agregando until_date')
+				console.log(state.until_date)
 				url += '/'+state.until_date
 			}
 			if (state.use_per_page) {
 				url += '?page='+state.page 
 			}
+			console.log(url)
 			return axios.get(url)
 			.then(res => {
 				if (state.use_per_page) {

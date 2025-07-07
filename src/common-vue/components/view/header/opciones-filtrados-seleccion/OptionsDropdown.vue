@@ -7,7 +7,7 @@
 	:variant="variant"
 	:text="text_dropdown">
 		<b-dropdown-item
-		v-if="puede_actualizar"
+		v-if="puede_actualizar && show_actualizar_option"
 		id="btn_actualizar"
 		@click="setUpdate">
 			<i class="icon-undo"></i>
@@ -22,6 +22,10 @@
 		</b-dropdown-item>
 		<slot
 		name="options_drop_down"></slot>
+		<slot
+		name="options_drop_down_seleccion"></slot>
+		<slot
+		name="options_drop_down_filtro"></slot>
 	</b-dropdown>
 </template>
 <script>
@@ -30,6 +34,7 @@ export default {
 		model_name: String,
 		from_filter: Boolean,
 		check_permissions: Boolean,
+		show_actualizar_option: Boolean,
 	},
 	computed: {
 		id() {
