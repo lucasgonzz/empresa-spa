@@ -66,6 +66,11 @@ export default {
 			description: 'Si se activa, el iva del articulo no impactara en el precio final del mismo',
 		},
 		{
+			text: 'Aplicar los descuentos y recargos en los articulos antes del margen de ganancia',
+			key: 'aplicar_descuentos_en_articulos_antes_del_margen_de_ganancia',
+			type: 'checkbox',
+		},
+		{
 			text: 'Valor dolar',
 			key: 'dollar',
 			type: 'text',

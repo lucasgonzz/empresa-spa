@@ -2,13 +2,13 @@
 	<div
 	class="m-t-15">
 		<b-table
-		v-if="articles.length"
+		v-if="items.length"
 		class="s-2 b-r-1 animate__animated animate__fadeIn"
 		head-variant="dark"
 		responsive
 		striped
 		:fields="fields"
-		:items="items">
+		:items="table_items">
 			
 			<template #cell(price_vender)="data">
 				
@@ -16,16 +16,17 @@
 				@change="call_set_total_devolucion"
 				@keyup="call_set_total_devolucion"
 				type="number"
-				v-model="articles[data.index].price_vender"></b-form-input>
+				v-model="items[data.index].price_vender"></b-form-input>
 
 			</template>
 			
 			<template #cell(article_variant_id)="data">
 				
 				<b-form-select
+				v-if="items[data.index].is_article"
 				:disabled="is_variant_disabled"
-				:options="article_variant_options(articles[data.index])"
-				v-model="articles[data.index].article_variant_id"></b-form-select>
+				:options="article_variant_options(items[data.index])"
+				v-model="items[data.index].article_variant_id"></b-form-select>
 
 			</template>
 			
@@ -37,13 +38,13 @@
 					@change="call_set_total_devolucion"
 					@keyup="call_set_total_devolucion"
 					type="number"
-					:min="minimo(articles[data.index])"
-					:max="articles[data.index].amount"
-					v-model="articles[data.index].returned_amount"></b-form-input>
+					:min="minimo(items[data.index])"
+					:max="items[data.index].amount"
+					v-model="items[data.index].returned_amount"></b-form-input>
 
 
 					<b-button
-					@click="remove_article(articles[data.index])"
+					@click="remove_item(items[data.index])"
 					v-if="!sale"
 					variant="danger">
 						<i class="icon-trash"></i>
@@ -105,35 +106,28 @@ export default {
 
 			return fields
 		},
-		items() {
+		table_items() {
 			let items = []
-			this.articles.forEach(article => {
+			
+			this.items.forEach(item => {
 				items.push({
-					bar_code: article.bar_code,
-					name: article.name,
-					price_vender: this.price(article.price_vender),
-					amount: article.amount,
-					article_variant_id: article.article_variant_id,
+					is_article: item.is_article,
+					is_service: item.is_service,
+					bar_code: item.bar_code,
+					name: item.name,
+					price_vender: this.price(item.price_vender),
+					amount: item.amount,
+					article_variant_id: item.article_variant_id,
 				})
 			})
-			// this.sale.services.forEach(service => {
-			// 	items.push({
-			// 		name: service.name,
-			// 		amount: service.pivot.amount,
-			// 		price: this.price(article.price_vender),
-			// 		ya_devueltas: service.pivot.returned,
-			// 		returned: service.pivot.returned,
-			// 		pivot: service.pivot,
-			// 		is_service: true,
-			// 	})
-			// })
+
 			return items 
 		},
 		sale() {
 			return this.$store.state.devoluciones.sale 
 		},
-		articles() {
-			return this.$store.state.devoluciones.articles 
+		items() {
+			return this.$store.state.devoluciones.items 
 		},
 		is_variant_disabled() {
 			if (this.sale) {
@@ -143,12 +137,12 @@ export default {
 		}
 	},
 	methods: {
-		remove_article(article) {
-			this.$store.commit('devoluciones/remove_article', article)
+		remove_item(item) {
+			this.$store.commit('devoluciones/remove_item', item)
 		},
-		minimo(article) {
-			if (article.ya_devueltas) {
-				return article.ya_devueltas
+		minimo(item) {
+			if (item.ya_devueltas) {
+				return item.ya_devueltas
 			}
 			return 0
 		},
@@ -156,13 +150,13 @@ export default {
 			// this.$store.commit('devoluciones/set_total_devolucion')
 			this.set_total_devolucion()
 		},
-		article_variant_options(article) {
+		article_variant_options(item) {
 			let options = [{
 				value: 0, 
 				text: 'Seleccione Variante' 
 			}]
 
-			article.article_variants.forEach(variant => {
+			item.article_variants.forEach(variant => {
 				options.push({
 					value: variant.id,
 					text: variant.variant_description

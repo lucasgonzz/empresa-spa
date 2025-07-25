@@ -160,7 +160,7 @@ export default {
 
 					let monto_recargo = this.monto_credito * Number(this.cuota_recargo) / 100
 
-					monto_credito_real = this.monto_credito + monto_descuento
+					monto_credito_real = this.monto_credito + monto_recargo
 				
 					this.$store.commit('vender/set_cuota_monto_recargo', monto_recargo)
 

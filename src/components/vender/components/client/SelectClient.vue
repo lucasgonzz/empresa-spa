@@ -30,8 +30,9 @@
 import vender_set_total from '@/mixins/vender_set_total'
 import price_types from '@/mixins/vender/price_types'
 import computed from '@/mixins/vender/computed'
+import default_payment_method from '@/mixins/vender/default_payment_method'
 export default {
-	mixins: [price_types, vender_set_total, computed],
+	mixins: [price_types, vender_set_total, computed, default_payment_method],
 	// mixins: [vender, vender_set_total],
 	components: {
 		SearchComponent: () => import('@/common-vue/components/search/Index'),
@@ -78,15 +79,7 @@ export default {
 			this.setPriceType()
 
 			this.bloquear_metodo_de_pago()
-		},
-		bloquear_metodo_de_pago() {
-			if (!this.omitir_en_cuenta_corriente) {
-				this.$store.commit('vender/setCurrentAcountPaymentMethodId', 0)
-				this.$store.commit('vender/setSelectedPaymentMethods', [])
-			}
-		},
-		habilitar_metodo_de_pago() {
-			this.$store.commit('vender/setCurrentAcountPaymentMethodId', 3)
+			this.bloquear_caja()
 		},
 		clearSelected() {
 			this.$store.commit('vender/setClient', null)

@@ -37,6 +37,13 @@ export default {
 					name: 'articulos',
 				})
 			}
+
+			if (this.can('reportes.cheques')) {
+
+				items.push({
+					name: 'cheques',
+				})
+			}
 			
 			return items 
 		},
@@ -63,6 +70,7 @@ export default {
 			}
 			if (item.name == 'cheques') {
 				this.$store.dispatch('cheque/getModels')
+				this.$router.push({params: {sub_view: 'recibido', sub_sub_view: 'pendientes'}})
 			}
 		},
 	}

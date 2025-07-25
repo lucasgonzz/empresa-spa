@@ -839,8 +839,8 @@ export default {
 			padding: 5px 15px
 			line-height: 25px
 			font-size: 1em
-			width: 500px
-			max-width: 500px
+			width: 800px
+			max-width: 800px
 			overflow-wrap: break-word
 			&:last-child 
 				white-space: nowrap

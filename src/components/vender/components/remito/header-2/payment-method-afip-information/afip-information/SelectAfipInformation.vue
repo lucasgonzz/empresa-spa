@@ -1,7 +1,7 @@
 <template>
 	<div>
 		<b-form-select
-		:disabled="index_previus_sales > 0"
+		v-if="show"
 		:class="facturando ? 'verde' : 'rojo'"
 		v-model="afip_information_id" 
 		@change="change"
@@ -34,6 +34,12 @@ export default {
 		},
 	},
 	computed: {
+		show() {
+			if (this.index_previus_sales > 0 || this.guardar_como_presupuesto) {
+				return false
+			}
+			return true
+		},
 		facturando() {
 			return this.afip_information_id != 0
 		},

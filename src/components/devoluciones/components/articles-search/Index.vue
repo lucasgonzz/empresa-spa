@@ -35,9 +35,7 @@ export default {
 				ya_devueltas: null,
 				pivot: {},
 			}
-			this.$store.commit('devoluciones/add_article', article)
-			console.log('articles:')
-			console.log(this.$store.state.devoluciones.articles)
+			this.$store.commit('devoluciones/add_item', article)
 
 			this.limpiar_input()
 		},

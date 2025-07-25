@@ -37,6 +37,7 @@ export default {
 			type: 'checkbox',
 			value: 1,
 			not_show: true,
+			disabled_to_edit: true,
 		},
 		{
 			text: 'Deposito',

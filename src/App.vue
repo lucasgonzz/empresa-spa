@@ -4,6 +4,7 @@
         <logo-loading></logo-loading>
         <nav-component></nav-component>
         <btn-scroll-top></btn-scroll-top>
+        <afip-reenviar-facturas></afip-reenviar-facturas>
         <b-container
         fluid>
             <payment-expire></payment-expire>
@@ -30,6 +31,7 @@ export default {
         NavComponent,
         BtnScrollTop,
         PaymentExpire: () => import('@/components/nav/PaymentExpire'),
+        AfipReenviarFacturas: () => import('@/components/common/afip-reenviar-facturas/Index'),
     },
     created() {
         this.$store.dispatch('auth/me')
@@ -47,6 +49,9 @@ export default {
                 this.listenChannels()
                 this.listenChannelsLocal()
                 this.startMethods()
+                
+                this.$store.dispatch('cheque/getModels')
+
             }
         }
     },

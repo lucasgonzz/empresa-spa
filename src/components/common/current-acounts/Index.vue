@@ -6,6 +6,10 @@
     :actions="actions"
     id="delete-current-acount"
     toast="Cuenta corriente eliminada"></confirm>
+    
+    <confirm-afip-tickets></confirm-afip-tickets>
+    <send-afip-tickets></send-afip-tickets>
+
     <pago></pago>    
     <nota-credito></nota-credito>    
     <nota-debito></nota-debito>    
@@ -118,6 +122,8 @@ export default {
         BudgetModalButtons: () => import('@/components/budget/components/ModalButtons'),
         OrderProductionModalButtons: () => import('@/components/produccion/components/order-productions/ModalButtons'),
         SaleModal: () => import('@/components/common/SaleModal'),
+        ConfirmAfipTickets: () => import('@/components/ventas/modals/afip-ticket/ConfirmAfipTickets'),
+        SendAfipTickets: () => import('@/components/ventas/modals/afip-ticket/SendAfipTickets'),
     },
     computed: {
         title() {

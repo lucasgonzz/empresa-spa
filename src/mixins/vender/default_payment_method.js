@@ -29,5 +29,21 @@ export default {
                 }, 2000)
             }
         },
+
+        
+        bloquear_metodo_de_pago() {
+            if (!this.omitir_en_cuenta_corriente) {
+                this.$store.commit('vender/setCurrentAcountPaymentMethodId', 0)
+                this.$store.commit('vender/setSelectedPaymentMethods', [])
+            }
+        },
+        bloquear_caja() {
+            if (!this.omitir_en_cuenta_corriente) {
+                this.$store.commit('vender/set_caja_id', 0)
+            }
+        },
+        habilitar_metodo_de_pago() {
+            this.$store.commit('vender/setCurrentAcountPaymentMethodId', 3)
+        },
 	}
 }

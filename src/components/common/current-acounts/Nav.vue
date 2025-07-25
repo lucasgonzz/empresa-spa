@@ -5,6 +5,7 @@
 		<label>Mostrar cuentas corrientes de </label>
 		<b-form-input
 		v-model="months_ago"
+		@keydown.enter="getCurrentAcounts"
 		class="input"
 		min="1"
 		type="number"></b-form-input>

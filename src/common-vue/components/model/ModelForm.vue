@@ -455,6 +455,9 @@ export default {
 			if (this.form_disabled_to_edit(this.model_name) && this.model.id) {
 				return true
 			}
+			if (prop.disabled_to_edit && this.model.id) {
+				return true
+			}
 			if (this.form_disabled_to_edit_function(this.model_name) && this.model.id) {
 				console.log('entro a form_disabled_to_edit_function')
 				let function_name = require('@/models/'+this.model_name).default.form_disabled_to_edit_function

@@ -2,7 +2,6 @@
 	<b-modal
 	v-if="usa_props_to_show"
 	title="Propiedades para mostrar"
-	hide-footer
 	id="props-to-show">
 
 		<b-button-group
@@ -38,13 +37,15 @@
 			<hr>
 		</div>
 
-		<b-button
-		block
-		@click="save"
-		class="m-t-15"
-		variant="primary">
-			Listo
-		</b-button>
+		<template #modal-footer>
+			<b-button
+			block
+			@click="save"
+			class="m-t-15"
+			variant="primary">
+				Listo
+			</b-button>
+		</template>
 	</b-modal>
 </template>
 <script>

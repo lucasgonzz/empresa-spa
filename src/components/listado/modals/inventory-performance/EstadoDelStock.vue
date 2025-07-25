@@ -20,7 +20,6 @@
 					{{ model.sin_stock }}
 				</p>
 			</div>
-			
 			<div class="info">
 				
 				<p
@@ -32,6 +31,15 @@
 				class="valor">
 					{{ model.stock_minimo }}
 				</p>
+
+			</div>
+
+			<div class="info">
+				<b-button
+				@click="excel"
+				variant="success">
+					Excel
+				</b-button>
 			</div>
 			
 			<!-- <div class="info">
@@ -55,7 +63,7 @@
 <script>
 export default {
 	components: {
-		CircleProgress: () => import('@/components/listado/components/inventory-performance/CircleProgress'),
+		CircleProgress: () => import('@/components/listado/modals/inventory-performance/CircleProgress'),
 
 	},
 	computed: {
@@ -63,5 +71,12 @@ export default {
 			return this.$store.state.inventory_performance.models[0]
 		},
 	},
+	methods: {
+		excel() {
+			let link = process.env.VUE_APP_API_URL+'/articles-stock-minimo/excel'
+			window.open(link)
+
+		}
+	}
 }
 </script>

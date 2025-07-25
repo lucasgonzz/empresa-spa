@@ -1,6 +1,6 @@
 <template>
 	<b-button
-	v-if="articles.length"
+	v-if="items.length"
 	@click="limpiar_devolucion"
 	variant="danger">
 		<i class="icon-cancel"></i>
@@ -12,8 +12,8 @@ import limpiar from '@/mixins/devoluciones/limpiar'
 export default {
 	mixins: [limpiar],
 	computed: {
-		articles() {
-			return this.$store.state.devoluciones.articles
+		items() {
+			return this.$store.state.devoluciones.items
 		},
 	},
 }

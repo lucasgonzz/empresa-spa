@@ -138,6 +138,14 @@ export default {
 		},
 		get_problemas_al_facturar() {
 			this.$store.dispatch('afip_ticket/get_problemas_al_facturar')
+			.then(() => {
+				this.notificar_errores_afip()
+			})
+		},
+		notificar_errores_afip() {
+			if (this.$store.state.afip_ticket.problemas_al_facturar.length) {
+				this.$bvModal.show('afip-reenviar-facturas')
+			}
 		}
 	}
 }

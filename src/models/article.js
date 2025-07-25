@@ -103,8 +103,20 @@ export default {
 			use_to_update: true,
 			filter_modal_position: 10,
 			filter_type: 'number',
+			can: 'article.cost',
 			// table_position: 8,
 		},
+
+		{
+			text: 'Costo Real',
+			key: 'costo_real',
+			type_to_update: 'number',
+			type: 'text',
+			is_price: true,
+			only_show: true,
+			if_has_extencion: 'article.costo_real',
+		},
+
 		{
 			text: 'costo en dolares',
 			key: 'cost_in_dollars',
@@ -125,14 +137,6 @@ export default {
 			is_price: true,
 			if_has_extencion: 'production',
 			not_show: true,
-		},
-		{
-			text: 'Costo Real', 
-			key: 'costo_real',
-			only_show: true,
-			is_price: true,
-			not_show: true, 
-			if_has_extencion: 'article.costo_real',
 		},
 		{
 			text: 'U individuales',

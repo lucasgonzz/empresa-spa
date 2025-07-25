@@ -2,6 +2,7 @@
 	<table-component
     :loading="false"
     :models="models"
+    :usar_filtros="false"
     model_name="article_purchase"
     :set_model_on_click="false"
     :show_actualizado="false"

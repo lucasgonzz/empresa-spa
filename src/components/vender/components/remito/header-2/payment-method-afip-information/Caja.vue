@@ -1,7 +1,8 @@
 <template>
 		
-	<b-form-select
-	v-if="cajas.length && pagado_al_contado && !selected_payment_methods.length"
+	<b-form-select 
+	v-if="cajas.length && !selected_payment_methods.length"
+	:disabled="!pagado_al_contado"
 	v-model="caja_id" 
 	:options="get_caja_options(vender_payment_method_id)"></b-form-select> 
 </template>

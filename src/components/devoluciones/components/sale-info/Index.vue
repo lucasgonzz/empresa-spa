@@ -1,6 +1,6 @@
 <template>
 	<div
-	v-if="articles.length"
+	v-if="items.length"
 	class="m-t-25 sale-info">
 		
 		<total></total>
@@ -15,8 +15,8 @@ export default {
 		Discounts: () => import('@/components/devoluciones/components/sale-info/Discounts'),
 	},
 	computed: {
-		articles() {
-			return this.$store.state.devoluciones.articles
+		items() {
+			return this.$store.state.devoluciones.items
 		}
 	}
 }

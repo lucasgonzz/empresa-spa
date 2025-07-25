@@ -26,6 +26,7 @@ export default {
 			text: 'Imagen',
 			key: 'image_url',
 			type: 'image',
+			crop_aspect_ratio: 0,
 		},
 	],
 	singular_model_name_spanish: 'Observaciones para el PDF de articulos',

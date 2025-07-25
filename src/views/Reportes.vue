@@ -9,6 +9,8 @@
 		<graficos></graficos>	
 
 		<articulos></articulos>	
+
+		<cheques></cheques>	
 	</div>
 </template>
 <script>
@@ -19,6 +21,7 @@ export default {
 		General: () => import('@/components/reportes/components/general/Index'),
 		Graficos: () => import('@/components/reportes/components/graficos/Index'),
 		Articulos: () => import('@/components/reportes/components/articulos/Index'),
+		Cheques: () => import('@/components/reportes/components/cheques/Index'),
 	},
 }
 </script>

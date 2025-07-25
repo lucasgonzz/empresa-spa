@@ -169,6 +169,7 @@ export default {
 		},
 		get_articles() {
 			console.log('get_articles presupuesto')
+			console.log(this.articles)
 			let articles = []
 			this.articles.forEach(article => {
 				articles.push({
@@ -177,6 +178,9 @@ export default {
 					pivot: {
 						amount: article.amount,
 						price: article.price_vender,
+						cost: article.cost,
+						costo_real: article.costo_real,
+						presentacion: article.presentacion,
 						price_type_personalizado_id: article.price_type_personalizado_id,
 						bonus: typeof article.discount != 'undefined' ? article.discount : null,
 						location: null,

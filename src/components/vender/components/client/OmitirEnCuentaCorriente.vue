@@ -2,7 +2,7 @@
 	<b-card
 	v-if="hasExtencion('ask_save_current_acount') 
 	&& client
-	&& !budget"
+	&& !guardar_como_presupuesto"
 	class="m-b-25 m-t-25 b-r-1 shadow">
 
 		<b-form-checkbox
@@ -35,6 +35,11 @@ export default {
 				this.$store.commit('vender/set_omitir_en_cuenta_corriente', value)
 				if (value == 1) {
 					this.setDefaultPaymentMethod()
+				} else {
+
+					this.bloquear_metodo_de_pago()
+					this.bloquear_caja()
+					
 				}
 			},
 			get() {
@@ -46,6 +51,9 @@ export default {
 		},
 		budget() {
 			return this.$store.state.vender.budget
+		},
+		guardar_como_presupuesto() {
+			return this.$store.state.vender.guardar_como_presupuesto
 		},
 		client() {
 			return this.$store.state.vender.client

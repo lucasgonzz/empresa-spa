@@ -1,5 +1,6 @@
 <template>
-	<b-card>
+	<b-card
+	v-if="surchages.length">
 		<h5
 		class="text-left">
 			Recargos

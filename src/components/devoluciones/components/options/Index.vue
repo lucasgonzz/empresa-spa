@@ -1,6 +1,6 @@
 <template>
 	<div
-	v-if="articles.length">
+	v-if="items.length">
 
 		<hr>
 
@@ -20,8 +20,8 @@ export default {
 		Facturar: () => import('@/components/devoluciones/components/options/Facturar'),
 	},
 	computed: {
-		articles() {
-			return this.$store.state.devoluciones.articles
+		items() {
+			return this.$store.state.devoluciones.items
 		},
 	}
 }

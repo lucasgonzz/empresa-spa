@@ -1,7 +1,5 @@
 <template>
 <div id="ventas">	
-	<make-afip-tickets></make-afip-tickets>
-	
 	<current-acounts></current-acounts>
 
 	<update-prices></update-prices>
@@ -70,7 +68,6 @@ export default {
 		AfipTicketShowErrors: () => import('@/components/ventas/modals/afip-ticket/ShowErrors'),
 		AfipTicketShowObservations: () => import('@/components/ventas/modals/afip-ticket/ShowObservations'),
 
-		MakeAfipTickets: () => import('@/components/ventas/modals/afip-ticket/MakeAfipTickets'),
 		ClientBtn: () => import('@/components/ventas/components/ClientBtn'),
 
 	},

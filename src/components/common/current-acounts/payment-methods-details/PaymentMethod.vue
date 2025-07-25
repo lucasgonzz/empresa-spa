@@ -7,9 +7,6 @@
 				{{ price(model.pivot.amount) }}
 			</strong>
 		</p>
-		<check-info 
-		:payment_method="model.pivot"
-		disabled_inputs></check-info>
 		<div
 		class="shadow-2 p-15 b-r-1"
 		v-if="model.credit_card">

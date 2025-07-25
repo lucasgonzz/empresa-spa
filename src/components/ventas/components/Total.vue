@@ -1,6 +1,6 @@
 <template>
 	<div
-	v-if="is_owner || is_admin"
+	v-if="can('sale.index.total')"
 	class="cont-total-ventas">
 		<div>
 			<div
@@ -61,7 +61,7 @@ export default {
 		total_cost() {
 			let total = 0
 			this.sales_to_show.forEach(model => {
-				total += model.total_cost
+				total += Number(model.total_cost)
 			})
 			return total 
 		},

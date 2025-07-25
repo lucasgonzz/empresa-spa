@@ -139,6 +139,10 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+		set_sub_sub_view: {
+			type: Boolean,
+			default: false,
+		},
 		show_filter_modal: {
 			type: Boolean,
 			default: false,
@@ -169,7 +173,7 @@ export default {
 		},
 	},
 	created() {
-		if (!this.set_view && !this.set_sub_view) {
+		if (!this.set_view && !this.set_sub_view && !this.set_sub_sub_view) {
 			if (typeof this.items != 'undefined' && this.items && this.items.length && !this.selected_item) {
 				this.select(this.items[0])
 			}
@@ -213,6 +217,9 @@ export default {
 			}
 			if (this.set_sub_view) {
 				return this.sub_view
+			}
+			if (this.set_sub_sub_view) {
+				return this.sub_sub_view
 			}
 			return this.selected_item
 		},
@@ -279,6 +286,16 @@ export default {
 					this.callMethods(item)
 				}
 			} 
+			if (this.set_sub_sub_view) {
+				if (this.sub_sub_view != this.routeString(this.routeValue(item))) {
+					this.$router.push({params: {method: this.method, sub_sub_view: this.routeString(this.routeValue(item))}})
+					this.callMethods(item, true)
+					console.log('se puso sub_sub_view, sub_sub_view: '+this.routeString(this.routeValue(item)))
+				} else {
+					this.callMethods(item)
+				}
+			} 
+
 			this.selected_item = item.name
 			if (!this.emitir_setSelected_al_inicio) {
 				this.$emit('setSelected', item)

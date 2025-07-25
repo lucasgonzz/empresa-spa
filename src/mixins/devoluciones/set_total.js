@@ -5,8 +5,8 @@ export default {
 		}
 	},
 	computed: {
-		articles() {
-			return this.$store.state.devoluciones.articles
+		items() {
+			return this.$store.state.devoluciones.items
 		},
 		discounts_id() {
 			return this.$store.state.devoluciones.discounts_id
@@ -27,26 +27,26 @@ export default {
 			console.log('mixin set_total_devolucion')
 			this.total_devolucion = 0
 			
-			this.articles.forEach(article => {
+			this.items.forEach(item => {
 
-				let unidades_devueltas = Number(article.returned_amount)
+				let unidades_devueltas = Number(item.returned_amount)
 
-				if (article.ya_devueltas) {
-					unidades_devueltas -= Number(article.ya_devueltas)
+				if (item.ya_devueltas) {
+					unidades_devueltas -= Number(item.ya_devueltas)
 				}
 
-				let total_article = article.price_vender * unidades_devueltas
+				let total_article = item.price_vender * unidades_devueltas
 				console.log('total_article: '+total_article)
 				
-				if (article.pivot.discount) {
+				if (item.pivot.discount) {
 
-					total_article -= total_article * article.pivot.discount / 100
+					total_article -= total_article * item.pivot.discount / 100
 				}	
 
 
 				this.total_devolucion += total_article
 
-				article.unidades_devueltas = unidades_devueltas
+				item.unidades_devueltas = unidades_devueltas
 			})
 
 			this.aplicar_discounts()

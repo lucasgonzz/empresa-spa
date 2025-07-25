@@ -1,7 +1,7 @@
 <template>
 	<b-button
 	class="m-r-15"
-	v-if="articles.length"
+	v-if="items.length"
 	@click="marcar_todo"
 	variant="success">
 		<i class="icon-check"></i>
@@ -14,13 +14,13 @@ import limpiar from '@/mixins/devoluciones/limpiar'
 export default {
 	mixins: [set_total, limpiar],
 	computed: {
-		articles() {
-			return this.$store.state.devoluciones.articles
+		items() {
+			return this.$store.state.devoluciones.items
 		},
 	},
 	methods: {
 		marcar_todo() {
-			this.articles.forEach(article => {
+			this.items.forEach(article => {
 				console.log(article.name)
 				article.returned_amount = article.amount
 				

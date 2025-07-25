@@ -59,7 +59,7 @@ export default {
 						this.$store.commit('devoluciones/set_generar_current_acount', 0)
 					}
 
-					this.$store.commit('devoluciones/format_articles', sale)
+					this.$store.commit('devoluciones/format_items', sale)
 				} else {
 
 					this.$store.commit('devoluciones/set_sale', null)

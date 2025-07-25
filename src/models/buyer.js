@@ -22,6 +22,13 @@ export default {
 			show: true,
 		},
 		{
+			text: 'Barrio',
+			key: 'barrio',
+			type: 'text',
+			value: '',
+			show: true,
+		},
+		{
 			text: 'WhatsApp',
 			key: 'WhatsApp',
 			button: {

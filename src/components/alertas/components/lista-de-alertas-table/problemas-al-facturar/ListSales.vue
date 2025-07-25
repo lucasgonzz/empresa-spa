@@ -1,46 +1,43 @@
 <template>
 	<div>
-		<div
-		v-if="view == 'facturacion'">
-
-    		<sale-modal></sale-modal>
-
-			<afip-ticket-show-errors></afip-ticket-show-errors>
-			<afip-ticket-show-observations></afip-ticket-show-observations>
 		
-			<make-afip-tickets></make-afip-tickets>
+		<sale-modal></sale-modal>
 
-			<b-table
-			v-if="problemas_al_facturar.length"
-			head-variant="dark"
-			responsive
-			:fields="fields"
-			:items="items">
+		<afip-ticket-show-errors></afip-ticket-show-errors>
+		<afip-ticket-show-observations></afip-ticket-show-observations>
+	
+		<!-- <make-afip-tickets></make-afip-tickets> -->
 
-				<template #cell(venta)="data">
-					<b-button
-					@click="showSale(problemas_al_facturar[data.index])"
-					variant="primary">
-						N° {{ problemas_al_facturar[data.index].num }}
-					</b-button>
-				</template>
+		<b-table
+		v-if="problemas_al_facturar.length"
+		head-variant="dark"
+		responsive
+		:fields="fields"
+		:items="items">
 
-				<template #cell(acciones)="data">
+			<template #cell(venta)="data">
+				<b-button
+				@click="showSale(problemas_al_facturar[data.index])"
+				variant="primary">
+					N° {{ problemas_al_facturar[data.index].num }}
+				</b-button>
+			</template>
 
-					<afip-buttons
-					:sale="problemas_al_facturar[data.index]"></afip-buttons>
-				</template>
+			<template #cell(acciones)="data">
 
-			</b-table>
+				<afip-buttons
+				:sale="problemas_al_facturar[data.index]"></afip-buttons>
+			</template>
 
-			<div 
-			v-else
-			class="text-with-icon">
-				No hay problemas al facturar
-				<i class="icon-eye-slash"></i>
-			</div>
+		</b-table>
 
+		<div 
+		v-else
+		class="text-with-icon">
+			No hay problemas al facturar
+			<i class="icon-eye-slash"></i>
 		</div>
+
 	</div>
 
 </template>
@@ -52,7 +49,7 @@ export default {
 		AfipButtons: () => import('@/components/ventas/components/table-buttons/AfipButtons'),
 		AfipTicketShowErrors: () => import('@/components/ventas/modals/afip-ticket/ShowErrors'),
 		AfipTicketShowObservations: () => import('@/components/ventas/modals/afip-ticket/ShowObservations'),
-		MakeAfipTickets: () => import('@/components/ventas/modals/afip-ticket/MakeAfipTickets'),
+		// MakeAfipTickets: () => import('@/components/ventas/modals/afip-ticket/MakeAfipTickets'),
 	},
 	computed: {
 		fields() {

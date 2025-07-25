@@ -86,7 +86,7 @@ export default {
 		{
 			text: 'Quienes somos',
 			key: 'quienes_somos',
-			type: 'textarea',
+			type: 'texteditor',
 			value: '',
 			show: true,
 		},

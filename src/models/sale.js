@@ -13,14 +13,15 @@ export default {
 			key: 'total',
 			type: 'number',
 			only_show: true,
-			function: 'totalSale',
+			is_price: true,
+			// function: 'totalSale',
 		},
 		{
 			text: 'Total Facturado',
 			type: 'number',
-			key: 'total_facturado',
-			function: 'total_facturado',
+			key: 'total_a_facturar',
 			only_show: true,
+			is_price: true,
 			v_if: ['afip_ticket', '!=', null],
 		},
 		{

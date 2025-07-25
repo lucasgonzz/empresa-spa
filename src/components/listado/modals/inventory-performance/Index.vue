@@ -7,7 +7,6 @@
 		
 		<b-row
 		class="m-t-15">
-
 			<b-col
 			class="m-b-25 m-b-xl-0"
 			md="6"
@@ -36,7 +35,6 @@
 			class="m-b-25 m-b-xl-0"
 			md="6"
 			xl="3">
-				
 				<estado-del-stock></estado-del-stock>
 			</b-col>
 			
@@ -46,10 +44,10 @@
 <script>
 export default {
 	components: {
-		InventarioStockeado: () => import('@/components/listado/components/inventory-performance/InventarioStockeado'),
-		ValorDelInventario: () => import('@/components/listado/components/inventory-performance/ValorDelInventario'),
-		CostosArticulos: () => import('@/components/listado/components/inventory-performance/CostosArticulos'),
-		EstadoDelStock: () => import('@/components/listado/components/inventory-performance/EstadoDelStock'),
+		InventarioStockeado: () => import('@/components/listado/modals/inventory-performance/InventarioStockeado'),
+		ValorDelInventario: () => import('@/components/listado/modals/inventory-performance/ValorDelInventario'),
+		CostosArticulos: () => import('@/components/listado/modals/inventory-performance/CostosArticulos'),
+		EstadoDelStock: () => import('@/components/listado/modals/inventory-performance/EstadoDelStock'),
 	},
 	created() {
 		console.log('se creo inventory-performance')

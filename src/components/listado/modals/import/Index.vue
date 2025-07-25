@@ -78,6 +78,14 @@ export default {
 					description: 'Separe los diferentes recargos con un guion bajo ( _ )',
 				},
 				{
+					text: 'Descuentos montos',
+					description: 'Separe los diferentes descuentos con un guion bajo ( _ )',
+				},
+				{
+					text: 'Recargos montos',
+					description: 'Separe los diferentes recargos con un guion bajo ( _ )',
+				},
+				{
 					text: 'Precio',
 				},
 				{

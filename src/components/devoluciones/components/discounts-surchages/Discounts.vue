@@ -1,5 +1,6 @@
 <template>
-	<b-card>
+	<b-card
+	v-if="discounts.length">
 		<h5
 		class="text-left">
 			Descuentos

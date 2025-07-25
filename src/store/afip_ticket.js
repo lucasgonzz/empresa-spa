@@ -9,6 +9,11 @@ export default {
 	state: {
 		problemas_al_facturar: [],
 
+		afip_tickets_for_make: [],
+
+		afip_information_id: 0,
+		afip_tipo_comprobante_id: 0,
+
 		loading: false,
 
 		props_to_show: [],
@@ -16,6 +21,12 @@ export default {
 	mutations: {
 		set_props_to_show(state, value) {
 			state.props_to_show = value
+		},
+		set_afip_tickets_for_make(state, value) {
+			state.afip_tickets_for_make = value
+		},
+		add_afip_tickets_for_make(state, value) {
+			state.afip_tickets_for_make.push(value)
 		},
 		setLoading(state, value) {
 			state.loading = value
@@ -39,6 +50,12 @@ export default {
 		},
 		set_problemas_al_facturar(state, value) {
 			state.problemas_al_facturar = value
+		},
+		set_afip_information_id(state, value) {
+			state.afip_information_id = value
+		},
+		set_afip_tipo_comprobante_id(state, value) {
+			state.afip_tipo_comprobante_id = value
 		},
 	},
 	actions: {

@@ -35,6 +35,9 @@ export default {
 		sub_view() {
 			return this.$route.params.sub_view
 		},
+		sub_sub_view() {
+			return this.$route.params.sub_sub_view
+		},
         today() {
         	return moment().format('YYYY-MM-DD')
         },
@@ -553,6 +556,9 @@ export default {
 			}
 			if (check_show_on_form && property.not_show_on_form) {
 				return false
+			}
+			if (property.can) {
+				return this.can(property.can)
 			}
 			if (property.show_only_if_is_created && !model.id) {
 				return false

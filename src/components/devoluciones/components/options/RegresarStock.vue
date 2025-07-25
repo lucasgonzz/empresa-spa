@@ -1,6 +1,6 @@
 <template>
 	<div
-	v-if="articles.length">
+	v-if="items.length">
 
 		<b-form-checkbox
 		:value="1"
@@ -10,7 +10,7 @@
 		</b-form-checkbox>
 		<b-form-select
 		class="m-t-10"
-		v-if="regresar_stock"
+		v-if="regresar_stock && addresses.length"
 		v-model="address_id"
 		:options="getOptions({text: 'Deposito', store: 'address', select_prop_name: 'street'})"></b-form-select>
 
@@ -19,8 +19,8 @@
 <script>
 export default {
 	computed: {
-		articles() {
-			return this.$store.state.devoluciones.articles
+		items() {
+			return this.$store.state.devoluciones.items
 		},
 		regresar_stock: {
 			get() {
@@ -38,6 +38,9 @@ export default {
 				this.$store.commit('devoluciones/set_address_id', value)
 			}
 		},
+		addresses() {
+			return this.$store.state.address.models
+		}
 	}
 }
 </script>

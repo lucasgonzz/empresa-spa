@@ -55,7 +55,10 @@ export default {
 					aspectRatio: 0,
 				}
 			}
-			if (this.prop.crop_aspect_ratio) {
+			if (
+				this.prop.crop_aspect_ratio
+				|| this.prop.crop_aspect_ratio == 0
+			) {
 				return {
 					aspectRatio: this.prop.crop_aspect_ratio
 				}	

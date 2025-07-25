@@ -1,7 +1,7 @@
 <template>
 	<b-button
 	class="m-t-15 m-b-25"
-	v-if="articles.length"
+	v-if="items.length"
 	block
 	@click="guardar"
 	variant="primary">
@@ -16,8 +16,8 @@ export default {
 		sale() {
 			return this.$store.state.devoluciones.sale 
 		},
-		articles() {
-			return this.$store.state.devoluciones.articles 
+		items() {
+			return this.$store.state.devoluciones.items 
 		},
 		client() {
 			return this.$store.state.devoluciones.client 
@@ -54,7 +54,7 @@ export default {
 				this.$store.commit('auth/setMessage', 'Guardando')
 				this.$store.commit('auth/setLoading', true)
 
-				let items = this.articles
+				let items = this.items
 
 				console.log('facturar_nota_credito: '+this.facturar_nota_credito)
 				this.$api.post('devoluciones', {
@@ -100,12 +100,13 @@ export default {
 				ok = false
 			}
 
-			this.articles.forEach(article => {
+			this.items.forEach(item => {
 				if (
-					article.article_variants.length
-					&& !article.article_variant_id
+					item.is_article
+					&& item.article_variants.length
+					&& !item.article_variant_id
 				) {
-					this.$toast.error('Indique variante de '+article.name)
+					this.$toast.error('Indique variante de '+item.name)
 					ok = false
 				}
 			})

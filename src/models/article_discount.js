@@ -7,6 +7,12 @@ export default {
 			is_title: true,
 		},
 		{
+			text: 'Monto',
+			key: 'amount',
+			type: 'number',
+			is_price: true,
+		},
+		{
 			text: 'Mostrar en la tienda online',
 			if_has_extencion: 'online',
 			key: 'show_in_online',

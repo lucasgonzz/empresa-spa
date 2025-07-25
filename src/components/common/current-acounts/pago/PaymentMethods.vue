@@ -19,7 +19,7 @@
 			</b-form-group>
 		
 			<b-form-group
-			v-if="hasExtencion('cajas') && cajas.length">
+			v-if="hasExtencion('cajas') && cajas.length && payment_method.current_acount_payment_method_id != 1">
 				<b-form-select
 				v-model="payment_method.caja_id"
 				:options="get_cajas_abiertas_options()"></b-form-select> 
