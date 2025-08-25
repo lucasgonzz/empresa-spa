@@ -132,6 +132,13 @@ export default {
         maked_sale() {
             return this.$store.state.vender.sale 
         },
+        payment_plan_cuota() {
+            if (this.view == 'planes-de-pago') {
+                return this.$store.state.payment_plan_cuota.model 
+            } else {
+                return null
+            }
+        },
     },
     methods: {
         focus_primer_payment_method() {
@@ -154,6 +161,7 @@ export default {
         			model_id: this.from_model.id,
         			...this.pago,
                     to_pay: this.to_pay,
+                    payment_plan_cuota: this.payment_plan_cuota,
         		})
         		.then(res => {
                     this.$store.dispatch('current_acount/getModels')
@@ -165,6 +173,8 @@ export default {
                     this.clear()
 
                     this.update_ventas()
+
+                    this.update_payment_plan_cuotas()
         		})
         		.catch(err => {
         			this.loading = false
@@ -173,6 +183,11 @@ export default {
         		})
             }
     	},
+        update_payment_plan_cuotas() {
+            if (this.view == 'planes-de-pago') {
+                this.$store.dispatch('payment_plan_cuota/getModels')
+            }
+        },
         update_ventas() {
             if (this.$store.state.sale.is_filtered) {
                 // this.$store.dispatch()

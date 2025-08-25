@@ -168,6 +168,14 @@ import delivery_day from '@/store/delivery_day'
 
 import article_pdf_observation from '@/store/article_pdf_observation'
 
+import column_position from '@/store/column_position'
+
+import price_type_surchage from '@/store/price_type_surchage'
+
+import payment_plan from '@/store/payment_plan'
+
+import payment_plan_cuota from '@/store/payment_plan_cuota'
+
 
 Vue.use(Vuex)
 
@@ -341,5 +349,13 @@ export default new Vuex.Store({
         delivery_day,
 
         article_pdf_observation,
+
+        column_position,
+
+        price_type_surchage,
+
+        payment_plan,
+
+        payment_plan_cuota,
     }
 })

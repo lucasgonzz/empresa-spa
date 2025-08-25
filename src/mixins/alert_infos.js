@@ -2,6 +2,18 @@ import online from '@/mixins/online'
 export default {
     mixins: [online],
 	computed: {
+        articles_stock_minimo() {
+            let models = this.$store.state.inventory_performance.models
+
+            if (
+                this.$store.state.inventory_performance.models[0]
+                && this.$store.state.inventory_performance.models[0].articles_stock_minimo
+            ) {
+                return this.$store.state.inventory_performance.models[0].articles_stock_minimo
+            }
+
+            return []
+        },
         problemas_al_facturar() {
             return this.$store.state.afip_ticket.problemas_al_facturar 
         },

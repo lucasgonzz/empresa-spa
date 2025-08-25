@@ -10,7 +10,9 @@ export default {
 
 				this.$api.get('articles-ultimos-actualizados')
 				.then(res => {
-					this.$store.commit('article/addModels', res.data.models)
+					res.data.models.forEach(article => {
+						this.$store.commit('article/add', article)
+					})
 				})
 				.catch(err => {
 					this.$toast.error('error al cargar ultimos articulos actualizados')

@@ -392,6 +392,9 @@ export default {
 						} else {
 							if (this.model_name == 'user') {
 								this.$store.commit('auth/setUser', res.data.model)
+								// alert('asd')
+								console.log('Volviendo a cargar AUTH')
+					        	this.$store.dispatch('auth/me')
 							} else {
 								this.$store.commit(this.replaceGuion(this.model_name)+'/add', res.data.model)
 								// console.log('se agrego este '+this.model_name+': ')

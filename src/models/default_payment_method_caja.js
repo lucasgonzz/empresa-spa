@@ -19,6 +19,7 @@ export default {
 			key: 'address_id',
 			type: 'select',
 			use_store_models: true,
+			relation_prop_name: 'street',
 		},
 	],
 	singular_model_name_spanish: 'Caja por defecto',

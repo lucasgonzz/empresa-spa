@@ -13,8 +13,9 @@
 		:save_if_not_exist="false"
 		:str_limint="str_limint"
 		:search_from_api="search_from_api"
+		search_function="get_articles_offline"
 		:props_to_show="props_to_show"
-		:props_to_filter="['num', 'name', 'provider_code']"
+		:props_to_filter="['id', 'name', 'provider_code']"
 		:prop="{text: 'Articulo', key: 'article_id', store: 'article'}"></search-component>
 	</b-col>
 </template>
@@ -59,10 +60,13 @@ export default {
 			return 'article-sale-name'
 		},
 		search_from_api() {
-			if (!this.download_articles) {
-				return true
-			}
-			return false
+
+			return this.$store.state.auth.online
+
+			// if (!this.download_articles) {
+			// 	return true
+			// }
+			// return false
 		},
 		price_types() {
 			return this.$store.state.price_type.models 

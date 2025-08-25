@@ -9,7 +9,6 @@
 		<seller></seller>
 		<cuotas></cuotas>
 		<caja></caja>
-		<total-info></total-info>
 	</div>
 </template>
 <script>
@@ -22,7 +21,6 @@ export default {
 		SaleType: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/SaleType'),
 		Seller: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/Seller'),
 		Cuotas: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/Cuotas'),
-		TotalInfo: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/total-info/Index'),
 		Caja: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/Caja'),
 	}
 }
@@ -31,17 +29,25 @@ export default {
 .payment-method-afip-information
 	display: flex
 	flex-wrap: wrap
+	flex-direction: row 
+	align-items: flex-start
 	@media screen and (max-width: 768px)
 		flex-direction: column 
 	@media screen and (min-width: 768px)
 		flex-direction: row 
-	select, .cont-select, .input-group
+		justify-content: space-between
+	
+	& > select, & > .input-group
 		margin-bottom: 10px
 		@media screen and (max-width: 768px)
 			width: 100%
 		@media screen and (min-width: 768px)
-			width: 200px
-			margin-right: 15px
+			width: 48%
+
+	.input-group
+		display: flex  
+		flex-direction: row 
+		align-items: flex-start
 
 	.cont-select 
 		display: flex
@@ -51,7 +57,7 @@ export default {
 
 
 		& > select 
-			width: 75%
+			width: calc(100% - 55px)
 			
 
 			

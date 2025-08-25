@@ -66,18 +66,29 @@ export default {
 		},
 		async getArticleFromCodigo(codigo) {
 			let article
+
 			if (!this.usar_codigo_proveedor) {
 				codigo = this.getBarCode(codigo)
 			}
-			if (!this.download_articles || (this.is_mobile && !this.downloadOnMobile('article') && !this.articles.length ) || this.$store.state.article.loading) {
-				await this.getArticleFromApi(codigo)
-				// alert('siguio')
-			} else {
-				this.finded_article = this.articles.find(article => {
+
+			if (this.$store.state.auth.online) {
+
+				if (!this.download_articles || (this.is_mobile && !this.downloadOnMobile('article') && !this.articles.length ) || this.$store.state.article.loading) {
+					await this.getArticleFromApi(codigo)
+				} 
+
+			} else if (!this.is_mobile) {
+
+				console.log('Buscando offline')
+
+				let articles = await this.get_articles_offline()
+
+				this.finded_article = articles.find(article => {
 					return this.check_article(article, codigo)
 				})
-				// alert('Find in store: '+this.finded_article)
+
 			}
+
 		},
 		check_article(article, codigo) {
 			if (this.usar_codigo_proveedor) {

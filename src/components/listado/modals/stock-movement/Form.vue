@@ -136,16 +136,19 @@ export default {
 				.then(res => {
 					this.loading = false 
 					this.$toast.success('Movimiento guardado')
-					this.$bvModal.hide('stock-movement') 
-					this.$bvModal.hide('article') 
+					this.$bvModal.hide('stock-movement')
+
+					// this.$bvModal.hide('article') 
+					
 					this.setTemporalId(res.data.model)
+					
 					if (!this.article.id) {
 						this.article.stock = this.amount_
 					}
 					if (this.article.id) {
 
 						this.loadModel('article', this.article.id)
-						// this.article.stock = Number(this.article.stock) + Number(this.amount_)
+						this.article.stock = Number(this.article.stock) + Number(this.amount_)
 
 						// if (this.article.addresses.length) {
 						// 	setTimeout(() => {

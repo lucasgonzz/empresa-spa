@@ -59,7 +59,7 @@
 
 		</template>
 
-		<template v-slot:table_right_options="props">
+		<template v-slot:table_left_options="props">
 			<buttons :model="props.model" />	
 		</template>
 

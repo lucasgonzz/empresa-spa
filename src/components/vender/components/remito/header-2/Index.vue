@@ -1,13 +1,12 @@
 <template>
 	<b-row>
 		<b-col
-		class="col-header-22"
 		cols="12"
-		lg="6">
+		lg="7">
 			<payment-method-afip-information></payment-method-afip-information>
 		</b-col>
 		<b-col
-		lg="6"
+		lg="5"
 		cols="12">
 			<buttons></buttons>
 		</b-col>
@@ -21,4 +20,3 @@ export default {
 	}
 }
 </script>
-<style lang="sass">

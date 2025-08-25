@@ -17,7 +17,7 @@
 				v-model="payment_method.current_acount_payment_method_id"
 				:options="options"></b-form-select> 
 			</b-form-group>
-		
+			
 			<b-form-group
 			v-if="hasExtencion('cajas') && cajas.length && payment_method.current_acount_payment_method_id != 1">
 				<b-form-select

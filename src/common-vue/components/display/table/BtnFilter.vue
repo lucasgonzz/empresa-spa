@@ -13,7 +13,7 @@
 
 		<b-button 
 		size="sm"
-		v-if="filtro_usado"
+		v-if="filtro_usado && field.type != 'search'"
 		variant="danger"
 		@click="call_limpiar_filtro(field.key)">
 			<i class="icon-undo"></i>
@@ -52,6 +52,8 @@ export default {
 	methods: {
 		call_limpiar_filtro() {
 			let filter = this.limpiar_filtro(this.filter)
+			console.log('filtro limpio:')
+			console.log(filter)
 			this.$store.commit(this.model_name+'/addFilter', filter)
 		},
 		toggleFilter() {

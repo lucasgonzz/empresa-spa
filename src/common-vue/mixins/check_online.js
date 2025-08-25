@@ -7,7 +7,6 @@ export default {
 		},
 		handleOnline() {
 			alert('Volvio la conexion a internet')
-			
 		},
 		handleOffline() {
 			alert('Se PERDIO la conexión a INTERNET, ESPERE a que se restablezca para continuar usando el SISTEMA, por favor')

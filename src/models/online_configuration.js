@@ -119,6 +119,16 @@ export default {
 			type: 'checkbox',
 		},
 		{
+			text: 'Pedir el barrio al registrarse',
+			key: 'pedir_barrio_al_registrarse',
+			type: 'checkbox',
+		},
+		{
+			text: 'Logear automaticamente al cliente cuando finaliza el registro',
+			key: 'logear_cliente_al_registrar',
+			type: 'checkbox',
+		},
+		{
 			text: 'Imagen por defecto para los articulos sin Imagenes',
 			key: 'default_article_image_url',
 			type: 'image',

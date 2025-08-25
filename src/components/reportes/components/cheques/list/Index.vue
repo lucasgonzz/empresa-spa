@@ -1,6 +1,7 @@
 <template>
 	<div>
 		<cobrar-cheque></cobrar-cheque>
+		<pagar-cheque></pagar-cheque>
 		<endozar-cheque></endozar-cheque>
 		<rechazar-cheque></rechazar-cheque>
 
@@ -38,6 +39,7 @@ export default {
 		TableComponent: () => import('@/common-vue/components/display/table/Index'),
 		TableButtons: () => import('@/components/reportes/components/cheques/list/TableButtons'),
 		CobrarCheque: () => import('@/components/reportes/components/cheques/list/modals/CobrarCheque'),
+		PagarCheque: () => import('@/components/reportes/components/cheques/list/modals/PagarCheque'),
 		EndozarCheque: () => import('@/components/reportes/components/cheques/list/modals/EndozarCheque'),
 		RechazarCheque: () => import('@/components/reportes/components/cheques/list/modals/RechazarCheque'),
 	},

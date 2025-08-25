@@ -123,6 +123,9 @@ export default {
 					res.json()
 					.then(body => {
 						console.log(body.searchInformation.totalResults)
+
+						this.sumar_contador_de_busqueda()
+
 						if (body.searchInformation.totalResults == 0) {
 							this.$toast.error('No se encontraron resultados, prueba con otras palabras por favor')
 						} else if (body.items.length) {
@@ -138,6 +141,12 @@ export default {
 					this.$toast.error('Limite de busqueda diaria')
 				})
 			}
+		},
+		sumar_contador_de_busqueda() {
+			this.$api.get('google/custom-search/aumentar-contador')
+			.catch(err => {
+				console.log('error al actualizar contador de google')
+			})
 		},
 		setImage(image_url) {
 			this.$bvModal.hide('search-image') 

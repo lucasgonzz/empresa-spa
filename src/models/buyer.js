@@ -22,8 +22,22 @@ export default {
 			show: true,
 		},
 		{
+			text: 'Ciudad',
+			key: 'ciudad',
+			type: 'text',
+			value: '',
+			show: true,
+		},
+		{
 			text: 'Barrio',
 			key: 'barrio',
+			type: 'text',
+			value: '',
+			show: true,
+		},
+		{
+			text: 'Direccion',
+			key: 'address',
 			type: 'text',
 			value: '',
 			show: true,

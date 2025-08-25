@@ -58,6 +58,12 @@
 		</div>
 		<hr>	
 		<div>
+
+			<column-positions-guardadas
+			:positions_seted="positions_seted"
+			:start_row="start_row"
+			:columns="columns_"></column-positions-guardadas>
+
 			<p>
 				<strong>
 					Posición de las columnas en el Excel
@@ -100,14 +106,6 @@
 								maxlength="1"
 								v-model="column.letra"></b-form-input>
 
-								<!-- <b-form-checkbox
-								v-if="canIgnore(column)"
-								class="m-t-10"
-								:unchecked_value="0"
-								:value="1"
-								v-model="column.ignored">
-									Ignorar
-								</b-form-checkbox> -->
 							</div>
 						</div>
 						<p
@@ -251,6 +249,7 @@ export default {
 		Advises,
 		BtnLoader,
 		ImportHistory: () => import('@/common-vue/components/import/ImportHistory'),
+		ColumnPositionsGuardadas: () => import('@/common-vue/components/import/column-positions-guardadas/Index'),
 	}, 
 	props: {
 		model_name: String,
@@ -299,7 +298,10 @@ export default {
 				return 20
 			}
 			return 70
-		}
+		},
+		selected_column_position_id() {
+			return this.$store.state.column_position.selected_column_position_id
+		},
 	},
 	data() {
 		return {
@@ -339,14 +341,22 @@ export default {
 				this.hubo_un_error = false
 				this.demora_de_todas_las_solicitud = 0
 				console.log('Se puso hubo_un_error en '+this.hubo_un_error)
-				this.setColumnsPositions()
+				this.set_default_columns_positions()
+				this.$store.commit('column_position/set_selected_column_position_id', 0)
 	        }
 	    })
 	},
 	watch: {
 		columns() {
 			console.log('watch de columns')
-			this.setColumnsPositions()
+			this.set_default_columns_positions()
+		},
+		selected_column_position_id() {
+			if (this.selected_column_position_id != 0) {
+				this.set_column_positions_from_selected_columns()
+			} else {
+				this.set_default_columns_positions()
+			}
 		},
 	},
 	methods: {
@@ -495,10 +505,48 @@ export default {
 			if (this.positions_seted) {
 				this.clear()
 			} else {
-				this.setColumnsPositions()
+				this.set_default_columns_positions()
 			}
 		},
-		setColumnsPositions() {
+
+
+		// Lo ejecuto con una column_position creada por el usuario
+		set_column_positions_from_selected_columns() {
+
+			let column_position = this.$store.state.column_position.models.find(c => c.id == this.selected_column_position_id)
+			
+			if (typeof column_position == 'undefined') return
+
+			this.columns_ = []
+
+			// Convierto el json en un array de objetos
+			// const columns_array = Object.entries(column_position.positions).map(([key, value]) => {
+			// 	return {
+			// 		text: key,
+			// 		letra: value
+			// 	};
+			// });
+
+			console.log('column_position:')
+			console.log(column_position)
+			// Agrego las columnas al array de columnas
+			column_position.positions.forEach(column => {
+				
+				this.columns_.push({
+					text: column.text,
+					description: column.description,
+					letra: column.letra,
+					position: column.position,
+					ignored: 0,
+					can_not_ignore: typeof column.can_not_ignore != 'undefined' ? true : undefined,
+				})
+			})
+			this.positions_seted = true
+
+			this.start_row = Number(column_position.start_row)
+		},
+
+		set_default_columns_positions() {
 			console.log('Seteando posiciones')
 			this.columns_ = []
 			let position = 1
@@ -522,6 +570,8 @@ export default {
 				}
 			})
 			this.positions_seted = true
+
+			this.start_row = 2
 		},
 		clear() {
 			let index = 0

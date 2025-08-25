@@ -1,204 +1,207 @@
 <template>
-<b-row
-class="m-b-15 m-t-20">
-	<b-col>
-		<b-table 
-		class="b-r-1"
-		v-if="items.length"
-		:items="table_items" 
-		head-variant="dark" 
-		:fields="fields" 
-		responsive 
-		hover>
-			<template #cell(price)="data">
-				<b-input-group
-				v-if="can('article.vender.change_price') || items[data.index].default_in_vender"
-				class="input-price m-b-10">
+<div
+class="m-b-15 m-t-70">
+	<hr>
+	<b-row>
+		<b-col>
+			<b-table 
+			class="b-r-1"
+			v-if="items.length"
+			:items="table_items" 
+			head-variant="dark" 
+			:fields="fields" 
+			responsive 
+			hover>
+				<template #cell(price)="data">
+					<b-input-group
+					v-if="can('article.vender.change_price') || items[data.index].default_in_vender"
+					class="input-price m-b-10">
 
-					<div class="cont-input-price">
-						<b-form-input
-						placeholder="Personalizado"
-						@keyup.enter="add_varios_precios(items[data.index], true)"
-						@keyup="callSetTotal" 
-						type="number"
-						:id="'price-vender-'+items[data.index].id"
-						min="0"
-						v-model="items[data.index].price_vender_personalizado"></b-form-input>
+						<div class="cont-input-price">
+							<b-form-input
+							placeholder="Personalizado"
+							@keyup.enter="add_varios_precios(items[data.index], true)"
+							@keyup="callSetTotal" 
+							type="number"
+							:id="'price-vender-'+items[data.index].id"
+							min="0"
+							v-model="items[data.index].price_vender_personalizado"></b-form-input>
 
-						<div
-						class="varios-precios"
-						v-if="items[data.index].varios_precios">
 							<div
-							v-for="otro_precio in items[data.index].varios_precios"
-							class="otro-precio">
-								<b-form-input 
-								@keyup.enter.stop="calculate_price_vender(items[data.index])"
-								v-model="otro_precio.price_vender"
-								type="number" />
+							class="varios-precios"
+							v-if="items[data.index].varios_precios">
+								<div
+								v-for="otro_precio in items[data.index].varios_precios"
+								class="otro-precio">
+									<b-form-input 
+									@keyup.enter.stop="calculate_price_vender(items[data.index])"
+									v-model="otro_precio.price_vender"
+									type="number" />
 
-								<b-form-input 
-								class="input-amount"
-								v-model="otro_precio.amount"
-								:min="1"
-								@change="enter_amount(items[data.index])"
-								@keyup.enter.prevent="enter_amount(items[data.index])"
-								placeholder="Cantidad"
-								type="number" />
+									<b-form-input 
+									class="input-amount"
+									v-model="otro_precio.amount"
+									:min="1"
+									@change="enter_amount(items[data.index])"
+									@keyup.enter.prevent="enter_amount(items[data.index])"
+									placeholder="Cantidad"
+									type="number" />
 
-								<b-button
-								size="sm"
-								@click="remove_otro_precio(items[data.index], otro_precio)"
-								variant="danger">
-									<i class="icon-trash"></i>
-								</b-button>
+									<b-button
+									size="sm"
+									@click="remove_otro_precio(items[data.index], otro_precio)"
+									variant="danger">
+										<i class="icon-trash"></i>
+									</b-button>
+								</div>
 							</div>
 						</div>
-					</div>
 
-				</b-input-group>
-				<span
-				v-if="items[data.index].calculated_price_vender">
-					{{ price(items[data.index].calculated_price_vender) }}
-				</span>
-				<span
-				v-else>
-					{{ price(items[data.index].price_vender) }}
-				</span>
-			</template>
+					</b-input-group>
+					<span
+					v-if="items[data.index].calculated_price_vender">
+						{{ price(items[data.index].calculated_price_vender) }}
+					</span>
+					<span
+					v-else>
+						{{ price(items[data.index].price_vender) }}
+					</span>
+				</template>
 
 
-			
-			<template #cell(article_variant_id)="data">
-				<b-input-group
-				v-if="items[data.index].is_article && items[data.index].article_variants.length"
-				class="input-discount">
-					<b-form-select
-					:options="article_variant_options(items[data.index])"
-					v-model="items[data.index].article_variant_id"></b-form-select>
-				</b-input-group>
-			</template>
-
-			
-			<template #cell(amount)="data">
-				<b-input-group
-				class="input-discount">
-					<b-form-input
-					:disabled="previus_sale != null && previus_sale.to_check == 1"
-					@keyup="callSetTotal(true, items[data.index])"
-					@click="callSetTotal(true, items[data.index])"
-					type="number"
-					min="0"
-					:dusk="'amount_'+data.index"
-					v-model="items[data.index].amount"></b-form-input>
-				</b-input-group>
-			</template>
-
-			<template #cell(unidades_individuales)="data">
-				<b-input-group
-				class="unidades-individuales">
-					<b-form-input
-					type="number"
-					min="0"
-					@keyup.enter="calcular_precio_por_unidades_individuales(items[data.index])"
-					v-model="items[data.index].unidades_individuales"
-					placeholder="Div Por"></b-form-input>
-					<b-form-input
-					type="number"
-					min="0"
-					@keyup.enter="calcular_precio_por_unidades_individuales(items[data.index])"
-					v-model="items[data.index].unidades_individuales_en_esta_venta"
-					placeholder="Div En"></b-form-input>
-				</b-input-group>
-			</template>
-
-			<template #cell(discount)="data">
-				<b-input-group
-				v-if="items[data.index].is_article"
-				class="input-discount"
-				prepend="%">
-					<b-form-input
-					@keyup="callSetTotal"
-					@click="callSetTotal"
-					type="number"
-					:placeholder="get_max_discount(items[data.index])"
-					min="0"
-					v-model="items[data.index].discount"></b-form-input>
-				</b-input-group>
-			</template>
-
-			<template #cell(price_type_personalizado_id)="data">
 				
-				<price-type
-				:item="items[data.index]"></price-type>
-			
-			</template>
+				<template #cell(article_variant_id)="data">
+					<b-input-group
+					v-if="items[data.index].is_article && items[data.index].article_variants.length"
+					class="input-discount">
+						<b-form-select
+						:options="article_variant_options(items[data.index])"
+						v-model="items[data.index].article_variant_id"></b-form-select>
+					</b-input-group>
+				</template>
 
-			<template #cell(checked_amount)="data">
-				<strong
-				class="text-danger p-b-10"
-				v-if="items[data.index].checked_amount && items[data.index].checked_amount == items[data.index].amount">
-					Se elimino
-				</strong>
-				<b-input-group
-				:class="checked_amount_input_class(items[data.index])"
-				class="input-checked-amount">
-					<div 
-					class="prepend">
-						<i class='icon-edit'></i>
+				
+				<template #cell(amount)="data">
+					<b-input-group
+					class="input-discount">
+						<b-form-input
+						:disabled="previus_sale != null && previus_sale.to_check == 1"
+						@keyup="callSetTotal(true, items[data.index])"
+						@click="callSetTotal(true, items[data.index])"
+						type="number"
+						min="0"
+						:dusk="'amount_'+data.index"
+						v-model="items[data.index].amount"></b-form-input>
+					</b-input-group>
+				</template>
+
+				<template #cell(unidades_individuales)="data">
+					<b-input-group
+					class="unidades-individuales">
+						<b-form-input
+						type="number"
+						min="0"
+						@keyup.enter="calcular_precio_por_unidades_individuales(items[data.index])"
+						v-model="items[data.index].unidades_individuales"
+						placeholder="Div Por"></b-form-input>
+						<b-form-input
+						type="number"
+						min="0"
+						@keyup.enter="calcular_precio_por_unidades_individuales(items[data.index])"
+						v-model="items[data.index].unidades_individuales_en_esta_venta"
+						placeholder="Div En"></b-form-input>
+					</b-input-group>
+				</template>
+
+				<template #cell(discount)="data">
+					<b-input-group
+					v-if="items[data.index].is_article"
+					class="input-discount"
+					prepend="%">
+						<b-form-input
+						@keyup="callSetTotal"
+						@click="callSetTotal"
+						type="number"
+						:placeholder="get_max_discount(items[data.index])"
+						min="0"
+						v-model="items[data.index].discount"></b-form-input>
+					</b-input-group>
+				</template>
+
+				<template #cell(price_type_personalizado_id)="data">
+					
+					<price-type
+					:item="items[data.index]"></price-type>
+				
+				</template>
+
+				<template #cell(checked_amount)="data">
+					<strong
+					class="text-danger p-b-10"
+					v-if="items[data.index].checked_amount && items[data.index].checked_amount == items[data.index].amount">
+						Se elimino
+					</strong>
+					<b-input-group
+					:class="checked_amount_input_class(items[data.index])"
+					class="input-checked-amount">
+						<div 
+						class="prepend">
+							<i class='icon-edit'></i>
+						</div>
+						<b-form-input
+						@keyup="setCheckedItems(items[data.index])"
+						:disabled="!previus_sale.to_check"
+						type="number"
+						min="0"
+						v-model="items[data.index].checked_amount"></b-form-input> 
+					</b-input-group>
+				</template>
+
+				<!-- <template #cell(returned_amount)="data">
+					<b-input-group
+					class="input-discount">
+						<b-form-input
+						@keyup="setReturnedItems(items[data.index])"
+						@click="setReturnedItems(items[data.index])"
+						type="number"
+						min="0"
+						v-model="items[data.index].returned_amount"></b-form-input>
+					</b-input-group>
+				</template> -->
+				<template #cell(delivered_amount)="data">
+					<b-input-group
+					class="input-discount">
+						<b-form-input
+						type="number"
+						min="0"
+						v-model="items[data.index].delivered_amount"></b-form-input>
+					</b-input-group>
+				</template>
+				<template #cell(options)="data">
+					<div class="options">
+						<b-button 
+						v-if="previus_sale === null || !previus_sale.to_check"
+						@click="removeItem(items[data.index])"
+						variant="danger"
+						class="btn-options"
+						size="sm">
+							<i class="icon-trash"></i>
+						</b-button>
 					</div>
-					<b-form-input
-					@keyup="setCheckedItems(items[data.index])"
-					:disabled="!previus_sale.to_check"
-					type="number"
-					min="0"
-					v-model="items[data.index].checked_amount"></b-form-input> 
-				</b-input-group>
-			</template>
-
-			<!-- <template #cell(returned_amount)="data">
-				<b-input-group
-				class="input-discount">
-					<b-form-input
-					@keyup="setReturnedItems(items[data.index])"
-					@click="setReturnedItems(items[data.index])"
-					type="number"
-					min="0"
-					v-model="items[data.index].returned_amount"></b-form-input>
-				</b-input-group>
-			</template> -->
-			<template #cell(delivered_amount)="data">
-				<b-input-group
-				class="input-discount">
-					<b-form-input
-					type="number"
-					min="0"
-					v-model="items[data.index].delivered_amount"></b-form-input>
-				</b-input-group>
-			</template>
-			<template #cell(options)="data">
-				<div class="options">
-					<b-button 
-					v-if="previus_sale === null || !previus_sale.to_check"
-					@click="removeItem(items[data.index])"
-					variant="danger"
-					class="btn-options"
-					size="sm">
-						<i class="icon-trash"></i>
-					</b-button>
-				</div>
-			</template>
-		</b-table>
-		<div 
-		v-else>
-			<p
-			dusk="text_remito"
-			class="text-with-icon-2">
-				<i class="icon-clipboard"></i>
-				Remito en blanco
-			</p>
-		</div>
-	</b-col>
-</b-row>
+				</template>
+			</b-table>
+			<div 
+			v-else>
+				<p
+				dusk="text_remito"
+				class="text-with-icon-2">
+					<i class="icon-clipboard"></i>
+					Remito en blanco
+				</p>
+			</div>
+		</b-col>
+	</b-row>
+</div>
 </template>
 <script>
 import vender from '@/mixins/vender/index'

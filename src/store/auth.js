@@ -13,6 +13,7 @@ export default {
 		schedule_edit: {},
 		loading: false,
 		message: '',
+		online: true,
 	},
 	getters: {
 		authenticated(state) {
@@ -23,6 +24,9 @@ export default {
 		},
 	},
 	mutations: {
+		set_online(state, value) {
+			state.online = value
+		},
 		setAuthenticated(state, value) {
 			state.authenticated = value
 		},

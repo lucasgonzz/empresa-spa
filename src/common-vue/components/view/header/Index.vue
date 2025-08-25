@@ -1,6 +1,6 @@
 <template>
 	<b-row
-	class="p-t-15">
+	class="p-t-15 align-center">
 		<b-col
 		class="j-start m-b-25 m-xl-b-0"
 		lg="6"

@@ -98,6 +98,12 @@ export default {
 			only_show: true,
 		},
 		{
+			text: 'En acopio',
+			key: 'en_acopio',
+			type: 'checkbox',
+			only_show: true,
+		},
+		{
 			text: 'Articulos',
 			key: 'articles',
 			store: 'article',

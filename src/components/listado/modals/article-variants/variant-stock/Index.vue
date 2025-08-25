@@ -1,6 +1,5 @@
 <template>
 	<div>
-		
 		<table-component
 		:properties="properties"
 		:models="models_to_show"
@@ -10,12 +9,20 @@
 			<template
 			v-for="address in addresses"
 			v-slot:[get_address_slot(address)]="props">
-				<b-form-input
-				type="number"
-				:id="input_id(props, address)"
-				@keyup="update_variant_stock(props.model)"
-				@click="update_variant_stock(props.model)"
-				v-model="props.model['address_'+address.id]"></b-form-input>
+
+				<div class="j-center align-center">
+					<b-form-input
+					type="number"
+					:id="input_id(props, address)"
+					@keyup="update_variant_stock(props.model)"
+					@click="update_variant_stock(props.model)"
+					v-model="props.model['address_'+address.id]"></b-form-input>
+
+					<b-badge
+					class="m-l-5"
+					variant="primary"
+					v-if="props.model['address_'+address.id+'_on_display']">En Exhibicion</b-badge>
+				</div>
 			</template>
 
 		</table-component>
@@ -64,6 +71,7 @@ export default {
 					variant.addresses.forEach(variant_address => {
 
 						model['address_'+variant_address.id] = variant_address.pivot.amount 
+						model['address_'+variant_address.id+'_on_display'] = variant_address.pivot.on_display 
 					})
 
 					models.push(model)

@@ -49,10 +49,6 @@ export default class ArticleVariants {
 		}
 		this.setVariantProperties(new_variant)
 		this.variants.push(new_variant)
-		// console.log('se agrego la vatiante ')
-		// new_variant.article_properties.forEach(p => {
-		// 	console.log(p.name)
-		// })
 
 
 		if (this.terminoLaUltima()) {

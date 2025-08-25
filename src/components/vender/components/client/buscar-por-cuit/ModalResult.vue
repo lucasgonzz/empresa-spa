@@ -6,7 +6,7 @@
 		<p
 		v-for="(item, index) in props" 
 		:key="index">
-			{{ item.key }}: {{ item.value }}
+			{{ item.key.replaceAll('_', ' ').toUpperCase() }}: {{ item.value }}
 		</p>	
 		<hr>
 		<div
@@ -81,7 +81,7 @@ export default {
 				},
 				{
 					key: 'iva_condition_id',
-					value: 1,
+					value: this.afip_data.condicion_iva == 'RESPONSABLE INSCRIPTO' ? 1 : this.afip_data.condicion_iva == 'MONOTRIBUTO' ? 2 : 3,
 				},
 			]
 

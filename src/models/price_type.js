@@ -36,6 +36,30 @@ export default {
 			show: true,
 		},
 		{
+			text: 'Setear el precio final',
+			key: 'setear_precio_final',
+			type: 'checkbox',
+			value: 0,
+			show: true,
+		},
+		{
+			// text: 'Setear el precio final',
+			key: 'se_usa_en_tienda_nube',
+			if_has_extencion: 'usa_tienda_nube',
+			type: 'checkbox',
+			value: 0,
+			show: true,
+		},
+		{
+			text: 'Recargos',
+			key: 'price_type_surchages',
+			has_many: {
+				text: 'Recargos',
+				model_name: 'price_type_surchage',
+			},
+		},
+
+		{
 			text: 'Categorias',
 			store: 'category',
 			search_on_models_by: 'name',

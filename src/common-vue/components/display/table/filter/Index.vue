@@ -31,6 +31,7 @@
 
 			<search-filter
 			@filtrar="filtrar"
+			@clear_selected="clear_selected"
 			:model_name="model_name"
 			:field="local_field"></search-filter>
 
@@ -53,7 +54,9 @@
 	</div>
 </template>
 <script>
+import filters from '@/common-vue/mixins/filters'
 export default {
+	mixins: [filters],
 	props: {
 		field: Object,
 		model_name: String,
@@ -104,6 +107,12 @@ export default {
 		}
 	},
 	methods: {
+		clear_selected() {
+			let filter = this.limpiar_filtro(this.filter)
+			console.log('filtro limpio:')
+			console.log(filter)
+			this.$store.commit(this.model_name+'/addFilter', filter)
+		},
 		filtrar() {
 			this.$emit('filtrar')
 		}

@@ -1,5 +1,6 @@
 <template>
-	<div>
+	<div
+	class="w-100">
 		<b-form-select
 		v-if="show"
 		:class="facturando ? 'verde' : 'rojo'"
@@ -82,9 +83,10 @@ export default {
 <style lang="sass">
 @import '@/sass/_custom'
 .rojo 
-	background: $red !important
+	background: #333 !important
 	color: #FFF !important
 	font-weight: bold !important
+	
 .verde 
 	background: $green !important
 	color: #FFF !important

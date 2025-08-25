@@ -14,7 +14,7 @@
 		prepend="Hasta">
 			<b-form-input
 			type="date"
-			v-model="to_date"></b-form-input>
+			v-model="until_date"></b-form-input>
 		</b-input-group>
 
 		<b-button
@@ -39,12 +39,12 @@ export default {
 				this.$store.commit(this.model_name+'/setFromDate', value)
 			}
 		},
-		to_date: {
+		until_date: {
 			get() {
-				return this.$store.state[this.model_name].to_date
+				return this.$store.state[this.model_name].until_date
 			},
 			set(value) {
-				this.$store.commit(this.model_name+'/setToDate', value)
+				this.$store.commit(this.model_name+'/setUntilDate', value)
 			}
 		},
 	},

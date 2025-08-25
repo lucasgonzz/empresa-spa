@@ -14,6 +14,7 @@ export default [
     'address',
     'client',
     'provider',
+    'column_position',
     'current_acount_payment_method',
     'afip_tipo_comprobante',
     'afip_information',

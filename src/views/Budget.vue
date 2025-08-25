@@ -14,7 +14,7 @@ model_name="budget">
 		<btn-actualizar-en-vender></btn-actualizar-en-vender>
 	</template>
 
-	<template v-slot:modal_buttons="props">
+	<template v-slot:model_modal_header="props">
 		<modal-buttons></modal-buttons>
 	</template>
 </view-component>

@@ -34,6 +34,7 @@ export default {
 			return this.$store.state.price_type.models 
 		},
 		show() {
+			return true
 			return this.price_types.length
 		},
 	},

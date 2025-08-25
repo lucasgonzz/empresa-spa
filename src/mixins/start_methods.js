@@ -31,6 +31,17 @@ export default {
 
 			// Llamo cada 20 segundos a peidos online
 			this.escuchar_orders_y_messages()
+
+			this.get_inventory_performance()
+
+		},
+		get_inventory_performance() {
+			this.$store.dispatch('inventory_performance/getModels')
+			.then(() => {
+				if (this.$store.state.inventory_performance.models[0].articles_stock_minimo.length) {
+					this.$bvModal.show('articles-stock-minimo')
+				}
+			})
 		},
 		escuchar_orders_y_messages() {
 			if (this.owner.online) {

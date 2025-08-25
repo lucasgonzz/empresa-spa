@@ -1,38 +1,47 @@
 <template>
-<div
-class="cont-select">
-	<b-form-select
-	:disabled="disabled"
-	id="vender_payment_method_id"
-	v-model="current_acount_payment_method_id"
-	@change="set_payment_methods_null"
-	:options="getOptions({key: 'current_acount_payment_method_id', text: 'Metodo de pago'})">
-	</b-form-select>
+	<b-input-group
+	class="cont-payment-methods">
+		
+		<b-form-select
+		:disabled="disabled"
+		id="vender_payment_method_id"
+		v-model="current_acount_payment_method_id"
+		@change="set_payment_methods_null"
+		:options="getOptions({key: 'current_acount_payment_method_id', text: 'Metodo de pago'})">
+		</b-form-select>
+
+		<template #append>
+
+			<!-- Boton para metodoS de pago -->
+			<b-button
+			:disabled="disabled" 
+			variant="success"
+			id="btn_set_payment_methods"
+			@click="set_payment_methods">
+				<b-badge
+				variant="primary"
+				v-if="selected_payment_methods.length">
+					{{ selected_payment_methods.length }}
+				</b-badge>
+				<i 
+				v-else
+				class="icon-plus"></i>
+			</b-button>
 
 
-	<!-- Boton para metodoS de pago -->
-	<b-button
-	:disabled="disabled" 
-	class="mb-2" 
-	variant="outline-primary"
-	id="btn_set_payment_methods"
-	@click="set_payment_methods">
-		<b-badge
-		variant="primary"
-		v-if="selected_payment_methods.length">
-			{{ selected_payment_methods.length }}
-		</b-badge>
-		<i 
-		v-else
-		class="icon-plus"></i>
-	</b-button>
-</div>
+			<total-info></total-info>
+
+		</template>
+	</b-input-group>
 </template>
 <script>
 // import vender from '@/mixins/vender'
 import select_payment_methods from '@/mixins/vender/select_payment_methods'
 export default {
 	mixins: [select_payment_methods],
+	components: {
+		TotalInfo: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/total-info/Index'),
+	},
 	computed: {
 		current_acount_payment_method_id: {
 			get(){
@@ -114,5 +123,12 @@ export default {
 	}
 }
 </script>
-  
-  
+<style lang="sass">
+.cont-payment-methods
+	
+	.input-group-append
+		height: 47.6px
+
+		button
+			border-radius: 0 5px 5px 0 !important
+</style>

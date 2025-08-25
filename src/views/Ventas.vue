@@ -10,6 +10,8 @@
 
 	<sale-modifications></sale-modifications>
 
+	<payment-plan-modal></payment-plan-modal>
+
 	<view-component
 	show_filter_modal
 	:models_to_show="sales_to_show"
@@ -28,12 +30,19 @@
 			<total></total>	
 		</template>
 		<template v-slot:table_left_options="props">
-			<div class="j-start">
+			<div class="j-start align-center">
 				<table-buttons
 				:model="props.model" />
 
 				<btn-sale-modifications
 				:model="props.model"></btn-sale-modifications>
+
+				<b-badge
+				class="m-l-5"
+				variant="danger"
+				v-if="props.model.en_acopio">
+					Acopio
+				</b-badge>
 			</div>
 		</template> 
 		<template #options_drop_down_seleccion>
@@ -70,6 +79,7 @@ export default {
 
 		ClientBtn: () => import('@/components/ventas/components/ClientBtn'),
 
+		PaymentPlanModal: () => import('@/components/common/payment-plan/Index'),
 	},
 	created() {
 		this.$store.commit('sale/set_from_depositos', 0)

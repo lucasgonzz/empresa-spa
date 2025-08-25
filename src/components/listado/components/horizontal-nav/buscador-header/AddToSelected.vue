@@ -2,7 +2,6 @@
 	<b-button
 	v-b-popover.hover.bottom="info"
 	:value="true"
-	class="m-r-5"
 	:unchecked-value="false"
 	@click="set_value"
 	:variant="get_variant">

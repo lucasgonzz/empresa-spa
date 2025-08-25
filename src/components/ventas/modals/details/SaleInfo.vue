@@ -13,6 +13,8 @@
 				:loader="loading_index"
 				@clicked="setPreviusSale(sale_details)" />
 			
+				<btn-actualizar-precios-actuales></btn-actualizar-precios-actuales>
+
 				<b-button
 				class="m-r-10"
 				v-if="hasExtencion('acopios')"
@@ -109,6 +111,7 @@ export default {
 		SalePrintButtons: () => import('@/components/common/SalePrintButtons'),
 		BtnFacturar: () => import('@/components/ventas/modals/details/BtnFacturar'),
 		BtnNotaCredito: () => import('@/components/ventas/modals/details/BtnNotaCredito'),
+		BtnActualizarPreciosActuales: () => import('@/components/ventas/modals/details/BtnActualizarPreciosActuales'),
 		// ClientInfo: () => import('@/components/common/ClientInfo'),
 	},
 	data() {

@@ -19,6 +19,11 @@ export default {
 			type: 'image',
 		},
 		{
+			text: 'Margen de ganancia',
+			key: 'percentage_gain',
+			type: 'number',
+		},
+		{
 			text: 'Listas de Precio',
 			if_has_extencion: 'lista_de_precios_por_categoria',
 			store: 'price_type',

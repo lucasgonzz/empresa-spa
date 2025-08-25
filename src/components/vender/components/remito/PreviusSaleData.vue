@@ -23,13 +23,26 @@
 				class="btn btn-primary">
 					{{ since(previus_sale.created_at) }}
 				</button>
+
+				<btn-loader
+				v-if="index_previus_sales > 0 || budget"
+				text="Cancelar"
+				:block="false"
+				:loader="false"
+				@clicked="cancelPreviusSale"
+				variant="outline-danger" />
 			</div>
 		</b-col>
 	</b-row>
 </template>
 <script>
+import previus_sales from '@/mixins/vender/previus_sale/index'
 export default {
 	name: 'PreviusSaleData',
+	mixins: [previus_sales],
+	components: {
+		BtnLoader: () => import('@/common-vue/components/BtnLoader'),
+	},
 	computed: {
 		index() {
 			return this.$store.state.vender.previus_sales.index
@@ -39,6 +52,9 @@ export default {
 		},
 		total() {
 			return this.$store.state.vender.total
+		},
+		budget() {
+			return this.$store.state.vender.budget
 		},
 	}
 }

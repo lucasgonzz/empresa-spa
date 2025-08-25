@@ -14,6 +14,7 @@
 	    
 	    <table-component
 	    :models="parent_model[prop.key]"
+	    is_from_has_many
 	    :model_name="prop.has_many.model_name"></table-component>
 	    
 		<b-button

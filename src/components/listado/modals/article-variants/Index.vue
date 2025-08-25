@@ -5,7 +5,8 @@ size="lg"
 id="article-variants"
 hide-footer>
 
-	<variants-stock></variants-stock>
+	<variants-stock
+	v-if="addresses.length"></variants-stock>
 
 	<article-properties></article-properties>
 
@@ -20,6 +21,9 @@ export default {
 		ArticleVariants: () => import('@/components/listado/modals/article-variants/ArticleVariants'),
 	},
 	computed: {
+		addresses() {
+			return this.$store.state.address.models
+		},
 		article() {
 			return this.$store.state.article.model 
 		},

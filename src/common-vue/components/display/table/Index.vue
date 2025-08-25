@@ -22,7 +22,7 @@
 								<span v-html="field.label"></span>
 
 								<div
-								v-if="!pivot && usar_filtros"
+								v-if="!pivot && usar_filtros && !is_from_has_many"
 								class="cont-filter-buttons">
 									
 									<ordenar
@@ -32,12 +32,14 @@
 									:key="field.key"
 									:field="field"></ordenar>	
 
+									<!-- Boton de la lupa con el boton de borrar -->
 									<btn-filter
 									:model_name="model_name"
 									@toggleFilter="toggleFilter"
 									:field="field"></btn-filter>
 								</div>
 
+								<!-- Componente donde se indican los parametros de filtrado -->
 								<filter-component
 								v-if="!pivot && usar_filtros"
 								@limpiar_show_filters="limpiar_show_filters"
@@ -174,11 +176,17 @@ export default {
 	props: {
 		properties: {
 			type: Array,
-			default: null
+			default: () => {
+				return []
+			}
 		},
 		order_list_by: {
 			type: String,
 			default: null
+		},
+		is_from_has_many: {
+			type: Boolean,
+			default: false,
 		},
 		order_list_from_pivot: {
 			type: Boolean,
@@ -279,9 +287,12 @@ export default {
 			console.log('calculando props')
 			let props = []
 
+			 if (this.properties.length) {
 
-			 if (this.properties) {
 				props = this.propertiesToShow(this.properties, true)
+
+				console.log('1:')
+				console.log(props)
 
 				if (this.papelera) {
 					props.splice(1, 0, {
@@ -297,6 +308,9 @@ export default {
 				|| (this.pivot && !this.pivot.props_to_show)
 				) {
 			 	props = this.propertiesToShow(this.modelPropertiesFromName(this.model_name), true)
+
+				console.log('propertiesToShow:')
+				console.log(props)
 				if (this.add_created_at) {
 
 					props.push({
@@ -363,6 +377,7 @@ export default {
 				}
 			} 
 
+			console.log(props)
 
 			
 			props.splice(0, 0, {
@@ -548,6 +563,7 @@ export default {
 					type: prop.type_to_update ? prop.type_to_update : prop.type
 				})
 			})
+			console.log('fields:')
 			console.log(this.fields)
 
 			this.set_filters(cambiaron_las_props)
@@ -672,18 +688,18 @@ export default {
 		},
 		setShowButtonsScroll() {
 			let cont_table =  document.getElementById(this.id)
-			let table = cont_table.firstChild
-			if (cont_table.offsetWidth < table.offsetWidth) {
-				this.show_buttons_scroll = true 
-			} else {
-				this.show_buttons_scroll = false
+			if (cont_table) {
+				let table = cont_table.firstChild
+				if (cont_table.offsetWidth < table.offsetWidth) {
+					this.show_buttons_scroll = true 
+				} else {
+					this.show_buttons_scroll = false
+				}
 			}
 		},
 		scroll_margenes() {
 		    const contTable = document.getElementById(this.id);
 		    if (!contTable) return;
-
-		    console.log('scroll_margenes table:', contTable);
 
 		    let scrollDirection = null;
 		    let isScrolling = false;

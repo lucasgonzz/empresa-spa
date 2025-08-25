@@ -16,7 +16,7 @@
  
 	<client></client>	
 	<remito></remito>	
-	<btn-save></btn-save>	
+	<!-- <btn-save></btn-save>	 -->
 
 </div> 
 </template>

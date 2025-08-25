@@ -7,7 +7,10 @@ export default {
 
 			if (
 				!this.guardar_como_presupuesto 
-				&& this.hasExtencion('check_article_stock_en_vender')
+				&& (
+					this.hasExtencion('check_article_stock_en_vender')
+					|| this.hasExtencion('warn_article_stock_en_vender')
+					)
 				) {
 
 				if (item.is_article) {
@@ -15,9 +18,18 @@ export default {
 					if (item.stock === null || item.stock > 0) {
 						return true 
 					}
-					this.$toast.error('Articulo sin stock, NO se agrego')
-					document.getElementById('article-bar-code').value = ''
-					return false 
+
+					if (this.hasExtencion('check_article_stock_en_vender')) {
+
+						this.$toast.error('Articulo sin stock, NO se agrego')
+						document.getElementById('article-bar-code').value = ''
+						return false 
+					} else {
+
+						this.$toast.error('Articulo sin stock')
+						return true 
+					}
+
 
 				} else if (item.is_combo) {
 
@@ -37,7 +49,12 @@ export default {
 						this.$toast.error('El articulo '+article.name+' no tiene stock')
 					})
 
-					return tiene_stock
+					if (this.hasExtencion('check_article_stock_en_vender')) {
+						return tiene_stock
+					} else {
+						return true
+					}
+
 				}
 			}
 			return true 
@@ -50,15 +67,14 @@ export default {
 			
 			if (
 				!this.guardar_como_presupuesto 
-				&& this.hasExtencion('check_article_stock_en_vender')) {
+				&& (
+					this.hasExtencion('check_article_stock_en_vender')
+					|| this.hasExtencion('warn_article_stock_en_vender')
+				)
+			) {
 
 				let cantidad_para_vender = item.amount
-
 				
-				// if (cantidad_para_vender == '') {
-				// 	cantidad_para_vender = 1
-				// }
-
 				cantidad_para_vender = Number(cantidad_para_vender)
 
 				if (item.is_article) {
@@ -88,7 +104,10 @@ export default {
 
 				}
 			}
-			return stock_disponible
+			if (this.hasExtencion('check_article_stock_en_vender')) {
+				return stock_disponible
+			}
+			return true
 		},
 	}
 }

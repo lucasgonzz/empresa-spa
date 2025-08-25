@@ -35,6 +35,8 @@ hide-footer
 		:model_name="modelNameFromRelationKey(prop)"
 		:prop="prop"
 		@setSelected="setSelected"></search-component>
+
+		<hr>
 	</b-form-group>
 	<btn-loader
 	@clicked="update"
@@ -124,7 +126,7 @@ export default {
 						type: 'search',
 						value: '',
 					})
-					console.log('search para '+prop.key)
+					// console.log('search para '+prop.key)
 					// this.form[prop.key] = '' 
 				}
 			})

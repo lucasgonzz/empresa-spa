@@ -61,6 +61,12 @@ export default {
 					key: 'sucursal',
 				},
 				{
+					key: 'punto_de_venta',
+				},
+				{
+					key: 'tipo_comprobante',
+				},
+				{
 					key: 'empleado',
 				},
 				{
@@ -85,6 +91,8 @@ export default {
 					venta: sale.num,
 					sucursal: sale.address ? sale.address.stree : null,
 					employee: sale.employee ? sale.employee.name : this.owner.name,
+					punto_de_venta: this.get_afip_information(sale),
+					tipo_comprobante: this.get_afip_tipo_comprobante(sale),
 					total: this.price(sale.total),
 					hace: this.since(sale.created_at),
 					fecha: this.date(sale.created_at),
@@ -102,7 +110,23 @@ export default {
 	methods: {
 		showSale(sale) {
             this.show_model('sale', sale.id)
-		}
+		},
+		get_afip_information(sale) {
+			let model = this.$store.state.afip_information.models.find(m => sale.afip_information_id == m.id)
+
+			if (typeof model != 'undefined') {
+				return model.razon_social
+			}
+			return ''
+		},
+		get_afip_tipo_comprobante(sale) {
+			let model = this.$store.state.afip_tipo_comprobante.models.find(m => sale.afip_tipo_comprobante_id == m.id)
+
+			if (typeof model != 'undefined') {
+				return model.name
+			}
+			return ''
+		},
 	}
 }
 </script>

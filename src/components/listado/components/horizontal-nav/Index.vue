@@ -1,6 +1,6 @@
 <template>
 	
-	<div class="j-end">
+	<div class="j-end align-center">
 	
 		<btn-inventory-performance></btn-inventory-performance>
 		

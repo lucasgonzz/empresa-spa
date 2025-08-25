@@ -14,6 +14,7 @@ export default {
 				filter.mayor_que = ''
 				filter.menor_que = ''
 				filter.que_contenga = ''
+				filter.checkbox = -1
 			}
 
 			if (limpiar_en_blanco) {

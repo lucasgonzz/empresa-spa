@@ -4,14 +4,25 @@
 hide-footer
 size="lg"
 id="price-changes">
-	<b-table
-	v-if="!loading"
-	class="s-2 b-r-1 animate__animated animate__fadeIn"
-	head-variant="dark"
-	responsive
-	striped
-	:fields="fields"
-	:items="items"></b-table>
+	<div
+	v-if="!loading">
+		
+		<b-table
+		v-if="items.length"
+		class="s-2 b-r-1 animate__animated animate__fadeIn"
+		head-variant="dark"
+		responsive
+		striped
+		:fields="fields"
+		:items="items"></b-table>
+
+		<p 
+		v-else
+		class="text-with-icon">
+			<i class="icon-eye-slash"></i>
+			No hay cambios de precios
+		</p>
+	</div>
 
 	<b-skeleton-table
 	class="s-2 b-r-1 m-t-15 animate__animated animate__fadeIn"
@@ -44,19 +55,14 @@ export default {
 		})
 	},
 	computed: {
+		price_types() {
+			return this.$store.state.price_type.models 
+		},
 		fields() {
-			return [
+			let fields = [
 				{
 					label: 'Costo',
 					key: 'cost',
-				},
-				{
-					label: 'Precio',
-					key: 'price',
-				},
-				{
-					label: 'Precio Final',
-					key: 'final_price',
 				},
 				{
 					label: 'Empleado',
@@ -67,17 +73,56 @@ export default {
 					key: 'created_at',
 				},
 			]
+
+			if (this.price_types.length) {
+
+				this.price_types.forEach(price_type => {
+					fields.push({
+						label: price_type.name,
+						key: 'price_type_'+price_type.id
+					})
+					console.log('agregando '+price_type.name)
+				})
+
+			} else {
+				fields.push({
+					label: 'Precio',
+					key: 'price',
+				})
+				fields.push({
+					label: 'Precio Final',
+					key: 'final_price',
+				})
+			}
+
+			return fields
 		},
 		items() {
 			let items = []
+
 			this.price_changes.forEach(model => {
-				items.push({
+				let item = {
 					cost: this.price(model.cost),
 					price: this.price(model.price),
-					final_price: this.price(model.final_price),
 					employee: this.getEmployee(model),
 					created_at: this.date(model.created_at),
-				})
+				}
+
+				if (this.price_types.length) {
+					
+					this.price_types.forEach(price_type => {
+						let relation_price_type = model.price_types.find(p => p.id == price_type.id)
+
+						if (typeof relation_price_type != 'undefined') {
+							item['price_type_'+price_type.id] = this.price(relation_price_type.pivot.final_price)
+						}
+					})
+
+				} else {
+					item.final_price = this.price(model.final_price)
+				}
+
+				items.push(item)
 			})
 			return items 
 		},

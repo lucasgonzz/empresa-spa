@@ -13,6 +13,8 @@
 
 		<problemas-al-facturar></problemas-al-facturar>
 
+		<stock-minimo></stock-minimo>
+
 	</div>
 </template>
 <script>
@@ -24,6 +26,7 @@ export default {
 		Mensajes: () => import('@/components/alertas/components/lista-de-alertas-table/Mensajes'),
 		DepositMovements: () => import('@/components/alertas/components/lista-de-alertas-table/DepositMovements'),
 		ProblemasAlFacturar: () => import('@/components/alertas/components/lista-de-alertas-table/problemas-al-facturar/Index'),
+		StockMinimo: () => import('@/components/alertas/components/lista-de-alertas-table/stock-minimo/Index'),
 	}
 }
 </script>

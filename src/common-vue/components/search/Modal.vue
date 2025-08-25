@@ -276,7 +276,7 @@ export default {
 				}
 			}
 		},
-		search(from_pagination = false) {
+		async search(from_pagination = false) {
 			console.log('BUSCANDO, str_limint: '+this.str_limint)
 			this.results = []
 
@@ -325,15 +325,10 @@ export default {
 					})
 				} else {
 					
-					console.log('this.models_to_search')
-					console.log(this.models_to_search)
-
 					let models_to_search = this.models_to_search
-					if (this.search_function && typeof this.search_function != 'undefined') {
-						models_to_search = this[this.search_function]()
-						console.log('Los models_to_search ahora son:')
-						console.log(models_to_search)
-					} 
+					
+					console.log('models_to_search')
+					console.log(models_to_search)
 
 					results = models_to_search.filter(model => {
 
@@ -373,36 +368,31 @@ export default {
 						
 						return coincide
 					})
-					results = results.filter(model => {
-						let index = this.results.findIndex(result => {
-							return result.id == model.id 
-						})
-						return index == -1
+					
+					console.log('resultados:')
+					console.log(results)
+
+					// Eliminar duplicados por ID (en el nuevo array resultante)
+					const unique_results = []
+					const seen_ids = new Set()
+
+					results.forEach(item => {
+					    if (!seen_ids.has(item.id)) {
+					    	console.log('agregando item no repetido:')
+					    	console.log(item)
+					        seen_ids.add(item.id)
+					        unique_results.push(item)
+					    } else {
+					    	console.log('ya estaba el item:')
+					    	console.log(item)
+					    }
 					})
 
-					this.results = this.results.concat(results)
+					this.results = unique_results
 
-					let ids = []
-					let repetidos = []
-					this.results.forEach(result => {
-						if (result.id) {
-							if (ids.includes(result.id)) {
-								repetidos.push(result.id)
-							} else {
-								ids.push(result.id)
-							}
-						}
-					})
+					console.log('luego:')
+					console.log(unique_results)
 
-					repetidos.forEach(id_repetido => {
-						let index = this.results.findIndex(result => {
-							return result.id == id_repetido
-						})
-						this.results.splice(index, 1)
-					})
-
-					console.log('results:')
-					console.log(this.results)
 					this.total_results = this.results.length
 					
 					this.finishSearch()

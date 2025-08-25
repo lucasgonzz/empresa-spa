@@ -5,6 +5,7 @@
 
 		<search-component
 		@setSelected="setFilters"
+		@clearSelected="clear_selected"
 		:model_name="modelNameFromRelationKey(filter)"></search-component>
 
 	</div>
@@ -24,6 +25,10 @@ export default {
 		},
 	},
 	methods: {
+		clear_selected() {
+			console.log('clear_selected')
+			this.$emit('clear_selected')
+		},
 		setFilters(result) {
 			console.log('result:')
 			console.log(result)

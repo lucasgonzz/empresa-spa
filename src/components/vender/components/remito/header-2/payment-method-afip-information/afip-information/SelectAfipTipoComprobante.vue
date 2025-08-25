@@ -3,6 +3,7 @@
 		<b-form-select
 		:disabled="index_previus_sales > 0"
 		v-if="facturando"
+		class="m-t-5"
 		v-model="afip_tipo_comprobante_id" 
 		id="afip_tipo_comprobante_id"
 		:options="getOptions({key: 'afip_tipo_comprobante_id', text: 'Tipo Comprobante'})"></b-form-select> 
@@ -52,14 +53,3 @@ export default {
 	}
 }
 </script>
-<style lang="sass">
-@import '@/sass/_custom'
-.rojo 
-	background: $red !important
-	color: #FFF !important
-	font-weight: bold !important
-.verde 
-	background: $green !important
-	color: #FFF !important
-	font-weight: bold !important
-</style>

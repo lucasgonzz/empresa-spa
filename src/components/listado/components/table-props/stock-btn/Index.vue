@@ -2,7 +2,7 @@
 	<div
 	class="j-center">
 			
-		<b-button
+		<!-- <b-button
 		size="sm"
 		class="m-l-10"
 		id="btn_asignar_stock"
@@ -16,7 +16,10 @@
 			v-else>
 				Asignar Stock
 			</span> 
-		</b-button>
+		</b-button> -->
+
+		<stock-btn
+		:article="article"></stock-btn>
 
 		<edit-addresses-stock-btn
 		:article="article"></edit-addresses-stock-btn>
@@ -25,6 +28,7 @@
 <script>
 export default {
 	components: {
+		StockBtn: () => import('@/components/listado/components/StockBtn'),
 		EditAddressesStockBtn: () => import('@/components/listado/components/table-props/stock-btn/EditAddressesStockBtn'),
 	},
 	props: {

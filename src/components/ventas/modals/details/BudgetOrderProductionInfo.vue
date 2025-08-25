@@ -33,7 +33,7 @@ export default {
 	},
 	methods: {
 		budgetDetails() {
-			this.setModel(this.sale_details.budget, 'budget')
+			this.show_model('budget', this.sale_details.budget_id)
 		},
 		orderProductionDetails() {
 			this.setModel(this.sale_details.order_production, 'order_production')

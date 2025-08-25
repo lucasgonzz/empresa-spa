@@ -50,13 +50,8 @@ export default {
 		EstadoDelStock: () => import('@/components/listado/modals/inventory-performance/EstadoDelStock'),
 	},
 	created() {
-		console.log('se creo inventory-performance')
-		this.$store.dispatch('inventory_performance/getModels')
-	},
-	computed: {
-		is_filtered() {
-			return this.$store.state.article.is_filtered
-		},
+		// console.log('se creo inventory-performance')
+		// this.$store.dispatch('inventory_performance/getModels')
 	},
 }
 </script>

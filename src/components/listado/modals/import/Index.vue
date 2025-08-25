@@ -52,6 +52,9 @@ export default {
 					text: 'Sub categoria',
 				},
 				{
+					text: 'Marca',
+				},
+				{
 					text: 'Stock actual',
 				},
 				{
@@ -128,31 +131,53 @@ export default {
 			})
 
 
-			if (this.hasExtencion('articulo_margen_de_ganancia_segun_lista_de_precios')) {
+			if (this.hasExtencion('article_variants')) {
 
-				this.price_types.forEach(price_type => {
+				this.article_property_types.forEach(model => {
 					columns.push({
-						text: '% '+price_type.name,
-						saltear_posiciones: 2,
+						text: model.name,
 					})
 				})
 				
 			}
 
-			// let index = 1
-			// columns.forEach(column => {
-			// 	column.column = index
-			// 	if (column.saltear_posiciones) {
-			// 		index += column.saltear_posiciones
-			// 	} else {
-			// 		index++
-			// 	}
-			// })
+
+			if (this.hasExtencion('articulo_margen_de_ganancia_segun_lista_de_precios')) {
+
+				this.price_types.forEach(price_type => {
+					columns.push({
+						text: '% '+price_type.name,
+						saltear_posiciones: 1,
+					})
+					columns.push({
+						text: '$ Final '+price_type.name,
+						// saltear_posiciones: 2,
+					})
+				})
+				
+			}
+
+
+
+			if (this.hasExtencion('articulos_en_exhibicion')) {
+
+				this.addresses.forEach(address => {
+					columns.push({
+						text: 'Exhibicion '+address.street,
+					})
+				})
+			}
+
+
+
 			console.log(columns)
 			return columns
 		},
 		addresses() {
 			return this.$store.state.address.models
+		},
+		article_property_types() {
+			return this.$store.state.article_property_type.models
 		},
 		price_types() {
 			return this.$store.state.price_type.models
@@ -169,6 +194,7 @@ export default {
 				'iva/getModels',
 				'category/getModels',
 				'sub_category/getModels',
+				'brand/getModels',
 			]
 		},
 		advises() {

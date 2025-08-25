@@ -1,41 +1,26 @@
 <template>
 	<div>
-		<b-form-group
-		id="form-group-stock"
-		placeholder="Stock">
-			<span>
-				{{ model.stock }}
-			</span>
-			<!-- <b-form-input
-			v-model="model.stock"
-			disabled></b-form-input> -->
-		</b-form-group>
-		<!-- <b-button
-		v-if="model.id"
-		class="m-t-10"
-		size="sm"
-		:disabled="disabled"
-		@click="stockMovement"
-		variant="primary">
-			<span
-			v-if="model.id">
-				Modificar stock
-			</span>
-			<span
-			v-else>
-				Asignar stock
-			</span>
-		</b-button> -->
 
 		<p
 		class="m-t-10"
 		v-if="typeof model.id == 'undefined'">
 			Primero cree el articulo para asignar el stock
 		</p>
+		
+		<div 
+		v-else
+		class="j-start">
+			Presione para editar stock ->
+			<stock-btn
+			:article="model"></stock-btn>
+		</div>
 	</div>
 </template>
 <script>
 export default {
+	components: {
+		StockBtn: () => import('@/components/listado/components/StockBtn'),
+	},
 	computed: {
 		model() {
 			return this.$store.state.article.model 

@@ -1,6 +1,6 @@
 <template>
 	<div
-	class="vuelto-efectivo card m-b-10"
+	class="vuelto-efectivo card m-b-10 d-none d-md-block"
 	v-if="monto_efectivo > 0">
 		
 		<h5>
@@ -8,12 +8,12 @@
 		</h5>
 
 		<b-input-group
-		prepend="Pago del cliente">
+		prepend="$">
 			<b-form-input
 			@keyup.enter="calcular_vuelto"
 			v-model="pago_del_cliente"
 			type="number"
-			placeholder="Pago del cliente"></b-form-input>
+			placeholder="Ingrese monto"></b-form-input>
 		</b-input-group>
 
 		<p 

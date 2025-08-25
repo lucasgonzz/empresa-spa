@@ -27,8 +27,9 @@
 		v-if="sub_view == 'emitido'">
 			<b-button
 			v-if="puede_cobrar_por_proveedor"
+			@click.stop="pagar"
 			variant="success">
-				Cobrado por proveedor
+				Pagar cheque
 			</b-button>
 			<b-button
 			v-if="puede_cobrar_por_proveedor"
@@ -68,6 +69,14 @@ export default {
 		},
 	},
 	methods: {
+		pagar() {
+			this.$store.commit('cheque/setModel', {
+				model: this.cheque,
+				properties: []
+			})
+
+			this.$bvModal.show('pagar-cheque')
+		},
 		cobrar() {
 			this.$store.commit('cheque/setModel', {
 				model: this.cheque,

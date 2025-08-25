@@ -234,7 +234,6 @@
 									<div
 									class="m-l-15"
 							    	v-if="prop.belongs_to_many && !prop.belongs_to_many.related_with_all && (!prop.type || prop.type != 'checkbox')">
-
 										<table-component
 										:loading="false"
 										:models="model[prop.key]"
@@ -812,7 +811,10 @@ export default {
 .model-form 
 	[class^='col-']
 		padding-bottom: 7px
-		margin-bottom: 7px
+		margin-bottom: 45px
+
+		padding-left: 20px !important
+		padding-right: 20px !important
 		// @if ($theme == 'dark')
 		// 	border-bottom: 1px solid rgba(255,255,255,.2)
 		// @else
@@ -827,6 +829,35 @@ export default {
 	label 
 		text-align: left
 		width: 100%
+
+
+	/* Estilos generales para labels de formularios */
+	.form-label 
+		font-weight: 600 /* un poco más grueso que normal */
+		color: #333 /* color primario para resaltar */
+		font-size: 1rem
+		margin-bottom: 6px
+		display: inline-block
+		letter-spacing: 0.3px
+		transition: color 0.2s ease
+
+	// input, select
+	// 	border-radius: 5px
+	// 	border: 2px solid #ced4da /* un poco más grueso que el default */
+
+	// input:focus, select:focus 
+	// 	// border: 4px solid red !important
+		
+	// 	border: 3px solid #007bff  /* azul primario */
+	// 	box-shadow: 0 0 8px rgba(0, 123, 255, 0.8) /* halo azul brillante */
+	// 	outline: none /* quitar borde por defecto del navegador */
+	// 	background-color: #f8fbff /* leve fondo para resaltar */
+
+
+	
+
+
+
 	.form-group
 		margin-bottom: 0 !important
 	hr 

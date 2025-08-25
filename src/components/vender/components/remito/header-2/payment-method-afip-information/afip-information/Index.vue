@@ -1,5 +1,6 @@
 <template>
-	<div>
+	<div
+	class="input-group">
 		<select-afip-information></select-afip-information>
 		
 		<select-afip-tipo-comprobante></select-afip-tipo-comprobante>

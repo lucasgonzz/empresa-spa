@@ -324,11 +324,30 @@ export default {
 				} 
 			}
 		},
-		setModelsToSearch() {
+		async setModelsToSearch() {
 			let models = []		
 			if (this.search_function && typeof this.search_function != 'undefined') {
-			// if (this.prop && this.prop.search_function) {
-				models = this[this.search_function]()
+				// models = this[this.search_function]()
+
+
+
+					let result = this[this.search_function]()
+
+					console.log('search_function:')
+					console.log(result)
+
+					if (result instanceof Promise) {
+						console.log('es una promesa, esperando')
+						models = await result
+						console.log('listo, models:')
+						console.log(models)
+
+					} else {
+
+						models = result
+
+					}
+
 			} else if (this.prop && this.prop.depends_on && this.model) {
 				if (!this.prop.search_depends_on_from_api) {
 				 	models = this.modelsStoreFromName(this.model_name)

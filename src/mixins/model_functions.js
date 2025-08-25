@@ -1,6 +1,7 @@
 import moment from 'moment'
 import dates from '@/common-vue/mixins/dates'
 import select_payment_methods from '@/mixins/vender/select_payment_methods'
+import db from '@/offline/db'
 export default {
     mixins: [select_payment_methods],
     computed: {
@@ -18,6 +19,9 @@ export default {
         //     console.log(prop)
         //     if (current_acount)
         // },
+        async get_articles_offline() {
+            return await db.articles.toArray()
+        },
         article_iva_id() {
             if (this.owner.default_article_iva_id) {
                 return this.owner.default_article_iva_id
@@ -40,7 +44,8 @@ export default {
                 prop.value.push({
                     ...price_type,
                     pivot: {
-                        incluir_en_excel_para_clientes: price_type.incluir_en_lista_de_precios_de_excel
+                        incluir_en_excel_para_clientes: price_type.incluir_en_lista_de_precios_de_excel,
+                        setear_precio_final: price_type.setear_precio_final,
                     }
                 })
             })

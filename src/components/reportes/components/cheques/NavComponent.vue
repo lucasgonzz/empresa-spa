@@ -86,12 +86,17 @@ export default {
 					},
 
 					{
-						name: 'Cobrados por proveedor',
+						name: 'Disponibles para cobrar',
+						alert: this.cheques.emitido.disponibles_para_cobrar.length,
+					},
+
+					{
+						name: 'Cobrados',
 						alert: this.cheques.emitido.cobrados.length,
 					},
 
 					{
-						name: 'Rechazados por proveedor',
+						name: 'Rechazados',
 						alert: this.cheques.emitido.rechazados.length,
 					},
 

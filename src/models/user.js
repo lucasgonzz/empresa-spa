@@ -76,6 +76,11 @@ export default {
 			type: 'text',
 		},
 		{
+			text: 'Margen de ganancia global',
+			key: 'percentage_gain',
+			type: 'number',
+		},
+		{
 			text: 'Preguntar la cantidad en VENDER',
 			key: 'ask_amount_in_vender',
 			type: 'checkbox',

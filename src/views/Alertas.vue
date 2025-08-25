@@ -29,6 +29,10 @@ export default {
 					name: 'Cobros',
 					alert: this.ventas_sin_cobrar.length	
 				},
+				{
+					name: 'Stock minimo',
+					alert: this.articles_stock_minimo.length	
+				},
 			]
 
 			if (this.can('alerts.provider_orders')) {

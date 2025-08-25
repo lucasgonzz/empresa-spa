@@ -53,6 +53,15 @@ export default {
         },
     },
     methods: {
+        get_store_model(model_name, model_id) {
+            let model = this.$store.state[model_name].models.find(_model => {
+                return _model.id == model_id
+            })
+            if (typeof model != 'undefined') {
+                return model 
+            }
+            return null
+        },
         venta_cobrada(sale) {
             if (!sale.client_id) {
                 return true
@@ -157,6 +166,7 @@ export default {
                 if (this.hasExtencion('cambiar_price_type_en_vender')) {
 
                     if (this.price_type_vender) {
+                        console.log('usando price_type_vender id: '+this.price_type_vender.id)
                         price_vender_id = this.price_type_vender.id 
                     }
 

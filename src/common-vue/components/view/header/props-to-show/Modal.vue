@@ -127,7 +127,7 @@ export default {
 		save() {
 			let props_to_show = []
 
-			console.log('selected_props: '+this.selected_props.length)
+			// console.log('selected_props: '+this.selected_props.length)
 			this.all_properties.forEach(prop => {
 
 				if (this.selected_props.includes(prop.key)) {

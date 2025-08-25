@@ -24,22 +24,22 @@ id="update-prices">
 </b-modal>
 </template>
 <script>
+import previus_sale from '@/mixins/vender/previus_sale/index'
 import BtnLoader from '@/common-vue/components/BtnLoader'
 export default {
+	mixins: [previus_sale],
 	components: {
 		BtnLoader,
 	},
 	data() {
 		return {
 			loading: false,
+			articles: [],
 		}
 	},
 	computed: {
 		sale() {
 			return this.$store.state.sale.model 
-		},
-		articles() {
-			return this.$store.state.article.models 
 		},
 		fields() {
 			return [
@@ -58,7 +58,7 @@ export default {
 					name: article.name,
 					actual_price: this.price(article.pivot.price),
 				}
-				item.price_vender = this.getActualPrice(item)
+				item.price_vender = article.final_price
 				items.push(item)
 			})
 			this.sale.services.forEach(service => {
@@ -68,24 +68,13 @@ export default {
 					name: service.name,
 					actual_price: service.pivot.price,
 				}
-				item.price_vender = this.getActualPrice(item)
+				item.price_vender = service.pivot.price
 				items.push(item)
 			})
 			return items 
 		},
 	},
 	methods: {
-		getActualPrice(item) {
-			if (item.is_article) {
-				let finded = this.articles.find(model => {
-					return model.id == item.id 
-				})
-				if (typeof finded != 'undefined') {
-					return finded.final_price 
-				}
-			}
-			return ''
-		},
 		update() {
 			this.loading = true 
 			this.$api.put('sale/update-prices/'+this.sale.id, {
@@ -93,10 +82,10 @@ export default {
 			})
 			.then(res => {
 				this.loading = false 
-				this.$toast.success('Precios actualizados')
-				this.addModel('sale', res.data.model)
-				this.$bvModal.hide('update-prices')
-				this.$bvModal.hide('sale')
+				// this.$bvModal.hide('update-prices')
+				// this.$bvModal.hide('sale')
+
+				this.setPreviusSale(this.sale)
 			})
 			.catch(err => {
 				console.log(err)
