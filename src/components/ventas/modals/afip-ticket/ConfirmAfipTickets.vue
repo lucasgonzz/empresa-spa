@@ -28,6 +28,14 @@
 			:options="getOptions({key: 'afip_tipo_comprobante_id', text: 'Tipo Comprobante'})"></b-form-select>
     	</b-form-group>
 
+    	<b-form-group
+    	v-if="selected_sales.length == 1"
+    	label="Monto a Facturar">
+	    	<b-form-input
+	    	placeholder="Monto a facturar"
+	    	v-model="monto_a_facturar"></b-form-input>
+    	</b-form-group>
+
     	<b-button
     	block 
     	variant="primary"

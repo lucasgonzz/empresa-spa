@@ -1,7 +1,12 @@
 <template>
 	<div>
 		<b-button
-		@click.stop="ver">Plan de pagos</b-button>
+		size="sm"
+		class="m-l-5"
+		variant="outline-primary"
+		@click.stop="ver">
+			<i class="icon-dolar"></i>
+		</b-button>
 	</div>
 </template>
 <script>

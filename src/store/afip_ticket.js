@@ -13,6 +13,7 @@ export default {
 
 		afip_information_id: 0,
 		afip_tipo_comprobante_id: 0,
+		monto_a_facturar: '',
 
 		loading: false,
 
@@ -56,6 +57,9 @@ export default {
 		},
 		set_afip_tipo_comprobante_id(state, value) {
 			state.afip_tipo_comprobante_id = value
+		},
+		set_monto_a_facturar(state, value) {
+			state.monto_a_facturar = value
 		},
 	},
 	actions: {

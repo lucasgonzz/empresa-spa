@@ -11,6 +11,12 @@
 		:show_previus_days="show_previus_days"
 		:props_to_send_on_save="props_to_send_on_save"
 		show_filter_modal>
+
+
+			<template v-slot:table_left_options="props">
+				<btn-export :model="props.model" />	
+				<btn-import :model="props.model" />	
+			</template>
 		</view-component>
 	</div>
 </template>
@@ -19,6 +25,8 @@ export default {
 	components: {
 		Import: () => import('@/components/provider/modals/orders/Import'),
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
+		BtnExport: () => import('@/components/provider/components/orders/BtnExport'),
+		BtnImport: () => import('@/components/provider/components/orders/BtnImport'),
 	},
 	computed: {
 		show_previus_days() {

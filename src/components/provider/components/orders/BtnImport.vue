@@ -1,10 +1,12 @@
 <template>
 	<b-button
 	class="m-l-15"
-	variant="outline-primary"
-	@click="setImportModel"
+	size="sm"
+	variant="success"
+	@click.stop="setImportModel"
 	v-b-modal="">
-		Importar articulos
+		<i class="icon-download"></i>
+		Importar excel
 	</b-button>
 </template>
 <script>

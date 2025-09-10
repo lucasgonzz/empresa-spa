@@ -26,6 +26,7 @@
     	:not_show_delete_text="not_show_delete_text"
     	:delete_text="delete_text"
     	:save_check_function="save_check_function"
+    	:props_to_send_on_save_function="props_to_send_on_save_function"
     	:show_only_guardar="show_only_guardar">
     		<template #model_modal_title>
     			<slot name="model_modal_title"></slot>
@@ -369,6 +370,10 @@ export default {
 		show_actualizar_option: {
 			type: Boolean,
 			default: true,
+		},
+		props_to_send_on_save_function: {
+			type: String,
+			default: null,
 		},
 	},
 	computed: {

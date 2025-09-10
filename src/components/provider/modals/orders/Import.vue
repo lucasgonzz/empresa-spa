@@ -3,6 +3,7 @@
 	:props_to_send="props_to_send"
 	model_name="provider_order"
 	model_name_spanish="articulos"
+	:pedir_operacion_a_realizar="false"
 	:columns="columns"></import>	
 </template>
 <script>
@@ -16,7 +17,7 @@ export default {
 		},
 		props_to_send() {
 			return {
-				model_id: this.model.id,
+				provider_order_id: this.model.id,
 			}
 		},
 		columns() {
@@ -36,15 +37,15 @@ export default {
 				{
 					text: 'Costo',
 				},
-				{
-					text: 'Costo Recibido',
-				},
+				// {
+				// 	text: 'Costo Recibido',
+				// },
 				{
 					text: 'Notas',
 				},
-				{
-					text: 'Recibidas',
-				},
+				// {
+				// 	text: 'Recibidas',
+				// },
 			]
 			let index = 1
 			columns.forEach(column => {

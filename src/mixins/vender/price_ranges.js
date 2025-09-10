@@ -13,6 +13,10 @@ export default {
 		
 		check_price_type_ranges(item) {
 
+			if (item.is_variant) {
+				return item
+			}
+
 			let price_type_id = this.get_price_type_range(item)
 
 			if (price_type_id) {

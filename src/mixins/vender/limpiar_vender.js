@@ -51,6 +51,8 @@ export default {
 
 			this.$store.commit('vender/set_fecha_entrega', null)
 
+			this.$store.commit('vender/set_moneda_id', 1)
+
 			// this.$store.commit('vender/set_caja_id', 0)
 			
 			// this.$store.commit('vender/set_afip_tipo_comprobante_id', 0)

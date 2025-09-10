@@ -203,6 +203,10 @@ export default {
 			type: Array,
 			default: () => []
 		},
+		props_to_send_on_save_function: {
+			type: String,
+			default: null,
+		},
 		emit_on_saved_instead_continue: {
 			type: Boolean,
 			default: false,
@@ -368,12 +372,12 @@ export default {
 				console.log('mandando solicitud')
 				this.$store.commit('auth/setMessage', 'Guardando')
 				this.loading = true 
-				let route = this.routeString(this.model_name)
+				let route = this.route_model_name()
 				// let model_to_send = this.model 
 				let model_to_send = this.getModelToSend()
 				
-				// console.log('model_to_send:')
-				// console.log(model_to_send)
+				console.log('model_to_send:')
+				console.log(model_to_send)
 				if (this.model.id) {
 					this.$api.put(route+'/'+this.model.id, model_to_send)
 					.then(res => {
@@ -401,7 +405,7 @@ export default {
 								// console.log(res.data.model)
 							}
 						}
-						this.closeModal(info)
+						this.closeModal(info, res.data.model)
 						this.callActions(res.data.model)
 					})
 					.catch(err => {
@@ -448,7 +452,7 @@ export default {
 								this.$store.commit(this.replaceGuion(this.model_name)+'/add', created_model)
 							}
 						}	
-						this.closeModal(info)
+						this.closeModal(info, res.data.model)
 						this.callActions(created_model)
 						this.clearModel(info)
 					})
@@ -460,11 +464,39 @@ export default {
 				}
 			}
 		},
-		closeModal(info) {
+		route_model_name() {
+			
+			let route_string = this.$store.state[this.model_name].route_string
+
+			if (typeof route_string != 'undefined' && route_string != '') {
+				return route_string
+			}
+
+			return this.routeString(this.model_name)
+		},
+		closeModal(info, model) {
 			if (info.close) {
 				setTimeout(() => {
 					this.$bvModal.hide(this.model_name)
 				}, 100)
+			} else {
+
+				console.log('se va a poner este model:')
+				console.log(this.model)
+
+				console.log('res model:')
+				console.log(model)
+
+				this.setModel(model, this.model_name)
+
+				// setTimeout(() => {
+				// 	this.$bvModal.hide(this.model_name)
+
+				// 	setTimeout(() => {
+				// 		this.$bvModal.show(this.model_name)
+				// 	}, 100)
+
+				// }, 100)
 			}
 		},
 		clearModel(info) {
@@ -500,13 +532,17 @@ export default {
 			}
 
 			if (this.props_to_send_on_save.length) {
-				// console.log('agregando props_to_send_on_save:')
-				// console.log(this.props_to_send_on_save)
+
 				this.props_to_send_on_save.forEach(prop_to_send => {
 
 					model_to_send[prop_to_send.key] = prop_to_send.value
 				}) 
 			}
+
+			if (this.props_to_send_on_save_function) {
+				model_to_send = this[this.props_to_send_on_save_function](model_to_send)
+			}
+
 			return model_to_send
 		},
 		setPropsValues() {

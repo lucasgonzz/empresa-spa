@@ -154,7 +154,8 @@ export default {
 		// Dropdown options
 		DropDownOptions: () => import('@/components/listado/components/selected-filtered-options/Index'),
 		ConfirmResetStock: () => import('@/components/listado/modals/ConfirmResetStock'),
-		PriceTypeInput: () => import('@/components/listado/components/PriceTypeInput'),
+		PriceTypeInput: () => import('@/components/listado/components/price-type-input/Index'),
+		// PriceTypeInput: () => import('@/components/listado/components/PriceTypeInput'),
 
 		InventoryPerformance: () => import('@/components/listado/modals/inventory-performance/Index'),
 

@@ -52,12 +52,27 @@ export default {
 			disabled_if_not_0: true,
 		},
 		{
+			text: 'Moneda',
+			key: 'moneda_id',
+			type: 'select',
+			value: 1,
+			use_store_models: true,
+			if_has_extencion: 'ventas_en_dolares',
+		},
+		{
+			key: 'numero_comprobante',
+			type: 'text',
+			value: '',
+			not_show: true,
+		},
+		{
 			text: 'Articulos',
 			store: 'article',
 			search_on_models_by: 'name',
 			type: 'search',
 			key: 'articles',
 			search_from_api_function: 'search_from_api_in_provider_order',
+			route_to_search: 'vender/buscar-articulo-por-nombre',
 			belongs_to_many: {
 				model_name: 'article',
 				create_if_not_exist: true,
@@ -67,6 +82,11 @@ export default {
 					'name',
 				],
 				props_to_show: [
+					{
+						text: 'Imagen',
+						key: 'images',
+						type: 'images',
+					},
 					{
 						text: 'Nombre',
 						key: 'name',
@@ -97,12 +117,12 @@ export default {
 						value: '',
 						type: 'number'
 					},
-					{
-						text: 'Cantidad pedida',
-						key: 'amount_pedida',
-						value: '',
-						type: 'number'
-					},
+					// {
+					// 	text: 'Cantidad pedida',
+					// 	key: 'amount_pedida',
+					// 	value: '',
+					// 	type: 'number'
+					// },
 					{
 						text: 'Costo',
 						key: 'cost',
@@ -120,7 +140,7 @@ export default {
 						type: 'number'
 					},
 					{
-						text: 'Bonif',
+						text: 'Descuento',
 						key: 'discount',
 						type: 'number',
 					},

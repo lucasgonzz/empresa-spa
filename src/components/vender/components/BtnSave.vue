@@ -72,8 +72,8 @@ export default {
 				return 'Guardar Presupuesto'
 			}
 			if (this.index_previus_sales == 0) {
-				return 'COBRAR'
-				// return 'Guardar venta'
+				// return 'COBRAR'
+				return 'Guardar venta'
 			}
 			return 'ACTUALIZAR venta'
 		},

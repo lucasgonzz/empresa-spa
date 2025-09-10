@@ -69,16 +69,21 @@ export default {
 			text: 'Aplicar los descuentos y recargos en los articulos antes del margen de ganancia',
 			key: 'aplicar_descuentos_en_articulos_antes_del_margen_de_ganancia',
 			type: 'checkbox',
-		},
+		}, 
 		{
 			text: 'Valor dolar',
 			key: 'dollar',
 			type: 'text',
-		},
+		}, 
 		{
 			text: 'Margen de ganancia global',
 			key: 'percentage_gain',
 			type: 'number',
+		},
+		{
+			text: 'Scroll automatico en tablas',
+			key: 'scroll_en_tablas',
+			type: 'checkbox',
 		},
 		{
 			text: 'Preguntar la cantidad en VENDER',
@@ -105,11 +110,11 @@ export default {
 			type: 'text',
 		},
 
-		{
-			text: 'Cantidad de letras del nombre a partir de las cuales buscar en VENDER',
-			key: 'str_limint_en_vender',
-			type: 'number',
-		},
+		// {
+		// 	text: 'Cantidad de letras del nombre a partir de las cuales buscar en VENDER',
+		// 	key: 'str_limint_en_vender',
+		// 	type: 'number',
+		// },
 		{
 			text: 'Metodo de pago por defecto en VENDER',
 			key: 'default_current_acount_payment_method_id',

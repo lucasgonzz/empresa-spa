@@ -2,9 +2,10 @@
 	<div
 	class="cont-inputs card p-10 j-start"
 	v-if="article_price_type">
-		
+
 		<div
 		class="cont-price-types">
+
 			<b-input-group
 			prepend="%">
 				<b-form-input
@@ -24,6 +25,7 @@
 				placeholder="Precio final"></b-form-input>
 			</b-input-group>
 		</div>
+
 
 		<div
 		class="cont-prices m-t-10">
@@ -89,13 +91,13 @@ export default {
 			return this.$store.state.article.model 
 		},
 		article_price_type() {
-			return this.article.price_types.find(price_type => price_type.id == this.price_type.id)
+			return this.local_article_price_type
 		},
 		price_type_store() {
-			return this.$store.state.price_type.models.find(p => p.id == this.article_price_type.id)
+			return this.$store.state.price_type.models.find(p => p.id == this.price_type.id)
 		},
 		indicar_percentage() {
-			if (this.hasExtencion('setear_precio_final_en_listas_de_precio') && this.article_price_type.pivot.setear_precio_final) {
+			if (this.article_price_type.pivot.setear_precio_final) {
 				return false
 			}
 			return true
@@ -107,7 +109,50 @@ export default {
 			return false
 		},
 		
-	}
+	},
+	data() {
+		return {
+			local_article_price_type: null
+		}
+	},
+	watch: {
+		article: {
+			handler: 'init_article_price_type',
+			immediate: true
+		},
+		local_article_price_type: {
+			handler(new_val) {
+				if (!this.article.id) {
+					const index = this.article.price_types.findIndex(pt => pt.id == this.price_type.id)
+
+					if (index !== -1) {
+						this.article.price_types.splice(index, 1, JSON.parse(JSON.stringify(new_val)))
+					} else {
+						this.article.price_types.push(JSON.parse(JSON.stringify(new_val)))
+					}
+				}
+			},
+			deep: true
+		}
+	},
+	methods: {
+		init_article_price_type() {
+			if (this.article.id) {
+				this.local_article_price_type = this.article.price_types.find(price_type => price_type.id == this.price_type.id)
+			} else {
+				this.local_article_price_type = {
+					id: this.price_type.id,
+					pivot: {
+						price_type_id: this.price_type.id,
+						percentage: '',
+						final_price: '',
+						setear_precio_final: this.price_type_store.setear_precio_final,
+						incluir_en_excel_para_clientes: 1
+					}
+				}
+			}
+		}
+	},
 }
 </script>
 <style lang="sass">

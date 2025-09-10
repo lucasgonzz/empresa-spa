@@ -11,6 +11,8 @@ export default [
     },
 
     'online_template',
+    'pais_exportacion',
+    'moneda',
     'address',
     'client',
     'provider',
@@ -24,6 +26,7 @@ export default [
     'provider_order_status',
     'category',
     'order_status',
+    'tienda_nube_order_status',
     'current_acount_payment_method_discount',
     'default_payment_method_caja',
     'order_production_status',

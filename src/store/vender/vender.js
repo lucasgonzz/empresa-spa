@@ -31,6 +31,9 @@ export default {
 		total: 0,
 
 		caja_id: 0,
+
+		moneda_id: 1,
+		valor_dolar: null,
 		
 
 		cuota_id: 0,
@@ -275,6 +278,12 @@ export default {
 		set_caja_id(state, value) {
 			state.caja_id = value 
 		},
+		set_moneda_id(state, value) {
+			state.moneda_id = value 
+		},
+		set_valor_dolar(state, value) {
+			state.valor_dolar = value 
+		},
 		set_cuota_id(state, value) {
 			state.cuota_id = value 
 		},
@@ -373,6 +382,8 @@ export default {
 				cuota_recargo: state.cuota_recargo,
 				monto_credito_real: state.monto_credito_real,
 				caja_id: state.caja_id,
+				moneda_id: state.moneda_id,
+				valor_dolar: state.valor_dolar,
 				afip_tipo_comprobante_id: state.afip_tipo_comprobante_id,
 				descuento: state.descuento,
 				fecha_entrega: state.fecha_entrega,

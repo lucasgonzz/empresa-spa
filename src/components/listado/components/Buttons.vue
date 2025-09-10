@@ -21,7 +21,7 @@ class="buttons-listado">
 		<b-badge
 		variant="danger"
 		v-if="model.article_variants.length">
-			{{ model.article_variants.length }}
+			{{ cantidad_variantes }}
 		</b-badge>
 		Variantes
 	</b-button>
@@ -114,6 +114,9 @@ export default {
 		}
 	},
 	computed: {
+		cantidad_variantes() {
+			return this.model.article_variants.filter(variante => !variante.oculta).length
+		},
 		order_production_statuses() {
 			return this.$store.state.order_production_status.models 
 		},

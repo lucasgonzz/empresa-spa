@@ -208,6 +208,8 @@ export default {
 			}
 			this.$store.commit('vender/setObservations', model.observations)
 			this.$store.commit('vender/set_omitir_en_cuenta_corriente', model.omitir_en_cuenta_corriente)
+			this.$store.commit('vender/set_moneda_id', model.moneda_id)
+			this.$store.commit('vender/set_valor_dolar', model.valor_dolar)
 
 			// this.setItemsPrices(false, true)
 
@@ -265,6 +267,7 @@ export default {
 				this.cancelPreviusSale()
 			})
 			.catch(err => {
+				console.log(err)
 				this.$toast.error('Error al actualizar venta')
 			})
 		},
@@ -273,6 +276,7 @@ export default {
 			this._limpiar_actualizandose_por()
 
 			this.limpiar_vender()
+			// this.resetear_vender()
 
 			this.setDefaultPaymentMethod()
 

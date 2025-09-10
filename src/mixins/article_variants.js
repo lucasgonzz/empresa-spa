@@ -1,104 +1,42 @@
-import axios from 'axios'
-
 export default class ArticleVariants {
 
-	constructor(article, properties) {
-		this.article = article
-		this.properties = properties
-		this.properties_positions = {}
-		this.property_position_iterando = null
-		this.last_position = null
-		this.finish = false
-		this.variants = []
-		this.setPropertiesPositions()
-	}
+    constructor(article, properties) {
+        this.article = article
+        this.properties = properties
+        this.variants = []
+    }
 
-	setPropertiesPositions() {
-		if (this.properties.length) {
-			console.log('setPropertiesPositions')
-			console.log(this.properties)
-			for (var i = 0; i < this.properties.length; i++) {
-				this.properties_positions[i] = 0
-			}
-			this.last_position = this.properties.length - 1
-			if (this.properties.length > 1) {
-				this.property_position_iterando = this.properties.length - 2
-			} else {
-				this.property_position_iterando = 0
-			}
-		} else {
-			return this.variants 
-		}
-	}
+    getArticleVariants() {
+        // Filtramos solo las propiedades que tengan valores
+        const valid_properties = this.properties.filter(p => 
+            p.article_property_values && p.article_property_values.length > 0
+        )
 
-	getArticleVariants() {
-		if (this.properties.length) {
-			while (!this.finish) {
-				this.setNewVariant()
-			}
-		}
-		return this.variants 
-	}
+        const value_lists = valid_properties.map(p => p.article_property_values)
 
-	setNewVariant() {
-		let new_variant = {
-			article_property_values: [],	
-		}
-		for (var i = 0; i < this.properties.length; i++) {
-			new_variant.article_property_values.push(this.properties[i].article_property_values[this.properties_positions[i]])
-		}
-		this.setVariantProperties(new_variant)
-		this.variants.push(new_variant)
+        if (!value_lists.length) {
+            return []
+        }
 
+        const combinations = this.cartesianProduct(value_lists)
 
-		if (this.terminoLaUltima()) {
-			this.properties_positions[this.last_position] = 0
-			console.log('Llego al final de la ultima, esta se puso en '+this.properties_positions[this.last_position])
-			if (this.esLaUltimaDeIterando() || this.properties.length == 1) {
-				if (this.property_position_iterando == 0) {
-					this.finish = true 
-					console.log('Iterando estaba en 0, termino')
-				} else {
-					this.properties_positions[this.property_position_iterando] = 0
-					console.log('Es la ultima posicion en iterando, esta se puso en '+this.properties_positions[this.property_position_iterando])
-					this.property_position_iterando--
-				}
-			} 
-			this.properties_positions[this.property_position_iterando]++
-			console.log('Se esta iterando la posicion '+this.property_position_iterando+' con la posicion en '+this.properties_positions[this.property_position_iterando])
-		} else {
-			this.properties_positions[this.last_position]++
-			console.log('Se aumento la posicion de la ultima a '+this.properties_positions[this.last_position])
-		}
-	}
+        return combinations.map(combo => this.createVariant(combo))
+    }
 
-	isLastValueInIterando() {
-		return this.properties_positions[this.property_position_iterando] == this.properties[this.property_position_iterando].article_property_values.length - 1
-	}
+    createVariant(combo) {
+        const description = combo.map(val => val.name).join(' ')
 
-	terminoLaUltima() {
-		return this.properties_positions[this.last_position] == this.properties[this.last_position].article_property_values.length - 1
-	}
+        return {
+            article_id: this.article.id,
+            price: this.article.final_price,
+            image_url: this.article.images?.[0]?.hosting_url || null,
+            article_property_values: combo,
+            variant_description: description
+        }
+    }
 
-	esLaUltimaDeIterando() {
-		return this.properties_positions[this.property_position_iterando] == this.properties[this.property_position_iterando].article_property_values.length - 1
-	}
-
-	setVariantProperties(variant) {
-		let variant_description = ''
-		variant.article_property_values.forEach(article_property_value => {
-			variant_description += article_property_value.name+' '
-		})
-		variant.variant_description = variant_description 
-
-		variant.article_id = this.article.id 
-		variant.price = this.article.final_price 
-		if (this.article.images.length) {
-			variant.image_url = this.article.images[0].hosting_url
-		} else {
-			variant.image_url = null
-		}
-
-	}
-
+    cartesianProduct(arrays) {
+        return arrays.reduce((a, b) =>
+            a.flatMap(d => b.map(e => [...d, e])), [[]])
+    }
 }

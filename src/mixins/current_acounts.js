@@ -1,5 +1,8 @@
 export default {
 	computed: {
+        from_credit_account() {
+            return this.$store.state.current_acount.from_credit_account
+        },
         from_model_name() {
             return this.$store.state.current_acount.from_model_name
         },

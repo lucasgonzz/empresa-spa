@@ -2,7 +2,9 @@
 	<div
 	class="vender-buttons">
 
-		<vuelto-efectivo></vuelto-efectivo>
+		<!-- <vuelto-efectivo></vuelto-efectivo> -->
+
+		<observations></observations>
 
 		<fecha-entrega></fecha-entrega>
 		<numero-orden-de-compra></numero-orden-de-compra>
@@ -13,11 +15,12 @@
 <script>
 export default {
 	components: {
+		Observations: () => import('@/components/vender/components/remito/header-2/buttons/Observations'),
 		FechaEntrega: () => import('@/components/vender/components/remito/header-2/buttons/FechaEntrega'),
 		NumeroOrdenDeCompra: () => import('@/components/vender/components/remito/header-2/buttons/NumeroOrdenDeCompra'),
 		Pago: () => import('@/components/vender/components/remito/header-2/buttons/Pago'),
 		Print: () => import('@/components/vender/components/remito/header-2/buttons/Print'),
-		VueltoEfectivo: () => import('@/components/vender/components/remito/VueltoEfectivo'),
+		// VueltoEfectivo: () => import('@/components/vender/components/remito/VueltoEfectivo'),
 	},
 }
 </script>
@@ -25,7 +28,8 @@ export default {
 .vender-buttons
 	display: flex
 	flex-direction: row 
-	align-items: center
+	align-items: flex-start
+	height: 100%
 	flex-wrap: wrap
 	justify-content: flex-end
 	@media screen and (max-width: 576px)

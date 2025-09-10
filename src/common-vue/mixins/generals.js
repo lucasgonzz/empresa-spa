@@ -986,6 +986,7 @@ export default {
 		routeString(string, in_plural = false, replace_guion_bajo = true) {
 			let result 
 			string = ''+string
+
 			if (in_plural) {
 				result = this.modelPlural(string.toLowerCase().replaceAll(' ', '-'))
 			} else {

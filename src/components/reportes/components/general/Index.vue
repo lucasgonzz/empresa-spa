@@ -1,5 +1,6 @@
 <template>
 	<div
+	class="p-b-100"
 	v-if="view == 'generales'">
 
 		<div

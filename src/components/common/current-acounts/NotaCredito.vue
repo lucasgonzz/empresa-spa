@@ -54,9 +54,10 @@ export default {
     	notaCredito() {
     		this.loading = true
     		this.$api.post('/current-acount/nota-credito', {
-                model_id         : this.from_model.id,
-    			model_name       : this.from_model_name,
-    			form             : this.form,
+                credit_account_id   : this.from_credit_account.id,
+                model_id            : this.from_model.id,
+    			model_name          : this.from_model_name,
+    			form                : this.form,
     		})
     		.then(res => {
                 this.$store.dispatch('current_acount/getModels')

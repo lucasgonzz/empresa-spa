@@ -2,7 +2,6 @@
 	<div
 	v-if="show">
 		<b-form-select
-		class="m-l-15"
 		:disabled="is_disabled"
 		v-if="hasExtencion('cambiar_price_type_en_vender')"
 		v-model="price_type_id"

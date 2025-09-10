@@ -176,6 +176,12 @@ import payment_plan from '@/store/payment_plan'
 
 import payment_plan_cuota from '@/store/payment_plan_cuota'
 
+import tienda_nube_order from '@/store/tienda_nube_order'
+import tienda_nube_order_status from '@/store/tienda_nube_order_status'
+
+import moneda from '@/store/moneda'
+import pais_exportacion from '@/store/pais_exportacion'
+
 
 Vue.use(Vuex)
 
@@ -357,5 +363,11 @@ export default new Vuex.Store({
         payment_plan,
 
         payment_plan_cuota,
+
+        tienda_nube_order,
+        tienda_nube_order_status,
+
+        moneda,
+        pais_exportacion,
     }
 })

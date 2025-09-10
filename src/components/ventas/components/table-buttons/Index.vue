@@ -1,5 +1,6 @@
 <template>
-	<div>
+	<div
+	class="j-start align-center">
 		<text-info
 		:model="model"></text-info>
 

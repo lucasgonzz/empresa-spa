@@ -384,6 +384,8 @@ export default {
 			
 			this.$store.commit('vender/set_fecha_entrega', null)
 
+			this.$store.commit('vender/set_moneda_id', 1)
+
 			// this.$store.commit('vender/set_caja_id', 0)
 			
 			// this.$store.commit('vender/set_afip_tipo_comprobante_id', 0)
@@ -782,7 +784,7 @@ export default {
 			if (typeof finded == 'undefined') {
 				console.log('No esta repetido')
 				return false
-			} else if (finded.article_variants.length) {
+			} else if (finded.article_variant_id) {
 				console.log('esta repetido pero tiene variantes')
 				return false
 			} else {

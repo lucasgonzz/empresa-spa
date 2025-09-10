@@ -54,7 +54,7 @@ export default {
 
 
 		actualizar_cliente() {
-
+			console.log('actualizar_cliente')
 			if (this.maked_sale.client_id && this.maked_sale.save_current_acount) {
 				this.loadModel('client', this.maked_sale.client_id)
 			}

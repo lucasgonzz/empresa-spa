@@ -190,6 +190,12 @@ export default {
 			// table_position: 9,
 		},
 		{
+			text: 'Aplicar iva',
+			key: 'aplicar_iva', 
+			type: 'checkbox',
+			value: 1,
+		},
+		{
 			text: 'Iva',
 			key: 'iva_id', 
 			type: 'select',
@@ -217,6 +223,74 @@ export default {
 				'lista_de_precios_por_categoria',
 			],
 			// table_position: 10,
+		},
+
+
+		// Autopartes
+		{
+			group_title: 'Autopartes',
+			if_has_extencion: 'autopartes',
+			not_show: true,
+		},
+		{
+			key: 'espesor',
+			type: 'text',
+			if_has_extencion: 'autopartes',
+			not_show: true,
+		},
+		{
+			key: 'modelo',
+			type: 'text',
+			if_has_extencion: 'autopartes',
+			not_show: true,
+		},
+		{
+			key: 'pastilla',
+			type: 'text',
+			if_has_extencion: 'autopartes',
+			not_show: true,
+		},
+		{
+			key: 'diametro',
+			type: 'text',
+			if_has_extencion: 'autopartes',
+			not_show: true,
+		},
+		{
+			key: 'litros',
+			type: 'text',
+			if_has_extencion: 'autopartes',
+			not_show: true,
+		},
+		// {
+		// 	key: 'descripcion',
+		// 	type: 'text',
+		// 	if_has_extencion: 'autopartes',
+		// 	not_show: true,
+		// },
+		{
+			key: 'contenido',
+			type: 'text',
+			if_has_extencion: 'autopartes',
+			not_show: true,
+		},
+		{
+			key: 'cm3',
+			type: 'text',
+			if_has_extencion: 'autopartes',
+			not_show: true,
+		},
+		{
+			key: 'calipers',
+			type: 'text',
+			if_has_extencion: 'autopartes',
+			not_show: true,
+		},
+		{
+			key: 'juego',
+			type: 'text',
+			if_has_extencion: 'autopartes',
+			not_show: true,
 		},
 
 
@@ -355,6 +429,11 @@ export default {
 			not_show: true,
 			filter_modal_position: 7,
 			keep_after_create: true,
+		},
+		{
+			key: 'descripcion',
+			type: 'text',
+			not_show: true,
 		},
 
 

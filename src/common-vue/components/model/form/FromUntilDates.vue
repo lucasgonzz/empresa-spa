@@ -1,15 +1,18 @@
 <template>
 	<div
 	class="from-until-dates">
-		<date-picker
-		:value="from_date"
+	
+		<b-form-input
+		v-model="from_date"
+		type="date"
 		label="Fecha Inicio"
-		@setDate="setFrom"></date-picker>
+		@setDate="setFrom"></b-form-input>
 
-		<date-picker
-		:value="until_date"
+		<b-form-input
+		v-model="until_date"
+		type="date"
 		label="Fecha Fin"
-		@setDate="setUntil"></date-picker>
+		@setDate="setUntil"></b-form-input>
 	</div>
 </template>
 <script>

@@ -14,6 +14,9 @@ export default {
 		address_id() {
 			return this.$store.state.vender.address_id
 		},
+		moneda_id() {
+			return this.$store.state.vender.moneda_id
+		},
 		observations() {
 			return this.$store.state.vender.observations
 		},
@@ -65,6 +68,7 @@ export default {
 				'address_id'              	: this.address_id,
 				'surchages_in_services'		: this.surchages_in_services,
 				'discounts_in_services'		: this.discounts_in_services,
+				'moneda_id'              	: this.moneda_id,
 
 				// Id 1 es el estado "sin confirmar"
 				'budget_status_id'          : this.budget.budget_status_id,
@@ -101,6 +105,7 @@ export default {
 				'observations'              : this.observations,
 				'total'              		: this.total,
 				'address_id'              	: this.address_id,
+				'moneda_id'              	: this.moneda_id,
 				'surchages_in_services'		: this.surchages_in_services,
 				'discounts_in_services'		: this.discounts_in_services,
 

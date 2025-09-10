@@ -1,30 +1,34 @@
 <template> 
-<view-component
-@modelSaved="modelSaved"
-show_filter_modal
-change_from_dates_option
-order_list_by="budget_status"
-:show_btn_save="show_btn_save"
-:show_btn_create="false"
-:show_previus_days="show_previus_days"
-:check_permissions_previus_days="false"
-model_name="budget">
+<div>
+	<current-acounts></current-acounts>
+	
+	<view-component
+	@modelSaved="modelSaved"
+	show_filter_modal
+	change_from_dates_option
+	order_list_by="budget_status"
+	:show_btn_save="show_btn_save"
+	:show_btn_create="false"
+	:show_previus_days="show_previus_days"
+	:show_modal="false"
+	:check_permissions_previus_days="false"
+	model_name="budget">
 
-	<template v-slot:actualizar_en_vender="props">
-		<btn-actualizar-en-vender></btn-actualizar-en-vender>
-	</template>
+		<template #table-prop-client_id="props">
+			<client-btn
+			from_budget
+			:sale="props.model"></client-btn>
+		</template>
 
-	<template v-slot:model_modal_header="props">
-		<modal-buttons></modal-buttons>
-	</template>
-</view-component>
+	</view-component>
+</div>
 </template>
 <script>
 export default {
 	components: {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
-		BtnActualizarEnVender: () => import('@/components/budget/components/BtnActualizarEnVender'),
-		ModalButtons: () => import('@/components/budget/components/ModalButtons'),
+		CurrentAcounts: () => import('@/components/common/current-acounts/Index'),
+		ClientBtn: () => import('@/components/ventas/components/ClientBtn'),
 	},
 	computed: {
 		show_previus_days() {

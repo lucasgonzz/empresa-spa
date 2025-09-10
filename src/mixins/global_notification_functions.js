@@ -12,5 +12,8 @@ export default {
 		update_provider_after_import() {
 			this.$store.dispatch('provider/getModels')
 		},
+		recargar_pagina() {
+			window.location.reload()
+		},
 	}
 }

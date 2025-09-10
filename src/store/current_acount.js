@@ -15,6 +15,8 @@ export default {
 		to_show: [],
 
 		months_ago: 1,
+		cantidad_movimientos: 10,
+		from_credit_account: {},
 		from_model: {},
 		selected: [],
 		to_show_payment_methods: {},
@@ -74,11 +76,17 @@ export default {
 		addToShow(state, value) {
 			state.to_show = state.to_show.concat(state.models.slice(state.to_show.length, state.to_show.length + 20))
 		},
+		set_cantidad_movimientos(state, value) {
+			state.cantidad_movimientos = value 
+		},
 		setMonthsAgo(state, value) {
 			state.months_ago = value 
 		},
 		setFromModel(state, value) {
 			state.from_model = value 
+		},
+		set_from_credit_account(state, value) {
+			state.from_credit_account = value  
 		},
 		setSelected(state, value) {
 			state.selected = value 
@@ -142,7 +150,8 @@ export default {
 	actions: {
 		getModels({ commit, state }) {
 			commit('setLoading', true)
-			return axios.get(`/api/${generals.methods.routeString(state.model_name)}/${state.from_model_name}/${state.from_model.id}/${state.months_ago}`)
+			// return axios.get(`/api/${generals.methods.routeString(state.model_name)}/${state.from_model_name}/${state.from_model.id}/${state.months_ago}`)
+			return axios.get(`/api/${generals.methods.routeString(state.model_name)}/${state.from_credit_account.id}/${state.cantidad_movimientos}`)
 			.then(res => {
 				commit('setLoading', false)
 				commit('setModels', res.data.models)

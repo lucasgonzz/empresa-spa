@@ -21,11 +21,16 @@ export default {
 			disabled: true,
 		},
 		{
+			key: 'oculta',
+			type: 'checkbox',
+		},
+		{
 			text: 'Stock por direccion',
 			key: 'addresses',
 			only_show: true,
 			type: 'search',
 			store: 'address',
+			not_show: true,
 			belongs_to_many: {
 				model_name: 'address',
 				props_to_show: [

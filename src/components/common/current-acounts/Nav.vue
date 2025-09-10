@@ -2,14 +2,14 @@
 	<div 
 	class="nav-current-acounts p-15"
 	inline>
-		<label>Mostrar cuentas corrientes de </label>
+		<label>Mostrar los ultimos</label>
 		<b-form-input
-		v-model="months_ago"
+		v-model="cantidad_movimientos"
 		@keydown.enter="getCurrentAcounts"
 		class="input"
 		min="1"
 		type="number"></b-form-input>
-		<label>meses atras</label>
+		<label>movimientos</label>
 		<b-button
 		@click="getCurrentAcounts"
 		variant="primary"
@@ -59,12 +59,12 @@ export default {
 		}
 	},
 	computed: {
-		months_ago: {
+		cantidad_movimientos: {
 			set(value) {
-				this.$store.commit('current_acount/setMonthsAgo', value)
+				this.$store.commit('current_acount/set_cantidad_movimientos', value)
 			},
 			get() {
-				return this.$store.state.current_acount.months_ago
+				return this.$store.state.current_acount.cantidad_movimientos
 			}
 		},
 		loading() {
@@ -83,7 +83,7 @@ export default {
 	methods: {
 		checkSaldos() {
 			this.checking = true 
-			this.$api.get('check-saldos/'+this.from_model_name+'/'+this.from_model.id)
+			this.$api.get('check-saldos/'+this.from_credit_account.id)
 			.then(() => {
 				this.checking = false 
 				this.$store.dispatch('current_acount/getModels')
@@ -100,7 +100,7 @@ export default {
 			this.$store.dispatch('current_acount/getModels')
 		},
 		print() {
-            let link = process.env.VUE_APP_API_URL+'/current-acount/pdf/'+this.from_model_name+'/'+this.from_model.id+'/'+this.months_ago
+            let link = process.env.VUE_APP_API_URL+'/current-acount/pdf/'+this.from_model_name+'/'+this.from_model.id+'/'+this.cantidad_movimientos
             window.open(link)
 		},
 	}
@@ -113,6 +113,6 @@ export default {
 	justify-content: flex-start 
 	align-items: center 
 	.input 
-		width: 70px
+		width: 100px
 		margin: 0 1em
 </style>

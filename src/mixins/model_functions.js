@@ -19,6 +19,25 @@ export default {
         //     console.log(prop)
         //     if (current_acount)
         // },
+        // add_price_type_monedas(model_to_send) {
+
+        //     console.log('add_price_type_monedas')
+
+        //     let payload = {}
+
+        //     this.$store.state.price_type.models.forEach(pt => {
+
+        //         const comp = this.$refs[`ptMonedas-${pt.id}`];
+        //         console.log(comp)
+
+        //         if (comp && comp.toPayload) {
+        //             payload.price_type_monedas.push(...comp.toPayload());
+        //         }
+        //     });
+
+        //     model_to_send.price_type_monedas = payload
+        //     return model_to_send
+        // },
         async get_articles_offline() {
             return await db.articles.toArray()
         },
@@ -567,8 +586,14 @@ export default {
             return total
         },
         showClientCurrentAcount(sale) {
+
+            let client = sale.client 
+
+            let credit_account = client.credit_accounts.find(ca => ca.moneda_id == sale.moneda_id)
+
             this.$store.commit('current_acount/setFromModelName', 'client')
             this.$store.commit('current_acount/setFromModel', sale.client)
+            this.$store.commit('current_acount/set_from_credit_account', credit_account)
             this.$store.dispatch('current_acount/getModels')
             this.$bvModal.show('current-acounts')
         },

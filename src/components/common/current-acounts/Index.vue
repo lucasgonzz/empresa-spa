@@ -21,9 +21,14 @@
 
     <model-index
     model_name="budget">
-        <template v-slot:default="props">
+        <template v-slot:model_modal_header="props">
             <budget-modal-buttons></budget-modal-buttons>
         </template>
+
+        <template v-slot:actualizar_en_vender="props">
+            <btn-actualizar-en-vender></btn-actualizar-en-vender>
+        </template>
+        
     </model-index>  
 
     <model-index
@@ -37,26 +42,6 @@
     model_name="provider_order"></model-index>  
 
     <sale-modal></sale-modal>
-
-    <!-- <model 
-    size="xl"
-    show_btn_pdf
-    model_name="budget">
-        <template>
-            <budget-modal-buttons></budget-modal-buttons>
-        </template>
-    </model>
-
-    <model 
-    size="xl"
-    show_btn_pdf
-    model_name="order_production">
-        <template>
-            <order-production-modal-buttons></order-production-modal-buttons>
-        </template>
-    </model>
-
-    <print-budget></print-budget> -->
 
     <b-modal 
     id="current-acounts" 
@@ -124,11 +109,15 @@ export default {
         SaleModal: () => import('@/components/common/SaleModal'),
         ConfirmAfipTickets: () => import('@/components/ventas/modals/afip-ticket/ConfirmAfipTickets'),
         SendAfipTickets: () => import('@/components/ventas/modals/afip-ticket/SendAfipTickets'),
+        BtnActualizarEnVender: () => import('@/components/budget/components/BtnActualizarEnVender'),
     },
     computed: {
         title() {
             if (this.from_model) {
-                return `Cuenta corriente de ${this.from_model.name}`
+                let moneda = this.get_store_model('moneda', this.from_credit_account.moneda_id)
+                if (moneda) {
+                    return `Cuenta corriente en  de ${this.from_model.name} (${moneda.name})`
+                }
             }
             return ''
         },

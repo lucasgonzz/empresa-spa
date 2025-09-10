@@ -22,6 +22,7 @@ class="p-l-20 p-r-20">
 
             <btn-payment-methods-info
             :model="slotProps.model"></btn-payment-methods-info>
+
             <b-button
             size="sm"
             v-if="canDelete(slotProps.model)"

@@ -5,6 +5,10 @@
 	class="m-r-15"
 	variant="primary">
 		Met Pago
+		<b-badge
+		v-if="model.is_provisorio">
+			(Provisorio)
+		</b-badge>
 	</b-button>
 </template>
 <script>

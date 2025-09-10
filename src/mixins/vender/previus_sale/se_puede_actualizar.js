@@ -9,6 +9,11 @@ export default {
 			
 			if (sale) {
 
+				// if (sale.moneda_id == 2) {
+
+				// 	return false 
+				// }
+
 				if (sale.afip_ticket) {
 				console.log('no puede 2')
 
@@ -24,7 +29,8 @@ export default {
 
 				if (sale.current_acount_payment_methods.length
 					&& sale.current_acount_payment_methods.length > 1) {
-				console.log('no puede 4')
+					
+					console.log('no puede 4')
 
 					return false
 				}

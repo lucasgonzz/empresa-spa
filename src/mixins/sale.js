@@ -74,7 +74,7 @@ export default {
 				console.log('solo-cobradas')
 			} else if (this.ventas_cobradas == 'solo-sin-cobrar') {
 				sales = sales.filter(sale => {
-					return sale.client_id && (!sale.current_acount || sale.current_acount.status != 'pagado')
+					return sale.client_id && sale.current_acount && sale.current_acount.status != 'pagado'
 				})
 			}
 

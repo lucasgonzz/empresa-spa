@@ -96,20 +96,48 @@ export default {
 			return this.model_name+'-'+prop.key+'-'+this.model.id
 		},
 		changeFocus(prop) {
-			let props = Object.keys(this.model.pivot)
-			let index = props.findIndex(prop => {
-				return prop == this.prop.key
-			})
 
-			let id = props[index + 1]
-			let elements = document.getElementsByClassName(this.model_name+'-'+id)
+			const matching_inputs = document.querySelectorAll('input[id*="'+this.model_name+'"][class*="input-search"]');
 
-			if (elements.length) {
+            if (matching_inputs.length > 0) {
+                const target_input = matching_inputs[0]; // Si hay más de uno, tomamos el primero
+                console.log("Input encontrado:", target_input);
+                
+                // Ejemplo: enfocar ese input
+                setTimeout(() => {
+                	target_input.focus()
+                }, 200)
+            } else {
+                console.warn('No se encontró ningún input que coincida con los criterios.');
+            }
 
-				elements[elements.length-1].focus()
+			// let props = Object.keys(this.model.pivot)
+
+			// console.log('this.model.pivot:')
+			// console.log(this.model)
+
+			// console.log('this.prop:')
+			// console.log(this.prop)
+
+			// console.log('this.model_name:')
+			// console.log(this.model_name)
+
+			// console.log('prop enter:')
+			// console.log(props)
+
+			// let index = props.findIndex(prop => {
+			// 	return prop == this.prop.key
+			// })
+
+			// let id = props[index + 1]
+			// let elements = document.getElementsByClassName(this.model_name+'-'+id)
+
+			// if (elements.length) {
+
+			// 	elements[elements.length-1].focus()
 	
-				this.updateTableScroll(elements[elements.length-1])
-			}
+			// 	this.updateTableScroll(elements[elements.length-1])
+			// }
 
 
 		},

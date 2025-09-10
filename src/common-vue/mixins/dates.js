@@ -43,7 +43,7 @@ export default {
 		hour_from_time(d) {
 			return moment(d, 'HH:mm:ss').format('HH:mm')
 		},
-		price(p, with_decimals = true, quitar_decimales_solo_si_no_es_00 = true) {
+		price(p, with_decimals = false, quitar_decimales_solo_si_no_es_00 = true) {
 			if (p === null) {
 				return '-'
 			}

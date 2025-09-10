@@ -64,6 +64,9 @@ export default {
 					text: 'Iva',
 				},
 				{
+					text: 'Aplicar IVA',
+				},
+				{
 					text: 'Proveedor',
 				},
 				{
@@ -96,6 +99,9 @@ export default {
 					description: 'USD para Dolares, ARS para pesos (ARS por defecto)',
 				},
 				{
+					text: 'descripcion'
+				},
+				{
 					text: 'Unidad medida',
 					description: 'Por defecto es UNIDAD',
 					saltear_posiciones: 1,
@@ -108,6 +114,45 @@ export default {
 				columns.push({
 					text: 'U individuales',
 				})
+			}
+
+
+
+			if (this.hasExtencion('autopartes')) {
+				let props = [
+					{
+						text: 'espesor',
+					},
+					{
+						text: 'modelo'
+					},
+					{
+						text: 'pastilla'
+					},
+					{
+						text: 'diametro'
+					},
+					{
+						text: 'litros'
+					},
+					// {
+					// 	text: 'descripcion'
+					// },
+					{
+						text: 'contenido'
+					},
+					{
+						text: 'cm3'
+					},
+					{
+						text: 'calipers'
+					},
+					{
+						text: 'juego'
+					},
+				]
+
+				columns.push(...props)
 			}
 
 

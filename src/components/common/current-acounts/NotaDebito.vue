@@ -51,10 +51,11 @@ export default {
     	save() {
     		this.loading = true
     		this.$api.post('/current-acount/nota-debito', {
-                model_id         : this.from_model.id,
-    			model_name       : this.from_model_name,
-                debe             : this.debe,
-    			description      : this.description,
+                credit_account_id        : this.from_credit_account.id,
+                model_id                 : this.from_model.id,
+    			model_name               : this.from_model_name,
+                debe                     : this.debe,
+    			description              : this.description,
     		})
     		.then(res => {
                 this.$store.dispatch('current_acount/getModels')

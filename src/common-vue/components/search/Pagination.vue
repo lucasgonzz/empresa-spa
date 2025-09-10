@@ -2,7 +2,7 @@
 	<div>
 		<b-pagination
 		class="m-0"
-		v-if="total_pages > 1"
+		v-if="total_results > per_page"
 		pills 
 		v-model="currentPage"
 		:total-rows="total_results"

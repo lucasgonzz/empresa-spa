@@ -113,6 +113,7 @@ export default {
 			let item = {
 				...this.item_vender,
 				price_type_personalizado_id: 0,
+				article_variant_id: this.item_vender.is_variant ? this.item_vender.variant_id : 0 
 			}
 
 			item = this.check_price_type_ranges(item)

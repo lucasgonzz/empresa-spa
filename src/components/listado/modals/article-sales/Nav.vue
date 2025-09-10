@@ -32,6 +32,10 @@ export default {
 			return moment().format('YYYY-MM-DD')
 		},
 	},
+	created() {
+		this.from = this.from_date
+		this._until = this.until_date
+	},
 	data() {
 		return {
 			from: '',

@@ -71,7 +71,7 @@ export default {
     computed: {
         title() {
             if (this.client) {
-                return `Cuenta corriente de ${this.client.name}`
+                return `Cuenta corriente de en ${this.from_credit_acount.moneda.name} ${this.client.name}` 
             }
             return ''
         },

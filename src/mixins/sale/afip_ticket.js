@@ -22,6 +22,14 @@ export default {
                 this.$store.commit('afip_ticket/set_afip_tipo_comprobante_id', value)
             }
         },
+        monto_a_facturar: {
+            get() {
+                return this.$store.state.afip_ticket.monto_a_facturar
+            },
+            set(value) {
+                this.$store.commit('afip_ticket/set_monto_a_facturar', value)
+            }
+        },
     },
 	methods: {
         tiene_nota_de_credito_facturada(sale) {
@@ -92,6 +100,8 @@ export default {
                 this.$store.commit('sale/setIsSelecteable', 0)
                 this.$store.commit('sale/setSelected', [])
 
+                this.$store.commit('afip_ticket/set_monto_a_facturar', '')
+
                 this.$bvModal.hide('send-afip-tickets')
                 this.$bvModal.hide('confirm-make-afip-tickets')
                 this.$bvModal.hide('sale')
@@ -103,10 +113,13 @@ export default {
 
         },
         send_request(index) {
+            console.log('send_request monto_a_facturar:')
+            console.log(this.monto_a_facturar)
             return this.$api.post('afip-ticket', {
                 sale_id: this.selected_sales[index].id,
                 afip_information_id: this.afip_information_id,
                 afip_tipo_comprobante_id: this.afip_tipo_comprobante_id,
+                monto_a_facturar: this.monto_a_facturar,
             })
             .catch(err => {
                 this.$toast.error('Error al emitir factura para la venta N° '+this.selected_sales[index].num)

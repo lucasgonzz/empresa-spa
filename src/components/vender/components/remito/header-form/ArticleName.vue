@@ -16,7 +16,7 @@
 		search_function="get_articles_offline"
 		:props_to_show="props_to_show"
 		:props_to_filter="['id', 'name', 'provider_code']"
-		:prop="{text: 'Articulo', key: 'article_id', store: 'article'}"></search-component>
+		:prop="{text: 'Articulo', key: 'article_id', store: 'article', route_to_search: 'vender/buscar-articulo-por-nombre'}"></search-component>
 	</b-col>
 </template>
 <script>
@@ -161,7 +161,6 @@ export default {
 			this.set_codigo_input_value(article)
 
 			this.set_item_vender(article)
-
 
 			if (this.owner.ask_amount_in_vender) {
 				let input = document.getElementById('search-article')

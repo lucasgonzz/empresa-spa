@@ -100,16 +100,16 @@ export default {
 				ok = false
 			}
 
-			this.items.forEach(item => {
-				if (
-					item.is_article
-					&& item.article_variants.length
-					&& !item.article_variant_id
-				) {
-					this.$toast.error('Indique variante de '+item.name)
-					ok = false
-				}
-			})
+			// this.items.forEach(item => {
+			// 	if (
+			// 		item.is_article
+			// 		&& item.article_variants.length
+			// 		&& !item.article_variant_id
+			// 	) {
+			// 		this.$toast.error('Indique variante de '+item.name)
+			// 		ok = false
+			// 	}
+			// })
 
 			return ok
 		}

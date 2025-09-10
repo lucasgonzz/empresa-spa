@@ -267,6 +267,22 @@ export default [
 		// image_url: 'nav-icons/tienda.png',
 	},
 	{
+		text: 'Tienda Nube',
+		name: 'tienda_nube',
+		path: '/tienda-nube',
+		component: '@/views/TiendaNube',
+		params: {
+			view: 'pedidos',
+		},
+		if_has_extencion: 'usa_tienda_nube',
+		// can: [
+		// 	'order.index',
+		// 	'buyer.index',
+		// ],
+		image_url: 'nuevos-nav-icons/tienda_nube.png',
+		// image_url: 'nav-icons/tienda.png',
+	},
+	{
 		text: 'MercadoLibre',
 		name: 'mercado_libre',
 		path: '/mercado-libre',

@@ -70,6 +70,7 @@ export default {
 			text: 'Sucursal',
 			key: 'address_id',
 			type: 'select',
+			relation_prop_name: 'street',
 			use_store_models: true,
 		},
 		{

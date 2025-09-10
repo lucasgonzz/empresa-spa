@@ -6,13 +6,13 @@
 		<div
 		class="cont-total">
 
-			<p 
+			<!-- <p 
 			v-if="sub_total != total"
 			class="m-0">
 				<strong class="sub-total">
 					Sub Total: {{ price(sub_total) }}
 				</strong>
-			</p>
+			</p> -->
 			<p class="m-0 venta-total-box">
 				<strong 
 				dusk="total">
@@ -40,9 +40,16 @@
 			</p>
 		</div>
 
-		<forzar-total></forzar-total>
-		
-		<price-type></price-type>
+		<div
+		class="cont-selects m-l-10">
+			
+			<forzar-total></forzar-total>
+			
+			<price-type></price-type>
+
+			<moneda></moneda>	
+		</div>
+
 	</b-col>
 </template>
 <script>
@@ -52,6 +59,7 @@ export default {
 	components: {
 		PriceType: () => import('@/components/vender/components/remito/total-previus-sales/price-type/Index'),
 		ForzarTotal: () => import('@/components/vender/components/remito/total-previus-sales/forzar-total/Index'),
+		Moneda: () => import('@/components/vender/components/remito/total-previus-sales/Moneda'),
 	},
 	computed: {
 		previus_sale() {
@@ -129,11 +137,17 @@ export default {
 			p 
 				text-align: left
 
+
 	.price-type-name
 		font-size: 20px
 		align-self: center
 		font-weight: bold
 		margin-left: 50px
+
+
+
+	.cont-selects
+		width: 150px
 
 
 

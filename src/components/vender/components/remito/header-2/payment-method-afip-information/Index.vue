@@ -4,11 +4,11 @@
 		<payment-method></payment-method>
 		<afip-information></afip-information>
 		<employee></employee>
+		<caja></caja>
 		<select-address></select-address>
 		<sale-type></sale-type>
 		<seller></seller>
 		<cuotas></cuotas>
-		<caja></caja>
 	</div>
 </template>
 <script>

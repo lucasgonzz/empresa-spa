@@ -25,6 +25,13 @@ export default {
 			v_if: ['afip_ticket', '!=', null],
 		},
 		{
+			text: 'Moneda',
+			type: 'select',
+			key: 'moneda_id',
+			only_show: true,
+			use_store_models: true,
+		},
+		{
 			text: 'Hora',
 			key: 'hora',
 			function: 'get_hora',
@@ -68,6 +75,7 @@ export default {
 			use_store_models: true,
 			only_show: true,
 			not_show: true,
+			v_if: ['seller_id', '!=', null],
 		},
 		{
 			text: 'Cuotas',
@@ -75,6 +83,7 @@ export default {
 			type: 'number',
 			only_show: true,
 			not_show: true,
+			v_if: ['cantidad_cuotas', '!=', 0],
 		},
 		{
 			text: 'Lista de Precios',
@@ -82,6 +91,7 @@ export default {
 			use_store_models: true,
 			not_show: true,
 			only_show: true,
+			v_if: ['price_type_id', '!=', 0],
 		},
 		{
 			text: 'Caja destino',
@@ -90,17 +100,26 @@ export default {
 			not_show: true,
 			only_show: true,
 			if_has_extencion: 'cajas',
+			v_if: ['save_current_acount', '==', 0],
 		},
 		{
 			text: 'Descuento',
 			key: 'descuento',
 			not_show: true,
 			only_show: true,
+			if_has_extencion: 'forzar_total',
 		},
 		{
 			text: 'En acopio',
 			key: 'en_acopio',
 			type: 'checkbox',
+			only_show: true,
+			if_has_extencion: 'acopios',
+		},
+		{
+			text: 'Observaciones',
+			key: 'observations',
+			type: 'textarea',
 			only_show: true,
 		},
 		{

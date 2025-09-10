@@ -172,7 +172,7 @@ export default {
 			esperando: false,
 			no_hacer_seleccion: false,
 
-			per_page: 25,
+			per_page: 50,
 			current_page: null,
 			total_pages: null,
 			total_results: 0,
@@ -304,17 +304,23 @@ export default {
 					let route = 'search-from-modal/'+this.model_name+'?page='+this.current_page
 
 					if (this.prop && this.prop.route_to_search) {
-						route = this.prop.route_to_search
+						route = this.prop.route_to_search+'?page='+this.current_page
 					}
 
 					this.$api.post(route, info)
 					.then(res => {
 						
-						console.log('llego desde api:')
-						console.log(res.data.models)
-						this.results = res.data.models.data 
-						this.total_pages = res.data.models.last_page
-						this.total_results = res.data.models.total
+						let response = res.data.models 
+						if (!res.data.models) {
+							response = res.data
+						}
+
+						console.log('response')
+						console.log(response)
+
+						this.results = response.data 
+						this.total_pages = response.last_page
+						this.total_results = response.total
 
 						this.finishSearch()
 					})
@@ -457,6 +463,8 @@ export default {
 
 				console.log('orderAlpabethic')
 				console.log(this.prop_to_filter)
+				console.log('results')
+				console.log(this.results)
 				this.results = this.results.sort((a, b) => {
 					return a[this.prop_to_filter.key]+''.localeCompare(b[this.prop_to_filter.key])
 				})

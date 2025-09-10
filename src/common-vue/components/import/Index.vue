@@ -146,7 +146,8 @@
 		<hr>
 
 
-		<div>
+		<div
+		v-if="pedir_operacion_a_realizar">
 			<p>
 				<strong>
 					Operaciones a realizar
@@ -187,8 +188,8 @@
 				</span>
 			</b-form-checkbox>
 
+			<hr>	
 		</div>
-		<hr>	
 
 		<b-form-group
 		label="Archivo Excel para importar">
@@ -285,6 +286,10 @@ export default {
 			type: String,
 			default: null,
 		},
+		pedir_operacion_a_realizar: {
+			type: Boolean,
+			default: true,
+		}
 	},
 	computed: {
 		title() {
@@ -637,9 +642,11 @@ export default {
 			}
 		},
 		check() {
-			if (this.create_and_edit === null) {
-				this.$toast.error('Indique las Operaciones a realizar')
-				return false 
+			if (this.pedir_operacion_a_realizar) {
+				if (this.create_and_edit === null) {
+					this.$toast.error('Indique las Operaciones a realizar')
+					return false 
+				}
 			}
 			if (this.model_name == 'article') {
 				let columna_proveedor = this.columns_.find(column => {

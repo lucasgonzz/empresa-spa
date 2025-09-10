@@ -19,20 +19,32 @@
 export default {
 	props: {
 		sale: Object,
+		from_budget: {
+			type: Boolean,
+			default: false
+		}
 	},
 	methods: {
 		show_current_acount() {
 			this.showClientCurrentAcount(this.sale)
 		},
 		whatsapp() {
-			let link = 'https://api.whatsapp.com/send?phone='+this.sale.client.phone+'&text=Hola '+this.sale.client.name+', te acercamos el comprobante de tu compra N° '+this.sale.num+': '
+			let link = 'https://api.whatsapp.com/send?phone='+this.sale.client.phone+'&text=Hola '+this.client_name()+', te acercamos el comprobante de tu compra N° '+this.sale.num+': '
 			
-			if (this.sale.afip_ticket) {
-				link += this.owner.api_url+'/sale/afip-ticket-pdf/'+this.sale.id 
+			if (this.from_budget) {
+				link += this.owner.api_url+'/budget/pdf/'+this.sale.id+'/1' 
 			} else {
-				link += this.owner.api_url+'/sale/pdf/'+this.sale.id+'/1/0/0' 
+
+				if (this.sale.afip_ticket) {
+					link += this.owner.api_url+'/sale/afip-ticket-pdf/'+this.sale.id 
+				} else {
+					link += this.owner.api_url+'/sale/pdf/'+this.sale.id+'/1/0/0' 
+				}
 			}
 			window.open(link)
+		},
+		client_name() {
+			return this.sale.client.name.split(' ')[0].toUpperCase()
 		}
 	}
 }

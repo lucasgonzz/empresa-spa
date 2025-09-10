@@ -8,6 +8,8 @@
 		@modelSaved="setArticleVariants"
 		@modelDeleted="setArticleVariants"
 		model_name="article_property"
+		:show_btn_create="false"
+		:show_view_header="false"
 		:check_permissions="false"
 		:prop_to_send_on_save="prop_to_send_on_save"></view-component>
 	</div>
@@ -37,11 +39,33 @@ export default {
 		async setArticleVariants() {
 			console.log('modelSaved article_properties')
 			console.log(this.article_properties)
-			var article_variants = new ArticleVariants(this.article, this.article_properties)
-			let variants = article_variants.getArticleVariants()
-			await this.saveVariants(variants)
-			this.loadModel('article', this.article.id)
+
+			if (this.se_asignaron_property_values) {
+
+				var article_variants = new ArticleVariants(this.article, this.article_properties)
+				let variants = article_variants.getArticleVariants()
+			
+				console.log('variants')
+				console.log(variants)
+
+				await this.saveVariants(variants)
+
+				this.loadModel('article', this.article.id)
+			}
+
 		},
+		se_asignaron_property_values() {
+			let se_asignaron_property_values = false
+			
+			this.article_properties.forEach(article_property => {
+
+				if (article_property.article_property_values.length) {
+					se_asignaron_property_values = true
+				}
+			})
+
+			return se_asignaron_property_values
+		},	
 
 		saveVariants(variants) {
 			return this.$api.post('article-variant', {

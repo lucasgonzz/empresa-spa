@@ -14,6 +14,7 @@
 				<div class="cards-wrapper">
 					<div
 					v-for="card in group.cards" 
+					v-if="show(card)"
 					:id="card.id ? card.id : ''"
 					class="icon-card">
 						<img :src="img_url(card)">
@@ -60,9 +61,24 @@ export default {
 							description: 'Total vendido, haya sido o no pagado',
 						},
 						{
+							text: 'Ingresos brutos USD',
+							if_has_extencion: 'ventas_en_dolares',
+							img: 'ventas',
+							value: this.price(this.model.total_vendido_usd, false),
+							description: 'Total vendido, haya sido o no pagado',
+						},
+						{
 							text: 'Pagado en mostrador',
 							img: 'pagado_mostrador2',
 							value: this.price(this.model.total_pagado_mostrador, false),
+							description: 'Total vendido y pagado en el momento, sin pasar a c/c',
+							extra: this.porcentaje_mostrador,
+						},
+						{
+							text: 'Pagado en mostrador USD',
+							if_has_extencion: 'ventas_en_dolares',
+							img: 'pagado_mostrador2',
+							value: this.price(this.model.total_pagado_mostrador_usd, false),
 							description: 'Total vendido y pagado en el momento, sin pasar a c/c',
 							extra: this.porcentaje_mostrador,
 						},
@@ -74,9 +90,24 @@ export default {
 							extra: this.porcentaje_a_cuenta_corriente,
 						},
 						{
+							text: 'A cuentas corrientes USD',
+							if_has_extencion: 'ventas_en_dolares',
+							img: 'a_cuentas_corrientes',
+							value: this.price(this.model.total_vendido_a_cuenta_corriente_usd, false),
+							description: 'Total vendido a tus clientes, pero que no se pago',
+							extra: this.porcentaje_a_cuenta_corriente,
+						},
+						{
 							text: 'Pagos de clientes (ctas ctes)',
 							img: 'pagado_mostrador',
 							value: this.price(this.model.total_pagado_a_cuenta_corriente, false),
+							description: 'Total pagado en C/C por tus clientes, de ventas que hayan realizado en el pasado'
+						},
+						{
+							text: 'Pagos de clientes (ctas ctes) USD',
+							if_has_extencion: 'ventas_en_dolares',
+							img: 'pagado_mostrador',
+							value: this.price(this.model.total_pagado_a_cuenta_corriente_usd, false),
 							description: 'Total pagado en C/C por tus clientes, de ventas que hayan realizado en el pasado'
 						},
 						{
@@ -122,9 +153,23 @@ export default {
 							description: 'Suma de: lo que se vendio en mostrador + lo que pagaron en C/C tus clientes (lo que deberia haber en la caja)',
 						},
 						{
+							text: 'Caja USD',
+							if_has_extencion: 'ventas_en_dolares',
+							img: 'ingresos_brutos',
+							value: this.price(this.model.total_ingresos_usd, false),
+							description: 'Suma de: lo que se vendio en mostrador + lo que pagaron en C/C tus clientes (lo que deberia haber en la caja)',
+						},
+						{
 							text: 'Utilidad',
 							img: 'ingresos_netos',
 							value: this.price(this.model.ingresos_netos, false),
+							description: 'Ingresos Brutos - Costo de la mercaderia',
+						},
+						{
+							text: 'Utilidad USD',
+							if_has_extencion: 'ventas_en_dolares',
+							img: 'ingresos_netos',
+							value: this.price(this.model.ingresos_netos_usd, false),
 							description: 'Ingresos Brutos - Costo de la mercaderia',
 						},
 						{
@@ -179,10 +224,24 @@ export default {
 							description: 'Sumatoria de los totales de los pedidos a proveedores',
 						},
 						{
+							text: 'Total Comprado USD',
+							img: 'comprado', 
+							value: this.price(this.model.total_comprado_usd, false),
+							description: 'Sumatoria de los totales de los pedidos a proveedores',
+							if_has_extencion: 'ventas_en_dolares',
+						},
+						{
 							text: 'Total Pagado',
 							img: 'pagado', 
 							value: this.price(this.model.total_pagado_a_proveedores, false),
 							description: 'Sumatoria de los pagos hechos a proveedores',
+						},
+						{
+							text: 'Total Pagado USD',
+							img: 'pagado', 
+							value: this.price(this.model.total_pagado_a_proveedores_usd, false),
+							description: 'Sumatoria de los pagos hechos a proveedores',
+							if_has_extencion: 'ventas_en_dolares',
 						},
 					],
 				},
@@ -223,13 +282,33 @@ export default {
 
 
 				{
-					group_name: 'Clientes',
+					group_name: 'Deudas',
 					cards: [
 						{
 							text: 'Deudas de Clientes',
 							img: 'deuda-clientes',
-							value: this.price(this.deuda_clientes, false),
-							description: 'Sumatoria de los saldos ACTUALES de tus clientes (EN VIVO)',
+							value: this.price(this.model.deuda_clientes, false),
+							description: 'Sumatoria de los saldos ACTUALES de tus clientes',
+						},
+						{
+							text: 'Deudas de Clientes USD',
+							img: 'deuda-clientes',
+							value: this.price(this.model.deuda_clientes_usd, false),
+							description: 'Sumatoria de los saldos ACTUALES de tus clientes',
+							if_has_extencion: 'ventas_en_dolares',
+						},
+						{
+							text: 'Deudas con Proveedores',
+							img: 'deuda-clientes',
+							value: this.price(this.model.deuda_proveedores, false),
+							description: 'Sumatoria de los saldos ACTUALES de tus proveedores',
+						},
+						{
+							text: 'Deudas con Proveedores USD',
+							img: 'deuda-clientes',
+							value: this.price(this.model.deuda_proveedores_usd, false),
+							description: 'Sumatoria de los saldos ACTUALES de tus proveedores',
+							if_has_extencion: 'ventas_en_dolares',
 						},
 					],
 				},
@@ -260,18 +339,38 @@ export default {
 		clients() {
 			return this.$store.state.client.models 
 		},
-		deuda_clientes() {
-			let deuda = 0
-			this.clients.forEach(client => {
-				if (client.saldo && client.saldo > 0) {
-					console.log('sumando '+client.saldo+' de '+client.name)
-					deuda += Number(client.saldo)
-					console.log('deuda:')
-					console.log(deuda)
-				}
-			})
-			return deuda
+		providers() {
+			return this.$store.state.provider.models 
 		},
+		rango_temporal() {
+			return this.$store.state.reportes.rango_temporal
+		},
+		// deuda_clientes() {
+		// 	if (this.rango_temporal == 'rango-de-fechas') {
+		// 		return this.model.deuda_clientes
+		// 	} 
+			
+		// 	let deuda = 0
+		// 	this.clients.forEach(client => {
+		// 		if (client.saldo && client.saldo > 0) {
+		// 			deuda += Number(client.saldo)
+		// 		}
+		// 	})
+		// 	return deuda
+		// },
+		// deuda_proveedores() {
+		// 	if (this.rango_temporal == 'rango-de-fechas') {
+		// 		return this.model.deuda_proveedores
+		// 	} 
+			
+		// 	let deuda = 0
+		// 	this.providers.forEach(provider => {
+		// 		if (provider.saldo && provider.saldo > 0) {
+		// 			deuda += Number(provider.saldo)
+		// 		}
+		// 	})
+		// 	return deuda
+		// },
 		model() {
 			return this.$store.state.reportes.model
 		},
@@ -308,6 +407,12 @@ export default {
 		img_url(card) {
 			return require('@/assets/iconos-reportes/'+card.img+'.png') 
 		},
+		show(card) {
+			if (card.if_has_extencion) {
+				return this.hasExtencion(card.if_has_extencion)
+			}
+			return true
+		}
 	},
 }
 </script>
@@ -342,6 +447,7 @@ export default {
 			margin: 10px
 		
 		height: 200px
+		min-height: 200px
 		background: #FFF
 		border: 2px solid rgba(0, 0, 0, .3)
 		border-radius: 8px

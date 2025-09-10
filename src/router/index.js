@@ -126,6 +126,11 @@ const routes = [
         component: () => import('@/views/Online')
     },
     {
+        path: '/tienda-nube/:view?/:sub_view?/',
+        name: 'tienda_nube',
+        component: () => import('@/views/TiendaNube')
+    },
+    {
         path: '/mercado-libre/:view?',
         name: 'mercado_libre',
         component: () => import('@/views/MercadoLibre')

@@ -69,6 +69,9 @@ export default {
 		seller_id() {
 			return this.$store.state.vender.seller_id
 		},
+		moneda_id() {
+			return this.$store.state.vender.moneda_id
+		},
 		current_acount_payment_method_discounts() {
 			return this.$store.state.current_acount_payment_method_discount.models 
 		},
@@ -79,34 +82,34 @@ export default {
 		}
 	},
 	methods: {
-		se_puede_actualizar_venta(sale = null) {
+		// se_puede_actualizar_venta(sale = null) {
 
-			if (!this.hasPermissionTo('sale.update')) {
-				return false
-			}
+		// 	if (!this.hasPermissionTo('sale.update')) {
+		// 		return false
+		// 	}
 			
-			if (sale) {
+		// 	if (sale) {
 
-				if (sale.afip_ticket) {
+		// 		if (sale.afip_ticket) {
 
-					return false 
-				}
+		// 			return false 
+		// 		}
 
-				if (sale.caja_id 
-					&& sale.caja_id != 0) {
+		// 		if (sale.caja_id 
+		// 			&& sale.caja_id != 0) {
 
-					return false
-				}
+		// 			return false
+		// 		}
 
-				if (sale.current_acount_payment_methods.length
-					&& sale.current_acount_payment_methods.length > 1) {
+		// 		if (sale.current_acount_payment_methods.length
+		// 			&& sale.current_acount_payment_methods.length > 1) {
 
-					return false
-				}
-			}
+		// 			return false
+		// 		}
+		// 	}
 
-			return true
-		},
+		// 	return true
+		// },
 		setPreviusSale(sale) {
 			console.log('updateSale:')
 			console.log(sale)
@@ -217,91 +220,92 @@ export default {
 			})
 
 		},
-		set_datos_para_actualizar_en_vender(model) {
-			console.log('set_datos_para_actualizar_en_vender model')
-			console.log(model)
-			let items = this.getItemsPreviusSale(model)
-			this.$store.commit('vender/setItems', items)
-			if (model.discounts.length) {
+		// set_datos_para_actualizar_en_vender(model) {
+		// 	console.log('set_datos_para_actualizar_en_vender model')
+		// 	console.log(model)
+		// 	let items = this.getItemsPreviusSale(model)
+		// 	this.$store.commit('vender/setItems', items)
+		// 	if (model.discounts.length) {
 				
-				this.set_discounts_store_with_pivot_percetage(model.discounts)
+		// 		this.set_discounts_store_with_pivot_percetage(model.discounts)
 
-				let discounts = model.discounts.map(discount => discount.id)
+		// 		let discounts = model.discounts.map(discount => discount.id)
 
-				this.$store.commit('vender/setDiscountsId', discounts)
+		// 		this.$store.commit('vender/setDiscountsId', discounts)
 
-			} else {
-				this.$store.commit('vender/setDiscountsId', [])
-			}
-			if (model.surchages.length) {
+		// 	} else {
+		// 		this.$store.commit('vender/setDiscountsId', [])
+		// 	}
+		// 	if (model.surchages.length) {
 
-				this.set_surchages_store_with_pivot_percetage(model.surchages)
+		// 		this.set_surchages_store_with_pivot_percetage(model.surchages)
 
-				let surchages = model.surchages.map(discount => discount.id)
+		// 		let surchages = model.surchages.map(discount => discount.id)
 
-				this.$store.commit('vender/setSurchagesId', surchages)
+		// 		this.$store.commit('vender/setSurchagesId', surchages)
 
-			} else {
-				this.$store.commit('vender/setSurchagesId', [])
-			}
-			if (model.client) {
-				this.$store.commit('vender/setClient', model.client)
-			} else {
-				console.log('se seteo client con null')
-				this.$store.commit('vender/setClient', null)
-				this.$store.commit('vender/setPriceType', null)
-			}
+		// 	} else {
+		// 		this.$store.commit('vender/setSurchagesId', [])
+		// 	}
+		// 	if (model.client) {
+		// 		this.$store.commit('vender/setClient', model.client)
+		// 	} else {
+		// 		console.log('se seteo client con null')
+		// 		this.$store.commit('vender/setClient', null)
+		// 		this.$store.commit('vender/setPriceType', null)
+		// 	}
 
-			if (model.price_type) {
-				console.log('setenaod price type con:')
-				console.log(model.price_type)
-				this.$store.commit('vender/setPriceType', model.price_type)
-			} else if (model.client && model.client.price_type_id) {
-				this.$store.commit('vender/setPriceType', model.client.price_type_id)
-			} else {
-				this.$store.commit('vender/setPriceType', null)
-			}
+		// 	if (model.price_type) {
+		// 		console.log('setenaod price type con:')
+		// 		console.log(model.price_type)
+		// 		this.$store.commit('vender/setPriceType', model.price_type)
+		// 	} else if (model.client && model.client.price_type_id) {
+		// 		this.$store.commit('vender/setPriceType', model.client.price_type_id)
+		// 	} else {
+		// 		this.$store.commit('vender/setPriceType', null)
+		// 	}
 
-			// this.setPriceType()
+		// 	// this.setPriceType()
 			
-			this.$store.commit('vender/setSellerId', model.seller_id)
+		// 	this.$store.commit('vender/setSellerId', model.seller_id)
 			
-			if (model.current_acount_payment_method_id) {
-				this.$store.commit('vender/setCurrentAcountPaymentMethodId', model.current_acount_payment_method_id)
-			} else {
-				this.$store.commit('vender/setCurrentAcountPaymentMethodId', 0)
-			}
+		// 	if (model.current_acount_payment_method_id) {
+		// 		this.$store.commit('vender/setCurrentAcountPaymentMethodId', model.current_acount_payment_method_id)
+		// 	} else {
+		// 		this.$store.commit('vender/setCurrentAcountPaymentMethodId', 0)
+		// 	}
 
-			if (model.current_acount_payment_methods
-				&& model.current_acount_payment_methods.length == 1) {
-				this.$store.commit('vender/setCurrentAcountPaymentMethodId', model.current_acount_payment_methods[0].id)
-			} 
+		// 	if (model.current_acount_payment_methods
+		// 		&& model.current_acount_payment_methods.length == 1) {
+		// 		this.$store.commit('vender/setCurrentAcountPaymentMethodId', model.current_acount_payment_methods[0].id)
+		// 	} 
 
-			if (model.afip_information_id) {
-				this.$store.commit('vender/setAfipInformationId', model.afip_information_id)
-			}
-			if (model.employee_id) {
-				this.$store.commit('vender/setEmployeeId', model.employee_id)
-			}
-			if (model.address_id) {
-				this.$store.commit('vender/setAddressId', model.address_id)
-			} else {
-				this.$store.commit('vender/setAddressId', 0)
-			}
-			if (model.sale_type_id) {
-				this.$store.commit('vender/setSaleTypeId', model.sale_type_id)
-			}
-			if (model.numero_orden_de_compra) {
-				this.$store.commit('vender/set_numero_orden_de_compra', model.numero_orden_de_compra)
-			}
-			this.$store.commit('vender/setObservations', model.observations)
-			this.$store.commit('vender/set_omitir_en_cuenta_corriente', model.omitir_en_cuenta_corriente)
+		// 	if (model.afip_information_id) {
+		// 		this.$store.commit('vender/setAfipInformationId', model.afip_information_id)
+		// 	}
+		// 	if (model.employee_id) {
+		// 		this.$store.commit('vender/setEmployeeId', model.employee_id)
+		// 	}
+		// 	if (model.address_id) {
+		// 		this.$store.commit('vender/setAddressId', model.address_id)
+		// 	} else {
+		// 		this.$store.commit('vender/setAddressId', 0)
+		// 	}
+		// 	if (model.sale_type_id) {
+		// 		this.$store.commit('vender/setSaleTypeId', model.sale_type_id)
+		// 	}
+		// 	if (model.numero_orden_de_compra) {
+		// 		this.$store.commit('vender/set_numero_orden_de_compra', model.numero_orden_de_compra)
+		// 	}
+		// 	this.$store.commit('vender/setObservations', model.observations)
+		// 	this.$store.commit('vender/set_omitir_en_cuenta_corriente', model.omitir_en_cuenta_corriente)
 
-			// this.setItemsPrices(false, true)
+		// 	this.$store.commit('vender/set_moneda_id', model.moneda_id)
+		// 	// this.setItemsPrices(false, true)
 
-			// this.$store.commit('vender/setTotal')
-			this.setTotal()
-		},
+		// 	// this.$store.commit('vender/setTotal')
+		// 	this.setTotal()
+		// },
 		setPreviusReturnedArticles() {
 			let returned_articles = []
 			this.previus_sale.articles.forEach(article => {
@@ -347,6 +351,7 @@ export default {
 				numero_orden_de_compra: this.numero_orden_de_compra,
 				omitir_en_cuenta_corriente: this.omitir_en_cuenta_corriente,
 				metodos_de_pago_seleccionados: this.selected_payment_methods,
+				moneda_id: this.moneda_id,
 				seller_id: this.seller_id,
 				sub_total: this.sub_total,
 				total: this.total,

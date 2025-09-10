@@ -12,7 +12,7 @@ export default {
 				console.log('No esta repetido')
 				return false
 
-			} else if (finded.article_variants.length) {
+			} else if (finded.article_variant_id) {
 				console.log('esta repetido pero tiene variantes')
 				return false
 			} else {

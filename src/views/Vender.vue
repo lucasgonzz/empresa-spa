@@ -1,5 +1,6 @@
 <template>
 <div id="vender">
+	
 	<new-article></new-article>
 
 	<loading-afip-ticket></loading-afip-ticket>

@@ -144,8 +144,29 @@ export default {
 
                 price = this.redondear(price)
             }
+
+            
             price = Number(price)
-            // console.log(this.price(price))
+
+            console.log('antes de llamar a check_moneda')
+            price = this.check_moneda(item, price, from_pivot)
+            console.log('luego de llamar a check_moneda')
+
+            return price
+        },
+        check_moneda(item, price, from_pivot) {
+            console.log('check_moneda: ')
+
+            console.log(this.$store.state.vender.moneda_id)
+            
+            if (
+                !from_pivot
+                && this.$store.state.vender.moneda_id == 2
+                && !item.price_type_monedas.length
+            ) {
+                price = Number(price) / Number(this.$store.state.vender.valor_dolar) 
+            }
+            
             return price
         },
         redondear(price) {
@@ -181,17 +202,35 @@ export default {
                 }
 
                 if (price_vender_id) {
-                        
-                    let article_price_type = item.price_types.find(price_type => {
-                        return price_type.id == price_vender_id 
-                    })
 
-                    if (typeof article_price_type != 'undefined') {
+                    if (this.hasExtencion('ventas_en_dolares')) {
 
-                        price = article_price_type.pivot.final_price
+                        let moneda_id = this.$store.state.vender.moneda_id
+
+                        let article_price_type_moneda = item.price_type_monedas.find(ptm => {
+                            return ptm.price_type_id == price_vender_id && ptm.moneda_id == moneda_id
+                        })
+
+                        if (typeof article_price_type_moneda != 'undefined') {
+                            price = article_price_type_moneda.final_price
+                        } else {
+                            console.log(`No se encontró price_type_moneda para artículo ${item.name}, PT: ${price_vender_id}, Moneda: ${moneda_id}`)
+                        }
+
                     } else {
-                        console.log('No se encontro price type para '+item.name)
+
+                        let article_price_type = item.price_types.find(price_type => {
+                            return price_type.id == price_vender_id 
+                        })
+
+                        if (typeof article_price_type != 'undefined') {
+
+                            price = article_price_type.pivot.final_price
+                        } else {
+                            console.log('No se encontro price type para '+item.name)
+                        }
                     }
+                        
                 }
             }
 

@@ -52,6 +52,17 @@ hide-footer>
         v-model="pago.numero_orden_de_compra"></b-form-input>
     </b-form-group>
 
+    <b-form-group
+    description="Si se activa, solo quedara registrado en la cuenta corriente, pero no impactara en el saldo del cliente"
+    v-if="hasExtencion('pagos_provisorios')">
+        <b-form-checkbox
+        :value="1"
+        :unchecked-value="1"
+        v-model="pago.is_provisorio">
+            Pago Provisorio
+        </b-form-checkbox>
+    </b-form-group>
+
     <hr>
  
     <payment-methods
@@ -95,6 +106,7 @@ export default {
                 description: '',
                 created_at: '',
                 haber: '',
+                is_provisorio: 0,
                 current_acount_payment_methods: [{
                     current_acount_payment_method_id: 3,
                     amount: '',
@@ -157,6 +169,7 @@ export default {
             if (this.check()) {
         		this.loading = true
         		this.$api.post('/current-acount/pago', {
+                    credit_account_id: this.from_credit_account.id,
                     model_name: this.from_model_name,
         			model_id: this.from_model.id,
         			...this.pago,
@@ -236,6 +249,7 @@ export default {
                 current_date: true,
                 created_at: '',
                 haber: '',
+                is_provisorio: 0,
                 current_acount_payment_methods: [{
                     current_acount_payment_method_id: 3,
                     amount: '',

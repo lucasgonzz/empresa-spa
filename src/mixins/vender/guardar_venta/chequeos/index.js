@@ -21,9 +21,9 @@ export default {
 
 		checkear_vender() {
 
-			if (!this.check_article_variants()) {
-				return false
-			}
+			// if (!this.check_article_variants()) {
+			// 	return false
+			// }
 
 			if (!this.check_cajas()) {
 				return false

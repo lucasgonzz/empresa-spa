@@ -125,21 +125,29 @@
 									</div>
 
 									<div
-									v-else-if="prop.type == 'text' || prop.type == 'number' || prop.type == 'password'"
-									class="d-flex w-100">
-										<b-form-input
-										autocomplete="off"
-										:id="model_name+'-'+prop.key"
-								        :disabled="isDisabled(prop, form_to_filter)"
-										:placeholder="'Ingresar '+propText(prop)"
-										:type="prop.type"
-										@keyup.enter="clickEnter(prop)"
-										v-model="model[prop.key]"></b-form-input>
+									v-else-if="prop.type == 'text' || prop.type == 'number' || prop.type == 'password'">
 
-										<bar-code-scanner
-										class="m-l-5"
-										v-if="prop.use_bar_code_scanner && hasExtencion('bar_code_scanner')"
-										@setBarCode="setBarCode"></bar-code-scanner>
+										<div class="d-flex w-100">
+											<b-form-input
+											autocomplete="off"
+											:id="model_name+'-'+prop.key"
+									        :disabled="isDisabled(prop, form_to_filter)"
+											:placeholder="'Ingresar '+propText(prop)"
+											:type="prop.type"
+											@keyup.enter="clickEnter(prop)"
+											v-model="model[prop.key]"></b-form-input>
+
+											<bar-code-scanner
+											class="m-l-5"
+											v-if="prop.use_bar_code_scanner && hasExtencion('bar_code_scanner')"
+											@setBarCode="setBarCode"></bar-code-scanner>
+										</div>
+
+										<div
+										class="m-t-10"
+										v-if="prop.is_price">
+											{{ price(model[prop.key]) }}
+										</div>
 									</div>
 
 									<b-form-textarea

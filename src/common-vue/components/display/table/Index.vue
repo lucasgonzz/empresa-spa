@@ -698,6 +698,14 @@ export default {
 			}
 		},
 		scroll_margenes() {
+			if (
+				this.is_mobile
+				|| !this.owner.scroll_en_tablas
+			) {
+				console.log('scroll_en_tablas:')
+				console.log(this.owner.scroll_en_tablas)
+				return
+			}
 		    const contTable = document.getElementById(this.id);
 		    if (!contTable) return;
 

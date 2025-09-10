@@ -4,6 +4,10 @@ v-if="items.length"
 cols="12"
 class="j-end align-start"
 lg="6">
+
+	<vuelto-efectivo></vuelto-efectivo>
+
+
 	<btn-loader 
 	:disabled="loader"
     class="venta-total-box"
@@ -12,7 +16,7 @@ lg="6">
 	:loader="loader"
 	dusk="btn_vender"
 	@clicked="saveSale">
-		Cobrar
+		Guardar venta
 	</btn-loader>
 
 </b-col>
@@ -25,6 +29,7 @@ import vender_presupuestos from '@/mixins/vender_presupuestos'
 export default {
 	name: 'ButtonClients',
 	components: {
+		VueltoEfectivo: () => import('@/components/vender/components/remito/VueltoEfectivo'),
 		BtnLoader,
 	},
 	mixins: [previus_sales, guardar_venta, vender_presupuestos],
@@ -86,8 +91,8 @@ export default {
 				return 'Guardar Presupuesto'
 			}
 			if (this.index_previus_sales == 0) {
-				return 'COBRAR'
-				// return 'Guardar venta'
+				// return 'COBRAR'
+				return 'Guardar venta'
 			}
 			return 'ACTUALIZAR venta'
 		},

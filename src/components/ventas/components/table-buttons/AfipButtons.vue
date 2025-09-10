@@ -4,10 +4,11 @@
 	class="p-l-5">
 			<b-button
 			variant="primary"
+			size="sm"
 			class="m-l-5"
 			@click.stop="afip_ticket"
 			v-if="sale.afip_ticket.cae">
-				Factura N° {{ sale.afip_ticket.cbte_numero }}
+				Fac N° {{ sale.afip_ticket.cbte_numero }}
 			</b-button>
 			<span
 			class="text-danger m-l-5"

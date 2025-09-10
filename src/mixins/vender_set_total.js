@@ -56,6 +56,12 @@ export default {
 		descuento() {
 			return this.$store.state.vender.descuento 
 		},
+		// moneda_id() {
+		// 	return this.$store.state.vender.moneda_id 
+		// },
+		// valor_dolar() {
+		// 	return this.$store.state.vender.valor_dolar
+		// }
 	},
 	data() {
 		return {
@@ -82,6 +88,8 @@ export default {
 				let new_items = []
 
 				this.setItemsPrices(false, this.from_pivot)
+				
+				// total = this.check_moneda(total)
 
 				this.vender_items.forEach(item => {
 					if (item.is_service) {
@@ -127,10 +135,18 @@ export default {
 			}
 			this.$store.commit('vender/setSubTotal', sub_total)
 			this.$store.commit('vender/setTotal', total)
+
+			console.log('setTotal: '+total)
 			
 			// console.log('se puso el sub_total en '+sub_total)
 			// console.log('se puso el total en '+total)
 		},
+		// check_moneda(total) {
+		// 	if (this.moneda_id == 2) {
+		// 		total = Number(total) / Number(this.valor_dolar) 
+		// 	}
+		// 	return total
+		// },
 		aplicar_cuotas(total) { 
 
 

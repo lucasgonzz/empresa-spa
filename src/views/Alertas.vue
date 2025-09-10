@@ -84,6 +84,13 @@ export default {
 				this.$store.commit('auth/setMessage', 'Cargando informacion')
 				this.$store.commit('auth/setLoading', true)
 
+				if (this.view == 'stock-minimo') {
+					this.$store.dispatch('inventory_performance/getModels')
+					.then(() => {
+						this.$store.commit('auth/setLoading', false)
+					})
+				}
+
 				if (this.view == 'cobros') {
 					this.$store.dispatch('sale/ventas_sin_cobrar/getModels')
 					.then(() => {

@@ -28,6 +28,12 @@ export default {
 					key: 'num',
 				},
 				{
+					key: 'codigo_barras',
+				},
+				{
+					key: 'codigo_proveedor',
+				},
+				{
 					key: 'nombre',
 				},
 				{
@@ -53,6 +59,8 @@ export default {
 			this.articles_stock_minimo.forEach(article => {
 				items.push({
 					num: article.id,
+					codigo_barras: article.bar_code,
+					codigo_proveedor: article.provider_code,
 					nombre: article.name,
 					precio: this.price(article.final_price),
 					stock: article.stock,

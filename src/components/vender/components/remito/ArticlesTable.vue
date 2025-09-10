@@ -71,13 +71,17 @@ class="m-b-15 m-t-70">
 
 				
 				<template #cell(article_variant_id)="data">
-					<b-input-group
+					<p
+					v-if="items[data.index].article_variant_id">
+						{{ items[data.index].variant_description }}
+					</p>
+					<!-- <b-input-group
 					v-if="items[data.index].is_article && items[data.index].article_variants.length"
 					class="input-discount">
 						<b-form-select
 						:options="article_variant_options(items[data.index])"
 						v-model="items[data.index].article_variant_id"></b-form-select>
-					</b-input-group>
+					</b-input-group> -->
 				</template>
 
 				
@@ -179,6 +183,15 @@ class="m-b-15 m-t-70">
 				</template>
 				<template #cell(options)="data">
 					<div class="options">
+						<!-- <b-button 
+						v-if="items[data.index].article_variants.length"
+						@click="peretir_articulo(items[data.index])"
+						variant="primary"
+						class="btn-options"
+						size="sm">
+							<i class="icon-refresh"></i>
+						</b-button> -->
+
 						<b-button 
 						v-if="previus_sale === null || !previus_sale.to_check"
 						@click="removeItem(items[data.index])"
@@ -315,6 +328,16 @@ export default {
 		},
 	},
 	methods: {
+		peretir_articulo(article) {
+			let item = {
+				...article,
+				article_variant_id: 0,
+				amount: article.amount,
+				is_article: true,
+			}
+			this.$store.commit('vender/setItem', item)
+			this.add_item_vender()
+		},
 		callSetTotal(from_amount_input = false, item = null) {
 
 			if (from_amount_input) {
@@ -339,10 +362,12 @@ export default {
 			}]
 
 			item.article_variants.forEach(article_variant => {
-				options.push({
-					value: article_variant.id,
-					text: article_variant.variant_description
-				})
+				if (!article_variant.oculta) {
+					options.push({
+						value: article_variant.id,
+						text: article_variant.variant_description
+					})
+				}
 			})
 
 			return options
