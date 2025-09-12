@@ -3,10 +3,11 @@
 		<b-button
 		v-for="credit_account in model.credit_accounts"
 		class="m-l-15"
+		v-if="show(credit_account)"
 		:id="'btn-current-acount-'+model.id"
 		@click.stop="showCurrentAcounts(credit_account)"
 		variant="success">
-			C/C {{ credit_account.moneda.name }} <span v-if="credit_account.saldo != 0">({{ price(credit_account.saldo) }})</span>
+			C/C {{ credit_account.moneda.name }}
 		</b-button> 
 	</div>
 </template>
@@ -17,6 +18,9 @@ export default {
 		model: Object,
 	},
 	methods: { 
+		show(credit_account) {
+			return credit_account.moneda_id == 1 || this.hasExtencion('ventas_en_dolares')
+		},
 		showCurrentAcounts(credit_account) {
 			this.$store.commit('current_acount/setFromModelName', this.model_name)
 			this.$store.commit('current_acount/setFromModel', this.model)

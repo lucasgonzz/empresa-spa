@@ -320,7 +320,7 @@ export default {
 			columns_: [], 
 			positions_seted: false,
 			create_and_edit: null,
-			no_actualizar_articulos_de_otro_proveedor: 0,
+			no_actualizar_articulos_de_otro_proveedor: 1,
 			show_history: false,
 			archivo_excel_path: null,
 

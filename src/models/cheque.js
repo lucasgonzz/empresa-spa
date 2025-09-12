@@ -10,6 +10,10 @@ export default {
 			key: 'client_id',
 		},
 		{
+			text: 'Proveedor',
+			key: 'provider_id',
+		},
+		{
 			key: 'banco',
 			type: 'text',
 		},

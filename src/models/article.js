@@ -104,6 +104,11 @@ export default {
 			filter_modal_position: 10,
 			filter_type: 'number',
 			can: 'article.cost',
+			check_simbolo_moneda: true,
+			prop_to_check_in_simbolo_moneda: {
+				key: 'cost_in_dollars',
+				equal_to: 1
+			},
 			// table_position: 8,
 		},
 
@@ -213,6 +218,11 @@ export default {
 			text: 'Precio final',
 			key: 'final_price',
 			type: 'number',
+			check_simbolo_moneda: true,
+			prop_to_check_in_simbolo_moneda: {
+				key: 'cost_in_dollars',
+				equal_to: 1
+			},
 			only_show: true,
 			is_price: true,
 			use_to_show_in_search_modal: true,

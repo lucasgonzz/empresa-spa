@@ -816,7 +816,23 @@ export default {
 				return model[array[0]][array[1]]
 			}
 			if (prop.is_price) {
-				return this.price(model[prop.key]) 
+				let value = this.price(model[prop.key]) 
+
+				if (prop.check_simbolo_moneda) {
+					console.log('ENTRO check_simbolo_moneda en prop '+prop.key+' con el model moenda_id: '+model.moneda_id)
+					let prop_to_check = 'moneda_id'
+					let value_equal_to = 2 
+
+					if (prop.prop_to_check_in_simbolo_moneda) {
+						prop_to_check = prop.prop_to_check_in_simbolo_moneda.key
+						value_equal_to = prop.prop_to_check_in_simbolo_moneda.equal_to
+					}
+
+					if (model[prop_to_check] == value_equal_to) {
+						value = 'USD '+value
+					}
+				}
+				return value
 			}
 			if (prop.type == 'search') {
 				if (typeof model[prop.key] == 'array') {

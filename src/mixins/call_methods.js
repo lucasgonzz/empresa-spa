@@ -57,6 +57,7 @@ export default [
     'iva',
     'iva_condition',
     'sub_category',
+    'provincia',
     'location',
     'seller',
     'payment_method',

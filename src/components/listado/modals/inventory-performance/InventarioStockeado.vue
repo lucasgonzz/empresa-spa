@@ -58,7 +58,7 @@
 				class="valor">
 					<circle-progress
 					:size="80"
-					:porcentaje="model.porcentaje_stockeado"></circle-progress>
+					:porcentaje="Number(model.porcentaje_stockeado)"></circle-progress>
 				</p>
 			</div>
 

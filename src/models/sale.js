@@ -14,6 +14,7 @@ export default {
 			type: 'number',
 			only_show: true,
 			is_price: true,
+			check_simbolo_moneda: true,
 			// function: 'totalSale',
 		},
 		{

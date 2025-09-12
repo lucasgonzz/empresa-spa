@@ -75,7 +75,7 @@ export default {
 	methods: {
 		iniciar_dolar() {
 
-			if (this.owner) {
+			if (this.user) {
 
 				console.log('iniciar_dolar')
 
@@ -83,6 +83,16 @@ export default {
 				console.log(this.input_dolar_valor)
 
 				this.input_dolar_valor = this.user_dolar
+
+				if (this.input_dolar_valor === null) {
+					this.iniciar_dolar()
+					return
+				}
+
+				console.log('-----------------------------------')
+				console.log('input_dolar_valor:')
+				console.log(this.input_dolar_valor)
+				console.log('-----------------------------------')
 
 				if (this.valor_dolar === null) {
 

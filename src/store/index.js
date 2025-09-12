@@ -182,6 +182,8 @@ import tienda_nube_order_status from '@/store/tienda_nube_order_status'
 import moneda from '@/store/moneda'
 import pais_exportacion from '@/store/pais_exportacion'
 
+import provincia from '@/store/provincia'
+
 
 Vue.use(Vuex)
 
@@ -369,5 +371,7 @@ export default new Vuex.Store({
 
         moneda,
         pais_exportacion,
+
+        provincia,
     }
 })

@@ -161,10 +161,30 @@ export default {
             
             if (
                 !from_pivot
-                && this.$store.state.vender.moneda_id == 2
                 && !item.price_type_monedas.length
             ) {
-                price = Number(price) / Number(this.$store.state.vender.valor_dolar) 
+
+                if (this.$store.state.vender.moneda_id == 2) {
+                    // La venta es en dolares
+                    
+                    if (this.owner.cotizar_precios_en_dolares) {
+
+                        price = Number(price) / Number(this.$store.state.vender.valor_dolar) 
+                    } 
+
+                } else if (this.$store.state.vender.moneda_id == 1) {
+
+                    // La venta es en pesos
+                    
+                    if (
+                        item.cost_in_dollars
+                        && !this.owner.cotizar_precios_en_dolares
+                    ) {
+
+                        price = Number(price) * Number(this.$store.state.vender.valor_dolar) 
+                    }
+
+                }
             }
             
             return price

@@ -11,15 +11,21 @@
 		class="m-t-15 w-100">
 			<b-button
 			@click="printWithoutPrices"
-			variant="outline-danger">
+			variant="danger">
 				<i class="icon-print"></i>
 				Sin precios
 			</b-button>
 			<b-button
 			@click="printWithPrices"
-			variant="danger">
+			variant="outline-danger">
 				<i class="icon-print"></i>
 				Con precios
+			</b-button>
+			<b-button
+			@click="printWithImages"
+			variant="danger">
+				<i class="icon-print"></i>
+				Con Imagenes
 			</b-button>
 		</b-button-group>
 		<hr>
@@ -78,11 +84,15 @@ export default {
 			})
 		},
 		printWithoutPrices() {
-            var link = process.env.VUE_APP_API_URL+'/budget/pdf/'+this.model.id+'/0'
+            var link = process.env.VUE_APP_API_URL+'/budget/pdf/'+this.model.id+'/0/0'
             window.open(link)
 		},
 		printWithPrices() {
-            var link = process.env.VUE_APP_API_URL+'/budget/pdf/'+this.model.id+'/1'
+            var link = process.env.VUE_APP_API_URL+'/budget/pdf/'+this.model.id+'/1/0'
+            window.open(link)
+		},
+		printWithImages() {
+            var link = process.env.VUE_APP_API_URL+'/budget/pdf/'+this.model.id+'/1/1'
             window.open(link)
 		},
 	}

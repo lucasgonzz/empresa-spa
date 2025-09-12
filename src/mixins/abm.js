@@ -51,6 +51,7 @@ export default {
 					view: 'generales',
 					models: [
 						'address',
+						'provincia',
 						'location',
 						'order_production_status',
 					]

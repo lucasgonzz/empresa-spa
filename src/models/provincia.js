@@ -7,15 +7,9 @@ export default {
 			value: '',
 			is_title: true,
 		},
-		{
-			text: 'Provincia',
-			key: 'provincia_id',
-			type: 'select',
-			use_store_models: true,
-		},
 	],
-	singular_model_name_spanish: 'Localidad',
-	plural_model_name_spanish: 'Localidades',
+	singular_model_name_spanish: 'Provincia',
+	plural_model_name_spanish: 'Provincias',
 	create_model_name_spanish: 'Nueva',
 	text_delete: 'la',
 }

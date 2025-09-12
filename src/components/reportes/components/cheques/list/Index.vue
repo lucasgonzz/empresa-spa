@@ -8,6 +8,7 @@
 		<table-component
 	    :loading="loading"
 	    :models="cheques_to_show"
+	    :properties="properties_to_show"
 	    model_name="cheque"
 	    :set_model_on_click="false"
 	    :show_actualizado="false"
@@ -56,6 +57,13 @@ export default {
 			console.log(this.sub_sub_view.replaceAll('-', '_'))
 			console.log(this.cheques[this.sub_view])
 			return this.cheques[this.sub_view][this.sub_sub_view.replaceAll('-', '_')]
+		},
+		properties_to_show() {
+			if (this.sub_view == 'recibido') {
+				return this.modelPropertiesFromName('cheque').filter(prop => prop.key != 'provider_id')
+			} else if (this.sub_view == 'emitido') {
+				return this.modelPropertiesFromName('cheque').filter(prop => prop.key != 'client_id')
+			}
 		}
 	}
 }

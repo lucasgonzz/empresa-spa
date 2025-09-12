@@ -101,12 +101,20 @@ export default {
 				key: 'name',	
 			})
 
-			if (!this.price_types.length) {
+			if (
+				!this.hasExtencion('cambiar_price_type_en_vender')
+			) {
 
 				props.push({
 					text: 'Precio',
 					key: 'final_price',
-					function: 'get_price_formateado',
+					is_price: true,
+					// function: 'get_price_formateado',
+					check_simbolo_moneda: true,
+					prop_to_check_in_simbolo_moneda: {
+						key: 'cost_in_dollars',
+						equal_to: 1
+					},
 				})
 			}
 
