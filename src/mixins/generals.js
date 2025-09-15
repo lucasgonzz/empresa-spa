@@ -166,11 +166,14 @@ export default {
 
                 if (this.$store.state.vender.moneda_id == 2) {
                     // La venta es en dolares
-                    
-                    if (this.owner.cotizar_precios_en_dolares) {
 
-                        price = Number(price) / Number(this.$store.state.vender.valor_dolar) 
-                    } 
+                    if (!item.cost_in_dollars) {
+                        price = this.cotizar_a_dolar(price)
+                    } else {
+                        if (this.owner.cotizar_precios_en_dolares) {
+                            price = this.cotizar_a_dolar(price)
+                        }
+                    }
 
                 } else if (this.$store.state.vender.moneda_id == 1) {
 
@@ -180,14 +183,19 @@ export default {
                         item.cost_in_dollars
                         && !this.owner.cotizar_precios_en_dolares
                     ) {
-
-                        price = Number(price) * Number(this.$store.state.vender.valor_dolar) 
+                        price = this.cotizar_a_peso(price)
                     }
 
                 }
             }
             
             return price
+        },
+        cotizar_a_peso(price) {
+            return price = Number(price) * Number(this.$store.state.vender.valor_dolar) 
+        },
+        cotizar_a_dolar(price) {
+            return price = Number(price) / Number(this.$store.state.vender.valor_dolar) 
         },
         redondear(price) {
             if (this.owner.redondear_centenas_en_vender) {

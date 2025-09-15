@@ -147,7 +147,7 @@ export default {
 
 
 	.cont-selects
-		width: 150px
+		width: 170px
 
 
 

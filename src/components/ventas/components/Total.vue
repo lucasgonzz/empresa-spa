@@ -22,6 +22,15 @@
 				v-if="is_admin">
 					| Ganancia <strong>{{ price(total - total_cost) }}</strong>
 				</p> 
+
+				<b-button
+				@click="export_excel"
+				class="m-l-10"
+				variant="outline-success"
+				size="sm">
+					<i class="icon-download"></i>
+					Excel
+				</b-button>
 			</div>
 			<b-skeleton 
 			v-else
@@ -72,6 +81,18 @@ export default {
 			})
 			return total 
 		},
+		from_date() {
+			return this.$store.state.sale.from_date
+		},
+		until_date() {
+			return this.$store.state.sale.until_date
+		},
+	},
+	methods: {
+		export_excel() {
+            var link = process.env.VUE_APP_API_URL+'/sales/excel/export/'+this.from_date+'/'+this.until_date
+            window.open(link)
+		}
 	}
 }
 </script>

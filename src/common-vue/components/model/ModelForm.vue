@@ -615,6 +615,11 @@ export default {
 		setSelected(result) {
 
 			let prop = result.prop
+
+			if (prop.toast_function) {
+				this[prop.toast_function](result)
+			}
+
 			if (prop.belongs_to_many) {
 				let model_to_add = result.model 
 				if (this.checkBelongsToManyExist(prop, model_to_add, result)) {

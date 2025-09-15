@@ -819,7 +819,7 @@ export default {
 				let value = this.price(model[prop.key]) 
 
 				if (prop.check_simbolo_moneda) {
-					console.log('ENTRO check_simbolo_moneda en prop '+prop.key+' con el model moenda_id: '+model.moneda_id)
+					// console.log('ENTRO check_simbolo_moneda en prop '+prop.key+' con el model moenda_id: '+model.moneda_id)
 					let prop_to_check = 'moneda_id'
 					let value_equal_to = 2 
 

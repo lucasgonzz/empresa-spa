@@ -74,12 +74,13 @@ export default {
 	},
 	methods: {
 		setSelected(result) {
-			let client = result.model 
-			this.$store.commit('vender/setClient', client)
 			this.setPriceType()
 
 			this.bloquear_metodo_de_pago()
 			this.bloquear_caja()
+			
+			let client = result.model 
+			this.$store.commit('vender/setClient', client)
 		},
 		clearSelected() {
 			this.$store.commit('vender/setClient', null)

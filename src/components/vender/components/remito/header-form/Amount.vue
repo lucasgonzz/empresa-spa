@@ -15,7 +15,7 @@
 			@keydown.enter="add_item_vender"
 			placeholder="Cantidad"></b-form-input>
 			<b-button 
-			class="d-md-none m-l-10"
+			class="d-lg-none m-l-10"
 			@click="callAddArticleToSale"
 			variant="primary">
 				<i class="icon-check"></i>

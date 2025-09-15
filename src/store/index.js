@@ -183,6 +183,7 @@ import moneda from '@/store/moneda'
 import pais_exportacion from '@/store/pais_exportacion'
 
 import provincia from '@/store/provincia'
+import provider_discount from '@/store/provider_discount'
 
 
 Vue.use(Vuex)
@@ -373,5 +374,6 @@ export default new Vuex.Store({
         pais_exportacion,
 
         provincia,
+        provider_discount,
     }
 })

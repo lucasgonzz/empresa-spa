@@ -109,6 +109,14 @@ export default {
 			type: 'select',
 			value: 0,
 		},
+		{
+			text: 'Descuentos',
+			key: 'provider_discounts',
+			has_many: {
+				text: 'Descuento',
+				model_name: 'provider_discount',
+			}
+		},
 		// {
 		// 	text: 'Listas de precios',
 		// 	key: 'provider_price_lists',

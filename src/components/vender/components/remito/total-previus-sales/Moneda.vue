@@ -9,9 +9,9 @@
 		:options="getOptions({key: 'moneda_id', text: 'Moneda'}, null, null, false)"></b-form-select>
 
 		<b-input-group
-		v-if="moneda_id == 2 && !hasExtencion('articulo_margen_de_ganancia_segun_lista_de_precios')"
+		v-if="!hasExtencion('articulo_margen_de_ganancia_segun_lista_de_precios')"
 		class="m-t-10"
-		prepend="$">
+		prepend="USD">
 			<b-form-input
 			type="number"
 			class="input-dolar"
@@ -123,5 +123,4 @@ export default {
 <style lang="sass">
 .select-moneda, .input-dolar
 	font-size: 15px !important
-	height: 35px !important
 </style>

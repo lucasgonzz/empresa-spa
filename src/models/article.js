@@ -119,7 +119,8 @@ export default {
 			type: 'text',
 			is_price: true,
 			only_show: true,
-			if_has_extencion: 'article.costo_real',
+			can: 'article.cost',
+			// if_has_extencion: 'article.costo_real',
 		},
 
 		{

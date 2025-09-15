@@ -73,6 +73,7 @@ export default {
 			key: 'articles',
 			search_from_api_function: 'search_from_api_in_provider_order',
 			route_to_search: 'vender/buscar-articulo-por-nombre',
+			toast_function: 'toast_article_provider_order_unidades_individuales',
 			belongs_to_many: {
 				model_name: 'article',
 				create_if_not_exist: true,

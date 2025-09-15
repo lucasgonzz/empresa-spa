@@ -38,6 +38,14 @@ export default {
         //     model_to_send.price_type_monedas = payload
         //     return model_to_send
         // },
+        toast_article_provider_order_unidades_individuales(result) {
+            if (
+                result.model 
+                && result.model.unidades_individuales
+            ) {
+                this.$toast.warning(result.model.unidades_individuales+' unidades individuales')
+            }
+        },
         async get_articles_offline() {
             return await db.articles.toArray()
         },
