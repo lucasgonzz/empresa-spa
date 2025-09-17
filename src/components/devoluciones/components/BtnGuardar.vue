@@ -81,6 +81,7 @@ export default {
 				})
 				.catch(err => {
 					this.$store.commit('auth/setLoading', false)
+					this.$toast.error(err)
 				})
 			}
 		},
