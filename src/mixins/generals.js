@@ -156,45 +156,70 @@ export default {
         },
         check_moneda(item, price, from_pivot) {
             console.log('check_moneda: ')
+            console.log(price)
+            console.log('valor_dolar:')
+            console.log(Number(this.$store.state.vender.valor_dolar))
 
-            console.log(this.$store.state.vender.moneda_id)
-            
+            // if (
+            //     !from_pivot
+            //     && !item.price_type_monedas.length
+            // ) {
             if (
-                !from_pivot
-                && !item.price_type_monedas.length
+                typeof item.price_type_monedas == 'undefined'
+                || !item.price_type_monedas.length
             ) {
 
-                if (this.$store.state.vender.moneda_id == 2) {
-                    // La venta es en dolares
+                if (typeof item.pivot == 'undefined') {
 
-                    if (!item.cost_in_dollars) {
-                        price = this.cotizar_a_dolar(price)
-                    } else {
-                        if (this.owner.cotizar_precios_en_dolares) {
+                    if (this.$store.state.vender.moneda_id == 2) {
+                        // La venta es en dolares
+
+
+                        if (!item.cost_in_dollars) {
                             price = this.cotizar_a_dolar(price)
+                            console.log('luego de cotizar_a_dolar: ')
+                            console.log(price)
+                        } else {
+                            if (this.owner.cotizar_precios_en_dolares) {
+                                price = this.cotizar_a_dolar(price)
+                                console.log('luego de cotizar_a_dolar: ')
+                                console.log(price)
+                            } else {
+                                console.log('no se cotizo a dolar')
+                            }
+                        } 
+
+                    } else if (this.$store.state.vender.moneda_id == 1) {
+
+                        // La venta es en pesos
+                        
+                        if (
+                            item.cost_in_dollars
+                            && !this.owner.cotizar_precios_en_dolares
+                        ) {
+                            price = this.cotizar_a_peso(price)
+                            console.log('luego de cotizar_a_peso: ')
+                            console.log(price)
+                        } else {
+                            console.log('no se cotizo a peso')
                         }
+
                     }
-
-                } else if (this.$store.state.vender.moneda_id == 1) {
-
-                    // La venta es en pesos
-                    
-                    if (
-                        item.cost_in_dollars
-                        && !this.owner.cotizar_precios_en_dolares
-                    ) {
-                        price = this.cotizar_a_peso(price)
-                    }
-
+                } else {
+                    console.log('no entro porque tiene pivot')
                 }
             }
             
             return price
         },
         cotizar_a_peso(price) {
+            console.log('cotizar_a_peso: ')
+            console.log(price)
             return price = Number(price) * Number(this.$store.state.vender.valor_dolar) 
         },
         cotizar_a_dolar(price) {
+            console.log('cotizar_a_dolar:')
+            console.log(price)
             return price = Number(price) / Number(this.$store.state.vender.valor_dolar) 
         },
         redondear(price) {

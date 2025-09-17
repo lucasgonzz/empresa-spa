@@ -1,7 +1,7 @@
 <template>
 	<div>
 		<b-form-select
-		:disabled="index_previus_sales > 0"
+		:disabled="true"
 		v-if="facturando"
 		class="m-t-5"
 		v-model="afip_tipo_comprobante_id" 

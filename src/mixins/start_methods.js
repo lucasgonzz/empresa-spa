@@ -109,12 +109,21 @@ export default {
 			}
 		},
 		checkAddressCookie() {
-			let cookie = this.$cookies.get('address_id')
-			console.log('address_id cookie:')
-			console.log(cookie)
-			if (cookie) {
-				this.$store.commit('vender/setAddressId', cookie)
+
+			if (this.user.address_id) {
+				
+				this.$store.commit('vender/setAddressId', this.user.address_id)
+
+			} else {
+
+				let cookie = this.$cookies.get('address_id')
+				console.log('address_id cookie:')
+				console.log(cookie)
+				if (cookie) {
+					this.$store.commit('vender/setAddressId', cookie)
+				}
 			}
+
 		},
 		checkUpdateFeaturesCookie() {
 			let cookie = this.$cookies.get('update_features_watched')

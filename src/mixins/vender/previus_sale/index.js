@@ -20,6 +20,9 @@ export default {
 		fecha_entrega() {
 			return this.$store.state.vender.fecha_entrega
 		},
+		valor_dolar() {
+			return this.$store.state.vender.valor_dolar
+		},
 	},
 	methods: {
 		setPreviusSale(sale) {
@@ -211,6 +214,8 @@ export default {
 			this.$store.commit('vender/set_moneda_id', model.moneda_id)
 			this.$store.commit('vender/set_valor_dolar', model.valor_dolar)
 
+			// alert('valor_dolar: '+this.$store.state.vender.valor_dolar)
+
 			// this.setItemsPrices(false, true)
 
 			// this.$store.commit('vender/setTotal')
@@ -261,6 +266,7 @@ export default {
 				sub_total: this.sub_total,
 				total: this.total,
 				fecha_entrega: this.fecha_entrega,
+				valor_dolar: this.valor_dolar,
 			})
 			.then(res => {
 				this.$toast.success('Venta actualizada')
@@ -305,6 +311,7 @@ export default {
 				item.name = article.name
 				item.status = article.status
 				item.article_variants = article.article_variants
+				item.cost_in_dollars = article.cost_in_dollars
 				item.pivot = article.pivot
 				item.cost = Number(article.pivot.cost)
 				item.price = Number(article.price)

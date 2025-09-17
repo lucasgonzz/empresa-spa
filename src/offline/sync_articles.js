@@ -10,14 +10,24 @@ export default {
         async sync_all_articles() {
             console.log('SINCRONIZANDO ARTICULOS')
 
+            if (this.owner.eliminar_articulos_offline) {
 
-            // Obtener la fecha de la última sincronización
-            const meta = await db.meta.get('last_articles_sync')
-            const updated_after = meta ? meta.value : null
+                await db.articles.clear()
+                await db.meta.clear()
+                
+                this.$toast.success('Se actualizo la memoria de productos')
+            } else {
 
-            await this.articulos_eliminados(updated_after)
+                // Obtener la fecha de la última sincronización
+                const meta = await db.meta.get('last_articles_sync')
+                const updated_after = meta ? meta.value : null
 
-            await this.articulos_actualizados(updated_after)
+                await this.articulos_eliminados(updated_after)
+
+                await this.articulos_actualizados(updated_after)
+            }
+
+
         },
         async articulos_eliminados(updated_after) {
             try {

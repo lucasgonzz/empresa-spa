@@ -46,6 +46,19 @@ export default {
                 this.$toast.warning(result.model.unidades_individuales+' unidades individuales')
             }
         },
+        async search_articles_offline(query) {
+            const keywords = query.trim().toLowerCase().split(/\s+/)
+
+            // Traer todos los artículos activos (si tenés un campo status)
+            const articles = await db.articles
+                .filter(article => {
+                    const name = (article.name || '').toLowerCase()
+                    return keywords.every(keyword => name.includes(keyword))
+                })
+                .toArray()
+
+            return articles
+        },
         async get_articles_offline() {
             return await db.articles.toArray()
         },

@@ -31,8 +31,9 @@ import vender_set_total from '@/mixins/vender_set_total'
 import price_types from '@/mixins/vender/price_types'
 import computed from '@/mixins/vender/computed'
 import default_payment_method from '@/mixins/vender/default_payment_method'
+import set_afip_tipo_comprobante from '@/mixins/vender/set_afip_tipo_comprobante'
 export default {
-	mixins: [price_types, vender_set_total, computed, default_payment_method],
+	mixins: [price_types, vender_set_total, computed, default_payment_method, set_afip_tipo_comprobante],
 	// mixins: [vender, vender_set_total],
 	components: {
 		SearchComponent: () => import('@/common-vue/components/search/Index'),
@@ -81,11 +82,14 @@ export default {
 			
 			let client = result.model 
 			this.$store.commit('vender/setClient', client)
+
+			this.set_afip_tipo_comprobante()
 		},
 		clearSelected() {
 			this.$store.commit('vender/setClient', null)
 			this.setPriceType()
 			this.habilitar_metodo_de_pago()
+			this.set_afip_tipo_comprobante()
 		},
 	}
 }

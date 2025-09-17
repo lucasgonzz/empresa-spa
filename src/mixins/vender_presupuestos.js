@@ -38,6 +38,9 @@ export default {
 		price_type() {
 			return this.$store.state.vender.price_type
 		},
+		valor_dolar() {
+			return this.$store.state.vender.valor_dolar
+		},
 		articles() {
 			return this.items.filter(item => item.is_article)
 		},
@@ -75,7 +78,7 @@ export default {
 
 				'discounts'					: this.get_discounts(),
 				'surchages'					: this.get_surchages(),
-				'articles'					: this.get_articles(),
+				'articles'					: this.get_articles(true),
 				'services'					: this.get_services(),
 				'promocion_vinotecas'		: this.get_promocion_vinotecas(),
 			})
@@ -108,6 +111,7 @@ export default {
 				'moneda_id'              	: this.moneda_id,
 				'surchages_in_services'		: this.surchages_in_services,
 				'discounts_in_services'		: this.discounts_in_services,
+				'valor_dolar'				: this.valor_dolar,
 
 				// Id 1 es el estado "sin confirmar"
 				'budget_status_id'          : 1, 
@@ -172,25 +176,73 @@ export default {
 			})
 			return surchages
 		},
-		get_articles() {
+		get_articles(for_update = false) {
+
 			console.log('get_articles presupuesto')
+
 			console.log(this.articles)
+
 			let articles = []
+
 			this.articles.forEach(article => {
-				articles.push({
+
+				let ya_estaba_cargado = typeof article.pivot != 'undefined'
+
+				let article_to_add = {
 					id: article.id,
 					status: article.status,
-					pivot: {
-						amount: article.amount,
-						price: article.price_vender,
-						cost: article.cost,
-						costo_real: article.costo_real,
-						presentacion: article.presentacion,
-						price_type_personalizado_id: article.price_type_personalizado_id,
-						bonus: typeof article.discount != 'undefined' ? article.discount : null,
-						location: null,
+					cost_in_dollars: article.cost_in_dollars,
+				}
+
+				let pivot_info = {
+					amount : article.amount,
+					price : article.price_vender,
+					cost : article.cost,
+					costo_real : article.costo_real,
+					presentacion : article.presentacion,
+					price_type_personalizado_id : article.price_type_personalizado_id,
+					bonus : typeof article.discount != 'undefined' ? article.discount : null,
+					location : null,
+				}
+
+				if (
+					for_update
+					&& ya_estaba_cargado
+				) {
+					article_to_add.pivot = pivot_info
+				} else {
+					article_to_add = {
+						...article_to_add,
+						...pivot_info,
 					}
-				})
+				}
+
+				articles.push(article_to_add)
+
+				// articles.push({
+				// 	id: article.id,
+				// 	status: article.status,
+				// 	cost_in_dollars: article.cost_in_dollars,
+
+				// 	amount: article.amount,
+				// 	price: article.price_vender,
+				// 	cost: article.cost,
+				// 	costo_real: article.costo_real,
+				// 	presentacion: article.presentacion,
+				// 	price_type_personalizado_id: article.price_type_personalizado_id,
+				// 	bonus: typeof article.discount != 'undefined' ? article.discount : null,
+				// 	location: null,
+				// 	// pivot: {
+				// 	// 	amount: article.amount,
+				// 	// 	price: article.price_vender,
+				// 	// 	cost: article.cost,
+				// 	// 	costo_real: article.costo_real,
+				// 	// 	presentacion: article.presentacion,
+				// 	// 	price_type_personalizado_id: article.price_type_personalizado_id,
+				// 	// 	bonus: typeof article.discount != 'undefined' ? article.discount : null,
+				// 	// 	location: null,
+				// 	// }
+				// })
 				console.log(articles)
 			})
 			return articles

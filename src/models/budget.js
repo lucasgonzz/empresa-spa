@@ -9,6 +9,7 @@ export default {
 		{
 			key: 'actualizar_en_vender',
 			text: 'Actualizar desde VENDER',
+			not_show: true,
 		},
 		{
 			text: 'Cliente',

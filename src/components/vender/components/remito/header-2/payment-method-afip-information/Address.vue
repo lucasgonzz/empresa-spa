@@ -1,6 +1,6 @@
 <template>
 	<b-form-select
-	:disabled="index_previus_sales > 0"
+	:disabled="disabled"
 	v-if="addresses.length > 1"
 	v-model="address_id" 
 	dusk="address_id"
@@ -13,6 +13,17 @@ export default {
 	computed: {
 		addresses() {
 			return this.$store.state.address.models
+		},
+		disabled() {
+			if (this.index_previus_sales > 0) {
+				return true
+			}
+
+			if (this.is_admin) {
+				return false 
+			}
+			
+			return true
 		}
 	}
 }

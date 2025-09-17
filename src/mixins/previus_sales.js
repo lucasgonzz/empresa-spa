@@ -110,32 +110,32 @@ export default {
 
 		// 	return true
 		// },
-		setPreviusSale(sale) {
-			console.log('updateSale:')
-			console.log(sale)
-			this.loading_index = true 
-			this.$api.get('previus-next-index/sale/'+sale.id)
-			.then(res => {
-				this.loading_index = false
+		// setPreviusSale(sale) {
+		// 	console.log('updateSale:')
+		// 	console.log(sale)
+		// 	this.loading_index = true 
+		// 	this.$api.get('previus-next-index/sale/'+sale.id)
+		// 	.then(res => {
+		// 		this.loading_index = false
 				
-				if (
-					res.data.actualizandose_por
-					&& res.data.actualizandose_por.id != this.user.id
-				) {
-					this.$toast.error('Se esta actualizando por '+res.data.actualizandose_por.name)
-				} else {
+		// 		if (
+		// 			res.data.actualizandose_por
+		// 			&& res.data.actualizandose_por.id != this.user.id
+		// 		) {
+		// 			this.$toast.error('Se esta actualizando por '+res.data.actualizandose_por.name)
+		// 		} else {
 
-					this.$store.commit('vender/previus_sales/setIndex', res.data.index)
-					this.callGetSale()
-					console.log('redirigiendo a vender')
-					this.$router.push({name: 'vender', params: {view: 'remito'}})
-				}
-			})
-			.catch(err => {
-				this.loading_index = false
-				console.log(err)
-			})
-		},	
+		// 			this.$store.commit('vender/previus_sales/setIndex', res.data.index)
+		// 			this.callGetSale()
+		// 			console.log('redirigiendo a vender')
+		// 			this.$router.push({name: 'vender', params: {view: 'remito'}})
+		// 		}
+		// 	})
+		// 	.catch(err => {
+		// 		this.loading_index = false
+		// 		console.log(err)
+		// 	})
+		// },	
 		callGetSale() {
 			console.log('callGetSale')
 			this.$store.commit('auth/setMessage', 'Cargando venta')

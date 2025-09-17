@@ -14,8 +14,9 @@
 		prepend="USD">
 			<b-form-input
 			type="number"
+			:disabled="disabled"
 			class="input-dolar"
-			@keyup.enter="set_venta_dolar"
+			@keyup.enter="set_valor_dolar"
 			v-model="input_dolar_valor"></b-form-input>
 		</b-input-group>
 
@@ -82,7 +83,17 @@ export default {
 				console.log(this.valor_dolar)
 				console.log(this.input_dolar_valor)
 
-				this.input_dolar_valor = this.user_dolar
+				if (
+					this.valor_dolar !== null
+					&& typeof this.valor_dolar !== 'undefined'
+				) {
+
+					this.input_dolar_valor = this.valor_dolar
+				} else {
+
+					this.input_dolar_valor = this.user_dolar
+				}
+
 
 				if (this.input_dolar_valor === null) {
 					this.iniciar_dolar()
@@ -97,7 +108,7 @@ export default {
 				if (this.valor_dolar === null) {
 
 					console.log('ENTRO a valor_dolar')
-				    this.set_venta_dolar()
+				    this.set_valor_dolar()
 				}
 			} else {
 				setTimeout(() => {
@@ -109,8 +120,8 @@ export default {
 		set_total() {
 			this.setTotal()
 		},
-		set_venta_dolar() {
-			this.valor_dolar = this.input_dolar_valor
+		set_valor_dolar() {
+			this.valor_dolar = Number(this.input_dolar_valor)
 
 			if (!this.valor_dolar) {
 				this.iniciar_dolar()

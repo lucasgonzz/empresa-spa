@@ -287,7 +287,7 @@ export default {
 
 			if (this.query.length >= this.str_limint) {
 				this.loading = true 
-				let results = []
+				let _results = []
 				this.searching = true
 
 				this.foco_en_input()
@@ -328,76 +328,86 @@ export default {
 						this.loading = false
 						console.log(err)
 						this.$toast.error('Error al buscar')
+						this.$toast.error(err)
 					})
 				} else {
-					
-					let models_to_search = this.models_to_search
-					
-					console.log('models_to_search')
-					console.log(models_to_search)
 
-					results = models_to_search.filter(model => {
+					let results = []
 
-						let value = ''+model[this.prop_to_filter.key]
-						let query_array = this.query.toLowerCase().split(' ')
+					if (this.search_function) {
+						console.log('BUSCANDO OFFLINE')
+						results = await this[this.search_function](this.query)
+						console.log('Listo')
+					} else {
 
-						let coincide = query_array.every((palabra) =>
-							value.toLowerCase().includes(palabra)
-						)
-
-						if (this.props_to_filter.length && !coincide) {
-							this.props_to_filter.forEach(prop_to_filter => {
-								if (!coincide) {
-									value = ''+model[prop_to_filter]
-									coincide = query_array.every((palabra) =>
-										value.toLowerCase().includes(palabra)
-									)
-									// coincide = value && value.toLowerCase().includes(this.query.toLowerCase())
-								}
-							})
-						}
-
-						if (this.props_extras.length) {
-
-							this.props_extras.forEach(prop_extra => {
-
-								console.log('tiene que tener '+prop_extra.key+' igual a '+prop_extra.value)
-
-								if (model[prop_extra.key]
-									&& model[prop_extra.key] != prop_extra.value) {
-
-									coincide = false  
-								}
-							})
-						}
-
+						let models_to_search = this.models_to_search
 						
-						return coincide
-					})
+						console.log('models_to_search')
+						console.log(models_to_search)
+
+						_results = models_to_search.filter(model => {
+
+							let value = ''+model[this.prop_to_filter.key]
+							let query_array = this.query.toLowerCase().split(' ')
+
+							let coincide = query_array.every((palabra) =>
+								value.toLowerCase().includes(palabra)
+							)
+
+							if (this.props_to_filter.length && !coincide) {
+								this.props_to_filter.forEach(prop_to_filter => {
+									if (!coincide) {
+										value = ''+model[prop_to_filter]
+										coincide = query_array.every((palabra) =>
+											value.toLowerCase().includes(palabra)
+										)
+										// coincide = value && value.toLowerCase().includes(this.query.toLowerCase())
+									}
+								})
+							}
+
+							if (this.props_extras.length) {
+
+								this.props_extras.forEach(prop_extra => {
+
+									console.log('tiene que tener '+prop_extra.key+' igual a '+prop_extra.value)
+
+									if (model[prop_extra.key]
+										&& model[prop_extra.key] != prop_extra.value) {
+
+										coincide = false  
+									}
+								})
+							}
+
+							
+							return coincide
+						})
+						
+						console.log('resultados:')
+						console.log(_results)
+
+						// Eliminar duplicados por ID (en el nuevo array resultante)
+						const seen_ids = new Set()
+
+						_results.forEach(item => {
+						    if (!seen_ids.has(item.id)) {
+						    	console.log('agregando item no repetido:')
+						    	console.log(item)
+						        seen_ids.add(item.id)
+						        results.push(item)
+						    } else {
+						    	console.log('ya estaba el item:')
+						    	console.log(item)
+						    }
+						})
+					}
 					
-					console.log('resultados:')
-					console.log(results)
 
-					// Eliminar duplicados por ID (en el nuevo array resultante)
-					const unique_results = []
-					const seen_ids = new Set()
-
-					results.forEach(item => {
-					    if (!seen_ids.has(item.id)) {
-					    	console.log('agregando item no repetido:')
-					    	console.log(item)
-					        seen_ids.add(item.id)
-					        unique_results.push(item)
-					    } else {
-					    	console.log('ya estaba el item:')
-					    	console.log(item)
-					    }
-					})
-
-					this.results = unique_results
+					this.results = results
 
 					console.log('luego:')
-					console.log(unique_results)
+					console.log(results)
 
 					this.total_results = this.results.length
 					

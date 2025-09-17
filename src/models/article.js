@@ -670,7 +670,7 @@ export default {
 		*/
 		{
 			funcion_personalizada: 'set_article_price_types',
-			text: 'asd',
+			text: '',
 			store: 'price_type',
 			type: 'search',
 			key: 'price_types',

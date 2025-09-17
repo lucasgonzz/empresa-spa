@@ -13,7 +13,7 @@
 		:save_if_not_exist="false"
 		:str_limint="str_limint"
 		:search_from_api="search_from_api"
-		search_function="get_articles_offline"
+		search_function="search_articles_offline"
 		:props_to_show="props_to_show"
 		:props_to_filter="['id', 'name', 'provider_code']"
 		:prop="{text: 'Articulo', key: 'article_id', store: 'article', route_to_search: 'vender/buscar-articulo-por-nombre'}"></search-component>
