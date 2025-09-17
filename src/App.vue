@@ -42,7 +42,7 @@ export default {
     },
     watch: {
         authenticated() {
-            console.log('watch de authenticated')
+            console.log('watch de authenticateds')
             if (!this.authenticated) {
                 this.$router.replace({name: 'home'})
             } else {
