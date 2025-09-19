@@ -85,6 +85,15 @@ export default {
 		this.$store.commit('sale/set_from_depositos', 0)
 		this.$store.commit('sale/setFromDates', true)
 		this.$store.dispatch('sale/getModels')
+
+		this.reiniciar_filtros()
+	},
+	methods: {
+		reiniciar_filtros() {
+			this.$store.commit('sale/setVentasCobradasShowOption', 'cobradas-y-no-cobradas')
+			this.$store.commit('sale/setAfipTicketShowOption', 'con-y-sin-factura')
+			this.$store.commit('sale/set_payment_method_show_option', 'todos')
+		},
 	},
 	beforeRouteLeave(to, from, next) {
 		this.$store.commit('sale/setSelected', [])

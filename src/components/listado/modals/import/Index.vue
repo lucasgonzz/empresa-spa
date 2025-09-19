@@ -173,6 +173,12 @@ export default {
 				columns.push({
 					text: address.street,
 				})
+				columns.push({
+					text: 'Min '+address.street,
+				})
+				columns.push({
+					text: 'Max '+address.street,
+				})
 			})
 
 
@@ -191,8 +197,12 @@ export default {
 
 				this.price_types.forEach(price_type => {
 					columns.push({
+						text: 'Setear precio final '+price_type.name,
+						// saltear_posiciones: 1,
+					})
+					columns.push({
 						text: '% '+price_type.name,
-						saltear_posiciones: 1,
+						// saltear_posiciones: 1,
 					})
 					columns.push({
 						text: '$ Final '+price_type.name,

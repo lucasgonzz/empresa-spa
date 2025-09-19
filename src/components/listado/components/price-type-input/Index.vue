@@ -15,6 +15,7 @@
 			:article_price_type="article_price_type"></cont-price-type>
 
 			<options-price-type
+			:price_type_store="price_type_store"
 			:article_price_type="article_price_type"></options-price-type>
 		</div>
 	</div>

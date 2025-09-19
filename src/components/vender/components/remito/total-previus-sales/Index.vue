@@ -6,6 +6,7 @@ class="row-total-card-previus-sales m-b-15 j-start">
 
 	<check-sale></check-sale>	
 	<advertencia-guardar-como-presupuesto></advertencia-guardar-como-presupuesto>	
+	<advertencia-cuenta-corriente></advertencia-cuenta-corriente>	
 </b-row>
 </template>
 <script>
@@ -16,6 +17,7 @@ export default {
 		BtnGuardar: () => import('@/components/vender/components/remito/total-previus-sales/BtnGuardar'),
 		CheckSale: () => import('@/components/vender/components/remito/total-previus-sales/CheckSale.vue'),
 		AdvertenciaGuardarComoPresupuesto: () => import('@/components/vender/components/remito/total-previus-sales/AdvertenciaGuardarComoPresupuesto.vue'),
+		AdvertenciaCuentaCorriente: () => import('@/components/vender/components/remito/total-previus-sales/AdvertenciaCuentaCorriente.vue'),
 	},
 	data() {
 		return {

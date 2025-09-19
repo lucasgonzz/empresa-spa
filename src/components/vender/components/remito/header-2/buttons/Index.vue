@@ -3,13 +3,14 @@
 	class="vender-buttons">
 
 		<!-- <vuelto-efectivo></vuelto-efectivo> -->
+		<print></print>
+		<limpiar-vender></limpiar-vender>
 
 		<observations></observations>
 
 		<fecha-entrega></fecha-entrega>
 		<numero-orden-de-compra></numero-orden-de-compra>
-		<pago></pago>
-		<print></print>
+		<!-- <pago></pago> -->
 	</div>
 </template>
 <script>
@@ -20,6 +21,7 @@ export default {
 		NumeroOrdenDeCompra: () => import('@/components/vender/components/remito/header-2/buttons/NumeroOrdenDeCompra'),
 		Pago: () => import('@/components/vender/components/remito/header-2/buttons/Pago'),
 		Print: () => import('@/components/vender/components/remito/header-2/buttons/Print'),
+		LimpiarVender: () => import('@/components/vender/components/remito/header-2/buttons/LimpiarVender'),
 		// VueltoEfectivo: () => import('@/components/vender/components/remito/VueltoEfectivo'),
 	},
 }

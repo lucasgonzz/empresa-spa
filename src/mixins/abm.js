@@ -35,6 +35,7 @@ export default {
 					models: [
 						'discount',
 						'surchage',
+						'current_acount_payment_method',
 						'dealer',
 						'category_price_type_range',
 						'article_price_type_group',

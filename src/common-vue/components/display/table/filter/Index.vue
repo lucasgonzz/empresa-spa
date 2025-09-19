@@ -2,6 +2,7 @@
 	<div 
 	v-if="show"
 	:class="full_width"
+	:id="'cont-filters-'+field.key"
 	class="filter-component custom-card">
 
 		<div class="header">

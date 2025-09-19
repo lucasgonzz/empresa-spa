@@ -1,7 +1,7 @@
 <template>
+
 	<div
 	class="cont-prices m-t-10">
-
 		<div 
 		v-if="hasExtencion('elegir_si_incluir_lista_de_precios_de_excel')">
 			<b-form-checkbox
@@ -41,6 +41,7 @@
 export default {
 	props: {
 		article_price_type: Object,
+		price_type_store: Object,
 	},
 	
 }

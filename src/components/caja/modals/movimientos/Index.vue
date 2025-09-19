@@ -9,9 +9,9 @@
 		@modelDeleted="actualizar_info"
 		:set_model_on_row_selected="false"
 		@clicked="clicked"
+		:show_btn_save="show_btn_save"
 		:props_to_send_on_save="props_to_send_on_save"
 		model_name="movimiento_caja">
-			
 			<template #header>
 				<info-apertura-caja></info-apertura-caja>
 			</template>
@@ -34,10 +34,16 @@ export default {
 		caja() {
 			return this.$store.state.caja.model 
 		},
+		movimiento_caja() {
+			return this.$store.state.movimiento_caja.model 
+		},
 		title() {
 			if (this.caja) {
 				return 'Movimientos de '+this.caja.name
 			}
+		},
+		show_btn_save() {
+			return this.movimiento_caja.id === null 
 		},
 		props_to_send_on_save() {
 			if (this.caja) {

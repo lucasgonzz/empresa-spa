@@ -58,6 +58,26 @@ export default {
 		},
 		toggleFilter() {
 			this.$emit('toggleFilter', this.field.key)
+			setTimeout(() => {
+				this.input_foco()
+			}, 300)
+		},
+		input_foco() {
+			if (
+				this.field.type == 'text'
+				|| this.field.type == 'number'
+			) {
+				let cont_filters = document.getElementById('cont-filters-'+this.field.key)
+
+				if (cont_filters) {
+
+					let input = cont_filters.querySelector('input')
+
+					if (input) {
+						input.focus()
+					}
+				}
+			}
 		}
 	}
 }
