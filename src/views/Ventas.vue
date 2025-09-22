@@ -2,7 +2,7 @@
 <div id="ventas">	
 	<current-acounts></current-acounts>
 
-	<update-prices></update-prices>
+	<!-- <update-prices></update-prices> -->
 
 
 	<afip-ticket-show-errors></afip-ticket-show-errors>
@@ -72,7 +72,7 @@ export default {
 		EmployeeNav: () => import('@/components/ventas/components/EmployeeNav'),
 		Total: () => import('@/components/ventas/components/Total'),
 		TableButtons: () => import('@/components/ventas/components/table-buttons/Index'),
-		UpdatePrices: () => import('@/components/ventas/modals/update-prices/Index'),
+		// UpdatePrices: () => import('@/components/ventas/modals/update-prices/Index'),
 		OptionDropdownAfipTicket: () => import('@/components/ventas/components/OptionDropdownAfipTicket'),
 		AfipTicketShowErrors: () => import('@/components/ventas/modals/afip-ticket/ShowErrors'),
 		AfipTicketShowObservations: () => import('@/components/ventas/modals/afip-ticket/ShowObservations'),

@@ -20,6 +20,10 @@ class="p-l-20 p-r-20">
             v-if="slotProps.model.sale && slotProps.model.sale.afip_ticket"
             variant="success">Facturado</b-badge>
 
+            <b-badge
+            v-if="slotProps.model.sale && slotProps.model.sale.en_acopio"
+            variant="danger">Acopio</b-badge>
+
             <btn-payment-methods-info
             :model="slotProps.model"></btn-payment-methods-info>
 

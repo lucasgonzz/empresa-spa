@@ -117,15 +117,16 @@ export default {
 			show: true,
 			use_to_filter_in_search: true,
 			filter_modal_position: 6,
+			check_length: 11,
 		},
-		{
-			text: 'Cuil',
-			key: 'cuil',
-			type: 'number',
-			value: '',
-			show: true,
-			use_to_filter_in_search: true,
-		},
+		// {
+		// 	text: 'Cuil',
+		// 	key: 'cuil',
+		// 	type: 'number',
+		// 	value: '',
+		// 	show: true,
+		// 	use_to_filter_in_search: true,
+		// },
 		{
 			text: 'Dni',
 			key: 'dni',
@@ -150,6 +151,15 @@ export default {
 			use_store_models: true,
 			use_to_filter_in_modal: true,
 			filter_modal_position: 8,
+		},
+
+		{
+			text: 'Reputacion',
+			key: 'client_reputation_id',
+			type: 'select',
+			value: 0,
+			not_show: true,
+			use_store_models: true,
 		},
 
 		{

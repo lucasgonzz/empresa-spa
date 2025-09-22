@@ -395,12 +395,14 @@ export default {
 			only_show: true,
 			is_date: true,
 		},
-		// {
-		// 	key: 'unidad_medida_id',
-		// 	type: 'select',
-		// 	not_show: true,
-		// 	use_store_models: true,
-		// },
+
+		{
+			text: 'Unidad medida',
+			key: 'unidad_medida_id',
+			type: 'select',
+			not_show: true,
+			use_store_models: true,
+		},
 
 
 

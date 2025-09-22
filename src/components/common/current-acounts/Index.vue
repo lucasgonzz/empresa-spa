@@ -9,6 +9,8 @@
     
     <confirm-afip-tickets></confirm-afip-tickets>
     <send-afip-tickets></send-afip-tickets>
+    
+    <update-prices></update-prices>
 
     <pago></pago>    
     <nota-credito></nota-credito>    
@@ -110,6 +112,7 @@ export default {
         ConfirmAfipTickets: () => import('@/components/ventas/modals/afip-ticket/ConfirmAfipTickets'),
         SendAfipTickets: () => import('@/components/ventas/modals/afip-ticket/SendAfipTickets'),
         BtnActualizarEnVender: () => import('@/components/budget/components/BtnActualizarEnVender'),
+        UpdatePrices: () => import('@/components/ventas/modals/update-prices/Index'),
     },
     computed: {
         title() {

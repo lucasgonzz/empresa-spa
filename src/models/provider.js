@@ -86,6 +86,7 @@ export default {
 			text: 'Cuit',
 			key: 'cuit',
 			type: 'text',
+			check_length: 11,
 		},
 		{
 			text: 'Observaciones',

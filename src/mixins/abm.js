@@ -39,6 +39,7 @@ export default {
 						'dealer',
 						'category_price_type_range',
 						'article_price_type_group',
+						'client_reputation',
 						'cuota',
 						'default_payment_method_caja',
 						'current_acount_payment_method_discount',

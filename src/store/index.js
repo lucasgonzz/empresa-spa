@@ -185,6 +185,8 @@ import pais_exportacion from '@/store/pais_exportacion'
 import provincia from '@/store/provincia'
 import provider_discount from '@/store/provider_discount'
 
+import client_reputation from '@/store/client_reputation'
+
 
 Vue.use(Vuex)
 
@@ -375,5 +377,7 @@ export default new Vuex.Store({
 
         provincia,
         provider_discount,
+
+        client_reputation,
     }
 })

@@ -589,6 +589,16 @@ export default {
 		            	}
 		            }
 
+		            if (
+		            	prop.check_length
+		            	&& this.model[prop.key] != ''
+		            ) {
+		            	if (this.model[prop.key].length != prop.check_length) {
+		            		this.$toast.error('El campo '+this.propText(prop)+' debe tener '+prop.check_length+' caracteres')
+		            		ok = false	
+		            	}
+		            }
+
 		            if ((prop.type == 'number' || prop.filter_type == 'number') && this.model[prop.key]) {
 		                numero = '' + this.model[prop.key];
 		                if (numero.includes(',')) {
