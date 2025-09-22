@@ -40,6 +40,7 @@ export default [
     'unidad_frecuencia',
     'afip_selected_payment_method',
     'expense_concept',
+    'expense_category',
     'article_pre_import_range',
     'price_type',
     'unidad_medida',

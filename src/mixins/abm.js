@@ -69,6 +69,7 @@ export default {
 					view: 'gastos',
 					models: [
 						'expense_concept',
+						'expense_category',
 					],
 				},
 				{

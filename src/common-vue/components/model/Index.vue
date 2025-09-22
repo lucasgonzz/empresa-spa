@@ -591,6 +591,7 @@ export default {
 
 		            if (
 		            	prop.check_length
+		            	&& typeof this.model[prop.key] != 'undefined' 
 		            	&& this.model[prop.key] != ''
 		            ) {
 		            	if (this.model[prop.key].length != prop.check_length) {

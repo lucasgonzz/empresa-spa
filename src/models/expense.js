@@ -21,6 +21,13 @@ export default {
 			is_price: true,
 		},
 		{
+			text: 'Importe IVA',
+			key: 'importe_iva',
+			type: 'number',
+			is_price: true,
+			description: 'Si completa este campo, el valor impactara en el valor de IVA CREDITO en el modulo de REPORTES',
+		},
+		{
 			text: 'Metodo de pago',
 			key: 'current_acount_payment_method_id',
 			type: 'select',

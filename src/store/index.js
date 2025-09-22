@@ -187,6 +187,9 @@ import provider_discount from '@/store/provider_discount'
 
 import client_reputation from '@/store/client_reputation'
 
+import expense_category from '@/store/expense_category'
+
+
 
 Vue.use(Vuex)
 
@@ -379,5 +382,6 @@ export default new Vuex.Store({
         provider_discount,
 
         client_reputation,
+        expense_category,
     }
 })

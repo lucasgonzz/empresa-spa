@@ -12,6 +12,12 @@ export default {
 			key: 'name',
 			type: 'text',
 		},
+		{
+			text: 'Categoria de gasto',
+			key: 'expense_category_id',
+			type: 'select',
+			use_store_models: true,
+		},
 	],
 	singular_model_name_spanish: 'Concepto de gasto',
 	plural_model_name_spanish: 'Conceptos de gasto',
