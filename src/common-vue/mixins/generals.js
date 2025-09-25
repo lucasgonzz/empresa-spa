@@ -818,6 +818,10 @@ export default {
 			if (prop.is_price) {
 				let value = this.price(model[prop.key]) 
 
+				if (prop.simbolo_moneda_function) {
+					return this[prop.simbolo_moneda_function](model, model[prop.key])
+				}
+
 				if (prop.check_simbolo_moneda) {
 					// console.log('ENTRO check_simbolo_moneda en prop '+prop.key+' con el model moenda_id: '+model.moneda_id)
 					let prop_to_check = 'moneda_id'
@@ -864,6 +868,19 @@ export default {
 			}
 			return model[prop.key]
 			// return model[prop.key].replace(/\n/g, '<br>')
+		},
+		article_simbolo_moneda(model, price) {
+			if (model.cost_in_dollars) {
+				if (!this.owner.cotizar_precios_en_dolares) {
+					return 'USD '+this.price(price)
+				}
+			}
+			return this.price(price)
+		},
+		current_acount_simbolo_moneda(model, price) {
+			console.log('current_acount_simbolo_moneda')
+			console.log(model)
+			return this.price(price)
 		},
 		isRelationKey(prop) {
 			let last = ''

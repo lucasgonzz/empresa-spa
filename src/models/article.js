@@ -220,10 +220,11 @@ export default {
 			key: 'final_price',
 			type: 'number',
 			check_simbolo_moneda: true,
-			prop_to_check_in_simbolo_moneda: {
-				key: 'cost_in_dollars',
-				equal_to: 1
-			},
+			simbolo_moneda_function: 'article_simbolo_moneda',
+			// prop_to_check_in_simbolo_moneda: {
+			// 	key: 'cost_in_dollars',
+			// 	equal_to: 1
+			// },
 			only_show: true,
 			is_price: true,
 			use_to_show_in_search_modal: true,

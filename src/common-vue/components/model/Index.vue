@@ -593,6 +593,7 @@ export default {
 		            	prop.check_length
 		            	&& typeof this.model[prop.key] != 'undefined' 
 		            	&& this.model[prop.key] != ''
+		            	&& this.model[prop.key] !== null
 		            ) {
 		            	if (this.model[prop.key].length != prop.check_length) {
 		            		this.$toast.error('El campo '+this.propText(prop)+' debe tener '+prop.check_length+' caracteres')

@@ -82,6 +82,9 @@ export default {
 		            return b.minQuantity - a.minQuantity; // Ordenar por minQuantity descendente
 		        });
 
+			    console.log('matching_ranges luego del sort:')
+			    console.log(matching_ranges)
+
 		        matching_ranges = matching_ranges.filter(range => {
 		        	if (range.sub_category_id) {
 		        		return range.sub_category_id == item.sub_category_id
@@ -89,17 +92,27 @@ export default {
 		        	return true
 		        })
 
-		        let selectedPriceTypeId = matching_ranges[0].price_type_id
+			    console.log('matching_ranges luego del filter:')
+			    console.log(matching_ranges)
+
+			    if (matching_ranges.length) {
+
+			        let selectedPriceTypeId = matching_ranges[0].price_type_id
 
 
-		        this.otros_articulos_relacionados.forEach(relatedItem => {
-                    relatedItem.price_type_personalizado_id = selectedPriceTypeId;
-                });
+			        this.otros_articulos_relacionados.forEach(relatedItem => {
+	                    relatedItem.price_type_personalizado_id = selectedPriceTypeId;
+	                });
 
-                console.log('se va a usar este rango:')
-                console.log(matching_ranges[0])
+	                console.log('se va a usar este rango:')
+	                console.log(matching_ranges[0])
 
-		        return selectedPriceTypeId
+			        return selectedPriceTypeId
+			    
+			    } else {
+			    	this.$toast.error('No hay rango para '+item.name)
+			    }
+
 		    }
 
 		    // Si no hay coincidencias, retornar null o un valor por defecto
