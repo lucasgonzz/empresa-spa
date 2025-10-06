@@ -135,15 +135,15 @@ export default {
 			if_has_extencion: 'costo_en_dolares',
 			not_show: true,
 		},
-		{
-			// text: 'costo_mano_de_obra',
-			key: 'costo_mano_de_obra',
-			type_to_update: 'number',
-			type: 'text',
-			is_price: true,
-			if_has_extencion: 'production',
-			not_show: true,
-		},
+		// {
+		// 	// text: 'costo_mano_de_obra',
+		// 	key: 'costo_mano_de_obra',
+		// 	type_to_update: 'number',
+		// 	type: 'text',
+		// 	is_price: true,
+		// 	if_has_extencion: 'production',
+		// 	not_show: true,
+		// },
 		{
 			text: 'U individuales',
 			key: 'unidades_individuales',
@@ -199,6 +199,7 @@ export default {
 			text: 'Aplicar iva',
 			key: 'aplicar_iva', 
 			type: 'checkbox',
+			not_show: true,
 			value: 1,
 		},
 		{
@@ -446,7 +447,7 @@ export default {
 		},
 		{
 			key: 'descripcion',
-			type: 'text',
+			type: 'textarea',
 			not_show: true,
 		},
 
@@ -475,14 +476,6 @@ export default {
 			keep_after_create: true,
 			if_has_extencion: 'online',
 		},
-		// {
-		// 	text: 'Disponible en Mercado Libre',
-		// 	key: 'mercado_libre',
-		// 	type: 'checkbox',
-		// 	value: 1,
-		// 	not_show: true,
-		// 	keep_after_create: true,
-		// },
 		{
 			text: 'Destacado',
 			key: 'featured',
@@ -496,6 +489,45 @@ export default {
 			type: 'checkbox',
 			not_show: true,
 			if_has_extencion: 'online',
+		},
+
+
+		{
+			group_title: 'Mercado Libre',
+			if_has_extencion: 'usa_mercado_libre',
+		},
+		{
+			text: 'Disponible en Mercado Libre',
+			key: 'mercado_libre',
+			type: 'checkbox',
+			value: 1,
+			not_show: true,
+			if_has_extencion: 'usa_mercado_libre',
+			keep_after_create: true,
+		},
+		{
+			text: 'Tipo publicacion',
+			key: 'meli_listing_type_id',
+			type: 'select',
+			use_store_models: true,
+			not_show: true,
+			if_has_extencion: 'usa_mercado_libre',
+		},
+		{
+			text: 'Modo de compra',
+			key: 'meli_buying_mode_id',
+			type: 'select',
+			use_store_models: true,
+			not_show: true,
+			if_has_extencion: 'usa_mercado_libre',
+		},
+		{
+			text: 'Condicion',
+			key: 'meli_item_condition_id',
+			type: 'select',
+			use_store_models: true,
+			not_show: true,
+			if_has_extencion: 'usa_mercado_libre',
 		},
 
 		// Propiedades de distribuidora

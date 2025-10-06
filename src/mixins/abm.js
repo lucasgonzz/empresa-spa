@@ -31,6 +31,15 @@ export default {
 					]
 				},
 				{
+					if_has_extencion: 'usa_mercado_libre',
+					view: 'meli',
+					models: [
+						'meli_listing_type',
+						'meli_buying_mode',
+						'meli_item_condition',
+					]
+				},
+				{
 					view: 'ventas',
 					models: [
 						'discount',

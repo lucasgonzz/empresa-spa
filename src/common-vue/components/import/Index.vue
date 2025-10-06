@@ -103,7 +103,7 @@
 								<b-form-input
 								:id="column.text.replaceAll(' ', '_')+'-position'"
 								@keyup="set_position(index)"
-								maxlength="1"
+								maxlength="2"
 								v-model="column.letra"></b-form-input>
 
 							</div>

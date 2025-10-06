@@ -28,6 +28,8 @@
 
 	<inventory-performance></inventory-performance>
 
+	<mercado-libre></mercado-libre>
+
 
 	<!-- <stock-info></stock-info> -->
 
@@ -158,6 +160,8 @@ export default {
 		// PriceTypeInput: () => import('@/components/listado/components/PriceTypeInput'),
 
 		InventoryPerformance: () => import('@/components/listado/modals/inventory-performance/Index'),
+
+		MercadoLibre: () => import('@/components/listado/modals/mercado-libre/Index'),
 
 
 		Combos: () => import('@/components/listado/components/combos/Index'),

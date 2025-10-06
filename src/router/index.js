@@ -61,7 +61,7 @@ const routes = [
         component: () => import('@/views/PanelDeControl')
     },
     {
-        path: '/listado-de-articulos',
+        path: '/listado-de-articulos/:view?',
         name: 'article',
         component: () => import('@/views/Listado')
     },

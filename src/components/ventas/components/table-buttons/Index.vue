@@ -9,6 +9,9 @@
 
 		<payment-plan-btn
 		:sale="model"></payment-plan-btn>
+
+		<etiqueta-envio
+		:sale="model"></etiqueta-envio>
 	</div>
 </template>
 <script>
@@ -25,6 +28,7 @@ export default {
 		TextInfo: () => import('@/components/ventas/components/table-buttons/TextInfo'),
 		AfipButtons: () => import('@/components/ventas/components/table-buttons/AfipButtons'),
 		PaymentPlanBtn: () => import('@/components/ventas/components/table-buttons/PaymentPlanBtn'),
+		EtiquetaEnvio: () => import('@/components/ventas/components/table-buttons/EtiquetaEnvio'),
 	}
 }
 </script>

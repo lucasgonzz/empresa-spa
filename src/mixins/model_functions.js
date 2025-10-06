@@ -38,6 +38,9 @@ export default {
         //     model_to_send.price_type_monedas = payload
         //     return model_to_send
         // },
+        get_sale_ganancia(model, prop) {
+            return Number(model.total) - Number(model.total_cost)
+        },
         toast_article_provider_order_unidades_individuales(result) {
             if (
                 result.model 
@@ -47,17 +50,20 @@ export default {
             }
         },
         async search_articles_offline(query) {
-            const keywords = query.trim().toLowerCase().split(/\s+/)
+            if (typeof query != 'undefined') {
+                
+                const keywords = query.trim().toLowerCase().split(/\s+/)
 
-            // Traer todos los artículos activos (si tenés un campo status)
-            const articles = await db.articles
-                .filter(article => {
-                    const name = (article.name || '').toLowerCase()
-                    return keywords.every(keyword => name.includes(keyword))
-                })
-                .toArray()
+                // Traer todos los artículos activos (si tenés un campo status)
+                const articles = await db.articles
+                    .filter(article => {
+                        const name = (article.name || '').toLowerCase()
+                        return keywords.every(keyword => name.includes(keyword))
+                    })
+                    .toArray()
 
-            return articles
+                return articles
+            }
         },
         async get_articles_offline() {
             return await db.articles.toArray()
@@ -147,24 +153,6 @@ export default {
                 options.push({
                     value: variant.id,
                     text: variant.variant_description
-                })
-            })
-
-            return options
-        },
-        get_cajas_abiertas_options(prop, model) {
-
-            let options = [{
-                value: 0,
-                text: 'Seleccione Caja'
-            }]
-
-            this.cajas_abiertas.forEach(caja => {
-
-                options.push({
-                    value: caja.id,
-                    text: caja.name,
-                    // text: caja.name+' ('+this.price(caja.saldo)+')',
                 })
             })
 
@@ -272,6 +260,8 @@ export default {
             return articles_pre_import.articles.length
         },
         articleRecipeHasAddresses(prop, recipe) {
+            console.log('articleRecipeHasAddresses')
+            console.log(recipe)
             if (recipe.article) {
                 let store_article = this.$store.state.article.models.find(_article => {
                     return _article.id == recipe.article_id 

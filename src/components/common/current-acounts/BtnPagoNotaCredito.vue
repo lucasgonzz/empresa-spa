@@ -50,11 +50,19 @@ export default {
             this.$bvModal.show('current-acounts-pago')
             setTimeout(() => {
 
+                let current_acount_debito = this.selected_current_acounts[0]
+
+                let saldo = current_acount_debito.debe
+                
+                if (current_acount_debito.pagandose) {
+                    saldo -= Number(current_acount_debito.pagandose)
+                }
+                
                 let input = document.getElementById('monto-pago')
-                input.value = this.selected_current_acounts[0].debe
+                input.value = saldo
 
                 input = document.getElementsByClassName('payment-method-amount')[0]                
-                input.value = this.selected_current_acounts[0].debe
+                input.value = saldo
                 input.focus()
             }, 500)
         },

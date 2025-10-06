@@ -20,24 +20,17 @@ export default {
 			this.setTotal()
 
 			this.set_afip_tipo_comprobante()
-
-			// if (this.afip_information_id) {
-
-			// 	let punto_de_venta = this.afip_informations.find(model => model.id == this.afip_information_id)
-
-			// 	if (punto_de_venta.iva_condition.name == 'Monotributista') {
-			// 		this.afip_tipo_comprobante_id = 3 
-			// 	} else {
-			// 		this.afip_tipo_comprobante_id = 2 
-			// 	}
-				
-			// } else {
-
-			// 	this.afip_tipo_comprobante_id = 0 
-			// }
-		},
+		}, 
 	},
 	computed: {
+		afip_information_id: {
+			get() {
+				return this.$store.state.vender.afip_information_id 
+			},
+			set(value) {
+				this.$store.commit('vender/setAfipInformationId', value) 
+			}
+		},
 		show() {
 			if (this.index_previus_sales > 0 || this.guardar_como_presupuesto) {
 				return false

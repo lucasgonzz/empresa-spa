@@ -1,19 +1,27 @@
 <template>
 	<div>
 
-		<p
-		class="m-t-10"
-		v-if="typeof model.id == 'undefined'">
-			Primero cree el articulo para asignar el stock
-		</p>
-		
-		<div 
-		v-else
-		class="j-start">
-			Presione para editar stock ->
-			<stock-btn
-			:article="model"></stock-btn>
+		<div
+		v-if="can('article.edit_stock')">
+			<p
+			class="m-t-10"
+			v-if="typeof model.id == 'undefined'">
+				Primero cree el articulo para asignar el stock
+			</p>
+			
+			<div 
+			v-else
+			class="j-start">
+				Presione para editar stock ->
+				<stock-btn
+				:article="model"></stock-btn>
+			</div>
 		</div>
+
+		<span
+		v-else>
+			{{ model.stock }}
+		</span>
 	</div>
 </template>
 <script>

@@ -23,7 +23,15 @@ export default {
 			key: 'total_a_facturar',
 			only_show: true,
 			is_price: true,
-			v_if: ['afip_ticket', '!=', null],
+			// v_if: ['afip_ticket', '!=', null],
+		},
+		{
+			text: 'Ganancia',
+			type: 'number',
+			only_show: true,
+			is_price: true,
+			if_is_admin: true,
+			function: 'get_sale_ganancia',
 		},
 		{
 			text: 'Moneda',
@@ -167,6 +175,10 @@ export default {
 						text: 'Total',
 						function: 'getTotalItem',
 						is_price: true,
+					},
+					{
+						text: 'Ganancia',
+						key: 'ganancia',
 					},
 					{
 						text: 'U/D',

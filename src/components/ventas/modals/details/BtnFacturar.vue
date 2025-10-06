@@ -41,6 +41,25 @@ export default {
 			this.$store.commit('sale/setIsSelecteable', 1)
 			this.$store.commit('sale/addSelected', this.sale_details)
 			this.$bvModal.show('confirm-make-afip-tickets')
+
+			this.set_punto_de_venta()
+		},
+		set_punto_de_venta() {
+			let address_id = this.sale_details.address_id
+
+			console.log('set_punto_de_venta:')
+			console.log(address_id)
+
+			if (address_id) {
+				let afip_information = this.$store.state.afip_information.models.find(model => model.address_id == address_id)
+
+				console.log(afip_information)
+				if (typeof afip_information != 'undefined') {
+
+                	this.$store.commit('afip_ticket/set_afip_information_id', afip_information.id)
+					console.log(afip_information.id)
+				}
+			}
 		}
 	}
 }

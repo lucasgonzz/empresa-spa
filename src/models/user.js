@@ -76,6 +76,12 @@ export default {
 			type: 'text',
 		}, 
 		{
+			text: 'Cotizar precios en dolares',
+			key: 'cotizar_precios_en_dolares',
+			type: 'checkbox',
+			description: 'Se se activa, los costos en dolares se cotizaran a peso para obtener el precio final en pesos',
+		}, 
+		{
 			text: 'Margen de ganancia global',
 			key: 'percentage_gain',
 			type: 'number',

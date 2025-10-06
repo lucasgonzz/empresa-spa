@@ -22,6 +22,7 @@
     <pagado-por></pagado-por>  
 
     <model-index
+    :show_btn_remove_belongs_to_many="false"
     model_name="budget">
         <template v-slot:model_modal_header="props">
             <budget-modal-buttons></budget-modal-buttons>

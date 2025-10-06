@@ -556,12 +556,15 @@ export default {
 
 			this.fields = []
 			this.props.forEach(prop => {
-				this.fields.push({
-					key: prop.key,
-					label: this.propText(prop, true, true),
-					sortable: prop.sortable,
-					type: prop.type_to_update ? prop.type_to_update : prop.type
-				})
+				if (this.showProperty(prop)) {
+
+					this.fields.push({
+						key: prop.key,
+						label: this.propText(prop, true, true),
+						sortable: prop.sortable,
+						type: prop.type_to_update ? prop.type_to_update : prop.type
+					})
+				}
 			})
 			console.log('fields:')
 			console.log(this.fields)

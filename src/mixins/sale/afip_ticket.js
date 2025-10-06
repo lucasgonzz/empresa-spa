@@ -6,7 +6,9 @@ export default {
         afip_tickets_for_make() {
             return this.$store.state.afip_ticket.afip_tickets_for_make
         },
-        afip_information_id: {
+
+        // Le puse ventas_afip_information_id para no confundirlo con el afip_information_id del mixin de vender set_afip_tipo_comprobante 
+        ventas_afip_information_id: {
             get() {
                 return this.$store.state.afip_ticket.afip_information_id
             },
@@ -94,7 +96,7 @@ export default {
 
             setTimeout(() => {
 
-                this.afip_information_id = 0
+                this.ventas_afip_information_id = 0
                 this.afip_tipo_comprobante_id = 0
 
                 this.$store.commit('sale/setIsSelecteable', 0)
@@ -117,7 +119,7 @@ export default {
             console.log(this.monto_a_facturar)
             return this.$api.post('afip-ticket', {
                 sale_id: this.selected_sales[index].id,
-                afip_information_id: this.afip_information_id,
+                ventas_afip_information_id: this.ventas_afip_information_id,
                 afip_tipo_comprobante_id: this.afip_tipo_comprobante_id,
                 monto_a_facturar: this.monto_a_facturar,
             })

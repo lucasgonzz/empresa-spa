@@ -16,7 +16,22 @@
 		search_function="search_articles_offline"
 		:props_to_show="props_to_show"
 		:props_to_filter="['id', 'name', 'provider_code']"
-		:prop="{text: 'Articulo', key: 'article_id', store: 'article', route_to_search: 'vender/buscar-articulo-por-nombre'}"></search-component>
+		:props_to_send_to_api="props_to_send_to_api"
+		:prop="{text: 'Articulo', key: 'article_id', store: 'article', route_to_search: 'vender/buscar-articulo-por-nombre'}">
+			<template #search_input_right>
+
+				<b-form-select 
+				v-if="hasExtencion('buscar_por_categoria_en_vender')"
+				class="select-category"
+				v-model="category_id"
+				:options="get_options_simple('category')"></b-form-select>
+
+				<p
+				v-else>
+					no
+				</p>
+			</template>
+		</search-component>
 	</b-col>
 </template>
 <script>
@@ -27,6 +42,22 @@ export default {
 	mixins: [vender],
 	components : {
 		SearchComponent,
+	},
+	data() {
+		return {
+			category_id: 0,
+			props_to_send_to_api: [
+				{
+					key: 'category_id',
+					value: 0
+				}
+			]
+		}
+	},
+	watch: {
+		category_id() {
+			this.props_to_send_to_api[0].value = this.category_id
+		}
 	},
 	computed: {
 		col_header_lg() {
@@ -109,25 +140,21 @@ export default {
 					text: 'Precio',
 					key: 'final_price',
 					is_price: true,
-					// function: 'get_price_formateado',
-					check_simbolo_moneda: true,
-					prop_to_check_in_simbolo_moneda: {
-						key: 'cost_in_dollars',
-						equal_to: 1
-					},
+					simbolo_moneda_function: 'article_simbolo_moneda',
 				})
-			}
+			
+				if (this.current_acount_payment_method_discounts.length) {
 
-			if (this.current_acount_payment_method_discounts.length) {
-
-				this.current_acount_payment_method_discounts.forEach(payment_method => {
-					props.push({
-						text: payment_method.current_acount_payment_method.name,
-						key: 'payment_method_'+payment_method.current_acount_payment_method_id,
-						function: 'get_price_with_discount_in_vender',
+					this.current_acount_payment_method_discounts.forEach(payment_method => {
+						props.push({
+							text: payment_method.current_acount_payment_method.name,
+							key: 'payment_method_'+payment_method.current_acount_payment_method_id,
+							function: 'get_price_with_discount_in_vender',
+						})
 					})
-				})
+				}
 			}
+
 
 			if (this.addresses.length) {
 
@@ -197,3 +224,8 @@ export default {
 	}
 }
 </script>
+<style lang="sass">
+.select-category
+	width: 350px !important
+	margin: 0 15px
+</style>

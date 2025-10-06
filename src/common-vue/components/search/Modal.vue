@@ -18,6 +18,8 @@ hide-footer
 			:id="_id+'-search-modal-input'"
 			:placeholder="_placeholder"></b-form-input>
 
+			<slot name="search_input_right"></slot>
+			
 			<b-button
 			@click="search"
 			dusk="btn_search"
@@ -158,6 +160,7 @@ export default {
 				return  []
 			}
 		},
+		props_to_send_to_api: Array,
 		emit_selected_with_null: Boolean,
 	},
 	data() {
@@ -305,6 +308,13 @@ export default {
 
 					if (this.prop && this.prop.route_to_search) {
 						route = this.prop.route_to_search+'?page='+this.current_page
+					}
+
+					if (this.props_to_send_to_api) {
+						this.props_to_send_to_api.forEach(prop_to_send => {
+							info[prop_to_send.key] = prop_to_send.value
+							// route += '?'+prop_to_send.key+'='+prop_to_send.value
+						})
 					}
 
 					this.$api.post(route, info)

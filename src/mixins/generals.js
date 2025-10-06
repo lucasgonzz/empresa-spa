@@ -53,6 +53,84 @@ export default {
         },
     },
     methods: {
+
+        set_expense_caja_id(prop_payment_method, model) {
+
+            let payment_method_id = model[prop_payment_method.key]
+
+            let caja_id = this.get_caja_por_defecto(payment_method_id)
+
+            let _model = this.$store.state.expense.model
+
+            console.log('model:')
+            console.log(_model)
+
+            if (caja_id) {
+                this.$store.state.expense.model.caja_id = caja_id
+            }
+        },
+
+        get_caja_por_defecto(payment_method_id, address_id = null) {
+
+            if (!address_id) {
+                address_id = this.$cookies.get('address_id')
+            }
+
+            // Obtén la caja por defecto
+            let caja_default = this.$store.state.default_payment_method_caja.models.find(caja_default => {
+                return caja_default.current_acount_payment_method_id == payment_method_id 
+                    && caja_default.address_id == address_id
+            })
+
+            // Si existe una caja por defecto, ordénala primero
+            if (caja_default) {
+
+                return caja_default.caja_id 
+            }
+        },
+
+        get_caja_options(payment_method_id = null) {
+
+            // if (!payment_method_id) {
+            //     payment_method_id = this.$store.state.expense.model.current_acount_payment_method_id
+            // }
+
+            let options = [{
+                value: 0,
+                text: 'Seleccione caja'
+            }]
+
+            let cajas_abiertas = this.$store.state.caja.models.filter(caja => caja.abierta)
+
+            cajas_abiertas.forEach(caja => {
+
+                options.push({
+                    value: caja.id,
+                    text: caja.name,
+                })
+            })
+
+            return options
+        },
+
+        get_cajas_abiertas_options() {
+             let cajas_abiertas = this.$store.state.caja.models.filter(caja => caja.abierta)
+
+             let options = []
+             options.push({
+                 value: 0,
+                 text: 'Seleccione Caja'
+             })
+
+             cajas_abiertas.forEach(caja => {
+                 options.push({
+                     value: caja.id,
+                     text: caja.name
+                 })
+             })
+
+             return options
+        },
         get_store_model(model_name, model_id) {
             let model = this.$store.state[model_name].models.find(_model => {
                 return _model.id == model_id
@@ -95,7 +173,7 @@ export default {
         },
         getPriceVender(item, from_pivot = false) {
             console.log('getPriceVender para '+item.name)
-            console.log(item)
+            // console.log(item)
 
             let price 
 
@@ -155,15 +233,7 @@ export default {
             return price
         },
         check_moneda(item, price, from_pivot) {
-            console.log('check_moneda: ')
-            console.log(price)
-            console.log('valor_dolar:')
-            console.log(Number(this.$store.state.vender.valor_dolar))
 
-            // if (
-            //     !from_pivot
-            //     && !item.price_type_monedas.length
-            // ) {
             if (
                 typeof item.price_type_monedas == 'undefined'
                 || !item.price_type_monedas.length
@@ -265,6 +335,8 @@ export default {
                         })
 
                         if (typeof article_price_type_moneda != 'undefined') {
+                            console.log('usando price_type_moneda moneda_id: '+article_price_type_moneda.moneda_id+', price_type_id: '+article_price_type_moneda.price_type_id)
+                            console.log(article_price_type_moneda.final_price)
                             price = article_price_type_moneda.final_price
                         } else {
                             console.log(`No se encontró price_type_moneda para artículo ${item.name}, PT: ${price_vender_id}, Moneda: ${moneda_id}`)

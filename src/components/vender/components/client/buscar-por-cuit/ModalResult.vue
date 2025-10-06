@@ -15,7 +15,7 @@
 				Nombre en el sistema: {{ client_model.name }}
 			</p>
 			<p>
-				Saldo: {{ price(client_model.saldo) }}
+				Saldo: {{ price(client_model.saldo_pesos) }}
 			</p>
 
 			<b-button

@@ -187,8 +187,9 @@ export default {
 
 			// Encuentra la posición de alguna de estas props
 			let props_a_partir_de_las_cuales_agregar = [
-				'cost',
+				'final_price',
 				'price',
+				'cost',
 				'name',
 				'provider_order',
 				'bar_code',

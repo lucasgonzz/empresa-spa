@@ -77,7 +77,7 @@ export default {
 		setSelected(result) {
 			this.setPriceType()
 
-			this.bloquear_metodo_de_pago()
+			// this.bloquear_metodo_de_pago()
 			this.bloquear_caja()
 			
 			let client = result.model 

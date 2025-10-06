@@ -27,8 +27,9 @@ import default_articles from '@/mixins/vender/default_articles'
 import default_payment_method from '@/mixins/vender/default_payment_method'
 import omitir_en_cuenta_corriente from '@/mixins/vender/omitir_en_cuenta_corriente'
 import previus_sale from '@/mixins/vender/previus_sale/index'
+import cajas from '@/mixins/vender/cajas'
 export default {
-	mixins: [price_types, default_articles, default_payment_method, omitir_en_cuenta_corriente, previus_sale],
+	mixins: [price_types, default_articles, default_payment_method, omitir_en_cuenta_corriente, previus_sale, cajas],
 	components: {  
 		SelectPaymentMethods: () => import('@/components/vender/modals/payment-methods/select-payment-methods/Index'),
 		PaymentMethodsWithDiscounts: () => import('@/components/vender/modals/payment-methods/payment-methods-with-discounts/Index'),
@@ -44,6 +45,7 @@ export default {
 		BtnSave: () => import('@/components/vender/components/BtnSave'),
 	},
 	created() {
+		console.log('created vender')
 		this.set_default_articles()
 
 		this.setPriceType()
@@ -51,6 +53,8 @@ export default {
 		this.setDefaultPaymentMethod()
 
 		this.set_omitir_en_cuenta_corriente()
+
+		this.set_caja_por_defecto()
 	},
 	beforeRouteLeave(to, from, next) {
 		this.$store.commit('sale/setSelected', [])
@@ -65,8 +69,8 @@ export default {
 		price_types() {
 			console.log('cambiaron los tipos de precios, llamando a setPriceType')
 			this.setPriceType()
-		}
-	}
+		},
+	},
 }
 </script>
 <style scoped lang="sass">

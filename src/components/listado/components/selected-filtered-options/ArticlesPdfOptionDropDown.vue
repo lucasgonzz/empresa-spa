@@ -4,16 +4,33 @@
 		<b-dropdown-text>
 			Documentos PDF
 		</b-dropdown-text>
-		<b-dropdown-item
-		@click="pdf">
-			<i class="icon-tag"></i>
-			PDF con imagenes
-		</b-dropdown-item>
-		<b-dropdown-item
-		@click="listaPdf">
-			<i class="icon-tag"></i>
-			Lista PDF
-		</b-dropdown-item>
+		
+		<div
+		v-if="hasExtencion('ventas_en_dolares')">
+
+			<b-dropdown-item
+			v-for="moneda in monedas"
+			@click="pdf_moneda(moneda)">
+				<i class="icon-tag"></i>
+				PDF con imagenes ({{ moneda.name }})
+			</b-dropdown-item>
+			
+		</div>
+		<div
+		v-else>
+			<b-dropdown-item
+			@click="pdf">
+				<i class="icon-tag"></i>
+				PDF con imagenes
+			</b-dropdown-item>
+
+			<b-dropdown-item
+			@click="listaPdf">
+				<i class="icon-tag"></i>
+				Lista PDF
+			</b-dropdown-item>
+		</div>
+
 	</div>
 </template>
 <script>
@@ -26,6 +43,9 @@ export default {
 		},
 		filtered() {
 			return this.$store.state.article.filtered 
+		},
+		monedas() {
+			return this.$store.state.moneda.models 
 		},
 	},
 	methods: {
@@ -43,16 +63,21 @@ export default {
 			})
 			return ids
 		},
-		pdf() {
+		pdf(moneda = null) {
 			let ids = this.getIds()
 			let link = process.env.VUE_APP_API_URL+'/article/pdf/'+ids.join('-') 
+			
+			if (moneda) {
+				link += '/'+moneda.id
+			}
+			
 			window.open(link)
 		},
 		listaPdf() {
 			let ids = this.getIds()
 			let link = process.env.VUE_APP_API_URL+'/article/list-pdf/'+ids.join('-') 
 			window.open(link)
-		}
+		},
 	}
 }
 </script>

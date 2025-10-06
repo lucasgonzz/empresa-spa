@@ -19,7 +19,10 @@ export default {
 				return true
 			}
 
-			if (this.is_admin) {
+			if (
+				this.is_admin
+				|| this.can('vender.cambiar_address_id')
+			) {
 				return false 
 			}
 			

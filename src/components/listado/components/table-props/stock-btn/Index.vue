@@ -2,27 +2,22 @@
 	<div
 	class="j-center">
 			
-		<!-- <b-button
-		size="sm"
-		class="m-l-10"
-		id="btn_asignar_stock"
-		@click.stop="stockMovement"
-		variant="outline-primary">
-			<span
-			v-if="article.stock !== null">
-				{{ article.stock }}
-			</span> 
-			<span
-			v-else>
-				Asignar Stock
-			</span> 
-		</b-button> -->
+		<div
+		class="j-center"
+		v-if="can('article.edit_stock')">
+			
+			<stock-btn
+			:article="article"></stock-btn>
 
-		<stock-btn
-		:article="article"></stock-btn>
+			<edit-addresses-stock-btn
+			:article="article"></edit-addresses-stock-btn>
+		</div> 
 
-		<edit-addresses-stock-btn
-		:article="article"></edit-addresses-stock-btn>
+		<span
+		v-else>
+			{{ article.stock }}
+		</span>
+
 	</div>
 </template>
 <script>

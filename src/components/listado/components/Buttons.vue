@@ -97,6 +97,15 @@ class="buttons-listado">
 		<i class="icon-chart"></i>
 		Recetas
 	</b-button>
+
+	<b-button 
+	v-if="hasExtencion('usa_mercado_libre')"
+	variant="warning"
+	size="sm"
+	@click.stop="show_meli"
+	class="m-l-10">
+		Meli
+	</b-button>
 </div>
 </template>
 <script>
@@ -151,6 +160,11 @@ export default {
         },
 	},
 	methods: {
+		show_meli() {
+			this.setModel(this.model, 'article', [], false)
+			this.$router.push({name: this.model_name, params: {view: 'del-articulo'}})
+			this.$bvModal.show('mercado-libre')
+		},
 		show_address_movement() {
 			this.setModel(this.model, 'article', [], false)
 			this.$bvModal.show('address-movement')

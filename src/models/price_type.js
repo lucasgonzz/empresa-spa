@@ -51,6 +51,14 @@ export default {
 			show: true,
 		},
 		{
+			text: 'Se usa para Mercado Libre',
+			key: 'se_usa_en_ml',
+			if_has_extencion: 'usa_mercado_libre',
+			type: 'checkbox',
+			value: 0,
+			show: true,
+		},
+		{
 			text: 'Recargos',
 			key: 'price_type_surchages',
 			has_many: {

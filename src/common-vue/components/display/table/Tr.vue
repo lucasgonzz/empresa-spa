@@ -3,7 +3,8 @@
 	@click="onRowSelected(model)"
 	:class="rowClass(model)">
 		<td
-		v-for="(prop, index) in props">
+		v-for="(prop, index) in props"
+		v-if="showProperty(prop)">
 			<slot :name="prop.key">
 				<div 
 				:class="index == props.length-1 ? 'cont-tr-full-width' : ''"

@@ -25,11 +25,18 @@
 		:props_to_filter="props_to_filter"
 		:search_function="search_function"
 		:props_extras="props_extras"
+		:props_to_send_to_api="props_to_send_to_api"
 		:emit_selected_with_null="emit_selected_with_null"
 		@callSearchModal="callSearchModal"
 		@setQuery="setQuery"
 		@setNotShowModel="setNotShowModel"
-		@setSelected="setSelected"></search-modal>
+		@setSelected="setSelected">
+			
+			<template #search_input_right>
+				<slot name="search_input_right"></slot>
+			</template>
+			
+		</search-modal>
 
 		<div
 		class="search-component">
@@ -187,6 +194,12 @@ export default {
 		init_query: {
 			type: String,
 			default: null,
+		},
+		props_to_send_to_api: {
+			type: Array,
+			default: () => {
+				return  []
+			}
 		},
 	},
 	data() {

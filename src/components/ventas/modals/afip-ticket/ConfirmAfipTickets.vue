@@ -15,8 +15,10 @@
     	<b-form-group
     	label="Seleccione el punto de venta desde el cual se van a emitir las facturas">
 	    	<b-form-select
+	    	:disabled="disabled"
 	    	id="select_punto_de_venta"
-	    	v-model="afip_information_id"
+	    	v-model="ventas_afip_information_id"
+	    	@change="set_tipo_comprobante"
 			:options="options"></b-form-select>
     	</b-form-group>
 
@@ -49,9 +51,14 @@
 </template>
 <script>
 import afip_ticket from '@/mixins/sale/afip_ticket'
+import set_afip_tipo_comprobante from '@/mixins/vender/set_afip_tipo_comprobante'
 export default {
-	mixins: [afip_ticket],
+	mixins: [afip_ticket, set_afip_tipo_comprobante],
 	computed: {
+		disabled() {
+			let addresses = this.$store.state.address.models 
+			return addresses.length > 0
+		},
 		afip_information() {
 			return this.$store.state.afip_information.models 
 		},
@@ -70,7 +77,7 @@ export default {
 					text = afip_information.razon_social 	
 				}
 				options.push({
-					value: afip_information.id,
+					value: afip_information.id, 
 					text
 				})
 			})
@@ -83,7 +90,24 @@ export default {
 			return '¿Seguro que quiere emitir '+this.selected_sales.length+' facturas?'
 		},
 	},
+	watch: {
+		ventas_afip_information_id() {
+			this.set_tipo_comprobante()
+		}
+	},
 	methods: {
+		set_tipo_comprobante() {
+
+			console.log('set_tipo_comprobante')
+
+			if (this.selected_sales.length == 1) {
+
+				let tipo_compobante_id = this.get_afip_tipo_comprobante(this.ventas_afip_information_id, this.selected_sales[0].client)
+
+				this.afip_tipo_comprobante_id = tipo_compobante_id
+			}
+
+		},
 		quitar_seleccionable() {
 			this.$store.commit('sale/setIsSelecteable', false)
 			this.$store.commit('sale/setSelected', [])
@@ -96,7 +120,7 @@ export default {
 			}
 		},
 		check() {
-			if (this.afip_information_id == 0) {
+			if (this.ventas_afip_information_id == 0) {
 				this.$toast.error('Seleccione un punto de venta')				
 				return false
 			}

@@ -111,8 +111,14 @@ export default {
 				value: -1,
 				text: 'Es para el PRIMER ESTADO',
 			})
+
 			this.cantidades_actuales.forEach(cantidades_actual => {
-				if (cantidades_actual.current_amount > 0 && !this.es_el_utlimo_estado(cantidades_actual.order_production_status)) {
+
+				if (
+					cantidades_actual.current_amount > 0 
+					&& !this.es_el_utlimo_estado(cantidades_actual.order_production_status)
+				) {
+
 					options.push({
 						value: cantidades_actual.order_production_status.id,
 						text: cantidades_actual.order_production_status.name+' ('+cantidades_actual.current_amount+')',

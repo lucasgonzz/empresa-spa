@@ -40,7 +40,7 @@ export default {
 			value: '',
 			is_price: true,
 			show: true,
-			// simbolo_moneda_function: 'current_acount_simbolo_moneda',
+			simbolo_moneda_function: 'current_acount_simbolo_moneda',
 		},
 		{
 			text: 'Haber',
@@ -49,6 +49,7 @@ export default {
 			value: '',
 			is_price: true,
 			show: true,
+			simbolo_moneda_function: 'current_acount_simbolo_moneda',
 		},
 		{
 			text: 'Saldo',
@@ -57,6 +58,7 @@ export default {
 			value: '',
 			is_price: true,
 			show: true,
+			simbolo_moneda_function: 'current_acount_simbolo_moneda',
 		},
 		{
 			text: 'Descripcion',

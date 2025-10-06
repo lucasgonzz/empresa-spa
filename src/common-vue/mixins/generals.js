@@ -551,7 +551,7 @@ export default {
 		// --------------------------------- Model ---------------------------------
 
 		showProperty(property, model, check_if_is_empty, check_show_on_form = false) {
-			if (property.v_if_function) {
+			if (property.v_if_function && model) {
 				return this[property.v_if_function](property, model)
 			}
 			if (check_show_on_form && property.not_show_on_form) {
@@ -563,10 +563,13 @@ export default {
 			if (property.show_only_if_is_created && !model.id) {
 				return false
 			}
-			if (check_if_is_empty && ((!model[property.key] || model[property.key] == '') && !property.function )) {
+			if (check_if_is_empty && model && ((!model[property.key] || model[property.key] == '') && !property.function )) {
 				return false
 			}
 			if (property.is_image || property.is_images) {
+				return false
+			}
+			if (property.if_is_admin && !this.is_admin) {
 				return false
 			}
 			if (property.if_has_extencion) {
@@ -582,7 +585,7 @@ export default {
 			if (property.v_if_prop_length) {
 				return model[property.v_if_prop_length].length
 			}
-			if (property.v_if) {
+			if (property.v_if && model) {
 				let array = property.v_if[0].split('.')
 				let prop_to_check
 				let prop = array[0]
@@ -811,18 +814,25 @@ export default {
 			if (prop.is_since) {
 				return this.since(model[prop.key] )
 			}
-			let array = prop.key.split('.')
-			if (model && model[array[0]] && array[1]) {
-				return model[array[0]][array[1]]
-			}
+
+			if (typeof prop.key != 'undefined') {
+
+				let array = prop.key.split('.')
+				if (model && model[array[0]] && array[1]) {
+					return model[array[0]][array[1]]
+				}
+			} 
+			
 			if (prop.is_price) {
 				let value = this.price(model[prop.key]) 
 
 				if (prop.simbolo_moneda_function) {
+					console.log('simbolo_moneda_function')
 					return this[prop.simbolo_moneda_function](model, model[prop.key])
 				}
 
 				if (prop.check_simbolo_moneda) {
+					console.log('check_simbolo_moneda')
 					// console.log('ENTRO check_simbolo_moneda en prop '+prop.key+' con el model moenda_id: '+model.moneda_id)
 					let prop_to_check = 'moneda_id'
 					let value_equal_to = 2 
@@ -871,6 +881,8 @@ export default {
 		},
 		article_simbolo_moneda(model, price) {
 			if (model.cost_in_dollars) {
+				console.log('VENDER article_simbolo_moneda')
+				console.log(this.owner.cotizar_precios_en_dolares)
 				if (!this.owner.cotizar_precios_en_dolares) {
 					return 'USD '+this.price(price)
 				}
@@ -878,8 +890,9 @@ export default {
 			return this.price(price)
 		},
 		current_acount_simbolo_moneda(model, price) {
-			console.log('current_acount_simbolo_moneda')
-			console.log(model)
+			if (model.moneda_id == 2) {
+				return 'USD '+this.price(price)
+			}
 			return this.price(price)
 		},
 		isRelationKey(prop) {
@@ -926,6 +939,23 @@ export default {
 				return prop 
 			}
 			return null
+		},
+		get_options_simple(model_name) {
+
+			let options = [{
+				value: 0, text: 'Seleccione '+this.singular(model_name) 
+			}]
+
+			this.$store.state[model_name].models.forEach(model => {
+
+				options.push({
+					value: model.id,
+					text: model.name   
+				})
+			})
+
+			return options
+
 		},
 		getOptions(prop, model = null, model_name = null, add_opcion_0 = true) {
 			let store 

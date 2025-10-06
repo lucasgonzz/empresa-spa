@@ -3,7 +3,6 @@
 	v-if="show_view">
 		
 		<slot name="modals"></slot>
-
     	<model
     	v-if="show_modal"
     	:show_btn_remove_belongs_to_many="show_btn_remove_belongs_to_many"

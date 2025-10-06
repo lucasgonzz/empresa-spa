@@ -1,6 +1,7 @@
 <template>
 	<div
 	v-if="model">
+
 	    <confirm
 	    @confimed="deleted"
 	    :not_show_delete_text="not_show_delete_text"

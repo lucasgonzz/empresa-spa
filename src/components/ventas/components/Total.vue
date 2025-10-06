@@ -4,26 +4,56 @@
 	class="cont-total-ventas">
 		<div>
 			<div
-			class="j-lg-start align-lg-center"
+			class="j-start align-end"
 			v-if="!loading">
-				<p
-				class="total-ventas">
-					Total {{ price(total) }}
-				</p>
 
-				<p
-				class="text-left m-b-0 m-md-l-10"
-				v-if="is_admin">
-					| Costos <strong>{{ price(total_cost) }}</strong>
-				</p> 
+				<div
+				class="cont-totales">
+					
+					<div
+					class="j-start align-center">
+						<p
+						class="total-ventas">
+							Total {{ price(total) }}
+						</p>
 
-				<p
-				class="text-left m-b-0 m-md-l-10"
-				v-if="is_admin">
-					| Ganancia <strong>{{ price(total - total_cost) }}</strong>
-				</p> 
+						<p
+						class="text-left m-b-0 m-md-l-10"
+						v-if="is_admin">
+							| Costos <strong>{{ price(total_cost) }}</strong>
+						</p> 
+
+						<p
+						class="text-left m-b-0 m-md-l-10"
+						v-if="is_admin">
+							| Ganancia <strong>{{ price(total - total_cost) }}</strong>
+						</p> 
+					</div>
+
+					<div
+					class="j-start align-center m-t-15"
+					v-if="hasExtencion('ventas_en_dolares')">
+						<p
+						class="total-ventas">
+							Total USD {{ price(total_usd) }}
+						</p>
+
+						<p
+						class="text-left m-b-0 m-md-l-10"
+						v-if="is_admin">
+							| Costos <strong>{{ price(total_cost_usd) }}</strong>
+						</p> 
+
+						<p
+						class="text-left m-b-0 m-md-l-10"
+						v-if="is_admin">
+							| Ganancia <strong>{{ price(total_usd - total_cost_usd) }}</strong>
+						</p> 
+					</div>
+				</div>
 
 				<b-button
+				v-if="is_admin"
 				@click="export_excel"
 				class="m-l-10"
 				variant="outline-success"
@@ -63,14 +93,36 @@ export default {
 		total() {
 			let total = 0
 			this.sales_to_show.forEach(model => {
-				total += Number(this.totalSale(model, false))
+				if (model.moneda_id == 1) {
+					total += Number(this.totalSale(model, false))
+				}
 			})
 			return total 
 		},
 		total_cost() {
 			let total = 0
 			this.sales_to_show.forEach(model => {
-				total += Number(model.total_cost)
+				if (model.moneda_id == 1) {
+					total += Number(model.total_cost)
+				}
+			})
+			return total 
+		},
+		total_usd() {
+			let total = 0
+			this.sales_to_show.forEach(model => {
+				if (model.moneda_id == 2) {
+					total += Number(this.totalSale(model, false))
+				}
+			})
+			return total 
+		},
+		total_cost_usd() {
+			let total = 0
+			this.sales_to_show.forEach(model => {
+				if (model.moneda_id == 2) {
+					total += Number(model.total_cost)
+				}
 			})
 			return total 
 		},
@@ -98,10 +150,14 @@ export default {
 </script>
 <style lang="sass">
 .cont-total-ventas
-	display: flex
-	flex-direction: row 
-	justify-content: space-between
-	align-items: center
+	// display: flex
+	// flex-direction: row 
+	// justify-content: space-between
+	// align-items: center
+
+	.cont-totales
+		display: flex 
+		flex-direction: column
 	.total-ventas 
 		margin-bottom: 0
 		font-size: 1.5em 

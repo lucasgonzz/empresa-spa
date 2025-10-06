@@ -113,6 +113,8 @@ export default {
 			if (this.user.address_id) {
 				
 				this.$store.commit('vender/setAddressId', this.user.address_id)
+				
+				this.$cookies.set('address_id', this.user.address_id, -1)
 
 			} else {
 

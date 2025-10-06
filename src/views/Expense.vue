@@ -1,6 +1,7 @@
 <template> 
 <view-component
 @modelSaved="modelSaved"
+:show_btn_delete="false"
 show_filter_modal
 show_previus_days
 model_name="expense">
@@ -17,6 +18,16 @@ export default {
 				this.loadModel('caja', expense.caja_id)
 			}
 		}
-	}
+	},
+	// computed: {
+	// 	model() {
+	// 		return this.$store.state.expense.model 
+	// 	},
+	// },
+	// watch: {
+	// 	model() {
+	// 		alert('cambio')
+	// 	}
+	// }
 }
 </script>

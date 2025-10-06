@@ -10,7 +10,31 @@
 import cajas from '@/mixins/vender/cajas'
 export default {
 	mixins: [cajas],
+	watch: {
+		payment_method_id() {
+			let address_id = this.$cookies.get('address_id')
+			
+			let caja_id = this.get_caja_por_defecto(this.payment_method_id, address_id)
+			if (caja_id) {
+				this.caja_id = caja_id
+			}
+		},
+		address_id() {
+			let address_id = this.$cookies.get('address_id')
+			
+			let caja_id = this.get_caja_por_defecto(this.payment_method_id, address_id)
+			if (caja_id) {
+				this.caja_id = caja_id
+			}
+		},
+	},
 	computed: {
+		address_id() {
+			return this.$store.state.vender.address_id
+		},
+		payment_method_id() {
+			return this.$store.state.vender.current_acount_payment_method_id
+		},
 		cajas() {
 			return this.$store.state.caja.models
 		},

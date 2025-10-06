@@ -173,7 +173,7 @@
 
 										<b-form-select
 										:id="model_name+'-'+prop.key"
-										@change="setChange(prop)"
+										@input="setChange(prop)"
 								        :disabled="isDisabled(prop, form_to_filter)"
 										v-model="model[prop.key]"
 										:options="getOptions(prop, model, model_name)"></b-form-select>
@@ -254,6 +254,7 @@
 										:show_btn_edit="false">
 											<template v-slot:table_right_options="slotProps">
 												<slot name="belongs" :model="slotProps.model"></slot>
+
 												<b-button
 												v-if="show_btn_remove_belongs_to_many"
 												class="m-l-15"
@@ -561,13 +562,15 @@ export default {
 			}
 		},
 		setChange(prop) {
-			if (prop.on_change) {
-				this[prop.on_change](prop)
-			}
-			if (this.model[prop.key] == -10) {
-				this.create(this.modelNameFromRelationKey(prop))
-			}
-			// this.$set(this.model, prop.key, this.model[prop.key])
+			this.$nextTick(() => {
+				if (prop.on_change) {
+					this[prop.on_change](prop, this.model)
+				}
+				if (this.model[prop.key] == -10) {
+					this.create(this.modelNameFromRelationKey(prop))
+				}
+				// this.$set(this.model, prop.key, this.model[prop.key])
+			})
 		},
 		setPivotProps(prop) {
 			if (this.model[prop.key] && this.model[prop.key] != 0) {

@@ -1,11 +1,11 @@
 <template>
 	<div>
-		<btn-loader
+		<!-- <btn-loader
 		v-if="show_btn_produccion"
 		variant="outline-primary"
 		:loader="loading"
 		text="Crear orden de produccion"
-		@clicked="createOrderProduction" />
+		@clicked="createOrderProduction" /> -->
 		<b-button-group
 		v-if="model.id"
 		class="m-t-15 w-100">

@@ -28,7 +28,7 @@ export default {
 	mixins: [vender_set_total],
 	computed: {
 		show() {
-			return this.user && this.hasExtencion('costo_en_dolares')
+			return this.user && this.hasExtencion('ventas_en_dolares')
 		},
 		user_dolar() {
 			return this.owner.dollar

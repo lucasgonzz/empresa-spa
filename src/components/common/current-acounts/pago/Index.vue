@@ -66,6 +66,7 @@ hide-footer>
     <hr>
  
     <payment-methods
+    ref="paymentMethodComponent"
     @hacerPago="hacerPago"
     :pago="pago"></payment-methods>
 
@@ -89,13 +90,15 @@ export default {
     	BtnLoader,
     },
     mounted() {
-        this.$root.$on('bv::modal::show', (bvEvent, modalId) => {
+        this.$root.$on('bv::modal::shown', (bvEvent, modalId) => {
             if (modalId === 'current-acounts-pago') {
                 console.log('pago creado')
 
                 setTimeout(() => {
                     this.focus_primer_payment_method()
+                    this.$refs.paymentMethodComponent.set_all_caja_ids()
                 }, 500)
+
             }
         })
     },

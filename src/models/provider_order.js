@@ -288,6 +288,7 @@ export default {
 			only_show: true,
 			is_price: true,
 			show: true,
+			check_simbolo_moneda: true,
 		},
 	],
 	singular_model_name_spanish: 'Pedido',

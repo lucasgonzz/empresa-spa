@@ -189,6 +189,12 @@ import client_reputation from '@/store/client_reputation'
 
 import expense_category from '@/store/expense_category'
 
+import meli from '@/store/meli'
+
+import meli_listing_type from '@/store/meli_listing_type'
+import meli_buying_mode from '@/store/meli_buying_mode'
+import meli_item_condition from '@/store/meli_item_condition'
+
 
 
 Vue.use(Vuex)
@@ -383,5 +389,11 @@ export default new Vuex.Store({
 
         client_reputation,
         expense_category,
+
+        meli,
+
+        meli_listing_type,
+        meli_buying_mode,
+        meli_item_condition,
     }
 })

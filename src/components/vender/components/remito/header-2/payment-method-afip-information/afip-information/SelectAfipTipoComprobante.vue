@@ -1,7 +1,7 @@
 <template>
 	<div>
 		<b-form-select
-		:disabled="true"
+		:disabled="disabled"
 		v-if="facturando"
 		class="m-t-5"
 		v-model="afip_tipo_comprobante_id" 
@@ -14,6 +14,12 @@ import vender from '@/mixins/vender'
 export default {
 	mixins: [vender],
 	computed: {
+		disabled() {
+			if (this.hasExtencion('ventas_en_dolares')) {
+				return false
+			}
+			return true
+		},
 		facturando() {
 			return this.afip_information_id != 0
 		},

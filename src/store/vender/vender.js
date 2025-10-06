@@ -49,6 +49,8 @@ export default {
 
 		afip_tipo_comprobante_id: 0,
 
+		incoterms: 0,
+
 		descuento: null,
 
 		client: null,
@@ -311,6 +313,9 @@ export default {
 		set_afip_tipo_comprobante_id(state, value) {
 			state.afip_tipo_comprobante_id = value 
 		},
+		set_incoterms(state, value) {
+			state.incoterms = value 
+		},
 		removeItem(state, item) {
 			let index = state.items.findIndex(i => {
 				return i.id == item.id
@@ -387,6 +392,7 @@ export default {
 				afip_tipo_comprobante_id: state.afip_tipo_comprobante_id,
 				descuento: state.descuento,
 				fecha_entrega: state.fecha_entrega,
+				incoterms: state.incoterms,
 			})
 			.then(res => {
 				console.log('vendido')

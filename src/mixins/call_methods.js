@@ -10,6 +10,9 @@ export default [
         if_has_extencion: 'vinoteca',
     },
 
+    'meli_listing_type',
+    'meli_buying_mode',
+    'meli_item_condition',
     'online_template',
     'pais_exportacion',
     'moneda',
