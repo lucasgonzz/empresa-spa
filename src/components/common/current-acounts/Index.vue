@@ -12,6 +12,8 @@
     
     <update-prices></update-prices>
 
+    <unidades-entregadas></unidades-entregadas>
+
     <pago></pago>    
     <nota-credito></nota-credito>    
     <nota-debito></nota-debito>    
@@ -114,6 +116,7 @@ export default {
         SendAfipTickets: () => import('@/components/ventas/modals/afip-ticket/SendAfipTickets'),
         BtnActualizarEnVender: () => import('@/components/budget/components/BtnActualizarEnVender'),
         UpdatePrices: () => import('@/components/ventas/modals/update-prices/Index'),
+        UnidadesEntregadas: () => import('@/components/ventas/modals/unidades-entregadas/Index'),
     },
     computed: {
         title() {

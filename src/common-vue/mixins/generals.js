@@ -884,7 +884,10 @@ export default {
 				console.log('VENDER article_simbolo_moneda')
 				console.log(this.owner.cotizar_precios_en_dolares)
 				if (!this.owner.cotizar_precios_en_dolares) {
-					return 'USD '+this.price(price)
+					if (price) {
+						return 'USD '+this.price(price)
+					}
+					return ''
 				}
 			}
 			return this.price(price)

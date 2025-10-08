@@ -30,6 +30,8 @@
 
 	<mercado-libre></mercado-libre>
 
+	<mercado-libre-category-predictor></mercado-libre-category-predictor>
+
 
 	<!-- <stock-info></stock-info> -->
 
@@ -162,6 +164,7 @@ export default {
 		InventoryPerformance: () => import('@/components/listado/modals/inventory-performance/Index'),
 
 		MercadoLibre: () => import('@/components/listado/modals/mercado-libre/Index'),
+		MercadoLibreCategoryPredictor: () => import('@/components/listado/modals/mercado-libre/category-predictor/Index'),
 
 
 		Combos: () => import('@/components/listado/components/combos/Index'),

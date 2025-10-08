@@ -179,6 +179,7 @@ export default {
 					{
 						text: 'Ganancia',
 						key: 'ganancia',
+						is_price: true,
 					},
 					{
 						text: 'U/D',

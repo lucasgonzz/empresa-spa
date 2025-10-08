@@ -120,6 +120,7 @@ export default {
 			is_price: true,
 			only_show: true,
 			can: 'article.cost',
+			simbolo_moneda_function: 'article_simbolo_moneda',
 			// if_has_extencion: 'article.costo_real',
 		},
 
@@ -526,6 +527,13 @@ export default {
 			key: 'meli_item_condition_id',
 			type: 'select',
 			use_store_models: true,
+			not_show: true,
+			if_has_extencion: 'usa_mercado_libre',
+		},
+		{
+			text: 'Descripcion',
+			key: 'meli_descripcion',
+			type: 'textarea',
 			not_show: true,
 			if_has_extencion: 'usa_mercado_libre',
 		},

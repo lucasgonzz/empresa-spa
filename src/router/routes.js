@@ -290,7 +290,7 @@ export default [
 		params: {
 			view: 'pedidos',
 		},
-		if_has_extencion: 'mercado_libre',
+		if_has_extencion: 'usa_mercado_libre',
 		can: [
 			'mercado_libre.orders',
 		],

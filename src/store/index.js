@@ -91,7 +91,7 @@ import dolar from '@/store/dolar'
 import article_ticket_info from '@/store/article_ticket_info'
 import check from '@/store/check'
 import panel_control from '@/store/panel_control/index'
-import me_li_order from '@/store/me_li_order'
+import meli_order from '@/store/meli_order'
 import me_li_payment from '@/store/me_li_payment'
 import articles_pre_import from '@/store/articles_pre_import'
 import reportes from '@/store/reportes/index'
@@ -297,7 +297,7 @@ export default new Vuex.Store({
         article_ticket_info,
         check,
         panel_control,
-        me_li_order,
+        meli_order,
         me_li_payment,
         articles_pre_import,
         reportes,

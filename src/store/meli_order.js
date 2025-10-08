@@ -7,7 +7,7 @@ import generals from '@/common-vue/mixins/generals'
 export default {
 	namespaced: true,
 	state: {
-		model_name: 'me_li_order',
+		model_name: 'meli_order',
 		route_prefix: '',
 		from_dates: true,
 		is_selecteable: false,

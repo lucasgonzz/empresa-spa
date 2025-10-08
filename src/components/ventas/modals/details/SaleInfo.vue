@@ -15,14 +15,22 @@
 			
 				<btn-actualizar-precios-actuales></btn-actualizar-precios-actuales>
 
-				<b-button
-				class="m-r-10"
+				<b-button-group
 				v-if="hasExtencion('acopios')"
-				@click="printDeliveredArticles"
-				variant="outline-danger">
-					<i class="icon-print"></i>
-					U entregadas
-				</b-button>
+				class="m-r-10">
+					
+					<b-button
+					@click="printDeliveredArticles"
+					variant="danger">
+						<i class="icon-print"></i>
+					</b-button>
+					<b-button
+					@click="show_unidades_entregadas"
+					variant="outline-danger">
+						U entregadas
+					</b-button>
+				</b-button-group>
+
 				<sale-print-buttons
 				:sale="sale_details"></sale-print-buttons>
 
@@ -125,6 +133,11 @@ export default {
 		},
 	},
 	methods: {
+		
+		show_unidades_entregadas() {
+			console.log('show_unidades_entregadas')
+			this.$bvModal.show('unidades-entregadas')
+		},
 		printDeliveredArticles() {
 			let link = process.env.VUE_APP_API_URL+'/sale/delivered-articles-pdf/'+this.sale_details.id 
 			window.open(link)

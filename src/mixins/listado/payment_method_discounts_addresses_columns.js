@@ -102,7 +102,7 @@ export default {
 		},
 		get_payment_discount(article, payment_discount) {
 			let price = this.aplicar_monto_descuento(article.final_price, payment_discount.current_acount_payment_method.id)
-			return this.price(this.redondear(price))
+			return this.article_simbolo_moneda(article, price)
 		},
 		get_price_type_price(article, price_type) {
 

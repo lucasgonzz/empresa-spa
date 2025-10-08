@@ -2,7 +2,7 @@ export default {
 	properties: [
 		{
 			text: 'Id',
-			key: 'me_li_order_id',
+			key: 'meli_order_id',
 			type: 'text',
 			only_show: true,
 		},
@@ -20,14 +20,14 @@ export default {
 		},
 		{
 			text: 'Creado',
-			key: 'date_created',
+			key: 'meli_created_at',
 			type: 'date',
 			only_show: true,
 			is_date: true,
 		},
 		{
 			text: 'Cerrado',
-			key: 'date_closed',
+			key: 'meli_closed_at',
 			type: 'date',
 			only_show: true,
 			is_date: true,
@@ -67,33 +67,34 @@ export default {
 					{
 						text: 'Precio',
 						key: 'price',
+						is_price: true,
 					},
 				],
 			}
 		},
 		{
 			text: 'Total',
-			key: 'total',
+			key: 'total_amount',
 			type: 'number',
 			only_show: true,
 			is_price: true,
 		},
 		{
 			text: 'Comprador',
-			key: 'me_li_buyer_id',
-			store: 'provider',
+			key: 'meli_buyer_id',
 			type: 'text',
 			only_show: true,
+			relation_prop_name: 'nickname',
 		},
-		{
-			text: 'Medios de pago',
-			key: 'me_li_payments',
-			type: 'text',
-			has_many: {
-				text: 'Medio de pago',
-				model_name: 'me_li_payment',
-			}
-		},
+		// {
+		// 	text: 'Medios de pago',
+		// 	key: 'me_li_payments',
+		// 	type: 'text',
+		// 	has_many: {
+		// 		text: 'Medio de pago',
+		// 		model_name: 'me_li_payment',
+		// 	}
+		// },
 	],
 	singular_model_name_spanish: 'Pedido de Mercado Libre',
 	plural_model_name_spanish: 'Pedidos de Mercado Libre',

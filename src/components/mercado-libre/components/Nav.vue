@@ -22,7 +22,7 @@ export default {
 		items() {
 			let items = [{
 				name: 'pedidos', 
-				call_models: 'me_li_order',
+				call_models: 'meli_order',
 			}]
 			return items 
 		},

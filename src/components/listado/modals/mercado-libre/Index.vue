@@ -2,7 +2,7 @@
 <b-modal
 scrollable
 id="mercado-libre"
-:title="'Mercado Libre '+model.name"
+title="Mercado Libre"
 size="lg"
 hide-footer>
 	
@@ -10,9 +10,6 @@ hide-footer>
 	v-if="meli_category">
     	Categoria: {{ meli_category.meli_category_name }}
 	</h3>
-
-	<category-predictor
-	v-else></category-predictor>
 	
 	<nav-component
 	@get_article_attributes="get_article_attributes"></nav-component>
@@ -29,7 +26,6 @@ export default {
         NavComponent: () => import('@/components/listado/modals/mercado-libre/Nav'),
         AttributesMercadoLibre: () => import('@/components/listado/modals/mercado-libre/attributes-mercado-libre/Index'),
         AttributesArticle: () => import('@/components/listado/modals/mercado-libre/attributes-article/Index'),
-        CategoryPredictor: () => import('@/components/listado/modals/mercado-libre/CategoryPredictor'),
 	},
 	computed: {
 		model() {

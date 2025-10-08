@@ -162,8 +162,18 @@ export default {
 	methods: {
 		show_meli() {
 			this.setModel(this.model, 'article', [], false)
-			this.$router.push({name: this.model_name, params: {view: 'del-articulo'}})
-			this.$bvModal.show('mercado-libre')
+
+			if (this.model.meli_category_id) {
+
+				this.$router.push({name: this.model_name, params: {view: 'del-articulo'}})
+				this.$bvModal.show('mercado-libre')
+			
+			} else {
+
+				this.$bvModal.show('mercado-libre-category-predictor')
+
+			}
+
 		},
 		show_address_movement() {
 			this.setModel(this.model, 'article', [], false)
