@@ -20,10 +20,24 @@ export default {
 	},
 	computed: {
 		items() {
-			let items = [{
-				name: 'pedidos', 
-				call_models: 'meli_order',
-			}]
+			let items = [
+				{
+					name: 'pedidos', 
+					action: 'meli_order/getModels',
+				},
+				{
+					name: 'Sinc articulo SALIENTES', 
+					action: 'sync_to_meli_article/getModels',
+				},
+				{
+					name: 'Sinc articulo ENTRANTES', 
+					action: 'sync_from_meli_article/getModels',
+				},
+				{
+					name: 'Sinc pedido ENTRANTES', 
+					action: 'sync_from_meli_order/getModels',
+				},
+			]
 			return items 
 		},
 	},

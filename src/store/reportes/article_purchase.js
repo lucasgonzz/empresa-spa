@@ -11,6 +11,7 @@ export default {
 
 		cantidad_resultados: 10,
 		orden: 'mayor-menor',
+		sale_channel_id: 0,
 
 		articles: [],
 		categories: [],
@@ -19,6 +20,9 @@ export default {
 		loading: false,
 	},
 	mutations: {
+		set_sale_channel_id(state, value) {
+			state.sale_channel_id = value 
+		},
 		set_orden(state, value) {
 			state.orden = value 
 		},

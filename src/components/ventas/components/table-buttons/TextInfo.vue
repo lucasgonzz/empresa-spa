@@ -13,6 +13,10 @@
 		v-else-if="model.order">
 			Pedido N° {{ model.order.num }}
 		</span>
+		<span
+		v-else-if="model.meli_order">
+			Pedido Meli N° {{ model.meli_order.id }}
+		</span>
 	</div>
 </template>
 <script>

@@ -25,6 +25,7 @@
 					Agregar total
 				</b-button>
 			</div>
+			
 			<select-caja
 			v-if="cajas.length > 0 && !payment_methods_with_discounts.length"
 			:payment_method="payment_method"></select-caja>

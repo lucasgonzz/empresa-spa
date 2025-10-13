@@ -93,30 +93,37 @@ export default {
 		},
 		getLocalidad() {
 
+			if (this.afip_data.localidad) {
 
-			let localidad = this.$store.state.location.models.find(location => {
-				return location.name == this.afip_data.localidad
-			})
-			if (typeof localidad != 'undefined') {
-				return localidad.id
-			} else {
-
-				return new Promise((resolve, reject) => {
-
-					this.$api.post('location', {
-						'name': this.afip_data.localidad
-					})
-					.then(res => {
-						this.$store.commit('location/add', res.data.model)
-						resolve(res.data.model.id)
-					})
-					.catch(err => {
-						console.log(err)
-					})
-
+				let localidad = this.$store.state.location.models.find(location => {
+					return location.name == this.afip_data.localidad
 				})
 
+				if (typeof localidad != 'undefined') {
+				
+					return localidad.id
+				
+				} else {
+
+					return new Promise((resolve, reject) => {
+
+						this.$api.post('location', {
+							'name': this.afip_data.localidad
+						})
+						.then(res => {
+							this.$store.commit('location/add', res.data.model)
+							resolve(res.data.model.id)
+						})
+						.catch(err => {
+							console.log(err)
+						})
+
+					})
+
+				}
 			}
+
+			return null
 		},
 		useClient() {
 			this.$store.commit('vender/setClient', this.client_model)

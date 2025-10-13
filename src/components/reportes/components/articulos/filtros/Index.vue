@@ -19,15 +19,19 @@
 
 		<b-row>
 			<b-col
-			lg="4">
+			lg="3">
 				<cantidad-resultados></cantidad-resultados>
 			</b-col>
 			<b-col
-			lg="4">
+			lg="3">
 				<orden></orden>
 			</b-col>
 			<b-col
-			lg="4">
+			lg="3">
+				<sale-channel></sale-channel>
+			</b-col>
+			<b-col
+			lg="3">
 				<btn-buscar></btn-buscar>
 			</b-col>
 		</b-row>
@@ -40,6 +44,7 @@ export default {
 		SelectProvider: () => import('@/components/reportes/components/articulos/filtros/SelectProvider'),
 		SelectCategory: () => import('@/components/reportes/components/articulos/filtros/SelectCategory'),
 		CantidadResultados: () => import('@/components/reportes/components/articulos/filtros/CantidadResultados'),
+		SaleChannel: () => import('@/components/reportes/components/articulos/filtros/SaleChannel'),
 		Orden: () => import('@/components/reportes/components/articulos/filtros/Orden'),
 		BtnBuscar: () => import('@/components/reportes/components/articulos/filtros/BtnBuscar'),
 	},

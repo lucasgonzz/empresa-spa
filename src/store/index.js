@@ -194,6 +194,11 @@ import meli from '@/store/meli'
 import meli_listing_type from '@/store/meli_listing_type'
 import meli_buying_mode from '@/store/meli_buying_mode'
 import meli_item_condition from '@/store/meli_item_condition'
+import sync_to_meli_article from '@/store/sync_to_meli_article'
+import sync_from_meli_article from '@/store/sync_from_meli_article'
+import sync_from_meli_order from '@/store/sync_from_meli_order'
+
+import sale_channel from '@/store/sale_channel'
 
 
 
@@ -395,5 +400,10 @@ export default new Vuex.Store({
         meli_listing_type,
         meli_buying_mode,
         meli_item_condition,
+        sync_to_meli_article,
+        sync_from_meli_article,
+        sync_from_meli_order,
+
+        sale_channel,
     }
 })

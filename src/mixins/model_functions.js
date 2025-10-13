@@ -38,6 +38,38 @@ export default {
         //     model_to_send.price_type_monedas = payload
         //     return model_to_send
         // },
+        sync_from_meli_orderGetColor(model) {
+            return this.syncs_meli_color(model)
+        },
+        sync_to_meli_articleGetColor(model) {
+            return this.syncs_meli_color(model)
+        },
+        sync_from_meli_articleGetColor(model) {
+            return this.syncs_meli_color(model)
+        },
+        syncs_meli_color(model) {
+            console.log('syncs_meli_color')
+            console.log(model)
+            if (model.status == 'pendiente') {
+                return 'sync-meli-warning'
+            }
+
+            if (model.status == 'exitosa') {
+                return 'sync-meli-success'
+            }
+
+            if (model.status == 'error') {
+                return 'sync-meli-danger'
+            }
+        },
+        go_to_sync_from_meli_order() {
+            this.$router.push({name: 'mercado_libre', params: {view: 'sinc-pedido-entrantes'}})
+            this.$store.dispatch('sync_from_meli_order/getModels')
+        },
+        go_to_sync_from_meli() {
+            this.$router.push({name: 'mercado_libre', params: {view: 'sinc-articulo-entrantes'}})
+            this.$store.dispatch('sync_from_meli_article/getModels')
+        },
         get_sale_ganancia(model, prop) {
             return Number(model.total) - Number(model.total_cost)
         },

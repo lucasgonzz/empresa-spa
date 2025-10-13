@@ -31,6 +31,7 @@
 
 		<div class="buttons j-center">
 			<b-button
+			class="m-r-15"
 			v-for="function_to_execute in functions_to_execute"
 			:variant="function_to_execute.btn_variant"
 			@click="call_function(function_to_execute)">

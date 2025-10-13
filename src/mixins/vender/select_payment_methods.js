@@ -72,10 +72,15 @@ export default {
 
 			let payment_methods = []
 
+			let address_id = this.$store.state.vender.address_id
+
 			this.current_acount_payment_methods.forEach(payment_method => {
+				
+				let caja_id = this.get_caja_por_defecto(payment_method.id, address_id)
+				
 				payment_methods.push({
 					...payment_method,
-					caja_id: 0,
+					caja_id: caja_id,
 					amount: ''
 				})
 			})

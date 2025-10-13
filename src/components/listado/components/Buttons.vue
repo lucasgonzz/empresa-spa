@@ -98,12 +98,25 @@ class="buttons-listado">
 		Recetas
 	</b-button>
 
+	<!-- <b-button 
+	variant="warning"
+	size="sm"
+	@click.stop="show_ubications()" 
+	class="m-l-10">
+		<i class="icon-location"></i>
+	</b-button> -->
+
 	<b-button 
 	v-if="hasExtencion('usa_mercado_libre')"
 	variant="warning"
 	size="sm"
 	@click.stop="show_meli"
 	class="m-l-10">
+		<b-badge
+		variant="success"
+		v-if="model.me_li_id">
+			.
+		</b-badge>
 		Meli
 	</b-button>
 </div>
@@ -160,6 +173,10 @@ export default {
         },
 	},
 	methods: {
+		show_ubications() {
+			this.setModel(this.model, 'article', [], false)
+			this.$bvModal.show('article-ubications')
+		},
 		show_meli() {
 			this.setModel(this.model, 'article', [], false)
 

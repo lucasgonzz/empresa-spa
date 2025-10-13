@@ -1,7 +1,7 @@
 <template>
     <div class="s-2 attribute">
         <!-- Mostrar propiedades traducidas -->
-        <p
+        <!-- <p
             v-for="(value, key) in attribute"
             v-if="show(value, key)"
             :key="key"
@@ -15,28 +15,12 @@
             v-else>
                 {{ translateKey(key) }}: {{ value }}
             </span>
+        </p> -->
+
+        <p>
+            {{ attribute.name }}
         </p>
 
-        <!-- Valores sugeridos para string -->
-        <div
-            v-if="attribute.value_type == 'string'
-                && attribute.meli_attributes_values
-                && attribute.meli_attributes_values.length"
-        >
-            <hr>
-            <p>Valores sugeridos</p>
-            <div class="values-list s-1 m-b-15">
-                <p
-                    v-for="value in attribute.meli_attributes_values"
-                    :key="value.meli_id"
-                >
-                    {{ value.meli_name }}
-                </p>
-            </div>
-        </div>
-
-        <hr>
-        <p><strong>Valor</strong></p>
         <!-- Input para string -->
         <div v-if="attribute.value_type == 'string'">
             <b-form-textarea
@@ -50,7 +34,6 @@
                 && attribute.meli_attributes_values
                 && attribute.meli_attributes_values.length"
         >
-            <hr>
             <p><strong>Valores posibles</strong></p>
             <b-form-select
                 v-model="selected_value"
@@ -74,6 +57,25 @@
                 v-model="selected_value"
                 :options="boolean_options(attribute.meli_attributes_values)"
             ></b-form-select>
+        </div>
+
+        <hr>
+        <!-- Valores sugeridos para string -->
+        <div
+            v-if="attribute.value_type == 'string'
+                && attribute.meli_attributes_values
+                && attribute.meli_attributes_values.length"
+        >
+            <hr>
+            <p>Valores sugeridos</p>
+            <div class="values-list s-1 m-b-15">
+                <p
+                    v-for="value in attribute.meli_attributes_values"
+                    :key="value.meli_id"
+                >
+                    {{ value.meli_name }}
+                </p>
+            </div>
         </div>
 
         <!-- Botón dinámico -->

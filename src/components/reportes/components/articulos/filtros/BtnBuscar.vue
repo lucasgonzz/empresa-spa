@@ -24,6 +24,9 @@ export default {
 		orden() {
 			return this.$store.state.reportes.article_purchase.orden
 		},
+		sale_channel_id() {
+			return this.$store.state.reportes.article_purchase.sale_channel_id
+		},
 		mes_inicio() {
 			return this.$store.state.reportes.mes_inicio
 		},
@@ -42,6 +45,7 @@ export default {
 				provider_id: this.provider_id,
 				category_id: this.category_id,
 				cantidad_resultados: this.cantidad_resultados,
+				sale_channel_id: this.sale_channel_id,
 				orden: this.orden,
 				mes_inicio: this.mes_inicio,
 				mes_fin: this.mes_fin,

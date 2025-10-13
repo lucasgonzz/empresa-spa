@@ -56,6 +56,7 @@ export default {
 	data() {
 		return {
 			finded_article: undefined,
+			from_balanza: false,
 		}
 	},
 	methods: {
@@ -98,21 +99,32 @@ export default {
 			} 
 		},
 		async setBarCode(bar_code) {
+			this.from_balanza = false
 			await this.getArticleFromCodigo(bar_code)
-			this.finded_article.is_article = true
 
-			this.set_item_vender(this.finded_article, true) 
+			if (!this.from_balanza) {
+
+				this.finded_article.is_article = true
+
+				this.set_item_vender(this.finded_article, true) 
+			}
 		},
 		async setArticle() {
 			if (this.item_vender.codigo != '') {
+				
+				this.from_balanza = false
 				await this.getArticleFromCodigo(this.item_vender.codigo)
+
+				console.log('from_balanza: '+this.from_balanza)
+
 				if (typeof this.finded_article != 'undefined') {
 
 					this.set_nombre_en_input()
 
 					this.finded_article.is_article = true
 					this.set_item_vender(this.finded_article)
-				} else {
+
+				} else if (!this.from_balanza) {
 
                     // var audio = new Audio(error);
                     // audio.play()
@@ -141,10 +153,20 @@ export default {
 			this.$store.commit('auth/setMessage', 'Buscando articulo')
 			this.$store.commit('auth/setLoading', true)
 			
+			console.log('getArticleFromApi')
+
 			return this.$api.get('vender/buscar-articulo-por-codido/'+bar_code)
 			.then(res => {
 				this.$store.commit('auth/setLoading', false)
 				if (res.data.article) {
+
+						console.log(res)
+					if (res.data.from_balanza) {
+						this.set_from_balanza(res)
+						this.from_balanza = true
+						return
+					} 
+
 					this.finded_article = res.data.article
 
 					if (res.data.variant_id) {
@@ -160,6 +182,18 @@ export default {
 				this.$toast.error('Error al buscar articulo')
 				alert(err)
 			})
+		},
+		set_from_balanza(res) {
+			let article = res.data.article
+			let vender_article_index = this.items.findIndex(item => {
+				return item.is_article && item.id == article.id 
+			})
+
+			if (vender_article_index != -1) {
+				this.items[vender_article_index].price_vender = res.data.price_vender
+
+				document.getElementById('article-bar-code').value = ''
+			}
 		}
 	}
 }

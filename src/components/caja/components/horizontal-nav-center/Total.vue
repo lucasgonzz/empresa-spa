@@ -9,7 +9,7 @@
 				<strong>Total: {{ price(total) }}</strong>
 			</h3>
 			<h3
-			class="m-b-0"
+			class="m-b-0 m-l-30"
 			v-if="hasExtencion('ventas_en_dolares')">
 				<strong>Total USD: {{ price(total_usd) }}</strong>
 			</h3>

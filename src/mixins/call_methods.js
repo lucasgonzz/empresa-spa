@@ -10,6 +10,7 @@ export default [
         if_has_extencion: 'vinoteca',
     },
 
+    'sale_channel',
     'meli_listing_type',
     'meli_buying_mode',
     'meli_item_condition',

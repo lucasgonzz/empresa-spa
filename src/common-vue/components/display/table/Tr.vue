@@ -135,7 +135,9 @@ export default {
 		rowClass(model) {
 			let color = ''
 			if (this.model_name && this.hasColor(this.model_name)) {
-				color += this[this.model_name+'GetColor'](model)
+				let fun_name = this.model_name+'GetColor'
+				console.log('fun_name: '+fun_name)
+				color += this[fun_name](model)
 			}
 			if (this.isSelected(model)) {
 				color += ' selected-row'

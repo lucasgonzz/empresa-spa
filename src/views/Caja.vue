@@ -80,5 +80,4 @@ export default {
 .caja-cerrada
 	td 
 		background: lighten($red, 25%) !important
-		// background: ligthen($green, 10%) !important
 </style>
