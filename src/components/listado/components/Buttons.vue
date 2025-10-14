@@ -98,13 +98,14 @@ class="buttons-listado">
 		Recetas
 	</b-button>
 
-	<!-- <b-button 
+	<b-button 
 	variant="warning"
 	size="sm"
+	v-if="model.addresses.length"
 	@click.stop="show_ubications()" 
 	class="m-l-10">
 		<i class="icon-location"></i>
-	</b-button> -->
+	</b-button>
 
 	<b-button 
 	v-if="hasExtencion('usa_mercado_libre')"

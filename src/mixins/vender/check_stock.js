@@ -73,13 +73,27 @@ export default {
 				)
 			) {
 
-				let cantidad_para_vender = item.amount
-				
-				cantidad_para_vender = Number(cantidad_para_vender)
+				let cantidad_para_vender = Number(item.amount)
 
 				if (item.is_article) {
 
-					if (item.stock && Number(item.stock) < cantidad_para_vender) {
+					if (item.addresses.length) {
+
+						let address = item.addresses.find(ad => ad.id == this.$store.state.vender.address_id)
+
+						if (typeof address != 'undefined') {
+
+							let stock = address.pivot.amount
+
+							if (stock < cantidad_para_vender) {
+								
+								stock_disponible = false 
+								this.$toast.error('Solo hay '+stock+' en '+address.street)
+
+							}
+						}
+
+					} else if (item.stock && Number(item.stock) < cantidad_para_vender) {
 						
 						stock_disponible = false 
 						

@@ -14,6 +14,7 @@ export default [
     'meli_listing_type',
     'meli_buying_mode',
     'meli_item_condition',
+    'article_ubication',
     'online_template',
     'pais_exportacion',
     'moneda',

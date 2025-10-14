@@ -60,9 +60,12 @@ export default {
 		},
 		properties_to_show() {
 			if (this.sub_view == 'recibido') {
-				return this.modelPropertiesFromName('cheque').filter(prop => prop.key != 'provider_id')
+				if (this.sub_sub_view == 'endosados') {
+					return this.modelPropertiesFromName('cheque').filter(prop => prop.key != 'provider_id' && prop.key != 'endosado_desde_client_id')
+				} 
+				return this.modelPropertiesFromName('cheque').filter(prop => prop.key != 'provider_id' && prop.key != 'endosado_a_provider_id' && prop.key != 'endosado_desde_client_id')
 			} else if (this.sub_view == 'emitido') {
-				return this.modelPropertiesFromName('cheque').filter(prop => prop.key != 'client_id')
+				return this.modelPropertiesFromName('cheque').filter(prop => prop.key != 'client_id' && prop.key != 'endosado_a_provider_id')
 			}
 		}
 	}

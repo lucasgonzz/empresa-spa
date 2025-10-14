@@ -32,6 +32,8 @@
 
 	<mercado-libre-category-predictor></mercado-libre-category-predictor>
 
+	<article-ubications></article-ubications>
+
 
 	<!-- <stock-info></stock-info> -->
 
@@ -165,6 +167,7 @@ export default {
 
 		MercadoLibre: () => import('@/components/listado/modals/mercado-libre/Index'),
 		MercadoLibreCategoryPredictor: () => import('@/components/listado/modals/mercado-libre/category-predictor/Index'),
+		ArticleUbications: () => import('@/components/listado/modals/article-ubications/Index'),
 
 
 		Combos: () => import('@/components/listado/components/combos/Index'),

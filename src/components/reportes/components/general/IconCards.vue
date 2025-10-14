@@ -32,6 +32,12 @@
 						<p class="description">
 							{{ card.description }}
 						</p>
+
+						<b-button
+						v-for="button in card.buttons"
+						@click="call_method(button)">
+							{{ button.text }}
+						</b-button>
 					</div>
 				</div>
 			</div>
@@ -276,6 +282,22 @@ export default {
 							value: this.price(this.model.total_facturado - this.model.total_iva_comprado, false),
 							description: 'Diferencia entre IVA Debito menos el IVA Credito',
 						},
+
+						{
+							text: 'Afip .TXT',
+							id: 'iva_diferencia', 
+							img: 'iva_diferencia', 
+							buttons: [
+								{
+									text: '.txt',
+									function: 'export_afip_txt'
+								},
+								{
+									text: '.txt alicuotas',
+									function: 'export_afip_alicuotas_txt'
+								},
+							]
+						},
 					],
 				},
 
@@ -412,6 +434,21 @@ export default {
 				return this.hasExtencion(card.if_has_extencion)
 			}
 			return true
+		},
+		call_method(btn) {
+			this[btn.function]()
+		},
+		export_afip_txt() {
+			let mes_inicio = this.$store.state.reportes.mes_inicio
+			let mes_fin = this.$store.state.reportes.mes_fin
+			let link = process.env.VUE_APP_API_URL+'/afip-txt/'+mes_inicio+'/'+mes_fin
+			window.open(link)
+		},
+		export_afip_alicuotas_txt() {
+			let mes_inicio = this.$store.state.reportes.mes_inicio
+			let mes_fin = this.$store.state.reportes.mes_fin
+			let link = process.env.VUE_APP_API_URL+'/afip-txt-alicuotas/'+mes_inicio+'/'+mes_fin
+			window.open(link)
 		}
 	},
 }

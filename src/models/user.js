@@ -12,13 +12,13 @@ export default {
 			value: '',
 			is_title: true,
 		},
-		{
-			text: 'Descargar articulos desde el arranque del sistema',
-			key: 'download_articles',
-			type: 'checkbox',
-			value: 0,
-			show: true,
-		},
+		// {
+		// 	text: 'Descargar articulos desde el arranque del sistema',
+		// 	key: 'download_articles',
+		// 	type: 'checkbox',
+		// 	value: 0,
+		// 	show: true,
+		// },
 		{
 			text: 'N° documento',
 			key: 'doc_number',
@@ -111,10 +111,21 @@ export default {
 		},
 
 		{
+			text: 'Omitir siempre las ventas en la c/c de los clientes',
+			key: 'siempre_omitir_en_cuenta_corriente',
+			type: 'checkbox',
+		},
+		{
 			text: 'Texto para OMITIR en C/C',
 			key: 'text_omitir_cc',
 			type: 'text',
 		},
+		{
+			text: 'C/C Ultimas arriba',
+			key: 'cc_ultimas_arriba',
+			type: 'checkbox',
+			description: 'Se se activa, las cuentas corrientes se listaran comenzando con las mas recientes',
+		}, 
 
 		// {
 		// 	text: 'Cantidad de letras del nombre a partir de las cuales buscar en VENDER',
@@ -129,11 +140,6 @@ export default {
 			description: 'Si se elige, despues de cada venta el valor del metodo de pago se seteara con este valor',
 		},
 
-		{
-			text: 'Omitir siempre las ventas en la c/c de los clientes',
-			key: 'siempre_omitir_en_cuenta_corriente',
-			type: 'checkbox',
-		},
 
 		{
 			text: 'Redondear de a centenas el Total en VENDER',

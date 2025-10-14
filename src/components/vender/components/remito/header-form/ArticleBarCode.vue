@@ -26,8 +26,9 @@
 import vender from '@/mixins/vender/index' 
 import guardar_venta from '@/mixins/vender/guardar_venta/index' 
 import sonido_error from '@/mixins/sonido_error' 
+import vender_set_total from '@/mixins/vender_set_total' 
 export default {
-	mixins: [vender, guardar_venta, sonido_error],
+	mixins: [vender, guardar_venta, sonido_error, vender_set_total],
 	created() {
 		setTimeout(() => {
 			document.getElementById('article-bar-code').focus()
@@ -190,7 +191,10 @@ export default {
 			})
 
 			if (vender_article_index != -1) {
+				this.items[vender_article_index].price_vender_personalizado = res.data.price_vender
 				this.items[vender_article_index].price_vender = res.data.price_vender
+
+				this.setTotal()
 
 				document.getElementById('article-bar-code').value = ''
 			}

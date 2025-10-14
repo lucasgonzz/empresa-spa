@@ -26,10 +26,6 @@
 				v-model="category_id"
 				:options="get_options_simple('category')"></b-form-select>
 
-				<p
-				v-else>
-					no
-				</p>
 			</template>
 		</search-component>
 	</b-col>

@@ -220,8 +220,9 @@ class="m-b-15 m-t-70">
 import vender from '@/mixins/vender/index'
 import vender_set_total from '@/mixins/vender_set_total'
 import previus_sales from '@/mixins/vender/previus_sale/index'
+import check_stock from '@/mixins/vender/check_stock'
 export default {
-	mixins: [vender, vender_set_total, previus_sales],
+	mixins: [vender, vender_set_total, previus_sales, check_stock],
 	components: {
 		PriceType: () => import('@/components/vender/components/remito/table-slots/PriceType'),
 	},
@@ -342,6 +343,12 @@ export default {
 
 			if (from_amount_input) {
 				
+				let check_stock = this.check_stock_disponible(item)
+
+				if (!check_stock) {
+					item.amount = 0
+				}
+
 				if (
 					item
 					&& this.hasExtencion('lista_de_precios_por_rango_de_cantidad_vendida')

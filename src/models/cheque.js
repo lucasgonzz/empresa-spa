@@ -10,8 +10,20 @@ export default {
 			key: 'client_id',
 		},
 		{
+			text: 'Endozado desde cliente',
+			key: 'endosado_desde_client_id',
+			store: 'client',
+			use_store_models: true,
+		},
+		{
 			text: 'Proveedor',
 			key: 'provider_id',
+		},
+		{
+			text: 'Endozado al proveedor',
+			key: 'endosado_a_provider_id',
+			store: 'provider',
+			use_store_models: true,
 		},
 		{
 			key: 'banco',

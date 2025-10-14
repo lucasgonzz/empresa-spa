@@ -199,6 +199,7 @@ import sync_from_meli_article from '@/store/sync_from_meli_article'
 import sync_from_meli_order from '@/store/sync_from_meli_order'
 
 import sale_channel from '@/store/sale_channel'
+import article_ubication from '@/store/article_ubication'
 
 
 
@@ -405,5 +406,6 @@ export default new Vuex.Store({
         sync_from_meli_order,
 
         sale_channel,
+        article_ubication,
     }
 })

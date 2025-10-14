@@ -55,23 +55,66 @@ import '@/sass/_custom.scss'
 Vue.use(BootstrapVue)
 
 // Axios
+// Axios
 import axios from 'axios'
+
+// ✅ Creamos la instancia $api
+const apiInstance = axios.create({
+    baseURL: process.env.VUE_APP_API_URL + '/api',
+    withCredentials: true
+})
+
+// ✅ Interceptor global para $api
+apiInstance.interceptors.response.use(
+    function(response) {
+        return response
+    },
+    function(error) {
+        console.log('ERROR GLOBAL ($api)')
+        if (error.response) {
+            document.dispatchEvent(
+                new CustomEvent('errorEvent', { detail: error })
+            )
+        }
+        return Promise.reject(error)
+    }
+)
+
+// ✅ Registramos $api como plugin (como hacías vos)
 Vue.use({
-  install (Vue) {
-    Vue.prototype.$axios = axios.create({
-      baseURL: process.env.VUE_APP_API_URL,
-      withCredentials: true
-    })
+  install(Vue) {
+    Vue.prototype.$api = apiInstance
   }
 })
+
+
+const axiosInstance = axios.create({
+    baseURL: process.env.VUE_APP_API_URL,
+    withCredentials: true
+})
+
 Vue.use({
-  install (Vue) {
-    Vue.prototype.$api = axios.create({
-      baseURL: process.env.VUE_APP_API_URL+'/api',
-      withCredentials: true
-    })
+  install(Vue) {
+    Vue.prototype.$axios = axiosInstance
   }
 })
+// import axios from 'axios'
+// Vue.use({
+//   install (Vue) {
+//     Vue.prototype.$axios = axios.create({
+//       baseURL: process.env.VUE_APP_API_URL,
+//       withCredentials: true
+//     })
+//   }
+// })
+// Vue.use({
+//   install (Vue) {
+//     Vue.prototype.$api = axios.create({
+//       baseURL: process.env.VUE_APP_API_URL+'/api',
+//       withCredentials: true
+//     })
+//   }
+// })
 
 // VueCookies
 import VueCookies from 'vue-cookies'
@@ -82,18 +125,6 @@ import app from './common-vue/mixins/app'
 Vue.mixin(app)
 import generals from './mixins/generals'
 Vue.mixin(generals)
-
-axios.interceptors.response.use(
-  function(response) { return response}, 
-  function(error) {
-    console.log('ERROR GLOBAL')
-    console.log(error)
-    if (error.response) {
-       document.dispatchEvent(
-        new CustomEvent('errorEvent', { detail: error })
-      )
-    }
-})
 
 
 

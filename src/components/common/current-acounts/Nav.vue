@@ -100,7 +100,7 @@ export default {
 			this.$store.dispatch('current_acount/getModels')
 		},
 		print() {
-            let link = process.env.VUE_APP_API_URL+'/current-acount/pdf/'+this.from_model_name+'/'+this.from_model.id+'/'+this.cantidad_movimientos
+            let link = process.env.VUE_APP_API_URL+'/current-acount/pdf/'+this.from_credit_account.id+'/'+this.cantidad_movimientos
             window.open(link)
 		},
 	}
