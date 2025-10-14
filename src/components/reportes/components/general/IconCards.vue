@@ -34,6 +34,7 @@
 						</p>
 
 						<b-button
+						size="sm"
 						v-for="button in card.buttons"
 						@click="call_method(button)">
 							{{ button.text }}
