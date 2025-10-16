@@ -21,9 +21,12 @@ export default {
             return this.owner.impresora
         },
         ancho_impresora() {
-            if (this.user.sale_ticket_width) {
-                return this.user.sale_ticket_width
+            let ancho = this.$cookies.get('ancho_impresora')
+            
+            if (ancho != 'null') {
+                return Number(ancho)
             }
+
             return this.owner.sale_ticket_width
         },
         tamano_letra() {

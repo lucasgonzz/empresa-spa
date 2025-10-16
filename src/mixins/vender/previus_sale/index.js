@@ -322,6 +322,7 @@ export default {
 				item.returned_amount = this.get_pivot_amount(article.pivot.returned_amount)
 				item.delivered_amount = this.get_pivot_amount(article.pivot.delivered_amount)
 				item.price_type_personalizado_id = this.get_price_type_personalizado_id(article)
+				item.addresses = article.addresses
 				item.price_types = article.price_types
 				item.category_id = article.category_id
 				item.sub_category_id = article.sub_category_id

@@ -2,8 +2,7 @@
 	<div
 	class="p-t-50 scale-up-center"
 	show
-	v-if="user && authenticated && days_before_expire < 3">
-
+	v-if="user && days_before_expire < 3">
 
 	    <confirm
 	    not_show_delete_text
@@ -47,29 +46,6 @@
 				v-if="owner.plan">
 					Licencia de uso para tu plan {{ owner.plan.name }}: <strong>{{ price(owner.total_a_pagar) }}</strong>
 				</p>
-				<!-- <div
-				v-if="employees.length">
-					<p>
-						Usuario extra (empleados): <strong>USD {{ owner.plan.user_price }}</strong>
-					</p>
-					<p>
-						Cantidad de usuarios extra: <strong>{{ employees.length }} (USD {{ owner.plan.user_price * employees.length }})</strong>
-					</p>
-				</div>
-
-				<p
-				v-if="owner.online">
-					E-commerce: <strong>USD {{ owner.plan.e_commerce }}</strong>
-				</p>
-
-				<p
-				v-if="owner.plan_discount">
-					Tu cuenta tiene asignado un descuento del <strong>{{ owner.plan_discount }}%</strong>
-				</p>
-
-				<p>
-					El total a pagar por tu Plan {{ owner.plan.name }} es de <strong>USD {{ price(total) }}</strong>, cotizado al promedio del valor del dolar en el dia de hoy de <strong>{{ price(dolar) }} ARS</strong> equivale a <strong>{{ price(total * dolar) }} ARS</strong>
-				</p> -->
 
 				<p>
 					Podes realizar el pago del sistema enviando una transferencia a nuestro alias: <strong>comerciocity</strong>

@@ -40,26 +40,11 @@ export default {
     created() {
         this.$store.dispatch('auth/me')
     },
-    // mounted() {
-    //     document.addEventListener('errorEvent', this.handleAxiosError)
-    // },
-    // beforeDestroy() {
-    //     document.removeEventListener('errorEvent', this.handleAxiosError)
-    // },
-    // methods: {
-    //     handleAxiosError(event) {
-    //       const error = event.detail
-
-    //       // ✅ Mostrás el toast
-    //       this.$toast.error(error)
-
-    //     }
-    // },
     watch: {
         authenticated() {
             console.log('watch de authenticateds')
             if (!this.authenticated) {
-                // this.$router.replace({name: 'home'})
+                this.$router.replace({name: 'home'})
             } else {
                 // this.check_online()
                 this.check_version()

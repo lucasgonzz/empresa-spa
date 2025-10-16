@@ -16,9 +16,16 @@
 		@click.stop="ticketPdf(sale)">
 			Ticket
 		</b-dropdown-item>
-		<b-dropdown-item
-		@click.stop="nuevo_ticket(sale)">
-			Ticket 2.0
+
+		<b-dropdown-item>
+			<i 
+			@click="set_ancho_impresora"
+			class="icon-configuration m-r-10"></i>
+
+			<span
+			@click.stop="nuevo_ticket(sale)">
+				Ticket 2.0
+			</span>
 		</b-dropdown-item>
 		<!-- <b-dropdown-item
 		v-if="owner.tamano_letra"
@@ -57,6 +64,27 @@ export default {
 		},
 	},
 	methods: {
+		set_ancho_impresora() {
+
+			let ancho = this.$cookies.get('ancho_impresora')
+
+			let _prompt = 'Ingrese el ancho en milimetros de su impresora'
+
+			if (ancho != 'null')  {
+				_prompt += '. Valor actual: '+ancho+'mm'
+			}
+
+			
+			let valor = prompt(_prompt)
+
+			if (valor)  {
+
+				this.$cookies.set('ancho_impresora', valor, -1)
+				alert('Ancho de '+this.$cookies.get('ancho_impresora')+'mm configurado correctamente')
+			}
+
+
+		},
 		salePdf(sale_id, with_prices, with_costs, precios_netos) {
             let link = process.env.VUE_APP_API_URL+'/sale/pdf/'+sale_id+'/'+with_prices+'/'+with_costs+'/'+precios_netos
             window.open(link) 

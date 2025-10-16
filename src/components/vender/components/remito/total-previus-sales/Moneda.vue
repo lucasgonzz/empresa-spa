@@ -78,6 +78,10 @@ export default {
 
 			if (this.user) {
 
+				if (!this.user.dollar) {
+					return
+				}
+
 				console.log('iniciar_dolar')
 
 				console.log(this.valor_dolar)

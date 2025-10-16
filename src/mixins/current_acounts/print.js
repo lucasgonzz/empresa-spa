@@ -5,7 +5,7 @@ export default {
             if (current_acount.provider_id) {
                 model_id = current_acount.provider_id
             }
-            let link = process.env.VUE_APP_API_URL+'/current-acount/pdf/'+current_acount.id+'/'+model_id
+            let link = process.env.VUE_APP_API_URL+'/current-acount/pdf/'+current_acount.id
             window.open(link)
 		}
 	}
