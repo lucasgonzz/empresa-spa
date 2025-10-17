@@ -10,7 +10,7 @@
 
 			<b-dropdown-item
 			v-for="moneda in monedas"
-			@click="pdf_moneda(moneda)">
+			@click="pdf(moneda)">
 				<i class="icon-tag"></i>
 				PDF con imagenes ({{ moneda.name }})
 			</b-dropdown-item>
