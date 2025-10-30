@@ -25,14 +25,14 @@
 			<template #cell(created_models)="data">
 				<b-button
 				@click="modelos_creados(models[data.index])">
-					{{ models[data.index].created_models }} | {{ models[data.index].articulos_creados.length }}
+					{{ models[data.index].created_models }}
 				</b-button>
 			</template>
 		
 			<template #cell(updated_models)="data">
 				<b-button
 				@click="modelos_actualizados(models[data.index])">
-					{{ models[data.index].updated_models }} | {{ models[data.index].articulos_actualizados.length }}
+					{{ models[data.index].updated_models }}
 				</b-button>
 			</template>
 
@@ -118,12 +118,23 @@ export default {
 	},
 	methods: {
 		modelos_creados(model) {
-			this.articulos_creados = model.articulos_creados
+			this.$store.commit('auth/setLoading', true)
+			this.$api.get('import-history/created-models/'+model.id)
+			.then(res => {
+				this.$store.commit('auth/setLoading', false)
+				this.articulos_creados = res.data.model.articulos_creados
+				this.$bvModal.show('articulos-creados')
+			})
 			this.$bvModal.show('articulos-creados')
 		},
 		modelos_actualizados(model) {
-			this.articulos_creados = model.articulos_actualizados
-			this.$bvModal.show('articulos-creados')
+			this.$store.commit('auth/setLoading', true)
+			this.$api.get('import-history/updated-models/'+model.id)
+			.then(res => {
+				this.$store.commit('auth/setLoading', false)
+				this.articulos_creados = res.data.model.articulos_actualizados
+				this.$bvModal.show('articulos-creados')
+			})
 		},
 		getProvider(model) {
 			let provider = this.getModelFromId('provider', model.provider_id)

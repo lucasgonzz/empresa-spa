@@ -46,7 +46,7 @@ export default {
 					title: 'Vender',
 					items: [
 						'Crea Ventas con Articulos del inventario y servicios.',
-						'Factura desde el sistema.',
+						'Factura con ARCA desde el sistema.',
 						'Clientes y cuenta corriente.',
 						'Precios segun lista de precios del Cliente.',
 						'Notas de debito.',
@@ -57,7 +57,7 @@ export default {
 					img: 'factura1.png',
 					title: 'Facturacion',
 					items: [
-						'Estamos vinculados a los servicios de AFIP, para que puedas elegir facturar cualquier venta que hagas.',
+						'Estamos vinculados a los servicios de ARCA, para que puedas elegir facturar cualquier venta que hagas.',
 					],
 				},
 				{
@@ -65,7 +65,8 @@ export default {
 					title: 'Stock',
 					items: [
 						'Actualizado al comprar o vender productos.',
-						'Dividi tu inventario por Proveedores, Categorias, Marca, etc.',	
+						'Dividi tu inventario por Proveedores, Categorias, Marca, etc.',
+						'Multi deposito',	
 					],
 				},
 				{

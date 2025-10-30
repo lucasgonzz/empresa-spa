@@ -26,6 +26,16 @@
 				<como-hacemos></como-hacemos>
 			</b-col>
 		</b-row>
+
+		<b-row
+		class="row-dark-2">
+			<b-col
+			cols="12"
+			lg="9"
+			xl="7">
+				<clients></clients>
+			</b-col>
+		</b-row>
 	
 		<b-row
 		class="row-dark-2 row-full-heigth">
@@ -44,16 +54,6 @@
 				<casos-de-exito></casos-de-exito>
 			</b-col>
 		</b-row> -->
-
-		<b-row
-		class="row-dark-2">
-			<b-col
-			cols="12"
-			lg="9"
-			xl="7">
-				<clients></clients>
-			</b-col>
-		</b-row>
 		<!-- <b-row
 		class="row-dark row-full-heigth">
 			<b-col
@@ -115,7 +115,7 @@ export default {
 		top: 0 
 		left: 0
 		background: rgb(0,0,0)
-		background: radial-gradient(circle, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 13%, rgba(0,0,0,0.9) 100%, rgba(0,0,0,0.9) 100%)
+		background: radial-gradient(circle, rgba(0,0,0,.1) 0%, rgba(0,0,0,.4) 13%, rgba(0,0,0,0.9) 100%, rgba(0,0,0,0.9) 100%)
 		background-attachment: fixed
 		// background: linear-gradient(-50deg,#58c3ff 0,#004de6 40%,#003bb1 100%)
 

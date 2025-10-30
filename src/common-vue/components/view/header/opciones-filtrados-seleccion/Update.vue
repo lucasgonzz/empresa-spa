@@ -111,6 +111,7 @@ export default {
 					this.form.push({
 						label: this.propText(prop),
 						key: prop.key, 
+						options: prop.options, 
 						store: this.modelNameFromRelationKey(prop),
 						depends_on: prop.depends_on,
 						type: 'select',

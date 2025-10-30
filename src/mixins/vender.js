@@ -392,7 +392,7 @@ export default {
 
 			this.setTotal()
 
-			this.checkAddressCookie()
+			// this.checkAddressCookie()
 
 			this.limpiar_descuentos()
 

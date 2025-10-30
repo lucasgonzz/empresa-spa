@@ -6,7 +6,7 @@
 			<b-form-select
 			@change="setFilters"
 			v-model="filter.igual_que"
-			:options="getOptions({key: filter.key, store: filter.store, text: 'Seleccione Iva'})"></b-form-select>
+			:options="getOptions({key: filter.key, store: filter.store, text: 'Seleccione '+filter.text, options: filter.options})"></b-form-select>
 			
 		</b-form-group>
 	</div>

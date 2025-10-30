@@ -2,10 +2,10 @@
 	<div
 	class="left-title">
 		<h1>
-			Organizamos y automatizamos tu empresa en menos de 2 meses
+			Ayudamos a DISTRIBUIDORAS a GANAR TIEMPO en la gestion de su negocio
 		</h1>
 		<h3>
-			Nos encargamos de implementar y poner en marcha una version personalizada de nuestro sistema. Desde el sistema ERP para gestion interna, paneles de control y un e-commerce, TODO AUTOMATIZADO. 
+			Nos encargamos de implementar y poner en marcha un sistema de gestion personalizado. Con desarrollos a medida para que puedas realmente delegar la gestion de todos tus procesos en un unico lugar.
 		</h3>
 		<!-- <h3>
 			Sistema de Gestion, Facturacion y Venta Online. 
@@ -25,7 +25,8 @@
 		align-items: flex-start
 
 	h1 
-		font-weight: bold 
+		font-family: Arial
+		font-weight: 500 
 		color: #FFF
 		margin: 30px 0
 
@@ -38,16 +39,16 @@
 			font-size: 3em
 
 	h3 
+		font-family: Arial
 		text-align: left
-		color: rgba(255, 255, 255, .8)
-		font-weight: 500
+		color: rgba(255, 255, 255, .9)
+		font-weight: 600
 		line-height: 25px
-		font-weight: bold
 
 		@media screen and (max-width: 992px)
-			font-size: 16px
+			font-size: 18px
 			text-align: center
 		@media screen and (min-width: 992px)
-			font-size: 18px
+			font-size: 20px
 			text-align: left
 </style>

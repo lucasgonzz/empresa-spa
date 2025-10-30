@@ -3,6 +3,7 @@
 	class="cont-price-types">
 
 		<b-input-group
+		v-if="can('article.percentage_gain')"
 		prepend="%">
 			<b-form-input
 			type="number"

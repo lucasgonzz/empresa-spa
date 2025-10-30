@@ -15,6 +15,7 @@
 		</b-input-group>
 
 		<b-input-group
+		v-if="can('article.stock_min_max')"
 		prepend="Min">
 			
 			<b-form-input
@@ -27,6 +28,7 @@
 		</b-input-group>
 
 		<b-input-group
+		v-if="can('article.stock_min_max')"
 		prepend="Max">
 			
 			<b-form-input

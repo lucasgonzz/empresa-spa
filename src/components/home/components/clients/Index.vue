@@ -2,11 +2,12 @@
 	<div
 	id="clients"
 	class="m-b-50">
-		<div class="titles">
-			<h4>
-				Clientes destacados
-			</h4>
-		</div>
+		<h2>
+			Negocios que confian en ComercioCity
+		</h2>
+		<h4>
+			Nuestros clientes 
+		</h4>
 
 		<div class="clients">
 			<div class="cont-clients">
@@ -83,9 +84,16 @@ export default {
 }
 </script>
 <style lang="sass">
+#clients
+	h2 
+		font-size: 50px
+		margin: 100px 0
+
+
 .clients 
 	overflow-x: auto
 	width: 100%
+
 	.cont-clients 
 		display: flex 
 		@media screen and (max-width: 768px) 
@@ -96,7 +104,7 @@ export default {
 			justify-content: flex-start
 			align-items: space-between
 			overflow-x: auto
-			height: 700px
+			height: 1000px
 		@media screen and (min-width: 768px) 
 			flex-wrap: wrap 
 			flex-direction: row

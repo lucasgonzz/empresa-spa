@@ -167,7 +167,10 @@ export default {
 
 			this.addresses.forEach(address => {
 
-				if (this.no_esta_agregada('address_', address, props)) {
+				if (
+					this.puede_ver_address(address)
+					&& this.no_esta_agregada('address_', address, props)
+				) {
 
 					props.splice(insertIndex, 0, {
 						text: address.street,
@@ -181,6 +184,20 @@ export default {
 			})
 
 			return props
+		},
+
+		puede_ver_address(address) {
+			if (
+				!this.is_admin
+				&& this.can('article.stock_only_sucursal')
+			) {
+
+				if (this.user.address_id != address.id) {
+					return false
+				}
+			}
+
+			return true
 		},
 
 		add_payment_methods_discounts(props) {

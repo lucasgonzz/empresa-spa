@@ -76,13 +76,15 @@ export default {
 	methods: {
 		iniciar_dolar() {
 
+			console.log('iniciar_dolar')
+
 			if (this.user) {
 
-				if (!this.user.dollar) {
+				if (!this.owner.dollar) {
+					console.log('El dueño no tiene dolar configurado')
 					return
 				}
 
-				console.log('iniciar_dolar')
 
 				console.log(this.valor_dolar)
 				console.log(this.input_dolar_valor)
@@ -115,6 +117,7 @@ export default {
 				    this.set_valor_dolar()
 				}
 			} else {
+				console.log('No habia user, volviendo a llamar')
 				setTimeout(() => {
 					this.iniciar_dolar()
 				}, 500)

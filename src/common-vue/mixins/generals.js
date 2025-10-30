@@ -747,7 +747,7 @@ export default {
 				return model[prop.key].length
 			}
 			if (this.isRelationKey(prop)) {
-				// console.log('isRelationKey')
+				// console.log(prop.key+' isRelationKey')
 				let relationship = this.modelNameFromRelationKey(prop, false, true)
 
 				// Creo que me la mande, lo comente porque me daba error al obtener el nombre
@@ -827,12 +827,10 @@ export default {
 				let value = this.price(model[prop.key]) 
 
 				if (prop.simbolo_moneda_function) {
-					console.log('simbolo_moneda_function')
 					return this[prop.simbolo_moneda_function](model, model[prop.key])
 				}
 
 				if (prop.check_simbolo_moneda) {
-					console.log('check_simbolo_moneda')
 					// console.log('ENTRO check_simbolo_moneda en prop '+prop.key+' con el model moenda_id: '+model.moneda_id)
 					let prop_to_check = 'moneda_id'
 					let value_equal_to = 2 
@@ -881,8 +879,6 @@ export default {
 		},
 		article_simbolo_moneda(model, price) {
 			if (model.cost_in_dollars) {
-				console.log('VENDER article_simbolo_moneda')
-				console.log(this.owner.cotizar_precios_en_dolares)
 				if (!this.owner.cotizar_precios_en_dolares) {
 					if (price) {
 						return 'USD '+this.price(price)
@@ -943,7 +939,7 @@ export default {
 			}
 			return null
 		},
-		get_options_simple(model_name) {
+		get_options_simple(model_name, prop_key = 'name') {
 
 			let options = [{
 				value: 0, text: 'Seleccione '+this.singular(model_name) 
@@ -953,7 +949,7 @@ export default {
 
 				options.push({
 					value: model.id,
-					text: model.name   
+					text: model[prop_key]   
 				})
 			})
 
@@ -962,6 +958,24 @@ export default {
 		},
 		getOptions(prop, model = null, model_name = null, add_opcion_0 = true) {
 			let store 
+
+			if (prop.options) {
+
+				let options = []
+
+				options.push({
+					value: 0, text: 'Seleccione '+prop.text
+				})
+
+				prop.options.forEach(option => {
+					options.push({
+						value: option,
+						text: option.replaceAll('_', ' ').toUpperCase(),
+					})
+				})
+
+				return options
+			}
 
 			if (prop.get_options_function) {
 				return this[prop.get_options_function](prop, model)

@@ -16,6 +16,7 @@ export default {
 			is_title: true,
 			required: true,
 			filter_modal_position: 2,
+			disabled_to_edit: true,
 		},
 		{
 			text: 'Actualizar precios',

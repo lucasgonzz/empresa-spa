@@ -1,6 +1,6 @@
 <template>
 	<div
-	class="align-center">
+	class="align-center buscador-listado">
 		<add-to-selected></add-to-selected>
 		<name-search
 		v-if="buscar_por_nombre"></name-search>
@@ -28,3 +28,14 @@ export default {
 	}
 }
 </script>
+<style lang="sass">
+.buscador-listado
+	button
+		border-radius: 5px 0 0 5px !important
+
+	.cont-search, .input-search
+		border-radius: 0 5px 5px 0 !important
+
+	.input-search
+		height: 38px !important
+</style>

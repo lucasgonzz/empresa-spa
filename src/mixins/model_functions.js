@@ -13,31 +13,9 @@ export default {
         },
     },
 	methods: {
-        // current_acount_btn_text(current_acount, prop) {
-        //     console.log('current_acount_btn_text')
-        //     console.log(current_acount)
-        //     console.log(prop)
-        //     if (current_acount)
-        // },
-        // add_price_type_monedas(model_to_send) {
-
-        //     console.log('add_price_type_monedas')
-
-        //     let payload = {}
-
-        //     this.$store.state.price_type.models.forEach(pt => {
-
-        //         const comp = this.$refs[`ptMonedas-${pt.id}`];
-        //         console.log(comp)
-
-        //         if (comp && comp.toPayload) {
-        //             payload.price_type_monedas.push(...comp.toPayload());
-        //         }
-        //     });
-
-        //     model_to_send.price_type_monedas = payload
-        //     return model_to_send
-        // },
+        stock_suggestionGetColor(model) {
+            return this.syncs_meli_color(model)
+        },
         sync_from_meli_orderGetColor(model) {
             return this.syncs_meli_color(model)
         },
@@ -54,7 +32,10 @@ export default {
                 return 'sync-meli-warning'
             }
 
-            if (model.status == 'exitosa') {
+            if (
+                model.status == 'exitosa'
+                || model.status == 'terminado'
+            ) {
                 return 'sync-meli-success'
             }
 

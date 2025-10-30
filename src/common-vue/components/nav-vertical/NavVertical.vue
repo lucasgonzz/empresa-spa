@@ -42,8 +42,6 @@
 			    	<div>
 				    	<span 
 				    	class="desplegable"
-						@mouseenter="showChildrenOnHover(route)"
-						@mouseleave="hideChildrenOnHover(route)"
 				    	@click.stop="toggleSubmenu(route)"
 				    	v-if="route.childrens">
 				    		<i class="icon-down"></i>

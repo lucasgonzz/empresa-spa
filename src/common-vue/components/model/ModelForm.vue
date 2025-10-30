@@ -23,8 +23,7 @@
 					
 					<b-form-group
 					:class="colorLabel(prop)"
-					:id="'form-group-'+prop.key"
-					:description="prop.description">
+					:id="'form-group-'+prop.key">
 						<label
 						class="form-label">
 							<i 
@@ -65,6 +64,7 @@
 									v-else-if="useSearch(prop)">
 										<search-component
 										class="m-b-15"
+									    :disabled="isDisabled(prop, form_to_filter)"
 										:id="model_name+'-'+prop.key"
 										:search_from_api="search_from_api(prop)"
 										@setSelected="setSelected"
@@ -169,6 +169,7 @@
 									<div
 									v-else-if="prop.type == 'select'">
 								    	<model-component
+								    	v-if="typeof prop.options == 'undefined'"
 								    	:model_name="modelNameFromRelationKey(prop)"></model-component>
 
 										<b-form-select
@@ -288,6 +289,17 @@
 
 							<!-- <hr> -->
 
+						</div>
+
+						<div
+						class="m-t-15 m-b-10"
+						v-if="prop.description">
+							<strong>{{ prop.description }}</strong>
+						</div>
+
+						<div
+						v-for="description in prop.descriptions">
+							<p>{{ description }}</p>
 						</div>
 
 					</b-form-group>

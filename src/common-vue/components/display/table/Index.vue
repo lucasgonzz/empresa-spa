@@ -612,6 +612,7 @@ export default {
 					filters.push({
 						key: prop.key,
 						store: prop.store,
+						options: prop.options,
 						label: this.propText(prop, true, true),
 						type: prop.type_to_update ? prop.type_to_update : prop.type,
 						igual_que: prop.type == 'select' ? 0 : '',

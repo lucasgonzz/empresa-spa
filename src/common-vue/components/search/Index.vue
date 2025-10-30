@@ -195,6 +195,10 @@ export default {
 			type: String,
 			default: null,
 		},
+		disabled: {
+			type: Boolean,
+			default: false,
+		},
 		props_to_send_to_api: {
 			type: Array,
 			default: () => {
@@ -232,6 +236,9 @@ export default {
 		is_disabled() {
 			if (this.prop && this.prop.only_show) {
 				return true 
+			}
+			if (this.disabled) {
+				return true
 			}
 			return false
 		},

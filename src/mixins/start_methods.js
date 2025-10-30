@@ -9,7 +9,7 @@ export default {
 			
 			this.setEmployeeVender()
 			
-			this.checkAddressCookie()
+			this.init_vender_address_id()
 			
 			// this.checkUpdateFeaturesCookie()
 			
@@ -108,20 +108,27 @@ export default {
 				}, 2000)
 			}
 		},
-		checkAddressCookie() {
 
+		/*
+			Al iniciar el sistema, se setea address_id con el configurado para el usuario
+			Solo si no se le configuro nada, se usa la cookie
+		*/
+		init_vender_address_id() {
+			
 			if (this.user.address_id) {
 				
+				console.log('seteando VENDER address_id desde USER->ADDRESS_ID')
 				this.$store.commit('vender/setAddressId', this.user.address_id)
 				
 				this.$cookies.set('address_id', this.user.address_id, -1)
 
 			} else {
 
+
 				let cookie = this.$cookies.get('address_id')
-				console.log('address_id cookie:')
-				console.log(cookie)
+
 				if (cookie) {
+					console.log('seteando VENDER address_id desde COOKIE')
 					this.$store.commit('vender/setAddressId', cookie)
 				}
 			}

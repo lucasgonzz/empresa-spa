@@ -104,9 +104,11 @@ export default {
 				{
 					text: 'Unidad medida',
 					description: 'Por defecto es UNIDAD',
-					saltear_posiciones: 1,
+					// saltear_posiciones: 1,
 				},
 			]
+
+
 
 
 			if (this.hasExtencion('articulos_unidades_individuales')) {
@@ -169,6 +171,10 @@ export default {
 				})
 			}
 
+			// if (this.addresses.length) {
+			// 	columns.splice(7, 1)
+			// }
+
 			this.addresses.forEach(address => {
 				columns.push({
 					text: address.street,
@@ -195,6 +201,13 @@ export default {
 
 			if (this.hasExtencion('articulo_margen_de_ganancia_segun_lista_de_precios')) {
 
+				let index_precio = columns.findIndex(col => col.text == 'Precio')
+				columns.splice(index_precio, 1)
+
+				let index_margen_de_ganancia = columns.findIndex(col => col.text == 'Margen de ganancia')
+				columns.splice(index_margen_de_ganancia, 1)
+
+
 				this.price_types.forEach(price_type => {
 					columns.push({
 						text: 'Setear precio final '+price_type.name,
@@ -210,6 +223,11 @@ export default {
 					})
 				})
 				
+			} else {
+
+
+				let index_unidad_medida = columns.findIndex(col => col.text == 'Unidad medida')
+				columns[index_unidad_medida].saltear_posiciones = 1
 			}
 
 

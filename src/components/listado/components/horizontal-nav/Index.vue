@@ -6,6 +6,8 @@
 		
 		<buscador-header></buscador-header>
 
+		<stock-suggestion></stock-suggestion>
+
 		<deposit-movements></deposit-movements>
 
 		<promociones-vinoteca></promociones-vinoteca>
@@ -18,6 +20,7 @@ export default {
 	components: {
 		BtnInventoryPerformance: () => import('@/components/listado/components/horizontal-nav/BtnInventoryPerformance'),
 		BuscadorHeader: () => import('@/components/listado/components/horizontal-nav/buscador-header/Index'),
+		StockSuggestion: () => import('@/components/listado/components/horizontal-nav/stock-suggestion/Index'),
 		DepositMovements: () => import('@/components/listado/components/horizontal-nav/deposit-movements/Index'),
 		PromocionesVinoteca: () => import('@/components/listado/components/horizontal-nav/promociones-vinoteca/Index'),
 		ArticlePdfPersonalizado: () => import('@/components/listado/components/horizontal-nav/ArticlePdfPersonalizado'),

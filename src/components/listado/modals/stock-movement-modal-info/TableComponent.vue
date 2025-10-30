@@ -115,7 +115,7 @@ export default {
 					to_address: this.getRelation('address', 'to_address_id', 'street', model),
 					employee: this.getEmployee(model),
 					observations: model.observations,
-					created_at: this.date(model.created_at),
+					created_at: this.date(model.created_at, true),
 				})
 			})
 			return items 

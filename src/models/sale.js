@@ -180,6 +180,7 @@ export default {
 						text: 'Ganancia',
 						key: 'ganancia',
 						is_price: true,
+						if_is_admin: true,
 					},
 					{
 						text: 'U/D',

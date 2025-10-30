@@ -33,7 +33,7 @@
 				</h6>
 				<div class="item">
 					<i class="icon-location"></i>
-					Pellegrini 1876, Rosario, Sante Fe, Argentina.
+					Av. Dorrego 2133 piso 1, CABA, Argentina.
 				</div>
 				<div class="redes">
 					<img 

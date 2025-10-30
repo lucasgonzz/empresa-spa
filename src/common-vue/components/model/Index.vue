@@ -412,6 +412,7 @@ export default {
 					.catch(err => {
 						console.log(err)
 						this.$toast.error('Hubo un Error')
+						this.$toast.error(err)
 						this.loading = false
 					})
 				} else {
@@ -460,6 +461,7 @@ export default {
 					.catch(err => {
 						console.log(err)
 						this.$toast.error('Hubo un error')
+						this.$toast.error(err)
 						this.loading = false
 					})
 				}
@@ -596,9 +598,14 @@ export default {
 		            	&& this.model[prop.key] != ''
 		            	&& this.model[prop.key] !== null
 		            ) {
-		            	if (this.model[prop.key].length != prop.check_length) {
-		            		this.$toast.error('El campo '+this.propText(prop)+' debe tener '+prop.check_length+' caracteres')
-		            		ok = false	
+		            	let input = document.getElementById(this.model_name+'-'+prop.key)
+
+		            	if (input) {
+
+			            	if (input.value.length != prop.check_length) {
+			            		this.$toast.error('El campo '+this.propText(prop)+' debe tener '+prop.check_length+' caracteres')
+			            		ok = false	
+			            	}
 		            	}
 		            }
 

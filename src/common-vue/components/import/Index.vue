@@ -676,37 +676,7 @@ export default {
 				console.log('se envio')
 				console.log(res)
 				return
-
-				if (this.es_la_primera_solicitud) {
-					this.fin_primera_solicitud = new Date();
-					let demora_primer_solicitud = (this.fin_primera_solicitud - this.inicio_primera_solicitud) / 1000
-					console.log('La primer solicitud tardo:')
-					console.log(demora_primer_solicitud)
-
-					this.demora_de_todas_las_solicitud = demora_primer_solicitud * this.cantidad_solicitudes
-
-					console.log('Todo tardaria:')
-					console.log(this.demora_de_todas_las_solicitud)
-
-					this.archivo_excel_path = res.data.archivo_excel_path
-
-					this.empezar_contador()
-				}
-
-				if (this.es_la_ultima_solicitud) {
-					this.import_history_id = null
-					this.pre_import_id = null
-					this.es_la_ultima_solicitud = false
-					this.start_row = 2
-					this.finish_row = ''
-					this.demora_de_todas_las_solicitud = 0
-					console.log('es_la_ultima_solicitud: '+this.es_la_ultima_solicitud)
-					console.log('import_history_id: '+this.import_history_id)
-					console.log('pre_import_id: '+this.import_history_id)
-				} else {
-					this.import_history_id = res.data.import_history_id
-					this.pre_import_id = res.data.pre_import_id
-				}
+				
 			})
 			.catch(err => {
 				this.loading = false

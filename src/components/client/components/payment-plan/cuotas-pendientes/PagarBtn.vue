@@ -17,6 +17,8 @@ export default {
 
 			this.$store.commit('current_acount/setFromModelName', 'client')
 			this.$store.commit('current_acount/setFromModel', this.payment_plan_cuota.client)
+			this.$store.commit('current_acount/set_from_credit_account', this.payment_plan_cuota.sale.current_acount.credit_account)
+
 			this.$bvModal.show('current-acounts-pago')
 
 

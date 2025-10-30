@@ -75,6 +75,7 @@ export default {
 			use_store_models: true,
 			filter_modal_position: 4,
 			keep_after_create: true,
+			can: 'article.provider',
 			// table_position: 6,
 		},
 		{
@@ -155,6 +156,7 @@ export default {
 		{
 			text: 'margen de ganancia',
 			key: 'percentage_gain',
+			can: 'article.percentage_gain',
 			type: 'number',
 			type_to_update: 'number',
 			use_to_update: true,

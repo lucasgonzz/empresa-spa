@@ -16,6 +16,7 @@ export default {
 				this.$store.state.vender.client
 				&& this.$store.state.vender.omitir_en_cuenta_corriente == 0
 				&& this.$store.state.vender.budget === null
+				&& !this.$store.state.vender.guardar_como_presupuesto
 			) {
 				return true
 			}
