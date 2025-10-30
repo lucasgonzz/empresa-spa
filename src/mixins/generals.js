@@ -172,7 +172,7 @@ export default {
             }
         },
         getPriceVender(item, from_pivot = false) {
-            console.log('getPriceVender para '+item.name)
+            // console.log('getPriceVender para '+item.name)
             // console.log(item)
 
             let price 
@@ -226,9 +226,7 @@ export default {
             
             price = Number(price)
 
-            console.log('antes de llamar a check_moneda')
             price = this.check_moneda(item, price, from_pivot)
-            console.log('luego de llamar a check_moneda')
 
             return price
         },
@@ -247,15 +245,15 @@ export default {
 
                         if (!item.cost_in_dollars) {
                             price = this.cotizar_a_dolar(price)
-                            console.log('luego de cotizar_a_dolar: ')
-                            console.log(price)
+                            // console.log('luego de cotizar_a_dolar: ')
+                            // console.log(price)
                         } else {
                             if (this.owner.cotizar_precios_en_dolares) {
                                 price = this.cotizar_a_dolar(price)
-                                console.log('luego de cotizar_a_dolar: ')
-                                console.log(price)
+                                // console.log('luego de cotizar_a_dolar: ')
+                                // console.log(price)
                             } else {
-                                console.log('no se cotizo a dolar')
+                                // console.log('no se cotizo a dolar')
                             }
                         } 
 
@@ -268,28 +266,28 @@ export default {
                             && !this.owner.cotizar_precios_en_dolares
                         ) {
                             price = this.cotizar_a_peso(price)
-                            console.log('luego de cotizar_a_peso: ')
-                            console.log(price)
+                            // console.log('luego de cotizar_a_peso: ')
+                            // console.log(price)
                         } else {
-                            console.log('no se cotizo a peso')
+                            // console.log('no se cotizo a peso')
                         }
 
                     }
                 } else {
-                    console.log('no entro porque tiene pivot')
+                    // console.log('no entro porque tiene pivot')
                 }
             }
             
             return price
         },
         cotizar_a_peso(price) {
-            console.log('cotizar_a_peso: ')
-            console.log(price)
+            // console.log('cotizar_a_peso: ')
+            // console.log(price)
             return price = Number(price) * Number(this.$store.state.vender.valor_dolar) 
         },
         cotizar_a_dolar(price) {
-            console.log('cotizar_a_dolar:')
-            console.log(price)
+            // console.log('cotizar_a_dolar:')
+            // console.log(price)
             return price = Number(price) / Number(this.$store.state.vender.valor_dolar) 
         },
         redondear(price) {

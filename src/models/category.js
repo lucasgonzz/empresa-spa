@@ -24,6 +24,13 @@ export default {
 			type: 'number',
 		},
 		{
+			text: 'Mostrar en PDF de articulos',
+			key: 'show_in_pdf_personalizado',
+			type: 'checkbox',
+			if_has_extencion: 'vinoteca',
+		},
+
+		{
 			text: 'Listas de Precio',
 			if_has_extencion: 'lista_de_precios_por_categoria',
 			store: 'price_type',

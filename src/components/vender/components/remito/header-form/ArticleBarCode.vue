@@ -12,7 +12,7 @@
 			v-model="item_vender.codigo"
 			autocomplete="off" 
 			ref="articleBarCode"
-			@keydown.enter="setArticle"
+			@keydown.enter="set_article_from_barcode"
 			:placeholder="placeholder"></b-form-input>
 
 			<bar-code-scanner
@@ -66,7 +66,43 @@ export default {
 				this.guardar_venta()
 			}
 		},
-		async getArticleFromCodigo(codigo) {
+
+		/*
+			Todo empieza con este metodo
+		*/
+		async set_article_from_barcode() {
+			if (this.item_vender.codigo != '') {
+				
+				this.from_balanza = false
+
+				await this.set_finded_article(this.item_vender.codigo)
+
+				console.log('from_balanza: '+this.from_balanza)
+
+				if (
+					typeof this.finded_article != 'undefined'
+					&& !this.from_balanza
+				) {
+
+					this.set_nombre_en_input()
+
+					this.finded_article.is_article = true
+					this.set_item_vender(this.finded_article)
+
+				} else if (!this.from_balanza) {
+
+					this.sonido_error()
+
+					this.$toast.error('No se encontro articulo')
+
+					let input = document.getElementById('article-bar-code')
+					input.value = ''
+
+				}
+			}
+		},
+
+		async set_finded_article(codigo) {
 			let article
 
 			if (!this.usar_codigo_proveedor) {
@@ -79,7 +115,7 @@ export default {
 					await this.getArticleFromApi(codigo)
 				} 
 
-			} else if (!this.is_mobile) {
+			} else {
 
 				console.log('Buscando offline')
 
@@ -105,43 +141,15 @@ export default {
 
 			if (!this.from_balanza) {
 
+				console.log('*********************************************')
+				console.log('*********************************************')
+				console.log('SIGE DE LARGO con from_balanza: '+this.from_balanza)
+				console.log('*********************************************')
+				console.log('*********************************************')
+
 				this.finded_article.is_article = true
 
 				this.set_item_vender(this.finded_article, true) 
-			}
-		},
-		async setArticle() {
-			if (this.item_vender.codigo != '') {
-				
-				this.from_balanza = false
-				await this.getArticleFromCodigo(this.item_vender.codigo)
-
-				console.log('from_balanza: '+this.from_balanza)
-
-				if (typeof this.finded_article != 'undefined') {
-
-					this.set_nombre_en_input()
-
-					this.finded_article.is_article = true
-					this.set_item_vender(this.finded_article)
-
-				} else if (!this.from_balanza) {
-
-                    // var audio = new Audio(error);
-                    // audio.play()
-
-                    // setTimeout(() => {
-                    // 	audio.play()
-                    // }, 1000)
-
-					this.sonido_error()
-
-					this.$toast.error('No se encontro articulo')
-
-					let input = document.getElementById('article-bar-code')
-					input.value = ''
-
-				}
 			}
 		},
 		set_nombre_en_input() {
@@ -161,10 +169,11 @@ export default {
 				this.$store.commit('auth/setLoading', false)
 				if (res.data.article) {
 
-						console.log(res)
 					if (res.data.from_balanza) {
+						console.log('entro a from_balanza')
 						this.set_from_balanza(res)
 						this.from_balanza = true
+						console.log('from_balanza: '+this.from_balanza)
 						return
 					} 
 
@@ -185,6 +194,7 @@ export default {
 			})
 		},
 		set_from_balanza(res) {
+			console.log('set_from_balanza')
 			let article = res.data.article
 			let vender_article_index = this.items.findIndex(item => {
 				return item.is_article && item.id == article.id 

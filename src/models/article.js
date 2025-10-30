@@ -331,6 +331,12 @@ export default {
 			if_has_extencion: 'vinoteca',
 		},
 		{
+			text: 'Origen',
+			key: 'origen',
+			type: 'text',
+			if_has_extencion: 'vinoteca',
+		},
+		{
 			text: 'Presentacion',
 			key: 'presentacion',
 			type: 'number',
