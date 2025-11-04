@@ -4,14 +4,23 @@
 	hide-footer
 	size="lg"
 	id="unidades-entregadas">
+
+		<b-button
+		variant="primary"
+		class="m-b-15"
+		v-b-modal="'acopio-article-deliveries'">
+			Historial
+		</b-button>
+
 		<b-table
 		head-variant="dark"
 		:fields="fields"
 		:items="local_items">
-			<template #cell(delivered_amount)="data">
+			<template #cell(add_delivered_amount)="data">
 				<b-form-input
 				type="number"
-				v-model="local_items[data.index].delivered_amount"></b-form-input>
+				placeholder="unidades a entregar"
+				v-model="local_items[data.index].add_delivered_amount"></b-form-input>
 			</template>
 		</b-table>
 
@@ -61,6 +70,10 @@ export default {
 					key: 'delivered_amount',
 					label: 'U Entregadas'
 				},
+				{
+					key: 'add_delivered_amount',
+					label: 'Agregar U Entregadas'
+				},
 			]
 		},
 		sale() {
@@ -90,8 +103,9 @@ export default {
 					bar_code: article.bar_code,
 					provider_code: article.provider_code,
 					name: article.name,
-					amount: article.pivot.amount,
-					delivered_amount: article.pivot.delivered_amount
+					amount: Number(article.pivot.amount),
+					delivered_amount: Number(article.pivot.delivered_amount),
+					add_delivered_amount: '',
 				})
 			})
 
@@ -99,9 +113,13 @@ export default {
 		},
 		marcar_todo_como_entregado() {
 			this.local_items.forEach((item, index) => {
+				let add_delivered_amount = item.amount
+				if (item.delivered_amount) {
+					add_delivered_amount -= item.delivered_amount 
+				}
 				this.$set(this.local_items, index, {
 					...item,
-					delivered_amount: item.amount
+					add_delivered_amount: add_delivered_amount
 				});
 			});
 			console.log('listo')

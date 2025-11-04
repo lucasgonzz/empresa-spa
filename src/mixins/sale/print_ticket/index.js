@@ -184,7 +184,7 @@ export default {
 
             this.linea()
 
-            this.letra_grande()
+            // this.letra_grande()
             this.negrita_on()
             this.content.push(`TOTAL A PAGAR: ${this.price(this.sale_to_print.total, false)}\n`);
             this.negrita_off()

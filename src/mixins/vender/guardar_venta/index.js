@@ -107,7 +107,9 @@ export default {
 				discounts: this.get_models_by_id('discount', this.discounts_id),
 				surchages: this.get_models_by_id('surchage', this.surchages_id),
 			})
-			.then(() => {
+			.then(res => {
+				console.log('SE GUARDO VENTA')
+				console.log(res)
 				this.resetear_vender()
 			})
 			.catch(err => {

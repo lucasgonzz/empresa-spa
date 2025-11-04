@@ -21,7 +21,7 @@ class="m-b-15 m-t-70">
 							<b-form-input
 							placeholder="Personalizado"
 							@keyup.enter="add_varios_precios(items[data.index], true)"
-							@keyup="callSetTotal" 
+							@keyup="callSetTotal(false)" 
 							type="number"
 							:id="'price-vender-'+items[data.index].id"
 							min="0"
@@ -123,8 +123,8 @@ class="m-b-15 m-t-70">
 					class="input-discount"
 					prepend="%">
 						<b-form-input
-						@keyup="callSetTotal"
-						@click="callSetTotal"
+						@keyup="callSetTotal(false)"
+						@click="callSetTotal(false)"
 						type="number"
 						:placeholder="get_max_discount(items[data.index])"
 						min="0"
@@ -342,6 +342,8 @@ export default {
 		callSetTotal(from_amount_input = false, item = null) {
 
 			if (from_amount_input) {
+
+				console.log('callSetTotal from_amount_input')
 				
 				let check_stock = this.check_stock_disponible(item)
 
@@ -351,11 +353,21 @@ export default {
 
 				if (
 					item
-					&& this.hasExtencion('lista_de_precios_por_rango_de_cantidad_vendida')
 					&& item.is_article
 				) {
-					item = this.check_price_type_ranges(item)
-					this.$store.commit('vender/replceItem', item)
+
+					if (this.hasExtencion('lista_de_precios_por_rango_de_cantidad_vendida')) {
+
+						item = this.check_price_type_ranges(item)
+						this.$store.commit('vender/replceItem', item)
+
+					} else if (this.hasExtencion('article_price_range')) {
+
+						item = this.check_price_range(item)
+						console.log('price_vender:')
+						console.log(item.price_vender)
+						this.$store.commit('vender/replceItem', item)
+					}
 				}
 				
 			}

@@ -71,6 +71,7 @@ export default {
 		client_name(sale) {
 			if (sale.client) {
 				return sale.client.name+' ( '+ this.price(sale.client.saldo) +' )'
+				// return sale.client.name+' ( '+ this.price(sale.client.saldo) +' )'
 			}
 			return 'NO HAY'
 		},

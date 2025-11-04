@@ -64,6 +64,8 @@ export default {
 
 			let stock_disponible = true
 
+			console.log('check_stock_disponible, item:')
+			console.log(item)
 			
 			if (
 				!this.guardar_como_presupuesto 

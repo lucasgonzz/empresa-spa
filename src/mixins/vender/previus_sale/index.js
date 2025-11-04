@@ -23,6 +23,9 @@ export default {
 		valor_dolar() {
 			return this.$store.state.vender.valor_dolar
 		},
+		seller_id() {
+			return this.$store.state.vender.seller_id
+		},
 	},
 	methods: {
 		setPreviusSale(sale) {

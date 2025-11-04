@@ -4,12 +4,21 @@ hide-footer
 size="lg"
 title="Buscar imagenes"
 id="search-image">
-	<b-form-input
-	class="m-b-15"
-	id="search-image-input"
-	placeholder="Buscar imagenes"
-	@keyup.enter="search"
-	v-model="query"></b-form-input>
+
+	<div class="j-between">
+		
+		<b-form-input
+		class="m-b-15"
+		id="search-image-input"
+		placeholder="Buscar imagenes"
+		@keyup.enter="search"
+		v-model="query"></b-form-input>
+
+		<div
+		class="busquedas-disponibles">
+			{{ busquedas_disponibles }} busquedas disponibles
+		</div>
+	</div>
 
 	<b-button
 	@click="setBarCode"
@@ -74,16 +83,15 @@ export default {
 		VueLoadImage,
 	},
 	mounted() {
-		this.$root.$on('bv::modal::show', (bvEvent, modalId) => {
+		this.$root.$on('bv::modal::shown', (bvEvent, modalId) => {
 			if (modalId == 'search-image') {
-				if (this.article.bar_code) {
-					this.query = this.article.bar_code
-				} else {
-					this.query = this.article.name
-				}
-				setTimeout(() => {
-					this.search() 
-				}, 300)
+				// if (this.article.bar_code) {
+				// 	this.query = this.article.bar_code
+				// 	setTimeout(() => {
+				// 		this.search() 
+				// 	}, 300)
+				// }
+				this.get_current_geocoder_counter()
 			}
 		})
 	},
@@ -92,6 +100,7 @@ export default {
 			query: '',
 			images_result: null,
 			loading: false,
+			current_geocoder_counter: null,
 		}
 	},
 	created() {
@@ -107,10 +116,19 @@ export default {
 				return this.owner.google_custom_search_api_key
 			}
 			return 'AIzaSyC4sUC-MuEDsMNoIQqwUPmYWZmw74rsHOI'
-		}
+		},
+		busquedas_disponibles() {
+			if (this.current_geocoder_counter) {
+				return this.owner.google_cuota - this.current_geocoder_counter.counter  
+			}
+		},
 	},
 	methods: {
 		async search() {
+			if (this.busquedas_disponibles <= 0) {
+				this.$toast.error('Ha alcanzado su limite de '+this.owner.google_cuota+' busquedas diarias')
+				return
+			}
 			if (!this.loading) {
 				console.log('Bucando imagen')
 				this.images_result = null
@@ -122,6 +140,8 @@ export default {
 					this.loading = false
 					res.json()
 					.then(body => {
+
+						console.log('resultados de google:')
 						console.log(body.searchInformation.totalResults)
 
 						this.sumar_contador_de_busqueda()
@@ -142,8 +162,22 @@ export default {
 				})
 			}
 		},
+		get_current_geocoder_counter() {
+
+			this.$api.get('google/get-current')
+			.then(res => {
+				console.log('se inicio current_geocoder_counter')
+				this.current_geocoder_counter = res.data.model
+			})
+			.catch(err => {
+				console.log('error al actualizar contador de google')
+			})
+		},
 		sumar_contador_de_busqueda() {
 			this.$api.get('google/custom-search/aumentar-contador')
+			.then(res => {
+				this.current_geocoder_counter = res.data.model
+			})
 			.catch(err => {
 				console.log('error al actualizar contador de google')
 			})
@@ -179,4 +213,10 @@ export default {
 			height: auto
 			img 
 				width: 100%
+
+	.busquedas-disponibles
+		width: 150px
+		margin-left: 15px
+		text-align: center
+		font-weight: bold
 </style>

@@ -33,6 +33,18 @@
 			class="payment-method-amount"
 			placeholder="Monto"></b-form-input>
 
+			<p
+			class="m-t-15">
+				Para indicar decimales utilice un . (punto).
+
+			</p>
+			<p>
+				Ejemplo: Para ingresar "Mil quinientos con 25", coloque 1500.25.
+			</p>  
+			<p>
+				No coloque 1500,25 ni 1.500,25
+			</p>
+
 			<check-info
 			:payment_method="payment_method"></check-info>
 

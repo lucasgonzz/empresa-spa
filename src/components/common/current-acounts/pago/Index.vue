@@ -224,7 +224,8 @@ export default {
                 }
 
             }
-            this.pago.current_acount_payment_methods.forEach(payment_method => {
+            
+            for (const payment_method of this.pago.current_acount_payment_methods) {
 
                 if (payment_method.id == 1) {
                     if (payment_method.bank == '') {
@@ -232,21 +233,69 @@ export default {
                         return false 
                     }
                     if (payment_method.payment_date == '') {
-                        this.$toast.error('Ingrese la fecha de corbo del cheque')
+                        this.$toast.error('Ingrese la fecha de cobro del cheque')
                         return false
                     } 
                     if (payment_method.amount == '') {
-                        this.$toast.error('Ingrese imorte del cheque')
+                        this.$toast.error('Ingrese importe del cheque')
                         return false
                     }
                     if (payment_method.num == '') {
-                        this.$toast.error('Ingrese el numero del cheque')
+                        this.$toast.error('Ingrese el número del cheque')
                         return false
                     }
                 }
-            })
+
+                let ok = this.validarNumero(payment_method.amount)
+
+                console.log(ok)
+                
+                if (!ok.ok) {
+
+                    this.$toast.error(ok.reason)
+                    return false
+                }
+            }
+
             return true
         },
+
+
+        /**
+         * Valida números en formato estricto: [-]1234 o [-]1234.56
+         * - Sin separadores de miles
+         * - Punto como separador decimal
+         * - Hasta `maxDecimals` decimales (por defecto 2)
+         */
+        validarNumero(input, maxDecimals = 2) {
+          if (input == null) return { ok: false, reason: "Vacío" };
+
+          let s = String(input).trim();
+          if (s === "") return { ok: false, reason: "Vacío" };
+
+          // No permitimos comas, espacios ni símbolos raros
+          if (/[,\s]/.test(s)) 
+            return { ok: false, reason: "Usá punto decimal y sin comas ni espacios" };
+
+          // Construimos regex: entero o entero.dec
+          const decPart = maxDecimals > 0 ? `(\\.\\d{1,${maxDecimals}})?` : ""; // <-- opcional
+          const re = new RegExp(`^-?\\d+${decPart}$`);
+
+          if (!re.test(s)) {
+            if (s.includes(",")) return { ok: false, reason: "No se permite coma, usá punto decimal" };
+            if ((s.match(/\./g) || []).length > 1) return { ok: false, reason: "No uses puntos de miles, solo un punto decimal" };
+            if (/\.\d{3,}$/.test(s)) return { ok: false, reason: `Máximo ${maxDecimals} decimales` };
+            if (/\.$/.test(s)) return { ok: false, reason: "Luego del punto deben ir decimales" };
+
+            return { ok: false, reason: "Formato inválido. Ej: 1234.50 o 1234" };
+          }
+
+          const n = Number(s);
+          if (!Number.isFinite(n)) return { ok: false, reason: "Número inválido" };
+
+          return { ok: true };
+        },
+
         clear() {
             this.pago = {
                 current_date: true,

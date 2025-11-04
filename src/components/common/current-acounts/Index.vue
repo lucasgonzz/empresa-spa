@@ -13,6 +13,7 @@
     <update-prices></update-prices>
 
     <unidades-entregadas></unidades-entregadas>
+    <acopio-article-deliveries></acopio-article-deliveries>
 
     <pago></pago>    
     <nota-credito></nota-credito>    
@@ -117,6 +118,7 @@ export default {
         BtnActualizarEnVender: () => import('@/components/budget/components/BtnActualizarEnVender'),
         UpdatePrices: () => import('@/components/ventas/modals/update-prices/Index'),
         UnidadesEntregadas: () => import('@/components/ventas/modals/unidades-entregadas/Index'),
+        AcopioArticleDeliveries: () => import('@/components/ventas/modals/unidades-entregadas/AcopioArticleDeliveries'),
     },
     computed: {
         title() {

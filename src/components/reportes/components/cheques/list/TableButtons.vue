@@ -57,8 +57,8 @@ export default {
 		},
 		puede_endozar() {
 			return this.sub_sub_view == 'pendientes'
-			// return this.sub_sub_view == 'disponibles-para-cobrar'
-					// || this.sub_sub_view == 'pronto-a-vencerse'
+					|| this.sub_sub_view == 'disponibles-para-cobrar'
+					|| this.sub_sub_view == 'pronto-a-vencerse'
 		},
 
 

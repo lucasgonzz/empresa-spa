@@ -412,6 +412,7 @@ export default {
 			.catch(err => {
 				commit('setVendiendo', false)
 				console.log(err)
+				throw err
 			})
 		}
 	},

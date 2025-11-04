@@ -1,5 +1,6 @@
 import limpiar_item_vender from '@/mixins/vender/limpiar_item_vender'
 import price_ranges from '@/mixins/vender/price_ranges'
+import article_price_range from '@/mixins/vender/article_price_range'
 import check_stock from '@/mixins/vender/check_stock'
 import computed from '@/mixins/vender/computed'
 import repetidos from '@/mixins/vender/repetidos'
@@ -8,7 +9,8 @@ import set_items_prices from '@/mixins/vender/set_items_prices'
 export default {
 	mixins: [
 		limpiar_item_vender, 
-		price_ranges, 
+		price_ranges,
+		article_price_range, 
 		check_stock, 
 		computed, 
 		repetidos, 

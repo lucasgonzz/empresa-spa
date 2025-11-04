@@ -1,6 +1,7 @@
 <template>
 	<div>
 		<sale-print-buttons
+		ref="print_buttons"
 		v-if="show"
 		:sale="sale">
 		</sale-print-buttons>
@@ -30,10 +31,27 @@ export default {
 	beforeDestroy() {
 		// limpiamos el intervalo
 		clearInterval(this.interval)
+        window.removeEventListener("keydown", this.detectarTecla);
+	},
+    mounted() {
+        window.addEventListener("keydown", this.detectarTecla);
+    },
+	methods: {
+		detectarTecla(event) {
+			if (event.key === 'F4' && this.$refs.print_buttons) {
+                this.$refs.print_buttons.nuevo_ticket(this.sale)
+                // this.$refs.print_buttons.ticketPdf(this.sale)
+
+            }
+		},
 	},
 	computed: {
 		show() {
-			return this.diffEnSegundos <= 30
+			if (this.user && this.owner.hide_sale_print_in_vender) {
+
+				return this.diffEnSegundos <= 30
+			}
+			return true
 		},
 		diffEnSegundos() {
 			if (this.maked_sale && this.maked_sale.created_at) {

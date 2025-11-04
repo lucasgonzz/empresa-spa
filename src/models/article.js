@@ -648,6 +648,16 @@ export default {
 		// 	not_show: true,
 		// },
 		{
+			text: 'Rangos de precio',
+			key: 'article_price_ranges',
+			has_many: {
+				text: 'Rango de precio',
+				model_name: 'article_price_range',
+			},
+			not_show: true,
+		},
+
+		{
 			text: 'Descuentos',
 			key: 'article_discounts',
 			has_many: {
