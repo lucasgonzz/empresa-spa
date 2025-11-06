@@ -49,7 +49,7 @@ export default {
 
 				    // Elegir el que tiene mayor amount
 				    let range = validRanges.reduce((prev, curr) => 
-				        curr.amount > prev.amount ? curr : prev
+				        Number(curr.amount) > Number(prev.amount) ? curr : prev
 				    );
 
 				    console.log('range price: ')

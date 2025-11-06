@@ -94,6 +94,7 @@ export default {
 			use_store_models: true,
 			use_to_filter_in_modal: true,
 			filter_modal_position: 7,
+			if_has_extencion: 'articulo_margen_de_ganancia_segun_lista_de_precios',
 		},
 		{
 			text: 'Provincia',

@@ -56,6 +56,10 @@ export default {
 				
 				if (this.check_stock_disponible(repetido)) {
 
+					repetido = this.check_price_type_ranges(repetido)
+					
+					repetido = this.check_price_range(repetido)
+
 					this.$store.commit('vender/updateItem', repetido)
 
 					this.setTotal()

@@ -65,7 +65,7 @@ export default {
 			this.$bvModal.show('afip-ticket-errors')
 		},
 		print_nota_credito_afip_ticket(nota_credito_afip_ticket) {
-			let link = process.env.VUE_APP_API_URL+'/current-acount/pdf/'+nota_credito_afip_ticket.nota_credito_id+'/0'
+			let link = process.env.VUE_APP_API_URL+'/current-acount/pdf/'+nota_credito_afip_ticket.nota_credito_id
 			window.open(link)
 		},
 		afip_ticket() {

@@ -119,6 +119,8 @@ export default {
 			}
 
 			item = this.check_price_type_ranges(item)
+			
+			item = this.check_price_range(item)
 
 			this.$store.commit('vender/addItem', item)
 

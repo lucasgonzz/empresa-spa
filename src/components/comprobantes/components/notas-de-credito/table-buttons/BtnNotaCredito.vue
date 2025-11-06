@@ -16,7 +16,7 @@ export default {
 	},
 	methods: {
 		print() {
-			let link = process.env.VUE_APP_API_URL+'/current-acount/pdf/'+this.nota_credito.id+'/0'
+			let link = process.env.VUE_APP_API_URL+'/current-acount/pdf/'+this.nota_credito.id
 			window.open(link)
 		},
 	}

@@ -172,8 +172,8 @@ export default {
             }
         },
         getPriceVender(item, from_pivot = false) {
-            // console.log('getPriceVender para '+item.name)
-            // console.log(item)
+            console.log('getPriceVender para '+item.name)
+            console.log(item)
 
             let price 
 
