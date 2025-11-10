@@ -40,6 +40,7 @@ export default [
     'cuota',
     'concepto_movimiento_caja',
     'caja',
+    'turno_caja',
     'tipo_envase',
     'article',
     'unidad_frecuencia',

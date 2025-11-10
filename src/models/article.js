@@ -34,6 +34,17 @@ export default {
 			// table_position: 3,
 		},
 		{
+			text: 'SKU',
+			key: 'sku',
+			type: 'text',
+			value: null,
+			use_to_check_if_is_repeat: true,
+			chequear_buscando_desde_api: true,
+			use_to_show_in_search_modal: true,
+			filter_modal_position: 1,
+			use_bar_code_scanner: true,
+		},
+		{
 			text: 'Codigo de Proveedor',
 			table_text: 'Cod Prov',
 			key: 'provider_code',

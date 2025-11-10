@@ -721,12 +721,15 @@ export default {
 
 		        isScrolling = true;
 		        const scroll = () => {
-		            if (!scrollDirection) {
+		            if (
+		            	!scrollDirection
+		            	// || contTable.scrollLeft == 0
+		            ) {
 		                isScrolling = false;
 		                return; // Detiene si no hay dirección
 		            }
 
-		            console.log('scroleando')
+		            console.log('scroleando, scrollLeft: '+contTable.scrollLeft)
 
 		            contTable.scrollLeft += scrollDirection === 'right' ? 20 : -20; // Ajusta velocidad aquí
 		            requestAnimationFrame(scroll); // Llama al siguiente cuadro

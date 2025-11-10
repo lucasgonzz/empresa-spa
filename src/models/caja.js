@@ -21,6 +21,21 @@ export default {
 			if_has_extencion: 'ventas_en_dolares',
 		},
 		{
+			text: 'Sucursal/Deposito',
+			key: 'address_id',
+			type: 'select',
+			relation_prop_name: 'street',
+			use_store_models: true,
+			if_has_extencion: 'resumen_caja',
+		},
+		{
+			text: 'Empleado',
+			key: 'employee_id',
+			type: 'select',
+			use_store_models: true,
+			if_has_extencion: 'resumen_caja',
+		},
+		{
 			text: 'Fecha apertura',
 			key: 'abierta_at',
 			type: 'date',
@@ -39,16 +54,16 @@ export default {
 			type: 'checkbox',
 			only_show: true,
 		},
-		{
-			text: 'Metodos de pago vinculados',
-			store: 'current_acount_payment_method',
-			search_on_models_by: 'name',
-			type: 'search',
-			key: 'current_acount_payment_methods',
-			belongs_to_many: {
-				model_name: 'current_acount_payment_method',
-			}
-		},
+		// {
+		// 	text: 'Metodos de pago vinculados',
+		// 	store: 'current_acount_payment_method',
+		// 	search_on_models_by: 'name',
+		// 	type: 'search',
+		// 	key: 'current_acount_payment_methods',
+		// 	belongs_to_many: {
+		// 		model_name: 'current_acount_payment_method',
+		// 	}
+		// },
 		{
 			text: 'Empleados con acceso',
 			store: 'employee',

@@ -77,15 +77,28 @@ export default {
             }
 
             // Obtén la caja por defecto
-            let caja_default = this.$store.state.default_payment_method_caja.models.find(caja_default => {
+            let cajas_default = this.$store.state.default_payment_method_caja.models.filter(caja_default => {
                 return caja_default.current_acount_payment_method_id == payment_method_id 
                     && caja_default.address_id == address_id
             })
 
             // Si existe una caja por defecto, ordénala primero
-            if (caja_default) {
+            if (cajas_default.length) {
 
-                return caja_default.caja_id 
+                let caja_for_employee = null
+                cajas_default.forEach(caja => {
+                    if (
+                        caja.employee_id == this.user.id
+                    ) {
+                        caja_for_employee = caja
+                    }
+                })
+
+                if (caja_for_employee) {
+                    return caja_for_employee.id 
+                }
+
+                return cajas_default[0].caja_id 
             }
         },
 

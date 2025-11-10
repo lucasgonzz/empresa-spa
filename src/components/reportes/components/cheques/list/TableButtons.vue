@@ -1,5 +1,6 @@
 <template>
-	<div>
+	<div
+	class="j-center">
 		<div
 		v-if="sub_view == 'recibido'">
 			<b-button
@@ -38,6 +39,13 @@
 				Rechazado por proveedor
 			</b-button>
 		</div>
+
+		<b-button
+		@click="eliminar"
+		class="m-l-10"
+		variant="danger">
+			<i class="icon-trash"></i>
+		</b-button>
 	</div>
 </template>
 <script>
@@ -69,6 +77,18 @@ export default {
 		},
 	},
 	methods: {
+		eliminar() {
+			if (confirm('¿Seguro que quiere eliminar este cheque? No se modificara la cuenta corriente')) {
+				this.$api.delete('cheque/'+this.cheque.id)
+				.then(() => {
+					this.$store.dispatch('cheque/getModels')
+					this.$toast.success('Cheque eliminado')
+				})
+				.catch(err => {
+					this.$toast.error(err)
+				})
+			}
+		},
 		pagar() {
 			this.$store.commit('cheque/setModel', {
 				model: this.cheque,

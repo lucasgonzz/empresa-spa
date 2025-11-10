@@ -46,6 +46,11 @@ export default {
 			is_date: true,
 		},
 		{
+			key: 'fecha_endoso',
+			type: 'date',
+			is_date: true,
+		},
+		{
 			text: 'Cobrado en',
 			key: 'cobrado_en',
 			type: 'date',

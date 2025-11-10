@@ -11,6 +11,8 @@ class="buttons-listado">
 	:block="false"
 	:loader="loading_online"></btn-loader> -->
 
+
+	<!-- Variantes -->
 	<b-button 
 	v-if="show_variants" 
 	:variant="getVariant()"
@@ -26,25 +28,18 @@ class="buttons-listado">
 		Variantes
 	</b-button>
 
-	<!-- <btn-loader
-	v-if="has_online"
-	@clicked="setFeatured(model)"
-	:variant="isFeatured(model)"
-	size="sm"
-	icon="check"
-	:block="false" 
-	class="m-l-10"
-	:loader="loading_featured"></btn-loader> -->
 
-	<!-- Estadisticas -->
-	<!-- <b-button 
-	variant="primary"
-	size="sm"
-	@click.stop="showCharts()" 
-	class="m-l-10">
-		<i class="icon-chart"></i>
-	</b-button> -->
 
+	<!-- Proveedores -->
+	<b-button 
+	variant="outline-secondary"
+	size="sm"
+	dusk="btn-movimiento-depositos"
+	v-if="model.providers.length"
+	@click.stop="show_providers" 
+	class="m-l-10 btn-movimiento-depositos">
+		<i class="icon-users"></i>
+	</b-button>
 
 
 	<!-- Movimientos de depositos -->
@@ -88,6 +83,8 @@ class="buttons-listado">
 		Ventas
 	</b-button>
 
+
+	<!-- Recetas -->
 	<b-button 
 	v-if="hasExtencion('produccion')"
 	variant="success"
@@ -98,6 +95,8 @@ class="buttons-listado">
 		Recetas
 	</b-button>
 
+
+	<!-- Ubicaciones -->
 	<b-button 
 	variant="warning"
 	size="sm"
@@ -107,6 +106,9 @@ class="buttons-listado">
 		<i class="icon-location"></i>
 	</b-button>
 
+
+
+	<!-- MercadoLibre -->
 	<b-button 
 	v-if="hasExtencion('usa_mercado_libre')"
 	variant="warning"
@@ -196,6 +198,10 @@ export default {
 		show_address_movement() {
 			this.setModel(this.model, 'article', [], false)
 			this.$bvModal.show('address-movement')
+		},
+		show_providers() {
+			this.setModel(this.model, 'article', [], false)
+			this.$bvModal.show('article-providers')
 		},
 		getVariant() {
 			if (this.model.article_properties.length) {

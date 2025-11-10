@@ -1,0 +1,9 @@
+<template>
+	<b-button
+	v-if="hasExtencion('resumen_caja')"
+	class="m-l-15"
+	v-b-modal="'resumen-caja'"
+	variant="primary">
+		Resumenes
+	</b-button>
+</template>

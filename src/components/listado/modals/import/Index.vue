@@ -38,6 +38,10 @@ export default {
 					can_not_ignore: true,
 				},
 				{
+					text: 'Sku',
+					can_not_ignore: true,
+				},
+				{
 					text: 'Codigo de proveedor',
 					can_not_ignore: true,
 				},

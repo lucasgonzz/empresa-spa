@@ -10,6 +10,8 @@ export default {
 
 				this.$api.get('articles-ultimos-actualizados')
 				.then(res => {
+					this.$store.commit('article/setModels', [])
+
 					res.data.models.forEach(article => {
 						this.$store.commit('article/add', article)
 					})

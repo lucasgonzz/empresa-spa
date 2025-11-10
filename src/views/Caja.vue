@@ -1,6 +1,8 @@
 <template>
 	<div>
 
+		<resumen-caja></resumen-caja>	
+
 		<movimientos-entre-cajas></movimientos-entre-cajas>	
 
 		<aperturas></aperturas>	
@@ -37,6 +39,7 @@ export default {
 		MovimientosEntreCajas: () => import('@/components/caja/modals/movimientos-entre-cajas/Index'),
 		Aperturas: () => import('@/components/caja/modals/aperturas/Index'),
 		Movimientos: () => import('@/components/caja/modals/movimientos/Index'),
+		ResumenCaja: () => import('@/components/caja/modals/resumen-caja/Index'),
 	},
 	computed: {
 		cajas() {

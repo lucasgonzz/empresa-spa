@@ -14,6 +14,11 @@ export default {
 			type: 'checkbox',
 		},
 		{
+			text: 'Porcentaje de comision',
+			key: 'percentage_commission',
+			type: 'number',
+		},
+		{
 			text: 'Categorias',
 			if_has_extencion: 'comisiones_por_categoria',
 			store: 'category',

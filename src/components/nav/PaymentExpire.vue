@@ -68,9 +68,19 @@ export default {
 	methods: {
 		mostrar_alerta() {
 			if (this.days_before_expire < 1) {
-				setInterval(() => {
-					this.$bvModal.show('aviso-vencido')
-				}, 30000)
+
+				const today = moment()
+
+				if (today.day() === 0) {
+				    console.log('Es domingo')
+				} else if (today.day() === 6) {
+				    console.log('Es sábado')
+				} else {
+					setInterval(() => {
+						this.$bvModal.show('aviso-vencido')
+					}, 30000)
+				}
+				
 			}
 		},
 	},

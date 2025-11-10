@@ -101,6 +101,15 @@
 							        :value="model[prop.key]"
 									v-else-if="prop.type == 'date'"></date-picker>
 
+									<b-time 
+									v-else-if="prop.type == 'time'"
+									:id="model_name+'-'+prop.key"
+							        :disabled="isDisabled(prop, form_to_filter)"
+									:placeholder="'Ingresar '+propText(prop)"
+									type="time"
+									@keyup.enter="clickEnter(prop)"
+									v-model="model[prop.key]"></b-time>
+
 									<div
 									v-else-if="prop.type == 'radio'">
 										<b-form-radio

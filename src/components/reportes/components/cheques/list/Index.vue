@@ -10,7 +10,6 @@
 	    :models="cheques_to_show"
 	    :properties="properties_to_show"
 	    model_name="cheque"
-	    :set_model_on_click="false"
 	    :show_actualizado="false"
 	    :show_btn_edit="false">
 	    	

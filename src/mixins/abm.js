@@ -60,6 +60,13 @@ export default {
 					],
 				},
 				{
+					view: 'tesoreria',
+					models: [
+						'turno_caja',
+						'default_payment_method_caja',
+					],
+				},
+				{
 					view: 'generales',
 					models: [
 						'address',

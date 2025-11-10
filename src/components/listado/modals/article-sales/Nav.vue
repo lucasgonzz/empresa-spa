@@ -1,6 +1,6 @@
 <template>
 	<div
-	class="j-start align-end">
+	class="j-start align-center">
 
 		<from-until-dates
 		:from_date="from_date"
@@ -9,7 +9,7 @@
 		@setUntil="setUntil"></from-until-dates>
 
 	    <b-button
-	    class="m-b-15 m-l-15"
+	    class="m-l-15"
 	    @click="getSales"
 	    variant="primary">
 	    	Buscar

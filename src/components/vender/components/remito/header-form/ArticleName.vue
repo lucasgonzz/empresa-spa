@@ -152,6 +152,10 @@ export default {
 			}
 
 
+			props.push({
+				text: 'Stock',
+				key: 'stock',
+			})
 			if (this.addresses.length) {
 
 				this.addresses.forEach(address => {
@@ -161,13 +165,7 @@ export default {
 						function: 'get_address_stock_in_vender',
 					})
 				})
-			} else {
-
-				props.push({
-					text: 'Stock',
-					key: 'stock',
-				})
-			}
+			} 
 
 			return props
 		},

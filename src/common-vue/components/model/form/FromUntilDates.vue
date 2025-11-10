@@ -10,6 +10,7 @@
 
 		<b-form-input
 		v-model="until_date"
+		class="m-l-15"
 		type="date"
 		label="Fecha Fin"
 		@setDate="setUntil"></b-form-input>

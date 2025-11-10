@@ -205,6 +205,9 @@ import stock_suggestion_article from '@/store/stock_suggestion_article'
 
 import article_price_range from '@/store/article_price_range'
 
+import turno_caja from '@/store/turno_caja'
+import resumen_caja from '@/store/resumen_caja'
+
 
 
 
@@ -416,5 +419,8 @@ export default new Vuex.Store({
         stock_suggestion_article,
 
         article_price_range,
+
+        turno_caja,
+        resumen_caja,
     }
 })
