@@ -57,7 +57,13 @@ export default {
 	computed: {
 		disabled() {
 			let addresses = this.$store.state.address.models 
-			return addresses.length > 0
+			if (
+				addresses.length > 0
+				&& this.ventas_afip_information_id
+			) {
+				return true 
+			}
+			return false
 		},
 		afip_information() {
 			return this.$store.state.afip_information.models 

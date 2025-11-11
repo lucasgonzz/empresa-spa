@@ -169,7 +169,8 @@ export default {
 			}
 		},
 		check() {
-			if (this.article.addresses.length && this.to_address_id == 0) {
+			if (this.addresses.length && this.to_address_id == 0) {
+			// if (this.article.addresses.length && this.to_address_id == 0) {
 				this.$toast.error('Indique el deposito')
 				return false 
 			}

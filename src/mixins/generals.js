@@ -85,17 +85,17 @@ export default {
             // Si existe una caja por defecto, ordénala primero
             if (cajas_default.length) {
 
-                let caja_for_employee = null
+                let default_caja_for_employee = null
                 cajas_default.forEach(caja => {
                     if (
                         caja.employee_id == this.user.id
                     ) {
-                        caja_for_employee = caja
+                        default_caja_for_employee = caja
                     }
                 })
 
-                if (caja_for_employee) {
-                    return caja_for_employee.id 
+                if (default_caja_for_employee) {
+                    return default_caja_for_employee.caja_id 
                 }
 
                 return cajas_default[0].caja_id 

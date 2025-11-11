@@ -104,6 +104,13 @@ export default {
 			],
 		},
 		{
+			text: 'PLU',
+			key: 'plu',
+			type: 'text',
+			not_show: true,
+			if_has_extencion: 'balanza_bar_code',
+		},
+		{
 			group_title: 'Precio',
 		},
 		{

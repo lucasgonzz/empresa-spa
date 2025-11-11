@@ -69,7 +69,7 @@ export default {
 		},
 		items() {
 			let items = []
-			if (this.article) {
+			if (this.article && this.article.providers) {
 				this.article.providers.forEach(provider => {
 					items.push({
 						provider: provider.name,

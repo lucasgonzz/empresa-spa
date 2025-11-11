@@ -21,6 +21,13 @@ export default {
 			use_store_models: true,
 			relation_prop_name: 'street',
 		},
+		{
+			text: 'Empleado',
+			key: 'employee_id',
+			type: 'select',
+			use_store_models: true,
+		},
+
 	],
 	singular_model_name_spanish: 'Caja por defecto',
 	plural_model_name_spanish: 'Cajas por defecto',

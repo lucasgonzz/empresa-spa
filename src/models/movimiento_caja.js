@@ -13,6 +13,13 @@ export default {
 			function: 'get_hora_from_created_at',
 		},
 		{
+			text: 'Fecha',
+			key: 'created_at',
+			type: 'date',
+			only_show: true,
+			is_date: true,
+		},
+		{
 			key: 'ingreso',
 			type: 'number',
 			is_price: true,
