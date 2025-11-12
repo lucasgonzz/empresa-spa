@@ -15,7 +15,7 @@
 		<div
 		class="p-l-15"
 		v-if="days_before_expire > 0">
-			Quedan {{ days_before_expire }} dias para que venza tu suscripcion. El total a pagar es de: <strong>{{ price(owner.total_a_pagar) }}</strong>
+			Quedan {{ days_before_expire }} dias para que venza tu suscripcion. El total a pagar es de: <strong>{{ price(total_a_pagar) }}</strong>
 		</div>
 		<div
 		class="payment-expire-card s-2"
@@ -24,7 +24,7 @@
 			<div>
 				<div class="tiempo-de-pagar">
 					<p>
-						El total a pagar es de: <strong>{{ price(owner.total_a_pagar) }}</strong>
+						El total a pagar es de: <strong>{{ price(total_a_pagar) }}</strong>
 					</p>
 					<p
 					v-if="days_before_expire < 0">
@@ -92,12 +92,13 @@ export default {
 			return this.$store.state.employee.models 
 		},
 		total_a_pagar() {
-			let total = this.employees.length * 20
-			total = total * this.dolar 
+			let precio_x_cuenta = 10000
+
+			let total = precio_x_cuenta
+
+			total += this.employees.length * precio_x_cuenta
+
 			return total 
-		},
-		employees() {
-			return this.$store.state.employee.models 
 		},
 		days_before_expire() {
 			return moment().diff(this.owner.payment_expired_at, 'days') * -1

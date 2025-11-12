@@ -603,6 +603,14 @@ export default {
 			not_show: true,
 			if_has_extencion: 'articles_default_in_vender',
 		},
+		{
+			text: 'Siempre personalizar precio en VENDER',
+			key: 'personalizar_price_en_vender',
+			type: 'checkbox',
+			not_show: true,
+			if_has_extencion: 'articles_default_in_vender',
+		},
+
 		// {
 		// 	text: 'Stock por direccion',
 		// 	key: 'addresses',

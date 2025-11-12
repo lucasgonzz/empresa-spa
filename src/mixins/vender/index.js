@@ -132,7 +132,22 @@ export default {
 
 			
 			this.limpiar_item()
+
+			this.check_foco_to_precio_personalizado(item)
 		},
+
+
+		check_foco_to_precio_personalizado(item) {
+			console.log('check_foco_to_precio_personalizado: ')
+			console.log(item)
+			if (item.personalizar_price_en_vender) {
+				setTimeout(() => {
+
+					document.getElementById('price-vender-'+item.id).focus()
+				}, 500)
+			}
+		},
+		
 
 		foco_input_amount(from_mobile) {
 

@@ -543,6 +543,7 @@ export default {
 		
 		
 		check_cajas() {
+			console.log('check_cajas asdasd')
 			if (this.cajas.length) {
 
 				if (!this.cajas_abiertas.length) {
@@ -564,6 +565,18 @@ export default {
 
 					console.log('entro con omitir_en_cuenta_corriente:')
 					console.log(this.$store.state.vender.omitir_en_cuenta_corriente)
+
+					this.$toast.error('Indique una CAJA para esta venta')
+					return false 
+				}
+
+				
+
+				let caja_seleccionada = this.cajas_abiertas.find(caja => caja.id == this.$store.state.vender.caja_id)
+				console.log('caja_seleccionada:')
+				console.log(caja_seleccionada)
+				
+				if (typeof caja_seleccionada == 'undefined') {
 
 					this.$toast.error('Indique una CAJA para esta venta')
 					return false 

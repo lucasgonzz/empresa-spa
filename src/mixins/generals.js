@@ -82,6 +82,9 @@ export default {
                     && caja_default.address_id == address_id
             })
 
+            console.log('cajas_default:')
+            console.log(cajas_default)
+
             // Si existe una caja por defecto, ordénala primero
             if (cajas_default.length) {
 
@@ -97,6 +100,8 @@ export default {
                 if (default_caja_for_employee) {
                     return default_caja_for_employee.caja_id 
                 }
+
+                console.log('caja_default: '+cajas_default[0].caja_id)
 
                 return cajas_default[0].caja_id 
             }

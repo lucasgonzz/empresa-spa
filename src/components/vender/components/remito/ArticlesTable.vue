@@ -417,18 +417,25 @@ export default {
 		},
 		add_varios_precios(item, hacer_caso = false) {
 			if (hacer_caso) {
-				if (typeof item.varios_precios == 'undefined') {
-					item.varios_precios = []
-				}
-				item.varios_precios.unshift({
-					price_vender: item.price_vender_personalizado,
-					amount: '',
-					id: item.varios_precios.length,
-					// article_id: item.id,
-				})
 
-				this.calculate_price_vender(item)
-				item.price_vender_personalizado = ''
+				if (item.personalizar_price_en_vender) {
+
+					document.getElementById('article-bar-code').focus()
+				} else {
+
+					if (typeof item.varios_precios == 'undefined') {
+						item.varios_precios = []
+					}
+					item.varios_precios.unshift({
+						price_vender: item.price_vender_personalizado,
+						amount: '',
+						id: item.varios_precios.length,
+						// article_id: item.id,
+					})
+
+					this.calculate_price_vender(item)
+					item.price_vender_personalizado = ''
+				}
 			}
 		},
 		enter_amount(item) {

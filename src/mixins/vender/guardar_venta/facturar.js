@@ -78,6 +78,9 @@ export default {
 
 					this.mostrar_mensaje_exitoso()
 
+					this.limpiar_afip()
+
+
 					setTimeout(() => {
 						this.ocultar_tarjeta()
 					}, 2000)
@@ -96,6 +99,10 @@ export default {
 					}, 2000)
 				})
 			}
+		},
+		limpiar_afip() {
+			this.$store.commit('vender/setAfipInformationId', 0)
+			this.$store.commit('vender/set_afip_tipo_comprobante_id', 0)
 		},
 		ticket_demorado() {
 			document.getElementById('loading-afip-ticket').classList.add('loading-afip-ticket-demorado')
