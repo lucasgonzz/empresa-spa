@@ -118,7 +118,7 @@ export default {
 			show: true,
 			use_to_filter_in_search: true,
 			filter_modal_position: 6,
-			check_length: 11,
+			// check_length: 11,
 		},
 		// {
 		// 	text: 'Cuil',
