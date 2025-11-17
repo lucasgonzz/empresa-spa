@@ -1,5 +1,7 @@
 <template>
     <div id="app">
+
+        <!-- Comentario de prueba Leonardo -->
         
         <error-modal></error-modal>
         <logo-loading></logo-loading>
