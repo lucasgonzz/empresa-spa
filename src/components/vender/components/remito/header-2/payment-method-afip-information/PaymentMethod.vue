@@ -127,7 +127,6 @@ export default {
 .cont-payment-methods
 	
 	.input-group-append
-		height: 47.6px
 
 		button
 			border-radius: 0 5px 5px 0 !important

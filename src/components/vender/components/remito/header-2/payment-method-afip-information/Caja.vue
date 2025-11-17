@@ -1,10 +1,13 @@
 <template>
 		
-	<b-form-select 
+	<b-input-group
 	v-if="cajas.length && !selected_payment_methods.length"
-	:disabled="!pagado_al_contado"
-	v-model="caja_id" 
-	:options="get_caja_options(vender_payment_method_id)"></b-form-select> 
+	prepend="Caja">
+		<b-form-select 
+		:disabled="!pagado_al_contado"
+		v-model="caja_id" 
+		:options="get_caja_options(vender_payment_method_id)"></b-form-select> 
+	</b-input-group>
 </template>
 <script>
 import cajas from '@/mixins/vender/cajas'

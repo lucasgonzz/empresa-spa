@@ -4,8 +4,10 @@
 	cols="12"
 	v-if="!hasExtencion('no_usar_codigos_de_barra')"
 	:md="3">
+
 		<div
 		class="d-flex w-100">
+	
 			<b-form-input
 			id="article-bar-code"
 			dusk="article_bar_code"
@@ -19,7 +21,9 @@
 			class="m-l-10"
 			v-if="hasExtencion('bar_code_scanner')"
 			@setBarCode="setBarCode"></bar-code-scanner>
+
 		</div>
+
 	</b-col>
 </template>
 <script>
@@ -126,7 +130,7 @@ export default {
 					await this.getArticleFromApi(codigo)
 				} 
 
-			} else {
+			} else if (!this.download_articles) {
 
 				console.log('Buscando offline')
 
@@ -200,8 +204,7 @@ export default {
 			})
 			.catch(err => {
 				this.$store.commit('auth/setLoading', false)
-				this.$toast.error('Error al buscar articulo')
-				alert(err)
+				this.$toast.error('Error al buscar codigo de barras: '+err)
 			})
 		},
 		set_from_balanza(res) {

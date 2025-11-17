@@ -418,24 +418,22 @@ export default {
 		add_varios_precios(item, hacer_caso = false) {
 			if (hacer_caso) {
 
-				if (item.personalizar_price_en_vender) {
+				
 
-					document.getElementById('article-bar-code').focus()
-				} else {
-
-					if (typeof item.varios_precios == 'undefined') {
-						item.varios_precios = []
-					}
-					item.varios_precios.unshift({
-						price_vender: item.price_vender_personalizado,
-						amount: '',
-						id: item.varios_precios.length,
-						// article_id: item.id,
-					})
-
-					this.calculate_price_vender(item)
-					item.price_vender_personalizado = ''
+				if (typeof item.varios_precios == 'undefined') {
+					item.varios_precios = []
 				}
+
+				item.varios_precios.unshift({
+					price_vender: item.price_vender_personalizado,
+					amount: '',
+					id: item.varios_precios.length,
+					// article_id: item.id,
+				})
+
+				// Actualizo el item, calculo total de la venta, y hago foco en bar_code o en price-personalizado
+				this.calculate_price_vender(item)
+				item.price_vender_personalizado = ''
 			}
 		},
 		enter_amount(item) {
@@ -460,9 +458,18 @@ export default {
 			this.setTotal()
 			// this.$store.commit('vender/setTotal')
 
-			setTimeout(() => {
-				document.getElementById('price-vender-'+item.id).focus()
-			}, 300)
+
+			if (item.personalizar_price_en_vender) {
+
+				document.getElementById('article-bar-code').focus()
+				
+			} else {
+
+				setTimeout(() => {
+					document.getElementById('price-vender-'+item.id).focus()
+				}, 300)
+				
+			}
 		},
 		remove_otro_precio(item, otro_precio) {
 			let index = item.varios_precios.findIndex(_otro_precio => {

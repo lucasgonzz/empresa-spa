@@ -6,9 +6,9 @@
 		<print></print>
 		<limpiar-vender></limpiar-vender>
 
+		<fecha-entrega></fecha-entrega>
 		<observations></observations>
 
-		<fecha-entrega></fecha-entrega>
 		<numero-orden-de-compra></numero-orden-de-compra>
 		<!-- <pago></pago> -->
 	</div>

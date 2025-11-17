@@ -1,10 +1,14 @@
 <template>
-	<b-form-select
-	:disabled="disabled"
+	<b-input-group
 	v-if="addresses.length > 1"
-	v-model="address_id" 
-	dusk="address_id"
-	:options="getOptions({key: 'address_id', text: 'Direccion'})"></b-form-select> 
+	prepend="Sucursal">
+		
+		<b-form-select
+		:disabled="disabled"
+		v-model="address_id" 
+		dusk="address_id"
+		:options="getOptions({key: 'address_id', text: 'Direccion'})"></b-form-select> 
+	</b-input-group>
 </template>
 <script>
 import vender from '@/mixins/vender'

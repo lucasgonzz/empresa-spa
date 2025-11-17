@@ -70,6 +70,10 @@ export default {
 
 			if (this.ya_esta_en_la_venta()) {
 
+				if (this.personalizar_price_en_vender()) {
+					return
+				}
+
 				this.actualizar_cantidad()
 
 				return

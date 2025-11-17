@@ -544,6 +544,14 @@ export default {
 		
 		check_cajas() {
 			console.log('check_cajas asdasd')
+
+			if (
+				this.$store.state.vender.client
+				&& !this.$store.state.vender.omitir_en_cuenta_corriente
+			) {
+				return true
+			}
+
 			if (this.cajas.length) {
 
 				if (!this.cajas_abiertas.length) {

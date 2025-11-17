@@ -3,7 +3,19 @@ import vender_set_total from '@/mixins/vender_set_total'
 export default {
 	mixins: [computed, vender_set_total],
 	methods: {
+		personalizar_price_en_vender() {
 
+			let finded = this.get_item_repetido()
+
+			if (finded.personalizar_price_en_vender) {
+
+				setTimeout(() => {
+					document.getElementById('price-vender-'+finded.id).focus()
+				}, 300)
+				return true
+			}
+
+		},
 		ya_esta_en_la_venta() {
 
 			let finded = this.get_item_repetido()

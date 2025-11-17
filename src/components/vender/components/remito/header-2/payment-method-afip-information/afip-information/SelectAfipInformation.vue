@@ -1,6 +1,10 @@
 <template>
 	<div
 	class="w-100">
+
+	<b-input-group
+	prepend="Factura">
+
 		<b-form-select
 		v-if="show"
 		:class="facturando ? 'verde' : 'rojo'"
@@ -8,6 +12,7 @@
 		@change="change"
 		id="afip_information_id"
 		:options="options"></b-form-select> 
+	</b-input-group>
 	</div>
 </template>
 <script>

@@ -23,7 +23,7 @@ export default {
 
 			this.get_buyers_and_set_messages_not_read()
 
-			this.get_problemas_al_facturar()
+			if (this.is_admin) this.get_problemas_al_facturar()
 
 			this.get_articles_por_defecto()
 
@@ -36,12 +36,22 @@ export default {
 
 		},
 		get_inventory_performance() {
-			this.$store.dispatch('inventory_performance/getModels')
-			.then(() => {
-				if (this.$store.state.inventory_performance.models[0].articles_stock_minimo.length) {
-					this.$bvModal.show('articles-stock-minimo')
-				}
-			})
+			if (
+				this.is_admin
+			) {
+				this.$store.dispatch('inventory_performance/getModels')
+				.then(() => {
+					if (
+						this.owner.show_stock_min_al_iniciar
+						&& (
+							this.$store.state.inventory_performance.models.length
+							&& this.$store.state.inventory_performance.models[0].articles_stock_minimo.length
+						)
+					) {
+						this.$bvModal.show('articles-stock-minimo')
+					}
+				})
+			}
 		},
 		escuchar_orders_y_messages() {
 			if (this.owner.online) {
@@ -168,7 +178,9 @@ export default {
 		get_problemas_al_facturar() {
 			this.$store.dispatch('afip_ticket/get_problemas_al_facturar')
 			.then(() => {
-				this.notificar_errores_afip()
+				if (this.owner.show_afip_errors_al_iniciar) {
+					this.notificar_errores_afip()
+				}
 			})
 		},
 		notificar_errores_afip() {

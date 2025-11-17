@@ -20,3 +20,11 @@ export default {
 	}
 }
 </script>
+<style lang="sass">
+#vender
+	.input-group
+		
+		.input-group-prepend, .input-group-append
+			height: 47.6px
+
+</style>
