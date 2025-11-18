@@ -36,6 +36,12 @@
 				</b-button>
 			</template>
 
+			<template #cell(link_excel)="data">
+				<b-button
+				variant="success"
+				@click="to_excel(models[data.index])">Excel</b-button>
+			</template>
+
 			<template #cell(observations)="data">
 				<b-form-textarea
 				:column="15"
@@ -79,6 +85,7 @@ export default {
 					error_message: model.error_message,
 					provider_id: model.provider_id ? this.getProvider(model) : null,
 					employee_id: model.user_id == model.employee_id ? this.user.name : this.getModelFromId('employee', model.employee_id).name,
+					link_excel: null,
 				})
 			})
 			return items 
@@ -110,6 +117,10 @@ export default {
 					label: 'Realizado por',
 				},
 				{
+					key: 'link_excel',
+					label: 'Archivo',
+				},
+				{
 					key: 'observations',
 					label: 'Observaciones',
 				},
@@ -117,6 +128,10 @@ export default {
 		}
 	},
 	methods: {
+		to_excel(model) {
+			let link = process.env.VUE_APP_API_URL+'/imported-files/'+model.excel_url.split('/')[1]
+			window.open(link)
+		},
 		modelos_creados(model) {
 			this.$store.commit('auth/setLoading', true)
 			this.$api.get('import-history/created-models/'+model.id)
