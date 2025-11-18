@@ -78,7 +78,9 @@ export default {
 					} else if (res.data.user_last_activity) {
 						this.$toast.error('Su cuenta esta siendo utilizada en otro dispositivo, cierre la cuenta en el otro dispositivo. En caso de que la cuenta no este siendo utilizada en el otro dispositivo, espere '+this.user_last_activity_minutes+' minutos')
 					} else {
-						this.$toast.error('Sus credenciales son incorrectas')
+						this.$toast.error('Sus credenciales son incorrectas, controle que este ingresando desde el link correspondiente a su negocio: TU-NEGOCIO.comerciocity.com', {
+							duration: 10000,
+						})
 					}
 				})
 				.catch(err => {

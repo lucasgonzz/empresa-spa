@@ -1,5 +1,6 @@
 <template>
 	<div
+	class="form-moneda"
 	v-if="show">
 		<b-form-select
 		class="m-t-10 select-moneda"
@@ -141,4 +142,11 @@ export default {
 <style lang="sass">
 .select-moneda, .input-dolar
 	font-size: 15px !important
+
+.form-moneda
+	
+	.input-group
+		
+		.input-group-prepend
+			height: 36.6px !important
 </style>
