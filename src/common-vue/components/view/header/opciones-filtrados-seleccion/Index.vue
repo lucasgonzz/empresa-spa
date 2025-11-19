@@ -105,7 +105,7 @@ export default {
 			.catch(err => {
 				this.loading = false 
 				console.log(err)
-				this.$toast.error('Error al actualizar')
+				// this.$toast.error('Error al actualizar')
 			})
 		},
 		deleteModels() {

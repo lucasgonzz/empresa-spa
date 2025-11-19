@@ -43,24 +43,57 @@ export default {
 		return {
 			loading: false,
 			error: null,
+			guardar_error: true,
 		}
 	},
     methods: {
-        errorEvent(error) {
+        errorEvent(event) {
         	console.log('errorEvent')
+
+        	let error = event.detail
         	console.log(error)
-        	this.$toast.error(error.detail.message)
+
+        	let code = error.response.status
+        	console.log('code')
+        	console.log(code)
+
+			if (error.response.data.message) {
+
+				if (code >= 500) {
+
+					this.$toast.error(error.response.data.message, {
+						duration: 10000
+					})
+
+		        	if (error.response.data.message != 'Unauthenticated.' && this.authenticated && error.response && error.response.data && error.response.data.message) {
+			        	this.$bvModal.show('error')
+			        	this.sendError(error)
+		        	}
+
+				} else if (code >= 400 && code < 500) {
+
+					this.$toast.warning(error.response.data.message, {
+						duration: 10000
+					})
+				}
+			} else {
+				this.$toast.error('Hubo un Error')
+				this.$toast.error(error.detail.message)
+			}
+
+        	// this.$toast.error(error.detail.message)
         	this.$store.commit('auth/setLoading', false)
-        	if (error.response.data.message != 'Unauthenticated.' && this.authenticated && error.response && error.response.data && error.response.data.message) {
-	        	this.$bvModal.show('error')
-        	}
+
         },
-        sendError() {
+        sendError(error) {
+        	
+        	if (!this.guardar_error) return
+
         	this.loading = true 
         	this.$api.post('error', {
-        		message: this.error.response.data.message,
-        		file: this.error.response.data.file,
-        		line: this.error.response.data.line,
+        		message: error.response.data.message,
+        		file: error.response.data.file,
+        		line: error.response.data.line,
         	})
         	.then(() => {
         		this.loading = false 
@@ -68,6 +101,11 @@ export default {
         	.catch(err => {
         		this.$toast.error('Error al guardar el error X)')
         		this.loading = false 
+
+        		this.guardar_error = false
+        		setTimeout(() => {
+        			this.guardar_error = true
+        		}, 10000)
         	})
         },
         close() {

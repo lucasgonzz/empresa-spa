@@ -16,6 +16,9 @@ export default {
         stock_suggestionGetColor(model) {
             return this.syncs_meli_color(model)
         },
+        sync_to_tn_articleGetColor(model) {
+            return this.syncs_meli_color(model)
+        },
         sync_from_meli_orderGetColor(model) {
             return this.syncs_meli_color(model)
         },

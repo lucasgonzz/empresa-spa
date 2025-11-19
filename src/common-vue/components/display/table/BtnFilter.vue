@@ -1,7 +1,7 @@
 <template>
 	<b-button-group
 	v-if="filter">
-		
+
 		<b-button 
 		class="m-l-10"
 		size="sm"
