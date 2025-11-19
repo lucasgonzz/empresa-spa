@@ -31,7 +31,7 @@ export default {
 		date(d, complete = false) {
 			if (d) {
 				if (complete) {
-					return moment(d).format('DD/MM/YY h:mm:ss')
+					return moment(d).format('DD/MM/YY HH:mm:ss')
 				}
 				return moment(d).format('DD/MM/YY')
 			}

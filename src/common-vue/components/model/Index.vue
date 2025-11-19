@@ -377,8 +377,8 @@ export default {
 				// let model_to_send = this.model 
 				let model_to_send = this.getModelToSend()
 				
-				console.log('model_to_send:')
-				console.log(model_to_send)
+				// console.log('model_to_send:')
+				// console.log(model_to_send)
 				if (this.model.id) {
 					this.$api.put(route+'/'+this.model.id, model_to_send)
 					.then(res => {
@@ -411,9 +411,13 @@ export default {
 					})
 					.catch(err => {
 						console.log(err)
-						this.$toast.error('Hubo un Error')
-						this.$toast.error(err)
 						this.loading = false
+						// if (err.response.data.message) {
+						// 	this.$toast.error(err.response.data.message)
+						// } else {
+						// 	this.$toast.error('Hubo un Error')
+						// 	this.$toast.error(err)
+						// }
 					})
 				} else {
 					this.$api.post(route, model_to_send)
@@ -459,9 +463,14 @@ export default {
 						this.clearModel(info)
 					})
 					.catch(err => {
+						console.log('Error catch')
 						console.log(err)
-						this.$toast.error('Hubo un error')
-						this.$toast.error(err)
+						// if (err.response.data.message) {
+						// 	this.$toast.error(err.response.data.message)
+						// } else {
+						// 	this.$toast.error('Hubo un Error')
+						// 	this.$toast.error(err)
+						// }
 						this.loading = false
 					})
 				}
