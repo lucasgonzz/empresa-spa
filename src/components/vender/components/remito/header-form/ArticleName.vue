@@ -20,7 +20,7 @@
 		:prop="{text: 'Articulo', key: 'article_id', store: 'article', route_to_search: 'vender/buscar-articulo-por-nombre'}">
 			<template #search_input_right>
 
-				<b-form-select 
+				<b-form-select
 				v-if="hasExtencion('buscar_por_categoria_en_vender')"
 				class="select-category"
 				v-model="category_id"
@@ -57,7 +57,7 @@ export default {
 	},
 	computed: {
 		col_header_lg() {
-			
+
 			let col = 4
 
 			if (
@@ -75,7 +75,7 @@ export default {
 				col += 3
 			}
 
-			return col 
+			return col
 		},
 		str_limint() {
 			return this.owner.str_limint_en_vender
@@ -96,19 +96,19 @@ export default {
 			// return false
 		},
 		price_types() {
-			return this.$store.state.price_type.models 
+			return this.$store.state.price_type.models
 		},
 		props_to_show() {
-			
+
 			let props = [
 				{
 					text: 'N°',
-					key: 'num',	
+					key: 'num',
 				},
 				{
 					text: 'Imagen',
 					key: 'images',
-					type: 'images',	
+					type: 'images',
 				},
 			]
 
@@ -125,7 +125,7 @@ export default {
 			})
 			props.push({
 				text: 'Nombre',
-				key: 'name',	
+				key: 'name',
 			})
 
 			if (
@@ -138,7 +138,7 @@ export default {
 					is_price: true,
 					simbolo_moneda_function: 'article_simbolo_moneda',
 				})
-			
+
 				if (this.current_acount_payment_method_discounts.length) {
 
 					this.current_acount_payment_method_discounts.forEach(payment_method => {
@@ -155,25 +155,27 @@ export default {
 			props.push({
 				text: 'Stock',
 				key: 'stock',
+        is_stock: true,
 			})
 			if (this.addresses.length) {
 
 				this.addresses.forEach(address => {
 					props.push({
+            is_stock: true,
 						text: address.street,
 						key: 'address_'+address.id,
 						function: 'get_address_stock_in_vender',
 					})
 				})
-			} 
+			}
 
 			return props
 		},
 		current_acount_payment_method_discounts() {
-			return this.$store.state.current_acount_payment_method_discount.models 
+			return this.$store.state.current_acount_payment_method_discount.models
 		},
 		addresses() {
-			return this.$store.state.address.models 
+			return this.$store.state.address.models
 		},
 	},
 	methods: {
@@ -186,7 +188,7 @@ export default {
 				...result.model,
 				is_article: true,
 			}
-			
+
 			this.set_codigo_input_value(article)
 
 			this.set_item_vender(article)
@@ -202,9 +204,9 @@ export default {
 				let input = document.getElementById('article-bar-code')
 
 				if (input) {
-					
+
 					if (this.hasExtencion('codigo_proveedor_en_vender')) {
-						
+
 						input.value = result.provider_code
 					} else {
 

@@ -13,8 +13,8 @@
 				:striped="_striped"
 				:fields="fields"
 				:items="items"
-				:hover="hover" 
-				selectable 
+				:hover="hover"
+				selectable
 				ref="tableComponent"
 				:select-mode="_select_mode"
 				:tbody-tr-class="rowClass"
@@ -23,14 +23,15 @@
 						<slot name="table_left_options" :model="model"></slot>
 					</template>
 
-					<template 
+					<template
 					v-for="prop in properties"
 					:style="'border: 6px solid red !important'"
 					v-slot:[toCellName(prop.key)]="data">
+
 						<vue-load-image
 						v-if="isImageProp(prop) && imageUrl(models[data.index], prop)"
 						class="img-fluid">
-							<img 
+							<img
 							slot="image"
 							:src="imageUrl(models[data.index], prop)">
 
@@ -91,6 +92,15 @@
 								{{ propertyText(models[data.index].pivot, prop) }}
 							</span>
 							<span
+							v-else-if="prop.is_stock"
+                :class="{
+                  'text-danger': parseFloat(propertyText(models[data.index], prop)) < 0,
+                  'font-weight-bold': parseFloat(propertyText(models[data.index], prop)) !== 0
+                }"
+              >
+								{{ propertyText(models[data.index], prop) }}
+							</span>
+							<span
 							v-else>
 								{{ propertyText(models[data.index], prop) }}
 							</span>
@@ -103,7 +113,7 @@
 						</span>
 					</template>
 
-					<!-- <template 
+					<!-- <template
 					v-for="(prop, index) in propsToSet()"
 					v-slot:[toCellName(prop.key)]="data">
 						<table-pivot-props-to-set
@@ -121,7 +131,7 @@
 
 					<template #cell(edit)="data">
 						<div class="cont-edit">
-							<slot 
+							<slot
 							name="btn-edit"
 							:model="models[data.index]"></slot>
 							<div
@@ -189,7 +199,7 @@
 				<!-- <btn-add-to-show
 				:model_name="model_name"></btn-add-to-show> -->
 			</div>
-			<p 
+			<p
 			v-else-if="!models.length && model_name && (!is_mobile || downloadOnMobile(model_name))"
 			class="text-with-icon">
 				<i class="icon-eye-slash"></i>
@@ -197,7 +207,7 @@
 			</p>
 			<div
 			v-else>
-				<p 
+				<p
 				class="text-with-icon">
 					<i class="icon-exclamation"></i>
 					No se descargaron {{ plural(model_name) }} para optimizar el rendimiento en este dispositivo
@@ -216,7 +226,7 @@
 		<b-skeleton-table
 		class="s-2 b-r-1 animate__animated animate__fadeIn"
 		v-else
-		:rows="10" 
+		:rows="10"
 		:columns="columns"
 		:table-props="skeleton_props"
 		></b-skeleton-table>
@@ -366,7 +376,7 @@ export default {
 						}
 					}
 					return 'single'
-				} 
+				}
 			}
 			return this.select_mode
 		},
@@ -397,7 +407,7 @@ export default {
 				key: 'edit',
 				label: '',
 			})
-			return fields 
+			return fields
 		},
 		items() {
 			let items = []
@@ -430,7 +440,7 @@ export default {
 		},
 		width(prop) {
 			return ''
-			
+
 			if (prop.table_width && prop.table_width == 'lg') {
 				return 'width-300'
 			}
@@ -440,9 +450,9 @@ export default {
 			if (this.model_name) {
 				let prop = this.getBorderColorProperty(this.model_name)
 				if (prop && model[this.modelNameFromRelationKey(prop)]) {
-					let color = model[this.modelNameFromRelationKey(prop)].color 
+					let color = model[this.modelNameFromRelationKey(prop)].color
 					console.log(color.variant)
-					return color.variant 
+					return color.variant
 				}
 			}
 			return ''
@@ -491,7 +501,7 @@ export default {
 		},
 		isTheSameSelection(items) {
 			if (this.last_selection.length == items.length) {
-				return true 
+				return true
 			} else {
 				return false
 			}
@@ -517,19 +527,19 @@ export default {
 					}
 				})
 			}
-			return props 
-		},	
+			return props
+		},
 		toCellName(slot) {
 			return `cell(${slot})`
 		},
 		showInput(prop, model) {
 			if (prop.show_in_input_if) {
 				if (prop.show_in_input_if[1] == '<') {
-					return model[prop.show_in_input_if[0]] < prop.show_in_input_if[2] 
+					return model[prop.show_in_input_if[0]] < prop.show_in_input_if[2]
 				} else if (prop.show_in_input_if[1] == '=') {
-					return model[prop.show_in_input_if[0]] == prop.show_in_input_if[2] 
+					return model[prop.show_in_input_if[0]] == prop.show_in_input_if[2]
 				} else if (prop.show_in_input_if[1] == '>') {
-					return model[prop.show_in_input_if[0]] > prop.show_in_input_if[2] 
+					return model[prop.show_in_input_if[0]] > prop.show_in_input_if[2]
 				}
 			}
 		},
@@ -558,46 +568,46 @@ export default {
 </script>
 <style lang="sass">
 @import '@/sass/_custom.scss'
-.table 
+.table
 	// background: #FFF
-	img 
+	img
 		width: 100px
 	input, textarea
 		width: 200px
-	th, td 
+	th, td
 		text-align: left
 		@if ($table_font_small)
 			font-size: 1em
 			padding: 5px !important
 
-	th 
+	th
 		white-space: nowrap
 
 	tr
 		@if ($theme == 'dark')
 			color: rgb(189, 189, 189)
-			&:hover 
+			&:hover
 				border: 2px solid $blue !important
-				& > td 
+				& > td
 					color: #FFF !important
 					background-color: rgba(0,0,0,.7) !important
- 
+
 		@else
 			color: #000
 
-	.b-table-row-selected 
+	.b-table-row-selected
 		border: 2px solid $blue !important
-		td 
+		td
 			color: #FFF !important
 			background-color: rgba(0,0,0,.7) !important
 
 
-	// th, td 
+	// th, td
 	// 	white-space: nowrap
 	// 	font-weight: bold
 	// 	text-align: left
-		
-		th 
+
+		th
 			padding: 10px 15px
 			font-size: 17px
 			position: sticky
@@ -613,10 +623,10 @@ export default {
 				background: rgb(189, 189, 189)
 
 
-		td 
+		td
 			padding: 5px 15px
 			line-height: 25px
-			span 
+			span
 				word-wrap: break-word
 				// max-width: 200px
 
@@ -627,13 +637,13 @@ export default {
 				border-bottom: 1px solid rgba(255,255,255,.2)
 			@else
 				background: rgb(189, 189, 189)
-				
+
 
 	.width-300
 		display: inline-block
 		width: 300px
 
-	.cont-edit 
+	.cont-edit
 		display: flex
 		flex-direction: row
 		justify-content: center
@@ -648,9 +658,9 @@ export default {
 				justify-content: center
 			// .pivot-input
 			// 	width: 200px
-	.input-sm 
+	.input-sm
 		width: 70px !important
-	.input-md 
+	.input-md
 		width: 150px !important
 	.input-lg
 		width: 300px !important
