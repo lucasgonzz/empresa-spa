@@ -27,6 +27,7 @@ export default {
 	props: {
 		sale_modification: Object,
 	},
+	// Se agregaron las propiedades _rowVariant para colorear las filas según los cambios en los artículos (agregados, eliminados o cantidad modificada).
 	computed: {
 		fields() {
 			return [
@@ -45,14 +46,21 @@ export default {
 		articulos_antes_de_actualizar() {
 			let items = []
 			if (this.sale_modification) {
-				this.sale_modification.articulos_antes_de_actualizar.forEach(article => {
-					items.push({
-
-						nombre : article.name,
-						cantidad : article.pivot.amount,
-						unidades_chequeadas : article.pivot.checked_amount,
-					
-					})
+				this.sale_modification.articulos_antes_de_actualizar.forEach(article_antes => {
+					let item = {
+						nombre : article_antes.name,
+						cantidad : article_antes.pivot.amount,
+						unidades_chequeadas : article_antes.pivot.checked_amount,
+					}
+					let article_despues = this.sale_modification.articulos_despues_de_actualizar.find(article => article.id == article_antes.id)
+					if (article_despues) {
+						if (article_despues.pivot.amount != article_antes.pivot.amount) {
+							item._rowVariant = 'warning'
+						}
+					} else {
+						item._rowVariant = 'danger'
+					}
+					items.push(item)
 				})
 			} 
 			return items
@@ -60,16 +68,23 @@ export default {
 		articulos_despues_de_actualizar() {
 			let items = []
 			if (this.sale_modification) {
-				this.sale_modification.articulos_despues_de_actualizar.forEach(article => {
-					items.push({
-
-						nombre : article.name,
-						cantidad : article.pivot.amount,
-						unidades_chequeadas : article.pivot.checked_amount,
-					
-					})
+				this.sale_modification.articulos_despues_de_actualizar.forEach(article_despues => {
+					let item = {
+						nombre : article_despues.name,
+						cantidad : article_despues.pivot.amount,
+						unidades_chequeadas : article_despues.pivot.checked_amount,
+					}
+					let article_antes = this.sale_modification.articulos_antes_de_actualizar.find(article => article.id == article_despues.id)
+					if (article_antes) {
+						if (article_antes.pivot.amount != article_despues.pivot.amount) {
+							item._rowVariant = 'warning'
+						}
+					} else {
+						item._rowVariant = 'success'
+					}
+					items.push(item)
 				})
-			}
+			} 
 			return items
 		},
 		title() {
