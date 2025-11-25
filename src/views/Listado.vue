@@ -88,6 +88,11 @@
 		</template>
 
 
+		<template #table-prop-images="props">
+			<google-btn
+			:article="props.model"></google-btn>
+		</template>
+
 		<template #table-prop-price="props">
 			<article-price
 			:article="props.model"></article-price> 
@@ -176,6 +181,7 @@ export default {
 
 		AddressStock: () => import('@/components/listado/components/table-props/address-stock/Index'),
 		HorizontalNav: () => import('@/components/listado/components/horizontal-nav/Index'),
+		GoogleBtn: () => import('@/components/listado/components/table-props/google-btn/Index'),
 	}, 
 	beforeRouteLeave(to, from, next) {
 		this.$store.commit('article/setSelected', [])

@@ -10,7 +10,17 @@
 	    backdrop
 	    btn_text="Entendido"
 	    text="Realice el pago del sistema para continuar usando el servicio"
-	    id="aviso-vencido"></confirm>
+	    id="aviso-vencido">
+	    	<template #footer>
+	    		<b-button
+	    		@click="update"
+	    		block 
+	    		class="m-t-15"
+	    		variant="outline-primary">
+	    			Ya pague
+	    		</b-button>
+	    	</template>
+	    </confirm>
 
 		<div
 		class="p-l-15"
@@ -66,6 +76,9 @@ export default {
 		Confirm: () => import('@/common-vue/components/Confirm'),
 	},
 	methods: {
+		update() {
+			location.reload()
+		},
 		mostrar_alerta() {
 			if (this.days_before_expire < 1) {
 

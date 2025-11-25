@@ -32,6 +32,7 @@
 
     	<b-form-group
     	v-if="selected_sales.length == 1"
+    	:description="description_importe_a_facturar"
     	label="Monto a Facturar">
 	    	<b-form-input
 	    	placeholder="Monto a facturar"
@@ -64,6 +65,13 @@ export default {
 				return true 
 			}
 			return false
+		},
+		description_importe_a_facturar() {
+			let text = ''
+			if (this.selected_sales.length == 1) {
+				text = 'IMPORTANTE: Completar SOLO SI quiere facturar un importe distinto al importe original de la venta, en este caso, si lo deja en blanco se facturaran '+this.price(this.selected_sales[0].total)
+			}
+			return text
 		},
 		afip_information() {
 			return this.$store.state.afip_information.models 

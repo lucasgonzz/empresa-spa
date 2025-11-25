@@ -6,7 +6,7 @@ export default {
 			not_show_on_form: true,
 		},
 		{
-			text: 'Descripcion',
+			text: 'Desc',
 			key: 'description',
 			type: 'text',
 		},
@@ -20,14 +20,14 @@ export default {
 			},
 			function: 'btn_comision_venta'
 		},
+		// {
+		// 	text: 'Vendedor',
+		// 	key: 'seller_id',
+		// 	type: 'text',
+		// 	use_store_models: true,
+		// },
 		{
-			text: 'Vendedor',
-			key: 'seller_id',
-			type: 'text',
-			use_store_models: true,
-		},
-		{
-			text: 'Porcentaje',
+			text: '%',
 			key: 'percentage',
 			type: 'text',
 		},
