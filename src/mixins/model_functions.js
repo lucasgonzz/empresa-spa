@@ -13,6 +13,16 @@ export default {
         },
     },
 	methods: {
+
+        movimiento_entre_cajas_options(prop, caja) {
+            let text = caja.name 
+
+            if (caja.employee_id) {
+                text += ' '+ caja.employee ? caja.employee.name : ''
+            }
+            return text
+        },
+
         stock_suggestionGetColor(model) {
             return this.syncs_meli_color(model)
         },

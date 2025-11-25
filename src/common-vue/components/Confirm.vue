@@ -11,6 +11,8 @@
 	@clicked="confirm"
 	:text="btn_text"
 	:loader="loading"></btn-loader>
+	<slot name="footer">
+	</slot>
 </b-modal>
 </template>
 <script>

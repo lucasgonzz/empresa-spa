@@ -91,9 +91,10 @@ export default {
 			text: 'Vendedor',
 			key: 'seller_id',
 			use_store_models: true,
+			type: 'select',
 			only_show: true,
 			not_show: true,
-			v_if: ['seller_id', '!=', null],
+			// if_has_extencion: 'indicar_vendedor_en_vender',
 		},
 		{
 			text: 'Cuotas',
