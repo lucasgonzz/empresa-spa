@@ -38,7 +38,16 @@ export default {
 			type: 'select',
 			key: 'moneda_id',
 			only_show: true,
+			if_has_extencion: 'ventas_en_dolares',
 			use_store_models: true,
+		},
+		{
+			text: 'Cotizacion USD',
+			type: 'number',
+			key: 'valor_dolar',
+			only_show: true,
+			if_has_extencion: 'ventas_en_dolares',
+			is_price: true,
 		},
 		{
 			text: 'Hora',
@@ -82,9 +91,10 @@ export default {
 			text: 'Vendedor',
 			key: 'seller_id',
 			use_store_models: true,
+			type: 'select',
 			only_show: true,
 			not_show: true,
-			v_if: ['seller_id', '!=', null],
+			// if_has_extencion: 'indicar_vendedor_en_vender',
 		},
 		{
 			text: 'Cuotas',

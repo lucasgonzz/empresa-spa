@@ -94,6 +94,7 @@ export default {
 					&& ( 
 						this.field.type == 'number'
 						|| this.field.type == 'text'
+						|| this.field.type == 'textarea'
 						|| this.field.type == 'search'
 						|| this.field.type == 'date'
 						|| this.field.type == 'select'

@@ -5,12 +5,16 @@
 show_filter_modal
 show_previus_days
 model_name="expense">
+	<template #display_top>
+		<total-expenses></total-expenses>
+	</template>
 </view-component>
 </template>
 <script>
 export default {
 	components: {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
+		TotalExpenses: () => import('@/components/expenses/components/TotalExpenses'),
 	},
 	methods: {
 		modelSaved(expense) {

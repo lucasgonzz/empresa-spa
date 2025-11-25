@@ -1,6 +1,6 @@
 <template>
 	<div
-	class="j-start align-start">
+	class="j-start align-start m-t-30">
 		<h5>
 			Unidades totales vendidas: <strong>{{ cantidad_total }}</strong>
 		</h5>

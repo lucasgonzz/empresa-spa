@@ -132,22 +132,29 @@ export default {
         },
 
         get_cajas_abiertas_options() {
-             let cajas_abiertas = this.$store.state.caja.models.filter(caja => caja.abierta)
+            let cajas_abiertas = this.$store.state.caja.models.filter(caja => caja.abierta)
 
-             let options = []
-             options.push({
-                 value: 0,
-                 text: 'Seleccione Caja'
-             })
+            let options = []
+            options.push({
+                value: 0,
+                text: 'Seleccione Caja'
+            })
 
-             cajas_abiertas.forEach(caja => {
-                 options.push({
-                     value: caja.id,
-                     text: caja.name
-                 })
-             })
+            cajas_abiertas.forEach(caja => {
 
-             return options
+                let text = caja.name 
+
+                if (caja.employee) {
+                    text += ' ' + caja.employee.name 
+                }
+
+                options.push({
+                    value: caja.id,
+                    text: text
+                })
+            })
+
+            return options
         },
         get_store_model(model_name, model_id) {
             let model = this.$store.state[model_name].models.find(_model => {
