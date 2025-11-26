@@ -155,15 +155,15 @@ export default {
 			if_has_extencion: 'costo_en_dolares',
 			not_show: true,
 		},
-		// {
-		// 	// text: 'costo_mano_de_obra',
-		// 	key: 'costo_mano_de_obra',
-		// 	type_to_update: 'number',
-		// 	type: 'text',
-		// 	is_price: true,
-		// 	if_has_extencion: 'production',
-		// 	not_show: true,
-		// },
+		{
+			// text: 'costo_mano_de_obra',
+			key: 'costo_mano_de_obra',
+			type_to_update: 'number',
+			type: 'text',
+			is_price: true,
+			if_has_extencion: 'production',
+			not_show: true,
+		},
 		{
 			text: 'U individuales',
 			key: 'unidades_individuales',
@@ -516,6 +516,57 @@ export default {
 			type: 'checkbox',
 			not_show: true,
 			if_has_extencion: 'online',
+		},
+
+
+		{
+			group_title: 'Tienda Nube',
+			if_has_extencion: 'usa_tienda_nube',
+		},
+		{
+			text: 'Disponible en Tienda Nube',
+			key: 'disponible_tienda_nube',
+			type: 'checkbox',
+			not_show: true,
+			value: 1,
+			if_has_extencion: 'usa_tienda_nube',
+			description: 'Si se desactiva, no se mostrara en Tienda Nube',
+		},
+		{
+			key: 'precio_promocional',
+			type: 'number',
+			not_show: true,
+			is_price: true,
+			if_has_extencion: 'usa_tienda_nube',
+			description: 'Precio promocional para mostrar solo en Tienda Nube',
+		},
+		{
+			key: 'peso',
+			type: 'number',
+			not_show: true,
+			if_has_extencion: 'usa_tienda_nube',
+			description: 'En Kilogramos'
+		},
+		{
+			key: 'profundidad',
+			type: 'number',
+			not_show: true,
+			if_has_extencion: 'usa_tienda_nube',
+			description: 'En cm'
+		},
+		{
+			key: 'ancho',
+			type: 'number',
+			not_show: true,
+			if_has_extencion: 'usa_tienda_nube',
+			description: 'En cm'
+		},
+		{
+			key: 'alto',
+			type: 'number',
+			not_show: true,
+			if_has_extencion: 'usa_tienda_nube',
+			description: 'En cm'
 		},
 
 

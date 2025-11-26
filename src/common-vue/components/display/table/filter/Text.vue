@@ -1,6 +1,6 @@
 <template>
 	<div 
-	v-if="field.type == 'text'"
+	v-if="field.type == 'text' || field.type == 'textarea'"
 	class="text">
 		<b-form-group>
 			<b-form-input

@@ -208,7 +208,7 @@ import article_price_range from '@/store/article_price_range'
 import turno_caja from '@/store/turno_caja'
 import resumen_caja from '@/store/resumen_caja'
 
-
+import sync_to_tn_article from '@/store/sync_to_tn_article'
 
 
 Vue.use(Vuex)
@@ -422,5 +422,7 @@ export default new Vuex.Store({
 
         turno_caja,
         resumen_caja,
+
+        sync_to_tn_article,
     }
 })

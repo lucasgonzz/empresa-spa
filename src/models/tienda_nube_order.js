@@ -98,6 +98,14 @@ export default {
 						show: true,
 					},
 				],
+				// properties_to_set: [
+				// 	{
+				// 		text: 'Cantidad',
+				// 		key: 'amount',
+				// 		type: 'number',
+				// 		show: true,
+				// 	},
+				// ]
 			}
 		},
 	],

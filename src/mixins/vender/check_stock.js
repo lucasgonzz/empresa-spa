@@ -87,7 +87,11 @@ export default {
 
 							let stock = address.pivot.amount
 
-							if (stock < cantidad_para_vender) {
+							if (stock <= 0) {
+
+								stock_disponible = false 
+								this.$toast.error('No hay stock en '+address.street)
+							} else if (stock < cantidad_para_vender) {
 								
 								stock_disponible = false 
 								this.$toast.error('Solo hay '+stock+' en '+address.street)

@@ -3,10 +3,12 @@ export default {
 		{
 			text: 'Caja ORIGEN',
 			key: 'from_caja_id',
+			// Agrego el nombre del empleado a la caja para que no se confundan
 			get_options_function: 'get_cajas_abiertas_options',
 			type: 'select',
 			store: 'caja',
 			use_store_models: true,
+
 		},
 		{
 			text: 'Caja DESTINO',
@@ -15,6 +17,7 @@ export default {
 			type: 'select',
 			store: 'caja',
 			use_store_models: true,
+
 		},
 		{
 			text: 'Monto',

@@ -155,7 +155,7 @@ export default {
 
 		foco_input_amount(from_mobile) {
 
-			let time = 200
+			let time = 400
 
 			if (from_mobile) {
 				time = 700
