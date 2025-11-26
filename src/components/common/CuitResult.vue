@@ -2,7 +2,7 @@
 	<b-modal
 	:title="title"
 	hide-footer
-	id="afip-client-result-modal">
+	:id="'cuit-result-modal-'+model_name">
 		<div v-if="afip_data">
 			<h4>Resultados de AFIP</h4>
 			<p
@@ -13,23 +13,23 @@
 		</div>
 		<hr>
 		<div
-		v-if="client_model">
-			<h4>Cliente ya existente</h4>
+		v-if="model">
+			<h4>{{ singular(model_name) | capitalize }} ya existente</h4>
 			<p>
-				Nombre en el sistema: {{ client_model.name }}
+				Nombre en el sistema: {{ model.name }}
 			</p>
-			<p v-if="client_model.saldo_pesos">
-				Saldo: {{ price(client_model.saldo_pesos) }}
+			<p v-if="model.saldo_pesos">
+				Saldo: {{ price(model.saldo_pesos) }}
 			</p>
 		</div>
 		<div v-else-if="afip_data">
-			<p>Este cliente no se encuentra registrado en el sistema.</p>
+			<p>Este {{ singular(model_name) }} no se encuentra registrado en el sistema.</p>
 		</div>
 
 		<hr>
 		
 		<b-button
-		v-if="!client_model && afip_data"
+		v-if="!model && afip_data"
 		@click="useData"
 		block
 		variant="primary">
@@ -49,11 +49,12 @@
 export default {
 	props: {
 		afip_data: Object,
-		client_model: Object,
+		model: Object,
+		model_name: String,
 	},
 	computed: {
 		title() {
-			return this.client_model ? 'Cliente ya existente' : 'Resultados de Búsqueda'
+			return this.model ? this.singular(this.model_name)+' ya existente' : 'Resultados de Búsqueda'
 		}
 	},
 	methods: {
@@ -65,7 +66,7 @@ export default {
 			this.close()
 		},
 		close() {
-			this.$bvModal.hide('afip-client-result-modal')
+			this.$bvModal.hide('cuit-result-modal-'+this.model_name)
 		}
 	}
 }

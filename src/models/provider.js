@@ -103,6 +103,7 @@ export default {
 			text: 'Localidad',
 			key: 'location_id',
 			type: 'search',
+      use_store_models: true,
 		},
 		{
 			text: 'IVA',

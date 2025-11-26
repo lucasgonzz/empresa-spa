@@ -147,7 +147,7 @@
 											v-model="model[prop.key]"></b-form-input>
 											<!-- FUNCIONALIDAD DE SEARCH POR CUIT PARA CLIENTES Y PODER CREAR CLIENTE CON LOS DATOS DE CUIT -->
 											<b-button
-											v-if="model_name == 'client' && prop.key == 'cuit'"
+											v-if="prop.key == 'cuit'"
 											@click="searchCUIT"
 											class="m-l-5"
 											variant="primary">
@@ -353,10 +353,11 @@
 		
 		<slot :model="model"></slot>
 
-		<afip-client-result
+		<cuit-result
 		@use-data="useAfipData"
 		:afip_data="afip_result_data"
-		:client_model="afip_result_client_model"></afip-client-result>
+		:model="afip_result_model"
+		:model_name="model_name"></cuit-result>
 
 		<!-- <slot 
 		v-if="!from_has_many"
@@ -446,7 +447,7 @@ export default {
 			props_to_show_in_belongs_to_many: [],
 
 			afip_result_data: null,
-			afip_result_client_model: null,
+			afip_result_model: null,
 		}
 	},
 	computed: {
@@ -465,15 +466,17 @@ export default {
 	},
 	methods: {
 		searchCUIT() {
-			this.$store.dispatch('search_by_cuit/searchByCUIT', this.model.cuit)
+			this.$store.dispatch('search_by_cuit/searchByCUIT', {
+				cuit: this.model.cuit,
+				model_name: this.model_name,
+			})
 			.then(data => {
 				if (data.hubo_un_error) {
 					this.$toast.error('Afip dice: '+data.error)
 				} else {
 					this.afip_result_data = data.afip_data
-					this.afip_result_client_model = data.client_model
-					console.log('this.afip_result_client_model', this.afip_result_client_model);
-					this.$bvModal.show('afip-client-result-modal')
+					this.afip_result_model = data.model
+					this.$bvModal.show('cuit-result-modal-'+this.model_name)
 				}
 			})
 			.catch(err => {
@@ -491,7 +494,7 @@ export default {
 		            if (afip_data.provincia) {
 		                new_model.provincia_id = await this.findOrCreateRelation('provincia', afip_data.provincia);
 		            }
-		            
+		            console.log('afip_data', afip_data);
 		            if (afip_data.localidad) {
 		                new_model.location_id = await this.findOrCreateRelation('location', afip_data.localidad);
 		            }
@@ -904,7 +907,7 @@ export default {
 
 	},
 	components: {
-		AfipClientResult: () => import('@/components/client/components/clients/CuitClientResult'),
+		CuitResult: () => import('@/components/common/CuitResult'),
 		ModelComponent: () => import('@/common-vue/components/model/Index'),
 		GoogleGeocoder: () => import('@/common-vue/components/model/google-geocoder/Index'),
 		SearchComponent: () => import('@/common-vue/components/search/Index'),
