@@ -145,6 +145,14 @@
 											:type="prop.type"
 											@keyup.enter="clickEnter(prop)"
 											v-model="model[prop.key]"></b-form-input>
+											<!-- FUNCIONALIDAD DE SEARCH POR CUIT PARA CLIENTES Y PODER CREAR CLIENTE CON LOS DATOS DE CUIT -->
+											<b-button
+											v-if="model_name == 'client' && prop.key == 'cuit'"
+											@click="searchCUIT"
+											class="m-l-5"
+											variant="primary">
+												<i class="icon-search"></i>
+											</b-button>
 
 											<bar-code-scanner
 											class="m-l-5"
@@ -345,6 +353,11 @@
 		
 		<slot :model="model"></slot>
 
+		<afip-client-result
+		@use-data="useAfipData"
+		:afip_data="afip_result_data"
+		:client_model="afip_result_client_model"></afip-client-result>
+
 		<!-- <slot 
 		v-if="!from_has_many"
 		name="buttons">
@@ -431,9 +444,15 @@ export default {
 			loading: false,
 			saving_belongs_to_many: false,
 			props_to_show_in_belongs_to_many: [],
+
+			afip_result_data: null,
+			afip_result_client_model: null,
 		}
 	},
 	computed: {
+		iva_conditions() {
+			return this.$store.state.iva_condition.models
+		},
 		_show_btn_delete() {
 			if (this.show_btn_delete && (this.check_can_delete || this.check_permissions)) {
 				return this.can(this.model_name+'.delete')
@@ -445,7 +464,65 @@ export default {
 		},
 	},
 	methods: {
-		search_from_api(prop) {
+		searchCUIT() {
+			this.$store.dispatch('search_by_cuit/searchByCUIT', this.model.cuit)
+			.then(data => {
+				if (data.hubo_un_error) {
+					this.$toast.error('Afip dice: '+data.error)
+				} else {
+					this.afip_result_data = data.afip_data
+					this.afip_result_client_model = data.client_model
+					console.log('this.afip_result_client_model', this.afip_result_client_model);
+					this.$bvModal.show('afip-client-result-modal')
+				}
+			})
+			.catch(err => {
+				console.log(err)
+				this.$toast.error('Error al buscar CUIT')
+			})
+		},
+		        async useAfipData(afip_data) {
+					console.log('afip_Data', afip_data);
+		            let new_model = { ...this.model };
+		            new_model.name = afip_data.nombre
+		            new_model.razon_social = afip_data.razonSocial
+		            new_model.address = afip_data.direccion
+		
+		            if (afip_data.provincia) {
+		                new_model.provincia_id = await this.findOrCreateRelation('provincia', afip_data.provincia);
+		            }
+		            
+		            if (afip_data.localidad) {
+		                new_model.location_id = await this.findOrCreateRelation('location', afip_data.localidad);
+		            }
+		
+		            
+					new_model.iva_condition_id = afip_data.condicion_iva == 'RESPONSABLE INSCRIPTO' ? 1 : afip_data.condicion_iva == 'MONOTRIBUTO' ? 2 : 3
+					
+		            this.setModel(new_model, this.model_name, [], false);
+		        },
+		        async findOrCreateRelation(modelName, name) {
+		            if (!name) {
+		                return null;
+		            }
+		
+		            let modelInStore = this.$store.state[modelName].models.find(m => m.name.toLowerCase() == name.toLowerCase());
+		
+		            if (modelInStore) {
+		                return modelInStore.id;
+		            } else {
+		                try {
+		                    const res = await this.$api.post(`/${modelName}`, { name: name });
+		                    this.$store.commit(`${modelName}/add`, res.data.model);
+		                    this.$toast.success(`${this.capitalize(modelName)} "${name}" se ha creado`);
+		                    return res.data.model.id;
+		                } catch (err) {
+		                    console.error(`Error creating ${modelName}:`, err);
+		                    this.$toast.error(`Error al crear ${modelName}`);
+		                    return null;
+		                }
+		            }
+		        },		search_from_api(prop) {
 			if (prop.search_from_api) {
 				return true
 			}
@@ -827,6 +904,7 @@ export default {
 
 	},
 	components: {
+		AfipClientResult: () => import('@/components/client/components/clients/CuitClientResult'),
 		ModelComponent: () => import('@/common-vue/components/model/Index'),
 		GoogleGeocoder: () => import('@/common-vue/components/model/google-geocoder/Index'),
 		SearchComponent: () => import('@/common-vue/components/search/Index'),
