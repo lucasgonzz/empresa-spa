@@ -9,13 +9,16 @@
 	size="lg"
 	title="Historial de importaciones"
 	id="import-history">
+	
 		<div 
 		v-if="loading"
 		class="all-center-md">
 			<b-spinner
 			variant="primary"></b-spinner>
 		</div>
+
 		<b-table
+		responsive
 		head-variant="dark"
 		v-else
 		:fields="fields"
@@ -42,11 +45,22 @@
 				@click="to_excel(models[data.index])">Excel</b-button>
 			</template>
 
+			<template #cell(columnas)="data">
+				<p
+				class="m-0"
+				v-if="a"
+				v-for="(a, b) in JSON.parse(models[data.index].columnas)">
+					{{b}}: {{ a }}
+				</p>
+			</template>
+
 			<template #cell(observations)="data">
 				<b-form-textarea
 				:column="15"
 				v-model="models[data.index].observations"></b-form-textarea>
 			</template>
+
+
 		</b-table>
 	</b-modal>
 </div>
@@ -83,8 +97,11 @@ export default {
 					articulos_creados: model.articulos_creados,
 					articulos_actualizados: model.articulos_actualizados,
 					error_message: model.error_message,
+					operacion: model.operacion_a_realizar,
+					actualizar_otro_proveedor: model.no_actualizar_otro_proveedor ? 'No' : 'Si',
 					provider_id: model.provider_id ? this.getProvider(model) : null,
 					employee_id: model.user_id == model.employee_id ? this.user.name : this.getModelFromId('employee', model.employee_id).name,
+					columnas: model.columnas,
 					link_excel: null,
 				})
 			})
@@ -95,6 +112,10 @@ export default {
 				{
 					key: 'created_at',
 					label: 'Fecha',
+				},
+				{
+					key: 'employee_id',
+					label: 'Realizado por',
 				},
 				{
 					key: 'created_models',
@@ -109,21 +130,27 @@ export default {
 					label: 'Proveedor',
 				},
 				{
-					key: 'error_message',
-					label: 'Errores',
+					key: 'operacion',
 				},
 				{
-					key: 'employee_id',
-					label: 'Realizado por',
+					key: 'Act. art. de otro proveedor',
+					key: 'actualizar_otro_proveedor',
+				},
+				{
+					key: 'error_message',
+					label: 'Errores',
 				},
 				{
 					key: 'link_excel',
 					label: 'Archivo',
 				},
 				{
-					key: 'observations',
-					label: 'Observaciones',
+					key: 'columnas',
 				},
+				// {
+				// 	key: 'observations',
+				// 	label: 'Observaciones',
+				// },
 			]
 		}
 	},

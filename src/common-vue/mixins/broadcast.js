@@ -76,6 +76,18 @@ export default {
 
                 }
             })
+
+            this.Echo.channel('import_status.'+this.owner_id)
+            .notification((notification) => {
+                console.log(notification)
+                
+                // this.$api.get('import-status/'+notification.import_status_id)
+                // .then(res => {
+
+                    this.$store.commit('import_status/setModel', notification.import_status)
+                // })
+
+            })
 		},
 	}
 }
