@@ -731,16 +731,20 @@ export default {
 		modelsStoreFromName(model_name) {
 			return this.$store.state[model_name].models
 		},
-		propertyText(model, prop, from_pivot = false) {
+		propertyText(model, prop, from_pivot = false, pivot_parent_model = null) {
 			// console.log('propertyText para '+prop.key)
 			if (prop.type == 'images' || prop.type == 'image') {
 				return null
 			}
 			if (prop.function) {
+
 				let value = this.getFunctionValue(prop, model)
+
 				if (prop.is_price) {
-					return this.price(value)
+					value = this.price(value)
 				}
+				value = this._check_moneda(value, prop, model, from_pivot, pivot_parent_model)
+
 				return value
 			}
 			if (prop.belongs_to_many) {
@@ -830,20 +834,26 @@ export default {
 					return this[prop.simbolo_moneda_function](model, model[prop.key])
 				}
 
-				if (prop.check_simbolo_moneda) {
-					// console.log('ENTRO check_simbolo_moneda en prop '+prop.key+' con el model moenda_id: '+model.moneda_id)
-					let prop_to_check = 'moneda_id'
-					let value_equal_to = 2 
+				value = this._check_moneda(value, prop, model, from_pivot, pivot_parent_model)
 
-					if (prop.prop_to_check_in_simbolo_moneda) {
-						prop_to_check = prop.prop_to_check_in_simbolo_moneda.key
-						value_equal_to = prop.prop_to_check_in_simbolo_moneda.equal_to
-					}
+				// if (prop.check_simbolo_moneda) {
+				// 	console.log('ENTRO check_simbolo_moneda en prop '+prop.key+' con el model moneda_id: '+model.moneda_id)
+				// 	let prop_to_check = 'moneda_id'
+				// 	let value_equal_to = 2 
 
-					if (model[prop_to_check] == value_equal_to) {
-						value = 'USD '+value
-					}
-				}
+				// 	if (prop.prop_to_check_in_simbolo_moneda) {
+				// 		prop_to_check = prop.prop_to_check_in_simbolo_moneda.key
+				// 		value_equal_to = prop.prop_to_check_in_simbolo_moneda.equal_to
+				// 	}
+
+				// 	if (from_pivot && pivot_parent_model) {
+				// 		model = pivot_parent_model
+				// 	} 
+
+				// 	if (model[prop_to_check] == value_equal_to) {
+				// 		value = 'USD '+value
+				// 	}
+				// }
 				return value
 			}
 			if (prop.type == 'search') {
@@ -876,6 +886,38 @@ export default {
 			}
 			return model[prop.key]
 			// return model[prop.key].replace(/\n/g, '<br>')
+		},
+		_check_moneda(value, prop, model, from_pivot, pivot_parent_model) {
+
+			if (prop.check_simbolo_moneda) {
+				console.log('ENTRO check_simbolo_moneda en prop '+prop.key+' con el model moneda_id: '+model.moneda_id)
+				let prop_to_check = 'moneda_id'
+				let value_equal_to = 2 
+
+				if (prop.prop_to_check_in_simbolo_moneda) {
+					prop_to_check = prop.prop_to_check_in_simbolo_moneda.key
+					value_equal_to = prop.prop_to_check_in_simbolo_moneda.equal_to
+				}
+
+
+				/*
+					Si es from_pivot, y esta pivot_parent_model, uso ese para tener como referencia al padre, 
+					por ejemplo para obtener "moneda_id" del Sale model en lugar del article model
+				*/
+				if (from_pivot && pivot_parent_model) {
+					model = pivot_parent_model
+				} 
+
+				if (model[prop_to_check] == value_equal_to) {
+					// Le quito el simbolo $
+					value = value.substring(1)
+
+					value = 'USD '+value
+				}
+			}
+			console.log('_check_moneda:::')
+			console.log(value)
+			return value 
 		},
 		article_simbolo_moneda(model, price) {
 			if (model.cost_in_dollars) {

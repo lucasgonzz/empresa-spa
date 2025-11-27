@@ -62,17 +62,32 @@ export default {
 					// group_name: 'Ingresos',
 					cards: [
 						{
-							text: 'Ingresos brutos',
+							text: 'Total vendido Bruto',
 							img: 'ventas',
 							value: this.price(this.model.total_vendido, false),
 							description: 'Total vendido, haya sido o no pagado',
 						},
 						{
-							text: 'Ingresos brutos USD',
+							text: 'Total vendido Bruto USD',
 							if_has_extencion: 'ventas_en_dolares',
 							img: 'ventas',
 							value: this.price(this.model.total_vendido_usd, false),
 							description: 'Total vendido, haya sido o no pagado',
+						},
+						{
+							text: 'Total vendido Neto',
+							if_mayor_0: 'total_devolucion',
+							img: 'ventas',
+							value: this.price(this.model.total_vendido - this.model.total_devolucion, false),
+							description: 'Total vendido, haya sido o no pagado - devoluciones (notas de credito)',
+						},
+						{
+							text: 'Total vendido Neto USD',
+							if_has_extencion: 'ventas_en_dolares',
+							if_mayor_0: 'total_devolucion_usd',
+							img: 'ventas',
+							value: this.price(this.model.total_vendido_usd - this.model.total_devolucion_usd, false),
+							description: 'Total vendido, haya sido o no pagado - devoluciones (notas de credito)',
 						},
 						{
 							text: 'Pagado en mostrador',
@@ -87,7 +102,7 @@ export default {
 							img: 'pagado_mostrador2',
 							value: this.price(this.model.total_pagado_mostrador_usd, false),
 							description: 'Total vendido y pagado en el momento, sin pasar a c/c',
-							extra: this.porcentaje_mostrador,
+							extra: this.porcentaje_mostrador_usd,
 						},
 						{
 							text: 'A cuentas corrientes',
@@ -102,7 +117,7 @@ export default {
 							img: 'a_cuentas_corrientes',
 							value: this.price(this.model.total_vendido_a_cuenta_corriente_usd, false),
 							description: 'Total vendido a tus clientes, pero que no se pago',
-							extra: this.porcentaje_a_cuenta_corriente,
+							extra: this.porcentaje_a_cuenta_corriente_usd,
 						},
 						{
 							text: 'Pagos de clientes (ctas ctes)',
@@ -185,6 +200,13 @@ export default {
 							value: this.price(this.model.rentabilidad, false),
 							description: 'UTILIDAD menos los GASTOS',
 						},
+						{
+							text: 'Ingresos Netos USD',
+							if_has_extencion: 'ventas_en_dolares',
+							img: 'rentabilidad',
+							value: this.price(this.model.rentabilidad_usd, false),
+							description: 'UTILIDAD USD menos los GASTOS USD',
+						},
 					],
 				},
 				// {
@@ -214,10 +236,24 @@ export default {
 							description: 'Suma de los GASTOS',
 						},
 						{
+							text: 'Gastos USD',
+							if_has_extencion: 'ventas_en_dolares',
+							img: 'gastos',
+							value: this.price(this.model.total_gastos_usd, false),
+							description: 'Suma de los GASTOS en USD',
+						},
+						{
 							text: 'Devoluciones',
 							img: 'devoluciones', 
 							value: this.price(this.model.total_devolucion, false),
 							description: 'Sumatoria de las devoluciones de tus clientes (notas de credito)',
+						},
+						{
+							text: 'Devoluciones USD',
+							if_has_extencion: 'ventas_en_dolares',
+							img: 'devoluciones', 
+							value: this.price(this.model.total_devolucion_usd, false),
+							description: 'Sumatoria de las devoluciones de tus clientes (notas de credito) en USD',
 						},
 					],
 				},
@@ -350,12 +386,30 @@ export default {
 
 			return '('+ Math.round(porcentaje) +'%)'
 		},
+		porcentaje_mostrador_usd() {
+			if (this.model.total_vendido_usd == 0) {
+				return null
+			}
+
+			let porcentaje = Number(this.model.total_pagado_mostrador_usd) * 100 / Number(this.model.total_vendido_usd)
+
+			return '('+ Math.round(porcentaje) +'%)'
+		},
 		porcentaje_a_cuenta_corriente() {
 			if (this.model.total_vendido == 0) {
 				return null
 			}
 
 			let porcentaje = Number(this.model.total_vendido_a_cuenta_corriente) * 100 / Number(this.model.total_vendido)
+			
+			return '('+ Math.round(porcentaje) +'%)'
+		},
+		porcentaje_a_cuenta_corriente_usd() {
+			if (this.model.total_vendido_usd == 0) {
+				return null
+			}
+
+			let porcentaje = Number(this.model.total_vendido_a_cuenta_corriente_usd) * 100 / Number(this.model.total_vendido_usd)
 			
 			return '('+ Math.round(porcentaje) +'%)'
 		},
@@ -431,10 +485,17 @@ export default {
 			return require('@/assets/iconos-reportes/'+card.img+'.png') 
 		},
 		show(card) {
-			if (card.if_has_extencion) {
-				return this.hasExtencion(card.if_has_extencion)
+			let show = true
+			
+			if (card.if_mayor_0) {
+				show = this.model[card.if_mayor_0] > 0
 			}
-			return true
+
+			if (show && card.if_has_extencion) {
+				show = this.hasExtencion(card.if_has_extencion)
+			}
+
+			return show
 		},
 		call_method(btn) {
 			this[btn.function]()
