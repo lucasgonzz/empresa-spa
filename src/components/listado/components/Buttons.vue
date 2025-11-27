@@ -122,6 +122,17 @@ class="buttons-listado">
 		</b-badge>
 		Meli
 	</b-button>
+
+
+	<!-- TiendaNube -->
+	<b-button 
+	v-if="hasExtencion('usa_tienda_nube')"
+	variant="success"
+	size="sm"
+	@click.stop="show_tienda_nube"
+	class="m-l-10">
+		<img src="@/assets/nuevos-nav-icons/tienda_nube.png" alt="">
+	</b-button>
 </div>
 </template>
 <script>
@@ -194,6 +205,10 @@ export default {
 
 			}
 
+		},
+		show_tienda_nube() {
+			let link = this.owner.tienda_nube_url+'/productos/'+this.model.handle
+			window.open(link)
 		},
 		show_address_movement() {
 			this.setModel(this.model, 'article', [], false)
@@ -294,4 +309,7 @@ export default {
 <style lang="sass">
 .buttons-listado
 	margin-left: 15px
+
+	img  	
+		width: 20px !important
 </style>

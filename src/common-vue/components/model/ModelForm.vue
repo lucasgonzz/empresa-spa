@@ -249,10 +249,13 @@
 										{{ getFunctionValue(prop, model) }}
 									</p>
 
+
+									<!-- en pivot_parent_model le paso el model padre, para que por ejemplo en el model Sale, en la tabla de articles, tenga acceso al Sale model (el parent_model) -->
 									<div
 									class="m-l-15"
 							    	v-if="prop.belongs_to_many && !prop.belongs_to_many.related_with_all && (!prop.type || prop.type != 'checkbox')">
 										<table-component
+										:pivot_parent_model="model"
 										:loading="false"
 										:models="model[prop.key]"
 										:model_name="prop.store"

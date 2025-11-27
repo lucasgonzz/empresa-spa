@@ -102,6 +102,7 @@ export default {
 				'articulo_margen_de_ganancia_segun_lista_de_precios',
 				'lista_de_precios_por_categoria',
 			],
+			use_to_update: true,
 		},
 		{
 			text: 'PLU',
@@ -222,6 +223,7 @@ export default {
 			type: 'checkbox',
 			not_show: true,
 			value: 1,
+			use_to_update: true,
 		},
 		{
 			text: 'Iva',
@@ -431,6 +433,7 @@ export default {
 			type: 'select',
 			not_show: true,
 			use_store_models: true,
+			value: 1,
 		},
 
 
@@ -519,6 +522,9 @@ export default {
 		},
 
 
+
+
+		// Tienda Nube
 		{
 			group_title: 'Tienda Nube',
 			if_has_extencion: 'usa_tienda_nube',
@@ -531,6 +537,62 @@ export default {
 			value: 1,
 			if_has_extencion: 'usa_tienda_nube',
 			description: 'Si se desactiva, no se mostrara en Tienda Nube',
+			use_to_update: true,
+		},
+
+		{
+			text: 'Titulo para SEO',
+			key: 'seo_title',
+			type: 'text',
+			not_show: true,
+			if_has_extencion: 'usa_tienda_nube',
+			description: 'Mejorá la visibilidad de este producto en Google, marketplaces y redes sociales, max 70 caracteres',
+		},
+		{
+			text: 'Descripcion para SEO',
+			key: 'seo_description',
+			type: 'text',
+			not_show: true,
+			if_has_extencion: 'usa_tienda_nube',
+			description: 'Mejorá la visibilidad de este producto en Google, marketplaces y redes sociales, max 320 caracteres',
+		},
+		{
+			text: 'Tags',
+			key: 'tags',
+			type: 'search',
+			store: 'tag',
+			not_show: true,
+			if_has_extencion: 'usa_tienda_nube',
+			description: 'Agregá palabras clave para ayudar a tus clientes a encontrar este producto en la tienda.',
+			belongs_to_many: {
+				model_name: 'tag',
+				props_to_show: [
+					{
+						text: 'Nombre',
+						key: 'name',
+					},
+				],
+			},
+
+		},
+
+
+		{
+			text: 'Requiere envio',
+			key: 'requires_shipping',
+			type: 'checkbox',
+			not_show: true,
+			value: 0,
+			if_has_extencion: 'usa_tienda_nube',
+			description: 'Activalo si el producto es fisico, desactivalo si el producto es digital'
+		},
+		{
+			text: 'Envio Gratis',
+			key: 'free_shipping',
+			type: 'checkbox',
+			not_show: true,
+			value: 0,
+			if_has_extencion: 'usa_tienda_nube',
 		},
 		{
 			key: 'precio_promocional',
@@ -539,6 +601,13 @@ export default {
 			is_price: true,
 			if_has_extencion: 'usa_tienda_nube',
 			description: 'Precio promocional para mostrar solo en Tienda Nube',
+		},
+		{
+			key: 'video_url',
+			type: 'text',
+			not_show: true,
+			if_has_extencion: 'usa_tienda_nube',
+			description: 'Link al video del producto',
 		},
 		{
 			key: 'peso',

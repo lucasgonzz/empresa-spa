@@ -209,6 +209,7 @@ import turno_caja from '@/store/turno_caja'
 import resumen_caja from '@/store/resumen_caja'
 
 import sync_to_tn_article from '@/store/sync_to_tn_article'
+import tag from '@/store/tag'
 
 
 Vue.use(Vuex)
@@ -424,5 +425,6 @@ export default new Vuex.Store({
         resumen_caja,
 
         sync_to_tn_article,
+        tag,
     }
 })
