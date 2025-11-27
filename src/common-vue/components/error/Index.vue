@@ -65,10 +65,10 @@ export default {
 						duration: 10000
 					})
 
-		        	if (error.response.data.message != 'Unauthenticated.' && this.authenticated && error.response && error.response.data && error.response.data.message) {
-			        	this.$bvModal.show('error')
-			        	this.sendError(error)
-		        	}
+		        	// if (error.response.data.message != 'Unauthenticated.' && this.authenticated && error.response && error.response.data && error.response.data.message) {
+			        // 	this.$bvModal.show('error')
+			        // 	this.sendError(error)
+		        	// }
 
 				} else if (code >= 400 && code < 500) {
 

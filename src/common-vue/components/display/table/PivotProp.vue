@@ -5,7 +5,7 @@
 		class="pivot-input">
 			<p
 			v-if="prop.only_show">
-				{{ propertyText(model, prop, true) }}
+				{{ propertyText(model, prop, true, pivot_parent_model) }}
 			</p>
 			<div
 			v-else>
@@ -69,6 +69,7 @@ export default {
 		model_name: String,
 		index: Number,
 		cont_table_id: String,
+		pivot_parent_model: Object,
 	},
 	methods: {
 		showProp(prop) {

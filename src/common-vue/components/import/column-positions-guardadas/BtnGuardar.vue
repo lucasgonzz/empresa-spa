@@ -50,7 +50,7 @@ export default {
 			console.log(positions)
 
 			this.$api.post('column-position', {
-				  name: this.name,
+				  // name: this.name,
 				  // name: this.column_position_name,
 				  model_name: 'article',
 				  positions: positions,
