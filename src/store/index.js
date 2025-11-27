@@ -426,7 +426,7 @@ export default new Vuex.Store({
         resumen_caja,
 
         sync_to_tn_article,
-        search_by_cuit
+        search_by_cuit,
         tag,
     }
 })
