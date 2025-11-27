@@ -13,6 +13,14 @@ export default {
 			only_show: true,
 		},
 		{
+			text: 'Moneda',
+			key: 'moneda_id',
+			type: 'select',
+			only_show: true,
+			use_store_models: true,
+			if_has_extencion: 'ventas_en_dolares',
+		},
+		{
 			text: 'Cliente',
 			key: 'client_id',
 			use_store_models: true,

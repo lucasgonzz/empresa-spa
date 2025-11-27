@@ -83,52 +83,56 @@ export default {
 		setForm() {
 			this.form = []
 			this.properties_to_update.forEach(prop => {
-				if ((prop.type_to_update && prop.type_to_update == 'number') || prop.type == 'number') {
-					this.form.push({
-						label: 'Disminuir el '+this.propText(prop),
-						key: 'decrement_'+prop.key,
-						type: 'number',
-						placeholder: 'Porcentaje para disminuir '+this.propText(prop),
-						value: '',
-						round: 0,
-					})
-					this.form.push({
-						label: 'Aumentar el '+this.propText(prop),
-						key: 'increment_'+prop.key,
-						type: 'number', 
-						placeholder: 'Porcentaje para aumentar '+this.propText(prop),
-						value: '',
-						round: 0,
-					})
-					this.form.push({
-						label: 'Setear el '+this.propText(prop),
-						key: 'set_'+prop.key,
-						type: 'number', 
-						placeholder: 'Valor para setear '+this.propText(prop),
-						value: '',
-					})
-				} else if (prop.type == 'select') {
-					this.form.push({
-						label: this.propText(prop),
-						key: prop.key, 
-						options: prop.options, 
-						store: this.modelNameFromRelationKey(prop),
-						depends_on: prop.depends_on,
-						type: 'select',
-						value: 0,
-					})
-					// this.form[prop.key] = 0 
-				} else if (prop.type == 'search') {
-					this.form.push({
-						label: this.propText(prop),
-						store: prop.store,
-						depends_on: prop.depends_on,
-						key: prop.key,
-						type: 'search',
-						value: '',
-					})
-					// console.log('search para '+prop.key)
-					// this.form[prop.key] = '' 
+
+				if (this.showProperty(prop)) {
+
+					if ((prop.type_to_update && prop.type_to_update == 'number') || prop.type == 'number') {
+						this.form.push({
+							label: 'Disminuir el '+this.propText(prop),
+							key: 'decrement_'+prop.key,
+							type: 'number',
+							placeholder: 'Porcentaje para disminuir '+this.propText(prop),
+							value: '',
+							round: 0,
+						})
+						this.form.push({
+							label: 'Aumentar el '+this.propText(prop),
+							key: 'increment_'+prop.key,
+							type: 'number', 
+							placeholder: 'Porcentaje para aumentar '+this.propText(prop),
+							value: '',
+							round: 0,
+						})
+						this.form.push({
+							label: 'Setear el '+this.propText(prop),
+							key: 'set_'+prop.key,
+							type: 'number', 
+							placeholder: 'Valor para setear '+this.propText(prop),
+							value: '',
+						})
+					} else if (prop.type == 'select') {
+						this.form.push({
+							label: this.propText(prop),
+							key: prop.key, 
+							options: prop.options, 
+							store: this.modelNameFromRelationKey(prop),
+							depends_on: prop.depends_on,
+							type: 'select',
+							value: 0,
+						})
+						// this.form[prop.key] = 0 
+					} else if (prop.type == 'search') {
+						this.form.push({
+							label: this.propText(prop),
+							store: prop.store,
+							depends_on: prop.depends_on,
+							key: prop.key,
+							type: 'search',
+							value: '',
+						})
+						// console.log('search para '+prop.key)
+						// this.form[prop.key] = '' 
+					}
 				}
 			})
 			console.log('form:')

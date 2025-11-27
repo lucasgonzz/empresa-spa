@@ -4,12 +4,10 @@
 		:id="id"
 		v-if="!loading"
 		class="cont-table">
-
 			<pagination
 			v-if="!pivot"
 			@filtrar="filtrar"
 			:model_name="model_name"></pagination>	
-
 			<table
 			:id="'table-'+model_name"
 			class="common-table">
@@ -74,6 +72,7 @@
 							<tr-component
 							v-for="model in list.models"
 							@onRowSelected="onRowSelected"
+							:pivot_parent_model="pivot_parent_model"
 							:model="model"
 							:pivot="pivot"
 							:select_mode="_select_mode"
@@ -98,8 +97,10 @@
 					</template>
 					<template
 					v-else>
+
 						<tr-component
 						v-for="(model, i) in models"
+						:pivot_parent_model="pivot_parent_model"
 						:key="i"
 						:model="model"
 						:pivot="pivot"
@@ -236,6 +237,10 @@ export default {
 		papelera: {
 			type: Boolean,
 			default: false,
+		},
+		pivot_parent_model: {
+			type: Object,
+			default: null,
 		},
 	},
 	mounted() {

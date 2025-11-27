@@ -13,6 +13,7 @@
 					<pivot-prop
 					v-if="prop.is_pivot_prop"
 					:cont_table_id="cont_table_id"
+					:pivot_parent_model="pivot_parent_model"
 					:model="model"
 					:index="index"
 					:model_name="model_name"
@@ -126,6 +127,7 @@ export default {
 		select_mode: String,
 		set_model_on_row_selected: Boolean,
 		cont_table_id: String,
+		pivot_parent_model: Object,
 	},
 	components: {
 		VueLoadImage: () => import('vue-load-image'),
