@@ -61,6 +61,7 @@ export default {
 		async setCreateClient() {
 			this.loading = true
 			let location_id = await this.getLocalidad()
+			let provincia_id = await this.getProvincia()
 
 			let properties_to_override = [
 				{
@@ -80,6 +81,10 @@ export default {
 					value: location_id,
 				},
 				{
+					key: 'provincia_id',
+					value: provincia_id,
+				},
+				{
 					key: 'iva_condition_id',
 					value: this.afip_data.condicion_iva == 'RESPONSABLE INSCRIPTO' ? 1 : this.afip_data.condicion_iva == 'MONOTRIBUTO' ? 2 : 3,
 				},
@@ -90,6 +95,31 @@ export default {
 
 			this.setModel(null, 'client', properties_to_override, true, false)
 			this.loading = false
+		},
+		getProvincia() {
+			if (this.afip_data.provincia) {
+				let provincia = this.$store.state.provincia.models.find(provincia => {
+					return provincia.name == this.afip_data.provincia
+				})
+
+				if (typeof provincia != 'undefined') {
+					return provincia.id
+				} else {
+					return new Promise((resolve, reject) => {
+						this.$api.post('provincia', {
+							'name': this.afip_data.provincia
+						})
+						.then(res => {
+							this.$store.commit('provincia/add', res.data.model)
+							resolve(res.data.model.id)
+						})
+						.catch(err => {
+							console.log(err)
+						})
+					})
+				}
+			}
+			return null
 		},
 		getLocalidad() {
 
