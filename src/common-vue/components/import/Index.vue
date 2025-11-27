@@ -4,6 +4,8 @@
 	:model_name="model_name"
 	:show_history="show_history"></import-history>
 
+	<import-status></import-status>
+
 	<b-modal
 	size="lg"
 	:title="title"
@@ -174,7 +176,7 @@
 				</span>
 			</b-form-radio>
 
-
+			<hr>
 			<b-form-checkbox
 			v-if="model_name == 'article'"
 			class="radio-option"
@@ -250,6 +252,7 @@ export default {
 		Advises,
 		BtnLoader,
 		ImportHistory: () => import('@/common-vue/components/import/ImportHistory'),
+		ImportStatus: () => import('@/common-vue/components/import/import-status/Index'),
 		ColumnPositionsGuardadas: () => import('@/common-vue/components/import/column-positions-guardadas/Index'),
 	}, 
 	props: {
@@ -316,7 +319,6 @@ export default {
 			finish_row: '',
 			finish_row_original: '',
 			percentage: '',
-			provider_id: 0,
 			columns_: [], 
 			positions_seted: false,
 			create_and_edit: null,
@@ -549,6 +551,10 @@ export default {
 			this.positions_seted = true
 
 			this.start_row = Number(column_position.start_row)
+
+			this.props_to_send.provider_id = column_position.provider_id
+			this.create_and_edit = column_position.create_and_edit
+			this.no_actualizar_articulos_de_otro_proveedor = column_position.no_actualizar_otro_proveedor
 		},
 
 		set_default_columns_positions() {
@@ -621,6 +627,8 @@ export default {
 
 				this.varias_solicitudes = false
 				await this.sendRequest(form_data)
+				
+
 				console.log('terminaron de enviarse las solicitudes')
 				this.loading = false
 				this.file = null
@@ -629,17 +637,52 @@ export default {
 				this.finish_row = ''
 				this.finish_row_original = ''
 				this.percentage = ''
-				this.provider_id = 0
+				this.props_to_send.provider_id = 0
 
 				this.$bvModal.hide(this.id)
 				this.$toast.success('Estamos precesando tu archivo, te notificaremos cuando termine', {
 					duration: 7000
 				})
-				// this.$store.dispatch(this.model_name+'/getModels')
-				// this.actions.forEach(action => {
-				// 	this.$store.dispatch(action)
-				// })
 			}
+		},
+		guardar_column_position() {
+
+			let positions = [];
+			this.columns_.forEach(item => {
+				positions.push({
+					text: item.text,
+					letra: item.letra,
+					position: item.position,
+				})
+			});
+
+			console.log('Se van a guardar estas columnas:')
+			console.log(positions)
+
+
+			this.$api.post('column-position', {
+				  // name: this.name,
+				  // name: this.column_position_name,
+				  model_name: 'article',
+				  positions: positions,
+				  start_row: this.start_row,
+				  provider_id: this.props_to_send.provider_id,
+				  create_and_edit: this.create_and_edit,
+				  no_actualizar_otro_proveedor: this.no_actualizar_articulos_de_otro_proveedor,
+			})
+			.then(res => {
+				this.$store.commit('column_position/add', res.data.model)
+				this.name = ''
+			})
+			.catch(err => {
+				this.$toast.error('Error al guardar')
+			})
+		},
+		load_import_status() {
+			this.$api.get('import-status')
+			.then(res => {
+				this.$store.commit('import_status/setModel', res.data.model)
+			})
 		},
 		check() {
 			if (this.pedir_operacion_a_realizar) {
@@ -675,6 +718,13 @@ export default {
 			.then(res => {
 				console.log('se envio')
 				console.log(res)
+				
+				if (this.model_name == 'article') {
+
+					this.load_import_status()
+					this.guardar_column_position()
+				}
+
 				return
 				
 			})

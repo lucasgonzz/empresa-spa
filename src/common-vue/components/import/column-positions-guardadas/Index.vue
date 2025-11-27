@@ -3,10 +3,10 @@
 	class="j-start align-end m-b-15">
 		<select-column-position></select-column-position>
 
-		<btn-guardar
+		<!-- <btn-guardar
 		:start_row="start_row"
 		:positions_seted="positions_seted"
-		:columns="columns"></btn-guardar>
+		:columns="columns"></btn-guardar> -->
 	</div>
 </template>
 <script>

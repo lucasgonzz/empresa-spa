@@ -56,7 +56,6 @@
 export default {
 	components: {
 		CircleProgress: () => import('@/components/listado/modals/inventory-performance/CircleProgress'),
-
 	},
 	computed: {
 		model() {
