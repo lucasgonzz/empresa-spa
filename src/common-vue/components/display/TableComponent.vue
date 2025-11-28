@@ -94,8 +94,9 @@
 							<span
 							v-else-if="prop.is_stock"
                 :class="{
-                  'text-danger': parseFloat(propertyText(models[data.index], prop)) < 0,
-                  'font-weight-bold': parseFloat(propertyText(models[data.index], prop)) !== 0
+                  'text-danger font-weight-bold': parseFloat(propertyText(models[data.index], prop)) <= 0,
+                  'font-weight-bold': parseFloat(propertyText(models[data.index], prop)) > 0,
+                  
                 }"
               >
 								{{ propertyText(models[data.index], prop) }}
