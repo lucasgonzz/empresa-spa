@@ -1,5 +1,5 @@
 <template>
-	<div 
+	<div
 	class="nav-current-acounts p-15"
 	inline>
 		<label>Mostrar los ultimos</label>
@@ -16,12 +16,13 @@
 		class="m-l-15">
 			Buscar
 		</b-button>
-		<b-button 
-		@click="print"
-		variant="danger"
-		class="m-l-15"> 
-			<i class="icon-print"></i>
-		</b-button>
+    <div>
+  <b-dropdown variant="danger" id="dropdown-1" text="Dropdown Button" class="m-l-15"><template #button-content>
+  <i class="icon-print"></i></template>
+    <b-dropdown-item @click="print('simple')">Imprimir</b-dropdown-item>
+    <b-dropdown-item @click="print('details')">Imprimir Desglose</b-dropdown-item>
+  </b-dropdown>
+</div>
 		<b-button
 		v-if="from_model.current_acounts_count == 0"
 		class="m-l-15"
@@ -36,13 +37,6 @@
 		text="Chequear Saldos"
 		@clicked="checkSaldos">
 		</btn-loader>
-
-		<!-- <b-button
-		class="m-l-15"
-		@click="print"
-		variant="danger">
-			Saldo inicial
-		</b-button> -->
 	</div>
 </template>
 <script>
@@ -82,14 +76,14 @@ export default {
 	},
 	methods: {
 		checkSaldos() {
-			this.checking = true 
+			this.checking = true
 			this.$api.get('check-saldos/'+this.from_credit_account.id)
 			.then(() => {
-				this.checking = false 
+				this.checking = false
 				this.$store.dispatch('current_acount/getModels')
 			})
 			.catch(err => {
-				this.checking = false 
+				this.checking = false
 			})
 		},
         saldoInicial() {
@@ -99,8 +93,8 @@ export default {
 		getCurrentAcounts() {
 			this.$store.dispatch('current_acount/getModels')
 		},
-		print() {
-            let link = process.env.VUE_APP_API_URL+'/current-acount/pdf/'+this.from_credit_account.id+'/'+this.cantidad_movimientos
+		print(detail) {
+            let link = process.env.VUE_APP_API_URL+'/current-acount/pdf/'+this.from_credit_account.id+'/'+this.cantidad_movimientos+'/'+detail
             window.open(link)
 		},
 	}
@@ -109,10 +103,10 @@ export default {
 <style scoped lang="sass">
 .nav-current-acounts
 	display: flex
-	flex-direction: row 
-	justify-content: flex-start 
-	align-items: center 
-	.input 
+	flex-direction: row
+	justify-content: flex-start
+	align-items: center
+	.input
 		width: 100px
 		margin: 0 1em
 </style>
