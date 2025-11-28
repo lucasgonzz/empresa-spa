@@ -143,7 +143,7 @@
 									        :disabled="isDisabled(prop, form_to_filter)"
 											:placeholder="'Ingresar '+propText(prop)"
 											:type="prop.type"
-											@keyup.enter="clickEnter(prop)"
+											@keyup.enter="prop.key == 'cuit' ? searchCUIT() : clickEnter(prop)"
 											v-model="model[prop.key]"></b-form-input>
 											<!-- FUNCIONALIDAD DE SEARCH POR CUIT PARA CLIENTES Y PODER CREAR CLIENTE CON LOS DATOS DE CUIT -->
 											<b-button
