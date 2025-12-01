@@ -8,7 +8,7 @@ id="import-status">
 
 
 		<p>
-			Importacion en curso
+			Estado: {{ status }}
 		</p>
 		
 		<p
@@ -47,6 +47,26 @@ export default {
 		}
 	},
 	computed: {
+		status() {
+			if (this.import_status) {
+				if (this.import_status.status == 'pendiente') {
+					return 'En preparacion'
+				}
+
+				if (this.import_status.status == 'en_proceso') {
+					return 'Procesandoce'
+				}
+
+				if (this.import_status.status == 'completado') {
+					return 'Completado'
+				}
+
+				if (this.import_status.status == 'fallo') {
+					return 'Fallido'
+				}
+			}
+			return null
+		},
 		percentage() {
 			if (this.import_status) {
 
@@ -81,6 +101,17 @@ export default {
 					this.$store.commit('import_status/setModel', null)
 				}, 5000)
 			
+			} else if (
+				this.import_status
+				&& this.import_status.status == 'fallo'
+			) {
+				
+				setTimeout(() => {
+
+					this.ocultar_tarjeta()
+
+					this.$store.commit('import_status/setModel', null)
+				}, 5000)
 			}
 		},
 	},
