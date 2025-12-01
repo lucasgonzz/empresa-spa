@@ -370,6 +370,12 @@
 
 		<select-expense-payment-methods-modal
 		v-if="model_name == 'expense'"></select-expense-payment-methods-modal>
+		
+		 <div 
+    v-if="model_name == 'expense' && prop.key == 'payment_methods'">
+        <payment-methods-table
+        :items="model.payment_methods"></payment-methods-table>
+    </div>
 
 		<!-- <slot 
 		v-if="!from_has_many"
@@ -404,14 +410,16 @@ import BtnLoader from '@/common-vue/components/BtnLoader'
 // import Model from '@/common-vue/components/model/Index'
 
 import model_functions from '@/common-vue/mixins/model_functions'
+//import generals from '@/common-vue/mixins/generals'
 export default {
 	components: {
 		CuitResult: () => import('@/components/common/CuitResult'),
 		ModelComponent: () => import('@/common-vue/components/model/Index'),
 		GoogleGeocoder: () => import('@/common-vue/components/model/google-geocoder/Index'),
 		SearchComponent: () => import('@/common-vue/components/search/Index'),
-		TextEditor: () => import('@/common-vue/components/model/form/TextEditor'),
+		TextEditor: () => import('@/common-vue/components/model/form/TextEditor'),	
 		SelectExpensePaymentMethodsModal: () =>  import('@/components/expenses/modals/select-payment-methods/Index'),
+		PaymentMethodsTable: () => import('@/components/expenses/components/PaymentMethodsTable'),
 		
 		HasMany,
 		BelongsToManyCheckbox,
@@ -424,6 +432,7 @@ export default {
 		DatePicker: () => import('@/common-vue/components/model/form/DatePicker'),
 	},
 
+	//mixins: [model_functions, generals],
 	mixins: [model_functions],
 	props: {
 		model: Object,
