@@ -34,10 +34,20 @@ export default {
 			is_price: true,
 			description: 'Si completa este campo, el valor impactara en el valor de IVA CREDITO en el modulo de REPORTES',
 		},
+    		{
+			text: 'Fecha',
+			key: 'created_at',
+			type: 'date',
+			value: moment().format('YYYY-MM-DD'),
+			not_show: true,
+		},
+    {
+			group_title: 'Metodos de Pago',
+		},
 		{
 			key: 'payment_methods',
 			type: 'button',
-      		text: 'Metodos de Pago',
+      text: 'Metodos de Pago',
 			button: {
 				button_text: 'Seleccionar',
 				badge: {
@@ -56,13 +66,10 @@ export default {
 			check_can_edit: true,
 		},
 		{
-			text: 'Fecha',
-			key: 'created_at',
-			type: 'date',
-			value: moment().format('YYYY-MM-DD'),
-			not_show: true,
+			key: 'payment_methods_table',
+			type: 'display',
 		},
-		{
+    {
 			text: 'Observaciones',
 			key: 'observations',
 			type: 'textarea',

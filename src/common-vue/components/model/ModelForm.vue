@@ -263,6 +263,11 @@
 										{{ getFunctionValue(prop, model) }}
 									</p>
 
+									<div v-else-if="prop.type == 'display' && prop.key == 'payment_methods_table' && model_name == 'expense'">
+										<payment-methods-table
+										:items="model.payment_methods"></payment-methods-table>
+									</div>
+
 
 									<!-- en pivot_parent_model le paso el model padre, para que por ejemplo en el model Sale, en la tabla de articles, tenga acceso al Sale model (el parent_model) -->
 									<div
@@ -371,12 +376,6 @@
 		<select-expense-payment-methods-modal
 		v-if="model_name == 'expense'"></select-expense-payment-methods-modal>
 		
-		 <div 
-    v-if="model_name == 'expense' && prop.key == 'payment_methods'">
-        <payment-methods-table
-        :items="model.payment_methods"></payment-methods-table>
-    </div>
-
 		<!-- <slot 
 		v-if="!from_has_many"
 		name="buttons">
@@ -405,12 +404,13 @@ import Cards from '@/common-vue/components/display/cards/Index'
 import TableComponent from '@/common-vue/components/display/table/Index'
 import Images from '@/common-vue/components/model/images/Index'
 import BtnLoader from '@/common-vue/components/BtnLoader'
+import PaymentMethodsTable from '@/components/expenses/components/PaymentMethodsTable'
 
 // import BtnDelete from '@/common-vue/components/BtnDelete'
 // import Model from '@/common-vue/components/model/Index'
 
 import model_functions from '@/common-vue/mixins/model_functions'
-//import generals from '@/common-vue/mixins/generals'
+import generals from '@/common-vue/mixins/generals'
 export default {
 	components: {
 		CuitResult: () => import('@/components/common/CuitResult'),
@@ -419,7 +419,7 @@ export default {
 		SearchComponent: () => import('@/common-vue/components/search/Index'),
 		TextEditor: () => import('@/common-vue/components/model/form/TextEditor'),	
 		SelectExpensePaymentMethodsModal: () =>  import('@/components/expenses/modals/select-payment-methods/Index'),
-		PaymentMethodsTable: () => import('@/components/expenses/components/PaymentMethodsTable'),
+		PaymentMethodsTable,
 		
 		HasMany,
 		BelongsToManyCheckbox,
@@ -432,8 +432,7 @@ export default {
 		DatePicker: () => import('@/common-vue/components/model/form/DatePicker'),
 	},
 
-	//mixins: [model_functions, generals],
-	mixins: [model_functions],
+	mixins: [model_functions, generals],
 	props: {
 		model: Object,
 		properties: Array,
