@@ -185,14 +185,14 @@ export default {
 							text: 'Utilidad',
 							img: 'ingresos_netos',
 							value: this.price(this.model.ingresos_netos, false),
-							description: 'Ingresos Brutos - Costo de la mercaderia',
+							description: 'Total vendido Neto - Costo de la mercaderia',
 						},
 						{
 							text: 'Utilidad USD',
 							if_has_extencion: 'ventas_en_dolares',
 							img: 'ingresos_netos',
 							value: this.price(this.model.ingresos_netos_usd, false),
-							description: 'Ingresos Brutos - Costo de la mercaderia',
+							description: 'Total vendido Neto USD - Costo de la mercaderia',
 						},
 						{
 							text: 'Ingresos Netos',
@@ -290,6 +290,40 @@ export default {
 				},
 
 
+
+				{
+					group_name: 'Deudas',
+					cards: [
+						{
+							text: 'Deudas de Clientes',
+							img: 'deuda-clientes',
+							value: this.price(this.model.deuda_clientes, false),
+							description: 'Sumatoria de los saldos ACTUALES de tus clientes',
+						},
+						{
+							text: 'Deudas de Clientes USD',
+							img: 'deuda-clientes',
+							value: this.price(this.model.deuda_clientes_usd, false),
+							description: 'Sumatoria de los saldos ACTUALES de tus clientes',
+							if_has_extencion: 'ventas_en_dolares',
+						},
+						{
+							text: 'Deudas con Proveedores',
+							img: 'deuda-clientes',
+							value: this.price(this.model.deuda_proveedores, false),
+							description: 'Sumatoria de los saldos ACTUALES de tus proveedores',
+						},
+						{
+							text: 'Deudas con Proveedores USD',
+							img: 'deuda-clientes',
+							value: this.price(this.model.deuda_proveedores_usd, false),
+							description: 'Sumatoria de los saldos ACTUALES de tus proveedores',
+							if_has_extencion: 'ventas_en_dolares',
+						},
+					],
+				},
+
+				
 				{
 					group_name: 'Facturacion',
 					cards: [
@@ -337,43 +371,33 @@ export default {
 						},
 					],
 				},
-
-
-
-				{
-					group_name: 'Deudas',
-					cards: [
-						{
-							text: 'Deudas de Clientes',
-							img: 'deuda-clientes',
-							value: this.price(this.model.deuda_clientes, false),
-							description: 'Sumatoria de los saldos ACTUALES de tus clientes',
-						},
-						{
-							text: 'Deudas de Clientes USD',
-							img: 'deuda-clientes',
-							value: this.price(this.model.deuda_clientes_usd, false),
-							description: 'Sumatoria de los saldos ACTUALES de tus clientes',
-							if_has_extencion: 'ventas_en_dolares',
-						},
-						{
-							text: 'Deudas con Proveedores',
-							img: 'deuda-clientes',
-							value: this.price(this.model.deuda_proveedores, false),
-							description: 'Sumatoria de los saldos ACTUALES de tus proveedores',
-						},
-						{
-							text: 'Deudas con Proveedores USD',
-							img: 'deuda-clientes',
-							value: this.price(this.model.deuda_proveedores_usd, false),
-							description: 'Sumatoria de los saldos ACTUALES de tus proveedores',
-							if_has_extencion: 'ventas_en_dolares',
-						},
-					],
-				},
 			]
 
 			card_groups = card_groups.concat(resto_de_grupos)
+
+
+			if (this.can('reportes.info_facturacion')) {
+
+				// Info facturacion
+				let group_facturacion = {
+					group_name: 'Detalles de Facturacion',
+					cards: [],
+				}
+
+				this.model.company_performance_info_facturacion.forEach(info_facturacion => {
+
+					
+					group_facturacion.cards.push({
+						text: info_facturacion.afip_information.razon_social+' | '+info_facturacion.afip_tipo_comprobante.name,
+						img: 'iva_comprado',
+						value: this.price(info_facturacion.total_facturado, false),
+						// description: 'Sumatoria de los saldos ACTUALES de tus proveedores',
+						// if_has_extencion: 'ventas_en_dolares',
+					})
+				})
+
+				card_groups = card_groups.concat(group_facturacion)
+			}
 
 			return card_groups
 		},
