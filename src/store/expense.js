@@ -4,6 +4,9 @@ axios.defaults.baseURL = process.env.VUE_APP_API_URL
 
 import moment from 'moment'
 import generals from '@/common-vue/mixins/generals'
+
+import payment_methods from './expense/payment_methods'
+
 export default {
 	namespaced: true,
 	state: {
@@ -50,8 +53,21 @@ export default {
 		loading: false,
 
 		props_to_show: [],
+
+		selected_payment_methods: [],
+		discount_percentage: null,
+		discount_amount: null,
 	},
 	mutations: {
+		set_payment_method_discount_percentage(state, value) {
+			state.discount_percentage = value
+		},
+		set_payment_method_discount_amount(state, value) {
+			state.discount_amount = value
+		},
+		set_selected_payment_methods(state, value){
+			state.selected_payment_methods = value
+		},
 		set_props_to_show(state, value) {
 			state.props_to_show = value
 		},
@@ -83,6 +99,9 @@ export default {
 						state.model[prop.key] = prop.value 
 					})
 				}
+				if (value.model.payment_methods) {
+					state.selected_payment_methods = value.model.payment_methods
+				}
 			} else {
 				let obj = {
 					id: null
@@ -96,6 +115,7 @@ export default {
 					})
 				}
 				state.model = obj
+				state.selected_payment_methods = []
 			}
 		},
 		addModels(state, value) {
@@ -158,6 +178,7 @@ export default {
 			if (index != -1) {
 				state.filtered.splice(index, 1, value)
 			} 
+			state.selected_payment_methods = value.payment_methods
 		},
 		setDelete(state, value) {
 			state.delete = value
@@ -361,4 +382,7 @@ export default {
 			})
 		}
 	},
+	modules: {
+		payment_methods
+	}
 }

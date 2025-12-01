@@ -35,18 +35,25 @@ export default {
 			description: 'Si completa este campo, el valor impactara en el valor de IVA CREDITO en el modulo de REPORTES',
 		},
 		{
-			text: 'Metodo de pago',
-			key: 'current_acount_payment_method_id',
-			type: 'select',
-			use_store_models: true,
-			on_change: 'set_expense_caja_id',
-		},
-		{
-			text: 'Caja',
-			key: 'caja_id',
-			type: 'select',
-			use_store_models: true,
-			get_options_function: 'get_caja_options',
+			key: 'payment_methods',
+			type: 'button',
+      		text: 'Metodos de Pago',
+			badge: {
+				function: 'get_payment_methods_count',
+				variant: 'primary',
+			},
+			button: {
+				button_text: 'Seleccionar',
+				call_functions: [
+					{
+						name: 'showSelectPaymentMethodModal',
+						params: [
+							'expense'
+						]
+					}
+				]
+			},
+			check_can_edit: true,
 		},
 		{
 			text: 'Fecha',

@@ -555,6 +555,16 @@ export default {
 				model_to_send = this[this.props_to_send_on_save_function](model_to_send)
 			}
 
+			if (this.model_name == 'expense') {
+				model_to_send.current_acount_payment_method_ids = this.$store.state.expense.selected_payment_methods.map(payment_method => {
+					return {
+						id: payment_method.id,
+						amount: payment_method.amount,
+						caja_id: payment_method.caja_id,
+					}
+				})
+			}
+
 			return model_to_send
 		},
 		setPropsValues() {
@@ -645,7 +655,7 @@ export default {
 				relations_filtered.forEach(relation_filtered => {
 					this.removeRelationFiltered(this.model_name, this.model, relation_filtered)
 				})
-				this.$store.commit(this.model_name+'/setDeletedModelsFromRelationsFiltered', [])
+				this.$store.commit(this.model_name+'/setDeletedModelsFromRelationFiltered', [])
 			}
 		},
 		callActions(model) {
