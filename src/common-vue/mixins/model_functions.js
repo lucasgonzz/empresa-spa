@@ -4,6 +4,18 @@ import select_payment_methods_expense from '@/mixins/expense/select_payment_meth
 export default {
 	mixins: [dates, select_payment_methods_vender, select_payment_methods_expense],
 	methods: {
+		getBadgeValue(prop, model) {
+			if (prop.badge && prop.badge.function) {
+				return this[prop.badge.function](model, prop);
+			}
+			return 0;
+		},
+		get_payment_methods_count(model) {
+			if (model.payment_methods) {
+				return model.payment_methods.length
+			}
+			return 0
+		},
 		getFunctionValue(prop, model) {
 			return this[prop.function](model, prop)
 		},

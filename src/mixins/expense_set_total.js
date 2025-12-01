@@ -3,8 +3,8 @@ export default {
 		expense_amount() {
 			return this.$store.state.expense.model.amount
 		},
-		selected_payment_methods() {
-			return this.$store.state.expense.selected_payment_methods 
+		payment_methods() {
+			return this.$store.state.expense.model.payment_methods 
 		},
 	},
 	methods: {
@@ -20,7 +20,7 @@ export default {
 		},
 		getTotalRepartido() {
 			let total_repartido = 0
-			this.selected_payment_methods.forEach(payment_method => {
+			this.payment_methods.forEach(payment_method => {
 				if (payment_method.amount) {
 					total_repartido += Number(payment_method.amount)
 				}

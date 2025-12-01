@@ -242,13 +242,19 @@
 										v-if="prop.button.icon"
 										:class="'icon-'+prop.button.icon"></i>
 										<span
-										v-else-if="prop.button.button_text">
+										v-if="prop.button.button_text">
 											{{ prop.button.button_text }}
 										</span>
 										<span
 										v-else>
 											{{ propertyText(model, prop) }}
 										</span>
+										<b-badge
+										v-if="prop.button.badge && getBadgeValue(prop.button, model) > 0"
+										class="m-l-5"
+										:variant="prop.button.badge.variant">
+											{{ getBadgeValue(prop.button, model) }}
+										</b-badge>
 									</b-button>
 									
 									<p

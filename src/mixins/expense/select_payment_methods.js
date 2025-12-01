@@ -33,8 +33,8 @@ export default {
 		current_acount_payment_methods() {
 			return this.$store.state.current_acount_payment_method.models
 		},
-		selected_payment_methods() {
-			return this.$store.state.expense.selected_payment_methods
+		payment_methods() {
+			return this.$store.state.expense.model.payment_methods
 		},
 	},
 	data() {
@@ -48,14 +48,14 @@ export default {
 			let payment_methods = []
 			let total_repartido = 0
 			this.current_acount_payment_methods.forEach(payment_method => {
-				let selected = this.selected_payment_methods.find(selected => selected.id == payment_method.id)
+				let selected = this.payment_methods.find(selected => selected.id == payment_method.id)
 				let amount = ''
 				let caja_id = payment_method.caja_id
 				if (typeof selected != 'undefined') {
-					amount = selected.pivot.amount
+					amount = selected.amount
 					total_repartido += Number(amount)
-					if (selected.pivot.caja_id) {
-						caja_id = selected.pivot.caja_id
+					if (selected.caja_id) {
+						caja_id = selected.caja_id
 					}
 				}
 
@@ -73,7 +73,7 @@ export default {
 
 			if (this.check_sobrante_a_repartir()) {
 				
-				this.$store.commit('expense/set_selected_payment_methods', this.modal_payment_methods);
+				// this.$store.commit('expense/set_payment_methods', this.modal_payment_methods);
 				
 				this.$store.commit('expense/payment_methods/set_watch_activado', false);
 
@@ -105,7 +105,7 @@ export default {
 					})
 				}
 			})
-			this.$store.commit('expense/set_selected_payment_methods', payment_methods);
+			this.$store.commit('expense/set_payment_methods', payment_methods);
 		},
 
 		limpiar_descuentos_anteriores() {

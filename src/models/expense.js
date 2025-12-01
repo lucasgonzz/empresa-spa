@@ -38,12 +38,12 @@ export default {
 			key: 'payment_methods',
 			type: 'button',
       		text: 'Metodos de Pago',
-			badge: {
-				function: 'get_payment_methods_count',
-				variant: 'primary',
-			},
 			button: {
 				button_text: 'Seleccionar',
+				badge: {
+					function: 'get_payment_methods_count',
+					variant: 'success',
+				},
 				call_functions: [
 					{
 						name: 'showSelectPaymentMethodModal',
