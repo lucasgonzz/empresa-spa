@@ -33,6 +33,9 @@ export default {
 		current_acount_payment_methods() {
 			return this.$store.state.current_acount_payment_method.models
 		},
+		selected_payment_methods() {
+			return this.$store.state.expense.selected_payment_methods
+		},
 	},
 	data() {
 		return {
@@ -43,17 +46,28 @@ export default {
 	methods: {
 		init_modal_payment_metohds_expense() {
 			let payment_methods = []
-
+			let total_repartido = 0
 			this.current_acount_payment_methods.forEach(payment_method => {
+				let selected = this.selected_payment_methods.find(selected => selected.id == payment_method.id)
+				let amount = ''
+				let caja_id = payment_method.caja_id
+				if (typeof selected != 'undefined') {
+					amount = selected.pivot.amount
+					total_repartido += Number(amount)
+					if (selected.pivot.caja_id) {
+						caja_id = selected.pivot.caja_id
+					}
+				}
+
 				payment_methods.push({
 					...payment_method,
-					caja_id: payment_method.caja_id, // Usamos caja_id si viene en el metodo de pago o si se asigna por defecto
-					amount: ''
+					caja_id,
+					amount,
 				})
 			})
 
 			this.$store.commit('expense/payment_methods/set_payment_methods', payment_methods)
-			this.total_repartido = 0
+			this.total_repartido = total_repartido
 		},
 		guardarMetodosPago() {
 

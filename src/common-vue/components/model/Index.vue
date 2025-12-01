@@ -556,7 +556,7 @@ export default {
 			}
 
 			if (this.model_name == 'expense') {
-				model_to_send.current_acount_payment_method_ids = this.$store.state.expense.selected_payment_methods.map(payment_method => {
+				model_to_send.payment_methods = this.$store.state.expense.selected_payment_methods.map(payment_method => {
 					return {
 						id: payment_method.id,
 						amount: payment_method.amount,
