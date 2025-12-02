@@ -490,7 +490,7 @@ export default {
 		        async useAfipData(afip_data) {
 					console.log('afip_Data', afip_data);
 		            let new_model = { ...this.model };
-		            new_model.name = afip_data.nombre
+		            new_model.name = afip_data.nombre + ' ' + afip_data.apellido
 		            new_model.razon_social = afip_data.razonSocial
 		            new_model.address = afip_data.direccion
 		
