@@ -72,9 +72,9 @@ export default {
 	},
 	methods: {
         detectarTecla(event) {
-            if (event.key === "Control") {
-            	document.getElementById('article-bar-code').focus()
-            }
+            // if (event.key === "Control") {
+            	// document.getElementById('article-bar-code').focus()
+            // }
         },
 		_callVender() {
 			if (!this.usar_codigo_proveedor) {
@@ -124,13 +124,10 @@ export default {
 				codigo = this.getBarCode(codigo)
 			}
 
-			if (this.$store.state.auth.online) {
-
-				if (!this.download_articles || (this.is_mobile && !this.downloadOnMobile('article') && !this.articles.length ) || this.$store.state.article.loading) {
-					await this.getArticleFromApi(codigo)
-				} 
-
-			} else if (!this.download_articles) {
+			if (
+				!this.$store.state.auth.online
+				|| this.owner.usar_articles_cache
+			) {
 
 				console.log('Buscando offline')
 
@@ -139,6 +136,10 @@ export default {
 				this.finded_article = articles.find(article => {
 					return this.check_article(article, codigo)
 				})
+
+			} else if (this.$store.state.auth.online) {
+
+				await this.getArticleFromApi(codigo)
 
 			}
 

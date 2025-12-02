@@ -73,7 +73,7 @@ export default {
 			type: 'search',
 			key: 'articles',
 			search_from_api_function: 'search_from_api_in_provider_order',
-			route_to_search: 'vender/buscar-articulo-por-nombre',
+			route_to_search: 'vender/buscar-articulo-por-nombre/1',
 			toast_function: 'toast_article_provider_order_unidades_individuales',
 			belongs_to_many: {
 				model_name: 'article',

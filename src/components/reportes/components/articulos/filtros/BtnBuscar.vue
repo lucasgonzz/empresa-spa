@@ -18,6 +18,9 @@ export default {
 		category_id() {
 			return this.$store.state.reportes.article_purchase.category_id
 		},
+		address_id() {
+			return this.$store.state.reportes.article_purchase.address_id
+		},
 		cantidad_resultados() {
 			return this.$store.state.reportes.article_purchase.cantidad_resultados
 		},
@@ -44,6 +47,7 @@ export default {
 				client_id: this.client_id,
 				provider_id: this.provider_id,
 				category_id: this.category_id,
+				address_id: this.address_id,
 				cantidad_resultados: this.cantidad_resultados,
 				sale_channel_id: this.sale_channel_id,
 				orden: this.orden,

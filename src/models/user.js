@@ -115,6 +115,11 @@ export default {
 			type: 'checkbox',
 		},
 		{
+			text: 'Utilizar articulos descargados para buscar por codigo de barras',
+			key: 'usar_articles_cache',
+			type: 'checkbox',
+		},
+		{
 			text: 'Metodo de pago por defecto en VENDER',
 			key: 'default_current_acount_payment_method_id',
 			type: 'select',
