@@ -46,18 +46,18 @@ export default {
 					}
 				}
 
-				if (this.total >= 344488) {
+				if (this.total >= 1000000) {
 						
 
 					if (!this.client) {
 
-						this.$toast.error('Para montos mayores a $344.488, debe indicar el receptor')
+						this.$toast.error('Para montos mayores a $1.000.000, debe indicar el receptor')
 						return false
 					}			
 
 					if (!this.client.dni && !this.client.cuit) {
 
-						this.$toast.error('Para montos mayores a $344.488, el cliente debe tener asignado un CUIT o DNI')
+						this.$toast.error('Para montos mayores a $1.000.000, el cliente debe tener asignado un CUIT o DNI')
 						return false
 					}					
 				}
