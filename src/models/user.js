@@ -151,6 +151,11 @@ export default {
 			key: 'redondear_centenas_en_vender',
 			type: 'checkbox',
 		},
+		{
+			text: 'Clave para poder eliminar un articulo en VENDER',
+			key: 'clave_eliminar_article',
+			type: 'text',
+		},
 
 
 

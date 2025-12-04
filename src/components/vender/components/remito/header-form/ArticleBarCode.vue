@@ -31,6 +31,9 @@ import vender from '@/mixins/vender/index'
 import guardar_venta from '@/mixins/vender/guardar_venta/index' 
 import sonido_error from '@/mixins/sonido_error' 
 import vender_set_total from '@/mixins/vender_set_total' 
+
+import db from '@/offline/db'
+
 export default {
 	mixins: [vender, guardar_venta, sonido_error, vender_set_total],
 	created() {
@@ -118,7 +121,6 @@ export default {
 		},
 
 		async set_finded_article(codigo) {
-			let article
 
 			if (!this.usar_codigo_proveedor) {
 				codigo = this.getBarCode(codigo)
@@ -131,11 +133,20 @@ export default {
 
 				console.log('Buscando offline')
 
-				let articles = await this.get_articles_offline()
+				let finded = await db.table('articles')
+							    .where('bar_code')
+							    .equals(codigo)
+							    .first();
 
-				this.finded_article = articles.find(article => {
-					return this.check_article(article, codigo)
-				})
+				if (typeof finded != 'undefined') {
+
+					this.finded_article = finded
+				
+				} else if (this.hasExtencion('plu_balanza_bar_code')) {
+
+					await this.set_article_from_plu(codigo)
+				}
+
 
 			} else if (this.$store.state.auth.online) {
 
@@ -189,7 +200,6 @@ export default {
 						console.log('entro a from_balanza')
 						this.set_from_balanza(res)
 						this.from_balanza = true
-						console.log('from_balanza: '+this.from_balanza)
 						return
 					} 
 
@@ -223,6 +233,52 @@ export default {
 
 				document.getElementById('article-bar-code').value = ''
 			}
+		},
+		async set_article_from_plu(barcode) {
+
+			console.log('set_article_from_plu')
+
+			if (barcode.length < 12) {
+		        return
+		    }
+
+		    let tipoBalanza = barcode.substring(0, 2);
+		    let plu = barcode.substring(2, 7).replace(/^0+/, '');   // quita ceros iniciales
+		    let peso = barcode.substring(7, 12).replace(/^0+/, ''); // quita ceros iniciales
+
+			console.log('plu: '+plu)
+			console.log('peso: '+peso)
+
+
+			let finded = await db.table('articles')
+						    .where('plu')
+						    .equals(plu)
+						    .first();
+
+			console.log('finded')
+			console.log(finded)
+			if (typeof finded != 'undefined') {
+
+				this.from_balanza = true
+
+				finded.is_article = true
+
+				// Gramo = 2
+				if (
+					finded.unidad_medida_id != 2
+				) {
+					peso /= 1000
+				}
+
+				finded.amount = peso
+
+				this.$store.commit('vender/setItem', finded)
+				this.add_item_vender()
+
+			} else {
+				return 
+			}
+		    
 		}
 	}
 }

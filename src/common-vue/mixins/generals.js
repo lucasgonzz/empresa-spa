@@ -234,8 +234,6 @@ export default {
 			model_name = model_name.toLowerCase()
 			let date = this.$store.state[model_name].from_date
 
-			console.log('from_date de '+model_name+': '+date)
-
 			return moment(date).format('YYYY-MM-DD')
 		},
 		get_table_prop_slot_name(prop) {
@@ -915,8 +913,6 @@ export default {
 					value = 'USD '+value
 				}
 			}
-			console.log('_check_moneda:::')
-			console.log(value)
 			return value 
 		},
 		article_simbolo_moneda(model, price) {
