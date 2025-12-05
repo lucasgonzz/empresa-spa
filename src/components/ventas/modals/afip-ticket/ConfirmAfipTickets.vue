@@ -29,6 +29,18 @@
 	    	v-model="afip_tipo_comprobante_id"
 			:options="getOptions({key: 'afip_tipo_comprobante_id', text: 'Tipo Comprobante'})"></b-form-select>
     	</b-form-group>
+    	
+			<b-form-group
+    	label="Seleccione fecha del comprobante"
+			description="Dejar en blanco para fecha actual"
+			>
+	    	<b-form-datepicker
+	    	id="datepicker_fecha_comprobante"
+				 :min="minDate()"
+    		:max="maxDate()"
+	    	v-model="afip_fecha_emision"
+	 	/>
+    	</b-form-group>
 
     	<b-form-group
     	v-if="selected_sales.length == 1"
@@ -55,6 +67,12 @@ import afip_ticket from '@/mixins/sale/afip_ticket'
 import set_afip_tipo_comprobante from '@/mixins/vender/set_afip_tipo_comprobante'
 export default {
 	mixins: [afip_ticket, set_afip_tipo_comprobante],
+	
+	data() {
+		return {
+			afip_fecha_emision: null,
+		}
+	},
 	computed: {
 		disabled() {
 			let addresses = this.$store.state.address.models 
@@ -110,6 +128,19 @@ export default {
 		}
 	},
 	methods: {
+		 minDate() {
+			const today = new Date();
+			const minDate = new Date(today);
+    	minDate.setDate(minDate.getDate() - 5);
+			return minDate.toISOString().split('T')[0]
+		},
+		maxDate() {
+			const today = new Date();
+			const maxDate = new Date(today);
+    	maxDate.setDate(maxDate.getDate() + 5);
+			return maxDate.toISOString().split('T')[0]
+		},
+
 		set_tipo_comprobante() {
 
 			console.log('set_tipo_comprobante')

@@ -6,7 +6,6 @@ export default {
         afip_tickets_for_make() {
             return this.$store.state.afip_ticket.afip_tickets_for_make
         },
-
         // Le puse ventas_afip_information_id para no confundirlo con el afip_information_id del mixin de vender set_afip_tipo_comprobante 
         ventas_afip_information_id: {
             get() {
@@ -122,6 +121,7 @@ export default {
                 ventas_afip_information_id: this.ventas_afip_information_id,
                 afip_tipo_comprobante_id: this.afip_tipo_comprobante_id,
                 monto_a_facturar: this.monto_a_facturar,
+                afip_fecha_emision: this.afip_fecha_emision,
             })
             .catch(err => {
                 this.$toast.error('Error al emitir factura para la venta N° '+this.selected_sales[index].num)
