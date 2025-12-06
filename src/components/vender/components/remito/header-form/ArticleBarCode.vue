@@ -31,6 +31,9 @@ import vender from '@/mixins/vender/index'
 import guardar_venta from '@/mixins/vender/guardar_venta/index' 
 import sonido_error from '@/mixins/sonido_error' 
 import vender_set_total from '@/mixins/vender_set_total' 
+
+import db from '@/offline/db'
+
 export default {
 	mixins: [vender, guardar_venta, sonido_error, vender_set_total],
 	created() {
@@ -72,9 +75,9 @@ export default {
 	},
 	methods: {
         detectarTecla(event) {
-            if (event.key === "Control") {
-            	document.getElementById('article-bar-code').focus()
-            }
+            // if (event.key === "Control") {
+            	// document.getElementById('article-bar-code').focus()
+            // }
         },
 		_callVender() {
 			if (!this.usar_codigo_proveedor) {
@@ -88,11 +91,14 @@ export default {
 		async set_article_from_barcode() {
 			if (this.item_vender.codigo != '') {
 				
+				this.finded_article = undefined
 				this.from_balanza = false
 
 				await this.set_finded_article(this.item_vender.codigo)
 
 				console.log('from_balanza: '+this.from_balanza)
+				console.log('finded_article: ')
+				console.log(this.finded_article)
 
 				if (
 					typeof this.finded_article != 'undefined'
@@ -118,27 +124,40 @@ export default {
 		},
 
 		async set_finded_article(codigo) {
-			let article
 
 			if (!this.usar_codigo_proveedor) {
 				codigo = this.getBarCode(codigo)
 			}
 
-			if (this.$store.state.auth.online) {
-
-				if (!this.download_articles || (this.is_mobile && !this.downloadOnMobile('article') && !this.articles.length ) || this.$store.state.article.loading) {
-					await this.getArticleFromApi(codigo)
-				} 
-
-			} else if (!this.download_articles) {
+			if (
+				!this.$store.state.auth.online
+				|| this.owner.usar_articles_cache
+			) {
 
 				console.log('Buscando offline')
 
-				let articles = await this.get_articles_offline()
+				let finded = await db.table('articles')
+							    .where('bar_code')
+							    .equals(codigo)
+							    .first();
 
-				this.finded_article = articles.find(article => {
-					return this.check_article(article, codigo)
-				})
+				if (typeof finded != 'undefined') {
+
+					this.finded_article = finded
+				
+				} else if (this.hasExtencion('plu_balanza_bar_code')) {
+
+					await this.set_article_from_plu(codigo)
+
+				} else {
+
+					this.finded_article = undefined
+				}
+
+
+			} else if (this.$store.state.auth.online) {
+
+				await this.getArticleFromApi(codigo)
 
 			}
 
@@ -188,7 +207,6 @@ export default {
 						console.log('entro a from_balanza')
 						this.set_from_balanza(res)
 						this.from_balanza = true
-						console.log('from_balanza: '+this.from_balanza)
 						return
 					} 
 
@@ -222,6 +240,53 @@ export default {
 
 				document.getElementById('article-bar-code').value = ''
 			}
+		},
+		async set_article_from_plu(barcode) {
+
+			console.log('set_article_from_plu')
+
+			if (barcode.length < 12) {
+		        return
+		    }
+
+		    let tipoBalanza = barcode.substring(0, 2);
+		    let plu = barcode.substring(2, 7).replace(/^0+/, '');   // quita ceros iniciales
+		    let peso = barcode.substring(7, 12).replace(/^0+/, ''); // quita ceros iniciales
+
+			console.log('plu: '+plu)
+			console.log('peso: '+peso)
+
+
+			let finded = await db.table('articles')
+						    .where('plu')
+						    .equals(plu)
+						    .first();
+
+			console.log('finded')
+			console.log(finded)
+			if (typeof finded != 'undefined') {
+
+				this.from_balanza = true
+
+				finded.is_article = true
+
+				// Gramo = 2
+				if (
+					finded.unidad_medida_id != 2
+				) {
+					peso /= 1000
+				}
+
+				finded.amount = peso
+
+				this.$store.commit('vender/setItem', finded)
+				this.add_item_vender()
+
+			} else {
+				this.finded_article = undefined
+				return 
+			}
+		    
 		}
 	}
 }

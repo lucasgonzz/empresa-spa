@@ -584,9 +584,32 @@ export default {
 			}
 		},
 		removeItem(article) {
+
+			if (
+				!this.is_admin
+				&& this.can('vender.prohibir_eliminar_articulos_de_venta')
+			) {
+
+				const claveIngresada = prompt("Ingrese la clave para eliminar el producto:");
+
+				if (claveIngresada === null) {
+					return
+				}
+
+				if (claveIngresada === this.owner.clave_eliminar_article) {
+					this.eliminar_item(article)
+				} else {
+					this.$toast.error('Clave incorrecta')
+					return  
+				}
+
+			} else {
+				this.eliminar_item(article)
+			}
+		},
+		eliminar_item(article) {
 			this.$store.commit('vender/removeItem', article)
 			this.setTotal()
-			// this.$store.commit('vender/setTotal')
 			document.getElementById('article-bar-code').focus()
 		},
 		calculateTotalFromAmount(article) {

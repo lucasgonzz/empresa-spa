@@ -15,4 +15,18 @@ db.version(4).stores({
     meta: '&key' // clave primaria es "key"
 })
 
+// Nueva versión agregando índice bar_code
+db.version(5).stores({
+    articles: 'id, name, provider_code, bar_code',
+    sales: '++id, created_at',
+    meta: '&key'
+})
+
+// Nueva versión agregando índice "plu"
+db.version(6).stores({
+    articles: 'id, name, provider_code, bar_code, plu',
+    sales: '++id, created_at',
+    meta: '&key'
+})
+
 export default db

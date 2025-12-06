@@ -4,16 +4,20 @@
 		<b-row
 		class="article-purchase-filtros">
 			<b-col
-			lg="4">
+			lg="3">
 				<select-client></select-client>
 			</b-col>
 			<b-col
-			lg="4">
+			lg="3">
 				<select-provider></select-provider>
 			</b-col>
 			<b-col
-			lg="4">
+			lg="3">
 				<select-category></select-category>
+			</b-col>
+			<b-col
+			lg="3">
+				<select-address></select-address>
 			</b-col>
 		</b-row>
 
@@ -43,6 +47,7 @@ export default {
 		SelectClient: () => import('@/components/reportes/components/articulos/filtros/SelectClient'),
 		SelectProvider: () => import('@/components/reportes/components/articulos/filtros/SelectProvider'),
 		SelectCategory: () => import('@/components/reportes/components/articulos/filtros/SelectCategory'),
+		SelectAddress: () => import('@/components/reportes/components/articulos/filtros/SelectAddress'),
 		CantidadResultados: () => import('@/components/reportes/components/articulos/filtros/CantidadResultados'),
 		SaleChannel: () => import('@/components/reportes/components/articulos/filtros/SaleChannel'),
 		Orden: () => import('@/components/reportes/components/articulos/filtros/Orden'),

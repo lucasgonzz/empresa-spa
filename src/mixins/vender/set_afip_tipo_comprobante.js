@@ -21,6 +21,7 @@ export default {
 
 			let afip_tipo_comprobante = 0
 
+
 			if (afip_information_id) {
 
 				let punto_de_venta = this.afip_informations.find(model => model.id == afip_information_id)
@@ -32,7 +33,10 @@ export default {
 				} else {
 					if (
 						client
-						&& client.iva_condition_id == 1
+						&& (
+							client.iva_condition_id == 1
+							|| client.iva_condition_id == 2 
+						)
 					) {
 
 						afip_tipo_comprobante = 1

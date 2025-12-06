@@ -90,10 +90,6 @@ export default {
 
 			return this.$store.state.auth.online
 
-			// if (!this.download_articles) {
-			// 	return true
-			// }
-			// return false
 		},
 		price_types() {
 			return this.$store.state.price_type.models

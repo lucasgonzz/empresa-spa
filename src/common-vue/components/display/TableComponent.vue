@@ -4,8 +4,12 @@
 		<div
 		v-if="!loading">
 			<div
+			ref="tabla_contenedor" 
+			style="max-height: 70vh; overflow-y: auto;"
+			:id="'cont-table-results-'+model_name"
 			v-if="models.length">
 				<b-table
+				sticky-header="70vh"
 				:dusk="'table-results-'+model_name"
 				class="s-2 b-r-1 animate__animated animate__fadeIn"
 				head-variant="dark"
@@ -338,6 +342,8 @@ export default {
 					this.is_from_keydown = false
 				}, 500)
 				console.log('se selecciono la fila '+this.selected_index)
+
+				this.scroll_to_selected()
 			}
 		},
 	},
@@ -431,6 +437,13 @@ export default {
 		},
 	},
 	methods: {
+		scroll_to_selected() {
+			const filas = this.$refs.tabla_contenedor.querySelectorAll('tbody tr')
+      const fila = filas[this.selected_index]
+      if (fila) {
+          fila.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+		},
 		rowClass(item, type) {
 			if (this.model_name && this.hasColor(this.model_name)) {
 				return this[this.model_name+'GetColor'](this.models.find(model => model.id == item.id))

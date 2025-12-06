@@ -384,17 +384,20 @@ export default {
 					cards: [],
 				}
 
-				this.model.company_performance_info_facturacion.forEach(info_facturacion => {
-
+				if (this.model.company_performance_info_facturacion) {
 					
-					group_facturacion.cards.push({
-						text: info_facturacion.afip_information.razon_social+' | '+info_facturacion.afip_tipo_comprobante.name,
-						img: 'iva_comprado',
-						value: this.price(info_facturacion.total_facturado, false),
-						// description: 'Sumatoria de los saldos ACTUALES de tus proveedores',
-						// if_has_extencion: 'ventas_en_dolares',
+					this.model.company_performance_info_facturacion.forEach(info_facturacion => {
+
+						
+						group_facturacion.cards.push({
+							text: info_facturacion.afip_information.razon_social+' | '+info_facturacion.afip_tipo_comprobante.name,
+							img: 'iva_comprado',
+							value: this.price(info_facturacion.total_facturado, false),
+							// description: 'Sumatoria de los saldos ACTUALES de tus proveedores',
+							// if_has_extencion: 'ventas_en_dolares',
+						})
 					})
-				})
+				}
 
 				card_groups = card_groups.concat(group_facturacion)
 			}

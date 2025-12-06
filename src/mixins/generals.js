@@ -82,8 +82,8 @@ export default {
                     && caja_default.address_id == address_id
             })
 
-            console.log('cajas_default:')
-            console.log(cajas_default)
+            // console.log('cajas_default:')
+            // console.log(cajas_default)
 
             // Si existe una caja por defecto, ordénala primero
             if (cajas_default.length) {
@@ -101,7 +101,7 @@ export default {
                     return default_caja_for_employee.caja_id 
                 }
 
-                console.log('caja_default: '+cajas_default[0].caja_id)
+                // console.log('caja_default: '+cajas_default[0].caja_id)
 
                 return cajas_default[0].caja_id 
             }
@@ -197,8 +197,8 @@ export default {
             }
         },
         getPriceVender(item, from_pivot = false) {
-            console.log('getPriceVender para '+item.name)
-            console.log(item)
+            // console.log('getPriceVender para '+item.name)
+            // console.log(item)
 
             let price 
 
@@ -358,11 +358,11 @@ export default {
                         })
 
                         if (typeof article_price_type_moneda != 'undefined') {
-                            console.log('usando price_type_moneda moneda_id: '+article_price_type_moneda.moneda_id+', price_type_id: '+article_price_type_moneda.price_type_id)
-                            console.log(article_price_type_moneda.final_price)
+                            // console.log('usando price_type_moneda moneda_id: '+article_price_type_moneda.moneda_id+', price_type_id: '+article_price_type_moneda.price_type_id)
+                            // console.log(article_price_type_moneda.final_price)
                             price = article_price_type_moneda.final_price
                         } else {
-                            console.log(`No se encontró price_type_moneda para artículo ${item.name}, PT: ${price_vender_id}, Moneda: ${moneda_id}`)
+                            // console.log(`No se encontró price_type_moneda para artículo ${item.name}, PT: ${price_vender_id}, Moneda: ${moneda_id}`)
                         }
 
                     } else {
@@ -375,7 +375,7 @@ export default {
 
                             price = article_price_type.pivot.final_price
                         } else {
-                            console.log('No se encontro price type para '+item.name)
+                            // console.log('No se encontro price type para '+item.name)
                         }
                     }
                         

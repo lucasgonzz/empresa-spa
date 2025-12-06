@@ -8,6 +8,7 @@ export default {
 		client_id: null,
 		provider_id: null,
 		category_id: null,
+		address_id: null,
 
 		cantidad_resultados: 10,
 		orden: 'mayor-menor',
@@ -34,6 +35,9 @@ export default {
 		},
 		set_category_id(state, value) {
 			state.category_id = value 
+		},
+		set_address_id(state, value) {
+			state.address_id = value 
 		},
 		set_cantidad_resultados(state, value) {
 			state.cantidad_resultados = value 

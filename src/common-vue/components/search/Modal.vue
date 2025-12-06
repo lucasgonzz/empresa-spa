@@ -580,6 +580,7 @@ export default {
 			})
 		},
 		selectUp() {
+			this.scroll_up()
 			if (this.selected_index > 0) {
 				this.selected_index--
 			} else {
@@ -587,12 +588,21 @@ export default {
 			}
 		},	
 		selectDown() {
+			this.scroll_down()
 			if (this.selected_index < this.results.length-1) {
 				this.selected_index++
 			} else {
 				this.selected_index = 0
 			}
 		},	
+		scroll_down() {
+			let modal = document.getElementById(this.modal_id)
+			modal.scrollTop += 200
+		},
+		scroll_up() {
+			let modal = document.getElementById(this.modal_id)
+			modal.scrollTop -= 200
+		},
 		onRowSelected(model) {
 			console.log('onRowSelected para SEARCH MODAL')
 			this.emitSetSelected(model)
