@@ -91,11 +91,14 @@ export default {
 		async set_article_from_barcode() {
 			if (this.item_vender.codigo != '') {
 				
+				this.finded_article = undefined
 				this.from_balanza = false
 
 				await this.set_finded_article(this.item_vender.codigo)
 
 				console.log('from_balanza: '+this.from_balanza)
+				console.log('finded_article: ')
+				console.log(this.finded_article)
 
 				if (
 					typeof this.finded_article != 'undefined'
@@ -145,6 +148,10 @@ export default {
 				} else if (this.hasExtencion('plu_balanza_bar_code')) {
 
 					await this.set_article_from_plu(codigo)
+
+				} else {
+
+					this.finded_article = undefined
 				}
 
 
@@ -276,6 +283,7 @@ export default {
 				this.add_item_vender()
 
 			} else {
+				this.finded_article = undefined
 				return 
 			}
 		    

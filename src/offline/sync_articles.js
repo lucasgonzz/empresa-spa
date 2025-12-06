@@ -10,12 +10,23 @@ export default {
         async sync_all_articles() {
             console.log('SINCRONIZANDO ARTICULOS')
 
-            if (this.owner.eliminar_articulos_offline) {
+            if (
+                this.user.eliminar_articulos_offline
+            ) {
 
                 await db.articles.clear()
                 await db.meta.clear()
                 
                 this.$toast.success('Se actualizo la memoria de productos')
+
+                this.$api.put('user/set_eliminar_articulos_offline/'+this.user.id+'/0')
+                .then(() => {
+                    this.$toast.success('Reiniciando sistema...')
+                    setTimeout(() => {
+
+                        location.reload()
+                    }, 2000)
+                })
             } else {
 
                 // Obtener la fecha de la última sincronización
