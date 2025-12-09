@@ -68,6 +68,7 @@ export default {
 		{
 			key: 'payment_methods_table',
 			type: 'display',
+      text: 'Metodos de Pago Seleccionados'
 		},
     {
 			text: 'Observaciones',
