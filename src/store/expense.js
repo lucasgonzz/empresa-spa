@@ -4,6 +4,9 @@ axios.defaults.baseURL = process.env.VUE_APP_API_URL
 
 import moment from 'moment'
 import generals from '@/common-vue/mixins/generals'
+
+import payment_methods from './expense/payment_methods'
+
 export default {
 	namespaced: true,
 	state: {
@@ -50,8 +53,21 @@ export default {
 		loading: false,
 
 		props_to_show: [],
+
+		discount_percentage: null,
+		discount_amount: null,
 	},
 	mutations: {
+		set_payment_method_discount_percentage(state, value) {
+			state.discount_percentage = value
+		},
+		set_payment_method_discount_amount(state, value) {
+			state.discount_amount = value
+		},
+		set_payment_methods(state, value){
+			state.model.payment_methods = value
+			state.model = { ...state.model }
+		},
 		set_props_to_show(state, value) {
 			state.props_to_show = value
 		},
@@ -77,15 +93,29 @@ export default {
 		},
 		setModel(state, value) {
 			if (value.model) {
-				state.model = value.model
+				let model = value.model
 				if (value.properties.length) {
 					value.properties.forEach(prop => {
-						state.model[prop.key] = prop.value 
+						model[prop.key] = prop.value 
 					})
 				}
+				let pms = []
+				if (model.payment_methods) {
+					model.payment_methods.forEach(pm => {
+						pms.push({
+							id: pm.id,
+							name: pm.name,
+							amount: pm.pivot.amount,
+							caja_id: pm.pivot.caja_id,
+						})
+					})
+				} 
+				model.payment_methods = pms
+				state.model = model
 			} else {
 				let obj = {
-					id: null
+					id: null,
+					payment_methods: [],
 				}
 				require(`@/models/${state.model_name}`).default.properties.forEach(prop => {
 					obj[prop.key] = prop.value 
@@ -361,4 +391,7 @@ export default {
 			})
 		}
 	},
+	modules: {
+		payment_methods
+	}
 }

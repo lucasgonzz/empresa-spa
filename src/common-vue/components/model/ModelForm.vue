@@ -242,13 +242,19 @@
 										v-if="prop.button.icon"
 										:class="'icon-'+prop.button.icon"></i>
 										<span
-										v-else-if="prop.button.button_text">
+										v-if="prop.button.button_text">
 											{{ prop.button.button_text }}
 										</span>
 										<span
 										v-else>
 											{{ propertyText(model, prop) }}
 										</span>
+										<b-badge
+										v-if="prop.button.badge && getBadgeValue(prop.button, model) > 0"
+										class="m-l-5"
+										:variant="prop.button.badge.variant">
+											{{ getBadgeValue(prop.button, model) }}
+										</b-badge>
 									</b-button>
 									
 									<p
@@ -256,6 +262,11 @@
 									v-else-if="prop.function">
 										{{ getFunctionValue(prop, model) }}
 									</p>
+
+									<div v-else-if="prop.type == 'display' && prop.key == 'payment_methods_table' && model_name == 'expense'">
+										<payment-methods-table
+										:items="model.payment_methods"></payment-methods-table>
+									</div>
 
 
 									<!-- en pivot_parent_model le paso el model padre, para que por ejemplo en el model Sale, en la tabla de articles, tenga acceso al Sale model (el parent_model) -->
@@ -362,6 +373,9 @@
 		:model="afip_result_model"
 		:model_name="model_name"></cuit-result>
 
+		<select-expense-payment-methods-modal
+		v-if="model_name == 'expense'"></select-expense-payment-methods-modal>
+		
 		<!-- <slot 
 		v-if="!from_has_many"
 		name="buttons">
@@ -390,12 +404,35 @@ import Cards from '@/common-vue/components/display/cards/Index'
 import TableComponent from '@/common-vue/components/display/table/Index'
 import Images from '@/common-vue/components/model/images/Index'
 import BtnLoader from '@/common-vue/components/BtnLoader'
+import PaymentMethodsTable from '@/components/expenses/components/PaymentMethodsTable'
+
 // import BtnDelete from '@/common-vue/components/BtnDelete'
 // import Model from '@/common-vue/components/model/Index'
 
 import model_functions from '@/common-vue/mixins/model_functions'
+import generals from '@/common-vue/mixins/generals'
 export default {
-	mixins: [model_functions],
+	components: {
+		CuitResult: () => import('@/components/common/CuitResult'),
+		ModelComponent: () => import('@/common-vue/components/model/Index'),
+		GoogleGeocoder: () => import('@/common-vue/components/model/google-geocoder/Index'),
+		SearchComponent: () => import('@/common-vue/components/search/Index'),
+		TextEditor: () => import('@/common-vue/components/model/form/TextEditor'),	
+		SelectExpensePaymentMethodsModal: () =>  import('@/components/expenses/modals/select-payment-methods/Index'),
+		PaymentMethodsTable,
+		
+		HasMany,
+		BelongsToManyCheckbox,
+		Cards,
+		TableComponent,
+		Images,
+		BtnLoader,
+		// BtnDelete,
+		BarCodeScanner: () => import('@/common-vue/components/bar-code-scanner/Index'),
+		DatePicker: () => import('@/common-vue/components/model/form/DatePicker'),
+	},
+
+	mixins: [model_functions, generals],
 	props: {
 		model: Object,
 		properties: Array,
@@ -909,22 +946,7 @@ export default {
 		}
 
 	},
-	components: {
-		CuitResult: () => import('@/components/common/CuitResult'),
-		ModelComponent: () => import('@/common-vue/components/model/Index'),
-		GoogleGeocoder: () => import('@/common-vue/components/model/google-geocoder/Index'),
-		SearchComponent: () => import('@/common-vue/components/search/Index'),
-		TextEditor: () => import('@/common-vue/components/model/form/TextEditor'),
-		HasMany,
-		BelongsToManyCheckbox,
-		Cards,
-		TableComponent,
-		Images,
-		BtnLoader,
-		// BtnDelete,
-		BarCodeScanner: () => import('@/common-vue/components/bar-code-scanner/Index'),
-		DatePicker: () => import('@/common-vue/components/model/form/DatePicker'),
-	}
+	
 }
 </script>
 <style lang="sass">
