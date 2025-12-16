@@ -98,6 +98,14 @@ export default {
 		},
 		setModel(state, value) {
 			if (value.model) {
+
+				// state.model = value.model
+				// if (value.properties.length) {
+				// 	value.properties.forEach(prop => {
+				// 		state.model[prop.key] = prop.value 
+				// 	})
+				// }
+
 				let model = value.model
 				if (value.properties.length) {
 					value.properties.forEach(prop => {
@@ -107,12 +115,16 @@ export default {
 				let pms = []
 				if (model.payment_methods) {
 					model.payment_methods.forEach(pm => {
-						pms.push({
-							id: pm.id,
-							name: pm.name,
-							amount: pm.pivot.amount,
-							caja_id: pm.pivot.caja_id,
-						})
+
+						if (pm.pivot) {
+							
+							pms.push({
+								id: pm.id,
+								name: pm.name,
+								amount: pm.pivot.amount,
+								caja_id: pm.pivot.caja_id,
+							})
+						}
 					})
 				} 
 				model.payment_methods = pms

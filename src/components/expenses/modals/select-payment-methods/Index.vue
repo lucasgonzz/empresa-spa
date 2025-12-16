@@ -9,10 +9,10 @@
 
 		<hr>
 
-		<!-- <list-payment-methods></list-payment-methods> -->
+		<list-payment-methods></list-payment-methods>
 
 		<!-- Botón para guardar -->
-		<!-- <buttons></buttons> -->
+		<buttons></buttons>
 
 	</b-modal>
 </template>

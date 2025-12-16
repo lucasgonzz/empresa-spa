@@ -34,13 +34,13 @@ export default {
 			is_price: true,
 			description: 'Si completa este campo, el valor impactara en el valor de IVA CREDITO en el modulo de REPORTES',
 		},
-		{
-			text: 'Caja',
-			key: 'caja_id',
-			type: 'select',
-			use_store_models: true,
-			get_options_function: 'get_caja_options',
-		},
+		// {
+		// 	text: 'Caja',
+		// 	key: 'caja_id',
+		// 	type: 'select',
+		// 	use_store_models: true,
+		// 	get_options_function: 'get_caja_options',
+		// },
     	{
 			text: 'Fecha',
 			key: 'created_at',
@@ -48,35 +48,35 @@ export default {
 			value: moment().format('YYYY-MM-DD'),
 			not_show: true,
 		},
-    	// {
-		// 	group_title: 'Metodos de Pago',
-		// },
-		// {
-		// 	key: 'payment_methods',
-		// 	type: 'button',
-      	// 	text: 'Metodos de Pago',
-		// 	button: {
-		// 		button_text: 'Seleccionar',
-		// 		badge: {
-		// 			function: 'get_payment_methods_count',
-		// 			variant: 'success',
-		// 		},
-		// 		call_functions: [
-		// 			{
-		// 				name: 'showSelectPaymentMethodModal',
-		// 				params: [
-		// 					'expense'
-		// 				]
-		// 			}
-		// 		]
-		// 	},
-		// 	check_can_edit: true,
-		// },
-		// {
-		// 	key: 'payment_methods_table',
-		// 	type: 'display',
-	    //   	text: 'Metodos de Pago Seleccionados'
-		// },
+    	{
+			group_title: 'Metodos de Pago',
+		},
+		{
+			key: 'payment_methods',
+			type: 'button',
+      		text: 'Metodos de Pago',
+			button: {
+				button_text: 'Seleccionar',
+				badge: {
+					function: 'get_payment_methods_count',
+					variant: 'success',
+				},
+				call_functions: [
+					{
+						name: 'showSelectPaymentMethodModal',
+						params: [
+							'expense'
+						]
+					}
+				]
+			},
+			check_can_edit: true,
+		},
+		{
+			key: 'payment_methods_table',
+			type: 'display',
+	      	text: 'Metodos de Pago Seleccionados'
+		},
 	    {
 			text: 'Observaciones',
 			key: 'observations',
