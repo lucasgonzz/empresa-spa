@@ -85,7 +85,7 @@ export default {
 				},
 				{
 					text: 'Recargos',
-					description: 'Separe los diferentes recargos con un guion bajo ( _ )',
+					description: 'Separe los diferentes recargos con un guion bajo ( _ ). Si quiere que se aplique al final del precio, coloque una F al final, ej: para aplicar un 10% y un 5& al final coloque: 10_5F',
 				},
 				{
 					text: 'Descuentos montos',
@@ -93,7 +93,7 @@ export default {
 				},
 				{
 					text: 'Recargos montos',
-					description: 'Separe los diferentes recargos con un guion bajo ( _ )',
+					description: 'Separe los diferentes recargos con un guion bajo ( _ ). Si quiere que se aplique al final del precio, coloque una F al final, ej: para aplicar un monto de 10 y un monto de 5 al final coloque: 10_5F',
 				},
 				{
 					text: 'Precio',

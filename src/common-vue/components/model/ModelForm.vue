@@ -79,6 +79,7 @@
 										:clear_query="clearQuery(prop)" 
 										:save_if_not_exist="saveIfNotExist(prop)"
 										:auto_select="autoSelect(prop)"
+										:limpiar_resultados_de_busqueda="prop.limpiar_resultados_de_busqueda"
 										:prop="prop"></search-component>
 									</div>
 
