@@ -14,6 +14,11 @@ export default {
 			is_title: true,
 		},
 		{
+			text: 'Imagen',
+			key: 'image_url',
+			type: 'image',
+		},
+		{
 			text: 'Categoria',
 			key: 'category_id',
 			type: 'search',

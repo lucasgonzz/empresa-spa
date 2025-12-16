@@ -37,14 +37,14 @@
 			</b-col>
 		</b-row>
 	
-		<b-row
+		<!-- <b-row
 		class="row-dark-2 row-full-heigth">
 			<b-col
 			cols="12"
 			xl="9">
 				<features></features>
 			</b-col>
-		</b-row>
+		</b-row> -->
 		<!-- <b-row
 		class="row-dark">
 			<b-col

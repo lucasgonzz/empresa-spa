@@ -4,6 +4,9 @@ axios.defaults.baseURL = process.env.VUE_APP_API_URL
 
 import moment from 'moment'
 import generals from '@/common-vue/mixins/generals'
+
+import payment_methods from './expense/payment_methods'
+
 export default {
 	namespaced: true,
 	state: {
@@ -50,8 +53,26 @@ export default {
 		loading: false,
 
 		props_to_show: [],
+
+		discount_percentage: null,
+		discount_amount: null,
+		selected_payment_methods: [],
 	},
 	mutations: {
+		set_selected_payment_methods(state, value) {
+			state.selected_payment_methods = value
+		},
+		set_payment_method_discount_percentage(state, value) {
+			state.discount_percentage = value
+		},
+		set_payment_method_discount_amount(state, value) {
+			state.discount_amount = value
+		},
+		set_payment_methods(state, value){
+			state.model.payment_methods = value
+			state.selected_payment_methods = value
+			state.model = { ...state.model }
+		},
 		set_props_to_show(state, value) {
 			state.props_to_show = value
 		},
@@ -77,18 +98,46 @@ export default {
 		},
 		setModel(state, value) {
 			if (value.model) {
-				state.model = value.model
+
+				// state.model = value.model
+				// if (value.properties.length) {
+				// 	value.properties.forEach(prop => {
+				// 		state.model[prop.key] = prop.value 
+				// 	})
+				// }
+
+				let model = value.model
 				if (value.properties.length) {
 					value.properties.forEach(prop => {
-						state.model[prop.key] = prop.value 
+						model[prop.key] = prop.value 
 					})
 				}
+				let pms = []
+				if (model.payment_methods) {
+					model.payment_methods.forEach(pm => {
+
+						if (pm.pivot) {
+							
+							pms.push({
+								id: pm.id,
+								name: pm.name,
+								amount: pm.pivot.amount,
+								caja_id: pm.pivot.caja_id,
+							})
+						}
+					})
+				} 
+				model.payment_methods = pms
+				state.model = model
 			} else {
 				let obj = {
-					id: null
+					id: null,
+					payment_methods: [],
 				}
 				require(`@/models/${state.model_name}`).default.properties.forEach(prop => {
-					obj[prop.key] = prop.value 
+					if (prop.value !== undefined) {
+						obj[prop.key] = prop.value 
+					}
 				})
 				if (value.properties.length) {
 					value.properties.forEach(prop => {
@@ -361,4 +410,7 @@ export default {
 			})
 		}
 	},
+	modules: {
+		payment_methods
+	}
 }

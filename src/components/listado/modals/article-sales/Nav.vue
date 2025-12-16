@@ -24,33 +24,21 @@ export default {
 	components: {
 		FromUntilDates: () => import('@/common-vue/components/model/form/FromUntilDates')
 	},
-	computed: {
-		from_date() {
-			return moment().startOf('month').format('YYYY-MM-DD')
-		},
-		until_date() {
-			return moment().format('YYYY-MM-DD')
-		},
-	},
-	created() {
-		this.from = this.from_date
-		this._until = this.until_date
-	},
 	data() {
 		return {
-			from: '',
-			_until: '',
+	        from_date: moment().startOf('month').format('YYYY-MM-DD'),
+	        until_date: moment().format('YYYY-MM-DD')
 		}
 	},
 	methods: {
 		setFrom(date) {
-			this.from = date.value
+			this.from_date = date.value
 		},
 		setUntil(date) {
-			this._until = date.value
+			this.until_date = date.value
 		},
 		getSales() {
-			this.$emit('getSales', {from_date: this.from, until_date: this._until})
+			this.$emit('getSales', {from_date: this.from_date, until_date: this.until_date})
 		},
 	}
 }

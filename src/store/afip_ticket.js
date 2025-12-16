@@ -8,15 +8,12 @@ export default {
 	namespaced: true,
 	state: {
 		problemas_al_facturar: [],
-
 		afip_tickets_for_make: [],
-
 		afip_information_id: 0,
 		afip_tipo_comprobante_id: 0,
 		monto_a_facturar: '',
-
+    afip_fecha_emision: moment().format('YYYY-MM-DD'),
 		loading: false,
-
 		props_to_show: [],
 	},
 	mutations: {
@@ -61,6 +58,7 @@ export default {
 		set_monto_a_facturar(state, value) {
 			state.monto_a_facturar = value
 		},
+    
 	},
 	actions: {
 		get_problemas_al_facturar({commit, state, dispatch}) {

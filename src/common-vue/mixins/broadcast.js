@@ -64,6 +64,11 @@ export default {
             })
             this.Echo.channel('global_notification.'+this.owner_id)
             .notification((notification) => {
+
+                if (this.$route.name == 'consultora_de_precios') {
+                    return 
+                }
+
                 console.log(notification)
                 if (!notification.is_only_for_auth_user || notification.is_only_for_auth_user != this.user.id) {
                     
@@ -80,6 +85,10 @@ export default {
             this.Echo.channel('import_status.'+this.owner_id)
             .notification((notification) => {
                 console.log(notification)
+                
+                if (this.$route.name == 'consultora_de_precios') {
+                    return 
+                }
                 
                 // this.$api.get('import-status/'+notification.import_status_id)
                 // .then(res => {

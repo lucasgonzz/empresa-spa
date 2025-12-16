@@ -542,56 +542,56 @@ export default {
 		},
 		
 		
-		check_cajas() {
-			console.log('check_cajas asdasd')
+		// check_cajas() {
+		// 	console.log('check_cajas asdasd')
 
-			if (
-				this.$store.state.vender.client
-				&& !this.$store.state.vender.omitir_en_cuenta_corriente
-			) {
-				return true
-			}
+		// 	if (
+		// 		this.$store.state.vender.client
+		// 		&& !this.$store.state.vender.omitir_en_cuenta_corriente
+		// 	) {
+		// 		return true
+		// 	}
 
-			if (this.cajas.length) {
+		// 	if (this.cajas.length) {
 
-				if (!this.cajas_abiertas.length) {
-					this.$toast.error('Habra al menos una CAJA para poder indicarla en esta venta')
-					return false 
-				}
+		// 		if (!this.cajas_abiertas.length) {
+		// 			this.$toast.error('Habra al menos una CAJA para poder indicarla en esta venta')
+		// 			return false 
+		// 		}
 
-				if (
-					!this.$store.state.vender.caja_id
-					&& this.selected_payment_methods.length == 0
-					&& (
-						!this.$store.state.vender.client
-						|| this.$store.state.vender.omitir_en_cuenta_corriente
-					)
-				) {
+		// 		if (
+		// 			!this.$store.state.vender.caja_id
+		// 			&& this.selected_payment_methods.length == 0
+		// 			&& (
+		// 				!this.$store.state.vender.client
+		// 				|| this.$store.state.vender.omitir_en_cuenta_corriente
+		// 			)
+		// 		) {
 
-					console.log('entro con client:')
-					console.log(this.$store.state.vender.client)
+		// 			console.log('entro con client:')
+		// 			console.log(this.$store.state.vender.client)
 
-					console.log('entro con omitir_en_cuenta_corriente:')
-					console.log(this.$store.state.vender.omitir_en_cuenta_corriente)
+		// 			console.log('entro con omitir_en_cuenta_corriente:')
+		// 			console.log(this.$store.state.vender.omitir_en_cuenta_corriente)
 
-					this.$toast.error('Indique una CAJA para esta venta')
-					return false 
-				}
+		// 			this.$toast.error('Indique una CAJA para esta venta')
+		// 			return false 
+		// 		}
 
 				
 
-				let caja_seleccionada = this.cajas_abiertas.find(caja => caja.id == this.$store.state.vender.caja_id)
-				console.log('caja_seleccionada:')
-				console.log(caja_seleccionada)
+		// 		let caja_seleccionada = this.cajas_abiertas.find(caja => caja.id == this.$store.state.vender.caja_id)
+		// 		console.log('caja_seleccionada:')
+		// 		console.log(caja_seleccionada)
 				
-				if (typeof caja_seleccionada == 'undefined') {
+		// 		if (typeof caja_seleccionada == 'undefined') {
 
-					this.$toast.error('Indique una CAJA para esta venta')
-					return false 
-				}
-			}
-			return true 
-		},	
+		// 			this.$toast.error('Indique una CAJA para esta venta')
+		// 			return false 
+		// 		}
+		// 	}
+		// 	return true 
+		// },	
 		checkDefaultArticles() {
 			console.log('checkDefaultArticles')
 			let default_articles = this.items.filter(item => {

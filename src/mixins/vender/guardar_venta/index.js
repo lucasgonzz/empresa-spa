@@ -118,7 +118,16 @@ export default {
 				this.$toast.error('Error al guardar venta', {
 					duration: 10000
 				})
-				this.$toast.error(err)
+
+				console.log(err.response.data.message)
+				if (err.response && err.response.data && err.response.data.message) {
+
+					this.$toast.error(err.response.data.message, {
+						duration: 10000
+					})
+				} else {
+					this.$toast.error(err)
+				}
 			})
 		},
 

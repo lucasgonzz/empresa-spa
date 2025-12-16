@@ -134,9 +134,18 @@ export default {
 				this.$store.commit('auth/setLoading', false)
 				this.$toast.error('Error al guardar Presupuesto')
 				console.log(err)
-				this.$toast.error('Codigo: '+err.code+'. Detalle: '+err.message, {
-					duration: 100000,
-				})
+
+				if (err.response && err.response.data && err.response.data.message) {
+
+					this.$toast.error(err.response.data.message, {
+						duration: 10000
+					})
+				} else {
+					
+					this.$toast.error('Codigo: '+err.code+'. Detalle: '+err.message, {
+						duration: 100000,
+					})
+				}
 			})
 		},
 		get_price_type_id() {
