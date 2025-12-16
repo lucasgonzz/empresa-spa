@@ -375,7 +375,7 @@
 
 		<select-expense-payment-methods-modal
 		v-if="model_name == 'expense'"></select-expense-payment-methods-modal>
-		
+
 		<!-- <slot 
 		v-if="!from_has_many"
 		name="buttons">
@@ -410,7 +410,7 @@ import PaymentMethodsTable from '@/components/expenses/components/PaymentMethods
 // import Model from '@/common-vue/components/model/Index'
 
 import model_functions from '@/common-vue/mixins/model_functions'
-import generals from '@/common-vue/mixins/generals'
+
 export default {
 	components: {
 		CuitResult: () => import('@/components/common/CuitResult'),
@@ -420,7 +420,6 @@ export default {
 		TextEditor: () => import('@/common-vue/components/model/form/TextEditor'),	
 		SelectExpensePaymentMethodsModal: () =>  import('@/components/expenses/modals/select-payment-methods/Index'),
 		PaymentMethodsTable,
-		
 		HasMany,
 		BelongsToManyCheckbox,
 		Cards,
@@ -432,7 +431,7 @@ export default {
 		DatePicker: () => import('@/common-vue/components/model/form/DatePicker'),
 	},
 
-	mixins: [model_functions, generals],
+	mixins: [model_functions],
 	props: {
 		model: Object,
 		properties: Array,
