@@ -56,8 +56,12 @@ export default {
 
 		discount_percentage: null,
 		discount_amount: null,
+		selected_payment_methods: [],
 	},
 	mutations: {
+		set_selected_payment_methods(state, value) {
+			state.selected_payment_methods = value
+		},
 		set_payment_method_discount_percentage(state, value) {
 			state.discount_percentage = value
 		},
@@ -66,6 +70,7 @@ export default {
 		},
 		set_payment_methods(state, value){
 			state.model.payment_methods = value
+			state.selected_payment_methods = value
 			state.model = { ...state.model }
 		},
 		set_props_to_show(state, value) {
@@ -118,7 +123,9 @@ export default {
 					payment_methods: [],
 				}
 				require(`@/models/${state.model_name}`).default.properties.forEach(prop => {
-					obj[prop.key] = prop.value 
+					if (prop.value !== undefined) {
+						obj[prop.key] = prop.value 
+					}
 				})
 				if (value.properties.length) {
 					value.properties.forEach(prop => {
