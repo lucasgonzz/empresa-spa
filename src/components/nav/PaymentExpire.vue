@@ -38,7 +38,7 @@
 					</p>
 					<p
 					v-if="days_before_expire < 0">
-						Tu licencia del sistema <strong>A EXPIRADO</strong>, realiza tu pago para que podamos seguir <strong>respaldando la informacion</strong> de tu empresa
+						Tu licencia del sistema <strong>HA EXPIRADO</strong>, realiza tu pago para que podamos seguir <strong>respaldando la informacion</strong> de tu empresa
 					</p>
 					<p 
 					v-else-if="days_before_expire == 0">
