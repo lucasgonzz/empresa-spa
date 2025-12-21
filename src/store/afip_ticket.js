@@ -12,11 +12,16 @@ export default {
 		afip_information_id: 0,
 		afip_tipo_comprobante_id: 0,
 		monto_a_facturar: '',
-    afip_fecha_emision: moment().format('YYYY-MM-DD'),
+    	afip_fecha_emision: moment().format('YYYY-MM-DD'),
 		loading: false,
 		props_to_show: [],
+
+		model: null,
 	},
 	mutations: {
+		set_model(state, value) {
+			state.model = value
+		},
 		set_props_to_show(state, value) {
 			state.props_to_show = value
 		},
