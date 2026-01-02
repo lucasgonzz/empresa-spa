@@ -12,9 +12,9 @@
 </template>
 
 <script>
-import limpiar_vender from '@/mixins/vender/limpiar_vender'
+import vender from '@/mixins/vender'
 export default {
-	mixins: [limpiar_vender],
+	mixins: [vender],
 	methods: {
 		call_limpiar_vender() {
 			if (confirm('¿Seguro que quiere reiniciar esta venta?')) {

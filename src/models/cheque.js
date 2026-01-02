@@ -6,8 +6,18 @@ export default {
 			is_title: true,
 		},
 		{
+			text: 'Tipo',
+			key: 'tipo',
+			type: 'select',
+			options: [
+				'recibido',
+				'emitido',
+			],
+		},
+		{
 			text: 'Cliente',
 			key: 'client_id',
+			type: 'search',
 		},
 		{
 			text: 'Endozado desde cliente',
@@ -32,7 +42,7 @@ export default {
 		{
 			text: 'Monto',
 			key: 'amount',
-			type: 'text',
+			type: 'number',
 			is_price: true,
 		},
 		{

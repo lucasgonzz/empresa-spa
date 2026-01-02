@@ -9,14 +9,31 @@ export default {
 	state: {
 		problemas_al_facturar: [],
 		afip_tickets_for_make: [],
+		forma_de_pago: '',
+		permiso_existente: '',
+		incoterms: 'FOB',
 		afip_information_id: 0,
 		afip_tipo_comprobante_id: 0,
 		monto_a_facturar: '',
-    afip_fecha_emision: moment().format('YYYY-MM-DD'),
+    	afip_fecha_emision: moment().format('YYYY-MM-DD'),
 		loading: false,
 		props_to_show: [],
+
+		model: null,
 	},
 	mutations: {
+		set_model(state, value) {
+			state.model = value
+		},
+		set_incoterms(state, value) {
+			state.incoterms = value
+		},
+		set_forma_de_pago(state, value) {
+			state.forma_de_pago = value
+		},
+		set_permiso_existente(state, value) {
+			state.permiso_existente = value
+		},
 		set_props_to_show(state, value) {
 			state.props_to_show = value
 		},

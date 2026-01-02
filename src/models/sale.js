@@ -20,7 +20,7 @@ export default {
 		{
 			text: 'Total Facturado',
 			type: 'number',
-			key: 'total_a_facturar',
+			key: 'total_facturado',
 			only_show: true,
 			is_price: true,
 			// v_if: ['afip_ticket', '!=', null],

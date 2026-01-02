@@ -249,8 +249,11 @@ export default {
 		        return
 		    }
 
+		    // 2
 		    let tipoBalanza = barcode.substring(0, 2);
+		    // 5
 		    let plu = barcode.substring(2, 7).replace(/^0+/, '');   // quita ceros iniciales
+		    // 6
 		    let peso = barcode.substring(7, 12).replace(/^0+/, ''); // quita ceros iniciales
 
 			console.log('plu: '+plu)

@@ -1,6 +1,5 @@
 <template>
 	<b-form-select
-	class="m-t-10"
 	:options="options"
 	@change="change"
 	v-model="incoterms"></b-form-select>

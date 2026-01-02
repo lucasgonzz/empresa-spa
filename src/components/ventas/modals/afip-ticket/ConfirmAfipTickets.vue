@@ -29,8 +29,40 @@
 	    	v-model="afip_tipo_comprobante_id"
 			:options="getOptions({key: 'afip_tipo_comprobante_id', text: 'Tipo Comprobante'})"></b-form-select>
     	</b-form-group>
+
+    	<div
+		v-if="afip_tipo_comprobante_id == 8">
+    		
+	    	<b-form-group
+			class="m-b-15"
+	    	label="Seleccione la condicion de venta">
+				<select-incoterms
+				@set_selected="set_incoterms"></select-incoterms>
+	    	</b-form-group>
+    		
+	    	<b-form-group
+			class="m-b-15"
+	    	label="Forma de Pago">
+				<b-form-input
+				v-model="forma_de_pago"></b-form-input>
+	    	</b-form-group>
+    		
+	    	<b-form-group
+			class="m-b-15"
+	    	label="Permiso existente">
+				<b-form-checkbox
+				value="S"
+				unchecked-value="N"
+				v-model="permiso_existente">
+					Permiso existente
+				</b-form-checkbox>
+	    	</b-form-group>
+    	</div>
+
+
     	
-			<b-form-group
+		<b-form-group
+		v-if="afip_tipo_comprobante_id != 8"
     	label="Seleccione fecha del comprobante"
 			description="Dejar en blanco para fecha actual"
 			>
@@ -43,7 +75,7 @@
     	</b-form-group>
 
     	<b-form-group
-    	v-if="selected_sales.length == 1"
+    	v-if="selected_sales.length == 1 && afip_tipo_comprobante_id != 8"
     	:description="description_importe_a_facturar"
     	label="Monto a Facturar">
 	    	<b-form-input
@@ -67,7 +99,9 @@ import afip_ticket from '@/mixins/sale/afip_ticket'
 import set_afip_tipo_comprobante from '@/mixins/vender/set_afip_tipo_comprobante'
 export default {
 	mixins: [afip_ticket, set_afip_tipo_comprobante],
-	
+	components: {
+		SelectIncoterms: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/afip-information/SelectIncoterms'),
+	},
 	data() {
 		return {
 			afip_fecha_emision: null,
@@ -128,19 +162,22 @@ export default {
 		}
 	},
 	methods: {
-		 minDate() {
+		set_incoterms(incoterms) {
+			console.log(incoterms)
+			this.$store.commit('afip_ticket/set_incoterms', incoterms)
+		},
+		minDate() {
 			const today = new Date();
 			const minDate = new Date(today);
-    	minDate.setDate(minDate.getDate() - 5);
+    		minDate.setDate(minDate.getDate() - 5);
 			return minDate.toISOString().split('T')[0]
 		},
 		maxDate() {
 			const today = new Date();
 			const maxDate = new Date(today);
-    	maxDate.setDate(maxDate.getDate() + 5);
+    		maxDate.setDate(maxDate.getDate() + 5);
 			return maxDate.toISOString().split('T')[0]
 		},
-
 		set_tipo_comprobante() {
 
 			console.log('set_tipo_comprobante')
