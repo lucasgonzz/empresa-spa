@@ -121,10 +121,13 @@ export default {
             let cajas_abiertas = this.$store.state.caja.models.filter(caja => caja.abierta)
 
             cajas_abiertas.forEach(caja => {
-
+                let name = caja.name 
+                if (caja.employee) {
+                    name += ' (' + caja.employee.name + ')' 
+                }
                 options.push({
                     value: caja.id,
-                    text: caja.name,
+                    text: name,
                 })
             })
 

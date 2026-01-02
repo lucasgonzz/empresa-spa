@@ -1,8 +1,9 @@
 import set_employee_vender from '@/mixins/set_employee_vender'
 import vender from '@/mixins/vender'
 import vender_set_total from '@/mixins/vender_set_total'
+import limpiar_vender from '@/mixins/vender/limpiar_vender'
 export default {
-	mixins: [vender, set_employee_vender, vender_set_total],
+	mixins: [vender, set_employee_vender, vender_set_total, limpiar_vender],
 	computed: {
 		updating() {
 			return this.$store.state.vender.previus_sales.updating

@@ -82,6 +82,7 @@ export default {
 				.catch(err => {
 					this.$store.commit('auth/setLoading', false)
 					this.$toast.error(err)
+					this.$toast.error('Ocurrio un error al crear la devolucion')
 				})
 			}
 		},
@@ -99,6 +100,17 @@ export default {
 			if (this.total_devolucion == 0) {
 				this.$toast.error('Indique unidades devueltas')
 				ok = false
+			}
+
+			if (this.facturar_nota_credito) {
+				let afip_ticket = this.sale.afip_tickets.find(m => m.id == this.facturar_nota_credito)
+				if (
+					typeof afip_ticket != 'undefined' 
+					&& this.total_devolucion > afip_ticket.importe_total
+				) {
+					this.$toast.error('El total de la devolucion ('+this.price(this.total_devolucion)+') no puede ser mayor que la Factura N° '+afip_ticket.cbte_numero+' ('+ this.price(afip_ticket.importe_total) +')')
+					ok = false
+				} 
 			}
 
 			// this.items.forEach(item => {

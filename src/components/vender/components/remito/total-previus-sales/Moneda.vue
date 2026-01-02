@@ -17,7 +17,7 @@
 			type="number"
 			:disabled="disabled"
 			class="input-dolar"
-			@keyup.enter="set_valor_dolar"
+			@keyup="set_valor_dolar"
 			v-model="input_dolar_valor"></b-form-input>
 		</b-input-group>
 

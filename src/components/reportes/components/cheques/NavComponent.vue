@@ -1,6 +1,7 @@
 <template>
 	<b-row>
-		<b-col>
+		<b-col
+		v-if="!filtro_activo">
 			<horizontal-nav
 			set_sub_view
 			:show_display="false"
@@ -11,12 +12,19 @@
 			:show_display="false"
 			:items="sub_items"></horizontal-nav>
 		</b-col>
+
+		<b-col
+		v-else>
+			
+			<nav-filtrados></nav-filtrados>
+		</b-col>
 	</b-row>
 </template>
 <script>
 export default {
 	components: {
 		HorizontalNav: () => import('@/common-vue/components/horizontal-nav/Index'),
+		NavFiltrados: () => import('@/components/reportes/components/cheques/NavFiltrados'),
 	},
 	data() {
 		return {
@@ -24,6 +32,9 @@ export default {
 		}
 	},
 	computed: {
+		filtro_activo() {
+			return this.$store.state.cheque.filtered.length
+		},
 		cheques() {
 			return this.$store.state.cheque.models 
 		},

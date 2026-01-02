@@ -2,9 +2,10 @@
 <b-modal
 title="Observaciones de Factura"
 hide-footer
+v-if="afip_ticket"
 id="afip-ticket-observations">
 	<div
-	v-for="observation in sale.afip_observations">
+	v-for="observation in afip_ticket.afip_observations">
 		<p
 		class="since">
 			{{ date(observation.created_at) }}
@@ -24,8 +25,8 @@ id="afip-ticket-observations">
 <script>
 export default {
 	computed: {
-		sale() {
-			return this.$store.state.sale.model
+		afip_ticket() {
+			return this.$store.state.afip_ticket.model
 		}
 	}
 }

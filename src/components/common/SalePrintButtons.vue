@@ -8,9 +8,10 @@
 			Imprimir	
 		</template>
 		<b-dropdown-item
-		v-if="sale.afip_ticket"
-		@click.stop="afipTicketPdf(sale.id)">
-			Factura
+		v-for="afip_ticket in sale.afip_tickets"
+		v-if="afip_ticket.cae"
+		@click.stop="afipTicketPdf(afip_ticket.id)">
+			Factura N°{{ afip_ticket.cbte_numero }}
 		</b-dropdown-item>
 		<b-dropdown-item
 		@click.stop="ticketPdf(sale)">
@@ -102,8 +103,8 @@ export default {
             let link = process.env.VUE_APP_API_URL+'/sale/ticket-pdf/'+sale.id
             window.open(link)
 		},
-		afipTicketPdf(sale_id) {
-            let link = process.env.VUE_APP_API_URL+'/sale/afip-ticket-pdf/'+sale_id
+		afipTicketPdf(afip_ticket_id) {
+            let link = process.env.VUE_APP_API_URL+'/sale/afip-ticket-pdf/'+afip_ticket_id
             window.open(link)
 		},
 	}
