@@ -1,8 +1,9 @@
 import start_methods from '@/mixins/start_methods'
 import vender_set_total from '@/mixins/vender_set_total'
 import set_price_type from '@/mixins/vender/price_types'
+import set_employee_vender from '@/mixins/set_employee_vender'
 export default {
-	mixins: [start_methods, vender_set_total, set_price_type],
+	mixins: [start_methods, vender_set_total, set_price_type, set_employee_vender],
 	computed: {
 		discounts() {
 			return this.$store.state.discount.models
@@ -66,6 +67,8 @@ export default {
 			this.limpiar_recargos()
 
 			this.limpiar_cuotas()
+
+			this.setEmployeeVender()
 
 			this.setPriceType()
 		},

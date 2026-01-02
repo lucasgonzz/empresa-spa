@@ -50,11 +50,13 @@ export default {
 		cheques() {
 			return this.$store.state.cheque.models 
 		},
+		filtered() {
+			return this.$store.state.cheque.filtered 
+		},
 		cheques_to_show() {
-			console.log('aca:')
-			console.log(this.sub_view)
-			console.log(this.sub_sub_view.replaceAll('-', '_'))
-			console.log(this.cheques[this.sub_view])
+			if (this.filtered.length) {
+				return this.filtered
+			}
 			return this.cheques[this.sub_view][this.sub_sub_view.replaceAll('-', '_')]
 		},
 		properties_to_show() {

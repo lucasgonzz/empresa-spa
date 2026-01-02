@@ -3,6 +3,12 @@ export default {
         maked_sale() {
             return this.$store.state.vender.sale
         },
+        afip_tipo_comprobante_id() {
+            return this.$store.state.vender.afip_tipo_comprobante_id
+        },
+        incoterms() {
+            return this.$store.state.vender.incoterms
+        },
 		afip_information_id: {
 			get() {
 				return this.$store.state.vender.afip_information_id
@@ -41,7 +47,12 @@ export default {
 			}, 500)
 		},
 		facturar_venta() {
-			if (this.afip_information_id && this.maked_sale.total_a_facturar > 0) {
+
+			if (
+				this.afip_information_id 
+				&& this.maked_sale.total_a_facturar > 0
+			) {
+
 				this.interval = window.setInterval(() => {
 					this.ticket_demorado()	
 				}, 5000)
@@ -50,7 +61,9 @@ export default {
 
 				this.$api.post('afip-ticket', {
 					sale_id: this.maked_sale.id,
-					afip_information_id: this.afip_information_id
+					ventas_afip_information_id: this.afip_information_id,
+					afip_tipo_comprobante_id: this.afip_tipo_comprobante_id,
+					incoterms: this.incoterms,
 				})
 				.then(res => {
 

@@ -15,6 +15,30 @@ export default {
                 this.$store.commit('afip_ticket/set_afip_information_id', value)
             }
         },
+        forma_de_pago: {
+            get() {
+                return this.$store.state.afip_ticket.forma_de_pago
+            },
+            set(value) {
+                this.$store.commit('afip_ticket/set_forma_de_pago', value)
+            }
+        },
+        permiso_existente: {
+            get() {
+                return this.$store.state.afip_ticket.permiso_existente
+            },
+            set(value) {
+                this.$store.commit('afip_ticket/set_permiso_existente', value)
+            }
+        },
+        incoterms: {
+            get() {
+                return this.$store.state.afip_ticket.incoterms
+            },
+            set(value) {
+                this.$store.commit('afip_ticket/set_incoterms', value)
+            }
+        },
         afip_tipo_comprobante_id: {
             get() {
                 return this.$store.state.afip_ticket.afip_tipo_comprobante_id
@@ -101,6 +125,9 @@ export default {
                 this.$store.commit('sale/setIsSelecteable', 0)
                 this.$store.commit('sale/setSelected', [])
 
+                this.$store.commit('afip_ticket/set_forma_de_pago', '')
+                this.$store.commit('afip_ticket/set_permiso_existente', '')
+                this.$store.commit('afip_ticket/set_incoterms', 'FOB')
                 this.$store.commit('afip_ticket/set_monto_a_facturar', '')
 
                 this.$bvModal.hide('send-afip-tickets')
@@ -122,6 +149,9 @@ export default {
                 afip_tipo_comprobante_id: this.afip_tipo_comprobante_id,
                 monto_a_facturar: this.monto_a_facturar,
                 afip_fecha_emision: this.afip_fecha_emision,
+                forma_de_pago: this.forma_de_pago,
+                permiso_existente: this.permiso_existente,
+                incoterms: this.incoterms,
             })
             .catch(err => {
                 this.$toast.error('Error al emitir factura para la venta N° '+this.selected_sales[index].num)

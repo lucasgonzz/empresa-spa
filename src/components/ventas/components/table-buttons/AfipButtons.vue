@@ -11,7 +11,7 @@
 			variant="primary"
 			size="sm"
 			class="m-l-5"
-			@click.stop="afip_ticket"
+			@click.stop="print_afip_ticket(afip_ticket)"
 			v-if="afip_ticket.cae">
 				Fac N° {{ afip_ticket.cbte_numero }}
 			</b-button>
@@ -22,13 +22,13 @@
 			v-else>
 				<span
 				v-if="afip_ticket.cbte_numero">
-					{{ afip_ticket.cbte_numero }}
+					Fac N° {{ afip_ticket.cbte_numero }}
 				</span>
-				(sin CAE)
+				 (sin CAE)
 			</b-button>
 
 			<b-button
-			@click="consultar(afip_ticket)"
+			@click.stop="consultar(afip_ticket)"
 			size="sm"
 			variant="danger"
 			v-if="!afip_ticket.cae && afip_ticket.cbte_numero">
@@ -59,10 +59,17 @@
 			<b-button
 			size="sm"
 			@click.stop="showErrors(afip_ticket)"
-			variant="danger"
+			variant="outline-danger"
 			v-if="afip_ticket.afip_errors.length">
 				<i class="icon-eye"></i>
 				{{ afip_ticket.afip_errors.length }}
+			</b-button>
+			<b-button
+			size="sm"
+			@click.stop="delete_afip_ticket(afip_ticket)"
+			variant="outline-danger"
+			v-if="puede_eliminar(afip_ticket)">
+				<i class="icon-trash"></i>
 			</b-button>
 		</b-button-group>
 	</div>
@@ -72,7 +79,21 @@ export default {
 	props: {
 		sale: Object,
 	},
+	computed: {
+	},
 	methods: {
+		puede_eliminar(afip_ticket) {
+			if (
+				(
+					afip_ticket.cae 
+					&& afip_ticket.consultado
+				)
+				|| !afip_ticket.cae
+			) {
+				return true
+			}
+			return false
+		},
 		showObservations(afip_ticket) {
 			this.$store.commit('afip_ticket/set_model', afip_ticket)
 			this.$bvModal.show('afip-ticket-observations')
@@ -82,12 +103,35 @@ export default {
 			this.$store.commit('afip_ticket/set_model', afip_ticket)
 			this.$bvModal.show('afip-ticket-errors')
 		},
+		delete_afip_ticket(afip_ticket) {
+			let text = '¿Seguro que quiere eliminar esta factura?'
+
+			if (afip_ticket.cbte_numero) {
+				text += ' Recomendamos antes CONSULTAR a ARCA sobre este comprobante'
+			}
+
+			if (confirm(text)) {
+
+				this.$store.commit('auht/setLoading', true)
+				this.$api.delete('/afip-ticket/'+afip_ticket.id)
+				.then(res => {
+					this.$store.commit('auht/setLoading', false)
+					this.$store.commit('sale/add', res.data.sale)
+					this.$toast.success('Factura eliminada')
+				})
+				.catch(err => {
+					this.$store.commit('auht/setLoading', false)
+					this.$toast.error('Error al eliminar factura')
+					console.log(err)
+				})
+			}
+		},
 		print_nota_credito_afip_ticket(nota_credito_afip_ticket) {
 			let link = process.env.VUE_APP_API_URL+'/current-acount/pdf/'+nota_credito_afip_ticket.nota_credito_id
 			window.open(link)
 		},
-		afip_ticket() {
-			let link = process.env.VUE_APP_API_URL+'/sale/ticket-pdf/'+this.sale.id
+		print_afip_ticket(afip_ticket) {
+			let link = process.env.VUE_APP_API_URL+'/sale/ticket-pdf/'+afip_ticket.id
 			window.open(link)
 
 		},
@@ -95,8 +139,7 @@ export default {
 			this.$store.commit('auth/setMessage', 'Consultando comprobante')
 			this.$store.commit('auth/setLoading', true)
 
-			let link = process.env.VUE_APP_API_URL+'/afip-ticket/consultar-comprobante/'+afip_ticket.id
-			this.$api.get(link)
+			this.$api.get('/afip-ticket/consultar-comprobante/'+afip_ticket.id)
 			.then(res => {
 				this.$store.commit('auth/setLoading', false)
 				this.$store.commit('sale/add', res.data.sale)

@@ -1,7 +1,7 @@
 export default {
 	properties: [
 		{
-			text: 'Calle',
+			text: 'Nombre',
 			key: 'street',
 			type: 'text',
 			value: '',
@@ -9,11 +9,22 @@ export default {
 			is_title: true,
 		},
 		{
-			text: 'Numero',
+			text: 'Domicilio',
 			key: 'street_number',
 			type: 'text',
 			value: '',
-			is_title: true,
+		},
+		{
+			text: 'Telefono',
+			key: 'phone',
+			type: 'text',
+			value: '',
+		},
+		{
+			text: 'Email',
+			key: 'email',
+			type: 'text',
+			value: '',
 		},
 		{
 			text: 'Ciudad',

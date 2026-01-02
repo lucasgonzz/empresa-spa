@@ -15,7 +15,7 @@ id="afip-ticket-errors">
 
 		<p
 		class="since">
-			{{ date(error.created_at) }}
+			{{ date(error.created_at, true) }}
 		</p>
 		<p>
 			Codigo: {{ error.code }}	

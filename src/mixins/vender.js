@@ -4,8 +4,9 @@ import select_payment_methods from '@/mixins/vender/select_payment_methods'
 import start_methods from '@/mixins/start_methods'
 import vender_set_total from '@/mixins/vender_set_total'
 import sonido_error from '@/mixins/sonido_error' 
+import set_employee_vender from '@/mixins/set_employee_vender'
 export default {
-	mixins: [sonido_error, vender_set_total, clients, sale_ticket, select_payment_methods, start_methods],
+	mixins: [sonido_error, vender_set_total, clients, sale_ticket, select_payment_methods, start_methods, set_employee_vender],
 	computed: {
 		discounts() {
 			return this.$store.state.discount.models
@@ -347,61 +348,63 @@ export default {
 				})
 			}
 		},
-		limpiar_vender() {
-			this.$store.commit('vender/previus_sales/setIndex', 0)
-			this.$store.commit('vender/previus_sales/setPreviusSale', {})
-			this.$store.commit('vender/setToCheck', 0)
-			this.$store.commit('vender/setChecked', 0)
-			this.$store.commit('vender/setConfirmed', 0)
-			this.$store.commit('vender/setItems', [])
+		// limpiar_vender() {
+		// 	this.$store.commit('vender/previus_sales/setIndex', 0)
+		// 	this.$store.commit('vender/previus_sales/setPreviusSale', {})
+		// 	this.$store.commit('vender/setToCheck', 0)
+		// 	this.$store.commit('vender/setChecked', 0)
+		// 	this.$store.commit('vender/setConfirmed', 0)
+		// 	this.$store.commit('vender/setItems', [])
 
-			this.$store.commit('vender/set_descuento', null)
-			this.$store.commit('vender/setDiscountsId', [])
-			this.$store.commit('vender/setSurchagesId', [])
+		// 	this.$store.commit('vender/set_descuento', null)
+		// 	this.$store.commit('vender/setDiscountsId', [])
+		// 	this.$store.commit('vender/setSurchagesId', [])
 
-			this.$store.commit('vender/setClient', null)
-			this.$store.commit('vender/setReturnedItems', [])
-			this.$store.commit('vender/setSaveNotaCredito', 0)
-			this.$store.commit('vender/setNotaCreditoDescription', '')
-			// this.$store.commit('vender/setTotal')
-			this.$store.commit('vender/setObservations', '')
-			this.$store.commit('vender/setGuardarComoPresupuesto', 0)
-			this.$store.commit('vender/setBudget', null)
-			this.$store.commit('vender/setPriceType', null)
-			this.$store.commit('vender/set_numero_orden_de_compra', '')
-			this.$store.commit('vender/set_omitir_en_cuenta_corriente', 0)
+		// 	this.$store.commit('vender/setClient', null)
+		// 	this.$store.commit('vender/setReturnedItems', [])
+		// 	this.$store.commit('vender/setSaveNotaCredito', 0)
+		// 	this.$store.commit('vender/setNotaCreditoDescription', '')
+		// 	// this.$store.commit('vender/setTotal')
+		// 	this.$store.commit('vender/setObservations', '')
+		// 	this.$store.commit('vender/setGuardarComoPresupuesto', 0)
+		// 	this.$store.commit('vender/setBudget', null)
+		// 	this.$store.commit('vender/setPriceType', null)
+		// 	this.$store.commit('vender/set_numero_orden_de_compra', '')
+		// 	this.$store.commit('vender/set_omitir_en_cuenta_corriente', 0)
 			
-			this.$store.commit('vender/setSelectedPaymentMethods', [])
+		// 	this.$store.commit('vender/setSelectedPaymentMethods', [])
 
-			this.$store.commit('vender/current_acount_payment_methods/set_payment_methods', [])
+		// 	this.$store.commit('vender/current_acount_payment_methods/set_payment_methods', [])
 
-			this.$store.commit('vender/setDiscountsInServices', 0)
-			this.$store.commit('vender/setSurchagesInServices', 0)
+		// 	this.$store.commit('vender/setDiscountsInServices', 0)
+		// 	this.$store.commit('vender/setSurchagesInServices', 0)
 
-			this.$store.commit('vender/set_omitir_en_cuenta_corriente', 0)
+		// 	this.$store.commit('vender/set_omitir_en_cuenta_corriente', 0)
 			
-			this.$store.commit('vender/setSellerId', 0)
+		// 	this.$store.commit('vender/setSellerId', 0)
 			
-			this.$store.commit('vender/set_fecha_entrega', null)
+		// 	this.$store.commit('vender/set_fecha_entrega', null)
 
-			this.$store.commit('vender/set_moneda_id', 1)
+		// 	this.$store.commit('vender/set_moneda_id', 1)
 
-			// this.$store.commit('vender/set_caja_id', 0)
+		// 	// this.$store.commit('vender/set_caja_id', 0)
 			
-			// this.$store.commit('vender/set_afip_tipo_comprobante_id', 0)
+		// 	// this.$store.commit('vender/set_afip_tipo_comprobante_id', 0)
 
-			this.setTotal()
+		// 	this.setTotal()
 
-			// this.checkAddressCookie()
+		// 	// this.checkAddressCookie()
 
-			this.limpiar_descuentos()
+		// 	this.limpiar_descuentos()
 
-			this.limpiar_recargos()
+		// 	this.limpiar_recargos()
 
-			this.limpiar_cuotas()
+		// 	this.limpiar_cuotas()
 
-			this.setPriceType()
-		},
+		// 	this.setEmployeeVender()
+
+		// 	this.setPriceType()
+		// },
 		limpiar_cuotas() {
 			this.$store.commit('vender/set_cuota_id', 0)
 			this.$store.commit('vender/set_cantidad_cuotas', null)

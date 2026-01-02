@@ -1,6 +1,7 @@
 import vender_mixin from '@/mixins/vender'
+import limpiar_vender from '@/mixins/vender/limpiar_vender'
 export default {
-	mixins: [vender_mixin],
+	mixins: [vender_mixin, limpiar_vender],
 	computed: {
 		client() {
 			return this.$store.state.vender.client
