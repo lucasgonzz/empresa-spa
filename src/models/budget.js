@@ -31,6 +31,14 @@ export default {
 			use_store_models: true,
 		},
 		{
+			text: 'Moneda',
+			type: 'select',
+			key: 'moneda_id',
+			only_show: true,
+			if_has_extencion: 'ventas_en_dolares',
+			use_store_models: true,
+		},
+		{
 			text: 'Total',
 			key: 'total',
 			only_show: true,
@@ -113,6 +121,13 @@ export default {
 						key: 'bonus',
 						value: '',
 						type: 'number'
+					},
+					{
+						text: 'Costo',
+						key: 'cost',
+						is_price: true,
+						if_is_admin: true,
+						check_simbolo_moneda: true,
 					},
 					// {
 					// 	text: 'Ubicacion',

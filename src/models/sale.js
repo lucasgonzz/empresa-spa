@@ -189,6 +189,13 @@ export default {
 						check_simbolo_moneda: true,
 					},
 					{
+						text: 'Costo',
+						key: 'cost',
+						is_price: true,
+						if_is_admin: true,
+						check_simbolo_moneda: true,
+					},
+					{
 						text: 'Ganancia',
 						key: 'ganancia',
 						is_price: true,
