@@ -33,6 +33,11 @@ export default {
 		},
 		callMethod(prop, model) {
 			console.log('callMethod called')
+			console.log(prop)
+            if (prop.button && prop.button.emit) {
+                this.$emit(prop.button.emit, model)
+                return
+            }
 			prop.button.call_functions.forEach(funcion => {
 				this[funcion.name](...funcion.params)
 			})
