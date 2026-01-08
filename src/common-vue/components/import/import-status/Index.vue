@@ -5,8 +5,6 @@ id="import-status"> -->
 <div
 id="import-status">
 
-
-
 		<p>
 			Estado: {{ status }}
 		</p>
@@ -20,6 +18,22 @@ id="import-status">
 		class="m-l-20"
 		:size="80"
 		:porcentaje="percentage"></circle-progress>
+
+		<hr>
+		<p
+		class="text-left">
+			Articulos creados: {{ import_status.created_models }}
+		</p>
+
+		<p
+		class="text-left">
+			Articulos actualizados: {{ import_status.updated_models }}
+		</p>
+
+		<p
+		class="text-left">
+			Articulos macheados: {{ import_status.articles_match }}
+		</p>
 
 
 		<div class="toggle"

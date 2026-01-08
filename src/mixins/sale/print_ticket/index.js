@@ -102,7 +102,7 @@ export default {
 
             this.total()
 
-            if (this.sale_to_print.afip_ticket) {
+            if (this.sale_to_print.afip_tickets.length) {
                 await this.print_iva_pagado()
             } else {
                 this.salto_linea()

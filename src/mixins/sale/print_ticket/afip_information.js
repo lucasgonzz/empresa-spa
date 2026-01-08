@@ -4,7 +4,7 @@ export default {
     methods: {
 
         afip_information() {
-            if (this.sale_to_print.afip_ticket) {
+            if (this.sale_to_print.afip_tickets.length) {
 
                 this.condicion_iva()
 
@@ -38,12 +38,12 @@ export default {
 
         tipo_comprobante() {
             this.negrita_on()
-            this.content.push(`FACTURA ${this.sale_to_print.afip_ticket.cbte_letra}\n`);
+            this.content.push(`FACTURA ${this.sale_to_print.afip_tickets[0].cbte_letra}\n`);
             this.negrita_off()
         },
 
         numero_comprobante() {
-            this.content.push(`Numero Factura: ${this.sale_to_print.afip_ticket.cbte_numero}\n`);
+            this.content.push(`Numero Factura: ${this.sale_to_print.afip_tickets[0].cbte_numero}\n`);
         },
 
         punto_venta() {
@@ -51,11 +51,11 @@ export default {
         },
 
         cae() {
-            this.content.push(`CAE: ${this.sale_to_print.afip_ticket.cae}\n`);
+            this.content.push(`CAE: ${this.sale_to_print.afip_tickets[0].cae}\n`);
         },
 
         vto_cae() {
-            let vto = this.sale_to_print.afip_ticket.cae_expired_at
+            let vto = this.sale_to_print.afip_tickets[0].cae_expired_at
             vto = vto.substring(0, 11)
 
             this.content.push(`Vto: ${vto}\n`);
@@ -68,8 +68,8 @@ export default {
         condicion_iva_cliente() {
             let iva = 'Consumidor final'
             
-            if (this.sale_to_print.afip_ticket.iva_cliente && this.sale_to_print.afip_ticket.iva_cliente != '') {
-                iva = this.sale_to_print.afip_ticket.iva_cliente
+            if (this.sale_to_print.afip_tickets[0].iva_cliente && this.sale_to_print.afip_tickets[0].iva_cliente != '') {
+                iva = this.sale_to_print.afip_tickets[0].iva_cliente
             }
 
             this.content.push(`Iva Cliente: ${iva}\n`);

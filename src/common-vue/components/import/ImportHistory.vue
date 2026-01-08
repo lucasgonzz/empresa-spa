@@ -92,10 +92,12 @@ export default {
 			this.models.forEach(model => {
 				items.push({
 					created_at: this.date(model.created_at)+' '+this.hour(model.created_at),
+					status: model.status,
 					created_models: model.created_models,
 					updated_models: model.updated_models,
 					articulos_creados: model.articulos_creados,
 					articulos_actualizados: model.articulos_actualizados,
+					articles_match: model.articles_match,
 					error_message: model.error_message,
 					operacion: model.operacion_a_realizar,
 					actualizar_otro_proveedor: model.no_actualizar_otro_proveedor ? 'No' : 'Si',
@@ -114,6 +116,10 @@ export default {
 					label: 'Fecha',
 				},
 				{
+					key: 'status',
+					label: 'Estado',
+				},
+				{
 					key: 'employee_id',
 					label: 'Realizado por',
 				},
@@ -124,6 +130,11 @@ export default {
 				{
 					key: 'updated_models',
 					label: 'Actualizados',
+				},
+
+				{
+					key: 'articles_match',
+					label: 'Macheados',
 				},
 				{
 					key: 'provider_id',
