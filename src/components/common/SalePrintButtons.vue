@@ -7,15 +7,23 @@
 			<i class="icon-print"></i>
 			Imprimir	
 		</template>
+
+        <b-dropdown-divider></b-dropdown-divider>
+		<b-dropdown-text>
+			Tickets
+		</b-dropdown-text>
+        <b-dropdown-divider></b-dropdown-divider>
+
+		<b-dropdown-item
+		@click.stop="ticketPdf(sale)">
+			Ticket venta
+		</b-dropdown-item>
+
 		<b-dropdown-item
 		v-for="afip_ticket in sale.afip_tickets"
 		v-if="afip_ticket.cae"
-		@click.stop="afipTicketPdf(afip_ticket.id)">
-			Factura N°{{ afip_ticket.cbte_numero }}
-		</b-dropdown-item>
-		<b-dropdown-item
-		@click.stop="ticketPdf(sale)">
-			Ticket
+		@click.stop="facturaTicketPdf(afip_ticket.id)">
+			Ticket Fac N°{{ afip_ticket.cbte_numero }}
 		</b-dropdown-item>
 
 		<b-dropdown-item>
@@ -28,11 +36,22 @@
 				Ticket 2.0
 			</span>
 		</b-dropdown-item>
-		<!-- <b-dropdown-item
-		v-if="owner.tamano_letra"
-		@click.stop="ticketRaw(sale)">
-			Ticket 3
-		</b-dropdown-item> -->
+
+
+        <b-dropdown-divider></b-dropdown-divider>
+		<b-dropdown-text>
+			A4
+		</b-dropdown-text>
+        <b-dropdown-divider></b-dropdown-divider>
+
+		
+		<b-dropdown-item
+		v-for="afip_ticket in sale.afip_tickets"
+		v-if="afip_ticket.cae"
+		@click.stop="facturaPdf(afip_ticket.id)">
+			Factura N°{{ afip_ticket.cbte_numero }}
+		</b-dropdown-item>
+
 		<b-dropdown-item
 		@click.stop="salePdf(sale.id, 0, 0, 0)">
 			Sin precios
@@ -100,11 +119,15 @@ export default {
             window.open(link)
 		},
 		ticketPdf(sale) {
-            let link = process.env.VUE_APP_API_URL+'/sale/ticket-pdf/'+sale.id
+            let link = process.env.VUE_APP_API_URL+'/sale/sale-ticket-pdf/'+sale.id
             window.open(link)
 		},
-		afipTicketPdf(afip_ticket_id) {
+		facturaTicketPdf(afip_ticket_id) {
             let link = process.env.VUE_APP_API_URL+'/sale/afip-ticket-pdf/'+afip_ticket_id
+            window.open(link)
+		},
+		facturaPdf(afip_ticket_id) {
+            let link = process.env.VUE_APP_API_URL+'/sale/afip-ticket-a4-pdf/'+afip_ticket_id
             window.open(link)
 		},
 	}
