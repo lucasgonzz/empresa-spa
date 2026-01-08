@@ -582,7 +582,7 @@ export default {
 			key: 'requires_shipping',
 			type: 'checkbox',
 			not_show: true,
-			value: 0,
+			value: 1,
 			if_has_extencion: 'usa_tienda_nube',
 			description: 'Activalo si el producto es fisico, desactivalo si el producto es digital'
 		},
