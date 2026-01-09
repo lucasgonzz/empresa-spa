@@ -19,21 +19,30 @@ id="import-status">
 		:size="80"
 		:porcentaje="percentage"></circle-progress>
 
-		<hr>
-		<p
-		class="text-left">
-			Articulos creados: {{ import_status.created_models }}
-		</p>
+		<div
+		v-if="import_status">
+			<hr>
+			<p
+			class="text-left">
+				Filas procesadas: {{ import_status.filas_procesadas }}
+			</p>
+			<p
+			class="text-left">
+				Articulos creados: {{ import_status.created_models }}
+			</p>
 
-		<p
-		class="text-left">
-			Articulos actualizados: {{ import_status.updated_models }}
-		</p>
+			<p
+			class="text-left">
+				Articulos actualizados: {{ import_status.updated_models }}
+			</p>
 
-		<p
-		class="text-left">
-			Articulos macheados: {{ import_status.articles_match }}
-		</p>
+			<p
+			class="text-left">
+				Articulos macheados: {{ import_status.articles_match }}
+			</p>
+
+			
+		</div>
 
 
 		<div class="toggle"
