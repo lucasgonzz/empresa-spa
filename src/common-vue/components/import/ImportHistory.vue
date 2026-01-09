@@ -98,6 +98,7 @@ export default {
 					articulos_creados: model.articulos_creados,
 					articulos_actualizados: model.articulos_actualizados,
 					articles_match: model.articles_match,
+					filas_procesadas: model.filas_procesadas,
 					error_message: model.error_message,
 					operacion: model.operacion_a_realizar,
 					actualizar_otro_proveedor: model.no_actualizar_otro_proveedor ? 'No' : 'Si',
@@ -137,6 +138,10 @@ export default {
 					label: 'Macheados',
 				},
 				{
+					key: 'filas_procesadas',
+					label: 'Filas procesadas',
+				},
+				{
 					key: 'provider_id',
 					label: 'Proveedor',
 				},
@@ -148,20 +153,20 @@ export default {
 					key: 'actualizar_otro_proveedor',
 				},
 				{
-					key: 'error_message',
-					label: 'Errores',
-				},
-				{
 					key: 'link_excel',
 					label: 'Archivo',
 				},
 				{
 					key: 'columnas',
 				},
-				// {
-				// 	key: 'observations',
-				// 	label: 'Observaciones',
-				// },
+				{
+					key: 'observations',
+					label: 'Observaciones',
+				},
+				{
+					key: 'error_message',
+					label: 'Errores',
+				},
 			]
 		}
 	},
