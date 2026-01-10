@@ -35,14 +35,13 @@
 				Consultar
 			</b-button>
 
-			<!-- <b-button
+			<b-button
 			v-for="nota_credito_afip_ticket in sale.nota_credito_afip_tickets"
 			variant="danger"
-			class="m-l-5"
 			size="sm"
 			@click.stop="print_nota_credito_afip_ticket(nota_credito_afip_ticket)">
 				N/C N° {{ nota_credito_afip_ticket.cbte_numero }}
-			</b-button> -->
+			</b-button>
 
 			<!-- Observaciones -->
 			<b-button
@@ -131,7 +130,7 @@ export default {
 			window.open(link)
 		},
 		print_afip_ticket(afip_ticket) {
-			let link = process.env.VUE_APP_API_URL+'/sale/ticket-pdf/'+afip_ticket.id
+            let link = process.env.VUE_APP_API_URL+'/sale/afip-ticket-pdf/'+afip_ticket.id
 			window.open(link)
 
 		},

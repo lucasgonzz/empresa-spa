@@ -156,6 +156,7 @@ export default {
             .catch(err => {
                 this.$toast.error('Error al emitir factura para la venta N° '+this.selected_sales[index].num)
                 this.afip_tickets_for_make[index].maked = false
+                this.$store.dispatch('sale/getModels')
             })
         },
         setAfipTicketsForMake() {
