@@ -35,13 +35,27 @@
 				Consultar
 			</b-button>
 
-			<b-button
-			v-for="nota_credito_afip in afip_ticket.nota_credito_afip"
-			variant="danger"
-			size="sm"
-			@click.stop="print_nota_credito_afip_ticket(nota_credito_afip)">
-				N/C N° {{ nota_credito_afip.cbte_numero }}
-			</b-button>
+			<b-button-group
+			v-for="nota_credito_afip in afip_ticket.nota_credito_afip">
+				
+				<b-button
+				variant="danger"
+				size="sm"
+				@click.stop="print_nota_credito_afip_ticket(nota_credito_afip)">
+					N/C N° {{ nota_credito_afip.cbte_numero }}
+
+				</b-button>
+
+				<!-- Errores -->
+				<b-button
+				size="sm"
+				@click.stop="showErrors(nota_credito_afip)"
+				variant="outline-danger"
+				v-if="nota_credito_afip.afip_errors.length">
+					<i class="icon-eye"></i>
+					{{ nota_credito_afip.afip_errors.length }}
+				</b-button>
+			</b-button-group>
 
 			<!-- Observaciones -->
 			<b-button

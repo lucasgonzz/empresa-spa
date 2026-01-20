@@ -1,5 +1,7 @@
 <template>
-	<div class="descriptions">
+	<div 
+	v-if="hasExtencion('nota_credito_descriptions')"
+	class="descriptions">
 		<hr>
 		<h3
 		class="m-40">
