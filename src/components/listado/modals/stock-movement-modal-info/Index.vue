@@ -1,6 +1,6 @@
 <template>
 <div>
-    <sale-modal></sale-modal>
+    <!-- <sale-modal></sale-modal> -->
 	
 	<b-modal
 	:title="'Movimientos de Stock de '+article.name+' | N° '+article.id"
@@ -18,7 +18,7 @@ export default {
 	components: {
 		NavComponent: () => import('@/components/listado/modals/stock-movement-modal-info/NavComponent'),
 		TableComponent: () => import('@/components/listado/modals/stock-movement-modal-info/TableComponent'),
-        SaleModal: () => import('@/components/common/SaleModal'),
+        // SaleModal: () => import('@/components/common/SaleModal'),
 	},
 	computed: {
 		article() {

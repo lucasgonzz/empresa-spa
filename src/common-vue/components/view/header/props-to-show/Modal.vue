@@ -184,6 +184,8 @@ export default {
 
 		    const props_to_show = Object.keys(localStorage).filter(name => name.startsWith("props_to_show-"));
 
+		    console.error('get_cookies para '+this.model_name)
+		    console.error(props_to_show)
 		    let cookies = [];
 		    
 		    props_to_show.forEach(name => {

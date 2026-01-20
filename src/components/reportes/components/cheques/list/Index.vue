@@ -60,14 +60,19 @@ export default {
 			return this.cheques[this.sub_view][this.sub_sub_view.replaceAll('-', '_')]
 		},
 		properties_to_show() {
-			if (this.sub_view == 'recibido') {
-				if (this.sub_sub_view == 'endosados') {
-					return this.modelPropertiesFromName('cheque').filter(prop => prop.key != 'provider_id' && prop.key != 'endosado_desde_client_id')
-				} 
-				return this.modelPropertiesFromName('cheque').filter(prop => prop.key != 'provider_id' && prop.key != 'endosado_a_provider_id' && prop.key != 'endosado_desde_client_id')
-			} else if (this.sub_view == 'emitido') {
-				return this.modelPropertiesFromName('cheque').filter(prop => prop.key != 'client_id' && prop.key != 'endosado_a_provider_id')
-			}
+			if (this.filtered.length == 0) {
+
+				if (this.sub_view == 'recibido') {
+					if (this.sub_sub_view == 'endosados') {
+						return this.modelPropertiesFromName('cheque').filter(prop => prop.key != 'provider_id' && prop.key != 'endosado_desde_client_id')
+					} 
+					return this.modelPropertiesFromName('cheque').filter(prop => prop.key != 'provider_id' && prop.key != 'endosado_a_provider_id' && prop.key != 'endosado_desde_client_id')
+				} else if (this.sub_view == 'emitido') {
+					return this.modelPropertiesFromName('cheque').filter(prop => prop.key != 'client_id' && prop.key != 'endosado_a_provider_id')
+				}
+			} 
+			
+			return this.modelPropertiesFromName('cheque')
 		}
 	}
 }

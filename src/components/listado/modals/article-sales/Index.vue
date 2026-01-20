@@ -6,7 +6,7 @@ id="article-sales"
 size="lg"
 hide-footer>
 
-    <model-component
+   <!--  <model-component
     :show_btn_save="false"
     :show_btn_delete="false"
     :show_btn_remove_belongs_to_many="false"
@@ -14,7 +14,7 @@ hide-footer>
         <template v-slot:model_modal_header="props">
             <sale-details></sale-details>
         </template>
-    </model-component>  
+    </model-component>  --> 
 
 	<nav-component
 	@getSales="getSales"></nav-component>
@@ -69,7 +69,7 @@ import article_sales from '@/mixins/article_sales'
 export default {
 	mixins: [article_sales],
 	components: {
-		ModelComponent: () => import('@/common-vue/components/model/Index'),
+		// ModelComponent: () => import('@/common-vue/components/model/Index'),
 		NavComponent: () => import('@/components/listado/modals/article-sales/Nav'),
 		ExtraInformation: () => import('@/components/listado/modals/article-sales/ExtraInformation'),
 		TableComponent: () => import('@/common-vue/components/display/table/Index'),
