@@ -8,6 +8,9 @@ export default {
 		items() {
 			return this.$store.state.devoluciones.items
 		},
+		descriptions() {
+			return this.$store.state.devoluciones.descriptions
+		},
 		discounts_id() {
 			return this.$store.state.devoluciones.discounts_id
 		},
@@ -49,12 +52,24 @@ export default {
 				item.unidades_devueltas = unidades_devueltas
 			})
 
+			this.aplicar_descriptions()
+
 			this.aplicar_discounts()
 			this.aplicar_surchages()
 
 			console.log('set_total_devolucion: '+this.total_devolucion)
 
 			this.$store.commit('devoluciones/set_total_devolucion_manual', this.total_devolucion)
+		},
+		aplicar_descriptions() {
+			this.descriptions.forEach(des => {
+				if (
+					des.price
+					&& Number(des.price) > 0
+				) {
+					this.total_devolucion += Number(des.price)
+				}
+			})
 		},
 		aplicar_discounts() {
 			if (this.discounts_id.length) {

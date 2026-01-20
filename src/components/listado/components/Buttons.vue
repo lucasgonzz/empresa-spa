@@ -29,6 +29,22 @@ class="buttons-listado">
 	</b-button>
 
 
+	<!-- Acopios -->
+	<b-button 
+	v-if="hasExtencion('acopios')" 
+	variant="outline-danger"
+	size="sm"
+	@click.stop="show_acopios()" 
+	class="m-l-10">
+		<b-badge
+		variant="danger"
+		v-if="model.sales_with_deliveries_in_acopio.length > 0">
+			{{ model.sales_with_deliveries_in_acopio.length }}
+		</b-badge>
+		Aco
+	</b-button>
+
+
 
 	<!-- Proveedores -->
 	<b-button 
@@ -227,6 +243,13 @@ export default {
 		showArticleInRecipes() {
 			this.$store.dispatch('article_used_in_recipes/getModels', this.model)
 			this.$bvModal.show('article-used-in-recipes')
+		},
+		show_acopios() {
+
+			this.setModel(this.model, 'article', [], false)
+			this.$bvModal.show('article-acopios')
+
+
 		},
 		showVariants() {
 			this.$store.commit('auth/setMessage', 'Cargando')

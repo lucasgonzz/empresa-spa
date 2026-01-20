@@ -155,4 +155,5 @@ export default {
 	plural_model_name_spanish: 'Recetas',
 	create_model_name_spanish: 'Nueva receta',
 	text_delete: 'la',
+	full_reactivity: true,
 }

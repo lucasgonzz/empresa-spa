@@ -16,11 +16,28 @@
 			:items="items">
 
 				<template #cell(cliente)="data">
-					<b-button
-					@click="showCurrentAcounts(ventas_sin_cobrar[data.index])"
-					variant="success">
-						{{ client_name(ventas_sin_cobrar[data.index]) }}
-					</b-button>
+					<div class="j-start">
+						
+						<p>
+							{{ ventas_sin_cobrar[data.index].client.name }}
+						</p>
+						
+						<b-button
+						class="m-l-10"
+						v-for="credit_account in ventas_sin_cobrar[data.index].client.credit_accounts"
+						@click="showCurrentAcounts(ventas_sin_cobrar[data.index].client, credit_account)"
+						variant="success">
+							{{ price(credit_account.saldo) }}
+							<span
+							v-if="credit_account.moneda_id == 1">
+								Pesos
+							</span>
+							<span
+							v-else-if="credit_account.moneda_id == 2">
+								USD
+							</span>
+						</b-button>
+					</div>
 				</template>
 
 
@@ -82,9 +99,23 @@ export default {
 		},
 	},
 	methods: {
-		client_name(sale) {
-			if (sale.client) {
-				return sale.client.name+' ( '+ this.price(sale.client.saldo) +' )'
+		client_name(info) {
+			if (info.client) {
+				let text = info.client.name
+				
+				let credit_account = info.client.credit_accounts.find(c => c.moneda_id == info.moneda_id)
+
+				if (typeof credit_account != 'undefined') {
+					text += ' ( '+ this.price(credit_account.saldo) 
+					if (credit_account.moneda_id == 2) {
+						text += ' USD )'
+					} else {
+
+						text += ' )'
+					}
+				} else {
+				}
+				return text
 			}
 			return 'NO HAY'
 		},
@@ -95,8 +126,8 @@ export default {
 		lo_que_falta_pagarse(sale) {
 			return this.price(Number(sale.current_acount.debe) - Number(sale.current_acount.pagandose))
 		},
-		showCurrentAcounts(sale) {
-			this.showClientCurrentAcount(sale)
+		showCurrentAcounts(client, credit_account) {
+			this.showCurrentAcount(client, credit_account)
 		}
 	}
 }

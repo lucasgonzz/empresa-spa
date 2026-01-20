@@ -622,6 +622,14 @@ export default {
             }
             return total
         },
+        showCurrentAcount(client, credit_account) {
+
+            this.$store.commit('current_acount/setFromModelName', 'client')
+            this.$store.commit('current_acount/setFromModel', client)
+            this.$store.commit('current_acount/set_from_credit_account', credit_account)
+            this.$store.dispatch('current_acount/getModels')
+            this.$bvModal.show('current-acounts')
+        },
         showClientCurrentAcount(sale) {
 
             let client = sale.client 

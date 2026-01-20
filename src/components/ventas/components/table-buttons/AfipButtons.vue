@@ -36,11 +36,11 @@
 			</b-button>
 
 			<b-button
-			v-for="nota_credito_afip_ticket in sale.nota_credito_afip_tickets"
+			v-for="nota_credito_afip in afip_ticket.nota_credito_afip"
 			variant="danger"
 			size="sm"
-			@click.stop="print_nota_credito_afip_ticket(nota_credito_afip_ticket)">
-				N/C N° {{ nota_credito_afip_ticket.cbte_numero }}
+			@click.stop="print_nota_credito_afip_ticket(nota_credito_afip)">
+				N/C N° {{ nota_credito_afip.cbte_numero }}
 			</b-button>
 
 			<!-- Observaciones -->
@@ -84,10 +84,10 @@ export default {
 		puede_eliminar(afip_ticket) {
 			if (
 				(
-					afip_ticket.cae 
+					!afip_ticket.cae
 					&& afip_ticket.consultado
 				)
-				|| !afip_ticket.cae
+				|| !afip_ticket.cbte_numero
 			) {
 				return true
 			}

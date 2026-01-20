@@ -17,6 +17,8 @@ export default {
 
 		total_devolucion: 0,
 
+		descriptions: [],
+
 		regresar_stock: 1,
 		address_id: 0,
 		generar_current_acount: 1,
@@ -25,6 +27,27 @@ export default {
 	mutations: {
 		set_num_sale(state, value) {
 			state.num_sale = value 
+		},
+		set_descriptions(state, value) {
+			state.descriptions = value 
+		},
+		add_description(state) {
+			state.descriptions.push({
+				notes: '',
+				price: '',
+				iva_id: 2,
+			})
+		},
+		delete_description(state, description) {
+
+			let index = state.descriptions.findIndex(d => {
+				return d.notes == description.notes
+				&& d.price == description.price
+			})
+
+			if (index != -1) {
+				state.descriptions.splice(index, 1)
+			}
 		},
 		set_client(state, value) {
 			state.client = value 

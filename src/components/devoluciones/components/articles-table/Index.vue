@@ -145,7 +145,7 @@ export default {
 				return item.ya_devueltas
 			}
 			return 0
-		},
+		}, 
 		call_set_total_devolucion() {
 			// this.$store.commit('devoluciones/set_total_devolucion')
 			this.set_total_devolucion()

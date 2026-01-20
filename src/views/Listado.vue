@@ -11,6 +11,8 @@
 	
 	<images-copy></images-copy> -->
 
+	<current-acounts></current-acounts>
+	
 	<import></import>
 	<charts></charts>
 	<article-sales></article-sales>
@@ -34,6 +36,7 @@
 	<mercado-libre-category-predictor></mercado-libre-category-predictor>
 
 	<article-ubications></article-ubications>
+	<acopios></acopios>
 
 
 	<!-- <stock-info></stock-info> -->
@@ -182,6 +185,9 @@ export default {
 		AddressStock: () => import('@/components/listado/components/table-props/address-stock/Index'),
 		HorizontalNav: () => import('@/components/listado/components/horizontal-nav/Index'),
 		GoogleBtn: () => import('@/components/listado/components/table-props/google-btn/Index'),
+		Acopios: () => import('@/components/listado/modals/acopios/Index'),
+		
+		CurrentAcounts: () => import('@/components/common/current-acounts/Index'),
 	}, 
 	beforeRouteLeave(to, from, next) {
 		this.$store.commit('article/setSelected', [])

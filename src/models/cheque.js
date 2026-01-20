@@ -28,7 +28,8 @@ export default {
 		{
 			text: 'Proveedor',
 			key: 'provider_id',
-		},
+			type: 'search',
+		}, 
 		{
 			text: 'Endozado al proveedor',
 			key: 'endosado_a_provider_id',

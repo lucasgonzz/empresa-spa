@@ -19,6 +19,9 @@ export default {
 		items() {
 			return this.$store.state.devoluciones.items 
 		},
+		descriptions() {
+			return this.$store.state.devoluciones.descriptions 
+		},
 		client() {
 			return this.$store.state.devoluciones.client 
 		},
@@ -66,6 +69,7 @@ export default {
 					generar_current_acount: this.generar_current_acount,
 					address_id: this.address_id,
 					facturar_nota_credito: this.facturar_nota_credito,
+					descriptions: this.descriptions,
 					discounts: this.get_models_by_id('discount', this.discounts_id),
 					surchages: this.get_models_by_id('surchage', this.surchages_id),
 				})
