@@ -51,6 +51,7 @@
 
     <b-modal 
     id="current-acounts" 
+    ref="current_acounts"
     :title="title" 
     hide-footer 
     size="xl" 

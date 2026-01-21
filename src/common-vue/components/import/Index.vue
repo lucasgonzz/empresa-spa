@@ -177,18 +177,54 @@
 			</b-form-radio>
 
 			<hr>
-			<b-form-checkbox
-			v-if="model_name == 'article'"
-			class="radio-option"
-			:value="1"
-			:unchecked-value="0"
-			size="lg"
-			v-model="no_actualizar_articulos_de_otro_proveedor">
-				<span
-				id="cargar_y_actualizar">
-					No actualizar articulos que ya pertenezcan a otro proveedor
-				</span>
-			</b-form-checkbox>
+			<div
+			v-if="model_name == 'article'">
+				
+				<b-form-checkbox
+				class="radio-option"
+				:value="1"
+				:unchecked-value="0"
+				size="lg"
+				v-model="no_actualizar_articulos_de_otro_proveedor">
+					<span
+					id="cargar_y_actualizar">
+						No actualizar articulos que ya pertenezcan a otro proveedor
+					</span>
+					<p
+					class="text-description">
+						Si lo activas, por mas que los artículos del excel que subas coincidan con otros artículos ya creados en el sistema, estos últimos deberán pertenecer al proveedor que indiques, solo así se actualizaran.
+					</p>
+					<p
+					class="text-description">
+						Si no lo activas, bastara con que los artículos coincidan y se actualizaran, pertenezcan o no al proveedor que indiques.
+					</p>
+				</b-form-checkbox>
+				
+				<div
+				v-if="!no_actualizar_articulos_de_otro_proveedor">
+					
+					<hr>
+					<b-form-checkbox
+					class="radio-option"
+					:value="1"
+					:unchecked-value="0"
+					size="lg"
+					v-model="actualizar_proveedor">
+						<span>
+							Actualizar el proveedor de los articulos
+						</span>
+						<p
+						class="text-description">
+							Ya que vas a actualizar todos los artículos con los que haya coincidencias (pertenezcan o no al proveedor que indicaste), al activar esta opción vas a cambiar el proveedor de todos los artículos que hayan tenido cambios. 
+						</p>
+						<p
+						class="text-description">
+							Si lo desactivas, los artículos que pertenezcan a otro proveedor van a seguir perteneciendo a ese proveedor.
+						</p>
+					</b-form-checkbox>
+				</div>
+
+			</div>
 
 			<hr>	
 		</div>
@@ -323,6 +359,7 @@ export default {
 			positions_seted: false,
 			create_and_edit: null,
 			no_actualizar_articulos_de_otro_proveedor: 1,
+			actualizar_proveedor: 0,
 			show_history: false,
 			archivo_excel_path: null,
 
@@ -606,6 +643,8 @@ export default {
 				form_data.append('finish_row', this.finish_row)
 				form_data.append('create_and_edit', this.create_and_edit)
 				form_data.append('no_actualizar_articulos_de_otro_proveedor', this.no_actualizar_articulos_de_otro_proveedor)
+				form_data.append('actualizar_proveedor', this.actualizar_proveedor)
+
 
 				let index = 0
 				this.columns_.forEach(column => {
@@ -787,5 +826,10 @@ export default {
 
 	.radio-option
 		font-size: 30px
+
+.text-description
+	font-size: .6em
+	margin: 5px 0 
+
 
 </style>
