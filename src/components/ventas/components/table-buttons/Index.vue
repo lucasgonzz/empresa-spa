@@ -12,6 +12,9 @@
 
 		<etiqueta-envio
 		:sale="model"></etiqueta-envio>
+
+		<cerrar-venta
+		:sale="model"></cerrar-venta>
 	</div>
 </template>
 <script>
@@ -29,6 +32,7 @@ export default {
 		AfipButtons: () => import('@/components/ventas/components/table-buttons/AfipButtons'),
 		PaymentPlanBtn: () => import('@/components/ventas/components/table-buttons/PaymentPlanBtn'),
 		EtiquetaEnvio: () => import('@/components/ventas/components/table-buttons/EtiquetaEnvio'),
+		CerrarVenta: () => import('@/components/ventas/components/table-buttons/CerrarVenta'),
 	}
 }
 </script>

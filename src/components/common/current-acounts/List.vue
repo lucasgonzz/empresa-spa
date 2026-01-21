@@ -17,8 +17,12 @@ class="p-l-20 p-r-20">
         <template v-slot:default="slotProps">
 
             <b-badge
-            v-if="slotProps.model.sale && slotProps.model.sale.afip_ticket"
+            v-if="slotProps.model.sale && slotProps.model.sale.afip_tickets.length"
             variant="success">Facturado</b-badge>
+
+            <cerrar-venta
+            v-if="slotProps.model.sale"
+            :sale="slotProps.model.sale"></cerrar-venta>
 
             <b-badge
             v-if="slotProps.model.sale && slotProps.model.sale.en_acopio"
@@ -47,7 +51,8 @@ export default {
     mixins: [current_acounts, print],
     components: {
         TableComponent,
-        BtnPaymentMethodsInfo: () => import('@/components/common/current-acounts/BtnPaymentMethodsInfo')
+        BtnPaymentMethodsInfo: () => import('@/components/common/current-acounts/BtnPaymentMethodsInfo'),
+        CerrarVenta: () => import('@/components/ventas/components/table-buttons/CerrarVenta'),
     },
     computed: {
         model_name() {

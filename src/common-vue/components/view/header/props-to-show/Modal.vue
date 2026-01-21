@@ -171,6 +171,11 @@ export default {
 
 		// Chequea si hay cookies con un orden es especifico
 		check_cookies() {
+
+			if (!this.can_use_local_storage() || !this.can_use_cookies()) {
+			    alert("Tu navegador tiene bloqueado el almacenamiento. La funcion de almacenar que columnas queres ver en las tablas puede no funcionar correctamente.");
+			}
+
 			let cookies = this.get_cookies()
 			console.error('Hay Cookies:')
 			console.error(cookies)
@@ -200,6 +205,26 @@ export default {
 
 		    return cookies;
 		},	
+
+
+		// Funciones para chequear si el navegador permite almacenar cookies
+		can_use_local_storage() {
+		    try {
+		        const test = '__test__';
+		        localStorage.setItem(test, test);
+		        localStorage.removeItem(test);
+		        return true;
+		    } catch (e) {
+		        return false;
+		    }
+		},
+
+		can_use_cookies() {
+		    document.cookie = "test_cookie=1";
+		    const can_use = document.cookie.indexOf("test_cookie") !== -1;
+		    document.cookie = "test_cookie=; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+		    return can_use;
+		},
 
 		// Agrega esas propiedades por defecto al array de propiedades seleccionadas
 		set_selected_props() {
