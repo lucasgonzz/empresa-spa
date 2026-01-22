@@ -65,7 +65,14 @@ export default {
 					)
 				) {
 
-				props = this.add_price_types(props)
+				// if (this.hasExtencion('ventas_en_dolares')) {
+
+					// props = this.quitar_props_de_precios(props)
+				// } else {
+
+					props = this.add_price_types(props)
+				// }
+
 				
 			}
 
@@ -106,14 +113,39 @@ export default {
 		},
 		get_price_type_price(article, price_type) {
 
-			let article_price_type = article.price_types.find(_price_type => {
-				return _price_type.id == price_type.id
-			})
+			if (this.hasExtencion('ventas_en_dolares')) {
 
-			if (typeof article_price_type != 'undefined') {
+				let price_type_monedas = article.price_type_monedas.filter(_price_type => {
+					return _price_type.price_type_id == price_type.id
+				})
 
-				return this.price(article_price_type.pivot.final_price)
+
+				if (price_type_monedas.length > 0) {
+
+					let pesos = price_type_monedas.find(p => p.moneda_id == 1)
+
+					let price = this.price(pesos.final_price)
+
+					let dolar = price_type_monedas.find(p => p.moneda_id == 2)
+
+					price += ' ('+this.price(dolar.final_price)+' USD)'
+
+
+					return price
+				}
+
+			} else {
+
+				let article_price_type = article.price_types.find(_price_type => {
+					return _price_type.id == price_type.id
+				})
+
+				if (typeof article_price_type != 'undefined') {
+
+					return this.price(article_price_type.pivot.final_price)
+				}
 			}
+
 		},
 		get_address_stock(article, address) {
 			
@@ -239,6 +271,7 @@ export default {
 			console.log(this.hasExtencion('lista_de_precios_por_categoria'))
 			// Encuentra la posición de alguna de estas props
 			let props_a_partir_de_las_cuales_agregar = [
+				'costo_real',
 				'cost',
 				'price',
 				'name',
@@ -250,9 +283,7 @@ export default {
 
 			let insertIndex = this.get_index(props, props_a_partir_de_las_cuales_agregar)
 
-			props = props.filter(prop => prop.key != 'percentage_gain')
-			props = props.filter(prop => prop.key != 'price')
-			props = props.filter(prop => prop.key != 'final_price')
+			props = this.quitar_props_de_precios(props)
 
 			this.price_types.forEach(price_type => {
 
@@ -272,6 +303,15 @@ export default {
 				}
 				
 			})
+
+			return props
+		},
+
+		quitar_props_de_precios(props) {
+
+			props = props.filter(prop => prop.key != 'percentage_gain')
+			props = props.filter(prop => prop.key != 'price')
+			props = props.filter(prop => prop.key != 'final_price')
 
 			return props
 		},
