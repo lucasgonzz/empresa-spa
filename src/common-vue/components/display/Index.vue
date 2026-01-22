@@ -154,7 +154,7 @@ export default {
 	},
 	data() {
 		return {
-			index_to_show: 100,
+			index_to_show: 300,
 		}
 	},
 	computed: {
