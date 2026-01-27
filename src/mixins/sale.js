@@ -81,11 +81,11 @@ export default {
 			if (this.afip_ticket_show_option == 'solo-con-factura') {
 				console.log('entro solo-con-factura')
 				sales = sales.filter(sale => {
-					return sale.afip_ticket 
+					return sale.afip_tickets.length  > 0
 				})
 			} else if (this.afip_ticket_show_option == 'solo-sin-factura') {
 				sales = sales.filter(sale => {
-					return !sale.afip_ticket 
+					return sale.afip_tickets.length == 0
 				})
 			}
 

@@ -585,7 +585,7 @@ export default {
 			this.$store.commit(this.model_name+'/setTotalFilterPages', 1)
 		},
 		filtros_ya_iniciados() {
-			return this.$store.state[this.model_name].filters.length
+			return this.$store.state[this.model_name].filters && this.$store.state[this.model_name].filters.length
 		},
 		set_filters(cambiaron_las_props) {
 
