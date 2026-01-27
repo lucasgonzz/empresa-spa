@@ -48,7 +48,7 @@ export default {
 				},
 				{
 					key: 'amount',
-					label: 'Cantidad'
+					label: 'Ultima Cantidad comprada'
 				},
 				{
 					key: 'cost',

@@ -28,7 +28,7 @@ export default {
 				}
 
 				if (sale.current_acount_payment_methods
-					&& sale.current_acount_payment_methods.length > 1) {
+					&& sale.current_acount_payment_methods.length >= 1) {
 					
 					console.log('no puede 4')
 

@@ -12,7 +12,7 @@
 </template>
 
 <script>
-import vender from '@/mixins/vender'
+import vender from '@/mixins/vender/limpiar_vender'
 export default {
 	mixins: [vender],
 	methods: {

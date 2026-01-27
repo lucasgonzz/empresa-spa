@@ -6,6 +6,12 @@ size="lg"
 id="article-acopios">
 	<div
 	v-if="!loading">
+
+		<h4
+		class="text-right">
+			Total: {{ total }}
+		</h4>
+
 		<b-table
 		v-if="items.length"
 		head-variant="dark"
@@ -76,7 +82,15 @@ export default {
 				},
 				{
 					key: 'amount',
-					label: 'Cantidad'
+					label: 'Cantidad Vendida'
+				},
+				{
+					key: 'amount_acopio',
+					label: 'Cantidad acopiada'
+				},
+				{
+					key: 'amount_entregada',
+					label: 'Cantidad entregada'
 				},
 				{
 					key: 'created_at',
@@ -92,6 +106,8 @@ export default {
 						acopio: acopio.name,
 						provider_code: acopio.pivot.provider_code,
 						amount: acopio.pivot.amount,
+						entregada: acopio.pivot.delivered_amount,
+						amount_acopio: Number(acopio.pivot.amount) - Number(acopio.pivot.delivered_amount),
 						cost: this.price(acopio.pivot.cost),
 						price: this.price(acopio.pivot.price),
 						updated_at: this.date(acopio.pivot.updated_at, true),
@@ -99,6 +115,18 @@ export default {
 				})
 			}
 			return items 
+		},
+		total() {
+			let total = []
+			if (this.article) {
+				this.sales.forEach(acopio => {
+
+					let amount_acopio = Number(acopio.pivot.amount) - Number(acopio.pivot.delivered_amount)
+
+					total += amount_acopio
+				})
+			}
+			return total 
 		}
 	},
 	methods: {

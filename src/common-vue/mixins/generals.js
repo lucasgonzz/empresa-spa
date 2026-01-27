@@ -888,7 +888,7 @@ export default {
 		_check_moneda(value, prop, model, from_pivot, pivot_parent_model) {
 
 			if (prop.check_simbolo_moneda) {
-				console.log('ENTRO check_simbolo_moneda en prop '+prop.key+' con el model moneda_id: '+model.moneda_id)
+				// console.log('ENTRO check_simbolo_moneda en prop '+prop.key+' con el model moneda_id: '+model.moneda_id)
 				let prop_to_check = 'moneda_id'
 				let value_equal_to = 2 
 
