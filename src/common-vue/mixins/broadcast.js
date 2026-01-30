@@ -82,20 +82,16 @@ export default {
                 }
             })
 
-            this.Echo.channel('import_status.'+this.owner_id)
-            .notification((notification) => {
-                console.log(notification)
-                
-                if (this.$route.name == 'consultora_de_precios') {
-                    return 
+            this.Echo
+            .channel(`import_status.${this.owner_id}`)
+            .listen('.ImportStatusUpdated', (e) => {
+                console.log('Evento recibido', e)
+
+                if (this.$route.name === 'consultora_de_precios') {
+                    return
                 }
-                
-                // this.$api.get('import-status/'+notification.import_status_id)
-                // .then(res => {
 
-                    this.$store.commit('import_status/setModel', notification.import_status)
-                // })
-
+                this.$store.commit('import_status/setModel', e.import_status)
             })
 		},
 	}

@@ -185,6 +185,36 @@
 				:value="1"
 				:unchecked-value="0"
 				size="lg"
+				v-model="registrar_art_cre">
+					<span>
+						Registrar que articulos fueron creados en esta importacion
+					</span>
+					<p
+					class="text-description">
+						Si lo activas, vas a ver un resumen de que articulos se crearon concretamente en esta importacion. IMPORTANTE: Esto puede aumentar el tiempo de procesamiento del archivo.
+					</p>
+				</b-form-checkbox>
+				
+				<b-form-checkbox
+				class="radio-option"
+				:value="1"
+				:unchecked-value="0"
+				size="lg"
+				v-model="registrar_art_act">
+					<span>
+						Registrar que articulos fueron actualizados en esta importacion
+					</span>
+					<p
+					class="text-description">
+						Si lo activas, vas a ver un resumen de que articulos se actualizaron concretamente en esta importacion. IMPORTANTE: Esto puede aumentar el tiempo de procesamiento del archivo.
+					</p>
+				</b-form-checkbox>
+				
+				<b-form-checkbox
+				class="radio-option"
+				:value="1"
+				:unchecked-value="0"
+				size="lg"
 				v-model="no_actualizar_articulos_de_otro_proveedor">
 					<span
 					id="cargar_y_actualizar">
@@ -359,6 +389,8 @@ export default {
 			positions_seted: false,
 			create_and_edit: null,
 			no_actualizar_articulos_de_otro_proveedor: 1,
+			registrar_art_cre: 0,
+			registrar_art_act: 0,
 			actualizar_proveedor: 0,
 			show_history: false,
 			archivo_excel_path: null,
@@ -644,6 +676,8 @@ export default {
 				form_data.append('create_and_edit', this.create_and_edit)
 				form_data.append('no_actualizar_articulos_de_otro_proveedor', this.no_actualizar_articulos_de_otro_proveedor)
 				form_data.append('actualizar_proveedor', this.actualizar_proveedor)
+				form_data.append('registrar_art_cre', this.registrar_art_cre)
+				form_data.append('registrar_art_act', this.registrar_art_act)
 
 
 				let index = 0
