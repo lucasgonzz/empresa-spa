@@ -21,6 +21,17 @@ id="import-status">
 
 		<div
 		v-if="import_status">
+
+			<div
+			v-if="import_status.provider">
+				<hr>
+				<p
+				class="text-left">
+					Proveedor: {{ import_status.provider.name }}
+				</p>
+			</div>
+
+
 			<hr>
 			<p
 			class="text-left">

@@ -115,7 +115,13 @@ export default {
 					// console.log('No tiene models, llamando getModels')
 				} 
 
-				if (route.call_models_always || this.route_name == route.model_name) {
+				if (
+					route.model_name != 'article'
+					&& (
+						route.call_models_always 
+						|| this.route_name == route.model_name
+					)
+				) {
 					this.$store.dispatch(route.model_name+'/getModels')
 					if (this.$store.state[route.model_name].from_dates) {
 						this.$store.commit(route.model_name+'/setFromDate', moment().format('YYYY-MM-DD'))
