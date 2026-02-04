@@ -103,7 +103,7 @@ export default {
 					description: 'USD para Dolares, ARS para pesos (ARS por defecto)',
 				},
 				{
-					text: 'descripcion'
+					text: 'Descripcion'
 				},
 				{
 					text: 'Unidad medida',
