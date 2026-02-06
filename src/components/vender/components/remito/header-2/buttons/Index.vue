@@ -29,11 +29,11 @@ export default {
 <style lang="sass">
 .vender-buttons
 	display: flex
-	flex-direction: row 
-	align-items: flex-start
+	flex-direction: column 
+	align-items: flex-end
 	height: 100%
 	flex-wrap: wrap
-	justify-content: flex-end
+	justify-content: center
 	@media screen and (max-width: 576px)
 		flex-direction: column
 		align-items: flex-end

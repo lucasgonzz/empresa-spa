@@ -142,6 +142,12 @@ export default {
 			only_show: true,
 		},
 		{
+			text: 'Observaciones Ocultas',
+			key: 'observations_ocultas',
+			type: 'textarea',
+			only_show: true,
+		},
+		{
 			text: 'Articulos',
 			key: 'articles',
 			store: 'article',

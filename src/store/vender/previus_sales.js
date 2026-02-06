@@ -111,6 +111,7 @@ export default {
 				seller_id: info.seller_id,
 				fecha_entrega: info.fecha_entrega,
 				valor_dolar: info.valor_dolar,
+				observations_ocultas: info.observations_ocultas,
 			})
 			.then(res => {
 				commit('sale/add', res.data.model, {root: true})

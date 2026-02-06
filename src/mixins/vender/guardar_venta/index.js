@@ -170,6 +170,7 @@ export default {
 				afip_tipo_comprobante_id: this.$store.state.vender.afip_tipo_comprobante_id,
 				descuento: this.$store.state.vender.descuento,
 				fecha_entrega: this.$store.state.vender.fecha_entrega,
+				observations_ocultas: this.$store.state.vender.observations_ocultas,
 			}
 
 			await this.save_sale_offline(sale_data)

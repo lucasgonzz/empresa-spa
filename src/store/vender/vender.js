@@ -74,6 +74,7 @@ export default {
 		address_id: 0,
 		sale_type_id: 0,
 		observations: '',
+		observations_ocultas: '',
 		numero_orden_de_compra: '',
 
 		guardar_como_presupuesto: 0,
@@ -262,6 +263,9 @@ export default {
 		setObservations(state, value) {
 			state.observations = value
 		},
+		setObservationsOcultas(state, value) {
+			state.observations_ocultas = value
+		},
 		set_numero_orden_de_compra(state, value) {
 			state.numero_orden_de_compra = value
 		},
@@ -393,6 +397,7 @@ export default {
 				descuento: state.descuento,
 				fecha_entrega: state.fecha_entrega,
 				incoterms: state.incoterms,
+				observations_ocultas: state.observations_ocultas,
 			})
 			.then(res => {
 				console.log('vendido')
