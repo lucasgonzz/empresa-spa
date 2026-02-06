@@ -213,6 +213,7 @@ export default {
 				this.$store.commit('vender/set_fecha_entrega', model.fecha_entrega.split('T')[0])
 			}
 			this.$store.commit('vender/setObservations', model.observations)
+			this.$store.commit('vender/setObservationsOcultas', model.observations_ocultas)
 			this.$store.commit('vender/set_omitir_en_cuenta_corriente', model.omitir_en_cuenta_corriente)
 			this.$store.commit('vender/set_moneda_id', model.moneda_id)
 			this.$store.commit('vender/set_valor_dolar', model.valor_dolar)
@@ -270,6 +271,7 @@ export default {
 				total: this.total,
 				fecha_entrega: this.fecha_entrega,
 				valor_dolar: this.valor_dolar,
+				observations_ocultas: this.$store.state.vender.observations_ocultas,
 			})
 			.then(res => {
 				this.$toast.success('Venta actualizada')

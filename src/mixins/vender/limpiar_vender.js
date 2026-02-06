@@ -33,6 +33,7 @@ export default {
 			this.$store.commit('vender/setNotaCreditoDescription', '')
 			// this.$store.commit('vender/setTotal')
 			this.$store.commit('vender/setObservations', '')
+			this.$store.commit('vender/setObservationsOcultas', '')
 			this.$store.commit('vender/setGuardarComoPresupuesto', 0)
 			this.$store.commit('vender/setBudget', null)
 			this.$store.commit('vender/setPriceType', null)

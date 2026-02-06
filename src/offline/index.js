@@ -9,7 +9,12 @@ export default {
             console.log('sincronizar_offline')
             if (navigator.onLine) {
                 console.log('🟢 Está online')
-                this.sync_all_articles()
+
+                if (this.owner.sync_offline_articles) {
+                    this.sync_all_articles()
+                } else {
+                    console.log('No se descargaron articulos offline')
+                }
                 this.sync_pending_sales()
             }
         },

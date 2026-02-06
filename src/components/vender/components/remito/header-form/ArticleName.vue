@@ -20,11 +20,9 @@
 		:prop="{text: 'Articulo', key: 'article_id', store: 'article', route_to_search: 'vender/buscar-articulo-por-nombre'}">
 			<template #search_input_right>
 
-				<b-form-select
-				v-if="hasExtencion('buscar_por_categoria_en_vender')"
-				class="select-category"
-				v-model="category_id"
-				:options="get_options_simple('category')"></b-form-select>
+				<category-options
+				:category_id.sync="category_id"
+				:stock_option.sync="stock_option"></category-options>
 
 			</template>
 		</search-component>
@@ -38,22 +36,31 @@ export default {
 	mixins: [vender],
 	components : {
 		SearchComponent,
+		CategoryOptions: () => import('@/components/vender/components/remito/header-form/CategoryOptions'),
 	},
 	data() {
 		return {
 			category_id: 0,
+			stock_option: 'con_o_sin_stock',
 			props_to_send_to_api: [
 				{
 					key: 'category_id',
 					value: 0
-				}
+				},
+				{
+					key: 'stock_option',
+					value: 'con_o_sin_stock',
+				},
 			]
 		}
 	},
 	watch: {
 		category_id() {
 			this.props_to_send_to_api[0].value = this.category_id
-		}
+		},
+		stock_option() {
+			this.props_to_send_to_api[1].value = this.stock_option
+		},
 	},
 	computed: {
 		col_header_lg() {
@@ -124,6 +131,11 @@ export default {
 				key: 'name',
 			})
 
+			props.push({
+				text: 'Proveedor',
+				key: 'provider_id',
+			})
+
 			if (
 				!this.hasExtencion('cambiar_price_type_en_vender')
 			) {
@@ -151,13 +163,14 @@ export default {
 			props.push({
 				text: 'Stock',
 				key: 'stock',
-        is_stock: true,
+		        is_stock: true,
 			})
+
 			if (this.addresses.length) {
 
 				this.addresses.forEach(address => {
 					props.push({
-            is_stock: true,
+            			is_stock: true,
 						text: address.street,
 						key: 'address_'+address.id,
 						function: 'get_address_stock_in_vender',
@@ -216,8 +229,3 @@ export default {
 	}
 }
 </script>
-<style lang="sass">
-.select-category
-	width: 350px !important
-	margin: 0 15px
-</style>

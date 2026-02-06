@@ -147,7 +147,7 @@ export default {
 			type: 'textarea',
 		},
 		{
-			text: 'Redondear de a centenas el Total en VENDER',
+			text: 'Redondear precios de a centenas',
 			key: 'redondear_centenas_en_vender',
 			type: 'checkbox',
 		},
