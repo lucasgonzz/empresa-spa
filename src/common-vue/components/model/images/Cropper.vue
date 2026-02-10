@@ -3,6 +3,7 @@
 	title="Recortar Imagen"
 	hide-footer
 	size="lg"
+	@shown="onModalShown"
 	:id="'cropper-'+model.id+'-'+model.nombre+'-'+prop.key">
 		<cropper
 		ref="cropper"
@@ -11,6 +12,28 @@
 		:src="image_url"
 		:stencil-props="stencil_props"
 		@change="change"/>
+
+		<b-progress
+	    class="m-t-15 m-b-10"
+	    height="15px"
+	    variant="primary"
+	    :max="1"
+	    :value="auto_crop_progress"
+	    animated/>
+
+	    <p
+		    class="text-center text-muted m-t-5"
+		    v-if="auto_save_enabled"
+		>
+		    Guardado automático en {{ auto_crop_seconds_left }} segundos…
+		</p>
+
+		<p
+		    class="text-center m-t-5"
+		    v-else
+		>
+		    Autoguardado cancelado — ajustá el recorte y guardá manualmente
+		</p>
 
 		<b-btn-group
 		class="w-100">
@@ -43,6 +66,10 @@ export default {
 		model_name: String,
 		has_many_parent_model: Object,
 		has_many_prop: Object,
+	    auto_crop: {
+	        type: Boolean,
+	        default: false,
+	    },
 	},
 	components: {
 		BtnLoader: () => import('@/common-vue/components/BtnLoader'),
@@ -67,17 +94,129 @@ export default {
 				aspectRatio: 1
 			}
 		},
+		auto_crop_seconds_left() {
+	        const remaining = Math.ceil(
+	            (1 - this.auto_crop_progress) * (this.auto_crop_delay / 1000)
+	        )
+	        return remaining > 0 ? remaining : 0
+	    },
 	},
 	data() {
 		return {
 			loading_cropp: false,
 			loading_not_cropp: false,
 			coordinates: null,
+
+	        // ⏱ auto recorte
+	        auto_crop_delay: 5000, // ms (configurable)
+	        auto_crop_start: null,
+	        auto_crop_progress: 0,
+	        auto_crop_timer: null,
+	        raf_id: null,
+
+	        is_setting_coordinates: false,
+
+	        auto_save_enabled: true,
 		}
 	},
+	beforeDestroy() {
+	    cancelAnimationFrame(this.raf_id)
+	    clearTimeout(this.auto_crop_timer)
+	},
 	methods: {
+		onModalShown() {
+			console.log('onModalShown')
+
+			this.auto_save_enabled = true
+		    this.setInitialCrop()
+	    },
+
+	    startAutoCropProgress() {
+		    this.auto_crop_start = performance.now()
+		    this.auto_crop_progress = 0
+
+		    const animate = (now) => {
+		    	if (!this.auto_save_enabled) return
+
+		        const elapsed = now - this.auto_crop_start
+		        this.auto_crop_progress = Math.min(
+		            elapsed / this.auto_crop_delay,
+		            1
+		        )
+
+		        if (this.auto_crop_progress < 1) {
+		            this.raf_id = requestAnimationFrame(animate)
+		        } else {
+		            this.uploadImage(true)
+		        }
+		    }
+
+		    this.raf_id = requestAnimationFrame(animate)
+		},
+
+	    setInitialCrop(attempt = 0) {
+	        console.log('setInitialCrop 1')
+	        this.is_setting_coordinates = true
+	        const cropper = this.$refs.cropper
+
+	        if (!cropper || attempt > 30) return
+
+	        const result = cropper.getResult()
+
+	        // ⛔ todavía no está lista la imagen
+	        if (!result || !result.image) {
+	            requestAnimationFrame(() => this.setInitialCrop(attempt + 1))
+	            return
+	        }
+
+	        const { width, height } = result.image
+
+	        if (!width || !height) {
+	            requestAnimationFrame(() => this.setInitialCrop(attempt + 1))
+	            return
+	        }
+
+
+	        console.log('setInitialCrop 2 is_setting_coordinates: '+this.is_setting_coordinates)
+
+	        // 🔥 CUADRADO MÁXIMO POSIBLE
+	        const size = Math.min(width, height)
+
+	        cropper.setCoordinates({
+	            width: size,
+	            height: size,
+	            left: (width - size) / 2,
+	            top: (height - size) / 2,
+	        })
+
+
+
+		    // this.$nextTick(() => {
+		    //     this.is_setting_coordinates = false
+		    // })
+
+		    this.startAutoCropProgress()
+
+	    },
 		change({ coordinates, canvas }) {
 			this.coordinates = coordinates 
+
+			console.log('change, is_setting_coordinates: '+this.is_setting_coordinates)
+
+			// 🛑 solo si el usuario movió el crop
+		    // if (!this.is_setting_coordinates && this.auto_save_enabled) {
+		    if (!this.is_setting_coordinates) {
+		        this.auto_save_enabled = false
+		        this.auto_crop_progress = 0
+
+		        if (this.raf_id) {
+		            cancelAnimationFrame(this.raf_id)
+		            this.raf_id = null
+		        }
+		    }
+
+		    this.is_setting_coordinates = false
+	        console.log('se puso is_setting_coordinates en false')
 		},
 		uploadImage(cropped) {
 

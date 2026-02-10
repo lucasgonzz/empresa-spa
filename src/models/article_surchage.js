@@ -13,9 +13,13 @@ export default {
 			is_price: true,
 		},
 		{
-			text: 'Aplicar al final',
+			text: 'Aplicar al final luego del Margen de ganancia',
 			key: 'luego_del_precio_final',
 			type: 'checkbox',
+			descriptions: [
+				'Si se activa, este recargo se aplicara al final del proceso de calcular el "Precio Final" luego del "Margen de ganancia".',
+				'Si se desactiva, este recargo se aplicara al costo a la hora d calcular el "Costo Real".',
+			]
 		},
 	],
 	singular_model_name_spanish: 'Recargo',

@@ -325,6 +325,8 @@ export default {
 					text += ' '+ this.model[prop_title]
 				} else if (this.model.num) {
 					text += ' N° '+this.model.num
+				} else if (this.model.id) {
+					text += ' N° '+this.model.id
 				}
 				return text
 			}

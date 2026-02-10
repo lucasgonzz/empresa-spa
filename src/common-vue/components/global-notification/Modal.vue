@@ -60,6 +60,9 @@ export default {
 			if (function_to_execute.function_name) {
 				this[function_to_execute.function_name]()
 			}
+			if (function_to_execute.link) {
+				window.open(function_to_execute.link)
+			}
 			this.close_notification_modal()
 		},
 		close_notification_modal() {

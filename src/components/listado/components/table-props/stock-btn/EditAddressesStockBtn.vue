@@ -53,22 +53,26 @@ export default {
 	methods: {
 		edit_addresses() {
 
-			this.addresses.forEach(address => {
+			if (confirm('Los valores que coloque en cada deposito, sera el stock final que tenga en cada deposito. El sistema NO "sumara" el valor que coloque al stock actual, sino que SOBRE ESCRIBIRA con el valor que coloque')) {
 
-				let article_address = this.article.addresses.find(_address => _address.id == address.id)
+				this.addresses.forEach(address => {
 
-				if (typeof article_address == 'undefined') {
+					let article_address = this.article.addresses.find(_address => _address.id == address.id)
 
-					this.article.addresses.push({
-						...address,
-						pivot: {
-							amount: ''
-						}
-					})
-				}
-			})
+					if (typeof article_address == 'undefined') {
 
-			this.$store.commit('article/edit_addresses_stock/set_article', this.article)
+						this.article.addresses.push({
+							...address,
+							pivot: {
+								amount: ''
+							}
+						})
+					}
+				})
+
+				this.$store.commit('article/edit_addresses_stock/set_article', this.article)
+			}
+
 		},
 		cancel() {
 			this.$store.commit('article/edit_addresses_stock/set_article', null)

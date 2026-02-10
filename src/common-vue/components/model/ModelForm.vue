@@ -24,7 +24,8 @@
 					<b-form-group
 					:class="colorLabel(prop)"
 					:id="'form-group-'+prop.key">
-						<label
+						<label	
+						:id="'label-'+prop.key"
 						class="form-label">
 							<i 
 							v-if="prop.has_many"
@@ -34,7 +35,30 @@
 							class="icon-right"></i>
 							<strong>{{ getLabel(prop) }}</strong>
 						</label>
+
+						<b-popover
+						v-if="prop.description" 
+						:target="'label-'+prop.key" 
+						triggers="hover" 
+						placement="left">
+						    <template #title><strong>Instrucciones</strong></template>
+						    {{ prop.description }}
+						 </b-popover>
+
+						<b-popover
+						v-if="prop.descriptions" 
+						:target="'label-'+prop.key" 
+						triggers="hover" 
+						placement="left">
+						    <template #title><strong>Instrucciones</strong></template>
+						    <p
+						    v-for="description in prop.descriptions">
+						    	{{ description }}
+						    </p>
+						 </b-popover>
+
 						<div>
+							
 							<images
 							v-if="prop.type == 'image' || prop.type == 'images'"
 							:prop="prop"
@@ -42,6 +66,7 @@
 							:model_name="model_name"
 							:has_many_parent_model="has_many_parent_model"
 							:has_many_prop="has_many_prop"></images>
+
 							<div
 							v-else>
 								<slot :name="prop.key">
@@ -323,16 +348,16 @@
 
 						</div>
 
-						<div
+						<!-- <div
 						class="m-t-15 m-b-10"
 						v-if="prop.description">
 							<strong>{{ prop.description }}</strong>
-						</div>
+						</div> -->
 
-						<div
+						<!-- <div
 						v-for="description in prop.descriptions">
 							<p>{{ description }}</p>
-						</div>
+						</div> -->
 
 					</b-form-group>
 				</div>

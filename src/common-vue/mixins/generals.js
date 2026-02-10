@@ -495,9 +495,13 @@ export default {
 			return true
 		},
 		getCol(prop, size, input_full_width = false) {
-			if (prop.group_title || this.inputs_full_size || input_full_width || prop.has_many || prop.belongs_to_many || prop.type == 'images' || prop.input_full_width) {
+			if (prop.group_title || this.inputs_full_size || input_full_width || prop.full_cols || prop.belongs_to_many || prop.input_full_width) {
+			// if (prop.group_title || this.inputs_full_size || input_full_width || prop.has_many || prop.belongs_to_many || prop.type == 'images' || prop.input_full_width) {
 				return 12
 			} 
+			if (prop.mid_full_cols && !this.is_mobile) {
+				return 6
+			}
 			return size
 		},
 		marginBtn(model_name) {

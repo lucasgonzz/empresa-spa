@@ -48,7 +48,7 @@
 		label="Deposito DESTINO">
 			<b-form-select
 			v-model="to_address_id"
-			:options="getOptions({key: 'to_address_id', text: 'Deposito', store: 'address'})"></b-form-select>
+			:options="addresses_options"></b-form-select>
 		</b-form-group>
 
 
@@ -99,6 +99,21 @@ export default {
 				})
 			})
 			return options
+		},
+		addresses_options() {
+			if (!this.is_admin && this.can('article.stock_only_sucursal') && this.user.address_id) {
+				return [
+					{
+						text: 'Seleccione deposito',
+						value: 0,
+					},
+					{
+						text: this.addresses.find(a => a.id == this.user.address_id).street,
+						value: this.user.address_id
+					}
+				]
+			}
+			return this.getOptions({key: 'to_address_id', text: 'Deposito', store: 'address'})
 		}
 	},
 	data() {

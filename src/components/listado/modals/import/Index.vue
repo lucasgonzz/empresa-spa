@@ -30,6 +30,9 @@ export default {
 			console.log('Calculando columnas para importar:')
 			let columns = [
 				{
+					group_title: 'Datos Generales',
+				},
+				{
 					text: 'Numero',
 					can_not_ignore: true,
 				},
@@ -50,6 +53,14 @@ export default {
 					can_not_ignore: true,
 				},
 				{
+					text: 'Proveedor',
+				},
+
+
+				{
+					group_title: 'Categoria',
+				},
+				{
 					text: 'Categoria',
 				},
 				{
@@ -58,56 +69,69 @@ export default {
 				{
 					text: 'Marca',
 				},
+
+
+				{
+					group_title: 'Stock',
+				},
 				{
 					text: 'Stock actual',
 				},
 				{
 					text: 'Stock minimo',
 				},
+
+
 				{
-					text: 'Iva',
-				},
-				{
-					text: 'Aplicar IVA',
-				},
-				{
-					text: 'Proveedor',
+					group_title: 'Precio',
 				},
 				{
 					text: 'Costo',
-				},
-				{
-					text: 'Margen de ganancia',
+					description: 'Costo que pago a su proveedor al comprar este articulo. Coloque el valor literal, sin descuentos ni IVA, esos datos se colocan por fuera del costo para tener mejor articulado el calculo del "Precio Final"',
 				},
 				{
 					text: 'Descuentos',
-					description: 'Separe los diferentes descuentos con un guion bajo ( _ )',
+					description: 'Los Descuentos se aplican al costo inmediatamente antes de aplicar IVA, se esa forma se obtiene el "Costo Real". Separe los diferentes descuentos con un guion bajo ( _ )',
 				},
 				{
 					text: 'Recargos',
-					description: 'Separe los diferentes recargos con un guion bajo ( _ ). Si quiere que se aplique al final del precio, coloque una F al final, ej: para aplicar un 10% y un 5& al final coloque: 10_5F',
+					description: 'Los Recargos se aplican al costo inmediatamente antes de aplicar IVA, se esa forma se obtiene el "Costo Real". Separe los diferentes recargos con un guion bajo ( _ ). Si quiere que se aplique al final del precio (luego de haber calculado el "Costo real" y aplicado el "Margen de ganancia"), coloque una F al final, ej: para aplicar un 10% y un 5% al final coloque: 10_5F',
 				},
 				{
 					text: 'Descuentos montos',
-					description: 'Separe los diferentes descuentos con un guion bajo ( _ )',
+					description: 'Los Descuentos se aplican al costo inmediatamente antes de aplicar IVA, se esa forma se obtiene el "Costo Real". Separe los diferentes descuentos con un guion bajo ( _ )',
 				},
 				{
 					text: 'Recargos montos',
-					description: 'Separe los diferentes recargos con un guion bajo ( _ ). Si quiere que se aplique al final del precio, coloque una F al final, ej: para aplicar un monto de 10 y un monto de 5 al final coloque: 10_5F',
+					description: 'Los Recargos se aplican al costo inmediatamente antes de aplicar IVA, se esa forma se obtiene el "Costo Real". Separe los diferentes recargos con un guion bajo ( _ ). Si quiere que se aplique al final del precio (luego de haber calculado el "Costo real" y aplicado el "Margen de ganancia"), coloque una F al final, ej: para aplicar un monto de 10 y un monto de 5 al final coloque: 10_5F',
+				},
+				{
+					text: 'Iva',
+					description: 'Alicuota de IVA que tiene este articulo, coloque el VALOR REAL ya que este dato sera usado en caso de hacer una FACTURA por la venta de este articulo',
+				},
+				{
+					text: 'Aplicar IVA',
+					description: 'Indique si quiere el el IVA del articulo se sume a su costo para obtener el "Costo Real". Valores posibles: "Si" y "No". Valor por defecto: "Si"',
+				},
+				{
+					text: 'Margen de ganancia',
+					description: 'Porcentaje de rentabilidad que quiere aplicar el "Costo Real"'
 				},
 				{
 					text: 'Precio',
+					description: 'Utilice este campo si quere saltearse el proceso de calcular el "Precio Final" de forma automatica (costo + iva + margen de ganancia), y en su lugar quiere fijar manualmente el "Precio Final". Lo que coloque aqui se utilizara como "Precio final/Precio de venta"',
 				},
 				{
 					text: 'Moneda',
 					description: 'USD para Dolares, ARS para pesos (ARS por defecto)',
 				},
 				{
-					text: 'Descripcion'
+					text: 'Descripcion',
+					description: 'Utilice este campo como informacion complementaria del articulo, para de esa forma no tener un "Nombre tan extenso". Esta descripcion esta incluida como criterio de busqueda en el modulo de VENDER'
 				},
 				{
 					text: 'Unidad medida',
-					description: 'Por defecto es UNIDAD',
+					description: 'Por defecto es UNIDAD. Tambien puede ser "Gramo", "Kilo", "Litro", "Centimetro", "Metro", "Rollo", "Par"',
 					// saltear_posiciones: 1,
 				},
 			]
@@ -126,6 +150,10 @@ export default {
 
 			if (this.hasExtencion('autopartes')) {
 				let props = [
+
+					{
+						group_title: 'Autopartes',
+					},
 					{
 						text: 'espesor',
 					},
