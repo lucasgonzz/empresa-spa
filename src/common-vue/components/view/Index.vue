@@ -430,13 +430,25 @@ export default {
 
 					if (prop.propiedad_extra_para_modal) {
 
-						if (prop.index) {
+						// if (prop.index) {
 
-							props.splice(prop.index+3, 0, {...prop})
-						} else {
-							props.push(prop)
-						}
+						// 	props.splice(prop.index+3, 0, {...prop})
+						// } else {
+						// 	props.push(prop)
+						// }
+						// IMPORTANTE: index puede ser 0, así que no hay que chequearlo como truthy
+		                if (prop.index !== undefined && prop.index !== null) {
+
+		                    // Sin +3: el ModelForm renderiza en orden directo
+		                    props.splice(prop.index+5, 0, { ...prop })
+
+		                    console.log('-> Agregando por extra '+prop.text+'. Index: '+prop.index)
+
+		                } else {
+		                    props.push({ ...prop })
+		                }
 					}
+
 				})
 			}
 			return props

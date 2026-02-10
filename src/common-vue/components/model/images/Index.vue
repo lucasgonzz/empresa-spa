@@ -15,6 +15,7 @@
 		@setImageUrl="setImageUrl"></upload-image>
 
 		<search-image 
+		ref="searchImage"
 		@setImageUrl="setImageUrl"></search-image>
 
 		<cropper
@@ -22,6 +23,8 @@
 		:has_many_prop="has_many_prop"
 		:image_url="image_url"
 		:model="model"
+		:auto_crop="auto_crop"
+		@cancelAutoCrop="auto_crop = false"
 		:model_name="model_name"
 		:prop="prop"></cropper>	
 
@@ -40,6 +43,7 @@
 			v-else
 			@uploadImage="uploadImage"
 			@setImageUrl="setImageUrl"
+			@callLuckyFlow="callLuckyFlow"
 			:model="model"
 			:prop="prop"
 			:model_name="model_name"></carrousel>
@@ -65,6 +69,7 @@ export default {
 			imgDataUrl: '',
 			pre_image_url: null,
 			image_url: '',
+			auto_crop: false,
 		}
 	},
 	computed: {
@@ -73,6 +78,14 @@ export default {
 		},
 	},
 	methods: {
+		callLuckyFlow() {
+			console.log('callLuckyFlow')
+	        this.$nextTick(() => {
+				console.log('nextTick')
+				this.auto_crop = true
+	            this.$refs.searchImage.luckyFlow()
+	        })
+		},
 		setImageUrl(image_url) {
 			this.image_url = image_url
 			this.$bvModal.show('cropper-'+this.model.id+'-'+this.model.nombre+'-'+this.prop.key)
@@ -97,6 +110,7 @@ export default {
 		position: relative
 		display: flex
 		align-items: center
+		height: 300px
 		&:hover > button 
 			display: block
 		button 
@@ -107,10 +121,10 @@ export default {
 			transform: translateX(-50%)
 			display: none 
 
-	.slide-img
-		max-width: 100%
-		@media screen and (max-width: 992px)
-			max-height: 70vh
-		@media screen and (min-width: 992px)
-			max-height: calc(100vh - 150px)
+	// .slide-img
+	// 	max-width: 100%
+	// 	@media screen and (max-width: 992px)
+	// 		max-height: 70vh
+	// 	@media screen and (min-width: 992px)
+	// 		max-height: calc(100vh - 150px)
 </style>

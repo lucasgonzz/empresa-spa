@@ -20,29 +20,54 @@ id="search-image">
 		</div>
 	</div>
 
-	<b-button
-	@click="setBarCode"
-	variant="primary">
-		Con el Codigo
-	</b-button>
-	<b-button
-	class="m-l-15"
-	@click="setName"
-	variant="primary">
-		Con el Nombre
-	</b-button>
+	<div
+	class="cont-buttons">
+		
+		<b-button
+		@click="setBarCode"
+		variant="primary">
+			Con el Codigo
+		</b-button>
+		<b-button
+		class="m-l-15"
+		@click="setName"
+		variant="primary">
+			Con el Nombre
+		</b-button>
+
+		<b-input-group
+		class="m-l-15"
+		prepend="Segundos para seleccionar automaticamente">
+			<b-form-input
+			type="number"
+			v-model="auto_select_timeout"></b-form-input>
+		</b-input-group>
+	</div>
+
+
+	<div 
+	v-if="flow_mode === 'auto'"
+	@click="cancel_flow_model"
+	:style="{ '--progress': auto_select_progress }"
+	class="cancel-seleccion-automatica">
+		<div class="text">
+			Cancelar seleccion automatica
+		</div>
+	</div>
 
 	<div
 	v-if="!loading">
 		<div 
 		v-if="images_result"
-		class="cont-images">
+		class="cont-images"
+		:style="{ '--progress': auto_select_progress }">
 
 			<vue-load-image
-			class="s-2 apretable hoverable"
-			v-for="image in images_result">
+		    class="s-2 image-wrapper"
+		    :class="getImageClass(index)"
+			v-for="(image, index) in images_result"
+    		@click.native="setImage(image)">
 				<img 
-				@click="setImage(image)"
 				slot="image"
 				class="b-r-1"
 				:src="image">
@@ -92,6 +117,9 @@ export default {
 				// 	}, 300)
 				// }
 				this.get_current_geocoder_counter()
+
+				// this.flow_mode = 'auto'
+				// this.auto_select_progress = 0.6
 			}
 		})
 	},
@@ -101,12 +129,41 @@ export default {
 			images_result: null,
 			loading: false,
 			current_geocoder_counter: null,
+
+	        flow_mode: 'idle',               // 'idle' | 'auto' | 'manual'
+	        // flow_mode: 'auto',               // 'idle' | 'auto' | 'manual'
+	        auto_select_timer: null,
+	        auto_select_start: null,
+	        auto_select_progress: 0, // 0 → 1
+	        // auto_select_progress: 0.6, // 0 → 1
+	        raf_id: null,
 		}
 	},
 	created() {
 		console.log('SE CREO MODAL')
 	},
 	computed: {
+		auto_select_timeout: {
+	        get() {
+	            // fallback por si el usuario aún no tiene el valor
+	            return this.owner?.img_auto_timeout ?? 5
+	        },
+	        set(value) {
+	            const seconds = Number(value)
+
+	            if (isNaN(seconds) || seconds <= 0) return
+
+	            this.$api.put('user/set-img-auto-timeout/'+seconds)
+	        	.then(() => {
+	        		let user = {...this.owner}
+	        		user.img_auto_timeout = seconds
+	        		this.$store.commit('user/setModel', {
+	        			model: user,
+	        			properties: [],
+	        		})
+	        	})
+	        }
+	    },
 		article() {
 			return this.$store.state.article.model 
 		},
@@ -124,6 +181,54 @@ export default {
 		},
 	},
 	methods: {
+		getImageClass(index) {
+		    if (this.flow_mode === 'auto' && index === 0) {
+		        return 'auto-select-border'
+		    }
+		    return ''
+		},
+		startAutoSelectProgress() {
+		    this.auto_select_start = performance.now()
+
+		    const animate = (now) => {
+		        const elapsed = now - this.auto_select_start
+		        this.auto_select_progress = Math.min(
+		            elapsed / (this.auto_select_timeout * 1000),
+		            1
+		        )
+
+		        if (this.auto_select_progress < 1 && this.flow_mode === 'auto') {
+		            this.raf_id = requestAnimationFrame(animate)
+		        }
+		    }
+
+		    this.raf_id = requestAnimationFrame(animate)
+		},
+		luckyFlow() {
+			console.log('luckyFlow')
+
+			if (this.article.bar_code) {
+				this.query = this.article.bar_code
+			} else if (this.article.name) {
+				this.query = this.article.name
+			} else {
+				console.log('no se busco')
+				return
+			}
+
+	        this.flow_mode = 'auto'
+	        this.search()
+	        .then(() => {
+
+	                // Esperar unos segundos antes de seleccionar automáticamente
+	        		this.startAutoSelectProgress()
+	                this.auto_select_timer = setTimeout(() => {
+	                    if (this.flow_mode === 'auto') {
+	                        this.setImage(this.images_result[0])
+	                    }
+	                }, this.auto_select_timeout)
+	        })
+	    },
 		async search() {
 			if (this.busquedas_disponibles <= 0) {
 				this.$toast.error('Ha alcanzado su limite de '+this.owner.google_cuota+' busquedas diarias')
@@ -183,8 +288,15 @@ export default {
 			})
 		},
 		setImage(image_url) {
-			this.$bvModal.hide('search-image') 
+			 if (this.flow_mode === 'auto') {
+			 	this.cancel_flow_model()
+		    }
+			// this.$bvModal.hide('search-image') 
 			this.$emit('setImageUrl', image_url) 
+		},
+		cancel_flow_model() {
+	        this.flow_mode = 'manual'
+	        cancelAnimationFrame(this.raf_id)
 		},
 		setBarCode() {
 			if (this.article.bar_code) {
@@ -219,4 +331,85 @@ export default {
 		margin-left: 15px
 		text-align: center
 		font-weight: bold
+
+	.cont-buttons
+		display: flex  
+		flex-direction: row 
+		justify-content: flex-start
+		align-items: center
+		.input-group	
+			width: 450px
+
+
+	.cancel-seleccion-automatica
+		width: 100%
+		margin: 15px 0
+		padding: 18px
+		border-radius: 8px
+		cursor: pointer
+		position: relative
+		overflow: hidden
+
+		display: flex
+		justify-content: center
+		align-items: center
+
+		font-size: 20px
+		font-weight: bold
+		color: #fff
+		text-align: center
+
+		background: conic-gradient(from 0deg,rgba(0, 123, 255, 0.85) 0%,rgba(255, 0, 0, 0.85) calc(var(--progress, 0) * 100%),rgba(200, 200, 200, 0.3) 0)
+
+		transition: transform .15s ease, box-shadow .15s ease
+
+		&:hover
+			transform: scale(1.01)
+			box-shadow: 0 4px 15px rgba(0,0,0,.25)
+
+		&:active
+			transform: scale(0.98)
+
+		.text
+			position: relative
+			z-index: 2
+
+			color: #fff
+
+			// Stroke (Chrome, Edge, Safari)
+			-webkit-text-stroke: .5px #000
+
+			// Fallback para Firefox
+			text-shadow: -.5px -.5px 0 #000,.5px -.5px 0 #000,-.5px  .5px 0 #000,.5px  .5px 0 #000
+
+
+.image-wrapper
+
+	transition: all .2s
+	&::hover > img
+		transform: scale(0.5)
+
+.image-wrapper img
+	position: relative
+	z-index: 1
+
+
+.image-wrapper.auto-select-border
+	position: relative
+
+	&::after
+		padding: 10px
+		z-index: 2
+		content: ''
+		position: absolute
+		inset: -3px
+		border-radius: 8px
+		pointer-events: none
+
+		background: conic-gradient(from 0deg, rgba(0, 123, 255, 0.9) 0%, rgba(255, 0, 0, 0.9) calc(var(--progress, 0) * 100%), rgba(0,0,0,0) 0)
+
+		mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)
+		mask-composite: exclude
+
+
 </style>

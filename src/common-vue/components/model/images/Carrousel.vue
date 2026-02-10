@@ -8,6 +8,7 @@
     toast="Imagen eliminada"></confirm>
 
 	<carousel
+	ref="carousel"
 	class="m-b-10 m-l-40 m-r-40"
 	v-if="model[prop.key].length"
 	navigationEnabled
@@ -24,6 +25,7 @@
 		:key="image.id">
 			<vue-load-image>
 				<img
+				@load="onImageLoaded"
 				slot="image"
 				class="s-2 b-r-1" 
 				:src="image[image_url_prop_name]">
@@ -53,22 +55,32 @@
 	<div
 	class="cont-btn-input"
 	v-if="show_btn_google">
-		<b-button
-		size="sm"
-		variant="outline-primary"
-		@click="searchImage">
-			Buscar imagen en Google
-		</b-button>
+		
+		<b-button-group
+		class="m-b-10">
+			<b-button
+		    variant="primary"
+		    @click="launchLuckyFlow">
+				<i class="icon-search"></i>
+				Automatica
+			</b-button>
+			<b-button
+			variant="outline-primary"
+			@click="searchImage">
+				<i class="icon-search"></i>
+				Manual
+			</b-button>
+		</b-button-group>
 
 		<b-form-file
 		:id="input_file_name"
-		class="m-b-15 file-reader-input-with-button"
-		browse-text="Buscar"
+		class="file-reader-input-with-button"
+		browse-text="Buscar en pc"
 		v-model="file"
 		variant="primary"
 		:state="Boolean(file)"
 		@change="upload"
-		placeholder="Seleccione la imagen o arrastrala hasta aquí"
+		placeholder="Arrastre su imagen aquí..."
 		drop-placeholder="Solta la imagen aqui..."
 		></b-form-file>
 
@@ -110,9 +122,20 @@ export default {
 	data() {
 		return {
 			file: null,
+			height_adjusted: false,
 		}
 	},
 	methods: {
+		onImageLoaded() {
+	        if (this.height_adjusted) return
+
+	        this.$nextTick(() => {
+	            if (this.$refs.carousel && this.$refs.carousel.computeCarouselHeight) {
+	                this.$refs.carousel.computeCarouselHeight()
+	                this.height_adjusted = true
+	            }
+	        })
+	    },
 		upload(event) {
 			var file = document.getElementById(this.input_file_name).files[0];
 			if (typeof file == 'undefined') {
@@ -138,18 +161,28 @@ export default {
 				document.getElementById('search-image-input').focus()
 			}, 200)
 		},
+		launchLuckyFlow() {
+	        this.$bvModal.show('search-image')
+	        this.$emit('callLuckyFlow')
+	    },
+
+	    handleImageSelected(image_url) {
+	        this.image_url = image_url
+	        this.showCropper = true
+	    }
 	}
 }
 </script>
 <style scoped lang="sass">
 .VueCarousel-inner
-	height: 50vh !important
+	// height: 50vh !important
 .VueCarousel-slide
 	position: relative
 	display: flex
 	align-items: center
 	justify-content: center
-	height: 50vh !important
+	height: auto
+	// height: 50vh !important
 	padding: 20px 0
 	&:hover > .btn-delete 
 		display: block
@@ -163,25 +196,28 @@ export default {
 
 	img 
 		max-width: 100%
+		object-fit: contain
 		@media screen and (max-width: 992px)
-			max-height: 70vh
+			// max-height: 70vh
 		@media screen and (min-width: 992px)
-			max-height: 50vh
+			// max-height: 50vh
 			// max-height: 50vh
 			// max-height: calc(100vh - 150px)
 
 .cont-btn-input
 	display: flex 
-	flex-direction: row 
+	flex-direction: column 
 	align-items: center 
-	justify-content: flex-start
+	justify-content: space-between
 	
-	button 
-		padding: 8px
+	// button 
+	// 	width: 120px
+	// 	font-size: 14px
+	// 	margin-right: 10px
 
 	.file-reader-input-with-button
-		width: 200px !important
-		margin: 15px 0
+		// width: 250px !important
+		// margin: 15px 0
 
 .file-reader-input
 	width: 100% !important

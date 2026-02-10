@@ -11,14 +11,14 @@ export default {
 			// table_position: 1,
 		},
 		{
+			group_title: 'Datos generales',
+		},
+		{
 			text: 'Imagenes',
 			key: 'images',
 			type: 'images',
 			use_to_show_in_search_modal: true,
 			// table_position: 2,
-		},
-		{
-			group_title: 'Datos generales',
 		},
 		{
 			text: 'Codigo de barras',
@@ -31,6 +31,7 @@ export default {
 			use_to_show_in_search_modal: true,
 			filter_modal_position: 1,
 			use_bar_code_scanner: true,
+			description: 'Codigo universal unico para cada articulo, no se puede repetir',
 			// table_position: 3,
 		},
 		{
@@ -43,6 +44,7 @@ export default {
 			use_to_show_in_search_modal: true,
 			filter_modal_position: 1,
 			use_bar_code_scanner: true,
+			description: 'Codigo interno de tu negocio unico para cada articulo',
 		},
 		{
 			text: 'Codigo de Proveedor',
@@ -53,6 +55,7 @@ export default {
 			chequear_buscando_desde_api: true,
 			use_to_show_in_search_modal: true,
 			filter_modal_position: 2,
+			description: 'Codigo de tu proveedor unico para cada articulo',
 			// table_position: 4,
 		},
 		{
@@ -75,6 +78,7 @@ export default {
 			use_to_show_in_search_modal: true,
 			table_width: 'lg',
 			filter_modal_position: 2,
+			description: 'Nombre con el que vas a identificar y buscar a este articulo a lo largo del sistema',
 			// table_position: 5,
 		},
 		{
@@ -87,6 +91,7 @@ export default {
 			filter_modal_position: 4,
 			keep_after_create: true,
 			can: 'article.provider',
+			description: 'Proveedor al que pertenece ahora este articulo. Ultimo proveedor del cual adquiriste este articulo',
 			// table_position: 6,
 		},
 		{
@@ -103,6 +108,7 @@ export default {
 				'lista_de_precios_por_categoria',
 			],
 			use_to_update: true,
+			description: 'Si se activa, se va a aplicar el margen de ganancia del proveedor a este articulo ADEMAS del margen de ganancia propio del articulo',
 		},
 		{
 			text: 'PLU',
@@ -110,6 +116,7 @@ export default {
 			type: 'text',
 			not_show: true,
 			if_has_extencion: 'balanza_bar_code',
+			description: 'Codigo del articulo en la balanza',
 		},
 		{
 			group_title: 'Precio',
@@ -129,21 +136,33 @@ export default {
 				key: 'cost_in_dollars',
 				equal_to: 1
 			},
+			description: 'Costo que pago a su proveedor al comprar este articulo. Coloque el valor literal, sin descuentos ni IVA, esos datos se colocan por fuera del costo para tener mejor articulado el calculo del "Precio Final"',
 			// table_position: 8,
 		},
-
+		
 		{
-			text: 'Costo Real',
-			key: 'costo_real',
-			type_to_update: 'number',
-			type: 'text',
-			is_price: true,
-			only_show: true,
-			can: 'article.cost',
-			simbolo_moneda_function: 'article_simbolo_moneda',
-			// if_has_extencion: 'article.costo_real',
+			text: 'Iva',
+			key: 'iva_id', 
+			type: 'select',
+			relation_prop_name: 'percentage',
+			use_store_models: true,
+			use_to_show_in_search_modal: true,
+			not_show: true,
+			keep_after_create: true,
+			// value: 2,
+			value_function: 'article_iva_id',
+			use_to_update: true,
+			description: 'Alicuota de IVA que tiene este articulo, coloque el VALOR REAL ya que este dato sera usado en caso de hacer una FACTURA por la venta de este articulo',
 		},
-
+		{
+			text: 'Aplicar iva',
+			key: 'aplicar_iva', 
+			type: 'checkbox',
+			not_show: true,
+			value: 1,
+			use_to_update: true,
+			description: 'Indique si quiere el el IVA del articulo se sume a su costo para obtener el "Costo Real". Valores posibles: "Si" y "No". Valor por defecto: "Si"',
+		},
 		{
 			text: 'costo en dolares',
 			key: 'cost_in_dollars',
@@ -155,7 +174,22 @@ export default {
 			},
 			if_has_extencion: 'costo_en_dolares',
 			not_show: true,
+			description: 'Active esta opcion si quiere indicar el costo en dolares, para que una vez calculado el "Precio Final", este se cotice a pesos en base a la cotizacion del Dolar del proveedor del articulo, o, en caso de no tener indicado ese dato, en base a la cotizacion que tenga indicada en la configuracion'
 		},
+
+		{
+			text: 'Costo Real',
+			key: 'costo_real',
+			type_to_update: 'number',
+			type: 'text',
+			is_price: true,
+			only_show: true,
+			can: 'article.cost',
+			simbolo_moneda_function: 'article_simbolo_moneda',
+			description: 'Este dato es calculado por el sistema, es igual a: "Costo" + "Descuentos" y "Recargos" + "IVA". Seria el costo real que tiene ese producto en su negocio luego de tener en cuenta los descuetos de su proveedor, costos por transporte, impuestos, etc',
+			// if_has_extencion: 'article.costo_real',
+		},
+
 		{
 			// text: 'costo_mano_de_obra',
 			key: 'costo_mano_de_obra',
@@ -164,6 +198,7 @@ export default {
 			is_price: true,
 			if_has_extencion: 'production',
 			not_show: true,
+			description: 'Indica cuanto te cuesta que este articulo sea utilizado en el proceso productivo como insumo dentro de la fabricacion de otros articulos. Este valor es usado, junto con el costo del articulo, para calcular cuanto te cuesta fabricar los articulos en los que esta computado este articulo',
 		},
 		{
 			text: 'U individuales',
@@ -171,6 +206,14 @@ export default {
 			type: 'number',
 			not_show: true,
 			if_has_extencion: 'articulos_unidades_individuales',
+			descriptions: [
+				'Indica por cuantas unidades individuales esta compuesto este articulo, solo si planeas vender este articulo de forma individual.',
+				'Este valor sera utilizado para dividir el "Precio Final" del articulo para calcular el precio por cada unidad individual. Y para multiplicar el stock que agregues por cada unidad individual.',
+				'Ejemplo: Este articulo es una "Caja de clavos" que contiene 100 unidades individuales, en ese caso colocas "100" en este campo, y eso va a impactar en que:.',
+				'Si el precio final de la caja de clavos es $2.000, ahora va a ser de $20 por unidad individual (Precio final -> 2.000 / Unidades individuales -> 100)..',
+				'Cuando agregues el valor "2" (cajas) como stock, en el stock del articulo vas a ver 200 unidades individuales (Stock a agregar -> 2 * Unidades individuales -> 100).',
+				'Cuando registres ventas de este articulo, en la cantidad a vender tenes que colocar las unidades individuales, ej: 100 (en caso de que vendas 1 caja entera).',
+			],
 		},
 		{
 			text: 'margen de ganancia',
@@ -187,6 +230,7 @@ export default {
 				'articulo_margen_de_ganancia_segun_lista_de_precios',
 				'lista_de_precios_por_categoria',
 			],
+			description: 'Porcentaje de rentabilidad que quiere aplicar al "Costo Real" para obtener el "Precio Final"',
 		},
 
 
@@ -215,28 +259,12 @@ export default {
 				'articulo_margen_de_ganancia_segun_lista_de_precios',
 				'lista_de_precios_por_categoria',
 			],
+			descriptions: [
+				'Utilice este campo si quere saltearse el proceso de calcular el "Precio Final" de forma automatica (costo + iva + margen de ganancia), y en su lugar quiere fijar manualmente el "Precio Final".',
+				'Lo que coloque aqui se utilizara de forma LITERAL como "Precio final/Precio de venta".',
+				'Si quiere usar este campo, debe tener vacio el campo de "Margen de ganancia".',
+			]
 			// table_position: 9,
-		},
-		{
-			text: 'Aplicar iva',
-			key: 'aplicar_iva', 
-			type: 'checkbox',
-			not_show: true,
-			value: 1,
-			use_to_update: true,
-		},
-		{
-			text: 'Iva',
-			key: 'iva_id', 
-			type: 'select',
-			relation_prop_name: 'percentage',
-			use_store_models: true,
-			use_to_show_in_search_modal: true,
-			not_show: true,
-			keep_after_create: true,
-			// value: 2,
-			value_function: 'article_iva_id',
-			use_to_update: true,
 		},
 
 		{
@@ -258,7 +286,58 @@ export default {
 				'articulo_margen_de_ganancia_segun_lista_de_precios',
 				'lista_de_precios_por_categoria',
 			],
+			descriptions: [
+				'Propiedad calculada por le sistema de la siguiente forma:',
+				'Costo Real',
+				'+ Margen de ganancia del PROVEEDOR (en caso de que este indicado en el proveedor de este articulo y este activada la opcion de "Aplicar margen de ganancia del proveedor").',
+				'+ Margen de ganancia de la CATEGORIA (en caso de que indicado en la categoria del articulo).',
+				'+ Margen de ganancia del articulo.',
+				'+ Recargos que tengan activada la opcion de "Aplicar al final luego del Margen de ganancia".',
+			]
 			// table_position: 10,
+		},
+
+
+
+		{
+			text: 'Precio final BLANCO',
+			key: 'final_price_blanco',
+			type: 'number',
+			if_has_extencion: 'articulos_precios_en_blanco',
+			only_show: true,
+			is_price: true,
+			use_to_show_in_search_modal: true,
+			filter_modal_position: 9,
+		},
+		{
+			text: 'Precio final actualizado',
+			key: 'final_price_updated_at',
+			type: 'date',
+			only_show: true,
+			is_date: true,
+			not_show: true,
+			if_has_not_extencions: [
+				'articulo_margen_de_ganancia_segun_lista_de_precios',
+				'lista_de_precios_por_categoria',
+			],
+			descriptions: [
+				'Ultima vez que hubo un cambio en el "Precio Final"',
+				'Pudo haber sido ocasionado por un cambio en el costo, margen de ganancia del articulo o proveedor, cotizacion del dolar, etc.',
+			],
+		},
+		{
+			text: 'Precio final anterior',
+			key: 'previus_final_price',
+			type: 'number',
+			only_show: true,
+			is_price: true,
+			use_to_show_in_search_modal: true,
+			not_show: true,
+			if_has_not_extencions: [
+				'articulo_margen_de_ganancia_segun_lista_de_precios',
+				'lista_de_precios_por_categoria',
+			],
+			description: 'Precio final anterior al actual, actualizado en la fecha de "Precio final actualizado"',
 		},
 
 
@@ -362,43 +441,15 @@ export default {
 			type: 'number',
 			if_has_extencion: 'vinoteca',
 		},
-
-
 		{
-			text: 'Precio final BLANCO',
-			key: 'final_price_blanco',
-			type: 'number',
-			if_has_extencion: 'articulos_precios_en_blanco',
-			only_show: true,
-			is_price: true,
-			use_to_show_in_search_modal: true,
-			filter_modal_position: 9,
-		},
-		{
-			text: 'Precio final anterior',
-			key: 'previus_final_price',
-			type: 'number',
-			only_show: true,
-			is_price: true,
-			use_to_show_in_search_modal: true,
+			text: 'Omitir en lista pdf',
+			key: 'omitir_en_lista_pdf',
+			type: 'checkbox',
+			value: 0,
 			not_show: true,
-			if_has_not_extencions: [
-				'articulo_margen_de_ganancia_segun_lista_de_precios',
-				'lista_de_precios_por_categoria',
-			],
+			if_has_extencion: 'vinoteca',
 		},
-		{
-			text: 'Precio final actualizado',
-			key: 'final_price_updated_at',
-			type: 'date',
-			only_show: true,
-			is_date: true,
-			not_show: true,
-			if_has_not_extencions: [
-				'articulo_margen_de_ganancia_segun_lista_de_precios',
-				'lista_de_precios_por_categoria',
-			],
-		},
+
 
 
 
@@ -418,6 +469,7 @@ export default {
 			key: 'stock_min',
 			type: 'number',
 			not_show: true,
+			description: 'Cuando el stock del articulo sea menor o igual a este campo, el articulo aparecera en las alertas de "Stock minimo"',
 		},
 		{
 			text: 'stock actualizado',
@@ -425,6 +477,10 @@ export default {
 			type: 'date',
 			only_show: true,
 			is_date: true,
+			descriptions: [
+				'Ultima vez que hubo un cambio en el stock que NO haya sido ocasionado por una VENTA',
+				'Por ejemplo ingreso o egreso de stock desde el modulo del Listado, importacion de Excel, compras a proveedores, etc',
+			],
 		},
 
 		{
@@ -434,6 +490,7 @@ export default {
 			not_show: true,
 			use_store_models: true,
 			value: 1,
+			description: 'Por defecto es UNIDAD. Tambien puede ser "Gramo", "Kilo", "Litro", "Centimetro", "Metro", "Rollo", "Par"',
 		},
 
 
@@ -479,16 +536,7 @@ export default {
 			key: 'descripcion',
 			type: 'textarea',
 			not_show: true,
-		},
-
-
-		{
-			text: 'Omitir en lista pdf',
-			key: 'omitir_en_lista_pdf',
-			type: 'checkbox',
-			value: 0,
-			not_show: true,
-			if_has_extencion: 'vinoteca',
+			description: 'Utilice este campo como informacion complementaria del articulo, para de esa forma no tener un "Nombre tan extenso". Esta descripcion esta incluida como criterio de busqueda en el modulo de VENDER'
 		},
 
 
@@ -722,6 +770,7 @@ export default {
 			type: 'checkbox',
 			not_show: true,
 			if_has_extencion: 'articles_default_in_vender',
+			description: 'Si se activa, se cargara siempre de forma automatica en el modulo de VENDER, y se inluira en las ventas siempre que se indique al menos una unidad vendida, de lo contrario no se guardara en las ventas',
 		},
 		{
 			text: 'Siempre personalizar precio en VENDER',
@@ -793,14 +842,36 @@ export default {
 		// 	},
 		// 	not_show: true,
 		// },
+
 		{
-			text: 'Rangos de precio',
+			text: 'Descripciones',
+			key: 'descriptions',
+			has_many: {
+				text: 'Descripcion',
+				model_name: 'description',
+			},
+			mid_full_cols: true,
+			not_show: true,
+			descriptions: [
+				'Agregue multiples descripciones a un producto, pudiendo editar los estilos del texto',
+				'Organize las descripciones con Titulos y parrafos',
+				'Estas descripciones son utilizadas en el e-commerce',
+			],
+		},
+
+		{
+			group_title: 'Descuentos y Recargos'
+		},
+		{
+			text: 'Ofertas para VENDER',
 			key: 'article_price_ranges',
 			has_many: {
 				text: 'Rango de precio',
 				model_name: 'article_price_range',
 			},
+			// mid_full_cols: true,
 			not_show: true,
+			description: 'Cree ofertas para el articulo dependiendo de la cantidad que se este vendiendo',
 		},
 
 		{
@@ -811,6 +882,7 @@ export default {
 				model_name: 'article_discount',
 			},
 			not_show: true,
+			description: 'Cree descuetos por porcentajes o por montos que seran computados al "Costo" para calcular el "Costo Real"',
 		},
 
 		{
@@ -833,6 +905,10 @@ export default {
 				model_name: 'article_surchage',
 			},
 			not_show: true,
+			descriptions: [
+				'Cree recargos por porcentajes o por montos que seran computados al "Costo" para calcular el "Costo Real"',
+				'Tambien puede indicar que los recargos se apliquen al "Precio Final"',
+			],
 		},
 
 		{
@@ -842,16 +918,6 @@ export default {
 			has_many: {
 				text: 'Recargo',
 				model_name: 'article_surchage_blanco',
-			},
-			not_show: true,
-		},
-
-		{
-			text: 'Descripciones',
-			key: 'descriptions',
-			has_many: {
-				text: 'Descripcion',
-				model_name: 'description',
 			},
 			not_show: true,
 		},

@@ -89,10 +89,22 @@
 			</b-button>
 			<b-form-row> 
 				<b-col
-				cols="12"
-				md="4"
+				:cols="excel_column(column, 12)"
+				:md="excel_column(column, 4)"
 				v-for="(column, index) in columns_">
-					<div class="container shadow-3">
+
+					<div
+					v-if="column.group_title">
+						<hr>
+						<h4
+						class="m-t-20 m-b-20">
+							{{ column.group_title }}
+						</h4>
+					</div>
+
+					<div 
+					v-else-if="column.text"
+					class="container shadow-3">
 						<div 
 						class="cont-inputs">
 							<span
@@ -436,12 +448,19 @@ export default {
 		},
 	},
 	methods: {
+		excel_column(column, _default) {
+			// console.log('excel_column: '+column.group_title)
+			if (column.group_title) {
+				return 12
+			}
+			return _default
+		},
 		check_letra(index) {
 			let letra = this.columns_[index].letra.toUpperCase()
 
-			console.log('check_letra:')
-			console.log(this.columns_[index].letra)
-			console.log(letra)
+			// console.log('check_letra:')
+			// console.log(this.columns_[index].letra)
+			// console.log(letra)
 			this.columns_[index].letra = letra
 		},
 		number_to_excel_column(n) {
@@ -637,6 +656,7 @@ export default {
 				letra = this.number_to_excel_column(position)
 
 				this.columns_.push({
+					group_title: column.group_title,
 					text: column.text,
 					description: column.description,
 					letra: letra,
@@ -700,7 +720,6 @@ export default {
 
 				this.varias_solicitudes = false
 				await this.sendRequest(form_data)
-				
 
 				console.log('terminaron de enviarse las solicitudes')
 				this.loading = false
@@ -713,9 +732,15 @@ export default {
 				this.props_to_send.provider_id = 0
 
 				this.$bvModal.hide(this.id)
-				this.$toast.success('Estamos precesando tu archivo, te notificaremos cuando termine', {
-					duration: 7000
-				})
+
+				if (!this.hubo_un_error) {
+					
+					this.$toast.success('Estamos precesando tu archivo, te notificaremos cuando termine', {
+						duration: 7000
+					})
+				}
+				
+
 			}
 		},
 		guardar_column_position() {
@@ -808,7 +833,14 @@ export default {
 				console.log(err)
 				this.hubo_un_error = true
 				this.limpiar_temporizador()
-				this.$toast.error('Error al importar Excel')
+				// this.$toast.error('Error al importar Excel')
+
+				// Levantar modal de notificacion global
+
+                this.$store.commit('global_notification/set_info_to_show', err.response.data.info_to_show)
+                    this.$store.commit('global_notification/set_functions_to_execute', err.response.data.functions_to_execute)
+
+                this.$bvModal.show('global-notification')
 			})
 		},
 		showHistory() {

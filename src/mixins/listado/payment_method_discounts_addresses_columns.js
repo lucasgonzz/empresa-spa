@@ -9,6 +9,9 @@ export default {
 		props_to_show() {
 			return this.$store.state.article.props_to_show 
 		},
+		article_model() {
+			return this.$store.state.article.model 
+		},
 	},
 	data() {
 		return {
@@ -19,6 +22,10 @@ export default {
 		// addresses() {
 		// 	this.set_properties_to_show()
 		// },
+		article_model() {
+			console.log('Se va a llamar desde article_model')
+			this.set_properties_to_show()
+		},
 		price_types() {
 			console.log('Se va a llamar desde price_types')
 			this.set_properties_to_show()
@@ -44,6 +51,7 @@ export default {
 
 				props = this.get_properties_to_show_ordenadas('article')
 			}
+			// props = this.get_properties_to_show_ordenadas('article')
 
 
 
@@ -266,9 +274,6 @@ export default {
 		},
 		add_price_types(props) {
 
-			console.log('agregando price_types a tabla listado')
-			console.log(this.hasExtencion('articulo_margen_de_ganancia_segun_lista_de_precios'))
-			console.log(this.hasExtencion('lista_de_precios_por_categoria'))
 			// Encuentra la posición de alguna de estas props
 			let props_a_partir_de_las_cuales_agregar = [
 				'costo_real',
@@ -282,6 +287,8 @@ export default {
 			]
 
 			let insertIndex = this.get_index(props, props_a_partir_de_las_cuales_agregar)
+
+			// console.log('insertIndex de price_types: '+insertIndex)
 
 			props = this.quitar_props_de_precios(props)
 
