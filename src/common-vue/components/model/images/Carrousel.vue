@@ -18,7 +18,7 @@
 	:paginationPadding="5"
 	loop
 	:perPage="1"
-	:adjustableHeight="true">
+	:adjustableHeight="false">
 		<slide
 		v-for="(image, index) in model[prop.key]"
 		:data-index="index"
@@ -126,16 +126,45 @@ export default {
 		}
 	},
 	methods: {
-		onImageLoaded() {
-	        if (this.height_adjusted) return
+		// onImageLoaded() {
+		// 	const img = event.target
 
-	        this.$nextTick(() => {
-	            if (this.$refs.carousel && this.$refs.carousel.computeCarouselHeight) {
-	                this.$refs.carousel.computeCarouselHeight()
-	                this.height_adjusted = true
-	            }
-	        })
-	    },
+		//     this.$nextTick(() => {	
+
+		//         if (!this.$refs.carousel) return
+
+		//         setTimeout(() => {
+
+		//         })
+
+		//         const carouselEl = this.$refs.carousel.$el
+
+		//         const newHeight = img.clientHeight + 40 // padding vertical
+
+		//         carouselEl.querySelector('.VueCarousel-inner').style.height = newHeight + 'px'
+		//         alert('se puso en '+newHeight)
+		//     })
+		// },
+		onImageLoaded(event) {
+
+		    const img = event.target
+
+		    this.$nextTick(() => {
+
+		        if (!this.$refs.carousel) return
+
+		        const carouselEl = this.$refs.carousel.$el
+		        const inner = carouselEl.querySelector('.VueCarousel-inner')
+
+		        const containerWidth = carouselEl.clientWidth
+
+		        // Calculamos el alto real proporcional
+		        const ratio = img.naturalHeight / img.naturalWidth
+		        const calculatedHeight = containerWidth * ratio
+
+		        inner.style.height = calculatedHeight + 'px'
+		    })
+		},
 		upload(event) {
 			var file = document.getElementById(this.input_file_name).files[0];
 			if (typeof file == 'undefined') {

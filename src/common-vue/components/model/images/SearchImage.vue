@@ -146,7 +146,11 @@ export default {
 		auto_select_timeout: {
 	        get() {
 	            // fallback por si el usuario aún no tiene el valor
-	            return this.owner?.img_auto_timeout ?? 5
+	            if (this.user) {
+
+	            	return this.owner?.img_auto_timeout ?? 5
+	            }
+	            return 5
 	        },
 	        set(value) {
 	            const seconds = Number(value)
@@ -218,16 +222,18 @@ export default {
 
 	        this.flow_mode = 'auto'
 	        this.search()
-	        .then(() => {
-
-	                // Esperar unos segundos antes de seleccionar automáticamente
-	        		this.startAutoSelectProgress()
-	                this.auto_select_timer = setTimeout(() => {
-	                    if (this.flow_mode === 'auto') {
-	                        this.setImage(this.images_result[0])
-	                    }
-	                }, this.auto_select_timeout)
-	        })
+	    },
+	    seleccionar_imagen_automaticamente() {
+	    	alert('Seleccionando en '+this.auto_select_timeout)
+	        // Esperar unos segundos antes de seleccionar automáticamente
+			this.startAutoSelectProgress()
+	        this.auto_select_timer = setTimeout(() => {
+	            if (this.flow_mode === 'auto') {
+	            	if (this.images_result.length) {
+	                	this.setImage(this.images_result[0])
+	            	}
+	            }
+	        }, this.auto_select_timeout * 1000)
 	    },
 		async search() {
 			if (this.busquedas_disponibles <= 0) {
@@ -239,7 +245,7 @@ export default {
 				this.images_result = null
 				this.loading = true
 				let url = 'https://www.googleapis.com/customsearch/v1?key='+this.google_api_key+'&cx=c442e5f346f314951&searchType=image&q='+this.query
-				fetch(url)
+				return fetch(url)
 				// fetch('https://www.googleapis.com/customsearch/v1?key=AIzaSyDOdbUFHZhD0I2DWoYVR6CQnKurqYY5rcQ&cx=c442e5f346f314951&searchType=image&q='+this.query)
 				.then(res => {
 					this.loading = false
@@ -258,6 +264,10 @@ export default {
 							body.items.forEach(item => {
 								this.images_result.push(item.link)
 							})
+
+							if (this.flow_mode == 'auto') {
+								this.seleccionar_imagen_automaticamente()
+							}
 						} 
 					})
 				})
@@ -291,7 +301,7 @@ export default {
 			 if (this.flow_mode === 'auto') {
 			 	this.cancel_flow_model()
 		    }
-			// this.$bvModal.hide('search-image') 
+			this.$bvModal.hide('search-image') 
 			this.$emit('setImageUrl', image_url) 
 		},
 		cancel_flow_model() {

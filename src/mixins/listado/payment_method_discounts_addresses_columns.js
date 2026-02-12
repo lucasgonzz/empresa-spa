@@ -1,4 +1,6 @@
+import insert_props from '@/common-vue/mixins/insert_props'
 export default {
+	mixins: [insert_props],
 	computed: {
 		addresses() {
 			return this.$store.state.address.models 
@@ -9,31 +11,37 @@ export default {
 		props_to_show() {
 			return this.$store.state.article.props_to_show 
 		},
-		article_model() {
-			return this.$store.state.article.model 
-		},
+		properties_to_show() {
+	        return this.set_properties_to_show()
+	    }
+		// article_model() {
+		// 	return this.$store.state.article.model 
+		// },
 	},
-	data() {
-		return {
-			properties_to_show: [],
-		}
-	},
+	// data() {
+	// 	return {
+	// 		properties_to_show: [],
+	// 	}
+	// },
 	watch: {
 		// addresses() {
 		// 	this.set_properties_to_show()
 		// },
-		article_model() {
-			console.log('Se va a llamar desde article_model')
-			this.set_properties_to_show()
-		},
-		price_types() {
-			console.log('Se va a llamar desde price_types')
-			this.set_properties_to_show()
-		},
-		props_to_show() {
-			console.log('Se va a llamar desde props_to_show')
-			this.set_properties_to_show()
-		},
+		// article_model() {
+		// 	console.log('Se va a llamar desde article_model')
+		// 	alert('set_properties_to_show desde article_model')
+		// 	this.set_properties_to_show()
+		// },
+		// price_types() {
+		// 	console.log('Se va a llamar desde price_types')
+		// 	alert('set_properties_to_show desde price_types')
+		// 	this.set_properties_to_show()
+		// },
+		// props_to_show() {
+		// 	alert('set_properties_to_show desde props_to_show')
+		// 	console.log('Se va a llamar desde props_to_show')
+		// 	this.set_properties_to_show()
+		// },
 	},
 	created() {
 		// console.log('Se va a llamar desde CREATED')
@@ -41,6 +49,7 @@ export default {
 	},
 	methods: {
 		set_properties_to_show() {
+
 
 			let props = []
 
@@ -51,12 +60,16 @@ export default {
 
 				props = this.get_properties_to_show_ordenadas('article')
 			}
-			// props = this.get_properties_to_show_ordenadas('article')
+			// props = this.get_properties_to_show('article')
 
+			// En el listado NO renderizamos group_title (eso es solo para el modal/Form)
+		    // Si entran acá, rompen el cálculo de índices y el orden de columnas.
+		    props = props.filter(prop => prop.key)
 
 
 			if (
-				!this.owner.online
+				this.user
+				&& !this.owner.online
 				&& !this.hasExtencion('imagenes')
 			) {
 				props = props.filter(prop => prop.key != 'images')
@@ -92,7 +105,8 @@ export default {
 
 			props = this.add_addresses(props)
 
-			this.properties_to_show = props
+			// this.properties_to_show = props
+			return props
 		},
 		no_esta_agregada(model_name, model, props) {
 			let prop = props.find(_prop => {
@@ -136,7 +150,7 @@ export default {
 
 					let dolar = price_type_monedas.find(p => p.moneda_id == 2)
 
-					price += ' ('+this.price(dolar.final_price)+' USD)'
+					price += ' | '+this.price(dolar.final_price)+' USD'
 
 
 					return price
@@ -204,7 +218,10 @@ export default {
 
 
 			let insertIndex = this.get_index(props, props_a_partir_de_las_cuales_agregar)
-
+			
+			// Para mantener el orden cuando agregamos varios con splice()
+			let current_index = insertIndex
+			
 			this.addresses.forEach(address => {
 
 				if (
@@ -212,14 +229,14 @@ export default {
 					&& this.no_esta_agregada('address_', address, props)
 				) {
 
-					props.splice(insertIndex, 0, {
+					props.splice(current_index, 0, {
 						text: address.street,
 						key: 'address_' + address.id,
 						type: 'text',
 						not_show_on_form: true,
 						no_usar_en_filtros: true,
 					});
-
+					current_index++
 				}
 			})
 
@@ -256,17 +273,20 @@ export default {
 
 			let insertIndex = this.get_index(props, props_a_partir_de_las_cuales_agregar)
 			
+			let current_index = insertIndex
+
 			this.current_acount_payment_method_discounts.forEach(dicount => {
 
 				if (this.no_esta_agregada('payment_method_discount_', dicount, props)) {
 
-					props.splice(insertIndex, 0, {
+					props.splice(current_index, 0, {
 						text: dicount.current_acount_payment_method.name,
 						key: 'payment_method_discount_'+dicount.id,
 						type: 'text',
 						not_show_on_form: true,
 						no_usar_en_filtros: true,
 					});
+					current_index++
 				}
 			})
 
@@ -286,27 +306,48 @@ export default {
 				'num',
 			]
 
-			let insertIndex = this.get_index(props, props_a_partir_de_las_cuales_agregar)
+			// let insertIndex = this.get_index(props, props_a_partir_de_las_cuales_agregar)
 
-			// console.log('insertIndex de price_types: '+insertIndex)
+			// // console.log('insertIndex de price_types: '+insertIndex)
+			// // console.log('en base a las props:')
+
+			// // IMPORTANTE: si agregamos muchos elementos con splice() siempre al mismo índice,
+		    // // el orden queda invertido. Por eso usamos current_index y lo incrementamos.
+		    // let current_index = insertIndex
+
+			
 
 			props = this.quitar_props_de_precios(props)
 
 			this.price_types.forEach(price_type => {
 
 				if (this.no_esta_agregada('price_type_', price_type, props)) {
-					props.splice(insertIndex, 0, {							
-						text: price_type.name,
-						key: 'price_type_'+price_type.id,
-						type: 'text',
-						no_usar_en_filtros: true,
 
-						// Con esto hago que se agregue a las propiedades
-						// para el modal component del Model
-						propiedad_extra_para_modal: true,
-						index: insertIndex,
-						// not_show_on_form: true,
-					})
+					props = this.insert_property_by_rules(props, {
+			            text: price_type.name,
+			            key: 'price_type_'+price_type.id,
+			            type: 'text',
+			            no_usar_en_filtros: true,
+
+			            propiedad_extra_para_modal: true,
+
+			            insert_after_keys: props_a_partir_de_las_cuales_agregar
+			        })
+
+					// props.splice(current_index, 0, {							
+					// 	text: price_type.name,
+					// 	key: 'price_type_'+price_type.id,
+					// 	type: 'text',
+					// 	no_usar_en_filtros: true,
+
+					// 	// Con esto hago que se agregue a las propiedades
+					// 	// para el modal component del Model
+					// 	propiedad_extra_para_modal: true,
+					// 	index: current_index,
+					// 	// not_show_on_form: true,
+					// })
+
+					// current_index++
 				}
 				
 			})

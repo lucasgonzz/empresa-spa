@@ -2,7 +2,7 @@ export default {
 	properties: [
 		{
 			text: 'N°',
-			key: 'num',
+			key: 'id',
 			type: 'number',
 			value: '',
 			show: true,
