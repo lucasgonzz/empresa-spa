@@ -2,7 +2,7 @@
 	<div>
 		<b-button
 		size="sm"
-		@click="search"
+		@click.stop="search"
 		variant="outline-primary"
 		v-if="!article.images.length">
 			<i class="icon-search"></i>

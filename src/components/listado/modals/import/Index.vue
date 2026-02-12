@@ -57,33 +57,13 @@ export default {
 				},
 
 
-				{
-					group_title: 'Categoria',
-				},
-				{
-					text: 'Categoria',
-				},
-				{
-					text: 'Sub categoria',
-				},
-				{
-					text: 'Marca',
-				},
-
-
-				{
-					group_title: 'Stock',
-				},
-				{
-					text: 'Stock actual',
-				},
-				{
-					text: 'Stock minimo',
-				},
-
 
 				{
 					group_title: 'Precio',
+				},
+				{
+					text: 'Moneda',
+					description: 'USD para Dolares, ARS para pesos (ARS por defecto)',
 				},
 				{
 					text: 'Costo',
@@ -121,9 +101,20 @@ export default {
 					text: 'Precio',
 					description: 'Utilice este campo si quere saltearse el proceso de calcular el "Precio Final" de forma automatica (costo + iva + margen de ganancia), y en su lugar quiere fijar manualmente el "Precio Final". Lo que coloque aqui se utilizara como "Precio final/Precio de venta"',
 				},
+
+				
+
 				{
-					text: 'Moneda',
-					description: 'USD para Dolares, ARS para pesos (ARS por defecto)',
+					group_title: 'Categoria',
+				},
+				{
+					text: 'Categoria',
+				},
+				{
+					text: 'Sub categoria',
+				},
+				{
+					text: 'Marca',
 				},
 				{
 					text: 'Descripcion',
@@ -207,17 +198,32 @@ export default {
 			// 	columns.splice(7, 1)
 			// }
 
-			this.addresses.forEach(address => {
-				columns.push({
-					text: address.street,
-				})
-				columns.push({
-					text: 'Min '+address.street,
-				})
-				columns.push({
-					text: 'Max '+address.street,
-				})
+			columns.push({
+				group_title: 'Stock',
 			})
+
+			if (this.addresses.length) {
+
+				this.addresses.forEach(address => {
+					columns.push({
+						text: address.street,
+					})
+					columns.push({
+						text: 'Min '+address.street,
+					})
+					columns.push({
+						text: 'Max '+address.street,
+					})
+				})
+			} else {
+				
+				columns.push({
+					text: 'Stock actual',
+				})
+				columns.push({
+					text: 'Stock minimo',
+				})
+			}
 
 
 			if (this.hasExtencion('article_variants')) {

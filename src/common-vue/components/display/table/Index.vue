@@ -251,7 +251,7 @@ export default {
 		}, 1000)
 	},
 	created() {
-		console.log('se creo tabla')
+		// console.log('se creo tabla')
 		this.setHeight()
 		let that = this
 		window.addEventListener('resize', function(event) {
@@ -289,15 +289,15 @@ export default {
 			return Math.random()+'-'+this.model_name
 		},
 		props() {
-			console.log('calculando props')
+			// console.log('calculando props')
 			let props = []
 
 			 if (this.properties.length) {
 
 				props = this.propertiesToShow(this.properties, true)
 
-				console.log('1:')
-				console.log(props)
+				// console.log('1:')
+				// console.log(props)
 
 				if (this.papelera) {
 					props.splice(1, 0, {
@@ -314,8 +314,8 @@ export default {
 				) {
 			 	props = this.propertiesToShow(this.modelPropertiesFromName(this.model_name), true)
 
-				console.log('propertiesToShow:')
-				console.log(props)
+				// console.log('propertiesToShow:')
+				// console.log(props)
 				if (this.add_created_at) {
 
 					props.push({
@@ -382,7 +382,7 @@ export default {
 				}
 			} 
 
-			console.log(props)
+			// console.log(props)
 
 			
 			props.splice(0, 0, {
@@ -479,8 +479,8 @@ export default {
 		filtrar() {
 			let filters = this.$store.state[this.model_name].filters
 			let current_page = this.$store.state[this.model_name].filter_page
-			console.log('filters:')
-			console.log(filters)
+			// console.log('filters:')
+			// console.log(filters)
 			
 			this.limpiar_show_filters()
 			
@@ -496,8 +496,8 @@ export default {
 			.then(res => {
 				this.$store.commit('auth/setLoading', false)
 
-				console.log('resultados::')
-				console.log(res)
+				// console.log('resultados::')
+				// console.log(res)
 
 				if (res.data.data.length) {
 
@@ -549,15 +549,15 @@ export default {
 				this.show_filters = {}; // Reinicia el objeto show_filters
 				this.$set(this.show_filters, field_key, true); // Activa solo el seleccionado
 			}
-			console.log('show_filters:')
-			console.log(this.show_filters)
+			// console.log('show_filters:')
+			// console.log(this.show_filters)
 		},
 		limpiar_show_filters() {
 			this.show_filters = {}; 
 		},
 		set_fields(cambiaron_las_props = false) {
 
-			console.log('set_fields:')
+			// console.log('set_fields:')
 
 			this.fields = []
 			this.props.forEach(prop => {
@@ -571,8 +571,8 @@ export default {
 					})
 				}
 			})
-			console.log('fields:')
-			console.log(this.fields)
+			// console.log('fields:')
+			// console.log(this.fields)
 
 			this.set_filters(cambiaron_las_props)
 
@@ -593,16 +593,16 @@ export default {
 				return
 			}
 
-			console.log('set_filters de '+this.model_name)
+			// console.log('set_filters de '+this.model_name)
 
 			if (this.filtros_ya_iniciados() && !cambiaron_las_props) {
-				console.log('Filtros ya iniciados')
+				// console.log('Filtros ya iniciados')
 				return
 			}
 
 
-			console.log('props:')
-			console.log(this.props)
+			// console.log('props:')
+			// console.log(this.props)
 
 			let filters = []
 
@@ -628,8 +628,8 @@ export default {
 				}
 			})
 
-			console.log('filters:')
-			console.log(filters)
+			// console.log('filters:')
+			// console.log(filters)
 			
 			this.$store.commit(this.model_name+'/setFilters', filters)
 		},
@@ -664,16 +664,16 @@ export default {
 						if (this.table_height_para_restar) {
 							height -= this.table_height_para_restar
 						}
-						console.log('setHeight de '+this.model_name)
+						// console.log('setHeight de '+this.model_name)
 						if (height > 500) {
-							console.log('aplicando height calculado de '+height)
+							// console.log('aplicando height calculado de '+height)
 							table.style.height = height +'px'
 						} else {
-							console.log('no se aplico height calculado de '+height)
-							console.log('la tabla tiene height de '+table.style.height)
+							// console.log('no se aplico height calculado de '+height)
+							// console.log('la tabla tiene height de '+table.style.height)
 
 							if (table.style.height < 500) {
-								console.log('se aplico height de 500')
+								// console.log('se aplico height de 500')
 								table.style.height = '500px'
 							}
 						}
@@ -711,8 +711,8 @@ export default {
 				this.is_mobile
 				|| !this.owner.scroll_en_tablas
 			) {
-				console.log('scroll_en_tablas:')
-				console.log(this.owner.scroll_en_tablas)
+				// console.log('scroll_en_tablas:')
+				// console.log(this.owner.scroll_en_tablas)
 				return
 			}
 		    const contTable = document.getElementById(this.id);
@@ -734,7 +734,7 @@ export default {
 		                return; // Detiene si no hay dirección
 		            }
 
-		            console.log('scroleando, scrollLeft: '+contTable.scrollLeft)
+		            // console.log('scroleando, scrollLeft: '+contTable.scrollLeft)
 
 		            contTable.scrollLeft += scrollDirection === 'right' ? 20 : -20; // Ajusta velocidad aquí
 		            requestAnimationFrame(scroll); // Llama al siguiente cuadro

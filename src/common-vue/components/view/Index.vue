@@ -159,6 +159,8 @@ import Model from '@/common-vue/components/model/Index'
 import List from '@/common-vue/components/view/List'
 import HorizontalNav from '@/common-vue/components/horizontal-nav/Index'
 
+import insert_props from '@/common-vue/mixins/insert_props'
+
 export default {
 	components: {
 		Model,
@@ -167,6 +169,7 @@ export default {
 		HorizontalNav,
 		ViewHeader: () => import('@/common-vue/components/view/header/Index'),
 	},
+	mixins: [insert_props],
 	props: {
 		model_name: {
 			type: String,
@@ -424,34 +427,27 @@ export default {
 		}
 	},
 	methods: {
-		check_propiedades_extras(props) {
-			if (this.properties_to_show) {
-				this.properties_to_show.forEach(prop => {
+		check_propiedades_extras(original_props) {
 
-					if (prop.propiedad_extra_para_modal) {
+		    let props = original_props.map(p => ({ ...p }))
 
-						// if (prop.index) {
+		    if (!Array.isArray(this.properties_to_show)) {
+		        return props
+		    }
 
-						// 	props.splice(prop.index+3, 0, {...prop})
-						// } else {
-						// 	props.push(prop)
-						// }
-						// IMPORTANTE: index puede ser 0, así que no hay que chequearlo como truthy
-		                if (prop.index !== undefined && prop.index !== null) {
+		    const extras = this.properties_to_show.filter(
+		        p => p && p.propiedad_extra_para_modal
+		    )
 
-		                    // Sin +3: el ModelForm renderiza en orden directo
-		                    props.splice(prop.index+5, 0, { ...prop })
+		    extras.forEach(extra => {
 
-		                    console.log('-> Agregando por extra '+prop.text+'. Index: '+prop.index)
+		        props = this.insert_property_by_rules(
+		            props,
+		            { ...extra }
+		        )
+		    })
 
-		                } else {
-		                    props.push({ ...prop })
-		                }
-					}
-
-				})
-			}
-			return props
+		    return props
 		},
 		modelSaved(model) {
 			console.log('22222')

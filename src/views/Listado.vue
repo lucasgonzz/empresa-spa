@@ -91,10 +91,10 @@
 		</template>
 
 
-		<template #table-prop-images="props">
+		<!-- <template #table-prop-images="props">
 			<google-btn
 			:article="props.model"></google-btn>
-		</template>
+		</template> -->
 
 		<template #table-prop-price="props">
 			<article-price
