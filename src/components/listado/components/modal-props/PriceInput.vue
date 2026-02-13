@@ -7,7 +7,7 @@
 		<p
 		class="m-t-10"
 		v-if="disabled">
-			Elimine el margen de ganancia para poder fijar el precio manualmente
+			Elimine el margen de ganancia del articulo y desactive el margen de ganancia del proveedor para poder fijar el precio manualmente
 		</p>
 	</div>
 </template>
@@ -18,19 +18,19 @@ export default {
 			return this.$store.state.article.model 
 		},
 		disabled() {
-			return this.article && typeof this.article.percentage_gain != 'undefined' && this.article.percentage_gain !== null && this.article.percentage_gain != ''
+			if (
+				(
+					this.article 
+					&& typeof this.article.percentage_gain != 'undefined' 
+					&& this.article.percentage_gain !== null 
+					&& this.article.percentage_gain != ''
+				)
+				|| this.article.apply_provider_percentage_gain
+			) {
+				return true
+			}
+			return false
 		}
 	},
-	methods: {
-		info() {
-			this.$api.get('article/final-price-description/'+this.article.id)
-			.then(res => {
-				console.log(res)
-
-				this.$store.commit('article/set_final_price_description', res.data.description)
-				this.$bvModal.show('final-price-description')
-			})
-		}
-	}
 }
 </script>

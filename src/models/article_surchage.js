@@ -18,7 +18,7 @@ export default {
 			type: 'checkbox',
 			descriptions: [
 				'Si se activa, este recargo se aplicara al final del proceso de calcular el "Precio Final" luego del "Margen de ganancia".',
-				'Si se desactiva, este recargo se aplicara al costo a la hora d calcular el "Costo Real".',
+				'Si se desactiva, este recargo se aplicara al costo a la hora de calcular el "Costo Real".',
 			]
 		},
 	],
