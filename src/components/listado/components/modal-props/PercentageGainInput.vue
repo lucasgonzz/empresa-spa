@@ -18,7 +18,7 @@ export default {
 			return this.$store.state.article.model 
 		},
 		disabled() {
-			return this.article && this.article.price !== null && this.article.price != ''
+			return this.article && typeof this.article.price != 'undefined' && this.article.price !== null && this.article.price != ''
 		}
 	},
 	methods: {
