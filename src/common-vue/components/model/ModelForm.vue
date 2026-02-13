@@ -24,6 +24,8 @@
 					<b-form-group
 					:class="colorLabel(prop)"
 					:id="'form-group-'+prop.key">
+
+						<!-- Titulo label -->
 						<label	
 						:id="'label-'+prop.key"
 						class="form-label">
@@ -36,6 +38,8 @@
 							<strong>{{ getLabel(prop) }}</strong>
 						</label>
 
+
+						<!-- Descripcion de la propiedad - Popover -->
 						<b-popover
 						v-if="prop.description" 
 						:target="'label-'+prop.key" 
@@ -55,8 +59,11 @@
 						    v-for="description in prop.descriptions">
 						    	{{ description }}
 						    </p>
-						 </b-popover>
+						</b-popover>
 
+
+
+						 <!-- Input -->
 						<div>
 							
 							<images
@@ -70,6 +77,7 @@
 							<div
 							v-else>
 								<slot :name="prop.key">
+
 									<p
 									v-if="prop.only_show || prop.from_pre_view"
 									:class="prop.class"

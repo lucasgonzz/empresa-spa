@@ -63,8 +63,13 @@ export default {
 		loading: false,
 
 		props_to_show: [],
+
+		final_price_description: [],
 	},
 	mutations: {
+		set_final_price_description(state, value) {
+			state.final_price_description = value
+		},
 		set_add_buscador_to_selected(state, value) {
 			state.add_buscador_to_selected = value
 		},

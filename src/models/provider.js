@@ -36,6 +36,12 @@ export default {
 			if_has_extencion: 'ventas_en_dolares',
 		},
 		{
+			text: 'Setear precio con COSTO + IVA',
+			key: 'price_from_cost_mas_iva',
+			type: 'checkbox',
+			if_has_extencion: 'providers_article_price_from_costo_mas_iva',
+		},
+		{
 			text: 'Margen de ganancia',
 			key: 'percentage_gain',
 			type: 'number',

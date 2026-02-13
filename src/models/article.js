@@ -247,14 +247,14 @@ export default {
 		},
 
 		{
-			text: 'precio',
+			text: 'Precio manual',
 			key: 'price',
-			type: 'text',
-			type_to_update: 'number',
-			is_price: true,
+			type: 'number',
+			// type_to_update: 'number',
+			// is_price: true,
 			use_to_update: true,
-			filter_modal_position: 11,
-			filter_type: 'number',
+			// filter_modal_position: 11,
+			// filter_type: 'number',
 			if_has_not_extencions: [
 				'articulo_margen_de_ganancia_segun_lista_de_precios',
 				'lista_de_precios_por_categoria',
@@ -271,17 +271,17 @@ export default {
 			text: 'Precio final',
 			key: 'final_price',
 			type: 'number',
-			check_simbolo_moneda: true,
-			simbolo_moneda_function: 'article_simbolo_moneda',
+			// check_simbolo_moneda: true,
+			// simbolo_moneda_function: 'article_simbolo_moneda',
 			// prop_to_check_in_simbolo_moneda: {
 			// 	key: 'cost_in_dollars',
 			// 	equal_to: 1
 			// },
-			only_show: true,
-			is_price: true,
+			// only_show: true,
+			// is_price: true,
 			use_to_show_in_search_modal: true,
 			filter_modal_position: 9,
-			class: 'final-price',
+			// class: 'final-price',
 			if_has_not_extencions: [
 				'articulo_margen_de_ganancia_segun_lista_de_precios',
 				'lista_de_precios_por_categoria',

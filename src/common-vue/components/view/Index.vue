@@ -41,11 +41,11 @@
     			<slot name="belongs" :model="slotProps.model"></slot>
     		</template> 
     		<template
-    		v-for="prop in properties"
+    		v-for="prop in properties_for_model_modal"
 			v-slot:[prop.key]="props">
-				<slot :name="prop.key" :model="props.model">
-				</slot>
+				<slot :name="prop.key" :model="props.model"></slot>
     		</template>
+			<!-- <template #price>asd</template> -->
     	</model>
 
 		<slot name="header"></slot>

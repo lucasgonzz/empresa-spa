@@ -11,6 +11,8 @@
 	
 	<images-copy></images-copy> -->
 
+	<final-price-description></final-price-description>
+
 	<current-acounts></current-acounts>
 	
 	<import></import>
@@ -74,11 +76,23 @@
 		</template>
 
 		<template #name>
-			<name-input></name-input> 
+			<name-input></name-input>  
 		</template>
 
 		<template #stock>
 			<stock-input></stock-input> 
+		</template>
+
+
+		<template #percentage_gain>
+			<percentage-gain-input></percentage-gain-input>
+		</template>
+		<template #price>
+			<price-input></price-input>
+		</template>
+
+		<template #final_price>
+			<final-price></final-price>
 		</template>
 
 		
@@ -166,6 +180,9 @@ export default {
 		// StockInfo: () => import('@/components/listado/modals/stock-info/Index'),
 		StockBtn: () => import('@/components/listado/components/table-props/stock-btn/Index'),
 		ArticlePrice: () => import('@/components/listado/components/ArticlePrice'),
+		PriceInput: () => import('@/components/listado/components/modal-props/PriceInput'),
+		PercentageGainInput: () => import('@/components/listado/components/modal-props/PercentageGainInput'),
+		FinalPrice: () => import('@/components/listado/components/modal-props/FinalPrice'),
 
 		// Dropdown options
 		DropDownOptions: () => import('@/components/listado/components/selected-filtered-options/Index'),
@@ -188,6 +205,8 @@ export default {
 		Acopios: () => import('@/components/listado/modals/acopios/Index'),
 		
 		CurrentAcounts: () => import('@/components/common/current-acounts/Index'),
+
+		FinalPriceDescription: () => import('@/components/listado/modals/FinalPriceDescription'),
 	}, 
 	beforeRouteLeave(to, from, next) {
 		this.$store.commit('article/setSelected', [])
