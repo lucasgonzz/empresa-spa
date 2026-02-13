@@ -18,7 +18,7 @@ export default {
 			return this.$store.state.article.model 
 		},
 		disabled() {
-			return this.article && this.article.percentage_gain !== null && this.article.percentage_gain != ''
+			return this.article && typeof this.article.percentage_gain != 'undefined' && this.article.percentage_gain !== null && this.article.percentage_gain != ''
 		}
 	},
 	methods: {
