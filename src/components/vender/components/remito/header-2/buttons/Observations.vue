@@ -6,9 +6,9 @@
 		v-model="observations"
 		placeholder="Observaciones"></b-form-textarea>
 		
-		<b-form-textarea
+		<!-- <b-form-textarea
 		v-model="observations_ocultas"
-		placeholder="Observaciones ocultas (no salen impresas para el cliente)"></b-form-textarea>
+		placeholder="Observaciones ocultas (no salen impresas para el cliente)"></b-form-textarea> -->
 	</div>
 </template>
 <script>
@@ -40,5 +40,6 @@ export default {
 	flex-direction: row  
 	justify-content: space-between
 	textarea 
-		width: 49%
+		width: 100%
+		// width: 49%
 </style>

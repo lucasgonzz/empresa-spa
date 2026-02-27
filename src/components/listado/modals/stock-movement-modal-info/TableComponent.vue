@@ -126,7 +126,7 @@ export default {
 	},
 	methods: {
 		btn_text(stock_movement) {
-			if (stock_movement.sale_id) {
+			if (stock_movement.sale_id && stock_movement.sale) {
 				return 'Venta N° '+stock_movement.sale.num
 			}
 		},

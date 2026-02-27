@@ -242,6 +242,10 @@ export default {
 			type: Object,
 			default: null,
 		},
+		disable_scroll: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	mounted() {
 		setTimeout(() => {
@@ -636,14 +640,18 @@ export default {
 		onRowSelected(model) {
 			this.$emit('onRowSelected', model)
 		},
-		scrollLeft() {
-			let table = document.getElementById(this.id)
-			table.scrollLeft -= 300
-		},
-		scrollRight() {
-			let table = document.getElementById(this.id)
-			table.scrollLeft += 300
-		},
+		// scrollLeft() {
+		// 	if (!this.disable_scroll) {
+		// 		let table = document.getElementById(this.id)
+		// 		table.scrollLeft -= 300
+		// 	}
+		// },
+		// scrollRight() {
+		// 	if (!this.disable_scroll) {
+		// 		let table = document.getElementById(this.id)
+		// 		table.scrollLeft += 300
+		// 	}
+		// },
 		loadMore($state) {
 			if (this.models_to_show.length < this.models.length) {
 				this.busy = true;
@@ -710,6 +718,7 @@ export default {
 			if (
 				this.is_mobile
 				|| !this.owner.scroll_en_tablas
+				|| this.disable_scroll
 			) {
 				// console.log('scroll_en_tablas:')
 				// console.log(this.owner.scroll_en_tablas)

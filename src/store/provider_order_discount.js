@@ -1,19 +1,15 @@
-// Se agrego days_to_advise_models
 import axios from 'axios'
 axios.defaults.withCredentials = true
 axios.defaults.baseURL = process.env.VUE_APP_API_URL
 
 import moment from 'moment'
 import generals from '@/common-vue/mixins/generals'
-import totales from '@/store/provider_order/totales'
 export default {
 	namespaced: true,
-	modules: {
-		totales,
-	},
 	state: {
-		model_name: 'provider_order',
-		from_dates: true,
+		model_name: 'provider_order_discount',
+		route_prefix: '',
+		from_dates: false,
 		is_selecteable: false,
 
 		use_per_page: false,
@@ -27,22 +23,21 @@ export default {
 		until_date: '',
 
 		page: 1,
-		per_page: 25,
+		per_page: 50,
 		total_pages: 1, 
 
-		days_to_advise_models: [],
 		models: [],
 		model: {},
 		selected: [],
-		filters: [], 
+		filters: [],
 		filtered: [],
 		is_filtered: false,
 		filter_page: 1,
 		total_filter_pages: null,
 		total_filter_results: 0,
 		loading_filtered: false,
-
-		relations_filtered: [],
+		filter_page: 1,
+		total_filter_pages: null,
 
 		delete: null,
 		delete_image_prop: null,
@@ -55,35 +50,16 @@ export default {
 		loading: false,
 
 		props_to_show: [],
-
-		afip_ticket_show_option: 'con-y-sin-factura',
 	},
 	mutations: {
-		setAfipTicketShowOption(state, value) {
-			state.afip_ticket_show_option = value
-		},
 		set_props_to_show(state, value) {
 			state.props_to_show = value
 		},
+		set_route_prefix(state, value) {
+			state.route_prefix = value 
+		},
 		setLoading(state, value) {
 			state.loading = value
-		},
-		setFilters(state, value) {
-			state.filters = value
-		},
-		addFilter(state, filter_to_add) {
-			let index = state.filters.findIndex(filter => {
-				return filter.key == filter_to_add.key
-			})
-
-			if (index == -1) {
-				state.filters.unshift(filter_to_add)
-			} else {
-				state.filters.splice(index, 1, filter_to_add)
-			}
-		},
-		setFiltered(state, value) {
-			state.filtered = value
 		},
 		setModel(state, value) {
 			if (value.model) {
@@ -111,9 +87,6 @@ export default {
 		addModels(state, value) {
 			state.models = state.models.concat(value)
 		},
-		setDaysToAdvise(state, value) {
-			state.days_to_advise_models = value
-		},
 		incrementPage(state) {
 			state.page++
 		},
@@ -136,8 +109,32 @@ export default {
 		setSelected(state, value) {
 			state.selected = value
 		},
+		addSelected(state, value) {
+			let index = state.selected.findIndex(selected_model => {
+				return selected_model.id == value.id 
+			})
+			if (index != -1) {
+				state.selected.splice(index, 1)
+			} else {
+				state.selected.push(value)
+			}
+		},
 		setFiltered(state, value) {
 			state.filtered = value
+		},
+		setFilters(state, value) {
+			state.filters = value
+		},
+		addFilter(state, filter_to_add) {
+			let index = state.filters.findIndex(filter => {
+				return filter.key == filter_to_add.key
+			})
+
+			if (index == -1) {
+				state.filters.unshift(filter_to_add)
+			} else {
+				state.filters.splice(index, 1, filter_to_add)
+			}
 		},
 		setIsFiltered(state, value) {
 			state.is_filtered = value
@@ -177,7 +174,7 @@ export default {
 				state.filtered.splice(index, 1)
 			}
 
-			if (state.selected_model) {
+			if (state.selected_model && state.selected_model[state.plural_model_name]) {
 				index = state.selected_model[state.plural_model_name].findIndex(model => {
 					return model.id == state.delete.id
 				})
@@ -216,8 +213,23 @@ export default {
 		setUntilDate(state, value) {
 			state.until_date = value
 		},
+		setIsSelecteable(state, value) {
+			state.is_selecteable = value
+		},
 		setFromDates(state, value) {
 			state.from_dates = value
+		},
+		incrementFilterPage(state) {
+			state.filter_page++
+		},
+		setFilterPage(state, value) {
+			state.filter_page = value 
+		},
+		setTotalFilterPages(state, value) {
+			state.total_filter_pages = value 
+		},
+		addFiltered(state, value) {
+			state.filtered = state.filtered.concat(value)
 		},
 		incrementFilterPage(state) {
 			state.filter_page++
@@ -236,15 +248,6 @@ export default {
 		},
 		setLoadingFiltered(state, value) {
 			state.loading_filtered = value 
-		},
-		addRelationFiltered(state, value) {
-			state.relations_filtered.push(value)
-		},
-		removeRelationFiltered(state, value) {
-			let index = state.relations_filtered.findIndex(relation => {
-				return relation == value 
-			})
-			state.relations_filtered.splice(index, 1)
 		},
 	},
 	actions: {
@@ -267,6 +270,9 @@ export default {
 				} else {
 					url += '/0'
 				}
+			} 
+			if (state.route_prefix != '' || state.route_prefix === 0) {
+				url += '/'+state.route_prefix
 			} 
 			if (state.from_dates) {
 				url += '/from-date/'+state.from_date
@@ -303,13 +309,15 @@ export default {
 				console.log(err)
 			})
 		},
-		getDaysToAdvise({commit, state}) {
-			return axios.get('/api/'+generals.methods.routeString(state.model_name)+'/days-to-advise/not-received')
+		loadMoreFiltered({state, commit}) {
+			commit('incrementFilterPage')
+			return axios.post(`/api/search/${generals.methods.routeString(state.model_name)}/null/1?page=${state.filter_page}`, {
+				filters: state.filters,
+			})
 			.then(res => {
-				commit('setDaysToAdvise', res.data.models)
+				commit('addFiltered', res.data.data)
 			})
 			.catch(err => {
-				commit('setLoading', false)
 				console.log(err)
 			})
 		},

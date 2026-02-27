@@ -1,34 +1,45 @@
 <template>
-<b-sidebar
-right
-id="download-resources" 
-v-model="visibility"
-shadow>
-	<h4
-	@click="$store.commit('download_resources/setStartDownload')">
-		Descarga de recursos
-	</h4>
-	<p
-	v-for="model in models_to_download">
-		<b-spinner
-		v-if="model.downloading"
-		variant="primary"></b-spinner>
-		<i 
-		v-else-if="model.downloaded"
-		class="icon-check"></i>
-		<i 
-		v-else-if="!model.downloaded"
-		class="icon-clock"></i>
-		<span>
-			{{ plural(model.model_name) }}
-		</span>
-	</p>    
-</b-sidebar>
+<div>
+	
+	<b-sidebar
+	right
+	id="download-resources" 
+	v-model="visibility"
+	shadow>
+		<h4
+		@click="$store.commit('download_resources/setStartDownload')">
+			Descarga de recursos
+		</h4>
+		<p
+		v-for="model in models_to_download">
+			<b-spinner
+			v-if="model.downloading"
+			variant="primary"></b-spinner>
+			<i 
+			v-else-if="model.downloaded"
+			class="icon-check"></i>
+			<i 
+			v-else-if="!model.downloaded"
+			class="icon-clock"></i>
+			<span>
+				{{ plural(model.model_name) }}
+			</span>
+		</p>    
+
+
+	</b-sidebar>
+	
+	<recursos-progress
+	:models_to_download="models_to_download"></recursos-progress>
+</div>
 </template>
 <script>
 import call_methods from '@/mixins/call_methods'
 export default {
 	mixins: [call_methods],
+	components: {
+		RecursosProgress: () => import('@/common-vue/components/download-resources/Progress'),
+	},
 	computed: {
 		visibility: {
 			get() {
@@ -66,12 +77,15 @@ export default {
 	methods: {
 		setModels() {
 			call_methods.forEach(model => {
-				this.models_to_download.push({
-					downloaded: false,
-					downloading: false,
-					model_name: typeof model == 'object' ? model.model_name : model,
-					if_has_extencion: typeof model == 'object' ? model.if_has_extencion : null,
-				})
+				console.log('agregando '+model)
+				if (model != 'article') {
+					this.models_to_download.push({
+						downloaded: false,
+						downloading: false,
+						model_name: typeof model == 'object' ? model.model_name : model,
+						if_has_extencion: typeof model == 'object' ? model.if_has_extencion : null,
+					})
+				}
 			})
 		},
 		async downloadModels() {

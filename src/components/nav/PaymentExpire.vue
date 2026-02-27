@@ -91,7 +91,7 @@ export default {
 				} else {
 					setInterval(() => {
 						this.$bvModal.show('aviso-vencido')
-					}, 30000)
+					}, 60000)
 				}
 				
 			}
@@ -105,11 +105,8 @@ export default {
 			return this.$store.state.employee.models 
 		},
 		total_a_pagar() {
-			let precio_x_cuenta = 10000
 
-			let total = precio_x_cuenta
-
-			total += this.employees.length * precio_x_cuenta
+			let total = (Number(this.employees.length) + 1) * Number(this.owner.precio_por_cuenta)
 
 			return total 
 		},

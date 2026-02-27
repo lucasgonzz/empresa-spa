@@ -10,6 +10,7 @@ export default [
         if_has_extencion: 'vinoteca',
     },
 
+    'employee',
     'sale_channel',
     'meli_listing_type',
     'meli_buying_mode',
@@ -53,7 +54,6 @@ export default [
     'article_property_type',
     'article_property_value',
     // 'task',
-    'employee',
     'permission',
     'sale_type',
     'discount',

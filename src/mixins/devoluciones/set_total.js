@@ -23,6 +23,9 @@ export default {
 		surchages_store() {
 			return this.$store.state.surchage.models
 		},
+		aplicar_recargos_directo_a_items() {
+			return this.$store.state.devoluciones.aplicar_recargos_directo_a_items
+		},
 	},
 	methods: {
 		set_total_devolucion() {
@@ -92,7 +95,12 @@ export default {
 			}
 		},
 		aplicar_surchages() {
-			if (this.surchages_id.length) {
+			console.log('aplicar_recargos_directo_a_items:')
+			console.log(this.aplicar_recargos_directo_a_items)
+			if (
+				!this.aplicar_recargos_directo_a_items
+				&& this.surchages_id.length
+			) {
 				let surchages = this.surchages_store 
 				
 				let devolucion_surchages = []

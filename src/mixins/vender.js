@@ -249,21 +249,21 @@ export default {
 			}
 		},
 
-		setItemsPrices(only_the_last = false, from_pivot = false) {
-			if (only_the_last) {
-				console.log('setenado precio el ultimo')
-				let last_item = this.items[0] 
-				last_item.price_vender = this.getPriceVender(last_item) 
-			} else {
-				console.log('seteando todos los precios. from_pivot: '+from_pivot)
-				console.log(this.items)
-				this.items.forEach(item => {
-					// if (!item.default_in_vender) {
-						item.price_vender = this.getPriceVender(item, from_pivot) 
-					// }
-				})
-			}
-		},
+		// setItemsPrices(only_the_last = false, from_pivot = false) {
+		// 	if (only_the_last) {
+		// 		console.log('setenado precio el ultimo')
+		// 		let last_item = this.items[0] 
+		// 		last_item.price_vender = this.getPriceVender(last_item) 
+		// 	} else {
+		// 		console.log('seteando todos los precios. from_pivot: '+from_pivot)
+		// 		console.log(this.items)
+		// 		this.items.forEach(item => {
+		// 			// if (!item.default_in_vender) {
+		// 				item.price_vender = this.getPriceVender(item, from_pivot) 
+		// 			// }
+		// 		})
+		// 	}
+		// },
 		callVender() {
 			if (!this.is_provider) {
 				this.vender()

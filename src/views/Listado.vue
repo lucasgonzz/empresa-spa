@@ -11,6 +11,8 @@
 	
 	<images-copy></images-copy> -->
 
+	<filter-history-modal></filter-history-modal>
+
 	<final-price-description></final-price-description>
 
 	<current-acounts></current-acounts>
@@ -207,6 +209,8 @@ export default {
 		CurrentAcounts: () => import('@/components/common/current-acounts/Index'),
 
 		FinalPriceDescription: () => import('@/components/listado/modals/FinalPriceDescription'),
+
+		FilterHistoryModal: () => import('@/components/listado/modals/filter-history/Index'),
 	}, 
 	beforeRouteLeave(to, from, next) {
 		this.$store.commit('article/setSelected', [])

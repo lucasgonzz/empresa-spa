@@ -146,12 +146,28 @@ export default {
 
 					let pesos = price_type_monedas.find(p => p.moneda_id == 1)
 
-					let price = this.price(pesos.final_price)
+					let price
+
+					if (
+						pesos.final_price != ''
+						&& pesos.final_price !== null
+						&& pesos.final_price != 0
+					) {
+
+						price = this.price(pesos.final_price)
+					}
+
 
 					let dolar = price_type_monedas.find(p => p.moneda_id == 2)
 
-					price += ' | '+this.price(dolar.final_price)+' USD'
+					if (
+						dolar.final_price != ''
+						&& dolar.final_price !== null
+						&& dolar.final_price != 0
+					) {
 
+						price += ' | '+this.price(dolar.final_price)+' USD'
+					}
 
 					return price
 				}

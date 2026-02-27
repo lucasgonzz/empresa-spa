@@ -30,11 +30,57 @@ export default {
 			type: 'number',
 			is_price: true,
 			value: '',
+			only_show: true,
 			show: true,
 		},
 		{
-			text: 'Retenciones',
-			key: 'retenciones',
+			text: 'Ivas',
+			key: 'provider_order_afip_ticket_ivas',
+			has_many: {
+				text: 'Ivas',
+				model_name: 'provider_order_afip_ticket_iva',
+			}
+		},
+
+
+		{
+			group_title: 'Retenciones'
+		},
+		{
+			key: 'retencion_iibb',
+			type: 'number',
+			is_price: true,
+			value: '',
+			show: true,
+		},
+		{
+			key: 'retencion_iva',
+			type: 'number',
+			is_price: true,
+			value: '',
+			show: true,
+		},
+		{
+			key: 'retencion_ganancias',
+			type: 'number',
+			is_price: true,
+			value: '',
+			show: true,
+		},
+
+
+		{
+			group_title: 'Percepciones'
+		},
+		{
+			key: 'percepcion_iibb',
+			type: 'number',
+			is_price: true,
+			value: '',
+			show: true,
+		},
+		{
+			key: 'percepcion_iva',
 			type: 'number',
 			is_price: true,
 			value: '',

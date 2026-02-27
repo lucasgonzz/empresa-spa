@@ -369,7 +369,13 @@ export default {
 							id: 'iva_credito', 
 							img: 'iva_comprado', 
 							value: this.price(this.model.total_iva_comprado, false),
-							description: 'Sumatoria de los totales de IVA de las facturas de los pedidos a proveedores',
+							description: 'Sumatoria de los totales de IVA de las facturas de los pedidos a proveedores en base a la fecha de emision',
+							buttons: [
+								{
+									text: 'Libro Iva',
+									function: 'iva_compras_pdf'
+								},
+							]
 						},
 
 						{
@@ -564,7 +570,13 @@ export default {
 			let mes_fin = this.$store.state.reportes.mes_fin
 			let link = process.env.VUE_APP_API_URL+'/afip-txt-alicuotas/'+mes_inicio+'/'+mes_fin
 			window.open(link)
-		}
+		},
+		iva_compras_pdf() {
+			let mes_inicio = this.$store.state.reportes.mes_inicio
+			let mes_fin = this.$store.state.reportes.mes_fin
+			let link = process.env.VUE_APP_API_URL+'/afip-iva-compras/'+mes_inicio+'/'+mes_fin
+			window.open(link)
+		},
 	},
 }
 </script>

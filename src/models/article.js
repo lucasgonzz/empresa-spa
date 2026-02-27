@@ -271,14 +271,14 @@ export default {
 			text: 'Precio final',
 			key: 'final_price',
 			type: 'number',
-			// check_simbolo_moneda: true,
-			// simbolo_moneda_function: 'article_simbolo_moneda',
-			// prop_to_check_in_simbolo_moneda: {
-			// 	key: 'cost_in_dollars',
-			// 	equal_to: 1
-			// },
+			check_simbolo_moneda: true,
+			simbolo_moneda_function: 'article_simbolo_moneda',
+			prop_to_check_in_simbolo_moneda: {
+				key: 'cost_in_dollars',
+				equal_to: 1
+			},
 			// only_show: true,
-			// is_price: true,
+			is_price: true,
 			use_to_show_in_search_modal: true,
 			filter_modal_position: 9,
 			// class: 'final-price',
@@ -767,10 +767,13 @@ export default {
 		{
 			text: 'Por defecto en VENDER',
 			key: 'default_in_vender',
-			type: 'checkbox',
+			type: 'number',
 			not_show: true,
 			if_has_extencion: 'articles_default_in_vender',
-			description: 'Si se activa, se cargara siempre de forma automatica en el modulo de VENDER, y se inluira en las ventas siempre que se indique al menos una unidad vendida, de lo contrario no se guardara en las ventas',
+			descriptions: [
+				'Si se indica, se cargara siempre de forma automatica en el modulo de VENDER, y se inluira en las ventas siempre que se indique al menos una unidad vendida, de lo contrario no se guardara en las ventas',
+				'Coloque la posicion en la que quiere que aparezca en el modulo de VENDER',
+			]
 		},
 		{
 			text: 'Siempre personalizar precio en VENDER',

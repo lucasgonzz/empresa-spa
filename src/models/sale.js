@@ -216,6 +216,11 @@ export default {
 						text: 'U/E',
 						key: 'delivered_amount',
 					},
+					{
+						text: 'Agregado',
+						key: 'fecha_agregado',
+						is_date: true,
+					},
 				],
 			},
 			no_usar_en_filtros: true,

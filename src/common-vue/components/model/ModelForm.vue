@@ -640,6 +640,9 @@ export default {
 			if (prop.disabled_to_edit && this.model.id) {
 				return true
 			}
+			if (prop.no_de_puede_desactivar && this.model.id) {
+				return true
+			}
 			if (this.form_disabled_to_edit_function(this.model_name) && this.model.id) {
 				console.log('entro a form_disabled_to_edit_function')
 				let function_name = require('@/models/'+this.model_name).default.form_disabled_to_edit_function
@@ -1005,6 +1008,11 @@ export default {
 	label 
 		text-align: left
 		width: 100%
+
+
+.popover-body
+	max-height: 60vh !important
+	overflow-y: auto
 
 
 	/* Estilos generales para labels de formularios */

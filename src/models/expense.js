@@ -21,12 +21,12 @@ export default {
 			use_store_models: true,
 			if_has_extencion: 'ventas_en_dolares',
 		},
-		{
-			text: 'Monto',
-			key: 'amount',
-			type: 'number',
-			is_price: true,
-		},
+		// {
+		// 	text: 'Monto',
+		// 	key: 'amount',
+		// 	type: 'number',
+		// 	is_price: true,
+		// },
 		{
 			text: 'Importe IVA',
 			key: 'importe_iva',

@@ -213,6 +213,10 @@ import search_by_cuit from './search_by_cuit'
 import tag from '@/store/tag'
 
 import import_status from '@/store/import_status'
+import filter_history from '@/store/filter_history'
+
+import provider_order_afip_ticket_iva from '@/store/provider_order_afip_ticket_iva'
+import provider_order_discount from '@/store/provider_order_discount'
 
 
 Vue.use(Vuex)
@@ -432,5 +436,9 @@ export default new Vuex.Store({
         tag,
 
         import_status,
+        filter_history,
+
+        provider_order_afip_ticket_iva,
+        provider_order_discount,
     }
 })

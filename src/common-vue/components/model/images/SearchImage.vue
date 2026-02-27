@@ -147,8 +147,7 @@ export default {
 	        get() {
 	            // fallback por si el usuario aún no tiene el valor
 	            if (this.user) {
-
-	            	return this.owner?.img_auto_timeout ?? 5
+	            	return this.owner.img_auto_timeout ?? 5
 	            }
 	            return 5
 	        },
@@ -224,7 +223,7 @@ export default {
 	        this.search()
 	    },
 	    seleccionar_imagen_automaticamente() {
-	    	alert('Seleccionando en '+this.auto_select_timeout)
+	    	// alert('Seleccionando en '+this.auto_select_timeout)
 	        // Esperar unos segundos antes de seleccionar automáticamente
 			this.startAutoSelectProgress()
 	        this.auto_select_timer = setTimeout(() => {

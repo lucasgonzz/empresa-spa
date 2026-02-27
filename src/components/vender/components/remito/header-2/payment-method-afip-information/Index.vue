@@ -8,7 +8,6 @@
 		<select-address></select-address>
 		<sale-type></sale-type>
 		<seller></seller>
-		<cuotas></cuotas>
 	</div>
 </template>
 <script>
@@ -20,7 +19,6 @@ export default {
 		SelectAddress: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/Address'),
 		SaleType: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/SaleType'),
 		Seller: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/Seller'),
-		Cuotas: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/Cuotas'),
 		Caja: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/Caja'),
 	}
 }

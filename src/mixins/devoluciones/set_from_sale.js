@@ -59,6 +59,17 @@ export default {
 						this.$store.commit('devoluciones/set_generar_current_acount', 0)
 					}
 
+
+					if (
+						sale.aplicar_recargos_directo_a_items 
+					) {
+
+						this.$store.commit('devoluciones/set_aplicar_recargos_directo_a_items', 1)
+					} else {
+
+						this.$store.commit('devoluciones/set_aplicar_recargos_directo_a_items', 0)
+					}
+
 					this.$store.commit('devoluciones/format_items', sale)
 				} else {
 
