@@ -2,11 +2,11 @@
 	<b-row>
 		<b-col
 		cols="12"
-		lg="7">
+		lg="8">
 			<payment-method-afip-information></payment-method-afip-information>
 		</b-col>
 		<b-col
-		lg="5"
+		lg="4"
 		cols="12">
 			<buttons></buttons>
 		</b-col>

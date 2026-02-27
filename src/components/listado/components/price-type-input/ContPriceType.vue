@@ -21,6 +21,10 @@
 			v-model="article_price_type.pivot.final_price"
 			placeholder="Precio final"></b-form-input>
 		</b-input-group>
+		<p
+		class="m-t-10 m-b-0">
+			{{ price(article_price_type.pivot.final_price) }}
+		</p>
 	</div>
 </template>
 <script>

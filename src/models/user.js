@@ -179,6 +179,12 @@ export default {
 			key: 'article_ticket_info_id',
 			type: 'select',
 		},
+		{
+			text: 'Tiempo de espera para seleccionar imagen automaticamente',
+			key: 'img_auto_timeout',
+			type: 'number',
+		},
+
 
 
 		{

@@ -51,6 +51,27 @@ export default {
             }
             return this.owner.download_articles
         },
+
+
+        surchages_id() {
+            return this.$store.state.vender.surchages_id 
+        },
+        surchages_store() {
+            return this.$store.state.surchage.models 
+        },
+        surcahges_models_vender() {
+
+            let sale_surchages = []
+            
+            if (this.surchages_id.length) {
+                
+                this.surchages_id.forEach(id => {
+                    sale_surchages.push(this.surchages_store.find(item => item.id == id))
+                }) 
+
+            }
+            return sale_surchages
+        },
     },
     methods: {
 
@@ -248,7 +269,9 @@ export default {
 
                 price = this.apicar_descuento_metodo_de_pago(item, price)
 
-                price = this.redondear(price)
+                price = this.apicar_recargos(item, price)
+
+                // price = this.redondear(price)
             }
 
             
@@ -382,6 +405,34 @@ export default {
                         }
                     }
                         
+                }
+            }
+
+            return price
+        },
+        apicar_recargos(item, price) {
+
+            if (
+                this.$store.state.vender.aplicar_recargos_directo_a_items
+                && this.surcahges_models_vender.length
+            ) {
+
+                if (
+                    item.is_article
+                    || (
+                        item.is_service 
+                        && this.$store.state.vender.surchages_in_services
+                    )
+                ) { 
+
+                    price = Number(price)
+
+                    this.surcahges_models_vender.forEach(sur => {
+                        console.log('Aplicando recargo al precio de')
+                        console.log(Number(price))
+                        console.log(Number(sur.percentage))
+                        price += price * Number(sur.percentage) / 100
+                    })
                 }
             }
 

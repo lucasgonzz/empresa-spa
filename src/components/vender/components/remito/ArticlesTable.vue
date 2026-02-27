@@ -27,6 +27,14 @@ class="m-b-15 m-t-70">
 							min="0"
 							v-model="items[data.index].price_vender_personalizado"></b-form-input>
 
+							<b-popover
+							:target="'price-vender-'+items[data.index].id" 
+							triggers="hover" 
+							placement="left">
+							    <template #title><strong>Instrucciones</strong></template>
+							    Si completa este campo, <strong>no se aplicaran recargos individuales ni descuentos/recargos por metodo de pago</strong> a este precio. Solo se aplicaran descuentos individuales
+							 </b-popover>
+
 							<div
 							class="varios-precios"
 							v-if="items[data.index].varios_precios">

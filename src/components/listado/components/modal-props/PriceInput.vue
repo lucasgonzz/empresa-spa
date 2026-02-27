@@ -4,11 +4,19 @@
 		:disabled="disabled"
 		v-model="article.price"
 		placeholder="Precio manual"></b-form-input>
-		<p
-		class="m-t-10"
+		<div
 		v-if="disabled">
-			Elimine el margen de ganancia del articulo y desactive el margen de ganancia del proveedor para poder fijar el precio manualmente
-		</p>
+			<p
+			class="m-t-10"
+			v-if="margen_del_articulo">
+				Elimine el margen de ganancia del articulo para poder fijar el precio manualmente
+			</p>
+			<p
+			class="m-t-10"
+			v-else-if="margen_del_proveedor">
+				Elimine el margen de ganancia del proveedor para poder fijar el precio manualmente
+			</p>
+		</div>
 	</div>
 </template>
 <script>
@@ -19,18 +27,24 @@ export default {
 		},
 		disabled() {
 			if (
-				(
+				this.margen_del_articulo
+				|| this.margen_del_proveedor
+			) {
+				return true
+			}
+			return false
+		},
+		margen_del_proveedor() {
+			return this.article.provider_id && this.article.apply_provider_percentage_gain
+		},
+		margen_del_articulo() {
+			return (
 					this.article 
 					&& typeof this.article.percentage_gain != 'undefined' 
 					&& this.article.percentage_gain !== null 
 					&& this.article.percentage_gain != ''
 				)
-				|| this.article.apply_provider_percentage_gain
-			) {
-				return true
-			}
-			return false
-		}
+		},
 	},
 }
 </script>

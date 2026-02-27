@@ -65,6 +65,20 @@
 					</span>
 				</b-form-checkbox>
 			</b-form-group>
+
+			<hr>
+			<b-form-group
+			label="Recargos en precio de los articulos">
+				<b-form-checkbox
+				:value="1"
+				:unchecked-value="0"
+				v-model="aplicar_recargos_directo_a_items">
+					<span
+					id="aplicar_recargos_a_servicios">
+						Aplicar recargos directamente a los precios de los articulos, en lugar de aplicarlo al total de la venta. (Para que no aparezca discriminado en el comprobante)
+					</span>
+				</b-form-checkbox>
+			</b-form-group>
 		</b-card>
 	</div>
 </template>

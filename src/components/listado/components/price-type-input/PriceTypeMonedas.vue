@@ -22,6 +22,11 @@
                 v-model.number="local.ptm[moneda.id].final_price"
                 placeholder="Precio final"></b-form-input>
             </b-input-group>
+            
+            <p
+            class="m-t-10 m-b-0">
+                {{ price(local.ptm[moneda.id].final_price) }}
+            </p>
 
             <b-form-checkbox
             class="m-t-10"

@@ -23,8 +23,12 @@ export default {
 		address_id: 0,
 		generar_current_acount: 1,
 		facturar_nota_credito: 0,
+		aplicar_recargos_directo_a_items: 0,
 	},
 	mutations: {
+		set_aplicar_recargos_directo_a_items(state, value) {
+			state.aplicar_recargos_directo_a_items = value
+		},
 		set_num_sale(state, value) {
 			state.num_sale = value 
 		},
@@ -137,60 +141,76 @@ export default {
 	},
 	actions: {
 
-		search_sale({state, commit}) {
+		// search_sale({state, commit}) {
 				
-			commit('auth/setMessage', 'Buscando venta', {root: true})
-			commit('auth/setLoading', true, {root: true})
+		// 	commit('auth/setMessage', 'Buscando venta', {root: true})
+		// 	commit('auth/setLoading', true, {root: true})
 
-			return axios.get('api/devoluciones/search-sale/'+state.num_sale)
-			.then(res => {
+		// 	return axios.get('api/devoluciones/search-sale/'+state.num_sale)
+		// 	.then(res => {
 				
-				commit('auth/setLoading', false, {root: true})
+		// 		commit('auth/setLoading', false, {root: true})
 
-				let sale = res.data.sale  
+		// 		let sale = res.data.sale  
 
-				if (sale) {
+		// 		console.log('sale de devolucion:')
+		// 		console.log(sale)
 
-					commit('set_sale', sale)
+		// 		if (sale) {
 
-					if (sale.client) {
+		// 			commit('set_sale', sale)
 
-						commit('set_client', sale.client)
-					}
+		// 			if (sale.client) {
 
-					if (sale.address_id) {
+		// 				commit('set_client', sale.client)
+		// 			}
 
-						commit('set_address_id', sale.address_id)
-					}
+		// 			if (sale.address_id) {
 
-					if (sale.afip_ticket) {
+		// 				commit('set_address_id', sale.address_id)
+		// 			}
 
-						commit('set_facturar_nota_credito', 1)
-					} else {
+		// 			if (sale.afip_ticket) {
 
-						commit('set_facturar_nota_credito', 0)
-					}
+		// 				commit('set_facturar_nota_credito', 1)
+		// 			} else {
 
-					if (
-						sale.client 
-						&& !sale.omitir_en_cuenta_corriente
-					) {
+		// 				commit('set_facturar_nota_credito', 0)
+		// 			}
 
-						commit('set_generar_current_acount', 1)
-					} else {
+		// 			if (
+		// 				sale.client 
+		// 				&& !sale.omitir_en_cuenta_corriente
+		// 			) {
 
-						commit('set_generar_current_acount', 0)
-					}
+		// 				commit('set_generar_current_acount', 1)
+		// 			} else {
 
-					commit('format_articles', sale)
-				} else {
+		// 				commit('set_generar_current_acount', 0)
+		// 			}
 
-					commit('set_sale', null)
-				}
-			})
-			.catch(err => {
-				commit('auth/setLoading', false, {root: true})
-			})
-		},
+		// 			console.log('sale.aplicar_recargos_directo_a_items :')
+		// 			console.log(sale.aplicar_recargos_directo_a_items)
+
+		// 			if (
+		// 				sale.aplicar_recargos_directo_a_items 
+		// 			) {
+
+		// 				commit('set_aplicar_recargos_directo_a_items', 1)
+		// 			} else {
+
+		// 				commit('set_aplicar_recargos_directo_a_items', 0)
+		// 			}
+
+		// 			commit('format_articles', sale)
+		// 		} else {
+
+		// 			commit('set_sale', null)
+		// 		}
+		// 	})
+		// 	.catch(err => {
+		// 		commit('auth/setLoading', false, {root: true})
+		// 	})
+		// },
 	},
 }

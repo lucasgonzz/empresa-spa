@@ -1,4 +1,5 @@
 <template>
+<div>
 	<b-input-group
 	class="cont-payment-methods">
 		
@@ -7,7 +8,7 @@
 		id="vender_payment_method_id"
 		v-model="current_acount_payment_method_id"
 		@change="set_payment_methods_null"
-		:options="getOptions({key: 'current_acount_payment_method_id', text: 'Metodo de pago'})">
+		:options="options">
 		</b-form-select>
 
 		<template #append>
@@ -32,7 +33,12 @@
 			<total-info></total-info>
 
 		</template>
+		
 	</b-input-group>
+
+	<cuotas></cuotas>
+</div>
+
 </template>
 <script>
 // import vender from '@/mixins/vender'
@@ -41,6 +47,7 @@ export default {
 	mixins: [select_payment_methods],
 	components: {
 		TotalInfo: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/total-info/Index'),
+		Cuotas: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/Cuotas'),
 	},
 	computed: {
 		current_acount_payment_method_id: {
@@ -50,6 +57,33 @@ export default {
 			set(value) {
 				this.$store.commit('vender/setCurrentAcountPaymentMethodId', value)
 			},
+		},
+		options() {
+			let options = [{
+				text: 'Seleccione metodo de pago',
+				value: 0,
+			}]
+
+			this.$store.state.current_acount_payment_method.models.forEach(pay => {
+				let text = pay.name  
+
+				let discount = this.$store.state.current_acount_payment_method_discount.models.find(dis => dis.current_acount_payment_method_id == pay.id)
+
+				if (typeof discount != 'undefined') {
+
+					if (Number(discount.discount_percentage) > 0) {
+						text += ' (-'+discount.discount_percentage+'%)'
+					} else {
+						text += ' (+'+discount.discount_percentage+'%)'
+					}
+				}
+				options.push({
+					text: text,
+					value: pay.id
+				})
+			})
+
+			return options
 		},
 		disabled() {
 			if (this.client && !this.omitir_en_cuenta_corriente) {

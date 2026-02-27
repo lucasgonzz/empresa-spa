@@ -32,6 +32,15 @@ export default {
 				this.setTotal()
 			},
 		},
+		aplicar_recargos_directo_a_items: {
+			get() {
+				return this.$store.state.vender.aplicar_recargos_directo_a_items
+			}, 
+			set(value) {
+				this.$store.commit('vender/set_aplicar_recargos_directo_a_items', value)
+				this.setTotal()
+			},
+		},
 		discounts_store() {
 			return this.$store.state.discount.models 
 		},
@@ -69,12 +78,15 @@ export default {
 			total_services: 0,
 			total_combos: 0,
 			total_promocion_vinoteca: 0,
+			total_description: '',
 		}
 	},
 	methods: {
 		setTotal(total = null) {
 
 			let sub_total = 0  
+
+			this.total_description = ''
 
 			if (!total) {
 
@@ -253,16 +265,13 @@ export default {
 
 		},
 		aplicar_surchages() {
-			if (this.surchages_id.length) {
-				let surchages = this.surchages_store 
-				
-				let sale_surchages = []
-				
-				this.surchages_id.forEach(id => {
-					sale_surchages.push(surchages.find(item => item.id == id))
-				}) 
+			if (
+				this.surcahges_models_vender.length
+				&& !this.aplicar_recargos_directo_a_items
+			) {
 
-				sale_surchages.forEach(_surchage => {
+				this.surcahges_models_vender.forEach(_surchage => {
+					
 					this.total_articles += this.total_articles * Number(_surchage.percentage) / 100 
 					this.total_combos += this.total_combos * Number(_surchage.percentage) / 100 
 					this.total_promocion_vinoteca += this.total_promocion_vinoteca * Number(_surchage.percentage) / 100 

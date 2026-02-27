@@ -23,6 +23,19 @@ export default {
             return text
         },
 
+        get_employee(model, prop) {
+            if (model.employee_id) {
+                let employee = this.$store.state.employee.models.find(e => e.id == model.employee_id)
+                if (typeof employee != 'undefined') {
+                    return employee.name 
+                }
+            }
+            if (this.owner) {
+                return this.owner.name 
+            }
+            return null
+        },
+
         stock_suggestionGetColor(model) {
             return this.syncs_meli_color(model)
         },

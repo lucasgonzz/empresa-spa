@@ -1,9 +1,13 @@
 <template>
 
+<b-input-group
+v-if="paga_con_credito && cuotas.length"
+class="cont-payment-methods m-t-5 m-b-15"
+prepend="Cuotas">
 	<b-form-select
-	v-if="paga_con_credito && cuotas.length"
 	v-model="cuota_id" 
 	:options="cuotas_options"></b-form-select> 
+</b-input-group>
 
 </template>
 <script>
@@ -79,14 +83,14 @@ export default {
 	},
 	methods: {
 		cuota_text(cuota) {
-			let text = cuota.cantidad_cuotas
+			let text = cuota.cantidad_cuotas + ' cuotas'
 
 			if (cuota.descuento) {
-				text += '  (- '+cuota.descuento+'%)'
+				text += ' (-'+cuota.descuento+'%)'
 			}
 
 			if (cuota.recargo) {
-				text += '  (+ '+cuota.recargo+'%)'
+				text += ' (+'+cuota.recargo+'%)'
 			}
 
 			return text 

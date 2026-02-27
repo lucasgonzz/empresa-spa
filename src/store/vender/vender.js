@@ -94,8 +94,13 @@ export default {
 		discount_amount: null,
 
 		fecha_entrega: null,
+
+		aplicar_recargos_directo_a_items: 1,
 	},
 	mutations: {
+		set_aplicar_recargos_directo_a_items(state, value) {
+			state.aplicar_recargos_directo_a_items = value 
+		},
 		set_fecha_entrega(state, value) {
 			state.fecha_entrega = value
 			console.log('se seteo fecha_entrega con:')
@@ -398,6 +403,7 @@ export default {
 				fecha_entrega: state.fecha_entrega,
 				incoterms: state.incoterms,
 				observations_ocultas: state.observations_ocultas,
+				aplicar_recargos_directo_a_items: state.aplicar_recargos_directo_a_items,
 			})
 			.then(res => {
 				console.log('vendido')
