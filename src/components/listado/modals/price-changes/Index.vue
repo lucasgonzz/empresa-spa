@@ -81,7 +81,7 @@ export default {
 						label: price_type.name,
 						key: 'price_type_'+price_type.id
 					})
-					console.log('agregando '+price_type.name)
+					// console.log('agregando '+price_type.name)
 				})
 
 			} else {

@@ -9,12 +9,17 @@ export default {
 		omitir_en_cuenta_corriente() {
 			return this.$store.state.vender.omitir_en_cuenta_corriente
 		},
+		selected_payment_methods() {
+			return this.$store.state.vender.selected_payment_methods
+		},
 		hay_mas_de_un_metodo_de_pago() {
-			return !this.current_acount_payment_method_id 
+			return this.selected_payment_methods.length 
 		},
 	},
 	methods: {
 		check_payment_methods() {
+
+			return true
 
 			if (this.hay_mas_de_un_metodo_de_pago
 				&& (

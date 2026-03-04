@@ -23,10 +23,10 @@
 	</div>
 </template>
 <script>
-import select_payment_methods from '@/mixins/expense/select_payment_methods'
+// import select_payment_methods from '@/mixins/expense/select_payment_methods'
 
 export default {
-	mixins: [select_payment_methods],
+	// mixins: [select_payment_methods],
 	methods: {
 		cancelar() {
 			this.total_repartido = 0

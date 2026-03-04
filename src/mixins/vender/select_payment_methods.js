@@ -3,34 +3,34 @@ import payment_methods from '@/mixins/vender/guardar_venta/chequeos/payment_meth
 export default {
 	mixins: [vender_set_total, payment_methods],
 	computed: {
-		total_a_repartir: {
-			get() {
-				return this.$store.state.vender.current_acount_payment_methods.total_a_repartir
-			},
-			set(value) {
-				this.$store.commit('vender/current_acount_payment_methods/set_total_a_repartir', value)
-			}
-		},
-		total_repartido: {
-			get() {
-				return this.$store.state.vender.current_acount_payment_methods.total_repartido
-			},
-			set(value) {
-				this.$store.commit('vender/current_acount_payment_methods/set_total_repartido', value)
-			}
-		},
-		modal_payment_methods: {
-			get() {
-				return this.$store.state.vender.current_acount_payment_methods.payment_methods
-			},
-			set(value) {
-				this.$store.commit('vender/current_acount_payment_methods/set_payment_methods', value)
-			}
-		},
+		// total_a_repartir: {
+		// 	get() {
+		// 		return this.$store.state.vender.current_acount_payment_methods.total_a_repartir
+		// 	},
+		// 	set(value) {
+		// 		this.$store.commit('vender/current_acount_payment_methods/set_total_a_repartir', value)
+		// 	}
+		// },
+		// total_repartido: {
+		// 	get() {
+		// 		return this.$store.state.vender.current_acount_payment_methods.total_repartido
+		// 	},
+		// 	set(value) {
+		// 		this.$store.commit('vender/current_acount_payment_methods/set_total_repartido', value)
+		// 	}
+		// },
+		// modal_payment_methods: {
+		// 	get() {
+		// 		return this.$store.state.vender.current_acount_payment_methods.payment_methods
+		// 	},
+		// 	set(value) {
+		// 		this.$store.commit('vender/current_acount_payment_methods/set_payment_methods', value)
+		// 	}
+		// },
 
-		sobrante_a_repartir(){
-			return this.total_a_repartir - this.total_repartido;
-		},
+		// sobrante_a_repartir(){
+		// 	return this.total_a_repartir - this.total_repartido;
+		// },
 		previus_sale() {
 			return this.$store.state.vender.previus_sales.previus_sale
 		},
@@ -44,12 +44,9 @@ export default {
 			return this.$store.state.vender.current_acount_payment_method_id
 		},
 		modal_payment_metohds() {
-			return this.$store.state.vender.current_acount_payment_methods.payment_methods
+			return this.$store.state.vender.modal_payment_methods
 		},
 
-		has_payment_methods_with_disconts() {
-			return this.current_acount_payment_method_discounts.length
-		}
 	},
 	data() {
 		return {
@@ -68,26 +65,26 @@ export default {
         //         return this.get_monto_descuento(article.price_vender, prop.key.substr(15))
         //     }
         // },
-		init_modal_payment_metohds() {
+		// init_modal_payment_metohds() {
 
-			let payment_methods = []
+		// 	let payment_methods = []
 
-			let address_id = this.$store.state.vender.address_id
+		// 	let address_id = this.$store.state.vender.address_id
 
-			this.current_acount_payment_methods.forEach(payment_method => {
+		// 	this.current_acount_payment_methods.forEach(payment_method => {
 				
-				let caja_id = this.get_caja_por_defecto(payment_method.id, address_id)
+		// 		let caja_id = this.get_caja_por_defecto(payment_method.id, address_id)
 				
-				payment_methods.push({
-					...payment_method,
-					caja_id: caja_id,
-					amount: ''
-				})
-			})
+		// 		payment_methods.push({
+		// 			...payment_method,
+		// 			caja_id: caja_id,
+		// 			amount: ''
+		// 		})
+		// 	})
 
-			this.$store.commit('vender/current_acount_payment_methods/set_payment_methods', payment_methods)
-			this.total_repartido = 0
-		},
+		// 	this.$store.commit('vender/current_acount_payment_methods/set_payment_methods', payment_methods)
+		// 	this.total_repartido = 0
+		// },
 
 		set_total_desde_previus_sale() {
 			console.log('set_total_desde_previus_sale')
@@ -121,76 +118,76 @@ export default {
 
 		
 
-		guardarMetodosPago() {
+		// guardarMetodosPago() {
 
-			if (this.check_sobrante_a_repartir()) {
+		// 	if (this.check_sobrante_a_repartir()) {
 				
-				this.$store.commit('vender/setSelectedPaymentMethods', this.modal_payment_metohds);
-				this.$store.commit('vender/setCurrentAcountPaymentMethodId', 0);
+		// 		this.$store.commit('vender/setSelectedPaymentMethods', this.modal_payment_metohds);
+		// 		this.$store.commit('vender/setCurrentAcountPaymentMethodId', 0);
 				
-				this.$store.commit('vender/current_acount_payment_methods/set_watch_activado', false);
+		// 		this.$store.commit('vender/current_acount_payment_methods/set_watch_activado', false);
 
-				this.setTotal()
+		// 		this.setTotal()
 				
-				if (this.has_payment_methods_with_disconts) {
+		// 		if (this.has_payment_methods_with_disconts) {
 
-					this.set_payment_methods_with_discounts()
+		// 			this.set_payment_methods_with_discounts()
 
-				} else {
+		// 		} else {
 
-					this.set_vender_payment_methods()
+		// 			this.set_vender_payment_methods()
 
-					this.$bvModal.hide('payment-method-modal')
-				}
+		// 			this.$bvModal.hide('payment-method-modal')
+		// 		}
 
-				setTimeout(() => {
-					this.$store.commit('vender/current_acount_payment_methods/set_watch_activado', true);
-				}, 1000)
+		// 		setTimeout(() => {
+		// 			this.$store.commit('vender/current_acount_payment_methods/set_watch_activado', true);
+		// 		}, 1000)
 
-				this.$store.commit('vender/set_caja_id', 0)
+		// 		this.$store.commit('vender/set_caja_id', 0)
 
-				return true 
-			}
-			console.log('No paso guardarMetodosPago')
-			return false 
-		},
+		// 		return true 
+		// 	}
+		// 	console.log('No paso guardarMetodosPago')
+		// 	return false 
+		// },
 
-		set_payment_methods_with_discounts() {
+		// set_payment_methods_with_discounts() {
 
-			let payment_methods = []
+		// 	let payment_methods = []
 
-			this.modal_payment_metohds.forEach(payment_method => {
+		// 	this.modal_payment_metohds.forEach(payment_method => {
 
-				if (payment_method.amount) {
+		// 		if (payment_method.amount) {
 
-					payment_methods.push({
-						...payment_method,
-						amount: '',
-					})
-				}
-			})
+		// 			payment_methods.push({
+		// 				...payment_method,
+		// 				amount: '',
+		// 			})
+		// 		}
+		// 	})
 			
-			this.$store.commit('vender/current_acount_payment_methods_with_discounts/set_payment_methods', payment_methods)
+		// 	this.$store.commit('vender/current_acount_payment_methods_with_discounts/set_payment_methods', payment_methods)
 
-		},
+		// },
 
-		set_vender_payment_methods() {
+		// set_vender_payment_methods() {
 
-			let payment_methods = []
+		// 	let payment_methods = []
 
-			this.modal_payment_metohds.forEach(payment_method => {
+		// 	this.modal_payment_metohds.forEach(payment_method => {
 
-				if (payment_method.amount) {
+		// 		if (payment_method.amount) {
 
-					payment_methods.push({
-						...payment_method,
-					})
-				}
-			})
+		// 			payment_methods.push({
+		// 				...payment_method,
+		// 			})
+		// 		}
+		// 	})
 			
-			this.$store.commit('vender/setSelectedPaymentMethods', payment_methods);
+		// 	this.$store.commit('vender/setSelectedPaymentMethods', payment_methods);
 
-		},
+		// },
 
 		limpiar_descuentos_anteriores() {
 			this.discount_percentage = null
@@ -207,18 +204,22 @@ export default {
 
 				if (this.modal_payment_metohds.length) {
 					
-					this.modal_payment_metohds.forEach(selected_payment_method => {
+					this.modal_payment_metohds.forEach(modal_payment_method => {
 						
-						descuento = this.get_monto_descuento(selected_payment_method.amount, Number(selected_payment_method.id), selected_payment_method)
+						// descuento = this.get_monto_descuento(modal_payment_method.amount, Number(modal_payment_method.id), modal_payment_method)
 
-						this.$set(selected_payment_method, 'monto_descuento', descuento)
+						// this.$set(modal_payment_method, 'monto_descuento', descuento)
 
-						console.log('descontando '+descuento+' de '+selected_payment_method.name)
+						if (modal_payment_method.discount_amount) {
+							
+							let descuento = Number(modal_payment_method.discount_amount)
+							console.log('descontando '+descuento+' de '+modal_payment_method.name)
 
-						total -= descuento
+							total -= descuento
+						}
 
-						selected_payment_method.discount_percentage = this.discount_percentage
-						selected_payment_method.discount_amount = this.discount_amount
+						// modal_payment_method.discount_percentage = this.discount_percentage
+						// modal_payment_method.discount_amount = this.discount_amount
 
 					})
 				}
@@ -277,15 +278,5 @@ export default {
 			})
 		}
 
-		// limpiar_array(metodos_de_pago) {
-		// 	const modal_payment_metohds = [];
-		// 	for (const [key, value] of Object.entries(metodos_de_pago)) {
-		// 		if (value !== 0 && value !=='') {
-		// 			modal_payment_metohds.push({ id:key , monto: value });
-		// 		}
-		// 	}
-
-		// 	return modal_payment_metohds
-		// },
 	}
 }

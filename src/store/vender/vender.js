@@ -83,6 +83,11 @@ export default {
 		seller_id: 0,
 
 		returned_items: [],
+
+		// Este se usa para guardar los metodos de pago seleccionados sin haber aplicado desceuntos de metodos de pago aun
+		modal_payment_methods: [],
+
+		// Aca guardo los metodos de pago con sus cantidades final, es el que se envia finalmente al back
 		selected_payment_methods: [],
 
 		vendiendo: false,
@@ -111,6 +116,10 @@ export default {
 		},
 		set_payment_method_discount_amount(state, value) {
 			state.discount_amount = value
+		},
+
+		set_modal_payment_methods(state, value){
+			state.modal_payment_methods = value
 		},
 		setSelectedPaymentMethods(state, value){
 			state.selected_payment_methods = value

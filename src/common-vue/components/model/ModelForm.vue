@@ -42,16 +42,16 @@
 						<!-- Descripcion de la propiedad - Popover -->
 						<b-popover
 						v-if="prop.description" 
-						:target="'label-'+prop.key" 
+						:target="'form-group-'+prop.key" 
 						triggers="hover" 
 						placement="left">
-						    <template #title><strong>Instrucciones</strong></template>
+						    <template #title><strong>Instrucciones {{ prop.text }}</strong></template>
 						    {{ prop.description }}
 						 </b-popover>
 
 						<b-popover
 						v-if="prop.descriptions" 
-						:target="'label-'+prop.key" 
+						:target="'form-group-'+prop.key" 
 						triggers="hover" 
 						placement="left">
 						    <template #title><strong>Instrucciones</strong></template>
@@ -271,6 +271,7 @@
 									<b-button
 									v-else-if="prop.button"
 									:variant="prop.button.variant"
+									:disabled="is_disabled_button(prop)"
 									@click="callMethod(prop, model)">
 										<i
 										v-if="prop.button.icon"
@@ -640,7 +641,7 @@ export default {
 			if (prop.disabled_to_edit && this.model.id) {
 				return true
 			}
-			if (prop.no_de_puede_desactivar && this.model.id) {
+			if (prop.no_se_puede_desactivar && this.model.id && Number(this.model[prop.key]) == 1) {
 				return true
 			}
 			if (this.form_disabled_to_edit_function(this.model_name) && this.model.id) {
@@ -652,6 +653,16 @@ export default {
 			}
 			if (prop.type == 'select' && prop.disabled_if_not_0 && this.model[prop.key] != 0) {
 				return true
+			}
+			return false
+		},
+		is_disabled_button(prop) {
+			if (prop.button && prop.button.disabled_if_model_is_created) {
+				if (this.model.id) {
+					return true
+				} else {
+					return false
+				}
 			}
 			return false
 		},

@@ -1,20 +1,31 @@
 <template> 
-<view-component
-@modelSaved="modelSaved"
-:show_btn_delete="false"
-show_filter_modal
-show_previus_days
-model_name="expense">
-	<template #display_top>
-		<total-expenses></total-expenses>
-	</template>
-</view-component>
+<div>
+	
+	<payment-methods></payment-methods>
+
+	<view-component
+	@modelSaved="modelSaved"
+	:show_btn_delete="is_admin"
+	show_filter_modal
+	show_previus_days
+	model_name="expense">
+		<template #display_top>
+			<total-expenses></total-expenses>
+		</template>
+
+		<template #payment_methods>
+			<btn-payment-method></btn-payment-method>
+		</template>
+	</view-component>
+</div>
 </template>
 <script>
 export default {
 	components: {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
+		PaymentMethods: () => import('@/components/expenses/modals/payment-methods/Index'),
 		TotalExpenses: () => import('@/components/expenses/components/TotalExpenses'),
+		BtnPaymentMethod: () => import('@/components/expenses/components/BtnPaymentMethod'),
 	},
 	methods: {
 		modelSaved(expense) {
@@ -23,15 +34,5 @@ export default {
 			}
 		}
 	},
-	// computed: {
-	// 	model() {
-	// 		return this.$store.state.expense.model 
-	// 	},
-	// },
-	// watch: {
-	// 	model() {
-	// 		alert('cambio')
-	// 	}
-	// }
 }
 </script>

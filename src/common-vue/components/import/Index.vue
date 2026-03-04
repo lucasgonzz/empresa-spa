@@ -106,6 +106,7 @@
 					v-else-if="column.text"
 					class="container shadow-3">
 						<div 
+						:id="'cont-input-prop-'+index"
 						class="cont-inputs">
 							<span
 							class="btn btn-link"
@@ -122,10 +123,33 @@
 
 							</div>
 						</div>
-						<p
+						<!-- <p
 						v-if="column.description">
 							{{ column.description }}
-						</p>
+						</p> -->
+
+
+						<!-- Descripcion de la propiedad - Popover -->
+						<b-popover
+						v-if="column.description" 
+						:target="'cont-input-prop-'+index" 
+						triggers="hover" 
+						placement="left">
+						    <template #title><strong>Instrucciones</strong></template>
+						    {{ column.description }}
+						 </b-popover>
+
+						<!-- <b-popover
+						v-if="prop.descriptions" 
+						:target="'label-'+prop.key" 
+						triggers="hover" 
+						placement="left">
+						    <template #title><strong>Instrucciones</strong></template>
+						    <p
+						    v-for="description in prop.descriptions">
+						    	{{ description }}
+						    </p>
+						</b-popover> -->
 					</div>
 				</b-col>
 			</b-form-row>
@@ -652,9 +676,12 @@ export default {
 			let letra 
 			console.log(this.columns_)
 			this.columns.forEach(column => {
-				
-				letra = this.number_to_excel_column(position)
 
+				if (typeof column.group_title == 'undefined') {
+					console.log('pidiendo letra para '+column.text)
+					letra = this.number_to_excel_column(position)
+				}
+				
 				this.columns_.push({
 					group_title: column.group_title,
 					text: column.text,
@@ -664,7 +691,11 @@ export default {
 					ignored: 0,
 					can_not_ignore: typeof column.can_not_ignore != 'undefined' ? true : undefined,
 				})
-				position++
+
+				if (typeof column.group_title == 'undefined') {
+					position++
+				}
+				
 				if (column.saltear_posiciones) {
 					position += column.saltear_posiciones
 				}

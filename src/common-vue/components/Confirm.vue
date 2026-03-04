@@ -79,24 +79,36 @@ export default {
 	methods: {
 		async confirm() {
 			if (this.emit) {
-				console.log('emitiendo '+this.emit)
-				this.$emit(this.emit)
-				this.$bvModal.hide(this.id)
-			} else {
-				let action_index = 0
-				this.loading = true
-				while (this.actions.length && this.actions[action_index] !== undefined) {
-					let res = await this.$store.dispatch(this.actions[action_index])
-					action_index++
-					if (this.actions[action_index] === undefined) {
-						this.loading = false
-						this.$toast.success(this.toast)
-						this.$bvModal.hide(this.id)
-						this.$bvModal.hide(this.model_name)
-					}
-				}
-				this.$emit('confimed')
-			}
+	            this.$emit(this.emit)
+	            this.$bvModal.hide(this.id)
+	            return
+	        }
+
+	        this.loading = true
+
+	        try {
+	            // Ejecuta una por una, en orden. Si alguna falla, salta al catch.
+	            for (let i = 0; i < this.actions.length; i++) {
+	                await this.$store.dispatch(this.actions[i])
+	            }
+
+	            // Si llegó acá, salieron todas bien
+	            this.$toast.success(this.toast)
+	            this.$bvModal.hide(this.id)
+	            if (this.model_name) {
+	                this.$bvModal.hide(this.model_name)
+	            }
+
+	            this.$emit('confirmed') // ojo: tenías 'confimed' (typo)
+	        } catch (err) {
+	            // Corta acá en el primer error
+	            this.$toast.error('Error al ejecutar la acción')
+	            // Si querés mostrar algo más útil:
+	            const msg = err?.response?.data?.message || err?.message || String(err)
+	            this.$toast.error(msg)
+	        } finally {
+	            this.loading = false
+	        }
 		},
 	}
 }

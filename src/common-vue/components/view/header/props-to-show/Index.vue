@@ -5,7 +5,7 @@
 		:model_name="model_name"></modal-component>
 
 		<b-button
-		v-b-modal="'props-to-show'"
+		v-b-modal="'props-to-show-'+model_name"
 		variant="primary">
 			<i class="icon-eye"></i>
 			<i class="icon-list p-l-10"></i>

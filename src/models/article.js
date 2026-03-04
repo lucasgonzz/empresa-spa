@@ -205,9 +205,9 @@ export default {
 			key: 'unidades_individuales',
 			type: 'number',
 			not_show: true,
-			if_has_extencion: 'articulos_unidades_individuales',
+			// if_has_extencion: 'articulos_unidades_individuales',
 			descriptions: [
-				'Indica por cuantas unidades individuales esta compuesto este articulo, solo si planeas vender este articulo de forma individual.',
+				'Indica por cuantas unidades individuales esta compuesto este articulo, solo si planeas vender las unidades individuales de este articulo en lugar de el articulo completo.',
 				'Este valor sera utilizado para dividir el "Precio Final" del articulo para calcular el precio por cada unidad individual. Y para multiplicar el stock que agregues por cada unidad individual.',
 				'Ejemplo: Este articulo es una "Caja de clavos" que contiene 100 unidades individuales, en ese caso colocas "100" en este campo, y eso va a impactar en que:.',
 				'Si el precio final de la caja de clavos es $2.000, ahora va a ser de $20 por unidad individual (Precio final -> 2.000 / Unidades individuales -> 100)..',

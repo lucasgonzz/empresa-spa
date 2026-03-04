@@ -63,12 +63,11 @@ hide-footer>
         </b-form-checkbox>
     </b-form-group>
 
-    <hr>
- 
     <payment-methods
     ref="paymentMethodComponent"
     @hacerPago="hacerPago"
     :pago="pago"></payment-methods>
+    
 
 	<btn-loader
     @clicked="hacerPago"
@@ -96,7 +95,7 @@ export default {
 
                 setTimeout(() => {
                     this.focus_primer_payment_method()
-                    this.$refs.paymentMethodComponent.set_all_caja_ids()
+                    // this.$refs.paymentMethodComponent.set_all_caja_ids()
                 }, 500)
 
             }
@@ -110,18 +109,7 @@ export default {
                 created_at: '',
                 haber: '',
                 is_provisorio: 0,
-                current_acount_payment_methods: [{
-                    current_acount_payment_method_id: 3,
-                    amount: '',
-                    numero: '',
-                    banco: '',
-                    fecha_emision: '',
-                    fecha_pago: '',
-                    es_echeq: 0,
-                    credit_card_id: 0,
-                    credit_card_payment_plan_id: 0,
-                    caja_id: 0,
-                }],
+                current_acount_payment_methods: [],
                 // checks: [
                 //     {
                 //         bank: '',
@@ -157,8 +145,10 @@ export default {
     },
     methods: {
         focus_primer_payment_method() {
-            let input = document.getElementsByClassName('payment-method-amount')[0]          
-            input.focus()
+            let input = document.getElementsByClassName('payment-method-amount')[0]      
+            if (input) {
+                input.focus()
+            }
         },
         setTotalSale() {
             this.pago.haber = this.maked_sale.total

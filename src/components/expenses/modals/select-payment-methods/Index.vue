@@ -17,9 +17,9 @@
 	</b-modal>
 </template>
 <script>
-import select_payment_methods from '@/mixins/expense/select_payment_methods'
+// import select_payment_methods from '@/mixins/expense/select_payment_methods'
 export default {
-	mixins: [select_payment_methods],
+	// mixins: [select_payment_methods],
 	components: {
 		Totales: () => import('@/components/expenses/modals/select-payment-methods/Totales'),
 		ListPaymentMethods: () => import('@/components/expenses/modals/select-payment-methods/ListPaymentMethods'),
