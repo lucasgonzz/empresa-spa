@@ -77,7 +77,7 @@ export default {
 	methods: {
 		setModels() {
 			call_methods.forEach(model => {
-				console.log('agregando '+model)
+				// console.log('agregando '+model)
 				if (model != 'article') {
 					this.models_to_download.push({
 						downloaded: false,

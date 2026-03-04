@@ -9,9 +9,8 @@
 
 	<current-acounts></current-acounts>
 
-	<select-payment-methods></select-payment-methods>
 
-	<payment-methods-with-discounts></payment-methods-with-discounts>
+	<payment-methods></payment-methods>
 
 	<nav-component></nav-component>
  
@@ -31,8 +30,7 @@ import cajas from '@/mixins/vender/cajas'
 export default {
 	mixins: [price_types, default_articles, default_payment_method, omitir_en_cuenta_corriente, previus_sale, cajas],
 	components: {  
-		SelectPaymentMethods: () => import('@/components/vender/modals/payment-methods/select-payment-methods/Index'),
-		PaymentMethodsWithDiscounts: () => import('@/components/vender/modals/payment-methods/payment-methods-with-discounts/Index'),
+		PaymentMethods: () => import('@/components/vender/modals/payment-methods/Index'),
 		NewArticle: () => import('@/components/vender/modals/NewArticle'),
 		LoadingAfipTicket: () => import('@/components/vender/modals/LoadingAfipTicket'),
 		

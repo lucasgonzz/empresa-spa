@@ -100,6 +100,7 @@ export default {
 				{
 					text: 'Precio',
 					description: 'Utilice este campo si quere saltearse el proceso de calcular el "Precio Final" de forma automatica (costo + iva + margen de ganancia), y en su lugar quiere fijar manualmente el "Precio Final". Lo que coloque aqui se utilizara como "Precio final/Precio de venta"',
+					saltear_posiciones: 1,
 				},
 
 				
@@ -125,17 +126,14 @@ export default {
 					description: 'Por defecto es UNIDAD. Tambien puede ser "Gramo", "Kilo", "Litro", "Centimetro", "Metro", "Rollo", "Par"',
 					// saltear_posiciones: 1,
 				},
+				{
+					text: 'U individuales',
+					description: 'Indica por cuantas unidades individuales esta compuesto este articulo, solo si planeas vender las unidades individuales de este articulo en lugar de el articulo completo.',
+					// saltear_posiciones: 1,
+				},
 			]
 
 
-
-
-			if (this.hasExtencion('articulos_unidades_individuales')) {
-
-				columns.push({
-					text: 'U individuales',
-				})
-			}
 
 
 
@@ -246,19 +244,28 @@ export default {
 				columns.splice(index_margen_de_ganancia, 1)
 
 
+				let index_aplicar_iva = columns.findIndex(col => col.text == 'Aplicar IVA')
+
+				// Lo aumento para que se inserten luego del indice
+				index_aplicar_iva++
+
+
 				this.price_types.forEach(price_type => {
-					columns.push({
-						text: 'Setear precio final '+price_type.name,
-						// saltear_posiciones: 1,
-					})
-					columns.push({
-						text: '% '+price_type.name,
-						// saltear_posiciones: 1,
-					})
-					columns.push({
-						text: '$ Final '+price_type.name,
-						// saltear_posiciones: 2,
-					})
+					columns.splice(
+						index_aplicar_iva,
+						0,
+						{text: '$ Final '+price_type.name,}
+					)
+					columns.splice(
+						index_aplicar_iva,
+						0,
+						{text: '% '+price_type.name,}
+					)
+					columns.splice(
+						index_aplicar_iva,
+						0,
+						{text: 'Setear precio final '+price_type.name,}
+					)
 				})
 				
 			} else {

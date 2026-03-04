@@ -218,6 +218,8 @@ import filter_history from '@/store/filter_history'
 import provider_order_afip_ticket_iva from '@/store/provider_order_afip_ticket_iva'
 import provider_order_discount from '@/store/provider_order_discount'
 
+import nota_credito_description from '@/store/nota_credito_description'
+
 
 Vue.use(Vuex)
 
@@ -440,5 +442,7 @@ export default new Vuex.Store({
 
         provider_order_afip_ticket_iva,
         provider_order_discount,
+
+        nota_credito_description,
     }
 })

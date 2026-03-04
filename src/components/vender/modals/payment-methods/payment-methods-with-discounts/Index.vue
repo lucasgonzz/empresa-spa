@@ -4,12 +4,7 @@
 	no-close-on-backdrop
 	title="Métodos de pago" 
 	hide-footer>
-	<!-- <b-modal 
-	id="payment-method-modal" 
-	no-close-on-backdrop
-	title="Métodos de pago" 
-	hide-header-close
-	hide-footer> -->
+	
 
 		<totales></totales>	
 

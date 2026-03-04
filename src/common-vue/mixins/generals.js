@@ -735,6 +735,8 @@ export default {
 		},
 		propertyText(model, prop, from_pivot = false, pivot_parent_model = null) {
 			// console.log('propertyText para '+prop.key)
+			// console.log('model ')
+			// console.log(model)
 			if (prop.type == 'images' || prop.type == 'image') {
 				return null
 			}
@@ -753,6 +755,11 @@ export default {
 				return model[prop.key].length
 			}
 			if (this.isRelationKey(prop)) {
+
+				if (from_pivot) {
+					model = model.pivot 
+				}
+
 				// console.log(prop.key+' isRelationKey')
 				let relationship = this.modelNameFromRelationKey(prop, false, true)
 
@@ -776,7 +783,7 @@ export default {
 							// console.log(finded_model)
 							return finded_model[prop_name]	
 						}
-						// console.log('no se encontro la relacion para '+relationship)
+						console.log('no se encontro la relacion para '+relationship)
 						return null
 					} else if (model[relationship] && model[relationship][prop_name]) {
 						return model[relationship][prop_name] 

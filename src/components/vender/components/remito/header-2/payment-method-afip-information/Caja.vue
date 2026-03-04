@@ -11,27 +11,30 @@
 </template>
 <script>
 import cajas from '@/mixins/vender/cajas'
+import caja_por_defecto from '@/mixins/caja_por_defecto'
 export default {
-	mixins: [cajas],
+	mixins: [cajas, caja_por_defecto],
 	watch: {
 		payment_method_id() {
-			let address_id = this.$cookies.get('address_id')
+
+            this.set_caja_por_defecto()
 			
-			let caja_id = this.get_caja_por_defecto(this.payment_method_id, address_id)
-			if (caja_id) {
-				this.caja_id = caja_id
-			}
 		},
 		address_id() {
-			let address_id = this.$cookies.get('address_id')
 			
-			let caja_id = this.get_caja_por_defecto(this.payment_method_id, address_id)
-			if (caja_id) {
-				this.caja_id = caja_id
-			}
+			this.set_caja_por_defecto()
+            
+		},
+		moneda_id() {
+			
+			this.set_caja_por_defecto()
+            
 		},
 	},
 	computed: {
+		moneda_id() {
+			return this.$store.state.vender.moneda_id
+		},
 		address_id() {
 			return this.$store.state.vender.address_id
 		},
@@ -65,5 +68,17 @@ export default {
 			}
 		},
 	},
+	methods: {
+		set_caja_por_defecto() {
+
+			let address_id = this.$cookies.get('address_id')
+
+			let caja_por_defecto = this.get_caja_por_defecto(this.payment_method_id, address_id, this.moneda_id) 
+
+            if (caja_por_defecto) {
+				this.caja_id = caja_por_defecto.id
+            }
+		}
+	}
 }
 </script>

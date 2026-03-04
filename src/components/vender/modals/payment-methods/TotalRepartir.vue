@@ -1,5 +1,6 @@
 <template>
-	<div>
+	<div
+	class="total-a-repartir-wrapper">
 		<p class="total-a-repartir">
 			Total a repartir: <strong>{{ price(total_a_repartir) }}</strong>
 		</p>
@@ -18,8 +19,16 @@
 	</div>
 </template>
 <script>
-// import select_payment_methods from '@/mixins/expense/select_payment_methods'
 export default {
-	// mixins: [select_payment_methods],
+	props: {
+		total_a_repartir: Number,
+		total_repartido: Number,
+		sobrante_a_repartir: Number,
+	},
 }
 </script>
+<style lang="sass">
+.total-a-repartir-wrapper
+	p
+		font-size: 20px !important
+</style>

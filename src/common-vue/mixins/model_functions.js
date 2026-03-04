@@ -1,8 +1,8 @@
 import dates from '@/common-vue/mixins/dates'
-import select_payment_methods_vender from '@/mixins/vender/select_payment_methods'
-import select_payment_methods_expense from '@/mixins/expense/select_payment_methods'
+// import select_payment_methods_vender from '@/mixins/vender/select_payment_methods'
+// import select_payment_methods_expense from '@/mixins/expense/select_payment_methods'
 export default {
-	mixins: [dates, select_payment_methods_vender, select_payment_methods_expense],
+	mixins: [dates],
 	methods: {
 		getBadgeValue(prop, model) {
 			if (prop.badge && prop.badge.function) {

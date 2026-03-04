@@ -79,6 +79,15 @@ export default {
 			},
 		},
 		{
+			text: 'Descripciones',
+			key: 'nota_credito_descriptions',
+			has_many: {
+				text: 'Descripcion',
+				model_name: 'nota_credito_description',
+			},
+			not_show: true,
+		},
+		{
 			text: 'Descuentos',
 			key: 'discounts',
 			store: 'discount',

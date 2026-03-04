@@ -21,26 +21,23 @@ export default {
 			use_store_models: true,
 			if_has_extencion: 'ventas_en_dolares',
 		},
-		// {
-		// 	text: 'Monto',
-		// 	key: 'amount',
-		// 	type: 'number',
-		// 	is_price: true,
-		// },
+		{
+			text: 'Monto',
+			key: 'amount',
+			type: 'number',
+			is_price: true,
+			only_show: true,
+		},
 		{
 			text: 'Importe IVA',
 			key: 'importe_iva',
 			type: 'number',
 			is_price: true,
-			description: 'Si completa este campo, el valor impactara en el valor de IVA CREDITO en el modulo de REPORTES',
+			descriptions: [
+				'Si completa este campo, el valor impactara en el valor de IVA CREDITO en el modulo de REPORTES',
+				'Debe estar SIEMPRE EN PESOS',
+			],
 		},
-		// {
-		// 	text: 'Caja',
-		// 	key: 'caja_id',
-		// 	type: 'select',
-		// 	use_store_models: true,
-		// 	get_options_function: 'get_caja_options',
-		// },
     	{
 			text: 'Fecha',
 			key: 'created_at',
@@ -52,30 +49,38 @@ export default {
 			group_title: 'Metodos de Pago',
 		},
 		{
+      		text: 'Seleccionar Metodos de Pago',
 			key: 'payment_methods',
-			type: 'button',
-      		text: 'Metodos de Pago',
-			button: {
-				button_text: 'Seleccionar',
-				badge: {
-					function: 'get_payment_methods_count',
-					variant: 'success',
-				},
-				call_functions: [
-					{
-						name: 'showSelectPaymentMethodModal',
-						params: [
-							'expense'
-						]
-					}
-				]
-			},
-			check_can_edit: true,
 		},
 		{
-			key: 'payment_methods_table',
-			type: 'display',
-	      	text: 'Metodos de Pago Seleccionados'
+      		text: 'Metodos de Pago',
+			key: 'current_acount_payment_methods',
+			store: 'current_acount_payment_method',
+			belongs_to_many: {
+				props_to_show: [
+					{
+						text: 'Nombre',
+						key: 'name',	
+					},
+				],
+				pivot_props_to_show: [
+					{
+						text: 'Monto',
+						key: 'amount',
+						is_price: true,
+					},
+					{
+						text: 'Moneda',
+						key: 'moneda_id',
+						use_store_models: true,
+					},
+					{
+						text: 'Caja',
+						key: 'caja_id',
+						use_store_models: true,
+					},
+				],
+			},
 		},
 	    {
 			text: 'Observaciones',

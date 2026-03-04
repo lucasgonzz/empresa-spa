@@ -294,9 +294,33 @@ export default {
 						is_price: true,
 					},
 					{
+						text: 'Moneda',
+						key: 'moneda_id',
+						// type: 'select',
+						use_store_models: true,
+						if_has_extencion: 'ventas_en_dolares',
+					},
+					{
+						text: 'Cotizacion',
+						key: 'cotizacion',
+						is_price: true,
+						if_has_extencion: 'ventas_en_dolares',
+					},
+					{
+						text: 'Monto cotizado',
+						key: 'amount_cotizado',
+						is_price: true,
+						if_has_extencion: 'ventas_en_dolares',
+					},
+					{
 						text: 'Descuento',
 						key: 'discount_amount',
 						is_price: true,
+					},
+					{
+						text: 'Caja',
+						key: 'caja_id',
+						use_store_models: true,
 					},
 				],
 			},

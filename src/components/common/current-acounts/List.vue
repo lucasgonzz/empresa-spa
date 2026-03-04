@@ -17,7 +17,7 @@ class="p-l-20 p-r-20">
         <template v-slot:default="slotProps">
 
             <b-badge
-            v-if="slotProps.model.sale && slotProps.model.sale.afip_tickets.length"
+            v-if="show_badge_facturado(slotProps.model)"
             variant="success">Facturado</b-badge>
 
             <cerrar-venta
@@ -75,6 +75,24 @@ export default {
         },
     },
     methods: {
+        show_badge_facturado(current_acount) {
+            if (
+                current_acount.sale 
+                && current_acount.debe
+                && current_acount.sale.afip_tickets.length
+            ) {
+                return true
+            }
+
+            if (
+                current_acount.afip_ticket 
+                && current_acount.status == 'nota_credito'
+                && current_acount.afip_ticket.cae
+            ) {
+                return true
+            }
+            return false
+        },
         showPaymentMethods(current_acount) {
             this.$store.commit('current_acount/setToShowPaymentMethods', current_acount)
             this.$bvModal.show('payment-methods-details')
@@ -83,7 +101,8 @@ export default {
             return current_acount.status == 'pago_from_client' 
                     || (
                         current_acount.status == 'nota_credito'
-                        && !current_acount.sale_id
+                        && !current_acount.afip_ticket
+                        // && !current_acount.sale_id
                     ) 
                     || current_acount.detalle == 'Nota de debito' 
                     || current_acount.detalle == 'Saldo inicial'

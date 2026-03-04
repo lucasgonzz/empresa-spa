@@ -1,5 +1,6 @@
 <template>
 	<b-modal 
+    title="Multiples metodos de pago"
 	id="payment-method-modal" 
 	no-close-on-backdrop
 	title="Métodos de pago" 

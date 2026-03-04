@@ -1,12 +1,12 @@
 import clients from '@/mixins/clients'
 import sale_ticket from '@/mixins/sale_ticket'
-import select_payment_methods from '@/mixins/vender/select_payment_methods'
+// import select_payment_methods from '@/mixins/vender/select_payment_methods'
 import start_methods from '@/mixins/start_methods'
 import vender_set_total from '@/mixins/vender_set_total'
 import sonido_error from '@/mixins/sonido_error' 
 import set_employee_vender from '@/mixins/set_employee_vender'
 export default {
-	mixins: [sonido_error, vender_set_total, clients, sale_ticket, select_payment_methods, start_methods, set_employee_vender],
+	mixins: [sonido_error, vender_set_total, clients, sale_ticket, start_methods, set_employee_vender],
 	computed: {
 		discounts() {
 			return this.$store.state.discount.models

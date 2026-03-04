@@ -126,7 +126,7 @@ export default {
 
 				this.limpiar_cuotas()
 
-				this.init_modal_payment_metohds()
+				// this.init_modal_payment_metohds()
 				
 				this.setTotal()
 			} 

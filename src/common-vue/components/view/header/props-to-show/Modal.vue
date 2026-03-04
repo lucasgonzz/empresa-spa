@@ -2,7 +2,7 @@
 	<b-modal
 	v-if="usa_props_to_show"
 	title="Propiedades para mostrar"
-	id="props-to-show">
+	:id="'props-to-show-'+model_name">
 
 		<b-button-group
 		class="m-b-10 w-100">

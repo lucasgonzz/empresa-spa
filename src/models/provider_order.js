@@ -80,7 +80,7 @@ export default {
 			type: 'checkbox',
 			value: 0,
 			not_show: true,
-			no_de_puede_desactivar: true,
+			no_se_puede_desactivar: true,
 			descriptions: [
 				'Una vez que active esta opcion, el sistema actualizara los costos/precios de sus articulos en el LISTADO en base a los valores indicados en esta compra.',
 				'Si nunca activa esta opcion, el sistema no cambiara los costos/precios de sus articulos por lo que indico en esta compra',
@@ -93,7 +93,7 @@ export default {
 			type: 'checkbox',
 			value: 0,
 			not_show: true,
-			no_de_puede_desactivar: true,
+			no_se_puede_desactivar: true,
 			descriptions: [
 				'Una vez que active esta opcion, el sistema actualizara el stock de sus articulos en el LISTADO en base a los valores indicados en esta compra.',
 				'Si nunca activa esta opcion, el sistema no actualizara el stock de sus articulos por lo que indico en esta compra',
@@ -107,7 +107,7 @@ export default {
 			type: 'checkbox',
 			value: 1,
 			not_show: true,
-			no_de_puede_desactivar: true,
+			no_se_puede_desactivar: true,
 			descriptions: [
 				'Una vez que active esta opcion, el sistema generara un movimiento en la Cuenta Corriente del proveedor por el "Total final" de esta compra.',
 				'Si nunca activa esta opcion, el sistema no generara un movimiento en la Cuenta Corriente del proveedor.',
