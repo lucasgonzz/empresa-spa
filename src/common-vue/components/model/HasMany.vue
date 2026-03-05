@@ -5,8 +5,18 @@
 		:has_many_parent_model="parent_model"
 		:has_many_parent_model_name="parent_model_name"
 		:has_many_prop="prop"
-		:model_name="prop.has_many.model_name"></model-component>	
-
+		:model_name="prop.has_many.model_name">
+			<template
+				v-for="prop in has_many_model_props"
+				v-slot:[prop.key]="props"
+			>
+				
+				<slot 
+					:name="'has-many-prop-'+prop.key"
+				>
+				</slot>
+			</template>
+		</model-component>	
 	    <confirm
 	    :model_name="prop.has_many.model_name"
 	    :actions="[parent_model_name+'/deletePropModel']"
@@ -56,6 +66,9 @@ export default {
 		}
 	},
 	computed: {
+		has_many_model_props() {
+			return this.modelPropertiesFromName(this.prop.has_many.model_name)
+		},	
 		prop_model_to_delete() {
 			return this.$store.state[this.parent_model_name].prop_model_to_delete
 		},

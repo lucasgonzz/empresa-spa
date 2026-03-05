@@ -8,6 +8,10 @@
 		<!-- <template v-slot:modal_buttons="data">
 			<modal-buttons></modal-buttons>
 		</template> -->
+
+		<template #has-many-prop-order_production_status_id>
+			hola
+		</template>
 	</view-component> 
 </template>
 <script>

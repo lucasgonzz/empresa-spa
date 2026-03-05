@@ -223,7 +223,8 @@ import nota_credito_description from '@/store/nota_credito_description'
 import recipe_route from '@/store/recipe_route'
 import recipe_route_type from '@/store/recipe_route_type'
 import production_batch_status from '@/store/production_batch_status'
-
+import production_batch from '@/store/production_batch'
+import production_batch_movement from '@/store/production_batch_movement'
 
 
 Vue.use(Vuex)
@@ -453,5 +454,7 @@ export default new Vuex.Store({
         recipe_route,
         recipe_route_type,
         production_batch_status,
+        production_batch,
+        production_batch_movement,
     }
 })

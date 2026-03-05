@@ -8,5 +8,6 @@ export default {
 	],
 	singular_model_name_spanish: 'Estado de lote de produccion',
 	plural_model_name_spanish: 'Estados de lote de produccion',
-	male: true,
+	create_model_name_spanish: 'Nuevo Estado de lote de produccion',
+	text_delete: 'el',
 }

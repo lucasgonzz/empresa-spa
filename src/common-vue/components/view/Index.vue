@@ -45,7 +45,7 @@
 			v-slot:[prop.key]="props">
 				<slot :name="prop.key" :model="props.model"></slot>
     		</template>
-			<!-- <template #price>asd</template> -->
+			<template #has-many-prop-order_production_status_id>asd</template>
     	</model>
 
 		<slot name="header"></slot>
