@@ -116,6 +116,11 @@ const routes = [
         component: () => import('@/views/Produccion')
     },
     {
+        path: '/produccionV2/:view?/:sub_view?',
+        name: 'produccionV2', 
+        component: () => import('@/views/ProduccionV2')
+    },
+    {
         path: '/caja/:view?/:sub_view?',
         name: 'caja',
         component: () => import('@/views/Caja')

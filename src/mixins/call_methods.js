@@ -9,6 +9,15 @@ export default [
         model_name: 'cepa',
         if_has_extencion: 'vinoteca',
     },
+    {
+        model_name: 'recipe_route_type',
+        if_has_extencion: 'productionV2',
+    },
+    {
+        model_name: 'production_batch_status',
+        if_has_extencion: 'productionV2',
+    },
+
 
     'employee',
     'sale_channel',

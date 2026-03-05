@@ -25,6 +25,7 @@
 			<slot 
 			name="model_modal_header"
 			:model="model"></slot>
+			
 
 			<model-form
 			@save="save"
@@ -56,7 +57,19 @@
 				v-for="prop in properties"
 				v-slot:[prop.key]="props">
 					<slot :name="prop.key" :model="props.model"></slot>
+
 				</template>
+
+				<template
+			        v-for="item in has_many_slot_items"
+			        v-slot:[item.slot_name]="props"
+			    >
+					<slot 
+						:name="item.slot_name"
+					></slot>
+				</template>
+
+
 
 			</model-form>
 
@@ -260,6 +273,28 @@ export default {
 		}
 	},
 	computed: {
+
+	    has_many_slot_items() {
+	        const items = []
+
+	        this.properties.forEach((prop) => {
+	            if (prop.has_many) {
+		            const child_props = this.modelPropertiesFromName(prop.has_many.model_name) || []
+
+		            child_props.forEach((child_prop) => {
+		                items.push({
+		                    slot_name: this.get_slot_has_many(child_prop),
+		                    has_many_prop: prop,
+		                    child_prop: child_prop,
+		                })
+		            })
+	            }
+
+	        })
+
+	        return items
+	    },
+
 		show_limpiar_formulario() {
 			return this.props_to_keep_after_create.length
 		},
@@ -339,6 +374,9 @@ export default {
 		}
 	},
 	methods: {
+		get_slot_has_many(prop) {
+			return 'has-many-prop-'+prop.key
+		},
 		press_delete_btn() {
 			this.$emit('press_delete_btn')
 		},

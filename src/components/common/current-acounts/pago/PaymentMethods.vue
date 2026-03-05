@@ -102,6 +102,18 @@ export default {
                 moneda_id: this.base_moneda, // o 'ARS'
                 cotizacion: this.user.dollar,
                 amount_cotizado: '',
+                
+
+                // ✅ Cheque
+                numero: '',
+                banco: '',
+                fecha_emision: '',
+                fecha_pago: '',
+                es_echeq: 0,
+
+                // ✅ Tarjeta (ejemplo, ajustá a tu modelo real)
+                credit_card_id: 0,
+                credit_card_payment_plan_id: 0,
             }
         },
 

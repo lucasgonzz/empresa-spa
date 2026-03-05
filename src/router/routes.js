@@ -312,6 +312,20 @@ export default [
 		image_url: 'nuevos-nav-icons/produccion.png',
 	},
 	{
+		text: 'ProduccionV2',
+		path: '/produccionV2',
+		name: 'produccionV2',
+		component: '@/views/ProduccionV2',
+		can: 'produccion.index',
+		if_has_extencion: ['production', 'comerciocity_interno', 'productionV2'],
+		// can: [
+		// 	'production_movement.index',
+		// 	'order_production.index',
+		// 	'recipe.index',
+		// ],
+		image_url: 'nuevos-nav-icons/produccion.png',
+	},
+	{
 		text: 'Tesoreria',
 		path: '/cajas',
 		name: 'caja',

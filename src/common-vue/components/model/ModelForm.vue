@@ -337,7 +337,17 @@
 									v-else-if="prop.has_many"
 									:parent_model="model"
 									:parent_model_name="model_name"
-									:prop="prop"></has-many>
+									:prop="prop">
+										
+										<template
+											v-for="prop in modelPropertiesFromName(prop.has_many.model_name)"
+											v-slot:[get_slot_has_many(prop)]="props"
+										>
+											<slot 
+												:name="'has-many-prop-'+prop.key"
+											></slot>
+										</template>					
+									</has-many>
 
 									<b-button
 									v-if="(prop.type == 'radio') && model[prop.key] != prop.value"
@@ -539,6 +549,9 @@ export default {
 		},
 	},
 	methods: {
+		get_slot_has_many(prop) {
+			return 'has-many-prop-'+prop.key
+		},
 		searchCUIT() {
 			this.$store.dispatch('search_by_cuit/searchByCUIT', {
 				cuit: this.model.cuit,
