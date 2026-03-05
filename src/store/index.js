@@ -220,6 +220,11 @@ import provider_order_discount from '@/store/provider_order_discount'
 
 import nota_credito_description from '@/store/nota_credito_description'
 
+import recipe_route from '@/store/recipe_route'
+import recipe_route_type from '@/store/recipe_route_type'
+import production_batch_status from '@/store/production_batch_status'
+
+
 
 Vue.use(Vuex)
 
@@ -444,5 +449,9 @@ export default new Vuex.Store({
         provider_order_discount,
 
         nota_credito_description,
+
+        recipe_route,
+        recipe_route_type,
+        production_batch_status,
     }
 })

@@ -1,14 +1,13 @@
 export default {
 	properties: [
 		{
-			text: '',
-			key: '',
+			text: 'Nombre',
+			key: 'name',
 			type: 'text',
-			is_title: true,
 		},
 	],
-	singular_model_name_spanish: 'Localidad',
-	plural_model_name_spanish: 'Localidades',
-	create_model_name_spanish: 'Nueva localidad',
+	singular_model_name_spanish: '',
+	plural_model_name_spanish: 'es',
+	create_model_name_spanish: 'Nueva ',
 	text_delete: 'la',
 }

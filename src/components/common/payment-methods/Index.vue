@@ -17,6 +17,8 @@
             @update_cotizacion="update_cotizacion"
             @update_amount_cotizado="update_amount_cotizado"
             @update_caja_id="update_caja_id"
+
+            @update_payment_method_field="update_payment_method_field"
         >
             <template v-slot:details="{ payment_method }">
                 <slot name="details" :payment_method="payment_method"></slot>
@@ -149,6 +151,19 @@ export default {
         }
     },
     methods: {
+
+        update_payment_method_field(index, key, value) {
+            let next = this.payment_methods_proxy.slice()
+            let pm = Object.assign({}, next[index])
+
+            pm[key] = value
+
+            next.splice(index, 1, pm)
+            this.payment_methods_proxy = next
+
+            this.$nextTick(() => this.$emit('changed', next))
+        },
+        
         add_payment_method() {
             let next = this.payment_methods_proxy.slice()
             next.push(this.payment_method_factory())

@@ -101,7 +101,7 @@
 
             <!-- CAJA -->
             <b-form-group
-                v-if="cajas.length"
+                v-if="cajas.length && payment_method.current_acount_payment_method_id != 1"
                 label="Caja"
             >
                 <b-form-select
@@ -117,6 +117,16 @@
                     La caja seleccionada no es compatible con la moneda elegida.
                 </small>
             </b-form-group>
+
+
+
+            <check-info
+            @field_change="on_check_field_change(index, $event)"
+            :payment_method="payment_method"></check-info>
+
+            <credit-card
+            @field_change="on_check_field_change(index, $event)"
+            :payment_method="payment_method"></credit-card>
 
 
 
@@ -155,6 +165,11 @@ import caja_por_defecto from '@/mixins/caja_por_defecto'
 export default {
     mixins: [caja_por_defecto],
     name: 'PaymentMethodsStep',
+    components: {
+
+        CheckInfo: () => import('@/components/common/payment-methods/CheckInfo'),
+        CreditCard: () => import('@/components/common/payment-methods/CreditCard'),
+    },
     props: {
         payment_methods: {
             type: Array,
@@ -220,6 +235,12 @@ export default {
         })
     },
     methods: {
+
+
+        on_check_field_change(index, payload) {
+            // payload = { key, value }
+            this.$emit('update_payment_method_field', index, payload.key, payload.value)
+        },
 
         set_payment_method_id(row, index, new_value) {
             let method_id = Number(new_value) || 0
