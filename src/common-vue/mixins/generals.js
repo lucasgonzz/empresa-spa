@@ -556,6 +556,9 @@ export default {
 			if (property.v_if_function && model) {
 				return this[property.v_if_function](property, model)
 			}
+			if (property.no_mostrar_nunca) {
+				return false
+			}
 			if (check_show_on_form && property.not_show_on_form) {
 				return false
 			}

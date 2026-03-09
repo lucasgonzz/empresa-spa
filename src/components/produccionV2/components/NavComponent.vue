@@ -20,10 +20,12 @@ export default {
 		items() {
 			let items = [
 				{
-					name: 'Lotes de produccion'
+					name: 'Lotes de produccion',
+					call_models: 'production_batch',
 				},
 				{
-					name: 'Recetas'
+					name: 'Recetas',
+					call_models: 'recipe',
 				},
 			]
 			return items

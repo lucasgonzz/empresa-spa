@@ -162,6 +162,7 @@ export default {
 		},
 		props_to_send_to_api: Array,
 		emit_selected_with_null: Boolean,
+		function_props_to_send_to_api: String,
 	},
 	data() {
 		return {
@@ -315,6 +316,12 @@ export default {
 							info[prop_to_send.key] = prop_to_send.value
 							// route += '?'+prop_to_send.key+'='+prop_to_send.value
 						})
+					}
+
+					if (this.function_props_to_send_to_api) {
+						
+						info = this[this.function_props_to_send_to_api](info)
+
 					}
 
 					this.$api.post(route, info)

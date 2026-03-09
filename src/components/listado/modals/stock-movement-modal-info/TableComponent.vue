@@ -106,7 +106,7 @@ export default {
 			this.stock_movements.forEach(model => {
 				concepto = this.get_store_model('concepto_stock_movement', model.concepto_stock_movement_id)
 				items.push({
-					concepto: typeof concepto != 'undefined' ? concepto.name : null,
+					concepto: typeof concepto != 'undefined' && concepto !== null ? concepto.name : null,
 					amount: model.amount,
 					article_variant: model.article_variant ? model.article_variant.variant_description : null,
 					stock_resultante: model.stock_resultante,

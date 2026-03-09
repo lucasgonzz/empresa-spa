@@ -225,6 +225,7 @@ import recipe_route_type from '@/store/recipe_route_type'
 import production_batch_status from '@/store/production_batch_status'
 import production_batch from '@/store/production_batch'
 import production_batch_movement from '@/store/production_batch_movement'
+import production_batch_movement_type from '@/store/production_batch_movement_type'
 
 
 Vue.use(Vuex)
@@ -456,5 +457,6 @@ export default new Vuex.Store({
         production_batch_status,
         production_batch,
         production_batch_movement,
+        production_batch_movement_type,
     }
 })

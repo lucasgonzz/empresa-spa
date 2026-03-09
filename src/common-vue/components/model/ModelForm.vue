@@ -112,7 +112,9 @@
 										:clear_query="clearQuery(prop)" 
 										:save_if_not_exist="saveIfNotExist(prop)"
 										:auto_select="autoSelect(prop)"
+										:props_to_send_to_api="prop.props_to_send_to_api"
 										:limpiar_resultados_de_busqueda="prop.limpiar_resultados_de_busqueda"
+										:function_props_to_send_to_api="prop.function_props_to_send_to_api"
 										:prop="prop"></search-component>
 									</div>
 
@@ -335,6 +337,8 @@
 
 									<has-many
 									v-else-if="prop.has_many"
+									@modelDeleted="has_many_deleted"
+									@modelSaved="has_many_saved"
 									:parent_model="model"
 									:parent_model_name="model_name"
 									:prop="prop">
@@ -549,8 +553,11 @@ export default {
 		},
 	},
 	methods: {
-		get_slot_has_many(prop) {
-			return 'has-many-prop-'+prop.key
+		has_many_deleted() {
+			this.$emit('has_many_deleted')
+		},
+		has_many_saved(model) {
+			this.$emit('has_many_saved', model)
 		},
 		searchCUIT() {
 			this.$store.dispatch('search_by_cuit/searchByCUIT', {

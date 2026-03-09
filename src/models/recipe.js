@@ -32,7 +32,8 @@ export default {
 			has_many: {
 				text: 'Ruta',
 				model_name: 'recipe_route',
-			}
+			},
+			full_cols: true,
 		}
 	],
 	singular_model_name_spanish: 'Receta',

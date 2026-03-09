@@ -3,7 +3,7 @@
 	v-if="model">
 
 	    <confirm
-	    @confimed="deleted"
+	    @confirmed="model_deleted"
 	    :not_show_delete_text="not_show_delete_text"
 	    :text="delete_text"
 	    :model_name="model_name"
@@ -29,6 +29,8 @@
 
 			<model-form
 			@save="save"
+			@has_many_deleted="has_many_deleted"
+			@has_many_saved="has_many_saved"
 			:show_btn_remove_belongs_to_many="show_btn_remove_belongs_to_many"
 			:has_many_parent_model="has_many_parent_model"
 			:has_many_parent_model_name="has_many_parent_model_name"
@@ -61,7 +63,7 @@
 				</template>
 
 				<template
-			        v-for="item in has_many_slot_items"
+			        v-for="item in has_many_slot_items(properties)"
 			        v-slot:[item.slot_name]="props"
 			    >
 					<slot 
@@ -274,26 +276,6 @@ export default {
 	},
 	computed: {
 
-	    has_many_slot_items() {
-	        const items = []
-
-	        this.properties.forEach((prop) => {
-	            if (prop.has_many) {
-		            const child_props = this.modelPropertiesFromName(prop.has_many.model_name) || []
-
-		            child_props.forEach((child_prop) => {
-		                items.push({
-		                    slot_name: this.get_slot_has_many(child_prop),
-		                    has_many_prop: prop,
-		                    child_prop: child_prop,
-		                })
-		            })
-	            }
-
-	        })
-
-	        return items
-	    },
 
 		show_limpiar_formulario() {
 			return this.props_to_keep_after_create.length
@@ -374,8 +356,11 @@ export default {
 		}
 	},
 	methods: {
-		get_slot_has_many(prop) {
-			return 'has-many-prop-'+prop.key
+		has_many_deleted() {
+			this.$emit('has_many_deleted')
+		},
+		has_many_saved(model) {
+			this.$emit('has_many_saved', model)
 		},
 		press_delete_btn() {
 			this.$emit('press_delete_btn')
@@ -399,7 +384,8 @@ export default {
 		onModalClosed() {
 			this.$root.$emit(this.model_name+'-modal-closed');
 		},
-		deleted() {
+		model_deleted() {
+			// alert('emitiendo model_deleted desde Index')
 			this.$emit('modelDeleted')
 		},
 		async save(info) {

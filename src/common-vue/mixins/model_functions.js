@@ -4,6 +4,32 @@ import dates from '@/common-vue/mixins/dates'
 export default {
 	mixins: [dates],
 	methods: {
+
+	    has_many_slot_items(properties) {
+	        const items = []
+
+	        properties.forEach((prop) => {
+	            if (prop.has_many) {
+		            const child_props = this.modelPropertiesFromName(prop.has_many.model_name) || []
+
+		            child_props.forEach((child_prop) => {
+		                items.push({
+		                    slot_name: this.get_slot_has_many(child_prop),
+		                    has_many_prop: prop,
+		                    child_prop: child_prop,
+		                })
+		            })
+	            }
+
+	        })
+
+	        return items
+	    },
+	    
+		get_slot_has_many(prop) {
+			return 'has-many-prop-'+prop.key
+		},
+	    
 		getBadgeValue(prop, model) {
 			if (prop.badge && prop.badge.function) {
 				return this[prop.badge.function](model, prop);

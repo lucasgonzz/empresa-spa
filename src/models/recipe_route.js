@@ -4,6 +4,7 @@ export default {
 			text: 'Tipo de ruta',
 			key: 'recipe_route_type_id',
 			type: 'select',
+			use_store_models: true,
 		},
 		{
 			text: 'Notas',
@@ -73,10 +74,6 @@ export default {
 						text: 'Deposito',
 						key: 'address_id',
 						value: 0,
-						v_if: {
-							b_t_many_model_prop: 'addresses',
-							check_array_length: true,
-						},
 						type: 'select'
 					},
 					{
@@ -91,13 +88,19 @@ export default {
 		{
 			text: 'Deposito insumos',
 			key: 'from_address_id',
+			store: 'address',
+			select_prop_name: 'street',
 			type: 'select',
+			use_store_models: true,
 			value: 0,
 		},
 		{
 			text: 'Deposito para las unidades producidas',
 			key: 'to_address_id',
 			type: 'select',
+			store: 'address',
+			select_prop_name: 'street',
+			use_store_models: true,
 			value: 0,
 		},
 		// {

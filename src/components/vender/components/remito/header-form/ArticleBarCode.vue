@@ -22,6 +22,11 @@
 			v-if="hasExtencion('bar_code_scanner')"
 			@setBarCode="setBarCode"></bar-code-scanner>
 
+			<p
+			class="m-0"
+			v-if="item && item.stock">
+				Stock: {{ item.stock }}
+			</p>
 		</div>
 
 	</b-col>
