@@ -87,6 +87,9 @@ export default {
 	        this.loading = true
 
 	        try {
+
+	            this.$emit('confirmed') // ojo: tenías 'confimed' (typo)
+	            
 	            // Ejecuta una por una, en orden. Si alguna falla, salta al catch.
 	            for (let i = 0; i < this.actions.length; i++) {
 	                await this.$store.dispatch(this.actions[i])
@@ -98,8 +101,6 @@ export default {
 	            if (this.model_name) {
 	                this.$bvModal.hide(this.model_name)
 	            }
-
-	            this.$emit('confirmed') // ojo: tenías 'confimed' (typo)
 	        } catch (err) {
 	            // Corta acá en el primer error
 	            this.$toast.error('Error al ejecutar la acción')

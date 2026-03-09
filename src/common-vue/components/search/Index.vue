@@ -27,6 +27,7 @@
 		:props_extras="props_extras"
 		:props_to_send_to_api="props_to_send_to_api"
 		:emit_selected_with_null="emit_selected_with_null"
+		:function_props_to_send_to_api="function_props_to_send_to_api"
 		@callSearchModal="callSearchModal"
 		@setQuery="setQuery"
 		@setNotShowModel="setNotShowModel"
@@ -204,6 +205,10 @@ export default {
 			default: () => {
 				return  []
 			}
+		},
+		function_props_to_send_to_api: {
+			type: String,
+			default: null
 		},
 	},
 	data() {

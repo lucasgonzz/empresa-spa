@@ -9,6 +9,8 @@
     	:solo_emitir_delete="solo_emitir_delete"
     	@modelSaved="modelSaved"
     	@modelDeleted="modelDeleted"
+    	@has_many_deleted="has_many_deleted"
+    	@has_many_saved="has_many_saved"
     	@press_delete_btn="press_delete_btn"
     	:properties_to_show="properties_for_model_modal"
     	:check_permissions="check_permissions"
@@ -40,12 +42,22 @@
     		<template v-slot:belongs="slotProps">
     			<slot name="belongs" :model="slotProps.model"></slot>
     		</template> 
+
     		<template
     		v-for="prop in properties_for_model_modal"
 			v-slot:[prop.key]="props">
 				<slot :name="prop.key" :model="props.model"></slot>
     		</template>
-			<template #has-many-prop-order_production_status_id>asd</template>
+
+
+			<template
+		        v-for="item in has_many_slot_items(properties)"
+		        v-slot:[item.slot_name]="props"
+		    >
+				<slot 
+					:name="item.slot_name"
+				></slot>
+			</template>
     	</model>
 
 		<slot name="header"></slot>
@@ -459,6 +471,12 @@ export default {
 		modelDeleted(model) {
 			console.log('modelo eliminado')
 			this.$emit('modelDeleted')
+		},
+		has_many_deleted() {
+			this.$emit('has_many_deleted')
+		},
+		has_many_saved(model) {
+			this.$emit('has_many_saved', model)
 		},
 		clicked(model) {
 			this.$emit('clicked', model)

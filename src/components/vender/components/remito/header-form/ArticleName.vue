@@ -26,6 +26,7 @@
 
 			</template>
 		</search-component>
+
 	</b-col>
 </template>
 <script>

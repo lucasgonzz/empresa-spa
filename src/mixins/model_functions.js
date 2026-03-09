@@ -14,6 +14,29 @@ export default {
     },
 	methods: {
 
+        add_production_batch_id(model) {
+            // console.log('add_production_batch_id model:')
+            // console.log(model)
+            let production_batch_id = this.$store.state.production_batch.model.id
+            model.production_batch_id = production_batch_id
+            return model
+        },
+
+        search_recipe_route(info_to_send_to_api) {
+            console.log('search_recipe_route')
+            let recipe_id = this.$store.state.production_batch.recipe_id
+
+            if (
+                recipe_id
+                && typeof recipe_id != 'undefined'
+            ) {
+                info_to_send_to_api.recipe_id = recipe_id
+                console.log('agregando recipe_id: '+recipe_id)
+            }
+            return info_to_send_to_api
+            
+        },
+
         movimiento_entre_cajas_options(prop, caja) {
             let text = caja.name 
 

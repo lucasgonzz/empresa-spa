@@ -2,9 +2,12 @@
 	<div
 	class="m-l-15">
 		<model-component
+		@modelDeleted="modelDeleted"
+		@modelSaved="modelSaved"
 		:has_many_parent_model="parent_model"
 		:has_many_parent_model_name="parent_model_name"
 		:has_many_prop="prop"
+		:props_to_send_on_save_function="prop.has_many.props_to_send_on_save_function"
 		:model_name="prop.has_many.model_name">
 			<template
 				v-for="prop in has_many_model_props"
@@ -84,8 +87,14 @@ export default {
 			let model_to_add = {...this.prop.has_many.model}
 			this.$set(this.parent_model, this.prop.key, this.parent_model[this.prop.key].concat([model_to_add]))
 		},
-		deleteModel(model) {
-		}
+		modelDeleted(model) {
+			// alert('hasMany modelDeleted')
+			this.$emit('modelDeleted')
+		},
+		modelSaved(model) {
+			// alert('hasMany modelSaved')
+			this.$emit('modelSaved', model)
+		},
 	}
 }
 </script>

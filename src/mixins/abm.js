@@ -72,7 +72,13 @@ export default {
 						'address',
 						'provincia',
 						'location',
+					]
+				},
+				{
+					view: 'produccion',
+					models: [
 						'order_production_status',
+						'recipe_route_type',
 					]
 				},
 				{
