@@ -28,6 +28,7 @@
 
                  <!-- MONEDA -->
                 <b-form-group 
+                v-if="hasExtencion('ventas_en_dolares')"
                 class="m-l-10"
                 label="Moneda">
                     <b-form-select
@@ -117,8 +118,6 @@
                     La caja seleccionada no es compatible con la moneda elegida.
                 </small>
             </b-form-group>
-
-
 
             <check-info
             @field_change="on_check_field_change(index, $event)"
@@ -386,7 +385,7 @@ export default {
             }
 
             // ✅ VALIDACIÓN CORRECTA: moneda de caja vs moneda del método
-            if (Number(caja.moneda_id) !== Number(payment_method.moneda_id)) {
+            if (caja.moneda_id !== null && Number(caja.moneda_id) !== Number(payment_method.moneda_id)) {
                 this.$toast.error('La caja seleccionada debe ser de la misma moneda que este método de pago')
 
                 // Fuerza a que el select vuelva al valor anterior (opcional, pero deja el UI perfecto)

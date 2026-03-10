@@ -71,6 +71,8 @@ export default {
 	methods: {
 		set_caja_por_defecto() {
 
+			console.log('set_caja_por_defecto')
+
 			let address_id = this.$cookies.get('address_id')
 
 			let caja_por_defecto = this.get_caja_por_defecto(this.payment_method_id, address_id, this.moneda_id) 

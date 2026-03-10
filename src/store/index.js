@@ -227,6 +227,9 @@ import production_batch from '@/store/production_batch'
 import production_batch_movement from '@/store/production_batch_movement'
 import production_batch_movement_type from '@/store/production_batch_movement_type'
 
+import c_a_payment_method_type from '@/store/c_a_payment_method_type'
+
+
 
 Vue.use(Vuex)
 
@@ -458,5 +461,6 @@ export default new Vuex.Store({
         production_batch,
         production_batch_movement,
         production_batch_movement_type,
+        c_a_payment_method_type,
     }
 })
