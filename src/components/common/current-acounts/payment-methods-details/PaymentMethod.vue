@@ -3,6 +3,11 @@
 		<p
 		class="j-between">
 			{{ model.name }}
+
+			<span
+			v-if="model.pivot.caja_id">
+				-> Caja {{ caja }}
+			</span>
 			<strong>
 				{{ price(model.pivot.amount) }}
 			</strong>
@@ -46,5 +51,15 @@ export default {
 	props: {
 		model: Object,
 	},
+	computed: {
+		caja() {
+			let caja = this.$store.state.caja.models.find(c => c.id == this.model.pivot.caja_id)
+
+			if (typeof caja != 'undefined') {
+				return caja.name 
+			}
+			return ''
+		}
+	}
 }
 </script>

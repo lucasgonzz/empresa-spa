@@ -36,6 +36,7 @@ export default [
     'client',
     'provider',
     'column_position',
+    'c_a_payment_method_type',
     'current_acount_payment_method',
     'afip_tipo_comprobante',
     'afip_information',

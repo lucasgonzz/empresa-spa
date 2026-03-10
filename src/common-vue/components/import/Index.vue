@@ -628,46 +628,112 @@ export default {
 			}
 		},
 
+		set_column_positions_from_selected_columns() {
+		    const column_position = this.$store.state.column_position.models.find(
+		        c => c.id == this.selected_column_position_id
+		    )
+
+		    if (typeof column_position === 'undefined') return
+
+		    // 1) Armo un mapa por "text" normalizado -> { letra, position, description, can_not_ignore }
+		    const normalize_key = (val) => {
+		        return (val || '').toString().trim().toLowerCase()
+		    }
+
+		    const saved_map = {}
+		    ;(column_position.positions || []).forEach(item => {
+		        if (item && item.text) {
+		            const key = normalize_key(item.text)
+		            saved_map[key] = {
+		                letra: item.letra || '',
+		                position: item.position || (item.letra ? this.excel_column_to_number(item.letra) : ''),
+		                description: item.description,
+		                can_not_ignore: typeof item.can_not_ignore !== 'undefined' ? true : undefined,
+		            }
+		        }
+		    })
+
+		    // 2) Reconstruyo columns_ DESDE this.columns (incluye group_title siempre)
+		    this.columns_ = []
+		    this.columns.forEach(def => {
+
+		        // Si es título de grupo, lo agrego tal cual (sin posiciones)
+		        if (def.group_title) {
+		            this.columns_.push({
+		                group_title: def.group_title,
+		                text: undefined,
+		                description: undefined,
+		                letra: '',
+		                position: '',
+		                ignored: 0,
+		                can_not_ignore: undefined,
+		            })
+		            return
+		        }
+
+		        // Es columna real: aplico preset si existe
+		        const key = normalize_key(def.text)
+		        const saved = saved_map[key]
+
+		        this.columns_.push({
+		            group_title: undefined,
+		            text: def.text,
+		            description: def.description,
+		            letra: saved ? (saved.letra || '') : '',
+		            position: saved ? (saved.position || '') : '',
+		            ignored: 0,
+		            can_not_ignore: typeof def.can_not_ignore != 'undefined' ? true : undefined,
+		        })
+		    })
+
+		    this.positions_seted = true
+		    this.start_row = Number(column_position.start_row)
+
+		    // Props extra
+		    this.props_to_send.provider_id = column_position.provider_id
+		    this.create_and_edit = column_position.create_and_edit
+		    this.no_actualizar_articulos_de_otro_proveedor = column_position.no_actualizar_otro_proveedor
+		},
 
 		// Lo ejecuto con una column_position creada por el usuario
-		set_column_positions_from_selected_columns() {
+		// set_column_positions_from_selected_columns() {
 
-			let column_position = this.$store.state.column_position.models.find(c => c.id == this.selected_column_position_id)
+		// 	let column_position = this.$store.state.column_position.models.find(c => c.id == this.selected_column_position_id)
 			
-			if (typeof column_position == 'undefined') return
+		// 	if (typeof column_position == 'undefined') return
 
-			this.columns_ = []
+		// 	this.columns_ = []
 
-			// Convierto el json en un array de objetos
-			// const columns_array = Object.entries(column_position.positions).map(([key, value]) => {
-			// 	return {
-			// 		text: key,
-			// 		letra: value
-			// 	};
-			// });
+		// 	// Convierto el json en un array de objetos
+		// 	// const columns_array = Object.entries(column_position.positions).map(([key, value]) => {
+		// 	// 	return {
+		// 	// 		text: key,
+		// 	// 		letra: value
+		// 	// 	};
+		// 	// });
 
-			console.log('column_position:')
-			console.log(column_position)
-			// Agrego las columnas al array de columnas
-			column_position.positions.forEach(column => {
+		// 	console.log('column_position:')
+		// 	console.log(column_position)
+		// 	// Agrego las columnas al array de columnas
+		// 	column_position.positions.forEach(column => {
 				
-				this.columns_.push({
-					text: column.text,
-					description: column.description,
-					letra: column.letra,
-					position: column.position,
-					ignored: 0,
-					can_not_ignore: typeof column.can_not_ignore != 'undefined' ? true : undefined,
-				})
-			})
-			this.positions_seted = true
+		// 		this.columns_.push({
+		// 			text: column.text,
+		// 			description: column.description,
+		// 			letra: column.letra,
+		// 			position: column.position,
+		// 			ignored: 0,
+		// 			can_not_ignore: typeof column.can_not_ignore != 'undefined' ? true : undefined,
+		// 		})
+		// 	})
+		// 	this.positions_seted = true
 
-			this.start_row = Number(column_position.start_row)
+		// 	this.start_row = Number(column_position.start_row)
 
-			this.props_to_send.provider_id = column_position.provider_id
-			this.create_and_edit = column_position.create_and_edit
-			this.no_actualizar_articulos_de_otro_proveedor = column_position.no_actualizar_otro_proveedor
-		},
+		// 	this.props_to_send.provider_id = column_position.provider_id
+		// 	this.create_and_edit = column_position.create_and_edit
+		// 	this.no_actualizar_articulos_de_otro_proveedor = column_position.no_actualizar_otro_proveedor
+		// },
 
 		set_default_columns_positions() {
 			console.log('Seteando posiciones')
@@ -733,12 +799,18 @@ export default {
 
 				let index = 0
 				this.columns_.forEach(column => {
-					if (!column.ignored) {
-						form_data.append('prop_'+column.text, column.position)
-					} else {
-						// form_data.append('prop_ignore_'+column.text, column.position)
-						console.log('Se ignoro '+column.text)
-					}
+
+				    // Saltar títulos de grupo
+				    if (column.text) {
+
+						if (!column.ignored) {
+							form_data.append('prop_'+column.text, column.position)
+						} else {
+							// form_data.append('prop_ignore_'+column.text, column.position)
+							console.log('Se ignoro '+column.text)
+						}
+				    } 
+
 				})
 				if (this.props_to_send) {
 					Object.keys(this.props_to_send).forEach(key => {
@@ -774,39 +846,86 @@ export default {
 
 			}
 		},
+
 		guardar_column_position() {
 
-			let positions = [];
-			this.columns_.forEach(item => {
-				positions.push({
-					text: item.text,
-					letra: item.letra,
-					position: item.position,
-				})
-			});
+		    let positions = []
+		    this.columns_.forEach(item => {
 
-			console.log('Se van a guardar estas columnas:')
-			console.log(positions)
+		        // Guardar títulos de grupo SOLO como estructura (sin letra/position)
+		        if (item.group_title && !item.text) {
+		            positions.push({
+		                group_title: item.group_title,
+		            })
+		            return
+		        }
 
+		        // Guardar columnas reales
+		        if (item.text) {
+		            positions.push({
+		                text: item.text,
+		                description: item.description,
+		                letra: item.letra,
+		                position: item.position,
+		                can_not_ignore: item.can_not_ignore,
+		            })
+		        }
+		    })
 
-			this.$api.post('column-position', {
-				  // name: this.name,
-				  // name: this.column_position_name,
-				  model_name: 'article',
-				  positions: positions,
-				  start_row: this.start_row,
-				  provider_id: this.props_to_send.provider_id,
-				  create_and_edit: this.create_and_edit,
-				  no_actualizar_otro_proveedor: this.no_actualizar_articulos_de_otro_proveedor,
-			})
-			.then(res => {
-				this.$store.commit('column_position/add', res.data.model)
-				this.name = ''
-			})
-			.catch(err => {
-				this.$toast.error('Error al guardar')
-			})
+		    console.log('Se van a guardar estas columnas:')
+		    console.log(positions)
+
+		    this.$api.post('column-position', {
+		        model_name: 'article',
+		        positions: positions,
+		        start_row: this.start_row,
+		        provider_id: this.props_to_send.provider_id,
+		        create_and_edit: this.create_and_edit,
+		        no_actualizar_otro_proveedor: this.no_actualizar_articulos_de_otro_proveedor,
+		    })
+		    .then(res => {
+		        this.$store.commit('column_position/add', res.data.model)
+		        this.name = ''
+		    })
+		    .catch(err => {
+		        this.$toast.error('Error al guardar')
+		    })
 		},
+		
+		// guardar_column_position() {
+
+		// 	let positions = [];
+		// 	this.columns_.forEach(item => {
+		// 		positions.push({
+		// 			group_title: item.group_title,
+		// 			text: item.text,
+		// 			letra: item.letra,
+		// 			position: item.position,
+		// 		})
+		// 	});
+
+		// 	console.log('Se van a guardar estas columnas:')
+		// 	console.log(positions)
+
+
+		// 	this.$api.post('column-position', {
+		// 		  // name: this.name,
+		// 		  // name: this.column_position_name,
+		// 		  model_name: 'article',
+		// 		  positions: positions,
+		// 		  start_row: this.start_row,
+		// 		  provider_id: this.props_to_send.provider_id,
+		// 		  create_and_edit: this.create_and_edit,
+		// 		  no_actualizar_otro_proveedor: this.no_actualizar_articulos_de_otro_proveedor,
+		// 	})
+		// 	.then(res => {
+		// 		this.$store.commit('column_position/add', res.data.model)
+		// 		this.name = ''
+		// 	})
+		// 	.catch(err => {
+		// 		this.$toast.error('Error al guardar')
+		// 	})
+		// },
 		load_import_status() {
 			this.$api.get('import-status')
 			.then(res => {

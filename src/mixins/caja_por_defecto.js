@@ -18,6 +18,8 @@ export default {
                 return false
             })
 
+            console.log('config cajas por defecto: '+default_payment_method_cajas.length)
+
 
             // Obtengo los modelos de Caja en base a los default_payment_method_caja obtenidos
             let cajas_por_defecto = []
@@ -30,21 +32,39 @@ export default {
                 }
             })
 
-            // console.log('cajas_por_defecto')
-            // cajas_por_defecto.forEach(caja => {
-            //     console.log(caja.name)
-            // })
 
+            let cajas_por_defecto_por_empleado = []
 
-            let caja_por_defecto = cajas_por_defecto.find(caja => caja.moneda_id == moneda_id)
+            cajas_por_defecto.forEach(caja => {
+                if (caja.employee_id && caja.employee_id == this.user.id) {
+                    cajas_por_defecto_por_empleado.push(caja)
+                }
+            })
 
-            if (typeof caja_por_defecto != 'undefined') {
+            if (cajas_por_defecto_por_empleado.length) {
+                console.log('se van a usar cajas por empleado: '+cajas_por_defecto_por_empleado.length)
+                cajas_por_defecto = cajas_por_defecto_por_empleado
+            }
 
-            	return caja_por_defecto
+            console.log('cajas_por_defecto: ')
+            cajas_por_defecto.forEach(c => console.log(c.name))
 
-                this.$emit('update_caja_id', index, Number(caja_por_defecto.id))
-                console.log('Usando la caja por defecto:')
-                console.log(cajas_por_defecto)
+            if (cajas_por_defecto.length) {
+
+                let caja_por_defecto = cajas_por_defecto[0]
+
+                if (this.hasExtencion('ventas_en_dolares')) {
+                    caja_por_defecto = cajas_por_defecto.find(caja => caja.moneda_id == moneda_id)
+                }
+
+                if (typeof caja_por_defecto != 'undefined') {
+
+                	return caja_por_defecto
+
+                    this.$emit('update_caja_id', index, Number(caja_por_defecto.id))
+                    console.log('Usando la caja por defecto:')
+                    console.log(cajas_por_defecto)
+                }
             }
 
             return null

@@ -1,6 +1,6 @@
 <template>
 	<div 
-	v-if="payment_method.current_acount_payment_method_id == 1"
+	v-if="is_cheque"
 	class="check card-moderna p-15 m-t-15 s-2 b-r-1">
 
 		<b-form-row
@@ -44,6 +44,19 @@ export default {
 		},
 	},
 	computed: {
+		is_cheque(){
+			let payment_method_model = this.$store.state.current_acount_payment_method.models.find(p => p.id == this.payment_method.current_acount_payment_method_id)
+
+			console.log('is cheque')
+			console.log(payment_method_model)
+
+			if (typeof payment_method_model != 'undefined') {
+				if (payment_method_model.type && payment_method_model.type.slug == 'cheque') {
+					return true
+				}
+			}
+			return false
+		},
 		props() {
 			return [
 				{

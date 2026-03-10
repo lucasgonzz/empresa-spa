@@ -1,13 +1,31 @@
 <template>
 	<div>
 		<b-form-group
-		label="Cantidad">
+		description="Si quiere restar unidades, coloque el numero en negativo. Ejemplo: para quitar 10, coloque -10"
+		label="Cantidad a agregar">
 			<b-form-input
 			id="stock-movement-amount"
 			@keyup.enter="save"
 			v-model="amount_"
 			placeholder="Ingrese cantidad"></b-form-input>
 		</b-form-group>
+
+		<div
+		class="m-b-10"
+		v-if="article.unidades_individuales">
+			<p>
+				
+				<strong>
+					Este articulo tiene indicado unidades individuales, el valor que agregue se multiplicara por las {{ article.unidades_individuales }} unidades individuales
+				</strong>
+			</p>
+			<p
+			v-if="amount_ != ''">
+				<strong>
+					Unidades a agregar: {{ Number(amount_) * Number(article.unidades_individuales) }}
+				</strong>
+			</p>
+		</div>
 
 		<b-form-group
 		v-if="amount_ >= 1"

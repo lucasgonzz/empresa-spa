@@ -24,7 +24,7 @@
 		</div>
 
 		<b-button
-		v-else
+		v-else-if="!article.unidades_individuales"
 		size="sm"
 		class="m-l-10"
 		dusk="btn_editar_depositos"

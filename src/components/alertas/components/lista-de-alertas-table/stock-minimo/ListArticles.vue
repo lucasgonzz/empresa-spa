@@ -40,6 +40,9 @@ export default {
 					key: 'precio',
 				},
 				{
+					key: 'deposito',
+				},
+				{
 					key: 'stock',
 				},
 				{
@@ -63,8 +66,9 @@ export default {
 					codigo_proveedor: article.provider_code,
 					nombre: article.name,
 					precio: this.price(article.final_price),
-					stock: article.stock,
-					stock_minimo: article.stock_min,
+					deposito: this.get_address(article),
+					stock: this.get_stock(article),
+					stock_minimo: this.get_stock_min(article),
 					proveedor: this.get_provider(article),
 					actualizacion: this.date(article.updated_at),
 				})
@@ -84,6 +88,30 @@ export default {
 		},
 	},
 	methods: {
+
+		get_address(article) {
+			if (article.pivot && article.pivot.address_id) {
+				let address = this.$store.state.address.models.find(a => a.id == article.pivot.address_id)
+				if (typeof address != 'undefined') {
+					return address.street 
+				}
+			}
+			return ''
+		},
+
+		get_stock(article) {
+			if (article.pivot && article.pivot.stock_address) {
+				return article.pivot.stock_address +' ('+ this.get_address(article) +')'
+			}
+			return article.stock
+		},
+
+		get_stock_min(article) {
+			if (article.pivot && article.pivot.stock_min_address) {
+				return article.pivot.stock_min_address +' ('+ this.get_address(article) +')'
+			}
+			return article.stock_min
+		},
 		get_provider(article) {
 			let provider = this.get_store_model('provider', article.provider_id)
 			if (provider) {
