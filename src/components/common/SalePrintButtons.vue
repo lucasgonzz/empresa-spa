@@ -54,20 +54,20 @@
 
 		<b-dropdown-item
 		@click.stop="salePdf(sale.id, 0, 0, 0)">
-			Sin precios
+			Rem sin precios
 		</b-dropdown-item>
 		<b-dropdown-item
 		@click.stop="salePdf(sale.id, 1, 0, 0)">
-			Con precios
+			Rem con precios
 		</b-dropdown-item>
 		<b-dropdown-item
 		v-if="is_admin"
 		@click.stop="salePdf(sale.id, 1, 1, 0)">
-			Con costos
+			Rem con costos
 		</b-dropdown-item>
 		<b-dropdown-item
 		@click.stop="salePdf(sale.id, 1, 0, 1)">
-			Precios Netos
+			Rem pecios Netos
 		</b-dropdown-item>
 	</b-dropdown>
 </template>

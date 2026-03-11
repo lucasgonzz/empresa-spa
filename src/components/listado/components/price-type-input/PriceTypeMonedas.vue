@@ -6,7 +6,7 @@
             <b-input-group prepend="%">
                 <b-form-input
                 type="number"
-                :disabled="local.ptm[moneda.id].setear_precio_final == 1"
+                :disabled="is_inputs_disabled(moneda.id, 'percentage')"
                 v-model.number="local.ptm[moneda.id].percentage"
                 @change="toPayload"
                 placeholder="Porcentaje"></b-form-input>
@@ -18,7 +18,7 @@
                 <b-form-input
                 type="number"
                 @change="toPayload"
-                :disabled="local.ptm[moneda.id].setear_precio_final == 0"
+                :disabled="is_inputs_disabled(moneda.id, 'final_price')"
                 v-model.number="local.ptm[moneda.id].final_price"
                 placeholder="Precio final"></b-form-input>
             </b-input-group>
@@ -31,9 +31,20 @@
             <b-form-checkbox
             class="m-t-10"
             :value="1"
+            @change="toPayload"
             :unchecked-value="0"
+            :disabled="local.ptm[moneda.id].cotizar_desde_otra_moneda == 1"
             v-model="local.ptm[moneda.id].setear_precio_final"
             size="sm">Setear precio final</b-form-checkbox>
+
+            <b-form-checkbox
+            class="m-t-10"
+            :value="1"
+            :unchecked-value="0"
+            @change="on_change_cotizar_desde_otra(moneda.id)"
+            v-model="local.ptm[moneda.id].cotizar_desde_otra_moneda"
+            size="sm">Cotizar desde la otra moneda</b-form-checkbox>
+
             <hr>
         </div>
     </div>
@@ -77,12 +88,14 @@ export default {
                 percentage: '',
                 final_price: '',
                 setear_precio_final: 0,
+                cotizar_desde_otra_moneda: 0,
             }
 
             if (typeof existente != 'undefined') {
                 info.percentage = existente.percentage
                 info.final_price = existente.final_price
                 info.setear_precio_final = existente.setear_precio_final
+                info.cotizar_desde_otra_moneda = existente.cotizar_desde_otra_moneda
             } 
 
             this.$set(this.local.ptm, m.id, {
@@ -109,13 +122,55 @@ export default {
         }
     },
     methods: {
+
+        is_inputs_disabled(moneda_id, field) {
+            const entry = this.local.ptm[moneda_id]
+
+            // Si esta moneda se cotiza desde la otra => es derivada
+            // entonces no se editan % ni final_price (se calculan desde la otra moneda)
+            if (entry.cotizar_desde_otra_moneda == 1) {
+              return true
+            }
+
+            // Modo normal: tu lógica actual
+            if (field === 'percentage') {
+              return entry.setear_precio_final == 1
+            }
+
+            if (field === 'final_price') {
+              return entry.setear_precio_final == 0
+            }
+
+            return false
+        },
+
+        on_change_cotizar_desde_otra(moneda_id_changed) {
+          const changed = this.local.ptm[moneda_id_changed]
+
+          // Si lo activaron, apagar el flag en el resto de monedas del mismo price_type
+          if (changed.cotizar_desde_otra_moneda == 1) {
+
+            // ESTA moneda pasa a ser derivada -> no puede setear final
+            changed.setear_precio_final = 0
+
+            Object.keys(this.local.ptm).forEach(moneda_id => {
+              const mid = parseInt(moneda_id)
+              if (mid !== moneda_id_changed) {
+                this.local.ptm[mid].cotizar_desde_otra_moneda = 0
+              }
+            })
+          }
+
+          this.toPayload()
+        },
         toPayload() {
             let nuevos_datos = Object.values(this.local.ptm).map(entry => ({
                 price_type_id: this.article_price_type.id,
                 moneda_id: entry.moneda_id,
                 percentage: entry.percentage,
                 final_price: entry.final_price,
-                setear_precio_final: entry.setear_precio_final
+                setear_precio_final: entry.setear_precio_final,
+                cotizar_desde_otra_moneda: entry.cotizar_desde_otra_moneda,
             }));
 
             if (!this.article.price_type_monedas) {
@@ -131,7 +186,7 @@ export default {
             this.article.price_type_monedas = [...actuales, ...nuevos_datos];
 
             console.log(this.article.price_type_monedas);
-        }
+        },
     }
 }
 </script>
