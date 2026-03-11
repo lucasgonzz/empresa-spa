@@ -8,7 +8,7 @@ id="recursos-progress">
 
 	<div class="j-center align-center">
 		<strong
-		class="text-primary"
+		class="text-success"
 		v-if="terminado">
 			Sistema listo para usar
 		</strong>

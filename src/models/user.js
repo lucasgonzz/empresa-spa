@@ -156,6 +156,20 @@ export default {
 			key: 'clave_eliminar_article',
 			type: 'text',
 		},
+		{
+			text: 'Direccion comercial para mostrar en los comprobantes de venta',
+			key: 'address_company',
+			descriptions: [
+				'Si completa este dato, se mostrara siempre en todos los comprobantes de venta',
+				'Si trabaja con sucursales, se mostrara junto con la direccion de la sucursal de donde se hizo la venta',
+			],
+			type: 'text',
+		},
+		{
+			text: 'Mostrar la direccion de todas las sucursales en los comprobantes de venta',
+			key: 'all_addresses_in_sale_pdf',
+			type: 'checkbox',
+		},
 
 
 
