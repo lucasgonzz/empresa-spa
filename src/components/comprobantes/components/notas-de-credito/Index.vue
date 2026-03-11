@@ -22,8 +22,10 @@
 			<template v-slot:table_right_options="props">
 				<div class="j-center">
 					
-					<btn-nota-credito
-					:nota_credito="props.model"></btn-nota-credito>	
+
+					<btn-afip-nota-credito
+					:nota_credito="props.model"></btn-afip-nota-credito>	
+
 					<print-btn
 					:model="props.model"></print-btn>			
 				</div>
@@ -36,7 +38,7 @@ export default {
 	components: {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 		BtnSale: () => import('@/components/comprobantes/components/notas-de-credito/table-buttons/BtnSale'),
-		BtnNotaCredito: () => import('@/components/comprobantes/components/notas-de-credito/table-buttons/BtnNotaCredito'),
+		BtnAfipNotaCredito: () => import('@/components/comprobantes/components/notas-de-credito/table-buttons/BtnAfipNotaCredito'),
         SaleModal: () => import('@/components/common/SaleModal'),
 		PrintBtn: () => import('@/components/comprobantes/components/common/PrintBtn'),
 	},

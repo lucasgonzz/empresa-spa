@@ -2,17 +2,21 @@
 	<div>
 		<!-- <make-afip-tickets></make-afip-tickets> -->
 		
-		<btn-loader
+		<b-button
 		v-if="!sale_details.afip_ticket || tiene_error_de_factura"
 		class="m-l-15"
-		text="Emitir Factura"
-		icon="clipboard"
 		id="btn_facturar"
-		:block="false"
-		@clicked="facturar"
-		:loader="loading"
+		@click="facturar"
 		variant="primary">
-		</btn-loader>
+			<i class="icon-clipboard"></i>
+			Emitir Factura
+
+			<b-badge
+			variant="danger"
+			v-if="sale_details.afip_tickets.length">
+				{{ sale_details.afip_tickets.length }}
+			</b-badge>
+		</b-button>
 	</div>
 </template>
 <script>
