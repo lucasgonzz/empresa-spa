@@ -28,6 +28,9 @@ export default {
 		total_devolucion() {
 			return this.$store.state.devoluciones.total_devolucion 
 		},
+		update_unidades_devueltas() {
+			return this.$store.state.devoluciones.update_unidades_devueltas 
+		},
 		regresar_stock() {
 			return this.$store.state.devoluciones.regresar_stock 
 		},
@@ -65,6 +68,7 @@ export default {
 					total_devolucion: this.total_devolucion,
 					items: items,
 					client_id: this.client ? this.client.id : null,
+					update_unidades_devueltas: this.update_unidades_devueltas,
 					regresar_stock: this.regresar_stock,
 					generar_current_acount: this.generar_current_acount,
 					address_id: this.address_id,
@@ -115,6 +119,13 @@ export default {
 					this.$toast.error('El total de la devolucion ('+this.price(this.total_devolucion)+') no puede ser mayor que la Factura N° '+afip_ticket.cbte_numero+' ('+ this.price(afip_ticket.importe_total) +')')
 					ok = false
 				} 
+			}
+
+			if (
+				this.sale.afip_tickets.length
+				&& !this.facturar_nota_credito
+			) {
+				return confirm('La venta sobre la cual vas a generar esta nota de credito esta facturada, recomendamos facturar esta nota de credito sobre alugna factura de esta venta. ¿Queres continuar de todas formas y no facturar esta nota de credito?')
 			}
 
 			// this.items.forEach(item => {

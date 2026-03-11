@@ -19,6 +19,7 @@ export default {
 
 		descriptions: [],
 
+		update_unidades_devueltas: 1,
 		regresar_stock: 1,
 		address_id: 0,
 		generar_current_acount: 1,
@@ -26,6 +27,9 @@ export default {
 		aplicar_recargos_directo_a_items: 0,
 	},
 	mutations: {
+		set_update_unidades_devueltas(state, value) {
+			state.update_unidades_devueltas = value
+		},
 		set_aplicar_recargos_directo_a_items(state, value) {
 			state.aplicar_recargos_directo_a_items = value
 		},

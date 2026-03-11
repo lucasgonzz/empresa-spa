@@ -19,9 +19,14 @@ export default {
 		loading: false,
 		props_to_show: [],
 
+		modal_afip_errors_abierto: false,
+
 		model: null,
 	},
 	mutations: {
+		set_modal_afip_errors_abierto(state, value) {
+			state.modal_afip_errors_abierto = value
+		},
 		set_model(state, value) {
 			state.model = value
 		},
