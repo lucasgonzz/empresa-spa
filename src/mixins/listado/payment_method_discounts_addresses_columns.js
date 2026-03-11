@@ -149,7 +149,9 @@ export default {
 					let price
 
 					if (
-						pesos.final_price != ''
+						typeof pesos != 'undefined'
+						&& typeof pesos.final_price != 'undefined'
+						&& pesos.final_price != ''
 						&& pesos.final_price !== null
 						&& pesos.final_price != 0
 					) {
@@ -161,7 +163,9 @@ export default {
 					let dolar = price_type_monedas.find(p => p.moneda_id == 2)
 
 					if (
-						dolar.final_price != ''
+						typeof dolar != 'undefined'
+						&& typeof dolar.final_price != 'undefined'
+						&& dolar.final_price != ''
 						&& dolar.final_price !== null
 						&& dolar.final_price != 0
 					) {
