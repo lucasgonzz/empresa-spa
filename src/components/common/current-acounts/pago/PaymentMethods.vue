@@ -114,6 +114,8 @@ export default {
                 // ✅ Tarjeta (ejemplo, ajustá a tu modelo real)
                 credit_card_id: 0,
                 credit_card_payment_plan_id: 0,
+                
+                cuota_id: 0,
             }
         },
 

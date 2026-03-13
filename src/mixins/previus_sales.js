@@ -329,42 +329,42 @@ export default {
 			console.log(returned_services)
 			this.$store.commit('vender/previus_sales/setPreviusReturnedServices', returned_services)
 		},
-		updateSale() {
-			this.$store.dispatch('vender/previus_sales/updateSale', {
-				client_id: this.client ? this.client.id : null, 
-				discounts: this.get_discounts(), 
-				surchages: this.get_surchages(), 
-				items: this.items, 
-				save_nota_credito: this.save_nota_credito,
-				returned_items: this.returned_items,
-				nota_credito_description: this.nota_credito_description,
-				discounts_in_services: this.discounts_in_services,
-				surchages_in_services: this.surchages_in_services,
-				current_acount_payment_method_id: this.current_acount_payment_method_id,
-				afip_information_id: this.afip_information_id,
-				sale_type_id: this.sale_type_id,
-				address_id: this.address_id,
-				employee_id: this.employee_id,
-				to_check: this.to_check,
-				checked: this.checked,
-				confirmed: this.confirmed,
-				observations: this.observations,
-				numero_orden_de_compra: this.numero_orden_de_compra,
-				omitir_en_cuenta_corriente: this.omitir_en_cuenta_corriente,
-				metodos_de_pago_seleccionados: this.selected_payment_methods,
-				moneda_id: this.moneda_id,
-				seller_id: this.seller_id,
-				sub_total: this.sub_total,
-				total: this.total,
-			})
-			.then(res => {
-				this.$toast.success('Venta actualizada')
-				this.cancelPreviusSale()
-			})
-			.catch(err => {
-				this.$toast.error('Error al actualizar venta')
-			})
-		},
+		// updateSale() {
+		// 	this.$store.dispatch('vender/previus_sales/updateSale', {
+		// 		client_id: this.client ? this.client.id : null, 
+		// 		discounts: this.get_discounts(), 
+		// 		surchages: this.get_surchages(), 
+		// 		items: this.items, 
+		// 		save_nota_credito: this.save_nota_credito,
+		// 		returned_items: this.returned_items,
+		// 		nota_credito_description: this.nota_credito_description,
+		// 		discounts_in_services: this.discounts_in_services,
+		// 		surchages_in_services: this.surchages_in_services,
+		// 		current_acount_payment_method_id: this.current_acount_payment_method_id,
+		// 		afip_information_id: this.afip_information_id,
+		// 		sale_type_id: this.sale_type_id,
+		// 		address_id: this.address_id,
+		// 		employee_id: this.employee_id,
+		// 		to_check: this.to_check,
+		// 		checked: this.checked,
+		// 		confirmed: this.confirmed,
+		// 		observations: this.observations,
+		// 		numero_orden_de_compra: this.numero_orden_de_compra,
+		// 		omitir_en_cuenta_corriente: this.omitir_en_cuenta_corriente,
+		// 		metodos_de_pago_seleccionados: this.selected_payment_methods,
+		// 		moneda_id: this.moneda_id,
+		// 		seller_id: this.seller_id,
+		// 		sub_total: this.sub_total,
+		// 		total: this.total,
+		// 	})
+		// 	.then(res => {
+		// 		this.$toast.success('Venta actualizada')
+		// 		this.cancelPreviusSale()
+		// 	})
+		// 	.catch(err => {
+		// 		this.$toast.error('Error al actualizar venta')
+		// 	})
+		// },
 		cancelPreviusSale() {
 
 			this.clear_actualizandose_por()

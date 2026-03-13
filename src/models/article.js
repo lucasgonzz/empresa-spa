@@ -115,7 +115,7 @@ export default {
 			key: 'plu',
 			type: 'text',
 			not_show: true,
-			if_has_extencion: 'balanza_bar_code',
+			if_has_extencion: 'plu_balanza_bar_code',
 			description: 'Codigo del articulo en la balanza',
 		},
 		{

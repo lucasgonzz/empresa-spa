@@ -3,8 +3,11 @@
 	class="vender-buttons">
 
 		<!-- <vuelto-efectivo></vuelto-efectivo> -->
-		<print></print>
-		<limpiar-vender></limpiar-vender>
+
+		<div class="j-end m-b-10">
+			<print></print>
+			<limpiar-vender></limpiar-vender>
+		</div>
 
 		<fecha-entrega></fecha-entrega>
 		<observations></observations>

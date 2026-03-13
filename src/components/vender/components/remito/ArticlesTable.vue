@@ -424,9 +424,10 @@ export default {
 			return ''
 		},
 		add_varios_precios(item, hacer_caso = false) {
-			if (hacer_caso) {
-
-				
+			if (
+				hacer_caso
+				&& this.hasExtencion('varios_precios')
+			) {
 
 				if (typeof item.varios_precios == 'undefined') {
 					item.varios_precios = []

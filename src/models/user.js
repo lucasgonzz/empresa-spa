@@ -137,6 +137,16 @@ export default {
 			type: 'text',
 		},
 		{
+			text: 'Redondear precios de a centenas',
+			key: 'redondear_centenas_en_vender',
+			type: 'checkbox',
+		},
+
+
+		{
+			group_title: 'Modulo de VENTAS',
+		},
+		{
 			text: 'Ancho en milimetros de la comandera para imprimir los Tickets de Ventas',
 			key: 'sale_ticket_width',
 			type: 'number',
@@ -145,11 +155,6 @@ export default {
 			text: 'Descripcion para mostrar en Tickets de Ventas',
 			key: 'sale_ticket_description',
 			type: 'textarea',
-		},
-		{
-			text: 'Redondear precios de a centenas',
-			key: 'redondear_centenas_en_vender',
-			type: 'checkbox',
 		},
 		{
 			text: 'Clave para poder eliminar un articulo en VENDER',
@@ -170,6 +175,12 @@ export default {
 			key: 'all_addresses_in_sale_pdf',
 			type: 'checkbox',
 		},
+		{
+			text: 'Mostrar el nombre del empleado que realizo la venta en los PDF de las ventas',
+			key: 'mostrar_vendedor_en_venta_pdf',
+			type: 'checkbox',
+		},
+
 
 
 

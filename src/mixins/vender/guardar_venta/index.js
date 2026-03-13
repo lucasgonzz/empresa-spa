@@ -5,6 +5,7 @@ import omitir_en_cuenta_corriente from '@/mixins/vender/omitir_en_cuenta_corrien
 import default_articles from '@/mixins/vender/default_articles'
 import facturar from '@/mixins/vender/guardar_venta/facturar'
 import sonido_error from '@/mixins/sonido_error' 
+import vender_set_total from '@/mixins/vender_set_total' 
 
 import sync_sales from '@/offline/sync_sales' 
 export default {
@@ -89,11 +90,11 @@ export default {
 
 			this.set_omitir_en_cuenta_corriente()
 
-
 			this.set_default_articles()
 
-
 			this.redirect_a_remito()
+
+			this.setTotal()
 
 			if (online) {
 				this.actualizar_cliente()

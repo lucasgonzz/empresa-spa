@@ -11,9 +11,10 @@ prepend="Cuotas">
 
 </template>
 <script>
-import vender from '@/mixins/vender'
+import cuotas from '@/mixins/cuotas'
+import select_payment_methods from '@/mixins/vender/select_payment_methods'
 export default {
-	mixins: [vender],
+	mixins: [select_payment_methods, cuotas],
 	computed: {
 		selected_payment_methods() {
 			return this.$store.state.vender.selected_payment_methods
@@ -55,46 +56,12 @@ export default {
 				this.setTotal()
 			}
 		},
-		cuotas() {
-			return this.$store.state.cuota.models 
-		},
-		cuotas_options() {
-			let options = [{
-				value: 0,
-				text: 'Seleccione cuotas'
-			}]
-
-			this.cuotas.forEach(cuota => {
-
-				options.push({
-					value: cuota.id,
-					text: this.cuota_text(cuota),
-				})
-			})
-
-			return options
-		},
 		paga_con_credito() {
-			return this.monto_credito
+			return this.es_credito(this.current_acount_payment_method_id)
 		},
 		addresses() {
 			return this.$store.state.address.models
 		}
 	},
-	methods: {
-		cuota_text(cuota) {
-			let text = cuota.cantidad_cuotas + ' cuotas'
-
-			if (cuota.descuento) {
-				text += ' (-'+cuota.descuento+'%)'
-			}
-
-			if (cuota.recargo) {
-				text += ' (+'+cuota.recargo+'%)'
-			}
-
-			return text 
-		}
-	}
 }
 </script>

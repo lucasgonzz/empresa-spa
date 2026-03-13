@@ -87,11 +87,11 @@ export default {
 				},
 				{
 					text: 'Iva',
-					description: 'Alicuota de IVA que tiene este articulo, coloque el VALOR REAL ya que este dato sera usado en caso de hacer una FACTURA por la venta de este articulo',
+					description: 'Valor por defecto: 21%. Alicuota de IVA que tiene este articulo, coloque el VALOR REAL ya que este dato sera usado en caso de hacer una FACTURA por la venta de este articulo.',
 				},
 				{
 					text: 'Aplicar IVA',
-					description: 'Indique si quiere el el IVA del articulo se sume a su costo para obtener el "Costo Real". Valores posibles: "Si" y "No". Valor por defecto: "Si"',
+					description: 'Valor por defecto: "Si". Indique si quiere el el IVA del articulo se sume a su costo para obtener el "Costo Real". Valores posibles: "Si" y "No".',
 				},
 				{
 					text: 'Margen de ganancia',
@@ -271,8 +271,8 @@ export default {
 			} else {
 
 
-				let index_unidad_medida = columns.findIndex(col => col.text == 'Unidad medida')
-				columns[index_unidad_medida].saltear_posiciones = 1
+				// let index_unidad_medida = columns.findIndex(col => col.text == 'Unidad medida')
+				// columns[index_unidad_medida].saltear_posiciones = 1
 			}
 
 

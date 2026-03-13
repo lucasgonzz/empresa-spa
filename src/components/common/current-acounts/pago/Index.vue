@@ -217,7 +217,7 @@ export default {
             
             for (const payment_method of this.pago.current_acount_payment_methods) {
 
-                if (payment_method.id == 1) {
+                if (payment_method.type && payment_method.type.slug == 'cheque') {
                     if (payment_method.bank == '') {
                         this.$toast.error('Ingrese el banco del cheque')
                         return false 
@@ -236,15 +236,15 @@ export default {
                     }
                 }
 
-                let ok = this.validarNumero(payment_method.amount)
+                // let ok = this.validarNumero(payment_method)
 
-                console.log(ok)
+                // console.log(ok)
                 
-                if (!ok.ok) {
+                // if (!ok.ok) {
 
-                    this.$toast.error(ok.reason)
-                    return false
-                }
+                //     this.$toast.error(ok.reason)
+                //     return false
+                // }
             }
 
             return true
@@ -257,33 +257,39 @@ export default {
          * - Punto como separador decimal
          * - Hasta `maxDecimals` decimales (por defecto 2)
          */
-        validarNumero(input, maxDecimals = 2) {
-          if (input == null) return { ok: false, reason: "Vacío" };
+        validarNumero(payment_method, maxDecimals = 2) {
+            console.log('validarNumero')
+            console.log(payment_method)
+            let input = payment_method.amount
+            if (input == null) return { ok: false, reason: "Monto vacio, complete nuevamente el monto del metodo "+payment_method.name+" por favor" };
 
-          let s = String(input).trim();
-          if (s === "") return { ok: false, reason: "Vacío" };
+            let s = String(input).trim();
+            if (s === "") return { ok: false, reason: "Monto vacio, complete nuevamente el monto del metodo "+payment_method.name+" por favor" };
 
-          // No permitimos comas, espacios ni símbolos raros
-          if (/[,\s]/.test(s)) 
-            return { ok: false, reason: "Usá punto decimal y sin comas ni espacios" };
+            // No permitimos comas, espacios ni símbolos raros
+            console.log('validando comas en '+s)
+            if (/[,\s]/.test(s))  {
+                console.log('se validaron comas')
+                return { ok: false, reason: "Usá punto decimal y sin comas ni espacios" };
+            }
 
-          // Construimos regex: entero o entero.dec
-          const decPart = maxDecimals > 0 ? `(\\.\\d{1,${maxDecimals}})?` : ""; // <-- opcional
-          const re = new RegExp(`^-?\\d+${decPart}$`);
+            // Construimos regex: entero o entero.dec
+            const decPart = maxDecimals > 0 ? `(\\.\\d{1,${maxDecimals}})?` : ""; // <-- opcional
+            const re = new RegExp(`^-?\\d+${decPart}$`);
 
-          if (!re.test(s)) {
+            if (!re.test(s)) {
             if (s.includes(",")) return { ok: false, reason: "No se permite coma, usá punto decimal" };
             if ((s.match(/\./g) || []).length > 1) return { ok: false, reason: "No uses puntos de miles, solo un punto decimal" };
             if (/\.\d{3,}$/.test(s)) return { ok: false, reason: `Máximo ${maxDecimals} decimales` };
             if (/\.$/.test(s)) return { ok: false, reason: "Luego del punto deben ir decimales" };
 
             return { ok: false, reason: "Formato inválido. Ej: 1234.50 o 1234" };
-          }
+            }
 
-          const n = Number(s);
-          if (!Number.isFinite(n)) return { ok: false, reason: "Número inválido" };
+            const n = Number(s);
+            if (!Number.isFinite(n)) return { ok: false, reason: "Número inválido" };
 
-          return { ok: true };
+            return { ok: true };
         },
 
         clear() {

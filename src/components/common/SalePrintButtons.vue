@@ -8,11 +8,9 @@
 			Imprimir	
 		</template>
 
-        <b-dropdown-divider></b-dropdown-divider>
 		<b-dropdown-text>
-			Tickets
+ 			Tickets
 		</b-dropdown-text>
-        <b-dropdown-divider></b-dropdown-divider>
 
 		<b-dropdown-item
 		@click.stop="ticketPdf(sale)">
@@ -40,9 +38,8 @@
 
         <b-dropdown-divider></b-dropdown-divider>
 		<b-dropdown-text>
-			A4
+			Hoja A4
 		</b-dropdown-text>
-        <b-dropdown-divider></b-dropdown-divider>
 
 		
 		<b-dropdown-item
@@ -133,3 +130,7 @@ export default {
 	}
 }
 </script>
+<style lang="sass">
+.b-dropdown-text
+	font-weight: bold !important
+</style>

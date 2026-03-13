@@ -42,7 +42,7 @@ export default {
 			
 			this.$store.commit('vender/setSelectedPaymentMethods', [])
 
-			this.$store.commit('vender/current_acount_payment_methods/set_payment_methods', [])
+			this.$store.commit('vender/set_modal_payment_methods', [])
 
 			this.$store.commit('vender/setDiscountsInServices', 0)
 			this.$store.commit('vender/setSurchagesInServices', 0)

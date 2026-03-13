@@ -100,9 +100,14 @@ export default {
 
 		fecha_entrega: null,
 
-		aplicar_recargos_directo_a_items: 1,
+		aplicar_recargos_directo_a_items: 0,
+
+		total_description: [],
 	},
 	mutations: {
+		set_total_description(state, value) {
+			state.total_description = value
+		},
 		set_aplicar_recargos_directo_a_items(state, value) {
 			state.aplicar_recargos_directo_a_items = value 
 		},

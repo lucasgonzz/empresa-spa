@@ -64,6 +64,9 @@ export default {
                 input = document.getElementsByClassName('payment-method-amount')[0]                
                 input.value = saldo
                 input.focus()
+
+                input.dispatchEvent(new Event('input', { bubbles: true }))
+                
             }, 500)
         },
         pago() {

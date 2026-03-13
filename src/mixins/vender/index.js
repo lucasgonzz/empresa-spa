@@ -33,8 +33,9 @@ export default {
 			6- Chequeo que haya sifuciente stock para lo que se quiere vender
 		*/
 
-		set_item_vender(item, from_mobile = false) {
+		set_item_vender(item, from_mobile = false, setear_amount = true) {
 
+			//  cuando busco por PLU, le paso setear_amount en FALSE para que use la cantidad que viene del api
 			console.log('set_item_vender:')
 			console.log(item)
 			this.item_para_agregar = item  
@@ -47,17 +48,20 @@ export default {
 
 			if (this.check_stock_mayor_a_cero(this.item_para_agregar)) {
 
-				if (this.preguntar_cantidad) {
-					this.item_para_agregar.amount = ''
-				} else {
-					this.item_para_agregar.amount = 1
+				if (setear_amount) {
+
+					if (this.preguntar_cantidad) {
+						this.item_para_agregar.amount = ''
+					} else {
+						this.item_para_agregar.amount = 1
+					}
 				}
 
 
 				this.$store.commit('vender/setItem', this.item_para_agregar)
 
 
-				if (this.preguntar_cantidad) {
+				if (this.preguntar_cantidad && setear_amount) {
 					this.foco_input_amount(from_mobile)
 				} else {
 					this.add_item_vender()

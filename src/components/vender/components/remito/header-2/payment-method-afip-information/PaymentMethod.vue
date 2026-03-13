@@ -30,7 +30,7 @@
 			</b-button>
 
 
-			<total-info></total-info>
+			<!-- <total-info></total-info> -->
 
 		</template>
 		
@@ -74,7 +74,7 @@ export default {
 					if (Number(discount.discount_percentage) > 0) {
 						text += ' (-'+discount.discount_percentage+'%)'
 					} else {
-						text += ' (+'+discount.discount_percentage+'%)'
+						text += ' (+'+Number(discount.discount_percentage)*-1+'%)'
 					}
 				}
 				options.push({
