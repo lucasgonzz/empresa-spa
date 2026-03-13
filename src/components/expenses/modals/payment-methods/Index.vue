@@ -97,6 +97,7 @@ export default {
                 moneda_id: this.base_moneda, // o 'ARS'
                 cotizacion: this.user.dollar,
                 amount_cotizado: '',
+                cuota_id: 0,
             }
         },
 

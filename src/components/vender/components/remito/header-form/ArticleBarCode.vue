@@ -215,6 +215,19 @@ export default {
 						return
 					} 
 
+					if (res.data.from_balanza_plu) {
+						console.log('entro a from_balanza_plu')
+						this.from_balanza = true
+						this.finded_article = res.data.article
+						this.finded_article.amount = res.data.amount
+						this.finded_article.is_article = true
+
+						this.set_item_vender(this.finded_article, false, false) 
+
+						return
+					} 
+
+
 					this.finded_article = res.data.article
 
 					if (res.data.variant_id) {

@@ -40,6 +40,14 @@
 			</p>
 		</div>
 
+		
+		<b-button
+		class="m-l-10"
+		variant="success"
+		v-b-modal="'final-price-description'">
+			?
+		</b-button>
+
 		<div
 		class="cont-selects m-l-10">
 			
@@ -49,6 +57,10 @@
 
 			<moneda></moneda>	
 		</div>
+
+		
+		<price-description
+		:price_descriptions="total_description"></price-description>
 
 	</b-col>
 </template>
@@ -60,8 +72,12 @@ export default {
 		PriceType: () => import('@/components/vender/components/remito/total-previus-sales/price-type/Index'),
 		ForzarTotal: () => import('@/components/vender/components/remito/total-previus-sales/forzar-total/Index'),
 		Moneda: () => import('@/components/vender/components/remito/total-previus-sales/Moneda'),
+		PriceDescription: () => import('@/components/common/PriceDescription'),
 	},
 	computed: {
+		total_description() {
+			return this.$store.state.vender.total_description
+		},
 		previus_sale() {
 			return this.$store.state.vender.previus_sales.previus_sale
 		},

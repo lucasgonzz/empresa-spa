@@ -4,11 +4,13 @@
         <div
             v-for="(payment_method, index) in payment_methods"
             :key="payment_method.__row_id"
-            class="m-b-15"
+            class="m-b-20 s-2 payment-method-card"
         >
 
             <h5>
-                Metodo de pago {{ index + 1}}
+                <strong>
+                    Metodo de pago {{ index + 1}}
+                </strong>
             </h5>
 
             <div class="cont-pm cont-pm-payment-method-moneda">
@@ -78,6 +80,7 @@
                         :value="payment_method.amount"
                         placeholder="Monto"
                         inputmode="decimal"
+                        @paste.prevent
                         @input="set_amount(payment_method, index, $event)"
                     ></b-form-input>
 
@@ -92,13 +95,22 @@
                 </div>
 
                 <p
-                class="text-success"
+                class="text-success m-t-10"
                 v-if="payment_method.discount_amount">
                     Descuento: {{ price(payment_method.discount_amount) }}
+                </p>
+                <p
+                class="text-danger m-t-10"
+                v-if="payment_method.surchage_amount">
+                    Recargo: {{ price(payment_method.surchage_amount) }}
                 </p>
             </b-form-group>
 
 
+            <cuotas
+            @field_change="on_check_field_change(index, $event)"
+            :payment_method="payment_method"></cuotas>
+            
 
             <!-- CAJA -->
             <b-form-group
@@ -123,10 +135,6 @@
             @field_change="on_check_field_change(index, $event)"
             :payment_method="payment_method"></check-info>
 
-            <credit-card
-            @field_change="on_check_field_change(index, $event)"
-            :payment_method="payment_method"></credit-card>
-
 
 
             <slot name="details" :payment_method="payment_method"></slot>
@@ -142,7 +150,7 @@
                 Quitar método de pago
             </b-button>
 
-            <hr>
+            <!-- <hr> -->
         </div>
 
         <b-button
@@ -167,7 +175,7 @@ export default {
     components: {
 
         CheckInfo: () => import('@/components/common/payment-methods/CheckInfo'),
-        CreditCard: () => import('@/components/common/payment-methods/CreditCard'),
+        Cuotas: () => import('@/components/common/payment-methods/Cuotas'),
     },
     props: {
         payment_methods: {
@@ -405,6 +413,12 @@ export default {
     flex-direction: row
     align-items: center
     justify-content: space-between
+
+.payment-method-card
+    padding: 10px
+    border-radius: 7px
+    background: rgba(0,0,0,.1)
+
 
 .cont-pm-payment-method-moneda
 

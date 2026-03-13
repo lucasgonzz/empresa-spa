@@ -36,7 +36,7 @@
             :total_a_repartir="total_vender"
             :total_repartido="total_repartido"
             :sobrante_a_repartir="sobrante_a_repartir"
-            @set_payment_methods_with_discounts="set_payment_methods_with_discounts"
+            @set_modal_payment_methods="set_modal_payment_methods"
             @set_selected_payment_methods="selected_payment_methods_ = $event"
         ></buttons> 
     </b-modal>
@@ -117,7 +117,7 @@ export default {
             return true
         },
 
-        set_payment_methods_with_discounts(value) {
+        set_modal_payment_methods(value) {
             this.payment_methods_with_discounts = value
             this.$store.commit('vender/set_modal_payment_methods', value)
             this.setTotal()
@@ -134,6 +134,8 @@ export default {
                 cotizacion: this.user.dollar,
                 caja_id: 0,
                 amount_cotizado: '',
+
+                cuota_id: 0,
             }
         },
 

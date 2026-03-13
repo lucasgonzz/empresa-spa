@@ -3,9 +3,8 @@ export default {
 
         get_caja_por_defecto(method_id, address_id, moneda_id) {
 
-            let payment_method = this.$store.state.current_acount_payment_method.models.find(p => p.id == method_id)
-
-            console.log('set_caja_por_defecto para el payment_method: '+payment_method.name)
+            // let payment_method = this.$store.state.current_acount_payment_method.models.find(p => p.id == method_id)
+            // console.log('set_caja_por_defecto para el payment_method: '+payment_method.name)
 
             // Obtengo las configuraciones de default_payment_method_caja que coinciden con el metodo y address utilizados
             let default_payment_method_cajas = this.$store.state.default_payment_method_caja.models.filter(default_caja => {

@@ -267,12 +267,16 @@ export default {
 
                 price = this.aplicar_tipos_de_precio(item, price)
 
-                price = this.apicar_descuento_metodo_de_pago(item, price)
+                price = this.aplicar_descuento_metodo_de_pago(item, price)
 
-                price = this.apicar_recargos(item, price)
+                price = this.aplicar_recargos(item, price)
+
+                price = this.check_cuotas(item, price)
 
                 // price = this.redondear(price)
             }
+            
+            // price = this.aplicar_recargos(item, price)
 
             
             price = Number(price)
@@ -410,7 +414,7 @@ export default {
 
             return price
         },
-        apicar_recargos(item, price) {
+        aplicar_recargos(item, price) {
 
             if (
                 this.$store.state.vender.aplicar_recargos_directo_a_items
@@ -438,14 +442,24 @@ export default {
 
             return price
         },
-        apicar_descuento_metodo_de_pago(item, price) {
+        aplicar_descuento_metodo_de_pago(item, price) {
             if (this.current_acount_payment_method_discounts.length 
                 && this.current_acount_payment_method_id) {
 
-                // console.log('apicar_descuento_metodo_de_pago')
+                // console.log('aplicar_descuento_metodo_de_pago')
                 price = this.aplicar_monto_descuento(price, this.current_acount_payment_method_id)
             }
             return price
+        },
+        check_cuotas(item, price) {
+            if (this.current_acount_payment_method_id) {
+
+                price = this.aplicar_cuotas(price, this.current_acount_payment_method_id)
+                console.log('price quedo en '+price)
+            }
+
+            return price
+
         },
         getPriceTypePercetage(price_type, item) {
             let sub_category_from_price_type = price_type.sub_categories.find(_sub_category => {

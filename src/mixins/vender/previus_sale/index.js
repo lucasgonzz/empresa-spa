@@ -26,6 +26,12 @@ export default {
 		seller_id() {
 			return this.$store.state.vender.seller_id
 		},
+		total() {
+			return this.$store.state.vender.total
+		},
+		sub_total() {
+			return this.$store.state.vender.sub_total
+		},
 	},
 	methods: {
 		setPreviusSale(sale) {
@@ -272,6 +278,7 @@ export default {
 				fecha_entrega: this.fecha_entrega,
 				valor_dolar: this.valor_dolar,
 				observations_ocultas: this.$store.state.vender.observations_ocultas,
+				aplicar_recargos_directo_a_items: this.$store.state.vender.aplicar_recargos_directo_a_items,
 			})
 			.then(res => {
 				this.$toast.success('Venta actualizada')

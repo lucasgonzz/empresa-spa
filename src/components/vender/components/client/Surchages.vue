@@ -21,10 +21,22 @@
 				</b-button>
 			</div>
 
+
+			<div
+			v-if="desactivar_recargos">
+				<p>
+					Los precios de los items de esta venta, ya tienen aplicado los recargos de esta venta al momento de crearce.
+				</p>
+				<p>
+					No puede aplicar no quitar recargos 
+				</p>
+			</div>
+
 			<b-form-group>
 				<b-form-checkbox
 				v-for="surchage in surchages"
 				:key="surchage.id"
+				:disabled="desactivar_recargos"
 				:value="surchage.id"
 				v-model="sale_surchages">
 
@@ -56,6 +68,7 @@
 			<b-form-group
 			label="Recargos en los servicios">
 				<b-form-checkbox
+				:disabled="desactivar_recargos"
 				:value="1"
 				:unchecked-value="0"
 				v-model="surchages_in_services">
@@ -68,8 +81,10 @@
 
 			<hr>
 			<b-form-group
+			description="Una vez creada la venta, no se podra cambiar esta opcion."
 			label="Recargos en precio de los articulos">
 				<b-form-checkbox
+				:disabled="desactivar_recargos_a_precios_de_articulos"
 				:value="1"
 				:unchecked-value="0"
 				v-model="aplicar_recargos_directo_a_items">
@@ -79,6 +94,7 @@
 					</span>
 				</b-form-checkbox>
 			</b-form-group>
+
 		</b-card>
 	</div>
 </template>
@@ -93,6 +109,20 @@ export default {
 		Surchages,
 	},
 	computed: {
+		desactivar_recargos() {
+			if (
+				this.index_previus_sales > 0 && this.previus_sale.aplicar_recargos_directo_a_items
+			) {
+				return true
+			}
+			return false
+		},
+		desactivar_recargos_a_precios_de_articulos() {
+			return this.index_previus_sales > 0
+		},
+		previus_sale() {
+			return this.$store.state.vender.previus_sales.previus_sale
+		},
 		surchages() {
 			return this.$store.state.surchage.models
 		},

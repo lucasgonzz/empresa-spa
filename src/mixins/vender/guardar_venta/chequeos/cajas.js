@@ -51,7 +51,9 @@ export default {
 					this.selected_payment_methods.forEach(pay => {
 						if (!pay.caja_id) {
 
-							this.$toast.error('Indique una CAJA para esta '+pay.name)
+							let payment_method = this.$store.state.current_acount_payment_method.models.find(p => p.id == pay.current_acount_payment_method_id)
+							
+							this.$toast.error('Indique una CAJA para el metodo de pago '+payment_method.name)
 							ok = false
 						}
 					})
