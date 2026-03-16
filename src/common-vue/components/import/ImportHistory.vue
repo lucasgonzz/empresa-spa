@@ -1,8 +1,11 @@
 <template>
 <div>
 
-	<articulos-creados
-	:articles="articulos_creados"></articulos-creados>
+	<!-- <articulos-creados
+	:articles="articulos_creados"></articulos-creados> -->
+
+	<chunks
+	:import_history_show_lotes="import_history_show_lotes"></chunks>
 	
 	<b-modal
 	hide-footer
@@ -26,23 +29,31 @@
 
 		
 			<template #cell(created_models)="data">
-				<b-button
+				{{ models[data.index].created_models }}
+				<!-- <b-button
 				@click="modelos_creados(models[data.index])">
 					{{ models[data.index].created_models }}
-				</b-button>
+				</b-button> -->
 			</template>
 		
 			<template #cell(updated_models)="data">
-				<b-button
+				{{ models[data.index].updated_models }}
+				<!-- <b-button
 				@click="modelos_actualizados(models[data.index])">
 					{{ models[data.index].updated_models }}
-				</b-button>
+				</b-button> -->
 			</template>
 
 			<template #cell(link_excel)="data">
 				<b-button
 				variant="success"
 				@click="to_excel(models[data.index])">Excel</b-button>
+			</template>
+
+			<template #cell(chunks)="data">
+				<b-button
+				variant="primary"
+				@click="chunks(models[data.index])">Lotes</b-button>
 			</template>
 
 			<template #cell(columnas)="data">
@@ -68,7 +79,8 @@
 <script>
 export default {
 	components: {
-		ArticulosCreados: () => import('@/common-vue/components/import/ArticulosCreados'),
+		// ArticulosCreados: () => import('@/common-vue/components/import/ArticulosCreados'),
+		Chunks: () => import('@/common-vue/components/import/chunks/Index'),
 	},
 	props: {
 		show_history: Boolean,
@@ -84,6 +96,7 @@ export default {
 			loading: false,
 			models: [],
 			articulos_creados: [],
+			import_history_show_lotes: null
 		}
 	},
 	computed: {
@@ -157,6 +170,10 @@ export default {
 					label: 'Archivo',
 				},
 				{
+					key: 'chunks',
+					label: 'Lotes',
+				},
+				{
 					key: 'columnas',
 				},
 				{
@@ -171,29 +188,33 @@ export default {
 		}
 	},
 	methods: {
+		chunks(model) {
+			this.import_history_show_lotes = model
+			this.$bvModal.show('chunks')
+		},
 		to_excel(model) {
 			let link = process.env.VUE_APP_API_URL+'/imported-files/'+model.excel_url.split('/')[1]
 			window.open(link)
 		},
-		modelos_creados(model) {
-			this.$store.commit('auth/setLoading', true)
-			this.$api.get('import-history/created-models/'+model.id)
-			.then(res => {
-				this.$store.commit('auth/setLoading', false)
-				this.articulos_creados = res.data.model.articulos_creados
-				this.$bvModal.show('articulos-creados')
-			})
-			this.$bvModal.show('articulos-creados')
-		},
-		modelos_actualizados(model) {
-			this.$store.commit('auth/setLoading', true)
-			this.$api.get('import-history/updated-models/'+model.id)
-			.then(res => {
-				this.$store.commit('auth/setLoading', false)
-				this.articulos_creados = res.data.model.articulos_actualizados
-				this.$bvModal.show('articulos-creados')
-			})
-		},
+		// modelos_creados(model) {
+		// 	this.$store.commit('auth/setLoading', true)
+		// 	this.$api.get('import-history/created-models/'+model.id)
+		// 	.then(res => {
+		// 		this.$store.commit('auth/setLoading', false)
+		// 		this.articulos_creados = res.data.model.articulos_creados
+		// 		this.$bvModal.show('articulos-creados')
+		// 	})
+		// 	this.$bvModal.show('articulos-creados')
+		// },
+		// modelos_actualizados(model) {
+		// 	this.$store.commit('auth/setLoading', true)
+		// 	this.$api.get('import-history/updated-models/'+model.id)
+		// 	.then(res => {
+		// 		this.$store.commit('auth/setLoading', false)
+		// 		this.articulos_creados = res.data.model.articulos_actualizados
+		// 		this.$bvModal.show('articulos-creados')
+		// 	})
+		// },
 		getProvider(model) {
 			let provider = this.getModelFromId('provider', model.provider_id)
 			if (typeof provider != 'undefined' && provider !== null && provider.name) {
