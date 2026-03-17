@@ -7,6 +7,14 @@ class="recursos-progress-active"
 id="recursos-progress">
 
 	<div class="j-center align-center">
+
+		<div 
+		class="btn-cerrar c-p"
+		v-if="terminado"
+		@click="ocultar_tarjeta">
+			<i class="icon-cancel"></i>
+		</div>
+
 		<strong
 		class="text-success"
 		v-if="terminado">
@@ -85,6 +93,9 @@ export default {
 	methods: {
 		check_visibilidad() {
 
+			console.log(this.terminado)
+			console.log(this.tarjeta_mostrandose)
+
 			if (this.models_to_download && !this.tarjeta_mostrandose) {
 				
 				this.mostrar_tarjeta()
@@ -148,6 +159,12 @@ export default {
 		// box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px
 		border-radius: 5px
 		cursor: pointer
+
+
+	.btn-cerrar
+		position: absolute
+		top: 2px
+		left: 2px
 
 
 

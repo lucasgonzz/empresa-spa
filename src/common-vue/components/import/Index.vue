@@ -216,7 +216,7 @@
 			<div
 			v-if="model_name == 'article'">
 				
-				<b-form-checkbox
+				<!-- <b-form-checkbox
 				class="radio-option"
 				:value="1"
 				:unchecked-value="0"
@@ -229,9 +229,9 @@
 					class="text-description">
 						Si lo activas, vas a ver un resumen de que articulos se crearon concretamente en esta importacion. IMPORTANTE: Esto puede aumentar el tiempo de procesamiento del archivo.
 					</p>
-				</b-form-checkbox>
+				</b-form-checkbox> -->
 				
-				<b-form-checkbox
+				<!-- <b-form-checkbox
 				class="radio-option"
 				:value="1"
 				:unchecked-value="0"
@@ -244,50 +244,293 @@
 					class="text-description">
 						Si lo activas, vas a ver un resumen de que articulos se actualizaron concretamente en esta importacion. IMPORTANTE: Esto puede aumentar el tiempo de procesamiento del archivo.
 					</p>
-				</b-form-checkbox>
-				
+				</b-form-checkbox> -->
+
+				<!-- 1 -->
+					
 				<b-form-checkbox
 				class="radio-option"
 				:value="1"
 				:unchecked-value="0"
 				size="lg"
-				v-model="no_actualizar_articulos_de_otro_proveedor">
-					<span
-					id="cargar_y_actualizar">
-						No actualizar articulos que ya pertenezcan a otro proveedor
-					</span>
-					<p
-					class="text-description">
-						Si lo activas, por mas que los artículos del excel que subas coincidan con otros artículos ya creados en el sistema, estos últimos deberán pertenecer al proveedor que indiques, solo así se actualizaran.
-					</p>
-					<p
-					class="text-description">
-						Si no lo activas, bastara con que los artículos coincidan y se actualizaran, pertenezcan o no al proveedor que indiques.
-					</p>
+				v-model="permitir_provider_code_repetido">
+					<div class="j-start align-start">
+						
+						<div class="f-columns">
+							
+							<span>
+								Permitir códigos de proveedor repetidos
+							</span>
+							<p
+							class="text-description">
+								Permite que existan varios artículos con el mismo código de proveedor
+							</p>
+						</div>
+
+						<b-button
+						class="m-l-20 m-t-5"
+						size="sm"
+						variant="outline-success"
+						id="permitir_provider_code_repetido">?</b-button>
+
+						<b-popover
+						triggers="click"  
+						placement="right"
+						target="permitir_provider_code_repetido" 
+						>
+							<p>
+								Si está activado, el sistema acepta duplicados: el mismo "codigo de proveedor" puede estar en más de un artículo.
+							</p>
+							<p>
+								Si está desactivado, el "codigo de proveedor" se considera único: si ya existe, el import actualizará el artículo existente en lugar de crear uno nuevo.
+							</p>
+							<p>
+								Cuándo usarlo:
+								Activarlo cuando tu proveedor maneja variantes o líneas distintas con el mismo código, o cuando el Excel viene con duplicados intencionales.
+							</p>			
+						</b-popover>
+					</div>
+
 				</b-form-checkbox>
 				
-				<div
-				v-if="!no_actualizar_articulos_de_otro_proveedor">
+
+				<!-- 2 -->
+				<b-form-checkbox
+				v-if="permitir_provider_code_repetido"
+				class="radio-option"
+				:value="1"
+				:unchecked-value="0"
+				size="lg"
+				v-model="permitir_provider_code_repetido_en_multi_providers">
+					<div class="j-start align-start">
+						
+						<div class="f-columns">
+							<span>
+								Permitir repetir el mismo código de proveedor en distintos proveedores
+							</span>
+							<p
+							class="text-description">
+								Permite que el mismo "codigo de proveedor" exista en proveedores diferentes.
+							</p>
+						</div>
+
+						<b-button
+						id="permitir_provider_code_repetido_en_multi_providers"
+						class="m-l-20 m-t-5"
+						size="sm"
+						variant="outline-success">?</b-button>
+
+						<b-popover
+						triggers="click"  
+						placement="right"
+						target="permitir_provider_code_repetido_en_multi_providers" 
+						>
+							<p>
+								Si está activado, el mismo código puede aparecer en artículos asociados a distintos proveedores.
+							</p>
+							<p>
+								Si está desactivado, se intenta evitar que el mismo "codigo de proveedor" se use en distintos proveedores (si hay coincidencias, el comportamiento dependerá de si habilitaste “Actualizar artículos de otros proveedores”).
+							</p>
+							<p>
+								Cuándo usarlo:
+							</p>
+							<p>
+								Activarlo si el "codigo de proveedor" no es globalmente único y depende del proveedor.
+							</p>			
+							<p>
+								Desactivarlo si querés que el "codigo de proveedor" sea “único a nivel sistema” aunque permitas duplicados dentro de un proveedor.
+							</p>
+						</b-popover>
+					</div>
+				</b-form-checkbox>
+
+
+				<!-- 3 -->
+				<b-form-checkbox
+				class="radio-option"
+				:value="1"
+				:unchecked-value="0"
+				size="lg"
+				v-model="actualizar_articulos_de_otro_proveedor">
+					<div class="j-start align-start">
+						
+						<div class="f-columns">
+							<span
+							id="cargar_y_actualizar">
+								Actualizar artículos de otros proveedores
+							</span>
+							<p
+							class="text-description">
+								Si el import encuentra coincidencias por "codigo de proveedor" en otros proveedores, define si también se actualizan.
+							</p>
+						</div>
+
+						<b-button
+						id="actualizar_articulos_de_otro_proveedor"
+						class="m-l-20 m-t-5"
+						size="sm"
+						variant="outline-success">?</b-button>
+
+						<b-popover
+						triggers="click"  
+						placement="right"
+						target="actualizar_articulos_de_otro_proveedor" 
+						>
+							<p>
+								Cuando el Excel trae un "codigo de proveedor" que ya existe en artículos de otros proveedores:
+							</p>
+							<p>
+								Activado: también se actualizan esos artículos.
+							</p>
+							<p>
+								Desactivado: solo se actualizan los artículos del proveedor del Excel (los de otros proveedores se ignoran).
+							</p>
+							<p>
+								Cuándo usarlo:
+							</p>			
+							<p>
+								Activarlo si querés mantener precios/stock sincronizados entre proveedores para el mismo código.
+							</p>
+							<p>
+								Dejarlo desactivado si cada proveedor se administra de forma independiente.
+							</p>
+						</b-popover>
+					</div>
+				</b-form-checkbox>
+
+				
+				<!-- 4 -->
+				<b-form-checkbox
+				v-if="permitir_provider_code_repetido"
+				class="radio-option"
+				:value="1"
+				:unchecked-value="0"
+				size="lg"
+				v-model="actualizar_por_provider_code">
+					<div class="j-start align-start">
+						
+						<div class="f-columns">
+							<span>
+								Actualizar por código de proveedor
+							</span>
+							<p
+							class="text-description">
+								Define si el import debe actualizar artículos existentes que coincidan por "codigo de proveedor"
+							</p>
+						</div>
+
+						<b-button
+						id="actualizar_por_provider_code"
+						class="m-l-20 m-t-5"
+						size="sm"
+						variant="outline-success">?</b-button>
+
+						<b-popover
+						triggers="click"  
+						placement="right"
+						target="actualizar_por_provider_code" 
+						>
+							<p>
+								Activado (modo sincronización): si existe uno o más artículos con ese "codigo de proveedor", se actualizan todas las coincidencias permitidas por la configuración (por ejemplo, solo del proveedor actual si “Actualizar otros proveedores” está desactivado).
+							</p>
+							<p>
+								Desactivado (modo carga): el import crea nuevos artículos, aunque ya existan artículos con el mismo "codigo de proveedor".
+							</p>
+							<p>
+								Cuándo usarlo:
+							</p>			
+							<p>
+								Desactivado para primera carga (querés crear todo lo que viene en el Excel).
+							</p>
+							<p>
+								Activado para reimportar y actualizar inventario (stock/precio/datos) de artículos existentes.
+							</p>
+						</b-popover>
+					</div>
+				</b-form-checkbox>
+
+						
 					
+				<b-form-checkbox
+				v-if="actualizar_articulos_de_otro_proveedor"
+				class="radio-option"
+				:value="1"
+				:unchecked-value="0"
+				size="lg"
+				v-model="actualizar_proveedor">
+					<div class="j-start align-start">
+						
+						<div class="f-columns">
+							<span>
+								Actualizar el proveedor de los articulos
+							</span>
+							<p
+							class="text-description">
+								Ya que vas a actualizar todos los artículos con los que haya coincidencias (pertenezcan o no al proveedor que indicaste), al activar esta opción vas a cambiar el proveedor de todos los artículos que hayan tenido cambios. 
+							</p>
+							<p
+							class="text-description">
+								Si lo desactivas, los artículos que pertenezcan a otro proveedor van a seguir perteneciendo a ese proveedor.
+							</p>
+						</div>
+					</div>
+				</b-form-checkbox>
+
+
+				<div class="ayudas">
 					<hr>
-					<b-form-checkbox
-					class="radio-option"
-					:value="1"
-					:unchecked-value="0"
-					size="lg"
-					v-model="actualizar_proveedor">
-						<span>
-							Actualizar el proveedor de los articulos
-						</span>
-						<p
-						class="text-description">
-							Ya que vas a actualizar todos los artículos con los que haya coincidencias (pertenezcan o no al proveedor que indicaste), al activar esta opción vas a cambiar el proveedor de todos los artículos que hayan tenido cambios. 
+					<h4>
+						Combinaciones típicas
+					</h4>
+
+					<div class="ayuda">
+						
+						<h6>
+							Primera carga (crear todo):
+						</h6>
+						<p>
+							Permitir códigos repetidos ✅
 						</p>
-						<p
-						class="text-description">
-							Si lo desactivas, los artículos que pertenezcan a otro proveedor van a seguir perteneciendo a ese proveedor.
+						<p>
+							Actualizar por código ❌
+							<span>
+								➡️ Crea artículos nuevos aunque el provider_code se repita.
+							</span>
 						</p>
-					</b-form-checkbox>
+					</div>
+
+					<div class="ayuda">
+						<h6>
+							Sincronización (actualizar existentes):
+						</h6>
+						<p>
+							Permitir códigos repetidos ✅
+						</p>
+						<p>
+							Actualizar por código ✅
+							<span>
+								➡️ Actualiza todos los artículos que coincidan por provider_code (según las reglas de proveedores).
+							</span>
+						</p>
+					</div>
+
+					<div class="ayuda">
+						<h6>
+							Si hay coincidencias en otros proveedores
+						</h6>
+						<p>
+							Actualizar artículos de otros proveedores ❌: solo se actualiza el proveedor actual.
+						</p>
+						<p>
+							Actualizar artículos de otros proveedores ✅: también se actualizan coincidencias en otros proveedores.
+						</p>
+					</div>
+
+
+
+
+
+
 				</div>
 
 			</div>
@@ -424,9 +667,12 @@ export default {
 			columns_: [], 
 			positions_seted: false,
 			create_and_edit: null,
-			no_actualizar_articulos_de_otro_proveedor: 1,
-			registrar_art_cre: 0,
-			registrar_art_act: 0,
+			actualizar_articulos_de_otro_proveedor: 1,
+			registrar_art_cre: 1,
+			registrar_art_act: 1,
+			permitir_provider_code_repetido: 0,
+			permitir_provider_code_repetido_en_multi_providers: 0,
+			actualizar_por_provider_code: 0,
 			actualizar_proveedor: 0,
 			show_history: false,
 			archivo_excel_path: null,
@@ -692,7 +938,7 @@ export default {
 		    // Props extra
 		    this.props_to_send.provider_id = column_position.provider_id
 		    this.create_and_edit = column_position.create_and_edit
-		    this.no_actualizar_articulos_de_otro_proveedor = column_position.no_actualizar_otro_proveedor
+		    this.actualizar_articulos_de_otro_proveedor = column_position.no_actualizar_otro_proveedor
 		},
 
 		// Lo ejecuto con una column_position creada por el usuario
@@ -732,7 +978,7 @@ export default {
 
 		// 	this.props_to_send.provider_id = column_position.provider_id
 		// 	this.create_and_edit = column_position.create_and_edit
-		// 	this.no_actualizar_articulos_de_otro_proveedor = column_position.no_actualizar_otro_proveedor
+		// 	this.actualizar_articulos_de_otro_proveedor = column_position.no_actualizar_otro_proveedor
 		// },
 
 		set_default_columns_positions() {
@@ -791,10 +1037,14 @@ export default {
 				form_data.append('start_row', this.start_row)
 				form_data.append('finish_row', this.finish_row)
 				form_data.append('create_and_edit', this.create_and_edit)
-				form_data.append('no_actualizar_articulos_de_otro_proveedor', this.no_actualizar_articulos_de_otro_proveedor)
-				form_data.append('actualizar_proveedor', this.actualizar_proveedor)
 				form_data.append('registrar_art_cre', this.registrar_art_cre)
 				form_data.append('registrar_art_act', this.registrar_art_act)
+				
+				form_data.append('actualizar_articulos_de_otro_proveedor', this.actualizar_articulos_de_otro_proveedor)
+				form_data.append('actualizar_proveedor', this.actualizar_proveedor)
+				form_data.append('permitir_provider_code_repetido', this.permitir_provider_code_repetido)
+				form_data.append('permitir_provider_code_repetido_en_multi_providers', this.permitir_provider_code_repetido_en_multi_providers)
+				form_data.append('actualizar_por_provider_code', this.actualizar_por_provider_code)
 
 
 				let index = 0
@@ -881,7 +1131,7 @@ export default {
 		        start_row: this.start_row,
 		        provider_id: this.props_to_send.provider_id,
 		        create_and_edit: this.create_and_edit,
-		        no_actualizar_otro_proveedor: this.no_actualizar_articulos_de_otro_proveedor,
+		        no_actualizar_otro_proveedor: this.actualizar_articulos_de_otro_proveedor,
 		    })
 		    .then(res => {
 		        this.$store.commit('column_position/add', res.data.model)
@@ -916,7 +1166,7 @@ export default {
 		// 		  start_row: this.start_row,
 		// 		  provider_id: this.props_to_send.provider_id,
 		// 		  create_and_edit: this.create_and_edit,
-		// 		  no_actualizar_otro_proveedor: this.no_actualizar_articulos_de_otro_proveedor,
+		// 		  no_actualizar_otro_proveedor: this.actualizar_articulos_de_otro_proveedor,
 		// 	})
 		// 	.then(res => {
 		// 		this.$store.commit('column_position/add', res.data.model)
@@ -1042,6 +1292,30 @@ export default {
 
 	.radio-option
 		font-size: 30px
+		margin: 10px 0
+
+
+.radio-option
+	margin: 20px 0
+
+
+
+
+.ayudas
+	h4 
+		font-size: 20px
+		margin: 15px 0 10px
+
+	.ayuda 
+		background: rgba(0,0,0,.1)
+		padding: 7px 
+		border-radius: 5px
+		margin-bottom: 10px
+		h6 
+			font-size: 16px
+			font-weight: bold
+		p 
+			margin-bottom: 5px
 
 .text-description
 	font-size: .6em

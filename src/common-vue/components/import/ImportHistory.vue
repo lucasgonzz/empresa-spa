@@ -57,12 +57,15 @@
 			</template>
 
 			<template #cell(columnas)="data">
-				<p
-				class="m-0"
-				v-if="a"
-				v-for="(a, b) in JSON.parse(models[data.index].columnas)">
-					{{b}}: {{ a }}
-				</p>
+				<div
+				class="cont-columns">
+					<p
+					class="m-0"
+					v-if="a"
+					v-for="(a, b) in JSON.parse(models[data.index].columnas)">
+						{{b}}: {{ a }}
+					</p>
+				</div>
 			</template>
 
 			<template #cell(observations)="data">
@@ -112,6 +115,7 @@ export default {
 					articulos_actualizados: model.articulos_actualizados,
 					articles_match: model.articles_match,
 					filas_procesadas: model.filas_procesadas,
+					articles_repetidos: model.articles_repetidos,
 					error_message: model.error_message,
 					operacion: model.operacion_a_realizar,
 					actualizar_otro_proveedor: model.no_actualizar_otro_proveedor ? 'No' : 'Si',
@@ -138,22 +142,25 @@ export default {
 					label: 'Realizado por',
 				},
 				{
+					key: 'filas_procesadas',
+					label: 'Filas procesadas',
+				},
+				{
 					key: 'created_models',
 					label: 'Creados',
 				},
-				{
-					key: 'updated_models',
-					label: 'Actualizados',
-				},
-
 				{
 					key: 'articles_match',
 					label: 'Macheados',
 				},
 				{
-					key: 'filas_procesadas',
-					label: 'Filas procesadas',
+					key: 'updated_models',
+					label: 'Actualizados',
 				},
+				// {
+				// 	key: 'articles_repetidos',
+				// 	label: 'Repetidos',
+				// },
 				{
 					key: 'provider_id',
 					label: 'Proveedor',
@@ -238,3 +245,8 @@ export default {
 	}
 }
 </script>
+<style lang="sass">
+.cont-columns
+	max-height: 100px
+	overflow-y: scroll
+</style>

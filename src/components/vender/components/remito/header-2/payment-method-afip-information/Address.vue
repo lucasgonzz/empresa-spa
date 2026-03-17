@@ -1,6 +1,6 @@
 <template>
 	<b-input-group
-	v-if="addresses.length > 1"
+	v-if="addresses.length >= 1"
 	prepend="Sucursal">
 		
 		<b-form-select

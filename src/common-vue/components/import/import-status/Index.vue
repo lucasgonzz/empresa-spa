@@ -52,6 +52,11 @@ id="import-status">
 				Articulos macheados: {{ import_status.articles_match }}
 			</p>
 
+			<!-- <p
+			class="text-left">
+				Articulos repetidos: {{ import_status.articles_repetidos }}
+			</p> -->
+
 			
 		</div>
 
