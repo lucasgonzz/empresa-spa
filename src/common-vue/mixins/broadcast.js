@@ -65,6 +65,9 @@ export default {
             this.Echo.channel('global_notification.'+this.owner_id)
             .notification((notification) => {
 
+                console.log('global notificacion:')
+                console.log(notification)
+
                 if (this.$route.name == 'consultora_de_precios') {
                     return 
                 }
