@@ -258,15 +258,15 @@ export default {
 
 			if (confirm(text)) {
 
-				this.$store.commit('auht/setLoading', true)
+				this.$store.commit('auth/setLoading', true)
 				this.$api.delete('/afip-ticket/'+afip_ticket.id)
 				.then(res => {
-					this.$store.commit('auht/setLoading', false)
+					this.$store.commit('auth/setLoading', false)
 					this.$store.commit('sale/add', res.data.sale)
 					this.$toast.success('Factura eliminada')
 				})
 				.catch(err => {
-					this.$store.commit('auht/setLoading', false)
+					this.$store.commit('auth/setLoading', false)
 					this.$toast.error('Error al eliminar factura')
 					console.log(err)
 				})

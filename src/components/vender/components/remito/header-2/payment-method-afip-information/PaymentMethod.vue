@@ -86,13 +86,22 @@ export default {
 			return options
 		},
 		disabled() {
-			if (this.client && !this.omitir_en_cuenta_corriente) {
+			if (
+				this.client 
+				&& (
+					!this.omitir_en_cuenta_corriente
+					|| this.budget
+				)
+			) {
 				return true 
 			}
 			return false
 		},
 		selected_payment_methods() {
 			return this.$store.state.vender.selected_payment_methods
+		},
+		budget() {
+			return this.$store.state.vender.budget
 		},
 		payment_methods_seteados() {
 

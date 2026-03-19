@@ -1,20 +1,15 @@
 <template>
-	<b-col
-	cols="12"
-	:md="col_header_lg"
-	class="col-autocomplete margin-bottom-since-lg">
-		<buscador-articulos
-		@setSelected="setSelected"
-		:model="item_vender"></buscador-articulos>
-		<!-- <search-component
+	<div>
+		<search-component
+		:placeholder="placeholder"
 		id="search-article"
 		model_name="article"
 		@setSelected="setSelected"
 		:limpiar_resultados_de_busqueda="false"
 		:show_selected="false"
-		:model="item_vender"
+		:model="model"
 		:save_if_not_exist="false"
-		:str_limint="str_limint"
+		:str_limint="2"
 		:search_from_api="search_from_api"
 		search_function="search_articles_offline"
 		:props_to_show="props_to_show"
@@ -28,20 +23,20 @@
 				:stock_option.sync="stock_option"></category-options>
 
 			</template>
-		</search-component> -->
+		</search-component>
 
-	</b-col>
+	</div>
 </template>
 <script>
-// import SearchComponent from '@/common-vue/components/search/Index'
-import vender from '@/mixins/vender/index'
-// import vender from '@/mixins/vender'
+import SearchComponent from '@/common-vue/components/search/Index'
 export default {
-	mixins: [vender],
+	props: {
+		model: Object,
+		placeholder: String,
+	},
 	components : {
-		// SearchComponent,
-		BuscadorArticulos: () => import('@/components/common/buscador-articulos/Index'),
-		// CategoryOptions: () => import('@/components/vender/components/remito/header-form/CategoryOptions'),
+		SearchComponent,
+		CategoryOptions: () => import('@/components/vender/components/remito/header-form/CategoryOptions'),
 	},
 	data() {
 		return {
@@ -88,9 +83,6 @@ export default {
 			}
 
 			return col
-		},
-		str_limint() {
-			return this.owner.str_limint_en_vender
 		},
 		articles() {
 			return this.$store.state.article.models
@@ -195,22 +187,8 @@ export default {
 	methods: {
 		setSelected(result) {
 
+			this.$emit('setSelected', result)
 
-			// this.item.name = result.query
-
-			let article = {
-				...result.model,
-				is_article: true,
-			}
-
-			this.set_codigo_input_value(article)
-
-			this.set_item_vender(article)
-
-			if (this.owner.ask_amount_in_vender) {
-				let input = document.getElementById('search-article')
-				input.value = article.name
-			}
 		},
 		set_codigo_input_value(result) {
 			if (typeof result != 'undefined' && result !== null) {

@@ -73,6 +73,10 @@
 
 		</template>
 
+		<template #body>
+			<buscador-articulos></buscador-articulos>
+		</template>
+
 		<template v-slot:table_left_options="props">
 			<buttons :model="props.model" />	
 		</template>
@@ -211,6 +215,8 @@ export default {
 		FinalPriceDescription: () => import('@/components/listado/modals/FinalPriceDescription'),
 
 		FilterHistoryModal: () => import('@/components/listado/modals/filter-history/Index'),
+
+		BuscadorArticulos: () => import('@/components/listado/components/BuscadorArticulos'),
 	}, 
 	beforeRouteLeave(to, from, next) {
 		this.$store.commit('article/setSelected', [])

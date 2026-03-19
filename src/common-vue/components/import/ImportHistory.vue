@@ -68,6 +68,17 @@
 				</div>
 			</template>
 
+			<template #cell(operaciones)="data">
+				<div
+				class="cont-columns">
+					<p
+					class="m-0"
+					v-for="operacion in JSON.parse(models[data.index].operaciones)">
+						{{ operacion.name }}: {{ operacion.value }}
+					</p>
+				</div>
+			</template>
+
 			<template #cell(observations)="data">
 				<b-form-textarea
 				:column="15"
@@ -80,6 +91,7 @@
 </div>
 </template>
 <script>
+import moment from 'moment'
 export default {
 	components: {
 		// ArticulosCreados: () => import('@/common-vue/components/import/ArticulosCreados'),
@@ -106,8 +118,18 @@ export default {
 		items() {
 			let items = []
 			this.models.forEach(model => {
+
+				let diferencia_minutos = ''
+				if (model.terminado_at) {
+
+					let fecha_inicio = moment(model.created_at)
+					let fecha_fin = moment(model.terminado_at)
+
+					diferencia_minutos = fecha_fin.diff(fecha_inicio, 'minutes')+' minutos'
+				}
+
 				items.push({
-					created_at: this.date(model.created_at)+' '+this.hour(model.created_at),
+					created_at: this.date(model.created_at, true),
 					status: model.status,
 					created_models: model.created_models,
 					updated_models: model.updated_models,
@@ -123,6 +145,11 @@ export default {
 					employee_id: model.user_id == model.employee_id ? this.user.name : this.getModelFromId('employee', model.employee_id).name,
 					columnas: model.columnas,
 					link_excel: null,
+					total_chunks: model.total_chunks,
+					processed_chunks: model.processed_chunks,
+					terminado_at: this.date(model.terminado_at, true),
+					operaciones: model.operaciones,
+					duration: diferencia_minutos
 				})
 			})
 			return items 
@@ -132,6 +159,10 @@ export default {
 				{
 					key: 'created_at',
 					label: 'Fecha',
+				},
+				{
+					key: 'terminado_at',
+					label: 'Finalizado',
 				},
 				{
 					key: 'status',
@@ -165,16 +196,32 @@ export default {
 					key: 'provider_id',
 					label: 'Proveedor',
 				},
-				{
-					key: 'operacion',
-				},
-				{
-					key: 'Act. art. de otro proveedor',
-					key: 'actualizar_otro_proveedor',
-				},
+				// {
+				// 	key: 'operacion',
+				// },
+				// {
+				// 	key: 'Act. art. de otro proveedor',
+				// 	key: 'actualizar_otro_proveedor',
+				// },
 				{
 					key: 'link_excel',
 					label: 'Archivo',
+				},
+				{
+					key: 'total_chunks',
+					label: 'Total lotes',
+				},
+				{
+					key: 'processed_chunks',
+					label: 'Lotes procesados',
+				},
+				{
+					key: 'duration',
+					label: 'Duracion',
+				},
+				{
+					key: 'operaciones',
+					label: 'Operaciones',
 				},
 				{
 					key: 'chunks',

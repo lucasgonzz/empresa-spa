@@ -218,6 +218,8 @@ export default {
 			if (model.fecha_entrega) {
 				this.$store.commit('vender/set_fecha_entrega', model.fecha_entrega.split('T')[0])
 			}
+			this.$store.commit('vender/set_omitir_en_cuenta_corriente', model.omitir_en_cuenta_corriente)
+
 			this.$store.commit('vender/setObservations', model.observations)
 			this.$store.commit('vender/setObservationsOcultas', model.observations_ocultas)
 			this.$store.commit('vender/set_omitir_en_cuenta_corriente', model.omitir_en_cuenta_corriente)

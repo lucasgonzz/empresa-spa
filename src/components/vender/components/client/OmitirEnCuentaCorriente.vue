@@ -1,8 +1,7 @@
 <template>
 	<b-card
 	v-if="hasExtencion('ask_save_current_acount') 
-	&& client
-	&& !guardar_como_presupuesto"
+	&& client && !guardar_como_presupuesto"
 	class="m-b-25 m-t-25 b-r-1 shadow">
 
 		<b-form-checkbox
@@ -62,10 +61,10 @@ export default {
 			return this.$store.state.vender.previus_sales.index
 		},
 		disabled() {
-			if (this.budget !== null) {
-			// if (this.previus_sale.id || this.budget !== null) {
-				return true
-			}
+			// if (this.budget !== null) {
+			// // if (this.previus_sale.id || this.budget !== null) {
+			// 	return true
+			// }
 			if (this.index_previus_sales > 0) {
 			// if (this.previus_sale.id || this.budget !== null) {
 				return true

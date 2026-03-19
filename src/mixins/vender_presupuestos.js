@@ -30,6 +30,9 @@ export default {
 		surchages_id() {
 			return this.$store.state.vender.surchages_id
 		},
+		omitir_en_cuenta_corriente() {
+			return this.$store.state.vender.omitir_en_cuenta_corriente
+		},
 		surchages() {
 			return this.$store.state.surchage.models
 		},
@@ -73,6 +76,7 @@ export default {
 				'surchages_in_services'		: this.surchages_in_services,
 				'discounts_in_services'		: this.discounts_in_services,
 				'moneda_id'              	: this.moneda_id,
+				'omitir_en_cuenta_corriente'              	: this.omitir_en_cuenta_corriente,
 
 				// Id 1 es el estado "sin confirmar"
 				'budget_status_id'          : this.budget.budget_status_id,
@@ -113,6 +117,7 @@ export default {
 				'surchages_in_services'		: this.surchages_in_services,
 				'discounts_in_services'		: this.discounts_in_services,
 				'valor_dolar'				: this.valor_dolar,
+				'omitir_en_cuenta_corriente'              	: this.omitir_en_cuenta_corriente,
 
 				// Id 1 es el estado "sin confirmar"
 				'budget_status_id'          : 1, 

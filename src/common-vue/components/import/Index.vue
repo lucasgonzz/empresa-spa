@@ -483,7 +483,9 @@
 						Combinaciones típicas
 					</h4>
 
-					<div class="ayuda">
+					<div 
+					@click="set_cominacion('primer_carga')"
+					class="ayuda">
 						
 						<h6>
 							Primera carga (crear todo):
@@ -494,12 +496,14 @@
 						<p>
 							Actualizar por código ❌
 							<span>
-								➡️ Crea artículos nuevos aunque el provider_code se repita.
+								➡️ Crea artículos nuevos, tantos como codigo de proveedor haya repetidos.
 							</span>
 						</p>
 					</div>
 
-					<div class="ayuda">
+					<div 
+					@click="set_cominacion('actualizacion')"
+					class="ayuda">
 						<h6>
 							Sincronización (actualizar existentes):
 						</h6>
@@ -509,12 +513,14 @@
 						<p>
 							Actualizar por código ✅
 							<span>
-								➡️ Actualiza todos los artículos que coincidan por provider_code (según las reglas de proveedores).
+								➡️ Actualiza todos los artículos que coincidan por codigo de proveedor (según las reglas de proveedores).
 							</span>
 						</p>
 					</div>
 
-					<div class="ayuda">
+					<div 
+					@click="set_cominacion('actualizacion')"
+					class="ayuda">
 						<h6>
 							Si hay coincidencias en otros proveedores
 						</h6>
