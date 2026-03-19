@@ -31,6 +31,8 @@ export default {
 		set_total_devolucion() {
 
 			console.log('mixin set_total_devolucion')
+
+			console.log(this.items)
 			this.total_devolucion = 0
 			
 			this.items.forEach(item => {
@@ -55,10 +57,10 @@ export default {
 				item.unidades_devueltas = unidades_devueltas
 			})
 
-			this.aplicar_descriptions()
-
 			this.aplicar_discounts()
 			this.aplicar_surchages()
+
+			this.aplicar_descriptions()
 
 			console.log('set_total_devolucion: '+this.total_devolucion)
 

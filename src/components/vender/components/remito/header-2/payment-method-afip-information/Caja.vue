@@ -4,7 +4,7 @@
 	v-if="cajas.length && !selected_payment_methods.length"
 	prepend="Caja">
 		<b-form-select 
-		:disabled="!pagado_al_contado"
+		:disabled="disabled"
 		v-model="caja_id" 
 		:options="get_caja_options(vender_payment_method_id)"></b-form-select> 
 	</b-input-group>
@@ -41,11 +41,26 @@ export default {
 		payment_method_id() {
 			return this.$store.state.vender.current_acount_payment_method_id
 		},
+		budget() {
+			return this.$store.state.vender.budget
+		},
 		cajas() {
 			return this.$store.state.caja.models
 		},
-		pagado_al_contado() {
-			return !this.client || this.omitir_en_cuenta_corriente
+		// pagado_al_contado() {
+		// 	return !this.client || this.omitir_en_cuenta_corriente
+		// },
+		disabled() {
+			if (
+				this.client 
+				&& (
+					!this.omitir_en_cuenta_corriente
+					|| this.budget
+				)
+			) {
+				return true 
+			}
+			return false
 		},
 		selected_payment_methods() {
 			return this.$store.state.vender.selected_payment_methods

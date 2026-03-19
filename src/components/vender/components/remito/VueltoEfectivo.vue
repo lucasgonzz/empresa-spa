@@ -1,7 +1,7 @@
 <template>
 	<div
 	class="vuelto-efectivo card m-b-10 d-none d-md-block"
-	v-if="monto_efectivo > 0">
+	v-if="monto_efectivo > 0 && !budget">
 		
 		<h5>
 			Calcular vuelto ({{ price(monto_efectivo) }})
@@ -31,6 +31,9 @@ export default {
 		},
 		client() {
 			return this.$store.state.vender.client 
+		},
+		budget() {
+			return this.$store.state.vender.budget 
 		},
 		omitir_en_cuenta_corriente() {
 			return this.$store.state.vender.omitir_en_cuenta_corriente 
