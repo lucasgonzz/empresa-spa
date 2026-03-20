@@ -12,15 +12,12 @@ export default {
 			type: 'textarea',
 			value: '',
 		},
-		{
+		{ 
 			text: 'Insumos',
 			store: 'article',
 			type: 'search',
-			search_on_models_by: 'name',
-			combine_with: { 
-				store: 'article',
-				prop: 'inactive_models',
-			},
+			search_from_api: true,
+			route_to_search: 'vender/buscar-articulo-por-nombre/1',
 			key: 'articles',
 			belongs_to_many: {
 				model_name: 'article',

@@ -95,6 +95,7 @@
 									
 									<div
 									v-else-if="useSearch(prop)">
+									
 										<search-component
 										class="m-b-15"
 									    :disabled="isDisabled(prop, form_to_filter)"
@@ -578,48 +579,49 @@ export default {
 				this.$toast.error('Error al buscar CUIT')
 			})
 		},
-		        async useAfipData(afip_data) {
-					console.log('afip_Data', afip_data);
-		            let new_model = { ...this.model };
-		            new_model.name = afip_data.nombre
-		            new_model.razon_social = afip_data.razonSocial
-		            new_model.address = afip_data.direccion
-		
-		            if (afip_data.provincia) {
-		                new_model.provincia_id = await this.findOrCreateRelation('provincia', afip_data.provincia);
-		            }
-		            console.log('afip_data', afip_data);
-		            if (afip_data.localidad) {
-		                new_model.location_id = await this.findOrCreateRelation('location', afip_data.localidad);
-		            }
-		
-		            
-					new_model.iva_condition_id = afip_data.condicion_iva == 'RESPONSABLE INSCRIPTO' ? 1 : afip_data.condicion_iva == 'MONOTRIBUTO' ? 2 : 3
-					
-		            this.setModel(new_model, this.model_name, [], false);
-		        },
-		        async findOrCreateRelation(modelName, name) {
-		            if (!name) {
-		                return null;
-		            }
-		
-		            let modelInStore = this.$store.state[modelName].models.find(m => m.name.toLowerCase() == name.toLowerCase());
-		
-		            if (modelInStore) {
-		                return modelInStore.id;
-		            } else {
-		                try {
-		                    const res = await this.$api.post(`/${modelName}`, { name: name });
-		                    this.$store.commit(`${modelName}/add`, res.data.model);
-		                    this.$toast.success(`${this.capitalize(modelName)} "${name}" se ha creado`);
-		                    return res.data.model.id;
-		                } catch (err) {
-		                    console.error(`Error creating ${modelName}:`, err);
-		                    this.$toast.error(`Error al crear ${modelName}`);
-		                    return null;
-		                }
-		            }
-		        },		search_from_api(prop) {
+        async useAfipData(afip_data) {
+			console.log('afip_Data', afip_data);
+            let new_model = { ...this.model };
+            new_model.name = afip_data.nombre
+            new_model.razon_social = afip_data.razonSocial
+            new_model.address = afip_data.direccion
+
+            if (afip_data.provincia) {
+                new_model.provincia_id = await this.findOrCreateRelation('provincia', afip_data.provincia);
+            }
+            console.log('afip_data', afip_data);
+            if (afip_data.localidad) {
+                new_model.location_id = await this.findOrCreateRelation('location', afip_data.localidad);
+            }
+
+            
+			new_model.iva_condition_id = afip_data.condicion_iva == 'RESPONSABLE INSCRIPTO' ? 1 : afip_data.condicion_iva == 'MONOTRIBUTO' ? 2 : 3
+			
+            this.setModel(new_model, this.model_name, [], false);
+        },
+        async findOrCreateRelation(modelName, name) {
+            if (!name) {
+                return null;
+            }
+
+            let modelInStore = this.$store.state[modelName].models.find(m => m.name.toLowerCase() == name.toLowerCase());
+
+            if (modelInStore) {
+                return modelInStore.id;
+            } else {
+                try {
+                    const res = await this.$api.post(`/${modelName}`, { name: name });
+                    this.$store.commit(`${modelName}/add`, res.data.model);
+                    this.$toast.success(`${this.capitalize(modelName)} "${name}" se ha creado`);
+                    return res.data.model.id;
+                } catch (err) {
+                    console.error(`Error creating ${modelName}:`, err);
+                    this.$toast.error(`Error al crear ${modelName}`);
+                    return null;
+                }
+            }
+        },		
+		search_from_api(prop) {
 			if (prop.search_from_api) {
 				return true
 			}

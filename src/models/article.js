@@ -119,6 +119,15 @@ export default {
 			description: 'Codigo del articulo en la balanza',
 		},
 		{
+			text: 'Es un insumo',
+			key: 'es_insumo',
+			type: 'checkbox',
+			if_has_extencion: 'productionV2',
+			description: 'Si lo activa, se apartara este articulo del Listado',
+		},
+
+
+		{
 			group_title: 'Precio',
 		},
 		{
