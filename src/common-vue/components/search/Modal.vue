@@ -348,7 +348,6 @@ export default {
 						this.$toast.error(err)
 					})
 				} else {
-
 					let results = []
 
 					if (this.search_function) {

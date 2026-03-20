@@ -12,7 +12,8 @@ export default {
 			is_title: true,
 			show: true,
 			value: '',
-			search_function: 'articles_to_search_in_recipe',
+			search_from_api: true,
+			route_to_search: 'vender/buscar-articulo-por-nombre/1',
 		},
 		{
 			text: 'Imagen',
