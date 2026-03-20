@@ -14,6 +14,7 @@ export default {
 			value: '',
 			search_from_api: true,
 			route_to_search: 'vender/buscar-articulo-por-nombre/1',
+			// Hot fix de develop para version 1.0.3
 		},
 		{
 			text: 'Imagen',
