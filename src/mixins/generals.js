@@ -128,11 +128,7 @@ export default {
             }
         },
 
-        get_caja_options(payment_method_id = null) {
-
-            // if (!payment_method_id) {
-            //     payment_method_id = this.$store.state.expense.model.current_acount_payment_method_id
-            // }
+        get_caja_options(payment_method_id = null, address_id = null) {
 
             let options = [{
                 value: 0,
@@ -151,6 +147,16 @@ export default {
                     text: name,
                 })
             })
+
+            if (address_id) {
+                cajas_abiertas = cajas_abiertas.filter(caja => {
+                    if (caja.address_id) {
+                        return caja.address_id == address_id
+                    } else {
+                        return true
+                    }
+                })
+            }
 
             return options
         },
@@ -238,7 +244,10 @@ export default {
                 from_pivot 
                 && item.pivot 
                 && item.pivot.price
-                && !this.hasExtencion('lista_de_precios_por_rango_de_cantidad_vendida')
+                && (
+                    !this.hasExtencion('lista_de_precios_por_rango_de_cantidad_vendida')
+                    || item.is_combo
+                )
                 // && (
                 //     !this.hasExtencion('lista_de_precios_por_rango_de_cantidad_vendida')
                 //     || !item.price_type_personalizado_id
@@ -356,6 +365,8 @@ export default {
         },
         aplicar_tipos_de_precio(item, price) {
 
+            console.log('aplicar_tipos_de_precio a: ')
+            console.log(item)
             if (item.is_article) {
 
                 let price_vender_id = null

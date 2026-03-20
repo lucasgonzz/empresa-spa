@@ -348,6 +348,8 @@ export default {
 
             if (caja_por_defecto) {
                 this.$emit('update_caja_id', index, Number(caja_por_defecto.id))
+            } else {
+                this.$emit('update_caja_id', index, 0)
             }
         },
 

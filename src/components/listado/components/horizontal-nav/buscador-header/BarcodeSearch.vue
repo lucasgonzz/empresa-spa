@@ -86,6 +86,9 @@ export default {
 						this.$store.commit('article/setFiltered', [article])
 						this.$store.commit('article/setTotalFilterPages', 1)
 						this.$store.commit('article/setTotalFilterResults', 1)
+
+						this.set_filter_data(article)
+
 						this.set_add_buscador_to_selected(article)
 					}
 
@@ -97,6 +100,14 @@ export default {
 				})
 
 			}
+		},
+		set_filter_data(article) {
+			let filter = {
+			    key 		: 'bar_code',
+			    igual_que 	: article.bar_code,
+			    type 		: 'text',
+			}
+			this.$store.commit('article/addFilter', filter)
 		},
 		set_add_buscador_to_selected(article) {
 			console.log('set_add_buscador_to_selected: ')
