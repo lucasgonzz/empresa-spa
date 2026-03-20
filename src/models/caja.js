@@ -26,7 +26,7 @@ export default {
 			type: 'select',
 			relation_prop_name: 'street',
 			use_store_models: true,
-			if_has_extencion: 'resumen_caja',
+			// if_has_extencion: 'resumen_caja',
 		},
 		{
 			text: 'Empleado',

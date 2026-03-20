@@ -352,21 +352,25 @@ export default {
 				items.push(item_to_add)
 			})
 			if (model.combos) {
+				item = {}
 				model.combos.forEach(combo => {
 					item.id = combo.id
 					item.name = combo.name
 					item.articles = combo.articles
 					item.pivot = combo.pivot
-					// item.price = Number(combo.pivot.price)
+					item.price = Number(combo.pivot.price)
 					item.amount = Number(combo.pivot.amount)
 					item_to_add = {
 						...item,
 						is_combo: true,
 					}
+					console.log('agregando comobo de previus_sale:')
+					console.log(item_to_add)
 					items.push(item_to_add)
 				})
 			}
 			if (model.promocion_vinotecas) {
+				item = {}
 				model.promocion_vinotecas.forEach(promo => {
 					item.id = promo.id
 					item.name = promo.name
@@ -382,6 +386,7 @@ export default {
 				})
 			}
 			if (model.services) {
+				item = {}
 				model.services.forEach(service => {
 					item.id = service.id
 					item.name = service.name
