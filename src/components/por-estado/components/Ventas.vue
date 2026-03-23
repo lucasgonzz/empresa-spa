@@ -1,6 +1,5 @@
 <template>
-	<div
-	v-if="view == 'ventas'">
+	<div>
 	    <confirm
 	    model_name="sale"
 	    :actions="['sale/delete']"
@@ -14,39 +13,28 @@
 		:properties_to_show="properties_to_show"
 		show_models_if_empty
 		:show_previus_days="show_previus_days"
+		change_from_dates_option
 		:show_btn_create="false"
 		:show_modal="false"
 		model_name="sale"> 
-			<template #header>
-				<rango-fechas></rango-fechas>
-			</template>
-			<template #table_right_options="props">
-				<b-button
-				class="m-l-15"
-				variant="success"
-				@click.stop="terminada(props.model)">
-					<i class="icon-check"></i>
-					Terminada
-				</b-button> 
-			</template>
+			
 		</view-component>
 	</div>
 </template>
 <script>
-import marcar_como_terminada from '@/mixins/sale/marcar_como_terminada'
+import sale_por_estado from '@/mixins/sale_por_estado'
 export default {
-	mixins: [marcar_como_terminada],
+	mixins: [sale_por_estado],
 	created() {
-		this.$store.commit('sale/set_modeulo', 'por_entregar')
 		this.$store.commit('sale/setIsSelecteable', false)
 		this.$store.commit('sale/setSelected', [])
 		this.$store.commit('sale/setFromDates', false)
+		
+		this.$store.commit('sale/set_modulo', 'por_estado')
 		this.$store.dispatch('sale/getModels')
 	},
 	components: {
 		CurrentAcounts: () => import('@/components/common/current-acounts/Index'),
-		// SaleModal: () => import('@/components/common/SaleModal'),
-		RangoFechas: () => import('@/components/por-entregar/components/ventas/RangoFechas'),
 		Confirm: () => import('@/common-vue/components/Confirm'),
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 		SaleButtons: () => import('@/components/deposito/components/SaleButtons'),
@@ -95,17 +83,9 @@ export default {
 				},
 			]
 		},
-		sales() {
-			return this.$store.state.sale.models 
-		},
-		sales_to_show() {
-			return this.sales.filter(sale => {
-				return sale.fecha_entrega && !sale.terminada 
-			})
-		},
 		show_previus_days() {
 			return this.$store.state.sale.from_dates
-		}
+		},
 	},
 	methods: {
 		clicked(model) {

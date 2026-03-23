@@ -120,16 +120,25 @@ export default [
 				},
 			},
 			{
+				path: '/por-estado',
+				text: 'Por Estados',
+				name: 'por-estado',
+				component: '@/views/PorEstado',
+				image_url: 'nuevos-nav-icons/por_entregar.png',
+				if_has_extencion: 'ventas_con_estados',
+				params: {
+					view: 'ventas',
+				},
+			},
+			{
 				text: 'Devoluciones',
 				path: '/devoluciones',
 				name: 'devoluciones',
 				component: '@/views/Devoluciones',
 				can: 'devolucion.store', 
 				image_url: 'nuevos-nav-icons/devoluciones.png',
-				// image_url: 'iconos-reportes/devoluciones.png',
 			},
 		]
-		// image_url: 'nav-icons/ventas.png',
 	},
 	{
 		text: 'Ventas',

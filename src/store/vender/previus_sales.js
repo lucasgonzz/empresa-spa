@@ -113,6 +113,7 @@ export default {
 				valor_dolar: info.valor_dolar,
 				observations_ocultas: info.observations_ocultas,
 				aplicar_recargos_directo_a_items: info.aplicar_recargos_directo_a_items,
+				sale_status_id: info.sale_status_id,
 			})
 			.then(res => {
 				commit('sale/add', res.data.model, {root: true})

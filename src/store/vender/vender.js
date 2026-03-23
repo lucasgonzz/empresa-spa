@@ -103,8 +103,13 @@ export default {
 		aplicar_recargos_directo_a_items: 0,
 
 		total_description: [],
+
+		sale_status_id: 0,
 	},
 	mutations: {
+		set_sale_status_id(state, value) {
+			state.sale_status_id = value
+		},
 		set_total_description(state, value) {
 			state.total_description = value
 		},
@@ -418,6 +423,8 @@ export default {
 				incoterms: state.incoterms,
 				observations_ocultas: state.observations_ocultas,
 				aplicar_recargos_directo_a_items: state.aplicar_recargos_directo_a_items,
+				sale_type_id: state.sale_type_id,
+				sale_status_id: state.sale_status_id,
 			})
 			.then(res => {
 				console.log('vendido')

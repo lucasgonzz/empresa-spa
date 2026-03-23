@@ -81,6 +81,11 @@ const routes = [
         component: () => import('@/views/PorEntregar')
     },
     {
+        path: '/por-estado/:view',
+        name: 'por-estado',
+        component: () => import('@/views/PorEstado')
+    },
+    {
         path: '/rutas',
         name: 'rutas',
         component: () => import('@/views/Rutas')

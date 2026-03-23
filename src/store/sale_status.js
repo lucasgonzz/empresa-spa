@@ -4,17 +4,12 @@ axios.defaults.baseURL = process.env.VUE_APP_API_URL
 
 import moment from 'moment'
 import generals from '@/common-vue/mixins/generals'
-import ventas_sin_cobrar from '@/store/sale/ventas_sin_cobrar'
 export default {
 	namespaced: true,
-    modules: {
-    	ventas_sin_cobrar,
-    },
 	state: {
-		modulo: 'ventas',
-
-		model_name: 'sale',
-		from_dates: true,
+		model_name: 'sale_status',
+		route_prefix: '',
+		from_dates: false,
 		is_selecteable: false,
 
 		use_per_page: false,
@@ -28,7 +23,7 @@ export default {
 		until_date: '',
 
 		page: 1,
-		per_page: 25,
+		per_page: 50,
 		total_pages: 1, 
 
 		models: [],
@@ -41,7 +36,9 @@ export default {
 		total_filter_pages: null,
 		total_filter_results: 0,
 		loading_filtered: false,
- 
+		filter_page: 1,
+		total_filter_pages: null,
+
 		delete: null,
 		delete_image_prop: null,
 		delete_image_model: null,
@@ -52,30 +49,15 @@ export default {
 
 		loading: false,
 
-		ventas_cobradas_show_option: 'cobradas-y-no-cobradas',
-		afip_ticket_show_option: 'con-y-sin-factura',
-		payment_method_show_option: 'todos',
-
 		props_to_show: [],
 	},
 	mutations: {
-		set_modulo(state, value) {
-			state.modulo = value 
-		},
 		set_props_to_show(state, value) {
 			state.props_to_show = value
 		},
-		setVentasCobradasShowOption(state, value) {
-			state.ventas_cobradas_show_option = value
+		set_route_prefix(state, value) {
+			state.route_prefix = value 
 		},
-		setAfipTicketShowOption(state, value) {
-			state.afip_ticket_show_option = value
-		},
-		set_payment_method_show_option(state, value) {
-			state.payment_method_show_option = value
-		},
-
-
 		setLoading(state, value) {
 			state.loading = value
 		},
@@ -137,6 +119,9 @@ export default {
 				state.selected.push(value)
 			}
 		},
+		setFiltered(state, value) {
+			state.filtered = value
+		},
 		setFilters(state, value) {
 			state.filters = value
 		},
@@ -151,9 +136,6 @@ export default {
 				state.filters.splice(index, 1, filter_to_add)
 			}
 		},
-		setFiltered(state, value) {
-			state.filtered = value
-		},
 		setIsFiltered(state, value) {
 			state.is_filtered = value
 		},
@@ -164,8 +146,6 @@ export default {
 			if (index == -1) {
 				state.models.unshift(value)
 			} else {
-				console.log('se actualizo esta venta:')
-				console.log(value)
 				state.models.splice(index, 1, value)
 			}
 
@@ -194,7 +174,7 @@ export default {
 				state.filtered.splice(index, 1)
 			}
 
-			if (state.selected_model) {
+			if (state.selected_model && state.selected_model[state.plural_model_name]) {
 				index = state.selected_model[state.plural_model_name].findIndex(model => {
 					return model.id == state.delete.id
 				})
@@ -230,14 +210,26 @@ export default {
 		setFromDate(state, value) {
 			state.from_date = value
 		},
-		setFromDates(state, value) {
-			state.from_dates = value
-		},
 		setUntilDate(state, value) {
 			state.until_date = value
 		},
 		setIsSelecteable(state, value) {
 			state.is_selecteable = value
+		},
+		setFromDates(state, value) {
+			state.from_dates = value
+		},
+		incrementFilterPage(state) {
+			state.filter_page++
+		},
+		setFilterPage(state, value) {
+			state.filter_page = value 
+		},
+		setTotalFilterPages(state, value) {
+			state.total_filter_pages = value 
+		},
+		addFiltered(state, value) {
+			state.filtered = state.filtered.concat(value)
 		},
 		incrementFilterPage(state) {
 			state.filter_page++
@@ -279,13 +271,12 @@ export default {
 					url += '/0'
 				}
 			} 
-			
-			url += '/from-date/'+state.modulo
-			
+			if (state.route_prefix != '' || state.route_prefix === 0) {
+				url += '/'+state.route_prefix
+			} 
 			if (state.from_dates) {
-				url += '/'+state.from_date
-			}
-			
+				url += '/from-date/'+state.from_date
+			} 
 			if (state.until_date != '') {
 				url += '/'+state.until_date
 			}
@@ -315,6 +306,18 @@ export default {
 			})
 			.catch(err => {
 				commit('setLoading', false)
+				console.log(err)
+			})
+		},
+		loadMoreFiltered({state, commit}) {
+			commit('incrementFilterPage')
+			return axios.post(`/api/search/${generals.methods.routeString(state.model_name)}/null/1?page=${state.filter_page}`, {
+				filters: state.filters,
+			})
+			.then(res => {
+				commit('addFiltered', res.data.data)
+			})
+			.catch(err => {
 				console.log(err)
 			})
 		},
