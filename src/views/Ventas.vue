@@ -82,8 +82,9 @@ export default {
 		PaymentPlanModal: () => import('@/components/common/payment-plan/Index'),
 	},
 	created() {
-		this.$store.commit('sale/set_from_depositos', 0)
 		this.$store.commit('sale/setFromDates', true)
+		
+		this.$store.commit('sale/set_modulo', 'ventas')
 		this.$store.dispatch('sale/getModels')
 
 		this.reiniciar_filtros()

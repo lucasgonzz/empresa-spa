@@ -1,7 +1,7 @@
 <template>
 	<div>
 		<b-button
-		class="m-l-10 m-b-10"
+		class="m-l-10"
 		v-if="items.length && can('vender.limpiar_venta')"
 		variant="outline-danger"
 		@click="call_limpiar_vender">

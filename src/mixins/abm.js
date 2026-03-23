@@ -46,6 +46,7 @@ export default {
 						'discount',
 						'surchage',
 						'current_acount_payment_method',
+    					'sale_status',
 						'dealer',
 						'category_price_type_range',
 						'article_price_type_group',

@@ -1,6 +1,6 @@
 <template>
 	<div
-	class="cont-observations">
+	class="cont-observations m-b-10">
 		
 		<b-form-textarea
 		v-model="observations"

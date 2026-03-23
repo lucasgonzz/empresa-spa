@@ -4,13 +4,15 @@
 
 		<!-- <vuelto-efectivo></vuelto-efectivo> -->
 
-		<div class="j-end m-b-10">
+		<div class="j-end w-100 m-b-10">
 			<print></print>
 			<limpiar-vender></limpiar-vender>
 		</div>
 
+		<sale-status></sale-status>
 		<fecha-entrega></fecha-entrega>
 		<observations></observations>
+
 
 		<numero-orden-de-compra></numero-orden-de-compra>
 		<!-- <pago></pago> -->
@@ -21,6 +23,7 @@ export default {
 	components: {
 		Observations: () => import('@/components/vender/components/remito/header-2/buttons/Observations'),
 		FechaEntrega: () => import('@/components/vender/components/remito/header-2/buttons/FechaEntrega'),
+		SaleStatus: () => import('@/components/vender/components/remito/header-2/buttons/SaleStatus'),
 		NumeroOrdenDeCompra: () => import('@/components/vender/components/remito/header-2/buttons/NumeroOrdenDeCompra'),
 		Pago: () => import('@/components/vender/components/remito/header-2/buttons/Pago'),
 		Print: () => import('@/components/vender/components/remito/header-2/buttons/Print'),
@@ -33,10 +36,10 @@ export default {
 .vender-buttons
 	display: flex
 	flex-direction: column 
-	align-items: flex-end
+	align-items: flex-start
 	height: 100%
 	flex-wrap: wrap
-	justify-content: center
+	justify-content: flex-start
 	@media screen and (max-width: 576px)
 		flex-direction: column
 		align-items: flex-end

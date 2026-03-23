@@ -225,6 +225,7 @@ export default {
 			this.$store.commit('vender/set_omitir_en_cuenta_corriente', model.omitir_en_cuenta_corriente)
 			this.$store.commit('vender/set_moneda_id', model.moneda_id)
 			this.$store.commit('vender/set_valor_dolar', model.valor_dolar)
+			this.$store.commit('vender/set_sale_status_id', model.sale_status_id)
 
 			// alert('valor_dolar: '+this.$store.state.vender.valor_dolar)
 
@@ -281,6 +282,7 @@ export default {
 				valor_dolar: this.valor_dolar,
 				observations_ocultas: this.$store.state.vender.observations_ocultas,
 				aplicar_recargos_directo_a_items: this.$store.state.vender.aplicar_recargos_directo_a_items,
+				sale_status_id: this.$store.state.vender.sale_status_id,
 			})
 			.then(res => {
 				this.$toast.success('Venta actualizada')

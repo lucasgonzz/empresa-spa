@@ -26,14 +26,17 @@ export default {
 			type: 'select',
 			relation_prop_name: 'street',
 			use_store_models: true,
-			if_has_extencion: 'resumen_caja',
+			// if_has_extencion: 'resumen_caja',
 		},
 		{
 			text: 'Empleado',
 			key: 'employee_id',
 			type: 'select',
 			use_store_models: true,
-			if_has_extencion: 'resumen_caja',
+			descriptions: [
+				'Complete solo en caso de que quiera asignar esta caja a un unico empleado',
+			]
+			// if_has_extencion: 'resumen_caja',
 		},
 		{
 			text: 'Fecha apertura',

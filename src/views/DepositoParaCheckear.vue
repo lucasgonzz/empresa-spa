@@ -34,7 +34,7 @@ import depositos from '@/mixins/sale/depositos'
 export default {
 	mixins: [previus_sale, depositos],
 	created() {
-		this.$store.commit('sale/set_from_depositos', 1)
+		this.$store.commit('sale/set_modulo', 'deposito')
 		this.$store.commit('sale/setIsSelecteable', false)
 		this.$store.commit('sale/setSelected', [])
 		this.$store.commit('sale/setFromDates', false)
