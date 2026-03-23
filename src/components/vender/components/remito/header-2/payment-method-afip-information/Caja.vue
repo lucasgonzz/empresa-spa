@@ -6,7 +6,7 @@
 		<b-form-select 
 		:disabled="disabled"
 		v-model="caja_id" 
-		:options="get_caja_options(vender_payment_method_id)"></b-form-select> 
+		:options="get_caja_options(vender_payment_method_id, address_id)"></b-form-select> 
 	</b-input-group>
 </template>
 <script>

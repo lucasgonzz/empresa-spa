@@ -51,6 +51,7 @@ export default {
 		{
       		text: 'Seleccionar Metodos de Pago',
 			key: 'payment_methods',
+			not_show: true,
 		},
 		{
       		text: 'Metodos de Pago',
