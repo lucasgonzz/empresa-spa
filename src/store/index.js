@@ -169,6 +169,7 @@ import delivery_day from '@/store/delivery_day'
 import article_pdf_observation from '@/store/article_pdf_observation'
 
 import column_position from '@/store/column_position'
+import table_column_preference from '@/store/table_column_preference'
 
 import price_type_surchage from '@/store/price_type_surchage'
 
@@ -406,6 +407,7 @@ export default new Vuex.Store({
         article_pdf_observation,
 
         column_position,
+        table_column_preference,
 
         price_type_surchage,
 

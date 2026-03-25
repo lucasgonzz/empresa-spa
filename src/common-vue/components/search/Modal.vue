@@ -32,6 +32,14 @@ hide-footer
 				</div>
 			</b-button>
 
+			<b-button
+			class="m-l-10"
+			variant="outline-primary"
+			@click="openColumnsConfig">
+				<i class="icon-eye"></i>
+				<i class="icon-list p-l-10"></i>
+			</b-button>
+
 			<btn-create-model
 			v-if="show_btn_create && prop && (!prop.has_many || (prop.has_many && !prop.has_many.models_from_parent_prop))"
 			@callSearchModal="callSearchModal"
@@ -75,6 +83,7 @@ hide-footer
 				:striped="false"
 				:set_model_on_row_selected="false"
 				:no_hacer_seleccion="no_hacer_seleccion"
+				:is_from_search_modal="true"
 				@onRowSelected="onRowSelected"></table-component>	
 			</div>
 			<div
@@ -102,12 +111,41 @@ hide-footer
 			</span>
 		</div>
 	</div>
+
+	<b-modal
+	:id="modal_id + '-columns-config'"
+	title="Propiedades en resultados de busqueda"
+	size="lg"
+	modal-class="props-to-show-modal"
+	body-class="props-to-show-body"
+	footer-class="props-to-show-footer">
+		<columns-preferences-config-modal
+		:config_rows="search_config_rows"></columns-preferences-config-modal>
+		<template #modal-footer>
+			<b-button
+			variant="secondary"
+			@click="$bvModal.hide(modal_id + '-columns-config')">
+				Cancelar
+			</b-button>
+			<b-button
+			variant="primary"
+			@click="saveSearchColumnsPreference">
+				Listo
+			</b-button>
+		</template>
+	</b-modal>
 </b-modal>
 </template>
 <script>
 import TableComponent from '@/common-vue/components/display/TableComponent'
+import ColumnsPreferencesConfigModal from '@/common-vue/components/view/header/props-to-show/ColumnsPreferencesConfigModal.vue'
+import {
+	default_column_width_for_property,
+	fallback_column_width_px,
+} from '@/common-vue/config/column_preference_defaults'
 export default {
 	components: {
+		ColumnsPreferencesConfigModal,
 		TableComponent,
 		BtnCreateModel: () => import('@/common-vue/components/search/BtnCreateModel'),
 		Pagination: () => import('@/common-vue/components/search/Pagination'),
@@ -137,7 +175,19 @@ export default {
 		},
 		props_to_show: {
 			type: Array,
-			default: null
+			default: null,
+		},
+		search_modal_extra_properties: {
+			type: Array,
+			default() {
+				return []
+			},
+		},
+		search_modal_omit_property_keys: {
+			type: Array,
+			default() {
+				return []
+			},
 		},
 		props_to_filter: {
 			type: Array,
@@ -182,6 +232,8 @@ export default {
 			total_results: 0,
 
 			ya_se_busco: true,
+			search_config_rows: [],
+			search_preference_columns: [],
 		}
 	},
 	watch: {
@@ -191,14 +243,18 @@ export default {
 		},
 		set_first_row_selected() {
 			this.setFirstSelectedRow()
-		}
+		},
+		model_name() {
+			this.loadSearchColumnsPreference()
+		},
+	},
+	async created() {
+		await this.loadSearchColumnsPreference()
 	},
 	computed: {
 		properties() {
-			if (this.props_to_show) {
-				return this.props_to_show 
-			}
-			return this.propsToShowInSearchModal(this.model_name)
+			const base_properties = this.getBaseSearchProperties()
+			return this.applySearchPreferenceToProperties(base_properties)
 		},
 		modal_id() {
 			return this._id+'-search-modal'
@@ -229,6 +285,185 @@ export default {
 		},
 	},
 	methods: {
+		getModelSearchProperties() {
+			let props = this.propsToShowInSearchModal(this.model_name)
+			const omit = this.search_modal_omit_property_keys || []
+			if (omit.length) {
+				props = props.filter(prop => prop && prop.key && !omit.includes(prop.key))
+			}
+			return props
+		},
+		appendSearchModalExtraProperties(base_properties) {
+			const merged = (base_properties || []).filter(prop => prop && prop.key)
+			const key_to_index = {}
+			merged.forEach((prop, index) => {
+				key_to_index[prop.key] = index
+			})
+			;(this.search_modal_extra_properties || []).forEach(extra => {
+				if (!extra || !extra.key) {
+					return
+				}
+				if (typeof key_to_index[extra.key] != 'undefined') {
+					const index = key_to_index[extra.key]
+					merged[index] = { ...merged[index], ...extra }
+				} else {
+					key_to_index[extra.key] = merged.length
+					merged.push(extra)
+				}
+			})
+			return merged
+		},
+		getBaseSearchProperties() {
+			let base
+			if (this.props_to_show) {
+				base = this.props_to_show
+			} else {
+				base = this.getModelSearchProperties()
+			}
+			return this.appendSearchModalExtraProperties(base)
+		},
+		openColumnsConfig() {
+			this.buildSearchConfigRows()
+			this.$bvModal.show(this.modal_id + '-columns-config')
+		},
+		search_modal_default_width(prop) {
+			if (prop.table_width && Number(prop.table_width) > 0) {
+				return Number(prop.table_width)
+			}
+			if (prop.table_width === 'lg') {
+				return 300
+			}
+			return 200
+		},
+		buildSearchConfigRows() {
+			const base_properties = this.getBaseSearchProperties()
+				.filter(prop => prop && prop.key)
+			const defaults = base_properties.map((prop, index) => ({
+				key: prop.key,
+				label: this.propText(prop),
+				visible: typeof prop.not_show == 'undefined' ? true : !prop.not_show,
+				order: index,
+				width: default_column_width_for_property(prop),
+				wrap_content: !!prop.table_wrap_content,
+				fade_when_truncated: typeof prop.table_fade_when_truncated == 'undefined' ? true : !!prop.table_fade_when_truncated,
+			}))
+			this.search_config_rows = this.normalizeSearchPreferenceRows(this.search_preference_columns, defaults)
+		},
+		normalizeSearchPreferenceRows(rows, defaults) {
+			const defaults_by_key = {}
+			defaults.forEach(item => {
+				defaults_by_key[item.key] = item
+			})
+
+			let normalized = []
+			if (rows && rows.length) {
+				normalized = rows
+					.filter(item => item && item.key && defaults_by_key[item.key])
+					.sort((a, b) => Number(a.order) - Number(b.order))
+					.map((item, index) => ({
+						key: item.key,
+						label: defaults_by_key[item.key].label,
+						visible: !!item.visible,
+						order: index,
+						width: item.width || defaults_by_key[item.key].width || fallback_column_width_px(item.key),
+						wrap_content: !!item.wrap_content,
+						fade_when_truncated: typeof item.fade_when_truncated == 'undefined'
+							? defaults_by_key[item.key].fade_when_truncated
+							: !!item.fade_when_truncated,
+					}))
+			}
+
+			defaults.forEach(default_item => {
+				const exists = normalized.find(item => item.key == default_item.key)
+				if (!exists) {
+					normalized.push({
+						...default_item,
+						order: normalized.length,
+					})
+				}
+			})
+
+			return normalized
+		},
+		applySearchPreferenceToProperties(base_properties) {
+			const by_key = {}
+			base_properties.forEach(prop => {
+				if (prop && prop.key) {
+					by_key[prop.key] = prop
+				}
+			})
+
+			const defaults = base_properties
+				.filter(prop => prop && prop.key)
+				.map((prop, index) => ({
+					key: prop.key,
+					label: this.propText(prop),
+					visible: typeof prop.not_show == 'undefined' ? true : !prop.not_show,
+					order: index,
+					width: this.search_modal_default_width(prop),
+					wrap_content: !!prop.table_wrap_content,
+					fade_when_truncated: typeof prop.table_fade_when_truncated == 'undefined' ? true : !!prop.table_fade_when_truncated,
+				}))
+
+			const rows = this.normalizeSearchPreferenceRows(this.search_preference_columns, defaults)
+			return rows
+				.filter(row => row.visible)
+				.sort((a, b) => Number(a.order) - Number(b.order))
+				.map(row => {
+					const base = by_key[row.key]
+					if (!base) {
+						return null
+					}
+					return {
+						...base,
+						not_show: false,
+						table_width: row.width || fallback_column_width_px(row.key),
+						table_wrap_content: !!row.wrap_content,
+						table_fade_when_truncated: !!row.fade_when_truncated,
+					}
+				})
+				.filter(Boolean)
+		},
+		async loadSearchColumnsPreference() {
+			const store_rows = this.tableColumnPreferenceColumnsFromStore(this.model_name, 'search')
+			if (store_rows && store_rows.length) {
+				this.search_preference_columns = store_rows
+				return
+			}
+			try {
+				const res = await this.$api.get('table-column-preference/' + this.model_name + '/search')
+				if (res.data && res.data.model && Array.isArray(res.data.model.columns)) {
+					this.search_preference_columns = res.data.model.columns
+				} else {
+					this.search_preference_columns = []
+				}
+			} catch (error) {
+				this.search_preference_columns = []
+			}
+		},
+		async saveSearchColumnsPreference() {
+			const rows_to_save = this.search_config_rows
+				.filter(row => row.key)
+				.map((row, index) => ({
+					key: row.key,
+					visible: !!row.visible,
+					order: index,
+					width: row.width ? Number(row.width) : null,
+					wrap_content: !!row.wrap_content,
+					fade_when_truncated: !!row.fade_when_truncated,
+				}))
+			try {
+				await this.$api.put('table-column-preference/' + this.model_name + '/search', {
+					columns: rows_to_save,
+				})
+				this.search_preference_columns = rows_to_save
+				this.$toast.success('Configuracion de busqueda guardada')
+				this.$bvModal.hide(this.modal_id + '-columns-config')
+				this.$store.dispatch('table_column_preference/getModels')
+			} catch (error) {
+				this.$toast.error('No se pudo guardar la configuracion de busqueda')
+			}
+		},
 		setCurrentPage(page) {
 			this.current_page = page 
 			this.search(true)
@@ -646,4 +881,16 @@ export default {
 		font-size: 1.2em
 		font-weight: bold
 		margin: 1em 0
+
+.props-to-show-modal .modal-content
+	max-height: 85vh
+.props-to-show-modal .props-to-show-body
+	max-height: calc(85vh - 130px)
+	overflow-y: auto
+.props-to-show-modal .props-to-show-footer
+	position: sticky
+	bottom: 0
+	background: inherit
+	z-index: 2
+	border-top: 1px solid rgba(0,0,0,.1)
 </style>

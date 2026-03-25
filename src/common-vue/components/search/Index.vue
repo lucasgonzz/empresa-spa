@@ -22,6 +22,8 @@
 		:show_btn_create="show_btn_create"
 		:search_from_api="search_from_api"
 		:props_to_show="props_to_show"
+		:search_modal_extra_properties="search_modal_extra_properties"
+		:search_modal_omit_property_keys="search_modal_omit_property_keys"
 		:props_to_filter="props_to_filter"
 		:search_function="search_function"
 		:props_extras="props_extras"
@@ -139,6 +141,18 @@ export default {
 		props_to_show: {
 			type: Array,
 			default: null,
+		},
+		search_modal_extra_properties: {
+			type: Array,
+			default() {
+				return []
+			},
+		},
+		search_modal_omit_property_keys: {
+			type: Array,
+			default() {
+				return []
+			},
 		},
 		show_selected: {
 			type: Boolean,

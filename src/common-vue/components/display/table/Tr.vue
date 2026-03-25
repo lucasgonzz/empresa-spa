@@ -4,10 +4,11 @@
 	:class="rowClass(model)">
 		<td
 		v-for="(prop, index) in props"
-		v-if="showProperty(prop)">
+		v-if="showProperty(prop)"
+		:style="column_style(prop)">
 			<slot :name="prop.key">
 				<div 
-				:class="index == props.length-1 ? 'cont-tr-full-width' : ''"
+				:class="get_cell_classes(prop, index)"
 				class="cont-tr">
 					
 					<pivot-prop
@@ -209,7 +210,32 @@ export default {
 				})
 			}
 			return props 
-		},	
+		},
+		column_style(prop) {
+			if (prop.table_width && Number(prop.table_width) > 0) {
+				return {
+					width: Number(prop.table_width) + 'px',
+					minWidth: Number(prop.table_width) + 'px',
+					maxWidth: Number(prop.table_width) + 'px',
+				}
+			}
+			return {}
+		},
+		get_cell_classes(prop, index) {
+			let classes = []
+			if (index == this.props.length - 1) {
+				classes.push('cont-tr-full-width')
+			}
+			if (prop.table_wrap_content) {
+				classes.push('cell-wrap')
+			} else {
+				classes.push('cell-nowrap')
+				if (prop.table_fade_when_truncated) {
+					classes.push('cell-fade')
+				}
+			}
+			return classes
+		},
 	}
 }
 </script>
@@ -225,6 +251,36 @@ export default {
 	white-space: nowrap // Esto evitará que el texto se rompa en múltiples líneas
 	overflow: hidden // Asegúrate de que el contenido no sobresalga
 	text-overflow: ellipsis // Para agregar puntos suspensivos si el texto es demasiado largo
+	position: relative
+
+.cell-wrap
+	white-space: normal !important
+	overflow: visible !important
+	text-overflow: initial !important
+	word-break: break-word
+	overflow-wrap: anywhere
+	align-items: flex-start
+
+.cell-nowrap
+	white-space: nowrap
+	overflow: hidden
+	text-overflow: ellipsis
+
+.cell-fade::after
+	content: ''
+	position: absolute
+	top: 0
+	right: 0
+	width: 40px
+	height: 100%
+	pointer-events: none
+	@if ($theme == 'dark')
+		background: linear-gradient(to right, rgba(29,29,29,0), rgba(29,29,29,1))
+	@else
+		background: linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,1))
+
+tr:hover .cell-fade::after
+	display: none
 
 .selected-row
 	font-weight: bold 

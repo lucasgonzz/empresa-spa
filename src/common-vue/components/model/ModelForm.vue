@@ -93,31 +93,26 @@
 										</span>
 									</p>
 									
-									<div
-									v-else-if="useSearch(prop)">
-									
-										<search-component
-										class="m-b-15"
-									    :disabled="isDisabled(prop, form_to_filter)"
-										:id="model_name+'-'+prop.key"
-										:search_from_api="search_from_api(prop)"
-										@setSelected="setSelected"
-										:props_to_filter="props_to_filter(prop)"
-										:model_name="modelNameFromRelationKey(prop)"
-										:model="model"
-										show_btn_create
-										:props_to_show="props_to_show(prop)"
-										:str_limint="str_limint(prop)"
-										:model_name_for_search_on_models="model_name"
-										:search_function="prop.search_function_for_model_form"
-										:clear_query="clearQuery(prop)" 
-										:save_if_not_exist="saveIfNotExist(prop)"
-										:auto_select="autoSelect(prop)"
-										:props_to_send_to_api="prop.props_to_send_to_api"
-										:limpiar_resultados_de_busqueda="prop.limpiar_resultados_de_busqueda"
-										:function_props_to_send_to_api="prop.function_props_to_send_to_api"
-										:prop="prop"></search-component>
-									</div>
+									<field-search-input
+									v-else-if="useSearch(prop)"
+									:prop="prop"
+									:model="model"
+									:disabled="isDisabled(prop, form_to_filter)"
+									:model_name="model_name"
+									:relation_model_name="modelNameFromRelationKey(prop)"
+									:search_from_api="search_from_api(prop)"
+									:props_to_filter="props_to_filter(prop)"
+									:props_to_show="props_to_show(prop)"
+									:str_limint="str_limint(prop)"
+									:model_name_for_search_on_models="model_name"
+									:search_function="prop.search_function_for_model_form"
+									:clear_query="clearQuery(prop)"
+									:save_if_not_exist="saveIfNotExist(prop)"
+									:auto_select="autoSelect(prop)"
+									:props_to_send_to_api="prop.props_to_send_to_api"
+									:limpiar_resultados_de_busqueda="prop.limpiar_resultados_de_busqueda"
+									:function_props_to_send_to_api="prop.function_props_to_send_to_api"
+									@set-selected="setSelected"></field-search-input>
 
 
 									<belongs-to-many-checkbox
@@ -170,39 +165,19 @@
 										</b-form-radio>
 									</div>
 
-									<div
-									v-else-if="prop.type == 'text' || prop.type == 'number' || prop.type == 'password'">
-
-										<div class="d-flex w-100">
-											<b-form-input
-											autocomplete="off"
-											:id="model_name+'-'+prop.key"
-									        :disabled="isDisabled(prop, form_to_filter)"
-											:placeholder="'Ingresar '+propText(prop)"
-											:type="prop.type"
-											@keyup.enter="prop.key == 'cuit' ? searchCUIT() : clickEnter(prop)"
-											v-model="model[prop.key]"></b-form-input>
-											<!-- FUNCIONALIDAD DE SEARCH POR CUIT PARA CLIENTES Y PODER CREAR CLIENTE CON LOS DATOS DE CUIT -->
-											<b-button
-											v-if="prop.key == 'cuit'"
-											@click="searchCUIT"
-											class="m-l-5"
-											variant="primary">
-												<i class="icon-search"></i>
-											</b-button>
-
-											<bar-code-scanner
-											class="m-l-5"
-											v-if="prop.use_bar_code_scanner && hasExtencion('bar_code_scanner')"
-											@setBarCode="setBarCode"></bar-code-scanner>
-										</div>
-
-										<div
-										class="m-t-10"
-										v-if="prop.is_price">
-											{{ price(model[prop.key]) }}
-										</div>
-									</div>
+									<field-text-input
+									v-else-if="prop.type == 'text' || prop.type == 'number' || prop.type == 'password'"
+									:model_name="model_name"
+									:prop="prop"
+									:value="model[prop.key]"
+									:disabled="isDisabled(prop, form_to_filter)"
+									:prop_text="propText(prop)"
+									:price_value="price(model[prop.key])"
+									:has_bar_code_scanner="hasExtencion('bar_code_scanner')"
+									@input="$set(model, prop.key, $event)"
+									@search-cuit="searchCUIT"
+									@set-bar-code="setBarCode"
+									@enter="prop.key == 'cuit' ? searchCUIT() : clickEnter(prop)"></field-text-input>
 
 									<b-form-textarea
 									autocomplete="off"
@@ -220,19 +195,16 @@
 									v-model="model[prop.key]"></text-editor>
 
 
-									<div
-									v-else-if="prop.type == 'select'">
-								    	<model-component
-								    	v-if="typeof prop.options == 'undefined'"
-								    	:model_name="modelNameFromRelationKey(prop)"></model-component>
-
-										<b-form-select
-										:id="model_name+'-'+prop.key"
-										@input="setChange(prop)"
-								        :disabled="isDisabled(prop, form_to_filter)"
-										v-model="model[prop.key]"
-										:options="getOptions(prop, model, model_name)"></b-form-select>
-									</div>		
+									<field-select-input
+									v-else-if="prop.type == 'select'"
+									:prop="prop"
+									:model_name="model_name"
+									:relation_model_name="modelNameFromRelationKey(prop)"
+									:value="model[prop.key]"
+									:disabled="isDisabled(prop, form_to_filter)"
+									:options="getOptions(prop, model, model_name)"
+									@input="$set(model, prop.key, $event)"
+									@input-change="setChange(prop)"></field-select-input>		
 
 									<b-form-checkbox
 									:id="model_name+'-'+prop.key"
@@ -308,33 +280,16 @@
 
 
 									<!-- en pivot_parent_model le paso el model padre, para que por ejemplo en el model Sale, en la tabla de articles, tenga acceso al Sale model (el parent_model) -->
-									<div
-									class="m-l-15"
-							    	v-if="prop.belongs_to_many && !prop.belongs_to_many.related_with_all && (!prop.type || prop.type != 'checkbox')">
-										<table-component
-										:pivot_parent_model="model"
-										:loading="false"
-										:models="model[prop.key]"
-										:model_name="prop.store"
-										:pivot="prop.belongs_to_many"
-										:order_list_by="prop.belongs_to_many.order_list_by"
-										:order_list_from_pivot="true"
-										:set_model_on_row_selected="false"
-										show_pivot_created_at
-										:show_btn_edit="false">
-											<template v-slot:table_right_options="slotProps">
-												<slot name="belongs" :model="slotProps.model"></slot>
-
-												<b-button
-												v-if="show_btn_remove_belongs_to_many"
-												class="m-l-15"
-												variant="danger"
-												@click="removeModel(prop, slotProps.model)">
-													<i class="icon-trash"></i>
-												</b-button>
-											</template>  
-										</table-component>	
-									</div>
+									<belongs-to-many-table
+									v-if="prop.belongs_to_many && !prop.belongs_to_many.related_with_all && (!prop.type || prop.type != 'checkbox')"
+									:prop="prop"
+									:model="model"
+									:show_btn_remove_belongs_to_many="show_btn_remove_belongs_to_many"
+									@remove-model="removeModel(prop, $event)">
+										<template #belongs="slotProps">
+											<slot name="belongs" :model="slotProps.model"></slot>
+										</template>
+									</belongs-to-many-table>
 
 									<has-many
 									v-else-if="prop.has_many"
@@ -447,11 +402,9 @@
 	</div>
 </template>
 <script>
-import SearchComponent from '@/common-vue/components/search/Index'
 import HasMany from '@/common-vue/components/model/HasMany'
 import BelongsToManyCheckbox from '@/common-vue/components/model/BelongsToManyCheckbox'
 import Cards from '@/common-vue/components/display/cards/Index'
-import TableComponent from '@/common-vue/components/display/table/Index'
 import Images from '@/common-vue/components/model/images/Index'
 import BtnLoader from '@/common-vue/components/BtnLoader'
 import PaymentMethodsTable from '@/components/expenses/components/PaymentMethodsTable'
@@ -466,18 +419,19 @@ export default {
 		CuitResult: () => import('@/components/common/CuitResult'),
 		ModelComponent: () => import('@/common-vue/components/model/Index'),
 		GoogleGeocoder: () => import('@/common-vue/components/model/google-geocoder/Index'),
-		SearchComponent: () => import('@/common-vue/components/search/Index'),
 		TextEditor: () => import('@/common-vue/components/model/form/TextEditor'),	
+		FieldTextInput: () => import('@/common-vue/components/model/form/FieldTextInput'),
+		FieldSearchInput: () => import('@/common-vue/components/model/form/FieldSearchInput'),
+		FieldSelectInput: () => import('@/common-vue/components/model/form/FieldSelectInput'),
+		BelongsToManyTable: () => import('@/common-vue/components/model/form/BelongsToManyTable'),
 		SelectExpensePaymentMethodsModal: () =>  import('@/components/expenses/modals/select-payment-methods/Index'),
 		PaymentMethodsTable,
 		HasMany,
 		BelongsToManyCheckbox,
 		Cards,
-		TableComponent,
 		Images,
 		BtnLoader,
 		// BtnDelete,
-		BarCodeScanner: () => import('@/common-vue/components/bar-code-scanner/Index'),
 		DatePicker: () => import('@/common-vue/components/model/form/DatePicker'),
 	},
 

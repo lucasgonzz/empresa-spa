@@ -14,14 +14,16 @@
 				<thead>
 					<tr>
 						<th
-						v-for="field in fields">
+						v-for="field in fields"
+						:style="column_style(field)">
 
 							<div class="cont-th">
 								<span v-html="field.label"></span>
 
 								<div
 								v-if="!pivot && usar_filtros && !is_from_has_many"
-								class="cont-filter-buttons">
+								class="cont-filter-buttons"
+								:class="{ 'force-show': filter_is_used(field.key) }">
 									
 									<ordenar
 									class="m-l-10"
@@ -559,6 +561,40 @@ export default {
 		limpiar_show_filters() {
 			this.show_filters = {}; 
 		},
+		filter_is_used(field_key) {
+			let filters = (this.$store.state[this.model_name] && this.$store.state[this.model_name].filters) ? this.$store.state[this.model_name].filters : []
+			let filter = filters.find(_filter => _filter.key === field_key)
+			if (!filter) return false
+
+			// Los flags “activos” son evaluados por Backend solo cuando el valor es efectivo.
+			// Para que la UI coincida, chequeamos los mismos criterios (ej: select/search != 0).
+			let type = filter.type
+
+			if (type === 'select' || type === 'search') {
+				return filter.igual_que !== 0 && filter.igual_que !== '' && filter.igual_que !== null && typeof filter.igual_que !== 'undefined'
+			}
+
+			if (type === 'checkbox') {
+				return typeof filter.checkbox !== 'undefined' && filter.checkbox !== -1
+			}
+
+			if (type === 'date') {
+				return (typeof filter.menor_que !== 'undefined' && filter.menor_que !== '') 
+					|| (typeof filter.igual_que !== 'undefined' && filter.igual_que !== '')
+					|| (typeof filter.mayor_que !== 'undefined' && filter.mayor_que !== '')
+			}
+
+			if (type === 'number') {
+				return (typeof filter.menor_que !== 'undefined' && filter.menor_que !== '') 
+					|| (typeof filter.igual_que !== 'undefined' && filter.igual_que !== '' && filter.igual_que !== null)
+					|| (typeof filter.mayor_que !== 'undefined' && filter.mayor_que !== '')
+			}
+
+			// text / textarea
+			return (typeof filter.que_contenga !== 'undefined' && filter.que_contenga !== '')
+				|| (typeof filter.igual_que !== 'undefined' && filter.igual_que !== '')
+				|| (typeof filter.en_blanco !== 'undefined' && filter.en_blanco)
+		},
 		set_fields(cambiaron_las_props = false) {
 
 			// console.log('set_fields:')
@@ -571,7 +607,8 @@ export default {
 						key: prop.key,
 						label: this.propText(prop, true, true),
 						sortable: prop.sortable,
-						type: prop.type_to_update ? prop.type_to_update : prop.type
+						type: prop.type_to_update ? prop.type_to_update : prop.type,
+						width: prop.table_width ? Number(prop.table_width) : null,
 					})
 				}
 			})
@@ -597,48 +634,38 @@ export default {
 				return
 			}
 
-			// console.log('set_filters de '+this.model_name)
+			let new_filters = this.build_table_filters_from_props(this.props)
 
-			if (this.filtros_ya_iniciados() && !cambiaron_las_props) {
-				// console.log('Filtros ya iniciados')
+			let existing_filters = this.$store.state[this.model_name].filters || []
+			let new_keys = new_filters.map(filter => filter.key).sort()
+			let existing_keys = existing_filters.map(filter => filter.key).sort()
+
+			// Reconstruimos si:
+			// - no hay filtros inicializados
+			// - cambiaron las props (columns)
+			// - cambiaron las keys incluidas
+			let should_rebuild =
+				!existing_filters.length
+				|| cambiaron_las_props
+				|| existing_filters.length !== new_filters.length
+				|| existing_keys.join('|') !== new_keys.join('|')
+
+			if (!should_rebuild) {
 				return
 			}
 
-
-			// console.log('props:')
-			// console.log(this.props)
-
-			let filters = []
-
-			this.props.forEach(prop => {
-				if (typeof prop.no_usar_en_filtros == 'undefined'
-					&& prop.type != 'images'
-					&& prop.type != 'image'
-					&& !prop.belongs_to_many
-					&& !prop.has_many
-				) {
-
-					filters.push({
-						key: prop.key,
-						store: prop.store,
-						options: prop.options,
-						label: this.propText(prop, true, true),
-						type: prop.type_to_update ? prop.type_to_update : prop.type,
-						igual_que: prop.type == 'select' ? 0 : '',
-						checkbox: -1,
-					})
-				} else {
-					// console.log('NO SE AGREGO filtro para '+prop.text)
-				}
-			})
-
-			// console.log('filters:')
-			// console.log(filters)
-			
-			this.$store.commit(this.model_name+'/setFilters', filters)
+			this.$store.commit(this.model_name+'/setFilters', new_filters)
 		},
 		onRowSelected(model) {
 			this.$emit('onRowSelected', model)
+		},
+		column_style(field) {
+			if (field.width && Number(field.width) > 0) {
+				return {
+					minWidth: Number(field.width) + 'px',
+				}
+			}
+			return {}
 		},
 		// scrollLeft() {
 		// 	if (!this.disable_scroll) {
@@ -851,6 +878,12 @@ export default {
 			position: sticky
 			top: 0px
 
+			&:hover
+				.cont-filter-buttons
+					max-width: 220px
+					opacity: 1
+					pointer-events: auto
+
 			.cont-th
 
 				// margin: -1px
@@ -904,6 +937,18 @@ export default {
 			display: flex  
 			flex-direction: row 
 			margin: -3px 0
+			// Colapsamos el ancho por defecto para que el `th` muestre solo el título.
+			// Al hacer hover, expandimos el contenedor para que quepan los botones.
+			max-width: 0
+			opacity: 0
+			overflow: hidden
+			pointer-events: none
+			transition: max-width 0.2s ease, opacity 0.2s ease
+
+		.cont-filter-buttons.force-show
+			max-width: 220px
+			opacity: 1
+			pointer-events: auto
 
 
 
