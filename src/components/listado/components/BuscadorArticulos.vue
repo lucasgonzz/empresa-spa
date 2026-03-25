@@ -4,18 +4,20 @@
 	v-if="hasExtencion('buscar_por_categoria_en_vender')">
 		<b-col
 		cols="12">
-			<buscador-articulos
+			<buscador-articulos-input
 			placeholder="Buscar articulo"
-			@setSelected="setSelected"></buscador-articulos>
+			@setSelected="setSelected"></buscador-articulos-input>
 		</b-col>
 	</b-row>
 </template>
 <script>
 export default {
+	name: 'ListadoBuscadorArticulos',
 	components : {
-		BuscadorArticulos: () => import('@/components/common/buscador-articulos/Index'),
+		BuscadorArticulosInput: () => import('@/components/common/buscador-articulos/Index'),
 	},
 	data() {
+		return {}
 	},
 	computed: {
 	},

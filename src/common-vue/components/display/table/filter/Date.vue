@@ -7,7 +7,7 @@
 			<b-form-input
 			@change="setFilters"
 			@keyup.enter="filtrar"
-			v-model="field.menor_que"
+			v-model="filter.menor_que"
 			type="date"
 			placeholder="Menor que"></b-form-input>
 		</b-form-group>
@@ -17,7 +17,7 @@
 			<b-form-input
 			@keyup.enter="filtrar"
 			@change="setFilters"
-			v-model="field.igual_que"
+			v-model="filter.igual_que"
 			type="date"
 			placeholder="Igual que"></b-form-input>
 		</b-form-group>
@@ -27,7 +27,7 @@
 			<b-form-input
 			@keyup.enter="filtrar"
 			@change="setFilters"
-			v-model="field.mayor_que"
+			v-model="filter.mayor_que"
 			type="date"
 			placeholder="Mayor que"></b-form-input>
 		</b-form-group>
@@ -39,9 +39,15 @@ export default {
 		field: Object,
 		model_name: String,
 	},
+	computed: {
+		filter() {
+			return this.$store.state[this.model_name].filters.find(filter => filter.key == this.field.key)
+		},
+	},
 	methods: {
 		setFilters() {
-			this.$store.commit(this.model_name+'/addFilter', {...this.field})
+			if (!this.filter) return
+			this.$store.commit(this.model_name+'/addFilter', {...this.filter})
 		},
 		filtrar() {
 			this.$emit('filtrar')

@@ -3,15 +3,16 @@
 	class="m-t-15">
 		<div
 		v-if="!loading">
-			<div
-			ref="tabla_contenedor" 
-			style="max-height: 70vh; overflow-y: auto;"
-			:id="'cont-table-results-'+model_name"
-			v-if="models.length">
+		<div
+		ref="tabla_contenedor" 
+		class="table-component-scroll"
+		style="max-height: 70vh; overflow-y: auto;"
+		:id="'cont-table-results-'+model_name"
+		v-if="models.length">
 				<b-table
 				sticky-header="70vh"
 				:dusk="'table-results-'+model_name"
-				class="s-2 b-r-1 animate__animated animate__fadeIn"
+				:class="table_component_table_class"
 				head-variant="dark"
 				responsive
 				:striped="_striped"
@@ -28,88 +29,90 @@
 					</template>
 
 					<template
-					v-for="prop in properties"
-					:style="'border: 6px solid red !important'"
+					v-for="(prop, prop_index) in visible_properties_for_table"
 					v-slot:[toCellName(prop.key)]="data">
-
-						<vue-load-image
-						v-if="isImageProp(prop) && imageUrl(models[data.index], prop)"
-						class="img-fluid">
-							<img
-							slot="image"
-							:src="imageUrl(models[data.index], prop)">
-
-					        <b-spinner
-							slot="preloader"
-					        variant="primary"></b-spinner>
-
-							<div slot="error">Imagen no encontrada</div>
-
-						</vue-load-image>
-
-
 						<div
-						v-else-if="showInput(prop, models[data.index])">
-							<b-form-textarea
-							v-if="prop.type == 'textarea'"
-							:class="getInputSize(prop)"
-							:placeholder="propertyText(models[data.index], prop)"
-							v-model="models[data.index][prop.key]"></b-form-textarea>
-							<b-form-input
-							v-if="prop.type == 'text'"
-							:class="getInputSize(prop)"
-							:placeholder="propertyText(models[data.index], prop)"
-							v-model="models[data.index][prop.key]"></b-form-input>
-							<p
-							v-if="prop.type == 'checkbox'">
+						:class="get_cell_classes(prop, prop_index)"
+						class="cont-tr table-component-cell-inner">
+							<vue-load-image
+							v-if="isImageProp(prop) && imageUrl(models[data.index], prop)"
+							class="img-fluid">
+								<img
+								slot="image"
+								:src="imageUrl(models[data.index], prop)">
+
+						        <b-spinner
+								slot="preloader"
+						        variant="primary"></b-spinner>
+
+								<div slot="error">Imagen no encontrada</div>
+
+							</vue-load-image>
+
+
+							<div
+							v-else-if="showInput(prop, models[data.index])">
+								<b-form-textarea
+								v-if="prop.type == 'textarea'"
+								:class="getInputSize(prop)"
+								:placeholder="propertyText(models[data.index], prop)"
+								v-model="models[data.index][prop.key]"></b-form-textarea>
+								<b-form-input
+								v-if="prop.type == 'text'"
+								:class="getInputSize(prop)"
+								:placeholder="propertyText(models[data.index], prop)"
+								v-model="models[data.index][prop.key]"></b-form-input>
+								<p
+								v-if="prop.type == 'checkbox'">
+									<span
+									v-if="models[data.index][prop.key]">
+										Si
+									</span>
+									<span
+									v-else>
+										No
+									</span>
+								</p>
+							</div>
+							<b-button
+							v-else-if="showProperty(prop, models[data.index]) && prop.button"
+							:variant="prop.button.variant"
+							@click="callMethod(prop, models[data.index])">
+								<i
+								v-if="prop.button.icon"
+								:class="'icon-'+prop.button.icon"></i>
 								<span
-								v-if="models[data.index][prop.key]">
-									Si
+								v-else-if="prop.button.button_text">
+									{{ prop.button.button_text }}
 								</span>
 								<span
 								v-else>
-									No
+									{{ propertyText(models[data.index], prop) }}
 								</span>
-							</p>
+							</b-button>
+							<span
+							:class="width(prop)"
+							v-else>
+								<span
+								v-if="prop.from_pivot">
+									{{ propertyText(models[data.index].pivot, prop) }}
+								</span>
+								<span
+								v-else-if="prop.is_stock"
+	                :class="{
+	                  'text-danger font-weight-bold': parseFloat(propertyText(models[data.index], prop)) <= 0,
+	                  'font-weight-bold': parseFloat(propertyText(models[data.index], prop)) > 0,
+	                  
+	                }"
+	              >
+									{{ propertyText(models[data.index], prop) }}
+								</span>
+								<span
+								v-else>
+									{{ propertyText(models[data.index], prop) }}
+								</span>
+							</span>
 						</div>
-						<b-button
-						v-else-if="showProperty(prop, models[data.index]) && prop.button"
-						:variant="prop.button.variant"
-						@click="callMethod(prop, models[data.index])">
-							<i
-							v-if="prop.button.icon"
-							:class="'icon-'+prop.button.icon"></i>
-							<span
-							v-else-if="prop.button.button_text">
-								{{ prop.button.button_text }}
-							</span>
-							<span
-							v-else>
-								{{ propertyText(models[data.index], prop) }}
-							</span>
-						</b-button>
-						<span
-						:class="width(prop)"
-						v-else>
-							<span
-							v-if="prop.from_pivot">
-								{{ propertyText(models[data.index].pivot, prop) }}
-							</span>
-							<span
-							v-else-if="prop.is_stock"
-                :class="{
-                  'text-danger font-weight-bold': parseFloat(propertyText(models[data.index], prop)) <= 0,
-                  'font-weight-bold': parseFloat(propertyText(models[data.index], prop)) > 0,
-                  
-                }"
-              >
-								{{ propertyText(models[data.index], prop) }}
-							</span>
-							<span
-							v-else>
-								{{ propertyText(models[data.index], prop) }}
-							</span>
-						</span>
 					</template>
 
 					<template #cell(updated_at)="data">
@@ -240,6 +243,7 @@
 <script>
 import VueLoadImage from 'vue-load-image'
 import BtnAddToShow from '@/common-vue/components/BtnAddToShow'
+import { fallback_column_width_px } from '@/common-vue/config/column_preference_defaults'
 
 export default {
 	components: {
@@ -348,6 +352,16 @@ export default {
 		},
 	},
 	computed: {
+		table_component_table_class() {
+			const classes = ['s-2', 'b-r-1', 'table-component-b-table']
+			if (!this.is_from_search_modal) {
+				classes.push('animate__animated', 'animate__fadeIn')
+			}
+			return classes
+		},
+		visible_properties_for_table() {
+			return this.propertiesToShow(this.properties, true)
+		},
 		skeleton_props() {
 			if (this.theme_dark) {
 				return { bordered: false, striped: false }
@@ -394,6 +408,8 @@ export default {
 					key: prop.key,
 					label: this.propText(prop, true, true),
 					sortable: prop.sortable,
+					thStyle: this.column_style(prop),
+					tdStyle: this.column_style(prop),
 				})
 			})
 
@@ -453,12 +469,44 @@ export default {
 			this.$store.dispatch(this.model_name+'/getModels')
 		},
 		width(prop) {
-			return ''
-
 			if (prop.table_width && prop.table_width == 'lg') {
 				return 'width-300'
 			}
 			return ''
+		},
+		column_style(prop) {
+			let width_px = null
+			if (prop.table_width && Number(prop.table_width) > 0) {
+				width_px = Number(prop.table_width)
+			} else if (prop.table_width === 'lg') {
+				width_px = 300
+			} else if (this.is_from_search_modal) {
+				width_px = fallback_column_width_px(prop.key)
+			}
+			if (width_px === null) {
+				return {}
+			}
+			return {
+				width: width_px + 'px',
+				minWidth: width_px + 'px',
+				maxWidth: width_px + 'px',
+			}
+		},
+		get_cell_classes(prop, index) {
+			const classes = []
+			const props_visible = this.visible_properties_for_table
+			if (index == props_visible.length - 1) {
+				classes.push('cont-tr-full-width')
+			}
+			if (prop.table_wrap_content) {
+				classes.push('cell-wrap')
+			} else {
+				classes.push('cell-nowrap')
+				if (prop.table_fade_when_truncated) {
+					classes.push('cell-fade')
+				}
+			}
+			return classes
 		},
 		getColor(model) {
 			if (this.model_name) {
@@ -582,8 +630,64 @@ export default {
 </script>
 <style lang="sass">
 @import '@/sass/_custom.scss'
+
+.table-component-scroll
+	overflow-x: auto
+	width: 100%
+	text-align: left
+
+	.table.table-component-b-table,
+	table.table
+		width: max-content
+		max-width: 100%
+		margin-left: 0
+		margin-right: auto
+
 .table
 	// background: #FFF
+	.table-component-cell-inner.cont-tr
+		width: 100%
+		display: flex
+		flex-direction: row
+		justify-content: flex-start
+		align-items: center
+		white-space: nowrap
+		overflow: hidden
+		text-overflow: ellipsis
+		position: relative
+		&.cell-wrap
+			white-space: normal !important
+			overflow: visible !important
+			text-overflow: initial !important
+			word-break: break-word
+			overflow-wrap: anywhere
+			align-items: flex-start
+		&.cell-nowrap
+			white-space: nowrap
+			overflow: hidden
+			text-overflow: ellipsis
+		&.cell-fade::after
+			content: ''
+			position: absolute
+			top: 0
+			right: 0
+			width: 40px
+			height: 100%
+			pointer-events: none
+			animation: none
+			transition: none
+			@if ($theme == 'dark')
+				background: linear-gradient(to right, rgba(29,29,29,0), rgba(29,29,29,1))
+			@else
+				background: linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,1))
+		&.cont-tr-full-width
+			white-space: nowrap
+	tr:not(.b-table-row-selected):hover .table-component-cell-inner.cell-fade::after
+		display: none
+	// Sin overlay en fila seleccionada: el gradiente semitransparente se superpone al texto y al fondo del td y se ve como rectangulos oscuros.
+	tr.b-table-row-selected .table-component-cell-inner.cell-fade::after
+		content: none
+		display: none !important
 	img
 		width: 100px
 	input, textarea

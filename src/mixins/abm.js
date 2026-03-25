@@ -73,6 +73,7 @@ export default {
 						'address',
 						'provincia',
 						'location',
+						'table_column_preference',
 					]
 				},
 				{

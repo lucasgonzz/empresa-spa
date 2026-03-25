@@ -22,7 +22,7 @@ export default [
         if_has_extencion: 'productionV2',
     },
     
-
+    'table_column_preference',
     'employee',
     'sale_channel',
     'sale_status',

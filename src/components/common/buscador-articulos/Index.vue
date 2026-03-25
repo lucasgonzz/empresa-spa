@@ -12,7 +12,8 @@
 		:str_limint="2"
 		:search_from_api="search_from_api"
 		search_function="search_articles_offline"
-		:props_to_show="props_to_show"
+		:search_modal_extra_properties="search_modal_extra_properties"
+		:search_modal_omit_property_keys="search_modal_omit_property_keys"
 		:props_to_filter="['id', 'name', 'provider_code']"
 		:props_to_send_to_api="props_to_send_to_api"
 		:prop="{text: 'Articulo', key: 'article_id', store: 'article', route_to_search: 'vender/buscar-articulo-por-nombre'}">
@@ -98,84 +99,83 @@ export default {
 		price_types() {
 			return this.$store.state.price_type.models
 		},
-		props_to_show() {
-
-			let props = [
-				{
-					text: 'N°',
-					key: 'num',
-				},
-				{
-					text: 'Imagen',
-					key: 'images',
-					type: 'images',
-				},
-			]
-
-			if (!this.hasExtencion('no_usar_codigos_de_barra')) {
-				props.push({
-					text: 'Cod Barras',
-					key: 'bar_code',
-				})
+		list_price_extensions() {
+			return this.hasExtencion('articulo_margen_de_ganancia_segun_lista_de_precios')
+				|| this.hasExtencion('lista_de_precios_por_categoria')
+		},
+		search_modal_omit_property_keys() {
+			const omit = []
+			if (this.hasExtencion('no_usar_codigos_de_barra')) {
+				omit.push('bar_code')
 			}
+			const has_price_types = this.price_types && this.price_types.length
+			if (
+				has_price_types
+				&& (
+					this.hasExtencion('cambiar_price_type_en_vender')
+					|| this.list_price_extensions
+				)
+			) {
+				omit.push('final_price')
+			}
+			return omit
+		},
+		search_modal_extra_properties() {
+			const extras = []
 
-			props.push({
-				text: 'Cod Prov',
-				key: 'provider_code',
-			})
-			props.push({
-				text: 'Nombre',
-				key: 'name',
+			extras.push({
+				key: 'stock',
+				is_stock: true,
 			})
 
-			props.push({
-				text: 'Proveedor',
-				key: 'provider_id',
-			})
+			const use_final_price_column = !this.search_modal_omit_property_keys.includes('final_price')
 
 			if (
-				!this.hasExtencion('cambiar_price_type_en_vender')
+				use_final_price_column
+				&& !this.hasExtencion('cambiar_price_type_en_vender')
+				&& this.current_acount_payment_method_discounts.length
 			) {
-
-				props.push({
-					text: 'Precio',
-					key: 'final_price',
-					is_price: true,
-					simbolo_moneda_function: 'article_simbolo_moneda',
-				})
-
-				if (this.current_acount_payment_method_discounts.length) {
-
-					this.current_acount_payment_method_discounts.forEach(payment_method => {
-						props.push({
-							text: payment_method.current_acount_payment_method.name,
-							key: 'payment_method_'+payment_method.current_acount_payment_method_id,
-							function: 'get_price_with_discount_in_vender',
-						})
+				this.current_acount_payment_method_discounts.forEach(payment_method => {
+					extras.push({
+						text: payment_method.current_acount_payment_method.name,
+						key: 'payment_method_' + payment_method.current_acount_payment_method_id,
+						function: 'get_price_with_discount_in_vender',
 					})
-				}
+				})
 			}
 
-
-			props.push({
-				text: 'Stock',
-				key: 'stock',
-		        is_stock: true,
-			})
+			const has_price_types = this.price_types && this.price_types.length
+			if (
+				has_price_types
+				&& (
+					this.hasExtencion('cambiar_price_type_en_vender')
+					|| this.list_price_extensions
+				)
+			) {
+				this.price_types.forEach(price_type => {
+					extras.push({
+						text: price_type.name,
+						key: 'price_type_' + price_type.id,
+						function: 'get_price_type_price_in_search_modal',
+					})
+				})
+			}
 
 			if (this.addresses.length) {
-
 				this.addresses.forEach(address => {
-					props.push({
-            			is_stock: true,
+					if (!this.search_modal_can_show_address_column(address)) {
+						return
+					}
+					extras.push({
+						is_stock: true,
 						text: address.street,
-						key: 'address_'+address.id,
+						key: 'address_' + address.id,
 						function: 'get_address_stock_in_vender',
 					})
 				})
 			}
 
-			return props
+			return extras
 		},
 		current_acount_payment_method_discounts() {
 			return this.$store.state.current_acount_payment_method_discount.models
@@ -185,6 +185,16 @@ export default {
 		},
 	},
 	methods: {
+		search_modal_can_show_address_column(address) {
+			if (
+				!this.is_admin
+				&& this.can('article.stock_only_sucursal')
+				&& this.user.address_id != address.id
+			) {
+				return false
+			}
+			return true
+		},
 		setSelected(result) {
 
 			this.$emit('setSelected', result)
