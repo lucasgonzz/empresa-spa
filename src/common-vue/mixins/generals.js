@@ -2,8 +2,16 @@ import moment from 'moment'
 moment.locale('es')
 import numeral from 'numeral'
 import VueScreenSize from 'vue-screen-size'
+import generals_computed from '@/common-vue/mixins/generals/computed'
+import generals_formatting from '@/common-vue/mixins/generals/formatting'
+import generals_model_meta from '@/common-vue/mixins/generals/model-meta'
 export default {
-	mixins: [VueScreenSize.VueScreenSizeMixin],
+	mixins: [
+		VueScreenSize.VueScreenSizeMixin,
+		generals_computed,
+		generals_formatting,
+		generals_model_meta,
+	],
 	computed: {
 		user() {
 			return this.$store.state.auth.user
@@ -476,6 +484,42 @@ export default {
 			}
 			return text 
 		},
+		build_table_filters_from_props(props) {
+			let filters = []
+
+			props.forEach(prop => {
+				// Reglas heredadas del antiguo set_filters() del table.
+				if (typeof prop.no_usar_en_filtros != 'undefined') return
+				if (prop.type == 'images' || prop.type == 'image') return
+				if (prop.belongs_to_many || prop.has_many) return
+
+				let filter_type = prop.type_to_update ? prop.type_to_update : prop.type
+				let label = this.propText(prop, true, true)
+
+				// Contrato base del backend: se evalúa por tipo y por valores != '' (o != 0/-1).
+				// Inicializamos todos los campos para mantener consistencia entre UI y store.
+				filters.push({
+					key: prop.key,
+					store: prop.store,
+					options: prop.options,
+					label: label,
+					text: label, // alias de compatibilidad (Select.vue usa filter.text)
+					type: filter_type,
+					checkbox: -1,
+					en_blanco: 0,
+
+					// Text (text/textarea)
+					que_contenga: '',
+					igual_que: (filter_type == 'select' || filter_type == 'search') ? 0 : '',
+
+					// Number (number)
+					menor_que: '',
+					mayor_que: '',
+				})
+			})
+
+			return filters
+		},
 		saveIfNotExist(prop) {
 			if (prop.save_if_not_exist == false) {
 				return false 
@@ -674,6 +718,19 @@ export default {
 				return to_show
 			}
 			return props
+		},
+		tableColumnPreferenceColumnsFromStore(model_name, preference_type) {
+			const st = this.$store.state.table_column_preference
+			if (!st || !Array.isArray(st.models) || !st.models.length) {
+				return null
+			}
+			const found = st.models.find(model => {
+				return model.model_name === model_name && model.preference_type === preference_type
+			})
+			if (!found || !Array.isArray(found.columns)) {
+				return null
+			}
+			return found.columns
 		},
 		propsToFilterInModal(model_name) {
 			let props = this.modelPropertiesFromName(model_name)

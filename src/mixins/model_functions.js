@@ -196,6 +196,52 @@ export default {
                 return null
             }
         },
+        get_price_type_price_in_search_modal(article, prop) {
+            if (typeof article == 'undefined' || typeof prop == 'undefined' || !prop.key) {
+                return ''
+            }
+            const price_type_id = Number(prop.key.substr('price_type_'.length))
+            if (!article.price_types || !article.price_types.length) {
+                return ''
+            }
+            if (this.hasExtencion('ventas_en_dolares')) {
+                const price_type_monedas = (article.price_type_monedas || []).filter(_price_type => {
+                    return _price_type.price_type_id == price_type_id
+                })
+                if (!price_type_monedas.length) {
+                    return ''
+                }
+                let display = ''
+                const pesos = price_type_monedas.find(p => p.moneda_id == 1)
+                if (
+                    pesos
+                    && typeof pesos.final_price != 'undefined'
+                    && pesos.final_price !== ''
+                    && pesos.final_price !== null
+                    && pesos.final_price != 0
+                ) {
+                    display = this.price(pesos.final_price)
+                }
+                const dolar = price_type_monedas.find(p => p.moneda_id == 2)
+                if (
+                    dolar
+                    && typeof dolar.final_price != 'undefined'
+                    && dolar.final_price !== ''
+                    && dolar.final_price !== null
+                    && dolar.final_price != 0
+                ) {
+                    display += (display ? ' | ' : '') + this.price(dolar.final_price) + ' USD'
+                }
+                return display
+            }
+            const article_price_type = article.price_types.find(_price_type => {
+                return _price_type.id == price_type_id
+            })
+            if (typeof article_price_type == 'undefined') {
+                return ''
+            }
+            return this.price(article_price_type.pivot.final_price)
+        },
         get_hora_from_created_at(model) {
             if (model.created_at) {
                 return moment(model.created_at).format('h:mm')

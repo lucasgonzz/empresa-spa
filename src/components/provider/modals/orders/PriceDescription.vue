@@ -9,7 +9,7 @@ export default {
 	},
 	computed: {
 		price_description() {
-			return this.$store.state.provider_order.model ? JSON.parse(this.$store.state.provider_order.model.price_description) : []
+			return this.$store.state.provider_order.model && this.$store.state.provider_order.model.price_description ? JSON.parse(this.$store.state.provider_order.model.price_description) : []
 		},
 	},
 }
