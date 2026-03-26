@@ -64,6 +64,7 @@ export default {
     			this.loading = false
     			this.$toast.success('Nota de credito registrada')
                 this.$bvModal.hide('current-acounts-nota-credito')
+                this.loadModel(this.from_model_name, this.from_model.id)
                 this.clear()
                 // this.updateClient(this.client)
     		})

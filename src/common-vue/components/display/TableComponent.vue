@@ -502,9 +502,6 @@ export default {
 				classes.push('cell-wrap')
 			} else {
 				classes.push('cell-nowrap')
-				if (prop.table_fade_when_truncated) {
-					classes.push('cell-fade')
-				}
 			}
 			return classes
 		},
@@ -638,8 +635,9 @@ export default {
 
 	.table.table-component-b-table,
 	table.table
-		width: max-content
-		max-width: 100%
+		// width: max-content
+		// max-width: 100%
+		width: 100%
 		margin-left: 0
 		margin-right: auto
 
@@ -666,28 +664,8 @@ export default {
 			white-space: nowrap
 			overflow: hidden
 			text-overflow: ellipsis
-		&.cell-fade::after
-			content: ''
-			position: absolute
-			top: 0
-			right: 0
-			width: 40px
-			height: 100%
-			pointer-events: none
-			animation: none
-			transition: none
-			@if ($theme == 'dark')
-				background: linear-gradient(to right, rgba(29,29,29,0), rgba(29,29,29,1))
-			@else
-				background: linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,1))
 		&.cont-tr-full-width
 			white-space: nowrap
-	tr:not(.b-table-row-selected):hover .table-component-cell-inner.cell-fade::after
-		display: none
-	// Sin overlay en fila seleccionada: el gradiente semitransparente se superpone al texto y al fondo del td y se ve como rectangulos oscuros.
-	tr.b-table-row-selected .table-component-cell-inner.cell-fade::after
-		content: none
-		display: none !important
 	img
 		width: 100px
 	input, textarea

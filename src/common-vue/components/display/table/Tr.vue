@@ -230,9 +230,6 @@ export default {
 				classes.push('cell-wrap')
 			} else {
 				classes.push('cell-nowrap')
-				if (prop.table_fade_when_truncated) {
-					classes.push('cell-fade')
-				}
 			}
 			return classes
 		},
@@ -265,22 +262,6 @@ export default {
 	white-space: nowrap
 	overflow: hidden
 	text-overflow: ellipsis
-
-.cell-fade::after
-	content: ''
-	position: absolute
-	top: 0
-	right: 0
-	width: 40px
-	height: 100%
-	pointer-events: none
-	@if ($theme == 'dark')
-		background: linear-gradient(to right, rgba(29,29,29,0), rgba(29,29,29,1))
-	@else
-		background: linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,1))
-
-tr:hover .cell-fade::after
-	display: none
 
 .selected-row
 	font-weight: bold 

@@ -1,136 +1,18 @@
 <template>
-	<b-dropdown
-	variant="danger"
-	right
-	v-if="sale">
-		<template #button-content>
-			<i class="icon-print"></i>
-			Imprimir	
-		</template>
-
-		<b-dropdown-text>
- 			Tickets
-		</b-dropdown-text>
-
-		<b-dropdown-item
-		@click.stop="ticketPdf(sale)">
-			Ticket venta
-		</b-dropdown-item>
-
-		<b-dropdown-item
-		v-for="afip_ticket in sale.afip_tickets"
-		v-if="afip_ticket.cae"
-		@click.stop="facturaTicketPdf(afip_ticket.id)">
-			Ticket Fac N°{{ afip_ticket.cbte_numero }}
-		</b-dropdown-item>
-
-		<b-dropdown-item>
-			<i 
-			@click="set_ancho_impresora"
-			class="icon-configuration m-r-10"></i>
-
-			<span
-			@click.stop="nuevo_ticket(sale)">
-				Ticket 2.0
-			</span>
-		</b-dropdown-item>
-
-
-        <b-dropdown-divider></b-dropdown-divider>
-		<b-dropdown-text>
-			Hoja A4
-		</b-dropdown-text>
-
-		
-		<b-dropdown-item
-		v-for="afip_ticket in sale.afip_tickets"
-		v-if="afip_ticket.cae"
-		@click.stop="facturaPdf(afip_ticket.id)">
-			Factura N°{{ afip_ticket.cbte_numero }}
-		</b-dropdown-item>
-
-		<b-dropdown-item
-		@click.stop="salePdf(sale.id, 0, 0, 0)">
-			Rem sin precios
-		</b-dropdown-item>
-		<b-dropdown-item
-		@click.stop="salePdf(sale.id, 1, 0, 0)">
-			Rem con precios
-		</b-dropdown-item>
-		<b-dropdown-item
-		v-if="is_admin"
-		@click.stop="salePdf(sale.id, 1, 1, 0)">
-			Rem con costos
-		</b-dropdown-item>
-		<b-dropdown-item
-		@click.stop="salePdf(sale.id, 1, 0, 1)">
-			Rem pecios Netos
-		</b-dropdown-item>
-	</b-dropdown>
+	<sale-print-buttons-common
+	:sale="sale"
+	model_name="sale"></sale-print-buttons-common>
 </template>
+
 <script>
-import print_ticket from '@/mixins/sale/print_ticket/index'
+import SalePrintButtonsCommon from '@/common-vue/sale-print-buttons/Index.vue'
+
 export default {
-	mixins: [print_ticket],
+	components: {
+		SalePrintButtonsCommon,
+	},
 	props: {
 		sale: Object,
 	},
-	computed: {
-		commissions() {
-			return this.$store.state.commission.models
-		},
-	},
-	methods: {
-		set_ancho_impresora() {
-
-			let ancho = this.$cookies.get('ancho_impresora')
-
-			let _prompt = 'Ingrese el ancho en milimetros de su impresora'
-
-			if (ancho != 'null')  {
-				_prompt += '. Valor actual: '+ancho+'mm'
-			}
-
-			
-			let valor = prompt(_prompt)
-
-			if (valor)  {
-
-				this.$cookies.set('ancho_impresora', valor, -1)
-				alert('Ancho de '+this.$cookies.get('ancho_impresora')+'mm configurado correctamente')
-			}
-
-
-		},
-		salePdf(sale_id, with_prices, with_costs, precios_netos) {
-            let link = process.env.VUE_APP_API_URL+'/sale/pdf/'+sale_id+'/'+with_prices+'/'+with_costs+'/'+precios_netos
-            window.open(link) 
-		},
-		nuevo_ticket(sale) {
-			this.printTicket(sale)
-            // let link = process.env.VUE_APP_API_URL+'/sale/ticket-pdf/'+sale_id
-            // window.open(link)
-		},
-		ticketRaw(sale) {
-            let link = process.env.VUE_APP_API_URL+'/sale/ticket-raw/'+sale.id
-            window.open(link)
-		},
-		ticketPdf(sale) {
-            let link = process.env.VUE_APP_API_URL+'/sale/sale-ticket-pdf/'+sale.id
-            window.open(link)
-		},
-		facturaTicketPdf(afip_ticket_id) {
-            let link = process.env.VUE_APP_API_URL+'/sale/afip-ticket-pdf/'+afip_ticket_id
-            window.open(link)
-		},
-		facturaPdf(afip_ticket_id) {
-            let link = process.env.VUE_APP_API_URL+'/sale/afip-ticket-a4-pdf/'+afip_ticket_id
-            window.open(link)
-		},
-	}
 }
 </script>
-<style lang="sass">
-.b-dropdown-text
-	font-weight: bold !important
-</style>

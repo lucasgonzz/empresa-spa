@@ -23,6 +23,8 @@ export default [
     },
     
     'table_column_preference',
+    'pdf_column_option',
+    'pdf_column_profile',
     'employee',
     'sale_channel',
     'sale_status',

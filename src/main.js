@@ -55,29 +55,49 @@ import '@/sass/_custom.scss'
 Vue.use(BootstrapVue)
 
 // Axios
-// Axios
 import axios from 'axios'
+import {
+    is_laravel_validation_payload,
+    show_laravel_validation_toast,
+} from '@/utils/laravel_validation_toast'
 
-// ✅ Creamos la instancia $api
+/**
+ * Interceptor de respuesta: errores de validación Laravel (422) → toast detallado;
+ * el resto mantiene el evento global `errorEvent` (logo loading, modal legacy, etc.).
+ *
+ * @param {import('axios').AxiosError} error Error devuelto por axios.
+ * @returns {Promise<never>}
+ */
+function global_api_error_interceptor(error) {
+    const response = error.response
+    if (!response) {
+        return Promise.reject(error)
+    }
+    const { status, data } = response
+    const skip_validation_toast = Boolean(
+        error.config && error.config.skip_global_validation_toast
+    )
+    const is_validation = is_laravel_validation_payload(status, data)
+
+    if (is_validation && !skip_validation_toast) {
+        show_laravel_validation_toast(data)
+    } else if (response) {
+        document.dispatchEvent(
+            new CustomEvent('errorEvent', { detail: error })
+        )
+    }
+    return Promise.reject(error)
+}
+
+// Instancia usada como Vue.prototype.$api (prefijo /api)
 const apiInstance = axios.create({
     baseURL: process.env.VUE_APP_API_URL + '/api',
     withCredentials: true
 })
 
-// ✅ Interceptor global para $api
 apiInstance.interceptors.response.use(
-    function(response) {
-        return response
-    },
-    function(error) {
-        console.log('ERROR GLOBAL ($api)')
-        if (error.response) {
-            document.dispatchEvent(
-                new CustomEvent('errorEvent', { detail: error })
-            )
-        }
-        return Promise.reject(error)
-    }
+    (response) => response,
+    global_api_error_interceptor
 )
 
 // ✅ Registramos $api como plugin (como hacías vos)
@@ -92,6 +112,17 @@ const axiosInstance = axios.create({
     baseURL: process.env.VUE_APP_API_URL,
     withCredentials: true
 })
+
+axiosInstance.interceptors.response.use(
+    (response) => response,
+    global_api_error_interceptor
+)
+
+// Misma lógica para el axios por defecto (stores que importan `axios` sin `create`)
+axios.interceptors.response.use(
+    (response) => response,
+    global_api_error_interceptor
+)
 
 Vue.use({
   install(Vue) {

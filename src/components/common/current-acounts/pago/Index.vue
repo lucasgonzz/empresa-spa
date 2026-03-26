@@ -174,7 +174,7 @@ export default {
         			this.loading = false
         			this.$toast.success('Pago registrado')
                     this.$bvModal.hide('current-acounts-pago')
-                    this.updateClient(this.from_model)
+                    // this.updateClient(this.from_model)
                     this.loadModel(this.from_model_name, this.from_model.id)
                     this.clear()
 
