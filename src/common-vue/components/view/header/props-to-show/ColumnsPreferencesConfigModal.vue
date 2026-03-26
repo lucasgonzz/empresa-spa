@@ -67,20 +67,13 @@
 
 					<b-form-checkbox
 					v-model="row.visible">
-						{{ row.label }}
+						{{ row.name || row.label }}
 					</b-form-checkbox>
 				</div>
 
 				<div class="ancho-wrapper">
-
 					<b-form-checkbox
-					v-if="!row.wrap_content"
-					v-model="row.fade_when_truncated">
-						Difuminar final
-					</b-form-checkbox>
-
-					<b-form-checkbox
-					class="m-l-15"
+					class="m-l-5"
 					v-model="row.wrap_content">
 						Salto de linea
 					</b-form-checkbox>
@@ -127,7 +120,8 @@ export default {
 			}
 			const query = this.search_query.toLowerCase()
 			return this.config_rows.filter(row => {
-				return (row.label || '').toLowerCase().includes(query)
+				const text = `${row.name || ''} ${row.label || ''}`.toLowerCase()
+				return text.includes(query)
 			})
 		},
 	},

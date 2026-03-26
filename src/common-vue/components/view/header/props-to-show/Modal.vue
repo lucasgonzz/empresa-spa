@@ -102,7 +102,6 @@ export default {
 				order: index,
 				width: row.width ? Number(row.width) : null,
 				wrap_content: !!row.wrap_content,
-				fade_when_truncated: !!row.fade_when_truncated,
 			}))
 
 			this.apply_rows_to_store(rows_to_save)
@@ -142,7 +141,6 @@ export default {
 				order: index,
 				width: default_column_width_for_property(prop),
 				wrap_content: !!prop.table_wrap_content,
-				fade_when_truncated: typeof prop.table_fade_when_truncated == 'undefined' ? true : !!prop.table_fade_when_truncated,
 			}))
 		},
 		normalize_rows(rows, default_rows) {
@@ -161,9 +159,6 @@ export default {
 					order: index,
 					width: item.width || defaults_by_key[item.key].width || fallback_column_width_px(item.key),
 					wrap_content: !!item.wrap_content,
-					fade_when_truncated: typeof item.fade_when_truncated == 'undefined'
-						? defaults_by_key[item.key].fade_when_truncated
-						: !!item.fade_when_truncated,
 				}))
 
 			default_rows.forEach(default_item => {
@@ -192,7 +187,6 @@ export default {
 					not_show: false,
 					table_width: row.width || fallback_column_width_px(row.key),
 					table_wrap_content: !!row.wrap_content,
-					table_fade_when_truncated: !!row.fade_when_truncated,
 				}))
 
 			this.$store.commit(this.model_name + '/set_props_to_show', props_to_show)

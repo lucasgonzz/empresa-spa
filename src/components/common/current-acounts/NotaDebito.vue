@@ -63,6 +63,7 @@ export default {
     			this.$toast.success('Nota de debito registrada')
                 this.$bvModal.hide('current-acounts-nota-debito')
                 this.clear()
+                this.loadModel(this.from_model_name, this.from_model.id)
                 // this.updateClient(this.client)
     		})
     		.catch(err => {

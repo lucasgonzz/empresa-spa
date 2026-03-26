@@ -568,6 +568,7 @@ export default {
 			.then(res => {
 				this.$store.commit(model_name+'/add', res.data.model)
 				this.$toast.success(this.singular(model_name)+' actualizado')
+                console.log('se actualizo '+model_name)
 			})
 			.catch(err => {
 				console.log(err)

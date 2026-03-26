@@ -19,7 +19,7 @@ export default {
 			key: 'columns',
 			type: 'textarea',
 			value: '[]',
-			description: 'Array JSON con key, visible, order, width, wrap_content, fade_when_truncated',
+			description: 'Array JSON con key, visible, order, width, wrap_content',
 		},
 	],
 	singular_model_name_spanish: 'Preferencia de columnas',

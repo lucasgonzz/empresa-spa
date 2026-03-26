@@ -170,6 +170,8 @@ import article_pdf_observation from '@/store/article_pdf_observation'
 
 import column_position from '@/store/column_position'
 import table_column_preference from '@/store/table_column_preference'
+import pdf_column_option from '@/store/pdf_column_option'
+import pdf_column_profile from '@/store/pdf_column_profile'
 
 import price_type_surchage from '@/store/price_type_surchage'
 
@@ -408,6 +410,8 @@ export default new Vuex.Store({
 
         column_position,
         table_column_preference,
+        pdf_column_option,
+        pdf_column_profile,
 
         price_type_surchage,
 

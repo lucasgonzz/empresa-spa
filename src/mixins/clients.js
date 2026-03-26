@@ -12,6 +12,7 @@ export default {
             this.$api.get('client/'+client.id)
             .then(res => {
                 this.$store.commit('client/add', res.data.model)
+                console.log('se actualizo cliente')
             })
             .catch(err => {
                 console.log(err)

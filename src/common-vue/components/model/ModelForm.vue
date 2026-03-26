@@ -298,7 +298,7 @@
 									:parent_model="model"
 									:parent_model_name="model_name"
 									:prop="prop">
-										
+										sdf
 										<template
 											v-for="prop in modelPropertiesFromName(prop.has_many.model_name)"
 											v-slot:[get_slot_has_many(prop)]="props"

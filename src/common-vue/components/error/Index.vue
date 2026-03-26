@@ -57,6 +57,18 @@ export default {
         	console.log('code')
         	console.log(code)
 
+			// Validación Laravel (422): el interceptor en main.js ya mostró el toast con todos los campos
+			if (
+				code === 422 &&
+				error.response.data &&
+				error.response.data.errors &&
+				typeof error.response.data.errors === 'object' &&
+				!Array.isArray(error.response.data.errors)
+			) {
+				this.$store.commit('auth/setLoading', false)
+				return
+			}
+
 			if (error.response.data.message) {
 
 				if (code >= 500) {

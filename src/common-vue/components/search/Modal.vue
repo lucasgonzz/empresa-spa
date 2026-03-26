@@ -345,7 +345,6 @@ export default {
 				order: index,
 				width: default_column_width_for_property(prop),
 				wrap_content: !!prop.table_wrap_content,
-				fade_when_truncated: typeof prop.table_fade_when_truncated == 'undefined' ? true : !!prop.table_fade_when_truncated,
 			}))
 			this.search_config_rows = this.normalizeSearchPreferenceRows(this.search_preference_columns, defaults)
 		},
@@ -367,9 +366,6 @@ export default {
 						order: index,
 						width: item.width || defaults_by_key[item.key].width || fallback_column_width_px(item.key),
 						wrap_content: !!item.wrap_content,
-						fade_when_truncated: typeof item.fade_when_truncated == 'undefined'
-							? defaults_by_key[item.key].fade_when_truncated
-							: !!item.fade_when_truncated,
 					}))
 			}
 
@@ -402,7 +398,6 @@ export default {
 					order: index,
 					width: this.search_modal_default_width(prop),
 					wrap_content: !!prop.table_wrap_content,
-					fade_when_truncated: typeof prop.table_fade_when_truncated == 'undefined' ? true : !!prop.table_fade_when_truncated,
 				}))
 
 			const rows = this.normalizeSearchPreferenceRows(this.search_preference_columns, defaults)
@@ -419,7 +414,6 @@ export default {
 						not_show: false,
 						table_width: row.width || fallback_column_width_px(row.key),
 						table_wrap_content: !!row.wrap_content,
-						table_fade_when_truncated: !!row.fade_when_truncated,
 					}
 				})
 				.filter(Boolean)
@@ -450,7 +444,6 @@ export default {
 					order: index,
 					width: row.width ? Number(row.width) : null,
 					wrap_content: !!row.wrap_content,
-					fade_when_truncated: !!row.fade_when_truncated,
 				}))
 			try {
 				await this.$api.put('table-column-preference/' + this.model_name + '/search', {
