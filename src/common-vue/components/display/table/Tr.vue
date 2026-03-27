@@ -10,7 +10,7 @@
 				<div 
 				:class="get_cell_classes(prop, index)"
 				class="cont-tr">
-					
+				
 					<pivot-prop
 					v-if="prop.is_pivot_prop"
 					:cont_table_id="cont_table_id"
@@ -81,6 +81,11 @@
 						</span>
 					</b-button>
 					
+
+					<template
+					v-else-if="prop.is_relation_column">
+						{{ relationColumnValue(model, prop) }}
+					</template>
 
 					<template
 					v-else>
@@ -210,6 +215,29 @@ export default {
 				})
 			}
 			return props 
+		},
+		/**
+		 * Obtiene el valor de pivote para una columna dinámica de relación.
+		 *
+		 * @param {Object} model - El modelo de la fila (ej: article)
+		 * @param {Object} prop - La prop de columna generada dinámicamente, con:
+		 *   - relation {string}: nombre de la relación en el model (ej: 'addresses')
+		 *   - related_model_id {number}: id del ítem relacionado que corresponde a esta columna
+		 *   - pivot_value_prop {string}: prop del objeto pivot a mostrar (ej: 'amount')
+		 * @returns {string|number} El valor del pivot, o cadena vacía si no aplica
+		 */
+		relationColumnValue(model, prop) {
+			// Obtener los ítems de la relación del model
+			let related_items = model[prop.relation]
+			if (!related_items || !related_items.length) {
+				return ''
+			}
+			// Buscar el ítem que corresponde a la columna por su id
+			let related = related_items.find(item => item.id == prop.related_model_id)
+			if (!related || !related.pivot) {
+				return ''
+			}
+			return related.pivot[prop.pivot_value_prop]
 		},
 		column_style(prop) {
 			if (prop.table_width && Number(prop.table_width) > 0) {

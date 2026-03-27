@@ -4,7 +4,7 @@
 	class="p-l-5">
 
 		<btn-factura
-		class="m-l-5"
+		class="m-l-5 m-b-10"
 		v-for="afip_ticket in sale.afip_tickets"
 		:print_url="print_url(afip_ticket)"
 		:afip_ticket="afip_ticket"></btn-factura>

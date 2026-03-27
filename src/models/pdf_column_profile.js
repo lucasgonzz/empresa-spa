@@ -86,13 +86,19 @@ export default {
 			type: 'number',
 			value: 277,
 		},
-		{
-			text: 'Margen por lado (mm)',
-			key: 'margin_mm',
-			type: 'number',
-			value: 5,
-		},
-		// {
+	{
+		text: 'Margen por lado (mm)',
+		key: 'margin_mm',
+		type: 'number',
+		value: 5,
+	},
+	{
+		text: 'Pie de página',
+		key: 'footer_text',
+		type: 'textarea',
+		value: '',
+	},
+	// {
 		// 	text: 'Columnas (JSON)',
 		// 	key: 'columns',
 		// 	type: 'textarea',

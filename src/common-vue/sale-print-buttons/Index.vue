@@ -39,6 +39,7 @@
 		:sheet_type_id.sync="sheet_type_id"
 		:is_afip_ticket.sync="is_afip_ticket"
 		:show_totals_on_each_page.sync="show_totals_on_each_page"
+		:footer_text.sync="footer_text"
 		:sheet_type_options="sheet_type_options"
 		:remaining_width_mm="remaining_width_mm"
 		@save_profile="save_pdf_profile"></modal-pdf-columns-profile>
@@ -112,11 +113,15 @@ export default {
 			 * Flag editable para perfil AFIP.
 			 */
 			is_afip_ticket: false,
-			/**
-			 * Flag editable para mostrar totales en cada hoja.
-			 */
-			show_totals_on_each_page: false,
-		}
+		/**
+		 * Flag editable para mostrar totales en cada hoja.
+		 */
+		show_totals_on_each_page: false,
+		/**
+		 * Texto editable del pie de página del perfil seleccionado.
+		 */
+		footer_text: '',
+	}
 	},
 	async created() {
 		await this.load_pdf_column_options_catalog()
@@ -389,9 +394,13 @@ export default {
 				this.margin_mm = Number(profile.margin_mm || 5)
 				this.profile_name = profile.name || ''
 				this.sheet_type_id = profile.sheet_type_id || (profile.sheet_type ? profile.sheet_type.id : null)
-				this.is_afip_ticket = this.normalize_boolean(profile.is_afip_ticket)
-				this.show_totals_on_each_page = this.normalize_boolean(profile.show_totals_on_each_page)
-			}
+			this.is_afip_ticket = this.normalize_boolean(profile.is_afip_ticket)
+			this.show_totals_on_each_page = this.normalize_boolean(profile.show_totals_on_each_page)
+			/**
+			 * Texto del pie de página; vacío si el perfil no tiene uno configurado.
+			 */
+			this.footer_text = profile.footer_text || ''
+		}
 		},
 		/**
 		 * Crea perfil nuevo base en A4 no fiscal.
@@ -417,18 +426,22 @@ export default {
 				},
 			}))
 			try {
-				const res = await this.$api.post('pdf-column-profiles', {
-					model_name: this.model_name,
-					name,
-					is_default: this.model_profiles.length == 0,
-					paper_width_mm: 297,
-					printable_width_mm: 277,
-					margin_mm: 5,
-					sheet_type_id: this.sheet_type_options.length ? this.sheet_type_options[0].value : null,
-					is_afip_ticket: false,
-					show_totals_on_each_page: false,
-					pdf_column_options,
-				})
+			const res = await this.$api.post('pdf-column-profiles', {
+				model_name: this.model_name,
+				name,
+				is_default: this.model_profiles.length == 0,
+				paper_width_mm: 297,
+				printable_width_mm: 277,
+				margin_mm: 5,
+				sheet_type_id: this.sheet_type_options.length ? this.sheet_type_options[0].value : null,
+				is_afip_ticket: false,
+				show_totals_on_each_page: false,
+				/**
+				 * Nuevo perfil sin pie de página por defecto.
+				 */
+				footer_text: null,
+				pdf_column_options,
+			})
 				this.$store.state.pdf_column_profile.models.push(res.data.model)
 				this.selected_profile_id = res.data.model.id
 				this.selected_profile_id_for_edit = res.data.model.id
@@ -470,16 +483,20 @@ export default {
 				})
 				.filter(row => !!row.id)
 			try {
-				const res = await this.$api.put('pdf-column-profiles/' + this.selected_profile_for_edit.id, {
-					name: this.profile_name,
-					paper_width_mm: Number(this.paper_width_mm || 297),
-					printable_width_mm: Number(this.printable_width_mm || 277),
-					margin_mm: Number(this.margin_mm || 0),
-					sheet_type_id: this.sheet_type_id,
-					is_afip_ticket: this.normalize_boolean(this.is_afip_ticket),
-					show_totals_on_each_page: this.normalize_boolean(this.show_totals_on_each_page),
-					pdf_column_options,
-				})
+			const res = await this.$api.put('pdf-column-profiles/' + this.selected_profile_for_edit.id, {
+				name: this.profile_name,
+				paper_width_mm: Number(this.paper_width_mm || 297),
+				printable_width_mm: Number(this.printable_width_mm || 277),
+				margin_mm: Number(this.margin_mm || 0),
+				sheet_type_id: this.sheet_type_id,
+				is_afip_ticket: this.normalize_boolean(this.is_afip_ticket),
+				show_totals_on_each_page: this.normalize_boolean(this.show_totals_on_each_page),
+				/**
+				 * Pie de página; se envía null si el usuario lo dejó en blanco.
+				 */
+				footer_text: this.footer_text || null,
+				pdf_column_options,
+			})
 				const store_models = this.$store.state.pdf_column_profile.models
 				const index = store_models.findIndex(profile => profile.id == res.data.model.id)
 				if (index != -1) {

@@ -74,20 +74,36 @@
 			</b-col>
 		</b-form-row>
 
-		<b-form-row class="m-b-0">
-			<b-col md="4" class="d-flex align-items-center">
-				<b-form-checkbox
-				v-model="local_is_afip_ticket">
-					Factura de ARCA
-				</b-form-checkbox>
-			</b-col>
-			<b-col md="4" class="d-flex align-items-center">
-				<b-form-checkbox
-				v-model="local_show_totals_on_each_page">
-					Mostrar totales en cada hoja
-				</b-form-checkbox>
-			</b-col>
-		</b-form-row>
+	<b-form-row class="m-b-0">
+		<b-col md="4" class="d-flex align-items-center">
+			<b-form-checkbox
+			v-model="local_is_afip_ticket">
+				Factura de ARCA
+			</b-form-checkbox>
+		</b-col>
+		<b-col md="4" class="d-flex align-items-center">
+			<b-form-checkbox
+			v-model="local_show_totals_on_each_page">
+				Mostrar totales en cada hoja
+			</b-form-checkbox>
+		</b-col>
+	</b-form-row>
+
+	<b-form-row class="m-b-0">
+		<b-col md="12">
+			<b-form-group>
+				<label class="form-label">
+					<i class="icon-right"></i>
+					<strong>Pie de página</strong>
+				</label>
+				<!-- Texto libre que aparece debajo de los totales en el PDF; soporta múltiples líneas -->
+				<b-form-textarea
+				placeholder="Texto que aparecerá en el pie de cada página del PDF..."
+				rows="3"
+				v-model="local_footer_text"></b-form-textarea>
+			</b-form-group>
+		</b-col>
+	</b-form-row>
 
 		<pdf-columns-preferences-config-modal
 		:config_rows="pdf_config_rows"
@@ -156,6 +172,13 @@ export default {
 		show_totals_on_each_page: {
 			type: [Boolean, Number, String],
 			default: false,
+		},
+		/**
+		 * Texto libre del pie de página del perfil.
+		 */
+		footer_text: {
+			type: String,
+			default: '',
 		},
 		sheet_type_options: {
 			type: Array,
@@ -264,6 +287,17 @@ export default {
 			},
 			set(value) {
 				this.$emit('update:show_totals_on_each_page', !!value)
+			},
+		},
+		/**
+		 * Proxy local del texto del pie de página del perfil.
+		 */
+		local_footer_text: {
+			get() {
+				return this.footer_text
+			},
+			set(value) {
+				this.$emit('update:footer_text', value || '')
 			},
 		},
 	},
