@@ -342,7 +342,40 @@ export default {
 				if (this.pivot.props_to_show) {
 					this.pivot.props_to_show.forEach(prop_to_show => {
 
-						if (prop_to_show.if_has_extencion) {
+						// Entrada de columnas dinámicas: se expande en una columna
+						// por cada ítem único de la relación indicada, tomando los datos
+						// de this.models para construir los headers y las keys de celda
+						if (prop_to_show.type == 'relation_columns') {
+
+							// Recolectar todos los ítems únicos de la relación
+							// a través de todos los modelos de la tabla
+							let unique_related_items = []
+							this.models.forEach(model => {
+								let related_items = model[prop_to_show.relation]
+								if (related_items && related_items.length) {
+									related_items.forEach(related_item => {
+										// Agregar solo si no fue agregado antes (por id)
+										let already_added = unique_related_items.find(item => item.id == related_item.id)
+										if (!already_added) {
+											unique_related_items.push(related_item)
+										}
+									})
+								}
+							})
+
+							// Generar una prop de columna por cada ítem relacionado único
+							unique_related_items.forEach(related_item => {
+								props.push({
+									key: 'relation_col_' + prop_to_show.relation + '_' + related_item.id,
+									text: related_item[prop_to_show.header_prop],
+									is_relation_column: true,
+									relation: prop_to_show.relation,
+									pivot_value_prop: prop_to_show.pivot_value_prop,
+									related_model_id: related_item.id,
+								})
+							})
+
+						} else if (prop_to_show.if_has_extencion) {
 
 							if (this.hasExtencion(prop_to_show.if_has_extencion)) {
 

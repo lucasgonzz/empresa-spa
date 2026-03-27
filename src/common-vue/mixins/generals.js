@@ -22,9 +22,9 @@ export default {
 		is_owner() {
 			return this.user && !this.user.owner_id
 		},
-		is_admin() {
-			return this.user && (this.is_owner || this.user.admin_access)
-		},
+		// is_admin() {
+		// 	return this.user && (this.is_owner || this.user.admin_access)
+		// },
         owner_id() {
         	if (this.user.owner_id) {
         		return this.user.owner_id

@@ -128,28 +128,19 @@ export default {
             }
         },
 
-        get_caja_options(payment_method_id = null, address_id = null) {
+        get_caja_options(payment_method_id = null, address_id = null, moneda_id = null) {
 
             let options = [{
                 value: 0,
                 text: 'Seleccione caja'
             }]
 
-            let cajas_abiertas = this.$store.state.caja.models.filter(caja => caja.abierta)
+            let cajas_disponibles = this.$store.state.caja.models.filter(caja => caja.abierta)
 
-            cajas_abiertas.forEach(caja => {
-                let name = caja.name 
-                if (caja.employee) {
-                    name += ' (' + caja.employee.name + ')' 
-                }
-                options.push({
-                    value: caja.id,
-                    text: name,
-                })
-            })
 
+            // Solo las cajas que tienen asignada y pertenecen a una sucursal 
             if (address_id) {
-                cajas_abiertas = cajas_abiertas.filter(caja => {
+                cajas_disponibles = cajas_disponibles.filter(caja => {
                     if (caja.address_id) {
                         return caja.address_id == address_id
                     } else {
@@ -157,6 +148,65 @@ export default {
                     }
                 })
             }
+
+            // Solo las cajas que tienen asignada y pertenecen a una moneda 
+            if (moneda_id) {
+                cajas_disponibles = cajas_disponibles.filter(caja => {
+                    if (caja.moneda_id !== null) {
+                        return caja.moneda_id == moneda_id
+                    } else {
+                        return true
+                    }
+                })
+            }
+
+
+            // Solo las cajas a las que el usuario tiene acceso
+            cajas_disponibles = cajas_disponibles.filter(caja => {
+
+                // Si es administrador, siempre va a tener acceso
+                if (this.is_admin) {
+                    return true
+                }
+
+                // Si la caja tiene asignados empleados con acceso, se cheque que el usuario logeado este en esa lista
+                if (caja.users.length) {
+
+                    let usuario_con_acceso = false
+
+                    caja.users.forEach(user_caja => {
+
+                        if (user_caja.id == this.user.id) {
+                            usuario_con_acceso = true 
+                        } 
+                    })
+
+                    return usuario_con_acceso
+                }
+                return true 
+            })
+
+            // Formate de nombres, se agrega nombre de empleado (en caso que pertenezca a uno) y la moneda (en caso de que sea USD) y la sucursal
+            cajas_disponibles.forEach(caja => {
+                let name = caja.name 
+                if (caja.employee) {
+                    name += ' (' + caja.employee.name + ')' 
+                }
+                if (caja.moneda_id == 2) {
+                    name += ' (USD)' 
+                }
+                if (caja.address_id) {
+                    let address = this.$store.state.address.models.find(a => a.id == caja.address_id)
+                    if (typeof address != 'undefined') {
+
+                        name += ' (' + address.street + ')' 
+                    }
+                }
+                options.push({
+                    value: caja.id,
+                    text: name,
+                })
+            })
 
             return options
         },

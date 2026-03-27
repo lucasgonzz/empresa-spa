@@ -72,6 +72,14 @@ export default {
 						key: 'name',
 						show: true,
 					},
+					// Columnas dinámicas: una columna por cada address del article,
+					// con el street como header y el amount del pivot como valor de celda
+					{
+						type: 'relation_columns',
+						relation: 'addresses',
+						header_prop: 'street',
+						pivot_value_prop: 'amount',
+					},
 				],
 				properties_to_set: [
 					{

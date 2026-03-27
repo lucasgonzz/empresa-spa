@@ -13,7 +13,7 @@ export default {
 			only_show: true,
 		},
 		{
-			type: 'Moneda',
+			text: 'Moneda',
 			key: 'moneda_id',
 			type: 'select',
 			use_store_models: true,
