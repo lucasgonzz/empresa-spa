@@ -177,6 +177,7 @@
 									@input="$set(model, prop.key, $event)"
 									@search-cuit="searchCUIT"
 									@set-bar-code="setBarCode"
+									@blur="on_field_blur(prop)"
 									@enter="prop.key == 'cuit' ? searchCUIT() : clickEnter(prop)"></field-text-input>
 
 									<b-form-textarea
@@ -485,6 +486,11 @@ export default {
 	},
 	data() {
 		return {
+			/*
+				Guarda el último valor chequeado por cada `prop.key` para evitar requests duplicadas
+				cuando el usuario presiona Enter y el input pierde foco inmediatamente después.
+			*/
+			last_repeat_check_by_prop_key: {},
 			loading: false,
 			saving_belongs_to_many: false,
 			props_to_show_in_belongs_to_many: [],
@@ -884,14 +890,111 @@ export default {
 			}
 		},
 		clickEnter(prop) {
-			if (prop.use_to_check_if_is_repeat) {
+			/*
+				Si el campo está configurado para chequeo de repetidos y la configuración del usuario lo permite,
+				se ejecuta el chequeo. Caso especial: algunos usuarios permiten `provider_code` repetidos en artículos.
+			*/
+			if (prop.use_to_check_if_is_repeat && this.can_check_is_repeat(prop)) {
+				/*
+					Se registra el valor antes de chequear para evitar que el blur posterior al Enter
+					dispare el mismo chequeo nuevamente.
+				*/
+				this.set_last_repeat_check_value(prop)
 				this.checkIsRepeat(prop)
 			} else {
 				this.$emit('save', {close: true})
 				// this.$emit('save')
 			}
 		},
+		/*
+			Dispara el chequeo de repetidos cuando el input pierde foco.
+			Se ejecuta solo para props que declaran `use_to_check_if_is_repeat`.
+		*/
+		on_field_blur(prop) {
+			/* No aplicar si el campo no participa en el chequeo de repetidos. */
+			if (!prop || !prop.use_to_check_if_is_repeat) {
+				return
+			}
+
+			/* Respeta configuración por usuario para omitir chequeos puntuales. */
+			if (!this.can_check_is_repeat(prop)) {
+				return
+			}
+
+			/* No chequear si no hay valor cargado. */
+			let current_value = this.model && this.model[prop.key] != null ? String(this.model[prop.key]) : ''
+			if (current_value.trim() == '') {
+				return
+			}
+
+			/* Evita requests duplicadas si ya se chequeó este mismo valor. */
+			let normalized_value = current_value.toLowerCase()
+			if (this.last_repeat_check_by_prop_key[prop.key] === normalized_value) {
+				return
+			}
+
+			/* Se registra el valor y se ejecuta el mismo chequeo que en Enter. */
+			this.last_repeat_check_by_prop_key[prop.key] = normalized_value
+			this.checkIsRepeat(prop)
+		},
+		/*
+			Define si corresponde ejecutar el chequeo de repetidos para el `prop` actual.
+			Se usa para poder omitir `provider_code` en artículos cuando el usuario lo permite.
+		*/
+		can_check_is_repeat(prop) {
+			/* Validación defensiva por compatibilidad con props dinámicas del form. */
+			if (!prop || !prop.key) {
+				return false
+			}
+
+			/*
+				Solo aplica al alta (create) de artículos.
+				Si el modelo ya existe, mantenemos el chequeo para evitar colisiones accidentales al editar.
+			*/
+			let is_creating_model = !this.model || !this.model.id
+			if (!is_creating_model) {
+				return true
+			}
+
+			console.log('can_check_is_repeat para '+this.model_name+' y prop:')
+			console.log(prop)
+			console.log(this.owner.usa_provider_codes_repetidos)
+
+			/* Caso particular: permitir `provider_code` repetido según configuración del usuario. */
+			if (this.model_name == 'article' && prop.key == 'provider_code') {
+			
+				/*
+					Usamos comparación explícita porque este valor puede llegar como:
+					- boolean (true/false)
+					- number (1/0)
+					- string ('1'/'0')
+				*/
+				if (Number(this.owner.usa_provider_codes_repetidos) === 1) {
+					return false
+				}
+			}
+
+			return true
+		},
+		/*
+			Registra el último valor chequeado para un `prop` específico.
+			Se usa principalmente para el flujo de Enter → foco al siguiente input.
+		*/
+		set_last_repeat_check_value(prop) {
+			/* Validación defensiva para no romper si llega un `prop` inesperado. */
+			if (!prop || !prop.key) {
+				return
+			}
+
+			/* Normalizamos a string en minúscula para comparar en forma consistente. */
+			let current_value = this.model && this.model[prop.key] != null ? String(this.model[prop.key]) : ''
+			this.last_repeat_check_by_prop_key[prop.key] = current_value.trim().toLowerCase()
+		},
 		async checkIsRepeat(prop) {
+		    /* Respeta configuración por usuario para omitir chequeos puntuales. */
+		    if (!this.can_check_is_repeat(prop)) {
+		    	return
+		    }
 		    if (prop.use_to_check_if_is_repeat) {
 		        let finded = undefined;
 

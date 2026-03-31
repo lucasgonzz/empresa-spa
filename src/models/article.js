@@ -950,7 +950,7 @@ export default {
 			Esto lo uso para que cuando creo un nuevo articulo, 
 			se setee esta propiedad y la tenga disponible en el modal de articulo,
 			para que indiquen el marguen de ganancia para cada lista de precios.
-			Como si tienen la extencion articulo_margen_de_ganancia_segun_lista_de_precios
+			Cuando el dueño tiene activo user.listas_de_precio (antes extensión articulo_margen_de_ganancia_segun_lista_de_precios).
 			Como pack, electro_lacarra
 		*/
 		{

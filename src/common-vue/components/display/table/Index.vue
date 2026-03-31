@@ -1,13 +1,18 @@
 <template>
 	<div>
+		<!--
+			Paginación fuera de .cont-table: ese contenedor tiene overflow y thead sticky (top: 0).
+			Si la barra va dentro, sticky se superpone al header; aquí queda fija arriba de la zona scrolleable.
+		-->
+		<pagination
+		v-if="!loading && !pivot"
+		@filtrar="filtrar"
+		:papelera="papelera"
+		:model_name="model_name"></pagination>
 		<div
 		:id="id"
 		v-if="!loading"
 		class="cont-table">
-			<pagination
-			v-if="!pivot"
-			@filtrar="filtrar"
-			:model_name="model_name"></pagination>	
 			<table
 			:id="'table-'+model_name"
 			class="common-table">
@@ -461,6 +466,15 @@ export default {
 			}
 			return 2
 		},
+		/**
+		 * Pendiente de armar filtros + búsqueda inicial en papelera vía POST search.
+		 */
+		pending_papelera_search_flag() {
+			if (!this.papelera || !this.model_name) {
+				return false
+			}
+			return this.$store.state.papelera[this.model_name].pending_default_papelera_search
+		},
 		lists() {
 			if (this.order_list_by) {
 				let models_from_order_by = this.$store.state[this.order_list_by].models
@@ -512,12 +526,28 @@ export default {
 		},
 		models() {
 			this.setHeight()
-		}
+		},
+		/**
+		 * getModels en papelera solo marca pending; si la tabla ya estaba montada (p. ej. tras restaurar), disparamos el bootstrap aquí.
+		 */
+		pending_papelera_search_flag(val) {
+			if (val && this.papelera && this.model_name) {
+				let that = this
+				this.$nextTick(function () {
+					if (that.$store.state.papelera[that.model_name].pending_default_papelera_search) {
+						that.bootstrap_papelera_default_search_from_props()
+					}
+				})
+			}
+		},
 	},
 	methods: {
 		filtrar() {
 			let filters = this.$store.state[this.model_name].filters
-			let current_page = this.$store.state[this.model_name].filter_page
+			// Página de resultados del contexto (papelera vs listado normal).
+			let current_page = this.papelera
+				? this.$store.state.papelera[this.model_name].filter_page
+				: this.$store.state[this.model_name].filter_page
 			// console.log('filters:')
 			// console.log(filters)
 			
@@ -530,7 +560,8 @@ export default {
 
 			this.$api.post('search/'+this.model_name+'/null/1?page='+current_page, { 
 				filters: filters,
-				papelera: this.papelera
+				papelera: this.papelera,
+				per_page: this.$store.state[this.model_name].filter_per_page || 5,
 			})
 			.then(res => {
 				this.$store.commit('auth/setLoading', false)
@@ -551,25 +582,17 @@ export default {
 					this.$store.commit(papelera+this.model_name+'/setTotalFilterPages', res.data.last_page)
 					this.$store.commit(papelera+this.model_name+'/setTotalFilterResults', res.data.total)
 
-					// if (this.papelera) {
-
-					// 	this.$store.commit(this.model_name+'/setIsFiltered', true) 
-					// 	this.$store.commit(this.model_name+'/setFiltered', res.data.data)
-					// 	this.$store.commit(this.model_name+'/setTotalFilterPages', res.data.last_page)
-					// 	this.$store.commit(this.model_name+'/setTotalFilterResults', res.data.total)
-
-					// } else {
-
-					// 	this.$store.commit(this.model_name+'/setIsFiltered', true) 
-					// 	this.$store.commit(this.model_name+'/setFiltered', res.data.data)
-					// 	this.$store.commit(this.model_name+'/setTotalFilterPages', res.data.last_page)
-					// 	this.$store.commit(this.model_name+'/setTotalFilterResults', res.data.total)
-					// }
-
 					
 				} else {
 
-					this.$toast.error('No se encontraron resultados')
+					if (this.papelera) {
+						this.$store.commit('papelera/' + this.model_name + '/setIsFiltered', true)
+						this.$store.commit('papelera/' + this.model_name + '/setFiltered', [])
+						this.$store.commit('papelera/' + this.model_name + '/setTotalFilterPages', res.data.last_page)
+						this.$store.commit('papelera/' + this.model_name + '/setTotalFilterResults', res.data.total)
+					} else {
+						this.$toast.error('No se encontraron resultados')
+					}
 				}
 
 
@@ -598,6 +621,10 @@ export default {
 			let filters = (this.$store.state[this.model_name] && this.$store.state[this.model_name].filters) ? this.$store.state[this.model_name].filters : []
 			let filter = filters.find(_filter => _filter.key === field_key)
 			if (!filter) return false
+
+			if (filter.ordenar_de !== null && filter.ordenar_de !== '' && typeof filter.ordenar_de !== 'undefined') {
+				return true
+			}
 
 			// Los flags “activos” son evaluados por Backend solo cuando el valor es efectivo.
 			// Para que la UI coincida, chequeamos los mismos criterios (ej: select/search != 0).
@@ -667,6 +694,11 @@ export default {
 				return
 			}
 
+			if (this.papelera && this.model_name && this.$store.state.papelera[this.model_name].pending_default_papelera_search) {
+				this.bootstrap_papelera_default_search_from_props()
+				return
+			}
+
 			let new_filters = this.build_table_filters_from_props(this.props)
 
 			let existing_filters = this.$store.state[this.model_name].filters || []
@@ -688,6 +720,49 @@ export default {
 			}
 
 			this.$store.commit(this.model_name+'/setFilters', new_filters)
+		},
+		/**
+		 * Entrada a papelera: reconstruye filtros desde columnas, orden único deleted_at DESC y POST search+papelera.
+		 */
+		bootstrap_papelera_default_search_from_props() {
+			if (!this.papelera || !this.model_name) {
+				return
+			}
+			if (!this.$store.state.papelera[this.model_name].pending_default_papelera_search) {
+				return
+			}
+			this.$store.commit('papelera/' + this.model_name + '/setPendingDefaultPapeleraSearch', false)
+			let new_filters = this.build_table_filters_from_props(this.props)
+			let idx = 0
+			for (idx = 0; idx < new_filters.length; idx++) {
+				new_filters[idx].ordenar_de = null
+			}
+			let deleted_filter = null
+			for (idx = 0; idx < new_filters.length; idx++) {
+				if (new_filters[idx].key === 'deleted_at') {
+					deleted_filter = new_filters[idx]
+					break
+				}
+			}
+			if (deleted_filter) {
+				deleted_filter.ordenar_de = 'DESC'
+			} else {
+				new_filters.push({
+					key: 'deleted_at',
+					type: 'date',
+					label: 'Eliminado',
+					text: 'Eliminado',
+					checkbox: -1,
+					en_blanco: 0,
+					que_contenga: '',
+					igual_que: '',
+					menor_que: '',
+					mayor_que: '',
+					ordenar_de: 'DESC',
+				})
+			}
+			this.$store.commit(this.model_name + '/setFilters', new_filters)
+			this.$store.dispatch('papelera/' + this.model_name + '/run_papelera_search_from_store')
 		},
 		onRowSelected(model) {
 			this.$emit('onRowSelected', model)

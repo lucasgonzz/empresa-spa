@@ -42,6 +42,7 @@
 		xl="4">
 
 			<opciones-filtrados-seleccion
+			:papelera="papelera"
 			:show_actualizar_option="show_actualizar_option"
 			:check_permissions="check_permissions"
 			:model_name="model_name">
@@ -59,7 +60,16 @@
 			</opciones-filtrados-seleccion>
 			
 			<btn-restart-filter
+			:papelera="papelera"
 			:model_name="model_name"></btn-restart-filter>
+
+			<b-button
+			v-if="papelera && is_filtered_papelera && total_filtrados_papelera > 0"
+			@click="restaurarTodosFiltradosPapelera"
+			class="m-l-10"
+			variant="danger">
+				Restaurar todos ({{ total_filtrados_papelera }})
+			</b-button>
 
 		</b-col>
 		
@@ -90,16 +100,12 @@ export default {
 		ExcelDropDown: () => import('@/common-vue/components/horizontal-nav/ExcelDropDown'),
 		DisplayNav: () => import('@/common-vue/components/horizontal-nav/DisplayNav'),
 	},
-	computed: {
-		can_create() {
-			if (this.check_permissions) {
-				return this.can(this.model_name+'.store')
-			}
-			return true 
-		},
-	},
 	props: {
 		model_name: String,
+		papelera: {
+			type: Boolean,
+			default: false,
+		},
 		ask_selectable: Boolean,
 		show_excel_drop_down: {
 			type: Boolean,
@@ -126,6 +132,67 @@ export default {
 			default: true,
 		},
 		show_actualizar_option: Boolean,
-	}
+	},
+	computed: {
+		can_create() {
+			if (this.check_permissions) {
+				return this.can(this.model_name+'.store')
+			}
+			return true 
+		},
+		is_filtered_papelera() {
+			if (!this.papelera || !this.model_name) {
+				return false
+			}
+			return this.$store.state.papelera[this.model_name].is_filtered
+		},
+		/**
+		 * Total de registros que coinciden con el filtro (todas las páginas), alineado con el paginador.
+		 */
+		total_filtrados_papelera() {
+			if (!this.papelera || !this.model_name) {
+				return 0
+			}
+			let n = this.$store.state.papelera[this.model_name].total_filter_results
+			return n ? parseInt(n, 10) : 0
+		},
+		cantidad_filtrados_papelera() {
+			if (!this.papelera || !this.model_name) {
+				return 0
+			}
+			let filtrados = this.$store.state.papelera[this.model_name].filtered
+			return filtrados ? filtrados.length : 0
+		},
+	},
+	methods: {
+		/**
+		 * Restaura en servidor todos los que coinciden con filters (misma consulta que search+papelera).
+		 */
+		restaurarTodosFiltradosPapelera() {
+			let total = this.total_filtrados_papelera
+			if (total < 1) {
+				return
+			}
+			let filters = this.$store.state[this.model_name].filters
+			let label = this.plural(this.model_name)
+			let mensaje = '¿Restaurar ' + total + ' ' + label + ' de esta búsqueda en la papelera?'
+			if (!window.confirm(mensaje)) {
+				return
+			}
+			let that = this
+			this.$store.commit('auth/setLoading', true)
+			this.$api.post('papelera/restaurar-filtrados/' + this.model_name, {
+				filters: filters,
+			}).then(function () {
+				that.$store.commit('auth/setLoading', false)
+				that.$toast.success('Registros restaurados')
+				return that.$store.dispatch('papelera/' + that.model_name + '/getModels')
+			}).catch(function (err) {
+				that.$store.commit('auth/setLoading', false)
+				that.$toast.error('Error al restaurar')
+				console.log(err)
+			})
+		},
+	},
 }
 </script>

@@ -95,6 +95,24 @@ export default {
 			description: 'Si se activa, el iva del articulo no impactara en el precio final del mismo',
 		},
 		{
+			text: 'Trabajar con listas de precio (margen por lista)',
+			key: 'listas_de_precio',
+			type: 'checkbox',
+			value: 0,
+			description: 'Si se activa, cada articulo un precio final para cada lista de precio que haya creada.',
+		},
+		/*
+		 * Permite que el usuario trabaje con artículos que tengan `provider_code` repetido.
+		 * Si está activo, al crear un artículo se omite el chequeo automático de repetidos por `provider_code`.
+		 */
+		{
+			text: 'Permitir codigos de proveedor repetidos en articulos',
+			key: 'usa_provider_codes_repetidos',
+			type: 'checkbox',
+			value: 0,
+			description: 'Si se activa, el sistema permitira crear articulos con el mismo codigo de proveedor.',
+		},
+		{
 			text: 'Aplicar los descuentos y recargos en los articulos antes del margen de ganancia',
 			key: 'aplicar_descuentos_en_articulos_antes_del_margen_de_ganancia',
 			type: 'checkbox',
@@ -117,6 +135,15 @@ export default {
 		{
 			text: 'Utilizar articulos descargados para buscar por codigo de barras',
 			key: 'usar_articles_cache',
+			type: 'checkbox',
+		},
+		/*
+		 * Permite habilitar o deshabilitar el trabajo en modo offline del sistema.
+		 * Si está desactivado, no se ejecuta la sincronización local de artículos/ventas.
+		 */
+		{
+			text: 'Permitir trabajar en modo offline',
+			key: 'sync_offline_articles',
 			type: 'checkbox',
 		},
 		{

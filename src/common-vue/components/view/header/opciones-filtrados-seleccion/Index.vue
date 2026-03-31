@@ -27,6 +27,8 @@
 		</options-dropdown>
 
 		<options-dropdown
+		v-if="!papelera"
+		:papelera="papelera"
 		:show_actualizar_option="show_actualizar_option"
 		:check_permissions="check_permissions"
 		@setUpdate="setUpdate"
@@ -49,6 +51,10 @@ export default {
 		model_name: String,
 		check_permissions: Boolean,
 		show_actualizar_option: Boolean,
+		papelera: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	components: {
 		Update: () => import('@/common-vue/components/view/header/opciones-filtrados-seleccion/Update'),

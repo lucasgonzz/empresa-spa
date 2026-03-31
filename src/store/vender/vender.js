@@ -105,10 +105,23 @@ export default {
 		total_description: [],
 
 		sale_status_id: 0,
+
+		// Indica si la venta debe descontar stock. Por defecto en true (1).
+		discount_stock: 1,
+		// Indica si los precios de los items se interpretan con IVA aplicado. Por defecto en true (1).
+		iva_aplicado: 1,
 	},
 	mutations: {
 		set_sale_status_id(state, value) {
 			state.sale_status_id = value
+		},
+		// Mutation para controlar si la venta descuenta stock
+		set_discount_stock(state, value) {
+			state.discount_stock = value
+		},
+		// Mutation para controlar si los precios incluyen IVA
+		set_iva_aplicado(state, value) {
+			state.iva_aplicado = value
 		},
 		set_total_description(state, value) {
 			state.total_description = value
@@ -425,6 +438,10 @@ export default {
 				aplicar_recargos_directo_a_items: state.aplicar_recargos_directo_a_items,
 				sale_type_id: state.sale_type_id,
 				sale_status_id: state.sale_status_id,
+				// Indica si la venta debe descontar stock al crearse
+				discount_stock: state.discount_stock,
+				// Indica si los precios enviados en la venta incluyen IVA
+				iva_aplicado: state.iva_aplicado,
 			})
 			.then(res => {
 				console.log('vendido')

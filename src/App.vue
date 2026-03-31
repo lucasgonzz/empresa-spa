@@ -7,6 +7,8 @@
         <logo-loading></logo-loading>
         <nav-component></nav-component>
         <btn-scroll-top></btn-scroll-top>
+        <offline-articles-progress
+        :offline_articles_sync_progress="offline_articles_sync_progress"></offline-articles-progress>
         <afip-reenviar-facturas></afip-reenviar-facturas>
         <articles-stock-minimo></articles-stock-minimo>
 
@@ -35,6 +37,7 @@ export default {
         LogoLoading, 
         NavComponent,
         BtnScrollTop,
+        OfflineArticlesProgress: () => import('@/common-vue/components/offline-sync-articles/Progress'),
         PaymentExpire: () => import('@/components/nav/PaymentExpire'),
         AfipReenviarFacturas: () => import('@/components/common/afip-reenviar-facturas/Index'),
         ArticlesStockMinimo: () => import('@/components/common/ArticlesStockMinimo'),

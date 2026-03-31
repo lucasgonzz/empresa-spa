@@ -4,17 +4,24 @@
 
 		<!-- <vuelto-efectivo></vuelto-efectivo> -->
 
-		<div class="j-end w-100 m-b-10">
-			<print></print>
-			<limpiar-vender></limpiar-vender>
-		</div>
-
 		<sale-status></sale-status>
 		<fecha-entrega></fecha-entrega>
+
+		<div class="j-start m-b-10">
+			<iva-aplicado></iva-aplicado>
+			<discount-stock></discount-stock>
+		</div>
+
+
 		<observations></observations>
 
 
 		<numero-orden-de-compra></numero-orden-de-compra>
+
+		<div class="j-end w-100 m-b-10">
+			<print></print>
+			<limpiar-vender></limpiar-vender>
+		</div>
 		<!-- <pago></pago> -->
 	</div>
 </template>
@@ -24,6 +31,8 @@ export default {
 		Observations: () => import('@/components/vender/components/remito/header-2/buttons/Observations'),
 		FechaEntrega: () => import('@/components/vender/components/remito/header-2/buttons/FechaEntrega'),
 		SaleStatus: () => import('@/components/vender/components/remito/header-2/buttons/SaleStatus'),
+		IvaAplicado: () => import('@/components/vender/components/remito/header-2/buttons/IvaAplicado'),
+		DiscountStock: () => import('@/components/vender/components/remito/header-2/buttons/DiscountStock'),
 		NumeroOrdenDeCompra: () => import('@/components/vender/components/remito/header-2/buttons/NumeroOrdenDeCompra'),
 		Pago: () => import('@/components/vender/components/remito/header-2/buttons/Pago'),
 		Print: () => import('@/components/vender/components/remito/header-2/buttons/Print'),

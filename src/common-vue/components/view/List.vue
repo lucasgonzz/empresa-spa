@@ -137,6 +137,9 @@ export default {
 			return this.$store.state[this.model_name].from_dates
 		},
 		se_esta_filtrando() {
+			if (this.papelera) {
+				return this.$store.state.papelera[this.model_name].is_filtered
+			}
 			return this.$store.state[this.model_name].is_filtered
 		}
 	},

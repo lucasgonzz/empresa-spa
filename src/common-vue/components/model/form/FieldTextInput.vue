@@ -1,6 +1,10 @@
 <template>
 	<div>
 		<div class="d-flex w-100">
+			<!--
+				Al perder el foco se notifica al componente padre para que pueda ejecutar
+				validaciones como el chequeo de repetidos sin depender solo de Enter.
+			-->
 			<b-form-input
 			autocomplete="off"
 			:id="model_name + '-' + prop.key"
@@ -8,6 +12,7 @@
 			:placeholder="'Ingresar ' + prop_text"
 			:type="prop.type"
 			@keyup.enter="$emit('enter')"
+			@blur="$emit('blur')"
 			v-model="local_value"></b-form-input>
 
 			<b-button

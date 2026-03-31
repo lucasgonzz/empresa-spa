@@ -265,7 +265,23 @@ export default {
             }
             return this.$store.state.employee.models.find(employee => employee.id == id)
         },
+        /**
+         * Indica si el dueño (owner) tiene activado el modo listas de precio.
+         * Usa user.listas_de_precio del owner; equivale a la antigua extensión de listas.
+         *
+         * @returns {boolean}
+         */
+        ownerUsesListasDePrecio() {
+            if (!this.authenticated || !this.owner) {
+                return false
+            }
+            const v = this.owner.listas_de_precio
+            return v === 1 || v === true || v === '1'
+        },
         hasExtencion(slug, check_has_one_extencion_permission = true) {
+            if (slug === 'articulo_margen_de_ganancia_segun_lista_de_precios') {
+                return this.ownerUsesListasDePrecio()
+            }
             if (
                 this.authenticated 
                 && this.owner_extencions
@@ -276,6 +292,123 @@ export default {
                 return index != -1 
             }
         },
+        /*
+            Obtiene el porcentaje de IVA numerico para un item de venta.
+            Prioriza la relacion iva del item y luego cae al iva_id / pivot.iva_id.
+        */
+        get_item_iva_percentage(item) {
+            // Porcentaje de IVA normalizado para usar en calculos.
+            let iva_percentage = 0
+
+            if (item && item.iva && typeof item.iva.percentage != 'undefined') {
+                iva_percentage = this.normalize_iva_percentage(item.iva.percentage)
+            } else if (item && item.iva_id) {
+                iva_percentage = this.get_iva_percentage_from_store(item.iva_id)
+            } else if (item && item.pivot && item.pivot.iva_id) {
+                iva_percentage = this.get_iva_percentage_from_store(item.pivot.iva_id)
+            }
+
+            return iva_percentage
+        },
+        /*
+            Busca el porcentaje de IVA desde el store usando el iva_id.
+            Si no existe el IVA o no es numerico, devuelve 0.
+        */
+        get_iva_percentage_from_store(iva_id) {
+            // Lista de IVA disponible en store para resolver alicuotas por id.
+            let iva_models = this.$store.state.iva ? this.$store.state.iva.models : []
+            // Modelo de IVA encontrado a partir del id recibido.
+            let iva_model = iva_models.find(model => {
+                return model.id == iva_id
+            })
+
+            if (typeof iva_model == 'undefined') {
+                return 0
+            }
+
+            return this.normalize_iva_percentage(iva_model.percentage)
+        },
+        /*
+            Normaliza el valor de porcentaje de IVA a numero.
+            Maneja etiquetas de exento/no gravado y formatos string.
+        */
+        normalize_iva_percentage(percentage) {
+            if (
+                percentage === null
+                || percentage === ''
+                || percentage == 'Exento'
+                || percentage == 'Extento'
+                || percentage == 'No Gravado'
+            ) {
+                return 0
+            }
+
+            // Valor de porcentaje convertido a numero para operar.
+            let parsed_percentage = Number(String(percentage).replace(',', '.'))
+
+            if (isNaN(parsed_percentage)) {
+                return 0
+            }
+
+            return parsed_percentage
+        },
+        /*
+            Obtiene el contexto de iva_aplicado actual y guardado.
+            Se usa para evitar doble descuento al editar ventas previas.
+        */
+        get_iva_aplicado_context(from_pivot) {
+            // Valor actual del checkbox iva_aplicado en store vender.
+            let current_iva_aplicado = this.$store.state.vender.iva_aplicado == 1 ? 1 : 0
+            // Venta previa cargada en store al actualizar una venta existente.
+            let previus_sale = this.$store.state.vender.previus_sales.previus_sale
+            // Define si hay una venta previa real sobre la que comparar flags.
+            let has_previus_sale = from_pivot && previus_sale && previus_sale.id
+            // Valor de iva_aplicado persistido en la venta que se esta editando.
+            let saved_iva_aplicado = current_iva_aplicado
+
+            if (has_previus_sale) {
+                saved_iva_aplicado = previus_sale.iva_aplicado == 1 ? 1 : 0
+            }
+
+            return {
+                current_iva_aplicado,
+                saved_iva_aplicado,
+            }
+        },
+        /*
+            Ajusta el precio segun iva_aplicado actual vs guardado.
+            Permite alternar IVA en nuevas ventas y en actualizacion sin doble descuento.
+        */
+        ajustar_precio_segun_iva_aplicado(item, price, from_pivot = false) {
+            // Contexto actual/guardado del flag iva_aplicado.
+            let iva_context = this.get_iva_aplicado_context(from_pivot)
+            // Alicuota de IVA del item, en porcentaje.
+            let iva_percentage = this.get_item_iva_percentage(item)
+
+            if (iva_percentage <= 0) {
+                return price
+            }
+
+            // Multiplicador para convertir entre neto y precio con IVA.
+            let iva_multiplier = 1 + (iva_percentage / 100)
+
+            if (iva_context.saved_iva_aplicado == iva_context.current_iva_aplicado) {
+                if (!from_pivot && iva_context.current_iva_aplicado == 0) {
+                    return Number(price) / iva_multiplier
+                }
+                return price
+            }
+
+            if (iva_context.saved_iva_aplicado == 1 && iva_context.current_iva_aplicado == 0) {
+                return Number(price) / iva_multiplier
+            }
+
+            if (iva_context.saved_iva_aplicado == 0 && iva_context.current_iva_aplicado == 1) {
+                return Number(price) * iva_multiplier
+            }
+
+            return price
+        },
         getPriceVender(item, from_pivot = false) {
             // console.log('getPriceVender para '+item.name)
             // console.log(item)
@@ -285,6 +418,7 @@ export default {
             if (item.price_vender_personalizado) {
 
                 price = item.price_vender_personalizado
+                price = this.ajustar_precio_segun_iva_aplicado(item, price, from_pivot)
 
             } else if (
                 /*
@@ -305,6 +439,7 @@ export default {
             ) {
 
                 price = item.pivot.price 
+                price = this.ajustar_precio_segun_iva_aplicado(item, price, true)
             
             } else if (this.hasExtencion('articulos_precios_en_blanco') && item.is_article) {
 
@@ -319,6 +454,7 @@ export default {
 
                     price = item.final_price
                 }
+                price = this.ajustar_precio_segun_iva_aplicado(item, price)
 
             } else {
 
@@ -331,6 +467,7 @@ export default {
                 price = this.aplicar_recargos(item, price)
 
                 price = this.check_cuotas(item, price)
+                price = this.ajustar_precio_segun_iva_aplicado(item, price)
 
                 // price = this.redondear(price)
             }

@@ -50,6 +50,8 @@ export default {
 		filter_page: 1,
 		total_filter_pages: null,
 		total_filter_results: 0,
+		/** Cantidad de filas por página en búsqueda filtrada (POST search); debe alinearse con SearchController. */
+		filter_per_page: 5,
 		loading_filtered: false,
 
 		delete: null,
@@ -285,6 +287,16 @@ export default {
 		setFilterPage(state, value) {
 			state.filter_page = value 
 		},
+		setFilterPerPage(state, value) {
+			let n = parseInt(value, 10)
+			if (isNaN(n) || n < 1) {
+				n = 5
+			}
+			if (n > 200) {
+				n = 200
+			}
+			state.filter_per_page = n
+		},
 		setTotalFilterPages(state, value) {
 			state.total_filter_pages = value 
 		},
@@ -394,6 +406,7 @@ export default {
 			commit('incrementFilterPage')
 			return axios.post(`/api/search/${generals.methods.routeString(state.model_name)}/null/1?page=${state.filter_page}`, {
 				filters: state.filters,
+				per_page: state.filter_per_page,
 			})
 			.then(res => {
 				commit('setLoadingFiltered', false)

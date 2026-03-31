@@ -12,6 +12,7 @@ export default {
 		from_dates: false,
 		is_selecteable: false,
 
+		// Descarga paginada vía GET papelera (no precarga todas las páginas).
 		use_per_page: false,
 		// Se usa cuando es belongs_to_many_from_dates. Por ejemplo para ver los pagos de un cliente
 		// plural_model_name: '',
@@ -23,8 +24,12 @@ export default {
 		until_date: '',
 
 		page: 1,
-		per_page: 50,
-		total_pages: 1, 
+		per_page: 25,
+		total_pages: 1,
+		/**
+		 * Si true, la tabla debe armar filtros + orden deleted_at DESC y disparar búsqueda POST (search+papelera).
+		 */
+		pending_default_papelera_search: false,
 
 		models: [],
 		model: {},
@@ -36,8 +41,6 @@ export default {
 		total_filter_pages: null,
 		total_filter_results: 0,
 		loading_filtered: false,
-		filter_page: 1,
-		total_filter_pages: null,
 
 		delete: null,
 		delete_image_prop: null,
@@ -231,88 +234,69 @@ export default {
 		addFiltered(state, value) {
 			state.filtered = state.filtered.concat(value)
 		},
-		incrementFilterPage(state) {
-			state.filter_page++
-		},
-		setFilterPage(state, value) {
-			state.filter_page = value 
-		},
-		setTotalFilterPages(state, value) {
-			state.total_filter_pages = value 
-		},
 		setTotalFilterResults(state, value) {
 			state.total_filter_results = value 
 		},
-		addFiltered(state, value) {
-			state.filtered = state.filtered.concat(value)
+		setPendingDefaultPapeleraSearch(state, value) {
+			state.pending_default_papelera_search = !!value
 		},
 		setLoadingFiltered(state, value) {
 			state.loading_filtered = value 
 		},
 	},
 	actions: {
-		getModels({commit, state, dispatch}) {
+		getModels({commit, state}) {
 			commit('setSelected', [])
 			commit('setFiltered', [])
 			commit('setIsFiltered', false)
-			if (state.use_per_page) {
-				commit('setPage', 1)
-				commit('setModels', [])
-			}
-			return dispatch('_getModels')
+			commit('setFilterPage', 1)
+			commit('setTotalFilterPages', null)
+			commit('setTotalFilterResults', 0)
+			commit('setPage', 1)
+			commit('setModels', [])
+			commit('setPendingDefaultPapeleraSearch', true)
+			return Promise.resolve()
 		},
-		_getModels({commit, state, dispatch}) {
-			commit('setLoading', true)
-			let url = '/api/papelera/'+generals.methods.routeString(state.model_name)
-			if (state.plural_model_name) {
-				if (state.selected_model) {
-					url += '/'+state.selected_model.id
-				} else {
-					url += '/0'
-				}
-			} 
-			if (state.route_prefix) {
-				url += '/'+state.route_prefix
-			} 
-			if (state.from_dates) {
-				url += '/from-date/'+state.from_date
-			} 
-			if (state.until_date != '') {
-				url += '/'+state.until_date
-			}
-			if (state.use_per_page) {
-				url += '?page='+state.page 
-			}
-			return axios.get(url)
-			.then(res => {
-				if (state.use_per_page) {
-					let loaded_models = res.data.models.data
-					if (res.data.models.current_page == 1) {
-						commit('setTotalPages', res.data.models.last_page)
-					}
-					console.log('se cargo '+state.model_name+' page: '+state.page)
-					commit('incrementPage')
-					commit('addModels', loaded_models)
-					if (loaded_models.length == state.per_page) {
-						dispatch('_getModels')
-					} else {
-						commit('setLoading', false)
-						commit('setPage', 1)
-					}
-				} else {
-					commit('setLoading', false)
-					commit('setModels', res.data.models)
-				}
+		/**
+		 * Ejecuta POST search con papelera:true y criterios del módulo raíz (misma idea que filtrar en la tabla).
+		 * Incluye 0 resultados sin error (papelera vacía).
+		 *
+		 * @param {Object} context state, rootState, commit
+		 * @returns {Promise}
+		 */
+		run_papelera_search_from_store({state, rootState, commit}) {
+			let mn = state.model_name
+			let filters = rootState[mn].filters
+			let page = state.filter_page
+			let per_page = rootState[mn].filter_per_page || 5
+			commit('auth/setMessage', 'Filtrando ' + mn, {root: true})
+			commit('auth/setLoading', true, {root: true})
+			return axios.post('/api/search/' + generals.methods.routeString(mn) + '/null/1?page=' + page, {
+				filters: filters,
+				papelera: true,
+				per_page: per_page,
 			})
-			.catch(err => {
-				commit('setLoading', false)
-				console.log(err)
-			})
+				.then(res => {
+					commit('auth/setLoading', false, {root: true})
+					let rows = res.data.data || []
+					commit('setIsFiltered', true)
+					commit('setFiltered', rows)
+					commit('setTotalFilterPages', res.data.last_page)
+					commit('setTotalFilterResults', res.data.total)
+				})
+				.catch(err => {
+					commit('auth/setLoading', false, {root: true})
+					console.log(err)
+				})
 		},
-		loadMoreFiltered({state, commit}) {
+		loadMoreFiltered({state, commit, rootState}) {
 			commit('incrementFilterPage')
+			// Criterios viven en el módulo raíz (article/sale); resultados en este submódulo.
+			let filters = rootState[state.model_name].filters
 			return axios.post(`/api/search/${generals.methods.routeString(state.model_name)}/null/1?page=${state.filter_page}`, {
-				filters: state.filters,
+				filters: filters,
+				papelera: true,
+				per_page: rootState[state.model_name].filter_per_page,
 			})
 			.then(res => {
 				commit('addFiltered', res.data.data)
