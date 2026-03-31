@@ -158,12 +158,21 @@ export default {
 		}
 	},
 	computed: {
+		/**
+		 * Resultados de filtro: en papelera se lee del submódulo namespaced, no del listado normal.
+		 */
 		is_filtered() {
-			return this.$store.state[this.model_name].is_filtered 
+			if (this.papelera) {
+				return this.$store.state.papelera[this.model_name].is_filtered
+			}
+			return this.$store.state[this.model_name].is_filtered
 		},
 		_display() {
 			if (this.display) {
 				return this.display
+			}
+			if (this.papelera) {
+				return this.$store.state.papelera[this.model_name].display
 			}
 			return this.$store.state[this.model_name].display
 		},
@@ -222,13 +231,22 @@ export default {
 				if (this.is_from_models_que_vinieron_por_props && this.slice_models) {
 					return this.models_to_show.length < this.models.length
 				}
-				return this.models_to_show.length < this.$store.state[this.model_name].models.length
+				let total_sin_filtrar = this.papelera
+					? this.$store.state.papelera[this.model_name].models.length
+					: this.$store.state[this.model_name].models.length
+				return this.models_to_show.length < total_sin_filtrar
 			}
 		},
 		filter_page() {
+			if (this.papelera) {
+				return this.$store.state.papelera[this.model_name].filter_page
+			}
 			return this.$store.state[this.model_name].filter_page
 		},
 		total_filter_pages() {
+			if (this.papelera) {
+				return this.$store.state.papelera[this.model_name].total_filter_pages
+			}
 			return this.$store.state[this.model_name].total_filter_pages
 		},
 	},
@@ -238,7 +256,10 @@ export default {
 		},
 		addModelsToShow() {
 			if (this.is_from_filter) {
-				this.$store.dispatch(this.model_name+'/loadMoreFiltered')
+				let dispatch_path = this.papelera
+					? ('papelera/' + this.model_name + '/loadMoreFiltered')
+					: (this.model_name + '/loadMoreFiltered')
+				this.$store.dispatch(dispatch_path)
 			} else {
 				this.index_to_show += 30
 			}

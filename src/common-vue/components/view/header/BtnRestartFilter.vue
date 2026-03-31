@@ -1,6 +1,6 @@
 <template>
 	<b-button
-	v-if="is_filtered"
+	v-if="is_filtered && !papelera"
 	@click="restartSearch"
 	class="m-l-10"
 	id="btn_restart_filter"
@@ -12,19 +12,29 @@
 export default {
 	props: {
 		model_name: String,
+		/** Si true, limpia solo el estado de resultados en papelera/{model} (no el is_filtered del listado). */
+		papelera: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	computed: {
 		is_filtered() {
+			if (this.papelera) {
+				return this.$store.state.papelera[this.model_name].is_filtered
+			}
 			return this.$store.state[this.model_name].is_filtered
 		},
 	},
 	methods: {
 		restartSearch() {
 			this.limpiar_filtros()
-			this.$store.commit(this.model_name+'/setIsFiltered', false)
-			this.$store.commit(this.model_name+'/setFiltered', [])
-			this.$store.commit(this.model_name+'/setFilterPage', 1)
-			this.$store.commit(this.model_name+'/setTotalFilterPages', 1)
+			let prefix = this.papelera ? ('papelera/' + this.model_name + '/') : (this.model_name + '/')
+			this.$store.commit(prefix + 'setIsFiltered', false)
+			this.$store.commit(prefix + 'setFiltered', [])
+			this.$store.commit(prefix + 'setFilterPage', 1)
+			this.$store.commit(prefix + 'setTotalFilterPages', null)
+			this.$store.commit(prefix + 'setTotalFilterResults', 0)
 		},
 		limpiar_filtros() {
 			this.$store.state[this.model_name].filters.forEach(filter => {

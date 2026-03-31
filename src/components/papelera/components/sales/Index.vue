@@ -5,7 +5,6 @@
 		<view-component 
 		model_name="sale"
 		papelera
-		:show_btn_restaurar="false"
 		show_filter_modal
 		:show_previus_days="false">
 			

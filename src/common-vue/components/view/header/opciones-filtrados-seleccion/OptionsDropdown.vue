@@ -35,6 +35,10 @@ export default {
 		from_filter: Boolean,
 		check_permissions: Boolean,
 		show_actualizar_option: Boolean,
+		papelera: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	computed: {
 		id() {
@@ -63,12 +67,18 @@ export default {
 		},
 		text_dropdown() {
 			if (this.from_filter) {
-				return this.$store.state[this.model_name].total_filter_results+' filtrados'
+				if (this.papelera) {
+					return this.$store.state.papelera[this.model_name].total_filter_results + ' filtrados'
+				}
+				return this.$store.state[this.model_name].total_filter_results + ' filtrados'
 			}
-			return 'Seleccion: '+this.$store.state[this.model_name].selected.length
+			return 'Seleccion: ' + this.$store.state[this.model_name].selected.length
 		},
 		show() {
 			if (this.from_filter) {
+				if (this.papelera) {
+					return this.$store.state.papelera[this.model_name].filtered.length
+				}
 				return this.$store.state[this.model_name].filtered.length
 			}
 			return this.$store.state[this.model_name].selected.length

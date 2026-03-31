@@ -5,6 +5,7 @@
 		<!-- <cantidades-actuales></cantidades-actuales> -->
 		<production-batches></production-batches>
 		<recipes></recipes>
+		<insumos></insumos>
 	</div>
 </template>
 <script>
@@ -15,6 +16,7 @@ export default {
 		// CantidadesActuales: () => import('@/components/produccion/components/cantidades-actuales/Index'),
 		ProductionBatches: () => import('@/components/produccionV2/components/production-batches/Index'),
 		Recipes: () => import('@/components/produccionV2/components/recipes/Index'),
+		Insumos: () => import('@/components/produccionV2/components/insumos/Index'),
 	}
 }
 </script> 

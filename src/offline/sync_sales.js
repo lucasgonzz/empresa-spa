@@ -49,8 +49,14 @@ export default {
                     
                     for (const sale of pending_sales) {
                         try {
+                            /** Evita enviar campos locales de IndexedDB al backend. */
+                            const sale_to_sync = {
+                                ...sale
+                            }
+                            delete sale_to_sync.id
+                            delete sale_to_sync.created_at
 
-                            const response = await this.$api.post('/sale', sale)
+                            const response = await this.$api.post('/sale', sale_to_sync)
 
                             if (response.status === 200 || response.status === 201) {
                                 
@@ -69,9 +75,10 @@ export default {
 
                     // this.notificar_ventas_guardadas(ventas_guardadas)
 
-                    if (pending_sales.length) {
+                    /** Notifica solo la cantidad realmente guardada en servidor. */
+                    if (ventas_guardadas.length) {
 
-                        let toast = `🔁 Se sincronizaron ${pending_sales.length} ventas offline exitosamente`
+                        let toast = `🔁 Se sincronizaron ${ventas_guardadas.length} ventas offline exitosamente`
                         this.$toast.success(toast, {
                             duration: 5000,
                             position: 'top-right'

@@ -954,8 +954,45 @@ export default {
 			if (prop.type == 'texteditor') {
 				return this.strip_html(model[prop.key])
 			}
+			// Select con options declaradas en el model: muestra texto amigable en tablas/listados.
+			if (prop.type == 'select') {
+				const resolved_select_label = this.resolve_static_select_display_text(prop, model[prop.key])
+				if (resolved_select_label !== null) {
+					return resolved_select_label
+				}
+			}
 			return model[prop.key]
 			// return model[prop.key].replace(/\n/g, '<br>')
+		},
+		/**
+		 * Obtiene el texto visible de un option estático (value guardado vs label en UI).
+		 *
+		 * @param {Object} prop definición de propiedad del model (debe tener options).
+		 * @param {*} stored_value valor persistido en model[prop.key] o pivot.
+		 * @returns {string|null} texto a mostrar o null si no aplica / no hubo match.
+		 */
+		resolve_static_select_display_text(prop, stored_value) {
+			if (!prop || !prop.options || !Array.isArray(prop.options)) {
+				return null
+			}
+			for (let i = 0; i < prop.options.length; i++) {
+				const option = prop.options[i]
+				if (typeof option === 'object' && option !== null && !Array.isArray(option)) {
+					const opt_value = option.value
+					if (opt_value === stored_value || String(opt_value) === String(stored_value)) {
+						if (option.text !== undefined && option.text !== null) {
+							return option.text
+						}
+						if (option.label !== undefined && option.label !== null) {
+							return option.label
+						}
+						return stored_value
+					}
+				} else if (option === stored_value || String(option) === String(stored_value)) {
+					return String(option).replaceAll('_', ' ').toUpperCase()
+				}
+			}
+			return null
 		},
 		_check_moneda(value, prop, model, from_pivot, pivot_parent_model) {
 
@@ -1070,18 +1107,32 @@ export default {
 			let store 
 
 			if (prop.options) {
-
+				// Options pueden ser strings (valor = texto derivado) u objetos { value, text|label }.
 				let options = []
 
 				options.push({
 					value: 0, text: 'Seleccione '+prop.text
 				})
 
-				prop.options.forEach(option => {
-					options.push({
-						value: option,
-						text: option.replaceAll('_', ' ').toUpperCase(),
-					})
+				prop.options.forEach((option) => {
+					if (typeof option === 'object' && option !== null && !Array.isArray(option)) {
+						const opt_value = option.value
+						const opt_text =
+							option.text !== undefined && option.text !== null
+								? option.text
+								: option.label !== undefined && option.label !== null
+									? option.label
+									: String(opt_value)
+						options.push({
+							value: opt_value,
+							text: opt_text,
+						})
+					} else {
+						options.push({
+							value: option,
+							text: String(option).replaceAll('_', ' ').toUpperCase(),
+						})
+					}
 				})
 
 				return options

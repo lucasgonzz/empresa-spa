@@ -27,6 +27,9 @@ export default {
 					name: 'Recetas',
 					call_models: 'recipe',
 				},
+				{
+					name: 'Insumos',
+				},
 			]
 			return items
 		}

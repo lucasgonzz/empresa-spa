@@ -137,6 +137,13 @@ import SearchComponent from '@/common-vue/components/search/Index'
 export default {
 	props: {
 		model_name: String,
+		/**
+		 * Búsqueda desde papelera: mismo criterio en store raíz (filters), resultados en papelera/{model}.
+		 */
+		papelera: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	components: {
 		SearchComponent,
@@ -179,27 +186,45 @@ export default {
 			this.props = this.propsToFilterInModal(this.model_name)
 		},
 		search() {
+			// Criterios siempre en el módulo del modelo (listado).
 			this.$store.commit(this.model_name+'/setFilterPage', 1)
 			this.$store.commit(this.model_name+'/setFilters', this.filters)
-			this.$store.commit(this.model_name+'/setLoading', true)
+			if (this.papelera) {
+				this.$store.commit('papelera/' + this.model_name + '/setFilterPage', 1)
+				this.$store.commit('papelera/' + this.model_name + '/setLoading', true)
+			} else {
+				this.$store.commit(this.model_name+'/setLoading', true)
+			}
 			this.$store.commit(this.model_name+'/setFromDate', '')
 			this.$bvModal.hide('filter-modal')
-			this.$api.post('search/'+this.model_name+'/null/1', {
+			this.$api.post('search/'+this.model_name+'/null/1?page=1', {
 				props: this.props,
 				filters: this.filters,
+				papelera: this.papelera,
+				per_page: this.$store.state[this.model_name].filter_per_page || 5,
 			})
 			.then(res => {
-				console.log('RRES')
-				console.log(res.data.data)
-				this.$store.commit(this.model_name+'/setLoading', false)
-				this.$store.commit(this.model_name+'/setIsFiltered', true) 
-				this.$store.commit(this.model_name+'/setFiltered', res.data.data)
-				this.$store.commit(this.model_name+'/setTotalFilterPages', res.data.last_page)
-				this.$store.commit(this.model_name+'/setTotalFilterResults', res.data.total)
+				let prefix_resultados = this.papelera
+					? ('papelera/' + this.model_name + '/')
+					: (this.model_name + '/')
+				if (this.papelera) {
+					this.$store.commit('papelera/' + this.model_name + '/setLoading', false)
+				} else {
+					this.$store.commit(this.model_name+'/setLoading', false)
+				}
+				this.$store.commit(prefix_resultados + 'setIsFiltered', true)
+				this.$store.commit(prefix_resultados + 'setFiltered', res.data.data)
+				this.$store.commit(prefix_resultados + 'setTotalFilterPages', res.data.last_page)
+				this.$store.commit(prefix_resultados + 'setTotalFilterResults', res.data.total)
 				this.clearFilter()
 			})
 			.catch(err => {
 				console.log(err)
+				if (this.papelera) {
+					this.$store.commit('papelera/' + this.model_name + '/setLoading', false)
+				} else {
+					this.$store.commit(this.model_name+'/setLoading', false)
+				}
 				this.$toast.error('Error al buscar')
 			})
 		},

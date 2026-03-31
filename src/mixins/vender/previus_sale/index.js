@@ -226,6 +226,10 @@ export default {
 			this.$store.commit('vender/set_moneda_id', model.moneda_id)
 			this.$store.commit('vender/set_valor_dolar', model.valor_dolar)
 			this.$store.commit('vender/set_sale_status_id', model.sale_status_id)
+			// Seteamos discount_stock desde la venta que se está actualizando
+			this.$store.commit('vender/set_discount_stock', model.discount_stock)
+			// Seteamos iva_aplicado desde la venta que se está actualizando
+			this.$store.commit('vender/set_iva_aplicado', model.iva_aplicado)
 
 			// alert('valor_dolar: '+this.$store.state.vender.valor_dolar)
 
@@ -283,6 +287,10 @@ export default {
 				observations_ocultas: this.$store.state.vender.observations_ocultas,
 				aplicar_recargos_directo_a_items: this.$store.state.vender.aplicar_recargos_directo_a_items,
 				sale_status_id: this.$store.state.vender.sale_status_id,
+				// Enviamos el valor actual de discount_stock al actualizar la venta
+				discount_stock: this.$store.state.vender.discount_stock,
+				// Enviamos el valor actual de iva_aplicado al actualizar la venta
+				iva_aplicado: this.$store.state.vender.iva_aplicado,
 			})
 			.then(res => {
 				this.$toast.success('Venta actualizada')
@@ -333,6 +341,10 @@ export default {
 				item.price = Number(article.price)
 				item.amount = Number(article.pivot.amount)
 				item.article_variant_id = Number(article.pivot.article_variant_id)
+				// Se conserva iva_id para recalcular precio segun iva_aplicado al editar.
+				item.iva_id = article.iva_id
+				// Se conserva la relacion iva para disponer del porcentaje en frontend.
+				item.iva = article.iva
 				item.discount = this.get_pivot_amount(article.pivot.discount ? article.pivot.discount : article.pivot.bonus)
 				item.checked_amount = this.get_pivot_amount(article.pivot.checked_amount)
 				item.returned_amount = this.get_pivot_amount(article.pivot.returned_amount)

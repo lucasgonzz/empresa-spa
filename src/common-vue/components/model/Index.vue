@@ -670,6 +670,120 @@ export default {
 		            ok = this[this.save_check_function]();
 		        }
 
+		        /*
+		         * Validación adicional: chequeo de repetidos al momento de CREAR.
+		         * Esto asegura que el usuario no pueda crear duplicados si no presionó Enter
+		         * o si no se disparó blur en el input antes de guardar.
+		         */
+		        if (ok) {
+		        	let is_creating_model = !this.model || !this.model.id
+		        	if (is_creating_model) {
+		        		/* Resolver usuario owner (si el autenticado es empleado). */
+		        		let auth_user = this.$store && this.$store.state && this.$store.state.auth ? this.$store.state.auth.user : null
+		        		let owner_user = auth_user && auth_user.owner ? auth_user.owner : auth_user
+
+		        		/*
+		        		 * Ejecuta chequeos en serie (uno por vez) para mantener el flujo simple
+		        		 * y evitar múltiples requests simultáneas.
+		        		 */
+		        		let props_to_check = this.properties.filter(p => {
+		        			return p && p.use_to_check_if_is_repeat
+		        		})
+
+		        		let check_next_prop = (index) => {
+		        			if (!ok || index >= props_to_check.length) {
+		        				console.log('termino check: ')
+		        				console.log(ok)
+		        				resolve(ok)
+		        				return
+		        			}
+
+		        			let prop = props_to_check[index]
+
+		        			/* Caso particular: permitir `provider_code` repetido en artículos según configuración. */
+		        			if (
+		        				this.model_name == 'article'
+		        				&& prop.key == 'provider_code'
+		        				&& owner_user
+		        				&& Number(owner_user.usa_provider_codes_repetidos) === 1
+		        			) {
+		        				check_next_prop(index + 1)
+		        				return
+		        			}
+
+		        			/* Si no hay valor cargado, no se chequea. */
+		        			let current_value = this.model && this.model[prop.key] != null ? String(this.model[prop.key]) : ''
+		        			if (current_value.trim() == '') {
+		        				check_next_prop(index + 1)
+		        				return
+		        			}
+
+		        			/* Chequeo por API (si corresponde), o local si el prop así lo define. */
+		        			if (prop.chequear_buscando_desde_api) {
+		        				let filters = [
+		        					{
+		        						type: 'text',
+		        						igual_que: current_value.toLowerCase(),
+		        						key: prop.key,
+		        					},
+		        				]
+
+		        				this.$store.commit('auth/setMessage', 'Chequeando ' + this.propText(prop))
+		        				this.$store.commit('auth/setLoading', true)
+
+		        				this.$api.post('search/' + this.model_name, { filters })
+		        				.then(res => {
+		        					this.$store.commit('auth/setLoading', false)
+		        					let models = res && res.data && res.data.models ? res.data.models : []
+		        					if (models.length) {
+		        						/* Si existe repetido, se bloquea el guardado. */
+		        						ok = false
+		        						this.$toast.warning('Ya hay un ' + this.singular(this.model_name) + ' con este ' + this.propText(prop))
+		        						let input = document.getElementById(this.model_name + '-' + prop.key)
+		        						if (input) {
+		        							setTimeout(() => {
+		        								input.focus()
+		        							}, 150)
+		        						}
+		        					}
+		        					check_next_prop(index + 1)
+		        				})
+		        				.catch(err => {
+		        					this.$store.commit('auth/setLoading', false)
+		        					/*
+		        					 * Si falla el chequeo, por seguridad bloqueamos el guardado para no crear duplicados
+		        					 * sin poder validar.
+		        					 */
+		        					ok = false
+		        					this.$toast.error('Error al chequear repetidos')
+		        					console.log(err)
+		        					check_next_prop(index + 1)
+		        				})
+		        			} else {
+		        				/* Chequeo local contra store (fallback). */
+		        				let models_store = this.modelsStoreFromName(this.model_name)
+		        				let finded = models_store.find(model => {
+		        					return model[prop.key] && String(model[prop.key]).toLowerCase() == current_value.toLowerCase()
+		        				})
+		        				if (typeof finded != 'undefined') {
+		        					ok = false
+		        					this.$toast.warning('Ya hay un ' + this.singular(this.model_name) + ' con este ' + this.propText(prop))
+		        					let input = document.getElementById(this.model_name + '-' + prop.key)
+		        					if (input) {
+		        						setTimeout(() => {
+		        							input.focus()
+		        						}, 150)
+		        					}
+		        				}
+		        				check_next_prop(index + 1)
+		        			}
+		        		}
+
+		        		check_next_prop(0)
+		        		return
+		        	}
+		        }
+
 		        console.log('termino check: ')
 		        console.log(ok)
 		        resolve(ok); // Retorna true o false

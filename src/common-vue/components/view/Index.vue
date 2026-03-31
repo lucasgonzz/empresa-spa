@@ -64,6 +64,7 @@
 
 		<view-header
 		v-if="show_view_header"
+		:papelera="papelera"
 		:show_actualizar_option="show_actualizar_option"
 		:show_btn_props_to_show="show_btn_props_to_show"
 		:show_btn_create="show_btn_create"
@@ -109,6 +110,7 @@
 		:items="horizontal_nav_items" 
 		:set_view="horizontal_nav_set_view"
 		:set_sub_view="horizontal_nav_set_sub_view"
+		:papelera="papelera"
 		:model_name="model_name">
 			<template v-slot:btn_create>
 				<slot name="horizontal_nav_btn_create"></slot>

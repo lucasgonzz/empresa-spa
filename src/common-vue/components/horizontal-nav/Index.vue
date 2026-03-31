@@ -26,6 +26,7 @@
 			class="cont-buttons search-buttons"
 			v-if="show_filter_modal">
 				<filter-modal
+				:papelera="papelera"
 				:model_name="model_name"></filter-modal>
 				<b-btn-group
 				class="m-r-15">
@@ -45,6 +46,7 @@
 			</div>
 			
 			<div
+			v-if="!papelera"
 			class="cont-buttons create-buttons">
 				<slot name="btn_create">
 					<excel-drop-down
@@ -171,6 +173,13 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+		/**
+		 * Si true, badge de filtrado y reinicio afectan solo papelera/{model_name} (resultados papelera).
+		 */
+		papelera: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	created() {
 		if (!this.set_view && !this.set_sub_view && !this.set_sub_sub_view) {
@@ -224,7 +233,20 @@ export default {
 			return this.selected_item
 		},
 		is_filtered() {
-			return this.$store.state[this.model_name].is_filtered 
+			if (this.papelera) {
+				return this.$store.state.papelera[this.model_name].is_filtered
+			}
+			return this.$store.state[this.model_name].is_filtered
+		},
+		/**
+		 * Cantidad de registros cargados en el resultado del filtro de la papelera (páginas acumuladas con “ver más”).
+		 */
+		cantidad_filtrados_papelera() {
+			if (!this.papelera || !this.model_name) {
+				return 0
+			}
+			let filtrados = this.$store.state.papelera[this.model_name].filtered
+			return filtrados ? filtrados.length : 0
 		},
 		_prop_name() {
 			if (this.prop_name) {
@@ -244,9 +266,12 @@ export default {
 			}, 300)
 		},
 		restartSearch() {
-			this.$store.commit(this.model_name+'/setIsFiltered', false)
-			this.$store.commit(this.model_name+'/setFiltered', [])
-			this.$store.commit(this.model_name+'/setFilterPage', 1)
+			let prefix = this.papelera ? ('papelera/' + this.model_name + '/') : (this.model_name + '/')
+			this.$store.commit(prefix + 'setIsFiltered', false)
+			this.$store.commit(prefix + 'setFiltered', [])
+			this.$store.commit(prefix + 'setFilterPage', 1)
+			this.$store.commit(prefix + 'setTotalFilterPages', null)
+			this.$store.commit(prefix + 'setTotalFilterResults', 0)
 		},
 		setDisplay(display) {
 			this.$emit('setDisplay', display)

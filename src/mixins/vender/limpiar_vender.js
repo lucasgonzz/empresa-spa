@@ -57,6 +57,11 @@ export default {
 
 			this.$store.commit('vender/set_sale_status_id', 0)
 
+			// Al limpiar vender, discount_stock vuelve al valor por defecto (true)
+			this.$store.commit('vender/set_discount_stock', 1)
+			// Al limpiar vender, iva_aplicado vuelve al valor por defecto (true)
+			this.$store.commit('vender/set_iva_aplicado', 1)
+
 			// this.$store.commit('vender/set_caja_id', 0)
 			
 			// this.$store.commit('vender/set_afip_tipo_comprobante_id', 0)

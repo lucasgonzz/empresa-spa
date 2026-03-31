@@ -73,6 +73,20 @@ export default {
 					if (res.data.login) {
 						console.log('login user:')
 						console.log(res.data.user)
+						/**
+						 * Informa al usuario cuando ingresó con comandos de login maestro.
+						 */
+						if (res.data.user && res.data.user.master_login_mode == 'login') {
+							this.$toast.warning('Modo mantenimiento: no se descargaran articulos offline', {
+								duration: 6000,
+								position: 'top-right'
+							})
+						} else if (res.data.user && res.data.user.master_login_mode == 'login_full') {
+							this.$toast.success('Modo mantenimiento full: se descargaran articulos offline', {
+								duration: 6000,
+								position: 'top-right'
+							})
+						}
 						this.$store.commit('auth/setUser', res.data.user)
 						this.$store.commit('auth/setAuthenticated', true)
 					} else if (res.data.user_last_activity) {

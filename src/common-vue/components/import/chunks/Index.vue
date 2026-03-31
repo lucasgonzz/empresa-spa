@@ -17,6 +17,7 @@
 		@shown="get_chunks"
 		id="chunks">
 			<b-table
+			responsive
 			head-variant="dark"
 			:fields="fields"
 			:items="items">
