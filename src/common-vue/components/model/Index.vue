@@ -374,6 +374,8 @@ export default {
 					this.restaurando = false
 					this.$toast.success('Restaurado') 
 					this.$bvModal.hide(this.model_name)
+					this.$store.dispatch('papelera/'+this.model_name+'/getModels')
+
 				})
 				.catch(err => {
 					this.restaurando = false

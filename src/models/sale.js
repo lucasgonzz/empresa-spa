@@ -28,10 +28,10 @@ export default {
 		{
 			text: 'Ganancia',
 			type: 'number',
+			key: 'ganancia',
 			only_show: true,
 			is_price: true,
 			if_is_admin: true,
-			function: 'get_sale_ganancia',
 		},
 		{
 			text: 'Moneda',
@@ -66,7 +66,9 @@ export default {
 		},
 		{
 			text: 'Met Pago',
+			key: 'met_pago',
 			function: 'get_sale_payment_methods',
+			no_usar_en_filtros: true,
 		},
 		{
 			text: 'Cliente',

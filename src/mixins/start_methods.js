@@ -171,7 +171,7 @@ export default {
 			this.$store.dispatch('buyer/getModels')
 			.then(() => {
 				console.log('llegaron los buyers, mandando setChatsToShow')
-				this.$store.commit('message/setChatsToShow')
+				this.$store.dispatch('message/setChatsToShow')
 				console.log('setChatsToShow mandado')
 			})
 		},

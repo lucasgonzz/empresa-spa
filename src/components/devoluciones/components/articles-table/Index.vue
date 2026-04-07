@@ -20,6 +20,16 @@
 
 			</template>
 			
+			<!-- <template #cell(discount)="data">
+				
+				<b-form-input
+				@change="call_set_total_devolucion"
+				@keyup="call_set_total_devolucion"
+				type="number"
+				v-model="items[data.index].discount"></b-form-input>
+
+			</template> -->
+			
 			<template #cell(article_variant_id)="data">
 				
 				<b-form-select
@@ -81,6 +91,10 @@ export default {
 					label: 'Precio',
 					key: 'price_vender',
 				},
+				{
+					label: 'Desc',
+					key: 'discount',
+				},
 			]
 
 			if (this.hasExtencion('article_variants')) {
@@ -116,6 +130,7 @@ export default {
 					bar_code: item.bar_code,
 					name: item.name,
 					price_vender: this.price(item.price_vender),
+					discount: item.discount,
 					amount: item.amount,
 					article_variant_id: item.article_variant_id,
 				})

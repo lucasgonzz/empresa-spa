@@ -17,6 +17,15 @@ export default {
 			type: 'checkbox',
 		},
 		{
+			/**
+			 * Flag para controlar visibilidad del total general en el pie del PDF.
+			 */
+			text: 'Mostrar total en el pie',
+			key: 'show_total_in_footer',
+			type: 'checkbox',
+			value: 1,
+		},
+		{
 			text: 'Opciones',
 			key: 'pdf_column_options',
 			store: 'pdf_column_option',

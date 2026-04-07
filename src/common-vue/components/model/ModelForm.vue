@@ -951,9 +951,10 @@ export default {
 				Solo aplica al alta (create) de artículos.
 				Si el modelo ya existe, mantenemos el chequeo para evitar colisiones accidentales al editar.
 			*/
-			let is_creating_model = !this.model || !this.model.id
-			if (!is_creating_model) {
+			if (!this.model.id) {
 				return true
+			} else {
+				return false
 			}
 
 			console.log('can_check_is_repeat para '+this.model_name+' y prop:')

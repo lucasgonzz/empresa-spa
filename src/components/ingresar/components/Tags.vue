@@ -26,7 +26,8 @@
 				class="j-start">
 					<div
 					class="tag bg-primary"
-					v-for="tag in article.tags">
+					v-for="tag in article.tags"
+					:key="tag.id">
 						{{ tag.name }}
 						<span 
 						@click="removeTag(tag)"
@@ -64,7 +65,11 @@ export default {
 	},
 	computed: {
 		tags() {
-			return this.$store.state.tags.tags
+			/**
+			 * Fuente de tags para el autocomplete.
+			 * El módulo Vuex registrado es `tag` y los registros viven en `models`.
+			 */
+			return this.$store.state.tag.models
 		},
 	},
 	methods: {
@@ -95,7 +100,8 @@ export default {
 				this.loading = false
 				let tag = res.data.tag
 				this.setTag(tag)
-				this.$store.commit('tags/add', tag)
+				// Agrega el tag al store para que quede disponible en próximas búsquedas.
+				this.$store.commit('tag/add', tag)
 			})
 			.catch(err => {
 				this.loading = false

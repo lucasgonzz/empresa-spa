@@ -51,7 +51,7 @@ export default {
 	methods: {
 		setSelected(item) {
 			if (item.name == 'mensajes') {
-				this.$store.commit('message/setChatsToShow')
+				this.$store.dispatch('message/setChatsToShow')
 			}
 		}
 	}

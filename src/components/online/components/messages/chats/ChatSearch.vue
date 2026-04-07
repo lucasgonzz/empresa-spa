@@ -30,9 +30,9 @@ export default {
 				let buyers_to_show = this.buyers.filter(buyer => {
 					return buyer.name.toLowerCase().includes(input.toLowerCase())
 				})
-				this.$store.commit('message/setChatsToShow', buyers_to_show)
+				this.$store.dispatch('message/setChatsToShow', buyers_to_show)
 			} else {
-				this.$store.commit('message/setChatsToShow')
+				this.$store.dispatch('message/setChatsToShow')
 			}
 			return []
 		},

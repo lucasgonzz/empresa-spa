@@ -29,7 +29,7 @@ export default {
 	},
 	created() {
 		console.log('creado messages')
-		this.$store.commit('message/setChatsToShow')
+		this.$store.dispatch('message/setChatsToShow')
 	}
 }
 </script>

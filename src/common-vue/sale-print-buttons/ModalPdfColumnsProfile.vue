@@ -83,6 +83,12 @@
 		</b-col>
 		<b-col md="4" class="d-flex align-items-center">
 			<b-form-checkbox
+			v-model="local_show_total_in_footer">
+				Mostrar total en el pie
+			</b-form-checkbox>
+		</b-col>
+		<b-col md="4" class="d-flex align-items-center">
+			<b-form-checkbox
 			v-model="local_show_totals_on_each_page">
 				Mostrar totales en cada hoja
 			</b-form-checkbox>
@@ -172,6 +178,13 @@ export default {
 		show_totals_on_each_page: {
 			type: [Boolean, Number, String],
 			default: false,
+		},
+		/**
+		 * Flag para controlar visibilidad del total general en el pie del PDF.
+		 */
+		show_total_in_footer: {
+			type: [Boolean, Number, String],
+			default: true,
 		},
 		/**
 		 * Texto libre del pie de página del perfil.
@@ -287,6 +300,19 @@ export default {
 			},
 			set(value) {
 				this.$emit('update:show_totals_on_each_page', !!value)
+			},
+		},
+		/**
+		 * Proxy local del flag para mostrar/ocultar el total en el pie.
+		 */
+		local_show_total_in_footer: {
+			get() {
+				return this.show_total_in_footer === true
+					|| this.show_total_in_footer === 1
+					|| this.show_total_in_footer === '1'
+			},
+			set(value) {
+				this.$emit('update:show_total_in_footer', !!value)
 			},
 		},
 		/**

@@ -4,7 +4,7 @@
 	class="cont-total-ventas">
 		<div>
 			<div
-			class="j-start align-end"
+			class="j-start align-start"
 			v-if="!loading">
 
 				<div
@@ -14,8 +14,13 @@
 					class="j-start align-center">
 						<p
 						class="total-ventas">
-							Total {{ price(total) }}
+							Total {{ price(total) }} 
 						</p>
+						<p
+						class="m-l-10 m-b-0"
+						v-if="total_selected_payment_method > 0">
+							({{ price(total_selected_payment_method) }} {{ selected_payment_method }})
+						</p> 
 
 						<p
 						class="text-left m-b-0 m-md-l-10"
@@ -26,8 +31,19 @@
 						<p
 						class="text-left m-b-0 m-md-l-10"
 						v-if="is_admin">
-							| Ganancia <strong>{{ price(total - total_cost) }}</strong>
+							| Ganancia <strong>{{ price(total_ganancia) }}</strong>
 						</p> 
+					</div>
+
+					<div
+					class="f-columns align-start">
+
+
+						<p
+						class="m-0"
+						v-if="total_cuenta_corriente > -1">
+							Total C/C: {{ price(total_cuenta_corriente) }}
+						</p>
 					</div>
 
 					<div
@@ -47,7 +63,7 @@
 						<p
 						class="text-left m-b-0 m-md-l-10"
 						v-if="is_admin">
-							| Ganancia <strong>{{ price(total_usd - total_cost_usd) }}</strong>
+							| Ganancia <strong>{{ price(total_ganancia_usd) }}</strong>
 						</p> 
 					</div>
 				</div>
@@ -90,6 +106,40 @@ export default {
 		loading() {
 			return this.$store.state.sale.loading  
 		},
+		selected_payment_method_id() {
+			return this.$store.state.sale.payment_method_show_option
+		},
+		selected_payment_method() {
+			let payment_method = this.$store.state.current_acount_payment_method.models.find(p => p.id == this.selected_payment_method_id)
+			if (typeof payment_method != 'undefined') {
+				return payment_method.name 
+			}
+			return ''
+		},
+		total_selected_payment_method() {
+			let total = 0
+			if (this.selected_payment_method_id != 'Todos') {
+				this.sales_to_show.forEach(sale => {
+					let payment_method = sale.current_acount_payment_methods.find(p => p.id == this.selected_payment_method_id)
+					if (typeof payment_method != 'undefined') {
+						total += Number(payment_method.pivot.amount)
+					}
+				})
+			}
+			return total 
+		},
+		total_cuenta_corriente() {
+			let total = 0
+			this.sales_to_show.forEach(model => {
+				if (
+					model.client_id
+					&& !model.omitir_en_cuenta_corriente
+				) {
+					total += Number(this.totalSale(model, false))
+				}
+			})
+			return total 
+		},	
 		total() {
 			let total = 0
 			this.sales_to_show.forEach(model => {
@@ -100,6 +150,7 @@ export default {
 			return total 
 		},
 		total_cost() {
+			/* Acumulador de costos para ventas en pesos. */
 			let total = 0
 			this.sales_to_show.forEach(model => {
 				if (model.moneda_id == 1) {
@@ -108,7 +159,19 @@ export default {
 			})
 			return total 
 		},
+		total_ganancia() {
+			/* Acumulador de ganancia persistida para ventas en pesos. */
+			let total = 0
+			this.sales_to_show.forEach(model => {
+				if (model.moneda_id == 1) {
+					/* Se usa el campo persistido por backend y no un calculo local. */
+					total += Number(model.ganancia)
+				}
+			})
+			return total
+		},
 		total_usd() {
+			/* Acumulador de total de ventas en dolares. */
 			let total = 0
 			this.sales_to_show.forEach(model => {
 				if (model.moneda_id == 2) {
@@ -118,6 +181,7 @@ export default {
 			return total 
 		},
 		total_cost_usd() {
+			/* Acumulador de costos para ventas en dolares. */
 			let total = 0
 			this.sales_to_show.forEach(model => {
 				if (model.moneda_id == 2) {
@@ -125,6 +189,17 @@ export default {
 				}
 			})
 			return total 
+		},
+		total_ganancia_usd() {
+			/* Acumulador de ganancia persistida para ventas en dolares. */
+			let total = 0
+			this.sales_to_show.forEach(model => {
+				if (model.moneda_id == 2) {
+					/* Se usa el campo persistido por backend y no un calculo local. */
+					total += Number(model.ganancia)
+				}
+			})
+			return total
 		},
 		cantidad_ventas() {
 			let total = 0

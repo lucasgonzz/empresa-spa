@@ -114,6 +114,12 @@ export default {
 		}
 	},
 	computed: {
+		/*
+		 * Filtra las filas configurables de columnas segun el texto de busqueda ingresado.
+		 * Parametros: no recibe parametros directos (usa this.search_query y this.config_rows).
+		 * Retorno: Array con filas coincidentes por nombre o etiqueta; si no hay busqueda, retorna todas.
+		 * Nota: la comparacion es case-insensitive para mejorar la experiencia de uso.
+		 */
 		filtered_config_rows() {
 			if (!this.search_query) {
 				return this.config_rows
@@ -126,16 +132,45 @@ export default {
 		},
 	},
 	methods: {
+		/*
+		 * Obtiene el indice real de una fila dentro del arreglo principal de configuracion.
+		 * Parametros:
+		 * - row (Object): fila de configuracion de columna.
+		 * Retorno: Number con la posicion encontrada en this.config_rows o -1 si no existe.
+		 * Nota: se usa para operar sobre el arreglo original, aun cuando la vista este filtrada.
+		 */
 		get_config_index(row) {
 			return this.config_rows.findIndex(item => item.key == row.key)
 		},
+		/*
+		 * Inicia el proceso de drag and drop guardando el indice de origen.
+		 * Parametros:
+		 * - row (Object): fila que comienza a arrastrarse.
+		 * - event (DragEvent): evento nativo del navegador para DnD.
+		 * Retorno: void.
+		 * Nota: effectAllowed en "move" informa que la interaccion es de reordenamiento.
+		 */
 		drag_start(row, event) {
 			this.dragging_index = this.get_config_index(row)
 			event.dataTransfer.effectAllowed = 'move'
 		},
+		/*
+		 * Actualiza el indice de destino mientras se arrastra una fila sobre otra.
+		 * Parametros:
+		 * - row (Object): fila actualmente sobrevolada.
+		 * Retorno: void.
+		 * Nota: se guarda solo referencia de indice para resolver el drop final.
+		 */
 		drag_over(row) {
 			this.drag_over_index = this.get_config_index(row)
 		},
+		/*
+		 * Ejecuta el reordenamiento al soltar una fila en una nueva posicion.
+		 * Parametros:
+		 * - row (Object): fila sobre la que se realiza el drop.
+		 * Retorno: void.
+		 * Nota: evita reordenar si no hay origen valido o si origen y destino son iguales.
+		 */
 		drop_row(row) {
 			const index = this.get_config_index(row)
 			if (this.dragging_index === null || this.dragging_index === index) {
@@ -146,27 +181,59 @@ export default {
 			this.config_rows.splice(index, 0, moved)
 			this.drag_end()
 		},
+		/*
+		 * Limpia el estado temporal del drag and drop al finalizar la interaccion.
+		 * Parametros: no recibe parametros.
+		 * Retorno: void.
+		 * Nota: reinicia indices para evitar efectos colaterales entre arrastres.
+		 */
 		drag_end() {
 			this.dragging_index = null
 			this.drag_over_index = null
 		},
+		/*
+		 * Mueve una fila seleccionada al inicio de la configuracion.
+		 * Parametros:
+		 * - row (Object): fila a mover.
+		 * Retorno: void.
+		 * Nota: si ya esta en primera posicion, no realiza cambios.
+		 */
 		move_to_start(row) {
 			const index = this.get_config_index(row)
 			if (index <= 0) return
 			const moved = this.config_rows.splice(index, 1)[0]
 			this.config_rows.unshift(moved)
 		},
+		/*
+		 * Mueve una fila seleccionada al final de la configuracion.
+		 * Parametros:
+		 * - row (Object): fila a mover.
+		 * Retorno: void.
+		 * Nota: si ya esta al final, no realiza cambios.
+		 */
 		move_to_end(row) {
 			const index = this.get_config_index(row)
 			if (index >= this.config_rows.length - 1) return
 			const moved = this.config_rows.splice(index, 1)[0]
 			this.config_rows.push(moved)
 		},
+		/*
+		 * Desmarca la visibilidad de todas las filas actualmente visibles en el filtro.
+		 * Parametros: no recibe parametros.
+		 * Retorno: void.
+		 * Nota: actua sobre filtered_config_rows para respetar la busqueda activa.
+		 */
 		limpiar_todo() {
 			this.filtered_config_rows.forEach(row => {
 				row.visible = false
 			})
 		},
+		/*
+		 * Marca la visibilidad de todas las filas actualmente visibles en el filtro.
+		 * Parametros: no recibe parametros.
+		 * Retorno: void.
+		 * Nota: actua sobre filtered_config_rows para respetar la busqueda activa.
+		 */
 		marcar_todo() {
 			this.filtered_config_rows.forEach(row => {
 				row.visible = true

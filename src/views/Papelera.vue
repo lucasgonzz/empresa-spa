@@ -14,6 +14,8 @@ export default {
 	},
 	created() {
 		this.$store.dispatch('papelera/article/getModels')
+		this.$store.commit('article/setIsSelecteable', false)
+
 	}
 }
 </script>

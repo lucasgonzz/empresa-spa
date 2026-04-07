@@ -85,7 +85,7 @@ export default {
 			.then(res => {
 				this.addBuyerMessage(res.data.model)
 				// this.$store.commit('buyer/addMessage', res.data.model)
-				this.$store.commit('message/setChatsToShow')
+				this.$store.dispatch('message/setChatsToShow')
 				this.loading = false
 				this.scrollBottom('messages')
 				this.clear()

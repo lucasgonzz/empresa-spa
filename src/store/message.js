@@ -2,7 +2,6 @@ import axios from 'axios'
 axios.defaults.withCredentials = true
 axios.defaults.baseURL = process.env.VUE_APP_API_URL
 
-import buyers_store from '@/store/buyer'
 import generals from '@/common-vue/mixins/generals'
 export default {
 	namespaced: true,
@@ -93,15 +92,19 @@ export default {
 		setSelectedArticle(state, value) {
 			state.selected_article = value
 		},
-		setChatsToShow(state, value = null) {
+		setChatsToShow(state, buyers_models) {
 			/*
 				* Busco los buyers ya descargados
 				y filtro los que tengan mensajes (leidos o sin leer)
 				y ordeno los buyers en base a la fecha del ultimo mensaje
 			*/
+			// Listado de buyers a evaluar para la bandeja de chats.
+			// Se espera que venga desde `rootState.buyer.models` o un filtro manual (ej: buscador).
+			let buyers_to_evaluate = Array.isArray(buyers_models) ? buyers_models : []
 			let buyers = []
-			buyers_store.state.models.forEach(buyer => {
-				if (buyer.messages.length) {
+			buyers_to_evaluate.forEach(buyer => {
+				// Solo muestro buyers que tengan mensajes ya cargados.
+				if (buyer && buyer.messages && buyer.messages.length) {
 					buyers.push(buyer)
 				}
 			})
@@ -181,6 +184,25 @@ export default {
 		},
 	},
 	actions: {
+		/**
+		 * Arma `chats_to_show` tomando como fuente los buyers ya cargados en el store `buyer`.
+		 *
+		 * Notas:
+		 * - En este proyecto, `buyer.js` exporta el módulo Vuex (factory), no el estado vivo.
+		 * - Por eso, para acceder al estado real, se usa `rootState.buyer.models`.
+		 *
+		 * @param {Object} context Contexto Vuex.
+		 * @param {Array|null} buyers_to_show Lista opcional filtrada (por ejemplo desde el buscador).
+		 * @returns {void}
+		 */
+		setChatsToShow({ commit, rootState }, buyers_to_show = null) {
+			// Si viene un listado filtrado (por búsqueda), lo uso; si no, uso el store `buyer`.
+			let buyers_models = buyers_to_show
+			if (!Array.isArray(buyers_models)) {
+				buyers_models = rootState && rootState.buyer ? rootState.buyer.models : []
+			}
+			commit('setChatsToShow', buyers_models)
+		},
 		getModels({ commit, state }, buyer_id = null) {
 			if (!buyer_id) {
 				buyer_id = state.selected_buyer.id
@@ -189,10 +211,13 @@ export default {
 			return axios.get(`/api/${generals.methods.routeString(state.model_name)}/${buyer_id}`)
 			.then(res => {
 				commit('setLoading', false)
-				let index = buyers_store.state.models.findIndex(buyer => {
+				// Actualizo los mensajes dentro del buyer ya cargado en el módulo `buyer`.
+				let index = this.state.buyer.models.findIndex(buyer => {
 					return buyer.id == buyer_id
 				})
-				buyers_store.state.models[index].messages = res.data.models 
+				if (index != -1) {
+					this.state.buyer.models[index].messages = res.data.models
+				}
 			})
 			.catch(err => {
 				commit('setLoading', false)

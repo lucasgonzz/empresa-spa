@@ -20,6 +20,8 @@
 					<tr>
 						<th
 						v-for="field in fields"
+						:key="field.key"
+						:class="header_column_classes(field)"
 						:style="column_style(field)">
 
 							<div class="cont-th">
@@ -64,6 +66,7 @@
 						<template
 						v-for="list in lists">
 							<tr
+							:key="'list-title-' + list.name"
 							class="list-title">
 								<td
 								:colspan="props.length + 2">
@@ -78,6 +81,7 @@
 							</tr>	
 							<tr-component
 							v-for="model in list.models"
+							:key="model.id"
 							@onRowSelected="onRowSelected"
 							:pivot_parent_model="pivot_parent_model"
 							:model="model"
@@ -86,11 +90,11 @@
 							:model_name="model_name"
 							:props="props"
 							:set_model_on_row_selected="set_model_on_row_selected">
-								<template v-slot:table_left_options="slotProps">
+								<template v-slot:table_left_options>
 									<slot name="table_left_options" :model="model"></slot>
 								</template>
 
-								<template v-slot:table_right_options="slotProps">
+								<template v-slot:table_right_options>
 									<slot name="table_right_options" :model="model"></slot>
 								</template>
 								
@@ -117,10 +121,10 @@
 						@onRowSelected="onRowSelected"
 						:set_model_on_row_selected="set_model_on_row_selected"
 						:cont_table_id="id">
-							<template v-slot:table_left_options="slotProps">
+							<template v-slot:table_left_options>
 								<slot name="table_left_options" :model="model"></slot>
 							</template>
-							<template v-slot:table_right_options="slotProps">
+							<template v-slot:table_right_options>
 								<slot name="table_right_options" :model="model"></slot>
 							</template>
 							<template
@@ -542,66 +546,49 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Determina si una columna corresponde a slots de opciones laterales.
+		 *
+		 * @param {Object} field - Definición del field del header.
+		 * @returns {Boolean} true cuando la columna es table_left_options o table_right_options.
+		 */
+		is_options_column(field) {
+			return field
+				&& (
+					field.key === 'table_left_options'
+					|| field.key === 'table_right_options'
+				)
+		},
+		/**
+		 * Devuelve clases CSS para controlar columnas especiales del header.
+		 *
+		 * @param {Object} field - Definición del field del header.
+		 * @returns {Array} Clases a aplicar en el <th>.
+		 */
+		header_column_classes(field) {
+			/**
+			 * Clases de estado para columnas con ancho especial.
+			 */
+			let classes = []
+			if (this.is_options_column(field)) {
+				classes.push('th-options-column')
+			}
+			return classes
+		},
 		filtrar() {
-			let filters = this.$store.state[this.model_name].filters
-			// Página de resultados del contexto (papelera vs listado normal).
-			let current_page = this.papelera
-				? this.$store.state.papelera[this.model_name].filter_page
-				: this.$store.state[this.model_name].filter_page
-			// console.log('filters:')
-			// console.log(filters)
-			
+			/**
+			 * Ejecuta (o re-ejecuta) el filtrado usando una única fuente de verdad (store).
+			 * Esto permite refrescar luego de operaciones masivas (ej: eliminar) sin duplicar requests en componentes.
+			 */
 			this.limpiar_show_filters()
-			
-			this.$store.commit('auth/setMessage', 'Filtrando '+this.plural(this.model_name))
-			this.$store.commit('auth/setLoading', true)
 
+			// En papelera, el store es específico y ya tiene una acción dedicada.
+			if (this.papelera) {
+				return this.$store.dispatch('papelera/' + this.model_name + '/run_papelera_search_from_store')
+			}
 
-
-			this.$api.post('search/'+this.model_name+'/null/1?page='+current_page, { 
-				filters: filters,
-				papelera: this.papelera,
-				per_page: this.$store.state[this.model_name].filter_per_page || 5,
-			})
-			.then(res => {
-				this.$store.commit('auth/setLoading', false)
-
-				// console.log('resultados::')
-				// console.log(res)
-
-				if (res.data.data.length) {
-
-					let papelera = ''
-
-					if (this.papelera) {
-						papelera = 'papelera/'
-					}
-
-					this.$store.commit(papelera+this.model_name+'/setIsFiltered', true) 
-					this.$store.commit(papelera+this.model_name+'/setFiltered', res.data.data)
-					this.$store.commit(papelera+this.model_name+'/setTotalFilterPages', res.data.last_page)
-					this.$store.commit(papelera+this.model_name+'/setTotalFilterResults', res.data.total)
-
-					
-				} else {
-
-					if (this.papelera) {
-						this.$store.commit('papelera/' + this.model_name + '/setIsFiltered', true)
-						this.$store.commit('papelera/' + this.model_name + '/setFiltered', [])
-						this.$store.commit('papelera/' + this.model_name + '/setTotalFilterPages', res.data.last_page)
-						this.$store.commit('papelera/' + this.model_name + '/setTotalFilterResults', res.data.total)
-					} else {
-						this.$toast.error('No se encontraron resultados')
-					}
-				}
-
-
-			})
-			.catch(err => {
-				this.$store.commit('auth/setLoading', false)
-				this.$toast.error('Error al buscar')
-				this.$toast.error(err)
-			})
+			// En listado normal, delegamos en el store base del módulo.
+			return this.$store.dispatch(this.model_name + '/runFilter')
 		},
 		toggleFilter(field_key) {
 			if (this.show_filters[field_key]) {
@@ -768,6 +755,14 @@ export default {
 			this.$emit('onRowSelected', model)
 		},
 		column_style(field) {
+			// Las columnas de acciones laterales no deben forzar ancho mínimo.
+			if (this.is_options_column(field)) {
+				return {
+					width: '1%',
+					minWidth: 'auto',
+					whiteSpace: 'nowrap',
+				}
+			}
 			if (field.width && Number(field.width) > 0) {
 				return {
 					minWidth: Number(field.width) + 'px',
@@ -981,6 +976,10 @@ export default {
 			// white-space: nowrap
 			text-align: left
 			// min-width: 150px
+
+		th.th-options-column
+			min-width: auto
+			width: 1%
 
 		th  
 			position: sticky
