@@ -16,7 +16,7 @@
         fluid>
             <payment-expire></payment-expire>
             <router-view/>
-        </b-container>
+        </b-container> 
     </div>
 </template>
 <script>
