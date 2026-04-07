@@ -115,7 +115,7 @@ export default {
 				if (this.view == 'mensajes') {
 					this.$store.dispatch('buyer/getModels')
 					.then(() => {
-						this.$store.commit('message/setChatsToShow')
+						this.$store.dispatch('message/setChatsToShow')
 						this.$store.commit('auth/setLoading', false)
 					})
 				}

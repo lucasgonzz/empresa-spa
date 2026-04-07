@@ -438,7 +438,7 @@ export default {
 					}
 
 					if (this.surchages_in_services) {
-						monto_recargo = this.total_articles * Number(_surchage.percentage) / 100 
+						monto_recargo = this.total_services * Number(_surchage.percentage) / 100 
 						this.total_services += monto_recargo
 						if (this.total_services > 0) {
 							this.des.push('Recargo para servicios: '+this.price(monto_recargo))

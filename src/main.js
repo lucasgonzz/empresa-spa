@@ -62,6 +62,59 @@ import {
 } from '@/utils/laravel_validation_toast'
 
 /**
+ * Interceptor de respuesta: muestra toasts devueltas por backend en `notifications`.
+ *
+ * Se usa para feedback inmediato cuando ciertas tareas (ej: recálculo de precios) se encolan
+ * y continúan en segundo plano.
+ *
+ * Formato esperado:
+ * - `response.data.notifications`: array de strings o de objetos { message, type }.
+ *
+ * @param {import('axios').AxiosResponse} response Respuesta exitosa de axios.
+ * @returns {import('axios').AxiosResponse}
+ */
+function global_api_notifications_interceptor(response) {
+    /** @type {any} data Payload devuelto por backend (puede variar por endpoint). */
+    const data = response && response.data ? response.data : null
+
+    /** @type {any[]} notifications Lista de notificaciones devueltas por backend. */
+    const notifications = data && Array.isArray(data.notifications) ? data.notifications : []
+
+    if (notifications.length) {
+        notifications.forEach((notification) => {
+            /** @type {string} message Texto principal a mostrar. */
+            let message = ''
+            /** @type {string} type Tipo de toast (success|error|warning|info). */
+            let type = 'info'
+
+            if (typeof notification === 'string') {
+                message = notification
+            } else if (notification && typeof notification === 'object') {
+                message = notification.message ? String(notification.message) : ''
+                type = notification.type ? String(notification.type) : 'info'
+            }
+
+            if (!message) {
+                return
+            }
+
+            // Usamos el API del plugin (Vue.$toast) para poder llamar desde acá sin `this`.
+            if (Vue && Vue.$toast && typeof Vue.$toast.open === 'function') {
+                Vue.$toast.open({
+                    message: message,
+                    type: type,
+                    duration: 8000,
+                })
+            } else if (Vue && Vue.$toast && typeof Vue.$toast[type] === 'function') {
+                Vue.$toast[type](message, { duration: 8000 })
+            }
+        })
+    }
+
+    return response
+}
+
+/**
  * Interceptor de respuesta: errores de validación Laravel (422) → toast detallado;
  * el resto mantiene el evento global `errorEvent` (logo loading, modal legacy, etc.).
  *
@@ -96,7 +149,7 @@ const apiInstance = axios.create({
 })
 
 apiInstance.interceptors.response.use(
-    (response) => response,
+    global_api_notifications_interceptor,
     global_api_error_interceptor
 )
 
@@ -114,13 +167,13 @@ const axiosInstance = axios.create({
 })
 
 axiosInstance.interceptors.response.use(
-    (response) => response,
+    global_api_notifications_interceptor,
     global_api_error_interceptor
 )
 
 // Misma lógica para el axios por defecto (stores que importan `axios` sin `create`)
 axios.interceptors.response.use(
-    (response) => response,
+    global_api_notifications_interceptor,
     global_api_error_interceptor
 )
 

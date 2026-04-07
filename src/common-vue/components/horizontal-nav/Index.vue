@@ -76,7 +76,7 @@
 				:value="1"
 				variant="warning"
 				v-model="is_selecteable">
-					Seleccion
+					Seleccionsdf
 				</b-form-checkbox>
 			</div>
 

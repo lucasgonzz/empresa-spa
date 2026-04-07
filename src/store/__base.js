@@ -35,7 +35,7 @@ export default {
 		filter_page: 1,
 		total_filter_pages: null,
 		total_filter_results: 0,
-		filter_per_page: 5,
+		filter_per_page: 50,
 		loading_filtered: false,
 
 		delete: null,
@@ -305,6 +305,45 @@ export default {
 				commit('setLoading', false)
 				console.log(err)
 			})
+		},
+		/**
+		 * Ejecuta la búsqueda filtrada (POST search) con los criterios actuales del store.
+		 * Se usa para: filtrar desde la tabla y refrescar resultados luego de operaciones masivas (ej: eliminar).
+		 *
+		 * @param {Object} context commit, state
+		 * @param {Object} payload
+		 * @param {Number|null} payload.page Página a consultar (si no viene, usa state.filter_page).
+		 * @returns {Promise}
+		 */
+		runFilter({commit, state}, payload = {}) {
+			// Página a consultar: por defecto, la actual del store.
+			let page = (payload && payload.page) ? payload.page : state.filter_page
+			let per_page = state.filter_per_page || 5
+
+			commit('auth/setMessage', 'Filtrando ' + state.model_name, {root: true})
+			commit('auth/setLoading', true, {root: true})
+
+			return axios.post('/api/search/' + generals.methods.routeString(state.model_name) + '/null/1?page=' + page, {
+				filters: state.filters,
+				papelera: false,
+				per_page: per_page,
+			})
+				.then(res => {
+					commit('auth/setLoading', false, {root: true})
+					commit('auth/setMessage', '', {root: true})
+
+					// Importante: aunque no haya filas, marcamos is_filtered=true para mantener el modo filtrado.
+					let rows = res.data.data || []
+					commit('setIsFiltered', true)
+					commit('setFiltered', rows)
+					commit('setTotalFilterPages', res.data.last_page)
+					commit('setTotalFilterResults', res.data.total)
+				})
+				.catch(err => {
+					commit('auth/setLoading', false, {root: true})
+					commit('auth/setMessage', '', {root: true})
+					console.log(err)
+				})
 		},
 		loadMoreFiltered({state, commit}) {
 			commit('incrementFilterPage')

@@ -55,7 +55,7 @@ export default {
 			
 			let caja_id = this.get_caja_por_defecto(payment_method_id, address_id)
 			
-			if (caja_id) {
+			if (caja_id && this.cajas.length) {
 				this.$store.commit('vender/set_caja_id', caja_id)
 			}
 		},

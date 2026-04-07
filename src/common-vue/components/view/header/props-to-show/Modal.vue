@@ -109,6 +109,8 @@ export default {
 			this.$bvModal.hide('props-to-show-' + this.model_name)
 		},
 		async init_preferences() {
+
+			// Elimino del localStorage si es que hay
 			try {
 				localStorage.removeItem('table_column_preference-' + this.model_name)
 			} catch (e) {
@@ -116,7 +118,9 @@ export default {
 			}
 
 			const default_rows = this.get_default_rows()
+
 			const store_rows = this.tableColumnPreferenceColumnsFromStore(this.model_name, 'table')
+			
 			let api_rows = store_rows && store_rows.length
 				? store_rows
 				: await this.get_preference_from_api()
@@ -207,10 +211,13 @@ export default {
 		},
 		async save_preference_in_api(rows) {
 			try {
+				this.$store.commit('auth/setMessage', 'Guardando')
+				this.$store.commit('auth/setLoading', true)
 				await this.$api.put('table-column-preference/' + this.model_name + '/table', {
 					columns: rows,
 				})
 				this.$store.dispatch('table_column_preference/getModels')
+				this.$store.commit('auth/setLoading', false)
 			} catch (error) {
 				this.$toast.error('No se pudo guardar la configuracion en el servidor')
 			}

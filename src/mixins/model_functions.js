@@ -100,9 +100,6 @@ export default {
             this.$router.push({name: 'mercado_libre', params: {view: 'sinc-articulo-entrantes'}})
             this.$store.dispatch('sync_from_meli_article/getModels')
         },
-        get_sale_ganancia(model, prop) {
-            return Number(model.total) - Number(model.total_cost)
-        },
         toast_article_provider_order_unidades_individuales(result) {
             if (
                 result.model 

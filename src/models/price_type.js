@@ -12,7 +12,6 @@ export default {
 			key: 'percentage',
 			type: 'number',
 			value: '',
-			not_show: true,
 			descriptions: [
 				'Este margen de ganancia se le aplicara a todos los articulos que al momento de ser creados, no se le complete el margen de ganancia para esta lista de precios, ni tampoco se le complete el precio final de forma manual',
 				'Si al momento de crear el articulo completa usted el campo, se usara ese valor y no se usara este valor',				
@@ -33,16 +32,16 @@ export default {
 		// 	]
 		// },
 		{
-			text: 'Al actualizar el margen por defecto, actualizar articulos relacionados',
+			text: 'Al actualizar el margen por defecto, actualizar los articulos que ...',
 			key: 'update_existing_articles_percentage_mode',
 			type: 'select',
 			value: 'none',
 			not_show: true,
 			// value: lo que persiste la API; text (o label): etiqueta en el select.
 			options: [
-				{ value: 'none', text: 'No actualizar ningún artículo relacionado' },
+				{ value: 'none', text: 'No actualizar ningún artículo' },
 				{ value: 'only_default_matches', text: 'Solo los que coincidían con el margen por defecto actual' },
-				{ value: 'all', text: 'Todos los artículos relacionados' },
+				{ value: 'all', text: 'Todos los artículos' },
 			],
 			descriptions: [
 				'Define como impacta el cambio de porcentaje por defecto sobre la relacion article_price_type.',

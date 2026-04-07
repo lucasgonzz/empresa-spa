@@ -92,7 +92,7 @@ export default {
 
 			let caja_por_defecto = this.get_caja_por_defecto(this.payment_method_id, address_id, this.moneda_id) 
 
-            if (caja_por_defecto) {
+            if (caja_por_defecto && this.cajas.length) {
 				this.caja_id = caja_por_defecto.id
             }
 		}

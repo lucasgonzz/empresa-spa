@@ -82,6 +82,22 @@ export default {
 		}
 	},
 	methods: {
+		/**
+		 * Re-ejecuta el filtrado actual para reflejar el estado real del servidor.
+		 * Se usa luego de eliminar (selección o por filtro) manteniendo el modo filtrado activo.
+		 */
+		refresh_filter_results() {
+			// Si la vista no está filtrada y la acción no fue "from_filter", no hay nada que refrescar.
+			let is_filtered = this.$store.state[this.model_name].is_filtered
+			if (!this.from_filter && !is_filtered) {
+				return Promise.resolve()
+			}
+
+			// Al eliminar puede cambiar la paginación; pedimos página 1 para evitar quedar parados en una página inválida.
+			return this.$store.dispatch(this.model_name + '/runFilter', {
+				page: 1,
+			})
+		},
 		setUpdate(from_filter) {
 			this.from_filter = from_filter
 			this.$bvModal.show(this.model_name+'-update-models')
@@ -117,9 +133,6 @@ export default {
 		deleteModels() {
 			this.$store.commit('auth/setMessage', 'Eliminando '+this.plural(this.model_name))
 			this.$store.commit('auth/setLoading', true)
-			console.log('por acaaa')
-			console.log('filter_form')
-			console.log(this.$store.state[this.model_name].filters)
 			this.$api.put('delete/'+this.model_name, {
 				from_filter: this.from_filter,
 				filter_form: this.$store.state[this.model_name].filters,
@@ -134,7 +147,11 @@ export default {
 				})
 				this.$toast.success(this.plural(this.model_name)+' eliminados')
 				this.$store.commit(this.model_name+'/setSelected', [])
-				this.$bvModal.hide('update-props')
+				// Cierra el modal de confirmación del delete (id = model_name + '-delete-models').
+				this.$bvModal.hide(this.model_name+'-delete-models')
+
+				// Refresca resultados filtrados si corresponde (selección en vista filtrada o eliminación por filtro).
+				return this.refresh_filter_results()
 			})
 			.catch(err => {
 				this.$toast.error('Error al eliminar '+this.plural(this.model_name))

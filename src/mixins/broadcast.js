@@ -7,7 +7,7 @@ export default {
             .notification((notification) => {
                 console.log(notification)
                 this.addBuyerMessage(notification.message)
-                this.$store.commit('message/setChatsToShow')
+                this.$store.dispatch('message/setChatsToShow')
                 this.checkIfIsMessagesView(notification)
             });
 		},

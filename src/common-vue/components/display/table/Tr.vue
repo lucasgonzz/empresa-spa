@@ -4,13 +4,17 @@
 	:class="rowClass(model)">
 		<td
 		v-for="(prop, index) in props"
+		:key="prop.key + '-' + index"
 		v-if="showProperty(prop)"
 		:style="column_style(prop)">
-			<slot :name="prop.key">
-				<div 
-				:class="get_cell_classes(prop, index)"
-				class="cont-tr">
-				
+			<div 
+			:class="get_cell_classes(prop, index)"
+			class="cont-tr">
+				<!--
+					El slot personalizado también queda dentro de `cont-tr` para
+					heredar recorte/ellipsis y evitar superposición con la celda siguiente.
+				-->
+				<slot :name="prop.key">
 					<pivot-prop
 					v-if="prop.is_pivot_prop"
 					:cont_table_id="cont_table_id"
@@ -104,11 +108,11 @@
 					<!-- <template
 					v-if="index == props.length-1"> -->
 						<slot name="table_right_options" :model="model">
-							&nbsp
+							&nbsp;
 						</slot>
 					</template>
-				</div>
-			</slot>
+				</slot>
+			</div>
 		</td>
 		<!-- <td>
 			<span
@@ -240,6 +244,15 @@ export default {
 			return related.pivot[prop.pivot_value_prop]
 		},
 		column_style(prop) {
+			// Las columnas de opciones laterales se ajustan al contenido sin recortes.
+			if (this.is_options_column(prop)) {
+				return {
+					width: '1%',
+					minWidth: 'auto',
+					maxWidth: 'none',
+					whiteSpace: 'nowrap',
+				}
+			}
 			if (prop.table_width && Number(prop.table_width) > 0) {
 				return {
 					width: Number(prop.table_width) + 'px',
@@ -250,9 +263,16 @@ export default {
 			return {}
 		},
 		get_cell_classes(prop, index) {
+			/**
+			 * Lista de clases que controlan recorte y comportamiento de texto en la celda.
+			 */
 			let classes = []
 			if (index == this.props.length - 1) {
 				classes.push('cont-tr-full-width')
+			}
+			if (this.is_options_column(prop)) {
+				classes.push('cell-options')
+				return classes
 			}
 			if (prop.table_wrap_content) {
 				classes.push('cell-wrap')
@@ -260,6 +280,19 @@ export default {
 				classes.push('cell-nowrap')
 			}
 			return classes
+		},
+		/**
+		 * Determina si la celda corresponde a una columna de opciones laterales.
+		 *
+		 * @param {Object} prop - Definición de propiedad de la columna.
+		 * @returns {Boolean} true cuando es table_left_options o table_right_options.
+		 */
+		is_options_column(prop) {
+			return prop
+				&& (
+					prop.key === 'table_left_options'
+					|| prop.key === 'table_right_options'
+				)
 		},
 	}
 }
@@ -290,6 +323,18 @@ export default {
 	white-space: nowrap
 	overflow: hidden
 	text-overflow: ellipsis
+	/*
+		Difuminado del contenido sin capa visible sobre el fondo del td.
+		La máscara evita el "rectángulo" al hacer hover en filas. */
+	-webkit-mask-image: linear-gradient(to right, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 1) calc(100% - 26px), rgba(0, 0, 0, 0) 100%)
+	mask-image: linear-gradient(to right, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 1) calc(100% - 26px), rgba(0, 0, 0, 0) 100%)
+
+.cell-options
+	white-space: nowrap
+	overflow: visible
+	text-overflow: initial
+	-webkit-mask-image: none
+	mask-image: none
 
 .selected-row
 	font-weight: bold 
