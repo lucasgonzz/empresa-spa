@@ -34,8 +34,15 @@ export default {
 			}
 			return false
 		},
+		article_provider() {
+			let provider = this.$store.state.provider.models.find(p => p.id == this.article.provider_id)
+			if (typeof provider != 'undefined') {
+				return provider 
+			}
+			return null
+		},
 		margen_del_proveedor() {
-			return this.article.provider_id && this.article.apply_provider_percentage_gain
+			return this.article.provider_id && this.article.apply_provider_percentage_gain && (this.article_provider && this.article_provider.percentage_gain)
 		},
 		margen_del_articulo() {
 			return (

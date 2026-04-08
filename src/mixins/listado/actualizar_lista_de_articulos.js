@@ -8,8 +8,10 @@ export default {
 		get_ultimos_articulos_actualizados() {
 			// if (!this.filters.length) {
 
-				this.$api.get('articles-ultimos-actualizados')
+				this.$store.commit('article/setLoading', true)
+				this.$api.get('articles-ultimos-actualizados')	
 				.then(res => {
+					this.$store.commit('article/setLoading', false)
 					this.$store.commit('article/setModels', [])
 
 					res.data.models.forEach(article => {
@@ -17,6 +19,7 @@ export default {
 					})
 				})
 				.catch(err => {
+					this.$store.commit('article/setLoading', false)
 					this.$toast.error('error al cargar ultimos articulos actualizados')
 				})
 			// }
