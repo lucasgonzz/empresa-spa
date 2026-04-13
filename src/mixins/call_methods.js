@@ -99,4 +99,5 @@ export default [
     'inventory_linkage_scope',
     'article_ticket_info',
     'client_reputation',
+    'inputs_size',
 ]

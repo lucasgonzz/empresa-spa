@@ -2,7 +2,6 @@
 	<search-component
 	v-if="!sale"
 	class="m-t-15"
-	disabled
 	:show_selected="false"
 	@setSelected="setSelected"
 	model_name="article"

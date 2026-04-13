@@ -110,30 +110,39 @@ export default {
 				// total = this.check_moneda(total)
 
 
-				// en getTotalItem aplico descuentos individuales y y multiplico por la cantidad
-				this.vender_items.forEach(item => {
-					if (item.is_service) {
+			// en getTotalItem aplico descuentos individuales y multiplico por la cantidad
+			this.vender_items.forEach(item => {
+				if (item.is_service) {
 
-						this.total_services += this.getTotalItem(item, false)
+					this.total_services += this.getTotalItem(item, false)
 
-					} else if (item.is_article) {
+				} else if (item.is_article) {
 
-						// console.log(this.getTotalItem(item, false))
+					// console.log(this.getTotalItem(item, false))
 
-						this.total_articles += this.getTotalItem(item, false)
+					this.total_articles += this.getTotalItem(item, false)
 
-					} else if (item.is_combo) {
+				} else if (item.is_combo) {
 
-						this.total_combos += this.getTotalItem(item, false)
+					this.total_combos += this.getTotalItem(item, false)
 
-					} else if (item.is_promocion_vinoteca) {
+				} else if (item.is_promocion_vinoteca) {
 
-						this.total_promocion_vinoteca += this.getTotalItem(item, false)
+					this.total_promocion_vinoteca += this.getTotalItem(item, false)
 
-					}
-					// total += this.getTotalItem(item, false)
-					new_items.push(item)
-				})
+				}
+				// total += this.getTotalItem(item, false)
+
+				// Agregar al des de la venta la descripción del precio calculado para este item
+				if (item.price_vender_description && item.price_vender_description.length) {
+					this.des.push('ITEM: ' + item.name)
+					item.price_vender_description.forEach(line => {
+						this.des.push(line)
+					})
+				}
+
+				new_items.push(item)
+			})
 
 				this.chequear_descuentos_por_metodo_de_pago_y_agregar_info_a_descripcion()
 

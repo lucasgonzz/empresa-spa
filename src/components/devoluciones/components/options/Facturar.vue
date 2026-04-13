@@ -1,7 +1,7 @@
 <template>
 	<div>
 		<div
-		v-if="sale.afip_tickets.length">
+		v-if="sale && sale.afip_tickets.length">
 			
 			<hr>
 

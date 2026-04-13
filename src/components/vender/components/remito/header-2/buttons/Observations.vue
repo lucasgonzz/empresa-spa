@@ -41,5 +41,9 @@ export default {
 	justify-content: space-between
 	textarea 
 		width: 100%
+
+.ui-small .cont-observations textarea	
+	height: 40px
+
 		// width: 49%
 </style>

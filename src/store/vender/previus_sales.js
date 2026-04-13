@@ -114,11 +114,13 @@ export default {
 				observations_ocultas: info.observations_ocultas,
 				aplicar_recargos_directo_a_items: info.aplicar_recargos_directo_a_items,
 				sale_status_id: info.sale_status_id,
-				// Indica si la venta debe descontar stock al actualizarse
-				discount_stock: info.discount_stock,
-				// Indica si los precios enviados en la actualización incluyen IVA
-				iva_aplicado: info.iva_aplicado,
-			})
+			// Indica si la venta debe descontar stock al actualizarse
+			discount_stock: info.discount_stock,
+			// Indica si los precios enviados en la actualización incluyen IVA
+			iva_aplicado: info.iva_aplicado,
+			// Array de descripciones del cálculo del precio final, serializado como JSON
+			price_description: info.price_description,
+		})
 			.then(res => {
 				commit('sale/add', res.data.model, {root: true})
 				commit('setUpdating', false)

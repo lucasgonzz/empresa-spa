@@ -23,8 +23,12 @@ export default {
 <style lang="sass">
 #vender
 	.input-group
-		
 		.input-group-prepend, .input-group-append
 			height: 47.6px
+
+.ui-small #vender
+	.input-group
+		.input-group-prepend, .input-group-append
+			height: auto
 
 </style>

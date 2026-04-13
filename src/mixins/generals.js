@@ -413,12 +413,22 @@ export default {
             // console.log('getPriceVender para '+item.name)
             // console.log(item)
 
-            let price 
+            let price
+
+            // Array de descripción del proceso de cálculo del precio para este item
+            let item_des = []
 
             if (item.price_vender_personalizado) {
 
                 price = item.price_vender_personalizado
+                item_des.push('Precio personalizado: ' + this.price(price))
+
+                // Ajuste IVA sobre el precio personalizado
+                let price_before_iva = price
                 price = this.ajustar_precio_segun_iva_aplicado(item, price, from_pivot)
+                if (Number(price) !== Number(price_before_iva)) {
+                    item_des.push('Ajuste IVA: ' + this.price(price_before_iva) + ' -> ' + this.price(price))
+                }
 
             } else if (
                 /*
@@ -438,8 +448,15 @@ export default {
                 // )
             ) {
 
-                price = item.pivot.price 
+                price = item.pivot.price
+                item_des.push('Precio del pivot (venta anterior): ' + this.price(price))
+
+                // Ajuste IVA sobre el precio del pivot
+                let price_before_iva = price
                 price = this.ajustar_precio_segun_iva_aplicado(item, price, true)
+                if (Number(price) !== Number(price_before_iva)) {
+                    item_des.push('Ajuste IVA: ' + this.price(price_before_iva) + ' -> ' + this.price(price))
+                }
             
             } else if (this.hasExtencion('articulos_precios_en_blanco') && item.is_article) {
 
@@ -449,35 +466,81 @@ export default {
 
                     // console.log('usando precio en blanco')
                     price = item.final_price_blanco
+                    item_des.push('Precio en blanco (con AFIP): ' + this.price(price))
                     
                 } else {
 
                     price = item.final_price
+                    item_des.push('Precio en blanco (sin AFIP): ' + this.price(price))
                 }
+
+                // Ajuste IVA sobre el precio en blanco
+                let price_before_iva = price
                 price = this.ajustar_precio_segun_iva_aplicado(item, price)
+                if (Number(price) !== Number(price_before_iva)) {
+                    item_des.push('Ajuste IVA: ' + this.price(price_before_iva) + ' -> ' + this.price(price))
+                }
 
             } else {
 
+                // Flujo normal: precio final base con todas las transformaciones
                 price = item.final_price
+                item_des.push('Precio final base: ' + this.price(price))
 
+                // Lista de precios (price type)
+                let price_before_pt = price
                 price = this.aplicar_tipos_de_precio(item, price)
+                if (Number(price) !== Number(price_before_pt)) {
+                    item_des.push('Lista de precios aplicada: ' + this.price(price_before_pt) + ' -> ' + this.price(price))
+                }
 
+                // Descuento por método de pago a nivel de item
+                let price_before_pm = price
                 price = this.aplicar_descuento_metodo_de_pago(item, price)
+                if (Number(price) !== Number(price_before_pm)) {
+                    item_des.push('Descuento metodo de pago: ' + this.price(price_before_pm) + ' -> ' + this.price(price))
+                }
 
+                // Recargos aplicados directo al item
+                let price_before_rec = price
                 price = this.aplicar_recargos(item, price)
+                if (Number(price) !== Number(price_before_rec)) {
+                    item_des.push('Recargo directo al item: ' + this.price(price_before_rec) + ' -> ' + this.price(price))
+                }
 
+                // Cuotas
+                let price_before_cuotas = price
                 price = this.check_cuotas(item, price)
+                if (Number(price) !== Number(price_before_cuotas)) {
+                    item_des.push('Cuotas aplicadas: ' + this.price(price_before_cuotas) + ' -> ' + this.price(price))
+                }
+
+                // Ajuste IVA
+                let price_before_iva = price
                 price = this.ajustar_precio_segun_iva_aplicado(item, price)
+                if (Number(price) !== Number(price_before_iva)) {
+                    item_des.push('Ajuste IVA: ' + this.price(price_before_iva) + ' -> ' + this.price(price))
+                }
 
                 // price = this.redondear(price)
             }
             
             // price = this.aplicar_recargos(item, price)
 
-            
             price = Number(price)
 
+            // Cotización de moneda (se aplica al final, fuera de todas las ramas)
+            let price_before_moneda = price
             price = this.check_moneda(item, price, from_pivot)
+            if (Number(price) !== Number(price_before_moneda)) {
+                item_des.push('Cotizacion moneda: ' + this.price(price_before_moneda) + ' -> ' + this.price(price))
+            }
+
+            // Precio final del item después de todas las transformaciones
+            item_des.push('Precio unitario final: ' + this.price(price))
+
+            // Asignar el array de descripción al item para que setTotal lo use
+            item.price_vender_description = item_des
 
             return price
         },

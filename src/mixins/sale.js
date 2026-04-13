@@ -1,5 +1,8 @@
 export default {
 	computed: {
+		selected_sale() {
+			return this.$store.state.sale.model 
+		},
 		_sales() {
 			return this.$store.state.sale.models 
 		},

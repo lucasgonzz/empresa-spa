@@ -72,7 +72,7 @@ export default {
 
 			this.aplicar_descriptions()
 
-			this.total_devolucion = this.total_articles + this.total_services
+			this.total_devolucion += this.total_articles + this.total_services
 
 			console.log('set_total_devolucion: '+this.total_devolucion)
 

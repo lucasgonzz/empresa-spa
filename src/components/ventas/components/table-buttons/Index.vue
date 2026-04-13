@@ -15,6 +15,10 @@
 
 		<cerrar-venta
 		:sale="model"></cerrar-venta>
+
+		<!-- Botón para ver el desglose del cálculo del precio final de la venta -->
+		<price-description-btn
+		:sale="model"></price-description-btn>
 	</div>
 </template>
 <script>
@@ -33,6 +37,8 @@ export default {
 		PaymentPlanBtn: () => import('@/components/ventas/components/table-buttons/PaymentPlanBtn'),
 		EtiquetaEnvio: () => import('@/components/ventas/components/table-buttons/EtiquetaEnvio'),
 		CerrarVenta: () => import('@/components/ventas/components/table-buttons/CerrarVenta'),
+		// Botón que muestra el desglose del cálculo del precio final de la venta
+		PriceDescriptionBtn: () => import('@/components/ventas/components/table-buttons/PriceDescriptionBtn'),
 	}
 }
 </script>

@@ -16,7 +16,6 @@
  
 	<client></client>	
 	<remito></remito>	
-	<!-- <btn-save></btn-save>	 -->
 
 </div> 
 </template>
@@ -40,7 +39,6 @@ export default {
 		NavComponent: () => import('@/components/vender/components/NavComponent'),
 		Client: () => import('@/components/vender/components/client/Index'),
 		Remito: () => import('@/components/vender/components/remito/Index'),
-		BtnSave: () => import('@/components/vender/components/BtnSave'),
 	},
 	created() {
 		console.log('created vender')

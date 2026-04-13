@@ -291,6 +291,8 @@ export default {
 				discount_stock: this.$store.state.vender.discount_stock,
 				// Enviamos el valor actual de iva_aplicado al actualizar la venta
 				iva_aplicado: this.$store.state.vender.iva_aplicado,
+				// Array de descripciones del cálculo del precio final, serializado como JSON
+				price_description: JSON.stringify(this.$store.state.vender.total_description),
 			})
 			.then(res => {
 				this.$toast.success('Venta actualizada')

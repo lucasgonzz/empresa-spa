@@ -2,7 +2,6 @@
 	<search-component
 	v-if="!sale"
 	class="m-l-15"
-	disabled
 	id="select_client_devoluciones"
 	@setSelected="setSelected"
 	@clearSelected="clearSelected"
