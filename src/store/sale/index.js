@@ -28,6 +28,9 @@ export default __base_store({
 		ventas_cobradas_show_option: 'cobradas-y-no-cobradas',
 		afip_ticket_show_option: 'con-y-sin-factura',
 		payment_method_show_option: 'todos',
+
+		// Array de descripciones del cálculo del precio de la venta seleccionada para mostrar en el modal
+		sale_price_description: [],
 	},
 	mutations: {
 		/**
@@ -53,6 +56,14 @@ export default __base_store({
 		 */
 		set_payment_method_show_option(state, value) {
 			state.payment_method_show_option = value
+		},
+		/**
+		 * Guarda el array de descripciones del precio de la venta seleccionada para mostrar en el modal.
+		 * Se llama desde PriceDescriptionBtn al hacer click en el botón de una fila de ventas.
+		 * @param {Array} value - Array de strings con las líneas descriptivas del cálculo
+		 */
+		set_sale_price_description(state, value) {
+			state.sale_price_description = value
 		},
 		/**
 		 * Mantiene el log de actualización de venta que ya tenía el store original.

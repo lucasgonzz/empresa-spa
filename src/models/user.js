@@ -246,6 +246,18 @@ export default {
 
 
 		{
+			group_title: 'Interfaz',
+		},
+		{
+			text: 'Tamaño de los componentes',
+			key: 'inputs_size_id',
+			type: 'select',
+			store: 'inputs_size',
+			description: 'Controla el tamaño de los inputs, fuentes, márgenes y paddings de la interfaz',
+		},
+
+
+		{
 			group_title: 'Generales',
 		},
 		{

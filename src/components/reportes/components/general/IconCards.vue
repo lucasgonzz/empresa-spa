@@ -79,7 +79,7 @@ export default {
 							if_mayor_0: 'total_devolucion',
 							img: 'ventas',
 							value: this.price(this.model.total_vendido - this.model.total_devolucion, false),
-							description: 'Total vendido, haya sido o no pagado - devoluciones (computando devoluciones)',
+							description: 'Total vendido bruto, MENOS las devoluciones ('+this.price(this.model.total_devolucion)-+')',
 						},
 						{
 							text: 'Total vendido Neto USD',
@@ -87,7 +87,7 @@ export default {
 							if_mayor_0: 'total_devolucion_usd',
 							img: 'ventas',
 							value: this.price(this.model.total_vendido_usd - this.model.total_devolucion_usd, false),
-							description: 'Total vendido, haya sido o no pagado - devoluciones (computando devoluciones)',
+							description: 'Total vendido bruto USD MENOS las devoluciones ('+ this.price(this.model.total_devolucion_usd) +')',
 						},
 						{
 							text: 'Pagado en mostrador',

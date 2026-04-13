@@ -40,7 +40,10 @@
 		:is_afip_ticket.sync="is_afip_ticket"
 		:show_total_in_footer.sync="show_total_in_footer"
 		:show_totals_on_each_page.sync="show_totals_on_each_page"
+		:show_comissions.sync="show_comissions"
+		:show_total_costs.sync="show_total_costs"
 		:footer_text.sync="footer_text"
+		:use_current_date.sync="use_current_date"
 		:sheet_type_options="sheet_type_options"
 		:remaining_width_mm="remaining_width_mm"
 		@save_profile="save_pdf_profile"></modal-pdf-columns-profile>
@@ -123,9 +126,22 @@ export default {
 		 */
 		show_totals_on_each_page: false,
 		/**
+		 * Flag editable para mostrar comisiones en el pie.
+		 */
+		show_comissions: false,
+		/**
+		 * Flag editable para mostrar total costos en el pie.
+		 */
+		show_total_costs: false,
+		/**
 		 * Texto editable del pie de página del perfil seleccionado.
 		 */
 		footer_text: '',
+		/**
+		 * Flag editable: cuando es true el PDF imprime la fecha actual
+		 * en lugar de la fecha del comprobante.
+		 */
+		use_current_date: false,
 	}
 	},
 	async created() {
@@ -407,10 +423,16 @@ export default {
 				? true
 				: this.normalize_boolean(profile.show_total_in_footer)
 			this.show_totals_on_each_page = this.normalize_boolean(profile.show_totals_on_each_page)
+			this.show_comissions = this.normalize_boolean(profile.show_comissions)
+			this.show_total_costs = this.normalize_boolean(profile.show_total_costs)
 			/**
 			 * Texto del pie de página; vacío si el perfil no tiene uno configurado.
 			 */
 			this.footer_text = profile.footer_text || ''
+			/**
+			 * Flag de fecha actual; false por defecto para mantener compatibilidad.
+			 */
+			this.use_current_date = this.normalize_boolean(profile.use_current_date)
 		}
 		},
 		/**
@@ -451,6 +473,8 @@ export default {
 				 */
 				show_total_in_footer: true,
 				show_totals_on_each_page: false,
+				show_comissions: false,
+				show_total_costs: false,
 				/**
 				 * Nuevo perfil sin pie de página por defecto.
 				 */
@@ -507,10 +531,13 @@ export default {
 				is_afip_ticket: this.normalize_boolean(this.is_afip_ticket),
 				show_total_in_footer: this.normalize_boolean(this.show_total_in_footer),
 				show_totals_on_each_page: this.normalize_boolean(this.show_totals_on_each_page),
+				show_comissions: this.normalize_boolean(this.show_comissions),
+				show_total_costs: this.normalize_boolean(this.show_total_costs),
 				/**
 				 * Pie de página; se envía null si el usuario lo dejó en blanco.
 				 */
 				footer_text: this.footer_text || null,
+				use_current_date: this.normalize_boolean(this.use_current_date),
 				pdf_column_options,
 			})
 				const store_models = this.$store.state.pdf_column_profile.models

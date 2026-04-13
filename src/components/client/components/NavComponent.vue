@@ -20,7 +20,7 @@ export default {
 			let items = []
 			if (this.can('client.index')) {
 				items.push({name: 'clientes', call_models: 'client'})
-				items.push({name: 'planes de pago', call_models: 'payment_plan'})
+				items.push({name: 'planes de pago'})
 				items.push({name: 'vendedores', call_models: 'seller'})
 			}
 			return items

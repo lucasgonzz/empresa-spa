@@ -12,6 +12,9 @@
 
 	<payment-plan-modal></payment-plan-modal>
 
+	<!-- Modal con el desglose del cálculo del precio final de la venta seleccionada -->
+	<sale-price-description></sale-price-description>
+
 	<view-component
 	show_filter_modal
 	:models_to_show="sales_to_show"
@@ -80,6 +83,8 @@ export default {
 		ClientBtn: () => import('@/components/ventas/components/ClientBtn'),
 
 		PaymentPlanModal: () => import('@/components/common/payment-plan/Index'),
+		// Modal con el desglose del cálculo del precio final de la venta
+		SalePriceDescription: () => import('@/components/ventas/modals/SalePriceDescription'),
 	},
 	created() {
 		this.$store.commit('sale/setFromDates', true)

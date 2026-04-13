@@ -110,7 +110,10 @@ export default {
 				ok = false
 			}
 
-			if (this.facturar_nota_credito) {
+			if (
+				this.sale
+				&& this.facturar_nota_credito
+			) {
 				let afip_ticket = this.sale.afip_tickets.find(m => m.id == this.facturar_nota_credito)
 				if (
 					typeof afip_ticket != 'undefined' 
@@ -122,7 +125,8 @@ export default {
 			}
 
 			if (
-				this.sale.afip_tickets.length
+				this.sale
+				&& this.sale.afip_tickets.length
 				&& !this.facturar_nota_credito
 			) {
 				return confirm('La venta sobre la cual vas a generar esta nota de credito esta facturada, recomendamos facturar esta nota de credito sobre alugna factura de esta venta. ¿Queres continuar de todas formas y no facturar esta nota de credito?')

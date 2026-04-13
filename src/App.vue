@@ -1,5 +1,5 @@
 <template>
-    <div id="app">
+    <div id="app" :class="uiSizeClass">
 
         <!-- Comentario de prueba Leonardo -->
         
@@ -41,6 +41,12 @@ export default {
         PaymentExpire: () => import('@/components/nav/PaymentExpire'),
         AfipReenviarFacturas: () => import('@/components/common/afip-reenviar-facturas/Index'),
         ArticlesStockMinimo: () => import('@/components/common/ArticlesStockMinimo'),
+    },
+    computed: {
+        uiSizeClass() {
+            const slug = this.$store.state.auth.user?.inputs_size?.slug
+            return slug ? `ui-${slug}` : ''
+        },
     },
     created() {
         this.$store.dispatch('auth/me')

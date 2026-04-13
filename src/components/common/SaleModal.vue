@@ -5,6 +5,7 @@
     :delete_text="sale_delete_text"
     check_permissions
     not_show_delete_text
+    :show_btn_delete="show_btn_delete"
     model_name="sale">
         <template v-slot:model_modal_header="props">
             <sale-details></sale-details>
@@ -19,13 +20,16 @@ export default {
         ModelIndex: () => import('@/common-vue/components/model/Index'),
         SaleDetails: () => import('@/components/ventas/modals/details/Index'),
     },
-    props: {
-        show_btn_delete: {
-            type: Boolean,
-            default: false,
-        },
-    },
     computed: {
+        selected_sale() {
+            return this.$store.state.sale.model 
+        },
+        show_btn_delete() {
+            if (this.selected_sale && this.selected_sale.afip_tickets && this.selected_sale.afip_tickets.length) {
+                return false
+            }
+            return true
+        },
         sale_to_delete() {
             return this.$store.state.sale.delete 
         },

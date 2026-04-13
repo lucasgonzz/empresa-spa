@@ -17,6 +17,18 @@ export default {
 			type: 'checkbox',
 		},
 		{
+			text: 'Mostrar comisiones',
+			key: 'show_comissions',
+			type: 'checkbox',
+			value: 0,
+		},
+		{
+			text: 'Mostrar total costos',
+			key: 'show_total_costs',
+			type: 'checkbox',
+			value: 0,
+		},
+		{
 			/**
 			 * Flag para controlar visibilidad del total general en el pie del PDF.
 			 */
@@ -24,6 +36,16 @@ export default {
 			key: 'show_total_in_footer',
 			type: 'checkbox',
 			value: 1,
+		},
+		{
+			/**
+			 * Cuando está activo, el PDF imprime la fecha actual del servidor
+			 * en lugar de la fecha en que se creó el comprobante.
+			 */
+			text: 'Imprimir con fecha actual',
+			key: 'use_current_date',
+			type: 'checkbox',
+			value: 0,
 		},
 		{
 			text: 'Opciones',

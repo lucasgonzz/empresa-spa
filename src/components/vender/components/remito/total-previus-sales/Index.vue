@@ -26,4 +26,9 @@ export default {
 	computed: {
 	},
 }
+
 </script>
+<style lang="sass">
+.ui-small .row-total-card-previus-sales
+	margin-bottom: 5px !important
+</style>

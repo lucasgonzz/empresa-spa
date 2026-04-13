@@ -96,6 +96,28 @@
 	</b-form-row>
 
 	<b-form-row class="m-b-0">
+		<b-col md="4" class="d-flex align-items-center">
+			<!-- Cuando está activo, el PDF imprime la fecha del día en lugar de la fecha del comprobante -->
+			<b-form-checkbox
+			v-model="local_use_current_date">
+				Imprimir con fecha actual
+			</b-form-checkbox>
+		</b-col>
+		<b-col md="4" class="d-flex align-items-center">
+			<b-form-checkbox
+			v-model="local_show_comissions">
+				Mostrar comisiones
+			</b-form-checkbox>
+		</b-col>
+		<b-col md="4" class="d-flex align-items-center">
+			<b-form-checkbox
+			v-model="local_show_total_costs">
+				Mostrar total costos
+			</b-form-checkbox>
+		</b-col>
+	</b-form-row>
+
+	<b-form-row class="m-b-0">
 		<b-col md="12">
 			<b-form-group>
 				<label class="form-label">
@@ -192,6 +214,22 @@ export default {
 		footer_text: {
 			type: String,
 			default: '',
+		},
+		/**
+		 * Cuando está activo, el PDF imprime la fecha actual del servidor
+		 * en lugar de la fecha en que se creó el comprobante.
+		 */
+		use_current_date: {
+			type: [Boolean, Number, String],
+			default: false,
+		},
+		show_comissions: {
+			type: [Boolean, Number, String],
+			default: false,
+		},
+		show_total_costs: {
+			type: [Boolean, Number, String],
+			default: false,
 		},
 		sheet_type_options: {
 			type: Array,
@@ -324,6 +362,39 @@ export default {
 			},
 			set(value) {
 				this.$emit('update:footer_text', value || '')
+			},
+		},
+		/**
+		 * Proxy local del flag para imprimir con fecha actual.
+		 */
+		local_use_current_date: {
+			get() {
+				return this.use_current_date === true
+					|| this.use_current_date === 1
+					|| this.use_current_date === '1'
+			},
+			set(value) {
+				this.$emit('update:use_current_date', !!value)
+			},
+		},
+		local_show_comissions: {
+			get() {
+				return this.show_comissions === true
+					|| this.show_comissions === 1
+					|| this.show_comissions === '1'
+			},
+			set(value) {
+				this.$emit('update:show_comissions', !!value)
+			},
+		},
+		local_show_total_costs: {
+			get() {
+				return this.show_total_costs === true
+					|| this.show_total_costs === 1
+					|| this.show_total_costs === '1'
+			},
+			set(value) {
+				this.$emit('update:show_total_costs', !!value)
 			},
 		},
 	},

@@ -106,6 +106,7 @@ export default {
 		},
 		total_a_pagar() {
 
+			return this.owner.total_mensualidad
 			let total = (Number(this.employees.length) + 1) * Number(this.owner.precio_por_cuenta)
 
 			return total 

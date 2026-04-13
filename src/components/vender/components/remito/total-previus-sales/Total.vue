@@ -186,4 +186,9 @@ export default {
 .venta-total-box:hover 
 	transform: scale(1.05)
 	box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3)
+
+.ui-small .venta-total-box
+	font-size: 1.2rem
+	padding: 8px 16px
+	border-radius: 8px
 </style>

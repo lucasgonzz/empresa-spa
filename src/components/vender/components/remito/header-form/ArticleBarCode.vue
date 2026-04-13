@@ -23,7 +23,7 @@
 			@setBarCode="setBarCode"></bar-code-scanner>
 
 			<p
-			class="m-0"
+			class="stock-text"
 			v-if="item && item.stock">
 				Stock: {{ item.stock }}
 			</p>
@@ -316,4 +316,8 @@ export default {
 .col-bar-code 
 	display: flex
 	align-items: center
+
+.stock-text
+	width: 200px
+	margin-bottom: 0
 </style>

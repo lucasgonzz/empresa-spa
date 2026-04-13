@@ -438,11 +438,13 @@ export default {
 				aplicar_recargos_directo_a_items: state.aplicar_recargos_directo_a_items,
 				sale_type_id: state.sale_type_id,
 				sale_status_id: state.sale_status_id,
-				// Indica si la venta debe descontar stock al crearse
-				discount_stock: state.discount_stock,
-				// Indica si los precios enviados en la venta incluyen IVA
-				iva_aplicado: state.iva_aplicado,
-			})
+			// Indica si la venta debe descontar stock al crearse
+			discount_stock: state.discount_stock,
+			// Indica si los precios enviados en la venta incluyen IVA
+			iva_aplicado: state.iva_aplicado,
+			// Array de descripciones del cálculo del precio final, serializado como JSON
+			price_description: JSON.stringify(state.total_description),
+		})
 			.then(res => {
 				console.log('vendido')
 				let sale = res.data.model

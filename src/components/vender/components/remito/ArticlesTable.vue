@@ -1,6 +1,6 @@
 <template>
 <div
-class="m-b-15 m-t-70">
+:class="['m-b-15', topMarginClass]">
 	<hr>
 	<b-row>
 		<b-col>
@@ -242,6 +242,9 @@ export default {
 		},
 	},
 	computed: {
+		topMarginClass() {
+			return this.$store.state.auth.user?.inputs_size?.slug === 'small' ? 'm-t-10' : 'm-t-70'
+		},
 		special_price_id() {
 			return this.$store.state.vender.special_price_id
 		},
