@@ -86,6 +86,13 @@
 			</template>
 
 
+			<template #cell(rollback)="data">
+				<b-button
+				variant="danger"
+				@click="rollback(models[data.index])">Revertir</b-button>
+			</template>
+
+
 		</b-table>
 	</b-modal>
 </div>
@@ -238,6 +245,10 @@ export default {
 					key: 'error_message',
 					label: 'Errores',
 				},
+				{
+					key: 'rollback',
+					label: 'Revertir importacion',
+				},
 			]
 		}
 	},
@@ -245,6 +256,22 @@ export default {
 		chunks(model) {
 			this.import_history_show_lotes = model
 			this.$bvModal.show('chunks')
+		},
+		rollback(model) {
+
+			if (confirm('¿Seguro que quiere revertir esta importacion?')) {
+				
+				this.$store.commit('auth/setMessage', 'Cargando')
+				this.$store.commit('auth/setMessage', true)
+				this.$api.post('import-history/rollback/'+model.id)
+				.then(res => {
+					this.$store.commit('auth/setMessage', false)
+					this.$toast.success('Enviado, te avisaremos cuando termine')
+				})
+				.catch(err => {
+					this.$store.commit('auth/setMessage', false)
+				})
+			}
 		},
 		to_excel(model) {
 			let link = process.env.VUE_APP_API_URL+'/imported-files/'+model.excel_url.split('/')[1]

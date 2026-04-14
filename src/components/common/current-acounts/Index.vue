@@ -4,6 +4,7 @@
     model_name="current_acount"
     :text="delete_text"
     :actions="actions"
+    @confirmed_final="model_deleted"
     id="delete-current-acount"
     toast="Cuenta corriente eliminada"></confirm>
     
@@ -147,6 +148,11 @@ export default {
             ]
         },
     },
+    methods: {
+        model_deleted() {
+            this.loadModel(this.from_model_name, this.from_model.id)
+        }
+    }
 }
 </script>
 <style lang="sass">

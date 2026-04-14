@@ -9,7 +9,7 @@
 			:prop="{text: 'Cliente', key: 'client_id'}"
 			:model="_vender.client"
 			model_name="client"
-			:props_to_filter="['num', 'name', 'phone']"
+			:props_to_filter="['num', 'name', 'phone', 'dni']"
 			show_btn_create
 			:props_extras="props_extras"
 			set_selected_model_with_model_prop

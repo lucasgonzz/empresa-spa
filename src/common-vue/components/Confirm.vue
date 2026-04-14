@@ -101,6 +101,7 @@ export default {
 	            if (this.model_name) {
 	                this.$bvModal.hide(this.model_name)
 	            }
+	            this.$emit('confirmed_final') 
 	        } catch (err) {
 	            // Corta acá en el primer error
 	            this.$toast.error('Error al ejecutar la acción')

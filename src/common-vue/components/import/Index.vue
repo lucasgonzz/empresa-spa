@@ -942,7 +942,7 @@ export default {
 		    // Props extra
 		    this.props_to_send.provider_id = column_position.provider_id
 		    this.create_and_edit = column_position.create_and_edit
-		    this.actualizar_articulos_de_otro_proveedor = column_position.no_actualizar_otro_proveedor
+		    // this.actualizar_articulos_de_otro_proveedor = column_position.no_actualizar_otro_proveedor
 		},
 
 		// Lo ejecuto con una column_position creada por el usuario

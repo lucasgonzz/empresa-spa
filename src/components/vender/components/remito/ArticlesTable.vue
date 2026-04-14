@@ -12,6 +12,12 @@
 			:fields="fields" 
 			responsive 
 			hover>
+				<template #cell(attachments)="data">
+					<item-attachments
+					:item="items[data.index]"
+					:sale-id="previus_sale && previus_sale.id ? previus_sale.id : null"></item-attachments>
+				</template>
+
 				<template #cell(price)="data">
 					<b-input-group
 					v-if="can('article.vender.change_price') || items[data.index].default_in_vender"
@@ -233,6 +239,7 @@ export default {
 	mixins: [vender, vender_set_total, previus_sales, check_stock],
 	components: {
 		PriceType: () => import('@/components/vender/components/remito/table-slots/PriceType'),
+		ItemAttachments: () => import('@/components/vender/components/remito/table-slots/ItemAttachments'),
 	},
 	watch: {
 		special_price_id() {
@@ -256,6 +263,10 @@ export default {
 		},
 		fields() {
 			let fields = []
+
+			if (this.hasExtencion('adjuntar_archivos_en_vantas')) {
+				fields.push({ key: 'attachments', label: 'Adj.' })
+			}
 
 			if (this.hasExtencion('bar_codes_in_vender_table')) {
 

@@ -77,6 +77,15 @@
 					<i class="icon-download"></i>
 					Excel
 				</b-button>
+				<b-button
+				v-if="is_admin"
+				@click="export_breakdown_excel"
+				class="m-l-10"
+				variant="outline-success"
+				size="sm">
+					<i class="icon-download"></i>
+					Excel full
+				</b-button>
 			</div>
 			<b-skeleton 
 			v-else
@@ -218,6 +227,10 @@ export default {
 	methods: {
 		export_excel() {
             var link = process.env.VUE_APP_API_URL+'/sales/excel/export/'+this.from_date+'/'+this.until_date
+            window.open(link)
+		},
+		export_breakdown_excel() {
+            var link = process.env.VUE_APP_API_URL+'/sales/excel/breakdown-export/'+this.from_date+'/'+this.until_date
             window.open(link)
 		}
 	}

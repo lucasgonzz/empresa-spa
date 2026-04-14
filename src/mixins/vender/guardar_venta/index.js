@@ -6,6 +6,7 @@ import default_articles from '@/mixins/vender/default_articles'
 import facturar from '@/mixins/vender/guardar_venta/facturar'
 import sonido_error from '@/mixins/sonido_error' 
 import vender_set_total from '@/mixins/vender_set_total' 
+import axios from 'axios'
 
 import sync_sales from '@/offline/sync_sales' 
 export default {
@@ -103,6 +104,7 @@ export default {
 		},
 
 		guardar_venta_online() {
+			const pending = [...this.$store.state.vender.pending_attachments]
 
 			this.$store.dispatch('vender/vender', {
 				discounts: this.get_models_by_id('discount', this.discounts_id),
@@ -111,6 +113,10 @@ export default {
 			.then(res => {
 				console.log('SE GUARDO VENTA')
 				console.log(res)
+				const sale = this.$store.state.vender.sale
+				if (sale && sale.id && pending.length) {
+					this.upload_pending_attachments(sale.id, pending)
+				}
 				this.resetear_vender()
 			})
 			.catch(err => {
@@ -130,6 +136,41 @@ export default {
 					this.$toast.error(err)
 				}
 			})
+		},
+
+		async upload_pending_attachments(sale_id, pending_attachments) {
+			const total = pending_attachments.length
+			let uploaded = 0
+			let errors = 0
+
+			this.$toast.info(`Guardando ${total} archivo${total !== 1 ? 's' : ''} adjunto${total !== 1 ? 's' : ''}...`, { duration: 4000 })
+
+			for (const att of pending_attachments) {
+				const form = new FormData()
+				form.append('sale_id', sale_id)
+				form.append('article_id', att.article_id)
+				form.append('file', att.file)
+				form.append('observation', att.observation || '')
+				try {
+					await axios.post(
+						process.env.VUE_APP_API_URL + '/api/sale-article-attachment',
+						form,
+						{ headers: { 'Content-Type': 'multipart/form-data' } }
+					)
+					uploaded++
+					if (total > 1) {
+						this.$toast.info(`Adjuntos: ${uploaded}/${total} subidos`, { duration: 2000 })
+					}
+				} catch {
+					errors++
+				}
+			}
+
+			if (errors === 0) {
+				this.$toast.success(`${total} archivo${total !== 1 ? 's' : ''} adjunto${total !== 1 ? 's' : ''} guardado${total !== 1 ? 's' : ''}`)
+			} else {
+				this.$toast.warning(`Se guardaron ${uploaded} de ${total} archivos adjuntos. ${errors} no se pud${errors !== 1 ? 'ieron' : 'o'} subir.`)
+			}
 		},
 
 		async guardar_venta_offline() {
