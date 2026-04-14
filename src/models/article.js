@@ -124,6 +124,7 @@ export default {
 			type: 'checkbox',
 			if_has_extencion: 'productionV2',
 			description: 'Si lo activa, se apartara este articulo del Listado',
+			use_to_update: true,
 		},
 
 
@@ -497,6 +498,7 @@ export default {
 			key: 'unidad_medida_id',
 			type: 'select',
 			not_show: true,
+			use_to_update: true,
 			use_store_models: true,
 			value: 1,
 			description: 'Por defecto es UNIDAD. Tambien puede ser "Gramo", "Kilo", "Litro", "Centimetro", "Metro", "Rollo", "Par"',
@@ -537,6 +539,7 @@ export default {
 			use_to_show_in_search_modal: true,
 			use_store_models: true,
 			not_show: true,
+			use_to_update: true,
 			not_show: true,
 			filter_modal_position: 7,
 			keep_after_create: true,
@@ -544,6 +547,7 @@ export default {
 		{
 			key: 'descripcion',
 			type: 'textarea',
+			use_to_update: true,
 			not_show: true,
 			description: 'Utilice este campo como informacion complementaria del articulo, para de esa forma no tener un "Nombre tan extenso". Esta descripcion esta incluida como criterio de busqueda en el modulo de VENDER'
 		},
@@ -560,6 +564,7 @@ export default {
 			type: 'checkbox',
 			value: 1,
 			not_show: true,
+			use_to_update: true,
 			keep_after_create: true,
 			if_has_extencion: 'online',
 		},
@@ -567,6 +572,7 @@ export default {
 			text: 'Destacado',
 			key: 'featured',
 			type: 'checkbox',
+			use_to_update: true,
 			not_show: true,
 			if_has_extencion: 'online',
 		},
@@ -574,6 +580,7 @@ export default {
 			text: 'En oferta',
 			key: 'in_offer',
 			type: 'checkbox',
+			use_to_update: true,
 			not_show: true,
 			if_has_extencion: 'online',
 		},
@@ -641,7 +648,8 @@ export default {
 			not_show: true,
 			value: 1,
 			if_has_extencion: 'usa_tienda_nube',
-			description: 'Activalo si el producto es fisico, desactivalo si el producto es digital'
+			description: 'Activalo si el producto es fisico, desactivalo si el producto es digital',
+			use_to_update: true,
 		},
 		{
 			text: 'Envio Gratis',
@@ -650,6 +658,7 @@ export default {
 			not_show: true,
 			value: 0,
 			if_has_extencion: 'usa_tienda_nube',
+			use_to_update: true,
 		},
 		{
 			key: 'precio_promocional',
@@ -658,6 +667,7 @@ export default {
 			is_price: true,
 			if_has_extencion: 'usa_tienda_nube',
 			description: 'Precio promocional para mostrar solo en Tienda Nube',
+			use_to_update: true,
 		},
 		{
 			key: 'video_url',

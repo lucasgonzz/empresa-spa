@@ -110,10 +110,37 @@ export default {
 		discount_stock: 1,
 		// Indica si los precios de los items se interpretan con IVA aplicado. Por defecto en true (1).
 		iva_aplicado: 1,
+
+		// Adjuntos pendientes de subir (para ventas nuevas, antes de que exista sale_id)
+		pending_attachments: [],
+
+		// Adjuntos ya guardados de la venta que se está editando (precargados)
+		sale_attachments: [],
 	},
 	mutations: {
 		set_sale_status_id(state, value) {
 			state.sale_status_id = value
+		},
+		addPendingAttachment(state, attachment) {
+			state.pending_attachments.push(attachment)
+		},
+		removePendingAttachment(state, temp_id) {
+			const index = state.pending_attachments.findIndex(a => a.temp_id === temp_id)
+			if (index !== -1) {
+				state.pending_attachments.splice(index, 1)
+			}
+		},
+		clearPendingAttachments(state) {
+			state.pending_attachments = []
+		},
+		setSaleAttachments(state, attachments) {
+			state.sale_attachments = attachments
+		},
+		addSaleAttachment(state, attachment) {
+			state.sale_attachments.push(attachment)
+		},
+		removeSaleAttachment(state, id) {
+			state.sale_attachments = state.sale_attachments.filter(a => a.id !== id)
 		},
 		// Mutation para controlar si la venta descuenta stock
 		set_discount_stock(state, value) {

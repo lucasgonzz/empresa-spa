@@ -5,6 +5,7 @@ hide-footer
 :id="model_name+'-update-models'">
 	<b-form-group
 	v-for="prop in form"
+	:key="prop.key"
 	:label="prop.label">
 		<div
 		v-if="prop.type == 'number'">
@@ -28,6 +29,11 @@ hide-footer
 		v-model="prop.value"
 		@chenge="setChange"
 		:options="getOptions(prop, form, prop.store)"></b-form-select>
+
+		<b-form-select
+		v-else-if="prop.type == 'checkbox'"
+		v-model="prop.value"
+		:options="prop.options"></b-form-select>
 
 		<search-component
 		v-else-if="prop.type == 'search'"
@@ -81,6 +87,10 @@ export default {
 			console.log(value)
 		},
 		setForm() {
+			/**
+			 * Reinicia el formulario dinámico para reconstruirlo
+			 * según las propiedades configuradas para actualización.
+			 */
 			this.form = []
 			this.properties_to_update.forEach(prop => {
 
@@ -132,6 +142,31 @@ export default {
 						})
 						// console.log('search para '+prop.key)
 						// this.form[prop.key] = '' 
+					} else if ((prop.type_to_update && prop.type_to_update == 'checkbox') || prop.type == 'checkbox') {
+						/**
+						 * Para checkbox en actualización masiva no se usa un boolean directo:
+						 * se ofrece una intención explícita para evitar cambios accidentales.
+						 */
+						this.form.push({
+							label: this.propText(prop),
+							key: prop.key,
+							type: 'checkbox',
+							options: [
+								{
+									value: '',
+									text: 'No modificar',
+								},
+								{
+									value: 1,
+									text: 'Activar',
+								},
+								{
+									value: 0,
+									text: 'Desactivar',
+								},
+							],
+							value: '',
+						})
 					}
 				}
 			})

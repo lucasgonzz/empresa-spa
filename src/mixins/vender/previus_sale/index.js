@@ -8,6 +8,7 @@ import limpiar_actualizandose_por from '@/mixins/vender/previus_sale/limpiar_act
 import price_types from '@/mixins/vender/price_types'
 import default_payment_method from '@/mixins/vender/default_payment_method'
 import price_ranges from '@/mixins/vender/price_ranges'
+import axios from 'axios'
 export default {
 	mixins: [price_ranges, limpiar_vender, limpiar_actualizandose_por, price_types, vender_set_total, default_payment_method],
 	// mixins: [vender, set_employee_vender, vender_set_total],
@@ -78,6 +79,11 @@ export default {
 					
 					this.setPreviusReturnedArticles()
 					this.setPreviusReturnedServices()
+
+					// Precargar adjuntos de la venta
+					if (this.previus_sale && this.previus_sale.id) {
+						this.load_previus_sale_attachments(this.previus_sale.id)
+					}
 				}, 500)
 			})
 			.catch(err => {
@@ -85,6 +91,15 @@ export default {
 				console.log(err)
 				this.$store.commit('auth/setLoading', false)
 			})
+		},
+		load_previus_sale_attachments(sale_id) {
+			axios.get(process.env.VUE_APP_API_URL + '/api/sale-article-attachment/by-sale/' + sale_id)
+				.then(res => {
+					this.$store.commit('vender/setSaleAttachments', res.data.models)
+				})
+				.catch(err => {
+					console.log('Error al cargar adjuntos:', err)
+				})
 		},
 		set_discounts_store_with_pivot_percetage(previus_discounts) {
 
@@ -256,7 +271,44 @@ export default {
 			})
 			this.$store.commit('vender/previus_sales/setPreviusReturnedServices', returned_services)
 		},
+		async upload_pending_attachments(sale_id, pending_attachments) {
+			const total = pending_attachments.length
+			let uploaded = 0
+			let errors = 0
+
+			this.$toast.info(`Guardando ${total} archivo${total !== 1 ? 's' : ''} adjunto${total !== 1 ? 's' : ''}...`, { duration: 4000 })
+
+			for (const att of pending_attachments) {
+				const form = new FormData()
+				form.append('sale_id', sale_id)
+				form.append('article_id', att.article_id)
+				form.append('file', att.file)
+				form.append('observation', att.observation || '')
+				try {
+					await axios.post(
+						process.env.VUE_APP_API_URL + '/api/sale-article-attachment',
+						form,
+						{ headers: { 'Content-Type': 'multipart/form-data' } }
+					)
+					uploaded++
+					if (total > 1) {
+						this.$toast.info(`Adjuntos: ${uploaded}/${total} subidos`, { duration: 2000 })
+					}
+				} catch {
+					errors++
+				}
+			}
+
+			if (errors === 0) {
+				this.$toast.success(`${total} archivo${total !== 1 ? 's' : ''} adjunto${total !== 1 ? 's' : ''} guardado${total !== 1 ? 's' : ''}`)
+			} else {
+				this.$toast.warning(`Se guardaron ${uploaded} de ${total} archivos adjuntos. ${errors} no se pud${errors !== 1 ? 'ieron' : 'o'} subir.`)
+			}
+		},
 		updateSale() {
+			const sale_id = this.previus_sale ? this.previus_sale.id : null
+			const pending = [...this.$store.state.vender.pending_attachments]
+
 			this.$store.dispatch('vender/previus_sales/updateSale', {
 				client_id: this.client ? this.client.id : null, 
 				discounts: this.get_discounts(), 
@@ -295,6 +347,9 @@ export default {
 				price_description: JSON.stringify(this.$store.state.vender.total_description),
 			})
 			.then(res => {
+				if (sale_id && pending.length) {
+					this.upload_pending_attachments(sale_id, pending)
+				}
 				this.$toast.success('Venta actualizada')
 				this.cancelPreviusSale()
 			})

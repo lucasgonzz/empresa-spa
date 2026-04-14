@@ -7,8 +7,13 @@
     not_show_delete_text
     :show_btn_delete="show_btn_delete"
     model_name="sale">
-        <template v-slot:model_modal_header="props">
+        <template v-slot:model_modal_header>
             <sale-details></sale-details>
+        </template>
+        <template v-slot:articles>
+            <sale-articles-attachment-table
+            v-if="selected_sale && selected_sale.id"
+            :sale="selected_sale"></sale-articles-attachment-table>
         </template>
     </model-index>  
 </template>
@@ -19,6 +24,7 @@ export default {
     components: {
         ModelIndex: () => import('@/common-vue/components/model/Index'),
         SaleDetails: () => import('@/components/ventas/modals/details/Index'),
+        SaleArticlesAttachmentTable: () => import('@/components/ventas/modals/details/SaleArticlesAttachmentTable'),
     },
     computed: {
         selected_sale() {
