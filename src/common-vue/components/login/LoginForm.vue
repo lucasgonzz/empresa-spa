@@ -90,7 +90,8 @@ export default {
 						this.$store.commit('auth/setUser', res.data.user)
 						this.$store.commit('auth/setAuthenticated', true)
 					} else if (res.data.user_last_activity) {
-						this.$toast.error('Su cuenta esta siendo utilizada en otro dispositivo, cierre la cuenta en el otro dispositivo. En caso de que la cuenta no este siendo utilizada en el otro dispositivo, espere '+this.user_last_activity_minutes+' minutos')
+						const waitMinutes = res.data.user_last_activity_wait_minutes || 0
+						this.$toast.error('Su cuenta esta siendo utilizada en otro dispositivo, cierre la cuenta en el otro dispositivo. En caso de que la cuenta no este siendo utilizada en el otro dispositivo, espere '+waitMinutes+' minutos')
 					} else {
 						this.$toast.error('Sus credenciales son incorrectas, controle que este ingresando desde el link correspondiente a su negocio: TU-NEGOCIO.comerciocity.com', {
 							duration: 10000,

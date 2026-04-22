@@ -3,6 +3,9 @@ export default {
 	mixins: [computed],
 	methods: {
 		setPriceType() {
+            console.log('setPriceType')
+            console.log('client:')
+            console.log(this.client)
             if (this.price_types_with_position.length
                 && !this.hasExtencion('lista_de_precios_por_rango_de_cantidad_vendida')) {
                 let price_type_para_vender 
@@ -13,6 +16,7 @@ export default {
                 
                 } else if (this.client && this.client.price_type) {
                     price_type_para_vender = this.client.price_type
+                    console.log('usando price type del client: '+this.client.price_type.name)
                 } else {
                     let last_position = 0
                     this.price_types_with_position.forEach(price_type => {

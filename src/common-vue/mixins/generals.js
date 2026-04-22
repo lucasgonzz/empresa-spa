@@ -635,7 +635,7 @@ export default {
 			if (property.v_if_prop_length) {
 				return model[property.v_if_prop_length].length
 			}
-			if (property.v_if && model) {
+			if (property.v_if && typeof property.v_if == 'array' && model) {
 				let array = property.v_if[0].split('.')
 				let prop_to_check
 				let prop = array[0]

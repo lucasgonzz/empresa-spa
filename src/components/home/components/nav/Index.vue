@@ -1,130 +1,96 @@
 <template>
-    <div
-    class="w-100">
-        <mobile></mobile> 
-        <div
-        :class="scroll_bottom ? 'nav-scroll' : ''"
-        class="nav-home"> 
-            <b-navbar 
-            toggleable="md">
-                <b-navbar-brand
-                :to="{name: 'home'}">
-                    <img src="@/assets/logo.png" alt="">
-                </b-navbar-brand>
-
-                <scroll-buttons
-                class="d-none d-lg-flex"></scroll-buttons>
-
-                <div
-                class="d-lg-none">
-                    <b-navbar-toggle target="nav-home-mobile">
-                        <i class="icon-bars"></i>
-                    </b-navbar-toggle>
-                </div>
-
-                <b-collapse id="nav-collapse" is-nav> 
-                    <div></div>
-        			<b-button
-                    class="btn-login"
-                    dusk="login-btn"
-                    :to="{name: 'login'}"
-                    variant="primary">
-        				Iniciar sesion
-        			</b-button>                
-                </b-collapse>
-            </b-navbar>
-        </div>
-    </div>
+	<header class="home_nav">
+		<div class="home_nav_container">
+			<div class="brand_block">
+				<img :src="section_data.brand_logo_url" alt="brand_logo" class="brand_logo">
+				<div class="brand_text">
+					<strong>{{ section_data.brand_name }}</strong>
+					<span>{{ section_data.brand_tagline }}</span>
+				</div>
+			</div>
+			<div class="actions_block">
+				<router-link :to="{ name: section_data.login_route_name }" class="btn_link">
+					{{ section_data.login_label }}
+				</router-link>
+				<a :href="section_data.primary_cta_url" target="_blank" rel="noopener" class="btn_primary">
+					{{ section_data.primary_cta_label }}
+				</a>
+			</div>
+		</div>
+	</header>
 </template>
+
 <script>
 export default {
-    components: {
-        ScrollButtons: () => import('@/components/home/components/nav/ScrollButtons'),
-        Mobile: () => import('@/components/home/components/nav/Mobile'),
-    },
-    data() {
-        return {
-            scroll: 0,
-            scroll_bottom: false,
-        }
-    },
-    created() {
-        window.addEventListener('scroll', () => {
-            if (this.scroll < window.scrollY) {
-                if (window.scrollY >= 100) {
-                    this.scroll_bottom = true
-                }
-            } else {
-                if (window.scrollY <= 400) {
-                    this.scroll_bottom = false
-                }
-            } 
-            this.scroll = window.scrollY
-        })
-    },
+	name: 'HomeNavSection',
+	props: {
+		/**
+		 * Datos de navegación superior del home.
+		 */
+		section_data: {
+			type: Object,
+			required: true,
+		},
+	},
 }
 </script>
+
 <style lang="sass">
-@import "@/sass/_custom"
-.nav-scroll 
-    background: darken($blue, 10) 
-    height: 80px !important
-    // .scroll-button
-    //     color: #000 !important
-    // i 
-    //     color: #000 !important
-    .navbar-brand
-        background: #fefefe
-        border-radius: 5px
-        padding: 5px 0
+.home_nav
+	position: sticky
+	top: 0
+	z-index: 50
+	background: rgba(255, 255, 255, .94)
+	border-bottom: 1px solid #E5EBF5
 
-    .btn-login
-        background: none
-        border: 2px solid #FFF
-        &:hover 
-            background: #FFF
-            color: $blue
+.home_nav_container
+	max-width: 1200px
+	margin: 0 auto
+	padding: 14px 20px
+	display: flex
+	align-items: center
+	justify-content: space-between
 
-.nav-home 
-    transition: all .4s
-    display: flex
-    flex-direction: row 
-    height: 100px
-    width: 100% 
-    position: fixed 
-    left: 0
-    top: 0
-    z-index: 500
-    @media screen and (max-width: 768px) 
-        padding: 0 30px
-    @media screen and (min-width: 768px) 
-        padding: 0 100px
-    
-    .navbar
-        width: 100%
-        padding: 0
+.brand_block
+	display: flex
+	align-items: center
+	gap: 12px
 
-    .navbar-brand
-        padding: 0
-        img 
-            width: 150px
+.brand_logo
+	width: 36px
+	height: 36px
+	border-radius: 8px
 
-    .navbar-toggler 
-        border: none
-        i 
-            color: #FFF
-            font-size: 25px
+.brand_text
+	display: flex
+	flex-direction: column
+	strong
+		font-size: 16px
+	span
+		font-size: 12px
+		color: #5F708A
 
-    .navbar-nav 
-        @media screen and (min-width: 768px)
-            align-items: center
+.actions_block
+	display: flex
+	gap: 10px
+	align-items: center
 
-    .navbar-collapse
-        justify-content: space-between
+.btn_link
+	color: #283A56
+	text-decoration: none
+	font-weight: 600
 
-    .btn-login
-        padding: 10px 15px
-        width: 150px
-        border-radius: 7px
-        font-size: 1em
+.btn_primary
+	background: linear-gradient(135deg, #256BFD 0%, #0FA4E8 100%)
+	color: white
+	padding: 10px 16px
+	border-radius: 10px
+	text-decoration: none
+	font-weight: 600
+
+@media screen and (max-width: 768px)
+	.home_nav_container
+		flex-direction: column
+		gap: 12px
+		align-items: flex-start
 </style>

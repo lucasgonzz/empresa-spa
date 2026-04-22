@@ -101,6 +101,29 @@ export default {
 			value: 0,
 			description: 'Si se activa, cada articulo un precio final para cada lista de precio que haya creada.',
 		},
+		{
+			text: 'Redondear precios de a centenas',
+			key: 'redondear_centenas_en_vender',
+			type: 'checkbox',
+		},
+		/*
+		 * Configuraciones de redondeo adicionales usadas por el backend al calcular precios finales.
+		 */
+		{
+			text: 'Redondear precios en decenas',
+			key: 'redondear_precios_en_decenas',
+			type: 'checkbox',
+		},
+		{
+			text: 'Redondear precios de a 50',
+			key: 'redondear_de_a_50',
+			type: 'checkbox',
+		},
+		{
+			text: 'Redondear precios en centavos',
+			key: 'redondear_precios_en_centavos',
+			type: 'checkbox',
+		},
 		/*
 		 * Permite que el usuario trabaje con artículos que tengan `provider_code` repetido.
 		 * Si está activo, al crear un artículo se omite el chequeo automático de repetidos por `provider_code`.
@@ -163,11 +186,8 @@ export default {
 			key: 'text_omitir_cc',
 			type: 'text',
 		},
-		{
-			text: 'Redondear precios de a centenas',
-			key: 'redondear_centenas_en_vender',
-			type: 'checkbox',
-		},
+
+
 
 
 		{

@@ -77,7 +77,7 @@
 <script>
 export default {
 	components: {
-        ScrollButtons: () => import('@/components/home/components/nav/ScrollButtons'),
+        ScrollButtons: () => import('@/components/home2/components/nav/ScrollButtons'),
 	},
 	methods: {
 		toWhatsapp() {

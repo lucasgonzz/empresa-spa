@@ -34,6 +34,16 @@ export default {
 
 			this.get_inventory_performance()
 
+			this.check_synced_version_notifications()
+
+		},
+		check_synced_version_notifications() {
+			this.$store.dispatch('synced_version_notification/get_pending')
+			.then(() => {
+				if (this.$store.getters['synced_version_notification/has_pending']) {
+					this.$bvModal.show('synced-version-notifications')
+				}
+			})
 		},
 		get_inventory_performance() {
 			if (

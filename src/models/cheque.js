@@ -1,6 +1,7 @@
 export default {
 	properties: [
 		{
+			text: 'Número',
 			key: 'numero',
 			type: 'text',
 			is_title: true,
@@ -37,6 +38,7 @@ export default {
 			use_store_models: true,
 		},
 		{
+			text: 'Banco',
 			key: 'banco',
 			type: 'text',
 		},
@@ -47,16 +49,24 @@ export default {
 			is_price: true,
 		},
 		{
+			text: 'Notas',
+			key: 'notes',
+			type: 'text',
+		},
+		{
+			text: 'Fecha emisión',
 			key: 'fecha_emision',
 			type: 'date',
 			is_date: true,
 		},
 		{
+			text: 'Fecha pago',
 			key: 'fecha_pago',
 			type: 'date',
 			is_date: true,
 		},
 		{
+			text: 'Fecha endoso',
 			key: 'fecha_endoso',
 			type: 'date',
 			is_date: true,

@@ -4,7 +4,6 @@
 	:props_to_send="props_to_send"
 	file_name="articulos-base"
 	:advises="advises"
-	:identifications="identifications"
 	:columns="columns"
 	:actions="actions">
 		<select-provider
@@ -299,12 +298,6 @@ export default {
 		},
 		price_types() {
 			return this.$store.state.price_type.models
-		},
-		identifications() {
-			return [
-				'Código de Barras',
-				'Código de Proveedor',
-			]
 		},
 		actions() {
 			return [

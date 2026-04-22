@@ -29,7 +29,7 @@ export default {
 		items() {
 			let items = []
 			
-			if (this.provider_order) {
+			if (this.provider_order && this.provider_order.iva_breakdown) {
 
 				this.provider_order.iva_breakdown.forEach(iva => {
 					items.push({

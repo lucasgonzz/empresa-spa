@@ -24,7 +24,7 @@
 				:select-mode="_select_mode"
 				:tbody-tr-class="rowClass"
 				@row-selected="onRowSelected">
-					<template v-slot:table_left_options="slotProps">
+					<template v-slot:table_left_options>
 						<slot name="table_left_options" :model="model"></slot>
 					</template>
 
@@ -32,6 +32,7 @@
 					v-for="(prop, prop_index) in visible_properties_for_table"
 					v-slot:[toCellName(prop.key)]="data">
 						<div
+						:key="prop.key + '-' + prop_index"
 						:class="get_cell_classes(prop, prop_index)"
 						class="cont-tr table-component-cell-inner">
 							<vue-load-image
@@ -39,6 +40,9 @@
 							class="img-fluid">
 								<img
 								slot="image"
+								class="article-thumbnail"
+								@click.stop.prevent="openImagePreview(imageUrl(models[data.index], prop))"
+								@mousedown.stop.prevent
 								:src="imageUrl(models[data.index], prop)">
 
 						        <b-spinner
@@ -48,8 +52,6 @@
 								<div slot="error">Imagen no encontrada</div>
 
 							</vue-load-image>
-
-
 							<div
 							v-else-if="showInput(prop, models[data.index])">
 								<b-form-textarea
@@ -146,7 +148,8 @@
 							class="cont-pivot-inputs"
 							v-if="pivot && pivot.properties_to_set">
 								<div
-								v-for="(prop, index) in propsToSet()">
+								v-for="(prop, index) in propsToSet()"
+								:key="'props-to-set-' + index">
 									<b-form-group
 									v-if="prop.type == 'text' || prop.type == 'textarea' || prop.type == 'number' || prop.type == 'select' || prop.type == 'checkbox' || prop.type == 'date'"
 									:key="'pivot-prop-'+index"
@@ -204,6 +207,28 @@
 						</div>
 					</template>
 				</b-table>
+				<div
+				v-if="show_image_preview && preview_image_url"
+				class="image-preview-overlay"
+				@click.self.stop.prevent="closeImagePreview"
+				@mousedown.stop.prevent>
+					<div
+					class="image-preview-modal"
+					@click.stop
+					@mousedown.stop>
+						<button
+						type="button"
+						class="image-preview-close"
+						@click.stop.prevent="closeImagePreview"
+						@mousedown.stop.prevent>
+							×
+						</button>
+						<img
+						class="image-preview-large"
+						:src="preview_image_url"
+						alt="Vista previa de articulo">
+					</div>
+				</div>
 				<!-- <btn-add-to-show
 				:model_name="model_name"></btn-add-to-show> -->
 			</div>
@@ -334,7 +359,15 @@ export default {
 		return {
 			last_selection: [],
 			is_from_keydown: false,
+			show_image_preview: false,
+			preview_image_url: '',
 		}
+	},
+	mounted() {
+		window.addEventListener('keydown', this.handlePreviewKeydown)
+	},
+	beforeDestroy() {
+		window.removeEventListener('keydown', this.handlePreviewKeydown)
 	},
 	watch: {
 		selected_index() {
@@ -453,6 +486,22 @@ export default {
 		},
 	},
 	methods: {
+		openImagePreview(image_url) {
+			if (!image_url) {
+				return
+			}
+			this.preview_image_url = image_url
+			this.show_image_preview = true
+		},
+		closeImagePreview() {
+			this.show_image_preview = false
+			this.preview_image_url = ''
+		},
+		handlePreviewKeydown(event) {
+			if (event.key == 'Escape' && this.show_image_preview) {
+				this.closeImagePreview()
+			}
+		},
 		scroll_to_selected() {
 			const filas = this.$refs.tabla_contenedor.querySelectorAll('tbody tr')
       const fila = filas[this.selected_index]
@@ -668,6 +717,8 @@ export default {
 			white-space: nowrap
 	img
 		width: 100px
+		&.article-thumbnail
+			cursor: zoom-in
 	input, textarea
 		width: 200px
 	th, td
@@ -760,4 +811,42 @@ export default {
 		width: 150px !important
 	.input-lg
 		width: 300px !important
+
+.image-preview-overlay
+	position: fixed
+	inset: 0
+	background: rgba(0,0,0,.65)
+	display: flex
+	align-items: center
+	justify-content: center
+	z-index: 2000
+	padding: 1rem
+
+.image-preview-modal
+	position: relative
+	background: #fff
+	padding: .75rem
+	border-radius: .5rem
+	max-width: 100%
+	box-shadow: 0 10px 25px rgba(0,0,0,.35)
+
+.image-preview-large
+	width: 3000px !important
+	max-width: 100%
+	height: auto
+	display: block
+
+.image-preview-close
+	position: absolute
+	top: .25rem
+	right: .25rem
+	width: 2rem
+	height: 2rem
+	border: 0
+	border-radius: 999px
+	background: rgba(0,0,0,.75)
+	color: #fff
+	font-size: 1.4rem
+	line-height: 1
+	cursor: pointer
 </style>

@@ -47,6 +47,7 @@
 				:placeholder="'Ingrese '+propText(prop)"
 				v-model="model.pivot[prop.key]"></b-form-input>
 			</div>
+			
 		</b-form-group>
 		<b-button
 		v-else-if="prop.type == 'button'"

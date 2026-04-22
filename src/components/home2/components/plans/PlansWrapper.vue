@@ -49,7 +49,7 @@ export default {
 	mixins: [plans], 
 	components: {
 		VueHorizontalList: () => import('vue-horizontal-list'),
-		Plan: () => import('@/components/home/components/plans/Plan'),
+		Plan: () => import('@/components/home2/components/plans/Plan'),
 	},
 	data() {
 		return {

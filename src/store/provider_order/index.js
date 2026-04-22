@@ -57,10 +57,15 @@ export default {
 		props_to_show: [],
 
 		afip_ticket_show_option: 'con-y-sin-factura',
+
+		import_diff: [],
 	},
 	mutations: {
 		setAfipTicketShowOption(state, value) {
 			state.afip_ticket_show_option = value
+		},
+		setImportDiff(state, value) {
+			state.import_diff = value
 		},
 		set_props_to_show(state, value) {
 			state.props_to_show = value

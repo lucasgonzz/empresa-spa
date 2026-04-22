@@ -89,7 +89,8 @@
 							:select_mode="_select_mode"
 							:model_name="model_name"
 							:props="props"
-							:set_model_on_row_selected="set_model_on_row_selected">
+							:set_model_on_row_selected="set_model_on_row_selected"
+							:disable_cell_fade="disable_cell_fade">
 								<template v-slot:table_left_options>
 									<slot name="table_left_options" :model="model"></slot>
 								</template>
@@ -120,6 +121,7 @@
 						:props="props"
 						@onRowSelected="onRowSelected"
 						:set_model_on_row_selected="set_model_on_row_selected"
+						:disable_cell_fade="disable_cell_fade"
 						:cont_table_id="id">
 							<template v-slot:table_left_options>
 								<slot name="table_left_options" :model="model"></slot>
@@ -254,6 +256,10 @@ export default {
 			default: null,
 		},
 		disable_scroll: {
+			type: Boolean,
+			default: false,
+		},
+		disable_cell_fade: {
 			type: Boolean,
 			default: false,
 		},
@@ -415,6 +421,7 @@ export default {
 
 								props.push({
 									...prop_to_set,
+									table_width: prop_to_set.table_width ? prop_to_set.table_width : 150,
 									is_pivot_prop: true,
 								})
 							}
@@ -422,6 +429,7 @@ export default {
 
 							props.push({
 								...prop_to_set,
+								table_width: prop_to_set.table_width ? prop_to_set.table_width : 300,
 								is_pivot_prop: true,
 							})
 						}
@@ -647,8 +655,18 @@ export default {
 			// console.log('set_fields:')
 
 			this.fields = []
+			/**
+			 * Registro de keys ya agregadas al header.
+			 * Evita columnas duplicadas (ej: created_at) que disparan warnings de Vue
+			 * y pueden provocar inconsistencias al actualizar el DOM.
+			 */
+			let used_field_keys = {}
 			this.props.forEach(prop => {
 				if (this.showProperty(prop)) {
+					if (used_field_keys[prop.key]) {
+						return
+					}
+					used_field_keys[prop.key] = true
 
 					this.fields.push({
 						key: prop.key,

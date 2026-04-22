@@ -2,7 +2,13 @@
 	<div
 	class="m-t-15"
 	v-if="advises.length">
-		ADVERTENCIAS
+		<hr>
+		<p>
+			<strong>
+				ADVERTENCIAS
+			</strong>
+		</p>
+			
 		<p
 		v-for="(advise, i) in advises"
 		:key="i">

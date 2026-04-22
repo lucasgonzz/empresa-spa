@@ -19,7 +19,7 @@
 export default {
 	components: {
 		VueHorizontalList: () => import('vue-horizontal-list'),
-		Card: () => import('@/components/home/components/casos-de-exito/Card'),
+		Card: () => import('@/components/home2/components/casos-de-exito/Card'),
 	},
 	computed: {
 		options() {

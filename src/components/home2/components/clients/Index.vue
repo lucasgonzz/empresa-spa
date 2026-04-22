@@ -30,7 +30,7 @@
 <script>
 export default {
 	components: {
-		Client: () => import('@/components/home/components/clients/Client'),
+		Client: () => import('@/components/home2/components/clients/Client'),
 		VueHorizontalList: () => import('vue-horizontal-list'),
 	},
 	data() {

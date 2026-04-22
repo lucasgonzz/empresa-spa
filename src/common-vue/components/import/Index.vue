@@ -12,35 +12,39 @@
 	:id="id"
 	hide-footer>
 
-		<b-button
-		@click="showHistory"
-		variant="primary">
-			<i class="icon-eye"></i>
-			Historial de importaciones
-		</b-button>
+		<div
+		v-if="model_name == 'article'">
+			
+			<b-button
+			@click="showHistory"
+			variant="primary">
+				<i class="icon-eye"></i>
+				Historial de importaciones
+			</b-button>
 
-		<hr>
-		<p>
-			<strong>
-				Opcion 1. Descargar el archivo Modelo en formato Excel
-			</strong>
-		</p>
-		<p
-		class="m-b-0">
-			Comience por descargar el archivo modelo con los títulos de las columnas que ComercioCity necesita para importar los datos de sus {{ plural(model_name) }}.
-		</p>
-		<b-button
-		class="m-t-10"
-		@click="base_export"
-		variant="success">
-			Descargar el archivo modelo
-		</b-button>
-		<hr>
-		<p>
-			<strong>
-				Opcion 2. Tambien puede tomar un archivo Excel ya existente, e indicar que columna de su archivo corresponde a que propiedad. 
-			</strong>
-		</p>
+			<hr>
+			<p>
+				<strong>
+					Opcion 1. Descargar el archivo Modelo en formato Excel
+				</strong>
+			</p>
+			<p
+			class="m-b-0">
+				Comience por descargar el archivo modelo con los títulos de las columnas que ComercioCity necesita para importar los datos de sus {{ plural(model_name) }}.
+			</p>
+			<b-button
+			class="m-t-10"
+			@click="base_export"
+			variant="success">
+				Descargar el archivo modelo
+			</b-button>
+			<hr>
+			<p>
+				<strong>
+					Opcion 2. Tambien puede tomar un archivo Excel ya existente, e indicar que columna de su archivo corresponde a que propiedad. 
+				</strong>
+			</p>
+		</div>
 
 		<hr>	
 		<div>	
@@ -49,19 +53,18 @@
 					Identificación
 				</strong>
 			</p>
-			<p>
-				Primero por: Numero
-			</p>
 			<p
 			v-for="(identification, index) in identifications"
 			:key="index">
-				Despues por: {{ identification }}
+				{{index + 1}}: {{ identification }}
 			</p>
 		</div>
 		<hr>	
 		<div>
 
+				
 			<column-positions-guardadas
+			v-if="model_name == 'article'"
 			:positions_seted="positions_seted"
 			:start_row="start_row"
 			:columns="columns_"></column-positions-guardadas>
@@ -621,7 +624,11 @@ export default {
 		identifications: {
 			type: Array,
 			default() {
-				return []
+				return [
+					'Numero',
+					'Código de Barras',
+					'Código de Proveedor',
+				]
 			}
 		},
 		file_name: {
@@ -1090,7 +1097,7 @@ export default {
 
 				this.$bvModal.hide(this.id)
 
-				if (!this.hubo_un_error) {
+				if (!this.hubo_un_error && this.model_name == 'article') {
 					
 					this.$toast.success('Estamos precesando tu archivo, te notificaremos cuando termine', {
 						duration: 7000
@@ -1226,6 +1233,10 @@ export default {
 					this.load_import_status()
 					this.guardar_column_position()
 				}
+
+				// if (res.data) {
+				this.$emit('import-success', res)
+				// }
 
 				return
 				
