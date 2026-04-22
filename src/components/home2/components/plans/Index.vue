@@ -23,7 +23,7 @@
 <script>
 export default {
 	components: {
-		PlansWrapper: () => import('@/components/home/components/plans/PlansWrapper'),
+		PlansWrapper: () => import('@/components/home2/components/plans/PlansWrapper'),
 	},
 }
 </script>

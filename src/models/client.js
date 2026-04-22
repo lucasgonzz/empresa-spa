@@ -10,6 +10,10 @@ export default {
 			use_to_filter_in_search: true,
 			filter_modal_position: 9,
 		},
+
+		{
+			group_title: 'Datos generales',
+		},
 		{
 			text: 'Nombre',
 			key: 'name',
@@ -52,30 +56,6 @@ export default {
 			if_has_extencion: 'ventas_en_dolares',
 		},
 		{
-			text: 'Telefono',
-			key: 'phone',
-			type: 'text',
-			value: '',
-			show: true,
-			use_to_filter_in_modal: true,
-		},
-		{
-			text: 'Correo',
-			key: 'email',
-			type: 'text',
-			value: '',
-			not_show: true,
-		},
-		{
-			text: 'Direccion',
-			key: 'address',
-			type: 'text',
-			value: '',
-			not_show: true,
-			use_to_filter_in_modal: true,
-			filter_modal_position: 5,
-		},
-		{
 			text: 'Sucursal',
 			key: 'address_id',
 			relation_prop_name: 'street',
@@ -97,6 +77,50 @@ export default {
 			if_has_extencion: 'articulo_margen_de_ganancia_segun_lista_de_precios',
 		},
 		{
+			text: 'Pasar las ventas a la C/C sin esperar a facturar',
+			key: 'pasar_ventas_a_la_cuenta_corriente_sin_esperar_a_facturar',
+			if_has_extencion: 'guardad_cuenta_corriente_despues_de_facturar',
+			type: 'checkbox',
+			description: 'Si se activa, se cargara el saldo a la cuenta corriente inmediatamente guardada la venta',
+			value: 0,
+		},
+		{
+			text: 'Vendedor',
+			key: 'seller_id',
+			type: 'select',
+			value: 0,
+			not_show: true,
+			use_store_models: true,
+			filter_modal_position: 3,
+		},
+		{
+			text: 'Descripcion',
+			key: 'description',
+			type: 'textarea',
+			value: '',
+			show: true,
+		},
+
+
+		{
+			group_title: 'Datos de contacto',
+		},
+		{
+			text: 'Telefono',
+			key: 'phone',
+			type: 'text',
+			value: '',
+			show: true,
+			use_to_filter_in_modal: true,
+		},
+		{
+			text: 'Correo',
+			key: 'email',
+			type: 'text',
+			value: '',
+			not_show: true,
+		},
+		{
 			text: 'Provincia',
 			key: 'provincia_id',
 			type: 'search',
@@ -109,6 +133,39 @@ export default {
 			use_store_models: true,
 			use_to_filter_in_modal: true,
 			filter_modal_position: 4,
+		},
+		{
+			text: 'Direccion',
+			key: 'address',
+			type: 'text',
+			value: '',
+			not_show: true,
+			use_to_filter_in_modal: true,
+			filter_modal_position: 5,
+		},
+		{
+			text: 'Google Maps',
+			key: 'link_google_maps',
+			type: 'text',
+			value: '',
+			not_show: true,
+			use_to_filter_in_modal: true,
+			filter_modal_position: 5,
+		},
+
+
+		{
+			group_title: 'Facturacion',
+		},
+		{
+			text: 'Condicion frente al IVA',
+			key: 'iva_condition_id',
+			type: 'select',
+			value: 0,
+			not_show: true,
+			use_store_models: true,
+			use_to_filter_in_modal: true,
+			filter_modal_position: 8,
 		},
 		{
 			text: 'Cuit',
@@ -143,16 +200,6 @@ export default {
 			not_show: true,
 			value: '',
 		},
-		{
-			text: 'Condicion frente al IVA',
-			key: 'iva_condition_id',
-			type: 'select',
-			value: 0,
-			not_show: true,
-			use_store_models: true,
-			use_to_filter_in_modal: true,
-			filter_modal_position: 8,
-		},
 
 		{
 			text: 'Reputacion',
@@ -163,41 +210,8 @@ export default {
 			use_store_models: true,
 		},
 
-		{
-			text: 'Google Maps',
-			key: 'link_google_maps',
-			type: 'text',
-			value: '',
-			not_show: true,
-			use_to_filter_in_modal: true,
-			filter_modal_position: 5,
-		},
 
-		{
-			text: 'Pasar las ventas a la C/C sin esperar a facturar',
-			key: 'pasar_ventas_a_la_cuenta_corriente_sin_esperar_a_facturar',
-			if_has_extencion: 'guardad_cuenta_corriente_despues_de_facturar',
-			type: 'checkbox',
-			description: 'Si se activa, se cargara el saldo a la cuenta corriente inmediatamente guardada la venta',
-			value: 0,
-		},
 		
-		{
-			text: 'Descripcion',
-			key: 'description',
-			type: 'textarea',
-			value: '',
-			show: true,
-		},
-		{
-			text: 'Vendedor',
-			key: 'seller_id',
-			type: 'select',
-			value: 0,
-			not_show: true,
-			use_store_models: true,
-			filter_modal_position: 3,
-		},
 	],
 	plural_model_name_spanish: 'Clientes',
 	singular_model_name_spanish: 'Cliente',

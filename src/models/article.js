@@ -584,6 +584,15 @@ export default {
 			not_show: true,
 			if_has_extencion: 'online',
 		},
+		{
+			text: 'Precio pausado (tienda)',
+			key: 'precio_pausado',
+			type: 'checkbox',
+			use_to_update: true,
+			not_show: true,
+			if_has_extencion: 'online',
+			description: 'En la tienda se muestra el texto configurado en Configuración online en lugar del importe.',
+		},
 
 
 

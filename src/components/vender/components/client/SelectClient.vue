@@ -23,6 +23,16 @@
 				Cliente seleccionado: {{ client.name }}
 			</p>
 		</div>
+		<div
+		v-if="client && client.email"
+		class="send-mail-check">
+			<b-form-checkbox
+			:value="1"
+			:unchecked-value="0"
+			v-model="send_mail">
+				Enviar correo al cliente
+			</b-form-checkbox>
+		</div>
 	</div>
 </template>
 <script>
@@ -50,6 +60,14 @@ export default {
 				
 			}
 		},
+		send_mail: {
+			get() {
+				return this.$store.state.vender.send_mail
+			},
+			set(value) {
+				this.$store.commit('vender/set_send_mail', value)
+			}
+		},
 		props_extras() {
 			if (this.hasExtencion('filtrar_clientes_por_sucursal_en_vender')) {
 				return [
@@ -75,7 +93,6 @@ export default {
 	},
 	methods: {
 		setSelected(result) {
-			this.setPriceType()
 
 			// this.bloquear_metodo_de_pago()
 			this.bloquear_caja()
@@ -83,10 +100,13 @@ export default {
 			let client = result.model 
 			this.$store.commit('vender/setClient', client)
 
+			this.setPriceType()
+			
 			this.set_afip_tipo_comprobante()
 		},
 		clearSelected() {
 			this.$store.commit('vender/setClient', null)
+			this.$store.commit('vender/set_send_mail', 0)
 			this.setPriceType()
 			this.habilitar_metodo_de_pago()
 			this.set_afip_tipo_comprobante()
@@ -108,4 +128,7 @@ export default {
 .selected-client
 	font-size: 20px
 	font-weight: bold
+
+.send-mail-check
+	margin-top: 8px
 </style>

@@ -11,6 +11,7 @@
         :offline_articles_sync_progress="offline_articles_sync_progress"></offline-articles-progress>
         <afip-reenviar-facturas></afip-reenviar-facturas>
         <articles-stock-minimo></articles-stock-minimo>
+        <synced-version-notifications></synced-version-notifications>
 
         <b-container
         fluid>
@@ -41,6 +42,7 @@ export default {
         PaymentExpire: () => import('@/components/nav/PaymentExpire'),
         AfipReenviarFacturas: () => import('@/components/common/afip-reenviar-facturas/Index'),
         ArticlesStockMinimo: () => import('@/components/common/ArticlesStockMinimo'),
+        SyncedVersionNotifications: () => import('@/components/common/SyncedVersionNotifications'),
     },
     computed: {
         uiSizeClass() {

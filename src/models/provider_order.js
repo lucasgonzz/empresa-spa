@@ -193,12 +193,12 @@ export default {
 						value: '',
 						type: 'number'
 					},
-					// {
-					// 	text: 'Cantidad pedida',
-					// 	key: 'amount_pedida',
-					// 	value: '',
-					// 	type: 'number'
-					// },
+					{
+						text: 'Cant Recibida',
+						key: 'received',
+						value: '',
+						type: 'number'
+					},
 					{
 						text: 'Costo',
 						key: 'cost',

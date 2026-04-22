@@ -24,8 +24,8 @@
 
 			<p
 			class="stock-text"
-			v-if="item && item.stock">
-				Stock: {{ item.stock }}
+			v-if="item_stock">
+				Stock: {{ item_stock }}
 			</p>
 		</div>
 
@@ -56,8 +56,24 @@ export default {
 		BarCodeScanner: () => import('@/common-vue/components/bar-code-scanner/Index'),
 	},
 	computed: {
+		address_id() {
+			return this.$store.state.vender.address_id
+		},
 		item() {
 			return this.$store.state.vender.item
+		},
+		item_stock() {
+			let stock = ''
+			if (this.item && this.item.is_article) {
+				stock = this.item.stock 
+				if (this.address_id) {
+					let finded = this.item.addresses.find(a => a.id == this.address_id) 
+					if (typeof finded != 'undefined') {
+						stock += ' ('+finded.pivot.amount+')'
+					}
+				}
+			}
+			return stock
 		},
 		articles() {
 			return this.$store.state.article.models

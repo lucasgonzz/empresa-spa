@@ -120,6 +120,8 @@ export default {
 			iva_aplicado: info.iva_aplicado,
 			// Array de descripciones del cálculo del precio final, serializado como JSON
 			price_description: info.price_description,
+			// Indica si se debe enviar correo al cliente
+			send_mail: info.send_mail,
 		})
 			.then(res => {
 				commit('sale/add', res.data.model, {root: true})

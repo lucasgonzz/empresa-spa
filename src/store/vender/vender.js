@@ -110,6 +110,8 @@ export default {
 		discount_stock: 1,
 		// Indica si los precios de los items se interpretan con IVA aplicado. Por defecto en true (1).
 		iva_aplicado: 1,
+		// Indica si se debe enviar un correo al cliente al crear la venta.
+		send_mail: 0,
 
 		// Adjuntos pendientes de subir (para ventas nuevas, antes de que exista sale_id)
 		pending_attachments: [],
@@ -149,6 +151,10 @@ export default {
 		// Mutation para controlar si los precios incluyen IVA
 		set_iva_aplicado(state, value) {
 			state.iva_aplicado = value
+		},
+		// Mutation para controlar si se envía correo al cliente
+		set_send_mail(state, value) {
+			state.send_mail = value
 		},
 		set_total_description(state, value) {
 			state.total_description = value
@@ -471,6 +477,8 @@ export default {
 			iva_aplicado: state.iva_aplicado,
 			// Array de descripciones del cálculo del precio final, serializado como JSON
 			price_description: JSON.stringify(state.total_description),
+			// Indica si se debe enviar correo al cliente al crear la venta
+			send_mail: state.send_mail,
 		})
 			.then(res => {
 				console.log('vendido')

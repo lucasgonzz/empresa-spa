@@ -117,7 +117,7 @@ export default {
 				let afip_ticket = this.sale.afip_tickets.find(m => m.id == this.facturar_nota_credito)
 				if (
 					typeof afip_ticket != 'undefined' 
-					&& this.total_devolucion > afip_ticket.importe_total
+					&& Number(this.total_devolucion) > Number(afip_ticket.importe_total)
 				) {
 					this.$toast.error('El total de la devolucion ('+this.price(this.total_devolucion)+') no puede ser mayor que la Factura N° '+afip_ticket.cbte_numero+' ('+ this.price(afip_ticket.importe_total) +')')
 					ok = false

@@ -21,10 +21,11 @@
 			</template>
 
 
-			<template v-slot:table_left_options="props">
-				<btn-export :model="props.model" />	
-				<btn-import :model="props.model" />	
-			</template>
+		<template v-slot:table_left_options="props">
+			<btn-export :model="props.model" />	
+			<btn-import :model="props.model" />
+			<btn-view-received-diff :model="props.model" />
+		</template>
 
 			<template #total="props">
 				<total></total>	
@@ -46,6 +47,7 @@ export default {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 		BtnExport: () => import('@/components/provider/components/orders/BtnExport'),
 		BtnImport: () => import('@/components/provider/components/orders/BtnImport'),
+		BtnViewReceivedDiff: () => import('@/components/provider/components/orders/BtnViewReceivedDiff'),
 		IvaBreakdown: () => import('@/components/provider/components/orders/IvaBreakdown'),
 		NavComponent: () => import('@/components/provider/components/orders/nav/Index'),
 		Total: () => import('@/components/provider/components/orders/Total'),

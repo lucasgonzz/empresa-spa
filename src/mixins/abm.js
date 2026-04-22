@@ -65,6 +65,7 @@ export default {
 					models: [
 						'turno_caja',
 						'default_payment_method_caja',
+						'concepto_movimiento_caja',
 					],
 				},
 				{

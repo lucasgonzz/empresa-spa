@@ -34,7 +34,11 @@ export default {
 	},
 	methods: {
 		limpiar_filtro() {
-			this.$store.commit('cheque/setFilters', [])
+			this.$store.commit('cheque/setIsFiltered', false)
+			this.$store.commit('cheque/setFiltered', [])
+			this.$store.commit('cheque/setFilterPage', 1)
+			this.$store.commit('cheque/setTotalFilterPages', null)
+			this.$store.commit('cheque/setTotalFilterResults', 0)
 			this.$store.commit('cheque/setFiltered', [])
 		},
 	}

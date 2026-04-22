@@ -3,16 +3,15 @@
 	v-if="show">
 		<b-form-select
 		:disabled="is_disabled"
-		v-if="hasExtencion('cambiar_price_type_en_vender')"
 		v-model="price_type_id"
 		@change="set_price_type"
 		:options="getOptions({key: 'price_type_id', text: 'Lista de precios'}, null, null, false)"></b-form-select>
 
-		<h5
+		<!-- <h5
 		v-else
 		class="price-type-name text-success">
 		    Lista {{ price_type_vender.name }}
-		</h5>
+		</h5> -->
 	</div>
 </template>
 <script>
@@ -37,12 +36,16 @@ export default {
 	},
 	computed: {
 		show() {
-			return this.hasExtencion('cambiar_price_type_en_vender')
+			// return this.hasExtencion('cambiar_price_type_en_vender')
+
+			// price_type_vender se setea siempre automaticamente al crearce vender en base al cliente seleccionado, o sino con la ultima lista de precios
 			if (this.price_type_vender) {
 				if (!this.hasExtencion('lista_de_precios_por_rango_de_cantidad_vendida')) {
 					return true 
 				}
-			}
+
+				return true 
+			} 
 			return false
 		},
 		is_disabled() {
@@ -53,6 +56,11 @@ export default {
 			if (this.budget) {
 				return true
 			}
+
+			if (!this.is_admin && this.can('vender.prohibir_camibar_lista_de_precios')) {
+				return true
+			}
+
 			return false
 		},
 		price_types() {

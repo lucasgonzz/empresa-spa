@@ -84,6 +84,11 @@ export default {
 					key: 'es_echeq',
 					type: 'checkbox',
 				},
+				{
+					text: 'Notas',
+					key: 'notes',
+					type: 'text',
+				},
 			]
 		}
 	},

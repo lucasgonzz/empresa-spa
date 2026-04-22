@@ -49,17 +49,25 @@ export default {
 		}
 	},
 	computed: {
+		effective_models_to_download() {
+			return this.models_to_download.filter(model => {
+				return !this.is_mobile || this.downloadOnMobile(model.model_name)
+			})
+		},
 		terminado() {
-			return this.descargados == this.models_to_download.length
+			return this.descargados == this.effective_models_to_download.length
 		},
 		percentage() {
-			return Math.round(this.descargados * 100 / this.models_to_download.length)
+			if (!this.effective_models_to_download.length) {
+				return 100
+			}
+			return Math.round(this.descargados * 100 / this.effective_models_to_download.length)
 		},
 		import_status() {
 			return this.$store.state.import_status.model
 		},
 		descargados() {
-			return this.models_to_download.filter(m => {
+			return this.effective_models_to_download.filter(m => {
 				
         		if (m.if_has_extencion) {
 
@@ -72,7 +80,7 @@ export default {
 			}).length
 		},
 		no_descargados() {
-			return this.models_to_download.filter(m => {
+			return this.effective_models_to_download.filter(m => {
 				
 				return !m.downloaded
 			})

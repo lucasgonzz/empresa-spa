@@ -46,6 +46,13 @@
 				v-if="props.model.en_acopio">
 					Acopio
 				</b-badge>
+
+				<b-badge
+				class="m-l-5"
+				variant="success"
+				v-if="props.model.send_mail">
+					<i class="icon-message"></i>
+				</b-badge>
 			</div>
 		</template> 
 		<template #options_drop_down_seleccion>

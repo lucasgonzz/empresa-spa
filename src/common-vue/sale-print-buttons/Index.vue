@@ -327,7 +327,7 @@ export default {
 		 * @param {number} profile_id
 		 */
 		print_with_profile(profile_id) {
-			this.salePdf(this.sale.id, 0, 0, 0, profile_id)
+			this.salePdf(this.sale.id, profile_id)
 		},
 		/**
 		 * Abre modal de configuración con perfil destino.
@@ -577,8 +577,8 @@ export default {
 		 * @param {number|null} profile_id
 		 * @param {number|null} afip_ticket_id
 		 */
-		salePdf(sale_id, with_prices, with_costs, precios_netos, profile_id = null, afip_ticket_id = null) {
-			let link = process.env.VUE_APP_API_URL + '/sale/pdf/' + sale_id + '/' + with_prices + '/' + with_costs + '/' + precios_netos
+		salePdf(sale_id, profile_id = null, afip_ticket_id = null) {
+			let link = process.env.VUE_APP_API_URL + '/sale/pdf/' + sale_id
 			const _profile_id = profile_id || this.selected_profile_id
 			const query_params = []
 			if (_profile_id) {
@@ -616,7 +616,7 @@ export default {
 		 * Imprime factura A4 usando perfil fiscal y afip_ticket_id.
 		 */
 		facturaPdfWithProfile(afip_ticket_id, profile_id) {
-			this.salePdf(this.sale.id, 0, 0, 0, profile_id, afip_ticket_id)
+			this.salePdf(this.sale.id, profile_id, afip_ticket_id)
 		},
 	},
 }

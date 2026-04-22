@@ -9,6 +9,7 @@
 		:order_list_by="prop.belongs_to_many.order_list_by"
 		:order_list_from_pivot="true"
 		:set_model_on_row_selected="false"
+		:disable_cell_fade="true"
 		show_pivot_created_at
 		:show_btn_edit="false">
 			<template v-slot:table_right_options="slotProps">

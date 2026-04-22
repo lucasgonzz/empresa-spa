@@ -245,6 +245,7 @@ export default {
 			this.$store.commit('vender/set_discount_stock', model.discount_stock)
 			// Seteamos iva_aplicado desde la venta que se está actualizando
 			this.$store.commit('vender/set_iva_aplicado', model.iva_aplicado)
+			this.$store.commit('vender/set_send_mail', Number(model.send_mail))
 
 			// alert('valor_dolar: '+this.$store.state.vender.valor_dolar)
 
@@ -345,6 +346,8 @@ export default {
 				iva_aplicado: this.$store.state.vender.iva_aplicado,
 				// Array de descripciones del cálculo del precio final, serializado como JSON
 				price_description: JSON.stringify(this.$store.state.vender.total_description),
+				// Indica si se debe enviar correo al cliente
+				send_mail: this.$store.state.vender.send_mail,
 			})
 			.then(res => {
 				if (sale_id && pending.length) {

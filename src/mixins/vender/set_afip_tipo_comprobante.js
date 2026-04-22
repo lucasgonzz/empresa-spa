@@ -26,7 +26,10 @@ export default {
 
 				let punto_de_venta = this.afip_informations.find(model => model.id == afip_information_id)
 
-				if (punto_de_venta.iva_condition.name == 'Monotributista') {
+				if (
+					punto_de_venta.iva_condition.name == 'Monotributista'
+					|| punto_de_venta.iva_condition.name == 'Exento'
+				) {
 
 					afip_tipo_comprobante = 3
 
