@@ -80,7 +80,20 @@ export default {
 				console.log(err)
 			})
 		},
-		updateSale({ commit, state }, info) {
+		updateSale({ commit, state, rootState }, info) {
+			// Registra intento de actualización y envía el log acumulado de la sesión de edición.
+			commit('vender/append_sale_log', {
+				event_key: 'sale_update_attempt',
+				source_component: 'vender/previus_sales/updateSale',
+				before: null,
+				after: {
+					sale_id: state.previus_sale.id,
+					items_count: rootState.vender.items.length,
+					client_id: rootState.vender.client ? rootState.vender.client.id : null,
+					total: rootState.vender.total,
+				},
+				diff: null,
+			}, { root: true })
 			commit('setUpdating', true)
 			console.log('observations:')
 			console.log(info.observations)
@@ -122,13 +135,34 @@ export default {
 			price_description: info.price_description,
 			// Indica si se debe enviar correo al cliente
 			send_mail: info.send_mail,
+			// Auditoría de acciones realizadas en vender durante la edición de la venta.
+			log: rootState.vender.sale_log,
 		})
 			.then(res => {
 				commit('sale/add', res.data.model, {root: true})
 				commit('setUpdating', false)
+				commit('vender/append_sale_log', {
+					event_key: 'sale_update_success',
+					source_component: 'vender/previus_sales/updateSale',
+					before: null,
+					after: {
+						sale_id: res.data.model.id,
+						sale_num: res.data.model.num,
+					},
+					diff: null,
+				}, { root: true })
 			})
 			.catch(err => {
 				commit('setUpdating', false)
+				commit('vender/append_sale_log', {
+					event_key: 'sale_update_error',
+					source_component: 'vender/previus_sales/updateSale',
+					before: null,
+					after: {
+						message: err && err.message ? err.message : 'unknown_error',
+					},
+					diff: null,
+				}, { root: true })
 				alert('Error al actualizar venta')
 				console.log(err)
 			})

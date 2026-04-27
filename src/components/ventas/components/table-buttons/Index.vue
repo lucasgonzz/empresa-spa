@@ -19,6 +19,10 @@
 		<!-- Botón para ver el desglose del cálculo del precio final de la venta -->
 		<price-description-btn
 		:sale="model"></price-description-btn>
+
+		<!-- Botón para ver el log de auditoría completo de la venta -->
+		<sale-log-btn
+		:sale="model"></sale-log-btn>
 	</div>
 </template>
 <script>
@@ -39,6 +43,8 @@ export default {
 		CerrarVenta: () => import('@/components/ventas/components/table-buttons/CerrarVenta'),
 		// Botón que muestra el desglose del cálculo del precio final de la venta
 		PriceDescriptionBtn: () => import('@/components/ventas/components/table-buttons/PriceDescriptionBtn'),
+		// Botón que muestra el log de auditoría detallado de la venta
+		SaleLogBtn: () => import('@/components/ventas/components/table-buttons/SaleLogBtn'),
 	}
 }
 </script>

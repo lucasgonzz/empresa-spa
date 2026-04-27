@@ -11,6 +11,7 @@
 			model_name="client"
 			:props_to_filter="['num', 'name', 'phone', 'dni']"
 			show_btn_create
+			search_from_api
 			:props_extras="props_extras"
 			set_selected_model_with_model_prop
 			@clearSelected="clearSelected"></search-component>

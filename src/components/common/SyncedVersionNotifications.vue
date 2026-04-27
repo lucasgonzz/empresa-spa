@@ -52,11 +52,20 @@ export default {
 		is_last() {
 			return this.total <= 1
 		},
-		title() {
-			if (this.total > 1) {
-				return 'Novedades (' + (this.index + 1) + ' de ' + this.total + ')'
+		/** Nombre de versión del paquete sincronizado (synced_versions.version), p. ej. 1.0.4 */
+		currentVersionName() {
+			if (!this.current || !this.current.synced_version) {
+				return ''
 			}
-			return 'Novedades'
+			return this.current.synced_version.version || ''
+		},
+		title() {
+			const v = this.currentVersionName
+			const suffix = v ? ' — v' + v : ''
+			if (this.total > 1) {
+				return 'Novedades (' + (this.index + 1) + ' de ' + this.total + ')' + suffix
+			}
+			return 'Novedades' + suffix
 		},
 	},
 	methods: {

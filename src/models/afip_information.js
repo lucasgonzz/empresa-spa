@@ -12,6 +12,12 @@ export default {
 			use_in_select: true,
 		},
 		{
+			text: 'Nombre del dueño',
+			key: 'owner_name',
+			type: 'text',
+			description: 'Si se completa este campo, se mostrara en la cabecera de la factura junto con la razon social',
+		},
+		{
 			key: 'domicilio_comercial',
 			type: 'text',
 		},

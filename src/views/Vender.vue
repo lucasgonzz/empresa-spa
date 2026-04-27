@@ -42,6 +42,8 @@ export default {
 	},
 	created() {
 		console.log('created vender')
+		// Inicializa el log de auditoría para una nueva sesión de venta.
+		this.$store.commit('vender/init_sale_log')
 		this.set_default_articles()
 
 		this.setPriceType()
@@ -51,9 +53,12 @@ export default {
 		this.set_omitir_en_cuenta_corriente()
 
 		this.set_caja_por_defecto()
+		
+		this.$store.commit('vender/clear_sale_log')
 	},
 	beforeRouteLeave(to, from, next) {
 		this.$store.commit('sale/setSelected', [])
+		// Limpia el log para evitar arrastre de auditoría entre ventas distintas.
 
 		if (this.index_previus_sales != 0) {
 

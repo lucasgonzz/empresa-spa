@@ -36,7 +36,7 @@ export default [
     'pais_exportacion',
     'moneda',
     'address',
-    'client',
+    // 'client',
     'provider',
     'column_position',
     'c_a_payment_method_type',

@@ -106,6 +106,35 @@
 				Esta venta no genero movimiento en la cuenta corriente de {{ sale_details.client.name }}
 			</p>
 		</div>
+
+		<!-- Aviso cuando esta venta fue incluida en una consolidación de facturación -->
+		<b-alert
+		show
+		variant="info"
+		class="m-t-15 m-l-15 m-r-15"
+		v-if="sale_details.consolidacion_facturacion_id">
+			<strong>
+				<i class="icon-clipboard"></i>
+				Esta venta fue facturada dentro de una consolidación de facturación
+			</strong>
+			<br>
+			La factura AFIP se emitió a través de la venta consolidada N° {{ sale_details.consolidacion_facturacion_id }}.
+		</b-alert>
+
+		<!-- Aviso cuando esta venta ES la consolidadora -->
+		<b-alert
+		show
+		variant="warning"
+		class="m-t-15 m-l-15 m-r-15"
+		v-if="sale_details.is_consolidacion_facturacion">
+			<strong>
+				<i class="icon-layers"></i>
+				Esta es una venta de consolidación de facturación
+			</strong>
+			<br>
+			No representa una venta real: fue creada para agrupar varias ventas en un único comprobante AFIP.
+			No genera movimientos en cuenta corriente ni descuenta stock.
+		</b-alert>
 	</b-row>
 </template>
 <script>

@@ -15,6 +15,9 @@
 	<!-- Modal con el desglose del cálculo del precio final de la venta seleccionada -->
 	<sale-price-description></sale-price-description>
 
+	<!-- Modal de consolidación de ventas para facturación -->
+	<consolidar-facturacion></consolidar-facturacion>
+
 	<view-component
 	show_filter_modal
 	:models_to_show="sales_to_show"
@@ -30,7 +33,10 @@
 		<template v-slot:display_top>
 			<address-afip-ticket-ventas-cobradas-nav></address-afip-ticket-ventas-cobradas-nav>
 			<employee-nav></employee-nav>
-			<total></total>	
+			<total></total>
+
+			<!-- Mostrar u ocultar ventas contenedoras de facturación en el listado. -->
+			<btn-show-consolidadas></btn-show-consolidadas>
 		</template>
 		<template v-slot:table_left_options="props">
 			<div class="j-start align-center">
@@ -53,10 +59,29 @@
 				v-if="props.model.send_mail">
 					<i class="icon-message"></i>
 				</b-badge>
+
+				<!-- Distintivo visual para ventas contenedoras de facturación -->
+				<b-badge
+				class="m-l-5"
+				variant="warning"
+				v-if="props.model.is_consolidacion_facturacion">
+					<i class="icon-layers"></i>
+					Consolidada
+				</b-badge>
+
+				<!-- Distintivo para ventas individuales ya incluidas en una consolidación -->
+				<b-badge
+				class="m-l-5"
+				variant="info"
+				v-if="props.model.consolidacion_facturacion_id">
+					<i class="icon-clipboard"></i>
+					Facturada en consolidación
+				</b-badge>
 			</div>
 		</template> 
 		<template #options_drop_down_seleccion>
 			<option-dropdown-afip-ticket></option-dropdown-afip-ticket>
+			<option-dropdown-consolidar-facturacion></option-dropdown-consolidar-facturacion>
 		</template>
 
 		<template #table-prop-client_id="props">
@@ -84,6 +109,7 @@ export default {
 		TableButtons: () => import('@/components/ventas/components/table-buttons/Index'),
 		// UpdatePrices: () => import('@/components/ventas/modals/update-prices/Index'),
 		OptionDropdownAfipTicket: () => import('@/components/ventas/components/OptionDropdownAfipTicket'),
+		OptionDropdownConsolidarFacturacion: () => import('@/components/ventas/components/OptionDropdownConsolidarFacturacion'),
 		AfipTicketShowErrors: () => import('@/components/ventas/modals/afip-ticket/ShowErrors'),
 		AfipTicketShowObservations: () => import('@/components/ventas/modals/afip-ticket/ShowObservations'),
 
@@ -92,6 +118,9 @@ export default {
 		PaymentPlanModal: () => import('@/components/common/payment-plan/Index'),
 		// Modal con el desglose del cálculo del precio final de la venta
 		SalePriceDescription: () => import('@/components/ventas/modals/SalePriceDescription'),
+		// Modal de consolidación de ventas para facturación
+		ConsolidarFacturacion: () => import('@/components/ventas/modals/consolidar-facturacion/Index'),
+		BtnShowConsolidadas: () => import('@/components/ventas/components/BtnShowConsolidadas'),
 	},
 	created() {
 		this.$store.commit('sale/setFromDates', true)

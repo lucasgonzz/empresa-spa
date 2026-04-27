@@ -72,6 +72,12 @@ export default {
 			type: 'text',
 			not_show: true,
 		},
+		{
+			text: 'Versión del sistema (sincronización admin)',
+			key: 'version_name',
+			type: 'text',
+			only_show: true,
+		},
 
 
 		{
