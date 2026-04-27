@@ -74,14 +74,29 @@
 	 	/>
     	</b-form-group>
 
-    	<b-form-group
-    	v-if="selected_sales.length == 1 && afip_tipo_comprobante_id != 8"
-    	:description="description_importe_a_facturar"
-    	label="Monto a Facturar">
-	    	<b-form-input
-	    	placeholder="Monto a facturar"
-	    	v-model="monto_a_facturar"></b-form-input>
-    	</b-form-group>
+    	<div
+	    v-if="selected_sales.length == 1 && afip_tipo_comprobante_id != 8">
+
+	    	<hr>
+		    
+		    <h4>
+		    	Total a facturar: <strong>{{ total_a_facturar }}</strong>
+		    </h4>
+		    <p
+		    v-if="venta_seleccionada && venta_seleccionada.moneda_id == 2">
+		    	Cotizacion dolar de la venta: {{ price(venta_seleccionada.valor_dolar) }}
+		    </p>
+    		
+	    	<hr>
+	    	<b-form-group
+	    	:description="description_importe_a_facturar"
+	    	label="O puede elegir un monto a facturar distinto">
+		    	<b-form-input
+		    	placeholder="Monto a facturar"
+		    	v-model="monto_a_facturar"></b-form-input>
+	    	</b-form-group>
+    	</div>
+
 
     	<b-button
     	block 
@@ -121,9 +136,31 @@ export default {
 		description_importe_a_facturar() {
 			let text = ''
 			if (this.selected_sales.length == 1) {
-				text = 'IMPORTANTE: Completar SOLO SI quiere facturar un importe distinto al importe original de la venta, en este caso, si lo deja en blanco se facturaran '+this.price(this.selected_sales[0].total)
+				text = 'IMPORTANTE: Completar SOLO SI quiere facturar un importe distinto al importe original de la venta, en este caso, si lo deja en blanco se facturaran '+this.total_a_facturar
 			}
 			return text
+		},
+		total_a_facturar() {
+			let total = 0
+			if (this.selected_sales.length == 1) {
+
+				if (this.venta_seleccionada.moneda_id == 1) {
+					
+					total = this.venta_seleccionada.total
+
+				} else if (this.venta_seleccionada.moneda_id == 2) {
+
+					total = Number(this.venta_seleccionada.total) * Number(this.venta_seleccionada.valor_dolar)
+				
+				}
+			}
+			return this.price(total)+' pesos'
+		},
+		venta_seleccionada() {
+			if (this.selected_sales.length == 1) {
+				return this.selected_sales[0]
+			}
+			return null
 		},
 		afip_information() {
 			return this.$store.state.afip_information.models 
@@ -225,4 +262,8 @@ export default {
 		.spinner-border 
 			width: 20px !important
 			height: 20px !important	
+
+#confirm-make-afip-tickets
+	.form-group
+		margin-bottom: 30px
 </style>

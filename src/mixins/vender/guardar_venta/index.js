@@ -101,6 +101,9 @@ export default {
 				this.actualizar_cliente()
 				this.facturar_venta()
 			}
+
+			this.$store.commit('vender/clear_sale_log')
+
 		},
 
 		guardar_venta_online() {

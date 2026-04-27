@@ -34,15 +34,14 @@
 							| Ganancia <strong>{{ price(total_ganancia) }}</strong>
 						</p> 
 					</div>
-
 					<div
 					class="f-columns align-start">
 
 
 						<p
 						class="m-0"
-						v-if="total_cuenta_corriente > -1">
-							Total C/C: {{ price(total_cuenta_corriente) }}
+						v-if="total_cuenta_corriente_pesos > -1">
+							Total C/C: {{ price(total_cuenta_corriente_pesos) }}
 						</p>
 					</div>
 
@@ -65,6 +64,14 @@
 						v-if="is_admin">
 							| Ganancia <strong>{{ price(total_ganancia_usd) }}</strong>
 						</p> 
+					</div>
+					<div
+					class="f-columns align-start">
+						<p
+						class="m-0"
+						v-if="total_cuenta_corriente_dolar > -1">
+							Total C/C: usd {{ price(total_cuenta_corriente_dolar) }}
+						</p>
 					</div>
 				</div>
 
@@ -137,12 +144,26 @@ export default {
 			}
 			return total 
 		},
-		total_cuenta_corriente() {
+		total_cuenta_corriente_pesos() {
 			let total = 0
 			this.sales_to_show.forEach(model => {
 				if (
 					model.client_id
 					&& !model.omitir_en_cuenta_corriente
+					&& model.moneda_id == 1
+				) {
+					total += Number(this.totalSale(model, false))
+				}
+			})
+			return total 
+		},	
+		total_cuenta_corriente_dolar() {
+			let total = 0
+			this.sales_to_show.forEach(model => {
+				if (
+					model.client_id
+					&& !model.omitir_en_cuenta_corriente
+					&& model.moneda_id == 2
 				) {
 					total += Number(this.totalSale(model, false))
 				}

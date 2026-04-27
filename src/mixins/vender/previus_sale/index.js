@@ -149,6 +149,8 @@ export default {
 
 		},
 		set_datos_para_actualizar_en_vender(model) {
+			// Evita que la hidratación del store genere entradas falsas en sale_log.
+			this.$store.commit('vender/set_sale_log_paused', true)
 			console.log('set_datos_para_actualizar_en_vender model')
 			console.log(model)
 			let items = this.getItemsPreviusSale(model)
@@ -253,6 +255,9 @@ export default {
 
 			// this.$store.commit('vender/setTotal')
 			this.setTotal()
+			// Log limpio solo para cambios posteriores a la carga de la venta a editar.
+			this.$store.commit('vender/init_sale_log')
+			this.$store.commit('vender/set_sale_log_paused', false)
 		},
 		setPreviusReturnedArticles() {
 			let returned_articles = []
@@ -364,6 +369,8 @@ export default {
 		cancelPreviusSale() {
 
 			this._limpiar_actualizandose_por()
+
+			this.$store.commit('vender/clear_sale_log')
 
 			this.limpiar_vender()
 			// this.resetear_vender()

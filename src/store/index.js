@@ -60,6 +60,8 @@ import recipe from '@/store/recipe'
 import address from '@/store/address'
 import title from '@/store/title'
 import message from '@/store/message'
+import support_ticket from '@/store/support_ticket'
+import support_message from '@/store/support_message'
 import payment_method_type from '@/store/payment_method_type'
 import configuration from '@/store/configuration'
 import service from '@/store/service'
@@ -306,6 +308,8 @@ export default new Vuex.Store({
         address,
         title,
         message,
+        support_ticket,
+        support_message,
         payment_method_type,
         configuration,
         service,

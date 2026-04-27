@@ -74,7 +74,7 @@
 			</b-col>
 		</b-form-row>
 
-	<b-form-row class="m-b-0">
+	<b-form-row class="m-b-10">
 		<b-col md="4" class="d-flex align-items-center">
 			<b-form-checkbox
 			v-model="local_is_afip_ticket">
@@ -84,18 +84,18 @@
 		<b-col md="4" class="d-flex align-items-center">
 			<b-form-checkbox
 			v-model="local_show_total_in_footer">
-				Mostrar total en el pie
+				Mostrar Total en el pie de pagina
 			</b-form-checkbox>
 		</b-col>
 		<b-col md="4" class="d-flex align-items-center">
 			<b-form-checkbox
 			v-model="local_show_totals_on_each_page">
-				Mostrar totales en cada hoja
+				Mostrar totales en cada pagina
 			</b-form-checkbox>
 		</b-col>
 	</b-form-row>
 
-	<b-form-row class="m-b-0">
+	<b-form-row class="m-b-10">
 		<b-col md="4" class="d-flex align-items-center">
 			<!-- Cuando está activo, el PDF imprime la fecha del día en lugar de la fecha del comprobante -->
 			<b-form-checkbox

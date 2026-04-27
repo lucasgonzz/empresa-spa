@@ -2,6 +2,7 @@ import __base_store from '@/store/__base_store'
 import axios from 'axios'
 import generals from '@/common-vue/mixins/generals'
 import ventas_sin_cobrar from '@/store/sale/ventas_sin_cobrar'
+import consolidar_facturacion from '@/store/sale/consolidar_facturacion'
 
 /**
  * Store de ventas (modelo `sale`) construido desde el factory común.
@@ -14,6 +15,7 @@ import ventas_sin_cobrar from '@/store/sale/ventas_sin_cobrar'
 export default __base_store({
 	modules: {
 		ventas_sin_cobrar,
+		consolidar_facturacion,
 	},
 	state: {
 		modulo: 'ventas',
@@ -31,6 +33,12 @@ export default __base_store({
 
 		// Array de descripciones del cálculo del precio de la venta seleccionada para mostrar en el modal
 		sale_price_description: [],
+
+		/**
+		 * Controla si las ventas contenedoras de facturación (is_consolidacion_facturacion=1)
+		 * se muestran u ocultan en el listado general de ventas. Por defecto ocultas.
+		 */
+		mostrar_consolidadas: false,
 	},
 	mutations: {
 		/**
@@ -64,6 +72,12 @@ export default __base_store({
 		 */
 		set_sale_price_description(state, value) {
 			state.sale_price_description = value
+		},
+		/**
+		 * Alterna la visibilidad de ventas contenedoras de facturación en el listado.
+		 */
+		toggleMostrarConsolidadas(state) {
+			state.mostrar_consolidadas = !state.mostrar_consolidadas
 		},
 		/**
 		 * Mantiene el log de actualización de venta que ya tenía el store original.
