@@ -4,6 +4,7 @@
 			<div class="support-chat-sidebar">
 				<ticket-list
 					:tickets="tickets"
+					:loading="tickets_loading"
 					:selected_ticket_id="selected_ticket_id"
 					@select="select_ticket" />
 			</div>
@@ -14,7 +15,8 @@
 				</div>
 				<conversation
 					:messages="messages"
-					:selected_ticket="selected_ticket" />
+					:selected_ticket="selected_ticket"
+					:loading="messages_loading" />
 				<message-input
 					:can_send="can_send_message"
 					:sending="sending"
@@ -61,6 +63,18 @@ export default {
 			return this.$store.state.support_message.sending
 		},
 		/**
+		 * Carga de la bandeja (getModels al abrir o refrescos).
+		 */
+		tickets_loading() {
+			return this.$store.state.support_ticket.loading
+		},
+		/**
+		 * Carga de mensajes del ticket abierto.
+		 */
+		messages_loading() {
+			return this.$store.state.support_message.messages_loading
+		},
+		/**
 		 * Modelo de ticket activo para mostrar título/estado.
 		 */
 		selected_ticket() {
@@ -98,16 +112,14 @@ export default {
 		 * Envía mensaje y refresca lista de tickets para estados recientes.
 		 */
 		send_message(payload) {
+			const self = this
 			this.$store.dispatch('support_message/sendMessage', payload)
-			.then(() => {
-				return this.$store.dispatch('support_ticket/getModels')
-			})
-			.then(() => {
-				// Si aún no hay ticket seleccionado (primer mensaje), toma el primero.
-				if (!this.selected_ticket_id && this.tickets.length) {
-					this.select_ticket(this.tickets[0].id)
-				}
-			})
+				.then(function () {
+					// Tras enviar, la bandeja se actualiza vía Pusher + applyTicketFromMessage; si es el primer envío, abre el ticket creado.
+					if (!self.selected_ticket_id && self.tickets.length) {
+						self.select_ticket(self.tickets[0].id)
+					}
+				})
 		},
 	},
 }

@@ -39,7 +39,8 @@ Vue.prototype.Echo = new Echo({
     broadcaster: 'pusher',
     key: process.env.VUE_APP_PUSHER_KEY,
     cluster: process.env.VUE_APP_PUSHER_CLUSTER,
-    forceTLS: false
+    // Alineado con Pusher (TLS); si usás túnel/HTTP local, podés setear VUE_APP_PUSHER_USE_TLS=false en .env
+    forceTLS: process.env.VUE_APP_PUSHER_USE_TLS === 'false' ? false : true,
 });
 
 // Notifications

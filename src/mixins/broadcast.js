@@ -1,6 +1,20 @@
 import online from '@/mixins/online'
 export default {
     mixins: [online],
+    data() {
+        return {
+            /** Nombre del canal support.user.* actualmente suscrito (para Echo.leave al cambiar de usuario). */
+            support_user_echo_channel: null,
+        }
+    },
+    watch: {
+        /**
+         * Tras auth/me el usuario puede llegar después de `authenticated`; re-suscribe al canal correcto.
+         */
+        'user.id'() {
+            this.listenSupportChannel()
+        },
+    },
 	methods: {
 		listenChannelsLocal() {
             this.Echo.channel('message.from_buyer.'+this.owner_id)
@@ -21,15 +35,41 @@ export default {
             }
         },
         /**
-         * Escucha mensajes de soporte enviados desde admin-api.
+         * Escucha mensajes de soporte enviados desde admin-api (empresa-api re-emite a support.user.{id}).
+         * Deja el canal previo para no acumular listeners y re-enlaza al cargar el usuario.
          */
         listenSupportChannel() {
-            this.Echo.channel('support.user.' + this.user.id)
-            .listen('.SupportMessageReceived', event_data => {
-                // Agrega mensaje en conversación activa para actualización inmediata.
-                this.$store.commit('support_message/addModel', event_data.message)
-                // Refresca lista de tickets para estados/orden.
-                this.$store.dispatch('support_ticket/getModels')
+            if (!this.Echo) {
+                return
+            }
+            if (this.support_user_echo_channel) {
+                this.Echo.leave(this.support_user_echo_channel)
+                this.support_user_echo_channel = null
+            }
+            if (!this.user || !this.user.id) {
+                return
+            }
+            const support_user_channel = 'support.user.' + this.user.id
+            this.support_user_echo_channel = support_user_channel
+            this.Echo.channel(support_user_channel)
+            .listen('.SupportMessageReceived', (event_data) => {
+                if (!event_data || !event_data.message) {
+                    return
+                }
+                const msg = event_data.message
+                this.$store.commit('support_message/addModel', msg)
+                // ticket + unread_messages_count: el API emite toArray; si faltan, se refresca la bandeja (badge en FloatingButton).
+                if (msg.ticket && msg.ticket.id) {
+                    this.$store.dispatch('support_ticket/applyTicketFromMessage', msg)
+                } else if (msg.sender_type === 'admin' && msg.support_ticket_id) {
+                    this.$store.dispatch('support_ticket/getModels')
+                }
+            })
+            .listen('.SupportMessageRead', (event_data) => {
+                if (event_data && event_data.message) {
+                    this.$store.commit('support_message/patchMessageRead', event_data.message)
+                    this.$store.dispatch('support_ticket/applyTicketFromMessage', event_data.message)
+                }
             })
         }
 	}
