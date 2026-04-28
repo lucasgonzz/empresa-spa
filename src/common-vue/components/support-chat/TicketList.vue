@@ -1,5 +1,14 @@
 <template>
-	<div class="support-ticket-list">
+	<div class="support-ticket-list position-relative">
+		<div
+			v-if="loading"
+			class="support-ticket-list-loading d-flex align-items-center justify-content-center"
+			role="status"
+			aria-live="polite"
+			aria-busy="true">
+			<span class="spinner-border text-primary" aria-hidden="true"></span>
+			<span class="sr-only">Cargando tickets…</span>
+		</div>
 		<div
 			v-for="ticket in tickets"
 			:key="ticket.id"
@@ -11,7 +20,7 @@
 				<small class="text-muted">{{ ticket.status == 'open' ? 'Abierto' : 'Cerrado' }}</small>
 			</div>
 		</div>
-		<div v-if="!tickets.length" class="p-3 text-muted">
+		<div v-if="!loading && !tickets.length" class="p-3 text-muted">
 			No hay tickets todavía.
 		</div>
 	</div>
@@ -29,6 +38,13 @@ export default {
 		selected_ticket_id: {
 			type: [String, Number],
 			default: null,
+		},
+		/**
+		 * GET lista de tickets (Vuex loading del módulo support_ticket).
+		 */
+		loading: {
+			type: Boolean,
+			default: false,
 		},
 	},
 	methods: {
@@ -57,7 +73,15 @@ export default {
 <style scoped>
 .support-ticket-list {
 	height: 100%;
+	min-height: 0;
 	overflow-y: auto;
+}
+
+.support-ticket-list-loading {
+	position: absolute;
+	inset: 0;
+	z-index: 2;
+	background: rgba(255, 255, 255, 0.85);
 }
 
 .support-ticket-item {

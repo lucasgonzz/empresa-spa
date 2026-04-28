@@ -5,19 +5,64 @@
 		</div>
 		<div class="support-conversation-body" ref="conversation_body">
 			<div
+				v-if="loading"
+				class="support-conversation-loading d-flex align-items-center justify-content-center"
+				role="status"
+				aria-live="polite"
+				aria-busy="true">
+				<span class="spinner-border text-primary" aria-hidden="true"></span>
+				<span class="sr-only">Cargando mensajes…</span>
+			</div>
+			<template v-else>
+			<div
 				v-for="message in messages"
-				:key="message.id"
+				:key="message_key(message)"
 				:class="['support-message', message.sender_type == 'user' ? 'mine' : 'their']">
-				<div class="support-message-bubble">
-					<div v-if="message.body">{{ message.body }}</div>
-					<a
-						v-if="message.attachments && message.attachments.length"
-						target="_blank"
-						:href="attachment_url(message.attachments[0])">
-						Adjunto
-					</a>
+				<div class="support-message-col">
+					<div class="support-message-bubble">
+						<div v-if="message.body">{{ message.body }}</div>
+						<a
+							v-if="message.attachments && message.attachments.length"
+							target="_blank"
+							:href="attachment_url(message.attachments[0])">
+							Adjunto
+						</a>
+					</div>
+					<div v-if="is_mine(message) && is_last_mine_message(message)" class="support-message-meta">
+						<span
+							v-if="message._client_pending"
+							class="support-meta-sending"
+							aria-label="Enviando">Enviando…</span>
+						<template v-else>
+							<!-- Leído por el operador: doble check azul; hora en tooltip. -->
+							<span
+								v-if="message.read_at"
+								class="support-meta-read-dbl"
+								:title="'Visto a las ' + format_read_time(message.read_at)">
+								<span class="support-tick-read">✓</span>
+								<span class="support-tick-read support-tick-read-overlap">✓</span>
+							</span>
+							<!-- Entregado a central pero aún no leído, o guardado local: checks grises. -->
+							<span
+								v-else
+								class="support-meta-delivery"
+								:title="delivery_remote_title(message)">
+								<span
+									v-if="message.synced_to_admin_at"
+									class="support-tick-double">✓✓</span>
+								<span
+									v-else
+									class="support-tick-single">✓</span>
+							</span>
+						</template>
+					</div>
 				</div>
 			</div>
+			<div
+				ref="scroll_end_anchor"
+				class="support-conversation-scroll-end"
+				aria-hidden="true" />
+			</template>
 		</div>
 	</div>
 </template>
@@ -33,18 +78,110 @@ export default {
 			type: Object,
 			default: null,
 		},
+		/**
+		 * Indicador de carga de la conversación (GET /api/support-ticket/:id).
+		 */
+		loading: {
+			type: Boolean,
+			default: false,
+		},
+	},
+	/**
+	 * Posiciona al pie al abrir el panel con historial ya en store.
+	 */
+	mounted() {
+		this.schedule_scroll_to_bottom()
 	},
 	watch: {
 		/**
-		 * Mantiene scroll al final al recibir mensajes nuevos.
+		 * deep: el store hace push/splice sobre el mismo array; hace falta profundidad.
 		 */
-		messages() {
-			this.$nextTick(() => {
-				this.scroll_bottom()
-			})
+		messages: {
+			deep: true,
+			handler() {
+				this.schedule_scroll_to_bottom()
+			},
+		},
+		/**
+		 * Tras finalizar carga, vuelve a anclar el scroll al final.
+		 */
+		loading: {
+			handler(value) {
+				if (!value) {
+					this.schedule_scroll_to_bottom()
+				}
+			},
 		},
 	},
 	methods: {
+		/**
+		 * Clave estable para v-for: id de servidor o id temporal de optimista.
+		 */
+		message_key(message) {
+			if (message.id != null) {
+				return 'm-' + message.id
+			}
+			if (message._client_pending) {
+				return 'p-' + message._client_pending
+			}
+			return 'x-' + String(Math.random())
+		},
+		/**
+		 * Burbuja propia: usuario o fila de pre-envío.
+		 */
+		is_mine(message) {
+			return message.sender_type == 'user'
+		},
+		/**
+		 * Hora "visto" y checks: solo en el último mensaje que enviaste tú (orden en el hilo).
+		 */
+		is_last_mine_message(message) {
+			const list = this.messages
+			if (!list || !list.length) {
+				return false
+			}
+			let last = null
+			for (let i = list.length - 1; i >= 0; i--) {
+				if (list[i].sender_type == 'user') {
+					last = list[i]
+					break
+				}
+			}
+			if (!last) {
+				return false
+			}
+			if (message.id != null && last.id != null) {
+				return String(message.id) === String(last.id)
+			}
+			if (message._client_pending && last._client_pending) {
+				return message._client_pending === last._client_pending
+			}
+			return last === message
+		},
+		/**
+		 * Tooltip: un check = local; doble = confirmado por el API de soporte remoto.
+		 */
+		delivery_remote_title(message) {
+			if (message.synced_to_admin_at) {
+				return 'Recibido por el sistema de soporte central'
+			}
+			return 'Guardado en tu cuenta (pendiente de entrega al sistema central)'
+		},
+		/**
+		 * Hora:minuto local a partir de read_at ISO.
+		 */
+		format_read_time(value) {
+			if (!value) {
+				return ''
+			}
+			const d = new Date(value)
+			if (isNaN(d.getTime())) {
+				return ''
+			}
+			const h = d.getHours()
+			const m = d.getMinutes()
+			return h + ':' + (m < 10 ? '0' : '') + m
+		},
 		/**
 		 * Construye URL de adjunto usando path almacenado.
 		 */
@@ -52,12 +189,30 @@ export default {
 			return process.env.VUE_APP_API_URL + '/storage/' + attachment.path
 		},
 		/**
-		 * Lleva scroll al final del contenedor de conversación.
+		 * Alinea al bottom tras el tick y tras el siguiente repintado (layout de adjuntos / fuentes).
+		 */
+		schedule_scroll_to_bottom() {
+			const self = this
+			this.$nextTick(function () {
+				self.scroll_bottom()
+				requestAnimationFrame(function () {
+					requestAnimationFrame(function () {
+						self.scroll_bottom()
+					})
+				})
+			})
+		},
+		/**
+		 * scrollTop máximo y refuerzo vía ancla al final de la columna.
 		 */
 		scroll_bottom() {
-			let container = this.$refs.conversation_body
+			const container = this.$refs.conversation_body
 			if (container) {
 				container.scrollTop = container.scrollHeight
+			}
+			const anchor = this.$refs.scroll_end_anchor
+			if (anchor && typeof anchor.scrollIntoView === 'function') {
+				anchor.scrollIntoView({ block: 'end', inline: 'nearest' })
 			}
 		},
 	},
@@ -83,6 +238,21 @@ export default {
 	overflow-y: auto;
 	padding: 12px;
 	background: #f7f9fb;
+	position: relative;
+}
+
+.support-conversation-loading {
+	position: absolute;
+	inset: 0;
+	z-index: 2;
+	min-height: 8rem;
+	background: rgba(247, 249, 251, 0.92);
+}
+
+.support-conversation-scroll-end {
+	height: 0;
+	width: 0;
+	overflow: hidden;
 }
 
 .support-message {
@@ -98,8 +268,19 @@ export default {
 	justify-content: flex-start;
 }
 
+.support-message-col {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	max-width: 80%;
+}
+
+.support-message.their .support-message-col {
+	align-items: flex-start;
+}
+
 .support-message-bubble {
-	max-width: 75%;
+	max-width: 100%;
 	padding: 8px 10px;
 	border-radius: 10px;
 	background: #fff;
@@ -109,5 +290,62 @@ export default {
 .support-message.mine .support-message-bubble {
 	background: #dcf8c6;
 }
-</style>
 
+.support-message-meta {
+	font-size: 11px;
+	color: #6b7280;
+	margin-top: 2px;
+	padding-right: 2px;
+	line-height: 1.2;
+}
+
+.support-message.their .support-message-meta {
+	padding-left: 2px;
+}
+
+.support-meta-sending {
+	display: inline-block;
+	animation: support-sending-pulse 1s ease-in-out infinite;
+}
+
+@keyframes support-sending-pulse {
+	0%,
+	100% {
+		opacity: 0.45;
+	}
+	50% {
+		opacity: 1;
+	}
+}
+
+.support-meta-delivery {
+	color: #9ca3af;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.support-tick-single {
+	color: #9ca3af;
+}
+
+.support-tick-double {
+	color: #6b7280;
+	letter-spacing: -2px;
+}
+
+.support-meta-read-dbl {
+	display: inline-block;
+	white-space: nowrap;
+	line-height: 1;
+}
+
+.support-tick-read {
+	color: #34b7f1;
+	font-weight: 600;
+	font-size: 0.95em;
+}
+
+.support-tick-read-overlap {
+	margin-left: -0.32em;
+}
+</style>

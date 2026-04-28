@@ -9,7 +9,6 @@
 				:disabled="!can_send || sending"
 				v-model="body"
 				@paste="on_paste"
-				@input="send_typing"
 				@keydown.enter.prevent="emit_send" />
 			<input
 				ref="file_input"
@@ -149,12 +148,6 @@ export default {
 			this.body = ''
 			this.attachment = null
 			this.$refs.file_input.value = ''
-		},
-		/**
-		 * Notifica typing al backend de forma ligera.
-		 */
-		send_typing() {
-			this.$store.dispatch('support_message/sendTyping')
 		},
 	},
 }

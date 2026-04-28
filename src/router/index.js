@@ -33,7 +33,7 @@ const routes = [
     {
         path: '/inicio/:view?',
         name: 'home',
-        component: () => import('@/views/Home')
+        component: () => import('@/views/Home2')
     },
     {
         path: '/alertas/:view?',
