@@ -95,10 +95,10 @@ export default {
 			description: 'Se se activa, los costos en dolares se cotizaran a peso para obtener el precio final en pesos',
 		}, 
 		{
-			text: 'Iva ya incluido en los precios',
-			key: 'iva_included',
+			text: 'Aplicar el iva al costo',
+			key: 'aplicar_iva_al_costo',
 			type: 'checkbox',
-			description: 'Si se activa, el iva del articulo no impactara en el precio final del mismo',
+			description: 'Si se desactiva, el iva del articulo se sumara luego del margen de ganancia',
 		},
 		{
 			text: 'Trabajar con listas de precio (margen por lista)',

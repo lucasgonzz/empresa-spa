@@ -25,10 +25,11 @@
 					:class="colorLabel(prop)"
 					:id="'form-group-'+prop.key">
 
-						<!-- Titulo label -->
+						<!-- Titulo label; cursor help si hay popover de instrucciones -->
 						<label	
 						:id="'label-'+prop.key"
-						class="form-label">
+						class="form-label"
+						:class="{ 'form-label--has-help': prop.description || prop.descriptions }">
 							<i 
 							v-if="prop.has_many"
 							class="icon-down"></i>
@@ -43,8 +44,8 @@
 						<b-popover
 						v-if="prop.description" 
 						:target="'form-group-'+prop.key" 
-						triggers="hover" 
-						placement="left">
+						triggers="click" 
+						placement="bottom">
 						    <template #title><strong>Instrucciones {{ prop.text }}</strong></template>
 						    {{ prop.description }}
 						 </b-popover>
@@ -52,8 +53,8 @@
 						<b-popover
 						v-if="prop.descriptions" 
 						:target="'form-group-'+prop.key" 
-						triggers="hover" 
-						placement="left">
+						triggers="click" 
+						placement="bottom">
 						    <template #title><strong>Instrucciones</strong></template>
 						    <p
 						    v-for="description in prop.descriptions">
@@ -1100,6 +1101,9 @@ export default {
 		text-align: left
 		width: 100%
 
+	// Indica ayuda al hover cuando el campo tiene popover de instrucciones (click)
+	label.form-label--has-help
+		cursor: help
 
 .popover-body
 	max-height: 60vh !important

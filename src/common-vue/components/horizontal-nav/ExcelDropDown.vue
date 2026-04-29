@@ -46,8 +46,21 @@ export default {
 	},
 	methods: {
 		exportModels() {
+			/* URL base del endpoint que ahora dispara la exportacion en cola. */
 			let url = process.env.VUE_APP_API_URL+'/'+this.model_name+'/excel/export'
-			window.open(url)		
+
+			/* Se solicita la exportacion asincrona al backend sin abrir descarga inmediata. */
+			this.$api.get(this.model_name+'/excel/export')
+			.then(() => {
+				this.$toast.success('La exportacion se esta procesando. Te avisaremos cuando el excel este listo.', {
+					duration: 4000,
+				})
+			})
+			.catch(() => {
+				this.$toast.error('No se pudo iniciar la exportacion de excel', {
+					duration: 4000,
+				})
+			})
 		},
 		call_set_model() {
 			if (this.can_create) {

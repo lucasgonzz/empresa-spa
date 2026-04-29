@@ -7,6 +7,7 @@
 		ref="search_component"
 		@setSelected="setFilters"
 		@clearSelected="clear_selected"
+		search_from_api
 		:model_name="modelNameFromRelationKey(filter)"></search-component>
 
 	</div>

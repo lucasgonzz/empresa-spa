@@ -7,7 +7,9 @@
 		<sale-status></sale-status>
 		<fecha-entrega></fecha-entrega>
 
-		<div class="j-start m-b-10">
+		<div 
+		v-if="!hasExtencion('hide_iva_and_discount_stock_in_vender')"
+		class="j-start m-b-10">
 			<iva-aplicado></iva-aplicado>
 			<discount-stock></discount-stock>
 		</div>

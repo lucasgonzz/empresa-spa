@@ -66,11 +66,29 @@ export default {
 			if (!this.model_name) {
 				return false
 			}
-			let filtrado = this.papelera
-				? this.$store.state.papelera[this.model_name].is_filtered
-				: this.$store.state[this.model_name].is_filtered
-			let total = this.total_results
-			return filtrado && total > 0
+			let filtrado = false
+
+			if (this.papelera) {
+				filtrado = this.$store.state.papelera[this.model_name].is_filtered
+			} else {
+				filtrado = this.$store.state[this.model_name].is_filtered
+			}
+
+			if (filtrado) {
+				return this.total_results > 0
+			} 
+			
+			/*
+				Pregunto si es article porque article tiene use_per_page=true porque se descargan los articulos al iniciar para el modo offline
+				La idea es que use_per_page sea true solo en los modelos que se manejan por fechas
+			*/
+			if (
+				this.model_name != 'article'
+				&& this.model_name != 'client'
+			) {
+				return this.$store.state[this.model_name].use_per_page
+			}
+
 		},
 		total_results() {
 			if (this.papelera) {
