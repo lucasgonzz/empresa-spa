@@ -70,5 +70,13 @@ export default {
         ventas_sin_cobrar() {
             return this.$store.state.sale.ventas_sin_cobrar.models 
         },
+
+        /**
+         * Cantidad de sincronizaciones con Tienda Nube que terminaron con error.
+         * Alimenta el badge del ítem de menú "Tienda Nube".
+         */
+        tn_sync_failed_count() {
+            return this.$store.state.sync_to_tn_article.failed_count
+        },
 	},
 }

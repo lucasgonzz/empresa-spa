@@ -397,6 +397,12 @@ export default function __base_store(options = {}) {
 					console.log('se cargo ' + state.model_name + ' page: ' + state.page)
 					commit('incrementPage')
 					commit('addModels', loaded_models)
+
+					// Pongo esto momentaneamente para que funcione la paginacion en display/table/pagination
+					commit('setTotalFilterPages', res.data.models.last_page)
+					commit('setTotalFilterResults', res.data.models.total) 
+
+
 					if (loaded_models.length == state.per_page) {
 						dispatch('_getModels')
 					} else {
@@ -477,8 +483,10 @@ export default function __base_store(options = {}) {
 			let page = (payload && payload.page) ? payload.page : state.filter_page
 			/** Cantidad por página para resultados filtrados (alineado con backend search). */
 			let per_page = state.filter_per_page || 5
+			/** Nombre plural en español del modelo para el mensaje de feedback al usuario. */
+			let plural_model_name = generals.methods.plural(state.model_name)
 
-			commit('auth/setMessage', 'Filtrando ' + state.model_name, {root: true})
+			commit('auth/setMessage', 'Filtrando ' + plural_model_name, {root: true})
 			commit('auth/setLoading', true, {root: true})
 
 			return axios.post('/api/search/' + generals.methods.routeString(state.model_name) + '/null/1?page=' + page, {

@@ -37,6 +37,16 @@ export default {
 			only_show: true,
 			show: true,
 		},
+		// Depósito / dirección de operación: se envía al backend y al confirmar se replica en la venta (address_id).
+		{
+			text: 'Deposito',
+			key: 'address_id',
+			type: 'select',
+			use_store_models: true,
+			select_prop_name: 'street',
+			value: null,
+			show: true,
+		},
 		{
 			text: 'Notas',
 			key: 'notes',

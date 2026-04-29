@@ -284,6 +284,8 @@ export default [
 			view: 'pedidos',
 		},
 		if_has_extencion: 'usa_tienda_nube',
+		/* Badge que muestra la cantidad de sincronizaciones fallidas con Tienda Nube */
+		budget_function: 'tn_failed_syncs_count',
 		// can: [
 		// 	'order.index',
 		// 	'buyer.index',

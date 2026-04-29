@@ -73,7 +73,8 @@ export default {
                 }
 
                 console.log(notification)
-                if (!notification.is_only_for_auth_user || notification.is_only_for_auth_user != this.user.id) {
+                // Mostrar siempre si no hay restricción, o solo al auth_user indicado.
+                if (!notification.is_only_for_auth_user || notification.is_only_for_auth_user == this.user.id) {
                     
                     this.$store.commit('global_notification/set_functions_to_execute', notification.functions_to_execute)
                     this.$store.commit('global_notification/set_info_to_show', notification.info_to_show)

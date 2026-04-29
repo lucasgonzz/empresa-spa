@@ -621,22 +621,22 @@ export default {
 
                 let price_vender_id = null
 
-                if (this.hasExtencion('cambiar_price_type_en_vender')) {
+                // if (this.hasExtencion('cambiar_price_type_en_vender')) {
 
                     if (this.price_type_vender) {
                         console.log('usando price_type_vender id: '+this.price_type_vender.id)
                         price_vender_id = this.price_type_vender.id 
                     }
 
-                }
+                // }
 
-                if (this.hasExtencion('cambiar_price_type_en_vender_item_por_item')) {
+                // if (this.hasExtencion('cambiar_price_type_en_vender_item_por_item')) {
 
                     if (item.price_type_personalizado_id) {
 
                         price_vender_id = item.price_type_personalizado_id
                     }
-                }
+                // }
 
                 if (price_vender_id) {
 

@@ -32,9 +32,11 @@ export default {
 			// Llamo cada 20 segundos a peidos online
 			this.escuchar_orders_y_messages()
 
-			this.get_inventory_performance()
+		this.get_inventory_performance()
 
-			this.check_synced_version_notifications()
+		this.get_tn_failed_syncs_count()
+
+		this.check_synced_version_notifications()
 
 		},
 		check_synced_version_notifications() {
@@ -114,6 +116,18 @@ export default {
 		get_ventas_sin_cobrar() {
 			if (this.owner.dias_alertar_empleados_ventas_no_cobradas) {
 				this.$store.dispatch('sale/ventas_sin_cobrar/getModels')
+			}
+		},
+
+		/**
+		 * Carga la cantidad de sincronizaciones fallidas con Tienda Nube.
+		 * Solo se ejecuta si el usuario tiene habilitada la extensión 'usa_tienda_nube'.
+		 * El resultado se guarda en el store y alimenta el badge del menú.
+		 */
+		get_tn_failed_syncs_count() {
+			/* Solo cargar si el usuario usa la integración con Tienda Nube */
+			if (this.hasExtencion('usa_tienda_nube')) {
+				this.$store.dispatch('sync_to_tn_article/getFailedCount')
 			}
 		},
 		checkUserAppUrl() {

@@ -28,7 +28,9 @@ export default {
 	},
 	methods: {
 		getIds() {
+			/* Acumula ids seleccionados para exportacion puntual. */
 			let ids = []
+			/* Fuente de articulos seleccionados en la grilla. */
 			let articles
 			if (this.selected.length) {
 				articles = this.selected
@@ -39,22 +41,37 @@ export default {
 			return ids.join('-')
 		},
 		export_excel() {
-
-			let link = process.env.VUE_APP_API_URL+'/article/excel/export'
+			/* Endpoint que ahora encola la exportacion en backend. */
+			let link = '/article/excel/export'
 			
+			/* Querystring final según exportación por seleccion o filtros. */
+			let query = ''
+
 			if (this.selected.length) {
+				/* IDs seleccionados manualmente en la tabla. */
 				let ids = this.getIds() 
-				link += '?articles_id='+ids
+				query = '?articles_id='+ids
 			} else {
-
+				/* Filtros activos del listado para exportación masiva. */
 				let jsonData = JSON.stringify(this.filters)
-
-				link += '?filters='+jsonData
+				query = '?filters='+encodeURIComponent(jsonData)
 			}
 
-			console.log(link)
+			/* URL definitiva que dispara el job de exportacion. */
+			let export_url = link + query
 			
-			window.open(link)
+			/* Se inicia proceso asincrono y la descarga llegará por notificación global. */
+			this.$api.get(export_url)
+			.then(() => {
+				this.$toast.success('La exportacion se esta procesando. Te avisaremos cuando el excel este listo.', {
+					duration: 4000,
+				})
+			})
+			.catch(() => {
+				this.$toast.error('No se pudo iniciar la exportacion de excel', {
+					duration: 4000,
+				})
+			})
 		},
 	}
 }

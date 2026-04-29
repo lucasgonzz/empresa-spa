@@ -26,6 +26,9 @@ export default {
 		articles() {
 			return this.$store.state.article.models 
 		},
+		page() {
+			return this.$store.state.article.filter_page 
+		}
 	},
 	methods: {
 		search() {
@@ -60,24 +63,27 @@ export default {
 
 				this.$store.commit('article/setFilterPage', 1)
 				this.$store.commit('article/setFilters', filters)
-				this.$store.commit('article/setLoading', true)
+				// this.$store.commit('article/setLoading', true)
 				this.$store.commit('article/setFromDate', '')
 
-				this.$api.post('search/'+'article/null/1', {
-					filters: filters,
-				})
-				.then(res => {
-					console.log(res.data.data)
-					this.$store.commit('article/setLoading', false)
-					this.$store.commit('article/setIsFiltered', true) 
-					this.$store.commit('article/setFiltered', res.data.data)
-					this.$store.commit('article/setTotalFilterPages', res.data.last_page)
-					this.$store.commit('article/setTotalFilterResults', res.data.total)
-				})
-				.catch(err => {
-					console.log(err)
-					this.$toast.error('Error al buscar')
-				})
+				this.$store.dispatch('article/runFilter')
+
+
+				// this.$api.post('search/'+'article/null/1?page='+this.page, {
+				// 	filters: filters,
+				// })
+				// .then(res => {
+				// 	console.log(res.data.data)
+				// 	this.$store.commit('article/setLoading', false)
+				// 	this.$store.commit('article/setIsFiltered', true) 
+				// 	this.$store.commit('article/setFiltered', res.data.data)
+				// 	this.$store.commit('article/setTotalFilterPages', res.data.last_page)
+				// 	this.$store.commit('article/setTotalFilterResults', res.data.total)
+				// })
+				// .catch(err => {
+				// 	console.log(err)
+				// 	this.$toast.error('Error al buscar')
+				// })
 
 			}
 		}
