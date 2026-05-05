@@ -39,7 +39,7 @@
 		<b-col
 		class="d-flex j-sm-center j-lg-end j-xl-start m-b-25 m-xl-b-0"
 		lg="6"
-		xl="4">
+		xl="3">
 
 			<opciones-filtrados-seleccion
 			:papelera="papelera"
@@ -74,7 +74,7 @@
 		</b-col>
 		
 		<b-col
-		xl="5">
+		xl="6">
 			<div class="j-end">
 				
 				<slot name="horizontal_nav_center"></slot>

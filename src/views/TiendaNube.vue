@@ -10,7 +10,7 @@
 export default {
 	components: {
 		NavComponent: () => import('@/components/tienda-nube/components/Nav'),
-		Orders: () => import('@/components/tienda-nube/components/Orders'),
+		Orders: () => import('@/components/tienda-nube/components/orders/Index'),
 		SyncToTNArticle: () => import('@/components/tienda-nube/components/SyncToTNArticle'),
 	},
 }

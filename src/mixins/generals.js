@@ -361,13 +361,21 @@ export default {
             let current_iva_aplicado = this.$store.state.vender.iva_aplicado == 1 ? 1 : 0
             // Venta previa cargada en store al actualizar una venta existente.
             let previus_sale = this.$store.state.vender.previus_sales.previus_sale
+            // Presupuesto cargado en vender al usar "Actualizar en VENDER" u operar sobre un budget existente.
+            let budget = this.$store.state.vender.budget
             // Define si hay una venta previa real sobre la que comparar flags.
             let has_previus_sale = from_pivot && previus_sale && previus_sale.id
-            // Valor de iva_aplicado persistido en la venta que se esta editando.
+            // Misma idea que la venta previa: ítems desde pivot al editar un presupuesto ya guardado.
+            let has_previus_budget = from_pivot && budget && budget.id
+            // Valor de iva_aplicado persistido en la venta o presupuesto que se esta editando.
             let saved_iva_aplicado = current_iva_aplicado
 
             if (has_previus_sale) {
                 saved_iva_aplicado = previus_sale.iva_aplicado == 1 ? 1 : 0
+            } else if (has_previus_budget) {
+                if (typeof budget.iva_aplicado !== 'undefined' && budget.iva_aplicado !== null) {
+                    saved_iva_aplicado = budget.iva_aplicado == 1 ? 1 : 0
+                }
             }
 
             return {

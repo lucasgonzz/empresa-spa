@@ -6,7 +6,7 @@
 	prepend="Factura">
 
 		<b-form-select
-		v-if="show"
+		:disabled="disabled"
 		:class="facturando ? 'verde' : 'rojo'"
 		v-model="afip_information_id" 
 		@change="change"
@@ -36,11 +36,11 @@ export default {
 				this.$store.commit('vender/setAfipInformationId', value) 
 			}
 		},
-		show() {
+		disabled() {
 			if (this.index_previus_sales > 0 || this.guardar_como_presupuesto) {
-				return false
+				return true
 			}
-			return true
+			return false
 		},
 		facturando() {
 			return this.afip_information_id != 0

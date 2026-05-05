@@ -14,6 +14,10 @@ export default {
     },
 	methods: {
 
+        show_budget_sale_status_id(prop, model) {
+            return this.$store.state.sale_status.models.length
+        },
+
         add_production_batch_id(model) {
             // console.log('add_production_batch_id model:')
             // console.log(model)

@@ -249,6 +249,13 @@ export default {
 			this.$store.commit('vender/set_iva_aplicado', model.iva_aplicado)
 			this.$store.commit('vender/set_send_mail', Number(model.send_mail))
 
+			// Umbral opcional de alerta de cobro persistido en la venta (null = usar reglas globales).
+			if (model.dias_alerta_venta_no_cobrada_personalizado !== undefined && model.dias_alerta_venta_no_cobrada_personalizado !== null) {
+				this.$store.commit('vender/set_dias_alerta_venta_no_cobrada_personalizado', model.dias_alerta_venta_no_cobrada_personalizado)
+			} else {
+				this.$store.commit('vender/set_dias_alerta_venta_no_cobrada_personalizado', null)
+			}
+
 			// alert('valor_dolar: '+this.$store.state.vender.valor_dolar)
 
 			// this.setItemsPrices(false, true)
@@ -353,6 +360,7 @@ export default {
 				price_description: JSON.stringify(this.$store.state.vender.total_description),
 				// Indica si se debe enviar correo al cliente
 				send_mail: this.$store.state.vender.send_mail,
+				dias_alerta_venta_no_cobrada_personalizado: this.$store.state.vender.dias_alerta_venta_no_cobrada_personalizado,
 			})
 			.then(res => {
 				if (sale_id && pending.length) {

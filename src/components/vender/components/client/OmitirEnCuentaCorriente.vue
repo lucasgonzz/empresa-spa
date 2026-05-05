@@ -1,7 +1,6 @@
 <template>
 	<b-card
-	v-if="hasExtencion('ask_save_current_acount') 
-	&& client && !guardar_como_presupuesto"
+	v-if="client && !guardar_como_presupuesto"
 	class="m-b-25 m-t-25 b-r-1 shadow">
 
 		<b-form-checkbox

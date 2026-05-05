@@ -170,6 +170,7 @@ import online_template from '@/store/online_template'
 import delivery_day from '@/store/delivery_day'
 
 import article_pdf_observation from '@/store/article_pdf_observation'
+import article_pdf from '@/store/article_pdf'
 
 import column_position from '@/store/column_position'
 import table_column_preference from '@/store/table_column_preference'
@@ -236,6 +237,7 @@ import production_batch_movement_type from '@/store/production_batch_movement_ty
 import c_a_payment_method_type from '@/store/c_a_payment_method_type'
 
 import sale_status from '@/store/sale_status'
+import sale_sender_info from '@/store/sale_sender_info'
 import inputs_size from '@/store/inputs_size'
 
 
@@ -414,6 +416,7 @@ export default new Vuex.Store({
         delivery_day,
 
         article_pdf_observation,
+        article_pdf,
 
         column_position,
         table_column_preference,
@@ -478,6 +481,7 @@ export default new Vuex.Store({
         c_a_payment_method_type,
 
         sale_status,
+        sale_sender_info,
         inputs_size,
     }
 })

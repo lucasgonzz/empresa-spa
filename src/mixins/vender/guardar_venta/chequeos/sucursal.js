@@ -26,13 +26,17 @@ export default {
 				return false
 			})
 		},
+		addresses() {
+			return this.$store.state.address.models 
+		},
 	},
 	methods: {
 		check_sucursal() {
 
-			if (this.address_id == 0 && this.articulos_con_depositos.length) {
-				this.$toast.error('Hay '+this.articulos_con_depositos.length+' articulos con stock en diferentes depositos')
-				this.$toast.error('Indique la DIRECCION de la venta para restar el stock en los depositos que correspondan')
+			// if (this.address_id == 0 && this.articulos_con_depositos.length) {
+			if (this.address_id == 0 && this.addresses.length) {
+				// this.$toast.error('Hay '+this.articulos_con_depositos.length+' articulos con stock en diferentes depositos')
+				this.$toast.error('Indique la SUCURSAL de la venta para restar el stock en los depositos que correspondan')
 				return false
 			}
 

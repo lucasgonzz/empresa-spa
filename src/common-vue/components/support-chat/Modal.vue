@@ -16,7 +16,8 @@
 				<conversation
 					:messages="messages"
 					:selected_ticket="selected_ticket"
-					:loading="messages_loading" />
+					:loading="messages_loading"
+					@retry-message="on_retry_message" />
 				<message-input
 					:can_send="can_send_message"
 					:sending="sending"
@@ -120,6 +121,17 @@ export default {
 						self.select_ticket(self.tickets[0].id)
 					}
 				})
+		},
+		/**
+		 * Reintenta envío completo o sólo la sincronización hacia admin-api.
+		 * @param {Object} message Fila de conversación con error.
+		 */
+		on_retry_message(message) {
+			if (message.remote_delivery_status === 'not_received' && message.id != null) {
+				this.$store.dispatch('support_message/retryRemoteSync', message)
+				return
+			}
+			this.$store.dispatch('support_message/retrySendMessage', message)
 		},
 	},
 }

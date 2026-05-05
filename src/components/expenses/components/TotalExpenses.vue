@@ -1,7 +1,7 @@
 <template>
 	<h4 
 	v-if="total > 0"
-	class="total-expenses">
+	class="total-expenses m-t-15">
 		Total: {{ price(total) }}
 	</h4>
 </template>

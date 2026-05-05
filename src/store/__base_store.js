@@ -403,12 +403,14 @@ export default function __base_store(options = {}) {
 					commit('setTotalFilterResults', res.data.models.total) 
 
 
-					if (loaded_models.length == state.per_page) {
-						dispatch('_getModels')
-					} else {
-						commit('setLoading', false)
-						commit('setPage', 1)
-					}
+					// if (loaded_models.length == state.per_page) {
+					// 	dispatch('_getModels')
+					// } else {
+					// 	commit('setLoading', false)
+					// 	commit('setPage', 1)
+					// }
+					commit('setLoading', false)
+					commit('setPage', 1)
 				} else {
 					commit('setLoading', false)
 					commit('setModels', res.data.models)

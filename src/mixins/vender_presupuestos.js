@@ -86,6 +86,9 @@ export default {
 				'articles'					: this.get_articles(true),
 				'services'					: this.get_services(),
 				'promocion_vinotecas'		: this.get_promocion_vinotecas(),
+				'discount_stock'			: this.discount_stock,
+				'sale_status_id'			: this.sale_status_id,
+				'iva_aplicado'				: this.iva_aplicado,
 			})
 			.then(res => {
 				this.$store.commit('auth/setMessage', '')
@@ -127,6 +130,9 @@ export default {
 				'articles'					: this.get_articles(),
 				'services'					: this.get_services(),
 				'promocion_vinotecas'		: this.get_promocion_vinotecas(),
+				'discount_stock'			: this.discount_stock,
+				'sale_status_id'			: this.sale_status_id,
+				'iva_aplicado'				: this.iva_aplicado,
 			})
 			.then(res => {
 				this.$store.commit('auth/setMessage', '')

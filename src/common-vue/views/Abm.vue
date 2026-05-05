@@ -104,7 +104,6 @@ export default {
 		setSelectedView(item) {
 			let view = this.abm_views.find(_view => this.routeString(_view.view) == this.view)
 			let model_name = view.models[0]
-			console.log('model_name: '+model_name)
 			this.$router.push({params: {sub_view: (this.routeString(this.plural(model_name)))}})
 			this.selected_model = model_name
 		},
@@ -114,13 +113,105 @@ export default {
 		setSelected(item) {
 			this.selected_model = item.call_models
 		},
+		/**
+		 * Sincroniza `selected_model` con la URL (/abm/:view/:sub_view) o con el default del menú.
+		 * Antes siempre se usaba routes.js (category), ignorando params al entrar desde un router-link.
+		 */
 		setView() {
-			let abm_route = routes.find(route => {
-				return route.name == 'abm'
+			var route_view = this.$route.params.view
+			var route_sub_view = this.$route.params.sub_view
+
+			if (route_view && route_sub_view) {
+				var resolved = this.resolveSelectedModelFromRoute(route_view, route_sub_view)
+				if (resolved) {
+					this.selected_model = resolved
+					return
+				}
+			}
+
+			if (route_view && !route_sub_view) {
+				var first_in_view = this.firstModelInView(route_view)
+				if (first_in_view) {
+					this.selected_model = first_in_view
+					return
+				}
+			}
+
+			var abm_route = routes.find(function (r) {
+				return r.name == 'abm'
 			})
-			console.log('se seteo selected_model con '+abm_route.params.model_name )
-			this.selected_model = abm_route.params.model_name 
-		}
+			if (abm_route && abm_route.params && abm_route.params.model_name) {
+				this.selected_model = abm_route.params.model_name
+			}
+		},
+
+		/**
+		 * Obtiene el nombre interno del modelo cuyo plural en ruta coincide con sub_view.
+		 *
+		 * @param {string} route_view Valor de $route.params.view (ej. ventas).
+		 * @param {string} route_sub_view Valor de $route.params.sub_view (ej. remitentes).
+		 * @returns {string|null} model_name o null.
+		 */
+		resolveSelectedModelFromRoute(route_view, route_sub_view) {
+			var self = this
+			var i
+			var j
+			for (i = 0; i < self.abm_views.length; i++) {
+				var v = self.abm_views[i]
+				if (v.if_has_extencion && !self.hasExtencion(v.if_has_extencion)) {
+					continue
+				}
+				if (self.routeString(v.view) !== route_view) {
+					continue
+				}
+				for (j = 0; j < v.models.length; j++) {
+					var model = v.models[j]
+					if (!self.checkModel(model)) {
+						continue
+					}
+					if (self.routeString(self.plural(model)) === route_sub_view) {
+						return model
+					}
+				}
+			}
+			return null
+		},
+
+		/**
+		 * Primer modelo permitido dentro de la pestaña ABM indicada por view (sin sub_view en la URL).
+		 *
+		 * @param {string} route_view Segmento view de la ruta.
+		 * @returns {string|null}
+		 */
+		firstModelInView(route_view) {
+			var self = this
+			var i
+			var j
+			for (i = 0; i < self.abm_views.length; i++) {
+				var v = self.abm_views[i]
+				if (v.if_has_extencion && !self.hasExtencion(v.if_has_extencion)) {
+					continue
+				}
+				if (self.routeString(v.view) !== route_view) {
+					continue
+				}
+				for (j = 0; j < v.models.length; j++) {
+					var model = v.models[j]
+					if (self.checkModel(model)) {
+						return model
+					}
+				}
+			}
+			return null
+		},
+	},
+	watch: {
+		'$route.params.view'() {
+			this.setView()
+		},
+		'$route.params.sub_view'() {
+			this.setView()
+		},
 	},
 	created() {
 		this.setView()

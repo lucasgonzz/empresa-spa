@@ -16,7 +16,6 @@ lg="6">
 	:loader="loader"
 	dusk="btn_vender"
 	@clicked="saveSale">
-		sdf Guardar venta
 	</btn-loader>
 
 </b-col>

@@ -1,5 +1,6 @@
 <template>
-	<div>
+	<div
+	v-if="!client">
 		
 		<modal-result
 		:title="modal_title"

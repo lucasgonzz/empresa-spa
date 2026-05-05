@@ -330,6 +330,18 @@ export default {
 			not_show: true,
 		},
 		{
+			text: 'Datos envío etiqueta',
+			key: 'sale_delivery_info',
+			not_show: true,
+			no_usar_en_filtros: true,
+		},
+		{
+			text: 'Remitente etiqueta',
+			key: 'sale_sender_info',
+			not_show: true,
+			no_usar_en_filtros: true,
+		},
+		{
 			text: 'Servicios',
 			key: 'services',
 			store: 'service',

@@ -82,6 +82,7 @@
 		<template #options_drop_down_seleccion>
 			<option-dropdown-afip-ticket></option-dropdown-afip-ticket>
 			<option-dropdown-consolidar-facturacion></option-dropdown-consolidar-facturacion>
+			<send-mail-option-dropdown></send-mail-option-dropdown>
 		</template>
 
 		<template #table-prop-client_id="props">
@@ -110,6 +111,7 @@ export default {
 		// UpdatePrices: () => import('@/components/ventas/modals/update-prices/Index'),
 		OptionDropdownAfipTicket: () => import('@/components/ventas/components/OptionDropdownAfipTicket'),
 		OptionDropdownConsolidarFacturacion: () => import('@/components/ventas/components/OptionDropdownConsolidarFacturacion'),
+		SendMailOptionDropdown: () => import('@/components/ventas/components/options-dropdown/SendMailOptionDropdown'),
 		AfipTicketShowErrors: () => import('@/components/ventas/modals/afip-ticket/ShowErrors'),
 		AfipTicketShowObservations: () => import('@/components/ventas/modals/afip-ticket/ShowObservations'),
 

@@ -25,8 +25,8 @@
 			</p>
 		</div>
 		<div
-		v-if="client && client.email"
-		class="send-mail-check">
+		v-if="hasExtencion('enviar_mail_a_clientes') && client && client.email"
+		class="send-mail-check j-end m-b-15">
 			<b-form-checkbox
 			:value="1"
 			:unchecked-value="0"

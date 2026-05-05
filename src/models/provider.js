@@ -108,7 +108,7 @@ export default {
 			text: 'Localidad',
 			key: 'location_id',
 			type: 'search',
-      use_store_models: true,
+			depends_on: 'provincia_id',
 		},
 		{
 			text: 'IVA',

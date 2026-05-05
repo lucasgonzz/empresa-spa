@@ -15,11 +15,15 @@
 			</div>
 			<template v-else>
 			<div
-				v-for="message in messages"
-				:key="message_key(message)"
+				v-for="(message, message_index) in messages"
+				:key="message_key(message, message_index)"
 				:class="['support-message', message.sender_type == 'user' ? 'mine' : 'their']">
 				<div class="support-message-col">
-					<div class="support-message-bubble">
+					<div
+						:class="[
+							'support-message-bubble',
+							has_delivery_error(message) ? 'support-message-bubble--error' : '',
+						]">
 						<div v-if="message.body">{{ message.body }}</div>
 						<a
 							v-if="message.attachments && message.attachments.length"
@@ -28,7 +32,20 @@
 							Adjunto
 						</a>
 					</div>
-					<div v-if="is_mine(message) && is_last_mine_message(message)" class="support-message-meta">
+					<div
+						v-if="is_mine(message) && has_delivery_error(message)"
+						class="support-message-error-row">
+						<span class="support-message-error-text">{{ delivery_error_label(message) }}</span>
+						<button
+							type="button"
+							class="btn btn-sm btn-outline-danger support-message-retry-btn"
+							@click="$emit('retry-message', message)">
+							Reintentar
+						</button>
+					</div>
+					<div
+						v-else-if="is_mine(message) && is_last_mine_message(message)"
+						class="support-message-meta">
 						<span
 							v-if="message._client_pending"
 							class="support-meta-sending"
@@ -68,6 +85,9 @@
 </template>
 
 <script>
+/**
+ * Emite `retry-message` cuando el usuario reintenta un envío fallido.
+ */
 export default {
 	props: {
 		messages: {
@@ -115,16 +135,22 @@ export default {
 	},
 	methods: {
 		/**
-		 * Clave estable para v-for: id de servidor o id temporal de optimista.
+		 * Clave única por fila en la lista: incluye índice para no chocar si el API
+		 * o el store dejan dos mensajes con el mismo id (Vue exige keys distintas).
+		 *
+		 * @param {Object} message Fila de mensaje.
+		 * @param {number} message_index Posición en `messages` (0-based).
+		 * @returns {string}
 		 */
-		message_key(message) {
+		message_key(message, message_index) {
+			const suffix = '-i' + String(message_index)
 			if (message.id != null) {
-				return 'm-' + message.id
+				return 'm-' + message.id + suffix
 			}
 			if (message._client_pending) {
-				return 'p-' + message._client_pending
+				return 'p-' + message._client_pending + suffix
 			}
-			return 'x-' + String(Math.random())
+			return 'x-' + suffix
 		},
 		/**
 		 * Burbuja propia: usuario o fila de pre-envío.
@@ -166,6 +192,34 @@ export default {
 				return 'Recibido por el sistema de soporte central'
 			}
 			return 'Guardado en tu cuenta (pendiente de entrega al sistema central)'
+		},
+		/**
+		 * Indica anomalía de entrega: fallo de red al API propio o sync a admin.
+		 * @param {Object} message
+		 * @returns {boolean}
+		 */
+		has_delivery_error(message) {
+			if (message._delivery_error === 'not_sent') {
+				return true
+			}
+			if (message.remote_delivery_status === 'not_received') {
+				return true
+			}
+			return false
+		},
+		/**
+		 * Texto según escenario (no enviado / no recibido en central).
+		 * @param {Object} message
+		 * @returns {string}
+		 */
+		delivery_error_label(message) {
+			if (message._delivery_error === 'not_sent') {
+				return 'No enviado'
+			}
+			if (message.remote_delivery_status === 'not_received') {
+				return 'No recibido en soporte central'
+			}
+			return 'Error de entrega'
 		},
 		/**
 		 * Hora:minuto local a partir de read_at ISO.
@@ -347,5 +401,30 @@ export default {
 
 .support-tick-read-overlap {
 	margin-left: -0.32em;
+}
+
+.support-message-bubble--error {
+	background: #fde8e8 !important;
+	border-color: #e53e3e !important;
+}
+
+.support-message-error-row {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-top: 4px;
+	font-size: 12px;
+}
+
+.support-message-error-text {
+	color: #c53030;
+	font-weight: 600;
+}
+
+.support-message-retry-btn {
+	padding: 0 8px;
+	font-size: 11px;
+	line-height: 1.4;
 }
 </style>
