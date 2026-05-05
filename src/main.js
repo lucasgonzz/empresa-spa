@@ -127,6 +127,12 @@ function global_api_error_interceptor(error) {
     if (!response) {
         return Promise.reject(error)
     }
+    /**
+     * Estado actual de autenticación en Vuex.
+     * Se usa para evitar notificaciones globales mientras la sesión todavía no existe.
+     */
+    const is_authenticated = store.state.auth && store.state.auth.authenticated === true
+
     const { status, data } = response
     const skip_validation_toast = Boolean(
         error.config && error.config.skip_global_validation_toast
@@ -135,7 +141,9 @@ function global_api_error_interceptor(error) {
 
     if (is_validation && !skip_validation_toast) {
         show_laravel_validation_toast(data)
-    } else if (response) {
+    } else if (response && is_authenticated) {
+        // Solo emitimos el error global cuando ya hay sesión iniciada.
+        // Esto evita alerts/toasts automáticos durante el arranque o antes del login.
         document.dispatchEvent(
             new CustomEvent('errorEvent', { detail: error })
         )
