@@ -43,7 +43,7 @@
 						<!-- Descripcion de la propiedad - Popover -->
 						<b-popover
 						v-if="prop.description" 
-						:target="'form-group-'+prop.key" 
+						:target="'label-'+prop.key" 
 						triggers="click" 
 						placement="bottom">
 						    <template #title><strong>Instrucciones {{ prop.text }}</strong></template>
@@ -52,7 +52,7 @@
 
 						<b-popover
 						v-if="prop.descriptions" 
-						:target="'form-group-'+prop.key" 
+						:target="'label-'+prop.key" 
 						triggers="click" 
 						placement="bottom">
 						    <template #title><strong>Instrucciones</strong></template>

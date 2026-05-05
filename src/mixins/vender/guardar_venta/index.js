@@ -216,6 +216,7 @@ export default {
 				descuento: this.$store.state.vender.descuento,
 				fecha_entrega: this.$store.state.vender.fecha_entrega,
 				observations_ocultas: this.$store.state.vender.observations_ocultas,
+				dias_alerta_venta_no_cobrada_personalizado: this.$store.state.vender.dias_alerta_venta_no_cobrada_personalizado,
 			}
 
 			await this.save_sale_offline(sale_data)

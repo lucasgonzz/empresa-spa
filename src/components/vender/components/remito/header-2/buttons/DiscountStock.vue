@@ -1,6 +1,6 @@
 <template>
 	<b-form-checkbox
-	class="m-l-10"
+	class="m-l-20"
 	v-model="discount_stock"
 	:disabled="is_disabled">
 		Descontar stock

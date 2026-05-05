@@ -159,6 +159,40 @@ export default {
 		setSending(state, value) {
 			state.sending = value
 		},
+		/**
+		 * Marca fallo de POST local (no enviado) manteniendo la fila para reintentar.
+		 */
+		markPendingDeliveryError(state, payload) {
+			const client_key = payload.client_key
+			const error_code = payload.error_code
+			let idx = state.models.length - 1
+			while (idx >= 0) {
+				if (state.models[idx]._client_pending === client_key) {
+					const merged = Object.assign({}, state.models[idx], {
+						_delivery_error: error_code,
+					})
+					state.models.splice(idx, 1, merged)
+					return
+				}
+				idx = idx - 1
+			}
+		},
+		/**
+		 * Fusiona campos de un mensaje ya persistido (p. ej. tras reintento de sync remoto).
+		 */
+		patchMessage(state, incoming) {
+			if (!incoming || incoming.id == null) {
+				return
+			}
+			let k = 0
+			for (k = 0; k < state.models.length; k = k + 1) {
+				if (state.models[k].id == incoming.id) {
+					const merged = Object.assign({}, state.models[k], incoming)
+					state.models.splice(k, 1, merged)
+					return
+				}
+			}
+		},
 	},
 	actions: {
 		/**
@@ -212,6 +246,7 @@ export default {
 				kind: kind_val,
 				body: body_text,
 				_attachment_pending: payload.attachment ? true : false,
+				_retry_attachment: payload.attachment || null,
 			})
 			let form_data = new FormData()
 			form_data.append('body', payload.body || '')
@@ -233,8 +268,41 @@ export default {
 				})
 				.catch(error => {
 					commit('setSending', false)
-					commit('removePendingMessage', client_key)
+					commit('markPendingDeliveryError', {
+						client_key: client_key,
+						error_code: 'not_sent',
+					})
 					console.log(error)
+				})
+		},
+		/**
+		 * Reintenta POST inicial cuando el mensaje no llegó al empresa-api (estado no enviado).
+		 */
+		retrySendMessage({ commit, dispatch }, message) {
+			const pending_key = message._client_pending
+			if (pending_key) {
+				commit('removePendingMessage', pending_key)
+			}
+			return dispatch('sendMessage', {
+				body: message.body,
+				kind: message.kind || 'text',
+				attachment: message._retry_attachment || null,
+			})
+		},
+		/**
+		 * Reintenta sincronización hacia admin-api para un mensaje ya guardado (no recibido en central).
+		 */
+		retryRemoteSync({ commit }, message_or_id) {
+			const id = typeof message_or_id === 'object' ? message_or_id.id : message_or_id
+			return axios
+				.post('/api/support-message/' + id + '/retry-remote-sync')
+				.then(function (res) {
+					if (res.data && res.data.model) {
+						commit('patchMessage', res.data.model)
+					}
+				})
+				.catch(function (err) {
+					console.log(err)
 				})
 		},
 		/**

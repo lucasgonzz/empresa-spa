@@ -135,6 +135,8 @@ export default {
 			price_description: info.price_description,
 			// Indica si se debe enviar correo al cliente
 			send_mail: info.send_mail,
+			// Días opcionales para alerta de cobro (null = reglas globales en backend).
+			dias_alerta_venta_no_cobrada_personalizado: info.dias_alerta_venta_no_cobrada_personalizado,
 			// Auditoría de acciones realizadas en vender durante la edición de la venta.
 			log: rootState.vender.sale_log,
 		})

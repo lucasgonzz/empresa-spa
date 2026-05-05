@@ -39,6 +39,8 @@ export default {
 			this.$store.commit('vender/setPriceType', null)
 			this.$store.commit('vender/set_numero_orden_de_compra', '')
 			this.$store.commit('vender/set_omitir_en_cuenta_corriente', 0)
+
+			this.$store.commit('vender/set_dias_alerta_venta_no_cobrada_personalizado', null)
 			
 			this.$store.commit('vender/setSelectedPaymentMethods', [])
 

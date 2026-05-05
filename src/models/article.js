@@ -503,8 +503,15 @@ export default {
 			value: 1,
 			description: 'Por defecto es UNIDAD. Tambien puede ser "Gramo", "Kilo", "Litro", "Centimetro", "Metro", "Rollo", "Par"',
 		},
-
-
+		{
+			text: 'Medida (contenido)',
+			key: 'medida',
+			type: 'number',
+			not_show: true,
+			use_to_update: true,
+			description:
+				'Cantidad que contiene el articulo en la unidad elegida arriba. Ejemplo: unidad Litro y medida 2.5 para un envase de 2,5 litros.',
+		},
 
 		{
 			group_title: 'Categoria',

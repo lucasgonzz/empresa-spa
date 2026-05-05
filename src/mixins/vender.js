@@ -84,6 +84,15 @@ export default {
 		omitir_en_cuenta_corriente() {
 			return this.$store.state.vender.omitir_en_cuenta_corriente
 		},
+		sale_status_id() {
+			return this.$store.state.vender.sale_status_id
+		},
+		discount_stock() {
+			return this.$store.state.vender.discount_stock
+		},
+		iva_aplicado() {
+			return this.$store.state.vender.iva_aplicado
+		},
 		discounts_in_services: {
 			get() {
 				return this.$store.state.vender.discounts_in_services

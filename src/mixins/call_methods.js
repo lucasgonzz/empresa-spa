@@ -91,6 +91,7 @@ export default [
     'delivery_day',
     'delivery_zone',
     'sale',
+    'sale_sender_info',
     // 'credit_card',
     // 'credit_card_payment_plan',
     'order',

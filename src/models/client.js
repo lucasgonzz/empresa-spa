@@ -130,9 +130,7 @@ export default {
 			text: 'Localidad',
 			key: 'location_id',
 			type: 'search',
-			use_store_models: true,
-			use_to_filter_in_modal: true,
-			filter_modal_position: 4,
+			depends_on: 'provincia_id',
 		},
 		{
 			text: 'Direccion',

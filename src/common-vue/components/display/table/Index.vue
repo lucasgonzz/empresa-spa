@@ -934,6 +934,7 @@ export default {
 
 .cont-table
 	width: calc(100% + 30px)
+	// min-height: 500px
 	// display: inline-block
 	overflow-y: scroll
 	margin-left: -15px

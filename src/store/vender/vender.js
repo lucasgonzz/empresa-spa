@@ -284,6 +284,9 @@ export default {
 		// Indica si se debe enviar un correo al cliente al crear la venta.
 		send_mail: 0,
 
+		// Días personalizados hasta alertar venta no cobrada; null = usar reglas globales del usuario.
+		dias_alerta_venta_no_cobrada_personalizado: null,
+
 		// Adjuntos pendientes de subir (para ventas nuevas, antes de que exista sale_id)
 		pending_attachments: [],
 
@@ -365,6 +368,19 @@ export default {
 		// Mutation para controlar si se envía correo al cliente
 		set_send_mail(state, value) {
 			state.send_mail = value
+		},
+		/**
+		 * Días opcionales para alerta de cobro de esta venta; null deja el umbral global del negocio.
+		 */
+		set_dias_alerta_venta_no_cobrada_personalizado(state, value) {
+			if (value === '' || value === undefined) {
+				state.dias_alerta_venta_no_cobrada_personalizado = null
+			} else if (value === null) {
+				state.dias_alerta_venta_no_cobrada_personalizado = null
+			} else {
+				const parsed = parseInt(value, 10)
+				state.dias_alerta_venta_no_cobrada_personalizado = isNaN(parsed) ? null : Math.max(0, parsed)
+			}
 		},
 		set_total_description(state, value) {
 			state.total_description = value
@@ -863,6 +879,8 @@ export default {
 			price_description: JSON.stringify(state.total_description),
 			// Indica si se debe enviar correo al cliente al crear la venta
 			send_mail: state.send_mail,
+			// Días opcionales para alerta de cobro (null = reglas globales en backend).
+			dias_alerta_venta_no_cobrada_personalizado: state.dias_alerta_venta_no_cobrada_personalizado,
 			// Array de auditoría completo de acciones realizadas durante la venta.
 			log: state.sale_log,
 		})

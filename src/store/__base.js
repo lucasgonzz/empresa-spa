@@ -287,15 +287,17 @@ export default {
 					if (res.data.models.current_page == 1) {
 						commit('setTotalPages', res.data.models.last_page)
 					}
-					console.log('se cargo '+state.model_name+' page: '+state.page)
+					console.log('se cargo '+state.model_name+', page: '+state.page)
 					commit('incrementPage')
 					commit('addModels', loaded_models)
-					if (loaded_models.length == state.per_page) {
-						dispatch('_getModels')
-					} else {
-						commit('setLoading', false)
-						commit('setPage', 1)
-					}
+					// if (loaded_models.length == state.per_page) {
+					// 	dispatch('_getModels')
+					// } else {
+					// 	commit('setLoading', false)
+					// 	commit('setPage', 1)
+					// }
+					commit('setLoading', false)
+					commit('setPage', 1)
 				} else {
 					commit('setLoading', false)
 					commit('setModels', res.data.models)

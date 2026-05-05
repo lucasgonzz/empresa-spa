@@ -17,6 +17,8 @@ export default __base_store({
 
 		/* Cantidad de sincronizaciones con status 'error'; alimenta el badge del menú */
 		failed_count: 0,
+
+		// per_page: 2,
 	},
 	mutations: {
 		/**

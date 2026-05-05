@@ -53,6 +53,31 @@ export default {
 			show: true,
 		},
 		{
+			text: 'Estado de venta',
+			key: 'sale_status_id',
+			type: 'select',
+			use_store_models: true,
+			value: null,
+			show: true,
+			v_if_function: 'show_budget_sale_status_id'
+		},
+		{
+			text: 'Descontar stock',
+			key: 'discount_stock',
+			type: 'checkbox',
+			value: true,
+			show: true,
+			description: 'Si está activo, al confirmar el presupuesto la venta generada descontará stock (artículos y promociones).',
+		},
+		{
+			text: 'Precios con IVA',
+			key: 'iva_aplicado',
+			type: 'checkbox',
+			value: true,
+			show: true,
+			description: 'Se guarda en el presupuesto y se aplica al generar la venta al confirmar; coherente con el flag en VENDER.',
+		},
+		{
 			text: 'Estado del presupuesto',
 			key: 'budget_status_id',
 			type: 'select',

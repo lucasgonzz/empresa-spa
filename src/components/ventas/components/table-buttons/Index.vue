@@ -13,6 +13,10 @@
 		<etiqueta-envio
 		:sale="model"></etiqueta-envio>
 
+		<!-- Envío / reenvío del correo de notificación de venta (ComercioCityMailHelper::new_sale) -->
+		<send-mail
+		:sale="model"></send-mail>
+
 		<cerrar-venta
 		:sale="model"></cerrar-venta>
 
@@ -40,6 +44,7 @@ export default {
 		AfipButtons: () => import('@/components/ventas/components/table-buttons/AfipButtons'),
 		PaymentPlanBtn: () => import('@/components/ventas/components/table-buttons/PaymentPlanBtn'),
 		EtiquetaEnvio: () => import('@/components/ventas/components/table-buttons/EtiquetaEnvio'),
+		SendMail: () => import('@/components/ventas/components/table-buttons/SendMail'),
 		CerrarVenta: () => import('@/components/ventas/components/table-buttons/CerrarVenta'),
 		// Botón que muestra el desglose del cálculo del precio final de la venta
 		PriceDescriptionBtn: () => import('@/components/ventas/components/table-buttons/PriceDescriptionBtn'),

@@ -6,6 +6,8 @@
 		<articles-pdf-option-drop-down></articles-pdf-option-drop-down>
 
 		<articles-bar-code-pdf></articles-bar-code-pdf>
+
+		<article-pdf></article-pdf>
 		
 		<seleccion-especial></seleccion-especial>
 		
@@ -20,6 +22,7 @@ export default {
 		ArticleTicketOptionDropDown: () => import('@/components/listado/components/selected-filtered-options/ArticleTicketOptionDropDown'),
 		ArticlesPdfOptionDropDown: () => import('@/components/listado/components/selected-filtered-options/ArticlesPdfOptionDropDown'),
 		ArticlesBarCodePdf: () => import('@/components/listado/components/selected-filtered-options/ArticlesBarCodePdf'),
+		ArticlePdf: () => import('@/components/listado/components/selected-filtered-options/ArticlePdf'),
 		ResetStockOptionDropDown: () => import('@/components/listado/components/selected-filtered-options/ResetStockOptionDropDown'),
 		SeleccionEspecial: () => import('@/components/listado/components/selected-filtered-options/SeleccionEspecial'),
 		ExcelExport: () => import('@/components/listado/components/selected-filtered-options/ExcelExport'),

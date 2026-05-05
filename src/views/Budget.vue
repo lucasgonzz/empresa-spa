@@ -14,6 +14,12 @@
 	:check_permissions_previus_days="false"
 	model_name="budget">
 
+		<template #table_left_options="props">
+			<div class="j-start align-center">
+				<budget-duplicate-btn :model="props.model"></budget-duplicate-btn>
+			</div>
+		</template>
+
 		<template #table-prop-client_id="props">
 			<client-btn
 			from_budget
@@ -29,6 +35,7 @@ export default {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 		CurrentAcounts: () => import('@/components/common/current-acounts/Index'),
 		ClientBtn: () => import('@/components/ventas/components/ClientBtn'),
+		BudgetDuplicateBtn: () => import('@/components/budget/components/BudgetDuplicateBtn'),
 	},
 	computed: {
 		show_previus_days() {

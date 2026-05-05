@@ -92,20 +92,29 @@ export default {
 			text: 'Cotizar precios en dolares',
 			key: 'cotizar_precios_en_dolares',
 			type: 'checkbox',
-			description: 'Se se activa, los costos en dolares se cotizaran a peso para obtener el precio final en pesos',
+			descriptions:
+			[
+			 	'Se se activa, los costos en dolares se cotizaran a peso para obtener el precio final en pesos',
+			],
 		}, 
 		{
 			text: 'Aplicar el iva al costo',
 			key: 'aplicar_iva_al_costo',
 			type: 'checkbox',
-			description: 'Si se desactiva, el iva del articulo se sumara luego del margen de ganancia',
+			descriptions:
+			[
+			 	'Si se desactiva, el iva del articulo se sumara luego del margen de ganancia',
+			],
 		},
 		{
 			text: 'Trabajar con listas de precio (margen por lista)',
 			key: 'listas_de_precio',
 			type: 'checkbox',
 			value: 0,
-			description: 'Si se activa, cada articulo un precio final para cada lista de precio que haya creada.',
+			descriptions:
+			[
+			 	'Si se activa, cada articulo un precio final para cada lista de precio que haya creada.',
+			],
 		},
 		{
 			text: 'Redondear precios de a centenas',
@@ -139,7 +148,10 @@ export default {
 			key: 'usa_provider_codes_repetidos',
 			type: 'checkbox',
 			value: 0,
-			description: 'Si se activa, el sistema permitira crear articulos con el mismo codigo de proveedor.',
+			descriptions:
+			[
+			 	'Si se activa, el sistema permitira crear articulos con el mismo codigo de proveedor.',
+			],
 		},
 		{
 			text: 'Aplicar los descuentos y recargos en los articulos antes del margen de ganancia',
@@ -180,7 +192,10 @@ export default {
 			key: 'default_current_acount_payment_method_id',
 			type: 'select',
 			store: 'current_acount_payment_method',
-			description: 'Si se elige, despues de cada venta el valor del metodo de pago se seteara con este valor',
+			descriptions:
+			[
+			 	'Si se elige, despues de cada venta el valor del metodo de pago se seteara con este valor',
+			],
 		},
 		{
 			text: 'Omitir siempre las ventas en la c/c de los clientes',
@@ -279,7 +294,10 @@ export default {
 			key: 'inputs_size_id',
 			type: 'select',
 			store: 'inputs_size',
-			description: 'Controla el tamaño de los inputs, fuentes, márgenes y paddings de la interfaz',
+			descriptions:
+			[
+			 	'Controla el tamaño de los inputs, fuentes, márgenes y paddings de la interfaz',
+			],
 		},
 
 
@@ -290,7 +308,10 @@ export default {
 			text: 'C/C Ultimas arriba',
 			key: 'cc_ultimas_arriba',
 			type: 'checkbox',
-			description: 'Se se activa, las cuentas corrientes se listaran comenzando con las mas recientes',
+			descriptions:
+			[
+			 	'Se se activa, las cuentas corrientes se listaran comenzando con las mas recientes',
+			],
 		}, 
 		{
 			text: 'Scroll automatico en tablas',
@@ -338,7 +359,10 @@ export default {
 			text: 'Descontar stock en los insumos recien cuando se supera el estado de produccion',
 			key: 'discount_stock_from_recipe_after_advance_to_next_status',
 			type: 'checkbox',
-			description: 'Si se activa, los insumos del estado 1 se descontaran cuando el articulo a producir avance al estado 2. Si no se activa, los insumos del estado 1 se descontaran ni bien el articulo a producir llegue al estado 1',
+			descriptions:
+			[
+			 	'Si se activa, los insumos del estado 1 se descontaran cuando el articulo a producir avance al estado 2. Si no se activa, los insumos del estado 1 se descontaran ni bien el articulo a producir llegue al estado 1',
+			],
 			if_has_extencion: 'production',
 		},
 		// {
