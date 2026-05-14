@@ -63,6 +63,30 @@ export default {
 			type: 'image',
 		},
 		{
+			text: 'Color primario',
+			key: 'primary_color',
+			type: 'text',
+			value: '#c5111d',
+		},
+		{
+			text: 'Color secundario',
+			key: 'secondary_color',
+			type: 'text',
+			value: '#fe7802',
+		},
+		{
+			text: 'Color texto',
+			key: 'text_color',
+			type: 'text',
+			value: '#F2F2F2',
+		},
+		{
+			text: 'Color texto hover',
+			key: 'hover_text_color',
+			type: 'text',
+			value: '#FFF',
+		},
+		{
 			text: 'Cantidad tarjetas en telefono',
 			key: 'cantidad_tarjetas_en_telefono',
 			type: 'number',

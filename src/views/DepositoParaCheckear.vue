@@ -2,6 +2,7 @@
 	<div>
 	    <confirm
 	    model_name="sale"
+	    show_compensar_caja_checkbox
 	    :actions="['sale/delete']"
 	    id="delete-sale"></confirm>
 		

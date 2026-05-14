@@ -14,9 +14,9 @@
 
 			<template
 			v-slot:modal_buttons="slotProps">
-	    		<comercio-city-user  
+	    		<!-- <comercio-city-user  
 	    		:model="slotProps.model"
-	    		model_name="client"></comercio-city-user>
+	    		model_name="client"></comercio-city-user> -->
 
 	    		<create-buyer  
 	    		:model="slotProps.model"></create-buyer>

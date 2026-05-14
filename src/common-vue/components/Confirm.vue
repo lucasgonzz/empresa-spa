@@ -1,11 +1,19 @@
 <template>
 <b-modal
+@show="on_modal_opened"
 :no-close-on-backdrop="backdrop"
 :id="id" hide-footer hide-header size="sm">
 	<p
 	class="text-center">
 		{{ confirm_text }}
 	</p>
+	<div
+	v-if="show_compensar_caja_checkbox"
+	class="m-b-10">
+		<b-form-checkbox v-model="compensar_caja">
+			Compensar caja (movimiento inverso por cada método de pago con caja)
+		</b-form-checkbox>
+	</div>
 	<btn-loader
 	:variant="variant"
 	@clicked="confirm"
@@ -25,6 +33,11 @@ export default {
 	data() {
 		return {
 			loading: false,
+			/**
+			 * Marca si al confirmar el borrado se debe enviar `compensar_caja` al backend (movimientos de caja inversos).
+			 * Se reinicia al abrir el modal según `compensar_caja_default`.
+			 */
+			compensar_caja: true,
 		}
 	},
 	props: {
@@ -64,6 +77,20 @@ export default {
 			default: false,
 		},
 		model_name: String,
+		/**
+		 * Si es true, muestra el checkbox para registrar compensación en caja al eliminar (venta, gasto, pago CC).
+		 */
+		show_compensar_caja_checkbox: {
+			type: Boolean,
+			default: false,
+		},
+		/**
+		 * Valor inicial del checkbox cada vez que se abre el modal (por defecto marcado).
+		 */
+		compensar_caja_default: {
+			type: Boolean,
+			default: true,
+		},
 	},
 	computed: {
 		confirm_text() {
@@ -77,6 +104,14 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Reinicia el estado del checkbox al valor por defecto cada vez que el usuario abre el modal.
+		 *
+		 * @returns {void}
+		 */
+		on_modal_opened() {
+			this.compensar_caja = this.compensar_caja_default
+		},
 		async confirm() {
 			if (this.emit) {
 	            this.$emit(this.emit)
@@ -89,6 +124,10 @@ export default {
 	        try {
 
 	            this.$emit('confirmed') // ojo: tenías 'confimed' (typo)
+
+	            if (this.show_compensar_caja_checkbox && this.model_name) {
+	            	this.$store.commit(this.model_name + '/setCompensarCajaDelete', this.compensar_caja)
+	            }
 	            
 	            // Ejecuta una por una, en orden. Si alguna falla, salta al catch.
 	            for (let i = 0; i < this.actions.length; i++) {

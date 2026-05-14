@@ -119,7 +119,7 @@
             >
                 <b-form-select
                     :value="payment_method.caja_id"
-                    :options="cajas_options()"
+                    :options="get_caja_options(payment_method.current_acount_payment_method_id, address_id, payment_method.moneda_id)"
                     @change="update_caja_id(index, $event, payment_method)"
                 ></b-form-select>
 
@@ -332,12 +332,14 @@ export default {
                 value: 0,
                 text: 'Seleccione Caja'
             }]
-            this.cajas.filter(c => c.abierta).forEach(caja => {
-                options.push({
-                    value: caja.id,
-                    text: caja.name
-                })
-            })
+
+            let cajas = this.get_caja_options(payment_method.current_acount_payment_method_id, )
+            // this.cajas.filter(c => c.abierta).forEach(caja => {
+            //     options.push({
+            //         value: caja.id,
+            //         text: caja.name
+            //     })
+            // })
             return options
         },
 
@@ -353,17 +355,61 @@ export default {
             }
         },
 
+        /**
+         * Completa el monto de la fila con el sobrante pendiente de repartir.
+         *
+         * El sobrante siempre está expresado en moneda base (total del comprobante).
+         * Si el método usa otra moneda, hay que convertir: el campo amount va en la
+         * moneda del método y amount_cotizado en base (misma regla que check_moneda).
+         *
+         * @param {number} index Índice de la fila en payment_methods
+         * @returns {void}
+         */
         completar(index) {
+            let pm = this.payment_methods[index]
+            if (!pm) {
+                return
+            }
 
-            // 1) setear el amount en la fila
-            this.$emit('update_amount', index, this.sobrante_a_repartir)
+            let sobrante_en_base = Number(this.sobrante_a_repartir) || 0
+            let moneda_base = Number(this.base_moneda) || 0
+            let moneda_metodo = Number(pm.moneda_id) || 0
 
-            console.log('update_amount con sobrante: '+this.sobrante_a_repartir)
-            // 2) recalcular cotizado si corresponde (esperamos a que el padre actualice)
+            // Misma moneda que el comprobante: el monto del método coincide con el sobrante en base
+            if (!moneda_metodo || moneda_metodo === moneda_base) {
+                this.$emit('update_amount', index, sobrante_en_base)
+                this.$nextTick(() => {
+                    if (!this.payment_methods[index]) {
+                        return
+                    }
+                    // Evita que quede un amount_cotizado viejo de otra moneda y duplique el total repartido
+                    this.$emit('update_amount_cotizado', index, 0)
+                })
+                return
+            }
+
+            let cotizacion = Number(pm.cotizacion) || 0
+            if (cotizacion <= 0) {
+                this.$toast.error('Ingresá la cotización para poder completar en esta moneda')
+                return
+            }
+
+            // Inverso de check_moneda: amount_cotizado deseado = sobrante_en_base
+            let amount_en_moneda_metodo = 0
+            if (moneda_metodo === 1) {
+                amount_en_moneda_metodo = sobrante_en_base * cotizacion
+            } else {
+                amount_en_moneda_metodo = sobrante_en_base / cotizacion
+            }
+
+            this.$emit('update_amount', index, amount_en_moneda_metodo)
+
             this.$nextTick(() => {
-                let pm = this.payment_methods[index]
-                if (!pm) return
-                this.check_moneda(pm, index, this.sobrante_a_repartir)
+                let pm_actualizado = this.payment_methods[index]
+                if (!pm_actualizado) {
+                    return
+                }
+                this.check_moneda(pm_actualizado, index, amount_en_moneda_metodo)
             })
         },
 

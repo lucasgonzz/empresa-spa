@@ -93,7 +93,13 @@ hide-footer
 					No se encontraron resultados
 				</div>
 				<div 
-				v-if="prop && save_if_not_exist && query.length"
+				v-if="prop && save_if_not_exist && query.length && show_afip_second_enter_hint"
+				class="text-with-icon">
+					<i class="icon-check"></i>
+					ENTER para consultar AFIP / ARCA
+				</div>
+				<div 
+				v-else-if="prop && save_if_not_exist && query.length"
 				class="text-with-icon">
 					<i class="icon-check"></i>
 					ENTER para crear {{ singular(model_name) }}
@@ -213,6 +219,14 @@ export default {
 		props_to_send_to_api: Array,
 		emit_selected_with_null: Boolean,
 		function_props_to_send_to_api: String,
+		/**
+		 * Si es true y el modelo es client, con criterio solo dígitos (CUIT 11 o DNI 7–8),
+		 * el segundo Enter sin resultados dispara consulta AFIP en lugar de crear cliente por nombre.
+		 */
+		tax_id_afip_lookup_on_second_enter: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	data() {
 		return {
@@ -279,6 +293,22 @@ export default {
 			} else if (this.prop) {
 				return 'Buscar '+this.propText(this.prop)
 			}
+		},
+		/**
+		 * CUIT normalizado: 11 dígitos; DNI: 7 u 8 (solo se cuentan dígitos del criterio).
+		 */
+		query_matches_client_afip_document_pattern() {
+			let digits_only = ('' + this.query).replace(/\D/g, '')
+			let len = digits_only.length
+			return len === 11 || (len >= 7 && len <= 8)
+		},
+		/**
+		 * Texto de ayuda cuando el flujo de AFIP por CUIT/DNI aplica al segundo Enter.
+		 */
+		show_afip_second_enter_hint() {
+			return this.tax_id_afip_lookup_on_second_enter
+				&& this.model_name === 'client'
+				&& this.query_matches_client_afip_document_pattern
 		},
 		prop_to_filter() {
 			return this.propToFilter(this.model_name)
@@ -759,6 +789,18 @@ export default {
 					// this.$emit('setSelected', this.results[this.selected_index])
 					this.emitSetSelected(this.results[this.selected_index])
 				} else if (this.save_if_not_exist) {
+					if (
+						this.tax_id_afip_lookup_on_second_enter
+						&& this.model_name === 'client'
+						&& this.query_matches_client_afip_document_pattern
+					) {
+						let normalized_digits = ('' + this.query).replace(/\D/g, '')
+						this.$emit('requestClientAfipLookup', {
+							query: this.query,
+							normalized_digits: normalized_digits,
+						})
+						return
+					}
 					this.saveIfNotExist()
 				} else if (this.emit_selected_with_null) {
 					this.emitSetSelected(null)

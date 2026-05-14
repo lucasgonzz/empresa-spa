@@ -59,6 +59,11 @@
 		<b-button-group
 		class="m-b-10">
 			<b-button
+			variant="primary"
+			@click="open_auto_timeout_config">
+				<i class="icon-configuration"></i>
+			</b-button>
+			<b-button
 		    variant="primary"
 		    @click="launchLuckyFlow">
 				<i class="icon-search"></i>
@@ -97,6 +102,28 @@
 	placeholder="Seleccione la imagen o arrastrala hasta aquí"
 	drop-placeholder="Solta la imagen aqui..."
 	></b-form-file>
+
+	<b-modal
+	:id="auto_timeout_modal_id"
+	title="Configurar tiempo de selección automática"
+	hide-footer>
+		<p>
+			Definí los segundos que espera el sistema antes de seleccionar automáticamente una imagen.
+		</p>
+		<b-input-group prepend="Segundos">
+			<b-form-input
+			type="number"
+			min="1"
+			v-model.number="config_timeout_value"></b-form-input>
+		</b-input-group>
+		<div class="d-flex justify-content-end m-t-15">
+			<b-button
+			variant="primary"
+			@click="save_timeout_config">
+				Guardar
+			</b-button>
+		</div>
+	</b-modal>
 </div>
 </template>
 <script>
@@ -117,12 +144,20 @@ export default {
 		},
 		input_file_name() {
 			return this.model_name+'-'+this.prop.key+'-input-file-drop'
+		},
+		/**
+		* ID dinámico del modal de configuración para evitar colisiones entre instancias.
+		*/
+		auto_timeout_modal_id() {
+			return 'config-auto-timeout-'+this.model_name+'-'+this.model.id+'-'+this.prop.key
 		}
 	},
 	data() {
 		return {
 			file: null,
 			height_adjusted: false,
+			/* Valor editable para definir el tiempo del flujo automático en segundos. */
+			config_timeout_value: 5,
 		}
 	},
 	methods: {
@@ -189,6 +224,60 @@ export default {
 			setTimeout(() => {
 				document.getElementById('search-image-input').focus()
 			}, 200)
+		},
+		/**
+		* Abre el modal y precarga el timeout actual del owner.
+		*
+		* @return {void}
+		*/
+		open_auto_timeout_config() {
+			/* Se normaliza a Number para evitar que el input reciba string. */
+			const owner_timeout = Number(this.owner && this.owner.img_auto_timeout ? this.owner.img_auto_timeout : 5)
+			this.config_timeout_value = isNaN(owner_timeout) || owner_timeout <= 0 ? 5 : owner_timeout
+			this.$bvModal.show(this.auto_timeout_modal_id)
+		},
+		/**
+		* Persiste el timeout automático y actualiza el modelo de usuario en store.
+		*
+		* @return {void}
+		*/
+		save_timeout_config() {
+			/* Valor solicitado por el usuario para timeout automático en segundos. */
+			const seconds = Number(this.config_timeout_value)
+			if (isNaN(seconds) || seconds <= 0) {
+				this.$toast.error('Ingrese un tiempo válido mayor a 0')
+				return
+			}
+			this.$api.put('user/set-img-auto-timeout/'+seconds)
+			.then(() => {
+				/* Usuario autenticado actual, fuente real de `owner` en los mixins globales. */
+				let auth_user = this.user ? {...this.user} : null
+				if (!auth_user) {
+					this.$toast.error('No se pudo actualizar el usuario en memoria')
+					return
+				}
+
+				/*
+				* Si es empleado, el timeout vive en `auth_user.owner`.
+				* Si es owner, vive en el propio `auth_user`.
+				*/
+				if (auth_user.owner_id) {
+					/* Se clona owner para mantener reactividad en Vue 2. */
+					let owner = {...(auth_user.owner || {})}
+					owner.img_auto_timeout = seconds
+					auth_user.owner = owner
+				} else {
+					auth_user.img_auto_timeout = seconds
+				}
+
+				/* Se actualiza `auth` porque de allí se calcula `owner` en toda la SPA. */
+				this.$store.commit('auth/setUser', auth_user)
+				this.$toast.success('Tiempo de espera actualizado')
+				this.$bvModal.hide(this.auto_timeout_modal_id)
+			})
+			.catch(() => {
+				this.$toast.error('No se pudo actualizar el tiempo de espera')
+			})
 		},
 		launchLuckyFlow() {
 	        this.$bvModal.show('search-image')

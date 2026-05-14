@@ -174,6 +174,15 @@ export default {
 			default: false,
 		},
 		/**
+		 * Permite controlar externamente el item activo.
+		 * Se utiliza como fallback de sincronización visual cuando un padre
+		 * necesita forzar el tab activo sin click manual del usuario.
+		 */
+		selected_item_value: {
+			type: [String, Number],
+			default: null,
+		},
+		/**
 		 * Si true, badge de filtrado y reinicio afectan solo papelera/{model_name} (resultados papelera).
 		 */
 		papelera: {
@@ -183,6 +192,10 @@ export default {
 	},
 	created() {
 		if (!this.set_view && !this.set_sub_view && !this.set_sub_sub_view) {
+			if (this.selected_item_value !== null && this.selected_item_value !== '') {
+				this.selected_item = this.routeString(this.selected_item_value)
+				return
+			}
 			if (typeof this.items != 'undefined' && this.items && this.items.length && !this.selected_item) {
 				this.select(this.items[0])
 			}
@@ -258,6 +271,18 @@ export default {
 			return 'name'
 		}
 	},
+	watch: {
+		/**
+		 * Sincroniza visualmente el item activo cuando cambia la selección externa.
+		 */
+		selected_item_value: {
+			handler(value) {
+				if (value !== null && value !== '') {
+					this.selected_item = this.routeString(value)
+				}
+			},
+		},
+	},
 	methods: {
 		filterModal() {
 			this.$bvModal.show('filter-modal')
@@ -321,7 +346,8 @@ export default {
 				}
 			} 
 
-			this.selected_item = item.name
+			/* Guarda el valor normalizado para que el estado `active` sea consistente. */
+			this.selected_item = this.routeString(this.routeValue(item))
 			if (!this.emitir_setSelected_al_inicio) {
 				this.$emit('setSelected', item)
 			}

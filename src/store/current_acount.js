@@ -25,11 +25,26 @@ export default {
 		delete: null,
 		delete_image: null,
 
+		/**
+		 * Checkbox del modal de borrado de movimiento CC: enviar `compensar_caja` en DELETE.
+		 */
+		compensar_caja_delete: true,
+
 		display: 'table',
 
 		loading: false,
 	},
 	mutations: {
+		/**
+		 * Guarda el valor del checkbox antes de borrar un movimiento de cuenta corriente.
+		 *
+		 * @param {Object} state Estado del módulo.
+		 * @param {boolean} value Checkbox compensar caja.
+		 * @returns {void}
+		 */
+		setCompensarCajaDelete(state, value) {
+			state.compensar_caja_delete = value
+		},
 		setFromModelName(state, value) {
 			state.from_model_name = value 
 		},
@@ -163,13 +178,18 @@ export default {
 			})
 		},
 		delete({ commit, state }) {
-			return axios.delete(`/api/${generals.methods.routeString(state.model_name)}/${state.from_model_name}/${state.delete.id}`)
-			.then(() => {
-				commit('delete')
+			return axios.delete(`/api/${generals.methods.routeString(state.model_name)}/${state.from_model_name}/${state.delete.id}`, {
+				params: {
+					compensar_caja: state.compensar_caja_delete ? 1 : 0,
+				},
 			})
-			.catch((err) => {
-				console.log(err)
-			})
+				.then(() => {
+					commit('delete')
+				})
+				.catch((err) => {
+					console.log(err)
+					return Promise.reject(err)
+				})
 		},
 		deleteImage({ commit, state }) {
 			return axios.delete(`/api/${generals.methods.routeString(state.model_name)}/image/${state.delete_image.id}`)

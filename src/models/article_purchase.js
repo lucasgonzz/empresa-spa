@@ -1,7 +1,19 @@
 export default {
 	properties: [
 		{
-			text: 'Codigo',
+			text: 'Num',
+			key: 'article_id',
+			type: 'text',
+			show: true,
+		},
+		{
+			text: 'Codigo Barras',
+			key: 'bar_code',
+			type: 'text',
+			show: true,
+		},
+		{
+			text: 'Codigo Prov',
 			key: 'provider_code',
 			type: 'text',
 			show: true,

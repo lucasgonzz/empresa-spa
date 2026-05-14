@@ -17,6 +17,7 @@
             :key="payment_methods_key"
             v-model="selected_payment_methods_"
             :payment_method_factory="payment_method_factory"
+            parent-modal-id="payment-method-modal"
             :payment_method_options="payment_methods_with_discounts"
             :show_decimal_help="true"
             :total_a_repartir="total_vender"
@@ -131,7 +132,7 @@ export default {
 
 
                 moneda_id: this.base_moneda, // o 'ARS'
-                cotizacion: this.user.dollar,
+                cotizacion: this.owner.dollar,
                 caja_id: 0,
                 amount_cotizado: '',
 

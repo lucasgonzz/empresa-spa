@@ -441,6 +441,7 @@ export default function __base_store(options = {}) {
 			})
 			.catch((err) => {
 				console.log(err)
+				return Promise.reject(err)
 			})
 		},
 		deleteImageProp({ commit, state }) {

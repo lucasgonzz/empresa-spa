@@ -1,4 +1,6 @@
 import __base_store from '@/store/__base_store'
+import axios from 'axios'
+import generals from '@/common-vue/mixins/generals'
 import payment_methods from './expense/payment_methods'
 
 /**
@@ -15,8 +17,22 @@ export default __base_store({
 		discount_percentage: null,
 		discount_amount: null,
 		selected_payment_methods: [],
+		/**
+		 * Checkbox del modal de borrado: si envía `compensar_caja` al eliminar gasto.
+		 */
+		compensar_caja_delete: true,
 	},
 	mutations: {
+		/**
+		 * Persiste el valor del checkbox "Compensar caja" antes del dispatch `expense/delete`.
+		 *
+		 * @param {Object} state Estado del módulo.
+		 * @param {boolean} value Valor booleano del checkbox.
+		 * @returns {void}
+		 */
+		setCompensarCajaDelete(state, value) {
+			state.compensar_caja_delete = value
+		},
 		/**
 		 * Sincroniza métodos de pago seleccionados para la UI de edición.
 		 *
@@ -129,5 +145,27 @@ export default __base_store({
 	},
 	modules: {
 		payment_methods,
+	},
+	actions: {
+		/**
+		 * DELETE de gasto con query `compensar_caja` según preferencia del usuario.
+		 *
+		 * @param {Object} context commit, state
+		 * @returns {Promise}
+		 */
+		delete({ commit, state }) {
+			return axios.delete(`/api/${generals.methods.routeString(state.model_name)}/${state.delete.id}`, {
+				params: {
+					compensar_caja: state.compensar_caja_delete ? 1 : 0,
+				},
+			})
+				.then(() => {
+					commit('delete')
+				})
+				.catch((err) => {
+					console.log(err)
+					return Promise.reject(err)
+				})
+		},
 	},
 })

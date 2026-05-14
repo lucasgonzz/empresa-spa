@@ -4,6 +4,7 @@
     model_name="current_acount"
     :text="delete_text"
     :actions="actions"
+    show_compensar_caja_checkbox
     @confirmed_final="model_deleted"
     id="delete-current-acount"
     toast="Cuenta corriente eliminada"></confirm>

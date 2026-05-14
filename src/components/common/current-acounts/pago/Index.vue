@@ -66,7 +66,8 @@ hide-footer>
     <payment-methods
     ref="paymentMethodComponent"
     @hacerPago="hacerPago"
-    :pago="pago"></payment-methods>
+    :pago="pago"
+    parent-modal-id="current-acounts-pago"></payment-methods>
     
 
 	<btn-loader

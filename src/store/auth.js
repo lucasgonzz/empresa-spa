@@ -130,6 +130,21 @@ export default {
                 console.log(err)
             })
 		},
+		/**
+		 * Refresca `auth.user` (y `owner` vía respuesta de API) sin overlay global de carga.
+		 * Se usa tras broadcast cuando otro usuario del mismo comercio guardó su perfil/config.
+		 */
+		refresh_user_from_api_silent({ commit }) {
+			return axios.get('/api/user')
+				.then(res => {
+					if (res && res.data.user) {
+						commit('setUser', res.data.user)
+					}
+				})
+				.catch(err => {
+					console.log(err)
+				})
+		},
 		deleteImage({ commit, state }) {
 			// return axios.delete(`/api/delete-current-image/user/${state.user.id}`)
 			return axios.delete(`/api/delete-image-prop/user/${state.user.id}/image_url`)

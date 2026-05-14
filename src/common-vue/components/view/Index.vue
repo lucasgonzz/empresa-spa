@@ -21,6 +21,7 @@
     	:show_btn_restaurar="show_btn_restaurar"
     	:size="modal_size"
     	:model_name="model_name"
+    	:confirm_compensar_caja="confirm_compensar_caja"
     	:prop_to_send_on_save="prop_to_send_on_save"
     	:props_to_send_on_save="props_to_send_on_save"
     	:emit_on_saved_instead_continue="emit_on_saved_instead_continue"
@@ -390,6 +391,13 @@ export default {
 		props_to_send_on_save_function: {
 			type: String,
 			default: null,
+		},
+		/**
+		 * Activa el checkbox de compensación de caja en el modal de borrado del modelo (p. ej. gastos).
+		 */
+		confirm_compensar_caja: {
+			type: Boolean,
+			default: false,
 		},
 	},
 	computed: {

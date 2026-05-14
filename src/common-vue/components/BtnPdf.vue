@@ -1,7 +1,6 @@
 <template>
 	<b-button
 	v-if="model.id"
-	block
 	@click="print"
 	variant="outline-danger">
 		<i class="icon-print"></i>

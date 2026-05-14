@@ -104,11 +104,11 @@ export default {
 }
 
 .support-ticket-status.open {
-	background: #2bbf5b;
+	background: #dc3545;
 }
 
 .support-ticket-status.closed {
-	background: #f44336;
+	background: #2bbf5b;
 }
 
 .support-ticket-content {

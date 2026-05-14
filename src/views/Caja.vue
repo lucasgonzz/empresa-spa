@@ -54,13 +54,11 @@ export default {
 				return this.cajas 
 			}
 
-			let cajas = []
+			const cajas = []
 
 			this.cajas.forEach(caja => {
 
-				let has_permission = caja.users.find(user => user.id == this.user.id)
-
-				if (typeof has_permission != 'undefined') {
+				if (this.user_can_view_caja_in_tesoreria(caja)) {
 
 					console.log('agregando la caja '+caja.name)
 
@@ -70,7 +68,31 @@ export default {
 
 			return cajas 
 		}
-	}
+	},
+	methods: {
+		/**
+		 * Determina si el usuario logueado debe ver la fila de esta caja en el módulo de tesorería.
+		 * Orden: si hay `treasury_users`, solo ellos ven; si no hay, se usa `users`; si ambas listas están vacías, todos ven.
+		 *
+		 * @param {Object} caja Modelo caja del store (con `treasury_users` y `users`).
+		 * @returns {boolean}
+		 */
+		user_can_view_caja_in_tesoreria(caja) {
+			const treasury_users = caja.treasury_users || []
+
+			if (treasury_users.length) {
+				return typeof treasury_users.find(user => user.id == this.user.id) !== 'undefined'
+			}
+
+			const users = caja.users || []
+
+			if (users.length) {
+				return typeof users.find(user => user.id == this.user.id) !== 'undefined'
+			}
+
+			return true
+		},
+	},
 }
 </script>
 <style lang="sass">

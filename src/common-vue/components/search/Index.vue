@@ -30,10 +30,12 @@
 		:props_to_send_to_api="props_to_send_to_api"
 		:emit_selected_with_null="emit_selected_with_null"
 		:function_props_to_send_to_api="function_props_to_send_to_api"
+		:tax_id_afip_lookup_on_second_enter="tax_id_afip_lookup_on_second_enter"
 		@callSearchModal="callSearchModal"
 		@setQuery="setQuery"
 		@setNotShowModel="setNotShowModel"
-		@setSelected="setSelected">
+		@setSelected="setSelected"
+		@requestClientAfipLookup="onRequestClientAfipLookupFromModal">
 			
 			<template #search_input_right>
 				<slot name="search_input_right"></slot>
@@ -224,6 +226,13 @@ export default {
 			type: String,
 			default: null
 		},
+		/**
+		 * Reenviado al modal de búsqueda: segundo Enter con CUIT/DNI sin resultados abre flujo AFIP (solo si el padre lo usa).
+		 */
+		tax_id_afip_lookup_on_second_enter: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	data() {
 		return {
@@ -288,6 +297,14 @@ export default {
 		}
 	},
 	methods: {
+		/**
+		 * Reemite al consumidor del search-component el pedido de consulta AFIP desde el modal.
+		 *
+		 * @param {{ query: string, normalized_digits: string }} payload
+		 */
+		onRequestClientAfipLookupFromModal(payload) {
+			this.$emit('requestClientAfipLookup', payload)
+		},
 		searchOnModels() {
 			if (this.prop && this.search_query.length > 1) {
 				this.resetModels(false)

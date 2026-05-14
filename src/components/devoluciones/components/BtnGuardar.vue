@@ -115,11 +115,13 @@ export default {
 				&& this.facturar_nota_credito
 			) {
 				let afip_ticket = this.sale.afip_tickets.find(m => m.id == this.facturar_nota_credito)
+				// Tolerancia en pesos: el total de devolución puede exceder al de la factura hasta este monto (p. ej. redondeos).
+				let max_total_devolucion_over_invoice = 2
 				if (
 					typeof afip_ticket != 'undefined' 
-					&& Number(this.total_devolucion) > Number(afip_ticket.importe_total)
+					&& Number(this.total_devolucion) > Number(afip_ticket.importe_total) + max_total_devolucion_over_invoice
 				) {
-					this.$toast.error('El total de la devolucion ('+this.price(this.total_devolucion)+') no puede ser mayor que la Factura N° '+afip_ticket.cbte_numero+' ('+ this.price(afip_ticket.importe_total) +')')
+					this.$toast.error('El total de la devolucion ('+this.price(this.total_devolucion)+') no puede superar en más de '+this.price(max_total_devolucion_over_invoice)+' al total de la Factura N° '+afip_ticket.cbte_numero+' ('+ this.price(afip_ticket.importe_total) +')')
 					ok = false
 				} 
 			}

@@ -12,8 +12,6 @@
 
 			<alertar-personalizado></alertar-personalizado>
 
-			<buscar-por-cuit></buscar-por-cuit>
-
 			<omitir-en-cuenta-corriente></omitir-en-cuenta-corriente>
 
 			<guardar-como-presupuesto></guardar-como-presupuesto>
@@ -30,7 +28,6 @@
 import TotalPreviusSales from '@/components/vender/components/remito/total-previus-sales/Index.vue'
 import SelectClient from '@/components/vender/components/client/SelectClient'
 import AlertarPersonalizado from '@/components/vender/components/client/AlertarPersonalizado'
-import BuscarPorCuit from '@/components/vender/components/client/buscar-por-cuit/Index'
 import OmitirEnCuentaCorriente from '@/components/vender/components/client/OmitirEnCuentaCorriente'
 import GuardarComoPresupuesto from '@/components/vender/components/client/GuardarComoPresupuesto'
 import Discounts from '@/components/vender/components/client/Discounts'
@@ -41,7 +38,6 @@ export default {
 		TotalPreviusSales,
 		SelectClient,
 		AlertarPersonalizado,
-		BuscarPorCuit,
 		OmitirEnCuentaCorriente,
 		GuardarComoPresupuesto,
 		Discounts,

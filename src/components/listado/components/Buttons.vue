@@ -11,144 +11,140 @@ class="buttons-listado">
 	:block="false"
 	:loader="loading_online"></btn-loader> -->
 
+	<b-button-group size="sm">
+		<!-- Variantes -->
+		<b-button 
+		v-if="show_variants" 
+		:variant="getVariant()"
+		id="btn-variantes"
+		@click.stop="showVariants()"
+		title="Variantes">
+			<b-badge
+			class="m-r-5"
+			variant="danger"
+			v-if="model.article_variants.length">
+				{{ cantidad_variantes }}
+			</b-badge>
+			<i class="bi bi-layers"></i>
+		</b-button>
 
-	<!-- Variantes -->
-	<b-button 
-	v-if="show_variants" 
-	:variant="getVariant()"
-	size="sm"
-	id="btn-variantes"
-	@click.stop="showVariants()" 
-	class="m-l-10">
-		<b-badge
-		variant="danger"
-		v-if="model.article_variants.length">
-			{{ cantidad_variantes }}
-		</b-badge>
-		Variantes
-	</b-button>
-
-
-	<!-- Acopios -->
-	<b-button 
-	v-if="hasExtencion('acopios')" 
-	variant="outline-danger"
-	size="sm"
-	@click.stop="show_acopios()" 
-	class="m-l-10">
-		<b-badge
-		variant="danger"
-		v-if="model.sales_with_deliveries_in_acopio.length > 0">
-			{{ model.sales_with_deliveries_in_acopio.length }}
-		</b-badge>
-		Aco
-	</b-button>
-
-
-
-	<!-- Proveedores -->
-	<b-button 
-	variant="outline-secondary"
-	size="sm"
-	dusk="btn-movimiento-depositos"
-	v-if="model.providers.length"
-	@click.stop="show_providers" 
-	class="m-l-10 btn-movimiento-depositos">
-		<i class="icon-users"></i>
-	</b-button>
-
-
-	<!-- Movimientos de depositos -->
-	<b-button 
-	variant="outline-secondary"
-	size="sm"
-	dusk="btn-movimiento-depositos"
-	v-if="show_btn_mover_stock"
-	@click.stop="show_address_movement" 
-	class="m-l-10 btn-movimiento-depositos">
-		<i class="icon-refresh"></i>
-	</b-button>
-
-
-
-	<!-- Movimientos de stock -->
-	<b-button 
-	variant="secondary"
-	size="sm"
-	dusk="btn-stock-movements"
-	@click.stop="stockMovements()" 
-	class="m-l-10 btn-stock-movement">
-		<i class="icon-database"></i>
-	</b-button>
-
-	<!-- Cammbios de precios -->
-	<b-button 
-	variant="secondary"
-	size="sm"
-	@click.stop="priceChanges()" 
-	class="m-l-10">
-		<i class="icon-dolar"></i>
-	</b-button>
-
-	<!-- Ventas -->
-	<b-button 
-	variant="primary"
-	size="sm"
-	@click.stop="showSales()" 
-	class="m-l-10">
-		Ventas
-	</b-button>
-
-
-	<!-- Recetas -->
-	<b-button 
-	v-if="hasExtencion('produccion')"
-	variant="success"
-	size="sm"
-	@click.stop="showArticleInRecipes()" 
-	class="m-l-10">
-		<i class="icon-chart"></i>
-		Recetas
-	</b-button>
-
-
-	<!-- Ubicaciones -->
-	<b-button 
-	variant="warning"
-	size="sm"
-	v-if="model.addresses.length"
-	@click.stop="show_ubications()" 
-	class="m-l-10">
-		<i class="icon-location"></i>
-	</b-button>
-
-
-
-	<!-- MercadoLibre -->
-	<b-button 
-	v-if="hasExtencion('usa_mercado_libre')"
-	variant="warning"
-	size="sm"
-	@click.stop="show_meli"
-	class="m-l-10">
-		<b-badge
+		<!-- Recetas -->
+		<b-button 
+		v-if="hasExtencion('produccion')"
 		variant="success"
-		v-if="model.me_li_id">
-			.
-		</b-badge>
-		Meli
-	</b-button>
+		@click.stop="showArticleInRecipes()"
+		title="Recetas">
+			<i class="bi bi-journal-text"></i>
+		</b-button>
+
+	</b-button-group>
 
 
-	<!-- TiendaNube -->
-	<b-button 
-	v-if="hasExtencion('usa_tienda_nube')"
-	variant="success"
-	size="sm"
-	@click.stop="show_tienda_nube"
-	class="m-l-10">
-		<img src="@/assets/nuevos-nav-icons/tienda_nube.png" alt="">
-	</b-button>
+	<b-button-group class="m-l-10" size="sm">
+		<!-- Movimientos de depositos -->
+		<b-button 
+		variant="outline-secondary"
+		dusk="btn-movimiento-depositos"
+		v-if="show_btn_mover_stock"
+		@click.stop="show_address_movement"
+		class="btn-movimiento-depositos"
+		title="Movimientos entre depósitos">
+			<i class="bi bi-arrow-left-right"></i>
+		</b-button>
+
+		<!-- Movimientos de stock -->
+		<b-button 
+		variant="secondary"
+		dusk="btn-stock-movements"
+		@click.stop="stockMovements()"
+		class="btn-stock-movement"
+		title="Movimientos de stock">
+			<i class="bi bi-arrow-down-up"></i>
+		</b-button>
+
+		<!-- Ubicaciones -->
+		<b-button 
+		variant="outline-secondary"
+		v-if="model.addresses.length"
+		@click.stop="show_ubications()"
+		title="Ubicaciones">
+			<i class="bi bi-geo-alt"></i>
+		</b-button>
+
+
+		<!-- Acopios -->
+		<b-button 
+		v-if="hasExtencion('acopios')" 
+		variant="outline-secondary"
+		@click.stop="show_acopios()"
+		title="Acopios">
+			<b-badge
+			class="m-r-5"
+			variant="danger"
+			v-if="model.sales_with_deliveries_in_acopio.length > 0">
+				{{ model.sales_with_deliveries_in_acopio.length }}
+			</b-badge>
+			<i class="bi bi-archive"></i>
+		</b-button>
+	</b-button-group>
+
+	<b-button-group class="m-l-10" size="sm">
+
+		<!-- Proveedores -->
+		<b-button 
+		variant="outline-success"
+		dusk="btn-movimiento-depositos"
+		v-if="model.providers.length"
+		@click.stop="show_providers"
+		class="btn-movimiento-depositos"
+		title="Proveedores">
+			<i class="bi bi-people"></i>
+		</b-button>
+
+		<!-- Cambios de precios -->
+		<b-button 
+		variant="outline-success"
+		@click.stop="priceChanges()"
+		title="Cambios de precio">
+			<i class="bi bi-currency-dollar"></i>
+		</b-button>
+
+		<!-- Ventas -->
+		<b-button 
+		variant="success"
+		@click.stop="showSales()"
+		title="Ventas">
+			<i class="bi bi-cart3"></i>
+		</b-button>
+
+	</b-button-group>
+
+	<b-button-group class="m-l-10" size="sm">
+
+		<!-- MercadoLibre -->
+		<b-button 
+		v-if="hasExtencion('usa_mercado_libre')"
+		variant="primary"
+		@click.stop="show_meli"
+		title="Mercado Libre">
+			<b-badge
+			class="m-r-5"
+			variant="success"
+			v-if="model.me_li_id">
+				.
+			</b-badge>
+			<i class="bi bi-shop"></i>
+		</b-button>
+
+		<!-- TiendaNube -->
+		<b-button 
+		v-if="hasExtencion('usa_tienda_nube')"
+		variant="primary"
+		@click.stop="show_tienda_nube"
+		title="Tienda Nube">
+			<i class="bi bi-cloud"></i>
+		</b-button>
+	</b-button-group>
 </div>
 </template>
 <script>
@@ -332,7 +328,4 @@ export default {
 <style lang="sass">
 .buttons-listado
 	margin-left: 15px
-
-	img  	
-		width: 20px !important
 </style>

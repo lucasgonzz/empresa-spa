@@ -5,6 +5,7 @@
     :delete_text="sale_delete_text"
     check_permissions
     not_show_delete_text
+    confirm_compensar_caja
     :show_btn_delete="show_btn_delete"
     model_name="sale">
         <template v-slot:model_modal_header>

@@ -94,6 +94,14 @@ export default {
             type: Number,
             default: null
         },
+        /**
+         * Si se informa, al abrirse ese `b-modal` (id) se vuelve a aplicar el factory
+         * sobre las filas ya cargadas (cotización, moneda base, etc.) sin perder montos.
+         */
+        parent_modal_id: {
+            type: String,
+            default: null,
+        },
     },
     computed: {
         __payment_method_options() {
@@ -127,6 +135,25 @@ export default {
                 })
             },
         },
+        /**
+         * Cotización del dólar del comercio (owner), según la sesión actual en Vuex.
+         * Cuando el owner la actualiza y otros usuarios reciben el refresh de usuario, esto cambia
+         * y se vuelve a aplicar el factory sobre las filas de pago abiertas.
+         *
+         * @returns {number|null}
+         */
+        owner_dollar_reference() {
+            const auth_user = this.$store.state.auth.user
+            if (!auth_user) {
+                return null
+            }
+            if (auth_user.owner_id && auth_user.owner) {
+                const d = auth_user.owner.dollar
+                return d === null || typeof d === 'undefined' ? null : Number(d)
+            }
+            const d = auth_user.dollar
+            return d === null || typeof d === 'undefined' ? null : Number(d)
+        },
     },
     data() {
         return {
@@ -142,15 +169,108 @@ export default {
                     
                 this.payment_methods_local = Array.isArray(new_value) ? new_value : []
             }
-        }
+        },
+        /**
+         * Si el owner cambia el dólar (p. ej. vía broadcast + refresh de sesión), las filas ya montadas
+         * seguían mostrando `cotizacion` vieja en PaymentMethodsStep: se re-mergea con el factory del padre.
+         *
+         * @param {number|null} new_val Nuevo valor de cotización de referencia.
+         * @param {number|null} old_val Valor anterior.
+         * @returns {void}
+         */
+        owner_dollar_reference(new_val, old_val) {
+            if (old_val === null || typeof old_val === 'undefined') {
+                return
+            }
+            if (new_val === null || typeof new_val === 'undefined') {
+                return
+            }
+            if (Number(new_val) === Number(old_val)) {
+                return
+            }
+            if (!this.payment_methods_proxy || !this.payment_methods_proxy.length) {
+                return
+            }
+            this.refresh_loaded_rows_with_factory()
+        },
     },
     mounted() {
         // Si viene vacío (vender), igual mostramos 1 fila lista para usar.
         if (!this.payment_methods_proxy || !this.payment_methods_proxy.length) {
             this.payment_methods_proxy = [this.payment_method_factory()]
         }
+        this.register_parent_modal_refresh_listener()
+    },
+    beforeDestroy() {
+        this.unregister_parent_modal_refresh_listener()
     },
     methods: {
+        /**
+         * Escucha la apertura del modal padre para refrescar defaults del factory (dólar, moneda, etc.).
+         *
+         * @returns {void}
+         */
+        register_parent_modal_refresh_listener() {
+            if (!this.parent_modal_id) {
+                return
+            }
+            const self = this
+            this._on_parent_modal_shown = function (bvEvent, modal_id) {
+                if (modal_id !== self.parent_modal_id) {
+                    return
+                }
+                self.refresh_loaded_rows_with_factory()
+            }
+            this.$root.$on('bv::modal::shown', this._on_parent_modal_shown)
+        },
+        /**
+         * @returns {void}
+         */
+        unregister_parent_modal_refresh_listener() {
+            if (this._on_parent_modal_shown) {
+                this.$root.$off('bv::modal::shown', this._on_parent_modal_shown)
+                this._on_parent_modal_shown = null
+            }
+        },
+        /**
+         * Reaplica `payment_method_factory()` sobre cada fila existente: actualiza cotización/moneda
+         * (y `__row_id` si el factory lo define) manteniendo montos y demás campos del usuario.
+         *
+         * @returns {void}
+         */
+        refresh_loaded_rows_with_factory() {
+            const rows = this.payment_methods_proxy
+            if (!Array.isArray(rows) || !rows.length) {
+                this.payment_methods_proxy = [this.payment_method_factory()]
+                this.$nextTick(() => {
+                    this.$emit('changed', this.payment_methods_proxy)
+                })
+                return
+            }
+            const next = []
+            for (let i = 0; i < rows.length; i++) {
+                next.push(this.merge_payment_method_with_factory_defaults(rows[i]))
+            }
+            this.payment_methods_proxy = next
+            this.$nextTick(() => {
+                this.$emit('changed', next)
+            })
+        },
+        /**
+         * @param {Object} old_row Fila actual del v-model.
+         * @returns {Object} Fila fusionada con defaults vigentes del factory.
+         */
+        merge_payment_method_with_factory_defaults(old_row) {
+            const fresh = this.payment_method_factory()
+            const patch = {
+                moneda_id: fresh.moneda_id,
+                cotizacion: fresh.cotizacion,
+            }
+            if (Object.prototype.hasOwnProperty.call(fresh, '__row_id')) {
+                patch.__row_id = fresh.__row_id
+            }
+            return Object.assign({}, old_row, patch)
+        },
 
         update_payment_method_field(index, key, value) {
             let next = this.payment_methods_proxy.slice()

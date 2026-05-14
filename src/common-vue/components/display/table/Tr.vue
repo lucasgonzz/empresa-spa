@@ -416,7 +416,15 @@ export default {
 	.input-lg
 		width: 350px !important
 
+.img-fluid
+	// El contenedor de carga debe ocupar todo el ancho disponible de la celda.
+	width: 100%
+
 .article-thumbnail
+	// La imagen se renderiza al ancho completo del contenedor de la celda.
+	display: block
+	width: 100%
+	max-width: none
 	cursor: zoom-in
 
 .image-preview-overlay

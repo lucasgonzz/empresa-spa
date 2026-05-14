@@ -4,6 +4,7 @@
         <multi-payment-methods
             v-model="pago.current_acount_payment_methods"
             :payment_method_factory="payment_method_factory"
+            :parent_modal_id="parent_modal_id"
             :show_decimal_help="true"
             :address_id="address_id"
             @changed="update_total"
@@ -35,6 +36,13 @@ export default {
         pago: {
             type: Object,
             required: true,
+        },
+        /**
+         * Id del `b-modal` que contiene este bloque; se reenvía a MultiPaymentMethods para refrescar al abrir.
+         */
+        parent_modal_id: {
+            type: String,
+            default: null,
         },
     },
     computed: {
@@ -100,7 +108,7 @@ export default {
                 credit_card_payment_plan_id: 0,
                 caja_id: 0,
                 moneda_id: this.base_moneda, // o 'ARS'
-                cotizacion: this.user.dollar,
+                cotizacion: this.owner.dollar,
                 amount_cotizado: '',
                 
 

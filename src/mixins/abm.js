@@ -101,6 +101,12 @@ export default {
 					],
 				},
 				{
+					view: 'integraciones',
+					models: [
+						'platform_connector',
+					],
+				},
+				{
 					view: 'tienda online',
 					models: [
 		    			'title',

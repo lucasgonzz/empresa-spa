@@ -610,7 +610,7 @@ export default {
 			if (property.can) {
 				return this.can(property.can)
 			}
-			if (property.show_only_if_is_created && !model.id) {
+			if (property.show_only_if_is_created && (model && !model.id)) {
 				return false
 			}
 			if (check_if_is_empty && model && ((!model[property.key] || model[property.key] == '') && !property.function )) {

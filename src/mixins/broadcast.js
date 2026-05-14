@@ -71,6 +71,16 @@ export default {
                     this.$store.dispatch('support_ticket/applyTicketFromMessage', event_data.message)
                 }
             })
+            /**
+             * Cierre / reapertura / nombre desde admin-api (sync HTTP + broadcast).
+             * Actualiza bandeja y estado del ticket abierto en el modal (bloqueo de envío y panel “nuevo ticket”).
+             */
+            .listen('.SupportTicketUpdated', (event_data) => {
+                if (!event_data || !event_data.ticket) {
+                    return
+                }
+                this.$store.commit('support_ticket/upsertFromBroadcast', event_data.ticket)
+            })
         }
 	}
 }

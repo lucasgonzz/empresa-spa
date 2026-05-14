@@ -83,6 +83,25 @@ export default {
 				],
 			}
 		},
+		{
+			text: 'Visibilidad en tesorería',
+			store: 'employee',
+			search_on_models_by: 'name',
+			type: 'search',
+			key: 'treasury_users',
+			descriptions: [
+				'Si no agrega empleados aquí, se usa la lista de «Empleados con acceso». Si ambas listas quedan vacías, todos los empleados ven la caja en tesorería.',
+			],
+			belongs_to_many: {
+				model_name: 'users',
+				props_to_show: [
+					{
+						text: 'Nombre',
+						key: 'name',
+					}
+				],
+			}
+		},
 	],
 	singular_model_name_spanish: 'Caja',
 	plural_model_name_spanish: 'Cajas',

@@ -6,7 +6,7 @@
 				class="form-control mr-2"
 				type="text"
 				placeholder="Escribí un mensaje..."
-				:disabled="!can_send || sending"
+				:disabled="!can_send"
 				v-model="body"
 				@paste="on_paste"
 				@keydown.enter.prevent="emit_send" />
@@ -19,21 +19,21 @@
 			<button
 				class="btn btn-outline-secondary mr-2"
 				type="button"
-				:disabled="!can_send || sending || recording"
+				:disabled="!can_send || recording"
 				@click="toggle_recording">
 				{{ recording ? 'Grabando...' : 'Audio' }}
 			</button>
 			<button
 				class="btn btn-outline-secondary mr-2"
 				type="button"
-				:disabled="!can_send || sending"
+				:disabled="!can_send"
 				@click="open_file_input">
 				Adjuntar
 			</button>
 			<button
 				class="btn btn-success"
 				type="button"
-				:disabled="!can_send || sending"
+				:disabled="!can_send"
 				@click="emit_send">
 				Enviar
 			</button>
@@ -47,10 +47,6 @@ export default {
 		can_send: {
 			type: Boolean,
 			default: true,
-		},
-		sending: {
-			type: Boolean,
-			default: false,
 		},
 	},
 	data() {
@@ -68,6 +64,17 @@ export default {
 		}
 	},
 	methods: {
+		/**
+		 * Enfoca el campo de texto del mensaje si existe y no está deshabilitado.
+		 * Lo usa el panel de soporte al abrirse para que el usuario pueda escribir al instante.
+		 */
+		focus_text_input() {
+			const input_el = this.$refs.text_input
+			if (!input_el || input_el.disabled) {
+				return
+			}
+			input_el.focus()
+		},
 		/**
 		 * Toma imagen pegada (Ctrl+V) desde portapapeles y la adjunta.
 		 */

@@ -9,7 +9,6 @@
 			autocomplete="off"
 			:id="model_name + '-' + prop.key"
 			:disabled="disabled"
-			:placeholder="'Ingresar ' + prop_text"
 			:type="prop.type"
 			@keyup.enter="$emit('enter')"
 			@blur="$emit('blur')"

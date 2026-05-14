@@ -23,7 +23,8 @@
 						:class="[
 							'support-message-bubble',
 							has_delivery_error(message) ? 'support-message-bubble--error' : '',
-						]">
+						]"
+						:title="message_sent_at_tooltip(message)">
 						<div v-if="message.body">{{ message.body }}</div>
 						<a
 							v-if="message.attachments && message.attachments.length"
@@ -76,6 +77,17 @@
 				</div>
 			</div>
 			<div
+				v-if="show_new_ticket_bar"
+				class="support-conversation-new-ticket-panel">
+				<p class="support-conversation-new-ticket-text">{{ new_ticket_hint }}</p>
+				<button
+					type="button"
+					class="btn btn-primary btn-sm support-conversation-new-ticket-btn"
+					@click="$emit('start-new-ticket')">
+					Iniciar nuevo ticket
+				</button>
+			</div>
+			<div
 				ref="scroll_end_anchor"
 				class="support-conversation-scroll-end"
 				aria-hidden="true" />
@@ -87,6 +99,9 @@
 <script>
 /**
  * Emite `retry-message` cuando el usuario reintenta un envío fallido.
+ * Emite `start-new-ticket` cuando el usuario abre un hilo nuevo desde la barra contextual.
+ *
+ * La barra de ticket cerrado / iniciar nuevo ticket se renderiza debajo de los mensajes del hilo.
  */
 export default {
 	props: {
@@ -104,6 +119,21 @@ export default {
 		loading: {
 			type: Boolean,
 			default: false,
+		},
+		/**
+		 * Muestra panel para iniciar ticket abierto cuando el seleccionado está cerrado
+		 * o no hay conversación activa elegible.
+		 */
+		show_new_ticket_bar: {
+			type: Boolean,
+			default: false,
+		},
+		/**
+		 * Texto explicativo para el panel de nuevo ticket (lo arma el padre según contexto).
+		 */
+		new_ticket_hint: {
+			type: String,
+			default: '',
 		},
 	},
 	/**
@@ -237,6 +267,52 @@ export default {
 			return h + ':' + (m < 10 ? '0' : '') + m
 		},
 		/**
+		 * Fecha y hora local para tooltip (mensaje enviado).
+		 *
+		 * @param {string} value ISO u otro formato aceptado por Date.
+		 * @returns {string}
+		 */
+		format_sent_datetime(value) {
+			if (!value) {
+				return ''
+			}
+			const d = new Date(value)
+			if (isNaN(d.getTime())) {
+				return ''
+			}
+			const pad = function (n) {
+				return (n < 10 ? '0' : '') + n
+			}
+			return (
+				pad(d.getDate()) +
+				'/' +
+				pad(d.getMonth() + 1) +
+				'/' +
+				d.getFullYear() +
+				' ' +
+				pad(d.getHours()) +
+				':' +
+				pad(d.getMinutes())
+			)
+		},
+		/**
+		 * Texto del atributo title al hacer hover sobre la burbuja.
+		 *
+		 * @param {Object} message Modelo de mensaje en el hilo.
+		 * @returns {string}
+		 */
+		message_sent_at_tooltip(message) {
+			if (message._client_pending && !message.created_at) {
+				return 'Enviando…'
+			}
+			const raw = message.created_at || message.delivered_at
+			const formatted = this.format_sent_datetime(raw)
+			if (!formatted) {
+				return ''
+			}
+			return 'Enviado el ' + formatted
+		},
+		/**
 		 * Construye URL de adjunto usando path almacenado.
 		 */
 		attachment_url(attachment) {
@@ -303,6 +379,27 @@ export default {
 	background: rgba(247, 249, 251, 0.92);
 }
 
+.support-conversation-new-ticket-panel {
+	flex-shrink: 0;
+	margin-top: 16px;
+	margin-bottom: 8px;
+	padding: 12px;
+	background: #e8f4fc;
+	border: 1px solid #b8daff;
+	border-radius: 8px;
+}
+
+.support-conversation-new-ticket-text {
+	margin: 0 0 10px;
+	font-size: 13px;
+	line-height: 1.4;
+	color: #1a4a6e;
+}
+
+.support-conversation-new-ticket-btn {
+	font-weight: 600;
+}
+
 .support-conversation-scroll-end {
 	height: 0;
 	width: 0;
@@ -339,6 +436,7 @@ export default {
 	border-radius: 10px;
 	background: #fff;
 	border: 1px solid #ececec;
+	cursor: help;
 }
 
 .support-message.mine .support-message-bubble {
