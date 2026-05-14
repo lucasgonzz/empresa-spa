@@ -11,7 +11,7 @@
 		:show_btn_create="false"
 		order_list_by="order_status"
 		model_name="order">
-			<template v-slot:modal_buttons="slotProps">
+			<template v-slot:modal_header="slotProps">
 				<btn-status />
 				<btn-cancel />
 			</template>

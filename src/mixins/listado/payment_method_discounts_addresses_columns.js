@@ -75,9 +75,9 @@ export default {
 				props = props.filter(prop => prop.key != 'images')
 			}
 
-			if (this.hasExtencion('no_usar_codigos_de_barra')) {
-				props = props.filter(prop => prop.key != 'bar_code')
-			}
+			// if (this.hasExtencion('no_usar_codigos_de_barra')) {
+			// 	props = props.filter(prop => prop.key != 'bar_code')
+			// }
 
 			if (this.authenticated 
 				&& (

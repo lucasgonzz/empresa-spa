@@ -4,7 +4,7 @@
 		
 		<deposit-movements-modal></deposit-movements-modal>
 
-		<modal-button></modal-button>
+		<!-- <modal-button></modal-button> -->
 
 	</div>
 </template>
@@ -12,7 +12,7 @@
 export default {
 	components: {
 		DepositMovementsModal: () => import('@/components/listado/components/horizontal-nav/deposit-movements/modal/Index'),
-		ModalButton: () => import('@/components/listado/components/horizontal-nav/deposit-movements/ModalButton'),
+		// ModalButton: () => import('@/components/listado/components/horizontal-nav/deposit-movements/ModalButton'),
 	},
 	computed: {
 		addresses() {

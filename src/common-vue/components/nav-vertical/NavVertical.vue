@@ -52,15 +52,24 @@
 				    	</span>
 			    	</div>
 
-			    	<img 
-			    	v-if="route.image_url"
-			    	:src="image(route)">
+			    	<!-- Contenedor para icono/imagen + badge: el badge va en esquina sin ocupar hueco en el flex -->
+			    	<div class="route-icon-badge-wrap">
+				    	<i
+				    	v-if="route.icon"
+				    	:class="get_icon_class(route)"
+				    	class="route-icon"></i>
+				    	<img 
+				    	v-else-if="route.image_url"
+				    	class="route-nav-img"
+				    	:src="image(route)">
 
-			    	<b-badge
-			    	variant="danger"
-			    	v-if="route.budget_function && get_function_value(route) > 0">
-			    		{{ get_function_value(route) }}
-			    	</b-badge>
+				    	<b-badge
+				    	class="route-alert-badge"
+				    	variant="danger"
+				    	v-if="route.budget_function && get_function_value(route) > 0">
+				    		{{ get_function_value(route) }}
+				    	</b-badge>
+			    	</div>
 	    		</div>
 				
 				<div 
@@ -190,6 +199,17 @@ export default {
 		image(route) {
 			return require('@/assets/'+route.image_url) 
 		},
+		/**
+		 * Devuelve la clase de Bootstrap Icons configurada para la ruta.
+		 *
+		 * @param {Object} route Ruta definida en router/routes.js.
+		 * @returns {String}
+		 */
+		get_icon_class(route) {
+			// Fallback preventivo para evitar render vacío si falta icon.
+			const icon_name = route && route.icon ? route.icon : 'circle'
+			return 'bi bi-' + icon_name
+		},
 		setShow() {
 			console.log('setShow')
 			this.show_nav_mobile = !this.show_nav_mobile
@@ -269,20 +289,49 @@ export default {
 			img
 				transition: all .2s 
 				transform: scale(1.5) translateX(-2px)
+			.route-icon
+				transition: all .2s 
+				transform: scale(1.18) translateX(-1px)
 		&:active 
 			transform: translateX(20px)
 		img 
 			width: 25px
 
-
-		.badge 
-			width: 35px
-			height: 35px
-			margin-right: 1.5px
-			display: flex 
-			align-items: center 
+		/* Área fija del icono para que el badge absoluto no desplace el layout */
+		.route-icon-badge-wrap
+			position: relative
+			flex-shrink: 0
+			display: flex
+			align-items: center
 			justify-content: center
-			font-size: 17px
+			width: 25px
+			min-height: 25px
+
+		.route-nav-img
+			display: block
+
+		.route-icon
+			font-size: 19px
+			width: 25px
+			text-align: center
+
+		/* Badge compacto superpuesto en la esquina del icono (no consume espacio en la fila) */
+		.route-alert-badge
+			position: absolute
+			top: -5px
+			right: -8px
+			min-width: 16px
+			height: 16px
+			padding: 0 4px
+			margin: 0
+			display: inline-flex
+			align-items: center
+			justify-content: center
+			font-size: 10px
+			font-weight: bold
+			line-height: 1
+			border-radius: 8px
+			box-shadow: 0 0 0 1px rgba(68, 68, 68, 0.9)
 
 
 	.active-item

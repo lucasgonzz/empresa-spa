@@ -10,6 +10,7 @@
   "dependencies": {
     "@undecaf/vue-barcode-scanner": "^0.9.3",
     "axios": "^1.2.1",
+    "bootstrap-icons": "^1.13.1",
     "bootstrap-vue": "^2.23.1",
     "chart.js": "^2.9.4",
     "chartjs-plugin-datalabels": "^0.7.0",

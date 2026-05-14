@@ -969,6 +969,9 @@ export default {
 			background: rgba(255,255,255,.8)
 	
 	.common-table
+		// Redondeo global de 3 esquinas para tablas del sistema.
+		border-radius: 10px 10px 10px 0
+		overflow: hidden
 		position: relative
 		border-spacing: 0px
 		width: 100%

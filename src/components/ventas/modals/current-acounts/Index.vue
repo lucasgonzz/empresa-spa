@@ -3,6 +3,8 @@
     <confirm
     :text="text_delete"
     :actions="actions"
+    model_name="current_acount"
+    show_compensar_caja_checkbox
     id="delete-current-acount"
     toast="Cuenta corriente eliminada"></confirm>
     <pago></pago>    

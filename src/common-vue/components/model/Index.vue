@@ -7,6 +7,7 @@
 	    :not_show_delete_text="not_show_delete_text"
 	    :text="delete_text"
 	    :model_name="model_name"
+	    :show_compensar_caja_checkbox="confirm_compensar_caja"
 	    :actions="[model_name+'/delete']"
 	    :id="'delete-'+model_name"></confirm>
 
@@ -26,6 +27,11 @@
 			name="model_modal_header"
 			:model="model"></slot>
 			
+			<btn-pdf
+			class="m-b-15"
+			v-if="show_btn_pdf"
+			:model_name="model_name"
+			:model="model"></btn-pdf>
 
 			<model-form
 			@save="save"
@@ -47,12 +53,6 @@
 				</template> 
 				<template v-slot:default="slotProps">
 					<slot :model="slotProps.model"></slot>
-
-	    			<btn-pdf
-	    			v-if="show_btn_pdf"
-	    			:model_name="model_name"
-	    			:model="slotProps.model"></btn-pdf>
-
 				</template>
 
 				<template
@@ -76,7 +76,9 @@
 			</model-form>
 
 			<div
-			v-if="show_limpiar_formulario">
+			v-if="false">
+			<!-- <div
+			v-if="show_limpiar_formulario"> -->
 				<b-form-checkbox
 				:value="1"
 				:uncheked-value="0"
@@ -258,6 +260,13 @@ export default {
 		solo_emitir_delete: {
 			type: Boolean,
 			default: null,
+		},
+		/**
+		 * Si es true, el modal de confirmación de borrado muestra la opción de compensar movimientos en caja (venta/gasto).
+		 */
+		confirm_compensar_caja: {
+			type: Boolean,
+			default: false,
 		},
 	},
 	components: {

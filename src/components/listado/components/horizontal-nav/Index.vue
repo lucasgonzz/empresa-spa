@@ -1,14 +1,20 @@
 <template>
 	
-	<div class="j-end align-center">
-	
-		<btn-inventory-performance></btn-inventory-performance>
+	<div class="j-end align-center w-100">
 		
 		<buscador-header></buscador-header>
+	
+		<btn-inventory-performance
+		class="d-none d-md-block"></btn-inventory-performance>
 
-		<stock-suggestion></stock-suggestion>
+		<stock-suggestion
+		class="d-none d-md-block"></stock-suggestion>
 
-		<deposit-movements></deposit-movements>
+		<deposit-movements
+		class="d-none d-md-block"></deposit-movements>
+
+		<deposit-buttons
+		class="d-none d-md-block"></deposit-buttons>
 
 		<promociones-vinoteca></promociones-vinoteca>
 
@@ -24,6 +30,7 @@ export default {
 		DepositMovements: () => import('@/components/listado/components/horizontal-nav/deposit-movements/Index'),
 		PromocionesVinoteca: () => import('@/components/listado/components/horizontal-nav/promociones-vinoteca/Index'),
 		ArticlePdfPersonalizado: () => import('@/components/listado/components/horizontal-nav/ArticlePdfPersonalizado'),
+		DepositButtons: () => import('@/components/listado/components/horizontal-nav/DepositButtons'),
 
 	}
 }

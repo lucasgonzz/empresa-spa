@@ -53,6 +53,7 @@ Vue.use(VueToast, {
 // Bootstrap
 import { BootstrapVue } from 'bootstrap-vue'
 import '@/sass/_custom.scss'
+import 'bootstrap-icons/font/bootstrap-icons.css'
 Vue.use(BootstrapVue)
 
 // Axios

@@ -90,7 +90,12 @@ export default {
 				},
 			]
 
-
+			if (this.afip_data.dni) {
+				properties_to_override.push({
+					key: 'dni',
+					value: this.afip_data.dni,
+				})
+			}
 			this.cerrar()
 
 			this.setModel(null, 'client', properties_to_override, true, false)
@@ -162,7 +167,10 @@ export default {
 		},
 		cerrar() {
 			this.$bvModal.hide('afip-data-modal')
-			document.getElementById('cuit-para-buscar').value = ''
+			let legacy_input = document.getElementById('cuit-para-buscar')
+			if (legacy_input) {
+				legacy_input.value = ''
+			}
 		}
 	}
 }

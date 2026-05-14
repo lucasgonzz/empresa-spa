@@ -8,6 +8,7 @@
 	:show_btn_delete="is_admin"
 	show_filter_modal
 	show_previus_days
+	confirm_compensar_caja
 	model_name="expense">
 		<template #display_top>
 			<total-expenses></total-expenses>

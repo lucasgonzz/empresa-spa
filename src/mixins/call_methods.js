@@ -33,6 +33,7 @@ export default [
     'meli_item_condition',
     'article_ubication',
     'online_template',
+    'platform',
     'pais_exportacion',
     'moneda',
     'address',

@@ -1,5 +1,10 @@
 <template>
 	<div>
+		<modal-result
+		:title="afip_modal_title"
+		:afip_data="afip_data"
+		:client_model="client_model_for_afip_modal"></modal-result>
+
 		<div
 		v-if="index_previus_sales == 0 && !budget">
 			<search-component
@@ -12,8 +17,11 @@
 			:props_to_filter="['num', 'name', 'phone', 'dni']"
 			show_btn_create
 			search_from_api
+			:tax_id_afip_lookup_on_second_enter="true"
+			placeholder="Buscar cliente, CUIT o DNI"
 			:props_extras="props_extras"
 			set_selected_model_with_model_prop
+			@requestClientAfipLookup="onRequestClientAfipLookup"
 			@clearSelected="clearSelected"></search-component>
 		</div>
 		<div
@@ -48,7 +56,15 @@ export default {
 	// mixins: [vender, vender_set_total],
 	components: {
 		SearchComponent: () => import('@/common-vue/components/search/Index'),
+		ModalResult: () => import('@/components/vender/components/client/buscar-por-cuit/ModalResult'),
 	}, 
+	data() {
+		return {
+			afip_modal_title: '',
+			afip_data: null,
+			client_model_for_afip_modal: null,
+		}
+	},
 	computed: {
 		price_types() {
 			return this.$store.state.price_type.models 
@@ -93,6 +109,48 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Segundo Enter en el buscador sin resultados: consulta AFIP por CUIT o DNI y abre el modal de alta/uso de cliente.
+		 *
+		 * @param {{ query: string, normalized_digits: string }} payload Criterio original y solo dígitos para la URL.
+		 */
+		onRequestClientAfipLookup(payload) {
+			let self = this
+			let digits = payload.normalized_digits
+			this.$store.commit('auth/setMessage', 'Consultando a AFIP')
+			this.$store.commit('auth/setLoading', true)
+			this.$api.get('client/get-afip-information-by-cuit/' + encodeURIComponent(digits))
+				.then(function (res) {
+					self.$store.commit('auth/setLoading', false)
+					self.$store.commit('auth/setMessage', '')
+					let data = res.data
+					if (data.hubo_un_error) {
+						self.$toast.error('Afip dice: ' + data.error, {
+							duration: 7000,
+						})
+						self.afip_data = null
+						self.client_model_for_afip_modal = null
+						return
+					}
+					self.afip_data = data.afip_data
+					let existing = data.model || data.client_model
+					if (existing) {
+						self.afip_modal_title = 'Cliente ya existente en el sistema'
+						self.client_model_for_afip_modal = existing
+					} else {
+						self.afip_modal_title = 'Resultados (cliente no registrado en sistema)'
+						self.client_model_for_afip_modal = null
+					}
+					self.$bvModal.hide('select_client_vender-search-modal')
+					self.$bvModal.show('afip-data-modal')
+				})
+				.catch(function (err) {
+					self.$store.commit('auth/setLoading', false)
+					self.$store.commit('auth/setMessage', '')
+					console.log(err)
+					self.$toast.error('Error al buscar')
+				})
+		},
 		setSelected(result) {
 
 			// this.bloquear_metodo_de_pago()

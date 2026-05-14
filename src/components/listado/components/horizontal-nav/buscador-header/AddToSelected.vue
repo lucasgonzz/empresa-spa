@@ -5,7 +5,7 @@
 	:unchecked-value="false"
 	@click="set_value"
 	:variant="get_variant">
-		<i class="icon-check"></i>
+		<i class="bi bi-plus-circle"></i>
 	</b-button>
 </template>
 <script>
@@ -19,9 +19,9 @@ export default {
 		},
 		get_variant() {
 			if (this.add_buscador_to_selected) {
-				return 'success'
+				return 'secondary'
 			}
-			return 'outline-success'
+			return 'outline-secondary'
 		},
 		add_buscador_to_selected: {
 			get() {

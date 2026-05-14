@@ -63,6 +63,44 @@ export default {
                 }
             })
             this.Echo.channel('global_notification.'+this.owner_id)
+            .listen('.CompanyOwnerContextUpdated', (payload) => {
+                if (!this.user) {
+                    return
+                }
+                /** Detalle de cambios enviado por la API (español). */
+                const change_descriptions = payload.change_descriptions || []
+                /** Id del usuario que guardó el perfil; no mostramos modal en su sesión. */
+                const updated_by_user_id = parseInt(payload.updated_by_user_id, 10)
+
+                this.$store.dispatch('auth/refresh_user_from_api_silent')
+                    .then(() => {
+                        if (this.$route.name === 'consultora_de_precios') {
+                            return
+                        }
+                        if (updated_by_user_id === parseInt(this.user.id, 10)) {
+                            return
+                        }
+                        if (!change_descriptions.length) {
+                            return
+                        }
+                        this.$store.commit('global_notification/set_functions_to_execute', [
+                            {
+                                btn_text: 'Entendido',
+                                function_name: 'close_notification_modal',
+                                btn_variant: 'primary',
+                            },
+                        ])
+                        this.$store.commit('global_notification/set_info_to_show', [
+                            {
+                                title: 'Detalle de los cambios',
+                                parrafos: change_descriptions,
+                            },
+                        ])
+                        this.$store.commit('global_notification/set_message_text', 'Se actualizó la configuración del sistema.')
+                        this.$store.commit('global_notification/set_color_variant', 'info')
+                        this.$bvModal.show('global-notification')
+                    })
+            })
             .notification((notification) => {
 
                 console.log('global notificacion:')

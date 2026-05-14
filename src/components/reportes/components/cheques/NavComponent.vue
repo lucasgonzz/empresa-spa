@@ -90,6 +90,12 @@ export default {
 
 				]
 			} else {
+				/**
+				 * Debe reflejar las mismas claves que devuelve la API en `models.emitido`
+				 * (ChequeController@index). Antes faltaban «Pronto a vencerse» y «Vencidos»:
+				 * los cheques en esos buckets existían en la respuesta pero no había pestaña ni
+				 * badge, y al sumar «total de cheques» desde la barra parecía faltar uno.
+				 */
 				return [
 					{
 						name: 'Pendientes',
@@ -99,6 +105,16 @@ export default {
 					{
 						name: 'Disponibles para cobrar',
 						alert: this.cheques.emitido.disponibles_para_cobrar.length,
+					},
+
+					{
+						name: 'Pronto a vencerse',
+						alert: this.cheques.emitido.pronto_a_vencerse.length,
+					},
+
+					{
+						name: 'Vencidos',
+						alert: this.cheques.emitido.vencidos.length,
 					},
 
 					{

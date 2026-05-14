@@ -14,6 +14,10 @@
 		v-if="view == 'notas-de-credito'"
 		model_name="nota_credito">
 
+			<template #horizontal_nav_center>
+				<btn-excel-export></btn-excel-export>
+			</template>
+
 			<template #table-prop-sale_id="props">
 				<btn-sale
 				:nota_credito="props.model"></btn-sale>
@@ -37,6 +41,7 @@
 export default {
 	components: {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
+		BtnExcelExport: () => import('@/components/comprobantes/components/notas-de-credito/BtnExcelExport'),
 		BtnSale: () => import('@/components/comprobantes/components/notas-de-credito/table-buttons/BtnSale'),
 		BtnAfipNotaCredito: () => import('@/components/comprobantes/components/notas-de-credito/table-buttons/BtnAfipNotaCredito'),
         SaleModal: () => import('@/components/common/SaleModal'),

@@ -2,24 +2,23 @@
 	<div
 	:id="id"
 	class="model-form">
+		<group-porps
+		v-if="has_group_props"
+		:group_items="visible_group_items"
+		:selected_group_title="selected_group_title"
+		@setSelectedGroup="set_selected_group_title"></group-porps>
+
 		<b-form-row
 		class="m-b-0">
+			
 			<b-col
 			v-for="(prop, index) in properties"
-			v-if="showProperty(prop, model, false, true)"
+			v-if="show_property_in_form(prop)"
 			:md="getCol(prop, 6, input_full_width)"
 			:lg="getCol(prop, 4, input_full_width)"
 			:xl="getCol(prop, 3, input_full_width)"
 			:key="'model-prop-'+index">
-				<div
-				v-if="prop.group_title">
-					<hr>
-					<h4>
-						{{ prop.group_title }}
-					</h4>
-				</div>
-				<div
-				v-else>
+				<div>
 					
 					<b-form-group
 					:class="colorLabel(prop)"
@@ -30,13 +29,13 @@
 						:id="'label-'+prop.key"
 						class="form-label"
 						:class="{ 'form-label--has-help': prop.description || prop.descriptions }">
-							<i 
+							<!-- <i 
 							v-if="prop.has_many"
 							class="icon-down"></i>
 							<i 
 							v-else
-							class="icon-right"></i>
-							<strong>{{ getLabel(prop) }}</strong>
+							class="icon-right"></i> -->
+							{{ getLabel(prop) }}
 						</label>
 
 
@@ -123,7 +122,6 @@
 
 							       <!--  <b-form-datepicker
 									v-else-if="prop.type == 'date'"
-							        placeholder="Fecha"
 							        :disabled="isDisabled(prop, form_to_filter)"
 							        v-model="model[prop.key]"></b-form-datepicker> -->
 
@@ -138,7 +136,6 @@
 									v-else-if="prop.type == 'time'"
 									:id="model_name+'-'+prop.key"
 							        :disabled="isDisabled(prop, form_to_filter)"
-									:placeholder="'Ingresar '+propText(prop)"
 									type="time"
 									@keyup.enter="clickEnter(prop)"
 									v-model="model[prop.key]"></b-time>
@@ -186,7 +183,6 @@
 									:id="model_name+'-'+prop.key"
 									v-else-if="prop.type == 'textarea'"
 							        :disabled="isDisabled(prop, form_to_filter)"
-									:placeholder="'Ingresar '+propText(prop)"
 									:rows="10"
 									:type="prop.type"
 									v-model="model[prop.key]"></b-form-textarea>
@@ -345,30 +341,31 @@
 			</b-col>
 		</b-form-row>
 		
+		<!-- Metadatos de fechas: misma línea visual que LoginForm (fila gris + prefijo + input integrado) -->
 		<b-form-row
 		class="m-b-0"
 		v-if="model.id && !from_has_many">
 			<b-col
 			md="6">
-				<label
-				class="form-label">
-					<i class="icon-right"></i>
-					Creado
-				</label>
-				<b-form-input
-				disabled
-				:value="date(model.created_at)+' '+since(model.created_at)"></b-form-input>
+				<b-input-group
+				prepend="Creado: ">
+					<b-form-input
+					class="model-form__meta-control"
+					disabled
+					:value="date(model.created_at, true)+' - '+since(model.created_at)"
+					aria-label="Registro creado el"></b-form-input>
+				</b-input-group>
 			</b-col>
 			<b-col
 			md="6">
-				<label
-				class="form-label">
-					<i class="icon-right"></i>
-					Actualizado
-				</label>
-				<b-form-input
-				disabled
-				:value="date(model.updated_at)+' '+since(model.updated_at)"></b-form-input>
+				<b-input-group
+				prepend="Actualizado: ">
+					<b-form-input
+					class="model-form__meta-control"
+					disabled
+					:value="date(model.updated_at, true)+' - '+since(model.updated_at)"
+					aria-label="Registro actualizado el"></b-form-input>
+				</b-input-group>
 			</b-col>
 		</b-form-row>
 		
@@ -379,9 +376,6 @@
 		:afip_data="afip_result_data"
 		:model="afip_result_model"
 		:model_name="model_name"></cuit-result>
-
-		<select-expense-payment-methods-modal
-		v-if="model_name == 'expense'"></select-expense-payment-methods-modal>
 
 		<!-- <slot 
 		v-if="!from_has_many"
@@ -409,6 +403,7 @@ import BelongsToManyCheckbox from '@/common-vue/components/model/BelongsToManyCh
 import Cards from '@/common-vue/components/display/cards/Index'
 import Images from '@/common-vue/components/model/images/Index'
 import BtnLoader from '@/common-vue/components/BtnLoader'
+import GroupPorps from '@/common-vue/components/model/GroupPorps'
 import PaymentMethodsTable from '@/components/expenses/components/PaymentMethodsTable'
 
 // import BtnDelete from '@/common-vue/components/BtnDelete'
@@ -426,12 +421,13 @@ export default {
 		FieldSearchInput: () => import('@/common-vue/components/model/form/FieldSearchInput'),
 		FieldSelectInput: () => import('@/common-vue/components/model/form/FieldSelectInput'),
 		BelongsToManyTable: () => import('@/common-vue/components/model/form/BelongsToManyTable'),
-		SelectExpensePaymentMethodsModal: () =>  import('@/components/expenses/modals/select-payment-methods/Index'),
+		// SelectExpensePaymentMethodsModal: () =>  import('@/components/expenses/modals/select-payment-methods/Index'),
 		PaymentMethodsTable,
 		HasMany,
 		BelongsToManyCheckbox,
 		Cards,
 		Images,
+		GroupPorps,
 		BtnLoader,
 		// BtnDelete,
 		DatePicker: () => import('@/common-vue/components/model/form/DatePicker'),
@@ -483,6 +479,7 @@ export default {
 		},
 	},
 	mounted() {
+		this.ensure_selected_group_title()
 		this.setFocus()
 	},
 	data() {
@@ -498,6 +495,9 @@ export default {
 
 			afip_result_data: null,
 			afip_result_model: null,
+
+			/* Guarda el `group_title` activo cuando el formulario tiene navegación por grupos. */
+			selected_group_title: null,
 		}
 	},
 	computed: {
@@ -513,8 +513,209 @@ export default {
 		id() {
 			return Math.random()+Date.now()
 		},
+		/**
+		 * Determina si el modelo declara al menos un separador de grupo.
+		 */
+		has_group_props() {
+			let has_groups = false
+			this.properties.forEach(prop => {
+				if (prop && prop.group_title) {
+					has_groups = true
+				}
+			})
+			return has_groups
+		},
+		/**
+		 * Retorna el primer `group_title` definido, usado como fallback
+		 * para props legacy que aparecen antes del primer grupo.
+		 */
+		first_group_title() {
+			let first_title = null
+			this.properties.forEach(prop => {
+				if (!first_title && prop && prop.group_title) {
+					first_title = prop.group_title
+				}
+			})
+			return first_title
+		},
+		/**
+		 * Arma los items visibles para el `HorizontalNav` de grupos.
+		 */
+		visible_group_items() {
+			/* Acumula nombres de grupo visibles evitando duplicados. */
+			let visible_group_titles = []
+
+			this.properties.forEach(prop => {
+				if (prop && prop.group_title && this.group_has_visible_props(prop.group_title)) {
+					let already_added = visible_group_titles.find(group_title => {
+						return group_title == prop.group_title
+					})
+					if (!already_added) {
+						visible_group_titles.push(prop.group_title)
+					}
+				}
+			})
+
+			/* Formatea cada grupo como item compatible con `HorizontalNav`. */
+			let group_items = []
+			visible_group_titles.forEach(group_title => {
+				group_items.push({
+					name: group_title,
+				})
+			})
+			return group_items
+		},
+	},
+	watch: {
+		/**
+		 * Recalcula selección de grupo cuando cambian las props del modelo.
+		 */
+		properties: {
+			handler() {
+				this.ensure_selected_group_title()
+			},
+			deep: true,
+		},
 	},
 	methods: {
+		/**
+		 * Actualiza el grupo activo desde el componente de navegación.
+		 *
+		 * @param {String} group_title Nombre del grupo seleccionado.
+		 * @returns {void}
+		 */
+		set_selected_group_title(group_title) {
+			/* Evita estados inválidos cuando el hijo emite vacío por error. */
+			if (!group_title) {
+				return
+			}
+			this.selected_group_title = group_title
+		},
+		/**
+		 * Garantiza un grupo activo válido al abrir/cambiar formulario con grupos.
+		 *
+		 * @returns {void}
+		 */
+		ensure_selected_group_title() {
+			/* Si no hay grupos, se limpia estado y no se aplica navegación. */
+			if (!this.has_group_props) {
+				this.selected_group_title = null
+				return
+			}
+
+			/* Obtiene títulos realmente visibles para no seleccionar tabs vacíos. */
+			let visible_group_titles = []
+			this.visible_group_items.forEach(group_item => {
+				visible_group_titles.push(group_item.name)
+			})
+
+			/* Si no hay grupos visibles, limpia selección para evitar filtros inconsistentes. */
+			if (!visible_group_titles.length) {
+				this.selected_group_title = null
+				return
+			}
+
+			/*
+				Conserva la selección actual si sigue visible;
+				de lo contrario, toma el primer grupo visible como default.
+			*/
+			let has_selected_group_visible = visible_group_titles.find(group_title => {
+				return group_title == this.selected_group_title
+			})
+			if (!has_selected_group_visible) {
+				this.selected_group_title = visible_group_titles[0]
+			}
+		},
+		/**
+		 * Indica si una propiedad debe mostrarse dentro del formulario actual.
+		 *
+		 * @param {Object} prop Definición de propiedad del modelo.
+		 * @returns {Boolean}
+		 */
+		show_property_in_form(prop) {
+			/* Nunca renderizar el separador como campo del formulario. */
+			if (!prop || prop.group_title) {
+				return false
+			}
+
+			/* Respeta toda la lógica existente de visibilidad condicional. */
+			if (!this.showProperty(prop, this.model, false, true)) {
+				return false
+			}
+
+			/* Sin grupos configurados, mantener render original del formulario completo. */
+			if (!this.has_group_props) {
+				return true
+			}
+
+			/* Si aún no hay grupo activo válido, no forzar render parcial inconsistente. */
+			if (!this.selected_group_title) {
+				return false
+			}
+
+			/* Muestra solo props del grupo activo. */
+			return this.get_group_title_for_prop(prop) == this.selected_group_title
+		},
+		/**
+		 * Devuelve el grupo al que pertenece una prop según su posición.
+		 * Las props previas al primer grupo se asignan al primer grupo visible.
+		 *
+		 * @param {Object} target_prop Propiedad a evaluar.
+		 * @returns {String|null}
+		 */
+		get_group_title_for_prop(target_prop) {
+			/* Si no hay grupos, no aplica segmentación. */
+			if (!this.has_group_props || !target_prop) {
+				return null
+			}
+
+			/* Se va actualizando el grupo actual mientras se recorre en orden original. */
+			let current_group_title = null
+			let group_title_for_prop = null
+			this.properties.forEach(prop => {
+				if (prop && prop.group_title) {
+					current_group_title = prop.group_title
+					return
+				}
+				if (prop === target_prop) {
+					group_title_for_prop = current_group_title
+				}
+			})
+
+			/* Fallback para props legacy declaradas antes del primer `group_title`. */
+			if (!group_title_for_prop) {
+				return this.first_group_title
+			}
+
+			return group_title_for_prop
+		},
+		/**
+		 * Determina si un grupo tiene al menos una prop visible en el form actual.
+		 *
+		 * @param {String} group_title Grupo a verificar.
+		 * @returns {Boolean}
+		 */
+		group_has_visible_props(group_title) {
+			/* Validación defensiva para evitar evaluaciones innecesarias. */
+			if (!group_title) {
+				return false
+			}
+
+			/* Recorre props y confirma visibilidad efectiva con la lógica existente. */
+			let has_visible_props = false
+			this.properties.forEach(prop => {
+				if (
+					!has_visible_props
+					&& prop
+					&& !prop.group_title
+					&& this.get_group_title_for_prop(prop) == group_title
+					&& this.showProperty(prop, this.model, false, true)
+				) {
+					has_visible_props = true
+				}
+			})
+			return has_visible_props
+		},
 		has_many_deleted() {
 			this.$emit('has_many_deleted')
 		},
@@ -655,7 +856,7 @@ export default {
 				this.properties.forEach(prop => {
 					if (!ok) {
 						let element = document.getElementById(this.model_name+'-'+prop.key)
-						if (element && prop.type == 'text') {
+						if (element && prop.type == 'text' && this.show_property_in_form(prop)) {
 							setTimeout(() => {
 								element.focus()
 							}, 200)
@@ -1147,4 +1348,50 @@ export default {
 		// font-size: 1.5em
 		font-weight: bold
 		margin-left: 25px
+
+	// Campos de solo lectura (creado / actualizado): estilo login moderno (fila #f3f4f6, focus-within, input sin borde).
+	.model-form__meta-field
+		margin-bottom: 0
+
+	.model-form__meta-input-row
+		display: flex
+		align-items: center
+		background: #f3f4f6
+		border-radius: 10px
+		padding: 0 0 0 0.65rem
+		border: 1px solid transparent
+		transition: border-color 0.15s ease, box-shadow 0.15s ease
+
+	.model-form__meta-input-row:focus-within
+		border-color: rgba(0, 137, 102, 0.35)
+		box-shadow: 0 0 0 3px rgba(0, 137, 102, 0.12)
+
+	// Prefijo izquierdo (reemplaza icono del login): etiqueta corta + dos puntos.
+	.model-form__meta-prefix
+		flex-shrink: 0
+		padding-right: 0.35rem
+		font-size: 0.8rem
+		font-weight: 600
+		color: #6b7280
+		white-space: nowrap
+
+	.model-form__meta-control
+		border: none !important
+		background: transparent !important
+		box-shadow: none !important
+		padding-left: 0.35rem !important
+		padding-right: 0.75rem !important
+		height: 46px !important
+		font-size: 0.95rem
+		color: #111827
+
+	.model-form__meta-control:focus
+		box-shadow: none !important
+
+	// Bootstrap atenúa disabled: mismo contraste que el bloque gris.
+	.model-form__meta-control:disabled
+		opacity: 1
+		color: #4b5563
+		-webkit-text-fill-color: #4b5563
+		cursor: default
 </style>

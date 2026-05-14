@@ -1,9 +1,10 @@
 <template>
 	<b-button
 	v-if="is_admin"
-	class="m-r-10"
+	class="m-l-15"
 	v-b-modal="'inventory-performance'"
-	variant="warning">
-		<i class="icon-info"></i>
+	variant="success">
+		<i class="bi bi-box-seam m-r-5"></i>
+		Inventario
 	</b-button>
 </template>

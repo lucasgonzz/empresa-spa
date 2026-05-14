@@ -2,11 +2,11 @@
 <b-modal
 title="Metodos de pago"
 hide-footer
+size="lg"
 id="payment-methods-details">
 	<payment-method
-	v-for="(payment_method, index) in model.current_acount_payment_methods"
-	:key="index"
-	:model="payment_method"></payment-method>
+	v-if="model.current_acount_payment_methods && model.current_acount_payment_methods.length"
+	:models="model.current_acount_payment_methods"></payment-method>
 
 	<p
 	v-if="model.cheques && model.cheques.length">

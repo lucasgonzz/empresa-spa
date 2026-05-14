@@ -95,6 +95,7 @@ import article_ticket_info from '@/store/article_ticket_info'
 import check from '@/store/check'
 import panel_control from '@/store/panel_control/index'
 import meli_order from '@/store/meli_order'
+import meli_order_status from '@/store/meli_order_status'
 import me_li_payment from '@/store/me_li_payment'
 import articles_pre_import from '@/store/articles_pre_import'
 import reportes from '@/store/reportes/index'
@@ -176,6 +177,9 @@ import column_position from '@/store/column_position'
 import table_column_preference from '@/store/table_column_preference'
 import pdf_column_option from '@/store/pdf_column_option'
 import pdf_column_profile from '@/store/pdf_column_profile'
+
+import platform from '@/store/platform'
+import platform_connector from '@/store/platform_connector'
 
 import price_type_surchage from '@/store/price_type_surchage'
 
@@ -345,6 +349,7 @@ export default new Vuex.Store({
         check,
         panel_control,
         meli_order,
+        meli_order_status,
         me_li_payment,
         articles_pre_import,
         reportes,
@@ -422,6 +427,9 @@ export default new Vuex.Store({
         table_column_preference,
         pdf_column_option,
         pdf_column_profile,
+
+        platform,
+        platform_connector,
 
         price_type_surchage,
 

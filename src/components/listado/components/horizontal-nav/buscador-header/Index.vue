@@ -1,7 +1,8 @@
 <template>
 	<div
 	class="align-center buscador-listado">
-		<add-to-selected></add-to-selected>
+		<add-to-selected
+		class="d-none d-md-block"></add-to-selected>
 		<name-search
 		v-if="buscar_por_nombre"></name-search>
 		<barcode-search
@@ -20,6 +21,7 @@ export default {
 			if (
 				this.hasExtencion('no_usar_codigos_de_barra')
 				|| this.hasExtencion('atajo_buscar_por_nombre')
+				|| this.is_mobile
 			) {
 				return true
 			}
@@ -30,12 +32,21 @@ export default {
 </script>
 <style lang="sass">
 .buscador-listado
+	@media screen and (max-width: 766px)
+		width: 100%
+
+	.search-component 
+		width: 100%
+
 	button
 		border-radius: 5px 0 0 5px !important
 
-	.cont-search, .input-search
+	.cont-search, .input-search 
 		border-radius: 0 5px 5px 0 !important
 
+	.cont-search > .icon
+		border-radius: 0 !important
+
 	.input-search
-		height: 38px !important
+		height: 36.5px !important
 </style>

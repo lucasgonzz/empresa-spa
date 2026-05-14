@@ -16,6 +16,7 @@
 				id="messages">
 					<div 
 					v-for="message in selected_buyer.messages"
+					:key="message.id || message.created_at || message.text"
 					class="message s-2"
 					:class="getClassMessage(message)">
 						<p class="text">
@@ -26,7 +27,7 @@
 						v-if="hasArticle(message)"
 						:model="message.article"></card-component>
 						<p class="since">
-							{{ since(message.created_at) }}
+							{{ format_message_datetime(message.created_at) }}
 						</p>
 					</div>
 				</div>
@@ -40,11 +41,11 @@
 			<div
 			class="messages"
 			v-else>
-				<div class="message shadow-2 commerce-message">
+				<div class="message shadow-2 outgoing-message">
 					<b-skeleton width="100%"></b-skeleton>
 					<b-skeleton width="50px"></b-skeleton>
 				</div>
-				<div class="message shadow-2 buyer-message">
+				<div class="message shadow-2 incoming-message">
 					<b-skeleton width="100%"></b-skeleton>
 					<b-skeleton width="50px"></b-skeleton>
 				</div>
@@ -53,6 +54,7 @@
 	</div>
 </template>
 <script>
+import moment from 'moment'
 import online from '@/mixins/online'
 export default {
 	mixins: [online],
@@ -68,9 +70,25 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Define la clase visual de cada mensaje según su origen.
+		 * from_buyer=true representa mensaje entrante del comprador.
+		 *
+		 * @param {Object} message Mensaje de conversación.
+		 * @returns {string}
+		 */
 		getClassMessage(message) {
-			return message.from_buyer ? 'buyer-message bg-primary' : 'commerce-message'
-		}
+			return message.from_buyer ? 'incoming-message' : 'outgoing-message'
+		},
+		/**
+		 * Formatea fecha y hora con el mismo patrón del chat de soporte.
+		 *
+		 * @param {string} created_at Fecha de creación del mensaje.
+		 * @returns {string}
+		 */
+		format_message_datetime(created_at) {
+			return moment(created_at).format('DD/MM/YYYY HH:mm')
+		},
 	},
 	watch: {
 		selected_buyer() {
@@ -88,30 +106,39 @@ export default {
 #container-messages
 	height: calc(100% - 70px)
 	overflow-y: scroll
+	padding: 12px
+	background: #f7f9fb
 #messages
 	display: flex
 	flex-direction: column
-	padding: 1em
-.commerce-message
+	gap: 8px
+.incoming-message
+	align-self: flex-start
+	color: #111827
+.outgoing-message
 	align-self: flex-end
-	color: #000 
-	.since
-		color: rgba(0,0,0,.7)
-.buyer-message
-	color: #FFF
-	.since
-		color: rgba(255,255,255,.7)
+	color: #111827
 .message
-	border-radius: .5em
-	padding: .5em
-	margin-bottom: 1em
-	width: 300px
+	border-radius: 10px
+	padding: 8px 10px
+	margin-bottom: 0
+	width: auto
+	max-width: 80%
 	background: #FFF
+	border: 1px solid #ececec
 	.text
 		text-align: left
+		white-space: pre-wrap
 	.since
-		font-size: .7em
+		font-size: 11px
 		text-align: right
+		color: #6b7280
+		margin-top: 4px
+		line-height: 1.2
+.outgoing-message.message
+	background: #dcf8c6
+.incoming-message.message
+	background: #ffffff
 	p 
 		margin: 0
 </style>

@@ -11,16 +11,19 @@
 			<div class="support-chat-main">
 				<div class="support-chat-main-header">
 					<strong>Soporte</strong>
-					<button class="btn btn-sm btn-outline-secondary" @click="$emit('close')">Cerrar</button>
+					<button class="btn btn-sm btn-warning" @click="$emit('close')">Esconder</button>
 				</div>
 				<conversation
 					:messages="messages"
 					:selected_ticket="selected_ticket"
 					:loading="messages_loading"
-					@retry-message="on_retry_message" />
+					:show_new_ticket_bar="show_new_ticket_bar"
+					:new_ticket_hint="new_ticket_hint_text"
+					@retry-message="on_retry_message"
+					@start-new-ticket="on_start_new_ticket" />
 				<message-input
+					ref="support_message_input"
 					:can_send="can_send_message"
-					:sending="sending"
 					@send="send_message" />
 			</div>
 		</div>
@@ -58,12 +61,6 @@ export default {
 			return this.$store.state.support_message.models
 		},
 		/**
-		 * Flag de envío en progreso para deshabilitar input.
-		 */
-		sending() {
-			return this.$store.state.support_message.sending
-		},
-		/**
 		 * Carga de la bandeja (getModels al abrir o refrescos).
 		 */
 		tickets_loading() {
@@ -90,18 +87,74 @@ export default {
 			}
 			return this.selected_ticket.status == 'open'
 		},
+		/**
+		 * Muestra la barra de “nuevo ticket” si el hilo actual no permite escribir o no hay uno elegido.
+		 */
+		show_new_ticket_bar() {
+			if (this.messages_loading || this.tickets_loading) {
+				return false
+			}
+			if (this.selected_ticket && this.selected_ticket.status !== 'open') {
+				return true
+			}
+			if (!this.selected_ticket_id && this.tickets.length > 0) {
+				return true
+			}
+			return false
+		},
+		/**
+		 * Mensaje contextual para la barra de nuevo ticket (ticket cerrado vs sin selección).
+		 */
+		new_ticket_hint_text() {
+			if (this.selected_ticket && this.selected_ticket.status !== 'open') {
+				return 'Este ticket está cerrado. Para una nueva consulta podés abrir un ticket nuevo con soporte.'
+			}
+			return 'Elegí un ticket en la lista o iniciá uno nuevo para escribir al equipo de soporte.'
+		},
 	},
 	created() {
+		const self = this
 		// Carga ticketera inicial al abrir panel.
 		this.$store.dispatch('support_ticket/getModels')
-		.then(() => {
-			// Selecciona primer ticket disponible para abrir historial.
-			if (this.tickets.length) {
-				this.select_ticket(this.tickets[0].id)
-			}
+			.then(() => {
+				// Prioriza un ticket abierto para poder escribir sin pasar por cerrados.
+				let id_to_select = null
+				let i = 0
+				for (i = 0; i < self.tickets.length; i = i + 1) {
+					if (self.tickets[i].status === 'open') {
+						id_to_select = self.tickets[i].id
+						break
+					}
+				}
+				if (id_to_select === null && self.tickets.length) {
+					id_to_select = self.tickets[0].id
+				}
+				if (id_to_select !== null) {
+					self.select_ticket(id_to_select)
+				}
+				// Tras definir ticket activo, reintenta foco (el input puede habilitarse o quedar disabled).
+				self.$nextTick(function () {
+					self.focus_support_message_input()
+				})
+			})
+	},
+	mounted() {
+		const self = this
+		// Tras pintar el overlay, enfoca el input de mensaje (mejor UX al abrir soporte).
+		this.$nextTick(function () {
+			self.focus_support_message_input()
 		})
 	},
 	methods: {
+		/**
+		 * Delega el foco en el campo de texto del componente hijo MessageInput.
+		 */
+		focus_support_message_input() {
+			const input_component = this.$refs.support_message_input
+			if (input_component && typeof input_component.focus_text_input === 'function') {
+				input_component.focus_text_input()
+			}
+		},
 		/**
 		 * Cambia ticket activo y recarga mensajes correspondientes.
 		 */
@@ -132,6 +185,25 @@ export default {
 				return
 			}
 			this.$store.dispatch('support_message/retrySendMessage', message)
+		},
+		/**
+		 * POST ticket abierto (o reutiliza el existente), selecciona ese hilo y enfoca el input.
+		 */
+		on_start_new_ticket() {
+			const self = this
+			this.$store.commit('auth/setLoading', true)
+			this.$store.commit('auth/setMessage', 'Preparando nuevo ticket de soporte')
+			this.$store.dispatch('support_ticket/createOpenTicket')
+				.then(function (model) {
+					self.$store.commit('auth/setLoading', false)
+					self.$store.commit('auth/setMessage', '')
+					if (model && model.id != null) {
+						self.select_ticket(model.id)
+					}
+					self.$nextTick(function () {
+						self.focus_support_message_input()
+					})
+				})
 		},
 	},
 }

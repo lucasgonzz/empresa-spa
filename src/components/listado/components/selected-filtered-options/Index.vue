@@ -1,6 +1,8 @@
 <template>
 	<div>
 		
+		<search-image-automatica></search-image-automatica>
+		
 		<article-ticket-option-drop-down></article-ticket-option-drop-down>
 		
 		<articles-pdf-option-drop-down></articles-pdf-option-drop-down>
@@ -27,6 +29,7 @@ export default {
 		SeleccionEspecial: () => import('@/components/listado/components/selected-filtered-options/SeleccionEspecial'),
 		ExcelExport: () => import('@/components/listado/components/selected-filtered-options/ExcelExport'),
 		ConfirmResetStock: () => import('@/components/listado/modals/ConfirmResetStock'),
+		SearchImageAutomatica: () => import('@/components/listado/components/selected-filtered-options/SearchImageAutomatica'),
 	}
 }
 </script>

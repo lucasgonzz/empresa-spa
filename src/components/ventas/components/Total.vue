@@ -23,13 +23,13 @@
 						</p> 
 
 						<p
-						class="text-left m-b-0 m-md-l-10"
+						class="text-left d-none d-lg-block m-b-0 m-md-l-10"
 						v-if="is_admin">
 							| Costos <strong>{{ price(total_cost) }}</strong>
 						</p> 
 
 						<p
-						class="text-left m-b-0 m-md-l-10"
+						class="text-left d-none d-lg-block m-b-0 m-md-l-10"
 						v-if="is_admin">
 							| Ganancia <strong>{{ price(total_ganancia) }}</strong>
 						</p> 

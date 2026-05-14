@@ -27,10 +27,15 @@ export default {
 		{
 			text: 'Estado',
 			key: 'order_status_id',
-			type: '',
-			only_show: true,
-			value: '',
+			type: 'select',
 			not_show: true,
+		},
+		{
+			text: 'Deposito',
+			key: 'address_id',
+			type: 'select',
+			use_store_models: true,
+			select_prop_name: 'street',
 		},
 		{
 			text: 'Fecha entrega',
@@ -112,13 +117,6 @@ export default {
 			show: true,
 		},
 		{
-			text: 'Deposito',
-			key: 'address_id',
-			type: 'select',
-			use_store_models: true,
-			select_prop_name: 'street',
-		},
-		{
 			text: 'Articulos',
 			key: 'articles',
 			store: 'article',
@@ -198,6 +196,7 @@ export default {
 			text: 'Promociones',
 			key: 'promocion_vinotecas',
 			store: 'promocion_vinoteca',
+			if_has_extencion: 'vinoteca',
 			belongs_to_many: {
 				can_not_modify: true,
 				props_to_show: [
@@ -240,16 +239,16 @@ export default {
 
 			}
 		},
-		{
-			text: 'Cupon',
-			key: 'cupon_id',
-			store: 'cupon',
-			type: '',
-			only_show: true,
-			value: '',
-			show: true,
-			relation_prop_name: 'code',
-		},
+		// {
+		// 	text: 'Cupon',
+		// 	key: 'cupon_id',
+		// 	store: 'cupon',
+		// 	type: '',
+		// 	only_show: true,
+		// 	value: '',
+		// 	show: true,
+		// 	relation_prop_name: 'code',
+		// },
 	],
 	singular_model_name_spanish: 'Pedido',
 	plural_model_name_spanish: 'Pedidos',

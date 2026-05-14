@@ -34,7 +34,7 @@
 			v-if="show_expand_button"
 			class="has-many-expand-button"
 			size="sm"
-			variant="outline-primary"
+			variant="primary"
 			@click="openExpandModal">
 				<i class="icon-eye"></i>
 				Ampliar

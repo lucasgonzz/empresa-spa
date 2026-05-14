@@ -5,7 +5,7 @@
 		<stock-suggestion-modal></stock-suggestion-modal>
 		<stock-suggestion-article-modal></stock-suggestion-article-modal>
 
-		<modal-button></modal-button>
+		<!-- <modal-button></modal-button> -->
 
 	</div>
 </template>
@@ -14,7 +14,7 @@ export default {
 	components: {
 		StockSuggestionModal: () => import('@/components/listado/modals/stock-suggestion/Index'),
 		StockSuggestionArticleModal: () => import('@/components/listado/modals/stock-suggestion-article/Index'),
-		ModalButton: () => import('@/components/listado/components/horizontal-nav/stock-suggestion/ModalButton'),
+		// ModalButton: () => import('@/components/listado/components/horizontal-nav/stock-suggestion/ModalButton'),
 	}, 
 	computed: {
 		addresses() {

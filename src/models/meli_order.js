@@ -32,6 +32,31 @@ export default {
 			only_show: true,
 			is_date: true,
 		},
+		// Estado interno (pendiente / confirmado): al pasar a Confirmado con pago ML "paid" se genera la venta.
+		{
+			text: 'Gestion',
+			key: 'meli_order_status_id',
+			type: 'select',
+			use_store_models: true,
+			show: true,
+		},
+		// Depósito / dirección de stock al confirmar (mismo criterio que Tienda Nube).
+		{
+			text: 'Deposito',
+			key: 'address_id',
+			type: 'select',
+			use_store_models: true,
+			select_prop_name: 'street',
+			value: null,
+			show: true,
+		},
+		{
+			text: 'Notas',
+			key: 'notes',
+			type: 'textarea',
+			value: '',
+			show: true,
+		},
 		{
 			text: 'Articulos',
 			key: 'articles',
@@ -74,7 +99,7 @@ export default {
 		},
 		{
 			text: 'Total',
-			key: 'total_amount',
+			key: 'total',
 			type: 'number',
 			only_show: true,
 			is_price: true,

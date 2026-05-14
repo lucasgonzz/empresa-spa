@@ -74,6 +74,27 @@ export default __base_store({
 					console.log(error)
 				})
 		},
+		/**
+		 * Crea o reutiliza el ticket abierto del usuario (POST /api/support-ticket).
+		 * Actualiza la bandeja local con upsertFromBroadcast.
+		 *
+		 * @returns {Promise<Object|null>} Modelo del ticket o null si falla la respuesta.
+		 */
+		createOpenTicket({ commit }) {
+			return axios
+				.post('/api/support-ticket')
+				.then(function (response) {
+					if (response.data && response.data.model) {
+						commit('upsertFromBroadcast', response.data.model)
+						return response.data.model
+					}
+					return null
+				})
+				.catch(function (error) {
+					console.log(error)
+					return null
+				})
+		},
 	},
 })
 

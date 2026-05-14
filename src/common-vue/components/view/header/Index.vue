@@ -2,7 +2,7 @@
 	<b-row
 	class="p-t-15 align-center">
 		<b-col
-		class="j-start m-b-25 m-xl-b-0"
+		class="j-start align-center m-b-25 m-xl-b-0"
 		lg="6"
 		xl="3">
 			
@@ -37,39 +37,50 @@
 		</b-col>
 
 		<b-col
-		class="d-flex j-sm-center j-lg-end j-xl-start m-b-25 m-xl-b-0"
+		:class="[
+			'd-flex',
+			'j-sm-center',
+			'j-lg-end',
+			'j-xl-start',
+			'm-xl-b-0',
+			{ 'm-b-25': show_filters_col_bottom_margin },
+		]"
 		lg="6"
 		xl="3">
 
-			<opciones-filtrados-seleccion
-			:papelera="papelera"
-			:show_actualizar_option="show_actualizar_option"
-			:check_permissions="check_permissions"
-			:model_name="model_name">
-				<template #options_drop_down>
-					<slot name="options_drop_down"></slot>
-				</template>
+			<div class="j-start">
+				
+				<opciones-filtrados-seleccion
+				:papelera="papelera"
+				:show_actualizar_option="show_actualizar_option"
+				:check_permissions="check_permissions"
+				:model_name="model_name">
+					<template #options_drop_down>
+						<slot name="options_drop_down"></slot>
+					</template>
 
-				<template #options_drop_down_seleccion>
-					<slot name="options_drop_down_seleccion"></slot>
-				</template>
+					<template #options_drop_down_seleccion>
+						<slot name="options_drop_down_seleccion"></slot>
+					</template>
 
-				<template #options_drop_down_filtro>
-					<slot name="options_drop_down_filtro"></slot>
-				</template>
-			</opciones-filtrados-seleccion>
-			
-			<btn-restart-filter
-			:papelera="papelera"
-			:model_name="model_name"></btn-restart-filter>
+					<template #options_drop_down_filtro>
+						<slot name="options_drop_down_filtro"></slot>
+					</template>
+				</opciones-filtrados-seleccion>
+				
+				<btn-restart-filter
+				:papelera="papelera"
+				:model_name="model_name"></btn-restart-filter>
 
-			<b-button
-			v-if="papelera && is_filtered_papelera && total_filtrados_papelera > 0"
-			@click="restaurarTodosFiltradosPapelera"
-			class="m-l-10"
-			variant="danger">
-				Restaurar todos ({{ total_filtrados_papelera }})
-			</b-button>
+				<b-button
+				v-if="papelera && is_filtered_papelera && total_filtrados_papelera > 0"
+				@click="restaurarTodosFiltradosPapelera"
+				class="m-l-10"
+				variant="danger">
+					Restaurar todos ({{ total_filtrados_papelera }})
+				</b-button>
+			</div>
+
 
 		</b-col>
 		
@@ -134,6 +145,32 @@ export default {
 		show_actualizar_option: Boolean,
 	},
 	computed: {
+		/**
+		 * True cuando la columna de filtrados/selección muestra al menos un control
+		 * (dropdowns, reinicio de filtro o restaurar en papelera). Evita aplicar
+		 * margen inferior si el bloque no ocupa espacio visual.
+		 *
+		 * @returns {boolean}
+		 */
+		show_filters_col_bottom_margin() {
+			if (!this.model_name) {
+				return false
+			}
+			let model_state = this.$store.state[this.model_name]
+			if (!model_state) {
+				return false
+			}
+			if (model_state.selected && model_state.selected.length > 0) {
+				return true
+			}
+			if (this.papelera) {
+				return this.is_filtered_papelera && this.total_filtrados_papelera > 0
+			}
+			if (model_state.filtered && model_state.filtered.length > 0) {
+				return true
+			}
+			return !!model_state.is_filtered
+		},
 		can_create() {
 			if (this.check_permissions) {
 				return this.can(this.model_name+'.store')

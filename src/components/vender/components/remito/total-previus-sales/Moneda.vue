@@ -118,7 +118,8 @@ export default {
 				    this.set_valor_dolar()
 				}
 			} else {
-				console.log('No habia user, volviendo a llamar')
+				console.log('No habia user, volviendo a llamar, user:')
+				console.log(this.user)
 				setTimeout(() => {
 					this.iniciar_dolar()
 				}, 500)

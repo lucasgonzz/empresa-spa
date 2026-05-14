@@ -684,6 +684,9 @@ export default {
 
 	.table.table-component-b-table,
 	table.table
+		// Redondeo global de 3 esquinas para todas las tablas basadas en b-table.
+		border-radius: 10px 10px 10px 0
+		overflow: hidden
 		// width: max-content
 		// max-width: 100%
 		width: 100%

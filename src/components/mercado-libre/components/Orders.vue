@@ -27,6 +27,10 @@ export default {
 	components: {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 	},
+	mounted() {
+		// Estados internos (pendiente / confirmado) para selects del formulario de pedido ML.
+		this.$store.dispatch('meli_order_status/getModels')
+	},
 	methods: {
 		crear_venta(meli_order) {
 			if (confirm('¿Seguro que quiere crear una venta en base a este pedido de Mercado Libre?')) {

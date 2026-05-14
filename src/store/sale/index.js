@@ -39,8 +39,23 @@ export default __base_store({
 		 * se muestran u ocultan en el listado general de ventas. Por defecto ocultas.
 		 */
 		mostrar_consolidadas: false,
+
+		/**
+		 * Si el usuario confirma con el checkbox activo, el DELETE envía `compensar_caja` al backend.
+		 */
+		compensar_caja_delete: true,
 	},
 	mutations: {
+		/**
+		 * Guarda la preferencia del modal de borrado: compensar caja o no en el próximo DELETE.
+		 *
+		 * @param {Object} state Estado del módulo.
+		 * @param {boolean} value Valor del checkbox en Confirm.vue.
+		 * @returns {void}
+		 */
+		setCompensarCajaDelete(state, value) {
+			state.compensar_caja_delete = value
+		},
 		/**
 		 * Cambia el módulo/fuente consultada en endpoint from-date de ventas.
 		 */
@@ -103,6 +118,26 @@ export default __base_store({
 		},
 	},
 	actions: {
+		/**
+		 * Elimina venta en API, opcionalmente pidiendo compensación en caja (`compensar_caja`).
+		 *
+		 * @param {Object} context commit, state
+		 * @returns {Promise}
+		 */
+		delete({ commit, state }) {
+			return axios.delete(`/api/${generals.methods.routeString(state.model_name)}/${state.delete.id}`, {
+				params: {
+					compensar_caja: state.compensar_caja_delete ? 1 : 0,
+				},
+			})
+				.then(() => {
+					commit('delete')
+				})
+				.catch((err) => {
+					console.log(err)
+					return Promise.reject(err)
+				})
+		},
 		/**
 		 * Override de carga para ventas:
 		 * arma URL `/api/sale/from-date/{modulo}/{from_date}/{until_date?}`.

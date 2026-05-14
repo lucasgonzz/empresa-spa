@@ -58,29 +58,6 @@ export default {
 
 
 		{
-			group_title: 'Configuracion de versiones',
-		},
-		{
-			text: 'Version por defecto',
-			key: 'default_version',
-			type: 'text',
-			not_show: true,
-		},
-		{
-			text: 'Version estable',
-			key: 'estable_version',
-			type: 'text',
-			not_show: true,
-		},
-		{
-			text: 'Versión del sistema (sincronización admin)',
-			key: 'version_name',
-			type: 'text',
-			only_show: true,
-		},
-
-
-		{
 			group_title: 'Configuracion de precios',
 		},
 		{
@@ -104,6 +81,19 @@ export default {
 			descriptions:
 			[
 			 	'Si se desactiva, el iva del articulo se sumara luego del margen de ganancia',
+			],
+		},
+		/*
+		 * Si está activo, al calcular costos en ventas se aplican descuentos y recargos del pedido (SaleHelper).
+		 */
+		{
+			text: 'Aplicar descuentos y recargos de la venta al costo',
+			key: 'aplicar_descuentos_de_venta_a_costos',
+			type: 'checkbox',
+			value: 0,
+			descriptions:
+			[
+				'Si se activa, los porcentajes de descuento y recargo de la venta modifican el costo usado en el cálculo.',
 			],
 		},
 		{
@@ -164,6 +154,31 @@ export default {
 			type: 'number',
 		},
 
+
+
+		{
+			group_title: 'Configuracion de versiones',
+		},
+		{
+			text: 'Version por defecto',
+			key: 'default_version',
+			type: 'text',
+			not_show: true,
+		},
+		{
+			text: 'Version estable',
+			key: 'estable_version',
+			type: 'text',
+			not_show: true,
+		},
+		{
+			text: 'Versión del sistema (sincronización admin)',
+			key: 'version_name',
+			type: 'text',
+			only_show: true,
+		},
+
+		
 
 		{
 			group_title: 'Modulo de VENDER',

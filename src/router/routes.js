@@ -11,6 +11,7 @@ export default [
 		path: '/reportes',
 		component: '@/views/Reportes',
 		image_url: 'nav-icons-2/reportes.png',
+		icon: 'bar-chart-line',
 		// image_url: 'nav-icons/caja.png',
 		name: 'reportes',
 		can: 'reportes.index',
@@ -25,6 +26,7 @@ export default [
 		component: '@/views/Listado',
 		can: 'article.index',
 		image_url: 'nav-icons-2/listado.png',
+		icon: 'list-ul',
 		// image_url: 'nav-icons/listado.png',
 	},
 	{
@@ -38,6 +40,7 @@ export default [
 		},
 		if_has_extencion: 'comerciocity_interno',
 		image_url: 'nav-icons-2/vender.png',
+		icon: 'cart-check',
 		childrens: [
 			{
 				path: '/presupuestos',
@@ -46,6 +49,7 @@ export default [
 				can: 'budget.index',
 				if_has_extencion: ['budgets', 'comerciocity_interno'],
 				image_url: 'nuevos-nav-icons/presupuesto.png',
+				icon: 'file-earmark-text',
 				// image_url: 'nav-icons/presupuestos.png',
 			},
 		]
@@ -54,6 +58,7 @@ export default [
 		text: 'Alertas',
 		path: '/alertas',
 		component: '@/views/Alertas',
+		icon: 'bell',
 		budget_function: 'alerts_count',
 		name: 'alertas',
 		params: {
@@ -66,6 +71,7 @@ export default [
 				model_name: 'pending',
 				component: '@/views/Pending',
 				image_url: 'nuevos-nav-icons/agenda.png',
+				icon: 'calendar-check',
 				can: 'pending.index',
 				params: {
 					view: 'por-realizar',
@@ -80,6 +86,7 @@ export default [
 		component: '@/views/DepositoParaCheckear',
 		can: 'deposito_para_checkear',
 		image_url: 'nav-icons/ventas-to-check.png',
+		icon: 'clipboard-check',
 		if_has_extencion: 'check_sales',
 		params: {
 			view: 'para-checkear',
@@ -92,6 +99,7 @@ export default [
 		component: '@/views/DepositoCheckeadas',
 		can: 'deposito_checkeadas',
 		image_url: 'nav-icons/ventas-checked.png',
+		icon: 'patch-check',
 		if_has_extencion: 'check_sales',
 	},
 	{
@@ -105,6 +113,7 @@ export default [
 			sub_view: 'todos',
 		},
 		image_url: 'nav-icons-2/ventas.png',
+		icon: 'cash-stack',
 		childrens: [
 			{
 				path: '/por-entregar',
@@ -113,6 +122,7 @@ export default [
 				component: '@/views/PorEntregar',
 				// can: 'deposito_checkeadas',
 				image_url: 'nuevos-nav-icons/por_entregar.png',
+				icon: 'truck',
 				if_has_extencion: 'ventas_con_fecha_de_entrega',
 				can: 'road_map.index',
 				params: {
@@ -125,6 +135,7 @@ export default [
 				name: 'por-estado',
 				component: '@/views/PorEstado',
 				image_url: 'nuevos-nav-icons/por_entregar.png',
+				icon: 'ui-checks-grid',
 				if_has_extencion: 'ventas_con_estados',
 				params: {
 					view: 'ventas',
@@ -137,6 +148,7 @@ export default [
 				component: '@/views/Devoluciones',
 				can: 'devolucion.store', 
 				image_url: 'nuevos-nav-icons/devoluciones.png',
+				icon: 'arrow-counterclockwise',
 			},
 		]
 	},
@@ -148,6 +160,7 @@ export default [
 		component: '@/views/Ventas',
 		can: 'sale.index',
 		image_url: 'nav-icons-2/ventas.png',
+		icon: 'receipt',
 		params: {
 			view: 'todas',
 			sub_view: 'todos',
@@ -161,6 +174,7 @@ export default [
 				component: '@/views/Devoluciones',
 				can: 'devolucion.store', 
 				image_url: 'nuevos-nav-icons/devoluciones.png',
+				icon: 'arrow-counterclockwise',
 				// image_url: 'iconos-reportes/devoluciones.png',
 			},
 			{
@@ -170,6 +184,7 @@ export default [
 				component: '@/views/PorEntregar',
 				// can: 'deposito_checkeadas',
 				image_url: 'nuevos-nav-icons/por_entregar.png',
+				icon: 'truck',
 				if_has_extencion: 'ventas_con_fecha_de_entrega',
 				can: 'road_map.index',
 				params: {
@@ -185,6 +200,7 @@ export default [
 		component: '@/views/Rutas',
 		// can: 'deposito_checkeadas',
 		image_url: 'nuevos-nav-icons/rutas.png',
+		icon: 'signpost-split',
 		if_has_extencion: 'ventas_con_fecha_de_entrega',
 		can: 'road_map.terminadas.index',
 	},
@@ -207,6 +223,7 @@ export default [
 		},
 		if_has_extencion: 'comerciocity_interno',
 		image_url: 'nav-icons-2/proveedores.png',
+		icon: 'person-badge',
 		// image_url: 'nav-icons/proveedores.png',
 	},
 	{
@@ -219,6 +236,7 @@ export default [
 		},
 		if_has_extencion: 'comerciocity_interno',
 		image_url: 'nav-icons-2/clientes.png',
+		icon: 'people',
 		// image_url: 'nav-icons/clientes.png',
 	},
 	// {
@@ -272,7 +290,10 @@ export default [
 			'order.index',
 			'buyer.index',
 		],
+		/* Badge: pedidos sin confirmar + mensajes de chat sin leer (ver online_menu_alert_count) */
+		budget_function: 'online_menu_alert_count',
 		image_url: 'nuevos-nav-icons/online.png',
+		icon: 'shop',
 		// image_url: 'nav-icons/tienda.png',
 	},
 	{
@@ -291,6 +312,7 @@ export default [
 		// 	'buyer.index',
 		// ],
 		image_url: 'nuevos-nav-icons/tienda_nube.png',
+		icon: 'cloud',
 		// image_url: 'nav-icons/tienda.png',
 	},
 	{
@@ -306,6 +328,7 @@ export default [
 			'mercado_libre.orders',
 		],
 		image_url: 'nav-icons/mercado_libre.png',
+		icon: 'bag',
 	},
 	// {
 	// 	text: 'Produccion',
@@ -338,6 +361,7 @@ export default [
 		// 	'recipe.index',
 		// ],
 		image_url: 'nuevos-nav-icons/produccion.png',
+		icon: 'gear-wide-connected',
 	},
 	{
 		text: 'Tesoreria',
@@ -347,6 +371,7 @@ export default [
 		component: '@/views/Caja',
 		// if_has_extencion: 'cajas',
 		image_url: 'nuevos-nav-icons/cajas.png',
+		icon: 'wallet2',
 		// image_url: 'nav-icons/cajas.png',
 		call_models_always: true,
 		can: 'caja.index',
@@ -356,6 +381,7 @@ export default [
 				model_name: 'expense',
 				component: '@/views/Expense',
 				image_url: 'nuevos-nav-icons/gastos.png',
+				icon: 'cash-coin',
 				can: 'expense.index',
 			},
 		]
@@ -370,6 +396,7 @@ export default [
 		},
 		can: 'abm',
 		image_url: 'nav-icons-2/abm.png',
+		icon: 'sliders',
 		// image_url: 'nav-icons/abm.png',
 		childrens: [
 			{
@@ -380,6 +407,7 @@ export default [
 				check_is_owner: true,
 				if_has_extencion: 'comerciocity_interno',
 				image_url: 'nuevos-nav-icons/empleados.png',
+				icon: 'person-workspace',
 				// image_url: 'nav-icons/empleados.png',
 			},
 			{
@@ -391,6 +419,7 @@ export default [
 				},
 				component: '@/views/Papelera',
 				image_url: 'nuevos-nav-icons/papelera.png',
+				icon: 'trash',
 				// image_url: 'nav-icons/papelera.png',
 				check_is_owner: true,
 			},
@@ -402,6 +431,7 @@ export default [
 		name: 'comprobantes',
 		component: '@/views/Comprobantes',
 		image_url: 'nuevos-nav-icons/comprobantes.png',
+		icon: 'file-earmark-text',
 		// image_url: 'nav-icons/comprobantes.png',
 		params: {
 			view: 'notas-de-credito',
@@ -414,5 +444,6 @@ export default [
 		component: '@/views/ConsultoraDePrecios',
 		if_has_extencion: 'consultora_de_precios',
 		image_url: 'nav-icons/consulta_precios.png',
+		icon: 'graph-up-arrow',
 	},
 ]
