@@ -1,6 +1,8 @@
 <template>
 	
 	<div class="j-end align-center w-100">
+
+		<btn-update-article-list></btn-update-article-list>
 		
 		<buscador-header></buscador-header>
 	
@@ -24,6 +26,7 @@
 <script>
 export default {
 	components: {
+		BtnUpdateArticleList: () => import('@/components/listado/components/horizontal-nav/BtnUpdateArticleList'),
 		BtnInventoryPerformance: () => import('@/components/listado/components/horizontal-nav/BtnInventoryPerformance'),
 		BuscadorHeader: () => import('@/components/listado/components/horizontal-nav/buscador-header/Index'),
 		StockSuggestion: () => import('@/components/listado/components/horizontal-nav/stock-suggestion/Index'),

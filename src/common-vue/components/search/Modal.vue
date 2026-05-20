@@ -27,8 +27,8 @@ hide-footer
 			variant="primary">
 				<div
 				class="j-center">
-					<i class="icon-search p-r-5"></i>
-					(Enter)
+					<i class="icon-search"></i>
+					<!-- (Enter) -->
 				</div>
 			</b-button>
 
@@ -104,6 +104,12 @@ hide-footer
 					<i class="icon-check"></i>
 					ENTER para crear {{ singular(model_name) }}
 				</div>
+				<div 
+				v-else-if="no_exist_message"
+				class="text-with-icon">
+					<i class="icon-check"></i>
+					{{ no_exist_message }}
+				</div>
 			</div>
 		</div>
 		<div
@@ -178,6 +184,9 @@ export default {
 		save_if_not_exist: {
 			type: Boolean,
 			default: true,
+		},
+		no_exist_message: {
+			type: String,
 		},
 		props_to_show: {
 			type: Array,

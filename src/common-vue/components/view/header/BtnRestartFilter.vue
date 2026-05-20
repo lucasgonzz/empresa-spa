@@ -1,11 +1,15 @@
 <template>
 	<b-button
 	v-if="is_filtered && !papelera"
+	v-b-tooltip.hover
+	:title="tooltip_text"
 	@click="restartSearch"
-	class="m-l-10"
+	class="btn-header-action m-l-10"
 	id="btn_restart_filter"
-	variant="outline-success">
-		<i class="icon-history"></i>
+	size="sm"
+	variant="outline-secondary">
+		<i class="bi bi-arrow-counterclockwise m-r-5" aria-hidden="true"></i>
+		<span class="btn-header-action__label">{{ button_label }}</span>
 	</b-button>
 </template>
 <script>
@@ -19,14 +23,30 @@ export default {
 		},
 	},
 	computed: {
+		/**
+		 * Indica si hay filtros activos en el listado o en papelera según el modo.
+		 *
+		 * @returns {boolean}
+		 */
 		is_filtered() {
 			if (this.papelera) {
 				return this.$store.state.papelera[this.model_name].is_filtered
 			}
 			return this.$store.state[this.model_name].is_filtered
 		},
+		/** Texto visible del botón. */
+		button_label() {
+			return 'Limpiar filtros'
+		},
+		/** Texto ampliado al pasar el mouse (accesibilidad y UX). */
+		tooltip_text() {
+			return 'Quitar todos los filtros y volver al listado completo'
+		},
 	},
 	methods: {
+		/**
+		 * Reinicia el estado de filtrado en el store y vacía los valores de cada filtro.
+		 */
 		restartSearch() {
 			this.limpiar_filtros()
 			let prefix = this.papelera ? ('papelera/' + this.model_name + '/') : (this.model_name + '/')
@@ -36,6 +56,9 @@ export default {
 			this.$store.commit(prefix + 'setTotalFilterPages', null)
 			this.$store.commit(prefix + 'setTotalFilterResults', 0)
 		},
+		/**
+		 * Restablece los campos de cada filtro del modelo a su valor inicial.
+		 */
 		limpiar_filtros() {
 			this.$store.state[this.model_name].filters.forEach(filter => {
 				filter.igual_que = filter.type == 'select' ? 0 : ''
@@ -43,9 +66,17 @@ export default {
 				filter.menor_que = ''
 				filter.que_contenga = ''
 				filter.checkbox = -1
-				filter.ordenar_de = '' 
+				filter.ordenar_de = ''
 			})
-		}
-	}
+		},
+	},
 }
 </script>
+<style scoped>
+/* Alineación con otros controles del header (icono + texto en una línea). */
+.btn-header-action {
+	display: inline-flex;
+	align-items: center;
+	white-space: nowrap;
+}
+</style>

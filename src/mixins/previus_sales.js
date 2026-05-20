@@ -471,16 +471,22 @@ export default {
 			}
 			return item.pivot.price_type_personalizado_id
 		},
-		checkear_metodos_de_pago_en_previus_sale() {
-			console.log('checkear_metodos_de_pago_en_previus_sale')
-			if (!this.current_acount_payment_method_id && !this.previus_sale.client_id) {
+		// checkear_metodos_de_pago_en_previus_sale() {
+		// 	console.log('checkear_metodos_de_pago_en_previus_sale')
+		// 	if (
+		// 		!this.current_acount_payment_method_id 
+		// 		&& (
+		// 			!this.previus_sale.client_id
+		// 			|| this.previus_sale.omitir_en_cuenta_corriente
+		// 		)
+		// 	) {
 
-				if (!this.guardarMetodosPago()) {
-					return false 
-				} 
+		// 		if (!this.check_sobrante_a_repartir()) {
+		// 			return false 
+		// 		} 
 
-			} 
-			return true
-		}
+		// 	} 
+		// 	return true
+		// }
 	}
 }

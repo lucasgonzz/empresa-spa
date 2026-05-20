@@ -58,7 +58,7 @@ export default {
 			return this.$store.state.provider_order.from_dates
 		},
 		total() {
-			return this.$store.state.provider_order.totales.total 
+			return this.$store.state.provider_order.total
 		},
 		props_to_send_on_save() {
 			return [

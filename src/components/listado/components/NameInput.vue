@@ -11,6 +11,7 @@
 		:show_selected="false"
 		search_from_api
 		emit_selected_with_null
+		no_exist_message="Preciona ENTER para usar este nombre"
 		:init_query="init_query"
 		:prop="{key: 'name', text: 'Nombre', set_model_on_click_or_prop_with_query_if_null: true}" 
 		:model="model"

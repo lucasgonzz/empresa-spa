@@ -27,13 +27,15 @@ export default {
 					return false
 				}
 
-				// if (sale.current_acount_payment_methods
-				// 	&& sale.current_acount_payment_methods.length >= 1) {
+				if (sale.current_acount_payment_methods
+					&& sale.current_acount_payment_methods.length >= 1
+					&& this.$store.state.caja.models.length 
+				) {
 					
-				// 	console.log('no puede 4')
+					console.log('no puede 4')
 
-				// 	return false
-				// }
+					return false
+				}
 			}
 
 			return true

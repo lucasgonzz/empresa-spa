@@ -114,7 +114,6 @@
 									:function_props_to_send_to_api="prop.function_props_to_send_to_api"
 									@set-selected="setSelected"></field-search-input>
 
-
 									<belongs-to-many-checkbox
 									v-else-if="prop.belongs_to_many && prop.type == 'checkbox'"
 									:model="model"
@@ -1149,30 +1148,21 @@ export default {
 				return false
 			}
 
-			/*
-				Solo aplica al alta (create) de artículos.
-				Si el modelo ya existe, mantenemos el chequeo para evitar colisiones accidentales al editar.
-			*/
-			if (!this.model.id) {
-				return true
-			} else {
+			/* El chequeo de repetidos solo aplica al alta (create), no al editar. */
+			if (this.model && this.model.id) {
 				return false
 			}
 
-			console.log('can_check_is_repeat para '+this.model_name+' y prop:')
-			console.log(prop)
-			console.log(this.owner.usa_provider_codes_repetidos)
-
-			/* Caso particular: permitir `provider_code` repetido según configuración del usuario. */
+			/*
+				Caso particular: `provider_code` en artículos.
+				Si el owner permite códigos repetidos (`usa_provider_codes_repetidos = 1`),
+				no se valida unicidad al crear.
+			*/
 			if (this.model_name == 'article' && prop.key == 'provider_code') {
-			
 				/*
-					Usamos comparación explícita porque este valor puede llegar como:
-					- boolean (true/false)
-					- number (1/0)
-					- string ('1'/'0')
+					Comparación explícita porque el valor puede llegar como boolean, number o string.
 				*/
-				if (Number(this.owner.usa_provider_codes_repetidos) === 1) {
+				if (Number(this.owner && this.owner.usa_provider_codes_repetidos) === 1) {
 					return false
 				}
 			}

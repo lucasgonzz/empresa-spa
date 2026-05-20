@@ -31,6 +31,7 @@
 		:emit_selected_with_null="emit_selected_with_null"
 		:function_props_to_send_to_api="function_props_to_send_to_api"
 		:tax_id_afip_lookup_on_second_enter="tax_id_afip_lookup_on_second_enter"
+		:no_exist_message="no_exist_message"
 		@callSearchModal="callSearchModal"
 		@setQuery="setQuery"
 		@setNotShowModel="setNotShowModel"
@@ -232,6 +233,10 @@ export default {
 		tax_id_afip_lookup_on_second_enter: {
 			type: Boolean,
 			default: false,
+		},
+		no_exist_message: {
+			type: String,
+			default: null,
 		},
 	},
 	data() {

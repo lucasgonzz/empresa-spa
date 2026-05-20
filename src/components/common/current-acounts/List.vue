@@ -81,7 +81,11 @@ export default {
                 && current_acount.debe
                 && current_acount.sale.afip_tickets.length
             ) {
-                return true
+                let sin_cae = current_acount.sale.afip_tickets.find(a => !a.cae)
+                if (typeof sin_cae != 'undefined') {
+                    return true 
+                }
+                return false
             }
 
             if (

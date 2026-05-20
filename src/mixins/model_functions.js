@@ -79,9 +79,7 @@ export default {
             return this.syncs_meli_color(model)
         },
         syncs_meli_color(model) {
-            console.log('syncs_meli_color')
-            console.log(model)
-            if (model.status == 'pendiente') {
+            if (model.status == 'pendiente' || model.status == 'en_progreso') {
                 return 'sync-meli-warning'
             }
 
@@ -777,7 +775,7 @@ export default {
                 total += Number(extra_cost.value)                
             })
 
-            this.$store.commit('provider_order/totales/set_total', total)
+            this.$store.commit('provider_order/set_total', total)
             console.log('seteando total de provider_order con: ')
             console.log(total)
             if (formated) {
