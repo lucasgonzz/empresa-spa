@@ -125,5 +125,5 @@ export default {
 <style lang="sass">
 .bar-code-search
 	// margin-left: 15px
-	width: 200px
+	width: 100px
 </style>

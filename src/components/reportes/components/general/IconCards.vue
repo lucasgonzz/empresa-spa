@@ -359,6 +359,12 @@ export default {
 							id: 'iva_debito', 
 							value: this.price(this.model.total_facturado, false),
 							description: 'Sumatoria de los importes de IVA de todos los articulos vendidos en ventas Facturadas',
+							buttons: [
+								{
+									text: 'Libro Iva',
+									function: 'iva_ventas_pdf'
+								},
+							]
 						},
 
 						/*
@@ -575,6 +581,12 @@ export default {
 			let mes_inicio = this.$store.state.reportes.mes_inicio
 			let mes_fin = this.$store.state.reportes.mes_fin
 			let link = process.env.VUE_APP_API_URL+'/afip-iva-compras/'+mes_inicio+'/'+mes_fin
+			window.open(link)
+		},
+		iva_ventas_pdf() {
+			let mes_inicio = this.$store.state.reportes.mes_inicio
+			let mes_fin = this.$store.state.reportes.mes_fin
+			let link = process.env.VUE_APP_API_URL+'/afip-iva-ventas/'+mes_inicio+'/'+mes_fin
 			window.open(link)
 		},
 	},

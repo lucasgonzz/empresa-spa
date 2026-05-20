@@ -1,3 +1,6 @@
+/**
+ * Modelo declarativo: corrida de importación ML → artículos locales.
+ */
 export default {
 	properties: [
 		{
@@ -7,7 +10,46 @@ export default {
 			only_show: true,
 		},
 		{
-			text: 'Detalle',
+			text: 'Resumen',
+			key: 'summary_message',
+			type: 'textarea',
+			only_show: true,
+		},
+		{
+			text: 'Publicaciones en Mercado Libre',
+			key: 'meli_items_total',
+			type: 'text',
+			only_show: true,
+		},
+		{
+			text: 'Artículos creados en el sistema',
+			key: 'articles_created_count',
+			type: 'text',
+			only_show: true,
+		},
+		{
+			text: 'Ya vinculados (omitidos)',
+			key: 'articles_skipped_count',
+			type: 'text',
+			only_show: true,
+		},
+		{
+			text: 'Con error',
+			key: 'articles_error_count',
+			type: 'text',
+			only_show: true,
+		},
+		{
+			text: 'Total vinculados en el sistema',
+			key: 'articles_linked_total_count',
+			type: 'text',
+			only_show: true,
+			descriptions: [
+				'Artículos nuevos creados en esta corrida más los que ya estaban enlazados y no se modificaron.',
+			],
+		},
+		{
+			text: 'Detalle error',
 			key: 'error_message',
 			type: 'textarea',
 			only_show: true,
@@ -20,14 +62,14 @@ export default {
 			is_date: true,
 		},
 		{
-			text: 'Sincronizado',
+			text: 'Finalizado',
 			key: 'synced_at',
 			type: 'date',
 			only_show: true,
 			is_date: true,
 		},
 		{
-			text: 'Articulos',
+			text: 'Artículos (detalle)',
 			store: 'article',
 			only_show: true,
 			search_on_models_by: 'name',
@@ -62,12 +104,12 @@ export default {
 						text: 'Detalle',
 					},
 				],
-			}
+			},
 		},
 	],
-	singular_model_name_spanish: 'Sincronizacion de articulos',
-	plural_model_name_spanish: 'Sincronizaciones de articulos',
-	create_model_name_spanish: 'Nueva Sincronizacion de articulos',
+	singular_model_name_spanish: 'Importación desde Mercado Libre',
+	plural_model_name_spanish: 'Importaciones desde Mercado Libre',
+	create_model_name_spanish: 'Importar artículos',
 	color_display_function: true,
 	text_delete: 'la',
 }

@@ -36,7 +36,7 @@ export default {
 		width: 100%
 
 	.search-component 
-		width: 100%
+		width: 200px
 
 	button
 		border-radius: 5px 0 0 5px !important

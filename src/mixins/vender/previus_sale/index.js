@@ -9,8 +9,9 @@ import price_types from '@/mixins/vender/price_types'
 import default_payment_method from '@/mixins/vender/default_payment_method'
 import price_ranges from '@/mixins/vender/price_ranges'
 import axios from 'axios'
+import payment_methods from '@/mixins/vender/guardar_venta/chequeos/payment_methods'
 export default {
-	mixins: [price_ranges, limpiar_vender, limpiar_actualizandose_por, price_types, vender_set_total, default_payment_method],
+	mixins: [price_ranges, limpiar_vender, limpiar_actualizandose_por, price_types, vender_set_total, default_payment_method, payment_methods],
 	// mixins: [vender, set_employee_vender, vender_set_total],
 	data() {
 		return {
@@ -507,9 +508,15 @@ export default {
 		},
 		checkear_metodos_de_pago_en_previus_sale() {
 			console.log('checkear_metodos_de_pago_en_previus_sale')
-			if (!this.current_acount_payment_method_id && !this.previus_sale.client_id) {
+			if (
+				!this.current_acount_payment_method_id 
+				&& (
+					!this.previus_sale.client_id
+					|| this.previus_sale.omitir_en_cuenta_corriente
+				)
+			) {
 
-				if (!this.guardarMetodosPago()) {
+				if (!this.check_sobrante_a_repartir()) {
 					return false 
 				} 
 

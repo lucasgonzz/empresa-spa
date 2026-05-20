@@ -30,7 +30,8 @@ export default {
 					action: 'sync_to_meli_article/getModels',
 				},
 				{
-					name: 'Sinc articulo ENTRANTES', 
+					name: 'Importar artículos ML',
+					route_value: 'sinc-articulo-entrantes',
 					action: 'sync_from_meli_article/getModels',
 				},
 				{

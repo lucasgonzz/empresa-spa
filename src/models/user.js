@@ -129,20 +129,6 @@ export default {
 			key: 'redondear_precios_en_centavos',
 			type: 'checkbox',
 		},
-		/*
-		 * Permite que el usuario trabaje con artículos que tengan `provider_code` repetido.
-		 * Si está activo, al crear un artículo se omite el chequeo automático de repetidos por `provider_code`.
-		 */
-		{
-			text: 'Permitir codigos de proveedor repetidos en articulos',
-			key: 'usa_provider_codes_repetidos',
-			type: 'checkbox',
-			value: 0,
-			descriptions:
-			[
-			 	'Si se activa, el sistema permitira crear articulos con el mismo codigo de proveedor.',
-			],
-		},
 		{
 			text: 'Aplicar los descuentos y recargos en los articulos antes del margen de ganancia',
 			key: 'aplicar_descuentos_en_articulos_antes_del_margen_de_ganancia',
@@ -276,6 +262,20 @@ export default {
 		{
 			group_title: 'Modulo de LISTADO',
 		},
+		/*
+		 * Permite que el usuario trabaje con artículos que tengan `provider_code` repetido.
+		 * Si está activo, al crear un artículo se omite el chequeo automático de repetidos por `provider_code`.
+		 */
+		{
+			text: 'Permitir codigos de proveedor repetidos en articulos',
+			key: 'usa_provider_codes_repetidos',
+			type: 'checkbox',
+			value: 0,
+			descriptions:
+			[
+			 	'Si se activa, el sistema permitira crear articulos con el mismo codigo de proveedor.',
+			],
+		},
 		{
 			text: 'Imprimir cabecera en PDF de articulos',
 			key: 'header_articulos_pdf',
@@ -299,6 +299,19 @@ export default {
 			type: 'number',
 		},
 
+		{
+			group_title: 'Alertas',
+		},
+		{
+			text: 'Dias a partir de los cuales ALERTAR a los EMPLEADOS sobre las ventas no cobradas',
+			key: 'dias_alertar_empleados_ventas_no_cobradas',
+			type: 'number',
+		},
+		{
+			text: 'Dias a partir de los cuales ALERTAR a los ADMINISTRADORES sobre las ventas no cobradas',
+			key: 'dias_alertar_administradores_ventas_no_cobradas',
+			type: 'number',
+		},
 
 
 		{
@@ -352,19 +365,6 @@ export default {
 
 
 
-		{
-			group_title: 'Alertas',
-		},
-		{
-			text: 'Dias a partir de los cuales ALERTAR a los EMPLEADOS sobre las ventas no cobradas',
-			key: 'dias_alertar_empleados_ventas_no_cobradas',
-			type: 'number',
-		},
-		{
-			text: 'Dias a partir de los cuales ALERTAR a los ADMINISTRADORES sobre las ventas no cobradas',
-			key: 'dias_alertar_administradores_ventas_no_cobradas',
-			type: 'number',
-		},
 
 
 		{

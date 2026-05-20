@@ -46,15 +46,6 @@
 									:field="field"></btn-filter>
 								</div>
 
-								<!-- Componente donde se indican los parametros de filtrado -->
-								<filter-component
-								v-if="!pivot && usar_filtros"
-								@limpiar_show_filters="limpiar_show_filters"
-								@filtrar="filtrar"
-								v-show="show_filters[field.key]"
-								:model_name="model_name"
-								:field="field"></filter-component>
-
 							</div>	
 						</th>
 					</tr>
@@ -174,6 +165,16 @@
 		:columns="columns"
 		:table-props="{ bordered: true, striped: true }"
 		></b-skeleton-table>
+
+		<!-- Modal de filtros por columna (un solo modal por tabla) -->
+		<filter-modal
+		v-if="!pivot && usar_filtros"
+		:field="filter_modal_field"
+		:model_name="model_name"
+		:modal_id="filter_modal_id"
+		@filtrar="filtrar"
+		@agregar_filtro="on_agregar_filtro"
+		@closed="close_filter_modal"></filter-modal>
 	</div>
 </template>
 <script>
@@ -182,7 +183,7 @@ export default {
 	directives: {infiniteScroll},
 	components: {
 		TrComponent: () => import('@/common-vue/components/display/table/Tr'),
-		FilterComponent: () => import('@/common-vue/components/display/table/filter/Index'),
+		FilterModal: () => import('@/common-vue/components/display/table/filter/FilterModal'),
 		Ordenar: () => import('@/common-vue/components/display/table/Ordenar'),
 		BtnFilter: () => import('@/common-vue/components/display/table/BtnFilter'),
 		Pagination: () => import('@/common-vue/components/display/table/pagination/Index'),
@@ -288,7 +289,8 @@ export default {
 			show_buttons_scroll: false,
 			intentos: 0,
 			fields: [],
-			show_filters: {},
+			// Columna cuyo filtro se edita en el modal; null si el modal está cerrado.
+			filter_modal_field: null,
 		}
 	},
 	computed: {
@@ -308,6 +310,14 @@ export default {
 		},
 		id() {
 			return Math.random()+'-'+this.model_name
+		},
+		/**
+		 * Id único del modal de filtros de esta tabla.
+		 *
+		 * @returns {string}
+		 */
+		filter_modal_id() {
+			return 'filter-modal-' + this.model_name
 		},
 		props() {
 			// console.log('calculando props')
@@ -588,7 +598,7 @@ export default {
 			 * Ejecuta (o re-ejecuta) el filtrado usando una única fuente de verdad (store).
 			 * Esto permite refrescar luego de operaciones masivas (ej: eliminar) sin duplicar requests en componentes.
 			 */
-			this.limpiar_show_filters()
+			this.close_filter_modal()
 
 			// En papelera, el store es específico y ya tiene una acción dedicada.
 			if (this.papelera) {
@@ -598,19 +608,33 @@ export default {
 			// En listado normal, delegamos en el store base del módulo.
 			return this.$store.dispatch(this.model_name + '/runFilter')
 		},
+		/**
+		 * Abre el modal de filtro para la columna indicada por la lupa.
+		 *
+		 * @param {string} field_key
+		 */
 		toggleFilter(field_key) {
-			if (this.show_filters[field_key]) {
-				this.$set(this.show_filters, field_key, false);
-			} else {
-				// Si no está visible, oculta todos los filtros y muestra solo el seleccionado
-				this.show_filters = {}; // Reinicia el objeto show_filters
-				this.$set(this.show_filters, field_key, true); // Activa solo el seleccionado
+			let field = this.fields.find(_field => _field.key == field_key)
+			if (!field) {
+				return
 			}
-			// console.log('show_filters:')
-			// console.log(this.show_filters)
+			this.filter_modal_field = field
+			this.$bvModal.show(this.filter_modal_id)
 		},
-		limpiar_show_filters() {
-			this.show_filters = {}; 
+		/**
+		 * Cierra el modal sin ejecutar búsqueda; el filtro queda guardado en store.
+		 */
+		on_agregar_filtro() {
+			this.close_filter_modal()
+		},
+		/**
+		 * Limpia la columna activa del modal (al cerrar o tras filtrar).
+		 */
+		close_filter_modal() {
+			if (this.filter_modal_id) {
+				this.$bvModal.hide(this.filter_modal_id)
+			}
+			this.filter_modal_field = null
 		},
 		filter_is_used(field_key) {
 			let filters = (this.$store.state[this.model_name] && this.$store.state[this.model_name].filters) ? this.$store.state[this.model_name].filters : []
