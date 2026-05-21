@@ -13,6 +13,7 @@
 		:src="image_url"
 		:stencil-props="stencil_props"
 		@ready="onCropperReady"
+		@error="on_cropper_image_error"
 		@change="change"/>
 
 		<b-progress
@@ -255,6 +256,35 @@ export default {
 	    	this.cropper_is_ready = true
 	    	this.tryInitializeCropper()
 	    },
+	    /**
+	    * Se dispara cuando vue-advanced-cropper no puede cargar la URL de la imagen.
+	    *
+	    * @return {void}
+	    */
+	    on_cropper_image_error() {
+	    	if (this.auto_crop) {
+	    		this.notify_batch_save_failed()
+	    		return
+	    	}
+	    	this.$toast.error('No se pudo cargar la imagen para recortar')
+	    },
+	    /**
+	    * Notifica fallo de guardado al flujo batch y cierra el modal de recorte.
+	    * En modo manual mantiene el toast genérico existente.
+	    *
+	    * @return {void}
+	    */
+	    notify_batch_save_failed() {
+	    	this.clearAutoCropRuntime()
+	    	this.loading_cropp = false
+	    	this.loading_not_cropp = false
+	    	this.$bvModal.hide('cropper-'+this.model.id+'-'+this.model.nombre+'-'+this.prop.key)
+	    	if (this.auto_crop) {
+	    		this.$emit('image-save-failed')
+	    		return
+	    	}
+	    	this.$toast.error('Error al recortar, pruebe seleccionando otro area')
+	    },
 
 	    startAutoCropProgress() {
 	    	this.clearAutoCropRuntime()
@@ -289,6 +319,10 @@ export default {
 	        /* Reintentos ampliados para cargas de imagen lentas o conexiones inestables. */
 	        if (attempt > 120) {
 	        	this.is_setting_coordinates = false
+	        	/* En batch automático, notifica al padre para saltar al siguiente artículo. */
+	        	if (this.auto_crop) {
+	        		this.notify_batch_save_failed()
+	        	}
 	        	return
 	        }
 
@@ -344,6 +378,11 @@ export default {
 		    this.is_setting_coordinates = false
 		},
 		uploadImage(cropped) {
+			/* En batch automático el padre omite el artículo; no dispara toast global de error. */
+			const request_config = {}
+			if (this.auto_crop) {
+				request_config.skip_global_error_event = true
+			}
 
 			let params = {}
 			if (cropped) {
@@ -354,10 +393,10 @@ export default {
 			} else {
 				this.loading_not_cropp = true
 			}
-			params.image_url = this.image_url,
-			params.model_name = this.model_name,
-			params.model_id = this.model.id,
-			this.$api.post(this.getImageUploadUrl(this.prop), params)
+			params.image_url = this.image_url
+			params.model_name = this.model_name
+			params.model_id = this.model.id
+			this.$api.post(this.getImageUploadUrl(this.prop), params, request_config)
 			.then(res => {
 				this.loading_cropp = false
 				this.loading_not_cropp = false
@@ -414,10 +453,14 @@ export default {
 				}
 			})
 			.catch(err => {
-				this.loading = false
+				console.log(err)
+				/* En batch automático el padre omite el artículo; en manual se muestra toast. */
+				if (this.auto_crop) {
+					this.notify_batch_save_failed()
+					return
+				}
 				this.loading_cropp = false
 				this.loading_not_cropp = false
-				console.log(err)
 				this.$toast.error('Error al recortar, pruebe seleccionando otro area')
 			})
 		},

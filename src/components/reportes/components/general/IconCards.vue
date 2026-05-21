@@ -1,51 +1,78 @@
 <template>
 	<div 
 	v-if="can('reportes.cards')"
-	class="icon-cards">
+	class="icon-cards m-t-30">
 		<template
 		v-if="!loading">
-			<div
-			class="card-group"
+			<template
 			v-for="group in card_groups">
-				<h6>
+			<div
+			v-if="visible_cards(group.cards).length > 0"
+			class="icon-cards__group"
+			:key="group.group_name">
+				<h6 class="icon-cards__group-title">
 					{{ group.group_name }}
 				</h6>
 
-				<div class="cards-wrapper">
+				<div class="icon-cards__grid">
 					<div
-					v-for="card in group.cards" 
-					v-if="show(card)"
+					v-for="card in visible_cards(group.cards)"
+					:key="card.id || card.text"
 					:id="card.id ? card.id : ''"
-					class="icon-card">
-						<img :src="img_url(card)">
-						<p class="text">
-							{{ card.text }}
-						</p>
-						<p class="value">
-							{{ card.value }}
-						</p>
-						<p 
-						v-if="card.extra"
-						class="extra">
-							{{ card.extra }}
-						</p>
-						<p class="description">
+					class="icon-card"
+					:class="card_accent_class(card)">
+						<div class="icon-card__header">
+							<div
+							class="icon-card__icon-wrap"
+							:class="card_accent_class(card)">
+								<i
+								:class="icon_class(card)"
+								aria-hidden="true"></i>
+							</div>
+
+							<div class="icon-card__body">
+								<p class="text">
+									{{ card.text }}
+								</p>
+								<p
+								v-if="card.value !== undefined && card.value !== null && card.value !== ''"
+								class="value">
+									{{ card.value }}
+								</p>
+								<p 
+								v-if="card.extra"
+								class="extra">
+									{{ card.extra }}
+								</p>
+							</div>
+						</div>
+
+						<p
+						v-if="card.description"
+						class="description">
 							{{ card.description }}
 						</p>
 
-						<b-button
-						size="sm"
-						v-for="button in card.buttons"
-						@click="call_method(button)">
-							{{ button.text }}
-						</b-button>
+						<div
+						v-if="card.buttons && card.buttons.length"
+						class="icon-card__actions">
+							<b-button
+							size="sm"
+							variant="outline-primary"
+							v-for="button in card.buttons"
+							:key="button.text"
+							@click="call_method(button)">
+								{{ button.text }}
+							</b-button>
+						</div>
 					</div>
 				</div>
 			</div>
+			</template>
 		</template>
 
 		<div
-		class="all-center-md"
+		class="all-center-md icon-cards__loading"
 		v-else>
 		    <b-spinner 
 		    variant="primary"></b-spinner>
@@ -394,8 +421,8 @@ export default {
 
 						{
 							text: 'Afip .TXT',
-							id: 'iva_diferencia', 
-							img: 'iva_diferencia', 
+							id: 'afip_txt', 
+							img: 'afip_txt', 
 							buttons: [
 								{
 									text: '.txt',
@@ -546,8 +573,92 @@ export default {
 		},
 	},
 	methods: {
-		img_url(card) {
-			return require('@/assets/iconos-reportes/'+card.img+'.png') 
+		/**
+		 * Devuelve la clase Bootstrap Icons según el tipo de tarjeta.
+		 * Prioriza casos especiales por texto; si no, usa el mapa por `card.img`.
+		 *
+		 * @param {Object} card - Definición de la tarjeta del reporte
+		 * @returns {String} Clases CSS del icono (ej. "bi bi-cart-check")
+		 */
+		icon_class(card) {
+			// Casos puntuales según el título visible de la tarjeta
+			if (card.text === 'Afip .TXT') {
+				return 'bi bi-filetype-txt'
+			}
+			if (card.text && card.text.indexOf('Proveedores') !== -1) {
+				return 'bi bi-building'
+			}
+			if (card.text && card.text.indexOf('Clientes') !== -1) {
+				return 'bi bi-people'
+			}
+
+			// Mapa de imágenes legacy → iconos Bootstrap representativos
+			const icon_map = {
+				ventas: 'bi-graph-up-arrow',
+				pagado_mostrador2: 'bi-shop-window',
+				a_cuentas_corrientes: 'bi-journal-text',
+				pagado_mostrador: 'bi-wallet2',
+				cantidad_ventas: 'bi-receipt-cutoff',
+				ingresos_brutos: 'bi-safe',
+				ingresos_netos: 'bi-piggy-bank',
+				rentabilidad: 'bi-trophy',
+				gastos: 'bi-cash-stack',
+				devoluciones: 'bi-arrow-return-left',
+				comprado: 'bi-cart-plus',
+				pagado: 'bi-credit-card-2-front',
+				'deuda-clientes': 'bi-exclamation-circle',
+				iva_vendido: 'bi-file-earmark-arrow-up',
+				iva_comprado: 'bi-file-earmark-arrow-down',
+				iva_diferencia: 'bi-calculator',
+			}
+
+			const icon_name = icon_map[card.img] || 'bi-bar-chart-line'
+			return 'bi ' + icon_name
+		},
+		/**
+		 * Clase de acento visual (color del icono y borde lateral) según categoría.
+		 *
+		 * @param {Object} card - Definición de la tarjeta del reporte
+		 * @returns {String} Sufijo de clase CSS (ej. "accent-ventas")
+		 */
+		card_accent_class(card) {
+			const accent_map = {
+				ventas: 'accent-ventas',
+				pagado_mostrador2: 'accent-ventas',
+				a_cuentas_corrientes: 'accent-ventas',
+				pagado_mostrador: 'accent-ventas',
+				cantidad_ventas: 'accent-ventas',
+				ingresos_brutos: 'accent-dinero',
+				ingresos_netos: 'accent-dinero',
+				rentabilidad: 'accent-dinero',
+				gastos: 'accent-gastos',
+				devoluciones: 'accent-gastos',
+				comprado: 'accent-egresos',
+				pagado: 'accent-egresos',
+				'deuda-clientes': 'accent-deudas',
+				iva_vendido: 'accent-facturacion',
+				iva_comprado: 'accent-facturacion',
+				iva_diferencia: 'accent-facturacion',
+			}
+
+			return accent_map[card.img] || 'accent-default'
+		},
+		/**
+		 * Filtra las tarjetas visibles según extensiones y condiciones del modelo.
+		 *
+		 * @param {Array} cards - Listado de tarjetas del grupo
+		 * @returns {Array} Tarjetas que deben mostrarse
+		 */
+		visible_cards(cards) {
+			let visible = []
+
+			cards.forEach(card => {
+				if (this.show(card)) {
+					visible.push(card)
+				}
+			})
+
+			return visible
 		},
 		show(card) {
 			let show = true
@@ -593,83 +704,198 @@ export default {
 }
 </script>
 <style lang="sass">
+// Paleta de acentos por categoría de KPI (tablero de control)
+$accent-ventas: #2563eb
+$accent-dinero: #059669
+$accent-gastos: #dc2626
+$accent-egresos: #7c3aed
+$accent-deudas: #d97706
+$accent-facturacion: #0891b2
+$accent-default: #64748b
+
 .icon-cards
-	display: flex 
-	flex-direction: column 
-	// flex-wrap: wrap
+	display: block
+	padding: 8px 4px 24px
 
-	.card-group
-		display: flex 
-		flex-direction: column
+	&__loading
+		min-height: 200px
+		padding: 48px 0
 
-		h6 
-			font-size: 25px
-			text-align: left
-			font-weight: bold 
-			margin: 30px 0 20px
+	// Evita conflicto con Bootstrap .card-group (flex que estira el contenedor)
+	&__group
+		display: block
+		height: auto
+		min-height: 0
+		margin: 0 0 50px
 
-		.cards-wrapper
-			display: flex 
-			flex-direction: row
-			flex-wrap: wrap 
+		&:last-child
+			margin-bottom: 0
+
+	&__group-title
+		font-size: 1rem
+		text-align: left
+		font-weight: 700
+		margin: 0 0 10px
+		padding-bottom: 8px
+		border-bottom: 2px solid #e2e8f0
+		color: #475569
+		text-transform: uppercase
+		letter-spacing: 0.06em
+
+	&__grid
+		display: grid
+		grid-template-columns: repeat(auto-fill, minmax(260px, 1fr))
+		grid-auto-rows: max-content
+		row-gap: 20px
+		column-gap: 16px
+		align-items: start
+		height: auto
+		min-height: 0
 
 	.icon-card
-		@media screen and (max-width: 700px) 
-			width: 45%
-			margin: 2.5%
-			
-		@media screen and (min-width: 700px) 
-			width: 250px
-			margin: 10px
-		
-		height: 200px
-		min-height: 200px
-		background: #FFF
-		border: 2px solid rgba(0, 0, 0, .3)
-		border-radius: 8px
-		display: flex 
+		background: #fff
+		border: 1px solid #e2e8f0
+		border-radius: 12px
+		display: flex
 		flex-direction: column
-		align-items: center 
-		justify-content: space-around
-		transition: all .2s
+		align-self: start
+		padding: 12px 14px
+		min-height: 0
+		height: auto
+		transition: transform 0.5s ease, box-shadow 0.5s ease, border-color 0.5s ease
 		overflow: hidden
-		position: relative // Añadido para contener el contenido absoluto
+		position: relative
+		box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06)
 
+		// Borde lateral de acento según categoría
+		&::before
+			content: ''
+			position: absolute
+			left: 0
+			top: 0
+			bottom: 0
+			width: 4px
+			border-radius: 12px 0 0 12px
+			background: $accent-default
 
-		&:hover 
-			transform: scale(1.1)
-			box-shadow: rgb(38, 57, 77) 0px 20px 30px -10px
-			height: auto
+		&.accent-ventas::before
+			background: $accent-ventas
+		&.accent-dinero::before
+			background: $accent-dinero
+		&.accent-gastos::before
+			background: $accent-gastos
+		&.accent-egresos::before
+			background: $accent-egresos
+		&.accent-deudas::before
+			background: $accent-deudas
+		&.accent-facturacion::before
+			background: $accent-facturacion
 
-			& > .description
+		&:hover
+			transform: translateY(-3px)
+			box-shadow: 0 12px 24px rgba(15, 23, 42, 0.1)
+			border-color: #cbd5e1
+			z-index: 2
+			overflow: visible
+
+			.description
 				display: block
+				margin-top: 10px
+				padding-top: 10px
+				border-top: 1px dashed #e2e8f0
 
-		img 
-			width: 80px
+		&__header
+			display: flex
+			align-items: flex-start
+			gap: 14px
+			flex-shrink: 0
 
-		p 
+		&__icon-wrap
+			flex-shrink: 0
+			width: 48px
+			height: 48px
+			border-radius: 10px
+			display: flex
+			align-items: center
+			justify-content: center
+			background: rgba($accent-default, 0.12)
+			color: $accent-default
+
+			i
+				font-size: 1.35rem
+				line-height: 1
+
+			&.accent-ventas
+				background: rgba($accent-ventas, 0.12)
+				color: $accent-ventas
+			&.accent-dinero
+				background: rgba($accent-dinero, 0.12)
+				color: $accent-dinero
+			&.accent-gastos
+				background: rgba($accent-gastos, 0.12)
+				color: $accent-gastos
+			&.accent-egresos
+				background: rgba($accent-egresos, 0.12)
+				color: $accent-egresos
+			&.accent-deudas
+				background: rgba($accent-deudas, 0.12)
+				color: $accent-deudas
+			&.accent-facturacion
+				background: rgba($accent-facturacion, 0.12)
+				color: $accent-facturacion
+
+		&__body
+			flex: 0 1 auto
+			min-width: 0
+
+		&__actions
+			display: flex
+			flex-wrap: wrap
+			gap: 8px
+			margin-top: 12px
+			padding-top: 12px
+			border-top: 1px solid #f1f5f9
+
+		p
 			margin: 0
 
-		.text 
-			font-size: 16px
-			font-weight: bold
-		
-		.value 
-			font-size: 25px
-			// font-weight: bold
+		.text
+			font-size: 0.8rem
+			font-weight: 600
+			color: #64748b
+			line-height: 1.3
+			margin-bottom: 6px
+
+		.value
+			font-size: 1.5rem
+			font-weight: 700
+			color: #0f172a
+			line-height: 1.2
+			word-break: break-word
+
+		.extra
+			font-size: 0.75rem
+			color: #94a3b8
+			margin-top: 4px
 
 		.description
-			font-size: 13px
-			color: rgba(0, 0, 0, .9)
 			display: none
-			padding: 10px
-			text-align: left
-			position: absolute // Absoluto para superponerse
-			top: 0 // Ubicación de la descripción dentro de la tarjeta
-			box-sizing: border-box // Incluye el padding en el ancho total
-			background: rgba(255, 255, 255, 0.9) // Fondo semitransparente
-			font-weight: bold
+			font-size: 0.75rem
+			color: #475569
+			line-height: 1.45
+			margin: 0
+			padding: 0
 
+	@media screen and (max-width: 700px)
+		&__grid
+			grid-template-columns: repeat(auto-fill, minmax(100%, 1fr))
+			row-gap: 20px
+			column-gap: 16px
 
+		.icon-card
+			padding: 14px
+
+			.value
+				font-size: 1.25rem
 
 </style>

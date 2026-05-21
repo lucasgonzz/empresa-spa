@@ -433,13 +433,18 @@ export default {
 	        this.flow_mode = 'auto'
 	        this.search()
 	    },
+	    /**
+	     * Espera el timeout configurado y luego selecciona la primera imagen disponible.
+	     * Si ninguna imagen carga correctamente, emite `no-image-available` para que el
+	     * componente padre pueda saltar al siguiente artículo del batch.
+	     *
+	     * @return {void}
+	     */
 	    seleccionar_imagen_automaticamente() {
-	    	// alert('Seleccionando en '+this.auto_select_timeout)
-	        // Esperar unos segundos antes de seleccionar automáticamente
 			this.startAutoSelectProgress()
 	        this.auto_select_timer = setTimeout(async () => {
 	            if (this.flow_mode === 'auto') {
-	            	if (this.images_result.length) {
+	            	if (this.images_result && this.images_result.length) {
 	            		/* Valida cada resultado en orden para evitar seleccionar enlaces rotos. */
 	            		const image_selected = await this.select_first_available_image()
 	            		if (image_selected) {
@@ -447,6 +452,8 @@ export default {
 	            		}
 	            		this.$toast.error('No se pudo cargar ninguna imagen para seleccionar automáticamente')
 	            	}
+	            	/* Ninguna imagen disponible: notifica al padre para saltar al siguiente artículo. */
+	            	this.$emit('no-image-available')
 	            }
 	        }, this.auto_select_timeout * 1000)
 	    },
@@ -476,12 +483,16 @@ export default {
 
 						this.sumar_contador_de_busqueda()
 
-						if (body.searchInformation.totalResults == 0) {
-							/* En automático, si no hubo resultados, intentar siguiente criterio antes de cancelar. */
-							if (this.try_next_auto_query()) {
-								return
-							}
-							this.$toast.error('No se encontraron resultados, prueba con otras palabras por favor')
+					if (body.searchInformation.totalResults == 0) {
+						/* En automático, si no hubo resultados, intentar siguiente criterio antes de cancelar. */
+						if (this.try_next_auto_query()) {
+							return
+						}
+						this.$toast.error('No se encontraron resultados, prueba con otras palabras por favor')
+						/* Agotadas todas las queries automáticas sin resultados: notifica para saltar artículo. */
+						if (this.flow_mode === 'auto') {
+							this.$emit('no-image-available')
+						}
 						} else if (body.items.length) {
 							this.images_result = []
 							body.items.forEach(item => {

@@ -25,13 +25,38 @@
 							has_delivery_error(message) ? 'support-message-bubble--error' : '',
 						]"
 						:title="message_sent_at_tooltip(message)">
-						<div v-if="message.body">{{ message.body }}</div>
+					<div v-if="message.body">{{ message.body }}</div>
+					<!-- Renderizado diferenciado según tipo de adjunto -->
+					<template v-if="message.attachments && message.attachments.length">
+						<!-- Reproducción inline para mensajes de audio -->
+						<audio
+							v-if="message.kind === 'audio'"
+							controls
+							:src="attachment_url(message.attachments[0])"
+							class="support-message-audio"
+							preload="metadata">
+							Tu navegador no soporta reproducción de audio.
+						</audio>
+						<!-- Miniatura: abre visor en la misma página -->
+						<button
+							v-else-if="message.kind === 'image'"
+							type="button"
+							class="support-message-image-btn"
+							title="Ver imagen en grande"
+							@click="open_image_preview(attachment_url(message.attachments[0]))">
+							<img
+								:src="attachment_url(message.attachments[0])"
+								class="support-message-image"
+								alt="Imagen adjunta" />
+						</button>
+						<!-- Fallback genérico para otros tipos de adjunto -->
 						<a
-							v-if="message.attachments && message.attachments.length"
+							v-else
 							target="_blank"
 							:href="attachment_url(message.attachments[0])">
 							Adjunto
 						</a>
+					</template>
 					</div>
 					<div
 						v-if="is_mine(message) && has_delivery_error(message)"
@@ -93,10 +118,17 @@
 				aria-hidden="true" />
 			</template>
 		</div>
+
+		<image-lightbox
+			:show.sync="image_preview_visible"
+			:image_url="image_preview_url"
+			@close="on_image_preview_close" />
 	</div>
 </template>
 
 <script>
+import ImageLightbox from '@/common-vue/components/support-chat/ImageLightbox.vue'
+
 /**
  * Emite `retry-message` cuando el usuario reintenta un envío fallido.
  * Emite `start-new-ticket` cuando el usuario abre un hilo nuevo desde la barra contextual.
@@ -104,6 +136,9 @@
  * La barra de ticket cerrado / iniciar nuevo ticket se renderiza debajo de los mensajes del hilo.
  */
 export default {
+	components: {
+		ImageLightbox,
+	},
 	props: {
 		messages: {
 			type: Array,
@@ -135,6 +170,14 @@ export default {
 			type: String,
 			default: '',
 		},
+	},
+	data() {
+		return {
+			/** Visor de imagen ampliada abierto. */
+			image_preview_visible: false,
+			/** URL de la imagen mostrada en el visor. */
+			image_preview_url: '',
+		}
 	},
 	/**
 	 * Posiciona al pie al abrir el panel con historial ya en store.
@@ -317,6 +360,24 @@ export default {
 		 */
 		attachment_url(attachment) {
 			return process.env.VUE_APP_API_URL + '/storage/' + attachment.path
+		},
+		/**
+		 * Abre el visor de imagen en la misma página.
+		 *
+		 * @param {string} url URL pública del adjunto.
+		 */
+		open_image_preview(url) {
+			if (!url) {
+				return
+			}
+			this.image_preview_url = url
+			this.image_preview_visible = true
+		},
+		/**
+		 * Limpia la URL al cerrar el visor.
+		 */
+		on_image_preview_close() {
+			this.image_preview_url = ''
 		},
 		/**
 		 * Alinea al bottom tras el tick y tras el siguiente repintado (layout de adjuntos / fuentes).
@@ -524,5 +585,42 @@ export default {
 	padding: 0 8px;
 	font-size: 11px;
 	line-height: 1.4;
+}
+
+/* Reproductor de audio compacto dentro de la burbuja */
+.support-message-audio {
+	display: block;
+	max-width: 260px;
+	width: 100%;
+	height: 36px;
+	margin-top: 2px;
+}
+
+/* Botón sin estilo que envuelve la miniatura */
+.support-message-image-btn {
+	display: block;
+	padding: 0;
+	margin: 0;
+	border: none;
+	background: transparent;
+	line-height: 0;
+	cursor: pointer;
+}
+
+.support-message-image-btn:focus {
+	outline: 2px solid #007bff;
+	outline-offset: 2px;
+	border-radius: 6px;
+}
+
+/* Miniatura de imagen; clic abre visor en la misma página */
+.support-message-image {
+	display: block;
+	max-width: 220px;
+	max-height: 180px;
+	border-radius: 6px;
+	margin-top: 4px;
+	object-fit: cover;
+	cursor: pointer;
 }
 </style>

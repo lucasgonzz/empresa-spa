@@ -19,7 +19,7 @@ export default {
 
 		descriptions: [],
 
-		update_unidades_devueltas: 1,
+		update_unidades_devueltas: 0,
 		regresar_stock: 1,
 		address_id: 0,
 		generar_current_acount: 1,
