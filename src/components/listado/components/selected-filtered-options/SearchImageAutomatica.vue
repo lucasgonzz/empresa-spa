@@ -4,17 +4,52 @@
 		<b-dropdown-text>
 			Imagenes inteligentes
 		</b-dropdown-text>
-		<b-dropdown-item
-		v-if="selected.length"
-		@click="start_batch_flow">
-			<i class="bi bi-images m-r-5"></i>
-			Asignar imágenes automáticamente
-		</b-dropdown-item>
-		<b-dropdown-divider></b-dropdown-divider>
+	<b-dropdown-item
+	@click="start_batch_flow()">
+		<i class="bi bi-images m-r-5"></i>
+		Asignar imágenes automáticamente
+	</b-dropdown-item>
+	<b-dropdown-divider></b-dropdown-divider>
 
-		<search-image
-		ref="search_image_modal"
-		@setImageUrl="on_image_selected"></search-image>
+	<search-image
+	ref="search_image_modal"
+	@setImageUrl="on_image_selected"
+	@no-image-available="on_no_image_available"></search-image>
+
+	<!-- Modal resumen final del procesamiento batch -->
+	<b-modal
+	v-model="batch_summary_visible"
+	title="Resumen de asignación automática"
+	ok-only
+	ok-title="Entendido"
+	ok-variant="primary">
+		<div class="batch-summary-content">
+			<div class="batch-summary-row batch-summary-success">
+				<i class="bi bi-check-circle-fill m-r-10"></i>
+				<span>Artículos con imagen asignada:</span>
+				<strong class="m-l-10">{{ articles_with_image_count }}</strong>
+			</div>
+			<div class="batch-summary-row batch-summary-skipped">
+				<i class="bi bi-skip-forward-circle-fill m-r-10"></i>
+				<span>Artículos sin imagen asignada:</span>
+				<strong class="m-l-10">{{ articles_skipped_count }}</strong>
+			</div>
+			<div
+			v-if="articles_skipped_names.length"
+			class="batch-summary-skipped-list">
+				<p class="batch-summary-skipped-list-title">
+					Artículos sin imagen:
+				</p>
+				<ul class="batch-summary-skipped-names">
+					<li
+					v-for="(article_name, index) in articles_skipped_names"
+					:key="'skipped-'+index">
+						{{ article_name }}
+					</li>
+				</ul>
+			</div>
+		</div>
+	</b-modal>
 
 		<cropper
 		v-if="current_article"
@@ -23,7 +58,8 @@
 		:prop="prop_images"
 		:model_name="'article'"
 		:auto_crop="auto_crop"
-		@image-saved="on_image_saved"></cropper>
+		@image-saved="on_image_saved"
+		@image-save-failed="on_image_save_failed"></cropper>
 
 	</div>
 </template>
@@ -41,6 +77,23 @@ export default {
 		*/
 		selected() {
 			return this.$store.state.article.selected
+		},
+		/**
+		* Artículos actualmente cargados como resultado del filtrado activo.
+		* Solo incluye los ya paginados/visibles, no los pendientes de cargar.
+		*
+		* @return {Array}
+		*/
+		filtered() {
+			return this.$store.state.article.filtered
+		},
+		/**
+		* Indica si hay un filtro activo en el listado.
+		*
+		* @return {Boolean}
+		*/
+		is_filtered() {
+			return this.$store.state.article.is_filtered
 		},
 	},
 	data() {
@@ -64,8 +117,16 @@ export default {
 			auto_crop: true,
 			/* Contador actual de búsquedas del día para validar cuota antes de iniciar. */
 			current_geocoder_counter: null,
-			/* Referencia al botón flotante montado en body para cancelar el flujo. */
-			floating_cancel_button: null,
+		/* Referencia al botón flotante montado en body para cancelar el flujo. */
+		floating_cancel_button: null,
+		/* Cantidad de artículos a los que se les asignó imagen exitosamente en el batch. */
+		articles_with_image_count: 0,
+		/* Cantidad de artículos saltados por falta de imágenes disponibles en el batch. */
+		articles_skipped_count: 0,
+		/* Nombres de artículos a los que no se les pudo asignar imagen (para el modal resumen). */
+		articles_skipped_names: [],
+		/* Controla visibilidad del modal resumen al finalizar el procesamiento. */
+		batch_summary_visible: false,
 		}
 	},
 	watch: {
@@ -119,21 +180,35 @@ export default {
 			this.floating_cancel_button = null
 		},
 		/**
-		* Inicia el flujo batch con la selección actual y advierte cuota disponible.
+		* Inicia el flujo batch con el array de artículos recibido y advierte cuota disponible.
+		* Se puede llamar tanto con los artículos seleccionados como con los filtrados visibles.
 		*
+		* @param {Array} articles_source Array de artículos a procesar en el batch.
 		* @return {void}
 		*/
 		start_batch_flow() {
-			if (!this.selected.length) {
-				this.$toast.error('Seleccione al menos un artículo para iniciar')
+			let articles_source = []
+			if (this.selected.length) {
+				articles_source = this.selected
+			} else if (this.filtered.length) {
+				articles_source = this.filtered
+			}
+
+			if (!articles_source || !articles_source.length) {
+				this.$toast.error('No hay artículos para procesar')
 				return
 			}
 
 			this.$api.get('google/get-current')
 			.then(res => {
 				this.current_geocoder_counter = res.data.model
-				this.articles_queue = this.selected.slice()
+				/* Copia el array fuente para evitar mutaciones reactivas durante el proceso. */
+				this.articles_queue = articles_source.slice()
 				this.current_index = 0
+				/* Reinicia contadores de resumen para el nuevo batch. */
+				this.articles_with_image_count = 0
+				this.articles_skipped_count = 0
+				this.articles_skipped_names = []
 				this.is_running = true
 				this.auto_crop = true
 				this.notify_quota_status()
@@ -167,10 +242,11 @@ export default {
 				return
 			}
 
-			if (this.current_index >= this.articles_queue.length) {
-				this.finish_batch_flow('Flujo automático finalizado')
-				return
-			}
+		if (this.current_index >= this.articles_queue.length) {
+			/* Finalización natural: muestra modal resumen en lugar de toast simple. */
+			this.finish_batch_flow(null, true)
+			return
+		}
 
 			/* Modelo actual que se mostrará en SearchImage y Cropper. */
 			const next_article = this.articles_queue[this.current_index]
@@ -180,12 +256,13 @@ export default {
 				return
 			}
 
-			if (!next_article.bar_code && !next_article.name) {
-				this.$toast.error('El artículo '+next_article.id+' no tiene código de barras ni nombre para buscar')
-				this.current_index++
-				this.process_next_article()
-				return
-			}
+		if (!next_article.bar_code && !next_article.name) {
+			this.$toast.error('El artículo '+next_article.id+' no tiene código de barras ni nombre para buscar')
+			this.register_article_skipped(next_article)
+			this.current_index++
+			this.process_next_article()
+			return
+		}
 
 			this.current_article = next_article
 			this.image_url = ''
@@ -219,6 +296,7 @@ export default {
 		},
 		/**
 		* Avanza al siguiente artículo cuando el cropper confirma guardado exitoso.
+		* Incrementa el contador de artículos con imagen asignada correctamente.
 		*
 		* @return {void}
 		*/
@@ -226,6 +304,70 @@ export default {
 			if (!this.is_running) {
 				return
 			}
+			/* Imagen guardada exitosamente: suma al contador de éxitos del batch. */
+			this.articles_with_image_count++
+			this.current_index++
+			this.process_next_article()
+		},
+		/**
+		* Maneja fallo al guardar/recortar (URL inválida, error de API, cropper sin cargar).
+		* Registra el artículo en la lista de omitidos y continúa con el siguiente.
+		*
+		* @return {void}
+		*/
+		on_image_save_failed() {
+			if (!this.is_running || !this.current_article) {
+				return
+			}
+			this.register_article_skipped(this.current_article)
+			this.current_index++
+			this.process_next_article()
+		},
+		/**
+		* Registra un artículo como omitido: incrementa contador y agrega su nombre al resumen.
+		*
+		* @param {Object} article Artículo que no recibió imagen.
+		* @return {void}
+		*/
+		register_article_skipped(article) {
+			if (!article) {
+				return
+			}
+			this.articles_skipped_count++
+			const display_name = this.get_article_display_name(article)
+			if (this.articles_skipped_names.indexOf(display_name) === -1) {
+				this.articles_skipped_names.push(display_name)
+			}
+		},
+		/**
+		* Obtiene el nombre legible del artículo para mostrar en el modal resumen.
+		*
+		* @param {Object} article Modelo de artículo.
+		* @return {String}
+		*/
+		get_article_display_name(article) {
+			if (article.name) {
+				return article.name
+			}
+			if (article.nombre) {
+				return article.nombre
+			}
+			return 'Artículo #'+article.id
+		},
+		/**
+		* Maneja el evento `no-image-available` emitido por SearchImage cuando no
+		* hay imágenes disponibles para el artículo actual (sin resultados o todas fallidas).
+		* Cierra el modal, registra el salto en el contador y avanza al siguiente.
+		*
+		* @return {void}
+		*/
+		on_no_image_available() {
+			if (!this.is_running) {
+				return
+			}
+			/* Cierra el modal de búsqueda que puede haber quedado abierto sin imagen seleccionada. */
+			this.$bvModal.hide('search-image')
+			this.register_article_skipped(this.current_article)
 			this.current_index++
 			this.process_next_article()
 		},
@@ -238,18 +380,30 @@ export default {
 			this.finish_batch_flow('Flujo automático cancelado')
 		},
 		/**
-		* Limpia estado interno y muestra mensaje final del proceso.
+		* Limpia estado interno y muestra feedback final del proceso.
+		* Cuando `show_summary` es true (finalización natural) abre el modal resumen;
+		* de lo contrario muestra un toast simple (cancelación manual).
 		*
-		* @param {String} toast_message Mensaje de feedback para el usuario.
+		* @param {String|null} toast_message Mensaje de toast; null si se usa modal resumen.
+		* @param {Boolean} show_summary     Si true, muestra el modal con estadísticas finales.
 		* @return {void}
 		*/
-		finish_batch_flow(toast_message) {
+		finish_batch_flow(toast_message, show_summary = false) {
+			/* Cierra cropper activo antes de limpiar el artículo actual. */
+			if (this.current_article) {
+				this.$bvModal.hide(this.get_cropper_modal_id())
+			}
 			this.is_running = false
 			this.articles_queue = []
 			this.current_index = 0
 			this.current_article = null
 			this.image_url = ''
 			this.$bvModal.hide('search-image')
+			if (show_summary) {
+				/* Abre el modal resumen con los contadores acumulados del batch. */
+				this.batch_summary_visible = true
+				return
+			}
 			if (toast_message) {
 				this.$toast.success(toast_message)
 			}
@@ -276,4 +430,48 @@ export default {
 	bottom: 20px
 	transform: translateX(-50%)
 	z-index: 99999
+
+.batch-summary-content
+	display: flex
+	flex-direction: column
+	gap: 16px
+	padding: 8px 0
+
+	.batch-summary-row
+		display: flex
+		align-items: center
+		font-size: 1.05rem
+		padding: 12px 16px
+		border-radius: 8px
+
+	.batch-summary-success
+		background-color: rgba(40, 167, 69, 0.1)
+		color: #155724
+
+	.batch-summary-skipped
+		background-color: rgba(255, 193, 7, 0.1)
+		color: #856404
+
+.batch-summary-skipped-list
+	margin-top: 4px
+	padding: 12px 16px
+	border-radius: 8px
+	background-color: rgba(255, 193, 7, 0.08)
+	max-height: 220px
+	overflow-y: auto
+
+	.batch-summary-skipped-list-title
+		margin: 0 0 8px 0
+		font-weight: bold
+		font-size: 0.95rem
+		color: #856404
+
+	.batch-summary-skipped-names
+		margin: 0
+		padding-left: 20px
+		font-size: 0.9rem
+		color: #664d03
+
+		li
+			margin-bottom: 4px
 </style>

@@ -8,6 +8,7 @@
 		<view-component 
 		v-if="view == 'compras'"
 		model_name="provider_order"
+		show_btn_pdf
 		show_models_if_empty
 		order_list_by="provider_order_status"
 		change_from_dates_option

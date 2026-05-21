@@ -138,11 +138,15 @@ function global_api_error_interceptor(error) {
     const skip_validation_toast = Boolean(
         error.config && error.config.skip_global_validation_toast
     )
+    /* Permite que llamadas puntuales (p. ej. batch de imágenes) manejen el error localmente. */
+    const skip_global_error_event = Boolean(
+        error.config && error.config.skip_global_error_event
+    )
     const is_validation = is_laravel_validation_payload(status, data)
 
     if (is_validation && !skip_validation_toast) {
         show_laravel_validation_toast(data)
-    } else if (response && is_authenticated) {
+    } else if (response && is_authenticated && !skip_global_error_event) {
         // Solo emitimos el error global cuando ya hay sesión iniciada.
         // Esto evita alerts/toasts automáticos durante el arranque o antes del login.
         document.dispatchEvent(
