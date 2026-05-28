@@ -94,7 +94,8 @@
 				<b-col
 				:cols="excel_column(column, 12)"
 				:md="excel_column(column, 4)"
-				v-for="(column, index) in columns_">
+				v-for="(column, index) in columns_"
+				:key="'import-column-' + index + '-' + (column.text || column.group_title || '')">
 
 					<div
 					v-if="column.group_title">
@@ -107,16 +108,31 @@
 
 					<div 
 					v-else-if="column.text"
-					class="container shadow-3">
+					class="import-column-card shadow-3"
+					:class="{ 'import-column-card--has-help': has_column_help(column) }">
 						<div 
 						:id="'cont-input-prop-'+index"
 						class="cont-inputs">
-							<span
-							class="btn btn-link"
-							@click="setColumn(index)">
-								{{ column.text }} 
-							</span>
-							<div>
+							<div class="import-column-label">
+								<span
+								class="btn btn-link import-column-title"
+								@click="setColumn(index)">
+									{{ column.text }} 
+								</span>
+								<b-button
+								v-if="has_column_help(column)"
+								size="sm"
+								:variant="get_column_help_btn_variant(column)"
+								class="import-column-help-btn"
+								:class="get_column_help_btn_active_class(column)"
+								@click.stop="$set(column, 'show_description', !column.show_description)"
+								:title="column.show_description ? 'Ocultar instrucciones' : 'Ver instrucciones'">
+									<i
+									class="import-column-help-icon"
+									:class="column.show_description ? 'icon-up' : 'icon-down'"></i>
+								</b-button>
+							</div>
+							<div class="import-column-input">
 
 								<b-form-input
 								:id="column.text.replaceAll(' ', '_')+'-position'"
@@ -126,33 +142,45 @@
 
 							</div>
 						</div>
-						<!-- <p
-						v-if="column.description">
-							{{ column.description }}
-						</p> -->
 
-
-						<!-- Descripcion de la propiedad - Popover -->
-						<b-popover
-						v-if="column.description" 
-						:target="'cont-input-prop-'+index" 
-						triggers="hover" 
-						placement="left">
-						    <template #title><strong>Instrucciones</strong></template>
-						    {{ column.description }}
-						 </b-popover>
-
-						<!-- <b-popover
-						v-if="prop.descriptions" 
-						:target="'label-'+prop.key" 
-						triggers="hover" 
-						placement="left">
-						    <template #title><strong>Instrucciones</strong></template>
-						    <p
-						    v-for="description in prop.descriptions">
-						    	{{ description }}
-						    </p>
-						</b-popover> -->
+						<transition name="import-description-slide">
+							<div
+							v-if="has_column_help(column) && column.show_description"
+							class="import-column-description"
+							:class="{ 'import-column-description--relation': column.help && column.help.has_relation_options }">
+								<span class="import-column-description-label">
+									Instrucciones
+								</span>
+								<p
+								v-if="column.help && column.help.text"
+								class="import-column-description-text m-b-0">
+									{{ column.help.text }}
+								</p>
+								<div
+								v-if="column.help && column.help.has_relation_options"
+								class="import-column-values-block"
+								:class="{ 'm-t-10': column.help.text }">
+									<span class="import-column-values-title">
+										{{ column.help.values_label }}
+									</span>
+									<div
+									v-if="column.help.values.length > 0"
+									class="import-column-values-list">
+										<span
+										v-for="(value, value_index) in column.help.values"
+										:key="'import-value-' + index + '-' + value_index"
+										class="import-column-value-chip">
+											{{ value }}
+										</span>
+									</div>
+									<p
+									v-else
+									class="import-column-description-text import-column-description-empty m-b-0">
+										Los valores se tomarán de los registros existentes en el sistema.
+									</p>
+								</div>
+							</div>
+						</transition>
 					</div>
 				</b-col>
 			</b-form-row>
@@ -617,7 +645,9 @@ export default {
 		},
 		props_to_send: {
 			type: Object,
-			default: null
+			default() {
+				return {}
+			}
 		},
 		advises: {
 			type: Array,
@@ -705,6 +735,7 @@ export default {
 				this.demora_de_todas_las_solicitud = 0
 				console.log('Se puso hubo_un_error en '+this.hubo_un_error)
 				this.set_default_columns_positions()
+				this.load_import_stores()
 				this.$store.commit('column_position/set_selected_column_position_id', 0)
 	        }
 	    })
@@ -723,6 +754,7 @@ export default {
 		columns() {
 			console.log('watch de columns')
 			this.set_default_columns_positions()
+			this.load_import_stores()
 		},
 		selected_column_position_id() {
 			if (this.selected_column_position_id != 0) {
@@ -740,6 +772,280 @@ export default {
 			}
 			return _default
 		},
+
+		/**
+		 * Devuelve props extra de importación evitando errores cuando no se pasaron desde el padre.
+		 *
+		 * @return {Object} Objeto con propiedades adicionales para el FormData.
+		 */
+		get_import_extra_props() {
+			if (this.props_to_send) {
+				return this.props_to_send
+			}
+
+			return {}
+		},
+
+		/**
+		 * Devuelve la clave backend de una columna (snake_case) usada en prop_* del FormData.
+		 *
+		 * @param {Object} column Columna configurada en el importador concreto.
+		 * @return {string} Clave estable para el backend.
+		 */
+		get_column_prop_key(column) {
+			if (column.key) {
+				return column.key
+			}
+
+			return column.text
+		},
+
+		/**
+		 * Normaliza el texto de una columna para comparar definiciones y presets guardados.
+		 *
+		 * @param {string} text Texto visible de la columna.
+		 * @return {string} Texto normalizado en minúsculas y sin espacios extremos.
+		 */
+		normalize_column_text(text) {
+			return (text || '').toString().trim().toLowerCase()
+		},
+
+		/**
+		 * Busca la definición original de una columna según su texto visible.
+		 *
+		 * @param {string} text Texto de la columna en pantalla.
+		 * @return {Object|null} Definición encontrada en `columns` o null.
+		 */
+		find_column_def_by_text(text) {
+			let normalized_text = this.normalize_column_text(text)
+			let column_def = null
+
+			this.columns.forEach(column => {
+				if (column.text && this.normalize_column_text(column.text) === normalized_text) {
+					column_def = column
+				}
+			})
+
+			return column_def
+		},
+
+		/**
+		 * Arma la lista de módulos Vuex que deben cargarse para mostrar valores posibles.
+		 *
+		 * @return {Array} Nombres de módulos del store a consultar con getModels.
+		 */
+		get_import_store_modules() {
+			let store_modules = {}
+
+			this.actions.forEach(action => {
+				let action_parts = action.split('/')
+
+				if (action_parts.length >= 2 && action_parts[1] === 'getModels') {
+					store_modules[action_parts[0]] = true
+				}
+			})
+
+			this.columns.forEach(column => {
+				if (column.relation_options && column.relation_options.store_module) {
+					store_modules[column.relation_options.store_module] = true
+				}
+			})
+
+			return Object.keys(store_modules)
+		},
+
+		/**
+		 * Carga en el store los modelos relacionados con columnas de importación y refresca ayudas.
+		 */
+		load_import_stores() {
+			let store_modules = this.get_import_store_modules()
+			let promises = []
+
+			store_modules.forEach(store_module => {
+				promises.push(this.$store.dispatch(store_module + '/getModels'))
+			})
+
+			if (promises.length === 0) {
+				return
+			}
+
+			Promise.all(promises).then(() => {
+				this.refresh_columns_descriptions()
+			}).catch(() => {
+				this.refresh_columns_descriptions()
+			})
+		},
+
+		/**
+		 * Reconstruye las descripciones visibles de columnas ya renderizadas en el modal.
+		 */
+		refresh_columns_descriptions() {
+			this.columns_.forEach(column => {
+				if (!column.text) {
+					return
+				}
+
+				let column_def = this.find_column_def_by_text(column.text)
+
+				if (column_def) {
+					column.help = this.resolve_column_help(column_def)
+					column.description = this.get_column_help_text(column.help)
+				}
+			})
+		},
+
+		/**
+		 * Indica si la columna tiene ayuda visible para el operador.
+		 *
+		 * @param {Object} column Columna renderizada en el modal.
+		 * @return {boolean} True si hay texto manual o valores de relación.
+		 */
+		has_column_help(column) {
+			if (!column.help) {
+				return false
+			}
+
+			if (column.help.text) {
+				return true
+			}
+
+			if (column.help.has_relation_options) {
+				return true
+			}
+
+			return column.help.values && column.help.values.length > 0
+		},
+
+		/**
+		 * Define el variant del botón de ayuda según el tipo de instrucciones.
+		 *
+		 * @param {Object} column Columna renderizada en el modal.
+		 * @return {string} Variant bootstrap del botón.
+		 */
+		get_column_help_btn_variant(column) {
+			if (column.help && column.help.has_relation_options) {
+				return 'outline-success'
+			}
+
+			return 'outline-secondary'
+		},
+
+		/**
+		 * Clase activa del botón de ayuda según el tipo de instrucciones.
+		 *
+		 * @param {Object} column Columna renderizada en el modal.
+		 * @return {Object} Clases condicionales para el botón.
+		 */
+		get_column_help_btn_active_class(column) {
+			if (!column.show_description) {
+				return {}
+			}
+
+			if (column.help && column.help.has_relation_options) {
+				return { 'import-column-help-btn--active-success': true }
+			}
+
+			return { 'import-column-help-btn--active-secondary': true }
+		},
+
+		/**
+		 * Arma un texto plano de ayuda para presets guardados o compatibilidad legacy.
+		 *
+		 * @param {Object|null} help Ayuda estructurada de la columna.
+		 * @return {string|undefined} Texto resumido de la ayuda.
+		 */
+		get_column_help_text(help) {
+			if (!help) {
+				return undefined
+			}
+
+			let parts = []
+
+			if (help.text) {
+				parts.push(help.text)
+			}
+
+			if (help.has_relation_options && help.values.length > 0) {
+				parts.push(help.values_label + ': ' + help.values.join(', ') + '.')
+			}
+
+			if (parts.length === 0) {
+				return undefined
+			}
+
+			return parts.join(' ')
+		},
+
+		/**
+		 * Construye la ayuda estructurada de una columna (texto manual + valores de relaciones).
+		 *
+		 * @param {Object} column Definición de la columna recibida por props.
+		 * @param {Object|null} saved_preset Posición guardada del usuario, si existe.
+		 * @return {Object|undefined} Ayuda estructurada para renderizar en el modal.
+		 */
+		resolve_column_help(column, saved_preset) {
+			if (!column) {
+				return undefined
+			}
+
+			if (!column.relation_options) {
+				if (saved_preset && saved_preset.description) {
+					return {
+						text: saved_preset.description,
+						values: [],
+						values_label: 'Valores posibles',
+						has_relation_options: false,
+					}
+				}
+
+				if (!column.description) {
+					return undefined
+				}
+
+				return {
+					text: column.description,
+					values: [],
+					values_label: 'Valores posibles',
+					has_relation_options: false,
+				}
+			}
+
+			let help = {
+				text: column.description || null,
+				values: [],
+				values_label: column.relation_options.prefix || 'Valores posibles',
+				has_relation_options: true,
+			}
+
+			if (help.values_label.indexOf(':') !== -1) {
+				help.values_label = help.values_label.replace(':', '').trim()
+			}
+
+			let store_module = column.relation_options.store_module
+			let value_prop = column.relation_options.value_prop || 'name'
+			let store_state = this.$store.state[store_module]
+			let models = store_state && store_state.models ? store_state.models : []
+
+			models.forEach(model => {
+				if (model[value_prop]) {
+					help.values.push(model[value_prop])
+				}
+			})
+
+			if (!help.text && help.values.length === 0) {
+				help.text = 'Los valores se tomarán de los registros existentes en el sistema.'
+			}
+
+			return help
+		},
+
+		/**
+		 * @deprecated Usar resolve_column_help(). Mantiene compatibilidad con presets guardados.
+		 */
+		resolve_column_description(column, saved_preset) {
+			return this.get_column_help_text(this.resolve_column_help(column, saved_preset))
+		},
+
 		check_letra(index) {
 			let letra = this.columns_[index].letra.toUpperCase()
 
@@ -939,7 +1245,9 @@ export default {
 		        this.columns_.push({
 		            group_title: undefined,
 		            text: def.text,
-		            description: def.description,
+		            help: this.resolve_column_help(def, saved),
+		            description: this.get_column_help_text(this.resolve_column_help(def, saved)),
+		            show_description: false,
 		            letra: saved ? (saved.letra || '') : '',
 		            position: saved ? (saved.position || '') : '',
 		            ignored: 0,
@@ -950,8 +1258,10 @@ export default {
 		    this.positions_seted = true
 		    this.start_row = Number(column_position.start_row)
 
-		    // Props extra
-		    this.props_to_send.provider_id = column_position.provider_id
+		    // Props extra (solo aplica a importaciones que envían datos adicionales, ej. artículos).
+		    if (this.props_to_send) {
+		    	this.props_to_send.provider_id = column_position.provider_id
+		    }
 		    this.create_and_edit = column_position.create_and_edit
 		    // this.actualizar_articulos_de_otro_proveedor = column_position.no_actualizar_otro_proveedor
 		},
@@ -1012,7 +1322,9 @@ export default {
 				this.columns_.push({
 					group_title: column.group_title,
 					text: column.text,
-					description: column.description,
+					help: this.resolve_column_help(column),
+					description: this.get_column_help_text(this.resolve_column_help(column)),
+					show_description: false,
 					letra: letra,
 					position: position,
 					ignored: 0,
@@ -1069,7 +1381,7 @@ export default {
 				    if (column.text) {
 
 						if (!column.ignored) {
-							form_data.append('prop_'+column.text, column.position)
+							form_data.append('prop_'+this.get_column_prop_key(column), column.position)
 						} else {
 							// form_data.append('prop_ignore_'+column.text, column.position)
 							console.log('Se ignoro '+column.text)
@@ -1097,7 +1409,9 @@ export default {
 				this.finish_row = ''
 				this.finish_row_original = ''
 				this.percentage = ''
-				this.props_to_send.provider_id = 0
+				if (this.props_to_send) {
+					this.props_to_send.provider_id = 0
+				}
 
 				this.$bvModal.hide(this.id)
 
@@ -1144,7 +1458,7 @@ export default {
 		        model_name: 'article',
 		        positions: positions,
 		        start_row: this.start_row,
-		        provider_id: this.props_to_send.provider_id,
+		        provider_id: this.get_import_extra_props().provider_id,
 		        create_and_edit: this.create_and_edit,
 		        no_actualizar_otro_proveedor: this.actualizar_articulos_de_otro_proveedor,
 		    })
@@ -1211,7 +1525,7 @@ export default {
 
 				if (typeof columna_proveedor != 'undefined') {
 
-					if (columna_proveedor.position == '' && this.props_to_send.provider_id == 0) {
+					if (columna_proveedor.position == '' && this.get_import_extra_props().provider_id == 0) {
 						if (confirm('No ha indicado ningun proveedor')) {
 							return true
 						} else {
@@ -1292,30 +1606,140 @@ export default {
 }
 </script>
 <style lang="sass">
-.container 
-	border: 1px solid rgba(0,0,0,.2)
-	padding: 10px
-	margin-bottom: 5px
-	border-radius: 5px
+.import-column-card
+	border: 1px solid rgba(0, 0, 0, .08)
+	padding: 10px 12px
+	margin-bottom: 8px
+	border-radius: 10px
+	background: #fff
+	transition: box-shadow .2s ease, border-color .2s ease
+
+	&.import-column-card--has-help:hover
+		border-color: rgba(0, 123, 255, .25)
+		box-shadow: 0 4px 14px rgba(15, 23, 42, .08)
+
 	.cont-inputs
 		display: flex
 		flex-direction: row
 		justify-content: space-between
 		align-items: center
-		input 
-			width: 100px
-	p 
-		margin-bottom: 0
-		font-size: .8em
-		color: rgba(0,0,0,.8)
+		gap: 8px
 
-	.radio-option
-		font-size: 30px
-		margin: 10px 0
+	.import-column-label
+		display: flex
+		align-items: center
+		gap: 4px
+		min-width: 0
+		flex: 1
 
+	.import-column-title
+		padding-left: 0
+		padding-right: 0
+		text-align: left
+		white-space: nowrap
+		overflow: hidden
+		text-overflow: ellipsis
+
+	.import-column-input
+		flex-shrink: 0
+
+		input
+			width: 72px
+			text-align: center
+			font-weight: 600
+
+	.import-column-help-btn
+		width: 28px
+		height: 28px
+		padding: 0
+		border-radius: 999px
+		display: inline-flex
+		align-items: center
+		justify-content: center
+		flex-shrink: 0
+
+	.import-column-help-btn--active-secondary
+		background: rgba(108, 117, 125, .08)
+		border-color: rgba(108, 117, 125, .35)
+		color: #6c757d
+
+	.import-column-help-btn--active-success
+		background: rgba(40, 167, 69, .08)
+		border-color: rgba(40, 167, 69, .35)
+		color: #28a745
+
+	.import-column-help-icon
+		font-size: 11px
+		line-height: 1
+
+	.import-column-description
+		margin-top: 10px
+		padding: 10px 12px
+		border-radius: 8px
+		background: linear-gradient(180deg, rgba(248, 250, 252, 1) 0%, rgba(241, 245, 249, 1) 100%)
+		border-left: 3px solid #6c757d
+
+		&.import-column-description--relation
+			border-left-color: #28a745
+
+	.import-column-values-block
+		margin-top: 0
+
+	.import-column-values-title
+		display: block
+		font-size: 11px
+		font-weight: 700
+		letter-spacing: .04em
+		text-transform: uppercase
+		color: #059669
+		margin-bottom: 8px
+
+	.import-column-values-list
+		display: flex
+		flex-wrap: wrap
+		gap: 6px
+
+	.import-column-value-chip
+		display: inline-flex
+		align-items: center
+		padding: 4px 10px
+		border-radius: 999px
+		background: rgba(40, 167, 69, .1)
+		border: 1px solid rgba(40, 167, 69, .18)
+		color: #166534
+		font-size: 11px
+		line-height: 1.3
+
+	.import-column-description-empty
+		font-style: italic
+		color: #64748b
+
+	.import-column-description-label
+		display: block
+		font-size: 11px
+		font-weight: 700
+		letter-spacing: .04em
+		text-transform: uppercase
+		color: #64748b
+		margin-bottom: 6px
+
+	.import-column-description-text
+		font-size: 12px
+		line-height: 1.45
+		color: #334155
+
+.import-description-slide-enter-active,
+.import-description-slide-leave-active
+	transition: all .18s ease
+
+.import-description-slide-enter,
+.import-description-slide-leave-to
+	opacity: 0
+	transform: translateY(-4px)
 
 .radio-option
 	margin: 20px 0
+	font-size: 30px
 
 
 

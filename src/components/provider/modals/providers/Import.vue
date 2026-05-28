@@ -28,12 +28,21 @@ export default {
 				},
 				{
 					text: 'Localidad',
+					description: 'Si no existe, se crea automaticamente al importar.',
+					relation_options: {
+						store_module: 'location',
+						prefix: 'Valores existentes:',
+					},
 				},
 				{
 					text: 'Email',
 				},
 				{
 					text: 'Condicion frente al IVA',
+					description: 'Debe coincidir exactamente con uno de los siguientes valores.',
+					relation_options: {
+						store_module: 'iva_condition',
+					},
 				},
 				{
 					text: 'Razon social',
@@ -53,6 +62,7 @@ export default {
 		actions() {
 			return [
 				'provider/getModels',
+				'iva_condition/getModels',
 				'location/getModels',
 			]
 		},
