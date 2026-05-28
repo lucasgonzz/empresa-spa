@@ -28,7 +28,9 @@ class="modal-belongs-to-many"
 				v-model="model_to_add.pivot[prop_to_set.key]"
 				v-if="prop_to_set.type == 'text' || prop_to_set.type == 'number'"
 				@keyup.enter="change"
-				:type="prop_to_set.type"></b-form-input>
+				@blur="normalize_belongs_to_many_number_on_blur(prop_to_set)"
+				:type="prop_to_set.type"
+				:step="prop_to_set.type == 'number' ? get_number_input_step(prop_to_set) : undefined"></b-form-input>
 
 				<b-form-checkbox
 				v-model="model_to_add.pivot[prop_to_set.key]"
@@ -80,6 +82,29 @@ export default {
 		},
 		handleSlideClick(index) {
 			this.index = index 
+		},
+		/**
+		 * Al salir del input numérico del carrusel, aplica formato de decimales variables en el pivot.
+		 *
+		 * @param {Object} prop_to_set propiedad del belongs_to_many (ej. cost).
+		 * @returns {void}
+		 */
+		normalize_belongs_to_many_number_on_blur(prop_to_set) {
+			if (!prop_to_set || prop_to_set.type != 'number' || !prop_to_set.variable_decimals) {
+				return
+			}
+			if (!this.model_to_add || !this.model_to_add.pivot) {
+				return
+			}
+			const pivot_key = prop_to_set.key
+			const current_value = this.model_to_add.pivot[pivot_key]
+			if (current_value === null || current_value === undefined || current_value === '') {
+				return
+			}
+			const normalized_value = this.normalize_variable_decimal_pivot_value(prop_to_set, current_value)
+			if (normalized_value !== current_value) {
+				this.$set(this.model_to_add.pivot, pivot_key, normalized_value)
+			}
 		},
 	},
 	data() {

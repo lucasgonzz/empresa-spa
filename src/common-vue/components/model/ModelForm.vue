@@ -78,20 +78,25 @@
 							v-else>
 								<slot :name="prop.key">
 
-									<p
-									v-if="prop.only_show || prop.from_pre_view"
-									:class="prop.class"
-									class="m-b-0 m-l-25 text-only-show">
-										<strong 
-										:class="colorLabel(prop)"
-										v-html="propertyText(model, prop, false, !prop.from_pre_view)"
-										v-if="propertyText(model, prop) != '' || propertyText(model, prop) == 0">
-										</strong>
-										<span
-										v-else>
-											No hay
-										</span>
-									</p>
+								<!-- Valor de solo lectura: contenedor gris suave con el texto del campo -->
+								<div
+								v-if="prop.only_show || prop.from_pre_view"
+								:class="prop.class"
+								class="model-form__only-show">
+									<!-- Valor presente: texto formateado por propertyText -->
+									<span
+									:class="colorLabel(prop)"
+									class="model-form__only-show-value"
+									v-html="propertyText(model, prop, false, !prop.from_pre_view)"
+									v-if="propertyText(model, prop) != '' || propertyText(model, prop) == 0">
+									</span>
+									<!-- Sin valor: indicador visual sutil en gris itálica -->
+									<span
+									v-else
+									class="model-form__no-data">
+										Sin datos
+									</span>
+								</div>
 									
 									<field-search-input
 									v-else-if="useSearch(prop)"
@@ -203,15 +208,24 @@
 									@input="$set(model, prop.key, $event)"
 									@input-change="setChange(prop)"></field-select-input>		
 
-									<b-form-checkbox
+								<!-- Toggle tipo iPhone: el label arriba ya describe el campo,
+								     el texto interno del checkbox es redundante y se omite -->
+								<label
+								v-else-if="prop.type == 'checkbox'"
+								:for="model_name+'-'+prop.key"
+								class="model-form__toggle"
+								:class="{ 'model-form__toggle--disabled': isDisabled(prop, form_to_filter) }">
+									<input
+									type="checkbox"
 									:id="model_name+'-'+prop.key"
-									v-else-if="prop.type == 'checkbox'"
-							        :disabled="isDisabled(prop, form_to_filter)"
-									v-model="model[prop.key]"
-									:value="1"
-									:unchecked-value="0">
-										{{ propText(prop) }}
-									</b-form-checkbox>
+									:disabled="isDisabled(prop, form_to_filter)"
+									:checked="Number(model[prop.key]) === 1"
+									@change="$set(model, prop.key, $event.target.checked ? 1 : 0)">
+									<!-- Track: fondo del toggle; thumb: círculo deslizante -->
+									<span class="model-form__toggle-track">
+										<span class="model-form__toggle-thumb"></span>
+									</span>
+								</label>
 
 									<google-geocoder
 									v-else-if="prop.type == 'google_geocoder'"
@@ -219,17 +233,20 @@
 									:prop="prop"
 									:model="model"></google-geocoder>
 
-									<div
-									v-else-if="prop.type == 'boolean'">
-										<p
-										v-if="model[prop.key]">
-											Si
-										</p>
-										<p
-										v-else>
-											No
-										</p>
-									</div>
+								<!-- Boolean: badge de color verde (Sí) o rojo (No) -->
+								<div
+								v-else-if="prop.type == 'boolean'">
+									<span
+									v-if="model[prop.key]"
+									class="model-form__boolean-badge model-form__boolean-badge--yes">
+										Sí
+									</span>
+									<span
+									v-else
+									class="model-form__boolean-badge model-form__boolean-badge--no">
+										No
+									</span>
+								</div>
 
 									<b-button
 							    	v-else-if="prop.show_model"
@@ -277,12 +294,13 @@
 
 
 									<!-- en pivot_parent_model le paso el model padre, para que por ejemplo en el model Sale, en la tabla de articles, tenga acceso al Sale model (el parent_model) -->
-									<belongs-to-many-table
-									v-if="prop.belongs_to_many && !prop.belongs_to_many.related_with_all && (!prop.type || prop.type != 'checkbox')"
-									:prop="prop"
-									:model="model"
-									:show_btn_remove_belongs_to_many="show_btn_remove_belongs_to_many"
-									@remove-model="removeModel(prop, $event)">
+								<belongs-to-many-table
+								v-if="prop.belongs_to_many && !prop.belongs_to_many.related_with_all && (!prop.type || prop.type != 'checkbox')"
+								:prop="prop"
+								:model="model"
+								:parent_model_name="model_name"
+								:show_btn_remove_belongs_to_many="show_btn_remove_belongs_to_many"
+								@remove-model="removeModel(prop, $event)">
 										<template #belongs="slotProps">
 											<slot name="belongs" :model="slotProps.model"></slot>
 										</template>
@@ -340,31 +358,39 @@
 			</b-col>
 		</b-form-row>
 		
-		<!-- Metadatos de fechas: misma línea visual que LoginForm (fila gris + prefijo + input integrado) -->
+		<!-- Metadatos de fechas: label + pill gris, mismo lenguaje visual que only_show / LoginForm -->
 		<b-form-row
-		class="m-b-0"
+		class="model-form__meta-row m-b-0"
 		v-if="model.id && !from_has_many">
 			<b-col
-			md="6">
-				<b-input-group
-				prepend="Creado: ">
-					<b-form-input
-					class="model-form__meta-control"
-					disabled
-					:value="date(model.created_at, true)+' - '+since(model.created_at)"
-					aria-label="Registro creado el"></b-form-input>
-				</b-input-group>
+			md="6"
+			class="model-form__meta-col">
+				<div class="model-form__meta-field">
+					<span class="form-label">Creado</span>
+					<div
+					class="model-form__meta-input-row"
+					role="text"
+					aria-label="Registro creado el">
+						<span class="model-form__meta-value">
+							{{ date(model.created_at, true) }} - {{ since(model.created_at) }}
+						</span>
+					</div>
+				</div>
 			</b-col>
 			<b-col
-			md="6">
-				<b-input-group
-				prepend="Actualizado: ">
-					<b-form-input
-					class="model-form__meta-control"
-					disabled
-					:value="date(model.updated_at, true)+' - '+since(model.updated_at)"
-					aria-label="Registro actualizado el"></b-form-input>
-				</b-input-group>
+			md="6"
+			class="model-form__meta-col">
+				<div class="model-form__meta-field">
+					<span class="form-label">Actualizado</span>
+					<div
+					class="model-form__meta-input-row"
+					role="text"
+					aria-label="Registro actualizado el">
+						<span class="model-form__meta-value">
+							{{ date(model.updated_at, true) }} - {{ since(model.updated_at) }}
+						</span>
+					</div>
+				</div>
 			</b-col>
 		</b-form-row>
 		
@@ -1296,92 +1322,176 @@ export default {
 	label.form-label--has-help
 		cursor: help
 
-.popover-body
-	max-height: 60vh !important
-	overflow-y: auto
+	// ─── Label moderno: compacto, peso alto, tipografía uppercase sutil ───────
+	// Similar a LoginForm: pequeño, oscuro, con letra-espaciado para legibilidad
+	.form-label
+		font-size: 0.78rem
+		font-weight: 700
+		color: #374151
+		text-transform: uppercase
+		letter-spacing: 0.045em
+		margin-bottom: 0.38rem
+		display: block
+		transition: color 0.15s ease
 
-
-	/* Estilos generales para labels de formularios */
-	.form-label 
-		font-weight: 600 /* un poco más grueso que normal */
-		color: #333 /* color primario para resaltar */
-		font-size: 1rem
-		margin-bottom: 6px
-		display: inline-block
-		letter-spacing: 0.3px
-		transition: color 0.2s ease
-
-	// input, select
-	// 	border-radius: 5px
-	// 	border: 2px solid #ced4da /* un poco más grueso que el default */
-
-	// input:focus, select:focus 
-	// 	// border: 4px solid red !important
-		
-	// 	border: 3px solid #007bff  /* azul primario */
-	// 	box-shadow: 0 0 8px rgba(0, 123, 255, 0.8) /* halo azul brillante */
-	// 	outline: none /* quitar borde por defecto del navegador */
-	// 	background-color: #f8fbff /* leve fondo para resaltar */
-
-
-	
-
-
-
+	// Sin margen extra; el col maneja el espacio vertical entre campos
 	.form-group
 		margin-bottom: 0 !important
-	hr 
+
+	hr
 		width: 100%
 		@if ($theme == 'dark')
-			border-top: 1px solid red !important 
-	.function-value
-		// font-size: 1.5em
-		font-weight: bold
-		margin-left: 25px
+			border-top: 1px solid red !important
 
-	// Campos de solo lectura (creado / actualizado): estilo login moderno (fila #f3f4f6, focus-within, input sin borde).
+	// ─── Valor calculado por función ─────────────────────────────────────────
+	// Mismo contenedor gris que only_show para coherencia visual
+	.function-value
+		display: inline-flex
+		align-items: center
+		min-height: 34px
+		padding: 0.28rem 0.75rem
+		background: #f3f4f6
+		border-radius: 8px
+		font-size: 0.9rem
+		font-weight: 600
+		color: #111827
+		margin-left: 0
+
+	// ─── Valor de solo lectura (only_show / from_pre_view) ────────────────────
+	// Contenedor tipo "input deshabilitado" con fondo #f3f4f6 (igual que LoginForm)
+	.model-form__only-show
+		display: inline-flex
+		align-items: center
+		min-height: 34px
+		padding: 0.28rem 0.75rem
+		background: #f3f4f6
+		border-radius: 8px
+		border: 1px solid transparent
+		line-height: 1.45
+		max-width: 100%
+
+	// Texto del valor presente: legible, peso medio, oscuro
+	.model-form__only-show-value
+		font-size: 0.9rem
+		font-weight: 500
+		color: #111827
+		word-break: break-word
+
+	// Campo vacío: indicador visual en gris claro itálica
+	.model-form__no-data
+		font-size: 0.8rem
+		font-style: italic
+		color: #9ca3af
+
+	// ─── Badge boolean (Sí / No) ──────────────────────────────────────────────
+	.model-form__boolean-badge
+		display: inline-flex
+		align-items: center
+		font-size: 0.75rem
+		font-weight: 700
+		padding: 0.2rem 0.7rem
+		border-radius: 9999px
+		letter-spacing: 0.03em
+		line-height: 1.4
+
+	// Sí: verde suave sobre fondo esmeralda muy claro
+	.model-form__boolean-badge--yes
+		background: #d1fae5
+		color: #065f46
+
+	// No: rojo suave sobre fondo rojo muy claro
+	.model-form__boolean-badge--no
+		background: #fee2e2
+		color: #991b1b
+
+	// ─── Toggle tipo iPhone (reemplaza b-form-checkbox) ─────────────────────
+	// Contenedor clickeable que actúa como label del input oculto
+	.model-form__toggle
+		position: relative
+		display: inline-block
+		width: 44px
+		height: 26px
+		cursor: pointer
+		vertical-align: middle
+		margin-bottom: 0
+
+		// Input nativo oculto visualmente pero accesible
+		input
+			opacity: 0
+			width: 0
+			height: 0
+			position: absolute
+
+		// Fondo del toggle: gris inactivo → verde activo
+		.model-form__toggle-track
+			position: absolute
+			inset: 0
+			background: #d1d5db
+			border-radius: 9999px
+			transition: background 0.2s ease
+
+		// Círculo deslizante blanco
+		.model-form__toggle-thumb
+			position: absolute
+			height: 20px
+			width: 20px
+			left: 3px
+			bottom: 3px
+			background: #fff
+			border-radius: 50%
+			transition: transform 0.2s ease
+			box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25)
+
+		// Estado activo: fondo verde estilo iOS y thumb desplazado
+		input:checked ~ .model-form__toggle-track
+			background: #22c55e
+
+		input:checked ~ .model-form__toggle-track .model-form__toggle-thumb
+			transform: translateX(18px)
+
+		// Estado deshabilitado: todo atenuado y cursor bloqueado
+		&.model-form__toggle--disabled
+			opacity: 0.45
+			cursor: not-allowed
+			pointer-events: none
+
+	// ─── Metadatos de fecha (Creado / Actualizado) ────────────────────────────
+	// Fila inferior del formulario: separador sutil y menos margen que los campos editables
+	.model-form__meta-row
+		margin-top: 0.25rem
+		padding-top: 1.25rem
+		border-top: 1px solid #e5e7eb
+		width: 100%
+
+	// Anula el margin-bottom grande de las columnas del grid principal
+	.model-form__meta-col
+		margin-bottom: 1rem !important
+		padding-bottom: 0 !important
+
 	.model-form__meta-field
 		margin-bottom: 0
 
+	// Contenedor gris: mismo aspecto que only_show y login-form__input-row
 	.model-form__meta-input-row
 		display: flex
 		align-items: center
+		min-height: 34px
+		padding: 0.28rem 0.75rem
 		background: #f3f4f6
-		border-radius: 10px
-		padding: 0 0 0 0.65rem
+		border-radius: 8px
 		border: 1px solid transparent
-		transition: border-color 0.15s ease, box-shadow 0.15s ease
+		line-height: 1.45
+		max-width: 100%
 
-	.model-form__meta-input-row:focus-within
-		border-color: rgba(0, 137, 102, 0.35)
-		box-shadow: 0 0 0 3px rgba(0, 137, 102, 0.12)
-
-	// Prefijo izquierdo (reemplaza icono del login): etiqueta corta + dos puntos.
-	.model-form__meta-prefix
-		flex-shrink: 0
-		padding-right: 0.35rem
-		font-size: 0.8rem
-		font-weight: 600
-		color: #6b7280
-		white-space: nowrap
-
-	.model-form__meta-control
-		border: none !important
-		background: transparent !important
-		box-shadow: none !important
-		padding-left: 0.35rem !important
-		padding-right: 0.75rem !important
-		height: 46px !important
-		font-size: 0.95rem
-		color: #111827
-
-	.model-form__meta-control:focus
-		box-shadow: none !important
-
-	// Bootstrap atenúa disabled: mismo contraste que el bloque gris.
-	.model-form__meta-control:disabled
-		opacity: 1
+	// Fecha + tiempo relativo en un solo bloque legible
+	.model-form__meta-value
+		font-size: 0.875rem
+		font-weight: 500
 		color: #4b5563
-		-webkit-text-fill-color: #4b5563
-		cursor: default
+		word-break: break-word
+
+// ─── Popover de instrucciones ─────────────────────────────────────────────────
+.popover-body
+	max-height: 60vh !important
+	overflow-y: auto
 </style>

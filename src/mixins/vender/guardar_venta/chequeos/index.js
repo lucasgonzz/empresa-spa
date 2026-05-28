@@ -6,6 +6,7 @@ import asignar_venta_a_cliente from '@/mixins/vender/guardar_venta/chequeos/asig
 import sale_type from '@/mixins/vender/guardar_venta/chequeos/sale_type'
 import sucursal from '@/mixins/vender/guardar_venta/chequeos/sucursal'
 import afip from '@/mixins/vender/guardar_venta/chequeos/afip'
+import articulo_pendiente_de_agregar from '@/mixins/vender/articulo_pendiente_de_agregar'
 export default {
 	mixins: [
 		cajas, 
@@ -15,7 +16,8 @@ export default {
 		asignar_venta_a_cliente,
 		sale_type, 
 		sucursal, 
-		afip
+		afip,
+		articulo_pendiente_de_agregar,
 	],
 	methods: {
 
@@ -24,6 +26,10 @@ export default {
 			// if (!this.check_article_variants()) {
 			// 	return false
 			// }
+
+			if (!this.check_articulo_pendiente_de_agregar()) {
+				return false
+			}
 
 			if (!this.check_cajas()) {
 				return false

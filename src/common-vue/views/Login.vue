@@ -38,14 +38,15 @@ export default {
 	},
 	methods: {
 		/**
-		 * Navega al home cuando la configuración del negocio habilita página de inicio pública.
+		 * Acción de marca (logo) en la vista de login.
+		 *
+		 * Nota: se quitó la vista/ruta de home en `empresa-spa`; por compatibilidad mantenemos
+		 * el método, pero redirige a `login` (no hace falta sesión).
 		 *
 		 * @returns {void}
 		 */
 		click_brand() {
-			if (this.use_home_page) {
-				this.$router.push({ name: 'home' })
-			}
+			this.$router.push({ name: 'login' })
 		},
 	},
 }
@@ -53,13 +54,16 @@ export default {
 <style lang="sass" scoped>
 .login-page
 	min-height: 100vh
-	width: 100vw
+	// `100vw` puede provocar overflow horizontal (por el ancho del scrollbar/padding).
+	// Usamos `100%` para mantener el ancho real del viewport y evitar scroll innecesario.
+	width: 100%
 	display: flex
 	justify-content: center
 	align-items: center
-	background: #f9fafb
+	// background: #f9fafb
 	padding: 2rem 1rem
 	box-sizing: border-box
+	overflow-x: hidden
 
 .login-page__inner
 	width: 100%

@@ -5,11 +5,20 @@
 		<hr>
 		<b-form-group>
 			<b-form-checkbox
-			@change="setFilters"
+			@change="on_en_blanco_change"
 			:value="1"
 			:unchecked-value="0"
 			v-model="filter.en_blanco">
 				En blanco
+			</b-form-checkbox>
+
+			<b-form-checkbox
+			class="m-t-10"
+			@change="on_no_en_blanco_change"
+			:value="1"
+			:unchecked-value="0"
+			v-model="filter.no_en_blanco">
+				Que no esté en blanco
 			</b-form-checkbox>
 			
 		</b-form-group>
@@ -29,26 +38,29 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Activa "En blanco" y desactiva el filtro inverso.
+		 */
+		on_en_blanco_change() {
+			if (this.filter.en_blanco) {
+				this.filter.no_en_blanco = 0
+			}
+			this.setFilters()
+		},
+		/**
+		 * Activa "Que no esté en blanco" y desactiva "En blanco".
+		 */
+		on_no_en_blanco_change() {
+			if (this.filter.no_en_blanco) {
+				this.filter.en_blanco = 0
+			}
+			this.setFilters()
+		},
+		/**
+		 * Limpia criterios de valor y persiste el filtro en el store.
+		 */
 		setFilters() {
-
 			let filter = this.limpiar_filtro(this.filter, false)
-			// if (
-			// 	this.field.type == 'search'
-			// 	|| this.field.type == 'select'
-			// 	) {
-
-			// 	this.field.igual_que = 0
-			// } else {
-			// 	this.field.igual_que = ''
-			// 	this.field.igual_que = ''
-			// 	this.field.mayor_que = ''
-			// 	this.field.menor_que = ''
-			// 	this.field.que_contenga = ''
-			// }
-
-			
-			console.log('actualizando filtro con:')
-			console.log(filter)
 			this.$store.commit(this.model_name+'/addFilter', {...filter})
 		},
 	}

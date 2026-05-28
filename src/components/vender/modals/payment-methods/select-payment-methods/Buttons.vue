@@ -78,7 +78,7 @@ export default {
 
 		cancelar() {
 
-			this.setDefaultPaymentMethod()
+			this.setDefaultPaymentMethod(true)
 
 			this.total_repartido = 0
 

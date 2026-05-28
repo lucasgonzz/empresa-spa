@@ -507,6 +507,7 @@ export default {
 					type: filter_type,
 					checkbox: -1,
 					en_blanco: 0,
+					no_en_blanco: 0,
 
 					// Text (text/textarea)
 					que_contenga: '',
@@ -953,6 +954,12 @@ export default {
 			}
 			if (prop.type == 'texteditor') {
 				return this.strip_html(model[prop.key])
+			}
+			// Números con decimales variables (ej. costo en compras: 2 o 4 según uso real).
+			if (prop.type == 'number' && prop.variable_decimals) {
+				const min_decimals = prop.variable_decimals.min != null ? prop.variable_decimals.min : 2
+				const max_decimals = prop.variable_decimals.max != null ? prop.variable_decimals.max : 4
+				return this.format_number_variable_decimals(model[prop.key], min_decimals, max_decimals)
 			}
 			// Select con options declaradas en el model: muestra texto amigable en tablas/listados.
 			if (prop.type == 'select') {

@@ -205,7 +205,9 @@ export default {
 						value: {
 							key: 'cost',
 						},
-						type: 'number'
+						type: 'number',
+						// Hasta 4 decimales en BD; en UI solo se muestran 3.º/4.º si el usuario los usa.
+						variable_decimals: { min: 2, max: 4 },
 					},
 					{
 						text: 'Precio',

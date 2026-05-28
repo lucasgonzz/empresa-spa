@@ -1,7 +1,7 @@
 <template>
 	<div>
 		<edit-address-stock
-		v-if="se_quiere_editar_stock"
+		v-if="se_quiere_editar_stock && puede_editar_stock"
 		:article="article"
 		:address="address"></edit-address-stock>
 		
@@ -25,6 +25,17 @@ export default {
 		address: Object,
 	},
 	computed: {
+		puede_editar_stock() {
+			if (this.is_admin) {
+				return true 
+			}
+
+			if (this.can('article.edit_stock_only_sucursal')) {
+				return Number(this.user.address_id) == Number(this.address.id)
+			}
+
+			return this.can('article.edit_stock')
+		},
 		se_quiere_editar_stock() {
 			return this.article_to_edit_address && this.article_to_edit_address.id == this.article.id
 		},

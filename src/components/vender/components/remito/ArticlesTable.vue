@@ -20,7 +20,7 @@
 
 				<template #cell(price)="data">
 					<b-input-group
-					v-if="can('article.vender.change_price') || items[data.index].default_in_vender"
+					v-if="can('article.vender.change_price') || items[data.index].default_in_vender || se_creo_en_vender(items[data.index])"
 					class="input-price m-b-10">
 
 						<div class="cont-input-price">
@@ -351,6 +351,12 @@ export default {
 		},
 	},
 	methods: {
+		se_creo_en_vender(item) {
+			if (!this.owner.listas_de_precio && !item.final_price) {
+				return true 
+			}
+			return false
+		},
 		peretir_articulo(article) {
 			let item = {
 				...article,

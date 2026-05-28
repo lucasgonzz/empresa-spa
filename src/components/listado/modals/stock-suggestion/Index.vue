@@ -27,9 +27,11 @@ export default {
 	},
 	methods: {
 		show_articles(model) {
-			console.log(model)
-			this.setModel(model, 'stock_suggestion', [], false)
-			this.$bvModal.show('stock-suggestion-article')
+			this.$api.get(`stock-suggestion/${model.id}`)
+			.then(res => {
+				this.setModel(res.data.model, 'stock_suggestion', [], false)
+				this.$bvModal.show('stock-suggestion-article')
+			})
 		}
 	}
 }

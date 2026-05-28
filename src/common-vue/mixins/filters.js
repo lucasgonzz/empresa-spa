@@ -19,6 +19,7 @@ export default {
 
 			if (limpiar_en_blanco) {
 				filter.en_blanco = 0
+				filter.no_en_blanco = 0
 			}
 
 			return filter 

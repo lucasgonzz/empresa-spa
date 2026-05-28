@@ -104,8 +104,22 @@
 				<slot 
 				v-if="!from_has_many"
 				name="buttons">
-					<b-btn-group
+					<div
 					class="w-100">
+						<!--
+							Avisos de validación al guardar (check): persisten hasta un guardado exitoso.
+						-->
+						<b-alert
+						v-if="save_check_alert_message"
+						show
+						:variant="save_check_alert_variant"
+						class="m-b-10">
+							{{ save_check_alert_message }}
+						</b-alert>
+
+						<b-btn-group
+						class="w-100"
+						:class="{'m-t-10': save_check_alert_message}">
 						<btn-delete
 						v-if="!papelera && _show_btn_delete"
 						:solo_emitir_delete="solo_emitir_delete"
@@ -144,7 +158,8 @@
 						:prop_to_send_on_emit="{close: true}"
 						:loader="restaurando"
 						text="Restaurar"></btn-loader>
-					</b-btn-group>
+						</b-btn-group>
+					</div>
 				</slot>
 			</template>
 		</b-modal>
@@ -281,6 +296,10 @@ export default {
 		return {
 			clear_model: 1,
 			restaurando: false,
+			/* Mensaje de error/advertencia del chequeo previo a guardar (visible sobre los botones). */
+			save_check_alert_message: '',
+			/* Variante Bootstrap del alert (danger, warning, etc.). */
+			save_check_alert_variant: 'danger',
 		}
 	},
 	computed: {
@@ -393,7 +412,27 @@ export default {
 			}
 		},
 		onModalClosed() {
+			this.clearSaveCheckAlert()
 			this.$root.$emit(this.model_name+'-modal-closed');
+		},
+		/**
+		 * Muestra un aviso de validación sobre los botones Guardar del modal.
+		 * @param {string} message - Texto a mostrar al usuario.
+		 * @param {string} variant - Variante de b-alert (p. ej. danger, warning).
+		 */
+		setSaveCheckAlert(message, variant) {
+			if (!message) {
+				return
+			}
+			this.save_check_alert_message = message
+			this.save_check_alert_variant = variant || 'danger'
+		},
+		/**
+		 * Oculta el aviso de validación al guardar (tras guardado exitoso o al cerrar el modal).
+		 */
+		clearSaveCheckAlert() {
+			this.save_check_alert_message = ''
+			this.save_check_alert_variant = 'danger'
 		},
 		model_deleted() {
 			// alert('emitiendo model_deleted desde Index')
@@ -407,6 +446,8 @@ export default {
 			console.log(isValid)
 
 			if (isValid && !this.loading) {
+				/* Validación OK: se oculta el aviso hasta que falle un chequeo posterior. */
+				this.clearSaveCheckAlert()
 				console.log('mandando solicitud')
 				this.$store.commit('auth/setMessage', 'Guardando')
 				this.loading = true 
@@ -419,7 +460,8 @@ export default {
 				if (this.model.id) {
 					this.$api.put(route+'/'+this.model.id, model_to_send)
 					.then(res => {
-						this.loading = false 
+						this.loading = false
+						this.clearSaveCheckAlert()
 						this.$toast.success('Actualizado')
 						if (this.has_many_parent_model) {
 							let index = this.has_many_parent_model[this.has_many_prop.key].findIndex(model => {
@@ -459,7 +501,8 @@ export default {
 				} else {
 					this.$api.post(route, model_to_send)
 					.then(res => {
-						this.loading = false 
+						this.loading = false
+						this.clearSaveCheckAlert()
 						this.$toast.success('Guardado')
 						let created_model = res.data.model 
 						if (!this.emit_on_saved_instead_continue) {
@@ -639,10 +682,10 @@ export default {
 		            	} else {
 
 			                if (ok && this.propType(prop, this.model) == 'select' && this.model[prop.key] == 0) {
-			                    this.$toast.error('Ingrese ' + this.propText(prop));
+			                    this.setSaveCheckAlert('Ingrese ' + this.propText(prop));
 			                    ok = false;
 			                } else if (ok && this.model[prop.key] == '') {
-			                    this.$toast.error('Ingrese ' + this.propText(prop));
+			                    this.setSaveCheckAlert('Ingrese ' + this.propText(prop));
 			                    ok = false;
 			                }
 		            	}
@@ -659,7 +702,7 @@ export default {
 		            	if (input) {
 
 			            	if (input.value.length != prop.check_length) {
-			            		this.$toast.error('El campo '+this.propText(prop)+' debe tener '+prop.check_length+' caracteres')
+			            		this.setSaveCheckAlert('El campo '+this.propText(prop)+' debe tener '+prop.check_length+' caracteres')
 			            		ok = false	
 			            	}
 		            	}
@@ -679,6 +722,9 @@ export default {
 		        	console.log('save_check_function:')
 		        	console.log(this.save_check_function)
 		            ok = this[this.save_check_function]();
+		            if (!ok && !this.save_check_alert_message) {
+		            	this.setSaveCheckAlert('No se pudo guardar. Revise los datos ingresados.')
+		            }
 		        }
 
 		        /*
@@ -749,7 +795,10 @@ export default {
 		        					if (models.length) {
 		        						/* Si existe repetido, se bloquea el guardado. */
 		        						ok = false
-		        						this.$toast.warning('Ya hay un ' + this.singular(this.model_name) + ' con este ' + this.propText(prop))
+		        						this.setSaveCheckAlert(
+		        							'Ya hay un ' + this.singular(this.model_name) + ' con este ' + this.propText(prop),
+		        							'warning'
+		        						)
 		        						let input = document.getElementById(this.model_name + '-' + prop.key)
 		        						if (input) {
 		        							setTimeout(() => {
@@ -766,7 +815,7 @@ export default {
 		        					 * sin poder validar.
 		        					 */
 		        					ok = false
-		        					this.$toast.error('Error al chequear repetidos')
+		        					this.setSaveCheckAlert('Error al chequear repetidos')
 		        					console.log(err)
 		        					check_next_prop(index + 1)
 		        				})
@@ -778,7 +827,10 @@ export default {
 		        				})
 		        				if (typeof finded != 'undefined') {
 		        					ok = false
-		        					this.$toast.warning('Ya hay un ' + this.singular(this.model_name) + ' con este ' + this.propText(prop))
+		        					this.setSaveCheckAlert(
+		        						'Ya hay un ' + this.singular(this.model_name) + ' con este ' + this.propText(prop),
+		        						'warning'
+		        					)
 		        					let input = document.getElementById(this.model_name + '-' + prop.key)
 		        					if (input) {
 		        						setTimeout(() => {

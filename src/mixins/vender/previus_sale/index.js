@@ -384,7 +384,7 @@ export default {
 			this.limpiar_vender()
 			// this.resetear_vender()
 
-			this.setDefaultPaymentMethod()
+			this.setDefaultPaymentMethod(true)
 
 			this.setPriceType()
 			if (this.view != 'remito') {

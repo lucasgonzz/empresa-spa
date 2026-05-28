@@ -41,8 +41,10 @@
 				:id="inputId(prop)"
 				@keyup.enter="changeFocus()"
 				@keyup.tab="changeFocus()"
+				@blur="normalize_pivot_variable_decimal_on_blur(prop)"
 				v-else-if="showProp(prop)"
 				:type="prop.type"
+				:step="prop.type == 'number' ? get_number_input_step(prop) : undefined"
 				:class="getInputSize(prop) && inputId(prop)"
 				:placeholder="'Ingrese '+propText(prop)"
 				v-model="model.pivot[prop.key]"></b-form-input>
@@ -72,7 +74,33 @@ export default {
 		cont_table_id: String,
 		pivot_parent_model: Object,
 	},
+	mounted() {
+		this.normalize_pivot_variable_decimal_on_blur(this.prop)
+	},
 	methods: {
+		/**
+		 * Al salir del campo o al montar la celda, formatea costos con 2 o 4 decimales según uso.
+		 *
+		 * @param {Object} prop definición de la columna pivot.
+		 * @returns {void}
+		 */
+		normalize_pivot_variable_decimal_on_blur(prop) {
+			if (!prop || prop.type != 'number' || !prop.variable_decimals) {
+				return
+			}
+			if (!this.model || !this.model.pivot) {
+				return
+			}
+			const pivot_key = prop.key
+			const current_value = this.model.pivot[pivot_key]
+			if (current_value === null || current_value === undefined || current_value === '') {
+				return
+			}
+			const normalized_value = this.normalize_variable_decimal_pivot_value(prop, current_value)
+			if (normalized_value !== current_value) {
+				this.$set(this.model.pivot, pivot_key, normalized_value)
+			}
+		},
 		showProp(prop) {
 			if (prop.v_if) {
 				if (prop.v_if.b_t_many_model_prop) {

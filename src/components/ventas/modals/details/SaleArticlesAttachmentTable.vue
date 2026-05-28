@@ -6,47 +6,26 @@
 	small
 	class="m-r-5"></b-spinner>
 
-	<b-table
-	v-if="sale.articles && sale.articles.length"
-	:items="sale.articles"
-	:fields="fields"
-	responsive
-	hover
-	head-variant="dark"
-	small>
-
-		<template #cell(attachments)="data">
+	<!-- Tabla configurable (mismo sistema que pedidos a proveedor) + adjuntos en columna izquierda -->
+	<belongs-to-many-table
+	v-if="sale && articles_prop"
+	:prop="articles_prop"
+	:model="sale"
+	parent_model_name="sale"
+	:show_btn_remove_belongs_to_many="false">
+		<template #table_left_options="{ model }">
 			<item-attachments
-			:item="data.item"
+			v-if="hasExtencion('adjuntar_archivos_en_vantas')"
+			:item="model"
 			:sale-id="sale.id"
 			:all-sale-attachments="all_sale_attachments"
 			@attachment-added="onAttachmentAdded"
 			@attachment-removed="onAttachmentRemoved"></item-attachments>
 		</template>
-
-		<template #cell(name)="data">
-			<span>{{ data.item.name }}</span>
-			<small
-			v-if="data.item.pivot && data.item.pivot.variant_description"
-			class="text-muted d-block">{{ data.item.pivot.variant_description }}</small>
-		</template>
-
-		<template #cell(amount)="data">
-			{{ data.item.pivot ? data.item.pivot.amount : '' }}
-		</template>
-
-		<template #cell(price)="data">
-			{{ data.item.pivot ? price(data.item.pivot.price) : '' }}
-		</template>
-
-		<template #cell(total)="data">
-			<strong>{{ total_item(data.item) }}</strong>
-		</template>
-
-	</b-table>
+	</belongs-to-many-table>
 
 	<p
-	v-else
+	v-else-if="!sale || !sale.articles || !sale.articles.length"
 	class="text-muted">
 		Sin artículos.
 	</p>
@@ -60,6 +39,7 @@ axios.defaults.baseURL = process.env.VUE_APP_API_URL
 
 export default {
 	components: {
+		BelongsToManyTable: () => import('@/common-vue/components/model/form/BelongsToManyTable'),
 		ItemAttachments: () => import('@/components/vender/components/remito/table-slots/ItemAttachments'),
 	},
 	props: {
@@ -75,18 +55,18 @@ export default {
 		}
 	},
 	computed: {
-		fields() {
-			const cols = []
-			if (this.hasExtencion('adjuntar_archivos_en_vantas')) {
-				cols.push({ key: 'attachments', label: 'Adj.' })
-			}
-			cols.push(
-				{ key: 'name', label: 'Nombre' },
-				{ key: 'amount', label: 'Cant.' },
-				{ key: 'price', label: 'Precio' },
-				{ key: 'total', label: 'Total' },
-			)
-			return cols
+		/*
+		 * Propiedad articles del modelo sale (belongs_to_many) para BelongsToManyTable.
+		 */
+		articles_prop() {
+			const props = this.modelPropertiesFromName('sale')
+			let articles_prop = null
+			props.forEach(prop => {
+				if (prop.key == 'articles') {
+					articles_prop = prop
+				}
+			})
+			return articles_prop
 		},
 	},
 	watch: {
@@ -100,19 +80,6 @@ export default {
 		},
 	},
 	methods: {
-		price(val) {
-			if (!val && val !== 0) return ''
-			return '$' + Number(val).toLocaleString('es-AR', { minimumFractionDigits: 2 })
-		},
-		total_item(item) {
-			if (!item.pivot) return ''
-			const p = Number(item.pivot.price || 0)
-			const a = Number(item.pivot.amount || 0)
-			const d = Number(item.pivot.discount || 0)
-			const subtotal = p * a
-			const total = subtotal - (subtotal * d / 100)
-			return this.price(total)
-		},
 		loadAttachments(sale_id) {
 			this.loading_attachments = true
 			axios.get('/api/sale-article-attachment/by-sale/' + sale_id)

@@ -1,22 +1,21 @@
 <template>
 	<div
+	class="j-start"
 	v-if="sale.client">
 		<b-button
 		@click.stop="show_current_acount">
 			{{ sale.client.name }}
 		</b-button>
 
-		<b-button
-		class="m-l-10"
-		variant="success"
-		@click="whatsapp"
-		v-if="sale.client.phone">
-			<i class="icon-whatsapp"></i>
-		</b-button>
+		<whatsapp-btn
+		:sale="sale"></whatsapp-btn>
 	</div>
 </template>
 <script>
 export default {
+	components: {
+		WhatsappBtn: () => import('@/common-vue/sale-print-buttons/WhatsappBtn'),
+	},
 	props: {
 		sale: Object,
 		from_budget: {
@@ -28,24 +27,6 @@ export default {
 		show_current_acount() {
 			this.showClientCurrentAcount(this.sale)
 		},
-		whatsapp() {
-			let link = 'https://api.whatsapp.com/send?phone='+this.sale.client.phone+'&text=Hola '+this.client_name()+', te acercamos el comprobante de tu compra N° '+this.sale.num+': '
-			
-			if (this.from_budget) {
-				link += this.owner.api_url+'/budget/pdf/'+this.sale.id+'/1' 
-			} else {
-
-				if (this.sale.afip_ticket) {
-					link += this.owner.api_url+'/sale/afip-ticket-pdf/'+this.sale.id 
-				} else {
-					link += this.owner.api_url+'/sale/pdf/'+this.sale.id+'/1/0/0' 
-				}
-			}
-			window.open(link)
-		},
-		client_name() {
-			return this.sale.client.name.split(' ')[0].toUpperCase()
-		}
 	}
 }
 </script>

@@ -8,7 +8,7 @@
             <b-navbar 
             toggleable="md">
                 <b-navbar-brand
-                :to="{name: 'home'}">
+                :to="{name: 'login'}">
                     <img src="@/assets/logo.png" alt="">
                 </b-navbar-brand>
 

@@ -8,7 +8,7 @@
 		:limpiar_resultados_de_busqueda="false"
 		:show_selected="false"
 		:model="model"
-		:save_if_not_exist="false"
+		:save_if_not_exist="create_if_not_exist"
 		:str_limint="2"
 		:search_from_api="search_from_api"
 		search_function="search_articles_offline"
@@ -64,6 +64,12 @@ export default {
 		},
 	},
 	computed: {
+		create_if_not_exist() {
+			if (this.route_name == 'vender') {
+				return this.can('vender.create_article')
+			}
+			return false
+		},
 		col_header_lg() {
 
 			let col = 4

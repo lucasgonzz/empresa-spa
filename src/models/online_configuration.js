@@ -106,6 +106,13 @@ export default {
 			key: 'cantidad_tarjetas_en_escritorio',
 			type: 'number',
 		},
+		{
+			text: 'Tamaño de letra en descripcion de articulos (px)',
+			key: 'article_description_font_size',
+			type: 'number',
+			value: 16,
+			description: 'Define el tamaño de letra de la descripcion en la vista de articulo de la tienda.',
+		},
 
 
 

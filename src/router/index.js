@@ -1,9 +1,15 @@
 import Vue from 'vue'
 import VueRouter from 'vue-router'
+import store from '@/store'
 
 Vue.use(VueRouter)
 
 const routes = [
+    {
+        path: '/',
+        name: 'root',
+        redirect: { name: 'login' },
+    },
     {
         path: '/login',
         name: 'login',
@@ -28,12 +34,6 @@ const routes = [
         path: '/empleados',
         name: 'employee',
         component: () => import('@/common-vue/views/Employee')
-    },
-    
-    {
-        path: '/inicio/:view?',
-        name: 'home',
-        component: () => import('@/views/Home2')
     },
     {
         path: '/alertas/:view?',
@@ -181,6 +181,36 @@ const router = new VueRouter({
     mode: 'history',
     base: process.env.BASE_URL,
     routes
+})
+
+/**
+ * Guardia global de navegación.
+ *
+ * - Si el usuario no está autenticado, redirige automáticamente a `login` para cualquier ruta privada.
+ * - Permite rutas públicas (por ejemplo recuperación de clave) sin sesión.
+ *
+ * @param {Object} to destino de navegación (VueRouter route).
+ * @param {Object} from origen de navegación (VueRouter route).
+ * @param {Function} next callback para continuar / redirigir.
+ * @returns {void}
+ */
+router.beforeEach((to, from, next) => {
+    // Rutas públicas que deben poder accederse sin sesión iniciada.
+    const public_route_names = ['login', 'passwordReset']
+
+    // Estado de sesión: `null` se trata como no autenticado (hasta que `auth/me` resuelva).
+    const is_authenticated = store && store.state && store.state.auth && store.state.auth.authenticated
+
+    if (!is_authenticated && public_route_names.indexOf(to.name) === -1) {
+        return next({
+            name: 'login',
+            query: {
+                redirect: to.fullPath,
+            },
+        })
+    }
+
+    next()
 })
 
 export default router

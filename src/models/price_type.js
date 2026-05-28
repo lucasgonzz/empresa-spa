@@ -8,6 +8,13 @@ export default {
 			is_title: true,
 		},
 		{
+			text: 'Pocision',
+			key: 'position',
+			type: 'number',
+			value: '',
+			show: true,
+		},
+		{
 			text: 'Margen por defecto',
 			key: 'percentage',
 			type: 'number',
@@ -15,6 +22,16 @@ export default {
 			descriptions: [
 				'Este margen de ganancia se le aplicara a todos los articulos que al momento de ser creados, no se le complete el margen de ganancia para esta lista de precios, ni tampoco se le complete el precio final de forma manual',
 				'Si al momento de crear el articulo completa usted el campo, se usara ese valor y no se usara este valor',				
+			]
+		},
+		{
+			text: 'Setear el precio final',
+			key: 'setear_precio_final',
+			type: 'checkbox',
+			value: 0,
+			not_show: true,
+			descriptions: [
+				'Si lo activa, en el modulo del LISTADO aparece siempre activada la opcion "Setear precio final" para esta lista de precio en cada articulo que vaya a crear',
 			]
 		},
 		// {
@@ -51,13 +68,6 @@ export default {
 			],
 		},
 		{
-			text: 'Pocision',
-			key: 'position',
-			type: 'number',
-			value: '',
-			show: true,
-		},
-		{
 			text: 'Ocultar al publico',
 			key: 'ocultar_al_publico',
 			type: 'checkbox',
@@ -70,16 +80,6 @@ export default {
 			type: 'checkbox',
 			value: 1,
 			not_show: true,
-		},
-		{
-			text: 'Setear el precio final',
-			key: 'setear_precio_final',
-			type: 'checkbox',
-			value: 0,
-			not_show: true,
-			descriptions: [
-				'Si lo activa, en el modulo del LISTADO aparece siempre activada la opcion "Setear precio final" para esta lista de precio en cada articulo que vaya a crear',
-			]
 		},
 		{
 			// text: 'Setear el precio final',

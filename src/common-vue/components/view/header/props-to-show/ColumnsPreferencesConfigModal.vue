@@ -31,7 +31,7 @@
 
 		<div
 		v-for="row in filtered_config_rows"
-		:key="row.key"
+		:key="get_row_unique_id(row)"
 		class="props-row"
 		draggable="true"
 		@dragstart="drag_start(row, $event)"
@@ -139,8 +139,19 @@ export default {
 		 * Retorno: Number con la posicion encontrada en this.config_rows o -1 si no existe.
 		 * Nota: se usa para operar sobre el arreglo original, aun cuando la vista este filtrada.
 		 */
+		/*
+		 * Identificador estable de fila para v-for y drag-and-drop.
+		 * Si existe row_id (belongs_to_many con colisión model/pivot), lo usa; si no, key.
+		 */
+		get_row_unique_id(row) {
+			if (row && row.row_id) {
+				return row.row_id
+			}
+			return row.key
+		},
 		get_config_index(row) {
-			return this.config_rows.findIndex(item => item.key == row.key)
+			const row_id = this.get_row_unique_id(row)
+			return this.config_rows.findIndex(item => this.get_row_unique_id(item) == row_id)
 		},
 		/*
 		 * Inicia el proceso de drag and drop guardando el indice de origen.

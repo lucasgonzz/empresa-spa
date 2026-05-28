@@ -7,11 +7,11 @@
 		<sale-status></sale-status>
 		<fecha-entrega></fecha-entrega>
 
-		<div 
-		v-if="!hasExtencion('hide_iva_and_discount_stock_in_vender')"
+		<div
+		v-if="show_iva_or_discount_stock_controls"
 		class="j-start m-b-10">
-			<iva-aplicado></iva-aplicado>
-			<discount-stock></discount-stock>
+			<iva-aplicado v-if="can_use_iva_aplicado"></iva-aplicado>
+			<discount-stock v-if="can_use_discount_stock"></discount-stock>
 		</div>
 
 
@@ -29,6 +29,37 @@
 </template>
 <script>
 export default {
+	computed: {
+		/*
+		 * La extensión puede ocultar ambos checkboxes; los permisos controlan cada uno por separado.
+		 */
+		hide_iva_and_discount_stock_in_vender() {
+			return this.hasExtencion('hide_iva_and_discount_stock_in_vender')
+		},
+
+		/*
+		 * Permiso para usar el checkbox "Precios con IVA".
+		 */
+		can_use_iva_aplicado() {
+			return !this.hide_iva_and_discount_stock_in_vender
+				&& this.can('vender.iva_aplicado')
+		},
+
+		/*
+		 * Permiso para usar el checkbox "Descontar stock".
+		 */
+		can_use_discount_stock() {
+			return !this.hide_iva_and_discount_stock_in_vender
+				&& this.can('vender.discount_stock')
+		},
+
+		/*
+		 * Muestra el contenedor si al menos uno de los checkboxes está habilitado.
+		 */
+		show_iva_or_discount_stock_controls() {
+			return this.can_use_iva_aplicado || this.can_use_discount_stock
+		},
+	},
 	components: {
 		Observations: () => import('@/components/vender/components/remito/header-2/buttons/Observations'),
 		FechaEntrega: () => import('@/components/vender/components/remito/header-2/buttons/FechaEntrega'),

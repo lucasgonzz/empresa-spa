@@ -24,6 +24,7 @@ export default {
 			text: 'Endozado desde cliente',
 			key: 'endosado_desde_client_id',
 			store: 'client',
+			type: 'search',
 			use_store_models: true,
 		},
 		{
@@ -35,6 +36,7 @@ export default {
 			text: 'Endozado al proveedor',
 			key: 'endosado_a_provider_id',
 			store: 'provider',
+			type: 'search',
 			use_store_models: true,
 		},
 		{
