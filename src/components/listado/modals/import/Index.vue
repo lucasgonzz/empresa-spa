@@ -53,6 +53,11 @@ export default {
 				},
 				{
 					text: 'Proveedor',
+					description: 'Si no existe, se crea automaticamente al importar.',
+					relation_options: {
+						store_module: 'provider',
+						prefix: 'Valores existentes:',
+					},
 				},
 
 
@@ -86,7 +91,11 @@ export default {
 				},
 				{
 					text: 'Iva',
-					description: 'Valor por defecto: 21%. Alicuota de IVA que tiene este articulo, coloque el VALOR REAL ya que este dato sera usado en caso de hacer una FACTURA por la venta de este articulo.',
+					description: 'Valor por defecto: 21%. Coloque el porcentaje o texto tal como figura en el sistema.',
+					relation_options: {
+						store_module: 'iva',
+						value_prop: 'percentage',
+					},
 				},
 				{
 					text: 'Aplicar IVA',
@@ -109,12 +118,27 @@ export default {
 				},
 				{
 					text: 'Categoria',
+					description: 'Si no existe, se crea automaticamente al importar.',
+					relation_options: {
+						store_module: 'category',
+						prefix: 'Valores existentes:',
+					},
 				},
 				{
 					text: 'Sub categoria',
+					description: 'Debe corresponder a la categoria indicada. Si no existe, se crea.',
+					relation_options: {
+						store_module: 'sub_category',
+						prefix: 'Valores existentes:',
+					},
 				},
 				{
 					text: 'Marca',
+					description: 'Si no existe, se crea automaticamente al importar.',
+					relation_options: {
+						store_module: 'brand',
+						prefix: 'Valores existentes:',
+					},
 				},
 				{
 					text: 'Descripcion',
@@ -122,7 +146,10 @@ export default {
 				},
 				{
 					text: 'Unidad medida',
-					description: 'Por defecto es UNIDAD. Tambien puede ser "Gramo", "Kilo", "Litro", "Centimetro", "Metro", "Rollo", "Par"',
+					description: 'Por defecto es UNIDAD. Debe coincidir con uno de los siguientes valores.',
+					relation_options: {
+						store_module: 'unidad_medida',
+					},
 					// saltear_posiciones: 1,
 				},
 				{
@@ -306,6 +333,7 @@ export default {
 				'category/getModels',
 				'sub_category/getModels',
 				'brand/getModels',
+				'unidad_medida/getModels',
 			]
 		},
 		advises() {
