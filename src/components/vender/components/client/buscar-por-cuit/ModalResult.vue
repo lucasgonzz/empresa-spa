@@ -34,9 +34,10 @@
 	</b-modal>
 </template>
 <script>
+import price_types from '@/mixins/vender/price_types'
 import vender from '@/mixins/vender'
 export default {
-	mixins: [vender],
+	mixins: [price_types, vender],
 	props: {
 		title: String,
 		afip_data: Object,

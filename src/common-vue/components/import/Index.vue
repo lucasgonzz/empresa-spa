@@ -427,7 +427,11 @@
 								</span>
 								<p
 								class="text-description">
-									Cuando se encuentre un codigo de proveedor repetido, se actualizan las coincidencias de ese codigo, o se crea el articulo?
+									Si se activa, cuando se encuentre un codigo de proveedor repetido, se actualizan las coincidencias de ese codigo. 
+								</p>
+								<p
+								class="text-description">
+									Si se desactiva, cuando se encuentre un codigo de proveedor repetido, se crea un nuevo articulo con ese codigo.
 								</p>
 								<p class="text-description">
 									Desactivarlo cuando se importe excel por primera vez

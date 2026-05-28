@@ -17,10 +17,19 @@
 				:options="get_options_simple('address', 'street')"></b-form-select>
 			</b-form-group>
 			<b-button
+			:disabled="!puede_buscar"
 			@click="buscar">
 				Buscar
 			</b-button>
 		</div>
+
+		<b-alert
+		v-if="mensaje_estado"
+		show
+		class="m-b-15"
+		:variant="mensaje_estado_variant">
+			{{ mensaje_estado }}
+		</b-alert>
 
 		<div
 		v-if="hay_resultados"
@@ -33,14 +42,14 @@
 				{{ todos_seleccionados ? 'Deseleccionar todos' : 'Seleccionar todos' }}
 			</b-button>
 			<span
-			v-if="selected_article_ids.length"
+			v-if="selected_line_ids.length"
 			class="m-r-10 text-muted small">
-				{{ selected_article_ids.length }} seleccionado/s
+				{{ selected_line_ids.length }} seleccionado/s
 			</span>
 			<b-button
 			size="sm"
 			variant="primary"
-			:disabled="!selected_article_ids.length || loading_crear"
+			:disabled="!selected_line_ids.length || loading_crear"
 			@click="crear_movimientos">
 				<b-spinner
 				v-if="loading_crear"
@@ -65,9 +74,10 @@ export default {
 		return {
 			modo_agrupacion: 'origen',
 			address_id: 0,
-			selected_article_ids: [],
+			selected_line_ids: [],
 			select_all_flag: false,
 			loading_crear: false,
+			busqueda_realizada: false,
 		}
 	},
 	computed: {
@@ -93,13 +103,43 @@ export default {
 			return this.stock_suggestion_articles.length > 0
 		},
 		todos_seleccionados() {
-			return this.hay_resultados && this.selected_article_ids.length === this.stock_suggestion_articles.length
+			return this.hay_resultados && this.selected_line_ids.length === this.stock_suggestion_articles.length
+		},
+		puede_buscar() {
+			return this.stock_suggestion
+				&& this.stock_suggestion.status === 'terminado'
+				&& this.address_id > 0
+		},
+		mensaje_estado() {
+			if (!this.stock_suggestion) {
+				return ''
+			}
+			if (this.stock_suggestion.status === 'pendiente') {
+				return 'La sugerencia se está generando. Esperá a que el estado pase a terminado y volvé a buscar.'
+			}
+			if (this.address_id <= 0) {
+				return 'Seleccioná un depósito y presioná Buscar.'
+			}
+			if (!this.hay_resultados && this.busqueda_realizada) {
+				return 'No hay artículos sugeridos para ese depósito con esta sugerencia.'
+			}
+			return ''
+		},
+		mensaje_estado_variant() {
+			if (this.stock_suggestion && this.stock_suggestion.status === 'pendiente') {
+				return 'warning'
+			}
+			return 'info'
 		},
 	},
 	methods: {
 		buscar() {
-			this.selected_article_ids = []
+			if (!this.puede_buscar) {
+				return
+			}
+			this.selected_line_ids = []
 			this.select_all_flag = false
+			this.busqueda_realizada = true
 			this.$api.post('stock-suggestion-article', {
 				stock_suggestion_id: this.stock_suggestion.id,
 				modo_agrupacion: this.modo_agrupacion,
@@ -113,12 +153,12 @@ export default {
 			this.select_all_flag = !this.todos_seleccionados
 		},
 		on_selected_change(ids) {
-			this.selected_article_ids = ids
+			this.selected_line_ids = ids
 		},
 		crear_movimientos() {
 			this.loading_crear = true
 			this.$api.post(`stock-suggestion/${this.stock_suggestion.id}/create-deposit-movement`, {
-				article_ids: this.selected_article_ids,
+				stock_suggestion_article_ids: this.selected_line_ids,
 			})
 			.then(res => {
 				const cantidad = res.data.deposit_movements.length
@@ -130,7 +170,7 @@ export default {
 					variant: 'success',
 					solid: true,
 				})
-				this.selected_article_ids = []
+				this.selected_line_ids = []
 				this.select_all_flag = false
 			})
 			.catch(() => {

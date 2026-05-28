@@ -33,7 +33,15 @@ export default {
 			6- Chequeo que haya sifuciente stock para lo que se quiere vender
 		*/
 
-		set_item_vender(item, from_mobile = false, setear_amount = true) {
+		/**
+		 * Prepara un artículo/combo en cabecera y lo agrega o pide cantidad según configuración.
+		 *
+		 * @param {Object} item - Artículo o combo a vender
+		 * @param {boolean} from_mobile - Ajusta tiempos de foco en dispositivos móviles
+		 * @param {boolean} setear_amount - Si false, respeta la cantidad ya definida (p. ej. balanza PLU)
+		 * @param {boolean} desde_buscador_nombre - Si true, espera el cierre del modal de búsqueda antes del foco
+		 */
+		set_item_vender(item, from_mobile = false, setear_amount = true, desde_buscador_nombre = false) {
 
 			//  cuando busco por PLU, le paso setear_amount en FALSE para que use la cantidad que viene del api
 			console.log('set_item_vender:')
@@ -62,7 +70,7 @@ export default {
 
 
 				if (this.preguntar_cantidad && setear_amount) {
-					this.foco_input_amount(from_mobile)
+					this.foco_input_amount(from_mobile, desde_buscador_nombre)
 				} else {
 					this.add_item_vender()
 				}
@@ -157,7 +165,14 @@ export default {
 		},
 		
 
-		foco_input_amount(from_mobile) {
+		/**
+		 * Enfoca el input de cantidad tras seleccionar un artículo con ask_amount_in_vender.
+		 *
+		 * @param {boolean} from_mobile - Mayor demora en móvil
+		 * @param {boolean} desde_buscador_nombre - Mayor demora tras cerrar modal de búsqueda por nombre
+		 * @param {number} intento - Reintentos internos si el foco no se aplicó
+		 */
+		foco_input_amount(from_mobile = false, desde_buscador_nombre = false, intento = 0) {
 
 			let time = 400
 
@@ -165,7 +180,21 @@ export default {
 				time = 700
 			}
 
-			let input = document.getElementById('article-amount')
+			// El modal de búsqueda restaura foco ~500 ms después de cerrarse
+			if (desde_buscador_nombre) {
+				time = 650
+			}
+
+			const input = document.getElementById('article-amount')
+
+			if (!input) {
+				if (intento < 5) {
+					setTimeout(() => {
+						this.foco_input_amount(from_mobile, desde_buscador_nombre, intento + 1)
+					}, 200)
+				}
+				return
+			}
 
 			setTimeout(() => {
 				input.value = ''
@@ -174,16 +203,28 @@ export default {
 			setTimeout(() => {
 				input.focus()
 
-				this.check_focus(input)
+				if (typeof input.select === 'function') {
+					input.select()
+				}
+
+				this.check_focus(input, from_mobile, desde_buscador_nombre, intento)
 			}, time)
 		},
 
-		check_focus(input) {
+		/**
+		 * Reintenta el foco en cantidad si otro control (p. ej. modal de búsqueda) lo interceptó.
+		 *
+		 * @param {HTMLElement} input - Input #article-amount
+		 * @param {boolean} from_mobile
+		 * @param {boolean} desde_buscador_nombre
+		 * @param {number} intento
+		 */
+		check_focus(input, from_mobile = false, desde_buscador_nombre = false, intento = 0) {
 
-            if (!document.activeElement === input) {
-            	console.log('NO se hizo foco, volviendo a llamar')
-            	this.foco_input_amount(false)
-            } 
+			if (document.activeElement !== input && intento < 3) {
+				console.log('NO se hizo foco, volviendo a llamar')
+				this.foco_input_amount(from_mobile, desde_buscador_nombre, intento + 1)
+			}
 		}
 	}
 }

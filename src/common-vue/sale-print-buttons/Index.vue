@@ -1,32 +1,37 @@
 <template>
 	<div>
-		<b-dropdown
-		variant="danger"
-		right
-		menu-class="sale-print-dropdown-menu"
-		v-if="sale">
-			<template #button-content>
-				<i class="icon-print"></i>
-				Imprimir
-			</template>
+		<div class="j-start">
+			<b-dropdown
+			variant="danger"
+			right
+			menu-class="sale-print-dropdown-menu"
+			v-if="sale">
+				<template #button-content>
+					<i class="icon-print"></i>
+					Imprimir
+				</template>
 
-			<section-tickets
-			:afip_tickets_with_cae="afip_tickets_with_cae"
-			@ticket_pdf="ticketPdf(sale)"
-			@factura_ticket_pdf="facturaTicketPdf"
-			@ticket_2="nuevo_ticket(sale)"
-			@set_ancho_impresora="set_ancho_impresora"></section-tickets>
+				<section-tickets
+				:afip_tickets_with_cae="afip_tickets_with_cae"
+				@ticket_pdf="ticketPdf(sale)"
+				@factura_ticket_pdf="facturaTicketPdf"
+				@ticket_2="nuevo_ticket(sale)"
+				@set_ancho_impresora="set_ancho_impresora"></section-tickets>
 
-			<section-remitos-a4
-			:remitos_a4_profiles="remitos_a4_profiles"
-			@print_with_profile="print_with_profile"
-			@open_profile_modal="open_pdf_columns_modal"></section-remitos-a4>
+				<section-remitos-a4
+				:remitos_a4_profiles="remitos_a4_profiles"
+				@print_with_profile="print_with_profile"
+				@open_profile_modal="open_pdf_columns_modal"></section-remitos-a4>
 
-			<section-facturas-a4
-			:afip_a4_print_options="afip_a4_print_options"
-			@factura_pdf_with_profile="facturaPdfWithProfile"
-			@open_profile_modal="open_pdf_columns_modal"></section-facturas-a4>
-		</b-dropdown>
+				<section-facturas-a4
+				:afip_a4_print_options="afip_a4_print_options"
+				@factura_pdf_with_profile="facturaPdfWithProfile"
+				@open_profile_modal="open_pdf_columns_modal"></section-facturas-a4>
+			</b-dropdown>
+
+			<whatsapp-btn
+			:sale="sale"></whatsapp-btn>
+		</div>
 
 		<modal-pdf-columns-profile
 		:sale="sale"
@@ -59,6 +64,7 @@ import SectionFacturasA4 from './SectionFacturasA4.vue'
 
 export default {
 	components: {
+		WhatsappBtn: () => import('@/common-vue/sale-print-buttons/WhatsappBtn'),
 		ModalPdfColumnsProfile,
 		SectionTickets,
 		SectionRemitosA4,

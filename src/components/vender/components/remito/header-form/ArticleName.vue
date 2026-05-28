@@ -193,23 +193,28 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Al elegir un artículo por nombre, lo deja en cabecera y pide cantidad si corresponde.
+		 *
+		 * @param {Object} result - Resultado del buscador ({ model, query, ... })
+		 */
 		setSelected(result) {
 
-
-			// this.item.name = result.query
-
-			let article = {
+			const article = {
 				...result.model,
 				is_article: true,
 			}
 
 			this.set_codigo_input_value(article)
 
-			this.set_item_vender(article)
+			// true en el 4º parámetro: el modal de búsqueda cierra después y puede robar el foco
+			this.set_item_vender(article, false, true, true)
 
 			if (this.owner.ask_amount_in_vender) {
-				let input = document.getElementById('search-article')
-				input.value = article.name
+				const input = document.getElementById('search-article')
+				if (input) {
+					input.value = article.name
+				}
 			}
 		},
 		set_codigo_input_value(result) {

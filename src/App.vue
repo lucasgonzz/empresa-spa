@@ -61,7 +61,11 @@ export default {
         authenticated() {
             console.log('watch de authenticateds')
             if (!this.authenticated) {
-                this.$router.replace({name: 'home'})
+                /**
+                 * Redirección de seguridad: si se pierde la sesión, volver a `login`.
+                 * Evita quedar en vistas privadas sin autorización o en rutas inexistentes.
+                 */
+                this.$router.replace({name: 'login'})
             } else {
                 // this.check_online()
                 this.check_version()

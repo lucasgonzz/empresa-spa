@@ -9,6 +9,9 @@ export default {
 			use_in_search_modal: true,
 		},
 		{
+			group_title: 'Datos generales',
+		},
+		{
 			text: 'Total',
 			key: 'total',
 			type: 'number',
@@ -65,12 +68,6 @@ export default {
 			if_has_extencion: 'ventas_con_fecha_de_entrega',
 		},
 		{
-			text: 'Met Pago',
-			key: 'met_pago',
-			function: 'get_sale_payment_methods',
-			no_usar_en_filtros: true,
-		},
-		{
 			text: 'Cliente',
 			key: 'client_id',
 			type: 'search',
@@ -99,6 +96,48 @@ export default {
 			// if_has_extencion: 'indicar_vendedor_en_vender',
 		},
 		{
+			text: 'En acopio',
+			key: 'en_acopio',
+			type: 'checkbox',
+			only_show: true,
+			if_has_extencion: 'acopios',
+		},
+		{
+			text: 'Observaciones',
+			key: 'observations',
+			type: 'textarea',
+			only_show: true,
+		},
+		{
+			text: 'Observaciones Ocultas',
+			key: 'observations_ocultas',
+			type: 'textarea',
+			only_show: true,
+		},
+		{
+			text: 'Datos envío etiqueta',
+			key: 'sale_delivery_info',
+			not_show: true,
+			no_usar_en_filtros: true,
+		},
+		{
+			text: 'Remitente etiqueta',
+			key: 'sale_sender_info',
+			not_show: true,
+			no_usar_en_filtros: true,
+		},
+
+
+		{
+			group_title: 'Pago',
+		},
+		{
+			text: 'Met Pago',
+			key: 'met_pago',
+			function: 'get_sale_payment_methods',
+			no_usar_en_filtros: true,
+		},
+		{
 			text: 'Cuotas',
 			key: 'cantidad_cuotas',
 			type: 'number',
@@ -112,7 +151,8 @@ export default {
 			use_store_models: true,
 			not_show: true,
 			only_show: true,
-			v_if: ['price_type_id', '!=', 0],
+			// Solo mostrar si hay lista asignada (id distinto de null y de 0).
+			v_if: ['price_type_id', '>', 0],
 		},
 		{
 			text: 'Caja destino',
@@ -131,23 +171,57 @@ export default {
 			if_has_extencion: 'forzar_total',
 		},
 		{
-			text: 'En acopio',
-			key: 'en_acopio',
-			type: 'checkbox',
+			text: 'Metodos de Pago',
+			key: 'current_acount_payment_methods',
+			store: 'current_acount_payment_method',
+			type: 'search',
 			only_show: true,
-			if_has_extencion: 'acopios',
+			belongs_to_many: {
+				model_name: 'current_acount_payment_method',
+				pivot_props_to_show: [
+					{
+						text: 'Monto',
+						key: 'amount',
+						is_price: true,
+					},
+					{
+						text: 'Moneda',
+						key: 'moneda_id',
+						// type: 'select',
+						use_store_models: true,
+						if_has_extencion: 'ventas_en_dolares',
+					},
+					{
+						text: 'Cotizacion',
+						key: 'cotizacion',
+						is_price: true,
+						if_has_extencion: 'ventas_en_dolares',
+					},
+					{
+						text: 'Monto cotizado',
+						key: 'amount_cotizado',
+						is_price: true,
+						if_has_extencion: 'ventas_en_dolares',
+					},
+					{
+						text: 'Descuento',
+						key: 'discount_amount',
+						is_price: true,
+					},
+					{
+						text: 'Caja',
+						key: 'caja_id',
+						use_store_models: true,
+					},
+				],
+			},
+			no_usar_en_filtros: true,
+			not_show: true,
 		},
+
+
 		{
-			text: 'Observaciones',
-			key: 'observations',
-			type: 'textarea',
-			only_show: true,
-		},
-		{
-			text: 'Observaciones Ocultas',
-			key: 'observations_ocultas',
-			type: 'textarea',
-			only_show: true,
+			group_title: 'Productos',
 		},
 		{
 			text: 'Articulos',
@@ -281,66 +355,7 @@ export default {
 			},
 			no_usar_en_filtros: true,
 		},
-		{
-			text: 'Metodos de Pago',
-			key: 'current_acount_payment_methods',
-			store: 'current_acount_payment_method',
-			type: 'search',
-			only_show: true,
-			belongs_to_many: {
-				model_name: 'current_acount_payment_method',
-				pivot_props_to_show: [
-					{
-						text: 'Monto',
-						key: 'amount',
-						is_price: true,
-					},
-					{
-						text: 'Moneda',
-						key: 'moneda_id',
-						// type: 'select',
-						use_store_models: true,
-						if_has_extencion: 'ventas_en_dolares',
-					},
-					{
-						text: 'Cotizacion',
-						key: 'cotizacion',
-						is_price: true,
-						if_has_extencion: 'ventas_en_dolares',
-					},
-					{
-						text: 'Monto cotizado',
-						key: 'amount_cotizado',
-						is_price: true,
-						if_has_extencion: 'ventas_en_dolares',
-					},
-					{
-						text: 'Descuento',
-						key: 'discount_amount',
-						is_price: true,
-					},
-					{
-						text: 'Caja',
-						key: 'caja_id',
-						use_store_models: true,
-					},
-				],
-			},
-			no_usar_en_filtros: true,
-			not_show: true,
-		},
-		{
-			text: 'Datos envío etiqueta',
-			key: 'sale_delivery_info',
-			not_show: true,
-			no_usar_en_filtros: true,
-		},
-		{
-			text: 'Remitente etiqueta',
-			key: 'sale_sender_info',
-			not_show: true,
-			no_usar_en_filtros: true,
-		},
+		
 		{
 			text: 'Servicios',
 			key: 'services',

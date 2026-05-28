@@ -641,6 +641,13 @@ export default {
 			let filter = filters.find(_filter => _filter.key === field_key)
 			if (!filter) return false
 
+			if (typeof filter.en_blanco !== 'undefined' && filter.en_blanco) {
+				return true
+			}
+			if (typeof filter.no_en_blanco !== 'undefined' && filter.no_en_blanco) {
+				return true
+			}
+
 			if (filter.ordenar_de !== null && filter.ordenar_de !== '' && typeof filter.ordenar_de !== 'undefined') {
 				return true
 			}
@@ -672,7 +679,6 @@ export default {
 			// text / textarea
 			return (typeof filter.que_contenga !== 'undefined' && filter.que_contenga !== '')
 				|| (typeof filter.igual_que !== 'undefined' && filter.igual_que !== '')
-				|| (typeof filter.en_blanco !== 'undefined' && filter.en_blanco)
 		},
 		set_fields(cambiaron_las_props = false) {
 
@@ -783,6 +789,7 @@ export default {
 					text: 'Eliminado',
 					checkbox: -1,
 					en_blanco: 0,
+					no_en_blanco: 0,
 					que_contenga: '',
 					igual_que: '',
 					menor_que: '',

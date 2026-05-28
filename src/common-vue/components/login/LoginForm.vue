@@ -270,8 +270,9 @@ export default {
 	transition: border-color 0.15s ease, box-shadow 0.15s ease
 
 .login-form__input-row:focus-within
-	border-color: rgba(0, 137, 102, 0.35)
-	box-shadow: 0 0 0 3px rgba(0, 137, 102, 0.12)
+	// Reemplazo del verde por azul para mantener consistencia visual en el login.
+	border-color: rgba(0, 123, 255, 0.35)
+	box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.12)
 
 .login-form__input-icon
 	display: flex
@@ -308,8 +309,8 @@ export default {
 	color: #4b5563
 
 .login-form__submit.btn
-	// background: #008966 !important
-	// border-color: #008966 !important
+	// background: #007bff !important
+	// border-color: #007bff !important
 	font-weight: 600
 	padding-top: 0.65rem
 	padding-bottom: 0.65rem
@@ -334,6 +335,6 @@ export default {
 	text-decoration: none
 
 .login-form__forgot-link:hover
-	color: #008966
+	color: #007bff
 	text-decoration: underline
 </style>

@@ -5,6 +5,62 @@ import ventas_sin_cobrar from '@/store/sale/ventas_sin_cobrar'
 import consolidar_facturacion from '@/store/sale/consolidar_facturacion'
 
 /**
+ * Indica si hay filtros de columnas activos, excluyendo búsqueda por N° de factura AFIP.
+ *
+ * @param {Array} filters Filtros del store sale.
+ * @returns {boolean}
+ */
+function sale_filters_have_active_criteria_except_afip(filters) {
+	let has_active = false
+	filters.forEach(filter => {
+		if (has_active || filter.key === 'afip_ticket_cbte_numero') {
+			return
+		}
+		if (filter.en_blanco || filter.no_en_blanco) {
+			has_active = true
+			return
+		}
+		if (filter.ordenar_de !== null && filter.ordenar_de !== '' && typeof filter.ordenar_de !== 'undefined') {
+			has_active = true
+			return
+		}
+		if (filter.type === 'select' || filter.type === 'search') {
+			if (filter.igual_que !== 0 && filter.igual_que !== '' && filter.igual_que !== null && typeof filter.igual_que !== 'undefined') {
+				has_active = true
+			}
+			return
+		}
+		if (filter.type === 'checkbox') {
+			if (typeof filter.checkbox !== 'undefined' && filter.checkbox !== -1) {
+				has_active = true
+			}
+			return
+		}
+		if (filter.type === 'date') {
+			if ((filter.menor_que !== '' && typeof filter.menor_que !== 'undefined')
+				|| (filter.igual_que !== '' && typeof filter.igual_que !== 'undefined')
+				|| (filter.mayor_que !== '' && typeof filter.mayor_que !== 'undefined')) {
+				has_active = true
+			}
+			return
+		}
+		if (filter.type === 'number') {
+			if ((filter.menor_que !== '' && typeof filter.menor_que !== 'undefined')
+				|| (filter.igual_que !== '' && filter.igual_que !== null && typeof filter.igual_que !== 'undefined')
+				|| (filter.mayor_que !== '' && typeof filter.mayor_que !== 'undefined')) {
+				has_active = true
+			}
+			return
+		}
+		if ((filter.que_contenga !== '' && typeof filter.que_contenga !== 'undefined')
+			|| (filter.igual_que !== '' && typeof filter.igual_que !== 'undefined')) {
+			has_active = true
+		}
+	})
+	return has_active
+}
+
+/**
  * Store de ventas (modelo `sale`) construido desde el factory común.
  *
  * Notas:
@@ -29,6 +85,8 @@ export default __base_store({
 
 		ventas_cobradas_show_option: 'cobradas-y-no-cobradas',
 		afip_ticket_show_option: 'con-y-sin-factura',
+		/** Texto para filtrar ventas por número de comprobante AFIP (cbte_numero). Vacío = sin filtro. */
+		afip_ticket_cbte_numero_search: '',
 		payment_method_show_option: 'todos',
 
 		// Array de descripciones del cálculo del precio de la venta seleccionada para mostrar en el modal
@@ -75,6 +133,16 @@ export default __base_store({
 			state.afip_ticket_show_option = value
 		},
 		/**
+		 * Texto de búsqueda por número de factura AFIP en el listado de ventas.
+		 *
+		 * @param {Object} state Estado del módulo.
+		 * @param {string} value Número o fragmento ingresado por el usuario.
+		 * @returns {void}
+		 */
+		set_afip_ticket_cbte_numero_search(state, value) {
+			state.afip_ticket_cbte_numero_search = value
+		},
+		/**
 		 * Filtro visual por método de pago.
 		 */
 		set_payment_method_show_option(state, value) {
@@ -118,6 +186,54 @@ export default __base_store({
 		},
 	},
 	actions: {
+		/**
+		 * Busca ventas en API por N° de comprobante AFIP (cbte_numero), sin depender del rango de fechas cargado.
+		 *
+		 * @param {Object} context commit, state, dispatch
+		 * @param {string} value Texto ingresado en el buscador del nav.
+		 * @returns {Promise|void}
+		 */
+		search_by_afip_ticket_cbte_numero({ commit, state, dispatch }, value) {
+			const cbte_numero = typeof value === 'string' ? value.trim() : ''
+			commit('set_afip_ticket_cbte_numero_search', cbte_numero)
+
+			let filters = state.filters ? state.filters.slice() : []
+			const filter_index = filters.findIndex(filter => {
+				return filter.key === 'afip_ticket_cbte_numero'
+			})
+
+			if (cbte_numero === '') {
+				if (filter_index !== -1) {
+					filters.splice(filter_index, 1)
+				}
+				commit('setFilters', filters)
+				if (sale_filters_have_active_criteria_except_afip(filters)) {
+					commit('setFilterPage', 1)
+					return dispatch('runFilter', { page: 1 })
+				}
+				commit('setIsFiltered', false)
+				commit('setFiltered', [])
+				commit('setFilterPage', 1)
+				commit('setTotalFilterPages', null)
+				commit('setTotalFilterResults', 0)
+				return
+			}
+
+			const afip_filter = {
+				key: 'afip_ticket_cbte_numero',
+				type: 'afip_ticket_cbte_numero',
+				text: 'N° de factura',
+				que_contenga: cbte_numero,
+			}
+			if (filter_index === -1) {
+				filters.unshift(afip_filter)
+			} else {
+				filters.splice(filter_index, 1, afip_filter)
+			}
+			commit('setFilters', filters)
+			commit('setFilterPage', 1)
+			return dispatch('runFilter', { page: 1 })
+		},
 		/**
 		 * Elimina venta en API, opcionalmente pidiendo compensación en caja (`compensar_caja`).
 		 *

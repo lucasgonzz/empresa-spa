@@ -119,7 +119,11 @@ export default {
 			return options
 		},
 		addresses_options() {
-			if (!this.is_admin && this.can('article.stock_only_sucursal') && this.user.address_id) {
+			if (
+				!this.is_admin 
+				&& this.can('article.edit_stock_only_sucursal') 
+				&& this.user.address_id
+			) {
 				return [
 					{
 						text: 'Seleccione deposito',

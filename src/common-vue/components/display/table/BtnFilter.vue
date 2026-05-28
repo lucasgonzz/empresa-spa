@@ -39,8 +39,11 @@ export default {
 		},
 		filtro_usado() {
 			if (this.filter) {
-				// Si el usuario marcó "En blanco", el filtro siempre cuenta como activo.
+				// Si el usuario marcó "En blanco" o "Que no esté en blanco", el filtro cuenta como activo.
 				if (typeof this.filter.en_blanco !== 'undefined' && this.filter.en_blanco) {
+					return true
+				}
+				if (typeof this.filter.no_en_blanco !== 'undefined' && this.filter.no_en_blanco) {
 					return true
 				}
 

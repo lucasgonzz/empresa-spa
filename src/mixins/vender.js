@@ -332,7 +332,7 @@ export default {
 					
 					this.limpiar_vender()
 
-					this.setDefaultPaymentMethod()
+					this.setDefaultPaymentMethod(true)
 
 					this.set_omitir_en_cuenta_corriente()
 

@@ -14,7 +14,7 @@
 			:prop="{text: 'Cliente', key: 'client_id'}"
 			:model="_vender.client"
 			model_name="client"
-			:props_to_filter="['num', 'name', 'phone', 'dni']"
+			:props_to_filter="['num', 'name', 'phone', 'dni', 'cuit']"
 			show_btn_create
 			search_from_api
 			:tax_id_afip_lookup_on_second_enter="true"

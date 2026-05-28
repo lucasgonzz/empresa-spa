@@ -28,7 +28,7 @@ export default {
 
 		cancelar() {
 
-			this.setDefaultPaymentMethod()
+			this.setDefaultPaymentMethod(true)
 
 			this.$store.commit('vender/setSelectedPaymentMethods', [])
 			// this.$store.commit('vender/current_acount_payment_methods/setPaymentMethods', [])

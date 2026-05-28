@@ -25,13 +25,14 @@ import BtnLoader from '@/common-vue/components/BtnLoader'
 import previus_sales from '@/mixins/vender/previus_sale/index'
 import guardar_venta from '@/mixins/vender/guardar_venta/index'
 import vender_presupuestos from '@/mixins/vender_presupuestos'
+import articulo_pendiente_de_agregar from '@/mixins/vender/articulo_pendiente_de_agregar'
 export default {
 	name: 'ButtonClients',
 	components: {
 		VueltoEfectivo: () => import('@/components/vender/components/remito/VueltoEfectivo'),
 		BtnLoader,
 	},
-	mixins: [previus_sales, guardar_venta, vender_presupuestos],
+	mixins: [previus_sales, guardar_venta, vender_presupuestos, articulo_pendiente_de_agregar],
     mounted() {
         window.addEventListener("keydown", this.detectarTecla);
     },
@@ -59,6 +60,10 @@ export default {
 			}
 		},
 		check() {
+			if (!this.check_articulo_pendiente_de_agregar()) {
+				return false
+			}
+
 			if (this.guardar_como_presupuesto) {
 				if (!this.client) {
 					this.$toast.error('Indique un CLIENTE para el Presupuesto')

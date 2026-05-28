@@ -81,6 +81,75 @@ export default {
             }
             return '-'
         },
+        /**
+         * Paso del input numérico según decimales máximos permitidos en el model.
+         *
+         * @param {Object} prop definición de propiedad (puede incluir variable_decimals).
+         * @returns {string|undefined} valor para el atributo step del input, o undefined si no aplica.
+         */
+        get_number_input_step(prop) {
+            if (!prop || !prop.variable_decimals) {
+                return undefined
+            }
+            const max_decimals = prop.variable_decimals.max != null ? prop.variable_decimals.max : 4
+            if (max_decimals <= 0) {
+                return '1'
+            }
+            return '0.' + '0'.repeat(max_decimals - 1) + '1'
+        },
+        /**
+         * Formatea un número con decimales variables: muestra min_decimals por defecto
+         * y hasta max_decimals solo si el valor usa el 3.er o 4.o decimal (u otros extra).
+         *
+         * @param {*} value valor crudo del campo.
+         * @param {number} min_decimals decimales mínimos visibles (por defecto 2).
+         * @param {number} max_decimals decimales máximos almacenados/permitidos (por defecto 4).
+         * @returns {string} texto listo para mostrar en tablas y formularios.
+         */
+        format_number_variable_decimals(value, min_decimals = 2, max_decimals = 4) {
+            if (value === null || value === undefined || value === '') {
+                return ''
+            }
+            const number_value = Number(value)
+            if (isNaN(number_value)) {
+                return String(value)
+            }
+            const factor_max = Math.pow(10, max_decimals)
+            const factor_min = Math.pow(10, min_decimals)
+            const rounded_max = Math.round(number_value * factor_max) / factor_max
+            const rounded_min = Math.round(number_value * factor_min) / factor_min
+
+            if (rounded_max === rounded_min) {
+                return rounded_min.toFixed(min_decimals)
+            }
+
+            let formatted = rounded_max.toFixed(max_decimals)
+            formatted = formatted.replace(/(\.\d*?[1-9])0+$/, '$1')
+            const decimal_part = formatted.indexOf('.') >= 0 ? formatted.split('.')[1] : ''
+            if (decimal_part.length < min_decimals) {
+                formatted = rounded_max.toFixed(min_decimals)
+            }
+            return formatted
+        },
+        /**
+         * Normaliza un valor de pivot para guardarlo/mostrarlo con decimales variables.
+         *
+         * @param {Object} prop definición de propiedad del model.
+         * @param {*} value valor actual del pivot.
+         * @returns {*} valor normalizado o el original si no aplica variable_decimals.
+         */
+        normalize_variable_decimal_pivot_value(prop, value) {
+            if (!prop || !prop.variable_decimals) {
+                return value
+            }
+            const min_decimals = prop.variable_decimals.min != null ? prop.variable_decimals.min : 2
+            const max_decimals = prop.variable_decimals.max != null ? prop.variable_decimals.max : 4
+            const formatted = this.format_number_variable_decimals(value, min_decimals, max_decimals)
+            if (formatted === '') {
+                return value
+            }
+            return formatted
+        },
         getMonth(d) {
             return moment(d).format('MMM')
         },
