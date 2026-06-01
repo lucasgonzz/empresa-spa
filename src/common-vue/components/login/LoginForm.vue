@@ -8,30 +8,20 @@
 				Iniciá sesión para acceder a la plataforma
 			</p> -->
 		</div>
-		<!-- Campo de identificación (email, DNI, etc. según VUE_APP_ATTEMPT_PROP) -->
+		<!-- Campo de identificación por número de documento -->
 		<div class="login-form__field">
 			<label
 				class="login-form__label"
-				:for="first_input_id"
+				for="doc_number"
 			>
-				{{ attempt_text }}
+				Numero de documento
 			</label>
 			<div class="login-form__input-row">
 				<span
 					class="login-form__input-icon"
 					aria-hidden="true"
 				>
-					<!-- Icono sobre el primer campo: sobre o usuario según tipo de login -->
 					<svg
-						v-if="show_mail_icon"
-						class="login-form__icon-svg"
-						viewBox="0 0 24 24"
-						xmlns="http://www.w3.org/2000/svg"
-					>
-						<path fill="currentColor" d="M4 6h16a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2zm0 2l7.89 5.26a1 1 0 001.22 0L20 8H4z" />
-					</svg>
-					<svg
-						v-else
 						class="login-form__icon-svg"
 						viewBox="0 0 24 24"
 						xmlns="http://www.w3.org/2000/svg"
@@ -42,11 +32,11 @@
 				<b-form-input
 					class="login-form__control"
 					@keyup.enter="login"
-					v-model="form[attempt_prop]"
-					:name="first_input_id"
-					:id="first_input_id"
-					:dusk="first_input_id"
-					:placeholder="first_attempt_placeholder"
+					v-model="form.doc_number"
+					name="doc_number"
+					id="doc_number"
+					dusk="doc_number"
+					placeholder="Ingrese su Numero de documento"
 				/>
 			</div>
 		</div>
@@ -120,6 +110,7 @@ export default {
 		// Estado del formulario de login enviado al endpoint `login`
 		return {
 			form: {
+				doc_number: '',
 				password: '',
 				remember: 0,
 			},
@@ -127,33 +118,6 @@ export default {
 		}
 	},
 	computed: {
-		/**
-		 * Id estable del primer campo para label/for y pruebas (antes `dni` fijo).
-		 *
-		 * @returns {string}
-		 */
-		first_input_id() {
-			return this.attempt_prop || 'attempt'
-		},
-		/**
-		 * Muestra icono de sobre cuando el intento de login es por email.
-		 *
-		 * @returns {boolean}
-		 */
-		show_mail_icon() {
-			return this.attempt_prop === 'email'
-		},
-		/**
-		 * Placeholder del primer campo según tipo de credencial configurada.
-		 *
-		 * @returns {string}
-		 */
-		first_attempt_placeholder() {
-			if (this.attempt_prop === 'email') {
-				return 'admin@empresa.com'
-			}
-			return 'Ingrese su ' + this.attempt_text
-		},
 		/**
 		 * Placeholder del campo contraseña (tono alineado al mockup).
 		 *
@@ -217,8 +181,8 @@ export default {
 		 * @returns {boolean}
 		 */
 		check() {
-			if (this.form[this.attempt_prop] == '') {
-				this.$toast.error('Ingrese el ' + this.attempt_text)
+			if (this.form.doc_number == '') {
+				this.$toast.error('Ingrese el Numero de documento')
 				return false
 			}
 			if (this.form.password == '') {

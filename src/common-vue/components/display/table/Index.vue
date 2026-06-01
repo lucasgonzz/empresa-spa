@@ -22,7 +22,8 @@
 						v-for="field in fields"
 						:key="field.key"
 						:class="header_column_classes(field)"
-						:style="column_style(field)">
+						:style="column_style(field)"
+						@mouseenter="on_header_th_mouseenter(field, $event)">
 
 							<div class="cont-th">
 								<span v-html="field.label"></span>
@@ -266,6 +267,8 @@ export default {
 		},
 	},
 	mounted() {
+		let that = this
+		that.update_all_header_filter_fit()
 		setTimeout(() => {
 
 			this.scroll_margenes()
@@ -278,6 +281,7 @@ export default {
 		let that = this
 		window.addEventListener('resize', function(event) {
 			that.setHeight()
+			that.update_all_header_filter_fit()
 		}, true);
 
 		this.set_fields()
@@ -291,6 +295,11 @@ export default {
 			fields: [],
 			// Columna cuyo filtro se edita en el modal; null si el modal está cerrado.
 			filter_modal_field: null,
+			/**
+			 * Por key de columna: true si el ancho actual del th ya alcanza para los botones de filtro
+			 * sin necesidad de ensanchar la celda al hacer hover.
+			 */
+			header_filter_fits_by_key: {},
 		}
 	},
 	computed: {
@@ -535,10 +544,38 @@ export default {
 				return lists
 			} 
 		},
+		/**
+		 * Firma de columnas con filtro activo; al cambiar, el ancho de botones (p. ej. borrar) puede variar.
+		 *
+		 * @returns {string}
+		 */
+		table_filters_signature() {
+			if (!this.model_name || !this.$store.state[this.model_name]) {
+				return ''
+			}
+			let filters = this.$store.state[this.model_name].filters || []
+			let used_keys = []
+			let idx = 0
+			for (idx = 0; idx < filters.length; idx++) {
+				if (this.filter_is_used(filters[idx].key)) {
+					used_keys.push(filters[idx].key)
+				}
+			}
+			return used_keys.join(',')
+		},
 	},
 	watch: {
+		fields() {
+			this.update_all_header_filter_fit()
+		},
+		table_filters_signature() {
+			this.update_all_header_filter_fit()
+		},
 		loading() {
 			this.setHeight()
+			if (!this.loading) {
+				this.update_all_header_filter_fit()
+			}
 		},
 		model_name() {
 			this.set_fields()
@@ -591,7 +628,118 @@ export default {
 			if (this.is_options_column(field)) {
 				classes.push('th-options-column')
 			}
+			if (this.header_filter_fits_by_key[field.key]) {
+				classes.push('th-filter-fits')
+			}
 			return classes
+		},
+		/**
+		 * Recalcula en todos los th si los botones de filtro caben sin ensanchar la columna.
+		 */
+		update_all_header_filter_fit() {
+			let that = this
+			if (that.pivot || !that.usar_filtros || that.is_from_has_many) {
+				return
+			}
+			that.$nextTick(function () {
+				let table = document.getElementById('table-' + that.model_name)
+				if (!table) {
+					return
+				}
+				let th_list = table.querySelectorAll('thead tr th')
+				let idx = 0
+				for (idx = 0; idx < th_list.length; idx++) {
+					let field = that.fields[idx]
+					if (!field) {
+						continue
+					}
+					that.measure_and_set_header_filter_fit(field, th_list[idx])
+				}
+			})
+		},
+		/**
+		 * Al entrar con el mouse, mide el th concreto (por si el layout cambió desde el último batch).
+		 *
+		 * @param {Object} field - Field del header.
+		 * @param {Event} event - mouseenter del th.
+		 */
+		on_header_th_mouseenter(field, event) {
+			if (!field || !event || !event.currentTarget) {
+				return
+			}
+			this.measure_and_set_header_filter_fit(field, event.currentTarget)
+		},
+		/**
+		 * Mide si el ancho actual del th deja lugar para los controles de filtro y guarda el resultado.
+		 *
+		 * @param {Object} field - Field del header.
+		 * @param {HTMLElement} th_element - Celda thead.
+		 */
+		measure_and_set_header_filter_fit(field, th_element) {
+			if (
+				!field
+				|| !th_element
+				|| this.pivot
+				|| !this.usar_filtros
+				|| this.is_from_has_many
+				|| this.is_options_column(field)
+			) {
+				return
+			}
+			let cont_th = th_element.querySelector('.cont-th')
+			let filter_cont = th_element.querySelector('.cont-filter-buttons')
+			if (!cont_th || !filter_cont) {
+				return
+			}
+			let label_el = cont_th.querySelector('span')
+			let label_width = label_el ? label_el.offsetWidth : 0
+			let cont_th_style = window.getComputedStyle(cont_th)
+			let padding_horizontal = parseFloat(cont_th_style.paddingLeft) + parseFloat(cont_th_style.paddingRight)
+			let buttons_width = this.measure_filter_buttons_width(filter_cont)
+			/**
+			 * Margen de tolerancia por redondeos de subpíxeles en flex/table layout.
+			 */
+			let fit_tolerance_px = 2
+			let available_width = th_element.clientWidth - label_width - padding_horizontal
+			let fits = available_width + fit_tolerance_px >= buttons_width
+			this.$set(this.header_filter_fits_by_key, field.key, fits)
+			if (fits) {
+				th_element.classList.add('th-filter-fits')
+			} else {
+				th_element.classList.remove('th-filter-fits')
+			}
+		},
+		/**
+		 * Ancho natural de .cont-filter-buttons (ordenar + lupa + borrar si aplica).
+		 *
+		 * @param {HTMLElement} filter_cont - Contenedor de botones del header.
+		 * @returns {number}
+		 */
+		measure_filter_buttons_width(filter_cont) {
+			let saved_max_width = filter_cont.style.maxWidth
+			let saved_overflow = filter_cont.style.overflow
+			let saved_visibility = filter_cont.style.visibility
+			let saved_position = filter_cont.style.position
+			let saved_opacity = filter_cont.style.opacity
+			let saved_pointer_events = filter_cont.style.pointerEvents
+
+			filter_cont.style.maxWidth = 'none'
+			filter_cont.style.overflow = 'visible'
+			filter_cont.style.visibility = 'hidden'
+			filter_cont.style.position = 'absolute'
+			filter_cont.style.opacity = '1'
+			filter_cont.style.pointerEvents = 'none'
+
+			let width = filter_cont.scrollWidth
+
+			filter_cont.style.maxWidth = saved_max_width
+			filter_cont.style.overflow = saved_overflow
+			filter_cont.style.visibility = saved_visibility
+			filter_cont.style.position = saved_position
+			filter_cont.style.opacity = saved_opacity
+			filter_cont.style.pointerEvents = saved_pointer_events
+
+			return width
 		},
 		filtrar() {
 			/**
@@ -704,6 +852,8 @@ export default {
 						sortable: prop.sortable,
 						type: prop.type_to_update ? prop.type_to_update : prop.type,
 						width: prop.table_width ? Number(prop.table_width) : null,
+						// Si true, el filtro date no muestra hora (solo día calendario).
+						filter_date_only: prop.filter_date_only === true,
 					})
 				}
 			})
@@ -711,6 +861,8 @@ export default {
 			// console.log(this.fields)
 
 			this.set_filters(cambiaron_las_props)
+
+			this.update_all_header_filter_fit()
 
 			// this.restart_filtereds()
 		},
@@ -1040,9 +1192,17 @@ export default {
 
 			&:hover
 				.cont-filter-buttons
-					max-width: 220px
 					opacity: 1
 					pointer-events: auto
+
+			// Solo ensanchamos la columna en hover si no hay espacio libre suficiente en el th actual.
+			&:not(.th-filter-fits):hover
+				.cont-filter-buttons
+					max-width: 220px
+
+			&.th-filter-fits:hover
+				.cont-filter-buttons
+					max-width: fit-content
 
 			.cont-th
 
@@ -1109,6 +1269,9 @@ export default {
 			max-width: 220px
 			opacity: 1
 			pointer-events: auto
+
+		th.th-filter-fits .cont-filter-buttons.force-show
+			max-width: fit-content
 
 
 

@@ -24,22 +24,12 @@
 					:model_name="model_name"
 					:prop="prop"></pivot-prop>
 
-					<vue-load-image
-					v-else-if="isImageProp(prop) && imageUrl(model, prop)"
-					class="img-fluid">
-						<img 
-						slot="image"
-						class="article-thumbnail"
-						@click.stop.prevent="openImagePreview(imageUrl(model, prop))"
-						@mousedown.stop.prevent
-						:src="imageUrl(model, prop)">
-
-				        <b-spinner
-						slot="preloader"
-				        variant="primary"></b-spinner>
-
-						<div slot="error">Imagen no encontrada</div>
-					</vue-load-image>
+					<table-thumbnail-images
+					v-else-if="isImageProp(prop) && hasTableImages(model, prop)"
+					:key="'thumb-' + model.id + '-' + prop.key"
+					:model="model"
+					:prop="prop"
+					@preview="openImagePreview"></table-thumbnail-images>
 					<div
 					v-if="show_image_preview && preview_image_url"
 					class="image-preview-overlay"
@@ -168,8 +158,8 @@ export default {
 		},
 	},
 	components: {
-		VueLoadImage: () => import('vue-load-image'),
 		PivotProp: () => import('@/common-vue/components/display/table/PivotProp'),
+		TableThumbnailImages: () => import('@/common-vue/components/display/table/TableThumbnailImages'),
 	},
 	data() {
 		return {

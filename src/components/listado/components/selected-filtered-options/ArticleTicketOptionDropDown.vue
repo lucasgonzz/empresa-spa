@@ -1,26 +1,36 @@
 <template>
 	<div>
-		<b-dropdown-divider></b-dropdown-divider>
-		<b-dropdown-item
+		<!-- <b-dropdown-divider></b-dropdown-divider>
+
+		<dropdown-section-title
+		title="Etiquetas"
+		icon="icon-tag"></dropdown-section-title> -->
+
+		<dropdown-option-item
 		v-if="!owner_uses_listas_de_precio"
+		icon="icon-print"
 		@click="tickets(null)">
-			<i class="icon-tag"></i>
-			Etiquetas
-		</b-dropdown-item>
-		<b-dropdown-item
+			Etiquetas gondolas
+		</dropdown-option-item>
+
+		<dropdown-option-item
 		v-else
 		v-for="price_type in price_types"
 		:key="price_type.id"
+		icon="icon-tag"
 		@click="tickets(price_type.id)">
-			<i class="icon-tag"></i>
 			{{ price_type.name }}
-		</b-dropdown-item>
+		</dropdown-option-item>
 	</div>
 </template>
 <script>
 import alert_filtrados from '@/mixins/listado/alert_filtrados'
 import generals from '@/mixins/generals'
 export default {
+	components: {
+		DropdownSectionTitle: () => import('@/components/listado/components/selected-filtered-options/DropdownSectionTitle'),
+		DropdownOptionItem: () => import('@/components/listado/components/selected-filtered-options/DropdownOptionItem'),
+	},
 	mixins: [alert_filtrados, generals],
 	computed: {
 		/*

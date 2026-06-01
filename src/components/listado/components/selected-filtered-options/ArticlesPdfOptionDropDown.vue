@@ -1,34 +1,34 @@
 <template>
 	<div>
 		<b-dropdown-divider></b-dropdown-divider>
-		<b-dropdown-text>
-			Documentos PDF
-		</b-dropdown-text>
-		
+
+		<dropdown-section-title
+		title="Documentos PDF"
+		icon="icon-pdf"></dropdown-section-title>
+
 		<div
 		v-if="hasExtencion('ventas_en_dolares')">
-
-			<b-dropdown-item
+			<dropdown-option-item
 			v-for="moneda in monedas"
+			:key="moneda.id"
+			icon="icon-pdf"
 			@click="pdf(moneda)">
-				<i class="icon-tag"></i>
 				PDF con imagenes ({{ moneda.name }})
-			</b-dropdown-item>
-			
+			</dropdown-option-item>
 		</div>
 		<div
 		v-else>
-			<b-dropdown-item
+			<dropdown-option-item
+			icon="icon-pdf"
 			@click="pdf">
-				<i class="icon-tag"></i>
-				PDF con imagenes
-			</b-dropdown-item>
+				Catalogo con imagenes
+			</dropdown-option-item>
 
-			<b-dropdown-item
+			<!-- <dropdown-option-item
+			icon="icon-print"
 			@click="listaPdf">
-				<i class="icon-tag"></i>
 				Lista PDF
-			</b-dropdown-item>
+			</dropdown-option-item> -->
 		</div>
 
 	</div>
@@ -36,6 +36,10 @@
 <script>
 import alert_filtrados from '@/mixins/listado/alert_filtrados'
 export default {
+	components: {
+		DropdownSectionTitle: () => import('@/components/listado/components/selected-filtered-options/DropdownSectionTitle'),
+		DropdownOptionItem: () => import('@/components/listado/components/selected-filtered-options/DropdownOptionItem'),
+	},
 	mixins: [alert_filtrados],
 	computed: {
 		selected() {

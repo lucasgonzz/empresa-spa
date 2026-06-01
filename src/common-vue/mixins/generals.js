@@ -61,12 +61,6 @@ export default {
         app_name() {
             return process.env.VUE_APP_APP_NAME
         },
-        attempt_prop() {
-            return process.env.VUE_APP_ATTEMPT_PROP
-        },
-        attempt_text() {
-            return process.env.VUE_APP_ATTEMPT_TEXT
-        },
 		is_local() {
 			return process.env.VUE_APP_API_URL.substring(process.env.VUE_APP_API_URL.length-5) == ':8000'
 		},

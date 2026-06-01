@@ -13,20 +13,25 @@
 			</p>
 		</b-modal>
 		<b-dropdown-divider></b-dropdown-divider>
-		<b-dropdown-text>
-			Pagina Web
-		</b-dropdown-text>
 
-		<b-dropdown-item
+		<dropdown-section-title
+		title="Página Web"
+		icon="icon-network"></dropdown-section-title>
+
+		<dropdown-option-item
+		icon="icon-share"
 		@click="generateLink">
-			<i class="icon-share"></i>
 			Seleccion especial para la WEB
-		</b-dropdown-item>
+		</dropdown-option-item>
 	</div>
 </template>
 <script>
 import alert_filtrados from '@/mixins/listado/alert_filtrados'
 export default {
+	components: {
+		DropdownSectionTitle: () => import('@/components/listado/components/selected-filtered-options/DropdownSectionTitle'),
+		DropdownOptionItem: () => import('@/components/listado/components/selected-filtered-options/DropdownOptionItem'),
+	},
 	mixins: [alert_filtrados],
 	computed: {
 		selected() {
@@ -59,19 +64,6 @@ export default {
 
 			this.$bvModal.show('copy-seleccion-especial-link')
 
-			// if (navigator.clipboard && navigator.clipboard.writeText) {
-			
-			// 	navigator.clipboard.writeText(link)
-			// 	.then(function() {
-			// 		this.$toast.success('Texto copiado al portapapeles');
-			// 	})
-			// 	.catch(function(err) {
-			// 		this.$toast.error('Error al copiar al portapapeles: ', err);
-			// 	});
-			// } else {
-			// 	console.error('El API de clipboard no está disponible en este navegador.');
-			// }
-
 		}
 	}
 }
@@ -82,5 +74,4 @@ export default {
 	padding: 7px
 	border-radius: 8px
 	border: 1px solid rgba(0, 0, 0, .5)
-	// color: rgba(255,255,255,.7)
 </style>

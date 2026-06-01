@@ -5,7 +5,8 @@
 		<b-col
 		cols="12">
 			<buscador-articulos-input
-			placeholder="Buscar articulo"
+			placeholder="Buscar artículos"
+			:set_filtered_on_search="true"
 			@setSelected="setSelected"></buscador-articulos-input>
 		</b-col>
 	</b-row>

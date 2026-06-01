@@ -1,6 +1,38 @@
 <template>
 	<div>
+		<!-- Modo listado: búsqueda aplica resultados en article/filtered (sin modal) -->
+		<div
+		v-if="set_filtered_on_search"
+		class="buscador-articulos-filtro-tabla">
+			<b-input-group>
+				<b-form-input
+				autocomplete="off"
+				v-model="filter_query"
+				:placeholder="placeholder_filtro_tabla"
+				@keyup.enter="buscar_y_filtrar"></b-form-input>
+				<b-input-group-append>
+					<category-options
+					:category_id.sync="category_id"
+					:stock_option.sync="stock_option"></category-options>
+					<b-button
+					variant="primary"
+					@click="buscar_y_filtrar">
+						<i class="icon-search"></i>
+						Buscar
+					</b-button>
+					<b-button
+					v-if="is_filtered_by_buscador"
+					variant="outline-secondary"
+					@click="limpiar_filtro">
+						<i class="icon-undo"></i>
+					</b-button>
+				</b-input-group-append>
+			</b-input-group>
+		</div>
+
+		<!-- Modo habitual: modal de búsqueda y selección de un artículo -->
 		<search-component
+		v-else
 		:placeholder="placeholder"
 		id="search-article"
 		model_name="article"
@@ -34,6 +66,14 @@ export default {
 	props: {
 		model: Object,
 		placeholder: String,
+		/**
+		 * Si es true, la búsqueda carga resultados en article/filtered del store
+		 * para operar sobre la tabla del listado (sin abrir modal de selección).
+		 */
+		set_filtered_on_search: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	components : {
 		SearchComponent,
@@ -41,6 +81,8 @@ export default {
 	},
 	data() {
 		return {
+			/** Criterio de texto para el modo filtrar tabla */
+			filter_query: '',
 			category_id: 0,
 			stock_option: 'con_o_sin_stock',
 			props_to_send_to_api: [
@@ -64,6 +106,27 @@ export default {
 		},
 	},
 	computed: {
+		/**
+		 * Placeholder del input en modo filtrar tabla.
+		 */
+		placeholder_filtro_tabla() {
+			if (this.placeholder) {
+				return this.placeholder
+			}
+			return 'Buscar y filtrar en tabla...'
+		},
+		/**
+		 * Indica si la búsqueda en modo filtro puede ir a la API.
+		 */
+		can_search_from_api() {
+			return this.$store.state.auth.online
+		},
+		/**
+		 * Muestra el botón limpiar cuando el filtrado activo es de este buscador.
+		 */
+		is_filtered_by_buscador() {
+			return this.$store.state.article.filtered_without_filter_form
+		},
 		create_if_not_exist() {
 			if (this.route_name == 'vender') {
 				return this.can('vender.create_article')
@@ -201,6 +264,100 @@ export default {
 			}
 			return true
 		},
+		/**
+		 * Arma el cuerpo del POST de búsqueda (mismo contrato que el modal de búsqueda).
+		 *
+		 * @returns {Object}
+		 */
+		get_filter_search_info() {
+			let info = {
+				query_value: this.filter_query,
+				props_to_filter: ['id', 'name', 'provider_code'],
+				per_page: 200,
+			}
+			this.props_to_send_to_api.forEach(prop_to_send => {
+				info[prop_to_send.key] = prop_to_send.value
+			})
+			return info
+		},
+		/**
+		 * Extrae filas y metadatos de paginación de la respuesta del endpoint de búsqueda.
+		 *
+		 * @param {Object} res Respuesta de $api.post
+		 * @returns {{ rows: Array, last_page: number, total: number }}
+		 */
+		parse_filter_search_response(res) {
+			let response = res.data.models
+			if (!res.data.models) {
+				response = res.data
+			}
+			let rows = []
+			let last_page = 1
+			let total = 0
+			if (response && response.data) {
+				rows = response.data
+				last_page = response.last_page || 1
+				total = response.total || rows.length
+			} else if (Array.isArray(response)) {
+				rows = response
+				total = rows.length
+			}
+			return {
+				rows: rows,
+				last_page: last_page,
+				total: total,
+			}
+		},
+		/**
+		 * Busca artículos y los carga en article/filtered para la tabla del listado.
+		 */
+		buscar_y_filtrar() {
+			if (this.filter_query.length < 2) {
+				this.$toast.error('Ingrese al menos 2 caracteres')
+				return
+			}
+			if (!this.can_search_from_api) {
+				this.$toast.error('Requiere conexión para buscar')
+				return
+			}
+			this.$store.commit('auth/setMessage', 'Buscando artículos')
+			this.$store.commit('auth/setLoading', true)
+			this.$api.post('vender/buscar-articulo-por-nombre?page=1', this.get_filter_search_info())
+				.then(res => {
+					let parsed = this.parse_filter_search_response(res)
+					this.$store.commit('article/setSelected', [])
+					this.$store.commit('article/setFilterPage', 1)
+					this.$store.commit('article/setFiltered', parsed.rows)
+					this.$store.commit('article/setIsFiltered', true)
+					this.$store.commit('article/setTotalFilterPages', parsed.last_page)
+					this.$store.commit('article/setTotalFilterResults', parsed.total)
+					this.$store.commit('article/set_filtered_without_filter_form', true)
+					this.$store.commit('auth/setLoading', false)
+					this.$store.commit('auth/setMessage', '')
+					if (!parsed.rows.length) {
+						this.$toast.info('No se encontraron artículos')
+					}
+				})
+				.catch(err => {
+					console.log(err)
+					this.$store.commit('auth/setLoading', false)
+					this.$store.commit('auth/setMessage', '')
+					this.$toast.error('Error al buscar artículos')
+				})
+		},
+		/**
+		 * Quita el filtro aplicado por este buscador y restaura la tabla normal del listado.
+		 */
+		limpiar_filtro() {
+			this.$store.commit('article/setFiltered', [])
+			this.$store.commit('article/setIsFiltered', false)
+			this.$store.commit('article/setSelected', [])
+			this.$store.commit('article/setFilterPage', 1)
+			this.$store.commit('article/setTotalFilterPages', null)
+			this.$store.commit('article/setTotalFilterResults', 0)
+			this.$store.commit('article/set_filtered_without_filter_form', false)
+			this.filter_query = ''
+		},
 		setSelected(result) {
 
 			this.$emit('setSelected', result)
@@ -228,3 +385,7 @@ export default {
 	}
 }
 </script>
+<style lang="sass" scoped>
+.buscador-articulos-filtro-tabla
+	width: 100%
+</style>

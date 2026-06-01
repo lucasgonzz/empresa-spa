@@ -9,6 +9,7 @@
 	:model="client"
 	model_name="client"
 	set_selected_model_with_model_prop
+	search_from_api
 	:props_to_filter="['num', 'name', 'phone']"></search-component>
 </template>
 <script>
