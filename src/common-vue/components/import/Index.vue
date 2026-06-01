@@ -924,7 +924,7 @@ export default {
 		 */
 		get_column_help_btn_variant(column) {
 			if (column.help && column.help.has_relation_options) {
-				return 'outline-success'
+				return 'success'
 			}
 
 			return 'outline-secondary'

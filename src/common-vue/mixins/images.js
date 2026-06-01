@@ -9,26 +9,56 @@
 			})
 			return images.length 
 		},
+		/**
+		 * Lista de URLs de imagen para una celda de tabla (una o varias).
+		 *
+		 * @param {Object} model - Fila del modelo.
+		 * @param {Object} prop - Definición de columna (`image` o `images`).
+		 * @returns {Array<string>} URLs válidas en orden de visualización.
+		 */
+		imageUrlsList(model, prop) {
+			let urls = []
+			if (prop.type == 'image') {
+				let single_url = model[prop.key]
+				if (single_url) {
+					urls.push(single_url)
+				}
+			} else if (prop.type == 'images' && model[prop.key] && model[prop.key].length) {
+				let url_prop = this.image_url_prop_name
+				model[prop.key].forEach(function(image_item) {
+					if (image_item && image_item[url_prop]) {
+						urls.push(image_item[url_prop])
+					}
+				})
+			}
+			return urls
+		},
+		/**
+		 * Indica si la celda tiene al menos una imagen para mostrar.
+		 *
+		 * @param {Object} model
+		 * @param {Object} prop
+		 * @returns {Boolean}
+		 */
+		hasTableImages(model, prop) {
+			return this.imageUrlsList(model, prop).length > 0
+		},
 		getImageUrl(props, model) {
 			if (this.hasImage(props)) {
 				let img_prop = props.find(prop => {
 					return prop.type == 'image' || prop.type == 'images' 
 				})
-				if (img_prop.type == 'image') {
-					return model[img_prop.key] 
-				} else if (img_prop.type == 'images' && model[img_prop.key].length) {
-					return model[img_prop.key][0][this.image_url_prop_name]  
+				let urls = this.imageUrlsList(model, img_prop)
+				if (urls.length) {
+					return urls[0]
 				}
 			}
 			return null 
 		},
 		imageUrl(model, prop) {
-			if (prop.type == 'images') {
-				if (model[prop.key].length) {
-					return model[prop.key][0][this.image_url_prop_name]
-				}
-			} else if (prop.type == 'image') {
-				return model[prop.key]
+			let urls = this.imageUrlsList(model, prop)
+			if (urls.length) {
+				return urls[0]
 			}
 			return null
 		},

@@ -1,20 +1,24 @@
 <template>
 	<div>
 		<b-dropdown-divider></b-dropdown-divider>
-		
-		<b-dropdown-text>
-			Documentos Excel 
-		</b-dropdown-text>
 
-		<b-dropdown-item
+		<dropdown-section-title
+		title="Documentos Excel"
+		icon="icon-download"></dropdown-section-title>
+
+		<dropdown-option-item
+		icon="icon-download"
 		@click="export_excel">
-			<i class="icon-share"></i>
 			Exportar Excel
-		</b-dropdown-item>
+		</dropdown-option-item>
 	</div>
 </template>
 <script>
 export default {
+	components: {
+		DropdownSectionTitle: () => import('@/components/listado/components/selected-filtered-options/DropdownSectionTitle'),
+		DropdownOptionItem: () => import('@/components/listado/components/selected-filtered-options/DropdownOptionItem'),
+	},
 	computed: {
 		selected() {
 			return this.$store.state.article.selected 

@@ -1,27 +1,29 @@
 <template>
 	<div>
 		<b-dropdown-divider></b-dropdown-divider>
-		<b-dropdown-text>
-			PDF ofertas (plantillas)
-		</b-dropdown-text>
+
+		<dropdown-section-title
+		title="PDF ofertas (plantillas)"
+		icon="icon-pdf"></dropdown-section-title>
+
 		<template v-if="!owner_uses_listas_de_precio">
-			<b-dropdown-item
+			<dropdown-option-item
 			v-for="design in article_pdf_models"
 			:key="design.id"
+			icon="icon-pdf"
 			@click="open_offer_pdf(design, null)">
-				<i class="icon-tag"></i>
 				{{ design.nombre }}
-			</b-dropdown-item>
+			</dropdown-option-item>
 		</template>
 		<template v-else>
 			<template v-for="design in article_pdf_models">
-				<b-dropdown-item
+				<dropdown-option-item
 				v-for="price_type in price_types"
 				:key="design.id + '-' + price_type.id"
+				icon="icon-pdf"
 				@click="open_offer_pdf(design, price_type.id)">
-					<i class="icon-tag"></i>
 					{{ design.nombre }} — {{ price_type.name }}
-				</b-dropdown-item>
+				</dropdown-option-item>
 			</template>
 		</template>
 	</div>
@@ -35,6 +37,10 @@ import generals from '@/mixins/generals'
  * Con listas de precio activas, una opción por plantilla y por `price_type`.
  */
 export default {
+	components: {
+		DropdownSectionTitle: () => import('@/components/listado/components/selected-filtered-options/DropdownSectionTitle'),
+		DropdownOptionItem: () => import('@/components/listado/components/selected-filtered-options/DropdownOptionItem'),
+	},
 	mixins: [alert_filtrados, generals],
 	computed: {
 		/**
@@ -50,6 +56,9 @@ export default {
 		},
 		total_filter_results() {
 			return this.$store.state.article.total_filter_results
+		},
+		filtered() {
+			return this.$store.state.article.filtered
 		},
 		article_pdf_models() {
 			return this.$store.state.article_pdf.models

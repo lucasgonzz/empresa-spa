@@ -3,9 +3,11 @@
 	<div>
 
 		<export-history
-
 		:model_name="model_name"></export-history>
 
+		<masive-update-history
+		v-if="show_masive_update_history"
+		:model_name="model_name"></masive-update-history>
 
 
 		<b-dropdown
@@ -75,21 +77,21 @@
 			</b-dropdown-item>
 
 			<b-dropdown-item
-
 			v-if="can_import"
-
 			id="btn_import"
-
 			v-b-modal="'import-'+model_name">
-
 				<i class="icon-download"></i>
-
 				Importar {{ plural(model_name) }}
+			</b-dropdown-item>
 
+			<b-dropdown-item
+			v-if="show_masive_update_history"
+			@click="open_masive_update_history">
+				<i class="icon-history"></i>
+				Historial de actualizaciones masivas
 			</b-dropdown-item>
 
 			<slot name="excel_drop_down_options"></slot>
-
 		</b-dropdown>
 
 	</div>
@@ -101,11 +103,9 @@
 export default {
 
 	components: {
-
 		ExportHistory: () => import('@/common-vue/components/horizontal-nav/ExportHistory'),
-
+		MasiveUpdateHistory: () => import('@/common-vue/components/horizontal-nav/MasiveUpdateHistory'),
 	},
-
 	props: {
 
 		model_name: String,
@@ -147,13 +147,12 @@ export default {
 		},
 
 		open_export_history() {
-
 			this.$bvModal.show('export-history')
-
 		},
-
+		open_masive_update_history() {
+			this.$bvModal.show('masive-update-history')
+		},
 		call_set_model() {
-
 			if (this.can_create) {
 
 				this.setModel(null, this.model_name)
@@ -179,20 +178,15 @@ export default {
 		},
 
 		can_import() {
-
 			if (!this.check_permissions || this.can(this.model_name + '.excel.import')) {
-
 				return true
-
-			} 
-
-			return false 
-
+			}
+			return false
 		},
-
+		show_masive_update_history() {
+			return this.model_name === 'article'
+		},
 	}
-
 }
-
 </script>
 

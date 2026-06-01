@@ -35,23 +35,12 @@
 						:key="prop.key + '-' + prop_index"
 						:class="get_cell_classes(prop, prop_index)"
 						class="cont-tr table-component-cell-inner">
-							<vue-load-image
-							v-if="isImageProp(prop) && imageUrl(models[data.index], prop)"
-							class="img-fluid">
-								<img
-								slot="image"
-								class="article-thumbnail"
-								@click.stop.prevent="openImagePreview(imageUrl(models[data.index], prop))"
-								@mousedown.stop.prevent
-								:src="imageUrl(models[data.index], prop)">
-
-						        <b-spinner
-								slot="preloader"
-						        variant="primary"></b-spinner>
-
-								<div slot="error">Imagen no encontrada</div>
-
-							</vue-load-image>
+							<table-thumbnail-images
+							v-if="isImageProp(prop) && hasTableImages(models[data.index], prop)"
+							:key="'thumb-' + models[data.index].id + '-' + prop.key"
+							:model="models[data.index]"
+							:prop="prop"
+							@preview="openImagePreview"></table-thumbnail-images>
 							<div
 							v-else-if="showInput(prop, models[data.index])">
 								<b-form-textarea
@@ -266,15 +255,14 @@
 	</div>
 </template>
 <script>
-import VueLoadImage from 'vue-load-image'
 import BtnAddToShow from '@/common-vue/components/BtnAddToShow'
 import { fallback_column_width_px } from '@/common-vue/config/column_preference_defaults'
 
 export default {
 	components: {
-		VueLoadImage,
 		BtnAddToShow,
 		TablePivotPropsToSet: () => import('@/common-vue/components/display/TablePivotPropsToSet'),
+		TableThumbnailImages: () => import('@/common-vue/components/display/table/TableThumbnailImages'),
 	},
 	props: {
 		loading: {

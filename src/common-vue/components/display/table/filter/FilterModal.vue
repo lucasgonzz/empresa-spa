@@ -113,9 +113,63 @@ export default {
 			}
 			let filters = this.$store.state[this.model_name].filters || []
 			let filter = filters.find(_filter => _filter.key == this.field.key)
-			if (filter) {
-				this.$store.commit(this.model_name + '/addFilter', { ...filter })
+			if (!filter) {
+				return
 			}
+			let patch = { ...filter }
+			if (filter.type === 'date') {
+				patch = this.read_date_filter_values_from_dom(patch)
+			}
+			this.$store.commit(this.model_name + '/addFilter', patch)
+		},
+		/**
+		 * Toma menor/igual/mayor desde los inputs del modal (el valor puede no estar aún en Vuex al pulsar Filtrar).
+		 *
+		 * @param {Object} filter Filtro de la columna activa.
+		 * @returns {Object}
+		 */
+		read_date_filter_values_from_dom(filter) {
+			let cont = document.getElementById('cont-filters-' + filter.key)
+			if (!cont) {
+				return filter
+			}
+			let include_time = !(this.field && this.field.filter_date_only)
+			let criteria_keys = ['menor_que', 'igual_que', 'mayor_que']
+			let patch = { ...filter }
+			criteria_keys.forEach(criterion_key => {
+				let row = cont.querySelector('[data-date-filter-criterion="' + criterion_key + '"]')
+				if (!row) {
+					return
+				}
+				patch[criterion_key] = this.read_combined_date_from_dom_row(row, include_time)
+			})
+			return patch
+		},
+		/**
+		 * Lee fecha y hora opcional de una fila del filtro date (misma lógica que Date.vue).
+		 *
+		 * @param {HTMLElement} row
+		 * @param {boolean} include_time
+		 * @returns {string}
+		 */
+		read_combined_date_from_dom_row(row, include_time) {
+			let date_input = row.querySelector('input.date-filter-date, input[type="date"]')
+			let date_val = date_input && date_input.value ? date_input.value : ''
+			if (date_val === '') {
+				return ''
+			}
+			if (!include_time) {
+				return date_val
+			}
+			let time_input = row.querySelector('input.date-filter-time, input[type="time"]')
+			let time_val = time_input && time_input.value ? time_input.value : ''
+			if (time_val === '') {
+				return date_val
+			}
+			if (time_val.length > 5) {
+				time_val = time_val.substring(0, 5)
+			}
+			return date_val + 'T' + time_val
 		},
 	},
 }

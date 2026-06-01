@@ -5,7 +5,7 @@
     :delete_text="sale_delete_text"
     check_permissions
     not_show_delete_text
-    confirm_compensar_caja
+    :confirm_compensar_caja="confirm_compensar_caja"
     :show_btn_delete="show_btn_delete"
     model_name="sale">
         <template v-slot:model_modal_header>
@@ -28,6 +28,12 @@ export default {
         SaleArticlesAttachmentTable: () => import('@/components/ventas/modals/details/SaleArticlesAttachmentTable'),
     },
     computed: {
+        confirm_compensar_caja() {
+            if (this.selected_sale && this.selected_sale.current_acount_payment_methods && this.selected_sale.current_acount_payment_methods.length) {
+                return true
+            }
+            return false
+        },
         selected_sale() {
             return this.$store.state.sale.model 
         },

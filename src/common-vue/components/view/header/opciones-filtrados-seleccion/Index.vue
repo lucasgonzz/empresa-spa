@@ -107,9 +107,10 @@ export default {
 			this.$bvModal.show(this.model_name+'-delete-models')
 		},
 		update(form) {
-			// console.log(form)
-			// console.log(this.$store.state[this.model_name].filters[4])
 			this.loading = true
+			this.$store.commit('auth/setMessage', 'Encolando actualización masiva')
+			this.$store.commit('auth/setLoading', true)
+
 			this.$api.put('update/'+this.model_name, {
 				from_filter: this.from_filter,
 				filter_form: this.$store.state[this.model_name].filters,
@@ -117,17 +118,28 @@ export default {
 				models_id: this.selecteds_id,
 			})
 			.then(res => {
-				this.loading = false 
-				res.data.models.forEach(model => {
-					this.$store.commit(this.model_name+'/add', model)
-				})
-				this.$toast.success('Actualizado')
+				this.loading = false
+				this.$store.commit('auth/setLoading', false)
+				this.$store.commit('auth/setMessage', '')
+
+				let queued_count = res.data.queued_count || 0
+				this.$toast.success(
+					'La actualización masiva se está procesando (' + queued_count + ' registros). Te avisaremos cuando termine.',
+					{ duration: 5000 }
+				)
 				this.$bvModal.hide(this.model_name+'-update-models')
 			})
 			.catch(err => {
-				this.loading = false 
+				this.loading = false
+				this.$store.commit('auth/setLoading', false)
+				this.$store.commit('auth/setMessage', '')
+
+				let message = 'No se pudo iniciar la actualización masiva'
+				if (err.response && err.response.data && err.response.data.message) {
+					message = err.response.data.message
+				}
+				this.$toast.error(message, { duration: 4000 })
 				console.log(err)
-				// this.$toast.error('Error al actualizar')
 			})
 		},
 		deleteModels() {

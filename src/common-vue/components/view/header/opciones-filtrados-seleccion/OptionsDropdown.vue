@@ -7,7 +7,7 @@
 	:variant="variant"
 	:text="text_dropdown">
 		<b-dropdown-item
-		v-if="puede_actualizar && show_actualizar_option"
+		v-if="puede_actualizar && show_actualizar_option && !ocultar_actualizar_eliminar_por_filtro"
 		id="btn_actualizar"
 		@click="setUpdate">
 			<i class="icon-undo"></i>
@@ -15,7 +15,7 @@
 		</b-dropdown-item>
 		<b-dropdown-item
 		id="btn_eliminar"
-		v-if="puede_eliminar"
+		v-if="puede_eliminar && !ocultar_actualizar_eliminar_por_filtro"
 		@click="setDelete"> 
 			<i class="icon-trash"></i>
 			Eliminar
@@ -82,7 +82,20 @@ export default {
 				return this.$store.state[this.model_name].filtered.length
 			}
 			return this.$store.state[this.model_name].selected.length
-		}
+		},
+		/**
+		 * Oculta actualizar/eliminar masivos por filtro cuando solo hay `filtered`
+		 * sin `filters` (búsqueda rápida en listado de artículos).
+		 */
+		ocultar_actualizar_eliminar_por_filtro() {
+			if (!this.from_filter) {
+				return false
+			}
+			let module_state = this.papelera
+				? this.$store.state.papelera[this.model_name]
+				: this.$store.state[this.model_name]
+			return !!module_state.filtered_without_filter_form
+		},
 	},
 	methods: {
 		setUpdate() {

@@ -1,55 +1,56 @@
 <template>
 	<div>
 		<b-dropdown-divider></b-dropdown-divider>
-		<b-dropdown-text>
-			Imagenes inteligentes
-		</b-dropdown-text>
-	<b-dropdown-item
-	@click="start_batch_flow()">
-		<i class="bi bi-images m-r-5"></i>
-		Asignar imágenes automáticamente
-	</b-dropdown-item>
-	<b-dropdown-divider></b-dropdown-divider>
 
-	<search-image
-	ref="search_image_modal"
-	@setImageUrl="on_image_selected"
-	@no-image-available="on_no_image_available"></search-image>
+		<dropdown-section-title
+		title="Imágenes inteligentes"
+		icon="icon-camera"></dropdown-section-title>
 
-	<!-- Modal resumen final del procesamiento batch -->
-	<b-modal
-	v-model="batch_summary_visible"
-	title="Resumen de asignación automática"
-	ok-only
-	ok-title="Entendido"
-	ok-variant="primary">
-		<div class="batch-summary-content">
-			<div class="batch-summary-row batch-summary-success">
-				<i class="bi bi-check-circle-fill m-r-10"></i>
-				<span>Artículos con imagen asignada:</span>
-				<strong class="m-l-10">{{ articles_with_image_count }}</strong>
+		<dropdown-option-item
+		icon="bi bi-images"
+		@click="start_batch_flow()">
+			Asignar imágenes automáticamente
+		</dropdown-option-item>
+
+		<search-image
+		ref="search_image_modal"
+		@setImageUrl="on_image_selected"
+		@no-image-available="on_no_image_available"></search-image>
+
+		<!-- Modal resumen final del procesamiento batch -->
+		<b-modal
+		v-model="batch_summary_visible"
+		title="Resumen de asignación automática"
+		ok-only
+		ok-title="Entendido"
+		ok-variant="primary">
+			<div class="batch-summary-content">
+				<div class="batch-summary-row batch-summary-success">
+					<i class="bi bi-check-circle-fill m-r-10"></i>
+					<span>Artículos con imagen asignada:</span>
+					<strong class="m-l-10">{{ articles_with_image_count }}</strong>
+				</div>
+				<div class="batch-summary-row batch-summary-skipped">
+					<i class="bi bi-skip-forward-circle-fill m-r-10"></i>
+					<span>Artículos sin imagen asignada:</span>
+					<strong class="m-l-10">{{ articles_skipped_count }}</strong>
+				</div>
+				<div
+				v-if="articles_skipped_names.length"
+				class="batch-summary-skipped-list">
+					<p class="batch-summary-skipped-list-title">
+						Artículos sin imagen:
+					</p>
+					<ul class="batch-summary-skipped-names">
+						<li
+						v-for="(article_name, index) in articles_skipped_names"
+						:key="'skipped-'+index">
+							{{ article_name }}
+						</li>
+					</ul>
+				</div>
 			</div>
-			<div class="batch-summary-row batch-summary-skipped">
-				<i class="bi bi-skip-forward-circle-fill m-r-10"></i>
-				<span>Artículos sin imagen asignada:</span>
-				<strong class="m-l-10">{{ articles_skipped_count }}</strong>
-			</div>
-			<div
-			v-if="articles_skipped_names.length"
-			class="batch-summary-skipped-list">
-				<p class="batch-summary-skipped-list-title">
-					Artículos sin imagen:
-				</p>
-				<ul class="batch-summary-skipped-names">
-					<li
-					v-for="(article_name, index) in articles_skipped_names"
-					:key="'skipped-'+index">
-						{{ article_name }}
-					</li>
-				</ul>
-			</div>
-		</div>
-	</b-modal>
+		</b-modal>
 
 		<cropper
 		v-if="current_article"
@@ -66,6 +67,8 @@
 <script>
 export default {
 	components: {
+		DropdownSectionTitle: () => import('@/components/listado/components/selected-filtered-options/DropdownSectionTitle'),
+		DropdownOptionItem: () => import('@/components/listado/components/selected-filtered-options/DropdownOptionItem'),
 		SearchImage: () => import('@/common-vue/components/model/images/SearchImage'),
 		Cropper: () => import('@/common-vue/components/model/images/Cropper'),
 	},

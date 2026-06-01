@@ -209,6 +209,12 @@ export default {
 			type: 'checkbox',
 			description: 'Si se pausa la tienda online, no se mostrara el contenido de la misma y se informara al usuario.',
 		},
+		{
+			text: 'Mostrar seccion Catalogo en la Tienda',
+			key: 'mostrar_catalogo',
+			type: 'checkbox',
+			description: 'Si se activa, se mostrara el enlace Catalogo en el navbar de la tienda online.',
+		},
 
 
 		{

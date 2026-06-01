@@ -51,6 +51,12 @@ export default __base_store({
 		 */
 		use_local_storage: false,
 		local_storage_canceled: false,
+
+		/**
+		 * true cuando `filtered` viene de búsqueda en listado sin `filters` en el store
+		 * (p. ej. buscador-articulos). Oculta actualizar/eliminar masivos por filtro en UI.
+		 */
+		filtered_without_filter_form: false,
 	},
 	mutations: {
 		/**
@@ -64,6 +70,28 @@ export default __base_store({
 		 */
 		set_add_buscador_to_selected(state, value) {
 			state.add_buscador_to_selected = value
+		},
+		/**
+		 * Marca filtrado sin criterios en store (búsqueda rápida vs modal de filtros).
+		 */
+		set_filtered_without_filter_form(state, value) {
+			state.filtered_without_filter_form = value
+		},
+		/**
+		 * Al setear filtros del modal, el filtrado pasa a tener criterios persistidos.
+		 */
+		setFilters(state, value) {
+			state.filters = value
+			state.filtered_without_filter_form = false
+		},
+		/**
+		 * Al salir del modo filtrado, limpia el flag de búsqueda sin filter_form.
+		 */
+		setIsFiltered(state, value) {
+			state.is_filtered = value
+			if (!value) {
+				state.filtered_without_filter_form = false
+			}
 		},
 		/**
 		 * Descuenta stock localmente en memoria para reflejar ventas/movimientos.

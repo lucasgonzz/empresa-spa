@@ -30,6 +30,7 @@
 			</b-dropdown>
 
 			<whatsapp-btn
+			v-if="sale"
 			:sale="sale"></whatsapp-btn>
 		</div>
 

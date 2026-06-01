@@ -54,8 +54,20 @@ export default {
         },
     },
     created() {
-        this.$store.dispatch('auth/me')
-        // 
+        var self = this
+        /**
+         * Si se llegó desde otra versión con token de transferencia, iniciar sesión aquí
+         * antes de `auth/me` para que la versión correcta ya quede autenticada.
+         */
+        this.consume_version_session_token_if_present()
+            .then(function (user_from_transfer) {
+                if (user_from_transfer) {
+                    self.$store.commit('auth/setUser', user_from_transfer)
+                    self.$store.commit('auth/setAuthenticated', true)
+                    return
+                }
+                self.$store.dispatch('auth/me')
+            })
     },
     watch: {
         authenticated() {
