@@ -76,13 +76,21 @@
 
 			</b-dropdown-item>
 
-			<b-dropdown-item
-			v-if="can_import"
-			id="btn_import"
-			v-b-modal="'import-'+model_name">
-				<i class="icon-download"></i>
-				Importar {{ plural(model_name) }}
-			</b-dropdown-item>
+		<b-dropdown-item
+		v-if="can_import"
+		id="btn_import"
+		v-b-modal="'import-'+model_name">
+			<i class="icon-download"></i>
+			Importar {{ plural(model_name) }}
+		</b-dropdown-item>
+
+		<!-- Opción de importación asistida por IA, visible solo para artículos con extensión habilitada -->
+		<b-dropdown-item
+		v-if="model_name === 'article' && hasExtencion('ai_excel_import')"
+		@click="$bvModal.show('ai-excel-import-modal')">
+			<i class="icon-cpu"></i>
+			Importar con IA
+		</b-dropdown-item>
 
 			<b-dropdown-item
 			v-if="show_masive_update_history"
