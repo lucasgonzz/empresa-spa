@@ -7,27 +7,20 @@
 		<search-image-automatica></search-image-automatica>
 
 
-
+		<!-- Documentos PDF -->
 		<articles-pdf-option-drop-down></articles-pdf-option-drop-down>
 
 		<article-ticket-option-drop-down></article-ticket-option-drop-down>
 
 		<articles-bar-code-pdf></articles-bar-code-pdf>
 
-
-
-
 		<article-pdf></article-pdf>
 
-
+		<article-table-pdf-profiles></article-table-pdf-profiles>
 
 		<seleccion-especial></seleccion-especial>
 
-
-
 		<excel-export></excel-export>
-
-
 
 		<reset-stock-option-drop-down></reset-stock-option-drop-down>
 
@@ -48,6 +41,8 @@ export default {
 		ArticlesBarCodePdf: () => import('@/components/listado/components/selected-filtered-options/ArticlesBarCodePdf'),
 
 		ArticlePdf: () => import('@/components/listado/components/selected-filtered-options/ArticlePdf'),
+
+		ArticleTablePdfProfiles: () => import('@/components/listado/components/selected-filtered-options/ArticleTablePdfProfiles'),
 
 		ResetStockOptionDropDown: () => import('@/components/listado/components/selected-filtered-options/ResetStockOptionDropDown'),
 

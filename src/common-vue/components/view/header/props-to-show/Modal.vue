@@ -183,15 +183,29 @@ export default {
 				properties_by_key[prop.key] = prop
 			})
 
-			const props_to_show = rows
+			const props_to_show = []
+			rows
 				.filter(row => row.visible)
 				.sort((a, b) => Number(a.order) - Number(b.order))
-				.map(row => ({
-					...properties_by_key[row.key],
-					not_show: false,
-					table_width: row.width || fallback_column_width_px(row.key),
-					table_wrap_content: !!row.wrap_content,
-				}))
+				.forEach(row => {
+					const base_prop = properties_by_key[row.key]
+					// Omitir filas huérfanas o campos solo de formulario (p. ej. editor display del PDF).
+					if (
+						!base_prop
+						|| !base_prop.key
+						|| base_prop.not_show
+						|| base_prop.not_show_on_table
+						|| base_prop.type === 'display'
+					) {
+						return
+					}
+					props_to_show.push({
+						...base_prop,
+						not_show: false,
+						table_width: row.width || fallback_column_width_px(row.key),
+						table_wrap_content: !!row.wrap_content,
+					})
+				})
 
 			this.$store.commit(this.model_name + '/set_props_to_show', props_to_show)
 		},

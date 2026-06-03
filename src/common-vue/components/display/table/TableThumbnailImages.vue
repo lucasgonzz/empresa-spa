@@ -135,10 +135,14 @@ export default {
 				this.is_loading = true
 				this.show_load_error = false
 			}
+			// Imagen en caché: load puede no dispararse tras cambiar el src.
+			this.sync_thumbnail_load_state()
 		},
 	},
 	mounted() {
 		this.start_auto_cycle()
+		// Primera pintura: load puede haber ocurrido antes de enlazar @load.
+		this.sync_thumbnail_load_state()
 	},
 	beforeDestroy() {
 		this.clear_auto_timer()
@@ -158,6 +162,8 @@ export default {
 			this.show_load_error = false
 			this.reserved_height_px = null
 			this.start_auto_cycle()
+			// Misma URL que antes: el watcher de current_image_url no corre y load no se repite.
+			this.sync_thumbnail_load_state()
 		},
 		/**
 		 * Inicia el ciclo automático solo si hay varias imágenes.
@@ -230,18 +236,50 @@ export default {
 			this.hover_can_advance = true
 		},
 		/**
+		 * Marca la miniatura como cargada y reserva el alto del marco.
+		 *
+		 * @param {HTMLImageElement} img_el - Elemento img de la miniatura.
+		 * @return {void}
+		 */
+		apply_thumbnail_loaded_state(img_el) {
+			if (img_el && img_el.offsetHeight) {
+				this.reserved_height_px = img_el.offsetHeight
+			}
+			this.is_loading = false
+			this.show_load_error = false
+		},
+		/**
+		 * Alinea is_loading con el estado real del navegador.
+		 * Cubre imágenes en caché y reinicios del carrusel sin cambio de URL.
+		 *
+		 * @return {void}
+		 */
+		sync_thumbnail_load_state() {
+			let that = this
+			that.$nextTick(function() {
+				let img_el = that.$el.querySelector('.article-thumbnail')
+				if (!img_el || !that.current_image_url) {
+					return
+				}
+				if (!img_el.complete) {
+					return
+				}
+				if (img_el.naturalWidth > 0) {
+					that.apply_thumbnail_loaded_state(img_el)
+					return
+				}
+				that.is_loading = false
+				that.show_load_error = true
+			})
+		},
+		/**
 		 * Guarda el alto renderizado y oculta el overlay de carga.
 		 *
 		 * @param {Event} event - Evento load del elemento img.
 		 * @return {void}
 		 */
 		on_thumbnail_image_load(event) {
-			let img_el = event.target
-			if (img_el && img_el.offsetHeight) {
-				this.reserved_height_px = img_el.offsetHeight
-			}
-			this.is_loading = false
-			this.show_load_error = false
+			this.apply_thumbnail_loaded_state(event.target)
 		},
 		/**
 		 * Marca error de carga sin colapsar el marco si ya había alto reservado.

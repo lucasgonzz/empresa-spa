@@ -593,6 +593,14 @@ export default {
 		// --------------------------------- Model ---------------------------------
 
 		showProperty(property, model, check_if_is_empty, check_show_on_form = false) {
+			/**
+			 * Visibilidad según model_name del registro (p. ej. campos solo de venta en pdf_column_profile).
+			 */
+			if (property.show_when_model_name && model) {
+				if (!model.model_name || model.model_name !== property.show_when_model_name) {
+					return false
+				}
+			}
 			if (property.v_if_function && model) {
 				return this[property.v_if_function](property, model)
 			}
@@ -793,6 +801,9 @@ export default {
 			// console.log('propertyText para '+prop.key)
 			// console.log('model ')
 			// console.log(model)
+			if (!prop || prop.key == null || prop.key === '') {
+				return ''
+			}
 			if (prop.type == 'images' || prop.type == 'image') {
 				return null
 			}
@@ -938,7 +949,7 @@ export default {
 			if (prop.has_many) {
 				return model[prop.key].length
 			} 
-			if (prop.key.includes('.')) {
+			if (prop.key && prop.key.includes('.')) {
 				let array = prop.key.split('.')
 				if (model[array[0]]) {
 					return model[array[0][1]]
@@ -1243,7 +1254,10 @@ export default {
 			return route.replaceAll('-', ' ')
 		},
 		capitalize(str) {
-			return str.charAt(0).toUpperCase() + str.slice(1)
+			if (typeof str != 'undefined') {
+				return str.charAt(0).toUpperCase() + str.slice(1)
+			}
+			return ''
 		},
 		date(d, complete = false) {
 			if (d) {
