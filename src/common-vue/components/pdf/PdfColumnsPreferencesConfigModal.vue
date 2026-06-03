@@ -32,7 +32,7 @@
 					<b-button
 					size="sm"
 					variant="outline-secondary"
-					@click="set_preset(297, 277)">
+					@click="set_preset(210, 210)">
 						A4
 					</b-button>
 					<b-button
@@ -63,11 +63,12 @@
 		show
 		variant="danger"
 		class="m-b-10">
-			La suma de anchos visibles supera el ancho imprimible por {{ Math.abs(remaining_width_mm) }}mm.
+			La suma de anchos visibles supera el ancho disponible ({{ available_width_mm }}mm, imprimible menos márgenes) por {{ Math.abs(remaining_width_mm) }}mm.
 		</b-alert>
 
 		<columns-preferences-config-modal
-		:config_rows="config_rows"></columns-preferences-config-modal>
+		:config_rows="config_rows"
+		:layout_table="layout_table"></columns-preferences-config-modal>
 	</div>
 </template>
 
@@ -92,7 +93,21 @@ export default {
 			type: Number,
 			default: 277,
 		},
+		/**
+		 * Margen lateral por lado (mm); se descuenta dos veces del ancho imprimible.
+		 */
+		margin_mm: {
+			type: Number,
+			default: 0,
+		},
 		show_size_controls: {
+			type: Boolean,
+			default: true,
+		},
+		/**
+		 * Lista de columnas en formato tabla compacta.
+		 */
+		layout_table: {
 			type: Boolean,
 			default: true,
 		},
@@ -117,8 +132,24 @@ export default {
 				.filter(row => !!row.visible)
 				.reduce((acc, row) => acc + Number(row.width || 0), 0)
 		},
+		/**
+		 * Ancho útil para columnas visibles (imprimible − márgenes izquierdo y derecho).
+		 *
+		 * @returns {number}
+		 */
+		available_width_mm() {
+			const printable_width_mm = Number(this.local_printable_width_mm || 0)
+			const margin_mm = Number(this.margin_mm || 0)
+			const available_width_mm = printable_width_mm - (margin_mm * 2)
+			return available_width_mm > 0 ? available_width_mm : 0
+		},
+		/**
+		 * Ancho restante disponible para columnas visibles (mm).
+		 *
+		 * @returns {number}
+		 */
 		remaining_width_mm() {
-			return Number(this.local_printable_width_mm || 0) - this.used_width_mm
+			return this.available_width_mm - this.used_width_mm
 		},
 	},
 	methods: {

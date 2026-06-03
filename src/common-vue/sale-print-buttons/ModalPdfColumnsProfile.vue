@@ -96,6 +96,24 @@
 	</b-form-row>
 
 	<b-form-row class="m-b-10">
+		<b-col
+		md="4"
+		class="d-flex align-items-center"
+		v-if="!local_is_afip_ticket">
+			<b-form-checkbox
+			v-model="local_is_default_whatsapp">
+				Predeterminado WhatsApp (remito)
+			</b-form-checkbox>
+		</b-col>
+		<b-col
+		md="4"
+		class="d-flex align-items-center"
+		v-if="local_is_afip_ticket">
+			<b-form-checkbox
+			v-model="local_is_default_whatsapp_afip">
+				Predeterminado WhatsApp (factura)
+			</b-form-checkbox>
+		</b-col>
 		<b-col md="4" class="d-flex align-items-center">
 			<!-- Cuando está activo, el PDF imprime la fecha del día en lugar de la fecha del comprobante -->
 			<b-form-checkbox
@@ -137,6 +155,7 @@
 		:config_rows="pdf_config_rows"
 		:paper_width_mm.sync="local_paper_width_mm"
 		:printable_width_mm.sync="local_printable_width_mm"
+		:margin_mm="local_margin_mm"
 		:show_size_controls="false"></pdf-columns-preferences-config-modal>
 
 		<template #modal-footer>
@@ -194,6 +213,20 @@ export default {
 			default: null,
 		},
 		is_afip_ticket: {
+			type: [Boolean, Number, String],
+			default: false,
+		},
+		/**
+		 * Marca el perfil como predeterminado para enlaces enviados por WhatsApp.
+		 */
+		is_default_whatsapp: {
+			type: [Boolean, Number, String],
+			default: false,
+		},
+		/**
+		 * Predeterminado para WhatsApp en ventas con factura ARCA.
+		 */
+		is_default_whatsapp_afip: {
 			type: [Boolean, Number, String],
 			default: false,
 		},
@@ -325,6 +358,32 @@ export default {
 			},
 			set(value) {
 				this.$emit('update:is_afip_ticket', !!value)
+			},
+		},
+		/**
+		 * Proxy local del flag predeterminado para WhatsApp.
+		 */
+		local_is_default_whatsapp: {
+			get() {
+				return this.is_default_whatsapp === true
+					|| this.is_default_whatsapp === 1
+					|| this.is_default_whatsapp === '1'
+			},
+			set(value) {
+				this.$emit('update:is_default_whatsapp', !!value)
+			},
+		},
+		/**
+		 * Proxy local del flag predeterminado WhatsApp para facturas ARCA.
+		 */
+		local_is_default_whatsapp_afip: {
+			get() {
+				return this.is_default_whatsapp_afip === true
+					|| this.is_default_whatsapp_afip === 1
+					|| this.is_default_whatsapp_afip === '1'
+			},
+			set(value) {
+				this.$emit('update:is_default_whatsapp_afip', !!value)
 			},
 		},
 		/**

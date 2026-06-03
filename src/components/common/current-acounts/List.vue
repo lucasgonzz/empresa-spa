@@ -19,6 +19,9 @@ class="p-l-20 p-r-20">
             <b-badge
             v-if="show_badge_facturado(slotProps.model)"
             variant="success">Facturado</b-badge>
+            <b-badge
+            v-if="show_badge_facturado_error(slotProps.model)"
+            variant="danger">Factura sin cae</b-badge>
 
             <cerrar-venta
             v-if="slotProps.model.sale"
@@ -82,9 +85,9 @@ export default {
                 && current_acount.sale.afip_tickets.length
             ) {
                 let sin_cae = current_acount.sale.afip_tickets.find(a => !a.cae)
-                if (typeof sin_cae != 'undefined') {
+                if (typeof sin_cae == 'undefined') {
                     return true 
-                }
+                } 
                 return false
             }
 
@@ -94,6 +97,27 @@ export default {
                 && current_acount.afip_ticket.cae
             ) {
                 return true
+            }
+            return false
+        },
+        show_badge_facturado_error(current_acount) {
+            if (
+                current_acount.sale 
+                && current_acount.debe
+                && current_acount.sale.afip_tickets.length
+            ) {
+                let sin_cae = current_acount.sale.afip_tickets.find(a => !a.cae)
+                if (typeof sin_cae != 'undefined') {
+                    return true 
+                } 
+            }
+
+            if (
+                current_acount.afip_ticket 
+                && current_acount.status == 'nota_credito'
+                && current_acount.afip_ticket.cae
+            ) {
+                return false
             }
             return false
         },

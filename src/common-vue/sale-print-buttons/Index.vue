@@ -44,6 +44,8 @@
 		:profile_name.sync="profile_name"
 		:sheet_type_id.sync="sheet_type_id"
 		:is_afip_ticket.sync="is_afip_ticket"
+		:is_default_whatsapp.sync="is_default_whatsapp"
+		:is_default_whatsapp_afip.sync="is_default_whatsapp_afip"
 		:show_total_in_footer.sync="show_total_in_footer"
 		:show_totals_on_each_page.sync="show_totals_on_each_page"
 		:show_comissions.sync="show_comissions"
@@ -58,6 +60,7 @@
 
 <script>
 import print_ticket from '@/mixins/sale/print_ticket/index'
+import { collect_laravel_validation_messages } from '@/utils/laravel_validation_toast'
 import ModalPdfColumnsProfile from './ModalPdfColumnsProfile.vue'
 import SectionTickets from './SectionTickets.vue'
 import SectionRemitosA4 from './SectionRemitosA4.vue'
@@ -124,6 +127,14 @@ export default {
 			 * Flag editable para perfil AFIP.
 			 */
 			is_afip_ticket: false,
+			/**
+			 * Flag editable: perfil predeterminado para enlaces de WhatsApp.
+			 */
+			is_default_whatsapp: false,
+			/**
+			 * Flag editable: perfil factura ARCA predeterminado para WhatsApp.
+			 */
+			is_default_whatsapp_afip: false,
 			/**
 			 * Flag editable para mostrar/ocultar total general en el pie.
 			 */
@@ -423,6 +434,8 @@ export default {
 				this.profile_name = profile.name || ''
 				this.sheet_type_id = profile.sheet_type_id || (profile.sheet_type ? profile.sheet_type.id : null)
 			this.is_afip_ticket = this.normalize_boolean(profile.is_afip_ticket)
+			this.is_default_whatsapp = this.normalize_boolean(profile.is_default_whatsapp)
+			this.is_default_whatsapp_afip = this.normalize_boolean(profile.is_default_whatsapp_afip)
 			/**
 			 * Flag del total en el pie; true si no viene para mantener compatibilidad.
 			 */
@@ -536,6 +549,8 @@ export default {
 				margin_mm: Number(this.margin_mm || 0),
 				sheet_type_id: this.sheet_type_id,
 				is_afip_ticket: this.normalize_boolean(this.is_afip_ticket),
+				is_default_whatsapp: this.normalize_boolean(this.is_default_whatsapp),
+				is_default_whatsapp_afip: this.normalize_boolean(this.is_default_whatsapp_afip),
 				show_total_in_footer: this.normalize_boolean(this.show_total_in_footer),
 				show_totals_on_each_page: this.normalize_boolean(this.show_totals_on_each_page),
 				show_comissions: this.normalize_boolean(this.show_comissions),
@@ -556,7 +571,15 @@ export default {
 				this.$toast.success('Perfil de PDF guardado')
 				this.$bvModal.hide(this.pdf_columns_modal_id)
 			} catch (error) {
-				this.$toast.error('No se pudo guardar el perfil')
+				const data = error && error.response && error.response.data
+				const validation_messages = collect_laravel_validation_messages(data)
+				if (validation_messages.length) {
+					this.$toast.error(validation_messages.join(' '))
+				} else if (data && typeof data.message === 'string' && data.message.trim().length) {
+					this.$toast.error(data.message.trim())
+				} else {
+					this.$toast.error('No se pudo guardar el perfil')
+				}
 			}
 		},
 		/**

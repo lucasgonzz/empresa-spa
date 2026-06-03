@@ -292,10 +292,14 @@
 										:items="model.payment_methods"></payment-methods-table>
 									</div>
 
+									<pdf-column-profile-editor
+									v-else-if="prop.type == 'display' && prop.key == 'pdf_column_profile_editor' && model_name == 'pdf_column_profile'"
+									:key="'pdf-column-profile-editor-' + (model.id || 'new') + '-' + (model.model_name || '')"
+									:model="model"></pdf-column-profile-editor>
 
 									<!-- en pivot_parent_model le paso el model padre, para que por ejemplo en el model Sale, en la tabla de articles, tenga acceso al Sale model (el parent_model) -->
 								<belongs-to-many-table
-								v-if="prop.belongs_to_many && !prop.belongs_to_many.related_with_all && (!prop.type || prop.type != 'checkbox')"
+								v-if="prop.belongs_to_many && !prop.belongs_to_many.related_with_all && (!prop.type || prop.type != 'checkbox') && !(model_name === 'pdf_column_profile' && prop.key === 'pdf_column_options')"
 								:prop="prop"
 								:model="model"
 								:parent_model_name="model_name"
@@ -456,6 +460,7 @@ export default {
 		BtnLoader,
 		// BtnDelete,
 		DatePicker: () => import('@/common-vue/components/model/form/DatePicker'),
+		PdfColumnProfileEditor: () => import('@/common-vue/components/pdf/PdfColumnProfileEditor.vue'),
 	},
 
 	mixins: [model_functions],
@@ -665,6 +670,16 @@ export default {
 
 			/* Respeta toda la lógica existente de visibilidad condicional. */
 			if (!this.showProperty(prop, this.model, false, true)) {
+				return false
+			}
+
+			/**
+			 * El ABM de perfiles PDF usa editor custom; ocultar el buscador belongs_to_many legacy.
+			 */
+			if (
+				this.model_name === 'pdf_column_profile'
+				&& prop.key === 'pdf_column_options'
+			) {
 				return false
 			}
 

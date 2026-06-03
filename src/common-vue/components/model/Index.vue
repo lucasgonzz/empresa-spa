@@ -173,6 +173,8 @@ import BtnDelete from '@/common-vue/components/BtnDelete'
 import BtnPdf from '@/common-vue/components/BtnPdf'
 
 import ModelForm from '@/common-vue/components/model/ModelForm'
+import { collect_laravel_validation_messages } from '@/utils/laravel_validation_toast'
+
 export default {
 	name: 'ModelIndex',
 	props: {
@@ -434,6 +436,30 @@ export default {
 			this.save_check_alert_message = ''
 			this.save_check_alert_variant = 'danger'
 		},
+		/**
+		 * Muestra en el alert del modal el mensaje devuelto por la API (p. ej. validación 422).
+		 *
+		 * @param {import('axios').AxiosError} err Error de la petición de guardado.
+		 * @return {void}
+		 */
+		setSaveErrorFromApi(err) {
+			const response = err && err.response
+			if (!response || !response.data) {
+				this.setSaveCheckAlert('No se pudo guardar. Intente nuevamente.')
+				return
+			}
+			const data = response.data
+			const validation_messages = collect_laravel_validation_messages(data)
+			if (validation_messages.length) {
+				this.setSaveCheckAlert(validation_messages.join(' '))
+				return
+			}
+			if (typeof data.message === 'string' && data.message.trim().length) {
+				this.setSaveCheckAlert(data.message.trim())
+				return
+			}
+			this.setSaveCheckAlert('No se pudo guardar. Intente nuevamente.')
+		},
 		model_deleted() {
 			// alert('emitiendo model_deleted desde Index')
 			this.$emit('modelDeleted')
@@ -491,12 +517,8 @@ export default {
 					.catch(err => {
 						console.log(err)
 						this.loading = false
-						// if (err.response.data.message) {
-						// 	this.$toast.error(err.response.data.message)
-						// } else {
-						// 	this.$toast.error('Hubo un Error')
-						// 	this.$toast.error(err)
-						// }
+						this.$store.commit('auth/setMessage', '')
+						this.setSaveErrorFromApi(err)
 					})
 				} else {
 					this.$api.post(route, model_to_send)
@@ -545,13 +567,9 @@ export default {
 					.catch(err => {
 						console.log('Error catch')
 						console.log(err)
-						// if (err.response.data.message) {
-						// 	this.$toast.error(err.response.data.message)
-						// } else {
-						// 	this.$toast.error('Hubo un Error')
-						// 	this.$toast.error(err)
-						// }
 						this.loading = false
+						this.$store.commit('auth/setMessage', '')
+						this.setSaveErrorFromApi(err)
 					})
 				}
 			}
