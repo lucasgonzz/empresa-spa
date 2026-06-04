@@ -68,7 +68,8 @@
 
 		<columns-preferences-config-modal
 		:config_rows="config_rows"
-		:layout_table="layout_table"></columns-preferences-config-modal>
+		:layout_table="layout_table"
+		:show_typography_columns="show_typography_columns"></columns-preferences-config-modal>
 	</div>
 </template>
 
@@ -110,6 +111,13 @@ export default {
 		layout_table: {
 			type: Boolean,
 			default: true,
+		},
+		/**
+		 * Muestra columnas de tipografía (tamaño y alineación) en perfiles PDF de artículos.
+		 */
+		show_typography_columns: {
+			type: Boolean,
+			default: false,
 		},
 	},
 	data() {

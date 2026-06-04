@@ -30,7 +30,7 @@
 	    v-if="showRoute(route)"
 	    :key="i"
 	    :class="isActiveRoute(route)"
-		class="route apretable"
+		class="route"
 	    @click="callSetRoute(route)">
 
 	    	<div 
@@ -81,7 +81,7 @@
 					v-for="child_route in route.childrens"
 	    			v-if="showRoute(child_route)"
 					:key="child_route.name"
-					class="route apretable"
+					class="route"
 		    		@click.stop="callSetRoute(child_route)">
 						{{ routeText(child_route) }}
 					</div>
@@ -96,7 +96,7 @@
 		
 		<div 
 	    v-b-toggle.download-resources
-		class="route apretable">
+		class="route">
 			<div class="menu-trigger">
 				<div class="ruta-principal">
 			    	Recursos

@@ -113,13 +113,9 @@ export default {
                 console.log(notification)
                 // Mostrar siempre si no hay restricción, o solo al auth_user indicado.
                 if (!notification.is_only_for_auth_user || notification.is_only_for_auth_user == this.user.id) {
-                    
-                    this.$store.commit('global_notification/set_functions_to_execute', notification.functions_to_execute)
-                    this.$store.commit('global_notification/set_info_to_show', notification.info_to_show)
-                    this.$store.commit('global_notification/set_message_text', notification.message_text)
-                    this.$store.commit('global_notification/set_color_variant', notification.color_variant)
 
-                    this.$bvModal.show('global-notification')
+                    this.$store.commit('global_notification/set_from_broadcast', notification)
+                    this.show_global_notification_modal(notification.notification_modal)
 
                 }
             })
@@ -135,6 +131,19 @@ export default {
 
                 this.$store.commit('import_status/setModel', e.import_status)
             })
+		},
+
+		/*
+		 * Abre el modal indicado en notification_modal (default: global-notification).
+		 */
+		show_global_notification_modal(notification_modal) {
+			let modal_id = 'global-notification'
+
+			if (notification_modal === 'article_import_result') {
+				modal_id = 'article-import-result-notification'
+			}
+
+			this.$bvModal.show(modal_id)
 		},
 	}
 }

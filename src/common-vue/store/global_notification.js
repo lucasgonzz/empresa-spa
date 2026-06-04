@@ -8,6 +8,9 @@ export default {
 		info_to_show: [],
 		message_text: '',
 		color_variant: '',
+		/* global_notification | article_import_result */
+		notification_modal: 'global_notification',
+		import_stats: null,
 	},
 	mutations: {
 		set_functions_to_execute(state, value) {
@@ -21,6 +24,23 @@ export default {
 		},
 		set_color_variant(state, value) {
 			state.color_variant = value
+		},
+		set_notification_modal(state, value) {
+			state.notification_modal = value || 'global_notification'
+		},
+		set_import_stats(state, value) {
+			state.import_stats = value
+		},
+		/*
+		 * Carga el payload completo de una GlobalNotification broadcast.
+		 */
+		set_from_broadcast(state, notification) {
+			state.functions_to_execute = notification.functions_to_execute || []
+			state.info_to_show = notification.info_to_show || []
+			state.message_text = notification.message_text || ''
+			state.color_variant = notification.color_variant || 'info'
+			state.notification_modal = notification.notification_modal || 'global_notification'
+			state.import_stats = notification.import_stats || null
 		},
 	},
 	actions: {

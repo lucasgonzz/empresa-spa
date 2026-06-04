@@ -14,6 +14,8 @@ v-if="show_nav">
 
     <global-notification></global-notification>
 
+    <notification-modals></notification-modals>
+
     <update-models></update-models>
 
 </div>
@@ -25,6 +27,7 @@ export default {
 	components: {
         NavVertical: () => import('@/common-vue/components/nav-vertical/NavVertical'),
         GlobalNotification: () => import('@/common-vue/components/global-notification/Modal'),
+        NotificationModals: () => import('@/components/common/notification-modals/Index'),
         UpdateModels: () => import('@/common-vue/components/UpdateModels'),
 	},
 }
