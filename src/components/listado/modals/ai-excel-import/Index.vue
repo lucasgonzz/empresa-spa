@@ -36,15 +36,36 @@
 				</b-form-file>
 			</b-form-group>
 
-			<!-- Resumen del rango detectado al elegir el archivo (mismo criterio que importación clásica) -->
-			<p
-			v-if="finish_row && !file_processing"
-			class="text-muted small m-b-0 m-t-10">
-				Última fila con contenido detectada: <strong>{{ finish_row }}</strong>.
-				<span v-if="excel_rows_to_import_count > 0">
-					Se importarán <strong>{{ excel_rows_to_import_count }}</strong> filas desde la fila {{ start_row }}.
-				</span>
-			</p>
+			<!-- Resumen del rango detectado y detección de cabecera al elegir el archivo -->
+			<div v-if="finish_row && !file_processing" class="ai-import-file-info m-t-10 m-b-10">
+
+				<!-- Resumen de filas -->
+				<p class="text-muted small m-b-5">
+					Última fila con contenido detectada: <strong>{{ finish_row }}</strong>.
+					<span v-if="excel_rows_to_import_count > 0">
+						Se importarán <strong>{{ excel_rows_to_import_count }}</strong> filas
+						(desde la fila <strong>{{ start_row }}</strong> hasta la <strong>{{ finish_row }}</strong>).
+					</span>
+				</p>
+
+				<!-- Toggle de cabecera: permite corregir la detección automática -->
+				<div class="ai-import-header-detection">
+					<b-form-checkbox
+					v-model="has_header_row"
+					size="sm"
+					@change="header_row_manually_overridden = true">
+						La primera fila es una cabecera de columnas
+						<span v-if="!header_row_manually_overridden" class="text-muted ai-import-header-auto-label">
+							(detectado automáticamente)
+						</span>
+					</b-form-checkbox>
+					<!-- Advertencia cuando no hay cabecera: el mapeo de Claude puede ser menos preciso -->
+					<small v-if="!has_header_row" class="text-warning d-block m-t-3">
+						Sin cabecera: Claude recibirá solo los datos para inferir el mapeo. La detección puede ser menos precisa.
+					</small>
+				</div>
+
+			</div>
 			<p
 			v-if="file_processing"
 			class="text-muted small m-t-10 m-b-0">
@@ -120,8 +141,26 @@
 			<p class="text-muted small m-b-15">
 				Revisá que cada columna del Excel esté asignada a la propiedad correcta.
 				<span class="text-warning">Las filas en amarillo tienen baja confianza.</span>
+				<span class="ai-import-mapping-legend-interpretation"> Las filas en celeste son interpretaciones de la IA que conviene validar.</span>
 				<span class="ai-import-mapping-legend-ignored"> Las filas en violeta se ignoran en la importación.</span>
 			</p>
+
+			<b-alert
+			v-if="column_mapping_interpretation_alerts.length > 0"
+			show
+			variant="info"
+			class="m-b-15">
+				<p class="font-weight-bold m-b-5 m-t-0">
+					<i class="icon-info m-r-5"></i>
+					Interpretaciones de la IA
+				</p>
+				<p
+				v-for="(alert_text, alert_index) in column_mapping_interpretation_alerts"
+				:key="'interpretation-alert-' + alert_index"
+				class="small m-b-5 m-t-0">
+					{{ alert_text }}
+				</p>
+			</b-alert>
 
 			<div class="ai-import-mapping-table">
 
@@ -136,42 +175,58 @@
 				<div
 				v-for="(item, index) in column_mapping"
 				:key="index"
-				class="ai-import-mapping-row"
+				class="ai-import-mapping-block"
 				:class="mapping_row_highlight_class(item)">
 
-					<!-- Letra y nombre de la columna en el Excel -->
-					<span
-					class="ai-import-mapping-excel-col"
-					:title="excel_column_full_label(item, index)">
-						<span class="ai-import-mapping-excel-letter">
-							{{ excel_column_letter_label(item, index) }}
-						</span>
-						<span class="ai-import-mapping-excel-header">
-							{{ item.excel_column }}
-						</span>
-					</span>
+					<div class="ai-import-mapping-row">
 
-					<!-- Select de propiedad del sistema -->
-					<b-form-select
-					v-model="item.system_property"
-					:options="system_property_options"
-					size="sm">
-					</b-form-select>
-
-					<!-- Nivel de confianza del mapeo sugerido por IA -->
-					<span class="ai-import-mapping-confidence text-center">
+						<!-- Letra y nombre de la columna en el Excel -->
 						<span
-						class="ai-import-mapping-confidence-value"
-						:class="column_confidence_text_class(item.confidence)"
-						:title="column_confidence_title(item.confidence)">
-							{{ format_column_confidence(item.confidence) }}
+						class="ai-import-mapping-excel-col"
+						:title="excel_column_full_label(item, index)">
+							<span class="ai-import-mapping-excel-letter">
+								{{ excel_column_letter_label(item, index) }}
+							</span>
+							<span class="ai-import-mapping-excel-header">
+								{{ item.excel_column }}
+							</span>
 						</span>
-						<small
-						v-if="column_confidence_is_low(item.confidence)"
-						class="ai-import-mapping-confidence-hint text-warning">
-							Revisar
-						</small>
-					</span>
+
+						<!-- Select de propiedad del sistema -->
+						<b-form-select
+						v-model="item.system_property"
+						:options="system_property_options"
+						size="sm">
+						</b-form-select>
+
+						<!-- Nivel de confianza del mapeo sugerido por IA -->
+						<span class="ai-import-mapping-confidence text-center">
+							<span
+							class="ai-import-mapping-confidence-value"
+							:class="column_confidence_text_class(item.confidence)"
+							:title="column_confidence_title(item.confidence)">
+								{{ format_column_confidence(item.confidence) }}
+							</span>
+							<small
+							v-if="column_confidence_is_low(item.confidence)"
+							class="ai-import-mapping-confidence-hint text-warning">
+								Revisar
+							</small>
+							<small
+							v-else-if="column_has_interpretation_note(item)"
+							class="ai-import-mapping-confidence-hint text-info">
+								Validar
+							</small>
+						</span>
+
+					</div>
+
+					<p
+					v-if="column_has_interpretation_note(item)"
+					class="ai-import-mapping-interpretation-note small m-b-0">
+						<i class="icon-info m-r-5"></i>
+						{{ item.interpretation_note }}
+					</p>
 
 				</div>
 
@@ -392,6 +447,12 @@ export default {
 			permitir_provider_code_repetido_en_multi_providers: 0,
 			actualizar_por_provider_code: 0,
 			actualizar_proveedor: 0,
+
+			/* True si la fila 1 del Excel fue detectada como cabecera de columnas. */
+			has_header_row: true,
+
+			/* True si el usuario corrigió manualmente la detección automática de cabecera. */
+			header_row_manually_overridden: false,
 		}
 	},
 
@@ -494,16 +555,40 @@ export default {
 		},
 
 		/*
+		 * Textos únicos de interpretation_note para el alert resumen del paso 2.
+		 */
+		column_mapping_interpretation_alerts() {
+			let alerts = []
+			let seen = {}
+
+			this.column_mapping.forEach(item => {
+				if (!this.column_has_interpretation_note(item)) {
+					return
+				}
+
+				let note = (item.interpretation_note || '').trim()
+				if (note === '' || seen[note]) {
+					return
+				}
+
+				seen[note] = true
+				alerts.push(note)
+			})
+
+			return alerts
+		},
+
+		/*
 		 * Opciones para el select de propiedades del sistema en la tabla de mapeo.
 		 * El valor null corresponde a "Ignorar columna".
 		 */
 		system_property_options() {
 			return [
 				{ value: null,                text: 'Ignorar columna' },
-				{ value: 'nombre',            text: 'Nombre' },
-				{ value: 'codigo_barras',     text: 'Código de barras' },
-				{ value: 'sku',               text: 'SKU' },
-				{ value: 'codigo_proveedor',  text: 'Código de proveedor' },
+				{ value: 'nombre',                text: 'Nombre' },
+				{ value: 'codigo_de_barras',      text: 'Código de barras' },
+				{ value: 'sku',                   text: 'SKU' },
+				{ value: 'codigo_de_proveedor',   text: 'Código de proveedor' },
 				{ value: 'costo',             text: 'Costo' },
 				{ value: 'precio',            text: 'Precio' },
 				{ value: 'iva',               text: 'IVA' },
@@ -563,6 +648,17 @@ export default {
 				this.actualizar_proveedor = 0
 			}
 		},
+
+		/*
+		 * Al cambiar el toggle de cabecera (manualmente o por detección automática),
+		 * ajustar start_row para reflejar el nuevo criterio.
+		 *
+		 * @param {Boolean} val - Nuevo valor de has_header_row
+		 */
+		has_header_row(val) {
+			/* Si el usuario cambia el toggle, ajustar start_row. */
+			this.start_row = val ? 2 : 1
+		},
 	},
 
 	methods: {
@@ -604,6 +700,8 @@ export default {
 
 		/*
 		 * Lee el Excel en el navegador y calcula finish_row (retorna promesa).
+		 * Resetea header_row_manually_overridden para que la detección automática
+		 * vuelva a correr con el nuevo archivo.
 		 */
 		process_excel_file(file) {
 			let self = this
@@ -612,6 +710,9 @@ export default {
 			self.finish_row = ''
 			self.finish_row_original = ''
 			self.excel_rows_read_error = ''
+
+			/* Al cambiar el archivo, se vuelve a detectar la cabecera automáticamente. */
+			self.header_row_manually_overridden = false
 
 			return new Promise(function(resolve, reject) {
 				let reader = new FileReader()
@@ -644,6 +745,8 @@ export default {
 
 		/*
 		 * Calcula la última fila con contenido desde el buffer del Excel (xlsx/xls).
+		 * También detecta automáticamente si la fila 1 es cabecera y ajusta start_row,
+		 * siempre que el usuario no haya corregido la detección manualmente.
 		 */
 		detect_last_excel_row_from_buffer(array_buffer) {
 			let data = new Uint8Array(array_buffer)
@@ -672,6 +775,9 @@ export default {
 					}
 				}
 
+				/* Detectar si la fila 1 es cabecera antes de retornar. */
+				this.detect_header_row(worksheet)
+
 				return ultima_fila_con_contenido
 			}
 
@@ -698,7 +804,61 @@ export default {
 				}
 			}
 
+			/* Detectar si la fila 1 es cabecera antes de retornar. */
+			this.detect_header_row(worksheet)
+
 			return ultima
+		},
+
+		/*
+		 * Analiza la primera fila del worksheet para determinar automáticamente
+		 * si es una cabecera de columnas o si son datos directamente.
+		 * Solo actúa si el usuario no sobreescribió la detección manualmente.
+		 *
+		 * Criterio: si todas las celdas no vacías de la fila 1 son strings (no números),
+		 * se considera cabecera. Si alguna celda no vacía es numérica, se asume que no hay cabecera.
+		 *
+		 * @param {Object} worksheet - Hoja de trabajo de XLSX
+		 */
+		detect_header_row(worksheet) {
+			/* Respetar corrección manual del usuario. */
+			if (this.header_row_manually_overridden) {
+				return
+			}
+
+			/* Leer la primera fila del Excel como array. */
+			let rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' })
+
+			if (!rows || !rows[0]) {
+				/* Sin datos suficientes: asumir cabecera por defecto. */
+				this.has_header_row = true
+				this.start_row = 2
+				return
+			}
+
+			let first_row = rows[0]
+			let detected_as_header = true
+
+			/* Recorrer celdas: si alguna no vacía es numérica, no es cabecera. */
+			for (let j = 0; j < first_row.length; j++) {
+				let cell_value = first_row[j]
+
+				/* Ignorar celdas vacías. */
+				if (cell_value === null || cell_value === '' || String(cell_value).trim() === '') {
+					continue
+				}
+
+				/* Si el valor es un número (o string numérico), no es cabecera. */
+				if (typeof cell_value === 'number' || !isNaN(Number(cell_value))) {
+					detected_as_header = false
+					break
+				}
+			}
+
+			this.has_header_row = detected_as_header
+
+			/* Ajustar start_row según si hay cabecera o no. */
+			this.start_row = detected_as_header ? 2 : 1
 		},
 
 		/*
@@ -849,6 +1009,29 @@ export default {
 		},
 
 		/*
+		 * Alinea claves del mapeo IA con las que usa el importador de artículos en el backend.
+		 *
+		 * @param {string|null} system_property Propiedad elegida en el select de mapeo.
+		 * @return {string|null} Clave canónica o null si se ignora la columna.
+		 */
+		normalize_system_property_key(system_property) {
+			if (system_property === null || system_property === '') {
+				return null
+			}
+
+			let property_aliases = {
+				codigo_proveedor: 'codigo_de_proveedor',
+				codigo_barras: 'codigo_de_barras',
+			}
+
+			if (property_aliases[system_property]) {
+				return property_aliases[system_property]
+			}
+
+			return system_property
+		},
+
+		/*
 		 * Transforma el column_mapping al formato que espera InitExcelImport.
 		 * Genera un objeto { system_property: 0-indexed-position } descartando
 		 * las columnas marcadas como "Ignorar columna" (system_property === null).
@@ -857,7 +1040,9 @@ export default {
 			let columns = {}
 
 			this.column_mapping.forEach((item, index) => {
-				if (item.system_property !== null) {
+				let system_property = this.normalize_system_property_key(item.system_property)
+
+				if (system_property !== null) {
 					/*
 					 * Posición real en el Excel (0-based); el backend la envía como excel_column_index.
 					 */
@@ -865,9 +1050,17 @@ export default {
 					if (typeof item.excel_column_index === 'number') {
 						column_position = item.excel_column_index
 					}
-					columns[item.system_property] = column_position
+					columns[system_property] = column_position
 				}
 			})
+
+			/*
+			 * Respaldo: si quedó solo descripcion en el mapeo, usar esa columna como nombre.
+			 */
+			if (typeof columns.nombre === 'undefined' && typeof columns.descripcion !== 'undefined') {
+				columns.nombre = columns.descripcion
+				delete columns.descripcion
+			}
 
 			return columns
 		},
@@ -898,10 +1091,21 @@ export default {
 					excel_column_index = item.excel_column_index
 				}
 
+				let interpretation_note = item.interpretation_note
+				if (typeof interpretation_note === 'string') {
+					interpretation_note = interpretation_note.trim()
+					if (interpretation_note === '') {
+						interpretation_note = null
+					}
+				} else {
+					interpretation_note = null
+				}
+
 				normalized.push({
 					excel_column:        item.excel_column || '',
-					system_property:     item.system_property,
+					system_property:     this.normalize_system_property_key(item.system_property),
 					confidence:          confidence,
+					interpretation_note: interpretation_note,
 					excel_column_index:  excel_column_index,
 					excel_column_letter: item.excel_column_letter || this.number_to_excel_column(excel_column_index + 1),
 				})
@@ -970,13 +1174,30 @@ export default {
 		mapping_row_highlight_class(item) {
 			if (this.column_mapping_is_ignored(item)) {
 				return {
-					'ai-import-mapping-row--ignored': true,
+					'ai-import-mapping-block--ignored': true,
+				}
+			}
+
+			if (this.column_has_interpretation_note(item)) {
+				return {
+					'ai-import-mapping-block--interpretation': true,
 				}
 			}
 
 			return {
-				'ai-import-mapping-row--warning': this.column_confidence_is_low(item.confidence),
+				'ai-import-mapping-block--warning': this.column_confidence_is_low(item.confidence),
 			}
+		},
+
+		/*
+		 * True si la IA dejó una nota para que el usuario valide el mapeo (p. ej. Descripción → nombre).
+		 */
+		column_has_interpretation_note(item) {
+			if (!item || !item.interpretation_note) {
+				return false
+			}
+
+			return String(item.interpretation_note).trim() !== ''
 		},
 
 		/*
@@ -1062,6 +1283,8 @@ export default {
 			this.permitir_provider_code_repetido_en_multi_providers = 0
 			this.actualizar_por_provider_code = 0
 			this.actualizar_proveedor = 0
+			this.has_header_row = true
+			this.header_row_manually_overridden = false
 		},
 
 	},
@@ -1100,25 +1323,19 @@ export default {
 	border-radius: 8px
 	overflow: hidden
 
-.ai-import-mapping-row
-	display: grid
-	grid-template-columns: 1fr 1.4fr 100px
-	align-items: center
-	gap: 10px
-	padding: 8px 12px
+.ai-import-mapping-block
 	border-bottom: 1px solid rgba(0,0,0,.06)
 
 	&:last-child
 		border-bottom: none
 
-	&--header
-		background: #f8f9fa
-		font-weight: 600
-		font-size: 13px
-		color: #495057
-
 	&--warning
 		background: rgba(255, 193, 7, 0.14)
+
+	&--interpretation
+		background: rgba(0, 123, 255, 0.1)
+		border-left: 4px solid #17a2b8
+		padding-left: 8px
 
 	&--ignored
 		background: rgba(111, 66, 193, 0.16)
@@ -1131,6 +1348,28 @@ export default {
 
 		.ai-import-mapping-confidence-value
 			opacity: 0.75
+
+.ai-import-mapping-row
+	display: grid
+	grid-template-columns: 1fr 1.4fr 100px
+	align-items: center
+	gap: 10px
+	padding: 8px 12px
+
+	&--header
+		background: #f8f9fa
+		font-weight: 600
+		font-size: 13px
+		color: #495057
+		border-bottom: 1px solid rgba(0,0,0,.06)
+
+.ai-import-mapping-interpretation-note
+	padding: 0 12px 8px 12px
+	color: #0c5460
+
+.ai-import-mapping-legend-interpretation
+	color: #17a2b8
+	font-weight: 600
 
 .ai-import-mapping-legend-ignored
 	color: #6f42c1
@@ -1171,4 +1410,20 @@ export default {
 .ai-import-mapping-confidence-hint
 	font-size: 11px
 	line-height: 1
+
+/* Bloque informativo de archivo cargado en el paso 1 */
+.ai-import-file-info
+	background: rgba(0, 123, 255, 0.05)
+	border-left: 3px solid rgba(0, 123, 255, 0.3)
+	padding: 10px 14px
+	border-radius: 4px
+
+/* Contenedor del toggle de cabecera */
+.ai-import-header-detection
+	margin-top: 6px
+
+/* Etiqueta de detección automática junto al checkbox */
+.ai-import-header-auto-label
+	font-size: 11px
+	font-style: italic
 </style>

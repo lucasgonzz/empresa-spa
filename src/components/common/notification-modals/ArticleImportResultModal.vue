@@ -1,9 +1,10 @@
 <template>
 	<b-modal
 	id="article-import-result-notification"
-	size="lg"
+	size="md"
 	hide-footer
 	centered
+	title="Importacion de Excel"
 	:modal-class="modal_wrapper_class"
 	body-class="article-import-result-modal__body"
 	@hide="on_modal_hide">
@@ -74,6 +75,73 @@
 				<span class="article-import-result-modal__chart-value">
 					{{ format_stat_value(stat.value) }}
 				</span>
+			</div>
+		</div>
+
+		<!-- Configuración utilizada en la importación -->
+		<div
+		v-if="show_import_options"
+		class="article-import-result-modal__config m-t-20">
+			<p class="article-import-result-modal__config-title">
+				Configuración utilizada
+			</p>
+
+			<div class="article-import-result-modal__config-grid">
+				<div
+				v-if="import_operacion_label"
+				class="article-import-result-modal__config-item">
+					<span class="article-import-result-modal__config-label">
+						Operación
+					</span>
+					<span class="article-import-result-modal__config-value">
+						{{ import_operacion_label }}
+					</span>
+				</div>
+
+				<div
+				v-if="import_row_range_label"
+				class="article-import-result-modal__config-item">
+					<span class="article-import-result-modal__config-label">
+						Rango de filas
+					</span>
+					<span class="article-import-result-modal__config-value">
+						{{ import_row_range_label }}
+					</span>
+				</div>
+
+				<div
+				v-if="import_provider_label"
+				class="article-import-result-modal__config-item">
+					<span class="article-import-result-modal__config-label">
+						Proveedor
+					</span>
+					<span class="article-import-result-modal__config-value">
+						{{ import_provider_label }}
+					</span>
+				</div>
+			</div>
+
+			<div
+			v-if="import_advanced_options.length"
+			class="article-import-result-modal__config-advanced m-t-12">
+				<p class="article-import-result-modal__config-subtitle">
+					Opciones avanzadas
+				</p>
+				<ul class="article-import-result-modal__config-list m-b-0">
+					<li
+					v-for="(option, index) in import_advanced_options"
+					:key="'import-option-' + index"
+					class="article-import-result-modal__config-list-item">
+						<span class="article-import-result-modal__config-list-label">
+							{{ option.label }}
+						</span>
+						<span
+						class="article-import-result-modal__config-list-value"
+						:class="import_option_value_class(option.value)">
+							{{ option.value }}
+						</span>
+					</li>
+				</ul>
 			</div>
 		</div>
 
@@ -151,6 +219,91 @@ export default {
 
 		import_stats() {
 			return this.$store.state.global_notification.import_stats
+		},
+
+		/*
+		 * Configuración de la importación enviada por el backend (paso 3 + rango).
+		 */
+		import_options() {
+			return this.$store.state.global_notification.import_options
+		},
+
+		/*
+		 * True si hay datos de configuración para mostrar en el modal.
+		 */
+		show_import_options() {
+			if (!this.import_options || typeof this.import_options !== 'object') {
+				return false
+			}
+
+			if (this.import_operacion_label || this.import_row_range_label || this.import_provider_label) {
+				return true
+			}
+
+			return this.import_advanced_options.length > 0
+		},
+
+		/*
+		 * Texto de operación (solo actualizar vs crear y actualizar).
+		 */
+		import_operacion_label() {
+			let options = this.import_options
+
+			if (!options || !options.operacion_a_realizar) {
+				return ''
+			}
+
+			return this.format_operacion_a_realizar(options.operacion_a_realizar)
+		},
+
+		/*
+		 * Rango de filas importadas (desde / hasta).
+		 */
+		import_row_range_label() {
+			let options = this.import_options
+
+			if (!options) {
+				return ''
+			}
+
+			let start_row = options.start_row
+			let finish_row = options.finish_row
+
+			if (start_row === null || start_row === '' || typeof start_row === 'undefined') {
+				return ''
+			}
+
+			if (finish_row === null || finish_row === '' || typeof finish_row === 'undefined') {
+				return 'Desde la fila ' + start_row
+			}
+
+			return 'Desde la fila ' + start_row + ' hasta la fila ' + finish_row
+		},
+
+		/*
+		 * Nombre del proveedor del archivo, si aplica.
+		 */
+		import_provider_label() {
+			let options = this.import_options
+
+			if (!options || !options.provider_name) {
+				return ''
+			}
+
+			return options.provider_name
+		},
+
+		/*
+		 * Checkboxes del paso 3 (códigos repetidos, otro proveedor, etc.).
+		 */
+		import_advanced_options() {
+			let options = this.import_options
+
+			if (!options || !Array.isArray(options.advanced_options)) {
+				return []
+			}
+
+			return options.advanced_options
 		},
 
 		/*
@@ -271,6 +424,40 @@ export default {
 
 		on_modal_hide() {
 			/* Sin estado extra que limpiar por ahora. */
+		},
+
+		/*
+		 * Texto alineado al paso 3 del modal de importación.
+		 */
+		format_operacion_a_realizar(operacion) {
+			let text = String(operacion || '').trim()
+
+			if (text === 'Crear y actualizar') {
+				return 'Cargar nuevos artículos y editar existentes'
+			}
+
+			if (text === 'Solo actualizar') {
+				return 'Solo editar artículos existentes'
+			}
+
+			return text
+		},
+
+		/*
+		 * Clase visual para valores Sí/No de opciones avanzadas.
+		 */
+		import_option_value_class(value) {
+			let text = String(value || '').trim().toLowerCase()
+
+			if (text === 'sí' || text === 'si') {
+				return 'article-import-result-modal__config-list-value--yes'
+			}
+
+			if (text === 'no') {
+				return 'article-import-result-modal__config-list-value--no'
+			}
+
+			return ''
 		},
 
 		/*
@@ -464,6 +651,77 @@ export default {
 	font-weight: 700
 	text-align: right
 	color: #343a40
+
+.article-import-result-modal__config
+	background: #f8f9fb
+	border: 1px solid rgba(0, 0, 0, 0.06)
+	border-radius: 12px
+	padding: 14px 16px
+
+.article-import-result-modal__config-title
+	font-size: 14px
+	font-weight: 700
+	color: #343a40
+	margin: 0 0 12px
+
+.article-import-result-modal__config-subtitle
+	font-size: 12px
+	font-weight: 600
+	color: #6c757d
+	margin: 0 0 8px
+	text-transform: uppercase
+	letter-spacing: 0.04em
+
+.article-import-result-modal__config-grid
+	display: grid
+	grid-template-columns: 1fr
+	gap: 10px
+
+.article-import-result-modal__config-item
+	display: flex
+	flex-direction: column
+	gap: 2px
+
+.article-import-result-modal__config-label
+	font-size: 12px
+	color: #6c757d
+
+.article-import-result-modal__config-value
+	font-size: 14px
+	font-weight: 600
+	color: #212529
+
+.article-import-result-modal__config-list
+	list-style: none
+	padding: 0
+	margin: 0
+
+.article-import-result-modal__config-list-item
+	display: flex
+	justify-content: space-between
+	align-items: flex-start
+	gap: 12px
+	padding: 6px 0
+	border-bottom: 1px solid rgba(0, 0, 0, 0.05)
+	font-size: 13px
+
+	&:last-child
+		border-bottom: none
+		padding-bottom: 0
+
+.article-import-result-modal__config-list-label
+	color: #495057
+	flex: 1
+
+.article-import-result-modal__config-list-value
+	font-weight: 600
+	flex-shrink: 0
+
+	&--yes
+		color: #28a745
+
+	&--no
+		color: #6c757d
 
 .article-import-result-modal__detail-block
 	background: #fff8f8

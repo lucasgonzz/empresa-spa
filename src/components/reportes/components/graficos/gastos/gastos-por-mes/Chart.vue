@@ -104,7 +104,7 @@ export default {
 						color: '#000',
 						font: {
 							weight: 'bold',
-							family: 'Roboto',
+							family: 'Inter',
 							size: this.font_size,
 						},
 						formatter: function(value, context) {

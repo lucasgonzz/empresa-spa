@@ -67,7 +67,7 @@ export default {
 						color: '#FFF',
 						font: {
 							weight: 'bold',
-							family: 'Roboto',
+							family: 'Inter',
 							size: this.font_size,
 						},
 						formatter: function(value) {

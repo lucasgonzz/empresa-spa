@@ -65,7 +65,7 @@ export default {
 						color: '#000',
 						font: {
 							weight: 'bold',
-							family: 'Roboto',
+							family: 'Inter',
 							size: 11,	
 						},
 						// formatter: function(value) {

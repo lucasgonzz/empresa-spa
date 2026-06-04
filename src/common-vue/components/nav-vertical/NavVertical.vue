@@ -29,7 +29,7 @@
 		v-for="(route, i) in routes"
 	    v-if="showRoute(route)"
 	    :key="i"
-	    :class="isActiveRoute(route)"
+	    :class="route_item_class(route)"
 		class="route"
 	    @click="callSetRoute(route)">
 
@@ -81,7 +81,8 @@
 					v-for="child_route in route.childrens"
 	    			v-if="showRoute(child_route)"
 					:key="child_route.name"
-					class="route"
+					:class="isActiveRoute(child_route)"
+					class="route route--child"
 		    		@click.stop="callSetRoute(child_route)">
 						{{ routeText(child_route) }}
 					</div>
@@ -99,8 +100,13 @@
 		class="route">
 			<div class="menu-trigger">
 				<div class="ruta-principal">
-			    	Recursos
-			        <img src="@/assets/nuevos-nav-icons/recursos.png" alt="">
+					<span class="route-text">Recursos</span>
+					<div class="route-icon-badge-wrap">
+			        	<img
+			        	class="route-nav-img"
+			        	src="@/assets/nuevos-nav-icons/recursos.png"
+			        	alt="Recursos">
+					</div>
 				</div>
 			</div>
 		</div>
@@ -210,115 +216,154 @@ export default {
 			const icon_name = route && route.icon ? route.icon : 'circle'
 			return 'bi bi-' + icon_name
 		},
+		/**
+		 * Clases visuales del ítem de menú según ruta activa (incluye hijos).
+		 *
+		 * @param {Object} route Ruta del menú.
+		 * @returns {string}
+		 */
+		route_item_class(route) {
+			if (this.getRouteName(route) == this.route_name) {
+				return 'active-item'
+			}
+			if (route.childrens) {
+				let has_active_child = false
+				route.childrens.forEach(child_route => {
+					if (this.showRoute(child_route) && this.getRouteName(child_route) == this.route_name) {
+						has_active_child = true
+					}
+				})
+				if (has_active_child) {
+					return 'active-item active-item--parent'
+				}
+			}
+			return ''
+		},
 		setShow() {
-			console.log('setShow')
 			this.show_nav_mobile = !this.show_nav_mobile
 		}
 	}
 }
 </script>
 <style lang="sass">
-@import '@/sass/_custom'
+@import '@/sass/_custom.scss'
+
+// Tokens visuales del menú lateral
+$nav_width: 220px
+$nav_collapsed_visible: 56px
+$nav_collapsed_offset: $nav_width - $nav_collapsed_visible
+$nav_bg: #16181d
+$nav_border: rgba(255, 255, 255, 0.06)
+$nav_text: rgba(255, 255, 255, 0.72)
+$nav_text_muted: rgba(255, 255, 255, 0.5)
+$nav_hover_bg: rgba(255, 255, 255, 0.06)
+$nav_active_bg: rgba($blue, 0.14)
+$nav_item_radius: 8px
+
 .container-fluid
 	@media screen and (min-width: 768px)
-		padding-left: 65px !important
+		padding-left: $nav_collapsed_visible + 8px !important
 
 .active-mobile-nav
 	transform: translateX(0px) !important
 
 .mobile-nav-header
-	background: #444 
+	background: $nav_bg
+	border-bottom: 1px solid $nav_border
 	display: flex
-	flex-direction: row 
+	flex-direction: row
 	justify-content: space-between
 	align-items: center
-	padding: 10px 15px
-	color: #FFF
-	.route-name 
-		font-weight: bold
-		font-size: 16px
-
-	i 
-		font-size: 20px
-
-.toggle-right
-	transform: translateX(200px)
+	padding: 12px 16px
+	color: #ffffff
+	.route-name
+		font-weight: 600
+		font-size: 0.9375rem
+		letter-spacing: -0.01em
+	i
+		font-size: 1.125rem
 
 .nav-vertical
-	display: flex 
+	display: flex
 	flex-direction: column
-	justify-content: flex-start 
+	justify-content: flex-start
 	position: fixed
-	width: 200px
+	width: $nav_width
 	height: 100vh
 	top: 0
 	left: 0
-	transition: all .2s
+	transition: transform 0.22s ease, box-shadow 0.22s ease
 	z-index: 1000
-	background: #444
+	background: $nav_bg
+	border-right: 1px solid $nav_border
 	overflow-y: auto
+	overflow-x: hidden
 	-ms-overflow-style: none !important
 	scrollbar-width: none !important
-	&::-webkit-scrollbar 
+	font-family: $font-family-sans-serif
+	&::-webkit-scrollbar
 		display: none !important
 
 	@media screen and (max-width: 768px)
-		transform: translateX(-200px)
+		transform: translateX(-$nav_width)
+		box-shadow: none
 
 	@media screen and (min-width: 768px)
-		transform: translateX(-155px)
+		transform: translateX(-$nav_collapsed_offset)
 		&:hover
 			transform: translateX(0px)
-			& .user-info .item, & .user-info hr  
+			box-shadow: 4px 0 24px rgba(15, 23, 42, 0.18)
+			& .user-info .item, & .user-info hr
 				opacity: 1
 
-	.route 
-		width: 100%
-		color: #FFF
-		margin: 5px 0
-		font-weight: bold
+	.route
+		width: calc(100% - 16px)
+		margin: 2px 8px
+		color: $nav_text
+		font-size: 1rem
+		font-weight: 500
+		line-height: 1.35
 		cursor: pointer
-		transition: all .2s
-		&:hover 
-			background: $blue 
-			// border-radius: 0 5px 5px 0
-			// span
-			// 	transition: all .2s 
-			// 	transform: scale(1.2)
-			
+		border-radius: $nav_item_radius
+		transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease
+		&:hover
+			background: $nav_hover_bg
+			color: #ffffff
 			img
-				transition: all .2s 
-				transform: scale(1.5) translateX(-2px)
+				transform: none
 			.route-icon
-				transition: all .2s 
-				transform: scale(1.18) translateX(-1px)
-		&:active 
-			transform: translateX(20px)
-		img 
-			width: 25px
+				transform: none
+				color: #ffffff
+		&:active
+			transform: none
+		img
+			width: 20px
+			height: 20px
+			object-fit: contain
+			opacity: 0.92
 
-		/* Área fija del icono para que el badge absoluto no desplace el layout */
 		.route-icon-badge-wrap
 			position: relative
 			flex-shrink: 0
 			display: flex
 			align-items: center
 			justify-content: center
-			width: 25px
-			min-height: 25px
+			width: 22px
+			min-height: 22px
 
 		.route-nav-img
 			display: block
 
 		.route-icon
-			font-size: 19px
-			width: 25px
+			font-size: 1.1rem
+			width: 20px
 			text-align: center
+			color: $nav_text_muted
+			transition: color 0.15s ease
 
-		/* Badge compacto superpuesto en la esquina del icono (no consume espacio en la fila) */
 		.route-alert-badge
 			position: absolute
-			top: -5px
+			top: -6px
 			right: -8px
 			min-width: 16px
 			height: 16px
@@ -327,57 +372,91 @@ export default {
 			display: inline-flex
 			align-items: center
 			justify-content: center
-			font-size: 10px
-			font-weight: bold
+			font-size: 0.625rem
+			font-weight: 700
 			line-height: 1
-			border-radius: 8px
-			box-shadow: 0 0 0 1px rgba(68, 68, 68, 0.9)
-
+			border-radius: 999px
+			box-shadow: 0 0 0 2px $nav_bg
 
 	.active-item
-		background: $blue 
-		color: #FFF
+		background: $nav_active_bg
+		color: #ffffff
+		font-weight: 600
+		box-shadow: inset 3px 0 0 0 $blue
+		.route-icon
+			color: $blue
 
+	.active-item--parent
+		background: rgba($blue, 0.08)
+		box-shadow: inset 3px 0 0 0 rgba($blue, 0.55)
 
-
-
-
-.route 
-	.menu-trigger 
+.route
+	.menu-trigger
 		width: 100%
-		font-size: 17px
-		display: flex 
+		display: flex
 		flex-direction: column
 
 		.ruta-principal
-			display: flex 
-			flex-direction: row 
+			display: flex
+			flex-direction: row
 			justify-content: space-between
-			align-items: center 
-			padding: 8px 10px 8px 20px
+			align-items: center
+			padding: 10px 12px 10px 14px
 			cursor: pointer
+			gap: 10px
 
+			> div:first-child
+				flex: 1
+				display: flex
+				align-items: center
+				min-width: 0
 
+			.route-text
+				flex: 1
+				text-align: left
+				white-space: nowrap
+				overflow: hidden
+				text-overflow: ellipsis
 
+	.submenu
+		background: transparent
+		padding: 2px 0 6px 0
+		margin: 0 8px 4px 22px
+		border-left: 1px solid rgba(255, 255, 255, 0.08)
 
-	.submenu 
-		background: #333
-		div 
-			padding: 8px 0 8px 40px
-			cursor: pointer
+		.route--child
+			width: 100%
+			margin: 2px 0
+			padding: 8px 12px 8px 14px
+			font-size: 0.8125rem
+			font-weight: 500
+			color: $nav_text_muted
 			text-align: left
-			&:hover 
-				background: $blue
-        
-    
+			box-shadow: none
+			&:hover
+				background: $nav_hover_bg
+				color: #ffffff
+			&.active-item
+				background: $nav_active_bg
+				color: #ffffff
+				font-weight: 600
+				box-shadow: inset 2px 0 0 0 $blue
+
 .desplegable
-	@media screen and (max-width: 576px)
-		padding: 10px 10px 10px 0px
-	@media screen and (min-width: 576px)
-		padding: 10px 0px 10px 10px
-		margin-left: -20px
-		margin-right: 15px
-	
-	// background: red 
+	display: inline-flex
+	align-items: center
+	justify-content: center
+	width: 20px
+	height: 20px
+	margin-right: 2px
+	margin-left: -4px
+	border-radius: 4px
+	color: $nav_text_muted
+	transition: background 0.15s ease, color 0.15s ease
+	&:hover
+		background: rgba(255, 255, 255, 0.08)
+		color: #ffffff
+	i
+		font-size: 0.6875rem
 
 </style>
