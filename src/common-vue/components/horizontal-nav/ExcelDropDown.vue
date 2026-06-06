@@ -84,10 +84,26 @@
 			Importar {{ plural(model_name) }}
 		</b-dropdown-item>
 
-		<!-- Opción de importación asistida por IA, visible solo para artículos con extensión habilitada -->
+		<!-- Opción de importación asistida por IA para artículos -->
 		<b-dropdown-item
 		v-if="model_name === 'article' && hasExtencion('ai_excel_import')"
 		@click="$bvModal.show('ai-excel-import-modal')">
+			<i class="icon-cpu"></i>
+			Importar con IA
+		</b-dropdown-item>
+
+		<!-- Opción de importación asistida por IA para clientes -->
+		<b-dropdown-item
+		v-if="model_name === 'client' && hasExtencion('ai_excel_import')"
+		@click="$bvModal.show('ai-client-excel-import-modal')">
+			<i class="icon-cpu"></i>
+			Importar con IA
+		</b-dropdown-item>
+
+		<!-- Opción de importación asistida por IA para proveedores -->
+		<b-dropdown-item
+		v-if="model_name === 'provider' && hasExtencion('ai_excel_import')"
+		@click="$bvModal.show('ai-provider-excel-import-modal')">
 			<i class="icon-cpu"></i>
 			Importar con IA
 		</b-dropdown-item>

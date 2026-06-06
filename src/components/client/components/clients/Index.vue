@@ -3,6 +3,12 @@
 	v-if="view == 'clientes'">
 		<import></import>
 
+		<!-- Modal de importación asistida por IA para clientes (visible solo con extensión habilitada) -->
+		<ai-excel-import-modal
+		v-if="hasExtencion('ai_excel_import')"
+		model="client">
+		</ai-excel-import-modal>
+
 		<view-component
 		show_filter_modal
 		show_excel_drop_down
@@ -44,6 +50,7 @@ export default {
 		SaldosClientesFiltrados: () => import('@/components/client/components/clients/SaldosClientesFiltrados'),
 		Import: () => import('@/components/client/components/clients/Import'),
 		BtnPdf: () => import('@/components/client/components/clients/BtnPdf'),
+		AiExcelImportModal: () => import('@/components/listado/modals/ai-excel-import/Index'),
 	}
 }
 </script>

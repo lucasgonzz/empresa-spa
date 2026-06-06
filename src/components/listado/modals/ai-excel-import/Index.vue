@@ -1,6 +1,6 @@
 <template>
 	<b-modal
-	id="ai-excel-import-modal"
+	:id="modal_id"
 	size="lg"
 	hide-footer
 	:title="modal_title"
@@ -108,32 +108,35 @@
 		<!-- ========================================================== -->
 		<div v-if="step === 2">
 
-			<!-- Sección de proveedor inferido -->
-			<div class="m-b-20">
+		<!-- Sección de proveedor inferido (solo para artículos) -->
+		<div
+		v-if="model === 'article'"
+		class="m-b-20">
 
-				<p class="font-weight-bold m-b-5">Proveedor detectado</p>
+			<p class="font-weight-bold m-b-5">Proveedor detectado</p>
 
-				<!-- Alerta si la confianza del proveedor es baja -->
-				<b-alert
-				v-if="provider_confidence === 'bajo'"
-				show
-				variant="warning"
-				class="m-b-10">
-					<i class="icon-alert-triangle m-r-5"></i>
-					Confianza baja — verificá el proveedor antes de continuar.
-				</b-alert>
+			<!-- Alerta si la confianza del proveedor es baja -->
+			<b-alert
+			v-if="provider_confidence === 'bajo'"
+			show
+			variant="warning"
+			class="m-b-10">
+				<i class="icon-alert-triangle m-r-5"></i>
+				Confianza baja — verificá el proveedor antes de continuar.
+			</b-alert>
 
-				<b-form-group
-				:description="provider_confidence_label">
-					<b-form-select
-					v-model="selected_provider_id"
-					:options="provider_options">
-					</b-form-select>
-				</b-form-group>
+			<b-form-group
+			:description="provider_confidence_label">
+				<b-form-select
+				v-model="selected_provider_id"
+				:options="provider_options">
+				</b-form-select>
+			</b-form-group>
 
-			</div>
+		</div>
 
-			<hr>
+		<hr
+		v-if="model === 'article'">
 
 			<!-- Tabla de mapeo de columnas -->
 			<p class="font-weight-bold m-b-10">Mapeo de columnas</p>
@@ -275,36 +278,44 @@
 				</b-form-input>
 			</b-form-group>
 
-			<p
-			v-if="excel_rows_to_import_count > 0"
-			class="text-muted small m-b-15">
-				Rango efectivo: filas {{ start_row }} a {{ finish_row }}
+		<p
+		v-if="excel_rows_to_import_count > 0"
+		class="text-muted small m-b-15">
+			Rango efectivo: filas {{ start_row }} a {{ finish_row }}
+			<span v-if="model === 'article'">
 				({{ excel_rows_to_import_count }} filas, aprox. {{ estimated_chunks_count }} chunks de 50 filas).
-			</p>
+			</span>
+			<span v-else>
+				({{ excel_rows_to_import_count }} filas).
+			</span>
+		</p>
+
+		<hr>
+
+		<!-- Operación a realizar -->
+		<b-form-group label="Operaciones a realizar">
+			<b-form-radio
+			class="radio-option m-b-5"
+			:value="0"
+			size="lg"
+			v-model="create_and_edit">
+				Solo editar {{ model_label_plural }} existentes
+			</b-form-radio>
+			<b-form-radio
+			class="radio-option"
+			:value="1"
+			size="lg"
+			v-model="create_and_edit">
+				Cargar nuevos {{ model_label_plural }} y editar existentes
+			</b-form-radio>
+		</b-form-group>
+
+		<!-- Opciones avanzadas de proveedor (solo para artículos) -->
+		<div
+		v-if="model === 'article'">
 
 			<hr>
 
-			<!-- Operación a realizar -->
-			<b-form-group label="Operaciones a realizar">
-				<b-form-radio
-				class="radio-option m-b-5"
-				:value="0"
-				size="lg"
-				v-model="create_and_edit">
-					Solo editar artículos existentes
-				</b-form-radio>
-				<b-form-radio
-				class="radio-option"
-				:value="1"
-				size="lg"
-				v-model="create_and_edit">
-					Cargar nuevos artículos y editar existentes
-				</b-form-radio>
-			</b-form-group>
-
-			<hr>
-
-			<!-- Opciones avanzadas de proveedor -->
 			<div class="checkbox-group m-b-15">
 
 				<b-form-checkbox
@@ -357,6 +368,8 @@
 
 			</div>
 
+		</div>
+
 			<!-- Error al importar -->
 			<b-alert
 			v-if="error_message"
@@ -396,7 +409,19 @@ import * as XLSX from 'xlsx/xlsx.mjs'
 
 export default {
 
-	/* Propiedades del sistema que Claude puede mapear a columnas del Excel. */
+	props: {
+		/*
+		 * Modelo de importación: 'article', 'client' o 'provider'.
+		 * Controla las propiedades del sistema disponibles, las secciones
+		 * condicionales y el id del modal.
+		 */
+		model: {
+			type: String,
+			default: 'article',
+		},
+	},
+
+	/* Estado reactivo del modal. */
 	data() {
 		return {
 			/* Paso actual del flujo (1, 2 o 3). */
@@ -459,15 +484,43 @@ export default {
 	computed: {
 
 		/*
-		 * Título dinámico del modal según el paso actual.
+		 * ID único del modal según el modelo; mantiene compatibilidad con artículos
+		 * y permite múltiples instancias del modal en la misma app sin colisión de ids.
+		 */
+		modal_id() {
+			if (this.model === 'article') return 'ai-excel-import-modal'
+			return 'ai-' + this.model + '-excel-import-modal'
+		},
+
+		/*
+		 * Etiqueta en plural del modelo para los textos de la UI.
+		 */
+		model_label_plural() {
+			const labels = {
+				article:  'artículos',
+				client:   'clientes',
+				provider: 'proveedores',
+			}
+			return labels[this.model] || this.model
+		},
+
+		/*
+		 * Título dinámico del modal según el paso actual y el modelo de importación.
 		 */
 		modal_title() {
-			const titles = {
-				1: 'Importar con IA — Subir archivo',
-				2: 'Importar con IA — Confirmar mapeo',
-				3: 'Importar con IA — Opciones de importación',
+			const model_labels = {
+				article:  'Artículos',
+				client:   'Clientes',
+				provider: 'Proveedores',
 			}
-			return titles[this.step] || 'Importar con IA'
+			const model_label = model_labels[this.model] || this.model
+
+			const titles = {
+				1: 'Importar ' + model_label + ' con IA — Subir archivo',
+				2: 'Importar ' + model_label + ' con IA — Confirmar mapeo',
+				3: 'Importar ' + model_label + ' con IA — Opciones de importación',
+			}
+			return titles[this.step] || ('Importar ' + model_label + ' con IA')
 		},
 
 		/*
@@ -580,26 +633,69 @@ export default {
 
 		/*
 		 * Opciones para el select de propiedades del sistema en la tabla de mapeo.
+		 * Varía según el modelo (article, client, provider).
 		 * El valor null corresponde a "Ignorar columna".
 		 */
 		system_property_options() {
+			/* Opción vacía común a todos los modelos. */
+			const ignore_option = { value: null, text: 'Ignorar columna' }
+
+			if (this.model === 'client') {
+				return [
+					ignore_option,
+					{ value: 'nombre',                   text: 'Nombre' },
+					{ value: 'telefono',                 text: 'Teléfono' },
+					{ value: 'email',                    text: 'Email' },
+					{ value: 'direccion',                text: 'Dirección' },
+					{ value: 'localidad',                text: 'Localidad' },
+					{ value: 'provincia',                text: 'Provincia' },
+					{ value: 'cuit',                     text: 'CUIT' },
+					{ value: 'cuil',                     text: 'CUIL' },
+					{ value: 'dni',                      text: 'DNI' },
+					{ value: 'razon_social',             text: 'Razón social' },
+					{ value: 'numero',                   text: 'Número de cliente' },
+					{ value: 'vendedor',                 text: 'Vendedor' },
+					{ value: 'condicion_frente_al_iva',  text: 'Condición frente al IVA' },
+					{ value: 'tipo_de_precio',           text: 'Tipo de precio' },
+					{ value: 'saldo_actual',             text: 'Saldo actual' },
+					{ value: 'descripcion',              text: 'Descripción' },
+				]
+			}
+
+			if (this.model === 'provider') {
+				return [
+					ignore_option,
+					{ value: 'nombre',                   text: 'Nombre' },
+					{ value: 'telefono',                 text: 'Teléfono' },
+					{ value: 'email',                    text: 'Email' },
+					{ value: 'direccion',                text: 'Dirección' },
+					{ value: 'localidad',                text: 'Localidad' },
+					{ value: 'cuit',                     text: 'CUIT' },
+					{ value: 'razon_social',             text: 'Razón social' },
+					{ value: 'numero',                   text: 'Número de proveedor' },
+					{ value: 'condicion_frente_al_iva',  text: 'Condición frente al IVA' },
+					{ value: 'observaciones',            text: 'Observaciones' },
+				]
+			}
+
+			/* Opciones para artículos (model === 'article' o default). */
 			return [
-				{ value: null,                text: 'Ignorar columna' },
+				ignore_option,
 				{ value: 'nombre',                text: 'Nombre' },
 				{ value: 'codigo_de_barras',      text: 'Código de barras' },
 				{ value: 'sku',                   text: 'SKU' },
 				{ value: 'codigo_de_proveedor',   text: 'Código de proveedor' },
-				{ value: 'costo',             text: 'Costo' },
-				{ value: 'precio',            text: 'Precio' },
-				{ value: 'iva',               text: 'IVA' },
-				{ value: 'margen_de_ganancia',text: 'Margen de ganancia' },
-				{ value: 'categoria',         text: 'Categoría' },
-				{ value: 'sub_categoria',     text: 'Sub categoría' },
-				{ value: 'marca',             text: 'Marca' },
-				{ value: 'descripcion',       text: 'Descripción' },
-				{ value: 'stock_actual',      text: 'Stock actual' },
-				{ value: 'descuentos',        text: 'Descuentos' },
-				{ value: 'recargos',          text: 'Recargos' },
+				{ value: 'costo',                 text: 'Costo' },
+				{ value: 'precio',                text: 'Precio' },
+				{ value: 'iva',                   text: 'IVA' },
+				{ value: 'margen_de_ganancia',    text: 'Margen de ganancia' },
+				{ value: 'categoria',             text: 'Categoría' },
+				{ value: 'sub_categoria',         text: 'Sub categoría' },
+				{ value: 'marca',                 text: 'Marca' },
+				{ value: 'descripcion',           text: 'Descripción' },
+				{ value: 'stock_actual',          text: 'Stock actual' },
+				{ value: 'descuentos',            text: 'Descuentos' },
+				{ value: 'recargos',              text: 'Recargos' },
 			]
 		},
 
@@ -911,6 +1007,8 @@ export default {
 
 			let form_data = new FormData()
 			form_data.append('excel_file', self.file)
+			/* Informamos al backend qué modelo analizar para elegir el analizador correcto. */
+			form_data.append('model', self.model)
 
 			let config = { headers: { 'content-type': 'multipart/form-data' } }
 
@@ -967,12 +1065,14 @@ export default {
 			this.$store.commit('auth/setLoading', true)
 
 			this.$api.post('ai-excel-import/import', {
-				excel_path:     this.excel_path,
-				columns:        this.build_columns(),
-				provider_id:    this.selected_provider_id,
+				model:           this.model,
+				excel_path:      this.excel_path,
+				columns:         this.build_columns(),
+				provider_id:     this.selected_provider_id,
 				create_and_edit: this.create_and_edit,
-				start_row:      Number(this.start_row),
-				finish_row:     Number(this.finish_row),
+				start_row:       Number(this.start_row),
+				finish_row:      Number(this.finish_row),
+				/* Campos específicos de artículos (ignorados por el backend para client/provider). */
 				registrar_art_cre: true,
 				registrar_art_act: true,
 				permitir_provider_code_repetido:                    this.permitir_provider_code_repetido,
@@ -986,7 +1086,7 @@ export default {
 				this.$store.commit('auth/setLoading', false)
 				this.$store.commit('auth/setMessage', '')
 
-				this.$bvModal.hide('ai-excel-import-modal')
+				this.$bvModal.hide(this.modal_id)
 
 				this.$toast.success(
 					'La importación está en proceso. Te avisaremos cuando termine.',
