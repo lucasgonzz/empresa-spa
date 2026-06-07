@@ -29,11 +29,11 @@
 				class="vender-stage__chevron"></i>
 			</div>
 
-			<!-- Body colapsable de la etapa 1 -->
+			<!-- Body colapsable de la etapa 1 — layout en grilla responsive -->
 			<transition name="stage-collapse">
 				<div
 				v-show="stage1_open"
-				class="vender-stage__body">
+				class="vender-stage__body vender-stage__body--grid">
 
 					<!-- Sucursal — define el depósito de stock -->
 					<div ref="field_address" class="vender-stage__field">
@@ -64,22 +64,28 @@
 						<sale-type></sale-type>
 					</div>
 
-					<!-- Separador visual antes de los campos de cliente -->
-					<hr class="vender-stage__separator">
+					<!-- Separador visual antes de los campos de cliente — ocupa toda la fila -->
+					<hr class="vender-stage__separator" style="grid-column: 1 / -1">
 
 					<!-- Cliente (opcional) -->
 					<div ref="field_client" class="vender-stage__field">
 						<select-client></select-client>
 					</div>
 
-					<!-- Alerta personalizada del cliente seleccionado -->
-					<alertar-personalizado></alertar-personalizado>
+					<!-- Alerta personalizada del cliente seleccionado — ocupa toda la fila -->
+					<div class="vender-stage__field vender-stage__field--full">
+						<alertar-personalizado></alertar-personalizado>
+					</div>
 
-					<!-- Omitir en cuenta corriente -->
-					<omitir-en-cuenta-corriente></omitir-en-cuenta-corriente>
+					<!-- Omitir en cuenta corriente — ocupa toda la fila -->
+					<div class="vender-stage__field vender-stage__field--full">
+						<omitir-en-cuenta-corriente></omitir-en-cuenta-corriente>
+					</div>
 
-					<!-- Guardar como presupuesto -->
-					<guardar-como-presupuesto></guardar-como-presupuesto>
+					<!-- Guardar como presupuesto — ocupa toda la fila -->
+					<div class="vender-stage__field vender-stage__field--full">
+						<guardar-como-presupuesto></guardar-como-presupuesto>
+					</div>
 
 				</div>
 			</transition>
@@ -142,11 +148,11 @@
 				class="vender-stage__chevron"></i>
 			</div>
 
-			<!-- Body colapsable de la etapa 3 -->
+			<!-- Body colapsable de la etapa 3 — layout en grilla responsive -->
 			<transition name="stage-collapse">
 				<div
 				v-show="stage3_open"
-				class="vender-stage__body">
+				class="vender-stage__body vender-stage__body--grid">
 
 					<!-- Punto de venta AFIP -->
 					<div class="vender-stage__field">
@@ -176,31 +182,34 @@
 						<seller></seller>
 					</div>
 
-					<!-- IVA aplicado y descuento de stock (solo si el usuario tiene permisos) -->
+					<!-- IVA aplicado y descuento de stock — ocupa toda la fila (solo si el usuario tiene permisos) -->
 					<div
 					v-if="show_iva_or_discount_stock_controls"
-					class="vender-stage__field j-start">
+					class="vender-stage__field vender-stage__field--full j-start">
 						<iva-aplicado v-if="can_use_iva_aplicado"></iva-aplicado>
 						<discount-stock v-if="can_use_discount_stock"></discount-stock>
 					</div>
 
-					<hr class="vender-stage__separator">
+					<!-- Separador visual — ocupa toda la fila -->
+					<hr class="vender-stage__separator" style="grid-column: 1 / -1">
 
-					<!-- Observaciones e internas -->
-					<div class="vender-stage__field">
+					<!-- Observaciones e internas — ocupa toda la fila -->
+					<div class="vender-stage__field vender-stage__field--full">
 						<observations></observations>
 					</div>
 
-					<!-- Descuentos y recargos (antes en tab Cliente) -->
-					<div class="vender-stage__field">
+					<!-- Descuentos — ocupa toda la fila -->
+					<div class="vender-stage__field vender-stage__field--full">
 						<discounts></discounts>
 					</div>
-					<div class="vender-stage__field">
+
+					<!-- Recargos — ocupa toda la fila -->
+					<div class="vender-stage__field vender-stage__field--full">
 						<surchages></surchages>
 					</div>
 
-					<!-- Nota de crédito -->
-					<div class="vender-stage__field">
+					<!-- Nota de crédito — ocupa toda la fila -->
+					<div class="vender-stage__field vender-stage__field--full">
 						<nota-credito></nota-credito>
 					</div>
 
@@ -464,10 +473,44 @@ export default {
 /* Body de la etapa con padding */
 .vender-stage__body
 	padding: 12px 14px
+	/* Ajuste tipográfico global para las etapas */
+	font-size: 0.875rem
+
+	/* Labels grises del b-input-group-prepend */
+	::v-deep .input-group-text
+		font-size: 0.8rem
+		padding: 4px 10px
+		white-space: nowrap
+
+	/* Inputs y selects dentro de las etapas */
+	::v-deep .form-control,
+	::v-deep .custom-select
+		font-size: 0.875rem
+		height: 36px
+		padding: 4px 10px
+
+	/* Altura uniforme de addons del input-group */
+	::v-deep .input-group-prepend .input-group-text,
+	::v-deep .input-group-append .input-group-text,
+	::v-deep .input-group-append .btn,
+	::v-deep .input-group-prepend .btn
+		height: 36px
 
 	/* Body de etapa 2: sin padding extra */
 	&--always-open
 		padding: 8px 14px
+
+	/*
+	 * Body con layout en grilla responsive para etapas 1 y 3.
+	 * Los campos se distribuyen automáticamente en columnas según el ancho disponible:
+	 * 3-4 columnas en pantallas anchas, 2 en medianas, 1 en móviles.
+	 */
+	&--grid
+		display: grid
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr))
+		gap: 10px 16px
+		align-items: start
+		padding: 14px 16px
 
 /* Contenedor de un campo individual dentro de la etapa */
 .vender-stage__field
@@ -475,6 +518,17 @@ export default {
 
 	&:last-child
 		margin-bottom: 0
+
+	/*
+	 * Campo que debe ocupar el ancho completo de la grilla (todas las columnas).
+	 * Usado para componentes que no tienen un ancho fijo y necesitan toda la fila.
+	 */
+	&--full
+		grid-column: 1 / -1
+
+/* En grilla, el gap maneja el espaciado — eliminar margin-bottom de los campos */
+.vender-stage__body--grid > .vender-stage__field
+	margin-bottom: 0
 
 /* Hint informativo dentro de la etapa */
 .vender-stage__field-hint
