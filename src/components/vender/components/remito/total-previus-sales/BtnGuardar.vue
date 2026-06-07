@@ -33,21 +33,12 @@ export default {
 		BtnLoader,
 	},
 	mixins: [previus_sales, guardar_venta, vender_presupuestos, articulo_pendiente_de_agregar],
-    mounted() {
-        window.addEventListener("keydown", this.detectarTecla);
-    },
-    beforeDestroy() {
-        window.removeEventListener("keydown", this.detectarTecla);
-    },
 	methods: {
-        detectarTecla(event) {
-        	console.log('detectarTecla')
-            // Comprobar si la tecla presionada es F2
-            if (event.key === "F2") {
-                event.preventDefault(); // Evita que el navegador intercepte F2
-                this.saveSale();
-            }
-        },
+		/*
+		 * El atajo F2 para guardar venta fue migrado al mixin keyboard_shortcuts.js
+		 * que se registra en Vender.vue como listener global centralizado.
+		 * Este componente mantiene saveSale() para uso del botón de click.
+		 */
 		saveSale() {
 			if (!this.loader && this.check()) {
 				if (this.guardar_como_presupuesto) {
