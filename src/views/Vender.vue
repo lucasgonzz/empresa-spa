@@ -21,9 +21,6 @@
 		<vender-stages></vender-stages>
 	</div>
 
-	<!-- Widget flotante de resumen (esquina superior derecha) -->
-	<vender-summary-panel></vender-summary-panel>
-
 	<!-- Barra fija inferior de acciones -->
 	<vender-actions-bar></vender-actions-bar>
 </div>
@@ -60,7 +57,6 @@ export default {
 		VenderTopbar: () => import('@/components/vender/components/VenderTopbar'),
 		VenderSummaryBar: () => import('@/components/vender/components/VenderSummaryBar'),
 		VenderStages: () => import('@/components/vender/components/VenderStages'),
-		VenderSummaryPanel: () => import('@/components/vender/components/VenderSummaryPanel'),
 		VenderActionsBar: () => import('@/components/vender/components/VenderActionsBar'),
 	},
 	created() {

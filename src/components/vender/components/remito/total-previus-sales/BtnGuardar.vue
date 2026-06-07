@@ -5,7 +5,8 @@ cols="12"
 class="j-end align-start"
 lg="6">
 
-	<vuelto-efectivo></vuelto-efectivo>
+	<!-- VueltoEfectivo se suprime cuando hide_vuelto es true (barra inferior de acciones) -->
+	<vuelto-efectivo v-if="!hide_vuelto"></vuelto-efectivo>
 
 
 	<btn-loader 
@@ -33,6 +34,17 @@ export default {
 		BtnLoader,
 	},
 	mixins: [previus_sales, guardar_venta, vender_presupuestos, articulo_pendiente_de_agregar],
+	props: {
+		/**
+		 * Cuando es true, suprime el componente VueltoEfectivo.
+		 * Usado por VenderActionsBar para evitar duplicar el vuelto
+		 * (que ya se muestra inline en VenderContextBar).
+		 */
+		hide_vuelto: {
+			type: Boolean,
+			default: false,
+		},
+	},
 	methods: {
 		/*
 		 * El atajo F2 para guardar venta fue migrado al mixin keyboard_shortcuts.js

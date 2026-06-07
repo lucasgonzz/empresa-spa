@@ -101,11 +101,14 @@
 				</div>
 			</div>
 
-			<!-- Body siempre visible -->
-			<div class="vender-stage__body vender-stage__body--always-open">
+		<!-- Body siempre visible -->
+		<div class="vender-stage__body vender-stage__body--always-open">
 
-				<!-- Buscadores de artículos -->
-				<header-form></header-form>
+			<!-- Barra de contexto horizontal: total, cliente, método de pago y checklist -->
+			<vender-context-bar></vender-context-bar>
+
+			<!-- Buscadores de artículos -->
+			<header-form></header-form>
 
 				<!-- Indicador de ventas anteriores vinculadas -->
 				<previus-sale-data></previus-sale-data>
@@ -243,6 +246,7 @@ export default {
 		GuardarComoPresupuesto,
 
 		/* Etapa 2 */
+		VenderContextBar: () => import('@/components/vender/components/VenderContextBar'),
 		HeaderForm,
 		PreviusSaleData,
 		ArticlesTable,

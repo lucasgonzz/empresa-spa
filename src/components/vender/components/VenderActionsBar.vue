@@ -27,7 +27,8 @@
 		v-if="items.length"
 		class="vender-actions-bar__item vender-actions-bar__guardar-wrap">
 			<kbd class="vender-actions-bar__kbd">F2</kbd>
-			<btn-guardar></btn-guardar>
+			<!-- hide_vuelto=true: el vuelto se muestra en VenderContextBar, no aquí -->
+			<btn-guardar :hide_vuelto="true"></btn-guardar>
 		</div>
 
 	</div>
@@ -163,14 +164,6 @@ export default {
 		padding: 0
 		width: auto
 		flex: none
-
-	/* Vuelto en efectivo: flotar sobre la barra si aplica */
-	::v-deep .vuelto-efectivo
-		position: absolute
-		bottom: 60px
-		right: 16px
-		z-index: 91
-		min-width: 220px
 
 	/* Botón principal más compacto y destacado para la barra inferior */
 	::v-deep button.venta-total-box
