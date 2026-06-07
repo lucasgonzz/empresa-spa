@@ -13,20 +13,20 @@
 				{{ total | currency }}
 			</div>
 
-			<!-- Badge de descuento por método de pago si aplica -->
-			<div
-			v-if="payment_method_discount_label"
-			class="vender-summary-panel__discount-badge">
-				<b-icon icon="tag-fill"></b-icon>
-				{{ payment_method_discount_label }}
-			</div>
+		<!-- Badge de descuento por método de pago si aplica -->
+		<div
+		v-if="payment_method_discount_label"
+		class="vender-summary-panel__discount-badge">
+			<i class="icon-list"></i>
+			{{ payment_method_discount_label }}
+		</div>
 		</div>
 
 		<!-- ── Mini card del cliente seleccionado ── -->
 		<div
 		v-if="client"
 		class="vender-summary-panel__client-card">
-			<b-icon icon="person-circle" class="vender-summary-panel__client-icon"></b-icon>
+			<i class="icon-user vender-summary-panel__client-icon"></i>
 			<div class="vender-summary-panel__client-info">
 				<span class="vender-summary-panel__client-name">{{ client.name }}</span>
 				<span
@@ -38,31 +38,25 @@
 		<!-- ── Checklist de estado de la venta ── -->
 		<div class="vender-summary-panel__checklist">
 			<div class="vender-summary-panel__check-item">
-				<b-icon
-				:icon="has_address ? 'check-circle-fill' : 'circle'"
-				:class="has_address ? 'text-success' : 'text-muted'">
-				</b-icon>
+				<i
+				:class="has_address ? 'icon-check text-success' : 'icon-right text-muted'">
+				</i>
 				<span>Sucursal</span>
 			</div>
 			<div class="vender-summary-panel__check-item">
-				<b-icon
-				:icon="has_payment_method ? 'check-circle-fill' : 'circle'"
-				:class="has_payment_method ? 'text-success' : 'text-muted'">
-				</b-icon>
+				<i
+				:class="has_payment_method ? 'icon-check text-success' : 'icon-right text-muted'">
+				</i>
 				<span>Método de pago</span>
 			</div>
 			<div class="vender-summary-panel__check-item">
-				<b-icon
-				:icon="has_articles ? 'check-circle-fill' : 'circle'"
-				:class="has_articles ? 'text-success' : 'text-muted'">
-				</b-icon>
+				<i
+				:class="has_articles ? 'icon-check text-success' : 'icon-right text-muted'">
+				</i>
 				<span>Artículos ({{ items.length }})</span>
 			</div>
 			<div class="vender-summary-panel__check-item">
-				<b-icon
-				icon="circle"
-				class="text-muted">
-				</b-icon>
+				<i class="icon-right text-muted"></i>
 				<span>Cierre pendiente</span>
 			</div>
 		</div>

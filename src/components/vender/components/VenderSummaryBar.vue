@@ -12,13 +12,13 @@
 		<div
 		v-if="selected_address"
 		class="vender-summary-bar__chip">
-			<b-icon icon="building" class="vender-summary-bar__chip-icon"></b-icon>
+			<i class="icon-clipboard vender-summary-bar__chip-icon"></i>
 			<span class="vender-summary-bar__chip-text">{{ selected_address.street }}</span>
 			<button
 			class="vender-summary-bar__chip-edit"
 			title="Editar sucursal"
 			@click="expandStage1('address')">
-				<b-icon icon="pencil"></b-icon>
+				<i class="icon-edit"></i>
 			</button>
 		</div>
 
@@ -26,13 +26,13 @@
 		<div
 		v-if="selected_payment_method"
 		class="vender-summary-bar__chip">
-			<b-icon icon="credit-card" class="vender-summary-bar__chip-icon"></b-icon>
+			<i class="icon-dolar vender-summary-bar__chip-icon"></i>
 			<span class="vender-summary-bar__chip-text">{{ selected_payment_method.name }}</span>
 			<button
 			class="vender-summary-bar__chip-edit"
 			title="Editar método de pago"
 			@click="expandStage1('payment_method')">
-				<b-icon icon="pencil"></b-icon>
+				<i class="icon-edit"></i>
 			</button>
 		</div>
 
@@ -40,13 +40,13 @@
 		<div
 		v-if="price_type_vender"
 		class="vender-summary-bar__chip">
-			<b-icon icon="tag" class="vender-summary-bar__chip-icon"></b-icon>
+			<i class="icon-list vender-summary-bar__chip-icon"></i>
 			<span class="vender-summary-bar__chip-text">{{ price_type_vender.name }}</span>
 			<button
 			class="vender-summary-bar__chip-edit"
 			title="Editar lista de precios"
 			@click="expandStage1('price_type')">
-				<b-icon icon="pencil"></b-icon>
+				<i class="icon-edit"></i>
 			</button>
 		</div>
 
@@ -54,13 +54,13 @@
 		<div
 		v-if="client"
 		class="vender-summary-bar__chip vender-summary-bar__chip--client">
-			<b-icon icon="person" class="vender-summary-bar__chip-icon"></b-icon>
+			<i class="icon-user vender-summary-bar__chip-icon"></i>
 			<span class="vender-summary-bar__chip-text">{{ client.name }}</span>
 			<button
 			class="vender-summary-bar__chip-edit"
 			title="Editar cliente"
 			@click="expandStage1('client')">
-				<b-icon icon="pencil"></b-icon>
+				<i class="icon-edit"></i>
 			</button>
 		</div>
 

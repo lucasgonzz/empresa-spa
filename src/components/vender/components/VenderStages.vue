@@ -24,10 +24,9 @@
 					<span class="vender-stage__label">Configuración inicial</span>
 					<span class="vender-stage__sublabel">Sucursal, método de pago, lista de precios y cliente</span>
 				</div>
-				<b-icon
-				:icon="stage1_open ? 'chevron-up' : 'chevron-down'"
-				class="vender-stage__chevron">
-				</b-icon>
+				<i
+				:class="stage1_open ? 'icon-up' : 'icon-down'"
+				class="vender-stage__chevron"></i>
 			</div>
 
 			<!-- Body colapsable de la etapa 1 -->
@@ -38,10 +37,10 @@
 
 					<!-- Sucursal — define el depósito de stock -->
 					<div ref="field_address" class="vender-stage__field">
-						<p class="vender-stage__field-hint">
-							<b-icon icon="info-circle"></b-icon>
-							La sucursal define el depósito de stock utilizado para la venta.
-						</p>
+					<p class="vender-stage__field-hint">
+						<i class="icon-info"></i>
+						La sucursal define el depósito de stock utilizado para la venta.
+					</p>
 						<select-address></select-address>
 					</div>
 
@@ -135,10 +134,9 @@
 					<span class="vender-stage__label">Cierre y opciones</span>
 					<span class="vender-stage__sublabel">AFIP, estado, empleado, descuentos y observaciones</span>
 				</div>
-				<b-icon
-				:icon="stage3_open ? 'chevron-up' : 'chevron-down'"
-				class="vender-stage__chevron">
-				</b-icon>
+				<i
+				:class="stage3_open ? 'icon-up' : 'icon-down'"
+				class="vender-stage__chevron"></i>
 			</div>
 
 			<!-- Body colapsable de la etapa 3 -->
