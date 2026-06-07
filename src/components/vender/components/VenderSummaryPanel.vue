@@ -1,91 +1,104 @@
 <template>
 	<!--
-		Panel derecho de resumen de la venta.
-		Siempre visible y fijo mientras el usuario edita el panel izquierdo.
-		Muestra: total, descuento por método de pago, cliente, checklist, botones.
+		Widget flotante de resumen de la venta.
+		Posicionado en la esquina superior derecha, colapsable con persistencia en localStorage.
+		Muestra: total, descuento por método de pago, cliente, checklist de estado.
 	-->
-	<div class="vender-summary-panel">
+	<div
+	class="vender-summary-panel"
+	:class="{ 'vender-summary-panel--collapsed': is_collapsed }">
 
-		<!-- ── Bloque de total ── -->
-		<div class="vender-summary-panel__total-block">
-			<div class="vender-summary-panel__total-label">Total</div>
-			<div class="vender-summary-panel__total-amount">
-				{{ total | currency }}
-			</div>
-
-		<!-- Badge de descuento por método de pago si aplica -->
+		<!-- Header con botón de colapsar/expandir -->
 		<div
-		v-if="payment_method_discount_label"
-		class="vender-summary-panel__discount-badge">
-			<i class="icon-list"></i>
-			{{ payment_method_discount_label }}
-		</div>
+		class="vender-summary-panel__header"
+		@click="toggle_collapsed">
+			<span class="vender-summary-panel__header-title">
+				{{ is_collapsed ? '▶' : '▼' }} Resumen
+			</span>
 		</div>
 
-		<!-- ── Mini card del cliente seleccionado ── -->
+		<!-- Contenido expandible -->
 		<div
-		v-if="client"
-		class="vender-summary-panel__client-card">
-			<i class="icon-user vender-summary-panel__client-icon"></i>
-			<div class="vender-summary-panel__client-info">
-				<span class="vender-summary-panel__client-name">{{ client.name }}</span>
-				<span
-				v-if="client.phone"
-				class="vender-summary-panel__client-phone">{{ client.phone }}</span>
-			</div>
-		</div>
+		v-show="!is_collapsed"
+		class="vender-summary-panel__body">
 
-		<!-- ── Checklist de estado de la venta ── -->
-		<div class="vender-summary-panel__checklist">
-			<div class="vender-summary-panel__check-item">
-				<i
-				:class="has_address ? 'icon-check text-success' : 'icon-right text-muted'">
-				</i>
-				<span>Sucursal</span>
-			</div>
-			<div class="vender-summary-panel__check-item">
-				<i
-				:class="has_payment_method ? 'icon-check text-success' : 'icon-right text-muted'">
-				</i>
-				<span>Método de pago</span>
-			</div>
-			<div class="vender-summary-panel__check-item">
-				<i
-				:class="has_articles ? 'icon-check text-success' : 'icon-right text-muted'">
-				</i>
-				<span>Artículos ({{ items.length }})</span>
-			</div>
-			<div class="vender-summary-panel__check-item">
-				<i class="icon-right text-muted"></i>
-				<span>Cierre pendiente</span>
-			</div>
-		</div>
+			<!-- ── Bloque de total ── -->
+			<div class="vender-summary-panel__total-block">
+				<div class="vender-summary-panel__total-label">Total</div>
+				<div class="vender-summary-panel__total-amount">
+					{{ total | currency }}
+				</div>
 
-		<!-- ── Comprobantes de ventas previas ── -->
-		<div class="vender-summary-panel__previus">
-			<total-previus-sales></total-previus-sales>
-		</div>
+				<!-- Badge de descuento por método de pago si aplica -->
+				<div
+				v-if="payment_method_discount_label"
+				class="vender-summary-panel__discount-badge">
+					<i class="icon-list"></i>
+					{{ payment_method_discount_label }}
+				</div>
+			</div>
 
-		<!-- ── Botones inferiores: imprimir y limpiar ── -->
-		<div class="vender-summary-panel__actions">
-			<print></print>
-			<limpiar-vender></limpiar-vender>
-		</div>
+			<!-- ── Mini card del cliente seleccionado ── -->
+			<div
+			v-if="client"
+			class="vender-summary-panel__client-card">
+				<i class="icon-user vender-summary-panel__client-icon"></i>
+				<div class="vender-summary-panel__client-info">
+					<span class="vender-summary-panel__client-name">{{ client.name }}</span>
+					<span
+					v-if="client.phone"
+					class="vender-summary-panel__client-phone">{{ client.phone }}</span>
+				</div>
+			</div>
 
+			<!-- ── Checklist de estado de la venta ── -->
+			<div class="vender-summary-panel__checklist">
+				<div class="vender-summary-panel__check-item">
+					<i
+					:class="has_address ? 'icon-check text-success' : 'icon-right text-muted'">
+					</i>
+					<span>Sucursal</span>
+				</div>
+				<div class="vender-summary-panel__check-item vender-summary-panel__check-item--payment">
+					<i
+					:class="has_payment_method ? 'icon-check text-success' : 'icon-right text-muted'">
+					</i>
+					<div class="vender-summary-panel__check-item-text">
+						<span>Método de pago</span>
+						<span
+						v-if="selected_payment_method"
+						class="vender-summary-panel__check-detail">
+							{{ selected_payment_method.name }}
+						</span>
+						<span
+						v-if="is_cuenta_corriente"
+						class="vender-summary-panel__cuenta-corriente">
+							· A cuenta corriente
+						</span>
+					</div>
+				</div>
+				<div class="vender-summary-panel__check-item">
+					<i
+					:class="has_articles ? 'icon-check text-success' : 'icon-right text-muted'">
+					</i>
+					<span>Artículos ({{ items.length }})</span>
+				</div>
+				<div class="vender-summary-panel__check-item">
+					<i class="icon-right text-muted"></i>
+					<span>Cierre pendiente</span>
+				</div>
+			</div>
+
+		</div>
 	</div>
 </template>
 
 <script>
+/* Key de localStorage para persistir el estado colapsado/expandido del widget */
+const STORAGE_KEY_COLLAPSED = 'vender_summary_collapsed'
+
 export default {
 	name: 'VenderSummaryPanel',
-	components: {
-		/* Total, btn guardar y alertas previas de venta */
-		TotalPreviusSales: () => import('@/components/vender/components/remito/total-previus-sales/Index.vue'),
-		/* Botón de imprimir (maneja F4 internamente) */
-		Print: () => import('@/components/vender/components/remito/header-2/buttons/Print'),
-		/* Botón de limpiar venta */
-		LimpiarVender: () => import('@/components/vender/components/remito/header-2/buttons/LimpiarVender'),
-	},
 	filters: {
 		/**
 		 * Formatea un número como moneda con dos decimales.
@@ -97,6 +110,19 @@ export default {
 			if (typeof value !== 'number') return '$ 0,00'
 			return '$ ' + value.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')
 		},
+	},
+	data() {
+		return {
+			/* Estado colapsado del widget; se carga desde localStorage en created() */
+			is_collapsed: false,
+		}
+	},
+	created() {
+		/* Restaurar preferencia de colapso desde localStorage */
+		const saved = localStorage.getItem(STORAGE_KEY_COLLAPSED)
+		if (saved === '1' || saved === 'true') {
+			this.is_collapsed = true
+		}
 	},
 	computed: {
 		/**
@@ -181,27 +207,81 @@ export default {
 			}
 			return null
 		},
+
+		/**
+		 * Indica si la venta se guardará a cuenta corriente.
+		 * Misma lógica que AdvertenciaCuentaCorriente.vue.
+		 *
+		 * @returns {boolean}
+		 */
+		is_cuenta_corriente() {
+			return !!(
+				this.$store.state.vender.client
+				&& this.$store.state.vender.omitir_en_cuenta_corriente == 0
+				&& this.$store.state.vender.budget === null
+				&& !this.$store.state.vender.guardar_como_presupuesto
+			)
+		},
+	},
+	methods: {
+		/**
+		 * Alterna el estado colapsado/expandido y persiste en localStorage.
+		 */
+		toggle_collapsed() {
+			this.is_collapsed = !this.is_collapsed
+			localStorage.setItem(STORAGE_KEY_COLLAPSED, this.is_collapsed ? '1' : '0')
+		},
 	},
 }
 </script>
 
 <style scoped lang="sass">
-/* Panel derecho de resumen de venta */
+/* Widget flotante de resumen de venta */
 .vender-summary-panel
-	height: 100%
-	display: flex
-	flex-direction: column
-	overflow-y: auto
-	background: var(--bg-card, #fff)
-	border-left: 1px solid var(--color-border-tertiary, #dee2e6)
+	position: fixed
+	top: 60px
+	right: 16px
+	width: 300px
+	z-index: 100
+	background: var(--color-bg, #fff)
+	border: 1px solid #e0e0e0
+	border-radius: 10px
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12)
+	padding: 0
+	overflow: hidden
+
+	/* Estado colapsado: solo muestra el header */
+	&--collapsed
+		.vender-summary-panel__total-block
+			display: none
+
+/* Header clickeable para colapsar/expandir */
+.vender-summary-panel__header
+	padding: 10px 16px
+	cursor: pointer
+	user-select: none
+	border-bottom: 1px solid var(--color-border-tertiary, #e0e0e0)
+	background: var(--bg-section, #f8f9fa)
+	transition: background 0.15s
+
+	&:hover
+		background: var(--bg-hover, #e9ecef)
+
+.vender-summary-panel__header-title
+	font-size: 0.82rem
+	font-weight: 600
+	color: var(--color-text-primary, #212529)
+
+/* Cuerpo del widget con padding interno */
+.vender-summary-panel__body
+	padding: 0 0 16px
 
 /* Bloque de total en azul destacado */
 .vender-summary-panel__total-block
 	background: var(--color-primary, #007bff)
 	color: #fff
-	padding: 20px 16px 16px
+	padding: 16px
 	text-align: center
-	flex-shrink: 0
 
 .vender-summary-panel__total-label
 	font-size: 0.8rem
@@ -211,7 +291,7 @@ export default {
 	margin-bottom: 4px
 
 .vender-summary-panel__total-amount
-	font-size: 2rem
+	font-size: 1.6rem
 	font-weight: 700
 	line-height: 1.1
 
@@ -231,10 +311,9 @@ export default {
 	display: flex
 	align-items: center
 	gap: 8px
-	padding: 10px 14px
+	padding: 10px 16px
 	border-bottom: 1px solid var(--color-border-tertiary, #dee2e6)
 	background: var(--bg-section, #f8f9fa)
-	flex-shrink: 0
 
 .vender-summary-panel__client-icon
 	font-size: 1.5rem
@@ -256,31 +335,33 @@ export default {
 
 /* Checklist de estado */
 .vender-summary-panel__checklist
-	padding: 12px 14px
+	padding: 12px 16px
 	display: flex
 	flex-direction: column
 	gap: 6px
-	border-bottom: 1px solid var(--color-border-tertiary, #dee2e6)
-	flex-shrink: 0
 
 .vender-summary-panel__check-item
 	display: flex
-	align-items: center
+	align-items: flex-start
 	gap: 6px
 	font-size: 0.82rem
 	color: var(--color-text-primary, #212529)
 
-/* Área de total previus sales (incluye BtnGuardar) */
-.vender-summary-panel__previus
-	padding: 10px 14px
-	flex: 1
+/* Ítem de método de pago con detalle en columna */
+.vender-summary-panel__check-item--payment
+	align-items: flex-start
 
-/* Botones inferiores (print + limpiar) */
-.vender-summary-panel__actions
-	padding: 10px 14px
-	border-top: 1px solid var(--color-border-tertiary, #dee2e6)
+.vender-summary-panel__check-item-text
 	display: flex
-	gap: 8px
-	flex-wrap: wrap
-	flex-shrink: 0
+	flex-direction: column
+	gap: 1px
+
+.vender-summary-panel__check-detail
+	font-size: 0.78rem
+	color: var(--color-text-secondary, #6c757d)
+
+/* Subtexto de cuenta corriente */
+.vender-summary-panel__cuenta-corriente
+	font-size: 0.78rem
+	color: var(--color-text-secondary, #6c757d)
 </style>

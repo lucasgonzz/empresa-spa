@@ -384,6 +384,8 @@ export default {
 	height: 100%
 	overflow-y: auto
 	padding: 8px
+	/* Espacio inferior para no quedar tapado por la barra de acciones fija */
+	padding-bottom: 56px
 
 /* Bloque de una etapa individual */
 .vender-stage
