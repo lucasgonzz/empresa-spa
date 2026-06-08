@@ -6,20 +6,21 @@
 	:id="id"
 	:variant="variant"
 	:text="text_dropdown">
-		<b-dropdown-item
+		<dropdown-option-item
 		v-if="puede_actualizar && show_actualizar_option && !ocultar_actualizar_eliminar_por_filtro"
 		id="btn_actualizar"
+		icon="icon-undo"
 		@click="setUpdate">
-			<i class="icon-undo"></i>
 			Actualizar
-		</b-dropdown-item>
-		<b-dropdown-item
+		</dropdown-option-item>
+		<dropdown-option-item
 		id="btn_eliminar"
 		v-if="puede_eliminar && !ocultar_actualizar_eliminar_por_filtro"
-		@click="setDelete"> 
-			<i class="icon-trash"></i>
+		icon="icon-trash"
+		variant="danger"
+		@click="setDelete">
 			Eliminar
-		</b-dropdown-item>
+		</dropdown-option-item>
 		<slot
 		name="options_drop_down"></slot>
 		<slot
@@ -30,6 +31,9 @@
 </template>
 <script>
 export default {
+	components: {
+		DropdownOptionItem: () => import('@/common-vue/components/view/header/opciones-filtrados-seleccion/DropdownOptionItem'),
+	},
 	props: {
 		model_name: String,
 		from_filter: Boolean,

@@ -262,7 +262,8 @@ $nav_item_radius: 8px
 
 .container-fluid
 	@media screen and (min-width: 768px)
-		padding-left: $nav_collapsed_visible + 8px !important
+		padding-left: $nav_collapsed_visible + 15 !important
+		padding-right: 15px !important
 
 .active-mobile-nav
 	transform: translateX(0px) !important

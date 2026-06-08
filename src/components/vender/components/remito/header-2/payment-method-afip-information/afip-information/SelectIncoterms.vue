@@ -1,8 +1,11 @@
 <template>
-	<b-form-select
-	:options="options"
-	@change="change"
-	v-model="incoterms"></b-form-select>
+	<b-input-group
+	prepend="Condición de venta">
+		<b-form-select
+		:options="options"
+		@change="change"
+		v-model="incoterms"></b-form-select>
+	</b-input-group>
 </template>
 <script>
 export default {

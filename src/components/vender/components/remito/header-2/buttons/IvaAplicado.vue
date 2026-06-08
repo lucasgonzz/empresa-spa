@@ -1,17 +1,20 @@
 <template>
-	<b-form-checkbox
-	v-model="iva_aplicado">
+	<vender-toggle v-model="iva_aplicado">
 		Precios con IVA
-	</b-form-checkbox>
+	</vender-toggle>
 </template>
 <script>
+import VenderToggle from '@/components/vender/components/VenderToggle'
 import vender_set_total from '@/mixins/vender_set_total'
 
 export default {
+	components: {
+		VenderToggle,
+	},
 	mixins: [vender_set_total],
 	computed: {
 		/*
-		 * Computed con getter/setter para enlazar el checkbox con el store.
+		 * Computed con getter/setter para enlazar el toggle con el store.
 		 * Lee y escribe vender/iva_aplicado como boolean y recalcula el total.
 		 */
 		iva_aplicado: {

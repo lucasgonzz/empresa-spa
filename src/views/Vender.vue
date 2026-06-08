@@ -1,5 +1,5 @@
 <template>
-<div id="vender" style="display: flex; flex-direction: column; height: 100vh; overflow: hidden;">
+<div id="vender" class="vender-view">
 
 	<!-- Modales y overlays globales del módulo -->
 	<new-article></new-article>
@@ -12,7 +12,7 @@
 	<vender-topbar></vender-topbar>
 
 	<!-- Barra de resumen de Etapa 1 (chips de configuración seleccionada) -->
-	<vender-summary-bar></vender-summary-bar>
+	<vender-stage1-summary-bar></vender-stage1-summary-bar>
 
 	<!-- Área principal: wizard de etapas a ancho completo -->
 	<div
@@ -55,7 +55,7 @@ export default {
 
 		/* Layout del wizard de venta */
 		VenderTopbar: () => import('@/components/vender/components/VenderTopbar'),
-		VenderSummaryBar: () => import('@/components/vender/components/VenderSummaryBar'),
+		VenderStage1SummaryBar: () => import('@/components/vender/components/VenderStage1SummaryBar'),
 		VenderStages: () => import('@/components/vender/components/VenderStages'),
 		VenderActionsBar: () => import('@/components/vender/components/VenderActionsBar'),
 	},
@@ -98,6 +98,24 @@ export default {
 
 <style lang="sass">
 /* Estilos globales del módulo Vender (no scoped para afectar sub-componentes) */
+#vender.vender-view
+	display: flex
+	flex-direction: column
+	height: 100vh
+	/* Permite que barras full-bleed salgan del padding del container-fluid */
+	overflow-x: visible
+	overflow-y: hidden
+
+.vender-full-bleed
+	box-sizing: border-box
+	width: calc(100% + 30px)
+	margin-left: -15px
+	margin-right: -15px
+
+/* Evita que el padding del container-fluid recorte las barras full-bleed */
+.container-fluid:has(#vender)
+	overflow-x: visible
+
 #vender
 	.input-group
 		.input-group-prepend, .input-group-append

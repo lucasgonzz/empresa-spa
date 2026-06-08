@@ -5,25 +5,22 @@
 		:afip_data="afip_data"
 		:client_model="client_model_for_afip_modal"></modal-result>
 
-		<div
-		v-if="index_previus_sales == 0 && !budget">
-			<search-component
-			class="m-b-15"
-			id="select_client_vender"
-			@setSelected="setSelected"
-			:prop="{text: 'Cliente', key: 'client_id'}"
-			:model="_vender.client"
-			model_name="client"
-			:props_to_filter="['num', 'name', 'phone', 'dni', 'cuit']"
-			show_btn_create
-			search_from_api
-			:tax_id_afip_lookup_on_second_enter="true"
-			placeholder="Buscar cliente, CUIT o DNI"
-			:props_extras="props_extras"
-			set_selected_model_with_model_prop
-			@requestClientAfipLookup="onRequestClientAfipLookup"
-			@clearSelected="clearSelected"></search-component>
-		</div>
+		<search-component
+		v-if="index_previus_sales == 0 && !budget"
+		id="select_client_vender"
+		@setSelected="setSelected"
+		:prop="{text: 'Cliente', key: 'client_id'}"
+		:model="_vender.client"
+		model_name="client"
+		:props_to_filter="['num', 'name', 'phone', 'dni', 'cuit']"
+		show_btn_create
+		search_from_api
+		:tax_id_afip_lookup_on_second_enter="true"
+		placeholder="Buscar cliente, CUIT o DNI"
+		:props_extras="props_extras"
+		set_selected_model_with_model_prop
+		@requestClientAfipLookup="onRequestClientAfipLookup"
+		@clearSelected="clearSelected"></search-component>
 		<div
 		v-else-if="client">
 			<p
@@ -56,8 +53,9 @@ export default {
 	// mixins: [vender, vender_set_total],
 	components: {
 		SearchComponent: () => import('@/common-vue/components/search/Index'),
-		ModalResult: () => import('@/components/vender/components/client/buscar-por-cuit/ModalResult'),
-	}, 
+		/* Modal de resultado AFIP — ubicado en la subcarpeta de esta etapa */
+		ModalResult: () => import('./buscar-por-cuit/ModalResult'),
+	},
 	data() {
 		return {
 			afip_modal_title: '',
@@ -67,14 +65,14 @@ export default {
 	},
 	computed: {
 		price_types() {
-			return this.$store.state.price_type.models 
+			return this.$store.state.price_type.models
 		},
 		_vender: {
 			get() {
 				return this.$store.state.vender
 			},
 			set(value) {
-				
+
 			}
 		},
 		send_mail: {
@@ -104,13 +102,13 @@ export default {
 			} else {
 				this.setItemsPrices(false, false)
 			}
-			this.setTotal() 
-			// this.$store.commit('vender/setTotal') 
+			this.setTotal()
+			// this.$store.commit('vender/setTotal')
 		},
 	},
 	methods: {
 		/**
-		 * Segundo Enter en el buscador sin resultados: consulta AFIP por CUIT o DNI y abre el modal de alta/uso de cliente.
+		 * Segundo Enter en el buscador sin resultados: consulta AFIP por CUIT o DNI y abre el modal.
 		 *
 		 * @param {{ query: string, normalized_digits: string }} payload Criterio original y solo dígitos para la URL.
 		 */
@@ -155,12 +153,12 @@ export default {
 
 			// this.bloquear_metodo_de_pago()
 			this.bloquear_caja()
-			
-			let client = result.model 
+
+			let client = result.model
 			this.$store.commit('vender/setClient', client)
 
 			this.setPriceType()
-			
+
 			this.set_afip_tipo_comprobante()
 		},
 		clearSelected() {
@@ -180,8 +178,8 @@ export default {
 	justify-content: space-between
 	align-items: flex-start
 	margin-bottom: 15px
-	& > div 
-		margin-bottom: 0 !important 
+	& > div
+		margin-bottom: 0 !important
 		width: 80%
 
 .selected-client

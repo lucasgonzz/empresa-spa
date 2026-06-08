@@ -6,7 +6,7 @@
 	-->
 	<div
 	v-if="has_any_data"
-	class="vender-summary-bar">
+	class="vender-summary-bar vender-full-bleed">
 
 		<!-- Chip: Sucursal -->
 		<div
@@ -69,7 +69,7 @@
 
 <script>
 export default {
-	name: 'VenderSummaryBar',
+	name: 'VenderStage1SummaryBar',
 	computed: {
 		/**
 		 * Sucursal (address) actualmente seleccionada en la venta.
@@ -132,7 +132,7 @@ export default {
 	methods: {
 		/**
 		 * Emite el evento para expandir la Etapa 1 con foco en el campo indicado.
-		 * VenderStages escucha este evento para abrir la etapa y hacer scroll al campo.
+		 * VenderStage1 escucha este evento para abrir la etapa y hacer scroll al campo.
 		 *
 		 * @param {string} field - Nombre del campo a enfocar ('address', 'payment_method', 'price_type', 'client')
 		 */
@@ -150,7 +150,7 @@ export default {
 	flex-wrap: wrap
 	align-items: center
 	gap: 6px
-	padding: 5px 12px
+	padding: 5px 15px
 	background: var(--bg-section, #f8f9fa)
 	border-bottom: 1px solid var(--color-border-tertiary, #dee2e6)
 	flex-shrink: 0

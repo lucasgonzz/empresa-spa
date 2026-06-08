@@ -1,13 +1,13 @@
 <template>
-	<div>
+	<b-input-group
+	v-if="facturando"
+	prepend="Tipo Comprobante">
 		<b-form-select
 		:disabled="disabled"
-		v-if="facturando"
-		class="m-t-5"
-		v-model="afip_tipo_comprobante_id" 
+		v-model="afip_tipo_comprobante_id"
 		id="afip_tipo_comprobante_id"
-		:options="getOptions({key: 'afip_tipo_comprobante_id', text: 'Tipo Comprobante'})"></b-form-select> 
-	</div>
+		:options="getOptions({key: 'afip_tipo_comprobante_id', text: 'Tipo Comprobante'})"></b-form-select>
+	</b-input-group>
 </template>
 <script>
 import vender from '@/mixins/vender'

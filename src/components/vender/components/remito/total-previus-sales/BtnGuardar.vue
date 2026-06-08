@@ -1,25 +1,44 @@
 <template>
-<b-col 
-v-if="items.length"
-cols="12"
-class="j-end align-start"
-lg="6">
+	<!-- Layout inline para VenderActionsBar (sin b-col ni btn-block) -->
+	<div
+	v-if="items.length && inline_layout"
+	class="btn-guardar-inline">
 
-	<!-- VueltoEfectivo se suprime cuando hide_vuelto es true (barra inferior de acciones) -->
-	<vuelto-efectivo v-if="!hide_vuelto"></vuelto-efectivo>
+		<vuelto-efectivo v-if="!hide_vuelto"></vuelto-efectivo>
 
+		<btn-loader
+		:disabled="loader"
+		class="venta-total-box"
+		icon="check"
+		:text="text_btn"
+		:loader="loader"
+		:block="false"
+		dusk="btn_vender"
+		@clicked="saveSale">
+		</btn-loader>
 
-	<btn-loader 
-	:disabled="loader"
-    class="venta-total-box"
-	icon="check"
-	:text="text_btn"
-	:loader="loader"
-	dusk="btn_vender"
-	@clicked="saveSale">
-	</btn-loader>
+	</div>
 
-</b-col>
+	<!-- Layout original en grilla Bootstrap -->
+	<b-col
+	v-else-if="items.length"
+	cols="12"
+	class="j-end align-start"
+	lg="6">
+
+		<vuelto-efectivo v-if="!hide_vuelto"></vuelto-efectivo>
+
+		<btn-loader
+		:disabled="loader"
+		class="venta-total-box"
+		icon="check"
+		:text="text_btn"
+		:loader="loader"
+		dusk="btn_vender"
+		@clicked="saveSale">
+		</btn-loader>
+
+	</b-col>
 </template>
 <script>
 import BtnLoader from '@/common-vue/components/BtnLoader'
@@ -38,9 +57,17 @@ export default {
 		/**
 		 * Cuando es true, suprime el componente VueltoEfectivo.
 		 * Usado por VenderActionsBar para evitar duplicar el vuelto
-		 * (que ya se muestra inline en VenderContextBar).
+		 * (que ya se muestra inline en VenderStage2ContextBar).
 		 */
 		hide_vuelto: {
+			type: Boolean,
+			default: false,
+		},
+		/**
+		 * Cuando es true, renderiza un div simple en lugar de b-col
+		 * y desactiva btn-block para uso en la barra inferior fija.
+		 */
+		inline_layout: {
 			type: Boolean,
 			default: false,
 		},
@@ -143,4 +170,10 @@ button.venta-total-box
 	width: 200px
 	font-size: 1.4rem
 	font-weight: bold
+
+/* Contenedor inline para la barra inferior de acciones */
+.btn-guardar-inline
+	display: inline-flex
+	align-items: center
+	width: auto
 </style>

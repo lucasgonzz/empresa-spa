@@ -3,6 +3,7 @@
 v-if="user"
 class="m-b-15">
 	<b-row
+	class="row-form-header"
 	v-if="show">
 		<article-bar-code></article-bar-code>
 		<article-name></article-name>
@@ -51,3 +52,8 @@ export default {
 	},
 }
 </script>
+<style lang="sass">
+.row-form-header 
+	align-items: flex-start
+
+</style>

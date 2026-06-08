@@ -7,6 +7,9 @@ export default {
 			not_show_on_form: true,
 		},
 		{
+			group_title: 'Datos generales',
+		},
+		{
 			key: 'actualizar_en_vender',
 			text: 'Actualizar desde VENDER',
 			not_show: true,
@@ -23,7 +26,7 @@ export default {
 			only_show: true,
 		},
 		{
-			text: 'Direccion',
+			text: 'Sucursal',
 			key: 'address_id',
 			relation_prop_name: 'street',
 			type: 'select',
@@ -46,6 +49,22 @@ export default {
 			show: true,
 		},
 		{
+			text: 'Estado del presupuesto',
+			key: 'budget_status_id',
+			type: 'select',
+			value: 1,
+			show: true,
+			filterable: true,
+			use_to_filter_in_modal: true,
+		},
+		{
+			text: 'Empleado',
+			key: 'employee_id',
+			use_store_models: true,
+			type: 'search',
+			only_show: true,
+		},
+		{
 			text: 'Observaciones',
 			key: 'observations',
 			type: 'textarea',
@@ -62,11 +81,15 @@ export default {
 			v_if_function: 'show_budget_sale_status_id'
 		},
 		{
+			group_title: 'Productos y servicios',
+		},
+		{
 			text: 'Descontar stock',
 			key: 'discount_stock',
 			type: 'checkbox',
 			value: true,
 			show: true,
+			only_show: true,
 			description: 'Si está activo, al confirmar el presupuesto la venta generada descontará stock (artículos y promociones).',
 		},
 		{
@@ -76,21 +99,6 @@ export default {
 			value: true,
 			show: true,
 			description: 'Se guarda en el presupuesto y se aplica al generar la venta al confirmar; coherente con el flag en VENDER.',
-		},
-		{
-			text: 'Estado del presupuesto',
-			key: 'budget_status_id',
-			type: 'select',
-			value: 1,
-			show: true,
-			filterable: true,
-			use_to_filter_in_modal: true,
-		},
-		{
-			text: 'Empleado',
-			key: 'employee_id',
-			use_store_models: true,
-			type: 'search',
 			only_show: true,
 		},
 		{
@@ -250,6 +258,10 @@ export default {
 					},
 				],
 			}
+		},
+
+		{
+			group_title: 'Descuentos y recargos'
 		},
 		{
 			text: 'Descuentos',

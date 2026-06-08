@@ -60,7 +60,7 @@ export default {
 
         /**
          * F3 — Expandir Etapa 1 y posicionar el foco en el método de pago.
-         * VenderStages escucha este evento y abre la etapa si estaba colapsada.
+         * VenderStage1 escucha este evento y abre la etapa si estaba colapsada.
          */
         _shortcut_foco_payment_method() {
             this.$root.$emit('vender:expand-stage1', 'payment_method')
@@ -68,7 +68,7 @@ export default {
 
         /**
          * F5 — Expandir Etapa 1 y posicionar el foco en el selector de cliente.
-         * VenderStages escucha este evento y abre la etapa si estaba colapsada.
+         * VenderStage1 escucha este evento y abre la etapa si estaba colapsada.
          */
         _shortcut_foco_client() {
             this.$root.$emit('vender:expand-stage1', 'client')

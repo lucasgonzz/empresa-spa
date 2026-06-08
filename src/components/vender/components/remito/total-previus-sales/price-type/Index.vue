@@ -1,6 +1,7 @@
 <template>
-	<div
-	v-if="show">
+	<b-input-group
+	v-if="show"
+	prepend="Lista de precios">
 		<b-form-select
 		:disabled="is_disabled"
 		v-model="price_type_id"
@@ -12,7 +13,7 @@
 		class="price-type-name text-success">
 		    Lista {{ price_type_vender.name }}
 		</h5> -->
-	</div>
+	</b-input-group>
 </template>
 <script>
 import vender from '@/mixins/vender'

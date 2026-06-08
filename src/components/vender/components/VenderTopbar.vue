@@ -1,6 +1,6 @@
 <template>
 	<!-- Barra superior del módulo Vender con los atajos de teclado activos -->
-	<div class="vender-topbar">
+	<div class="vender-topbar vender-full-bleed">
 		<span class="vender-topbar__title">Vender</span>
 
 		<!-- Lista de atajos activos; en el futuro serán configurables por usuario -->
@@ -46,10 +46,11 @@ export default {
 	display: flex
 	align-items: center
 	gap: 16px
-	padding: 6px 12px
+	box-sizing: border-box
+	flex-shrink: 0
 	background: var(--bg-section, #f8f9fa)
 	border-bottom: 1px solid var(--color-border-tertiary, #dee2e6)
-	flex-shrink: 0
+	padding: 6px 15px
 
 	/* Título del módulo */
 	&__title

@@ -1,6 +1,5 @@
 <template>
-<div
-:class="['m-b-15', topMarginClass]">
+<div>
 	<hr>
 	<b-row>
 		<b-col>
@@ -217,13 +216,19 @@
 					</div>
 				</template>
 			</b-table>
-			<div 
-			v-else>
-				<p
-				dusk="text_remito"
-				class="text-with-icon-2">
-					<i class="icon-clipboard"></i>
-					Remito en blanco
+			<!-- Estado vacío: se muestra cuando el remito aún no tiene artículos -->
+			<div
+			v-else
+			dusk="text_remito"
+			class="remito-empty-state">
+				<div class="remito-empty-state__icon">
+					<i class="icon-list"></i>
+				</div>
+				<p class="remito-empty-state__title">
+					Aún no hay artículos
+				</p>
+				<p class="remito-empty-state__hint">
+					Buscá o escaneá un código para agregar el primero
 				</p>
 			</div>
 		</b-col>
@@ -249,9 +254,9 @@ export default {
 		},
 	},
 	computed: {
-		topMarginClass() {
-			return this.$store.state.auth.user?.inputs_size?.slug === 'small' ? 'm-t-10' : 'm-t-70'
-		},
+		// topMarginClass() {
+		// 	return this.$store.state.auth.user?.inputs_size?.slug === 'small' ? 'm-t-10' : 'm-t-70'
+		// },
 		special_price_id() {
 			return this.$store.state.vender.special_price_id
 		},
@@ -731,4 +736,40 @@ export default {
 
 .options 
 	width: 140px
+
+/* Estado vacío del remito: fondo blanco para diferenciarlo de los headers de etapa (#f8f9fa) */
+.remito-empty-state
+	display: flex
+	flex-direction: column
+	align-items: center
+	justify-content: center
+	gap: 6px
+	padding: 2.5rem 1.5rem
+	border: 1px dashed var(--color-border, #ced4da)
+	border-radius: 8px
+	background: var(--bg-card, #fff)
+	text-align: center
+
+.remito-empty-state__icon
+	display: flex
+	align-items: center
+	justify-content: center
+	width: 48px
+	height: 48px
+	margin-bottom: 4px
+	border-radius: 50%
+	background: var(--bg-section, #f8f9fa)
+	color: var(--color-text-secondary, #6c757d)
+	font-size: 1.35rem
+
+.remito-empty-state__title
+	margin: 0
+	font-size: 0.95rem
+	font-weight: 600
+	color: var(--color-text-primary, #212529)
+
+.remito-empty-state__hint
+	margin: 0
+	font-size: 0.82rem
+	color: var(--color-text-secondary, #6c757d)
 </style>

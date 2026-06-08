@@ -1,7 +1,8 @@
 <template>
 <div>
 	<b-input-group
-	class="cont-payment-methods">
+	class="cont-payment-methods"
+	prepend="Mét. pago">
 		
 		<b-form-select
 		:disabled="disabled"

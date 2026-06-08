@@ -1,28 +1,25 @@
 <template>
-	<b-card
+	<div
 	v-if="client && !guardar_como_presupuesto"
-	class="m-b-25 m-t-25 b-r-1 shadow">
+	class="vender-client-block">
 
-		<b-form-group
-		label-for="dias_alerta_venta_no_cobrada_personalizado"
-		:label="'Alerta de cobro de esta venta (opcional)'">
+		<b-input-group prepend="Alerta cobro">
 			<b-form-input
 			id="dias_alerta_venta_no_cobrada_personalizado"
 			type="number"
 			min="0"
 			step="1"
-			placeholder="Vacío = usar días configurados para tu usuario"
+			placeholder="Días (vacío = config. usuario)"
 			:value="dias_alerta_display"
 			@input="on_input_dias_alerta">
 			</b-form-input>
-			<small
-			class="text-muted d-block m-t-10">
-				Si no completás el campo, las alertas de ventas sin cobrar usan los días definidos en la configuración del negocio o empleado.
-				Si indicás un número, esta venta pasará a las alertas cuando lleve esos días sin estar cobrada (según cuenta corriente).
-			</small>
-		</b-form-group>
+		</b-input-group>
 
-	</b-card>
+		<p class="vender-client-block__hint">
+			Vacío usa los días del negocio o empleado. Un número fija el umbral solo para esta venta en cuenta corriente.
+		</p>
+
+	</div>
 </template>
 <script>
 /**

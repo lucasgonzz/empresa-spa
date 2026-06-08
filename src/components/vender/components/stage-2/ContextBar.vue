@@ -94,7 +94,7 @@
 
 <script>
 export default {
-	name: 'VenderContextBar',
+	name: 'ContextBar',
 	filters: {
 		/**
 		 * Formatea un número como moneda con dos decimales y separadores de miles.
@@ -147,7 +147,6 @@ export default {
 		 * @returns {number}
 		 */
 		total_unidades() {
-			/* Acumular la cantidad de cada ítem; si no tiene amount asumir 1 */
 			let suma = 0
 			this.items.forEach(item => {
 				suma += Number(item.amount) || 1
@@ -166,7 +165,6 @@ export default {
 
 		/**
 		 * Indica si la venta irá a cuenta corriente del cliente.
-		 * Misma lógica que AdvertenciaCuentaCorriente.vue.
 		 *
 		 * @returns {boolean}
 		 */
@@ -238,7 +236,6 @@ export default {
 
 		/**
 		 * ID del método de pago efectivo.
-		 * Corresponde a current_acount_payment_method_id (igual que VueltoEfectivo.vue).
 		 *
 		 * @returns {number|null}
 		 */
@@ -257,7 +254,6 @@ export default {
 
 		/**
 		 * Monto en efectivo que el cliente debe pagar.
-		 * Copiado exactamente de VueltoEfectivo.vue para mantener consistencia.
 		 *
 		 * @returns {number}
 		 */
@@ -286,7 +282,6 @@ export default {
 	methods: {
 		/**
 		 * Formatea un número como precio con separadores de miles y decimales.
-		 * Se usa dentro del template donde no aplica el filtro currency.
 		 *
 		 * @param {number} value
 		 * @returns {string}
@@ -298,12 +293,11 @@ export default {
 
 		/**
 		 * Calcula el vuelto a partir del monto ingresado por el operador.
-		 * Si el monto es insuficiente muestra un toast de error (igual que VueltoEfectivo.vue).
+		 * Si el monto es insuficiente muestra un toast de error.
 		 */
 		calcular_vuelto() {
 			const vuelto = Number(this.pago_del_cliente) - Number(this.monto_efectivo)
 			if (vuelto > 0) {
-				/* Mostrar el vuelto calculado */
 				this.vuelto_calculado = vuelto
 			} else {
 				this.$toast.error('Dinero insuficiente')
@@ -353,7 +347,7 @@ export default {
 
 /* Valor principal (grande) de cada bloque */
 .vender-context-bar__main-value
-	font-size: 0.92rem
+	font-size: 1.5rem
 	font-weight: 700
 	color: var(--color-text-primary, #212529)
 	white-space: nowrap

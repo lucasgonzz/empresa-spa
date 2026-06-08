@@ -27,8 +27,11 @@
 		v-if="items.length"
 		class="vender-actions-bar__item vender-actions-bar__guardar-wrap">
 			<kbd class="vender-actions-bar__kbd">F2</kbd>
-			<!-- hide_vuelto=true: el vuelto se muestra en VenderContextBar, no aquí -->
-			<btn-guardar :hide_vuelto="true"></btn-guardar>
+			<!-- inline_layout evita que b-col cols="12" ocupe todo el ancho de la barra -->
+			<btn-guardar
+			:hide_vuelto="true"
+			:inline_layout="true">
+			</btn-guardar>
 		</div>
 
 	</div>
@@ -132,44 +135,75 @@ export default {
 	display: flex
 	justify-content: center
 	align-items: center
+	flex-wrap: nowrap
 	gap: 12px
 	background: var(--color-bg, #fff)
 	border-top: 1px solid var(--color-border-tertiary, #e0e0e0)
 	z-index: 90
 	padding: 0 16px
+	overflow: visible
 
 /* Contenedor de cada botón en la barra */
 .vender-actions-bar__item
-	display: flex
+	display: inline-flex
 	align-items: center
+	flex-shrink: 0
+	position: relative
+
+	/* Evitar que wrappers internos ocupen el 100% del ancho de la barra */
+	::v-deep > div
+		display: inline-flex
+		align-items: center
+		width: auto
+		max-width: none
+		flex: 0 0 auto
 
 /* Ocultar WhatsApp dentro de Print para no duplicar (se muestra aparte) */
 .vender-actions-bar__print
+	::v-deep .j-start
+		display: inline-flex
+		align-items: center
+		width: auto
+
 	::v-deep .j-start > *:last-child
 		display: none !important
 
-/* Quitar margen izquierdo heredado de LimpiarVender */
+/* Quitar margen izquierdo heredado de LimpiarVender y WhatsApp */
 .vender-actions-bar__item
 	::v-deep .m-l-10
 		margin-left: 0 !important
 
 /* Contenedor del botón guardar con atajo F2 */
 .vender-actions-bar__guardar-wrap
-	display: flex
+	display: inline-flex
 	align-items: center
 	gap: 8px
+	flex-shrink: 0
 
-	/* Resetear layout de columna Bootstrap de BtnGuardar */
-	::v-deep .col-12
-		padding: 0
-		width: auto
-		flex: none
+	/* BtnGuardar usa b-col cols="12" que por defecto ocupa el 100% del ancho */
+	/* En la barra inferior hay que anular ese comportamiento de grilla Bootstrap */
+	::v-deep .col,
+	::v-deep .col-12,
+	::v-deep [class*="col-"]
+		flex: 0 0 auto !important
+		max-width: none !important
+		width: auto !important
+		padding: 0 !important
+		position: static !important
+		display: inline-flex !important
+		align-items: center !important
+		justify-content: flex-start !important
 
-	/* Botón principal más compacto y destacado para la barra inferior */
-	::v-deep button.venta-total-box
+	/* BtnLoader usa block=true; anular btn-block para que no se superponga */
+	::v-deep button.venta-total-box,
+	::v-deep button.venta-total-box.btn-block
+		display: inline-flex !important
+		align-items: center
+		justify-content: center
 		height: 40px
 		min-width: 200px
-		width: auto
+		width: auto !important
+		max-width: none !important
 		font-size: 1rem
 		font-weight: 700
 		padding: 0 20px

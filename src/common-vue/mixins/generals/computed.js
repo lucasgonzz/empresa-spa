@@ -15,12 +15,18 @@ export default {
             return this.user && (this.is_owner || this.user.admin_access)
         },
         owner_id() {
+            if (!this.user) {
+                return null
+            }
             if (this.user.owner_id) {
                 return this.user.owner_id
             }
             return this.user.id
         },
         owner() {
+            if (!this.user) {
+                return null
+            }
             if (this.is_owner) {
                 return this.user
             }

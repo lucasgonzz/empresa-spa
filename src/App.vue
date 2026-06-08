@@ -77,7 +77,9 @@ export default {
                  * Redirección de seguridad: si se pierde la sesión, volver a `login`.
                  * Evita quedar en vistas privadas sin autorización o en rutas inexistentes.
                  */
-                this.$router.replace({name: 'login'})
+                if (this.$route.name !== 'login') {
+                    this.$router.replace({name: 'login'}).catch(() => {})
+                }
             } else {
                 // this.check_online()
                 this.check_version()

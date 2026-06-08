@@ -1,13 +1,16 @@
 <template>
-	<b-form-checkbox
-	class="m-l-20"
+	<vender-toggle
 	v-model="discount_stock"
 	:disabled="is_disabled">
 		Descontar stock
-	</b-form-checkbox>
+	</vender-toggle>
 </template>
 <script>
+import VenderToggle from '@/components/vender/components/VenderToggle'
 export default {
+	components: {
+		VenderToggle,
+	},
 	computed: {
 		/*
 		 * Venta previa que se está actualizando (si existe).
@@ -19,7 +22,7 @@ export default {
 		},
 
 		/*
-		 * El checkbox se deshabilita cuando se está actualizando una venta
+		 * El toggle se deshabilita cuando se está actualizando una venta
 		 * que ya tenía discount_stock activado (ya descontó stock en algún momento).
 		 * Una vez que se activó y se guardó, no puede desactivarse.
 		 */
@@ -30,7 +33,7 @@ export default {
 		},
 
 		/*
-		 * Computed con getter/setter para enlazar el checkbox con el store.
+		 * Computed con getter/setter para enlazar el toggle con el store.
 		 * Lee y escribe el estado vender/discount_stock como boolean.
 		 */
 		discount_stock: {

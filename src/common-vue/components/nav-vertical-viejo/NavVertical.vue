@@ -120,14 +120,16 @@ export default {
 			console.log('setShow')
 			this.show_nav_mobile = !this.show_nav_mobile
 		}
-	}
+	} 
 }
 </script>
 <style lang="sass">
 @import '@/sass/_custom'
-.container-fluid
-	@media screen and (min-width: 768px)
-		padding-left: 65px !important
+// .container-fluid
+// 	@media screen and (min-width: 768px)
+// 		// padding-left: 50px !important
+// 		padding-left: 65px !important
+// 		padding-right: 15px !important 
 
 .active-mobile-nav
 	transform: translateX(0px) !important
