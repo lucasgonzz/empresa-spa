@@ -18,6 +18,14 @@
 		show_excel_drop_down
 		:show_previus_days="false">
 
+			<template #horizontal_nav_center>
+				<!-- Buscador rápido por texto para proveedores: busca en los campos principales del modelo -->
+				<buscador-rapido
+				model_name="provider"
+				:props_to_filter="['name', 'phone', 'address', 'email', 'razon_social', 'cuit', 'observations']"
+				placeholder="Buscar proveedor..."></buscador-rapido>
+			</template>
+
 			<template v-slot:table_left_options="slotProps">
 				<btn-current-acounts
 				:model="slotProps.model"
@@ -44,6 +52,7 @@ export default {
 		BtnCurrentAcounts: () => import('@/components/common/BtnCurrentAcounts'),
 		ComercioCityUser: () => import('@/components/common/ComercioCityUser'),
 		AiExcelImportModal: () => import('@/components/listado/modals/ai-excel-import/Index'),
+		BuscadorRapido: () => import('@/common-vue/components/buscador-rapido/Index'),
 	},
 }
 </script>

@@ -83,6 +83,10 @@ export default function __base_store(options = {}) {
 			loading: false,
 
 			props_to_show: [],
+
+			// Flag que indica si el estado filtered fue cargado por BuscadorRapido (sin usar el FilterForm).
+			// Permite distinguir entre "filtrado por formulario" y "filtrado por buscador rápido".
+			filtered_without_filter_form: false,
 		}
 
 		/**
@@ -304,6 +308,17 @@ export default function __base_store(options = {}) {
 		setLoadingFiltered(state, value) {
 			state.loading_filtered = value
 		},
+
+		/**
+		 * Activa o desactiva el flag que indica que filtered fue cargado
+		 * por BuscadorRapido (sin pasar por el formulario de filtros).
+		 *
+		 * @param {Object} state  Estado del módulo.
+		 * @param {Boolean} value true cuando viene del buscador rápido, false en cualquier reset.
+		 */
+		set_filtered_without_filter_form(state, value) {
+			state.filtered_without_filter_form = value
+		},
 	}
 
 	/**
@@ -359,6 +374,8 @@ export default function __base_store(options = {}) {
 			commit('setSelected', [])
 			commit('setFiltered', [])
 			commit('setIsFiltered', false)
+			// Resetear el flag de buscador rápido al recargar modelos desde el servidor.
+			commit('set_filtered_without_filter_form', false)
 			if (state.use_per_page) {
 				commit('setPage', 1)
 				commit('setModels', [])
@@ -530,6 +547,8 @@ export default function __base_store(options = {}) {
 			commit('setSelected', [])
 			commit('setFiltered', [])
 			commit('setIsFiltered', false)
+			// Resetear el flag de buscador rápido al recargar modelos desde el servidor.
+			commit('set_filtered_without_filter_form', false)
 			if (state.use_per_page) {
 				commit('setPage', 1)
 				commit('setModels', [])

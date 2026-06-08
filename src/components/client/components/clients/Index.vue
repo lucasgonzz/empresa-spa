@@ -28,9 +28,15 @@
 	    		:model="slotProps.model"></create-buyer>
 			</template>
 
-			<template #horizontal_nav_center>
-				<saldos-clientes-filtrados></saldos-clientes-filtrados>
-			</template>
+		<template #horizontal_nav_center>
+			<saldos-clientes-filtrados></saldos-clientes-filtrados>
+
+			<!-- Buscador rápido por texto para clientes: busca en los campos más comunes del modelo -->
+			<buscador-rapido
+			model_name="client"
+			:props_to_filter="['name', 'email', 'phone', 'address', 'cuil', 'cuit', 'dni', 'razon_social', 'description', 'link_google_maps']"
+			placeholder="Buscar cliente..."></buscador-rapido>
+		</template>
 
 			<template v-slot:table_left_options="slotProps">
 				<btn-current-acounts
@@ -51,6 +57,7 @@ export default {
 		Import: () => import('@/components/client/components/clients/Import'),
 		BtnPdf: () => import('@/components/client/components/clients/BtnPdf'),
 		AiExcelImportModal: () => import('@/components/listado/modals/ai-excel-import/Index'),
+		BuscadorRapido: () => import('@/common-vue/components/buscador-rapido/Index'),
 	}
 }
 </script>
