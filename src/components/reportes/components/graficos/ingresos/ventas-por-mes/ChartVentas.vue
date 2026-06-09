@@ -56,9 +56,12 @@ export default {
 				return
 			}
 
+			/* Variables para acumular los valores de cada serie por mes */
 			let labels = []
 			let total_vendido = []
+			/* deuda_clientes y deuda_proveedores son stock (no flujo): se empuja null si no hay snapshot */
 			let deuda_clientes = []
+			let deuda_proveedores = []
 			let ingresos_brutos = []
 			let ingresos_netos = []
 			let rentabilidad = []
@@ -71,26 +74,36 @@ export default {
 			let total_comprado = []
 			let total_pagado_a_proveedores = []
 
-			this.meses_anteriores.forEach(meses_anteriores => {
-				labels.push(meses_anteriores.fecha)
-				total_vendido.push(meses_anteriores.total_vendido)
-				deuda_clientes.push(meses_anteriores.deuda_clientes)
-				ingresos_brutos.push(meses_anteriores.total_vendido)
-				ingresos_netos.push(meses_anteriores.ingresos_netos)
-				rentabilidad.push(meses_anteriores.rentabilidad)
-				gastos.push(meses_anteriores.total_gastos)
-				total_vendido_a_cuenta_corriente.push(meses_anteriores.total_vendido_a_cuenta_corriente)
-				total_pagado_a_cuenta_corriente.push(meses_anteriores.total_pagado_a_cuenta_corriente)
-				total_pagado_mostrador.push(meses_anteriores.total_pagado_mostrador)
-				iva_vendido.push(meses_anteriores.total_facturado)
-				iva_comprado.push(meses_anteriores.total_iva_comprado)
-				total_comprado.push(meses_anteriores.total_comprado)
-				total_pagado_a_proveedores.push(meses_anteriores.total_pagado_a_proveedores)
+			this.meses_anteriores.forEach(mes => {
+				labels.push(mes.fecha)
+				total_vendido.push(mes.total_vendido)
+
+				/* Si no hay snapshot para el mes, pushear null para que Chart.js no dibuje la barra */
+				deuda_clientes.push(
+					mes.snapshot_disponible ? mes.deuda_clientes : null
+				)
+				deuda_proveedores.push(
+					mes.snapshot_disponible ? mes.deuda_proveedores : null
+				)
+
+				ingresos_brutos.push(mes.total_vendido)
+				ingresos_netos.push(mes.ingresos_netos)
+				rentabilidad.push(mes.rentabilidad)
+				gastos.push(mes.total_gastos)
+				total_vendido_a_cuenta_corriente.push(mes.total_vendido_a_cuenta_corriente)
+				total_pagado_a_cuenta_corriente.push(mes.total_pagado_a_cuenta_corriente)
+				total_pagado_mostrador.push(mes.total_pagado_mostrador)
+				iva_vendido.push(mes.total_facturado)
+				iva_comprado.push(mes.total_iva_comprado)
+				total_comprado.push(mes.total_comprado)
+				total_pagado_a_proveedores.push(mes.total_pagado_a_proveedores)
 			})
 
 			let datasets = [
 				this.build_monthly_dataset('Ingresos Brutos', '#3B82F6', total_vendido, false),
-				this.build_monthly_dataset('Deuda clientes', '#64748B', deuda_clientes, true),
+				/* Deuda al cierre del mes: ocultas por defecto, el usuario las activa si las quiere ver */
+				this.build_monthly_dataset('Deuda Clientes (cierre)', '#64748B', deuda_clientes, true),
+				this.build_monthly_dataset('Deuda Proveedores (cierre)', '#D97706', deuda_proveedores, true),
 				this.build_monthly_dataset('Vendido a C/C', '#EF4444', total_vendido_a_cuenta_corriente, true),
 				this.build_monthly_dataset('Ingresos por C/C', '#B91C1C', total_pagado_a_cuenta_corriente, true),
 				this.build_monthly_dataset('Ingresos mostrador', '#F59E0B', total_pagado_mostrador, true),

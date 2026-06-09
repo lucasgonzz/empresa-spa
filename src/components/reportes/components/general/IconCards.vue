@@ -344,37 +344,113 @@ export default {
 
 
 
-				{
-					group_name: 'Deudas',
-					cards: [
+			{
+				group_name: 'Deudas',
+				/* Si es reporte del día actual (mes_inicio null): mostrar deuda actual en tiempo real.
+				   Si es rango de fechas: mostrar deuda al inicio y al fin del período desde snapshots.
+				   Si no hay snapshot disponible: mostrar aviso con '—' en lugar del número. */
+				cards: this.mes_inicio === null
+					? [
+						/* Reporte del día actual: deuda calculada en tiempo real por el backend */
 						{
 							text: 'Deudas de Clientes',
 							img: 'deuda-clientes',
 							value: this.price(this.model.deuda_clientes, false, false),
-							description: 'Sumatoria de los saldos ACTUALES de tus clientes',
+							description: 'Saldo total actual de tus clientes',
 						},
 						{
 							text: 'Deudas de Clientes USD',
 							img: 'deuda-clientes',
 							value: this.price(this.model.deuda_clientes_usd, false, false),
-							description: 'Sumatoria de los saldos ACTUALES de tus clientes',
+							description: 'Saldo total actual de tus clientes',
 							if_has_extencion: 'ventas_en_dolares',
 						},
 						{
 							text: 'Deudas con Proveedores',
 							img: 'deuda-clientes',
 							value: this.price(this.model.deuda_proveedores, false, false),
-							description: 'Sumatoria de los saldos ACTUALES de tus proveedores',
+							description: 'Saldo total actual de tus proveedores',
 						},
 						{
 							text: 'Deudas con Proveedores USD',
 							img: 'deuda-clientes',
 							value: this.price(this.model.deuda_proveedores_usd, false, false),
-							description: 'Sumatoria de los saldos ACTUALES de tus proveedores',
+							description: 'Saldo total actual de tus proveedores',
 							if_has_extencion: 'ventas_en_dolares',
 						},
+					]
+					: [
+						/* Reporte de rango de fechas: deuda al inicio y al fin del período (snapshots históricos) */
+						{
+							text: 'Clientes (inicio período)',
+							img: 'deuda-clientes',
+							value: this.snapshot_disponible ? this.price(this.model.deuda_clientes_inicio, false, false) : '—',
+							description: this.snapshot_disponible
+								? 'Saldo de clientes al inicio del período seleccionado'
+								: '⚠️ No hay datos históricos disponibles para este período. Los snapshots se generan a partir de hoy.',
+						},
+						{
+							text: 'Clientes (fin período)',
+							img: 'deuda-clientes',
+							value: this.snapshot_disponible ? this.price(this.model.deuda_clientes_fin, false, false) : '—',
+							description: this.snapshot_disponible
+								? 'Saldo de clientes al cierre del período seleccionado'
+								: '⚠️ No hay datos históricos disponibles para este período. Los snapshots se generan a partir de hoy.',
+						},
+						{
+							text: 'Clientes USD (inicio período)',
+							img: 'deuda-clientes',
+							if_has_extencion: 'ventas_en_dolares',
+							value: this.snapshot_disponible ? this.price(this.model.deuda_clientes_usd_inicio, false, false) : '—',
+							description: this.snapshot_disponible
+								? 'Saldo de clientes en USD al inicio del período seleccionado'
+								: '⚠️ No hay datos históricos disponibles para este período. Los snapshots se generan a partir de hoy.',
+						},
+						{
+							text: 'Clientes USD (fin período)',
+							img: 'deuda-clientes',
+							if_has_extencion: 'ventas_en_dolares',
+							value: this.snapshot_disponible ? this.price(this.model.deuda_clientes_usd_fin, false, false) : '—',
+							description: this.snapshot_disponible
+								? 'Saldo de clientes en USD al cierre del período seleccionado'
+								: '⚠️ No hay datos históricos disponibles para este período. Los snapshots se generan a partir de hoy.',
+						},
+						{
+							text: 'Proveedores (inicio período)',
+							img: 'deuda-clientes',
+							value: this.snapshot_disponible ? this.price(this.model.deuda_proveedores_inicio, false, false) : '—',
+							description: this.snapshot_disponible
+								? 'Saldo de proveedores al inicio del período seleccionado'
+								: '⚠️ No hay datos históricos disponibles para este período. Los snapshots se generan a partir de hoy.',
+						},
+						{
+							text: 'Proveedores (fin período)',
+							img: 'deuda-clientes',
+							value: this.snapshot_disponible ? this.price(this.model.deuda_proveedores_fin, false, false) : '—',
+							description: this.snapshot_disponible
+								? 'Saldo de proveedores al cierre del período seleccionado'
+								: '⚠️ No hay datos históricos disponibles para este período. Los snapshots se generan a partir de hoy.',
+						},
+						{
+							text: 'Proveedores USD (inicio período)',
+							img: 'deuda-clientes',
+							if_has_extencion: 'ventas_en_dolares',
+							value: this.snapshot_disponible ? this.price(this.model.deuda_proveedores_usd_inicio, false, false) : '—',
+							description: this.snapshot_disponible
+								? 'Saldo de proveedores en USD al inicio del período seleccionado'
+								: '⚠️ No hay datos históricos disponibles para este período. Los snapshots se generan a partir de hoy.',
+						},
+						{
+							text: 'Proveedores USD (fin período)',
+							img: 'deuda-clientes',
+							if_has_extencion: 'ventas_en_dolares',
+							value: this.snapshot_disponible ? this.price(this.model.deuda_proveedores_usd_fin, false, false) : '—',
+							description: this.snapshot_disponible
+								? 'Saldo de proveedores en USD al cierre del período seleccionado'
+								: '⚠️ No hay datos históricos disponibles para este período. Los snapshots se generan a partir de hoy.',
+						},
 					],
-				},
+			},
 
 				
 				{
@@ -540,6 +616,28 @@ export default {
 		// 	})
 		// 	return deuda
 		// },
+		/**
+		 * Retorna null cuando el reporte es del día actual, o la fecha string cuando es rango.
+		 * Se usa para distinguir entre reporte del día (sin snapshots) y rango de fechas (con snapshots).
+		 *
+		 * @returns {string|null}
+		 */
+		mes_inicio() {
+			/* Solo es rango de fechas cuando rango_temporal == 'rango-de-fechas' */
+			if (this.$store.state.reportes.rango_temporal !== 'rango-de-fechas') {
+				return null
+			}
+			return this.$store.state.reportes.mes_inicio
+		},
+		/**
+		 * Indica si el modelo de reporte tiene snapshots de deuda disponibles para el período.
+		 * false significa que no hay datos históricos y se debe mostrar el aviso correspondiente.
+		 *
+		 * @returns {boolean}
+		 */
+		snapshot_disponible() {
+			return this.model.snapshot_disponible !== false
+		},
 		model() {
 			return this.$store.state.reportes.model
 		},
