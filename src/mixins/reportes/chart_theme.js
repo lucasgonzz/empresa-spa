@@ -2,6 +2,9 @@
  * Tema visual compartido para gráficos de reportes (Chart.js 2).
  * Centraliza colores, ejes, leyenda, tooltips y datalabels sin alterar el cálculo de datos.
  */
+// Desregistro global del plugin datalabels al cargar cualquier gráfico con tema de reportes
+import '@/plugins/chart_datalabels'
+
 export default {
 	data() {
 		return {

@@ -1,9 +1,10 @@
 <script>
 import { Bar } from 'vue-chartjs'
 import moment from 'moment'
-import 'chartjs-plugin-datalabels'
+import chart_datalabels from '@/mixins/reportes/chart_datalabels'
 export default {
 	extends: Bar,
+	mixins: [chart_datalabels],
 	computed: { 
 		providers() {  
 			return this.$store.state.reportes.article_purchase.providers

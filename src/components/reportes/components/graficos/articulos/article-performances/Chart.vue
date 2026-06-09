@@ -1,11 +1,11 @@
 <script>
 import { Bar } from 'vue-chartjs'
-import 'chartjs-plugin-datalabels'
 import chart_theme from '@/mixins/reportes/chart_theme'
+import chart_datalabels from '@/mixins/reportes/chart_datalabels'
 
 export default {
 	extends: Bar,
-	mixins: [chart_theme],
+	mixins: [chart_theme, chart_datalabels],
 	computed: {
 		article_performances() {
 			return this.$store.state.reportes.article_performance.models

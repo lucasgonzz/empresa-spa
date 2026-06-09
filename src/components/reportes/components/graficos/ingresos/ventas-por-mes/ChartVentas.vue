@@ -123,11 +123,6 @@ export default {
 				labels: labels,
 				datasets: datasets,
 			}, this.get_reportes_bar_chart_options({
-				plugins: {
-					datalabels: {
-						display: false,
-					},
-				},
 				tooltips: {
 					callbacks: {
 						label: function(tooltip_item, data) {

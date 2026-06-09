@@ -2,13 +2,34 @@
 	<b-button
 	block
 	@click="buscar"
-	variant="primary"> 
+	:disabled="disabled"
+	variant="primary">
 		Buscar
 	</b-button>
 </template>
 <script>
 export default {
 	computed: {
+		/* Modo temporal del selector de fechas de reportes */
+		rango_temporal() {
+			return this.$store.state.reportes.rango_temporal
+		},
+
+		/* Rango inválido cuando la fecha de inicio es posterior a la de fin */
+		fecha_invalida() {
+			if (!this.mes_inicio || !this.mes_fin) {
+				return false
+			}
+			return this.mes_inicio > this.mes_fin
+		},
+
+		/* Solo se puede buscar con rango de fechas completo y válido */
+		disabled() {
+			if (this.rango_temporal != 'rango-de-fechas') {
+				return true
+			}
+			return !this.mes_inicio || !this.mes_fin || this.fecha_invalida
+		},
 		client_id() {
 			return this.$store.state.reportes.article_purchase.client_id
 		},
@@ -38,7 +59,14 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Dispara la búsqueda de artículos vendidos según filtros y rango de fechas del store.
+		 */
 		buscar() {
+			if (this.disabled) {
+				return
+			}
+
 			this.$store.commit('auth/setMessage', 'Buscando')
 			this.$store.commit('auth/setLoading', true)
 				this.$store.commit('reportes/article_purchase/set_loading', true)

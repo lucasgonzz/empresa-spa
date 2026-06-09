@@ -7,7 +7,7 @@
 				<div class="horizontal-nav date-mode-selector">
 					<div
 					class="item apretable"
-					:class="{ active: rango_temporal == 'dia-actual', 'is-disabled': is_article_view }"
+					:class="{ active: rango_temporal == 'dia-actual' }"
 					@click="set_mode('dia-actual')">
 						Hoy
 					</div>
@@ -73,20 +73,7 @@ export default {
 	components: {
 		InfoTime: () => import('@/components/reportes/components/general/select-date/InfoTime'),
 	},
-	watch: {
-		/* Cuando el usuario cambia a la vista de artículos, se fuerza el modo rango */
-		view() {
-			if (this.is_article_view) {
-				this.set_mode('rango-de-fechas')
-			}
-		},
-	},
 	computed: {
-		/* Indica si la vista activa es la de artículos (donde se fuerza rango) */
-		is_article_view() {
-			return this.view == 'articulos'
-		},
-
 		/* El botón Buscar se deshabilita si faltan fechas o el rango es inválido */
 		disabled() {
 			if (this.rango_temporal == 'rango-de-fechas') {
@@ -138,11 +125,6 @@ export default {
 		 * @param {string} mode - Valor del modo a activar
 		 */
 		set_mode(mode) {
-			/* En vista artículos solo se permite rango de fechas */
-			if (mode == 'dia-actual' && this.is_article_view) {
-				return
-			}
-
 			this.$store.commit('reportes/setRangoTemporal', mode)
 		},
 
