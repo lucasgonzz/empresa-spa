@@ -153,6 +153,19 @@ export default {
 			.then(res => {
 				this.$store.commit('auth/setLoading', false)
 				this.$store.commit('auth/setMessage', '')
+
+				// Eliminación encolada: el listado se actualiza al recibir la notificación global.
+				if (res.data.queued) {
+					let queued_count = res.data.queued_count || 0
+					this.$toast.success(
+						'La eliminación se está procesando (' + queued_count + ' registros). Te avisaremos cuando termine.',
+						{ duration: 5000 }
+					)
+					this.$store.commit(this.model_name+'/setSelected', [])
+					this.$bvModal.hide(this.model_name+'-delete-models')
+					return
+				}
+
 				res.data.models.forEach(model => {
 					this.$store.commit(this.model_name+'/setDelete', model)
 					this.$store.commit(this.model_name+'/delete')

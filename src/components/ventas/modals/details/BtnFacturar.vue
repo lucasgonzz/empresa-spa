@@ -1,23 +1,19 @@
 <template>
-	<div>
-		<!-- <make-afip-tickets></make-afip-tickets> -->
-		
-		<b-button
-		v-if="!sale_details.afip_ticket || tiene_error_de_factura"
-		class="m-l-15"
-		id="btn_facturar"
-		@click="facturar"
-		variant="primary">
-			<i class="icon-clipboard"></i>
-			Emitir Factura
-
-			<b-badge
-			variant="danger"
-			v-if="sale_details.afip_tickets.length">
-				{{ sale_details.afip_tickets.length }}
-			</b-badge>
-		</b-button>
-	</div>
+	<b-button
+	v-if="!sale_details.afip_ticket || tiene_error_de_factura"
+	id="btn_facturar"
+	size="sm"
+	@click="facturar"
+	variant="primary">
+		<i class="bi bi-receipt"></i>
+		Emitir factura
+		<b-badge
+		variant="light"
+		class="text-primary"
+		v-if="sale_details.afip_tickets.length">
+			{{ sale_details.afip_tickets.length }}
+		</b-badge>
+	</b-button>
 </template>
 <script>
 import afip_ticket from '@/mixins/sale/afip_ticket'
@@ -25,12 +21,21 @@ export default {
 	mixins: [afip_ticket],
 	components: {
 		BtnLoader: () => import('@/common-vue/components/BtnLoader'),
-		// MakeAfipTickets: () => import('@/components/ventas/modals/afip-ticket/MakeAfipTickets'),
 	},
 	computed: {
+		/**
+		 * Venta cargada en el store del modal de detalle.
+		 *
+		 * @returns {Object}
+		 */
 		sale_details() {
 			return this.$store.state.sale.model 
 		},
+		/**
+		 * Indica si la factura AFIP quedó con error (sin CAE).
+		 *
+		 * @returns {boolean}
+		 */
 		tiene_error_de_factura() {
 			return this.sale_details.afip_ticket && !this.sale_details.afip_ticket.cae
 		},
@@ -41,6 +46,9 @@ export default {
 		}
 	},
 	methods: {
+		/**
+		 * Abre el modal de confirmación para emitir comprobantes AFIP.
+		 */
 		facturar() {
 			this.$store.commit('sale/setIsSelecteable', 1)
 			this.$store.commit('sale/addSelected', this.sale_details)
@@ -48,6 +56,9 @@ export default {
 
 			this.set_punto_de_venta()
 		},
+		/**
+		 * Preselecciona el punto de venta AFIP según la sucursal de la venta.
+		 */
 		set_punto_de_venta() {
 			let address_id = this.sale_details.address_id
 

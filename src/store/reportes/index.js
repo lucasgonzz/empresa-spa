@@ -13,8 +13,9 @@ export default {
 
 		loading: false,
 
-		mes_inicio: moment().subtract(4, 'months').format('YYYY-MM'),
-		mes_fin: moment().format('YYYY-MM'),
+		/* Fechas del rango en formato YYYY-MM-DD; usadas cuando rango_temporal == 'rango-de-fechas' */
+		mes_inicio: moment().subtract(30, 'days').format('YYYY-MM-DD'),
+		mes_fin: moment().format('YYYY-MM-DD'),
 
 		model: {},
 		meses_anteriores: [],
@@ -108,13 +109,10 @@ export default {
 
 			let link = 'api/company-performance'
 
+			/* En rango de fechas se envían ambas fechas (YYYY-MM-DD) como parámetros de ruta */
 			if (state.rango_temporal == 'rango-de-fechas') {
 
 				link += '/'+state.mes_inicio+'/'+state.mes_fin
-
-			} else if (state.rango_temporal == 'dia-en-especifico') {
-
-				link += '/'+state.mes_inicio
 
 			}
 

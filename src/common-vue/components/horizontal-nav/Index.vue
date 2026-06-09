@@ -412,12 +412,16 @@ export default {
 
 		& > div 
 			margin-top: 15px
+/* Pista gris segmentada (mismo estilo que impl-detail-tab-bar en admin Implementations) */
 .horizontal-nav
 	width: 100%
 	display: flex
+	gap: 6px
+	padding: 4px
 	overflow-x: auto
 	overflow-y: hidden
-	padding-bottom: 5px
+	background-color: #E3E3E3
+	border-radius: 8px
 
 	@media screen and (max-width: 576px)
 		-webkit-scrollbar 
@@ -431,24 +435,41 @@ export default {
 	.buttons 
 		display: flex
 
+	/* Pestaña inactiva: texto secundario sobre fondo transparente */
 	.item
-		border-bottom: 3px solid lighten($blue, 30)
-		padding: 5px 15px
+		border: none
+		border-radius: 6px
+		padding: 8px 12px
 		cursor: pointer
-		border-radius: 4px 4px 0 0
-		transition: all .2s
-		font-size: 1em
-		white-space: nowrap 
-		@if ($theme == 'dark') 
-			color: rgba(255, 255, 255, .8) !important
-		@else 
-			color: rgba(0, 0, 0, .6) !important
+		font-size: 0.875rem
+		font-weight: 500
+		line-height: 1.25
+		color: #6c757d
+		background-color: transparent
+		white-space: nowrap
+		transition: color 0.12s ease, background-color 0.12s ease, box-shadow 0.12s ease
 
-	.active 
-		font-weight: bold
-		border-bottom: 3px solid $blue
-		@if ($theme == 'dark') 
-			color: #fff !important
-		@else 
-			color: #000 !important
+		&:hover:not(.active)
+			color: #0d6efd
+			background-color: #e7f1ff
+
+		&:focus,
+		&:focus-visible
+			box-shadow: none
+			outline: none
+
+		&:focus-visible
+			outline: 2px solid #0d6efd
+			outline-offset: 2px
+
+		/* Pestaña activa: relleno azul sólido como btn-primary */
+		&.active
+			color: #fff
+			background-color: #0d6efd
+			font-weight: 600
+			box-shadow: 0 1px 2px rgba(13, 110, 253, 0.28)
+
+			&:hover
+				color: #fff
+				background-color: #0b5ed7
 </style>

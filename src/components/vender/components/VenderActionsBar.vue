@@ -22,11 +22,11 @@
 			<whatsapp-btn :sale="sale"></whatsapp-btn>
 		</div>
 
-		<!-- Botón principal guardar / actualizar con atajo F2 -->
+		<!-- Botón principal guardar / actualizar con atajo configurable -->
 		<div
 		v-if="items.length"
 		class="vender-actions-bar__item vender-actions-bar__guardar-wrap">
-			<kbd class="vender-actions-bar__kbd">F2</kbd>
+			<kbd class="vender-actions-bar__kbd">{{ save_shortcut_key }}</kbd>
 			<!-- inline_layout evita que b-col cols="12" ocupe todo el ancho de la barra -->
 			<btn-guardar
 			:hide_vuelto="true"
@@ -45,7 +45,7 @@ export default {
 	components: {
 		/* Botón de limpiar venta (permiso vender.limpiar_venta) */
 		LimpiarVender: () => import('@/components/vender/components/remito/header-2/buttons/LimpiarVender'),
-		/* Dropdown de impresión y atajo F4 */
+		/* Dropdown de impresión; atajo vía keyboard_shortcuts.js */
 		Print: () => import('@/components/vender/components/remito/header-2/buttons/Print'),
 		/* Botón de envío por WhatsApp */
 		WhatsappBtn: () => import('@/common-vue/sale-print-buttons/WhatsappBtn'),
@@ -120,6 +120,16 @@ export default {
 			}
 			return null
 		},
+
+		/**
+		 * Tecla configurada para guardar la venta (muestra en la barra inferior).
+		 *
+		 * @returns {string}
+		 */
+		save_shortcut_key() {
+			const shortcuts = this.$store.state.vender.keyboard_shortcuts || {}
+			return shortcuts.save || 'F5'
+		},
 	},
 }
 </script>
@@ -173,7 +183,7 @@ export default {
 	::v-deep .m-l-10
 		margin-left: 0 !important
 
-/* Contenedor del botón guardar con atajo F2 */
+/* Contenedor del botón guardar con atajo configurable */
 .vender-actions-bar__guardar-wrap
 	display: inline-flex
 	align-items: center
@@ -209,7 +219,7 @@ export default {
 		padding: 0 20px
 		white-space: nowrap
 
-/* Tecla de atajo F2 junto al botón guardar */
+/* Tecla de atajo junto al botón guardar */
 .vender-actions-bar__kbd
 	display: inline-block
 	padding: 2px 6px

@@ -74,7 +74,7 @@ export default {
 	},
 	methods: {
 		/*
-		 * El atajo F2 para guardar venta fue migrado al mixin keyboard_shortcuts.js
+		 * El atajo para guardar venta está en el mixin keyboard_shortcuts.js (tecla configurable).
 		 * que se registra en Vender.vue como listener global centralizado.
 		 * Este componente mantiene saveSale() para uso del botón de click.
 		 */

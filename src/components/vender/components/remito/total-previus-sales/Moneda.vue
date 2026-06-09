@@ -2,12 +2,14 @@
 	<div
 	class="form-moneda"
 	v-if="show">
-		<b-form-select
-		class="m-t-10 select-moneda"
-		:disabled="disabled"
-		v-model="moneda_id"
-		@change="set_total"
-		:options="getOptions({key: 'moneda_id', text: 'Moneda'}, null, null, false)"></b-form-select>
+		<b-input-group prepend="Moneda">
+			<b-form-select
+			class="select-moneda"
+			:disabled="disabled"
+			v-model="moneda_id"
+			@change="set_total"
+			:options="getOptions({key: 'moneda_id', text: 'Moneda'}, null, null, false)"></b-form-select>
+		</b-input-group>
 
 		<b-input-group
 		v-if="!hasExtencion('articulo_margen_de_ganancia_segun_lista_de_precios')"

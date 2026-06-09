@@ -16,10 +16,15 @@
 		show_models_if_empty
 		model_name="caja">
 
-			<template #horizontal_nav_center>
-				
-				<horizontal-nav-center></horizontal-nav-center>
-			</template>
+		<template #horizontal_nav_center>
+			<!-- Buscador rápido por texto para cajas: busca por nombre -->
+			<buscador-rapido
+			model_name="caja"
+			:props_to_filter="['name']"
+			placeholder="Buscar caja..."></buscador-rapido>
+
+			<horizontal-nav-center></horizontal-nav-center>
+		</template>
 
 			<template #table_left_options="props">
 				<table-buttons
@@ -40,6 +45,7 @@ export default {
 		Aperturas: () => import('@/components/caja/modals/aperturas/Index'),
 		Movimientos: () => import('@/components/caja/modals/movimientos/Index'),
 		ResumenCaja: () => import('@/components/caja/modals/resumen-caja/Index'),
+		BuscadorRapido: () => import('@/common-vue/components/buscador-rapido/Index'),
 	},
 	computed: {
 		cajas() {

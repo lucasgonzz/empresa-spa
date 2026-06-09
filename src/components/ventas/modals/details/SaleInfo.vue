@@ -2,42 +2,75 @@
 	<b-row>
 		<b-col
 		cols="12">
+			<!-- Barra de acciones en línea, agrupada por función -->
 			<div
 			class="sale-details-buttons">
-				<btn-loader
-				v-if="se_puede_actualizar_venta(sale_details)"
-				dusk="btn_actualizar_venta"
-				class="m-r-10"
-				text="Actualizar venta"
-				:block="false"
-				:loader="loading_index"
-				@clicked="setPreviusSale(sale_details)" />
-			
-				<btn-actualizar-precios-actuales></btn-actualizar-precios-actuales>
+				<!-- Grupo: impresión y WhatsApp -->
+				<div
+				class="sale-details-buttons__group sale-details-buttons__group--print">
+					<sale-print-buttons
+					:sale="sale_details"></sale-print-buttons>
+				</div>
 
+				<span
+				v-if="show_acopios_actions"
+				class="sale-details-buttons__divider"
+				aria-hidden="true"></span>
+
+				<!-- Grupo: acopios -->
 				<b-button-group
-				v-if="hasExtencion('acopios')"
-				class="m-r-10">
-					
+				v-if="show_acopios_actions"
+				size="sm"
+				class="sale-details-buttons__group">
 					<b-button
 					@click="printDeliveredArticles"
-					variant="danger">
-						<i class="icon-print"></i>
+					variant="outline-secondary"
+					title="Imprimir unidades entregadas">
+						<i class="bi bi-printer"></i>
 					</b-button>
 					<b-button
 					@click="show_unidades_entregadas"
-					variant="outline-danger">
-						U entregadas
+					variant="outline-secondary"
+					title="Unidades entregadas">
+						<i class="bi bi-list-check"></i>
+						U. entregadas
 					</b-button>
 				</b-button-group>
 
-				<sale-print-buttons
-				:sale="sale_details"></sale-print-buttons>
+				<span
+				v-if="can_edit_sale"
+				class="sale-details-buttons__divider"
+				aria-hidden="true"></span>
 
-				<btn-facturar></btn-facturar>
+				<!-- Grupo: edición de la venta -->
+				<b-button-group
+				v-if="can_edit_sale"
+				size="sm"
+				class="sale-details-buttons__group">
+					<btn-loader
+					dusk="btn_actualizar_venta"
+					text="Actualizar venta"
+					icon_class="bi bi-pencil-square"
+					size="sm"
+					variant="outline-primary"
+					:block="false"
+					:loader="loading_index"
+					@clicked="setPreviusSale(sale_details)" />
 
-				<btn-nota-credito></btn-nota-credito>
+					<btn-actualizar-precios-actuales></btn-actualizar-precios-actuales>
+				</b-button-group>
 
+				<span
+				class="sale-details-buttons__divider"
+				aria-hidden="true"></span>
+
+				<!-- Grupo: facturación -->
+				<b-button-group
+				size="sm"
+				class="sale-details-buttons__group">
+					<btn-facturar></btn-facturar>
+					<btn-nota-credito></btn-nota-credito>
+				</b-button-group>
 			</div>
 		</b-col>
 		<b-col 
@@ -149,7 +182,6 @@ export default {
 		BtnFacturar: () => import('@/components/ventas/modals/details/BtnFacturar'),
 		BtnNotaCredito: () => import('@/components/ventas/modals/details/BtnNotaCredito'),
 		BtnActualizarPreciosActuales: () => import('@/components/ventas/modals/details/BtnActualizarPreciosActuales'),
-		// ClientInfo: () => import('@/components/common/ClientInfo'),
 	},
 	data() {
 		return {
@@ -157,16 +189,42 @@ export default {
 		}
 	},
 	computed: {
+		/**
+		 * Venta cargada en el store del modal de detalle.
+		 *
+		 * @returns {Object}
+		 */
 		sale_details() {
 			return this.$store.state.sale.model 
 		},
+		/**
+		 * Indica si la venta puede editarse desde este modal.
+		 *
+		 * @returns {boolean}
+		 */
+		can_edit_sale() {
+			return this.se_puede_actualizar_venta(this.sale_details)
+		},
+		/**
+		 * Indica si se muestran acciones de acopios.
+		 *
+		 * @returns {boolean}
+		 */
+		show_acopios_actions() {
+			return this.hasExtencion('acopios')
+		},
 	},
 	methods: {
-		
+		/**
+		 * Abre el modal de unidades entregadas de la venta.
+		 */
 		show_unidades_entregadas() {
 			console.log('show_unidades_entregadas')
 			this.$bvModal.show('unidades-entregadas')
 		},
+		/**
+		 * Abre el PDF de unidades entregadas en acopio.
+		 */
 		printDeliveredArticles() {
 			let link = process.env.VUE_APP_API_URL+'/sale/delivered-articles-pdf/'+this.sale_details.id 
 			window.open(link)
@@ -191,20 +249,105 @@ export default {
 }
 </script>
 <style lang="sass">
-.sale-details-title 
-	display: flex
-	flex-direction: row
-	justify-content: space-between
-	p 
-		font-size: 1.5em 
-	div
-		display: flex
-		align-items: center
 .sale-details-buttons
-	display: flex  
-	flex-direction: row
-	justify-content: flex-start
-	.btn 
-		@media screen and (max-width: 992px)
-			margin-bottom: 15px
+	display: flex
+	flex-flow: row nowrap
+	align-items: center
+	width: 100%
+	overflow: visible
+	padding: 6px 0
+
+	/* Separador vertical entre grupos */
+	&__divider
+		display: inline-block
+		width: 1px
+		height: 22px
+		background: var(--color-border-tertiary, #dee2e6)
+		margin: 0 8px
+		flex-shrink: 0
+		opacity: 0.9
+
+	/* Contenedor de cada grupo en la fila */
+	&__group
+		display: inline-flex
+		flex: 0 0 auto
+		align-items: center
+		white-space: nowrap
+
+	/* Impresión: mantener dropdown y WhatsApp en línea sin recortar el menú */
+	&__group--print
+		position: relative
+		z-index: 30
+		overflow: visible
+
+		::v-deep > div
+			display: inline-flex !important
+			flex-direction: row !important
+			align-items: center
+			width: auto !important
+			overflow: visible
+
+		::v-deep .j-start
+			display: inline-flex
+			align-items: center
+			gap: 4px
+			width: auto
+			overflow: visible
+
+		::v-deep .dropdown
+			position: relative
+			overflow: visible
+
+		::v-deep .dropdown.show
+			z-index: 1060
+
+		/* Dropdown y WhatsApp al mismo tamaño y estilo del resto de la barra */
+		::v-deep .dropdown .btn,
+		::v-deep .btn-success
+			padding: 0.25rem 0.5rem
+			font-size: 0.875rem
+			line-height: 1.5
+
+		::v-deep .dropdown .btn-danger
+			color: #6c757d
+			background-color: transparent
+			border-color: #6c757d
+
+			&:hover,
+			&:focus,
+			&.show
+				color: #fff
+				background-color: #6c757d
+				border-color: #6c757d
+
+		::v-deep .btn-success
+			color: #198754
+			background-color: transparent
+			border-color: #198754
+
+			&:hover,
+			&:focus
+				color: #fff
+				background-color: #198754
+				border-color: #198754
+
+	/* Botones uniformes dentro de la barra */
+	::v-deep .btn
+		display: inline-flex
+		align-items: center
+		justify-content: center
+		gap: 4px
+		white-space: nowrap
+
+		.bi
+			line-height: 1
+			font-size: 0.95em
+
+	/* Anular márgenes legacy de componentes hijos */
+	::v-deep .m-l-10,
+	::v-deep .m-l-15,
+	::v-deep .m-r-10,
+	::v-deep .m-r-15
+		margin-left: 0 !important
+		margin-right: 0 !important
 </style>

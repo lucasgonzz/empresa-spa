@@ -1,97 +1,82 @@
 <script>
 import { Bar } from 'vue-chartjs'
-import moment from 'moment'
+import 'chartjs-plugin-datalabels'
+import chart_theme from '@/mixins/reportes/chart_theme'
+
 export default {
 	extends: Bar,
-	computed: { 
-		article_performances() {  
+	mixins: [chart_theme],
+	computed: {
+		article_performances() {
 			return this.$store.state.reportes.article_performance.models
 		},
-		loading() {  
+		loading() {
 			return this.$store.state.reportes.article_performance.loading
 		},
 	},
 	watch: {
 		article_performances() {
-			console.log('wacth chart')
 			this.setChart()
 		},
 		loading() {
-			console.log('wacth chart')
 			this.setChart()
 		},
 	},
 	data() {
 		return {
 			per_page: 10,
-		}	
+		}
 	},
 	mounted() {
 		this.setChart()
 	},
 	methods: {
-		setChart() {	
-
+		setChart() {
 			if (!this.article_performances) {
 				return
 			}
 
-			console.log('setChart gastos')
-			console.log(this.article_performances)
-
 			let labels = []
 			let data = []
-			
+
 			this.article_performances.forEach(article_performance => {
 				labels.push(article_performance.fecha)
-				data.push(article_performance.amount)	
+				data.push(article_performance.amount)
 			})
 
+			let bar_style = this.get_reportes_bar_dataset_style(data.length, false)
 			let datasets = [{
 				label: 'Unidades vendidas',
-				backgroundColor: '#007bff',
 				data: data,
+				...bar_style,
 			}]
 
-			let that = this
 			this.renderChart({
 				labels: labels,
 				datasets: datasets,
-			}, {
+			}, this.get_reportes_bar_chart_options({
 				plugins: {
-					datalabels: { 
+					datalabels: {
+						align: 'end',
 						anchor: 'end',
-						align: 'top',
-						color: '#000',
+						color: '#1E293B',
 						font: {
-							weight: 'bold',
-							family: 'Inter',
-							size: 11,	
+							weight: '600',
+							family: this.chart_font_family,
+							size: 11,
 						},
-						// formatter: function(value) {
-						// 	return that.price(Math.round(value)); // Usa tu método price() para formatear
-						// },
+						offset: 4,
 					},
 				},
-				maintainAspectRatio: false,
-				onClick: function (event, elements, chart) {
-					// let provider = providers[elements[0]._index]
-					// that.setSelectedProvider(provider)
+				tooltips: {
+					callbacks: {
+						label: function(tooltip_item) {
+							return 'Unidades: ' + tooltip_item.yLabel
+						},
+					},
 				},
-				// tooltips: {
-				// 	callbacks: {
-				// 		label: function(tooltipItem, data) {
-				// 			// console.log('entorooooo')
-				// 			return that.price(Math.round(tooltipItem.yLabel))
-				// 		}
-				// 	}
-				// }
-			})
+			}))
 		},
-		setSelectedProvider(provider) {
-			this.$router.push({params: {sub_view: 'rendimiento-por-proveedor'}})
-			this.setProviderArticles(provider)
-		}
 	},
 }
 </script>

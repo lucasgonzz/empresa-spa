@@ -8,8 +8,14 @@
 		<span 
 		v-show="(loader == true && !index) || index == loader"
 		class="spinner-border spinner-border-sm"></span>
-		<span v-show="(loader == false || (index && loader != index)) && icon != ''">
-			<i :class="'icon-'+icon"></i>
+		<span 
+		v-show="(loader == false || (index && loader != index)) && (icon_class || icon)">
+			<i
+			v-if="icon_class"
+			:class="icon_class"></i>
+			<i
+			v-else
+			:class="'icon-'+icon"></i>
 		</span>
 		<span v-show="(loader == false || (index && loader != index)) && text != ''">
 			{{ text }}
@@ -26,6 +32,14 @@ export default {
 			default: null,
 		},
 		icon: {
+			default: null,
+		},
+		/**
+		 * Clase CSS completa del ícono (p. ej. bi bi-pencil-square).
+		 * Tiene prioridad sobre icon cuando está definida.
+		 */
+		icon_class: {
+			type: String,
 			default: null,
 		},
 		index: {

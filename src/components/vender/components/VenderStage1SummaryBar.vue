@@ -7,7 +7,6 @@
 	<div
 	v-if="has_any_data"
 	class="vender-summary-bar vender-full-bleed">
-
 		<!-- Chip: Sucursal -->
 		<div
 		v-if="selected_address"
@@ -151,7 +150,7 @@ export default {
 	align-items: center
 	gap: 6px
 	padding: 5px 15px
-	background: var(--bg-section, #f8f9fa)
+	// background: var(--bg-section, #f8f9fa)
 	border-bottom: 1px solid var(--color-border-tertiary, #dee2e6)
 	flex-shrink: 0
 

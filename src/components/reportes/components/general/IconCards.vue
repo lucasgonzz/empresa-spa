@@ -677,26 +677,27 @@ export default {
 			this[btn.function]()
 		},
 		export_afip_txt() {
-			let mes_inicio = this.$store.state.reportes.mes_inicio
-			let mes_fin = this.$store.state.reportes.mes_fin
+			/* Las rutas AFIP esperan YYYY-MM; se extrae desde el formato YYYY-MM-DD del store */
+			let mes_inicio = this.$store.state.reportes.mes_inicio.substring(0, 7)
+			let mes_fin = this.$store.state.reportes.mes_fin.substring(0, 7)
 			let link = process.env.VUE_APP_API_URL+'/afip-txt/'+mes_inicio+'/'+mes_fin
 			window.open(link)
 		},
 		export_afip_alicuotas_txt() {
-			let mes_inicio = this.$store.state.reportes.mes_inicio
-			let mes_fin = this.$store.state.reportes.mes_fin
+			let mes_inicio = this.$store.state.reportes.mes_inicio.substring(0, 7)
+			let mes_fin = this.$store.state.reportes.mes_fin.substring(0, 7)
 			let link = process.env.VUE_APP_API_URL+'/afip-txt-alicuotas/'+mes_inicio+'/'+mes_fin
 			window.open(link)
 		},
 		iva_compras_pdf() {
-			let mes_inicio = this.$store.state.reportes.mes_inicio
-			let mes_fin = this.$store.state.reportes.mes_fin
+			let mes_inicio = this.$store.state.reportes.mes_inicio.substring(0, 7)
+			let mes_fin = this.$store.state.reportes.mes_fin.substring(0, 7)
 			let link = process.env.VUE_APP_API_URL+'/afip-iva-compras/'+mes_inicio+'/'+mes_fin
 			window.open(link)
 		},
 		iva_ventas_pdf() {
-			let mes_inicio = this.$store.state.reportes.mes_inicio
-			let mes_fin = this.$store.state.reportes.mes_fin
+			let mes_inicio = this.$store.state.reportes.mes_inicio.substring(0, 7)
+			let mes_fin = this.$store.state.reportes.mes_fin.substring(0, 7)
 			let link = process.env.VUE_APP_API_URL+'/afip-iva-ventas/'+mes_inicio+'/'+mes_fin
 			window.open(link)
 		},

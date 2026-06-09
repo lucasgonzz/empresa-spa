@@ -14,7 +14,6 @@
 			variant="primary"
 			@click="buscar">
 				<i class="icon-search"></i>
-				Buscar
 			</b-button>
 
 			<!-- Botón limpiar: visible solo cuando el buscador rápido tiene resultados activos -->
@@ -180,6 +179,13 @@ export default {
 <style scoped>
 /* El buscador ocupa todo el ancho disponible del contenedor padre */
 .buscador-rapido {
-	width: 100%;
+	width: 300px;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+
+	input {
+		height: 38px;
+	}
 }
 </style>

@@ -5,10 +5,15 @@
 	prepend="Mét. pago">
 		
 		<b-form-select
+		ref="payment_method_select"
 		:disabled="disabled"
 		id="vender_payment_method_id"
 		v-model="current_acount_payment_method_id"
-		@change="set_payment_methods_null"
+		:select-size="payment_method_select_expanded ? expanded_select_size : 0"
+		:class="{ 'cont-payment-methods__select--expanded': payment_method_select_expanded }"
+		@change="on_payment_method_change"
+		@blur="on_payment_method_blur"
+		@keydown.native="on_payment_method_keydown"
 		:options="options">
 		</b-form-select>
 
@@ -50,6 +55,29 @@ export default {
 		TotalInfo: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/total-info/Index'),
 		Cuotas: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/Cuotas'),
 	},
+	data() {
+		return {
+			/* Muestra el select como listbox con todas las opciones (atajo de teclado) */
+			payment_method_select_expanded: false,
+
+			/* Buffer temporal para tipear números de dos dígitos (p. ej. 10, 11) */
+			payment_method_number_buffer: '',
+
+			/* Timeout que reinicia el buffer de dígitos */
+			payment_method_number_buffer_timeout: null,
+		}
+	},
+	mounted() {
+		/* Atajo de teclado y chips de resumen piden foco en este select */
+		this.$root.$on('vender:focus-payment-method', this.focus_payment_method_select)
+	},
+	beforeDestroy() {
+		this.$root.$off('vender:focus-payment-method', this.focus_payment_method_select)
+
+		if (this.payment_method_number_buffer_timeout) {
+			clearTimeout(this.payment_method_number_buffer_timeout)
+		}
+	},
 	computed: {
 		current_acount_payment_method_id: {
 			get(){
@@ -65,8 +93,9 @@ export default {
 				value: 0,
 			}]
 
-			this.$store.state.current_acount_payment_method.models.forEach(pay => {
-				let text = pay.name  
+			this.$store.state.current_acount_payment_method.models.forEach((pay, index) => {
+				/* Número ascendente visible para elegir con teclado (1, 2, 3...) */
+				let text = (index + 1) + ' - ' + pay.name
 
 				let discount = this.$store.state.current_acount_payment_method_discount.models.find(dis => dis.current_acount_payment_method_id == pay.id)
 
@@ -118,8 +147,184 @@ export default {
 
 			return seteados
 		},
+
+		/**
+		 * Cantidad de filas visibles cuando el select está expandido por atajo.
+		 *
+		 * @returns {number}
+		 */
+		expanded_select_size() {
+			return Math.max(this.options.length, 2)
+		},
 	},
 	methods: {
+		/**
+		 * Devuelve el elemento DOM del select de método de pago.
+		 *
+		 * @returns {HTMLSelectElement|null}
+		 */
+		get_payment_method_select_element() {
+			if (this.$refs.payment_method_select && this.$refs.payment_method_select.$el) {
+				return this.$refs.payment_method_select.$el
+			}
+
+			return document.getElementById('vender_payment_method_id')
+		},
+
+		/**
+		 * Enfoca el select y lo expande como listbox (select-size).
+		 * Los select nativos no abren el desplegable con click programático desde un atajo.
+		 *
+		 * @param {number} retry_count
+		 */
+		focus_payment_method_select(retry_count) {
+			if (this.disabled) {
+				return
+			}
+
+			let attempts = retry_count || 0
+
+			this.payment_method_select_expanded = true
+
+			this.$nextTick(() => {
+				this.$nextTick(() => {
+					const select = this.get_payment_method_select_element()
+
+					if (!select) {
+						if (attempts < 8) {
+							const self = this
+
+							setTimeout(function () {
+								self.focus_payment_method_select(attempts + 1)
+							}, 80)
+						} else {
+							this.payment_method_select_expanded = false
+						}
+
+						return
+					}
+
+					select.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+					select.focus()
+				})
+			})
+		},
+
+		/**
+		 * Vuelve al modo desplegable normal del select.
+		 */
+		collapse_payment_method_select() {
+			this.payment_method_select_expanded = false
+		},
+
+		/**
+		 * Al perder foco, colapsar el listbox (con leve delay para no cortar el change).
+		 */
+		on_payment_method_blur() {
+			const self = this
+
+			setTimeout(function () {
+				self.collapse_payment_method_select()
+			}, 150)
+		},
+
+		/**
+		 * Maneja el cambio manual o por teclado numérico del método de pago.
+		 */
+		on_payment_method_change() {
+			this.collapse_payment_method_select()
+			this.set_payment_methods_null()
+		},
+
+		/**
+		 * Lista de métodos de pago disponibles (sin el placeholder).
+		 *
+		 * @returns {Array}
+		 */
+		get_payment_method_models() {
+			return this.$store.state.current_acount_payment_method.models || []
+		},
+
+		/**
+		 * Selecciona un método de pago por índice (0-based) y aplica la misma lógica que @change.
+		 *
+		 * @param {number} index
+		 */
+		select_payment_method_by_index(index) {
+			const methods = this.get_payment_method_models()
+			const payment_method = methods[index]
+
+			if (!payment_method) {
+				return
+			}
+
+			this.$store.commit('vender/setCurrentAcountPaymentMethodId', payment_method.id)
+			this.set_payment_methods_null()
+			this.collapse_payment_method_select()
+		},
+
+		/**
+		 * Reinicia el buffer numérico usado para métodos con índice de dos dígitos.
+		 */
+		reset_payment_method_number_buffer() {
+			this.payment_method_number_buffer = ''
+
+			if (this.payment_method_number_buffer_timeout) {
+				clearTimeout(this.payment_method_number_buffer_timeout)
+				this.payment_method_number_buffer_timeout = null
+			}
+		},
+
+		/**
+		 * Permite tipear el número del método (1, 2, ... 10, 11) con el select enfocado.
+		 *
+		 * @param {KeyboardEvent} event
+		 */
+		on_payment_method_keydown(event) {
+			if (this.disabled) {
+				return
+			}
+
+			const key = event.key
+
+			if (!/^[0-9]$/.test(key)) {
+				return
+			}
+
+			const methods = this.get_payment_method_models()
+
+			if (!methods.length) {
+				return
+			}
+
+			event.preventDefault()
+
+			if (this.payment_method_number_buffer_timeout) {
+				clearTimeout(this.payment_method_number_buffer_timeout)
+			}
+
+			this.payment_method_number_buffer += key
+
+			const selected_number = parseInt(this.payment_method_number_buffer, 10)
+
+			if (selected_number >= 1 && selected_number <= methods.length) {
+				this.select_payment_method_by_index(selected_number - 1)
+				this.reset_payment_method_number_buffer()
+				return
+			}
+
+			/* Si el buffer ya no puede formar un índice válido, conservar solo el último dígito */
+			if (this.payment_method_number_buffer.length >= 2) {
+				this.payment_method_number_buffer = key
+			}
+
+			const self = this
+
+			this.payment_method_number_buffer_timeout = setTimeout(function () {
+				self.reset_payment_method_number_buffer()
+			}, 800)
+		},
+
 		set_payment_methods() {
 
 			if (this.sobrante_a_repartir != 0) {
@@ -169,7 +374,11 @@ export default {
 </script>
 <style lang="sass">
 .cont-payment-methods
-	
+
+	/* Listbox expandido por atajo: limitar alto y permitir scroll interno */
+	&__select--expanded
+		max-height: 220px
+
 	.input-group-append
 
 		button

@@ -55,6 +55,11 @@
 					<price-type-selector></price-type-selector>
 				</div>
 
+				<!-- Moneda y cotización USD (solo con extensión ventas_en_dolares) -->
+				<div class="vender-stage__field">
+					<moneda></moneda>
+				</div>
+
 				<!-- Tipo de venta -->
 				<div class="vender-stage__field">
 					<sale-type></sale-type>
@@ -106,6 +111,8 @@ export default {
 		/* Campos de configuración — cargados de forma lazy */
 		SelectAddress: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/Address'),
 		PriceTypeSelector: () => import('@/components/vender/components/remito/total-previus-sales/price-type/Index'),
+		/* Selector de moneda y cotización dólar — visible según extensión ventas_en_dolares */
+		Moneda: () => import('@/components/vender/components/remito/total-previus-sales/Moneda'),
 		PaymentMethod: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/PaymentMethod'),
 		Caja: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/Caja'),
 		SaleType: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/SaleType'),
@@ -134,7 +141,7 @@ export default {
 	mounted() {
 		/*
 		 * Escuchar el evento global de expansión.
-		 * Emitido por keyboard_shortcuts.js (F3, F5) y VenderStage1SummaryBar (chips con lápiz).
+		 * Emitido por keyboard_shortcuts.js (payment_method, client) y VenderStage1SummaryBar (chips con lápiz).
 		 */
 		this.$root.$on('vender:expand-stage1', this.onExpandStage1)
 	},
@@ -171,6 +178,16 @@ export default {
 				const ref_name = ref_map[field]
 				if (ref_name && this.$refs[ref_name]) {
 					this.$refs[ref_name].scrollIntoView({ behavior: 'smooth', block: 'start' })
+
+					/* Método de pago: esperar render del componente lazy y abrir el select */
+					if (field === 'payment_method') {
+						this.$nextTick(() => {
+							this.$nextTick(() => {
+								this.$root.$emit('vender:focus-payment-method')
+							})
+						})
+						return
+					}
 
 					/* Intentar enfocar el primer input dentro del contenedor */
 					const input = this.$refs[ref_name].querySelector('input, select')

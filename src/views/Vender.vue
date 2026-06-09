@@ -62,6 +62,12 @@ export default {
 	created() {
 		console.log('created vender')
 
+		/* Cargar atajos de teclado del usuario antes de usarlos en la vista */
+		this.$store.dispatch('vender/load_keyboard_shortcuts')
+
+		/* Perfiles PDF para configurar opciones de impresión del atajo */
+		this.$store.dispatch('pdf_column_profile/getModels')
+
 		/* Inicializar el log de auditoría para una nueva sesión de venta */
 		this.$store.commit('vender/init_sale_log')
 		this.set_default_articles()

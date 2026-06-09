@@ -1,9 +1,9 @@
 <template>
 	<b-button
-	v-if="se_puede_actualizar_venta(sale_details)"
-	class="m-r-15"
+	size="sm"
 	variant="outline-primary"
 	v-b-modal="'update-prices'">
+		<i class="bi bi-arrow-repeat"></i>
 		Actualizar precios
 	</b-button>
 </template>
@@ -12,18 +12,14 @@ import se_puede_actualizar from '@/mixins/vender/previus_sale/se_puede_actualiza
 export default {
 	mixins: [se_puede_actualizar],
 	computed: {
+		/**
+		 * Venta cargada en el store del modal de detalle.
+		 *
+		 * @returns {Object}
+		 */
 		sale_details() {
 			return this.$store.state.sale.model 
 		},
 	},
-	data() {
-		return {
-			loading: false,
-		}
-	},
-	methods: {
-		actualizar() {
-		}
-	}
 }
 </script>

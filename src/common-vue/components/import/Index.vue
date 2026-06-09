@@ -1568,12 +1568,32 @@ export default {
 				this.limpiar_temporizador()
 				// this.$toast.error('Error al importar Excel')
 
-				// Levantar modal de notificacion global
+				// Levantar modal de notificacion global con fallback si el backend no envió payload estructurado
+				let response_data = (err.response && err.response.data) ? err.response.data : {}
+				let info_to_show = response_data.info_to_show || []
+				let functions_to_execute = response_data.functions_to_execute || []
+				let message_text = response_data.message || 'Hubo un error al importar el Excel'
 
-                this.$store.commit('global_notification/set_info_to_show', err.response.data.info_to_show)
-                    this.$store.commit('global_notification/set_functions_to_execute', err.response.data.functions_to_execute)
+				if (info_to_show.length === 0 && response_data.message) {
+					info_to_show = [{
+						title: 'Detalle del error',
+						value: response_data.message,
+					}]
+				}
 
-                this.$bvModal.show('global-notification')
+				if (functions_to_execute.length === 0) {
+					functions_to_execute = [{
+						btn_text: 'Entendido',
+						btn_variant: 'primary',
+					}]
+				}
+
+				this.$store.commit('global_notification/set_message_text', message_text)
+				this.$store.commit('global_notification/set_color_variant', 'danger')
+				this.$store.commit('global_notification/set_info_to_show', info_to_show)
+				this.$store.commit('global_notification/set_functions_to_execute', functions_to_execute)
+
+				this.$bvModal.show('global-notification')
 			})
 		},
 		showHistory() {

@@ -6,6 +6,15 @@ axios.defaults.baseURL = process.env.VUE_APP_API_URL
 import previus_sales from '@/store/vender/previus_sales'
 import current_acount_payment_methods from '@/store/vender/current_acount_payment_methods'
 import current_acount_payment_methods_with_discounts from '@/store/vender/current_acount_payment_methods_with_discounts'
+import {
+	VENDER_KEYBOARD_SHORTCUT_DEFAULTS,
+	normalize_vender_keyboard_shortcuts,
+	vender_keyboard_shortcuts_have_duplicates,
+} from '@/constants/vender_keyboard_shortcuts'
+import {
+	VENDER_PRINT_OPTIONS_DEFAULTS,
+	normalize_vender_print_options,
+} from '@/constants/vender_print_shortcut_options'
 
 // import mixin_vender from '@/mixins/vender'
 import model_functions from '@/mixins/model_functions'
@@ -302,6 +311,18 @@ export default {
 
 		// En true, no se agregan entradas a sale_log (carga inicial al editar venta).
 		sale_log_paused: false,
+
+		// Atajos de teclado activos del módulo Vender (mapa action => tecla F1-F10).
+		keyboard_shortcuts: Object.assign({}, VENDER_KEYBOARD_SHORTCUT_DEFAULTS),
+
+		// Indica si los atajos ya se cargaron desde la API en esta sesión.
+		keyboard_shortcuts_loaded: false,
+
+		// Guardado de atajos en curso (deshabilita botón en topbar).
+		keyboard_shortcuts_saving: false,
+
+		// Opciones del atajo Imprimir (remito / facturado / ticket 2.0).
+		keyboard_print_options: Object.assign({}, VENDER_PRINT_OPTIONS_DEFAULTS),
 	},
 	mutations: {
 		/**
@@ -811,8 +832,113 @@ export default {
 		setAfipResult(state, value) {
 			state.afip_results = value 
 		},
+
+		/**
+		 * Reemplaza el mapa de atajos activos del módulo Vender.
+		 *
+		 * @param {Object} state
+		 * @param {Object|null|undefined} shortcuts
+		 */
+		set_keyboard_shortcuts(state, shortcuts) {
+			state.keyboard_shortcuts = normalize_vender_keyboard_shortcuts(shortcuts)
+		},
+
+		/**
+		 * Marca si los atajos ya se cargaron desde la API.
+		 *
+		 * @param {Object} state
+		 * @param {boolean} value
+		 */
+		set_keyboard_shortcuts_loaded(state, value) {
+			state.keyboard_shortcuts_loaded = !!value
+		},
+
+		/**
+		 * Indica si hay un guardado de atajos en curso.
+		 *
+		 * @param {Object} state
+		 * @param {boolean} value
+		 */
+		set_keyboard_shortcuts_saving(state, value) {
+			state.keyboard_shortcuts_saving = !!value
+		},
+
+		/**
+		 * Reemplaza las opciones del atajo Imprimir.
+		 *
+		 * @param {Object} state
+		 * @param {Object|null|undefined} print_options
+		 */
+		set_keyboard_print_options(state, print_options) {
+			state.keyboard_print_options = normalize_vender_print_options(print_options)
+		},
 	},
 	actions: {
+		/**
+		 * Carga los atajos de teclado del usuario autenticado desde la API.
+		 *
+		 * @param {Object} context
+		 * @returns {Promise}
+		 */
+		load_keyboard_shortcuts({ commit }) {
+			return axios.get('/api/vender-keyboard-shortcut')
+				.then(function (res) {
+					const model = res.data ? res.data.model : null
+					const shortcuts = model ? model.shortcuts : null
+					const print_options = model ? model.print_options : null
+
+					commit('set_keyboard_shortcuts', shortcuts)
+					commit('set_keyboard_print_options', print_options)
+					commit('set_keyboard_shortcuts_loaded', true)
+				})
+				.catch(function (err) {
+					commit('set_keyboard_shortcuts_loaded', true)
+					console.log(err)
+				})
+		},
+
+		/**
+		 * Persiste atajos de teclado y opciones de impresión del usuario.
+		 *
+		 * @param {Object} context
+		 * @param {Object} payload
+		 * @param {Object<string, string>} payload.shortcuts
+		 * @param {Object} payload.print_options
+		 * @returns {Promise}
+		 */
+		save_keyboard_shortcuts({ commit }, payload) {
+			const shortcuts = normalize_vender_keyboard_shortcuts(payload.shortcuts)
+			const print_options = normalize_vender_print_options(payload.print_options)
+
+			if (vender_keyboard_shortcuts_have_duplicates(shortcuts)) {
+				return Promise.reject(new Error('duplicate_keys'))
+			}
+
+			commit('set_keyboard_shortcuts_saving', true)
+
+			return axios.put('/api/vender-keyboard-shortcut', {
+				shortcuts: shortcuts,
+				print_options: print_options,
+			})
+				.then(function (res) {
+					const model = res.data ? res.data.model : null
+					const saved_shortcuts = model ? model.shortcuts : shortcuts
+					const saved_print_options = model ? model.print_options : print_options
+
+					commit('set_keyboard_shortcuts', saved_shortcuts)
+					commit('set_keyboard_print_options', saved_print_options)
+					commit('set_keyboard_shortcuts_saving', false)
+					return {
+						shortcuts: saved_shortcuts,
+						print_options: saved_print_options,
+					}
+				})
+				.catch(function (err) {
+					commit('set_keyboard_shortcuts_saving', false)
+					throw err
+				})
+		},
+
 		vender({ commit, state }, info) {
 			// Log previo al envío para auditar el estado final con el que se intenta guardar.
 			commit('append_sale_log', {

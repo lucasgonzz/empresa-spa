@@ -3,11 +3,14 @@
 		<div class="j-start">
 			<b-dropdown
 			variant="danger"
-			right
+			left
+			size="sm"
+			boundary="viewport"
+			:popper-opts="dropdown_popper_opts"
 			menu-class="sale-print-dropdown-menu"
 			v-if="sale">
 				<template #button-content>
-					<i class="icon-print"></i>
+					<i class="bi bi-printer"></i>
 					Imprimir
 				</template>
 
@@ -87,6 +90,12 @@ export default {
 	},
 	data() {
 		return {
+			/**
+			 * Opciones Popper para que el menú no quede recortado en modales scrollables.
+			 */
+			dropdown_popper_opts: {
+				positionFixed: true,
+			},
 			/**
 			 * Catálogo de opciones de columnas para el model_name activo.
 			 */
@@ -648,6 +657,117 @@ export default {
 		facturaPdfWithProfile(afip_ticket_id, profile_id) {
 			this.salePdf(this.sale.id, profile_id, afip_ticket_id)
 		},
+
+		/**
+		 * Primer comprobante AFIP con CAE de la venta.
+		 *
+		 * @param {Object} sale
+		 * @returns {Object|null}
+		 */
+		get_first_afip_ticket_with_cae(sale) {
+			const afip_tickets = sale && sale.afip_tickets ? sale.afip_tickets : []
+			let found = null
+
+			afip_tickets.forEach(function (afip_ticket) {
+				if (!found && afip_ticket.cae) {
+					found = afip_ticket
+				}
+			})
+
+			return found
+		},
+
+		/**
+		 * Indica si la venta tiene al menos un ticket AFIP con CAE.
+		 *
+		 * @param {Object} sale
+		 * @returns {boolean}
+		 */
+		sale_has_afip_ticket_with_cae(sale) {
+			return !!this.get_first_afip_ticket_with_cae(sale)
+		},
+
+		/**
+		 * Ejecuta una opción de impresión por clave configurada.
+		 *
+		 * @param {string} option_key
+		 * @param {Object} sale
+		 */
+		execute_keyboard_print_option(option_key, sale) {
+			if (!sale || !option_key) {
+				this.$toast.error('No hay venta para imprimir')
+				return
+			}
+
+			if (option_key === 'ticket_2') {
+				this.nuevo_ticket(sale)
+				return
+			}
+
+			if (option_key === 'ticket_pdf') {
+				this.ticketPdf(sale)
+				return
+			}
+
+			if (option_key === 'factura_ticket_pdf') {
+				const afip_ticket = this.get_first_afip_ticket_with_cae(sale)
+
+				if (!afip_ticket) {
+					this.$toast.error('La venta no tiene ticket AFIP con CAE')
+					return
+				}
+
+				this.facturaTicketPdf(afip_ticket.id)
+				return
+			}
+
+			if (option_key.indexOf('remito_a4:') === 0) {
+				const profile_id = parseInt(option_key.replace('remito_a4:', ''), 10)
+				this.print_with_profile(profile_id)
+				return
+			}
+
+			if (option_key.indexOf('factura_a4:') === 0) {
+				const profile_id = parseInt(option_key.replace('factura_a4:', ''), 10)
+				const afip_ticket = this.get_first_afip_ticket_with_cae(sale)
+
+				if (!afip_ticket) {
+					this.$toast.error('La venta no tiene ticket AFIP con CAE')
+					return
+				}
+
+				this.facturaPdfWithProfile(afip_ticket.id, profile_id)
+				return
+			}
+
+			this.$toast.error('Opción de impresión no reconocida')
+		},
+
+		/**
+		 * Ejecuta el atajo Imprimir según print_options guardadas en Vender.
+		 *
+		 * @param {Object} print_options
+		 * @param {Object} sale
+		 */
+		execute_vender_print_shortcut(print_options, sale) {
+			if (!sale) {
+				this.$toast.error('No hay venta para imprimir')
+				return
+			}
+
+			const has_afip_ticket = this.sale_has_afip_ticket_with_cae(sale)
+			let option_key = print_options.remito
+
+			if (print_options.use_ticket_2_for_both) {
+				option_key = 'ticket_2'
+			} else if (has_afip_ticket) {
+				option_key = print_options.facturado
+			} else {
+				option_key = print_options.remito
+			}
+
+			this.execute_keyboard_print_option(option_key, sale)
+		},
 	},
 }
 </script>
@@ -658,6 +778,8 @@ export default {
 
 .sale-print-dropdown-menu
 	width: 200px
+	z-index: 1060 !important
+	background-color: #fff
 	.b-dropdown-text
 		text-align: center
 
