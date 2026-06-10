@@ -71,8 +71,14 @@
 
 		</template>
 		
-		<template #options_drop_down>
-			
+		<template #options_drop_down_seleccion>
+
+			<drop-down-options></drop-down-options>
+
+		</template>
+
+		<template #options_drop_down_filtro>
+
 			<drop-down-options></drop-down-options>
 
 		</template>

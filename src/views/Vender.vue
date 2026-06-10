@@ -78,12 +78,17 @@ export default {
 		this.$store.commit('vender/clear_sale_log')
 	},
 	mounted() {
-		/* Registrar el listener global de atajos de teclado */
-		window.addEventListener('keydown', this.handleVenderKeyboard)
+		/*
+		 * Captura en fase capture: interceptar F5/F1-F10 antes del comportamiento
+		 * nativo del navegador (refresh, búsqueda, ayuda, etc.).
+		 */
+		window.addEventListener('keydown', this.handleVenderKeyboard, true)
+		window.addEventListener('keyup', this.handleVenderKeyboardKeyup, true)
 	},
 	beforeDestroy() {
-		/* Limpiar el listener al salir del módulo */
-		window.removeEventListener('keydown', this.handleVenderKeyboard)
+		/* Limpiar listeners al salir del módulo */
+		window.removeEventListener('keydown', this.handleVenderKeyboard, true)
+		window.removeEventListener('keyup', this.handleVenderKeyboardKeyup, true)
 	},
 	beforeRouteLeave(to, from, next) {
 		this.$store.commit('sale/setSelected', [])

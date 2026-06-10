@@ -11,7 +11,8 @@
 	hide-footer
 	size="lg"
 	title="Historial de importaciones"
-	id="import-history">
+	id="import-history"
+	@show="getModels">
 	
 		<div 
 		v-if="loading"
@@ -19,6 +20,12 @@
 			<b-spinner
 			variant="primary"></b-spinner>
 		</div>
+
+		<history-empty-state
+		v-else-if="!models.length"
+		icon_class="icon-download"
+		title="Aún no hay importaciones"
+		hint="Cuando importes datos desde el menú, aparecerá aquí su historial."></history-empty-state>
 
 		<b-table
 		responsive
@@ -103,6 +110,7 @@ export default {
 	components: {
 		// ArticulosCreados: () => import('@/common-vue/components/import/ArticulosCreados'),
 		Chunks: () => import('@/common-vue/components/import/chunks/Index'),
+		HistoryEmptyState: () => import('@/common-vue/components/horizontal-nav/HistoryEmptyState'),
 	},
 	props: {
 		show_history: Boolean,

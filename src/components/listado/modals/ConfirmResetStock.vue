@@ -8,31 +8,37 @@
     id="confirm-reset-stock"></confirm>
 </template>
 <script>
-import alert_filtrados from '@/mixins/listado/alert_filtrados'
+import listado_articles_source from '@/mixins/listado/listado_articles_source'
+
 export default {
-	mixins: [alert_filtrados],
+	mixins: [listado_articles_source],
 	components: {
 		Confirm: () => import('@/common-vue/components/Confirm'),
 	},
 	computed: {
-		selected() {
-			return this.$store.state.article.selected 
-		},
-		filtered() {
-			return this.$store.state.article.filtered 
+		/**
+		 * Origen guardado al abrir el modal desde el dropdown de filtrados o seleccionados.
+		 *
+		 * @return {boolean}
+		 */
+		use_filtered_source() {
+			return this.remembered_options_from_filter()
 		},
 	},
 	methods: {
+		/**
+		 * Resetea stock a 0 según el dropdown que abrió la confirmación.
+		 *
+		 * @return {void}
+		 */
 		resetStock() {
-			let ids = []
-			let articles
-			if (this.selected.length) {
-				articles = this.selected
-			} else if (this.filtered.length) {
-				this.alert_filtrados()
-				articles = this.filtered
+			let articles = this.resolve_articles()
+			if (!articles || !articles.length) {
+				return
 			}
-			articles.forEach(article => {
+
+			let ids = []
+			articles.forEach(function (article) {
 				ids.push(article.id)
 			})
 

@@ -3,7 +3,8 @@
 	:dusk="'btn_create_'+model_name"
 	:class="with_margin ? 'm-b-15' : ''"
 	@click="create"
-	:block="block ? true : false" 
+	:block="block ? true : false"
+	:size="button_size"
 	variant="primary">
 		<i class="icon-plus"></i>
 		Crear
@@ -21,6 +22,11 @@ export default {
 		block: {
 			type: Boolean,
 			default: true,
+		},
+		/** Tamaño Bootstrap del botón (p. ej. `sm` en cabecera de vista). */
+		button_size: {
+			type: String,
+			default: null,
 		},
 	},
 	methods: {

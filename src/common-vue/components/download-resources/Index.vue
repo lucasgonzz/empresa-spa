@@ -109,6 +109,9 @@ export default {
             		} else {
 						this.models_to_download[i].downloading = true
 		                await this.$store.dispatch(model_name+'/getModels')
+						if (model_name === 'table_column_preference') {
+							this.$store.dispatch('table_column_preference/bootstrap_module_preferences')
+						}
 						this.models_to_download[i].downloading = false
 						this.models_to_download[i].downloaded = true
             		}
@@ -116,8 +119,17 @@ export default {
             	
             }
 		},
+		/**
+		 * Indica si un recurso ya está en store y no hace falta volver a pedirlo al inicio.
+		 *
+		 * @param {string} model_name
+		 * @returns {boolean}
+		 */
 		yaSeDescargaron(model_name) {
-			return this.$store.state[model_name].models.length 
+			if (model_name === 'pdf_column_profile') {
+				return this.$store.state.pdf_column_profile.all_profiles_loaded
+			}
+			return this.$store.state[model_name].models.length
 		}
 	},
 }

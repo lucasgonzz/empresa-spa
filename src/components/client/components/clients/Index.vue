@@ -14,7 +14,11 @@
 		show_excel_drop_down
 		model_name="client">
 
-			<template #options_drop_down>
+			<template #options_drop_down_seleccion>
+				<btn-pdf></btn-pdf>
+			</template>
+
+			<template #options_drop_down_filtro>
 				<btn-pdf></btn-pdf>
 			</template>
 

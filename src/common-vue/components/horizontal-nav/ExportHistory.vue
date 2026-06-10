@@ -14,13 +14,18 @@
 			variant="primary"></b-spinner>
 		</div>
 
+		<history-empty-state
+		v-else-if="!models.length"
+		icon_class="icon-upload"
+		title="Aún no hay exportaciones"
+		hint="Cuando generes una exportación desde el menú, aparecerá aquí su historial."></history-empty-state>
+
 		<b-table
 		responsive
 		head-variant="dark"
 		v-else
 		:fields="fields"
-		:items="items"
-		empty-text="No hay exportaciones registradas">
+		:items="items">
 
 			<template #cell(status)="data">
 				{{ status_label(models[data.index].status) }}
@@ -64,6 +69,9 @@
 </template>
 <script>
 export default {
+	components: {
+		HistoryEmptyState: () => import('@/common-vue/components/horizontal-nav/HistoryEmptyState'),
+	},
 	props: {
 		model_name: String,
 	},

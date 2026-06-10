@@ -2,6 +2,7 @@
 	<b-dropdown
 	right
 	class="m-l-15"
+	size="sm"
 	text="Depositos"
 	variant="primary">
 		<b-dropdown-item

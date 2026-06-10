@@ -1,10 +1,13 @@
 <template>
 	<b-row
-	class="p-t-15 align-center">
+	class="view-header-toolbar p-t-15 align-center">
+
+		<!-- Columna de acciones primarias: toggler de columnas, crear, seleccionar -->
+		<!-- cols=6: ocupa mitad en mobile; xl=auto: ancho exacto del contenido en desktop (≥1200px) -->
 		<b-col
-		class="j-start align-center m-b-25 m-xl-b-0"
-		lg="6"
-		xl="3">
+		class="j-start align-center flex-wrap flex-xl-nowrap m-b-10 m-xl-b-0"
+		cols="6"
+		xl="auto">
 			
 			<props-to-show
 			v-if="show_btn_props_to_show"
@@ -28,6 +31,7 @@
 				class="m-l-10"
 				:with_margin="false"
 				:block="false"
+				button_size="sm"
 				:model_name="model_name"></btn-create>
 			</slot>
 
@@ -36,57 +40,51 @@
 			:ask_selectable="ask_selectable"></btn-seleccion>
 		</b-col>
 
+		<!-- Columna de estado: dropdowns de selección/filtro y limpiar filtros -->
+		<!-- cols=6: ocupa mitad en mobile; xl=auto: ancho exacto del contenido en desktop (≥1200px) -->
 		<b-col
-		:class="[
-			'd-flex',
-			'j-sm-center',
-			'j-lg-end',
-			'j-xl-start',
-			'm-xl-b-0',
-			{ 'm-b-25': show_filters_col_bottom_margin },
-		]"
-		lg="6"
-		xl="3">
+		class="j-start align-center flex-wrap flex-xl-nowrap m-b-10 m-xl-b-0"
+		cols="6"
+		xl="auto">
 
-			<div class="j-start">
-				
-				<opciones-filtrados-seleccion
-				:papelera="papelera"
-				:show_actualizar_option="show_actualizar_option"
-				:check_permissions="check_permissions"
-				:model_name="model_name">
-					<template #options_drop_down>
-						<slot name="options_drop_down"></slot>
-					</template>
+			<opciones-filtrados-seleccion
+			:papelera="papelera"
+			:show_actualizar_option="show_actualizar_option"
+			:check_permissions="check_permissions"
+			:model_name="model_name">
+				<template #options_drop_down>
+					<slot name="options_drop_down"></slot>
+				</template>
 
-					<template #options_drop_down_seleccion>
-						<slot name="options_drop_down_seleccion"></slot>
-					</template>
+				<template #options_drop_down_seleccion>
+					<slot name="options_drop_down_seleccion"></slot>
+				</template>
 
-					<template #options_drop_down_filtro>
-						<slot name="options_drop_down_filtro"></slot>
-					</template>
-				</opciones-filtrados-seleccion>
-				
-				<btn-restart-filter
-				:papelera="papelera"
-				:model_name="model_name"></btn-restart-filter>
+				<template #options_drop_down_filtro>
+					<slot name="options_drop_down_filtro"></slot>
+				</template>
+			</opciones-filtrados-seleccion>
+			
+			<btn-restart-filter
+			:papelera="papelera"
+			:model_name="model_name"></btn-restart-filter>
 
-				<b-button
-				v-if="papelera && is_filtered_papelera && total_filtrados_papelera > 0"
-				@click="restaurarTodosFiltradosPapelera"
-				class="m-l-10"
-				variant="danger">
-					Restaurar todos ({{ total_filtrados_papelera }})
-				</b-button>
-			</div>
-
+			<b-button
+			v-if="papelera && is_filtered_papelera && total_filtrados_papelera > 0"
+			@click="restaurarTodosFiltradosPapelera"
+			class="m-l-10"
+			size="sm"
+			variant="danger">
+				Restaurar todos ({{ total_filtrados_papelera }})
+			</b-button>
 
 		</b-col>
 		
+		<!-- Columna de contenido del módulo: crece para llenar el espacio restante en desktop (≥1200px) -->
 		<b-col
-		xl="6">
-			<div class="j-end">
+		cols="12"
+		:xl="true">
+			<div class="j-end align-center flex-wrap">
 				
 				<slot name="horizontal_nav_center"></slot>
 
@@ -145,32 +143,6 @@ export default {
 		show_actualizar_option: Boolean,
 	},
 	computed: {
-		/**
-		 * True cuando la columna de filtrados/selección muestra al menos un control
-		 * (dropdowns, reinicio de filtro o restaurar en papelera). Evita aplicar
-		 * margen inferior si el bloque no ocupa espacio visual.
-		 *
-		 * @returns {boolean}
-		 */
-		show_filters_col_bottom_margin() {
-			if (!this.model_name) {
-				return false
-			}
-			let model_state = this.$store.state[this.model_name]
-			if (!model_state) {
-				return false
-			}
-			if (model_state.selected && model_state.selected.length > 0) {
-				return true
-			}
-			if (this.papelera) {
-				return this.is_filtered_papelera && this.total_filtrados_papelera > 0
-			}
-			if (model_state.filtered && model_state.filtered.length > 0) {
-				return true
-			}
-			return !!model_state.is_filtered
-		},
 		can_create() {
 			if (this.check_permissions) {
 				return this.can(this.model_name+'.store')
@@ -233,3 +205,40 @@ export default {
 	},
 }
 </script>
+
+<style lang="sass">
+
+/* Quitar margen inferior de las cols cuando ya están en una sola fila (Bootstrap xl ≥1200px) */
+@media (min-width: 1200px)
+	.view-header-toolbar
+		[class*='col-xl']
+			margin-bottom: 0 !important
+
+/* Altura unificada de botones y dropdowns en la cabecera (misma que btn-sm: Seleccionar / Actualizar) */
+.view-header-toolbar
+	::v-deep .btn:not(.btn-link):not(.dropdown-item)
+		padding: 0.25rem 0.5rem
+		font-size: 0.875rem
+		line-height: 1.5
+
+	::v-deep .dropdown > .btn
+		padding: 0.25rem 0.5rem
+		font-size: 0.875rem
+		line-height: 1.5
+
+	/* Buscador del listado en horizontal_nav_center: input alineado con btn-sm */
+	::v-deep .buscador-listado
+		.cont-search
+			align-items: stretch
+
+		.icon
+			font-size: 0.875rem
+			width: 32px
+
+		.input-search
+			height: auto !important
+			padding: 0.25rem 0.5rem
+			font-size: 0.875rem
+			line-height: 1.5
+
+</style>

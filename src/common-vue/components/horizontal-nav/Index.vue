@@ -355,9 +355,16 @@ export default {
 		callMethods(item, only_if_empty = false) {
 			if (item.action) {
 				this.$store.dispatch(item.action)
-			}  
-			if (item.call_models && (!only_if_empty || !this.$store.state[item.call_models].models.length)) {
-				this.$store.dispatch(item.call_models+'/getModels')
+			}
+			if (item.call_models) {
+				const store_slice = this.$store.state[item.call_models]
+				const has_models = store_slice && store_slice.models && store_slice.models.length
+				const pdf_profiles_incomplete = item.call_models === 'pdf_column_profile'
+					&& store_slice
+					&& !store_slice.all_profiles_loaded
+				if (!only_if_empty || !has_models || pdf_profiles_incomplete) {
+					this.$store.dispatch(item.call_models + '/getModels')
+				}
 			} 
 			if (item.commit) {
 				item.commit.forEach(commit => {

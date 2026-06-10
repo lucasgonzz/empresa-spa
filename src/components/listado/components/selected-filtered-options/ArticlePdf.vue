@@ -29,42 +29,32 @@
 	</div>
 </template>
 <script>
-import alert_filtrados from '@/mixins/listado/alert_filtrados'
+import listado_articles_source from '@/mixins/listado/listado_articles_source'
 import generals from '@/mixins/generals'
 
 /**
  * Lista plantillas `article_pdf` del usuario y abre el PDF de ofertas en otra pestaña.
- * Con listas de precio activas, una opción por plantilla y por `price_type`.
  */
 export default {
+	mixins: [listado_articles_source, generals],
 	components: {
 		DropdownSectionTitle: () => import('@/components/listado/components/selected-filtered-options/DropdownSectionTitle'),
 		DropdownOptionItem: () => import('@/components/listado/components/selected-filtered-options/DropdownOptionItem'),
 	},
-	mixins: [alert_filtrados, generals],
 	computed: {
 		/**
-		 * Indica si el dueño trabaja con listas de precios (`user.listas_de_precio`).
+		 * Indica si el dueño trabaja con listas de precios.
 		 *
 		 * @returns {boolean}
 		 */
 		owner_uses_listas_de_precio() {
 			return this.ownerUsesListasDePrecio()
 		},
-		selected() {
-			return this.$store.state.article.selected
-		},
-		total_filter_results() {
-			return this.$store.state.article.total_filter_results
-		},
-		filtered() {
-			return this.$store.state.article.filtered
-		},
 		article_pdf_models() {
 			return this.$store.state.article_pdf.models
 		},
 		/**
-		 * Listas de precios cargadas en store (una opción de PDF por cada una).
+		 * Listas de precios cargadas en store.
 		 *
 		 * @returns {Array}
 		 */
@@ -85,27 +75,18 @@ export default {
 	},
 	methods: {
 		/**
-		 * Arma la lista de IDs (selección o filtrados) y abre el endpoint del PDF.
+		 * Arma la lista de IDs según el dropdown activo y abre el endpoint del PDF.
 		 *
-		 * @param {Object}      design         Registro `article_pdf` con `id` y `nombre`.
-		 * @param {number|null} price_type_id  Lista de precios; query `price_type_id` si aplica.
+		 * @param {Object}      design
+		 * @param {number|null} price_type_id
 		 * @return {void}
 		 */
 		open_offer_pdf(design, price_type_id) {
-			let ids = []
-			let articles
-			if (this.selected.length) {
-				articles = this.selected
-			} else if (this.filtered.length) {
-				this.alert_filtrados()
-				articles = this.filtered
-			}
-			if (!articles || !articles.length) {
+			let ids = this.resolve_article_ids()
+			if (!ids.length) {
 				return
 			}
-			articles.forEach(function (article) {
-				ids.push(article.id)
-			})
+
 			let link = process.env.VUE_APP_API_URL + '/article/article-offer-pdf/' + design.id + '/' + ids.join('-')
 			if (price_type_id) {
 				link += '?price_type_id=' + price_type_id

@@ -4,6 +4,7 @@
 	class="m-l-15"
 	right
 	:id="id"
+	size="sm"
 	:variant="variant"
 	:text="text_dropdown">
 		<dropdown-option-item
@@ -43,6 +44,12 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+	},
+	provide() {
+		return {
+			options_from_filter: this.from_filter,
+			options_dropdown_model_name: this.model_name,
+		}
 	},
 	computed: {
 		id() {

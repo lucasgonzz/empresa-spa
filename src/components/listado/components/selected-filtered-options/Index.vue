@@ -7,8 +7,9 @@
 		<search-image-automatica></search-image-automatica>
 
 
+		<!-- <articles-pdf-option-drop-down></articles-pdf-option-drop-down> -->
+
 		<!-- Documentos PDF -->
-		<articles-pdf-option-drop-down></articles-pdf-option-drop-down>
 
 		<article-ticket-option-drop-down></article-ticket-option-drop-down>
 
@@ -29,9 +30,7 @@
 </template>
 
 <script>
-
 export default {
-
 	components: {
 
 		ArticleTicketOptionDropDown: () => import('@/components/listado/components/selected-filtered-options/ArticleTicketOptionDropDown'),

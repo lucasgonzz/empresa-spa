@@ -10,6 +10,7 @@
 				@keyup.enter="search"
 				v-model="name"
 				placeholder="Nombre"
+				size="sm"
 				class="input-search"></b-form-input>
 			</div>
 		</div>

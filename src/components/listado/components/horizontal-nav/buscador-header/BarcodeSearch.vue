@@ -11,6 +11,7 @@
 				v-model="bar_code"
 				id="bar-code-search"
 				placeholder="Codigo de barras"
+				size="sm"
 				class="input-search"></b-form-input>
 			</div>
 		</div>

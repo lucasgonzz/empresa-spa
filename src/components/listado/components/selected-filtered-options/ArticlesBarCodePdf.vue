@@ -27,9 +27,11 @@
 
 <script>
 
-import alert_filtrados from '@/mixins/listado/alert_filtrados'
+import listado_articles_source from '@/mixins/listado/listado_articles_source'
 
 export default {
+
+	mixins: [listado_articles_source],
 
 	components: {
 
@@ -38,8 +40,6 @@ export default {
 		EtiquetasConfigModal: () => import('@/components/listado/components/selected-filtered-options/EtiquetasConfigModal'),
 
 	},
-
-	mixins: [alert_filtrados],
 
 	data() {
 
@@ -51,80 +51,35 @@ export default {
 
 	},
 
-	computed: {
-
-		selected() {
-
-			return this.$store.state.article.selected 
-
-		},
-
-		filtered() {
-
-			return this.$store.state.article.filtered 
-
-		},
-
-		total_filter_results() {
-
-			return this.$store.state.article.total_filter_results 
-
-		},
-
-	},
-
 	methods: {
 
+		/**
+		 * Abre PDF A4 de códigos de barra según el dropdown activo.
+		 *
+		 * @return {void}
+		 */
 		ticketsA4() {
 
-			let ids = []
-
-			let articles
-
-			if (this.selected.length) {
-
-				articles = this.selected
-
-			} else if (this.filtered.length) {
-
-				this.alert_filtrados()
-
-				articles = this.filtered
-
+			let ids = this.resolve_article_ids()
+			if (!ids.length) {
+				return
 			}
 
-			articles.forEach(article => {
-
-				ids.push(article.id)
-
-			})
-
-			let link = process.env.VUE_APP_API_URL+'/article/bar-codes-pdf/'+ids.join('-') 
-
+			let link = process.env.VUE_APP_API_URL + '/article/bar-codes-pdf/' + ids.join('-')
 			window.open(link)
 
 		},
 
 		/**
-		 * Resuelve artículos seleccionados o filtrados y abre el modal de configuración.
+		 * Resuelve artículos según el dropdown activo y abre el modal de configuración.
+		 *
+		 * @return {void}
 		 */
 		abrir_modal_etiquetas() {
 
-			let articles = []
+			let articles = this.resolve_articles()
 
-			if (this.selected.length) {
-
-				articles = this.selected
-
-			} else if (this.filtered.length) {
-
-				this.alert_filtrados()
-
-				articles = this.filtered
-
-			}
-
-			if (!articles.length) {
+			if (!articles || !articles.length) {
 
 				this.$toast.warning('Seleccioná al menos un artículo')
 

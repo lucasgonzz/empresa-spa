@@ -15,56 +15,63 @@
 				</h6>
 
 				<div class="icon-cards__grid">
+					<!-- Contenedor de celda: mantiene la altura del grid; la descripción flota con position absolute -->
 					<div
 					v-for="card in visible_cards(group.cards)"
 					:key="card.id || card.text"
-					:id="card.id ? card.id : ''"
-					class="icon-card"
-					:class="card_accent_class(card)">
-						<div class="icon-card__header">
-							<div
-							class="icon-card__icon-wrap"
-							:class="card_accent_class(card)">
-								<i
-								:class="icon_class(card)"
-								aria-hidden="true"></i>
+					class="icon-card-shell"
+					:class="{ 'icon-card-shell--has-description': card.description }">
+						<div
+						:id="card.id ? card.id : ''"
+						class="icon-card"
+						:class="card_accent_class(card)">
+							<div class="icon-card__header">
+								<div
+								class="icon-card__icon-wrap"
+								:class="card_accent_class(card)">
+									<i
+									:class="icon_class(card)"
+									aria-hidden="true"></i>
+								</div>
+
+								<div class="icon-card__body">
+									<p class="text">
+										{{ card.text }}
+									</p>
+									<p
+									v-if="card.value !== undefined && card.value !== null && card.value !== ''"
+									class="value">
+										{{ card.value }}
+									</p>
+									<p 
+									v-if="card.extra"
+									class="extra">
+										{{ card.extra }}
+									</p>
+								</div>
 							</div>
 
-							<div class="icon-card__body">
-								<p class="text">
-									{{ card.text }}
-								</p>
-								<p
-								v-if="card.value !== undefined && card.value !== null && card.value !== ''"
-								class="value">
-									{{ card.value }}
-								</p>
-								<p 
-								v-if="card.extra"
-								class="extra">
-									{{ card.extra }}
-								</p>
+							<div
+							v-if="card.buttons && card.buttons.length"
+							class="icon-card__actions">
+								<b-button
+								size="sm"
+								variant="outline-primary"
+								v-for="button in card.buttons"
+								:key="button.text"
+								@click="call_method(button)">
+									{{ button.text }}
+								</b-button>
 							</div>
 						</div>
 
+						<!-- Panel flotante: no participa del flujo del grid al expandirse -->
 						<p
 						v-if="card.description"
-						class="description">
+						class="icon-card__description-panel"
+						role="tooltip">
 							{{ card.description }}
 						</p>
-
-						<div
-						v-if="card.buttons && card.buttons.length"
-						class="icon-card__actions">
-							<b-button
-							size="sm"
-							variant="outline-primary"
-							v-for="button in card.buttons"
-							:key="button.text"
-							@click="call_method(button)">
-								{{ button.text }}
-							</b-button>
-						</div>
 					</div>
 				</div>
 			</div>
@@ -851,6 +858,55 @@ $accent-default: #64748b
 		height: auto
 		min-height: 0
 
+	// Celda del grid: reserva espacio solo por el contenido visible de la tarjeta
+	.icon-card-shell
+		position: relative
+		align-self: start
+		z-index: 1
+		transition: transform 0.25s ease, z-index 0s linear 0.25s
+
+		&:hover
+			transform: translateY(-3px)
+			z-index: 20
+			transition: transform 0.25s ease, z-index 0s linear 0s
+
+			.icon-card
+				box-shadow: 0 12px 24px rgba(15, 23, 42, 0.1)
+				border-color: #cbd5e1
+
+			.icon-card__description-panel
+				opacity: 1
+				visibility: visible
+				pointer-events: auto
+
+		&--has-description:hover
+			.icon-card
+				border-bottom-left-radius: 0
+				border-bottom-right-radius: 0
+				border-bottom-color: transparent
+
+		// Descripción flotante: se superpone al contenido inferior sin redimensionar el grid
+		.icon-card__description-panel
+			position: absolute
+			top: 100%
+			left: 0
+			right: 0
+			margin: 0
+			padding: 10px 14px 12px
+			font-size: 0.75rem
+			color: #475569
+			line-height: 1.45
+			background: #fff
+			border: 1px solid #cbd5e1
+			border-top: 1px dashed #e2e8f0
+			border-radius: 0 0 12px 12px
+			box-shadow: 0 12px 24px rgba(15, 23, 42, 0.1)
+			opacity: 0
+			visibility: hidden
+			pointer-events: none
+			transition: opacity 0.2s ease, visibility 0.2s ease
+			z-index: 2
+
 	.icon-card
 		background: #fff
 		border: 1px solid #e2e8f0
@@ -861,7 +917,7 @@ $accent-default: #64748b
 		padding: 12px 14px
 		min-height: 0
 		height: auto
-		transition: transform 0.5s ease, box-shadow 0.5s ease, border-color 0.5s ease
+		transition: box-shadow 0.25s ease, border-color 0.25s ease, border-radius 0.25s ease
 		overflow: hidden
 		position: relative
 		box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06)
@@ -889,19 +945,6 @@ $accent-default: #64748b
 			background: $accent-deudas
 		&.accent-facturacion::before
 			background: $accent-facturacion
-
-		&:hover
-			transform: translateY(-3px)
-			box-shadow: 0 12px 24px rgba(15, 23, 42, 0.1)
-			border-color: #cbd5e1
-			z-index: 2
-			overflow: visible
-
-			.description
-				display: block
-				margin-top: 10px
-				padding-top: 10px
-				border-top: 1px dashed #e2e8f0
 
 		&__header
 			display: flex
@@ -976,14 +1019,6 @@ $accent-default: #64748b
 			font-size: 0.75rem
 			color: #94a3b8
 			margin-top: 4px
-
-		.description
-			display: none
-			font-size: 0.75rem
-			color: #475569
-			line-height: 1.45
-			margin: 0
-			padding: 0
 
 	@media screen and (max-width: 700px)
 		&__grid

@@ -208,8 +208,8 @@ export default {
 			value: '',
 		},
 	],
-	singular_model_name_spanish: 'Perfil de columnas PDF',
-	plural_model_name_spanish: 'Perfiles de columnas PDF',
-	create_model_name_spanish: 'Nuevo perfil de columnas PDF',
+	singular_model_name_spanish: 'Diseño de PDF',
+	plural_model_name_spanish: 'Diseño de PDF',
+	create_model_name_spanish: 'Nuevo Diseño de PDF',
 	text_delete: 'el',
 }

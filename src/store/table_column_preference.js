@@ -4,6 +4,8 @@ axios.defaults.baseURL = process.env.VUE_APP_API_URL
 
 import moment from 'moment'
 import generals from '@/common-vue/mixins/generals'
+import { bootstrap_all_module_column_preferences_from_cache } from '@/common-vue/helpers/column_preferences_helper'
+
 export default {
 	namespaced: true,
 	state: {
@@ -252,6 +254,19 @@ export default {
 		},
 	},
 	actions: {
+		/**
+		 * Precarga props_to_show de cada módulo desde el cache ya descargado al inicio.
+		 * Evita re-aplicar columnas (y pisar filtros) al entrar a cada vista.
+		 *
+		 * @param {Object} context rootState no usado; se usa el store completo vía commit/dispatch implícito.
+		 * @return {void}
+		 */
+		bootstrap_module_preferences(context) {
+			bootstrap_all_module_column_preferences_from_cache({
+				rootState: context.rootState,
+				commit: context.commit,
+			})
+		},
 		getModels({commit, state, dispatch}) {
 			commit('setSelected', [])
 			commit('setFiltered', [])

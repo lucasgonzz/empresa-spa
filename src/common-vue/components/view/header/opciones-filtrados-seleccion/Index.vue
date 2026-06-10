@@ -191,6 +191,12 @@ export default {
 
 <style lang="sass">
 
+/* Menú del dropdown de seleccionados/filtrados: altura máxima y scroll vertical */
+#btn_filtrados_dropdown .dropdown-menu,
+#btn_seleccionados_dropdown .dropdown-menu
+	max-height: 70vh
+	overflow-y: auto
+
 /* Opción individual del dropdown de seleccionados/filtrados: icono en celda + label */
 
 .article-dropdown-option

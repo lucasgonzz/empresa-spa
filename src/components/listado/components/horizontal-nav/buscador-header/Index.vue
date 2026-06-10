@@ -31,6 +31,8 @@ export default {
 }
 </script>
 <style lang="sass">
+
+/* Buscador del listado: misma altura que btn-sm (Seleccionar / Actualizar) */
 .buscador-listado
 	@media screen and (max-width: 766px)
 		width: 100%
@@ -47,6 +49,17 @@ export default {
 	.cont-search > .icon
 		border-radius: 0 !important
 
+	.cont-search
+		align-items: stretch
+
+	.icon
+		font-size: 0.875rem
+		width: 32px
+
 	.input-search
-		height: 36.5px !important
+		height: auto !important
+		padding: 0.25rem 0.5rem
+		font-size: 0.875rem
+		line-height: 1.5
+
 </style>

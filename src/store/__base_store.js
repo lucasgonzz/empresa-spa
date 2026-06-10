@@ -87,6 +87,12 @@ export default function __base_store(options = {}) {
 			// Flag que indica si el estado filtered fue cargado por BuscadorRapido (sin usar el FilterForm).
 			// Permite distinguir entre "filtrado por formulario" y "filtrado por buscador rápido".
 			filtered_without_filter_form: false,
+
+			/**
+			 * Origen del último dropdown masivo (filtrados vs seleccionados).
+			 * Lo usan modales globales fuera del árbol del menú desplegable.
+			 */
+			options_from_filter: false,
 		}
 
 		/**
@@ -318,6 +324,15 @@ export default function __base_store(options = {}) {
 		 */
 		set_filtered_without_filter_form(state, value) {
 			state.filtered_without_filter_form = value
+		},
+		/**
+		 * Guarda si la acción masiva se originó en el dropdown de filtrados.
+		 *
+		 * @param {Object}  state
+		 * @param {boolean} value
+		 */
+		set_options_from_filter(state, value) {
+			state.options_from_filter = !!value
 		},
 	}
 

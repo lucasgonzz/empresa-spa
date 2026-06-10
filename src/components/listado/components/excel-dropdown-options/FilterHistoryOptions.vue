@@ -1,25 +1,19 @@
 <template>
 	<div>
 		<b-dropdown-divider></b-dropdown-divider>
-		
-		<!-- <b-dropdown-text>
-			
-			<h5>
-				<i class="icon-down"></i>
-				Historial de busquedas
-			</h5>
-		</b-dropdown-text>
-		<b-dropdown-divider></b-dropdown-divider> -->
 
-		<b-dropdown-item
+		<excel-dropdown-option-item
+		icon="icon-search"
 		@click="show">
-			<i class="icon-search"></i>
 			Historial de busquedas
-		</b-dropdown-item>
+		</excel-dropdown-option-item>
 	</div>
 </template>
 <script>
 export default {
+	components: {
+		ExcelDropdownOptionItem: () => import('@/common-vue/components/horizontal-nav/ExcelDropdownOptionItem'),
+	},
 	methods: {
 		show() {
 			this.$store.dispatch('filter_history/getModels')

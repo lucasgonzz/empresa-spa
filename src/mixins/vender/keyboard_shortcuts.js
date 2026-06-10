@@ -1,5 +1,6 @@
 import {
 	VENDER_KEYBOARD_SHORTCUT_ACTIONS,
+	VENDER_KEYBOARD_SHORTCUT_KEYS,
 } from '@/constants/vender_keyboard_shortcuts'
 
 /**
@@ -39,34 +40,89 @@ export default {
 		},
 
 		/**
+		 * Normaliza la tecla del evento (F1-F10) para comparar con la config del store.
+		 *
+		 * @param {KeyboardEvent} event
+		 * @returns {string}
+		 */
+		_get_vender_key_from_event(event) {
+			if (event.key && VENDER_KEYBOARD_SHORTCUT_KEYS.indexOf(event.key) !== -1) {
+				return event.key
+			}
+
+			if (event.code && VENDER_KEYBOARD_SHORTCUT_KEYS.indexOf(event.code) !== -1) {
+				return event.code
+			}
+
+			return event.key
+		},
+
+		/**
+		 * Indica si la tecla presionada está asignada a algún atajo de Vender.
+		 *
+		 * @param {KeyboardEvent} event
+		 * @returns {boolean}
+		 */
+		_is_vender_handled_keyboard_event(event) {
+			const event_key = this._get_vender_key_from_event(event)
+			const handled_keys = this._get_vender_handled_keys()
+
+			return handled_keys.indexOf(event_key) !== -1
+		},
+
+		/**
+		 * Bloquea el comportamiento nativo del navegador para teclas F asignadas.
+		 * Algunas (p. ej. F5) requieren preventDefault también en keyup.
+		 *
+		 * @param {KeyboardEvent} event
+		 */
+		_prevent_vender_keyboard_default(event) {
+			event.preventDefault()
+			event.stopPropagation()
+		},
+
+		/**
+		 * Receptor del keyup: refuerza el bloqueo de F5 refresh y similares.
+		 *
+		 * @param {KeyboardEvent} event
+		 */
+		handleVenderKeyboardKeyup(event) {
+			if (!this._is_vender_handled_keyboard_event(event)) {
+				return
+			}
+
+			this._prevent_vender_keyboard_default(event)
+		},
+
+		/**
 		 * Receptor principal del evento keydown global.
 		 * Previene el comportamiento del navegador para las teclas configuradas.
 		 *
 		 * @param {KeyboardEvent} event
 		 */
 		handleVenderKeyboard(event) {
-			const shortcuts = this._get_vender_keyboard_shortcuts()
-			const handled_keys = this._get_vender_handled_keys()
-
-			if (handled_keys.indexOf(event.key) === -1) {
+			if (!this._is_vender_handled_keyboard_event(event)) {
 				return
 			}
 
-			/* Prevenir comportamiento default del navegador (rename archivo, búsqueda, etc.) */
-			event.preventDefault()
+			const shortcuts = this._get_vender_keyboard_shortcuts()
+			const event_key = this._get_vender_key_from_event(event)
 
-			if (event.key === shortcuts.save) {
+			/* Evitar refresh (F5), búsqueda (F3), ayuda (F1), etc. */
+			this._prevent_vender_keyboard_default(event)
+
+			if (event_key === shortcuts.save) {
 				this._shortcut_guardar_venta()
-			} else if (event.key === shortcuts.payment_method) {
+			} else if (event_key === shortcuts.payment_method) {
 				this._shortcut_foco_payment_method()
-			} else if (event.key === shortcuts.print) {
+			} else if (event_key === shortcuts.print) {
 				/* Imprimir lo ejecuta Print.vue escuchando vender:print-shortcut */
 				this.$root.$emit('vender:print-shortcut')
-			} else if (event.key === shortcuts.client) {
+			} else if (event_key === shortcuts.client) {
 				this._shortcut_foco_client()
-			} else if (event.key === shortcuts.search_article) {
+			} else if (event_key === shortcuts.search_article) {
 				this._shortcut_foco_article_name()
-			} else if (event.key === shortcuts.barcode) {
+			} else if (event_key === shortcuts.barcode) {
 				this._shortcut_foco_barcode()
 			}
 		},
