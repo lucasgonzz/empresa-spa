@@ -14,13 +14,18 @@
 			variant="primary"></b-spinner>
 		</div>
 
+		<history-empty-state
+		v-else-if="!models.length"
+		icon_class="icon-history"
+		title="Aún no hay actualizaciones masivas"
+		hint="Cuando realices una actualización masiva, aparecerá aquí su historial."></history-empty-state>
+
 		<b-table
 		responsive
 		head-variant="dark"
 		v-else
 		:fields="fields"
-		:items="items"
-		empty-text="No hay actualizaciones masivas registradas">
+		:items="items">
 
 			<template #cell(action)="data">
 				{{ action_label(models[data.index].action) }}
@@ -130,6 +135,7 @@ export default {
 	},
 	components: {
 		Confirm: () => import('@/common-vue/components/Confirm'),
+		HistoryEmptyState: () => import('@/common-vue/components/horizontal-nav/HistoryEmptyState'),
 	},
 	data() {
 		return {

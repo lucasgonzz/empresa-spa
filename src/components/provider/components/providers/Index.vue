@@ -3,6 +3,13 @@
 	v-if="view == 'proveedores'">
     	<current-acounts></current-acounts>
     	<import></import>
+
+		<!-- Modal de importación asistida por IA para proveedores (visible solo con extensión habilitada) -->
+		<ai-excel-import-modal
+		v-if="hasExtencion('ai_excel_import')"
+		model="provider">
+		</ai-excel-import-modal>
+
 		<!-- <update-prices></update-prices> -->
 		
 		<view-component 
@@ -10,6 +17,14 @@
 		show_filter_modal
 		show_excel_drop_down
 		:show_previus_days="false">
+
+			<template #horizontal_nav_center>
+				<!-- Buscador rápido por texto para proveedores: busca en los campos principales del modelo -->
+				<buscador-rapido
+				model_name="provider"
+				:props_to_filter="['name', 'phone', 'address', 'email', 'razon_social', 'cuit', 'observations']"
+				placeholder="Buscar proveedor..."></buscador-rapido>
+			</template>
 
 			<template v-slot:table_left_options="slotProps">
 				<btn-current-acounts
@@ -36,6 +51,8 @@ export default {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 		BtnCurrentAcounts: () => import('@/components/common/BtnCurrentAcounts'),
 		ComercioCityUser: () => import('@/components/common/ComercioCityUser'),
+		AiExcelImportModal: () => import('@/components/listado/modals/ai-excel-import/Index'),
+		BuscadorRapido: () => import('@/common-vue/components/buscador-rapido/Index'),
 	},
 }
 </script>

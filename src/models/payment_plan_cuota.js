@@ -41,11 +41,11 @@ export default {
 			key: 'client_id',
 			only_show: true,
 		},
-		{
-			text: 'Venta',
-			key: 'sale_id',
-			only_show: true,
-		},
+		// {
+		// 	text: 'Venta',
+		// 	key: 'sale_id',
+		// 	only_show: true,
+		// },
 	],
 	singular_model_name_spanish: 'Cuota',
 	plural_model_name_spanish: 'Cuotas',

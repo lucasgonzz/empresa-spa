@@ -180,7 +180,10 @@
 </template>
 <script>
 import infiniteScroll from 'vue-infinite-scroll'
+import filters from '@/common-vue/mixins/filters'
+
 export default {
+	mixins: [filters],
 	directives: {infiniteScroll},
 	components: {
 		TrComponent: () => import('@/common-vue/components/display/table/Tr'),
@@ -784,49 +787,97 @@ export default {
 			}
 			this.filter_modal_field = null
 		},
+		/**
+		 * Indica si la columna tiene algún filtro activo en el store.
+		 *
+		 * @param {string} field_key
+		 * @returns {boolean}
+		 */
 		filter_is_used(field_key) {
 			let filters = (this.$store.state[this.model_name] && this.$store.state[this.model_name].filters) ? this.$store.state[this.model_name].filters : []
-			let filter = filters.find(_filter => _filter.key === field_key)
-			if (!filter) return false
+			let has_active = false
 
-			if (typeof filter.en_blanco !== 'undefined' && filter.en_blanco) {
-				return true
-			}
-			if (typeof filter.no_en_blanco !== 'undefined' && filter.no_en_blanco) {
-				return true
-			}
+			filters.forEach(filter => {
+				if (!has_active && filter.key === field_key && this.filter_has_active_values(filter)) {
+					has_active = true
+				}
+			})
 
-			if (filter.ordenar_de !== null && filter.ordenar_de !== '' && typeof filter.ordenar_de !== 'undefined') {
-				return true
-			}
+			return has_active
+		},
+		/**
+		 * Copia criterios activos de filtros existentes sobre la plantilla nueva de columna.
+		 *
+		 * @param {Object} template_filter Plantilla vacía generada desde props.
+		 * @param {Array}  existing_filters  Filtros previos con la misma key.
+		 * @returns {Object}
+		 */
+		apply_active_filter_values_to_template(template_filter, existing_filters) {
+			let merged_filter = Object.assign({}, template_filter)
 
-			// Los flags “activos” son evaluados por Backend solo cuando el valor es efectivo.
-			// Para que la UI coincida, chequeamos los mismos criterios (ej: select/search != 0).
-			let type = filter.type
+			existing_filters.forEach(existing_filter => {
+				if (!this.filter_has_active_values(existing_filter)) {
+					return
+				}
 
-			if (type === 'select' || type === 'search') {
-				return filter.igual_que !== 0 && filter.igual_que !== '' && filter.igual_que !== null && typeof filter.igual_que !== 'undefined'
-			}
+				let fields_to_copy = ['que_contenga', 'igual_que', 'menor_que', 'mayor_que', 'checkbox', 'en_blanco', 'no_en_blanco', 'ordenar_de']
+				fields_to_copy.forEach(field_key => {
+					if (typeof existing_filter[field_key] !== 'undefined') {
+						merged_filter[field_key] = existing_filter[field_key]
+					}
+				})
 
-			if (type === 'checkbox') {
-				return typeof filter.checkbox !== 'undefined' && filter.checkbox !== -1
-			}
+				/* Compatibilidad con filtros del modal horizontal (value / number_type). */
+				if (typeof existing_filter.value !== 'undefined' && existing_filter.value !== '' && existing_filter.value !== null) {
+					if (existing_filter.type === 'text' || existing_filter.type === 'textarea') {
+						merged_filter.que_contenga = existing_filter.value
+					} else if (existing_filter.type === 'select' || existing_filter.type === 'search') {
+						if (existing_filter.value !== 0) {
+							merged_filter.igual_que = existing_filter.value
+						}
+					} else if (existing_filter.type === 'number') {
+						if (existing_filter.number_type === 'min') {
+							merged_filter.menor_que = existing_filter.value
+						} else if (existing_filter.number_type === 'equal') {
+							merged_filter.igual_que = existing_filter.value
+						} else if (existing_filter.number_type === 'max') {
+							merged_filter.mayor_que = existing_filter.value
+						}
+					} else if (existing_filter.type === 'boolean' && existing_filter.value !== -1) {
+						merged_filter.checkbox = existing_filter.value
+					}
+				}
+			})
 
-			if (type === 'date') {
-				return (typeof filter.menor_que !== 'undefined' && filter.menor_que !== '') 
-					|| (typeof filter.igual_que !== 'undefined' && filter.igual_que !== '')
-					|| (typeof filter.mayor_que !== 'undefined' && filter.mayor_que !== '')
-			}
+			return merged_filter
+		},
+		/**
+		 * Reconstruye la plantilla de filtros conservando criterios activos del store.
+		 *
+		 * @param {Array} new_filters      Plantilla según columnas visibles.
+		 * @param {Array} existing_filters Filtros actuales del módulo.
+		 * @returns {Array}
+		 */
+		merge_table_filters_preserving_active_values(new_filters, existing_filters) {
+			let merged_filters = []
 
-			if (type === 'number') {
-				return (typeof filter.menor_que !== 'undefined' && filter.menor_que !== '') 
-					|| (typeof filter.igual_que !== 'undefined' && filter.igual_que !== '' && filter.igual_que !== null)
-					|| (typeof filter.mayor_que !== 'undefined' && filter.mayor_que !== '')
-			}
+			new_filters.forEach(new_filter => {
+				let same_key_filters = []
+				existing_filters.forEach(existing_filter => {
+					if (existing_filter.key === new_filter.key) {
+						same_key_filters.push(existing_filter)
+					}
+				})
 
-			// text / textarea
-			return (typeof filter.que_contenga !== 'undefined' && filter.que_contenga !== '')
-				|| (typeof filter.igual_que !== 'undefined' && filter.igual_que !== '')
+				if (!same_key_filters.length) {
+					merged_filters.push(new_filter)
+					return
+				}
+
+				merged_filters.push(this.apply_active_filter_values_to_template(new_filter, same_key_filters))
+			})
+
+			return merged_filters
 		},
 		set_fields(cambiaron_las_props = false) {
 
@@ -906,7 +957,9 @@ export default {
 				return
 			}
 
-			this.$store.commit(this.model_name+'/setFilters', new_filters)
+			/* Al cambiar columnas (p. ej. depósitos o listas de precio al iniciar), no perder criterios activos. */
+			let merged_filters = this.merge_table_filters_preserving_active_values(new_filters, existing_filters)
+			this.$store.commit(this.model_name+'/setFilters', merged_filters)
 		},
 		/**
 		 * Entrada a papelera: reconstruye filtros desde columnas, orden único deleted_at DESC y POST search+papelera.
@@ -1120,9 +1173,13 @@ export default {
 	// min-height: 500px
 	// display: inline-block
 	overflow-y: scroll
-	margin-left: -15px
+	margin-left: -10px
+	margin-right: 10px
 	margin-top: 15px
 	position: relative
+	/* Esquinas superiores fijas: el thead sticky se ancla aquí, no en .common-table que scrollea. */
+	border-top-left-radius: 10px
+	border-top-right-radius: 10px
 
 	&::before,
 	&::after 
@@ -1152,8 +1209,8 @@ export default {
 			background: rgba(255,255,255,.8)
 	
 	.common-table
-		// Redondeo global de 3 esquinas para tablas del sistema.
-		border-radius: 10px 10px 10px 0
+		// Redondeo inferior derecho; las esquinas superiores las recorta .cont-table (header sticky).
+		border-radius: 0 0 10px 0
 		overflow: hidden
 		position: relative
 		border-spacing: 0px
@@ -1189,6 +1246,23 @@ export default {
 		th  
 			position: sticky
 			top: 0px
+			/* Fondo en el th sticky (no solo en .cont-th): evita que se vea tbody al scrollear por el padding nativo del th. */
+			padding: 0
+			background: #2C2C2C
+			/* Sombra hacia arriba: tapa el hueco de 1–2px por redondeo de subpíxeles al componer capas sticky. */
+			box-shadow: 0 -2px 0 0 #2C2C2C
+
+			&:first-child
+				border-top-left-radius: 10px
+				overflow: hidden
+				.cont-th
+					border-top-left-radius: 10px
+
+			&:last-child
+				border-top-right-radius: 10px
+				overflow: hidden
+				.cont-th
+					border-top-right-radius: 10px
 
 			&:hover
 				.cont-filter-buttons
@@ -1206,7 +1280,6 @@ export default {
 
 			.cont-th
 
-				// margin: -1px
 				position: relative
 				display: flex  
 				flex-direction: row

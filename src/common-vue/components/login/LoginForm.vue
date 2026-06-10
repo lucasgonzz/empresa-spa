@@ -1,12 +1,17 @@
 <template>
-	<div class="login-form login-form--modern">
+	<div
+		class="login-form"
+		:class="split_layout ? 'login-form--split' : 'login-form--modern'"
+	>
 		<div class="login-form__welcome">
+			<!-- Título principal del formulario de acceso -->
 			<h2 class="login-form__welcome-title">
-				Bienvenido de nuevo
+				Bienvenido
 			</h2>
-			<!-- <p class="login-form__welcome-text">
-				Iniciá sesión para acceder a la plataforma
-			</p> -->
+			<!-- Subtítulo orientativo que describe la acción esperada -->
+			<p class="login-form__welcome-text">
+				Iniciá sesión para acceder a tu panel
+			</p>
 		</div>
 		<!-- Campo de identificación por número de documento -->
 		<div class="login-form__field">
@@ -36,7 +41,8 @@
 					name="doc_number"
 					id="doc_number"
 					dusk="doc_number"
-					placeholder="Ingrese su Numero de documento"
+					autocomplete="username"
+					:placeholder="doc_number_placeholder"
 				/>
 			</div>
 		</div>
@@ -68,11 +74,16 @@
 					id="password"
 					type="password"
 					dusk="password"
+					autocomplete="current-password"
 					:placeholder="password_placeholder"
 				/>
 			</div>
 		</div>
-		<div class="login-form__remember">
+		<!-- Recordarme: solo en layout clásico (no aparece en split-screen del mockup) -->
+		<div
+			v-if="!split_layout"
+			class="login-form__remember"
+		>
 			<b-form-checkbox
 				v-model="form.remember"
 				:value="1"
@@ -83,13 +94,17 @@
 		</div>
 		<btn-loader
 			class="login-form__submit"
+			:class="{ 'login-form__submit--with-arrow': split_layout }"
 			@clicked="login"
 			text="Iniciar sesión"
 			name="login"
 			:loader="loading"
 			variant="primary"
 		/>
-		<div class="login-form__forgot-wrap">
+		<div
+			v-if="!split_layout"
+			class="login-form__forgot-wrap"
+		>
 			<b-link
 				class="login-form__forgot-link"
 				:to="{ name: 'passwordReset', params: { view: 'email' } }"
@@ -105,6 +120,15 @@ import BtnLoader from '@/common-vue/components/BtnLoader'
 export default {
 	components: {
 		BtnLoader,
+	},
+	props: {
+		/**
+		 * Activa el layout split-screen (mockup): sin recordarme ni recuperar contraseña.
+		 */
+		split_layout: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	data() {
 		// Estado del formulario de login enviado al endpoint `login`
@@ -125,6 +149,17 @@ export default {
 		 */
 		password_placeholder() {
 			return 'Ingresá tu contraseña'
+		},
+		/**
+		 * Placeholder del documento según layout activo.
+		 *
+		 * @returns {string}
+		 */
+		doc_number_placeholder() {
+			if (this.split_layout) {
+				return 'Ingresá tu número de documento'
+			}
+			return 'Ingrese su Numero de documento'
 		},
 	},
 	methods: {
@@ -203,14 +238,17 @@ export default {
 .login-form__welcome
 	margin-bottom: 1.5rem
 
+/* Título principal del bloque de bienvenida */
 .login-form__welcome-title
-	font-size: 1.2rem
+	font-size: 1.5rem
 	font-weight: 700
 	color: #111827
-	margin: 0 0 0.35rem
+	margin: 0 0 0.4rem
+	letter-spacing: -0.02em
 
+/* Subtítulo descriptivo debajo del título */
 .login-form__welcome-text
-	font-size: 0.9rem
+	font-size: 0.875rem
 	color: #6b7280
 	margin: 0
 
@@ -301,4 +339,115 @@ export default {
 .login-form__forgot-link:hover
 	color: #007bff
 	text-decoration: underline
+
+// ─── Layout split-screen (réplica del mockup de referencia) ───
+.login-form--split
+	padding: 0
+
+.login-form--split .login-form__welcome
+	margin-bottom: 2rem
+
+.login-form--split .login-form__welcome-title
+	font-size: 1.875rem
+	font-weight: 700
+	color: #111827
+	margin: 0 0 0.5rem
+	letter-spacing: -0.03em
+
+.login-form--split .login-form__welcome-text
+	font-size: 0.9375rem
+	font-weight: 400
+	color: #6b7280
+	margin: 0
+
+.login-form--split .login-form__field
+	margin-bottom: 1.35rem
+
+.login-form--split .login-form__label
+	font-size: 0.8125rem
+	font-weight: 500
+	color: #6b7280
+	margin-bottom: 0.5rem
+
+.login-form--split .login-form__input-row
+	background: #ffffff
+	border: 1px solid #e5e7eb
+	border-radius: 8px
+	padding: 0 0 0 0.75rem
+	box-shadow: none
+	// Cuando el navegador autocompleta, pintar toda la fila (icono + input) de amarillo
+	&:has(.login-form__control:-webkit-autofill),
+	&:has(.login-form__control:autofill)
+		background: #fff9c4
+
+.login-form--split .login-form__input-row:focus-within
+	border-color: rgba(0, 123, 255, 0.45)
+	box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1)
+
+.login-form--split .login-form__input-icon
+	color: #9ca3af
+
+.login-form--split .login-form__control
+	height: 48px !important
+	font-size: 0.9375rem
+	color: #111827
+
+.login-form--split .login-form__control::placeholder
+	color: #9ca3af
+
+// Autocompletado del navegador: fondo amarillo uniforme en todo el campo
+.login-form--split .login-form__control:-webkit-autofill,
+.login-form--split .login-form__control:-webkit-autofill:hover,
+.login-form--split .login-form__control:-webkit-autofill:focus,
+.login-form--split .login-form__control:-webkit-autofill:active,
+.login-form--split .login-form__control:autofill
+	-webkit-box-shadow: 0 0 0 1000px #fff9c4 inset !important
+	box-shadow: 0 0 0 1000px #fff9c4 inset !important
+	-webkit-text-fill-color: #111827 !important
+	caret-color: #111827
+	transition: background-color 5000s ease-in-out 0s
+
+.login-form--split .login-form__submit.btn
+	background: #007bff !important
+	border-color: #007bff !important
+	font-size: 1rem
+	font-weight: 600
+	padding-top: 0.75rem
+	padding-bottom: 0.75rem
+	border-radius: 8px
+	margin-top: 0.25rem
+
+.login-form--split .login-form__submit.btn:hover,
+.login-form--split .login-form__submit.btn:focus
+	background: #0069d9 !important
+	border-color: #0062cc !important
+
+// ─── Ajustes mobile (layout apilado del mockup) ───
+@media screen and (max-width: 900px)
+	.login-form--split .login-form__welcome
+		margin-bottom: 1.75rem
+
+	.login-form--split .login-form__welcome-title
+		font-size: 1.625rem
+
+	.login-form--split .login-form__label
+		font-size: 0.6875rem
+		font-weight: 600
+		letter-spacing: 0.07em
+		text-transform: uppercase
+		color: #6b7280
+		margin-bottom: 0.45rem
+
+	.login-form--split .login-form__field
+		margin-bottom: 1.25rem
+
+	.login-form--split .login-form__submit.btn
+		margin-top: 0.5rem
+		padding-top: 0.8rem
+		padding-bottom: 0.8rem
+
+	// Flecha → en el botón de ingreso (solo mobile)
+	.login-form--split .login-form__submit--with-arrow.btn:not(:disabled) span:last-child::after
+		content: ' →'
+		margin-left: 0.15rem
 </style>

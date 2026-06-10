@@ -69,6 +69,10 @@ export default {
 					key: 'provider_code',
 				},
 				{
+					label: 'Nombre',
+					key: 'name',
+				},
+				{
 					label: 'Deposito Origen',
 					key: 'from_address',
 				}, 

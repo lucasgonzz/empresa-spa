@@ -80,6 +80,9 @@ export default {
 			location.reload()
 		},
 		mostrar_alerta() {
+			if (!this.authenticated || !this.owner || !this.owner.payment_expired_at) {
+				return
+			}
 			if (this.days_before_expire < 1) {
 
 				const today = moment()
@@ -105,13 +108,18 @@ export default {
 			return this.$store.state.employee.models 
 		},
 		total_a_pagar() {
-
+			if (!this.owner) {
+				return 0
+			}
 			return this.owner.total_mensualidad
 			let total = (Number(this.employees.length) + 1) * Number(this.owner.precio_por_cuenta)
 
 			return total 
 		},
 		days_before_expire() {
+			if (!this.owner || !this.owner.payment_expired_at) {
+				return 999
+			}
 			return moment().diff(this.owner.payment_expired_at, 'days') * -1
 		},
 		total() {

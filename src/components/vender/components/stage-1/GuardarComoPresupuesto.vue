@@ -1,21 +1,31 @@
 <template>
-	<b-card
+	<div
 	v-if="hasExtencion('budgets') && client"
-	class="m-b-25 m-t-25 b-r-1 shadow">
+	class="vender-toggle-row">
 
-		<b-form-checkbox
-		:value="1"
-		size="lg"
-		:disabled="disabled"
-		:unchecked-value="0"
-		v-model="guardar_como_presupuesto">
-			<span
-			id="guardar_como_presupuesto">
-				Guardar como PRESUPUESTO
+		<!-- Toggle estilo iPhone enlazado al computed con setter -->
+		<label
+		class="vender-toggle"
+		:class="{ 'vender-toggle--disabled': disabled }"
+		for="toggle-presupuesto">
+			<input
+			type="checkbox"
+			id="toggle-presupuesto"
+			:disabled="disabled"
+			:checked="guardar_como_presupuesto == 1"
+			@change="guardar_como_presupuesto = $event.target.checked ? 1 : 0">
+			<span class="vender-toggle__track">
+				<span class="vender-toggle__thumb"></span>
 			</span>
-		</b-form-checkbox>
+		</label>
 
-	</b-card>
+		<span
+		class="vender-toggle__label"
+		id="guardar_como_presupuesto">
+			Guardar como presupuesto
+		</span>
+
+	</div>
 </template>
 <script>
 export default {

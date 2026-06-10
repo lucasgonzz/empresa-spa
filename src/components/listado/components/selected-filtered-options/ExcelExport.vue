@@ -1,82 +1,133 @@
 <template>
+
 	<div>
+
 		<b-dropdown-divider></b-dropdown-divider>
 
+
+
 		<dropdown-section-title
+
 		title="Documentos Excel"
+
 		icon="icon-download"></dropdown-section-title>
 
+
+
 		<dropdown-option-item
+
 		icon="icon-download"
+
 		@click="export_excel">
+
 			Exportar Excel
+
 		</dropdown-option-item>
+
 	</div>
+
 </template>
+
 <script>
+
+import listado_articles_source from '@/mixins/listado/listado_articles_source'
+
+
+
 export default {
+
+	mixins: [listado_articles_source],
+
 	components: {
+
 		DropdownSectionTitle: () => import('@/components/listado/components/selected-filtered-options/DropdownSectionTitle'),
+
 		DropdownOptionItem: () => import('@/components/listado/components/selected-filtered-options/DropdownOptionItem'),
+
 	},
-	computed: {
-		selected() {
-			return this.$store.state.article.selected 
-		},
-		filtered() {
-			return this.$store.state.article.filtered 
-		},
-		filters() {
-			return this.$store.state.article.filters 
-		},
-	},
+
 	methods: {
-		getIds() {
-			/* Acumula ids seleccionados para exportacion puntual. */
-			let ids = []
-			/* Fuente de articulos seleccionados en la grilla. */
-			let articles
-			if (this.selected.length) {
-				articles = this.selected
-			} 
-			articles.forEach(article => {
-				ids.push(article.id)
-			})
-			return ids.join('-')
-		},
+
+		/**
+
+		 * Encola exportación Excel según seleccionados o filtros del dropdown activo.
+
+		 *
+
+		 * @return {void}
+
+		 */
+
 		export_excel() {
-			/* Endpoint que ahora encola la exportacion en backend. */
+
 			let link = '/article/excel/export'
-			
-			/* Querystring final según exportación por seleccion o filtros. */
+
 			let query = ''
 
-			if (this.selected.length) {
-				/* IDs seleccionados manualmente en la tabla. */
-				let ids = this.getIds() 
-				query = '?articles_id='+ids
+
+
+			if (this.use_filtered_source) {
+
+				let active_filters = this.resolve_active_filters_for_export()
+
+				if (!active_filters.length) {
+					this.$toast.error('No hay filtros activos para exportar', { duration: 4000 })
+					return
+				}
+
+				let json_data = JSON.stringify(active_filters)
+
+				query = '?filters=' + encodeURIComponent(json_data)
+
 			} else {
-				/* Filtros activos del listado para exportación masiva. */
-				let jsonData = JSON.stringify(this.filters)
-				query = '?filters='+encodeURIComponent(jsonData)
+
+				let ids = this.resolve_article_ids()
+
+				if (!ids.length) {
+
+					this.$toast.error('No hay artículos para exportar', { duration: 4000 })
+
+					return
+
+				}
+
+				query = '?articles_id=' + ids.join('-')
+
 			}
 
-			/* URL definitiva que dispara el job de exportacion. */
+
+
 			let export_url = link + query
-			
-			/* Se inicia proceso asincrono y la descarga llegará por notificación global. */
+
+
+
 			this.$api.get(export_url)
+
 			.then(() => {
+
 				this.$toast.success('La exportacion se esta procesando. Te avisaremos cuando el excel este listo.', {
+
 					duration: 4000,
+
 				})
+
 			})
+
 			.catch(() => {
+
 				this.$toast.error('No se pudo iniciar la exportacion de excel', {
+
 					duration: 4000,
+
 				})
+
 			})
+
 		},
+
 	}
+
 }
+
 </script>
+

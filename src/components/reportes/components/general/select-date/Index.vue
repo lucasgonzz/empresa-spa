@@ -12,8 +12,6 @@
 					:options="options"></b-form-select>
 				</b-form-group>
 
-				<dia-en-especifico></dia-en-especifico>
-
 				<rango-temporal></rango-temporal>
 
 				<b-button
@@ -39,7 +37,7 @@ export default {
 	computed: {
 		disabled() {
 			if (this.rango_temporal == 'rango-de-fechas') {
-				return this.mes_inicio == '' || this.mes_fin == ''
+				return !this.mes_inicio || !this.mes_fin || this.mes_inicio > this.mes_fin
 			}
 			return false
 		},
@@ -48,10 +46,6 @@ export default {
 				{
 					text: 'Dia actual',
 					value: 'dia-actual'
-				},
-				{
-					text: 'Dia en especifico',
-					value: 'dia-en-especifico'
 				},
 				{
 					text: 'Rango de fechas',

@@ -3,34 +3,51 @@
 	:title="title"
 	hide-footer
 	id="afip-data-modal">
-		<p
-		v-for="(item, index) in props" 
-		:key="index">
-			{{ item.key.replaceAll('_', ' ').toUpperCase() }}: {{ item.value }}
-		</p>	
-		<hr>
+
+		<div class="vender-afip-modal__data">
+			<div
+			class="vender-afip-modal__field"
+			v-for="(item, index) in props"
+			:key="index">
+				<span class="vender-afip-modal__field-label">
+					{{ format_afip_label(item.key) }}
+				</span>
+				<span class="vender-afip-modal__field-value">
+					{{ item.value }}
+				</span>
+			</div>
+		</div>
+
+		<hr class="vender-client-block__separator">
+
 		<div
-		v-if="client_model">
+		v-if="client_model"
+		class="vender-afip-modal__client-summary">
 			<p>
 				Nombre en el sistema: {{ client_model.name }}
 			</p>
 			<p>
 				Saldo: {{ price(client_model.saldo_pesos) }}
 			</p>
+		</div>
 
+		<div class="vender-afip-modal__actions">
 			<b-button
+			v-if="client_model"
 			block
 			@click="useClient"
 			variant="primary">
 				Usar cliente para la venta
 			</b-button>
+
+			<btn-loader
+			v-else
+			:loader="loading"
+			id="crear_cliente"
+			text="Crear cliente y usar para esta venta"
+			@clicked="setCreateClient"></btn-loader>
 		</div>
-		<btn-loader
-		v-else
-		:loader="loading"
-		id="crear_cliente"
-		text="Crear cliente y usar para esta venta"
-		@clicked="setCreateClient"></btn-loader>
+
 	</b-modal>
 </template>
 <script>
@@ -59,6 +76,15 @@ export default {
 		}
 	},
 	methods: {
+		/**
+		 * Formatea la clave de un dato AFIP para mostrarla como etiqueta legible.
+		 *
+		 * @param {string} key Clave del campo devuelto por AFIP.
+		 * @returns {string}
+		 */
+		format_afip_label(key) {
+			return key.replaceAll('_', ' ')
+		},
 		async setCreateClient() {
 			this.loading = true
 			let location_id = await this.getLocalidad()
@@ -136,9 +162,9 @@ export default {
 				})
 
 				if (typeof localidad != 'undefined') {
-				
+
 					return localidad.id
-				
+
 				} else {
 
 					return new Promise((resolve, reject) => {
@@ -176,3 +202,6 @@ export default {
 	}
 }
 </script>
+<style lang="sass">
+@import '@/components/vender/sass/_vender-client-block'
+</style>

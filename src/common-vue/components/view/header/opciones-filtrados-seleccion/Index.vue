@@ -153,6 +153,19 @@ export default {
 			.then(res => {
 				this.$store.commit('auth/setLoading', false)
 				this.$store.commit('auth/setMessage', '')
+
+				// Eliminación encolada: el listado se actualiza al recibir la notificación global.
+				if (res.data.queued) {
+					let queued_count = res.data.queued_count || 0
+					this.$toast.success(
+						'La eliminación se está procesando (' + queued_count + ' registros). Te avisaremos cuando termine.',
+						{ duration: 5000 }
+					)
+					this.$store.commit(this.model_name+'/setSelected', [])
+					this.$bvModal.hide(this.model_name+'-delete-models')
+					return
+				}
+
 				res.data.models.forEach(model => {
 					this.$store.commit(this.model_name+'/setDelete', model)
 					this.$store.commit(this.model_name+'/delete')
@@ -175,3 +188,113 @@ export default {
 	}
 }
 </script>
+
+<style lang="sass">
+
+/* Menú del dropdown de seleccionados/filtrados: altura máxima y scroll vertical */
+#btn_filtrados_dropdown .dropdown-menu,
+#btn_seleccionados_dropdown .dropdown-menu
+	max-height: 70vh
+	overflow-y: auto
+
+/* Opción individual del dropdown de seleccionados/filtrados: icono en celda + label */
+
+.article-dropdown-option
+
+	padding: 0
+
+	&.dropdown-item
+
+		padding: 0
+
+	&:hover,
+
+	&:focus,
+
+	&:active
+
+		.article-dropdown-option__icon-wrap
+
+			background-color: rgba(255, 255, 255, 0.22)
+
+			color: inherit
+
+	&__content
+
+		display: flex
+
+		align-items: center
+
+		gap: 12px
+
+		width: 100%
+
+		padding: 5px 0px
+
+		min-height: 42px
+
+	&__icon-wrap
+
+		display: flex
+
+		align-items: center
+
+		justify-content: center
+
+		flex-shrink: 0
+
+		width: 32px
+
+		height: 32px
+
+		border-radius: 8px
+
+		background-color: rgba(0, 0, 0, 0.06)
+
+		color: #495057
+
+		font-size: 1rem
+
+		transition: background-color 0.15s ease, color 0.15s ease
+
+	&__label
+
+		flex: 1
+
+		font-size: 0.9rem
+
+		font-weight: 500
+
+		line-height: 1.35
+
+		color: #212529
+
+		text-align: left
+
+		white-space: normal
+
+		word-break: break-word
+
+/* Variante de peligro para acciones destructivas */
+
+.article-dropdown-option--danger
+
+	.article-dropdown-option__icon-wrap
+
+		background-color: rgba(220, 53, 69, 0.12)
+
+		color: #c82333
+
+	.article-dropdown-option__label
+
+		color: #c82333
+
+	&:hover,
+
+	&:focus
+
+		.article-dropdown-option__icon-wrap
+
+			background-color: rgba(220, 53, 69, 0.2)
+
+</style>

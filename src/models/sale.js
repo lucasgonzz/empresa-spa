@@ -53,6 +53,14 @@ export default {
 			is_price: true,
 		},
 		{
+			text: 'Sucursal',
+			type: 'select',
+			key: 'address_id',
+			relation_prop_name: 'street',
+			only_show: true,
+			use_store_models: true,
+		},
+		{
 			text: 'Hora',
 			key: 'hora',
 			function: 'get_hora',
@@ -221,7 +229,7 @@ export default {
 
 
 		{
-			group_title: 'Productos',
+			group_title: 'Productos y servicios',
 		},
 		{
 			text: 'Articulos',

@@ -1,8 +1,7 @@
 <template>
-	<div
-	class="p-t-15">
+	<div>
 		<b-alert
-		class="s-2 m-b-15"
+		class="s-2 m-b-15 m-t-15"
 		:show="loading">
 			<slot></slot>
 			<span

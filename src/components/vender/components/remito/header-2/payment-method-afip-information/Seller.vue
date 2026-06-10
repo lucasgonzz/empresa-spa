@@ -1,10 +1,11 @@
 <template>
-	<div
-	v-if="hasExtencion('indicar_vendedor_en_vender')">
+	<b-input-group
+	v-if="hasExtencion('indicar_vendedor_en_vender')"
+	prepend="Vendedor">
 		<b-form-select
-		v-model="seller_id" 
-		:options="getOptions({key: 'seller_id', text: 'Vendedor'})"></b-form-select> 
-	</div>
+		v-model="seller_id"
+		:options="getOptions({key: 'seller_id', text: 'Vendedor'})"></b-form-select>
+	</b-input-group>
 </template>
 <script>
 export default {

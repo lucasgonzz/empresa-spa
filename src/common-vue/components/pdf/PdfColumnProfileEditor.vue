@@ -28,6 +28,7 @@
 				:printable_width_mm="local_printable_width_mm"
 				:margin_mm="local_margin_mm"
 				:show_size_controls="false"
+				:show_typography_columns="model.model_name === 'article'"
 				:layout_table="true"></pdf-columns-preferences-config-modal>
 
 				<b-alert
@@ -284,6 +285,10 @@ export default {
 					order: Number(pivot.order || 0),
 					width: Number(pivot.width || opt.default_width || 0),
 					wrap_content: this.as_bool(pivot.wrap_content),
+					font_size: pivot.font_size != null && pivot.font_size !== ''
+						? Number(pivot.font_size)
+						: 8,
+					text_align: pivot.text_align || '',
 					has_pivot: true,
 				}
 			})
@@ -299,6 +304,8 @@ export default {
 					order: saved ? saved.order : catalog_index,
 					width: saved ? saved.width : Number(option.default_width || 0),
 					wrap_content: saved ? saved.wrap_content : false,
+					font_size: saved ? saved.font_size : 8,
+					text_align: saved ? saved.text_align : '',
 				}
 			})
 
@@ -318,6 +325,31 @@ export default {
 		 */
 		as_bool(value) {
 			return value === true || value === 1 || value === '1'
+		},
+		/**
+		 * Normaliza tamaño de letra al rango permitido por la API (4–24 pt).
+		 *
+		 * @param {*} value
+		 * @return {number|null}
+		 */
+		normalize_font_size(value) {
+			const font_size = Number(value || 0)
+			if (font_size >= 4 && font_size <= 24) {
+				return font_size
+			}
+			return null
+		},
+		/**
+		 * Normaliza alineación horizontal; cadena vacía → null (automática en backend).
+		 *
+		 * @param {*} value
+		 * @return {string|null}
+		 */
+		normalize_text_align(value) {
+			if (value === 'left' || value === 'center' || value === 'right') {
+				return value
+			}
+			return null
 		},
 		/**
 		 * Copia el estado actual de pdf_config_rows a model.pdf_column_options
@@ -358,6 +390,8 @@ export default {
 						order: index,
 						width: Number(row.width || 0),
 						wrap_content: this.as_bool(row.wrap_content),
+						font_size: this.normalize_font_size(row.font_size),
+						text_align: this.normalize_text_align(row.text_align),
 					},
 				})
 			})

@@ -1,19 +1,21 @@
 <script>
 import { Bar } from 'vue-chartjs'
-import moment from 'moment'
 import chart from '@/mixins/chart'
 import font_control from '@/mixins/reportes/font_control'
+import chart_theme from '@/mixins/reportes/chart_theme'
+import chart_datalabels from '@/mixins/reportes/chart_datalabels'
+
 export default {
 	extends: Bar,
-	mixins: [chart, font_control],
-	computed: { 
-		clients() {  
+	mixins: [chart, font_control, chart_theme, chart_datalabels],
+	computed: {
+		clients() {
 			return this.$store.state.client.models
 		},
-		current_page() {  
+		current_page() {
 			return this.$store.state.chart.client.current_page
 		},
-		order_by() {  
+		order_by() {
 			return this.$store.state.chart.client.order_by
 		},
 	},
@@ -34,72 +36,42 @@ export default {
 		this.setChart()
 	},
 	methods: {
-		setChart() {	
-
-			console.log('setChart de clients')
-
+		setChart() {
 			let labels = []
 			let data = []
 
 			let clients = this.get_chart_models_ordenados('client', this.clients, 'saldo')
-			
+
 			clients.forEach(client => {
 				labels.push(client.name)
-				data.push(client.saldo)	
+				data.push(client.saldo)
 			})
 
+			let bar_style = this.get_reportes_bar_dataset_style(data.length, true)
 			let datasets = [{
 				label: 'Deuda',
-				backgroundColor: '#007bff',
 				data: data,
+				...bar_style,
 			}]
 
 			let that = this
+
 			this.renderChart({
 				labels: labels,
 				datasets: datasets,
-			}, {
+			}, this.get_reportes_bar_chart_options({
 				plugins: {
-					datalabels: { 
-						align: 'top',
-						color: '#000',
-						font: {
-							weight: 'bold',
-							family: 'Roboto',
-							size: this.font_size,
-						},
-						formatter: function(value) {
-							let price = Math.round(value)
-							
-							if (price != 0) {
-								return that.price(price)
-							}
-							return null
-						},
-						offset: function(context) {
-							return 0
-						}
-					},
-				},
-				maintainAspectRatio: false,
-				onClick: function (event, elements, chart) {
-					// let provider = providers[elements[0]._index]
-					// that.setSelectedProvider(provider)
+					datalabels: this.get_reportes_datalabels_options(that, {
+						align: 'end',
+						anchor: 'end',
+						offset: 4,
+					}),
 				},
 				tooltips: {
-					callbacks: {
-						label: function(tooltipItem, data) {
-							// console.log('entorooooo')
-							return that.price(Math.round(tooltipItem.yLabel))
-						}
-					}
-				}
-			})
+					callbacks: this.get_reportes_price_tooltip_callbacks(that),
+				},
+			}))
 		},
-		setSelectedProvider(provider) {
-			this.$router.push({params: {sub_view: 'rendimiento-por-proveedor'}})
-			this.setProviderArticles(provider)
-		}
 	},
 }
 </script>

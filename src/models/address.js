@@ -46,8 +46,8 @@ export default {
 			description: 'Si se marca, este deeposito se ofrecera como opcion por defecto a la hora de indicar el deposito para cualquier articulo',
 		},
 	],
-	singular_model_name_spanish: 'Direccion',
-	plural_model_name_spanish: 'Direcciones',
+	singular_model_name_spanish: 'Sucursal',
+	plural_model_name_spanish: 'Sucursales',
 	create_model_name_spanish: 'Nueva',
 	text_delete: 'la',
 }

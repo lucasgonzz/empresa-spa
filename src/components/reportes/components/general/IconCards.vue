@@ -15,56 +15,63 @@
 				</h6>
 
 				<div class="icon-cards__grid">
+					<!-- Contenedor de celda: mantiene la altura del grid; la descripción flota con position absolute -->
 					<div
 					v-for="card in visible_cards(group.cards)"
 					:key="card.id || card.text"
-					:id="card.id ? card.id : ''"
-					class="icon-card"
-					:class="card_accent_class(card)">
-						<div class="icon-card__header">
-							<div
-							class="icon-card__icon-wrap"
-							:class="card_accent_class(card)">
-								<i
-								:class="icon_class(card)"
-								aria-hidden="true"></i>
+					class="icon-card-shell"
+					:class="{ 'icon-card-shell--has-description': card.description }">
+						<div
+						:id="card.id ? card.id : ''"
+						class="icon-card"
+						:class="card_accent_class(card)">
+							<div class="icon-card__header">
+								<div
+								class="icon-card__icon-wrap"
+								:class="card_accent_class(card)">
+									<i
+									:class="icon_class(card)"
+									aria-hidden="true"></i>
+								</div>
+
+								<div class="icon-card__body">
+									<p class="text">
+										{{ card.text }}
+									</p>
+									<p
+									v-if="card.value !== undefined && card.value !== null && card.value !== ''"
+									class="value">
+										{{ card.value }}
+									</p>
+									<p 
+									v-if="card.extra"
+									class="extra">
+										{{ card.extra }}
+									</p>
+								</div>
 							</div>
 
-							<div class="icon-card__body">
-								<p class="text">
-									{{ card.text }}
-								</p>
-								<p
-								v-if="card.value !== undefined && card.value !== null && card.value !== ''"
-								class="value">
-									{{ card.value }}
-								</p>
-								<p 
-								v-if="card.extra"
-								class="extra">
-									{{ card.extra }}
-								</p>
+							<div
+							v-if="card.buttons && card.buttons.length"
+							class="icon-card__actions">
+								<b-button
+								size="sm"
+								variant="outline-primary"
+								v-for="button in card.buttons"
+								:key="button.text"
+								@click="call_method(button)">
+									{{ button.text }}
+								</b-button>
 							</div>
 						</div>
 
+						<!-- Panel flotante: no participa del flujo del grid al expandirse -->
 						<p
 						v-if="card.description"
-						class="description">
+						class="icon-card__description-panel"
+						role="tooltip">
 							{{ card.description }}
 						</p>
-
-						<div
-						v-if="card.buttons && card.buttons.length"
-						class="icon-card__actions">
-							<b-button
-							size="sm"
-							variant="outline-primary"
-							v-for="button in card.buttons"
-							:key="button.text"
-							@click="call_method(button)">
-								{{ button.text }}
-							</b-button>
-						</div>
 					</div>
 				</div>
 			</div>
@@ -91,35 +98,35 @@ export default {
 						{
 							text: 'Total vendido Bruto',
 							img: 'ventas',
-							value: this.price(this.model.total_vendido, false),
+							value: this.price(this.model.total_vendido, false, false),
 							description: 'Total vendido, haya sido o no pagado (sin computar devoluciones)',
 						},
 						{
 							text: 'Total vendido Bruto USD',
 							if_has_extencion: 'ventas_en_dolares',
 							img: 'ventas',
-							value: this.price(this.model.total_vendido_usd, false),
+							value: this.price(this.model.total_vendido_usd, false, false),
 							description: 'Total vendido, haya sido o no pagado (sin computar devoluciones)',
 						},
 						{
 							text: 'Total vendido Neto',
 							if_mayor_0: 'total_devolucion',
 							img: 'ventas',
-							value: this.price(this.model.total_vendido - this.model.total_devolucion, false),
-							description: 'Total vendido bruto, MENOS las devoluciones ('+this.price(this.model.total_devolucion)-+')',
+							value: this.price(this.model.total_vendido - this.model.total_devolucion, false, false),
+							description: 'Total vendido bruto, MENOS las devoluciones ('+this.price(this.model.total_devolucion, false, false)-+')',
 						},
 						{
 							text: 'Total vendido Neto USD',
 							if_has_extencion: 'ventas_en_dolares',
 							if_mayor_0: 'total_devolucion_usd',
 							img: 'ventas',
-							value: this.price(this.model.total_vendido_usd - this.model.total_devolucion_usd, false),
-							description: 'Total vendido bruto USD MENOS las devoluciones ('+ this.price(this.model.total_devolucion_usd) +')',
+							value: this.price(this.model.total_vendido_usd - this.model.total_devolucion_usd, false, false),
+							description: 'Total vendido bruto USD MENOS las devoluciones ('+ this.price(this.model.total_devolucion_usd, false, false) +')',
 						},
 						{
 							text: 'Pagado en mostrador',
 							img: 'pagado_mostrador2',
-							value: this.price(this.model.total_pagado_mostrador, false),
+							value: this.price(this.model.total_pagado_mostrador, false, false),
 							description: 'Total vendido y pagado en el momento, sin pasar a c/c',
 							extra: this.porcentaje_mostrador,
 						},
@@ -127,14 +134,14 @@ export default {
 							text: 'Pagado en mostrador USD',
 							if_has_extencion: 'ventas_en_dolares',
 							img: 'pagado_mostrador2',
-							value: this.price(this.model.total_pagado_mostrador_usd, false),
+							value: this.price(this.model.total_pagado_mostrador_usd, false, false),
 							description: 'Total vendido y pagado en el momento, sin pasar a c/c',
 							extra: this.porcentaje_mostrador_usd,
 						},
 						{
 							text: 'A cuentas corrientes',
 							img: 'a_cuentas_corrientes',
-							value: this.price(this.model.total_vendido_a_cuenta_corriente, false),
+							value: this.price(this.model.total_vendido_a_cuenta_corriente, false, false),
 							description: 'Total vendido a tus clientes, pero que no se pago',
 							extra: this.porcentaje_a_cuenta_corriente,
 						},
@@ -142,21 +149,21 @@ export default {
 							text: 'A cuentas corrientes USD',
 							if_has_extencion: 'ventas_en_dolares',
 							img: 'a_cuentas_corrientes',
-							value: this.price(this.model.total_vendido_a_cuenta_corriente_usd, false),
+							value: this.price(this.model.total_vendido_a_cuenta_corriente_usd, false, false),
 							description: 'Total vendido a tus clientes, pero que no se pago',
 							extra: this.porcentaje_a_cuenta_corriente_usd,
 						},
 						{
 							text: 'Pagos de clientes (ctas ctes)',
 							img: 'pagado_mostrador',
-							value: this.price(this.model.total_pagado_a_cuenta_corriente, false),
+							value: this.price(this.model.total_pagado_a_cuenta_corriente, false, false),
 							description: 'Total pagado en C/C por tus clientes, de ventas que hayan realizado en el pasado'
 						},
 						{
 							text: 'Pagos de clientes (ctas ctes) USD',
 							if_has_extencion: 'ventas_en_dolares',
 							img: 'pagado_mostrador',
-							value: this.price(this.model.total_pagado_a_cuenta_corriente_usd, false),
+							value: this.price(this.model.total_pagado_a_cuenta_corriente_usd, false, false),
 							description: 'Total pagado en C/C por tus clientes, de ventas que hayan realizado en el pasado'
 						},
 						{
@@ -182,7 +189,7 @@ export default {
 					group.cards.push({
 						text: price_type.name,
 						img: 'ventas',
-						value: this.price(price_type.pivot.total_vendido),
+						value: this.price(price_type.pivot.total_vendido, false, false),
 						description: 'Suma de todas las ventas hechas con la lista de precios '+price_type.name
 					})
 				})
@@ -198,66 +205,66 @@ export default {
 						{
 							text: 'Caja',
 							img: 'ingresos_brutos',
-							value: this.price(this.model.total_ingresos, false),
+							value: this.price(this.model.total_ingresos, false, false),
 							description: 'Suma de: lo que se vendio en mostrador + lo que pagaron en C/C tus clientes (lo que deberia haber en la caja)',
 						},
 						{
 							text: 'Caja USD',
 							if_has_extencion: 'ventas_en_dolares',
 							img: 'ingresos_brutos',
-							value: this.price(this.model.total_ingresos_usd, false),
+							value: this.price(this.model.total_ingresos_usd, false, false),
 							description: 'Suma de: lo que se vendio en mostrador + lo que pagaron en C/C tus clientes (lo que deberia haber en la caja)',
 						},
 						{
 							text: 'Costos',
 							img: 'ventas',
-							value: this.price(this.model.total_vendido_costos, false),
+							value: this.price(this.model.total_vendido_costos, false, false),
 							description: 'Costo de la mercaderia vendida (sin computar devoluciones)',
 						},
 						{
 							text: 'Costos USD',
 							if_has_extencion: 'ventas_en_dolares',
 							img: 'ventas',
-							value: this.price(this.model.total_vendido_costos_usd, false),
+							value: this.price(this.model.total_vendido_costos_usd, false, false),
 							description: 'Costo de la mercaderia vendida (sin computar devoluciones)',
 						},
 						{
 							text: 'Utilidad Bruta',
 							img: 'ingresos_netos',
-							value: this.price(this.model.ingresos_brutos, false),
+							value: this.price(this.model.ingresos_brutos, false, false),
 							description: 'Total vendido Bruto - Costo de la mercaderia (sin computar desvoluciones)',
 						},
 						{
 							text: 'Utilidad USD Bruta',
 							if_has_extencion: 'ventas_en_dolares',
 							img: 'ingresos_netos',
-							value: this.price(this.model.ingresos_brutos_usd, false),
+							value: this.price(this.model.ingresos_brutos_usd, false, false),
 							description: 'Total vendido Bruto USD - Costo de la mercaderia (sin computar desvoluciones)',
 						},
 						{
 							text: 'Utilidad Neta',
 							img: 'ingresos_netos',
-							value: this.price(this.model.ingresos_netos, false),
+							value: this.price(this.model.ingresos_netos, false, false),
 							description: 'Total vendido Neto - Costo de la mercaderia (computando devoluciones)',
 						},
 						{
 							text: 'Utilidad USD Neta',
 							if_has_extencion: 'ventas_en_dolares',
 							img: 'ingresos_netos',
-							value: this.price(this.model.ingresos_netos_usd, false),
+							value: this.price(this.model.ingresos_netos_usd, false, false),
 							description: 'Total vendido Neto USD - Costo de la mercaderia (computando devoluciones)',
 						},
 						{
 							text: 'Ingresos Netos',
 							img: 'rentabilidad',
-							value: this.price(this.model.rentabilidad, false),
+							value: this.price(this.model.rentabilidad, false, false),
 							description: 'UTILIDAD menos los GASTOS',
 						},
 						{
 							text: 'Ingresos Netos USD',
 							if_has_extencion: 'ventas_en_dolares',
 							img: 'rentabilidad',
-							value: this.price(this.model.rentabilidad_usd, false),
+							value: this.price(this.model.rentabilidad_usd, false, false),
 							description: 'UTILIDAD USD menos los GASTOS USD',
 						},
 					],
@@ -285,27 +292,27 @@ export default {
 						{
 							text: 'Gastos',
 							img: 'gastos',
-							value: this.price(this.model.total_gastos, false),
+							value: this.price(this.model.total_gastos, false, false),
 							description: 'Suma de los GASTOS',
 						},
 						{
 							text: 'Gastos USD',
 							if_has_extencion: 'ventas_en_dolares',
 							img: 'gastos',
-							value: this.price(this.model.total_gastos_usd, false),
+							value: this.price(this.model.total_gastos_usd, false, false),
 							description: 'Suma de los GASTOS en USD',
 						},
 						{
 							text: 'Devoluciones',
 							img: 'devoluciones', 
-							value: this.price(this.model.total_devolucion, false),
+							value: this.price(this.model.total_devolucion, false, false),
 							description: 'Sumatoria de las devoluciones de tus clientes (notas de credito)',
 						},
 						{
 							text: 'Devoluciones USD',
 							if_has_extencion: 'ventas_en_dolares',
 							img: 'devoluciones', 
-							value: this.price(this.model.total_devolucion_usd, false),
+							value: this.price(this.model.total_devolucion_usd, false, false),
 							description: 'Sumatoria de las devoluciones de tus clientes (notas de credito) en USD',
 						},
 					],
@@ -316,26 +323,26 @@ export default {
 						{
 							text: 'Total Comprado',
 							img: 'comprado', 
-							value: this.price(this.model.total_comprado, false),
+							value: this.price(this.model.total_comprado, false, false),
 							description: 'Sumatoria de los totales de los pedidos a proveedores',
 						},
 						{
 							text: 'Total Comprado USD',
 							img: 'comprado', 
-							value: this.price(this.model.total_comprado_usd, false),
+							value: this.price(this.model.total_comprado_usd, false, false),
 							description: 'Sumatoria de los totales de los pedidos a proveedores',
 							if_has_extencion: 'ventas_en_dolares',
 						},
 						{
 							text: 'Total Pagado',
 							img: 'pagado', 
-							value: this.price(this.model.total_pagado_a_proveedores, false),
+							value: this.price(this.model.total_pagado_a_proveedores, false, false),
 							description: 'Sumatoria de los pagos hechos a proveedores',
 						},
 						{
 							text: 'Total Pagado USD',
 							img: 'pagado', 
-							value: this.price(this.model.total_pagado_a_proveedores_usd, false),
+							value: this.price(this.model.total_pagado_a_proveedores_usd, false, false),
 							description: 'Sumatoria de los pagos hechos a proveedores',
 							if_has_extencion: 'ventas_en_dolares',
 						},
@@ -344,37 +351,113 @@ export default {
 
 
 
-				{
-					group_name: 'Deudas',
-					cards: [
+			{
+				group_name: 'Deudas',
+				/* Si es reporte del día actual (mes_inicio null): mostrar deuda actual en tiempo real.
+				   Si es rango de fechas: mostrar deuda al inicio y al fin del período desde snapshots.
+				   Si no hay snapshot disponible: mostrar aviso con '—' en lugar del número. */
+				cards: this.mes_inicio === null
+					? [
+						/* Reporte del día actual: deuda calculada en tiempo real por el backend */
 						{
 							text: 'Deudas de Clientes',
 							img: 'deuda-clientes',
-							value: this.price(this.model.deuda_clientes, false),
-							description: 'Sumatoria de los saldos ACTUALES de tus clientes',
+							value: this.price(this.model.deuda_clientes, false, false),
+							description: 'Saldo total actual de tus clientes',
 						},
 						{
 							text: 'Deudas de Clientes USD',
 							img: 'deuda-clientes',
-							value: this.price(this.model.deuda_clientes_usd, false),
-							description: 'Sumatoria de los saldos ACTUALES de tus clientes',
+							value: this.price(this.model.deuda_clientes_usd, false, false),
+							description: 'Saldo total actual de tus clientes',
 							if_has_extencion: 'ventas_en_dolares',
 						},
 						{
 							text: 'Deudas con Proveedores',
 							img: 'deuda-clientes',
-							value: this.price(this.model.deuda_proveedores, false),
-							description: 'Sumatoria de los saldos ACTUALES de tus proveedores',
+							value: this.price(this.model.deuda_proveedores, false, false),
+							description: 'Saldo total actual de tus proveedores',
 						},
 						{
 							text: 'Deudas con Proveedores USD',
 							img: 'deuda-clientes',
-							value: this.price(this.model.deuda_proveedores_usd, false),
-							description: 'Sumatoria de los saldos ACTUALES de tus proveedores',
+							value: this.price(this.model.deuda_proveedores_usd, false, false),
+							description: 'Saldo total actual de tus proveedores',
 							if_has_extencion: 'ventas_en_dolares',
 						},
+					]
+					: [
+						/* Reporte de rango de fechas: deuda al inicio y al fin del período (snapshots históricos) */
+						{
+							text: 'Clientes (inicio período)',
+							img: 'deuda-clientes',
+							value: this.snapshot_disponible ? this.price(this.model.deuda_clientes_inicio, false, false) : '—',
+							description: this.snapshot_disponible
+								? 'Saldo de clientes al inicio del período seleccionado'
+								: '⚠️ No hay datos históricos disponibles para este período. Los snapshots se generan a partir de hoy.',
+						},
+						{
+							text: 'Clientes (fin período)',
+							img: 'deuda-clientes',
+							value: this.snapshot_disponible ? this.price(this.model.deuda_clientes_fin, false, false) : '—',
+							description: this.snapshot_disponible
+								? 'Saldo de clientes al cierre del período seleccionado'
+								: '⚠️ No hay datos históricos disponibles para este período. Los snapshots se generan a partir de hoy.',
+						},
+						{
+							text: 'Clientes USD (inicio período)',
+							img: 'deuda-clientes',
+							if_has_extencion: 'ventas_en_dolares',
+							value: this.snapshot_disponible ? this.price(this.model.deuda_clientes_usd_inicio, false, false) : '—',
+							description: this.snapshot_disponible
+								? 'Saldo de clientes en USD al inicio del período seleccionado'
+								: '⚠️ No hay datos históricos disponibles para este período. Los snapshots se generan a partir de hoy.',
+						},
+						{
+							text: 'Clientes USD (fin período)',
+							img: 'deuda-clientes',
+							if_has_extencion: 'ventas_en_dolares',
+							value: this.snapshot_disponible ? this.price(this.model.deuda_clientes_usd_fin, false, false) : '—',
+							description: this.snapshot_disponible
+								? 'Saldo de clientes en USD al cierre del período seleccionado'
+								: '⚠️ No hay datos históricos disponibles para este período. Los snapshots se generan a partir de hoy.',
+						},
+						{
+							text: 'Proveedores (inicio período)',
+							img: 'deuda-clientes',
+							value: this.snapshot_disponible ? this.price(this.model.deuda_proveedores_inicio, false, false) : '—',
+							description: this.snapshot_disponible
+								? 'Saldo de proveedores al inicio del período seleccionado'
+								: '⚠️ No hay datos históricos disponibles para este período. Los snapshots se generan a partir de hoy.',
+						},
+						{
+							text: 'Proveedores (fin período)',
+							img: 'deuda-clientes',
+							value: this.snapshot_disponible ? this.price(this.model.deuda_proveedores_fin, false, false) : '—',
+							description: this.snapshot_disponible
+								? 'Saldo de proveedores al cierre del período seleccionado'
+								: '⚠️ No hay datos históricos disponibles para este período. Los snapshots se generan a partir de hoy.',
+						},
+						{
+							text: 'Proveedores USD (inicio período)',
+							img: 'deuda-clientes',
+							if_has_extencion: 'ventas_en_dolares',
+							value: this.snapshot_disponible ? this.price(this.model.deuda_proveedores_usd_inicio, false, false) : '—',
+							description: this.snapshot_disponible
+								? 'Saldo de proveedores en USD al inicio del período seleccionado'
+								: '⚠️ No hay datos históricos disponibles para este período. Los snapshots se generan a partir de hoy.',
+						},
+						{
+							text: 'Proveedores USD (fin período)',
+							img: 'deuda-clientes',
+							if_has_extencion: 'ventas_en_dolares',
+							value: this.snapshot_disponible ? this.price(this.model.deuda_proveedores_usd_fin, false, false) : '—',
+							description: this.snapshot_disponible
+								? 'Saldo de proveedores en USD al cierre del período seleccionado'
+								: '⚠️ No hay datos históricos disponibles para este período. Los snapshots se generan a partir de hoy.',
+						},
 					],
-				},
+			},
 
 				
 				{
@@ -384,7 +467,7 @@ export default {
 							text: 'Iva Debito',
 							img: 'iva_vendido',
 							id: 'iva_debito', 
-							value: this.price(this.model.total_facturado, false),
+							value: this.price(this.model.total_facturado, false, false),
 							description: 'Sumatoria de los importes de IVA de todos los articulos vendidos en ventas Facturadas',
 							buttons: [
 								{
@@ -401,7 +484,7 @@ export default {
 							text: 'Iva Credito',
 							id: 'iva_credito', 
 							img: 'iva_comprado', 
-							value: this.price(this.model.total_iva_comprado, false),
+							value: this.price(this.model.total_iva_comprado, false, false),
 							description: 'Sumatoria de los totales de IVA de las facturas de los pedidos a proveedores en base a la fecha de emision',
 							buttons: [
 								{
@@ -415,7 +498,7 @@ export default {
 							text: 'Iva a Pagar',
 							id: 'iva_diferencia', 
 							img: 'iva_diferencia', 
-							value: this.price(this.model.total_facturado - this.model.total_iva_comprado, false),
+							value: this.price(this.model.total_facturado - this.model.total_iva_comprado, false, false),
 							description: 'Diferencia entre IVA Debito menos el IVA Credito',
 						},
 
@@ -457,7 +540,7 @@ export default {
 						group_facturacion.cards.push({
 							text: info_facturacion.afip_information.razon_social+' | '+info_facturacion.afip_tipo_comprobante.name,
 							img: 'iva_comprado',
-							value: this.price(info_facturacion.total_facturado, false),
+							value: this.price(info_facturacion.total_facturado, false, false),
 							// description: 'Sumatoria de los saldos ACTUALES de tus proveedores',
 							// if_has_extencion: 'ventas_en_dolares',
 						})
@@ -540,6 +623,28 @@ export default {
 		// 	})
 		// 	return deuda
 		// },
+		/**
+		 * Retorna null cuando el reporte es del día actual, o la fecha string cuando es rango.
+		 * Se usa para distinguir entre reporte del día (sin snapshots) y rango de fechas (con snapshots).
+		 *
+		 * @returns {string|null}
+		 */
+		mes_inicio() {
+			/* Solo es rango de fechas cuando rango_temporal == 'rango-de-fechas' */
+			if (this.$store.state.reportes.rango_temporal !== 'rango-de-fechas') {
+				return null
+			}
+			return this.$store.state.reportes.mes_inicio
+		},
+		/**
+		 * Indica si el modelo de reporte tiene snapshots de deuda disponibles para el período.
+		 * false significa que no hay datos históricos y se debe mostrar el aviso correspondiente.
+		 *
+		 * @returns {boolean}
+		 */
+		snapshot_disponible() {
+			return this.model.snapshot_disponible !== false
+		},
 		model() {
 			return this.$store.state.reportes.model
 		},
@@ -677,26 +782,27 @@ export default {
 			this[btn.function]()
 		},
 		export_afip_txt() {
-			let mes_inicio = this.$store.state.reportes.mes_inicio
-			let mes_fin = this.$store.state.reportes.mes_fin
+			/* Las rutas AFIP esperan YYYY-MM; se extrae desde el formato YYYY-MM-DD del store */
+			let mes_inicio = this.$store.state.reportes.mes_inicio.substring(0, 7)
+			let mes_fin = this.$store.state.reportes.mes_fin.substring(0, 7)
 			let link = process.env.VUE_APP_API_URL+'/afip-txt/'+mes_inicio+'/'+mes_fin
 			window.open(link)
 		},
 		export_afip_alicuotas_txt() {
-			let mes_inicio = this.$store.state.reportes.mes_inicio
-			let mes_fin = this.$store.state.reportes.mes_fin
+			let mes_inicio = this.$store.state.reportes.mes_inicio.substring(0, 7)
+			let mes_fin = this.$store.state.reportes.mes_fin.substring(0, 7)
 			let link = process.env.VUE_APP_API_URL+'/afip-txt-alicuotas/'+mes_inicio+'/'+mes_fin
 			window.open(link)
 		},
 		iva_compras_pdf() {
-			let mes_inicio = this.$store.state.reportes.mes_inicio
-			let mes_fin = this.$store.state.reportes.mes_fin
+			let mes_inicio = this.$store.state.reportes.mes_inicio.substring(0, 7)
+			let mes_fin = this.$store.state.reportes.mes_fin.substring(0, 7)
 			let link = process.env.VUE_APP_API_URL+'/afip-iva-compras/'+mes_inicio+'/'+mes_fin
 			window.open(link)
 		},
 		iva_ventas_pdf() {
-			let mes_inicio = this.$store.state.reportes.mes_inicio
-			let mes_fin = this.$store.state.reportes.mes_fin
+			let mes_inicio = this.$store.state.reportes.mes_inicio.substring(0, 7)
+			let mes_fin = this.$store.state.reportes.mes_fin.substring(0, 7)
 			let link = process.env.VUE_APP_API_URL+'/afip-iva-ventas/'+mes_inicio+'/'+mes_fin
 			window.open(link)
 		},
@@ -752,6 +858,55 @@ $accent-default: #64748b
 		height: auto
 		min-height: 0
 
+	// Celda del grid: reserva espacio solo por el contenido visible de la tarjeta
+	.icon-card-shell
+		position: relative
+		align-self: start
+		z-index: 1
+		transition: transform 0.25s ease, z-index 0s linear 0.25s
+
+		&:hover
+			transform: translateY(-3px)
+			z-index: 20
+			transition: transform 0.25s ease, z-index 0s linear 0s
+
+			.icon-card
+				box-shadow: 0 12px 24px rgba(15, 23, 42, 0.1)
+				border-color: #cbd5e1
+
+			.icon-card__description-panel
+				opacity: 1
+				visibility: visible
+				pointer-events: auto
+
+		&--has-description:hover
+			.icon-card
+				border-bottom-left-radius: 0
+				border-bottom-right-radius: 0
+				border-bottom-color: transparent
+
+		// Descripción flotante: se superpone al contenido inferior sin redimensionar el grid
+		.icon-card__description-panel
+			position: absolute
+			top: 100%
+			left: 0
+			right: 0
+			margin: 0
+			padding: 10px 14px 12px
+			font-size: 0.75rem
+			color: #475569
+			line-height: 1.45
+			background: #fff
+			border: 1px solid #cbd5e1
+			border-top: 1px dashed #e2e8f0
+			border-radius: 0 0 12px 12px
+			box-shadow: 0 12px 24px rgba(15, 23, 42, 0.1)
+			opacity: 0
+			visibility: hidden
+			pointer-events: none
+			transition: opacity 0.2s ease, visibility 0.2s ease
+			z-index: 2
+
 	.icon-card
 		background: #fff
 		border: 1px solid #e2e8f0
@@ -762,7 +917,7 @@ $accent-default: #64748b
 		padding: 12px 14px
 		min-height: 0
 		height: auto
-		transition: transform 0.5s ease, box-shadow 0.5s ease, border-color 0.5s ease
+		transition: box-shadow 0.25s ease, border-color 0.25s ease, border-radius 0.25s ease
 		overflow: hidden
 		position: relative
 		box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06)
@@ -790,19 +945,6 @@ $accent-default: #64748b
 			background: $accent-deudas
 		&.accent-facturacion::before
 			background: $accent-facturacion
-
-		&:hover
-			transform: translateY(-3px)
-			box-shadow: 0 12px 24px rgba(15, 23, 42, 0.1)
-			border-color: #cbd5e1
-			z-index: 2
-			overflow: visible
-
-			.description
-				display: block
-				margin-top: 10px
-				padding-top: 10px
-				border-top: 1px dashed #e2e8f0
 
 		&__header
 			display: flex
@@ -877,14 +1019,6 @@ $accent-default: #64748b
 			font-size: 0.75rem
 			color: #94a3b8
 			margin-top: 4px
-
-		.description
-			display: none
-			font-size: 0.75rem
-			color: #475569
-			line-height: 1.45
-			margin: 0
-			padding: 0
 
 	@media screen and (max-width: 700px)
 		&__grid

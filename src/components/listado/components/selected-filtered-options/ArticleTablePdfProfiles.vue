@@ -30,12 +30,13 @@
 		<p
 		v-if="!article_table_pdf_profiles.length && !loading_profiles"
 		class="article-dropdown-section-header text-muted small px-3 py-2 mb-0">
-			Sin plantillas (Configuración → Generales)
+			Sin plantillas (Configuración → Generales → Diseños PDF)
 		</p>
 	</div>
 </template>
 <script>
 import generals from '@/mixins/generals'
+import listado_articles_source from '@/mixins/listado/listado_articles_source'
 
 /**
  * Lista plantillas PdfColumnProfile (model_name article) y abre PDF tabular.
@@ -46,7 +47,7 @@ export default {
 		DropdownSectionTitle: () => import('@/components/listado/components/selected-filtered-options/DropdownSectionTitle'),
 		DropdownOptionItem: () => import('@/components/listado/components/selected-filtered-options/DropdownOptionItem'),
 	},
-	mixins: [generals],
+	mixins: [generals, listado_articles_source],
 	data() {
 		return {
 			loading_profiles: false,
@@ -68,15 +69,6 @@ export default {
 		 */
 		price_types() {
 			return this.$store.state.price_type ? this.$store.state.price_type.models : []
-		},
-		selected() {
-			return this.$store.state.article.selected
-		},
-		filters() {
-			return this.$store.state.article.filters
-		},
-		is_filtered() {
-			return this.$store.state.article.is_filtered
 		},
 		article_table_pdf_profiles() {
 			const models = this.$store.state.pdf_column_profile.models || []
@@ -118,14 +110,6 @@ export default {
 				return
 			}
 
-			let has_selection = this.selected && this.selected.length > 0
-			let has_filters = this.is_filtered && this.filters && this.filters.length > 0
-
-			if (!has_selection && !has_filters) {
-				this.$toast.error('Seleccioná artículos o aplicá un filtro en el listado', { duration: 4000 })
-				return
-			}
-
 			let link = process.env.VUE_APP_API_URL + '/article/table-pdf?pdf_column_profile_id=' + profile.id
 			let query = ''
 
@@ -133,15 +117,21 @@ export default {
 				query += '&price_type_id=' + price_type_id
 			}
 
-			if (has_selection) {
-				let ids = []
-				this.selected.forEach(function (article) {
-					ids.push(article.id)
-				})
-				query += '&articles_id=' + ids.join('-')
-			} else {
-				let json_data = JSON.stringify(this.filters)
+			if (this.use_filtered_source) {
+				let active_filters = this.resolve_active_filters_for_export()
+				if (!active_filters.length) {
+					this.$toast.error('Aplicá un filtro en el listado', { duration: 4000 })
+					return
+				}
+				let json_data = JSON.stringify(active_filters)
 				query += '&filters=' + encodeURIComponent(json_data)
+			} else {
+				let ids = this.resolve_article_ids()
+				if (!ids.length) {
+					this.$toast.error('Seleccioná al menos un artículo', { duration: 4000 })
+					return
+				}
+				query += '&articles_id=' + ids.join('-')
 			}
 
 			window.open(link + query)

@@ -1,8 +1,11 @@
 <template>
-	<b-form-select
+	<b-input-group
 	v-if="sale_types.length > 1"
-	v-model="sale_type_id" 
-	:options="getOptions({key: 'sale_type_id', text: 'Tipo venta'})"></b-form-select> 
+	prepend="Tipo venta">
+		<b-form-select
+		v-model="sale_type_id"
+		:options="getOptions({key: 'sale_type_id', text: 'Tipo venta'})"></b-form-select>
+	</b-input-group> 
 </template>
 <script>
 import vender from '@/mixins/vender'

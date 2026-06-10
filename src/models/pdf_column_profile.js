@@ -98,6 +98,26 @@ export default {
 						type: 'checkbox',
 						value: 0,
 					},
+					{
+						text: 'Tamaño de letra (pt)',
+						key: 'font_size',
+						type: 'number',
+						value: 8,
+						show_when_model_name: 'article',
+					},
+					{
+						text: 'Alineación horizontal',
+						key: 'text_align',
+						type: 'select',
+						value: '',
+						show_when_model_name: 'article',
+						options: [
+							{ value: '', text: 'Automática' },
+							{ value: 'left', text: 'Izquierda' },
+							{ value: 'center', text: 'Centro' },
+							{ value: 'right', text: 'Derecha' },
+						],
+					},
 				],
 			},
 		},
@@ -165,6 +185,16 @@ export default {
 			not_show_on_form: false,
 		},
 		{
+			/**
+			 * Tamaño de letra uniforme para todos los encabezados de columna (th) del PDF tabular.
+			 */
+			text: 'Letra encabezado columnas (pt)',
+			key: 'table_header_font_size',
+			type: 'number',
+			value: 8,
+			show_when_model_name: 'article',
+		},
+		{
 			text: 'Imagen de cabecera (cada página)',
 			key: 'header_image_url',
 			type: 'image',
@@ -178,8 +208,8 @@ export default {
 			value: '',
 		},
 	],
-	singular_model_name_spanish: 'Perfil de columnas PDF',
-	plural_model_name_spanish: 'Perfiles de columnas PDF',
-	create_model_name_spanish: 'Nuevo perfil de columnas PDF',
+	singular_model_name_spanish: 'Diseño de PDF',
+	plural_model_name_spanish: 'Diseño de PDF',
+	create_model_name_spanish: 'Nuevo Diseño de PDF',
 	text_delete: 'el',
 }

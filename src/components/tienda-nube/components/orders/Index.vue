@@ -11,7 +11,7 @@
 			<btn-confirmar/>
 		</template>
 
-		<template #options_drop_down>
+		<template #options_drop_down_seleccion>
 			<confirmar-pedido-drop-down/>
 		</template>
 	</view-component>

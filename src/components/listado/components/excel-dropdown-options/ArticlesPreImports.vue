@@ -2,15 +2,18 @@
 	<div
 	v-if="show">
 		<b-dropdown-divider></b-dropdown-divider>
-		<b-dropdown-item
+		<excel-dropdown-option-item
+		icon="icon-eye"
 		@click="getPreImports">
-			<i class="icon-eye"></i>
 			Pre Importaciones
-		</b-dropdown-item>
+		</excel-dropdown-option-item>
 	</div>
 </template>
 <script>
 export default {
+	components: {
+		ExcelDropdownOptionItem: () => import('@/common-vue/components/horizontal-nav/ExcelDropdownOptionItem'),
+	},
 	computed: {
 		price_types() {
 			return this.$store.state.price_type.models 

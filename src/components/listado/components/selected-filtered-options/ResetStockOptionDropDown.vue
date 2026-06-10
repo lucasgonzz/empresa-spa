@@ -15,13 +15,22 @@
 	</div>
 </template>
 <script>
+import listado_articles_source from '@/mixins/listado/listado_articles_source'
+
 export default {
+	mixins: [listado_articles_source],
 	components: {
 		DropdownSectionTitle: () => import('@/components/listado/components/selected-filtered-options/DropdownSectionTitle'),
 		DropdownOptionItem: () => import('@/components/listado/components/selected-filtered-options/DropdownOptionItem'),
 	},
 	methods: {
+		/**
+		 * Guarda el origen del dropdown y abre confirmación de reseteo de stock.
+		 *
+		 * @return {void}
+		 */
 		resetStock() {
+			this.remember_options_from_filter()
 			this.$bvModal.show('confirm-reset-stock')
 		}
 	}

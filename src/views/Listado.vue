@@ -46,6 +46,10 @@
 	<!-- <stock-info></stock-info> -->
 
 	<articles-pre-import-modal></articles-pre-import-modal>
+
+	<!-- Modal de importación asistida por IA, disponible solo con la extensión habilitada -->
+	<ai-excel-import-modal
+	v-if="hasExtencion('ai_excel_import')"></ai-excel-import-modal>
 	<view-component
 	show_view_header
 	show_filter_modal
@@ -67,8 +71,14 @@
 
 		</template>
 		
-		<template #options_drop_down>
-			
+		<template #options_drop_down_seleccion>
+
+			<drop-down-options></drop-down-options>
+
+		</template>
+
+		<template #options_drop_down_filtro>
+
 			<drop-down-options></drop-down-options>
 
 		</template>
@@ -166,6 +176,7 @@ export default {
 
 		ExcelDropdownOptions: () => import('@/components/listado/components/excel-dropdown-options/Index'),
 		ArticlesPreImportModal: () => import('@/components/listado/modals/articles-pre-import/Index'),
+		AiExcelImportModal: () => import('@/components/listado/modals/ai-excel-import/Index'),
 
 		// StockInfoButtons: () => import('@/components/listado/components/StockInfoButtons'),
 		

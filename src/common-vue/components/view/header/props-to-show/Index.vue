@@ -6,6 +6,7 @@
 
 		<b-button
 		v-b-modal="'props-to-show-'+model_name"
+		size="sm"
 		variant="primary">
 			<i class="icon-eye"></i>
 			<i class="icon-list p-l-10"></i>

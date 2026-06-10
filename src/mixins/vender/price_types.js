@@ -6,8 +6,11 @@ export default {
             console.log('setPriceType')
             console.log('client:')
             console.log(this.client)
-            if (this.price_types_with_position.length
-                && !this.hasExtencion('lista_de_precios_por_rango_de_cantidad_vendida')) {
+            if (
+                this.owner.listas_de_precio
+                && this.price_types_with_position.length
+                && !this.hasExtencion('lista_de_precios_por_rango_de_cantidad_vendida')
+            ) {
                 let price_type_para_vender 
 
                 if (this.budget 

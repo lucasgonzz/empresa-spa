@@ -23,63 +23,43 @@
 			@click="pdf">
 				Catalogo con imagenes
 			</dropdown-option-item>
-
-			<!-- <dropdown-option-item
-			icon="icon-print"
-			@click="listaPdf">
-				Lista PDF
-			</dropdown-option-item> -->
 		</div>
 
 	</div>
 </template>
 <script>
-import alert_filtrados from '@/mixins/listado/alert_filtrados'
+import listado_articles_source from '@/mixins/listado/listado_articles_source'
+
 export default {
+	mixins: [listado_articles_source],
 	components: {
 		DropdownSectionTitle: () => import('@/components/listado/components/selected-filtered-options/DropdownSectionTitle'),
 		DropdownOptionItem: () => import('@/components/listado/components/selected-filtered-options/DropdownOptionItem'),
 	},
-	mixins: [alert_filtrados],
 	computed: {
-		selected() {
-			return this.$store.state.article.selected 
-		},
-		filtered() {
-			return this.$store.state.article.filtered 
-		},
 		monedas() {
 			return this.$store.state.moneda.models 
 		},
 	},
 	methods: {
-		getIds() {
-			let ids = []
-			let articles
-			if (this.selected.length) {
-				articles = this.selected
-			} else if (this.filtered.length) { 
-				this.alert_filtrados()
-				articles = this.filtered
-			}
-			articles.forEach(article => {
-				ids.push(article.id)
-			})
-			return ids
-		},
+		/**
+		 * Abre PDF con imágenes para seleccionados o filtrados según el dropdown activo.
+		 *
+		 * @param {Object|null} moneda
+		 * @return {void}
+		 */
 		pdf(moneda = null) {
-			let ids = this.getIds()
-			let link = process.env.VUE_APP_API_URL+'/article/pdf/'+ids.join('-') 
+			let ids = this.resolve_article_ids()
+			if (!ids.length) {
+				return
+			}
+
+			let link = process.env.VUE_APP_API_URL + '/article/pdf/' + ids.join('-') 
 			
 			if (moneda) {
-				link += '/'+moneda.id
+				link += '/' + moneda.id
 			}
 			
-			window.open(link)
-		},
-		listaPdf() {
-			let ids = this.getIds()
-			let link = process.env.VUE_APP_API_URL+'/article/list-pdf/'+ids.join('-') 
 			window.open(link)
 		},
 	}

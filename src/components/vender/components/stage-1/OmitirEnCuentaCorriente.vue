@@ -1,21 +1,31 @@
 <template>
-	<b-card
+	<div
 	v-if="client && !guardar_como_presupuesto"
-	class="m-b-25 m-t-25 b-r-1 shadow">
+	class="vender-toggle-row">
 
-		<b-form-checkbox
-		:value="1"
-		size="lg"
-		:disabled="disabled"
-		:unchecked-value="0"
-		v-model="omitir_en_cuenta_corriente">
-			<span
-			id="omitir_en_cuenta_corriente">
-				{{ text }}
+		<!-- Toggle estilo iPhone enlazado al computed con setter -->
+		<label
+		class="vender-toggle"
+		:class="{ 'vender-toggle--disabled': disabled }"
+		for="toggle-omitir-cc">
+			<input
+			type="checkbox"
+			id="toggle-omitir-cc"
+			:disabled="disabled"
+			:checked="omitir_en_cuenta_corriente == 1"
+			@change="omitir_en_cuenta_corriente = $event.target.checked ? 1 : 0">
+			<span class="vender-toggle__track">
+				<span class="vender-toggle__thumb"></span>
 			</span>
-		</b-form-checkbox>
+		</label>
 
-	</b-card>
+		<span
+		class="vender-toggle__label"
+		id="omitir_en_cuenta_corriente">
+			{{ text }}
+		</span>
+
+	</div>
 </template>
 <script>
 import default_payment_method from '@/mixins/vender/default_payment_method'
@@ -26,7 +36,7 @@ export default {
 			if (this.owner.text_omitir_cc) {
 				return this.owner.text_omitir_cc
 			}
-			return 'OMITIR en cuenta corriente'
+			return 'Omitir cuenta corriente'
 		},
 		omitir_en_cuenta_corriente: {
 			set(value) {

@@ -1,0 +1,1529 @@
+<template>
+	<b-modal
+	:id="modal_id"
+	size="lg"
+	hide-footer
+	:title="modal_title"
+	@hide="reset">
+
+		<!-- Indicador de pasos -->
+		<div class="ai-import-steps m-b-20">
+			<span
+			v-for="n in 3"
+			:key="n"
+			class="ai-import-step-dot"
+			:class="{ 'ai-import-step-dot--active': step >= n }">
+				{{ n }}
+			</span>
+		</div>
+
+		<!-- ========================================================== -->
+		<!-- PASO 1: Subir archivo y analizar con IA                     -->
+		<!-- ========================================================== -->
+		<div v-if="step === 1">
+
+			<p class="text-muted m-b-15">
+				Subí tu planilla Excel y Claude IA detectará automáticamente qué columna corresponde a cada propiedad del sistema.
+			</p>
+
+			<b-form-group label="Archivo Excel (.xlsx, .xls)">
+				<b-form-file
+				v-model="file"
+				accept=".xlsx,.xls"
+				placeholder="Seleccioná un archivo..."
+				browse-text="Explorar"
+				@input="onFileChange">
+				</b-form-file>
+			</b-form-group>
+
+			<!-- Resumen del rango detectado y detección de cabecera al elegir el archivo -->
+			<div v-if="finish_row && !file_processing" class="ai-import-file-info m-t-10 m-b-10">
+
+				<!-- Resumen de filas -->
+				<p class="text-muted small m-b-5">
+					Última fila con contenido detectada: <strong>{{ finish_row }}</strong>.
+					<span v-if="excel_rows_to_import_count > 0">
+						Se importarán <strong>{{ excel_rows_to_import_count }}</strong> filas
+						(desde la fila <strong>{{ start_row }}</strong> hasta la <strong>{{ finish_row }}</strong>).
+					</span>
+				</p>
+
+				<!-- Toggle de cabecera: permite corregir la detección automática -->
+				<div class="ai-import-header-detection">
+					<b-form-checkbox
+					v-model="has_header_row"
+					size="sm"
+					@change="header_row_manually_overridden = true">
+						La primera fila es una cabecera de columnas
+						<span v-if="!header_row_manually_overridden" class="text-muted ai-import-header-auto-label">
+							(detectado automáticamente)
+						</span>
+					</b-form-checkbox>
+					<!-- Advertencia cuando no hay cabecera: el mapeo de Claude puede ser menos preciso -->
+					<small v-if="!has_header_row" class="text-warning d-block m-t-3">
+						Sin cabecera: Claude recibirá solo los datos para inferir el mapeo. La detección puede ser menos precisa.
+					</small>
+				</div>
+
+			</div>
+			<p
+			v-if="file_processing"
+			class="text-muted small m-t-10 m-b-0">
+				Leyendo filas del Excel...
+			</p>
+			<b-alert
+			v-if="excel_rows_read_error"
+			show
+			variant="warning"
+			class="m-t-10 m-b-0">
+				{{ excel_rows_read_error }}
+			</b-alert>
+
+			<!-- Mensaje de error del análisis -->
+			<b-alert
+			v-if="error_message"
+			show
+			variant="danger"
+			class="m-t-10">
+				{{ error_message }}
+			</b-alert>
+
+			<b-button
+			variant="primary"
+			block
+			:disabled="!file || loading || file_processing"
+			@click="analyze">
+				<b-spinner
+				v-if="loading"
+				small
+				class="m-r-5">
+				</b-spinner>
+				{{ loading ? 'Analizando con IA...' : 'Analizar con IA' }}
+			</b-button>
+
+		</div>
+
+		<!-- ========================================================== -->
+		<!-- PASO 2: Confirmar proveedor y mapeo de columnas             -->
+		<!-- ========================================================== -->
+		<div v-if="step === 2">
+
+		<!-- Sección de proveedor inferido (solo para artículos) -->
+		<div
+		v-if="model === 'article'"
+		class="m-b-20">
+
+			<p class="font-weight-bold m-b-5">Proveedor detectado</p>
+
+			<!-- Alerta si la confianza del proveedor es baja -->
+			<b-alert
+			v-if="provider_confidence === 'bajo'"
+			show
+			variant="warning"
+			class="m-b-10">
+				<i class="icon-alert-triangle m-r-5"></i>
+				Confianza baja — verificá el proveedor antes de continuar.
+			</b-alert>
+
+			<b-form-group
+			:description="provider_confidence_label">
+				<b-form-select
+				v-model="selected_provider_id"
+				:options="provider_options">
+				</b-form-select>
+			</b-form-group>
+
+		</div>
+
+		<hr
+		v-if="model === 'article'">
+
+			<!-- Tabla de mapeo de columnas -->
+			<p class="font-weight-bold m-b-10">Mapeo de columnas</p>
+
+			<p class="text-muted small m-b-15">
+				Revisá que cada columna del Excel esté asignada a la propiedad correcta.
+				<span class="text-warning">Las filas en amarillo tienen baja confianza.</span>
+				<span class="ai-import-mapping-legend-interpretation"> Las filas en celeste son interpretaciones de la IA que conviene validar.</span>
+				<span class="ai-import-mapping-legend-ignored"> Las filas en violeta se ignoran en la importación.</span>
+			</p>
+
+			<b-alert
+			v-if="column_mapping_interpretation_alerts.length > 0"
+			show
+			variant="info"
+			class="m-b-15">
+				<p class="font-weight-bold m-b-5 m-t-0">
+					<i class="icon-info m-r-5"></i>
+					Interpretaciones de la IA
+				</p>
+				<p
+				v-for="(alert_text, alert_index) in column_mapping_interpretation_alerts"
+				:key="'interpretation-alert-' + alert_index"
+				class="small m-b-5 m-t-0">
+					{{ alert_text }}
+				</p>
+			</b-alert>
+
+			<div class="ai-import-mapping-table">
+
+				<!-- Cabecera -->
+				<div class="ai-import-mapping-row ai-import-mapping-row--header">
+					<span>Columna en Excel</span>
+					<span>Propiedad del sistema</span>
+					<span class="text-center">Confianza</span>
+				</div>
+
+				<!-- Fila por cada columna detectada -->
+				<div
+				v-for="(item, index) in column_mapping"
+				:key="index"
+				class="ai-import-mapping-block"
+				:class="mapping_row_highlight_class(item)">
+
+					<div class="ai-import-mapping-row">
+
+						<!-- Letra y nombre de la columna en el Excel -->
+						<span
+						class="ai-import-mapping-excel-col"
+						:title="excel_column_full_label(item, index)">
+							<span class="ai-import-mapping-excel-letter">
+								{{ excel_column_letter_label(item, index) }}
+							</span>
+							<span class="ai-import-mapping-excel-header">
+								{{ item.excel_column }}
+							</span>
+						</span>
+
+						<!-- Select de propiedad del sistema -->
+						<b-form-select
+						v-model="item.system_property"
+						:options="system_property_options"
+						size="sm">
+						</b-form-select>
+
+						<!-- Nivel de confianza del mapeo sugerido por IA -->
+						<span class="ai-import-mapping-confidence text-center">
+							<span
+							class="ai-import-mapping-confidence-value"
+							:class="column_confidence_text_class(item.confidence)"
+							:title="column_confidence_title(item.confidence)">
+								{{ format_column_confidence(item.confidence) }}
+							</span>
+							<small
+							v-if="column_confidence_is_low(item.confidence)"
+							class="ai-import-mapping-confidence-hint text-warning">
+								Revisar
+							</small>
+							<small
+							v-else-if="column_has_interpretation_note(item)"
+							class="ai-import-mapping-confidence-hint text-info">
+								Validar
+							</small>
+						</span>
+
+					</div>
+
+					<p
+					v-if="column_has_interpretation_note(item)"
+					class="ai-import-mapping-interpretation-note small m-b-0">
+						<i class="icon-info m-r-5"></i>
+						{{ item.interpretation_note }}
+					</p>
+
+				</div>
+
+			</div>
+
+			<div class="m-t-20 j-end">
+				<b-button
+				variant="outline-secondary"
+				class="m-r-10"
+				@click="step = 1">
+					Volver
+				</b-button>
+				<b-button
+				variant="primary"
+				@click="step = 3">
+					Confirmar y configurar importación
+				</b-button>
+			</div>
+
+		</div>
+
+		<!-- ========================================================== -->
+		<!-- PASO 3: Opciones de importación                             -->
+		<!-- ========================================================== -->
+		<div v-if="step === 3">
+
+			<p class="font-weight-bold m-b-15">Opciones de importación</p>
+
+			<!-- Rango de filas (igual que el modal de importación clásico) -->
+			<b-form-group
+			label="Fila a partir de la cual empezar a importar">
+				<b-form-input
+				type="number"
+				v-model="start_row"
+				placeholder="Fila a partir de la cual empezar a importar">
+				</b-form-input>
+			</b-form-group>
+
+			<b-form-group
+			description="Dejar en blanco para importar hasta la última fila"
+			label="Última fila hasta la cual importar">
+				<b-form-input
+				type="number"
+				v-model="finish_row"
+				placeholder="Última fila hasta la cual importar">
+				</b-form-input>
+			</b-form-group>
+
+		<p
+		v-if="excel_rows_to_import_count > 0"
+		class="text-muted small m-b-15">
+			Rango efectivo: filas {{ start_row }} a {{ finish_row }}
+			<span v-if="model === 'article'">
+				({{ excel_rows_to_import_count }} filas, aprox. {{ estimated_chunks_count }} chunks de 50 filas).
+			</span>
+			<span v-else>
+				({{ excel_rows_to_import_count }} filas).
+			</span>
+		</p>
+
+		<hr>
+
+		<!-- Operación a realizar -->
+		<b-form-group label="Operaciones a realizar">
+			<b-form-radio
+			class="radio-option m-b-5"
+			:value="0"
+			size="lg"
+			v-model="create_and_edit">
+				Solo editar {{ model_label_plural }} existentes
+			</b-form-radio>
+			<b-form-radio
+			class="radio-option"
+			:value="1"
+			size="lg"
+			v-model="create_and_edit">
+				Cargar nuevos {{ model_label_plural }} y editar existentes
+			</b-form-radio>
+		</b-form-group>
+
+		<!-- Opciones avanzadas de proveedor (solo para artículos) -->
+		<div
+		v-if="model === 'article'">
+
+			<hr>
+
+			<div class="checkbox-group m-b-15">
+
+				<b-form-checkbox
+				class="radio-option m-b-10"
+				:value="1"
+				:unchecked-value="0"
+				size="lg"
+				v-model="permitir_provider_code_repetido">
+					Permitir códigos de proveedor repetidos
+				</b-form-checkbox>
+
+				<b-form-checkbox
+				v-if="permitir_provider_code_repetido"
+				class="radio-option m-b-10"
+				:value="1"
+				:unchecked-value="0"
+				size="lg"
+				v-model="permitir_provider_code_repetido_en_multi_providers">
+					Permitir códigos repetidos en múltiples proveedores
+				</b-form-checkbox>
+
+				<b-form-checkbox
+				v-if="has_selected_provider"
+				class="radio-option m-b-10"
+				:value="1"
+				:unchecked-value="0"
+				size="lg"
+				v-model="actualizar_articulos_de_otro_proveedor">
+					Actualizar artículos de otro proveedor
+				</b-form-checkbox>
+
+				<b-form-checkbox
+				class="radio-option m-b-10"
+				:value="1"
+				:unchecked-value="0"
+				size="lg"
+				v-model="actualizar_por_provider_code">
+					Actualizar por código de proveedor
+				</b-form-checkbox>
+
+				<b-form-checkbox
+				v-if="has_selected_provider && actualizar_articulos_de_otro_proveedor"
+				class="radio-option m-b-10"
+				:value="1"
+				:unchecked-value="0"
+				size="lg"
+				v-model="actualizar_proveedor">
+					Actualizar proveedor del artículo
+				</b-form-checkbox>
+
+			</div>
+
+		</div>
+
+			<!-- Error al importar -->
+			<b-alert
+			v-if="error_message"
+			show
+			variant="danger"
+			class="m-t-10 m-b-15">
+				{{ error_message }}
+			</b-alert>
+
+			<div class="j-end">
+				<b-button
+				variant="outline-secondary"
+				class="m-r-10"
+				@click="step = 2">
+					Volver
+				</b-button>
+				<b-button
+				variant="success"
+				:disabled="loading || create_and_edit === null || !can_start_import"
+				@click="importar">
+					<b-spinner
+					v-if="loading"
+					small
+					class="m-r-5">
+					</b-spinner>
+					{{ loading ? 'Iniciando importación...' : 'Importar' }}
+				</b-button>
+			</div>
+
+		</div>
+
+	</b-modal>
+</template>
+
+<script>
+import * as XLSX from 'xlsx/xlsx.mjs'
+
+export default {
+
+	props: {
+		/*
+		 * Modelo de importación: 'article', 'client' o 'provider'.
+		 * Controla las propiedades del sistema disponibles, las secciones
+		 * condicionales y el id del modal.
+		 */
+		model: {
+			type: String,
+			default: 'article',
+		},
+	},
+
+	/* Estado reactivo del modal. */
+	data() {
+		return {
+			/* Paso actual del flujo (1, 2 o 3). */
+			step: 1,
+
+			/* Archivo Excel seleccionado por el usuario en el paso 1. */
+			file: null,
+
+			/* Lectura local del Excel para detectar última fila (como importación clásica). */
+			file_processing: false,
+
+			/* Primera fila de datos a importar; por defecto 2 (fila 1 = encabezados). */
+			start_row: 2,
+
+			/* Última fila con contenido detectada en el archivo. */
+			finish_row: '',
+
+			/* Copia de respaldo del finish_row detectado automáticamente. */
+			finish_row_original: '',
+
+			/* Error al leer filas localmente (no bloquea analizar; se reintenta al hacer clic). */
+			excel_rows_read_error: '',
+
+			/* Estado de carga para bloquear botones durante peticiones. */
+			loading: false,
+
+			/* Mensaje de error descriptivo para mostrar en la UI. */
+			error_message: '',
+
+			/* Ruta relativa del archivo guardado, devuelta por /analyze. */
+			excel_path: null,
+
+			/* Mapeo de columnas devuelto por Claude, modificable por el usuario. */
+			column_mapping: [],
+
+			/* ID del proveedor inferido por Claude (puede ser null). */
+			selected_provider_id: null,
+
+			/* Nivel de confianza del proveedor inferido: "alto", "medio" o "bajo". */
+			provider_confidence: 'bajo',
+
+			/* Opción de operación: 0=solo actualizar, 1=crear y actualizar. */
+			create_and_edit: null,
+
+			/* Opciones avanzadas de importación, con los mismos defaults que el modal existente. */
+			actualizar_articulos_de_otro_proveedor: 1,
+			permitir_provider_code_repetido: 0,
+			permitir_provider_code_repetido_en_multi_providers: 0,
+			actualizar_por_provider_code: 0,
+			actualizar_proveedor: 0,
+
+			/* True si la fila 1 del Excel fue detectada como cabecera de columnas. */
+			has_header_row: true,
+
+			/* True si el usuario corrigió manualmente la detección automática de cabecera. */
+			header_row_manually_overridden: false,
+		}
+	},
+
+	computed: {
+
+		/*
+		 * ID único del modal según el modelo; mantiene compatibilidad con artículos
+		 * y permite múltiples instancias del modal en la misma app sin colisión de ids.
+		 */
+		modal_id() {
+			if (this.model === 'article') return 'ai-excel-import-modal'
+			return 'ai-' + this.model + '-excel-import-modal'
+		},
+
+		/*
+		 * Etiqueta en plural del modelo para los textos de la UI.
+		 */
+		model_label_plural() {
+			const labels = {
+				article:  'artículos',
+				client:   'clientes',
+				provider: 'proveedores',
+			}
+			return labels[this.model] || this.model
+		},
+
+		/*
+		 * Título dinámico del modal según el paso actual y el modelo de importación.
+		 */
+		modal_title() {
+			const model_labels = {
+				article:  'Artículos',
+				client:   'Clientes',
+				provider: 'Proveedores',
+			}
+			const model_label = model_labels[this.model] || this.model
+
+			const titles = {
+				1: 'Importar ' + model_label + ' con IA — Subir archivo',
+				2: 'Importar ' + model_label + ' con IA — Confirmar mapeo',
+				3: 'Importar ' + model_label + ' con IA — Opciones de importación',
+			}
+			return titles[this.step] || ('Importar ' + model_label + ' con IA')
+		},
+
+		/*
+		 * Proveedores disponibles del usuario, cargados desde el store.
+		 * Se transforman en opciones para b-form-select.
+		 */
+		providers() {
+			return this.$store.state.provider.models
+		},
+
+		provider_options() {
+			/* Opción vacía como primera opción del select. */
+			let options = [{ value: null, text: 'Sin proveedor' }]
+
+			this.providers.forEach(provider => {
+				options.push({ value: provider.id, text: provider.name })
+			})
+
+			return options
+		},
+
+		/*
+		 * Descripción textual del nivel de confianza del proveedor inferido.
+		 * Se muestra como descripción del b-form-group en el paso 2.
+		 */
+		provider_confidence_label() {
+			const labels = {
+				alto: 'Alta confianza — el proveedor fue inferido con seguridad',
+				medio: 'Confianza media — verificá que el proveedor sea correcto',
+				bajo: 'Confianza baja — no se pudo determinar con seguridad',
+			}
+			return labels[this.provider_confidence] || ''
+		},
+
+		/*
+		 * True si en el paso 2 se eligió un proveedor para todo el archivo (no "Sin proveedor").
+		 */
+		has_selected_provider() {
+			if (this.selected_provider_id === null || this.selected_provider_id === '') {
+				return false
+			}
+
+			return Number(this.selected_provider_id) > 0
+		},
+
+		/*
+		 * Cantidad de filas que se importarán según start_row y finish_row.
+		 */
+		excel_rows_to_import_count() {
+			let finish = Number(this.finish_row)
+			let start = Number(this.start_row)
+
+			if (!finish || !start || finish < start) {
+				return 0
+			}
+
+			return finish - start + 1
+		},
+
+		/*
+		 * Estimación de chunks según ARTICLE_EXCEL_CHUNK_SIZE del backend (referencia UX).
+		 */
+		estimated_chunks_count() {
+			let rows = this.excel_rows_to_import_count
+			if (rows <= 0) {
+				return 0
+			}
+
+			let chunk_size = 50
+			return Math.ceil(rows / chunk_size)
+		},
+
+		/*
+		 * Permite importar solo si hay rango de filas válido y el archivo ya fue leído.
+		 */
+		can_start_import() {
+			if (this.file_processing) {
+				return false
+			}
+
+			let finish = Number(this.finish_row)
+			let start = Number(this.start_row)
+
+			return finish > 0 && start > 0 && finish >= start
+		},
+
+		/*
+		 * Textos únicos de interpretation_note para el alert resumen del paso 2.
+		 */
+		column_mapping_interpretation_alerts() {
+			let alerts = []
+			let seen = {}
+
+			this.column_mapping.forEach(item => {
+				if (!this.column_has_interpretation_note(item)) {
+					return
+				}
+
+				let note = (item.interpretation_note || '').trim()
+				if (note === '' || seen[note]) {
+					return
+				}
+
+				seen[note] = true
+				alerts.push(note)
+			})
+
+			return alerts
+		},
+
+		/*
+		 * Opciones para el select de propiedades del sistema en la tabla de mapeo.
+		 * Varía según el modelo (article, client, provider).
+		 * El valor null corresponde a "Ignorar columna".
+		 */
+		system_property_options() {
+			/* Opción vacía común a todos los modelos. */
+			const ignore_option = { value: null, text: 'Ignorar columna' }
+
+			if (this.model === 'client') {
+				return [
+					ignore_option,
+					{ value: 'nombre',                   text: 'Nombre' },
+					{ value: 'telefono',                 text: 'Teléfono' },
+					{ value: 'email',                    text: 'Email' },
+					{ value: 'direccion',                text: 'Dirección' },
+					{ value: 'localidad',                text: 'Localidad' },
+					{ value: 'provincia',                text: 'Provincia' },
+					{ value: 'cuit',                     text: 'CUIT' },
+					{ value: 'cuil',                     text: 'CUIL' },
+					{ value: 'dni',                      text: 'DNI' },
+					{ value: 'razon_social',             text: 'Razón social' },
+					{ value: 'numero',                   text: 'Número de cliente' },
+					{ value: 'vendedor',                 text: 'Vendedor' },
+					{ value: 'condicion_frente_al_iva',  text: 'Condición frente al IVA' },
+					{ value: 'tipo_de_precio',           text: 'Tipo de precio' },
+					{ value: 'saldo_actual',             text: 'Saldo actual' },
+					{ value: 'descripcion',              text: 'Descripción' },
+				]
+			}
+
+			if (this.model === 'provider') {
+				return [
+					ignore_option,
+					{ value: 'nombre',                   text: 'Nombre' },
+					{ value: 'telefono',                 text: 'Teléfono' },
+					{ value: 'email',                    text: 'Email' },
+					{ value: 'direccion',                text: 'Dirección' },
+					{ value: 'localidad',                text: 'Localidad' },
+					{ value: 'cuit',                     text: 'CUIT' },
+					{ value: 'razon_social',             text: 'Razón social' },
+					{ value: 'numero',                   text: 'Número de proveedor' },
+					{ value: 'condicion_frente_al_iva',  text: 'Condición frente al IVA' },
+					{ value: 'observaciones',            text: 'Observaciones' },
+				]
+			}
+
+			/* Opciones para artículos (model === 'article' o default). */
+			return [
+				ignore_option,
+				{ value: 'nombre',                text: 'Nombre' },
+				{ value: 'codigo_de_barras',      text: 'Código de barras' },
+				{ value: 'sku',                   text: 'SKU' },
+				{ value: 'codigo_de_proveedor',   text: 'Código de proveedor' },
+				{ value: 'costo',                 text: 'Costo' },
+				{ value: 'precio',                text: 'Precio' },
+				{ value: 'iva',                   text: 'IVA' },
+				{ value: 'margen_de_ganancia',    text: 'Margen de ganancia' },
+				{ value: 'categoria',             text: 'Categoría' },
+				{ value: 'sub_categoria',         text: 'Sub categoría' },
+				{ value: 'marca',                 text: 'Marca' },
+				{ value: 'descripcion',           text: 'Descripción' },
+				{ value: 'stock_actual',          text: 'Stock actual' },
+				{ value: 'descuentos',            text: 'Descuentos' },
+				{ value: 'recargos',              text: 'Recargos' },
+			]
+		},
+
+	},
+
+	watch: {
+
+		/*
+		 * Al elegir archivo (v-model de b-form-file), detectamos última fila como en import clásico.
+		 */
+		file(new_file) {
+			if (new_file) {
+				this.onFileChange(new_file)
+			} else {
+				this.finish_row = ''
+				this.finish_row_original = ''
+			}
+		},
+
+		/*
+		 * Cuando se desactiva permitir_provider_code_repetido, limpiamos
+		 * la opción dependiente para mantener consistencia.
+		 */
+		permitir_provider_code_repetido() {
+			if (!this.permitir_provider_code_repetido) {
+				this.permitir_provider_code_repetido_en_multi_providers = 0
+			}
+		},
+
+		/*
+		 * Cuando se desactiva actualizar_articulos_de_otro_proveedor,
+		 * limpiamos actualizar_proveedor para evitar estado inconsistente.
+		 */
+		actualizar_articulos_de_otro_proveedor() {
+			if (!this.actualizar_articulos_de_otro_proveedor) {
+				this.actualizar_proveedor = 0
+			}
+		},
+
+		/*
+		 * Sin proveedor del archivo, las opciones de "otro proveedor" no aplican y se desactivan.
+		 */
+		selected_provider_id() {
+			if (!this.has_selected_provider) {
+				this.actualizar_articulos_de_otro_proveedor = 0
+				this.actualizar_proveedor = 0
+			}
+		},
+
+		/*
+		 * Al cambiar el toggle de cabecera (manualmente o por detección automática),
+		 * ajustar start_row para reflejar el nuevo criterio.
+		 *
+		 * @param {Boolean} val - Nuevo valor de has_header_row
+		 */
+		has_header_row(val) {
+			/* Si el usuario cambia el toggle, ajustar start_row. */
+			this.start_row = val ? 2 : 1
+		},
+	},
+
+	methods: {
+
+		/*
+		 * Procesa el archivo elegido (File o evento nativo del input), igual que import/Index.vue.
+		 */
+		onFileChange(file_or_event) {
+			let selected_file = this.resolve_selected_excel_file(file_or_event)
+
+			if (!selected_file) {
+				this.finish_row = ''
+				this.finish_row_original = ''
+				this.excel_rows_read_error = ''
+				return
+			}
+
+			this.process_excel_file(selected_file)
+		},
+
+		/*
+		 * Obtiene el File desde el evento de b-form-file, v-model o input nativo.
+		 */
+		resolve_selected_excel_file(file_or_event) {
+			if (file_or_event && file_or_event.target && file_or_event.target.files && file_or_event.target.files.length > 0) {
+				return file_or_event.target.files[0]
+			}
+
+			if (file_or_event && file_or_event.name) {
+				return file_or_event
+			}
+
+			if (this.file && this.file.name) {
+				return this.file
+			}
+
+			return null
+		},
+
+		/*
+		 * Lee el Excel en el navegador y calcula finish_row (retorna promesa).
+		 * Resetea header_row_manually_overridden para que la detección automática
+		 * vuelva a correr con el nuevo archivo.
+		 */
+		process_excel_file(file) {
+			let self = this
+
+			self.file_processing = true
+			self.finish_row = ''
+			self.finish_row_original = ''
+			self.excel_rows_read_error = ''
+
+			/* Al cambiar el archivo, se vuelve a detectar la cabecera automáticamente. */
+			self.header_row_manually_overridden = false
+
+			return new Promise(function(resolve, reject) {
+				let reader = new FileReader()
+
+				reader.onload = function(e) {
+					try {
+						let ultima_fila_con_contenido = self.detect_last_excel_row_from_buffer(e.target.result)
+
+						self.finish_row = ultima_fila_con_contenido
+						self.finish_row_original = ultima_fila_con_contenido
+						self.file_processing = false
+						resolve(ultima_fila_con_contenido)
+					} catch (err) {
+						console.error('Error al leer filas del Excel:', err)
+						self.file_processing = false
+						self.excel_rows_read_error = 'No se pudo leer el archivo para detectar filas. Podés analizar igual; el servidor ajustará el rango.'
+						reject(err)
+					}
+				}
+
+				reader.onerror = function() {
+					self.file_processing = false
+					self.excel_rows_read_error = 'Error al leer el archivo en el navegador.'
+					reject(new Error('FileReader error'))
+				}
+
+				reader.readAsArrayBuffer(file)
+			})
+		},
+
+		/*
+		 * Calcula la última fila con contenido desde el buffer del Excel (xlsx/xls).
+		 * También detecta automáticamente si la fila 1 es cabecera y ajusta start_row,
+		 * siempre que el usuario no haya corregido la detección manualmente.
+		 */
+		detect_last_excel_row_from_buffer(array_buffer) {
+			let data = new Uint8Array(array_buffer)
+			let workbook = XLSX.read(data, { type: 'array' })
+			let sheet_name = workbook.SheetNames[0]
+			let worksheet = workbook.Sheets[sheet_name]
+
+			if (!worksheet) {
+				throw new Error('Hoja vacía')
+			}
+
+			/* Método principal: mismo criterio que import/Index.vue cuando hay !ref. */
+			if (worksheet['!ref']) {
+				let range = XLSX.utils.decode_range(worksheet['!ref'])
+				let ultima_fila_con_contenido = 1
+
+				for (let fila = range.s.r; fila <= range.e.r; fila++) {
+					for (let col = range.s.c; col <= range.e.c; col++) {
+						let cell_ref = XLSX.utils.encode_cell({ c: col, r: fila })
+						let cell = worksheet[cell_ref]
+
+						if (cell && cell.v !== null && cell.v !== '') {
+							ultima_fila_con_contenido = fila + 1
+							break
+						}
+					}
+				}
+
+				/* Detectar si la fila 1 es cabecera antes de retornar. */
+				this.detect_header_row(worksheet)
+
+				return ultima_fila_con_contenido
+			}
+
+			/* Fallback si el Excel no trae !ref: recorremos filas parseadas. */
+			let rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' })
+			let ultima = 1
+
+			for (let i = rows.length - 1; i >= 0; i--) {
+				let row = rows[i]
+				let has_content = false
+
+				if (Array.isArray(row)) {
+					for (let j = 0; j < row.length; j++) {
+						if (row[j] !== null && row[j] !== '' && String(row[j]).trim() !== '') {
+							has_content = true
+							break
+						}
+					}
+				}
+
+				if (has_content) {
+					ultima = i + 1
+					break
+				}
+			}
+
+			/* Detectar si la fila 1 es cabecera antes de retornar. */
+			this.detect_header_row(worksheet)
+
+			return ultima
+		},
+
+		/*
+		 * Analiza la primera fila del worksheet para determinar automáticamente
+		 * si es una cabecera de columnas o si son datos directamente.
+		 * Solo actúa si el usuario no sobreescribió la detección manualmente.
+		 *
+		 * Criterio: si todas las celdas no vacías de la fila 1 son strings (no números),
+		 * se considera cabecera. Si alguna celda no vacía es numérica, se asume que no hay cabecera.
+		 *
+		 * @param {Object} worksheet - Hoja de trabajo de XLSX
+		 */
+		detect_header_row(worksheet) {
+			/* Respetar corrección manual del usuario. */
+			if (this.header_row_manually_overridden) {
+				return
+			}
+
+			/* Leer la primera fila del Excel como array. */
+			let rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' })
+
+			if (!rows || !rows[0]) {
+				/* Sin datos suficientes: asumir cabecera por defecto. */
+				this.has_header_row = true
+				this.start_row = 2
+				return
+			}
+
+			let first_row = rows[0]
+			let detected_as_header = true
+
+			/* Recorrer celdas: si alguna no vacía es numérica, no es cabecera. */
+			for (let j = 0; j < first_row.length; j++) {
+				let cell_value = first_row[j]
+
+				/* Ignorar celdas vacías. */
+				if (cell_value === null || cell_value === '' || String(cell_value).trim() === '') {
+					continue
+				}
+
+				/* Si el valor es un número (o string numérico), no es cabecera. */
+				if (typeof cell_value === 'number' || !isNaN(Number(cell_value))) {
+					detected_as_header = false
+					break
+				}
+			}
+
+			this.has_header_row = detected_as_header
+
+			/* Ajustar start_row según si hay cabecera o no. */
+			this.start_row = detected_as_header ? 2 : 1
+		},
+
+		/*
+		 * Llama al endpoint /ai-excel-import/analyze con el archivo Excel seleccionado.
+		 * Al recibir respuesta de Claude, avanza al paso 2 con el mapeo sugerido.
+		 */
+		analyze() {
+			let self = this
+
+			if (!self.file) {
+				self.$toast.error('Seleccioná un archivo Excel')
+				return
+			}
+
+			if (self.file_processing) {
+				self.$toast.error('Esperá a que termine de leerse el archivo')
+				return
+			}
+
+			self.error_message = ''
+			self.loading = true
+
+			/*
+			 * Si no se detectaron filas al elegir el archivo, reintentamos antes de llamar a la API.
+			 */
+			let detect_promise = Promise.resolve()
+
+			if (!self.finish_row) {
+				let file_to_read = self.resolve_selected_excel_file(self.file)
+				if (file_to_read) {
+					detect_promise = self.process_excel_file(file_to_read)
+				}
+			}
+
+			detect_promise
+			.then(function() {
+				self.run_analyze_request()
+			})
+			.catch(function() {
+				/* Aunque falle la lectura local, permitimos analizar (el backend ajusta finish_row). */
+				self.run_analyze_request()
+			})
+		},
+
+		/*
+		 * POST a /ai-excel-import/analyze con el archivo ya seleccionado.
+		 */
+		run_analyze_request() {
+			let self = this
+
+			let form_data = new FormData()
+			form_data.append('excel_file', self.file)
+			/* Informamos al backend qué modelo analizar para elegir el analizador correcto. */
+			form_data.append('model', self.model)
+
+			let config = { headers: { 'content-type': 'multipart/form-data' } }
+
+			self.$store.commit('auth/setMessage', 'Analizando archivo con IA...')
+			self.$store.commit('auth/setLoading', true)
+
+			self.$api.post('ai-excel-import/analyze', form_data, config)
+			.then(function(res) {
+				self.loading = false
+				self.$store.commit('auth/setLoading', false)
+				self.$store.commit('auth/setMessage', '')
+
+				self.excel_path        = res.data.excel_path
+				self.column_mapping    = self.normalize_column_mapping(res.data.column_mapping)
+				self.selected_provider_id = res.data.provider_id
+				self.provider_confidence  = res.data.provider_confidence
+
+				self.step = 2
+			})
+			.catch(function(err) {
+				self.loading = false
+				self.$store.commit('auth/setLoading', false)
+				self.$store.commit('auth/setMessage', '')
+
+				let message = 'Error al analizar el archivo.'
+
+				if (err.response && err.response.data && err.response.data.message) {
+					message = err.response.data.message
+				}
+
+				self.error_message = message
+			})
+		},
+
+		/*
+		 * Lanza la importación de artículos usando el mapeo confirmado por el usuario.
+		 * Cierra el modal al recibir respuesta exitosa del backend.
+		 */
+		importar() {
+			if (this.create_and_edit === null) {
+				this.$toast.error('Indicá las operaciones a realizar')
+				return
+			}
+
+			if (!this.can_start_import) {
+				this.$toast.error('Indicá un rango de filas válido (inicio y última fila)')
+				return
+			}
+
+			this.error_message = ''
+			this.loading = true
+
+			this.$store.commit('auth/setMessage', 'Iniciando importación...')
+			this.$store.commit('auth/setLoading', true)
+
+			this.$api.post('ai-excel-import/import', {
+				model:           this.model,
+				excel_path:      this.excel_path,
+				columns:         this.build_columns(),
+				provider_id:     this.selected_provider_id,
+				create_and_edit: this.create_and_edit,
+				start_row:       Number(this.start_row),
+				finish_row:      Number(this.finish_row),
+				/* Campos específicos de artículos (ignorados por el backend para client/provider). */
+				registrar_art_cre: true,
+				registrar_art_act: true,
+				permitir_provider_code_repetido:                    this.permitir_provider_code_repetido,
+				permitir_provider_code_repetido_en_multi_providers: this.permitir_provider_code_repetido_en_multi_providers,
+				actualizar_articulos_de_otro_proveedor:             this.actualizar_articulos_de_otro_proveedor,
+				actualizar_por_provider_code:                       this.actualizar_por_provider_code,
+				actualizar_proveedor:                               this.actualizar_proveedor,
+			})
+			.then(() => {
+				this.loading = false
+				this.$store.commit('auth/setLoading', false)
+				this.$store.commit('auth/setMessage', '')
+
+				this.$bvModal.hide(this.modal_id)
+
+				this.$toast.success(
+					'La importación está en proceso. Te avisaremos cuando termine.',
+					{ duration: 7000 }
+				)
+			})
+			.catch(err => {
+				this.loading = false
+				this.$store.commit('auth/setLoading', false)
+				this.$store.commit('auth/setMessage', '')
+
+				let message = 'Error al iniciar la importación.'
+
+				if (err.response && err.response.data && err.response.data.message) {
+					message = err.response.data.message
+				}
+
+				this.error_message = message
+			})
+		},
+
+		/*
+		 * Alinea claves del mapeo IA con las que usa el importador de artículos en el backend.
+		 *
+		 * @param {string|null} system_property Propiedad elegida en el select de mapeo.
+		 * @return {string|null} Clave canónica o null si se ignora la columna.
+		 */
+		normalize_system_property_key(system_property) {
+			if (system_property === null || system_property === '') {
+				return null
+			}
+
+			let property_aliases = {
+				codigo_proveedor: 'codigo_de_proveedor',
+				codigo_barras: 'codigo_de_barras',
+			}
+
+			if (property_aliases[system_property]) {
+				return property_aliases[system_property]
+			}
+
+			return system_property
+		},
+
+		/*
+		 * Transforma el column_mapping al formato que espera InitExcelImport.
+		 * Genera un objeto { system_property: 0-indexed-position } descartando
+		 * las columnas marcadas como "Ignorar columna" (system_property === null).
+		 */
+		build_columns() {
+			let columns = {}
+
+			this.column_mapping.forEach((item, index) => {
+				let system_property = this.normalize_system_property_key(item.system_property)
+
+				if (system_property !== null) {
+					/*
+					 * Posición real en el Excel (0-based); el backend la envía como excel_column_index.
+					 */
+					let column_position = index
+					if (typeof item.excel_column_index === 'number') {
+						column_position = item.excel_column_index
+					}
+					columns[system_property] = column_position
+				}
+			})
+
+			/*
+			 * Respaldo: si quedó solo descripcion en el mapeo, usar esa columna como nombre.
+			 */
+			if (typeof columns.nombre === 'undefined' && typeof columns.descripcion !== 'undefined') {
+				columns.nombre = columns.descripcion
+				delete columns.descripcion
+			}
+
+			return columns
+		},
+
+		/*
+		 * Asegura tipos consistentes en cada ítem del mapeo recibido del análisis.
+		 */
+		normalize_column_mapping(column_mapping) {
+			if (!Array.isArray(column_mapping)) {
+				return []
+			}
+
+			let normalized = []
+
+			column_mapping.forEach((item, index) => {
+				if (!item) {
+					return
+				}
+
+				let confidence = parseFloat(item.confidence)
+				if (isNaN(confidence)) {
+					confidence = 0
+				}
+				confidence = Math.max(0, Math.min(1, confidence))
+
+				let excel_column_index = index
+				if (typeof item.excel_column_index === 'number') {
+					excel_column_index = item.excel_column_index
+				}
+
+				let interpretation_note = item.interpretation_note
+				if (typeof interpretation_note === 'string') {
+					interpretation_note = interpretation_note.trim()
+					if (interpretation_note === '') {
+						interpretation_note = null
+					}
+				} else {
+					interpretation_note = null
+				}
+
+				normalized.push({
+					excel_column:        item.excel_column || '',
+					system_property:     this.normalize_system_property_key(item.system_property),
+					confidence:          confidence,
+					interpretation_note: interpretation_note,
+					excel_column_index:  excel_column_index,
+					excel_column_letter: item.excel_column_letter || this.number_to_excel_column(excel_column_index + 1),
+				})
+			})
+
+			return normalized
+		},
+
+		/*
+		 * Letra de columna Excel para mostrar en la tabla (A, B, C…).
+		 */
+		excel_column_letter_label(item, index) {
+			if (item && item.excel_column_letter) {
+				return item.excel_column_letter
+			}
+
+			let column_index = index
+			if (item && typeof item.excel_column_index === 'number') {
+				column_index = item.excel_column_index
+			}
+
+			return this.number_to_excel_column(column_index + 1)
+		},
+
+		/*
+		 * Texto completo para el tooltip: "A — CODIGO".
+		 */
+		excel_column_full_label(item, index) {
+			let letter = this.excel_column_letter_label(item, index)
+			let header = (item && item.excel_column) ? item.excel_column : ''
+
+			return letter + ' — ' + header
+		},
+
+		/*
+		 * Convierte índice 1-based a letra de columna (mismo criterio que import manual).
+		 */
+		number_to_excel_column(column_number) {
+			let column_letter = ''
+			let n = column_number
+
+			while (n > 0) {
+				let remainder = (n - 1) % 26
+				column_letter = String.fromCharCode(65 + remainder) + column_letter
+				n = Math.floor((n - 1) / 26)
+			}
+
+			return column_letter
+		},
+
+		/*
+		 * Porcentaje redondeado para la columna Confianza (0%–100%).
+		 */
+		format_column_confidence(confidence) {
+			let value = parseFloat(confidence)
+			if (isNaN(value)) {
+				return '—'
+			}
+
+			return Math.round(value * 100) + '%'
+		},
+
+		/*
+		 * Clases de resaltado por fila: ignorada (violeta) tiene prioridad sobre baja confianza (amarillo).
+		 */
+		mapping_row_highlight_class(item) {
+			if (this.column_mapping_is_ignored(item)) {
+				return {
+					'ai-import-mapping-block--ignored': true,
+				}
+			}
+
+			if (this.column_has_interpretation_note(item)) {
+				return {
+					'ai-import-mapping-block--interpretation': true,
+				}
+			}
+
+			return {
+				'ai-import-mapping-block--warning': this.column_confidence_is_low(item.confidence),
+			}
+		},
+
+		/*
+		 * True si la IA dejó una nota para que el usuario valide el mapeo (p. ej. Descripción → nombre).
+		 */
+		column_has_interpretation_note(item) {
+			if (!item || !item.interpretation_note) {
+				return false
+			}
+
+			return String(item.interpretation_note).trim() !== ''
+		},
+
+		/*
+		 * True si el usuario eligió "Ignorar columna" (system_property null).
+		 */
+		column_mapping_is_ignored(item) {
+			return item && (item.system_property === null || item.system_property === '')
+		},
+
+		/*
+		 * Confianza baja: menos del 70% (fila resaltada en amarillo).
+		 */
+		column_confidence_is_low(confidence) {
+			let value = parseFloat(confidence)
+			if (isNaN(value)) {
+				return true
+			}
+
+			return value < 0.7
+		},
+
+		/*
+		 * Clase de color según el nivel de confianza del mapeo.
+		 */
+		column_confidence_text_class(confidence) {
+			let value = parseFloat(confidence)
+			if (isNaN(value)) {
+				return 'text-muted'
+			}
+
+			if (value >= 0.7) {
+				return 'text-success'
+			}
+
+			if (value >= 0.4) {
+				return 'text-warning'
+			}
+
+			return 'text-danger'
+		},
+
+		/*
+		 * Descripción para el atributo title del porcentaje de confianza.
+		 */
+		column_confidence_title(confidence) {
+			let value = parseFloat(confidence)
+			if (isNaN(value)) {
+				return 'Sin dato de confianza'
+			}
+
+			if (value >= 0.7) {
+				return 'Confianza alta'
+			}
+
+			if (value >= 0.4) {
+				return 'Confianza media — conviene revisar'
+			}
+
+			return 'Confianza baja — revisar el mapeo'
+		},
+
+		/*
+		 * Resetea el estado del modal al cerrarlo para que la próxima vez
+		 * empiece desde el paso 1 limpio.
+		 */
+		reset() {
+			this.step          = 1
+			this.file          = null
+			this.file_processing = false
+			this.start_row     = 2
+			this.finish_row    = ''
+			this.finish_row_original = ''
+			this.excel_rows_read_error = ''
+			this.loading       = false
+			this.error_message = ''
+			this.excel_path    = null
+			this.column_mapping = []
+			this.selected_provider_id = null
+			this.provider_confidence  = 'bajo'
+			this.create_and_edit      = null
+			this.actualizar_articulos_de_otro_proveedor = 1
+			this.permitir_provider_code_repetido = 0
+			this.permitir_provider_code_repetido_en_multi_providers = 0
+			this.actualizar_por_provider_code = 0
+			this.actualizar_proveedor = 0
+			this.has_header_row = true
+			this.header_row_manually_overridden = false
+		},
+
+	},
+
+}
+</script>
+
+<style lang="sass">
+/* Indicador visual de pasos del flujo */
+.ai-import-steps
+	display: flex
+	align-items: center
+	gap: 8px
+	margin-bottom: 20px
+
+.ai-import-step-dot
+	display: inline-flex
+	align-items: center
+	justify-content: center
+	width: 28px
+	height: 28px
+	border-radius: 50%
+	background: #e9ecef
+	color: #6c757d
+	font-weight: 600
+	font-size: 13px
+	transition: background 0.2s, color 0.2s
+
+	&--active
+		background: #007bff
+		color: #fff
+
+/* Tabla de mapeo de columnas */
+.ai-import-mapping-table
+	border: 1px solid rgba(0,0,0,.1)
+	border-radius: 8px
+	overflow: hidden
+
+.ai-import-mapping-block
+	border-bottom: 1px solid rgba(0,0,0,.06)
+
+	&:last-child
+		border-bottom: none
+
+	&--warning
+		background: rgba(255, 193, 7, 0.14)
+
+	&--interpretation
+		background: rgba(0, 123, 255, 0.1)
+		border-left: 4px solid #17a2b8
+		padding-left: 8px
+
+	&--ignored
+		background: rgba(111, 66, 193, 0.16)
+		border-left: 4px solid #6f42c1
+		padding-left: 8px
+
+		.ai-import-mapping-excel-header
+			color: #5a32a3
+			font-style: italic
+
+		.ai-import-mapping-confidence-value
+			opacity: 0.75
+
+.ai-import-mapping-row
+	display: grid
+	grid-template-columns: 1fr 1.4fr 100px
+	align-items: center
+	gap: 10px
+	padding: 8px 12px
+
+	&--header
+		background: #f8f9fa
+		font-weight: 600
+		font-size: 13px
+		color: #495057
+		border-bottom: 1px solid rgba(0,0,0,.06)
+
+.ai-import-mapping-interpretation-note
+	padding: 0 12px 8px 12px
+	color: #0c5460
+
+.ai-import-mapping-legend-interpretation
+	color: #17a2b8
+	font-weight: 600
+
+.ai-import-mapping-legend-ignored
+	color: #6f42c1
+	font-weight: 600
+
+.ai-import-mapping-excel-col
+	display: flex
+	align-items: baseline
+	gap: 8px
+	min-width: 0
+	font-size: 13px
+	color: #343a40
+
+.ai-import-mapping-excel-letter
+	flex-shrink: 0
+	font-weight: 700
+	color: #007bff
+	font-size: 12px
+	min-width: 1.5em
+
+.ai-import-mapping-excel-header
+	font-weight: 500
+	white-space: nowrap
+	overflow: hidden
+	text-overflow: ellipsis
+
+.ai-import-mapping-confidence
+	display: flex
+	flex-direction: column
+	align-items: center
+	gap: 2px
+
+.ai-import-mapping-confidence-value
+	font-weight: 600
+	font-size: 13px
+	line-height: 1.2
+
+.ai-import-mapping-confidence-hint
+	font-size: 11px
+	line-height: 1
+
+/* Bloque informativo de archivo cargado en el paso 1 */
+.ai-import-file-info
+	background: rgba(0, 123, 255, 0.05)
+	border-left: 3px solid rgba(0, 123, 255, 0.3)
+	padding: 10px 14px
+	border-radius: 4px
+
+/* Contenedor del toggle de cabecera */
+.ai-import-header-detection
+	margin-top: 6px
+
+/* Etiqueta de detección automática junto al checkbox */
+.ai-import-header-auto-label
+	font-size: 11px
+	font-style: italic
+</style>

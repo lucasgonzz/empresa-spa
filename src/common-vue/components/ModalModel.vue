@@ -2,6 +2,7 @@
 <b-modal
 hide-footer
 :title="title"
+:size="size"
 :id="modelPlural(model_name)">
 	<view-component
 	:show_models_if_empty="show_models_if_empty"
@@ -37,6 +38,10 @@ export default {
 		check_permissions: {
 			type: Boolean,
 			default: true,
+		},
+		size: {
+			type: String,
+			default: 'sm',
 		},
 		show_models_if_empty: Boolean,
 	},

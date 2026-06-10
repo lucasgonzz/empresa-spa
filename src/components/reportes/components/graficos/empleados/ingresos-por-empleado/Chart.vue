@@ -1,107 +1,97 @@
 <script>
 import { Bar } from 'vue-chartjs'
-import moment from 'moment'
 import font_control from '@/mixins/reportes/font_control'
+import chart_theme from '@/mixins/reportes/chart_theme'
+import chart_datalabels from '@/mixins/reportes/chart_datalabels'
+
 export default {
 	extends: Bar,
-	mixins: [font_control],
+	mixins: [font_control, chart_theme, chart_datalabels],
 	props: {
 		user_prop: Object,
 	},
-	computed: { 
-		payment_methods() {  
+	computed: {
+		payment_methods() {
 			return this.$store.state.current_acount_payment_method.models
 		},
-		loading() {   
+		loading() {
 			return this.$store.state.reportes.loading
 		},
 	},
 	watch: {
 		meses_anteriores() {
-			console.log('wacth chart')
 			this.setChart()
 		},
 		loading() {
-			console.log('wacth chart')
 			this.setChart()
 		},
 	},
 	data() {
 		return {
 			per_page: 10,
-			paleta_de_colores: ['#FF6384', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#FF6B6B', '#8C9EFF', '#FFD54F', '#4DB6AC', '#BA68C8', '#FF8A65'],
 		}
 	},
 	mounted() {
 		this.setChart()
 	},
 	methods: {
-		setChart() {	
-
-			console.log('setChart user:')
-			console.log(this.user_prop)
-
-			// if (typeof this.addresses_payment_methods == 'undefined') {
-			// 	return 
-			// }
-
+		setChart() {
 			let labels = []
-
 			let total_ingresado = []
-
 			let total_vendido = []
-
 			let payment_methods_labes = []
 
 			this.payment_methods.forEach(payment_method => {
-
 				payment_methods_labes[payment_method.id] = {
 					payment_method: payment_method,
 					data: [],
 				}
 			})
 
-			
 			labels.push(this.user_prop.user.name)
-
 			total_ingresado.push(this.user_prop.total_ingresado)
 			total_vendido.push(this.user_prop.total_vendido)
 
-			let amount 
+			let amount
 
 			this.user_prop.payment_methods.forEach(payment_method => {
-
 				if (typeof payment_method.total != 'undefined') {
-
 					amount = payment_method.total
 				} else {
-
 					amount = payment_method.pivot.amount
 				}
 
-				payment_methods_labes[payment_method.id].data.push(amount) 
+				payment_methods_labes[payment_method.id].data.push(amount)
 			})
 
 			let datasets = [
 				{
 					label: 'Total vendido',
-					backgroundColor: '#4CAF50',
 					data: total_vendido,
+					backgroundColor: '#10B981',
+					hoverBackgroundColor: '#059669',
+					borderWidth: 0,
+					barPercentage: 0.68,
+					categoryPercentage: 0.82,
 				},
 				{
 					label: 'Total ingresos',
-					backgroundColor: '#007bff',
 					data: total_ingresado,
+					...this.get_reportes_bar_dataset_style(1, false),
 				},
 			]
 
 			let index = 0
 			payment_methods_labes.forEach(payment_method => {
+				let series_color = this.get_chart_color(index)
 
 				datasets.push({
-
 					label: payment_method.payment_method.name,
-					backgroundColor: this.paleta_de_colores[index],
+					backgroundColor: series_color,
+					hoverBackgroundColor: series_color,
+					borderWidth: 0,
+					barPercentage: 0.68,
+					categoryPercentage: 0.82,
 					data: payment_method.data,
 				})
 
@@ -109,47 +99,23 @@ export default {
 			})
 
 			let that = this
+
 			this.renderChart({
 				labels: labels,
 				datasets: datasets,
-			}, {
+			}, this.get_reportes_bar_chart_options({
 				plugins: {
-					datalabels: { 
-						color: '#000',
-						font: {
-							weight: 'bold',
-							family: 'Roboto',
-							size: this.font_size,
-						},
-						formatter: function(value) {
-							let price = Math.round(value)
-							
-							if (price != 0) {
-								return that.price(price)
-							}
-							return null
-						},
-					},
-				},
-				maintainAspectRatio: false,
-				onClick: function (event, elements, chart) {
-					// let provider = providers[elements[0]._index]
-					// that.setSelectedProvider(provider)
+					datalabels: this.get_reportes_datalabels_options(that, {
+						align: 'end',
+						anchor: 'end',
+						offset: 2,
+					}),
 				},
 				tooltips: {
-					callbacks: {
-						label: function(tooltipItem, data) {
-							// console.log('entorooooo')
-							return that.price(Math.round(tooltipItem.yLabel))
-						}
-					}
-				}
-			})
+					callbacks: this.get_reportes_price_tooltip_callbacks(that),
+				},
+			}))
 		},
-		setSelectedProvider(provider) {
-			this.$router.push({params: {sub_view: 'rendimiento-por-proveedor'}})
-			this.setProviderArticles(provider)
-		}
 	},
 }
 </script>

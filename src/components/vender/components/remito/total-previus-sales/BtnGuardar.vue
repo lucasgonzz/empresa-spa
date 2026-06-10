@@ -1,24 +1,44 @@
 <template>
-<b-col 
-v-if="items.length"
-cols="12"
-class="j-end align-start"
-lg="6">
+	<!-- Layout inline para VenderActionsBar (sin b-col ni btn-block) -->
+	<div
+	v-if="items.length && inline_layout"
+	class="btn-guardar-inline">
 
-	<vuelto-efectivo></vuelto-efectivo>
+		<vuelto-efectivo v-if="!hide_vuelto"></vuelto-efectivo>
 
+		<btn-loader
+		:disabled="loader"
+		class="venta-total-box"
+		icon="check"
+		:text="text_btn"
+		:loader="loader"
+		:block="false"
+		dusk="btn_vender"
+		@clicked="saveSale">
+		</btn-loader>
 
-	<btn-loader 
-	:disabled="loader"
-    class="venta-total-box"
-	icon="check"
-	:text="text_btn"
-	:loader="loader"
-	dusk="btn_vender"
-	@clicked="saveSale">
-	</btn-loader>
+	</div>
 
-</b-col>
+	<!-- Layout original en grilla Bootstrap -->
+	<b-col
+	v-else-if="items.length"
+	cols="12"
+	class="j-end align-start"
+	lg="6">
+
+		<vuelto-efectivo v-if="!hide_vuelto"></vuelto-efectivo>
+
+		<btn-loader
+		:disabled="loader"
+		class="venta-total-box"
+		icon="check"
+		:text="text_btn"
+		:loader="loader"
+		dusk="btn_vender"
+		@clicked="saveSale">
+		</btn-loader>
+
+	</b-col>
 </template>
 <script>
 import BtnLoader from '@/common-vue/components/BtnLoader'
@@ -33,21 +53,31 @@ export default {
 		BtnLoader,
 	},
 	mixins: [previus_sales, guardar_venta, vender_presupuestos, articulo_pendiente_de_agregar],
-    mounted() {
-        window.addEventListener("keydown", this.detectarTecla);
-    },
-    beforeDestroy() {
-        window.removeEventListener("keydown", this.detectarTecla);
-    },
+	props: {
+		/**
+		 * Cuando es true, suprime el componente VueltoEfectivo.
+		 * Usado por VenderActionsBar para evitar duplicar el vuelto
+		 * (que ya se muestra inline en VenderStage2ContextBar).
+		 */
+		hide_vuelto: {
+			type: Boolean,
+			default: false,
+		},
+		/**
+		 * Cuando es true, renderiza un div simple en lugar de b-col
+		 * y desactiva btn-block para uso en la barra inferior fija.
+		 */
+		inline_layout: {
+			type: Boolean,
+			default: false,
+		},
+	},
 	methods: {
-        detectarTecla(event) {
-        	console.log('detectarTecla')
-            // Comprobar si la tecla presionada es F2
-            if (event.key === "F2") {
-                event.preventDefault(); // Evita que el navegador intercepte F2
-                this.saveSale();
-            }
-        },
+		/*
+		 * El atajo para guardar venta está en el mixin keyboard_shortcuts.js (tecla configurable).
+		 * que se registra en Vender.vue como listener global centralizado.
+		 * Este componente mantiene saveSale() para uso del botón de click.
+		 */
 		saveSale() {
 			if (!this.loader && this.check()) {
 				if (this.guardar_como_presupuesto) {
@@ -140,4 +170,10 @@ button.venta-total-box
 	width: 200px
 	font-size: 1.4rem
 	font-weight: bold
+
+/* Contenedor inline para la barra inferior de acciones */
+.btn-guardar-inline
+	display: inline-flex
+	align-items: center
+	width: auto
 </style>

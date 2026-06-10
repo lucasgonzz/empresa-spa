@@ -18,7 +18,15 @@
 
 		:id="'dropdown_'+model_name"
 
+		size="sm"
+
 		variant="primary"
+
+		boundary="viewport"
+
+		:popper-opts="dropdown_popper_opts"
+
+		menu-class="excel-create-dropdown-menu"
 
 		v-if="can_create || has_permission_create_dropdown"
 
@@ -40,56 +48,53 @@
 
 			</template>
 
-			<b-dropdown-item
-
+			<excel-dropdown-option-item
 			v-if="can_create"
-
+			icon="icon-plus"
 			@click="setModel(null, model_name)">
-
-				<i class="icon-plus"></i>
-
 				{{ create_spanish(model_name) }}
+			</excel-dropdown-option-item>
 
-			</b-dropdown-item>
+			<excel-dropdown-submenu
+			v-if="show_export_submenu"
+			icon="icon-upload"
+			label="Exportación">
+				<excel-dropdown-option-item
+				icon="icon-upload"
+				@click="exportModels">
+					Nueva exportación
+				</excel-dropdown-option-item>
+				<excel-dropdown-option-item
+				icon="icon-list"
+				@click="open_export_history">
+					Historial de exportaciones
+				</excel-dropdown-option-item>
+			</excel-dropdown-submenu>
 
-			<b-dropdown-item
+			<excel-dropdown-submenu
+			v-if="show_import_submenu"
+			icon="icon-download"
+			label="Importación">
+				<excel-dropdown-option-item
+				v-if="can_import"
+				icon="icon-list"
+				@click="open_import_history">
+					Historial de importaciones
+				</excel-dropdown-option-item>
+				<excel-dropdown-option-item
+				v-if="can_import_ai"
+				icon="bi bi-stars"
+				@click="open_ai_import">
+					Importar con IA
+				</excel-dropdown-option-item>
+			</excel-dropdown-submenu>
 
-			v-if="can_export"
-
-			@click="exportModels">
-
-				<i class="icon-upload"></i>
-
-				Exportar {{ plural(model_name) }}
-
-			</b-dropdown-item>
-
-			<b-dropdown-item
-
-			v-if="can_export"
-
-			@click="open_export_history">
-
-				<i class="icon-list"></i>
-
-				Historial de exportaciones
-
-			</b-dropdown-item>
-
-			<b-dropdown-item
-			v-if="can_import"
-			id="btn_import"
-			v-b-modal="'import-'+model_name">
-				<i class="icon-download"></i>
-				Importar {{ plural(model_name) }}
-			</b-dropdown-item>
-
-			<b-dropdown-item
+			<excel-dropdown-option-item
 			v-if="show_masive_update_history"
+			icon="icon-history"
 			@click="open_masive_update_history">
-				<i class="icon-history"></i>
 				Historial de actualizaciones masivas
-			</b-dropdown-item>
+			</excel-dropdown-option-item>
 
 			<slot name="excel_drop_down_options"></slot>
 		</b-dropdown>
@@ -105,6 +110,8 @@ export default {
 	components: {
 		ExportHistory: () => import('@/common-vue/components/horizontal-nav/ExportHistory'),
 		MasiveUpdateHistory: () => import('@/common-vue/components/horizontal-nav/MasiveUpdateHistory'),
+		ExcelDropdownSubmenu: () => import('@/common-vue/components/horizontal-nav/ExcelDropdownSubmenu'),
+		ExcelDropdownOptionItem: () => import('@/common-vue/components/horizontal-nav/ExcelDropdownOptionItem'),
 	},
 	props: {
 
@@ -118,8 +125,22 @@ export default {
 
 	},
 
+	data() {
+		return {
+			// Popper en fixed para que el menú no quede limitado por el ancho del botón split.
+			dropdown_popper_opts: {
+				positionFixed: true,
+			},
+		}
+	},
+
 	methods: {
 
+		/**
+		 * Encola una nueva exportación Excel del modelo actual.
+		 *
+		 * @return {void}
+		 */
 		exportModels() {
 
 			this.$api.get(this.model_name + '/excel/export')
@@ -146,12 +167,47 @@ export default {
 
 		},
 
+		/**
+		 * Abre el modal de historial de exportaciones del modelo actual.
+		 *
+		 * @return {void}
+		 */
 		open_export_history() {
 			this.$bvModal.show('export-history')
 		},
+
+		/**
+		 * Abre el modal de historial de importaciones del modelo actual.
+		 *
+		 * @return {void}
+		 */
+		open_import_history() {
+			this.$bvModal.show('import-history')
+		},
+
+		/**
+		 * Abre el modal de importación asistida por IA según el model_name.
+		 *
+		 * @return {void}
+		 */
+		open_ai_import() {
+			this.$bvModal.show(this.ai_import_modal_id)
+		},
+
+		/**
+		 * Abre el historial de actualizaciones masivas (solo artículos).
+		 *
+		 * @return {void}
+		 */
 		open_masive_update_history() {
 			this.$bvModal.show('masive-update-history')
 		},
+
+		/**
+		 * Acción del botón principal split: crear registro si hay permiso.
+		 *
+		 * @return {void}
+		 */
 		call_set_model() {
 			if (this.can_create) {
 
@@ -165,6 +221,11 @@ export default {
 
 	computed: {
 
+		/**
+		 * Permiso de exportación Excel según check_permissions y can().
+		 *
+		 * @return {boolean}
+		 */
 		can_export() {
 
 			if (!this.check_permissions || this.can(this.model_name + '.excel.export')) {
@@ -177,12 +238,67 @@ export default {
 
 		},
 
+		/**
+		 * Permiso de importación clásica (historial y flujo legacy en modal import).
+		 *
+		 * @return {boolean}
+		 */
 		can_import() {
 			if (!this.check_permissions || this.can(this.model_name + '.excel.import')) {
 				return true
 			}
 			return false
 		},
+
+		/**
+		 * True si el modelo actual soporta importación con IA y la extensión está habilitada.
+		 *
+		 * @return {boolean}
+		 */
+		can_import_ai() {
+			return true
+			if (!this.hasExtencion('ai_excel_import')) {
+				return false
+			}
+			let models_with_ai = ['article', 'client', 'provider']
+			return models_with_ai.indexOf(this.model_name) !== -1
+		},
+
+		/**
+		 * ID del modal de importación IA según model_name (compatible con instancias existentes).
+		 *
+		 * @return {string}
+		 */
+		ai_import_modal_id() {
+			if (this.model_name === 'article') {
+				return 'ai-excel-import-modal'
+			}
+			return 'ai-' + this.model_name + '-excel-import-modal'
+		},
+
+		/**
+		 * Muestra el submenú Exportación cuando hay permiso de exportar.
+		 *
+		 * @return {boolean}
+		 */
+		show_export_submenu() {
+			return this.can_export
+		},
+
+		/**
+		 * Muestra el submenú Importación si hay al menos una opción hija visible.
+		 *
+		 * @return {boolean}
+		 */
+		show_import_submenu() {
+			return this.can_import || this.can_import_ai
+		},
+
+		/**
+		 * Historial de actualizaciones masivas solo aplica al listado de artículos.
+		 *
+		 * @return {boolean}
+		 */
 		show_masive_update_history() {
 			return this.model_name === 'article'
 		},
@@ -190,3 +306,22 @@ export default {
 }
 </script>
 
+<style lang="sass">
+.excel-create-dropdown-menu
+	min-width: 300px !important
+	max-width: calc(100vw - 24px)
+	max-height: 70vh
+	overflow-y: auto
+	overflow-x: hidden
+	padding-top: 0.35rem
+	padding-bottom: 0.35rem
+	text-align: left
+
+	> li
+		width: 100%
+
+	.dropdown-item
+		text-align: left
+		border: none
+		box-shadow: none
+</style>

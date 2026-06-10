@@ -1,6 +1,7 @@
 <template>
 	<model
 	:check_permissions="false"
+	size="lg"
 	model_name="surchage"></model>
 </template>
 <script>

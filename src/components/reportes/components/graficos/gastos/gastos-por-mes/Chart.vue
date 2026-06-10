@@ -1,133 +1,105 @@
 <script>
 import { Bar } from 'vue-chartjs'
-import moment from 'moment'
 import font_control from '@/mixins/reportes/font_control'
+import chart_theme from '@/mixins/reportes/chart_theme'
+
 export default {
 	extends: Bar,
-	mixins: [font_control],
-	computed: { 
-		meses_anteriores() {  
+	mixins: [font_control, chart_theme],
+	computed: {
+		meses_anteriores() {
 			return this.$store.state.reportes.meses_anteriores
 		},
-		loading() {  
+		loading() {
 			return this.$store.state.reportes.loading
 		},
 		expense_concepts() {
-			return this.$store.state.expense_concept.models 
-		}
+			return this.$store.state.expense_concept.models
+		},
 	},
 	watch: {
 		meses_anteriores() {
-			console.log('wacth chart')
 			this.setChart()
 		},
 		loading() {
-			console.log('wacth chart')
 			this.setChart()
 		},
 	},
 	data() {
 		return {
 			per_page: 10,
-			// paleta_de_colores: ['#FF6384', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'],
-			paleta_de_colores:['#FF5733', '#4CAF50', '#2196F3', '#FFD700', '#9C27B0', '#E91E63', '#FF6F61', '#81C784', '#64B5F6', '#FFD966', '#BA68C8', '#F06292', '#FF8C42', '#AED581', '#90CAF9', '#FFE066', '#CE93D8', '#F48FB1', '#FFB085', '#C5E1A5', '#BBDEFB', '#FFF176', '#E1BEE7', '#F8BBD0', '#9E9E9E', '#BDBDBD', '#E0E0E0', '#F5F5F5', '#6A1B9A', '#FFEB3B' ],
 		}
 	},
 	mounted() {
 		this.setChart()
 	},
 	methods: {
-		setChart() {	
-
+		setChart() {
 			if (typeof this.meses_anteriores == 'undefined') {
 				return
 			}
 
 			let labels = []
 			let total_gastos = []
-
 			let datasets_expense_concepts = []
 
 			this.expense_concepts.forEach(expense_concept => {
-				
 				datasets_expense_concepts[expense_concept.id] = {
 					expense_concept_name: expense_concept.name,
-					meses: [] 
+					meses: [],
 				}
-
 			})
-			
+
 			this.meses_anteriores.forEach(meses_anterior => {
 				labels.push(meses_anterior.fecha)
 				total_gastos.push(meses_anterior.total_gastos)
 
 				meses_anterior.expense_concepts.forEach(expense_concept => {
-
 					datasets_expense_concepts[expense_concept.id].meses.push(expense_concept.pivot.amount)
-				})	
-
+				})
 			})
 
-			console.log('data total_gastos:')
-			console.log(total_gastos)
-
-			console.log('data datasets_expense_concepts:')
-			console.log(datasets_expense_concepts)
-
+			let primary_style = this.get_reportes_bar_dataset_style(1, false)
 			let datasets = [{
 				label: 'Total gastado',
-				backgroundColor: '#007bff',
 				data: total_gastos,
+				...primary_style,
 			}]
 
 			let index = 0
 			datasets_expense_concepts.forEach(dataset => {
-				
+				let series_color = this.get_chart_color(index)
+
 				datasets.push({
 					label: dataset.expense_concept_name,
-					backgroundColor: this.paleta_de_colores[index],
-					data: dataset.meses 
+					backgroundColor: series_color,
+					hoverBackgroundColor: series_color,
+					borderWidth: 0,
+					barPercentage: 0.68,
+					categoryPercentage: 0.82,
+					data: dataset.meses,
 				})
 
 				index++
 			})
 
 			let that = this
+
 			this.renderChart({
 				labels: labels,
 				datasets: datasets,
-			}, {
-				plugins: {
-					datalabels: { 
-						anchor: 'end',
-						align: 'top',
-						color: '#000',
-						font: {
-							weight: 'bold',
-							family: 'Roboto',
-							size: this.font_size,
-						},
-						formatter: function(value, context) {
-							return null
+			}, this.get_reportes_bar_chart_options({
+				tooltips: {
+					callbacks: {
+						label: function(tooltip_item, data) {
+							let dataset_label = data.datasets[tooltip_item.datasetIndex].label || ''
+							let value = tooltip_item.yLabel
+							return dataset_label + ': ' + that.price(value)
 						},
 					},
 				},
-				maintainAspectRatio: false,
-				tooltips: {
-					callbacks: {
-						label: function(tooltipItem, data) {
-							const datasetLabel = data.datasets[tooltipItem.datasetIndex].label || '';
-							const value = tooltipItem.yLabel;
-							return `${datasetLabel}: ${that.price(value)}`;
-						}
-					}
-				}
-			})
+			}))
 		},
-		setSelectedProvider(provider) {
-			this.$router.push({params: {sub_view: 'rendimiento-por-proveedor'}})
-			this.setProviderArticles(provider)
-		}
 	},
 }
 </script>

@@ -4,6 +4,7 @@
 	:value="true"
 	:unchecked-value="false"
 	@click="set_value"
+	size="sm"
 	:variant="get_variant">
 		<i class="bi bi-plus-circle"></i>
 	</b-button>

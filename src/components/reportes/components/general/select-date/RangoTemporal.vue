@@ -6,7 +6,7 @@ class="cont-rango-de-fechas">
 	label="Desde">
 		<b-form-input
 		v-model="mes_inicio"
-		type="month"></b-form-input>
+		type="date"></b-form-input>
 	</b-form-group>
 
 	<b-form-group
@@ -14,7 +14,7 @@ class="cont-rango-de-fechas">
 	label="Hasta">
 		<b-form-input
 		v-model="mes_fin"
-		type="month"></b-form-input>
+		type="date"></b-form-input>
 	</b-form-group>
 </div>
 </template>

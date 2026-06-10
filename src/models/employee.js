@@ -7,6 +7,12 @@ export default {
 			is_title: true,
 		},
 		{
+			text: 'Teléfono',
+			key: 'phone',
+			type: 'text',
+			show: true,
+		},
+		{
 			text: 'N° de documento',
 			key: 'doc_number',
 			type: 'text',

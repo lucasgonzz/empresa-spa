@@ -97,6 +97,18 @@
 
 						<th class="columns-preferences-config__th-wrap text-center">Salto de línea</th>
 
+						<th
+						v-if="show_typography_columns"
+						class="columns-preferences-config__th-font-size text-center">
+							Letra (pt)
+						</th>
+
+						<th
+						v-if="show_typography_columns"
+						class="columns-preferences-config__th-text-align text-center">
+							Alineación
+						</th>
+
 						<th class="columns-preferences-config__th-width text-right">Ancho (px)</th>
 
 					</tr>
@@ -211,6 +223,42 @@
 
 						</td>
 
+						<td
+						v-if="show_typography_columns"
+						class="text-center columns-preferences-config__td-font-size">
+
+							<b-form-input
+							v-if="!is_image_column_row(row)"
+							class="columns-preferences-config__font-size-input"
+							type="number"
+							min="4"
+							max="24"
+							size="sm"
+							v-model.number="row.font_size"></b-form-input>
+
+							<span
+							v-else
+							class="text-muted">—</span>
+
+						</td>
+
+						<td
+						v-if="show_typography_columns"
+						class="text-center columns-preferences-config__td-text-align">
+
+							<b-form-select
+							v-if="!is_image_column_row(row)"
+							class="columns-preferences-config__text-align-select"
+							size="sm"
+							v-model="row.text_align"
+							:options="text_align_options"></b-form-select>
+
+							<span
+							v-else
+							class="text-muted">—</span>
+
+						</td>
+
 						<td class="columns-preferences-config__td-width">
 
 							<b-form-input
@@ -233,7 +281,7 @@
 
 					<tr v-if="!filtered_config_rows.length">
 						<td
-						colspan="5"
+						:colspan="table_empty_colspan"
 						class="text-center text-muted columns-preferences-config__empty">
 							<span v-if="!config_rows.length">
 								No hay columnas en el catálogo. Actualizá la versión del sistema o ejecutá el seeder de opciones PDF.
@@ -446,6 +494,20 @@ export default {
 
 		},
 
+		/**
+
+		 * Muestra tamaño de letra y alineación horizontal (perfiles PDF de artículos).
+
+		 */
+
+		show_typography_columns: {
+
+			type: Boolean,
+
+			default: false,
+
+		},
+
 	},
 
 	data() {
@@ -457,6 +519,24 @@ export default {
 			dragging_index: null,
 
 			drag_over_index: null,
+
+			/**
+
+			 * Opciones de alineación horizontal para columnas PDF de artículos.
+
+			 */
+
+			text_align_options: [
+
+				{ value: '', text: 'Automática' },
+
+				{ value: 'left', text: 'Izquierda' },
+
+				{ value: 'center', text: 'Centro' },
+
+				{ value: 'right', text: 'Derecha' },
+
+			],
 
 		}
 
@@ -577,9 +657,39 @@ export default {
 			})
 		},
 
+		/**
+
+		 * Colspan de la fila vacía según columnas visibles en la tabla.
+
+		 *
+
+		 * @returns {number}
+
+		 */
+
+		table_empty_colspan() {
+			return this.show_typography_columns ? 7 : 5
+		},
+
 	},
 
 	methods: {
+
+		/**
+
+		 * Indica si la fila corresponde a la columna de imagen del artículo (sin tipografía).
+
+		 *
+
+		 * @param {Object} row
+
+		 * @returns {boolean}
+
+		 */
+
+		is_image_column_row(row) {
+			return row && row.value_resolver === 'article_first_image'
+		},
 
 		/*
 
@@ -1088,6 +1198,24 @@ export default {
 		margin-left: auto
 
 		text-align: right
+
+
+
+	.columns-preferences-config__font-size-input
+
+		max-width: 72px
+
+		margin: 0 auto
+
+		text-align: center
+
+
+
+	.columns-preferences-config__text-align-select
+
+		max-width: 120px
+
+		margin: 0 auto
 
 
 
