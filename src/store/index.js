@@ -180,6 +180,7 @@ import pdf_column_profile from '@/store/pdf_column_profile'
 
 import platform from '@/store/platform'
 import platform_connector from '@/store/platform_connector'
+import whatsapp_bot_config from '@/store/whatsapp_bot_config'
 
 import price_type_surchage from '@/store/price_type_surchage'
 
@@ -430,6 +431,7 @@ export default new Vuex.Store({
 
         platform,
         platform_connector,
+        whatsapp_bot_config,
 
         price_type_surchage,
 
