@@ -107,6 +107,8 @@ export default {
 						commit('setAuthenticated', true)
 					} else {
 						console.log('NO autenticado')
+						commit('setAuthenticated', false)
+						commit('setUser', null)
 					}
 					// commit('setUserWorkdaysId')
 				})
@@ -118,17 +120,29 @@ export default {
 				})
 			})
 		},
+		/**
+		 * Cierra sesión en el backend y limpia el estado local aunque falle el POST.
+		 *
+		 * @param {object} context Contexto Vuex del módulo auth.
+		 * @returns {Promise<void>}
+		 */
 		logout({ commit }) {
 			commit('setLoading', true)
-			return axios.post('/logout')
-            .then(() => {
-                commit('setLoading', false)
-                commit('setAuthenticated', false)
-                commit('setUser', null)
-            })
-            .catch(err => {
-                console.log(err)
-            })
+			return axios.get('/sanctum/csrf-cookie')
+				.then(() => {
+					return axios.post('/logout')
+				})
+				.then(() => {
+					commit('setLoading', false)
+					commit('setAuthenticated', false)
+					commit('setUser', null)
+				})
+				.catch(err => {
+					console.log(err)
+					commit('setLoading', false)
+					commit('setAuthenticated', false)
+					commit('setUser', null)
+				})
 		},
 		/**
 		 * Refresca `auth.user` (y `owner` vía respuesta de API) sin overlay global de carga.

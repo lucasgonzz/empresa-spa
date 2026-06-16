@@ -20,14 +20,25 @@ export default {
             }
             return this.owner.impresora
         },
+        /**
+         * Ancho de la comandera en mm: cookie válida del navegador o perfil del owner.
+         *
+         * @returns {number}
+         */
         ancho_impresora() {
-            let ancho = this.$cookies.get('ancho_impresora')
-            
-            if (ancho != 'null') {
-                return Number(ancho)
+            // Prioridad: cookie local configurada en Ticket 2.0
+            let ancho_cookie = this.parse_valid_ticket_width_mm(this.$cookies.get('ancho_impresora'))
+            if (ancho_cookie) {
+                return ancho_cookie
             }
 
-            return this.owner.sale_ticket_width
+            // Fallback: ancho del perfil del dueño (sale_ticket_width)
+            let ancho_owner = this.parse_valid_ticket_width_mm(this.owner && this.owner.sale_ticket_width)
+            if (ancho_owner) {
+                return ancho_owner
+            }
+
+            return 80
         },
         tamano_letra() {
             return this.owner.tamano_letra
@@ -40,6 +51,26 @@ export default {
         }
     },
     methods: {
+        /**
+         * Valida un ancho de ticket expresado en milímetros.
+         *
+         * @param {*} raw_value valor crudo (cookie, perfil de usuario, prompt).
+         * @returns {number|null} ancho en mm o null si no es válido.
+         */
+        parse_valid_ticket_width_mm(raw_value) {
+            if (raw_value == null || raw_value === '') {
+                return null
+            }
+
+            let ancho_mm = Number(raw_value)
+
+            if (isNaN(ancho_mm) || ancho_mm <= 0) {
+                return null
+            }
+
+            return ancho_mm
+        },
+
         async printTicket(sale_to_print) {
             try {
 

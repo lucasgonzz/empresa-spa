@@ -406,6 +406,9 @@ export default {
 			model.articles.forEach(article => {
 				item.id = article.id
 				item.name = article.name
+				item.name_vender_personalizado = article.pivot && article.pivot.name
+					? article.pivot.name
+					: null
 				item.status = article.status
 				item.article_variants = article.article_variants
 				item.pivot = article.pivot

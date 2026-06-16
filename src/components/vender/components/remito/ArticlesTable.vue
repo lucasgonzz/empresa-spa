@@ -82,6 +82,21 @@
 				</template>
 
 
+				<template #cell(name)="data">
+					<b-input-group
+					v-if="can_edit_item_name(items[data.index])"
+					class="input-name m-b-10">
+						<b-form-input
+						:placeholder="get_item_name_placeholder(items[data.index])"
+						:id="'name-vender-'+items[data.index].id"
+						v-model="items[data.index].name_vender_personalizado"></b-form-input>
+					</b-input-group>
+					<span
+					v-if="!can_edit_item_name(items[data.index]) || !items[data.index].name_vender_personalizado">
+						{{ getItemDisplayName(items[data.index]) }}
+					</span>
+				</template>
+
 				
 				<template #cell(article_variant_id)="data">
 					<p
@@ -346,7 +361,7 @@ export default {
 					bar_code: item.bar_code,
 					price: item.price_vender,
 					// price: this.price(item.price_vender),
-					name: item.name,
+					name: this.getItemDisplayName(item),
 					// amount: item.amount,
 					total: this.price(this.getTotalItem(item, false)),
 				}
@@ -356,6 +371,24 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Indica si el ítem permite editar el nombre en el remito según permiso del usuario.
+		 *
+		 * @param {Object} item
+		 * @return {boolean}
+		 */
+		can_edit_item_name(item) {
+			return this.can('article.vender.change_name')
+		},
+		/**
+		 * Placeholder del input de nombre: nombre por defecto del artículo en catálogo.
+		 *
+		 * @param {Object} item
+		 * @return {string}
+		 */
+		get_item_name_placeholder(item) {
+			return item.name || 'Personalizado'
+		},
 		se_creo_en_vender(item) {
 			if (!this.owner.listas_de_precio && !item.final_price) {
 				return true 
@@ -694,6 +727,9 @@ export default {
 
 .input-price
 	width: 150px
+
+.input-name
+	width: 200px
 
 	.cont-input-price
 		display: flex 
