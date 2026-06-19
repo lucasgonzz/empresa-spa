@@ -417,6 +417,37 @@ export default {
 
             return price
         },
+        /**
+         * Nombre a mostrar de un ítem en vender (remito, totales, etc.).
+         * Prioriza name_vender_personalizado; si no, nombre del artículo + variante.
+         *
+         * @param {Object} item
+         * @param {boolean} from_pivot  Si true, lee pivot.name de una venta ya guardada.
+         * @return {string}
+         */
+        getItemDisplayName(item, from_pivot = false) {
+            if (from_pivot && item.pivot && item.pivot.name) {
+                return item.pivot.name
+            }
+
+            if (item.name_vender_personalizado) {
+                return item.name_vender_personalizado
+            }
+
+            let name = item.name || ''
+
+            if (item.variant_description) {
+                name += ' ' + item.variant_description
+            } else if (
+                from_pivot
+                && item.pivot
+                && item.pivot.variant_description
+            ) {
+                name += ' ' + item.pivot.variant_description
+            }
+
+            return name
+        },
         getPriceVender(item, from_pivot = false) {
             // console.log('getPriceVender para '+item.name)
             // console.log(item)

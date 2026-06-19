@@ -164,14 +164,38 @@ export default {
 	},
 	methods: {
 		/**
+		 * Sincroniza los valores del DOM con el formulario cuando el navegador autocompleta
+		 * los campos sin disparar v-model (caso frecuente tras cerrar sesión y recargar).
+		 *
+		 * @returns {void}
+		 */
+		sync_autofill_values() {
+			/** Campo de documento en el DOM. */
+			const doc_number_input = document.getElementById('doc_number')
+			/** Campo de contraseña en el DOM. */
+			const password_input = document.getElementById('password')
+
+			if (doc_number_input && doc_number_input.value) {
+				this.form.doc_number = doc_number_input.value
+			}
+			if (password_input && password_input.value) {
+				this.form.password = password_input.value
+			}
+		},
+		/**
 		 * Envía credenciales al backend y actualiza el store de autenticación si el login es válido.
 		 *
 		 * @returns {void}
 		 */
 		login() {
+			this.sync_autofill_values()
+
 			if (this.check() && !this.loading) {
 				this.loading = true
-				this.$axios.post('login', this.form)
+				this.$axios.get('/sanctum/csrf-cookie')
+					.then(() => {
+						return this.$axios.post('login', this.form)
+					})
 					.then(res => {
 						this.loading = false
 						if (res.data.login) {
@@ -195,7 +219,9 @@ export default {
 							this.$store.commit('auth/setAuthenticated', true)
 						} else if (res.data.user_last_activity) {
 							const waitMinutes = res.data.user_last_activity_wait_minutes || 0
-							this.$toast.error('Su cuenta esta siendo utilizada en otro dispositivo, cierre la cuenta en el otro dispositivo. En caso de que la cuenta no este siendo utilizada en el otro dispositivo, espere ' + waitMinutes + ' minutos')
+							this.$toast.error('Su cuenta esta siendo utilizada en otro dispositivo, cierre la cuenta en el otro dispositivo. En caso de que la cuenta no este siendo utilizada en el otro dispositivo, espere ' + waitMinutes + ' minutos', {
+								duration: 10000,
+							})
 						} else {
 							this.$toast.error('Sus credenciales son incorrectas, controle que este ingresando desde el link correspondiente a su negocio: TU-NEGOCIO.comerciocity.com', {
 								duration: 10000,
@@ -205,8 +231,7 @@ export default {
 					.catch(err => {
 						console.log(err)
 						this.loading = false
-						this.$toast.error('Error al ingresar')
-						this.$toast.error(err)
+						this.$toast.error('Error al ingresar. Recargá la página e intentá de nuevo.')
 					})
 			}
 		},

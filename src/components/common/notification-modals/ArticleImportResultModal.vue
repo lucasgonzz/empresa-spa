@@ -78,6 +78,36 @@
 			</div>
 		</div>
 
+		<!-- Lista expandible de artículos creados con código repetido -->
+		<div
+		v-if="is_success && repeated_code_count > 0"
+		class="article-import-result-modal__repeated m-t-15">
+			<b-button
+			variant="link"
+			size="sm"
+			class="p-0"
+			@click="toggle_repeated_code_list">
+				{{ show_repeated_code_list ? 'Ocultar' : 'Ver' }} los {{ repeated_code_count }} artículos creados con código repetido
+			</b-button>
+			<div v-if="show_repeated_code_list" class="m-t-10">
+				<div v-if="loading_repeated_code_list" class="text-muted small">Cargando...</div>
+				<div
+				v-else-if="repeated_code_articles_error"
+				class="text-danger small">
+					No se pudo cargar la lista. Intentá de nuevo más tarde.
+				</div>
+				<ul v-else class="small article-import-result-modal__repeated-list">
+					<li
+					v-for="art in repeated_code_articles"
+					:key="art.id">
+						<strong>{{ art.name }}</strong>
+						<span v-if="art.bar_code" class="text-muted"> · BC: {{ art.bar_code }}</span>
+						<span v-if="art.provider_code" class="text-muted"> · CP: {{ art.provider_code }}</span>
+					</li>
+				</ul>
+			</div>
+		</div>
+
 		<!-- Configuración utilizada en la importación -->
 		<div
 		v-if="show_import_options"
@@ -195,6 +225,22 @@ import global_notification_functions from '@/mixins/global_notification_function
 export default {
 
 	mixins: [global_notification_functions],
+
+	data() {
+		return {
+			/* Controla si la lista expandible de artículos con código repetido está visible. */
+			show_repeated_code_list: false,
+
+			/* True mientras se está cargando la lista desde la API. */
+			loading_repeated_code_list: false,
+
+			/* True si la carga de la lista falló. */
+			repeated_code_articles_error: false,
+
+			/* Artículos traídos por el endpoint repeated-code-articles. */
+			repeated_code_articles: [],
+		}
+	},
 
 	computed: {
 
@@ -337,12 +383,14 @@ export default {
 
 		/*
 		 * Tarjetas de métricas a partir de import_stats o, en fallback, info_to_show.
+		 * Si hay artículos creados con código repetido (> 0), se agrega un 5to card en rojo.
 		 */
 		stat_cards() {
 			let stats = this.import_stats
 
 			if (stats && typeof stats === 'object') {
-				return [
+				/* Construir el array base con los 4 contadores siempre presentes. */
+				let cards = [
 					{
 						label: 'Filas procesadas',
 						value: stats.filas_procesadas,
@@ -364,9 +412,28 @@ export default {
 						color: '#007bff',
 					},
 				]
+
+				/* Solo mostrar el 5to card cuando haya artículos con código repetido. */
+				if (this.repeated_code_count > 0) {
+					cards.push({
+						label: 'Creados con código repetido',
+						value: this.repeated_code_count,
+						color: '#dc3545',
+					})
+				}
+
+				return cards
 			}
 
 			return this.parse_stats_from_info_to_show()
+		},
+
+		/*
+		 * Cantidad de artículos creados cuyo bar_code o provider_code ya existía en BD.
+		 * Proviene de import_stats.articulos_creados_con_codigo_repetido.
+		 */
+		repeated_code_count() {
+			return ((this.import_stats || {}).articulos_creados_con_codigo_repetido) || 0
 		},
 
 		/*
@@ -423,7 +490,49 @@ export default {
 		},
 
 		on_modal_hide() {
-			/* Sin estado extra que limpiar por ahora. */
+			/* Limpiar estado de la lista expandible al cerrar el modal. */
+			this.show_repeated_code_list = false
+			this.loading_repeated_code_list = false
+			this.repeated_code_articles_error = false
+			this.repeated_code_articles = []
+		},
+
+		/*
+		 * Alterna visibilidad de la lista de artículos con código repetido.
+		 * Dispara la carga desde la API si aún no se hizo y la lista está vacía.
+		 */
+		toggle_repeated_code_list() {
+			this.show_repeated_code_list = !this.show_repeated_code_list
+
+			if (this.show_repeated_code_list && this.repeated_code_articles.length === 0) {
+				this.fetch_repeated_code_articles()
+			}
+		},
+
+		/*
+		 * Llama al endpoint para traer los artículos creados con código repetido.
+		 * Usa el import_history_id provisto en import_stats.
+		 */
+		fetch_repeated_code_articles() {
+			let import_history_id = (this.import_stats || {}).import_history_id
+
+			if (!import_history_id) {
+				return
+			}
+
+			this.loading_repeated_code_list = true
+			this.repeated_code_articles_error = false
+
+			this.$api.get('import-history/repeated-code-articles/' + import_history_id)
+			.then(res => {
+				this.repeated_code_articles = res.data
+			})
+			.catch(() => {
+				this.repeated_code_articles_error = true
+			})
+			.finally(() => {
+				this.loading_repeated_code_list = false
+			})
 		},
 
 		/*
@@ -754,4 +863,15 @@ export default {
 .article-import-result-modal__action-btn
 	min-width: 140px
 	font-weight: 600
+
+.article-import-result-modal__repeated-list
+	padding-left: 16px
+	margin: 0
+
+	li
+		padding: 3px 0
+		border-bottom: 1px solid rgba(0, 0, 0, 0.05)
+
+		&:last-child
+			border-bottom: none
 </style>

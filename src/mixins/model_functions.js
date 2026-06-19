@@ -703,6 +703,16 @@ export default {
             }
             return total
         },
+        /**
+         * Nombre del artículo en el detalle de venta (pivot.name o catálogo + variante).
+         *
+         * @param {Object} article  Artículo con pivot de la venta.
+         * @param {Object} prop     Definición de columna del modelo sale.
+         * @return {string}
+         */
+        get_sale_article_display_name(article, prop) {
+            return this.getItemDisplayName(article, true)
+        },
         showCurrentAcount(client, credit_account) {
 
             this.$store.commit('current_acount/setFromModelName', 'client')

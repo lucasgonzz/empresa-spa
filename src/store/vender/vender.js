@@ -83,6 +83,7 @@ function get_article_log_model(article) {
 	// Campos solicitados para trazabilidad del item implicado.
 	return {
 		name: article.name || null,
+		name_vender_personalizado: article.name_vender_personalizado || null,
 		amount: article.amount || null,
 		price_vender: article.price_vender || null,
 		price_vender_personalizado: article.price_vender_personalizado || null,

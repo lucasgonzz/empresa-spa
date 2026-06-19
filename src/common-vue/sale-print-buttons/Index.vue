@@ -592,18 +592,31 @@ export default {
 			}
 		},
 		/**
-		 * Configura el ancho de impresora para ticket 2.0.
+		 * Configura el ancho de impresora para ticket 2.0 (cookie local del navegador).
 		 */
 		set_ancho_impresora() {
-			let ancho = this.$cookies.get('ancho_impresora')
+			let ancho_cookie = this.$cookies.get('ancho_impresora')
+			let ancho_cookie_valido = this.parse_valid_ticket_width_mm(ancho_cookie)
 			let _prompt = 'Ingrese el ancho en milimetros de su impresora'
-			if (ancho != 'null') {
-				_prompt += '. Valor actual: ' + ancho + 'mm'
+
+			if (ancho_cookie_valido) {
+				_prompt += '. Valor actual (cookie): ' + ancho_cookie_valido + 'mm'
+			} else {
+				_prompt += '. Valor actual (perfil): ' + this.ancho_impresora + 'mm'
 			}
+
 			let valor = prompt(_prompt)
+
 			if (valor) {
-				this.$cookies.set('ancho_impresora', valor, -1)
-				alert('Ancho de ' + this.$cookies.get('ancho_impresora') + 'mm configurado correctamente')
+				let ancho_mm = this.parse_valid_ticket_width_mm(valor.trim())
+
+				if (!ancho_mm) {
+					alert('Ingrese un ancho valido en milimetros (numero mayor a 0)')
+					return
+				}
+
+				this.$cookies.set('ancho_impresora', String(ancho_mm), -1)
+				alert('Ancho de ' + ancho_mm + 'mm configurado correctamente')
 			}
 		},
 		/**

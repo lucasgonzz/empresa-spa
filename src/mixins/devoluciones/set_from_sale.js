@@ -21,10 +21,10 @@ export default {
 
 					this.$store.commit('devoluciones/set_sale', sale)
 
-					if (sale.client) {
-
-						this.$store.commit('devoluciones/set_client', sale.client)
-					}
+				// Siempre resetear el cliente al de la venta buscada.
+				// Si no hay cliente (sale.client = null), se fuerza a null para
+				// evitar que quede un cliente residual de una búsqueda anterior.
+				this.$store.commit('devoluciones/set_client', sale.client || null)
 
 					if (sale.address_id) {
 

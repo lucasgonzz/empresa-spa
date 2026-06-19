@@ -104,6 +104,7 @@ export default {
 					view: 'integraciones',
 					models: [
 						'platform_connector',
+						'whatsapp_bot_config',
 					],
 				},
 				{

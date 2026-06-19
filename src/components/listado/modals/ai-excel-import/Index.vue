@@ -8,8 +8,8 @@
 
 		<!-- Indicador de pasos -->
 		<div class="ai-import-steps m-b-20">
-			<span
-			v-for="n in 3"
+		<span
+		v-for="n in 4"
 			:key="n"
 			class="ai-import-step-dot"
 			:class="{ 'ai-import-step-dot--active': step >= n }">
@@ -252,9 +252,87 @@
 		</div>
 
 		<!-- ========================================================== -->
-		<!-- PASO 3: Opciones de importación                             -->
+		<!-- PASO 3: Recomendación de configuración basada en preanálisis -->
 		<!-- ========================================================== -->
 		<div v-if="step === 3">
+
+			<!-- Stats del preanálisis: totales e indicadores de duplicados detectados -->
+			<div v-if="duplicate_stats" class="ai-import-stats m-b-15">
+				<p class="font-weight-bold m-b-10">Análisis del archivo</p>
+				<ul class="text-muted small m-b-0">
+					<li>Total de filas: <strong>{{ duplicate_stats.total_filas_datos }}</strong></li>
+					<li v-if="duplicate_stats.bar_codes_duplicados_intra_archivo > 0">
+						<strong>{{ duplicate_stats.bar_codes_duplicados_intra_archivo }}</strong> códigos de barras repetidos dentro del Excel
+					</li>
+					<li v-if="duplicate_stats.provider_codes_duplicados_intra_archivo > 0">
+						<strong>{{ duplicate_stats.provider_codes_duplicados_intra_archivo }}</strong> códigos de proveedor repetidos dentro del Excel
+					</li>
+					<li v-if="duplicate_stats.provider_codes_existentes_mismo_proveedor > 0">
+						<strong>{{ duplicate_stats.provider_codes_existentes_mismo_proveedor }}</strong> códigos de proveedor del Excel ya existen en tu base de datos
+					</li>
+					<li v-if="duplicate_stats.provider_codes_existentes_otros_proveedores > 0">
+						<strong>{{ duplicate_stats.provider_codes_existentes_otros_proveedores }}</strong> códigos de proveedor ya existen pero en otros proveedores
+					</li>
+				</ul>
+			</div>
+
+			<!-- Recomendación generada por Claude IA -->
+			<div v-if="recomendacion_configuracion" class="ai-import-recomendacion m-b-20">
+				<p class="font-weight-bold m-b-5">
+					<i class="icon-cpu m-r-5"></i>Recomendación de Claude IA
+				</p>
+				<p class="text-muted m-b-0">{{ recomendacion_configuracion.explicacion }}</p>
+			</div>
+
+			<!-- Decisión 1: clave de identidad del artículo -->
+			<b-form-group label="¿Qué campo identifica un artículo como 'el mismo'?">
+				<b-form-radio v-model="clave_identidad" value="bar_code" class="m-b-5">
+					Código de barras
+				</b-form-radio>
+				<b-form-radio v-model="clave_identidad" value="provider_code" class="m-b-5">
+					Código de proveedor
+				</b-form-radio>
+				<b-form-radio v-model="clave_identidad" value="name" class="m-b-5">
+					Nombre del artículo
+				</b-form-radio>
+			</b-form-group>
+
+			<!-- Decisión 2: política de colisión (solo cuando puede haber colisiones por provider_code) -->
+			<b-form-group
+			v-if="clave_identidad === 'provider_code'"
+			label="Cuando una fila del Excel coincida con varios artículos, ¿qué hacer?">
+				<b-form-radio v-model="politica_colision" value="actualizar_todos" class="m-b-5">
+					Actualizar todos los artículos coincidentes
+				</b-form-radio>
+				<b-form-radio v-model="politica_colision" value="actualizar_uno" class="m-b-5">
+					Actualizar solo uno (el más antiguo)
+				</b-form-radio>
+				<b-form-radio v-model="politica_colision" value="crear_nuevo" class="m-b-5">
+					Crear un artículo nuevo igual
+				</b-form-radio>
+			</b-form-group>
+
+			<div class="j-end">
+				<b-button
+				variant="outline-secondary"
+				class="m-r-10"
+				@click="step = 2">
+					Volver
+				</b-button>
+				<b-button
+				variant="primary"
+				:disabled="!clave_identidad || (clave_identidad === 'provider_code' && !politica_colision)"
+				@click="step = 4">
+					Continuar
+				</b-button>
+			</div>
+
+		</div>
+
+		<!-- ========================================================== -->
+		<!-- PASO 4: Opciones de importación                             -->
+		<!-- ========================================================== -->
+		<div v-if="step === 4">
 
 			<p class="font-weight-bold m-b-15">Opciones de importación</p>
 
@@ -310,66 +388,6 @@
 			</b-form-radio>
 		</b-form-group>
 
-		<!-- Opciones avanzadas de proveedor (solo para artículos) -->
-		<div
-		v-if="model === 'article'">
-
-			<hr>
-
-			<div class="checkbox-group m-b-15">
-
-				<b-form-checkbox
-				class="radio-option m-b-10"
-				:value="1"
-				:unchecked-value="0"
-				size="lg"
-				v-model="permitir_provider_code_repetido">
-					Permitir códigos de proveedor repetidos
-				</b-form-checkbox>
-
-				<b-form-checkbox
-				v-if="permitir_provider_code_repetido"
-				class="radio-option m-b-10"
-				:value="1"
-				:unchecked-value="0"
-				size="lg"
-				v-model="permitir_provider_code_repetido_en_multi_providers">
-					Permitir códigos repetidos en múltiples proveedores
-				</b-form-checkbox>
-
-				<b-form-checkbox
-				v-if="has_selected_provider"
-				class="radio-option m-b-10"
-				:value="1"
-				:unchecked-value="0"
-				size="lg"
-				v-model="actualizar_articulos_de_otro_proveedor">
-					Actualizar artículos de otro proveedor
-				</b-form-checkbox>
-
-				<b-form-checkbox
-				class="radio-option m-b-10"
-				:value="1"
-				:unchecked-value="0"
-				size="lg"
-				v-model="actualizar_por_provider_code">
-					Actualizar por código de proveedor
-				</b-form-checkbox>
-
-				<b-form-checkbox
-				v-if="has_selected_provider && actualizar_articulos_de_otro_proveedor"
-				class="radio-option m-b-10"
-				:value="1"
-				:unchecked-value="0"
-				size="lg"
-				v-model="actualizar_proveedor">
-					Actualizar proveedor del artículo
-				</b-form-checkbox>
-
-			</div>
-
-		</div>
-
 			<!-- Error al importar -->
 			<b-alert
 			v-if="error_message"
@@ -383,7 +401,7 @@
 				<b-button
 				variant="outline-secondary"
 				class="m-r-10"
-				@click="step = 2">
+				@click="step = 3">
 					Volver
 				</b-button>
 				<b-button
@@ -478,6 +496,18 @@ export default {
 
 			/* True si el usuario corrigió manualmente la detección automática de cabecera. */
 			header_row_manually_overridden: false,
+
+			/* Estadísticas de duplicados devueltas por el análisis IA (preanálisis del Excel). */
+			duplicate_stats: null,
+
+			/* Recomendación de configuración generada por Claude: { clave_identidad, politica_colision, explicacion }. */
+			recomendacion_configuracion: null,
+
+			/* Clave que identifica un artículo como "el mismo": 'bar_code' | 'provider_code' | 'name'. */
+			clave_identidad: null,
+
+			/* Política a aplicar cuando la clave coincide con varios artículos: 'actualizar_todos' | 'actualizar_uno' | 'crear_nuevo'. */
+			politica_colision: null,
 		}
 	},
 
@@ -518,7 +548,8 @@ export default {
 			const titles = {
 				1: 'Importar ' + model_label + ' con IA — Subir archivo',
 				2: 'Importar ' + model_label + ' con IA — Confirmar mapeo',
-				3: 'Importar ' + model_label + ' con IA — Opciones de importación',
+				3: 'Importar ' + model_label + ' con IA — Recomendación',
+				4: 'Importar ' + model_label + ' con IA — Opciones de importación',
 			}
 			return titles[this.step] || ('Importar ' + model_label + ' con IA')
 		},
@@ -1026,6 +1057,16 @@ export default {
 				self.selected_provider_id = res.data.provider_id
 				self.provider_confidence  = res.data.provider_confidence
 
+				/* Datos del preanálisis de duplicados y recomendación de la IA. */
+				self.duplicate_stats             = res.data.duplicate_stats || null
+				self.recomendacion_configuracion = res.data.recomendacion_configuracion || null
+
+				/* Preseleccionar los valores recomendados si la IA los devolvió. */
+				if (self.recomendacion_configuracion) {
+					self.clave_identidad   = self.recomendacion_configuracion.clave_identidad
+					self.politica_colision = self.recomendacion_configuracion.politica_colision
+				}
+
 				self.step = 2
 			})
 			.catch(function(err) {
@@ -1041,6 +1082,44 @@ export default {
 
 				self.error_message = message
 			})
+		},
+
+		/**
+		 * Traduce las 2 decisiones de negocio (clave_identidad + politica_colision)
+		 * a los 5 flags que sigue esperando /ai-excel-import/import.
+		 * Permite mantener el contrato del backend sin cambios.
+		 *
+		 * @returns {Object} - Objeto con los 5 flags calculados (0 o 1 cada uno).
+		 */
+		derive_flags_from_choice() {
+			/* Valores por defecto: todos los flags desactivados. */
+			let flags = {
+				permitir_provider_code_repetido: 0,
+				permitir_provider_code_repetido_en_multi_providers: 0,
+				actualizar_articulos_de_otro_proveedor: 0,
+				actualizar_por_provider_code: 0,
+				actualizar_proveedor: 0,
+			}
+
+			/* Solo se activan flags cuando la clave es provider_code. */
+			if (this.clave_identidad === 'provider_code') {
+
+				if (this.politica_colision === 'actualizar_todos') {
+					/* Actualizar todos los que coincidan, incluso de otros proveedores. */
+					flags.permitir_provider_code_repetido = 1
+					flags.permitir_provider_code_repetido_en_multi_providers = 1
+					flags.actualizar_articulos_de_otro_proveedor = 1
+					flags.actualizar_por_provider_code = 1
+
+				} else if (this.politica_colision === 'crear_nuevo') {
+					/* Permitir repetidos pero sin actualizar: se crea uno nuevo. */
+					flags.permitir_provider_code_repetido = 1
+					flags.permitir_provider_code_repetido_en_multi_providers = 1
+				}
+				/* 'actualizar_uno' deja todos los flags en 0 (comportamiento default del backend). */
+			}
+
+			return flags
 		},
 
 		/*
@@ -1064,6 +1143,9 @@ export default {
 			this.$store.commit('auth/setMessage', 'Iniciando importación...')
 			this.$store.commit('auth/setLoading', true)
 
+			/* Traducir las decisiones de negocio del paso 3 a los flags que espera el backend. */
+			let derived_flags = this.derive_flags_from_choice()
+
 			this.$api.post('ai-excel-import/import', {
 				model:           this.model,
 				excel_path:      this.excel_path,
@@ -1075,11 +1157,11 @@ export default {
 				/* Campos específicos de artículos (ignorados por el backend para client/provider). */
 				registrar_art_cre: true,
 				registrar_art_act: true,
-				permitir_provider_code_repetido:                    this.permitir_provider_code_repetido,
-				permitir_provider_code_repetido_en_multi_providers: this.permitir_provider_code_repetido_en_multi_providers,
-				actualizar_articulos_de_otro_proveedor:             this.actualizar_articulos_de_otro_proveedor,
-				actualizar_por_provider_code:                       this.actualizar_por_provider_code,
-				actualizar_proveedor:                               this.actualizar_proveedor,
+				permitir_provider_code_repetido:                    derived_flags.permitir_provider_code_repetido,
+				permitir_provider_code_repetido_en_multi_providers: derived_flags.permitir_provider_code_repetido_en_multi_providers,
+				actualizar_articulos_de_otro_proveedor:             derived_flags.actualizar_articulos_de_otro_proveedor,
+				actualizar_por_provider_code:                       derived_flags.actualizar_por_provider_code,
+				actualizar_proveedor:                               derived_flags.actualizar_proveedor,
 			})
 			.then(() => {
 				this.loading = false
@@ -1385,6 +1467,10 @@ export default {
 			this.actualizar_proveedor = 0
 			this.has_header_row = true
 			this.header_row_manually_overridden = false
+			this.duplicate_stats             = null
+			this.recomendacion_configuracion = null
+			this.clave_identidad             = null
+			this.politica_colision           = null
 		},
 
 	},

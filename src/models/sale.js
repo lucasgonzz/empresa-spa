@@ -249,7 +249,7 @@ export default {
 					},
 					{
 						text: 'Nombre',
-						key: 'name',	
+						function: 'get_sale_article_display_name',
 						show: true,
 					},
 				],
