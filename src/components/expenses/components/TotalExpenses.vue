@@ -9,6 +9,9 @@
 export default {
 	computed: {
 		expenses() {
+			if (this.$store.state.expense.filtered.length) {
+				return this.$store.state.expense.filtered
+			}
 			return this.$store.state.expense.models 
 		},
 		total() {
