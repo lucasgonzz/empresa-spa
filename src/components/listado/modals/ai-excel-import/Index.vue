@@ -63,6 +63,12 @@
 					<small v-if="!has_header_row" class="text-warning d-block m-t-3">
 						Sin cabecera: Claude recibirá solo los datos para inferir el mapeo. La detección puede ser menos precisa.
 					</small>
+					<!-- Aviso cuando la cabecera no está en la fila 1 (filas vacías al inicio del Excel) -->
+					<small
+					v-if="has_header_row && !header_row_manually_overridden && Number(start_row) > 2"
+					class="text-muted d-block m-t-3">
+						Cabecera detectada en fila {{ Number(start_row) - 1 }}. Los datos empiezan en la fila {{ start_row }}.
+					</small>
 				</div>
 
 			</div>
@@ -391,19 +397,22 @@
 			</b-form-radio>
 		</b-form-group>
 
-		<!-- Decisión 2: política de colisión (solo cuando puede haber colisiones por provider_code) -->
+		<!-- Decisión 2: política de colisión (solo cuando hay códigos de proveedor repetidos en el Excel) -->
 		<b-form-group
-		v-if="clave_identidad === 'provider_code'"
-		label="Cuando una fila del Excel coincida con artículos existentes, ¿qué hacer?"
+		v-if="clave_identidad === 'provider_code' && duplicate_stats && duplicate_stats.provider_codes_duplicados_intra_archivo > 0"
+		label="Hay códigos de proveedor repetidos en el Excel. Cuando varias filas tengan el mismo código, ¿qué hacer con los artículos existentes?"
 		label-class="ai-import-decision-title">
 			<b-form-radio v-model="politica_colision" value="actualizar_todos" class="m-b-5">
-				Crear o actualizar todos los artículos coincidentes
+				Actualizar todos los artículos con ese código de proveedor
+				<small class="d-block text-muted m-t-3">Cada fila del Excel actualizará todos los artículos que tengan el mismo código. Si no existe ninguno, se crea.</small>
 			</b-form-radio>
 			<b-form-radio v-model="politica_colision" value="actualizar_uno" class="m-b-5">
-				Actualizar el artículo existente
+				Actualizar solo el primer artículo con ese código de proveedor
+				<small class="d-block text-muted m-t-3">Si hay varios artículos con el mismo código, solo se actualiza el más antiguo. Si no existe ninguno, se crea.</small>
 			</b-form-radio>
 			<b-form-radio v-model="politica_colision" value="crear_nuevo" class="m-b-5">
-				Crear un artículo nuevo (ignorar coincidencias)
+				Ignorar coincidencias y crear un artículo nuevo
+				<small class="d-block text-muted m-t-3">Aunque ya exista un artículo con ese código de proveedor, se crea uno nuevo adicional.</small>
 			</b-form-radio>
 		</b-form-group>
 
@@ -416,7 +425,7 @@
 				</b-button>
 				<b-button
 				variant="primary"
-				:disabled="!clave_identidad || (clave_identidad === 'provider_code' && !politica_colision)"
+				:disabled="!clave_identidad || (clave_identidad === 'provider_code' && duplicate_stats && duplicate_stats.provider_codes_duplicados_intra_archivo > 0 && !politica_colision)"
 				@click="step = 4">
 					Continuar
 				</b-button>
@@ -920,14 +929,18 @@ export default {
 		},
 
 		/*
-		 * Al cambiar el toggle de cabecera (manualmente o por detección automática),
-		 * ajustar start_row para reflejar el nuevo criterio.
+		 * Al cambiar el toggle de cabecera manualmente, ajustar start_row de forma relativa.
+		 * Si la detección es automática, detect_header_row ya asignó start_row correctamente.
 		 *
 		 * @param {Boolean} val - Nuevo valor de has_header_row
 		 */
 		has_header_row(val) {
-			/* Si el usuario cambia el toggle, ajustar start_row. */
-			this.start_row = val ? 2 : 1
+			/* Solo ajustar start_row si el usuario cambió el toggle manualmente. */
+			if (this.header_row_manually_overridden) {
+				this.start_row = val
+					? Number(this.start_row) + 1
+					: Math.max(1, Number(this.start_row) - 1)
+			}
 		},
 	},
 
@@ -1081,12 +1094,9 @@ export default {
 		},
 
 		/*
-		 * Analiza la primera fila del worksheet para determinar automáticamente
-		 * si es una cabecera de columnas o si son datos directamente.
+		 * Determina automáticamente la fila de cabecera y start_row, tolerando filas vacías al inicio.
+		 * Busca la primera fila no vacía; si todas sus celdas no vacías son texto, es cabecera.
 		 * Solo actúa si el usuario no sobreescribió la detección manualmente.
-		 *
-		 * Criterio: si todas las celdas no vacías de la fila 1 son strings (no números),
-		 * se considera cabecera. Si alguna celda no vacía es numérica, se asume que no hay cabecera.
 		 *
 		 * @param {Object} worksheet - Hoja de trabajo de XLSX
 		 */
@@ -1096,39 +1106,77 @@ export default {
 				return
 			}
 
-			/* Leer la primera fila del Excel como array. */
+			/* Todas las filas del Excel (índice 0 = fila 1 en Excel). */
 			let rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' })
 
-			if (!rows || !rows[0]) {
-				/* Sin datos suficientes: asumir cabecera por defecto. */
-				this.has_header_row = true
+			/* Índice 0-based de la primera fila con al menos una celda no vacía. */
+			let first_non_empty_index = -1
+
+			if (Array.isArray(rows)) {
+				for (let i = 0; i < rows.length; i++) {
+					if (this.excel_row_has_content(rows[i])) {
+						first_non_empty_index = i
+						break
+					}
+				}
+			}
+
+			/* Sin filas con contenido: mantener el default histórico (cabecera fila 1, datos fila 2). */
+			if (first_non_empty_index < 0) {
 				this.start_row = 2
+				this.has_header_row = true
 				return
 			}
 
-			let first_row = rows[0]
+			/* Número de fila Excel (1-based) de la primera fila no vacía. */
+			let first_non_empty_row = first_non_empty_index + 1
+			let first_row = rows[first_non_empty_index]
+
+			/* True si todas las celdas no vacías de esa fila son texto no numérico. */
 			let detected_as_header = true
 
-			/* Recorrer celdas: si alguna no vacía es numérica, no es cabecera. */
 			for (let j = 0; j < first_row.length; j++) {
 				let cell_value = first_row[j]
 
-				/* Ignorar celdas vacías. */
 				if (cell_value === null || cell_value === '' || String(cell_value).trim() === '') {
 					continue
 				}
 
-				/* Si el valor es un número (o string numérico), no es cabecera. */
 				if (typeof cell_value === 'number' || !isNaN(Number(cell_value))) {
 					detected_as_header = false
 					break
 				}
 			}
 
-			this.has_header_row = detected_as_header
+			/* Calcular start_row antes de asignar has_header_row (evita que el watcher lo pise). */
+			let calculated_start_row = detected_as_header
+				? first_non_empty_row + 1
+				: first_non_empty_row
 
-			/* Ajustar start_row según si hay cabecera o no. */
-			this.start_row = detected_as_header ? 2 : 1
+			this.start_row = Math.max(1, calculated_start_row)
+			this.has_header_row = detected_as_header
+		},
+
+		/*
+		 * True si la fila del Excel tiene al menos una celda con contenido (tras trim).
+		 *
+		 * @param {Array} row - Fila parseada con sheet_to_json
+		 * @returns {Boolean}
+		 */
+		excel_row_has_content(row) {
+			if (!Array.isArray(row)) {
+				return false
+			}
+
+			for (let j = 0; j < row.length; j++) {
+				let cell_value = row[j]
+
+				if (cell_value !== null && cell_value !== '' && String(cell_value).trim() !== '') {
+					return true
+				}
+			}
+
+			return false
 		},
 
 		/*
