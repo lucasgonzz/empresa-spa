@@ -256,32 +256,124 @@
 		<!-- ========================================================== -->
 		<div v-if="step === 3">
 
-			<!-- Stats del preanálisis: totales e indicadores de duplicados detectados -->
-			<div v-if="duplicate_stats" class="ai-import-stats m-b-15">
-				<p class="font-weight-bold m-b-10">Análisis del archivo</p>
-				<ul class="text-muted small m-b-0">
-					<li>Total de filas: <strong>{{ duplicate_stats.total_filas_datos }}</strong></li>
-					<li v-if="duplicate_stats.bar_codes_duplicados_intra_archivo > 0">
-						<strong>{{ duplicate_stats.bar_codes_duplicados_intra_archivo }}</strong> códigos de barras repetidos dentro del Excel
-					</li>
-					<li v-if="duplicate_stats.provider_codes_duplicados_intra_archivo > 0">
-						<strong>{{ duplicate_stats.provider_codes_duplicados_intra_archivo }}</strong> códigos de proveedor repetidos dentro del Excel
-					</li>
-					<li v-if="duplicate_stats.provider_codes_existentes_mismo_proveedor > 0">
-						<strong>{{ duplicate_stats.provider_codes_existentes_mismo_proveedor }}</strong> códigos de proveedor del Excel ya existen en tu base de datos
-					</li>
-					<li v-if="duplicate_stats.provider_codes_existentes_otros_proveedores > 0">
-						<strong>{{ duplicate_stats.provider_codes_existentes_otros_proveedores }}</strong> códigos de proveedor ya existen pero en otros proveedores
-					</li>
-				</ul>
+			<!-- Chips de resumen del archivo -->
+			<div v-if="duplicate_stats" class="ai-import-summary-chips m-b-15">
+
+				<!-- Total de filas -->
+				<span class="ai-import-summary-chip">
+					📄 {{ duplicate_stats.total_filas_datos }} filas totales
+				</span>
+
+				<!-- Códigos de proveedor repetidos (solo si hay) -->
+				<span
+				v-if="duplicate_stats.provider_codes_duplicados_intra_archivo > 0"
+				class="ai-import-summary-chip ai-import-summary-chip--warning">
+					⚠️ {{ duplicate_stats.provider_codes_duplicados_intra_archivo }} cód. proveedor repetido{{ duplicate_stats.provider_codes_duplicados_intra_archivo > 1 ? 's' : '' }}
+				</span>
+
+				<!-- Códigos de barras repetidos (solo si hay) -->
+				<span
+				v-if="duplicate_stats.bar_codes_duplicados_intra_archivo > 0"
+				class="ai-import-summary-chip ai-import-summary-chip--warning">
+					⚠️ {{ duplicate_stats.bar_codes_duplicados_intra_archivo }} cód. barras repetido{{ duplicate_stats.bar_codes_duplicados_intra_archivo > 1 ? 's' : '' }}
+				</span>
+
+				<!-- Colisiones en BD (mismo proveedor) -->
+				<span
+				v-if="duplicate_stats.provider_codes_existentes_mismo_proveedor > 0"
+				class="ai-import-summary-chip ai-import-summary-chip--info">
+					🔁 {{ duplicate_stats.provider_codes_existentes_mismo_proveedor }} ya en BD (mismo proveedor)
+				</span>
+
+				<!-- Colisiones en BD (otros proveedores) -->
+				<span
+				v-if="duplicate_stats.provider_codes_existentes_otros_proveedores > 0"
+				class="ai-import-summary-chip ai-import-summary-chip--info">
+					🔁 {{ duplicate_stats.provider_codes_existentes_otros_proveedores }} ya en BD (otro proveedor)
+				</span>
+
 			</div>
 
-			<!-- Recomendación generada por Claude IA -->
-			<div v-if="recomendacion_configuracion" class="ai-import-recomendacion m-b-20">
-				<p class="font-weight-bold m-b-5">
+			<!-- Tabla de códigos de proveedor repetidos -->
+			<div v-if="provider_codes_detail.length > 0" class="m-b-15">
+
+				<p class="font-weight-bold m-b-8 small">Códigos de proveedor repetidos</p>
+
+				<div class="ai-import-duplicates-table">
+					<div class="ai-import-duplicates-table__header">
+						<span>Código</span>
+						<span class="text-center">Repeticiones</span>
+						<span>Filas en el Excel</span>
+					</div>
+					<div
+					v-for="(item, idx) in provider_codes_detail"
+					:key="'pc-' + idx"
+					class="ai-import-duplicates-table__row">
+						<span>{{ item.codigo }}</span>
+						<span class="text-center">
+							<span class="ai-import-duplicates-badge">{{ item.veces }}</span>
+						</span>
+						<span class="text-muted">{{ item.filas.join(', ') }}</span>
+					</div>
+				</div>
+
+				<!-- Aviso de truncado cuando hay más duplicados que los mostrados -->
+				<small
+				v-if="duplicate_stats && duplicate_stats.provider_codes_duplicados_intra_archivo > provider_codes_detail.length"
+				class="text-muted d-block m-t-5">
+					y {{ duplicate_stats.provider_codes_duplicados_intra_archivo - provider_codes_detail.length }} más...
+				</small>
+
+			</div>
+
+			<!-- Tabla de códigos de barras repetidos -->
+			<div v-if="bar_codes_detail.length > 0" class="m-b-15">
+
+				<p class="font-weight-bold m-b-8 small">Códigos de barras repetidos</p>
+
+				<div class="ai-import-duplicates-table">
+					<div class="ai-import-duplicates-table__header">
+						<span>Código</span>
+						<span class="text-center">Repeticiones</span>
+						<span>Filas en el Excel</span>
+					</div>
+					<div
+					v-for="(item, idx) in bar_codes_detail"
+					:key="'bc-' + idx"
+					class="ai-import-duplicates-table__row">
+						<span>{{ item.codigo }}</span>
+						<span class="text-center">
+							<span class="ai-import-duplicates-badge">{{ item.veces }}</span>
+						</span>
+						<span class="text-muted">{{ item.filas.join(', ') }}</span>
+					</div>
+				</div>
+
+				<!-- Aviso de truncado cuando hay más duplicados que los mostrados -->
+				<small
+				v-if="duplicate_stats && duplicate_stats.bar_codes_duplicados_intra_archivo > bar_codes_detail.length"
+				class="text-muted d-block m-t-5">
+					y {{ duplicate_stats.bar_codes_duplicados_intra_archivo - bar_codes_detail.length }} más...
+				</small>
+
+			</div>
+
+			<!-- Card de recomendación de Claude IA -->
+			<div v-if="recomendacion_configuracion" class="ai-import-recomendacion-card m-b-20">
+
+				<p class="font-weight-bold m-b-8">
 					<i class="icon-cpu m-r-5"></i>Recomendación de Claude IA
 				</p>
-				<p class="text-muted m-b-0">{{ recomendacion_configuracion.explicacion }}</p>
+
+				<!-- Texto explicativo de la recomendación -->
+				<p class="text-muted small m-b-10">{{ recomendacion_configuracion.explicacion }}</p>
+
+				<!-- Resumen visual: qué clave recomienda usar -->
+				<div v-if="recomendacion_clave_label" class="ai-import-recomendacion-decision">
+					<i class="icon-check-circle m-r-5"></i>
+					Identificar por: <strong>{{ recomendacion_clave_label }}</strong>
+				</div>
+
 			</div>
 
 			<!-- Decisión 1: clave de identidad del artículo -->
@@ -660,6 +752,54 @@ export default {
 			})
 
 			return alerts
+		},
+
+		/*
+		 * Detalle enriquecido de códigos de proveedor repetidos (del preanálisis).
+		 * Cada elemento: { codigo, veces, filas }.
+		 * Vacío si no hay datos o si la columna no estaba mapeada.
+		 */
+		provider_codes_detail() {
+			if (
+				!this.duplicate_stats
+				|| !Array.isArray(this.duplicate_stats.detalle_provider_codes_duplicados)
+			) {
+				return []
+			}
+
+			return this.duplicate_stats.detalle_provider_codes_duplicados
+		},
+
+		/*
+		 * Detalle enriquecido de códigos de barras repetidos (del preanálisis).
+		 * Cada elemento: { codigo, veces, filas }.
+		 * Vacío si no hay datos o si la columna no estaba mapeada.
+		 */
+		bar_codes_detail() {
+			if (
+				!this.duplicate_stats
+				|| !Array.isArray(this.duplicate_stats.detalle_bar_codes_duplicados)
+			) {
+				return []
+			}
+
+			return this.duplicate_stats.detalle_bar_codes_duplicados
+		},
+
+		/*
+		 * Etiqueta legible de la clave de identidad recomendada por Claude.
+		 * Se usa en el resumen visual de la card de recomendación.
+		 */
+		recomendacion_clave_label() {
+			if (!this.recomendacion_configuracion) return ''
+
+			const labels = {
+				bar_code:     'Código de barras',
+				provider_code: 'Código de proveedor',
+				name:          'Nombre del artículo',
+			}
+
+			return labels[this.recomendacion_configuracion.clave_identidad] || ''
 		},
 
 		/*
@@ -1612,4 +1752,105 @@ export default {
 .ai-import-header-auto-label
 	font-size: 11px
 	font-style: italic
+
+/* Chips de resumen del archivo en el paso 3 */
+.ai-import-summary-chips
+	display: flex
+	flex-wrap: wrap
+	gap: 8px
+
+/* Chip individual: borde redondeado, fondo suave */
+.ai-import-summary-chip
+	display: inline-flex
+	align-items: center
+	gap: 4px
+	padding: 4px 10px
+	border-radius: 20px
+	font-size: 12px
+	font-weight: 500
+	background: rgba(0, 123, 255, 0.08)
+	border: 1px solid rgba(0, 123, 255, 0.2)
+	color: #004085
+
+	/* Variante de advertencia: fondo naranja suave */
+	&--warning
+		background: rgba(255, 193, 7, 0.14)
+		border-color: rgba(255, 193, 7, 0.5)
+		color: #856404
+
+	/* Variante informativa: fondo verde suave */
+	&--info
+		background: rgba(40, 167, 69, 0.08)
+		border-color: rgba(40, 167, 69, 0.25)
+		color: #155724
+
+/* Card de recomendación de Claude en el paso 3 */
+.ai-import-recomendacion-card
+	background: #f8f9fa
+	border: 1px solid rgba(0, 123, 255, 0.2)
+	border-left: 4px solid #007bff
+	border-radius: 6px
+	padding: 14px 16px
+
+/* Línea resumen de la decisión recomendada dentro de la card */
+.ai-import-recomendacion-decision
+	display: inline-flex
+	align-items: center
+	gap: 4px
+	font-size: 13px
+	color: #155724
+	background: rgba(40, 167, 69, 0.1)
+	border: 1px solid rgba(40, 167, 69, 0.25)
+	border-radius: 4px
+	padding: 4px 10px
+
+	i
+		color: #28a745
+
+/* Tabla de duplicados del paso 3 */
+.ai-import-duplicates-table
+	border: 1px solid rgba(0, 0, 0, 0.1)
+	border-radius: 6px
+	overflow: hidden
+	font-size: 12px
+
+/* Fila de cabecera de la tabla de duplicados */
+.ai-import-duplicates-table__header
+	display: grid
+	grid-template-columns: 1fr 100px 1fr
+	gap: 8px
+	padding: 7px 12px
+	background: #f8f9fa
+	font-weight: 600
+	color: #495057
+	border-bottom: 1px solid rgba(0, 0, 0, 0.08)
+
+/* Fila de dato de la tabla de duplicados */
+.ai-import-duplicates-table__row
+	display: grid
+	grid-template-columns: 1fr 100px 1fr
+	gap: 8px
+	padding: 7px 12px
+	border-bottom: 1px solid rgba(0, 0, 0, 0.05)
+
+	&:last-child
+		border-bottom: none
+
+	&:hover
+		background: rgba(255, 193, 7, 0.06)
+
+/* Badge con el número de repeticiones en la tabla de duplicados */
+.ai-import-duplicates-badge
+	display: inline-flex
+	align-items: center
+	justify-content: center
+	min-width: 24px
+	height: 20px
+	padding: 0 6px
+	border-radius: 10px
+	font-size: 11px
+	font-weight: 700
+	background: rgba(255, 193, 7, 0.25)
+	color: #856404
+	border: 1px solid rgba(255, 193, 7, 0.4)
 </style>
