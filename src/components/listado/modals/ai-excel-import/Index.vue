@@ -376,33 +376,36 @@
 
 			</div>
 
-			<!-- Decisión 1: clave de identidad del artículo -->
-			<b-form-group label="¿Qué campo identifica un artículo como 'el mismo'?">
-				<b-form-radio v-model="clave_identidad" value="bar_code" class="m-b-5">
-					Código de barras
-				</b-form-radio>
-				<b-form-radio v-model="clave_identidad" value="provider_code" class="m-b-5">
-					Código de proveedor
-				</b-form-radio>
-				<b-form-radio v-model="clave_identidad" value="name" class="m-b-5">
-					Nombre del artículo
-				</b-form-radio>
-			</b-form-group>
+		<!-- Decisión 1: clave de identidad del artículo -->
+		<b-form-group
+		label="¿Qué campo identifica un artículo como 'el mismo'?"
+		label-class="ai-import-decision-title">
+			<b-form-radio v-model="clave_identidad" value="bar_code" class="m-b-5">
+				Código de barras
+			</b-form-radio>
+			<b-form-radio v-model="clave_identidad" value="provider_code" class="m-b-5">
+				Código de proveedor
+			</b-form-radio>
+			<b-form-radio v-model="clave_identidad" value="name" class="m-b-5">
+				Nombre del artículo
+			</b-form-radio>
+		</b-form-group>
 
-			<!-- Decisión 2: política de colisión (solo cuando puede haber colisiones por provider_code) -->
-			<b-form-group
-			v-if="clave_identidad === 'provider_code'"
-			label="Cuando una fila del Excel coincida con varios artículos, ¿qué hacer?">
-				<b-form-radio v-model="politica_colision" value="actualizar_todos" class="m-b-5">
-					Actualizar todos los artículos coincidentes
-				</b-form-radio>
-				<b-form-radio v-model="politica_colision" value="actualizar_uno" class="m-b-5">
-					Actualizar solo uno (el más antiguo)
-				</b-form-radio>
-				<b-form-radio v-model="politica_colision" value="crear_nuevo" class="m-b-5">
-					Crear un artículo nuevo igual
-				</b-form-radio>
-			</b-form-group>
+		<!-- Decisión 2: política de colisión (solo cuando puede haber colisiones por provider_code) -->
+		<b-form-group
+		v-if="clave_identidad === 'provider_code'"
+		label="Cuando una fila del Excel coincida con artículos existentes, ¿qué hacer?"
+		label-class="ai-import-decision-title">
+			<b-form-radio v-model="politica_colision" value="actualizar_todos" class="m-b-5">
+				Crear o actualizar todos los artículos coincidentes
+			</b-form-radio>
+			<b-form-radio v-model="politica_colision" value="actualizar_uno" class="m-b-5">
+				Actualizar el artículo existente
+			</b-form-radio>
+			<b-form-radio v-model="politica_colision" value="crear_nuevo" class="m-b-5">
+				Crear un artículo nuevo (ignorar coincidencias)
+			</b-form-radio>
+		</b-form-group>
 
 			<div class="j-end">
 				<b-button
@@ -1853,4 +1856,12 @@ export default {
 	background: rgba(255, 193, 7, 0.25)
 	color: #856404
 	border: 1px solid rgba(255, 193, 7, 0.4)
+
+/* Títulos de las preguntas de decisión en el paso 3 */
+.ai-import-decision-title
+	font-size: 14px
+	font-weight: 700
+	color: #343a40
+	margin-bottom: 10px
+	display: block
 </style>
