@@ -1121,43 +1121,67 @@ export default {
 				return
 			}
 
-			/* Todas las filas del Excel (índice 0 = fila 1 en Excel). */
-			let rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' })
+			/*
+			 * IMPORTANTE: sheet_to_json omite filas vacías del inicio, por lo que
+			 * rows[0] siempre es la primera fila con contenido sin importar en qué
+			 * fila física del Excel esté. Para calcular el número de fila real usamos
+			 * el rango !ref del worksheet, que sí preserva la posición física.
+			 *
+			 * Estrategia:
+			 * 1. Recorrer el worksheet celda por celda usando !ref (igual que detect_last_excel_row_from_buffer)
+			 *    para encontrar la primera fila física con al menos una celda no vacía.
+			 * 2. Analizar esa fila para determinar si es cabecera o datos.
+			 * 3. Asignar start_row con el número de fila real del Excel.
+			 */
 
-			/* Índice 0-based de la primera fila con al menos una celda no vacía. */
-			let first_non_empty_index = -1
+			if (!worksheet || !worksheet['!ref']) {
+				/* Sin referencia de rango: fallback a sheet_to_json para no romper el flujo. */
+				let rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' })
+				this.has_header_row = true
+				this.start_row = rows.length > 0 ? 2 : 1
+				return
+			}
 
-			if (Array.isArray(rows)) {
-				for (let i = 0; i < rows.length; i++) {
-					if (this.excel_row_has_content(rows[i])) {
-						first_non_empty_index = i
-						break
+			let range = XLSX.utils.decode_range(worksheet['!ref'])
+
+			/* Encontrar la primera fila física (0-based) que tenga al menos una celda no vacía. */
+			let first_non_empty_r = -1
+
+			outer:
+			for (let r = range.s.r; r <= range.e.r; r++) {
+				for (let c = range.s.c; c <= range.e.c; c++) {
+					let cell_ref = XLSX.utils.encode_cell({ c: c, r: r })
+					let cell = worksheet[cell_ref]
+					if (cell && cell.v !== null && cell.v !== undefined && String(cell.v).trim() !== '') {
+						first_non_empty_r = r
+						break outer
 					}
 				}
 			}
 
-			/* Sin filas con contenido: mantener el default histórico (cabecera fila 1, datos fila 2). */
-			if (first_non_empty_index < 0) {
+			/* Sin filas con contenido: fallback al default. */
+			if (first_non_empty_r < 0) {
 				this.start_row = 2
 				this.has_header_row = true
 				return
 			}
 
-			/* Número de fila Excel (1-based) de la primera fila no vacía. */
-			let first_non_empty_row = first_non_empty_index + 1
-			let first_row = rows[first_non_empty_index]
+			/* Número de fila Excel (1-based). */
+			let first_non_empty_row = first_non_empty_r + 1
 
-			/* True si todas las celdas no vacías de esa fila son texto no numérico. */
+			/* Leer las celdas de esa fila para determinar si es cabecera. */
 			let detected_as_header = true
 
-			for (let j = 0; j < first_row.length; j++) {
-				let cell_value = first_row[j]
+			for (let c = range.s.c; c <= range.e.c; c++) {
+				let cell_ref = XLSX.utils.encode_cell({ c: c, r: first_non_empty_r })
+				let cell = worksheet[cell_ref]
 
-				if (cell_value === null || cell_value === '' || String(cell_value).trim() === '') {
+				if (!cell || cell.v === null || cell.v === undefined || String(cell.v).trim() === '') {
 					continue
 				}
 
-				if (typeof cell_value === 'number' || !isNaN(Number(cell_value))) {
+				/* Si alguna celda no vacía es numérica, no es cabecera. */
+				if (typeof cell.v === 'number' || !isNaN(Number(cell.v))) {
 					detected_as_header = false
 					break
 				}
