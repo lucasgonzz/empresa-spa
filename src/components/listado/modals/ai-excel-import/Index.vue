@@ -404,7 +404,15 @@
 		label-class="ai-import-decision-title">
 			<b-form-radio v-model="politica_colision" value="actualizar_todos" class="m-b-5">
 				Actualizar todos los artículos con ese código de proveedor
-				<small class="d-block text-muted m-t-3">Cada fila del Excel actualizará todos los artículos que tengan el mismo código. Si no existe ninguno, se crea.</small>
+				<!-- Subtítulo dinámico: primera importación vs reimportación según códigos ya en BD -->
+				<small class="d-block text-muted m-t-3">
+					<template v-if="duplicate_stats.provider_codes_existentes_mismo_proveedor === 0">
+						Como es la primera importación, se creará un artículo por cada fila, aunque compartan el código de proveedor.
+					</template>
+					<template v-else>
+						Cada fila del Excel actualizará todos los artículos que tengan el mismo código de proveedor.
+					</template>
+				</small>
 			</b-form-radio>
 			<b-form-radio v-model="politica_colision" value="actualizar_uno" class="m-b-5">
 				Actualizar solo el primer artículo con ese código de proveedor
