@@ -241,6 +241,45 @@
 
 			</div>
 
+			<!-- Preview de artículos: tabla reactiva con los primeros 5 registros del Excel -->
+			<div
+			v-if="preview_columns.length > 0 && preview_rows.length > 0"
+			class="m-t-20">
+				<p class="font-weight-bold m-b-8 small">
+					Vista previa - primeros {{ preview_rows.length }} artículos del Excel
+				</p>
+
+				<div class="ai-import-preview-table-wrapper">
+					<table class="ai-import-preview-table">
+						<thead>
+							<tr>
+								<th
+								v-for="(col, idx) in preview_columns"
+								:key="'ph-' + idx">
+									{{ col.label }}
+								</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr
+							v-for="(row, rowIdx) in preview_rows"
+							:key="'pr-' + rowIdx">
+								<td
+								v-for="(col, colIdx) in preview_columns"
+								:key="'pc-' + rowIdx + '-' + colIdx">
+									{{ row[col.excel_column_index] || '-' }}
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+
+				<small class="text-muted d-block m-t-5">
+					Las columnas marcadas como "Ignorar columna" no aparecen en esta preview.
+				</small>
+
+			</div>
+
 			<div class="m-t-20 j-end">
 				<b-button
 				variant="outline-secondary"
@@ -651,6 +690,9 @@ export default {
 			 * 'actualizar' → pisar los artículos del otro proveedor con los datos del Excel
 			 */
 			politica_otro_proveedor: null,
+
+			/* Filas de muestra del Excel (máx. 5) para la preview del paso 2. */
+			preview_rows: [],
 		}
 	},
 
@@ -919,6 +961,57 @@ export default {
 				{ value: 'descuentos',            text: 'Descuentos' },
 				{ value: 'recargos',              text: 'Recargos' },
 			]
+		},
+
+		/*
+		 * Columnas visibles en la preview del paso 2.
+		 * Excluye las columnas marcadas como "Ignorar columna" (system_property === null).
+		 * Cada elemento: { label: string, excel_column_index: number }
+		 */
+		preview_columns() {
+			if (!this.column_mapping || this.column_mapping.length === 0) return []
+
+			const labels = {
+				nombre:               'Nombre',
+				codigo_de_barras:     'Cód. barras',
+				sku:                  'SKU',
+				codigo_de_proveedor:  'Cód. proveedor',
+				costo:                'Costo',
+				precio:               'Precio',
+				iva:                  'IVA',
+				margen_de_ganancia:   'Margen',
+				categoria:            'Categoría',
+				sub_categoria:        'Sub categoría',
+				marca:                'Marca',
+				descripcion:          'Descripción',
+				stock_actual:         'Stock',
+				descuentos:           'Descuentos',
+				recargos:             'Recargos',
+				// cliente
+				telefono:             'Teléfono',
+				email:                'Email',
+				direccion:            'Dirección',
+				localidad:            'Localidad',
+				provincia:            'Provincia',
+				cuit:                 'CUIT',
+				cuil:                 'CUIL',
+				dni:                  'DNI',
+				razon_social:         'Razón social',
+				numero:               'Número',
+				vendedor:             'Vendedor',
+				condicion_frente_al_iva: 'Cond. IVA',
+				tipo_de_precio:       'Tipo precio',
+				saldo_actual:         'Saldo',
+				// proveedor
+				observaciones:        'Observaciones',
+			}
+
+			return this.column_mapping
+				.filter(item => item.system_property !== null && item.system_property !== '')
+				.map(item => ({
+					label: labels[item.system_property] || item.system_property,
+					excel_column_index: item.excel_column_index,
+				}))
 		},
 
 	},
@@ -1324,6 +1417,7 @@ export default {
 				/* Datos del preanálisis de duplicados y recomendación de la IA. */
 				self.duplicate_stats             = res.data.duplicate_stats || null
 				self.recomendacion_configuracion = res.data.recomendacion_configuracion || null
+				self.preview_rows                = res.data.preview_rows || []
 
 				/* Preseleccionar los valores recomendados si la IA los devolvió. */
 				if (self.recomendacion_configuracion) {
@@ -1763,6 +1857,7 @@ export default {
 			this.clave_identidad             = null
 			this.politica_colision           = null
 			this.politica_otro_proveedor     = null
+			this.preview_rows                = []
 		},
 
 	},
@@ -2013,4 +2108,41 @@ export default {
 	color: #343a40
 	margin-bottom: 10px
 	display: block
+
+/* Wrapper con scroll horizontal para la tabla de preview */
+.ai-import-preview-table-wrapper
+	overflow-x: auto
+	border: 1px solid rgba(0, 0, 0, 0.1)
+	border-radius: 6px
+
+/* Tabla de preview de artículos en el paso 2 */
+.ai-import-preview-table
+	width: 100%
+	border-collapse: collapse
+	font-size: 12px
+	white-space: nowrap
+
+	thead tr
+		background: #f8f9fa
+		border-bottom: 2px solid rgba(0, 0, 0, 0.08)
+
+	th
+		padding: 7px 12px
+		font-weight: 600
+		color: #495057
+		text-align: left
+
+	td
+		padding: 6px 12px
+		border-bottom: 1px solid rgba(0, 0, 0, 0.05)
+		color: #343a40
+		max-width: 200px
+		overflow: hidden
+		text-overflow: ellipsis
+
+	tbody tr:last-child td
+		border-bottom: none
+
+	tbody tr:hover
+		background: rgba(0, 123, 255, 0.03)
 </style>
