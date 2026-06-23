@@ -442,30 +442,33 @@
 			</b-form-radio>
 		</b-form-group>
 
-		<!-- Decisión 2: política de colisión (solo cuando hay códigos de proveedor repetidos en el Excel) -->
+		<!-- Decisión 2: política de colisión — visible siempre que la clave sea provider_code -->
 		<b-form-group
-		v-if="clave_identidad === 'provider_code' && duplicate_stats && duplicate_stats.provider_codes_duplicados_intra_archivo > 0"
-		label="Hay códigos de proveedor repetidos en el Excel. Cuando varias filas tengan el mismo código, ¿qué hacer con los artículos existentes?"
+		v-if="clave_identidad === 'provider_code'"
+		label="Si el código de proveedor coincide con artículos que ya existen en el sistema, ¿qué hacer?"
 		label-class="ai-import-decision-title">
 			<b-form-radio v-model="politica_colision" value="actualizar_todos" class="m-b-5">
 				Actualizar todos los artículos con ese código de proveedor
-				<!-- Subtítulo dinámico: primera importación vs reimportación según códigos ya en BD -->
 				<small class="d-block text-muted m-t-3">
-					<template v-if="duplicate_stats.provider_codes_existentes_mismo_proveedor === 0">
-						Como es la primera importación, se creará un artículo por cada fila, aunque compartan el código de proveedor.
+					<template v-if="duplicate_stats && duplicate_stats.provider_codes_existentes_mismo_proveedor === 0">
+						Como es la primera importación, se creará un artículo por cada fila. En futuras importaciones, si el mismo código ya existe en el sistema, se actualizarán todos los artículos que lo tengan.
 					</template>
 					<template v-else>
-						Cada fila del Excel actualizará todos los artículos que tengan el mismo código de proveedor.
+						Cada fila del Excel actualizará todos los artículos del sistema que tengan ese mismo código de proveedor, sin importar cuántos sean.
 					</template>
 				</small>
 			</b-form-radio>
 			<b-form-radio v-model="politica_colision" value="actualizar_uno" class="m-b-5">
 				Actualizar solo el primer artículo con ese código de proveedor
-				<small class="d-block text-muted m-t-3">Si hay varios artículos con el mismo código, solo se actualiza el más antiguo. Si no existe ninguno, se crea.</small>
+				<small class="d-block text-muted m-t-3">
+					Si en el sistema hay varios artículos con el mismo código de proveedor, solo se actualizará el más antiguo. Si no existe ninguno, se creará uno nuevo.
+				</small>
 			</b-form-radio>
 			<b-form-radio v-model="politica_colision" value="crear_nuevo" class="m-b-5">
 				Ignorar coincidencias y crear un artículo nuevo
-				<small class="d-block text-muted m-t-3">Aunque ya exista un artículo con ese código de proveedor, se crea uno nuevo adicional.</small>
+				<small class="d-block text-muted m-t-3">
+					Aunque ya exista un artículo con ese código de proveedor en el sistema, se creará uno nuevo adicional.
+				</small>
 			</b-form-radio>
 		</b-form-group>
 
@@ -498,7 +501,7 @@
 				<b-button
 				variant="primary"
 				:disabled="!clave_identidad
-					|| (clave_identidad === 'provider_code' && duplicate_stats && duplicate_stats.provider_codes_duplicados_intra_archivo > 0 && !politica_colision)
+					|| (clave_identidad === 'provider_code' && !politica_colision)
 					|| (clave_identidad === 'provider_code' && duplicate_stats && duplicate_stats.provider_codes_existentes_otros_proveedores > 0 && !politica_otro_proveedor)"
 				@click="step = 4">
 					Continuar
@@ -760,8 +763,13 @@ export default {
 			/* Opción vacía como primera opción del select. */
 			let options = [{ value: null, text: 'Sin proveedor' }]
 
+			/* Deduplicar por id antes de mapear, por si el store acumuló cargas múltiples. */
+			const seen_ids = new Set()
 			this.providers.forEach(provider => {
-				options.push({ value: provider.id, text: provider.name })
+				if (!seen_ids.has(provider.id)) {
+					seen_ids.add(provider.id)
+					options.push({ value: provider.id, text: provider.name })
+				}
 			})
 
 			return options
