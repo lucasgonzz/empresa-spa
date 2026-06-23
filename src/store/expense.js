@@ -125,6 +125,8 @@ export default __base_store({
 			new_model = {
 				id: null,
 				payment_methods: [],
+				/* Pesos por defecto; evita moneda_id=0 en altas sin extensión ventas_en_dolares */
+				moneda_id: 1,
 			}
 
 			require(`@/models/${state.model_name}`).default.properties.forEach(prop => {

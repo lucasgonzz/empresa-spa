@@ -183,11 +183,19 @@
 .vender-stage__body--grid > .vender-stage__field
 	margin-bottom: 0
 
-/* Selectores visibles: mismo ancho mínimo que la grilla anterior (220px) y reparto equitativo en la fila */
+/* Gap horizontal entre selectores (debe coincidir con gap del --grid) */
+$vender_stage_field_gap: 16px
+
+/* Selectores por fila: hasta 1499px máximo 3; desde 1500px hasta 5 */
 .vender-stage__body--grid > .vender-stage__field:not(.vender-stage__field--full)
-	flex: 1 1 220px
+	flex: 1 1 calc((100% - #{$vender_stage_field_gap * 2}) / 3)
+	max-width: calc((100% - #{$vender_stage_field_gap * 2}) / 3)
 	min-width: 220px
-	max-width: 100%
+
+@media (min-width: 1500px)
+	.vender-stage__body--grid > .vender-stage__field:not(.vender-stage__field--full)
+		flex: 1 1 calc((100% - #{$vender_stage_field_gap * 4}) / 5)
+		max-width: calc((100% - #{$vender_stage_field_gap * 4}) / 5)
 
 /* Ocultar contenedores sin selector renderizado (los hijos usan v-if y no montan controles) */
 .vender-stage__body--grid > .vender-stage__field:not(.vender-stage__field--full):not(:has(.input-group)):not(:has(.form-moneda))
