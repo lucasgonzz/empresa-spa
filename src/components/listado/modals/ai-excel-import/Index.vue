@@ -424,6 +424,25 @@
 			</b-form-radio>
 		</b-form-group>
 
+		<!-- Decisión 3: política para códigos de proveedor existentes en otros proveedores -->
+		<b-form-group
+		v-if="clave_identidad === 'provider_code' && duplicate_stats && duplicate_stats.provider_codes_existentes_otros_proveedores > 0"
+		label="El código de proveedor ya existe en otros proveedores. ¿Qué hacer con esos artículos?"
+		label-class="ai-import-decision-title">
+			<b-form-radio v-model="politica_otro_proveedor" value="ignorar" class="m-b-5">
+				Ignorar esos artículos y crear nuevos para este proveedor
+				<small class="d-block text-muted m-t-3">
+					El mismo código de proveedor puede pertenecer a distintos proveedores. Los artículos del otro proveedor no serán modificados. Se crearán artículos nuevos para el proveedor seleccionado en este paso, aunque compartan el código de proveedor con los existentes.
+				</small>
+			</b-form-radio>
+			<b-form-radio v-model="politica_otro_proveedor" value="actualizar" class="m-b-5">
+				Actualizar los artículos del otro proveedor con los datos de este Excel
+				<small class="d-block text-muted m-t-3">
+					Usá esta opción si los artículos fueron importados antes con el proveedor equivocado. Los artículos que tengan ese código de proveedor, sin importar a qué proveedor están asignados actualmente, serán actualizados con los datos de este Excel.
+				</small>
+			</b-form-radio>
+		</b-form-group>
+
 			<div class="j-end">
 				<b-button
 				variant="outline-secondary"
@@ -433,7 +452,9 @@
 				</b-button>
 				<b-button
 				variant="primary"
-				:disabled="!clave_identidad || (clave_identidad === 'provider_code' && duplicate_stats && duplicate_stats.provider_codes_duplicados_intra_archivo > 0 && !politica_colision)"
+				:disabled="!clave_identidad
+					|| (clave_identidad === 'provider_code' && duplicate_stats && duplicate_stats.provider_codes_duplicados_intra_archivo > 0 && !politica_colision)
+					|| (clave_identidad === 'provider_code' && duplicate_stats && duplicate_stats.provider_codes_existentes_otros_proveedores > 0 && !politica_otro_proveedor)"
 				@click="step = 4">
 					Continuar
 				</b-button>
@@ -623,6 +644,13 @@ export default {
 
 			/* Política a aplicar cuando la clave coincide con varios artículos: 'actualizar_todos' | 'actualizar_uno' | 'crear_nuevo'. */
 			politica_colision: null,
+
+			/*
+			 * Política para artículos de otros proveedores con el mismo provider_code:
+			 * 'ignorar' → no tocar esos artículos, crear nuevos para este proveedor
+			 * 'actualizar' → pisar los artículos del otro proveedor con los datos del Excel
+			 */
+			politica_otro_proveedor: null,
 		}
 	},
 
@@ -1345,7 +1373,7 @@ export default {
 		},
 
 		/**
-		 * Traduce las 2 decisiones de negocio (clave_identidad + politica_colision)
+		 * Traduce las decisiones de negocio (clave_identidad, politica_colision y politica_otro_proveedor)
 		 * a los 5 flags que sigue esperando /ai-excel-import/import.
 		 * Permite mantener el contrato del backend sin cambios.
 		 *
@@ -1364,19 +1392,21 @@ export default {
 			/* Solo se activan flags cuando la clave es provider_code. */
 			if (this.clave_identidad === 'provider_code') {
 
+				/* La política politica_otro_proveedor controla si se actualizan artículos de otros proveedores. */
+				if (this.politica_otro_proveedor === 'actualizar') {
+					flags.actualizar_articulos_de_otro_proveedor = 1
+				}
+
 				if (this.politica_colision === 'actualizar_todos') {
-					/* Actualizar todos los que coincidan, incluso de otros proveedores. */
 					flags.permitir_provider_code_repetido = 1
 					flags.permitir_provider_code_repetido_en_multi_providers = 1
-					flags.actualizar_articulos_de_otro_proveedor = 1
 					flags.actualizar_por_provider_code = 1
 
 				} else if (this.politica_colision === 'crear_nuevo') {
-					/* Permitir repetidos pero sin actualizar: se crea uno nuevo. */
 					flags.permitir_provider_code_repetido = 1
 					flags.permitir_provider_code_repetido_en_multi_providers = 1
 				}
-				/* 'actualizar_uno' deja todos los flags en 0 (comportamiento default del backend). */
+				/* 'actualizar_uno' deja todos esos flags en 0. */
 			}
 
 			return flags
@@ -1732,6 +1762,7 @@ export default {
 			this.recomendacion_configuracion = null
 			this.clave_identidad             = null
 			this.politica_colision           = null
+			this.politica_otro_proveedor     = null
 		},
 
 	},
