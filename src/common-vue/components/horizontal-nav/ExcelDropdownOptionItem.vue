@@ -2,7 +2,8 @@
 	<b-dropdown-item
 	:link-class="link_classes"
 	:id="id"
-	@click="on_click">
+	@click="on_click"
+	@mousedown.native.stop>
 		<span class="excel-dropdown-option__inner">
 			<span class="excel-dropdown-option__icon-wrap">
 				<i :class="icon"></i>

@@ -612,6 +612,9 @@ export default {
 			/* Estadísticas de duplicados devueltas por el análisis IA (preanálisis del Excel). */
 			duplicate_stats: null,
 
+			/* Índice 0-based de la columna provider_code, guardado tras el análisis para refresh-provider-stats. */
+			provider_code_column_index: null,
+
 			/* Recomendación de configuración generada por Claude: { clave_identidad, politica_colision, explicacion }. */
 			recomendacion_configuracion: null,
 
@@ -929,10 +932,14 @@ export default {
 		/*
 		 * Sin proveedor del archivo, las opciones de "otro proveedor" no aplican y se desactivan.
 		 */
-		selected_provider_id() {
+		selected_provider_id(new_val) {
 			if (!this.has_selected_provider) {
 				this.actualizar_articulos_de_otro_proveedor = 0
 				this.actualizar_proveedor = 0
+			}
+			/* Recalcular stats de existentes en BD con el proveedor real seleccionado en paso 2. */
+			if (this.excel_path && this.provider_code_column_index !== null) {
+				this.refresh_provider_stats()
 			}
 		},
 
@@ -1256,6 +1263,12 @@ export default {
 				self.selected_provider_id = res.data.provider_id
 				self.provider_confidence  = res.data.provider_confidence
 
+				/* Guardar índice de columna provider_code para refresh-provider-stats al cambiar proveedor. */
+				const provider_col = res.data.column_mapping.find(
+					col => col.system_property === 'codigo_de_proveedor'
+				)
+				self.provider_code_column_index = provider_col ? provider_col.excel_column_index : null
+
 				/* Datos del preanálisis de duplicados y recomendación de la IA. */
 				self.duplicate_stats             = res.data.duplicate_stats || null
 				self.recomendacion_configuracion = res.data.recomendacion_configuracion || null
@@ -1280,6 +1293,30 @@ export default {
 				}
 
 				self.error_message = message
+			})
+		},
+
+		/**
+		 * Recalcula provider_codes_existentes_mismo/otros_proveedor cuando el usuario
+		 * cambia el proveedor en el paso 2 (stats del /analyze usan el proveedor inferido).
+		 */
+		refresh_provider_stats() {
+			let self = this
+
+			self.$api.post('ai-excel-import/refresh-provider-stats', {
+				excel_path:                 self.excel_path,
+				provider_code_column_index: self.provider_code_column_index,
+				provider_id:                self.selected_provider_id,
+			})
+			.then(function(res) {
+				self.duplicate_stats = {
+					...self.duplicate_stats,
+					provider_codes_existentes_mismo_proveedor:   res.data.provider_codes_existentes_mismo_proveedor,
+					provider_codes_existentes_otros_proveedores: res.data.provider_codes_existentes_otros_proveedores,
+				}
+			})
+			.catch(function(err) {
+				console.warn('refresh_provider_stats: error al recalcular stats', err)
 			})
 		},
 
@@ -1667,6 +1704,7 @@ export default {
 			this.has_header_row = true
 			this.header_row_manually_overridden = false
 			this.duplicate_stats             = null
+			this.provider_code_column_index  = null
 			this.recomendacion_configuracion = null
 			this.clave_identidad             = null
 			this.politica_colision           = null

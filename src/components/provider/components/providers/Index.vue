@@ -4,12 +4,6 @@
     	<current-acounts></current-acounts>
     	<import></import>
 
-		<!-- Modal de importación asistida por IA para proveedores (visible solo con extensión habilitada) -->
-		<ai-excel-import-modal
-		v-if="hasExtencion('ai_excel_import')"
-		model="provider">
-		</ai-excel-import-modal>
-
 		<!-- <update-prices></update-prices> -->
 		
 		<view-component 
@@ -51,7 +45,6 @@ export default {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 		BtnCurrentAcounts: () => import('@/components/common/BtnCurrentAcounts'),
 		ComercioCityUser: () => import('@/components/common/ComercioCityUser'),
-		AiExcelImportModal: () => import('@/components/listado/modals/ai-excel-import/Index'),
 		BuscadorRapido: () => import('@/common-vue/components/buscador-rapido/Index'),
 	},
 }

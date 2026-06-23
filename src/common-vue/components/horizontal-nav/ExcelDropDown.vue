@@ -9,6 +9,11 @@
 		v-if="show_masive_update_history"
 		:model_name="model_name"></masive-update-history>
 
+		<!-- Modal de importación IA: mismo criterio que el ítem del menú (evita id inexistente al abrir) -->
+		<ai-excel-import-modal
+		v-if="can_import_ai"
+		:model="model_name">
+		</ai-excel-import-modal>
 
 		<b-dropdown
 
@@ -76,16 +81,16 @@
 			icon="icon-download"
 			label="Importación">
 				<excel-dropdown-option-item
-				v-if="can_import"
-				icon="icon-list"
-				@click="open_import_history">
-					Historial de importaciones
-				</excel-dropdown-option-item>
-				<excel-dropdown-option-item
 				v-if="can_import_ai"
 				icon="bi bi-stars"
 				@click="open_ai_import">
 					Importar con IA
+				</excel-dropdown-option-item>
+				<excel-dropdown-option-item
+				v-if="can_import"
+				icon="icon-list"
+				@click="open_import_history">
+					Historial de importaciones
 				</excel-dropdown-option-item>
 			</excel-dropdown-submenu>
 
@@ -110,6 +115,7 @@ export default {
 	components: {
 		ExportHistory: () => import('@/common-vue/components/horizontal-nav/ExportHistory'),
 		MasiveUpdateHistory: () => import('@/common-vue/components/horizontal-nav/MasiveUpdateHistory'),
+		AiExcelImportModal: () => import('@/components/listado/modals/ai-excel-import/Index'),
 		ExcelDropdownSubmenu: () => import('@/common-vue/components/horizontal-nav/ExcelDropdownSubmenu'),
 		ExcelDropdownOptionItem: () => import('@/common-vue/components/horizontal-nav/ExcelDropdownOptionItem'),
 	},
@@ -191,7 +197,12 @@ export default {
 		 * @return {void}
 		 */
 		open_ai_import() {
-			this.$bvModal.show(this.ai_import_modal_id)
+			// nextTick: el submenú teleportado puede cerrar el dropdown en el mismo tick del click.
+			let modal_id = this.ai_import_modal_id
+			let self = this
+			this.$nextTick(function () {
+				self.$bvModal.show(modal_id)
+			})
 		},
 
 		/**
@@ -251,15 +262,11 @@ export default {
 		},
 
 		/**
-		 * True si el modelo actual soporta importación con IA y la extensión está habilitada.
+		 * True si el modelo actual soporta importación con IA (artículos, clientes, proveedores).
 		 *
 		 * @return {boolean}
 		 */
 		can_import_ai() {
-			return true
-			if (!this.hasExtencion('ai_excel_import')) {
-				return false
-			}
 			let models_with_ai = ['article', 'client', 'provider']
 			return models_with_ai.indexOf(this.model_name) !== -1
 		},
