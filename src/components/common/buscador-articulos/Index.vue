@@ -127,9 +127,12 @@ export default {
 		is_filtered_by_buscador() {
 			return this.$store.state.article.filtered_without_filter_form
 		},
+		/**
+		 * Permite crear un artículo al vuelo en VENDER si la extensión está activa.
+		 */
 		create_if_not_exist() {
 			if (this.route_name == 'vender') {
-				return this.can('vender.create_article')
+				return this.hasExtencion('crear_articulos_desde_vender') && this.can('vender.create_article')
 			}
 			return false
 		},
