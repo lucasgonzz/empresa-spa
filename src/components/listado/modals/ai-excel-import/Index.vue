@@ -289,8 +289,14 @@
 				</b-button>
 				<b-button
 				variant="primary"
-				@click="step = 3">
-					Confirmar y configurar importación
+				:disabled="loading_recomendacion"
+				@click="confirmar_paso_2">
+					<b-spinner
+					v-if="loading_recomendacion"
+					small
+					class="m-r-5">
+					</b-spinner>
+					{{ loading_recomendacion ? 'Generando recomendación...' : 'Confirmar y configurar importación' }}
 				</b-button>
 			</div>
 
@@ -677,6 +683,9 @@ export default {
 
 			/* Recomendación de configuración generada por Claude: { clave_identidad, politica_colision, explicacion }. */
 			recomendacion_configuracion: null,
+
+			/* True mientras se espera la recomendación de Claude al confirmar el paso 2. */
+			loading_recomendacion: false,
 
 			/* Clave que identifica un artículo como "el mismo": 'bar_code' | 'provider_code' | 'name'. */
 			clave_identidad: null,
@@ -1414,16 +1423,9 @@ export default {
 				)
 				self.provider_code_column_index = provider_col ? provider_col.excel_column_index : null
 
-				/* Datos del preanálisis de duplicados y recomendación de la IA. */
-				self.duplicate_stats             = res.data.duplicate_stats || null
-				self.recomendacion_configuracion = res.data.recomendacion_configuracion || null
-				self.preview_rows                = res.data.preview_rows || []
-
-				/* Preseleccionar los valores recomendados si la IA los devolvió. */
-				if (self.recomendacion_configuracion) {
-					self.clave_identidad   = self.recomendacion_configuracion.clave_identidad
-					self.politica_colision = self.recomendacion_configuracion.politica_colision
-				}
+				/* Datos del preanálisis de duplicados (la recomendación se genera al confirmar el paso 2). */
+				self.duplicate_stats = res.data.duplicate_stats || null
+				self.preview_rows    = res.data.preview_rows || []
 
 				self.step = 2
 			})
@@ -1439,6 +1441,56 @@ export default {
 				}
 
 				self.error_message = message
+			})
+		},
+
+		/*
+		 * Llama al endpoint get-recomendacion con el proveedor confirmado por el usuario
+		 * y los stats actualizados, y avanza al paso 3 con la recomendación correcta.
+		 */
+		confirmar_paso_2() {
+			let self = this
+
+			self.loading_recomendacion = true
+			self.recomendacion_configuracion = null
+
+			self.$api.post('ai-excel-import/get-recomendacion', {
+				excel_path:                 self.excel_path,
+				provider_id:                self.selected_provider_id,
+				provider_code_column_index: self.provider_code_column_index,
+				column_mapping:             self.column_mapping,
+			})
+			.then(function(res) {
+				self.loading_recomendacion = false
+
+				self.recomendacion_configuracion = res.data.recomendacion_configuracion || null
+
+				/* Actualizar duplicate_stats con los conteos recalculados para el proveedor confirmado. */
+				if (self.duplicate_stats) {
+					self.duplicate_stats = {
+						...self.duplicate_stats,
+						provider_codes_existentes_mismo_proveedor:   res.data.provider_codes_existentes_mismo_proveedor,
+						provider_codes_existentes_otros_proveedores: res.data.provider_codes_existentes_otros_proveedores,
+					}
+				}
+
+				/* Preseleccionar los valores recomendados. */
+				if (self.recomendacion_configuracion) {
+					self.clave_identidad   = self.recomendacion_configuracion.clave_identidad
+					self.politica_colision = self.recomendacion_configuracion.politica_colision
+				}
+
+				self.step = 3
+			})
+			.catch(function(err) {
+				self.loading_recomendacion = false
+
+				let message = 'Error al generar la recomendación.'
+				if (err.response && err.response.data && err.response.data.message) {
+					message = err.response.data.message
+				}
+
+				self.$toast.error(message)
 			})
 		},
 
@@ -1854,6 +1906,7 @@ export default {
 			this.duplicate_stats             = null
 			this.provider_code_column_index  = null
 			this.recomendacion_configuracion = null
+			this.loading_recomendacion       = false
 			this.clave_identidad             = null
 			this.politica_colision           = null
 			this.politica_otro_proveedor     = null
