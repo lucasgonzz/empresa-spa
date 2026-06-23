@@ -24,7 +24,7 @@
 			class="vender-stage__chevron"></i>
 		</div>
 
-		<!-- Body colapsable — layout en grilla responsive -->
+		<!-- Body colapsable — layout flexible; los selectores ocupan solo el espacio que necesitan -->
 		<transition name="stage-collapse">
 			<div
 			v-show="stage1_open"
@@ -65,8 +65,13 @@
 					<sale-type></sale-type>
 				</div>
 
+				<!-- Tipo de venta -->
+				<div class="vender-stage__field">
+					<seller-selector></seller-selector>
+				</div>
+
 				<!-- Separador visual antes de los campos de cliente -->
-				<hr class="vender-stage__separator" style="grid-column: 1 / -1">
+				<hr class="vender-stage__separator">
 
 				<!-- Cliente e información AFIP — misma fila -->
 				<div class="vender-stage__field vender-stage__field--full vender-stage__field--row">
@@ -80,17 +85,6 @@
 					<div class="vender-stage__field-row-item">
 						<alertar-personalizado></alertar-personalizado>
 					</div>
-				</div>
-
-				<!-- Opciones del cliente — columna alerta + columna checkboxes -->
-				<div class="vender-stage__field vender-stage__field--full vender-stage__client-options">
-					<!-- <div class="vender-stage__client-options-col vender-stage__client-options-col--stack">
-						<guardar-como-presupuesto></guardar-como-presupuesto>
-						<omitir-en-cuenta-corriente></omitir-en-cuenta-corriente>
-					</div> -->
-					<!-- <div class="vender-stage__client-options-col">
-						<alertar-personalizado></alertar-personalizado>
-					</div> -->
 				</div>
 
 			</div>
@@ -114,7 +108,8 @@ export default {
 		/* Selector de moneda y cotización dólar — visible según extensión ventas_en_dolares */
 		Moneda: () => import('@/components/vender/components/remito/total-previus-sales/Moneda'),
 		PaymentMethod: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/PaymentMethod'),
-		Caja: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/Caja'),
+		Caja: () 			=> import('@/components/vender/components/remito/header-2/payment-method-afip-information/Caja'),
+		SellerSelector: () 	=> import('@/components/vender/components/remito/header-2/payment-method-afip-information/Seller'),
 		SaleType: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/SaleType'),
 		AfipInformation: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/afip-information/Index'),
 		/* Subcomponentes del cliente */

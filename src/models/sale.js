@@ -104,6 +104,15 @@ export default {
 			// if_has_extencion: 'indicar_vendedor_en_vender',
 		},
 		{
+			text: 'Tipo de venta',
+			key: 'sale_type_id',
+			use_store_models: true,
+			type: 'select',
+			only_show: true,
+			not_show: true,
+			// if_has_extencion: 'indicar_vendedor_en_vender',
+		},
+		{
 			text: 'En acopio',
 			key: 'en_acopio',
 			type: 'checkbox',

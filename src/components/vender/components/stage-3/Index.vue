@@ -57,7 +57,7 @@
 				</div>
 
 				<!-- Separador visual -->
-				<hr class="vender-stage__separator" style="grid-column: 1 / -1">
+				<hr class="vender-stage__separator">
 
 				<!-- Observaciones — ocupa toda la fila -->
 				<div class="vender-stage__field vender-stage__field--full">

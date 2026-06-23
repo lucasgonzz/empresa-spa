@@ -6,8 +6,9 @@
 		:class="isSelectedFromDates(true)"
 		@click="setFromDates(true)"
 		class="item apretable">
-			Por fecha
+			Por fecha 
 		</div>
+		
 		<div   
 		v-if="change_from_dates_option"
 		:class="isSelectedFromDates(false)"

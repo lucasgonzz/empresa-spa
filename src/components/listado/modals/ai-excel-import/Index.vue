@@ -63,6 +63,12 @@
 					<small v-if="!has_header_row" class="text-warning d-block m-t-3">
 						Sin cabecera: Claude recibirá solo los datos para inferir el mapeo. La detección puede ser menos precisa.
 					</small>
+					<!-- Aviso cuando la cabecera no está en la fila 1 (filas vacías al inicio del Excel) -->
+					<small
+					v-if="has_header_row && !header_row_manually_overridden && Number(start_row) > 2"
+					class="text-muted d-block m-t-3">
+						Cabecera detectada en fila {{ Number(start_row) - 1 }}. Los datos empiezan en la fila {{ start_row }}.
+					</small>
 				</div>
 
 			</div>
@@ -235,6 +241,45 @@
 
 			</div>
 
+			<!-- Preview de artículos: tabla reactiva con los primeros 5 registros del Excel -->
+			<div
+			v-if="preview_columns.length > 0 && preview_rows.length > 0"
+			class="m-t-20">
+				<p class="font-weight-bold m-b-8 small">
+					Vista previa - primeros {{ preview_rows.length }} artículos del Excel
+				</p>
+
+				<div class="ai-import-preview-table-wrapper">
+					<table class="ai-import-preview-table">
+						<thead>
+							<tr>
+								<th
+								v-for="(col, idx) in preview_columns"
+								:key="'ph-' + idx">
+									{{ col.label }}
+								</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr
+							v-for="(row, rowIdx) in preview_rows"
+							:key="'pr-' + rowIdx">
+								<td
+								v-for="(col, colIdx) in preview_columns"
+								:key="'pc-' + rowIdx + '-' + colIdx">
+									{{ row[col.excel_column_index] || '-' }}
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+
+				<small class="text-muted d-block m-t-5">
+					Las columnas marcadas como "Ignorar columna" no aparecen en esta preview.
+				</small>
+
+			</div>
+
 			<div class="m-t-20 j-end">
 				<b-button
 				variant="outline-secondary"
@@ -244,8 +289,14 @@
 				</b-button>
 				<b-button
 				variant="primary"
-				@click="step = 3">
-					Confirmar y configurar importación
+				:disabled="loading_recomendacion"
+				@click="confirmar_paso_2">
+					<b-spinner
+					v-if="loading_recomendacion"
+					small
+					class="m-r-5">
+					</b-spinner>
+					{{ loading_recomendacion ? 'Generando recomendación...' : 'Confirmar y configurar importación' }}
 				</b-button>
 			</div>
 
@@ -256,61 +307,189 @@
 		<!-- ========================================================== -->
 		<div v-if="step === 3">
 
-			<!-- Stats del preanálisis: totales e indicadores de duplicados detectados -->
-			<div v-if="duplicate_stats" class="ai-import-stats m-b-15">
-				<p class="font-weight-bold m-b-10">Análisis del archivo</p>
-				<ul class="text-muted small m-b-0">
-					<li>Total de filas: <strong>{{ duplicate_stats.total_filas_datos }}</strong></li>
-					<li v-if="duplicate_stats.bar_codes_duplicados_intra_archivo > 0">
-						<strong>{{ duplicate_stats.bar_codes_duplicados_intra_archivo }}</strong> códigos de barras repetidos dentro del Excel
-					</li>
-					<li v-if="duplicate_stats.provider_codes_duplicados_intra_archivo > 0">
-						<strong>{{ duplicate_stats.provider_codes_duplicados_intra_archivo }}</strong> códigos de proveedor repetidos dentro del Excel
-					</li>
-					<li v-if="duplicate_stats.provider_codes_existentes_mismo_proveedor > 0">
-						<strong>{{ duplicate_stats.provider_codes_existentes_mismo_proveedor }}</strong> códigos de proveedor del Excel ya existen en tu base de datos
-					</li>
-					<li v-if="duplicate_stats.provider_codes_existentes_otros_proveedores > 0">
-						<strong>{{ duplicate_stats.provider_codes_existentes_otros_proveedores }}</strong> códigos de proveedor ya existen pero en otros proveedores
-					</li>
-				</ul>
+			<!-- Chips de resumen del archivo -->
+			<div v-if="duplicate_stats" class="ai-import-summary-chips m-b-15">
+
+				<!-- Total de filas -->
+				<span class="ai-import-summary-chip">
+					📄 {{ duplicate_stats.total_filas_datos }} filas totales
+				</span>
+
+				<!-- Códigos de proveedor repetidos (solo si hay) -->
+				<span
+				v-if="duplicate_stats.provider_codes_duplicados_intra_archivo > 0"
+				class="ai-import-summary-chip ai-import-summary-chip--warning">
+					⚠️ {{ duplicate_stats.provider_codes_duplicados_intra_archivo }} cód. proveedor repetido{{ duplicate_stats.provider_codes_duplicados_intra_archivo > 1 ? 's' : '' }}
+				</span>
+
+				<!-- Códigos de barras repetidos (solo si hay) -->
+				<span
+				v-if="duplicate_stats.bar_codes_duplicados_intra_archivo > 0"
+				class="ai-import-summary-chip ai-import-summary-chip--warning">
+					⚠️ {{ duplicate_stats.bar_codes_duplicados_intra_archivo }} cód. barras repetido{{ duplicate_stats.bar_codes_duplicados_intra_archivo > 1 ? 's' : '' }}
+				</span>
+
+				<!-- Colisiones en BD (mismo proveedor) -->
+				<span
+				v-if="duplicate_stats.provider_codes_existentes_mismo_proveedor > 0"
+				class="ai-import-summary-chip ai-import-summary-chip--info">
+					🔁 {{ duplicate_stats.provider_codes_existentes_mismo_proveedor }} ya en BD (mismo proveedor)
+				</span>
+
+				<!-- Colisiones en BD (otros proveedores) -->
+				<span
+				v-if="duplicate_stats.provider_codes_existentes_otros_proveedores > 0"
+				class="ai-import-summary-chip ai-import-summary-chip--info">
+					🔁 {{ duplicate_stats.provider_codes_existentes_otros_proveedores }} ya en BD (otro proveedor)
+				</span>
+
 			</div>
 
-			<!-- Recomendación generada por Claude IA -->
-			<div v-if="recomendacion_configuracion" class="ai-import-recomendacion m-b-20">
-				<p class="font-weight-bold m-b-5">
+			<!-- Tabla de códigos de proveedor repetidos -->
+			<div v-if="provider_codes_detail.length > 0" class="m-b-15">
+
+				<p class="font-weight-bold m-b-8 small">Códigos de proveedor repetidos</p>
+
+				<div class="ai-import-duplicates-table">
+					<div class="ai-import-duplicates-table__header">
+						<span>Código</span>
+						<span class="text-center">Repeticiones</span>
+						<span>Filas en el Excel</span>
+					</div>
+					<div
+					v-for="(item, idx) in provider_codes_detail"
+					:key="'pc-' + idx"
+					class="ai-import-duplicates-table__row">
+						<span>{{ item.codigo }}</span>
+						<span class="text-center">
+							<span class="ai-import-duplicates-badge">{{ item.veces }}</span>
+						</span>
+						<span class="text-muted">{{ item.filas.join(', ') }}</span>
+					</div>
+				</div>
+
+				<!-- Aviso de truncado cuando hay más duplicados que los mostrados -->
+				<small
+				v-if="duplicate_stats && duplicate_stats.provider_codes_duplicados_intra_archivo > provider_codes_detail.length"
+				class="text-muted d-block m-t-5">
+					y {{ duplicate_stats.provider_codes_duplicados_intra_archivo - provider_codes_detail.length }} más...
+				</small>
+
+			</div>
+
+			<!-- Tabla de códigos de barras repetidos -->
+			<div v-if="bar_codes_detail.length > 0" class="m-b-15">
+
+				<p class="font-weight-bold m-b-8 small">Códigos de barras repetidos</p>
+
+				<div class="ai-import-duplicates-table">
+					<div class="ai-import-duplicates-table__header">
+						<span>Código</span>
+						<span class="text-center">Repeticiones</span>
+						<span>Filas en el Excel</span>
+					</div>
+					<div
+					v-for="(item, idx) in bar_codes_detail"
+					:key="'bc-' + idx"
+					class="ai-import-duplicates-table__row">
+						<span>{{ item.codigo }}</span>
+						<span class="text-center">
+							<span class="ai-import-duplicates-badge">{{ item.veces }}</span>
+						</span>
+						<span class="text-muted">{{ item.filas.join(', ') }}</span>
+					</div>
+				</div>
+
+				<!-- Aviso de truncado cuando hay más duplicados que los mostrados -->
+				<small
+				v-if="duplicate_stats && duplicate_stats.bar_codes_duplicados_intra_archivo > bar_codes_detail.length"
+				class="text-muted d-block m-t-5">
+					y {{ duplicate_stats.bar_codes_duplicados_intra_archivo - bar_codes_detail.length }} más...
+				</small>
+
+			</div>
+
+			<!-- Card de recomendación de Claude IA -->
+			<div v-if="recomendacion_configuracion" class="ai-import-recomendacion-card m-b-20">
+
+				<p class="font-weight-bold m-b-8">
 					<i class="icon-cpu m-r-5"></i>Recomendación de Claude IA
 				</p>
-				<p class="text-muted m-b-0">{{ recomendacion_configuracion.explicacion }}</p>
+
+				<!-- Texto explicativo de la recomendación -->
+				<p class="text-muted small m-b-10">{{ recomendacion_configuracion.explicacion }}</p>
+
+				<!-- Resumen visual: qué clave recomienda usar -->
+				<div v-if="recomendacion_clave_label" class="ai-import-recomendacion-decision">
+					<i class="icon-check-circle m-r-5"></i>
+					Identificar por: <strong>{{ recomendacion_clave_label }}</strong>
+				</div>
+
 			</div>
 
-			<!-- Decisión 1: clave de identidad del artículo -->
-			<b-form-group label="¿Qué campo identifica un artículo como 'el mismo'?">
-				<b-form-radio v-model="clave_identidad" value="bar_code" class="m-b-5">
-					Código de barras
-				</b-form-radio>
-				<b-form-radio v-model="clave_identidad" value="provider_code" class="m-b-5">
-					Código de proveedor
-				</b-form-radio>
-				<b-form-radio v-model="clave_identidad" value="name" class="m-b-5">
-					Nombre del artículo
-				</b-form-radio>
-			</b-form-group>
+		<!-- Decisión 1: clave de identidad del artículo -->
+		<b-form-group
+		label="¿Qué campo identifica un artículo como 'el mismo'?"
+		label-class="ai-import-decision-title">
+			<b-form-radio v-model="clave_identidad" value="bar_code" class="m-b-5">
+				Código de barras
+			</b-form-radio>
+			<b-form-radio v-model="clave_identidad" value="provider_code" class="m-b-5">
+				Código de proveedor
+			</b-form-radio>
+			<b-form-radio v-model="clave_identidad" value="name" class="m-b-5">
+				Nombre del artículo
+			</b-form-radio>
+		</b-form-group>
 
-			<!-- Decisión 2: política de colisión (solo cuando puede haber colisiones por provider_code) -->
-			<b-form-group
-			v-if="clave_identidad === 'provider_code'"
-			label="Cuando una fila del Excel coincida con varios artículos, ¿qué hacer?">
-				<b-form-radio v-model="politica_colision" value="actualizar_todos" class="m-b-5">
-					Actualizar todos los artículos coincidentes
-				</b-form-radio>
-				<b-form-radio v-model="politica_colision" value="actualizar_uno" class="m-b-5">
-					Actualizar solo uno (el más antiguo)
-				</b-form-radio>
-				<b-form-radio v-model="politica_colision" value="crear_nuevo" class="m-b-5">
-					Crear un artículo nuevo igual
-				</b-form-radio>
-			</b-form-group>
+		<!-- Decisión 2: política de colisión — visible siempre que la clave sea provider_code -->
+		<b-form-group
+		v-if="clave_identidad === 'provider_code'"
+		label="Si el código de proveedor coincide con artículos que ya existen en el sistema, ¿qué hacer?"
+		label-class="ai-import-decision-title">
+			<b-form-radio v-model="politica_colision" value="actualizar_todos" class="m-b-5">
+				Actualizar todos los artículos con ese código de proveedor
+				<small class="d-block text-muted m-t-3">
+					<template v-if="duplicate_stats && duplicate_stats.provider_codes_existentes_mismo_proveedor === 0">
+						Como es la primera importación, se creará un artículo por cada fila. En futuras importaciones, si el mismo código ya existe en el sistema, se actualizarán todos los artículos que lo tengan.
+					</template>
+					<template v-else>
+						Cada fila del Excel actualizará todos los artículos del sistema que tengan ese mismo código de proveedor, sin importar cuántos sean.
+					</template>
+				</small>
+			</b-form-radio>
+			<b-form-radio v-model="politica_colision" value="actualizar_uno" class="m-b-5">
+				Actualizar solo el primer artículo con ese código de proveedor
+				<small class="d-block text-muted m-t-3">
+					Si en el sistema hay varios artículos con el mismo código de proveedor, solo se actualizará el más antiguo. Si no existe ninguno, se creará uno nuevo.
+				</small>
+			</b-form-radio>
+			<b-form-radio v-model="politica_colision" value="crear_nuevo" class="m-b-5">
+				Ignorar coincidencias y crear un artículo nuevo
+				<small class="d-block text-muted m-t-3">
+					Aunque ya exista un artículo con ese código de proveedor en el sistema, se creará uno nuevo adicional.
+				</small>
+			</b-form-radio>
+		</b-form-group>
+
+		<!-- Decisión 3: política para códigos de proveedor existentes en otros proveedores -->
+		<b-form-group
+		v-if="clave_identidad === 'provider_code' && duplicate_stats && duplicate_stats.provider_codes_existentes_otros_proveedores > 0"
+		label="El código de proveedor ya existe en otros proveedores. ¿Qué hacer con esos artículos?"
+		label-class="ai-import-decision-title">
+			<b-form-radio v-model="politica_otro_proveedor" value="ignorar" class="m-b-5">
+				Ignorar esos artículos y crear nuevos para este proveedor
+				<small class="d-block text-muted m-t-3">
+					El mismo código de proveedor puede pertenecer a distintos proveedores. Los artículos del otro proveedor no serán modificados. Se crearán artículos nuevos para el proveedor seleccionado en este paso, aunque compartan el código de proveedor con los existentes.
+				</small>
+			</b-form-radio>
+			<b-form-radio v-model="politica_otro_proveedor" value="actualizar" class="m-b-5">
+				Actualizar los artículos del otro proveedor con los datos de este Excel
+				<small class="d-block text-muted m-t-3">
+					Usá esta opción si los artículos fueron importados antes con el proveedor equivocado. Los artículos que tengan ese código de proveedor, sin importar a qué proveedor están asignados actualmente, serán actualizados con los datos de este Excel.
+				</small>
+			</b-form-radio>
+		</b-form-group>
 
 			<div class="j-end">
 				<b-button
@@ -321,7 +500,9 @@
 				</b-button>
 				<b-button
 				variant="primary"
-				:disabled="!clave_identidad || (clave_identidad === 'provider_code' && !politica_colision)"
+				:disabled="!clave_identidad
+					|| (clave_identidad === 'provider_code' && !politica_colision)
+					|| (clave_identidad === 'provider_code' && duplicate_stats && duplicate_stats.provider_codes_existentes_otros_proveedores > 0 && !politica_otro_proveedor)"
 				@click="step = 4">
 					Continuar
 				</b-button>
@@ -500,14 +681,30 @@ export default {
 			/* Estadísticas de duplicados devueltas por el análisis IA (preanálisis del Excel). */
 			duplicate_stats: null,
 
+			/* Índice 0-based de la columna provider_code, guardado tras el análisis para refresh-provider-stats. */
+			provider_code_column_index: null,
+
 			/* Recomendación de configuración generada por Claude: { clave_identidad, politica_colision, explicacion }. */
 			recomendacion_configuracion: null,
+
+			/* True mientras se espera la recomendación de Claude al confirmar el paso 2. */
+			loading_recomendacion: false,
 
 			/* Clave que identifica un artículo como "el mismo": 'bar_code' | 'provider_code' | 'name'. */
 			clave_identidad: null,
 
 			/* Política a aplicar cuando la clave coincide con varios artículos: 'actualizar_todos' | 'actualizar_uno' | 'crear_nuevo'. */
 			politica_colision: null,
+
+			/*
+			 * Política para artículos de otros proveedores con el mismo provider_code:
+			 * 'ignorar' → no tocar esos artículos, crear nuevos para este proveedor
+			 * 'actualizar' → pisar los artículos del otro proveedor con los datos del Excel
+			 */
+			politica_otro_proveedor: null,
+
+			/* Filas de muestra del Excel (máx. 5) para la preview del paso 2. */
+			preview_rows: [],
 		}
 	},
 
@@ -566,8 +763,13 @@ export default {
 			/* Opción vacía como primera opción del select. */
 			let options = [{ value: null, text: 'Sin proveedor' }]
 
+			/* Deduplicar por id antes de mapear, por si el store acumuló cargas múltiples. */
+			const seen_ids = new Set()
 			this.providers.forEach(provider => {
-				options.push({ value: provider.id, text: provider.name })
+				if (!seen_ids.has(provider.id)) {
+					seen_ids.add(provider.id)
+					options.push({ value: provider.id, text: provider.name })
+				}
 			})
 
 			return options
@@ -663,6 +865,54 @@ export default {
 		},
 
 		/*
+		 * Detalle enriquecido de códigos de proveedor repetidos (del preanálisis).
+		 * Cada elemento: { codigo, veces, filas }.
+		 * Vacío si no hay datos o si la columna no estaba mapeada.
+		 */
+		provider_codes_detail() {
+			if (
+				!this.duplicate_stats
+				|| !Array.isArray(this.duplicate_stats.detalle_provider_codes_duplicados)
+			) {
+				return []
+			}
+
+			return this.duplicate_stats.detalle_provider_codes_duplicados
+		},
+
+		/*
+		 * Detalle enriquecido de códigos de barras repetidos (del preanálisis).
+		 * Cada elemento: { codigo, veces, filas }.
+		 * Vacío si no hay datos o si la columna no estaba mapeada.
+		 */
+		bar_codes_detail() {
+			if (
+				!this.duplicate_stats
+				|| !Array.isArray(this.duplicate_stats.detalle_bar_codes_duplicados)
+			) {
+				return []
+			}
+
+			return this.duplicate_stats.detalle_bar_codes_duplicados
+		},
+
+		/*
+		 * Etiqueta legible de la clave de identidad recomendada por Claude.
+		 * Se usa en el resumen visual de la card de recomendación.
+		 */
+		recomendacion_clave_label() {
+			if (!this.recomendacion_configuracion) return ''
+
+			const labels = {
+				bar_code:     'Código de barras',
+				provider_code: 'Código de proveedor',
+				name:          'Nombre del artículo',
+			}
+
+			return labels[this.recomendacion_configuracion.clave_identidad] || ''
+		},
+
+		/*
 		 * Opciones para el select de propiedades del sistema en la tabla de mapeo.
 		 * Varía según el modelo (article, client, provider).
 		 * El valor null corresponde a "Ignorar columna".
@@ -730,6 +980,57 @@ export default {
 			]
 		},
 
+		/*
+		 * Columnas visibles en la preview del paso 2.
+		 * Excluye las columnas marcadas como "Ignorar columna" (system_property === null).
+		 * Cada elemento: { label: string, excel_column_index: number }
+		 */
+		preview_columns() {
+			if (!this.column_mapping || this.column_mapping.length === 0) return []
+
+			const labels = {
+				nombre:               'Nombre',
+				codigo_de_barras:     'Cód. barras',
+				sku:                  'SKU',
+				codigo_de_proveedor:  'Cód. proveedor',
+				costo:                'Costo',
+				precio:               'Precio',
+				iva:                  'IVA',
+				margen_de_ganancia:   'Margen',
+				categoria:            'Categoría',
+				sub_categoria:        'Sub categoría',
+				marca:                'Marca',
+				descripcion:          'Descripción',
+				stock_actual:         'Stock',
+				descuentos:           'Descuentos',
+				recargos:             'Recargos',
+				// cliente
+				telefono:             'Teléfono',
+				email:                'Email',
+				direccion:            'Dirección',
+				localidad:            'Localidad',
+				provincia:            'Provincia',
+				cuit:                 'CUIT',
+				cuil:                 'CUIL',
+				dni:                  'DNI',
+				razon_social:         'Razón social',
+				numero:               'Número',
+				vendedor:             'Vendedor',
+				condicion_frente_al_iva: 'Cond. IVA',
+				tipo_de_precio:       'Tipo precio',
+				saldo_actual:         'Saldo',
+				// proveedor
+				observaciones:        'Observaciones',
+			}
+
+			return this.column_mapping
+				.filter(item => item.system_property !== null && item.system_property !== '')
+				.map(item => ({
+					label: labels[item.system_property] || item.system_property,
+					excel_column_index: item.excel_column_index,
+				}))
+		},
+
 	},
 
 	watch: {
@@ -769,22 +1070,30 @@ export default {
 		/*
 		 * Sin proveedor del archivo, las opciones de "otro proveedor" no aplican y se desactivan.
 		 */
-		selected_provider_id() {
+		selected_provider_id(new_val) {
 			if (!this.has_selected_provider) {
 				this.actualizar_articulos_de_otro_proveedor = 0
 				this.actualizar_proveedor = 0
 			}
+			/* Recalcular stats de existentes en BD con el proveedor real seleccionado en paso 2. */
+			if (this.excel_path && this.provider_code_column_index !== null) {
+				this.refresh_provider_stats()
+			}
 		},
 
 		/*
-		 * Al cambiar el toggle de cabecera (manualmente o por detección automática),
-		 * ajustar start_row para reflejar el nuevo criterio.
+		 * Al cambiar el toggle de cabecera manualmente, ajustar start_row de forma relativa.
+		 * Si la detección es automática, detect_header_row ya asignó start_row correctamente.
 		 *
 		 * @param {Boolean} val - Nuevo valor de has_header_row
 		 */
 		has_header_row(val) {
-			/* Si el usuario cambia el toggle, ajustar start_row. */
-			this.start_row = val ? 2 : 1
+			/* Solo ajustar start_row si el usuario cambió el toggle manualmente. */
+			if (this.header_row_manually_overridden) {
+				this.start_row = val
+					? Number(this.start_row) + 1
+					: Math.max(1, Number(this.start_row) - 1)
+			}
 		},
 	},
 
@@ -938,12 +1247,9 @@ export default {
 		},
 
 		/*
-		 * Analiza la primera fila del worksheet para determinar automáticamente
-		 * si es una cabecera de columnas o si son datos directamente.
+		 * Determina automáticamente la fila de cabecera y start_row, tolerando filas vacías al inicio.
+		 * Busca la primera fila no vacía; si todas sus celdas no vacías son texto, es cabecera.
 		 * Solo actúa si el usuario no sobreescribió la detección manualmente.
-		 *
-		 * Criterio: si todas las celdas no vacías de la fila 1 son strings (no números),
-		 * se considera cabecera. Si alguna celda no vacía es numérica, se asume que no hay cabecera.
 		 *
 		 * @param {Object} worksheet - Hoja de trabajo de XLSX
 		 */
@@ -953,39 +1259,101 @@ export default {
 				return
 			}
 
-			/* Leer la primera fila del Excel como array. */
-			let rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' })
+			/*
+			 * IMPORTANTE: sheet_to_json omite filas vacías del inicio, por lo que
+			 * rows[0] siempre es la primera fila con contenido sin importar en qué
+			 * fila física del Excel esté. Para calcular el número de fila real usamos
+			 * el rango !ref del worksheet, que sí preserva la posición física.
+			 *
+			 * Estrategia:
+			 * 1. Recorrer el worksheet celda por celda usando !ref (igual que detect_last_excel_row_from_buffer)
+			 *    para encontrar la primera fila física con al menos una celda no vacía.
+			 * 2. Analizar esa fila para determinar si es cabecera o datos.
+			 * 3. Asignar start_row con el número de fila real del Excel.
+			 */
 
-			if (!rows || !rows[0]) {
-				/* Sin datos suficientes: asumir cabecera por defecto. */
+			if (!worksheet || !worksheet['!ref']) {
+				/* Sin referencia de rango: fallback a sheet_to_json para no romper el flujo. */
+				let rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' })
 				this.has_header_row = true
-				this.start_row = 2
+				this.start_row = rows.length > 0 ? 2 : 1
 				return
 			}
 
-			let first_row = rows[0]
+			let range = XLSX.utils.decode_range(worksheet['!ref'])
+
+			/* Encontrar la primera fila física (0-based) que tenga al menos una celda no vacía. */
+			let first_non_empty_r = -1
+
+			outer:
+			for (let r = range.s.r; r <= range.e.r; r++) {
+				for (let c = range.s.c; c <= range.e.c; c++) {
+					let cell_ref = XLSX.utils.encode_cell({ c: c, r: r })
+					let cell = worksheet[cell_ref]
+					if (cell && cell.v !== null && cell.v !== undefined && String(cell.v).trim() !== '') {
+						first_non_empty_r = r
+						break outer
+					}
+				}
+			}
+
+			/* Sin filas con contenido: fallback al default. */
+			if (first_non_empty_r < 0) {
+				this.start_row = 2
+				this.has_header_row = true
+				return
+			}
+
+			/* Número de fila Excel (1-based). */
+			let first_non_empty_row = first_non_empty_r + 1
+
+			/* Leer las celdas de esa fila para determinar si es cabecera. */
 			let detected_as_header = true
 
-			/* Recorrer celdas: si alguna no vacía es numérica, no es cabecera. */
-			for (let j = 0; j < first_row.length; j++) {
-				let cell_value = first_row[j]
+			for (let c = range.s.c; c <= range.e.c; c++) {
+				let cell_ref = XLSX.utils.encode_cell({ c: c, r: first_non_empty_r })
+				let cell = worksheet[cell_ref]
 
-				/* Ignorar celdas vacías. */
-				if (cell_value === null || cell_value === '' || String(cell_value).trim() === '') {
+				if (!cell || cell.v === null || cell.v === undefined || String(cell.v).trim() === '') {
 					continue
 				}
 
-				/* Si el valor es un número (o string numérico), no es cabecera. */
-				if (typeof cell_value === 'number' || !isNaN(Number(cell_value))) {
+				/* Si alguna celda no vacía es numérica, no es cabecera. */
+				if (typeof cell.v === 'number' || !isNaN(Number(cell.v))) {
 					detected_as_header = false
 					break
 				}
 			}
 
-			this.has_header_row = detected_as_header
+			/* Calcular start_row antes de asignar has_header_row (evita que el watcher lo pise). */
+			let calculated_start_row = detected_as_header
+				? first_non_empty_row + 1
+				: first_non_empty_row
 
-			/* Ajustar start_row según si hay cabecera o no. */
-			this.start_row = detected_as_header ? 2 : 1
+			this.start_row = Math.max(1, calculated_start_row)
+			this.has_header_row = detected_as_header
+		},
+
+		/*
+		 * True si la fila del Excel tiene al menos una celda con contenido (tras trim).
+		 *
+		 * @param {Array} row - Fila parseada con sheet_to_json
+		 * @returns {Boolean}
+		 */
+		excel_row_has_content(row) {
+			if (!Array.isArray(row)) {
+				return false
+			}
+
+			for (let j = 0; j < row.length; j++) {
+				let cell_value = row[j]
+
+				if (cell_value !== null && cell_value !== '' && String(cell_value).trim() !== '') {
+					return true
+				}
+			}
+
+			return false
 		},
 
 		/*
@@ -1057,15 +1425,15 @@ export default {
 				self.selected_provider_id = res.data.provider_id
 				self.provider_confidence  = res.data.provider_confidence
 
-				/* Datos del preanálisis de duplicados y recomendación de la IA. */
-				self.duplicate_stats             = res.data.duplicate_stats || null
-				self.recomendacion_configuracion = res.data.recomendacion_configuracion || null
+				/* Guardar índice de columna provider_code para refresh-provider-stats al cambiar proveedor. */
+				const provider_col = res.data.column_mapping.find(
+					col => col.system_property === 'codigo_de_proveedor'
+				)
+				self.provider_code_column_index = provider_col ? provider_col.excel_column_index : null
 
-				/* Preseleccionar los valores recomendados si la IA los devolvió. */
-				if (self.recomendacion_configuracion) {
-					self.clave_identidad   = self.recomendacion_configuracion.clave_identidad
-					self.politica_colision = self.recomendacion_configuracion.politica_colision
-				}
+				/* Datos del preanálisis de duplicados (la recomendación se genera al confirmar el paso 2). */
+				self.duplicate_stats = res.data.duplicate_stats || null
+				self.preview_rows    = res.data.preview_rows || []
 
 				self.step = 2
 			})
@@ -1084,8 +1452,82 @@ export default {
 			})
 		},
 
+		/*
+		 * Llama al endpoint get-recomendacion con el proveedor confirmado por el usuario
+		 * y los stats actualizados, y avanza al paso 3 con la recomendación correcta.
+		 */
+		confirmar_paso_2() {
+			let self = this
+
+			self.loading_recomendacion = true
+			self.recomendacion_configuracion = null
+
+			self.$api.post('ai-excel-import/get-recomendacion', {
+				excel_path:                 self.excel_path,
+				provider_id:                self.selected_provider_id,
+				provider_code_column_index: self.provider_code_column_index,
+				column_mapping:             self.column_mapping,
+			})
+			.then(function(res) {
+				self.loading_recomendacion = false
+
+				self.recomendacion_configuracion = res.data.recomendacion_configuracion || null
+
+				/* Actualizar duplicate_stats con los conteos recalculados para el proveedor confirmado. */
+				if (self.duplicate_stats) {
+					self.duplicate_stats = {
+						...self.duplicate_stats,
+						provider_codes_existentes_mismo_proveedor:   res.data.provider_codes_existentes_mismo_proveedor,
+						provider_codes_existentes_otros_proveedores: res.data.provider_codes_existentes_otros_proveedores,
+					}
+				}
+
+				/* Preseleccionar los valores recomendados. */
+				if (self.recomendacion_configuracion) {
+					self.clave_identidad   = self.recomendacion_configuracion.clave_identidad
+					self.politica_colision = self.recomendacion_configuracion.politica_colision
+				}
+
+				self.step = 3
+			})
+			.catch(function(err) {
+				self.loading_recomendacion = false
+
+				let message = 'Error al generar la recomendación.'
+				if (err.response && err.response.data && err.response.data.message) {
+					message = err.response.data.message
+				}
+
+				self.$toast.error(message)
+			})
+		},
+
 		/**
-		 * Traduce las 2 decisiones de negocio (clave_identidad + politica_colision)
+		 * Recalcula provider_codes_existentes_mismo/otros_proveedor cuando el usuario
+		 * cambia el proveedor en el paso 2 (stats del /analyze usan el proveedor inferido).
+		 */
+		refresh_provider_stats() {
+			let self = this
+
+			self.$api.post('ai-excel-import/refresh-provider-stats', {
+				excel_path:                 self.excel_path,
+				provider_code_column_index: self.provider_code_column_index,
+				provider_id:                self.selected_provider_id,
+			})
+			.then(function(res) {
+				self.duplicate_stats = {
+					...self.duplicate_stats,
+					provider_codes_existentes_mismo_proveedor:   res.data.provider_codes_existentes_mismo_proveedor,
+					provider_codes_existentes_otros_proveedores: res.data.provider_codes_existentes_otros_proveedores,
+				}
+			})
+			.catch(function(err) {
+				console.warn('refresh_provider_stats: error al recalcular stats', err)
+			})
+		},
+
+		/**
+		 * Traduce las decisiones de negocio (clave_identidad, politica_colision y politica_otro_proveedor)
 		 * a los 5 flags que sigue esperando /ai-excel-import/import.
 		 * Permite mantener el contrato del backend sin cambios.
 		 *
@@ -1104,19 +1546,21 @@ export default {
 			/* Solo se activan flags cuando la clave es provider_code. */
 			if (this.clave_identidad === 'provider_code') {
 
+				/* La política politica_otro_proveedor controla si se actualizan artículos de otros proveedores. */
+				if (this.politica_otro_proveedor === 'actualizar') {
+					flags.actualizar_articulos_de_otro_proveedor = 1
+				}
+
 				if (this.politica_colision === 'actualizar_todos') {
-					/* Actualizar todos los que coincidan, incluso de otros proveedores. */
 					flags.permitir_provider_code_repetido = 1
 					flags.permitir_provider_code_repetido_en_multi_providers = 1
-					flags.actualizar_articulos_de_otro_proveedor = 1
 					flags.actualizar_por_provider_code = 1
 
 				} else if (this.politica_colision === 'crear_nuevo') {
-					/* Permitir repetidos pero sin actualizar: se crea uno nuevo. */
 					flags.permitir_provider_code_repetido = 1
 					flags.permitir_provider_code_repetido_en_multi_providers = 1
 				}
-				/* 'actualizar_uno' deja todos los flags en 0 (comportamiento default del backend). */
+				/* 'actualizar_uno' deja todos esos flags en 0. */
 			}
 
 			return flags
@@ -1468,9 +1912,13 @@ export default {
 			this.has_header_row = true
 			this.header_row_manually_overridden = false
 			this.duplicate_stats             = null
+			this.provider_code_column_index  = null
 			this.recomendacion_configuracion = null
+			this.loading_recomendacion       = false
 			this.clave_identidad             = null
 			this.politica_colision           = null
+			this.politica_otro_proveedor     = null
+			this.preview_rows                = []
 		},
 
 	},
@@ -1612,4 +2060,150 @@ export default {
 .ai-import-header-auto-label
 	font-size: 11px
 	font-style: italic
+
+/* Chips de resumen del archivo en el paso 3 */
+.ai-import-summary-chips
+	display: flex
+	flex-wrap: wrap
+	gap: 8px
+
+/* Chip individual: borde redondeado, fondo suave */
+.ai-import-summary-chip
+	display: inline-flex
+	align-items: center
+	gap: 4px
+	padding: 4px 10px
+	border-radius: 20px
+	font-size: 12px
+	font-weight: 500
+	background: rgba(0, 123, 255, 0.08)
+	border: 1px solid rgba(0, 123, 255, 0.2)
+	color: #004085
+
+	/* Variante de advertencia: fondo naranja suave */
+	&--warning
+		background: rgba(255, 193, 7, 0.14)
+		border-color: rgba(255, 193, 7, 0.5)
+		color: #856404
+
+	/* Variante informativa: fondo verde suave */
+	&--info
+		background: rgba(40, 167, 69, 0.08)
+		border-color: rgba(40, 167, 69, 0.25)
+		color: #155724
+
+/* Card de recomendación de Claude en el paso 3 */
+.ai-import-recomendacion-card
+	background: #f8f9fa
+	border: 1px solid rgba(0, 123, 255, 0.2)
+	border-left: 4px solid #007bff
+	border-radius: 6px
+	padding: 14px 16px
+
+/* Línea resumen de la decisión recomendada dentro de la card */
+.ai-import-recomendacion-decision
+	display: inline-flex
+	align-items: center
+	gap: 4px
+	font-size: 13px
+	color: #155724
+	background: rgba(40, 167, 69, 0.1)
+	border: 1px solid rgba(40, 167, 69, 0.25)
+	border-radius: 4px
+	padding: 4px 10px
+
+	i
+		color: #28a745
+
+/* Tabla de duplicados del paso 3 */
+.ai-import-duplicates-table
+	border: 1px solid rgba(0, 0, 0, 0.1)
+	border-radius: 6px
+	overflow: hidden
+	font-size: 12px
+
+/* Fila de cabecera de la tabla de duplicados */
+.ai-import-duplicates-table__header
+	display: grid
+	grid-template-columns: 1fr 100px 1fr
+	gap: 8px
+	padding: 7px 12px
+	background: #f8f9fa
+	font-weight: 600
+	color: #495057
+	border-bottom: 1px solid rgba(0, 0, 0, 0.08)
+
+/* Fila de dato de la tabla de duplicados */
+.ai-import-duplicates-table__row
+	display: grid
+	grid-template-columns: 1fr 100px 1fr
+	gap: 8px
+	padding: 7px 12px
+	border-bottom: 1px solid rgba(0, 0, 0, 0.05)
+
+	&:last-child
+		border-bottom: none
+
+	&:hover
+		background: rgba(255, 193, 7, 0.06)
+
+/* Badge con el número de repeticiones en la tabla de duplicados */
+.ai-import-duplicates-badge
+	display: inline-flex
+	align-items: center
+	justify-content: center
+	min-width: 24px
+	height: 20px
+	padding: 0 6px
+	border-radius: 10px
+	font-size: 11px
+	font-weight: 700
+	background: rgba(255, 193, 7, 0.25)
+	color: #856404
+	border: 1px solid rgba(255, 193, 7, 0.4)
+
+/* Títulos de las preguntas de decisión en el paso 3 */
+.ai-import-decision-title
+	font-size: 14px
+	font-weight: 700
+	color: #343a40
+	margin-bottom: 10px
+	display: block
+
+/* Wrapper con scroll horizontal para la tabla de preview */
+.ai-import-preview-table-wrapper
+	overflow-x: auto
+	border: 1px solid rgba(0, 0, 0, 0.1)
+	border-radius: 6px
+
+/* Tabla de preview de artículos en el paso 2 */
+.ai-import-preview-table
+	width: 100%
+	border-collapse: collapse
+	font-size: 12px
+	white-space: nowrap
+
+	thead tr
+		background: #f8f9fa
+		border-bottom: 2px solid rgba(0, 0, 0, 0.08)
+
+	th
+		padding: 7px 12px
+		font-weight: 600
+		color: #495057
+		text-align: left
+
+	td
+		padding: 6px 12px
+		border-bottom: 1px solid rgba(0, 0, 0, 0.05)
+		color: #343a40
+		max-width: 200px
+		overflow: hidden
+		text-overflow: ellipsis
+
+	tbody tr:last-child td
+		border-bottom: none
+
+	tbody tr:hover
+		background: rgba(0, 123, 255, 0.03)
 </style>

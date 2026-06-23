@@ -159,10 +159,10 @@
 	&--always-open
 		padding: 8px 14px
 
-	/* Body con layout en grilla responsive para etapas 1 y 3 */
+	/* Body con layout flexible para etapas 1 y 3: los selectores se alinean en fila y colapsan si no están visibles */
 	&--grid
-		display: grid
-		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr))
+		display: flex
+		flex-wrap: wrap
 		gap: 10px 16px
 		align-items: start
 		padding: 14px 16px
@@ -174,13 +174,32 @@
 	&:last-child
 		margin-bottom: 0
 
-	/* Campo que ocupa el ancho completo de la grilla */
+	/* Campo que ocupa el ancho completo del contenedor flexible */
 	&--full
-		grid-column: 1 / -1
+		flex: 1 1 100%
+		width: 100%
 
-/* En grilla, el gap maneja el espaciado */
+/* En layout flexible, el gap maneja el espaciado */
 .vender-stage__body--grid > .vender-stage__field
 	margin-bottom: 0
+
+/* Gap horizontal entre selectores (debe coincidir con gap del --grid) */
+$vender_stage_field_gap: 16px
+
+/* Selectores por fila: hasta 1499px máximo 3; desde 1500px hasta 5 */
+.vender-stage__body--grid > .vender-stage__field:not(.vender-stage__field--full)
+	flex: 1 1 calc((100% - #{$vender_stage_field_gap * 2}) / 3)
+	max-width: calc((100% - #{$vender_stage_field_gap * 2}) / 3)
+	min-width: 220px
+
+@media (min-width: 1500px)
+	.vender-stage__body--grid > .vender-stage__field:not(.vender-stage__field--full)
+		flex: 1 1 calc((100% - #{$vender_stage_field_gap * 4}) / 5)
+		max-width: calc((100% - #{$vender_stage_field_gap * 4}) / 5)
+
+/* Ocultar contenedores sin selector renderizado (los hijos usan v-if y no montan controles) */
+.vender-stage__body--grid > .vender-stage__field:not(.vender-stage__field--full):not(:has(.input-group)):not(:has(.form-moneda))
+	display: none
 
 /* Fila horizontal con dos campos (cliente + AFIP) */
 .vender-stage__field--row
@@ -201,8 +220,10 @@
 	align-items: center
 	gap: 12px 20px
 
-/* Separador visual dentro del body */
+/* Separador visual dentro del body — ancho completo en layout flexible */
 .vender-stage__separator
+	flex: 1 1 100%
+	width: 100%
 	margin: 12px 0
 	border-color: var(--color-border-tertiary, #dee2e6)
 
