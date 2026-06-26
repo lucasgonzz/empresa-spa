@@ -501,7 +501,7 @@
 				<b-button
 				variant="primary"
 				:disabled="!clave_identidad
-					|| (clave_identidad === 'provider_code' && !politica_colision)
+					|| (clave_identidad === 'provider_code' && duplicate_stats && duplicate_stats.provider_codes_duplicados_intra_archivo > 0 && !politica_colision)
 					|| (clave_identidad === 'provider_code' && duplicate_stats && duplicate_stats.provider_codes_existentes_otros_proveedores > 0 && !politica_otro_proveedor)"
 				@click="step = 4">
 					Continuar
