@@ -5,6 +5,7 @@ export default {
 			key: 'iva_id',
 			type: 'select',
 			show: true,
+			relation_prop_name: 'percentage',
 			use_store_models: true,
 		},
 		{

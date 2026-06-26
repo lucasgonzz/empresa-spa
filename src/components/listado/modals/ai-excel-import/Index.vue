@@ -139,6 +139,17 @@
 				</b-form-select>
 			</b-form-group>
 
+			<b-alert
+			v-if="has_provider_column"
+			show
+			variant="info"
+			class="m-t-10 m-b-0">
+				<i class="icon-info m-r-5"></i>
+				El proveedor de cada artículo se tomará de la columna del Excel.
+				Dejá <strong>Sin proveedor</strong> en el selector de arriba para que funcione correctamente.
+				Si elegís un proveedor global, pisará el valor de la columna para todos los artículos.
+			</b-alert>
+
 		</div>
 
 		<hr
@@ -408,6 +419,26 @@
 				</small>
 
 			</div>
+
+			<!-- Explicación del comportamiento con bar_codes repetidos -->
+			<b-alert
+			v-if="bar_codes_detail.length > 0 || (duplicate_stats && duplicate_stats.bar_codes_duplicados_intra_archivo > 0)"
+			show
+			variant="warning"
+			class="m-b-15">
+				<p class="font-weight-bold m-b-5 m-t-0 small">
+					<i class="icon-alert-triangle m-r-5"></i>
+					¿Qué va a pasar con los códigos de barras repetidos?
+				</p>
+				<p class="small m-b-0 m-t-0">
+					No se crearán artículos con código de barras duplicado.
+					Cuando el mismo código aparece varias veces en el Excel,
+					se procesará <strong>un único artículo</strong> y la información
+					de la <strong>última aparición</strong> en el archivo sobreescribirá a las anteriores.
+					Revisá el Excel antes de continuar, o tené en cuenta que solo quedará
+					la información de la última fila con ese código.
+				</p>
+			</b-alert>
 
 			<!-- Card de recomendación de Claude IA -->
 			<div v-if="recomendacion_configuracion" class="ai-import-recomendacion-card m-b-20">
@@ -800,6 +831,15 @@ export default {
 		},
 
 		/*
+		 * True si alguna columna del mapeo fue asignada a 'proveedor'.
+		 * En ese caso el proveedor de cada artículo se toma de la columna del Excel,
+		 * no del selector global.
+		 */
+		has_provider_column() {
+			return this.column_mapping.some(item => item.system_property === 'proveedor')
+		},
+
+		/*
 		 * Cantidad de filas que se importarán según start_row y finish_row.
 		 */
 		excel_rows_to_import_count() {
@@ -977,6 +1017,7 @@ export default {
 				{ value: 'stock_actual',          text: 'Stock actual' },
 				{ value: 'descuentos',            text: 'Descuentos' },
 				{ value: 'recargos',              text: 'Recargos' },
+				{ value: 'proveedor',             text: 'Proveedor' },
 			]
 		},
 
@@ -1004,6 +1045,7 @@ export default {
 				stock_actual:         'Stock',
 				descuentos:           'Descuentos',
 				recargos:             'Recargos',
+				proveedor:            'Proveedor',
 				// cliente
 				telefono:             'Teléfono',
 				email:                'Email',
