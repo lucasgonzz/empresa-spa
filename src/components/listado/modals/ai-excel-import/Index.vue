@@ -1735,8 +1735,9 @@ export default {
 			}
 
 			let property_aliases = {
-				codigo_proveedor: 'codigo_de_proveedor',
-				codigo_barras: 'codigo_de_barras',
+				codigo_proveedor:  'codigo_de_proveedor',
+				codigo_barras:     'codigo_de_barras',
+				moneda:            'costo_en_dolares',
 			}
 
 			if (property_aliases[system_property]) {
