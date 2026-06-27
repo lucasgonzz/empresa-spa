@@ -6,15 +6,13 @@
 		<div
 		ref="tabla_contenedor" 
 		class="table-component-scroll"
-		style="max-height: 70vh; overflow-y: auto;"
+		:style="container_style"
 		:id="'cont-table-results-'+model_name"
 		v-if="models.length">
 				<b-table
-				sticky-header="70vh"
 				:dusk="'table-results-'+model_name"
 				:class="table_component_table_class"
 				head-variant="dark"
-				responsive
 				:striped="_striped"
 				:fields="fields"
 				:items="items"
@@ -349,13 +347,18 @@ export default {
 			is_from_keydown: false,
 			show_image_preview: false,
 			preview_image_url: '',
+			// Altura disponible calculada dinámicamente desde el top del contenedor hasta el borde inferior de la ventana
+			available_height: null,
 		}
 	},
 	mounted() {
 		window.addEventListener('keydown', this.handlePreviewKeydown)
+		this.recalcular_altura()
+		window.addEventListener('resize', this.recalcular_altura)
 	},
 	beforeDestroy() {
 		window.removeEventListener('keydown', this.handlePreviewKeydown)
+		window.removeEventListener('resize', this.recalcular_altura)
 	},
 	watch: {
 		selected_index() {
@@ -373,6 +376,21 @@ export default {
 		},
 	},
 	computed: {
+		/**
+		 * Estilos inline del wrapper scroll: altura dinámica hasta el borde inferior de la ventana.
+		 * Fallback a 70vh hasta que mounted() calcule available_height.
+		 */
+		container_style() {
+			var height = this.available_height
+				? Math.max(200, this.available_height) + 'px'
+				: '70vh'
+			return {
+				height: height,
+				maxHeight: height,
+				overflowY: 'auto',
+				overflowX: 'auto',
+			}
+		},
 		table_component_table_class() {
 			const classes = ['s-2', 'b-r-1', 'table-component-b-table']
 			if (!this.is_from_search_modal) {
@@ -474,6 +492,21 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Recalcula la altura disponible del contenedor de tabla según su posición en viewport.
+		 * Resta 8px de margen inferior para evitar scroll residual en la página.
+		 */
+		recalcular_altura: function() {
+			var self = this
+			self.$nextTick(function() {
+				var el = self.$refs.tabla_contenedor
+				if (el) {
+					var top = el.getBoundingClientRect().top
+					var height = window.innerHeight - top - 8
+					self.available_height = height
+				}
+			})
+		},
 		openImagePreview(image_url) {
 			if (!image_url) {
 				return
@@ -666,9 +699,15 @@ export default {
 @import '@/sass/_custom.scss'
 
 .table-component-scroll
-	overflow-x: auto
+	overflow: auto
 	width: 100%
 	text-align: left
+
+	// sticky thead via CSS (reemplaza sticky-header de b-table)
+	thead th
+		position: sticky
+		top: 0
+		z-index: 5
 
 	.table.table-component-b-table,
 	table.table
