@@ -116,6 +116,14 @@ export default __base_store({
 					})
 				}
 
+				/**
+				 * Gastos legacy o altas sin extensión pueden venir sin moneda_id;
+				 * el backend persiste pesos (1) pero la UI debe alinearlo para métodos de pago.
+				 */
+				if (!model.moneda_id) {
+					model.moneda_id = 1
+				}
+
 				model.payment_methods = selected_payment_methods
 				state.model = model
 				state.selected_payment_methods = selected_payment_methods
