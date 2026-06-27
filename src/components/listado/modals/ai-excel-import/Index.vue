@@ -475,6 +475,18 @@
 		<b-form-group
 		label="¿Qué campo identifica un artículo como 'el mismo'?"
 		label-class="ai-import-decision-title">
+			<b-form-radio
+				v-if="has_numero_column"
+				v-model="clave_identidad"
+				value="numero"
+				class="m-b-5">
+				Número del artículo (ID interno del sistema)
+				<small class="d-block text-muted m-t-3">
+					Identificá el artículo por su número único asignado por el sistema.
+					Usá esta opción solo si el Excel fue exportado desde este sistema.
+					Si el Excel también tiene una columna de código de barras, con esta opción también se puede actualizar ese código.
+				</small>
+			</b-form-radio>
 			<b-form-radio v-model="clave_identidad" value="bar_code" class="m-b-5">
 				Código de barras
 			</b-form-radio>
@@ -869,6 +881,14 @@ export default {
 		 */
 		has_provider_column() {
 			return this.column_mapping.some(item => item.system_property === 'proveedor')
+		},
+
+		/*
+		 * Verdadero si el mapeo actual tiene al menos una columna asignada a 'numero' (ID interno).
+		 * Controla si se muestra la opción de clave de identidad por número en el paso 3.
+		 */
+		has_numero_column() {
+			return this.column_mapping.some(item => item.system_property === 'numero')
 		},
 
 		/*
@@ -1791,6 +1811,7 @@ export default {
 
 			/* Diccionario de etiquetas para propiedades planas conocidas. */
 			const labels = {
+				numero:               'Número',
 				nombre:               'Nombre',
 				codigo_de_barras:     'Cód. barras',
 				sku:                  'SKU',
