@@ -1054,6 +1054,7 @@ export default {
 			/* Opciones para artículos (model === 'article' o default). */
 			let options = [
 				ignore_option,
+				{ value: 'numero',                text: 'Número (ID del sistema)' },
 				{ value: 'nombre',                text: 'Nombre' },
 				{ value: 'codigo_de_barras',      text: 'Código de barras' },
 				{ value: 'sku',                   text: 'SKU' },
