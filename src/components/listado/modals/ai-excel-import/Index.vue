@@ -165,6 +165,19 @@
 				<span class="ai-import-mapping-legend-ignored"> Las filas en violeta se ignoran en la importación.</span>
 			</p>
 
+			<!-- Notas de asistencia globales de Claude (consejos generales sobre el archivo) -->
+			<div
+			v-if="assistant_notes.length > 0"
+			class="assistant-notes-container m-b-15">
+				<div
+				v-for="(note, idx) in assistant_notes"
+				:key="'an-' + idx"
+				class="assistant-note">
+					<span class="assistant-note-icon">💡</span>
+					<span class="assistant-note-text">{{ note }}</span>
+				</div>
+			</div>
+
 			<b-alert
 			v-if="column_mapping_interpretation_alerts.length > 0"
 			show
@@ -736,6 +749,9 @@ export default {
 
 			/* Filas de muestra del Excel (máx. 5) para la preview del paso 2. */
 			preview_rows: [],
+
+			/* Notas globales de asistencia generadas por Claude durante el análisis. */
+			assistant_notes: [],
 		}
 	},
 
@@ -788,6 +804,22 @@ export default {
 		 */
 		providers() {
 			return this.$store.state.provider.models
+		},
+
+		/*
+		 * Depósitos del usuario, usados para generar dinámicamente las opciones
+		 * de stock por depósito en el dropdown de mapeo.
+		 */
+		addresses() {
+			return this.$store.state.address.models
+		},
+
+		/*
+		 * Listas de precio del usuario, usadas para generar dinámicamente las
+		 * opciones de precio por lista en el dropdown de mapeo.
+		 */
+		price_types() {
+			return this.$store.state.price_type.models
 		},
 
 		provider_options() {
@@ -1000,7 +1032,7 @@ export default {
 			}
 
 			/* Opciones para artículos (model === 'article' o default). */
-			return [
+			let options = [
 				ignore_option,
 				{ value: 'nombre',                text: 'Nombre' },
 				{ value: 'codigo_de_barras',      text: 'Código de barras' },
@@ -1018,7 +1050,55 @@ export default {
 				{ value: 'descuentos',            text: 'Descuentos' },
 				{ value: 'recargos',              text: 'Recargos' },
 				{ value: 'proveedor',             text: 'Proveedor' },
+				/* Precio */
+				{ value: 'costo_en_dolares',    text: 'Costo en dólares (Si/No)' },
+				{ value: 'aplicar_iva',         text: 'Aplicar IVA (Si/No)' },
+				/* Stock y medidas */
+				{ value: 'medida',              text: 'Medida / Contenido (número)' },
+				{ value: 'contenido',           text: 'Contenido (texto)' },
+				{ value: 'unidad_medida',       text: 'Unidad de medida' },
+				{ value: 'u_individuales',      text: 'Unidades individuales' },
+				/* Descuentos y recargos */
+				{ value: 'descuentos_montos',   text: 'Descuentos (montos $)' },
+				{ value: 'recargos_montos',     text: 'Recargos (montos $)' },
+				/* Estado y visibilidad */
+				{ value: 'in_offer',            text: 'En oferta (Si/No)' },
+				{ value: 'online',              text: 'Activo / Visible (Si/No)' },
+				{ value: 'precio_pausado',      text: 'Precio pausado (Si/No)' },
+				{ value: 'disponible_tienda_nube', text: 'Disponible en Tienda Nube (Si/No)' },
 			]
+
+			/*
+			 * Grupo dinámico de depósitos: una opción de stock/min/max por cada depósito del usuario.
+			 * El separador __group__ es una opción deshabilitada que actúa como encabezado visual.
+			 */
+			if (this.addresses.length > 0) {
+				options.push({ value: '__group__', text: '— Stock por depósito —', disabled: true })
+				this.addresses.forEach(address => {
+					const id = address.id
+					const name = address.street
+					options.push({ value: `address_${id}_amount`, text: `Stock: ${name}` })
+					options.push({ value: `address_${id}_min`,    text: `Stock mínimo: ${name}` })
+					options.push({ value: `address_${id}_max`,    text: `Stock máximo: ${name}` })
+				})
+			}
+
+			/*
+			 * Grupo dinámico de listas de precio: solo disponible si el usuario tiene listas
+			 * cargadas y la extensión de margen por lista activa.
+			 */
+			if (this.price_types.length > 0 && this.hasExtencion('articulo_margen_de_ganancia_segun_lista_de_precios')) {
+				options.push({ value: '__group__', text: '— Listas de precio —', disabled: true })
+				this.price_types.forEach(pt => {
+					const id = pt.id
+					const name = pt.name
+					options.push({ value: `price_type_${id}_final_price`, text: `$ Final: ${name}` })
+					options.push({ value: `price_type_${id}_percentage`,  text: `%: ${name}` })
+					options.push({ value: `price_type_${id}_setear`,      text: `Setear precio final: ${name}` })
+				})
+			}
+
+			return options
 		},
 
 		/*
@@ -1029,46 +1109,10 @@ export default {
 		preview_columns() {
 			if (!this.column_mapping || this.column_mapping.length === 0) return []
 
-			const labels = {
-				nombre:               'Nombre',
-				codigo_de_barras:     'Cód. barras',
-				sku:                  'SKU',
-				codigo_de_proveedor:  'Cód. proveedor',
-				costo:                'Costo',
-				precio:               'Precio',
-				iva:                  'IVA',
-				margen_de_ganancia:   'Margen',
-				categoria:            'Categoría',
-				sub_categoria:        'Sub categoría',
-				marca:                'Marca',
-				descripcion:          'Descripción',
-				stock_actual:         'Stock',
-				descuentos:           'Descuentos',
-				recargos:             'Recargos',
-				proveedor:            'Proveedor',
-				// cliente
-				telefono:             'Teléfono',
-				email:                'Email',
-				direccion:            'Dirección',
-				localidad:            'Localidad',
-				provincia:            'Provincia',
-				cuit:                 'CUIT',
-				cuil:                 'CUIL',
-				dni:                  'DNI',
-				razon_social:         'Razón social',
-				numero:               'Número',
-				vendedor:             'Vendedor',
-				condicion_frente_al_iva: 'Cond. IVA',
-				tipo_de_precio:       'Tipo precio',
-				saldo_actual:         'Saldo',
-				// proveedor
-				observaciones:        'Observaciones',
-			}
-
 			return this.column_mapping
 				.filter(item => item.system_property !== null && item.system_property !== '')
 				.map(item => ({
-					label: labels[item.system_property] || item.system_property,
+					label: this.get_property_label(item.system_property),
 					excel_column_index: item.excel_column_index,
 				}))
 		},
@@ -1477,6 +1521,9 @@ export default {
 				self.duplicate_stats = res.data.duplicate_stats || null
 				self.preview_rows    = res.data.preview_rows || []
 
+				/* Notas globales de asistencia que Claude generó sobre el archivo completo. */
+				self.assistant_notes = res.data.assistant_notes || []
+
 				self.step = 2
 			})
 			.catch(function(err) {
@@ -1700,26 +1747,156 @@ export default {
 		},
 
 		/*
+		 * Devuelve una etiqueta amigable para una propiedad del sistema, incluyendo
+		 * las propiedades codificadas de depósitos (address_{id}_{sub_tipo}) y listas
+		 * de precio (price_type_{id}_{sub_tipo}). Para propiedades planas conocidas
+		 * usa el diccionario estático; si no la reconoce devuelve el valor crudo.
+		 *
+		 * @param {string|null} system_property - Propiedad a etiquetar.
+		 * @returns {string} - Etiqueta legible para mostrar en la UI.
+		 */
+		get_property_label(system_property) {
+			if (system_property === null || system_property === '') {
+				return ''
+			}
+
+			/* Propiedad codificada de depósito: address_{id}_{amount|min|max}. */
+			let address_match = system_property.match(/^address_(\d+)_(amount|min|max)$/)
+			if (address_match) {
+				const address_id = parseInt(address_match[1])
+				const sub_type   = address_match[2]
+				const address    = this.addresses.find(a => a.id === address_id)
+				if (address) {
+					if (sub_type === 'amount') return 'Stock: ' + address.street
+					if (sub_type === 'min')    return 'Stock mín: ' + address.street
+					if (sub_type === 'max')    return 'Stock máx: ' + address.street
+				}
+				return system_property
+			}
+
+			/* Propiedad codificada de lista de precio: price_type_{id}_{final_price|percentage|setear}. */
+			let pt_match = system_property.match(/^price_type_(\d+)_(final_price|percentage|setear)$/)
+			if (pt_match) {
+				const pt_id    = parseInt(pt_match[1])
+				const sub_type = pt_match[2]
+				const pt       = this.price_types.find(p => p.id === pt_id)
+				if (pt) {
+					if (sub_type === 'final_price') return '$ Final: ' + pt.name
+					if (sub_type === 'percentage')  return '%: ' + pt.name
+					if (sub_type === 'setear')      return 'Setear: ' + pt.name
+				}
+				return system_property
+			}
+
+			/* Diccionario de etiquetas para propiedades planas conocidas. */
+			const labels = {
+				nombre:               'Nombre',
+				codigo_de_barras:     'Cód. barras',
+				sku:                  'SKU',
+				codigo_de_proveedor:  'Cód. proveedor',
+				costo:                'Costo',
+				precio:               'Precio',
+				iva:                  'IVA',
+				margen_de_ganancia:   'Margen',
+				categoria:            'Categoría',
+				sub_categoria:        'Sub categoría',
+				marca:                'Marca',
+				descripcion:          'Descripción',
+				stock_actual:         'Stock',
+				descuentos:           'Descuentos',
+				recargos:             'Recargos',
+				proveedor:            'Proveedor',
+				// propiedades nuevas de artículo
+				costo_en_dolares:       'Costo en USD',
+				aplicar_iva:            'Aplicar IVA',
+				medida:                 'Medida',
+				contenido:              'Contenido',
+				unidad_medida:          'Unidad medida',
+				u_individuales:         'U. individuales',
+				descuentos_montos:      'Desc. (montos)',
+				recargos_montos:        'Recarg. (montos)',
+				in_offer:               'En oferta',
+				online:                 'Activo',
+				precio_pausado:         'Precio pausado',
+				disponible_tienda_nube: 'Tienda Nube',
+				// cliente
+				telefono:             'Teléfono',
+				email:                'Email',
+				direccion:            'Dirección',
+				localidad:            'Localidad',
+				provincia:            'Provincia',
+				cuit:                 'CUIT',
+				cuil:                 'CUIL',
+				dni:                  'DNI',
+				razon_social:         'Razón social',
+				numero:               'Número',
+				vendedor:             'Vendedor',
+				condicion_frente_al_iva: 'Cond. IVA',
+				tipo_de_precio:       'Tipo precio',
+				saldo_actual:         'Saldo',
+				// proveedor
+				observaciones:        'Observaciones',
+			}
+
+			return labels[system_property] || system_property
+		},
+
+		/*
 		 * Transforma el column_mapping al formato que espera InitExcelImport.
 		 * Genera un objeto { system_property: 0-indexed-position } descartando
 		 * las columnas marcadas como "Ignorar columna" (system_property === null).
+		 * Las propiedades codificadas de depósitos y listas de precio se traducen
+		 * a los nombres internos planos que espera ProcessRow.
 		 */
 		build_columns() {
 			let columns = {}
 
 			this.column_mapping.forEach((item, index) => {
 				let system_property = this.normalize_system_property_key(item.system_property)
-
-				if (system_property !== null) {
-					/*
-					 * Posición real en el Excel (0-based); el backend la envía como excel_column_index.
-					 */
-					let column_position = index
-					if (typeof item.excel_column_index === 'number') {
-						column_position = item.excel_column_index
-					}
-					columns[system_property] = column_position
+				if (system_property === null) {
+					return
 				}
+
+				/*
+				 * Posición real en el Excel (0-based); el backend la envía como excel_column_index.
+				 */
+				let column_position = index
+				if (typeof item.excel_column_index === 'number') {
+					column_position = item.excel_column_index
+				}
+
+				/* Traducir propiedades codificadas de depósitos a las claves planas de ProcessRow. */
+				let address_match = system_property.match(/^address_(\d+)_(amount|min|max)$/)
+				if (address_match) {
+					const address_id = parseInt(address_match[1])
+					const sub_type   = address_match[2]
+					const address    = this.addresses.find(a => a.id === address_id)
+					if (address) {
+						const street_key = address.street.toLowerCase().replace(/\s+/g, '_')
+						if (sub_type === 'amount') columns[street_key]          = column_position
+						if (sub_type === 'min')    columns['min_' + street_key] = column_position
+						if (sub_type === 'max')    columns['max_' + street_key] = column_position
+					}
+					return
+				}
+
+				/* Traducir propiedades codificadas de listas de precio a las claves planas de ProcessRow. */
+				let pt_match = system_property.match(/^price_type_(\d+)_(final_price|percentage|setear)$/)
+				if (pt_match) {
+					const pt_id    = parseInt(pt_match[1])
+					const sub_type = pt_match[2]
+					const pt       = this.price_types.find(p => p.id === pt_id)
+					if (pt) {
+						const name_key = pt.name.toLowerCase().replace(/\s+/g, '_')
+						if (sub_type === 'final_price') columns['$_final_' + name_key]             = column_position
+						if (sub_type === 'percentage')  columns['%_' + name_key]                   = column_position
+						if (sub_type === 'setear')      columns['setear_precio_final_' + name_key] = column_position
+					}
+					return
+				}
+
+				/* Propiedad plana normal. */
+				columns[system_property] = column_position
 			})
 
 			/*
@@ -1961,8 +2138,25 @@ export default {
 			this.politica_colision           = null
 			this.politica_otro_proveedor     = null
 			this.preview_rows                = []
+			this.assistant_notes             = []
 		},
 
+	},
+
+	/*
+	 * Al montar el modal aseguramos que los depósitos y listas de precio estén
+	 * cargados en el store, ya que el dropdown de mapeo genera sus opciones a
+	 * partir de ellos. Solo se despachan si aún no hay datos, para evitar
+	 * peticiones redundantes cuando el padre ya los cargó.
+	 */
+	created() {
+		if (this.addresses.length === 0) {
+			this.$store.dispatch('address/getModels')
+		}
+
+		if (this.price_types.length === 0) {
+			this.$store.dispatch('price_type/getModels')
+		}
 	},
 
 }
@@ -1992,6 +2186,31 @@ export default {
 	&--active
 		background: #007bff
 		color: #fff
+
+/* Contenedor de notas de asistencia globales de Claude (paso 2) */
+.assistant-notes-container
+	display: flex
+	flex-direction: column
+	gap: 6px
+
+/* Nota individual de asistencia: fondo ámbar suave con ícono de bombilla */
+.assistant-note
+	display: flex
+	align-items: flex-start
+	gap: 8px
+	padding: 8px 12px
+	border-radius: 6px
+	background: rgba(255, 193, 7, 0.12)
+	border-left: 4px solid #ffc107
+	font-size: 13px
+	color: #6c5200
+
+.assistant-note-icon
+	flex-shrink: 0
+	line-height: 1.4
+
+.assistant-note-text
+	line-height: 1.4
 
 /* Tabla de mapeo de columnas */
 .ai-import-mapping-table
