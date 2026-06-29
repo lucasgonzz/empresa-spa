@@ -119,7 +119,7 @@
             >
                 <b-form-select
                     :value="payment_method.caja_id"
-                    :options="get_caja_options(payment_method.current_acount_payment_method_id, address_id, payment_method.moneda_id)"
+                    :options="get_caja_options(payment_method.current_acount_payment_method_id, address_id, resolve_payment_method_moneda_id(payment_method))"
                     @change="update_caja_id(index, $event, payment_method)"
                 ></b-form-select>
 
@@ -237,12 +237,32 @@ export default {
                 ||modalId == 'current-acounts-pago'
             ) {
                 let payment_method = this.payment_methods[0]
-                this.set_caja_por_defecto(0, payment_method.current_acount_payment_method_id, payment_method.moneda_id)
+                let moneda_id = this.resolve_payment_method_moneda_id(payment_method)
+                this.set_caja_por_defecto(0, payment_method.current_acount_payment_method_id, moneda_id)
             }
         })
     },
     methods: {
 
+        /**
+         * Moneda efectiva del método de pago para filtrar cajas y validar compatibilidad.
+         * Sin extensión ventas_en_dolares se usa la moneda base del comprobante (pesos por defecto).
+         *
+         * @param {Object} payment_method Fila de método de pago del formulario.
+         * @returns {number}
+         */
+        resolve_payment_method_moneda_id(payment_method) {
+            if (!this.hasExtencion('ventas_en_dolares')) {
+                return Number(this.base_moneda) || 1
+            }
+
+            const moneda_id = Number(payment_method.moneda_id)
+            if (!Number.isNaN(moneda_id) && moneda_id) {
+                return moneda_id
+            }
+
+            return Number(this.base_moneda) || 0
+        },
 
         on_check_field_change(index, payload) {
             // payload = { key, value }
@@ -255,7 +275,11 @@ export default {
             this.$emit('update_payment_method_id', index, method_id)
 
             this.$nextTick(() => {
-                let moneda_id = Number(this.payment_methods[index]?.moneda_id) || 0
+                let pm = this.payment_methods[index]
+                if (!pm) {
+                    return
+                }
+                let moneda_id = this.resolve_payment_method_moneda_id(pm)
                 this.set_caja_por_defecto(index, method_id, moneda_id)
             })
         },
@@ -418,8 +442,11 @@ export default {
         cash_box_moneda_error(payment_method) {
             if (!this.validate_cash_box_moneda) return false
             if (!payment_method.caja_id) return false
-            if (!payment_method.moneda_id) return false
-            return !this.validate_cash_box_moneda(payment_method.caja_id, payment_method.moneda_id)
+
+            let moneda_id = this.resolve_payment_method_moneda_id(payment_method)
+            if (!moneda_id) return false
+
+            return !this.validate_cash_box_moneda(payment_method.caja_id, moneda_id)
         },
 
         update_caja_id(index, value, payment_method) {
@@ -440,8 +467,9 @@ export default {
                 return
             }
 
-            // ✅ VALIDACIÓN CORRECTA: moneda de caja vs moneda del método
-            if (caja.moneda_id !== null && Number(caja.moneda_id) !== Number(payment_method.moneda_id)) {
+            // Validación: moneda de caja vs moneda efectiva del método (pesos si no hay extensión dólares)
+            let moneda_metodo = this.resolve_payment_method_moneda_id(payment_method)
+            if (caja.moneda_id !== null && Number(caja.moneda_id) !== moneda_metodo) {
                 this.$toast.error('La caja seleccionada debe ser de la misma moneda que este método de pago')
 
                 // Fuerza a que el select vuelva al valor anterior (opcional, pero deja el UI perfecto)

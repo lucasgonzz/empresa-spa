@@ -49,8 +49,23 @@ export default {
             }
             return null
         },
+        /**
+         * Moneda del gasto usada como base para métodos de pago y validación de cajas.
+         * Sin extensión ventas_en_dolares siempre es pesos (id 1); el campo no se muestra en el formulario.
+         *
+         * @returns {number}
+         */
         base_moneda() {
-            return this.expense.moneda_id
+            if (!this.hasExtencion('ventas_en_dolares')) {
+                return 1
+            }
+
+            const moneda_id = Number(this.expense.moneda_id)
+            if (Number.isNaN(moneda_id) || !moneda_id) {
+                return 1
+            }
+
+            return moneda_id
         },
     },
     data() {
@@ -77,6 +92,11 @@ export default {
         on_modal_show() {
             // ✅ fuerza remount del MultiPaymentMethods
             this.payment_methods_key += 1
+
+            // Sin extensión dólares el gasto siempre es en pesos aunque el formulario oculte moneda_id
+            if (!this.hasExtencion('ventas_en_dolares')) {
+                this.$set(this.expense, 'moneda_id', 1)
+            }
 
             // ✅ resetea el array con la moneda actual (base_moneda ya viene de expense)
             this.$set(this.expense, 'payment_methods', [this.payment_method_factory()])

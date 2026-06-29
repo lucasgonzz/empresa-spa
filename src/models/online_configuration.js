@@ -12,6 +12,9 @@ export default {
 			text: 'Registrarse para comprar',
 			key: 'register_to_buy',
 			type: 'checkbox',
+			descriptions: [
+				'Solo disponible si no se trabaja con listas de precios',
+			],
 		},
 		{
 			text: 'Recargos a los precios en la Tienda',
