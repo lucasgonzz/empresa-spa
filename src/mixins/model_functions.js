@@ -402,6 +402,18 @@ export default {
                 return this.model.address.street+' '+this.model.address.street_number
             }
         },
+        /**
+         * Etiqueta legible de la modalidad de entrega del pedido online.
+         *
+         * @param {object} order
+         * @returns {string}
+         */
+        getOrderDeliverLabel(order) {
+            if (Number(order.deliver) === 1) {
+                return 'Envio a domicilio'
+            }
+            return 'Retiro por local'
+        },
         currentAcountStatus(current_acount) {
             if (current_acount.status == 'sin_pagar') {
                 return 'Sin pagar'

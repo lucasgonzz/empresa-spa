@@ -53,9 +53,9 @@ export default {
 			only_show: true,
 		},
 		{
-			text: 'Para enviar',
+			text: 'Modalidad de entrega',
 			key: 'deliver',
-			type: 'checkbox',
+			function: 'getOrderDeliverLabel',
 			only_show: true,
 			not_show: true,
 		},
