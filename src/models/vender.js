@@ -62,9 +62,15 @@ var VENDER_OWN_PROPERTIES = [
 		type: 'number',
 	},
 	{
+		key: 'amount',
+		text: 'Cantidad',
+		type: 'number',
+		locked_visible: true,
+	},
+	{
 		key: 'price_type_personalizado_id',
 		text: 'Lista de precio individual',
-		type: 'display',
+		type: 'select',
 		if_has_extencion: 'cambiar_price_type_en_vender_item_por_item',
 	},
 ]

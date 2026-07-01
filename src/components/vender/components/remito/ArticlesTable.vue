@@ -3,13 +3,14 @@
 	<hr>
 	<b-row>
 		<b-col>
-			<b-table 
+			<b-table
 			class="b-r-1"
 			v-if="items.length"
-			:items="table_items" 
-			head-variant="dark" 
-			:fields="fields" 
-			responsive 
+			:key="fields_signature"
+			:items="table_items"
+			head-variant="dark"
+			:fields="fields"
+			responsive
 			hover>
 				<template #cell(attachments)="data">
 					<item-attachments
@@ -299,11 +300,10 @@ export default {
 				fields.push({ key: 'attachments', label: 'Adj.' })
 			}
 
-			/* Bloque configurable: orden, visibilidad y ancho elegidos por el usuario */
+			/* Bloque configurable: orden, visibilidad y ancho elegidos por el usuario. */
+			/* Incluye "Cantidad" con posicion configurable pero visibilidad bloqueada */
+			/* (locked_visible en vender.js) — unico lugar para editar la cantidad del item. */
 			fields = fields.concat(this.dynamic_table_fields)
-
-			/* Fija: unico lugar para editar la cantidad de un item ya agregado */
-			fields.push({ key: 'amount', label: 'Cantidad' })
 
 			if (this.hasExtencion('article_variants')) {
 				fields.push({
@@ -338,6 +338,23 @@ export default {
 			fields.push({ key: 'options', label: 'Opciones' })
 
 			return fields
+		},
+		/**
+		 * Firma de la configuracion de columnas (key + ancho + salto de linea) usada como :key
+		 * del b-table. BootstrapVue no siempre recalcula el layout de columnas cuando solo
+		 * cambian propiedades internas de `fields` (ej. thStyle) sin que cambie la instancia del
+		 * componente — forzar el remount con este key es lo que hace que el ancho se vea
+		 * actualizado apenas se guarda, sin necesidad de recargar la pagina.
+		 *
+		 * @returns {string}
+		 */
+		fields_signature() {
+			return this.fields
+				.map(field => {
+					let width = field.thStyle && field.thStyle.minWidth ? field.thStyle.minWidth : ''
+					return field.key + ':' + width + ':' + (field.tdClass || '')
+				})
+				.join('|')
 		},
 		/**
 		 * Filas configurables (props_to_show del store) ya filtradas por los gates dinamicos

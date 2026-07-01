@@ -192,7 +192,8 @@
 
 							class="columns-preferences-config__checkbox-only"
 
-							v-model="row.visible"></b-form-checkbox>
+							v-model="row.visible"
+							:disabled="row.locked"></b-form-checkbox>
 
 						</td>
 
@@ -385,7 +386,11 @@
 
 						<b-form-checkbox
 
-						v-model="row.visible">
+						v-model="row.visible"
+
+						:disabled="row.locked"
+
+						:title="row.locked ? 'Esta columna no se puede ocultar' : null">
 
 							{{ row.name || row.label }}
 
@@ -835,6 +840,10 @@ export default {
 		limpiar_todo() {
 
 			this.filtered_config_rows.forEach(row => {
+
+				if (row.locked) {
+					return
+				}
 
 				row.visible = false
 

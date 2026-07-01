@@ -212,10 +212,12 @@ export function get_default_rows_for_model(store_context, model_name) {
 	return all_properties.map((prop, index) => ({
 		key: prop.key,
 		label: context.getLabel(prop),
-		visible: !prop.not_show,
+		visible: prop.locked_visible ? true : !prop.not_show,
 		order: index,
 		width: default_column_width_for_property(prop),
 		wrap_content: !!prop.table_wrap_content,
+		/* Columnas bloqueadas (ej. Cantidad en vender): visibilidad no editable, posicion si. */
+		locked: !!prop.locked_visible,
 	}))
 }
 
@@ -236,14 +238,18 @@ export function normalize_column_preference_rows(rows, default_rows) {
 	let normalized = rows
 		.filter(item => defaults_by_key[item.key])
 		.sort((a, b) => Number(a.order) - Number(b.order))
-		.map((item, index) => ({
-			key: item.key,
-			label: defaults_by_key[item.key].label,
-			visible: !!item.visible,
-			order: index,
-			width: item.width || defaults_by_key[item.key].width || fallback_column_width_px(item.key),
-			wrap_content: !!item.wrap_content,
-		}))
+		.map((item, index) => {
+			let default_item = defaults_by_key[item.key]
+			return {
+				key: item.key,
+				label: default_item.label,
+				visible: default_item.locked ? true : !!item.visible,
+				order: index,
+				width: item.width || default_item.width || fallback_column_width_px(item.key),
+				wrap_content: !!item.wrap_content,
+				locked: !!default_item.locked,
+			}
+		})
 
 	default_rows.forEach(default_item => {
 		let exists = normalized.find(item => item.key == default_item.key)
@@ -277,7 +283,13 @@ export function build_props_to_show_from_rows(store_context, model_name, rows) {
 	let props_to_show = []
 
 	rows
-		.filter(row => row.visible)
+		.filter(row => {
+			if (row.visible) {
+				return true
+			}
+			let base_prop = properties_by_key[row.key]
+			return !!(base_prop && base_prop.locked_visible)
+		})
 		.sort((a, b) => Number(a.order) - Number(b.order))
 		.forEach(row => {
 			let base_prop = properties_by_key[row.key]
