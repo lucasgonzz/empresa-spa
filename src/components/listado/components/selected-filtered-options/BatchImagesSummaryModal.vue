@@ -12,6 +12,19 @@
 				<span>Artículos con imagen asignada:</span>
 				<strong class="m-l-10">{{ batch_result ? batch_result.processed : 0 }}</strong>
 			</div>
+			<div
+			v-if="batch_result && batch_result.quota_reached"
+			class="batch-summary-row batch-summary-quota">
+				<i class="bi bi-exclamation-triangle-fill m-r-10"></i>
+				<div>
+					<div>
+						<span>Se alcanzó el límite diario de búsquedas de Google.</span>
+					</div>
+					<small class="batch-summary-quota-hint">
+						{{ batch_result.skipped_by_quota }} artículo(s) quedaron sin procesar por este motivo. Podés retomar mañana cuando se renueve la cuota.
+					</small>
+				</div>
+			</div>
 			<div class="batch-summary-row batch-summary-skipped">
 				<i class="bi bi-skip-forward-circle-fill m-r-10"></i>
 				<span>Artículos sin imagen asignada:</span>
@@ -41,6 +54,20 @@
 					<li
 					v-for="(article_name, index) in batch_result.skipped_names"
 					:key="'skipped-'+index">
+						{{ article_name }}
+					</li>
+				</ul>
+			</div>
+			<div
+			v-if="batch_result && batch_result.skipped_by_quota_names && batch_result.skipped_by_quota_names.length"
+			class="batch-summary-quota-list">
+				<p class="batch-summary-quota-list-title">
+					Artículos sin procesar por límite de cuota:
+				</p>
+				<ul class="batch-summary-quota-names">
+					<li
+					v-for="(article_name, index) in batch_result.skipped_by_quota_names"
+					:key="'quota-'+index">
 						{{ article_name }}
 					</li>
 				</ul>
@@ -159,6 +186,39 @@ export default {
 			margin-top: 4px
 			font-size: 0.85rem
 			color: #996300
+
+.batch-summary-quota
+	background-color: rgba(220, 53, 69, 0.1)
+	color: #842029
+
+	.batch-summary-quota-hint
+		display: block
+		margin-top: 4px
+		font-size: 0.85rem
+		color: #a83240
+
+.batch-summary-quota-list
+	margin-top: 4px
+	padding: 12px 16px
+	border-radius: 8px
+	background-color: rgba(220, 53, 69, 0.08)
+	max-height: 220px
+	overflow-y: auto
+
+	.batch-summary-quota-list-title
+		margin: 0 0 8px 0
+		font-weight: bold
+		font-size: 0.95rem
+		color: #842029
+
+	.batch-summary-quota-names
+		margin: 0
+		padding-left: 20px
+		font-size: 0.9rem
+		color: #6a1a24
+
+		li
+			margin-bottom: 4px
 
 .batch-summary-skipped-list
 	margin-top: 4px
