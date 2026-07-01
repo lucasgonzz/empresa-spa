@@ -51,7 +51,7 @@
 					<div 
 					:class="is_disabled ? 'bg-gray' : 'bg-withe'"
 					class="icon">
-						<i class="icon-search"></i>
+						<i :class="input_icon"></i>
 					</div>
 					<b-form-input
 					:disabled="is_disabled"
@@ -237,6 +237,14 @@ export default {
 		no_exist_message: {
 			type: String,
 			default: null,
+		},
+		/**
+		 * Clase del ícono mostrado a la izquierda del input de búsqueda.
+		 * Permite personalizar el indicador visual por contexto (p. ej. cliente en vender).
+		 */
+		input_icon: {
+			type: String,
+			default: 'icon-search',
 		},
 	},
 	data() {

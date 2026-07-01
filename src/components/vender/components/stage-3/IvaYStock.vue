@@ -1,20 +1,40 @@
 <template>
 	<!--
-		Controles de IVA aplicado y descuento de stock.
-		Encapsula la lógica de permisos para mostrar/ocultar cada opción.
+		Fila de cierre: toggles de IVA/stock y observaciones de la venta.
+		Los textareas se muestran siempre; los toggles dependen de permisos/extensión.
 	-->
-	<div
-	v-if="show_iva_or_discount_stock_controls"
-	class="vender-stage__iva-stock-toggles j-start">
-		<iva-aplicado v-if="can_use_iva_aplicado"></iva-aplicado>
-		<discount-stock v-if="can_use_discount_stock"></discount-stock>
+	<div class="vender-stage__iva-stock-observations-row">
+
+		<!-- Toggles de IVA aplicado y descuento de stock -->
+		<div
+		v-if="show_iva_or_discount_stock_controls"
+		class="vender-stage__iva-stock-toggles j-start">
+			<iva-aplicado v-if="can_use_iva_aplicado"></iva-aplicado>
+			<discount-stock v-if="can_use_discount_stock"></discount-stock>
+		</div>
+
+		<!-- Observaciones normales y ocultas (siempre visibles) -->
+		<observations :stage_open="stage_open"></observations>
+
 	</div>
 </template>
 
 <script>
+import Observations from './Observations'
+
 export default {
 	name: 'IvaYStock',
+	props: {
+		/**
+		 * Indica si la etapa 3 está expandida (para recalcular altura de textareas al mostrarse).
+		 */
+		stage_open: {
+			type: Boolean,
+			default: false,
+		},
+	},
 	components: {
+		Observations,
 		IvaAplicado: () => import('@/components/vender/components/remito/header-2/buttons/IvaAplicado'),
 		DiscountStock: () => import('@/components/vender/components/remito/header-2/buttons/DiscountStock'),
 	},

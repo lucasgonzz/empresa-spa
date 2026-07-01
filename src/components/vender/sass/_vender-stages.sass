@@ -6,13 +6,13 @@
 	overflow-y: auto
 	padding: 8px
 	/* Espacio inferior para no quedar tapado por la barra de acciones fija */
-	padding-bottom: 56px
+	padding-bottom: 60px
 
 /* Bloque de una etapa individual */
 .vender-stage
 	border: 1px solid var(--color-border-tertiary, #dee2e6)
 	border-radius: 6px
-	margin-bottom: 8px
+	margin-bottom: 18px
 	overflow: hidden
 	background: var(--bg-card, #fff)
 
@@ -155,6 +155,32 @@
 		border: none !important
 		border-radius: 0
 
+	/* Buscador de cliente en etapa 1: ícono discreto a la izquierda */
+	.vender-stage__client-search
+		width: 100%
+
+		.search-component .cont-search
+			box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important
+			border: 1px solid var(--color-border-tertiary, #ced4da) !important
+			border-radius: 0.25rem
+			overflow: hidden
+
+		.search-component .cont-search > .icon
+			background: var(--bg-section, #f8f9fa) !important
+			width: 44px
+			justify-content: center
+			border-right: 1px solid var(--color-border-tertiary, #dee2e6)
+			border-radius: 0
+
+			i
+				color: #495057
+				font-size: 1rem
+				opacity: 0.72
+
+		.search-component .input-search
+			height: 36px
+			border-radius: 0
+
 	/* Body de etapa 2: sin padding extra */
 	&--always-open
 		padding: 8px 14px
@@ -213,12 +239,71 @@ $vender_stage_field_gap: 16px
 	flex: 1
 	min-width: 220px
 
+/* Fila de toggles IVA/stock + observaciones en etapa 3 */
+.vender-stage__iva-stock-observations-row
+	display: flex
+	flex-wrap: wrap
+	align-items: flex-end
+	gap: 16px 20px
+	width: 100%
+
 /* Toggles de IVA y stock en etapa 3 */
 .vender-stage__iva-stock-toggles
 	display: flex
 	flex-wrap: wrap
 	align-items: center
 	gap: 12px 20px
+	flex: 0 0 auto
+	padding-bottom: 1px
+
+/* Contenedor de los dos textareas de observaciones */
+.vender-stage__observations-fields
+	display: flex
+	flex: 1 1 360px
+	flex-wrap: wrap
+	gap: 12px 16px
+	min-width: 0
+	align-items: stretch
+
+/* Campo individual de observaciones: label arriba + textarea */
+.vender-stage__observations-field
+	display: flex
+	flex-direction: column
+	gap: 4px
+	flex: 1 1 220px
+	min-width: 200px
+	margin-bottom: 0 !important
+
+/* Etiqueta compacta sobre el textarea */
+.vender-stage__observations-label
+	font-size: 0.75rem
+	font-weight: 600
+	color: var(--color-text-secondary, #6c757d)
+	margin-bottom: 0
+	line-height: 1.2
+	white-space: nowrap
+
+/* Textarea auto-expandible: una línea por defecto, crece con el contenido */
+.vender-stage__observations-textarea.form-control
+	min-height: 36px
+	height: 36px
+	resize: none
+	overflow-y: hidden
+	line-height: 1.4
+	padding: 7px 10px
+	box-shadow: none
+	border: 1px solid var(--color-border-tertiary, #ced4da)
+	border-radius: 0.25rem
+	background: var(--bg-card, #fff)
+	width: 100%
+
+	&:focus
+		border-color: var(--color-primary, #007bff)
+		box-shadow: 0 0 0 0.1rem rgba(0, 123, 255, 0.15)
+
+	&::placeholder
+		color: #adb5bd
+		font-size: 0.82rem
 
 /* Separador visual dentro del body — ancho completo en layout flexible */
 .vender-stage__separator

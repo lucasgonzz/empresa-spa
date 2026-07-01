@@ -51,18 +51,13 @@
 					<seller></seller>
 				</div>
 
-				<!-- IVA aplicado y descuento de stock (lógica de permisos en IvaYStock) -->
+				<!-- IVA, stock y observaciones en la misma fila (IvaYStock) -->
 				<div class="vender-stage__field vender-stage__field--full">
-					<iva-y-stock></iva-y-stock>
+					<iva-y-stock :stage_open="stage3_open"></iva-y-stock>
 				</div>
 
 				<!-- Separador visual -->
 				<hr class="vender-stage__separator">
-
-				<!-- Observaciones — ocupa toda la fila -->
-				<div class="vender-stage__field vender-stage__field--full">
-					<observations></observations>
-				</div>
 
 				<!-- Descuentos y recargos — dos columnas en pantallas anchas -->
 				<div class="vender-stage__field vender-stage__field--full vender-stage__client-panels">
@@ -81,7 +76,6 @@
 </template>
 
 <script>
-import Observations from '@/components/vender/components/remito/Observations'
 /* Subcomponentes propios de la etapa 3 */
 import IvaYStock from './IvaYStock'
 import Discounts from './Discounts'
@@ -96,7 +90,6 @@ export default {
 		NumeroOrdenDeCompra: () => import('@/components/vender/components/remito/header-2/buttons/NumeroOrdenDeCompra'),
 		Employee: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/Employee'),
 		Seller: () => import('@/components/vender/components/remito/header-2/payment-method-afip-information/Seller'),
-		Observations,
 		IvaYStock,
 		Discounts,
 		Surchages,

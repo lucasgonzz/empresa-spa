@@ -5,22 +5,27 @@
 		:afip_data="afip_data"
 		:client_model="client_model_for_afip_modal"></modal-result>
 
-		<search-component
+		<!-- Buscador de cliente con ícono distintivo en etapa 1 de vender -->
+		<div
 		v-if="index_previus_sales == 0 && !budget"
-		id="select_client_vender"
-		@setSelected="setSelected"
-		:prop="{text: 'Cliente', key: 'client_id'}"
-		:model="_vender.client"
-		model_name="client"
-		:props_to_filter="['num', 'name', 'phone', 'dni', 'cuit']"
-		show_btn_create
-		search_from_api
-		:tax_id_afip_lookup_on_second_enter="true"
-		placeholder="Buscar cliente, CUIT o DNI"
-		:props_extras="props_extras"
-		set_selected_model_with_model_prop
-		@requestClientAfipLookup="onRequestClientAfipLookup"
-		@clearSelected="clearSelected"></search-component>
+		class="vender-stage__client-search">
+			<search-component
+			id="select_client_vender"
+			@setSelected="setSelected"
+			:prop="{text: 'Cliente', key: 'client_id'}"
+			:model="_vender.client"
+			model_name="client"
+			:props_to_filter="['num', 'name', 'phone', 'dni', 'cuit']"
+			show_btn_create
+			search_from_api
+			:tax_id_afip_lookup_on_second_enter="true"
+			placeholder="Buscar cliente, CUIT o DNI"
+			input_icon="icon-user-o"
+			:props_extras="props_extras"
+			set_selected_model_with_model_prop
+			@requestClientAfipLookup="onRequestClientAfipLookup"
+			@clearSelected="clearSelected"></search-component>
+		</div>
 		<div
 		v-else-if="client">
 			<p

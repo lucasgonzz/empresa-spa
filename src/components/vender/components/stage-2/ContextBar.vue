@@ -7,8 +7,8 @@
 	<div class="vender-context-bar">
 
 		<!-- ── Bloque 1: Total ── -->
-		<div class="vender-context-bar__block">
-			<span class="vender-context-bar__main-value">{{ total | currency }}</span>
+		<div class="vender-context-bar__block vender-context-bar__block--total">
+			<span class="vender-context-bar__main-value vender-context-bar__total-value">{{ total | currency }}</span>
 			<span class="vender-context-bar__sub-value">
 				{{ items.length }} {{ items.length === 1 ? 'producto' : 'productos' }} · {{ total_unidades }} {{ total_unidades === 1 ? 'unidad' : 'unidades' }}
 			</span>
@@ -344,6 +344,19 @@ export default {
 		align-items: center
 		gap: 12px
 		flex-shrink: 0
+
+	/* Bloque del total: un poco más de aire vertical */
+	&--total
+		padding-top: 8px
+		padding-bottom: 8px
+
+/* Total de la venta: más grande y en verde (acento de la etapa 2) */
+.vender-context-bar__total-value
+	font-size: 1.85rem
+	font-weight: 700
+	color: #198754
+	letter-spacing: -0.01em
+	line-height: 1.1
 
 /* Valor principal (grande) de cada bloque */
 .vender-context-bar__main-value
