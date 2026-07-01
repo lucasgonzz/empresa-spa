@@ -10,6 +10,7 @@
 
 		<b-table
 		v-if="articles_stock_minimo.length"
+		:key="fields_signature"
 		head-variant="dark"
 		responsive
 		:fields="fields"
@@ -80,6 +81,23 @@ export default {
 			})
 
 			return fields
+		},
+		/**
+		 * Firma de la configuracion de columnas (key + ancho + salto de linea) usada como :key
+		 * del b-table. BootstrapVue no siempre recalcula el layout de columnas cuando solo
+		 * cambian propiedades internas de `fields` (ej. thStyle) sin que cambie la instancia del
+		 * componente — forzar el remount con este key es lo que hace que el ancho se vea
+		 * actualizado apenas se guarda, sin necesidad de recargar la pagina.
+		 *
+		 * @returns {string}
+		 */
+		fields_signature() {
+			return this.fields
+				.map(function (field) {
+					let width = field.thStyle && field.thStyle.minWidth ? field.thStyle.minWidth : ''
+					return field.key + ':' + width + ':' + (field.tdClass || '')
+				})
+				.join('|')
 		},
 		/**
 		 * Subconjunto de dynamic_fields de tipo imagen: necesitan el slot dedicado
