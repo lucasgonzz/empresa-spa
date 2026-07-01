@@ -3,6 +3,11 @@
 	<div class="vender-topbar vender-full-bleed">
 		<span class="vender-topbar__title">Vender</span>
 
+		<!-- Boton para elegir columnas visibles de la tabla de items (sistema props-to-show) -->
+		<props-to-show
+		class="vender-topbar__props-to-show"
+		model_name="vender"></props-to-show>
+
 		<!-- Lista de atajos editables con select F1-F10 por acción -->
 		<div class="vender-topbar__shortcuts">
 			<span
@@ -72,6 +77,7 @@ export default {
 	name: 'VenderTopbar',
 	components: {
 		PrintShortcutConfigModal,
+		PropsToShow: () => import('@/common-vue/components/view/header/props-to-show/Index'),
 	},
 	data() {
 		return {
@@ -284,6 +290,7 @@ export default {
 .vender-topbar
 	display: flex
 	align-items: center
+	flex-wrap: wrap
 	gap: 16px
 	box-sizing: border-box
 	flex-shrink: 0
@@ -297,6 +304,11 @@ export default {
 		color: var(--color-text-secondary, #6c757d)
 		letter-spacing: 0.05em
 		text-transform: uppercase
+
+	/* Boton del sistema de columnas configurables (ojito) */
+	&__props-to-show
+		display: inline-flex
+		flex-shrink: 0
 
 	/* Contenedor de todos los atajos */
 	&__shortcuts

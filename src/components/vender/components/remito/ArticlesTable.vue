@@ -3,13 +3,14 @@
 	<hr>
 	<b-row>
 		<b-col>
-			<b-table 
+			<b-table
 			class="b-r-1"
 			v-if="items.length"
-			:items="table_items" 
-			head-variant="dark" 
-			:fields="fields" 
-			responsive 
+			:key="fields_signature"
+			:items="table_items"
+			head-variant="dark"
+			:fields="fields"
+			responsive
 			hover>
 				<template #cell(attachments)="data">
 					<item-attachments
@@ -17,7 +18,7 @@
 					:sale-id="previus_sale && previus_sale.id ? previus_sale.id : null"></item-attachments>
 				</template>
 
-				<template #cell(price)="data">
+				<template #cell(price_vender)="data">
 					<b-input-group
 					v-if="can('article.vender.change_price') || items[data.index].default_in_vender || se_creo_en_vender(items[data.index])"
 					class="input-price m-b-10">
@@ -230,6 +231,16 @@
 						</b-button>
 					</div>
 				</template>
+
+				<!-- Columnas configurables de tipo imagen: slot dinamico por cada una elegida por el usuario -->
+				<template
+				v-for="prop in image_dynamic_fields"
+				v-slot:[cell_slot_name(prop.key)]="data">
+					<table-thumbnail-images
+					:key="'thumb-'+items[data.index].id+'-'+prop.key"
+					:model="items[data.index]"
+					:prop="prop"></table-thumbnail-images>
+				</template>
 			</b-table>
 			<!-- Estado vacío: se muestra cuando el remito aún no tiene artículos -->
 			<div
@@ -260,6 +271,7 @@ export default {
 	components: {
 		PriceType: () => import('@/components/vender/components/remito/table-slots/PriceType'),
 		ItemAttachments: () => import('@/components/vender/components/remito/table-slots/ItemAttachments'),
+		TableThumbnailImages: () => import('@/common-vue/components/display/table/TableThumbnailImages'),
 	},
 	watch: {
 		special_price_id() {
@@ -288,36 +300,14 @@ export default {
 				fields.push({ key: 'attachments', label: 'Adj.' })
 			}
 
-			if (this.hasExtencion('bar_codes_in_vender_table')) {
-
-				fields.push({ 
-					key: 'bar_code', label: 'Codigo'
-				})
-			}
-			
-			fields = fields.concat([
-				{ key: 'price', label: 'Precio' },
-				{ key: 'name', label: 'Nombre' },
-				{ key: 'amount', label: 'Cantidad' },
-			])
-
+			/* Bloque configurable: orden, visibilidad y ancho elegidos por el usuario. */
+			/* Incluye "Cantidad" con posicion configurable pero visibilidad bloqueada */
+			/* (locked_visible en vender.js) — unico lugar para editar la cantidad del item. */
+			fields = fields.concat(this.dynamic_table_fields)
 
 			if (this.hasExtencion('article_variants')) {
-				fields.push({ 
+				fields.push({
 					key: 'article_variant_id', label: 'Variante'
-				})
-			}
-			
-			if (this.can('vender.article_discount')) {
-				fields.push({ 
-					key: 'discount', label: 'Descuento' 
-				})
-			}
-			
-			if (this.hasExtencion('cambiar_price_type_en_vender_item_por_item')
-				&& this.price_types.length) {
-				fields.push({ 
-					key: 'price_type_personalizado_id', label: 'Lista' 
 				})
 			}
 
@@ -343,34 +333,118 @@ export default {
 					)
 				}
 			}
-			fields = fields.concat([
-				{ key: 'total', label: 'Total' },
-				{ key: 'options', label: 'Opciones' },
-			])
+
+			/* Fija: columna de acciones (boton eliminar), igual que en el resto del sistema */
+			fields.push({ key: 'options', label: 'Opciones' })
+
 			return fields
+		},
+		/**
+		 * Firma de la configuracion de columnas (key + ancho + salto de linea) usada como :key
+		 * del b-table. BootstrapVue no siempre recalcula el layout de columnas cuando solo
+		 * cambian propiedades internas de `fields` (ej. thStyle) sin que cambie la instancia del
+		 * componente — forzar el remount con este key es lo que hace que el ancho se vea
+		 * actualizado apenas se guarda, sin necesidad de recargar la pagina.
+		 *
+		 * @returns {string}
+		 */
+		fields_signature() {
+			return this.fields
+				.map(field => {
+					let width = field.thStyle && field.thStyle.minWidth ? field.thStyle.minWidth : ''
+					return field.key + ':' + width + ':' + (field.tdClass || '')
+				})
+				.join('|')
+		},
+		/**
+		 * Filas configurables (props_to_show del store) ya filtradas por los gates dinamicos
+		 * que no se pueden expresar como extension estatica (permiso de descuento, listas de
+		 * precio cargadas). Devuelve los objetos de propiedad COMPLETOS (no un resumen) porque
+		 * dynamic_table_fields, table_items e image_dynamic_fields los necesitan para resolver
+		 * relaciones/fechas/imagenes con propertyText/isImageProp.
+		 *
+		 * @returns {Array}
+		 */
+		dynamic_fields() {
+			let props_to_show = this.$store.state.vender.props_to_show || []
+
+			return props_to_show.filter(prop => {
+				if (prop.key == 'discount') {
+					return this.can('vender.article_discount')
+				}
+				if (prop.key == 'price_type_personalizado_id') {
+					return this.price_types.length > 0
+				}
+				return true
+			})
+		},
+		/**
+		 * Columnas de b-table para el bloque configurable, derivadas de dynamic_fields.
+		 *
+		 * @returns {Array}
+		 */
+		dynamic_table_fields() {
+			return this.dynamic_fields.map(prop => ({
+				key: prop.key,
+				label: this.propText(prop, true, true),
+				tdClass: prop.table_wrap_content ? '' : 'text-nowrap',
+				thStyle: prop.table_width ? { minWidth: prop.table_width + 'px' } : {},
+			}))
+		},
+		/**
+		 * Subconjunto de dynamic_fields de tipo imagen: necesitan el slot dedicado
+		 * (table-thumbnail-images) en vez de texto plano vía propertyText.
+		 *
+		 * @returns {Array}
+		 */
+		image_dynamic_fields() {
+			return this.dynamic_fields.filter(prop => this.isImageProp(prop))
 		},
 		items() {
 			return this.$store.state.vender.items
 		},
 		table_items() {
-			let items = []
-			let item_to_add
-			this.items.forEach(item => {
-				item_to_add = {
-					id: item.id,
-					bar_code: item.bar_code,
-					price: item.price_vender,
-					// price: this.price(item.price_vender),
-					name: this.getItemDisplayName(item),
-					// amount: item.amount,
-					total: this.price(this.getTotalItem(item, false)),
-				}
-				items.push(item_to_add)
+			let self = this
+			let dedicated_keys = {
+				price_vender: true,
+				name: true,
+				amount: true,
+				article_variant_id: true,
+				discount: true,
+				price_type_personalizado_id: true,
+				checked_amount: true,
+				delivered_amount: true,
+				attachments: true,
+				options: true,
+			}
+
+			return this.items.map(function (item) {
+				let computed_item = Object.assign({}, item, {
+					name: self.getItemDisplayName(item),
+					total: self.price(self.getTotalItem(item, false)),
+				})
+
+				self.dynamic_fields.forEach(function (prop) {
+					if (dedicated_keys[prop.key] || self.isImageProp(prop)) {
+						return
+					}
+					computed_item[prop.key] = self.propertyText(item, prop)
+				})
+
+				return computed_item
 			})
-			return items
 		},
 	},
 	methods: {
+		/**
+		 * Nombre de slot dinamico de b-table para una columna de imagen configurable.
+		 *
+		 * @param {string} key
+		 * @returns {string}
+		 */
+		cell_slot_name(key) {
+			return 'cell(' + key + ')'
+		},
 		/**
 		 * Indica si el ítem permite editar el nombre en el remito según permiso del usuario.
 		 *

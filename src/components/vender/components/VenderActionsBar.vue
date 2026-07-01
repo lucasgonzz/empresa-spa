@@ -6,27 +6,27 @@
 	<div class="vender-actions-bar">
 
 		<!-- Botón limpiar venta -->
-		<div class="vender-actions-bar__item">
-			<limpiar-vender></limpiar-vender>
+		<div class="vender-actions-bar__item vender-actions-bar__item--secondary">
+			<limpiar-vender in_actions_bar></limpiar-vender>
 		</div>
 
 		<!-- Botón imprimir (oculta WhatsApp duplicado; se muestra aparte) -->
-		<div class="vender-actions-bar__item vender-actions-bar__print">
+		<div class="vender-actions-bar__item vender-actions-bar__item--secondary vender-actions-bar__print">
 			<print></print>
 		</div>
 
 		<!-- Botón WhatsApp (componente separado, misma venta que Print) -->
 		<div
 		v-if="sale"
-		class="vender-actions-bar__item">
+		class="vender-actions-bar__item vender-actions-bar__item--secondary">
 			<whatsapp-btn :sale="sale"></whatsapp-btn>
 		</div>
 
 		<!-- Botón principal guardar / actualizar con atajo configurable -->
 		<div
 		v-if="items.length"
-		class="vender-actions-bar__item vender-actions-bar__guardar-wrap">
-			<kbd class="vender-actions-bar__kbd">{{ save_shortcut_key }}</kbd>
+		class="vender-actions-bar__item vender-actions-bar__item--primary vender-actions-bar__guardar-wrap">
+			<span class="vender-actions-bar__kbd">{{ save_shortcut_key }}</span>
 			<!-- inline_layout evita que b-col cols="12" ocupe todo el ancho de la barra -->
 			<btn-guardar
 			:hide_vuelto="true"
@@ -141,16 +141,17 @@ export default {
 	bottom: 0
 	left: 0
 	right: 0
-	height: 56px
+	height: 60px
 	display: flex
-	justify-content: center
+	justify-content: flex-end
 	align-items: center
 	flex-wrap: nowrap
-	gap: 12px
-	background: var(--color-bg, #fff)
-	border-top: 1px solid var(--color-border-tertiary, #e0e0e0)
+	gap: 8px
+	background: var(--bg-card, #fff)
+	border-top: 1px solid var(--color-border-tertiary, #dee2e6)
+	box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.04)
 	z-index: 90
-	padding: 0 16px
+	padding: 0 20px
 	overflow: visible
 
 /* Contenedor de cada botón en la barra */
@@ -168,6 +169,65 @@ export default {
 		max-width: none
 		flex: 0 0 auto
 
+/* Estilo base compartido por botones secundarios del footer */
+.vender-actions-bar__item--secondary
+	::v-deep .btn
+		display: inline-flex
+		align-items: center
+		justify-content: center
+		gap: 6px
+		height: 40px
+		min-width: 0
+		padding: 0 14px
+		font-size: 0.84rem
+		font-weight: 600
+		line-height: 1
+		border-radius: 8px
+		box-shadow: none
+		transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease
+		white-space: nowrap
+
+		i
+			font-size: 0.9rem
+
+	/* Limpiar: tono neutro, sin rojo agresivo */
+	::v-deep .btn-outline-secondary
+		color: var(--color-text-primary, #495057)
+		border-color: var(--color-border-tertiary, #dee2e6)
+		background: var(--bg-section, #f8f9fa)
+
+		&:hover:not(:disabled),
+		&:focus:not(:disabled)
+			color: #c0392b
+			border-color: #f1aeb5
+			background: #fff5f5
+
+	/* Imprimir: mismo lenguaje visual que Limpiar */
+	::v-deep .dropdown .btn-danger
+		color: var(--color-text-primary, #495057)
+		border: 1px solid var(--color-border-tertiary, #dee2e6)
+		background: var(--bg-section, #f8f9fa)
+
+		&:hover:not(:disabled),
+		&:focus:not(:disabled)
+			color: var(--color-primary, #007bff)
+			border-color: #b8daff
+			background: #f0f7ff
+
+	/* WhatsApp: acento verde suave, no bloque sólido */
+	::v-deep .btn-success
+		color: #1e7e34
+		border: 1px solid #b7dfc3
+		background: #f4fbf6
+		min-width: 40px
+		padding: 0 12px
+
+		&:hover:not(:disabled),
+		&:focus:not(:disabled)
+			color: #155724
+			border-color: #8fd19e
+			background: #e8f7ec
+
 /* Ocultar WhatsApp dentro de Print para no duplicar (se muestra aparte) */
 .vender-actions-bar__print
 	::v-deep .j-start
@@ -183,11 +243,17 @@ export default {
 	::v-deep .m-l-10
 		margin-left: 0 !important
 
+/* Separador sutil antes del bloque principal */
+.vender-actions-bar__item--primary
+	margin-left: 8px
+	padding-left: 16px
+	border-left: 1px solid var(--color-border-tertiary, #e9ecef)
+
 /* Contenedor del botón guardar con atajo configurable */
 .vender-actions-bar__guardar-wrap
 	display: inline-flex
 	align-items: center
-	gap: 8px
+	gap: 10px
 	flex-shrink: 0
 
 	/* BtnGuardar usa b-col cols="12" que por defecto ocupa el 100% del ancho */
@@ -204,31 +270,55 @@ export default {
 		align-items: center !important
 		justify-content: flex-start !important
 
-	/* BtnLoader usa block=true; anular btn-block para que no se superponga */
+	/* Botón principal: limpio, compacto y con énfasis moderado */
 	::v-deep button.venta-total-box,
 	::v-deep button.venta-total-box.btn-block
 		display: inline-flex !important
 		align-items: center
 		justify-content: center
+		gap: 6px
 		height: 40px
-		min-width: 200px
+		min-width: 168px
 		width: auto !important
 		max-width: none !important
-		font-size: 1rem
-		font-weight: 700
-		padding: 0 20px
+		font-size: 0.875rem
+		font-weight: 600
+		line-height: 1
+		padding: 0 18px
 		white-space: nowrap
+		border: none
+		border-radius: 8px
+		background: var(--color-primary, #007bff)
+		box-shadow: 0 2px 8px rgba(0, 123, 255, 0.22)
+		transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease
 
-/* Tecla de atajo junto al botón guardar */
+		&:hover:not(:disabled),
+		&:focus:not(:disabled)
+			background: #0069d9
+			box-shadow: 0 3px 10px rgba(0, 123, 255, 0.28)
+
+		&:active:not(:disabled)
+			transform: translateY(1px)
+			box-shadow: 0 1px 4px rgba(0, 123, 255, 0.2)
+
+		i
+			font-size: 0.95rem
+
+/* Tecla de atajo junto al botón guardar (mismo lenguaje que la topbar) */
 .vender-actions-bar__kbd
-	display: inline-block
-	padding: 2px 6px
+	display: inline-flex
+	align-items: center
+	justify-content: center
+	min-width: 34px
+	padding: 4px 8px
 	font-size: 0.72rem
 	font-family: monospace
+	font-weight: 600
 	background: var(--bg-section, #f8f9fa)
 	border: 1px solid var(--color-border-tertiary, #dee2e6)
-	border-radius: 3px
-	box-shadow: 0 1px 0 var(--color-border-tertiary, #dee2e6)
+	border-radius: 6px
+	box-shadow: none
 	color: var(--color-text-secondary, #6c757d)
 	flex-shrink: 0
+	line-height: 1
 </style>

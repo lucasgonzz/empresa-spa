@@ -19,8 +19,7 @@
 			class="columns-preferences-config__btn-group"
 
 			:class="{
-				'columns-preferences-config__btn-group--stacked': allow_row_wrap && !layout_table,
-				'w-50': !layout_table && !allow_row_wrap,
+				'columns-preferences-config__btn-group--stacked': is_narrow_stacked,
 			}">
 
 				<b-button
@@ -193,7 +192,8 @@
 
 							class="columns-preferences-config__checkbox-only"
 
-							v-model="row.visible"></b-form-checkbox>
+							v-model="row.visible"
+							:disabled="row.locked"></b-form-checkbox>
 
 						</td>
 
@@ -386,7 +386,11 @@
 
 						<b-form-checkbox
 
-						v-model="row.visible">
+						v-model="row.visible"
+
+						:disabled="row.locked"
+
+						:title="row.locked ? 'Esta columna no se puede ocultar' : null">
 
 							{{ row.name || row.label }}
 
@@ -568,6 +572,24 @@ export default {
 
 		/**
 
+		 * Layout angosto apilado (pensado para modales ABM angostos vía allow_row_wrap).
+		 * Hoy ningun lugar del sistema pasa allow_row_wrap=true — todo lo demas (incluido
+		 * el caso "sin props" que usan Vender/Articulos/etc.) usa el layout en fila.
+
+		 *
+
+		 * @returns {boolean}
+
+		 */
+
+		is_narrow_stacked() {
+
+			return this.allow_row_wrap && !this.layout_table
+
+		},
+
+		/**
+
 		 * Clases de la barra superior (toolbar).
 
 		 *
@@ -580,9 +602,9 @@ export default {
 
 			return {
 
-				'columns-preferences-config__toolbar--stacked': this.allow_row_wrap && !this.layout_table,
+				'columns-preferences-config__toolbar--stacked': this.is_narrow_stacked,
 
-				'columns-preferences-config__toolbar--inline': this.layout_table,
+				'columns-preferences-config__toolbar--inline': !this.is_narrow_stacked,
 
 			}
 
@@ -602,9 +624,7 @@ export default {
 
 			return {
 
-				'columns-preferences-config__search--inline': this.layout_table,
-
-				'm-l-10': !this.layout_table && !this.allow_row_wrap,
+				'columns-preferences-config__search--inline': !this.is_narrow_stacked,
 
 			}
 
@@ -622,7 +642,7 @@ export default {
 
 		search_input_style() {
 
-			if (this.layout_table || this.allow_row_wrap) {
+			if (!this.is_narrow_stacked) {
 
 				return null
 
@@ -820,6 +840,10 @@ export default {
 		limpiar_todo() {
 
 			this.filtered_config_rows.forEach(row => {
+
+				if (row.locked) {
+					return
+				}
 
 				row.visible = false
 

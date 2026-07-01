@@ -1,15 +1,32 @@
 <template>
 	<div>
-		
+
+		<div
+		v-if="articles_stock_minimo.length"
+		class="d-flex justify-content-end m-b-5">
+			<props-to-show
+			model_name="inventory_performance"></props-to-show>
+		</div>
+
 		<b-table
 		v-if="articles_stock_minimo.length"
+		:key="fields_signature"
 		head-variant="dark"
 		responsive
 		:fields="fields"
-		:items="items">
+		:items="table_items">
+			<!-- Columnas de tipo imagen: slot dinamico por cada una elegida por el usuario -->
+			<template
+			v-for="prop in image_fields"
+			v-slot:[cell_slot_name(prop.key)]="data">
+				<table-thumbnail-images
+				:key="'thumb-'+articles_stock_minimo[data.index].id+'-'+prop.key"
+				:model="resolve_pivot_model(articles_stock_minimo[data.index], prop)"
+				:prop="prop"></table-thumbnail-images>
+			</template>
 		</b-table>
 
-		<div 
+		<div
 		v-else
 		class="text-with-icon">
 			No hay articulos con stock minimo
@@ -21,63 +38,17 @@
 </template>
 <script>
 export default {
+	components: {
+		PropsToShow: () => import('@/common-vue/components/view/header/props-to-show/Index'),
+		TableThumbnailImages: () => import('@/common-vue/components/display/table/TableThumbnailImages'),
+	},
 	computed: {
-		fields() {
-			return [
-				{
-					key: 'num',
-				},
-				{
-					key: 'codigo_barras',
-				},
-				{
-					key: 'codigo_proveedor',
-				},
-				{
-					key: 'nombre',
-				},
-				{
-					key: 'precio',
-				},
-				{
-					key: 'deposito',
-				},
-				{
-					key: 'stock',
-				},
-				{
-					key: 'stock_minimo',
-				},
-				{
-					key: 'proveedor',
-				},
-				{
-					key: 'actualizacion',
-				},
-			]
-		},
-		items() {
-			let items = []
-
-			this.articles_stock_minimo.forEach(article => {
-				items.push({
-					num: article.id,
-					codigo_barras: article.bar_code,
-					codigo_proveedor: article.provider_code,
-					nombre: article.name,
-					precio: this.price(article.final_price),
-					deposito: this.get_address(article),
-					stock: this.get_stock(article),
-					stock_minimo: this.get_stock_min(article),
-					proveedor: this.get_provider(article),
-					actualizacion: this.date(article.updated_at),
-				})
-			})
-
-			return items
-		},
-
-
+		/**
+		 * Articulos con stock minimo de la alerta activa: modelos Article completos con
+		 * su pivot (address_id, stock_address, stock_min_address) cuando la alerta es por deposito.
+		 *
+		 * @returns {Array}
+		 */
 		articles_stock_minimo() {
 			if (this.$store.state.inventory_performance.models[0]) {
 
@@ -86,58 +57,109 @@ export default {
 
 			return []
 		},
+		/**
+		 * Columnas configurables (props_to_show del store), ya resueltas por el usuario
+		 * (orden, visibilidad, ancho, salto de linea). No hay columnas fijas en este modulo
+		 * — es una tabla de solo lectura, sin edicion ni acciones por fila.
+		 *
+		 * @returns {Array}
+		 */
+		dynamic_fields() {
+			return this.$store.state.inventory_performance.props_to_show || []
+		},
+		fields() {
+			let self = this
+			let fields = []
+
+			this.dynamic_fields.forEach(function (prop) {
+				fields.push({
+					key: prop.key,
+					label: self.propText(prop, true, true),
+					tdClass: prop.table_wrap_content ? '' : 'text-nowrap',
+					thStyle: prop.table_width ? { minWidth: prop.table_width + 'px' } : {},
+				})
+			})
+
+			return fields
+		},
+		/**
+		 * Firma de la configuracion de columnas (key + ancho + salto de linea) usada como :key
+		 * del b-table. BootstrapVue no siempre recalcula el layout de columnas cuando solo
+		 * cambian propiedades internas de `fields` (ej. thStyle) sin que cambie la instancia del
+		 * componente — forzar el remount con este key es lo que hace que el ancho se vea
+		 * actualizado apenas se guarda, sin necesidad de recargar la pagina.
+		 *
+		 * @returns {string}
+		 */
+		fields_signature() {
+			return this.fields
+				.map(function (field) {
+					let width = field.thStyle && field.thStyle.minWidth ? field.thStyle.minWidth : ''
+					return field.key + ':' + width + ':' + (field.tdClass || '')
+				})
+				.join('|')
+		},
+		/**
+		 * Subconjunto de dynamic_fields de tipo imagen: necesitan el slot dedicado
+		 * (table-thumbnail-images) en vez de texto plano vía propertyText.
+		 *
+		 * @returns {Array}
+		 */
+		image_fields() {
+			return this.dynamic_fields.filter(prop => this.isImageProp(prop))
+		},
+		/**
+		 * Filas para b-table: valor de cada columna resuelto con propertyText (relaciones,
+		 * fechas, booleanos, etc.) — mismo mecanismo que usa cualquier tabla ABM del sistema.
+		 * Las columnas de imagen quedan sin resolver aca (las resuelve el slot dedicado).
+		 *
+		 * @returns {Array}
+		 */
+		table_items() {
+			let self = this
+			let items = []
+
+			this.articles_stock_minimo.forEach(function (article) {
+				let computed_item = {}
+
+				self.dynamic_fields.forEach(function (prop) {
+					if (self.isImageProp(prop)) {
+						return
+					}
+					let model = self.resolve_pivot_model(article, prop)
+					computed_item[prop.key] = self.propertyText(model, prop)
+				})
+
+				items.push(computed_item)
+			})
+
+			return items
+		},
 	},
 	methods: {
-
-		get_address(article) {
-			if (article.pivot && article.pivot.address_id) {
-				let address = this.$store.state.address.models.find(a => a.id == article.pivot.address_id)
-				if (typeof address != 'undefined') {
-					return address.street 
-				}
+		/**
+		 * Resuelve si una propiedad debe leerse del pivot (depósito/stock del depósito) o
+		 * del articulo directamente.
+		 *
+		 * @param {Object} article
+		 * @param {Object} prop
+		 * @returns {Object}
+		 */
+		resolve_pivot_model(article, prop) {
+			if (prop.from_pivot) {
+				return article.pivot || {}
 			}
-			return ''
+			return article
 		},
-
-		get_stock(article) {
-			if (article.pivot && article.pivot.stock_address) {
-				return article.pivot.stock_address +' ('+ this.get_address(article) +')'
-			}
-			return article.stock
+		/**
+		 * Nombre de slot dinamico de b-table para una columna de imagen configurable.
+		 *
+		 * @param {string} key
+		 * @returns {string}
+		 */
+		cell_slot_name(key) {
+			return 'cell(' + key + ')'
 		},
-
-		get_stock_min(article) {
-			if (article.pivot && article.pivot.stock_min_address) {
-				return article.pivot.stock_min_address +' ('+ this.get_address(article) +')'
-			}
-			return article.stock_min
-		},
-		get_provider(article) {
-			let provider = this.get_store_model('provider', article.provider_id)
-			if (provider) {
-				return provider.name
-			}
-			return null
-		},
-		showSale(sale) {
-            this.show_model('sale', sale.id)
-		},
-		get_afip_information(sale) {
-			let model = this.$store.state.afip_information.models.find(m => sale.afip_information_id == m.id)
-
-			if (typeof model != 'undefined') {
-				return model.razon_social
-			}
-			return ''
-		},
-		get_afip_tipo_comprobante(sale) {
-			let model = this.$store.state.afip_tipo_comprobante.models.find(m => sale.afip_tipo_comprobante_id == m.id)
-
-			if (typeof model != 'undefined') {
-				return model.name
-			}
-			return ''
-		},
-	}
+	},
 }
 </script>

@@ -38,6 +38,14 @@ export default {
 			show: true,
 		},
 		{
+			text: 'Aviso antes de confirmar compra',
+			key: 'aviso_antes_de_confirmar_compra',
+			type: 'texteditor',
+			value: '',
+			show: true,
+			description: 'Texto formateado que se muestra en la tienda, debajo del resumen de compra, antes de finalizar el pedido.',
+		},
+		{
 			text: 'Mensaje para mostrar en Pagina CONTACTO',
 			key: 'mensaje_contacto',
 			type: 'textarea',
