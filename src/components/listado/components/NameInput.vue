@@ -17,11 +17,11 @@
 		:model="model"
 		model_name="article"></search-component>
 
-		<b-form-input
+		<b-form-textarea
 		placeholder="Ingrese el nombre"
 		id="article-name"
 		v-model="model.name"
-		v-else></b-form-input>
+		v-else></b-form-textarea>
 
 	</div>
 </template>

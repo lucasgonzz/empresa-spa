@@ -61,7 +61,7 @@ export default {
 		{
 			text: 'nombre',
 			key: 'name',
-			type: 'text',
+			type: 'textarea',
 			// type_if: {
 			// 	condition: 'bar_code',
 			// 	operator: '=',
