@@ -17,7 +17,7 @@
 					:sale-id="previus_sale && previus_sale.id ? previus_sale.id : null"></item-attachments>
 				</template>
 
-				<template #cell(price)="data">
+				<template #cell(price_vender)="data">
 					<b-input-group
 					v-if="can('article.vender.change_price') || items[data.index].default_in_vender || se_creo_en_vender(items[data.index])"
 					class="input-price m-b-10">
@@ -288,36 +288,15 @@ export default {
 				fields.push({ key: 'attachments', label: 'Adj.' })
 			}
 
-			if (this.hasExtencion('bar_codes_in_vender_table')) {
+			/* Bloque configurable: orden, visibilidad y ancho elegidos por el usuario */
+			fields = fields.concat(this.dynamic_fields)
 
-				fields.push({ 
-					key: 'bar_code', label: 'Codigo'
-				})
-			}
-			
-			fields = fields.concat([
-				{ key: 'price', label: 'Precio' },
-				{ key: 'name', label: 'Nombre' },
-				{ key: 'amount', label: 'Cantidad' },
-			])
-
+			/* Fija: unico lugar para editar la cantidad de un item ya agregado */
+			fields.push({ key: 'amount', label: 'Cantidad' })
 
 			if (this.hasExtencion('article_variants')) {
-				fields.push({ 
+				fields.push({
 					key: 'article_variant_id', label: 'Variante'
-				})
-			}
-			
-			if (this.can('vender.article_discount')) {
-				fields.push({ 
-					key: 'discount', label: 'Descuento' 
-				})
-			}
-			
-			if (this.hasExtencion('cambiar_price_type_en_vender_item_por_item')
-				&& this.price_types.length) {
-				fields.push({ 
-					key: 'price_type_personalizado_id', label: 'Lista' 
 				})
 			}
 
@@ -343,31 +322,48 @@ export default {
 					)
 				}
 			}
-			fields = fields.concat([
-				{ key: 'total', label: 'Total' },
-				{ key: 'options', label: 'Opciones' },
-			])
+
+			/* Fija: columna de acciones (boton eliminar), igual que en el resto del sistema */
+			fields.push({ key: 'options', label: 'Opciones' })
+
 			return fields
+		},
+		/**
+		 * Resuelve las columnas configurables (props_to_show del store) a fields de b-table,
+		 * respetando orden, visibilidad, ancho y salto de linea elegidos por el usuario, mas
+		 * los gates dinamicos que ya existian (permiso de descuento, listas de precio cargadas).
+		 *
+		 * @returns {Array}
+		 */
+		dynamic_fields() {
+			let props_to_show = this.$store.state.vender.props_to_show || []
+
+			return props_to_show
+				.filter(prop => {
+					if (prop.key == 'discount') {
+						return this.can('vender.article_discount')
+					}
+					if (prop.key == 'price_type_personalizado_id') {
+						return this.price_types.length > 0
+					}
+					return true
+				})
+				.map(prop => ({
+					key: prop.key,
+					label: this.propText(prop, true, true),
+					tdClass: prop.table_wrap_content ? '' : 'text-nowrap',
+					thStyle: prop.table_width ? { minWidth: prop.table_width + 'px' } : {},
+				}))
 		},
 		items() {
 			return this.$store.state.vender.items
 		},
 		table_items() {
-			let items = []
-			let item_to_add
-			this.items.forEach(item => {
-				item_to_add = {
-					id: item.id,
-					bar_code: item.bar_code,
-					price: item.price_vender,
-					// price: this.price(item.price_vender),
-					name: this.getItemDisplayName(item),
-					// amount: item.amount,
-					total: this.price(this.getTotalItem(item, false)),
-				}
-				items.push(item_to_add)
-			})
-			return items
+			return this.items.map(item => ({
+				...item,
+				name: this.getItemDisplayName(item),
+				total: this.price(this.getTotalItem(item, false)),
+			}))
 		},
 	},
 	methods: {

@@ -352,6 +352,11 @@ export function clear_module_filters_after_column_change(store_context, model_na
 		return
 	}
 
+	/* Modulos no-ABM (ej. vender) no tienen filtros de listado: nada que limpiar. */
+	if (typeof root_state[model_name].is_filtered == 'undefined') {
+		return
+	}
+
 	commit_to_module(store_context, model_name, 'setIsFiltered', false)
 	commit_to_module(store_context, model_name, 'setFiltered', [])
 	commit_to_module(store_context, model_name, 'setFilterPage', 1)

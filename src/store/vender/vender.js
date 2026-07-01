@@ -324,6 +324,9 @@ export default {
 
 		// Opciones del atajo Imprimir (remito / facturado / ticket 2.0).
 		keyboard_print_options: Object.assign({}, VENDER_PRINT_OPTIONS_DEFAULTS),
+
+		// Preferencia de columnas de la tabla de items (sistema props-to-show)
+		props_to_show: [],
 	},
 	mutations: {
 		/**
@@ -872,6 +875,16 @@ export default {
 		 */
 		set_keyboard_print_options(state, print_options) {
 			state.keyboard_print_options = normalize_vender_print_options(print_options)
+		},
+
+		/**
+		 * Reemplaza la preferencia de columnas de la tabla de items (sistema props-to-show).
+		 *
+		 * @param {Object} state
+		 * @param {Array} value
+		 */
+		set_props_to_show(state, value) {
+			state.props_to_show = value
 		},
 	},
 	actions: {
