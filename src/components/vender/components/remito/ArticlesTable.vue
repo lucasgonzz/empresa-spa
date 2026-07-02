@@ -416,6 +416,7 @@ export default {
 				delivered_amount: true,
 				attachments: true,
 				options: true,
+				total: true,
 			}
 
 			return this.items.map(function (item) {
