@@ -79,12 +79,14 @@ export default {
 			// 	props = props.filter(prop => prop.key != 'bar_code')
 			// }
 
-			if (this.authenticated 
+			// Indica si el dueño usa listas de precio (columnas por price_type en el Listado).
+			let usa_lista_de_precios = this.authenticated 
 				&& (
 					this.hasExtencion('articulo_margen_de_ganancia_segun_lista_de_precios')
 					|| this.hasExtencion('lista_de_precios_por_categoria')
 					)
-				) {
+
+			if (usa_lista_de_precios) {
 
 				// if (this.hasExtencion('ventas_en_dolares')) {
 
@@ -97,7 +99,13 @@ export default {
 				
 			}
 
-			if (this.current_acount_payment_method_discounts.length) {
+			// Los descuentos por metodo de pago se calculan sobre final_price (get_payment_discount).
+			// Si el dueno usa listas de precio, final_price deja de ser la base de venta real: el
+			// descuento pasa a aplicarse solo en Vender, nunca como columna del Listado.
+			if (
+				!usa_lista_de_precios
+				&& this.current_acount_payment_method_discounts.length
+			) {
 
 				props = this.add_payment_methods_discounts(props)
 				
