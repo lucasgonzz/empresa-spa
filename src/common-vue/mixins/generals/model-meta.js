@@ -1,3 +1,5 @@
+import { add_article_dynamic_columns } from '@/common-vue/helpers/article_dynamic_table_columns'
+
 export default {
     methods: {
         get_properties_to_show(model_name) {
@@ -12,6 +14,19 @@ export default {
             }
 
             props = this.check_extencions(props)
+
+            // Fallback usado por Listado cuando aun no se aplico ninguna preferencia de
+            // columnas (props_to_show vacio): recalcula las columnas dinamicas del articulo
+            // con las colecciones ya cargadas, en vez de dejarlas afuera.
+            if (model_name == 'article') {
+                props = add_article_dynamic_columns(props, this, {
+                    price_types: this.$store.state.price_type ? this.$store.state.price_type.models : [],
+                    addresses: this.$store.state.address ? this.$store.state.address.models : [],
+                    payment_method_discounts: this.$store.state.current_acount_payment_method_discount
+                        ? this.$store.state.current_acount_payment_method_discount.models
+                        : [],
+                })
+            }
 
             let props_ordenadas = props.filter(prop => prop.table_position)
             if (props_ordenadas.length) {

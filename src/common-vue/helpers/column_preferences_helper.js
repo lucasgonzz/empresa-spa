@@ -4,6 +4,7 @@ import {
 } from '@/common-vue/config/column_preference_defaults'
 import app_generals from '@/mixins/generals'
 import generals from '@/common-vue/mixins/generals'
+import { add_article_dynamic_columns } from '@/common-vue/helpers/article_dynamic_table_columns'
 
 /**
  * Contexto mínimo para reutilizar métodos de generals fuera de componentes Vue.
@@ -44,6 +45,28 @@ function build_generals_context(store_wrapper) {
 			}
 			return auth_user.owner_extencions || []
 		},
+		get is_admin() {
+			return !!(auth_user && (is_owner || auth_user.admin_access))
+		},
+	}
+
+	context.can = function (permission_slug) {
+		if (!context.authenticated) {
+			return false
+		}
+		if (is_owner || (auth_user && auth_user.admin_access)) {
+			return true
+		}
+		if (context.is_admin) {
+			return true
+		}
+		let has_permission = false
+		;(auth_user && auth_user.permissions ? auth_user.permissions : []).forEach(function (permission) {
+			if (permission.slug == permission_slug) {
+				has_permission = true
+			}
+		})
+		return has_permission
 	}
 
 	context.ownerUsesListasDePrecio = function () {
@@ -179,6 +202,17 @@ export function get_all_properties_for_model(store_context, model_name) {
 	})
 
 	props = context.check_extencions(props)
+
+	if (model_name == 'article') {
+		let root_state = get_root_state(store_context)
+		props = add_article_dynamic_columns(props, context, {
+			price_types: root_state.price_type ? root_state.price_type.models : [],
+			addresses: root_state.address ? root_state.address.models : [],
+			payment_method_discounts: root_state.current_acount_payment_method_discount
+				? root_state.current_acount_payment_method_discount.models
+				: [],
+		})
+	}
 
 	props.push({
 		key: 'created_at',

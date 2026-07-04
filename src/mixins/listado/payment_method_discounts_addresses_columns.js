@@ -1,55 +1,20 @@
-import insert_props from '@/common-vue/mixins/insert_props'
 export default {
-	mixins: [insert_props],
 	computed: {
 		addresses() {
-			return this.$store.state.address.models 
+			return this.$store.state.address.models
 		},
 		price_types() {
-			return this.$store.state.price_type.models 
+			return this.$store.state.price_type.models
 		},
 		props_to_show() {
-			return this.$store.state.article.props_to_show 
+			return this.$store.state.article.props_to_show
 		},
 		properties_to_show() {
 	        return this.set_properties_to_show()
 	    }
-		// article_model() {
-		// 	return this.$store.state.article.model 
-		// },
-	},
-	// data() {
-	// 	return {
-	// 		properties_to_show: [],
-	// 	}
-	// },
-	watch: {
-		// addresses() {
-		// 	this.set_properties_to_show()
-		// },
-		// article_model() {
-		// 	console.log('Se va a llamar desde article_model')
-		// 	alert('set_properties_to_show desde article_model')
-		// 	this.set_properties_to_show()
-		// },
-		// price_types() {
-		// 	console.log('Se va a llamar desde price_types')
-		// 	alert('set_properties_to_show desde price_types')
-		// 	this.set_properties_to_show()
-		// },
-		// props_to_show() {
-		// 	alert('set_properties_to_show desde props_to_show')
-		// 	console.log('Se va a llamar desde props_to_show')
-		// 	this.set_properties_to_show()
-		// },
-	},
-	created() {
-		// console.log('Se va a llamar desde CREATED')
-		// this.set_properties_to_show()
 	},
 	methods: {
 		set_properties_to_show() {
-
 
 			let props = []
 
@@ -60,12 +25,10 @@ export default {
 
 				props = this.get_properties_to_show_ordenadas('article')
 			}
-			// props = this.get_properties_to_show('article')
 
 			// En el listado NO renderizamos group_title (eso es solo para el modal/Form)
 		    // Si entran acá, rompen el cálculo de índices y el orden de columnas.
 		    props = props.filter(prop => prop.key)
-
 
 			if (
 				this.user
@@ -75,52 +38,7 @@ export default {
 				props = props.filter(prop => prop.key != 'images')
 			}
 
-			// if (this.hasExtencion('no_usar_codigos_de_barra')) {
-			// 	props = props.filter(prop => prop.key != 'bar_code')
-			// }
-
-			// Indica si el dueño usa listas de precio (columnas por price_type en el Listado).
-			let usa_lista_de_precios = this.authenticated 
-				&& (
-					this.hasExtencion('articulo_margen_de_ganancia_segun_lista_de_precios')
-					|| this.hasExtencion('lista_de_precios_por_categoria')
-					)
-
-			if (usa_lista_de_precios) {
-
-				// if (this.hasExtencion('ventas_en_dolares')) {
-
-					// props = this.quitar_props_de_precios(props)
-				// } else {
-
-					props = this.add_price_types(props)
-				// }
-
-				
-			}
-
-			// Los descuentos por metodo de pago se calculan sobre final_price (get_payment_discount).
-			// Si el dueno usa listas de precio, final_price deja de ser la base de venta real: el
-			// descuento pasa a aplicarse solo en Vender, nunca como columna del Listado.
-			if (
-				!usa_lista_de_precios
-				&& this.current_acount_payment_method_discounts.length
-			) {
-
-				props = this.add_payment_methods_discounts(props)
-				
-			}
-
-			props = this.add_addresses(props)
-
-			// this.properties_to_show = props
 			return props
-		},
-		no_esta_agregada(model_name, model, props) {
-			let prop = props.find(_prop => {
-				return _prop.key == model_name+model.id 
-			})
-			return typeof prop == 'undefined'
 		},
 		get_table_relation_prop(relation_name, model) {
 			return 'table-prop-'+relation_name+'_'+model.id
@@ -198,7 +116,7 @@ export default {
 
 		},
 		get_address_stock(article, address) {
-			
+
 			let article_address = article.addresses.find(_address => {
 				return _address.id == address.id
 			})
@@ -228,191 +146,5 @@ export default {
 				return stock_in_address
 			}
 		},
-
-
-		add_addresses(props) {
-
-			// Encuentra la posición de alguna de estas props
-			let props_a_partir_de_las_cuales_agregar = [
-				'stock',
-				'name',
-				'price',
-				'cost',
-				'provider_order',
-				'bar_code',
-				'images',
-				'num',
-			]
-
-
-			let insertIndex = this.get_index(props, props_a_partir_de_las_cuales_agregar)
-			
-			// Para mantener el orden cuando agregamos varios con splice()
-			let current_index = insertIndex
-			
-			this.addresses.forEach(address => {
-
-				if (
-					this.puede_ver_address(address)
-					&& this.no_esta_agregada('address_', address, props)
-				) {
-
-					props.splice(current_index, 0, {
-						text: address.street,
-						key: 'address_' + address.id,
-						type: 'text',
-						not_show_on_form: true,
-						no_usar_en_filtros: true,
-					});
-					current_index++
-				}
-			})
-
-			return props
-		},
-
-		puede_ver_address(address) {
-			if (
-				!this.is_admin
-				&& this.can('article.stock_only_sucursal')
-			) {
-
-				if (this.user.address_id != address.id) {
-					return false
-				}
-			}
-
-			return true
-		},
-
-		add_payment_methods_discounts(props) {
-
-			// Encuentra la posición de alguna de estas props
-			let props_a_partir_de_las_cuales_agregar = [
-				'final_price',
-				'price',
-				'cost',
-				'name',
-				'provider_order',
-				'bar_code',
-				'images',
-				'num',
-			]
-
-			let insertIndex = this.get_index(props, props_a_partir_de_las_cuales_agregar)
-			
-			let current_index = insertIndex
-
-			this.current_acount_payment_method_discounts.forEach(dicount => {
-
-				if (this.no_esta_agregada('payment_method_discount_', dicount, props)) {
-
-					props.splice(current_index, 0, {
-						text: dicount.current_acount_payment_method.name,
-						key: 'payment_method_discount_'+dicount.id,
-						type: 'text',
-						not_show_on_form: true,
-						no_usar_en_filtros: true,
-					});
-					current_index++
-				}
-			})
-
-			return props
-		},
-		add_price_types(props) {
-
-			// Encuentra la posición de alguna de estas props
-			let props_a_partir_de_las_cuales_agregar = [
-				'costo_real',
-				'cost',
-				'price',
-				'name',
-				'provider_order',
-				'bar_code',
-				'images',
-				'num',
-			]
-
-			// let insertIndex = this.get_index(props, props_a_partir_de_las_cuales_agregar)
-
-			// // console.log('insertIndex de price_types: '+insertIndex)
-			// // console.log('en base a las props:')
-
-			// // IMPORTANTE: si agregamos muchos elementos con splice() siempre al mismo índice,
-		    // // el orden queda invertido. Por eso usamos current_index y lo incrementamos.
-		    // let current_index = insertIndex
-
-			
-
-			props = this.quitar_props_de_precios(props)
-
-			this.price_types.forEach(price_type => {
-
-				if (this.no_esta_agregada('price_type_', price_type, props)) {
-
-					props = this.insert_property_by_rules(props, {
-			            text: price_type.name,
-			            key: 'price_type_'+price_type.id,
-			            type: 'text',
-			            no_usar_en_filtros: true,
-
-			            propiedad_extra_para_modal: true,
-
-			            insert_after_keys: props_a_partir_de_las_cuales_agregar
-			        })
-
-					// props.splice(current_index, 0, {							
-					// 	text: price_type.name,
-					// 	key: 'price_type_'+price_type.id,
-					// 	type: 'text',
-					// 	no_usar_en_filtros: true,
-
-					// 	// Con esto hago que se agregue a las propiedades
-					// 	// para el modal component del Model
-					// 	propiedad_extra_para_modal: true,
-					// 	index: current_index,
-					// 	// not_show_on_form: true,
-					// })
-
-					// current_index++
-				}
-				
-			})
-
-			return props
-		},
-
-		quitar_props_de_precios(props) {
-
-			props = props.filter(prop => prop.key != 'percentage_gain')
-			props = props.filter(prop => prop.key != 'price')
-			props = props.filter(prop => prop.key != 'final_price')
-
-			return props
-		},
-
-		get_index(props, props_a_partir_de_las_cuales_agregar) {
-
-			let index = -1
-			
-			let prop_index = 0
-
-			while (
-				index == -1 
-				&& prop_index < props_a_partir_de_las_cuales_agregar.length) 
-			{
-				let prop = props_a_partir_de_las_cuales_agregar[prop_index]	
-				
-				prop_index++
-
-				index = props.findIndex(_prop => _prop.key === prop)
-			}
-
-			// Aumento el index en 1 para que se muestre en la siguiente posicion 
-			index++
-
-			return index 
-		}
 	},
 }
