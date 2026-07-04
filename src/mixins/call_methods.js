@@ -22,6 +22,13 @@ export default [
         if_has_extencion: 'productionV2',
     },
     
+    // Deben descargarse antes que 'table_column_preference': su bootstrap calcula ya las
+    // columnas dinamicas de articulo (listas de precio, depositos, descuentos por metodo de
+    // pago) usando estas colecciones, y si estan vacias en ese momento, esas columnas quedan
+    // afuera de props_to_show para el resto de la sesion (prompt 255).
+    'address',
+    'current_acount_payment_method_discount',
+    'price_type',
     'table_column_preference',
     'pdf_column_option',
     'pdf_column_profile',
@@ -36,7 +43,6 @@ export default [
     'platform',
     'pais_exportacion',
     'moneda',
-    'address',
     // 'client',
     'provider',
     'column_position',
@@ -51,7 +57,6 @@ export default [
     'category',
     'order_status',
     'tienda_nube_order_status',
-    'current_acount_payment_method_discount',
     'default_payment_method_caja',
     'order_production_status',
     'deposit_movement_status',
@@ -67,7 +72,6 @@ export default [
     'expense_concept',
     'expense_category',
     'article_pre_import_range',
-    'price_type',
     'unidad_medida',
     'article_property_type',
     'article_property_value',
