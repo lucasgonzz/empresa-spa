@@ -348,6 +348,13 @@ export default {
 			type: Array,
 			default: null,
 		},
+		// Fuente alternativa (siempre completa) de propiedades extra para el modal de
+		// edicion — independiente de properties_to_show, que puede venir filtrado por la
+		// visibilidad de columnas de la tabla. Si no viene, cae al comportamiento actual.
+		extra_properties_for_modal: {
+			type: Array,
+			default: null,
+		},
 		show_actualizado: {
 			type: Boolean,
 			default: true,
@@ -453,11 +460,16 @@ export default {
 
 		    let props = original_props.map(p => ({ ...p }))
 
-		    if (!Array.isArray(this.properties_to_show)) {
+		    // extra_properties_for_modal (si el modulo lo pasa) es siempre completo, sin
+		    // filtrar por visibilidad de columna de tabla. Si no viene, se cae al viejo
+		    // comportamiento de leer propiedad_extra_para_modal desde properties_to_show.
+		    let source = this.extra_properties_for_modal || this.properties_to_show
+
+		    if (!Array.isArray(source)) {
 		        return props
 		    }
 
-		    const extras = this.properties_to_show.filter(
+		    const extras = source.filter(
 		        p => p && p.propiedad_extra_para_modal
 		    )
 
