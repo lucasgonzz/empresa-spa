@@ -1,3 +1,5 @@
+import { build_price_type_modal_extra_properties } from '@/common-vue/helpers/article_dynamic_table_columns'
+
 export default {
 	computed: {
 		addresses() {
@@ -11,7 +13,12 @@ export default {
 		},
 		properties_to_show() {
 	        return this.set_properties_to_show()
-	    }
+	    },
+		// Todas las listas de precio, siempre, para las tarjetas del modal de edicion de
+		// articulo — independiente de la configuracion de columnas visibles en la tabla.
+		price_type_modal_extra_properties() {
+			return build_price_type_modal_extra_properties(this, this.price_types)
+		},
 	},
 	methods: {
 		set_properties_to_show() {

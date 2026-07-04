@@ -54,6 +54,7 @@
 	show_excel_drop_down
 	:has_permission_create_dropdown="has_permission_create_dropdown"
 	:properties_to_show="properties_to_show"
+	:extra_properties_for_modal="price_type_modal_extra_properties"
 	@addressMovement="addressMovement"
 	:show_empty_text="show_empty_text"
 	model_name="article">
