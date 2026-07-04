@@ -1004,6 +1004,7 @@ export default {
 			},
 			not_show: true,
 			not_show_on_form: true,
+			no_mostrar_nunca: true,
 		},
 	],
 	singular_model_name_spanish: 'Articulo',
