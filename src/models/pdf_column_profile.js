@@ -149,6 +149,16 @@ export default {
 		},
 		{
 			/**
+			 * Perfil predeterminado para PDF de ventas que imprime el buyer desde la tienda.
+			 */
+			text: 'Predeterminado Tienda (ecommerce)',
+			key: 'is_default_tienda',
+			type: 'checkbox',
+			value: 0,
+			show_when_model_name: 'sale',
+		},
+		{
+			/**
 			 * Ancho físico de la hoja. A4 portrait artículos/ventas: 210 mm.
 			 */
 			text: 'Ancho hoja (mm)',
