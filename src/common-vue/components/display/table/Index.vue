@@ -281,13 +281,19 @@ export default {
 	created() {
 		// console.log('se creo tabla')
 		this.setHeight()
+		this.setWidth()
 		let that = this
 		window.addEventListener('resize', function(event) {
 			that.setHeight()
+			that.setWidth()
 			that.update_all_header_filter_fit()
 		}, true);
 
 		this.set_fields()
+	},
+	beforeDestroy() {
+		// Evita leaks de listeners de mousemove/mouseleave si el componente se destruye con la tabla enganchada.
+		this.unbind_scroll_margenes()
 	},
 	data() {
 		return {
@@ -303,6 +309,12 @@ export default {
 			 * sin necesidad de ensanchar la celda al hacer hover.
 			 */
 			header_filter_fits_by_key: {},
+			// Elemento .cont-table al que están enganchados actualmente los listeners de scroll_margenes.
+			scroll_bound_el: null,
+			// Handler de mousemove enganchado a scroll_bound_el (para poder removerlo).
+			scroll_move_handler: null,
+			// Handler de mouseleave enganchado a scroll_bound_el (para poder removerlo).
+			scroll_leave_handler: null,
 		}
 	},
 	computed: {
@@ -576,8 +588,13 @@ export default {
 		},
 		loading() {
 			this.setHeight()
+			this.setWidth()
 			if (!this.loading) {
 				this.update_all_header_filter_fit()
+				// El elemento .cont-table se recreó (estaba detrás de v-if="!loading"): re-enganchar el auto-scroll de márgenes.
+				this.$nextTick(() => {
+					this.scroll_margenes()
+				})
 			}
 		},
 		model_name() {
@@ -588,6 +605,7 @@ export default {
 		},
 		models() {
 			this.setHeight()
+			this.setWidth()
 		},
 		/**
 		 * getModels en papelera solo marca pending; si la tabla ya estaba montada (p. ej. tras restaurar), disparamos el bootstrap aquí.
@@ -1051,8 +1069,9 @@ export default {
 				let table = document.getElementById(this.id)
 				if (table) {
 					setTimeout(() => {
-						let height = window.innerHeight - (Number(table.offsetTop))
-						// height -= 50
+						// Margen de seguridad para que el redondeo de subpíxeles nunca genere scroll vertical de página.
+						let bottom_safety = 12
+						let height = window.innerHeight - Number(table.offsetTop) - bottom_safety
 						if (this.table_height_para_restar) {
 							height -= this.table_height_para_restar
 						}
@@ -1084,8 +1103,44 @@ export default {
 				if (this.intentos < 5) {
 					this.intentos++
 					this.setHeight()
-				} 
+				}
 			}, 300)
+		},
+		/**
+		 * Fija el ancho de .cont-table para que su borde derecho llegue justo al borde del viewport,
+		 * evitando el desborde que genera scroll horizontal de página. No aplica dentro de modales,
+		 * que tienen su propio layout (width: 98%).
+		 */
+		setWidth() {
+			if (this.loading) {
+				return
+			}
+			let table = document.getElementById(this.id)
+			if (!table) {
+				return
+			}
+			// Las tablas dentro de modales tienen su propio layout, no se tocan.
+			if (table.closest && table.closest('.modal-content')) {
+				return
+			}
+			setTimeout(() => {
+				let el = document.getElementById(this.id)
+				if (!el) {
+					return
+				}
+				if (el.closest && el.closest('.modal-content')) {
+					return
+				}
+				let rect = el.getBoundingClientRect()
+				// clientWidth del documento = ancho de viewport SIN la scrollbar vertical de la página.
+				let viewport_right = document.documentElement.clientWidth
+				// Margen de seguridad para no generar nunca scroll horizontal de página.
+				let safety = 6
+				let width = viewport_right - rect.left - safety
+				if (width > 0) {
+					el.style.width = width + 'px'
+				}
+			}, 500)
 		},
 		setShowButtonsScroll() {
 			let cont_table =  document.getElementById(this.id)
@@ -1098,6 +1153,11 @@ export default {
 				}
 			}
 		},
+		/**
+		 * Engancha el auto-scroll horizontal de márgenes sobre .cont-table.
+		 * Idempotente: si ya está enganchado al mismo elemento no vuelve a enganchar; si el elemento
+		 * se recreó (v-if="!loading" lo destruye/recrea), limpia los listeners viejos antes de re-enganchar.
+		 */
 		scroll_margenes() {
 			if (
 				this.is_mobile
@@ -1110,6 +1170,11 @@ export default {
 			}
 		    const contTable = document.getElementById(this.id);
 		    if (!contTable) return;
+
+		    // Ya enganchado a este mismo elemento: no duplicar listeners.
+		    if (this.scroll_bound_el === contTable) return;
+		    // Elemento viejo (tabla recreada por el v-if de loading): limpiar antes de re-enganchar.
+		    this.unbind_scroll_margenes();
 
 		    let scrollDirection = null;
 		    let isScrolling = false;
@@ -1156,6 +1221,26 @@ export default {
 
 		    contTable.addEventListener('mousemove', handleMouseMove);
 		    contTable.addEventListener('mouseleave', stopScroll);
+
+		    this.scroll_bound_el = contTable;
+		    this.scroll_move_handler = handleMouseMove;
+		    this.scroll_leave_handler = stopScroll;
+		},
+		/**
+		 * Remueve los listeners de scroll_margenes del elemento al que estén enganchados actualmente.
+		 */
+		unbind_scroll_margenes() {
+			if (this.scroll_bound_el) {
+				if (this.scroll_move_handler) {
+					this.scroll_bound_el.removeEventListener('mousemove', this.scroll_move_handler);
+				}
+				if (this.scroll_leave_handler) {
+					this.scroll_bound_el.removeEventListener('mouseleave', this.scroll_leave_handler);
+				}
+			}
+			this.scroll_bound_el = null;
+			this.scroll_move_handler = null;
+			this.scroll_leave_handler = null;
 		},
 	}
 }
@@ -1169,12 +1254,12 @@ export default {
 			min-width: 150px
 
 .cont-table
-	width: calc(100% + 30px)
-	// min-height: 500px
-	// display: inline-block
-	overflow-y: scroll
+	box-sizing: border-box
+	width: 100%
+	overflow-x: auto
+	overflow-y: auto
 	margin-left: -10px
-	margin-right: 10px
+	margin-right: 0
 	margin-top: 15px
 	position: relative
 	/* Esquinas superiores fijas: el thead sticky se ancla aquí, no en .common-table que scrollea. */
