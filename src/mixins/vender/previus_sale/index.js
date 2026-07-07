@@ -213,8 +213,37 @@ export default {
 
 			if (model.current_acount_payment_methods
 				&& model.current_acount_payment_methods.length == 1) {
+				// Venta con un único método de pago: se setea el id y se limpia el reparto múltiple.
 				this.$store.commit('vender/setCurrentAcountPaymentMethodId', model.current_acount_payment_methods[0].id)
-			} 
+				this.$store.commit('vender/setSelectedPaymentMethods', [])
+			} else if (model.current_acount_payment_methods
+				&& model.current_acount_payment_methods.length > 1) {
+				// Venta con múltiples métodos de pago: no hay un único método, se precarga
+				// el reparto (selected_payment_methods) reconstruyendo cada entrada desde el
+				// pivot de current_acount_payment_methods, con las mismas llaves que espera
+				// el backend (PaymentMethodHelper::attach_payment_methods) para poder
+				// actualizar la venta sin re-ingresar los métodos.
+				this.$store.commit('vender/setCurrentAcountPaymentMethodId', 0)
+				// Array donde se arma el reparto de métodos de pago precargado.
+				let selected_payment_methods = []
+				model.current_acount_payment_methods.forEach(pm => {
+					selected_payment_methods.push({
+						current_acount_payment_method_id: pm.id,
+						amount: pm.pivot.amount,
+						amount_cotizado: pm.pivot.amount_cotizado,
+						cotizacion: pm.pivot.cotizacion,
+						moneda_id: pm.pivot.moneda_id,
+						cuota_id: pm.pivot.cuota_id ? pm.pivot.cuota_id : 0,
+						caja_id: pm.pivot.caja_id ? pm.pivot.caja_id : 0,
+						discount_amount: pm.pivot.discount_amount,
+					})
+				})
+				this.$store.commit('vender/setSelectedPaymentMethods', selected_payment_methods)
+			} else {
+				// Sin métodos de pago (o venta a cuenta corriente): se limpia el reparto
+				// para que no herede el de una venta previa cargada anteriormente.
+				this.$store.commit('vender/setSelectedPaymentMethods', [])
+			}
 
 			if (model.afip_information_id) {
 				this.$store.commit('vender/setAfipInformationId', model.afip_information_id)
