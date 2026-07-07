@@ -281,11 +281,9 @@ export default {
 	created() {
 		// console.log('se creo tabla')
 		this.setHeight()
-		this.setWidth()
 		let that = this
 		window.addEventListener('resize', function(event) {
 			that.setHeight()
-			that.setWidth()
 			that.update_all_header_filter_fit()
 		}, true);
 
@@ -588,7 +586,6 @@ export default {
 		},
 		loading() {
 			this.setHeight()
-			this.setWidth()
 			if (!this.loading) {
 				this.update_all_header_filter_fit()
 				// El elemento .cont-table se recreó (estaba detrás de v-if="!loading"): re-enganchar el auto-scroll de márgenes.
@@ -605,7 +602,6 @@ export default {
 		},
 		models() {
 			this.setHeight()
-			this.setWidth()
 		},
 		/**
 		 * getModels en papelera solo marca pending; si la tabla ya estaba montada (p. ej. tras restaurar), disparamos el bootstrap aquí.
@@ -1106,42 +1102,6 @@ export default {
 				}
 			}, 300)
 		},
-		/**
-		 * Fija el ancho de .cont-table para que su borde derecho llegue justo al borde del viewport,
-		 * evitando el desborde que genera scroll horizontal de página. No aplica dentro de modales,
-		 * que tienen su propio layout (width: 98%).
-		 */
-		setWidth() {
-			if (this.loading) {
-				return
-			}
-			let table = document.getElementById(this.id)
-			if (!table) {
-				return
-			}
-			// Las tablas dentro de modales tienen su propio layout, no se tocan.
-			if (table.closest && table.closest('.modal-content')) {
-				return
-			}
-			setTimeout(() => {
-				let el = document.getElementById(this.id)
-				if (!el) {
-					return
-				}
-				if (el.closest && el.closest('.modal-content')) {
-					return
-				}
-				let rect = el.getBoundingClientRect()
-				// clientWidth del documento = ancho de viewport SIN la scrollbar vertical de la página.
-				let viewport_right = document.documentElement.clientWidth
-				// Margen de seguridad para no generar nunca scroll horizontal de página.
-				let safety = 6
-				let width = viewport_right - rect.left - safety
-				if (width > 0) {
-					el.style.width = width + 'px'
-				}
-			}, 500)
-		},
 		setShowButtonsScroll() {
 			let cont_table =  document.getElementById(this.id)
 			if (cont_table) {
@@ -1176,7 +1136,11 @@ export default {
 		    // Elemento viejo (tabla recreada por el v-if de loading): limpiar antes de re-enganchar.
 		    this.unbind_scroll_margenes();
 
+		    const MARGIN = 70;      // Ancho de la zona de scroll de los márgenes (NO cambia).
+		    const MAX_SPEED = 20;   // Velocidad máxima (la actual), al borde de la zona útil.
+
 		    let scrollDirection = null;
+		    let scrollSpeed = 0;
 		    let isScrolling = false;
 
 		    const startScroll = () => {
@@ -1184,35 +1148,55 @@ export default {
 
 		        isScrolling = true;
 		        const scroll = () => {
-		            if (
-		            	!scrollDirection
-		            	// || contTable.scrollLeft == 0
-		            ) {
+		            if (!scrollDirection || scrollSpeed <= 0) {
 		                isScrolling = false;
-		                return; // Detiene si no hay dirección
+		                return; // Detiene si no hay dirección o velocidad
 		            }
-
-		            // console.log('scroleando, scrollLeft: '+contTable.scrollLeft)
-
-		            contTable.scrollLeft += scrollDirection === 'right' ? 20 : -20; // Ajusta velocidad aquí
-		            requestAnimationFrame(scroll); // Llama al siguiente cuadro
+		            contTable.scrollLeft += scrollDirection === 'right' ? scrollSpeed : -scrollSpeed;
+		            requestAnimationFrame(scroll);
 		        };
 		        scroll();
 		    };
 
 		    const stopScroll = () => {
 		        scrollDirection = null;
+		        scrollSpeed = 0;
 		    };
 
 		    const handleMouseMove = (e) => {
-		        const { left, right } = contTable.getBoundingClientRect();
-		        const margin = 70; // Ancho de los márgenes
+		        const rect = contTable.getBoundingClientRect();
+		        const left = rect.left;
+		        const right = rect.right;
+		        const x = e.clientX;
+		        // Ancho real de la scrollbar vertical (a la derecha). 0 si no hay.
+		        const scrollbar_width = contTable.offsetWidth - contTable.clientWidth;
 
-		        if (e.clientX < left + margin) {
+		        // Sobre la barra de scroll vertical: no auto-scroll (para poder usar la barra).
+		        if (scrollbar_width > 0 && x > right - scrollbar_width) {
+		            stopScroll();
+		            return;
+		        }
+
+		        if (x < left + MARGIN) {
+		            // Margen izquierdo: cuanto más cerca del borde, más rápido.
+		            let distance = x - left;                    // 0 en el borde, MARGIN en el límite interno
+		            let proximity = (MARGIN - distance) / MARGIN;
+		            if (proximity < 0) proximity = 0;
+		            if (proximity > 1) proximity = 1;
 		            scrollDirection = 'left';
+		            scrollSpeed = MAX_SPEED * proximity;
 		            startScroll();
-		        } else if (e.clientX > right - margin) {
+		        } else if (x > right - MARGIN) {
+		            // Margen derecho (excluyendo la scrollbar): cuanto más cerca del borde usable, más rápido.
+		            let distance = right - x;                   // pequeño cerca del borde
+		            let usable = MARGIN - scrollbar_width;      // zona útil sin la scrollbar
+		            if (usable <= 0) usable = MARGIN;
+		            // proximity = 1 justo al lado de la scrollbar (máxima velocidad), 0 en el límite interno.
+		            let proximity = (MARGIN - distance) / usable;
+		            if (proximity < 0) proximity = 0;
+		            if (proximity > 1) proximity = 1;
 		            scrollDirection = 'right';
+		            scrollSpeed = MAX_SPEED * proximity;
 		            startScroll();
 		        } else {
 		            stopScroll();
@@ -1258,13 +1242,17 @@ export default {
 	width: 100%
 	overflow-x: auto
 	overflow-y: auto
-	margin-left: -10px
+	margin-left: 0
 	margin-right: 0
 	margin-top: 15px
 	position: relative
-	/* Esquinas superiores fijas: el thead sticky se ancla aquí, no en .common-table que scrollea. */
-	border-top-left-radius: 10px
-	border-top-right-radius: 10px
+	/* Esquinas redondeadas arriba y abajo (el overflow auto recorta el contenido a este radio). */
+	border-radius: 12px
+
+	/* Scrollbar de ancho normal para la tabla (el global _scroll_bar.sass la deja en 8px, muy fina). */
+	&::-webkit-scrollbar
+		width: 15px
+		height: 15px
 
 	&::before,
 	&::after 
@@ -1294,8 +1282,8 @@ export default {
 			background: rgba(255,255,255,.8)
 	
 	.common-table
-		// Redondeo inferior derecho; las esquinas superiores las recorta .cont-table (header sticky).
-		border-radius: 0 0 10px 0
+		// Redondeo inferior (ambas esquinas); las superiores las recorta .cont-table (header sticky).
+		border-radius: 0 0 12px 12px
 		overflow: hidden
 		position: relative
 		border-spacing: 0px
@@ -1338,16 +1326,16 @@ export default {
 			box-shadow: 0 -2px 0 0 #2C2C2C
 
 			&:first-child
-				border-top-left-radius: 10px
+				border-top-left-radius: 12px
 				overflow: hidden
 				.cont-th
-					border-top-left-radius: 10px
+					border-top-left-radius: 12px
 
 			&:last-child
-				border-top-right-radius: 10px
+				border-top-right-radius: 12px
 				overflow: hidden
 				.cont-th
-					border-top-right-radius: 10px
+					border-top-right-radius: 12px
 
 			&:hover
 				.cont-filter-buttons
