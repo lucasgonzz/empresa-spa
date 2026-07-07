@@ -507,21 +507,21 @@ export default {
 			return item.pivot.price_type_personalizado_id
 		},
 		checkear_metodos_de_pago_en_previus_sale() {
-			console.log('checkear_metodos_de_pago_en_previus_sale')
-			if (
-				!this.current_acount_payment_method_id 
-				&& (
-					!this.previus_sale.client_id
-					|| this.previus_sale.omitir_en_cuenta_corriente
-				)
-			) {
-
-				if (!this.check_sobrante_a_repartir()) {
-					return false 
-				} 
-
-			} 
-			return true
+			// Venta a cuenta corriente: no exige método de pago de contado
+			if (this.previus_sale.client_id && !this.previus_sale.omitir_en_cuenta_corriente) {
+				return true
+			}
+			// Método de pago único seleccionado
+			if (this.current_acount_payment_method_id) {
+				return true
+			}
+			// Múltiples métodos de pago: el modal ya validó que el total quede repartido
+			if (this.selected_payment_methods.length) {
+				return true
+			}
+			// No hay ningún método de pago definido
+			this.$toast.error('Seleccione un método de pago', { duration: 5000 })
+			return false
 		}
 	}
 }
