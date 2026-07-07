@@ -5,7 +5,11 @@ export default {
 			key: 'model_name',
 			type: 'select',
 			is_title: true,
+			// Requerido para que el chequeo de Index.vue avise "Ingrese Modelo" si se intenta guardar sin elegir uno.
+			required: true,
 			options: [
+				// Opción placeholder con value: 0 para matchear el valor inicial del select (evita el bug de la opción "fantasma" seleccionada sin disparar change).
+				{ value: 0, text: 'Seleccioná un modelo' },
 				{ value: 'sale', text: 'Venta (comprobantes)' },
 				{ value: 'article', text: 'Artículo (listado PDF tabla)' },
 			],
