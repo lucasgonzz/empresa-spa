@@ -115,6 +115,12 @@
 			</b-form-checkbox>
 		</b-col>
 		<b-col md="4" class="d-flex align-items-center">
+			<b-form-checkbox
+			v-model="local_is_default_tienda">
+				Predeterminado Tienda (ecommerce)
+			</b-form-checkbox>
+		</b-col>
+		<b-col md="4" class="d-flex align-items-center">
 			<!-- Cuando está activo, el PDF imprime la fecha del día en lugar de la fecha del comprobante -->
 			<b-form-checkbox
 			v-model="local_use_current_date">
@@ -227,6 +233,13 @@ export default {
 		 * Predeterminado para WhatsApp en ventas con factura ARCA.
 		 */
 		is_default_whatsapp_afip: {
+			type: [Boolean, Number, String],
+			default: false,
+		},
+		/**
+		 * Marca el perfil como predeterminado para PDF de ventas en la tienda (ecommerce).
+		 */
+		is_default_tienda: {
 			type: [Boolean, Number, String],
 			default: false,
 		},
@@ -384,6 +397,19 @@ export default {
 			},
 			set(value) {
 				this.$emit('update:is_default_whatsapp_afip', !!value)
+			},
+		},
+		/**
+		 * Proxy local del flag predeterminado para PDF de ventas en tienda (ecommerce).
+		 */
+		local_is_default_tienda: {
+			get() {
+				return this.is_default_tienda === true
+					|| this.is_default_tienda === 1
+					|| this.is_default_tienda === '1'
+			},
+			set(value) {
+				this.$emit('update:is_default_tienda', !!value)
 			},
 		},
 		/**

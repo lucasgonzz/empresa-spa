@@ -49,6 +49,7 @@
 		:is_afip_ticket.sync="is_afip_ticket"
 		:is_default_whatsapp.sync="is_default_whatsapp"
 		:is_default_whatsapp_afip.sync="is_default_whatsapp_afip"
+		:is_default_tienda.sync="is_default_tienda"
 		:show_total_in_footer.sync="show_total_in_footer"
 		:show_totals_on_each_page.sync="show_totals_on_each_page"
 		:show_comissions.sync="show_comissions"
@@ -144,6 +145,10 @@ export default {
 			 * Flag editable: perfil factura ARCA predeterminado para WhatsApp.
 			 */
 			is_default_whatsapp_afip: false,
+			/**
+			 * Flag editable: perfil predeterminado para PDF de ventas en tienda (ecommerce).
+			 */
+			is_default_tienda: false,
 			/**
 			 * Flag editable para mostrar/ocultar total general en el pie.
 			 */
@@ -445,6 +450,7 @@ export default {
 			this.is_afip_ticket = this.normalize_boolean(profile.is_afip_ticket)
 			this.is_default_whatsapp = this.normalize_boolean(profile.is_default_whatsapp)
 			this.is_default_whatsapp_afip = this.normalize_boolean(profile.is_default_whatsapp_afip)
+			this.is_default_tienda = this.normalize_boolean(profile.is_default_tienda)
 			/**
 			 * Flag del total en el pie; true si no viene para mantener compatibilidad.
 			 */
@@ -560,6 +566,7 @@ export default {
 				is_afip_ticket: this.normalize_boolean(this.is_afip_ticket),
 				is_default_whatsapp: this.normalize_boolean(this.is_default_whatsapp),
 				is_default_whatsapp_afip: this.normalize_boolean(this.is_default_whatsapp_afip),
+				is_default_tienda: this.normalize_boolean(this.is_default_tienda),
 				show_total_in_footer: this.normalize_boolean(this.show_total_in_footer),
 				show_totals_on_each_page: this.normalize_boolean(this.show_totals_on_each_page),
 				show_comissions: this.normalize_boolean(this.show_comissions),

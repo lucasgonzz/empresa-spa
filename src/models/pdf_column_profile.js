@@ -5,7 +5,11 @@ export default {
 			key: 'model_name',
 			type: 'select',
 			is_title: true,
+			// Requerido para que el chequeo de Index.vue avise "Ingrese Modelo" si se intenta guardar sin elegir uno.
+			required: true,
 			options: [
+				// Opción placeholder con value: 0 para matchear el valor inicial del select (evita el bug de la opción "fantasma" seleccionada sin disparar change).
+				{ value: 0, text: 'Seleccioná un modelo' },
 				{ value: 'sale', text: 'Venta (comprobantes)' },
 				{ value: 'article', text: 'Artículo (listado PDF tabla)' },
 			],
@@ -143,6 +147,16 @@ export default {
 			 */
 			text: 'Predeterminado WhatsApp (factura ARCA)',
 			key: 'is_default_whatsapp_afip',
+			type: 'checkbox',
+			value: 0,
+			show_when_model_name: 'sale',
+		},
+		{
+			/**
+			 * Perfil predeterminado para PDF de ventas que imprime el buyer desde la tienda.
+			 */
+			text: 'Predeterminado Tienda (ecommerce)',
+			key: 'is_default_tienda',
 			type: 'checkbox',
 			value: 0,
 			show_when_model_name: 'sale',

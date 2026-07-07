@@ -289,6 +289,10 @@ export default {
 
 		this.set_fields()
 	},
+	beforeDestroy() {
+		// Evita leaks de listeners de mousemove/mouseleave si el componente se destruye con la tabla enganchada.
+		this.unbind_scroll_margenes()
+	},
 	data() {
 		return {
 			index_to_show: 1,
@@ -303,6 +307,12 @@ export default {
 			 * sin necesidad de ensanchar la celda al hacer hover.
 			 */
 			header_filter_fits_by_key: {},
+			// Elemento .cont-table al que están enganchados actualmente los listeners de scroll_margenes.
+			scroll_bound_el: null,
+			// Handler de mousemove enganchado a scroll_bound_el (para poder removerlo).
+			scroll_move_handler: null,
+			// Handler de mouseleave enganchado a scroll_bound_el (para poder removerlo).
+			scroll_leave_handler: null,
 		}
 	},
 	computed: {
@@ -578,6 +588,10 @@ export default {
 			this.setHeight()
 			if (!this.loading) {
 				this.update_all_header_filter_fit()
+				// El elemento .cont-table se recreó (estaba detrás de v-if="!loading"): re-enganchar el auto-scroll de márgenes.
+				this.$nextTick(() => {
+					this.scroll_margenes()
+				})
 			}
 		},
 		model_name() {
@@ -1051,8 +1065,9 @@ export default {
 				let table = document.getElementById(this.id)
 				if (table) {
 					setTimeout(() => {
-						let height = window.innerHeight - (Number(table.offsetTop))
-						// height -= 50
+						// Margen de seguridad para que el redondeo de subpíxeles nunca genere scroll vertical de página.
+						let bottom_safety = 12
+						let height = window.innerHeight - Number(table.offsetTop) - bottom_safety
 						if (this.table_height_para_restar) {
 							height -= this.table_height_para_restar
 						}
@@ -1084,7 +1099,7 @@ export default {
 				if (this.intentos < 5) {
 					this.intentos++
 					this.setHeight()
-				} 
+				}
 			}, 300)
 		},
 		setShowButtonsScroll() {
@@ -1098,6 +1113,11 @@ export default {
 				}
 			}
 		},
+		/**
+		 * Engancha el auto-scroll horizontal de márgenes sobre .cont-table.
+		 * Idempotente: si ya está enganchado al mismo elemento no vuelve a enganchar; si el elemento
+		 * se recreó (v-if="!loading" lo destruye/recrea), limpia los listeners viejos antes de re-enganchar.
+		 */
 		scroll_margenes() {
 			if (
 				this.is_mobile
@@ -1111,7 +1131,16 @@ export default {
 		    const contTable = document.getElementById(this.id);
 		    if (!contTable) return;
 
+		    // Ya enganchado a este mismo elemento: no duplicar listeners.
+		    if (this.scroll_bound_el === contTable) return;
+		    // Elemento viejo (tabla recreada por el v-if de loading): limpiar antes de re-enganchar.
+		    this.unbind_scroll_margenes();
+
+		    const MARGIN = 70;      // Ancho de la zona de scroll de los márgenes (NO cambia).
+		    const MAX_SPEED = 20;   // Velocidad máxima (la actual), al borde de la zona útil.
+
 		    let scrollDirection = null;
+		    let scrollSpeed = 0;
 		    let isScrolling = false;
 
 		    const startScroll = () => {
@@ -1119,35 +1148,55 @@ export default {
 
 		        isScrolling = true;
 		        const scroll = () => {
-		            if (
-		            	!scrollDirection
-		            	// || contTable.scrollLeft == 0
-		            ) {
+		            if (!scrollDirection || scrollSpeed <= 0) {
 		                isScrolling = false;
-		                return; // Detiene si no hay dirección
+		                return; // Detiene si no hay dirección o velocidad
 		            }
-
-		            // console.log('scroleando, scrollLeft: '+contTable.scrollLeft)
-
-		            contTable.scrollLeft += scrollDirection === 'right' ? 20 : -20; // Ajusta velocidad aquí
-		            requestAnimationFrame(scroll); // Llama al siguiente cuadro
+		            contTable.scrollLeft += scrollDirection === 'right' ? scrollSpeed : -scrollSpeed;
+		            requestAnimationFrame(scroll);
 		        };
 		        scroll();
 		    };
 
 		    const stopScroll = () => {
 		        scrollDirection = null;
+		        scrollSpeed = 0;
 		    };
 
 		    const handleMouseMove = (e) => {
-		        const { left, right } = contTable.getBoundingClientRect();
-		        const margin = 70; // Ancho de los márgenes
+		        const rect = contTable.getBoundingClientRect();
+		        const left = rect.left;
+		        const right = rect.right;
+		        const x = e.clientX;
+		        // Ancho real de la scrollbar vertical (a la derecha). 0 si no hay.
+		        const scrollbar_width = contTable.offsetWidth - contTable.clientWidth;
 
-		        if (e.clientX < left + margin) {
+		        // Sobre la barra de scroll vertical: no auto-scroll (para poder usar la barra).
+		        if (scrollbar_width > 0 && x > right - scrollbar_width) {
+		            stopScroll();
+		            return;
+		        }
+
+		        if (x < left + MARGIN) {
+		            // Margen izquierdo: cuanto más cerca del borde, más rápido.
+		            let distance = x - left;                    // 0 en el borde, MARGIN en el límite interno
+		            let proximity = (MARGIN - distance) / MARGIN;
+		            if (proximity < 0) proximity = 0;
+		            if (proximity > 1) proximity = 1;
 		            scrollDirection = 'left';
+		            scrollSpeed = MAX_SPEED * proximity;
 		            startScroll();
-		        } else if (e.clientX > right - margin) {
+		        } else if (x > right - MARGIN) {
+		            // Margen derecho (excluyendo la scrollbar): cuanto más cerca del borde usable, más rápido.
+		            let distance = right - x;                   // pequeño cerca del borde
+		            let usable = MARGIN - scrollbar_width;      // zona útil sin la scrollbar
+		            if (usable <= 0) usable = MARGIN;
+		            // proximity = 1 justo al lado de la scrollbar (máxima velocidad), 0 en el límite interno.
+		            let proximity = (MARGIN - distance) / usable;
+		            if (proximity < 0) proximity = 0;
+		            if (proximity > 1) proximity = 1;
 		            scrollDirection = 'right';
+		            scrollSpeed = MAX_SPEED * proximity;
 		            startScroll();
 		        } else {
 		            stopScroll();
@@ -1156,6 +1205,26 @@ export default {
 
 		    contTable.addEventListener('mousemove', handleMouseMove);
 		    contTable.addEventListener('mouseleave', stopScroll);
+
+		    this.scroll_bound_el = contTable;
+		    this.scroll_move_handler = handleMouseMove;
+		    this.scroll_leave_handler = stopScroll;
+		},
+		/**
+		 * Remueve los listeners de scroll_margenes del elemento al que estén enganchados actualmente.
+		 */
+		unbind_scroll_margenes() {
+			if (this.scroll_bound_el) {
+				if (this.scroll_move_handler) {
+					this.scroll_bound_el.removeEventListener('mousemove', this.scroll_move_handler);
+				}
+				if (this.scroll_leave_handler) {
+					this.scroll_bound_el.removeEventListener('mouseleave', this.scroll_leave_handler);
+				}
+			}
+			this.scroll_bound_el = null;
+			this.scroll_move_handler = null;
+			this.scroll_leave_handler = null;
 		},
 	}
 }
@@ -1169,17 +1238,21 @@ export default {
 			min-width: 150px
 
 .cont-table
-	width: calc(100% + 30px)
-	// min-height: 500px
-	// display: inline-block
-	overflow-y: scroll
-	margin-left: -10px
-	margin-right: 10px
+	box-sizing: border-box
+	width: 100%
+	overflow-x: auto
+	overflow-y: auto
+	margin-left: 0
+	margin-right: 0
 	margin-top: 15px
 	position: relative
-	/* Esquinas superiores fijas: el thead sticky se ancla aquí, no en .common-table que scrollea. */
-	border-top-left-radius: 10px
-	border-top-right-radius: 10px
+	/* Esquinas redondeadas arriba y abajo (el overflow auto recorta el contenido a este radio). */
+	border-radius: 12px
+
+	/* Scrollbar de ancho normal para la tabla (el global _scroll_bar.sass la deja en 8px, muy fina). */
+	&::-webkit-scrollbar
+		width: 15px
+		height: 15px
 
 	&::before,
 	&::after 
@@ -1209,8 +1282,8 @@ export default {
 			background: rgba(255,255,255,.8)
 	
 	.common-table
-		// Redondeo inferior derecho; las esquinas superiores las recorta .cont-table (header sticky).
-		border-radius: 0 0 10px 0
+		// Redondeo inferior (ambas esquinas); las superiores las recorta .cont-table (header sticky).
+		border-radius: 0 0 12px 12px
 		overflow: hidden
 		position: relative
 		border-spacing: 0px
@@ -1253,16 +1326,16 @@ export default {
 			box-shadow: 0 -2px 0 0 #2C2C2C
 
 			&:first-child
-				border-top-left-radius: 10px
+				border-top-left-radius: 12px
 				overflow: hidden
 				.cont-th
-					border-top-left-radius: 10px
+					border-top-left-radius: 12px
 
 			&:last-child
-				border-top-right-radius: 10px
+				border-top-right-radius: 12px
 				overflow: hidden
 				.cont-th
-					border-top-right-radius: 10px
+					border-top-right-radius: 12px
 
 			&:hover
 				.cont-filter-buttons
