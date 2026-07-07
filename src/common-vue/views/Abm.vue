@@ -19,7 +19,13 @@
 			<view-component
 			show_filter_modal
 			:check_permissions="false"
-			:model_name="selected_model"></view-component>
+			:model_name="selected_model">
+				<template #table_left_options="{ model }">
+					<btn-duplicate-pdf-profile
+					v-if="selected_model === 'pdf_column_profile'"
+					:model="model"></btn-duplicate-pdf-profile>
+				</template>
+			</view-component>
 		</b-col>
 	</b-row>
 </template>
@@ -31,6 +37,7 @@ export default {
 	components: {
 		HorizontalNav: () => import('@/common-vue/components/horizontal-nav/Index'),
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
+		BtnDuplicatePdfProfile: () => import('@/common-vue/components/pdf/BtnDuplicatePdfProfile'),
 	},
 	data() {
 		return {
