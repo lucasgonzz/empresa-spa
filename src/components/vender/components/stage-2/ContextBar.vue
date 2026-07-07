@@ -39,9 +39,9 @@
 		<div class="vender-context-bar__block vender-context-bar__block--payment">
 			<div class="vender-context-bar__payment-row">
 				<span
-				v-if="selected_payment_method"
+				v-if="payment_method_summary"
 				class="vender-context-bar__main-value">
-					{{ selected_payment_method.name }}
+					{{ payment_method_summary }}
 				</span>
 				<span
 				v-else
@@ -178,15 +178,36 @@ export default {
 		},
 
 		/**
-		 * Método de pago seleccionado; buscado en el store de payment_method.
+		 * Método de pago único seleccionado; buscado en el store de current_acount_payment_method.
+		 * Fuente de verdad correcta para la venta de método único (no el store legacy payment_method).
 		 *
 		 * @returns {Object|null}
 		 */
 		selected_payment_method() {
-			const pm_id = this.$store.state.vender.payment_method_id
+			/* ID del método de pago único guardado en el store de vender */
+			const pm_id = this.$store.state.vender.current_acount_payment_method_id
 			if (!pm_id) return null
-			const methods = this.$store.state.payment_method.models || []
+			const methods = this.$store.state.current_acount_payment_method.models || []
 			return methods.find(m => m.id == pm_id) || null
+		},
+
+		/**
+		 * Resumen textual del método de pago para mostrar en la barra de contexto.
+		 * Contempla tanto el caso de método único como el de múltiples métodos repartidos.
+		 *
+		 * @returns {string|null}
+		 */
+		payment_method_summary() {
+			/* Caso método único: mostrar su nombre */
+			if (this.selected_payment_method) {
+				return this.selected_payment_method.name
+			}
+			/* Caso múltiples métodos de pago repartidos: mostrar cantidad */
+			if (this.selected_payment_methods.length) {
+				return this.selected_payment_methods.length + ' métodos de pago'
+			}
+			/* Sin método de pago seleccionado */
+			return null
 		},
 
 		/**
@@ -199,12 +220,13 @@ export default {
 		},
 
 		/**
-		 * Indica si hay un método de pago seleccionado.
+		 * Indica si hay un método de pago seleccionado: método único o reparto de múltiples métodos.
 		 *
 		 * @returns {boolean}
 		 */
 		has_payment_method() {
-			return !!this.$store.state.vender.payment_method_id
+			return !!this.$store.state.vender.current_acount_payment_method_id
+				|| this.selected_payment_methods.length > 0
 		},
 
 		/**
