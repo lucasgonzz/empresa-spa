@@ -9,6 +9,7 @@
 
 	</b-modal>
 </template>
+
 <script>
 export default {
 	components: {
