@@ -84,6 +84,27 @@ export default {
 			],
 		},
 		/*
+		 * Prompt 266 (Fase 2, Capa 3): modo "precio de etiqueta incluye la tarjeta mas cara".
+		 * Si esta activo, el precio final del articulo (el que se muestra en LISTADO y VENDER) ya
+		 * tiene incorporado el recargo del metodo de pago mas caro configurado. Al elegir un metodo
+		 * de pago en VENDER, se muestra el precio ajustado para ese metodo y su descuento respecto
+		 * del precio de etiqueta (por ejemplo, elegir "Efectivo" muestra un precio menor con su
+		 * porcentaje de descuento). Si esta desactivado, el comportamiento es el de siempre: precio
+		 * base + recargo del metodo de pago elegido.
+		 */
+		{
+			text: 'El precio de etiqueta ya incluye el recargo de la tarjeta mas cara',
+			key: 'precio_base_incluye_tarjeta',
+			type: 'checkbox',
+			value: 0,
+			descriptions:
+			[
+				'Si se activa, el precio final del articulo ya incluye el recargo del metodo de pago mas caro configurado.',
+				'En VENDER, al elegir un metodo de pago se muestra el precio ajustado y el descuento respecto del precio de etiqueta.',
+				'Si se desactiva, el precio final es el base y el recargo del metodo de pago elegido se suma aparte (comportamiento actual).',
+			],
+		},
+		/*
 		 * Si está activo, al calcular costos en ventas se aplican descuentos y recargos del pedido (SaleHelper).
 		 */
 		{

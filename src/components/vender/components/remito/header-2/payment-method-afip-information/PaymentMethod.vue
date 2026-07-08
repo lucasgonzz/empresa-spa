@@ -42,6 +42,25 @@
 		
 	</b-input-group>
 
+	<!--
+		Prompt 266 (Fase 2, Capa 3): con el flag `precio_base_incluye_tarjeta` activo, el precio
+		mostrado en el carrito ya es el de etiqueta (incluye la tarjeta mas cara). Al elegir un
+		metodo de pago, se muestra el precio final equivalente para ese metodo y su descuento
+		respecto de la etiqueta (dato que ya resuelve la API, ver ArticlePricesHelper).
+		Con el flag inactivo, o sin reglas configuradas, este bloque no se muestra y nada cambia.
+	-->
+	<p
+	v-if="precio_metodo_pago_seleccionado"
+	class="precio-metodo-pago-seleccionado m-t-5">
+		Precio con este metodo: <strong>{{ price(precio_metodo_pago_seleccionado.price) }}</strong>
+		<span v-if="precio_metodo_pago_seleccionado.discount_percentage_vs_etiqueta > 0">
+			(-{{ precio_metodo_pago_seleccionado.discount_percentage_vs_etiqueta }}%)
+		</span>
+		<span v-else-if="precio_metodo_pago_seleccionado.discount_percentage_vs_etiqueta < 0">
+			(+{{ precio_metodo_pago_seleccionado.discount_percentage_vs_etiqueta * -1 }}%)
+		</span>
+	</p>
+
 	<cuotas></cuotas>
 </div>
 
@@ -155,6 +174,59 @@ export default {
 		 */
 		expanded_select_size() {
 			return Math.max(this.options.length, 2)
+		},
+
+		/**
+		 * Prompt 266 (Fase 2, Capa 3): total actual de la venta (el que ya calcula setTotal()).
+		 */
+		vender_total() {
+			return this.$store.state.vender.total
+		},
+
+		/**
+		 * Prompt 266 (Fase 2, Capa 3): desglose de precios por metodo de pago que devuelve la API
+		 * (ArticlePricesHelper::calcular_precios_por_metodo_pago_con_tarjeta_incluida), tomado del
+		 * primer articulo del carrito que lo tenga. El porcentaje de descuento/recargo vs etiqueta
+		 * es el mismo para cualquier articulo (depende de las reglas del negocio, no del precio),
+		 * asi que alcanza con tomar el de un solo item para aplicarlo sobre el total de la venta.
+		 * Es null si el flag `precio_base_incluye_tarjeta` esta apagado o no hay reglas configuradas.
+		 */
+		precios_por_metodo_pago() {
+			let item_con_precios = this.$store.state.vender.items.find(item => item.precios_por_metodo_pago)
+			return item_con_precios ? item_con_precios.precios_por_metodo_pago : null
+		},
+
+		/**
+		 * Prompt 266 (Fase 2, Capa 3): precio final de la venta y descuento vs etiqueta para el
+		 * metodo de pago actualmente seleccionado. Null si el flag esta apagado, no hay reglas
+		 * configuradas o todavia no se eligio un metodo de pago.
+		 */
+		precio_metodo_pago_seleccionado() {
+			if (
+				!this.owner
+				|| !this.owner.precio_base_incluye_tarjeta
+				|| !this.precios_por_metodo_pago
+				|| !this.current_acount_payment_method_id
+			) {
+				return null
+			}
+
+			let metodo = this.precios_por_metodo_pago.precios_por_metodo.find(m => {
+				return m.current_acount_payment_method_id == this.current_acount_payment_method_id
+			})
+
+			if (!metodo) {
+				return null
+			}
+
+			// Se recalcula el precio final sobre el TOTAL de la venta (no sobre el precio unitario
+			// del articulo) usando el mismo porcentaje que ya resolvio la API para ese metodo.
+			let precio_final = this.vender_total * (1 - (metodo.discount_percentage_vs_etiqueta / 100))
+
+			return {
+				price: precio_final,
+				discount_percentage_vs_etiqueta: metodo.discount_percentage_vs_etiqueta,
+			}
 		},
 	},
 	methods: {
@@ -383,4 +455,9 @@ export default {
 
 		button
 			border-radius: 0 5px 5px 0 !important
+
+/* Prompt 266 (Fase 2, Capa 3): precio equivalente del metodo de pago elegido cuando el flag precio_base_incluye_tarjeta esta activo */
+.precio-metodo-pago-seleccionado
+	margin-bottom: 0
+	font-size: 0.9em
 </style>

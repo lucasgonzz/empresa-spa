@@ -208,6 +208,10 @@ export default {
 				seller_id: this.$store.state.vender.seller_id,
 				cuota_id: this.$store.state.vender.cuota_id,
 				cantidad_cuotas: this.$store.state.vender.cantidad_cuotas,
+				// Prompt 266 (Fase 2, Capa 3): mismo valor que cantidad_cuotas, bajo el nombre que
+				// espera SaleHelper::resolver_descuento_recargo_metodo_pago() (prompt 263) para poder
+				// resolver server-side el descuento/recargo cuando el frontend no lo manda calculado.
+				cuotas: this.$store.state.vender.cantidad_cuotas,
 				cuota_descuento: this.$store.state.vender.cuota_descuento,
 				cuota_recargo: this.$store.state.vender.cuota_recargo,
 				monto_credito_real: this.$store.state.vender.monto_credito_real,
