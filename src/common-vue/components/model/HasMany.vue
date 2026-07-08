@@ -41,10 +41,20 @@
 			</b-button>
 
 			<table-component
-			disable_scroll    
+			disable_scroll
 		    :models="parent_model[prop.key]"
 		    is_from_has_many
 		    :model_name="prop.has_many.model_name"></table-component>
+
+			<!-- Barra de resize: arrastrar el borde derecho para ajustar el ancho (unidades de grilla) -->
+			<div
+			v-if="!is_mobile"
+			class="has-many-resize-handle"
+			:class="{ 'has-many-resize-handle--active': is_resizing }"
+			@mousedown.prevent="start_resize"
+			title="Arrastrar para ajustar el ancho de la tabla">
+				<div class="has-many-resize-handle__grip"></div>
+			</div>
 		</div>
 	    
 		<b-button
@@ -93,6 +103,10 @@ export default {
 		prop: Object,
 		parent_model_name: String,
 		parent_model: Object,
+		form_cols: {
+			type: Number,
+			default: null,
+		},
 	},
 	components: {
 		ModelFormComponent: () => import('@/common-vue/components/model/ModelForm'),
@@ -110,6 +124,13 @@ export default {
 			show_expand_modal: false,
 			// Estado legado existente para operaciones de borrado.
 			deleting: 0,
+
+			// Estado del arrastre de la barra de resize.
+			is_resizing: false,
+			resize_start_x: 0,
+			resize_start_cols: 0,
+			resize_px_per_col: 0,
+			resize_last_cols: null,
 		}
 	},
 	computed: {
@@ -152,7 +173,86 @@ export default {
 			// alert('hasMany modelSaved')
 			this.$emit('modelSaved', model)
 		},
-	}
+		/**
+		 * Inicia el resize: mide el track de 12 columnas (b-form-row) y el ancho real
+		 * de la columna actual para derivar las cols de arranque, independiente del breakpoint.
+		 */
+		start_resize(event) {
+			let form_row = this.$el.closest('.form-row')
+			let col_el = this.$el.closest('[class*="col-"]')
+			if (!form_row || !col_el) {
+				return
+			}
+			let track_width = form_row.clientWidth
+			this.resize_px_per_col = track_width / 12
+			if (!this.resize_px_per_col) {
+				return
+			}
+			this.resize_start_cols = this.clamp_cols(Math.round(col_el.getBoundingClientRect().width / this.resize_px_per_col))
+			this.resize_start_x = event.clientX
+			this.resize_last_cols = this.resize_start_cols
+			this.is_resizing = true
+
+			this._resize_on_move = this.on_resize_move.bind(this)
+			this._resize_on_up = this.stop_resize.bind(this)
+			document.addEventListener('mousemove', this._resize_on_move)
+			document.addEventListener('mouseup', this._resize_on_up)
+			document.body.style.userSelect = 'none'
+		},
+		/**
+		 * Durante el arrastre: convierte el delta en píxeles a delta de columnas (snap a entero)
+		 * y emite el nuevo ancho para feedback en vivo.
+		 */
+		on_resize_move(event) {
+			if (!this.is_resizing) {
+				return
+			}
+			let delta_cols = Math.round((event.clientX - this.resize_start_x) / this.resize_px_per_col)
+			let new_cols = this.clamp_cols(this.resize_start_cols + delta_cols)
+			if (new_cols !== this.resize_last_cols) {
+				this.resize_last_cols = new_cols
+				this.$emit('resizing', { key: this.prop.key, cols: new_cols })
+			}
+		},
+		/**
+		 * Al soltar: fija el ancho final y pide persistir.
+		 */
+		stop_resize() {
+			if (!this.is_resizing) {
+				return
+			}
+			this.is_resizing = false
+			document.removeEventListener('mousemove', this._resize_on_move)
+			document.removeEventListener('mouseup', this._resize_on_up)
+			document.body.style.userSelect = ''
+			this.$emit('resized', { key: this.prop.key, cols: this.resize_last_cols })
+		},
+		/**
+		 * Acota el ancho al rango permitido (mín 3, máx 12 unidades de grilla).
+		 */
+		clamp_cols(cols) {
+			if (cols < 3) {
+				return 3
+			}
+			if (cols > 12) {
+				return 12
+			}
+			return cols
+		},
+	},
+	/**
+	 * Limpia listeners globales si el componente se desmonta a mitad de un drag
+	 * (ej. se cierra el modal del formulario mientras el usuario arrastra la barra).
+	 */
+	beforeDestroy() {
+		if (this._resize_on_move) {
+			document.removeEventListener('mousemove', this._resize_on_move)
+		}
+		if (this._resize_on_up) {
+			document.removeEventListener('mouseup', this._resize_on_up)
+		}
+		document.body.style.userSelect = ''
+	},
 }
 </script>
 <style scoped>
@@ -166,5 +266,40 @@ export default {
 	top: 50%;
 	transform: translate(-50%, -50%);
 	z-index: 1000;
+}
+
+/* Barra de resize: oculta hasta hover, cursor de redimensionar horizontal */
+.has-many-resize-handle {
+	position: absolute;
+	top: 0;
+	right: -4px;
+	width: 10px;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: ew-resize;
+	opacity: 0;
+	transition: opacity 0.15s ease;
+	z-index: 1001;
+}
+
+/* Se muestra al hacer hover sobre la tabla contenedora */
+.has-many-table-container:hover .has-many-resize-handle {
+	opacity: 0.45;
+}
+
+/* Full opacidad al hacer hover directo sobre la barra o mientras se arrastra */
+.has-many-resize-handle:hover,
+.has-many-resize-handle--active {
+	opacity: 1;
+}
+
+/* Grip visual: barrita azul vertical */
+.has-many-resize-handle__grip {
+	width: 4px;
+	height: 42px;
+	border-radius: 4px;
+	background: #3b82f6;
 }
 </style>

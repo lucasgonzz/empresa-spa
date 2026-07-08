@@ -14,9 +14,9 @@
 			<b-col
 			v-for="(prop, index) in properties"
 			v-if="show_property_in_form(prop)"
-			:md="getCol(prop, 6, input_full_width)"
-			:lg="getCol(prop, 4, input_full_width)"
-			:xl="getCol(prop, 3, input_full_width)"
+			:md="form_col_for(prop, 6)"
+			:lg="form_col_for(prop, 4)"
+			:xl="form_col_for(prop, 3)"
 			:key="'model-prop-'+index">
 				<div>
 					
@@ -314,6 +314,9 @@
 									v-else-if="prop.has_many"
 									@modelDeleted="has_many_deleted"
 									@modelSaved="has_many_saved"
+									@resizing="on_has_many_resizing"
+									@resized="on_has_many_resized"
+									:form_cols="form_col_for(prop, 4)"
 									:parent_model="model"
 									:parent_model_name="model_name"
 									:prop="prop">
@@ -439,6 +442,11 @@ import PaymentMethodsTable from '@/components/expenses/components/PaymentMethods
 // import Model from '@/common-vue/components/model/Index'
 
 import model_functions from '@/common-vue/mixins/model_functions'
+import {
+	form_has_many_cols_from_store,
+	save_form_has_many_cols,
+	default_has_many_form_cols,
+} from '@/common-vue/helpers/column_preferences_helper'
 
 export default {
 	components: {
@@ -511,6 +519,8 @@ export default {
 	mounted() {
 		this.ensure_selected_group_title()
 		this.setFocus()
+		/* Carga el mapa de anchos has_many de este modelo desde el cache global (fallback dueño→empleado ya resuelto). */
+		this.has_many_form_cols = form_has_many_cols_from_store(this.$store, this.model_name)
 	},
 	data() {
 		return {
@@ -519,6 +529,9 @@ export default {
 				cuando el usuario presiona Enter y el input pierde foco inmediatamente después.
 			*/
 			last_repeat_check_by_prop_key: {},
+
+			/* Mapa { prop_key: cols } de anchos de has_many de este modelo (override del usuario). */
+			has_many_form_cols: {},
 			loading: false,
 			saving_belongs_to_many: false,
 			props_to_show_in_belongs_to_many: [],
@@ -1385,12 +1398,63 @@ export default {
 					setTimeout(() => {
 						input.focus()
 					}, 200)
-				} 
+				}
 			}
-		}
+		},
+		/**
+		 * Ancho (unidades de grilla 1..12) para una prop en el formulario.
+		 * has_many: override del usuario si existe; si no, default automático según la tabla hija
+		 * (respetando full width explícito del modelo). Resto de props: comportamiento original.
+		 */
+		form_col_for(prop, size) {
+			if (prop && prop.has_many) {
+				if (this.has_many_form_cols[prop.key]) {
+					return this.has_many_form_cols[prop.key]
+				}
+				if (prop.full_cols || prop.input_full_width || this.input_full_width || this.inputs_full_size) {
+					return 12
+				}
+				return default_has_many_form_cols(this.child_columns_count(prop))
+			}
+			return this.getCol(prop, size, this.input_full_width)
+		},
+		/**
+		 * Cantidad de columnas visibles de la tabla hija de una prop has_many.
+		 * Mismo criterio que usa la tabla (display/table/Index.vue).
+		 */
+		child_columns_count(prop) {
+			let child_props = this.propertiesToShow(this.modelPropertiesFromName(prop.has_many.model_name), true)
+			return child_props.length
+		},
+		/**
+		 * Feedback en vivo mientras se arrastra la barra de resize.
+		 */
+		on_has_many_resizing(payload) {
+			this.$set(this.has_many_form_cols, payload.key, payload.cols)
+		},
+		/**
+		 * Al soltar: fija el ancho y lo persiste.
+		 */
+		on_has_many_resized(payload) {
+			this.$set(this.has_many_form_cols, payload.key, payload.cols)
+			this.save_has_many_form_cols()
+		},
+		/**
+		 * Persiste el mapa completo de anchos de has_many de este modelo y refresca el cache local.
+		 */
+		save_has_many_form_cols() {
+			let self = this
+			save_form_has_many_cols(this, this.model_name, this.has_many_form_cols)
+			.then(function () {
+				self.has_many_form_cols = form_has_many_cols_from_store(self.$store, self.model_name)
+			})
+			.catch(function () {
+				self.$toast.error('No se pudo guardar el ancho de la tabla')
+			})
+		},
 
 	},
-	
+
 }
 </script>
 <style lang="sass">

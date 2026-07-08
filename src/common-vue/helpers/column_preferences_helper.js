@@ -455,3 +455,85 @@ export function bootstrap_all_module_column_preferences_from_cache(store_context
 		bootstrap_module_column_preferences_if_needed(store_context, preference.model_name, 'table')
 	})
 }
+
+/**
+ * Lee el mapa { prop_key: cols } de anchos de has_many del formulario para un modelo padre,
+ * desde el cache global de table_column_preference (preference_type 'form_has_many').
+ * El fallback dueño→empleado ya viene resuelto por el backend en la carga inicial.
+ *
+ * @param {Object} store_context $store del componente o { rootState }
+ * @param {string} parent_model_name
+ * @returns {Object} mapa prop_key -> cols (1..12). {} si no hay preferencia.
+ */
+export function form_has_many_cols_from_store(store_context, parent_model_name) {
+	let columns = table_column_preference_columns_from_store(store_context, parent_model_name, 'form_has_many')
+	let cols_map = {}
+	if (!columns || !columns.length) {
+		return cols_map
+	}
+	columns.forEach(function (column) {
+		if (column && column.key && column.cols) {
+			cols_map[column.key] = Number(column.cols)
+		}
+	})
+	return cols_map
+}
+
+/**
+ * Persiste el mapa de anchos de has_many del formulario para un modelo padre.
+ * Reusa el mismo endpoint/jerarquía que las props to show (cada usuario guarda su fila;
+ * empleado sin fila propia hereda la del dueño). Refresca el cache global al terminar.
+ *
+ * @param {Object} api_component componente con this.$api y this.$store
+ * @param {string} parent_model_name
+ * @param {Object} cols_map  { prop_key: cols }
+ * @returns {Promise}
+ */
+export function save_form_has_many_cols(api_component, parent_model_name, cols_map) {
+	let columns = []
+	let order = 0
+
+	Object.keys(cols_map).forEach(function (prop_key) {
+		let cols = Number(cols_map[prop_key])
+		if (!prop_key || !cols) {
+			return
+		}
+		/* visible/order/width/wrap_content son valores dummy para pasar la validación del backend;
+		   para 'form_has_many' el único dato que importa es cols. */
+		columns.push({
+			key: prop_key,
+			visible: true,
+			order: order,
+			width: null,
+			wrap_content: false,
+			cols: cols,
+		})
+		order++
+	})
+
+	return api_component.$api.put('table-column-preference/' + parent_model_name + '/form_has_many', {
+		columns: columns,
+	})
+	.then(function () {
+		return api_component.$store.dispatch('table_column_preference/getModels')
+	})
+}
+
+/**
+ * Ancho por defecto (unidades de grilla 1..12) para una tabla has_many del formulario,
+ * según la cantidad de columnas visibles de la tabla hija. Más columnas → más ancho,
+ * para minimizar el resize manual. Escalones que tilan limpio en la grilla de 12.
+ *
+ * @param {number} child_columns_count columnas visibles de la tabla hija
+ * @returns {number} unidades de grilla
+ */
+export function default_has_many_form_cols(child_columns_count) {
+	let count = Number(child_columns_count) || 0
+	if (count <= 2) {
+		return 4
+	}
+	if (count <= 4) {
+		return 6
+	}
+	return 12
+}
