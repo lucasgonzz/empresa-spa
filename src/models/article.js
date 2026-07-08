@@ -90,7 +90,14 @@ export default {
 			filter_modal_position: 4,
 			keep_after_create: true,
 			can: 'article.provider',
-			description: 'Proveedor al que pertenece ahora este articulo. Ultimo proveedor del cual adquiriste este articulo',
+			// Prompt 309: al elegir un proveedor nuevo para un articulo que ya existe y ya
+			// tenia otro proveedor, no se asigna directo: ModelForm.vue llama a esta funcion
+			// (definida ahi mismo) que abre el modal de confirmacion con los dos flags
+			// independientes del prompt 308 (eliminar descuentos del proveedor anterior /
+			// crear los del proveedor nuevo) y recien ahi, si se confirma, pega contra el
+			// endpoint dedicado "PUT article/change-provider".
+			confirm_change_function: 'confirmProviderChange',
+			description: 'Proveedor al que pertenece ahora este articulo. Ultimo proveedor del cual adquiriste este articulo. Al cambiarlo en un articulo existente se abre un modal para elegir si se eliminan los descuentos del proveedor anterior y/o se crean los del proveedor nuevo.',
 			// table_position: 6,
 		},
 		{

@@ -1044,6 +1044,15 @@ export default {
 
 			let prop = result.prop
 
+			// Prompt 309: si la propiedad tiene declarada una funcion de confirmacion previa
+			// (ej: "provider_id" de "article", ver src/models/article.js), se delega el manejo
+			// a esa funcion en vez de aplicar el cambio directo. Si la funcion devuelve true
+			// significa que ya se encargo del flujo (por ejemplo abriendo un modal de
+			// confirmacion) y no hay que continuar con la logica generica de mas abajo.
+			if (prop.confirm_change_function && this[prop.confirm_change_function](prop, result)) {
+				return
+			}
+
 			if (prop.toast_function) {
 				this[prop.toast_function](result)
 			}
@@ -1077,6 +1086,45 @@ export default {
 
 				this.setModel(this.model, this.model_name, [], false)
 			}
+		},
+		/**
+		 * Prompt 309: hook declarado en src/models/article.js sobre la propiedad "provider_id"
+		 * (`confirm_change_function: 'confirmProviderChange'`). En vez de aplicar el cambio de
+		 * proveedor directo (como hace el resto de los campos "search"), cuando corresponde
+		 * abre el modal de confirmacion con los dos flags independientes del prompt 308
+		 * (eliminar descuentos del proveedor anterior / crear los del proveedor nuevo). El
+		 * modal (src/components/listado/modals/ChangeProvider.vue) es quien efectivamente
+		 * llama al endpoint dedicado `PUT article/change-provider`.
+		 *
+		 * @param {Object} prop propiedad "provider_id" del modelo article.js
+		 * @param {Object} result resultado del buscador: { prop, model, query }
+		 * @returns {Boolean} true si se abrio el modal (corta el flujo generico de seleccion),
+		 *                    false si hay que continuar con la asignacion directa de siempre
+		 *                    (articulo nuevo sin id todavia, o articulo sin proveedor previo:
+		 *                    no hay nada que decidir, se asigna directo).
+		 */
+		confirmProviderChange(prop, result) {
+			let is_editing_existing_article = this.model && this.model.id
+			let had_previous_provider = this.model && this.model.provider_id
+			let is_actual_change = !this.model.provider_id || this.model.provider_id != result.model.id
+
+			if (!is_editing_existing_article || !had_previous_provider || !is_actual_change) {
+				return false
+			}
+
+			// El modal vive fuera del arbol de ModelForm (montado una unica vez en la vista de
+			// Listado, ver src/components/listado/modals/ChangeProvider.vue), por eso se le
+			// pasan los datos por evento global en vez de props.
+			this.$root.$emit('open-change-provider-modal', {
+				article_id: this.model.id,
+				old_provider_id: this.model.provider_id,
+				old_provider_name: this.model.provider ? this.model.provider.name : '',
+				new_provider_id: result.model.id,
+				new_provider_name: result.model.name,
+			})
+			this.$bvModal.show('change-provider-confirm')
+
+			return true
 		},
 		/**
 		 * Precarga filas editables en un has_many del modelo a partir de datos relacionados que vinieron

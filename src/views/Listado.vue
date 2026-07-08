@@ -24,6 +24,7 @@
 	<article-variants></article-variants>
 	<providers-history></providers-history>
 	<article-providers></article-providers>
+	<change-provider></change-provider>
 	<stock-movement></stock-movement>
 	<address-movement></address-movement>
 	<stock-movement-modal-info></stock-movement-modal-info>
@@ -183,6 +184,7 @@ export default {
 		ArticleVariants: () => import('@/components/listado/modals/article-variants/Index'),
 		ProvidersHistory: () => import('@/components/listado/modals/providers-history/Index'),
 		ArticleProviders: () => import('@/components/listado/modals/article-providers/Index'),
+		ChangeProvider: () => import('@/components/listado/modals/ChangeProvider'),
 		StockMovement: () => import('@/components/listado/modals/stock-movement/Index'),
 		AddressMovement: () => import('@/components/listado/modals/address-movement/Index'),
 		StockMovementModalInfo: () => import('@/components/listado/modals/stock-movement-modal-info/Index'),

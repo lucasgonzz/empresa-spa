@@ -91,10 +91,17 @@ export default {
 			value: 0,
 			not_show: true,
 			no_se_puede_desactivar: true,
+			// Prompt 309 (tarea 2): descripcion completa de todo lo que implica activar/desactivar
+			// esta opcion, para que quede documentado en la UI (tooltip/ayuda) que se le muestra al usuario.
 			descriptions: [
-				'Una vez que active esta opcion, el sistema actualizara los costos/precios de sus articulos en el LISTADO en base a los valores indicados en esta compra.',
-				'Si nunca activa esta opcion, el sistema no cambiara los costos/precios de sus articulos por lo que indico en esta compra',
-				'Una vez activada esta accion NO ES REVERSIBLE',
+				'Una vez que active esta opcion, el sistema actualizara los costos/precios de sus articulos en el LISTADO en base a los valores indicados en esta compra. Una vez activada esta accion NO ES REVERSIBLE.',
+				'Activado, implica TODO lo siguiente:',
+				'1. El costo del articulo se actualiza al costo bruto oficial de la compra, sin descuentos.',
+				'2. Los descuentos de la compra se materializan como descuentos del articulo atados a ese proveedor, barriendo (reemplazando) los descuentos que tenia atados al proveedor anterior.',
+				'3. El articulo pasa a pertenecer al proveedor de esta compra.',
+				'4. Los costos extra tipados (transporte, seguro, arancel, etc.) se prorratean entre los articulos de la compra y se materializan como recargos del articulo.',
+				'5. Se recalcula el costo real y el precio final del articulo en base a todo lo anterior.',
+				'Si nunca activa esta opcion (desactivado), no se toca nada del articulo: ni su costo, ni sus descuentos, ni su proveedor, ni su precio. La compra se registra igual (stock, cuenta corriente del proveedor, factura), solo que sin impactar en el LISTADO de articulos.',
 			]
 		},
 		{
