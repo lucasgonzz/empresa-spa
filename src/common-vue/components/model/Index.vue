@@ -653,6 +653,20 @@ export default {
 				model_to_send = this[this.props_to_send_on_save_function](model_to_send)
 			}
 
+			// Algunos endpoints (ej: sale-tax) esperan la relacion belongs_to_many como un array plano de ids
+			// (ej: "article_ids") en lugar del array de objetos completos que usa la convencion generica de
+			// belongs_to_many (GeneralHelper::attachModels en el backend). El modelo declara esto con la
+			// propiedad `send_belongs_to_many_ids_as` en la definicion del belongs_to_many.
+			this.properties.forEach(prop => {
+				if (prop.belongs_to_many && prop.send_belongs_to_many_ids_as && Array.isArray(this.model[prop.key])) {
+					let related_ids = []
+					this.model[prop.key].forEach(related_model => {
+						related_ids.push(related_model.id)
+					})
+					model_to_send[prop.send_belongs_to_many_ids_as] = related_ids
+				}
+			})
+
 			// if (this.model_name == 'expense') {
 			// 	model_to_send.payment_methods = this.$store.state.expense.selected_payment_methods.map(payment_method => {
 			// 		return {

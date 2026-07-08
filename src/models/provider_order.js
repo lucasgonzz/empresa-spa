@@ -17,7 +17,17 @@ export default {
 			required: true,
 			filter_modal_position: 2,
 			disabled_to_edit: true,
-			description: 'Proveedor al que va a pertenecer la compra',
+			description: 'Proveedor al que va a pertenecer la compra. Si el proveedor tiene bonificaciones cargadas, se precargan automaticamente como descuentos editables de la compra (ver "prefill_has_many_on_select")',
+			// Al elegir un proveedor con bonificaciones cargadas (provider.provider_discounts), precarga cada una como
+			// fila editable en "Descuentos de la compra" (provider_order_discounts), tal como hace el backend al confirmar
+			// la orden (prompt 262/265). Solo precarga si el usuario todavia no cargo descuentos manualmente.
+			prefill_has_many_on_select: {
+				source_prop: 'provider_discounts',
+				target_key: 'provider_order_discounts',
+				target_model_name: 'provider_order_discount',
+				description_text: 'Bonificación de proveedor',
+				only_if_empty: true,
+			},
 		},
 		{
 			text: 'Moneda',

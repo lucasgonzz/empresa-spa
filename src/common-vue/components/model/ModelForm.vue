@@ -1056,8 +1056,92 @@ export default {
 				this.$set(this.model, result.prop.key, result.model.id)
 				this.$set(this.model, this.modelNameFromRelationKey(result.prop), result.model)
 
+				// Si la propiedad tiene configurado "prefill_has_many_on_select" (ej: provider_id en provider_order),
+				// precarga en un has_many hermano los datos relacionados que vinieron con el modelo elegido (ej: bonificaciones del proveedor)
+				if (prop.prefill_has_many_on_select) {
+					this.prefillHasManyOnSelect(prop, result.model)
+				}
+
 				this.setModel(this.model, this.model_name, [], false)
 			}
+		},
+		/**
+		 * Precarga filas editables en un has_many del modelo a partir de datos relacionados que vinieron
+		 * junto con el modelo elegido en un campo "search" (ej: al elegir un proveedor, precargar sus
+		 * bonificaciones como descuentos de la orden de compra).
+		 *
+		 * @param {Object} prop propiedad "search" que tiene la config `prefill_has_many_on_select`.
+		 * @param {Object} selected_model modelo elegido en el buscador (ej: el proveedor completo).
+		 * @returns {void}
+		 */
+		prefillHasManyOnSelect(prop, selected_model) {
+			// Config declarada en el model (src/models/provider_order.js): de donde sale la data, a donde se precarga
+			// y el model_name del has_many destino (necesario para pegarle a su propio endpoint)
+			let config = prop.prefill_has_many_on_select
+			let source_items = selected_model[config.source_prop]
+
+			if (!source_items || !source_items.length) {
+				return
+			}
+
+			// Si ya hay filas cargadas (manualmente o de una seleccion previa) y el flag pide no pisarlas, no hace nada
+			let current_items = this.model[config.target_key]
+			if (config.only_if_empty && current_items && current_items.length) {
+				return
+			}
+
+			// Solo se precargan los items con porcentaje cargado, mismo criterio que usa el backend
+			// (NewProviderOrderHelper::precargar_bonificaciones_proveedor) para no arrastrar filas vacias
+			let items_to_prefill = []
+			source_items.forEach(source_item => {
+				if (source_item.percentage) {
+					items_to_prefill.push(source_item)
+				}
+			})
+
+			if (!items_to_prefill.length) {
+				return
+			}
+
+			// Vacia el array destino antes de precargar (por si quedo alguna referencia de una seleccion previa)
+			this.$set(this.model, config.target_key, [])
+
+			this.$store.commit('auth/setMessage', 'Cargando bonificaciones del proveedor')
+			this.$store.commit('auth/setLoading', true)
+
+			// Igual que el boton "Agregar" del has_many generico cuando el padre todavia no tiene id: cada fila se
+			// persiste de inmediato en su propio endpoint y se trackea via "childrens"/temporal_id (ver save() en
+			// src/common-vue/components/model/Index.vue) para que el backend la vincule al guardar la orden.
+			items_to_prefill.forEach(source_item => {
+				let payload = {
+					description: config.description_text,
+					percentage: source_item.percentage,
+					monto: null,
+				}
+				this.$api.post(this.routeString(config.target_model_name), payload)
+				.then(res => {
+					this.$store.commit('auth/setLoading', false)
+					this.$store.commit('auth/setMessage', '')
+
+					let created_model = res.data.model
+					this.$set(this.model, config.target_key, this.model[config.target_key].concat([created_model]))
+
+					if (!this.model.id) {
+						if (!this.model.childrens) {
+							this.model.childrens = []
+						}
+						this.model.childrens.push({
+							model_name: config.target_model_name,
+							temporal_id: created_model.temporal_id,
+						})
+					}
+				})
+				.catch(err => {
+					this.$store.commit('auth/setLoading', false)
+					this.$store.commit('auth/setMessage', '')
+					console.log(err)
+				})
+			})
 		},
 		checkBelongsToManyExist(prop, model_to_add) {
 			console.log('checkBelongsToManyExist')

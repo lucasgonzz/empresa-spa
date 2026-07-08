@@ -10,6 +10,7 @@ export default {
 						'combo',
 						'brand',
 						'price_type',
+						'sale_tax',
 						'article_ubication',
 						'column_position',
 						'tipo_envase',

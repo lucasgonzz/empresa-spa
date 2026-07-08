@@ -35,6 +35,7 @@ import current_acount_payment_method from '@/store/current_acount_payment_method
 import client from '@/store/client'
 import seller from '@/store/seller'
 import price_type from '@/store/price_type'
+import sale_tax from '@/store/sale_tax'
 import sale from '@/store/sale/index'
 import provider_order from '@/store/provider_order'
 import provider_order_status from '@/store/provider_order_status'
@@ -290,6 +291,7 @@ export default new Vuex.Store({
         client,
         seller,
         price_type,
+        sale_tax,
         sale,
         provider_order,
         provider_order_status,
