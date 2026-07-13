@@ -10,6 +10,7 @@
 			:id="model_name + '-' + prop.key"
 			:disabled="disabled"
 			:type="prop.type"
+			:placeholder="placeholder"
 			@keyup.enter="$emit('enter')"
 			@blur="$emit('blur')"
 			v-model="local_value"></b-form-input>
@@ -69,6 +70,15 @@ export default {
 		has_bar_code_scanner: {
 			type: Boolean,
 			default: false,
+		},
+		/**
+		 * Texto de ayuda mostrado cuando el input esta vacio (atributo HTML placeholder).
+		 * Se usa principalmente en campos type="password" write-only, para indicar
+		 * que ya existe un valor guardado sin exponerlo (ej: "•••• configurada").
+		 */
+		placeholder: {
+			type: String,
+			default: null,
 		},
 	},
 	computed: {

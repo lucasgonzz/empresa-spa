@@ -245,6 +245,64 @@ export default {
 			value: '',
 			show: true,
 		},
+
+		{
+			group_title: 'Correo para notificaciones a clientes'
+		},
+		{
+			text: 'Usar mi propio correo',
+			key: 'mail_enabled',
+			type: 'checkbox',
+			// El group_title no soporta un texto propio en el renderer, por eso la aclaracion
+			// general del grupo se muestra como description (popover) del primer campo.
+			description: 'Este correo se usa para avisarle a tus clientes cuando entra stock de un articulo que estaban esperando, y para el resto de los avisos de la tienda. Si esta desactivado, los mails a tus clientes salen desde el correo del sistema.',
+		},
+		{
+			text: 'Correo',
+			key: 'mail_username',
+			type: 'text',
+			description: 'La casilla desde la que se envian los mails (ej: ventas@tunegocio.com.ar).',
+		},
+		{
+			text: 'Contraseña',
+			key: 'mail_password',
+			type: 'password',
+			description: 'Por seguridad no se muestra la contraseña guardada. Dejalo vacio si no queres cambiarla.',
+		},
+		{
+			text: 'Servidor SMTP',
+			key: 'mail_host',
+			type: 'text',
+			description: 'Ej: smtp.hostinger.com',
+		},
+		{
+			text: 'Puerto',
+			key: 'mail_port',
+			type: 'number',
+			description: 'Normalmente 587 (TLS) o 465 (SSL).',
+		},
+		{
+			text: 'Encriptación',
+			key: 'mail_encryption',
+			type: 'select',
+			options: [
+				{ value: 'tls', text: 'TLS' },
+				{ value: 'ssl', text: 'SSL' },
+				{ value: '', text: 'Ninguna' },
+			],
+		},
+		{
+			text: 'Nombre del remitente',
+			key: 'mail_from_name',
+			type: 'text',
+			description: 'Como ve tu cliente el remitente. Si lo dejas vacio, se usa el nombre de tu empresa.',
+		},
+		{
+			text: 'Correo del remitente',
+			key: 'mail_from_address',
+			type: 'text',
+			description: 'Si lo dejas vacio, se usa el mismo correo de arriba.',
+		},
 	],
 	singular_model_name_spanish: 'Configuracion Online',
 	plural_model_name_spanish: 'Configuraciones Online',
