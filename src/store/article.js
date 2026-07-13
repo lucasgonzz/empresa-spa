@@ -27,9 +27,6 @@ export default __base_store({
 		edit_variants_stock,
 	},
 	state: {
-		/** Flag usado por el buscador de artículos para selección. */
-		add_buscador_to_selected: false,
-
 		model_name: 'article',
 		route_prefix: 'index/from-status',
 		from_dates: false,
@@ -64,12 +61,6 @@ export default __base_store({
 		 */
 		set_final_price_description(state, value) {
 			state.final_price_description = value
-		},
-		/**
-		 * Controla si el buscador agrega artículos a seleccionados.
-		 */
-		set_add_buscador_to_selected(state, value) {
-			state.add_buscador_to_selected = value
 		},
 		/**
 		 * Marca filtrado sin criterios en store (búsqueda rápida vs modal de filtros).

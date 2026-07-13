@@ -58,6 +58,7 @@
 	:extra_properties_for_modal="price_type_modal_extra_properties"
 	@addressMovement="addressMovement"
 	:show_empty_text="show_empty_text"
+	:extra_filters="extra_filters"
 	model_name="article">
 
 		<template #excel_drop_down_options>
@@ -69,7 +70,16 @@
 			<horizontal-nav></horizontal-nav>
 
 		</template>
-		
+
+		<!-- Filtros extra del buscador general: categoría y con/sin stock (solo con la extensión activa) -->
+		<template
+		v-if="hasExtencion('buscar_por_categoria_en_vender')"
+		#search_extra>
+			<category-options
+			:category_id.sync="category_id"
+			:stock_option.sync="stock_option"></category-options>
+		</template>
+
 		<template #options_drop_down_seleccion>
 
 			<drop-down-options></drop-down-options>
@@ -80,10 +90,6 @@
 
 			<drop-down-options></drop-down-options>
 
-		</template>
-
-		<template #body>
-			<buscador-articulos></buscador-articulos>
 		</template>
 
 		<template v-slot:table_left_options="props">
@@ -225,11 +231,20 @@ export default {
 
 		FilterHistoryModal: () => import('@/components/listado/modals/filter-history/Index'),
 
-		BuscadorArticulos: () => import('@/components/listado/components/BuscadorArticulos'),
-	}, 
+		// Selectores de categoría / con-sin stock, inyectados como filtros extra del buscador general.
+		CategoryOptions: () => import('@/components/vender/components/remito/header-form/CategoryOptions'),
+	},
 	beforeRouteLeave(to, from, next) {
 		this.$store.commit('article/setSelected', [])
 		next()
+	},
+	data() {
+		return {
+			// Categoría tildada en el filtro extra del buscador general (0 = sin filtro).
+			category_id: 0,
+			// Opción de stock tildada en el filtro extra del buscador general.
+			stock_option: 'con_o_sin_stock',
+		}
 	},
 	computed: {
 		has_permission_create_dropdown() {
@@ -237,6 +252,34 @@ export default {
 		},
 		show_empty_text() {
 			return this.$store.state.article.is_filtered
+		},
+		/**
+		 * Filtros extra que se le pasan al buscador general de la zona centro del header.
+		 * Se arma solo con category_id/stock_option cuando difieren de su valor "sin filtro",
+		 * para no mandarle al backend filtros vacíos.
+		 *
+		 * @returns {Array} [{ key, operator, value }]
+		 */
+		extra_filters() {
+			let filters = []
+
+			if (this.category_id) {
+				filters.push({
+					key: 'category_id',
+					operator: 'category',
+					value: this.category_id,
+				})
+			}
+
+			if (this.stock_option !== 'con_o_sin_stock') {
+				filters.push({
+					key: 'stock',
+					operator: 'stock_option',
+					value: this.stock_option,
+				})
+			}
+
+			return filters
 		},
 	},
 	methods: {
