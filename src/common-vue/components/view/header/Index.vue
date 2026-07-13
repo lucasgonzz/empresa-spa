@@ -1,109 +1,120 @@
 <template>
-	<b-row
-	class="view-header-toolbar p-t-15 align-center">
+	<!--
+		View-header en 3 zonas con CSS Grid (NO el grid de 12 columnas de Bootstrap, que era lo que
+		wrappeaba feo en pantallas chicas).
+		Izquierda (acciones): grupo primario (ojo + crear) + divisor + grupo de estado (grupo-estado).
+		Centro: buscador general, centrado y con ancho acotado en desktop.
+		Derecha (módulo): botones propios del módulo (slot horizontal_nav_center) + display-nav de fechas.
 
-		<!-- Columna de acciones primarias: toggler de columnas, crear, seleccionar -->
-		<!-- cols=6: ocupa mitad en mobile; xl=auto: ancho exacto del contenido en desktop (≥1200px) -->
-		<b-col
-		class="j-start align-center flex-wrap flex-xl-nowrap m-b-10 m-xl-b-0"
-		cols="6"
-		xl="auto">
-			
-			<props-to-show
-			v-if="show_btn_props_to_show"
-			:model_name="model_name"></props-to-show>
+		Regla crítica: la zona derecha NUNCA se oculta con CSS en ningún breakpoint. Los botones de
+		módulo (Inventario/Depósitos) se auto-ocultan en teléfono por sus propias clases d-none d-md-block;
+		el display-nav de fechas de Ventas (change_from_dates_option) se ve SIEMPRE, en todos los tamaños.
+	-->
+	<div class="view-header-toolbar view-header p-t-15">
 
-			<slot name="btn_create">
-				<excel-drop-down
-				class="m-l-10"
-				v-if="show_excel_drop_down"
-				:check_permissions="check_permissions"
-				:can_create="can_create"
-				:has_permission_create_dropdown="has_permission_create_dropdown"
-				:model_name="model_name">
-					<template #excel_drop_down_options>
-						<slot name="excel_drop_down_options"></slot>
-					</template>
-				</excel-drop-down>
+		<!-- ZONA IZQUIERDA — acciones: dos grupos semánticos separados por un divisor sutil -->
+		<div class="view-header__left">
 
-				<btn-create
-				v-else-if="show_btn_create && can_create"
-				class="m-l-10"
-				:with_margin="false"
-				:block="false"
-				button_size="sm"
-				:model_name="model_name"></btn-create>
-			</slot>
+			<!-- Grupo 1 (siempre visible): props-to-show (ojo) + crear (excel-drop-down o btn-create) -->
+			<div class="view-header__group">
 
-			<btn-seleccion
-			:model_name="model_name"
-			:ask_selectable="ask_selectable"></btn-seleccion>
-		</b-col>
+				<props-to-show
+				v-if="show_btn_props_to_show"
+				:model_name="model_name"></props-to-show>
 
-		<!-- Columna de estado: dropdowns de selección/filtro y limpiar filtros -->
-		<!-- cols=6: ocupa mitad en mobile; xl=auto: ancho exacto del contenido en desktop (≥1200px) -->
-		<b-col
-		class="j-start align-center flex-wrap flex-xl-nowrap m-b-10 m-xl-b-0"
-		cols="6"
-		xl="auto">
+				<slot name="btn_create">
+					<excel-drop-down
+					class="m-l-10"
+					v-if="show_excel_drop_down"
+					:check_permissions="check_permissions"
+					:can_create="can_create"
+					:has_permission_create_dropdown="has_permission_create_dropdown"
+					:model_name="model_name">
+						<template #excel_drop_down_options>
+							<slot name="excel_drop_down_options"></slot>
+						</template>
+					</excel-drop-down>
 
-			<opciones-filtrados-seleccion
-			:papelera="papelera"
-			:show_actualizar_option="show_actualizar_option"
-			:check_permissions="check_permissions"
-			:model_name="model_name">
-				<template #options_drop_down>
-					<slot name="options_drop_down"></slot>
-				</template>
-
-				<template #options_drop_down_seleccion>
-					<slot name="options_drop_down_seleccion"></slot>
-				</template>
-
-				<template #options_drop_down_filtro>
-					<slot name="options_drop_down_filtro"></slot>
-				</template>
-			</opciones-filtrados-seleccion>
-			
-			<btn-restart-filter
-			:papelera="papelera"
-			:model_name="model_name"></btn-restart-filter>
-
-			<b-button
-			v-if="papelera && is_filtered_papelera && total_filtrados_papelera > 0"
-			@click="restaurarTodosFiltradosPapelera"
-			class="m-l-10"
-			size="sm"
-			variant="danger">
-				Restaurar todos ({{ total_filtrados_papelera }})
-			</b-button>
-
-		</b-col>
-		
-		<!-- Columna de contenido del módulo: crece para llenar el espacio restante en desktop (≥1200px) -->
-		<b-col
-		cols="12"
-		:xl="true">
-			<div class="j-end align-center flex-wrap">
-				
-				<slot name="horizontal_nav_center"></slot>
-
-				<display-nav
-				v-if="change_from_dates_option"
-				:change_from_dates_option="change_from_dates_option"
-				:model_name="model_name"></display-nav>
+					<btn-create
+					v-else-if="show_btn_create && can_create"
+					class="m-l-10"
+					:with_margin="false"
+					:block="false"
+					button_size="sm"
+					:model_name="model_name"></btn-create>
+				</slot>
 			</div>
-		</b-col>
-	</b-row>
+
+			<!-- Divisor sutil entre el grupo primario y el grupo de estado -->
+			<span class="view-header__divider" aria-hidden="true"></span>
+
+			<!-- Grupo 2 (estado): seleccionar / filtrados-selección / limpiar filtros / restaurar papelera. -->
+			<!-- En teléfono colapsa dentro de un dropdown de overflow (⋯); lógica encapsulada en grupo-estado. -->
+			<div class="view-header__group">
+				<grupo-estado
+				:model_name="model_name"
+				:papelera="papelera"
+				:ask_selectable="ask_selectable"
+				:check_permissions="check_permissions"
+				:show_actualizar_option="show_actualizar_option">
+					<template #options_drop_down>
+						<slot name="options_drop_down"></slot>
+					</template>
+
+					<template #options_drop_down_seleccion>
+						<slot name="options_drop_down_seleccion"></slot>
+					</template>
+
+					<template #options_drop_down_filtro>
+						<slot name="options_drop_down_filtro"></slot>
+					</template>
+				</grupo-estado>
+			</div>
+		</div>
+
+		<!-- ZONA CENTRO — buscador general (montado por default; se puede apagar con show_buscador_general) -->
+		<div
+		v-if="show_buscador_general"
+		class="view-header__center">
+			<buscador-general
+			:model_name="model_name"
+			:extra_filters="extra_filters">
+				<!-- Slot para que cada módulo inyecte filtros propios (ej: categoría/stock del listado) -->
+				<template #search_extra>
+					<slot name="search_extra"></slot>
+				</template>
+			</buscador-general>
+		</div>
+
+		<!-- ZONA DERECHA — módulo. ⚠️ NUNCA se oculta con CSS (ver comentario del template). -->
+		<!-- Los botones de módulo se auto-ocultan en teléfono por sus clases d-none d-md-block. -->
+		<!-- El display-nav de fechas es visible en todos los breakpoints; en teléfono baja a fila propia. -->
+		<div
+		class="view-header__right"
+		:class="{ 'view-header__right--fechas': change_from_dates_option }">
+
+			<slot name="horizontal_nav_center"></slot>
+
+			<display-nav
+			v-if="change_from_dates_option"
+			:change_from_dates_option="change_from_dates_option"
+			:model_name="model_name"></display-nav>
+		</div>
+	</div>
 </template>
 <script>
 export default {
+	/**
+	 * ViewHeader — orquestador del encabezado de las vistas de listado (view-component).
+	 * Solo compone las 3 zonas (acciones / buscador / módulo) y reparte props y slots hacia
+	 * los sub-componentes (grupo-estado, buscador-general). La lógica de estado (selección,
+	 * filtrados, papelera) vive en grupo-estado; la de búsqueda en buscador-general.
+	 */
 	components: {
 		PropsToShow: () => import('@/common-vue/components/view/header/props-to-show/Index'),
-		BtnRestartFilter: () => import('@/common-vue/components/view/header/BtnRestartFilter'),
 		BtnCreate: () => import('@/common-vue/components/BtnCreate'),
-		BtnSeleccion: () => import('@/common-vue/components/view/header/BtnSeleccion'),
-		OpcionesFiltradosSeleccion: () => import('@/common-vue/components/view/header/opciones-filtrados-seleccion/Index'),
+		GrupoEstado: () => import('@/common-vue/components/view/header/grupo-estado/Index'),
+		BuscadorGeneral: () => import('@/common-vue/components/view/header/buscador-general/Index'),
 
 		// De horizontal-nav original
 		ExcelDropDown: () => import('@/common-vue/components/horizontal-nav/ExcelDropDown'),
@@ -141,66 +152,36 @@ export default {
 			default: true,
 		},
 		show_actualizar_option: Boolean,
+		/**
+		 * Muestra el buscador general en la zona centro. Se puede apagar en un módulo puntual
+		 * donde no aplique. Default true.
+		 */
+		show_buscador_general: {
+			type: Boolean,
+			default: true,
+		},
+		/**
+		 * Filtros extra propios del módulo que el header le pasa al buscador general
+		 * (ej: categoría/stock del listado). Formato: [{ key, operator, value }].
+		 */
+		extra_filters: {
+			type: Array,
+			default: function () {
+				return []
+			},
+		},
 	},
 	computed: {
+		/**
+		 * Indica si el usuario puede crear registros del modelo (según permisos, si se chequean).
+		 *
+		 * @returns {boolean}
+		 */
 		can_create() {
 			if (this.check_permissions) {
 				return this.can(this.model_name+'.store')
 			}
-			return true 
-		},
-		is_filtered_papelera() {
-			if (!this.papelera || !this.model_name) {
-				return false
-			}
-			return this.$store.state.papelera[this.model_name].is_filtered
-		},
-		/**
-		 * Total de registros que coinciden con el filtro (todas las páginas), alineado con el paginador.
-		 */
-		total_filtrados_papelera() {
-			if (!this.papelera || !this.model_name) {
-				return 0
-			}
-			let n = this.$store.state.papelera[this.model_name].total_filter_results
-			return n ? parseInt(n, 10) : 0
-		},
-		cantidad_filtrados_papelera() {
-			if (!this.papelera || !this.model_name) {
-				return 0
-			}
-			let filtrados = this.$store.state.papelera[this.model_name].filtered
-			return filtrados ? filtrados.length : 0
-		},
-	},
-	methods: {
-		/**
-		 * Restaura en servidor todos los que coinciden con filters (misma consulta que search+papelera).
-		 */
-		restaurarTodosFiltradosPapelera() {
-			let total = this.total_filtrados_papelera
-			if (total < 1) {
-				return
-			}
-			let filters = this.$store.state[this.model_name].filters
-			let label = this.plural(this.model_name)
-			let mensaje = '¿Restaurar ' + total + ' ' + label + ' de esta búsqueda en la papelera?'
-			if (!window.confirm(mensaje)) {
-				return
-			}
-			let that = this
-			this.$store.commit('auth/setLoading', true)
-			this.$api.post('papelera/restaurar-filtrados/' + this.model_name, {
-				filters: filters,
-			}).then(function () {
-				that.$store.commit('auth/setLoading', false)
-				that.$toast.success('Registros restaurados')
-				return that.$store.dispatch('papelera/' + that.model_name + '/getModels')
-			}).catch(function (err) {
-				that.$store.commit('auth/setLoading', false)
-				that.$toast.error('Error al restaurar')
-				console.log(err)
-			})
+			return true
 		},
 	},
 }
@@ -208,11 +189,99 @@ export default {
 
 <style lang="sass">
 
-/* Quitar margen inferior de las cols cuando ya están en una sola fila (Bootstrap xl ≥1200px) */
-@media (min-width: 1200px)
-	.view-header-toolbar
-		[class*='col-xl']
-			margin-bottom: 0 !important
+/*
+	Layout de 3 zonas con CSS Grid. Máximo 2 filas de contenido principal en cualquier tamaño
+	(más una fila propia para el display-nav de fechas cuando existe, en teléfono).
+*/
+.view-header
+	display: grid
+	align-items: center
+	column-gap: 12px
+	row-gap: 10px
+	/* Desktop (≥1200px): una sola fila — izquierda | buscador centrado | derecha */
+	grid-template-columns: 1fr auto 1fr
+	grid-template-areas: "left center right"
+
+.view-header__left
+	grid-area: left
+	display: flex
+	align-items: center
+	flex-wrap: wrap
+	justify-self: start
+
+/* Grupo semántico de botones (primario o de estado) */
+.view-header__group
+	display: flex
+	align-items: center
+	flex-wrap: wrap
+
+/* Divisor vertical sutil entre el grupo primario y el grupo de estado */
+.view-header__divider
+	width: 1px
+	align-self: stretch
+	min-height: 24px
+	margin: 0 10px
+	background-color: rgba(0, 0, 0, 0.12)
+
+/* Zona centro: buscador centrado respecto del header (gracias al 1fr auto 1fr) y de ancho acotado */
+.view-header__center
+	grid-area: center
+	justify-self: center
+	width: 100%
+	max-width: 520px
+
+/*
+	Zona derecha (módulo). NUNCA se oculta con CSS. Se justifica a la derecha en desktop.
+	Si queda vacía (Listado en teléfono, botones auto-ocultos) colapsa a ancho/alto cero sin dejar hueco.
+*/
+.view-header__right
+	grid-area: right
+	display: flex
+	align-items: center
+	flex-wrap: wrap
+	justify-content: flex-end
+	justify-self: end
+
+/*
+	Intermedio (hasta 1199px): el buscador baja a fila propia a ancho completo; arriba quedan
+	las acciones (izquierda) y los botones de módulo (derecha).
+*/
+@media (max-width: 1199px)
+	.view-header
+		grid-template-columns: 1fr auto
+		grid-template-areas: "left right" "center center"
+
+	.view-header__center
+		justify-self: stretch
+		max-width: none
+
+/*
+	Teléfono (<768px): una sola columna. Fila 1 = ojo + Crear + ⋯; fila 2 = buscador a ancho completo;
+	fila 3 (solo si hay display-nav de fechas) = fechas centradas a ancho completo. Los botones de
+	módulo se auto-ocultan por sus clases d-none d-md-block: el header NO oculta la zona derecha.
+*/
+@media (max-width: 767px)
+	.view-header
+		grid-template-columns: 1fr
+		grid-template-areas: "left" "center" "right"
+		/* Sin row-gap: la separación se maneja con margin para no reservar espacio en zonas vacías */
+		row-gap: 0
+
+	.view-header__left
+		justify-self: stretch
+		justify-content: flex-start
+
+	.view-header__center
+		margin-top: 10px
+
+	/* La zona derecha se centra; NO se oculta. Sin display-nav queda vacía y colapsa sin hueco. */
+	.view-header__right
+		justify-self: stretch
+		justify-content: center
+
+	/* Solo cuando hay display-nav de fechas (Ventas) se agrega la separación de su fila propia */
+	.view-header__right--fechas
+		margin-top: 10px
 
 /* Altura unificada de botones y dropdowns en la cabecera (misma que btn-sm: Seleccionar / Actualizar) */
 .view-header-toolbar
@@ -236,6 +305,14 @@ export default {
 			width: 32px
 
 		.input-search
+			height: auto !important
+			padding: 0.25rem 0.5rem
+			font-size: 0.875rem
+			line-height: 1.5
+
+	/* Buscador general de la zona centro: input alineado con la altura de btn-sm */
+	::v-deep .buscador-general
+		input.form-control
 			height: auto !important
 			padding: 0.25rem 0.5rem
 			font-size: 0.875rem

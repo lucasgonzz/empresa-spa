@@ -74,12 +74,17 @@
 		:has_permission_create_dropdown="has_permission_create_dropdown"
 		:ask_selectable="ask_selectable"
 		:change_from_dates_option="change_from_dates_option"
+		:show_buscador_general="show_buscador_general"
+		:extra_filters="extra_filters"
 		:model_name="model_name">
 			<template v-slot:btn_create>
 				<slot name="horizontal_nav_btn_create"></slot>
 			</template>
 			<template v-slot:horizontal_nav_center>
 				<slot name="horizontal_nav_center"></slot>
+			</template>
+			<template v-slot:search_extra>
+				<slot name="search_extra"></slot>
 			</template>
 			
 			<template #options_drop_down>
@@ -394,6 +399,24 @@ export default {
 		show_actualizar_option: {
 			type: Boolean,
 			default: true,
+		},
+		/**
+		 * Muestra el buscador general en la zona centro del view-header. Se puede apagar en un
+		 * módulo puntual donde no aplique. Default true.
+		 */
+		show_buscador_general: {
+			type: Boolean,
+			default: true,
+		},
+		/**
+		 * Filtros extra propios del módulo que el header le pasa al buscador general
+		 * (ej: categoría/stock del listado). Formato esperado por el backend: [{ key, operator, value }].
+		 */
+		extra_filters: {
+			type: Array,
+			default: function () {
+				return []
+			},
 		},
 		props_to_send_on_save_function: {
 			type: String,
