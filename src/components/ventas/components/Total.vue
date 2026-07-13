@@ -247,13 +247,93 @@ export default {
 	},
 	methods: {
 		export_excel() {
-            var link = process.env.VUE_APP_API_URL+'/sales/excel/export/'+this.from_date+'/'+this.until_date
-            window.open(link)
+			this.download_sales_excel('sales/excel/export', 'ventas')
 		},
 		export_breakdown_excel() {
-            var link = process.env.VUE_APP_API_URL+'/sales/excel/breakdown-export/'+this.from_date+'/'+this.until_date
-            window.open(link)
-		}
+			this.download_sales_excel('sales/excel/breakdown-export', 'ventas_desglosado')
+		},
+		/**
+		 * Arma el cuerpo del POST con el estado completo del filtro que ve la pantalla.
+		 * @returns {Object}
+		 */
+		build_export_body() {
+			let state = this.$store.state.sale
+			let scope = this.resolve_view_scope()
+			return {
+				is_filtered: state.is_filtered,
+				filters: state.filters,
+				from_date: this.from_date,
+				until_date: this.until_date,
+				ventas_cobradas_show_option: state.ventas_cobradas_show_option,
+				afip_ticket_show_option: state.afip_ticket_show_option,
+				payment_method_show_option: state.payment_method_show_option,
+				address_id: scope.address_id,
+				employee_id: scope.employee_id,
+				only_owner: scope.only_owner,
+			}
+		},
+		/**
+		 * Resuelve la pestaña actual (sucursal/empleado) igual que sales_to_show (mixins/sale.js).
+		 * @returns {{address_id: (number|null), employee_id: (number|null), only_owner: boolean}}
+		 */
+		resolve_view_scope() {
+			// Id de sucursal resuelto por nombre de calle (street), null si es "todas".
+			let address_id = null
+			// Id de empleado resuelto por nombre, null si es "todos" o si es el caso "dueño".
+			let employee_id = null
+			// True cuando la sub_view es una pestaña de empleado pero ninguna venta tiene employee_id (caso dueño).
+			let only_owner = false
+
+			if (this.view != 'todas') {
+				let address = this.addresses.find(model => {
+					return model.street.toLowerCase() == this.view.replaceAll('-', ' ').toLowerCase()
+				})
+				if (typeof address != 'undefined') {
+					address_id = address.id
+				}
+			}
+
+			if (this.sub_view != 'todos') {
+				let employee = this.employees.find(model => {
+					return model.name.toLowerCase() == this.sub_view.replaceAll('-', ' ').toLowerCase()
+				})
+				if (typeof employee == 'undefined') {
+					// Caso "dueño": ventas sin empleado asignado.
+					only_owner = true
+				} else {
+					employee_id = employee.id
+				}
+			}
+
+			return { address_id, employee_id, only_owner }
+		},
+		/**
+		 * POST autenticado al endpoint de export; descarga el .xlsx desde la respuesta (blob).
+		 * @param {string} endpoint 'sales/excel/export' | 'sales/excel/breakdown-export'
+		 * @param {string} filename_prefix Prefijo del nombre del archivo.
+		 * @returns {void}
+		 */
+		download_sales_excel(endpoint, filename_prefix) {
+			this.$api.post(endpoint, this.build_export_body(), { responseType: 'blob' })
+				.then(res => {
+					// Se arma un link temporal para disparar la descarga del blob recibido.
+					let url = window.URL.createObjectURL(new Blob([res.data]))
+					let a = document.createElement('a')
+					a.href = url
+					let now = new Date()
+					let stamp = ('0' + now.getDate()).slice(-2)
+						+ '-' + ('0' + (now.getMonth() + 1)).slice(-2)
+						+ '-' + String(now.getFullYear()).slice(-2)
+					a.download = filename_prefix + '_' + stamp + '.xlsx'
+					document.body.appendChild(a)
+					a.click()
+					a.remove()
+					window.URL.revokeObjectURL(url)
+				})
+				.catch(() => {
+					this.$toast.error('No se pudo generar el Excel', { duration: 4000 })
+				})
+		},
 	}
 }
 </script>
