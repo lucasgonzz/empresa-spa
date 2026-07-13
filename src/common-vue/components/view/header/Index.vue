@@ -189,10 +189,7 @@ export default {
 
 <style lang="sass">
 
-/*
-	Layout de 3 zonas con CSS Grid. Máximo 2 filas de contenido principal en cualquier tamaño
-	(más una fila propia para el display-nav de fechas cuando existe, en teléfono).
-*/
+/* Layout de 3 zonas con CSS Grid. Máx. 2 filas (+ fila fechas en teléfono) */
 .view-header
 	display: grid
 	align-items: center
@@ -223,17 +220,14 @@ export default {
 	margin: 0 10px
 	background-color: rgba(0, 0, 0, 0.12)
 
-/* Zona centro: buscador centrado respecto del header (gracias al 1fr auto 1fr) y de ancho acotado */
+/* Zona centro: buscador centrado (1fr auto 1fr) y de ancho acotado */
 .view-header__center
 	grid-area: center
 	justify-self: center
 	width: 100%
 	max-width: 520px
 
-/*
-	Zona derecha (módulo). NUNCA se oculta con CSS. Se justifica a la derecha en desktop.
-	Si queda vacía (Listado en teléfono, botones auto-ocultos) colapsa a ancho/alto cero sin dejar hueco.
-*/
+/* Zona derecha (módulo). NUNCA se oculta con CSS. Vacía colapsa sin hueco */
 .view-header__right
 	grid-area: right
 	display: flex
@@ -242,10 +236,7 @@ export default {
 	justify-content: flex-end
 	justify-self: end
 
-/*
-	Intermedio (hasta 1199px): el buscador baja a fila propia a ancho completo; arriba quedan
-	las acciones (izquierda) y los botones de módulo (derecha).
-*/
+/* Intermedio (≤1199px): buscador a fila propia; arriba acciones | módulo */
 @media (max-width: 1199px)
 	.view-header
 		grid-template-columns: 1fr auto
@@ -255,16 +246,12 @@ export default {
 		justify-self: stretch
 		max-width: none
 
-/*
-	Teléfono (<768px): una sola columna. Fila 1 = ojo + Crear + ⋯; fila 2 = buscador a ancho completo;
-	fila 3 (solo si hay display-nav de fechas) = fechas centradas a ancho completo. Los botones de
-	módulo se auto-ocultan por sus clases d-none d-md-block: el header NO oculta la zona derecha.
-*/
+/* Teléfono (<768px): columna única. Zona derecha NO se oculta */
 @media (max-width: 767px)
 	.view-header
 		grid-template-columns: 1fr
 		grid-template-areas: "left" "center" "right"
-		/* Sin row-gap: la separación se maneja con margin para no reservar espacio en zonas vacías */
+		/* Sin row-gap: separación con margin para no reservar espacio en zonas vacías */
 		row-gap: 0
 
 	.view-header__left
@@ -274,16 +261,16 @@ export default {
 	.view-header__center
 		margin-top: 10px
 
-	/* La zona derecha se centra; NO se oculta. Sin display-nav queda vacía y colapsa sin hueco. */
+	/* Zona derecha centrada; NO se oculta. Sin display-nav colapsa sin hueco */
 	.view-header__right
 		justify-self: stretch
 		justify-content: center
 
-	/* Solo cuando hay display-nav de fechas (Ventas) se agrega la separación de su fila propia */
+	/* Con display-nav de fechas (Ventas): separación de su fila propia */
 	.view-header__right--fechas
 		margin-top: 10px
 
-/* Altura unificada de botones y dropdowns en la cabecera (misma que btn-sm: Seleccionar / Actualizar) */
+/* Altura unificada de botones/dropdowns (misma que btn-sm) */
 .view-header-toolbar
 	::v-deep .btn:not(.btn-link):not(.dropdown-item)
 		padding: 0.25rem 0.5rem
@@ -295,7 +282,7 @@ export default {
 		font-size: 0.875rem
 		line-height: 1.5
 
-	/* Buscador del listado en horizontal_nav_center: input alineado con btn-sm */
+	/* Buscador listado en horizontal_nav_center: input alineado con btn-sm */
 	::v-deep .buscador-listado
 		.cont-search
 			align-items: stretch
@@ -310,7 +297,7 @@ export default {
 			font-size: 0.875rem
 			line-height: 1.5
 
-	/* Buscador general de la zona centro: input alineado con la altura de btn-sm */
+	/* Buscador general zona centro: input alineado con altura de btn-sm */
 	::v-deep .buscador-general
 		input.form-control
 			height: auto !important
