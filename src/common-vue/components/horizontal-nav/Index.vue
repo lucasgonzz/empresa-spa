@@ -107,9 +107,11 @@ import BtnCreate from '@/common-vue/components/BtnCreate'
 import FilterModal from '@/common-vue/components/horizontal-nav/FilterModal'
 import ExcelDropDown from '@/common-vue/components/horizontal-nav/ExcelDropDown'
 import DisplayNav from '@/common-vue/components/horizontal-nav/DisplayNav'
+import horizontal_nav_scroll from '@/common-vue/mixins/horizontal_nav_scroll'
 
 export default {
 	name: 'HorizontalNav',
+	mixins: [horizontal_nav_scroll],
 	components: {
 		BtnCreate,
 		FilterModal,
@@ -206,8 +208,6 @@ export default {
 	data() {
 		return {
 			selected_item: null,
-			/* true cuando el ancho de los ítems supera el contenedor y hace falta scroll horizontal */
-			has_horizontal_scroll: false,
 		}
 	},
 	computed: {
@@ -286,59 +286,8 @@ export default {
 				}
 			},
 		},
-		/**
-		 * Recalcula si hace falta scroll cuando cambia la cantidad o el texto de los ítems.
-		 */
-		items: {
-			handler() {
-				this.schedule_horizontal_scroll_check()
-			},
-			deep: true,
-		},
-	},
-	mounted() {
-		this.schedule_horizontal_scroll_check()
-		window.addEventListener('resize', this.on_window_resize_for_horizontal_nav)
-	},
-	beforeDestroy() {
-		window.removeEventListener('resize', this.on_window_resize_for_horizontal_nav)
-		if (this.horizontal_scroll_check_timeout) {
-			clearTimeout(this.horizontal_scroll_check_timeout)
-		}
 	},
 	methods: {
-		/**
-		 * Programa la verificación de overflow tras el próximo render del DOM.
-		 */
-		schedule_horizontal_scroll_check() {
-			this.$nextTick(() => {
-				this.update_horizontal_scroll_state()
-			})
-		},
-		/**
-		 * Revalida el overflow cuando cambia el tamaño de la ventana.
-		 */
-		on_window_resize_for_horizontal_nav() {
-			if (this.horizontal_scroll_check_timeout) {
-				clearTimeout(this.horizontal_scroll_check_timeout)
-			}
-			/* Evita recalcular en cada pixel del resize */
-			this.horizontal_scroll_check_timeout = setTimeout(() => {
-				this.update_horizontal_scroll_state()
-			}, 100)
-		},
-		/**
-		 * Detecta si los ítems desbordan el contenedor y activa espacio para la barra de scroll.
-		 */
-		update_horizontal_scroll_state() {
-			let horizontal_nav = this.$refs.horizontal_nav
-			if (!horizontal_nav) {
-				this.has_horizontal_scroll = false
-				return
-			}
-			/* Tolerancia de 1px por redondeos de subpíxeles en distintos navegadores */
-			this.has_horizontal_scroll = horizontal_nav.scrollWidth > (horizontal_nav.clientWidth + 1)
-		},
 		filterModal() {
 			this.$bvModal.show('filter-modal')
 			setTimeout(() => {
@@ -459,6 +408,7 @@ export default {
 	// padding: 1em 0 0
 	justify-content: space-between
 	width: 100%
+	min-width: 0
 
 	.cont-left
 		display: flex
@@ -466,6 +416,7 @@ export default {
 		justify-content: flex-start
 		align-items: center
 		flex-wrap: wrap
+		min-width: 0
 		max-width: 100%
 		.cont-buttons
 			display: flex 
@@ -476,20 +427,16 @@ export default {
 			margin-top: 15px
 /* Pista gris segmentada (mismo estilo que impl-detail-tab-bar en admin Implementations) */
 .horizontal-nav
-	width: 100%
-	display: flex
+	display: inline-flex
+	width: fit-content
+	max-width: 100%
+	min-width: 0
 	gap: 6px
 	padding: 4px
 	overflow-x: auto
 	overflow-y: hidden
 	background-color: #E3E3E3
 	border-radius: 8px
-	transition: padding-bottom 0.12s ease
-
-	/* Solo cuando hay overflow: reserva espacio al interactuar para que la barra no tape los ítems */
-	&.has_horizontal_scroll:hover,
-	&.has_horizontal_scroll:focus-within
-		padding-bottom: 14px
 
 	@media screen and (max-width: 576px)
 		-webkit-scrollbar 

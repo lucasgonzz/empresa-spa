@@ -4,7 +4,10 @@
 			<div class="date-selector">
 
 				<!-- Control segmentado: mismo patrón visual que horizontal-nav -->
-				<div class="horizontal-nav date-mode-selector">
+				<div
+				ref="horizontal_nav"
+				class="horizontal-nav date-mode-selector"
+				:class="{ 'has_horizontal_scroll': has_horizontal_scroll }">
 					<div
 					class="item apretable"
 					:class="{ active: rango_temporal == 'dia-actual' }"
@@ -69,7 +72,10 @@
 	</b-row>
 </template>
 <script>
+import horizontal_nav_scroll from '@/common-vue/mixins/horizontal_nav_scroll'
+
 export default {
+	mixins: [horizontal_nav_scroll],
 	components: {
 		InfoTime: () => import('@/components/reportes/components/general/select-date/InfoTime'),
 	},
@@ -154,6 +160,7 @@ export default {
 .date-mode-selector.horizontal-nav
 	display: inline-flex
 	width: fit-content
+	min-width: 0
 	max-width: 100%
 	flex-shrink: 0
 	gap: 6px
