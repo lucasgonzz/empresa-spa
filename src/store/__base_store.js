@@ -88,6 +88,11 @@ export default function __base_store(options = {}) {
 			// Permite distinguir entre "filtrado por formulario" y "filtrado por buscador rápido".
 			filtered_without_filter_form: false,
 
+			// Payload completo (query_value, props, relation_props, extra_filters) de la última búsqueda
+			// disparada por el buscador general (BuscadorGeneral). Se persiste para que la paginación
+			// pueda repetir la misma búsqueda solo cambiando la página, sin volver a armar el payload.
+			global_search_payload: null,
+
 			/**
 			 * Origen del último dropdown masivo (filtrados vs seleccionados).
 			 * Lo usan modales globales fuera del árbol del menú desplegable.
@@ -326,6 +331,16 @@ export default function __base_store(options = {}) {
 			state.filtered_without_filter_form = value
 		},
 		/**
+		 * Persiste (o limpia, con `null`) el payload completo de la última búsqueda del buscador general,
+		 * para que la paginación pueda repetirla cambiando solo la página.
+		 *
+		 * @param {Object} state Estado del módulo.
+		 * @param {Object|null} value Payload completo (query_value, props, relation_props, extra_filters) o null.
+		 */
+		setGlobalSearchPayload(state, value) {
+			state.global_search_payload = value
+		},
+		/**
 		 * Guarda si la acción masiva se originó en el dropdown de filtrados.
 		 *
 		 * @param {Object}  state
@@ -391,6 +406,8 @@ export default function __base_store(options = {}) {
 			commit('setIsFiltered', false)
 			// Resetear el flag de buscador rápido al recargar modelos desde el servidor.
 			commit('set_filtered_without_filter_form', false)
+			// Limpiar el payload persistido del buscador general para no dejarlo colgado de una búsqueda vieja.
+			commit('setGlobalSearchPayload', null)
 			if (state.use_per_page) {
 				commit('setPage', 1)
 				commit('setModels', [])
@@ -546,6 +563,71 @@ export default function __base_store(options = {}) {
 					console.log(err)
 				})
 		},
+
+		/**
+		 * Ejecuta el buscador general (POST global-search/{model_name}) contra props propias
+		 * (OR + AND de keywords) y relaciones (whereHas), más AND de extra_filters propios del módulo.
+		 * Persiste el payload completo en el store para que la paginación pueda repetir la misma
+		 * búsqueda solo pisando la página, sin volver a armar props/relation_props/extra_filters.
+		 *
+		 * @param {Object} context commit, state
+		 * @param {Object} payload
+		 * @param {Number} [payload.page] Página a consultar (si no viene, usa state.filter_page).
+		 * @param {String} [payload.query_value] Criterio de texto. Si el payload no trae `props`
+		 *   (caso paginación: llega solo `{ page }`), se asume que es un cambio de página y se
+		 *   reusa el payload persistido en `state.global_search_payload`.
+		 * @param {Array} [payload.props] Props propias del modelo a buscar (OR).
+		 * @param {Array} [payload.relation_props] Relaciones a buscar, cada una `{ relation, props }`.
+		 * @param {Array} [payload.extra_filters] Filtros extra propios del módulo (AND).
+		 * @returns {Promise}
+		 */
+		runGlobalSearch({commit, state}, payload = {}) {
+			/**
+			 * Payload completo a enviar: si viene con `props` es una búsqueda nueva (se persiste);
+			 * si no (solo `{ page }`), es un cambio de página y se reusa el payload persistido.
+			 */
+			let search_payload = payload
+			if (payload && payload.props) {
+				commit('setGlobalSearchPayload', payload)
+			} else {
+				search_payload = state.global_search_payload || {}
+			}
+
+			/** Página objetivo: la que viene en el payload de paginación, o la actual del store. */
+			let page = (payload && payload.page) ? payload.page : state.filter_page
+			/** Cantidad por página, alineada con el resto de búsquedas filtradas. */
+			let per_page = state.filter_per_page || 5
+			/** Nombre plural en español del modelo para el mensaje de feedback al usuario. */
+			let plural_model_name = generals.methods.plural(state.model_name)
+
+			commit('auth/setMessage', 'Buscando ' + plural_model_name, {root: true})
+			commit('auth/setLoading', true, {root: true})
+
+			return axios.post(
+				'/api/global-search/' + generals.methods.routeString(state.model_name) + '?page=' + page,
+				Object.assign({}, search_payload, {per_page: per_page})
+			)
+				.then(res => {
+					commit('auth/setLoading', false, {root: true})
+					commit('auth/setMessage', '', {root: true})
+
+					/** Filas devueltas: el endpoint responde envuelto en `models` (paginador Laravel). */
+					let rows = (res.data.models && res.data.models.data) ? res.data.models.data : []
+					commit('setSelected', [])
+					commit('setFilterPage', page)
+					commit('setFiltered', rows)
+					commit('setIsFiltered', true)
+					commit('setTotalFilterPages', res.data.models ? res.data.models.last_page : null)
+					commit('setTotalFilterResults', res.data.models ? res.data.models.total : 0)
+					// Marcar que el filtered fue cargado por el buscador general (no por el form de filtros).
+					commit('set_filtered_without_filter_form', true)
+				})
+				.catch(err => {
+					commit('auth/setLoading', false, {root: true})
+					commit('auth/setMessage', '', {root: true})
+					console.log(err)
+				})
+		},
 	}
 
 	/**
@@ -564,6 +646,8 @@ export default function __base_store(options = {}) {
 			commit('setIsFiltered', false)
 			// Resetear el flag de buscador rápido al recargar modelos desde el servidor.
 			commit('set_filtered_without_filter_form', false)
+			// Limpiar el payload persistido del buscador general para no dejarlo colgado de una búsqueda vieja.
+			commit('setGlobalSearchPayload', null)
 			if (state.use_per_page) {
 				commit('setPage', 1)
 				commit('setModels', [])

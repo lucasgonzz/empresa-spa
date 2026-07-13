@@ -770,6 +770,12 @@ export default {
 				return this.$store.dispatch('papelera/' + this.model_name + '/run_papelera_search_from_store')
 			}
 
+			// Si hay una búsqueda del buscador general activa (payload persistido), la paginación
+			// debe repetir esa búsqueda (no volver al listado completo vía runFilter).
+			if (this.$store.state[this.model_name].global_search_payload) {
+				return this.$store.dispatch(this.model_name + '/runGlobalSearch')
+			}
+
 			// En listado normal, delegamos en el store base del módulo.
 			return this.$store.dispatch(this.model_name + '/runFilter')
 		},
