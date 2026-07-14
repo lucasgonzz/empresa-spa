@@ -103,6 +103,23 @@ import TableComponent from '@/common-vue/components/display/table/Index'
 
 import Confirm from '@/common-vue/components/Confirm'
 
+/**
+ * Registro estatico de componentes "extra" opcionales para el hook aditivo de HasMany
+ * (has_many.extra_action_component en el meta del prop). Cada entrada es un import con un
+ * string LITERAL completo: webpack lo resuelve de forma directa, sin construir un contexto
+ * dinamico que tenga que escanear todo src/components/ en disco (ver nota en el computed
+ * extra_action_component mas abajo).
+ *
+ * Para agregar un nuevo extra_action_component en el futuro: sumar una entrada aca con la
+ * misma clave que se declare en el meta del prop del modelo.
+ */
+const EXTRA_ACTION_COMPONENTS = {
+	'listado/components/ArticleDescriptionsAiBtn': () => import(
+		/* webpackChunkName: "has-many-extra-action" */
+		'@/components/listado/components/ArticleDescriptionsAiBtn.vue'
+	),
+}
+
 export default {
 	name: 'HasMany',
 	props: {
@@ -152,19 +169,16 @@ export default {
 				return null
 			}
 
-			// Ruta relativa dentro de src/components al componente a cargar de forma diferida.
-			const path = this.prop.has_many.extra_action_component
-
-			// El path es una expresion variable: sin acotar, webpack generaria un contexto sobre TODO
-			// src/components y trataria de compilar archivos legacy no relacionados (algunos rotos),
-			// haciendo fallar el build. Con webpackInclude se limita el contexto al unico componente
-			// extra que existe hoy. Si en el futuro se agrega otro extra_action_component, sumar su
-			// archivo a esta expresion regular.
-			return () => import(
-				/* webpackChunkName: "has-many-extra-action" */
-				/* webpackInclude: /listado[\/\\]components[\/\\]ArticleDescriptionsAiBtn\.vue$/ */
-				'@/components/'+path
-			)
+			// Registro estatico (EXTRA_ACTION_COMPONENTS, declarado fuera del componente, arriba de
+			// los imports). FIX 14/7/2026: la version anterior armaba el import dinamico por
+			// concatenacion de string ('@/components/'+path). webpackInclude solo filtra los
+			// candidatos DESPUES de que webpack escanea en disco TODO el arbol de src/components/
+			// para construir el contexto -- no limita ese escaneo. Un problema de filesystem en
+			// CUALQUIER carpeta bajo src/components/, sin relacion alguna con este hook, rompia el
+			// build entero (paso real: scandir de src/components/online/config fallando en local
+			// justo despues de un merge). Con un registro estatico de imports literales, webpack
+			// resuelve cada entrada de forma directa, sin escanear nada.
+			return EXTRA_ACTION_COMPONENTS[this.prop.has_many.extra_action_component] || null
 		},
 		// text_delete_() {
 		// 	if (this.prop_model_to_delete) {
