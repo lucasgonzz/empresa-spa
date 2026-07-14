@@ -1,12 +1,44 @@
 export default {
 	properties: [
 		{
-			group_title: 'Generales'
+			group_title: 'General'
+		},
+		{
+			text: 'Pausar la Tienda Online',
+			key: 'pausar_tienda_online',
+			type: 'checkbox',
+			description: 'Si se pausa la tienda online, no se mostrara el contenido de la misma y se informara al usuario.',
+		},
+		{
+			text: 'Mostrar seccion Catalogo en la Tienda',
+			key: 'mostrar_catalogo',
+			type: 'checkbox',
+			description: 'Si se activa, se mostrara el enlace Catalogo en el navbar de la tienda online.',
+		},
+
+		{
+			group_title: 'Precios'
 		},
 		{
 			text: 'Precios en la Tienda',
 			key: 'online_price_type_id',
 			type: 'select',
+		},
+		{
+			text: 'Recargos a los precios en la Tienda',
+			key: 'online_price_surchage',
+			type: 'number',
+		},
+		{
+			text: 'Texto para precio pausado',
+			key: 'text_precio_pausado',
+			type: 'text',
+			value: '',
+			description: 'Mensaje que verán los clientes en los artículos marcados con "Precio pausado" en lugar del importe.',
+		},
+
+		{
+			group_title: 'Registro de clientes'
 		},
 		{
 			text: 'Registrarse para comprar',
@@ -17,13 +49,18 @@ export default {
 			],
 		},
 		{
-			text: 'Recargos a los precios en la Tienda',
-			key: 'online_price_surchage',
-			type: 'number',
+			text: 'Pedir el barrio al registrarse',
+			key: 'pedir_barrio_al_registrarse',
+			type: 'checkbox',
+		},
+		{
+			text: 'Logear automaticamente al cliente cuando finaliza el registro',
+			key: 'logear_cliente_al_registrar',
+			type: 'checkbox',
 		},
 
 		{
-			group_title: 'Precentacion'
+			group_title: 'Presentacion'
 		},
 		{
 			text: 'Titulo seccion Quienes somos',
@@ -38,21 +75,12 @@ export default {
 			show: true,
 		},
 		{
-			text: 'Aviso antes de confirmar compra',
-			key: 'aviso_antes_de_confirmar_compra',
-			type: 'texteditor',
-			value: '',
-			show: true,
-			description: 'Texto formateado que se muestra en la tienda, debajo del resumen de compra, antes de finalizar el pedido.',
-		},
-		{
 			text: 'Mensaje para mostrar en Pagina CONTACTO',
 			key: 'mensaje_contacto',
 			type: 'textarea',
 			value: '',
 			show: true,
 		},
-
 
 		{
 			group_title: 'Diseño'
@@ -125,28 +153,8 @@ export default {
 			description: 'Define el tamaño de letra de la descripcion en la vista de articulo de la tienda.',
 		},
 
-
-
 		{
-			group_title: 'Funcionalidad'
-		},
-		{
-			text: 'Cantidad por defecto para agregar al carrito',
-			key: 'default_amount_add_to_cart',
-			type: 'number',
-		},
-		{
-			text: 'Nota para los pedidos',
-			key: 'order_description',
-			type: 'textarea',
-			value: '',
-			show: true,
-		},
-		{
-			text: 'Guardar venta despues de entregar Pedido',
-			key: 'save_sale_after_finish_order',
-			description: 'Si se activa, se descontara el stock despues de confirmar un pedido, y se generara la venta una vez entregado',
-			type: 'checkbox',
+			group_title: 'Inicio (Home)'
 		},
 		{
 			text: 'Scroll infinito en el Inicio',
@@ -172,14 +180,8 @@ export default {
 			description: 'Cada cuantos milisegundos se aplica el scroll automatico. Si no tiene valor, usa 1000.',
 		},
 
-
 		{
-			group_title: 'Opciones'
-		},
-		{
-			text: 'Ofrecer opcion de envio en la Tienda',
-			key: 'has_delivery',
-			type: 'checkbox',
+			group_title: 'Catalogo y stock'
 		},
 		{
 			text: 'Mostrar articulos sin Stock en la Tienda',
@@ -197,39 +199,49 @@ export default {
 			key: 'show_articles_without_images',
 			type: 'checkbox',
 		},
+
 		{
-			text: 'Texto para precio pausado',
-			key: 'text_precio_pausado',
-			type: 'text',
+			group_title: 'Carrito y pedidos'
+		},
+		{
+			text: 'Cantidad por defecto para agregar al carrito',
+			key: 'default_amount_add_to_cart',
+			type: 'number',
+		},
+		{
+			text: 'Nota para los pedidos',
+			key: 'order_description',
+			type: 'textarea',
 			value: '',
-			description: 'Mensaje que verán los clientes en los artículos marcados con "Precio pausado" en lugar del importe.',
+			show: true,
 		},
 		{
-			text: 'Pedir el barrio al registrarse',
-			key: 'pedir_barrio_al_registrarse',
+			text: 'Aviso antes de confirmar compra',
+			key: 'aviso_antes_de_confirmar_compra',
+			type: 'texteditor',
+			value: '',
+			show: true,
+			description: 'Texto formateado que se muestra en la tienda, debajo del resumen de compra, antes de finalizar el pedido.',
+		},
+		{
+			text: 'Guardar venta despues de entregar Pedido',
+			key: 'save_sale_after_finish_order',
+			description: 'Si se activa, se descontara el stock despues de confirmar un pedido, y se generara la venta una vez entregado',
 			type: 'checkbox',
 		},
 		{
-			text: 'Logear automaticamente al cliente cuando finaliza el registro',
-			key: 'logear_cliente_al_registrar',
+			text: 'Ofrecer opcion de envio en la Tienda',
+			key: 'has_delivery',
 			type: 'checkbox',
 		},
 		{
-			text: 'Pausar la Tienda Online',
-			key: 'pausar_tienda_online',
+			text: 'Cliente envia whatsapp al negocio al finalizar pedido',
+			key: 'enviar_whatsapp_al_terminar_pedido',
 			type: 'checkbox',
-			description: 'Si se pausa la tienda online, no se mostrara el contenido de la misma y se informara al usuario.',
-		},
-		{
-			text: 'Mostrar seccion Catalogo en la Tienda',
-			key: 'mostrar_catalogo',
-			type: 'checkbox',
-			description: 'Si se activa, se mostrara el enlace Catalogo en el navbar de la tienda online.',
 		},
 
-
 		{
-			group_title: 'Enlaces'
+			group_title: 'Redes sociales'
 		},
 		{
 			text: 'Instagram',
@@ -244,6 +256,95 @@ export default {
 			type: 'text',
 			value: '',
 			show: true,
+		},
+
+		{
+			// Grupo nuevo: agrupa las notificaciones por mail relacionadas a pedidos y stock
+			// (prompt 384). Va antes del grupo de la casilla SMTP propia porque el orden
+			// natural es primero elegir que mails se mandan y despues desde que correo salen.
+			group_title: 'Notificaciones por mail'
+		},
+		{
+			text: 'Avisarme por mail cuando entra un pedido nuevo',
+			key: 'notificar_pedido_al_negocio',
+			type: 'checkbox',
+			description: 'Cada vez que un cliente termina una compra en tu tienda online, te llega un mail con el detalle completo del pedido.',
+		},
+		{
+			text: 'Correo donde recibir los avisos de pedidos',
+			key: 'mail_notificacion_pedidos',
+			type: 'text',
+			description: 'Podes poner varios correos separados por coma. Si lo dejas vacio, el aviso se manda al correo de tu cuenta.',
+		},
+		{
+			text: 'Enviarle al cliente un mail confirmando que realizo su pedido',
+			key: 'notificar_pedido_al_cliente',
+			type: 'checkbox',
+			description: 'Cuando termina la compra, el cliente recibe un mail con el detalle de su pedido y los totales.',
+		},
+		{
+			text: 'Avisar por mail cuando ingresa stock de un articulo esperado',
+			key: 'avisar_ingreso_stock_por_mail',
+			type: 'checkbox',
+			description: 'Aplica a los clientes que tocaron "Avisarme cuando este disponible" en un articulo sin stock. Antes esto se configuraba en el servidor; ahora lo manejas vos desde aca.',
+		},
+
+		{
+			group_title: 'Correo para notificaciones a clientes'
+		},
+		{
+			text: 'Usar mi propio correo',
+			key: 'mail_enabled',
+			type: 'checkbox',
+			// El group_title no soporta un texto propio en el renderer, por eso la aclaracion
+			// general del grupo se muestra como description (popover) del primer campo.
+			description: 'Este correo se usa para avisarle a tus clientes cuando entra stock de un articulo que estaban esperando, y para el resto de los avisos de la tienda. Si esta desactivado, los mails a tus clientes salen desde el correo del sistema.',
+		},
+		{
+			text: 'Correo',
+			key: 'mail_username',
+			type: 'text',
+			description: 'La casilla desde la que se envian los mails (ej: ventas@tunegocio.com.ar).',
+		},
+		{
+			text: 'Contraseña',
+			key: 'mail_password',
+			type: 'password',
+			description: 'Por seguridad no se muestra la contraseña guardada. Dejalo vacio si no queres cambiarla.',
+		},
+		{
+			text: 'Servidor SMTP',
+			key: 'mail_host',
+			type: 'text',
+			description: 'Ej: smtp.hostinger.com',
+		},
+		{
+			text: 'Puerto',
+			key: 'mail_port',
+			type: 'number',
+			description: 'Normalmente 587 (TLS) o 465 (SSL).',
+		},
+		{
+			text: 'Encriptación',
+			key: 'mail_encryption',
+			type: 'select',
+			options: [
+				{ value: 'tls', text: 'TLS' },
+				{ value: 'ssl', text: 'SSL' },
+				{ value: '', text: 'Ninguna' },
+			],
+		},
+		{
+			text: 'Nombre del remitente',
+			key: 'mail_from_name',
+			type: 'text',
+			description: 'Como ve tu cliente el remitente. Si lo dejas vacio, se usa el nombre de tu empresa.',
+		},
+		{
+			text: 'Correo del remitente',
+			key: 'mail_from_address',
+			type: 'text',
+			description: 'Si lo dejas vacio, se usa el mismo correo de arriba.',
 		},
 	],
 	singular_model_name_spanish: 'Configuracion Online',

@@ -57,6 +57,14 @@
 			Agregar {{ singular(prop.has_many.model_name) }}
 		</b-button>
 
+		<!-- Hook aditivo opcional: componente extra declarado en el meta del prop (has_many.extra_action_component). Si el prop no lo declara, extra_action_component es null y no se renderiza nada. -->
+		<component
+		v-if="extra_action_component"
+		:is="extra_action_component"
+		:parent_model="parent_model"
+		:parent_model_name="parent_model_name"
+		class="m-t-15 m-l-10"></component>
+
 		<b-modal
 		hide-footer
 		:title="'Detalle de '+plural(prop.has_many.model_name)"
@@ -78,6 +86,14 @@
 				<i class="icon-plus"></i>
 				Agregar {{ singular(prop.has_many.model_name) }}
 			</b-button>
+
+			<!-- Hook aditivo opcional dentro de la vista "Ampliar": mismo componente extra que en la vista compacta. -->
+			<component
+			v-if="extra_action_component"
+			:is="extra_action_component"
+			:parent_model="parent_model"
+			:parent_model_name="parent_model_name"
+			class="m-t-15 m-l-10"></component>
 		</b-modal>
 	</div>
 </template>
@@ -86,6 +102,23 @@ import BtnLoader from '@/common-vue/components/BtnLoader'
 import TableComponent from '@/common-vue/components/display/table/Index'
 
 import Confirm from '@/common-vue/components/Confirm'
+
+/**
+ * Registro estatico de componentes "extra" opcionales para el hook aditivo de HasMany
+ * (has_many.extra_action_component en el meta del prop). Cada entrada es un import con un
+ * string LITERAL completo: webpack lo resuelve de forma directa, sin construir un contexto
+ * dinamico que tenga que escanear todo src/components/ en disco (ver nota en el computed
+ * extra_action_component mas abajo).
+ *
+ * Para agregar un nuevo extra_action_component en el futuro: sumar una entrada aca con la
+ * misma clave que se declare en el meta del prop del modelo.
+ */
+const EXTRA_ACTION_COMPONENTS = {
+	'listado/components/ArticleDescriptionsAiBtn': () => import(
+		/* webpackChunkName: "has-many-extra-action" */
+		'@/components/listado/components/ArticleDescriptionsAiBtn.vue'
+	),
+}
 
 export default {
 	name: 'HasMany',
@@ -122,6 +155,30 @@ export default {
 		expand_modal_id() {
 			// ID unico por propiedad para evitar colisiones de modal en formularios con multiples HasMany.
 			return 'has-many-expand-modal-'+this.parent_model_name+'-'+this.prop.key
+		},
+		/**
+		 * Componente extra opcional declarado en el meta del prop:
+		 *   has_many: { extra_action_component: 'listado/components/ArticleDescriptionsAiBtn' }
+		 * Si no esta declarado, devuelve null y no se renderiza nada: el HasMany se comporta
+		 * exactamente como siempre (cambio estrictamente aditivo, no afecta a ningun otro has_many).
+		 *
+		 * @return {Function|null}
+		 */
+		extra_action_component() {
+			if (!this.prop.has_many || !this.prop.has_many.extra_action_component) {
+				return null
+			}
+
+			// Registro estatico (EXTRA_ACTION_COMPONENTS, declarado fuera del componente, arriba de
+			// los imports). FIX 14/7/2026: la version anterior armaba el import dinamico por
+			// concatenacion de string ('@/components/'+path). webpackInclude solo filtra los
+			// candidatos DESPUES de que webpack escanea en disco TODO el arbol de src/components/
+			// para construir el contexto -- no limita ese escaneo. Un problema de filesystem en
+			// CUALQUIER carpeta bajo src/components/, sin relacion alguna con este hook, rompia el
+			// build entero (paso real: scandir de src/components/online/config fallando en local
+			// justo despues de un merge). Con un registro estatico de imports literales, webpack
+			// resuelve cada entrada de forma directa, sin escanear nada.
+			return EXTRA_ACTION_COMPONENTS[this.prop.has_many.extra_action_component] || null
 		},
 		// text_delete_() {
 		// 	if (this.prop_model_to_delete) {

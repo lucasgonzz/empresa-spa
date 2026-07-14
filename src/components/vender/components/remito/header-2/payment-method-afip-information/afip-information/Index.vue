@@ -8,6 +8,22 @@
 		<select-incoterms
 		@set_selected="set_incoterms"
 		v-if="afip_tipo_comprobante_id == 8"></select-incoterms>
+
+		<b-input-group
+		prepend="Forma de Pago"
+		v-if="afip_tipo_comprobante_id == 8">
+			<b-form-input
+			v-model="forma_de_pago"></b-form-input>
+		</b-input-group>
+
+		<b-form-checkbox
+		v-if="afip_tipo_comprobante_id == 8"
+		value="S"
+		unchecked-value="N"
+		v-model="permiso_existente"
+		class="ml-2 align-self-center">
+			Permiso existente
+		</b-form-checkbox>
 	</div>
 </template>
 <script>
@@ -20,6 +36,22 @@ export default {
 	computed: {
 		afip_tipo_comprobante_id() {
 			return this.$store.state.vender.afip_tipo_comprobante_id
+		},
+		forma_de_pago: {
+			get() {
+				return this.$store.state.vender.forma_de_pago
+			},
+			set(value) {
+				this.$store.commit('vender/set_forma_de_pago', value)
+			},
+		},
+		permiso_existente: {
+			get() {
+				return this.$store.state.vender.permiso_existente
+			},
+			set(value) {
+				this.$store.commit('vender/set_permiso_existente', value)
+			},
 		},
 	},
 	methods: {

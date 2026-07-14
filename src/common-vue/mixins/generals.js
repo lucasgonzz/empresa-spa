@@ -813,6 +813,10 @@ export default {
 			if (prop.type == 'images' || prop.type == 'image') {
 				return null
 			}
+			/* Nunca exponer el valor de un campo password (ej: solo-lectura, tablas, PDF). */
+			if (prop.type == 'password') {
+				return ''
+			}
 			if (prop.function) {
 
 				let value = this.getFunctionValue(prop, model)
