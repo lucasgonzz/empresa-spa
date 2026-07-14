@@ -247,6 +247,37 @@ export default {
 		},
 
 		{
+			// Grupo nuevo: agrupa las notificaciones por mail relacionadas a pedidos y stock
+			// (prompt 384). Va antes del grupo de la casilla SMTP propia porque el orden
+			// natural es primero elegir que mails se mandan y despues desde que correo salen.
+			group_title: 'Notificaciones por mail'
+		},
+		{
+			text: 'Avisarme por mail cuando entra un pedido nuevo',
+			key: 'notificar_pedido_al_negocio',
+			type: 'checkbox',
+			description: 'Cada vez que un cliente termina una compra en tu tienda online, te llega un mail con el detalle completo del pedido.',
+		},
+		{
+			text: 'Correo donde recibir los avisos de pedidos',
+			key: 'mail_notificacion_pedidos',
+			type: 'text',
+			description: 'Podes poner varios correos separados por coma. Si lo dejas vacio, el aviso se manda al correo de tu cuenta.',
+		},
+		{
+			text: 'Enviarle al cliente un mail confirmando su pedido',
+			key: 'notificar_pedido_al_cliente',
+			type: 'checkbox',
+			description: 'Cuando termina la compra, el cliente recibe un mail con el detalle de su pedido y los totales.',
+		},
+		{
+			text: 'Avisar por mail cuando ingresa stock de un articulo esperado',
+			key: 'avisar_ingreso_stock_por_mail',
+			type: 'checkbox',
+			description: 'Aplica a los clientes que tocaron "Avisarme cuando este disponible" en un articulo sin stock. Antes esto se configuraba en el servidor; ahora lo manejas vos desde aca.',
+		},
+
+		{
 			group_title: 'Correo para notificaciones a clientes'
 		},
 		{
