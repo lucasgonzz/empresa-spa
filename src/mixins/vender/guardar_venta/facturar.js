@@ -17,6 +17,22 @@ export default {
 				this.$store.commit('vender/setAfipInformationId', value)
 			},
 		},
+		forma_de_pago: {
+			get() {
+				return this.$store.state.vender.forma_de_pago
+			},
+			set(value) {
+				this.$store.commit('vender/set_forma_de_pago', value)
+			},
+		},
+		permiso_existente: {
+			get() {
+				return this.$store.state.vender.permiso_existente
+			},
+			set(value) {
+				this.$store.commit('vender/set_permiso_existente', value)
+			},
+		},
 	},
 	methods: {
 		mostrar_tarjeta() {
@@ -64,6 +80,8 @@ export default {
 					ventas_afip_information_id: this.afip_information_id,
 					afip_tipo_comprobante_id: this.afip_tipo_comprobante_id,
 					incoterms: this.incoterms,
+					forma_de_pago: this.forma_de_pago,
+					permiso_existente: this.permiso_existente,
 				})
 				.then(res => {
 
@@ -116,6 +134,8 @@ export default {
 		limpiar_afip() {
 			this.$store.commit('vender/setAfipInformationId', 0)
 			this.$store.commit('vender/set_afip_tipo_comprobante_id', 0)
+			this.$store.commit('vender/set_forma_de_pago', '')
+			this.$store.commit('vender/set_permiso_existente', '')
 		},
 		ticket_demorado() {
 			document.getElementById('loading-afip-ticket').classList.add('loading-afip-ticket-demorado')

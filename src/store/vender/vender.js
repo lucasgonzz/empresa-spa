@@ -231,6 +231,8 @@ export default {
 		afip_tipo_comprobante_id: 0,
 
 		incoterms: 0,
+		forma_de_pago: '',
+		permiso_existente: '',
 
 		descuento: null,
 
@@ -779,6 +781,12 @@ export default {
 		},
 		set_incoterms(state, value) {
 			state.incoterms = value 
+		},
+		set_forma_de_pago(state, value) {
+			state.forma_de_pago = value 
+		},
+		set_permiso_existente(state, value) {
+			state.permiso_existente = value 
 		},
 		removeItem(state, item) {
 			// Estado previo para registrar la eliminación del item.

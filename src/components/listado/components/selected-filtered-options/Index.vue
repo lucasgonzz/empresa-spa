@@ -6,6 +6,8 @@
 
 		<search-image-automatica></search-image-automatica>
 
+		<search-description-automatica></search-description-automatica>
+
 
 		<!-- <articles-pdf-option-drop-down></articles-pdf-option-drop-down> -->
 
@@ -52,6 +54,8 @@ export default {
 		ConfirmResetStock: () => import('@/components/listado/modals/ConfirmResetStock'),
 
 		SearchImageAutomatica: () => import('@/components/listado/components/selected-filtered-options/SearchImageAutomatica'),
+
+		SearchDescriptionAutomatica: () => import('@/components/listado/components/selected-filtered-options/SearchDescriptionAutomatica'),
 
 	}
 

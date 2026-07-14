@@ -176,6 +176,7 @@
 									:prop_text="propText(prop)"
 									:price_value="price(model[prop.key])"
 									:has_bar_code_scanner="hasExtencion('bar_code_scanner')"
+									:placeholder="passwordPlaceholder(prop)"
 									@input="$set(model, prop.key, $event)"
 									@search-cuit="searchCUIT"
 									@set-bar-code="setBarCode"
@@ -1323,6 +1324,31 @@ export default {
 			/* Se registra el valor y se ejecuta el mismo chequeo que en Enter. */
 			this.last_repeat_check_by_prop_key[prop.key] = normalized_value
 			this.checkIsRepeat(prop)
+		},
+		/**
+		 * Placeholder para campos type="password" (write-only: el backend nunca devuelve
+		 * el valor real guardado, asi que el input siempre arranca vacio).
+		 *
+		 * Convencion: si el modelo trae `has_<key>` en true (ej: `has_mail_password`),
+		 * se asume que ya hay un valor guardado y se avisa con un placeholder, sin
+		 * exponer nunca la contraseña real.
+		 *
+		 * @param {Object} prop Propiedad declarativa del modelo (properties[]).
+		 * @returns {String|null} Texto de placeholder, o null si no aplica.
+		 */
+		passwordPlaceholder(prop) {
+			/* Solo aplica a campos de tipo password. */
+			if (!prop || prop.type != 'password') {
+				return null
+			}
+
+			/* Chequea el flag `has_<key>` que informa el backend (ej: has_mail_password). */
+			let has_value_key = 'has_' + prop.key
+			if (this.model && this.model[has_value_key]) {
+				return '••••••••  (dejar vacío para no cambiarla)'
+			}
+
+			return null
 		},
 		/*
 			Define si corresponde ejecutar el chequeo de repetidos para el `prop` actual.
