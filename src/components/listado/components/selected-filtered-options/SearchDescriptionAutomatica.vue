@@ -22,7 +22,10 @@
 
 		@click="start_batch_flow()">
 
-			Generar descripciones automáticamente
+			<div class="ai-desc-dropdown-option">
+				<div class="ai-desc-dropdown-option__title">Generar para los que no tienen descripción</div>
+				<small class="ai-desc-dropdown-option__hint">No toca los artículos que ya tienen una, sea generada por IA o cargada a mano.</small>
+			</div>
 
 		</dropdown-option-item>
 
@@ -34,7 +37,10 @@
 
 		@click="start_batch_flow(true)">
 
-			Generar y reemplazar las generadas por IA (nunca pisa lo escrito a mano)
+			<div class="ai-desc-dropdown-option">
+				<div class="ai-desc-dropdown-option__title">Regenerar las descripciones de IA</div>
+				<small class="ai-desc-dropdown-option__hint">Vuelve a buscar y reemplaza solo las que fueron generadas por IA. Nunca toca las cargadas a mano.</small>
+			</div>
 
 		</dropdown-option-item>
 
@@ -115,7 +121,8 @@ export default {
 
 		* Encola la generación masiva de descripciones y se suscribe a Pusher para recibir el resumen.
 		* Nunca pisa descripciones cargadas a mano: si overwrite es true, solo se borran (y regeneran)
-		* las descripciones previas que fueron generadas por IA.
+		* las descripciones previas que fueron generadas por IA. En modo automático (overwrite=false)
+		* tampoco se tocan los artículos que ya tienen descripción de IA: solo se generan las faltantes.
 		*
 		* @param {Boolean} overwrite Si es true, borra y regenera las descripciones ya generadas por IA.
 		* @return {void}
@@ -255,4 +262,21 @@ export default {
 }
 
 </script>
+
+<style lang="sass">
+	/* Contenedor de cada opción del dropdown: título + línea aclaratoria en chico */
+	.ai-desc-dropdown-option
+		display: flex
+		flex-direction: column
+		gap: 1px
+		white-space: normal
+		line-height: 1.25
+
+		&__title
+			font-weight: 500
+
+		&__hint
+			color: #6c757d
+			font-size: 0.78rem
+</style>
 
