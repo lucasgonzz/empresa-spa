@@ -1,6 +1,7 @@
 import set_employee_vender from '@/mixins/set_employee_vender'
+import inventory_performance from '@/mixins/inventory_performance'
 export default {
-	mixins: [set_employee_vender],
+	mixins: [set_employee_vender, inventory_performance],
 	methods: {
 		startMethods() {
 			console.log('llamando startMethods')
@@ -47,23 +48,49 @@ export default {
 				}
 			})
 		},
+		/**
+		 * Pide el reporte de inventario al iniciar el sistema y decide si mostrar
+		 * el modal de stock minimo:
+		 *
+		 * - Escenario 1 (reporte vigente): se muestra el modal de una si corresponde.
+		 * - Escenario 2 (reporte vencido o inexistente, generating: true): no se espera nada,
+		 *   se suscribe al canal de broadcast y el modal se muestra recien cuando el job
+		 *   en background termina de calcular el reporte (puede tardar minutos en cuentas grandes).
+		 *
+		 * Si show_stock_min_al_iniciar esta desactivado, el reporte igual se pide (y se
+		 * regenera si vencio) porque lo usan el modulo de Alertas y el boton Inventario.
+		 */
 		get_inventory_performance() {
-			if (
-				this.is_admin
-			) {
-				this.$store.dispatch('inventory_performance/getModels')
-				.then(() => {
-					if (
-						this.owner.show_stock_min_al_iniciar
-						&& (
-							this.$store.state.inventory_performance.models.length
-							&& this.$store.state.inventory_performance.models[0].articles_stock_minimo.length
-						)
-					) {
-						this.$bvModal.show('articles-stock-minimo')
-					}
-				})
-			}
+			if (!this.is_admin) return
+
+			this.$store.dispatch('inventory_performance/get_models_con_estado')
+			.then(() => {
+
+				// Escenario 1: el reporte ya estaba vigente.
+				if (this.mostrar_modal_stock_minimo()) {
+					this.$bvModal.show('articles-stock-minimo')
+					return
+				}
+
+				// Escenario 2: se esta generando en background -> esperar el broadcast.
+				if (this.inventory_performance_generating) {
+					this.escuchar_inventory_performance(() => {
+						if (this.mostrar_modal_stock_minimo()) {
+							this.$bvModal.show('articles-stock-minimo')
+						}
+					})
+				}
+			})
+		},
+		/**
+		 * Determina si corresponde mostrar el modal de stock minimo al iniciar sesion.
+		 * Se decide con el contador stock_minimo del reporte (no con la lista completa
+		 * de articulos, que ya no viaja en la respuesta del backend).
+		 *
+		 * @returns {Boolean}
+		 */
+		mostrar_modal_stock_minimo() {
+			return !!(this.owner.show_stock_min_al_iniciar && this.hay_articulos_stock_minimo)
 		},
 		escuchar_orders_y_messages() {
 			if (this.owner.online) {

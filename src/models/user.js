@@ -352,6 +352,14 @@ export default {
 			type: 'checkbox',
 		},
 		{
+			text: 'Minutos de duracion del reporte de inventario',
+			key: 'duracion_reporte_inventario',
+			type: 'number',
+			descriptions: [
+				'Cada cuantos minutos se vuelve a calcular el reporte de inventario y las alertas de stock minimo. Si tenes muchos articulos, conviene un valor alto: el calculo se hace en segundo plano y puede tardar varios minutos.',
+			],
+		},
+		{
 			text: 'Mostrar errores de facturacion al ingresar al sistema',
 			key: 'show_afip_errors_al_iniciar',
 			type: 'checkbox',
