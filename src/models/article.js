@@ -886,6 +886,9 @@ export default {
 			has_many: {
 				text: 'Descripcion',
 				model_name: 'description',
+				// Hook aditivo del HasMany generico: renderiza el boton "Generar con IA" con preview editable
+				// al lado de "Agregar Descripcion". Solo este prop declara la clave; ningun otro has_many la usa.
+				extra_action_component: 'listado/components/ArticleDescriptionsAiBtn',
 			},
 			mid_full_cols: true,
 			not_show: true,
@@ -893,6 +896,7 @@ export default {
 				'Agregue multiples descripciones a un producto, pudiendo editar los estilos del texto',
 				'Organize las descripciones con Titulos y parrafos',
 				'Estas descripciones son utilizadas en el e-commerce',
+				'Con "Generar con IA" el sistema busca informacion real del producto por su codigo de barras y redacta la ficha. Siempre te la muestra para que la revises antes de guardarla.',
 			],
 		},
 

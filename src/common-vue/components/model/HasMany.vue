@@ -57,6 +57,14 @@
 			Agregar {{ singular(prop.has_many.model_name) }}
 		</b-button>
 
+		<!-- Hook aditivo opcional: componente extra declarado en el meta del prop (has_many.extra_action_component). Si el prop no lo declara, extra_action_component es null y no se renderiza nada. -->
+		<component
+		v-if="extra_action_component"
+		:is="extra_action_component"
+		:parent_model="parent_model"
+		:parent_model_name="parent_model_name"
+		class="m-t-15 m-l-10"></component>
+
 		<b-modal
 		hide-footer
 		:title="'Detalle de '+plural(prop.has_many.model_name)"
@@ -78,6 +86,14 @@
 				<i class="icon-plus"></i>
 				Agregar {{ singular(prop.has_many.model_name) }}
 			</b-button>
+
+			<!-- Hook aditivo opcional dentro de la vista "Ampliar": mismo componente extra que en la vista compacta. -->
+			<component
+			v-if="extra_action_component"
+			:is="extra_action_component"
+			:parent_model="parent_model"
+			:parent_model_name="parent_model_name"
+			class="m-t-15 m-l-10"></component>
 		</b-modal>
 	</div>
 </template>
@@ -122,6 +138,33 @@ export default {
 		expand_modal_id() {
 			// ID unico por propiedad para evitar colisiones de modal en formularios con multiples HasMany.
 			return 'has-many-expand-modal-'+this.parent_model_name+'-'+this.prop.key
+		},
+		/**
+		 * Componente extra opcional declarado en el meta del prop:
+		 *   has_many: { extra_action_component: 'listado/components/ArticleDescriptionsAiBtn' }
+		 * Si no esta declarado, devuelve null y no se renderiza nada: el HasMany se comporta
+		 * exactamente como siempre (cambio estrictamente aditivo, no afecta a ningun otro has_many).
+		 *
+		 * @return {Function|null}
+		 */
+		extra_action_component() {
+			if (!this.prop.has_many || !this.prop.has_many.extra_action_component) {
+				return null
+			}
+
+			// Ruta relativa dentro de src/components al componente a cargar de forma diferida.
+			const path = this.prop.has_many.extra_action_component
+
+			// El path es una expresion variable: sin acotar, webpack generaria un contexto sobre TODO
+			// src/components y trataria de compilar archivos legacy no relacionados (algunos rotos),
+			// haciendo fallar el build. Con webpackInclude se limita el contexto al unico componente
+			// extra que existe hoy. Si en el futuro se agrega otro extra_action_component, sumar su
+			// archivo a esta expresion regular.
+			return () => import(
+				/* webpackChunkName: "has-many-extra-action" */
+				/* webpackInclude: /listado[\/\\]components[\/\\]ArticleDescriptionsAiBtn\.vue$/ */
+				'@/components/'+path
+			)
 		},
 		// text_delete_() {
 		// 	if (this.prop_model_to_delete) {
