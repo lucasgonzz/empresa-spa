@@ -1,12 +1,44 @@
 export default {
 	properties: [
 		{
-			group_title: 'Generales'
+			group_title: 'General'
+		},
+		{
+			text: 'Pausar la Tienda Online',
+			key: 'pausar_tienda_online',
+			type: 'checkbox',
+			description: 'Si se pausa la tienda online, no se mostrara el contenido de la misma y se informara al usuario.',
+		},
+		{
+			text: 'Mostrar seccion Catalogo en la Tienda',
+			key: 'mostrar_catalogo',
+			type: 'checkbox',
+			description: 'Si se activa, se mostrara el enlace Catalogo en el navbar de la tienda online.',
+		},
+
+		{
+			group_title: 'Precios'
 		},
 		{
 			text: 'Precios en la Tienda',
 			key: 'online_price_type_id',
 			type: 'select',
+		},
+		{
+			text: 'Recargos a los precios en la Tienda',
+			key: 'online_price_surchage',
+			type: 'number',
+		},
+		{
+			text: 'Texto para precio pausado',
+			key: 'text_precio_pausado',
+			type: 'text',
+			value: '',
+			description: 'Mensaje que verán los clientes en los artículos marcados con "Precio pausado" en lugar del importe.',
+		},
+
+		{
+			group_title: 'Registro de clientes'
 		},
 		{
 			text: 'Registrarse para comprar',
@@ -17,13 +49,18 @@ export default {
 			],
 		},
 		{
-			text: 'Recargos a los precios en la Tienda',
-			key: 'online_price_surchage',
-			type: 'number',
+			text: 'Pedir el barrio al registrarse',
+			key: 'pedir_barrio_al_registrarse',
+			type: 'checkbox',
+		},
+		{
+			text: 'Logear automaticamente al cliente cuando finaliza el registro',
+			key: 'logear_cliente_al_registrar',
+			type: 'checkbox',
 		},
 
 		{
-			group_title: 'Precentacion'
+			group_title: 'Presentacion'
 		},
 		{
 			text: 'Titulo seccion Quienes somos',
@@ -38,21 +75,12 @@ export default {
 			show: true,
 		},
 		{
-			text: 'Aviso antes de confirmar compra',
-			key: 'aviso_antes_de_confirmar_compra',
-			type: 'texteditor',
-			value: '',
-			show: true,
-			description: 'Texto formateado que se muestra en la tienda, debajo del resumen de compra, antes de finalizar el pedido.',
-		},
-		{
 			text: 'Mensaje para mostrar en Pagina CONTACTO',
 			key: 'mensaje_contacto',
 			type: 'textarea',
 			value: '',
 			show: true,
 		},
-
 
 		{
 			group_title: 'Diseño'
@@ -125,28 +153,8 @@ export default {
 			description: 'Define el tamaño de letra de la descripcion en la vista de articulo de la tienda.',
 		},
 
-
-
 		{
-			group_title: 'Funcionalidad'
-		},
-		{
-			text: 'Cantidad por defecto para agregar al carrito',
-			key: 'default_amount_add_to_cart',
-			type: 'number',
-		},
-		{
-			text: 'Nota para los pedidos',
-			key: 'order_description',
-			type: 'textarea',
-			value: '',
-			show: true,
-		},
-		{
-			text: 'Guardar venta despues de entregar Pedido',
-			key: 'save_sale_after_finish_order',
-			description: 'Si se activa, se descontara el stock despues de confirmar un pedido, y se generara la venta una vez entregado',
-			type: 'checkbox',
+			group_title: 'Inicio (Home)'
 		},
 		{
 			text: 'Scroll infinito en el Inicio',
@@ -172,14 +180,8 @@ export default {
 			description: 'Cada cuantos milisegundos se aplica el scroll automatico. Si no tiene valor, usa 1000.',
 		},
 
-
 		{
-			group_title: 'Opciones'
-		},
-		{
-			text: 'Ofrecer opcion de envio en la Tienda',
-			key: 'has_delivery',
-			type: 'checkbox',
+			group_title: 'Catalogo y stock'
 		},
 		{
 			text: 'Mostrar articulos sin Stock en la Tienda',
@@ -197,39 +199,49 @@ export default {
 			key: 'show_articles_without_images',
 			type: 'checkbox',
 		},
+
 		{
-			text: 'Texto para precio pausado',
-			key: 'text_precio_pausado',
-			type: 'text',
+			group_title: 'Carrito y pedidos'
+		},
+		{
+			text: 'Cantidad por defecto para agregar al carrito',
+			key: 'default_amount_add_to_cart',
+			type: 'number',
+		},
+		{
+			text: 'Nota para los pedidos',
+			key: 'order_description',
+			type: 'textarea',
 			value: '',
-			description: 'Mensaje que verán los clientes en los artículos marcados con "Precio pausado" en lugar del importe.',
+			show: true,
 		},
 		{
-			text: 'Pedir el barrio al registrarse',
-			key: 'pedir_barrio_al_registrarse',
+			text: 'Aviso antes de confirmar compra',
+			key: 'aviso_antes_de_confirmar_compra',
+			type: 'texteditor',
+			value: '',
+			show: true,
+			description: 'Texto formateado que se muestra en la tienda, debajo del resumen de compra, antes de finalizar el pedido.',
+		},
+		{
+			text: 'Guardar venta despues de entregar Pedido',
+			key: 'save_sale_after_finish_order',
+			description: 'Si se activa, se descontara el stock despues de confirmar un pedido, y se generara la venta una vez entregado',
 			type: 'checkbox',
 		},
 		{
-			text: 'Logear automaticamente al cliente cuando finaliza el registro',
-			key: 'logear_cliente_al_registrar',
+			text: 'Ofrecer opcion de envio en la Tienda',
+			key: 'has_delivery',
 			type: 'checkbox',
 		},
 		{
-			text: 'Pausar la Tienda Online',
-			key: 'pausar_tienda_online',
+			text: 'Cliente envia whatsapp al negocio al finalizar pedido',
+			key: 'enviar_whatsapp_al_terminar_pedido',
 			type: 'checkbox',
-			description: 'Si se pausa la tienda online, no se mostrara el contenido de la misma y se informara al usuario.',
-		},
-		{
-			text: 'Mostrar seccion Catalogo en la Tienda',
-			key: 'mostrar_catalogo',
-			type: 'checkbox',
-			description: 'Si se activa, se mostrara el enlace Catalogo en el navbar de la tienda online.',
 		},
 
-
 		{
-			group_title: 'Enlaces'
+			group_title: 'Redes sociales'
 		},
 		{
 			text: 'Instagram',
@@ -265,7 +277,7 @@ export default {
 			description: 'Podes poner varios correos separados por coma. Si lo dejas vacio, el aviso se manda al correo de tu cuenta.',
 		},
 		{
-			text: 'Enviarle al cliente un mail confirmando su pedido',
+			text: 'Enviarle al cliente un mail confirmando que realizo su pedido',
 			key: 'notificar_pedido_al_cliente',
 			type: 'checkbox',
 			description: 'Cuando termina la compra, el cliente recibe un mail con el detalle de su pedido y los totales.',
