@@ -51,11 +51,11 @@
 						<a
 						v-for="(source, index) in item.ai_sources"
 						:key="'source-'+item.id+'-'+index"
-						:href="source"
+						:href="source_url(source)"
 						target="_blank"
 						rel="noopener noreferrer"
 						class="ai-review-source-link">
-							{{ source }}
+							{{ source_label(source) }}
 						</a>
 					</div>
 
@@ -223,6 +223,31 @@ export default {
 				return
 			}
 			this.items.splice(index, 1)
+		},
+		/**
+		 * URL de una fuente. Soporta tanto el shape real `{source, url, title}` como, por las dudas,
+		 * un string plano legado.
+		 *
+		 * @param {Object|String} source
+		 * @return {String}
+		 */
+		source_url(source) {
+			if (source && typeof source === 'object') {
+				return source.url || ''
+			}
+			return source || ''
+		},
+		/**
+		 * Texto visible de una fuente: preferir el título legible, si no la URL.
+		 *
+		 * @param {Object|String} source
+		 * @return {String}
+		 */
+		source_label(source) {
+			if (source && typeof source === 'object') {
+				return source.title || source.url || source.source || ''
+			}
+			return source || ''
 		},
 	},
 }
