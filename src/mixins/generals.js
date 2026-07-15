@@ -75,6 +75,17 @@ export default {
     },
     methods: {
 
+        /**
+         * v_if_function genérico para propiedades de formulario que solo debe ver/editar
+         * el usuario dueño (owner_id null). Pensado para reutilizarse en futuras
+         * configuraciones a nivel dueño, no solo sale_factura_print_option.
+         *
+         * @returns {boolean}
+         */
+        is_owner_v_if_function() {
+            return this.is_owner
+        },
+
         set_expense_caja_id(prop_payment_method, model) {
 
             let payment_method_id = model[prop_payment_method.key]

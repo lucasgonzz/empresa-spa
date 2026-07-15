@@ -255,6 +255,17 @@ export default {
 			key: 'mostrar_vendedor_en_venta_pdf',
 			type: 'checkbox',
 		},
+		{
+			text: 'PDF a imprimir al presionar "Imprimir" en la factura ARCA de la venta',
+			key: 'sale_factura_print_option',
+			type: 'select',
+			options: [],
+			v_if_function: 'is_owner_v_if_function',
+			descriptions: [
+				'Aplica a TODOS los usuarios del sistema, no solo al dueño.',
+				'Sin elegir ninguno, se imprime el ticket común (comportamiento de siempre).',
+			],
+		},
 
 
 
