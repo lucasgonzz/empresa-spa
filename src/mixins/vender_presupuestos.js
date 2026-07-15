@@ -67,7 +67,10 @@ export default {
 		},
 		actualizar() {
 			this.$api.put('budget/'+this.budget.id, {
-				'client_id'                 : this.budget.client_id,
+				// Cliente actualmente seleccionado en VENDER (refleja un cambio de cliente hecho
+				// en la edición); si por algún motivo no hay cliente en store, se usa el original
+				// del presupuesto como resguardo.
+				'client_id'                 : this.client ? this.client.id : this.budget.client_id,
 				'start_at'                  : this.budget.start_at,
 				'finish_at'                 : this.budget.finish_at,
 				'observations'              : this.observations,
