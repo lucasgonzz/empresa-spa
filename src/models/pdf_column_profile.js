@@ -51,6 +51,31 @@ export default {
 		},
 		{
 			/**
+			 * Muestra la línea "Sub Total" en el pie del PDF (flag del backend, prompt 417).
+			 * Solo tiene efecto cuando la venta tiene descuentos o recargos: si no los tiene,
+			 * el Sub Total es igual al Total y no se imprime. Default 1 = comportamiento legacy.
+			 */
+			text: 'Mostrar Sub Total en el pie',
+			key: 'show_subtotal_in_footer',
+			type: 'checkbox',
+			value: 1,
+			show_when_model_name: 'sale',
+		},
+		{
+			/**
+			 * Controla si TODO el pie de página (total, subtotal, comisiones, costos y texto libre)
+			 * se imprime en cada hoja o solo en la última. Apagado (default) = solo en la última página.
+			 * Esta columna ya existía en la base; acá solo se la expone en el editor de perfiles
+			 * (antes solo estaba en el modal de impresión).
+			 */
+			text: 'Mostrar pie de página en cada hoja',
+			key: 'show_totals_on_each_page',
+			type: 'checkbox',
+			value: 0,
+			show_when_model_name: 'sale',
+		},
+		{
+			/**
 			 * Cuando está activo, el PDF imprime la fecha actual del servidor
 			 * en lugar de la fecha en que se creó el comprobante.
 			 */
