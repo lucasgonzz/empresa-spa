@@ -10,11 +10,6 @@ export default {
 			group_title: 'Datos generales',
 		},
 		{
-			key: 'actualizar_en_vender',
-			text: 'Actualizar desde VENDER',
-			not_show: true,
-		},
-		{
 			text: 'Cliente',
 			key: 'client_id',
 			store: 'client',
