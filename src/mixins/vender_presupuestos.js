@@ -212,10 +212,19 @@ export default {
 
 				let ya_estaba_cargado = typeof article.pivot != 'undefined'
 
+				// Se agregan 'name' y 'name_vender_personalizado' a nivel raíz de article_to_add
+				// para que el backend (SaleHelper::get_custom_name_for_pivot) pueda leerlos:
+				// 'name' es el nombre base del articulo (permite comparar sin consulta extra) y
+				// 'name_vender_personalizado' es el nombre editado por línea en el input de
+				// ArticlesTable.vue. Si no se editó, se manda null. Estas claves quedan
+				// preservadas tanto si article_to_add se manda "plano" (crear) como si se
+				// anida bajo pivot (actualizar), porque ambas ramas parten de este mismo objeto.
 				let article_to_add = {
 					id: article.id,
 					status: article.status,
 					cost_in_dollars: article.cost_in_dollars,
+					name: article.name,
+					name_vender_personalizado: article.name_vender_personalizado || null,
 				}
 
 				let pivot_info = {
