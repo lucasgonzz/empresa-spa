@@ -275,9 +275,7 @@ export default {
 		white-space: nowrap
 
 	/* Impresión: mantener dropdown y WhatsApp en línea sin recortar el menú */
-	/* z-index alto porque este grupo crea su propio stacking context: si queda por debajo
-	   del z-index:900 del thead sticky de .common-table (tabla genérica de artículos),
-	   el header de esa tabla tapa el dropdown de impresión sin importar el z-index interno del menú. */
+	/* z-index alto porque este grupo crea su propio stacking context: si queda por debajo del z-index:900 del thead sticky de .common-table (tabla genérica de artículos), el header de esa tabla tapa el dropdown de impresión sin importar el z-index interno del menú. */
 	&__group--print
 		position: relative
 		z-index: 1060
