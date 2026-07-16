@@ -181,6 +181,40 @@ export default {
         get_hora(model, prop) {
             return this.hour(model.created_at)
         },
+        /**
+         * Texto legible de las fuentes verificables de una descripcion generada por IA.
+         * `ai_sources` es un array de objetos `{source, url, title}` (ver
+         * ArticleDescriptionAiService::build_sources en empresa-api) — nunca un array
+         * de strings. Devuelve texto plano (sin HTML): esta misma funcion se usa tanto
+         * en la tabla del HasMany generico (Tr.vue, interpola con {{ }}, escapa HTML)
+         * como en el campo de solo lectura del formulario de edicion (ModelForm.vue,
+         * renderiza con v-html) — un link clickeable ahi se veria como tag literal
+         * en la tabla.
+         *
+         * @param {Object} model Descripcion (debe tener ai_generated y ai_sources).
+         * @return {String} Fuentes separadas por " · ", o '' si no hay fuentes de IA.
+         */
+        get_description_ai_sources_text(model) {
+            // Sin descripcion generada por IA o sin fuentes guardadas: no hay nada que mostrar.
+            if (!model || !model.ai_generated || !Array.isArray(model.ai_sources) || !model.ai_sources.length) {
+                return ''
+            }
+            // Arma un array de textos legibles a partir de cada objeto fuente,
+            // priorizando url, luego title y luego source como fallback.
+            let sources_text = []
+            model.ai_sources.forEach(source => {
+                let text = ''
+                if (source && typeof source === 'object') {
+                    text = source.url || source.title || source.source || ''
+                } else {
+                    text = source || ''
+                }
+                if (text !== '') {
+                    sources_text.push(text)
+                }
+            })
+            return sources_text.join(' · ')
+        },
         get_address_stock_in_vender(article, prop) {
             if (typeof article != 'undefined' && typeof prop != 'undefined') {
 
@@ -723,6 +757,18 @@ export default {
          * @return {string}
          */
         get_sale_article_display_name(article, prop) {
+            return this.getItemDisplayName(article, true)
+        },
+        /**
+         * Nombre del artículo en el detalle de presupuesto (pivot.name o catálogo + variante).
+         * Equivalente a get_sale_article_display_name pero para presupuestos.
+         * Conserva key:'name' y show_in_input_if para permitir edición de artículos inactivos.
+         *
+         * @param {Object} article  Artículo con pivot del presupuesto.
+         * @param {Object} prop     Definición de columna del modelo budget.
+         * @return {string}
+         */
+        get_budget_article_display_name(article, prop) {
             return this.getItemDisplayName(article, true)
         },
         showCurrentAcount(client, credit_account) {

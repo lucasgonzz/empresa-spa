@@ -438,6 +438,10 @@ export default {
 				item.id = article.id
 				item.bar_code = article.bar_code
 				item.name = article.name
+				// Se recarga el nombre personalizado por línea (guardado en pivot.name) para
+				// que reaparezca en el input de ArticlesTable.vue al reabrir una venta o
+				// presupuesto para editar. Si no hay pivot.name, queda en null.
+				item.name_vender_personalizado = (article.pivot && article.pivot.name) ? article.pivot.name : null
 				item.status = article.status
 				item.article_variants = article.article_variants
 				item.cost_in_dollars = article.cost_in_dollars

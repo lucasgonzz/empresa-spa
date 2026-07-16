@@ -1,61 +1,244 @@
 <template>
 	<div>
 
+		<!-- Resumen del reporte: solo se muestra si ya hay un reporte calculado (evita "0 articulos" que seria informacion falsa) -->
 		<div
-		v-if="articles_stock_minimo.length"
-		class="d-flex justify-content-end m-b-5">
+		v-if="inventory_performance"
+		class="custom-card m-b-15">
+			<div class="header">
+				Resumen de stock minimo
+			</div>
+
+			<div class="body">
+
+				<div class="info">
+					<p class="nombre">
+						Articulos bajo el minimo
+					</p>
+					<p class="valor">
+						{{ inventory_performance.stock_minimo }}
+					</p>
+				</div>
+
+				<div class="info">
+					<p class="nombre">
+						Sin stock
+					</p>
+					<p class="valor">
+						{{ inventory_performance.sin_stock }}
+					</p>
+				</div>
+
+				<div
+				class="info"
+				:class="{ 'text-danger': inventory_performance.stock_negativo > 0 }">
+					<p class="nombre">
+						Con stock negativo
+					</p>
+					<p class="valor">
+						{{ inventory_performance.stock_negativo }}
+					</p>
+				</div>
+
+				<!-- Aclaracion sobre el stock negativo: solo tiene sentido mostrarla si hay al menos uno -->
+				<div
+				v-if="inventory_performance.stock_negativo > 0"
+				class="info">
+					<p class="aclaracion">
+						Un stock negativo suele indicar ventas sin ingreso de mercaderia registrado o un error de carga
+					</p>
+				</div>
+
+				<div class="info">
+					<p class="nombre">
+						Costo estimado de reposicion
+					</p>
+					<p class="valor">
+						{{ price(inventory_performance.costo_reposicion_stock_minimo) }}
+					</p>
+				</div>
+
+				<div class="info">
+					<p class="aclaracion">
+						Lo que costaria comprar lo que falta para llegar al minimo, sin contar los articulos sin costo cargado
+					</p>
+				</div>
+
+			</div>
+		</div>
+
+		<!-- Aviso de regeneracion en background: el reporte sigue vigente, no se oculta la tabla -->
+		<div
+		v-if="inventory_performance && inventory_performance_generating"
+		class="text-with-icon m-b-15">
+			Estamos actualizando el reporte de inventario. Los datos de abajo van a refrescarse solos apenas termine.
+			<i class="icon-refresh"></i>
+		</div>
+
+		<!-- Buscador + columnas configurables: solo tiene sentido si ya hay reporte -->
+		<div
+		v-if="inventory_performance"
+		class="d-flex justify-content-between align-items-center flex-wrap m-b-10">
+
+			<b-form-input
+			v-model="search_input"
+			@input="on_search_input"
+			placeholder="Buscar por nombre, codigo de barras o codigo de proveedor"
+			class="stock-minimo-search m-b-5"></b-form-input>
+
 			<props-to-show
 			model_name="inventory_performance"></props-to-show>
 		</div>
 
-		<b-table
-		v-if="articles_stock_minimo.length"
-		:key="fields_signature"
-		head-variant="dark"
-		responsive
-		:fields="fields"
-		:items="table_items">
-			<!-- Columnas de tipo imagen: slot dinamico por cada una elegida por el usuario -->
-			<template
-			v-for="prop in image_fields"
-			v-slot:[cell_slot_name(prop.key)]="data">
-				<table-thumbnail-images
-				:key="'thumb-'+articles_stock_minimo[data.index].id+'-'+prop.key"
-				:model="resolve_pivot_model(articles_stock_minimo[data.index], prop)"
-				:prop="prop"></table-thumbnail-images>
-			</template>
-		</b-table>
-
+		<!-- Caso 1: todavia no hay ningun reporte generado (ni siquiera uno viejo) y se esta calculando el primero -->
 		<div
-		v-else
+		v-if="sin_reporte_generando"
 		class="text-with-icon">
-			No hay articulos con stock minimo
+			Estamos calculando el reporte de inventario. Los datos van a aparecer solos en unos minutos.
 			<i class="icon-eye-slash"></i>
 		</div>
+
+		<!-- Caso 2: hay reporte pero la pagina actual vino vacia (sin stock minimo, o sin coincidencias de busqueda) -->
+		<div
+		v-else-if="sin_resultados"
+		class="text-with-icon">
+			{{ hay_busqueda_activa ? 'Ningun articulo coincide con la busqueda' : 'No hay articulos con stock minimo' }}
+			<i class="icon-eye-slash"></i>
+		</div>
+
+		<!-- Caso 3: hay reporte y filas para mostrar -->
+		<template v-else-if="inventory_performance">
+
+			<!-- Spinner de carga: se muestra arriba de la tabla sin ocultar las filas de la pagina anterior -->
+			<div
+			v-if="loading_articles"
+			class="d-flex justify-content-center m-b-10">
+				<span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>
+			</div>
+
+			<b-table
+			:key="fields_signature"
+			head-variant="dark"
+			responsive
+			:fields="fields"
+			:items="table_items">
+				<!-- Columnas de tipo imagen: slot dinamico por cada una elegida por el usuario -->
+				<template
+				v-for="prop in image_fields"
+				v-slot:[cell_slot_name(prop.key)]="data">
+					<table-thumbnail-images
+					:key="'thumb-'+articles_stock_minimo[data.index].id+'-'+prop.key"
+					:model="resolve_pivot_model(articles_stock_minimo[data.index], prop)"
+					:prop="prop"></table-thumbnail-images>
+				</template>
+			</b-table>
+
+			<b-pagination
+			v-if="total_stock_minimo > per_page"
+			v-model="current_page"
+			pills
+			:total-rows="total_stock_minimo"
+			:per-page="per_page"
+			:disabled="loading_articles"></b-pagination>
+
+		</template>
 
 	</div>
 
 </template>
 <script>
+import inventory_performance from '@/mixins/inventory_performance'
 export default {
+	mixins: [inventory_performance],
 	components: {
 		PropsToShow: () => import('@/common-vue/components/view/header/props-to-show/Index'),
 		TableThumbnailImages: () => import('@/common-vue/components/display/table/TableThumbnailImages'),
 	},
+	data() {
+		return {
+			// Texto tipeado en el buscador. Vive local hasta que el debounce lo confirma contra
+			// el store: evita disparar una request al backend por cada tecla presionada.
+			search_input: this.$store.state.inventory_performance.search,
+			// Timer del debounce del buscador (se reinicia en cada tecla).
+			search_debounce_timer: null,
+		}
+	},
+	created() {
+		// Pide la pagina actual de articulos bajo el minimo (el reporte de contadores ya lo
+		// pide quien contenga a este componente: modal de inicio, modulo de Alertas o modal de Inventario).
+		this.fetch_articles()
+	},
 	computed: {
 		/**
-		 * Articulos con stock minimo de la alerta activa: modelos Article completos con
-		 * su pivot (address_id, stock_address, stock_min_address) cuando la alerta es por deposito.
+		 * Pagina actual de articulos con stock minimo (ya no la lista completa: viene paginada
+		 * desde el backend a partir del prompt 393/394).
 		 *
 		 * @returns {Array}
 		 */
 		articles_stock_minimo() {
-			if (this.$store.state.inventory_performance.models[0]) {
-
-				return this.$store.state.inventory_performance.models[0].articles_stock_minimo
-			}
-
-			return []
+			return this.$store.state.inventory_performance.articles_stock_minimo
+		},
+		/**
+		 * true mientras se esta pidiendo la pagina actual al backend.
+		 *
+		 * @returns {Boolean}
+		 */
+		loading_articles() {
+			return this.$store.state.inventory_performance.loading_articles
+		},
+		/**
+		 * Total real de articulos bajo el minimo (para la paginacion), no la cantidad de filas de esta pagina.
+		 *
+		 * @returns {Number}
+		 */
+		total_stock_minimo() {
+			return this.$store.state.inventory_performance.total_stock_minimo
+		},
+		/**
+		 * Cantidad de filas por pagina configurada en el store.
+		 *
+		 * @returns {Number}
+		 */
+		per_page() {
+			return this.$store.state.inventory_performance.per_page
+		},
+		/**
+		 * Pagina solicitada al backend. Al cambiarla (b-pagination) vuelve a pedir la pagina nueva.
+		 */
+		current_page: {
+			get() {
+				return this.$store.state.inventory_performance.page
+			},
+			set(value) {
+				this.$store.commit('inventory_performance/set_page', value)
+				this.fetch_articles()
+			},
+		},
+		/**
+		 * true si hay un texto de busqueda aplicado (para diferenciar el mensaje de "vacio").
+		 *
+		 * @returns {Boolean}
+		 */
+		hay_busqueda_activa() {
+			return !!this.$store.state.inventory_performance.search
+		},
+		/**
+		 * Caso "todavia no hay ningun reporte": se esta generando el primero en background y no
+		 * hay ningun dato previo para mostrar (ni tabla ni resumen).
+		 *
+		 * @returns {Boolean}
+		 */
+		sin_reporte_generando() {
+			return this.inventory_performance_generating && !this.inventory_performance
+		},
+		/**
+		 * Caso "hay reporte pero la pagina actual vino vacia": ya sea porque no hay articulos
+		 * bajo el minimo, o porque la busqueda aplicada no encontro coincidencias.
+		 *
+		 * @returns {Boolean}
+		 */
+		sin_resultados() {
+			return !!this.inventory_performance && !this.loading_articles && !this.articles_stock_minimo.length
 		},
 		/**
 		 * Columnas configurables (props_to_show del store), ya resueltas por el usuario
@@ -138,6 +321,27 @@ export default {
 	},
 	methods: {
 		/**
+		 * Pide al backend la pagina actual de articulos bajo el minimo (page/per_page/search
+		 * salen del store del modulo).
+		 *
+		 * @returns {Promise}
+		 */
+		fetch_articles() {
+			return this.$store.dispatch('inventory_performance/get_articles_stock_minimo')
+		},
+		/**
+		 * Maneja cada tecla del buscador con debounce (~400ms): recien despues de esa pausa
+		 * confirma el texto contra el store, vuelve a la pagina 1 y pide de nuevo.
+		 */
+		on_search_input() {
+			clearTimeout(this.search_debounce_timer)
+			this.search_debounce_timer = setTimeout(() => {
+				this.$store.commit('inventory_performance/set_search', this.search_input)
+				this.$store.commit('inventory_performance/set_page', 1)
+				this.fetch_articles()
+			}, 400)
+		},
+		/**
 		 * Resuelve si una propiedad debe leerse del pivot (depósito/stock del depósito) o
 		 * del articulo directamente.
 		 *
@@ -159,6 +363,16 @@ export default {
 		 */
 		cell_slot_name(key) {
 			return 'cell(' + key + ')'
+		},
+	},
+	watch: {
+		/**
+		 * Cuando llega un reporte nuevo (broadcast del job en background, escuchado por quien
+		 * contenga a este componente), se vuelve a pedir la pagina actual para reflejar los
+		 * numeros recalculados sin esperar a que el usuario cambie de pagina.
+		 */
+		'inventory_performance.created_at'() {
+			this.fetch_articles()
 		},
 	},
 }

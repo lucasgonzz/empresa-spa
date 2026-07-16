@@ -7,7 +7,7 @@
 
 		<!-- Buscador de cliente con ícono distintivo en etapa 1 de vender -->
 		<div
-		v-if="index_previus_sales == 0 && !budget"
+		v-if="puede_cambiar_cliente"
 		class="vender-stage__client-search">
 			<search-component
 			id="select_client_vender"
@@ -98,11 +98,27 @@ export default {
 				]
 			}
 			return []
-		}
+		},
+		// Determina si se puede elegir/cambiar el cliente en VENDER.
+		// - Venta nueva: siempre.
+		// - Venta existente en edición: solo si está omitida en cuenta corriente.
+		// - Presupuesto en edición: solo si no está confirmado (estado 2).
+		//   (De todos modos el botón "Actualizar en VENDER" ya viene deshabilitado para confirmados.)
+		puede_cambiar_cliente() {
+			if (this.budget) {
+				return this.budget.budget_status_id != 2
+			}
+			if (this.index_previus_sales == 0) {
+				return true
+			}
+			return !!(this.previus_sale && this.previus_sale.omitir_en_cuenta_corriente)
+		},
 	},
 	watch: {
 		client() {
-			if (this.index_previus_sales > 0) {
+			// En edición (venta previa o presupuesto existente) se conservan los precios
+			// ya guardados: se recalcula desde el pivot, igual que las ventas en edición.
+			if (this.index_previus_sales > 0 || this.budget) {
 				this.setItemsPrices(false, true)
 			} else {
 				this.setItemsPrices(false, false)
@@ -159,12 +175,49 @@ export default {
 			// this.bloquear_metodo_de_pago()
 			this.bloquear_caja()
 
+			// Cliente elegido en el buscador
 			let client = result.model
-			this.$store.commit('vender/setClient', client)
 
-			this.setPriceType()
+			// En edición (presupuesto o venta existente) se conserva la lista de precios que
+			// ya tiene el comprobante: NO se llama a setPriceType(). Si el negocio usa listas y
+			// el cliente elegido trae otra distinta, se avisa que se mantiene la original.
+			if (this.en_edicion_vender()) {
+				this.avisar_si_cambia_lista_de_precios(client)
+				this.$store.commit('vender/setClient', client)
+			} else {
+				this.$store.commit('vender/setClient', client)
+				this.setPriceType()
+			}
 
 			this.set_afip_tipo_comprobante()
+		},
+		// Devuelve true si se está editando un comprobante ya guardado (presupuesto o venta previa),
+		// false si es una venta nueva en curso.
+		en_edicion_vender() {
+			return !!this.budget || this.index_previus_sales > 0
+		},
+		// Si el negocio usa listas de precios y el cliente elegido tiene asignada una lista distinta
+		// a la que ya tiene el comprobante, avisa que se mantiene la lista original (los precios no cambian).
+		avisar_si_cambia_lista_de_precios(client) {
+			if (!this.owner || !this.owner.listas_de_precio) {
+				return
+			}
+			// Lista de precios del cliente elegido (si tiene)
+			let lista_cliente = client ? client.price_type : null
+			if (!lista_cliente) {
+				return
+			}
+			// Lista de precios que ya tiene el comprobante actual
+			let lista_actual = this.$store.state.vender.price_type
+			// Compara si la lista del cliente elegido difiere de la que ya tiene el comprobante
+			let cambia = !lista_actual || lista_actual.id != lista_cliente.id
+			if (cambia) {
+				let nombre_actual = lista_actual ? lista_actual.name : 'la que ya tenía'
+				this.$toast.info(
+					'El cliente seleccionado tiene la lista de precios "' + lista_cliente.name + '", pero se mantiene la lista "' + nombre_actual + '" del comprobante. Los precios no cambian.',
+					{ duration: 8000 }
+				)
+			}
 		},
 		clearSelected() {
 			this.$store.commit('vender/setClient', null)

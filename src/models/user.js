@@ -276,6 +276,21 @@ export default {
 			key: 'mostrar_vendedor_en_venta_pdf',
 			type: 'checkbox',
 		},
+		{
+			text: 'PDF a imprimir al presionar "Imprimir" en la factura ARCA de la venta',
+			key: 'sale_factura_print_option',
+			type: 'select',
+			// options: [] vacío es intencional: evita que FieldSelectInput monte el
+			// componente genérico de relación (que espera una clave "*_id"). Las
+			// opciones reales las calcula dynamic_options_function en tiempo real.
+			options: [],
+			dynamic_options_function: 'get_sale_factura_print_options',
+			v_if_function: 'is_owner_v_if_function',
+			descriptions: [
+				'Aplica a TODOS los usuarios del sistema, no solo al dueño.',
+				'Sin elegir ninguno, se imprime el ticket común (comportamiento de siempre).',
+			],
+		},
 
 
 
@@ -371,6 +386,14 @@ export default {
 			text: 'Mostrar stocks minimos al ingresar al sistema',
 			key: 'show_stock_min_al_iniciar',
 			type: 'checkbox',
+		},
+		{
+			text: 'Minutos de duracion del reporte de inventario',
+			key: 'duracion_reporte_inventario',
+			type: 'number',
+			descriptions: [
+				'Cada cuantos minutos se vuelve a calcular el reporte de inventario y las alertas de stock minimo. Si tenes muchos articulos, conviene un valor alto: el calculo se hace en segundo plano y puede tardar varios minutos.',
+			],
 		},
 		{
 			text: 'Mostrar errores de facturacion al ingresar al sistema',

@@ -61,14 +61,20 @@
 	</div>
 </template>
 <script>
+import inventory_performance from '@/mixins/inventory_performance'
 export default {
+	mixins: [inventory_performance],
 	components: {
 		CircleProgress: () => import('@/components/listado/modals/inventory-performance/CircleProgress'),
 
 	},
 	computed: {
+		/**
+		 * Reporte de inventario vigente, leido a traves del mixin comun (centraliza el
+		 * filtrado de `models: [null]` cuando todavia no hay reporte generado para el owner).
+		 */
 		model() {
-			return this.$store.state.inventory_performance.models[0]
+			return this.inventory_performance
 		},
 	},
 	methods: {

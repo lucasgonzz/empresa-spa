@@ -1,7 +1,8 @@
 <template>
 	<b-button
 	:disabled="budget.budget_status_id == 2"
-	variant="primary"
+	variant="outline-primary"
+	size="sm"
 	id="btn_actualizar_en_vender"
 	@click="update">
 		Actualizar en VENDER
