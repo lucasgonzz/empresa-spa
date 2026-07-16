@@ -5,6 +5,9 @@ import VueScreenSize from 'vue-screen-size'
 import generals_computed from '@/common-vue/mixins/generals/computed'
 import generals_formatting from '@/common-vue/mixins/generals/formatting'
 import generals_model_meta from '@/common-vue/mixins/generals/model-meta'
+// Función reusada para armar las opciones del selector de PDF a imprimir en la factura
+// (mismo vocabulario que el atajo de impresión de Vender).
+import { build_vender_facturado_print_select_options } from '@/constants/vender_print_shortcut_options'
 export default {
 	mixins: [
 		VueScreenSize.VueScreenSizeMixin,
@@ -1126,7 +1129,18 @@ export default {
 
 		},
 		getOptions(prop, model = null, model_name = null, add_opcion_0 = true) {
-			let store 
+			let store
+
+			/**
+			 * Hook aditivo: si la propiedad declara dynamic_options_function, las opciones se
+			 * calculan en tiempo real llamando a ese método (definido en este mismo mixin
+			 * global, por lo tanto disponible en cualquier componente que use ModelForm,
+			 * sin importar la pantalla). No afecta a ningún otro select existente, que sigue
+			 * usando prop.options o prop.store como hasta ahora.
+			 */
+			if (prop.dynamic_options_function) {
+				return this[prop.dynamic_options_function](prop, model, model_name)
+			}
 
 			if (prop.options) {
 				// Options pueden ser strings (valor = texto derivado) u objetos { value, text|label }.
@@ -1230,6 +1244,18 @@ export default {
 			// 	})
 			// }
 			return options
+		},
+		/**
+		 * Opciones del selector "PDF a imprimir al presionar Imprimir en la factura ARCA"
+		 * (Configuración general → Modulo de VENTAS, solo dueño). Reutiliza
+		 * build_vender_facturado_print_select_options, la misma función que arma el select
+		 * del atajo de impresión de Vender, para mantener el mismo vocabulario en toda la app.
+		 *
+		 * @returns {Array<{value: string, text: string}>}
+		 */
+		get_sale_factura_print_options() {
+			const profiles = this.$store.state.pdf_column_profile.models || []
+			return build_vender_facturado_print_select_options(profiles)
 		},
 		booleanOptions(prop, model = null) {
 			let options = []

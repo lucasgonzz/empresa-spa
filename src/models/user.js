@@ -259,7 +259,11 @@ export default {
 			text: 'PDF a imprimir al presionar "Imprimir" en la factura ARCA de la venta',
 			key: 'sale_factura_print_option',
 			type: 'select',
+			// options: [] vacío es intencional: evita que FieldSelectInput monte el
+			// componente genérico de relación (que espera una clave "*_id"). Las
+			// opciones reales las calcula dynamic_options_function en tiempo real.
 			options: [],
+			dynamic_options_function: 'get_sale_factura_print_options',
 			v_if_function: 'is_owner_v_if_function',
 			descriptions: [
 				'Aplica a TODOS los usuarios del sistema, no solo al dueño.',
