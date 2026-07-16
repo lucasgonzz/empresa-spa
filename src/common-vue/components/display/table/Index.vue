@@ -1282,9 +1282,12 @@ export default {
 			background: rgba(255,255,255,.8)
 	
 	.common-table
-		// Redondeo inferior (ambas esquinas); las superiores las recorta .cont-table (header sticky).
+		// El redondeo (arriba y abajo) lo recorta .cont-table, que es el que scrollea de verdad.
+		// OJO: nunca poner "overflow" (hidden/auto/scroll) acá. Por spec, position:sticky se ancla
+		// al ancestro scrolleable más cercano, y overflow en la propia <table> la convierte a ELLA
+		// en ese ancestro (aunque nunca llegue a scrollear). Resultado: el header sticky del th deja
+		// de estar anclado a .cont-table y se pierde apenas se hace scroll vertical. Bug real, 16/7/2026.
 		border-radius: 0 0 12px 12px
-		overflow: hidden
 		position: relative
 		border-spacing: 0px
 		width: 100%
