@@ -798,7 +798,7 @@ export default {
 
 .sale-print-dropdown-menu
 	width: 200px
-	z-index: 1060 !important
+	z-index: 3060 !important
 	background-color: #fff
 	.b-dropdown-text
 		text-align: center
