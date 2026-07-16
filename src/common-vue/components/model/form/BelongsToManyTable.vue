@@ -402,6 +402,17 @@ export default {
 				model_props_by_key[p.key] = p
 			})
 
+			/*
+			 * Mapa de las props_to_show explícitas del modelo padre (ej: budget.js).
+			 * all_related_properties se arma desde el modelo relacionado (ej: article.js),
+			 * que no incluye overrides de display como `function`. Este mapa permite
+			 * conservarlos al reconstruir las columnas.
+			 */
+			const explicit_props_to_show_by_key = {}
+			;(belongs.props_to_show || []).forEach(p => {
+				explicit_props_to_show_by_key[p.key] = p
+			})
+
 			const pivot_show_by_key = {}
 			;(belongs.pivot_props_to_show || []).forEach(p => {
 				pivot_show_by_key[p.key] = p
@@ -427,11 +438,21 @@ export default {
 					/* Reconstruir usando la definición completa del modelo más los ajustes de ancho/wrap */
 					const model_prop = model_props_by_key[row.key]
 					if (model_prop) {
-						new_props_to_show.push({
+						const explicit_prop = explicit_props_to_show_by_key[row.key]
+						const merged_prop = {
 							...model_prop,
 							table_width: row.width,
 							table_wrap_content: row.wrap_content,
-						})
+						}
+						/*
+						 * Conservar la funcion de display definida en props_to_show del
+						 * modelo padre (ej: budget.js -> get_budget_article_display_name),
+						 * que all_related_properties (tomado del modelo relacionado) no incluye.
+						 */
+						if (explicit_prop && explicit_prop.function) {
+							merged_prop.function = explicit_prop.function
+						}
+						new_props_to_show.push(merged_prop)
 					}
 				} else if (row.source === 'pivot_show') {
 					/* Reconstruir prop de pivot solo-lectura con ajuste de ancho */
