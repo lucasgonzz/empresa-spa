@@ -114,6 +114,7 @@ export default {
 					{
 						text: 'Nombre',
 						key: 'name',
+						function: 'get_budget_article_display_name',
 						type: 'textarea',
 						show: true,
 						show_in_input_if: ['status', '=', 'inactive'],
