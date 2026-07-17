@@ -508,6 +508,15 @@ export default {
 					label: label,
 					text: label, // alias de compatibilidad (Select.vue usa filter.text)
 					type: filter_type,
+
+					// Columna visible de la relacion para ordenar (solo aplica a select/search).
+					// El backend ordena por esta columna de la tabla relacionada: 'name' por defecto,
+					// o la definida en relation_prop_name (ej: 'percentage' para el IVA).
+					// Para tipos que no son relacion queda null y el backend ordena por la columna propia.
+					order_relation_prop: (filter_type == 'select' || filter_type == 'search')
+						? (prop.relation_prop_name ? prop.relation_prop_name : 'name')
+						: null,
+
 					checkbox: -1,
 					en_blanco: 0,
 					no_en_blanco: 0,
