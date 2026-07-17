@@ -241,11 +241,6 @@ export default {
 		},
 
 		{
-			text: 'Tamaño en mm del logo en PDF',
-			key: 'pdf_image_size',
-			type: 'number',
-		},
-		{
 			text: 'Mostrar la direccion de todas las sucursales en los comprobantes de venta',
 			key: 'all_addresses_in_sale_pdf',
 			type: 'checkbox',

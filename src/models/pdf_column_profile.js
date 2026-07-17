@@ -63,6 +63,22 @@ export default {
 		},
 		{
 			/**
+			 * Cómo se listan los descuentos y recargos en el pie (prompt 431/433):
+			 * 'descriptivo' = monto + porcentaje + total acumulado por cada uno (comportamiento actual);
+			 * 'simple' = solo el porcentaje y el nombre, sin montos ni totales parciales.
+			 */
+			text: 'Detalle de descuentos y recargos',
+			key: 'discount_display_mode',
+			type: 'select',
+			value: 'descriptivo',
+			show_when_model_name: 'sale',
+			options: [
+				{ value: 'descriptivo', text: 'Descriptivo (monto, porcentaje y total por cada uno)' },
+				{ value: 'simple', text: 'Simple (solo porcentaje y nombre)' },
+			],
+		},
+		{
+			/**
 			 * Controla si TODO el pie de página (total, subtotal, comisiones, costos y texto libre)
 			 * se imprime en cada hoja o solo en la última. Apagado (default) = solo en la última página.
 			 * Esta columna ya existía en la base; acá solo se la expone en el editor de perfiles
@@ -213,6 +229,16 @@ export default {
 			key: 'margin_mm',
 			type: 'number',
 			value: 5,
+		},
+		{
+			/**
+			 * Tamaño del logo en mm para el header de este comprobante (remito o factura).
+			 * Vacío = usar el tamaño global configurado en el dueño (fallback en el backend).
+			 */
+			text: 'Tamaño del logo en mm (vacío = usar el global del dueño)',
+			key: 'logo_size_mm',
+			type: 'number',
+			show_when_model_name: 'sale',
 		},
 		{
 			text: 'Columnas del PDF',
