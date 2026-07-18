@@ -2,12 +2,13 @@
 
 	<div
 
-	v-if="sale.client && sale.client.phone">
+	v-if="force_show || (sale.client && sale.client.phone)">
 
 		<b-button
 		size="sm"
 		class="m-l-10"
 		variant="success"
+		:disabled="disabled"
 		@click="whatsapp">
 			<i class="bi bi-whatsapp"></i>
 		</b-button>
@@ -46,6 +47,78 @@ export default {
 
 		},
 
+		/**
+
+		 * Override del telefono a usar. Si no se pasa (null), se usa sale.client.phone
+
+		 * como siempre. Lo usa Vender para permitir un numero editado a mano.
+
+		 */
+
+		phone: {
+
+			type: String,
+
+			default: null,
+
+		},
+
+		/**
+
+		 * Si es true, el componente se muestra SIEMPRE (ignora el chequeo historico de
+
+		 * sale.client && sale.client.phone). Default false: mantiene el comportamiento
+
+		 * historico en los demas usos (ClientBtn.vue, SaleInfo.vue, sale-print-buttons
+
+		 * interno, etc.)
+
+		 */
+
+		force_show: {
+
+			type: Boolean,
+
+			default: false,
+
+		},
+
+		/**
+
+		 * Deshabilita el boton de envio (lo usa Vender mientras el input de telefono
+
+		 * esta vacio).
+
+		 */
+
+		disabled: {
+
+			type: Boolean,
+
+			default: false,
+
+		},
+
+	},
+
+	computed: {
+
+		/**
+
+		 * Telefono efectivo a usar para el link de WhatsApp: el prop `phone` (override)
+
+		 * tiene prioridad; si no vino, cae al telefono del cliente de la venta, igual
+
+		 * que el comportamiento historico.
+
+		 */
+
+		effective_phone() {
+
+			return this.phone || (this.sale.client && this.sale.client.phone) || ''
+
+		},
+
 	},
 
 	methods: {
@@ -58,7 +131,11 @@ export default {
 
 		whatsapp() {
 
-			let link = 'https://api.whatsapp.com/send?phone=' + this.sale.client.phone + '&text=Hola ' + this.client_name() + ', te acercamos el comprobante de tu compra N° ' + this.sale.num + ': '
+			/* Saludo generico si no hay cliente asignado (Vender permite enviar sin cliente) */
+
+			let saludo = this.client_name() ? ('Hola ' + this.client_name() + ', ') : 'Hola, '
+
+			let link = 'https://api.whatsapp.com/send?phone=' + this.effective_phone + '&text=' + saludo + 'te acercamos el comprobante de tu compra N° ' + this.sale.num + ': '
 
 
 
@@ -73,6 +150,10 @@ export default {
 			}
 
 			window.open(link)
+
+			/* Avisa al padre el telefono usado -- VenderActionsBar lo escucha para ofrecer actualizar el telefono del cliente */
+
+			this.$emit('sent', this.effective_phone)
 
 		},
 
@@ -296,7 +377,15 @@ export default {
 
 		client_name() {
 
-			return this.sale.client.name.split(' ')[0].toUpperCase()
+			/* Sin cliente asignado (o sin nombre), no hay saludo personalizado */
+
+			if (this.sale.client && this.sale.client.name) {
+
+				return this.sale.client.name.split(' ')[0].toUpperCase()
+
+			}
+
+			return ''
 
 		}
 

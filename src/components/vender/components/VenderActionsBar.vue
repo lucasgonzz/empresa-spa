@@ -15,11 +15,24 @@
 			<print :show_whatsapp_btn="false"></print>
 		</div>
 
-		<!-- Botón WhatsApp (componente separado, misma venta que Print) -->
+		<!-- Botón WhatsApp (componente separado, misma venta que Print) + input de teléfono editable -->
 		<div
 		v-if="sale"
-		class="vender-actions-bar__item vender-actions-bar__item--secondary">
-			<whatsapp-btn :sale="sale"></whatsapp-btn>
+		class="vender-actions-bar__item vender-actions-bar__item--secondary vender-actions-bar__whatsapp">
+			<b-form-input
+			size="sm"
+			v-model="whatsapp_phone"
+			placeholder="Teléfono"
+			class="vender-actions-bar__whatsapp-input"
+			@blur="maybe_offer_update_client_phone">
+			</b-form-input>
+			<whatsapp-btn
+			:sale="sale"
+			:phone="whatsapp_phone"
+			:force_show="true"
+			:disabled="!whatsapp_phone || !whatsapp_phone.trim()"
+			@sent="maybe_offer_update_client_phone">
+			</whatsapp-btn>
 		</div>
 
 		<!-- Botón principal guardar / actualizar con atajo configurable -->
@@ -56,7 +69,27 @@ export default {
 		return {
 			/* Reloj reactivo para calcular visibilidad de impresión (misma lógica que Print.vue) */
 			now: moment(),
+			/* Teléfono editable para el envío de WhatsApp de esta venta */
+			whatsapp_phone: '',
+			/* Último teléfono ya consultado (evita preguntar dos veces por el mismo número) */
+			telefono_ya_consultado: null,
 		}
+	},
+	watch: {
+		/**
+		 * Al aparecer una venta nueva (o cambiar a una venta previa), reinicia el input
+		 * con el teléfono del cliente si tiene, o vacío si no hay cliente/teléfono.
+		 *
+		 * @param {Object|null} nueva_venta
+		 */
+		sale(nueva_venta) {
+			if (nueva_venta) {
+				this.whatsapp_phone = (nueva_venta.client && nueva_venta.client.phone) || ''
+			} else {
+				this.whatsapp_phone = ''
+			}
+			this.telefono_ya_consultado = null
+		},
 	},
 	mounted() {
 		/* Actualizar el reloj cada segundo para el cálculo de diffEnSegundos */
@@ -129,6 +162,59 @@ export default {
 		save_shortcut_key() {
 			const shortcuts = this.$store.state.vender.keyboard_shortcuts || {}
 			return shortcuts.save || 'F5'
+		},
+	},
+	methods: {
+		/**
+		 * Si hay cliente asignado y el teléfono escrito difiere del teléfono guardado
+		 * del cliente, ofrece actualizarlo. No pregunta dos veces por el mismo valor
+		 * (se dispara tanto al perder foco el input como al enviar el WhatsApp).
+		 */
+		maybe_offer_update_client_phone() {
+			if (!this.sale || !this.sale.client) {
+				return
+			}
+			/* Número escrito en el input, sin espacios sobrantes */
+			const nuevo = (this.whatsapp_phone || '').trim()
+			/* Teléfono actual guardado en el cliente de la venta */
+			const actual = this.sale.client.phone || ''
+			if (!nuevo || nuevo === actual) {
+				return
+			}
+			if (this.telefono_ya_consultado === nuevo) {
+				return
+			}
+			this.telefono_ya_consultado = nuevo
+			this.$bvModal.msgBoxConfirm(
+				'¿Actualizar el teléfono de ' + this.sale.client.name + ' a ' + nuevo + '?',
+				{
+					title: 'Actualizar teléfono del cliente',
+					okTitle: 'Actualizar',
+					cancelTitle: 'No',
+				}
+			).then(confirmado => {
+				if (confirmado) {
+					this.actualizar_telefono_cliente(nuevo)
+				}
+			})
+		},
+		/**
+		 * Actualiza el teléfono del cliente vía el endpoint dedicado (no pisa el resto de sus datos).
+		 *
+		 * @param {string} nuevo_telefono
+		 */
+		actualizar_telefono_cliente(nuevo_telefono) {
+			this.$api.patch('client/' + this.sale.client.id + '/phone', {
+				phone: nuevo_telefono,
+			})
+			.then(res => {
+				/* Actualiza reactivamente el cliente de la venta activa (footer y PDF ya usan este dato) */
+				this.sale.client.phone = res.data.model.phone
+				this.$toast.success('Teléfono del cliente actualizado')
+			})
+			.catch(() => {
+				this.$toast.error('No se pudo actualizar el teléfono del cliente')
+			})
 		},
 	},
 }
@@ -318,4 +404,13 @@ export default {
 	color: var(--color-text-secondary, #6c757d)
 	flex-shrink: 0
 	line-height: 1
+
+/* Contenedor del input de teléfono + botón WhatsApp */
+.vender-actions-bar__whatsapp
+	gap: 6px
+
+/* Input de teléfono editable junto al botón WhatsApp */
+.vender-actions-bar__whatsapp-input
+	width: 130px
+	height: 40px
 </style>
