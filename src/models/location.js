@@ -19,6 +19,12 @@ export default {
 			type: 'text',
 		},
 	],
+	abm_descripcion: {
+		para_que_sirve: 'Registra las localidades con su provincia y código postal.',
+		implicancias: 'Las localidades se usan en los domicilios de clientes y en los datos de envío, con su código postal asociado.',
+		como_se_utiliza: 'Creá la localidad, asignale la provincia y completá el código postal.',
+		palabras_clave: ['ciudad', 'codigo postal', 'domicilio', 'envios'],
+	},
 	singular_model_name_spanish: 'Localidad',
 	plural_model_name_spanish: 'Localidades',
 	create_model_name_spanish: 'Nueva',

@@ -34,6 +34,12 @@ export default {
 			}
 		},
 	],
+	abm_descripcion: {
+		para_que_sirve: 'Vincula tu catálogo con la cuenta de un cliente que también usa ComercioCity, para que revenda tus artículos.',
+		implicancias: 'Al crear la vinculación, tus categorías y artículos se replican en la cuenta del cliente con los descuentos por categoría que definas, y el sistema le avisa cuando un artículo tuyo se agota. Es la base del circuito mayorista-minorista entre cuentas.',
+		como_se_utiliza: 'Elegí el cliente, el alcance de la vinculación y las categorías con su porcentaje de descuento. La sincronización inicial puede demorar según el tamaño del catálogo.',
+		palabras_clave: ['sincronizar', 'revendedor', 'mayorista', 'minorista', 'catalogo compartido'],
+	},
 	singular_model_name_spanish: 'Vinculacion de inventario',
 	plural_model_name_spanish: 'Vinculaciones de inventario',
 	create_model_name_spanish: 'Nueva',

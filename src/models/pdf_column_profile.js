@@ -247,6 +247,12 @@ export default {
 			value: '',
 		},
 	],
+	abm_descripcion: {
+		para_que_sirve: 'Define perfiles de diseño para los PDFs del sistema: comprobantes de venta y listados de artículos.',
+		implicancias: 'Cada perfil controla qué columnas se imprimen, en qué orden y con qué ancho, y en los comprobantes de venta también el pie de página: totales, subtotal, comisiones, detalle de descuentos y fecha. El perfil elegido al imprimir determina cómo sale el documento.',
+		como_se_utiliza: 'Creá el perfil eligiendo el modelo (venta o artículo), configurá las columnas y las opciones del pie, y seleccioná el perfil al imprimir. Podés duplicar un perfil existente con el botón de duplicar para hacer variantes rápido.',
+		palabras_clave: ['comprobante', 'columnas', 'diseño', 'impresion', 'remito', 'presupuesto'],
+	},
 	singular_model_name_spanish: 'Diseño de PDF',
 	plural_model_name_spanish: 'Diseño de PDF',
 	create_model_name_spanish: 'Nuevo Diseño de PDF',
