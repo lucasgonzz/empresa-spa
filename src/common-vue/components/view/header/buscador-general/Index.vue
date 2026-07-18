@@ -113,6 +113,11 @@ export default {
 		 */
 		own_props() {
 			let model_properties = require('@/models/' + this.model_name).default.properties
+			// Filtra por extensión activa del cliente: sin esto, props gateadas por distintas
+			// extensiones que comparten `key` (ej: 'contenido' en autopartes vs en
+			// articulos_con_propiedades_de_distribuidora) generan keys duplicadas en el v-for
+			// de PropertiesDropdown, y clientes ven props de extensiones que no tienen.
+			model_properties = this.check_extencions(model_properties)
 			return model_properties.filter(function (property) {
 				return property.key
 					&& ['text', 'textarea', 'number'].indexOf(property.type) !== -1
@@ -129,6 +134,8 @@ export default {
 		 */
 		relation_props() {
 			let model_properties = require('@/models/' + this.model_name).default.properties
+			// Mismo filtro por extensión que en own_props, ver comentario ahí.
+			model_properties = this.check_extencions(model_properties)
 			let relations = []
 			model_properties.forEach(function (property) {
 				if (!property.key || property.type !== 'search' || property.key.slice(-3) !== '_id') {
