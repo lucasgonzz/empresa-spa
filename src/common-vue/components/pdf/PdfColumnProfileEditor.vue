@@ -22,6 +22,21 @@
 			</b-alert>
 
 			<template v-else>
+				<!-- Botón de acceso al diseñador visual del header (prompt 441). Solo tiene
+				     sentido para perfiles de venta (comprobantes): los perfiles de artículo
+				     no tienen header configurable por este diseñador. -->
+				<div
+				v-if="model.model_name === 'sale'"
+				class="m-b-10">
+					<b-button
+					size="sm"
+					variant="outline-primary"
+					@click="open_header_designer">
+						<i class="icon-configuration"></i>
+						Diseñar header
+					</b-button>
+				</div>
+
 				<pdf-columns-preferences-config-modal
 				:config_rows="pdf_config_rows"
 				:paper_width_mm="local_paper_width_mm"
@@ -38,6 +53,13 @@
 				class="m-t-10">
 					La suma de anchos visibles supera el ancho disponible ({{ available_width_mm }}mm, imprimible menos márgenes) por {{ Math.abs(remaining_width_mm) }}mm.
 				</b-alert>
+
+				<!-- Diseñador visual del header (modal aparte): recibe el mismo model
+				     que edita este ABM y persiste header_layout + logo_size_mm -->
+				<header-designer
+				v-if="model.model_name === 'sale'"
+				ref="header_designer"
+				:model="model"></header-designer>
 			</template>
 		</template>
 	</div>
@@ -45,6 +67,7 @@
 
 <script>
 import PdfColumnsPreferencesConfigModal from '@/common-vue/components/pdf/PdfColumnsPreferencesConfigModal.vue'
+import HeaderDesigner from '@/common-vue/components/pdf/header-designer/Index.vue'
 
 /**
  * Editor de columnas PDF para ABM de pdf_column_profile (ventas o artículos).
@@ -55,6 +78,7 @@ import PdfColumnsPreferencesConfigModal from '@/common-vue/components/pdf/PdfCol
 export default {
 	components: {
 		PdfColumnsPreferencesConfigModal,
+		HeaderDesigner,
 	},
 	props: {
 		/**
@@ -397,6 +421,16 @@ export default {
 			})
 
 			this.$set(this.model, 'pdf_column_options', payload)
+		},
+		/**
+		 * Abre el diseñador visual del header (prompt 441) para el perfil actual.
+		 *
+		 * @return {void}
+		 */
+		open_header_designer() {
+			if (this.$refs.header_designer) {
+				this.$refs.header_designer.open()
+			}
 		},
 	},
 }
