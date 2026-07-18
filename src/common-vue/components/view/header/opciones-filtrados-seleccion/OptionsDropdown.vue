@@ -6,7 +6,11 @@
 	:id="id"
 	size="sm"
 	:variant="variant"
-	:text="text_dropdown">
+	:toggle-attrs="{ title: tooltip_text, 'aria-label': tooltip_text }">
+		<template #button-content>
+			<i :class="icon_class" aria-hidden="true"></i>
+			<b-badge :variant="badge_variant" class="m-l-5">{{ count }}</b-badge>
+		</template>
 		<dropdown-option-item
 		v-if="puede_actualizar && show_actualizar_option && !ocultar_actualizar_eliminar_por_filtro"
 		id="btn_actualizar"
@@ -64,17 +68,17 @@ export default {
 			}
 			return 'warning'
 		},
-		puede_eliminar() { 
+		puede_eliminar() {
 			if (this.check_permissions) {
 				return this.can(this.model_name+'.delete')
 			}
-			return true 
+			return true
 		},
-		puede_actualizar() { 
+		puede_actualizar() {
 			if (this.check_permissions) {
 				return this.can(this.model_name+'.update')
 			}
-			return true 
+			return true
 		},
 		text_dropdown() {
 			if (this.from_filter) {
@@ -84,6 +88,37 @@ export default {
 				return this.$store.state[this.model_name].total_filter_results + ' filtrados'
 			}
 			return 'Seleccion: ' + this.$store.state[this.model_name].selected.length
+		},
+		/** Cantidad a mostrar en el badge (seleccionados o filtrados según el modo). */
+		count() {
+			if (this.from_filter) {
+				if (this.papelera) {
+					return this.$store.state.papelera[this.model_name].total_filter_results
+				}
+				return this.$store.state[this.model_name].total_filter_results
+			}
+			return this.$store.state[this.model_name].selected.length
+		},
+		/** Ícono descriptivo del dropdown según el modo. */
+		icon_class() {
+			if (this.from_filter) {
+				return 'bi bi-funnel-fill'
+			}
+			return 'bi bi-check2-all'
+		},
+		/** Variante del badge para que contraste con la variante del botón. */
+		badge_variant() {
+			if (this.from_filter) {
+				return 'light'
+			}
+			return 'dark'
+		},
+		/** Texto del tooltip/aria del toggle (reemplaza al texto visible que se sacó). */
+		tooltip_text() {
+			if (this.from_filter) {
+				return 'Acciones sobre ' + this.count + ' filtrados'
+			}
+			return 'Acciones sobre ' + this.count + ' seleccionados'
 		},
 		show() {
 			if (this.from_filter) {

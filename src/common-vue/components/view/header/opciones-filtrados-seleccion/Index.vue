@@ -1,15 +1,15 @@
 <template>
-	<div>
+	<div class="opciones-grupos">
 		<update
 		@update="update"
 		:loading="loading"
-		:model_name="model_name"></update>	
+		:model_name="model_name"></update>
 
 		<confirm
 		:id="model_name+'-delete-models'"
 		:text="delete_text"
 		emit="deleteModels"
-		@deleteModels="deleteModels"></confirm>	
+		@deleteModels="deleteModels"></confirm>
 
 		<options-dropdown
 		:show_actualizar_option="show_actualizar_option"
@@ -25,6 +25,11 @@
 				<slot name="options_drop_down_seleccion"></slot>
 			</template>
 		</options-dropdown>
+
+		<span
+		v-if="mostrar_divisor_grupos"
+		class="opciones-grupos__divider"
+		aria-hidden="true"></span>
 
 		<options-dropdown
 		v-if="!papelera"
@@ -70,8 +75,20 @@ export default {
 		},
 		selecteds_id() {
 			return this.$store.state[this.model_name].selected.map(model => {
-				return model.id 
+				return model.id
 			})
+		},
+		/**
+		 * Muestra el divisor entre el grupo de selección y el de filtros. Sólo cuando el dropdown de
+		 * filtrados va a renderizar (hay resultados filtrados) — así separa la selección (a la izquierda,
+		 * con el botón Seleccionar) de los filtros (a la derecha, con Limpiar filtros).
+		 */
+		mostrar_divisor_grupos() {
+			if (this.papelera) {
+				return false
+			}
+			let m = this.$store.state[this.model_name]
+			return m.filtered && m.filtered.length > 0
 		},
 	},
 	data() {
@@ -190,6 +207,17 @@ export default {
 </script>
 
 <style lang="sass">
+
+.opciones-grupos
+	display: inline-flex
+	align-items: center
+
+	&__divider
+		width: 1px
+		align-self: stretch
+		min-height: 22px
+		margin: 0 6px
+		background-color: rgba(0, 0, 0, 0.12)
 
 /* Menú del dropdown de seleccionados/filtrados: altura máxima y scroll vertical */
 #btn_filtrados_dropdown .dropdown-menu,

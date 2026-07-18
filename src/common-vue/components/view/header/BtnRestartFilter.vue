@@ -3,13 +3,13 @@
 	v-if="is_filtered && !papelera"
 	v-b-tooltip.hover
 	:title="tooltip_text"
+	:aria-label="tooltip_text"
 	@click="restartSearch"
 	class="btn-header-action m-l-10"
 	id="btn_restart_filter"
 	size="sm"
 	variant="outline-secondary">
-		<i class="bi bi-arrow-counterclockwise m-r-5" aria-hidden="true"></i>
-		<span class="btn-header-action__label">{{ button_label }}</span>
+		<i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
 	</b-button>
 </template>
 <script>

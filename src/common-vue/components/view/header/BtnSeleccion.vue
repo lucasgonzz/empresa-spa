@@ -6,6 +6,7 @@
 		<b-button
 		v-b-tooltip.hover
 		:title="tooltip_text"
+		:aria-label="tooltip_text"
 		:variant="variant"
 		:aria-pressed="is_selecteable ? 'true' : 'false'"
 		@click="toggle_selection_mode"
@@ -13,9 +14,7 @@
 		size="sm">
 			<i
 			:class="selection_icon_class"
-			class="m-r-5"
 			aria-hidden="true"></i>
-			<span class="btn-header-action__label">{{ button_label }}</span>
 		</b-button>
 	</div>
 </template>
