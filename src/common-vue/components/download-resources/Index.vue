@@ -35,6 +35,7 @@
 </template>
 <script>
 import call_methods from '@/mixins/call_methods'
+import { mark_dynamic_dependency_ready } from '@/common-vue/helpers/dynamic_column_dependencies_status'
 export default {
 	mixins: [call_methods],
 	components: {
@@ -106,12 +107,18 @@ export default {
             	if ((!this.is_mobile || this.downloadOnMobile(model_name)) && (model_name != 'article' || this.download_articles)) {
             		if (this.yaSeDescargaron(model_name)) {
 						this.models_to_download[i].downloaded = true
+						// Marca la dependencia como lista si ya estaba descargada de antes (ver
+						// dynamic_column_dependencies_status.js). Ignora sin romper nada los
+						// model_name que no son dependencia de columnas dinamicas de article.
+						mark_dynamic_dependency_ready(model_name)
             		} else {
 						this.models_to_download[i].downloading = true
 		                await this.$store.dispatch(model_name+'/getModels')
 						if (model_name === 'table_column_preference') {
 							this.$store.dispatch('table_column_preference/bootstrap_module_preferences')
 						}
+						// Marca la dependencia como lista recien despues de terminar de descargarla.
+						mark_dynamic_dependency_ready(model_name)
 						this.models_to_download[i].downloading = false
 						this.models_to_download[i].downloaded = true
             		}

@@ -5,6 +5,7 @@ import {
 import app_generals from '@/mixins/generals'
 import generals from '@/common-vue/mixins/generals'
 import { add_article_dynamic_columns } from '@/common-vue/helpers/article_dynamic_table_columns'
+import { article_dynamic_dependencies_ready } from '@/common-vue/helpers/dynamic_column_dependencies_status'
 
 /**
  * Contexto mínimo para reutilizar métodos de generals fuera de componentes Vue.
@@ -425,6 +426,17 @@ export function clear_module_filters_after_column_change(store_context, model_na
  */
 export function bootstrap_module_column_preferences_if_needed(store_context, model_name, preference_type) {
 	if (module_already_has_column_preferences(store_context, model_name)) {
+		return false
+	}
+
+	// Guarda contra condicion de carrera (ver dynamic_column_dependencies_status.js): 'article'
+	// tiene columnas dinamicas (direcciones/sucursales, listas de precio, descuentos por metodo
+	// de pago) calculadas a partir de colecciones que se descargan en paralelo/despues. Si estas
+	// todavia no llegaron, NO fijar props_to_show ahora -- dejarlo vacio y que el fallback
+	// reactivo (get_properties_to_show_ordenadas en generals/model-meta.js) siga mostrando la
+	// tabla correctamente hasta que se pueda reconciliar (ver reconcile_article_dynamic_columns_if_needed,
+	// prompt 461).
+	if (model_name == 'article' && !article_dynamic_dependencies_ready()) {
 		return false
 	}
 
