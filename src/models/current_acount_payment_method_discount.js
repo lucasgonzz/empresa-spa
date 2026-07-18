@@ -28,6 +28,12 @@ export default {
 			],
 		},
 	],
+	abm_descripcion: {
+		para_que_sirve: 'Define un descuento porcentual automático según el método de pago con el que se cobra.',
+		implicancias: 'Al cobrar una venta con el método elegido, el sistema aplica el descuento sobre el monto pagado con ese método. Es la forma típica de premiar el pago en efectivo.',
+		como_se_utiliza: 'Creá el registro eligiendo el método de pago y el porcentaje de descuento. Se aplica solo cada vez que ese método se usa en un cobro.',
+		palabras_clave: ['efectivo', 'descuento por pago', 'metodo de pago', 'contado'],
+	},
 	singular_model_name_spanish: 'Descuento para Metodo de pago',
 	plural_model_name_spanish: 'Descuentos para Metodo de pago',
 	create_model_name_spanish: 'Nuevo Descuento para Metodo de pago',

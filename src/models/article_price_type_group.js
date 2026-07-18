@@ -40,6 +40,12 @@ export default {
 			}
 		},
 	],
+	abm_descripcion: {
+		para_que_sirve: 'Agrupa artículos para que sus cantidades se sumen juntas al evaluar los rangos de precio por cantidad.',
+		implicancias: 'Si un cliente compra artículos distintos del mismo grupo, las cantidades se acumulan para alcanzar el rango: comprar 6 unidades repartidas entre varios artículos del grupo cuenta como 6 para el rango. Sin el grupo, cada artículo evalúa su cantidad por separado.',
+		como_se_utiliza: 'Creá el grupo con un nombre y agregale los artículos que deben sumar en conjunto. Funciona en combinación con los Rangos de precio.',
+		palabras_clave: ['agrupar', 'cantidad conjunta', 'volumen', 'rangos'],
+	},
 	singular_model_name_spanish: 'Grupo de articulos',
 	plural_model_name_spanish: 'Grupos de articulos',
 	create_model_name_spanish: 'Nuevo Grupo de articulos',

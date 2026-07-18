@@ -81,6 +81,12 @@ export default {
 			],
 		},
 	],
+	abm_descripcion: {
+		para_que_sirve: 'Define los impuestos sobre ventas del negocio, como IIBB o impuestos municipales, que se aplican al precio de los artículos.',
+		implicancias: 'Es la Capa 2 del marco de precios: se aplica sobre el precio que ya incluye el margen de ganancia, con fórmula de división (precio ÷ (1 − alícuota)). Puede aplicar a todos los artículos o solo a los seleccionados, y se puede desactivar sin borrarlo.',
+		como_se_utiliza: 'Creá el impuesto con nombre y alícuota en porcentaje, elegí si aplica a todos los artículos o a una selección, y dejalo activo. El sistema lo suma automáticamente al calcular el precio final.',
+		palabras_clave: ['iibb', 'impuesto', 'alicuota', 'tributo', 'precio'],
+	},
 	singular_model_name_spanish: 'Impuesto sobre venta',
 	plural_model_name_spanish: 'Impuestos sobre ventas',
 	create_model_name_spanish: 'Nuevo impuesto sobre venta',

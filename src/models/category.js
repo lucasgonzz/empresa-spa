@@ -58,6 +58,12 @@ export default {
 			}
 		},
 	],
+	abm_descripcion: {
+		para_que_sirve: 'Agrupa los artículos en rubros o familias para organizar el catálogo.',
+		implicancias: 'Las categorías aparecen como filtros en el listado de artículos, en Vender y en la tienda online. El margen de ganancia de la categoría se usa como valor por defecto al crear artículos, y los rangos de precio por cantidad se definen por categoría.',
+		como_se_utiliza: 'Creá una categoría con nombre, imagen opcional y margen de ganancia. Después asignala a los artículos desde el listado o al crearlos. Si usás listas de precios por categoría, acá también definís el margen por cada lista.',
+		palabras_clave: ['rubros', 'familias', 'agrupar articulos', 'catalogo', 'margen'],
+	},
 	singular_model_name_spanish: 'Categoria',
 	plural_model_name_spanish: 'Categorias',
 	create_model_name_spanish: 'Nueva',
