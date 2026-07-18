@@ -467,3 +467,57 @@ export function bootstrap_all_module_column_preferences_from_cache(store_context
 		bootstrap_module_column_preferences_if_needed(store_context, preference.model_name, 'table')
 	})
 }
+
+/**
+ * Claves esperadas de columnas dinámicas de artículo (direcciones/sucursales, listas de
+ * precio, descuentos por método de pago) según el estado ACTUAL del store — mismo gating
+ * que add_article_dynamic_columns (puede_ver_address, usa_lista_de_precios, etc), sin
+ * duplicar esa lógica: se obtiene filtrando el resultado de get_all_properties_for_model.
+ *
+ * @param {Object} store_context
+ * @returns {Array<string>}
+ */
+function expected_article_dynamic_keys(store_context) {
+	return get_all_properties_for_model(store_context, 'article')
+		.filter(function (prop) { return prop.dynamic_article_column })
+		.map(function (prop) { return prop.key })
+}
+
+/**
+ * Reconciliación de columnas dinámicas de artículo: si 'article' ya tiene props_to_show
+ * fijado (bootstrap ya corrió, en esta sesión o desde una preferencia guardada) pero le
+ * faltan columnas dinámicas que HOY deberían estar disponibles, vuelve a resolver y aplicar
+ * las filas — sin pisar el orden/ancho/visibilidad que el usuario ya eligió para las columnas
+ * que ya conocía (normalize_column_preference_rows ya preserva eso; solo agrega al final las
+ * columnas nuevas con su default).
+ *
+ * No hace nada si props_to_show todavía no se fijó (esa primera fijación la hace
+ * bootstrap_module_column_preferences_if_needed, no esta función) ni si ya tiene todo lo
+ * esperado.
+ *
+ * @param {Object} store_context
+ * @return {void}
+ */
+export function reconcile_article_dynamic_columns_if_needed(store_context) {
+	if (!module_supports_props_to_show(store_context, 'article')) {
+		return
+	}
+
+	let root_state = get_root_state(store_context)
+	let current_props_to_show = root_state.article.props_to_show
+
+	if (!current_props_to_show.length) {
+		return
+	}
+
+	let expected_keys = expected_article_dynamic_keys(store_context)
+	let current_keys = current_props_to_show.map(function (prop) { return prop.key })
+	let missing_keys = expected_keys.filter(function (key) { return current_keys.indexOf(key) === -1 })
+
+	if (!missing_keys.length) {
+		return
+	}
+
+	let rows = resolve_column_preference_rows(store_context, 'article', 'table')
+	apply_column_preference_rows_to_module_store(store_context, 'article', rows)
+}
