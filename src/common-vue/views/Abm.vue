@@ -2,6 +2,9 @@
 	<b-row
 	v-if="authenticated">
 		<b-col>
+			<abm-search
+			v-if="has_views"></abm-search>
+
 			<horizontal-nav
 			v-if="has_views"
 			:show_display="false"
@@ -35,6 +38,7 @@ import routes from '@/router/routes'
 export default {
 	mixins: [abm],
 	components: {
+		AbmSearch: () => import('@/common-vue/components/abm-search/Index'),
 		HorizontalNav: () => import('@/common-vue/components/horizontal-nav/Index'),
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 		BtnDuplicatePdfProfile: () => import('@/common-vue/components/pdf/BtnDuplicatePdfProfile'),

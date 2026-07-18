@@ -390,7 +390,7 @@ export default [
 		text: 'ABM',
 		name: 'abm',
 		params: {
-			view: 'listado',
+			view: 'articulos',
 			sub_view: 'categorias',
 			model_name: 'category',
 		},
