@@ -272,6 +272,22 @@ export default {
 			type: 'textarea',
 			value: '',
 		},
+		{
+			/**
+			 * Layout del encabezado del PDF (fiscal y comercial), en formato JSON (prompt 437,
+			 * default en PdfColumnProfile::default_header_layout, render en el prompt 439).
+			 * No tiene input visible en este form: lo edita el diseñador de encabezados del
+			 * prompt 441. Se declara igual como propiedad del modelo para que getModelToSend()
+			 * (common-vue/components/model/Index.vue, que arma el payload por spread de `model`)
+			 * lo incluya al crear/actualizar el perfil y no se pierda en el round-trip.
+			 */
+			text: 'Layout de encabezado',
+			key: 'header_layout',
+			type: 'text',
+			value: null,
+			not_show: true,
+			not_show_on_form: true,
+		},
 	],
 	singular_model_name_spanish: 'Diseño de PDF',
 	plural_model_name_spanish: 'Diseño de PDF',

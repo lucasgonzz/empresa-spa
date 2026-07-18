@@ -1266,6 +1266,65 @@ export default {
 			const profiles = this.$store.state.pdf_column_profile.models || []
 			return build_vender_facturado_print_select_options(profiles)
 		},
+		/**
+		 * Opciones del selector "Facturación por defecto (ventas en negro)" del formulario
+		 * de sucursal (address.default_afip_information_id, prompt 440). A diferencia de un
+		 * select genérico por store, acá SOLO se listan los afip_information que pertenecen a
+		 * ESA sucursal en particular (address.afip_informations, cargados por el backend en
+		 * Address::scopeWithAll — prompt 438), no todos los afip_information del negocio.
+		 *
+		 * Siempre incluye la opción "Sin especificar" (value null): si el campo queda vacío,
+		 * el backend resuelve la identidad fiscal cayendo al afip_information del dueño.
+		 *
+		 * @param {Object} prop - Definición declarativa del campo (no usada, se mantiene por firma común de dynamic_options_function).
+		 * @param {Object} model - Instancia de address que se está editando/creando.
+		 * @returns {Array<{value: number|null, text: string}>}
+		 */
+		get_address_default_afip_information_options(prop, model) {
+			// Opción para dejar la sucursal sin facturación por defecto propia.
+			let options = [
+				{ value: null, text: 'Sin especificar' },
+			]
+
+			// afip_informations viene precargado por el backend solo cuando la sucursal ya existe (scopeWithAll).
+			let afip_informations = (model && model.afip_informations) || []
+
+			afip_informations.forEach(afip_information => {
+				// Mismo criterio de etiqueta que SelectAfipInformation.vue: description si la tiene,
+				// sino razón social + CUIT para poder identificar cuál es cuál.
+				let text = afip_information.description
+					? afip_information.description
+					: (afip_information.razon_social || '') + ' — CUIT ' + (afip_information.cuit || '')
+
+				options.push({
+					value: afip_information.id,
+					text,
+				})
+			})
+
+			return options
+		},
+		/**
+		 * true cuando la sucursal todavía no tiene ningún afip_information cargado: en ese
+		 * caso el select de "Facturación por defecto" se deshabilita (no tiene sentido elegir
+		 * entre opciones que no existen) y se muestra un aviso (address_default_afip_information_warning_text).
+		 *
+		 * @param {Object} model - Instancia de address.
+		 * @returns {boolean}
+		 */
+		is_address_default_afip_information_disabled(model) {
+			let afip_informations = (model && model.afip_informations) || []
+			return afip_informations.length === 0
+		},
+		/**
+		 * Texto de aviso mostrado debajo del select cuando queda deshabilitado por falta de
+		 * afip_information en la sucursal.
+		 *
+		 * @returns {string}
+		 */
+		address_default_afip_information_warning_text() {
+			return 'Esta sucursal no tiene datos de facturación cargados'
+		},
 		booleanOptions(prop, model = null) {
 			let options = []
 			options.push({
