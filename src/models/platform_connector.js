@@ -43,6 +43,12 @@ export default {
 			],
 		},
 	],
+	abm_descripcion: {
+		para_que_sirve: 'Conecta tu cuenta con Mercado Libre o Tienda Nube mediante autorización OAuth.',
+		implicancias: 'El conector guarda el estado de la conexión y los datos de tu cuenta en la plataforma. Con la conexión activa, el sistema puede sincronizar artículos, precios y pedidos con la plataforma elegida.',
+		como_se_utiliza: 'Creá el conector eligiendo la plataforma (no se puede cambiar después), abrí el enlace de autorización y completá el proceso en la plataforma. El estado pasa a conectado cuando los permisos quedan otorgados.',
+		palabras_clave: ['mercado libre', 'tienda nube', 'oauth', 'sincronizacion', 'conectar'],
+	},
 	singular_model_name_spanish: 'Conector de plataforma',
 	plural_model_name_spanish: 'Conectores de plataforma',
 	create_model_name_spanish: 'Nuevo',

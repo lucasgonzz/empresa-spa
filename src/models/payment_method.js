@@ -54,6 +54,12 @@ export default {
 		}
 
 	],
+	abm_descripcion: {
+		para_que_sirve: 'Define los métodos de pago que ofrece la tienda online a los compradores.',
+		implicancias: 'Son los medios de pago del checkout de la tienda: pueden tener descuento propio, cuotas configuradas y, en el caso de Mercado Pago, las credenciales para cobrar online. No confundir con los Métodos de Pago de cuenta corriente, que son los del mostrador.',
+		como_se_utiliza: 'Creá el método con nombre, tipo y descuento si corresponde. Para Mercado Pago, completá la clave pública y la privada, y configurá las cuotas disponibles.',
+		palabras_clave: ['checkout', 'mercado pago', 'cuotas', 'tienda', 'cobro online'],
+	},
 	singular_model_name_spanish: 'Metodo de pago',
 	plural_model_name_spanish: 'Metodos de pago',
 	create_model_name_spanish: 'Nuevo metodo de pago',
