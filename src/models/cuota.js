@@ -35,6 +35,12 @@ export default {
 			],
 		},
 	],
+	abm_descripcion: {
+		para_que_sirve: 'Define las opciones de cuotas de los planes de pago, con su descuento o recargo.',
+		implicancias: 'Al armar un plan de pago en cuenta corriente, las opciones de cantidad de cuotas disponibles y su ajuste (descuento o recargo porcentual) salen de acá.',
+		como_se_utiliza: 'Creá cada opción indicando la cantidad de cuotas y, si corresponde, el descuento o recargo que aplica. Se usan al generar planes de pago para los clientes.',
+		palabras_clave: ['plan de pago', 'financiacion', 'cuotas', 'recargo', 'interes'],
+	},
 	singular_model_name_spanish: 'Cuota',
 	plural_model_name_spanish: 'Cuotas',
 	create_model_name_spanish: 'Nueva Cuota',

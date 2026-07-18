@@ -29,6 +29,12 @@ export default {
 		},
 
 	],
+	abm_descripcion: {
+		para_que_sirve: 'Define a qué caja entra el dinero según el método de pago con que se cobra, pudiendo diferenciar por sucursal y empleado.',
+		implicancias: 'Al cobrar una venta, el sistema dirige el dinero a la caja configurada para ese método de pago. Permite, por ejemplo, que el efectivo vaya a la caja física y las transferencias a una caja bancaria.',
+		como_se_utiliza: 'Creá el registro combinando caja, método de pago y, si hace falta, sucursal y empleado. El sistema lo aplica automáticamente en cada cobro.',
+		palabras_clave: ['caja', 'destino del dinero', 'cobros', 'sucursal'],
+	},
 	singular_model_name_spanish: 'Caja por defecto',
 	plural_model_name_spanish: 'Cajas por defecto',
 	create_model_name_spanish: 'Nueva Caja por defecto',
