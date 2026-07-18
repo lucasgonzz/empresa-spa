@@ -12,7 +12,7 @@
 
 		<!-- Botón imprimir (oculta WhatsApp duplicado; se muestra aparte) -->
 		<div class="vender-actions-bar__item vender-actions-bar__item--secondary vender-actions-bar__print">
-			<print></print>
+			<print :show_whatsapp_btn="false"></print>
 		</div>
 
 		<!-- Botón WhatsApp (componente separado, misma venta que Print) -->
@@ -234,9 +234,6 @@ export default {
 		display: inline-flex
 		align-items: center
 		width: auto
-
-	::v-deep .j-start > *:last-child
-		display: none !important
 
 /* Quitar margen izquierdo heredado de LimpiarVender y WhatsApp */
 .vender-actions-bar__item

@@ -8,7 +8,9 @@
 
 		v-if="show"
 
-		:sale="sale">
+		:sale="sale"
+
+		:show_whatsapp_btn="show_whatsapp_btn">
 
 		</sale-print-buttons>
 
@@ -33,6 +35,20 @@ export default {
 	components: {
 
 		SalePrintButtons: () => import('@/common-vue/sale-print-buttons/Index.vue'),
+
+	},
+
+	props: {
+
+		/* Controla si sale-print-buttons renderiza su propio WhatsApp interno (default true, ver Index.vue) */
+
+		show_whatsapp_btn: {
+
+			type: Boolean,
+
+			default: true,
+
+		},
 
 	},
 

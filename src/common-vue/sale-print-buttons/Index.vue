@@ -33,7 +33,7 @@
 			</b-dropdown>
 
 			<whatsapp-btn
-			v-if="sale"
+			v-if="sale && show_whatsapp_btn"
 			:sale="sale"></whatsapp-btn>
 		</div>
 
@@ -87,6 +87,15 @@ export default {
 		model_name: {
 			type: String,
 			default: 'sale',
+		},
+		/**
+		 * Controla si se muestra el botón de WhatsApp interno.
+		 * Se usa en false cuando un contenedor externo (ej. VenderActionsBar)
+		 * ya muestra su propio botón de WhatsApp y no se quiere duplicar.
+		 */
+		show_whatsapp_btn: {
+			type: Boolean,
+			default: true,
 		},
 	},
 	data() {
