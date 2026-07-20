@@ -35,6 +35,13 @@
 		:items="items">
 
 		
+			<!-- Estado de la importacion mostrado como badge de color segun status -->
+			<template #cell(status)="data">
+				<b-badge :variant="status_variant(items[data.index].status)">
+					{{ status_label(items[data.index].status) }}
+				</b-badge>
+			</template>
+
 			<template #cell(created_models)="data">
 				{{ models[data.index].created_models }}
 				<!-- <b-button
@@ -92,6 +99,18 @@
 				v-model="models[data.index].observations"></b-form-textarea>
 			</template>
 
+			<!-- Boton para ver el detalle del error solo cuando la importacion fallo o tiene mensaje de error -->
+			<template #cell(error_message)="data">
+				<b-button
+				v-if="es_fallida(items[data.index].status) || items[data.index].error_message"
+				size="sm"
+				variant="outline-danger"
+				@click="ver_error(items[data.index])">
+					Ver error
+				</b-button>
+				<span v-else>—</span>
+			</template>
+
 
 			<template #cell(rollback)="data">
 				<b-button
@@ -101,6 +120,32 @@
 
 
 		</b-table>
+	</b-modal>
+
+	<!-- Modal con el detalle del error de una importacion fallida: motivo humano + log tecnico completo -->
+	<b-modal
+	hide-footer
+	size="lg"
+	title="Detalle del error de importación"
+	id="import-error-detail">
+
+		<div v-if="error_seleccionado">
+
+			<h6 class="text-danger">Motivo</h6>
+			<p class="mb-3">{{ error_seleccionado.error_message || 'Sin motivo registrado.' }}</p>
+
+			<div v-if="error_seleccionado.error_trace">
+				<h6 class="d-flex justify-content-between align-items-center">
+					<span>Log técnico</span>
+					<b-button size="sm" variant="outline-secondary" @click="copiar_trace">Copiar</b-button>
+				</h6>
+				<pre class="import-error-trace">{{ error_seleccionado.error_trace }}</pre>
+			</div>
+			<p v-else class="text-muted">
+				No hay log técnico (el proceso se interrumpió sin dejar traza).
+			</p>
+
+		</div>
 	</b-modal>
 </div>
 </template>
@@ -126,7 +171,9 @@ export default {
 			loading: false,
 			models: [],
 			articulos_creados: [],
-			import_history_show_lotes: null
+			import_history_show_lotes: null,
+			// Importacion actualmente seleccionada para ver su error en el modal "import-error-detail"
+			error_seleccionado: null,
 		}
 	},
 	computed: {
@@ -154,6 +201,7 @@ export default {
 					filas_procesadas: model.filas_procesadas,
 					articles_repetidos: model.articles_repetidos,
 					error_message: model.error_message,
+					error_trace: model.error_trace,
 					operacion: model.operacion_a_realizar,
 					actualizar_otro_proveedor: model.no_actualizar_otro_proveedor ? 'No' : 'Si',
 					provider_id: model.provider_id ? this.getProvider(model) : null,
@@ -265,6 +313,57 @@ export default {
 			this.import_history_show_lotes = model
 			this.$bvModal.show('chunks')
 		},
+		/**
+		 * Determina si un estado de importacion se considera fallido.
+		 * Incluye el estado legado "error" para registros viejos anteriores a "fallo".
+		 * @param {String} status - status crudo de la importacion
+		 * @returns {Boolean} true si es un estado fallido
+		 */
+		es_fallida(status) {
+			return status === 'fallo' || status === 'error'
+		},
+		/**
+		 * Devuelve la variante de color del badge segun el estado de la importacion.
+		 * @param {String} status - status crudo de la importacion
+		 * @returns {String} variante de b-badge (success, primary, secondary, danger, light)
+		 */
+		status_variant(status) {
+			if (status === 'terminado') return 'success'
+			if (status === 'en_proceso') return 'primary'
+			if (status === 'pendiente' || status === 'en_preparacion') return 'secondary'
+			if (status === 'fallo' || status === 'error') return 'danger'
+			return 'light'
+		},
+		/**
+		 * Devuelve la etiqueta legible en español para el estado de la importacion.
+		 * @param {String} status - status crudo de la importacion
+		 * @returns {String} etiqueta legible, o el status crudo si no matchea ninguno conocido
+		 */
+		status_label(status) {
+			if (status === 'terminado') return 'Terminado'
+			if (status === 'en_proceso') return 'Procesando'
+			if (status === 'pendiente' || status === 'en_preparacion') return 'En preparación'
+			if (status === 'fallo' || status === 'error') return 'Fallido'
+			return status
+		},
+		/**
+		 * Abre el modal de detalle de error con la importacion seleccionada.
+		 * @param {Object} item - item de la tabla (incluye error_message y error_trace)
+		 */
+		ver_error(item) {
+			this.error_seleccionado = item
+			this.$bvModal.show('import-error-detail')
+		},
+		/**
+		 * Copia el log tecnico completo del error seleccionado al portapapeles.
+		 * @returns {void}
+		 */
+		copiar_trace() {
+			if (this.error_seleccionado && this.error_seleccionado.error_trace) {
+				navigator.clipboard.writeText(this.error_seleccionado.error_trace)
+				this.$toast.success('Log copiado')
+			}
+		},
 		rollback(model) {
 
 			if (confirm('¿Seguro que quiere revertir esta importacion?')) {
@@ -331,4 +430,16 @@ export default {
 .cont-columns
 	max-height: 100px
 	overflow-y: scroll
+
+// Log tecnico del error de importacion: estilo tipo consola para facilitar la lectura
+.import-error-trace
+	max-height: 400px
+	overflow: auto
+	background: #1e1e1e
+	color: #d4d4d4
+	padding: 12px
+	border-radius: 6px
+	font-size: 12px
+	white-space: pre-wrap
+	word-break: break-word
 </style>

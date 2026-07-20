@@ -207,7 +207,15 @@
 									:disabled="isDisabled(prop, form_to_filter)"
 									:options="getOptions(prop, model, model_name)"
 									@input="$set(model, prop.key, $event)"
-									@input-change="setChange(prop)"></field-select-input>		
+									@input-change="setChange(prop)"></field-select-input>
+
+									<!-- Aviso debajo del select cuando queda deshabilitado por falta de datos
+									     relacionados (ej: sucursal sin afip_information cargados, prompt 440) -->
+									<small
+									v-if="prop.type == 'select' && getWarningText(prop)"
+									class="form-text text-warning">
+										{{ getWarningText(prop) }}
+									</small>
 
 								<!-- Toggle tipo iPhone: el label arriba ya describe el campo,
 								     el texto interno del checkbox es redundante y se omite -->
@@ -892,7 +900,28 @@ export default {
 			if (prop.type == 'select' && prop.disabled_if_not_0 && this.model[prop.key] != 0) {
 				return true
 			}
+			// Hook genérico (mismo patrón que dynamic_options_function/color_function): el prop
+			// declara el nombre de un método global (definido en common-vue/mixins/generals.js)
+			// que decide si el campo debe deshabilitarse según el estado actual del modelo.
+			// Ej: prop.disabled_function = 'is_address_default_afip_information_disabled'.
+			if (prop.disabled_function && this[prop.disabled_function](this.model)) {
+				return true
+			}
 			return false
+		},
+		/**
+		 * Texto de advertencia dinámico para un campo deshabilitado por falta de datos
+		 * relacionados en el modelo (ej: sucursal sin afip_information cargados). El prop
+		 * declara `warning_function`, un método global que resuelve el mensaje.
+		 *
+		 * @param {Object} prop - Definición declarativa del campo.
+		 * @returns {string} Texto de advertencia, o cadena vacía si no aplica.
+		 */
+		getWarningText(prop) {
+			if (prop.warning_function && this.isDisabled(prop)) {
+				return this[prop.warning_function](this.model)
+			}
+			return ''
 		},
 		is_disabled_button(prop) {
 			if (prop.button && prop.button.disabled_if_model_is_created) {

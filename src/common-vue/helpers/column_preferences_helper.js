@@ -5,6 +5,7 @@ import {
 import app_generals from '@/mixins/generals'
 import generals from '@/common-vue/mixins/generals'
 import { add_article_dynamic_columns } from '@/common-vue/helpers/article_dynamic_table_columns'
+import { article_dynamic_dependencies_ready } from '@/common-vue/helpers/dynamic_column_dependencies_status'
 
 /**
  * Contexto mínimo para reutilizar métodos de generals fuera de componentes Vue.
@@ -428,6 +429,17 @@ export function bootstrap_module_column_preferences_if_needed(store_context, mod
 		return false
 	}
 
+	// Guarda contra condicion de carrera (ver dynamic_column_dependencies_status.js): 'article'
+	// tiene columnas dinamicas (direcciones/sucursales, listas de precio, descuentos por metodo
+	// de pago) calculadas a partir de colecciones que se descargan en paralelo/despues. Si estas
+	// todavia no llegaron, NO fijar props_to_show ahora -- dejarlo vacio y que el fallback
+	// reactivo (get_properties_to_show_ordenadas en generals/model-meta.js) siga mostrando la
+	// tabla correctamente hasta que se pueda reconciliar (ver reconcile_article_dynamic_columns_if_needed,
+	// prompt 461).
+	if (model_name == 'article' && !article_dynamic_dependencies_ready()) {
+		return false
+	}
+
 	let rows = resolve_column_preference_rows(store_context, model_name, preference_type)
 	apply_column_preference_rows_to_module_store(store_context, model_name, rows)
 	return true
@@ -536,4 +548,58 @@ export function default_has_many_form_cols(child_columns_count) {
 		return 6
 	}
 	return 12
+}
+
+/**
+ * Claves esperadas de columnas dinámicas de artículo (direcciones/sucursales, listas de
+ * precio, descuentos por método de pago) según el estado ACTUAL del store — mismo gating
+ * que add_article_dynamic_columns (puede_ver_address, usa_lista_de_precios, etc), sin
+ * duplicar esa lógica: se obtiene filtrando el resultado de get_all_properties_for_model.
+ *
+ * @param {Object} store_context
+ * @returns {Array<string>}
+ */
+function expected_article_dynamic_keys(store_context) {
+	return get_all_properties_for_model(store_context, 'article')
+		.filter(function (prop) { return prop.dynamic_article_column })
+		.map(function (prop) { return prop.key })
+}
+
+/**
+ * Reconciliación de columnas dinámicas de artículo: si 'article' ya tiene props_to_show
+ * fijado (bootstrap ya corrió, en esta sesión o desde una preferencia guardada) pero le
+ * faltan columnas dinámicas que HOY deberían estar disponibles, vuelve a resolver y aplicar
+ * las filas — sin pisar el orden/ancho/visibilidad que el usuario ya eligió para las columnas
+ * que ya conocía (normalize_column_preference_rows ya preserva eso; solo agrega al final las
+ * columnas nuevas con su default).
+ *
+ * No hace nada si props_to_show todavía no se fijó (esa primera fijación la hace
+ * bootstrap_module_column_preferences_if_needed, no esta función) ni si ya tiene todo lo
+ * esperado.
+ *
+ * @param {Object} store_context
+ * @return {void}
+ */
+export function reconcile_article_dynamic_columns_if_needed(store_context) {
+	if (!module_supports_props_to_show(store_context, 'article')) {
+		return
+	}
+
+	let root_state = get_root_state(store_context)
+	let current_props_to_show = root_state.article.props_to_show
+
+	if (!current_props_to_show.length) {
+		return
+	}
+
+	let expected_keys = expected_article_dynamic_keys(store_context)
+	let current_keys = current_props_to_show.map(function (prop) { return prop.key })
+	let missing_keys = expected_keys.filter(function (key) { return current_keys.indexOf(key) === -1 })
+
+	if (!missing_keys.length) {
+		return
+	}
+
+	let rows = resolve_column_preference_rows(store_context, 'article', 'table')
+	apply_column_preference_rows_to_module_store(store_context, 'article', rows)
 }

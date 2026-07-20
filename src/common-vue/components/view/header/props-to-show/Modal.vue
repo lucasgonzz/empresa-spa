@@ -70,6 +70,8 @@ import {
 
 } from '@/common-vue/helpers/column_preferences_helper'
 
+import { article_dynamic_dependencies_ready } from '@/common-vue/helpers/dynamic_column_dependencies_status'
+
 
 
 export default {
@@ -199,6 +201,25 @@ export default {
 			/* Intentar aplicar desde cache global descargado al inicio. */
 
 			if (bootstrap_module_column_preferences_if_needed(this.$store, this.model_name, 'table')) {
+
+				this.sync_config_rows_only()
+
+				return Promise.resolve()
+
+			}
+
+
+
+			// Si 'article' todavia no tiene las colecciones dinamicas listas (direcciones/sucursales,
+			// listas de precio, descuentos por metodo de pago), NO ejecutar el fallback de API: ese
+			// fallback SI fija props_to_show con lo que haya en ese momento, y lo dejaria trabado sin
+			// las columnas dinamicas por el resto de la sesion (bootstrap_module_column_preferences_if_needed
+			// ya devolvio false por esta misma razon, no porque no exista preferencia). Dejamos
+			// props_to_show vacio -- el fallback reactivo del Listado ya muestra la tabla bien mientras
+			// tanto -- y sync_config_rows_only() igual arma la lista de checkboxes del modal con lo que
+			// ya haya cargado hasta ahora (puede faltar alguna columna dinamica si el modal se abre en
+			// ese instante exacto; caso raro, no cubierto por este prompt).
+			if (this.model_name == 'article' && !article_dynamic_dependencies_ready()) {
 
 				this.sync_config_rows_only()
 
