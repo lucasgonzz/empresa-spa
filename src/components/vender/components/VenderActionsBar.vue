@@ -410,7 +410,8 @@ export default {
 	gap: 6px
 
 /* Input de teléfono editable junto al botón WhatsApp */
+/* Ancho ampliado para que el número completo (con código de área) se vea sin cortarse */
 .vender-actions-bar__whatsapp-input
-	width: 130px
+	width: 165px
 	height: 40px
 </style>

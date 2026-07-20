@@ -1,77 +1,107 @@
-﻿# Prompt 266 — Refactor precios/costos: UI de Capa 3 en empresa-spa — recargos por método/cuotas y modo precio_base_incluye_tarjeta en Vender
+﻿# Prompt 513 — Migraciones aditivas: precios con IVA incluido por compra/proveedor + costos extra facturados (empresa-api)
 
 ## Estado
-bloqueado
+
+pendiente
 
 ## Descripción
-UI de la Capa 3 construida en el prompt 263 (plan Fase 2, prompt B7). Dos frentes:
 
-1. **Configuración:** los ABM existentes de reglas por método de pago
-   (`current_acount_payment_method_discounts`) y de cuotas (`cuotas`) ganan los campos nuevos:
-   una regla de método puede limitarse a una cantidad de cuotas, y una regla de cuotas puede
-   atarse a un método de pago específico (Visa 3 cuotas +5% ≠ genérico 3 cuotas +3%).
-   También la config del flag `precio_base_incluye_tarjeta` del usuario (en la sección de
-   configuración donde viven los flags de precios del negocio).
-2. **Vender:** cuando `precio_base_incluye_tarjeta` está activo, el precio mostrado es el de
-   etiqueta (ya incluye la tarjeta más cara) y al elegir método de pago se muestra el descuento
-   correspondiente ("Efectivo: $1100 (−9,1%)"). Con el flag apagado, comportamiento actual
-   (precio base + recargo del método elegido). La resolución de la regla aplicable la hace la API
-   (precedencia definida en el prompt 263) — el SPA consume y muestra.
+Base del fix de IVA de la factura de compra documentado en `refactor_empresa/compras.md`
+("REVISIÓN EN PRUEBAS 18/7"). Solo migraciones **aditivas y retrocompatibles** (los 40 clientes
+en producción no deben cambiar de comportamiento: todos los defaults = comportamiento actual).
+
+Agrega:
+
+1. **`provider_orders.precios_incluyen_iva`** (bool, default `false`): indica si los precios cargados
+   en esa compra ya vienen con el IVA incluido por parte del proveedor. `false` = comportamiento
+   actual (el precio es neto y se le suma IVA para la factura).
+2. **`providers.precios_incluyen_iva`** (bool, default `false`): default a nivel proveedor, que
+   pre-completa el flag de la orden al elegir ese proveedor (la convención suele ser estable por
+   proveedor). El de la orden manda; este solo pre-carga.
+3. En **`provider_order_extra_costs`** (los costos extra: flete, seguro, etc.):
+   - `facturado` (bool, default `false`): si ese costo extra vino facturado (genera IVA crédito) o no.
+   - `iva_id` (nullable, FK a `ivas`): alícuota con la que se facturó ese costo extra (solo aplica si
+     `facturado` = true).
+   - `en_factura_compra` (bool, default `true`): si el costo va DENTRO de la misma factura de la
+     compra (`true`) o en una **factura aparte** (`false`, caso flete tercerizado por otro emisor).
+   - `emisor_cuit` (nullable string): CUIT del emisor de la factura aparte (cuando `en_factura_compra`
+     = false y `facturado` = true; ej. la empresa de transporte tercerizada).
+   - `emisor_razon_social` (nullable string): razón social del emisor de la factura aparte.
 
 ## Ejecución sugerida
 
 cursor
 
 ## Modelo sugerido
-Claude Sonnet, esfuerzo alto — toca Vender (el módulo más crítico del SPA) y el modal de métodos
-de pago con su lógica de pago múltiple ya construida, que NO debe romperse.
 
-## Repositorio y rama
-`empresa-spa` (rama `develop`). Depende del prompt 263 ya ejecutado en empresa-api (y del 265 para
-convenciones si se ejecutan en orden).
+auto — son migraciones aditivas simples, sin lógica. Alcanza con auto.
+
+## Repositorios y ramas
+
+`empresa-api` (rama `refractor`). Trabajar y pushear en `refractor`. NO develop, NO master.
+
+## Ramas
+
+- empresa-api: refractor
+
+## Dependencias
+
+Ninguna. Es la base del resto del grupo 124 (514–517 dependen de este).
+
+## Checker sugerido
+
+sonnet. Revisar solo que las migraciones sean aditivas, con defaults que preserven el comportamiento
+actual (todos los flags nuevos en el valor "como hoy"), FK `iva_id` nullable con `onDelete` seguro, y
+que existan los `down()` para revertir. No hay lógica de negocio que chequear acá.
 
 ---
 
-## Contexto técnico
+## Constraint PHP 7.4 (empresa-api)
 
-- Modal de métodos de pago de Vender: @src/components/vender/modals/payment-methods/ (Index.vue,
-  Buttons.vue, select-payment-methods/). Leerlo COMPLETO antes de tocar: el flujo de pago
-  múltiple con recálculo y re-pregunta de asignación (descrito en `refactor_empresa/ventas.md`)
-  ya funciona y se preserva tal cual.
-- Modelos a extender: buscar en `src/models/` los de cuotas y descuentos por método de pago;
-  agregar las propiedades nuevas (`payment_method_id` en cuota, `cuotas` en la regla de método)
-  como selects/inputs opcionales con su texto claro ("Dejar vacío para aplicar a cualquier
-  método/cantidad de cuotas").
-- Flag de usuario: buscar dónde el SPA edita los flags de configuración de precios del negocio
-  (ej: `aplicar_iva_al_costo`, `aplicar_descuentos_en_articulos_antes_del_margen_de_ganancia`) y
-  agregar `precio_base_incluye_tarjeta` ahí con el mismo patrón.
+Producción corre **PHP 7.4**. PROHIBIDO: `?->` (nullsafe), `match`, `str_contains`,
+`str_starts_with`, `str_ends_with`, named arguments, union types, constructor promotion, `readonly`,
+`enum`, atributos `#[...]`, tipos de retorno `mixed`/`never`/`static`. Usar `isset()`, `strpos()`,
+`switch`, ternarios clásicos. Violar esto rompió producción varias veces.
 
-**Workstream de descripciones (obligatorio):** toda propiedad creada o tocada en `src/models/*.js`
-lleva su `descriptions` autodocumentada (patrón existente en el repo). En particular, el flag
-`precio_base_incluye_tarjeta` debe explicar el modo completo en su description.
+---
+
+## Contexto técnico (rama refractor)
+
+- Modelo `@app/Models/ProviderOrder.php` — la orden de compra. Ya tiene `modo_facturacion`,
+  `total_with_iva`, `total_from_provider_order_afip_tickets`, relación `extra_costs`, `discounts`,
+  `current_acount`.
+- Modelo `@app/Models/Provider.php` — el proveedor. Ya tiene `provider_discounts`.
+- Tabla `provider_order_extra_costs` — los costos extra de la orden (flete/seguro). Buscar su
+  migración y modelo actuales para agregarle las columnas sin romper los usos existentes.
+- Tabla `ivas` — catálogo de alícuotas (0, 10.5, 21, 27, etc.). La FK `iva_id` apunta acá; mismo
+  patrón que el `iva_id` que ya usan los artículos.
+- Mirar cómo están hechas las migraciones aditivas recientes del refactor (ej. la que agregó
+  `provider_id` a `article_discounts`, prompt 305) para respetar el estilo.
 
 ## Tareas
 
-1. Extender los modelos/formularios de cuotas y reglas por método con los campos nuevos
-   (opcionales, con default vacío = comportamiento genérico actual).
-2. Agregar el flag `precio_base_incluye_tarjeta` a la configuración del negocio.
-3. En Vender, con el flag activo:
-   - El precio unitario y el total mostrados son los de etiqueta (la API ya los entrega así).
-   - En el modal de métodos de pago, mostrar por método el importe final y el descuento respecto
-     de etiqueta cuando corresponda (datos provistos por la API del prompt 263).
-   - Con el flag inactivo: ni un píxel cambia respecto de hoy.
-4. Verificar el pago múltiple en ambos modos (flag on/off): el flujo de recálculo y re-asignación
-   existente debe seguir funcionando idéntico.
+1. Migración aditiva para `provider_orders`: agregar `precios_incluyen_iva` boolean, default false,
+   after de una columna estable.
+2. Migración aditiva para `providers`: agregar `precios_incluyen_iva` boolean, default false.
+3. Migración aditiva para `provider_order_extra_costs`: agregar `facturado` (bool default false),
+   `iva_id` (unsignedBigInteger nullable + FK a `ivas`, `nullOnDelete`), `en_factura_compra` (bool
+   default true), `emisor_cuit` (string nullable), `emisor_razon_social` (string nullable).
+4. Sumar los campos nuevos a `$fillable` (y casts booleanos donde corresponda) en los modelos
+   `ProviderOrder`, `Provider` y el modelo del extra cost.
+5. `down()` de cada migración que revierta limpio (dropForeign antes de dropColumn en el caso de
+   `iva_id`).
+
+NO agregar lógica de cálculo en este prompt: solo esquema + fillable/casts. La lógica va en 514–516.
+NO es una ExtencionEmpresa ni un permiso, así que no requiere seeders (los defaults ya dejan a los
+clientes existentes en el comportamiento actual).
 
 ## Criterio de éxito
-- Configurar "Visa crédito 3 cuotas +5%" y "3 cuotas genérico +3%": vender con Visa 3 cuotas aplica
-  5%, con otra tarjeta 3%.
-- Reglas existentes (sin campos nuevos) siguen aplicando igual que siempre.
-- Flag activo: artículo de etiqueta $1210 → elegir efectivo muestra $1100 con su descuento visible;
-  elegir crédito 6 cuotas mantiene $1210.
-- Flag inactivo: Vender se ve y comporta exactamente igual que hoy.
-- Pago múltiple con re-asignación funciona en ambos modos.
-- Modelos tocados con `descriptions` completas.
+
+- `php artisan migrate` corre limpio; `migrate:rollback` revierte limpio.
+- Un `provider_order` existente queda con `precios_incluyen_iva = false` (sin cambio de comportamiento).
+- Un `provider_order_extra_cost` existente queda con `facturado = false`, `en_factura_compra = true`,
+  `iva_id = null` (sin cambio de comportamiento).
+- Los campos nuevos son asignables (fillable) y los booleanos castean a bool.
 
 ---
 
