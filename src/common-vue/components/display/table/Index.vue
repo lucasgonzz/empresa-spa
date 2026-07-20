@@ -1254,6 +1254,8 @@ export default {
 	position: relative
 	/* Esquinas redondeadas arriba y abajo (el overflow auto recorta el contenido a este radio). */
 	border-radius: 12px
+	/* Sombra sutil para que la tabla se despegue un poco del fondo (estilo Apple: discreta). */
+	box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px
 
 	/* Scrollbar de ancho normal para la tabla (el global _scroll_bar.sass la deja en 8px, muy fina). */
 	&::-webkit-scrollbar
@@ -1388,14 +1390,14 @@ export default {
 					opacity: 1
 					pointer-events: auto
 
-		td 
+		td
 			padding: 5px 15px
 			line-height: 25px
 			font-size: 1em
 			width: 800px
 			max-width: 800px
 			overflow-wrap: break-word
-			&:last-child 
+			&:last-child
 				white-space: nowrap
 				max-width: 2000px
 			@if ($theme == 'dark')
@@ -1405,8 +1407,18 @@ export default {
 			@else
 				border-bottom: 1px solid rgba(0,0,0,.2)
 				// background: #f1f3f4
-				background: #FFF 
+				background: #FFF
 
+		tbody
+			tr:last-child
+				td:first-child
+					/* Esquina inferior izquierda de la última fila de datos. */
+					border-bottom-left-radius: 12px
+					overflow: hidden
+				td:last-child
+					/* Esquina inferior derecha de la última fila de datos. */
+					border-bottom-right-radius: 12px
+					overflow: hidden
 
 		.cont-filter-buttons
 			display: flex  
