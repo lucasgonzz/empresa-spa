@@ -42,6 +42,17 @@ export default {
 			if_has_extencion: 'providers_article_price_from_costo_mas_iva',
 		},
 		{
+			// Prompt 517: default de "precios_incluyen_iva" para las compras de este proveedor. Al elegir
+			// este proveedor en una compra (provider_order), se precarga este valor en el check de la
+			// compra (ver "prefill_prop_on_select" en provider_order.js), pero el usuario puede
+			// sobreescribirlo en cada compra puntual.
+			text: 'Los precios de este proveedor ya incluyen IVA',
+			key: 'precios_incluyen_iva',
+			type: 'checkbox',
+			value: 0,
+			description: 'Valor por defecto para tus compras a este proveedor: si sus listas de precios ya incluyen IVA. Al cargar una compra de este proveedor, el check "Los precios ya incluyen IVA" viene pre-tildado según esto (podés cambiarlo en cada compra).',
+		},
+		{
 			text: 'Margen de ganancia',
 			key: 'percentage_gain',
 			type: 'number',

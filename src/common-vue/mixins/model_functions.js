@@ -67,6 +67,30 @@ export default {
 			prop.button.call_functions.forEach(funcion => {
 				this[funcion.name](...funcion.params)
 			})
-		}
+		},
+		/**
+		 * Prompt 517 (v_if_function usado en src/models/provider_order_extra_cost.js): muestra los
+		 * campos de alicuota ("iva_id") y "en_factura_compra" de un costo extra de la compra solo
+		 * cuando ese costo extra esta marcado como facturado.
+		 *
+		 * @param {Object} prop propiedad del modelo que declara este v_if_function.
+		 * @param {Object} model el costo extra (provider_order_extra_cost) que se esta editando.
+		 * @returns {Boolean}
+		 */
+		show_costo_extra_si_facturado(prop, model) {
+			return !!(model && model.facturado)
+		},
+		/**
+		 * Prompt 517 (v_if_function usado en src/models/provider_order_extra_cost.js): muestra los
+		 * campos de emisor ("emisor_cuit"/"emisor_razon_social") de un costo extra solo cuando esta
+		 * facturado Y la factura NO va dentro de la factura de la compra (se factura aparte).
+		 *
+		 * @param {Object} prop propiedad del modelo que declara este v_if_function.
+		 * @param {Object} model el costo extra (provider_order_extra_cost) que se esta editando.
+		 * @returns {Boolean}
+		 */
+		show_costo_extra_si_factura_aparte(prop, model) {
+			return !!(model && model.facturado && !model.en_factura_compra)
+		},
 	}
 }

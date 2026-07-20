@@ -28,6 +28,13 @@ export default {
 				description_text: 'Bonificación de proveedor',
 				only_if_empty: true,
 			},
+			// Prompt 517: al elegir un proveedor, precarga el check "precios_incluyen_iva" de la
+			// compra con el default configurado en el proveedor (provider.precios_incluyen_iva).
+			// El usuario puede sobreescribirlo despues en esta misma compra sin problema.
+			prefill_prop_on_select: {
+				source_prop: 'precios_incluyen_iva',
+				target_key: 'precios_incluyen_iva',
+			},
 		},
 		{
 			text: 'Moneda',
@@ -83,6 +90,23 @@ export default {
 
 		{
 			group_title: 'Configuracion'
+		},
+		{
+			// Prompt 517: define si los precios cargados en esta compra ya incluyen IVA. Se precarga
+			// automaticamente al elegir el proveedor (ver "prefill_prop_on_select" en la prop
+			// "provider_id" de este mismo modelo), pero el usuario puede sobreescribirlo para esta
+			// compra puntual: el valor de la compra siempre manda sobre el default del proveedor.
+			text: 'Los precios ya incluyen IVA',
+			key: 'precios_incluyen_iva',
+			type: 'checkbox',
+			value: 0,
+			not_show: true,
+			descriptions: [
+				'Indica que los precios de esta compra ya vienen con el IVA incluido por parte del proveedor.',
+				'Activado: el precio que cargás es el final (con IVA) y el sistema desglosa cuánto es neto y cuánto IVA para la factura, y guarda el costo del artículo SIN IVA.',
+				'Desactivado: el precio que cargás es neto y el sistema le suma el IVA para armar la factura.',
+				'En ambos casos el costo del artículo se guarda siempre neto.',
+			],
 		},
 		{
 			text: 'Actualizar precios',

@@ -1114,6 +1114,14 @@ export default {
 					this.prefillHasManyOnSelect(prop, result.model)
 				}
 
+				// Prompt 517: si la propiedad tiene configurado "prefill_prop_on_select" (ej: provider_id en
+				// provider_order), precarga un campo escalar del propio modelo con el valor que trae el modelo
+				// elegido (ej: "precios_incluyen_iva" del proveedor como default de la compra). El usuario puede
+				// sobreescribirlo despues sin problema, ya que el prefill solo corre al seleccionar el modelo.
+				if (prop.prefill_prop_on_select) {
+					this.prefillPropOnSelect(prop, result.model)
+				}
+
 				this.setModel(this.model, this.model_name, [], false)
 			}
 		},
@@ -1233,6 +1241,28 @@ export default {
 					console.log(err)
 				})
 			})
+		},
+		/**
+		 * Prompt 517: precarga un campo escalar del modelo actual con el valor de una propiedad del modelo
+		 * elegido en un campo "search" (ej: al elegir un proveedor en la compra, precargar "precios_incluyen_iva"
+		 * de la compra con el valor por defecto configurado en el proveedor). Es el equivalente escalar de
+		 * "prefillHasManyOnSelect", pero para un solo valor en vez de un array de filas relacionadas.
+		 *
+		 * @param {Object} prop propiedad "search" que tiene la config `prefill_prop_on_select`.
+		 * @param {Object} selected_model modelo elegido en el buscador (ej: el proveedor completo).
+		 * @returns {void}
+		 */
+		prefillPropOnSelect(prop, selected_model) {
+			// Config declarada en el model (src/models/provider_order.js): de que propiedad del modelo
+			// elegido sale el valor por defecto, y en que propiedad del modelo actual se precarga
+			let config = prop.prefill_prop_on_select
+
+			// Si el modelo elegido no trae la propiedad de origen cargada, no hay nada que precargar
+			if (typeof selected_model[config.source_prop] == 'undefined' || selected_model[config.source_prop] === null) {
+				return
+			}
+
+			this.$set(this.model, config.target_key, selected_model[config.source_prop])
 		},
 		checkBelongsToManyExist(prop, model_to_add) {
 			console.log('checkBelongsToManyExist')

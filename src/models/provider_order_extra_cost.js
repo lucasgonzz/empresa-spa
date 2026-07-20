@@ -29,6 +29,49 @@ export default {
 				'"Otro": el costo se suma al total de la compra pero NO se prorratea ni genera recargos en los articulos.',
 			],
 		},
+		{
+			// Prompt 517: indica si este costo extra vino facturado. Controla la visibilidad del
+			// resto de los campos nuevos (alicuota, en_factura_compra, emisor) via "v_if_function".
+			text: 'Facturado',
+			key: 'facturado',
+			type: 'checkbox',
+			value: 0,
+			description: 'Indica si este costo extra (flete, seguro, etc.) vino facturado. Si está facturado, genera IVA crédito y hay que indicar con qué alícuota; si no, suma al costo sin IVA.',
+		},
+		{
+			text: 'Alicuota IVA',
+			key: 'iva_id',
+			type: 'select',
+			relation_prop_name: 'percentage',
+			use_store_models: true,
+			// Solo se muestra si el costo extra esta facturado (ver "show_costo_extra_si_facturado" en
+			// src/common-vue/mixins/model_functions.js)
+			v_if_function: 'show_costo_extra_si_facturado',
+			description: 'Alícuota de IVA con la que se facturó este costo extra (puede ser distinta a la de la mercadería; ej. el flete suele ir a 21%).',
+		},
+		{
+			text: 'Va en la factura de la compra',
+			key: 'en_factura_compra',
+			type: 'checkbox',
+			value: 1,
+			v_if_function: 'show_costo_extra_si_facturado',
+			description: 'Activado: este costo extra va dentro de la misma factura de la compra. Desactivado: se factura aparte (por ejemplo, cuando el transporte lo hizo otra empresa) y se genera un comprobante separado con los datos del emisor.',
+		},
+		{
+			text: 'CUIT emisor',
+			key: 'emisor_cuit',
+			type: 'text',
+			// Solo se muestra si esta facturado Y la factura es aparte (no va en la factura de la compra)
+			v_if_function: 'show_costo_extra_si_factura_aparte',
+			description: 'CUIT del emisor de la factura aparte de este costo extra (ej. la empresa de transporte que lo facturó por separado).',
+		},
+		{
+			text: 'Razon social emisor',
+			key: 'emisor_razon_social',
+			type: 'text',
+			v_if_function: 'show_costo_extra_si_factura_aparte',
+			description: 'Razón social del emisor de la factura aparte de este costo extra.',
+		},
 	],
 	singular_model_name_spanish: 'Costo Extra',
 	plural_model_name_spanish: 'Costos Extra',
