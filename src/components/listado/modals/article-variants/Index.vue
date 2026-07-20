@@ -3,14 +3,27 @@
 :title="title"
 size="lg"
 id="article-variants"
+modal-class="article-variants-modal"
 hide-footer>
 
-	<variants-stock
-	v-if="addresses.length"></variants-stock>
+	<div
+	v-if="addresses.length"
+	class="article-variants-modal__section">
+		<variants-stock></variants-stock>
+	</div>
 
-	<article-properties></article-properties>
+	<!-- Zona 1: propiedades y valores del articulo (alta/baja + intencion al back) -->
+	<div class="article-variants-modal__section">
+		<article-properties></article-properties>
+	</div>
 
-	<article-variants></article-variants>
+	<!-- Zona 2: preview en vivo de cuantas variantes se generarian -->
+	<preview-count></preview-count>
+
+	<!-- Zona 3: grilla de variantes (disponibilidad/precio/imagen/stock -> prompt 524) -->
+	<div class="article-variants-modal__section">
+		<article-variants></article-variants>
+	</div>
 </b-modal>
 </template>
 <script>
@@ -18,6 +31,7 @@ export default {
 	components: {
 		VariantsStock: () => import('@/components/listado/modals/article-variants/variant-stock/Index'),
 		ArticleProperties: () => import('@/components/listado/modals/article-variants/ArticleProperties'),
+		PreviewCount: () => import('@/components/listado/modals/article-variants/PreviewCount'),
 		ArticleVariants: () => import('@/components/listado/modals/article-variants/ArticleVariants'),
 	},
 	computed: {
@@ -25,11 +39,31 @@ export default {
 			return this.$store.state.address.models
 		},
 		article() {
-			return this.$store.state.article.model 
+			return this.$store.state.article.model
 		},
 		title() {
-			return 'Variantes de '+this.article.name 
+			return 'Variantes de '+this.article.name
 		},
 	}
 }
 </script>
+<style lang="sass">
+.article-variants-modal
+	.modal-content
+		border-radius: 18px
+		border: none
+	.modal-header
+		border-bottom: none
+		padding-bottom: 0
+	.modal-title
+		font-weight: 600
+		color: #1d1d1f
+	&__section
+		margin-bottom: 18px
+		padding-bottom: 18px
+		border-bottom: 1px solid rgba(0, 0, 0, .06)
+		&:last-child
+			border-bottom: none
+			padding-bottom: 0
+			margin-bottom: 0
+</style>
