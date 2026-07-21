@@ -280,36 +280,40 @@ export default {
 	gap: 0.4rem
 	flex-shrink: 0
 
-.lbl-per-page
-	margin: 0
-	font-size: 0.75rem
-	font-weight: 500
-	line-height: 1.2
-	white-space: nowrap
-	@if ($theme == 'dark')
-		color: rgba(255, 255, 255, 0.72)
-	@else
-		color: rgba(33, 37, 41, 0.62)
+	// Label "Por página": secundario, sin dominar la barra.
+	.lbl-per-page
+		margin: 0
+		font-size: 0.75rem
+		font-weight: 500
+		line-height: 1.2
+		white-space: nowrap
+		@if ($theme == 'dark')
+			color: rgba(255, 255, 255, 0.72)
+		@else
+			color: rgba(33, 37, 41, 0.62)
 
-.input-per-page
-	width: 3.5rem
-	min-width: 3.25rem
-	padding: 0.2rem 0.35rem
-	border-radius: 999px
-	text-align: center
-	font-size: 0.8125rem
-	line-height: 1.2
-	@if ($theme == 'dark')
-		background-color: rgba(255, 255, 255, 0.06)
-		border-color: rgba(255, 255, 255, 0.12)
-		color: rgba(255, 255, 255, 0.9)
-	@else
-		background-color: rgba(0, 0, 0, 0.03)
-		border-color: rgba(0, 0, 0, 0.1)
-		color: rgba(33, 37, 41, 0.9)
+	// Input "por página" con especificidad aumentada para que el border-radius de pill (999px)
+	// gane sobre .form-control-sm de Bootstrap. Sin !important: especificidad de dos clases
+	// (.pagination-bar-per-page .input-per-page) supera la de una sola clase (.form-control-sm).
+	.input-per-page
+		width: 3.5rem
+		min-width: 3.25rem
+		padding: 0.2rem 0.35rem
+		border-radius: 999px
+		text-align: center
+		font-size: 0.8125rem
+		line-height: 1.2
+		@if ($theme == 'dark')
+			background-color: rgba(255, 255, 255, 0.06)
+			border-color: rgba(255, 255, 255, 0.12)
+			color: rgba(255, 255, 255, 0.9)
+		@else
+			background-color: rgba(0, 0, 0, 0.03)
+			border-color: rgba(0, 0, 0, 0.1)
+			color: rgba(33, 37, 41, 0.9)
 
-	&:focus
-		box-shadow: 0 0 0 0.15rem rgba($blue, 0.18)
+		&:focus
+			box-shadow: 0 0 0 0.15rem rgba($blue, 0.18)
 
 // Mobile: card apilada, legible y sin overflow horizontal.
 @media (max-width: 575px)
