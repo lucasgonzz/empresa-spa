@@ -21,12 +21,6 @@
 			class="m-l-10"
 			v-if="hasExtencion('bar_code_scanner')"
 			@setBarCode="setBarCode"></bar-code-scanner>
-
-			<!-- <p
-			class="stock-text"
-			v-if="item_stock">
-				Stock: {{ item_stock }}
-			</p> -->
 		</div>
 
 	</b-col>
@@ -46,12 +40,6 @@ export default {
 			document.getElementById('article-bar-code').focus()
 		}, 500)
 	},
-    mounted() {
-        window.addEventListener("keydown", this.detectarTecla);
-    },
-    beforeDestroy() {
-        window.removeEventListener("keydown", this.detectarTecla);
-    },
 	components: {
 		BarCodeScanner: () => import('@/common-vue/components/bar-code-scanner/Index'),
 	},
@@ -89,11 +77,6 @@ export default {
 		}
 	},
 	methods: {
-        detectarTecla(event) {
-            // if (event.key === "Control") {
-            	// document.getElementById('article-bar-code').focus()
-            // }
-        },
 		_callVender() {
 			if (!this.usar_codigo_proveedor) {
 				this.guardar_venta()
@@ -356,11 +339,7 @@ export default {
 }
 </script>
 <style scoped lang="sass">
-.col-bar-code 
+.col-bar-code
 	display: flex
 	align-items: center
-
-.stock-text
-	width: 200px
-	margin-bottom: 0
 </style>
