@@ -3,49 +3,54 @@
 	class="header-designer-preview"
 	:style="preview_box_style">
 
-		<!-- Bloque emisor: cuadrante izquierdo, centro (elementos estructurales fijos) y cuadrante derecho -->
+		<!-- Bloque emisor: logo a la izquierda de todo, cuadrante izquierdo (ancho
+		     dinámico según el logo), recuadro de letra y cuadrante derecho. El orden
+		     replica al PDF real (AfipPdfHelper::print_emisor_header_block). -->
 		<div class="header-designer-preview__row header-designer-preview__row--emisor">
-			<quadrant-list
-			class="header-designer-preview__col header-designer-preview__col--side"
-			title="Emisor · Izquierda"
-			:items="layout.emisor.izquierda"
-			group="emisor"
-			:locked_keys="locked_emisor_keys"></quadrant-list>
+			<!-- Logo: columna propia a la izquierda de todo, como en el PDF real. Su ancho
+			     (el del logo) le quita ancho al cuadrante izquierdo a medida que crece. -->
+			<div class="header-designer-preview__col header-designer-preview__col--logo">
+				<div
+				class="header-designer-preview__logo"
+				:style="logo_style"
+				title="Logo del negocio (estructural, fijo)">
+					LOGO
+					<logo-resize-handle
+					:size_mm="logo_size_mm"
+					:min_mm="logo_size_mm_min"
+					:max_mm="logo_size_mm_max"
+					:px_per_mm="px_per_mm"
+					@update:size_mm="on_logo_resize"></logo-resize-handle>
+				</div>
+				<p class="header-designer-preview__logo-size small text-muted m-t-5 m-b-0">
+					{{ logo_size_mm }} mm
+				</p>
+			</div>
 
-			<!-- Centro: título del negocio, recuadro de la letra y logo. Son elementos
-			     estructurales fijos (no arrastrables) para que el usuario vea el
-			     contexto real del header, tal como pide el prompt. -->
-			<div class="header-designer-preview__col header-designer-preview__col--center">
+			<!-- Emisor izquierda: nombre del negocio arriba + datos. Toma el ancho que sobra
+			     después del logo (flex: 1 1 0), replicando el "beside_logo_width" del PDF. -->
+			<div class="header-designer-preview__col header-designer-preview__col--side">
 				<p class="header-designer-preview__business-name">
 					{{ business_name }}
 				</p>
+				<quadrant-list
+				title="Emisor · Izquierda"
+				:items="layout.emisor.izquierda"
+				group="emisor"
+				:locked_keys="locked_emisor_keys"></quadrant-list>
+			</div>
 
+			<!-- Recuadro de la letra, centrado entre izquierda y derecha. Estructural, fijo.
+			     Se muestra en fiscal ("A"/"B"...) y en comercial ("X"). -->
+			<div class="header-designer-preview__col header-designer-preview__col--letter">
 				<div
-				v-if="is_afip"
 				class="header-designer-preview__letter-box"
 				title="Recuadro de la letra del comprobante (estructural, fijo)">
 					{{ letter_placeholder }}
 				</div>
-
-				<div class="header-designer-preview__logo-wrap">
-					<div
-					class="header-designer-preview__logo"
-					:style="logo_style"
-					title="Logo del negocio (estructural, fijo)">
-						LOGO
-						<logo-resize-handle
-						:size_mm="logo_size_mm"
-						:min_mm="logo_size_mm_min"
-						:max_mm="logo_size_mm_max"
-						:px_per_mm="px_per_mm"
-						@update:size_mm="on_logo_resize"></logo-resize-handle>
-					</div>
-					<p class="header-designer-preview__logo-size small text-muted m-t-5 m-b-0">
-						{{ logo_size_mm }} mm
-					</p>
-				</div>
 			</div>
 
+			<!-- Emisor derecha -->
 			<quadrant-list
 			class="header-designer-preview__col header-designer-preview__col--side"
 			title="Emisor · Derecha"
@@ -168,12 +173,14 @@ export default {
 			return (this.owner && this.owner.company_name) ? this.owner.company_name : 'Nombre del Negocio'
 		},
 		/**
-		 * Letra del comprobante mostrada en el recuadro fijo (solo perfiles fiscales).
+		 * Letra del comprobante mostrada en el recuadro central (estructural).
+		 * En fiscal se muestra "A" como placeholder; en comercial (remito/no fiscal) "X",
+		 * coherente con el PDF real que también dibuja el recuadro de letra en comercial.
 		 *
 		 * @return {string}
 		 */
 		letter_placeholder() {
-			return 'A'
+			return this.is_afip ? 'A' : 'X'
 		},
 		/**
 		 * Ancho en px de la previsualización, según el ancho de hoja del perfil (mm).
@@ -234,18 +241,24 @@ export default {
 .header-designer-preview__col--side
 	flex: 1 1 0
 
-.header-designer-preview__col--center
-	flex: 0 0 130px
+.header-designer-preview__col--logo
+	flex: 0 0 auto
 	display: flex
 	flex-direction: column
 	align-items: center
-	text-align: center
+
+.header-designer-preview__col--letter
+	flex: 0 0 auto
+	display: flex
+	align-items: flex-start
+	justify-content: center
 
 .header-designer-preview__business-name
 	font-weight: 700
 	font-size: 12px
 	margin-bottom: 6px
 	word-break: break-word
+	text-align: left
 
 .header-designer-preview__letter-box
 	width: 26px
@@ -257,11 +270,6 @@ export default {
 	font-weight: 700
 	font-size: 14px
 	margin-bottom: 8px
-
-.header-designer-preview__logo-wrap
-	display: flex
-	flex-direction: column
-	align-items: center
 
 .header-designer-preview__logo
 	position: relative
