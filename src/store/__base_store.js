@@ -84,7 +84,7 @@ export default function __base_store(options = {}) {
 
 			props_to_show: [],
 
-			// Flag que indica si el estado filtered fue cargado por BuscadorRapido (sin usar el FilterForm).
+			// Flag que indica si el estado filtered fue cargado por un buscador rápido sin usar el FilterForm (ej. el buscador general).
 			// Permite distinguir entre "filtrado por formulario" y "filtrado por buscador rápido".
 			filtered_without_filter_form: false,
 
@@ -322,7 +322,7 @@ export default function __base_store(options = {}) {
 
 		/**
 		 * Activa o desactiva el flag que indica que filtered fue cargado
-		 * por BuscadorRapido (sin pasar por el formulario de filtros).
+		 * por un buscador rápido sin pasar por el formulario de filtros (ej. el buscador general).
 		 *
 		 * @param {Object} state  Estado del módulo.
 		 * @param {Boolean} value true cuando viene del buscador rápido, false en cualquier reset.

@@ -28,12 +28,6 @@
 
 		<template #horizontal_nav_center>
 			<saldos-clientes-filtrados></saldos-clientes-filtrados>
-
-			<!-- Buscador rápido por texto para clientes: busca en los campos más comunes del modelo -->
-			<buscador-rapido
-			model_name="client"
-			:props_to_filter="['name', 'email', 'phone', 'address', 'cuil', 'cuit', 'dni', 'razon_social', 'description', 'link_google_maps']"
-			placeholder="Buscar cliente..."></buscador-rapido>
 		</template>
 
 			<template v-slot:table_left_options="slotProps">
@@ -54,7 +48,6 @@ export default {
 		SaldosClientesFiltrados: () => import('@/components/client/components/clients/SaldosClientesFiltrados'),
 		Import: () => import('@/components/client/components/clients/Import'),
 		BtnPdf: () => import('@/components/client/components/clients/BtnPdf'),
-		BuscadorRapido: () => import('@/common-vue/components/buscador-rapido/Index'),
 	}
 }
 </script>
