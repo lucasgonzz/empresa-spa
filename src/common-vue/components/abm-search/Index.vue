@@ -2,6 +2,7 @@
 	<div
 	class="abm-search">
 		<b-form-input
+		class="abm-search-input"
 		v-model="query"
 		autocomplete="off"
 		placeholder="Buscar recurso... Ej: metodos de pago, comisiones, reputaciones"
@@ -234,8 +235,31 @@ export default {
 <style lang="sass" scoped>
 .abm-search
 	position: relative
-	max-width: 480px
-	margin: 0 auto 15px auto
+	flex: 1 1 260px
+	min-width: 0
+	max-width: 360px
+
+	// Estilo pill igual al buscador general de los Listados (buscador-general/Index.vue),
+	// para reemplazar el input gris default de Bootstrap heredado de _inputs.sass
+	.abm-search-input
+		width: 100%
+		height: 40px
+		border: 1px solid #e2e4e7
+		border-radius: 22px
+		padding: 0 16px
+		font-size: 0.9rem
+		color: #1d1d1f
+		background: #fff
+		box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px
+		transition: border-color 0.15s ease, box-shadow 0.15s ease
+
+		&:focus
+			border-color: #c7cacf
+			box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px, 0 0 0 3px rgba(0, 0, 0, 0.04)
+			outline: none
+
+		&::placeholder
+			color: #9aa0a6
 	.abm-search-resultados
 		position: absolute
 		top: calc(100% + 4px)

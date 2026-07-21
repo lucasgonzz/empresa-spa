@@ -2,15 +2,17 @@
 	<b-row
 	v-if="authenticated">
 		<b-col>
-			<abm-search
-			v-if="has_views"></abm-search>
-
-			<horizontal-nav
+			<div
 			v-if="has_views"
-			:show_display="false"
-			@setSelected="setSelectedView"
-			set_view
-			:items="views"></horizontal-nav>
+			class="abm-modulos-row">
+				<horizontal-nav
+				:show_display="false"
+				@setSelected="setSelectedView"
+				set_view
+				:items="views"></horizontal-nav>
+
+				<abm-search></abm-search>
+			</div>
 
 			<horizontal-nav
 			:show_display="false"
@@ -229,3 +231,20 @@ export default {
 	}
 }
 </script>
+<style scoped lang="sass">
+.abm-modulos-row
+	display: flex
+	align-items: center
+	justify-content: space-between
+	flex-wrap: wrap
+	gap: 15px
+	width: 100%
+	margin-bottom: 15px
+
+	// El horizontal-nav de modulos viene con width:100% (pensado para cuando va solo en su fila,
+	// como en los Listados). Aca conviven con el buscador, asi que le pedimos que ocupe
+	// solo el ancho de su contenido y no fuerce al buscador a la linea de abajo.
+	::v-deep .cont-navs
+		width: auto
+		flex: 0 1 auto
+</style>
