@@ -4,15 +4,13 @@
 	:title="tooltip_text"
 	@click="update_article_list"
 	:disabled="is_loading"
-	class="btn-update-article-list m-r-15"
+	class="btn-update-article-list m-l-15"
 	dusk="btn_update_article_list"
 	size="sm"
 	variant="outline-primary">
 		<i
 		:class="loading_icon_class"
-		class="m-r-5"
 		aria-hidden="true"></i>
-		<span>{{ button_label }}</span>
 	</b-button>
 </template>
 <script>
@@ -30,13 +28,6 @@ export default {
 		 */
 		is_loading() {
 			return !!this.$store.state.article.loading
-		},
-		/** Texto visible del botón. */
-		button_label() {
-			if (this.is_loading) {
-				return 'Actualizando...'
-			}
-			return 'Actualizar'
 		},
 		/** Icono Bootstrap: spinner durante carga, reloj en reposo. */
 		loading_icon_class() {

@@ -3,8 +3,12 @@
 	right
 	class="m-l-15"
 	size="sm"
-	text="Depositos"
-	variant="primary">
+	variant="primary"
+	:toggle-attrs="{ title: 'Depósitos', 'aria-label': 'Depósitos' }">
+		<!-- Botón del dropdown solo-ícono (sin texto), con tooltip descriptivo -->
+		<template #button-content>
+			<i class="bi bi-hdd-stack" aria-hidden="true"></i>
+		</template>
 		<b-dropdown-item
 		dusk="btn_deposit_movements"
 		@click="show_modal_movements">

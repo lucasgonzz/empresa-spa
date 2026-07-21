@@ -2,7 +2,8 @@
 	
 	<div class="j-end align-center w-100">
 
-		<btn-update-article-list></btn-update-article-list>
+		<btn-update-article-list
+		class="d-none d-md-block"></btn-update-article-list>
 
 		<btn-inventory-performance
 		class="d-none d-md-block"></btn-inventory-performance>
