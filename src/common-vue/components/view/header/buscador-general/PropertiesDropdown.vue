@@ -10,6 +10,8 @@
 	class="buscador-general-dropdown"
 	variant="link"
 	no-caret
+	boundary="viewport"
+	:popper-opts="dropdown_popper_opts"
 	toggle-class="buscador-general-dropdown__toggle"
 	menu-class="buscador-general-dropdown__menu">
 		<template #button-content>
@@ -56,7 +58,7 @@
 		:key="item.kind + '_' + item.key"
 		class="buscador-general-dropdown__row-form">
 			<div class="buscador-general-dropdown__row">
-				<span class="buscador-general-dropdown__row-label">{{ item.text }}</span>
+				<span class="buscador-general-dropdown__row-label">{{ display_text(item.text) }}</span>
 
 				<!-- Toggle tipo iPhone (mismo diseno que los checkbox del ModelForm) -->
 				<label class="bg-toggle">
@@ -110,6 +112,15 @@ export default {
 			// Texto ingresado en el campo "Filtrar propiedades...": filtra la lista mostrada por
 			// coincidencia case-insensitive sobre item.text, sin tocar seleccion ni orden real.
 			filter_text: '',
+			// Popper: separa el menu del toggle (mas espacio que el default) y lo centra bajo el
+			// icono en vez de quedar pegado al borde izquierdo (toggle ~30px, menu ~320px).
+			dropdown_popper_opts: {
+				modifiers: {
+					offset: {
+						offset: '-145, 8',
+					},
+				},
+			},
 		}
 	},
 	computed: {
@@ -160,7 +171,9 @@ export default {
 			}
 			let query = this.filter_text.toLowerCase()
 			return this.ordered_props.filter(function (item) {
-				return item.text.toLowerCase().indexOf(query) !== -1
+				// Blindaje defensivo (ultima linea de defensa): si por algun motivo llegara un item
+				// sin `text`, no rompe el filtro, simplemente no matchea la busqueda.
+				return (item.text || '').toLowerCase().indexOf(query) !== -1
 			})
 		},
 	},
@@ -176,6 +189,24 @@ export default {
 				return this.selected_props.indexOf(item.key) !== -1
 			}
 			return this.selected_relations.indexOf(item.key) !== -1
+		},
+
+		/**
+		 * Texto a mostrar en la fila: primera letra en mayuscula y resto en minuscula. Si el texto
+		 * original ya viene todo en mayusculas (siglas como SKU), se deja intacto para no romper la
+		 * sigla.
+		 *
+		 * @param {String} text
+		 * @returns {String}
+		 */
+		display_text(text) {
+			if (!text) {
+				return ''
+			}
+			if (text === text.toUpperCase() && text !== text.toLowerCase()) {
+				return text
+			}
+			return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase()
 		},
 	},
 }

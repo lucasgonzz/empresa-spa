@@ -98,6 +98,19 @@ export default {
 				return []
 			},
 		},
+
+		/**
+		 * Keys de props propias que se suman a 'name' en la seleccion por defecto (sin preferencia
+		 * guardada). Pensada para modulos donde conviene buscar tambien por otros campos frecuentes
+		 * (ej: el Listado de articulos suma codigo de barras, SKU, codigo de proveedor y N°). Si una
+		 * key no existe en own_props para este modelo, se ignora sin error.
+		 */
+		default_extra_props: {
+			type: Array,
+			default: function () {
+				return []
+			},
+		},
 	},
 	data() {
 		return {
@@ -130,6 +143,9 @@ export default {
 				return property.key
 					&& ['text', 'textarea', 'number'].indexOf(property.type) !== -1
 					&& !property.not_use_in_global_search
+					// Excluye props ocultas (not_show): suelen no tener `text` y rompen el render
+					// y el filtro del dropdown (ver bug reportado en prompt 547).
+					&& !property.not_show
 			})
 		},
 
@@ -146,7 +162,9 @@ export default {
 			model_properties = this.check_extencions(model_properties)
 			let relations = []
 			model_properties.forEach(function (property) {
-				if (!property.key || property.type !== 'search' || property.key.slice(-3) !== '_id') {
+				// Misma exclusion de props ocultas (not_show) que en own_props: evita relaciones
+				// sin `text` colandose en el dropdown.
+				if (!property.key || property.type !== 'search' || property.key.slice(-3) !== '_id' || property.not_show) {
 					return
 				}
 				relations.push({
@@ -192,10 +210,13 @@ export default {
 			// Lista base con el tipo de cada prop.
 			let items = []
 			this.own_props.forEach(function (property) {
-				items.push({ key: property.key, text: property.text, kind: 'own' })
+				// Fallback defensivo: segunda capa de seguridad por si en el futuro se cuela otra
+				// prop sin `text` (el filtro de not_show de arriba deberia evitarlo, pero no cuesta
+				// nada blindarlo aca tambien).
+				items.push({ key: property.key, text: property.text || property.table_text || property.key, kind: 'own' })
 			})
 			this.relation_props.forEach(function (property) {
-				items.push({ key: property.key, text: property.text, kind: 'relation' })
+				items.push({ key: property.key, text: property.text || property.key, kind: 'relation' })
 			})
 			// Se envuelve cada item con su clave de orden para un sort estable.
 			let order_map = this.props_to_show_order
@@ -236,15 +257,28 @@ export default {
 	},
 	methods: {
 		/**
-		 * Seleccion por defecto (sin preferencia guardada): todas las props propias tildadas,
-		 * ninguna relacion.
+		 * Seleccion por defecto (sin preferencia guardada): 'name' (si el modelo lo tiene) mas las
+		 * keys de default_extra_props que existan en own_props. Ninguna relacion por defecto.
 		 *
 		 * @return {void}
 		 */
 		applyDefaultSelection() {
-			let default_props = []
+			// Keys disponibles entre las props propias del modelo, para validar que 'name' y las
+			// default_extra_props realmente existan antes de tildarlas.
+			let own_keys = []
 			this.own_props.forEach(function (property) {
-				default_props.push(property.key)
+				own_keys.push(property.key)
+			})
+			let default_props = []
+			if (own_keys.indexOf('name') !== -1) {
+				default_props.push('name')
+			}
+			// Suma las keys extra del modulo (ej: bar_code/sku/provider_code/id en el Listado de
+			// articulos) que existan en own_props, sin duplicar.
+			this.default_extra_props.forEach(function (key) {
+				if (own_keys.indexOf(key) !== -1 && default_props.indexOf(key) === -1) {
+					default_props.push(key)
+				}
 			})
 			this.selected_props = default_props
 			this.selected_relations = []
@@ -514,10 +548,11 @@ export default {
 		// mismo criterio que la sombra de las tablas del sistema.
 		box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px
 
-		// Anillo sutil al enfocar el input: se suma a la sombra base, no la reemplaza
+		// Anillo azul al enfocar el input (color $blue de _custom.scss): se suma a la
+		// sombra base, no la reemplaza
 		&:focus-within
-			border-color: #c7cacf
-			box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px, 0 0 0 3px rgba(0, 0, 0, 0.04)
+			border-color: #007bff
+			box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px, 0 0 0 3px rgba(0, 123, 255, 0.15)
 
 	// El desplegable de propiedades se integra al pill (ver PropertiesDropdown.vue)
 	.buscador-general__props

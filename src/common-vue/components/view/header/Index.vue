@@ -78,7 +78,8 @@
 		class="view-header__center">
 			<buscador-general
 			:model_name="model_name"
-			:extra_filters="extra_filters">
+			:extra_filters="extra_filters"
+			:default_extra_props="default_extra_props">
 				<!-- Slot para que cada módulo inyecte filtros propios (ej: categoría/stock del listado) -->
 				<template #search_extra>
 					<slot name="search_extra"></slot>
@@ -165,6 +166,15 @@ export default {
 		 * (ej: categoría/stock del listado). Formato: [{ key, operator, value }].
 		 */
 		extra_filters: {
+			type: Array,
+			default: function () {
+				return []
+			},
+		},
+		/**
+		 * Keys extra que se suman a 'name' en el default del buscador general (ver buscador-general).
+		 */
+		default_extra_props: {
 			type: Array,
 			default: function () {
 				return []

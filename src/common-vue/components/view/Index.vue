@@ -76,6 +76,7 @@
 		:change_from_dates_option="change_from_dates_option"
 		:show_buscador_general="show_buscador_general"
 		:extra_filters="extra_filters"
+		:default_extra_props="default_extra_props"
 		:model_name="model_name">
 			<template v-slot:btn_create>
 				<slot name="horizontal_nav_btn_create"></slot>
@@ -413,6 +414,17 @@ export default {
 		 * (ej: categoría/stock del listado). Formato esperado por el backend: [{ key, operator, value }].
 		 */
 		extra_filters: {
+			type: Array,
+			default: function () {
+				return []
+			},
+		},
+		/**
+		 * Keys extra que se suman a 'name' en el default del buscador general (ver
+		 * buscador-general/Index.vue, applyDefaultSelection). Ej: en el Listado de articulos suma
+		 * codigo de barras/SKU/codigo de proveedor/N°.
+		 */
+		default_extra_props: {
 			type: Array,
 			default: function () {
 				return []

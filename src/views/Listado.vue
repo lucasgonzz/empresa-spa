@@ -59,6 +59,7 @@
 	@addressMovement="addressMovement"
 	:show_empty_text="show_empty_text"
 	:extra_filters="extra_filters"
+	:default_extra_props="['bar_code', 'sku', 'provider_code', 'id']"
 	model_name="article">
 
 		<template #excel_drop_down_options>
