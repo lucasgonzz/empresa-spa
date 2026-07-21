@@ -77,7 +77,7 @@ export default {
 		{
 			text: 'Mensaje para mostrar en Pagina CONTACTO',
 			key: 'mensaje_contacto',
-			type: 'textarea',
+			type: 'texteditor',
 			value: '',
 			show: true,
 		},
