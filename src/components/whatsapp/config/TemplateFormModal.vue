@@ -25,7 +25,7 @@
 			v-model="form.body_preview"
 			rows="4"
 			max-rows="8"
-			placeholder="Hola {{1}}, tenés un saldo pendiente de {{2}}. ¿Podemos ayudarte con el pago?"></b-form-textarea>
+			:placeholder="'Hola ' + placeholder(1) + ', tenés un saldo pendiente de ' + placeholder(2) + '. ¿Podemos ayudarte con el pago?'"></b-form-textarea>
 			<small class="text-muted whatsapp-template-form__hint">
 				Usá <code>{{ placeholder(1) }}</code>, <code>{{ placeholder(2) }}</code>… para las
 				variables, en el mismo orden que las cargues abajo. No puede empezar ni terminar
