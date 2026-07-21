@@ -32,12 +32,7 @@
         <template v-slot:model_modal_header="props">
             <budget-modal-buttons></budget-modal-buttons>
         </template>
-
-        <template v-slot:actualizar_en_vender="props">
-            <btn-actualizar-en-vender></btn-actualizar-en-vender>
-        </template>
-        
-    </model-index>  
+    </model-index>
 
     <model-index
     model_name="order_production">
@@ -118,7 +113,6 @@ export default {
         SaleModal: () => import('@/components/common/SaleModal'),
         ConfirmAfipTickets: () => import('@/components/ventas/modals/afip-ticket/ConfirmAfipTickets'),
         SendAfipTickets: () => import('@/components/ventas/modals/afip-ticket/SendAfipTickets'),
-        BtnActualizarEnVender: () => import('@/components/budget/components/BtnActualizarEnVender'),
         UpdatePrices: () => import('@/components/ventas/modals/update-prices/Index'),
         UnidadesEntregadas: () => import('@/components/ventas/modals/unidades-entregadas/Index'),
         AcopioArticleDeliveries: () => import('@/components/ventas/modals/unidades-entregadas/AcopioArticleDeliveries'),

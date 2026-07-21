@@ -170,12 +170,35 @@
 	</div>
 </template>
 <script>
+// Mixin de impresión Ticket 2.0 (conexión QZ Tray). Solo dispara la conexión
+// cuando se invoca this.printTicket(sale) desde un método (ej. al click),
+// nunca automáticamente al crear/montar el componente.
+import print_ticket from '@/mixins/sale/print_ticket/index'
+
 export default {
+	mixins: [print_ticket],
 	props: {
 		afip_ticket: Object,
 		print_url: String,
+		// Venta completa (con articles/client/discounts) asociada a esta factura.
+		// Opcional: si no viene (uso futuro sin la venta completa), se cae al
+		// comportamiento de siempre (ticket común).
+		sale: {
+			type: Object,
+			default: null,
+		},
 	},
 	computed: {
+		/**
+		 * Preferencia del dueño sobre qué PDF imprimir al presionar "Imprimir"
+		 * en la tarjetita de la factura ARCA (ver users.sale_factura_print_option).
+		 * `this.owner` está disponible globalmente vía el mixin `generals`.
+		 *
+		 * @returns {string|null}
+		 */
+		resolved_sale_factura_print_option() {
+			return this.owner ? this.owner.sale_factura_print_option : null
+		},
 		title_description() {
 			if (this.afip_ticket.cae) {
 				return 'Factura de ARCA'
@@ -304,8 +327,42 @@ export default {
 			let link = process.env.VUE_APP_API_URL+'/current-acount/pdf/'+nota_credito_afip_ticket.nota_credito_id
 			window.open(link)
 		},
+		/**
+		 * Resuelve qué imprimir al presionar "Imprimir" en la factura ARCA,
+		 * según la preferencia del dueño (sale_factura_print_option):
+		 * - 'ticket_2': Ticket 2.0 vía QZ Tray (this.printTicket, del mixin print_ticket).
+		 * - 'factura_a4:{id}': PDF A4 del perfil fiscal indicado.
+		 * - default/sin preferencia/perfil inexistente: ticket común (comportamiento de siempre).
+		 *
+		 * @returns {void}
+		 */
 		print_afip_ticket() {
-            let link = process.env.VUE_APP_API_URL+this.print_url
+			// Preferencia configurada por el dueño (o null si no hay ninguna).
+			const option = this.resolved_sale_factura_print_option
+
+			// Ticket 2.0: reutiliza el mixin print_ticket ya usado en sale-print-buttons/Index.vue.
+			// Requiere la venta completa (this.sale) para armar el contenido del ticket.
+			if (option === 'ticket_2' && this.sale) {
+				this.printTicket(this.sale)
+				return
+			}
+
+			// Perfil de PDF A4 fiscal: se arma el link con el id del perfil elegido.
+			if (option && this.sale && option.indexOf('factura_a4:') === 0) {
+				const profile_id = parseInt(option.replace('factura_a4:', ''), 10)
+
+				if (profile_id) {
+					let link = process.env.VUE_APP_API_URL + '/sale/pdf/' + this.sale.id
+						+ '?pdf_column_profile_id=' + profile_id
+						+ '&afip_ticket_id=' + this.afip_ticket.id
+					window.open(link)
+					return
+				}
+			}
+
+			// Default / fallback: ticket común (comportamiento de siempre, incluye el
+			// caso "sale" no vino, o el perfil A4 configurado ya no existe/no aplica).
+			let link = process.env.VUE_APP_API_URL+this.print_url
 			window.open(link)
 
 		},

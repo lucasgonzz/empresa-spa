@@ -1071,27 +1071,27 @@ export default {
 						if (this.table_height_para_restar) {
 							height -= this.table_height_para_restar
 						}
-						// console.log('setHeight de '+this.model_name)
-						if (height > 500) {
-							// console.log('aplicando height calculado de '+height)
-							table.style.height = height +'px'
-						} else {
-							// console.log('no se aplico height calculado de '+height)
-							// console.log('la tabla tiene height de '+table.style.height)
-
-							if (table.style.height < 500) {
-								// console.log('se aplico height de 500')
-								table.style.height = '500px'
-							}
+						// Piso de 500px: si el espacio disponible calculado es menor, igual garantizamos
+						// un alto minimo razonable para la zona de la tabla.
+						if (height < 500) {
+							height = 500
 						}
-						// table.style.max_height = height +'px'
+						// Antes se aplicaba como 'height' fijo, asi que el contenedor siempre ocupaba
+						// TODO el alto disponible aunque tuviera pocas filas (quedaba espacio vacio abajo,
+						// con la sombra/bordes redondeados al final de ese espacio vacio en vez de al
+						// final de la ultima fila real). Ahora se aplica como TOPE (max-height) + height
+						// auto: el contenedor se ajusta al contenido real y solo llega a este tope (y
+						// scrollea, gracias al overflow-y:auto que ya tiene .cont-table) cuando las filas
+						// no entran en ese espacio.
+						table.style.maxHeight = height + 'px'
+						table.style.height = 'auto'
 
 						this.setShowButtonsScroll()
 					}, 500)
 				} else {
 					this.volver_a_llamar_set_height()
 				}
-			} 
+			}
 		},
 		volver_a_llamar_set_height() {
 
@@ -1248,6 +1248,8 @@ export default {
 	position: relative
 	/* Esquinas redondeadas arriba y abajo (el overflow auto recorta el contenido a este radio). */
 	border-radius: 12px
+	/* Sombra sutil para que la tabla se despegue un poco del fondo (estilo Apple: discreta). */
+	box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px
 
 	/* Scrollbar de ancho normal para la tabla (el global _scroll_bar.sass la deja en 8px, muy fina). */
 	&::-webkit-scrollbar
@@ -1282,9 +1284,12 @@ export default {
 			background: rgba(255,255,255,.8)
 	
 	.common-table
-		// Redondeo inferior (ambas esquinas); las superiores las recorta .cont-table (header sticky).
+		// El redondeo (arriba y abajo) lo recorta .cont-table, que es el que scrollea de verdad.
+		// OJO: nunca poner "overflow" (hidden/auto/scroll) acá. Por spec, position:sticky se ancla
+		// al ancestro scrolleable más cercano, y overflow en la propia <table> la convierte a ELLA
+		// en ese ancestro (aunque nunca llegue a scrollear). Resultado: el header sticky del th deja
+		// de estar anclado a .cont-table y se pierde apenas se hace scroll vertical. Bug real, 16/7/2026.
 		border-radius: 0 0 12px 12px
-		overflow: hidden
 		position: relative
 		border-spacing: 0px
 		width: 100%
@@ -1379,14 +1384,14 @@ export default {
 					opacity: 1
 					pointer-events: auto
 
-		td 
+		td
 			padding: 5px 15px
 			line-height: 25px
 			font-size: 1em
 			width: 800px
 			max-width: 800px
 			overflow-wrap: break-word
-			&:last-child 
+			&:last-child
 				white-space: nowrap
 				max-width: 2000px
 			@if ($theme == 'dark')
@@ -1396,8 +1401,18 @@ export default {
 			@else
 				border-bottom: 1px solid rgba(0,0,0,.2)
 				// background: #f1f3f4
-				background: #FFF 
+				background: #FFF
 
+		tbody
+			tr:last-child
+				td:first-child
+					/* Esquina inferior izquierda de la última fila de datos. */
+					border-bottom-left-radius: 12px
+					overflow: hidden
+				td:last-child
+					/* Esquina inferior derecha de la última fila de datos. */
+					border-bottom-right-radius: 12px
+					overflow: hidden
 
 		.cont-filter-buttons
 			display: flex  

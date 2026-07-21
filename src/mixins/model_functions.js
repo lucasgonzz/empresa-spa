@@ -759,6 +759,18 @@ export default {
         get_sale_article_display_name(article, prop) {
             return this.getItemDisplayName(article, true)
         },
+        /**
+         * Nombre del artículo en el detalle de presupuesto (pivot.name o catálogo + variante).
+         * Equivalente a get_sale_article_display_name pero para presupuestos.
+         * Conserva key:'name' y show_in_input_if para permitir edición de artículos inactivos.
+         *
+         * @param {Object} article  Artículo con pivot del presupuesto.
+         * @param {Object} prop     Definición de columna del modelo budget.
+         * @return {string}
+         */
+        get_budget_article_display_name(article, prop) {
+            return this.getItemDisplayName(article, true)
+        },
         showCurrentAcount(client, credit_account) {
 
             this.$store.commit('current_acount/setFromModelName', 'client')

@@ -35,6 +35,8 @@
 </template>
 <script>
 import call_methods from '@/mixins/call_methods'
+import { mark_dynamic_dependency_ready } from '@/common-vue/helpers/dynamic_column_dependencies_status'
+import { reconcile_article_dynamic_columns_if_needed } from '@/common-vue/helpers/column_preferences_helper'
 export default {
 	mixins: [call_methods],
 	components: {
@@ -106,18 +108,31 @@ export default {
             	if ((!this.is_mobile || this.downloadOnMobile(model_name)) && (model_name != 'article' || this.download_articles)) {
             		if (this.yaSeDescargaron(model_name)) {
 						this.models_to_download[i].downloaded = true
+						// Marca la dependencia como lista si ya estaba descargada de antes (ver
+						// dynamic_column_dependencies_status.js). Ignora sin romper nada los
+						// model_name que no son dependencia de columnas dinamicas de article.
+						mark_dynamic_dependency_ready(model_name)
             		} else {
 						this.models_to_download[i].downloading = true
 		                await this.$store.dispatch(model_name+'/getModels')
 						if (model_name === 'table_column_preference') {
 							this.$store.dispatch('table_column_preference/bootstrap_module_preferences')
 						}
+						// Marca la dependencia como lista recien despues de terminar de descargarla.
+						mark_dynamic_dependency_ready(model_name)
 						this.models_to_download[i].downloading = false
 						this.models_to_download[i].downloaded = true
             		}
             	}
-            	
+
             }
+
+            // Reconciliación: ahora que las 3 colecciones dinámicas (address, price_type,
+            // current_acount_payment_method_discount) terminaron de descargar en paralelo,
+            // sana un props_to_show de article que haya quedado corto (por la guarda del
+            // prompt 460, o por staleness de una preferencia guardada antes de que exista
+            // una sucursal nueva). Ver reconcile_article_dynamic_columns_if_needed.
+            reconcile_article_dynamic_columns_if_needed(this.$store)
 		},
 		/**
 		 * Indica si un recurso ya está en store y no hace falta volver a pedirlo al inicio.

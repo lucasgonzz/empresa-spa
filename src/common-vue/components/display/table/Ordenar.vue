@@ -44,11 +44,17 @@ export default {
 			return null
 		},
 		show() {
+			// Habilitamos las flechas de ordenar para columnas propias (number/text/textarea/date)
+			// y tambien para relaciones (select/search): el backend ordena esas ultimas por el
+			// nombre de la relacion, no por el id del FK. Ver prompt 435.
 			return this.filter
 					&& (
 						this.filter.type === 'number' ||
 						this.filter.type === 'text' ||
-						this.filter.type === 'date'
+						this.filter.type === 'textarea' ||
+						this.filter.type === 'date' ||
+						this.filter.type === 'select' ||
+						this.filter.type === 'search'
 					);
 		},
 	},

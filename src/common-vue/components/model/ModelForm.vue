@@ -207,26 +207,43 @@
 									:disabled="isDisabled(prop, form_to_filter)"
 									:options="getOptions(prop, model, model_name)"
 									@input="$set(model, prop.key, $event)"
-									@input-change="setChange(prop)"></field-select-input>		
+									@input-change="setChange(prop)"></field-select-input>
 
-								<!-- Toggle tipo iPhone: el label arriba ya describe el campo,
-								     el texto interno del checkbox es redundante y se omite -->
-								<label
+									<!-- Aviso debajo del select cuando queda deshabilitado por falta de datos
+									     relacionados (ej: sucursal sin afip_information cargados, prompt 440) -->
+									<small
+									v-if="prop.type == 'select' && getWarningText(prop)"
+									class="form-text text-warning">
+										{{ getWarningText(prop) }}
+									</small>
+
+								<!-- Toggle tipo iPhone con el valor actual (Sí/No) al lado, separado por margen.
+								     Antes se omitía el texto por redundante con el label de arriba; Lucas pidió
+								     mantenerlo visible, con el mismo estilo de badge que usa el tipo 'boolean'. -->
+								<div
 								v-else-if="prop.type == 'checkbox'"
-								:for="model_name+'-'+prop.key"
-								class="model-form__toggle"
-								:class="{ 'model-form__toggle--disabled': isDisabled(prop, form_to_filter) }">
-									<input
-									type="checkbox"
-									:id="model_name+'-'+prop.key"
-									:disabled="isDisabled(prop, form_to_filter)"
-									:checked="Number(model[prop.key]) === 1"
-									@change="$set(model, prop.key, $event.target.checked ? 1 : 0)">
-									<!-- Track: fondo del toggle; thumb: círculo deslizante -->
-									<span class="model-form__toggle-track">
-										<span class="model-form__toggle-thumb"></span>
+								class="model-form__checkbox-row">
+									<span
+									class="model-form__boolean-badge"
+									:class="Number(model[prop.key]) === 1 ? 'model-form__boolean-badge--yes' : 'model-form__boolean-badge--no'">
+										{{ Number(model[prop.key]) === 1 ? 'Sí' : 'No' }}
 									</span>
-								</label>
+									<label
+									:for="model_name+'-'+prop.key"
+									class="model-form__toggle"
+									:class="{ 'model-form__toggle--disabled': isDisabled(prop, form_to_filter) }">
+										<input
+										type="checkbox"
+										:id="model_name+'-'+prop.key"
+										:disabled="isDisabled(prop, form_to_filter)"
+										:checked="Number(model[prop.key]) === 1"
+										@change="$set(model, prop.key, $event.target.checked ? 1 : 0)">
+										<!-- Track: fondo del toggle; thumb: círculo deslizante -->
+										<span class="model-form__toggle-track">
+											<span class="model-form__toggle-thumb"></span>
+										</span>
+									</label>
+								</div>
 
 									<google-geocoder
 									v-else-if="prop.type == 'google_geocoder'"
@@ -879,7 +896,28 @@ export default {
 			if (prop.type == 'select' && prop.disabled_if_not_0 && this.model[prop.key] != 0) {
 				return true
 			}
+			// Hook genérico (mismo patrón que dynamic_options_function/color_function): el prop
+			// declara el nombre de un método global (definido en common-vue/mixins/generals.js)
+			// que decide si el campo debe deshabilitarse según el estado actual del modelo.
+			// Ej: prop.disabled_function = 'is_address_default_afip_information_disabled'.
+			if (prop.disabled_function && this[prop.disabled_function](this.model)) {
+				return true
+			}
 			return false
+		},
+		/**
+		 * Texto de advertencia dinámico para un campo deshabilitado por falta de datos
+		 * relacionados en el modelo (ej: sucursal sin afip_information cargados). El prop
+		 * declara `warning_function`, un método global que resuelve el mensaje.
+		 *
+		 * @param {Object} prop - Definición declarativa del campo.
+		 * @returns {string} Texto de advertencia, o cadena vacía si no aplica.
+		 */
+		getWarningText(prop) {
+			if (prop.warning_function && this.isDisabled(prop)) {
+				return this[prop.warning_function](this.model)
+			}
+			return ''
 		},
 		is_disabled_button(prop) {
 			if (prop.button && prop.button.disabled_if_model_is_created) {
@@ -1444,6 +1482,12 @@ export default {
 	.model-form__boolean-badge--no
 		background: #fee2e2
 		color: #991b1b
+
+	// ─── Fila del checkbox: badge Sí/No + toggle, con margen entre ambos ──────
+	.model-form__checkbox-row
+		display: flex
+		align-items: center
+		gap: 10px
 
 	// ─── Toggle tipo iPhone (reemplaza b-form-checkbox) ─────────────────────
 	// Contenedor clickeable que actúa como label del input oculto

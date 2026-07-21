@@ -7,6 +7,8 @@
 	<articles-loading-advise></articles-loading-advise>
 	<current-acounts></current-acounts>
 	<payment-methods></payment-methods>
+	<!-- Selector de variantes al escanear un articulo con variantes disponibles (Prompt 525) -->
+	<select-variant></select-variant>
 
 	<!-- Barra de atajos de teclado activos -->
 	<vender-topbar></vender-topbar>
@@ -50,6 +52,7 @@ export default {
 		PaymentMethods: () => import('@/components/vender/modals/payment-methods/Index'),
 		NewArticle: () => import('@/components/vender/modals/NewArticle'),
 		LoadingAfipTicket: () => import('@/components/vender/modals/LoadingAfipTicket'),
+		SelectVariant: () => import('@/components/vender/modals/SelectVariant'),
 		CurrentAcounts: () => import('@/components/common/current-acounts/Index'),
 		ArticlesLoadingAdvise: () => import('@/components/common/ArticlesLoadingAdvise'),
 

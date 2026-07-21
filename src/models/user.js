@@ -216,16 +216,6 @@ export default {
 			group_title: 'Modulo de VENTAS',
 		},
 		{
-			text: 'Ancho en milimetros de la comandera para imprimir los Tickets de Ventas',
-			key: 'sale_ticket_width',
-			type: 'number',
-		},
-		{
-			text: 'Descripcion para mostrar en Tickets de Ventas',
-			key: 'sale_ticket_description',
-			type: 'textarea',
-		},
-		{
 			text: 'Clave para poder eliminar un articulo en VENDER',
 			key: 'clave_eliminar_article',
 			type: 'text',
@@ -241,11 +231,6 @@ export default {
 		},
 
 		{
-			text: 'Tamaño en mm del logo en PDF',
-			key: 'pdf_image_size',
-			type: 'number',
-		},
-		{
 			text: 'Mostrar la direccion de todas las sucursales en los comprobantes de venta',
 			key: 'all_addresses_in_sale_pdf',
 			type: 'checkbox',
@@ -254,6 +239,73 @@ export default {
 			text: 'Mostrar el nombre del empleado que realizo la venta en los PDF de las ventas',
 			key: 'mostrar_vendedor_en_venta_pdf',
 			type: 'checkbox',
+		},
+		{
+			text: 'PDF a imprimir al presionar "Imprimir" en la factura ARCA de la venta',
+			key: 'sale_factura_print_option',
+			type: 'select',
+			// options: [] vacío es intencional: evita que FieldSelectInput monte el
+			// componente genérico de relación (que espera una clave "*_id"). Las
+			// opciones reales las calcula dynamic_options_function en tiempo real.
+			options: [],
+			dynamic_options_function: 'get_sale_factura_print_options',
+			v_if_function: 'is_owner_v_if_function',
+			descriptions: [
+				'Aplica a TODOS los usuarios del sistema, no solo al dueño.',
+				'Sin elegir ninguno, se imprime el ticket común (comportamiento de siempre).',
+			],
+		},
+
+
+
+		{
+			group_title: 'Configuración del ticket de venta',
+		},
+		// Ancho de la comandera para imprimir tickets de venta, ajustado por el usuario.
+		{
+			text: 'Ancho en milimetros de la comandera para imprimir los Tickets de Ventas',
+			key: 'sale_ticket_width',
+			type: 'number',
+		},
+		// Descripción personalizada a mostrar en los tickets de venta.
+		{
+			text: 'Descripcion para mostrar en Tickets de Ventas',
+			key: 'sale_ticket_description',
+			type: 'textarea',
+		},
+		// Tamaño de letra del nombre del artículo en el ticket de venta.
+		// Se ajusta automáticamente entre 8 y 16 puntos.
+		{
+			text: 'Tamaño de letra del nombre del artículo en el ticket',
+			key: 'sale_ticket_name_font_size',
+			type: 'number',
+			descriptions: [
+				'Valor recomendado: 12.',
+				'Se ajusta automáticamente entre 8 y 16.',
+			],
+		},
+		// Tamaño de letra de los precios (unitario y total) en el ticket de venta.
+		// Los precios siempre se imprimen en negrita.
+		{
+			text: 'Tamaño de letra de los precios (unitario y total) en el ticket',
+			key: 'sale_ticket_price_font_size',
+			type: 'number',
+			descriptions: [
+				'Los precios siempre se imprimen en negrita.',
+				'Valor recomendado: 10. Se ajusta entre 8 y 14.',
+			],
+		},
+		// Controla si el logo ocupa todo el ancho del ticket o aparece en un lado.
+		// Cuando está activado, el logo ocupa todo el ancho y los datos de la empresa van debajo.
+		// Cuando está desactivado, el logo va a la izquierda y los datos a la derecha.
+		{
+			text: 'El logo ocupa todo el ancho del ticket',
+			key: 'sale_ticket_logo_full_width',
+			type: 'checkbox',
+			descriptions: [
+				'Activado: el logo se muestra a todo el ancho y los datos de la empresa quedan debajo.',
+				'Desactivado: el logo va a la izquierda y los datos a la derecha (como hasta ahora).',
+			],
 		},
 
 

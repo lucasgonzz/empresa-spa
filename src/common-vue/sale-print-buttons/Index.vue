@@ -33,8 +33,14 @@
 			</b-dropdown>
 
 			<whatsapp-btn
-			v-if="sale"
+			v-if="sale && show_whatsapp_btn"
 			:sale="sale"></whatsapp-btn>
+
+			<!-- Envío del comprobante por el agente de WhatsApp (grupo 137, Prompt 06). Convive con el botón wa.me de arriba: no depende del celular del operador. -->
+			<send-whatsapp-agent-btn
+			v-if="sale && show_whatsapp_btn && hasExtencion('whatsapp')"
+			class="m-l-10"
+			:sale="sale"></send-whatsapp-agent-btn>
 		</div>
 
 		<modal-pdf-columns-profile
@@ -73,6 +79,7 @@ import SectionFacturasA4 from './SectionFacturasA4.vue'
 export default {
 	components: {
 		WhatsappBtn: () => import('@/common-vue/sale-print-buttons/WhatsappBtn'),
+		SendWhatsappAgentBtn: () => import('@/common-vue/sale-print-buttons/SendWhatsappAgentBtn'),
 		ModalPdfColumnsProfile,
 		SectionTickets,
 		SectionRemitosA4,
@@ -87,6 +94,15 @@ export default {
 		model_name: {
 			type: String,
 			default: 'sale',
+		},
+		/**
+		 * Controla si se muestra el botón de WhatsApp interno.
+		 * Se usa en false cuando un contenedor externo (ej. VenderActionsBar)
+		 * ya muestra su propio botón de WhatsApp y no se quiere duplicar.
+		 */
+		show_whatsapp_btn: {
+			type: Boolean,
+			default: true,
 		},
 	},
 	data() {
@@ -798,7 +814,7 @@ export default {
 
 .sale-print-dropdown-menu
 	width: 200px
-	z-index: 1060 !important
+	z-index: 3060 !important
 	background-color: #fff
 	.b-dropdown-text
 		text-align: center

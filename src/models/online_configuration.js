@@ -77,7 +77,7 @@ export default {
 		{
 			text: 'Mensaje para mostrar en Pagina CONTACTO',
 			key: 'mensaje_contacto',
-			type: 'textarea',
+			type: 'texteditor',
 			value: '',
 			show: true,
 		},
@@ -238,6 +238,36 @@ export default {
 			text: 'Cliente envia whatsapp al negocio al finalizar pedido',
 			key: 'enviar_whatsapp_al_terminar_pedido',
 			type: 'checkbox',
+		},
+
+		{
+			// Grupo nuevo: login con Google para la tienda online (prompt 588).
+			// Antes las credenciales de Google vivian en el .env de tienda-api;
+			// se mudan aca para que cada dueño las cargue desde su propio online_configuration
+			// (ver prompt 589 para las columnas/backend en empresa-api).
+			group_title: 'Login con Google'
+		},
+		{
+			text: 'Activar login con Google en la tienda',
+			key: 'google_login_enabled',
+			type: 'checkbox',
+			description: 'Permite a los clientes iniciar sesion en la tienda usando su cuenta de Google.',
+		},
+		{
+			text: 'Google Client ID',
+			key: 'google_client_id',
+			type: 'text',
+			// No se condiciona la visibilidad al toggle porque el modelo declarativo
+			// no soporta mostrar/ocultar un campo segun el valor de otro campo (no existe
+			// un "show_when"/"depends_on" en generals.js); por eso queda siempre visible
+			// con esta aclaracion en la description.
+			description: 'Solo aplica si "Activar login con Google" esta activo. Se obtiene desde Google Cloud Console.',
+		},
+		{
+			text: 'Google Client Secret',
+			key: 'google_client_secret',
+			type: 'password',
+			description: 'Solo aplica si "Activar login con Google" esta activo. Por seguridad no se muestra el valor guardado; dejalo vacio si no queres cambiarlo.',
 		},
 
 		{
