@@ -36,11 +36,23 @@
 			</div>
 		</b-dropdown-form>
 
+		<!-- Filtro de texto: reduce la lista de abajo en vivo, sin afectar la seleccion ni el
+			orden real de ordered_props. b-dropdown-form para no cerrar el menu al escribir. -->
+		<b-dropdown-form class="buscador-general-dropdown__filter-form">
+			<input
+			type="text"
+			class="buscador-general-dropdown__filter"
+			autocomplete="off"
+			placeholder="Filtrar propiedades..."
+			v-model="filter_text">
+		</b-dropdown-form>
+
 		<b-dropdown-divider></b-dropdown-divider>
 
-		<!-- Lista unica de props (propias + relaciones) en el orden de props_to_show -->
+		<!-- Lista unica de props (propias + relaciones) en el orden de props_to_show, filtrada
+			en vivo por filter_text (solo visual: no altera seleccion ni orden real) -->
 		<b-dropdown-form
-		v-for="item in ordered_props"
+		v-for="item in filtered_props"
 		:key="item.kind + '_' + item.key"
 		class="buscador-general-dropdown__row-form">
 			<div class="buscador-general-dropdown__row">
@@ -93,6 +105,13 @@ export default {
 			required: true,
 		},
 	},
+	data() {
+		return {
+			// Texto ingresado en el campo "Filtrar propiedades...": filtra la lista mostrada por
+			// coincidencia case-insensitive sobre item.text, sin tocar seleccion ni orden real.
+			filter_text: '',
+		}
+	},
 	computed: {
 		/**
 		 * Cantidad de props actualmente tildadas (propias + relaciones) sobre el total de la lista.
@@ -126,6 +145,23 @@ export default {
 		 */
 		none_selected() {
 			return this.selected_count === 0
+		},
+
+		/**
+		 * ordered_props filtrado en vivo por filter_text (coincidencia case-insensitive sobre
+		 * item.text). Si filter_text esta vacio devuelve ordered_props tal cual. Es solo un
+		 * filtro visual de la lista mostrada: no cambia la seleccion real ni el orden.
+		 *
+		 * @returns {Array}
+		 */
+		filtered_props() {
+			if (!this.filter_text) {
+				return this.ordered_props
+			}
+			let query = this.filter_text.toLowerCase()
+			return this.ordered_props.filter(function (item) {
+				return item.text.toLowerCase().indexOf(query) !== -1
+			})
 		},
 	},
 	methods: {
@@ -209,6 +245,30 @@ export default {
 			border-color: #22c55e
 			color: #15803d
 			background: rgba(34, 197, 94, 0.08)
+
+// Campo de texto para filtrar la lista de propiedades mostradas (solo visual)
+.buscador-general-dropdown__filter-form
+	padding-top: 0
+	padding-bottom: 4px
+
+.buscador-general-dropdown__filter
+	width: 100%
+	height: 30px
+	border: 1px solid #e2e4e7
+	border-radius: 8px
+	background: #fff
+	padding: 0 10px
+	font-size: 0.8rem
+	color: #1d1d1f
+	// Sin la sombra global de _inputs.sass: input chico y sobrio, igual criterio que el pill
+	box-shadow: none
+
+	&::placeholder
+		color: #9aa0a6
+
+	&:focus
+		outline: none
+		border-color: #c7cacf
 
 // Fila de una propiedad: nombre a la izquierda, toggle a la derecha
 .buscador-general-dropdown__row

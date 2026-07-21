@@ -510,11 +510,14 @@ export default {
 		height: 40px
 		padding: 0 6px 0 4px
 		transition: border-color 0.15s ease, box-shadow 0.15s ease
+		// Sombra sutil permanente que envuelve el pill entero (icono + input + lupa),
+		// mismo criterio que la sombra de las tablas del sistema.
+		box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px
 
-		// Anillo sutil al enfocar el input
+		// Anillo sutil al enfocar el input: se suma a la sombra base, no la reemplaza
 		&:focus-within
 			border-color: #c7cacf
-			box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.04)
+			box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px, 0 0 0 3px rgba(0, 0, 0, 0.04)
 
 	// El desplegable de propiedades se integra al pill (ver PropertiesDropdown.vue)
 	.buscador-general__props
@@ -532,6 +535,8 @@ export default {
 		padding: 0 6px
 		font-size: 0.9rem
 		color: #1d1d1f
+		// Anula la sombra global de input en _inputs.sass: la sombra la da el pill contenedor
+		box-shadow: none
 
 		&::placeholder
 			color: #9aa0a6
@@ -549,6 +554,8 @@ export default {
 		color: #86868b
 		cursor: pointer
 		transition: background 0.15s ease, color 0.15s ease
+		// Blinda los botones de icono (lupa, limpiar) contra cualquier sombra heredada
+		box-shadow: none
 
 		&:hover
 			background: #f2f3f4
