@@ -1,22 +1,20 @@
 <template>
-	<div
+	<!-- Raíz = el propio b-button (sin div wrapper), para que Bootstrap pueda combinarlo dentro de un .btn-group -->
+	<b-button
 	id="btn_seleccion"
-	class="btn-header-action-wrap"
-	v-if="ask_selectable">
-		<b-button
-		v-b-tooltip.hover
-		:title="tooltip_text"
-		:aria-label="tooltip_text"
-		:variant="variant"
-		:aria-pressed="is_selecteable ? 'true' : 'false'"
-		@click="toggle_selection_mode"
-		class="btn-header-action m-l-10"
-		size="sm">
-			<i
-			:class="selection_icon_class"
-			aria-hidden="true"></i>
-		</b-button>
-	</div>
+	v-if="ask_selectable"
+	v-b-tooltip.hover
+	:title="tooltip_text"
+	:aria-label="tooltip_text"
+	:variant="variant"
+	:aria-pressed="is_selecteable ? 'true' : 'false'"
+	@click="toggle_selection_mode"
+	class="btn-header-action"
+	size="sm">
+		<i
+		:class="selection_icon_class"
+		aria-hidden="true"></i>
+	</b-button>
 </template>
 <script>
 export default {
@@ -81,11 +79,6 @@ export default {
 }
 </script>
 <style scoped>
-.btn-header-action-wrap {
-	display: inline-flex;
-	align-items: center;
-}
-
 .btn-header-action {
 	display: inline-flex;
 	align-items: center;

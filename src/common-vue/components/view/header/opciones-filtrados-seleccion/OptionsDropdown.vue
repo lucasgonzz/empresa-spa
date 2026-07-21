@@ -1,7 +1,6 @@
 <template>
 	<b-dropdown
 	v-if="show"
-	class="m-l-15"
 	right
 	:id="id"
 	size="sm"

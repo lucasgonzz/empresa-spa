@@ -11,43 +11,54 @@
 		emit="deleteModels"
 		@deleteModels="deleteModels"></confirm>
 
-		<options-dropdown
-		:show_actualizar_option="show_actualizar_option"
-		:check_permissions="check_permissions"
-		@setUpdate="setUpdate"
-		@setDelete="setDelete"
-		:model_name="model_name">
-			<template #options_drop_down>
-				<slot name="options_drop_down"></slot>
-			</template>
+		<!-- Grupo SELECCIÓN: botón activar/quitar selección + dropdown de seleccionados, combinados en un solo button-group -->
+		<div class="btn-group opciones-grupos__group" role="group">
+			<btn-seleccion
+			:ask_selectable="ask_selectable"
+			:model_name="model_name"></btn-seleccion>
 
-			<template #options_drop_down_seleccion>
-				<slot name="options_drop_down_seleccion"></slot>
-			</template>
-		</options-dropdown>
+			<options-dropdown
+			:show_actualizar_option="show_actualizar_option"
+			:check_permissions="check_permissions"
+			@setUpdate="setUpdate"
+			@setDelete="setDelete"
+			:model_name="model_name">
+				<template #options_drop_down>
+					<slot name="options_drop_down"></slot>
+				</template>
 
-		<span
-		v-if="mostrar_divisor_grupos"
-		class="opciones-grupos__divider"
-		aria-hidden="true"></span>
+				<template #options_drop_down_seleccion>
+					<slot name="options_drop_down_seleccion"></slot>
+				</template>
+			</options-dropdown>
+		</div>
 
-		<options-dropdown
+		<!-- Grupo FILTROS: dropdown de filtrados + botón limpiar filtros, combinados en un solo button-group -->
+		<div
 		v-if="!papelera"
-		:papelera="papelera"
-		:show_actualizar_option="show_actualizar_option"
-		:check_permissions="check_permissions"
-		@setUpdate="setUpdate"
-		@setDelete="setDelete"
-		from_filter
-		:model_name="model_name">
-			<template #options_drop_down>
-				<slot name="options_drop_down"></slot>
-			</template>
+		class="btn-group opciones-grupos__group opciones-grupos__group--filtros"
+		role="group">
+			<options-dropdown
+			:papelera="papelera"
+			:show_actualizar_option="show_actualizar_option"
+			:check_permissions="check_permissions"
+			@setUpdate="setUpdate"
+			@setDelete="setDelete"
+			from_filter
+			:model_name="model_name">
+				<template #options_drop_down>
+					<slot name="options_drop_down"></slot>
+				</template>
 
-			<template #options_drop_down_filtro>
-				<slot name="options_drop_down_filtro"></slot>
-			</template>
-		</options-dropdown>
+				<template #options_drop_down_filtro>
+					<slot name="options_drop_down_filtro"></slot>
+				</template>
+			</options-dropdown>
+
+			<btn-restart-filter
+			:papelera="papelera"
+			:model_name="model_name"></btn-restart-filter>
+		</div>
 	</div>
 </template>
 <script>
@@ -60,11 +71,15 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+		/** Habilita el modo selección múltiple (viene desde grupo-estado); lo consume btn-seleccion. */
+		ask_selectable: Boolean,
 	},
 	components: {
 		Update: () => import('@/common-vue/components/view/header/opciones-filtrados-seleccion/Update'),
 		Confirm: () => import('@/common-vue/components/Confirm'),
 		OptionsDropdown: () => import('@/common-vue/components/view/header/opciones-filtrados-seleccion/OptionsDropdown'),
+		BtnSeleccion: () => import('@/common-vue/components/view/header/BtnSeleccion'),
+		BtnRestartFilter: () => import('@/common-vue/components/view/header/BtnRestartFilter'),
 	},
 	computed: {
 		delete_text() {
@@ -77,18 +92,6 @@ export default {
 			return this.$store.state[this.model_name].selected.map(model => {
 				return model.id
 			})
-		},
-		/**
-		 * Muestra el divisor entre el grupo de selección y el de filtros. Sólo cuando el dropdown de
-		 * filtrados va a renderizar (hay resultados filtrados) — así separa la selección (a la izquierda,
-		 * con el botón Seleccionar) de los filtros (a la derecha, con Limpiar filtros).
-		 */
-		mostrar_divisor_grupos() {
-			if (this.papelera) {
-				return false
-			}
-			let m = this.$store.state[this.model_name]
-			return m.filtered && m.filtered.length > 0
 		},
 	},
 	data() {
@@ -212,12 +215,13 @@ export default {
 	display: inline-flex
 	align-items: center
 
-	&__divider
-		width: 1px
-		align-self: stretch
-		min-height: 22px
-		margin: 0 6px
-		background-color: rgba(0, 0, 0, 0.12)
+	/* Grupo combinado (selección o filtros); sin margen propio, cada botón/dropdown va pegado */
+	&__group
+		margin: 0
+
+		/* Separación entre el grupo de selección y el de filtros: solo margen, sin línea divisoria */
+		&--filtros
+			margin-left: 10px
 
 /* Menú del dropdown de seleccionados/filtrados: altura máxima y scroll vertical */
 #btn_filtrados_dropdown .dropdown-menu,

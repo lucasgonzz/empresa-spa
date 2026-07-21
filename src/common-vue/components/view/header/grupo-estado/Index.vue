@@ -9,14 +9,11 @@
 		<!-- Contenido del grupo: siempre en línea, en desktop, tablet y teléfono -->
 		<div class="grupo-estado__content">
 
-			<btn-seleccion
-			:model_name="model_name"
-			:ask_selectable="ask_selectable"></btn-seleccion>
-
 			<opciones-filtrados-seleccion
 			:papelera="papelera"
 			:show_actualizar_option="show_actualizar_option"
 			:check_permissions="check_permissions"
+			:ask_selectable="ask_selectable"
 			:model_name="model_name">
 				<template #options_drop_down>
 					<slot name="options_drop_down"></slot>
@@ -30,10 +27,6 @@
 					<slot name="options_drop_down_filtro"></slot>
 				</template>
 			</opciones-filtrados-seleccion>
-
-			<btn-restart-filter
-			:papelera="papelera"
-			:model_name="model_name"></btn-restart-filter>
 
 			<b-button
 			v-if="papelera && is_filtered_papelera && total_filtrados_papelera > 0"
@@ -56,8 +49,6 @@ export default {
 	 * ícono no hace falta colapsarlos, wrappean solos.
 	 */
 	components: {
-		BtnSeleccion: () => import('@/common-vue/components/view/header/BtnSeleccion'),
-		BtnRestartFilter: () => import('@/common-vue/components/view/header/BtnRestartFilter'),
 		OpcionesFiltradosSeleccion: () => import('@/common-vue/components/view/header/opciones-filtrados-seleccion/Index'),
 	},
 	props: {

@@ -5,7 +5,7 @@
 	:title="tooltip_text"
 	:aria-label="tooltip_text"
 	@click="restartSearch"
-	class="btn-header-action m-l-10"
+	class="btn-header-action"
 	id="btn_restart_filter"
 	size="sm"
 	variant="outline-secondary">

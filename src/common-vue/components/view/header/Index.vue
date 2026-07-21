@@ -2,7 +2,7 @@
 	<!--
 		View-header en 3 zonas con CSS Grid (NO el grid de 12 columnas de Bootstrap, que era lo que
 		wrappeaba feo en pantallas chicas).
-		Izquierda (acciones): grupo primario (ojo + crear) + divisor + grupo de estado (grupo-estado).
+		Izquierda (acciones): grupo primario (ojo + crear) + grupo de estado (grupo-estado), separados por margen.
 		Centro: buscador general, centrado y con ancho acotado en desktop.
 		Derecha (módulo): botones propios del módulo (slot horizontal_nav_center) + display-nav de fechas.
 
@@ -12,7 +12,7 @@
 	-->
 	<div class="view-header-toolbar view-header p-t-15">
 
-		<!-- ZONA IZQUIERDA — acciones: dos grupos semánticos separados por un divisor sutil -->
+		<!-- ZONA IZQUIERDA — acciones: dos grupos semánticos separados por margen -->
 		<div class="view-header__left">
 
 			<!-- Grupo 1 (siempre visible): props-to-show (ojo) + crear (excel-drop-down o btn-create) -->
@@ -44,9 +44,6 @@
 					:model_name="model_name"></btn-create>
 				</slot>
 			</div>
-
-			<!-- Divisor sutil entre el grupo primario y el grupo de estado -->
-			<span class="view-header__divider" aria-hidden="true"></span>
 
 			<!-- Grupo 2 (estado): seleccionar / filtrados-selección / limpiar filtros / restaurar papelera. -->
 			<!-- En teléfono colapsa dentro de un dropdown de overflow (⋯); lógica encapsulada en grupo-estado. -->
@@ -215,20 +212,14 @@ export default {
 	align-items: center
 	flex-wrap: wrap
 	justify-self: start
+	/* Separación entre el grupo primario y el grupo de estado: solo margen, sin línea divisoria */
+	gap: 10px
 
 /* Grupo semántico de botones (primario o de estado) */
 .view-header__group
 	display: flex
 	align-items: center
 	flex-wrap: wrap
-
-/* Divisor vertical sutil entre el grupo primario y el grupo de estado */
-.view-header__divider
-	width: 1px
-	align-self: stretch
-	min-height: 24px
-	margin: 0 10px
-	background-color: rgba(0, 0, 0, 0.12)
 
 /* Zona centro: buscador centrado (1fr auto 1fr) y de ancho acotado */
 .view-header__center
