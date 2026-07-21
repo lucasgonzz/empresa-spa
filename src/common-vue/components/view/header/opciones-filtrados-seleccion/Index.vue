@@ -329,4 +329,18 @@ export default {
 
 			background-color: rgba(220, 53, 69, 0.2)
 
+/* Variante deshabilitada: accion visible pero atenuada (con tooltip explicativo) */
+
+.article-dropdown-option--disabled
+
+	.article-dropdown-option__icon-wrap
+
+		background-color: rgba(0, 0, 0, 0.04)
+
+		color: #adb5bd
+
+	.article-dropdown-option__label
+
+		color: #adb5bd
+
 </style>

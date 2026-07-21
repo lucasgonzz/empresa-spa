@@ -11,17 +11,21 @@
 			<b-badge :variant="badge_variant" class="m-l-5">{{ count }}</b-badge>
 		</template>
 		<dropdown-option-item
-		v-if="puede_actualizar && show_actualizar_option && !ocultar_actualizar_eliminar_por_filtro"
+		v-if="puede_actualizar && show_actualizar_option"
 		id="btn_actualizar"
 		icon="icon-undo"
+		:disabled="ocultar_actualizar_eliminar_por_filtro"
+		:tooltip="ocultar_actualizar_eliminar_por_filtro ? texto_disabled_buscador_general : ''"
 		@click="setUpdate">
 			Actualizar
 		</dropdown-option-item>
 		<dropdown-option-item
 		id="btn_eliminar"
-		v-if="puede_eliminar && !ocultar_actualizar_eliminar_por_filtro"
+		v-if="puede_eliminar"
 		icon="icon-trash"
 		variant="danger"
+		:disabled="ocultar_actualizar_eliminar_por_filtro"
+		:tooltip="ocultar_actualizar_eliminar_por_filtro ? texto_disabled_buscador_general : ''"
 		@click="setDelete">
 			Eliminar
 		</dropdown-option-item>
@@ -140,6 +144,16 @@ export default {
 				? this.$store.state.papelera[this.model_name]
 				: this.$store.state[this.model_name]
 			return !!module_state.filtered_without_filter_form
+		},
+		/**
+		 * Texto del tooltip cuando Actualizar/Eliminar por filtro estan deshabilitados por venir
+		 * de una busqueda del buscador general (ver ocultar_actualizar_eliminar_por_filtro). Explica
+		 * el motivo en vez de ocultar los botones sin mas.
+		 *
+		 * @returns {String}
+		 */
+		texto_disabled_buscador_general() {
+			return 'No disponible para resultados del buscador general. Para actualizar o eliminar varios registros a la vez, usá el buscador de filtros.'
 		},
 	},
 	methods: {
