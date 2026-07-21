@@ -11,6 +11,16 @@
 				<i class="bi bi-plus-lg"></i>
 				Nuevo chat
 			</b-button>
+			<!-- Configuración del agente y plantillas: solo el dueño la ve/edita (patrón is_owner del proyecto) -->
+			<b-button
+			v-if="is_owner"
+			size="sm"
+			variant="outline-secondary"
+			class="whatsapp-chats-list__config-btn"
+			title="Configuración de WhatsApp"
+			v-b-modal="'whatsapp-config'">
+				<i class="bi bi-gear"></i>
+			</b-button>
 		</div>
 
 		<div class="whatsapp-chats-list__body">
@@ -34,17 +44,20 @@
 		</div>
 
 		<new-chat-modal></new-chat-modal>
+		<whatsapp-config v-if="is_owner"></whatsapp-config>
 	</div>
 </template>
 <script>
 import ChatSearch from '@/components/whatsapp/chats-list/ChatSearch'
 import ChatRow from '@/components/whatsapp/chats-list/ChatRow'
 import NewChatModal from '@/components/whatsapp/chats-list/NewChatModal'
+import WhatsappConfig from '@/components/whatsapp/config/Index'
 export default {
 	components: {
 		ChatSearch,
 		ChatRow,
 		NewChatModal,
+		WhatsappConfig,
 	},
 	computed: {
 		chats() {
@@ -90,6 +103,8 @@ export default {
 		flex-shrink: 0
 		white-space: nowrap
 		margin-right: 8px
+	&__config-btn
+		flex-shrink: 0
 	&__body
 		flex: 1
 		overflow-y: auto
