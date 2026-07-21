@@ -79,6 +79,13 @@ export default {
 		return {
 			finded_article: undefined,
 			from_balanza: false,
+			/*
+				Prompt 525: cuando el back responde has_variants:true, se abre el selector de
+				variantes (SelectVariant) en vez de agregar el articulo padre. Esta bandera evita
+				que set_article_from_barcode agregue el item o muestre el toast de "no encontrado"
+				mientras se espera que el usuario elija una variante en el modal.
+			*/
+			opening_variant_selector: false,
 		}
 	},
 	methods: {
@@ -98,9 +105,12 @@ export default {
 		*/
 		async set_article_from_barcode() {
 			if (this.item_vender.codigo != '') {
-				
+
 				this.finded_article = undefined
 				this.from_balanza = false
+				// Se resetea en cada busqueda: si el back vuelve a responder has_variants:true
+				// para un nuevo escaneo, tiene que volver a bloquear el agregado automatico.
+				this.opening_variant_selector = false
 
 				await this.set_finded_article(this.item_vender.codigo)
 
@@ -111,6 +121,7 @@ export default {
 				if (
 					typeof this.finded_article != 'undefined'
 					&& !this.from_balanza
+					&& !this.opening_variant_selector
 				) {
 
 					this.set_nombre_en_input()
@@ -118,7 +129,7 @@ export default {
 					this.finded_article.is_article = true
 					this.set_item_vender(this.finded_article)
 
-				} else if (!this.from_balanza) {
+				} else if (!this.from_balanza && !this.opening_variant_selector) {
 
 					this.sonido_error()
 
@@ -225,11 +236,40 @@ export default {
 						this.finded_article.amount = res.data.amount
 						this.finded_article.is_article = true
 
-						this.set_item_vender(this.finded_article, false, false) 
+						this.set_item_vender(this.finded_article, false, false)
 
 						return
-					} 
+					}
 
+					/*
+						Prompt 525 (depende del 520): el back distingue 3 casos al escanear.
+						- variant_id presente (mas abajo): se encontro una variante puntual, se
+						  agrega directo via set_item_vender (ya sabe traducir variant_id a
+						  article_variant_id).
+						- has_variants:true: el articulo escaneado tiene variantes disponibles
+						  pero el codigo no identifica una en particular -> hay que abrir el
+						  selector (SelectVariant) en vez de agregar el padre sin variante.
+						- has_variants:false (u omitido): flujo de siempre, articulo sin variantes.
+					*/
+					if (res.data.has_variants) {
+
+						this.opening_variant_selector = true
+						this.finded_article = undefined
+
+						// Se deja el articulo + sus variantes en el store para que SelectVariant
+						// las consuma (mismo shape que manda el back: variant_id/variant_description)
+						this.$store.commit('vender/setArticleForSale', {
+							...res.data.article,
+							variants: res.data.variants,
+						})
+
+						this.$bvModal.show('select-variant')
+
+						let input = document.getElementById('article-bar-code')
+						input.value = ''
+
+						return
+					}
 
 					this.finded_article = res.data.article
 
