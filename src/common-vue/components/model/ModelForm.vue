@@ -217,24 +217,33 @@
 										{{ getWarningText(prop) }}
 									</small>
 
-								<!-- Toggle tipo iPhone: el label arriba ya describe el campo,
-								     el texto interno del checkbox es redundante y se omite -->
-								<label
+								<!-- Toggle tipo iPhone con el valor actual (Sí/No) al lado, separado por margen.
+								     Antes se omitía el texto por redundante con el label de arriba; Lucas pidió
+								     mantenerlo visible, con el mismo estilo de badge que usa el tipo 'boolean'. -->
+								<div
 								v-else-if="prop.type == 'checkbox'"
-								:for="model_name+'-'+prop.key"
-								class="model-form__toggle"
-								:class="{ 'model-form__toggle--disabled': isDisabled(prop, form_to_filter) }">
-									<input
-									type="checkbox"
-									:id="model_name+'-'+prop.key"
-									:disabled="isDisabled(prop, form_to_filter)"
-									:checked="Number(model[prop.key]) === 1"
-									@change="$set(model, prop.key, $event.target.checked ? 1 : 0)">
-									<!-- Track: fondo del toggle; thumb: círculo deslizante -->
-									<span class="model-form__toggle-track">
-										<span class="model-form__toggle-thumb"></span>
+								class="model-form__checkbox-row">
+									<span
+									class="model-form__boolean-badge"
+									:class="Number(model[prop.key]) === 1 ? 'model-form__boolean-badge--yes' : 'model-form__boolean-badge--no'">
+										{{ Number(model[prop.key]) === 1 ? 'Sí' : 'No' }}
 									</span>
-								</label>
+									<label
+									:for="model_name+'-'+prop.key"
+									class="model-form__toggle"
+									:class="{ 'model-form__toggle--disabled': isDisabled(prop, form_to_filter) }">
+										<input
+										type="checkbox"
+										:id="model_name+'-'+prop.key"
+										:disabled="isDisabled(prop, form_to_filter)"
+										:checked="Number(model[prop.key]) === 1"
+										@change="$set(model, prop.key, $event.target.checked ? 1 : 0)">
+										<!-- Track: fondo del toggle; thumb: círculo deslizante -->
+										<span class="model-form__toggle-track">
+											<span class="model-form__toggle-thumb"></span>
+										</span>
+									</label>
+								</div>
 
 									<google-geocoder
 									v-else-if="prop.type == 'google_geocoder'"
@@ -1473,6 +1482,12 @@ export default {
 	.model-form__boolean-badge--no
 		background: #fee2e2
 		color: #991b1b
+
+	// ─── Fila del checkbox: badge Sí/No + toggle, con margen entre ambos ──────
+	.model-form__checkbox-row
+		display: flex
+		align-items: center
+		gap: 10px
 
 	// ─── Toggle tipo iPhone (reemplaza b-form-checkbox) ─────────────────────
 	// Contenedor clickeable que actúa como label del input oculto
