@@ -6,12 +6,6 @@ id="article-variants"
 modal-class="article-variants-modal"
 hide-footer>
 
-	<div
-	v-if="addresses.length"
-	class="article-variants-modal__section">
-		<variants-stock></variants-stock>
-	</div>
-
 	<!-- Zona 1: propiedades y valores del articulo (alta/baja + intencion al back) -->
 	<div class="article-variants-modal__section">
 		<article-properties></article-properties>
@@ -20,24 +14,20 @@ hide-footer>
 	<!-- Zona 2: preview en vivo de cuantas variantes se generarian -->
 	<preview-count></preview-count>
 
-	<!-- Zona 3: grilla de variantes (disponibilidad/precio/imagen/stock -> prompt 524) -->
+	<!-- Zona 3: grilla de variantes (disponibilidad, precio/imagen inline, stock por deposito) -->
 	<div class="article-variants-modal__section">
-		<article-variants></article-variants>
+		<variant-grid></variant-grid>
 	</div>
 </b-modal>
 </template>
 <script>
 export default {
 	components: {
-		VariantsStock: () => import('@/components/listado/modals/article-variants/variant-stock/Index'),
 		ArticleProperties: () => import('@/components/listado/modals/article-variants/ArticleProperties'),
 		PreviewCount: () => import('@/components/listado/modals/article-variants/PreviewCount'),
-		ArticleVariants: () => import('@/components/listado/modals/article-variants/ArticleVariants'),
+		VariantGrid: () => import('@/components/listado/modals/article-variants/variant-grid/Index'),
 	},
 	computed: {
-		addresses() {
-			return this.$store.state.address.models
-		},
 		article() {
 			return this.$store.state.article.model
 		},
