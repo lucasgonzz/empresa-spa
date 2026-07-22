@@ -32,6 +32,7 @@
 		:function_props_to_send_to_api="function_props_to_send_to_api"
 		:tax_id_afip_lookup_on_second_enter="tax_id_afip_lookup_on_second_enter"
 		:no_exist_message="no_exist_message"
+		:contexto="contexto"
 		@callSearchModal="callSearchModal"
 		@setQuery="setQuery"
 		@setNotShowModel="setNotShowModel"
@@ -246,6 +247,15 @@ export default {
 		input_icon: {
 			type: String,
 			default: 'icon-search',
+		},
+		/**
+		 * Contexto del modulo que reenvia al modal de busqueda (tarea 4, prompt 08 del grupo 179):
+		 * 'vender', 'provider_order' o 'recipe'. Se usa para que global-search aplique la logica
+		 * propia de ese contexto. Ningun consumidor que sea un listado debe declararlo.
+		 */
+		contexto: {
+			type: String,
+			default: null,
 		},
 	},
 	data() {

@@ -7,31 +7,24 @@ hide-footer
 	<div
 	class="search-component-modal">
 		<div class="header">
-			<b-form-input
-			autocomplete="off"
-			@keydown="reset_ya_se_busco"
-			@keydown.enter="pulso_enter"
-			@keydown.up="selectUp"
-			@keydown.down="selectDown"
-			class="input-search-modal"
-			v-model="query"
-			:id="_id+'-search-modal-input'"
-			:data-testid="_id+'-search-modal-input'"
-			:placeholder="_placeholder"></b-form-input>
+			<!--
+				Buscador general embebido (tarea 2, prompt 08 del grupo 179): reemplaza el
+				b-form-input + boton de lupa de siempre. modo="modal" hace que buscar()/limpiar()
+				no toquen el store, solo emitan eventos (ver Index.vue del buscador general). El
+				input_id preserva el mismo id que usaban los document.getElementById repartidos por
+				este archivo y por search/Index.vue, asi ninguno se rompe.
+			-->
+			<buscador-general
+			:model_name="model_name"
+			modo="modal"
+			:input_id="_id+'-search-modal-input'"
+			:placeholder="_placeholder"
+			@keydown.native="reset_ya_se_busco"
+			@keydown.native.up="selectUp"
+			@keydown.native.down="selectDown"
+			@buscar="onBuscarDesdeBuscadorGeneral"></buscador-general>
 
 			<slot name="search_input_right"></slot>
-			
-			<b-button
-			@click="search"
-			dusk="btn_search"
-			class="m-l-10"
-			variant="primary">
-				<div
-				class="j-center">
-					<i class="icon-search"></i>
-					<!-- (Enter) -->
-				</div>
-			</b-button>
 
 			<b-button
 			class="m-l-10"
@@ -163,6 +156,7 @@ export default {
 		TableComponent,
 		BtnCreateModel: () => import('@/common-vue/components/search/BtnCreateModel'),
 		Pagination: () => import('@/common-vue/components/search/Pagination'),
+		BuscadorGeneral: () => import('@/common-vue/components/view/header/buscador-general/Index'),
 	},
 	props: {
 		_id: String,
@@ -238,6 +232,17 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+		/**
+		 * Contexto del modulo que declara la busqueda (tarea 3/4, prompt 08 del grupo 179):
+		 * 'vender', 'provider_order' o 'recipe'. Se manda al backend (global-search) para que
+		 * aplique la logica propia de ese contexto (ej: insumos en pedido a proveedor / receta,
+		 * exclusion de insumos y codigo de barras exacto en Vender). Si viene null, global-search
+		 * no aplica ninguna logica especial. Ningun consumidor que sea un listado debe declararlo.
+		 */
+		contexto: {
+			type: String,
+			default: null,
+		},
 	},
 	data() {
 		return {
@@ -259,6 +264,15 @@ export default {
 			ya_se_busco: true,
 			search_config_rows: [],
 			search_preference_columns: [],
+
+			// Ultimo payload recibido del evento 'buscar' del buscador general embebido (props/
+			// relaciones tildadas, conector, extra_filters). Se reusa tal cual en las busquedas que
+			// dispara la paginacion (tarea 5, prompt 08 del grupo 179), para que la pagina 2 tenga
+			// las mismas props/modo/filtros que la 1.
+			ultima_busqueda_buscador_general: null,
+			// Evita repetir el aviso de "los filtros no se aplican sin conexion" en cada tecla
+			// (tarea 3): se muestra una sola vez por instancia del modal.
+			aviso_filtros_offline_mostrado: false,
 		}
 	},
 	watch: {
@@ -572,12 +586,21 @@ export default {
 						this.current_page = 1
 					}
 
-					let info = this.get_info_param()
+					// Valvula de escape (tarea 3, prompt 08 del grupo 179): si el consumidor declaro
+					// su propia route_to_search y NO declaro contexto, se sigue respetando esa ruta
+					// vieja tal cual (ej: road_map, production_batch, pedido a proveedor/receta que
+					// todavia no migraron). En cualquier otro caso se va por global-search.
+					let usa_route_to_search_propio = !!(this.prop && this.prop.route_to_search && !this.contexto)
 
-					let route = 'search-from-modal/'+this.model_name+'?page='+this.current_page
+					let route
+					let info
 
-					if (this.prop && this.prop.route_to_search) {
+					if (usa_route_to_search_propio) {
 						route = this.prop.route_to_search+'?page='+this.current_page
+						info = this.get_info_param()
+					} else {
+						route = 'global-search/'+this.model_name+'?page='+this.current_page
+						info = this.get_global_search_info_param()
 					}
 
 					if (this.props_to_send_to_api) {
@@ -617,6 +640,19 @@ export default {
 						this.$toast.error(err)
 					})
 				} else {
+					// Offline con filtros fijos configurados (tarea 3, prompt 08 del grupo 179): los
+					// filtros fijos del buscador general no se aplican al filtrado en memoria, se
+					// avisa una sola vez y se sigue filtrando por texto como siempre.
+					if (
+						this.ultima_busqueda_buscador_general
+						&& this.ultima_busqueda_buscador_general.extra_filters
+						&& this.ultima_busqueda_buscador_general.extra_filters.length
+						&& !this.aviso_filtros_offline_mostrado
+					) {
+						this.$toast.info('Los filtros no se aplican sin conexión')
+						this.aviso_filtros_offline_mostrado = true
+					}
+
 					let results = []
 
 					if (this.search_function) {
@@ -726,6 +762,54 @@ export default {
 
 			return info
 		},
+		/**
+		 * Arma el cuerpo del POST para global-search (tarea 3, prompt 08 del grupo 179): toma el
+		 * ultimo payload emitido por el buscador general embebido (props/relaciones tildadas,
+		 * conector, extra_filters) y le suma contexto, per_page y depends_on. Fallback obligatorio:
+		 * si el buscador general no mando ninguna prop (usuario sin configuracion guardada, o
+		 * modelo sin props buscables), usa props_to_filter para nunca mandar una busqueda sin
+		 * ninguna propiedad.
+		 *
+		 * @returns {Object}
+		 */
+		get_global_search_info_param() {
+			let buscador_payload = this.ultima_busqueda_buscador_general || {}
+
+			let props = buscador_payload.props
+
+			if (!props || !props.length) {
+				props = []
+				if (this.props_to_filter && this.props_to_filter.length) {
+					this.props_to_filter.forEach(prop_to_filter => {
+						props.push(prop_to_filter)
+					})
+				} else if (this.prop_to_filter) {
+					props.push(this.prop_to_filter.key)
+				}
+			}
+
+			let info = {
+				query_value: typeof buscador_payload.query_value != 'undefined' ? buscador_payload.query_value : this.query,
+				props: props,
+				relation_props: buscador_payload.relation_props || [],
+				// Conector a nivel modelo ('or'/'and'), ver buscador-general/Index.vue.
+				conector: buscador_payload.conector || 'or',
+				extra_filters: buscador_payload.extra_filters || [],
+				per_page: this.per_page,
+			}
+
+			// Contexto del modulo (tarea 3/4): solo se manda cuando el consumidor lo declaro.
+			if (this.contexto) {
+				info.contexto = this.contexto
+			}
+
+			if (this.prop && this.prop.depends_on) {
+				info.depends_on_key = this.prop.depends_on
+				info.depends_on_value = this.model[this.prop.depends_on]
+			}
+
+			return info
+		},
 		searchFromApi() {
 			if (this.search_from_api) {
 				return true
@@ -793,6 +877,22 @@ export default {
 			} else {
 				this.seleccionar_resultado()
 			}
+		},
+		/**
+		 * Handler del evento 'buscar' del buscador general embebido (tarea 2, prompt 08 del grupo
+		 * 179). El Enter ahora lo maneja el buscador general (su propio @keyup.enter interno), asi
+		 * que este metodo reemplaza al @keydown.enter="pulso_enter" que tenia el b-form-input
+		 * viejo: guarda el payload para search()/la paginacion (tarea 5), sincroniza this.query
+		 * (que search()/pulso_enter siguen leyendo) con lo tipeado, y delega en pulso_enter la
+		 * MISMA logica de siempre (crear el modelo al vuelo, consultar AFIP en el segundo Enter).
+		 *
+		 * @param {Object} payload { query_value, props, relation_props, extra_filters, conector }
+		 * @return {void}
+		 */
+		onBuscarDesdeBuscadorGeneral(payload) {
+			this.ultima_busqueda_buscador_general = payload
+			this.query = payload.query_value
+			this.pulso_enter()
 		},
 		seleccionar_resultado() { 
 			if (!this.loading) {
@@ -923,6 +1023,13 @@ export default {
 	.header
 		display: flex
 		flex-direction: row
+		align-items: center
+		// El buscador general trae width:100% propio (pensado para el encabezado del listado):
+		// dentro del header del modal tiene que achicarse para dejar lugar al slot y los botones.
+		.buscador-general
+			flex: 1 1 auto
+			min-width: 0
+			width: auto
 	.results-title
 		font-size: 1.2em
 		font-weight: bold

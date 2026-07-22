@@ -48,6 +48,7 @@
 		:search_modal_omit_property_keys="search_modal_omit_property_keys"
 		:props_to_filter="['id', 'name', 'provider_code']"
 		:props_to_send_to_api="props_to_send_to_api"
+		:contexto="contexto"
 		:prop="{text: 'Articulo', key: 'article_id', store: 'article', route_to_search: 'vender/buscar-articulo-por-nombre'}">
 			<template #search_input_right>
 
@@ -135,6 +136,21 @@ export default {
 				return this.hasExtencion('crear_articulos_desde_vender') && this.can('vender.create_article')
 			}
 			return false
+		},
+		/**
+		 * Contexto que se manda a global-search (tarea 4, prompt 08 del grupo 179): 'vender' si la
+		 * búsqueda se hace desde la ruta de Vender, 'provider_order' en cualquier otro caso (pedido
+		 * a proveedor o receta, que son los únicos otros consumidores de este buscador). Mismo
+		 * criterio (route_name) que ya usa este archivo en create_if_not_exist para distinguir
+		 * Vender del resto.
+		 *
+		 * @returns {String}
+		 */
+		contexto() {
+			if (this.route_name == 'vender') {
+				return 'vender'
+			}
+			return 'provider_order'
 		},
 		col_header_lg() {
 

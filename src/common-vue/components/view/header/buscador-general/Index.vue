@@ -36,6 +36,8 @@
 				type="text"
 				autocomplete="off"
 				v-model="query_value"
+				:id="input_id"
+				:data-testid="input_id"
 				:placeholder="placeholder"
 				@keyup.enter="buscar">
 
@@ -148,6 +150,30 @@ export default {
 			default: function () {
 				return []
 			},
+		},
+
+		/**
+		 * Modo de despacho de la busqueda (prompt 08 del grupo 179). 'header' (default): el de
+		 * siempre, buscar() dispara runGlobalSearch contra el store y limpiar() hace los commits
+		 * de siempre. 'modal': se usa embebido dentro del encabezado del modal de busqueda
+		 * (common-vue/components/search/Modal.vue): buscar() y limpiar() NO tocan el store, solo
+		 * emiten el evento correspondiente para que el consumidor (el modal) decida que hacer. El
+		 * desplegable, los filtros fijos, la persistencia de la seleccion y los estilos son
+		 * identicos en los dos modos: es el mismo componente leyendo la misma configuracion.
+		 */
+		modo: {
+			type: String,
+			default: 'header',
+		},
+
+		/**
+		 * Id del input interno del buscador. Si viene, se aplica al <input> (y a su data-testid)
+		 * para que los document.getElementById(...) que ya usan otros componentes (Modal.vue,
+		 * search/Index.vue) sigan funcionando sin migrarlos a $refs.
+		 */
+		input_id: {
+			type: String,
+			default: null,
 		},
 	},
 	data() {
@@ -1062,12 +1088,20 @@ export default {
 				// el grupo en modo 'alguna' (ver prompt 03 del grupo 179 para la semantica exacta).
 				conector: this.conector,
 				extra_filters: this.extra_filters_finales,
-				page: 1,
 			}
 
-			this.$store.dispatch(this.model_name + '/runGlobalSearch', payload)
+			if (this.modo === 'modal') {
+				// Modo embebido (prompt 08 del grupo 179): no toca el store, el modal de busqueda
+				// (Modal.vue) es quien decide que hacer con este payload (armar el POST a
+				// global-search, filtrar en memoria si esta offline, etc).
+				this.$emit('buscar', payload)
+			} else {
+				payload.page = 1
+				this.$store.dispatch(this.model_name + '/runGlobalSearch', payload)
+			}
 
-			// Guarda la seleccion actual como preferencia del usuario para este modelo.
+			// Guarda la seleccion actual como preferencia del usuario para este modelo (identico en
+			// los dos modos: es la misma configuracion de busqueda).
 			this.persistSelection()
 		},
 
@@ -1188,6 +1222,13 @@ export default {
 			})
 			this.filtros_values = values
 
+			if (this.modo === 'modal') {
+				// Modo embebido (prompt 08 del grupo 179): solo resetea el estado interno (ya hecho
+				// arriba) y avisa al consumidor; el modal decide que limpiar de lo suyo.
+				this.$emit('limpiar')
+				return
+			}
+
 			this.$store.commit(this.model_name + '/setFiltered', [])
 			this.$store.commit(this.model_name + '/setIsFiltered', false)
 			this.$store.commit(this.model_name + '/setSelected', [])
@@ -1196,6 +1237,24 @@ export default {
 			this.$store.commit(this.model_name + '/setTotalFilterResults', 0)
 			this.$store.commit(this.model_name + '/set_filtered_without_filter_form', false)
 			this.$store.commit(this.model_name + '/setGlobalSearchPayload', null)
+		},
+
+		/**
+		 * Enfoca el input interno del buscador (prompt 08 del grupo 179). Publico para que un
+		 * consumidor externo (ej: Modal.vue) pueda forzar el foco despues de una accion propia,
+		 * con el mismo criterio (document.getElementById via input_id) que ya usa el resto del
+		 * sistema en vez de $refs.
+		 *
+		 * @return {void}
+		 */
+		foco() {
+			if (!this.input_id) {
+				return
+			}
+			let input = document.getElementById(this.input_id)
+			if (input) {
+				input.focus()
+			}
 		},
 	},
 }
