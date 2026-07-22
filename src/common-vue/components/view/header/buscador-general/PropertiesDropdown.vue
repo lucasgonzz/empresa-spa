@@ -1,10 +1,13 @@
 <template>
 	<!--
-		Desplegable de propiedades del buscador general: una sola lista (sin titulos de seccion) con
-		las props propias + relaciones, en el mismo orden que props_to_show, cada una con un toggle
-		tipo iPhone. Arriba, una botonera para tildar o destildar todas. Es un componente de
-		presentacion: no toca el store, solo emite toggle / select-all / deselect-all y el padre
-		(Index.vue) decide que hacer con la seleccion.
+		Desplegable de propiedades del buscador general, dividido en dos secciones (prompt 07 del
+		grupo 179):
+		- "Donde buscar": lo que ya existia (botonera seleccionar todas/ninguna, filtro de texto y
+		la lista de props con su toggle), sin cambios de comportamiento.
+		- "Como buscar": presets de modo de busqueda (distribuida/estricta) + conector, explicados
+		en criollo para que un comerciante los entienda sin saber que es un OR.
+		Es un componente de presentacion: no toca el store, solo emite eventos y el padre
+		(Index.vue) decide que hacer con cada uno.
 	-->
 	<b-dropdown
 	class="buscador-general-dropdown"
@@ -17,6 +20,9 @@
 		<template #button-content>
 			<i class="icon-filter"></i>
 		</template>
+
+		<!-- ─── Seccion 1: "Donde buscar" (sin cambios de comportamiento) ─── -->
+		<div class="buscador-general-dropdown__section-title">Donde buscar</div>
 
 		<!-- Botonera: seleccionar / deseleccionar todas. b-dropdown-form para no cerrar el menu. -->
 		<b-dropdown-form class="buscador-general-dropdown__actions-form">
@@ -79,6 +85,31 @@
 					<i class="icon-configuration buscador-general-dropdown__row-label-gear"></i>
 				</button>
 
+				<!--
+					Selector de modo de busqueda por propiedad (prompt 07 del grupo 179): solo se
+					muestra si la propiedad esta tildada (si no participa de la busqueda, su modo no
+					importa y solo ensucia la fila). Va entre el nombre y el toggle. Dentro de
+					b-dropdown-form ya envuelve toda la fila, asi que un @change ac no cierra el menu.
+				-->
+				<span
+				v-if="is_selected(item)"
+				class="buscador-general-dropdown__row-mode"
+				title="Como se compara esta propiedad contra las palabras buscadas">
+					<select
+					class="buscador-general-dropdown__row-mode-select"
+					:value="keyword_mode_de(item)"
+					@click.stop
+					@change="$emit('set-keyword-mode', { key: item.key, kind: item.kind, mode: $event.target.value })">
+						<option value="alguna">Puede aportar una palabra</option>
+						<option value="todas">Tiene que tener todas</option>
+					</select>
+					<!-- Icono de ayuda con tooltip: aclara el significado del modo elegido -->
+					<i
+					class="icon-help buscador-general-dropdown__row-mode-help"
+					v-b-tooltip.hover
+					:title="keyword_mode_help_de(item)"></i>
+				</span>
+
 				<!-- Toggle tipo iPhone (mismo diseno que los checkbox del ModelForm) -->
 				<label class="bg-toggle">
 					<input
@@ -90,6 +121,66 @@
 					</span>
 				</label>
 			</div>
+		</b-dropdown-form>
+
+		<b-dropdown-divider></b-dropdown-divider>
+
+		<!-- ─── Seccion 2: "Como buscar" (prompt 07 del grupo 179) ─── -->
+		<div class="buscador-general-dropdown__section-title">Como buscar</div>
+
+		<!-- Presets: cubren el 99% de los casos sin tener que tocar el selector por propiedad -->
+		<b-dropdown-form class="buscador-general-dropdown__presets-form">
+			<div class="buscador-general-dropdown__presets">
+				<button
+				type="button"
+				class="buscador-general-dropdown__preset"
+				:class="{ 'buscador-general-dropdown__preset--active': preset_activo === 'distribuida' }"
+				@click="$emit('set-preset', 'distribuida')">
+					<span class="buscador-general-dropdown__preset-title">Las palabras pueden estar repartidas</span>
+					<span class="buscador-general-dropdown__preset-desc">
+						Cada palabra que escribis puede aparecer en un campo distinto. Si buscas "8 pinza",
+						encuentra una pinza cuyo codigo de proveedor tenga el 8. Es la forma mas parecida al
+						buscador de VENDER.
+					</span>
+				</button>
+				<button
+				type="button"
+				class="buscador-general-dropdown__preset"
+				:class="{ 'buscador-general-dropdown__preset--active': preset_activo === 'estricta' }"
+				@click="$emit('set-preset', 'estricta')">
+					<span class="buscador-general-dropdown__preset-title">Cada campo tiene que tener todo</span>
+					<span class="buscador-general-dropdown__preset-desc">
+						Un mismo campo tiene que contener todas las palabras que escribiste. Es mas exacto y
+						devuelve menos resultados.
+					</span>
+				</button>
+			</div>
+		</b-dropdown-form>
+
+		<!--
+			Conector: solo tiene sentido si entre las props tildadas hay una mezcla de los dos
+			modos (si son todas iguales, no hay nada que conectar).
+		-->
+		<b-dropdown-form v-if="mostrar_conector" class="buscador-general-dropdown__conector-form">
+			<div class="buscador-general-dropdown__conector">
+				<button
+				type="button"
+				class="buscador-general-dropdown__conector-opcion"
+				:class="{ 'buscador-general-dropdown__conector-opcion--active': conector === 'or' }"
+				@click="$emit('set-conector', 'or')">
+					Con que coincida de una forma u otra alcanza
+				</button>
+				<button
+				type="button"
+				class="buscador-general-dropdown__conector-opcion"
+				:class="{ 'buscador-general-dropdown__conector-opcion--active': conector === 'and' }"
+				@click="$emit('set-conector', 'and')">
+					Tiene que coincidir de las dos formas
+				</button>
+			</div>
+			<p class="buscador-general-dropdown__conector-help">
+				La segunda opcion es mas restrictiva y casi siempre devuelve menos resultados.
+			</p>
 		</b-dropdown-form>
 	</b-dropdown>
 </template>
@@ -136,6 +227,37 @@ export default {
 			default: function () {
 				return []
 			},
+		},
+
+		/**
+		 * Modo de coincidencia por propiedad (prompt 07 del grupo 179): mapa key -> 'alguna' o
+		 * 'todas'. 'alguna' es el default nuevo (comportamiento tipo Vender); 'todas' es el
+		 * comportamiento estricto que tenia el buscador general antes de este prompt.
+		 */
+		keyword_modes: {
+			type: Object,
+			default: function () {
+				return {}
+			},
+		},
+
+		/**
+		 * Conector a nivel modelo ('or' / 'and') que une el grupo de props en modo 'todas' con el
+		 * grupo en modo 'alguna'. Solo se usa/muestra cuando mostrar_conector es true.
+		 */
+		conector: {
+			type: String,
+			default: 'or',
+		},
+
+		/**
+		 * True si entre las props tildadas hay una mezcla de los dos modos ('alguna' y 'todas'):
+		 * en ese caso el conector tiene sentido y se muestra. Lo calcula Index.vue (conoce la
+		 * seleccion completa).
+		 */
+		mostrar_conector: {
+			type: Boolean,
+			default: false,
 		},
 	},
 	data() {
@@ -207,6 +329,45 @@ export default {
 				return (item.text || '').toLowerCase().indexOf(query) !== -1
 			})
 		},
+
+		/**
+		 * Preset que coincide con la configuracion actual, para resaltar el boton correspondiente
+		 * (mismo criterio que all_selected/none_selected: solo se resalta cuando calza exacto).
+		 * 'distribuida' = todas las props tildadas en 'alguna'; 'estricta' = todas en 'todas'.
+		 * Si no hay ninguna prop tildada, o hay mezcla, no hay preset activo (null).
+		 *
+		 * @returns {String|null}
+		 */
+		preset_activo() {
+			let self = this
+			let modos = []
+			this.ordered_props.forEach(function (item) {
+				if (self.is_selected(item)) {
+					modos.push(self.keyword_mode_de(item))
+				}
+			})
+			if (!modos.length) {
+				return null
+			}
+			// Recorre a mano (sin every/map) para mantenerse en linea con el estilo del proyecto.
+			let todas_alguna = true
+			let todas_todas = true
+			modos.forEach(function (mode) {
+				if (mode !== 'alguna') {
+					todas_alguna = false
+				}
+				if (mode !== 'todas') {
+					todas_todas = false
+				}
+			})
+			if (todas_alguna) {
+				return 'distribuida'
+			}
+			if (todas_todas) {
+				return 'estricta'
+			}
+			return null
+		},
 	},
 	methods: {
 		/**
@@ -231,6 +392,31 @@ export default {
 		 */
 		es_filtro_fijo_activo(item) {
 			return this.filtros_fijos_activos.indexOf(item.key) !== -1
+		},
+
+		/**
+		 * Modo de coincidencia de una propiedad ('alguna' o 'todas'). Si no hay valor guardado
+		 * para esa key, cae en 'alguna' (mismo default que Index.vue: comportamiento tipo Vender).
+		 *
+		 * @param {Object} item { key, kind }
+		 * @returns {String} 'alguna' o 'todas'
+		 */
+		keyword_mode_de(item) {
+			return this.keyword_modes[item.key] || 'alguna'
+		},
+
+		/**
+		 * Texto de ayuda (tooltip) segun el modo actual de una propiedad, en criollo, sin jerga
+		 * tecnica (nada de OR/AND/operador).
+		 *
+		 * @param {Object} item { key, kind }
+		 * @returns {String}
+		 */
+		keyword_mode_help_de(item) {
+			if (this.keyword_mode_de(item) === 'todas') {
+				return 'Este campo tiene que tener todas las palabras'
+			}
+			return 'Alcanza con que este campo tenga alguna de las palabras'
 		},
 
 		/**
@@ -343,6 +529,15 @@ export default {
 		outline: none
 		border-color: #c7cacf
 
+// Titulo discreto de cada seccion ("Donde buscar" / "Como buscar")
+.buscador-general-dropdown__section-title
+	padding: 6px 12px 2px
+	font-size: 0.72rem
+	font-weight: 600
+	text-transform: uppercase
+	letter-spacing: 0.04em
+	color: #9aa0a6
+
 // Fila de una propiedad: nombre a la izquierda, toggle a la derecha
 .buscador-general-dropdown__row
 	display: flex
@@ -397,6 +592,102 @@ export default {
 		&.buscador-general-dropdown__row-label--activa
 			.buscador-general-dropdown__row-label-text
 				color: #007bff
+
+// Selector de modo de busqueda por propiedad + icono de ayuda, entre el nombre y el toggle
+.buscador-general-dropdown__row-mode
+	display: flex
+	align-items: center
+	gap: 4px
+	flex: 0 0 auto
+
+	.buscador-general-dropdown__row-mode-select
+		border: 1px solid #e2e4e7
+		border-radius: 6px
+		background: #fff
+		padding: 1px 4px
+		font-size: 0.72rem
+		color: #4b4f56
+		max-width: 108px
+
+		&:focus
+			outline: none
+			border-color: #c7cacf
+
+	.buscador-general-dropdown__row-mode-help
+		font-size: 0.68rem
+		color: #9aa0a6
+		cursor: help
+
+// Presets de "Como buscar": dos tarjetas apiladas, estetica Apple (sobria, sin colores fuertes)
+.buscador-general-dropdown__presets-form
+	padding-top: 4px
+
+.buscador-general-dropdown__presets
+	display: flex
+	flex-direction: column
+	gap: 6px
+
+	.buscador-general-dropdown__preset
+		display: flex
+		flex-direction: column
+		gap: 2px
+		text-align: left
+		border: 1px solid #e2e4e7
+		background: #fff
+		border-radius: 8px
+		padding: 8px 10px
+		cursor: pointer
+		transition: background 0.15s ease, border-color 0.15s ease
+
+		&:hover
+			background: #f7f8f9
+
+		// Solo se resalta cuando la configuracion actual coincide exactamente con este preset
+		&.buscador-general-dropdown__preset--active
+			border-color: #22c55e
+			background: rgba(34, 197, 94, 0.08)
+
+		.buscador-general-dropdown__preset-title
+			font-size: 0.82rem
+			color: #1d1d1f
+
+		.buscador-general-dropdown__preset-desc
+			font-size: 0.72rem
+			color: #86868b
+			line-height: 1.3
+
+// Conector (solo visible con mezcla de modos entre las props tildadas)
+.buscador-general-dropdown__conector-form
+	padding-top: 6px
+
+.buscador-general-dropdown__conector
+	display: flex
+	flex-direction: column
+	gap: 6px
+
+	.buscador-general-dropdown__conector-opcion
+		text-align: left
+		border: 1px solid #e2e4e7
+		background: #fff
+		border-radius: 8px
+		padding: 6px 10px
+		font-size: 0.78rem
+		color: #4b4f56
+		cursor: pointer
+		transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease
+
+		&:hover
+			background: #f7f8f9
+
+		&.buscador-general-dropdown__conector-opcion--active
+			border-color: #22c55e
+			color: #15803d
+			background: rgba(34, 197, 94, 0.08)
+
+.buscador-general-dropdown__conector-help
+	margin: 4px 0 0
+	font-size: 0.7rem
+	color: #86868b
 
 // ─── Toggle tipo iPhone (mismo diseno que los checkbox del ModelForm) ───
 .bg-toggle

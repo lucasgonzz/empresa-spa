@@ -20,10 +20,16 @@
 				:selected_props="selected_props"
 				:selected_relations="selected_relations"
 				:filtros_fijos_activos="filtros_fijos_activos"
+				:keyword_modes="keyword_modes"
+				:conector="conector"
+				:mostrar_conector="mostrar_conector"
 				@toggle="onToggle"
 				@select-all="selectAll"
 				@deselect-all="deselectAll"
-				@configure="onConfigure"></properties-dropdown>
+				@configure="onConfigure"
+				@set-keyword-mode="onSetKeywordMode"
+				@set-preset="onSetPreset"
+				@set-conector="onSetConector"></properties-dropdown>
 
 				<input
 				class="buscador-general__input"
@@ -155,6 +161,14 @@ export default {
 			// True apenas el usuario toca la seleccion a mano: evita que la carga async del backend
 			// pise una eleccion que el usuario ya empezo a hacer mientras se resolvia el GET.
 			selection_touched: false,
+			// Modo de coincidencia por propiedad (prompt 07 del grupo 179): mapa key -> 'alguna' o
+			// 'todas'. Toda key sin entrada se interpreta como 'alguna' (ver keywordModeDe()): ese
+			// es el punto del prompt, el buscador general pasa a comportarse como el de Vender
+			// (distribuida) salvo que el usuario elija lo contrario.
+			keyword_modes: {},
+			// Conector a nivel modelo ('or'/'and') que une el grupo de props en 'todas' con el
+			// grupo en 'alguna'. Default 'or' (menos restrictivo), igual que valida el backend.
+			conector: 'or',
 			// Propiedad que se esta configurando como filtro fijo en FiltroFijoModal.vue (null si
 			// el modal esta cerrado o no hay ninguna en edicion).
 			property_en_configuracion: null,
@@ -365,6 +379,35 @@ export default {
 		},
 
 		/**
+		 * True solo si entre las props tildadas (propias + relaciones) hay al menos una en modo
+		 * 'alguna' y al menos una en 'todas' (prompt 07 del grupo 179). El conector solo tiene
+		 * sentido cuando hay una mezcla de los dos modos; si son todas iguales, no hay nada que
+		 * conectar y el control se oculta para no ensuciar el desplegable.
+		 *
+		 * @returns {Boolean}
+		 */
+		mostrar_conector() {
+			let self = this
+			let hay_alguna = false
+			let hay_todas = false
+			this.selected_props.forEach(function (key) {
+				if (self.keywordModeDe(key) === 'todas') {
+					hay_todas = true
+				} else {
+					hay_alguna = true
+				}
+			})
+			this.selected_relations.forEach(function (key) {
+				if (self.keywordModeDe(key) === 'todas') {
+					hay_todas = true
+				} else {
+					hay_alguna = true
+				}
+			})
+			return hay_alguna && hay_todas
+		},
+
+		/**
 		 * Combina los `extra_filters` que manda el modulo por prop (ej: categoria/stock del
 		 * Listado) con los filtros fijos que el usuario configuro desde el buscador. Si el
 		 * usuario activo un filtro con la misma `key` que uno del modulo, el del usuario
@@ -411,6 +454,18 @@ export default {
 	},
 	methods: {
 		/**
+		 * Modo de coincidencia de una propiedad ('alguna' o 'todas'). Si no hay valor guardado
+		 * para esa key, devuelve 'alguna' (default nuevo del prompt 07 del grupo 179: el buscador
+		 * general pasa a comportarse como el de Vender salvo que el usuario diga lo contrario).
+		 *
+		 * @param {String} key
+		 * @returns {String} 'alguna' o 'todas'
+		 */
+		keywordModeDe(key) {
+			return this.keyword_modes[key] || 'alguna'
+		},
+
+		/**
 		 * Seleccion por defecto (sin preferencia guardada): 'name' (si el modelo lo tiene) mas las
 		 * keys de default_extra_props que existan en own_props. Ninguna relacion por defecto.
 		 *
@@ -447,9 +502,13 @@ export default {
 		 * @return {void}
 		 */
 		loadSelection() {
-			let cached = this.tableColumnPreferenceColumnsFromStore(this.model_name, 'global_search')
-			if (cached && cached.length) {
-				this.applySelectionFromColumns(cached)
+			// Cache-first tambien para el `settings.conector` a nivel modelo: se busca la fila
+			// completa (no solo columns) en el cache global de table_column_preference, mismo
+			// criterio que tableColumnPreferenceColumnsFromStore pero sin descartar `settings`.
+			let cached_model = this.tableColumnPreferenceModelFromStore('global_search')
+			if (cached_model && Array.isArray(cached_model.columns) && cached_model.columns.length) {
+				this.applySelectionFromColumns(cached_model.columns)
+				this.applyConectorFromSettings(cached_model.settings)
 				return
 			}
 			this.$api.get('table-column-preference/' + this.model_name + '/global_search')
@@ -459,6 +518,7 @@ export default {
 				}
 				if (res.data && res.data.model && Array.isArray(res.data.model.columns) && res.data.model.columns.length) {
 					this.applySelectionFromColumns(res.data.model.columns)
+					this.applyConectorFromSettings(res.data.model.settings)
 				} else {
 					this.applyDefaultSelection()
 				}
@@ -471,14 +531,42 @@ export default {
 		},
 
 		/**
+		 * Busca la fila completa de una preferencia (no solo `columns`) en el cache global de
+		 * table_column_preference. A diferencia del mixin tableColumnPreferenceColumnsFromStore
+		 * (que solo devuelve `columns`), esta version local tambien expone `settings`, necesario
+		 * para leer el `conector` a nivel modelo (prompt 07 del grupo 179).
+		 *
+		 * @param {String} preference_type
+		 * @returns {Object|null}
+		 */
+		tableColumnPreferenceModelFromStore(preference_type) {
+			let store_state = this.$store.state.table_column_preference
+			if (!store_state || !Array.isArray(store_state.models) || !store_state.models.length) {
+				return null
+			}
+			let self = this
+			let found = null
+			store_state.models.forEach(function (model) {
+				if (model && model.model_name === self.model_name && model.preference_type === preference_type) {
+					found = model
+				}
+			})
+			return found
+		},
+
+		/**
 		 * Reconstruye la seleccion desde las columnas guardadas: visible=true => tildada. Separa
 		 * en props propias vs relaciones por pertenencia de la key (las relaciones terminan en
-		 * "_id" y nunca colisionan con una prop propia).
+		 * "_id" y nunca colisionan con una prop propia). Ademas vuelca el `keyword_mode` de cada
+		 * columna en `keyword_modes` (default 'alguna' si no vino guardado, ver keywordModeDe()).
 		 *
-		 * @param {Array} columns [{ key, visible, order }]
+		 * @param {Array} columns [{ key, visible, order, keyword_mode }]
 		 * @return {void}
 		 */
 		applySelectionFromColumns(columns) {
+			if (this.selection_touched) {
+				return
+			}
 			let own_available = {}
 			this.own_props.forEach(function (property) {
 				own_available[property.key] = true
@@ -489,8 +577,17 @@ export default {
 			})
 			let own_keys = []
 			let relation_keys = []
+			let modes = {}
 			columns.forEach(function (column) {
-				if (!column || !column.visible || !column.key) {
+				if (!column || !column.key) {
+					return
+				}
+				// keyword_mode se guarda para toda columna que lo tenga, este o no tildada hoy: asi
+				// no se pierde la eleccion del usuario si destilda y vuelve a tildar la prop despues.
+				if (column.keyword_mode === 'todas' || column.keyword_mode === 'alguna') {
+					modes[column.key] = column.keyword_mode
+				}
+				if (!column.visible) {
 					return
 				}
 				if (own_available[column.key]) {
@@ -501,6 +598,24 @@ export default {
 			})
 			this.selected_props = own_keys
 			this.selected_relations = relation_keys
+			this.keyword_modes = modes
+		},
+
+		/**
+		 * Vuelca el `conector` guardado a nivel modelo (fila `settings` de la preferencia) en el
+		 * data local, con default 'or' si no hay nada guardado todavia. Nunca pisa lo que el
+		 * usuario ya toco (mismo criterio que selection_touched para el resto de la seleccion).
+		 *
+		 * @param {Object|null|undefined} settings { conector }
+		 * @return {void}
+		 */
+		applyConectorFromSettings(settings) {
+			if (this.selection_touched) {
+				return
+			}
+			if (settings && (settings.conector === 'or' || settings.conector === 'and')) {
+				this.conector = settings.conector
+			}
 		},
 
 		/**
@@ -790,6 +905,50 @@ export default {
 		},
 
 		/**
+		 * Handler del evento 'set-keyword-mode' del desplegable: cambia el modo de coincidencia de
+		 * UNA propiedad puntual. No persiste al toque (mismo criterio que el resto de la seleccion,
+		 * que se guarda al buscar): solo actualiza el estado local.
+		 *
+		 * @param {Object} payload { key, kind, mode } mode: 'alguna' o 'todas'
+		 * @return {void}
+		 */
+		onSetKeywordMode(payload) {
+			this.selection_touched = true
+			this.$set(this.keyword_modes, payload.key, payload.mode)
+		},
+
+		/**
+		 * Handler del evento 'set-preset' del desplegable: aplica 'alguna' o 'todas' a TODAS las
+		 * props actualmente tildadas (propias + relaciones) de una sola vez.
+		 *
+		 * @param {String} preset 'distribuida' (-> 'alguna') o 'estricta' (-> 'todas')
+		 * @return {void}
+		 */
+		onSetPreset(preset) {
+			this.selection_touched = true
+			let mode = preset === 'estricta' ? 'todas' : 'alguna'
+			let modes = Object.assign({}, this.keyword_modes)
+			this.selected_props.forEach(function (key) {
+				modes[key] = mode
+			})
+			this.selected_relations.forEach(function (key) {
+				modes[key] = mode
+			})
+			this.keyword_modes = modes
+		},
+
+		/**
+		 * Handler del evento 'set-conector' del desplegable: cambia el conector a nivel modelo.
+		 *
+		 * @param {String} value 'or' o 'and'
+		 * @return {void}
+		 */
+		onSetConector(value) {
+			this.selection_touched = true
+			this.conector = value
+		},
+
+		/**
 		 * Tilda/destilda una prop propia de la busqueda.
 		 *
 		 * @param {String} key
@@ -866,9 +1025,12 @@ export default {
 				return
 			}
 
-			// Arma relation_props con la forma que espera el backend: { relation, props }.
+			// Arma relation_props con la forma que espera el backend: { relation, props, keyword_mode }.
+			// keyword_mode viaja a nivel de la relacion completa (todas las props internas de esa
+			// relacion comparten el modo de la propiedad "_id" tildada, ver prompt 03 del grupo 179).
 			let relation_props_payload = []
 			let relation_props_disponibles = this.relation_props
+			let self = this
 			this.selected_relations.forEach(function (relation_key) {
 				let relation_prop = relation_props_disponibles.find(function (item) {
 					return item.key === relation_key
@@ -877,16 +1039,28 @@ export default {
 					relation_props_payload.push({
 						relation: relation_prop.relation,
 						props: relation_prop.props,
+						keyword_mode: self.keywordModeDe(relation_key),
 					})
 				}
+			})
+
+			// props pasa de ser un array de strings a un array de objetos { key, keyword_mode }
+			// (prompt 07 del grupo 179): el backend acepta las dos formas (ver prompt 03), pero
+			// desde este componente siempre se manda la forma nueva.
+			let props_payload = []
+			this.selected_props.forEach(function (key) {
+				props_payload.push({ key: key, keyword_mode: self.keywordModeDe(key) })
 			})
 
 			let payload = {
 				// Se llama `query_value`, no `query`: en el backend `$request->query` es el
 				// InputBag de Symfony y no el input del mismo nombre.
 				query_value: this.query_value,
-				props: this.selected_props,
+				props: props_payload,
 				relation_props: relation_props_payload,
+				// Conector a nivel modelo ('or'/'and'): une el grupo de props en modo 'todas' con
+				// el grupo en modo 'alguna' (ver prompt 03 del grupo 179 para la semantica exacta).
+				conector: this.conector,
 				extra_filters: this.extra_filters_finales,
 				page: 1,
 			}
@@ -899,9 +1073,10 @@ export default {
 
 		/**
 		 * Persiste que props quedan tildadas para la busqueda rapida (preference_type
-		 * global_search), por usuario y modelo. visible=true => tildada. Fire and forget: no
-		 * bloquea la busqueda. Al guardar, refresca el cache global para que la proxima vez
-		 * (u otra vista) se cargue la seleccion nueva.
+		 * global_search), por usuario y modelo. visible=true => tildada. Suma tambien el
+		 * `keyword_mode` de cada columna y el `conector` a nivel modelo en `settings` (prompt 07
+		 * del grupo 179). Fire and forget: no bloquea la busqueda. Al guardar, refresca el cache
+		 * global para que la proxima vez (u otra vista) se cargue la seleccion nueva.
 		 *
 		 * @return {void}
 		 */
@@ -913,10 +1088,22 @@ export default {
 				let is_selected = item.kind === 'own'
 					? self.selected_props.indexOf(item.key) !== -1
 					: self.selected_relations.indexOf(item.key) !== -1
-				columns.push({ key: item.key, visible: is_selected, order: order })
+				columns.push({
+					key: item.key,
+					visible: is_selected,
+					order: order,
+					// Modo de coincidencia de esta propiedad (prompt 07 del grupo 179): se manda
+					// siempre, este o no tildada hoy, para no perder la eleccion del usuario si
+					// destilda y vuelve a tildar la prop mas adelante.
+					keyword_mode: self.keywordModeDe(item.key),
+				})
 				order++
 			})
-			this.$api.put('table-column-preference/' + this.model_name + '/global_search', { columns: columns })
+			this.$api.put('table-column-preference/' + this.model_name + '/global_search', {
+				columns: columns,
+				// Conector a nivel modelo ('or'/'and'), fuera de las columnas.
+				settings: { conector: this.conector },
+			})
 			.then(() => {
 				this.$store.dispatch('table_column_preference/getModels')
 			})
