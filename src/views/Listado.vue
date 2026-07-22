@@ -113,6 +113,16 @@
 			<price-input></price-input>
 		</template>
 
+		<!-- Prompt 612: "Costo base" con descripcion permanente que cambia segun RRII/Monotributista -->
+		<template #cost>
+			<cost-input></cost-input>
+		</template>
+
+		<!-- Prompt 612: "Aplicar iva" forzado y bloqueado para RRII; oculto por completo en Monotributista via v_if_function -->
+		<template #aplicar_iva>
+			<aplicar-iva-input></aplicar-iva-input>
+		</template>
+
 		<template #final_price>
 			<final-price></final-price>
 		</template>
@@ -205,6 +215,9 @@ export default {
 		PriceInput: () => import('@/components/listado/components/modal-props/PriceInput'),
 		PercentageGainInput: () => import('@/components/listado/components/modal-props/PercentageGainInput'),
 		FinalPrice: () => import('@/components/listado/components/modal-props/FinalPrice'),
+		// Prompt 612: "Costo base" (descripcion permanente) y "Aplicar iva" (forzado/bloqueado en RRII, oculto en MT)
+		CostInput: () => import('@/components/listado/components/modal-props/CostInput'),
+		AplicarIvaInput: () => import('@/components/listado/components/modal-props/AplicarIvaInput'),
 
 		// Dropdown options
 		DropDownOptions: () => import('@/components/listado/components/selected-filtered-options/Index'),

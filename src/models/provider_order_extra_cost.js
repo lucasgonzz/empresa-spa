@@ -6,10 +6,13 @@ export default {
 			type: 'text',
 		},
 		{
+			// Prompt 612: aclara que este importe es el bruto final del comprobante (con IVA
+			// incluido si el costo extra esta facturado), no un valor "neto" a discriminar aparte.
 			text: 'Valor',
 			key: 'value',
 			type: 'number',
 			is_price: true,
+			description: 'Importe bruto final de este costo extra, tal como figura en el comprobante (con IVA incluido si esta facturado).',
 		},
 		{
 			// Clasifica el costo extra. Si el tipo es Transporte/Seguro/Arancel-Importacion, el backend prorratea este costo entre los articulos de la compra y crea/actualiza un recargo (article_surchage) del mismo tipo en cada articulo (prompt 264)
@@ -44,18 +47,22 @@ export default {
 			type: 'select',
 			relation_prop_name: 'percentage',
 			use_store_models: true,
-			// Solo se muestra si el costo extra esta facturado (ver "show_costo_extra_si_facturado" en
-			// src/common-vue/mixins/model_functions.js)
-			v_if_function: 'show_costo_extra_si_facturado',
+			// Prompt 612: ademas de requerir "Facturado", ahora tambien se oculta en cuentas
+			// Monotributista (ver "show_costo_extra_iva_si_facturado_y_rrii" en
+			// src/common-vue/mixins/model_functions.js): al Monotributista nunca le discriminan el
+			// IVA, no tiene alicuota que elegir.
+			v_if_function: 'show_costo_extra_iva_si_facturado_y_rrii',
 			description: 'Alícuota de IVA con la que se facturó este costo extra (puede ser distinta a la de la mercadería; ej. el flete suele ir a 21%).',
 		},
 		{
-			text: 'Va en la factura de la compra',
+			// Prompt 612: label mas explicito sobre lo que implica activar/desactivar este control
+			// (antes "Va en la factura de la compra").
+			text: 'La factura viene incluida en la compra',
 			key: 'en_factura_compra',
 			type: 'checkbox',
 			value: 1,
 			v_if_function: 'show_costo_extra_si_facturado',
-			description: 'Activado: este costo extra va dentro de la misma factura de la compra. Desactivado: se factura aparte (por ejemplo, cuando el transporte lo hizo otra empresa) y se genera un comprobante separado con los datos del emisor.',
+			description: 'Activado: este costo extra va dentro de la misma factura de la compra. Desactivado: se factura aparte (por ejemplo, cuando el transporte lo hizo otra empresa): se va a generar automaticamente un comprobante separado con el total de este costo extra, para completar despues con los datos del emisor (CUIT y razón social).',
 		},
 		{
 			text: 'CUIT emisor',

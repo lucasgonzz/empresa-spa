@@ -92,5 +92,20 @@ export default {
 		show_costo_extra_si_factura_aparte(prop, model) {
 			return !!(model && model.facturado && !model.en_factura_compra)
 		},
+		/**
+		 * Prompt 612 (v_if_function usado en src/models/provider_order_extra_cost.js): muestra el
+		 * selector de alicuota IVA ("iva_id") de un costo extra solo cuando esta facturado Y la
+		 * cuenta es Responsable Inscripto. Reusa "es_monotributista" (computed global definida en
+		 * src/mixins/generals.js, Prompt 611) para la condicion de IVA de la cuenta: al
+		 * Monotributista nunca le discriminan el IVA, asi que no tiene sentido que elija alicuota
+		 * aunque el costo extra este facturado.
+		 *
+		 * @param {Object} prop propiedad del modelo que declara este v_if_function.
+		 * @param {Object} model el costo extra (provider_order_extra_cost) que se esta editando.
+		 * @returns {Boolean}
+		 */
+		show_costo_extra_iva_si_facturado_y_rrii(prop, model) {
+			return this.show_costo_extra_si_facturado(prop, model) && !this.es_monotributista
+		},
 	}
 }

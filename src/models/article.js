@@ -138,7 +138,12 @@ export default {
 			group_title: 'Precio',
 		},
 		{
-			text: 'costo',
+			// Prompt 612: se renombro de "Costo" a "Costo base" (mismo campo/mismo valor guardado,
+			// sin IVA) para aclarar, sobre todo al Monotributista, que este valor no es el que
+			// figura en la factura de su proveedor. La aclaracion ahora es SIEMPRE VISIBLE (ya no
+			// popover de "description") y cambia segun la condicion de IVA de la cuenta: ver el slot
+			// "#cost" en src/views/Listado.vue -> CostInput.vue.
+			text: 'Costo base',
 			key: 'cost',
 			type_to_update: 'number',
 			type: 'text',
@@ -152,7 +157,6 @@ export default {
 				key: 'cost_in_dollars',
 				equal_to: 1
 			},
-			description: 'Costo que pago a su proveedor al comprar este articulo. Coloque el valor literal, sin descuentos ni IVA, esos datos se colocan por fuera del costo para tener mejor articulado el calculo del "Precio Final"',
 			// table_position: 8,
 		},
 		
@@ -171,13 +175,19 @@ export default {
 			description: 'Alicuota de IVA que tiene este articulo, coloque el VALOR REAL ya que este dato sera usado en caso de hacer una FACTURA por la venta de este articulo',
 		},
 		{
+			// Prompt 612: solo se muestra (y se puede ver) para cuentas Responsable Inscripto, donde
+			// queda siempre activado y bloqueado (el usuario no lo puede apagar; los articulos
+			// exentos se resuelven por la alicuota de IVA, no apagando este control). En
+			// Monotributista se oculta por completo. El render se reemplaza por un componente propio
+			// (slot "#aplicar_iva" en src/views/Listado.vue -> AplicarIvaInput.vue), que fuerza el
+			// valor a 1 y agrega la aclaracion siempre visible.
 			text: 'Aplicar iva',
-			key: 'aplicar_iva', 
+			key: 'aplicar_iva',
 			type: 'checkbox',
 			not_show: true,
 			value: 1,
 			use_to_update: true,
-			description: 'Indique si quiere el el IVA del articulo se sume a su costo para obtener el "Costo Real". Valores posibles: "Si" y "No". Valor por defecto: "Si"',
+			v_if_function: 'es_responsable_inscripto_v_if_function',
 		},
 		{
 			text: 'costo en dolares',
