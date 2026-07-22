@@ -58,7 +58,26 @@
 		:key="item.kind + '_' + item.key"
 		class="buscador-general-dropdown__row-form">
 			<div class="buscador-general-dropdown__row">
-				<span class="buscador-general-dropdown__row-label">{{ display_text(item.text) }}</span>
+				<!--
+					Nombre de la propiedad: ahora es clickeable (abre el modal de configuracion de
+					filtro fijo, prompt 05 del grupo 179). Es un boton separado del toggle: el click
+					acá NO debe disparar el toggle ni viceversa, por eso @click.stop (ademas de estar
+					en un elemento hermano, no anidado dentro del label del toggle).
+				-->
+				<button
+				type="button"
+				class="buscador-general-dropdown__row-label"
+				:class="{ 'buscador-general-dropdown__row-label--activa': es_filtro_fijo_activo(item) }"
+				:title="'Configurar '+display_text(item.text)+' como filtro fijo'"
+				@click.stop="$emit('configure', { key: item.key, kind: item.kind })">
+					<span class="buscador-general-dropdown__row-label-text">{{ display_text(item.text) }}</span>
+					<!-- Puntito/embudo lleno: indica que esta propiedad ya esta agregada como filtro fijo -->
+					<i
+					v-if="es_filtro_fijo_activo(item)"
+					class="icon-filter buscador-general-dropdown__row-label-badge"></i>
+					<!-- Icono de ajustes: discreto, solo aparece marcado al hover (ver estilos) -->
+					<i class="icon-configuration buscador-general-dropdown__row-label-gear"></i>
+				</button>
 
 				<!-- Toggle tipo iPhone (mismo diseno que los checkbox del ModelForm) -->
 				<label class="bg-toggle">
@@ -105,6 +124,18 @@ export default {
 		selected_relations: {
 			type: Array,
 			required: true,
+		},
+
+		/**
+		 * Keys de propiedades que ya estan agregadas como filtro fijo (control propio a la par del
+		 * input, ver FiltroFijoModal.vue). Solo se usa para el indicador visual de la fila; el
+		 * armado/persistencia de esta lista lo maneja Index.vue.
+		 */
+		filtros_fijos_activos: {
+			type: Array,
+			default: function () {
+				return []
+			},
 		},
 	},
 	data() {
@@ -189,6 +220,17 @@ export default {
 				return this.selected_props.indexOf(item.key) !== -1
 			}
 			return this.selected_relations.indexOf(item.key) !== -1
+		},
+
+		/**
+		 * Indica si una propiedad de la lista ya esta agregada como filtro fijo (para mostrar el
+		 * indicador visual al lado del nombre).
+		 *
+		 * @param {Object} item { key, kind }
+		 * @returns {Boolean}
+		 */
+		es_filtro_fijo_activo(item) {
+			return this.filtros_fijos_activos.indexOf(item.key) !== -1
 		},
 
 		/**
@@ -309,12 +351,52 @@ export default {
 	gap: 12px
 	width: 100%
 
+	// Nombre de la propiedad, ahora un boton (clickeable para abrir el modal de filtro fijo).
+	// Estetica Apple: discreto, sin fondo de boton, solo un cambio leve al hover.
 	.buscador-general-dropdown__row-label
+		display: flex
+		align-items: center
+		gap: 4px
+		flex: 1 1 auto
+		min-width: 0
+		border: none
+		background: transparent
+		padding: 2px 0
+		text-align: left
+		cursor: pointer
 		font-size: 0.86rem
 		color: #1d1d1f
-		overflow: hidden
-		text-overflow: ellipsis
-		white-space: nowrap
+
+		.buscador-general-dropdown__row-label-text
+			overflow: hidden
+			text-overflow: ellipsis
+			white-space: nowrap
+
+		// Puntito/embudo lleno: la propiedad ya esta agregada como filtro fijo
+		.buscador-general-dropdown__row-label-badge
+			flex: 0 0 auto
+			font-size: 0.7rem
+			color: #007bff
+
+		// Icono de ajustes: oculto salvo hover/focus, para no ensuciar la lista en reposo
+		.buscador-general-dropdown__row-label-gear
+			flex: 0 0 auto
+			font-size: 0.75rem
+			color: #86868b
+			opacity: 0
+			transition: opacity 0.15s ease
+
+		&:hover, &:focus
+			.buscador-general-dropdown__row-label-text
+				text-decoration: underline
+				text-decoration-color: #c7cacf
+
+			.buscador-general-dropdown__row-label-gear
+				opacity: 1
+
+		&.buscador-general-dropdown__row-label--activa
+			.buscador-general-dropdown__row-label-text
+				color: #007bff
 
 // ─── Toggle tipo iPhone (mismo diseno que los checkbox del ModelForm) ───
 .bg-toggle

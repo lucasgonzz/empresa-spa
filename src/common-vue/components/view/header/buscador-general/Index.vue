@@ -17,9 +17,11 @@
 				:ordered_props="ordered_props"
 				:selected_props="selected_props"
 				:selected_relations="selected_relations"
+				:filtros_fijos_activos="filtros_fijos_activos"
 				@toggle="onToggle"
 				@select-all="selectAll"
-				@deselect-all="deselectAll"></properties-dropdown>
+				@deselect-all="deselectAll"
+				@configure="onConfigure"></properties-dropdown>
 
 				<input
 				class="buscador-general__input"
@@ -54,6 +56,18 @@
 				<slot name="search_extra"></slot>
 			</div>
 		</div>
+
+		<!--
+			Modal de configuracion de filtro fijo (prompt 05 del grupo 179): se abre al hacer clic en
+			el NOMBRE de una propiedad del desplegable. Todavia no persiste ni renderiza controles
+			(eso es el prompt 06): solo emite 'agregar'/'quitar' con la config elegida.
+		-->
+		<filtro-fijo-modal
+		:model_name="model_name"
+		:property="property_en_configuracion"
+		:config_actual="config_actual_en_edicion"
+		@agregar="onAgregarFiltroFijo"
+		@quitar="onQuitarFiltroFijo"></filtro-fijo-modal>
 	</div>
 </template>
 <script>
@@ -70,6 +84,7 @@ export default {
 	 */
 	components: {
 		PropertiesDropdown: () => import('@/common-vue/components/view/header/buscador-general/PropertiesDropdown'),
+		FiltroFijoModal: () => import('@/common-vue/components/view/header/buscador-general/FiltroFijoModal'),
 	},
 	props: {
 		/**
@@ -123,6 +138,13 @@ export default {
 			// True apenas el usuario toca la seleccion a mano: evita que la carga async del backend
 			// pise una eleccion que el usuario ya empezo a hacer mientras se resolvia el GET.
 			selection_touched: false,
+			// Propiedad que se esta configurando como filtro fijo en FiltroFijoModal.vue (null si
+			// el modal esta cerrado o no hay ninguna en edicion).
+			property_en_configuracion: null,
+			// Filtros fijos agregados hasta ahora: [{ key, filter_kind, operator, default_value }].
+			// Prompt 05 (este): solo estado local en memoria. La persistencia contra el backend y
+			// el render de los controles al lado del input es el prompt 06, no se adelanta aca.
+			filtros_fijos: [],
 		}
 	},
 	computed: {
@@ -249,6 +271,69 @@ export default {
 		is_filtered_by_buscador() {
 			return !!this.$store.state[this.model_name].global_search_payload
 		},
+
+		/**
+		 * Props candidatas a "filtro fijo" (control propio a la par del input del buscador). A
+		 * diferencia de own_props/relation_props, esta lista NO excluye las props con
+		 * `not_show: true`: esa exclusion es correcta para la busqueda por texto (evita romper el
+		 * render de props sin `text`) pero descartaria justamente el caso mas pedido
+		 * (category_id, que en src/models/article.js tiene not_show: true). Criterio: tiene key y
+		 * text (sin text no se puede etiquetar el control), pasa check_extencions, y es relacion
+		 * (type search/select con key terminada en "_id") o numerica (type number).
+		 *
+		 * @returns {Array} [{ key, text, type }]
+		 */
+		props_filtrables() {
+			let model_properties = require('@/models/' + this.model_name).default.properties
+			// Mismo filtro por extension que own_props/relation_props: un cliente no debe ver
+			// propiedades de extensiones que no tiene habilitadas.
+			model_properties = this.check_extencions(model_properties)
+			let result = []
+			model_properties.forEach(function (property) {
+				if (!property.key || !property.text) {
+					return
+				}
+				let es_relacion = (property.type === 'search' || property.type === 'select')
+					&& property.key.slice(-3) === '_id'
+				let es_numerica = property.type === 'number'
+				if (!es_relacion && !es_numerica) {
+					return
+				}
+				result.push({ key: property.key, text: property.text, type: property.type })
+			})
+			return result
+		},
+
+		/**
+		 * Keys de los filtros fijos ya agregados, para pintar el indicador visual en el
+		 * desplegable (PropertiesDropdown.vue).
+		 *
+		 * @returns {Array}
+		 */
+		filtros_fijos_activos() {
+			let keys = []
+			this.filtros_fijos.forEach(function (filtro) {
+				keys.push(filtro.key)
+			})
+			return keys
+		},
+
+		/**
+		 * Configuracion ya guardada de la propiedad en edicion en el modal, si ya estaba agregada
+		 * como filtro fijo. null si es la primera vez que se configura.
+		 *
+		 * @returns {Object|null}
+		 */
+		config_actual_en_edicion() {
+			if (!this.property_en_configuracion) {
+				return null
+			}
+			let self = this
+			let encontrado = this.filtros_fijos.find(function (filtro) {
+				return filtro.key === self.property_en_configuracion.key
+			})
+			return encontrado || null
+		},
 	},
 	created() {
 		// Default inmediato (nunca queda vacio mientras carga) y despues se pisa con lo guardado.
@@ -362,6 +447,74 @@ export default {
 				this.toggleProp(payload.key)
 			} else {
 				this.toggleRelation(payload.key)
+			}
+		},
+
+		/**
+		 * Handler del click en el NOMBRE de una propiedad (evento 'configure' del desplegable).
+		 * Busca la prop primero en props_filtrables (relacion/numerica); si no esta ahi (ej: una
+		 * prop de texto, que no es filtrable como control fijo) cae a la definicion cruda del
+		 * modelo, para que el modal igual se abra y muestre el mensaje de "no soportado" en vez de
+		 * quedarse sin reaccionar al click.
+		 *
+		 * @param {Object} payload { key, kind }
+		 * @return {void}
+		 */
+		onConfigure(payload) {
+			let self = this
+			let encontrada = this.props_filtrables.find(function (property) {
+				return property.key === payload.key
+			})
+			if (!encontrada) {
+				let model_properties = this.check_extencions(require('@/models/' + this.model_name).default.properties)
+				let cruda = model_properties.find(function (property) {
+					return property.key === payload.key
+				})
+				encontrada = cruda ? { key: cruda.key, text: cruda.text, type: cruda.type } : { key: payload.key, text: payload.key, type: null }
+			}
+			this.property_en_configuracion = encontrada
+			this.$bvModal.show(this.model_name + '-filtro-fijo-modal')
+		},
+
+		/**
+		 * Handler del evento 'agregar' de FiltroFijoModal.vue: guarda (o actualiza, si ya existia)
+		 * la configuracion del filtro fijo en el estado local `filtros_fijos`. Prompt 05 (este):
+		 * solo estado local, sin persistir contra el backend ni renderizar el control todavia
+		 * (eso lo hace el prompt 06, que conecta esto con el store).
+		 *
+		 * @param {Object} config { key, filter_kind, operator, default_value }
+		 * @return {void}
+		 */
+		onAgregarFiltroFijo(config) {
+			let index = -1
+			this.filtros_fijos.forEach(function (filtro, i) {
+				if (filtro.key === config.key) {
+					index = i
+				}
+			})
+			if (index === -1) {
+				this.filtros_fijos.push(config)
+			} else {
+				this.filtros_fijos.splice(index, 1, config)
+			}
+		},
+
+		/**
+		 * Handler del evento 'quitar' de FiltroFijoModal.vue: saca la propiedad del estado local
+		 * `filtros_fijos`.
+		 *
+		 * @param {Object} payload { key }
+		 * @return {void}
+		 */
+		onQuitarFiltroFijo(payload) {
+			let index = -1
+			this.filtros_fijos.forEach(function (filtro, i) {
+				if (filtro.key === payload.key) {
+					index = i
+				}
+			})
+			if (index !== -1) {
+				this.filtros_fijos.splice(index, 1)
 			}
 		},
 
