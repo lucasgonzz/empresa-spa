@@ -175,6 +175,24 @@ export default {
 			type: String,
 			default: null,
 		},
+
+		/**
+		 * Filtros fijos por defecto (prompt 09 del grupo 179): configuracion que el modulo quiere
+		 * que quede sembrada la PRIMERA vez que un usuario usa el buscador general de este modelo
+		 * (sin preferencia guardada todavia, ni en cache ni en el backend). Misma forma que las
+		 * columnas persistidas: [{ key, filter_kind, operator, default_value }]. Se aplica una
+		 * sola vez y se persiste de inmediato como si el usuario la hubiera elegido, para que a
+		 * partir de ahi sea una preferencia normal que puede modificar o borrar sin que se vuelva
+		 * a sembrar. Si el usuario ya tiene una preferencia guardada (aunque sea vacia, con todo
+		 * en visible:false), no se siembra nada. Ej: categoria/stock del Listado de articulos para
+		 * clientes con la extension buscar_por_categoria_en_vender.
+		 */
+		filtros_fijos_por_defecto: {
+			type: Array,
+			default: function () {
+				return []
+			},
+		},
 	},
 	data() {
 		return {
@@ -707,11 +725,47 @@ export default {
 				}
 				if (res.data && res.data.model && Array.isArray(res.data.model.columns) && res.data.model.columns.length) {
 					this.applyFiltrosFijosFromColumns(res.data.model.columns)
+				} else {
+					// No existe preferencia guardada para este usuario/modelo (ni cache ni fila en
+					// el backend): se siembra la configuracion por defecto del modulo, si trajo
+					// alguna (prompt 09 del grupo 179).
+					this.sembrarFiltrosFijosPorDefecto()
 				}
 			})
 			.catch(() => {
-				// Sin preferencia guardada (404 o error de red): no hay filtros fijos, se deja vacio.
+				// Error de red (no "sin preferencia guardada", eso ya devuelve 200 con model null):
+				// se deja vacio, no se siembra nada para no persistir en falso ante una falla real
+				// de conexion. Se vuelve a intentar en el proximo montaje del componente.
 			})
+		},
+
+		/**
+		 * Siembra `filtros_fijos_por_defecto` como configuracion inicial de filtros fijos, SOLO
+		 * cuando este usuario/modelo nunca tuvo preferencia guardada (ver loadFiltrosFijos). Arma
+		 * columnas "visible:true" con la misma forma que persistFiltrosFijos y reusa
+		 * applyFiltrosFijosFromColumns para no duplicar la logica de reconstruccion (filtrado por
+		 * props_filtrables disponibles hoy, completado de text/type, valor inicial de cada
+		 * control). Persiste de inmediato: a partir de aca es una preferencia normal del usuario,
+		 * que puede modificar o borrar sin que se vuelva a sembrar en la proxima carga.
+		 *
+		 * @return {void}
+		 */
+		sembrarFiltrosFijosPorDefecto() {
+			if (this.filtros_touched || !this.filtros_fijos_por_defecto.length) {
+				return
+			}
+			let columns = []
+			this.filtros_fijos_por_defecto.forEach(function (filtro) {
+				columns.push({
+					key: filtro.key,
+					visible: true,
+					filter_kind: filtro.filter_kind,
+					operator: filtro.operator,
+					default_value: filtro.default_value,
+				})
+			})
+			this.applyFiltrosFijosFromColumns(columns)
+			this.persistFiltrosFijos()
 		},
 
 		/**

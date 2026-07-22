@@ -76,7 +76,8 @@
 			<buscador-general
 			:model_name="model_name"
 			:extra_filters="extra_filters"
-			:default_extra_props="default_extra_props">
+			:default_extra_props="default_extra_props"
+			:filtros_fijos_por_defecto="filtros_fijos_por_defecto">
 				<!-- Slot para que cada módulo inyecte filtros propios (ej: categoría/stock del listado) -->
 				<template #search_extra>
 					<slot name="search_extra"></slot>
@@ -172,6 +173,16 @@ export default {
 		 * Keys extra que se suman a 'name' en el default del buscador general (ver buscador-general).
 		 */
 		default_extra_props: {
+			type: Array,
+			default: function () {
+				return []
+			},
+		},
+		/**
+		 * Filtros fijos por defecto que el módulo quiere sembrar la primera vez que un usuario usa
+		 * el buscador general (ver buscador-general/Index.vue, filtros_fijos_por_defecto).
+		 */
+		filtros_fijos_por_defecto: {
 			type: Array,
 			default: function () {
 				return []

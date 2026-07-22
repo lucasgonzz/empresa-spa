@@ -77,6 +77,7 @@
 		:show_buscador_general="show_buscador_general"
 		:extra_filters="extra_filters"
 		:default_extra_props="default_extra_props"
+		:filtros_fijos_por_defecto="filtros_fijos_por_defecto"
 		:model_name="model_name">
 			<template v-slot:btn_create>
 				<slot name="horizontal_nav_btn_create"></slot>
@@ -425,6 +426,17 @@ export default {
 		 * codigo de barras/SKU/codigo de proveedor/N°.
 		 */
 		default_extra_props: {
+			type: Array,
+			default: function () {
+				return []
+			},
+		},
+		/**
+		 * Filtros fijos por defecto que el módulo quiere sembrar la primera vez que un usuario usa
+		 * el buscador general de este modelo (ver buscador-general/Index.vue,
+		 * filtros_fijos_por_defecto). Formato: [{ key, filter_kind, operator, default_value }].
+		 */
+		filtros_fijos_por_defecto: {
 			type: Array,
 			default: function () {
 				return []
