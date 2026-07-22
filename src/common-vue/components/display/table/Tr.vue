@@ -1,6 +1,7 @@
 <template>
 	<tr
 	@click="onRowSelected(model)"
+	:data-testid="select_mode == 'single' ? 'search-result-row' : (model_name + '-row-' + model.id)"
 	:class="rowClass(model)">
 		<td
 		v-for="(prop, index) in props"

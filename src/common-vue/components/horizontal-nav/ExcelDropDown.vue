@@ -43,7 +43,9 @@
 
 				<span
 
-				:dusk="'btn_create_'+model_name">
+				:dusk="'btn_create_'+model_name"
+
+				:data-testid="'btn-crear-'+model_name">
 
 					<i class="icon-plus"></i>
 

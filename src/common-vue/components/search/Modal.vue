@@ -16,6 +16,7 @@ hide-footer
 			class="input-search-modal"
 			v-model="query"
 			:id="_id+'-search-modal-input'"
+			:data-testid="_id+'-search-modal-input'"
 			:placeholder="_placeholder"></b-form-input>
 
 			<slot name="search_input_right"></slot>
@@ -87,7 +88,8 @@ hide-footer
 				@onRowSelected="onRowSelected"></table-component>	
 			</div>
 			<div
-			v-else>
+			v-else
+			data-testid="search-no-results">
 				<div class="text-with-icon">
 					<i class="icon-eye-slash"></i>
 					No se encontraron resultados

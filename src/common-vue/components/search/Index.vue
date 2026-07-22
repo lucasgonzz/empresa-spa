@@ -57,6 +57,7 @@
 					:disabled="is_disabled"
 					class="input-search"
 					:id="_id"
+					:data-testid="_id"
 					@click="callSearchModal"
 					@keyup="callSearchModal"
 					v-model="query"

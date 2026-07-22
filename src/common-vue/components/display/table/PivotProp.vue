@@ -20,6 +20,7 @@
 
 				<b-form-select
 				:id="inputId(prop)"
+				:data-testid="inputId(prop)"
 				@keyup.enter="changeFocus()"
 				@keyup.tab="changeFocus()"
 				v-else-if="showProp(prop) && prop.type == 'select'"
@@ -39,6 +40,7 @@
 
 				<b-form-input
 				:id="inputId(prop)"
+				:data-testid="inputId(prop)"
 				@keyup.enter="changeFocus()"
 				@keyup.tab="changeFocus()"
 				@blur="normalize_pivot_variable_decimal_on_blur(prop)"

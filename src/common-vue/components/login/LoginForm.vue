@@ -41,6 +41,7 @@
 					name="doc_number"
 					id="doc_number"
 					dusk="doc_number"
+					data-testid="login-doc-number"
 					autocomplete="username"
 					:placeholder="doc_number_placeholder"
 				/>
@@ -74,6 +75,7 @@
 					id="password"
 					type="password"
 					dusk="password"
+					data-testid="login-password"
 					autocomplete="current-password"
 					:placeholder="password_placeholder"
 				/>
@@ -98,6 +100,7 @@
 			@clicked="login"
 			text="Iniciar sesión"
 			name="login"
+			data-testid="login-submit"
 			:loader="loading"
 			variant="primary"
 		/>

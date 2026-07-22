@@ -227,6 +227,7 @@
 									<input
 									type="checkbox"
 									:id="model_name+'-'+prop.key"
+									:data-testid="model_name+'-'+prop.key"
 									:disabled="isDisabled(prop, form_to_filter)"
 									:checked="Number(model[prop.key]) === 1"
 									@change="$set(model, prop.key, $event.target.checked ? 1 : 0)">

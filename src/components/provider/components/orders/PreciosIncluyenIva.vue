@@ -17,6 +17,7 @@
 			<input
 			type="checkbox"
 			id="provider_order-precios_incluyen_iva"
+			data-testid="provider_order-precios_incluyen_iva"
 			:checked="precios_incluyen_iva_activo"
 			@change="setPreciosIncluyenIva($event.target.checked)">
 			<span class="model-form__toggle-track">

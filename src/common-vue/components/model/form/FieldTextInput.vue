@@ -8,6 +8,7 @@
 			<b-form-input
 			autocomplete="off"
 			:id="model_name + '-' + prop.key"
+			:data-testid="model_name + '-' + prop.key"
 			:disabled="disabled"
 			:type="prop.type"
 			:placeholder="placeholder"

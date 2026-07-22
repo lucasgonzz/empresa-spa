@@ -1,6 +1,7 @@
 <template>
 	<div
-	class="m-l-15">
+	class="m-l-15"
+	:data-testid="parent_model_name + '-' + prop.key">
 		<model-component
 		@modelDeleted="modelDeleted"
 		@modelSaved="modelSaved"
