@@ -4,8 +4,10 @@
 		dentro del mismo pill, el icono que abre el desplegable de propiedades a incluir en la busqueda;
 		a la derecha, el icono de lupa. La busqueda se dispara con Enter (la lupa es un atajo opcional).
 		Las props tildadas se persisten por usuario y por modelo al buscar (preference_type global_search)
-		y se recargan como default en cada montaje. Los filtros propios del modulo (slot search_extra) van
-		fuera del pill para no romper su diseno.
+		y se recargan como default en cada montaje. Los filtros fijos que el usuario configura desde el
+		desplegable (preference_type global_search_filters) se renderizan a la par del pill (ver
+		FiltrosFijos.vue). Los filtros propios del modulo (slot search_extra) van fuera del pill para no
+		romper su diseno.
 	-->
 	<div class="buscador-general">
 		<div class="buscador-general__row">
@@ -51,6 +53,19 @@
 				</button>
 			</div>
 
+			<!--
+				Filtros fijos configurados por el usuario (prompt 06 del grupo 179): un control por
+				cada uno (relacion / comparacion numerica / presencia de valor), entre el pill y los
+				filtros propios del modulo. Si no hay ninguno configurado no ocupa lugar (ver
+				`v-if` interno de FiltrosFijos.vue).
+			-->
+			<filtros-fijos
+			:filtros="filtros_fijos"
+			:values="filtros_values"
+			@input="onInputFiltroFijo"
+			@quitar="onQuitarFiltroFijo"
+			@enter="buscar"></filtros-fijos>
+
 			<!-- Filtros propios del modulo (ej: categoria / stock del listado). Fuera del pill. -->
 			<div class="buscador-general__extra">
 				<slot name="search_extra"></slot>
@@ -59,8 +74,9 @@
 
 		<!--
 			Modal de configuracion de filtro fijo (prompt 05 del grupo 179): se abre al hacer clic en
-			el NOMBRE de una propiedad del desplegable. Todavia no persiste ni renderiza controles
-			(eso es el prompt 06): solo emite 'agregar'/'quitar' con la config elegida.
+			el NOMBRE de una propiedad del desplegable. Emite 'agregar'/'quitar' con la config
+			elegida; Index.vue la persiste (preference_type global_search_filters, prompt 06) y
+			renderiza el control correspondiente en la barra de FiltrosFijos.vue.
 		-->
 		<filtro-fijo-modal
 		:model_name="model_name"
@@ -85,6 +101,7 @@ export default {
 	components: {
 		PropertiesDropdown: () => import('@/common-vue/components/view/header/buscador-general/PropertiesDropdown'),
 		FiltroFijoModal: () => import('@/common-vue/components/view/header/buscador-general/FiltroFijoModal'),
+		FiltrosFijos: () => import('@/common-vue/components/view/header/buscador-general/FiltrosFijos'),
 	},
 	props: {
 		/**
@@ -141,10 +158,22 @@ export default {
 			// Propiedad que se esta configurando como filtro fijo en FiltroFijoModal.vue (null si
 			// el modal esta cerrado o no hay ninguna en edicion).
 			property_en_configuracion: null,
-			// Filtros fijos agregados hasta ahora: [{ key, filter_kind, operator, default_value }].
-			// Prompt 05 (este): solo estado local en memoria. La persistencia contra el backend y
-			// el render de los controles al lado del input es el prompt 06, no se adelanta aca.
+			// Filtros fijos agregados hasta ahora, ya reconstruidos desde la preferencia guardada
+			// (o desde lo que el usuario agrego a mano en esta sesion):
+			// [{ key, text, type, filter_kind, operator, default_value }].
 			filtros_fijos: [],
+			// Valor actual elegido para cada filtro fijo, keyeado por `key`. Se inicializa con el
+			// default_value (o el valor neutro) al cargar/agregar cada filtro.
+			filtros_values: {},
+			// True apenas el usuario toca algun filtro fijo (agregar/quitar/elegir un valor): evita
+			// que la carga async de la preferencia pise una configuracion que ya se empezo a tocar
+			// mientras se resolvia el GET (mismo rol que selection_touched).
+			filtros_touched: false,
+			// Ultima version conocida (cargada o persistida) de CADA columna de filtro fijo, tanto
+			// las activas como las que el usuario desactivo, keyeada por `key`. Se usa solo para
+			// armar el PUT de persistFiltrosFijos() sin perder la configuracion de una columna que
+			// se quito (visible: false), no se usa para el render.
+			filtros_historial: {},
 		}
 	},
 	computed: {
@@ -334,11 +363,51 @@ export default {
 			})
 			return encontrado || null
 		},
+
+		/**
+		 * Combina los `extra_filters` que manda el modulo por prop (ej: categoria/stock del
+		 * Listado) con los filtros fijos que el usuario configuro desde el buscador. Si el
+		 * usuario activo un filtro con la misma `key` que uno del modulo, el del usuario
+		 * reemplaza al del modulo (no se manda la misma columna dos veces). Los filtros fijos
+		 * "sin valor" (select en la opcion neutra, comparacion sin numero cargado) no se agregan.
+		 *
+		 * @returns {Array} [{ key, operator, value }]
+		 */
+		extra_filters_finales() {
+			// Arranca con una copia de los filtros del modulo, para no mutar la prop original.
+			let combinados = []
+			this.extra_filters.forEach(function (filtro) {
+				combinados.push(filtro)
+			})
+			let self = this
+			this.filtros_fijos.forEach(function (filtro) {
+				let entrada = self.entradaDeFiltroFijo(filtro)
+				if (!entrada) {
+					// Filtro "sin valor": no se manda al backend.
+					return
+				}
+				// Si el modulo ya mandaba esta misma key, la reemplaza; si no, la agrega.
+				let index = -1
+				combinados.forEach(function (existente, i) {
+					if (existente.key === entrada.key) {
+						index = i
+					}
+				})
+				if (index === -1) {
+					combinados.push(entrada)
+				} else {
+					combinados.splice(index, 1, entrada)
+				}
+			})
+			return combinados
+		},
 	},
 	created() {
 		// Default inmediato (nunca queda vacio mientras carga) y despues se pisa con lo guardado.
 		this.applyDefaultSelection()
 		this.loadSelection()
+		// Carga la configuracion de filtros fijos guardada (preference_type global_search_filters).
+		this.loadFiltrosFijos()
 	},
 	methods: {
 		/**
@@ -477,36 +546,228 @@ export default {
 		},
 
 		/**
-		 * Handler del evento 'agregar' de FiltroFijoModal.vue: guarda (o actualiza, si ya existia)
-		 * la configuracion del filtro fijo en el estado local `filtros_fijos`. Prompt 05 (este):
-		 * solo estado local, sin persistir contra el backend ni renderizar el control todavia
-		 * (eso lo hace el prompt 06, que conecta esto con el store).
+		 * Carga la configuracion de filtros fijos guardada por usuario y modelo (preference_type
+		 * global_search_filters). Cache-first (mismo patron que loadSelection): si el cache global
+		 * ya la trae, la aplica sincronico; si no, la pide al backend. Nunca pisa una configuracion
+		 * que el usuario ya empezo a tocar (filtros_touched).
+		 *
+		 * @return {void}
+		 */
+		loadFiltrosFijos() {
+			let cached = this.tableColumnPreferenceColumnsFromStore(this.model_name, 'global_search_filters')
+			if (cached && cached.length) {
+				this.applyFiltrosFijosFromColumns(cached)
+				return
+			}
+			this.$api.get('table-column-preference/' + this.model_name + '/global_search_filters')
+			.then(res => {
+				if (this.filtros_touched) {
+					return
+				}
+				if (res.data && res.data.model && Array.isArray(res.data.model.columns) && res.data.model.columns.length) {
+					this.applyFiltrosFijosFromColumns(res.data.model.columns)
+				}
+			})
+			.catch(() => {
+				// Sin preferencia guardada (404 o error de red): no hay filtros fijos, se deja vacio.
+			})
+		},
+
+		/**
+		 * Reconstruye `filtros_fijos` / `filtros_values` desde las columnas guardadas. Se queda
+		 * solo con las columnas `visible: true` cuya key siga existiendo en `props_filtrables`
+		 * (una prop que dejo de existir por una extension desactivada se ignora en silencio),
+		 * respeta el `order` guardado, y completa `text`/`type` desde `props_filtrables`. Ademas
+		 * guarda TODAS las columnas (activas o no) en `filtros_historial`, para no perder la
+		 * configuracion de una columna desactivada al volver a persistir.
+		 *
+		 * @param {Array} columns [{ key, visible, order, filter_kind, operator, default_value }]
+		 * @return {void}
+		 */
+		applyFiltrosFijosFromColumns(columns) {
+			if (this.filtros_touched) {
+				return
+			}
+			// Guarda el historial completo (visible o no) para no perderlo al persistir despues.
+			let historial = {}
+			columns.forEach(function (column) {
+				if (column && column.key) {
+					historial[column.key] = column
+				}
+			})
+			this.filtros_historial = historial
+
+			// Props filtrables disponibles hoy para este cliente (respeta extensiones activas).
+			let disponibles = {}
+			this.props_filtrables.forEach(function (property) {
+				disponibles[property.key] = property
+			})
+
+			let visibles = columns.filter(function (column) {
+				return column && column.visible && column.key && disponibles[column.key]
+			})
+			visibles.sort(function (a, b) {
+				return (a.order || 0) - (b.order || 0)
+			})
+
+			let filtros = []
+			let values = {}
+			let self = this
+			visibles.forEach(function (column) {
+				let property = disponibles[column.key]
+				let filtro = {
+					key: column.key,
+					text: property.text,
+					type: property.type,
+					filter_kind: column.filter_kind,
+					operator: column.operator,
+					default_value: column.default_value,
+				}
+				filtros.push(filtro)
+				values[column.key] = self.valorInicialDeFiltro(filtro)
+			})
+			this.filtros_fijos = filtros
+			this.filtros_values = values
+		},
+
+		/**
+		 * Valor con el que arranca el control de un filtro fijo: el `default_value` guardado si
+		 * hay uno cargado, o si no el valor neutro (sin filtro activo) segun su `filter_kind`.
+		 *
+		 * @param {Object} filtro
+		 * @returns {*}
+		 */
+		valorInicialDeFiltro(filtro) {
+			if (typeof filtro.default_value !== 'undefined' && filtro.default_value !== null && filtro.default_value !== '') {
+				return filtro.default_value
+			}
+			return this.valorNeutroFiltro(filtro)
+		},
+
+		/**
+		 * Valor neutro (sin filtro activo) segun el filter_kind: 0 para relacion (misma
+		 * convencion que get_options_simple), string vacio para comparacion numerica, 'todos'
+		 * para presencia de valor.
+		 *
+		 * @param {Object} filtro
+		 * @returns {*}
+		 */
+		valorNeutroFiltro(filtro) {
+			if (filtro.filter_kind === 'relation') {
+				return 0
+			}
+			if (filtro.filter_kind === 'numeric_comparison') {
+				return ''
+			}
+			return 'todos'
+		},
+
+		/**
+		 * Handler del evento 'input' de FiltrosFijos.vue: actualiza el valor elegido para un
+		 * filtro fijo puntual. No persiste (solo se persiste la configuracion, no el valor
+		 * elegido en cada busqueda).
+		 *
+		 * @param {Object} payload { key, value }
+		 * @return {void}
+		 */
+		onInputFiltroFijo(payload) {
+			this.filtros_touched = true
+			this.$set(this.filtros_values, payload.key, payload.value)
+		},
+
+		/**
+		 * Arma la entrada de extra_filters que produce un filtro fijo, segun su filter_kind y el
+		 * valor actual elegido. Devuelve null si el filtro esta en su valor neutro ("sin filtro"),
+		 * caso en el que no debe mandarse al backend.
+		 *
+		 * @param {Object} filtro
+		 * @returns {Object|null} { key, operator, value } o null
+		 */
+		entradaDeFiltroFijo(filtro) {
+			let value = this.filtros_values[filtro.key]
+			if (filtro.filter_kind === 'relation') {
+				// 0 es la opcion "Seleccione..." de get_options_simple: no hay filtro elegido.
+				if (value === 0 || value === null || value === '' || typeof value === 'undefined') {
+					return null
+				}
+				return { key: filtro.key, operator: '=', value: value }
+			}
+			if (filtro.filter_kind === 'numeric_comparison') {
+				// Ojo: 0 SI es un valor valido (ej: stock igual a 0), no se descarta.
+				if (value === '' || value === null || typeof value === 'undefined') {
+					return null
+				}
+				return { key: filtro.key, operator: filtro.operator, value: value }
+			}
+			if (filtro.filter_kind === 'numeric_presence') {
+				if (value === 'todos' || value === '' || value === null || typeof value === 'undefined') {
+					return null
+				}
+				return { key: filtro.key, operator: 'numeric_presence', value: value }
+			}
+			return null
+		},
+
+		/**
+		 * Handler del evento 'agregar' de FiltroFijoModal.vue (o de reconfigurar uno ya existente):
+		 * guarda (o actualiza) la configuracion del filtro fijo, inicializa su valor, marca que el
+		 * usuario toco la configuracion y la persiste contra el backend.
 		 *
 		 * @param {Object} config { key, filter_kind, operator, default_value }
 		 * @return {void}
 		 */
 		onAgregarFiltroFijo(config) {
+			this.filtros_touched = true
+
+			// Completa text/type desde props_filtrables para poder etiquetar el control.
+			let property = this.props_filtrables.find(function (prop) {
+				return prop.key === config.key
+			})
+			let filtro = {
+				key: config.key,
+				text: property ? property.text : config.key,
+				type: property ? property.type : null,
+				filter_kind: config.filter_kind,
+				operator: config.operator,
+				default_value: config.default_value,
+			}
+
 			let index = -1
-			this.filtros_fijos.forEach(function (filtro, i) {
-				if (filtro.key === config.key) {
+			this.filtros_fijos.forEach(function (item, i) {
+				if (item.key === filtro.key) {
 					index = i
 				}
 			})
 			if (index === -1) {
-				this.filtros_fijos.push(config)
+				this.filtros_fijos.push(filtro)
 			} else {
-				this.filtros_fijos.splice(index, 1, config)
+				this.filtros_fijos.splice(index, 1, filtro)
 			}
+			this.$set(this.filtros_values, filtro.key, this.valorInicialDeFiltro(filtro))
+
+			// Actualiza el historial (para el proximo persist) y persiste ya mismo.
+			this.filtros_historial[filtro.key] = {
+				key: filtro.key,
+				visible: true,
+				filter_kind: filtro.filter_kind,
+				operator: filtro.operator,
+				default_value: filtro.default_value,
+			}
+			this.persistFiltrosFijos()
 		},
 
 		/**
-		 * Handler del evento 'quitar' de FiltroFijoModal.vue: saca la propiedad del estado local
-		 * `filtros_fijos`.
+		 * Handler del evento 'quitar' de FiltroFijoModal.vue (o del boton x de la barra): saca la
+		 * propiedad del estado local `filtros_fijos`/`filtros_values`, marca que el usuario toco la
+		 * configuracion, y persiste contra el backend guardando la columna como visible: false
+		 * (no se pierde su configuracion previa).
 		 *
 		 * @param {Object} payload { key }
 		 * @return {void}
 		 */
 		onQuitarFiltroFijo(payload) {
+			this.filtros_touched = true
+
 			let index = -1
 			this.filtros_fijos.forEach(function (filtro, i) {
 				if (filtro.key === payload.key) {
@@ -516,6 +777,16 @@ export default {
 			if (index !== -1) {
 				this.filtros_fijos.splice(index, 1)
 			}
+			this.$delete(this.filtros_values, payload.key)
+
+			// Guarda en el historial como visible:false, conservando la configuracion previa que
+			// ya tuviera (filter_kind/operator/default_value) para no perderla.
+			let historial_previo = this.filtros_historial[payload.key] || {}
+			this.filtros_historial[payload.key] = Object.assign({}, historial_previo, {
+				key: payload.key,
+				visible: false,
+			})
+			this.persistFiltrosFijos()
 		},
 
 		/**
@@ -586,8 +857,9 @@ export default {
 		 * @return {void}
 		 */
 		buscar() {
-			// Si hay extra_filters activos, se permite buscar sin texto (ej: solo por categoria).
-			let has_extra_filters = this.extra_filters && this.extra_filters.length > 0
+			// Si hay extra_filters activos (del modulo y/o filtros fijos del usuario ya
+			// combinados), se permite buscar sin texto (ej: solo por categoria).
+			let has_extra_filters = this.extra_filters_finales && this.extra_filters_finales.length > 0
 
 			if (this.query_value.trim().length < 2 && !has_extra_filters) {
 				this.$toast.error('Ingrese al menos 2 caracteres')
@@ -615,7 +887,7 @@ export default {
 				query_value: this.query_value,
 				props: this.selected_props,
 				relation_props: relation_props_payload,
-				extra_filters: this.extra_filters,
+				extra_filters: this.extra_filters_finales,
 				page: 1,
 			}
 
@@ -654,13 +926,80 @@ export default {
 		},
 
 		/**
+		 * Persiste la configuracion de filtros fijos (preference_type global_search_filters), por
+		 * usuario y modelo. Manda las columnas activas (filtros_fijos, visible:true) mas las que
+		 * el usuario desactivo en algun momento (visible:false, desde filtros_historial) para no
+		 * perder su configuracion previa. Fire and forget: no bloquea la busqueda. Mismo criterio
+		 * exacto que persistSelection().
+		 *
+		 * @return {void}
+		 */
+		persistFiltrosFijos() {
+			let columns = []
+			let order = 0
+
+			// Primero las columnas activas, en el orden en que estan agregadas.
+			this.filtros_fijos.forEach(function (filtro) {
+				columns.push({
+					key: filtro.key,
+					visible: true,
+					order: order,
+					filter_kind: filtro.filter_kind,
+					operator: filtro.operator,
+					default_value: filtro.default_value,
+				})
+				order++
+			})
+
+			// Despues, las que estan en el historial pero no activas ahora mismo (el usuario las
+			// quito en algun momento): se mandan con visible:false para no perder su config.
+			let activas = {}
+			this.filtros_fijos.forEach(function (filtro) {
+				activas[filtro.key] = true
+			})
+			let historial = this.filtros_historial
+			Object.keys(historial).forEach(function (key) {
+				if (activas[key]) {
+					return
+				}
+				let previa = historial[key]
+				columns.push({
+					key: key,
+					visible: false,
+					order: order,
+					filter_kind: previa.filter_kind,
+					operator: previa.operator,
+					default_value: previa.default_value,
+				})
+				order++
+			})
+
+			this.$api.put('table-column-preference/' + this.model_name + '/global_search_filters', { columns: columns })
+			.then(() => {
+				this.$store.dispatch('table_column_preference/getModels')
+			})
+			.catch(err => {
+				console.log('buscador-general: no se pudo guardar la configuracion de filtros fijos', err)
+			})
+		},
+
+		/**
 		 * Limpia el criterio de texto, resetea el filtered del store (mismos commits que
-		 * BuscadorRapido) y limpia el payload persistido del buscador general.
+		 * BuscadorRapido) y limpia el payload persistido del buscador general. Ademas resetea los
+		 * VALORES elegidos en los filtros fijos a su estado neutro (los controles siguen ahi,
+		 * vacios: la configuracion no se borra, solo se limpia lo tipeado/elegido).
 		 *
 		 * @return {void}
 		 */
 		limpiar() {
 			this.query_value = ''
+
+			let values = {}
+			let self = this
+			this.filtros_fijos.forEach(function (filtro) {
+				values[filtro.key] = self.valorNeutroFiltro(filtro)
+			})
+			this.filtros_values = values
 
 			this.$store.commit(this.model_name + '/setFiltered', [])
 			this.$store.commit(this.model_name + '/setIsFiltered', false)
