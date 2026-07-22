@@ -35,7 +35,13 @@
 			<template #iva_breakdown="props">
 				<iva-breakdown></iva-breakdown>
 			</template>
-			
+
+			<!-- Prompt 611: reemplaza el checkbox generico de "precios_incluyen_iva" por un control
+			con descripcion permanente debajo (ver PreciosIncluyenIva.vue) -->
+			<template #precios_incluyen_iva="props">
+				<precios-incluyen-iva></precios-incluyen-iva>
+			</template>
+
 		</view-component>
 	</div>
 </template>
@@ -53,6 +59,8 @@ export default {
 		NavComponent: () => import('@/components/provider/components/orders/nav/Index'),
 		Total: () => import('@/components/provider/components/orders/Total'),
 		PriceDescription: () => import('@/components/provider/modals/orders/PriceDescription'),
+		// Prompt 611: control "Los precios ya incluyen IVA" con descripcion permanente
+		PreciosIncluyenIva: () => import('@/components/provider/components/orders/PreciosIncluyenIva'),
 	},
 	computed: {
 		show_previus_days() {

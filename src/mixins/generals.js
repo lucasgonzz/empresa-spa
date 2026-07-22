@@ -6,10 +6,29 @@ export default {
         },
         user_configuration() {
             if (this.is_owner) {
-                return this.user.configuration 
+                return this.user.configuration
             } else {
-                return this.user.owner_configuration 
+                return this.user.owner_configuration
             }
+        },
+        /**
+         * Indica si la cuenta opera bajo la condicion de IVA "Monotributista" (vs. Responsable
+         * Inscripto), en base a "user_configuration.condicion_iva_precios" (columna agregada en
+         * UserConfiguration por el Prompt 608 en empresa-api).
+         *
+         * Reusable en cualquier vista/modelo que necesite branchear por esta condicion (ver
+         * "es_responsable_inscripto_v_if_function" mas abajo para usarla como v_if_function en
+         * props declarativas de src/models).
+         *
+         * Nota: mientras el Prompt 608 (backend) no corra, la columna no existe todavia y
+         * "condicion_iva_precios" llega undefined/null desde la API. En ese caso esta computed
+         * devuelve false (fallback seguro a Responsable Inscripto, mismo comportamiento actual
+         * del sistema), consistente con el fallback que ya usa el backend en los Prompts 609/610.
+         *
+         * @returns {Boolean}
+         */
+        es_monotributista() {
+            return !!(this.user_configuration && this.user_configuration.condicion_iva_precios == 'MT')
         },
         owner_extencions() {
             if (this.is_owner) {
@@ -84,6 +103,19 @@ export default {
          */
         is_owner_v_if_function() {
             return this.is_owner
+        },
+
+        /**
+         * v_if_function para propiedades de formulario que solo deben verse cuando la cuenta es
+         * Responsable Inscripto (Prompt 611). Se usa, por ejemplo, en el checkbox
+         * "precios_incluyen_iva" del modelo de compra a proveedor (src/models/provider_order.js):
+         * en Monotributista ese control se oculta por completo porque el proveedor nunca le
+         * discrimina el IVA al monotributista, siempre se asume que el precio ya lo incluye.
+         *
+         * @returns {Boolean}
+         */
+        es_responsable_inscripto_v_if_function() {
+            return !this.es_monotributista
         },
 
         set_expense_caja_id(prop_payment_method, model) {

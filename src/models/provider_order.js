@@ -96,17 +96,20 @@ export default {
 			// automaticamente al elegir el proveedor (ver "prefill_prop_on_select" en la prop
 			// "provider_id" de este mismo modelo), pero el usuario puede sobreescribirlo para esta
 			// compra puntual: el valor de la compra siempre manda sobre el default del proveedor.
+			// Prompt 611: solo se muestra para cuentas Responsable Inscripto. En Monotributista se
+			// oculta por completo (el proveedor nunca le discrimina el IVA al monotributista, se
+			// asume siempre que los precios ya lo incluyen). El render de este campo se reemplaza
+			// por un componente propio (slot "precios_incluyen_iva" en
+			// src/components/provider/components/orders/Index.vue) que agrega, debajo del control,
+			// una descripcion SIEMPRE VISIBLE (no popover) que cambia segun el estado del toggle -
+			// por eso ya no se usa "descriptions" aca (quedaba como popover solo al hacer click,
+			// que era justamente la confusion que este prompt vino a resolver).
 			text: 'Los precios ya incluyen IVA',
 			key: 'precios_incluyen_iva',
 			type: 'checkbox',
 			value: 0,
 			not_show: true,
-			descriptions: [
-				'Indica que los precios de esta compra ya vienen con el IVA incluido por parte del proveedor.',
-				'Activado: el precio que cargás es el final (con IVA) y el sistema desglosa cuánto es neto y cuánto IVA para la factura, y guarda el costo del artículo SIN IVA.',
-				'Desactivado: el precio que cargás es neto y el sistema le suma el IVA para armar la factura.',
-				'En ambos casos el costo del artículo se guarda siempre neto.',
-			],
+			v_if_function: 'es_responsable_inscripto_v_if_function',
 		},
 		{
 			text: 'Actualizar precios',
