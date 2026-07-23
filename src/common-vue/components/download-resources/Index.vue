@@ -78,16 +78,40 @@ export default {
 	},
 	methods: {
 		setModels() {
+			// Se vacia la lista antes de armarla porque setModels() tambien se llama cuando cambia
+			// start_download (el boton de volver a descargar). Sin este reset los recursos quedaban
+			// duplicados y el porcentaje de la tarjeta de progreso se calculaba sobre el doble.
+			this.models_to_download = []
+
 			call_methods.forEach(model => {
-				// console.log('agregando '+model)
-				if (model != 'article') {
-					this.models_to_download.push({
-						downloaded: false,
-						downloading: false,
-						model_name: typeof model == 'object' ? model.model_name : model,
-						if_has_extencion: typeof model == 'object' ? model.if_has_extencion : null,
-					})
+
+				let model_name = typeof model == 'object' ? model.model_name : model
+				let if_has_extencion = typeof model == 'object' ? model.if_has_extencion : null
+
+				if (model_name == 'article') {
+					return
 				}
+
+				// No entran a la lista los recursos que esta sesion no va a descargar: los que
+				// dependen de una extencion que el comercio no tiene contratada, y los que estan
+				// marcados para no bajarse en celular. Antes se agregaban igual y se quedaban para
+				// siempre con el icono de reloj, como si la descarga hubiera quedado colgada.
+				if (if_has_extencion && !this.hasExtencion(if_has_extencion)) {
+					return
+				}
+
+				// El orden importa: downloadOnMobile() accede a this.$store.state[model_name] sin
+				// guarda, asi que solo se evalua cuando de verdad estamos en celular.
+				if (this.is_mobile && !this.downloadOnMobile(model_name)) {
+					return
+				}
+
+				this.models_to_download.push({
+					downloaded: false,
+					downloading: false,
+					model_name: model_name,
+					if_has_extencion: if_has_extencion,
+				})
 			})
 		},
 		async downloadModels() {
@@ -99,6 +123,8 @@ export default {
         		if (this.models_to_download[i].if_has_extencion) {
 
         			if (!this.hasExtencion(this.models_to_download[i].if_has_extencion)) {
+						// Desde este prompt la lista ya viene filtrada desde setModels(), asi que aca
+						// nunca deberia entrar. Se deja como guarda / ultima linea de defensa.
         				continue
         			}
         		}
