@@ -28,13 +28,14 @@ hide-footer
 
 			<slot name="search_input_right"></slot>
 
-			<b-button
-			class="m-l-10"
-			variant="outline-primary"
+			<button
+			type="button"
+			class="search-modal-columnas-btn"
+			title="Elegir que propiedades se ven en los resultados"
 			@click="openColumnsConfig">
 				<i class="icon-eye"></i>
-				<i class="icon-list p-l-10"></i>
-			</b-button>
+				<i class="icon-list"></i>
+			</button>
 
 			<btn-create-model
 			v-if="show_btn_create && prop && (!prop.has_many || (prop.has_many && !prop.has_many.models_from_parent_prop))"
@@ -1134,6 +1135,39 @@ export default {
 			flex: 1 1 auto
 			min-width: 0
 			width: auto
+
+		// Boton de propiedades de la tabla de resultados: mismo lenguaje visual que el pill
+		// del buscador general (blanco, 40px de alto, esquinas redondeadas, sombra suave).
+		// La sombra se declara explicita porque _inputs.sass le pone un relieve gris a todo
+		// button y no combina con el pill.
+		.search-modal-columnas-btn
+			display: flex
+			align-items: center
+			justify-content: center
+			gap: 8px
+			flex: 0 0 auto
+			height: 40px
+			padding: 0 14px
+			margin-left: 10px
+			border: 1px solid #e2e4e7
+			border-radius: 22px
+			background: #fff
+			color: #86868b
+			cursor: pointer
+			transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease
+			box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px
+
+			&:hover
+				background: #f7f8f9
+				color: #1d1d1f
+
+			&:focus
+				outline: none
+				border-color: #007bff
+				box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px, 0 0 0 3px rgba(0, 123, 255, 0.15)
+
+			i
+				font-size: 0.95rem
 	.results-title
 		font-size: 1.2em
 		font-weight: bold
