@@ -14,6 +14,32 @@
 
 		:class="toolbar_classes">
 
+			<!-- Contenedor del buscador: input + icono de lupa posicionado absoluto -->
+
+			<div
+
+			class="columns-preferences-config__search-wrap"
+
+			:class="search_input_classes"
+
+			:style="search_input_style">
+
+				<i class="icon-search columns-preferences-config__search-icon"></i>
+
+				<b-form-input
+
+				class="columns-preferences-config__search"
+
+				size="sm"
+
+				v-model.trim="search_query"
+
+				placeholder="Buscar columna..."></b-form-input>
+
+			</div>
+
+
+
 			<b-button-group
 
 			class="columns-preferences-config__btn-group"
@@ -26,8 +52,6 @@
 
 				@click="limpiar_todo"
 
-				:block="!layout_table && !allow_row_wrap"
-
 				size="sm"
 
 				variant="outline-primary">
@@ -37,8 +61,6 @@
 				</b-button>
 
 				<b-button
-
-				:block="!layout_table && !allow_row_wrap"
 
 				@click="marcar_todo"
 
@@ -53,22 +75,6 @@
 				</b-button>
 
 			</b-button-group>
-
-
-
-			<b-form-input
-
-			class="columns-preferences-config__search"
-
-			:class="search_input_classes"
-
-			:style="search_input_style"
-
-			size="sm"
-
-			v-model.trim="search_query"
-
-			placeholder="Buscar columna..."></b-form-input>
 
 		</div>
 
@@ -987,7 +993,7 @@ export default {
 
 
 
-/* Toolbar en una fila: botones a la izquierda, buscador ocupa el resto */
+/* Toolbar en una fila: buscador a la izquierda ocupando el ancho libre, botones a la derecha */
 
 .columns-preferences-config__toolbar--inline
 
@@ -997,7 +1003,7 @@ export default {
 
 	align-items: center
 
-	justify-content: flex-start
+	justify-content: space-between
 
 	gap: 12px
 
@@ -1022,6 +1028,91 @@ export default {
 	max-width: none
 
 	margin-left: 0 !important
+
+
+
+/* Contenedor del buscador (icono de lupa + input). min-width: 0 es clave para que el */
+/* input pueda achicarse dentro del flex y no empuje a los botones fuera de la fila. */
+.columns-preferences-config__search-wrap
+
+	position: relative
+
+	flex: 1 1 auto
+
+	min-width: 0
+
+	display: flex
+
+	align-items: center
+
+
+
+.columns-preferences-config__search-icon
+
+	position: absolute
+
+	left: 14px
+
+	pointer-events: none
+
+	color: #9aa0a6
+
+	font-size: 15px
+
+
+
+/* Input del buscador con estilo propio (pill), pisando el estilo global de _inputs.sass */
+.columns-preferences-config .columns-preferences-config__search-wrap .columns-preferences-config__search
+
+	height: 40px
+
+	border-radius: 20px
+
+	border: 1px solid #e2e4e7
+
+	background: #fff
+
+	padding: 0 16px 0 40px
+
+	font-size: 14px
+
+	width: 100%
+
+	box-shadow: none
+
+	transition: border-color .15s ease, box-shadow .15s ease
+
+	&:focus
+
+		border-color: #007bff
+
+		box-shadow: 0 0 0 3px rgba(0, 123, 255, .12)
+
+		outline: none
+
+	&::placeholder
+
+		color: #9aa0a6
+
+
+
+/* Grupo de botones: ancho minimo por boton para que "Limpiar todo" y "Marcar todo" */
+/* no corten renglon, alineados en alto (40px) con el buscador nuevo. */
+.columns-preferences-config__btn-group
+
+	flex: 0 0 auto
+
+	.btn
+
+		white-space: nowrap
+
+		min-width: 118px
+
+		padding-left: 16px
+
+		padding-right: 16px
+
+		height: 40px
 
 
 
