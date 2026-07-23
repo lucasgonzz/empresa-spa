@@ -166,9 +166,16 @@ export default {
 		model_name: String,
 		model: Object,
 		models_to_search: Array,
+		/**
+		 * Desde el 23/7/2026 (Lucas) esta prop YA NO se usa como bloqueo de la busqueda: search()
+		 * y callSearch() no exigen ningun minimo de caracteres. Queda solo como umbral del
+		 * debounce de tipeo de callSearch(), que hoy no esta enganchado a ningun handler del
+		 * template (ver comentario en ese metodo). Se mantiene por compatibilidad con los
+		 * consumidores que ya la pasan (ArticleName.vue, Combos.vue, PromocionVinoteca.vue).
+		 */
 		str_limint: {
 			type: Number,
-			default: 2,
+			default: 1,
 		},
 		auto_select: Boolean,
 		placeholder: {
@@ -539,7 +546,11 @@ export default {
 		            window.clearInterval(this.interval)
 					this.interval = null
 				}
-				if (this.query.length >= this.str_limint) {
+				// Sin minimo de caracteres (Lucas, 23/7/2026): antes exigia str_limint. Este
+				// metodo hoy no lo llama nadie desde el template (quedo de antes del buscador
+				// general embebido, ver comentario de onBuscarDesdeBuscadorGeneral); se actualiza
+				// igual para no dejar escrita una regla que ya no rige.
+				if (this.query.length > 0) {
 					this.waiting_time = 1
 					this.interval = window.setInterval(() => {
 						if (this.waiting_time == 0) {
@@ -572,8 +583,19 @@ export default {
 				return
 			} 
 
-			if (this.query.length >= this.str_limint) {
-				this.loading = true 
+			// Sin minimo de caracteres (Lucas, 23/7/2026). Se busca con lo que haya: alcanza con que
+			// exista criterio de texto, o con que el buscador general haya mandado filtros fijos
+			// (extra_filters), que es la busqueda "solo por categoria" del grupo 179. El filtrado
+			// offline si necesita texto: filtra en memoria comparando strings, no puede aplicar filtros.
+			let tiene_texto = ('' + this.query).trim().length > 0
+			let tiene_filtros_fijos = !!(
+				this.ultima_busqueda_buscador_general
+				&& this.ultima_busqueda_buscador_general.extra_filters
+				&& this.ultima_busqueda_buscador_general.extra_filters.length
+			)
+
+			if (tiene_texto || (tiene_filtros_fijos && this.searchFromApi())) {
+				this.loading = true
 				let _results = []
 				this.searching = true
 
@@ -735,7 +757,11 @@ export default {
 					this.finishSearch()
 				}
 			} else {
-				this.$toast.error('Ingrese al menos '+this.str_limint+' letras')
+				// Sin criterio y sin filtros: no se busca y no se molesta con un toast rojo. El modal
+				// muestra el estado "Escribi un criterio de busqueda" (prompt 02 de este grupo).
+				this.results = []
+				this.total_results = 0
+				this.loading = false
 			}
 		},
 		get_info_param() {

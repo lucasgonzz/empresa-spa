@@ -1120,8 +1120,9 @@ export default {
 
 		/**
 		 * Ejecuta la busqueda general: arma el payload (props/relaciones tildadas + extra_filters)
-		 * y lo despacha a `runGlobalSearch`. Requiere al menos 2 caracteres de texto, salvo que
-		 * haya extra_filters activos. Ademas persiste la seleccion actual.
+		 * y lo despacha a `runGlobalSearch`. Sin minimo ni maximo de caracteres (Lucas, 23/7/2026):
+		 * solo se frena el caso realmente vacio (sin texto y sin extra_filters activos). Ademas
+		 * persiste la seleccion actual.
 		 *
 		 * @return {void}
 		 */
@@ -1130,8 +1131,13 @@ export default {
 			// combinados), se permite buscar sin texto (ej: solo por categoria).
 			let has_extra_filters = this.extra_filters_finales && this.extra_filters_finales.length > 0
 
-			if (this.query_value.trim().length < 2 && !has_extra_filters) {
-				this.$toast.error('Ingrese al menos 2 caracteres')
+			// Sin criterio de texto y sin filtros fijos no hay nada que buscar. Antes el minimo era de
+			// 2 caracteres; Lucas lo saco a proposito el 23/7/2026: se busca con una sola letra y con
+			// todas las palabras que haga falta, sin minimo ni maximo.
+			if (this.query_value.trim().length === 0 && !has_extra_filters) {
+				if (this.modo !== 'modal') {
+					this.$toast.info('Escribi un criterio de busqueda')
+				}
 				return
 			}
 
