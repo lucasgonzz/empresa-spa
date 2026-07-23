@@ -214,6 +214,9 @@ export default {
 			simbolo_moneda_function: 'article_simbolo_moneda',
 			description: 'Este dato es calculado por el sistema, es igual a: "Costo" + "Descuentos" y "Recargos" + "IVA". Seria el costo real que tiene ese producto en su negocio luego de tener en cuenta los descuetos de su proveedor, costos por transporte, impuestos, etc',
 			// if_has_extencion: 'article.costo_real',
+			// No es una columna real: es un accessor del backend (getCostoRealAttribute en
+			// app/Models/Article.php), asi que no se puede buscar por el en el buscador general.
+			not_use_in_global_search: true,
 		},
 
 		{

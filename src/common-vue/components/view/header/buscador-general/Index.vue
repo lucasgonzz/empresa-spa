@@ -237,8 +237,12 @@ export default {
 	computed: {
 		/**
 		 * Props propias del modelo, buscables por texto/numero: type en text/textarea/number,
-		 * que no sean relacion, que no tengan el flag `not_use_in_global_search`, y que tengan
-		 * `key` (descarta las entradas `group_title`, que no representan una columna).
+		 * que no tengan el flag `not_use_in_global_search`, y que tengan `text` (etiqueta). Se
+		 * pide `text` en vez de excluir `not_show`: `not_show` solo significa "no se muestra como
+		 * columna de la tabla", no "no se busca" — hay props ocultas (categoria, sub categoria,
+		 * marca, PLU, etc.) que si tienen `text` y son perfectamente buscables. Lo que de verdad
+		 * rompia el render (prompt 547) eran las props SIN `text`, por eso el criterio correcto es
+		 * exigirlo directamente en vez de usar `not_show` como proxy.
 		 *
 		 * @returns {Array} [{ key, text, ... }]
 		 */
@@ -252,16 +256,15 @@ export default {
 				return property.key
 					&& ['text', 'textarea', 'number'].indexOf(property.type) !== -1
 					&& !property.not_use_in_global_search
-					// Excluye props ocultas (not_show): suelen no tener `text` y rompen el render
-					// y el filtro del dropdown (ver bug reportado en prompt 547).
-					&& !property.not_show
+					&& !!property.text
 			})
 		},
 
 		/**
-		 * Relaciones buscables del modelo: props con type "search" y key terminada en "_id".
-		 * Para cada una se deriva la relacion Eloquent (sin el sufijo "_id") y las props por las
-		 * que se busca dentro de esa relacion (`global_search_relation_props`, default ['name']).
+		 * Relaciones buscables del modelo: props con type "search" o "select" y key terminada en
+		 * "_id" (misma equivalencia que ya usa `props_filtrables` para los filtros fijos). Para
+		 * cada una se deriva la relacion Eloquent (sin el sufijo "_id") y las props por las que se
+		 * busca dentro de esa relacion.
 		 *
 		 * @returns {Array} [{ key, text, relation, props }]
 		 */
@@ -271,16 +274,27 @@ export default {
 			model_properties = this.check_extencions(model_properties)
 			let relations = []
 			model_properties.forEach(function (property) {
-				// Misma exclusion de props ocultas (not_show) que en own_props: evita relaciones
-				// sin `text` colandose en el dropdown.
-				if (!property.key || property.type !== 'search' || property.key.slice(-3) !== '_id' || property.not_show) {
+				// Relacion: type search o select (misma equivalencia de props_filtrables) con key
+				// terminada en "_id".
+				let es_relacion = (property.type === 'search' || property.type === 'select')
+					&& property.key.slice(-3) === '_id'
+
+				// Mismo criterio que own_props: se exige `text` (etiqueta) en vez de excluir
+				// not_show.
+				if (!property.key || !es_relacion || !property.text) {
 					return
 				}
+
 				relations.push({
 					key: property.key,
 					text: property.text,
 					relation: property.key.replace('_id', ''),
-					props: property.global_search_relation_props || ['name'],
+					// Por que prop se busca dentro de la relacion: lo declarado explicitamente, o
+					// el `relation_prop_name` que ya usa el resto del sistema para mostrar esa
+					// relacion (ej: iva_id muestra 'percentage', no 'name'), o 'name' como ultimo
+					// default.
+					props: property.global_search_relation_props
+						|| (property.relation_prop_name ? [property.relation_prop_name] : ['name']),
 				})
 			})
 			return relations
@@ -311,7 +325,10 @@ export default {
 		/**
 		 * Lista unica de props buscables (propias + relaciones), ordenada como props_to_show.
 		 * Las props que no estan en props_to_show quedan al final, conservando el orden original
-		 * (primero propias, despues relaciones).
+		 * (primero propias, despues relaciones). Se deduplica por `key` quedandose con la primera
+		 * aparicion: algunos modelos (ej: article.js) declaran la misma key dos veces en su array
+		 * de properties, y PropertiesDropdown.vue usa la key en el `:key` del v-for, asi que dos
+		 * entradas repetidas rompen el render de Vue.
 		 *
 		 * @returns {Array} [{ key, text, kind }] con kind 'own' o 'relation'.
 		 */
@@ -320,13 +337,26 @@ export default {
 			let items = []
 			this.own_props.forEach(function (property) {
 				// Fallback defensivo: segunda capa de seguridad por si en el futuro se cuela otra
-				// prop sin `text` (el filtro de not_show de arriba deberia evitarlo, pero no cuesta
-				// nada blindarlo aca tambien).
+				// prop sin `text` (el filtro de own_props deberia evitarlo, pero no cuesta nada
+				// blindarlo aca tambien).
 				items.push({ key: property.key, text: property.text || property.table_text || property.key, kind: 'own' })
 			})
 			this.relation_props.forEach(function (property) {
 				items.push({ key: property.key, text: property.text || property.key, kind: 'relation' })
 			})
+			// Deduplica por key, quedandose con la PRIMERA aparicion. Se hace antes del armado de
+			// entries/sort para no alterar el orden resultante. Objeto de keys ya vistas + forEach,
+			// sin `filter` (para poder cortar en la primera ocurrencia sin lookahead raro).
+			let keys_vistas = {}
+			let items_unicos = []
+			items.forEach(function (item) {
+				if (keys_vistas[item.key]) {
+					return
+				}
+				keys_vistas[item.key] = true
+				items_unicos.push(item)
+			})
+			items = items_unicos
 			// Se envuelve cada item con su clave de orden para un sort estable.
 			let order_map = this.props_to_show_order
 			let entries = []
