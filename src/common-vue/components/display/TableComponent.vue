@@ -374,16 +374,33 @@ export default {
 				this.scroll_to_selected()
 			}
 		},
+		models() {
+			// El alto disponible depende de donde arranca la tabla, y eso se mueve cuando cambia el
+			// contenido de arriba (titulo de resultados, paginacion) o cuando el contenedor se
+			// recrea por el v-if. Sin esto, el modal conserva el tope de la busqueda anterior.
+			this.recalcular_altura()
+		},
 	},
 	computed: {
 		/**
-		 * Estilos inline del wrapper scroll: altura dinámica hasta el borde inferior de la ventana.
-		 * Fallback a 70vh hasta que mounted() calcule available_height.
+		 * Estilos inline del wrapper scroll.
+		 * En un listado la tabla ocupa un alto fijo hasta el borde inferior de la ventana.
+		 * En el modal de busqueda (is_from_search_modal) NO se fija height: solo un maxHeight, para
+		 * que la tabla mida lo que miden sus filas — con 6 resultados no puede quedar un hueco de
+		 * media pantalla — y recien scrollee cuando los resultados pasan el alto disponible.
+		 * Fallback a 70vh hasta que recalcular_altura() calcule available_height.
 		 */
 		container_style() {
 			var height = this.available_height
 				? Math.max(200, this.available_height) + 'px'
 				: '70vh'
+			if (this.is_from_search_modal) {
+				return {
+					maxHeight: height,
+					overflowY: 'auto',
+					overflowX: 'auto',
+				}
+			}
 			return {
 				height: height,
 				maxHeight: height,
@@ -494,7 +511,7 @@ export default {
 	methods: {
 		/**
 		 * Recalcula la altura disponible del contenedor de tabla según su posición en viewport.
-		 * Resta 8px de margen inferior para evitar scroll residual en la página.
+		 * Resta un margen inferior para evitar scroll residual en la página.
 		 */
 		recalcular_altura: function() {
 			var self = this
@@ -502,7 +519,11 @@ export default {
 				var el = self.$refs.tabla_contenedor
 				if (el) {
 					var top = el.getBoundingClientRect().top
-					var height = window.innerHeight - top - 8
+					// Margen inferior: 8px alcanza en un listado (la tabla llega hasta abajo de
+					// todo). Dentro del modal se deja mas aire para que el modal respire y no
+					// quede pegado al borde de la ventana.
+					var margen = self.is_from_search_modal ? 40 : 8
+					var height = window.innerHeight - top - margen
 					self.available_height = height
 				}
 			})
