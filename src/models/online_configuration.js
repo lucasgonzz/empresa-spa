@@ -126,6 +126,13 @@ export default {
 			value: '#FFF',
 		},
 		{
+			text: 'Color de fondo',
+			key: 'background_color',
+			type: 'text',
+			value: '#FFFFFF',
+			description: 'Es el fondo general de la tienda, detrás de las tarjetas de productos. Antes lo definía la plantilla elegida; ahora lo elegís vos.',
+		},
+		{
 			text: 'Cantidad tarjetas en telefono',
 			key: 'cantidad_tarjetas_en_telefono',
 			type: 'number',
@@ -151,6 +158,14 @@ export default {
 			type: 'number',
 			value: 16,
 			description: 'Define el tamaño de letra de la descripcion en la vista de articulo de la tienda.',
+		},
+		{
+			// Propiedad virtual: no es una columna de la tabla. Solo existe para que el renderer
+			// generico reserve un slot dentro de la pestaña "Diseño" donde montar el generador de
+			// paleta con IA (ver UserConfig.vue). El backend ignora esta clave.
+			text: 'Paleta automática',
+			key: 'ai_palette_generator',
+			type: 'text',
 		},
 
 		{
