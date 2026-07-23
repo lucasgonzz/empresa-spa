@@ -136,6 +136,11 @@ const routes = [
         component: () => import('@/views/Online')
     },
     {
+        path: '/whatsapp/:chat_id?',
+        name: 'whatsapp',
+        component: () => import('@/views/Whatsapp')
+    },
+    {
         path: '/tienda-nube/:view?/:sub_view?/',
         name: 'tienda_nube',
         component: () => import('@/views/TiendaNube')

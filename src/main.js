@@ -41,6 +41,31 @@ Vue.prototype.Echo = new Echo({
     cluster: process.env.VUE_APP_PUSHER_CLUSTER,
     // Alineado con Pusher (TLS); si usás túnel/HTTP local, podés setear VUE_APP_PUSHER_USE_TLS=false en .env
     forceTLS: process.env.VUE_APP_PUSHER_USE_TLS === 'false' ? false : true,
+    /**
+     * Autorizador custom para canales PRIVADOS (ej: `whatsapp.{owner_id}`, grupo 137).
+     * El fetch relativo por defecto de Echo pegaría a `/broadcasting/auth` en el dominio
+     * del SPA (no de la API); acá se pega directo al dominio de la API con `axios`, que ya
+     * manda las cookies de sesión de Sanctum (`withCredentials`) igual que el resto de los
+     * requests autenticados de la app.
+     */
+    authorizer: (channel) => {
+        return {
+            authorize: (socket_id, callback) => {
+                axios.post(process.env.VUE_APP_API_URL + '/broadcasting/auth', {
+                    socket_id: socket_id,
+                    channel_name: channel.name,
+                }, {
+                    withCredentials: true,
+                })
+                .then(res => {
+                    callback(false, res.data)
+                })
+                .catch(err => {
+                    callback(true, err)
+                })
+            }
+        }
+    },
 });
 
 // Notifications

@@ -24,41 +24,48 @@
 					:class="colorLabel(prop)"
 					:id="'form-group-'+prop.key">
 
-						<!-- Titulo label; cursor help si hay popover de instrucciones -->
-						<label	
+						<!-- Titulo label; cursor help (icono "?" nativo) + hover-intent para mostrar el popover -->
+						<label
 						:id="'label-'+prop.key"
 						class="form-label"
-						:class="{ 'form-label--has-help': prop.description || prop.descriptions }">
-							<!-- <i 
+						:class="{ 'form-label--has-help': hasHelp(prop) }"
+						@mouseenter="hasHelp(prop) && onHelpEnter(prop.key)"
+						@mouseleave="hasHelp(prop) && onHelpLeave(prop.key)">
+							<!-- <i
 							v-if="prop.has_many"
 							class="icon-down"></i>
-							<i 
+							<i
 							v-else
 							class="icon-right"></i> -->
 							{{ getLabel(prop) }}
 						</label>
 
-
-						<!-- Descripcion de la propiedad - Popover -->
+						<!-- Descripcion de la propiedad - Popover con hover-intent (1s para mostrar,
+						     margen de gracia para ocultar) en vez de click. Un solo b-popover para
+						     description/descriptions (antes eran dos, mutuamente excluyentes por el v-if). -->
 						<b-popover
-						v-if="prop.description" 
-						:target="'label-'+prop.key" 
-						triggers="click" 
-						placement="bottom">
-						    <template #title><strong>Instrucciones {{ prop.text }}</strong></template>
-						    {{ prop.description }}
-						 </b-popover>
-
-						<b-popover
-						v-if="prop.descriptions" 
-						:target="'label-'+prop.key" 
-						triggers="click" 
-						placement="bottom">
-						    <template #title><strong>Instrucciones</strong></template>
-						    <p
-						    v-for="description in prop.descriptions">
-						    	{{ description }}
-						    </p>
+						v-if="hasHelp(prop)"
+						:target="'label-'+prop.key"
+						:show="!!popover_visible[prop.key]"
+						triggers=""
+						placement="bottom"
+						boundary="window"
+						custom-class="model-form-help-popover">
+							<div
+							class="model-form-help-popover__inner"
+							@mouseenter="onHelpEnter(prop.key)"
+							@mouseleave="onHelpLeave(prop.key)">
+								<div class="model-form-help-popover__header">
+									{{ helpTitle(prop) }}
+								</div>
+								<div class="model-form-help-popover__body">
+									<p
+									v-for="(paragraph, i) in helpParagraphs(prop)"
+									:key="i">
+										{{ paragraph }}
+									</p>
+								</div>
+							</div>
 						</b-popover>
 
 
@@ -217,25 +224,34 @@
 										{{ getWarningText(prop) }}
 									</small>
 
-								<!-- Toggle tipo iPhone: el label arriba ya describe el campo,
-								     el texto interno del checkbox es redundante y se omite -->
-								<label
+								<!-- Toggle tipo iPhone con el valor actual (Sí/No) al lado, separado por margen.
+								     Antes se omitía el texto por redundante con el label de arriba; Lucas pidió
+								     mantenerlo visible, con el mismo estilo de badge que usa el tipo 'boolean'. -->
+								<div
 								v-else-if="prop.type == 'checkbox'"
-								:for="model_name+'-'+prop.key"
-								class="model-form__toggle"
-								:class="{ 'model-form__toggle--disabled': isDisabled(prop, form_to_filter) }">
-									<input
-									type="checkbox"
-									:id="model_name+'-'+prop.key"
-									:data-testid="model_name+'-'+prop.key"
-									:disabled="isDisabled(prop, form_to_filter)"
-									:checked="Number(model[prop.key]) === 1"
-									@change="$set(model, prop.key, $event.target.checked ? 1 : 0)">
-									<!-- Track: fondo del toggle; thumb: círculo deslizante -->
-									<span class="model-form__toggle-track">
-										<span class="model-form__toggle-thumb"></span>
+								class="model-form__checkbox-row">
+									<span
+									class="model-form__boolean-badge"
+									:class="Number(model[prop.key]) === 1 ? 'model-form__boolean-badge--yes' : 'model-form__boolean-badge--no'">
+										{{ Number(model[prop.key]) === 1 ? 'Sí' : 'No' }}
 									</span>
-								</label>
+									<label
+									:for="model_name+'-'+prop.key"
+									class="model-form__toggle"
+									:class="{ 'model-form__toggle--disabled': isDisabled(prop, form_to_filter) }">
+										<input
+										type="checkbox"
+										:id="model_name+'-'+prop.key"
+										:data-testid="model_name+'-'+prop.key"
+										:disabled="isDisabled(prop, form_to_filter)"
+										:checked="Number(model[prop.key]) === 1"
+										@change="$set(model, prop.key, $event.target.checked ? 1 : 0)">
+										<!-- Track: fondo del toggle; thumb: círculo deslizante -->
+										<span class="model-form__toggle-track">
+											<span class="model-form__toggle-thumb"></span>
+										</span>
+									</label>
+								</div>
 
 									<google-geocoder
 									v-else-if="prop.type == 'google_geocoder'"
@@ -532,6 +548,17 @@ export default {
 		/* Carga el mapa de anchos has_many de este modelo desde el cache global (fallback dueño→empleado ya resuelto). */
 		this.has_many_form_cols = form_has_many_cols_from_store(this.$store, this.model_name)
 	},
+	beforeDestroy() {
+		/* Limpia cualquier timer de hover-intent pendiente al destruir el formulario,
+		   para evitar que un setTimeout dispare $set sobre un componente ya destruido. */
+		if (this._help_timers) {
+			Object.keys(this._help_timers).forEach(timer_key => {
+				if (this._help_timers[timer_key]) {
+					clearTimeout(this._help_timers[timer_key])
+				}
+			})
+		}
+	},
 	data() {
 		return {
 			/*
@@ -542,6 +569,11 @@ export default {
 
 			/* Mapa { prop_key: cols } de anchos de has_many de este modelo (override del usuario). */
 			has_many_form_cols: {},
+			/*
+				Controla, por `prop.key`, si el popover de instrucciones está visible.
+				Se actualiza solo desde onHelpEnter/onHelpLeave (hover-intent), nunca directo.
+			*/
+			popover_visible: {},
 			loading: false,
 			saving_belongs_to_many: false,
 			props_to_show_in_belongs_to_many: [],
@@ -631,6 +663,76 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Indica si la propiedad tiene instrucciones para mostrar en el popover de ayuda.
+		 */
+		hasHelp(prop) {
+			return !!(prop.description || prop.descriptions)
+		},
+		/**
+		 * Título del popover de instrucciones. Mantiene el mismo criterio que tenía antes:
+		 * con description singular se agrega el texto de la propiedad; con descriptions
+		 * (array) el título queda genérico, porque suele cubrir varios aspectos distintos.
+		 */
+		helpTitle(prop) {
+			if (prop.description) {
+				return 'Instrucciones ' + (prop.text || '')
+			}
+			return 'Instrucciones'
+		},
+		/**
+		 * Normaliza description/descriptions a un array de párrafos para el v-for del template.
+		 */
+		helpParagraphs(prop) {
+			if (prop.description) {
+				return [prop.description]
+			}
+			if (prop.descriptions) {
+				return prop.descriptions
+			}
+			return []
+		},
+		/**
+		 * El mouse entra al label (o al popover ya abierto) con instrucciones.
+		 * No lo muestra al toque: espera 1 segundo de hover sostenido (hover-intent),
+		 * para que pasar el mouse de refilón por el label no dispare el popover.
+		 * Si en el medio el mouse sale del label o del popover, este timer se cancela
+		 * en onHelpLeave antes de completarse.
+		 */
+		onHelpEnter(key) {
+			this.cancelHelpTimer(key, 'hide')
+			this.cancelHelpTimer(key, 'show')
+			this._help_timers = this._help_timers || {}
+			this._help_timers[key + '_show'] = setTimeout(() => {
+				this.$set(this.popover_visible, key, true)
+			}, 1000)
+		},
+		/**
+		 * El mouse sale del label o del popover. No cierra de inmediato: da un margen
+		 * de gracia corto (250ms) antes de ocultar, para que cruzar el espacio entre
+		 * el label y el popover (o un roce involuntario) no lo cierre -- solo un
+		 * alejamiento realmente intencional del usuario termina cerrándolo. Si el
+		 * mouse vuelve a entrar (al label o al popover) antes de que se cumplan los
+		 * 250ms, onHelpEnter cancela este timer y el popover nunca llega a cerrarse.
+		 */
+		onHelpLeave(key) {
+			this.cancelHelpTimer(key, 'show')
+			this._help_timers = this._help_timers || {}
+			this._help_timers[key + '_hide'] = setTimeout(() => {
+				this.$set(this.popover_visible, key, false)
+			}, 250)
+		},
+		/**
+		 * Cancela el timer de mostrar u ocultar pendiente para una prop puntual.
+		 */
+		cancelHelpTimer(key, kind) {
+			this._help_timers = this._help_timers || {}
+			let timer_key = key + '_' + kind
+			if (this._help_timers[timer_key]) {
+				clearTimeout(this._help_timers[timer_key])
+				this._help_timers[timer_key] = null
+			}
+		},
 		/**
 		 * Actualiza el grupo activo desde el componente de navegación.
 		 *
@@ -1615,9 +1717,13 @@ export default {
 		text-align: left
 		width: 100%
 
-	// Indica ayuda al hover cuando el campo tiene popover de instrucciones (click)
+	// Indica ayuda al hover cuando el campo tiene popover de instrucciones (hover-intent).
+	// El padding + margen negativo (se cancelan visualmente, no mueven el layout) agranda
+	// el área donde el hover cuenta, para no depender de apuntar justo al texto.
 	label.form-label--has-help
 		cursor: help
+		padding: 6px 0
+		margin: -6px 0
 
 	// ─── Label moderno: compacto, peso alto, tipografía uppercase sutil ───────
 	// Similar a LoginForm: pequeño, oscuro, con letra-espaciado para legibilidad
@@ -1700,6 +1806,12 @@ export default {
 	.model-form__boolean-badge--no
 		background: #fee2e2
 		color: #991b1b
+
+	// ─── Fila del checkbox: badge Sí/No + toggle, con margen entre ambos ──────
+	.model-form__checkbox-row
+		display: flex
+		align-items: center
+		gap: 10px
 
 	// ─── Toggle tipo iPhone (reemplaza b-form-checkbox) ─────────────────────
 	// Contenedor clickeable que actúa como label del input oculto
@@ -1787,8 +1899,52 @@ export default {
 		color: #4b5563
 		word-break: break-word
 
-// ─── Popover de instrucciones ─────────────────────────────────────────────────
-.popover-body
-	max-height: 60vh !important
-	overflow-y: auto
+// ─── Popover de instrucciones: rediseño ancho + estilo Apple ──────────────────
+// No se toca la regla global .popover-body de arriba (la usan otros 6 componentes
+// del sistema); esta es más específica y gana solo para el popover de ModelForm.
+.model-form-help-popover
+	max-width: 420px !important
+	border: none
+	border-radius: 14px
+	box-shadow: 0 12px 40px rgba(0, 0, 0, 0.14), 0 2px 10px rgba(0, 0, 0, 0.06)
+	padding: 0
+
+	.popover-body
+		max-height: 55vh !important
+		overflow-y: auto
+		padding: 0
+		color: initial
+
+	// Animación estilo Apple: fundido + escala sutil, rápida (180ms).
+	// BootstrapVue ya agrega/saca las clases fade/show al mostrar/ocultar
+	// el popover (lo maneja el :show que controlan onHelpEnter/onHelpLeave).
+	&.fade
+		transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1)
+		opacity: 0
+		transform: scale(0.96) translateY(-4px)
+
+		&.show
+			opacity: 1
+			transform: scale(1) translateY(0)
+
+.model-form-help-popover__inner
+	padding: 16px 18px
+
+.model-form-help-popover__header
+	font-size: 0.8rem
+	font-weight: 700
+	text-transform: uppercase
+	letter-spacing: 0.04em
+	color: #6b7280
+	margin-bottom: 10px
+
+.model-form-help-popover__body
+	p
+		font-size: 0.925rem
+		line-height: 1.55
+		color: #1f2937
+		margin-bottom: 10px
+
+		&:last-child
+			margin-bottom: 0
 </style>

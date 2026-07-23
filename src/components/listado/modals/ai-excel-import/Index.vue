@@ -487,13 +487,32 @@
 					Si el Excel también tiene una columna de código de barras, con esta opción también se puede actualizar ese código.
 				</small>
 			</b-form-radio>
-			<b-form-radio v-model="clave_identidad" value="bar_code" class="m-b-5">
+			<b-form-radio
+				v-if="has_bar_code_column"
+				v-model="clave_identidad"
+				value="bar_code"
+				class="m-b-5">
 				Código de barras
 			</b-form-radio>
-			<b-form-radio v-model="clave_identidad" value="provider_code" class="m-b-5">
+			<b-form-radio
+				v-if="has_sku_column"
+				v-model="clave_identidad"
+				value="sku"
+				class="m-b-5">
+				SKU
+			</b-form-radio>
+			<b-form-radio
+				v-if="has_provider_code_column"
+				v-model="clave_identidad"
+				value="provider_code"
+				class="m-b-5">
 				Código de proveedor
 			</b-form-radio>
-			<b-form-radio v-model="clave_identidad" value="name" class="m-b-5">
+			<b-form-radio
+				v-if="has_name_column"
+				v-model="clave_identidad"
+				value="name"
+				class="m-b-5">
 				Nombre del artículo
 			</b-form-radio>
 		</b-form-group>
@@ -891,6 +910,41 @@ export default {
 			return this.column_mapping.some(item => item.system_property === 'numero')
 		},
 
+		/* Verdadero si el mapeo actual tiene una columna asignada a código de barras. */
+		has_bar_code_column() {
+			return this.column_mapping.some(item => item.system_property === 'codigo_de_barras')
+		},
+
+		/* Verdadero si el mapeo actual tiene una columna asignada a SKU. */
+		has_sku_column() {
+			return this.column_mapping.some(item => item.system_property === 'sku')
+		},
+
+		/* Verdadero si el mapeo actual tiene una columna asignada a código de proveedor. */
+		has_provider_code_column() {
+			return this.column_mapping.some(item => item.system_property === 'codigo_de_proveedor')
+		},
+
+		/* Verdadero si el mapeo actual tiene una columna asignada a nombre. */
+		has_name_column() {
+			return this.column_mapping.some(item => item.system_property === 'nombre')
+		},
+
+		/*
+		 * Clave de identidad por defecto: la de mayor prioridad cuya columna esté
+		 * presente en el Excel. Prioridad: numero -> bar_code -> sku -> provider_code -> name.
+		 * Se usa como red de seguridad del auto-select cuando la recomendación no
+		 * corresponde a una columna presente o no vino recomendación.
+		 */
+		default_clave_identidad() {
+			if (this.has_numero_column)        return 'numero'
+			if (this.has_bar_code_column)      return 'bar_code'
+			if (this.has_sku_column)           return 'sku'
+			if (this.has_provider_code_column) return 'provider_code'
+			if (this.has_name_column)          return 'name'
+			return null
+		},
+
 		/*
 		 * Cantidad de filas que se importarán según start_row y finish_row.
 		 */
@@ -996,7 +1050,9 @@ export default {
 			if (!this.recomendacion_configuracion) return ''
 
 			const labels = {
-				bar_code:     'Código de barras',
+				numero:        'Número del artículo (ID interno)',
+				bar_code:      'Código de barras',
+				sku:           'SKU',
 				provider_code: 'Código de proveedor',
 				name:          'Nombre del artículo',
 			}
@@ -1598,6 +1654,16 @@ export default {
 					self.politica_colision = self.recomendacion_configuracion.politica_colision
 				}
 
+				/*
+				 * Red de seguridad del auto-select: si la clave recomendada no tiene columna
+				 * presente en el Excel (radio oculto), o no vino recomendación, caemos a la
+				 * clave de mayor prioridad que sí esté presente. Así el modal siempre arranca
+				 * con una opción visible marcada y "Continuar" queda consistente.
+				 */
+				if (!self.clave_identidad || !self.clave_identidad_column_present(self.clave_identidad)) {
+					self.clave_identidad = self.default_clave_identidad
+				}
+
 				self.step = 3
 			})
 			.catch(function(err) {
@@ -1610,6 +1676,21 @@ export default {
 
 				self.$toast.error(message)
 			})
+		},
+
+		/*
+		 * Indica si la columna correspondiente a una clave de identidad está presente
+		 * en el Excel (mapeada en column_mapping).
+		 */
+		clave_identidad_column_present(clave) {
+			let mapa = {
+				numero:        this.has_numero_column,
+				bar_code:      this.has_bar_code_column,
+				sku:           this.has_sku_column,
+				provider_code: this.has_provider_code_column,
+				name:          this.has_name_column,
+			}
+			return !!mapa[clave]
 		},
 
 		/**

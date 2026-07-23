@@ -297,6 +297,15 @@ export default [
 		// image_url: 'nav-icons/tienda.png',
 	},
 	{
+		text: 'WhatsApp',
+		name: 'whatsapp',
+		path: '/whatsapp',
+		component: '@/views/Whatsapp',
+		// Solo visible con la extensión 'whatsapp' activa (mismo gateo que usa el backend en check_extencion_empresa).
+		if_has_extencion: 'whatsapp',
+		icon: 'whatsapp',
+	},
+	{
 		text: 'Tienda Nube',
 		name: 'tienda_nube',
 		path: '/tienda-nube',

@@ -23,19 +23,6 @@
 					:logo_size_mm="logo_size_mm"
 					@update:logo_size_mm="logo_size_mm = $event"
 					:paper_width_mm="model.paper_width_mm"></header-preview>
-
-					<!-- Ajuste fino del logo por input numérico, alternativa a la manija -->
-					<b-form-group
-					label="Tamaño del logo (mm)"
-					class="m-t-15"
-					description="También podés arrastrar la manija celeste en la esquina del logo.">
-						<b-form-input
-						type="number"
-						:min="logo_size_mm_min"
-						:max="logo_size_mm_max"
-						v-model.number="logo_size_mm"
-						style="max-width: 140px"></b-form-input>
-					</b-form-group>
 				</b-col>
 
 				<b-col cols="12" md="4">
@@ -82,8 +69,6 @@ import {
 	RECEPTOR_CHIP_LABELS,
 	FISCAL_REQUIRED_EMISOR_KEYS,
 	default_header_layout,
-	LOGO_SIZE_MM_MIN,
-	LOGO_SIZE_MM_MAX,
 	LOGO_SIZE_MM_DEFAULT,
 } from '@/common-vue/components/pdf/header-designer/header_designer_catalog'
 
@@ -148,11 +133,6 @@ export default {
 			 * true mientras se persiste el diseño vía API (deshabilita "Guardar diseño").
 			 */
 			saving: false,
-			/**
-			 * Topes de tamaño de logo (mm), tomados del catálogo compartido.
-			 */
-			logo_size_mm_min: LOGO_SIZE_MM_MIN,
-			logo_size_mm_max: LOGO_SIZE_MM_MAX,
 		}
 	},
 	computed: {

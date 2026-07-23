@@ -35,6 +35,12 @@
 			<whatsapp-btn
 			v-if="sale && show_whatsapp_btn"
 			:sale="sale"></whatsapp-btn>
+
+			<!-- Envío del comprobante por el agente de WhatsApp (grupo 137, Prompt 06). Convive con el botón wa.me de arriba: no depende del celular del operador. -->
+			<send-whatsapp-agent-btn
+			v-if="sale && show_whatsapp_btn && hasExtencion('whatsapp')"
+			class="m-l-10"
+			:sale="sale"></send-whatsapp-agent-btn>
 		</div>
 
 		<modal-pdf-columns-profile
@@ -73,6 +79,7 @@ import SectionFacturasA4 from './SectionFacturasA4.vue'
 export default {
 	components: {
 		WhatsappBtn: () => import('@/common-vue/sale-print-buttons/WhatsappBtn'),
+		SendWhatsappAgentBtn: () => import('@/common-vue/sale-print-buttons/SendWhatsappAgentBtn'),
 		ModalPdfColumnsProfile,
 		SectionTickets,
 		SectionRemitosA4,

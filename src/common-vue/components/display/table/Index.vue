@@ -1077,27 +1077,27 @@ export default {
 						if (this.table_height_para_restar) {
 							height -= this.table_height_para_restar
 						}
-						// console.log('setHeight de '+this.model_name)
-						if (height > 500) {
-							// console.log('aplicando height calculado de '+height)
-							table.style.height = height +'px'
-						} else {
-							// console.log('no se aplico height calculado de '+height)
-							// console.log('la tabla tiene height de '+table.style.height)
-
-							if (table.style.height < 500) {
-								// console.log('se aplico height de 500')
-								table.style.height = '500px'
-							}
+						// Piso de 500px: si el espacio disponible calculado es menor, igual garantizamos
+						// un alto minimo razonable para la zona de la tabla.
+						if (height < 500) {
+							height = 500
 						}
-						// table.style.max_height = height +'px'
+						// Antes se aplicaba como 'height' fijo, asi que el contenedor siempre ocupaba
+						// TODO el alto disponible aunque tuviera pocas filas (quedaba espacio vacio abajo,
+						// con la sombra/bordes redondeados al final de ese espacio vacio en vez de al
+						// final de la ultima fila real). Ahora se aplica como TOPE (max-height) + height
+						// auto: el contenedor se ajusta al contenido real y solo llega a este tope (y
+						// scrollea, gracias al overflow-y:auto que ya tiene .cont-table) cuando las filas
+						// no entran en ese espacio.
+						table.style.maxHeight = height + 'px'
+						table.style.height = 'auto'
 
 						this.setShowButtonsScroll()
 					}, 500)
 				} else {
 					this.volver_a_llamar_set_height()
 				}
-			} 
+			}
 		},
 		volver_a_llamar_set_height() {
 
