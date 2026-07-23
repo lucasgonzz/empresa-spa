@@ -55,6 +55,13 @@ export default {
 			this.$store.commit(prefix + 'setFilterPage', 1)
 			this.$store.commit(prefix + 'setTotalFilterPages', null)
 			this.$store.commit(prefix + 'setTotalFilterResults', 0)
+
+			// El botón "Quitar filtros" también debe apagar el estado del buscador general (si estaba
+			// activo), para que su input y su botón "Limpiar búsqueda" queden consistentes. Estas dos
+			// mutaciones no existen en el store de papelera — este botón nunca se muestra en modo
+			// papelera (ver v-if de arriba), por eso van directo con model_name y no con `prefix`.
+			this.$store.commit(this.model_name + '/set_filtered_without_filter_form', false)
+			this.$store.commit(this.model_name + '/setGlobalSearchPayload', null)
 		},
 		/**
 		 * Restablece los campos de cada filtro del modelo a su valor inicial.

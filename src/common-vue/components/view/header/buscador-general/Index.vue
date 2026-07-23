@@ -528,6 +528,21 @@ export default {
 			return combinados
 		},
 	},
+	watch: {
+		/**
+		 * Si el buscador general deja de estar activo por una causa externa (ej: el botón
+		 * "Quitar filtros" del grupo de al lado, que ahora también apaga global_search_payload),
+		 * limpia el texto ingresado para que el input no quede mostrando un criterio que ya no
+		 * representa lo que hay en pantalla. No rompe el propio botón "Limpiar búsqueda" del
+		 * buscador general (que ya vacía query_value a mano en su método limpiar()): este watcher
+		 * simplemente vuelve a hacer lo mismo, sin efecto extra.
+		 */
+		is_filtered_by_buscador(nuevo_valor) {
+			if (!nuevo_valor) {
+				this.query_value = ''
+			}
+		},
+	},
 	created() {
 		// Default inmediato (nunca queda vacio mientras carga) y despues se pisa con lo guardado.
 		this.applyDefaultSelection()
