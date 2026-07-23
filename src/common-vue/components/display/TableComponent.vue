@@ -255,6 +255,7 @@
 <script>
 import BtnAddToShow from '@/common-vue/components/BtnAddToShow'
 import { fallback_column_width_px } from '@/common-vue/config/column_preference_defaults'
+import { bind_edge_auto_scroll, unbind_edge_auto_scroll } from '@/common-vue/helpers/edge_auto_scroll'
 
 export default {
 	components: {
@@ -340,6 +341,11 @@ export default {
 			type: Boolean,
 			default: false
 		},
+		// Permite a un consumidor apagar el auto-scroll horizontal por bordes (misma semantica que en los listados).
+		disable_scroll: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	data() {
 		return {
@@ -349,16 +355,21 @@ export default {
 			preview_image_url: '',
 			// Altura disponible calculada dinámicamente desde el top del contenedor hasta el borde inferior de la ventana
 			available_height: null,
+			// Handle de los listeners de auto-scroll por bordes. Se guarda para poder desengancharlos
+			// cuando el contenedor se recrea (v-if) o cuando se destruye el componente.
+			edge_scroll_handle: null,
 		}
 	},
 	mounted() {
 		window.addEventListener('keydown', this.handlePreviewKeydown)
 		this.recalcular_altura()
 		window.addEventListener('resize', this.recalcular_altura)
+		this.enganchar_scroll_margenes()
 	},
 	beforeDestroy() {
 		window.removeEventListener('keydown', this.handlePreviewKeydown)
 		window.removeEventListener('resize', this.recalcular_altura)
+		this.desenganchar_scroll_margenes()
 	},
 	watch: {
 		selected_index() {
@@ -379,6 +390,9 @@ export default {
 			// contenido de arriba (titulo de resultados, paginacion) o cuando el contenedor se
 			// recrea por el v-if. Sin esto, el modal conserva el tope de la busqueda anterior.
 			this.recalcular_altura()
+			// El contenedor .table-component-scroll tambien se recrea (v-if="models.length"), asi
+			// que hay que re-enganchar el auto-scroll de margenes despues de cada busqueda/pagina.
+			this.enganchar_scroll_margenes()
 		},
 	},
 	computed: {
@@ -543,6 +557,42 @@ export default {
 			if (event.key == 'Escape' && this.show_image_preview) {
 				this.closeImagePreview()
 			}
+		},
+		/**
+		 * Engancha el auto-scroll horizontal de margenes sobre el contenedor de la tabla.
+		 * Idempotente: si ya esta enganchado al mismo elemento no vuelve a enganchar; si el
+		 * contenedor se recreo (el v-if de models/loading lo destruye y lo vuelve a crear), limpia
+		 * los listeners viejos antes de re-enganchar.
+		 */
+		enganchar_scroll_margenes() {
+			if (
+				this.is_mobile
+				|| !this.owner
+				|| !this.owner.scroll_en_tablas
+				|| this.disable_scroll
+			) {
+				return
+			}
+			var self = this
+			self.$nextTick(function() {
+				var el = self.$refs.tabla_contenedor
+				if (!el) {
+					self.desenganchar_scroll_margenes()
+					return
+				}
+				if (self.edge_scroll_handle && self.edge_scroll_handle.el === el) {
+					return
+				}
+				self.desenganchar_scroll_margenes()
+				self.edge_scroll_handle = bind_edge_auto_scroll(el)
+			})
+		},
+		/**
+		 * Remueve los listeners de auto-scroll de margenes del elemento al que esten enganchados.
+		 */
+		desenganchar_scroll_margenes() {
+			unbind_edge_auto_scroll(this.edge_scroll_handle)
+			this.edge_scroll_handle = null
 		},
 		scroll_to_selected() {
 			const filas = this.$refs.tabla_contenedor.querySelectorAll('tbody tr')
