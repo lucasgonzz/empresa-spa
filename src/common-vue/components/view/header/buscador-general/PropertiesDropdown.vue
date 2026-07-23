@@ -86,14 +86,18 @@
 				</button>
 
 				<!--
-					Selector de modo de busqueda por propiedad (prompt 07 del grupo 179): solo se
-					muestra si la propiedad esta tildada (si no participa de la busqueda, su modo no
-					importa y solo ensucia la fila). Va entre el nombre y el toggle. Dentro de
-					b-dropdown-form ya envuelve toda la fila, asi que un @change ac no cierra el menu.
+					Selector de modo de busqueda por propiedad (prompt 07 del grupo 179). Va entre el
+					nombre y el toggle. Dentro de b-dropdown-form ya envuelve toda la fila, asi que un
+					@change aca no cierra el menu.
+					Nota (grupo 195, prompt 03): antes se ocultaba con v-if cuando la propiedad no
+					estaba tildada, pero eso hacia que el toggle de cada fila quedara en una posicion
+					distinta segun si habia selector de modo o no. Ahora el contenedor siempre se
+					renderiza y se oculta con la clase --oculto (visibility: hidden), asi reserva su
+					espacio y la columna del toggle queda alineada en todas las filas.
 				-->
 				<span
-				v-if="is_selected(item)"
 				class="buscador-general-dropdown__row-mode"
+				:class="{ 'buscador-general-dropdown__row-mode--oculto': !is_selected(item) }"
 				title="Como se compara esta propiedad contra las palabras buscadas">
 					<select
 					class="buscador-general-dropdown__row-mode-select"
@@ -266,11 +270,15 @@ export default {
 			// coincidencia case-insensitive sobre item.text, sin tocar seleccion ni orden real.
 			filter_text: '',
 			// Popper: separa el menu del toggle (mas espacio que el default) y lo centra bajo el
-			// icono en vez de quedar pegado al borde izquierdo (toggle ~30px, menu ~320px).
+			// icono en vez de quedar pegado al borde izquierdo. Con el menu fijo en 440px y el
+			// toggle en 30px, el corrimiento horizontal es (440 - 30) / 2 = 205. El vertical se
+			// subio de 8 a 10 para dejarle lugar a la flecha que apunta al icono (ver estilos,
+			// bloque .buscador-general-dropdown &.show::after). Si se cambia el ancho del menu,
+			// hay que recalcular este offset y revisar que la flecha siga centrada.
 			dropdown_popper_opts: {
 				modifiers: {
 					offset: {
-						offset: '-145, 8',
+						offset: '-205, 10',
 					},
 				},
 			},
@@ -441,7 +449,11 @@ export default {
 </script>
 <style lang="sass">
 // Toggle del dropdown (solo icono de embudo): plano, se integra al pill del buscador.
+// position: relative ya lo aplica Bootstrap a .dropdown, pero se deja explicito aca porque la
+// flecha de abajo (&.show::after) se posiciona en absoluto contra esta raiz.
 .buscador-general-dropdown
+	position: relative
+
 	.buscador-general-dropdown__toggle
 		display: flex
 		align-items: center
@@ -465,9 +477,36 @@ export default {
 		i
 			font-size: 0.95rem
 
-// Menu mas ancho para que se lean bien los nombres de las propiedades
+	// Flecha que apunta al icono desde el que se despliega el panel (referencia: el menu de
+	// categorias de Mercado Libre). Va sobre la RAIZ del dropdown y no sobre el menu, porque
+	// el menu tiene overflow-y: auto y recortaria cualquier pseudo-elemento que asome.
+	// Geometria: el menu arranca a 10px del borde inferior de la raiz (offset del popper).
+	// El cuadrado de 12px rotado 45 grados queda centrado justo en esa altura, asi que la
+	// mitad de arriba sobresale como punta y la mitad de abajo tapa el borde superior del
+	// menu (fondo blanco opaco, z-index por encima). El color de borde (#e2e4e7) es el mismo
+	// que usan el resto de los bordes del panel (acciones, filtro, presets, conector).
+	&.show::after
+		content: ''
+		position: absolute
+		top: 100%
+		left: 50%
+		margin-top: 4px
+		width: 12px
+		height: 12px
+		background: #fff
+		border-left: 1px solid #e2e4e7
+		border-top: 1px solid #e2e4e7
+		transform: translateX(-50%) rotate(45deg)
+		z-index: 1001
+		pointer-events: none
+
+// Menu con ancho fijo: un .dropdown-menu sin limite se estira hasta el max-content de su
+// contenido, y el contenido mas ancho eran los parrafos largos de los presets de "Como buscar"
+// (nunca cortaban de renglon). El ancho anterior de mas de 1000px no era una decision de diseno,
+// era un accidente. Se fija un ancho explicito y max-width para no desbordar en pantallas chicas.
 .buscador-general-dropdown__menu
-	min-width: 320px
+	width: 440px
+	max-width: calc(100vw - 24px)
 	max-height: 60vh
 	overflow-y: auto
 	padding-top: 6px
@@ -479,6 +518,27 @@ export default {
 
 	.buscador-general-dropdown__actions-form
 		padding: 4px 12px
+
+	// La regla global de _inputs.sass le pone box-shadow a input, button, textarea y select.
+	// Adentro del panel no queremos ningun relieve: el borde de cada control ya alcanza.
+	button, select, input, textarea
+		box-shadow: none
+
+	// Filas de propiedad: se leen como una tabla — mas aire vertical, hairline separadora
+	// (inset, para no mover el layout) y realce al pasar por encima. Anidado aca adentro (y no
+	// como regla suelta) porque si no pierde por especificidad contra .b-dropdown-form de arriba.
+	.buscador-general-dropdown__row-form
+		padding: 7px 12px
+		box-shadow: inset 0 -1px 0 #f0f1f3
+		transition: background 0.12s ease
+
+		&:hover
+			background: #fafbfc
+
+	// El divider que va justo despues de la ultima fila de propiedad quedaba pegado a la ultima
+	// hairline; un poco de aire para que se lea como separacion de seccion.
+	.dropdown-divider
+		margin-top: 8px
 
 // Botonera de seleccionar / deseleccionar todas
 .buscador-general-dropdown__actions
@@ -594,11 +654,14 @@ export default {
 				color: #007bff
 
 // Selector de modo de busqueda por propiedad + icono de ayuda, entre el nombre y el toggle
+// Ancho fijo (no auto): asi la columna del selector de modo queda alineada en todas las filas,
+// esten tildadas o no (ver .buscador-general-dropdown__row-mode--oculto mas abajo).
 .buscador-general-dropdown__row-mode
 	display: flex
 	align-items: center
 	gap: 4px
-	flex: 0 0 auto
+	width: 118px
+	flex: 0 0 118px
 
 	.buscador-general-dropdown__row-mode-select
 		border: 1px solid #e2e4e7
@@ -607,7 +670,7 @@ export default {
 		padding: 1px 4px
 		font-size: 0.72rem
 		color: #4b4f56
-		max-width: 108px
+		width: 100%
 
 		&:focus
 			outline: none
@@ -617,6 +680,12 @@ export default {
 		font-size: 0.68rem
 		color: #9aa0a6
 		cursor: help
+
+	// Fila no tildada: el selector de modo no aplica, pero se mantiene invisible en vez de no
+	// renderizarse (v-if), para que la columna del toggle no salte de posicion entre filas.
+	// visibility: hidden ademas saca el control del orden de tabulacion, que es lo que queremos.
+	&.buscador-general-dropdown__row-mode--oculto
+		visibility: hidden
 
 // Presets de "Como buscar": dos tarjetas apiladas, estetica Apple (sobria, sin colores fuertes)
 .buscador-general-dropdown__presets-form
@@ -655,6 +724,8 @@ export default {
 			font-size: 0.72rem
 			color: #86868b
 			line-height: 1.3
+			// Ningun texto largo puede volver a empujar el ancho del panel: corta de renglon.
+			overflow-wrap: break-word
 
 // Conector (solo visible con mezcla de modos entre las props tildadas)
 .buscador-general-dropdown__conector-form
@@ -688,6 +759,8 @@ export default {
 	margin: 4px 0 0
 	font-size: 0.7rem
 	color: #86868b
+	// Ningun texto largo puede volver a empujar el ancho del panel: corta de renglon.
+	overflow-wrap: break-word
 
 // ─── Toggle tipo iPhone (mismo diseno que los checkbox del ModelForm) ───
 .bg-toggle
