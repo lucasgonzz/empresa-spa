@@ -232,6 +232,15 @@ export default {
 			// armar el PUT de persistFiltrosFijos() sin perder la configuracion de una columna que
 			// se quito (visible: false), no se usa para el render.
 			filtros_historial: {},
+			// Id del setTimeout del debounce de persistSelection() (prompt 01 del grupo 199): se
+			// agenda en cada cambio de la seleccion del desplegable (tildar, modo, presets,
+			// conector, todas/ninguna) para que se guarde sola sin necesidad de buscar.
+			persist_selection_timer: null,
+			// True mientras hay un PUT de persistSelection() esperando respuesta del backend.
+			persist_selection_in_flight: false,
+			// True si llego un cambio de seleccion mientras habia un PUT en vuelo: al terminar ese
+			// PUT hay que volver a persistir con el estado ya actualizado (evita perder el cambio).
+			persist_selection_pending: false,
 		}
 	},
 	computed: {
@@ -526,6 +535,17 @@ export default {
 		// Carga la configuracion de filtros fijos guardada (preference_type global_search_filters).
 		this.loadFiltrosFijos()
 	},
+	beforeDestroy() {
+		// Si quedo un debounce de persistSelection() pendiente (el usuario tildo algo y salio del
+		// modulo antes de que se cumplieran los 400ms), se cancela el timer y se persiste una
+		// ultima vez para no perder el cambio (prompt 01 del grupo 199). Fire and forget: no
+		// bloquea la navegacion.
+		if (this.persist_selection_timer) {
+			clearTimeout(this.persist_selection_timer)
+			this.persist_selection_timer = null
+			this.persistSelection()
+		}
+	},
 	methods: {
 		/**
 		 * Modo de coincidencia de una propiedad ('alguna' o 'todas'). Si no hay valor guardado
@@ -706,6 +726,9 @@ export default {
 			} else {
 				this.toggleRelation(payload.key)
 			}
+			// Persiste solo (con debounce) al tildar/destildar (prompt 01 del grupo 199): ya no
+			// hace falta ejecutar una busqueda para que la seleccion quede guardada.
+			this.schedulePersistSelection()
 		},
 
 		/**
@@ -1016,8 +1039,8 @@ export default {
 
 		/**
 		 * Handler del evento 'set-keyword-mode' del desplegable: cambia el modo de coincidencia de
-		 * UNA propiedad puntual. No persiste al toque (mismo criterio que el resto de la seleccion,
-		 * que se guarda al buscar): solo actualiza el estado local.
+		 * UNA propiedad puntual. Persiste solo, con debounce (prompt 01 del grupo 199): ya no hace
+		 * falta ejecutar una busqueda para que el cambio quede guardado.
 		 *
 		 * @param {Object} payload { key, kind, mode } mode: 'alguna' o 'todas'
 		 * @return {void}
@@ -1025,6 +1048,7 @@ export default {
 		onSetKeywordMode(payload) {
 			this.selection_touched = true
 			this.$set(this.keyword_modes, payload.key, payload.mode)
+			this.schedulePersistSelection()
 		},
 
 		/**
@@ -1045,6 +1069,7 @@ export default {
 				modes[key] = mode
 			})
 			this.keyword_modes = modes
+			this.schedulePersistSelection()
 		},
 
 		/**
@@ -1056,6 +1081,7 @@ export default {
 		onSetConector(value) {
 			this.selection_touched = true
 			this.conector = value
+			this.schedulePersistSelection()
 		},
 
 		/**
@@ -1105,6 +1131,7 @@ export default {
 			})
 			this.selected_props = own_keys
 			this.selected_relations = relation_keys
+			this.schedulePersistSelection()
 		},
 
 		/**
@@ -1116,6 +1143,7 @@ export default {
 			this.selection_touched = true
 			this.selected_props = []
 			this.selected_relations = []
+			this.schedulePersistSelection()
 		},
 
 		/**
@@ -1191,8 +1219,32 @@ export default {
 			}
 
 			// Guarda la seleccion actual como preferencia del usuario para este modelo (identico en
-			// los dos modos: es la misma configuracion de busqueda).
+			// los dos modos: es la misma configuracion de busqueda). Si quedo un debounce agendado
+			// por un tilde reciente, se cancela para no mandar dos PUT casi seguidos (prompt 01 del
+			// grupo 199).
+			if (this.persist_selection_timer) {
+				clearTimeout(this.persist_selection_timer)
+				this.persist_selection_timer = null
+			}
 			this.persistSelection()
+		},
+
+		/**
+		 * Agenda la persistencia de la seleccion del desplegable (prompt 01 del grupo 199). Se llama
+		 * en cada cambio del usuario (tildar, modo, presets, conector, todas/ninguna). El debounce
+		 * coalesce las rafagas de clics en un solo PUT: sin el, tildar cinco propiedades seguidas
+		 * mandaria cinco PUT mas cinco refrescos del cache global.
+		 *
+		 * @return {void}
+		 */
+		schedulePersistSelection() {
+			if (this.persist_selection_timer) {
+				clearTimeout(this.persist_selection_timer)
+			}
+			this.persist_selection_timer = setTimeout(() => {
+				this.persist_selection_timer = null
+				this.persistSelection()
+			}, 400)
 		},
 
 		/**
@@ -1202,9 +1254,25 @@ export default {
 		 * del grupo 179). Fire and forget: no bloquea la busqueda. Al guardar, refresca el cache
 		 * global para que la proxima vez (u otra vista) se cargue la seleccion nueva.
 		 *
+		 * Se serializa (prompt 01 del grupo 199): el backend hace `updateOrCreate`, que no es
+		 * atomico, asi que dos PUT simultaneos del mismo usuario/modelo/tipo pueden llegar a crear
+		 * filas duplicadas. Si entra un cambio nuevo mientras hay un PUT esperando respuesta, se
+		 * marca pendiente y se re-manda al terminar, con el estado ya actualizado.
+		 *
 		 * @return {void}
 		 */
 		persistSelection() {
+			// Una sola llamada en vuelo por vez: updateOrCreate del backend no es atomico y dos PUT
+			// simultaneos del mismo usuario/modelo/tipo pueden duplicar la fila. Si entra un cambio
+			// nuevo mientras hay uno esperando respuesta, se marca pendiente y se re-manda al final
+			// con el estado ya actualizado.
+			if (this.persist_selection_in_flight) {
+				this.persist_selection_pending = true
+				return
+			}
+
+			this.persist_selection_in_flight = true
+
 			let columns = []
 			let order = 0
 			let self = this
@@ -1233,6 +1301,16 @@ export default {
 			})
 			.catch(err => {
 				console.log('buscador-general: no se pudo guardar la seleccion de propiedades', err)
+			})
+			.then(() => {
+				// Libera la bandera de "en vuelo" (tanto si el PUT salio bien como si fallo, ver el
+				// catch de arriba) y, si llego un cambio nuevo mientras se esperaba la respuesta,
+				// vuelve a persistir con el estado ya actualizado.
+				this.persist_selection_in_flight = false
+				if (this.persist_selection_pending) {
+					this.persist_selection_pending = false
+					this.persistSelection()
+				}
 			})
 		},
 
