@@ -57,8 +57,16 @@
 
 				<template
 				v-for="prop in properties"
-				v-slot:[prop.key]="props">
-					<slot :name="prop.key" :model="props.model"></slot>
+				v-slot:[prop.key]>
+					<!--
+						Fix (grupo 202, prompt 03): `props` no expone `model` porque
+						ModelForm.vue declara el slot como `<slot :name="prop.key">`, sin
+						bindear nada. `model` ya es un prop propio de este componente (el
+						mismo que se le pasa a <model-form :model="model">), asi que se
+						reenvia ese en vez del scope inexistente. No rompe a nadie: antes
+						este binding siempre llegaba `undefined`.
+					-->
+					<slot :name="prop.key" :model="model"></slot>
 
 				</template>
 

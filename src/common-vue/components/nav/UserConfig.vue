@@ -32,6 +32,72 @@
 					v-if="slot_props.model && slot_props.model.id"
 					:model="slot_props.model"></integrations>
 				</template>
+
+				<!--
+					Selectores de color reales para la pestaña "Diseño" (grupo 202, prompt 03).
+					Cada uno reemplaza el input de texto plano de su color correspondiente
+					mediante el slot por propiedad que ModelForm.vue ya expone
+					(<slot :name="prop.key">). El "model" que llega en el slot es el mismo
+					online_configuration del formulario, gracias al fix de model/Index.vue.
+				-->
+				<template
+				v-if="config_model_name == 'online_configuration'"
+				v-slot:primary_color="slot_props">
+					<color-field
+					v-if="slot_props.model"
+					:prop="{ key: 'primary_color' }"
+					:model="slot_props.model"></color-field>
+				</template>
+
+				<template
+				v-if="config_model_name == 'online_configuration'"
+				v-slot:secondary_color="slot_props">
+					<color-field
+					v-if="slot_props.model"
+					:prop="{ key: 'secondary_color' }"
+					:model="slot_props.model"></color-field>
+				</template>
+
+				<template
+				v-if="config_model_name == 'online_configuration'"
+				v-slot:text_color="slot_props">
+					<color-field
+					v-if="slot_props.model"
+					:prop="{ key: 'text_color' }"
+					:model="slot_props.model"></color-field>
+				</template>
+
+				<template
+				v-if="config_model_name == 'online_configuration'"
+				v-slot:hover_text_color="slot_props">
+					<color-field
+					v-if="slot_props.model"
+					:prop="{ key: 'hover_text_color' }"
+					:model="slot_props.model"></color-field>
+				</template>
+
+				<template
+				v-if="config_model_name == 'online_configuration'"
+				v-slot:background_color="slot_props">
+					<color-field
+					v-if="slot_props.model"
+					:prop="{ key: 'background_color' }"
+					:model="slot_props.model"></color-field>
+				</template>
+
+				<!--
+					Generador de paleta con IA (grupo 202, prompt 03): se monta en el slot de
+					la propiedad virtual "ai_palette_generator" (ver
+					src/models/online_configuration.js), que existe solo para reservar un lugar
+					dentro de la pestaña "Diseño". No es una columna real, el backend la ignora.
+				-->
+				<template
+				v-if="config_model_name == 'online_configuration'"
+				v-slot:ai_palette_generator="slot_props">
+					<ai-palette-generator
+					v-if="slot_props.model"
+					:model="slot_props.model"></ai-palette-generator>
+				</template>
 			</model>
 		</div>
 	</div>
@@ -42,6 +108,8 @@ export default {
 		Model: () => import('@/common-vue/components/model/Index'),
 		TestMailButton: () => import('@/components/online/config/TestMailButton'),
 		Integrations: () => import('@/components/online/config/integrations/Index'),
+		ColorField: () => import('@/components/online/config/ColorField'),
+		AiPaletteGenerator: () => import('@/components/online/config/AiPaletteGenerator'),
 	},
 	created() {
 		/*

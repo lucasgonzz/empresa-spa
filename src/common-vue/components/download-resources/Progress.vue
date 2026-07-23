@@ -1,38 +1,20 @@
 <template>
-<!-- <div
-class="recursos-progress-active"
-id="recursos-progress"> -->
-<div
-class="recursos-progress-active"
-id="recursos-progress">
+<transition name="recursos-tarjeta">
+	<div
+	v-if="visible"
+	class="recursos-tarjeta"
+	:class="{ 'recursos-tarjeta--compacta': compacta }">
 
-	<div class="j-center align-center">
-
-		<div 
-		class="btn-cerrar c-p"
-		v-if="terminado"
-		@click="ocultar_tarjeta">
-			<i class="icon-cancel"></i>
-		</div>
-
-		<strong
-		class="text-success"
-		v-if="terminado">
-			Sistema listo para usar
-		</strong>
-		<span
-		v-else>
-			Descargando recursos...
+		<span class="recursos-tarjeta__texto">
+			{{ texto }}
 		</span>
 
-		<circle-progress
-		class="m-l-20"
-		:size="40"
-		:porcentaje="percentage"></circle-progress>
-	</div>
-	
+		<ring-progress
+		:porcentaje="percentage"
+		:terminado="terminado"></ring-progress>
 
-</div>
+	</div>
+</transition>
 </template>
 <script>
 export default {
@@ -40,146 +22,168 @@ export default {
 		models_to_download: Array,
 	},
 	components: {
-		CircleProgress: () => import('@/components/listado/modals/inventory-performance/CircleProgress'),
+		RingProgress: () => import('@/common-vue/components/download-resources/RingProgress'),
 	},
 	data() {
 		return {
-			tarjeta_mostrandose: false,
-			tarjeta_minimizada: false,
+			// Controla si la tarjeta esta en pantalla (entra/sale con animacion).
+			visible: false,
+			// Controla el estado achicado (solo el anillo, sin texto).
+			compacta: false,
+			// Evita reiniciar la secuencia en cada disparo del watch de models_to_download,
+			// que se dispara una vez por cada recurso que el padre agrega con push.
+			secuencia_iniciada: false,
+			// Timer que achica la tarjeta a los 5 segundos de arrancar.
+			timer_compactar: null,
+			// Timer que oculta la tarjeta a los 3 segundos de terminar.
+			timer_ocultar: null,
 		}
 	},
 	computed: {
-		effective_models_to_download() {
-			return this.models_to_download.filter(model => {
-				return !this.is_mobile || this.downloadOnMobile(model.model_name)
-			})
+		descargados() {
+			// La lista ya viene filtrada desde setModels() (prompt 01 del grupo): no entran los
+			// recursos que esta sesion no va a descargar, asi que alcanza con contar los terminados.
+			return this.models_to_download.filter(model => model.downloaded).length
 		},
 		terminado() {
-			return this.descargados == this.effective_models_to_download.length
+			// El chequeo de length evita que la tarjeta se considere terminada con la lista
+			// todavia vacia (0 de 0), que era lo que la hacia aparecer y desaparecer al arrancar.
+			return this.models_to_download.length > 0 && this.descargados == this.models_to_download.length
 		},
 		percentage() {
-			if (!this.effective_models_to_download.length) {
-				return 100
+			if (!this.models_to_download.length) {
+				return 0
 			}
-			return Math.round(this.descargados * 100 / this.effective_models_to_download.length)
+			return Math.round(this.descargados * 100 / this.models_to_download.length)
 		},
-		import_status() {
-			return this.$store.state.import_status.model
+		texto() {
+			return this.terminado ? 'Recursos descargados' : 'Descargando recursos'
 		},
-		descargados() {
-			return this.effective_models_to_download.filter(m => {
-				
-        		if (m.if_has_extencion) {
-
-        			if (!this.hasExtencion(m.if_has_extencion)) {
-        				return true
-        			}
-        		}
-
-				return m.downloaded
-			}).length
-		},
-		no_descargados() {
-			return this.effective_models_to_download.filter(m => {
-				
-				return !m.downloaded
-			})
-		}
 	},
 	watch: {
 		models_to_download() {
-			console.log('watch de models_to_download:')
-			console.log(this.models_to_download)
-
-			this.check_visibilidad()
+			if (!this.models_to_download.length) {
+				// La lista se rearmo desde cero (boton de volver a descargar): se habilita una
+				// secuencia nueva.
+				this.secuencia_iniciada = false
+				return
+			}
+			if (!this.terminado) {
+				this.iniciar_secuencia()
+			}
 		},
-		terminado() {
-			console.log('watch de terminado')
-			this.check_visibilidad()
+		terminado(valor) {
+			if (valor) {
+				this.mostrar_final()
+			}
 		},
 	},
+	beforeDestroy() {
+		this.limpiar_timers()
+	},
 	methods: {
-		check_visibilidad() {
+		/**
+		 * Muestra la tarjeta expandida y programa el achique a los 5 segundos.
+		 * Es idempotente: el watch de models_to_download se dispara una vez por cada recurso
+		 * que se agrega a la lista, y la secuencia tiene que arrancar una sola vez.
+		 */
+		iniciar_secuencia() {
+			if (this.secuencia_iniciada) {
+				return
+			}
+			this.secuencia_iniciada = true
+			this.limpiar_timers()
+			this.visible = true
+			this.compacta = false
 
-			console.log(this.terminado)
-			console.log(this.tarjeta_mostrandose)
-
-			if (this.models_to_download && !this.tarjeta_mostrandose) {
-				
-				this.mostrar_tarjeta()
-
-			} else if (
-				this.terminado
-				&& this.tarjeta_mostrandose
-			) {
-				
-				setTimeout(() => {
-
-					this.ocultar_tarjeta()
-
-				}, 5000)
-			
-			} 
+			// El texto se muestra los primeros 5 segundos. Despues la tarjeta se achica y queda
+			// solo el anillo, para no ocupar pantalla durante toda la descarga. Si la descarga ya
+			// termino antes de esos 5 segundos no se achica nunca: manda el estado final.
+			this.timer_compactar = setTimeout(() => {
+				if (!this.terminado) {
+					this.compacta = true
+				}
+			}, 5000)
 		},
-		mostrar_tarjeta() {
-			let el = document.getElementById('recursos-progress')
-			
-			el.classList.add('recursos-progress-active')
-			this.tarjeta_mostrandose = true
-
-			// alert('Mostrando tarjeta')
+		/**
+		 * Vuelve a expandir la tarjeta con el mensaje final y la esconde sola.
+		 */
+		mostrar_final() {
+			this.limpiar_timers()
+			this.visible = true
+			this.compacta = false
+			this.timer_ocultar = setTimeout(() => {
+				this.visible = false
+			}, 3000)
 		},
-		ocultar_tarjeta() {
-			let el = document.getElementById('recursos-progress')
-			console.log(el)
-			el.classList.remove('recursos-progress-active')
-			this.tarjeta_mostrandose = false
-			// alert('ocultar_tarjeta')
+		/**
+		 * Cancela los timers pendientes para que no se pisen entre secuencias ni queden vivos
+		 * despues de destruir el componente.
+		 */
+		limpiar_timers() {
+			clearTimeout(this.timer_compactar)
+			clearTimeout(this.timer_ocultar)
+			this.timer_compactar = null
+			this.timer_ocultar = null
 		},
-	}
+	},
 }
 </script>
 <style lang="sass">
-@import '@/sass/_custom'
+@import '@/sass/_custom.scss'
 
-#recursos-progress
-	width: 270px
-	position: fixed 
-	top: 10px
-	right: -310px
-	border-radius: 8px
-	padding: 8px
-	background: #FFF
-	border: 2px solid rgba(0, 0, 0, .1)
+.recursos-tarjeta
+	position: fixed
+	top: 14px
+	right: 20px
 	z-index: 1000
-	box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px
-	
-	transition: all .2s
+	display: flex
+	flex-direction: row
+	align-items: center
+	gap: 12px
+	padding: 7px 8px 7px 18px
+	border-radius: 999px
+	background: rgba(255, 255, 255, .82)
+	backdrop-filter: saturate(180%) blur(20px)
+	-webkit-backdrop-filter: saturate(180%) blur(20px)
+	border: 1px solid rgba(0, 0, 0, .06)
+	box-shadow: 0 8px 30px rgba(0, 0, 0, .12)
+	// El achique se anima por el ancho maximo del texto, no por el ancho de la tarjeta:
+	// una pildora con ancho automatico no se puede animar de otra manera.
+	transition: padding .42s cubic-bezier(.22, .61, .36, 1), gap .42s cubic-bezier(.22, .61, .36, 1)
 
+.recursos-tarjeta__texto
+	font-size: 13px
+	font-weight: 500
+	color: #1d1d1f
+	white-space: nowrap
+	overflow: hidden
+	max-width: 220px
+	opacity: 1
+	transition: max-width .42s cubic-bezier(.22, .61, .36, 1), opacity .18s ease
 
-	.toggle
-		position: absolute
-		left: -10px
-		top: 10px
-		background: #FFF
-		padding: 4px
-		border: 2px solid rgba(0, 0, 0, .3)
-		// box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px
-		border-radius: 5px
-		cursor: pointer
+.recursos-tarjeta--compacta
+	padding: 7px
+	gap: 0
 
+	.recursos-tarjeta__texto
+		max-width: 0
+		opacity: 0
 
-	.btn-cerrar
-		position: absolute
-		top: 2px
-		left: 2px
+// Entrada y salida de la tarjeta: entra deslizando desde el borde derecho y se va igual.
+.recursos-tarjeta-enter, .recursos-tarjeta-leave-to
+	opacity: 0
+	transform: translateX(28px) scale(.96)
 
+.recursos-tarjeta-enter-active, .recursos-tarjeta-leave-active
+	transition: opacity .34s ease, transform .38s cubic-bezier(.22, .61, .36, 1)
 
+@if ($theme == 'dark')
+	.recursos-tarjeta
+		background: rgba(38, 38, 40, .82)
+		border-color: rgba(255, 255, 255, .1)
+		box-shadow: 0 8px 30px rgba(0, 0, 0, .45)
 
-.recursos-progress-active
-	right: 20px !important
-
-.recursos-progress-minimizada
-	right: -280px !important
-
+	.recursos-tarjeta__texto
+		color: rgba(255, 255, 255, .95)
 </style>

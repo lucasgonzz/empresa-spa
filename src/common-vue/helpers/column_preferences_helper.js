@@ -166,6 +166,21 @@ export function module_already_has_column_preferences(store_context, model_name)
 }
 
 /**
+ * Indica si el cache global de table_column_preference ya termino de descargarse.
+ * Mientras sea false, la ausencia de una preferencia en el cache NO significa que el
+ * usuario no tenga una guardada: significa que todavia no la bajamos.
+ *
+ * @param {Object} store_context
+ * @returns {boolean}
+ */
+export function table_column_preference_cache_is_loaded(store_context) {
+	let root_state = get_root_state(store_context)
+	let preferences_store = root_state.table_column_preference
+
+	return !!(preferences_store && preferences_store.loaded)
+}
+
+/**
  * Lee columnas guardadas del cache global table_column_preference.
  *
  * @param {Object} store
@@ -426,6 +441,18 @@ export function clear_module_filters_after_column_change(store_context, model_na
  */
 export function bootstrap_module_column_preferences_if_needed(store_context, model_name, preference_type) {
 	if (module_already_has_column_preferences(store_context, model_name)) {
+		return false
+	}
+
+	// Guarda contra cache frio (bug real encontrado el 23/7/2026): si el cache global de
+	// table_column_preference todavia no bajo, resolve_column_preference_rows() no encuentra
+	// nada y devuelve los DEFAULTS del modelo. Aplicarlos aca y devolver true hacia que
+	// props-to-show/Modal.vue diera por resuelto el asunto y nunca cayera al fallback de API,
+	// asi que la preferencia guardada del usuario no se leia NUNCA en una recarga parado
+	// dentro de un modulo (el modal se crea con el header, varios segundos antes de que
+	// download-resources llegue a table_column_preference). Sin cache no se decide nada aca:
+	// se devuelve false y resuelve el llamador contra la API.
+	if (!table_column_preference_cache_is_loaded(store_context)) {
 		return false
 	}
 

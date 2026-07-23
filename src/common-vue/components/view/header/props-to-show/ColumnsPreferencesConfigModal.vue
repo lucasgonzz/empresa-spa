@@ -14,6 +14,32 @@
 
 		:class="toolbar_classes">
 
+			<!-- Contenedor del buscador: input + icono de lupa posicionado absoluto -->
+
+			<div
+
+			class="columns-preferences-config__search-wrap"
+
+			:class="search_input_classes"
+
+			:style="search_input_style">
+
+				<i class="icon-search columns-preferences-config__search-icon"></i>
+
+				<b-form-input
+
+				class="columns-preferences-config__search"
+
+				size="sm"
+
+				v-model.trim="search_query"
+
+				placeholder="Buscar columna..."></b-form-input>
+
+			</div>
+
+
+
 			<b-button-group
 
 			class="columns-preferences-config__btn-group"
@@ -26,8 +52,6 @@
 
 				@click="limpiar_todo"
 
-				:block="!layout_table && !allow_row_wrap"
-
 				size="sm"
 
 				variant="outline-primary">
@@ -37,8 +61,6 @@
 				</b-button>
 
 				<b-button
-
-				:block="!layout_table && !allow_row_wrap"
 
 				@click="marcar_todo"
 
@@ -53,22 +75,6 @@
 				</b-button>
 
 			</b-button-group>
-
-
-
-			<b-form-input
-
-			class="columns-preferences-config__search"
-
-			:class="search_input_classes"
-
-			:style="search_input_style"
-
-			size="sm"
-
-			v-model.trim="search_query"
-
-			placeholder="Buscar columna..."></b-form-input>
 
 		</div>
 
@@ -124,13 +130,17 @@
 
 					class="columns-preferences-config__table-row"
 
-					:class="{ 'columns-preferences-config__table-row--drag-over': drag_over_index === get_config_index(row) }"
+					:class="{
+						'columns-preferences-config__table-row--dragging': dragging_index !== null && get_config_index(row) === dragging_index,
+						'columns-preferences-config__table-row--drop-before': drag_over_index === get_config_index(row) && drop_position === 'before',
+						'columns-preferences-config__table-row--drop-after': drag_over_index === get_config_index(row) && drop_position === 'after',
+					}"
 
-					draggable="true"
+					:draggable="row_is_draggable(row)"
 
 					@dragstart="drag_start(row, $event)"
 
-					@dragover.prevent="drag_over(row)"
+					@dragover.prevent="drag_over(row, $event)"
 
 					@drop.prevent="drop_row(row)"
 
@@ -144,7 +154,11 @@
 
 								class="drag-handle"
 
-								title="Arrastrar para reordenar">
+								:class="{ 'drag-handle--disabled': !reorder_enabled }"
+
+								@mousedown="enable_drag_from_handle(row)"
+
+								:title="reorder_enabled ? 'Arrastrar para reordenar' : 'Limpiá la búsqueda para poder reordenar'">
 
 									<i class="icon-list"></i>
 
@@ -316,11 +330,17 @@
 
 			class="props-row"
 
-			draggable="true"
+			:class="{
+				'props-row--dragging': dragging_index !== null && get_config_index(row) === dragging_index,
+				'props-row--drop-before': drag_over_index === get_config_index(row) && drop_position === 'before',
+				'props-row--drop-after': drag_over_index === get_config_index(row) && drop_position === 'after',
+			}"
+
+			:draggable="row_is_draggable(row)"
 
 			@dragstart="drag_start(row, $event)"
 
-			@dragover.prevent="drag_over(row)"
+			@dragover.prevent="drag_over(row, $event)"
 
 			@drop.prevent="drop_row(row)"
 
@@ -340,7 +360,11 @@
 
 						class="drag-handle m-r-10"
 
-						title="Arrastrar para reordenar">
+						:class="{ 'drag-handle--disabled': !reorder_enabled }"
+
+						@mousedown="enable_drag_from_handle(row)"
+
+						:title="reorder_enabled ? 'Arrastrar para reordenar' : 'Limpiá la búsqueda para poder reordenar'">
 
 							<i class="icon-list"></i>
 
@@ -525,6 +549,19 @@ export default {
 			drag_over_index: null,
 
 			/**
+			 * 'before' o 'after': de que lado de la fila de destino (drag_over_index) va a
+			 * caer la fila arrastrada, segun la mitad del alto donde este el mouse.
+			 */
+			drop_position: null,
+
+			/**
+			 * Id (get_row_unique_id) de la fila que habilito el arrastre apretando su manija.
+			 * Solo esa fila es draggable="true"; asi tocar un checkbox o el input de ancho
+			 * y moverse unos pixeles no dispara un drag por accidente.
+			 */
+			drag_handle_row_id: null,
+
+			/**
 
 			 * Opciones de alineación horizontal para columnas PDF de artículos.
 
@@ -652,6 +689,18 @@ export default {
 
 		},
 
+		/**
+		 * Habilita el reordenamiento por arrastre. Con el buscador escrito el v-for muestra
+		 * un subconjunto (filtered_config_rows) y el indicador de insercion no podria
+		 * representar la posicion real dentro de la lista completa (config_rows), asi que
+		 * se apaga la manija hasta que se limpie la busqueda.
+		 *
+		 * @returns {boolean}
+		 */
+		reorder_enabled() {
+			return !this.search_query
+		},
+
 		/*
 
 		 * Filtra las filas configurables de columnas segun el texto de busqueda ingresado.
@@ -747,6 +796,30 @@ export default {
 
 		},
 
+		/**
+		 * Habilita el arrastre de una fila puntual: solo se dispara desde la manija, para que
+		 * apretar un checkbox o el input de ancho y moverse no arranque un reordenamiento.
+		 *
+		 * @param {Object} row
+		 * @returns {void}
+		 */
+		enable_drag_from_handle(row) {
+			if (!this.reorder_enabled) {
+				return
+			}
+			this.drag_handle_row_id = this.get_row_unique_id(row)
+		},
+
+		/**
+		 * Indica si esta fila puede arrastrarse ahora mismo (habilitada por su manija).
+		 *
+		 * @param {Object} row
+		 * @returns {boolean}
+		 */
+		row_is_draggable(row) {
+			return this.reorder_enabled && this.get_row_unique_id(row) === this.drag_handle_row_id
+		},
+
 		/*
 
 		 * Inicia el proceso de drag and drop guardando el indice de origen.
@@ -763,27 +836,36 @@ export default {
 
 		/*
 
-		 * Actualiza el indice de destino mientras se arrastra una fila sobre otra.
+		 * Actualiza el indice de destino mientras se arrastra una fila sobre otra, y calcula
+		 * si el drop va a insertar antes o despues segun la mitad del alto donde este el mouse.
 
 		 */
 
-		drag_over(row) {
+		drag_over(row, event) {
 
 			this.drag_over_index = this.get_config_index(row)
+
+			/* rect de la fila sobre la que se esta arrastrando, para comparar contra clientY */
+			let rect = event.currentTarget.getBoundingClientRect()
+
+			this.drop_position = (event.clientY - rect.top) < (rect.height / 2) ? 'before' : 'after'
 
 		},
 
 		/*
 
-		 * Ejecuta el reordenamiento al soltar una fila en una nueva posicion.
+		 * Ejecuta el reordenamiento al soltar una fila, respetando si el drop fue en la mitad
+		 * de arriba ('before') o de abajo ('after') de la fila de destino.
 
 		 */
 
 		drop_row(row) {
 
-			const index = this.get_config_index(row)
+			let target_index = this.get_config_index(row)
 
-			if (this.dragging_index === null || this.dragging_index === index) {
+			let from_index = this.dragging_index
+
+			if (from_index === null || from_index === target_index) {
 
 				this.drag_end()
 
@@ -791,9 +873,17 @@ export default {
 
 			}
 
-			const moved = this.config_rows.splice(this.dragging_index, 1)[0]
+			/* Indice donde insertar la fila movida segun la mitad del alto donde se solto */
+			let insert_index = this.drop_position === 'after' ? target_index + 1 : target_index
 
-			this.config_rows.splice(index, 0, moved)
+			/* Al sacar la fila de origen, todo lo que estaba despues se corre un lugar. */
+			if (from_index < insert_index) {
+				insert_index--
+			}
+
+			let moved = this.config_rows.splice(from_index, 1)[0]
+
+			this.config_rows.splice(insert_index, 0, moved)
 
 			this.drag_end()
 
@@ -810,6 +900,10 @@ export default {
 			this.dragging_index = null
 
 			this.drag_over_index = null
+
+			this.drop_position = null
+
+			this.drag_handle_row_id = null
 
 		},
 
@@ -872,9 +966,10 @@ export default {
 .columns-preferences-config
 
 	.props-row
+		/* position: relative para poder posicionar la barra de insercion (::before/::after) */
+		position: relative
 
-		cursor: move
-
+	/* La manija es la unica zona que dispara el drag; el cursor "move" se movio para acá */
 	.drag-handle
 
 		display: inline-flex
@@ -892,6 +987,56 @@ export default {
 		border-radius: 4px
 
 		background: rgba(0,0,0,.03)
+
+		cursor: grab
+
+		&:hover
+			background: rgba(0,0,0,.08)
+
+		&:active
+			cursor: grabbing
+
+	/* Manija apagada mientras hay busqueda activa: no se puede reordenar un subconjunto */
+	.drag-handle--disabled
+
+		opacity: .35
+
+		cursor: default
+
+		&:hover
+			background: rgba(0,0,0,.03)
+
+		&:active
+			cursor: default
+
+	/* Fila de origen atenuada mientras se arrastra */
+	.props-row--dragging
+
+		opacity: .4
+
+	/* Barra de insercion azul: arriba de la fila cuando el drop cae en la mitad de arriba */
+	.props-row--drop-before::before
+
+		content: ''
+		position: absolute
+		left: 0
+		right: 0
+		top: 0
+		height: 2px
+		background: #007bff
+		border-radius: 2px
+
+	/* Barra de insercion azul: abajo de la fila cuando el drop cae en la mitad de abajo */
+	.props-row--drop-after::after
+
+		content: ''
+		position: absolute
+		left: 0
+		right: 0
+		bottom: 0
+		height: 2px
+		background: #007bff
+		border-radius: 2px
 
 
 
@@ -987,7 +1132,7 @@ export default {
 
 
 
-/* Toolbar en una fila: botones a la izquierda, buscador ocupa el resto */
+/* Toolbar en una fila: buscador a la izquierda ocupando el ancho libre, botones a la derecha */
 
 .columns-preferences-config__toolbar--inline
 
@@ -997,7 +1142,7 @@ export default {
 
 	align-items: center
 
-	justify-content: flex-start
+	justify-content: space-between
 
 	gap: 12px
 
@@ -1022,6 +1167,91 @@ export default {
 	max-width: none
 
 	margin-left: 0 !important
+
+
+
+/* Contenedor del buscador (icono de lupa + input). min-width: 0 es clave para que el */
+/* input pueda achicarse dentro del flex y no empuje a los botones fuera de la fila. */
+.columns-preferences-config__search-wrap
+
+	position: relative
+
+	flex: 1 1 auto
+
+	min-width: 0
+
+	display: flex
+
+	align-items: center
+
+
+
+.columns-preferences-config__search-icon
+
+	position: absolute
+
+	left: 14px
+
+	pointer-events: none
+
+	color: #9aa0a6
+
+	font-size: 15px
+
+
+
+/* Input del buscador con estilo propio (pill), pisando el estilo global de _inputs.sass */
+.columns-preferences-config .columns-preferences-config__search-wrap .columns-preferences-config__search
+
+	height: 40px
+
+	border-radius: 20px
+
+	border: 1px solid #e2e4e7
+
+	background: #fff
+
+	padding: 0 16px 0 40px
+
+	font-size: 14px
+
+	width: 100%
+
+	box-shadow: none
+
+	transition: border-color .15s ease, box-shadow .15s ease
+
+	&:focus
+
+		border-color: #007bff
+
+		box-shadow: 0 0 0 3px rgba(0, 123, 255, .12)
+
+		outline: none
+
+	&::placeholder
+
+		color: #9aa0a6
+
+
+
+/* Grupo de botones: ancho minimo por boton para que "Limpiar todo" y "Marcar todo" */
+/* no corten renglon, alineados en alto (40px) con el buscador nuevo. */
+.columns-preferences-config__btn-group
+
+	flex: 0 0 auto
+
+	.btn
+
+		white-space: nowrap
+
+		min-width: 118px
+
+		padding-left: 16px
+
+		padding-right: 16px
+
+		height: 40px
 
 
 
@@ -1103,11 +1333,20 @@ export default {
 
 		cursor: move
 
+	/* Fila de origen atenuada mientras se arrastra (vista tabla) */
+	.columns-preferences-config__table-row--dragging
 
+		opacity: .4
 
-	.columns-preferences-config__table-row--drag-over td
+	/* Barra de insercion con box-shadow inset: un ::before absoluto dentro de un <tr> no se */
+	/* posiciona confiable en todos los navegadores, por eso se dibuja sobre los td */
+	.columns-preferences-config__table-row--drop-before td
 
-		background: rgba(0, 123, 255, 0.06)
+		box-shadow: inset 0 2px 0 #007bff
+
+	.columns-preferences-config__table-row--drop-after td
+
+		box-shadow: inset 0 -2px 0 #007bff
 
 
 

@@ -11,8 +11,8 @@
 		:model_name="model_name"></pagination>
 		<div
 		:id="id"
-		v-if="!loading"
-		class="cont-table">
+		class="cont-table"
+		:class="{ 'cont-table--loading': loading }">
 			<table
 			:id="'table-'+model_name"
 			class="common-table">
@@ -51,8 +51,27 @@
 						</th>
 					</tr>
 				</thead>
+				<!-- Filas skeleton: una barra por celda, reutilizando column_style() para que el ancho coincida con la tabla real. -->
 				<tbody
-				v-if="models.length">
+				v-if="loading">
+					<tr
+					v-for="skeleton_row in skeleton_rows_count"
+					:key="'skeleton-row-' + skeleton_row">
+						<td
+						v-for="field in fields"
+						:key="field.key"
+						:style="column_style(field)">
+							<!-- Columnas de opciones (izq/der): son angostas y solo tienen íconos, el skeleton va acorde. -->
+							<b-skeleton
+							v-if="is_options_column(field)"
+							width="24px"></b-skeleton>
+							<b-skeleton
+							v-else></b-skeleton>
+						</td>
+					</tr>
+				</tbody>
+				<tbody
+				v-else-if="models.length">
 					<template
 					v-if="order_list_by">
 						<template
@@ -139,7 +158,7 @@
 				<slot name="btn_add_to_show"></slot>
 			</table>
 			<p
-			v-if="!models.length && show_empty_text"
+			v-if="!loading && !models.length && show_empty_text"
 			class="text-with-icon">
 				<i class="icon-eye-slash"></i>
 				No hay {{ plural(model_name) }}
@@ -159,13 +178,6 @@
 				</div>
 			</div> -->
 		</div>
-		<b-skeleton-table
-		class="s-2 b-r-1 m-t-15 animate__animated animate__fadeIn"
-		v-else
-		:rows="10" 
-		:columns="columns"
-		:table-props="{ bordered: true, striped: true }"
-		></b-skeleton-table>
 
 		<!-- Modal de filtros por columna (un solo modal por tabla) -->
 		<filter-modal
@@ -313,6 +325,8 @@ export default {
 			scroll_move_handler: null,
 			// Handler de mouseleave enganchado a scroll_bound_el (para poder removerlo).
 			scroll_leave_handler: null,
+			// Cantidad fija de filas placeholder del skeleton (no se calcula contra el alto real, alcanza con un número generoso).
+			skeleton_rows_count: 12,
 		}
 	},
 	computed: {
@@ -500,16 +514,6 @@ export default {
 
 		// 	return fields 
 		// },
-		columns() {
-			// let props = this.propertiesToShow(this.properties, true)
-			if (this.props.length) {
-				if (this.props.length > 6) {
-					return 6
-				}
-				return this.props.length
-			}
-			return 2
-		},
 		/**
 		 * Pendiente de armar filtros + búsqueda inicial en papelera vía POST search.
 		 */
@@ -1067,7 +1071,9 @@ export default {
 			}
 		},
 		setHeight() {
-			if (this.set_table_height && !this.loading) {
+			// Se aplica también mientras loading es true: así el bloque skeleton ocupa el mismo alto
+			// que ocuparía la tabla real y no hay salto de tamaño al terminar de cargar.
+			if (this.set_table_height) {
 				let table = document.getElementById(this.id)
 				if (table) {
 					setTimeout(() => {
@@ -1256,6 +1262,11 @@ export default {
 	border-radius: 12px
 	/* Sombra sutil para que la tabla se despegue un poco del fondo (estilo Apple: discreta). */
 	box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px
+
+	/* Mientras carga (skeleton con cantidad fija de filas) se oculta el scroll vertical: si sobran */
+	/* filas respecto al alto visible, quedan recortadas prolijamente por el borde inferior redondeado. */
+	&.cont-table--loading
+		overflow-y: hidden
 
 	/* Scrollbar de ancho normal para la tabla (el global _scroll_bar.sass la deja en 8px, muy fina). */
 	&::-webkit-scrollbar
