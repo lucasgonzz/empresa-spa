@@ -3,7 +3,8 @@
 :title="title"
 size="xl"
 hide-footer
-:id="modal_id">
+:id="modal_id"
+@show="onModalShow">
 	<div
 	class="search-component-modal">
 		<div class="header">
@@ -22,7 +23,8 @@ hide-footer
 			@keydown.native="reset_ya_se_busco"
 			@keydown.native.up="selectUp"
 			@keydown.native.down="selectDown"
-			@buscar="onBuscarDesdeBuscadorGeneral"></buscador-general>
+			@buscar="onBuscarDesdeBuscadorGeneral"
+			@limpiar="onLimpiarDesdeBuscadorGeneral"></buscador-general>
 
 			<slot name="search_input_right"></slot>
 
@@ -82,27 +84,26 @@ hide-footer
 			</div>
 			<div
 			v-else
-			data-testid="search-no-results">
-				<div class="text-with-icon">
-					<i class="icon-eye-slash"></i>
-					No se encontraron resultados
+			class="search-modal-estado"
+			:data-testid="busqueda_realizada ? 'search-no-results' : 'search-sin-criterio'">
+				<div class="search-modal-estado__icono">
+					<i :class="estado_icono"></i>
 				</div>
-				<div 
-				v-if="prop && save_if_not_exist && query.length && show_afip_second_enter_hint"
-				class="text-with-icon">
-					<i class="icon-check"></i>
-					ENTER para consultar AFIP / ARCA
+				<p class="search-modal-estado__titulo">
+					{{ estado_titulo }}
+				</p>
+				<p class="search-modal-estado__detalle">
+					{{ estado_detalle }}
+				</p>
+				<div
+				v-if="estado_hint"
+				class="search-modal-estado__hint">
+					<span class="search-modal-estado__tecla">ENTER</span>
+					{{ estado_hint }}
 				</div>
-				<div 
-				v-else-if="prop && save_if_not_exist && query.length"
-				class="text-with-icon">
-					<i class="icon-check"></i>
-					ENTER para crear {{ singular(model_name) }}
-				</div>
-				<div 
-				v-else-if="no_exist_message"
-				class="text-with-icon">
-					<i class="icon-check"></i>
+				<div
+				v-else-if="busqueda_realizada && no_exist_message"
+				class="search-modal-estado__hint">
 					{{ no_exist_message }}
 				</div>
 			</div>
@@ -269,6 +270,12 @@ export default {
 			total_results: 0,
 
 			ya_se_busco: true,
+
+			// True recien despues de una busqueda terminada. Distingue "todavia no buscaste" (modal
+			// recien abierto) de "buscaste y no hubo resultados". Ojo: NO reutilizar ya_se_busco, que
+			// es del flujo del doble Enter (pulso_enter / reset_ya_se_busco).
+			busqueda_realizada: false,
+
 			search_config_rows: [],
 			search_preference_columns: [],
 
@@ -292,6 +299,13 @@ export default {
 		},
 		model_name() {
 			this.loadSearchColumnsPreference()
+		},
+		query(nuevo_valor) {
+			// Si el criterio queda vacio, el modal vuelve al estado inicial: no tiene sentido
+			// seguir diciendo "no se encontraron resultados" de una busqueda que ya no existe.
+			if (!('' + nuevo_valor).trim().length) {
+				this.busqueda_realizada = false
+			}
 		},
 	},
 	async created() {
@@ -345,8 +359,71 @@ export default {
 		prop_to_filter() {
 			return this.propToFilter(this.model_name)
 		},
+		/**
+		 * Icono del estado vacio segun el momento: lupa antes de buscar, informacion despues de una
+		 * busqueda sin resultados.
+		 */
+		estado_icono() {
+			if (!this.busqueda_realizada) {
+				return 'icon-search'
+			}
+			return 'icon-info-o'
+		},
+		estado_titulo() {
+			if (!this.busqueda_realizada) {
+				return 'Escribi un criterio de busqueda'
+			}
+			return 'No se encontraron resultados'
+		},
+		estado_detalle() {
+			if (!this.busqueda_realizada) {
+				return 'Buscamos por las propiedades tildadas en el filtro del buscador.'
+			}
+			return 'Proba con otras palabras, o revisa las propiedades tildadas en el filtro del buscador.'
+		},
+		/**
+		 * Texto de la accion de teclado disponible, o null si no hay ninguna. Mismas condiciones
+		 * que tenia el template antes de este prompt.
+		 */
+		estado_hint() {
+			if (!this.busqueda_realizada || !this.query.length) {
+				return null
+			}
+			if (this.prop && this.save_if_not_exist && this.show_afip_second_enter_hint) {
+				return 'para consultar en AFIP / ARCA'
+			}
+			if (this.prop && this.save_if_not_exist) {
+				return 'para crear ' + this.singular(this.model_name)
+			}
+			return null
+		},
 	},
 	methods: {
+		/**
+		 * Estado limpio cada vez que se abre el modal: todavia no se busco nada.
+		 * No toca this.results, que puede venir precargado por preview_results.
+		 */
+		onModalShow() {
+			this.busqueda_realizada = false
+			this.total_results = 0
+			this.current_page = null
+			this.total_pages = null
+		},
+		/**
+		 * El usuario toco el boton de limpiar del pill (icono de deshacer). El buscador general ya
+		 * vacio su input y sus filtros; acá se limpia lo del modal y se vuelve al estado inicial.
+		 */
+		onLimpiarDesdeBuscadorGeneral() {
+			this.query = ''
+			this.results = []
+			this.total_results = 0
+			this.current_page = null
+			this.total_pages = null
+			this.selected_index = -1
+			this.busqueda_realizada = false
+			this.ultima_busqueda_buscador_general = null
+			this.foco_en_input()
+		},
 		getModelSearchProperties() {
 			let props = this.propsToShowInSearchModal(this.model_name)
 			const omit = this.search_modal_omit_property_keys || []
@@ -862,6 +939,7 @@ export default {
 			this.loading = false 
 			this.setFirstSelectedRow()
 			this.ya_se_busco = true
+			this.busqueda_realizada = true
 		},
 		orderAlpabethic() {
 			if (this.prop_to_filter && this.prop_to_filter.key) {
@@ -1060,6 +1138,59 @@ export default {
 		font-size: 1.2em
 		font-weight: bold
 		margin: 1em 0
+
+	// Estado vacio del modal (antes de buscar, o busqueda sin resultados). No usa la clase
+	// global .text-with-icon a proposito: esa clase pone el icono en 4em y la usan ~30
+	// pantallas del sistema, no se puede tocar desde aca.
+	.search-modal-estado
+		display: flex
+		flex-direction: column
+		align-items: center
+		justify-content: center
+		text-align: center
+		padding: 48px 16px
+
+		.search-modal-estado__icono
+			display: flex
+			align-items: center
+			justify-content: center
+			width: 56px
+			height: 56px
+			border-radius: 50%
+			background: #f5f6f7
+			color: #86868b
+			margin-bottom: 14px
+
+			i
+				font-size: 1.4rem
+
+		.search-modal-estado__titulo
+			margin: 0
+			font-size: 1rem
+			font-weight: 500
+			color: #1d1d1f
+
+		.search-modal-estado__detalle
+			margin: 6px 0 0
+			max-width: 420px
+			font-size: 0.85rem
+			color: #86868b
+
+		.search-modal-estado__hint
+			display: flex
+			align-items: center
+			gap: 8px
+			margin-top: 18px
+			font-size: 0.85rem
+			color: #6e6e73
+
+			.search-modal-estado__tecla
+				border: 1px solid #e2e4e7
+				border-radius: 6px
+				padding: 2px 8px
+				font-size: 0.75rem
+				background: #fff
+				box-shadow: none
 
 .props-to-show-modal .modal-content
 	max-height: 85vh
