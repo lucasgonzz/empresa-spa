@@ -1,8 +1,6 @@
 <template>
 	<div
 	class="display">
-		<load-pages-info
-		:model_name="model_name"></load-pages-info>
 		<color-info
 		:model_name="model_name"></color-info>
 
@@ -267,7 +265,6 @@ export default {
 	},
 	components: {
 		ColorInfo: () => import('@/common-vue/components/display/ColorInfo'),
-		LoadPagesInfo: () => import('@/common-vue/components/display/LoadPagesInfo'),
 		BtnAddToShow: () => import('@/common-vue/components/display/BtnAddToShow'),
 		TableComponent,
 		CardsComponent,

@@ -52,6 +52,11 @@ export default {
 
 		loading: false,
 
+		// Indica si el cache global de este store ya termino de descargarse una vez.
+		// Se usa para distinguir "no hay preferencia guardada" de "todavia no bajo el cache"
+		// (ver bootstrap_module_column_preferences_if_needed en column_preferences_helper.js).
+		loaded: false,
+
 		props_to_show: [],
 	},
 	mutations: {
@@ -63,6 +68,10 @@ export default {
 		},
 		setLoading(state, value) {
 			state.loading = value
+		},
+		// Marca si el cache global ya termino de descargarse (ver comentario en state.loaded).
+		setLoaded(state, value) {
+			state.loaded = value
 		},
 		setModel(state, value) {
 			if (value.model) {
@@ -319,10 +328,14 @@ export default {
 					} else {
 						commit('setLoading', false)
 						commit('setPage', 1)
+						// Ya no quedan mas paginas: el cache termino de bajar completo.
+						commit('setLoaded', true)
 					}
 				} else {
 					commit('setLoading', false)
 					commit('setModels', res.data.models)
+					// Descarga sin paginado: el cache ya esta completo con esta unica respuesta.
+					commit('setLoaded', true)
 				}
 			})
 			.catch(err => {
