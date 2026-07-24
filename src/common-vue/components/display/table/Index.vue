@@ -9,196 +9,206 @@
 		@filtrar="filtrar"
 		:papelera="papelera"
 		:model_name="model_name"></pagination>
-		<div
-		:id="id"
-		class="cont-table"
-		:class="{ 'cont-table--loading': loading }">
-			<table
-			:id="'table-'+model_name"
-			class="common-table">
-				<thead>
-					<tr>
-						<th
-						v-for="field in fields"
-						:key="field.key"
-						:class="header_column_classes(field)"
-						:style="column_style(field)"
-						@mouseenter="on_header_th_mouseenter(field, $event)">
-
-							<div class="cont-th">
-								<span v-html="field.label"></span>
-
-								<div
-								v-if="!pivot && usar_filtros && !is_from_has_many"
-								class="cont-filter-buttons"
-								:class="{ 'force-show': filter_is_used(field.key) }">
-									
-									<ordenar
-									class="m-l-10"
-									@filtrar="filtrar"
-									:model_name="model_name"
-									:key="field.key"
-									:field="field"></ordenar>	
-
-									<!-- Boton de la lupa con el boton de borrar -->
-									<btn-filter
-									:model_name="model_name"
-									@toggleFilter="toggleFilter"
-									:field="field"></btn-filter>
-								</div>
-
-							</div>	
-						</th>
-					</tr>
-				</thead>
-				<!-- Filas skeleton: una barra por celda, reutilizando column_style() para que el ancho coincida con la tabla real. -->
-				<tbody
-				v-if="loading">
-					<tr
-					v-for="skeleton_row in skeleton_rows_count"
-					:key="'skeleton-row-' + skeleton_row"
-					class="skeleton-row">
-						<td
-						v-for="field in fields"
-						:key="field.key"
-						:style="column_style(field)">
-							<!-- Mismo wrapper que usa la fila real (Tr.vue): hereda el padding y alto de celda real. -->
-							<div class="cont-tr cont-tr-skeleton">
-								<!-- Columna de imagen: recuadro cuadrado animado, no una barrita fina. -->
-								<b-skeleton
-								v-if="field.is_image"
-								class="skeleton-thumb"
-								width="44px"
-								height="44px"
-								animation="wave"></b-skeleton>
-								<!-- Columnas de opciones (izq/der): simulan el grupo de botones con 3 cuadraditos. -->
-								<div
-								v-else-if="is_options_column(field)"
-								class="skeleton-options">
+		<!--
+			Wrapper que recorta las barras de scroll: el border-radius de .cont-table no recorta
+			sus propias scrollbars (spec del navegador que no las considera parte del contenido
+			recortable del propio elemento). Un contenedor externo con overflow:hidden es la
+			unica forma de recortarlas. NO position:relative/absolute/sticky aca: offsetTop de
+			setHeight() se mide contra el offsetParent (ancestro posicionado mas cercano); si
+			este wrapper fuera posicionado pasaria a serlo y el alto calculado se rompe.
+		-->
+		<div class="cont-table-wrapper">
+			<div
+			:id="id"
+			class="cont-table"
+			:class="{ 'cont-table--loading': loading }">
+				<table
+				:id="'table-'+model_name"
+				class="common-table">
+					<thead>
+						<tr>
+							<th
+							v-for="field in fields"
+							:key="field.key"
+							:class="header_column_classes(field)"
+							:style="column_style(field)"
+							@mouseenter="on_header_th_mouseenter(field, $event)">
+	
+								<div class="cont-th">
+									<span v-html="field.label"></span>
+	
+									<div
+									v-if="!pivot && usar_filtros && !is_from_has_many"
+									class="cont-filter-buttons"
+									:class="{ 'force-show': filter_is_used(field.key) }">
+										
+										<ordenar
+										class="m-l-10"
+										@filtrar="filtrar"
+										:model_name="model_name"
+										:key="field.key"
+										:field="field"></ordenar>	
+	
+										<!-- Boton de la lupa con el boton de borrar -->
+										<btn-filter
+										:model_name="model_name"
+										@toggleFilter="toggleFilter"
+										:field="field"></btn-filter>
+									</div>
+	
+								</div>	
+							</th>
+						</tr>
+					</thead>
+					<!-- Filas skeleton: una barra por celda, reutilizando column_style() para que el ancho coincida con la tabla real. -->
+					<tbody
+					v-if="loading">
+						<tr
+						v-for="skeleton_row in skeleton_rows_count"
+						:key="'skeleton-row-' + skeleton_row"
+						class="skeleton-row">
+							<td
+							v-for="field in fields"
+							:key="field.key"
+							:style="column_style(field)">
+								<!-- Mismo wrapper que usa la fila real (Tr.vue): hereda el padding y alto de celda real. -->
+								<div class="cont-tr cont-tr-skeleton">
+									<!-- Columna de imagen: recuadro cuadrado animado, no una barrita fina. -->
 									<b-skeleton
-									v-for="n in 3"
-									:key="n"
-									width="24px"
-									height="24px"
+									v-if="field.is_image"
+									class="skeleton-thumb"
+									width="44px"
+									height="44px"
+									animation="wave"></b-skeleton>
+									<!-- Columnas de opciones (izq/der): simulan el grupo de botones con 3 cuadraditos. -->
+									<div
+									v-else-if="is_options_column(field)"
+									class="skeleton-options">
+										<b-skeleton
+										v-for="n in 3"
+										:key="n"
+										width="24px"
+										height="24px"
+										animation="wave"></b-skeleton>
+									</div>
+									<!-- Resto de columnas: barrita simple, como antes. -->
+									<b-skeleton
+									v-else
 									animation="wave"></b-skeleton>
 								</div>
-								<!-- Resto de columnas: barrita simple, como antes. -->
-								<b-skeleton
-								v-else
-								animation="wave"></b-skeleton>
-							</div>
-						</td>
-					</tr>
-				</tbody>
-				<tbody
-				v-else-if="models.length">
-					<template
-					v-if="order_list_by">
+							</td>
+						</tr>
+					</tbody>
+					<tbody
+					v-else-if="models.length">
 						<template
-						v-for="list in lists">
-							<tr
-							:key="'list-title-' + list.name"
-							class="list-title">
-								<td
-								:colspan="props.length + 2">
-									{{ list.name }} 
-									<b-badge
-									v-if="list.models.length"
-									variant="danger"
-									class="m-l-10">
-										{{ list.models.length }}
-									</b-badge>
-								</td>
-							</tr>	
+						v-if="order_list_by">
+							<template
+							v-for="list in lists">
+								<tr
+								:key="'list-title-' + list.name"
+								class="list-title">
+									<td
+									:colspan="props.length + 2">
+										{{ list.name }} 
+										<b-badge
+										v-if="list.models.length"
+										variant="danger"
+										class="m-l-10">
+											{{ list.models.length }}
+										</b-badge>
+									</td>
+								</tr>	
+								<tr-component
+								v-for="model in list.models"
+								:key="model.id"
+								@onRowSelected="onRowSelected"
+								:pivot_parent_model="pivot_parent_model"
+								:model="model"
+								:pivot="pivot"
+								:select_mode="_select_mode"
+								:model_name="model_name"
+								:props="props"
+								:set_model_on_row_selected="set_model_on_row_selected"
+								:disable_cell_fade="disable_cell_fade">
+									<template v-slot:table_left_options>
+										<slot name="table_left_options" :model="model"></slot>
+									</template>
+	
+									<template v-slot:table_right_options>
+										<slot name="table_right_options" :model="model"></slot>
+									</template>
+									
+									<template
+									v-for="prop in properties"
+									v-slot:[prop.key]>
+										<slot :model="model" :name="'table-prop-'+prop.key"></slot>
+									</template>
+								</tr-component>
+							</template>
+						</template>
+						<template
+						v-else>
+	
 							<tr-component
-							v-for="model in list.models"
-							:key="model.id"
-							@onRowSelected="onRowSelected"
+							v-for="(model, i) in models"
 							:pivot_parent_model="pivot_parent_model"
+							:key="i"
 							:model="model"
 							:pivot="pivot"
 							:select_mode="_select_mode"
 							:model_name="model_name"
 							:props="props"
+							@onRowSelected="onRowSelected"
 							:set_model_on_row_selected="set_model_on_row_selected"
-							:disable_cell_fade="disable_cell_fade">
+							:disable_cell_fade="disable_cell_fade"
+							:cont_table_id="id">
 								<template v-slot:table_left_options>
 									<slot name="table_left_options" :model="model"></slot>
 								</template>
-
 								<template v-slot:table_right_options>
 									<slot name="table_right_options" :model="model"></slot>
 								</template>
-								
 								<template
 								v-for="prop in properties"
 								v-slot:[prop.key]>
 									<slot :model="model" :name="'table-prop-'+prop.key"></slot>
 								</template>
 							</tr-component>
+	
+							<!-- <div 
+							v-if="busy">
+								Cargando...
+							</div>
+	
+							<div v-infinite-scroll="loadMore" infinite-scroll-disabled="busy" infinite-scroll-distance="10"></div> -->
 						</template>
-					</template>
-					<template
-					v-else>
+					</tbody>
+					<slot name="btn_add_to_show"></slot>
+				</table>
+				<p
+				v-if="!loading && !models.length && show_empty_text"
+				class="text-with-icon">
+					<i class="icon-eye-slash"></i>
+					No hay {{ plural(model_name) }}
+				</p>
+				<!-- <div 
+				v-if="models.length && show_buttons_scroll"
+				class="scroll-buttons">
+					<div 
+					@click="scrollLeft"
+					class="scroll-button">
+						<i class="icon-left"></i>
+					</div>
+					<div 
+					@click="scrollRight"
+					class="scroll-button">
+						<i class="icon-right"></i>
+					</div>
+				</div> -->
+			</div>
 
-						<tr-component
-						v-for="(model, i) in models"
-						:pivot_parent_model="pivot_parent_model"
-						:key="i"
-						:model="model"
-						:pivot="pivot"
-						:select_mode="_select_mode"
-						:model_name="model_name"
-						:props="props"
-						@onRowSelected="onRowSelected"
-						:set_model_on_row_selected="set_model_on_row_selected"
-						:disable_cell_fade="disable_cell_fade"
-						:cont_table_id="id">
-							<template v-slot:table_left_options>
-								<slot name="table_left_options" :model="model"></slot>
-							</template>
-							<template v-slot:table_right_options>
-								<slot name="table_right_options" :model="model"></slot>
-							</template>
-							<template
-							v-for="prop in properties"
-							v-slot:[prop.key]>
-								<slot :model="model" :name="'table-prop-'+prop.key"></slot>
-							</template>
-						</tr-component>
-
-						<!-- <div 
-						v-if="busy">
-							Cargando...
-						</div>
-
-						<div v-infinite-scroll="loadMore" infinite-scroll-disabled="busy" infinite-scroll-distance="10"></div> -->
-					</template>
-				</tbody>
-				<slot name="btn_add_to_show"></slot>
-			</table>
-			<p
-			v-if="!loading && !models.length && show_empty_text"
-			class="text-with-icon">
-				<i class="icon-eye-slash"></i>
-				No hay {{ plural(model_name) }}
-			</p>
-			<!-- <div 
-			v-if="models.length && show_buttons_scroll"
-			class="scroll-buttons">
-				<div 
-				@click="scrollLeft"
-				class="scroll-button">
-					<i class="icon-left"></i>
-				</div>
-				<div 
-				@click="scrollRight"
-				class="scroll-button">
-					<i class="icon-right"></i>
-				</div>
-			</div> -->
 		</div>
-
 		<!-- Modal de filtros por columna (un solo modal por tabla) -->
 		<filter-modal
 		v-if="!pivot && usar_filtros"
@@ -1335,6 +1345,26 @@ export default {
 		th, td 
 			min-width: 150px
 
+/* Envuelve a .cont-table para recortar sus barras de scroll (spec: el border-radius de un */
+/* elemento no recorta sus propias scrollbars, hace falta un contenedor externo con overflow:hidden). */
+.cont-table-wrapper
+	box-sizing: border-box
+	width: 100%
+	/* Margen superior movido acá (antes vivía en .cont-table): si quedara adentro del wrapper con */
+	/* overflow:hidden, el margin-top deja de colapsar hacia afuera y se ve como espacio vacío */
+	/* dentro de la caja, corriendo el box-shadow 15px de más. */
+	margin-top: 15px
+	/* Esquinas redondeadas del conjunto tabla + scrollbars. */
+	border-radius: 12px
+	/* Recorta las barras de scroll de .cont-table contra este radio (lo que arregla este prompt). */
+	overflow: hidden
+	/* Sombra sutil movida acá (antes vivía en .cont-table) para que siga pegada al borde real de la tabla. */
+	box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px
+	/* OJO: nunca poner position:relative/absolute/sticky acá. setHeight() calcula */
+	/* window.innerHeight - table.offsetTop, y offsetTop se mide contra el offsetParent (el ancestro */
+	/* posicionado más cercano). Si este wrapper quedara posicionado, pasaría a ser el offsetParent */
+	/* de .cont-table, offsetTop se iría casi a 0 y la tabla se saldría de la pantalla. */
+
 .cont-table
 	box-sizing: border-box
 	width: 100%
@@ -1342,12 +1372,13 @@ export default {
 	overflow-y: auto
 	margin-left: 0
 	margin-right: 0
-	margin-top: 15px
+	/* El margen ahora lo pone .cont-table-wrapper (ver arriba). */
+	margin-top: 0
 	position: relative
-	/* Esquinas redondeadas arriba y abajo (el overflow auto recorta el contenido a este radio). */
+	/* El redondeo visible ahora lo garantiza .cont-table-wrapper (overflow:hidden recorta acá */
+	/* adentro). Se deja igual acá para que el contenido siga recortado si algún uso llegara a */
+	/* faltarle el wrapper. */
 	border-radius: 12px
-	/* Sombra sutil para que la tabla se despegue un poco del fondo (estilo Apple: discreta). */
-	box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px
 
 	/* Mientras carga (skeleton con cantidad fija de filas) se oculta el scroll vertical: si sobran */
 	/* filas respecto al alto visible, quedan recortadas prolijamente por el borde inferior redondeado. */
@@ -1358,6 +1389,23 @@ export default {
 	&::-webkit-scrollbar
 		width: 15px
 		height: 15px
+
+	/* Track transparente: se ve el fondo de la tabla, no una franja de color detrás de la píldora. */
+	&::-webkit-scrollbar-track
+		background: transparent
+
+	/* Cuadradito donde se cruzan las dos barras (esquina inferior derecha): transparente para que */
+	/* no quede un rectángulo azul pegado ahí. */
+	&::-webkit-scrollbar-corner
+		background: transparent
+
+	/* Píldora redondeada separada del borde: el border transparente + background-clip:padding-box */
+	/* "empuja" el color hacia adentro sin agrandar el grosor visual de la barra. */
+	&::-webkit-scrollbar-thumb
+		background: $blue
+		border-radius: 8px
+		border: 3px solid transparent
+		background-clip: padding-box
 
 	&::before,
 	&::after 
@@ -1609,12 +1657,17 @@ export default {
 
 
 .modal-content
+	/* Ancho y margen del conjunto (antes vivían en .cont-table); repartido acá porque el wrapper */
+	/* es ahora el que tiene margin-top. */
+	.cont-table-wrapper
+		width: 98%
+		margin-top: 15px
 	.cont-table
-		width: 98% 
+		width: 100%
 		min-height: 300px
 		max-height: 50vh
 		// margin-left: -15px
-		margin-top: 15px
+		margin-top: 0
 
 
 
