@@ -5,8 +5,9 @@
 	ok-only
 	ok-title="Entendido"
 	ok-variant="primary"
-	size="lg"
+	size="xl"
 	scrollable
+	body-class="batch-summary-modal-body"
 	@ok="on_confirm">
 		<batch-images-summary-content :batch_result="batch_result"></batch-images-summary-content>
 	</b-modal>

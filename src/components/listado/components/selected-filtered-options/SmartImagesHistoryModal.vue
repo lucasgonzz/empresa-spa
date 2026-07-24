@@ -63,6 +63,7 @@
 	hide-footer
 	size="xl"
 	scrollable
+	body-class="batch-summary-modal-body"
 	:title="detail_title"
 	id="smart-images-history-detail"
 	@hidden="clear_detail">

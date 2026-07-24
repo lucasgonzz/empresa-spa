@@ -556,8 +556,8 @@ export default {
 	padding: 12px 16px
 	border-radius: 8px
 	background-color: rgba(220, 53, 69, 0.08)
-	max-height: 220px
-	overflow-y: auto
+	// Alto libre a propósito: el único scroll es el del b-modal "scrollable" que envuelve
+	// este componente. No volver a poner max-height/overflow acá (ver prompt 05, grupo 217).
 
 	.batch-summary-quota-list-title
 		margin: 0 0 8px 0
@@ -606,8 +606,8 @@ export default {
 	margin: 0
 	padding: 0
 	list-style: none
-	max-height: 420px
-	overflow-y: auto
+	// Alto libre a propósito: el único scroll es el del b-modal "scrollable" que envuelve
+	// este componente. No volver a poner max-height/overflow acá (ver prompt 05, grupo 217).
 
 	.batch-summary-skipped-item
 		border-bottom: 1px solid rgba(0, 0, 0, 0.06)
@@ -754,8 +754,8 @@ export default {
 	display: flex
 	flex-direction: column
 	gap: 10px
-	max-height: 280px
-	overflow-y: auto
+	// Alto libre a propósito: el único scroll es el del b-modal "scrollable" que envuelve
+	// este componente. No volver a poner max-height/overflow acá (ver prompt 05, grupo 217).
 
 .batch-summary-review-card
 	display: flex
@@ -788,4 +788,27 @@ export default {
 	font-size: 0.88rem
 	color: #5c3d00
 	word-break: break-word
+
+// Techo de seguridad del modal (no de las cajas internas, que ahora tienen alto libre): esta clase
+// se pasa vía "body-class" a los b-modal que renderizan este componente (fin de corrida e historial).
+// Es la MISMA capa de scroll que ya activa el atributo "scrollable" del b-modal, no una segunda
+// anidada: solo le fija un alto máximo relativo a la ventana para que el modal no crezca más allá
+// de la pantalla y el header con el título quede siempre visible. Los 200px cubren header + footer
+// + margen del modal.
+.batch-summary-modal-body
+	max-height: calc(100vh - 200px)
+	overflow-y: auto
+
+	// Scrollbar prolija, misma estética que el resto del sistema: track transparente y thumb en
+	// forma de píldora, gris translúcido. Puramente cosmético; si el navegador no lo soporta, la
+	// scrollbar nativa sigue funcionando igual.
+	&::-webkit-scrollbar
+		width: 8px
+
+	&::-webkit-scrollbar-track
+		background: transparent
+
+	&::-webkit-scrollbar-thumb
+		background-color: rgba(0, 0, 0, 0.2)
+		border-radius: 8px
 </style>
