@@ -749,6 +749,8 @@ export default {
 		width: 100px
 		&.article-thumbnail
 			cursor: zoom-in
+			// Esquinas redondeadas para acompañar el estilo de la tabla.
+			border-radius: 10px
 	input, textarea
 		width: 200px
 	th, td
