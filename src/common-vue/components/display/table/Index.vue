@@ -56,17 +56,37 @@
 				v-if="loading">
 					<tr
 					v-for="skeleton_row in skeleton_rows_count"
-					:key="'skeleton-row-' + skeleton_row">
+					:key="'skeleton-row-' + skeleton_row"
+					class="skeleton-row">
 						<td
 						v-for="field in fields"
 						:key="field.key"
 						:style="column_style(field)">
-							<!-- Columnas de opciones (izq/der): son angostas y solo tienen íconos, el skeleton va acorde. -->
-							<b-skeleton
-							v-if="is_options_column(field)"
-							width="24px"></b-skeleton>
-							<b-skeleton
-							v-else></b-skeleton>
+							<!-- Mismo wrapper que usa la fila real (Tr.vue): hereda el padding y alto de celda real. -->
+							<div class="cont-tr cont-tr-skeleton">
+								<!-- Columna de imagen: recuadro cuadrado animado, no una barrita fina. -->
+								<b-skeleton
+								v-if="field.is_image"
+								class="skeleton-thumb"
+								width="44px"
+								height="44px"
+								animation="wave"></b-skeleton>
+								<!-- Columnas de opciones (izq/der): simulan el grupo de botones con 3 cuadraditos. -->
+								<div
+								v-else-if="is_options_column(field)"
+								class="skeleton-options">
+									<b-skeleton
+									v-for="n in 3"
+									:key="n"
+									width="24px"
+									height="24px"
+									animation="wave"></b-skeleton>
+								</div>
+								<!-- Resto de columnas: barrita simple, como antes. -->
+								<b-skeleton
+								v-else
+								animation="wave"></b-skeleton>
+							</div>
 						</td>
 					</tr>
 				</tbody>
@@ -293,10 +313,14 @@ export default {
 	created() {
 		// console.log('se creo tabla')
 		this.setHeight()
+		// Primer cálculo de filas del skeleton contra el alto real disponible.
+		this.update_skeleton_rows_count()
 		let that = this
 		window.addEventListener('resize', function(event) {
 			that.setHeight()
 			that.update_all_header_filter_fit()
+			// El alto disponible cambió: recalcular cuántas filas de skeleton entran.
+			that.update_skeleton_rows_count()
 		}, true);
 
 		this.set_fields()
@@ -325,8 +349,13 @@ export default {
 			scroll_move_handler: null,
 			// Handler de mouseleave enganchado a scroll_bound_el (para poder removerlo).
 			scroll_leave_handler: null,
-			// Cantidad fija de filas placeholder del skeleton (no se calcula contra el alto real, alcanza con un número generoso).
+			// Cantidad de filas placeholder del skeleton. Arranca en 12 como fallback del primer frame
+			// (antes de poder medir el DOM); update_skeleton_rows_count() la recalcula contra el alto real.
 			skeleton_rows_count: 12,
+			// Alto aproximado (px) de una fila real con botones de opciones: padding del td (5px arriba
+			// y abajo) + alto del .cont-tr con los botones (~44px). Debe coincidir con el min-height
+			// de .cont-tr-skeleton en el bloque de estilos de más abajo.
+			skeleton_row_height_px: 54,
 		}
 	},
 	computed: {
@@ -590,6 +619,10 @@ export default {
 		},
 		loading() {
 			this.setHeight()
+			if (this.loading) {
+				// Vuelve a mostrarse el skeleton: recalcular filas contra el alto real actual.
+				this.update_skeleton_rows_count()
+			}
 			if (!this.loading) {
 				this.update_all_header_filter_fit()
 				// El elemento .cont-table se recreó (estaba detrás de v-if="!loading"): re-enganchar el auto-scroll de márgenes.
@@ -923,6 +956,10 @@ export default {
 						width: prop.table_width ? Number(prop.table_width) : null,
 						// Si true, el filtro date no muestra hora (solo día calendario).
 						filter_date_only: prop.filter_date_only === true,
+						// Calculado desde la prop original (no desde field.type, que puede venir
+						// pisado por type_to_update) para saber si el skeleton de esta columna
+						// debe mostrar el recuadro cuadrado de imagen en vez de una barrita.
+						is_image: this.isImageProp(prop),
 					})
 				}
 			})
@@ -1107,6 +1144,61 @@ export default {
 					this.setHeight()
 				}
 			}, 300)
+		},
+		/**
+		 * Calcula cuántas filas de skeleton hacen falta para llenar el alto real disponible de la
+		 * tabla, y lo guarda en skeleton_rows_count. Reusa la misma formula de alto que setHeight()
+		 * (sin modificar setHeight ni depender de ella) para que ambos cálculos no se desincronicen.
+		 */
+		update_skeleton_rows_count() {
+			// Margen de seguridad, igual al que usa setHeight().
+			let bottom_safety = 12
+			// Alto disponible calculado desde window.innerHeight, igual que en setHeight().
+			let available_height
+			let table = document.getElementById(this.id)
+			if (table) {
+				available_height = window.innerHeight - Number(table.offsetTop) - bottom_safety
+				if (this.table_height_para_restar) {
+					available_height -= this.table_height_para_restar
+				}
+				// Mismo piso de 500px que aplica setHeight().
+				if (available_height < 500) {
+					available_height = 500
+				}
+			} else {
+				// El elemento todavía no está en el DOM (el skeleton se dibuja antes que nada):
+				// no podemos abortar, así que estimamos con un porcentaje del alto de la ventana.
+				available_height = window.innerHeight * 0.7
+			}
+
+			// El thead es sticky y no scrollea: no cuenta como espacio disponible para filas.
+			// Se busca dentro de "table" (ya resuelto por getElementById arriba) en vez de armar un
+			// selector con this.id, porque ese id puede contener un punto (viene de Math.random()) y
+			// un punto en un selector CSS se interpreta como clase, no como parte del id.
+			let thead_height = 47
+			if (table) {
+				let thead_el = table.querySelector('thead')
+				if (thead_el && thead_el.offsetHeight) {
+					thead_height = thead_el.offsetHeight
+				}
+			}
+			let usable_height = available_height - thead_height
+
+			// Redondear para arriba y sumar 3 filas de sobra: quedarse corto se ve mal (queda un
+			// hueco vacío abajo), pasarse es seguro porque .cont-table--loading recorta el sobrante
+			// con overflow-y: hidden contra el borde inferior redondeado.
+			let rows = Math.ceil(usable_height / this.skeleton_row_height_px) + 3
+
+			// Clamp para que pantallas muy chicas o muy grandes (4K) no generen una cantidad
+			// absurda (o insuficiente) de nodos de skeleton.
+			if (rows < 8) {
+				rows = 8
+			}
+			if (rows > 60) {
+				rows = 60
+			}
+
+			this.skeleton_rows_count = rows
 		},
 		setShowButtonsScroll() {
 			let cont_table =  document.getElementById(this.id)
@@ -1424,6 +1516,37 @@ export default {
 					/* Esquina inferior derecha de la última fila de datos. */
 					border-bottom-right-radius: 12px
 					overflow: hidden
+
+			tr.skeleton-row
+				td
+					.cont-tr-skeleton
+						/* Sube la fila de ~36px (una barrita sola) a ~54px, para que se parezca a la */
+						/* fila real con botones. Este min-height tiene que coincidir con */
+						/* skeleton_row_height_px del script: si se cambia uno, cambiar el otro. */
+						display: flex
+						flex-direction: row
+						align-items: center
+						min-height: 44px
+					/* bootstrap-vue le pone margin-bottom por default al b-skeleton; lo sacamos */
+					/* para que no infle la altura calculada por skeleton_row_height_px. */
+					.cont-tr-skeleton .b-skeleton
+						margin-bottom: 0
+
+		.skeleton-thumb
+			/* Mismo radio que va a tener la miniatura real (prompt 02 de este grupo). */
+			border-radius: 10px
+			flex: 0 0 auto
+
+		.skeleton-options
+			display: flex
+			flex-direction: row
+			align-items: center
+			/* Separación entre los 3 cuadraditos: margin-right en vez de gap, para no depender */
+			/* del soporte de flex-gap del navegador target. */
+			.b-skeleton
+				margin-right: 6px
+				&:last-child
+					margin-right: 0
 
 		.cont-filter-buttons
 			display: flex  
