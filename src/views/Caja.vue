@@ -5,9 +5,13 @@
 
 		<movimientos-entre-cajas></movimientos-entre-cajas>	
 
-		<aperturas></aperturas>	
+		<aperturas></aperturas>
 
-		<movimientos></movimientos>	
+		<movimientos></movimientos>
+
+		<liquidacion-config></liquidacion-config>
+
+		<liquidacion-timeline></liquidacion-timeline>
 
 		<sale-modal></sale-modal>
 
@@ -39,6 +43,8 @@ export default {
 		Aperturas: () => import('@/components/caja/modals/aperturas/Index'),
 		Movimientos: () => import('@/components/caja/modals/movimientos/Index'),
 		ResumenCaja: () => import('@/components/caja/modals/resumen-caja/Index'),
+		LiquidacionConfig: () => import('@/components/caja/modals/liquidacion-config/Index'),
+		LiquidacionTimeline: () => import('@/components/caja/modals/liquidacion-timeline/Index'),
 	},
 	computed: {
 		cajas() {

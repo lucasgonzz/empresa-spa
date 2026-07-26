@@ -27,6 +27,17 @@ export default {
 			type: 'select',
 			use_store_models: true,
 		},
+		{
+			// Grupo 223 · Prompt 03 (06): moneda por defecto de este pago -> caja. Mismo patrón
+			// condicional que caja.js/client.js/sale.js: solo se ve (y se manda) con la extensión
+			// de ventas en dólares activa. Sin la extensión, el backend recibe moneda_id = 1.
+			text: 'Moneda',
+			key: 'moneda_id',
+			type: 'select',
+			use_store_models: true,
+			value: 1,
+			if_has_extencion: 'ventas_en_dolares',
+		},
 
 	],
 	abm_descripcion: {

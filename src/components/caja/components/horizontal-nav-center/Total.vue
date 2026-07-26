@@ -2,12 +2,17 @@
 	<!--
 		Resumen compacto de saldos totales de las cajas visibles.
 		Se muestra en la barra horizontal del módulo caja, solo para el owner.
+
+		Grupo 223 · Prompt 03: si hay cajas con liquidación configurada, el "total" deja de ser un
+		solo número: se muestra Disponible grande (protagonista, es lo que el dueño puede usar ya)
+		y Contable/A liquidar chicos al lado. Si las tres sumas coinciden (ningún caja configurada,
+		ej. todo efectivo), se sigue mostrando un solo número como antes de este prompt.
 	-->
 	<div
 	class="caja-totales"
 	v-if="is_owner">
 
-		<!-- Chip de total acumulado en pesos -->
+		<!-- Chip de total en pesos -->
 		<div class="caja-totales__chip caja-totales__chip--ars">
 			<div class="caja-totales__icon-wrap">
 				<i
@@ -16,12 +21,33 @@
 			</div>
 			<div class="caja-totales__body">
 				<span class="caja-totales__label">Total en pesos</span>
-				<span class="caja-totales__value">{{ total_pesos_label }}</span>
+
+				<template v-if="ars_sin_configurar">
+					<span class="caja-totales__value">{{ price(ars.disponible) }}</span>
+				</template>
+				<template v-else>
+					<span
+					class="caja-totales__value caja-totales__value--disponible"
+					:class="{ 'caja-totales__value--clickable': puede_ver_a_liquidar }"
+					@click="verALiquidar('ars')">
+						{{ price(ars.disponible) }}
+					</span>
+					<span class="caja-totales__secundarios">
+						<span>Contable: {{ price(ars.contable) }}</span>
+						<span
+						class="caja-totales__a-liquidar"
+						:class="{ 'caja-totales__value--clickable': puede_ver_a_liquidar }"
+						@click="verALiquidar('ars')">
+							A liquidar: {{ price(ars.a_liquidar) }}
+						</span>
+					</span>
+				</template>
+
 				<span class="caja-totales__meta">{{ cajas_count_label }}</span>
 			</div>
 		</div>
 
-		<!-- Chip de total acumulado en dólares (solo con extensión habilitada) -->
+		<!-- Chip de total en dólares (solo con extensión habilitada) -->
 		<div
 		class="caja-totales__chip caja-totales__chip--usd"
 		v-if="hasExtencion('ventas_en_dolares')">
@@ -32,7 +58,28 @@
 			</div>
 			<div class="caja-totales__body">
 				<span class="caja-totales__label">Total en dólares</span>
-				<span class="caja-totales__value">{{ total_dolares_label }}</span>
+
+				<template v-if="usd_sin_configurar">
+					<span class="caja-totales__value">{{ price(usd.disponible) }}</span>
+				</template>
+				<template v-else>
+					<span
+					class="caja-totales__value caja-totales__value--disponible"
+					:class="{ 'caja-totales__value--clickable': puede_ver_a_liquidar }"
+					@click="verALiquidar('usd')">
+						{{ price(usd.disponible) }}
+					</span>
+					<span class="caja-totales__secundarios">
+						<span>Contable: {{ price(usd.contable) }}</span>
+						<span
+						class="caja-totales__a-liquidar"
+						:class="{ 'caja-totales__value--clickable': puede_ver_a_liquidar }"
+						@click="verALiquidar('usd')">
+							A liquidar: {{ price(usd.a_liquidar) }}
+						</span>
+					</span>
+				</template>
+
 				<span class="caja-totales__meta">{{ cajas_count_label }}</span>
 			</div>
 		</div>
@@ -76,61 +123,98 @@ export default {
 		},
 
 		/**
-		 * Suma de saldos en pesos de todas las cajas en moneda local.
+		 * Suma de los tres saldos (contable/disponible/a liquidar) de las cajas en pesos.
+		 * `saldo_contable`/`saldo_disponible`/`saldo_a_liquidar` los calcula el backend
+		 * (Grupo 223 · Prompt 02) en `CajaController::index()`. Si una caja vieja todavía no
+		 * los trajera por algún motivo, cae a `saldo` para no romper el total.
 		 *
-		 * @returns {number}
+		 * @returns {Object} {contable, disponible, a_liquidar}
 		 */
-		total() {
-			// Acumulador del total en pesos
-			let total = 0
+		ars() {
+			return this.sumar_saldos(caja => caja.moneda_id === null || caja.moneda_id == 1)
+		},
+
+		/**
+		 * Mismo cálculo que `ars`, para las cajas en dólares.
+		 *
+		 * @returns {Object} {contable, disponible, a_liquidar}
+		 */
+		usd() {
+			return this.sumar_saldos(caja => caja.moneda_id == 2)
+		},
+
+		/**
+		 * true si ninguna caja en pesos tiene liquidación configurada (los tres saldos
+		 * coinciden): en ese caso se muestra un solo número, igual que antes de este prompt.
+		 *
+		 * @returns {Boolean}
+		 */
+		ars_sin_configurar() {
+			return this.ars.contable === this.ars.disponible && this.ars.disponible === this.ars.a_liquidar
+		},
+
+		/**
+		 * Mismo criterio que `ars_sin_configurar`, para dólares.
+		 *
+		 * @returns {Boolean}
+		 */
+		usd_sin_configurar() {
+			return this.usd.contable === this.usd.disponible && this.usd.disponible === this.usd.a_liquidar
+		},
+
+		/**
+		 * El detalle de "a liquidar" es por caja (el endpoint de línea de tiempo pide un id
+		 * puntual). Con varias cajas visibles a la vez no hay una única caja para consultar,
+		 * así que el chip solo es clickeable cuando se está viendo una sola caja.
+		 *
+		 * @returns {Boolean}
+		 */
+		puede_ver_a_liquidar() {
+			return this.cajas_count === 1
+		},
+	},
+	methods: {
+		/**
+		 * Suma `saldo_contable`/`saldo_disponible`/`saldo_a_liquidar` de las cajas que
+		 * cumplen el filtro de moneda dado.
+		 *
+		 * @param {Function} filtro_moneda (caja) => Boolean
+		 * @returns {Object} {contable, disponible, a_liquidar}
+		 */
+		sumar_saldos(filtro_moneda) {
+			let contable = 0
+			let disponible = 0
+			let a_liquidar = 0
 
 			this.cajas.forEach(caja => {
-				// moneda_id null o 1 corresponde a pesos
-				if (
-					caja.moneda_id === null
-					|| caja.moneda_id == 1
-				) {
-					total += Number(caja.saldo)
+				if (!filtro_moneda(caja)) {
+					return
 				}
+				contable += Number(typeof caja.saldo_contable != 'undefined' ? caja.saldo_contable : caja.saldo)
+				disponible += Number(typeof caja.saldo_disponible != 'undefined' ? caja.saldo_disponible : caja.saldo)
+				a_liquidar += Number(caja.saldo_a_liquidar || 0)
 			})
 
-			return total
+			return { contable, disponible, a_liquidar }
 		},
 
 		/**
-		 * Suma de saldos en dólares de las cajas en USD.
+		 * Abre la línea de tiempo de liquidaciones pendientes de la única caja visible.
+		 * No hace nada si hay más de una caja en pantalla (ver `puede_ver_a_liquidar`).
 		 *
-		 * @returns {number}
+		 * @returns {void}
 		 */
-		total_usd() {
-			// Acumulador del total en dólares
-			let total = 0
+		verALiquidar() {
+			if (!this.puede_ver_a_liquidar) {
+				return
+			}
 
-			this.cajas.forEach(caja => {
-				if (caja.moneda_id == 2) {
-					total += Number(caja.saldo)
-				}
+			this.$store.commit('caja/setModel', {
+				model: this.cajas[0],
+				properties: [],
 			})
 
-			return total
-		},
-
-		/**
-		 * Total en pesos formateado para mostrar en el chip.
-		 *
-		 * @returns {string}
-		 */
-		total_pesos_label() {
-			return this.price(this.total)
-		},
-
-		/**
-		 * Total en dólares formateado para mostrar en el chip.
-		 *
-		 * @returns {string}
-		 */
-		total_dolares_label() {
-			return this.price(this.total_usd)
+			this.$bvModal.show('liquidacion-timeline')
 		},
 	},
 }
@@ -216,6 +300,26 @@ $accent-usd: #0891b2
 		font-weight: 700
 		line-height: 1.2
 		white-space: nowrap
+
+		&--disponible
+			font-size: 1.15rem
+
+		&--clickable
+			cursor: pointer
+
+			&:hover
+				text-decoration: underline
+
+	&__secundarios
+		display: flex
+		gap: 8px
+		font-size: 0.7rem
+		font-weight: 500
+		color: #94a3b8
+		white-space: nowrap
+
+	&__a-liquidar
+		cursor: default
 
 	&__meta
 		font-size: 0.68rem

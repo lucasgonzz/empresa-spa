@@ -126,6 +126,7 @@ import caja from '@/store/caja'
 import apertura_caja from '@/store/apertura_caja'
 import movimiento_caja from '@/store/movimiento_caja'
 import concepto_movimiento_caja from '@/store/concepto_movimiento_caja'
+import caja_liquidacion_config from '@/store/caja_liquidacion_config'
 
 import default_payment_method_caja from '@/store/default_payment_method_caja'
 
@@ -384,6 +385,7 @@ export default new Vuex.Store({
         apertura_caja,
         movimiento_caja,
         concepto_movimiento_caja,
+        caja_liquidacion_config,
 
         default_payment_method_caja,
 
