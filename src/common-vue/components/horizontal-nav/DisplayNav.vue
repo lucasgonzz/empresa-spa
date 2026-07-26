@@ -9,26 +9,13 @@
 			Por fecha 
 		</div>
 		
-		<div   
+		<div
 		v-if="change_from_dates_option"
 		:class="isSelectedFromDates(false)"
 		@click="setFromDates(false)"
 		class="item apretable">
 			Historico
 		</div>
-
-		<!-- <div   
-		:class="isSelected('cards')"
-		@click="setDisplay('cards')"
-		class="item apretable">
-			<i class="icon-grid"></i>
-		</div>
-		<div 
-		:class="isSelected('table')"
-		@click="setDisplay('table')"
-		class="item apretable">
-			<i class="icon-list"></i>
-		</div> -->
 	</div>
 </template>
 <script>
@@ -43,11 +30,42 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Devuelve la clase 'active' cuando el valor coincide con el modo actual (from_dates),
+		 * para pintar la pestaña seleccionada con el estilo segmentado nuevo (prompt 05 grupo 221).
+		 *
+		 * @param {Boolean} value - true = "Por fecha", false = "Historico"
+		 * @returns {String} 'active' o cadena vacía
+		 */
 		isSelectedFromDates(value) {
-			return this.$store.state[this.model_name].from_dates == value ? 'selected-from-dates' : ''
+			return this.$store.state[this.model_name].from_dates == value ? 'active' : ''
 		},
+		/**
+		 * Cambia entre "Por fecha" e "Historico" (prompt 05 grupo 221).
+		 * - Historico (value = false): dispatchea runListadoPorDefecto para traer el listado
+		 *   completo paginado y ordenado por id descendente, igual que el listado por defecto
+		 *   de los demás módulos.
+		 * - Por fecha (value = true): antes de pedir los modelos por fecha, limpia todo el
+		 *   estado que haya dejado el historico paginado (mismos commits que restartSearch() en
+		 *   BtnRestartFilter.vue), para que la tabla no se quede mostrando `filtered` ni
+		 *   `listado_por_defecto` de la vista anterior.
+		 *
+		 * @param {Boolean} value - true = "Por fecha", false = "Historico"
+		 */
 		setFromDates(value) {
 			this.$store.commit(this.model_name+'/setFromDates', value)
+			if (!value) {
+				this.$store.dispatch(this.model_name+'/runListadoPorDefecto')
+				return
+			}
+			// Limpieza del estado de paginado/historico antes de volver a "Por fecha".
+			this.$store.commit(this.model_name+'/setFiltered', [])
+			this.$store.commit(this.model_name+'/setIsFiltered', false)
+			this.$store.commit(this.model_name+'/setFilterPage', 1)
+			this.$store.commit(this.model_name+'/setTotalFilterPages', null)
+			this.$store.commit(this.model_name+'/setTotalFilterResults', 0)
+			this.$store.commit(this.model_name+'/set_listado_por_defecto', false)
+			this.$store.commit(this.model_name+'/setGlobalSearchPayload', null)
 			this.$store.dispatch(this.model_name+'/getModels')
 		},
 		setDisplay(display) {
@@ -69,28 +87,52 @@ export default {
 </script>
 <style lang="sass">
 @import '@/sass/_custom.scss'
-.display-nav 
-	display: flex
-	justify-content: flex-end
-	// @media screen and (max-width: 576px)
-	// 	width: 100%
-		// margin-top: 15px
-	.item 
-		padding: 0 .5em
-		font-size: 1.2em
-		cursor: pointer
-		@if ($theme == 'dark') 
-			color: rgba(255, 255, 255, .9)
-		@else 
-			color: #333 
-	[class^='icon-']:before
-		margin-right: 0
-	.selected-display
-		i
-			color: $blue
-			border-bottom: 3px solid $blue
+/* Pista gris segmentada (mismos valores que .horizontal-nav en horizontal-nav/Index.vue, prompt 05 grupo 221) */
+.display-nav
+	display: inline-flex
+	width: fit-content
+	max-width: 100%
+	min-width: 0
+	gap: 6px
+	padding: 4px
+	background-color: #E3E3E3
+	border-radius: 8px
 
-	.selected-from-dates
-		border-bottom: 3px solid $blue
-		font-weight: bold
+	/* Pestaña inactiva: texto secundario sobre fondo transparente */
+	.item
+		border: none
+		border-radius: 6px
+		padding: 8px 12px
+		cursor: pointer
+		font-size: 0.875rem
+		font-weight: 500
+		line-height: 1.25
+		color: #6c757d
+		background-color: transparent
+		white-space: nowrap
+		transition: color 0.12s ease, background-color 0.12s ease, box-shadow 0.12s ease
+
+		&:hover:not(.active)
+			color: #0d6efd
+			background-color: #e7f1ff
+
+		&:focus,
+		&:focus-visible
+			box-shadow: none
+			outline: none
+
+		&:focus-visible
+			outline: 2px solid #0d6efd
+			outline-offset: 2px
+
+		/* Pestaña activa: relleno azul sólido como btn-primary */
+		&.active
+			color: #fff
+			background-color: #0d6efd
+			font-weight: 600
+			box-shadow: 0 1px 2px rgba(13, 110, 253, 0.28)
+
+			&:hover
+				color: #fff
+				background-color: #0b5ed7
 </style>
