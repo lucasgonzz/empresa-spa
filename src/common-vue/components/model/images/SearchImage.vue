@@ -185,7 +185,16 @@ export default {
 				console.log('google_api_key del owner: '+this.owner.google_custom_search_api_key)
 				return this.owner.google_custom_search_api_key
 			}
-			return 'AIzaSyC4sUC-MuEDsMNoIQqwUPmYWZmw74rsHOI'
+			/*
+			 * Repositorio publico: la API key de fallback de Google Custom Search se saca del
+			 * codigo fuente y se toma de una variable de entorno del build. Esto NO la vuelve
+			 * secreta: sigue viajando igual dentro del bundle que se le descarga a cualquier
+			 * visitante. Sirve para poder rotarla sin tocar codigo y para que no quede escrita
+			 * en el repo. La proteccion real es restringirla en Google Cloud Console (limitarla
+			 * a la Custom Search API y por dominio/referrer HTTP) porque consume cuota
+			 * facturable, a diferencia de una key de Firebase que esta pensada para ser publica.
+			 */
+			return process.env.VUE_APP_GOOGLE_SEARCH_API_KEY
 		},
 		busquedas_disponibles() {
 			if (this.current_geocoder_counter) {
@@ -472,7 +481,9 @@ export default {
 				this.loading = true
 				let url = 'https://www.googleapis.com/customsearch/v1?key='+this.google_api_key+'&cx=c442e5f346f314951&searchType=image&q='+this.query
 				return fetch(url)
-				// fetch('https://www.googleapis.com/customsearch/v1?key=AIzaSyDOdbUFHZhD0I2DWoYVR6CQnKurqYY5rcQ&cx=c442e5f346f314951&searchType=image&q='+this.query)
+				// Repositorio publico: codigo muerto comentado, se saca la key literal igual
+				// (un secreto/valor comentado sigue publicado en el historial de git).
+				// fetch('https://www.googleapis.com/customsearch/v1?key=[valor removido - repositorio publico]&cx=c442e5f346f314951&searchType=image&q='+this.query)
 				.then(res => {
 					this.loading = false
 					res.json()
