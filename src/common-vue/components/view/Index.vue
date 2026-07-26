@@ -453,6 +453,18 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+		/**
+		 * Al entrar al módulo (o al cambiar de modelo dentro de un mismo ABM), dispara sola la
+		 * primera página del listado paginado por orden de id descendente (ver
+		 * `runListadoPorDefecto` en `__base_store.js`), para que la tabla muestre desde el primer
+		 * momento el contador de resultados y la paginación, sin esperar a que el usuario ordene a
+		 * mano por N°. Default true: se activa en todos los módulos salvo que uno puntual lo apague
+		 * pasando esta prop en false.
+		 */
+		listado_paginado_por_defecto: {
+			type: Boolean,
+			default: true,
+		},
 	},
 	computed: {
 		show_view() {
@@ -502,7 +514,77 @@ export default {
 			return this.show_btn_create
 		}
 	},
+	created() {
+		// Dispara el listado paginado por defecto al montar el componente (primera vez que se
+		// entra al módulo). El método decide internamente si corresponde o no.
+		this.disparar_listado_por_defecto()
+	},
+	watch: {
+		// El ABM (src/common-vue/views/Abm.vue) reusa este mismo view-component e intercambia el
+		// modelo con las solapas (marcas, rubros, formas de pago...). Sin este watch, solo el
+		// primer modelo de cada ABM traeria el listado paginado por defecto.
+		model_name() {
+			this.disparar_listado_por_defecto()
+		}
+	},
 	methods: {
+		/**
+		 * Decide si corresponde disparar el listado paginado por defecto (pagina 1, ordenado por id
+		 * descendente, ver `runListadoPorDefecto` en __base_store.js) y lo dispara si aplica.
+		 *
+		 * Corta sin hacer nada en los siguientes casos:
+		 * - la prop `listado_paginado_por_defecto` viene apagada.
+		 * - `papelera`: tiene su propio submodulo de store y su propio flujo.
+		 * - los modelos vienen por prop desde el modulo que lo usa (tablas embebidas en modales o
+		 *   en relaciones has-many), donde no corresponde pedir nada al servidor.
+		 * - el modulo se ve por fecha (ventas, compras, pedidos, gastos, cheques, presupuestos):
+		 *   ese flujo sigue entrando por dia/rango como hasta ahora.
+		 * - el usuario no tiene permiso de index sobre el modelo.
+		 * - ya hay una busqueda real del usuario activa (is_filtered en true y listado_por_defecto
+		 *   en false): evita pisarle al usuario lo que habia buscado al volver al modulo.
+		 *
+		 * @returns {void}
+		 */
+		disparar_listado_por_defecto() {
+
+			// Corte 1: el modulo puntual apago la prop.
+			if (!this.listado_paginado_por_defecto) {
+				return
+			}
+
+			// Corte 2: la papelera tiene su propio submodulo de store y su propio flujo.
+			if (this.papelera) {
+				return
+			}
+
+			// Corte 3: los modelos vienen por prop desde el modulo (tablas embebidas en modales o
+			// en has-many), no corresponde pedir nada al servidor.
+			if (this.mostrar_models_que_vinienen_por_prop_siempre) {
+				return
+			}
+			if (this.models_to_show.length && !this.show_view_header) {
+				return
+			}
+
+			// Corte 4: modulos que se ven por fecha (ventas, compras, pedidos, gastos, cheques,
+			// presupuestos) entran como hasta hoy, mostrando el dia o el rango elegido.
+			if (this.$store.state[this.model_name].from_dates) {
+				return
+			}
+
+			// Corte 5: el usuario no tiene permiso de index sobre este modelo.
+			if (!this.can_show_list) {
+				return
+			}
+
+			// Corte 6: ya hay una busqueda real del usuario activa, no se la pisamos.
+			if (this.$store.state[this.model_name].is_filtered && !this.$store.state[this.model_name].listado_por_defecto) {
+				return
+			}
+
+			// Ninguno de los cortes aplico: pide la primera pagina del listado por defecto.
+			this.$store.dispatch(this.model_name+'/runListadoPorDefecto')
+		},
 		check_propiedades_extras(original_props) {
 
 		    let props = original_props.map(p => ({ ...p }))
