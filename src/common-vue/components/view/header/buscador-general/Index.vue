@@ -390,12 +390,17 @@ export default {
 
 		/**
 		 * Indica si hay una busqueda del buscador general activa (payload persistido en el store).
-		 * Controla la visibilidad del boton limpiar.
+		 * Controla la visibilidad del boton limpiar. El listado por defecto (prompts 02/03 del
+		 * grupo 221) tambien persiste un global_search_payload (asi obtiene paginacion/contador
+		 * sin escribir nada nuevo), pero no fue una busqueda del usuario: por eso se exige ademas
+		 * que listado_por_defecto sea false, siguiendo la misma regla que el resto de los
+		 * indicadores de "filtro activo" del sistema (ver Title.vue, BtnRestartFilter.vue, etc).
 		 *
 		 * @returns {Boolean}
 		 */
 		is_filtered_by_buscador() {
 			return !!this.$store.state[this.model_name].global_search_payload
+				&& !this.$store.state[this.model_name].listado_por_defecto
 		},
 
 		/**
@@ -1391,7 +1396,10 @@ export default {
 		 * Limpia el criterio de texto, resetea el filtered del store (mismos commits que
 		 * BuscadorRapido) y limpia el payload persistido del buscador general. Ademas resetea los
 		 * VALORES elegidos en los filtros fijos a su estado neutro (los controles siguen ahi,
-		 * vacios: la configuracion no se borra, solo se limpia lo tipeado/elegido).
+		 * vacios: la configuracion no se borra, solo se limpia lo tipeado/elegido). Al terminar,
+		 * dispatchea runListadoPorDefecto (prompt 04 del grupo 221): sin esto la tabla quedaria
+		 * mostrando los modelos viejos que ya estaban en memoria (filtered vacio de golpe), en vez
+		 * de volver al listado completo paginado por id descendente.
 		 *
 		 * @return {void}
 		 */
@@ -1407,7 +1415,8 @@ export default {
 
 			if (this.modo === 'modal') {
 				// Modo embebido (prompt 08 del grupo 179): solo resetea el estado interno (ya hecho
-				// arriba) y avisa al consumidor; el modal decide que limpiar de lo suyo.
+				// arriba) y avisa al consumidor; el modal decide que limpiar de lo suyo. No toca el
+				// store, por eso tampoco dispatchea runListadoPorDefecto aca.
 				this.$emit('limpiar')
 				return
 			}
@@ -1420,6 +1429,10 @@ export default {
 			this.$store.commit(this.model_name + '/setTotalFilterResults', 0)
 			this.$store.commit(this.model_name + '/set_filtered_without_filter_form', false)
 			this.$store.commit(this.model_name + '/setGlobalSearchPayload', null)
+
+			// Vuelve al listado completo paginado (orden id DESC) en vez de dejar la tabla con lo
+			// que haya quedado en memoria de la busqueda que se acaba de limpiar.
+			this.$store.dispatch(this.model_name + '/runListadoPorDefecto')
 		},
 
 		/**

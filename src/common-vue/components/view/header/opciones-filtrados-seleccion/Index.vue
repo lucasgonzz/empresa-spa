@@ -105,12 +105,23 @@ export default {
 		/**
 		 * Re-ejecuta el filtrado actual para reflejar el estado real del servidor.
 		 * Se usa luego de eliminar (selección o por filtro) manteniendo el modo filtrado activo.
+		 * Si lo que estaba en pantalla era el listado por defecto (prompt 04 del grupo 221, flag
+		 * `listado_por_defecto` del store) el refresco tiene que ir por runListadoPorDefecto y no
+		 * por runFilter: ese listado nunca vino de un formulario de filtros, vino del buscador
+		 * general en modo silencioso, y runFilter no sabe reconstruir ese criterio.
 		 */
 		refresh_filter_results() {
 			// Si la vista no está filtrada y la acción no fue "from_filter", no hay nada que refrescar.
 			let is_filtered = this.$store.state[this.model_name].is_filtered
 			if (!this.from_filter && !is_filtered) {
 				return Promise.resolve()
+			}
+
+			// Listado por defecto activo: refresca por el mismo camino que lo armó, no por runFilter.
+			if (this.$store.state[this.model_name].listado_por_defecto) {
+				return this.$store.dispatch(this.model_name + '/runListadoPorDefecto', {
+					page: 1,
+				})
 			}
 
 			// Al eliminar puede cambiar la paginación; pedimos página 1 para evitar quedar parados en una página inválida.

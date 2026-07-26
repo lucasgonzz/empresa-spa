@@ -116,9 +116,29 @@ export default {
 			}
 			return 'dark'
 		},
-		/** Texto del tooltip/aria del toggle (reemplaza al texto visible que se sacó). */
+		/**
+		 * True cuando lo que hay en pantalla es el listado por defecto (prompts 02/03 del grupo
+		 * 221), no un filtro puesto por el usuario. El store de papelera no tiene este flag (la
+		 * papelera nunca arma listado por defecto), por eso solo se lee del lado normal.
+		 *
+		 * @returns {Boolean}
+		 */
+		listado_por_defecto() {
+			if (this.papelera) {
+				return false
+			}
+			return !!this.$store.state[this.model_name].listado_por_defecto
+		},
+		/**
+		 * Texto del tooltip/aria del toggle (reemplaza al texto visible que se sacó). Cuando lo
+		 * que hay en pantalla es el listado por defecto, la palabra correcta es "todos": el
+		 * usuario no filtró nada, solo entró al módulo (prompt 04 del grupo 221, tarea 06).
+		 */
 		tooltip_text() {
 			if (this.from_filter) {
+				if (this.listado_por_defecto) {
+					return 'Acciones sobre todos (' + this.count + ')'
+				}
 				return 'Acciones sobre ' + this.count + ' filtrados'
 			}
 			return 'Acciones sobre ' + this.count + ' seleccionados'

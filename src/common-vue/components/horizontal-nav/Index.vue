@@ -39,7 +39,7 @@
 						<i class="icon-search"></i>
 					</b-button>
 					<b-button
-					v-if="is_filtered"
+					v-if="is_filtered && !listado_por_defecto"
 					@click="restartSearch"
 					variant="outline-success">
 						<i class="icon-history"></i>
@@ -256,6 +256,19 @@ export default {
 			return this.$store.state[this.model_name].is_filtered
 		},
 		/**
+		 * True cuando lo que hay en pantalla es el listado por defecto (prompts 02/03 del grupo
+		 * 221), no un filtro puesto por el usuario. El store de papelera no tiene este flag (la
+		 * papelera nunca arma listado por defecto), por eso solo se lee del lado normal.
+		 *
+		 * @returns {Boolean}
+		 */
+		listado_por_defecto() {
+			if (this.papelera) {
+				return false
+			}
+			return !!this.$store.state[this.model_name].listado_por_defecto
+		},
+		/**
 		 * Cantidad de registros cargados en el resultado del filtro de la papelera (páginas acumuladas con “ver más”).
 		 */
 		cantidad_filtrados_papelera() {
@@ -294,6 +307,12 @@ export default {
 				document.getElementById('search-modal-'+this.propsToFilterInModal(this.model_name)[0].key).focus()
 			}, 300)
 		},
+		/**
+		 * Reinicia el estado de filtrado en el store. Fuera de papelera, dispatchea
+		 * runListadoPorDefecto al final (prompt 04 del grupo 221) para volver al listado completo
+		 * paginado en vez de dejar la tabla con lo que haya quedado en memoria; el store de
+		 * papelera no tiene esa action, por eso queda igual que antes en ese caso.
+		 */
 		restartSearch() {
 			let prefix = this.papelera ? ('papelera/' + this.model_name + '/') : (this.model_name + '/')
 			this.$store.commit(prefix + 'setIsFiltered', false)
@@ -301,6 +320,10 @@ export default {
 			this.$store.commit(prefix + 'setFilterPage', 1)
 			this.$store.commit(prefix + 'setTotalFilterPages', null)
 			this.$store.commit(prefix + 'setTotalFilterResults', 0)
+
+			if (!this.papelera) {
+				this.$store.dispatch(this.model_name + '/runListadoPorDefecto')
+			}
 		},
 		setDisplay(display) {
 			this.$emit('setDisplay', display)

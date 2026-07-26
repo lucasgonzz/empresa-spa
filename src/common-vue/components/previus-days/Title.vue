@@ -1,7 +1,7 @@
 <template>
 <h5>
 	<div
-	v-if="typeof is_filtered != 'undefined' && is_filtered">
+	v-if="mostrar_con_filtro">
 		<strong>
 			{{ plural(model_name) }} con filtro
 		</strong>
@@ -31,6 +31,21 @@ export default {
 	computed: {
 		is_filtered() {
 			return this.$store.state[this.model_name].is_filtered
+		},
+		// True cuando hay un listado por defecto activo (paginacion sembrada sin busqueda real
+		// del usuario, ver runListadoPorDefecto en __base_store.js).
+		listado_por_defecto() {
+			return !!this.$store.state[this.model_name].listado_por_defecto
+		},
+		/**
+		 * Indica si corresponde mostrar el titulo "con filtro". Regla del grupo 221: is_filtered
+		 * debe ser true Y listado_por_defecto debe ser false. El listado por defecto reusa
+		 * is_filtered para tener paginacion/contador, pero no es un filtro puesto por el usuario.
+		 *
+		 * @returns {Boolean}
+		 */
+		mostrar_con_filtro() {
+			return typeof this.is_filtered != 'undefined' && this.is_filtered && !this.listado_por_defecto
 		},
 		from_date() {
 			return this.$store.state[this.model_name].from_date
