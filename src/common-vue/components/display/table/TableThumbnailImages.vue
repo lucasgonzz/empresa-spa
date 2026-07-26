@@ -350,4 +350,6 @@ export default {
 	cursor: zoom-in
 	// Esquinas redondeadas de la imagen para acompañar el estilo de la tabla.
 	border-radius: 10px
+	// Sombra sutil sobre la imagen en si (no en __frame, que la recortaria por su overflow: hidden).
+	box-shadow: rgba(99, 99, 99, 0.25) 0px 1px 4px 0px
 </style>

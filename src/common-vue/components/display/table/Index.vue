@@ -77,8 +77,8 @@
 									<b-skeleton
 									v-if="field.is_image"
 									class="skeleton-thumb"
-									width="44px"
-									height="44px"
+									width="56px"
+									height="56px"
 									animation="wave"></b-skeleton>
 									<!-- Columnas de opciones (izq/der): simulan el grupo de botones con 3 cuadraditos. -->
 									<div
@@ -93,6 +93,7 @@
 									</div>
 									<!-- Resto de columnas: barrita simple, como antes. -->
 									<b-skeleton
+									class="skeleton-text"
 									v-else
 									animation="wave"></b-skeleton>
 								</div>
@@ -363,9 +364,9 @@ export default {
 			// (antes de poder medir el DOM); update_skeleton_rows_count() la recalcula contra el alto real.
 			skeleton_rows_count: 12,
 			// Alto aproximado (px) de una fila real con botones de opciones: padding del td (5px arriba
-			// y abajo) + alto del .cont-tr con los botones (~44px). Debe coincidir con el min-height
+			// y abajo) + alto del .cont-tr con los botones (~56px). Debe coincidir con el min-height
 			// de .cont-tr-skeleton en el bloque de estilos de más abajo.
-			skeleton_row_height_px: 54,
+			skeleton_row_height_px: 68,
 		}
 	},
 	computed: {
@@ -1568,13 +1569,13 @@ export default {
 			tr.skeleton-row
 				td
 					.cont-tr-skeleton
-						/* Sube la fila de ~36px (una barrita sola) a ~54px, para que se parezca a la */
+						/* Sube la fila de ~36px (una barrita sola) a ~68px, para que se parezca a la */
 						/* fila real con botones. Este min-height tiene que coincidir con */
 						/* skeleton_row_height_px del script: si se cambia uno, cambiar el otro. */
 						display: flex
 						flex-direction: row
 						align-items: center
-						min-height: 44px
+						min-height: 58px
 					/* bootstrap-vue le pone margin-bottom por default al b-skeleton; lo sacamos */
 					/* para que no infle la altura calculada por skeleton_row_height_px. */
 					.cont-tr-skeleton .b-skeleton
@@ -1584,6 +1585,15 @@ export default {
 			/* Mismo radio que va a tener la miniatura real (prompt 02 de este grupo). */
 			border-radius: 10px
 			flex: 0 0 auto
+			/* Misma sombra sutil que las miniaturas reales, para que no haya salto visual al cargar. */
+			box-shadow: rgba(99, 99, 99, 0.25) 0px 1px 4px 0px
+
+		.skeleton-text
+			/* Fuerza un ancho fijo sin depender de porcentajes dentro de un flex item */
+			/* (bootstrap-vue solo pone width inline si se le pasa como prop). */
+			flex: 0 0 auto
+			width: 65%
+			height: 14px
 
 		.skeleton-options
 			display: flex
