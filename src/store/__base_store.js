@@ -93,6 +93,13 @@ export default function __base_store(options = {}) {
 			// pueda repetir la misma búsqueda solo cambiando la página, sin volver a armar el payload.
 			global_search_payload: null,
 
+			// Flag que distingue "listado por defecto" (filtered poblado por la carga automática al
+			// entrar al módulo, con todos los registros paginados) de una búsqueda real escrita por el
+			// usuario. La UI lo usa para no mostrar carteles de "filtro activo" (título "con filtro",
+			// botón de limpiar búsqueda, botón de quitar filtros) cuando en realidad no hay ningún
+			// criterio puesto, solo el listado inicial.
+			listado_por_defecto: false,
+
 			/**
 			 * Origen del último dropdown masivo (filtrados vs seleccionados).
 			 * Lo usan modales globales fuera del árbol del menú desplegable.
@@ -341,6 +348,17 @@ export default function __base_store(options = {}) {
 			state.global_search_payload = value
 		},
 		/**
+		 * Activa o desactiva el flag que indica que `filtered` viene de la carga automática
+		 * del listado por defecto (no de una búsqueda escrita por el usuario).
+		 *
+		 * @param {Object} state Estado del módulo.
+		 * @param {Boolean} value true cuando el listado activo es el "por defecto", false en cualquier
+		 *   búsqueda o filtro real del usuario.
+		 */
+		set_listado_por_defecto(state, value) {
+			state.listado_por_defecto = value
+		},
+		/**
 		 * Guarda si la acción masiva se originó en el dropdown de filtrados.
 		 *
 		 * @param {Object}  state
@@ -408,6 +426,8 @@ export default function __base_store(options = {}) {
 			commit('set_filtered_without_filter_form', false)
 			// Limpiar el payload persistido del buscador general para no dejarlo colgado de una búsqueda vieja.
 			commit('setGlobalSearchPayload', null)
+			// Esta carga ya no es el "listado por defecto" armado por runListadoPorDefecto.
+			commit('set_listado_por_defecto', false)
 			if (state.use_per_page) {
 				commit('setPage', 1)
 				commit('setModels', [])
@@ -556,6 +576,8 @@ export default function __base_store(options = {}) {
 					commit('setFiltered', rows)
 					commit('setTotalFilterPages', res.data.last_page)
 					commit('setTotalFilterResults', res.data.total)
+					// Un filtro real del formulario de filtros nunca es el listado por defecto.
+					commit('set_listado_por_defecto', false)
 				})
 				.catch(err => {
 					commit('auth/setLoading', false, {root: true})
@@ -579,16 +601,27 @@ export default function __base_store(options = {}) {
 		 * @param {Array} [payload.props] Props propias del modelo a buscar (OR).
 		 * @param {Array} [payload.relation_props] Relaciones a buscar, cada una `{ relation, props }`.
 		 * @param {Array} [payload.extra_filters] Filtros extra propios del módulo (AND).
+		 * @param {String} [payload.order_by] Columna de orden. Viaja dentro del payload persistido en
+		 *   `state.global_search_payload` para que la paginación (que solo manda `{ page }`) repita el
+		 *   mismo orden en vez de caer al orden por defecto del backend (created_at DESC).
+		 * @param {String} [payload.order_direction] Dirección del orden ('ASC'/'DESC'), misma lógica
+		 *   de persistencia que `order_by`.
+		 * @param {Boolean} [payload.silencioso] Si es true, no muestra el overlay global de carga
+		 *   (`auth/setLoading` / `auth/setMessage`). Pensado para el listado por defecto, que se
+		 *   dispara solo al entrar al módulo y no debería sentirse como una búsqueda del usuario.
 		 * @returns {Promise}
 		 */
 		runGlobalSearch({commit, state}, payload = {}) {
 			/**
-			 * Payload completo a enviar: si viene con `props` es una búsqueda nueva (se persiste);
+			 * Payload completo a enviar: si viene con `props` es una búsqueda nueva (se persiste,
+			 * incluyendo `order_by`/`order_direction` si vinieron, ya que se persiste el payload entero);
 			 * si no (solo `{ page }`), es un cambio de página y se reusa el payload persistido.
 			 */
 			let search_payload = payload
 			if (payload && payload.props) {
 				commit('setGlobalSearchPayload', payload)
+				// Es una búsqueda real del usuario: a partir de ahora deja de ser el listado por defecto.
+				commit('set_listado_por_defecto', false)
 			} else {
 				search_payload = state.global_search_payload || {}
 			}
@@ -599,17 +632,23 @@ export default function __base_store(options = {}) {
 			let per_page = state.filter_per_page || 5
 			/** Nombre plural en español del modelo para el mensaje de feedback al usuario. */
 			let plural_model_name = generals.methods.plural(state.model_name)
+			/** Modo silencioso: no muestra el overlay global de carga (ver doc de la action). */
+			let silencioso = !!(payload && payload.silencioso)
 
-			commit('auth/setMessage', 'Buscando ' + plural_model_name, {root: true})
-			commit('auth/setLoading', true, {root: true})
+			if (!silencioso) {
+				commit('auth/setMessage', 'Buscando ' + plural_model_name, {root: true})
+				commit('auth/setLoading', true, {root: true})
+			}
 
 			return axios.post(
 				'/api/global-search/' + generals.methods.routeString(state.model_name) + '?page=' + page,
 				Object.assign({}, search_payload, {per_page: per_page})
 			)
 				.then(res => {
-					commit('auth/setLoading', false, {root: true})
-					commit('auth/setMessage', '', {root: true})
+					if (!silencioso) {
+						commit('auth/setLoading', false, {root: true})
+						commit('auth/setMessage', '', {root: true})
+					}
 
 					/** Filas devueltas: el endpoint responde envuelto en `models` (paginador Laravel). */
 					let rows = (res.data.models && res.data.models.data) ? res.data.models.data : []
@@ -623,9 +662,47 @@ export default function __base_store(options = {}) {
 					commit('set_filtered_without_filter_form', true)
 				})
 				.catch(err => {
-					commit('auth/setLoading', false, {root: true})
-					commit('auth/setMessage', '', {root: true})
+					if (!silencioso) {
+						commit('auth/setLoading', false, {root: true})
+						commit('auth/setMessage', '', {root: true})
+					}
 					console.log(err)
+				})
+		},
+
+		/**
+		 * Carga automática de la tabla al entrar a un módulo: pide "todos los registros" (sin ningún
+		 * criterio) contra el mismo endpoint que usa el buscador general (`global-search`), en vez del
+		 * `index` de siempre, porque el `index` no pagina ni devuelve el total de resultados y este
+		 * listado necesita ambas cosas para la barra de paginación.
+		 *
+		 * Delega en `runGlobalSearch` en modo silencioso (sin overlay de carga) para que abrir el
+		 * módulo no se sienta más lento que hoy, y deja marcado `listado_por_defecto` en true para que
+		 * la UI no muestre carteles de "filtro activo" sobre este listado.
+		 *
+		 * @param {Object} context commit, dispatch
+		 * @param {Object} payload
+		 * @param {Number} [payload.page] Página a consultar (por defecto, 1).
+		 * @returns {Promise}
+		 */
+		runListadoPorDefecto({commit, dispatch}, payload = {}) {
+			/** Página a pedir: la que venga en el payload, o la primera. */
+			let page = (payload && payload.page) ? payload.page : 1
+
+			return dispatch('runGlobalSearch', {
+				query_value: '',
+				props: [],
+				relation_props: [],
+				extra_filters: [],
+				order_by: 'id',
+				order_direction: 'DESC',
+				page: page,
+				silencioso: true,
+			})
+				.then(res => {
+					// Confirma que lo que se ve es el listado por defecto, no una búsqueda del usuario.
+					commit('set_listado_por_defecto', true)
+					return res
 				})
 		},
 	}
@@ -648,6 +725,8 @@ export default function __base_store(options = {}) {
 			commit('set_filtered_without_filter_form', false)
 			// Limpiar el payload persistido del buscador general para no dejarlo colgado de una búsqueda vieja.
 			commit('setGlobalSearchPayload', null)
+			// Esta carga ya no es el "listado por defecto" armado por runListadoPorDefecto.
+			commit('set_listado_por_defecto', false)
 			if (state.use_per_page) {
 				commit('setPage', 1)
 				commit('setModels', [])
