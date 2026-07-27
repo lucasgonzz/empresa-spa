@@ -56,6 +56,12 @@ export default {
     },
     created() {
         var self = this
+        // La vista de ingreso a la demo maneja su propia autenticación: si dejamos correr el
+        // auth/me de arranque, resuelve "no autenticado" y el watcher de abajo manda a login
+        // antes de que el token de la demo llegue a canjearse.
+        if (this.$route.name === 'demoIngreso') {
+            return
+        }
         /**
          * Si se llegó desde otra versión con token de transferencia, iniciar sesión aquí
          * antes de `auth/me` para que la versión correcta ya quede autenticada.
