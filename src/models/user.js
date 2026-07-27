@@ -82,6 +82,36 @@ export default {
 			[
 			 	'Si se desactiva, el iva del articulo se sumara luego del margen de ganancia',
 			],
+			// Grupo 231, prompt 06: con la dinamica nueva de costeo por condicion fiscal activa
+			// (usar_condicion_fiscal_en_costeo) esta tilde ya no tiene ningun efecto (ver grupo 231,
+			// prompt 02), asi que se oculta del formulario para que el cliente no la toque creyendo
+			// que hace algo.
+			v_if_function: 'ocultar_aplicar_iva_al_costo_si_usa_condicion_fiscal_v_if_function',
+		},
+		// Grupo 231, prompt 06: condicion de IVA de la cuenta. Determina como se calculan los
+		// costos cuando la dinamica nueva (ver siguiente propiedad) esta activa.
+		{
+			text: 'Condicion de IVA',
+			key: 'condicion_iva_precios',
+			type: 'select',
+			options: [
+				{text: 'Responsable Inscripto', value: 'RRII'},
+				{text: 'Monotributista', value: 'MT'},
+			],
+			descriptions: [
+				'Determina como se calculan los costos. Un Monotributista no recupera el IVA de sus compras, asi que el IVA forma parte del costo. Un Responsable Inscripto lo recupera, asi que el IVA se suma al momento de vender.',
+			],
+		},
+		// Grupo 231, prompt 06: activa la dinamica de costeo por condicion fiscal (grupo 231,
+		// prompt 02) en reemplazo de la tilde historica "aplicar_iva_al_costo".
+		{
+			text: 'Calcular costos segun la condicion de IVA',
+			key: 'usar_condicion_fiscal_en_costeo',
+			type: 'checkbox',
+			descriptions: [
+				'Si se activa, el sistema calcula los costos y los precios segun la condicion de IVA indicada arriba, en lugar de la configuracion historica de esta cuenta.',
+				'Al cambiar esta opcion se recalculan los precios de todos los articulos. El costo real de los articulos va a cambiar y los precios finales pueden moverse. No la actives sin haber hablado antes con el equipo de ComercioCity.',
+			],
 		},
 		/*
 		 * Prompt 266 (Fase 2, Capa 3): modo "precio de etiqueta incluye la tarjeta mas cara".

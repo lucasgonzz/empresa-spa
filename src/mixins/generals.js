@@ -13,22 +13,22 @@ export default {
         },
         /**
          * Indica si la cuenta opera bajo la condicion de IVA "Monotributista" (vs. Responsable
-         * Inscripto), en base a "user_configuration.condicion_iva_precios" (columna agregada en
-         * UserConfiguration por el Prompt 608 en empresa-api).
+         * Inscripto), en base a "user.condicion_iva_precios" (columna agregada en "users" por el
+         * grupo 231, prompt 01 en empresa-api; reemplaza a la columna vieja de
+         * UserConfiguration del Prompt 608, que quedo obsoleta).
          *
          * Reusable en cualquier vista/modelo que necesite branchear por esta condicion (ver
          * "es_responsable_inscripto_v_if_function" mas abajo para usarla como v_if_function en
          * props declarativas de src/models).
          *
-         * Nota: mientras el Prompt 608 (backend) no corra, la columna no existe todavia y
-         * "condicion_iva_precios" llega undefined/null desde la API. En ese caso esta computed
+         * Nota: si "condicion_iva_precios" llega undefined/null desde la API, esta computed
          * devuelve false (fallback seguro a Responsable Inscripto, mismo comportamiento actual
-         * del sistema), consistente con el fallback que ya usa el backend en los Prompts 609/610.
+         * del sistema), consistente con el fallback que ya usa el backend.
          *
          * @returns {Boolean}
          */
         es_monotributista() {
-            return !!(this.user_configuration && this.user_configuration.condicion_iva_precios == 'MT')
+            return !!(this.user && this.user.condicion_iva_precios == 'MT')
         },
         owner_extencions() {
             if (this.is_owner) {
@@ -116,6 +116,26 @@ export default {
          */
         es_responsable_inscripto_v_if_function() {
             return !this.es_monotributista
+        },
+
+        /**
+         * v_if_function para el checkbox historico "aplicar_iva_al_costo" (grupo 231, prompt 06).
+         * Con la dinamica nueva de costeo por condicion fiscal activa
+         * (usar_condicion_fiscal_en_costeo, grupo 231 prompt 02) esa tilde ya no tiene ningun
+         * efecto en el calculo de costos, asi que se oculta del formulario para evitar que el
+         * cliente la toque creyendo que hace algo.
+         *
+         * Se lee directamente de "model" (el usuario que se esta editando en la configuracion
+         * general, ver src/common-vue/components/configuration/general/Index.vue) y no de una
+         * computed sobre "this.user", porque el formulario debe reaccionar al toggle del
+         * checkbox nuevo antes de guardar.
+         *
+         * @param {Object} prop propiedad del modelo que declara este v_if_function.
+         * @param {Object} model el usuario (users) que se esta editando.
+         * @returns {Boolean}
+         */
+        ocultar_aplicar_iva_al_costo_si_usa_condicion_fiscal_v_if_function(prop, model) {
+            return !(model && model.usar_condicion_fiscal_en_costeo)
         },
 
         set_expense_caja_id(prop_payment_method, model) {
