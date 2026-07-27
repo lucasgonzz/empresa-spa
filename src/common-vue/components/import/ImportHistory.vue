@@ -571,6 +571,9 @@ export default {
 				ambiguo: 'Codigo repetido: la fila coincidia con mas de un articulo',
 				placeholder_descartado: "Codigo invalido: se ignoro un valor como '-' o 'S/N'",
 				sin_identificador: 'Fila sin ningun codigo utilizable',
+				// Nuevos (grupo 229, prompt 07): parseo robusto de columnas numericas.
+				numero_invalido: 'Valor numerico invalido: no se pudo interpretar',
+				numero_fuera_de_rango: 'Valor numerico demasiado grande para la columna',
 			}
 			return labels[tipo] || tipo
 		},
@@ -585,6 +588,14 @@ export default {
 				sku: 'SKU',
 				provider_code: 'Codigo de proveedor',
 				name: 'Nombre',
+				// Nuevos (grupo 229, prompt 07): campos numericos que puede reportar
+				// registrar_conflicto_numerico() en ProcessRow.
+				cost: 'Costo',
+				price: 'Precio',
+				percentage_gain: 'Margen de ganancia',
+				stock_min: 'Stock minimo',
+				unidades_individuales: 'Unidades individuales',
+				medida: 'Medida',
 			}
 			return labels[campo] || campo
 		},
