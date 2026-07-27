@@ -331,6 +331,60 @@
 		<!-- ========================================================== -->
 		<div v-if="step === 3">
 
+			<!-- ====================================================================== -->
+			<!-- Bloque explicativo: cadena de identificación efectiva (prompt 06, grupo 229) -->
+			<!-- Muestra con qué columna se va a identificar cada fila, en el mismo orden -->
+			<!-- de prioridad que usa el matching real del importador.                    -->
+			<!-- ====================================================================== -->
+			<div v-if="pasos_cadena_identificacion.length > 0" class="ai-import-identification-chain m-b-20">
+
+				<p class="font-weight-bold m-b-8">
+					Como se van a identificar los articulos
+				</p>
+
+				<ol class="ai-import-identification-chain-list">
+					<li
+					v-for="paso in pasos_cadena_identificacion"
+					:key="'chain-' + paso.campo"
+					class="ai-import-identification-chain-item">
+
+						<span class="ai-import-identification-chain-title">
+							{{ paso.label }} — {{ paso.filas }} filas
+						</span>
+
+						<small class="d-block text-muted m-t-3">
+							{{ paso.descripcion }}
+						</small>
+
+						<!-- Configuración vigente, solo junto al escalón de código de proveedor -->
+						<small
+						v-if="paso.campo === 'provider_code'"
+						class="d-block text-muted m-t-3">
+							Configuración actual: {{ texto_configuracion_provider_code }}
+						</small>
+
+						<!-- Aviso de nombres repetidos, solo junto al escalón de nombre -->
+						<small
+						v-if="paso.campo === 'name' && aviso_nombres_duplicados"
+						class="d-block text-warning m-t-3">
+							{{ aviso_nombres_duplicados }}
+						</small>
+
+					</li>
+				</ol>
+
+				<!-- Aviso de filas sin ningún identificador utilizable -->
+				<b-alert
+				v-if="filas_sin_identificador > 0"
+				show
+				variant="warning"
+				class="m-t-10 m-b-0">
+					{{ filas_sin_identificador }} filas no tienen ningún código utilizable y se van a crear
+					como artículos nuevos sin posibilidad de actualizarse en futuras importaciones.
+				</b-alert>
+
+			</div>
+
 			<!-- Chips de resumen del archivo -->
 			<div v-if="duplicate_stats" class="ai-import-summary-chips m-b-15">
 
@@ -433,6 +487,41 @@
 
 			</div>
 
+			<!-- Tabla de códigos inválidos (placeholders) detectados: prompt 06, grupo 229 -->
+			<div v-if="placeholders.length > 0" class="m-b-15">
+
+				<p class="font-weight-bold m-b-8 small">Codigos invalidos detectados</p>
+
+				<b-alert show variant="info" class="m-b-10">
+					<p class="small m-b-0 m-t-0">
+						Estos valores no son codigos reales, son marcadores que usan algunos
+						proveedores para indicar que el producto no tiene codigo. Se van a ignorar:
+						las filas que los tengan van a pasar al siguiente criterio de identificacion.
+						Antes se tomaban como codigos validos y hacian que muchas filas distintas
+						se fusionaran en un mismo articulo.
+					</p>
+				</b-alert>
+
+				<div class="ai-import-duplicates-table">
+					<div class="ai-import-duplicates-table__header">
+						<span>Código</span>
+						<span class="text-center">Repeticiones</span>
+						<span>Filas en el Excel</span>
+					</div>
+					<div
+					v-for="(item, idx) in placeholders"
+					:key="'ph-' + idx"
+					class="ai-import-duplicates-table__row">
+						<span>{{ item.valor }}</span>
+						<span class="text-center">
+							<span class="ai-import-duplicates-badge">{{ item.repeticiones }}</span>
+						</span>
+						<span class="text-muted">{{ item.filas.join(', ') }}</span>
+					</div>
+				</div>
+
+			</div>
+
 			<!-- Explicación del comportamiento con bar_codes repetidos -->
 			<b-alert
 			v-if="bar_codes_detail.length > 0 || (duplicate_stats && duplicate_stats.bar_codes_duplicados_intra_archivo > 0)"
@@ -444,12 +533,14 @@
 					¿Qué va a pasar con los códigos de barras repetidos?
 				</p>
 				<p class="small m-b-0 m-t-0">
-					No se crearán artículos con código de barras duplicado.
-					Cuando el mismo código aparece varias veces en el Excel,
-					se procesará <strong>un único artículo</strong> y la información
-					de la <strong>última aparición</strong> en el archivo sobreescribirá a las anteriores.
-					Revisá el Excel antes de continuar, o tené en cuenta que solo quedará
-					la información de la última fila con ese código.
+					Cuando el mismo código de barras aparece en más de una fila, o coincide con
+					más de un artículo ya cargado, esas filas no se van a procesar: se van a
+					reportar como problema al terminar la importación, con el número de fila,
+					para que puedas corregir el Excel.
+				</p>
+				<p class="small m-b-0 m-t-5 text-muted">
+					Antes se procesaba un único artículo y la última aparición sobreescribía a
+					las anteriores, lo que podía mezclar datos de productos distintos.
 				</p>
 			</b-alert>
 
@@ -783,6 +874,25 @@ export default {
 
 			/* Notas globales de asistencia generadas por Claude durante el análisis. */
 			assistant_notes: [],
+
+			/*
+			 * Prompt 06 (grupo 229 - matching-importacion-excel): valores placeholder
+			 * detectados por columna identificadora (ej. "-", "S/N"), devueltos por el
+			 * análisis del backend. Cada ítem: { campo, valor, repeticiones, filas }.
+			 */
+			placeholders: [],
+
+			/*
+			 * Cadena de identificación efectiva calculada por el backend con el mismo
+			 * criterio que usa el importador real: { columnas_mapeadas: [...], escalones: [...] }.
+			 */
+			cadena_identificacion: null,
+
+			/*
+			 * Nombres repetidos detectados en el Excel: { cantidad_distintos, filas_afectadas }.
+			 * Se usa para advertir sobre filas que podrían no procesarse en el escalón "name".
+			 */
+			nombres_duplicados: null,
 		}
 	},
 
@@ -1040,6 +1150,131 @@ export default {
 			}
 
 			return this.duplicate_stats.detalle_bar_codes_duplicados
+		},
+
+		/*
+		 * Prompt 06 (grupo 229 - matching-importacion-excel): pasos de la cadena de
+		 * identificación efectiva, listos para renderizar en el paso 3.
+		 * Solo incluye los escalones cuya columna está mapeada en este Excel
+		 * (columnas_mapeadas), en el mismo orden de prioridad que usa el matching real:
+		 * id -> bar_code -> sku -> provider_code -> name. Nunca incluye "sin_identificador",
+		 * que se muestra aparte como advertencia (ver filas_sin_identificador).
+		 */
+		pasos_cadena_identificacion() {
+			if (!this.cadena_identificacion) {
+				return []
+			}
+
+			/* Etiqueta legible por campo de la cadena. */
+			let etiquetas = {
+				id:            'Número de artículo',
+				bar_code:      'Código de barras',
+				sku:           'SKU',
+				provider_code: 'Código de proveedor',
+				name:          'Nombre exacto',
+			}
+
+			/* Descripción fija de cada escalón (no depende de los datos del archivo). */
+			let descripciones = {
+				id:            'El artículo ya existe en el sistema con este número. Es la clave más confiable.',
+				bar_code:      'Es la columna más confiable. Se usa primero siempre que la fila la tenga.',
+				sku:           'Se usa cuando la fila no tiene código de barras.',
+				provider_code: 'Se usa cuando la fila no tiene código de barras ni SKU.',
+				name:          'Último recurso, cuando la fila no tiene ningún código. Si el nombre coincide con más de un artículo, la fila no se procesa.',
+			}
+
+			let columnas_mapeadas = this.cadena_identificacion.columnas_mapeadas || []
+			let escalones         = this.cadena_identificacion.escalones || []
+
+			let pasos = []
+
+			escalones.forEach(function(escalon) {
+				/* "sin_identificador" no es un paso de la cadena: se muestra aparte como advertencia. */
+				if (escalon.campo === 'sin_identificador') {
+					return
+				}
+
+				/* Solo mostramos escalones cuya columna está efectivamente mapeada en el Excel. */
+				if (columnas_mapeadas.indexOf(escalon.campo) === -1) {
+					return
+				}
+
+				pasos.push({
+					campo:       escalon.campo,
+					label:       etiquetas[escalon.campo] || escalon.campo,
+					filas:       escalon.filas,
+					descripcion: descripciones[escalon.campo] || '',
+				})
+			})
+
+			return pasos
+		},
+
+		/*
+		 * Cantidad de filas del Excel que no tienen ningún identificador utilizable
+		 * (ni número, ni código de barras, ni SKU, ni código de proveedor, ni nombre).
+		 * Esas filas se crean siempre como artículos nuevos, sin posibilidad de
+		 * actualizarse en futuras importaciones.
+		 */
+		filas_sin_identificador() {
+			if (!this.cadena_identificacion || !Array.isArray(this.cadena_identificacion.escalones)) {
+				return 0
+			}
+
+			let encontrado = 0
+			this.cadena_identificacion.escalones.forEach(function(escalon) {
+				if (escalon.campo === 'sin_identificador') {
+					encontrado = escalon.filas
+				}
+			})
+
+			return encontrado
+		},
+
+		/*
+		 * Texto legible de la configuración vigente para el escalón de código de proveedor,
+		 * derivado de las mismas decisiones (clave_identidad / políticas) que
+		 * derive_flags_from_choice() traduce a los flags reales que recibe el backend.
+		 * Se recalcula reactivamente: si el usuario cambia su elección en el paso 3,
+		 * este texto cambia con ella (a diferencia de un valor fijo calculado en el análisis inicial).
+		 */
+		texto_configuracion_provider_code() {
+			let flags = this.derive_flags_from_choice()
+
+			if (!flags.actualizar_por_provider_code) {
+				return 'No se va a identificar por código de proveedor. Estas filas se van a crear como artículos nuevos.'
+			}
+
+			let texto = ''
+
+			if (!flags.permitir_provider_code_repetido) {
+				texto = 'Si un código de proveedor coincide con más de un artículo, la fila se va a saltear y quedar reportada como problema.'
+			} else {
+				texto = 'Se van a actualizar todos los artículos que compartan el código de proveedor.'
+				if (flags.permitir_provider_code_repetido_en_multi_providers) {
+					texto += ' Incluyendo artículos de otros proveedores.'
+				}
+			}
+
+			if (flags.actualizar_articulos_de_otro_proveedor) {
+				texto += ' Se pueden actualizar artículos asignados a otro proveedor.'
+			}
+
+			return texto
+		},
+
+		/*
+		 * Aviso de nombres repetidos en el Excel, para mostrar junto al escalón "name".
+		 * Vacío si no hay nombres repetidos (o si no se calculó aún).
+		 */
+		aviso_nombres_duplicados() {
+			if (!this.nombres_duplicados || !this.nombres_duplicados.cantidad_distintos) {
+				return ''
+			}
+
+			return 'El archivo tiene ' + this.nombres_duplicados.cantidad_distintos + ' nombres repetidos en '
+				+ this.nombres_duplicados.filas_afectadas + ' filas. Si alguna de esas filas llega al escalón '
+				+ 'de nombre, no se va a procesar y se va a reportar como problema.'
 		},
 
 		/*
@@ -1600,6 +1835,11 @@ export default {
 
 				/* Notas globales de asistencia que Claude generó sobre el archivo completo. */
 				self.assistant_notes = res.data.assistant_notes || []
+
+				/* Prompt 06 (grupo 229): placeholders, cadena de identificación y nombres repetidos. */
+				self.placeholders           = res.data.placeholders || []
+				self.cadena_identificacion  = res.data.cadena_identificacion || null
+				self.nombres_duplicados     = res.data.nombres_duplicados || null
 
 				self.step = 2
 			})
@@ -2243,6 +2483,9 @@ export default {
 			this.politica_otro_proveedor     = null
 			this.preview_rows                = []
 			this.assistant_notes             = []
+			this.placeholders                = []
+			this.cadena_identificacion       = null
+			this.nombres_duplicados          = null
 		},
 
 	},
@@ -2425,6 +2668,28 @@ export default {
 .ai-import-header-auto-label
 	font-size: 11px
 	font-style: italic
+
+/* Bloque explicativo de la cadena de identificación efectiva (paso 3, prompt 06 grupo 229) */
+.ai-import-identification-chain
+	background: rgba(0, 123, 255, 0.04)
+	border: 1px solid rgba(0, 123, 255, 0.15)
+	border-radius: 6px
+	padding: 14px 16px
+
+.ai-import-identification-chain-list
+	margin: 0
+	padding-left: 20px
+
+.ai-import-identification-chain-item
+	margin-bottom: 12px
+
+	&:last-child
+		margin-bottom: 0
+
+.ai-import-identification-chain-title
+	font-weight: 600
+	font-size: 13px
+	color: #343a40
 
 /* Chips de resumen del archivo en el paso 3 */
 .ai-import-summary-chips
