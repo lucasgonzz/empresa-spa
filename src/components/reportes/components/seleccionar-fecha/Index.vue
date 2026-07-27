@@ -77,7 +77,10 @@ import horizontal_nav_scroll from '@/common-vue/mixins/horizontal_nav_scroll'
 export default {
 	mixins: [horizontal_nav_scroll],
 	components: {
-		InfoTime: () => import('@/components/reportes/components/general/select-date/InfoTime'),
+		/* Antes apuntaba a components/general/select-date/InfoTime (duplicado identico, resto de una
+		   migracion anterior). Se corrige para usar el propio sibling de esta carpeta, ya que
+		   components/general/ se elimina por completo en este prompt (grupo 227). */
+		InfoTime: () => import('@/components/reportes/components/seleccionar-fecha/InfoTime'),
 	},
 	computed: {
 		/* El botón Buscar se deshabilita si faltan fechas o el rango es inválido */
@@ -136,9 +139,15 @@ export default {
 
 		/**
 		 * Dispara la búsqueda de reportes con el rango de fechas seleccionado.
+		 * Se piden tanto el reporte legacy (Articulos/Graficos) como los 3 reportes contables
+		 * nuevos del grupo 227 (Estado de Resultados, Flujo de Caja, Posicion Fiscal), ya que las
+		 * 3 secciones nuevas tambien dependen de este mismo selector de rango.
 		 */
 		buscar() {
 			this.$store.dispatch('reportes/getReportes')
+			this.$store.dispatch('reportes/getEstadoResultados')
+			this.$store.dispatch('reportes/getPosicionFiscal')
+			this.$store.dispatch('reportes/getFlujoCaja')
 		},
 	},
 }
