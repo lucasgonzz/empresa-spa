@@ -15,7 +15,8 @@
 		@hidden="onModalClosed"
 		:size="size"
 		scrollable
-		:id="model_name">
+		:id="model_name"
+		:data-tour="model_name === 'article' ? 'listado.modal_articulo' : null">
 
 			<template #modal-title>
 				<slot name="model_modal_title">
@@ -154,6 +155,7 @@
 						v-if="!papelera && can_save"
 						@clicked="save"
 						:dusk="'btn_guardar_'+model_name"
+						:data-tour="model_name === 'article' ? 'listado.boton_guardar_articulo' : null"
 						:prop_to_send_on_emit="{close: true}"
 						:loader="loading"
 						text="Guardar y cerrar"></btn-loader>

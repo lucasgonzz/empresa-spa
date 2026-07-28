@@ -92,6 +92,7 @@
 				<excel-dropdown-option-item
 				v-if="can_import"
 				icon="icon-list"
+				:data_tour="model_name === 'article' ? 'listado.boton_importar_excel' : null"
 				@click="open_import_history">
 					Historial de importaciones
 				</excel-dropdown-option-item>

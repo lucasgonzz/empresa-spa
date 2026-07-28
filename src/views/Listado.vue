@@ -1,5 +1,5 @@
 <template>
-<div id="listado">	
+<div id="listado" data-tour="listado.contenedor">	
 	<!-- <article-charts></article-charts>
 
 	<stock-min></stock-min>

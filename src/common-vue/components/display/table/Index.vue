@@ -24,7 +24,8 @@
 			:class="{ 'cont-table--loading': loading }">
 				<table
 				:id="'table-'+model_name"
-				class="common-table">
+				class="common-table"
+				:data-tour="model_name === 'article' ? 'listado.tabla' : null">
 					<thead>
 						<tr>
 							<th

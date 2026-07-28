@@ -90,6 +90,7 @@ export default {
 			filter_modal_position: 4,
 			keep_after_create: true,
 			can: 'article.provider',
+			data_tour: 'listado.campo_proveedor',
 			description: 'Proveedor al que pertenece ahora este articulo. Ultimo proveedor del cual adquiriste este articulo',
 			// table_position: 6,
 		},
@@ -525,6 +526,7 @@ export default {
 			not_show: true,
 			filter_modal_position: 5,
 			keep_after_create: true,
+			data_tour: 'listado.campo_categoria',
 		},
 		{
 			text: 'sub categoria',

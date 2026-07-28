@@ -2,6 +2,7 @@
 	<b-dropdown-item
 	:link-class="link_classes"
 	:id="id"
+	:data-tour="data_tour"
 	@click="on_click"
 	@mousedown.native.stop>
 		<span class="excel-dropdown-option__inner">
@@ -40,6 +41,10 @@ export default {
 		variant: {
 			type: String,
 			default: '',
+		},
+		data_tour: {
+			type: String,
+			default: null,
 		},
 	},
 	computed: {
