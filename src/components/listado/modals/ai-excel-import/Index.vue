@@ -583,6 +583,88 @@
 
 				</div>
 
+				<!-- ====================================================================== -->
+				<!-- Selector de interpretacion_punto (prompt 05, grupo 239)                 -->
+				<!-- Solo se ofrece si hay alguna columna de riesgo "alto" o "medio": si todo -->
+				<!-- el archivo es riesgo "bajo" la heuristica automatica ya acierta.         -->
+				<!-- ====================================================================== -->
+				<div
+				v-if="mostrar_selector_interpretacion_punto"
+				class="ai-import-numeric-interpretacion m-t-15">
+
+					<p class="font-weight-bold m-b-8 small">
+						Como interpretar el punto en los numeros
+					</p>
+
+					<b-form-group>
+						<b-form-radio
+						v-model="interpretacion_punto"
+						value="auto"
+						class="m-b-5">
+							Automatico (recomendado)
+							<small class="d-block text-muted m-t-3">
+								Si el punto separa grupos de exactamente 3 digitos es separador de miles; si no, es decimal.
+							</small>
+						</b-form-radio>
+						<b-form-radio
+						v-model="interpretacion_punto"
+						value="siempre_miles"
+						class="m-b-5">
+							El punto siempre separa miles
+							<small class="d-block text-muted m-t-3">
+								Elegilo si tu proveedor escribe 2.500 para dos mil quinientos y nunca usa el punto como decimal.
+							</small>
+						</b-form-radio>
+						<b-form-radio
+						v-model="interpretacion_punto"
+						value="siempre_decimal">
+							El punto siempre es decimal
+							<small class="d-block text-muted m-t-3">
+								Elegilo si tu proveedor escribe 2.500 para dos con medio.
+							</small>
+						</b-form-radio>
+					</b-form-group>
+
+					<!-- Vista previa reactiva: recalcula los mismos ejemplos de arriba segun la opcion elegida, sin pedir nada al backend -->
+					<div
+					v-for="columna_preview in preview_interpretacion_punto"
+					:key="'numfmt-preview-' + columna_preview.campo"
+					class="ai-import-numeric-interpretacion__preview m-t-10">
+
+						<p class="text-muted small m-b-5">
+							Vista previa — {{ columna_preview.nombre_columna_excel }}
+						</p>
+
+						<div class="ai-import-preview-table-wrapper">
+							<table class="ai-import-preview-table">
+								<thead>
+									<tr>
+										<th>Fila</th>
+										<th>En el Excel</th>
+										<th>Queda como</th>
+									</tr>
+								</thead>
+								<tbody>
+									<tr
+									v-for="(ejemplo, idx) in columna_preview.ejemplos"
+									:key="'numfmt-preview-ej-' + columna_preview.campo + '-' + idx">
+										<td>{{ ejemplo.fila }}</td>
+										<td>{{ ejemplo.original }}</td>
+										<td>
+											{{ ejemplo.resultado }}
+											<small v-if="ejemplo.sin_cambios" class="text-muted d-block">
+												(no se ve afectado por esta opción)
+											</small>
+										</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+
+					</div>
+
+				</div>
+
 			</div>
 
 			<!-- Explicación del comportamiento con bar_codes repetidos -->
@@ -919,6 +1001,14 @@ export default {
 			 */
 			formatos_numericos: null,
 
+			/*
+			 * Prompt 05 (grupo 239 - alerta-formatos-numericos-import): como interpretar el
+			 * punto en los numeros con formato ambiguo, elegido explicitamente por el usuario
+			 * en el paso 3. Viaja en el POST de importacion junto al resto de la configuracion.
+			 * 'auto' (default) preserva el comportamiento heuristico existente del backend.
+			 */
+			interpretacion_punto: 'auto',
+
 			/* Índice 0-based de la columna provider_code, guardado tras el análisis para refresh-provider-stats. */
 			provider_code_column_index: null,
 
@@ -1254,6 +1344,54 @@ export default {
 			})
 
 			return columnas
+		},
+
+		/*
+		 * Prompt 05 (grupo 239 - alerta-formatos-numericos-import): true si el selector de
+		 * interpretacion_punto debe mostrarse en el paso 3. Solo tiene sentido ofrecerlo cuando
+		 * hay alguna columna de riesgo "alto" o "medio": si todo el archivo es riesgo "bajo",
+		 * la heuristica automatica ya acierta y mostrar el selector es invitar a que el usuario
+		 * rompa algo que ya funciona.
+		 */
+		mostrar_selector_interpretacion_punto() {
+			return this.columnas_con_ambiguedad_numerica.some(function(columna) {
+				return columna.nivel_de_riesgo === 'alto' || columna.nivel_de_riesgo === 'medio'
+			})
+		},
+
+		/*
+		 * Prompt 05 (grupo 239 - alerta-formatos-numericos-import): vista previa reactiva de los
+		 * mismos ejemplos que ya muestra la tabla de arriba, recalculados en el cliente segun la
+		 * opcion elegida en interpretacion_punto. No pide nada al backend: el usuario ve el efecto
+		 * de cada opcion al instante. Cada ejemplo con coma y punto juntos (ej. "1.234,56") no se
+		 * ve afectado por ninguna opcion; se marca con `sin_cambios` para aclararlo en el template.
+		 */
+		preview_interpretacion_punto() {
+			let self = this
+
+			/* Array de columnas con sus ejemplos recalculados, en el mismo orden que la tabla de arriba. */
+			let columnas_preview = []
+
+			this.columnas_con_ambiguedad_numerica.forEach(function(columna) {
+				let ejemplos_recalculados = []
+
+				columna.ejemplos.forEach(function(ejemplo) {
+					ejemplos_recalculados.push({
+						fila:        ejemplo.fila,
+						original:    ejemplo.original,
+						resultado:   self.recalcular_resultado_interpretacion_punto(ejemplo.original),
+						sin_cambios: self.valor_tiene_coma_y_punto(ejemplo.original),
+					})
+				})
+
+				columnas_preview.push({
+					campo:                 columna.campo,
+					nombre_columna_excel:  columna.nombre_columna_excel,
+					ejemplos:              ejemplos_recalculados,
+				})
+			})
+
+			return columnas_preview
 		},
 
 		/*
@@ -1596,6 +1734,19 @@ export default {
 					? Number(this.start_row) + 1
 					: Math.max(1, Number(this.start_row) - 1)
 			}
+		},
+
+		/*
+		 * Prompt 05 (grupo 239 - alerta-formatos-numericos-import): si el usuario cambia el
+		 * mapeo de columnas en el paso 2 (o el análisis inicial lo carga), reseteamos
+		 * interpretacion_punto a 'auto'. La elección anterior se hizo mirando otras columnas,
+		 * así que arrastrarla en silencio a un mapeo distinto es peor que perderla.
+		 */
+		column_mapping: {
+			deep: true,
+			handler() {
+				this.interpretacion_punto = 'auto'
+			},
 		},
 	},
 
@@ -2070,6 +2221,70 @@ export default {
 			})
 		},
 
+		/*
+		 * Prompt 05 (grupo 239 - alerta-formatos-numericos-import): true si el valor original
+		 * tiene coma y punto a la vez (ej. "1.234,56"). Esos valores no se ven afectados por
+		 * ninguna de las tres opciones de interpretacion_punto: el formato ya es inequivoco.
+		 *
+		 * @param {String|Number} valor - Valor original tal como vino en el Excel.
+		 * @returns {Boolean}
+		 */
+		valor_tiene_coma_y_punto(valor) {
+			let texto = String(valor)
+			return texto.indexOf(',') !== -1 && texto.indexOf('.') !== -1
+		},
+
+		/*
+		 * Prompt 05 (grupo 239 - alerta-formatos-numericos-import): aplica en JS, sobre el cliente,
+		 * la misma regla que usa el backend (ImportHelper::parseNumericValue) para recalcular como
+		 * queda un valor con punto segun la opcion elegida en interpretacion_punto:
+		 * - siempre_miles: el punto siempre separa miles, se sacan todos los puntos.
+		 * - siempre_decimal: el punto siempre es decimal, se deja el valor tal cual (parseado).
+		 * - auto: separador de miles solo si el punto separa grupos de exactamente 3 digitos;
+		 *   si no, decimal.
+		 *
+		 * @param {String|Number} valor - Valor original tal como vino en el Excel.
+		 * @returns {String} - Valor recalculado, listo para mostrar en la vista previa.
+		 */
+		recalcular_resultado_interpretacion_punto(valor) {
+			let texto = String(valor)
+
+			/* Los valores con coma y punto juntos no se ven afectados por ninguna opcion. */
+			if (this.valor_tiene_coma_y_punto(texto)) {
+				return texto
+			}
+
+			if (this.interpretacion_punto === 'siempre_miles') {
+				return texto.split('.').join('')
+			}
+
+			if (this.interpretacion_punto === 'siempre_decimal') {
+				return this.formatear_como_decimal(texto)
+			}
+
+			/* auto: separador de miles solo si el punto separa grupos de exactamente 3 digitos. */
+			let es_separador_de_miles = /^-?\d{1,3}(\.\d{3})+$/.test(texto)
+			return es_separador_de_miles ? texto.split('.').join('') : this.formatear_como_decimal(texto)
+		},
+
+		/*
+		 * Prompt 05 (grupo 239 - alerta-formatos-numericos-import): interpreta el valor como
+		 * numero decimal (parseFloat, que descarta ceros finales igual que un float real) y lo
+		 * formatea con coma como separador decimal, como el resto del sistema.
+		 *
+		 * @param {String} texto - Valor original con punto.
+		 * @returns {String} - Valor formateado con coma decimal, o el texto original si no es numerico.
+		 */
+		formatear_como_decimal(texto) {
+			let numero = parseFloat(texto)
+
+			if (isNaN(numero)) {
+				return texto
+			}
+
+			return numero.toString().replace('.', ',')
+		},
+
 		/**
 		 * Traduce las decisiones de negocio (clave_identidad, politica_colision y politica_otro_proveedor)
 		 * a los 5 flags que sigue esperando /ai-excel-import/import.
@@ -2150,6 +2365,8 @@ export default {
 				actualizar_articulos_de_otro_proveedor:             derived_flags.actualizar_articulos_de_otro_proveedor,
 				actualizar_por_provider_code:                       derived_flags.actualizar_por_provider_code,
 				actualizar_proveedor:                               derived_flags.actualizar_proveedor,
+				/* Prompt 05 (grupo 239): como interpretar el punto en numeros ambiguos, elegido en el paso 3. */
+				interpretacion_punto:                               this.interpretacion_punto,
 			})
 			.then(() => {
 				this.loading = false
@@ -2599,6 +2816,7 @@ export default {
 			this.placeholders                = []
 			this.cadena_identificacion       = null
 			this.nombres_duplicados          = null
+			this.interpretacion_punto        = 'auto'
 		},
 
 	},
@@ -2963,4 +3181,14 @@ export default {
 /* Aviso de riesgo alto: mismo tono que otras alertas destacadas del paso 3 */
 .ai-import-numeric-formats__risk-alert
 	font-size: 12px
+
+/* Selector de interpretacion_punto y su vista previa (prompt 05, grupo 239) */
+.ai-import-numeric-interpretacion
+	border-top: 1px solid rgba(0, 0, 0, 0.06)
+	padding-top: 10px
+
+/* Separación entre las vistas previas cuando hay más de una columna con selector */
+.ai-import-numeric-interpretacion__preview
+	&:not(:last-child)
+		margin-bottom: 10px
 </style>
