@@ -522,6 +522,69 @@
 
 			</div>
 
+			<!-- ====================================================================== -->
+			<!-- Bloque de alerta de numeros con punto ambiguos (prompt 03, grupo 239)   -->
+			<!-- Muestra, columna por columna, como se van a interpretar los numeros con -->
+			<!-- punto detectados en el archivo (separador de miles vs decimal), con     -->
+			<!-- ejemplos reales tomados del Excel del usuario.                          -->
+			<!-- ====================================================================== -->
+			<div v-if="columnas_con_ambiguedad_numerica.length > 0" class="ai-import-numeric-formats m-b-15">
+
+				<div
+				v-for="columna in columnas_con_ambiguedad_numerica"
+				:key="'numfmt-' + columna.campo"
+				class="ai-import-numeric-formats__column m-b-15">
+
+					<p class="font-weight-bold m-b-5 small">
+						Numeros con punto en la columna {{ columna.nombre_columna_excel }}
+					</p>
+
+					<p class="text-muted small m-b-8">
+						{{ columna.celdas_con_punto }} valores tienen punto. Asi los vamos a interpretar:
+					</p>
+
+					<div class="ai-import-preview-table-wrapper">
+						<table class="ai-import-preview-table">
+							<thead>
+								<tr>
+									<th>Fila</th>
+									<th>En el Excel</th>
+									<th>Se interpreta como</th>
+									<th>Queda como</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr
+								v-for="(ejemplo, idx) in columna.ejemplos"
+								:key="'numfmt-ej-' + columna.campo + '-' + idx">
+									<td>{{ ejemplo.fila }}</td>
+									<td>{{ ejemplo.original }}</td>
+									<td>{{ ejemplo.interpretacion === 'miles' ? 'separador de miles' : 'decimal' }}</td>
+									<td>{{ ejemplo.resultado }}</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+
+					<small class="text-muted d-block m-t-5">
+						Regla: si el punto separa grupos de exactamente 3 digitos, es separador de miles.
+						En cualquier otro caso es decimal.
+					</small>
+
+					<!-- Aviso destacado cuando la columna mezcla ambas interpretaciones -->
+					<b-alert
+					v-if="columna.nivel_de_riesgo === 'alto'"
+					show
+					variant="warning"
+					class="ai-import-numeric-formats__risk-alert m-t-8 m-b-0">
+						<i class="icon-alert-triangle m-r-5"></i>
+						Este archivo mezcla las dos interpretaciones en la misma columna. Revisa los ejemplos antes de continuar.
+					</b-alert>
+
+				</div>
+
+			</div>
+
 			<!-- Explicación del comportamiento con bar_codes repetidos -->
 			<b-alert
 			v-if="bar_codes_detail.length > 0 || (duplicate_stats && duplicate_stats.bar_codes_duplicados_intra_archivo > 0)"
@@ -847,6 +910,15 @@ export default {
 			/* Estadísticas de duplicados devueltas por el análisis IA (preanálisis del Excel). */
 			duplicate_stats: null,
 
+			/*
+			 * Prompt 03 (grupo 239 - alerta-formatos-numericos-import): estadisticas de
+			 * numeros con punto ambiguos por columna, devueltas por /analyze y recalculadas
+			 * por /get-recomendacion tras corregir el mapeo en el paso 2.
+			 * Forma: { columnas: { <campo>: {...} }, hay_ambiguedad }. Null si el analisis
+			 * fallo o no vino del backend.
+			 */
+			formatos_numericos: null,
+
 			/* Índice 0-based de la columna provider_code, guardado tras el análisis para refresh-provider-stats. */
 			provider_code_column_index: null,
 
@@ -1150,6 +1222,38 @@ export default {
 			}
 
 			return this.duplicate_stats.detalle_bar_codes_duplicados
+		},
+
+		/*
+		 * Prompt 03 (grupo 239 - alerta-formatos-numericos-import): columnas con números
+		 * con punto ambiguos, listas para renderizar en el paso 3, ordenadas por nivel de
+		 * riesgo (primero "alto", después "medio", después "bajo"). Es lo que itera el
+		 * template: nunca se recorre el objeto `formatos_numericos.columnas` directo en un
+		 * v-for, porque no tiene un orden garantizado.
+		 * Devuelve [] si no hay análisis de formatos numéricos (null).
+		 */
+		columnas_con_ambiguedad_numerica() {
+			if (!this.formatos_numericos || !this.formatos_numericos.columnas) {
+				return []
+			}
+
+			/* Orden de prioridad visual de los niveles de riesgo. */
+			let orden_riesgo = { alto: 0, medio: 1, bajo: 2 }
+
+			/* Volcamos el objeto de columnas a un array para poder ordenarlo. */
+			let columnas = []
+			let mapa_columnas = this.formatos_numericos.columnas
+			Object.keys(mapa_columnas).forEach(function(campo) {
+				columnas.push(mapa_columnas[campo])
+			})
+
+			columnas.sort(function(a, b) {
+				let orden_a = orden_riesgo[a.nivel_de_riesgo] !== undefined ? orden_riesgo[a.nivel_de_riesgo] : 3
+				let orden_b = orden_riesgo[b.nivel_de_riesgo] !== undefined ? orden_riesgo[b.nivel_de_riesgo] : 3
+				return orden_a - orden_b
+			})
+
+			return columnas
 		},
 
 		/*
@@ -1833,6 +1937,9 @@ export default {
 				self.duplicate_stats = res.data.duplicate_stats || null
 				self.preview_rows    = res.data.preview_rows || []
 
+				/* Prompt 03 (grupo 239): estadísticas de números con punto ambiguos por columna. */
+				self.formatos_numericos = res.data.formatos_numericos || null
+
 				/* Notas globales de asistencia que Claude generó sobre el archivo completo. */
 				self.assistant_notes = res.data.assistant_notes || []
 
@@ -1878,6 +1985,12 @@ export default {
 				self.loading_recomendacion = false
 
 				self.recomendacion_configuracion = res.data.recomendacion_configuracion || null
+
+				/*
+				 * Prompt 03 (grupo 239): refrescar formatos_numericos con el recalculo del
+				 * backend, por si el usuario corrigió el mapeo de columnas en el paso 2.
+				 */
+				self.formatos_numericos = res.data.formatos_numericos || null
 
 				/* Actualizar duplicate_stats con los conteos recalculados para el proveedor confirmado. */
 				if (self.duplicate_stats) {
@@ -2836,4 +2949,18 @@ export default {
 
 	tbody tr:hover
 		background: rgba(0, 123, 255, 0.03)
+
+/* Bloque de números con punto ambiguos del paso 3 (prompt 03, grupo 239) */
+.ai-import-numeric-formats
+	display: block
+
+/* Separación entre columnas cuando hay más de una con ambigüedad numérica */
+.ai-import-numeric-formats__column
+	&:not(:last-child)
+		border-bottom: 1px solid rgba(0, 0, 0, 0.06)
+		padding-bottom: 12px
+
+/* Aviso de riesgo alto: mismo tono que otras alertas destacadas del paso 3 */
+.ai-import-numeric-formats__risk-alert
+	font-size: 12px
 </style>
