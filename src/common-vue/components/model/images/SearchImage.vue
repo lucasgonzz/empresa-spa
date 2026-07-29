@@ -331,6 +331,48 @@ export default {
 			return false
 		},
 		/**
+		* Reintenta la seleccion automatica cuando el servidor no pudo guardar la imagen elegida.
+		*
+		* El navegador si podia mostrarla (por eso paso validate_image_url), pero el servidor no
+		* pudo bajarla. Se marca esa URL como fallida y se sigue con la proxima candidata de la
+		* misma busqueda; si no queda ninguna, se prueba el siguiente criterio de busqueda.
+		*
+		* @param {String} failed_image_url URL que el servidor rechazo.
+		* @return {void}
+		*/
+		retry_after_server_failure(failed_image_url) {
+			if (failed_image_url && this.failed_image_urls.indexOf(failed_image_url) === -1) {
+				this.failed_image_urls.push(failed_image_url)
+			}
+
+			/* setImage() habia dejado el flujo en 'manual'; para el reintento vuelve a automatico. */
+			this.flow_mode = 'auto'
+
+			/* Se arranca en la posicion siguiente a la que fallo, no desde el principio. */
+			let next_index = 0
+			if (this.images_result) {
+				const failed_index = this.images_result.indexOf(failed_image_url)
+				if (failed_index !== -1) {
+					next_index = failed_index + 1
+				}
+			}
+			this.auto_select_target_index = next_index
+
+			this.select_first_available_image()
+			.then(image_selected => {
+				if (image_selected) {
+					return
+				}
+				/* Sin candidatas en esta busqueda: se prueba el siguiente criterio (bar_code -> name). */
+				if (this.try_next_auto_query()) {
+					return
+				}
+				this.flow_mode = 'idle'
+				this.$toast.error('No se pudo guardar ninguna de las imágenes encontradas')
+				this.$emit('no-image-available')
+			})
+		},
+		/**
 		* Valida el dígito verificador GS1 (módulo 10) para códigos de 8, 12, 13 o 14 dígitos.
 		*
 		* @param {String} code Cadena solo numérica incluyendo el dígito de control al final.
