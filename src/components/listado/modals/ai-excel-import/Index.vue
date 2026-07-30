@@ -753,6 +753,34 @@
 			</b-form-radio>
 		</b-form-group>
 
+		<!-- Decisión nueva: politica_intra_archivo — repetidos del código de proveedor DENTRO del propio Excel (prompt 06, grupo 265) -->
+		<b-form-group
+		v-if="clave_identidad === 'provider_code' && duplicate_stats && duplicate_stats.provider_codes_duplicados_intra_archivo > 0"
+		label-class="ai-import-decision-title">
+			<template #label>
+				Este archivo tiene {{ duplicate_stats.provider_codes_duplicados_intra_archivo }}
+				código{{ duplicate_stats.provider_codes_duplicados_intra_archivo > 1 ? 's' : '' }}
+				de proveedor repetido{{ duplicate_stats.provider_codes_duplicados_intra_archivo > 1 ? 's' : '' }}.
+				<small class="d-block text-muted font-weight-normal m-t-3">
+					{{ resumen_intra_archivo_provider_code }}
+				</small>
+				<span class="d-block m-t-5">¿Qué representan esas filas repetidas?</span>
+			</template>
+			<b-form-radio v-model="politica_intra_archivo" value="ultima_gana" class="m-b-5">
+				Es el mismo producto, cargado más de una vez
+				<small class="d-block text-muted m-t-3">
+					Se va a conservar la información de la <strong>última</strong> aparición de cada código. Al terminar te
+					mostramos exactamente qué filas quedaron sobrescritas y por cuál.
+				</small>
+			</b-form-radio>
+			<b-form-radio v-model="politica_intra_archivo" value="productos_distintos" class="m-b-5">
+				Son productos distintos que comparten el código de proveedor
+				<small class="d-block text-muted m-t-3">
+					Se procesa cada fila por separado y se crea un artículo por cada una, aunque compartan el código.
+				</small>
+			</b-form-radio>
+		</b-form-group>
+
 		<!-- Decisión 2: política de colisión — visible siempre que la clave sea provider_code -->
 		<b-form-group
 		v-if="clave_identidad === 'provider_code'"
@@ -1030,6 +1058,14 @@ export default {
 			 * 'actualizar' → pisar los artículos del otro proveedor con los datos del Excel
 			 */
 			politica_otro_proveedor: null,
+
+			/*
+			 * Prompt 06 (grupo 265 - import-excel-jerarquia-ultima-fila-gana-y-reporte-sobrescritura):
+			 * qué representan los códigos de proveedor repetidos DENTRO del propio Excel (no contra
+			 * la base, eso lo cubren politica_colision/politica_otro_proveedor). 'ultima_gana' |
+			 * 'productos_distintos'. Viaja siempre en el payload de importar(), con este mismo default.
+			 */
+			politica_intra_archivo: 'ultima_gana',
 
 			/* Filas de muestra del Excel (máx. 5) para la preview del paso 2. */
 			preview_rows: [],
@@ -1500,6 +1536,33 @@ export default {
 
 			if (flags.actualizar_articulos_de_otro_proveedor) {
 				texto += ' Se pueden actualizar artículos asignados a otro proveedor.'
+			}
+
+			return texto
+		},
+
+		/*
+		 * Prompt 06 (grupo 265): resumen en lenguaje natural, con los códigos y filas REALES
+		 * del archivo, de los códigos de proveedor repetidos dentro del propio Excel. Hasta 3
+		 * ejemplos y, si hay más, "y N más…" — mismo patrón que la tabla de duplicados de más
+		 * arriba en este paso. Vacío si no hay datos.
+		 */
+		resumen_intra_archivo_provider_code() {
+			let detalle = this.provider_codes_detail
+
+			if (detalle.length === 0) {
+				return ''
+			}
+
+			let ejemplos = detalle.slice(0, 3).map(function(item) {
+				let plural = item.filas.length > 1
+				return item.codigo + ' aparece en ' + (plural ? 'las filas ' : 'la fila ') + item.filas.join(', ')
+			})
+
+			let texto = ejemplos.join(' · ')
+
+			if (detalle.length > 3) {
+				texto += ' · y ' + (detalle.length - 3) + ' más…'
 			}
 
 			return texto
@@ -2156,6 +2219,20 @@ export default {
 				if (self.recomendacion_configuracion) {
 					self.clave_identidad   = self.recomendacion_configuracion.clave_identidad
 					self.politica_colision = self.recomendacion_configuracion.politica_colision
+
+					/*
+					 * Prompt 06 (grupo 265): igual patrón defensivo que el resto de la
+					 * recomendación — el backend todavía no manda este campo (queda preparado
+					 * para cuando se le agregue al prompt de la IA), y si mandara un valor no
+					 * reconocido tampoco se acepta. Sin recomendación válida, se deja el
+					 * default ('ultima_gana').
+					 */
+					if (
+						self.recomendacion_configuracion.politica_intra_archivo === 'ultima_gana'
+						|| self.recomendacion_configuracion.politica_intra_archivo === 'productos_distintos'
+					) {
+						self.politica_intra_archivo = self.recomendacion_configuracion.politica_intra_archivo
+					}
 				}
 
 				/*
@@ -2367,6 +2444,12 @@ export default {
 				actualizar_proveedor:                               derived_flags.actualizar_proveedor,
 				/* Prompt 05 (grupo 239): como interpretar el punto en numeros ambiguos, elegido en el paso 3. */
 				interpretacion_punto:                               this.interpretacion_punto,
+				/*
+				 * Prompt 06 (grupo 265): decisión sobre códigos de proveedor repetidos DENTRO del
+				 * propio Excel. Se manda siempre, incluso cuando la pregunta no se mostró: el
+				 * backend tiene el mismo default ('ultima_gana'), así que es inocuo.
+				 */
+				filas_repetidas_del_archivo:                        this.politica_intra_archivo || 'ultima_gana',
 			})
 			.then(() => {
 				this.loading = false
@@ -2811,6 +2894,7 @@ export default {
 			this.clave_identidad             = null
 			this.politica_colision           = null
 			this.politica_otro_proveedor     = null
+			this.politica_intra_archivo      = 'ultima_gana'
 			this.preview_rows                = []
 			this.assistant_notes             = []
 			this.placeholders                = []

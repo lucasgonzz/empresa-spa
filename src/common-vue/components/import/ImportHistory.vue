@@ -214,6 +214,9 @@
 						<span v-if="data.item.tipo === 'ambiguo' && data.item.article_ids">
 							({{ data.item.article_ids.length }} artículos)
 						</span>
+						<span v-if="data.item.tipo === 'fila_sobrescrita' && data.item.fila_ganadora">
+							(sobrescrita por la fila {{ data.item.fila_ganadora }})
+						</span>
 					</template>
 
 					<!-- Traduce el campo tecnico (bar_code, sku, etc.) a su nombre visible -->
@@ -574,6 +577,8 @@ export default {
 				// Nuevos (grupo 229, prompt 07): parseo robusto de columnas numericas.
 				numero_invalido: 'Valor numerico invalido: no se pudo interpretar',
 				numero_fuera_de_rango: 'Valor numerico demasiado grande para la columna',
+				// Nuevo (grupo 265, prompt 03): repetido dentro del propio archivo, resuelto.
+				fila_sobrescrita: 'Fila sobrescrita',
 			}
 			return labels[tipo] || tipo
 		},
