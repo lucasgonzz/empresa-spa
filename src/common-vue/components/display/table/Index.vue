@@ -34,7 +34,6 @@
 								:class="{ 'force-show': filter_is_used(field.key) }">
 									
 									<ordenar
-									class="m-l-10"
 									@filtrar="filtrar"
 									:model_name="model_name"
 									:key="field.key"
@@ -1375,9 +1374,10 @@ export default {
 			.cont-th
 
 				position: relative
-				display: flex  
+				display: flex
 				flex-direction: row
 				justify-content: space-between
+				align-items: center
 				white-space: nowrap
 				padding: 10px 15px
 				font-size: 17px
@@ -1431,13 +1431,20 @@ export default {
 					overflow: hidden
 
 		.cont-filter-buttons
-			display: flex  
-			flex-direction: row 
-			margin: -3px 0
+			display: flex
+			flex-direction: row
+			align-items: center
+			gap: 4px
 			// Colapsamos el ancho por defecto para que el `th` muestre solo el título.
 			// Al hacer hover, expandimos el contenedor para que quepan los botones.
 			max-width: 0
 			opacity: 0
+			// OJO (Prompt 07, Grupo 273): este overflow: hidden es lo que hace posible el colapso
+			// animado (max-width 0 -> 220px en hover) -- no se puede sacar. Por eso Ordenar.vue y
+			// BtnFilter.vue NUNCA pueden pintar nada fuera de su propio border-box (ej. un
+			// box-shadow de foco a lo Bootstrap): cualquier cosa que se pinte afuera cae justo en
+			// este borde de recorte y se ve cortada. Si en el futuro alguien "mejora" el foco de
+			// esos botones, que no sea con box-shadow externo.
 			overflow: hidden
 			pointer-events: none
 			transition: max-width 0.2s ease, opacity 0.2s ease
