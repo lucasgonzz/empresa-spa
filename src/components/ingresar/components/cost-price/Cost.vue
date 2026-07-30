@@ -8,6 +8,7 @@
 			<b-form-input
 			id="article-cost"
 			placeholder="Ingresa el costo del producto"
+			:step="get_number_input_step(cost_prop)"
 			v-model="article.cost"
 			@keydown.enter="changeToPrice"
 			autocomplete="off"></b-form-input>
@@ -42,6 +43,14 @@ export default {
 		},
 		disabled_price() {
 			return this.article.percentage_gain != ''
+		},
+		/**
+		 * Definicion de la prop 'cost' del model article, para leer su variable_decimals
+		 * (grupo 282, prompt 05) sin duplicar la declaracion acá.
+		 * @returns {Object|undefined}
+		 */
+		cost_prop() {
+			return this.modelPropertiesFromName('article').find(prop => prop.key == 'cost')
 		},
 	},
 	methods: {
