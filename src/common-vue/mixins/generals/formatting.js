@@ -132,6 +132,30 @@ export default {
             return formatted
         },
         /**
+         * Igual que price(), pero con cantidad de decimales variable en vez de fija en 2:
+         * conserva el símbolo de moneda y el separador de miles que format_number_variable_decimals()
+         * no pone (grupo 282, prompt 04).
+         *
+         * No reimplementa la decisión de cuántos decimales mostrar: la delega en
+         * format_number_variable_decimals() (misma regla en un solo lugar) y solo toma la
+         * cantidad de decimales del resultado para armar el patrón de numeral.
+         *
+         * @param {*} p valor crudo a formatear.
+         * @param {number} min_decimals decimales mínimos visibles (por defecto 2).
+         * @param {number} max_decimals decimales máximos permitidos (por defecto 6).
+         * @returns {string} precio formateado (ej. '$44,23' o '$1.234,567891'), o '-' si p es falsy (igual que price()).
+         */
+        price_variable_decimals(p, min_decimals = 2, max_decimals = 6) {
+            if (!p) {
+                return '-'
+            }
+            const formatted = this.format_number_variable_decimals(p, min_decimals, max_decimals)
+            const decimal_part = formatted.indexOf('.') >= 0 ? formatted.split('.')[1] : ''
+            const decimals = decimal_part.length
+            const pattern = decimals > 0 ? '$0,0.' + '0'.repeat(decimals) : '$0,0'
+            return numeral(p).format(pattern)
+        },
+        /**
          * Normaliza un valor de pivot para guardarlo/mostrarlo con decimales variables.
          *
          * @param {Object} prop definición de propiedad del model.
