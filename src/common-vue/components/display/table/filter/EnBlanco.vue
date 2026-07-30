@@ -1,27 +1,32 @@
 <template>
-	<div 
+	<div
 	v-if="field.type != 'checkbox'"
-	class="text">
-		<hr>
-		<b-form-group>
-			<b-form-checkbox
-			@change="on_en_blanco_change"
-			:value="1"
-			:unchecked-value="0"
-			v-model="filter.en_blanco">
-				En blanco
-			</b-form-checkbox>
+	class="text filter-toggles">
+		<div class="filter-toggle-row">
+			<span class="filter-toggle-row__label">En blanco</span>
+			<label class="filter-toggle">
+				<input
+				type="checkbox"
+				:checked="Number(filter.en_blanco) === 1"
+				@change="on_en_blanco_toggle">
+				<span class="filter-toggle-track">
+					<span class="filter-toggle-thumb"></span>
+				</span>
+			</label>
+		</div>
 
-			<b-form-checkbox
-			class="m-t-10"
-			@change="on_no_en_blanco_change"
-			:value="1"
-			:unchecked-value="0"
-			v-model="filter.no_en_blanco">
-				Que no esté en blanco
-			</b-form-checkbox>
-			
-		</b-form-group>
+		<div class="filter-toggle-row">
+			<span class="filter-toggle-row__label">Que no esté en blanco</span>
+			<label class="filter-toggle">
+				<input
+				type="checkbox"
+				:checked="Number(filter.no_en_blanco) === 1"
+				@change="on_no_en_blanco_toggle">
+				<span class="filter-toggle-track">
+					<span class="filter-toggle-thumb"></span>
+				</span>
+			</label>
+		</div>
 	</div>
 </template>
 <script>
@@ -39,6 +44,16 @@ export default {
 	},
 	methods: {
 		/**
+		 * Handler del toggle "En blanco": escribe el valor tocado (el input nativo ya reemplaza al
+		 * v-model de b-form-checkbox) y delega en la MISMA lógica de siempre.
+		 *
+		 * @param {Event} event
+		 */
+		on_en_blanco_toggle(event) {
+			this.$set(this.filter, 'en_blanco', event.target.checked ? 1 : 0)
+			this.on_en_blanco_change()
+		},
+		/**
 		 * Activa "En blanco" y desactiva el filtro inverso.
 		 */
 		on_en_blanco_change() {
@@ -46,6 +61,15 @@ export default {
 				this.filter.no_en_blanco = 0
 			}
 			this.setFilters()
+		},
+		/**
+		 * Handler del toggle "Que no esté en blanco", mismo criterio que on_en_blanco_toggle.
+		 *
+		 * @param {Event} event
+		 */
+		on_no_en_blanco_toggle(event) {
+			this.$set(this.filter, 'no_en_blanco', event.target.checked ? 1 : 0)
+			this.on_no_en_blanco_change()
 		},
 		/**
 		 * Activa "Que no esté en blanco" y desactiva "En blanco".
