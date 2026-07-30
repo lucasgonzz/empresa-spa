@@ -18,7 +18,16 @@
 	toggle-class="buscador-general-dropdown__toggle"
 	menu-class="buscador-general-dropdown__menu">
 		<template #button-content>
-			<i class="icon-filter"></i>
+			<i class="icon-filter" :title="dropdown_title"></i>
+			<!--
+				Cantidad de propiedades en las que se va a buscar. Solo aparece si hay al menos una:
+				con el contador siempre visible, un "0" quedaria como el estado normal y el boton
+				perderia la lectura de un vistazo que es todo el punto de esto.
+			-->
+			<span
+			v-if="selected_count > 0"
+			class="buscador-general-dropdown__count"
+			:title="dropdown_title">{{ selected_count }}</span>
 		</template>
 
 		<!-- ─── Seccion 1: "Donde buscar" (sin cambios de comportamiento) ─── -->
@@ -302,6 +311,22 @@ export default {
 		},
 
 		/**
+		 * Texto en criollo de cuantas propiedades estan tildadas, para el title del boton (unica
+		 * forma de que el numero sea autoexplicativo la primera vez, antes de abrir el desplegable).
+		 *
+		 * @returns {String}
+		 */
+		dropdown_title() {
+			if (this.selected_count === 0) {
+				return 'Elegi en que propiedades buscar'
+			}
+			if (this.selected_count === 1) {
+				return 'Buscando en 1 propiedad'
+			}
+			return 'Buscando en ' + this.selected_count + ' propiedades'
+		},
+
+		/**
 		 * True si TODAS las props de la lista estan tildadas (resalta el boton "Seleccionar todas").
 		 *
 		 * @returns {Boolean}
@@ -458,12 +483,17 @@ export default {
 		display: flex
 		align-items: center
 		justify-content: center
-		width: 30px
+		gap: 4px
+		// Deja de ser un circulo fijo: con el contador al lado crece a lo ancho y pasa a
+		// pastilla. Sin contador, min-width + border-radius alto lo dejan identico al circulo
+		// de 30px de antes.
+		min-width: 30px
+		width: auto
 		height: 30px
-		padding: 0
+		padding: 0 4px
 		border: none
 		background: transparent
-		border-radius: 50%
+		border-radius: 15px
 		color: #86868b
 		box-shadow: none
 		text-decoration: none
@@ -474,8 +504,30 @@ export default {
 			box-shadow: none
 			text-decoration: none
 
+			.buscador-general-dropdown__count
+				background: #e4e6e8
+				color: #1d1d1f
+
 		i
 			font-size: 0.95rem
+
+	// Contador de propiedades activas. Pastilla gris clara, tipografia chica y tabular para que
+	// no baile el ancho entre un 1 y un 8. Sin color de acento: es un dato de estado, no una
+	// alerta -- el azul lo tiene reservado el foco del input, a tres centimetros de aca.
+	.buscador-general-dropdown__count
+		display: inline-flex
+		align-items: center
+		justify-content: center
+		min-width: 18px
+		height: 18px
+		padding: 0 5px
+		border-radius: 9px
+		background: #f2f3f4
+		color: #6e6e73
+		font-size: 0.7rem
+		font-weight: 600
+		line-height: 1
+		font-variant-numeric: tabular-nums
 
 	// Flecha que apunta al icono desde el que se despliega el panel (referencia: el menu de
 	// categorias de Mercado Libre). Va sobre la RAIZ del dropdown y no sobre el menu, porque
