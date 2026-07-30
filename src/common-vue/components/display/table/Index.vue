@@ -774,14 +774,13 @@ export default {
 				return this.$store.dispatch('papelera/' + this.model_name + '/run_papelera_search_from_store')
 			}
 
-			// Si hay una búsqueda del buscador general activa (payload persistido), la paginación
-			// debe repetir esa búsqueda (no volver al listado completo vía runFilter).
-			if (this.$store.state[this.model_name].global_search_payload) {
-				return this.$store.dispatch(this.model_name + '/runGlobalSearch')
-			}
-
-			// En listado normal, delegamos en el store base del módulo.
-			return this.$store.dispatch(this.model_name + '/runFilter')
+			// Un solo camino para todos los filtrados del listado: global-search compone el criterio de
+			// texto del buscador general (payload persistido en el store) con los filtros de columna
+			// (state.filters, que runGlobalSearch adjunta en cada request). Antes había una bifurcación
+			// según si existía global_search_payload, y como el listado por defecto lo deja seteado
+			// siempre, la rama de runFilter quedaba inalcanzable y los filtros de columna no se
+			// aplicaban nunca (bug del 30/7/2026).
+			return this.$store.dispatch(this.model_name + '/runGlobalSearch', { page: 1 })
 		},
 		/**
 		 * Abre el modal de filtro para la columna indicada por la lupa.

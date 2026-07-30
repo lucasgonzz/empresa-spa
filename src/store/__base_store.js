@@ -4,6 +4,7 @@ axios.defaults.baseURL = process.env.VUE_APP_API_URL
 
 import moment from 'moment'
 import generals from '@/common-vue/mixins/generals'
+import filters_mixin from '@/common-vue/mixins/filters'
 
 /**
  * Factory de módulo base Vuex para stores de modelos.
@@ -640,9 +641,21 @@ export default function __base_store(options = {}) {
 				commit('auth/setLoading', true, {root: true})
 			}
 
+			// Filtros de columna vigentes (los de la lupa de cada header). Se leen del store EN CADA
+			// request y NUNCA se guardan dentro de global_search_payload: ese payload se persiste para
+			// que la paginacion repita la misma busqueda, y si los filtros viajaran adentro, un filtro
+			// que el usuario borro seguiria aplicandose al cambiar de pagina. state.filters es la unica
+			// fuente de verdad de los filtros; el payload persistido solo describe la busqueda de texto.
+			let column_filters = []
+			state.filters.forEach(filter => {
+				if (filters_mixin.methods.filter_has_active_values(filter)) {
+					column_filters.push(filter)
+				}
+			})
+
 			return axios.post(
 				'/api/global-search/' + generals.methods.routeString(state.model_name) + '?page=' + page,
-				Object.assign({}, search_payload, {per_page: per_page})
+				Object.assign({}, search_payload, {per_page: per_page, filters: column_filters})
 			)
 				.then(res => {
 					if (!silencioso) {
