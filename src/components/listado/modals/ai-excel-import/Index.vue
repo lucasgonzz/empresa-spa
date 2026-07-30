@@ -336,52 +336,75 @@
 			<!-- Muestra con qué columna se va a identificar cada fila, en el mismo orden -->
 			<!-- de prioridad que usa el matching real del importador.                    -->
 			<!-- ====================================================================== -->
-			<div v-if="pasos_cadena_identificacion.length > 0" class="ai-import-identification-chain m-b-20">
+			<div v-if="cadena_identificacion" class="ai-import-identification-chain m-b-20">
 
-				<p class="font-weight-bold m-b-8">
-					Como se van a identificar los articulos
-				</p>
-
-				<ol class="ai-import-identification-chain-list">
-					<li
-					v-for="paso in pasos_cadena_identificacion"
-					:key="'chain-' + paso.campo"
-					class="ai-import-identification-chain-item">
-
-						<span class="ai-import-identification-chain-title">
-							{{ paso.label }} — {{ paso.filas }} filas
-						</span>
-
-						<small class="d-block text-muted m-t-3">
-							{{ paso.descripcion }}
-						</small>
-
-						<!-- Configuración vigente, solo junto al escalón de código de proveedor -->
-						<small
-						v-if="paso.campo === 'provider_code'"
-						class="d-block text-muted m-t-3">
-							Configuración actual: {{ texto_configuracion_provider_code }}
-						</small>
-
-						<!-- Aviso de nombres repetidos, solo junto al escalón de nombre -->
-						<small
-						v-if="paso.campo === 'name' && aviso_nombres_duplicados"
-						class="d-block text-warning m-t-3">
-							{{ aviso_nombres_duplicados }}
-						</small>
-
-					</li>
-				</ol>
-
-				<!-- Aviso de filas sin ningún identificador utilizable -->
+				<!-- Grupo 284, prompt 04: no se pudo calcular la cadena (sin columnas identificadoras
+				mapeadas, o error de lectura del archivo). Antes esto simplemente no dibujaba nada y
+				el bloque desaparecía sin ningún aviso. -->
 				<b-alert
-				v-if="filas_sin_identificador > 0"
+				v-if="cadena_identificacion.disponible === false"
 				show
 				variant="warning"
-				class="m-t-10 m-b-0">
-					{{ filas_sin_identificador }} filas no tienen ningún código utilizable y se van a crear
-					como artículos nuevos sin posibilidad de actualizarse en futuras importaciones.
+				class="m-b-0">
+					No se pudo determinar cómo se van a identificar los artículos. Revisá el mapeo de
+					columnas del paso anterior.
+					<template v-if="cadena_identificacion.motivo === 'sin_columnas_identificadoras'">
+						Ninguna columna identificadora quedó mapeada.
+					</template>
 				</b-alert>
+
+				<div v-else>
+
+					<p class="font-weight-bold m-b-8">
+						Como se van a identificar los articulos
+					</p>
+
+					<p class="text-muted small m-b-8">
+						De las {{ cadena_identificacion.total_filas }} filas del archivo, se van a identificar así:
+					</p>
+
+					<ol class="ai-import-identification-chain-list">
+						<li
+						v-for="paso in pasos_cadena_identificacion"
+						:key="'chain-' + paso.campo"
+						class="ai-import-identification-chain-item">
+
+							<span class="ai-import-identification-chain-title">
+								{{ paso.label }} — {{ paso.filas }} filas
+							</span>
+
+							<small class="d-block text-muted m-t-3">
+								{{ paso.descripcion }}
+							</small>
+
+							<!-- Configuración vigente, solo junto al escalón de código de proveedor -->
+							<small
+							v-if="paso.campo === 'provider_code'"
+							class="d-block text-muted m-t-3">
+								Configuración actual: {{ texto_configuracion_provider_code }}
+							</small>
+
+							<!-- Aviso de nombres repetidos, solo junto al escalón de nombre -->
+							<small
+							v-if="paso.campo === 'name' && aviso_nombres_duplicados"
+							class="d-block text-warning m-t-3">
+								{{ aviso_nombres_duplicados }}
+							</small>
+
+						</li>
+					</ol>
+
+					<!-- Aviso de filas sin ningún identificador utilizable -->
+					<b-alert
+					v-if="filas_sin_identificador > 0"
+					show
+					variant="warning"
+					class="m-t-10 m-b-0">
+						{{ filas_sin_identificador }} filas no tienen ningún código utilizable y se van a crear
+						como artículos nuevos sin posibilidad de actualizarse en futuras importaciones.
+					</b-alert>
+
+				</div>
 
 			</div>
 
@@ -699,63 +722,11 @@
 				<!-- Texto explicativo de la recomendación -->
 				<p class="text-muted small m-b-10">{{ recomendacion_configuracion.explicacion }}</p>
 
-				<!-- Resumen visual: qué clave recomienda usar -->
-				<div v-if="recomendacion_clave_label" class="ai-import-recomendacion-decision">
-					<i class="icon-check-circle m-r-5"></i>
-					Identificar por: <strong>{{ recomendacion_clave_label }}</strong>
-				</div>
-
 			</div>
-
-		<!-- Decisión 1: clave de identidad del artículo -->
-		<b-form-group
-		label="¿Qué campo identifica un artículo como 'el mismo'?"
-		label-class="ai-import-decision-title">
-			<b-form-radio
-				v-if="has_numero_column"
-				v-model="clave_identidad"
-				value="numero"
-				class="m-b-5">
-				Número del artículo (ID interno del sistema)
-				<small class="d-block text-muted m-t-3">
-					Identificá el artículo por su número único asignado por el sistema.
-					Usá esta opción solo si el Excel fue exportado desde este sistema.
-					Si el Excel también tiene una columna de código de barras, con esta opción también se puede actualizar ese código.
-				</small>
-			</b-form-radio>
-			<b-form-radio
-				v-if="has_bar_code_column"
-				v-model="clave_identidad"
-				value="bar_code"
-				class="m-b-5">
-				Código de barras
-			</b-form-radio>
-			<b-form-radio
-				v-if="has_sku_column"
-				v-model="clave_identidad"
-				value="sku"
-				class="m-b-5">
-				SKU
-			</b-form-radio>
-			<b-form-radio
-				v-if="has_provider_code_column"
-				v-model="clave_identidad"
-				value="provider_code"
-				class="m-b-5">
-				Código de proveedor
-			</b-form-radio>
-			<b-form-radio
-				v-if="has_name_column"
-				v-model="clave_identidad"
-				value="name"
-				class="m-b-5">
-				Nombre del artículo
-			</b-form-radio>
-		</b-form-group>
 
 		<!-- Decisión nueva: politica_intra_archivo — repetidos del código de proveedor DENTRO del propio Excel (prompt 06, grupo 265) -->
 		<b-form-group
-		v-if="clave_identidad === 'provider_code' && duplicate_stats && duplicate_stats.provider_codes_duplicados_intra_archivo > 0"
+		v-if="duplicate_stats && duplicate_stats.provider_codes_duplicados_intra_archivo > 0"
 		label-class="ai-import-decision-title">
 			<template #label>
 				Este archivo tiene {{ duplicate_stats.provider_codes_duplicados_intra_archivo }}
@@ -781,13 +752,16 @@
 			</b-form-radio>
 		</b-form-group>
 
-		<!-- Decisión 2: política de colisión — visible siempre que la clave sea provider_code -->
+		<!-- Decisión 2: política de colisión — visible cuando hay filas que se van a identificar
+		por código de proveedor (grupo 284, prompt 04: antes dependía de "clave_identidad", que ya
+		no existe como pregunta; la jerarquía es fija y este es el único escalón donde la decisión
+		tiene efecto real). -->
 		<b-form-group
-		v-if="clave_identidad === 'provider_code'"
+		v-if="filas_identificadas_por_provider_code > 0"
 		label="Si el código de proveedor coincide con artículos que ya existen en el sistema, ¿qué hacer?"
 		label-class="ai-import-decision-title">
 			<b-form-radio v-model="politica_colision" value="actualizar_todos" class="m-b-5">
-				Actualizar todos los artículos con ese código de proveedor
+				Actualizar todos los artículos que tengan ese código
 				<small class="d-block text-muted m-t-3">
 					<template v-if="duplicate_stats && duplicate_stats.provider_codes_existentes_mismo_proveedor === 0">
 						Como es la primera importación, se creará un artículo por cada fila. En futuras importaciones, si el mismo código ya existe en el sistema, se actualizarán todos los artículos que lo tengan.
@@ -797,23 +771,26 @@
 					</template>
 				</small>
 			</b-form-radio>
-			<b-form-radio v-model="politica_colision" value="actualizar_uno" class="m-b-5">
-				Actualizar solo el primer artículo con ese código de proveedor
+			<b-form-radio v-model="politica_colision" value="saltear_y_reportar" class="m-b-5">
+				Saltear esas filas y avisarme
 				<small class="d-block text-muted m-t-3">
-					Si en el sistema hay varios artículos con el mismo código de proveedor, solo se actualizará el más antiguo. Si no existe ninguno, se creará uno nuevo.
+					Si un código coincide con más de un artículo, esa fila no se crea ni se actualiza: queda
+					reportada al final para que la resuelvas a mano. No se toca nada de lo que el sistema no
+					está seguro.
 				</small>
 			</b-form-radio>
 			<b-form-radio v-model="politica_colision" value="crear_nuevo" class="m-b-5">
-				Ignorar coincidencias y crear un artículo nuevo
+				No identificar por código de proveedor
 				<small class="d-block text-muted m-t-3">
-					Aunque ya exista un artículo con ese código de proveedor en el sistema, se creará uno nuevo adicional.
+					Las filas que solo tienen código de proveedor van a crear artículos nuevos aunque el código
+					ya exista. Usala solo si el código de proveedor de tu catálogo no es confiable.
 				</small>
 			</b-form-radio>
 		</b-form-group>
 
 		<!-- Decisión 3: política para códigos de proveedor existentes en otros proveedores -->
 		<b-form-group
-		v-if="clave_identidad === 'provider_code' && duplicate_stats && duplicate_stats.provider_codes_existentes_otros_proveedores > 0"
+		v-if="duplicate_stats && duplicate_stats.provider_codes_existentes_otros_proveedores > 0"
 		label="El código de proveedor ya existe en otros proveedores. ¿Qué hacer con esos artículos?"
 		label-class="ai-import-decision-title">
 			<b-form-radio v-model="politica_otro_proveedor" value="ignorar" class="m-b-5">
@@ -839,9 +816,8 @@
 				</b-button>
 				<b-button
 				variant="primary"
-				:disabled="!clave_identidad
-					|| (clave_identidad === 'provider_code' && duplicate_stats && duplicate_stats.provider_codes_duplicados_intra_archivo > 0 && !politica_colision)
-					|| (clave_identidad === 'provider_code' && duplicate_stats && duplicate_stats.provider_codes_existentes_otros_proveedores > 0 && !politica_otro_proveedor)"
+				:disabled="(filas_identificadas_por_provider_code > 0 && !politica_colision)
+					|| (duplicate_stats && duplicate_stats.provider_codes_existentes_otros_proveedores > 0 && !politica_otro_proveedor)"
 				@click="step = 4">
 					Continuar
 				</b-button>
@@ -1040,16 +1016,18 @@ export default {
 			/* Índice 0-based de la columna provider_code, guardado tras el análisis para refresh-provider-stats. */
 			provider_code_column_index: null,
 
-			/* Recomendación de configuración generada por Claude: { clave_identidad, politica_colision, explicacion }. */
+			/* Recomendación de configuración generada por Claude: { politica_colision, politica_intra_archivo, explicacion }. */
 			recomendacion_configuracion: null,
 
 			/* True mientras se espera la recomendación de Claude al confirmar el paso 2. */
 			loading_recomendacion: false,
 
-			/* Clave que identifica un artículo como "el mismo": 'bar_code' | 'provider_code' | 'name'. */
-			clave_identidad: null,
-
-			/* Política a aplicar cuando la clave coincide con varios artículos: 'actualizar_todos' | 'actualizar_uno' | 'crear_nuevo'. */
+			/*
+			 * Política a aplicar cuando un código de proveedor coincide con varios artículos ya
+			 * existentes en el sistema: 'actualizar_todos' | 'saltear_y_reportar' | 'crear_nuevo'
+			 * (grupo 284, prompt 04: reemplaza a 'actualizar_uno', que hacía exactamente lo mismo
+			 * que 'crear_nuevo' y nunca eligió "el más antiguo" pese a su nombre).
+			 */
 			politica_colision: null,
 
 			/*
@@ -1208,49 +1186,6 @@ export default {
 		 */
 		has_provider_column() {
 			return this.column_mapping.some(item => item.system_property === 'proveedor')
-		},
-
-		/*
-		 * Verdadero si el mapeo actual tiene al menos una columna asignada a 'numero' (ID interno).
-		 * Controla si se muestra la opción de clave de identidad por número en el paso 3.
-		 */
-		has_numero_column() {
-			return this.column_mapping.some(item => item.system_property === 'numero')
-		},
-
-		/* Verdadero si el mapeo actual tiene una columna asignada a código de barras. */
-		has_bar_code_column() {
-			return this.column_mapping.some(item => item.system_property === 'codigo_de_barras')
-		},
-
-		/* Verdadero si el mapeo actual tiene una columna asignada a SKU. */
-		has_sku_column() {
-			return this.column_mapping.some(item => item.system_property === 'sku')
-		},
-
-		/* Verdadero si el mapeo actual tiene una columna asignada a código de proveedor. */
-		has_provider_code_column() {
-			return this.column_mapping.some(item => item.system_property === 'codigo_de_proveedor')
-		},
-
-		/* Verdadero si el mapeo actual tiene una columna asignada a nombre. */
-		has_name_column() {
-			return this.column_mapping.some(item => item.system_property === 'nombre')
-		},
-
-		/*
-		 * Clave de identidad por defecto: la de mayor prioridad cuya columna esté
-		 * presente en el Excel. Prioridad: numero -> bar_code -> sku -> provider_code -> name.
-		 * Se usa como red de seguridad del auto-select cuando la recomendación no
-		 * corresponde a una columna presente o no vino recomendación.
-		 */
-		default_clave_identidad() {
-			if (this.has_numero_column)        return 'numero'
-			if (this.has_bar_code_column)      return 'bar_code'
-			if (this.has_sku_column)           return 'sku'
-			if (this.has_provider_code_column) return 'provider_code'
-			if (this.has_name_column)          return 'name'
-			return null
 		},
 
 		/*
@@ -1510,8 +1445,30 @@ export default {
 		},
 
 		/*
+		 * Grupo 284, prompt 04: cantidad de filas del Excel que se van a identificar por
+		 * código de proveedor (escalón 'provider_code' de la cadena de identificación). Es el
+		 * único escalón donde politica_colision tiene efecto real, así que controla si el
+		 * bloque de esa decisión se muestra en el paso 3 — reemplaza al viejo
+		 * "clave_identidad === 'provider_code'", que ya no existe.
+		 */
+		filas_identificadas_por_provider_code() {
+			if (!this.cadena_identificacion || !Array.isArray(this.cadena_identificacion.escalones)) {
+				return 0
+			}
+
+			let encontrado = 0
+			this.cadena_identificacion.escalones.forEach(function(escalon) {
+				if (escalon.campo === 'provider_code') {
+					encontrado = escalon.filas
+				}
+			})
+
+			return encontrado
+		},
+
+		/*
 		 * Texto legible de la configuración vigente para el escalón de código de proveedor,
-		 * derivado de las mismas decisiones (clave_identidad / políticas) que
+		 * derivado de las mismas decisiones (politica_colision / politica_otro_proveedor) que
 		 * derive_flags_from_choice() traduce a los flags reales que recibe el backend.
 		 * Se recalcula reactivamente: si el usuario cambia su elección en el paso 3,
 		 * este texto cambia con ella (a diferencia de un valor fijo calculado en el análisis inicial).
@@ -1580,24 +1537,6 @@ export default {
 			return 'El archivo tiene ' + this.nombres_duplicados.cantidad_distintos + ' nombres repetidos en '
 				+ this.nombres_duplicados.filas_afectadas + ' filas. Si alguna de esas filas llega al escalón '
 				+ 'de nombre, no se va a procesar y se va a reportar como problema.'
-		},
-
-		/*
-		 * Etiqueta legible de la clave de identidad recomendada por Claude.
-		 * Se usa en el resumen visual de la card de recomendación.
-		 */
-		recomendacion_clave_label() {
-			if (!this.recomendacion_configuracion) return ''
-
-			const labels = {
-				numero:        'Número del artículo (ID interno)',
-				bar_code:      'Código de barras',
-				sku:           'SKU',
-				provider_code: 'Código de proveedor',
-				name:          'Nombre del artículo',
-			}
-
-			return labels[this.recomendacion_configuracion.clave_identidad] || ''
 		},
 
 		/*
@@ -2217,15 +2156,29 @@ export default {
 
 				/* Preseleccionar los valores recomendados. */
 				if (self.recomendacion_configuracion) {
-					self.clave_identidad   = self.recomendacion_configuracion.clave_identidad
-					self.politica_colision = self.recomendacion_configuracion.politica_colision
 
 					/*
-					 * Prompt 06 (grupo 265): igual patrón defensivo que el resto de la
-					 * recomendación — el backend todavía no manda este campo (queda preparado
-					 * para cuando se le agregue al prompt de la IA), y si mandara un valor no
-					 * reconocido tampoco se acepta. Sin recomendación válida, se deja el
-					 * default ('ultima_gana').
+					 * Grupo 284, prompt 04: politica_colision valida contra los tres valores
+					 * nuevos. 'actualizar_uno' es el valor legado (backend, prompt 02): se
+					 * traduce a 'saltear_y_reportar', la opción más cercana a su intención
+					 * original. Sin un valor reconocido, no se preselecciona nada (igual que
+					 * antes, cuando la recomendación no traía un valor válido).
+					 */
+					let politica_colision_recomendada = self.recomendacion_configuracion.politica_colision
+					if (politica_colision_recomendada === 'actualizar_uno') {
+						politica_colision_recomendada = 'saltear_y_reportar'
+					}
+					if (
+						politica_colision_recomendada === 'actualizar_todos'
+						|| politica_colision_recomendada === 'saltear_y_reportar'
+						|| politica_colision_recomendada === 'crear_nuevo'
+					) {
+						self.politica_colision = politica_colision_recomendada
+					}
+
+					/*
+					 * Prompt 06 (grupo 265): igual patrón defensivo — si no viene o no es uno
+					 * de los dos valores válidos, se deja el default ('ultima_gana').
 					 */
 					if (
 						self.recomendacion_configuracion.politica_intra_archivo === 'ultima_gana'
@@ -2233,16 +2186,6 @@ export default {
 					) {
 						self.politica_intra_archivo = self.recomendacion_configuracion.politica_intra_archivo
 					}
-				}
-
-				/*
-				 * Red de seguridad del auto-select: si la clave recomendada no tiene columna
-				 * presente en el Excel (radio oculto), o no vino recomendación, caemos a la
-				 * clave de mayor prioridad que sí esté presente. Así el modal siempre arranca
-				 * con una opción visible marcada y "Continuar" queda consistente.
-				 */
-				if (!self.clave_identidad || !self.clave_identidad_column_present(self.clave_identidad)) {
-					self.clave_identidad = self.default_clave_identidad
 				}
 
 				self.step = 3
@@ -2257,21 +2200,6 @@ export default {
 
 				self.$toast.error(message)
 			})
-		},
-
-		/*
-		 * Indica si la columna correspondiente a una clave de identidad está presente
-		 * en el Excel (mapeada en column_mapping).
-		 */
-		clave_identidad_column_present(clave) {
-			let mapa = {
-				numero:        this.has_numero_column,
-				bar_code:      this.has_bar_code_column,
-				sku:           this.has_sku_column,
-				provider_code: this.has_provider_code_column,
-				name:          this.has_name_column,
-			}
-			return !!mapa[clave]
 		},
 
 		/**
@@ -2363,41 +2291,53 @@ export default {
 		},
 
 		/**
-		 * Traduce las decisiones de negocio (clave_identidad, politica_colision y politica_otro_proveedor)
+		 * Traduce las decisiones de negocio (politica_colision y politica_otro_proveedor)
 		 * a los 5 flags que sigue esperando /ai-excel-import/import.
 		 * Permite mantener el contrato del backend sin cambios.
 		 *
 		 * @returns {Object} - Objeto con los 5 flags calculados (0 o 1 cada uno).
 		 */
 		derive_flags_from_choice() {
-			/* Valores por defecto: todos los flags desactivados. */
+			/*
+			 * Grupo 284, prompt 04 (30/7/2026): hasta este cambio, actualizar_por_provider_code
+			 * solo se encendía cuando el usuario elegía explícitamente "código de proveedor"
+			 * como clave de identidad — elegir cualquier otra clave (o no elegir nada) lo
+			 * apagaba en silencio, y esas filas terminaban creando un artículo nuevo en vez de
+			 * actualizar el existente. La clave de identidad ya no existe como pregunta (la
+			 * jerarquía de identificación es fija, ver el prompt 03 de empresa-api): ahora
+			 * identificar por código de proveedor es el comportamiento DEFAULT, salvo que el
+			 * usuario elija explícitamente "No identificar por código de proveedor"
+			 * (politica_colision === 'crear_nuevo'). NO volver a poner este default en 0 "por
+			 * las dudas": eso es exactamente el bug que este prompt vino a arreglar.
+			 */
 			let flags = {
 				permitir_provider_code_repetido: 0,
 				permitir_provider_code_repetido_en_multi_providers: 0,
 				actualizar_articulos_de_otro_proveedor: 0,
-				actualizar_por_provider_code: 0,
+				actualizar_por_provider_code: 1,
 				actualizar_proveedor: 0,
 			}
 
-			/* Solo se activan flags cuando la clave es provider_code. */
-			if (this.clave_identidad === 'provider_code') {
-
-				/* La política politica_otro_proveedor controla si se actualizan artículos de otros proveedores. */
-				if (this.politica_otro_proveedor === 'actualizar') {
-					flags.actualizar_articulos_de_otro_proveedor = 1
-				}
-
-				if (this.politica_colision === 'actualizar_todos') {
-					flags.permitir_provider_code_repetido = 1
-					flags.permitir_provider_code_repetido_en_multi_providers = 1
-					flags.actualizar_por_provider_code = 1
-
-				} else if (this.politica_colision === 'crear_nuevo') {
-					flags.permitir_provider_code_repetido = 1
-					flags.permitir_provider_code_repetido_en_multi_providers = 1
-				}
-				/* 'actualizar_uno' deja todos esos flags en 0. */
+			/* La política politica_otro_proveedor controla si se actualizan artículos de otros proveedores. */
+			if (this.politica_otro_proveedor === 'actualizar') {
+				flags.actualizar_articulos_de_otro_proveedor = 1
 			}
+
+			if (this.politica_colision === 'actualizar_todos') {
+				flags.permitir_provider_code_repetido = 1
+				flags.permitir_provider_code_repetido_en_multi_providers = 1
+
+			} else if (this.politica_colision === 'crear_nuevo') {
+				flags.actualizar_por_provider_code = 0
+			}
+			/*
+			 * 'saltear_y_reportar' y el caso sin valor (la pregunta todavía no se mostró, por
+			 * ejemplo porque no hay filas que se identifiquen por código de proveedor) dejan
+			 * actualizar_por_provider_code=1 con permitir_provider_code_repetido=0: es
+			 * justamente la combinación que produce AmbiguousMatch en
+			 * ArticleIndexCache::find_with_index() cuando el código coincide con más de un
+			 * artículo — la fila se saltea y queda reportada.
+			 */
 
 			return flags
 		},
@@ -2891,7 +2831,6 @@ export default {
 			this.provider_code_column_index  = null
 			this.recomendacion_configuracion = null
 			this.loading_recomendacion       = false
-			this.clave_identidad             = null
 			this.politica_colision           = null
 			this.politica_otro_proveedor     = null
 			this.politica_intra_archivo      = 'ultima_gana'
