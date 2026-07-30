@@ -10,6 +10,7 @@
 			:id="model_name + '-' + prop.key"
 			:disabled="disabled"
 			:type="prop.type"
+			:step="get_number_input_step(prop)"
 			:placeholder="placeholder"
 			@keyup.enter="$emit('enter')"
 			@blur="$emit('blur')"
