@@ -49,42 +49,52 @@
 		class="search-component">
 			<div class="cont-search-input-btn">
 				<div class="cont-search">
-					<div 
-					:class="is_disabled ? 'bg-gray' : 'bg-withe'"
-					class="icon">
-						<i :class="input_icon"></i>
+					<div class="search-pill">
+						<input
+						:disabled="is_disabled"
+						class="input-search search-pill__input"
+						type="text"
+						autocomplete="off"
+						:id="_id"
+						:data-testid="_id"
+						@click="callSearchModal"
+						@keyup="callSearchModal"
+						v-model="query"
+						:placeholder="_placeholder">
+
+						<div
+						:class="is_disabled ? 'bg-gray' : ''"
+						class="search-pill__icon-btn">
+							<i :class="input_icon"></i>
+						</div>
 					</div>
-					<b-form-input
-					:disabled="is_disabled"
-					class="input-search"
-					:id="_id"
-					:data-testid="_id"
-					@click="callSearchModal"
-					@keyup="callSearchModal"
-					v-model="query"
-					:placeholder="_placeholder"></b-form-input>
 				</div>
-				<div 
+				<div
 				v-if="prop && prop.search_on_models_by"
 				class="cont-search-on-models">
-					<div
-					class="m-r-10 icon"
-					v-if="on_models_searched"
-					@click="resetModels">
-						<i class="icon-redo"></i>
+					<div class="search-pill">
+						<input
+						class="input-search search-pill__input"
+						type="text"
+						autocomplete="off"
+						@keyup.enter="searchOnModels"
+						@keyup="limpiar_busqueda_por_borrar"
+						v-model="search_query"
+						:placeholder="_placeholder_search">
+
+						<div
+						v-if="on_models_searched"
+						class="search-pill__icon-btn"
+						@click="resetModels">
+							<i class="icon-redo"></i>
+						</div>
+						<div
+						v-else
+						:class="is_disabled ? 'bg-gray' : ''"
+						class="search-pill__icon-btn">
+							<i class="icon-search"></i>
+						</div>
 					</div>
-					<div 
-					v-else
-					:class="is_disabled ? 'bg-gray' : 'bg-withe'"
-					class="icon">
-						<i class="icon-search"></i>
-					</div>
-					<b-form-input
-					class="input-search"
-					@keyup.enter="searchOnModels"
-					@keyup="limpiar_busqueda_por_borrar"
-					v-model="search_query"
-					:placeholder="_placeholder_search"></b-form-input>
 				</div>
 			</div>
 		</div>
@@ -534,19 +544,26 @@ export default {
 	flex-direction: row
 	box-shadow: 0 2px 4px rgb(0 0 0 / 15%) !important
 	border: 1px solid #ced4da
-	border-radius: 0.25rem 
+	border-radius: 0.25rem
+
+	// El pill nuevo (prompt 05, grupo 273) reemplaza visualmente el borde/sombra cuadrados de
+	// arriba. No se le sacan esas propiedades a .cont-search a secas porque este archivo no usa
+	// `scoped` y BarCodeSearch.vue reusa esta MISMA clase global con su markup viejo (icon +
+	// input-search sueltos, sin pill adentro): sigue necesitando ese borde/sombra. Se neutralizan
+	// con !important solo cuando adentro hay un .search-pill.
+	.search-pill
+		box-shadow: none !important
+		border: none !important
+		border-radius: 0 !important
 
 .cont-search-on-models
 	width: 40%
 	position: relative
 	display: flex
 	flex-direction: row
-	box-shadow: 0 2px 4px rgb(0 0 0 / 15%) !important
-	border: 1px solid #ced4da
-	border-radius: 0.25rem 
 	margin-left: 15px
 
-.icon 
+.icon
 	background: #FFF
 	width: 40px
 	display: flex
@@ -557,14 +574,74 @@ export default {
 	border-radius: 0.25rem 0 0 0.25rem
 	i
 		color: rgba(0, 0, 0, .6)
-	@if ($theme == 'dark') 
+	@if ($theme == 'dark')
 		background: #333 !important
 		i
 			color: #FFF
-.bg-gray 
+.bg-gray
 	background: #e9ecef !important
 .input-search
-	border-radius: 0 0.25rem 0.25rem 0 
+	border-radius: 0 0.25rem 0.25rem 0
 	box-shadow: none !important
 	border: none !important
+
+// Pill del input que abre el modal de busqueda, y del input de "buscar dentro de los modelos
+// cargados" (prompt 05, grupo 273): mismo diseno que .buscador-general__pill (buscador-general/
+// Index.vue) -- 40px de alto, bordes redondeados, sombra suave, anillo azul al enfocar -- pero
+// con clases propias. No se reutilizan las buscador-general__*: son de otro componente, y
+// acoplarlas haria que un ajuste alla rompa aca sin que nadie lo vea venir.
+.search-pill
+	display: flex
+	align-items: center
+	width: 100%
+	background: #fff
+	border: 1px solid #e2e4e7
+	border-radius: 22px
+	height: 40px
+	padding: 0 6px 0 12px
+	transition: border-color 0.15s ease, box-shadow 0.15s ease
+	box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px
+	@if ($theme == 'dark')
+		background: #333 !important
+		border-color: #444
+
+	&:focus-within
+		border-color: #007bff
+		box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px, 0 0 0 3px rgba(0, 123, 255, 0.15)
+
+	// Input plano: sin borde ni fondo propio, el pill es el borde (mismo criterio que
+	// .buscador-general__input).
+	.search-pill__input
+		flex: 1 1 auto
+		min-width: 0
+		border: none
+		outline: none
+		background: transparent
+		height: 100%
+		padding: 0 6px
+		font-size: 0.9rem
+		color: #1d1d1f
+		box-shadow: none
+		@if ($theme == 'dark')
+			color: #FFF
+		&::placeholder
+			color: #9aa0a6
+
+	// Icono como boton redondo, a la derecha (mismo criterio que .buscador-general__icon-btn).
+	.search-pill__icon-btn
+		display: flex
+		align-items: center
+		justify-content: center
+		flex: 0 0 auto
+		width: 30px
+		height: 30px
+		border-radius: 50%
+		color: #86868b
+		cursor: pointer
+		transition: background 0.15s ease, color 0.15s ease
+		&:hover
+			background: #f2f3f4
+			color: #1d1d1f
+		i
+			font-size: 0.95rem
 </style>
