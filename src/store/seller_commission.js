@@ -21,6 +21,10 @@ export default {
 		// until_date: '',
 
 		models: [],
+		liquidadas: [],
+		pendientes: [],
+		totales: {},
+		moneda_id: 1,
 		model: {},
 		selected: [],
 		filters: [],
@@ -96,6 +100,20 @@ export default {
 			} else {
 				state.models = []
 			}
+		},
+		setLiquidadas(state, value) {
+			state.liquidadas = value || []
+			// Alias: mientras algo del repo siga leyendo `models`, lo sigue encontrando.
+			state.models = state.liquidadas
+		},
+		setPendientes(state, value) {
+			state.pendientes = value || []
+		},
+		setTotales(state, value) {
+			state.totales = value || {}
+		},
+		setMonedaId(state, value) {
+			state.moneda_id = value
 		},
 		setSelectedModel(state, value) {
 			state.selected_model = value 
@@ -213,21 +231,28 @@ export default {
 					url += '/0'
 				}
 			}
+			url += '/'+state.moneda_id
 			if (state.from_dates) {
 				url += '/'+state.from_date
-			} 
+			}
 			if (state.until_date != '') {
 				url += '/'+state.until_date
 			}
 			return axios.get(url)
 			.then(res => {
 				commit('setLoading', false)
-				commit('setModels', res.data.models)
+				commit('setLiquidadas', res.data.liquidadas)
+				commit('setPendientes', res.data.pendientes)
+				commit('setTotales', res.data.totales)
 			})
 			.catch(err => {
 				commit('setLoading', false)
 				console.log(err)
 			})
+		},
+		setMoneda({ commit, dispatch }, value) {
+			commit('setMonedaId', value)
+			return dispatch('getModels')
 		},
 		delete({ commit, state }) {
 			return axios.delete(`/api/${generals.methods.routeString(state.model_name)}/${state.delete.id}`)
