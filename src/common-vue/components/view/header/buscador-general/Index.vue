@@ -92,6 +92,17 @@
 		:config_actual="config_actual_en_edicion"
 		@agregar="onAgregarFiltroFijo"
 		@quitar="onQuitarFiltroFijo"></filtro-fijo-modal>
+
+		<!--
+			Notificacion de coincidencias (prompt 03 del grupo 274): solo en modo 'header'. El modal
+			de busqueda tiene su propio marco y un cartel fijo abajo al centro no le corresponde;
+			ademas el backend ni siquiera manda desglose para el contexto Vender que usa ese modal.
+		-->
+		<notificacion-coincidencias
+		v-if="modo !== 'modal'"
+		:matches="matches_del_store"
+		:nonce="matches_nonce_del_store"
+		:etiquetas="etiquetas_de_propiedades"></notificacion-coincidencias>
 	</div>
 </template>
 <script>
@@ -110,6 +121,7 @@ export default {
 		PropertiesDropdown: () => import('@/common-vue/components/view/header/buscador-general/PropertiesDropdown'),
 		FiltroFijoModal: () => import('@/common-vue/components/view/header/buscador-general/FiltroFijoModal'),
 		FiltrosFijos: () => import('@/common-vue/components/view/header/buscador-general/FiltrosFijos'),
+		NotificacionCoincidencias: () => import('@/common-vue/components/view/header/buscador-general/NotificacionCoincidencias'),
 	},
 	props: {
 		/**
@@ -401,6 +413,48 @@ export default {
 		is_filtered_by_buscador() {
 			return !!this.$store.state[this.model_name].global_search_payload
 				&& !this.$store.state[this.model_name].listado_por_defecto
+		},
+
+		/**
+		 * Desglose de coincidencias de la ultima busqueda (prompt 03 del grupo 274), leido del
+		 * store. null cuando no hay nada que mostrar (listado por defecto, busqueda sin criterio de
+		 * texto, o contexto Vender).
+		 *
+		 * @returns {Object|null}
+		 */
+		matches_del_store() {
+			return this.$store.state[this.model_name].global_search_matches
+		},
+
+		/**
+		 * Contador que se incrementa solo en busquedas nuevas del usuario (nunca en paginacion).
+		 * NotificacionCoincidencias.vue lo observa para saber cuando mostrarse.
+		 *
+		 * @returns {Number}
+		 */
+		matches_nonce_del_store() {
+			return this.$store.state[this.model_name].global_search_matches_nonce
+		},
+
+		/**
+		 * Mapa 'own:<key>' / 'relation:<relation>' -> etiqueta legible, para que
+		 * NotificacionCoincidencias.vue traduzca el desglose crudo del backend a texto. Recorre
+		 * ordered_props (propias) y relation_props (relaciones), que son las mismas listas que ya
+		 * arman el desplegable de propiedades.
+		 *
+		 * @returns {Object}
+		 */
+		etiquetas_de_propiedades() {
+			let mapa = {}
+			this.ordered_props.forEach(function (item) {
+				if (item.kind === 'own') {
+					mapa['own:' + item.key] = item.text
+				}
+			})
+			this.relation_props.forEach(function (item) {
+				mapa['relation:' + item.relation] = item.text
+			})
+			return mapa
 		},
 
 		/**
@@ -1429,6 +1483,7 @@ export default {
 			this.$store.commit(this.model_name + '/setTotalFilterResults', 0)
 			this.$store.commit(this.model_name + '/set_filtered_without_filter_form', false)
 			this.$store.commit(this.model_name + '/setGlobalSearchPayload', null)
+			this.$store.commit(this.model_name + '/setGlobalSearchMatches', { matches: null, es_busqueda_nueva: false })
 
 			// Vuelve al listado completo paginado (orden id DESC) en vez de dejar la tabla con lo
 			// que haya quedado en memoria de la busqueda que se acaba de limpiar.

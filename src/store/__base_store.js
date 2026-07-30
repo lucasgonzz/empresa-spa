@@ -93,6 +93,17 @@ export default function __base_store(options = {}) {
 			// pueda repetir la misma búsqueda solo cambiando la página, sin volver a armar el payload.
 			global_search_payload: null,
 
+			// Desglose de coincidencias de la ultima busqueda del buscador general (grupo 274): que
+			// propiedad aporto cada resultado de la pagina que se esta viendo. null cuando la respuesta
+			// no lo trae (listado por defecto, o busqueda sin criterio de texto).
+			global_search_matches: null,
+
+			// Contador que se incrementa SOLO cuando el usuario dispara una busqueda nueva (no en los
+			// cambios de pagina). El componente de notificacion lo observa para saber cuando mostrarse:
+			// sin esto, la notificacion reaparecia en cada clic de la paginacion, que es la clase de
+			// insistencia que hace que un cartel util se vuelva molesto.
+			global_search_matches_nonce: 0,
+
 			// Flag que distingue "listado por defecto" (filtered poblado por la carga automática al
 			// entrar al módulo, con todos los registros paginados) de una búsqueda real escrita por el
 			// usuario. La UI lo usa para no mostrar carteles de "filtro activo" (título "con filtro",
@@ -346,6 +357,21 @@ export default function __base_store(options = {}) {
 		 */
 		setGlobalSearchPayload(state, value) {
 			state.global_search_payload = value
+		},
+		/**
+		 * Guarda el desglose de coincidencias de la ultima busqueda, o lo limpia con null.
+		 * Incrementa el nonce solo cuando `es_busqueda_nueva` es true (ver doc del state).
+		 *
+		 * @param {Object} state Estado del modulo.
+		 * @param {Object} payload
+		 * @param {Object|null} payload.matches Desglose devuelto por el backend, o null.
+		 * @param {Boolean} payload.es_busqueda_nueva true cuando la disparo el usuario, false en paginacion.
+		 */
+		setGlobalSearchMatches(state, payload) {
+			state.global_search_matches = (payload && payload.matches) ? payload.matches : null
+			if (payload && payload.es_busqueda_nueva) {
+				state.global_search_matches_nonce++
+			}
 		},
 		/**
 		 * Activa o desactiva el flag que indica que `filtered` viene de la carga automática
@@ -618,7 +644,9 @@ export default function __base_store(options = {}) {
 			 * si no (solo `{ page }`), es un cambio de página y se reusa el payload persistido.
 			 */
 			let search_payload = payload
-			if (payload && payload.props) {
+			/** true cuando esta llamada es una búsqueda nueva del usuario (trae `props`), false cuando es un cambio de página (solo `{ page }`, reusa el payload persistido). */
+			let es_busqueda_nueva = !!(payload && payload.props)
+			if (es_busqueda_nueva) {
 				commit('setGlobalSearchPayload', payload)
 				// Es una búsqueda real del usuario: a partir de ahora deja de ser el listado por defecto.
 				commit('set_listado_por_defecto', false)
@@ -660,6 +688,11 @@ export default function __base_store(options = {}) {
 					commit('setTotalFilterResults', res.data.models ? res.data.models.total : 0)
 					// Marcar que el filtered fue cargado por el buscador general (no por el form de filtros).
 					commit('set_filtered_without_filter_form', true)
+
+					commit('setGlobalSearchMatches', {
+						matches: res.data.matches ? res.data.matches : null,
+						es_busqueda_nueva: es_busqueda_nueva,
+					})
 				})
 				.catch(err => {
 					if (!silencioso) {
