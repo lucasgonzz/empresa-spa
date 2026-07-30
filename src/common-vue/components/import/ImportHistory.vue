@@ -217,6 +217,9 @@
 						<span v-if="data.item.tipo === 'fila_sobrescrita' && data.item.fila_ganadora">
 							(sobrescrita por la fila {{ data.item.fila_ganadora }})
 						</span>
+						<span v-if="data.item.tipo === 'identificador_sin_asignar' && data.item.article_ids">
+							({{ data.item.article_ids.length }} artículos)
+						</span>
 					</template>
 
 					<!-- Traduce el campo tecnico (bar_code, sku, etc.) a su nombre visible -->
@@ -579,6 +582,8 @@ export default {
 				numero_fuera_de_rango: 'Valor numerico demasiado grande para la columna',
 				// Nuevo (grupo 265, prompt 03): repetido dentro del propio archivo, resuelto.
 				fila_sobrescrita: 'Fila sobrescrita',
+				// Nuevo (grupo 265, prompt 08): identificador unico que no se pudo asignar por match multiple.
+				identificador_sin_asignar: 'No se pudo asignar un codigo unico: coincidian varios articulos',
 			}
 			return labels[tipo] || tipo
 		},
