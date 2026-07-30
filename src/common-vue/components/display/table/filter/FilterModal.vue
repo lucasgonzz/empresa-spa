@@ -1,7 +1,7 @@
 <template>
 	<b-modal
 	:id="modal_id"
-	size="sm"
+	size="md"
 	:title="'Filtrar por '+field_label"
 	:no-close-on-backdrop="false"
 	@shown="on_modal_shown"
@@ -14,24 +14,28 @@
 			Filtros — {{ field_label }}
 		</p> -->
 
-		<filter-component
-		v-if="field"
-		:field="field"
-		:in_modal="true"
-		:model_name="model_name"
-		@filtrar="filtrar"></filter-component>
+		<div class="filter-modal-body">
+			<filter-component
+			v-if="field"
+			:field="field"
+			:in_modal="true"
+			:model_name="model_name"
+			@filtrar="filtrar"></filter-component>
+		</div>
 
 		<template #modal-footer>
-			<b-button
-			variant="outline-primary"
+			<button
+			type="button"
+			class="filter-modal-btn filter-modal-btn--secondary"
 			@click="agregar_filtro">
 				Agregar filtro
-			</b-button>
-			<b-button
-			variant="primary"
+			</button>
+			<button
+			type="button"
+			class="filter-modal-btn filter-modal-btn--primary"
 			@click="filtrar">
 				Filtrar
-			</b-button>
+			</button>
 		</template>
 	</b-modal>
 </template>
@@ -178,4 +182,153 @@ export default {
 .filter-modal-title
 	font-weight: bold
 	color: #000
+
+// ────────────────────────────────────────────────────────────────────────
+// Rediseño del modal de filtro por columna (Grupo 273, Prompt 06). Único
+// lugar de estilos para los 7 subcomponentes que renderizan adentro
+// (EnBlanco/Text/Number/Date/Select/Checkbox/Index): ellos solo aportan
+// markup y clases, así en 3 meses no hay dos que se vean distinto sin que
+// nadie sepa cuál es el bueno. NO scoped a propósito: filter-component se
+// re-renderiza vía teleport/slot del b-modal, y estas reglas tienen que
+// alcanzarlo igual.
+// ────────────────────────────────────────────────────────────────────────
+
+.filter-modal-body
+	// Inputs y selects (b-form-input / b-form-select renderizan
+	// .form-control / .custom-select): mismo lenguaje visual que el resto
+	// del sistema (redondeado, borde suave, anillo azul al enfocar), en vez
+	// del borde grueso + glow azul que pone _inputs.sass por defecto.
+	.form-control,
+	.custom-select
+		height: 38px
+		border-radius: 10px
+		border: 1px solid #e2e4e7
+		background: #fff
+		box-shadow: none
+		font-size: 0.9rem
+
+		&:focus
+			border: 1px solid #007bff
+			box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15)
+			outline: none
+			background: #fff
+
+	// Cada criterio (b-form-group) es su propia fila, con el label chico
+	// arriba del input (b-form-group sin label-for renderiza un <legend>,
+	// ver Date.vue: ya lo usaba y esto lo alcanza sin tocarle una línea).
+	.form-group
+		margin-bottom: 14px
+
+		&:last-child
+			margin-bottom: 0
+
+	legend
+		font-size: 0.75rem
+		color: #6e6e73
+		font-weight: normal
+		margin-bottom: 4px
+
+	// ─── Toggles "En blanco" / "Que no esté en blanco" (EnBlanco.vue) ─────
+	// Reemplaza el <hr> de antes: borde superior suave + espaciado.
+	.filter-toggles
+		border-top: 1px solid #e5e7eb
+		margin-top: 14px
+		padding-top: 14px
+
+	.filter-toggle-row
+		display: flex
+		align-items: center
+		justify-content: space-between
+		gap: 10px
+
+		& + .filter-toggle-row
+			margin-top: 10px
+
+	.filter-toggle-row__label
+		font-size: 0.9rem
+		color: #1d1d1f
+
+	// Toggle tipo iPhone: mismos valores exactos que .model-form__toggle
+	// (common-vue/components/model/ModelForm.vue) y su copia bg-toggle del
+	// buscador general. No se inventa un tercero.
+	.filter-toggle
+		position: relative
+		display: inline-block
+		width: 44px
+		height: 26px
+		cursor: pointer
+		vertical-align: middle
+		margin-bottom: 0
+		flex: 0 0 auto
+
+		input
+			opacity: 0
+			width: 0
+			height: 0
+			position: absolute
+
+		.filter-toggle-track
+			position: absolute
+			inset: 0
+			background: #d1d5db
+			border-radius: 9999px
+			transition: background 0.2s ease
+
+		.filter-toggle-thumb
+			position: absolute
+			height: 20px
+			width: 20px
+			left: 3px
+			bottom: 3px
+			background: #fff
+			border-radius: 50%
+			transition: transform 0.2s ease
+			box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25)
+
+		input:checked ~ .filter-toggle-track
+			background: #22c55e
+
+		input:checked ~ .filter-toggle-track .filter-toggle-thumb
+			transform: translateX(18px)
+
+// ─── Botones del footer ("Agregar filtro" / "Filtrar") ──────────────────
+// Viven fuera de .filter-modal-body (el footer del b-modal es otro slot),
+// por eso quedan a nivel de archivo en vez de anidados debajo, pero
+// definidos en este mismo bloque para no repartir el sass entre archivos.
+.filter-modal-btn
+	height: 38px
+	padding: 0 16px
+	border-radius: 10px
+	font-size: 0.9rem
+	border: 1px solid transparent
+	cursor: pointer
+	box-shadow: none
+	transition: background 0.15s ease, border-color 0.15s ease
+
+.filter-modal-btn--primary
+	background: #007bff
+	border-color: #007bff
+	color: #fff
+
+	&:hover
+		background: #006fe6
+		border-color: #006fe6
+
+	&:focus-visible
+		background: #006fe6
+		border-color: #0056b3
+		box-shadow: none
+
+.filter-modal-btn--secondary
+	background: #fff
+	border-color: #e2e4e7
+	color: #1d1d1f
+
+	&:hover
+		background: #f2f3f4
+
+	&:focus-visible
+		border-color: #007bff
+		background: #f2f8ff
+		box-shadow: none
 </style>

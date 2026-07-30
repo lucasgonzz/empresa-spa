@@ -288,6 +288,14 @@ export default {
 			// Evita repetir el aviso de "los filtros no se aplican sin conexion" en cada tecla
 			// (tarea 3): se muestra una sola vez por instancia del modal.
 			aviso_filtros_offline_mostrado: false,
+
+			// Criterio tipeado en este modal, disponible en el MISMO tick en que se escribe. Existe
+			// porque `query` es una computed sobre la prop `query_value`: su setter emite 'setQuery'
+			// al padre y el valor recien vuelve como prop en el proximo ciclo de render. Cualquier
+			// lectura de `query` en el mismo tick (lo que hace pulso_enter -> search) leia el valor
+			// viejo, y el primer Enter no buscaba nunca (bug del 30/7/2026). `null` significa "no hay
+			// nada tipeado aca, mandan las props".
+			query_local: null,
 		}
 	},
 	watch: {
@@ -300,6 +308,11 @@ export default {
 		},
 		model_name() {
 			this.loadSearchColumnsPreference()
+		},
+		query_value() {
+			// El padre ya tiene el valor: se suelta la copia local para no quedar pisando una
+			// limpieza hecha desde afuera (ej. clear_query).
+			this.query_local = null
 		},
 		query(nuevo_valor) {
 			// Si el criterio queda vacio, el modal vuelve al estado inicial: no tiene sentido
@@ -328,9 +341,13 @@ export default {
 		},
 		query: {
 			get() {
-				return this.query_value 
+				if (this.query_local !== null) {
+					return this.query_local
+				}
+				return this.query_value
 			},
 			set(value) {
+				this.query_local = value
 				this.$emit('setQuery', value)
 			}
 		},
@@ -409,6 +426,9 @@ export default {
 			this.total_results = 0
 			this.current_page = null
 			this.total_pages = null
+			// Un criterio tipeado en una apertura anterior no debe ganarle a lo que traiga el padre
+			// en esta apertura nueva (ver query_local en data()).
+			this.query_local = null
 		},
 		/**
 		 * El usuario toco el boton de limpiar del pill (icono de deshacer). El buscador general ya
