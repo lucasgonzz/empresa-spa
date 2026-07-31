@@ -106,6 +106,11 @@
 						<span v-if="art.provider_code" class="text-muted"> · CP: {{ art.provider_code }}</span>
 					</li>
 				</ul>
+				<p
+				v-if="!loading_repeated_code_list && !repeated_code_articles_error && hay_mas_repeated_code_articles"
+				class="text-muted small m-t-5 m-b-0">
+					y {{ repeated_code_total - repeated_code_articles.length }} más…
+				</p>
 			</div>
 		</div>
 
@@ -263,11 +268,25 @@ export default {
 			repeated_code_articles: [],
 
 			/*
+			 * Prompt 05 (grupo 291): total real de artículos con código repetido, según el
+			 * endpoint acotado (repeated_code_articles.length siempre da como mucho el
+			 * limit pedido). Null hasta que la respuesta llega.
+			 */
+			repeated_code_total: null,
+
+			/*
 			 * Prompt 06 (grupo 265): sobrescrituras (import_conflicts tipo 'fila_sobrescrita')
 			 * de esta importación, traídas del historial cuando import_stats no las trae ya
 			 * armadas. Cada item: { fila, fila_ganadora }.
 			 */
 			sobrescrituras: [],
+
+			/*
+			 * Prompt 05 (grupo 291): total real de sobrescrituras, según el endpoint acotado
+			 * (?tipo=fila_sobrescrita&limit=5) -- sobrescrituras.length ya no sirve para el
+			 * conteo porque ahora el backend devuelve como mucho 5. Null hasta que llega.
+			 */
+			sobrescrituras_total: null,
 		}
 	},
 
@@ -481,14 +500,20 @@ export default {
 		},
 
 		/*
-		 * Total de sobrescrituras: el conteo de import_stats.sobrescrituras_count si vino,
-		 * si no la cantidad de la lista (ya sea la de import_stats o la pedida al historial).
+		 * Total de sobrescrituras: el conteo de import_stats.sobrescrituras_count si vino;
+		 * si no, el total real que devolvió el endpoint acotado (prompt 05, grupo 291); si
+		 * no, la cantidad de la lista (ya sea la de import_stats o la pedida al historial).
+		 * sobrescrituras.length YA NO alcanza sola porque el endpoint devuelve como mucho 5.
 		 */
 		sobrescrituras_count() {
 			let stats = this.import_stats
 
 			if (stats && typeof stats.sobrescrituras_count === 'number') {
 				return stats.sobrescrituras_count
+			}
+
+			if (!this.sobrescrituras_de_import_stats && typeof this.sobrescrituras_total === 'number') {
+				return this.sobrescrituras_total
 			}
 
 			return (this.sobrescrituras_de_import_stats || this.sobrescrituras).length
@@ -507,6 +532,15 @@ export default {
 		 */
 		hay_mas_sobrescrituras() {
 			return this.sobrescrituras_count > this.sobrescrituras_a_mostrar.length
+		},
+
+		/*
+		 * Prompt 05 (grupo 291): true si el endpoint acotado de artículos con código
+		 * repetido devolvió menos artículos que el total real, para avisar que la lista
+		 * está truncada.
+		 */
+		hay_mas_repeated_code_articles() {
+			return this.repeated_code_total > this.repeated_code_articles.length
 		},
 
 		/*
@@ -573,7 +607,9 @@ export default {
 			this.loading_repeated_code_list = false
 			this.repeated_code_articles_error = false
 			this.repeated_code_articles = []
+			this.repeated_code_total = null
 			this.sobrescrituras = []
+			this.sobrescrituras_total = null
 		},
 
 		/*
@@ -602,9 +638,17 @@ export default {
 			this.loading_repeated_code_list = true
 			this.repeated_code_articles_error = false
 
-			this.$api.get('import-history/repeated-code-articles/' + import_history_id)
+			/*
+			 * Prompt 05 (grupo 291): el endpoint ahora acota con limit/offset y devuelve
+			 * { articles, total } en vez del array pelado de antes. Pedimos 50 (el
+			 * componente los muestra todos en la lista expandible).
+			 */
+			this.$api.get('import-history/repeated-code-articles/' + import_history_id + '?limit=50')
 			.then(res => {
-				this.repeated_code_articles = res.data
+				this.repeated_code_articles = res.data.articles || []
+				this.repeated_code_total = typeof res.data.total === 'number'
+					? res.data.total
+					: this.repeated_code_articles.length
 			})
 			.catch(() => {
 				this.repeated_code_articles_error = true
@@ -631,11 +675,20 @@ export default {
 				return
 			}
 
-			this.$api.get('import-history/' + import_history_id + '/conflicts')
+			/*
+			 * Prompt 05 (grupo 291): filtramos por tipo del lado del backend en vez de traer
+			 * TODOS los conflictos del historial y filtrar acá -- con Excel grandes y códigos
+			 * repetidos, fila_sobrescrita se registra una vez por cada fila pisada, así que
+			 * podían viajar miles de filas por la red para mostrar 5. limit=5 porque el
+			 * componente ya solo muestra 5; el conteo real sale de res.data.total (agregado
+			 * SQL del backend), no de sobrescrituras.length.
+			 */
+			this.$api.get('import-history/' + import_history_id + '/conflicts?tipo=fila_sobrescrita&limit=5')
 			.then(res => {
-				this.sobrescrituras = (res.data.conflicts || []).filter(function(conflicto) {
-					return conflicto.tipo === 'fila_sobrescrita'
-				})
+				this.sobrescrituras = res.data.conflicts || []
+				this.sobrescrituras_total = typeof res.data.total === 'number'
+					? res.data.total
+					: this.sobrescrituras.length
 			})
 			.catch(() => {
 				/* Silencioso: es informativo, no bloquea nada del resultado de la importación. */
