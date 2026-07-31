@@ -1069,6 +1069,29 @@ export default {
 			 * Se usa para advertir sobre filas que podrían no procesarse en el escalón "name".
 			 */
 			nombres_duplicados: null,
+
+			/*
+			 * Grupo 299 (correctivo de cancelación de polling, segundo intento):
+			 * token de la corrida de análisis/recomendación en curso. Se incrementa y
+			 * se captura en una variable local ANTES de lanzar cada POST (analyze /
+			 * get-recomendacion) — no dentro del helper de espera — porque la subida del
+			 * archivo es la ventana más larga de todo el flujo (hasta 2 minutos) y la
+			 * cancelación tiene que poder invalidarla también. Cualquier callback que no
+			 * vea su token capturado === analysis_polling_token vigente aborta en
+			 * silencio: es una corrida vieja, cancelada.
+			 */
+			analysis_polling_token: 0,
+
+			/* Id del setTimeout del próximo ciclo de polling, para poder cancelarlo. */
+			analysis_polling_timer_id: null,
+
+			/*
+			 * Id del setTimeout del aviso de "archivo grande" (20 s). Tiene que morir en
+			 * todos los caminos de salida (éxito, error o cancelación): si sobrevive,
+			 * ensucia auth/setMessage después de que el flujo que corresponda ya lo dejó
+			 * en su valor final.
+			 */
+			analysis_warning_timer_id: null,
 		}
 	},
 
@@ -2054,6 +2077,145 @@ export default {
 		},
 
 		/*
+		 * Grupo 299 (correctivo de cancelación de polling, segundo intento): helper
+		 * único de espera para las dos corridas asincrónicas del modal (análisis y
+		 * recomendación). Hace polling a GET ai-excel-import/analysis/<uuid> hasta
+		 * que el backend reporte 'listo' o 'error'.
+		 *
+		 * Recibe el token de corrida CAPTURADO POR EL CALLER (antes del POST que
+		 * encoló esta corrida) y lo reusa tal cual en todas sus comprobaciones: NO
+		 * lo incrementa ni acuña uno propio. Ese es exactamente el bug que tumbó el
+		 * intento anterior (grupo 297): un helper que se acuña su propio token
+		 * rompe la cadena de invalidación del caller y una corrida cancelada
+		 * "resucita" como una corrida nueva y válida.
+		 *
+		 * @param {string} analysis_uuid  uuid devuelto por analyze() / get-recomendacion()
+		 * @param {number} token_corrida  token que el caller capturó antes de su POST
+		 * @return {Promise} resuelve con el "resultado" del backend, rechaza con un mensaje legible
+		 */
+		esperar_analisis_terminado(analysis_uuid, token_corrida) {
+			let self = this
+
+			return new Promise(function(resolve, reject) {
+
+				let inicio = Date.now()
+				let fallos_consecutivos = 0
+
+				/*
+				 * Aviso de "archivo grande" a los 20 segundos: si para entonces el
+				 * análisis todavía no terminó, tranquiliza al usuario para que no
+				 * cierre el modal pensando que se colgó. Tiene que morir en TODOS los
+				 * caminos de salida (éxito, error o cancelación) o ensucia
+				 * auth/setMessage después de que el flujo que corresponda ya lo dejó
+				 * en su valor final — el store de auth es compartido por toda la app.
+				 */
+				self.analysis_warning_timer_id = setTimeout(function() {
+					if (token_corrida !== self.analysis_polling_token) return
+					self.$store.commit(
+						'auth/setMessage',
+						'Los archivos grandes pueden tardar unos minutos. Podés dejar esta ventana abierta.'
+					)
+				}, 20000)
+
+				function limpiar_timer_de_aviso() {
+					if (self.analysis_warning_timer_id) {
+						clearTimeout(self.analysis_warning_timer_id)
+						self.analysis_warning_timer_id = null
+					}
+				}
+
+				function consultar() {
+
+					/* Punto de chequeo: la función que ejecuta la consulta. */
+					if (token_corrida !== self.analysis_polling_token) return
+
+					self.$api.get('ai-excel-import/analysis/' + analysis_uuid, { timeout: 30000 })
+					.then(function(res) {
+
+						/* Punto de chequeo: el .then de cada GET de polling. */
+						if (token_corrida !== self.analysis_polling_token) return
+
+						fallos_consecutivos = 0
+
+						if (res.data.paso) {
+							self.$store.commit(
+								'auth/setMessage',
+								res.data.progreso ? (res.data.paso + ' (' + res.data.progreso + '%)') : res.data.paso
+							)
+						}
+
+						if (res.data.estado === 'listo') {
+							limpiar_timer_de_aviso()
+							self.analysis_polling_token++
+							resolve(res.data.resultado)
+							return
+						}
+
+						if (res.data.estado === 'error') {
+							limpiar_timer_de_aviso()
+							self.analysis_polling_token++
+							reject(res.data.error || 'Ocurrió un error al analizar el archivo.')
+							return
+						}
+
+						agendar_proxima_consulta()
+					})
+					.catch(function() {
+
+						/* Punto de chequeo: el .catch de cada GET de polling. */
+						if (token_corrida !== self.analysis_polling_token) return
+
+						/*
+						 * Un error de red en UNA consulta no aborta la espera: un corte de
+						 * wifi de tres segundos no puede tirar abajo un análisis de diez
+						 * minutos que el servidor está haciendo bien. Recién después de 5
+						 * fallos SEGUIDOS se rechaza.
+						 */
+						fallos_consecutivos++
+
+						if (fallos_consecutivos >= 5) {
+							limpiar_timer_de_aviso()
+							self.analysis_polling_token++
+							reject('No se pudo consultar el estado del análisis. Probá de nuevo.')
+							return
+						}
+
+						agendar_proxima_consulta()
+					})
+				}
+
+				function agendar_proxima_consulta() {
+
+					/* Punto de chequeo: el agendador del siguiente ciclo. */
+					if (token_corrida !== self.analysis_polling_token) return
+
+					let transcurrido = Date.now() - inicio
+
+					if (transcurrido >= 900000) {
+						limpiar_timer_de_aviso()
+						self.analysis_polling_token++
+						reject('El análisis está tardando más de lo normal. Probá de nuevo o avisanos.')
+						return
+					}
+
+					/* Cada 2s el primer medio minuto; cada 5s después (menos ruido contra la API). */
+					let intervalo = transcurrido < 30000 ? 2000 : 5000
+
+					self.analysis_polling_timer_id = setTimeout(function() {
+
+						/* Punto de chequeo: la función que ejecuta la consulta (al disparar el timer). */
+						if (token_corrida !== self.analysis_polling_token) return
+
+						consultar()
+
+					}, intervalo)
+				}
+
+				consultar()
+			})
+		},
+
+		/*
 		 * POST a /ai-excel-import/analyze con el archivo ya seleccionado.
 		 */
 		run_analyze_request() {
@@ -2064,46 +2226,84 @@ export default {
 			/* Informamos al backend qué modelo analizar para elegir el analizador correcto. */
 			form_data.append('model', self.model)
 
-			let config = { headers: { 'content-type': 'multipart/form-data' } }
+			/* Solo sube el archivo y lo encola: si tarda más de 2 minutos, es la subida, no el análisis. */
+			let config = {
+				headers: { 'content-type': 'multipart/form-data' },
+				timeout: 120000,
+			}
+
+			/*
+			 * Capturamos el token ANTES del POST y no dentro del helper de polling
+			 * porque la subida del archivo es la ventana más larga de todo el flujo
+			 * (hasta 2 minutos con archivos grandes): si el usuario cierra el modal
+			 * mientras el POST está en vuelo, la cancelación tiene que poder
+			 * invalidar TAMBIÉN esta corrida, y solo puede hacerlo si el token ya
+			 * existía cuando el POST arrancó.
+			 */
+			let token_corrida = ++self.analysis_polling_token
 
 			self.$store.commit('auth/setMessage', 'Analizando archivo con IA...')
 			self.$store.commit('auth/setLoading', true)
 
 			self.$api.post('ai-excel-import/analyze', form_data, config)
 			.then(function(res) {
-				self.loading = false
-				self.$store.commit('auth/setLoading', false)
-				self.$store.commit('auth/setMessage', '')
 
-				self.excel_path        = res.data.excel_path
-				self.column_mapping    = self.normalize_column_mapping(res.data.column_mapping)
-				self.selected_provider_id = res.data.provider_id
-				self.provider_confidence  = res.data.provider_confidence
+				/* Punto de chequeo: el .then del POST inicial, antes de llamar al helper. */
+				if (token_corrida !== self.analysis_polling_token) return
 
-				/* Guardar índice de columna provider_code para refresh-provider-stats al cambiar proveedor. */
-				const provider_col = res.data.column_mapping.find(
-					col => col.system_property === 'codigo_de_proveedor'
-				)
-				self.provider_code_column_index = provider_col ? provider_col.excel_column_index : null
+				return self.esperar_analisis_terminado(res.data.analysis_uuid, token_corrida)
+				.then(function(resultado) {
 
-				/* Datos del preanálisis de duplicados (la recomendación se genera al confirmar el paso 2). */
-				self.duplicate_stats = res.data.duplicate_stats || null
-				self.preview_rows    = res.data.preview_rows || []
+					if (token_corrida !== self.analysis_polling_token) return
 
-				/* Prompt 03 (grupo 239): estadísticas de números con punto ambiguos por columna. */
-				self.formatos_numericos = res.data.formatos_numericos || null
+					self.loading = false
+					self.$store.commit('auth/setLoading', false)
+					self.$store.commit('auth/setMessage', '')
 
-				/* Notas globales de asistencia que Claude generó sobre el archivo completo. */
-				self.assistant_notes = res.data.assistant_notes || []
+					self.excel_path        = resultado.excel_path
+					self.column_mapping    = self.normalize_column_mapping(resultado.column_mapping)
+					self.selected_provider_id = resultado.provider_id
+					self.provider_confidence  = resultado.provider_confidence
 
-				/* Prompt 06 (grupo 229): placeholders, cadena de identificación y nombres repetidos. */
-				self.placeholders           = res.data.placeholders || []
-				self.cadena_identificacion  = res.data.cadena_identificacion || null
-				self.nombres_duplicados     = res.data.nombres_duplicados || null
+					/* Guardar índice de columna provider_code para refresh-provider-stats al cambiar proveedor. */
+					const provider_col = resultado.column_mapping.find(
+						col => col.system_property === 'codigo_de_proveedor'
+					)
+					self.provider_code_column_index = provider_col ? provider_col.excel_column_index : null
 
-				self.step = 2
+					/* Datos del preanálisis de duplicados (la recomendación se genera al confirmar el paso 2). */
+					self.duplicate_stats = resultado.duplicate_stats || null
+					self.preview_rows    = resultado.preview_rows || []
+
+					/* Prompt 03 (grupo 239): estadísticas de números con punto ambiguos por columna. */
+					self.formatos_numericos = resultado.formatos_numericos || null
+
+					/* Notas globales de asistencia que Claude generó sobre el archivo completo. */
+					self.assistant_notes = resultado.assistant_notes || []
+
+					/* Prompt 06 (grupo 229): placeholders, cadena de identificación y nombres repetidos. */
+					self.placeholders           = resultado.placeholders || []
+					self.cadena_identificacion  = resultado.cadena_identificacion || null
+					self.nombres_duplicados     = resultado.nombres_duplicados || null
+
+					self.step = 2
+				})
+				.catch(function(mensaje) {
+
+					/* Punto de chequeo: no escribir error_message sobre una corrida ya cancelada. */
+					if (token_corrida !== self.analysis_polling_token) return
+
+					self.loading = false
+					self.$store.commit('auth/setLoading', false)
+					self.$store.commit('auth/setMessage', '')
+					self.error_message = mensaje
+				})
 			})
 			.catch(function(err) {
+
+				/* Punto de chequeo: el .catch del POST inicial, antes de tocar loading/error_message. */
+				if (token_corrida !== self.analysis_polling_token) return
+
 				self.loading = false
 				self.$store.commit('auth/setLoading', false)
 				self.$store.commit('auth/setMessage', '')
@@ -2128,70 +2328,103 @@ export default {
 			self.loading_recomendacion = true
 			self.recomendacion_configuracion = null
 
+			/* Mismo motivo y mismo criterio que run_analyze_request(): ver ese comentario. */
+			let token_corrida = ++self.analysis_polling_token
+
+			self.$store.commit('auth/setMessage', 'Generando recomendación con IA...')
+			self.$store.commit('auth/setLoading', true)
+
 			self.$api.post('ai-excel-import/get-recomendacion', {
 				excel_path:                 self.excel_path,
 				provider_id:                self.selected_provider_id,
 				provider_code_column_index: self.provider_code_column_index,
 				column_mapping:             self.column_mapping,
-			})
+			}, { timeout: 120000 })
 			.then(function(res) {
-				self.loading_recomendacion = false
 
-				self.recomendacion_configuracion = res.data.recomendacion_configuracion || null
+				/* Punto de chequeo: el .then del POST inicial, antes de llamar al helper. */
+				if (token_corrida !== self.analysis_polling_token) return
 
-				/*
-				 * Prompt 03 (grupo 239): refrescar formatos_numericos con el recalculo del
-				 * backend, por si el usuario corrigió el mapeo de columnas en el paso 2.
-				 */
-				self.formatos_numericos = res.data.formatos_numericos || null
+				return self.esperar_analisis_terminado(res.data.analysis_uuid, token_corrida)
+				.then(function(resultado) {
 
-				/* Actualizar duplicate_stats con los conteos recalculados para el proveedor confirmado. */
-				if (self.duplicate_stats) {
-					self.duplicate_stats = {
-						...self.duplicate_stats,
-						provider_codes_existentes_mismo_proveedor:   res.data.provider_codes_existentes_mismo_proveedor,
-						provider_codes_existentes_otros_proveedores: res.data.provider_codes_existentes_otros_proveedores,
-					}
-				}
+					if (token_corrida !== self.analysis_polling_token) return
 
-				/* Preseleccionar los valores recomendados. */
-				if (self.recomendacion_configuracion) {
+					self.loading_recomendacion = false
+					self.$store.commit('auth/setLoading', false)
+					self.$store.commit('auth/setMessage', '')
+
+					self.recomendacion_configuracion = resultado.recomendacion_configuracion || null
 
 					/*
-					 * Grupo 284, prompt 04: politica_colision valida contra los tres valores
-					 * nuevos. 'actualizar_uno' es el valor legado (backend, prompt 02): se
-					 * traduce a 'saltear_y_reportar', la opción más cercana a su intención
-					 * original. Sin un valor reconocido, no se preselecciona nada (igual que
-					 * antes, cuando la recomendación no traía un valor válido).
+					 * Prompt 03 (grupo 239): refrescar formatos_numericos con el recalculo del
+					 * backend, por si el usuario corrigió el mapeo de columnas en el paso 2.
 					 */
-					let politica_colision_recomendada = self.recomendacion_configuracion.politica_colision
-					if (politica_colision_recomendada === 'actualizar_uno') {
-						politica_colision_recomendada = 'saltear_y_reportar'
-					}
-					if (
-						politica_colision_recomendada === 'actualizar_todos'
-						|| politica_colision_recomendada === 'saltear_y_reportar'
-						|| politica_colision_recomendada === 'crear_nuevo'
-					) {
-						self.politica_colision = politica_colision_recomendada
+					self.formatos_numericos = resultado.formatos_numericos || null
+
+					/* Actualizar duplicate_stats con los conteos recalculados para el proveedor confirmado. */
+					if (self.duplicate_stats) {
+						self.duplicate_stats = {
+							...self.duplicate_stats,
+							provider_codes_existentes_mismo_proveedor:   resultado.provider_codes_existentes_mismo_proveedor,
+							provider_codes_existentes_otros_proveedores: resultado.provider_codes_existentes_otros_proveedores,
+						}
 					}
 
-					/*
-					 * Prompt 06 (grupo 265): igual patrón defensivo — si no viene o no es uno
-					 * de los dos valores válidos, se deja el default ('ultima_gana').
-					 */
-					if (
-						self.recomendacion_configuracion.politica_intra_archivo === 'ultima_gana'
-						|| self.recomendacion_configuracion.politica_intra_archivo === 'productos_distintos'
-					) {
-						self.politica_intra_archivo = self.recomendacion_configuracion.politica_intra_archivo
-					}
-				}
+					/* Preseleccionar los valores recomendados. */
+					if (self.recomendacion_configuracion) {
 
-				self.step = 3
+						/*
+						 * Grupo 284, prompt 04: politica_colision valida contra los tres valores
+						 * nuevos. 'actualizar_uno' es el valor legado (backend, prompt 02): se
+						 * traduce a 'saltear_y_reportar', la opción más cercana a su intención
+						 * original. Sin un valor reconocido, no se preselecciona nada (igual que
+						 * antes, cuando la recomendación no traía un valor válido).
+						 */
+						let politica_colision_recomendada = self.recomendacion_configuracion.politica_colision
+						if (politica_colision_recomendada === 'actualizar_uno') {
+							politica_colision_recomendada = 'saltear_y_reportar'
+						}
+						if (
+							politica_colision_recomendada === 'actualizar_todos'
+							|| politica_colision_recomendada === 'saltear_y_reportar'
+							|| politica_colision_recomendada === 'crear_nuevo'
+						) {
+							self.politica_colision = politica_colision_recomendada
+						}
+
+						/*
+						 * Prompt 06 (grupo 265): igual patrón defensivo — si no viene o no es uno
+						 * de los dos valores válidos, se deja el default ('ultima_gana').
+						 */
+						if (
+							self.recomendacion_configuracion.politica_intra_archivo === 'ultima_gana'
+							|| self.recomendacion_configuracion.politica_intra_archivo === 'productos_distintos'
+						) {
+							self.politica_intra_archivo = self.recomendacion_configuracion.politica_intra_archivo
+						}
+					}
+
+					self.step = 3
+				})
+				.catch(function(mensaje) {
+
+					if (token_corrida !== self.analysis_polling_token) return
+
+					self.loading_recomendacion = false
+					self.$store.commit('auth/setLoading', false)
+					self.$store.commit('auth/setMessage', '')
+					self.$toast.error(mensaje)
+				})
 			})
 			.catch(function(err) {
+
+				/* Punto de chequeo: el .catch del POST inicial. */
+				if (token_corrida !== self.analysis_polling_token) return
+
 				self.loading_recomendacion = false
+				self.$store.commit('auth/setLoading', false)
+				self.$store.commit('auth/setMessage', '')
 
 				let message = 'Error al generar la recomendación.'
 				if (err.response && err.response.data && err.response.data.message) {
@@ -2802,10 +3035,45 @@ export default {
 		},
 
 		/*
+		 * Grupo 299 (correctivo de cancelación de polling, segundo intento): cancela
+		 * cualquier corrida de análisis/recomendación en curso. Se llama desde
+		 * reset() (disparado por @hide del modal: ESC, clic afuera, o cierre
+		 * explícito) y desde beforeDestroy() (navegación fuera de la vista).
+		 *
+		 * Hace las cuatro cosas que exige la cancelación:
+		 * 1. invalida el token vigente, de modo que cualquier request ya en vuelo
+		 *    — el POST inicial incluido — quede huérfano al volver;
+		 * 2 y 3. limpia los timers pendientes (polling y aviso de archivo grande);
+		 * 4. apaga el indicador global de carga y los flags locales SIN depender de
+		 *    que la Promise en curso se resuelva o rechace, porque cuando se
+		 *    cancela no va a hacer ninguna de las dos cosas.
+		 */
+		cancelar_analisis_en_curso() {
+			this.analysis_polling_token++
+
+			if (this.analysis_polling_timer_id) {
+				clearTimeout(this.analysis_polling_timer_id)
+				this.analysis_polling_timer_id = null
+			}
+
+			if (this.analysis_warning_timer_id) {
+				clearTimeout(this.analysis_warning_timer_id)
+				this.analysis_warning_timer_id = null
+			}
+
+			this.$store.commit('auth/setLoading', false)
+			this.$store.commit('auth/setMessage', '')
+			this.loading = false
+			this.loading_recomendacion = false
+		},
+
+		/*
 		 * Resetea el estado del modal al cerrarlo para que la próxima vez
 		 * empiece desde el paso 1 limpio.
 		 */
 		reset() {
+			this.cancelar_analisis_en_curso()
+
 			this.step          = 1
 			this.file          = null
 			this.file_processing = false
@@ -2858,6 +3126,16 @@ export default {
 		if (this.price_types.length === 0) {
 			this.$store.dispatch('price_type/getModels')
 		}
+	},
+
+	/*
+	 * Grupo 299 (correctivo de cancelación de polling, segundo intento): si el
+	 * componente se destruye (navegación fuera de la vista) con un análisis o una
+	 * recomendación en curso, cancela igual que reset() — si no, el polling sigue
+	 * pegándole a la API con el componente ya destruido.
+	 */
+	beforeDestroy() {
+		this.cancelar_analisis_en_curso()
 	},
 
 }
