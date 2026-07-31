@@ -21,9 +21,10 @@
 
 			<!-- Boton para metodoS de pago -->
 			<b-button
-			:disabled="disabled" 
+			:disabled="disabled"
 			variant="success"
 			id="btn_set_payment_methods"
+			data-tour="vender.boton_cobrar"
 			@click="set_payment_methods">
 				<b-badge
 				variant="primary"
