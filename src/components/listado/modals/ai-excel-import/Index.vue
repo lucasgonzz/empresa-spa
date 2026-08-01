@@ -2089,6 +2089,15 @@ export default {
 		 * rompe la cadena de invalidación del caller y una corrida cancelada
 		 * "resucita" como una corrida nueva y válida.
 		 *
+		 * Grupo 303 (1/8/2026): este helper NUNCA escribe analysis_polling_token,
+		 * solo lo lee. Sus cuatro salidas (éxito, error del backend, 5 fallos de
+		 * red seguidos y corte a los 15 minutos) cierran únicamente con
+		 * limpiar_timer_de_aviso() y nada más — ni un solo ++token dentro de este
+		 * método. Escribirlo acá invalida la corrida contra el propio callback del
+		 * caller que va a consumir el resultado (ver comentario junto al resolve()
+		 * de más abajo). El único lugar autorizado a incrementar el token es
+		 * cancelar_analisis_en_curso().
+		 *
 		 * @param {string} analysis_uuid  uuid devuelto por analyze() / get-recomendacion()
 		 * @param {number} token_corrida  token que el caller capturó antes de su POST
 		 * @return {Promise} resuelve con el "resultado" del backend, rechaza con un mensaje legible
@@ -2144,16 +2153,30 @@ export default {
 							)
 						}
 
+						/*
+						 * Grupo 303 (corrige el correctivo del grupo 299): acá NO va un
+						 * incremento del token (self.analysis_polling_token). El token es
+						 * del caller: lo capturó antes de su POST y lo vuelve a chequear
+						 * en su .then(resultado),
+						 * que corre después de este resolve(). Si lo invalidamos acá,
+						 * dejamos huérfano al propio callback que iba a consumir el
+						 * resultado — exactamente el bug que dejaba el modal colgado para
+						 * siempre en "Analizando el archivo con IA... (40%)" (1/8/2026).
+						 * Lo único que corresponde cerrar en todos los caminos de salida es
+						 * el timer de aviso de los 20 s (limpiar_timer_de_aviso(), arriba),
+						 * para que no ensucie auth/setMessage — ese era el motivo real por
+						 * el que alguien había puesto el ++ acá. El único lugar autorizado a
+						 * invalidar el token es cancelar_analisis_en_curso().
+						 */
 						if (res.data.estado === 'listo') {
 							limpiar_timer_de_aviso()
-							self.analysis_polling_token++
 							resolve(res.data.resultado)
 							return
 						}
 
+						/* Ídem arriba: el token es del caller, no se invalida en este helper. */
 						if (res.data.estado === 'error') {
 							limpiar_timer_de_aviso()
-							self.analysis_polling_token++
 							reject(res.data.error || 'Ocurrió un error al analizar el archivo.')
 							return
 						}
@@ -2175,7 +2198,6 @@ export default {
 
 						if (fallos_consecutivos >= 5) {
 							limpiar_timer_de_aviso()
-							self.analysis_polling_token++
 							reject('No se pudo consultar el estado del análisis. Probá de nuevo.')
 							return
 						}
@@ -2193,7 +2215,6 @@ export default {
 
 					if (transcurrido >= 900000) {
 						limpiar_timer_de_aviso()
-						self.analysis_polling_token++
 						reject('El análisis está tardando más de lo normal. Probá de nuevo o avisanos.')
 						return
 					}
