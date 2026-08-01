@@ -76,7 +76,7 @@
 				<!-- Cliente e información AFIP — misma fila -->
 				<div class="vender-stage__field vender-stage__field--full vender-stage__field--row">
 					<div ref="field_client" class="vender-stage__field-row-item">
-						<select-client></select-client>
+						<select-client data-tour="vender.selector_cliente"></select-client>
 					</div>
 					<div class="vender-stage__field-row-item">
 						<guardar-como-presupuesto></guardar-como-presupuesto>

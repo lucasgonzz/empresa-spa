@@ -10,6 +10,13 @@
 			<limpiar-vender in_actions_bar></limpiar-vender>
 		</div>
 
+		<!-- Etiqueta de contexto: a qué venta apuntan los botones de imprimir/WhatsApp -->
+		<span
+		v-if="sale && sale.num"
+		class="vender-actions-bar__sale-num">
+			Venta {{ sale.num }}
+		</span>
+
 		<!-- Botón imprimir (oculta WhatsApp duplicado; se muestra aparte) -->
 		<div class="vender-actions-bar__item vender-actions-bar__item--secondary vender-actions-bar__print">
 			<print :show_whatsapp_btn="false"></print>
@@ -79,16 +86,23 @@ export default {
 		/**
 		 * Al aparecer una venta nueva (o cambiar a una venta previa), reinicia el input
 		 * con el teléfono del cliente si tiene, o vacío si no hay cliente/teléfono.
-		 *
-		 * @param {Object|null} nueva_venta
+		 * `immediate: true` para que corra también al montar el componente: así, si el
+		 * operador vuelve al módulo con una `ultima_venta_sesion` ya cargada desde el
+		 * store, el input arranca con el teléfono correcto en vez de vacío/deshabilitado.
 		 */
-		sale(nueva_venta) {
-			if (nueva_venta) {
-				this.whatsapp_phone = (nueva_venta.client && nueva_venta.client.phone) || ''
-			} else {
-				this.whatsapp_phone = ''
-			}
-			this.telefono_ya_consultado = null
+		sale: {
+			immediate: true,
+			/**
+			 * @param {Object|null} nueva_venta
+			 */
+			handler(nueva_venta) {
+				if (nueva_venta) {
+					this.whatsapp_phone = (nueva_venta.client && nueva_venta.client.phone) || ''
+				} else {
+					this.whatsapp_phone = ''
+				}
+				this.telefono_ya_consultado = null
+			},
 		},
 	},
 	mounted() {
@@ -140,7 +154,18 @@ export default {
 		},
 
 		/**
+		 * Última venta confirmada en la sesión actual (sobrevive a salir y volver al módulo).
+		 *
+		 * @returns {Object|null}
+		 */
+		ultima_venta_sesion() {
+			return this.$store.state.vender.ultima_venta_sesion
+		},
+
+		/**
 		 * Venta a usar para imprimir y WhatsApp (misma lógica que Print.vue).
+		 * Prioridad: venta previa en edición > venta recién confirmada > última venta
+		 * de la sesión (fallback para cuando el operador vuelve al módulo).
 		 *
 		 * @returns {Object|null}
 		 */
@@ -150,6 +175,9 @@ export default {
 			}
 			if (this.maked_sale) {
 				return this.maked_sale
+			}
+			if (this.ultima_venta_sesion) {
+				return this.ultima_venta_sesion
 			}
 			return null
 		},
@@ -413,4 +441,11 @@ export default {
 .vender-actions-bar__whatsapp-input
 	width: 130px
 	height: 40px
+
+/* Etiqueta de contexto: número de la venta a la que apuntan imprimir/WhatsApp */
+.vender-actions-bar__sale-num
+	font-size: 0.78rem
+	color: var(--color-text-secondary, #6c757d)
+	white-space: nowrap
+	flex-shrink: 0
 </style>

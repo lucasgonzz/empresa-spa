@@ -1,5 +1,5 @@
 <template>
-<div id="vender" class="vender-view">
+<div id="vender" class="vender-view" data-tour="vender.contenedor">
 
 	<!-- Modales y overlays globales del módulo -->
 	<new-article></new-article>

@@ -57,6 +57,7 @@
 					:disabled="is_disabled"
 					class="input-search"
 					:id="_id"
+					:data-tour="data_tour"
 					@click="callSearchModal"
 					@keyup="callSearchModal"
 					v-model="query"
@@ -245,6 +246,10 @@ export default {
 		input_icon: {
 			type: String,
 			default: 'icon-search',
+		},
+		data_tour: {
+			type: String,
+			default: null,
 		},
 	},
 	data() {

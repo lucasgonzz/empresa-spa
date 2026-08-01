@@ -13,6 +13,12 @@ export default {
 		},
 	},
 	methods: {
+		/*
+			Ojo: limpiar_vender NO debe tocar vender/ultima_venta_sesion.
+			Ese campo tiene que sobrevivir a limpiar la venta y a salir del modulo,
+			para que el footer siga ofreciendo imprimir o mandar el comprobante de
+			la ultima venta hecha en la sesion. Se limpia solo al refrescar la pagina.
+		*/
 		limpiar_vender() {
 			console.log('limpiar_vender')
 			

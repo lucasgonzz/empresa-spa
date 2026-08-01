@@ -276,6 +276,14 @@ export default {
 		vendiendo: false,
 		sale: null,
 
+		/*
+			Ultima venta confirmada en la sesion de navegacion actual.
+			Vive solo en memoria a proposito: se mantiene aunque el operador salga
+			del modulo Vender y vuelva a entrar, y se pierde al refrescar la pagina.
+			No persistir en localStorage ni sessionStorage.
+		*/
+		ultima_venta_sesion: null,
+
 		afip_results: null,
 
 		discount_percentage: null,
@@ -706,6 +714,9 @@ export default {
 		setSale(state, value) {
 			state.sale = value
 		},
+		set_ultima_venta_sesion(state, value) {
+			state.ultima_venta_sesion = value
+		},
 		setSubTotal(state, sub_total = null) {
 			const previous_sub_total = state.sub_total
 			state.sub_total = sub_total
@@ -1037,6 +1048,7 @@ export default {
 				let sale = res.data.model
 				console.log(sale)
 				commit('setSale', sale)
+				commit('set_ultima_venta_sesion', sale)
 				commit('setVendiendo', false)
 				commit('append_sale_log', {
 					event_key: 'sale_submit_success',

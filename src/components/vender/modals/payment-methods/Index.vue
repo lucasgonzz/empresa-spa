@@ -5,7 +5,8 @@
     hide-header-close
     hide-footer
     @show="on_modal_show"
-    id="payment-method-modal">
+    id="payment-method-modal"
+    data-tour="vender.modal_cobro">
 
         <total-repartir
         :total_a_repartir="total_vender"

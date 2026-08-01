@@ -91,7 +91,10 @@ export default {
 	actions: {
 		me({commit}) {
 			commit('setLoading', true)
-			axios.get('/sanctum/csrf-cookie')
+			// Se retorna la cadena de promesas para que quien haga `dispatch('auth/me')`
+			// pueda encadenar `.then()` y saber cuándo terminó de resolverse (antes no
+			// se retornaba y el dispatch se resolvía antes de terminar las llamadas HTTP reales).
+			return axios.get('/sanctum/csrf-cookie')
 			.then(() => {
 				return axios.get('/api/user')
 				.then(res => {

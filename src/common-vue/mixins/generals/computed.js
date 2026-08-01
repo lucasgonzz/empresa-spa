@@ -80,12 +80,6 @@ export default {
             }
             return 'light'
         },
-        image_url_prop_name() {
-            if (process.env.VUE_APP_IMAGE_URL_PROP_NAME) {
-                return process.env.VUE_APP_IMAGE_URL_PROP_NAME
-            }
-            return 'image_url'
-        },
         custom_configuration_page() {
             if (typeof process.env.VUE_APP_CUSTOM_CONFIGURATION_PAGE != 'undefined' && process.env.VUE_APP_CUSTOM_CONFIGURATION_PAGE) {
                 return true

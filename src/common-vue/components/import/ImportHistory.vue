@@ -58,6 +58,18 @@
 				</b-button> -->
 			</template>
 
+			<!-- Boton para ver los problemas (conflictos) de la importacion, solo si tuvo al menos uno -->
+			<template #cell(conflicts)="data">
+				<b-button
+				v-if="tiene_conflictos(models[data.index])"
+				size="sm"
+				variant="warning"
+				@click="ver_conflictos(models[data.index])">
+					{{ models[data.index].conflicts_count }}
+				</b-button>
+				<span v-else class="text-muted">-</span>
+			</template>
+
 			<template #cell(link_excel)="data">
 				<b-button
 				variant="success"
@@ -147,6 +159,93 @@
 
 		</div>
 	</b-modal>
+
+	<!-- Modal con el detalle de los problemas (conflictos) de una importacion -->
+	<b-modal
+	hide-footer
+	size="lg"
+	title="Problemas de la importación"
+	id="modal-conflictos-importacion">
+
+		<div
+		v-if="cargando_conflictos"
+		class="all-center-md">
+			<b-spinner variant="warning"></b-spinner>
+		</div>
+
+		<div v-else>
+
+			<!-- Encabezado: fecha de la importacion y total de problemas detectados -->
+			<p class="mb-3">
+				<strong>Importación del {{ date((import_history_conflictos || {}).created_at, true) }}</strong>
+				— {{ total_conflictos }} problema<span v-if="total_conflictos != 1">s</span> detectado<span v-if="total_conflictos != 1">s</span>
+			</p>
+
+			<!-- Resumen por tipo de problema, como chips -->
+			<div
+			v-if="resumen_conflictos.length"
+			class="conflictos-resumen m-b-15">
+				<span
+				v-for="(item, index) in resumen_conflictos"
+				:key="'resumen-'+index"
+				class="badge badge-warning conflictos-resumen__chip">
+					{{ tipo_conflicto_label(item.tipo) }} ({{ campo_conflicto_label(item.campo) }}): {{ item.total }}
+				</span>
+			</div>
+
+			<history-empty-state
+			v-if="!conflictos.length"
+			icon_class="icon-check-circle"
+			title="No hay problemas para mostrar"
+			hint="Esta importación no tiene filas con conflictos."></history-empty-state>
+
+			<div v-else>
+
+				<b-table
+				responsive
+				small
+				head-variant="dark"
+				:items="conflictos_a_mostrar"
+				:fields="conflictos_fields">
+
+					<!-- Traduce el tipo de problema a lenguaje de usuario, sumando cuantos articulos competian cuando es ambiguo -->
+					<template #cell(tipo)="data">
+						{{ tipo_conflicto_label(data.item.tipo) }}
+						<span v-if="data.item.tipo === 'ambiguo' && data.item.article_ids">
+							({{ data.item.article_ids.length }} artículos)
+						</span>
+						<span v-if="data.item.tipo === 'fila_sobrescrita' && data.item.fila_ganadora">
+							(sobrescrita por la fila {{ data.item.fila_ganadora }})
+						</span>
+						<span v-if="data.item.tipo === 'identificador_sin_asignar' && data.item.article_ids">
+							({{ data.item.article_ids.length }} artículos)
+						</span>
+					</template>
+
+					<!-- Traduce el campo tecnico (bar_code, sku, etc.) a su nombre visible -->
+					<template #cell(campo)="data">
+						{{ campo_conflicto_label(data.item.campo) }}
+					</template>
+
+				</b-table>
+
+				<!-- Aviso cuando se recorta la lista a las primeras 200 filas para no renderizar tablas gigantes -->
+				<p
+				v-if="hay_mas_conflictos"
+				class="text-muted small">
+					Se muestran las primeras 200 filas de {{ conflictos_ordenados.length }}. Corregí estas y volvé a importar para ver el resto.
+				</p>
+
+			</div>
+
+			<p class="text-muted small m-t-15">
+				Estas filas no se procesaron para no sobrescribir articulos existentes con
+				datos equivocados. Corregi los codigos en el Excel y volve a importar solo
+				esas filas.
+			</p>
+
+		</div>
+	</b-modal>
 </div>
 </template>
 <script>
@@ -174,6 +273,16 @@ export default {
 			import_history_show_lotes: null,
 			// Importacion actualmente seleccionada para ver su error en el modal "import-error-detail"
 			error_seleccionado: null,
+			// Importacion actualmente seleccionada para ver sus problemas (conflictos) en el modal "modal-conflictos-importacion"
+			import_history_conflictos: null,
+			// Filas con problemas de la importacion seleccionada (conflicts del endpoint)
+			conflictos: [],
+			// Resumen por tipo/campo de los problemas de la importacion seleccionada
+			resumen_conflictos: [],
+			// Total de problemas de la importacion seleccionada (total del endpoint)
+			total_conflictos: 0,
+			// True mientras se cargan los problemas desde la API
+			cargando_conflictos: false,
 		}
 	},
 	computed: {
@@ -267,6 +376,10 @@ export default {
 				// 	key: 'actualizar_otro_proveedor',
 				// },
 				{
+					key: 'conflicts',
+					label: 'Problemas',
+				},
+				{
 					key: 'link_excel',
 					label: 'Archivo',
 				},
@@ -306,6 +419,59 @@ export default {
 					label: 'Revertir importacion',
 				},
 			]
+		},
+		/**
+		 * Columnas de la tabla de detalle del modal de problemas.
+		 * @returns {Array} definicion de fields para b-table
+		 */
+		conflictos_fields() {
+			return [
+				{
+					key: 'fila',
+					label: 'Fila',
+				},
+				{
+					key: 'tipo',
+					label: 'Problema',
+				},
+				{
+					key: 'campo',
+					label: 'Campo',
+				},
+				{
+					key: 'valor',
+					label: 'Valor',
+				},
+				{
+					key: 'nombre_excel',
+					label: 'Producto en el Excel',
+				},
+			]
+		},
+		/**
+		 * Copia de "conflictos" ordenada por numero de fila ascendente, para que el usuario
+		 * pueda ir corrigiendo el Excel en el mismo orden en que aparecen las filas.
+		 * @returns {Array} conflictos ordenados, sin mutar el array original
+		 */
+		conflictos_ordenados() {
+			return this.conflictos.slice().sort(function(a, b) {
+				return (a.fila || 0) - (b.fila || 0)
+			})
+		},
+		/**
+		 * Recorta la lista ordenada a las primeras 200 filas, para no renderizar
+		 * tablas gigantes cuando una importacion tiene miles de problemas.
+		 * @returns {Array} primeras 200 filas de conflictos_ordenados
+		 */
+		conflictos_a_mostrar() {
+			return this.conflictos_ordenados.slice(0, 200)
+		},
+		/**
+		 * True cuando hay mas de 200 filas de problemas, para mostrar el aviso de recorte.
+		 * @returns {Boolean}
+		 */
+		hay_mas_conflictos() {
+			return this.conflictos_ordenados.length > 200
 		}
 	},
 	methods: {
@@ -363,6 +529,85 @@ export default {
 				navigator.clipboard.writeText(this.error_seleccionado.error_trace)
 				this.$toast.success('Log copiado')
 			}
+		},
+		/**
+		 * Determina si una importacion tuvo al menos un problema (conflicto) durante el matching.
+		 * @param {Object} import_history - registro de import_histories (tabla o crudo)
+		 * @returns {Boolean} true si conflicts_count es mayor a 0
+		 */
+		tiene_conflictos(import_history) {
+			if (!import_history) return false
+			return Number(import_history.conflicts_count) > 0
+		},
+		/**
+		 * Abre el modal de problemas y carga desde la API el detalle de conflictos
+		 * de la importacion seleccionada.
+		 * @param {Object} import_history - registro de import_histories cuyos problemas se quieren ver
+		 * @returns {void}
+		 */
+		ver_conflictos(import_history) {
+			// Importacion seleccionada, para mostrar su fecha en el encabezado del modal
+			this.import_history_conflictos = import_history
+			this.conflictos = []
+			this.resumen_conflictos = []
+			this.total_conflictos = 0
+			this.cargando_conflictos = true
+
+			this.$bvModal.show('modal-conflictos-importacion')
+
+			this.$api.get('import-history/' + import_history.id + '/conflicts')
+			.then(res => {
+				this.conflictos = res.data.conflicts
+				this.resumen_conflictos = res.data.resumen
+				this.total_conflictos = res.data.total
+				this.cargando_conflictos = false
+			})
+			.catch(err => {
+				this.cargando_conflictos = false
+				this.$toast.error('No se pudieron cargar los problemas de la importacion')
+			})
+		},
+		/**
+		 * Traduce el "tipo" tecnico de un conflicto a un texto entendible por el usuario.
+		 * @param {String} tipo - tipo crudo devuelto por el backend (ambiguo, placeholder_descartado, sin_identificador)
+		 * @returns {String} texto traducido, o el tipo crudo si no matchea ninguno conocido
+		 */
+		tipo_conflicto_label(tipo) {
+			let labels = {
+				ambiguo: 'Codigo repetido: la fila coincidia con mas de un articulo',
+				placeholder_descartado: "Codigo invalido: se ignoro un valor como '-' o 'S/N'",
+				sin_identificador: 'Fila sin ningun codigo utilizable',
+				// Nuevos (grupo 229, prompt 07): parseo robusto de columnas numericas.
+				numero_invalido: 'Valor numerico invalido: no se pudo interpretar',
+				numero_fuera_de_rango: 'Valor numerico demasiado grande para la columna',
+				// Nuevo (grupo 265, prompt 03): repetido dentro del propio archivo, resuelto.
+				fila_sobrescrita: 'Fila sobrescrita',
+				// Nuevo (grupo 265, prompt 08): identificador unico que no se pudo asignar por match multiple.
+				identificador_sin_asignar: 'No se pudo asignar un codigo unico: coincidian varios articulos',
+			}
+			return labels[tipo] || tipo
+		},
+		/**
+		 * Traduce el nombre tecnico de un campo (bar_code, sku, etc.) a su nombre visible.
+		 * @param {String} campo - campo crudo devuelto por el backend
+		 * @returns {String} nombre traducido, o el campo crudo si no matchea ninguno conocido
+		 */
+		campo_conflicto_label(campo) {
+			let labels = {
+				bar_code: 'Codigo de barras',
+				sku: 'SKU',
+				provider_code: 'Codigo de proveedor',
+				name: 'Nombre',
+				// Nuevos (grupo 229, prompt 07): campos numericos que puede reportar
+				// registrar_conflicto_numerico() en ProcessRow.
+				cost: 'Costo',
+				price: 'Precio',
+				percentage_gain: 'Margen de ganancia',
+				stock_min: 'Stock minimo',
+				unidades_individuales: 'Unidades individuales',
+				medida: 'Medida',
+			}
+			return labels[campo] || campo
 		},
 		rollback(model) {
 
@@ -442,4 +687,17 @@ export default {
 	font-size: 12px
 	white-space: pre-wrap
 	word-break: break-word
+
+// Resumen de problemas de una importacion, mostrado como chips en el modal de conflictos
+.conflictos-resumen
+	display: flex
+	flex-wrap: wrap
+	gap: 8px
+
+	&__chip
+		font-size: 12px
+		font-weight: 500
+		padding: 6px 10px
+		white-space: normal
+		text-align: left
 </style>

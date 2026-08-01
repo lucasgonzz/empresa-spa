@@ -37,26 +37,34 @@ export default {
 		selected_model() {
 			return this.$store.state.seller_commission.selected_model
 		},
+		moneda_id() {
+			return this.$store.state.seller_commission.moneda_id
+		},
 	},
 	methods: {
 		save() {
-			this.loading = true 
+			this.loading = true
 			this.$api.post('seller-commission/saldo-inicial', {
 				...this.form,
-				seller_id: this.selected_model.id
+				seller_id: this.selected_model.id,
+				moneda_id: this.moneda_id,
 			})
 			.then(res => {
-				this.loading = false 
+				this.loading = false
 				this.$store.dispatch('seller_commission/getModels')
 				this.$toast.success('Guardado')
 				this.$bvModal.hide('seller-commission-saldo-inicial')
-				this.form.pago = ''
+				this.form.debe = ''
+				this.form.haber = ''
 				this.$store.commit('seller/add', res.data.model)
 			})
 			.catch(err => {
-				this.loading = false 
-				this.$toast.error(error)
-				console.log(err)
+				this.loading = false
+				let mensaje = 'Error al guardar'
+				if (err.response && err.response.data && err.response.data.message) {
+					mensaje = err.response.data.message
+				}
+				this.$toast.error(mensaje)
 			})
 		}
 	}

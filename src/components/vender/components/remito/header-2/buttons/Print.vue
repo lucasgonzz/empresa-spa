@@ -134,9 +134,12 @@ export default {
 
 		diffEnSegundos() {
 
-			if (this.maked_sale && this.maked_sale.created_at) {
+			/* Se calcula sobre this.sale (no maked_sale) para que la ventana de 30s */
+			/* de hide_sale_print_in_vender también aplique cuando la venta viene del */
+			/* fallback de ultima_venta_sesion, no solo cuando se acaba de confirmar. */
+			if (this.sale && this.sale.created_at) {
 
-				let venta_creada = moment(this.maked_sale.created_at)
+				let venta_creada = moment(this.sale.created_at)
 
 				return this.now.diff(venta_creada, 'seconds')
 
@@ -164,6 +167,22 @@ export default {
 
 		},
 
+		/**
+
+		 * Última venta confirmada en la sesión actual (sobrevive a salir y volver al módulo).
+
+		 *
+
+		 * @returns {Object|null}
+
+		 */
+
+		ultima_venta_sesion() {
+
+			return this.$store.state.vender.ultima_venta_sesion
+
+		},
+
 		sale() {
 
 			if (this.index_previus_sale > 0) {
@@ -173,6 +192,10 @@ export default {
 			} else if (this.maked_sale) {
 
 				return this.maked_sale
+
+			} else if (this.ultima_venta_sesion) {
+
+				return this.ultima_venta_sesion
 
 			}
 

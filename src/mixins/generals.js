@@ -102,6 +102,102 @@ export default {
             }
         },
 
+        /**
+         * Opciones del select de Concepto en el formulario de gastos.
+         *
+         * Si el gasto ya tiene una categoria elegida, se muestran solo los conceptos de esa
+         * categoria. Si no hay categoria elegida, se muestran todos: filtrar por una categoria
+         * vacia dejaria el select sin ninguna opcion, que es lo que pasaria con el depends_on
+         * generico de getOptions().
+         *
+         * @param {Object} prop propiedad del model (la de expense_concept_id)
+         * @param {Object} model gasto que se esta editando o creando
+         * @returns {Array} opciones para el b-form-select, con la opcion 0 adelante
+         */
+        expense_concept_options_de_la_categoria(prop, model) {
+
+            let opciones = [
+                { value: 0, text: 'Seleccione Concepto' },
+            ]
+
+            let conceptos = this.$store.state.expense_concept.models
+
+            // Number() porque el valor del select puede llegar como string desde el DOM.
+            let expense_category_id = model ? Number(model.expense_category_id) : 0
+
+            if (expense_category_id) {
+                conceptos = conceptos.filter(concepto => {
+                    return Number(concepto.expense_category_id) === expense_category_id
+                })
+            }
+
+            conceptos.forEach(concepto => {
+                opciones.push({
+                    value: concepto.id,
+                    text: concepto.name,
+                })
+            })
+
+            return opciones
+        },
+
+        /**
+         * Al elegir un concepto, completa sola la categoria del gasto con la del concepto.
+         *
+         * Es el camino de carga rapido: el usuario que ya sabe el concepto no tiene que elegir la
+         * categoria primero. Un concepto sin categoria deja el select de categoria en 0.
+         *
+         * @param {Object} prop propiedad del model (la de expense_concept_id)
+         * @param {Object} model gasto que se esta editando o creando
+         * @returns {void}
+         */
+        set_expense_category_del_concepto(prop, model) {
+
+            let expense_concept_id = Number(model.expense_concept_id)
+
+            if (!expense_concept_id) {
+                return
+            }
+
+            let concepto = this.$store.state.expense_concept.models.find(_concepto => {
+                return Number(_concepto.id) === expense_concept_id
+            })
+
+            if (typeof concepto == 'undefined') {
+                return
+            }
+
+            this.$set(model, 'expense_category_id', concepto.expense_category_id ? concepto.expense_category_id : 0)
+        },
+
+        /**
+         * Al cambiar la categoria, limpia el concepto si el que estaba elegido no pertenece a la
+         * categoria nueva. Si no se limpiara, quedaria en el formulario un concepto que ya no figura
+         * entre las opciones visibles, y el gasto se guardaria con una combinacion que el usuario cree
+         * haber descartado.
+         *
+         * @param {Object} prop propiedad del model (la de expense_category_id)
+         * @param {Object} model gasto que se esta editando o creando
+         * @returns {void}
+         */
+        limpiar_expense_concept_de_otra_categoria(prop, model) {
+
+            let expense_category_id = Number(model.expense_category_id)
+            let expense_concept_id = Number(model.expense_concept_id)
+
+            if (!expense_category_id || !expense_concept_id) {
+                return
+            }
+
+            let concepto = this.$store.state.expense_concept.models.find(_concepto => {
+                return Number(_concepto.id) === expense_concept_id
+            })
+
+            if (typeof concepto == 'undefined' || Number(concepto.expense_category_id) !== expense_category_id) {
+                this.$set(model, 'expense_concept_id', 0)
+            }
+        },
+
         get_caja_por_defecto(payment_method_id, address_id = null) {
 
             if (!address_id) {

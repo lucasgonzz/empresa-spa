@@ -81,6 +81,17 @@ export default {
 			value: '',
 			show: true,
 		},
+		{
+			// Descripcion que se muestra al compartir el link de la tienda por WhatsApp/Instagram/Facebook.
+			// Es texto plano (type: 'textarea'), NO 'texteditor': si trajera HTML, rompería el atributo
+			// content="..." de la etiqueta <meta name="description"> que arma el build del ecommerce.
+			text: 'Descripcion al compartir el link de la tienda',
+			key: 'meta_description',
+			type: 'textarea',
+			value: '',
+			show: true,
+			description: 'Es el texto que se ve debajo del nombre cuando compartis el link de tu tienda por WhatsApp, Instagram o Facebook. Conviene que sea corto: entra alrededor de 160 caracteres. Si lo dejas vacio, se comparte solo el nombre del comercio. Se aplica la proxima vez que se actualice tu tienda.',
+		},
 
 		{
 			group_title: 'Diseño'

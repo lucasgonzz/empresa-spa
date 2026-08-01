@@ -10,7 +10,7 @@ size="lg"
 		class="s-1 b-r-1 c-p apretable"
 		v-for="image in images"
 		@click="selectImage(image)"
-		:src="image[image_url_prop_name]">
+		:src="image.hosting_url">
 	</div>
 </b-modal>
 </template>
@@ -37,7 +37,7 @@ export default {
 	methods: {
 		selectImage(image) {
 			this.loading = true 
-			this.model[this.prop.key] = image[this.image_url_prop_name]
+			this.model[this.prop.key] = image.hosting_url
 			this.$api.put(this.routeString(this.model_name)+'/'+this.model.id, this.model)
 			.then(res => {
 				this.loading = false 

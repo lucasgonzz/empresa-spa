@@ -99,9 +99,13 @@ export default {
 		    }
 
 		    // Caso 2: stock global
+		    // Desde el prompt 04 (grupo 229): d.new pasó a ser el stock RESULTANTE
+		    // (no el delta). formatStockDiff() arma "viejo → resultante (delta)"
+		    // para que se lea como lo que pasó de verdad (ej: "2 → 1 (-1)"), en vez
+		    // de mostrar el delta como si fuera el valor final.
 		    if (value && typeof value === 'object' && value.__diff__stock) {
 		      const d = value.__diff__stock
-		      lines.push(`<b>${this.prettyName(key)}:</b> ${d.old} → <span class="text-success">${d.new}</span>`)
+		      lines.push(`<b>${this.prettyName(key)}:</b> ${this.formatStockDiff(d)}`)
 		      return
 		    }
 
@@ -214,6 +218,40 @@ export default {
 		  return lines.length
 		    ? `<ul class="mb-0">${lines.map(l => `<li>${l}</li>`).join('')}</ul>`
 		    : '—'
+		},
+
+		/**
+		 * Formatea el diff de stock global mostrando "viejo → resultante (delta)".
+		 * `d.new` es el stock RESULTANTE (no el delta) desde el prompt 04 (grupo 229).
+		 * Si el diff es viejo (pre-prompt, sin `delta`) se muestra "viejo → nuevo"
+		 * como antes, para no inventar un delta que no tenemos.
+		 */
+		formatStockDiff(d) {
+		  if (!d) return ''
+
+		  const oldVal = this.formatearNumero(d.old)
+		  const newVal = this.formatearNumero(d.new)
+
+		  if (typeof d.delta === 'undefined' || d.delta === null) {
+		    return `${oldVal} → <span class="text-success">${newVal}</span>`
+		  }
+
+		  const signo = Number(d.delta) > 0 ? '+' : ''
+		  const deltaVal = signo + this.formatearNumero(d.delta)
+
+		  return `${oldVal} → <span class="text-success">${newVal}</span> (${deltaVal})`
+		},
+
+		/**
+		 * Formatea un valor numérico para mostrar en el detalle del lote, quitando
+		 * decimales innecesarios (ej: "1.00" -> "1").
+		 */
+		formatearNumero(valor) {
+		  const numero = Number(valor)
+		  if (isNaN(numero)) return valor
+		  // Number(-1.00).toString() ya devuelve "-1": alcanza para quitar
+		  // los ceros/decimales sobrantes que trae el valor crudo del backend.
+		  return numero.toString()
 		},
 
 		prettyPriceField(field) {

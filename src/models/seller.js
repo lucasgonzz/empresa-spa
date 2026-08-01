@@ -12,11 +12,17 @@ export default {
 			text: 'Liquidar comision despues de saldar la venta',
 			key: 'commission_after_pay_sale',
 			type: 'checkbox',
+			descriptions: [
+				'Si esta activado, la comision se liquida recien cuando el cliente termina de pagar la venta. Si esta desactivado, se liquida en el momento de confirmar la venta, este cobrada o no.',
+			],
 		},
 		{
 			text: 'Porcentaje de comision',
 			key: 'percentage_commission',
 			type: 'number',
+			descriptions: [
+				'Porcentaje que se le liquida al vendedor sobre el total final de cada venta que tenga asignado a este vendedor.',
+			],
 		},
 		{
 			text: 'Categorias',

@@ -416,6 +416,10 @@ export default {
 	width: 100%
 	max-width: none
 	cursor: zoom-in
+	// Esquinas redondeadas para acompañar el estilo de la tabla.
+	border-radius: 10px
+	// Sombra sutil, consistente con el resto de las miniaturas de la tabla.
+	box-shadow: rgba(99, 99, 99, 0.25) 0px 1px 4px 0px
 
 .image-preview-overlay
 	position: fixed
@@ -440,6 +444,8 @@ export default {
 	max-width: 100%
 	height: auto
 	display: block
+	// Esquinas redondeadas suaves para la imagen en el modal de vista previa.
+	border-radius: 6px
 
 .image-preview-close
 	position: absolute

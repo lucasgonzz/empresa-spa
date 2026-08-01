@@ -262,28 +262,50 @@ export default {
 	    * @return {void}
 	    */
 	    on_cropper_image_error() {
-	    	if (this.auto_crop) {
-	    		this.notify_batch_save_failed()
-	    		return
-	    	}
-	    	this.$toast.error('No se pudo cargar la imagen para recortar')
+	    	this.notify_image_save_failed('No se pudo abrir la imagen para recortar. Probá con otra imagen de los resultados.')
 	    },
 	    /**
-	    * Notifica fallo de guardado al flujo batch y cierra el modal de recorte.
-	    * En modo manual mantiene el toast genérico existente.
+	    * Devuelve el mensaje de error que mando la API, o el texto de reserva si no vino ninguno.
 	    *
+	    * El endpoint set-image responde 422 con un `message` ya redactado para mostrarse tal cual
+	    * (ver grupo 262, prompt 01). Cualquier otro error de red o de servidor cae en el fallback.
+	    *
+	    * @param {Object} err Error de axios.
+	    * @param {String} fallback Texto a mostrar si la API no dijo nada util.
+	    * @return {String}
+	    */
+	    get_backend_error_message(err, fallback) {
+	    	if (
+	    		err
+	    		&& err.response
+	    		&& err.response.data
+	    		&& typeof err.response.data.message === 'string'
+	    		&& err.response.data.message.length
+	    	) {
+	    		return err.response.data.message
+	    	}
+	    	return fallback
+	    },
+	    /**
+	    * Cierra el modal de recorte, avisa al usuario y notifica al padre.
+	    *
+	    * A diferencia de la version anterior, el toast sale SIEMPRE: en el flujo automatico el
+	    * usuario tambien tiene que enterarse de que la imagen no se guardo. El evento sigue
+	    * emitiendose para que el padre pueda encadenar el reintento (grupo 262, prompt 03).
+	    *
+	    * @param {String} message Texto exacto a mostrar al usuario.
 	    * @return {void}
 	    */
-	    notify_batch_save_failed() {
+	    notify_image_save_failed(message) {
 	    	this.clearAutoCropRuntime()
 	    	this.loading_cropp = false
 	    	this.loading_not_cropp = false
 	    	this.$bvModal.hide('cropper-'+this.model.id+'-'+this.model.nombre+'-'+this.prop.key)
-	    	if (this.auto_crop) {
-	    		this.$emit('image-save-failed')
-	    		return
-	    	}
-	    	this.$toast.error('Error al recortar, pruebe seleccionando otro area')
+	    	this.$toast.error(message)
+	    	this.$emit('image-save-failed', {
+	    		image_url: this.image_url,
+	    		message: message,
+	    	})
 	    },
 
 	    startAutoCropProgress() {
@@ -319,10 +341,8 @@ export default {
 	        /* Reintentos ampliados para cargas de imagen lentas o conexiones inestables. */
 	        if (attempt > 120) {
 	        	this.is_setting_coordinates = false
-	        	/* En batch automático, notifica al padre para saltar al siguiente artículo. */
-	        	if (this.auto_crop) {
-	        		this.notify_batch_save_failed()
-	        	}
+	        	/* La imagen nunca termino de cargar: antes esto se abandonaba en silencio en manual. */
+	        	this.notify_image_save_failed('La imagen tardó demasiado en cargar y no se pudo recortar. Probá con otra imagen de los resultados.')
 	        	return
 	        }
 
@@ -378,10 +398,12 @@ export default {
 		    this.is_setting_coordinates = false
 		},
 		uploadImage(cropped) {
-			/* En batch automático el padre omite el artículo; no dispara toast global de error. */
-			const request_config = {}
-			if (this.auto_crop) {
-				request_config.skip_global_error_event = true
+			/*
+			* Este componente muestra su propio toast en todas las ramas de error, asi que se apaga
+			* el evento global: si no, el usuario ve el cartel generico ademas del mensaje bueno.
+			*/
+			const request_config = {
+				skip_global_error_event: true,
 			}
 
 			let params = {}
@@ -454,14 +476,12 @@ export default {
 			})
 			.catch(err => {
 				console.log(err)
-				/* En batch automático el padre omite el artículo; en manual se muestra toast. */
-				if (this.auto_crop) {
-					this.notify_batch_save_failed()
-					return
-				}
-				this.loading_cropp = false
-				this.loading_not_cropp = false
-				this.$toast.error('Error al recortar, pruebe seleccionando otro area')
+				/* El backend manda el motivo real en `message`; el texto fijo queda solo de reserva. */
+				const message = this.get_backend_error_message(
+					err,
+					'No se pudo guardar la imagen. Probá con otra imagen de los resultados.'
+				)
+				this.notify_image_save_failed(message)
 			})
 		},
 	},

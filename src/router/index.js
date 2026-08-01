@@ -16,6 +16,13 @@ const routes = [
         component: () => import('@/common-vue/views/Login')
     },
     {
+        // Ruta pública de ingreso a la demo: el lead entra con un token en la query
+        // string (`?t=`) y la vista canjea ese token por una sesión ya iniciada.
+        path: '/demo/ingreso',
+        name: 'demoIngreso',
+        component: () => import('@/views/DemoIngreso'),
+    },
+    {
         path: '/recuperar-clave/:view?/:sub_view?',
         name: 'passwordReset', 
         component: () => import('@/common-vue/views/PasswordReset')
@@ -201,7 +208,8 @@ const router = new VueRouter({
  */
 router.beforeEach((to, from, next) => {
     // Rutas públicas que deben poder accederse sin sesión iniciada.
-    const public_route_names = ['login', 'passwordReset']
+    // 'demoIngreso' es el ingreso a la demo vía token: la vista maneja su propia autenticación.
+    const public_route_names = ['login', 'passwordReset', 'demoIngreso']
 
     // Estado de sesión: `null` se trata como no autenticado (hasta que `auth/me` resuelva).
     const is_authenticated = store && store.state && store.state.auth && store.state.auth.authenticated
