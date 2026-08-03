@@ -37,6 +37,7 @@
 
 				<template #cell(acciones)="fila">
 					<b-button
+					v-if="se_puede_abrir(fila.item)"
 					size="sm"
 					variant="outline-primary"
 					@click="irAComprobante(fila.item)">
@@ -92,18 +93,13 @@ export default {
 				cheques_en_cartera: 'Cheques en cartera',
 			}
 		},
-		/* Modelo (store module) que corresponde a cada link_tipo devuelto por el backend, para poder
-		   abrir el comprobante con el mecanismo generico show_model(model_name, id) que ya usa el
-		   resto de la SPA. Mapeo hecho a partir de los nombres de ruta existentes (routes.js/router);
-		   'current_acount' y 'movimiento_caja' son la mejor suposicion disponible y conviene
-		   confirmarlos contra el backend real. */
+		/* Un tipo entra a este mapa cuando su modal esta efectivamente montado en
+		   views/Reportes.vue, no antes: los que quedaron afuera (expense, current_acount,
+		   cheque, movimiento_caja) eran un clic muerto, no una funcionalidad que se saco. */
 		modelo_por_link_tipo() {
 			return {
 				sale: 'sale',
-				expense: 'expense',
-				current_acount: 'current_acount',
-				cheque: 'cheque',
-				movimiento_caja: 'caja',
+				provider_order: 'provider_order',
 			}
 		},
 		pagina_actual: {
@@ -118,6 +114,16 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Determina si la fila tiene un modal montado en Reportes.vue para poder abrir
+		 * su comprobante (tarea 01: evitar el clic muerto de tipos sin modal).
+		 *
+		 * @param {Object} fila - registro del detalle (con link_tipo y link_id)
+		 * @returns {boolean}
+		 */
+		se_puede_abrir(fila) {
+			return typeof this.modelo_por_link_tipo[fila.link_tipo] !== 'undefined' && !!fila.link_id
+		},
 		/**
 		 * Navega al comprobante de origen de una fila del detalle, segun `link_tipo` + `link_id`
 		 * (tarea 06). Usa el mecanismo generico `show_model` que ya usa el resto de la SPA para

@@ -21,6 +21,11 @@
 
 		<!-- Modal de drill-down por concepto, compartido por las 3 secciones contables nuevas -->
 		<detalle-modal></detalle-modal>
+
+		<!-- Modales de comprobante que "Ver comprobante" del detalle abre por id via show_model.
+		No se referencian desde el template: si parecen sin uso, no borrar. -->
+		<sale-modal></sale-modal>
+		<model-index model_name="provider_order"></model-index>
 	</div>
 </template>
 <script>
@@ -36,6 +41,8 @@ export default {
 		Graficos: () => import('@/components/reportes/components/graficos/Index'),
 		Articulos: () => import('@/components/reportes/components/articulos/Index'),
 		Cheques: () => import('@/components/reportes/components/cheques/Index'),
+		SaleModal: () => import('@/components/common/SaleModal'),
+		ModelIndex: () => import('@/common-vue/components/model/Index'),
 	},
 	computed: {
 		/* El selector de moneda unico solo tiene sentido en las 3 secciones contables nuevas */
