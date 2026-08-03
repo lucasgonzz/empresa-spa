@@ -51,7 +51,12 @@ export default {
 				return []
 			}
 
-			let categorias = this.model.gastos_por_categoria.filter(categoria => categoria.total > 0)
+			// Copias nuevas (no los objetos del store): mas abajo se les agrega color y
+			// porcentaje, y mutar in-place los objetos de gastos_por_categoria ensuciaria
+			// el estado de Vuex por fuera de una mutation.
+			let categorias = this.model.gastos_por_categoria
+				.filter(categoria => categoria.total > 0)
+				.map(categoria => ({expense_concept_id: categoria.expense_concept_id, concepto: categoria.concepto, total: categoria.total}))
 
 			categorias.sort((a, b) => b.total - a.total)
 
