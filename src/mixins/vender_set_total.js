@@ -219,11 +219,41 @@ export default {
 
 		aplicar_payment_method_discounts_a_total_repartido_del_modal(total) {
 
-			/* 
+			/*
 				En modal_payment_metohds tengo guardado los metodos de pago elegidos en la primer instancia de repartir el total,
 				tienen seteada la propiedad discount_amount, calculada en vender/modals/payment-methods/buttons.calcular()
-	
+
 			*/
+
+			/*
+				Si hay un metodo de pago UNICO elegido en el select del remito
+				(current_acount_payment_method_id distinto de 0) entonces NO hay reparto en
+				multiples metodos de pago activo, y lo que haya quedado en modal_payment_methods
+				es el sobrante de un reparto anterior: sus discount_amount / surchage_amount ya
+				no corresponden a nada y no tienen que tocar el total.
+
+				POR QUE ESTE GUARD Y NO ALCANZA CON LIMPIAR EL STORE (no simplificar sacandolo):
+				modal_payment_methods es estado DERIVADO del reparto -- lo escribe calcular() en
+				vender/modals/payment-methods/Buttons.vue -- pero vive en su propio slot del
+				store, separado de selected_payment_methods. Eso obliga a que CADA camino que
+				sale del reparto se acuerde de limpiarlo, y el que se olvida deja el recargo
+				viejo sumandose al total para siempre, sin ningun error visible. Es exactamente
+				lo que paso en produccion el 3/8/2026: con un metodo de pago con recargo
+				(discount_percentage negativo), repartir 1000 y despues volver a elegir un
+				metodo unico en el select dejaba el total clavado en 1050. Las limpiezas van
+				puestas igual (mas abajo en este mismo prompt), pero este guard es la red que no
+				depende de que un camino futuro se acuerde.
+
+				NO usar selected_payment_methods.length como condicion: durante el paso de
+				Calcular el store todavia lo tiene vacio (las filas viven en el data local del
+				modal) y ahi el recargo SI se tiene que aplicar, que es justamente como el
+				usuario ve el total actualizado que tiene que volver a repartir.
+			*/
+			if (this.$store.state.vender.current_acount_payment_method_id) {
+
+				return total
+			}
+
 			if (this.current_acount_payment_method_discounts.length) {
 
 				let descuento = 0
