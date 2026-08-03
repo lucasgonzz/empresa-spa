@@ -5,7 +5,7 @@
 		<p class="composicion__titulo">A dónde va cada peso vendido</p>
 
 		<div class="composicion__barra">
-			<chart></chart>
+			<chart :styles="chart_styles"></chart>
 		</div>
 
 		<div class="composicion__leyenda">
@@ -23,7 +23,7 @@
 		<p
 		v-if="hay_perdida"
 		class="composicion__perdida">
-			El período cerró con una pérdida de {{ formatear(Math.abs(model.resultado_neto)) }}
+			{{ texto_perdida() }}
 		</p>
 	</div>
 </template>
@@ -31,6 +31,14 @@
 export default {
 	components: {
 		Chart: () => import('@/components/reportes/components/estado-resultados/composicion/Chart'),
+	},
+	data() {
+		return {
+			// vue-chartjs mide el contenedor real del canvas, no .composicion__barra (su abuelo):
+			// sin este prop el canvas queda con el alto por defecto de Chart.js (400px) y el
+			// overflow:hidden del wrapper solo deja ver los primeros pixeles, la barra "desaparece".
+			chart_styles: {height: '26px', position: 'relative'},
+		}
 	},
 	computed: {
 		model() {
@@ -85,9 +93,17 @@ export default {
 		formatear(valor) {
 			return this.price(valor, false, false)
 		},
-		/* Mismo criterio que el porcentaje() del prompt 02 en estado-resultados/Index.vue: base ventas_netas, redondeo a un decimal, valor absoluto */
+		/* Mismo criterio que el porcentaje() del prompt 02 en estado-resultados/Index.vue: base ventas_netas, redondeo a un decimal, valor absoluto. toFixed(1) para que 35 no se lea como "35%" sino "35.0%" (consistente con el resto de la leyenda) */
 		porcentaje(valor) {
-			return Math.round(Math.abs(valor) / this.model.ventas_netas * 1000) / 10
+			return (Math.round(Math.abs(valor) / this.model.ventas_netas * 1000) / 10).toFixed(1)
+		},
+		/* price(0, ...) devuelve '-' (mismo criterio que el resto de la app): en el caso borde de
+		   resultado_neto exactamente 0 evita el texto confuso "perdida de -" */
+		texto_perdida() {
+			if (this.model.resultado_neto === 0) {
+				return 'El período cerró sin ganancia ni pérdida'
+			}
+			return 'El período cerró con una pérdida de ' + this.formatear(Math.abs(this.model.resultado_neto))
 		},
 	},
 }

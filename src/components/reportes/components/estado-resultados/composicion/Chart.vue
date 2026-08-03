@@ -53,11 +53,13 @@ export default {
 			]
 
 			let datasets = []
+			let suma_dibujada = 0
 
 			// Un segmento en 0 o negativo no se agrega: un dataset de ancho cero mete una
 			// entrada fantasma en el tooltip.
 			candidatos.filter(candidato => candidato.valor > 0).forEach(candidato => {
 				datasets.push(this.dataset_segmento(candidato.label, candidato.valor, candidato.color))
+				suma_dibujada += candidato.valor
 			})
 
 			/**
@@ -68,6 +70,7 @@ export default {
 			 */
 			if (resultado_neto > 0) {
 				datasets.push(this.dataset_segmento('Resultado', resultado_neto, '#10B981'))
+				suma_dibujada += resultado_neto
 			}
 
 			let that = this
@@ -76,22 +79,30 @@ export default {
 
 			options.legend = {display: false}
 			options.scales = {
+				// stacked + barPercentage/categoryPercentage van en la escala indice (yAxes),
+				// no en el dataset: desde Chart.js 2.7 el dataset los ignora por completo.
 				xAxes: [{
 					stacked: true,
 					display: false,
 					gridLines: {display: false, drawBorder: false},
+					// Sin min/max fijo, Chart.js redondea el maximo del eje hacia el proximo
+					// tick "lindo" (ticks.max > suma real): la barra queda con un hueco a la
+					// derecha y desalineada contra los porcentajes de la leyenda.
+					ticks: {display: false, beginAtZero: true, min: 0, max: suma_dibujada},
 				}],
 				yAxes: [{
 					stacked: true,
 					display: false,
 					gridLines: {display: false, drawBorder: false},
+					barPercentage: 1,
+					categoryPercentage: 1,
 				}],
 			}
 			options.tooltips.callbacks = {
 				label: function(tooltip_item, data) {
 					let dataset = data.datasets[tooltip_item.datasetIndex]
 					let valor = dataset.data[0]
-					let porcentaje = Math.round(Math.abs(valor) / ventas_netas * 1000) / 10
+					let porcentaje = (Math.round(Math.abs(valor) / ventas_netas * 1000) / 10).toFixed(1)
 
 					return dataset.label + ': ' + that.price(valor, false, false) + ' (' + porcentaje + '%)'
 				},
@@ -108,8 +119,6 @@ export default {
 				label: label,
 				data: [valor],
 				backgroundColor: color,
-				barPercentage: 1,
-				categoryPercentage: 1,
 			}
 		},
 	},
