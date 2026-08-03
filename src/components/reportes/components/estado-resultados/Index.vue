@@ -86,8 +86,13 @@
 					<span class="cascada-renglon__porcentaje">{{ porcentaje(model.gastos_operativos) }}</span>
 				</span>
 			</div>
+			<!-- Anillo de gastos por categoria (tarea 04): reemplaza al desglose de texto cuando
+			hay 2 o mas categorias con gasto, no se muestran los dos juntos (misma info
+			duplicada). Con 0 o 1 categoria el anillo no aporta nada, se sigue mostrando el
+			texto de siempre -- por eso el bloque .cascada-desglose de abajo no se borra. -->
+			<gastos-categorias v-if="categorias_con_gasto.length >= 2"></gastos-categorias>
 			<div
-			v-if="model.gastos_por_categoria && model.gastos_por_categoria.length"
+			v-else-if="model.gastos_por_categoria && model.gastos_por_categoria.length"
 			class="cascada-desglose">
 				<div
 				v-for="categoria in model.gastos_por_categoria"
@@ -156,6 +161,7 @@ export default {
 	mixins: [detalle_drilldown],
 	components: {
 		Composicion: () => import('@/components/reportes/components/estado-resultados/composicion/Index'),
+		GastosCategorias: () => import('@/components/reportes/components/estado-resultados/gastos-categorias/Index'),
 	},
 	created() {
 		this.$store.dispatch('reportes/getEstadoResultados')
@@ -163,6 +169,13 @@ export default {
 	computed: {
 		model() {
 			return this.$store.state.reportes.estado_resultados
+		},
+		/* Cuantas categorias tienen gasto real (tarea 04): decide si se muestra el anillo o el texto */
+		categorias_con_gasto() {
+			if (!this.model.gastos_por_categoria) {
+				return []
+			}
+			return this.model.gastos_por_categoria.filter(categoria => categoria.total > 0)
 		},
 		loading() {
 			return this.$store.state.reportes.estado_resultados_loading
