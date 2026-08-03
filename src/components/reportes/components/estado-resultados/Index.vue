@@ -14,6 +14,10 @@
 		v-else
 		class="cascada-card">
 
+			<!-- Barra de composicion "a donde va cada peso vendido" (tarea 03): primer bloque
+			de la tarjeta, se autooculta si no hay ventas netas -->
+			<composicion></composicion>
+
 			<!-- Ventas brutas -->
 			<div
 			class="cascada-renglon apretable"
@@ -150,6 +154,9 @@ import detalle_drilldown from '@/mixins/reportes/detalle_drilldown'
 
 export default {
 	mixins: [detalle_drilldown],
+	components: {
+		Composicion: () => import('@/components/reportes/components/estado-resultados/composicion/Index'),
+	},
 	created() {
 		this.$store.dispatch('reportes/getEstadoResultados')
 	},
