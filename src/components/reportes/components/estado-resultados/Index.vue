@@ -27,7 +27,10 @@
 			class="cascada-renglon cascada-renglon--resta apretable"
 			@click="abrirDetalle('devoluciones')">
 				<span class="cascada-renglon__label">(–) Devoluciones</span>
-				<span class="cascada-renglon__monto">{{ formatear(model.devoluciones) }}</span>
+				<span class="cascada-renglon__monto">
+					{{ formatear(model.devoluciones) }}
+					<span class="cascada-renglon__porcentaje">{{ porcentaje(model.devoluciones) }}</span>
+				</span>
 			</div>
 
 			<!-- Ventas netas: subtotal destacado -->
@@ -41,7 +44,10 @@
 			class="cascada-renglon cascada-renglon--resta apretable"
 			@click="abrirDetalle('costo_mercaderia_vendida')">
 				<span class="cascada-renglon__label">(–) Costo de mercadería vendida</span>
-				<span class="cascada-renglon__monto">{{ formatear(model.costo_mercaderia_vendida) }}</span>
+				<span class="cascada-renglon__monto">
+					{{ formatear(model.costo_mercaderia_vendida) }}
+					<span class="cascada-renglon__porcentaje">{{ porcentaje(model.costo_mercaderia_vendida) }}</span>
+				</span>
 			</div>
 
 			<!-- Costo de mercaderia devuelta: se resta del costo de mercaderia vendida, solo se muestra si hay algo -->
@@ -49,11 +55,16 @@
 			v-if="model.costo_mercaderia_devuelta"
 			class="cascada-renglon cascada-renglon--resta">
 				<span class="cascada-renglon__label">(+) Costo de mercadería devuelta</span>
-				<span class="cascada-renglon__monto">{{ formatear(model.costo_mercaderia_devuelta) }}</span>
+				<span class="cascada-renglon__monto">
+					{{ formatear(model.costo_mercaderia_devuelta) }}
+					<span class="cascada-renglon__porcentaje">{{ porcentaje(model.costo_mercaderia_devuelta) }}</span>
+				</span>
 			</div>
 
-			<!-- Resultado bruto: subtotal destacado, con margen al lado -->
-			<div class="cascada-renglon cascada-renglon--subtotal">
+			<!-- Resultado bruto: subtotal destacado, con margen al lado. Rojo con perdida (tarea 02), verde queda reservado para el neto -->
+			<div
+			class="cascada-renglon cascada-renglon--subtotal"
+			:class="clase_resultado(model.resultado_bruto)">
 				<span class="cascada-renglon__label">
 					Resultado bruto
 					<span class="cascada-renglon__margen">({{ margen(model.margen_bruto_porcentaje) }})</span>
@@ -66,7 +77,10 @@
 			class="cascada-renglon cascada-renglon--resta apretable"
 			@click="abrirDetalle('gastos')">
 				<span class="cascada-renglon__label">(–) Gastos operativos</span>
-				<span class="cascada-renglon__monto">{{ formatear(model.gastos_operativos) }}</span>
+				<span class="cascada-renglon__monto">
+					{{ formatear(model.gastos_operativos) }}
+					<span class="cascada-renglon__porcentaje">{{ porcentaje(model.gastos_operativos) }}</span>
+				</span>
 			</div>
 			<div
 			v-if="model.gastos_por_categoria && model.gastos_por_categoria.length"
@@ -76,20 +90,31 @@
 				:key="categoria.expense_concept_id"
 				class="cascada-desglose__item">
 					<span>{{ categoria.concepto }}</span>
-					<span>{{ formatear(categoria.total) }}</span>
+					<span>
+						{{ formatear(categoria.total) }}
+						<span class="cascada-renglon__porcentaje">{{ porcentaje(categoria.total) }}</span>
+					</span>
 				</div>
 			</div>
 
-			<!-- Resultado operativo: subtotal destacado -->
-			<div class="cascada-renglon cascada-renglon--subtotal">
+			<!-- Resultado operativo: subtotal destacado. Unica linea de resultado sin proporcion propia del backend, se le agrega aca -->
+			<div
+			class="cascada-renglon cascada-renglon--subtotal"
+			:class="clase_resultado(model.resultado_operativo)">
 				<span class="cascada-renglon__label">Resultado operativo</span>
-				<span class="cascada-renglon__monto">{{ formatear(model.resultado_operativo) }}</span>
+				<span class="cascada-renglon__monto">
+					{{ formatear(model.resultado_operativo) }}
+					<span class="cascada-renglon__porcentaje">{{ porcentaje(model.resultado_operativo) }}</span>
+				</span>
 			</div>
 
 			<!-- Comisiones de cobro: resta, no tiene concepto propio en la whitelist de detalle -->
 			<div class="cascada-renglon cascada-renglon--resta">
 				<span class="cascada-renglon__label">(–) Comisiones de cobro</span>
-				<span class="cascada-renglon__monto">{{ formatear(model.comisiones_de_cobro) }}</span>
+				<span class="cascada-renglon__monto">
+					{{ formatear(model.comisiones_de_cobro) }}
+					<span class="cascada-renglon__porcentaje">{{ porcentaje(model.comisiones_de_cobro) }}</span>
+				</span>
 			</div>
 
 			<!-- IIBB determinado: solo aplica cuando la moneda no es dolares (backend manda null en ese caso) -->
@@ -97,6 +122,7 @@
 				<span class="cascada-renglon__label">(–) IIBB determinado</span>
 				<span class="cascada-renglon__monto">
 					{{ model.iibb_determinado === null ? '—' : formatear(model.iibb_determinado) }}
+					<span class="cascada-renglon__porcentaje">{{ porcentaje(model.iibb_determinado) }}</span>
 				</span>
 			</div>
 			<p
@@ -105,8 +131,10 @@
 				No se calcula en dólares: IIBB se determina siempre sobre el total en pesos.
 			</p>
 
-			<!-- Resultado neto: subtotal final, el mas destacado -->
-			<div class="cascada-renglon cascada-renglon--subtotal cascada-renglon--final">
+			<!-- Resultado neto: subtotal final, el mas destacado. Color por signo (tarea 02): antes quedaba verde fijo aunque hubiera perdida -->
+			<div
+			class="cascada-renglon cascada-renglon--subtotal cascada-renglon--final"
+			:class="clase_resultado(model.resultado_neto)">
 				<span class="cascada-renglon__label">
 					Resultado neto
 					<span class="cascada-renglon__margen">({{ margen(model.margen_neto_porcentaje) }})</span>
@@ -156,6 +184,41 @@ export default {
 		no_atribuible(campo) {
 			return !!(this.model.lineas_no_atribuibles_a_moneda && this.model.lineas_no_atribuibles_a_moneda.indexOf(campo) !== -1)
 		},
+		/**
+		 * Peso porcentual de un monto sobre las ventas netas (tarea 02). La base es
+		 * ventas_netas, no ventas_brutas, porque es la misma base contra la que el backend
+		 * calcula margen_bruto_porcentaje y margen_neto_porcentaje (metodo margen() de arriba):
+		 * usar otra base daria numeros que no cierran con esos dos margenes ya mostrados.
+		 * Usa el valor absoluto porque es "cuanto pesa", no debe arrastrar el signo del renglon.
+		 *
+		 * @param {Number|null} valor
+		 * @returns {String}
+		 */
+		porcentaje(valor) {
+			if (!this.model.ventas_netas || !valor) {
+				return '—'
+			}
+			return Math.round(Math.abs(valor) / this.model.ventas_netas * 1000) / 10 + '%'
+		},
+		/**
+		 * Clase de color segun el signo del resultado (tarea 02): verde en positivo, rojo en
+		 * negativo, sin clase (color gris oscuro por defecto) en cero o sin dato. El verde solo
+		 * se ve en la practica en Resultado neto porque solo ese renglon tiene la clase
+		 * --final combinada en el estilo; en bruto y operativo un positivo se queda con el
+		 * gris oscuro que ya traen de --subtotal.
+		 *
+		 * @param {Number|null} valor
+		 * @returns {String}
+		 */
+		clase_resultado(valor) {
+			if (valor > 0) {
+				return 'cascada-renglon--positivo'
+			}
+			if (valor < 0) {
+				return 'cascada-renglon--negativo'
+			}
+			return ''
+		},
 	},
 }
 </script>
@@ -193,14 +256,28 @@ export default {
 			border-top: 2px solid #e2e8f0
 			border-bottom: 2px solid #e2e8f0
 
+		&--negativo
+			color: #DC2626
+
 		&--final
 			font-size: 1.2rem
-			color: #059669
+			color: #0f172a
+
+			&.cascada-renglon--positivo
+				color: #059669
+
+			&.cascada-renglon--negativo
+				color: #DC2626
 
 		&__margen
 			font-weight: 500
 			font-size: 0.8rem
 			color: #64748b
+			margin-left: 6px
+
+		&__porcentaje
+			font-size: 0.85em
+			color: #94a3b8
 			margin-left: 6px
 
 	.cascada-desglose
