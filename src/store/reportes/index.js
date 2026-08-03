@@ -221,21 +221,15 @@ export default {
 		 */
 		getEstadoResultados({state, commit}) {
 			commit('setEstadoResultadosLoading', true)
-			commit('auth/setMessage', 'Cargando estado de resultados', {root: true})
-			commit('auth/setLoading', true, {root: true})
 
 			axios.get('api/reportes/estado-resultados', {params: fecha_moneda_params(state, true)})
 			.then(res => {
 				commit('setEstadoResultadosLoading', false)
-				commit('auth/setLoading', false, {root: true})
-				commit('auth/setMessage', '', {root: true})
 				commit('setEstadoResultados', res.data.estado_resultados)
 			})
 			.catch(err => {
 				console.log(err)
 				commit('setEstadoResultadosLoading', false)
-				commit('auth/setLoading', false, {root: true})
-				commit('auth/setMessage', '', {root: true})
 			})
 		},
 
@@ -244,21 +238,15 @@ export default {
 		 */
 		getPosicionFiscal({state, commit}) {
 			commit('setPosicionFiscalLoading', true)
-			commit('auth/setMessage', 'Cargando posicion fiscal', {root: true})
-			commit('auth/setLoading', true, {root: true})
 
 			axios.get('api/reportes/posicion-fiscal', {params: fecha_moneda_params(state, false)})
 			.then(res => {
 				commit('setPosicionFiscalLoading', false)
-				commit('auth/setLoading', false, {root: true})
-				commit('auth/setMessage', '', {root: true})
 				commit('setPosicionFiscal', res.data.posicion_fiscal)
 			})
 			.catch(err => {
 				console.log(err)
 				commit('setPosicionFiscalLoading', false)
-				commit('auth/setLoading', false, {root: true})
-				commit('auth/setMessage', '', {root: true})
 			})
 		},
 
@@ -267,21 +255,15 @@ export default {
 		 */
 		getFlujoCaja({state, commit}) {
 			commit('setFlujoCajaLoading', true)
-			commit('auth/setMessage', 'Cargando flujo de caja', {root: true})
-			commit('auth/setLoading', true, {root: true})
 
 			axios.get('api/reportes/flujo-caja', {params: fecha_moneda_params(state, true)})
 			.then(res => {
 				commit('setFlujoCajaLoading', false)
-				commit('auth/setLoading', false, {root: true})
-				commit('auth/setMessage', '', {root: true})
 				commit('setFlujoCaja', res.data.flujo_caja)
 			})
 			.catch(err => {
 				console.log(err)
 				commit('setFlujoCajaLoading', false)
-				commit('auth/setLoading', false, {root: true})
-				commit('auth/setMessage', '', {root: true})
 			})
 		},
 
