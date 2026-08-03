@@ -50,7 +50,10 @@ async function search_and_select(page, field_testid, query) {
 	await page.locator(`[data-testid="${field_testid}"]`).click()
 	const modal_input = page.locator(`[data-testid="${field_testid}-search-modal-input"]`)
 	await modal_input.fill(query)
-	// Dispara la busqueda contra los modelos ya cargados en el store (no golpea la API).
+	// Dispara la busqueda, que pega a la API (global-search/article): el usuario del fixture
+	// tiene download_articles desactivado, asi que search_from_api_in_provider_order (definida
+	// en src/mixins/model_functions.js) da true. El filtrado en memoria contra el store es el
+	// camino alternativo, para usuarios con los articulos descargados o sin conexion.
 	await modal_input.press('Enter')
 	// Auto-espera: el primer resultado tarda lo que tarde en filtrar/renderizar, sin waitForTimeout.
 	await page.locator('[data-testid="search-result-row"]').first().click()
