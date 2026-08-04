@@ -84,8 +84,24 @@ export default {
 			console.log('resetear_vender')
 
 			this.focus_bar_code()
-			
+
+			/*
+				El snapshot se toma antes de limpiar porque el punto de venta se resetea ya mismo, no
+				cuando vuelve AFIP, y la factura de la venta que se acaba de guardar todavía necesita
+				esos datos.
+			*/
+			let datos_afip = {
+				afip_information_id: this.$store.state.vender.afip_information_id,
+				afip_tipo_comprobante_id: this.$store.state.vender.afip_tipo_comprobante_id,
+				incoterms: this.$store.state.vender.incoterms,
+				forma_de_pago: this.$store.state.vender.forma_de_pago,
+				permiso_existente: this.$store.state.vender.permiso_existente,
+			}
+
 			this.limpiar_vender()
+
+			// El punto de venta y el tipo de comprobante vuelven a cero siempre, se haya facturado o no.
+			this.limpiar_afip()
 
 			this.setDefaultPaymentMethod(true)
 
@@ -99,7 +115,7 @@ export default {
 
 			if (online) {
 				this.actualizar_cliente()
-				this.facturar_venta()
+				this.facturar_venta(datos_afip)
 			}
 
 			this.$store.commit('vender/clear_sale_log')

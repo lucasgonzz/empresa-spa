@@ -186,15 +186,28 @@
 							<div v-infinite-scroll="loadMore" infinite-scroll-disabled="busy" infinite-scroll-distance="10"></div> -->
 						</template>
 					</tbody>
+					<!--
+						El estado vacío va como fila de la tabla y no como bloque suelto debajo: con un td de
+						colspan completo, el fondo cubre el ancho REAL de la tabla incluso cuando hay scroll
+						horizontal, y las esquinas inferiores redondeadas de tbody tr:last-child aplican solas.
+						Como <p> hermano de la tabla no heredaba nada de eso: quedaba transparente y, al scrollear
+						de costado, cortado.
+					-->
+					<tbody
+					v-else-if="show_empty_text">
+						<tr
+						class="empty-state-row">
+							<td
+							:colspan="fields.length">
+								<empty-state
+								:title="empty_state_title"
+								:hint="empty_state_hint"></empty-state>
+							</td>
+						</tr>
+					</tbody>
 					<slot name="btn_add_to_show"></slot>
 				</table>
-				<p
-				v-if="!loading && !models.length && show_empty_text"
-				class="text-with-icon">
-					<i class="icon-eye-slash"></i>
-					No hay {{ plural(model_name) }}
-				</p>
-				<!-- <div 
+				<!-- <div
 				v-if="models.length && show_buttons_scroll"
 				class="scroll-buttons">
 					<div 
@@ -235,6 +248,7 @@ export default {
 		Ordenar: () => import('@/common-vue/components/display/table/Ordenar'),
 		BtnFilter: () => import('@/common-vue/components/display/table/BtnFilter'),
 		Pagination: () => import('@/common-vue/components/display/table/pagination/Index'),
+		EmptyState: () => import('@/common-vue/components/display/EmptyState'),
 	},
 	props: {
 		properties: {
@@ -620,6 +634,27 @@ export default {
 				}
 			}
 			return used_keys.join(',')
+		},
+		/**
+		 * Título del estado vacío. Cambia según haya o no filtros aplicados: "no hay nada" y
+		 * "tu búsqueda no encontró nada" son situaciones distintas y el usuario necesita
+		 * distinguirlas para saber si tiene que limpiar filtros o cargar datos.
+		 */
+		empty_state_title() {
+			if (this.table_filters_signature !== '') {
+				return 'No se encontraron resultados'
+			}
+			return 'No hay ' + this.plural(this.model_name)
+		},
+		/**
+		 * Ayuda secundaria: solo cuando hay filtros activos. Sin filtros el título ya lo dice todo
+		 * y una línea extra sería ruido.
+		 */
+		empty_state_hint() {
+			if (this.table_filters_signature !== '') {
+				return 'Probá con otros filtros o limpiá los que tenés aplicados.'
+			}
+			return null
 		},
 	},
 	watch: {
@@ -1566,6 +1601,23 @@ export default {
 					/* Esquina inferior derecha de la última fila de datos. */
 					border-bottom-right-radius: 12px
 					overflow: hidden
+
+			tr.empty-state-row
+				td
+					/* El td trae width/max-width de 800px y padding de celda pensados para datos: */
+					/* acá estorban, el contenido lo centra el propio componente. */
+					width: auto
+					max-width: none
+					padding: 0
+					border-bottom: 0
+					/* El mismo blanco que tienen las filas reales y las del skeleton (en modo */
+					/* oscuro, la superficie equivalente). Es lo que faltaba: el <p> viejo vivía */
+					/* fuera de la tabla y no heredaba ningún fondo. */
+					background: var(--bg-card, #FFF)
+				/* No es una fila clickeable: el realce de hover de las filas de datos no aplica. */
+				&:hover
+					td
+						background: var(--bg-card, #FFF)
 
 			tr.skeleton-row
 				td
