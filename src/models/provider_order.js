@@ -12,6 +12,7 @@ export default {
 			key: 'provider_id',
 			store: 'provider',
 			type: 'search',
+			search_from_api: true,
 			value: 0,
 			is_title: true,
 			required: true,

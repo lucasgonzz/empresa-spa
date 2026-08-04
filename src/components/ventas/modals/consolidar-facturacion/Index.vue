@@ -5,6 +5,7 @@
     title="Consolidar ventas para facturar"
     size="lg"
     hide-footer
+    @shown="onShown"
     @hidden="onHidden">
 
         <!-- Flujo búsqueda: filtros de cliente y fechas; oculto cuando viene de la grilla. -->
@@ -252,7 +253,7 @@ export default {
             if (!cid) {
                 return ''
             }
-            const c = this.$store.state.client.models.find(x => x.id == cid)
+            const c = this.$store.state.client.options.find(x => x.id == cid)
             return c ? c.name : `Cliente #${cid}`
         },
 
@@ -309,7 +310,7 @@ export default {
 
         /** Opciones para el selector de clientes. */
         client_options() {
-            return this.$store.state.client.models.map(c => ({
+            return this.$store.state.client.options.map(c => ({
                 value: c.id,
                 text: c.name,
             }))
@@ -351,6 +352,14 @@ export default {
         onHidden() {
             this.$store.commit('sale/consolidar_facturacion/cerrarModal')
             this.busqueda_realizada = false
+        },
+
+        /**
+         * Pide el catalogo completo de clientes (options) al abrir el modal: ya no se
+         * descarga entero al iniciar sesion (grupo 332/342, 4/8/2026).
+         */
+        onShown() {
+            this.$store.dispatch('client/getOptions')
         },
 
         /**

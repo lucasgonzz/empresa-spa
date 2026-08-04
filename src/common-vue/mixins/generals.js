@@ -1166,6 +1166,22 @@ export default {
 			return options
 
 		},
+		/**
+		 * Arma options para un <select> a partir de `options` del store (catalogo completo, sin
+		 * withAll ni paginar) en vez de `models` (parcial/paginado). Pensado para props de un store
+		 * construido con __base_store (los unicos que tienen `options` en su state) cuyo catalogo
+		 * dejo de descargarse al iniciar sesion y ahora se pide con la accion getOptions de Vuex al
+		 * abrir la pantalla que lo necesita (grupo 332, 4/8/2026). No usar con stores que no vengan
+		 * del factory: esos no tienen `options` en su state.
+		 */
+		getOptionsFromCatalog(prop) {
+			let store = prop.store || prop.key.substring(0, prop.key.length - 3)
+			let options = [{ value: 0, text: 'Seleccione ' + this.propText(prop) }]
+			this.$store.state[store].options.forEach(item => {
+				options.push({ value: item.id, text: item.name })
+			})
+			return options
+		},
 		getOptions(prop, model = null, model_name = null, add_opcion_0 = true) {
 			let store
 
