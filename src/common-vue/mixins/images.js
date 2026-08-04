@@ -24,10 +24,12 @@
 					urls.push(single_url)
 				}
 			} else if (prop.type == 'images' && model[prop.key] && model[prop.key].length) {
-				let url_prop = this.image_url_prop_name
 				model[prop.key].forEach(function(image_item) {
-					if (image_item && image_item[url_prop]) {
-						urls.push(image_item[url_prop])
+					if (image_item && image_item.hosting_url) {
+						urls.push(image_item.hosting_url)
+					} else if (image_item) {
+						// Imagen sin hosting_url: se deja rastro en consola en vez de fallar en silencio (ver Grupo 215 Prompt 03)
+						console.warn('Imagen sin hosting_url', image_item.id)
 					}
 				})
 			}

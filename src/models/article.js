@@ -97,6 +97,7 @@ export default {
 			// crear los del proveedor nuevo) y recien ahi, si se confirma, pega contra el
 			// endpoint dedicado "PUT article/change-provider".
 			confirm_change_function: 'confirmProviderChange',
+			data_tour: 'listado.campo_proveedor',
 			description: 'Proveedor al que pertenece ahora este articulo. Ultimo proveedor del cual adquiriste este articulo. Al cambiarlo en un articulo existente se abre un modal para elegir si se eliminan los descuentos del proveedor anterior y/o se crean los del proveedor nuevo.',
 			// table_position: 6,
 		},
@@ -149,6 +150,8 @@ export default {
 			type: 'text',
 			is_price: true,
 			use_to_update: true,
+			// Hasta 6 decimales en BD (grupo 282); en UI solo se muestran del 3.º al 6.º si el usuario los usa.
+			variable_decimals: { min: 2, max: 6 },
 			filter_modal_position: 10,
 			filter_type: 'number',
 			can: 'article.cost',
@@ -210,6 +213,8 @@ export default {
 			type: 'text',
 			is_price: true,
 			only_show: true,
+			// Hasta 6 decimales en BD (grupo 282); en UI solo se muestran del 3.º al 6.º si el usuario los usa.
+			variable_decimals: { min: 2, max: 6 },
 			can: 'article.cost',
 			simbolo_moneda_function: 'article_simbolo_moneda',
 			description: 'Este dato es calculado por el sistema, es igual a: "Costo" + "Descuentos" y "Recargos" + "IVA". Seria el costo real que tiene ese producto en su negocio luego de tener en cuenta los descuetos de su proveedor, costos por transporte, impuestos, etc',
@@ -225,6 +230,8 @@ export default {
 			type_to_update: 'number',
 			type: 'text',
 			is_price: true,
+			// Hasta 6 decimales en BD (grupo 282); en UI solo se muestran del 3.º al 6.º si el usuario los usa.
+			variable_decimals: { min: 2, max: 6 },
 			if_has_extencion: 'production',
 			not_show: true,
 			description: 'Indica cuanto te cuesta que este articulo sea utilizado en el proceso productivo como insumo dentro de la fabricacion de otros articulos. Este valor es usado, junto con el costo del articulo, para calcular cuanto te cuesta fabricar los articulos en los que esta computado este articulo',
@@ -545,6 +552,7 @@ export default {
 			not_show: true,
 			filter_modal_position: 5,
 			keep_after_create: true,
+			data_tour: 'listado.campo_categoria',
 		},
 		{
 			text: 'sub categoria',

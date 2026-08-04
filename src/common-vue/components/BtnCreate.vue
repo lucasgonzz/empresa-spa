@@ -2,6 +2,7 @@
 	<b-button
 	:dusk="'btn_create_'+model_name"
 	:class="with_margin ? 'm-b-15' : ''"
+	:data-tour="model_name === 'article' ? 'listado.boton_crear_articulo' : null"
 	@click="create"
 	:block="block ? true : false"
 	:size="button_size"

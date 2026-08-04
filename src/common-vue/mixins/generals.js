@@ -94,12 +94,6 @@ export default {
 			}
 			return 'light'
 		},
-		image_url_prop_name() {
-			if (process.env.VUE_APP_IMAGE_URL_PROP_NAME) {
-				return process.env.VUE_APP_IMAGE_URL_PROP_NAME
-			}
-			return 'image_url'
-		},
 		custom_configuration_page() {
 			if (typeof process.env.VUE_APP_CUSTOM_CONFIGURATION_PAGE != 'undefined' && process.env.VUE_APP_CUSTOM_CONFIGURATION_PAGE) {
 				return true
@@ -834,7 +828,13 @@ export default {
 				let value = this.getFunctionValue(prop, model)
 
 				if (prop.is_price) {
-					value = this.price(value)
+					if (prop.variable_decimals) {
+						const min_decimals = prop.variable_decimals.min != null ? prop.variable_decimals.min : 2
+						const max_decimals = prop.variable_decimals.max != null ? prop.variable_decimals.max : 6
+						value = this.price_variable_decimals(value, min_decimals, max_decimals)
+					} else {
+						value = this.price(value)
+					}
 				}
 				value = this._check_moneda(value, prop, model, from_pivot, pivot_parent_model)
 
@@ -926,10 +926,18 @@ export default {
 			} 
 			
 			if (prop.is_price) {
-				let value = this.price(model[prop.key]) 
+				let value
+
+				if (prop.variable_decimals) {
+					const min_decimals = prop.variable_decimals.min != null ? prop.variable_decimals.min : 2
+					const max_decimals = prop.variable_decimals.max != null ? prop.variable_decimals.max : 6
+					value = this.price_variable_decimals(model[prop.key], min_decimals, max_decimals)
+				} else {
+					value = this.price(model[prop.key])
+				}
 
 				if (prop.simbolo_moneda_function) {
-					return this[prop.simbolo_moneda_function](model, model[prop.key])
+					return this[prop.simbolo_moneda_function](model, model[prop.key], prop)
 				}
 
 				value = this._check_moneda(value, prop, model, from_pivot, pivot_parent_model)
@@ -1058,16 +1066,31 @@ export default {
 			}
 			return value 
 		},
-		article_simbolo_moneda(model, price) {
+		/**
+		 * @param {Object} model
+		 * @param {*} price
+		 * @param {Object|null} prop definición de propiedad del model, para respetar
+		 *   variable_decimals cuando la declara (grupo 282, prompt 04). Parámetro opcional
+		 *   para no romper a los llamadores que invocan esta función directamente sin un prop.
+		 */
+		article_simbolo_moneda(model, price, prop = null) {
+			const formatear = (valor) => {
+				if (prop && prop.variable_decimals) {
+					const min_decimals = prop.variable_decimals.min != null ? prop.variable_decimals.min : 2
+					const max_decimals = prop.variable_decimals.max != null ? prop.variable_decimals.max : 6
+					return this.price_variable_decimals(valor, min_decimals, max_decimals)
+				}
+				return this.price(valor)
+			}
 			if (model.cost_in_dollars) {
 				if (!this.owner.cotizar_precios_en_dolares) {
 					if (price) {
-						return 'USD '+this.price(price)
+						return 'USD '+formatear(price)
 					}
 					return ''
 				}
 			}
-			return this.price(price)
+			return formatear(price)
 		},
 		current_acount_simbolo_moneda(model, price) {
 			if (model.moneda_id == 2) {

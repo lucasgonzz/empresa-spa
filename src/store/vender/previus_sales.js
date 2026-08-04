@@ -142,6 +142,10 @@ export default {
 		})
 			.then(res => {
 				commit('sale/add', res.data.model, {root: true})
+				// Si la venta actualizada es la ultima_venta_sesion (mismo ID), refrescarla.
+				if (rootState.vender.ultima_venta_sesion && rootState.vender.ultima_venta_sesion.id === res.data.model.id) {
+					commit('vender/set_ultima_venta_sesion', res.data.model, {root: true})
+				}
 				commit('setUpdating', false)
 				commit('vender/append_sale_log', {
 					event_key: 'sale_update_success',

@@ -22,13 +22,13 @@
 			<context-bar></context-bar>
 
 			<!-- Buscadores de artículos -->
-			<header-form></header-form>
+			<header-form data-tour="vender.buscador_articulos"></header-form>
 
 			<!-- Indicador de ventas anteriores vinculadas -->
 			<previus-sale-data></previus-sale-data>
 
 			<!-- Tabla de artículos agregados -->
-			<articles-table></articles-table>
+			<articles-table data-tour="vender.lista_articulos"></articles-table>
 
 		</div>
 	</div>

@@ -314,6 +314,9 @@ export default {
 		display: block
 		// Altura mínima solo en la primera carga, antes de conocer el alto real de la imagen.
 		min-height: 48px
+		// Esquinas redondeadas para que el spinner y el cartel de error queden recortados.
+		border-radius: 10px
+		overflow: hidden
 
 	&__overlay
 		position: absolute
@@ -345,4 +348,8 @@ export default {
 	width: 100%
 	max-width: none
 	cursor: zoom-in
+	// Esquinas redondeadas de la imagen para acompañar el estilo de la tabla.
+	border-radius: 10px
+	// Sombra sutil sobre la imagen en si (no en __frame, que la recortaria por su overflow: hidden).
+	box-shadow: rgba(99, 99, 99, 0.25) 0px 1px 4px 0px
 </style>

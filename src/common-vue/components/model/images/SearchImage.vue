@@ -185,7 +185,16 @@ export default {
 				console.log('google_api_key del owner: '+this.owner.google_custom_search_api_key)
 				return this.owner.google_custom_search_api_key
 			}
-			return 'AIzaSyC4sUC-MuEDsMNoIQqwUPmYWZmw74rsHOI'
+			/*
+			 * Repositorio publico: la API key de fallback de Google Custom Search se saca del
+			 * codigo fuente y se toma de una variable de entorno del build. Esto NO la vuelve
+			 * secreta: sigue viajando igual dentro del bundle que se le descarga a cualquier
+			 * visitante. Sirve para poder rotarla sin tocar codigo y para que no quede escrita
+			 * en el repo. La proteccion real es restringirla en Google Cloud Console (limitarla
+			 * a la Custom Search API y por dominio/referrer HTTP) porque consume cuota
+			 * facturable, a diferencia de una key de Firebase que esta pensada para ser publica.
+			 */
+			return process.env.VUE_APP_GOOGLE_SEARCH_API_KEY
 		},
 		busquedas_disponibles() {
 			if (this.current_geocoder_counter) {
@@ -320,6 +329,48 @@ export default {
 				}
 			}
 			return false
+		},
+		/**
+		* Reintenta la seleccion automatica cuando el servidor no pudo guardar la imagen elegida.
+		*
+		* El navegador si podia mostrarla (por eso paso validate_image_url), pero el servidor no
+		* pudo bajarla. Se marca esa URL como fallida y se sigue con la proxima candidata de la
+		* misma busqueda; si no queda ninguna, se prueba el siguiente criterio de busqueda.
+		*
+		* @param {String} failed_image_url URL que el servidor rechazo.
+		* @return {void}
+		*/
+		retry_after_server_failure(failed_image_url) {
+			if (failed_image_url && this.failed_image_urls.indexOf(failed_image_url) === -1) {
+				this.failed_image_urls.push(failed_image_url)
+			}
+
+			/* setImage() habia dejado el flujo en 'manual'; para el reintento vuelve a automatico. */
+			this.flow_mode = 'auto'
+
+			/* Se arranca en la posicion siguiente a la que fallo, no desde el principio. */
+			let next_index = 0
+			if (this.images_result) {
+				const failed_index = this.images_result.indexOf(failed_image_url)
+				if (failed_index !== -1) {
+					next_index = failed_index + 1
+				}
+			}
+			this.auto_select_target_index = next_index
+
+			this.select_first_available_image()
+			.then(image_selected => {
+				if (image_selected) {
+					return
+				}
+				/* Sin candidatas en esta busqueda: se prueba el siguiente criterio (bar_code -> name). */
+				if (this.try_next_auto_query()) {
+					return
+				}
+				this.flow_mode = 'idle'
+				this.$toast.error('No se pudo guardar ninguna de las imágenes encontradas')
+				this.$emit('no-image-available')
+			})
 		},
 		/**
 		* Valida el dígito verificador GS1 (módulo 10) para códigos de 8, 12, 13 o 14 dígitos.
@@ -472,7 +523,9 @@ export default {
 				this.loading = true
 				let url = 'https://www.googleapis.com/customsearch/v1?key='+this.google_api_key+'&cx=c442e5f346f314951&searchType=image&q='+this.query
 				return fetch(url)
-				// fetch('https://www.googleapis.com/customsearch/v1?key=AIzaSyDOdbUFHZhD0I2DWoYVR6CQnKurqYY5rcQ&cx=c442e5f346f314951&searchType=image&q='+this.query)
+				// Repositorio publico: codigo muerto comentado, se saca la key literal igual
+				// (un secreto/valor comentado sigue publicado en el historial de git).
+				// fetch('https://www.googleapis.com/customsearch/v1?key=[valor removido - repositorio publico]&cx=c442e5f346f314951&searchType=image&q='+this.query)
 				.then(res => {
 					this.loading = false
 					res.json()

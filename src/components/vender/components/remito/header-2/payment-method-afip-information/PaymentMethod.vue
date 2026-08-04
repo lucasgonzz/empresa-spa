@@ -21,9 +21,10 @@
 
 			<!-- Boton para metodoS de pago -->
 			<b-button
-			:disabled="disabled" 
+			:disabled="disabled"
 			variant="success"
 			id="btn_set_payment_methods"
+			data-tour="vender.boton_cobrar"
 			@click="set_payment_methods">
 				<b-badge
 				variant="primary"
@@ -413,17 +414,21 @@ export default {
 
 				this.limpiar_cuotas()
 
-				// this.init_modal_payment_metohds()
-				
-				this.setTotal()
-			} 
+				/* Se vuelve a repartir desde cero: los montos del reparto anterior no se heredan */
+				this.$store.commit('vender/set_modal_payment_methods', [])
 
-			
+				this.setTotal()
+			}
+
+
 			this.$bvModal.show('payment-method-modal')
 		},
 		set_payment_methods_null() {
 			this.$store.commit('vender/setSelectedPaymentMethods', [])
 			this.$store.commit('vender/current_acount_payment_methods/set_payment_methods', [])
+
+			/* El reparto en multiples metodos de pago quedo sin efecto, asi que sus montos de descuento/recargo tambien */
+			this.$store.commit('vender/set_modal_payment_methods', [])
 
 			this.limpiar_cuotas()
 

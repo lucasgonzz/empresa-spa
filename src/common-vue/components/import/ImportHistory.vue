@@ -58,6 +58,18 @@
 				</b-button> -->
 			</template>
 
+			<!-- Boton para ver los problemas (conflictos) de la importacion, solo si tuvo al menos uno -->
+			<template #cell(conflicts)="data">
+				<b-button
+				v-if="tiene_conflictos(models[data.index])"
+				size="sm"
+				variant="warning"
+				@click="ver_conflictos(models[data.index])">
+					{{ models[data.index].conflicts_count }}
+				</b-button>
+				<span v-else class="text-muted">-</span>
+			</template>
+
 			<template #cell(link_excel)="data">
 				<b-button
 				variant="success"
@@ -113,9 +125,36 @@
 
 
 			<template #cell(rollback)="data">
+				<b-badge
+				v-if="models[data.index].rollback_status === 'revertida'"
+				variant="success">
+					Revertida
+					<br>
+					{{ date(models[data.index].rolled_back_at, true) }}
+				</b-badge>
+				<span
+				v-else-if="models[data.index].rollback_status === 'encolado'">
+					<b-spinner small variant="secondary"></b-spinner>
+					Revirtiendo…
+				</span>
 				<b-button
+				v-else-if="models[data.index].rollback_status === 'fallido' && puede_revertir(models[data.index])"
+				size="sm"
+				variant="outline-danger"
+				:title="models[data.index].rollback_error"
+				@click="pedir_confirmacion_rollback(models[data.index])">
+					Reintentar
+				</b-button>
+				<b-button
+				v-else-if="puede_revertir(models[data.index])"
 				variant="danger"
-				@click="rollback(models[data.index])">Revertir</b-button>
+				@click="pedir_confirmacion_rollback(models[data.index])">
+					Revertir
+				</b-button>
+				<span
+				v-else
+				class="text-muted"
+				title="No se puede revertir una importacion que todavia esta en curso">—</span>
 			</template>
 
 
@@ -147,6 +186,103 @@
 
 		</div>
 	</b-modal>
+
+	<!-- Modal con el detalle de los problemas (conflictos) de una importacion -->
+	<b-modal
+	hide-footer
+	size="lg"
+	title="Problemas de la importación"
+	id="modal-conflictos-importacion">
+
+		<div
+		v-if="cargando_conflictos"
+		class="all-center-md">
+			<b-spinner variant="warning"></b-spinner>
+		</div>
+
+		<div v-else>
+
+			<!-- Encabezado: fecha de la importacion y total de problemas detectados -->
+			<p class="mb-3">
+				<strong>Importación del {{ date((import_history_conflictos || {}).created_at, true) }}</strong>
+				— {{ total_conflictos }} problema<span v-if="total_conflictos != 1">s</span> detectado<span v-if="total_conflictos != 1">s</span>
+			</p>
+
+			<!-- Resumen por tipo de problema, como chips -->
+			<div
+			v-if="resumen_conflictos.length"
+			class="conflictos-resumen m-b-15">
+				<span
+				v-for="(item, index) in resumen_conflictos"
+				:key="'resumen-'+index"
+				class="badge badge-warning conflictos-resumen__chip">
+					{{ tipo_conflicto_label(item.tipo) }} ({{ campo_conflicto_label(item.campo) }}): {{ item.total }}
+				</span>
+			</div>
+
+			<history-empty-state
+			v-if="!conflictos.length"
+			icon_class="icon-check-circle"
+			title="No hay problemas para mostrar"
+			hint="Esta importación no tiene filas con conflictos."></history-empty-state>
+
+			<div v-else>
+
+				<b-table
+				responsive
+				small
+				head-variant="dark"
+				:items="conflictos_a_mostrar"
+				:fields="conflictos_fields">
+
+					<!-- Traduce el tipo de problema a lenguaje de usuario, sumando cuantos articulos competian cuando es ambiguo -->
+					<template #cell(tipo)="data">
+						{{ tipo_conflicto_label(data.item.tipo) }}
+						<span v-if="data.item.tipo === 'ambiguo' && data.item.article_ids">
+							({{ data.item.article_ids.length }} artículos)
+						</span>
+						<span v-if="data.item.tipo === 'fila_sobrescrita' && data.item.fila_ganadora">
+							(sobrescrita por la fila {{ data.item.fila_ganadora }})
+						</span>
+						<span v-if="data.item.tipo === 'identificador_sin_asignar' && data.item.article_ids">
+							({{ data.item.article_ids.length }} artículos)
+						</span>
+					</template>
+
+					<!-- Traduce el campo tecnico (bar_code, sku, etc.) a su nombre visible -->
+					<template #cell(campo)="data">
+						{{ campo_conflicto_label(data.item.campo) }}
+					</template>
+
+				</b-table>
+
+				<!-- Aviso cuando se recorta la lista a las primeras 200 filas para no renderizar tablas gigantes -->
+				<p
+				v-if="hay_mas_conflictos"
+				class="text-muted small">
+					Se muestran las primeras 200 filas de {{ conflictos_ordenados.length }}. Corregí estas y volvé a importar para ver el resto.
+				</p>
+
+			</div>
+
+			<p class="text-muted small m-t-15">
+				Estas filas no se procesaron para no sobrescribir articulos existentes con
+				datos equivocados. Corregi los codigos en el Excel y volve a importar solo
+				esas filas.
+			</p>
+
+		</div>
+	</b-modal>
+
+	<!-- Confirmacion antes de revertir una importacion (grupo 305, prompt 03) -->
+	<confirm
+	id="confirm-rollback-import"
+	:text="texto_confirmacion_rollback"
+	not_show_delete_text
+	btn_text="Revertir importación"
+	variant="danger"
+	emit="rollback_confirmado"
+	@rollback_confirmado="ejecutar_rollback"></confirm>
 </div>
 </template>
 <script>
@@ -156,6 +292,7 @@ export default {
 		// ArticulosCreados: () => import('@/common-vue/components/import/ArticulosCreados'),
 		Chunks: () => import('@/common-vue/components/import/chunks/Index'),
 		HistoryEmptyState: () => import('@/common-vue/components/horizontal-nav/HistoryEmptyState'),
+		Confirm: () => import('@/common-vue/components/Confirm'),
 	},
 	props: {
 		show_history: Boolean,
@@ -174,6 +311,18 @@ export default {
 			import_history_show_lotes: null,
 			// Importacion actualmente seleccionada para ver su error en el modal "import-error-detail"
 			error_seleccionado: null,
+			// Importacion actualmente seleccionada para ver sus problemas (conflictos) en el modal "modal-conflictos-importacion"
+			import_history_conflictos: null,
+			// Filas con problemas de la importacion seleccionada (conflicts del endpoint)
+			conflictos: [],
+			// Resumen por tipo/campo de los problemas de la importacion seleccionada
+			resumen_conflictos: [],
+			// Total de problemas de la importacion seleccionada (total del endpoint)
+			total_conflictos: 0,
+			// True mientras se cargan los problemas desde la API
+			cargando_conflictos: false,
+			// Importacion seleccionada para revertir, pendiente de confirmar en el modal "confirm-rollback-import"
+			import_history_a_revertir: null,
 		}
 	},
 	computed: {
@@ -267,6 +416,10 @@ export default {
 				// 	key: 'actualizar_otro_proveedor',
 				// },
 				{
+					key: 'conflicts',
+					label: 'Problemas',
+				},
+				{
 					key: 'link_excel',
 					label: 'Archivo',
 				},
@@ -306,7 +459,79 @@ export default {
 					label: 'Revertir importacion',
 				},
 			]
-		}
+		},
+		/**
+		 * Columnas de la tabla de detalle del modal de problemas.
+		 * @returns {Array} definicion de fields para b-table
+		 */
+		conflictos_fields() {
+			return [
+				{
+					key: 'fila',
+					label: 'Fila',
+				},
+				{
+					key: 'tipo',
+					label: 'Problema',
+				},
+				{
+					key: 'campo',
+					label: 'Campo',
+				},
+				{
+					key: 'valor',
+					label: 'Valor',
+				},
+				{
+					key: 'nombre_excel',
+					label: 'Producto en el Excel',
+				},
+			]
+		},
+		/**
+		 * Copia de "conflictos" ordenada por numero de fila ascendente, para que el usuario
+		 * pueda ir corrigiendo el Excel en el mismo orden en que aparecen las filas.
+		 * @returns {Array} conflictos ordenados, sin mutar el array original
+		 */
+		conflictos_ordenados() {
+			return this.conflictos.slice().sort(function(a, b) {
+				return (a.fila || 0) - (b.fila || 0)
+			})
+		},
+		/**
+		 * Recorta la lista ordenada a las primeras 200 filas, para no renderizar
+		 * tablas gigantes cuando una importacion tiene miles de problemas.
+		 * @returns {Array} primeras 200 filas de conflictos_ordenados
+		 */
+		conflictos_a_mostrar() {
+			return this.conflictos_ordenados.slice(0, 200)
+		},
+		/**
+		 * True cuando hay mas de 200 filas de problemas, para mostrar el aviso de recorte.
+		 * @returns {Boolean}
+		 */
+		hay_mas_conflictos() {
+			return this.conflictos_ordenados.length > 200
+		},
+		/**
+		 * Texto del modal de confirmacion antes de revertir, con la fecha y las
+		 * cantidades reales de la importacion seleccionada (grupo 305, prompt 03).
+		 * Generico si todavia no se eligio ninguna: el computed se evalua antes
+		 * de que el usuario apriete "Revertir" por primera vez.
+		 * @returns {String}
+		 */
+		texto_confirmacion_rollback() {
+			let model = this.import_history_a_revertir
+			if (!model) {
+				return 'Vas a revertir esta importación. Esta acción no se puede deshacer.'
+			}
+			let fecha = this.date(model.created_at, true)
+			let creados = model.created_models || 0
+			let actualizados = model.updated_models || 0
+			return 'Vas a revertir la importación del ' + fecha + '. Se van a eliminar los ' + creados +
+				' artículos que creó y los ' + actualizados + ' que actualizó van a volver a los valores ' +
+				'que tenían antes. Esta acción no se puede deshacer.'
+		},
 	},
 	methods: {
 		chunks(model) {
@@ -364,21 +589,135 @@ export default {
 				this.$toast.success('Log copiado')
 			}
 		},
-		rollback(model) {
+		/**
+		 * Determina si una importacion tuvo al menos un problema (conflicto) durante el matching.
+		 * @param {Object} import_history - registro de import_histories (tabla o crudo)
+		 * @returns {Boolean} true si conflicts_count es mayor a 0
+		 */
+		tiene_conflictos(import_history) {
+			if (!import_history) return false
+			return Number(import_history.conflicts_count) > 0
+		},
+		/**
+		 * Abre el modal de problemas y carga desde la API el detalle de conflictos
+		 * de la importacion seleccionada.
+		 * @param {Object} import_history - registro de import_histories cuyos problemas se quieren ver
+		 * @returns {void}
+		 */
+		ver_conflictos(import_history) {
+			// Importacion seleccionada, para mostrar su fecha en el encabezado del modal
+			this.import_history_conflictos = import_history
+			this.conflictos = []
+			this.resumen_conflictos = []
+			this.total_conflictos = 0
+			this.cargando_conflictos = true
 
-			if (confirm('¿Seguro que quiere revertir esta importacion?')) {
-				
-				this.$store.commit('auth/setMessage', 'Cargando')
-				this.$store.commit('auth/setMessage', true)
-				this.$api.post('import-history/rollback/'+model.id)
-				.then(res => {
-					this.$store.commit('auth/setMessage', false)
-					this.$toast.success('Enviado, te avisaremos cuando termine')
-				})
-				.catch(err => {
-					this.$store.commit('auth/setMessage', false)
-				})
+			this.$bvModal.show('modal-conflictos-importacion')
+
+			this.$api.get('import-history/' + import_history.id + '/conflicts')
+			.then(res => {
+				this.conflictos = res.data.conflicts
+				this.resumen_conflictos = res.data.resumen
+				this.total_conflictos = res.data.total
+				this.cargando_conflictos = false
+			})
+			.catch(err => {
+				this.cargando_conflictos = false
+				this.$toast.error('No se pudieron cargar los problemas de la importacion')
+			})
+		},
+		/**
+		 * Traduce el "tipo" tecnico de un conflicto a un texto entendible por el usuario.
+		 * @param {String} tipo - tipo crudo devuelto por el backend (ambiguo, placeholder_descartado, sin_identificador)
+		 * @returns {String} texto traducido, o el tipo crudo si no matchea ninguno conocido
+		 */
+		tipo_conflicto_label(tipo) {
+			let labels = {
+				ambiguo: 'Codigo repetido: la fila coincidia con mas de un articulo',
+				placeholder_descartado: "Codigo invalido: se ignoro un valor como '-' o 'S/N'",
+				sin_identificador: 'Fila sin ningun codigo utilizable',
+				// Nuevos (grupo 229, prompt 07): parseo robusto de columnas numericas.
+				numero_invalido: 'Valor numerico invalido: no se pudo interpretar',
+				numero_fuera_de_rango: 'Valor numerico demasiado grande para la columna',
+				// Nuevo (grupo 265, prompt 03): repetido dentro del propio archivo, resuelto.
+				fila_sobrescrita: 'Fila sobrescrita',
+				// Nuevo (grupo 265, prompt 08): identificador unico que no se pudo asignar por match multiple.
+				identificador_sin_asignar: 'No se pudo asignar un codigo unico: coincidian varios articulos',
 			}
+			return labels[tipo] || tipo
+		},
+		/**
+		 * Traduce el nombre tecnico de un campo (bar_code, sku, etc.) a su nombre visible.
+		 * @param {String} campo - campo crudo devuelto por el backend
+		 * @returns {String} nombre traducido, o el campo crudo si no matchea ninguno conocido
+		 */
+		campo_conflicto_label(campo) {
+			let labels = {
+				bar_code: 'Codigo de barras',
+				sku: 'SKU',
+				provider_code: 'Codigo de proveedor',
+				name: 'Nombre',
+				// Nuevos (grupo 229, prompt 07): campos numericos que puede reportar
+				// registrar_conflicto_numerico() en ProcessRow.
+				cost: 'Costo',
+				price: 'Precio',
+				percentage_gain: 'Margen de ganancia',
+				stock_min: 'Stock minimo',
+				unidades_individuales: 'Unidades individuales',
+				medida: 'Medida',
+			}
+			return labels[campo] || campo
+		},
+		/**
+		 * El backend manda can_revert en cada fila del historial (ImportHistoryController::index).
+		 * Se compara contra false explicitamente y no por valor de verdad: si una API todavia sin
+		 * actualizar no manda el campo, llega undefined, y en ese caso conviene mostrar el boton
+		 * (comportamiento de siempre) en vez de esconderlo y dejar al usuario sin la opcion.
+		 */
+		puede_revertir(model) {
+			if (!model) return false
+			return model.can_revert !== false
+		},
+		/**
+		 * Guarda la importacion elegida y abre el modal de confirmacion. No dispara
+		 * ningun request todavia (grupo 305, prompt 03).
+		 * @param {Object} model - registro crudo del historial a revertir
+		 */
+		pedir_confirmacion_rollback(model) {
+			this.import_history_a_revertir = model
+			this.$bvModal.show('confirm-rollback-import')
+		},
+		/**
+		 * Dispara el rollback tras la confirmacion del modal. Limpia la seleccion
+		 * antes del POST para que dos confirmaciones seguidas no lo manden dos veces,
+		 * y marca la fila localmente para que el boton desaparezca sin esperar a
+		 * reabrir el modal (grupo 305, prompt 03).
+		 */
+		ejecutar_rollback() {
+			if (!this.import_history_a_revertir) return
+
+			let model = this.import_history_a_revertir
+			this.import_history_a_revertir = null
+
+			let self = this
+			this.$store.commit('auth/setMessage', 'Cargando')
+			this.$store.commit('auth/setMessage', true)
+			this.$api.post('import-history/rollback/'+model.id)
+			.then(function(res) {
+				self.$store.commit('auth/setMessage', false)
+				self.$toast.success('Enviado, te avisaremos cuando termine')
+				self.$set(model, 'rollback_status', 'encolado')
+				self.$set(model, 'can_revert', false)
+			})
+			.catch(function(err) {
+				self.$store.commit('auth/setMessage', false)
+				let mensaje = 'No se pudo revertir la importacion'
+				if (err.response && err.response.data && err.response.data.message) {
+					mensaje = err.response.data.message
+				}
+				self.$toast.error(mensaje)
+				self.getModels()
+			})
 		},
 		to_excel(model) {
 			let link = process.env.VUE_APP_API_URL+'/imported-files/'+model.excel_url.split('/')[1]
@@ -442,4 +781,17 @@ export default {
 	font-size: 12px
 	white-space: pre-wrap
 	word-break: break-word
+
+// Resumen de problemas de una importacion, mostrado como chips en el modal de conflictos
+.conflictos-resumen
+	display: flex
+	flex-wrap: wrap
+	gap: 8px
+
+	&__chip
+		font-size: 12px
+		font-weight: 500
+		padding: 6px 10px
+		white-space: normal
+		text-align: left
 </style>

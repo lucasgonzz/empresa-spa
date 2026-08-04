@@ -94,6 +94,7 @@ export default {
 
 					this.$store.commit('sale/add', sale)
 					this.$store.commit('vender/setSale', sale)
+					this.$store.commit('vender/set_ultima_venta_sesion', sale)
 
 					if (sale.afip_errors.length) {
 						this.$toast.error('Afip informo errores', {

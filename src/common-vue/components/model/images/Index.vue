@@ -14,8 +14,9 @@
 		:model="model"
 		@setImageUrl="setImageUrl"></upload-image>
 
-		<search-image 
+		<search-image
 		ref="searchImage"
+		@no-image-available="on_no_image_available"
 		@setImageUrl="setImageUrl"></search-image>
 
 		<cropper
@@ -24,9 +25,10 @@
 		:image_url="image_url"
 		:model="model"
 		:auto_crop="auto_crop"
-		@cancelAutoCrop="auto_crop = false"
+		@image-saved="on_image_saved"
+		@image-save-failed="on_image_save_failed"
 		:model_name="model_name"
-		:prop="prop"></cropper>	
+		:prop="prop"></cropper>
 
 		<div>
 			<one-image
@@ -54,6 +56,9 @@
 import Cropper from '@/common-vue/components/model/images/Cropper'
 import OneImage from '@/common-vue/components/model/images/OneImage'
 import Carrousel from '@/common-vue/components/model/images/Carrousel'
+/* Tope de reintentos por articulo en el flujo automatico. Sin tope, el modal se abre y cierra
+   indefinidamente si toda la pagina de resultados es de sitios que bloquean la descarga. */
+const MAX_AUTO_SAVE_RETRIES = 3
 export default {
 	props: ['model', 'model_name', 'prop', 'has_many_parent_model', 'has_many_prop'],
 	components: {
@@ -70,6 +75,8 @@ export default {
 			pre_image_url: null,
 			image_url: '',
 			auto_crop: false,
+			/* Cuantas veces fallo el guardado en el servidor dentro del mismo flujo automatico. */
+			auto_retry_count: 0,
 		}
 	},
 	computed: {
@@ -80,6 +87,8 @@ export default {
 	methods: {
 		callLuckyFlow() {
 			console.log('callLuckyFlow')
+			/* Reinicia el contador de reintentos al arrancar un flujo automatico nuevo. */
+			this.auto_retry_count = 0
 	        this.$nextTick(() => {
 				console.log('nextTick')
 				this.auto_crop = true
@@ -91,7 +100,54 @@ export default {
 			this.$bvModal.show('cropper-'+this.model.id+'-'+this.model.nombre+'-'+this.prop.key)
 			// this.$bvModal.show('cropper-'+this.prop.key)
 		},
-		
+		/**
+		* La imagen se guardo bien: se cierra el ciclo automatico.
+		*
+		* Esto es lo que antes intentaba hacer el binding @cancelAutoCrop, que nunca se disparaba
+		* porque ningun componente emitia ese evento (grupo 262, prompt 03).
+		*
+		* @return {void}
+		*/
+		on_image_saved() {
+			this.auto_crop = false
+			this.auto_retry_count = 0
+		},
+		/**
+		* El servidor no pudo guardar la imagen elegida automaticamente: se prueba la siguiente.
+		*
+		* En modo manual no se hace nada: el usuario ya vio el toast del Cropper y decide el.
+		*
+		* @param {Object} payload Con `image_url` (la que fallo) y `message`.
+		* @return {void}
+		*/
+		on_image_save_failed(payload) {
+			if (!this.auto_crop) {
+				return
+			}
+
+			this.auto_retry_count++
+
+			if (this.auto_retry_count > MAX_AUTO_SAVE_RETRIES) {
+				this.auto_crop = false
+				this.auto_retry_count = 0
+				this.$toast.error('No se pudo guardar ninguna de las imágenes encontradas. Probá buscando con otras palabras.')
+				return
+			}
+
+			const failed_url = payload && payload.image_url ? payload.image_url : this.image_url
+			this.$refs.searchImage.retry_after_server_failure(failed_url)
+		},
+		/**
+		* No quedaron imagenes para probar. SearchImage ya mostro el motivo, aca solo se cierra
+		* el ciclo automatico para que un recorte manual posterior no se autoguarde solo.
+		*
+		* @return {void}
+		*/
+		on_no_image_available() {
+			this.auto_crop = false
+			this.auto_retry_count = 0
+		},
+
 		uploadImage() {
 			if (this.prop.select_image_from) {
 				this.$bvModal.show('select-image-'+this.prop.key)

@@ -2,16 +2,7 @@
 	<div
 	v-if="view == 'vendedores'">
 
-		<has-many
-		model_name="seller_commission">
-			<template v-slot:default="props">
-				<button-delete
-				:model="props.model"></button-delete>
-			</template>
-			<template v-slot:footer_buttons>
-				<button-pago></button-pago>
-			</template>
-		</has-many>
+		<comisiones></comisiones>
 
 		<saldo-inicial></saldo-inicial>
 		<pago></pago>
@@ -32,9 +23,7 @@
 <script>
 export default {
 	components: {
-		HasMany: () => import('@/common-vue/components/has-many/Index'),
-		ButtonDelete: () => import('@/components/client/components/sellers/ButtonDelete'),
-		ButtonPago: () => import('@/components/client/components/sellers/ButtonPago'),
+		Comisiones: () => import('@/components/client/modals/sellers/comisiones/Index'),
 		SaldoInicial: () => import('@/components/client/modals/sellers/SaldoInicial'),
 		Pago: () => import('@/components/client/modals/sellers/Pago'),
 		ViewComponent: () => import('@/common-vue/components/view/Index'),

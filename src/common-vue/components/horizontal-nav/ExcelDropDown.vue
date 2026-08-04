@@ -9,6 +9,9 @@
 		v-if="show_masive_update_history"
 		:model_name="model_name"></masive-update-history>
 
+		<smart-images-history-modal
+		v-if="show_smart_images_history"></smart-images-history-modal>
+
 		<!-- Modal de importación IA: mismo criterio que el ítem del menú (evita id inexistente al abrir) -->
 		<ai-excel-import-modal
 		v-if="can_import_ai"
@@ -91,6 +94,7 @@
 				<excel-dropdown-option-item
 				v-if="can_import"
 				icon="icon-list"
+				:data_tour="model_name === 'article' ? 'listado.boton_importar_excel' : null"
 				@click="open_import_history">
 					Historial de importaciones
 				</excel-dropdown-option-item>
@@ -101,6 +105,13 @@
 			icon="icon-history"
 			@click="open_masive_update_history">
 				Historial de actualizaciones masivas
+			</excel-dropdown-option-item>
+
+			<excel-dropdown-option-item
+			v-if="show_smart_images_history"
+			icon="bi bi-images"
+			@click="open_smart_images_history">
+				Historial de imágenes inteligentes
 			</excel-dropdown-option-item>
 
 			<slot name="excel_drop_down_options"></slot>
@@ -117,6 +128,7 @@ export default {
 	components: {
 		ExportHistory: () => import('@/common-vue/components/horizontal-nav/ExportHistory'),
 		MasiveUpdateHistory: () => import('@/common-vue/components/horizontal-nav/MasiveUpdateHistory'),
+		SmartImagesHistoryModal: () => import('@/components/listado/components/selected-filtered-options/SmartImagesHistoryModal'),
 		AiExcelImportModal: () => import('@/components/listado/modals/ai-excel-import/Index'),
 		ExcelDropdownSubmenu: () => import('@/common-vue/components/horizontal-nav/ExcelDropdownSubmenu'),
 		ExcelDropdownOptionItem: () => import('@/common-vue/components/horizontal-nav/ExcelDropdownOptionItem'),
@@ -217,6 +229,15 @@ export default {
 		},
 
 		/**
+		 * Abre el historial de imágenes inteligentes (solo artículos).
+		 *
+		 * @return {void}
+		 */
+		open_smart_images_history() {
+			this.$bvModal.show('smart-images-history')
+		},
+
+		/**
 		 * Acción del botón principal split: crear registro si hay permiso.
 		 *
 		 * @return {void}
@@ -309,6 +330,17 @@ export default {
 		 * @return {boolean}
 		 */
 		show_masive_update_history() {
+			return this.model_name === 'article'
+		},
+
+		/**
+		 * Historial de imágenes inteligentes solo aplica al listado de artículos. Es un computed
+		 * distinto de `show_masive_update_history` a propósito: hoy comparten el mismo criterio
+		 * pero son condiciones independientes que pueden divergir a futuro.
+		 *
+		 * @return {boolean}
+		 */
+		show_smart_images_history() {
 			return this.model_name === 'article'
 		},
 	}

@@ -57,6 +57,7 @@
 						autocomplete="off"
 						:id="_id"
 						:data-testid="_id"
+						:data-tour="data_tour"
 						@click="callSearchModal"
 						@keyup="callSearchModal"
 						v-model="query"
@@ -264,6 +265,14 @@ export default {
 		 * propia de ese contexto. Ningun consumidor que sea un listado debe declararlo.
 		 */
 		contexto: {
+			type: String,
+			default: null,
+		},
+		/**
+		 * Ancla del data tour de la demo (develop): se propaga al input principal del pill para
+		 * que el tour guiado pueda apuntar a este buscador.
+		 */
+		data_tour: {
 			type: String,
 			default: null,
 		},

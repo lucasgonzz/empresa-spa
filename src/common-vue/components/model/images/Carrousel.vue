@@ -28,7 +28,7 @@
 				@load="onImageLoaded"
 				slot="image"
 				class="s-2 b-r-1" 
-				:src="image[image_url_prop_name]">
+				:src="image.hosting_url">
 				
 		        <b-spinner
 				slot="preloader"

@@ -331,6 +331,83 @@
 		<!-- ========================================================== -->
 		<div v-if="step === 3">
 
+			<!-- ====================================================================== -->
+			<!-- Bloque explicativo: cadena de identificación efectiva (prompt 06, grupo 229) -->
+			<!-- Muestra con qué columna se va a identificar cada fila, en el mismo orden -->
+			<!-- de prioridad que usa el matching real del importador.                    -->
+			<!-- ====================================================================== -->
+			<div v-if="cadena_identificacion" class="ai-import-identification-chain m-b-20">
+
+				<!-- Grupo 284, prompt 04: no se pudo calcular la cadena (sin columnas identificadoras
+				mapeadas, o error de lectura del archivo). Antes esto simplemente no dibujaba nada y
+				el bloque desaparecía sin ningún aviso. -->
+				<b-alert
+				v-if="cadena_identificacion.disponible === false"
+				show
+				variant="warning"
+				class="m-b-0">
+					No se pudo determinar cómo se van a identificar los artículos. Revisá el mapeo de
+					columnas del paso anterior.
+					<template v-if="cadena_identificacion.motivo === 'sin_columnas_identificadoras'">
+						Ninguna columna identificadora quedó mapeada.
+					</template>
+				</b-alert>
+
+				<div v-else>
+
+					<p class="font-weight-bold m-b-8">
+						Como se van a identificar los articulos
+					</p>
+
+					<p class="text-muted small m-b-8">
+						De las {{ cadena_identificacion.total_filas }} filas del archivo, se van a identificar así:
+					</p>
+
+					<ol class="ai-import-identification-chain-list">
+						<li
+						v-for="paso in pasos_cadena_identificacion"
+						:key="'chain-' + paso.campo"
+						class="ai-import-identification-chain-item">
+
+							<span class="ai-import-identification-chain-title">
+								{{ paso.label }} — {{ paso.filas }} filas
+							</span>
+
+							<small class="d-block text-muted m-t-3">
+								{{ paso.descripcion }}
+							</small>
+
+							<!-- Configuración vigente, solo junto al escalón de código de proveedor -->
+							<small
+							v-if="paso.campo === 'provider_code'"
+							class="d-block text-muted m-t-3">
+								Configuración actual: {{ texto_configuracion_provider_code }}
+							</small>
+
+							<!-- Aviso de nombres repetidos, solo junto al escalón de nombre -->
+							<small
+							v-if="paso.campo === 'name' && aviso_nombres_duplicados"
+							class="d-block text-warning m-t-3">
+								{{ aviso_nombres_duplicados }}
+							</small>
+
+						</li>
+					</ol>
+
+					<!-- Aviso de filas sin ningún identificador utilizable -->
+					<b-alert
+					v-if="filas_sin_identificador > 0"
+					show
+					variant="warning"
+					class="m-t-10 m-b-0">
+						{{ filas_sin_identificador }} filas no tienen ningún código utilizable y se van a crear
+						como artículos nuevos sin posibilidad de actualizarse en futuras importaciones.
+					</b-alert>
+
+				</div>
+
+			</div>
+
 			<!-- Chips de resumen del archivo -->
 			<div v-if="duplicate_stats" class="ai-import-summary-chips m-b-15">
 
@@ -433,6 +510,186 @@
 
 			</div>
 
+			<!-- Tabla de códigos inválidos (placeholders) detectados: prompt 06, grupo 229 -->
+			<div v-if="placeholders.length > 0" class="m-b-15">
+
+				<p class="font-weight-bold m-b-8 small">Codigos invalidos detectados</p>
+
+				<b-alert show variant="info" class="m-b-10">
+					<p class="small m-b-0 m-t-0">
+						Estos valores no son codigos reales, son marcadores que usan algunos
+						proveedores para indicar que el producto no tiene codigo. Se van a ignorar:
+						las filas que los tengan van a pasar al siguiente criterio de identificacion.
+						Antes se tomaban como codigos validos y hacian que muchas filas distintas
+						se fusionaran en un mismo articulo.
+					</p>
+				</b-alert>
+
+				<div class="ai-import-duplicates-table">
+					<div class="ai-import-duplicates-table__header">
+						<span>Código</span>
+						<span class="text-center">Repeticiones</span>
+						<span>Filas en el Excel</span>
+					</div>
+					<div
+					v-for="(item, idx) in placeholders"
+					:key="'ph-' + idx"
+					class="ai-import-duplicates-table__row">
+						<span>{{ item.valor }}</span>
+						<span class="text-center">
+							<span class="ai-import-duplicates-badge">{{ item.repeticiones }}</span>
+						</span>
+						<span class="text-muted">{{ item.filas.join(', ') }}</span>
+					</div>
+				</div>
+
+			</div>
+
+			<!-- ====================================================================== -->
+			<!-- Bloque de alerta de numeros con punto ambiguos (prompt 03, grupo 239)   -->
+			<!-- Muestra, columna por columna, como se van a interpretar los numeros con -->
+			<!-- punto detectados en el archivo (separador de miles vs decimal), con     -->
+			<!-- ejemplos reales tomados del Excel del usuario.                          -->
+			<!-- ====================================================================== -->
+			<div v-if="columnas_con_ambiguedad_numerica.length > 0" class="ai-import-numeric-formats m-b-15">
+
+				<div
+				v-for="columna in columnas_con_ambiguedad_numerica"
+				:key="'numfmt-' + columna.campo"
+				class="ai-import-numeric-formats__column m-b-15">
+
+					<p class="font-weight-bold m-b-5 small">
+						Numeros con punto en la columna {{ columna.nombre_columna_excel }}
+					</p>
+
+					<p class="text-muted small m-b-8">
+						{{ columna.celdas_con_punto }} valores tienen punto. Asi los vamos a interpretar:
+					</p>
+
+					<div class="ai-import-preview-table-wrapper">
+						<table class="ai-import-preview-table">
+							<thead>
+								<tr>
+									<th>Fila</th>
+									<th>En el Excel</th>
+									<th>Se interpreta como</th>
+									<th>Queda como</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr
+								v-for="(ejemplo, idx) in columna.ejemplos"
+								:key="'numfmt-ej-' + columna.campo + '-' + idx">
+									<td>{{ ejemplo.fila }}</td>
+									<td>{{ ejemplo.original }}</td>
+									<td>{{ ejemplo.interpretacion === 'miles' ? 'separador de miles' : 'decimal' }}</td>
+									<td>{{ ejemplo.resultado }}</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+
+					<small class="text-muted d-block m-t-5">
+						Regla: si el punto separa grupos de exactamente 3 digitos, es separador de miles.
+						En cualquier otro caso es decimal.
+					</small>
+
+					<!-- Aviso destacado cuando la columna mezcla ambas interpretaciones -->
+					<b-alert
+					v-if="columna.nivel_de_riesgo === 'alto'"
+					show
+					variant="warning"
+					class="ai-import-numeric-formats__risk-alert m-t-8 m-b-0">
+						<i class="icon-alert-triangle m-r-5"></i>
+						Este archivo mezcla las dos interpretaciones en la misma columna. Revisa los ejemplos antes de continuar.
+					</b-alert>
+
+				</div>
+
+				<!-- ====================================================================== -->
+				<!-- Selector de interpretacion_punto (prompt 05, grupo 239)                 -->
+				<!-- Solo se ofrece si hay alguna columna de riesgo "alto" o "medio": si todo -->
+				<!-- el archivo es riesgo "bajo" la heuristica automatica ya acierta.         -->
+				<!-- ====================================================================== -->
+				<div
+				v-if="mostrar_selector_interpretacion_punto"
+				class="ai-import-numeric-interpretacion m-t-15">
+
+					<p class="font-weight-bold m-b-8 small">
+						Como interpretar el punto en los numeros
+					</p>
+
+					<b-form-group>
+						<b-form-radio
+						v-model="interpretacion_punto"
+						value="auto"
+						class="m-b-5">
+							Automatico (recomendado)
+							<small class="d-block text-muted m-t-3">
+								Si el punto separa grupos de exactamente 3 digitos es separador de miles; si no, es decimal.
+							</small>
+						</b-form-radio>
+						<b-form-radio
+						v-model="interpretacion_punto"
+						value="siempre_miles"
+						class="m-b-5">
+							El punto siempre separa miles
+							<small class="d-block text-muted m-t-3">
+								Elegilo si tu proveedor escribe 2.500 para dos mil quinientos y nunca usa el punto como decimal.
+							</small>
+						</b-form-radio>
+						<b-form-radio
+						v-model="interpretacion_punto"
+						value="siempre_decimal">
+							El punto siempre es decimal
+							<small class="d-block text-muted m-t-3">
+								Elegilo si tu proveedor escribe 2.500 para dos con medio.
+							</small>
+						</b-form-radio>
+					</b-form-group>
+
+					<!-- Vista previa reactiva: recalcula los mismos ejemplos de arriba segun la opcion elegida, sin pedir nada al backend -->
+					<div
+					v-for="columna_preview in preview_interpretacion_punto"
+					:key="'numfmt-preview-' + columna_preview.campo"
+					class="ai-import-numeric-interpretacion__preview m-t-10">
+
+						<p class="text-muted small m-b-5">
+							Vista previa — {{ columna_preview.nombre_columna_excel }}
+						</p>
+
+						<div class="ai-import-preview-table-wrapper">
+							<table class="ai-import-preview-table">
+								<thead>
+									<tr>
+										<th>Fila</th>
+										<th>En el Excel</th>
+										<th>Queda como</th>
+									</tr>
+								</thead>
+								<tbody>
+									<tr
+									v-for="(ejemplo, idx) in columna_preview.ejemplos"
+									:key="'numfmt-preview-ej-' + columna_preview.campo + '-' + idx">
+										<td>{{ ejemplo.fila }}</td>
+										<td>{{ ejemplo.original }}</td>
+										<td>
+											{{ ejemplo.resultado }}
+											<small v-if="ejemplo.sin_cambios" class="text-muted d-block">
+												(no se ve afectado por esta opción)
+											</small>
+										</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+
+					</div>
+
+				</div>
+
+			</div>
+
 			<!-- Explicación del comportamiento con bar_codes repetidos -->
 			<b-alert
 			v-if="bar_codes_detail.length > 0 || (duplicate_stats && duplicate_stats.bar_codes_duplicados_intra_archivo > 0)"
@@ -444,12 +701,14 @@
 					¿Qué va a pasar con los códigos de barras repetidos?
 				</p>
 				<p class="small m-b-0 m-t-0">
-					No se crearán artículos con código de barras duplicado.
-					Cuando el mismo código aparece varias veces en el Excel,
-					se procesará <strong>un único artículo</strong> y la información
-					de la <strong>última aparición</strong> en el archivo sobreescribirá a las anteriores.
-					Revisá el Excel antes de continuar, o tené en cuenta que solo quedará
-					la información de la última fila con ese código.
+					Cuando el mismo código de barras aparece en más de una fila, o coincide con
+					más de un artículo ya cargado, esas filas no se van a procesar: se van a
+					reportar como problema al terminar la importación, con el número de fila,
+					para que puedas corregir el Excel.
+				</p>
+				<p class="small m-b-0 m-t-5 text-muted">
+					Antes se procesaba un único artículo y la última aparición sobreescribía a
+					las anteriores, lo que podía mezclar datos de productos distintos.
 				</p>
 			</b-alert>
 
@@ -463,67 +722,46 @@
 				<!-- Texto explicativo de la recomendación -->
 				<p class="text-muted small m-b-10">{{ recomendacion_configuracion.explicacion }}</p>
 
-				<!-- Resumen visual: qué clave recomienda usar -->
-				<div v-if="recomendacion_clave_label" class="ai-import-recomendacion-decision">
-					<i class="icon-check-circle m-r-5"></i>
-					Identificar por: <strong>{{ recomendacion_clave_label }}</strong>
-				</div>
-
 			</div>
 
-		<!-- Decisión 1: clave de identidad del artículo -->
+		<!-- Decisión nueva: politica_intra_archivo — repetidos del código de proveedor DENTRO del propio Excel (prompt 06, grupo 265) -->
 		<b-form-group
-		label="¿Qué campo identifica un artículo como 'el mismo'?"
+		v-if="duplicate_stats && duplicate_stats.provider_codes_duplicados_intra_archivo > 0"
 		label-class="ai-import-decision-title">
-			<b-form-radio
-				v-if="has_numero_column"
-				v-model="clave_identidad"
-				value="numero"
-				class="m-b-5">
-				Número del artículo (ID interno del sistema)
+			<template #label>
+				Este archivo tiene {{ duplicate_stats.provider_codes_duplicados_intra_archivo }}
+				código{{ duplicate_stats.provider_codes_duplicados_intra_archivo > 1 ? 's' : '' }}
+				de proveedor repetido{{ duplicate_stats.provider_codes_duplicados_intra_archivo > 1 ? 's' : '' }}.
+				<small class="d-block text-muted font-weight-normal m-t-3">
+					{{ resumen_intra_archivo_provider_code }}
+				</small>
+				<span class="d-block m-t-5">¿Qué representan esas filas repetidas?</span>
+			</template>
+			<b-form-radio v-model="politica_intra_archivo" value="ultima_gana" class="m-b-5">
+				Es el mismo producto, cargado más de una vez
 				<small class="d-block text-muted m-t-3">
-					Identificá el artículo por su número único asignado por el sistema.
-					Usá esta opción solo si el Excel fue exportado desde este sistema.
-					Si el Excel también tiene una columna de código de barras, con esta opción también se puede actualizar ese código.
+					Se va a conservar la información de la <strong>última</strong> aparición de cada código. Al terminar te
+					mostramos exactamente qué filas quedaron sobrescritas y por cuál.
 				</small>
 			</b-form-radio>
-			<b-form-radio
-				v-if="has_bar_code_column"
-				v-model="clave_identidad"
-				value="bar_code"
-				class="m-b-5">
-				Código de barras
-			</b-form-radio>
-			<b-form-radio
-				v-if="has_sku_column"
-				v-model="clave_identidad"
-				value="sku"
-				class="m-b-5">
-				SKU
-			</b-form-radio>
-			<b-form-radio
-				v-if="has_provider_code_column"
-				v-model="clave_identidad"
-				value="provider_code"
-				class="m-b-5">
-				Código de proveedor
-			</b-form-radio>
-			<b-form-radio
-				v-if="has_name_column"
-				v-model="clave_identidad"
-				value="name"
-				class="m-b-5">
-				Nombre del artículo
+			<b-form-radio v-model="politica_intra_archivo" value="productos_distintos" class="m-b-5">
+				Son productos distintos que comparten el código de proveedor
+				<small class="d-block text-muted m-t-3">
+					Se procesa cada fila por separado y se crea un artículo por cada una, aunque compartan el código.
+				</small>
 			</b-form-radio>
 		</b-form-group>
 
-		<!-- Decisión 2: política de colisión — visible siempre que la clave sea provider_code -->
+		<!-- Decisión 2: política de colisión — visible cuando hay filas que se van a identificar
+		por código de proveedor (grupo 284, prompt 04: antes dependía de "clave_identidad", que ya
+		no existe como pregunta; la jerarquía es fija y este es el único escalón donde la decisión
+		tiene efecto real). -->
 		<b-form-group
-		v-if="clave_identidad === 'provider_code'"
+		v-if="filas_identificadas_por_provider_code > 0"
 		label="Si el código de proveedor coincide con artículos que ya existen en el sistema, ¿qué hacer?"
 		label-class="ai-import-decision-title">
 			<b-form-radio v-model="politica_colision" value="actualizar_todos" class="m-b-5">
-				Actualizar todos los artículos con ese código de proveedor
+				Actualizar todos los artículos que tengan ese código
 				<small class="d-block text-muted m-t-3">
 					<template v-if="duplicate_stats && duplicate_stats.provider_codes_existentes_mismo_proveedor === 0">
 						Como es la primera importación, se creará un artículo por cada fila. En futuras importaciones, si el mismo código ya existe en el sistema, se actualizarán todos los artículos que lo tengan.
@@ -533,23 +771,26 @@
 					</template>
 				</small>
 			</b-form-radio>
-			<b-form-radio v-model="politica_colision" value="actualizar_uno" class="m-b-5">
-				Actualizar solo el primer artículo con ese código de proveedor
+			<b-form-radio v-model="politica_colision" value="saltear_y_reportar" class="m-b-5">
+				Saltear esas filas y avisarme
 				<small class="d-block text-muted m-t-3">
-					Si en el sistema hay varios artículos con el mismo código de proveedor, solo se actualizará el más antiguo. Si no existe ninguno, se creará uno nuevo.
+					Si un código coincide con más de un artículo, esa fila no se crea ni se actualiza: queda
+					reportada al final para que la resuelvas a mano. No se toca nada de lo que el sistema no
+					está seguro.
 				</small>
 			</b-form-radio>
 			<b-form-radio v-model="politica_colision" value="crear_nuevo" class="m-b-5">
-				Ignorar coincidencias y crear un artículo nuevo
+				No identificar por código de proveedor
 				<small class="d-block text-muted m-t-3">
-					Aunque ya exista un artículo con ese código de proveedor en el sistema, se creará uno nuevo adicional.
+					Las filas que solo tienen código de proveedor van a crear artículos nuevos aunque el código
+					ya exista. Usala solo si el código de proveedor de tu catálogo no es confiable.
 				</small>
 			</b-form-radio>
 		</b-form-group>
 
 		<!-- Decisión 3: política para códigos de proveedor existentes en otros proveedores -->
 		<b-form-group
-		v-if="clave_identidad === 'provider_code' && duplicate_stats && duplicate_stats.provider_codes_existentes_otros_proveedores > 0"
+		v-if="duplicate_stats && duplicate_stats.provider_codes_existentes_otros_proveedores > 0"
 		label="El código de proveedor ya existe en otros proveedores. ¿Qué hacer con esos artículos?"
 		label-class="ai-import-decision-title">
 			<b-form-radio v-model="politica_otro_proveedor" value="ignorar" class="m-b-5">
@@ -575,9 +816,8 @@
 				</b-button>
 				<b-button
 				variant="primary"
-				:disabled="!clave_identidad
-					|| (clave_identidad === 'provider_code' && duplicate_stats && duplicate_stats.provider_codes_duplicados_intra_archivo > 0 && !politica_colision)
-					|| (clave_identidad === 'provider_code' && duplicate_stats && duplicate_stats.provider_codes_existentes_otros_proveedores > 0 && !politica_otro_proveedor)"
+				:disabled="(filas_identificadas_por_provider_code > 0 && !politica_colision)
+					|| (duplicate_stats && duplicate_stats.provider_codes_existentes_otros_proveedores > 0 && !politica_otro_proveedor)"
 				@click="step = 4">
 					Continuar
 				</b-button>
@@ -756,19 +996,38 @@ export default {
 			/* Estadísticas de duplicados devueltas por el análisis IA (preanálisis del Excel). */
 			duplicate_stats: null,
 
+			/*
+			 * Prompt 03 (grupo 239 - alerta-formatos-numericos-import): estadisticas de
+			 * numeros con punto ambiguos por columna, devueltas por /analyze y recalculadas
+			 * por /get-recomendacion tras corregir el mapeo en el paso 2.
+			 * Forma: { columnas: { <campo>: {...} }, hay_ambiguedad }. Null si el analisis
+			 * fallo o no vino del backend.
+			 */
+			formatos_numericos: null,
+
+			/*
+			 * Prompt 05 (grupo 239 - alerta-formatos-numericos-import): como interpretar el
+			 * punto en los numeros con formato ambiguo, elegido explicitamente por el usuario
+			 * en el paso 3. Viaja en el POST de importacion junto al resto de la configuracion.
+			 * 'auto' (default) preserva el comportamiento heuristico existente del backend.
+			 */
+			interpretacion_punto: 'auto',
+
 			/* Índice 0-based de la columna provider_code, guardado tras el análisis para refresh-provider-stats. */
 			provider_code_column_index: null,
 
-			/* Recomendación de configuración generada por Claude: { clave_identidad, politica_colision, explicacion }. */
+			/* Recomendación de configuración generada por Claude: { politica_colision, politica_intra_archivo, explicacion }. */
 			recomendacion_configuracion: null,
 
 			/* True mientras se espera la recomendación de Claude al confirmar el paso 2. */
 			loading_recomendacion: false,
 
-			/* Clave que identifica un artículo como "el mismo": 'bar_code' | 'provider_code' | 'name'. */
-			clave_identidad: null,
-
-			/* Política a aplicar cuando la clave coincide con varios artículos: 'actualizar_todos' | 'actualizar_uno' | 'crear_nuevo'. */
+			/*
+			 * Política a aplicar cuando un código de proveedor coincide con varios artículos ya
+			 * existentes en el sistema: 'actualizar_todos' | 'saltear_y_reportar' | 'crear_nuevo'
+			 * (grupo 284, prompt 04: reemplaza a 'actualizar_uno', que hacía exactamente lo mismo
+			 * que 'crear_nuevo' y nunca eligió "el más antiguo" pese a su nombre).
+			 */
 			politica_colision: null,
 
 			/*
@@ -778,11 +1037,61 @@ export default {
 			 */
 			politica_otro_proveedor: null,
 
+			/*
+			 * Prompt 06 (grupo 265 - import-excel-jerarquia-ultima-fila-gana-y-reporte-sobrescritura):
+			 * qué representan los códigos de proveedor repetidos DENTRO del propio Excel (no contra
+			 * la base, eso lo cubren politica_colision/politica_otro_proveedor). 'ultima_gana' |
+			 * 'productos_distintos'. Viaja siempre en el payload de importar(), con este mismo default.
+			 */
+			politica_intra_archivo: 'ultima_gana',
+
 			/* Filas de muestra del Excel (máx. 5) para la preview del paso 2. */
 			preview_rows: [],
 
 			/* Notas globales de asistencia generadas por Claude durante el análisis. */
 			assistant_notes: [],
+
+			/*
+			 * Prompt 06 (grupo 229 - matching-importacion-excel): valores placeholder
+			 * detectados por columna identificadora (ej. "-", "S/N"), devueltos por el
+			 * análisis del backend. Cada ítem: { campo, valor, repeticiones, filas }.
+			 */
+			placeholders: [],
+
+			/*
+			 * Cadena de identificación efectiva calculada por el backend con el mismo
+			 * criterio que usa el importador real: { columnas_mapeadas: [...], escalones: [...] }.
+			 */
+			cadena_identificacion: null,
+
+			/*
+			 * Nombres repetidos detectados en el Excel: { cantidad_distintos, filas_afectadas }.
+			 * Se usa para advertir sobre filas que podrían no procesarse en el escalón "name".
+			 */
+			nombres_duplicados: null,
+
+			/*
+			 * Grupo 299 (correctivo de cancelación de polling, segundo intento):
+			 * token de la corrida de análisis/recomendación en curso. Se incrementa y
+			 * se captura en una variable local ANTES de lanzar cada POST (analyze /
+			 * get-recomendacion) — no dentro del helper de espera — porque la subida del
+			 * archivo es la ventana más larga de todo el flujo (hasta 2 minutos) y la
+			 * cancelación tiene que poder invalidarla también. Cualquier callback que no
+			 * vea su token capturado === analysis_polling_token vigente aborta en
+			 * silencio: es una corrida vieja, cancelada.
+			 */
+			analysis_polling_token: 0,
+
+			/* Id del setTimeout del próximo ciclo de polling, para poder cancelarlo. */
+			analysis_polling_timer_id: null,
+
+			/*
+			 * Id del setTimeout del aviso de "archivo grande" (20 s). Tiene que morir en
+			 * todos los caminos de salida (éxito, error o cancelación): si sobrevive,
+			 * ensucia auth/setMessage después de que el flujo que corresponda ya lo dejó
+			 * en su valor final.
+			 */
+			analysis_warning_timer_id: null,
 		}
 	},
 
@@ -903,49 +1212,6 @@ export default {
 		},
 
 		/*
-		 * Verdadero si el mapeo actual tiene al menos una columna asignada a 'numero' (ID interno).
-		 * Controla si se muestra la opción de clave de identidad por número en el paso 3.
-		 */
-		has_numero_column() {
-			return this.column_mapping.some(item => item.system_property === 'numero')
-		},
-
-		/* Verdadero si el mapeo actual tiene una columna asignada a código de barras. */
-		has_bar_code_column() {
-			return this.column_mapping.some(item => item.system_property === 'codigo_de_barras')
-		},
-
-		/* Verdadero si el mapeo actual tiene una columna asignada a SKU. */
-		has_sku_column() {
-			return this.column_mapping.some(item => item.system_property === 'sku')
-		},
-
-		/* Verdadero si el mapeo actual tiene una columna asignada a código de proveedor. */
-		has_provider_code_column() {
-			return this.column_mapping.some(item => item.system_property === 'codigo_de_proveedor')
-		},
-
-		/* Verdadero si el mapeo actual tiene una columna asignada a nombre. */
-		has_name_column() {
-			return this.column_mapping.some(item => item.system_property === 'nombre')
-		},
-
-		/*
-		 * Clave de identidad por defecto: la de mayor prioridad cuya columna esté
-		 * presente en el Excel. Prioridad: numero -> bar_code -> sku -> provider_code -> name.
-		 * Se usa como red de seguridad del auto-select cuando la recomendación no
-		 * corresponde a una columna presente o no vino recomendación.
-		 */
-		default_clave_identidad() {
-			if (this.has_numero_column)        return 'numero'
-			if (this.has_bar_code_column)      return 'bar_code'
-			if (this.has_sku_column)           return 'sku'
-			if (this.has_provider_code_column) return 'provider_code'
-			if (this.has_name_column)          return 'name'
-			return null
-		},
-
-		/*
 		 * Cantidad de filas que se importarán según start_row y finish_row.
 		 */
 		excel_rows_to_import_count() {
@@ -1043,21 +1309,257 @@ export default {
 		},
 
 		/*
-		 * Etiqueta legible de la clave de identidad recomendada por Claude.
-		 * Se usa en el resumen visual de la card de recomendación.
+		 * Prompt 03 (grupo 239 - alerta-formatos-numericos-import): columnas con números
+		 * con punto ambiguos, listas para renderizar en el paso 3, ordenadas por nivel de
+		 * riesgo (primero "alto", después "medio", después "bajo"). Es lo que itera el
+		 * template: nunca se recorre el objeto `formatos_numericos.columnas` directo en un
+		 * v-for, porque no tiene un orden garantizado.
+		 * Devuelve [] si no hay análisis de formatos numéricos (null).
 		 */
-		recomendacion_clave_label() {
-			if (!this.recomendacion_configuracion) return ''
+		columnas_con_ambiguedad_numerica() {
+			if (!this.formatos_numericos || !this.formatos_numericos.columnas) {
+				return []
+			}
 
-			const labels = {
-				numero:        'Número del artículo (ID interno)',
+			/* Orden de prioridad visual de los niveles de riesgo. */
+			let orden_riesgo = { alto: 0, medio: 1, bajo: 2 }
+
+			/* Volcamos el objeto de columnas a un array para poder ordenarlo. */
+			let columnas = []
+			let mapa_columnas = this.formatos_numericos.columnas
+			Object.keys(mapa_columnas).forEach(function(campo) {
+				columnas.push(mapa_columnas[campo])
+			})
+
+			columnas.sort(function(a, b) {
+				let orden_a = orden_riesgo[a.nivel_de_riesgo] !== undefined ? orden_riesgo[a.nivel_de_riesgo] : 3
+				let orden_b = orden_riesgo[b.nivel_de_riesgo] !== undefined ? orden_riesgo[b.nivel_de_riesgo] : 3
+				return orden_a - orden_b
+			})
+
+			return columnas
+		},
+
+		/*
+		 * Prompt 05 (grupo 239 - alerta-formatos-numericos-import): true si el selector de
+		 * interpretacion_punto debe mostrarse en el paso 3. Solo tiene sentido ofrecerlo cuando
+		 * hay alguna columna de riesgo "alto" o "medio": si todo el archivo es riesgo "bajo",
+		 * la heuristica automatica ya acierta y mostrar el selector es invitar a que el usuario
+		 * rompa algo que ya funciona.
+		 */
+		mostrar_selector_interpretacion_punto() {
+			return this.columnas_con_ambiguedad_numerica.some(function(columna) {
+				return columna.nivel_de_riesgo === 'alto' || columna.nivel_de_riesgo === 'medio'
+			})
+		},
+
+		/*
+		 * Prompt 05 (grupo 239 - alerta-formatos-numericos-import): vista previa reactiva de los
+		 * mismos ejemplos que ya muestra la tabla de arriba, recalculados en el cliente segun la
+		 * opcion elegida en interpretacion_punto. No pide nada al backend: el usuario ve el efecto
+		 * de cada opcion al instante. Cada ejemplo con coma y punto juntos (ej. "1.234,56") no se
+		 * ve afectado por ninguna opcion; se marca con `sin_cambios` para aclararlo en el template.
+		 */
+		preview_interpretacion_punto() {
+			let self = this
+
+			/* Array de columnas con sus ejemplos recalculados, en el mismo orden que la tabla de arriba. */
+			let columnas_preview = []
+
+			this.columnas_con_ambiguedad_numerica.forEach(function(columna) {
+				let ejemplos_recalculados = []
+
+				columna.ejemplos.forEach(function(ejemplo) {
+					ejemplos_recalculados.push({
+						fila:        ejemplo.fila,
+						original:    ejemplo.original,
+						resultado:   self.recalcular_resultado_interpretacion_punto(ejemplo.original),
+						sin_cambios: self.valor_tiene_coma_y_punto(ejemplo.original),
+					})
+				})
+
+				columnas_preview.push({
+					campo:                 columna.campo,
+					nombre_columna_excel:  columna.nombre_columna_excel,
+					ejemplos:              ejemplos_recalculados,
+				})
+			})
+
+			return columnas_preview
+		},
+
+		/*
+		 * Prompt 06 (grupo 229 - matching-importacion-excel): pasos de la cadena de
+		 * identificación efectiva, listos para renderizar en el paso 3.
+		 * Solo incluye los escalones cuya columna está mapeada en este Excel
+		 * (columnas_mapeadas), en el mismo orden de prioridad que usa el matching real:
+		 * id -> bar_code -> sku -> provider_code -> name. Nunca incluye "sin_identificador",
+		 * que se muestra aparte como advertencia (ver filas_sin_identificador).
+		 */
+		pasos_cadena_identificacion() {
+			if (!this.cadena_identificacion) {
+				return []
+			}
+
+			/* Etiqueta legible por campo de la cadena. */
+			let etiquetas = {
+				id:            'Número de artículo',
 				bar_code:      'Código de barras',
 				sku:           'SKU',
 				provider_code: 'Código de proveedor',
-				name:          'Nombre del artículo',
+				name:          'Nombre exacto',
 			}
 
-			return labels[this.recomendacion_configuracion.clave_identidad] || ''
+			/* Descripción fija de cada escalón (no depende de los datos del archivo). */
+			let descripciones = {
+				id:            'El artículo ya existe en el sistema con este número. Es la clave más confiable.',
+				bar_code:      'Es la columna más confiable. Se usa primero siempre que la fila la tenga.',
+				sku:           'Se usa cuando la fila no tiene código de barras.',
+				provider_code: 'Se usa cuando la fila no tiene código de barras ni SKU.',
+				name:          'Último recurso, cuando la fila no tiene ningún código. Si el nombre coincide con más de un artículo, la fila no se procesa.',
+			}
+
+			let columnas_mapeadas = this.cadena_identificacion.columnas_mapeadas || []
+			let escalones         = this.cadena_identificacion.escalones || []
+
+			let pasos = []
+
+			escalones.forEach(function(escalon) {
+				/* "sin_identificador" no es un paso de la cadena: se muestra aparte como advertencia. */
+				if (escalon.campo === 'sin_identificador') {
+					return
+				}
+
+				/* Solo mostramos escalones cuya columna está efectivamente mapeada en el Excel. */
+				if (columnas_mapeadas.indexOf(escalon.campo) === -1) {
+					return
+				}
+
+				pasos.push({
+					campo:       escalon.campo,
+					label:       etiquetas[escalon.campo] || escalon.campo,
+					filas:       escalon.filas,
+					descripcion: descripciones[escalon.campo] || '',
+				})
+			})
+
+			return pasos
+		},
+
+		/*
+		 * Cantidad de filas del Excel que no tienen ningún identificador utilizable
+		 * (ni número, ni código de barras, ni SKU, ni código de proveedor, ni nombre).
+		 * Esas filas se crean siempre como artículos nuevos, sin posibilidad de
+		 * actualizarse en futuras importaciones.
+		 */
+		filas_sin_identificador() {
+			if (!this.cadena_identificacion || !Array.isArray(this.cadena_identificacion.escalones)) {
+				return 0
+			}
+
+			let encontrado = 0
+			this.cadena_identificacion.escalones.forEach(function(escalon) {
+				if (escalon.campo === 'sin_identificador') {
+					encontrado = escalon.filas
+				}
+			})
+
+			return encontrado
+		},
+
+		/*
+		 * Grupo 284, prompt 04: cantidad de filas del Excel que se van a identificar por
+		 * código de proveedor (escalón 'provider_code' de la cadena de identificación). Es el
+		 * único escalón donde politica_colision tiene efecto real, así que controla si el
+		 * bloque de esa decisión se muestra en el paso 3 — reemplaza al viejo
+		 * "clave_identidad === 'provider_code'", que ya no existe.
+		 */
+		filas_identificadas_por_provider_code() {
+			if (!this.cadena_identificacion || !Array.isArray(this.cadena_identificacion.escalones)) {
+				return 0
+			}
+
+			let encontrado = 0
+			this.cadena_identificacion.escalones.forEach(function(escalon) {
+				if (escalon.campo === 'provider_code') {
+					encontrado = escalon.filas
+				}
+			})
+
+			return encontrado
+		},
+
+		/*
+		 * Texto legible de la configuración vigente para el escalón de código de proveedor,
+		 * derivado de las mismas decisiones (politica_colision / politica_otro_proveedor) que
+		 * derive_flags_from_choice() traduce a los flags reales que recibe el backend.
+		 * Se recalcula reactivamente: si el usuario cambia su elección en el paso 3,
+		 * este texto cambia con ella (a diferencia de un valor fijo calculado en el análisis inicial).
+		 */
+		texto_configuracion_provider_code() {
+			let flags = this.derive_flags_from_choice()
+
+			if (!flags.actualizar_por_provider_code) {
+				return 'No se va a identificar por código de proveedor. Estas filas se van a crear como artículos nuevos.'
+			}
+
+			let texto = ''
+
+			if (!flags.permitir_provider_code_repetido) {
+				texto = 'Si un código de proveedor coincide con más de un artículo, la fila se va a saltear y quedar reportada como problema.'
+			} else {
+				texto = 'Se van a actualizar todos los artículos que compartan el código de proveedor.'
+				if (flags.permitir_provider_code_repetido_en_multi_providers) {
+					texto += ' Incluyendo artículos de otros proveedores.'
+				}
+			}
+
+			if (flags.actualizar_articulos_de_otro_proveedor) {
+				texto += ' Se pueden actualizar artículos asignados a otro proveedor.'
+			}
+
+			return texto
+		},
+
+		/*
+		 * Prompt 06 (grupo 265): resumen en lenguaje natural, con los códigos y filas REALES
+		 * del archivo, de los códigos de proveedor repetidos dentro del propio Excel. Hasta 3
+		 * ejemplos y, si hay más, "y N más…" — mismo patrón que la tabla de duplicados de más
+		 * arriba en este paso. Vacío si no hay datos.
+		 */
+		resumen_intra_archivo_provider_code() {
+			let detalle = this.provider_codes_detail
+
+			if (detalle.length === 0) {
+				return ''
+			}
+
+			let ejemplos = detalle.slice(0, 3).map(function(item) {
+				let plural = item.filas.length > 1
+				return item.codigo + ' aparece en ' + (plural ? 'las filas ' : 'la fila ') + item.filas.join(', ')
+			})
+
+			let texto = ejemplos.join(' · ')
+
+			if (detalle.length > 3) {
+				texto += ' · y ' + (detalle.length - 3) + ' más…'
+			}
+
+			return texto
+		},
+
+		/*
+		 * Aviso de nombres repetidos en el Excel, para mostrar junto al escalón "name".
+		 * Vacío si no hay nombres repetidos (o si no se calculó aún).
+		 */
+		aviso_nombres_duplicados() {
+			if (!this.nombres_duplicados || !this.nombres_duplicados.cantidad_distintos) {
+				return ''
+			}
+
+			return 'El archivo tiene ' + this.nombres_duplicados.cantidad_distintos + ' nombres repetidos en '
+				+ this.nombres_duplicados.filas_afectadas + ' filas. Si alguna de esas filas llega al escalón '
+				+ 'de nombre, no se va a procesar y se va a reportar como problema.'
 		},
 
 		/*
@@ -1257,6 +1759,19 @@ export default {
 					? Number(this.start_row) + 1
 					: Math.max(1, Number(this.start_row) - 1)
 			}
+		},
+
+		/*
+		 * Prompt 05 (grupo 239 - alerta-formatos-numericos-import): si el usuario cambia el
+		 * mapeo de columnas en el paso 2 (o el análisis inicial lo carga), reseteamos
+		 * interpretacion_punto a 'auto'. La elección anterior se hizo mirando otras columnas,
+		 * así que arrastrarla en silencio a un mapeo distinto es peor que perderla.
+		 */
+		column_mapping: {
+			deep: true,
+			handler() {
+				this.interpretacion_punto = 'auto'
+			},
 		},
 	},
 
@@ -1562,6 +2077,166 @@ export default {
 		},
 
 		/*
+		 * Grupo 299 (correctivo de cancelación de polling, segundo intento): helper
+		 * único de espera para las dos corridas asincrónicas del modal (análisis y
+		 * recomendación). Hace polling a GET ai-excel-import/analysis/<uuid> hasta
+		 * que el backend reporte 'listo' o 'error'.
+		 *
+		 * Recibe el token de corrida CAPTURADO POR EL CALLER (antes del POST que
+		 * encoló esta corrida) y lo reusa tal cual en todas sus comprobaciones: NO
+		 * lo incrementa ni acuña uno propio. Ese es exactamente el bug que tumbó el
+		 * intento anterior (grupo 297): un helper que se acuña su propio token
+		 * rompe la cadena de invalidación del caller y una corrida cancelada
+		 * "resucita" como una corrida nueva y válida.
+		 *
+		 * Grupo 303 (1/8/2026): este helper NUNCA escribe analysis_polling_token,
+		 * solo lo lee. Sus cuatro salidas (éxito, error del backend, 5 fallos de
+		 * red seguidos y corte a los 15 minutos) cierran únicamente con
+		 * limpiar_timer_de_aviso() y nada más — ni un solo ++token dentro de este
+		 * método. Escribirlo acá invalida la corrida contra el propio callback del
+		 * caller que va a consumir el resultado (ver comentario junto al resolve()
+		 * de más abajo). El único lugar autorizado a incrementar el token es
+		 * cancelar_analisis_en_curso().
+		 *
+		 * @param {string} analysis_uuid  uuid devuelto por analyze() / get-recomendacion()
+		 * @param {number} token_corrida  token que el caller capturó antes de su POST
+		 * @return {Promise} resuelve con el "resultado" del backend, rechaza con un mensaje legible
+		 */
+		esperar_analisis_terminado(analysis_uuid, token_corrida) {
+			let self = this
+
+			return new Promise(function(resolve, reject) {
+
+				let inicio = Date.now()
+				let fallos_consecutivos = 0
+
+				/*
+				 * Aviso de "archivo grande" a los 20 segundos: si para entonces el
+				 * análisis todavía no terminó, tranquiliza al usuario para que no
+				 * cierre el modal pensando que se colgó. Tiene que morir en TODOS los
+				 * caminos de salida (éxito, error o cancelación) o ensucia
+				 * auth/setMessage después de que el flujo que corresponda ya lo dejó
+				 * en su valor final — el store de auth es compartido por toda la app.
+				 */
+				self.analysis_warning_timer_id = setTimeout(function() {
+					if (token_corrida !== self.analysis_polling_token) return
+					self.$store.commit(
+						'auth/setMessage',
+						'Los archivos grandes pueden tardar unos minutos. Podés dejar esta ventana abierta.'
+					)
+				}, 20000)
+
+				function limpiar_timer_de_aviso() {
+					if (self.analysis_warning_timer_id) {
+						clearTimeout(self.analysis_warning_timer_id)
+						self.analysis_warning_timer_id = null
+					}
+				}
+
+				function consultar() {
+
+					/* Punto de chequeo: la función que ejecuta la consulta. */
+					if (token_corrida !== self.analysis_polling_token) return
+
+					self.$api.get('ai-excel-import/analysis/' + analysis_uuid, { timeout: 30000 })
+					.then(function(res) {
+
+						/* Punto de chequeo: el .then de cada GET de polling. */
+						if (token_corrida !== self.analysis_polling_token) return
+
+						fallos_consecutivos = 0
+
+						if (res.data.paso) {
+							self.$store.commit(
+								'auth/setMessage',
+								res.data.progreso ? (res.data.paso + ' (' + res.data.progreso + '%)') : res.data.paso
+							)
+						}
+
+						/*
+						 * Grupo 303 (corrige el correctivo del grupo 299): acá NO va un
+						 * incremento del token (self.analysis_polling_token). El token es
+						 * del caller: lo capturó antes de su POST y lo vuelve a chequear
+						 * en su .then(resultado),
+						 * que corre después de este resolve(). Si lo invalidamos acá,
+						 * dejamos huérfano al propio callback que iba a consumir el
+						 * resultado — exactamente el bug que dejaba el modal colgado para
+						 * siempre en "Analizando el archivo con IA... (40%)" (1/8/2026).
+						 * Lo único que corresponde cerrar en todos los caminos de salida es
+						 * el timer de aviso de los 20 s (limpiar_timer_de_aviso(), arriba),
+						 * para que no ensucie auth/setMessage — ese era el motivo real por
+						 * el que alguien había puesto el ++ acá. El único lugar autorizado a
+						 * invalidar el token es cancelar_analisis_en_curso().
+						 */
+						if (res.data.estado === 'listo') {
+							limpiar_timer_de_aviso()
+							resolve(res.data.resultado)
+							return
+						}
+
+						/* Ídem arriba: el token es del caller, no se invalida en este helper. */
+						if (res.data.estado === 'error') {
+							limpiar_timer_de_aviso()
+							reject(res.data.error || 'Ocurrió un error al analizar el archivo.')
+							return
+						}
+
+						agendar_proxima_consulta()
+					})
+					.catch(function() {
+
+						/* Punto de chequeo: el .catch de cada GET de polling. */
+						if (token_corrida !== self.analysis_polling_token) return
+
+						/*
+						 * Un error de red en UNA consulta no aborta la espera: un corte de
+						 * wifi de tres segundos no puede tirar abajo un análisis de diez
+						 * minutos que el servidor está haciendo bien. Recién después de 5
+						 * fallos SEGUIDOS se rechaza.
+						 */
+						fallos_consecutivos++
+
+						if (fallos_consecutivos >= 5) {
+							limpiar_timer_de_aviso()
+							reject('No se pudo consultar el estado del análisis. Probá de nuevo.')
+							return
+						}
+
+						agendar_proxima_consulta()
+					})
+				}
+
+				function agendar_proxima_consulta() {
+
+					/* Punto de chequeo: el agendador del siguiente ciclo. */
+					if (token_corrida !== self.analysis_polling_token) return
+
+					let transcurrido = Date.now() - inicio
+
+					if (transcurrido >= 900000) {
+						limpiar_timer_de_aviso()
+						reject('El análisis está tardando más de lo normal. Probá de nuevo o avisanos.')
+						return
+					}
+
+					/* Cada 2s el primer medio minuto; cada 5s después (menos ruido contra la API). */
+					let intervalo = transcurrido < 30000 ? 2000 : 5000
+
+					self.analysis_polling_timer_id = setTimeout(function() {
+
+						/* Punto de chequeo: la función que ejecuta la consulta (al disparar el timer). */
+						if (token_corrida !== self.analysis_polling_token) return
+
+						consultar()
+
+					}, intervalo)
+				}
+
+				consultar()
+			})
+		},
+
+		/*
 		 * POST a /ai-excel-import/analyze con el archivo ya seleccionado.
 		 */
 		run_analyze_request() {
@@ -1572,38 +2247,84 @@ export default {
 			/* Informamos al backend qué modelo analizar para elegir el analizador correcto. */
 			form_data.append('model', self.model)
 
-			let config = { headers: { 'content-type': 'multipart/form-data' } }
+			/* Solo sube el archivo y lo encola: si tarda más de 2 minutos, es la subida, no el análisis. */
+			let config = {
+				headers: { 'content-type': 'multipart/form-data' },
+				timeout: 120000,
+			}
+
+			/*
+			 * Capturamos el token ANTES del POST y no dentro del helper de polling
+			 * porque la subida del archivo es la ventana más larga de todo el flujo
+			 * (hasta 2 minutos con archivos grandes): si el usuario cierra el modal
+			 * mientras el POST está en vuelo, la cancelación tiene que poder
+			 * invalidar TAMBIÉN esta corrida, y solo puede hacerlo si el token ya
+			 * existía cuando el POST arrancó.
+			 */
+			let token_corrida = ++self.analysis_polling_token
 
 			self.$store.commit('auth/setMessage', 'Analizando archivo con IA...')
 			self.$store.commit('auth/setLoading', true)
 
 			self.$api.post('ai-excel-import/analyze', form_data, config)
 			.then(function(res) {
-				self.loading = false
-				self.$store.commit('auth/setLoading', false)
-				self.$store.commit('auth/setMessage', '')
 
-				self.excel_path        = res.data.excel_path
-				self.column_mapping    = self.normalize_column_mapping(res.data.column_mapping)
-				self.selected_provider_id = res.data.provider_id
-				self.provider_confidence  = res.data.provider_confidence
+				/* Punto de chequeo: el .then del POST inicial, antes de llamar al helper. */
+				if (token_corrida !== self.analysis_polling_token) return
 
-				/* Guardar índice de columna provider_code para refresh-provider-stats al cambiar proveedor. */
-				const provider_col = res.data.column_mapping.find(
-					col => col.system_property === 'codigo_de_proveedor'
-				)
-				self.provider_code_column_index = provider_col ? provider_col.excel_column_index : null
+				return self.esperar_analisis_terminado(res.data.analysis_uuid, token_corrida)
+				.then(function(resultado) {
 
-				/* Datos del preanálisis de duplicados (la recomendación se genera al confirmar el paso 2). */
-				self.duplicate_stats = res.data.duplicate_stats || null
-				self.preview_rows    = res.data.preview_rows || []
+					if (token_corrida !== self.analysis_polling_token) return
 
-				/* Notas globales de asistencia que Claude generó sobre el archivo completo. */
-				self.assistant_notes = res.data.assistant_notes || []
+					self.loading = false
+					self.$store.commit('auth/setLoading', false)
+					self.$store.commit('auth/setMessage', '')
 
-				self.step = 2
+					self.excel_path        = resultado.excel_path
+					self.column_mapping    = self.normalize_column_mapping(resultado.column_mapping)
+					self.selected_provider_id = resultado.provider_id
+					self.provider_confidence  = resultado.provider_confidence
+
+					/* Guardar índice de columna provider_code para refresh-provider-stats al cambiar proveedor. */
+					const provider_col = resultado.column_mapping.find(
+						col => col.system_property === 'codigo_de_proveedor'
+					)
+					self.provider_code_column_index = provider_col ? provider_col.excel_column_index : null
+
+					/* Datos del preanálisis de duplicados (la recomendación se genera al confirmar el paso 2). */
+					self.duplicate_stats = resultado.duplicate_stats || null
+					self.preview_rows    = resultado.preview_rows || []
+
+					/* Prompt 03 (grupo 239): estadísticas de números con punto ambiguos por columna. */
+					self.formatos_numericos = resultado.formatos_numericos || null
+
+					/* Notas globales de asistencia que Claude generó sobre el archivo completo. */
+					self.assistant_notes = resultado.assistant_notes || []
+
+					/* Prompt 06 (grupo 229): placeholders, cadena de identificación y nombres repetidos. */
+					self.placeholders           = resultado.placeholders || []
+					self.cadena_identificacion  = resultado.cadena_identificacion || null
+					self.nombres_duplicados     = resultado.nombres_duplicados || null
+
+					self.step = 2
+				})
+				.catch(function(mensaje) {
+
+					/* Punto de chequeo: no escribir error_message sobre una corrida ya cancelada. */
+					if (token_corrida !== self.analysis_polling_token) return
+
+					self.loading = false
+					self.$store.commit('auth/setLoading', false)
+					self.$store.commit('auth/setMessage', '')
+					self.error_message = mensaje
+				})
 			})
 			.catch(function(err) {
+
+				/* Punto de chequeo: el .catch del POST inicial, antes de tocar loading/error_message. */
+				if (token_corrida !== self.analysis_polling_token) return
+
 				self.loading = false
 				self.$store.commit('auth/setLoading', false)
 				self.$store.commit('auth/setMessage', '')
@@ -1628,46 +2349,103 @@ export default {
 			self.loading_recomendacion = true
 			self.recomendacion_configuracion = null
 
+			/* Mismo motivo y mismo criterio que run_analyze_request(): ver ese comentario. */
+			let token_corrida = ++self.analysis_polling_token
+
+			self.$store.commit('auth/setMessage', 'Generando recomendación con IA...')
+			self.$store.commit('auth/setLoading', true)
+
 			self.$api.post('ai-excel-import/get-recomendacion', {
 				excel_path:                 self.excel_path,
 				provider_id:                self.selected_provider_id,
 				provider_code_column_index: self.provider_code_column_index,
 				column_mapping:             self.column_mapping,
-			})
+			}, { timeout: 120000 })
 			.then(function(res) {
-				self.loading_recomendacion = false
 
-				self.recomendacion_configuracion = res.data.recomendacion_configuracion || null
+				/* Punto de chequeo: el .then del POST inicial, antes de llamar al helper. */
+				if (token_corrida !== self.analysis_polling_token) return
 
-				/* Actualizar duplicate_stats con los conteos recalculados para el proveedor confirmado. */
-				if (self.duplicate_stats) {
-					self.duplicate_stats = {
-						...self.duplicate_stats,
-						provider_codes_existentes_mismo_proveedor:   res.data.provider_codes_existentes_mismo_proveedor,
-						provider_codes_existentes_otros_proveedores: res.data.provider_codes_existentes_otros_proveedores,
+				return self.esperar_analisis_terminado(res.data.analysis_uuid, token_corrida)
+				.then(function(resultado) {
+
+					if (token_corrida !== self.analysis_polling_token) return
+
+					self.loading_recomendacion = false
+					self.$store.commit('auth/setLoading', false)
+					self.$store.commit('auth/setMessage', '')
+
+					self.recomendacion_configuracion = resultado.recomendacion_configuracion || null
+
+					/*
+					 * Prompt 03 (grupo 239): refrescar formatos_numericos con el recalculo del
+					 * backend, por si el usuario corrigió el mapeo de columnas en el paso 2.
+					 */
+					self.formatos_numericos = resultado.formatos_numericos || null
+
+					/* Actualizar duplicate_stats con los conteos recalculados para el proveedor confirmado. */
+					if (self.duplicate_stats) {
+						self.duplicate_stats = {
+							...self.duplicate_stats,
+							provider_codes_existentes_mismo_proveedor:   resultado.provider_codes_existentes_mismo_proveedor,
+							provider_codes_existentes_otros_proveedores: resultado.provider_codes_existentes_otros_proveedores,
+						}
 					}
-				}
 
-				/* Preseleccionar los valores recomendados. */
-				if (self.recomendacion_configuracion) {
-					self.clave_identidad   = self.recomendacion_configuracion.clave_identidad
-					self.politica_colision = self.recomendacion_configuracion.politica_colision
-				}
+					/* Preseleccionar los valores recomendados. */
+					if (self.recomendacion_configuracion) {
 
-				/*
-				 * Red de seguridad del auto-select: si la clave recomendada no tiene columna
-				 * presente en el Excel (radio oculto), o no vino recomendación, caemos a la
-				 * clave de mayor prioridad que sí esté presente. Así el modal siempre arranca
-				 * con una opción visible marcada y "Continuar" queda consistente.
-				 */
-				if (!self.clave_identidad || !self.clave_identidad_column_present(self.clave_identidad)) {
-					self.clave_identidad = self.default_clave_identidad
-				}
+						/*
+						 * Grupo 284, prompt 04: politica_colision valida contra los tres valores
+						 * nuevos. 'actualizar_uno' es el valor legado (backend, prompt 02): se
+						 * traduce a 'saltear_y_reportar', la opción más cercana a su intención
+						 * original. Sin un valor reconocido, no se preselecciona nada (igual que
+						 * antes, cuando la recomendación no traía un valor válido).
+						 */
+						let politica_colision_recomendada = self.recomendacion_configuracion.politica_colision
+						if (politica_colision_recomendada === 'actualizar_uno') {
+							politica_colision_recomendada = 'saltear_y_reportar'
+						}
+						if (
+							politica_colision_recomendada === 'actualizar_todos'
+							|| politica_colision_recomendada === 'saltear_y_reportar'
+							|| politica_colision_recomendada === 'crear_nuevo'
+						) {
+							self.politica_colision = politica_colision_recomendada
+						}
 
-				self.step = 3
+						/*
+						 * Prompt 06 (grupo 265): igual patrón defensivo — si no viene o no es uno
+						 * de los dos valores válidos, se deja el default ('ultima_gana').
+						 */
+						if (
+							self.recomendacion_configuracion.politica_intra_archivo === 'ultima_gana'
+							|| self.recomendacion_configuracion.politica_intra_archivo === 'productos_distintos'
+						) {
+							self.politica_intra_archivo = self.recomendacion_configuracion.politica_intra_archivo
+						}
+					}
+
+					self.step = 3
+				})
+				.catch(function(mensaje) {
+
+					if (token_corrida !== self.analysis_polling_token) return
+
+					self.loading_recomendacion = false
+					self.$store.commit('auth/setLoading', false)
+					self.$store.commit('auth/setMessage', '')
+					self.$toast.error(mensaje)
+				})
 			})
 			.catch(function(err) {
+
+				/* Punto de chequeo: el .catch del POST inicial. */
+				if (token_corrida !== self.analysis_polling_token) return
+
 				self.loading_recomendacion = false
+				self.$store.commit('auth/setLoading', false)
+				self.$store.commit('auth/setMessage', '')
 
 				let message = 'Error al generar la recomendación.'
 				if (err.response && err.response.data && err.response.data.message) {
@@ -1676,21 +2454,6 @@ export default {
 
 				self.$toast.error(message)
 			})
-		},
-
-		/*
-		 * Indica si la columna correspondiente a una clave de identidad está presente
-		 * en el Excel (mapeada en column_mapping).
-		 */
-		clave_identidad_column_present(clave) {
-			let mapa = {
-				numero:        this.has_numero_column,
-				bar_code:      this.has_bar_code_column,
-				sku:           this.has_sku_column,
-				provider_code: this.has_provider_code_column,
-				name:          this.has_name_column,
-			}
-			return !!mapa[clave]
 		},
 
 		/**
@@ -1717,42 +2480,118 @@ export default {
 			})
 		},
 
+		/*
+		 * Prompt 05 (grupo 239 - alerta-formatos-numericos-import): true si el valor original
+		 * tiene coma y punto a la vez (ej. "1.234,56"). Esos valores no se ven afectados por
+		 * ninguna de las tres opciones de interpretacion_punto: el formato ya es inequivoco.
+		 *
+		 * @param {String|Number} valor - Valor original tal como vino en el Excel.
+		 * @returns {Boolean}
+		 */
+		valor_tiene_coma_y_punto(valor) {
+			let texto = String(valor)
+			return texto.indexOf(',') !== -1 && texto.indexOf('.') !== -1
+		},
+
+		/*
+		 * Prompt 05 (grupo 239 - alerta-formatos-numericos-import): aplica en JS, sobre el cliente,
+		 * la misma regla que usa el backend (ImportHelper::parseNumericValue) para recalcular como
+		 * queda un valor con punto segun la opcion elegida en interpretacion_punto:
+		 * - siempre_miles: el punto siempre separa miles, se sacan todos los puntos.
+		 * - siempre_decimal: el punto siempre es decimal, se deja el valor tal cual (parseado).
+		 * - auto: separador de miles solo si el punto separa grupos de exactamente 3 digitos;
+		 *   si no, decimal.
+		 *
+		 * @param {String|Number} valor - Valor original tal como vino en el Excel.
+		 * @returns {String} - Valor recalculado, listo para mostrar en la vista previa.
+		 */
+		recalcular_resultado_interpretacion_punto(valor) {
+			let texto = String(valor)
+
+			/* Los valores con coma y punto juntos no se ven afectados por ninguna opcion. */
+			if (this.valor_tiene_coma_y_punto(texto)) {
+				return texto
+			}
+
+			if (this.interpretacion_punto === 'siempre_miles') {
+				return texto.split('.').join('')
+			}
+
+			if (this.interpretacion_punto === 'siempre_decimal') {
+				return this.formatear_como_decimal(texto)
+			}
+
+			/* auto: separador de miles solo si el punto separa grupos de exactamente 3 digitos. */
+			let es_separador_de_miles = /^-?\d{1,3}(\.\d{3})+$/.test(texto)
+			return es_separador_de_miles ? texto.split('.').join('') : this.formatear_como_decimal(texto)
+		},
+
+		/*
+		 * Prompt 05 (grupo 239 - alerta-formatos-numericos-import): interpreta el valor como
+		 * numero decimal (parseFloat, que descarta ceros finales igual que un float real) y lo
+		 * formatea con coma como separador decimal, como el resto del sistema.
+		 *
+		 * @param {String} texto - Valor original con punto.
+		 * @returns {String} - Valor formateado con coma decimal, o el texto original si no es numerico.
+		 */
+		formatear_como_decimal(texto) {
+			let numero = parseFloat(texto)
+
+			if (isNaN(numero)) {
+				return texto
+			}
+
+			return numero.toString().replace('.', ',')
+		},
+
 		/**
-		 * Traduce las decisiones de negocio (clave_identidad, politica_colision y politica_otro_proveedor)
+		 * Traduce las decisiones de negocio (politica_colision y politica_otro_proveedor)
 		 * a los 5 flags que sigue esperando /ai-excel-import/import.
 		 * Permite mantener el contrato del backend sin cambios.
 		 *
 		 * @returns {Object} - Objeto con los 5 flags calculados (0 o 1 cada uno).
 		 */
 		derive_flags_from_choice() {
-			/* Valores por defecto: todos los flags desactivados. */
+			/*
+			 * Grupo 284, prompt 04 (30/7/2026): hasta este cambio, actualizar_por_provider_code
+			 * solo se encendía cuando el usuario elegía explícitamente "código de proveedor"
+			 * como clave de identidad — elegir cualquier otra clave (o no elegir nada) lo
+			 * apagaba en silencio, y esas filas terminaban creando un artículo nuevo en vez de
+			 * actualizar el existente. La clave de identidad ya no existe como pregunta (la
+			 * jerarquía de identificación es fija, ver el prompt 03 de empresa-api): ahora
+			 * identificar por código de proveedor es el comportamiento DEFAULT, salvo que el
+			 * usuario elija explícitamente "No identificar por código de proveedor"
+			 * (politica_colision === 'crear_nuevo'). NO volver a poner este default en 0 "por
+			 * las dudas": eso es exactamente el bug que este prompt vino a arreglar.
+			 */
 			let flags = {
 				permitir_provider_code_repetido: 0,
 				permitir_provider_code_repetido_en_multi_providers: 0,
 				actualizar_articulos_de_otro_proveedor: 0,
-				actualizar_por_provider_code: 0,
+				actualizar_por_provider_code: 1,
 				actualizar_proveedor: 0,
 			}
 
-			/* Solo se activan flags cuando la clave es provider_code. */
-			if (this.clave_identidad === 'provider_code') {
-
-				/* La política politica_otro_proveedor controla si se actualizan artículos de otros proveedores. */
-				if (this.politica_otro_proveedor === 'actualizar') {
-					flags.actualizar_articulos_de_otro_proveedor = 1
-				}
-
-				if (this.politica_colision === 'actualizar_todos') {
-					flags.permitir_provider_code_repetido = 1
-					flags.permitir_provider_code_repetido_en_multi_providers = 1
-					flags.actualizar_por_provider_code = 1
-
-				} else if (this.politica_colision === 'crear_nuevo') {
-					flags.permitir_provider_code_repetido = 1
-					flags.permitir_provider_code_repetido_en_multi_providers = 1
-				}
-				/* 'actualizar_uno' deja todos esos flags en 0. */
+			/* La política politica_otro_proveedor controla si se actualizan artículos de otros proveedores. */
+			if (this.politica_otro_proveedor === 'actualizar') {
+				flags.actualizar_articulos_de_otro_proveedor = 1
 			}
+
+			if (this.politica_colision === 'actualizar_todos') {
+				flags.permitir_provider_code_repetido = 1
+				flags.permitir_provider_code_repetido_en_multi_providers = 1
+
+			} else if (this.politica_colision === 'crear_nuevo') {
+				flags.actualizar_por_provider_code = 0
+			}
+			/*
+			 * 'saltear_y_reportar' y el caso sin valor (la pregunta todavía no se mostró, por
+			 * ejemplo porque no hay filas que se identifiquen por código de proveedor) dejan
+			 * actualizar_por_provider_code=1 con permitir_provider_code_repetido=0: es
+			 * justamente la combinación que produce AmbiguousMatch en
+			 * ArticleIndexCache::find_with_index() cuando el código coincide con más de un
+			 * artículo — la fila se saltea y queda reportada.
+			 */
 
 			return flags
 		},
@@ -1797,6 +2636,14 @@ export default {
 				actualizar_articulos_de_otro_proveedor:             derived_flags.actualizar_articulos_de_otro_proveedor,
 				actualizar_por_provider_code:                       derived_flags.actualizar_por_provider_code,
 				actualizar_proveedor:                               derived_flags.actualizar_proveedor,
+				/* Prompt 05 (grupo 239): como interpretar el punto en numeros ambiguos, elegido en el paso 3. */
+				interpretacion_punto:                               this.interpretacion_punto,
+				/*
+				 * Prompt 06 (grupo 265): decisión sobre códigos de proveedor repetidos DENTRO del
+				 * propio Excel. Se manda siempre, incluso cuando la pregunta no se mostró: el
+				 * backend tiene el mismo default ('ultima_gana'), así que es inocuo.
+				 */
+				filas_repetidas_del_archivo:                        this.politica_intra_archivo || 'ultima_gana',
 			})
 			.then(() => {
 				this.loading = false
@@ -2209,10 +3056,45 @@ export default {
 		},
 
 		/*
+		 * Grupo 299 (correctivo de cancelación de polling, segundo intento): cancela
+		 * cualquier corrida de análisis/recomendación en curso. Se llama desde
+		 * reset() (disparado por @hide del modal: ESC, clic afuera, o cierre
+		 * explícito) y desde beforeDestroy() (navegación fuera de la vista).
+		 *
+		 * Hace las cuatro cosas que exige la cancelación:
+		 * 1. invalida el token vigente, de modo que cualquier request ya en vuelo
+		 *    — el POST inicial incluido — quede huérfano al volver;
+		 * 2 y 3. limpia los timers pendientes (polling y aviso de archivo grande);
+		 * 4. apaga el indicador global de carga y los flags locales SIN depender de
+		 *    que la Promise en curso se resuelva o rechace, porque cuando se
+		 *    cancela no va a hacer ninguna de las dos cosas.
+		 */
+		cancelar_analisis_en_curso() {
+			this.analysis_polling_token++
+
+			if (this.analysis_polling_timer_id) {
+				clearTimeout(this.analysis_polling_timer_id)
+				this.analysis_polling_timer_id = null
+			}
+
+			if (this.analysis_warning_timer_id) {
+				clearTimeout(this.analysis_warning_timer_id)
+				this.analysis_warning_timer_id = null
+			}
+
+			this.$store.commit('auth/setLoading', false)
+			this.$store.commit('auth/setMessage', '')
+			this.loading = false
+			this.loading_recomendacion = false
+		},
+
+		/*
 		 * Resetea el estado del modal al cerrarlo para que la próxima vez
 		 * empiece desde el paso 1 limpio.
 		 */
 		reset() {
+			this.cancelar_analisis_en_curso()
+
 			this.step          = 1
 			this.file          = null
 			this.file_processing = false
@@ -2238,11 +3120,15 @@ export default {
 			this.provider_code_column_index  = null
 			this.recomendacion_configuracion = null
 			this.loading_recomendacion       = false
-			this.clave_identidad             = null
 			this.politica_colision           = null
 			this.politica_otro_proveedor     = null
+			this.politica_intra_archivo      = 'ultima_gana'
 			this.preview_rows                = []
 			this.assistant_notes             = []
+			this.placeholders                = []
+			this.cadena_identificacion       = null
+			this.nombres_duplicados          = null
+			this.interpretacion_punto        = 'auto'
 		},
 
 	},
@@ -2261,6 +3147,16 @@ export default {
 		if (this.price_types.length === 0) {
 			this.$store.dispatch('price_type/getModels')
 		}
+	},
+
+	/*
+	 * Grupo 299 (correctivo de cancelación de polling, segundo intento): si el
+	 * componente se destruye (navegación fuera de la vista) con un análisis o una
+	 * recomendación en curso, cancela igual que reset() — si no, el polling sigue
+	 * pegándole a la API con el componente ya destruido.
+	 */
+	beforeDestroy() {
+		this.cancelar_analisis_en_curso()
 	},
 
 }
@@ -2426,6 +3322,28 @@ export default {
 	font-size: 11px
 	font-style: italic
 
+/* Bloque explicativo de la cadena de identificación efectiva (paso 3, prompt 06 grupo 229) */
+.ai-import-identification-chain
+	background: rgba(0, 123, 255, 0.04)
+	border: 1px solid rgba(0, 123, 255, 0.15)
+	border-radius: 6px
+	padding: 14px 16px
+
+.ai-import-identification-chain-list
+	margin: 0
+	padding-left: 20px
+
+.ai-import-identification-chain-item
+	margin-bottom: 12px
+
+	&:last-child
+		margin-bottom: 0
+
+.ai-import-identification-chain-title
+	font-weight: 600
+	font-size: 13px
+	color: #343a40
+
 /* Chips de resumen del archivo en el paso 3 */
 .ai-import-summary-chips
 	display: flex
@@ -2571,4 +3489,28 @@ export default {
 
 	tbody tr:hover
 		background: rgba(0, 123, 255, 0.03)
+
+/* Bloque de números con punto ambiguos del paso 3 (prompt 03, grupo 239) */
+.ai-import-numeric-formats
+	display: block
+
+/* Separación entre columnas cuando hay más de una con ambigüedad numérica */
+.ai-import-numeric-formats__column
+	&:not(:last-child)
+		border-bottom: 1px solid rgba(0, 0, 0, 0.06)
+		padding-bottom: 12px
+
+/* Aviso de riesgo alto: mismo tono que otras alertas destacadas del paso 3 */
+.ai-import-numeric-formats__risk-alert
+	font-size: 12px
+
+/* Selector de interpretacion_punto y su vista previa (prompt 05, grupo 239) */
+.ai-import-numeric-interpretacion
+	border-top: 1px solid rgba(0, 0, 0, 0.06)
+	padding-top: 10px
+
+/* Separación entre las vistas previas cuando hay más de una columna con selector */
+.ai-import-numeric-interpretacion__preview
+	&:not(:last-child)
+		margin-bottom: 10px
 </style>

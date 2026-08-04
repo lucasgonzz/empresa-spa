@@ -20,6 +20,7 @@
 		<b-form-textarea
 		placeholder="Ingrese el nombre"
 		id="article-name"
+		data-tour="listado.campo_nombre"
 		v-model="model.name"
 		v-else></b-form-textarea>
 

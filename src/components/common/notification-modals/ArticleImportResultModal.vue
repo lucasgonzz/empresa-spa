@@ -7,6 +7,7 @@
 	title="Importacion de Excel"
 	:modal-class="modal_wrapper_class"
 	body-class="article-import-result-modal__body"
+	@show="on_modal_show"
 	@hide="on_modal_hide">
 
 		<!-- Cabecera con icono y mensaje principal -->
@@ -105,7 +106,33 @@
 						<span v-if="art.provider_code" class="text-muted"> · CP: {{ art.provider_code }}</span>
 					</li>
 				</ul>
+				<p
+				v-if="!loading_repeated_code_list && !repeated_code_articles_error && hay_mas_repeated_code_articles"
+				class="text-muted small m-t-5 m-b-0">
+					y {{ repeated_code_total - repeated_code_articles.length }} más…
+				</p>
 			</div>
+		</div>
+
+		<!-- Sobrescrituras dentro del propio archivo (prompt 06, grupo 265): informativo, no un error -->
+		<div
+		v-if="sobrescrituras_a_mostrar.length > 0"
+		class="article-import-result-modal__overwrites m-t-15">
+			<p class="article-import-result-modal__overwrites-title">
+				{{ sobrescrituras_count }} fila{{ sobrescrituras_count > 1 ? 's' : '' }} se resolv{{ sobrescrituras_count > 1 ? 'ieron' : 'ió' }} como repetida{{ sobrescrituras_count > 1 ? 's' : '' }}
+			</p>
+			<ul class="small article-import-result-modal__overwrites-list m-b-0">
+				<li
+				v-for="(item, index) in sobrescrituras_a_mostrar"
+				:key="'overwrite-' + index">
+					La fila {{ item.fila }} fue sobrescrita por la fila {{ item.fila_ganadora }}
+				</li>
+			</ul>
+			<p
+			v-if="hay_mas_sobrescrituras"
+			class="text-muted small m-t-5 m-b-0">
+				y {{ sobrescrituras_count - sobrescrituras_a_mostrar.length }} más — velas en el historial de importaciones.
+			</p>
 		</div>
 
 		<!-- Configuración utilizada en la importación -->
@@ -239,6 +266,27 @@ export default {
 
 			/* Artículos traídos por el endpoint repeated-code-articles. */
 			repeated_code_articles: [],
+
+			/*
+			 * Prompt 05 (grupo 291): total real de artículos con código repetido, según el
+			 * endpoint acotado (repeated_code_articles.length siempre da como mucho el
+			 * limit pedido). Null hasta que la respuesta llega.
+			 */
+			repeated_code_total: null,
+
+			/*
+			 * Prompt 06 (grupo 265): sobrescrituras (import_conflicts tipo 'fila_sobrescrita')
+			 * de esta importación, traídas del historial cuando import_stats no las trae ya
+			 * armadas. Cada item: { fila, fila_ganadora }.
+			 */
+			sobrescrituras: [],
+
+			/*
+			 * Prompt 05 (grupo 291): total real de sobrescrituras, según el endpoint acotado
+			 * (?tipo=fila_sobrescrita&limit=5) -- sobrescrituras.length ya no sirve para el
+			 * conteo porque ahora el backend devuelve como mucho 5. Null hasta que llega.
+			 */
+			sobrescrituras_total: null,
 		}
 	},
 
@@ -437,6 +485,65 @@ export default {
 		},
 
 		/*
+		 * Prompt 06 (grupo 265): lista de sobrescrituras si import_stats ya la trae armada
+		 * (preparado para cuando el backend la sume al payload de la notificación), o null
+		 * si hay que pedirla al historial (ver fetch_sobrescrituras()).
+		 */
+		sobrescrituras_de_import_stats() {
+			let stats = this.import_stats
+
+			if (stats && Array.isArray(stats.sobrescrituras)) {
+				return stats.sobrescrituras
+			}
+
+			return null
+		},
+
+		/*
+		 * Total de sobrescrituras: el conteo de import_stats.sobrescrituras_count si vino;
+		 * si no, el total real que devolvió el endpoint acotado (prompt 05, grupo 291); si
+		 * no, la cantidad de la lista (ya sea la de import_stats o la pedida al historial).
+		 * sobrescrituras.length YA NO alcanza sola porque el endpoint devuelve como mucho 5.
+		 */
+		sobrescrituras_count() {
+			let stats = this.import_stats
+
+			if (stats && typeof stats.sobrescrituras_count === 'number') {
+				return stats.sobrescrituras_count
+			}
+
+			if (!this.sobrescrituras_de_import_stats && typeof this.sobrescrituras_total === 'number') {
+				return this.sobrescrituras_total
+			}
+
+			return (this.sobrescrituras_de_import_stats || this.sobrescrituras).length
+		},
+
+		/*
+		 * Primeras 5 sobrescrituras para el texto de la sección; el resto queda resumido
+		 * en "y N más — velas en el historial de importaciones".
+		 */
+		sobrescrituras_a_mostrar() {
+			return (this.sobrescrituras_de_import_stats || this.sobrescrituras).slice(0, 5)
+		},
+
+		/*
+		 * True si hay más de 5 sobrescrituras y hay que mostrar el resumen de las restantes.
+		 */
+		hay_mas_sobrescrituras() {
+			return this.sobrescrituras_count > this.sobrescrituras_a_mostrar.length
+		},
+
+		/*
+		 * Prompt 05 (grupo 291): true si el endpoint acotado de artículos con código
+		 * repetido devolvió menos artículos que el total real, para avisar que la lista
+		 * está truncada.
+		 */
+		hay_mas_repeated_code_articles() {
+			return this.repeated_code_total > this.repeated_code_articles.length
+		},
+
+		/*
 		 * Bloques de info extra (errores o compatibilidad).
 		 */
 		extra_info_blocks() {
@@ -489,12 +596,20 @@ export default {
 			this.$bvModal.hide('article-import-result-notification')
 		},
 
+		on_modal_show() {
+			/* Prompt 06 (grupo 265): pedir las sobrescrituras si import_stats no las trae ya. */
+			this.fetch_sobrescrituras()
+		},
+
 		on_modal_hide() {
 			/* Limpiar estado de la lista expandible al cerrar el modal. */
 			this.show_repeated_code_list = false
 			this.loading_repeated_code_list = false
 			this.repeated_code_articles_error = false
 			this.repeated_code_articles = []
+			this.repeated_code_total = null
+			this.sobrescrituras = []
+			this.sobrescrituras_total = null
 		},
 
 		/*
@@ -523,15 +638,60 @@ export default {
 			this.loading_repeated_code_list = true
 			this.repeated_code_articles_error = false
 
-			this.$api.get('import-history/repeated-code-articles/' + import_history_id)
+			/*
+			 * Prompt 05 (grupo 291): el endpoint ahora acota con limit/offset y devuelve
+			 * { articles, total } en vez del array pelado de antes. Pedimos 50 (el
+			 * componente los muestra todos en la lista expandible).
+			 */
+			this.$api.get('import-history/repeated-code-articles/' + import_history_id + '?limit=50')
 			.then(res => {
-				this.repeated_code_articles = res.data
+				this.repeated_code_articles = res.data.articles || []
+				this.repeated_code_total = typeof res.data.total === 'number'
+					? res.data.total
+					: this.repeated_code_articles.length
 			})
 			.catch(() => {
 				this.repeated_code_articles_error = true
 			})
 			.finally(() => {
 				this.loading_repeated_code_list = false
+			})
+		},
+
+		/*
+		 * Prompt 06 (grupo 265): trae las sobrescrituras (import_conflicts tipo
+		 * 'fila_sobrescrita') del historial, sin cambiar el contrato de la notificación.
+		 * No hace falta si import_stats ya las trae armadas (sobrescrituras_de_import_stats).
+		 * Reutiliza el mismo endpoint de conflictos que usa el historial de importaciones.
+		 */
+		fetch_sobrescrituras() {
+			if (!this.is_success || this.sobrescrituras_de_import_stats) {
+				return
+			}
+
+			let import_history_id = (this.import_stats || {}).import_history_id
+
+			if (!import_history_id) {
+				return
+			}
+
+			/*
+			 * Prompt 05 (grupo 291): filtramos por tipo del lado del backend en vez de traer
+			 * TODOS los conflictos del historial y filtrar acá -- con Excel grandes y códigos
+			 * repetidos, fila_sobrescrita se registra una vez por cada fila pisada, así que
+			 * podían viajar miles de filas por la red para mostrar 5. limit=5 porque el
+			 * componente ya solo muestra 5; el conteo real sale de res.data.total (agregado
+			 * SQL del backend), no de sobrescrituras.length.
+			 */
+			this.$api.get('import-history/' + import_history_id + '/conflicts?tipo=fila_sobrescrita&limit=5')
+			.then(res => {
+				this.sobrescrituras = res.data.conflicts || []
+				this.sobrescrituras_total = typeof res.data.total === 'number'
+					? res.data.total
+					: this.sobrescrituras.length
+			})
+			.catch(() => {
+				/* Silencioso: es informativo, no bloquea nada del resultado de la importación. */
 			})
 		},
 
@@ -760,6 +920,29 @@ export default {
 	font-weight: 700
 	text-align: right
 	color: #343a40
+
+// Sobrescrituras dentro del propio archivo (prompt 06, grupo 265): dato informativo,
+// mismo tono neutro que la configuración utilizada — a propósito, no es un error.
+.article-import-result-modal__overwrites
+	background: #f8f9fb
+	border: 1px solid rgba(0, 0, 0, 0.06)
+	border-radius: 12px
+	padding: 14px 16px
+
+.article-import-result-modal__overwrites-title
+	font-size: 14px
+	font-weight: 700
+	color: #343a40
+	margin: 0 0 8px
+
+.article-import-result-modal__overwrites-list
+	list-style: none
+	padding: 0
+	margin: 0
+	color: #495057
+
+	li
+		padding: 3px 0
 
 .article-import-result-modal__config
 	background: #f8f9fb

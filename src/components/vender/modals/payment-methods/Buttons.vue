@@ -3,7 +3,7 @@
 	class="m-t-15">
 		<div
 		v-if="payment_method_discounts.length">
-			
+
 			<b-button
 			block
 			variant="primary"
@@ -15,6 +15,7 @@
 			block
 			variant="primary"
 			v-else
+			data-tour="vender.boton_confirmar_venta"
 			@click="terminar">
 				Listo
 			</b-button>
@@ -22,6 +23,7 @@
 		<b-button
 		block
 		variant="primary"
+		data-tour="vender.boton_confirmar_venta"
 		@click="terminar"
 		v-else>
 			Listo

@@ -34,6 +34,7 @@ import start_methods from '@/mixins/start_methods'
 import broadcast from '@/mixins/broadcast'
 import check_version from '@/mixins/check_version'
 import offline from '@/offline/index'
+import { apply_dark_mode_class, store_dark_mode } from '@/utils/dark_mode'
 export default {
     mixins: [app, start_methods, broadcast, check_version, offline],
     components: {
@@ -53,9 +54,26 @@ export default {
             const slug = this.$store.state.auth.user?.inputs_size?.slug
             return slug ? `ui-${slug}` : ''
         },
+        /**
+         * Preferencia de modo oscuro del usuario autenticado. `null` mientras no se sepa quién
+         * es (arranque, antes de que resuelva `auth/me`) -- a propósito, y no `false`: Vue solo
+         * dispara un watch cuando el valor OBSERVADO cambia, así que si acá devolviéramos
+         * `false` durante el arranque y el usuario resultara tener la preferencia en claro
+         * (`false` también), la transición `false -> false` no dispararía el watch de abajo, y
+         * ni la clase ni el recuerdo de `localStorage` se corregirían nunca contra la base.
+         */
+        dark_mode_del_usuario() {
+            return this.user ? Boolean(this.user.dark_mode) : null
+        },
     },
     created() {
         var self = this
+        // La vista de ingreso a la demo maneja su propia autenticación: si dejamos correr el
+        // auth/me de arranque, resuelve "no autenticado" y el watcher de abajo manda a login
+        // antes de que el token de la demo llegue a canjearse.
+        if (this.$route.name === 'demoIngreso') {
+            return
+        }
         /**
          * Si se llegó desde otra versión con token de transferencia, iniciar sesión aquí
          * antes de `auth/me` para que la versión correcta ya quede autenticada.
@@ -71,6 +89,28 @@ export default {
             })
     },
     watch: {
+        /**
+         * Corrige el recuerdo de `localStorage` (aplicado en `main.js` antes de montar) contra
+         * lo que dice la base apenas resuelve `auth/me`. Cubre el caso de que el usuario haya
+         * cambiado la preferencia desde otra computadora, o que en esta se hubiera logueado
+         * antes otra persona con una preferencia distinta. `immediate: true` para que corra
+         * también en el primer cuadro, no solo ante cambios posteriores.
+         */
+        dark_mode_del_usuario: {
+            immediate: true,
+            handler(activo) {
+                // `activo` es null hasta que resuelve auth/me, y este watch corre sincrónicamente
+                // al crear el componente (mismo tick que main.js). Sin este guard, la primera
+                // ejecución (con activo todavía null) borraría la clase que main.js acaba de
+                // poner a partir del recuerdo de localStorage -- el destello blanco que se
+                // quería evitar. Mientras no se sepa quién es el usuario, el recuerdo manda.
+                if (activo === null) {
+                    return
+                }
+                apply_dark_mode_class(activo)
+                store_dark_mode(activo)
+            },
+        },
         authenticated() {
             console.log('watch de authenticateds')
             if (!this.authenticated) {

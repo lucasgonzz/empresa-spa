@@ -198,12 +198,14 @@ export default {
 			return this.$store.state.sale.model 
 		},
 		/**
-		 * Indica si la venta puede editarse desde este modal.
+		 * Indica si la venta puede editarse desde este modal. Ademas de lo que ya exige
+		 * se_puede_actualizar_venta() (permiso, no facturada, no cerrada, no movio caja),
+		 * exige que la venta no tenga un reparto en multiples metodos de pago.
 		 *
 		 * @returns {boolean}
 		 */
 		can_edit_sale() {
-			return this.se_puede_actualizar_venta(this.sale_details)
+			return this.se_puede_editar_venta(this.sale_details)
 		},
 		/**
 		 * Indica si se muestran acciones de acopios.

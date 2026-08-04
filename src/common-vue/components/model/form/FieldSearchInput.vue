@@ -4,6 +4,7 @@
 		:disabled="disabled"
 		:id="model_name + '-' + prop.key"
 		:search_from_api="search_from_api"
+		:data_tour="prop.data_tour"
 		@setSelected="$emit('set-selected', $event)"
 		:props_to_filter="props_to_filter"
 		:model_name="relation_model_name"
