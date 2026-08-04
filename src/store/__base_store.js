@@ -93,6 +93,16 @@ export default function __base_store(options = {}) {
 			 * Lo usan modales globales fuera del árbol del menú desplegable.
 			 */
 			options_from_filter: false,
+
+			/**
+			 * Lista liviana (id + name, y lo que agregue cada endpoint /options) para selectores y
+			 * acumuladores que necesitan el catálogo entero, sin descargar el modelo completo con
+			 * withAll() al iniciar sesión (grupo 332, 4/8/2026). Ver acción `getOptions`.
+			 */
+			options: [],
+			// Si ya se pidió una vez en esta sesión: evita re-pedir en cada `created()` que la use.
+			options_loaded: false,
+			loading_options: false,
 		}
 
 		/**
@@ -222,6 +232,29 @@ export default function __base_store(options = {}) {
 			if (index != -1) {
 				state.filtered.splice(index, 1, value)
 			}
+
+			// Si options ya está cargado, insertar o reemplazar también ahí una version
+			// reducida del modelo, o el selector no lo va a ofrecer hasta recargar la
+			// pagina (grupo 332, 4/8/2026). Las claves se toman de un elemento ya
+			// existente en options (las que devuelve el endpoint /options de cada
+			// modelo), asi el factory no necesita saber de antemano que columnas trae
+			// cada uno.
+			if (state.options_loaded) {
+				let claves = state.options.length ? Object.keys(state.options[0]) : ['id', 'name']
+				let reducido = {}
+				claves.forEach(clave => {
+					reducido[clave] = value[clave]
+				})
+
+				let index_options = state.options.findIndex(item => {
+					return item.id == reducido.id
+				})
+				if (index_options == -1) {
+					state.options.unshift(reducido)
+				} else {
+					state.options.splice(index_options, 1, reducido)
+				}
+			}
 		},
 		setDelete(state, value) {
 			state.delete = value
@@ -333,6 +366,33 @@ export default function __base_store(options = {}) {
 		 */
 		set_options_from_filter(state, value) {
 			state.options_from_filter = !!value
+		},
+		/**
+		 * Setea la lista liviana traída por `getOptions`.
+		 *
+		 * @param {Object} state
+		 * @param {Array} value
+		 */
+		setOptions(state, value) {
+			state.options = value
+		},
+		/**
+		 * Marca si `options` ya se pidió con éxito en esta sesión.
+		 *
+		 * @param {Object} state
+		 * @param {Boolean} value
+		 */
+		setOptionsLoaded(state, value) {
+			state.options_loaded = value
+		},
+		/**
+		 * Estado de carga de `getOptions`, para que la UI pueda mostrar un loader.
+		 *
+		 * @param {Object} state
+		 * @param {Boolean} value
+		 */
+		setLoadingOptions(state, value) {
+			state.loading_options = value
 		},
 	}
 
@@ -450,6 +510,39 @@ export default function __base_store(options = {}) {
 			})
 			.catch(err => {
 				commit('setLoading', false)
+				console.log(err)
+			})
+		},
+		/**
+		 * Trae la lista liviana (id + name, y lo que agregue cada endpoint) para selectores y
+		 * acumuladores que necesitan el catálogo entero. No usa `getModels`/paginación a propósito:
+		 * ese camino trae el modelo completo con withAll() y solo la primera página (grupo 332,
+		 * 4/8/2026).
+		 *
+		 * @param {Object} context commit, state
+		 * @param {Boolean} force Si es true, vuelve a pedir aunque ya esté cargado.
+		 * @returns {Promise}
+		 */
+		getOptions({commit, state}, force = false) {
+			// Si ya se cargó y no se pide forzar, no vuelve a pedir: esto es lo que permite
+			// llamarla desde el created() de varias pantallas sin generar una ráfaga de requests.
+			if (state.options_loaded && !force) {
+				return Promise.resolve()
+			}
+			commit('setLoadingOptions', true)
+			let url = '/api/' + generals.methods.routeString(state.model_name) + '/options'
+			return axios.get(url)
+			.then(res => {
+				commit('setOptions', res.data.models)
+				commit('setOptionsLoaded', true)
+				commit('setLoadingOptions', false)
+			})
+			.catch(err => {
+				// Punto critico: NO marcar options_loaded en true acá. Si la request falla y
+				// igual quedara marcada, la sesión entera se queda con una lista vacía o parcial
+				// que nunca se vuelve a pedir (exactamente el modo de falla que corrige este
+				// grupo). Dejar options_loaded en false para que el próximo intento reintente.
+				commit('setLoadingOptions', false)
 				console.log(err)
 			})
 		},
