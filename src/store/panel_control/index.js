@@ -387,7 +387,9 @@ export default {
 			}
 			return dispatch('_getModels')
 		},
-		_getModels({commit, state, dispatch}) {
+		_getModels({commit, state, dispatch}, payload = {}) {
+			/** Cuántas páginas ya se pidieron para el meses_atras actual (arranca en 1). */
+			let intentos = payload.intentos || 1
 			commit('setLoading', true)
 			let url = '/api/'+generals.methods.routeString(state.model_name)
 			if (state.plural_model_name) {
@@ -396,19 +398,19 @@ export default {
 				} else {
 					url += '/0'
 				}
-			} 
+			}
 			url += '/'+state.meses_atras
 			if (state.route_prefix) {
 				url += '/'+state.route_prefix
-			} 
+			}
 			if (state.from_dates) {
 				url += '/from-date/'+state.from_date
-			} 
+			}
 			if (state.until_date != '') {
 				url += '/'+state.until_date
 			}
 			if (state.use_per_page) {
-				url += '?page='+state.page 
+				url += '?page='+state.page+'&per_page='+state.per_page
 			}
 			return axios.get(url)
 			.then(res => {
@@ -420,9 +422,22 @@ export default {
 					console.log('se cargo '+state.model_name+' meses_atras: '+state.meses_atras+' page: '+state.page)
 					commit('incrementPage')
 					commit('addModels', loaded_models)
-					if (loaded_models.length == state.per_page) {
-						dispatch('_getModels')
+					/*
+						La condición es current_page < last_page, no comparar la cantidad de filas
+						recibidas contra el per_page del store. Esa comparación asumía que el front y
+						el backend usaban el mismo tamaño de página sin que nadie lo verificara: el
+						store de article decía 200, el controller paginaba de a 500, la igualdad nunca
+						daba verdadero y el listado se cortaba en la primera página (4/8/2026). El
+						backend ya devuelve current_page y last_page en la misma respuesta. El eje de
+						meses_atras (mas abajo) no cambia: sigue encadenando por su cuenta cuando esta
+						pagina ya se termino de traer.
+					*/
+					if (res.data.models.current_page < res.data.models.last_page && intentos < 500) {
+						dispatch('_getModels', {intentos: intentos + 1})
 					} else {
+						if (res.data.models.current_page < res.data.models.last_page) {
+							console.log('se corto la descarga de ' + state.model_name + ' por alcanzar el tope de seguridad de 500 paginas (revisar last_page del backend)')
+						}
 						commit('setPage', 1)
 						if (state.meses_atras == 0) {
 							commit('setLoading', false)
