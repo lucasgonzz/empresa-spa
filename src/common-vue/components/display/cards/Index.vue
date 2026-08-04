@@ -31,12 +31,9 @@
 
 				<div v-infinite-scroll="loadMore" infinite-scroll-disabled="busy" infinite-scroll-distance="10"></div>
 			</div>
-			<p 
+			<empty-state
 			v-else-if="!models_to_show.length"
-			class="text-with-icon">
-				<i class="icon-eye-slash"></i>
-				No hay {{ plural(model_name) }}
-			</p>
+			:title="'No hay ' + plural(model_name)"></empty-state>
 		</div>
 		<div 
 		v-else
@@ -86,6 +83,7 @@ export default {
 	components: {
 		CardComponent,
 		CardSkeleton,
+		EmptyState: () => import('@/common-vue/components/display/EmptyState'),
 	},
 	data() {
 		return {
