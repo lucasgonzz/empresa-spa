@@ -4,7 +4,9 @@ export default {
 			text: 'Proveedor',
 			key: 'provider_id',
 			type: 'select',
-			use_store_models: true,
+			// El catalogo de proveedores no se descarga entero al iniciar sesion (grupo 332,
+			// 4/8/2026): el buscador va contra la API y la tabla lee la relacion embebida.
+			search_from_api: true,
 		},
 		{
 			text: 'Articulos para chequear',

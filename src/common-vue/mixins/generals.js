@@ -870,17 +870,23 @@ export default {
 						if (typeof finded_model != 'undefined') {
 							// console.log('encontro: ')
 							// console.log(finded_model)
-							return finded_model[prop_name]	
+							return finded_model[prop_name]
 						}
-						console.log('no se encontro la relacion para '+relationship)
-						return null
-					} else if (model[relationship] && model[relationship][prop_name]) {
-						return model[relationship][prop_name] 
 					}
-					// let _model = this.$store.state[relationship].models.find(model_ => {
-					// 	return model_.id == model[prop.key]
-					// })
-					// return _model[prop_name]
+
+					// El orden importa y el fallback no puede ser un `else`. Antes esta rama devolvia
+					// null cuando el modelo no estaba en el store, aunque la relacion viajara cargada
+					// en la respuesta: la columna Proveedor del Listado quedaba vacia para todo
+					// articulo cuyo proveedor no estuviera entre los descargados (4/8/2026). El nombre
+					// de la relacion se deriva de la clave, no de prop.store, porque hay props (cheque:
+					// endosado_desde_client_id) donde el store apunta a `client` pero la relacion
+					// embebida se llama distinto y leer la del store devolveria otro modelo.
+					let embedded_relationship = this.modelNameFromRelationKey(prop, false, false)
+					if (model[embedded_relationship] && model[embedded_relationship][prop_name]) {
+						return model[embedded_relationship][prop_name]
+					}
+
+					return null
 				} else {
 					return 'S/A'
 				}
