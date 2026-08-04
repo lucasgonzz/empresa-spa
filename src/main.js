@@ -3,6 +3,7 @@ import App from './App.vue'
 import './registerServiceWorker'
 import router from './router'
 import store from './store'
+import { apply_dark_mode_class, read_stored_dark_mode } from '@/utils/dark_mode'
 
 // Vue Scrool
 Vue.prototype.$scrollToTop = (() => {
@@ -252,6 +253,12 @@ Vue.mixin(generals)
 
 
 Vue.config.productionTip = false
+
+// Modo oscuro: aplicar el recuerdo de localStorage ANTES de montar, no en el created() de
+// App.vue. El usuario recién se conoce cuando resuelve auth/me (csrf-cookie + GET api/user); sin
+// esto, alguien con el modo oscuro prendido vería la aplicación en blanco durante todo ese ida y
+// vuelta y después un salto a oscuro. App.vue corrige este recuerdo apenas llega el usuario real.
+apply_dark_mode_class(read_stored_dark_mode())
 
 new Vue({
   router,

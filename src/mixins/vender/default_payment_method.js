@@ -48,6 +48,8 @@ export default {
             if (!this.omitir_en_cuenta_corriente) {
                 this.$store.commit('vender/setCurrentAcountPaymentMethodId', 0)
                 this.$store.commit('vender/setSelectedPaymentMethods', [])
+                /* Sin reparto activo, los montos de descuento/recargo que dejo el reparto anterior no aplican mas */
+                this.$store.commit('vender/set_modal_payment_methods', [])
             }
         },
         bloquear_caja() {

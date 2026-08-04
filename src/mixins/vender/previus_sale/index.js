@@ -211,6 +211,13 @@ export default {
 				this.$store.commit('vender/setCurrentAcountPaymentMethodId', 0)
 			}
 
+			/*
+				La venta que se esta cargando trae su propio reparto (o ninguno): los montos de
+				descuento/recargo que hayan quedado del reparto anterior no tienen nada que ver
+				con ella. Se limpian antes de setear el reparto nuevo, no dentro de cada rama.
+			*/
+			this.$store.commit('vender/set_modal_payment_methods', [])
+
 			if (model.current_acount_payment_methods
 				&& model.current_acount_payment_methods.length == 1) {
 				// Venta con un único método de pago: se setea el id y se limpia el reparto múltiple.
@@ -401,7 +408,19 @@ export default {
 			})
 			.catch(err => {
 				console.log(err)
-				this.$toast.error('Error al actualizar venta')
+
+				/* El backend rechaza con 409 y un motivo legible (venta facturada, cerrada o con varios metodos de pago) */
+				if (
+					err.response
+					&& err.response.data
+					&& err.response.data.message
+				) {
+					this.$toast.error(err.response.data.message, {
+						duration: 6000
+					})
+				} else {
+					this.$toast.error('Error al actualizar venta')
+				}
 			})
 		},
 		cancelPreviusSale() {

@@ -23,21 +23,28 @@ export default {
 		{
 			text: 'Endozado desde cliente',
 			key: 'endosado_desde_client_id',
+			// store: 'client' es el modelo contra el que busca el modal (search-from-modal/client),
+			// no el nombre de la relacion embebida: esa se llama endosado_desde_client y se deriva
+			// de la clave (grupo 332, 4/8/2026, ver propertyText()).
 			store: 'client',
 			type: 'search',
-			use_store_models: true,
+			search_from_api: true,
 		},
 		{
 			text: 'Proveedor',
 			key: 'provider_id',
 			type: 'search',
-		}, 
+			search_from_api: true,
+		},
 		{
 			text: 'Endozado al proveedor',
 			key: 'endosado_a_provider_id',
+			// store: 'provider' es el modelo contra el que busca el modal (search-from-modal/provider),
+			// no el nombre de la relacion embebida: esa se llama endosado_a_provider y se deriva de
+			// la clave (grupo 332, 4/8/2026, ver propertyText()).
 			store: 'provider',
 			type: 'search',
-			use_store_models: true,
+			search_from_api: true,
 		},
 		{
 			text: 'Banco',

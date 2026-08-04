@@ -4,7 +4,13 @@ export default {
 			text: 'Proveedor',
 			key: 'provider_id',
 			type: 'select',
-			use_store_models: true,
+			// El catalogo de proveedores no se descarga entero al iniciar sesion (grupo 332,
+			// 4/8/2026): el buscador va contra la API y la tabla lee la relacion embebida.
+			// search_from_api no hace nada para type: 'select' (ModelForm.vue arma estos
+			// selects con getOptions(prop, model, model_name), que no lee esa bandera) -- el
+			// hook real es get_options_function (grupo 342, 4/8/2026).
+			search_from_api: true,
+			get_options_function: 'getOptionsFromCatalog',
 		},
 		{
 			text: 'Articulos para chequear',

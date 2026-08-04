@@ -39,7 +39,10 @@ export default {
 			return this.selected_provider && provider.id == this.selected_provider.id ? 'active-provider' : ''
 		},
 		filterProviders() {
-			this.$store.commit('panel_control/setProvidersFormated', this.provider_query)
+			this.$store.commit('panel_control/setProvidersFormated', {
+				providers: this.$store.state.provider.options,
+				query: this.provider_query,
+			})
 		}
 	},
 	data() {

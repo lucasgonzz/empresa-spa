@@ -35,6 +35,9 @@ export default {
 	},
 	created() {
 		this.$store.dispatch('pago_de_cliente/getModels')
+		// Sin esto el filtro por sucursal de models_to_show (pagos_de_clientes.js) queda
+		// vacio para siempre: necesita el catalogo completo de clientes (grupo 342, 4/8/2026).
+		this.$store.dispatch('client/getOptions')
 		this.$router.push({params: {sub_view: 'todas'}})
 	},
 }

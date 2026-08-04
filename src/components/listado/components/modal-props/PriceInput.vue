@@ -35,11 +35,10 @@ export default {
 			return false
 		},
 		article_provider() {
-			let provider = this.$store.state.provider.models.find(p => p.id == this.article.provider_id)
-			if (typeof provider != 'undefined') {
-				return provider 
-			}
-			return null
+			// Antes buscaba el proveedor en el store paginado (provider.models), que ya no se
+			// descarga completo al iniciar sesion (grupo 332/342, 4/8/2026). El articulo ya
+			// trae la relacion embebida via scopeWithAll(), asi que no hace falta el store.
+			return this.article.provider || null
 		},
 		margen_del_proveedor() {
 			return this.article.provider_id && this.article.apply_provider_percentage_gain && (this.article_provider && this.article_provider.percentage_gain)

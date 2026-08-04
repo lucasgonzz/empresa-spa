@@ -454,14 +454,22 @@ export default {
 					this.query = this.model[this.prop.key]
 					this.selected_model = null
 				} else if (this.model && this.prop && this.model[this.prop.key]) {
+					let selected_model = null
 					if (this.prop.use_store_models) {
-						let model = this.$store.state[this.modelNameFromRelationKey(this.prop)].models.find(_model => {
+						selected_model = this.$store.state[this.modelNameFromRelationKey(this.prop)].models.find(_model => {
 							return _model.id == this.model[this.prop.key]
 						})
-						this.selected_model = model
-					} else {
-						this.selected_model = this.model[this.modelNameFromRelationKey(this.prop)]
 					}
+
+					// Mismo orden que propertyText(): el store es un intento, no una salida.
+					// Si el modelo no esta ahi, cae a la relacion embebida, derivada de la
+					// clave (no de prop.store), o el campo quedaba vacio al editar un modelo
+					// cuyo relacionado no estaba entre los descargados (4/8/2026).
+					if (!selected_model) {
+						selected_model = this.model[this.modelNameFromRelationKey(this.prop, false, false)]
+					}
+
+					this.selected_model = selected_model
 				} else if (this.set_selected_model_with_model_prop && this.model) {
 					this.selected_model = this.model 
 				} else if (this.set_selected_model_with_model_prop) {

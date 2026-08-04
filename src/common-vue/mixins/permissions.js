@@ -44,6 +44,10 @@ export default {
 		checkPermissionForCurrentRoute() {
 			if (this.$route.path == '/' || this.$route.path == '/login' || (this.use_home_page && this.route_name == 'home')) {
 				// console.log('estaba en la ruta /')
+				/* Antes de mandar a la ruta por defecto, intentar volver al destino original (ver redirectToIntendedRoute) */
+				if (this.redirectToIntendedRoute()) {
+					return true
+				}
 				this.redirect()
 			} else {
 				// console.log('por llamar getRoutePermissionSlug con la ruta: '+this.$route.path)
@@ -86,6 +90,52 @@ export default {
 			} else {
 				// console.log('NO TIENE PERMISO PARA NINGUNA RUTA')
 			}
+		},
+		redirectToIntendedRoute() {
+
+			/*
+				El guard global de router/index.js rebota una ruta privada al login antes de que
+				auth/me resuelva, y arma la query redirect=<ruta original> (ver ese archivo). Ese
+				redirect no lo consumia nadie, asi que el usuario terminaba en la ruta por defecto
+				en vez de en el destino que pidio. Este metodo lo consume: si encuentra un destino
+				valido, navega hacia el y devuelve true; si no hay nada que hacer, devuelve false y
+				el flujo sigue normal (redirect() a la ruta por defecto).
+			*/
+			let destino = this.$route.query.redirect
+
+			// sin query redirect, o con un valor que no es un string: no hay nada que consumir
+			if (!destino || typeof destino != 'string') {
+				return false
+			}
+
+			// solo rutas internas de esta SPA: si no empieza con "/" no es una ruta valida
+			if (destino.charAt(0) != '/') {
+				return false
+			}
+
+			// "//dominio.com" es una URL absoluta (protocol-relative): evita que se use el
+			// sistema como trampolin hacia un sitio externo
+			if (destino.charAt(1) == '/') {
+				return false
+			}
+
+			// no rebotar contra si mismo
+			if (destino == '/login' || destino.indexOf('/login?') == 0) {
+				return false
+			}
+
+			// replace (no push): el rebote al login es un accidente tecnico, no tiene que quedar
+			// en el historial del navegador
+			this.$router.replace(destino).then(() => {
+				this.$nextTick(() => {
+					// el destino guardado puede ser una ruta para la que el usuario no tenga
+					// permiso: se re-chequea con $route ya actualizado (entra por la rama else,
+					// porque la ruta ya no es /login, y cae en redirect() si no hay permiso)
+					this.checkPermissionForCurrentRoute()
+				})
+			}).catch(() => {})
+
+			return true
 		},
 		getRoutePermissionSlug(route_name = null) {
 			if (route_name == 'abm') {

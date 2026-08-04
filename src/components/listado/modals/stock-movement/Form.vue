@@ -33,7 +33,7 @@
 			<search-component
 			ref="search_component"
 			:model="article"
-			:prop="{key: 'provider_id', text: 'Proveedor', use_store_models: true}"
+			:prop="{key: 'provider_id', text: 'Proveedor', search_from_api: true}"
 			id="stock-movement-search-povider"
 			@setSelected="setSelectedProvider"
 			model_name="provider"
@@ -100,9 +100,6 @@ export default {
 		},
 		addresses() {
 			return this.$store.state.address.models
-		},
-		providers() {
-			return this.$store.state.provider.models
 		},
 		article_variant_options() {
 			let options = [{

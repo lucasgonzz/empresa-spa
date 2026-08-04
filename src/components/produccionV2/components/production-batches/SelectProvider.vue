@@ -3,17 +3,20 @@
 		<b-form-group
 		:disabled="disabled">
 			<b-form-select
-			:options="get_options_simple('provider')"
-			v-model="model.provider_id"></b-form-select>	
+			:options="getOptionsFromCatalog({key: 'provider_id', text: 'Proveedor'})"
+			v-model="model.provider_id"></b-form-select>
 		</b-form-group>
 
 	</div>
 </template>
 <script>
 export default {
+	created() {
+		this.$store.dispatch('provider/getOptions')
+	},
 	computed: {
 		model() {
-			return this.$store.state.production_batch_movement.model 
+			return this.$store.state.production_batch_movement.model
 		},
 		disabled() {
 			if (this.model.id) {

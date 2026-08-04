@@ -19,7 +19,9 @@ export default {
 
 			return this.pagos_de_clientes.filter(pago => {
 
-				let client = this.$store.state.client.models.find(_client => _client.id == pago.client_id)
+				// Catalogo completo (options, incluye address_id), no el store paginado que ya
+				// no se descarga entero al iniciar sesion (grupo 332/342, 4/8/2026).
+				let client = this.$store.state.client.options.find(_client => _client.id == pago.client_id)
 
 				if (typeof client != 'undefined') {
 

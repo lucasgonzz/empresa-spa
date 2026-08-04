@@ -86,7 +86,9 @@ export default {
 			type: 'search',
 			use_to_show_in_search_modal: true,
 			use_to_update: true,
-			use_store_models: true,
+			// El catalogo de proveedores no se descarga entero al iniciar sesion (grupo 332,
+			// 4/8/2026): el buscador va contra la API y la tabla lee la relacion embebida.
+			search_from_api: true,
 			filter_modal_position: 4,
 			keep_after_create: true,
 			can: 'article.provider',

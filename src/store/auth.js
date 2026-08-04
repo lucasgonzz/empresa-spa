@@ -45,6 +45,20 @@ export default {
 		setSelectedAddress(state, value) {
 			state.selected_address = value
 		},
+		/**
+		 * Actualiza la preferencia de modo oscuro del usuario autenticado en el estado local.
+		 *
+		 * Reemplaza el objeto `user` entero con `Object.assign` en vez de mutar `dark_mode`
+		 * directamente: Vue 2 no detecta reactivamente una propiedad que no existía en el objeto
+		 * original (por ejemplo, si `dark_mode` todavía no llegó del backend en algún punto), y
+		 * este patrón lo evita sin depender de `Vue.set` (este archivo no importa Vue).
+		 */
+		setDarkMode(state, value) {
+			if (!state.user) {
+				return
+			}
+			state.user = Object.assign({}, state.user, { dark_mode: value ? 1 : 0 })
+		},
 		addAddress(state, value) {
 			state.user.addresses.push(value)
 		},
@@ -161,6 +175,22 @@ export default {
 				.catch(err => {
 					console.log(err)
 				})
+		},
+		/**
+		 * Guarda la preferencia de modo oscuro en el backend y confirma contra lo que responde
+		 * (no contra lo que se mandó). Sin `.catch`: lo maneja quien llama, que es el que tiene
+		 * que revertir la perilla si la llamada falla.
+		 *
+		 * @param {object} context Contexto Vuex del módulo auth.
+		 * @param {boolean} value Nuevo valor a guardar.
+		 * @returns {Promise<number>} El valor persistido (0 o 1) según respondió el backend.
+		 */
+		set_dark_mode({ commit }, value) {
+			return axios.put('/api/user/set-dark-mode/' + (value ? 1 : 0))
+			.then(res => {
+				commit('setDarkMode', res.data.dark_mode)
+				return res.data.dark_mode
+			})
 		},
 		deleteImage({ commit, state }) {
 			// return axios.delete(`/api/delete-current-image/user/${state.user.id}`)

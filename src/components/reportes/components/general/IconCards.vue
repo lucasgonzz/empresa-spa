@@ -588,12 +588,6 @@ export default {
 			
 			return '('+ Math.round(porcentaje) +'%)'
 		},
-		clients() {
-			return this.$store.state.client.models 
-		},
-		providers() {
-			return this.$store.state.provider.models 
-		},
 		rango_temporal() {
 			return this.$store.state.reportes.rango_temporal
 		},

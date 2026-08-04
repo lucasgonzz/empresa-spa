@@ -1,0 +1,255 @@
+// Tema oscuro: tokens de color y chasis de la aplicacion (grupo 304, prompt 02).
+//
+// Se activa poniendo la clase `dark-mode` en <html>. Este archivo es CSS puro: no agrega
+// ni saca esa clase, ni lee nada de localStorage o de la sesion -- eso lo hace el prompt 03.
+// Aca solo se define que pinta cuando la clase ya esta puesta.
+
+// Los tokens van en :root (claro) y en html.dark-mode (oscuro), nunca en #app ni en body:
+// las custom properties heredan por el arbol del documento, y los modales de bootstrap-vue
+// se montan colgando de <body>, fuera de #app -- si los tokens vivieran en #app, los
+// modales (y cualquier cosa montada fuera del arbol de #app) quedarian sin ellos.
+:root
+	--color-primary: #007bff
+	--color-text-primary: #212529
+	--color-text-secondary: #6c757d
+	--color-border: #dee2e6
+	--color-border-secondary: #e9ecef
+	--color-border-tertiary: #dee2e6
+	--color-bg: #f8f9fa
+	--bg-card: #fff
+	--bg-section: #f8f9fa
+	--bg-hover: #f1f3f5
+
+html.dark-mode
+	--color-bg: #14161a
+	--bg-card: #1e2127
+	--bg-section: #191c21
+	--bg-hover: #23272e
+	--color-text-primary: #e6e8eb
+	--color-text-secondary: #9aa1a9
+	--color-border: rgba(255, 255, 255, 0.10)
+	--color-border-secondary: rgba(255, 255, 255, 0.07)
+	--color-border-tertiary: rgba(255, 255, 255, 0.10)
+	--color-primary: #3b9dff
+
+	// El navegador pinta con esto las barras de scroll, los selects nativos y los date
+	// pickers del sistema: una linea que resuelve media docena de rincones blancos.
+	color-scheme: dark
+
+	// Transicion suave al cambiar de modo. Solo en body y #app -- una transicion global
+	// sobre * se siente como un tiron con la cantidad de nodos que tienen las tablas de
+	// este sistema, no como una suavidad.
+	body, #app
+		transition: background-color 0.25s ease, color 0.25s ease
+
+	// Fondo general. #app tenia un gradiente pensado para modo claro (_app_vue.sass linea
+	// 34); en oscuro va un color plano.
+	body
+		background-color: var(--color-bg)
+		color: var(--color-text-primary)
+
+	#app
+		background: var(--color-bg)
+		color: var(--color-text-primary)
+
+	// Tarjetas y superficies "planas" que flotan sobre el fondo.
+	.card, .card-header, .card-body, .list-group-item, .jumbotron
+		background-color: var(--bg-card)
+		color: var(--color-text-primary)
+		border-color: var(--color-border)
+
+	.custom-card
+		background-color: var(--bg-card)
+		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2)
+
+		.header
+			background-color: var(--bg-section)
+			border-color: var(--color-border)
+			color: var(--color-text-primary)
+
+		.body .aclaracion
+			border-color: var(--color-border)
+			color: var(--color-text-secondary)
+
+	// Tablas. table tbody tr es el selector que origina el !important de esta hoja:
+	// _tables.sass ya define `table tbody tr { background-color: #FFF !important }` para
+	// modo claro (linea 15), y un !important SIEMPRE le gana a una declaracion normal sin
+	// importar la especificidad -- por mas que html.dark-mode tenga mas especificidad, sin
+	// !important de este lado esa regla nunca se vence. Con !important de los dos lados,
+	// ahi si decide la especificidad, y html.dark-mode table tbody tr la tiene mas alta.
+	// (El otro !important de este archivo, el del hover un poco mas abajo, es consecuencia
+	// directa de este: tiene que igualarlo para no quedar tapado por el mismo.)
+	table
+		color: var(--color-text-primary)
+
+		thead th
+			background-color: var(--bg-section)
+			color: var(--color-text-primary)
+			border-color: var(--color-border)
+
+		tbody
+			border-color: var(--color-border)
+
+			tr
+				background-color: var(--bg-card) !important
+				color: var(--color-text-primary)
+
+			td
+				border-color: var(--color-border)
+				color: var(--color-text-primary)
+
+	// Necesita !important por la regla de arriba (html.dark-mode table tbody tr), no por
+	// nada externo: esa regla ya es !important, y sin igualarla aca el hover nunca se ve
+	// (un !important le gana a cualquier normal, sin importar la especificidad). Entre
+	// los dos, gana este por especificidad (.table-hover + :hover suma mas que table tbody
+	// tr a secas).
+	.table-hover tbody tr:hover
+		background-color: var(--bg-hover) !important
+
+	.b-table
+		background-color: var(--bg-card)
+		color: var(--color-text-primary)
+
+	// Modales.
+	.modal-content
+		background-color: var(--bg-card)
+		color: var(--color-text-primary)
+		border-color: var(--color-border)
+
+	.modal-header, .modal-footer
+		border-color: var(--color-border)
+
+	.modal-title
+		color: var(--color-text-primary)
+
+	// El boton de cerrar es texto negro por defecto: sobre un modal oscuro queda negro
+	// sobre negro, invisible.
+	.close
+		color: var(--color-text-primary)
+		text-shadow: none
+		opacity: .75
+		&:hover, &:focus
+			color: var(--color-text-primary)
+			opacity: 1
+
+	// Menus y flotantes.
+	.dropdown-menu
+		background-color: var(--bg-card)
+		border-color: var(--color-border)
+
+	.dropdown-item
+		color: var(--color-text-primary)
+		&:hover, &:focus
+			background-color: var(--bg-hover)
+			color: var(--color-text-primary)
+
+	.dropdown-divider
+		border-color: var(--color-border)
+
+	.dropdown-header
+		color: var(--color-text-secondary)
+
+	.popover
+		background-color: var(--bg-card)
+		border-color: var(--color-border)
+		.popover-body
+			color: var(--color-text-primary)
+
+	.tooltip-inner
+		background-color: var(--bg-section)
+		color: var(--color-text-primary)
+
+	.b-sidebar
+		background-color: var(--bg-card)
+		color: var(--color-text-primary)
+
+	// Formularios.
+	.form-control, textarea.form-control, .custom-select, .input-group-text, .custom-file-label
+		background-color: var(--bg-section)
+		border-color: var(--color-border)
+		color: var(--color-text-primary)
+
+	.form-control:disabled, .form-control:read-only, .custom-select:disabled
+		background-color: var(--bg-section)
+		opacity: .6
+
+	.form-control:focus, .custom-select:focus
+		background-color: var(--bg-section)
+		border-color: var(--color-primary)
+		color: var(--color-text-primary)
+
+	.form-control::placeholder, .form-control::-webkit-input-placeholder
+		color: var(--color-text-secondary)
+
+	// Tipografia y separadores.
+	//
+	// .text-muted, .text-dark, .border, .border-top y .border-bottom quedan afuera a
+	// proposito: son utilidades de bootstrap definidas con !important
+	// (utilities/_text.scss, utilities/_borders.scss). Un !important le gana a cualquier
+	// declaracion normal sin importar la especificidad, asi que una regla de este lado sin
+	// !important nunca las vence -- y sumarles !important rompe la convencion del archivo
+	// (los dos !important que ya tiene, el de table tbody tr y su consecuencia en el
+	// hover, son la excepcion puntual que el prompt permite, no una puerta abierta).
+	// Quedan con los valores de bootstrap, que sobre el fondo oscuro se siguen viendo
+	// aunque no sigan la paleta nueva.
+	hr
+		border-color: var(--color-border)
+
+	// Botones neutros. Los de accion/estado (.btn-primary, .btn-success, .btn-danger,
+	// .btn-warning y sus badges) quedan afuera a proposito: se mantienen identicos en los
+	// dos modos.
+	.btn-light
+		background-color: var(--bg-section)
+		border-color: var(--color-border)
+		color: var(--color-text-primary)
+
+	.btn-outline-secondary
+		border-color: var(--color-border)
+		color: var(--color-text-primary)
+		&:hover
+			background-color: var(--bg-hover)
+			color: var(--color-text-primary)
+
+	.btn-outline-dark
+		border-color: var(--color-border)
+		color: var(--color-text-primary)
+		&:hover
+			background-color: var(--bg-hover)
+			color: var(--color-text-primary)
+
+	// Pestanas.
+	.nav-tabs
+		border-color: var(--color-border)
+		.nav-link
+			color: var(--color-text-secondary)
+			&.active
+				background-color: var(--bg-card)
+				border-color: var(--color-border) var(--color-border) var(--bg-card)
+				color: var(--color-text-primary)
+
+	// Paginacion.
+	.page-link
+		background-color: var(--bg-card)
+		border-color: var(--color-border)
+		color: var(--color-text-primary)
+
+	.page-item.disabled .page-link
+		background-color: var(--bg-section)
+		color: var(--color-text-secondary)
+
+	.page-item.active .page-link
+		background-color: var(--color-primary)
+		border-color: var(--color-primary)
+
+// Lo que queda explicitamente afuera de esta primera fase (no es un olvido):
+//
+// - El menu lateral (.nav-vertical, .mobile-nav-header, .user-info): ya es oscuro
+//   (NavVertical.vue define $nav_bg: #16181d), este archivo oscurece el CONTENIDO para
+//   que se ponga a tono con la barra, no la barra.
+// - Los colores de accion y de estado: botones y badges de color, alertas, toasts.
+// - Los ~90 componentes con blancos escritos a mano en su propio <style>. Se barren por
+//   modulo en un grupo posterior, despues de que Lucas vea el tema andando y marque que
+//   pantallas molestan de verdad.
+// - .text-muted, .text-dark, .border, .border-top y .border-bottom (ver el comentario en
+//   la seccion de tipografia arriba: son utilidades de bootstrap con !important y vencerlas
+//   exigiria sumar !important de este lado, fuera de la convencion del archivo).

@@ -125,9 +125,36 @@
 
 
 			<template #cell(rollback)="data">
+				<b-badge
+				v-if="models[data.index].rollback_status === 'revertida'"
+				variant="success">
+					Revertida
+					<br>
+					{{ date(models[data.index].rolled_back_at, true) }}
+				</b-badge>
+				<span
+				v-else-if="models[data.index].rollback_status === 'encolado'">
+					<b-spinner small variant="secondary"></b-spinner>
+					Revirtiendo…
+				</span>
 				<b-button
+				v-else-if="models[data.index].rollback_status === 'fallido' && puede_revertir(models[data.index])"
+				size="sm"
+				variant="outline-danger"
+				:title="models[data.index].rollback_error"
+				@click="pedir_confirmacion_rollback(models[data.index])">
+					Reintentar
+				</b-button>
+				<b-button
+				v-else-if="puede_revertir(models[data.index])"
 				variant="danger"
-				@click="rollback(models[data.index])">Revertir</b-button>
+				@click="pedir_confirmacion_rollback(models[data.index])">
+					Revertir
+				</b-button>
+				<span
+				v-else
+				class="text-muted"
+				title="No se puede revertir una importacion que todavia esta en curso">—</span>
 			</template>
 
 
@@ -246,6 +273,16 @@
 
 		</div>
 	</b-modal>
+
+	<!-- Confirmacion antes de revertir una importacion (grupo 305, prompt 03) -->
+	<confirm
+	id="confirm-rollback-import"
+	:text="texto_confirmacion_rollback"
+	not_show_delete_text
+	btn_text="Revertir importación"
+	variant="danger"
+	emit="rollback_confirmado"
+	@rollback_confirmado="ejecutar_rollback"></confirm>
 </div>
 </template>
 <script>
@@ -255,6 +292,7 @@ export default {
 		// ArticulosCreados: () => import('@/common-vue/components/import/ArticulosCreados'),
 		Chunks: () => import('@/common-vue/components/import/chunks/Index'),
 		HistoryEmptyState: () => import('@/common-vue/components/horizontal-nav/HistoryEmptyState'),
+		Confirm: () => import('@/common-vue/components/Confirm'),
 	},
 	props: {
 		show_history: Boolean,
@@ -283,6 +321,8 @@ export default {
 			total_conflictos: 0,
 			// True mientras se cargan los problemas desde la API
 			cargando_conflictos: false,
+			// Importacion seleccionada para revertir, pendiente de confirmar en el modal "confirm-rollback-import"
+			import_history_a_revertir: null,
 		}
 	},
 	computed: {
@@ -472,7 +512,26 @@ export default {
 		 */
 		hay_mas_conflictos() {
 			return this.conflictos_ordenados.length > 200
-		}
+		},
+		/**
+		 * Texto del modal de confirmacion antes de revertir, con la fecha y las
+		 * cantidades reales de la importacion seleccionada (grupo 305, prompt 03).
+		 * Generico si todavia no se eligio ninguna: el computed se evalua antes
+		 * de que el usuario apriete "Revertir" por primera vez.
+		 * @returns {String}
+		 */
+		texto_confirmacion_rollback() {
+			let model = this.import_history_a_revertir
+			if (!model) {
+				return 'Vas a revertir esta importación. Esta acción no se puede deshacer.'
+			}
+			let fecha = this.date(model.created_at, true)
+			let creados = model.created_models || 0
+			let actualizados = model.updated_models || 0
+			return 'Vas a revertir la importación del ' + fecha + '. Se van a eliminar los ' + creados +
+				' artículos que creó y los ' + actualizados + ' que actualizó van a volver a los valores ' +
+				'que tenían antes. Esta acción no se puede deshacer.'
+		},
 	},
 	methods: {
 		chunks(model) {
@@ -609,21 +668,56 @@ export default {
 			}
 			return labels[campo] || campo
 		},
-		rollback(model) {
+		/**
+		 * El backend manda can_revert en cada fila del historial (ImportHistoryController::index).
+		 * Se compara contra false explicitamente y no por valor de verdad: si una API todavia sin
+		 * actualizar no manda el campo, llega undefined, y en ese caso conviene mostrar el boton
+		 * (comportamiento de siempre) en vez de esconderlo y dejar al usuario sin la opcion.
+		 */
+		puede_revertir(model) {
+			if (!model) return false
+			return model.can_revert !== false
+		},
+		/**
+		 * Guarda la importacion elegida y abre el modal de confirmacion. No dispara
+		 * ningun request todavia (grupo 305, prompt 03).
+		 * @param {Object} model - registro crudo del historial a revertir
+		 */
+		pedir_confirmacion_rollback(model) {
+			this.import_history_a_revertir = model
+			this.$bvModal.show('confirm-rollback-import')
+		},
+		/**
+		 * Dispara el rollback tras la confirmacion del modal. Limpia la seleccion
+		 * antes del POST para que dos confirmaciones seguidas no lo manden dos veces,
+		 * y marca la fila localmente para que el boton desaparezca sin esperar a
+		 * reabrir el modal (grupo 305, prompt 03).
+		 */
+		ejecutar_rollback() {
+			if (!this.import_history_a_revertir) return
 
-			if (confirm('¿Seguro que quiere revertir esta importacion?')) {
-				
-				this.$store.commit('auth/setMessage', 'Cargando')
-				this.$store.commit('auth/setMessage', true)
-				this.$api.post('import-history/rollback/'+model.id)
-				.then(res => {
-					this.$store.commit('auth/setMessage', false)
-					this.$toast.success('Enviado, te avisaremos cuando termine')
-				})
-				.catch(err => {
-					this.$store.commit('auth/setMessage', false)
-				})
-			}
+			let model = this.import_history_a_revertir
+			this.import_history_a_revertir = null
+
+			let self = this
+			this.$store.commit('auth/setMessage', 'Cargando')
+			this.$store.commit('auth/setMessage', true)
+			this.$api.post('import-history/rollback/'+model.id)
+			.then(function(res) {
+				self.$store.commit('auth/setMessage', false)
+				self.$toast.success('Enviado, te avisaremos cuando termine')
+				self.$set(model, 'rollback_status', 'encolado')
+				self.$set(model, 'can_revert', false)
+			})
+			.catch(function(err) {
+				self.$store.commit('auth/setMessage', false)
+				let mensaje = 'No se pudo revertir la importacion'
+				if (err.response && err.response.data && err.response.data.message) {
+					mensaje = err.response.data.message
+				}
+				self.$toast.error(mensaje)
+				self.getModels()
+			})
 		},
 		to_excel(model) {
 			let link = process.env.VUE_APP_API_URL+'/imported-files/'+model.excel_url.split('/')[1]

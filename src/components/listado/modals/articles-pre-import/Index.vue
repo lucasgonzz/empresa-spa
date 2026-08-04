@@ -7,7 +7,8 @@
 	title="Pre importaciones de Articulos"
 	hide-footer
 	size="lg"
-	id="articles-pre-import-modal">
+	id="articles-pre-import-modal"
+	@shown="onShown">
 		
 		<view-component
 		@clicked="clicked"
@@ -34,6 +35,9 @@ export default {
 		},
 	},
 	methods: {
+		onShown() {
+			this.$store.dispatch('provider/getOptions')
+		},
 		clicked(model) {
 			console.log('clicked')
 			console.log(model)

@@ -1143,7 +1143,9 @@ export default {
 		 * Se transforman en opciones para b-form-select.
 		 */
 		providers() {
-			return this.$store.state.provider.models
+			// Catalogo completo (options), no el store paginado (models) que ya no se descarga
+			// entero al iniciar sesion (grupo 332/342, 4/8/2026). Se pide en created().
+			return this.$store.state.provider.options
 		},
 
 		/*
@@ -3147,6 +3149,10 @@ export default {
 		if (this.price_types.length === 0) {
 			this.$store.dispatch('price_type/getModels')
 		}
+
+		// getOptions ya se guarda solo si ya esta cargado (options_loaded), asi que no hace
+		// falta un guard extra aca.
+		this.$store.dispatch('provider/getOptions')
 	},
 
 	/*
