@@ -32,6 +32,9 @@
 	// proposito, no un gris.
 	--bg-nav: #E3E3E3
 	--bg-nav-hover: #e7f1ff
+	// Gris del toggle apagado (ModelForm). En oscuro necesita su propio valor: el gris claro de
+	// modo claro se lee como "encendido" sobre el fondo del modal.
+	--toggle-track-off: #d1d5db
 
 // La escala arranca en #23262b y NO mas abajo, aunque el negro casi puro parezca mas elegante:
 // probado en pantalla (grupo 360, fase 2), el #14161a original se leia apagado y, sobre todo,
@@ -60,6 +63,7 @@ html.dark-mode
 	// con el azul del tema en baja opacidad, en vez de un gris plano.
 	--bg-nav: #2b2f36
 	--bg-nav-hover: rgba(77, 163, 255, 0.16)
+	--toggle-track-off: #5a626d
 
 	// El navegador pinta con esto las barras de scroll, los selects nativos y los date
 	// pickers del sistema: una linea que resuelve media docena de rincones blancos.
@@ -269,6 +273,21 @@ html.dark-mode
 	.page-item.active .page-link
 		background-color: var(--color-primary)
 		border-color: var(--color-primary)
+
+	// Checkboxes y radios cuadrados de bootstrap-vue (.custom-control). Van aca y no en el
+	// componente porque son clases GLOBALES que usan decenas de pantallas: el cuadradito lo dibuja
+	// el ::before del label, que sin esto queda blanco sobre el modal oscuro. El estado marcado no
+	// se toca: bootstrap lo pinta con el azul primario, y los colores de accion se mantienen
+	// iguales en los dos modos.
+	.custom-control-label::before
+		background-color: var(--bg-section)
+		border-color: var(--color-border)
+
+	.custom-control-input:not(:checked) ~ .custom-control-label::before
+		background-color: var(--bg-section)
+
+	.custom-control-label
+		color: var(--color-text-primary)
 
 // Lo que queda explicitamente afuera de esta primera fase (no es un olvido):
 //
