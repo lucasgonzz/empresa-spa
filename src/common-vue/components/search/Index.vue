@@ -52,6 +52,12 @@
 					<div
 					class="search-field"
 					:class="is_disabled ? 'search-field--disabled' : ''">
+						<!--
+							Este input esta controlado por v-model: su valor sale de `query` en cada render. Quien lo
+							limpie o lo escriba desde afuera (Vender, Devoluciones) tiene que usar setInputValueSync,
+							que despacha el evento 'input'. Un `input.value = ''` suelto se ve limpio un instante y el
+							proximo re-render lo vuelve a llenar (bug del 5/8/2026 en Vender).
+						-->
 						<input
 						:disabled="is_disabled"
 						class="input-search search-field__input form-control"

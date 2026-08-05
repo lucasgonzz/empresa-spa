@@ -143,6 +143,29 @@ export default {
 		},  
 	},
 	methods: {
+		/**
+		 * Escribe un valor en un input del DOM avisandole a Vue.
+		 *
+		 * Existe porque asignar `input.value` a mano NO dispara ningun evento: un input con v-model
+		 * sigue teniendo su valor viejo en el estado del componente, y el proximo re-render lo vuelve a
+		 * pintar en pantalla, deshaciendo el cambio. El evento 'input' es exactamente lo que v-model
+		 * escucha, asi que despacharlo deja las dos puntas sincronizadas.
+		 *
+		 * Caso real que lo origino (5/8/2026): en Vender, despues de agregar un articulo, el criterio de
+		 * busqueda volvia a aparecer solo en el buscador por nombre.
+		 *
+		 * @param {HTMLElement|null} input - El input a escribir. Si es null no hace nada.
+		 * @param {String} value - Valor a dejar en el input.
+		 */
+		setInputValueSync(input, value) {
+			if (!input) {
+				return
+			}
+
+			input.value = value
+
+			input.dispatchEvent(new Event('input', { bubbles: true }))
+		},
 		html_text(text) {
 			return text.replace(/\n/g, '<br>');
 		},
