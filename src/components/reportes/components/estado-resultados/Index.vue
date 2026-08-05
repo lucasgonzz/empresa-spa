@@ -20,7 +20,12 @@
 			<div
 			class="cascada-renglon apretable"
 			@click="abrirDetalle('ventas_brutas')">
-				<span class="cascada-renglon__label">Ventas brutas</span>
+				<span class="cascada-renglon__label">
+					<span class="cascada-renglon__icono acento-ventas">
+						<i class="bi bi-graph-up-arrow" aria-hidden="true"></i>
+					</span>
+					Ventas brutas
+				</span>
 				<span class="cascada-renglon__monto">{{ formatear(model.ventas_brutas) }}</span>
 			</div>
 
@@ -28,7 +33,12 @@
 			<div
 			class="cascada-renglon cascada-renglon--resta apretable"
 			@click="abrirDetalle('devoluciones')">
-				<span class="cascada-renglon__label">(–) Devoluciones</span>
+				<span class="cascada-renglon__label">
+					<span class="cascada-renglon__icono acento-gastos">
+						<i class="bi bi-arrow-return-left" aria-hidden="true"></i>
+					</span>
+					(–) Devoluciones
+				</span>
 				<span class="cascada-renglon__monto">
 					{{ formatear(model.devoluciones) }}
 					<span class="cascada-renglon__porcentaje">{{ porcentaje(model.devoluciones) }}</span>
@@ -37,7 +47,12 @@
 
 			<!-- Ventas netas: subtotal destacado -->
 			<div class="cascada-renglon cascada-renglon--subtotal">
-				<span class="cascada-renglon__label">Ventas netas</span>
+				<span class="cascada-renglon__label">
+					<span class="cascada-renglon__icono acento-ventas">
+						<i class="bi bi-cash-coin" aria-hidden="true"></i>
+					</span>
+					Ventas netas
+				</span>
 				<span class="cascada-renglon__monto">{{ formatear(model.ventas_netas) }}</span>
 			</div>
 
@@ -45,7 +60,12 @@
 			<div
 			class="cascada-renglon cascada-renglon--resta apretable"
 			@click="abrirDetalle('costo_mercaderia_vendida')">
-				<span class="cascada-renglon__label">(–) Costo de mercadería vendida</span>
+				<span class="cascada-renglon__label">
+					<span class="cascada-renglon__icono acento-egresos">
+						<i class="bi bi-box-seam" aria-hidden="true"></i>
+					</span>
+					(–) Costo de mercadería vendida
+				</span>
 				<span class="cascada-renglon__monto">
 					{{ formatear(model.costo_mercaderia_vendida) }}
 					<span class="cascada-renglon__porcentaje">{{ porcentaje(model.costo_mercaderia_vendida) }}</span>
@@ -56,7 +76,12 @@
 			<div
 			v-if="model.costo_mercaderia_devuelta"
 			class="cascada-renglon cascada-renglon--resta">
-				<span class="cascada-renglon__label">(+) Costo de mercadería devuelta</span>
+				<span class="cascada-renglon__label">
+					<span class="cascada-renglon__icono acento-egresos">
+						<i class="bi bi-box-arrow-in-left" aria-hidden="true"></i>
+					</span>
+					(+) Costo de mercadería devuelta
+				</span>
 				<span class="cascada-renglon__monto">
 					{{ formatear(model.costo_mercaderia_devuelta) }}
 					<span class="cascada-renglon__porcentaje">{{ porcentaje(model.costo_mercaderia_devuelta) }}</span>
@@ -68,6 +93,9 @@
 			class="cascada-renglon cascada-renglon--subtotal"
 			:class="clase_resultado(model.resultado_bruto)">
 				<span class="cascada-renglon__label">
+					<span class="cascada-renglon__icono acento-dinero">
+						<i class="bi bi-bar-chart-line" aria-hidden="true"></i>
+					</span>
 					Resultado bruto
 					<span class="cascada-renglon__margen">({{ margen(model.margen_bruto_porcentaje) }})</span>
 				</span>
@@ -78,7 +106,12 @@
 			<div
 			class="cascada-renglon cascada-renglon--resta apretable"
 			@click="abrirDetalle('gastos')">
-				<span class="cascada-renglon__label">(–) Gastos operativos</span>
+				<span class="cascada-renglon__label">
+					<span class="cascada-renglon__icono acento-gastos">
+						<i class="bi bi-cash-stack" aria-hidden="true"></i>
+					</span>
+					(–) Gastos operativos
+				</span>
 				<span class="cascada-renglon__monto">
 					{{ formatear(model.gastos_operativos) }}
 					<span class="cascada-renglon__porcentaje">{{ porcentaje(model.gastos_operativos) }}</span>
@@ -108,7 +141,12 @@
 			<div
 			class="cascada-renglon cascada-renglon--subtotal"
 			:class="clase_resultado(model.resultado_operativo)">
-				<span class="cascada-renglon__label">Resultado operativo</span>
+				<span class="cascada-renglon__label">
+					<span class="cascada-renglon__icono acento-dinero">
+						<i class="bi bi-clipboard-data" aria-hidden="true"></i>
+					</span>
+					Resultado operativo
+				</span>
 				<span class="cascada-renglon__monto">
 					{{ formatear(model.resultado_operativo) }}
 					<span class="cascada-renglon__porcentaje">{{ porcentaje(model.resultado_operativo) }}</span>
@@ -117,7 +155,12 @@
 
 			<!-- Comisiones de cobro: resta, no tiene concepto propio en la whitelist de detalle -->
 			<div class="cascada-renglon cascada-renglon--resta">
-				<span class="cascada-renglon__label">(–) Comisiones de cobro</span>
+				<span class="cascada-renglon__label">
+					<span class="cascada-renglon__icono acento-deudas">
+						<i class="bi bi-percent" aria-hidden="true"></i>
+					</span>
+					(–) Comisiones de cobro
+				</span>
 				<span class="cascada-renglon__monto">
 					{{ formatear(model.comisiones_de_cobro) }}
 					<span class="cascada-renglon__porcentaje">{{ porcentaje(model.comisiones_de_cobro) }}</span>
@@ -126,7 +169,12 @@
 
 			<!-- IIBB determinado: solo aplica cuando la moneda no es dolares (backend manda null en ese caso) -->
 			<div class="cascada-renglon cascada-renglon--resta">
-				<span class="cascada-renglon__label">(–) IIBB determinado</span>
+				<span class="cascada-renglon__label">
+					<span class="cascada-renglon__icono acento-fiscal">
+						<i class="bi bi-bank" aria-hidden="true"></i>
+					</span>
+					(–) IIBB determinado
+				</span>
 				<span class="cascada-renglon__monto">
 					{{ model.iibb_determinado === null ? '—' : formatear(model.iibb_determinado) }}
 					<span class="cascada-renglon__porcentaje">{{ porcentaje(model.iibb_determinado) }}</span>
@@ -143,6 +191,13 @@
 			class="cascada-renglon cascada-renglon--subtotal cascada-renglon--final"
 			:class="clase_resultado(model.resultado_neto)">
 				<span class="cascada-renglon__label">
+					<span
+					class="cascada-renglon__icono"
+					:class="acento_resultado_neto()">
+						<i
+						:class="icono_resultado_neto()"
+						aria-hidden="true"></i>
+					</span>
 					Resultado neto
 					<span class="cascada-renglon__margen">({{ margen(model.margen_neto_porcentaje) }})</span>
 				</span>
@@ -238,31 +293,111 @@ export default {
 			}
 			return ''
 		},
+		/**
+		 * Icono del renglon de Resultado neto: trofeo cuando el periodo cerro en ganancia,
+		 * flecha hacia abajo cuando cerro en perdida. El resto de los renglones tiene icono
+		 * fijo; este no, porque es el unico donde el signo es la informacion principal.
+		 *
+		 * @returns {String}
+		 */
+		icono_resultado_neto() {
+			if (this.model.resultado_neto < 0) {
+				return 'bi bi-graph-down-arrow'
+			}
+			return 'bi bi-trophy'
+		},
+		/**
+		 * Acento de color del icono de Resultado neto, para que acompane al color que
+		 * clase_resultado() ya le pone al texto del renglon.
+		 *
+		 * @returns {String}
+		 */
+		acento_resultado_neto() {
+			if (this.model.resultado_neto < 0) {
+				return 'acento-gastos'
+			}
+			return 'acento-dinero'
+		},
 	},
 }
 </script>
 <style lang="sass">
+// Paleta de acentos de los iconos de renglon. Misma familia que usaba IconCards.vue en
+// develop, para que Reportes se sienta el mismo modulo aunque el layout haya cambiado.
+// Si algun dia este modulo pasa a los tokens de --dark_theme, estas seis variables son
+// el unico punto a tocar por archivo.
+$acento-ventas: #2563eb
+$acento-dinero: #059669
+$acento-gastos: #dc2626
+$acento-egresos: #7c3aed
+$acento-deudas: #d97706
+$acento-fiscal: #0891b2
+
 .cascada-resultados
 	.cascada-card
 		background: #fff
 		border: 1px solid #e2e8f0
 		border-radius: 12px
 		box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06)
-		padding: 8px 24px
+		padding: 12px 28px
 		max-width: 720px
 		margin: 0 auto
 
 	.cascada-renglon
 		display: flex
 		justify-content: space-between
-		align-items: baseline
-		padding: 14px 0
+		// Era baseline. Con el icono adentro del label, el baseline toma el borde
+		// inferior de la cajita del icono y descoloca el monto de la derecha; con
+		// center las dos columnas quedan alineadas por el medio.
+		align-items: center
+		// 14px -> 18px: la cascada es una lista larga de numeros y con 14 los
+		// renglones se leian pegados.
+		padding: 18px 0
 		border-bottom: 1px solid #f1f5f9
 		font-size: 0.95rem
 		color: #0f172a
 
 		&:last-child
 			border-bottom: none
+
+		&__label
+			display: flex
+			align-items: center
+			gap: 12px
+			min-width: 0
+
+		&__icono
+			flex-shrink: 0
+			width: 30px
+			height: 30px
+			border-radius: 8px
+			display: inline-flex
+			align-items: center
+			justify-content: center
+			background: rgba($acento-ventas, 0.10)
+			color: $acento-ventas
+
+			i
+				// En rem y no en em: el renglon --resta baja su font-size y el icono no
+				// tiene que achicarse con el, o quedan dos tamanos de cajita en la lista.
+				font-size: 0.95rem
+				line-height: 1
+
+			&.acento-dinero
+				background: rgba($acento-dinero, 0.10)
+				color: $acento-dinero
+			&.acento-gastos
+				background: rgba($acento-gastos, 0.10)
+				color: $acento-gastos
+			&.acento-egresos
+				background: rgba($acento-egresos, 0.10)
+				color: $acento-egresos
+			&.acento-deudas
+				background: rgba($acento-deudas, 0.10)
+				color: $acento-deudas
+			&.acento-fiscal
+				background: rgba($acento-fiscal, 0.10)
+				color: $acento-fiscal
 
 		&--resta
 			color: #94a3b8
@@ -307,7 +442,7 @@ export default {
 			justify-content: space-between
 			font-size: 0.8rem
 			color: #94a3b8
-			padding: 4px 0
+			padding: 6px 0
 
 	.cascada-nota
 		font-size: 0.78rem

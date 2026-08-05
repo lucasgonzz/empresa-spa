@@ -18,7 +18,16 @@
 			v-for="(renglon, j) in bloque.renglones"
 			:key="'renglon-'+i+'-'+j"
 			:class="clase_renglon(renglon)">
-				<b-skeleton :width="ancho_etiqueta(i, j)"></b-skeleton>
+				<!-- La cajita del icono tambien va en la silueta: sin ella, al llegar el
+				contenido real todas las etiquetas se corren 42px (30 de la cajita + 12 del
+				gap) de golpe hacia la derecha. Va adentro del mismo __label que usa el
+				renglon real, para heredar de el ese flex y ese gap en vez de repetirlos aca. -->
+				<div class="cascada-renglon__label">
+					<div class="skeleton-cascada__icono">
+						<b-skeleton width="30px" height="30px"></b-skeleton>
+					</div>
+					<b-skeleton :width="ancho_etiqueta(i, j)"></b-skeleton>
+				</div>
 				<b-skeleton :width="ancho_monto(renglon)"></b-skeleton>
 			</div>
 		</div>
@@ -82,10 +91,25 @@ export default {
 // el skeleton acompana solo. Si aca se vuelve a declarar background / border-radius /
 // padding / max-width, se duplica la definicion y las dos empiezan a separarse.
 .skeleton-cascada
-	.cascada-renglon
-		// El renglon real alinea con baseline, que con <div> en vez de texto deja las
-		// barras desalineadas
-		align-items: center
+	// El renglon real ya no necesita que aca se corrija el align-items: desde que lleva
+	// icono adentro del label, los tres padres alinean con center y esta regla quedaba
+	// duplicando una definicion que ya vive alla (que es justo lo que el comentario de
+	// arriba pide no hacer). Verificado: los tres unicos componentes que montan este
+	// skeleton son estado-resultados, flujo-caja y posicion-fiscal.
+	.cascada-renglon__label
+		// Los anchos de ANCHOS_ETIQUETA estan en %, y hasta ahora se resolvian contra el
+		// ancho del renglon porque el b-skeleton era hijo directo de el. Adentro del label
+		// (flex-item de base auto) ese % se resolveria contra un ancho que depende del
+		// propio contenido y la barra colapsaria; con flex: 1 el label toma el espacio
+		// libre del renglon y los porcentajes vuelven a medir algo estable.
+		flex: 1
+		min-width: 0
+
+	.skeleton-cascada__icono
+		flex-shrink: 0
+
+		.b-skeleton
+			border-radius: 8px
 
 	.b-skeleton
 		// BootstrapVue le pone margin-bottom, que adentro de un flex de dos columnas

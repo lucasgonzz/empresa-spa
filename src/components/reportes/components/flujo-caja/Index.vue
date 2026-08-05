@@ -23,17 +23,32 @@
 				<h6 class="cascada-card__titulo">Ingresos</h6>
 
 				<div class="cascada-renglon">
-					<span class="cascada-renglon__label">Cobros en mostrador</span>
+					<span class="cascada-renglon__label">
+						<span class="cascada-renglon__icono acento-ventas">
+							<i class="bi bi-shop-window" aria-hidden="true"></i>
+						</span>
+						Cobros en mostrador
+					</span>
 					<span class="cascada-renglon__monto">{{ formatear(model.cobros_mostrador) }}</span>
 				</div>
 				<div class="cascada-renglon">
-					<span class="cascada-renglon__label">Cobranzas de cuenta corriente</span>
+					<span class="cascada-renglon__label">
+						<span class="cascada-renglon__icono acento-ventas">
+							<i class="bi bi-journal-text" aria-hidden="true"></i>
+						</span>
+						Cobranzas de cuenta corriente
+					</span>
 					<span class="cascada-renglon__monto">{{ formatear(model.cobranzas_cuenta_corriente) }}</span>
 				</div>
 				<div
 				class="cascada-renglon cascada-renglon--subtotal apretable"
 				@click="abrirDetalle('cobranzas')">
-					<span class="cascada-renglon__label">Total ingresos</span>
+					<span class="cascada-renglon__label">
+						<span class="cascada-renglon__icono acento-dinero">
+							<i class="bi bi-arrow-down-circle" aria-hidden="true"></i>
+						</span>
+						Total ingresos
+					</span>
 					<span class="cascada-renglon__monto">{{ formatear(model.total_ingresos) }}</span>
 				</div>
 
@@ -58,13 +73,23 @@
 				<div
 				class="cascada-renglon apretable"
 				@click="abrirDetalle('pagos_proveedores')">
-					<span class="cascada-renglon__label">Pagos a proveedores</span>
+					<span class="cascada-renglon__label">
+						<span class="cascada-renglon__icono acento-egresos">
+							<i class="bi bi-truck" aria-hidden="true"></i>
+						</span>
+						Pagos a proveedores
+					</span>
 					<span class="cascada-renglon__monto">{{ formatear(model.pagos_a_proveedores) }}</span>
 				</div>
 				<div
 				class="cascada-renglon apretable"
 				@click="abrirDetalle('gastos')">
-					<span class="cascada-renglon__label">Gastos pagados</span>
+					<span class="cascada-renglon__label">
+						<span class="cascada-renglon__icono acento-gastos">
+							<i class="bi bi-cash-stack" aria-hidden="true"></i>
+						</span>
+						Gastos pagados
+					</span>
 					<span class="cascada-renglon__monto">{{ formatear(model.gastos_pagados) }}</span>
 				</div>
 				<div
@@ -80,7 +105,12 @@
 				</div>
 
 				<div class="cascada-renglon cascada-renglon--subtotal">
-					<span class="cascada-renglon__label">Total egresos</span>
+					<span class="cascada-renglon__label">
+						<span class="cascada-renglon__icono acento-gastos">
+							<i class="bi bi-arrow-up-circle" aria-hidden="true"></i>
+						</span>
+						Total egresos
+					</span>
 					<span class="cascada-renglon__monto">{{ formatear(model.total_egresos) }}</span>
 				</div>
 
@@ -100,7 +130,12 @@
 
 			<div class="cascada-card m-t-20">
 				<div class="cascada-renglon cascada-renglon--subtotal cascada-renglon--final">
-					<span class="cascada-renglon__label">Flujo neto del período</span>
+					<span class="cascada-renglon__label">
+						<span class="cascada-renglon__icono acento-dinero">
+							<i class="bi bi-wallet2" aria-hidden="true"></i>
+						</span>
+						Flujo neto del período
+					</span>
 					<span class="cascada-renglon__monto">{{ formatear(model.flujo_neto) }}</span>
 				</div>
 			</div>
@@ -117,17 +152,32 @@
 				<div
 				class="cascada-renglon apretable"
 				@click="abrirDetalle('liquidaciones_pendientes')">
-					<span class="cascada-renglon__label">Liquidaciones pendientes</span>
+					<span class="cascada-renglon__label">
+						<span class="cascada-renglon__icono acento-deudas">
+							<i class="bi bi-hourglass-split" aria-hidden="true"></i>
+						</span>
+						Liquidaciones pendientes
+					</span>
 					<span class="cascada-renglon__monto">{{ formatear(total_liquidaciones_pendientes) }}</span>
 				</div>
 				<div
 				class="cascada-renglon apretable"
 				@click="abrirDetalle('cheques_en_cartera')">
-					<span class="cascada-renglon__label">Cheques diferidos en cartera</span>
+					<span class="cascada-renglon__label">
+						<span class="cascada-renglon__icono acento-deudas">
+							<i class="bi bi-file-earmark-check" aria-hidden="true"></i>
+						</span>
+						Cheques diferidos en cartera
+					</span>
 					<span class="cascada-renglon__monto">{{ formatear(total_cheques_diferidos) }}</span>
 				</div>
 				<div class="cascada-renglon cascada-renglon--subtotal">
-					<span class="cascada-renglon__label">Total en camino</span>
+					<span class="cascada-renglon__label">
+						<span class="cascada-renglon__icono acento-deudas">
+							<i class="bi bi-send" aria-hidden="true"></i>
+						</span>
+						Total en camino
+					</span>
 					<span class="cascada-renglon__monto">{{ formatear(model.plata_en_transito.total_estimado) }}</span>
 				</div>
 			</div>
@@ -183,13 +233,24 @@ export default {
 }
 </script>
 <style lang="sass">
+// Paleta de acentos de los iconos de renglon. Misma familia que usaba IconCards.vue en
+// develop, para que Reportes se sienta el mismo modulo aunque el layout haya cambiado.
+// Si algun dia este modulo pasa a los tokens de --dark_theme, estas seis variables son
+// el unico punto a tocar por archivo.
+$acento-ventas: #2563eb
+$acento-dinero: #059669
+$acento-gastos: #dc2626
+$acento-egresos: #7c3aed
+$acento-deudas: #d97706
+$acento-fiscal: #0891b2
+
 .flujo-caja
 	.cascada-card
 		background: #fff
 		border: 1px solid #e2e8f0
 		border-radius: 12px
 		box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06)
-		padding: 8px 24px
+		padding: 12px 28px
 		max-width: 720px
 		margin: 0 auto
 
@@ -210,14 +271,58 @@ export default {
 	.cascada-renglon
 		display: flex
 		justify-content: space-between
-		align-items: baseline
-		padding: 14px 0
+		// Era baseline. Con el icono adentro del label, el baseline toma el borde
+		// inferior de la cajita del icono y descoloca el monto de la derecha; con
+		// center las dos columnas quedan alineadas por el medio.
+		align-items: center
+		// 14px -> 18px: la cascada es una lista larga de numeros y con 14 los
+		// renglones se leian pegados.
+		padding: 18px 0
 		border-bottom: 1px solid #f1f5f9
 		font-size: 0.95rem
 		color: #0f172a
 
 		&:last-child
 			border-bottom: none
+
+		&__label
+			display: flex
+			align-items: center
+			gap: 12px
+			min-width: 0
+
+		&__icono
+			flex-shrink: 0
+			width: 30px
+			height: 30px
+			border-radius: 8px
+			display: inline-flex
+			align-items: center
+			justify-content: center
+			background: rgba($acento-ventas, 0.10)
+			color: $acento-ventas
+
+			i
+				// En rem y no en em, para que la cajita mida siempre lo mismo aunque el
+				// renglon que la contiene cambie de font-size.
+				font-size: 0.95rem
+				line-height: 1
+
+			&.acento-dinero
+				background: rgba($acento-dinero, 0.10)
+				color: $acento-dinero
+			&.acento-gastos
+				background: rgba($acento-gastos, 0.10)
+				color: $acento-gastos
+			&.acento-egresos
+				background: rgba($acento-egresos, 0.10)
+				color: $acento-egresos
+			&.acento-deudas
+				background: rgba($acento-deudas, 0.10)
+				color: $acento-deudas
+			&.acento-fiscal
+				background: rgba($acento-fiscal, 0.10)
+				color: $acento-fiscal
 
 		&--subtotal
 			font-weight: 700
@@ -244,7 +349,7 @@ export default {
 			justify-content: space-between
 			font-size: 0.8rem
 			color: #94a3b8
-			padding: 4px 0
+			padding: 6px 0
 
 	.cascada-nota
 		font-size: 0.82rem

@@ -25,32 +25,59 @@
 				<div
 				class="cascada-renglon apretable"
 				@click="abrirDetalle('iva_debito')">
-					<span class="cascada-renglon__label">IVA débito</span>
+					<span class="cascada-renglon__label">
+						<span class="cascada-renglon__icono acento-fiscal">
+							<i class="bi bi-file-earmark-arrow-up" aria-hidden="true"></i>
+						</span>
+						IVA débito
+					</span>
 					<span class="cascada-renglon__monto">{{ formatear(iva.iva_debito) }}</span>
 				</div>
 				<div
 				class="cascada-renglon apretable"
 				@click="abrirDetalle('iva_credito')">
-					<span class="cascada-renglon__label">IVA crédito</span>
+					<span class="cascada-renglon__label">
+						<span class="cascada-renglon__icono acento-fiscal">
+							<i class="bi bi-file-earmark-arrow-down" aria-hidden="true"></i>
+						</span>
+						IVA crédito
+					</span>
 					<span class="cascada-renglon__monto">{{ formatear(iva.iva_credito) }}</span>
 				</div>
 				<div
 				class="cascada-renglon apretable"
 				@click="abrirDetalle('percepciones_iva')">
-					<span class="cascada-renglon__label">Percepciones de IVA sufridas</span>
+					<span class="cascada-renglon__label">
+						<span class="cascada-renglon__icono acento-fiscal">
+							<i class="bi bi-funnel" aria-hidden="true"></i>
+						</span>
+						Percepciones de IVA sufridas
+					</span>
 					<span class="cascada-renglon__monto">{{ formatear(iva.percepcion_iva_sufrida) }}</span>
 				</div>
 				<div
 				class="cascada-renglon apretable"
 				@click="abrirDetalle('retenciones')">
-					<span class="cascada-renglon__label">Retenciones de IVA sufridas</span>
+					<span class="cascada-renglon__label">
+						<span class="cascada-renglon__icono acento-fiscal">
+							<i class="bi bi-scissors" aria-hidden="true"></i>
+						</span>
+						Retenciones de IVA sufridas
+					</span>
 					<span class="cascada-renglon__monto">{{ formatear(iva.retencion_iva_sufrida) }}</span>
 				</div>
 
 				<div
 				class="cascada-renglon cascada-renglon--subtotal"
 				:class="{ 'cascada-renglon--favor': iva.tipo == 'a_favor' }">
-					<span class="cascada-renglon__label">{{ iva.tipo == 'a_favor' ? 'Saldo a favor' : 'Saldo a pagar' }}</span>
+					<span class="cascada-renglon__label">
+						<span
+						class="cascada-renglon__icono"
+						:class="acento_saldo(iva)">
+							<i class="bi bi-calculator" aria-hidden="true"></i>
+						</span>
+						{{ iva.tipo == 'a_favor' ? 'Saldo a favor' : 'Saldo a pagar' }}
+					</span>
 					<span class="cascada-renglon__monto">{{ formatear(iva.saldo) }}</span>
 				</div>
 			</div>
@@ -78,26 +105,48 @@
 					<div
 					class="cascada-renglon apretable"
 					@click="abrirDetalle('percepciones_iibb')">
-						<span class="cascada-renglon__label">IIBB determinado</span>
+						<span class="cascada-renglon__label">
+							<span class="cascada-renglon__icono acento-fiscal">
+								<i class="bi bi-bank" aria-hidden="true"></i>
+							</span>
+							IIBB determinado
+						</span>
 						<span class="cascada-renglon__monto">{{ formatear(iibb.iibb_determinado) }}</span>
 					</div>
 					<div
 					class="cascada-renglon apretable"
 					@click="abrirDetalle('percepciones_iibb')">
-						<span class="cascada-renglon__label">Percepciones de IIBB sufridas</span>
+						<span class="cascada-renglon__label">
+							<span class="cascada-renglon__icono acento-fiscal">
+								<i class="bi bi-funnel" aria-hidden="true"></i>
+							</span>
+							Percepciones de IIBB sufridas
+						</span>
 						<span class="cascada-renglon__monto">{{ formatear(iibb.percepcion_iibb_sufrida) }}</span>
 					</div>
 					<div
 					class="cascada-renglon apretable"
 					@click="abrirDetalle('retenciones')">
-						<span class="cascada-renglon__label">Retenciones de IIBB sufridas</span>
+						<span class="cascada-renglon__label">
+							<span class="cascada-renglon__icono acento-fiscal">
+								<i class="bi bi-scissors" aria-hidden="true"></i>
+							</span>
+							Retenciones de IIBB sufridas
+						</span>
 						<span class="cascada-renglon__monto">{{ formatear(iibb.retencion_iibb_sufrida) }}</span>
 					</div>
 
 					<div
 					class="cascada-renglon cascada-renglon--subtotal"
 					:class="{ 'cascada-renglon--favor': iibb.tipo == 'a_favor' }">
-						<span class="cascada-renglon__label">{{ iibb.tipo == 'a_favor' ? 'Saldo a favor' : 'Saldo a pagar' }}</span>
+						<span class="cascada-renglon__label">
+							<span
+							class="cascada-renglon__icono"
+							:class="acento_saldo(iibb)">
+								<i class="bi bi-calculator" aria-hidden="true"></i>
+							</span>
+							{{ iibb.tipo == 'a_favor' ? 'Saldo a favor' : 'Saldo a pagar' }}
+						</span>
 						<span class="cascada-renglon__monto">{{ formatear(iibb.saldo) }}</span>
 					</div>
 				</template>
@@ -110,7 +159,12 @@
 				<div
 				class="cascada-renglon apretable"
 				@click="abrirDetalle('retenciones')">
-					<span class="cascada-renglon__label">Retenciones de Ganancias sufridas</span>
+					<span class="cascada-renglon__label">
+						<span class="cascada-renglon__icono acento-fiscal">
+							<i class="bi bi-scissors" aria-hidden="true"></i>
+						</span>
+						Retenciones de Ganancias sufridas
+					</span>
 					<span class="cascada-renglon__monto">{{ formatear(ganancias.retencion_ganancias_sufrida) }}</span>
 				</div>
 			</div>
@@ -149,17 +203,41 @@ export default {
 		formatear(valor) {
 			return this.price(valor, false, false)
 		},
+		/**
+		 * Acento del icono de un renglon de saldo fiscal, para que siga al color que la clase
+		 * cascada-renglon--favor ya le pone al texto: verde a favor, rojo a pagar.
+		 *
+		 * @param {Object} posicion Objeto de posicion (iva o iibb), con su campo tipo
+		 * @returns {String}
+		 */
+		acento_saldo(posicion) {
+			if (posicion.tipo == 'a_favor') {
+				return 'acento-dinero'
+			}
+			return 'acento-gastos'
+		},
 	},
 }
 </script>
 <style lang="sass">
+// Paleta de acentos de los iconos de renglon. Misma familia que usaba IconCards.vue en
+// develop, para que Reportes se sienta el mismo modulo aunque el layout haya cambiado.
+// Si algun dia este modulo pasa a los tokens de --dark_theme, estas seis variables son
+// el unico punto a tocar por archivo.
+$acento-ventas: #2563eb
+$acento-dinero: #059669
+$acento-gastos: #dc2626
+$acento-egresos: #7c3aed
+$acento-deudas: #d97706
+$acento-fiscal: #0891b2
+
 .posicion-fiscal
 	.cascada-card
 		background: #fff
 		border: 1px solid #e2e8f0
 		border-radius: 12px
 		box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06)
-		padding: 8px 24px
+		padding: 12px 28px
 		max-width: 720px
 		margin: 0 auto
 
@@ -175,14 +253,58 @@ export default {
 	.cascada-renglon
 		display: flex
 		justify-content: space-between
-		align-items: baseline
-		padding: 14px 0
+		// Era baseline. Con el icono adentro del label, el baseline toma el borde
+		// inferior de la cajita del icono y descoloca el monto de la derecha; con
+		// center las dos columnas quedan alineadas por el medio.
+		align-items: center
+		// 14px -> 18px: la cascada es una lista larga de numeros y con 14 los
+		// renglones se leian pegados.
+		padding: 18px 0
 		border-bottom: 1px solid #f1f5f9
 		font-size: 0.95rem
 		color: #0f172a
 
 		&:last-child
 			border-bottom: none
+
+		&__label
+			display: flex
+			align-items: center
+			gap: 12px
+			min-width: 0
+
+		&__icono
+			flex-shrink: 0
+			width: 30px
+			height: 30px
+			border-radius: 8px
+			display: inline-flex
+			align-items: center
+			justify-content: center
+			background: rgba($acento-ventas, 0.10)
+			color: $acento-ventas
+
+			i
+				// En rem y no en em, para que la cajita mida siempre lo mismo aunque el
+				// renglon que la contiene cambie de font-size.
+				font-size: 0.95rem
+				line-height: 1
+
+			&.acento-dinero
+				background: rgba($acento-dinero, 0.10)
+				color: $acento-dinero
+			&.acento-gastos
+				background: rgba($acento-gastos, 0.10)
+				color: $acento-gastos
+			&.acento-egresos
+				background: rgba($acento-egresos, 0.10)
+				color: $acento-egresos
+			&.acento-deudas
+				background: rgba($acento-deudas, 0.10)
+				color: $acento-deudas
+			&.acento-fiscal
+				background: rgba($acento-fiscal, 0.10)
+				color: $acento-fiscal
 
 		&--subtotal
 			font-weight: 700
