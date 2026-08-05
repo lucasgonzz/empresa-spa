@@ -4,15 +4,41 @@
 	class="composicion">
 		<p class="composicion__titulo">A dónde va cada peso vendido</p>
 
-		<div class="composicion__barra">
-			<chart :styles="chart_styles"></chart>
+		<!-- Zona con position relative y SIN overflow hidden: es la que aloja el tooltip.
+		El overflow hidden vive un nivel mas abajo, en __barra, donde hace falta para que
+		el border-radius corte los segmentos. Este era el nudo del bug anterior: el
+		tooltip se dibujaba adentro del canvas, que estaba adentro del overflow hidden. -->
+		<div class="composicion__zona">
+
+			<div class="composicion__barra">
+				<div
+				v-for="(segmento, i) in segmentos"
+				:key="segmento.label"
+				class="composicion__segmento"
+				:class="{ 'composicion__segmento--atenuado': indice_activo !== null && indice_activo !== i }"
+				:style="{ flexGrow: segmento.valor, backgroundColor: segmento.color }"
+				@mouseenter="indice_activo = i"
+				@mouseleave="indice_activo = null"
+				@click="alternar_activo(i)"></div>
+			</div>
+
+			<div
+			v-if="segmento_activo"
+			class="composicion__tooltip"
+			:style="estilo_tooltip">
+				<span class="composicion__tooltip-label">{{ segmento_activo.label }}</span>
+				<span class="composicion__tooltip-monto">{{ formatear(segmento_activo.valor) }}</span>
+				<span class="composicion__tooltip-porcentaje">{{ segmento_activo.porcentaje }}% de las ventas netas</span>
+			</div>
 		</div>
 
 		<div class="composicion__leyenda">
 			<span
-			v-for="segmento in segmentos"
+			v-for="(segmento, i) in segmentos"
 			:key="segmento.label"
-			class="composicion__item">
+			class="composicion__item"
+			@mouseenter="indice_activo = i"
+			@mouseleave="indice_activo = null">
 				<span
 				class="composicion__punto"
 				:style="{backgroundColor: segmento.color}"></span>
@@ -29,15 +55,11 @@
 </template>
 <script>
 export default {
-	components: {
-		Chart: () => import('@/components/reportes/components/estado-resultados/composicion/Chart'),
-	},
 	data() {
 		return {
-			// vue-chartjs mide el contenedor real del canvas, no .composicion__barra (su abuelo):
-			// sin este prop el canvas queda con el alto por defecto de Chart.js (400px) y el
-			// overflow:hidden del wrapper solo deja ver los primeros pixeles, la barra "desaparece".
-			chart_styles: {height: '26px', position: 'relative'},
+			// Indice del segmento sobre el que esta el mouse, o null. Gobierna el tooltip y
+			// la atenuacion del resto de los segmentos.
+			indice_activo: null,
 		}
 	},
 	computed: {
@@ -55,11 +77,11 @@ export default {
 			return this.mostrar && this.model.resultado_neto <= 0
 		},
 		/**
-		 * Misma composicion de 5 segmentos que arma Chart.vue para dibujar la barra (identidad
-		 * verificada en EstadoResultadosHelper), pero aca solo para la leyenda propia en HTML:
-		 * nombre, color y porcentaje sobre ventas_netas de cada uno que efectivamente se dibuja.
-		 * Si resultado_neto <= 0 no entra a la leyenda (tampoco se dibuja en la barra): esa
-		 * perdida se comunica con la linea de composicion__perdida, no con un segmento rojo.
+		 * Los 5 segmentos de la identidad verificada en EstadoResultadosHelper: nombre, color,
+		 * monto y porcentaje sobre ventas_netas de cada uno que efectivamente se dibuja. Es la
+		 * fuente de verdad tanto de la barra como de la leyenda.
+		 * Si resultado_neto <= 0 no entra (tampoco se dibuja en la barra): esa perdida se
+		 * comunica con la linea de composicion__perdida, no con un segmento rojo.
 		 */
 		segmentos() {
 			if (!this.mostrar) {
@@ -88,6 +110,65 @@ export default {
 
 			return segmentos
 		},
+		/**
+		 * El segmento bajo el cursor, o null. Se resuelve contra el array segmentos() en vez de
+		 * guardar una copia en data: si el reporte se recarga con otro periodo mientras el mouse
+		 * esta encima, el tooltip queda mostrando el dato viejo.
+		 *
+		 * @returns {Object|null}
+		 */
+		segmento_activo() {
+			if (this.indice_activo === null || !this.segmentos[this.indice_activo]) {
+				return null
+			}
+			return this.segmentos[this.indice_activo]
+		},
+		/**
+		 * Posicion horizontal del tooltip: centrado sobre el medio del segmento activo.
+		 *
+		 * El centro se calcula acumulando los valores anteriores sobre la suma de los segmentos
+		 * DIBUJADOS -- la misma base que reparte flex-grow --, no sobre ventas_netas, para que la
+		 * punta del tooltip caiga sobre el segmento y no corrida: en un periodo con perdida
+		 * Resultado no se dibuja y las dos bases no coinciden.
+		 *
+		 * Cerca de los bordes se ancla al borde en vez de centrarse: un tooltip centrado sobre el
+		 * primer segmento se sale de la tarjeta por la izquierda. Se resuelve con el ancla y no
+		 * midiendo el ancho real del tooltip, porque medir el DOM obliga a un $nextTick por cada
+		 * movimiento del mouse.
+		 *
+		 * @returns {Object}
+		 */
+		estilo_tooltip() {
+			if (this.indice_activo === null) {
+				return {}
+			}
+
+			let suma = 0
+			this.segmentos.forEach(segmento => {
+				suma += segmento.valor
+			})
+
+			if (!suma) {
+				return {}
+			}
+
+			let acumulado = 0
+			let i = 0
+			while (i < this.indice_activo) {
+				acumulado += this.segmentos[i].valor
+				i++
+			}
+
+			let centro = (acumulado + this.segmentos[this.indice_activo].valor / 2) / suma * 100
+
+			if (centro < 18) {
+				return {left: '0', transform: 'none'}
+			}
+			if (centro > 82) {
+				return {left: 'auto', right: '0', transform: 'none'}
+			}
+			return {left: centro + '%'}
+		},
 	},
 	methods: {
 		formatear(valor) {
@@ -105,6 +186,20 @@ export default {
 			}
 			return 'El período cerró con una pérdida de ' + this.formatear(Math.abs(this.model.resultado_neto))
 		},
+		/**
+		 * Alterna el segmento activo al tocarlo. En pantalla tactil no hay mouseenter, asi que sin
+		 * esto el tooltip seria inalcanzable en celular. Volver a tocar el mismo segmento lo cierra.
+		 *
+		 * @param {Number} indice
+		 * @returns {void}
+		 */
+		alternar_activo(indice) {
+			if (this.indice_activo === indice) {
+				this.indice_activo = null
+				return
+			}
+			this.indice_activo = indice
+		},
 	},
 }
 </script>
@@ -117,10 +212,63 @@ export default {
 		color: #94a3b8
 		margin: 0 0 8px
 
+	&__zona
+		position: relative
+
 	&__barra
+		display: flex
 		height: 26px
 		border-radius: 8px
+		// El overflow hidden se queda ACA y no en __zona: es lo que hace que el
+		// border-radius recorte el primer y el ultimo segmento. Si sube un nivel,
+		// se vuelve a comer el tooltip, que es el bug que este prompt arregla.
 		overflow: hidden
+
+	&__segmento
+		// Sin base ni shrink: el ancho lo decide enteramente el flex-grow proporcional
+		// al monto, que se pasa inline desde el template.
+		flex-basis: 0
+		flex-shrink: 1
+		// Un segmento chico igual tiene que poder verse y recibir el mouse.
+		min-width: 3px
+		cursor: default
+		transition: opacity 160ms ease
+
+		&--atenuado
+			opacity: 0.45
+
+	&__tooltip
+		position: absolute
+		// Sobre la barra, no debajo: debajo choca con la leyenda.
+		bottom: calc(100% + 8px)
+		transform: translateX(-50%)
+		z-index: 5
+		background: #1e293b
+		color: #f8fafc
+		border-radius: 8px
+		padding: 8px 12px
+		// Que el mouse lo atraviese: si el tooltip tapa el segmento, entra en un ciclo
+		// de mouseenter/mouseleave y titila.
+		pointer-events: none
+		white-space: nowrap
+		box-shadow: 0 6px 16px rgba(15, 23, 42, 0.18)
+
+	&__tooltip-label
+		display: block
+		font-size: 0.72rem
+		text-transform: uppercase
+		letter-spacing: 0.05em
+		color: #94a3b8
+
+	&__tooltip-monto
+		display: block
+		font-size: 0.95rem
+		font-weight: 700
+
+	&__tooltip-porcentaje
+		display: block
+		font-size: 0.72rem
+		color: #cbd5e1
 
 	&__leyenda
 		display: flex
