@@ -60,6 +60,22 @@ module.exports = defineConfig({
 	// Un test que pasa recien al reintentar esconde un problema real: sin reintentos en local.
 	retries: 0,
 
+	// 2 minutos por test, muy por encima del default de 30 segundos. Es holgado a proposito: en
+	// local, contra WAMP y con la SPA sin buildear, el arranque real es lento y variable. Medido el
+	// 4/8/2026 sobre e2e/tests/alta-compra.spec.js: la navegacion inicial a /proveedores/compras
+	// tarda entre 5,8 y 9,2 segundos, el click que abre el alta otros 9, y la busqueda del proveedor
+	// devolvio resultados recien pasados los 16 segundos. Con 30 segundos el presupuesto se agota en
+	// el arranque y el timeout PARECE un bug de la aplicacion sin serlo. Bajar este numero sin haber
+	// acelerado antes el arranque solo trae rojos que no corresponden a bugs.
+	timeout: 120000,
+
+	// 30 segundos por asercion (default: 5). Con los tiempos de arranque de arriba, 5 segundos es
+	// corto para este sistema: el expect(page).not.toHaveURL(/\/login/) del setup ya venia
+	// reintentando 33 veces contra el mismo valor antes de rendirse.
+	expect: {
+		timeout: 30000,
+	},
+
 	// Reporter legible en consola local.
 	reporter: [['list']],
 
