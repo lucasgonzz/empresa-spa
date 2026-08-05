@@ -121,6 +121,18 @@ export default {
 		flex-direction: column
 		width: 100%
 
+	// Encabezado de la tarjeta: el precio y, al lado, el boton que explica como se llego a el.
+	.price-type-card__encabezado
+		display: flex
+		flex-direction: row
+		align-items: center
+		justify-content: space-between
+		width: 100%
+
+		.price-type-card__info
+			flex: 0 0 auto
+			margin-left: 8px
+
 	// El precio de la lista, que es a lo que el usuario le mira primero.
 	.price-type-card__precio
 		font-size: 1.8em

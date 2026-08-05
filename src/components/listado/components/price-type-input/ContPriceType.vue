@@ -3,9 +3,23 @@
 	class="cont-price-types">
 
 		<!-- El precio de la lista es el dato que el usuario viene a ver: va primero y grande, con el
-		     mismo criterio que el precio final unico en modal-props/FinalPrice.vue. -->
-		<div class="price-type-card__precio">
-			{{ price(article_price_type.pivot.final_price) }}
+		     mismo criterio que el precio final unico en modal-props/FinalPrice.vue. Al lado, el
+		     boton que explica de donde salio ese numero. -->
+		<div class="price-type-card__encabezado">
+			<div class="price-type-card__precio">
+				{{ price(article_price_type.pivot.final_price) }}
+			</div>
+
+			<!-- Sin id de articulo no hay nada que explicar (alta nueva) y el endpoint contestaria
+			     404, asi que el boton no se dibuja. -->
+			<b-button
+			v-if="article.id"
+			class="price-type-card__info"
+			@click="info"
+			variant="outline-success"
+			size="sm">
+				?
+			</b-button>
 		</div>
 
 		<!-- Una linea que dice de donde salio ese precio, para no tener que deducirlo del interruptor
@@ -54,6 +68,9 @@ export default {
 		article_price_type: Object,
 	},
 	computed: {
+		article() {
+			return this.$store.state.article.model
+		},
 		indicar_percentage() {
 			if (this.article_price_type.pivot.setear_precio_final) {
 				return false
@@ -81,6 +98,24 @@ export default {
 			return Math.round(parseFloat(valor) * 100) / 100 + '%'
 		},
 
+	},
+	methods: {
+		/**
+		 * Pide el desglose del precio de ESTA lista y lo muestra en el mismo modal que ya usa el
+		 * precio final unico (modal-props/FinalPrice.vue): mismo mutation, mismo modal. El backend
+		 * devuelve la cadena entera, desde el costo real hasta el precio de la lista.
+		 */
+		info() {
+			this.$api.get('article/price-type-description/'+this.article.id+'/'+this.article_price_type.id)
+			.then(res => {
+				this.$store.commit('article/set_final_price_description', res.data.description)
+				this.$bvModal.show('final-price-description')
+			})
+			.catch(err => {
+				console.log(err)
+				this.$toast.error('No se pudo obtener el calculo del precio')
+			})
+		},
 	},
 }
 </script>
