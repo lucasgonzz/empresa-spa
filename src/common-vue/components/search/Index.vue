@@ -48,11 +48,13 @@
 		<div
 		class="search-component">
 			<div class="cont-search-input-btn">
-				<div class="cont-search">
-					<div class="search-pill">
+				<div class="cont-search cont-search--field">
+					<div
+					class="search-field"
+					:class="is_disabled ? 'search-field--disabled' : ''">
 						<input
 						:disabled="is_disabled"
-						class="input-search search-pill__input"
+						class="input-search search-field__input form-control"
 						type="text"
 						autocomplete="off"
 						:id="_id"
@@ -64,8 +66,8 @@
 						:placeholder="_placeholder">
 
 						<div
-						:class="is_disabled ? 'bg-gray' : ''"
-						class="search-pill__icon-btn">
+						class="search-field__icon"
+						@click="abrirDesdeIcono">
 							<i :class="input_icon"></i>
 						</div>
 					</div>
@@ -73,9 +75,11 @@
 				<div
 				v-if="prop && prop.search_on_models_by"
 				class="cont-search-on-models">
-					<div class="search-pill">
+					<div
+					class="search-field"
+					:class="is_disabled ? 'search-field--disabled' : ''">
 						<input
-						class="input-search search-pill__input"
+						class="input-search search-field__input form-control"
 						type="text"
 						autocomplete="off"
 						@keyup.enter="searchOnModels"
@@ -85,14 +89,13 @@
 
 						<div
 						v-if="on_models_searched"
-						class="search-pill__icon-btn"
+						class="search-field__icon"
 						@click="resetModels">
 							<i class="icon-redo"></i>
 						</div>
 						<div
 						v-else
-						:class="is_disabled ? 'bg-gray' : ''"
-						class="search-pill__icon-btn">
+						class="search-field__icon">
 							<i class="icon-search"></i>
 						</div>
 					</div>
@@ -500,6 +503,17 @@ export default {
 		setQuery(value) {
 			this.query = value 
 		},
+		/**
+		 * Abre el modal de busqueda al hacer clic en la lupa. El input ya lo hace con su propio
+		 * @click, pero el icono queda fuera del input y sin esto es una zona muerta de 34px justo
+		 * donde el usuario apunta.
+		 */
+		abrirDesdeIcono() {
+			if (this.is_disabled) {
+				return
+			}
+			this.callSearchModal()
+		},
 		callSearchModal() {
 			if (!this.not_show_modal) {
 
@@ -551,19 +565,20 @@ export default {
 	position: relative
 	display: flex
 	flex-direction: row
-	box-shadow: 0 2px 4px rgb(0 0 0 / 15%) !important
-	border: 1px solid #ced4da
-	border-radius: 0.25rem
 
-	// El pill nuevo (prompt 05, grupo 273) reemplaza visualmente el borde/sombra cuadrados de
-	// arriba. No se le sacan esas propiedades a .cont-search a secas porque este archivo no usa
-	// `scoped` y BarCodeSearch.vue reusa esta MISMA clase global con su markup viejo (icon +
-	// input-search sueltos, sin pill adentro): sigue necesitando ese borde/sombra. Se neutralizan
-	// con !important solo cuando adentro hay un .search-pill.
-	.search-pill
-		box-shadow: none !important
-		border: none !important
-		border-radius: 0 !important
+	// El borde, la sombra y el radio de abajo son del markup VIEJO (un div .icon + un input
+	// sueltos), que hoy solo usa BarCodeSearch.vue. Este <style> no es scoped, asi que esa clase
+	// es global y ese componente sigue dependiendo de ellos: por eso no se borran.
+	// El search-component ya no los usa -- su contenedor declara .cont-search--field y el borde
+	// lo dibuja .search-field, que replica los tokens de un input del sistema.
+	// OJO: hasta el 5/8/2026 esto estaba al reves (se anulaba el campo desde .cont-search con
+	// !important) y el efecto era que el diseno nuevo no se veia NUNCA: siempre ganaba el
+	// rectangulo viejo. Si en algun momento parece que el buscador "volvio a verse cuadrado",
+	// mira aca primero.
+	&:not(.cont-search--field)
+		box-shadow: 0 2px 4px rgb(0 0 0 / 15%) !important
+		border: 1px solid #ced4da
+		border-radius: 0.25rem
 
 .cont-search-on-models
 	width: 40%
@@ -594,63 +609,73 @@ export default {
 	box-shadow: none !important
 	border: none !important
 
-// Pill del input que abre el modal de busqueda, y del input de "buscar dentro de los modelos
-// cargados" (prompt 05, grupo 273): mismo diseno que .buscador-general__pill (buscador-general/
-// Index.vue) -- 40px de alto, bordes redondeados, sombra suave, anillo azul al enfocar -- pero
-// con clases propias. No se reutilizan las buscador-general__*: son de otro componente, y
-// acoplarlas haria que un ajuste alla rompa aca sin que nadie lo vea venir.
-.search-pill
+// Campo del input que abre el modal de busqueda, y del input de "buscar dentro de los modelos
+// cargados". Replica los tokens de un input del sistema (src/sass/_inputs.sass y
+// common-vue/sass/_inputs.sass): borde de 2px, radio de 5px, la misma sombra y el mismo foco.
+// Antes esto era un pill redondeado copiado del buscador general; se cambio el 5/8/2026 porque
+// el campo tiene que ser indistinguible del resto de los inputs del formulario, no un control
+// aparte. El pill sigue vivo donde tiene sentido: .buscador-general__pill, que es otro componente.
+.search-field
 	display: flex
 	align-items: center
 	width: 100%
 	background: #fff
-	border: 1px solid #e2e4e7
-	border-radius: 22px
-	height: 40px
-	padding: 0 6px 0 12px
+	border: 2px solid #ced4da
+	border-radius: 5px
+	box-shadow: rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px
 	transition: border-color 0.15s ease, box-shadow 0.15s ease
-	box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px
 	@if ($theme == 'dark')
-		background: #333 !important
+		background: #1d1d1d !important
 		border-color: #444
 
 	&:focus-within
-		border-color: #007bff
-		box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px, 0 0 0 3px rgba(0, 123, 255, 0.15)
+		border: 3px solid #007bff
+		box-shadow: 0 0 8px rgba(0, 123, 255, 0.8)
+		background-color: #f8fbff
 
-	// Input plano: sin borde ni fondo propio, el pill es el borde (mismo criterio que
-	// .buscador-general__input).
-	.search-pill__input
+	// Input plano: la tipografia, el padding y la preferencia .ui-small los hereda de
+	// .form-control (ver src/sass/_inputs.sass y src/sass/_ui_sizes.sass), no se copian a mano.
+	// Lo unico que se le saca es lo que ahora dibuja el contenedor.
+	.search-field__input
 		flex: 1 1 auto
 		min-width: 0
+		// height: auto y no el height de Bootstrap: .form-control trae
+		// height: calc(1.5em + .75rem + 2px), que ya incluye 2px de borde propio. Como aca el
+		// borde lo pone .search-field, ese height dejaria el campo 2px mas alto que el resto.
+		height: auto
 		border: none
 		outline: none
 		background: transparent
-		height: 100%
-		padding: 0 6px
-		font-size: 0.9rem
-		color: #1d1d1f
 		box-shadow: none
-		@if ($theme == 'dark')
-			color: #FFF
-		&::placeholder
-			color: #9aa0a6
 
-	// Icono como boton redondo, a la derecha (mismo criterio que .buscador-general__icon-btn).
-	.search-pill__icon-btn
+		// src/sass/_inputs.sass le pinta a todo input:focus un borde azul de 3px con halo. Sin
+		// apagarlo aca se verian DOS bordes azules, el del input adentro del del contenedor.
+		&:focus
+			border: none
+			box-shadow: none
+			background: transparent
+
+	// Icono discreto adentro del campo, a la derecha.
+	.search-field__icon
 		display: flex
 		align-items: center
 		justify-content: center
 		flex: 0 0 auto
-		width: 30px
-		height: 30px
-		border-radius: 50%
-		color: #86868b
+		width: 34px
+		color: rgba(0, 0, 0, .5)
 		cursor: pointer
-		transition: background 0.15s ease, color 0.15s ease
-		&:hover
-			background: #f2f3f4
-			color: #1d1d1f
 		i
-			font-size: 0.95rem
+			font-size: 1.1rem
+		@if ($theme == 'dark')
+			color: rgba(255, 255, 255, .7)
+
+	// Deshabilitado: gris el campo entero, como cualquier .form-control:disabled. Antes el gris
+	// se le ponia solo al icono y quedaba un cuadradito gris adentro de un campo blanco.
+	&.search-field--disabled
+		background: #e9ecef
+		cursor: not-allowed
+		.search-field__input
+			background: transparent
+		.search-field__icon
+			cursor: default
 </style>
