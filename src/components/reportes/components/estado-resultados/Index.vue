@@ -4,15 +4,13 @@
 	v-if="view == 'estado-de-resultados'"
 	class="cascada-resultados m-t-20 p-b-100">
 
-		<div
+		<skeleton-cascada
 		v-if="loading"
-		class="all-center p-t-30 p-b-30">
-			<b-spinner variant="primary"></b-spinner>
-		</div>
+		:bloques="[{titulo: false, renglones: ['linea','linea','subtotal','linea','subtotal','linea','subtotal','linea','linea','final']}]"></skeleton-cascada>
 
 		<div
 		v-else
-		class="cascada-card">
+		class="cascada-card cascada-fundido">
 
 			<!-- Barra de composicion "a donde va cada peso vendido" (tarea 03): primer bloque
 			de la tarjeta, se autooculta si no hay ventas netas -->
@@ -162,6 +160,7 @@ export default {
 	components: {
 		Composicion: () => import('@/components/reportes/components/estado-resultados/composicion/Index'),
 		GastosCategorias: () => import('@/components/reportes/components/estado-resultados/gastos-categorias/Index'),
+		SkeletonCascada: () => import('@/components/reportes/components/SkeletonCascada'),
 	},
 	created() {
 		this.$store.dispatch('reportes/getEstadoResultados')
@@ -315,4 +314,16 @@ export default {
 		color: #94a3b8
 		font-style: italic
 		margin: 0 0 10px
+
+	// Fundido corto al reemplazar el skeleton por el contenido real. Escrito a mano y no
+	// con animate.css: el <link> de esa libreria esta comentado en public/index.html y no
+	// esta en package.json, asi que animate__fadeIn no hace nada en este repo
+	.cascada-fundido
+		animation: cascada-fundido-in 220ms ease-out both
+
+@keyframes cascada-fundido-in
+	from
+		opacity: 0
+	to
+		opacity: 1
 </style>
