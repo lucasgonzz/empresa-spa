@@ -100,40 +100,122 @@ export default {
 }
 </script>
 <style lang="sass">
+@import '@/sass/_custom.scss'
+// Tarjeta de una lista de precio dentro del modal del articulo. El nombre de la lista NO se dibuja
+// aca: lo pone el label del form-group de ModelForm, por fuera del slot (verificado el 5/8/2026,
+// build_price_type_modal_extra_properties le pasa price_type.name como text).
 .cont-inputs
-	display: flex 
-	flex-direction: column 
+	display: flex
+	flex-direction: column
 	align-items: flex-start
-	justify-content: flex-start  
-	
-	input 
-		width: 140px
+	justify-content: flex-start
+
+	// Los inputs no llevan ancho fijo: varias listas se dibujan una al lado de la otra y con 140px
+	// duros la tarjeta desbordaba en el telefono.
+	input
+		width: 100%
+		min-width: 0
 
 	.cont-price-types
-		display: flex  
+		display: flex
+		flex-direction: column
+		width: 100%
+
+	// El precio de la lista, que es a lo que el usuario le mira primero.
+	.price-type-card__precio
+		font-size: 1.8em
+		font-weight: bold
+		line-height: 1.1
+		color: #28a745
+		word-break: break-word
+		@if ($theme == 'dark')
+			color: #5dd879
+
+	// De donde salio ese precio, en una linea.
+	.price-type-card__origen
+		font-size: 0.85em
+		color: rgba(0, 0, 0, .55)
+		margin-bottom: 8px
+		@if ($theme == 'dark')
+			color: rgba(255, 255, 255, .6)
+
+	.price-type-card__campos
+		display: flex
+		flex-direction: column
+		width: 100%
+
+		.price-type-card__campo
+			margin-bottom: 8px
+
+		// El campo que manda: se lee como el editable de la tarjeta.
+		.price-type-card__campo--manda
+			.input-group-text
+				background: #28a745
+				border-color: #28a745
+				color: #FFF
+				font-weight: bold
+
+		// El derivado: el valor lo calcula el sistema. Ademas del disabled propio del input, se
+		// atenua el grupo entero, para que la relacion entre los dos campos se vea de un vistazo.
+		.price-type-card__campo--derivado
+			opacity: 0.65
+
+			.input-group-text
+				background: transparent
+				border-style: dashed
+				color: rgba(0, 0, 0, .5)
+				@if ($theme == 'dark')
+					color: rgba(255, 255, 255, .5)
+
+	.price-type-card__opciones
+		width: 100%
+		display: flex
 		flex-direction: column
 
-	.cont-prices
-		width: 100%
-		display: flex 
-		flex-direction: row 
-		justify-content: flex-start
-		align-items: center
+	// El interruptor que decide cual de los dos campos manda, con su explicacion al lado.
+	.price-type-card__interruptor
+		padding: 6px 8px
+		border-radius: 6px
+		background: rgba(0, 0, 0, .04)
+		@if ($theme == 'dark')
+			background: rgba(255, 255, 255, .06)
 
-		.cont-price 
-			border: 1px solid rgba(0,0,0,.6)
-			border-radius: 7px
-			margin: 0 5px
-			padding: 2px 5px
-			color: rgba(0,0,0,.8)
+		.price-type-card__interruptor-ayuda
+			font-size: 0.75em
+			color: rgba(0, 0, 0, .55)
+			margin-top: 2px
+			@if ($theme == 'dark')
+				color: rgba(255, 255, 255, .6)
 
-		.price
-			background: rgba(0,0,0,.6)
-			color: #FFF
+	// Datos calculados: subordinados, en una fila que envuelve si no entra.
+	.price-type-card__datos
+		display: flex
+		flex-direction: row
+		flex-wrap: wrap
+		margin-top: 8px
 
-		.cont-iva
-			background: lighten(green, 10)
-			color: #FFF
+		.price-type-card__dato
+			font-size: 0.85em
+			margin-right: 10px
+			color: rgba(0, 0, 0, .8)
+			@if ($theme == 'dark')
+				color: rgba(255, 255, 255, .8)
+
+			.price-type-card__dato-label
+				display: block
+				font-size: 0.85em
+				color: rgba(0, 0, 0, .5)
+				@if ($theme == 'dark')
+					color: rgba(255, 255, 255, .5)
+
+		.price-type-card__dato--ganancia
 			font-weight: bold
+
+	.price-type-card__excel
+		margin-top: 8px
+		padding-top: 8px
+		border-top: 1px solid rgba(0, 0, 0, .08)
+		@if ($theme == 'dark')
+			border-top-color: rgba(255, 255, 255, .12)
 
 </style>
