@@ -84,6 +84,11 @@ export default {
 			text: 'proveedor',
 			key: 'provider_id',
 			type: 'search',
+			// Sin prop "store" el buscador resuelve el store por la key (provider_id -> provider).
+			// La busqueda va siempre contra la API (global-search/provider), nunca contra el store:
+			// hay cuentas con miles de proveedores y el resultado no puede depender de que la
+			// descarga del store haya terminado. No sacar.
+			search_from_api: true,
 			use_to_show_in_search_modal: true,
 			use_to_update: true,
 			use_store_models: true,

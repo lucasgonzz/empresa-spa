@@ -12,6 +12,11 @@ export default {
 			key: 'provider_id',
 			store: 'provider',
 			type: 'search',
+			// La busqueda va siempre contra la API (global-search/provider), nunca contra el store:
+			// hay cuentas con miles de proveedores y el resultado no puede depender de que la
+			// descarga del store haya terminado. Sin esto, buscar apenas carga la pagina no
+			// devuelve nada y el Enter dispara el alta de un proveedor nuevo. No sacar.
+			search_from_api: true,
 			value: 0,
 			is_title: true,
 			required: true,

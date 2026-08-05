@@ -19,24 +19,40 @@ export default {
 			text: 'Cliente',
 			key: 'client_id',
 			type: 'search',
+			// Sin prop "store" el buscador resuelve el store por la key (client_id -> client), asi
+			// que este campo tiene el mismo problema que los de abajo: la busqueda va siempre
+			// contra la API (global-search/client) y nunca contra el store. No sacar.
+			search_from_api: true,
 		},
 		{
 			text: 'Endozado desde cliente',
 			key: 'endosado_desde_client_id',
 			store: 'client',
 			type: 'search',
+			// La busqueda va siempre contra la API (global-search/client), nunca contra el store:
+			// hay cuentas con miles de clientes y el resultado no puede depender de que la descarga
+			// del store haya terminado. No sacar.
+			search_from_api: true,
 			use_store_models: true,
 		},
 		{
 			text: 'Proveedor',
 			key: 'provider_id',
 			type: 'search',
-		}, 
+			// Sin prop "store" el buscador resuelve el store por la key (provider_id -> provider),
+			// asi que este campo tiene el mismo problema que los de abajo: la busqueda va siempre
+			// contra la API (global-search/provider) y nunca contra el store. No sacar.
+			search_from_api: true,
+		},
 		{
 			text: 'Endozado al proveedor',
 			key: 'endosado_a_provider_id',
 			store: 'provider',
 			type: 'search',
+			// La busqueda va siempre contra la API (global-search/provider), nunca contra el store:
+			// hay cuentas con miles de proveedores y el resultado no puede depender de que la
+			// descarga del store haya terminado. No sacar.
+			search_from_api: true,
 			use_store_models: true,
 		},
 		{

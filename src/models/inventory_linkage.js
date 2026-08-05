@@ -4,6 +4,11 @@ export default {
 			text: 'Cliente',
 			key: 'client_id',
 			type: 'search',
+			// Sin prop "store" el buscador resuelve el store por la key (client_id -> client). La
+			// busqueda va siempre contra la API (global-search/client), nunca contra el store: hay
+			// cuentas con miles de clientes y el resultado no puede depender de que la descarga del
+			// store haya terminado. No sacar.
+			search_from_api: true,
 		},
 		{
 			text: 'Alcance',
