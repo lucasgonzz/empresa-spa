@@ -4,13 +4,20 @@
 	v-if="view == 'flujo-de-caja'"
 	class="flujo-caja m-t-20 p-b-100">
 
-		<div
+		<skeleton-cascada
 		v-if="loading"
-		class="all-center p-t-30 p-b-30">
-			<b-spinner variant="primary"></b-spinner>
-		</div>
+		:bloques="[
+			{titulo: true, renglones: ['linea','linea','subtotal']},
+			{titulo: true, renglones: ['linea','linea','subtotal']},
+			{titulo: false, renglones: ['final']}
+		]"></skeleton-cascada>
 
-		<template v-else>
+		<!-- Antes era un <template v-else>, que no puede llevar clase. El div intermedio es
+		seguro: el sass de abajo usa selectores descendientes (.flujo-caja .cascada-card),
+		no hijo directo -->
+		<div
+		v-else
+		class="cascada-fundido">
 			<div class="cascada-card">
 
 				<h6 class="cascada-card__titulo">Ingresos</h6>
@@ -124,7 +131,7 @@
 					<span class="cascada-renglon__monto">{{ formatear(model.plata_en_transito.total_estimado) }}</span>
 				</div>
 			</div>
-		</template>
+		</div>
 	</div>
 </template>
 <script>
@@ -132,6 +139,9 @@ import detalle_drilldown from '@/mixins/reportes/detalle_drilldown'
 
 export default {
 	mixins: [detalle_drilldown],
+	components: {
+		SkeletonCascada: () => import('@/components/reportes/components/SkeletonCascada'),
+	},
 	created() {
 		this.$store.dispatch('reportes/getFlujoCaja')
 	},
@@ -240,4 +250,15 @@ export default {
 		font-size: 0.82rem
 		color: #64748b
 		margin: 0 0 10px
+
+	// Fundido corto al reemplazar el skeleton por el contenido real. Escrito a mano y no
+	// con animate.css: esa libreria no esta cargada en este repo
+	.cascada-fundido
+		animation: cascada-fundido-in 220ms ease-out both
+
+@keyframes cascada-fundido-in
+	from
+		opacity: 0
+	to
+		opacity: 1
 </style>

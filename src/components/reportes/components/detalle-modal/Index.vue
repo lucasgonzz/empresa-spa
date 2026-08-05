@@ -6,10 +6,18 @@
 	:title="titulo"
 	@hidden="alCerrar">
 
-		<div
-		v-if="detalle.loading"
-		class="all-center p-t-30 p-b-30">
-			<b-spinner variant="primary"></b-spinner>
+		<div v-if="detalle.loading">
+			<!-- Misma separacion que la linea "Total: $..." real, para que la tabla no se
+			corra de lugar cuando llegan los datos -->
+			<div class="detalle-modal__total detalle-modal__total--skeleton">
+				<b-skeleton width="30%"></b-skeleton>
+			</div>
+
+			<!-- 4 columnas: Fecha, Descripcion, Monto y la de acciones. El encabezado viene
+			activado por defecto en b-skeleton-table (hide-header es false) -->
+			<b-skeleton-table
+			:rows="6"
+			:columns="4"></b-skeleton-table>
 		</div>
 
 		<template v-else>
@@ -155,4 +163,10 @@ export default {
 	font-size: 1rem
 	font-weight: 600
 	margin-bottom: 14px
+
+	// El margin-bottom que BootstrapVue le pone a .b-skeleton se sumaria al del bloque y
+	// correria la tabla hacia abajo respecto de donde queda el total real
+	&--skeleton
+		.b-skeleton
+			margin-bottom: 0
 </style>
