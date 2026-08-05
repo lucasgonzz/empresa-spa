@@ -27,6 +27,11 @@
 	// pasaria de gris oscuro con texto claro a casi blanco, que es un cambio visible para todos los
 	// clientes -- ninguno de los cuales pidio tocar el modo claro.
 	--bg-table-header: #2C2C2C
+	// Pista del nav horizontal y su hover azulado. Tokens propios y no --bg-section/--bg-hover:
+	// la pista tiene su propio gris (mas oscuro que el fondo de la pagina) y el hover es azulado a
+	// proposito, no un gris.
+	--bg-nav: #E3E3E3
+	--bg-nav-hover: #e7f1ff
 
 // La escala arranca en #23262b y NO mas abajo, aunque el negro casi puro parezca mas elegante:
 // probado en pantalla (grupo 360, fase 2), el #14161a original se leia apagado y, sobre todo,
@@ -50,6 +55,11 @@ html.dark-mode
 	// que es la misma relacion que tiene en modo claro: el header se despega hacia abajo, no se
 	// funde con la tabla.
 	--bg-table-header: #1c1f24
+	// La pista va un escalon POR ENCIMA del fondo (#23262b), igual que en claro va un escalon por
+	// debajo: en los dos casos se despega del fondo de la pagina. El hover mantiene el matiz azulado
+	// con el azul del tema en baja opacidad, en vez de un gris plano.
+	--bg-nav: #2b2f36
+	--bg-nav-hover: rgba(77, 163, 255, 0.16)
 
 	// El navegador pinta con esto las barras de scroll, los selects nativos y los date
 	// pickers del sistema: una linea que resuelve media docena de rincones blancos.
