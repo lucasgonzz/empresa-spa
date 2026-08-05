@@ -16,7 +16,7 @@ export default [
 		name: 'reportes',
 		can: 'reportes.index',
 		params: {
-			view: 'generales',
+			view: 'estado-de-resultados',
 		},
 	},
 	{
