@@ -529,27 +529,31 @@ export default {
 .cont-search-input-btn
 	display: flex
 	width: 100%
+// Los colores van por token con el literal viejo de fallback, adentro del componente: el <style>
+// del componente le gana por especificidad a las reglas del tema global, asi que una regla en
+// _dark_theme.sass no alcanzaria. El !important de .bg-gray es el que ya estaba, no se agrega uno.
 .cont-search
 	width: 100%
 	position: relative
 	display: flex
 	flex-direction: row
-	box-shadow: 0 2px 4px rgb(0 0 0 / 15%) !important
-	border: 1px solid #ced4da
-	border-radius: 0.25rem 
+	box-shadow: 0 2px 4px var(--shadow-color, rgba(0, 0, 0, 0.15)) !important
+	border: 1px solid var(--color-border, #ced4da)
+	border-radius: 0.25rem
 
 .cont-search-on-models
 	width: 40%
 	position: relative
 	display: flex
 	flex-direction: row
-	box-shadow: 0 2px 4px rgb(0 0 0 / 15%) !important
-	border: 1px solid #ced4da
-	border-radius: 0.25rem 
+	box-shadow: 0 2px 4px var(--shadow-color, rgba(0, 0, 0, 0.15)) !important
+	border: 1px solid var(--color-border, #ced4da)
+	border-radius: 0.25rem
 	margin-left: 15px
 
-.icon 
-	background: #FFF
+// El recuadro de la lupa: era el bloque blanco pegado al input en modo oscuro.
+.icon
+	background: var(--bg-section, #FFF)
 	width: 40px
 	display: flex
 	flex-direction: row
@@ -558,13 +562,14 @@ export default {
 	justify-content: flex-end
 	border-radius: 0.25rem 0 0 0.25rem
 	i
-		color: rgba(0, 0, 0, .6)
-	@if ($theme == 'dark') 
+		color: var(--color-text-secondary, rgba(0, 0, 0, .6))
+	@if ($theme == 'dark')
 		background: #333 !important
 		i
 			color: #FFF
-.bg-gray 
-	background: #e9ecef !important
+// Estado deshabilitado del buscador.
+.bg-gray
+	background: var(--bg-hover, #e9ecef) !important
 .input-search
 	border-radius: 0 0.25rem 0.25rem 0 
 	box-shadow: none !important
