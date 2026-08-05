@@ -20,17 +20,23 @@
 	--bg-section: #f8f9fa
 	--bg-hover: #f1f3f5
 
+// La escala arranca en #23262b y NO mas abajo, aunque el negro casi puro parezca mas elegante:
+// probado en pantalla (grupo 360, fase 2), el #14161a original se leia apagado y, sobre todo,
+// dejaba a los modales sin despegarse del fondo, porque la distancia entre --color-bg y --bg-card
+// era demasiado chica para leerse como elevacion. Se mantiene el orden relativo de los tres fondos
+// (bg < section < card) y se agranda la distancia. Los bordes suben de 0.10/0.07 a 0.14/0.09 por el
+// mismo motivo: sobre un fondo mas claro, los viejos dejaban de verse.
 html.dark-mode
-	--color-bg: #14161a
-	--bg-card: #1e2127
-	--bg-section: #191c21
-	--bg-hover: #23272e
-	--color-text-primary: #e6e8eb
-	--color-text-secondary: #9aa1a9
-	--color-border: rgba(255, 255, 255, 0.10)
-	--color-border-secondary: rgba(255, 255, 255, 0.07)
-	--color-border-tertiary: rgba(255, 255, 255, 0.10)
-	--color-primary: #3b9dff
+	--color-bg: #23262b
+	--bg-card: #2e333a
+	--bg-section: #272b31
+	--bg-hover: #3a4048
+	--color-text-primary: #e8eaed
+	--color-text-secondary: #aab2bd
+	--color-border: rgba(255, 255, 255, 0.14)
+	--color-border-secondary: rgba(255, 255, 255, 0.09)
+	--color-border-tertiary: rgba(255, 255, 255, 0.14)
+	--color-primary: #4da3ff
 
 	// El navegador pinta con esto las barras de scroll, los selects nativos y los date
 	// pickers del sistema: una linea que resuelve media docena de rincones blancos.
