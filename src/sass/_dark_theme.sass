@@ -19,6 +19,14 @@
 	--bg-card: #fff
 	--bg-section: #f8f9fa
 	--bg-hover: #f1f3f5
+	// Color de las sombras de elevacion (tablas, tarjetas). En claro es el gris de siempre; en
+	// oscuro tiene que ser negro, porque un gris claro sobre fondo oscuro directamente no se ve.
+	--shadow-color: rgba(99, 99, 99, 0.2)
+	// Header de las tablas del listado. Token DEDICADO y no --bg-section: el header es oscuro en
+	// los DOS modos (decision de Lucas, 5/8/2026, grupo 360). Si usara --bg-section, en modo claro
+	// pasaria de gris oscuro con texto claro a casi blanco, que es un cambio visible para todos los
+	// clientes -- ninguno de los cuales pidio tocar el modo claro.
+	--bg-table-header: #2C2C2C
 
 // La escala arranca en #23262b y NO mas abajo, aunque el negro casi puro parezca mas elegante:
 // probado en pantalla (grupo 360, fase 2), el #14161a original se leia apagado y, sobre todo,
@@ -37,6 +45,11 @@ html.dark-mode
 	--color-border-secondary: rgba(255, 255, 255, 0.09)
 	--color-border-tertiary: rgba(255, 255, 255, 0.14)
 	--color-primary: #4da3ff
+	--shadow-color: rgba(0, 0, 0, 0.45)
+	// Mas oscuro que las filas (--bg-card #2e333a) y que el fondo general (--color-bg #23262b),
+	// que es la misma relacion que tiene en modo claro: el header se despega hacia abajo, no se
+	// funde con la tabla.
+	--bg-table-header: #1c1f24
 
 	// El navegador pinta con esto las barras de scroll, los selects nativos y los date
 	// pickers del sistema: una linea que resuelve media docena de rincones blancos.
