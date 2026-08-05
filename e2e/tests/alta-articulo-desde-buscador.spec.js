@@ -20,18 +20,31 @@ test.describe('Compras: alta de articulo desde el buscador', () => {
 
 		await page.locator('[data-testid="provider_order-provider_id"]').click()
 		const provider_modal_input = page.locator('[data-testid="provider_order-provider_id-search-modal-input"]')
-		await provider_modal_input.fill('Rosario')
+		// Tecleo real, no fill(): ver el comentario largo de search_and_select en
+		// alta-compra.spec.js. fill() no emite keydown, ya_se_busco queda en true y el Enter de
+		// abajo crearia un proveedor "Rosario" nuevo en vez de buscar el del fixture.
+		await provider_modal_input.fill('')
+		await provider_modal_input.pressSequentially('Rosario')
 		await provider_modal_input.press('Enter')
 		await page.locator('[data-testid="search-result-row"]').first().click()
 
 		// 2. Escribir en el buscador de articulos un nombre que no existe.
 		await page.locator('[data-testid="provider_order-articles"]').click()
 		const articles_modal_input = page.locator('[data-testid="provider_order-articles-search-modal-input"]')
-		await articles_modal_input.fill(unique_article_name)
+		// Tecleo real: es lo que deja ya_se_busco en false y hace que el PRIMER Enter busque. Con
+		// fill() este test pasaba por el motivo equivocado — el primer Enter creaba el articulo
+		// directamente, sin haber verificado nunca que la busqueda no encontraba nada, que es la
+		// mitad de lo que dice probar.
+		await articles_modal_input.fill('')
+		await articles_modal_input.pressSequentially(unique_article_name)
 
 		// Primer Enter: dispara la busqueda. Auto-espera de Playwright a que aparezca el aviso,
 		// sin waitForTimeout: si no aparece dentro del timeout default, el test falla mostrando
 		// justo lo que fallo (no encontro el aviso, no un timeout ciego).
+		// El testid distingue los dos estados vacios del modal: "search-sin-criterio" es el modal
+		// recien abierto y "search-no-results" es una busqueda ya terminada sin resultados
+		// (busqueda_realizada, que solo se pone en true dentro de finishSearch). O sea que esta
+		// asercion prueba que la busqueda ocurrio de verdad.
 		await articles_modal_input.press('Enter')
 		await expect(page.locator('[data-testid="search-no-results"]')).toBeVisible()
 

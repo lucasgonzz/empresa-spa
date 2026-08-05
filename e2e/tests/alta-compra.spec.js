@@ -49,10 +49,21 @@ const RECEIVED_CON_AUMENTO = '8'
 async function search_and_select(page, field_testid, query) {
 	await page.locator(`[data-testid="${field_testid}"]`).click()
 	const modal_input = page.locator(`[data-testid="${field_testid}-search-modal-input"]`)
-	await modal_input.fill(query)
-	// Dispara la busqueda, que pega a la API (global-search/article): el usuario del fixture
-	// tiene download_articles desactivado, asi que search_from_api_in_provider_order (definida
-	// en src/mixins/model_functions.js) da true. El filtrado en memoria contra el store es el
+	// Tecleo real, caracter por caracter: fill() escribe el valor directo en el DOM y emite
+	// input, pero NINGUN keydown. El modal (src/common-vue/components/search/Modal.vue) arranca
+	// con ya_se_busco en true y solo lo pasa a false cuando reset_ya_se_busco recibe un keydown
+	// de una tecla que no sea Enter ni flecha. pressSequentially emite keydown/keypress/keyup por
+	// cada caracter, como un humano. El fill('') previo es necesario porque pressSequentially
+	// AGREGA al final de lo que ya haya en el input, no reemplaza.
+	await modal_input.fill('')
+	await modal_input.pressSequentially(query)
+	// Este Enter BUSCA porque el tecleo de arriba dejo ya_se_busco en false. Con fill() este
+	// mismo Enter caeria en seleccionar_resultado() y, sin resultados, crearia el modelo al vuelo
+	// (el alta al vuelo del segundo Enter): el test terminaria creando un proveedor "Buenos
+	// Aires" nuevo en vez de buscarlo. Es la trampa principal de este modal.
+	// La busqueda pega a la API (global-search/article): el usuario del fixture tiene
+	// download_articles desactivado, asi que search_from_api_in_provider_order (definida en
+	// src/mixins/model_functions.js) da true. El filtrado en memoria contra el store es el
 	// camino alternativo, para usuarios con los articulos descargados o sin conexion.
 	await modal_input.press('Enter')
 	// Auto-espera: el primer resultado tarda lo que tarde en filtrar/renderizar, sin waitForTimeout.
