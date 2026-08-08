@@ -20,6 +20,32 @@
 				<btn-concepto
 				:movimiento_caja="props.model"></btn-concepto>
 			</template>
+
+			<!--
+				Los montos de ingreso y egreso salian los dos en negro y una celda vacia no se
+				distinguia de un cero. El guion largo marca "no hay monto".
+			-->
+			<template #table-prop-ingreso="props">
+				<span
+				v-if="props.model.ingreso"
+				class="movimiento-monto movimiento-monto--ingreso">
+					{{ price(props.model.ingreso) }}
+				</span>
+				<span
+				v-else
+				class="movimiento-monto--vacio">—</span>
+			</template>
+
+			<template #table-prop-egreso="props">
+				<span
+				v-if="props.model.egreso"
+				class="movimiento-monto movimiento-monto--egreso">
+					{{ price(props.model.egreso) }}
+				</span>
+				<span
+				v-else
+				class="movimiento-monto--vacio">—</span>
+			</template>
 		</view-component>
 	</b-modal>
 </template>
@@ -120,3 +146,19 @@ export default {
 	}
 }
 </script>
+<style scoped lang="sass">
+// Funciona con scoped aunque las clases se usen dentro de la tabla: en Vue 2 el contenido de
+// un slot se compila en el scope del componente que lo escribe, o sea este, asi que recibe
+// este scope id y no el de common-vue.
+.movimiento-monto
+	font-weight: 600
+
+	&--ingreso
+		color: var(--caja-abierta-texto)
+
+	&--egreso
+		color: var(--caja-cerrar-texto)
+
+	&--vacio
+		color: var(--color-text-secondary)
+</style>
