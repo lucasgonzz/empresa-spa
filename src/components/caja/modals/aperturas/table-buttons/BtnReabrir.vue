@@ -1,12 +1,11 @@
 <template>
-	<btn-loader
+	<btn-accion
 	v-if="se_puede_reabrir"
-	@clicked="reabirir_caja"
-	variant="success"
-	class="m-l-10"
-	text="Re abrir"
-	:loader="loading">
-	</btn-loader>
+	icono="bi bi-arrow-counterclockwise"
+	texto="Reabrir"
+	tono="abrir"
+	:loader="loading"
+	@clicked="reabirir_caja"></btn-accion>
 </template>
 <script>
 export default {
@@ -14,7 +13,7 @@ export default {
 		apertura_caja: Object,
 	},
 	components: {
-		BtnLoader: () => import('@/common-vue/components/BtnLoader'),
+		BtnAccion: () => import('@/components/caja/components/table-buttons/BtnAccion'),
 	},
 	data() {
 		return {
@@ -24,7 +23,7 @@ export default {
 	computed: {
 		se_puede_reabrir() {
 			if (this.es_la_ultima_apertura && this.la_caja_esta_cerrada) {
-				return true 
+				return true
 			}
 			return false
 		},
@@ -41,22 +40,22 @@ export default {
 			return this.aperturas_caja[0].id == this.apertura_caja.id
 		},
 		aperturas_caja() {
-			return this.$store.state.apertura_caja.models 
+			return this.$store.state.apertura_caja.models
 		},
 	},
 	methods: {
 		reabirir_caja() {
-			this.loading = true 
+			this.loading = true
 			this.$api.post('apertura-caja/reabrir/'+this.apertura_caja.id)
 			.then(res => {
-				this.loading = false 
+				this.loading = false
 				this.$bvModal.hide('aperturas-caja')
 				this.$store.dispatch('caja/getModels')
 				this.$toast.success('Caja reabierta')
 			})
 			.catch(err => {
-				this.loading = false 
-				this.$toast.error('Error al reabrir Caja')				
+				this.loading = false
+				this.$toast.error('Error al reabrir Caja')
 			})
 		}
 	}
