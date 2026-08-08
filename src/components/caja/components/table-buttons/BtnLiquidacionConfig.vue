@@ -1,15 +1,16 @@
 <template>
-	<b-button
-	class="m-l-10"
-	variant="outline-secondary"
-	@click.stop="show_liquidacion_config">
-		Liquidación
-	</b-button>
+	<btn-accion
+	icono="bi bi-percent"
+	texto="Liquidación"
+	@clicked="show_liquidacion_config"></btn-accion>
 </template>
 <script>
 export default {
 	props: {
 		caja: Object,
+	},
+	components: {
+		BtnAccion: () => import('@/components/caja/components/table-buttons/BtnAccion'),
 	},
 	methods: {
 		/**
