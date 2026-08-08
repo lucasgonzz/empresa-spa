@@ -20,6 +20,23 @@
 	--bg-section: #f8f9fa
 	--bg-hover: #f1f3f5
 
+	// Estados del modulo de Cajas (grupo 371). El verde apagado marca la caja ABIERTA, que es
+	// el estado que interesa encontrar de un vistazo. La caja CERRADA va en gris neutro a
+	// proposito y NO en rojo: cerrar la caja es el final normal de la jornada, y el rojo la
+	// haria leer como un error. El rojo queda reservado para la ACCION de cerrar (--caja-cerrar-*),
+	// que si es una accion destructiva.
+	--caja-abierta-fondo: #f2f7f4
+	--caja-abierta-fondo-hover: #e8f1ec
+	--caja-abierta-acento: #2f7d5d
+	--caja-abierta-texto: #1e6047
+	--caja-cerrada-fondo: #f7f8f9
+	--caja-cerrada-fondo-hover: #eef0f2
+	--caja-cerrada-acento: #94a3b8
+	--caja-cerrada-texto: #64748b
+	--caja-cerrar-fondo: #fdf3f2
+	--caja-cerrar-acento: #b4443f
+	--caja-cerrar-texto: #9c3a36
+
 html.dark-mode
 	--color-bg: #14161a
 	--bg-card: #1e2127
@@ -31,6 +48,20 @@ html.dark-mode
 	--color-border-secondary: rgba(255, 255, 255, 0.07)
 	--color-border-tertiary: rgba(255, 255, 255, 0.10)
 	--color-primary: #3b9dff
+
+	// Contraparte oscura de los estados de Cajas (grupo 371). Los fondos van en rgba sobre el
+	// acento en vez de un color plano: asi se apoyan sobre --bg-card sin pelearse con el.
+	--caja-abierta-fondo: rgba(47, 125, 93, 0.16)
+	--caja-abierta-fondo-hover: rgba(47, 125, 93, 0.24)
+	--caja-abierta-acento: #57b48d
+	--caja-abierta-texto: #86d3b0
+	--caja-cerrada-fondo: rgba(148, 163, 184, 0.08)
+	--caja-cerrada-fondo-hover: rgba(148, 163, 184, 0.14)
+	--caja-cerrada-acento: #6b7280
+	--caja-cerrada-texto: #9aa1a9
+	--caja-cerrar-fondo: rgba(180, 68, 63, 0.16)
+	--caja-cerrar-acento: #d98680
+	--caja-cerrar-texto: #e5a29d
 
 	// El navegador pinta con esto las barras de scroll, los selects nativos y los date
 	// pickers del sistema: una linea que resuelve media docena de rincones blancos.

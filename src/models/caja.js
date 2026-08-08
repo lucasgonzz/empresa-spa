@@ -53,6 +53,10 @@ export default {
 			only_show: true,
 		},
 		{
+			// Grupo 371: la columna muestra la pildora de EstadoCaja.vue, no el "Si"/"No" de
+			// propertyText(). Sin `text`, propText() cae al fallback (la key capitalizada) y el
+			// encabezado decia "Abierta" arriba de una pildora que dice "Cerrada".
+			text: 'Estado',
 			key: 'abierta',
 			type: 'checkbox',
 			only_show: true,

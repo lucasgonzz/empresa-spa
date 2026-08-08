@@ -28,6 +28,15 @@
 				<table-buttons
 				:caja="props.model"></table-buttons>
 			</template>
+
+			<!--
+				El doble ! no es cosmetico: el backend puede mandar `abierta` como 1/0 y la prop
+				esta declarada Boolean, con lo cual Vue tira un warning de tipo por cada fila.
+			-->
+			<template #table-prop-abierta="props">
+				<estado-caja
+				:abierta="!!props.model.abierta"></estado-caja>
+			</template>
 		</view-component>
 	</div>
 </template>
@@ -37,6 +46,7 @@ export default {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 		HorizontalNavCenter: () => import('@/components/caja/components/horizontal-nav-center/Index'),
 		TableButtons: () => import('@/components/caja/components/table-buttons/Index'),
+		EstadoCaja: () => import('@/components/caja/components/EstadoCaja'),
 
 		SaleModal: () => import('@/components/common/SaleModal'),
 		MovimientosEntreCajas: () => import('@/components/caja/modals/movimientos-entre-cajas/Index'),
@@ -54,9 +64,7 @@ export default {
 
 			if (this.is_admin) {
 
-				console.log('es admin para cajas')
-
-				return this.cajas 
+				return this.cajas
 			}
 
 			const cajas = []
@@ -64,8 +72,6 @@ export default {
 			this.cajas.forEach(caja => {
 
 				if (this.user_can_view_caja_in_tesoreria(caja)) {
-
-					console.log('agregando la caja '+caja.name)
 
 					cajas.push(caja)
 				}
@@ -101,13 +107,39 @@ export default {
 }
 </script>
 <style lang="sass">
-@import '@/sass/_custom'
+// Estado de la caja en la fila. Tres senales suaves en vez de un bloque de color:
+// (1) un tinte muy leve, (2) una barra de acento de 3px en el borde izquierdo y
+// (3) la pildora de EstadoCaja.vue en la columna Estado. La paleta vive en
+// src/sass/_dark_theme.sass, definida en modo claro y oscuro.
+//
+// El !important NO es decoracion: `.cont-table .common-table td` (en
+// common-vue/components/display/table/Index.vue) pinta el fondo del td y pesa (0,2,1);
+// `.caja-abierta td` pesa (0,1,1) y sin !important pierde siempre.
+//
+// La barra va como box-shadow inset y no como border-left: un border agrega 3px al ancho
+// de la celda y corre el contenido de la primera columna respecto de las filas vecinas.
 .caja-abierta
-	td 
-		background: lighten($green, 25%) !important
+	td
+		background: var(--caja-abierta-fondo) !important
 
+	td:first-child
+		box-shadow: inset 3px 0 0 0 var(--caja-abierta-acento)
+
+	// El hover de la tabla (`.common-table tr:hover td`) es una declaracion normal, asi que
+	// hoy el !important de arriba se lo come y las filas de cajas son las unicas de todo el
+	// sistema que no responden al mouse. Con esta regla vuelve a responder.
+	&:hover
+		td
+			background: var(--caja-abierta-fondo-hover) !important
 
 .caja-cerrada
-	td 
-		background: lighten($red, 25%) !important
+	td
+		background: var(--caja-cerrada-fondo) !important
+
+	td:first-child
+		box-shadow: inset 3px 0 0 0 var(--caja-cerrada-acento)
+
+	&:hover
+		td
+			background: var(--caja-cerrada-fondo-hover) !important
 </style>
