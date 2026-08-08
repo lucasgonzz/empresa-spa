@@ -35,7 +35,7 @@
 			</b-form-input>
 			<whatsapp-btn
 			:sale="sale"
-			:phone="whatsapp_phone"
+			:phone_override="whatsapp_phone"
 			:force_show="true"
 			:disabled="!whatsapp_phone || !whatsapp_phone.trim()"
 			@sent="maybe_offer_update_client_phone">
