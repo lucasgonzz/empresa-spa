@@ -4,7 +4,49 @@ Harness de tests end-to-end del prompt 617 (grupo 184). Prueba pocos recorridos 
 de punta a punta contra la interfaz real; el calculo numerico (costeo, descuentos, flete) ya esta
 cubierto por la suite PHPUnit de `empresa-api` (prompts 614-616). **No** repite esa matriz aca.
 
-## Setup
+## Setup en un slot del sistema paralelo (`C:\cc-worktrees\sN`) — usá esto
+
+Un slot **no puede** usar el setup manual de más abajo: apunta a `localhost:8080` y a la base de la
+carpeta fija `C:\wamp64\www\empresa`, que es donde Lucas prueba a mano y que el slot tiene prohibido
+tocar (ver el hallazgo `20260805-playwright-no-ejecutable-desde-un-slot`). Para eso está
+**`e2e/setup-slot.ps1`**, que deja el worktree corriendo por su cuenta:
+
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File <raiz_slot>\empresa-spa\e2e\setup-slot.ps1
+```
+
+Hace, en este orden: `npm install` + `npx playwright install chromium`; apunta el `.env.testing` de
+`empresa-api` a los puertos del slot; `migrate:fresh` + `TestingFerreteriaSeeder` sobre la base del
+slot (`empresa_testing_sN`, la que declara `.claude\SLOT.json`); corrige tres datos del usuario del
+fixture; y escribe `.env.local` y `e2e/.env.e2e`. Al terminar imprime los dos comandos para levantar
+los servidores.
+
+**Convención de puertos** (para que N slots convivan y ninguno pise el 8000/8080 de la carpeta fija):
+API = `8100 + N`, SPA = `8180 + N`. Slot 1: `8101` y `8181`.
+
+Las tres cosas que el script corrige en la base y que no son obvias:
+
+| Qué | Por qué |
+|---|---|
+| `users.default_version` → la SPA del slot | `src/mixins/check_version.js` compara el origin actual contra `default_version` y **redirige** si difieren. `UserSeeder` lo siembra en `:8080`, así que el primer login sacaba al navegador del slot y lo metía en el entorno de Lucas |
+| `users.activity_minutes = 0` | Es el lock de sesión única (`AuthHelper::ya_paso_el_tiempo`). Cada corrida hace un login con `session_id` nuevo, así que con el valor por defecto (60) la **segunda** corrida no puede loguear por una hora. El síntoma es un login que se queda en `/login` sin ningún error visible |
+| `session_id` y `last_activity` → `null` | Libera el lock que dejó la corrida anterior |
+
+Y una variable que el `.env.local` **tiene que** llevar: `VUE_APP_PUSHER_KEY` (y `_CLUSTER`). Sin
+ella `src/main.js` tira `You must pass your app key when you instantiate Pusher` antes de montar la
+app: la página queda en blanco, sin un solo `data-testid`, y desde el test se ve como "no encuentro
+el input de login".
+
+> ⚠️ **Estado conocido (10/8/2026):** con la API servida por `php artisan serve` la suite todavía no
+> corre entera. Ese servidor atiende **un request por vez** y el arranque de la SPA son ~73 llamadas:
+> medido, la descarga de recursos no termina en 120 s (a los 117 s iba por 35 de 73) y una búsqueda
+> lanzada en el medio tarda ~9 s en responder. El proyecto `setup` (login) pasa; los dos specs mueren
+> compitiendo con esa cola. Está registrado como hallazgo y escalado: la salida pasa por servir la
+> API con concurrencia o por achicar el arranque, y ninguna de las dos es del harness.
+
+---
+
+## Setup manual (carpeta fija de Lucas)
 
 1. Tener corriendo en local:
    - `empresa-api` (`php artisan serve` o Valet/Wamp) con la base sembrada con el fixture

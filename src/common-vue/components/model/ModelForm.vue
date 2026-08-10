@@ -235,8 +235,16 @@
 									:class="Number(model[prop.key]) === 1 ? 'model-form__boolean-badge--yes' : 'model-form__boolean-badge--no'">
 										{{ Number(model[prop.key]) === 1 ? 'Sí' : 'No' }}
 									</span>
+									<!-- El data-testid del label NO es un duplicado del que lleva el input: el input
+									     de un toggle esta oculto por CSS (el control visible es este label con su
+									     track y su thumb), asi que un test no lo puede clickear ni marcar con
+									     check() —Playwright exige que el elemento sea visible— y la unica salida
+									     seria forzar el click salteando esa verificacion. Con este testid el test
+									     clickea lo mismo que clickea una persona, y sigue leyendo el estado del
+									     input por su propio testid. -->
 									<label
 									:for="model_name+'-'+prop.key"
+									:data-testid="model_name+'-'+prop.key+'-toggle'"
 									class="model-form__toggle"
 									:class="{ 'model-form__toggle--disabled': isDisabled(prop, form_to_filter) }">
 										<input

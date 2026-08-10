@@ -46,6 +46,27 @@ const RECEIVED_CON_AUMENTO = '8'
  * @param {string} query texto a buscar.
  * @returns {Promise<void>}
  */
+/**
+ * Abre una pestaña del formulario generico (ModelForm).
+ *
+ * Desde que ModelForm reparte sus campos en grupos, el formulario de la compra es un conjunto de
+ * PESTAÑAS ("Configuracion", "Articulos", "Facturacion", "Descuentos y recargos", "Total") y solo
+ * se renderizan los campos del grupo activo: los demas NO estan en el DOM. Este helper hace lo
+ * mismo que un humano —clickear la pestaña— antes de tocar un campo que vive en otro grupo.
+ *
+ * Se acota al modal de la compra a proposito: la nav del modulo que quedo detras del modal usa el
+ * mismo componente y los mismos data-testid ("proveedores", "compras").
+ *
+ * @param {import('@playwright/test').Page} page
+ * @param {string} nombre Titulo del grupo, tal cual lo declara src/models/provider_order.js.
+ * @returns {Promise<void>}
+ */
+async function abrir_pestania(page, nombre) {
+	await page.locator('#provider_order___BV_modal_outer_')
+		.locator(`[data-testid="nav-item-${nombre}"]`)
+		.click()
+}
+
 async function search_and_select(page, field_testid, query) {
 	await page.locator(`[data-testid="${field_testid}"]`).click()
 	const modal_input = page.locator(`[data-testid="${field_testid}-search-modal-input"]`)
@@ -67,7 +88,37 @@ async function search_and_select(page, field_testid, query) {
 	// camino alternativo, para usuarios con los articulos descargados o sin conexion.
 	await modal_input.press('Enter')
 	// Auto-espera: el primer resultado tarda lo que tarde en filtrar/renderizar, sin waitForTimeout.
-	await page.locator('[data-testid="search-result-row"]').first().click()
+	await elegir_primer_resultado(page, field_testid)
+}
+
+/**
+ * Clickea el primer resultado del modal y espera la SEÑAL REAL de que la seleccion ocurrio: que el
+ * modal se haya cerrado. Si no se cerro, vuelve a clickear.
+ *
+ * Por que hace falta reintentar, y por que esto no es un sleep disfrazado: cuando la busqueda
+ * termina, el modal autoselecciona la primera fila (selected_index), y ese watch de TableComponent
+ * levanta una guarda `is_from_keydown` que se baja con un setTimeout de 500 ms. Mientras la guarda
+ * esta arriba, TableComponent::onRowSelected() descarta el evento entero: el click en la fila no
+ * emite nada, no seleccciona y el modal queda abierto tapando el formulario. Playwright clickea
+ * apenas la fila aparece, o sea casi siempre DENTRO de esos 500 ms. Medido el 10/8/2026: tras el
+ * click el modal seguia con clase "modal fade show" a los 12 segundos, y en la consola salian los
+ * dos "onRowSelected items:" de TableComponent sin un solo "onRowSelected para SEARCH MODAL".
+ *
+ * Es un bug real del producto y le pasa igual a una persona que clickee rapido; quedo registrado
+ * como hallazgo y escalado, porque arreglarlo de raiz cambia el comportamiento de la navegacion por
+ * teclado para todos los usuarios. Lo de aca NO tapa el sintoma con un timeout mas largo: espera la
+ * condicion observable correcta (modal cerrado) y, si no se cumple, repite la MISMA accion.
+ *
+ * @param {import('@playwright/test').Page} page
+ * @param {string} field_testid data-testid del input principal del campo search.
+ * @returns {Promise<void>}
+ */
+async function elegir_primer_resultado(page, field_testid) {
+	const modal = page.locator(`#${field_testid}-search-modal`)
+	await expect(async () => {
+		await page.locator('[data-testid="search-result-row"]').first().click()
+		await expect(modal).toBeHidden({ timeout: 1500 })
+	}).toPass({ timeout: 30000 })
 }
 
 test.describe('Compras: alta de compra completa', () => {
@@ -76,15 +127,23 @@ test.describe('Compras: alta de compra completa', () => {
 		await page.goto('/proveedores/compras')
 		await page.locator('[data-testid="btn-crear-provider_order"]').click()
 
-		// 2. Proveedor Buenos Aires y deposito Principal.
+		// 2. Proveedor Buenos Aires y deposito Principal. Los dos viven en la pestaña
+		// "Configuracion", que es la que el formulario abre por defecto.
 		await search_and_select(page, 'provider_order-provider_id', 'Buenos Aires')
 		await page.locator('[data-testid="provider_order-address_id"]').selectOption({ label: 'Principal' })
 
-		// 3. Facturacion automatica + "los precios ya incluyen IVA" activado.
+		// 3. "Los precios ya incluyen IVA" (pestaña "Configuracion") y facturacion automatica
+		// (pestaña "Facturacion"). Se hace en ese orden porque cambiar de pestaña desmonta los
+		// campos de la anterior: el toggle se marca mientras su grupo todavia esta en pantalla.
+		// El toggle se clickea por su label (el input del checkbox esta oculto por CSS: el control
+		// visible es el label). El estado se verifica sobre el input, que es el que lo tiene.
+		await page.locator('[data-testid="provider_order-precios_incluyen_iva-toggle"]').click()
+		await expect(page.locator('[data-testid="provider_order-precios_incluyen_iva"]')).toBeChecked()
+		await abrir_pestania(page, 'Facturacion')
 		await page.locator('[data-testid="provider_order-modo_facturacion"]').selectOption('automatico')
-		await page.locator('[data-testid="provider_order-precios_incluyen_iva"]').check()
 
 		// 4. Cargar los 10 articulos del fixture (5 de Buenos Aires + 5 de Rosario).
+		await abrir_pestania(page, 'Articulos')
 		for (const article of ALL_ARTICLES) {
 			const rows_before = await page.locator('[data-testid^="article-amount-"]').count()
 
@@ -125,6 +184,8 @@ test.describe('Compras: alta de compra completa', () => {
 		await row.click()
 
 		// El total mostrado en pantalla debe coincidir con el total que devolvio la API.
+		// El total vive en la pestaña "Total" del formulario.
+		await abrir_pestania(page, 'Total')
 		const total_text = await page.locator('[data-testid="compra-total"]').innerText()
 		const total_from_server = Number(saved_model.total)
 		expect(total_text).toContain(
@@ -134,12 +195,14 @@ test.describe('Compras: alta de compra completa', () => {
 		// Los descuentos del proveedor (10% y 5%) deben haber quedado precargados en la compra.
 		// Se lee el texto del contenedor de descuentos (ubicado por data-testid, no por clase):
 		// no es una seleccion por texto, es una aserción de contenido sobre un elemento ya ubicado.
+		await abrir_pestania(page, 'Descuentos y recargos')
 		const discounts_container = page.locator('[data-testid="provider_order-provider_order_discounts"]')
 		const discounts_text = await discounts_container.innerText()
 		expect(discounts_text).toContain('10')
 		expect(discounts_text).toContain('5')
 
 		// Los 2 articulos con recibida 8 deben seguir mostrando esa cantidad al reabrir.
+		await abrir_pestania(page, 'Articulos')
 		let count_received_8 = 0
 		const all_received = page.locator('[data-testid^="article-received-"]')
 		const total_received_inputs = await all_received.count()

@@ -11,8 +11,14 @@
 			oculta por completo (ver "v_if_function: es_responsable_inscripto_v_if_function" en el prop
 			"precios_incluyen_iva" de src/models/provider_order.js).
 		-->
+		<!--
+			El data-testid del label no duplica el del input: el input de un toggle esta oculto por
+			CSS (el control visible es este label), asi que un test no lo puede clickear. Mismo
+			criterio y mismo sufijo que el toggle generico de ModelForm.vue.
+		-->
 		<label
 		for="provider_order-precios_incluyen_iva"
+		data-testid="provider_order-precios_incluyen_iva-toggle"
 		class="model-form__toggle">
 			<input
 			type="checkbox"

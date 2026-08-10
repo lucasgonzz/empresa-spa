@@ -21,6 +21,7 @@
 				ref="tableComponent"
 				:select-mode="_select_mode"
 				:tbody-tr-class="rowClass"
+				:tbody-tr-attr="rowAttrs"
 				@row-selected="onRowSelected">
 					<template v-slot:table_left_options>
 						<slot name="table_left_options" :model="model"></slot>
@@ -605,6 +606,42 @@ export default {
 			if (this.model_name && this.hasColor(this.model_name)) {
 				return this[this.model_name+'GetColor'](this.models.find(model => model.id == item.id))
 			}
+		},
+		/**
+		 * data-testid de cada fila, con la MISMA convencion que documenta e2e/README.md y que ya
+		 * aplica display/table/Tr.vue: "search-result-row" para una fila del modal de busqueda,
+		 * "<model_name>-row-<id>" para una fila de listado.
+		 *
+		 * Por que hace falta aca tambien, y por que no alcanzaba con Tr.vue: son dos tablas
+		 * distintas. Tr.vue es la tabla propia de display/table/Index.vue; ESTE componente renderiza
+		 * con <b-table> de bootstrap-vue, que arma sus <tr> por su cuenta y nunca pasa por Tr.vue.
+		 * El modal de busqueda usa este camino, asi que la fila de resultado salia SIN ningun
+		 * data-testid: la busqueda encontraba al proveedor, la fila se veia en pantalla, y el test
+		 * igual moria esperando [data-testid="search-result-row"]. Medido el 10/8/2026 volcando el
+		 * DOM real de la fila: clases "b-table-row-selected table-active", atributo data-testid
+		 * ausente. Es tambien el motivo por el que faltaba "provider_order-row-<id>" en el listado.
+		 *
+		 * El discriminante es is_from_search_modal (lo pasa search/Modal.vue) y NO _select_mode:
+		 * _select_mode vale 'single' en los dos casos cuando el store no es seleccionable, asi que
+		 * usarlo dejaria las filas de un listado comun llamandose "search-result-row".
+		 *
+		 * Solo agrega un atributo: no cambia el render ni el comportamiento de la tabla.
+		 *
+		 * @param {object} item Fila tal como la arma el computed items() (siempre trae id).
+		 * @param {string} type Tipo de fila de b-table ('row' | 'row-details').
+		 * @returns {object} Atributos extra para el <tr>.
+		 */
+		rowAttrs(item, type) {
+			if (type != 'row' || !item) {
+				return {}
+			}
+			if (this.is_from_search_modal) {
+				return { 'data-testid': 'search-result-row' }
+			}
+			if (this.model_name && typeof item.id != 'undefined') {
+				return { 'data-testid': this.model_name + '-row-' + item.id }
+			}
+			return {}
 		},
 		download() {
 			this.$store.dispatch(this.model_name+'/getModels')

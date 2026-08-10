@@ -13,6 +13,7 @@
 				v-for="(item, i) in items"
 				:key="i"
 				:dusk="value(item)"
+				:data-testid="testid(item)"
 				@click="select(item)"
 				:class="isActive(item)">
 					{{ itemName(item) }}
@@ -405,6 +406,28 @@ export default {
 		},
 		value(item) {
 			return item[this._prop_name]
+		},
+		/**
+		 * data-testid de una pestaña de esta nav, con la convencion de e2e/README.md.
+		 *
+		 * Hace falta porque desde el prompt de grupos de props el formulario generico (ModelForm)
+		 * reparte sus campos en PESTAÑAS: solo se renderizan los del grupo activo. Los tests e2e de
+		 * compras se escribieron cuando el formulario era uno solo, asi que buscaban campos como
+		 * provider_order-modo_facturacion (grupo "Facturacion") o provider_order-articles (grupo
+		 * "Articulos") sin cambiar de pestaña, y morian esperando un elemento que todavia no existe
+		 * en el DOM. Con esto un test puede hacer lo mismo que un humano: clickear la pestaña.
+		 *
+		 * Solo agrega un atributo, al lado del `dusk` que ya estaba: no cambia nada del render.
+		 *
+		 * @param {object} item Item de la nav.
+		 * @returns {string|null} 'nav-item-<valor>' o null si el item no tiene un valor usable.
+		 */
+		testid(item) {
+			let valor = this.value(item)
+			if (typeof valor != 'string' || !valor.length) {
+				return null
+			}
+			return 'nav-item-' + valor
 		},
 		routeValue(item) {
 			if (item.route_value) {

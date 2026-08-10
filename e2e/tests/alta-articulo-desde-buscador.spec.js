@@ -26,9 +26,24 @@ test.describe('Compras: alta de articulo desde el buscador', () => {
 		await provider_modal_input.fill('')
 		await provider_modal_input.pressSequentially('Rosario')
 		await provider_modal_input.press('Enter')
-		await page.locator('[data-testid="search-result-row"]').first().click()
+		// Click con reintento hasta que el modal se cierre, que es la señal real de que la seleccion
+		// ocurrio. Mismo motivo que el helper elegir_primer_resultado de alta-compra.spec.js: durante
+		// los primeros 500 ms despues de la busqueda, TableComponent descarta el click por su guarda
+		// is_from_keydown y el modal queda abierto. No es un timeout mas largo: es esperar la
+		// condicion correcta y repetir la misma accion si no se cumplio.
+		const provider_search_modal = page.locator('#provider_order-provider_id-search-modal')
+		await expect(async () => {
+			await page.locator('[data-testid="search-result-row"]').first().click()
+			await expect(provider_search_modal).toBeHidden({ timeout: 1500 })
+		}).toPass({ timeout: 30000 })
 
 		// 2. Escribir en el buscador de articulos un nombre que no existe.
+		// El buscador de articulos vive en la pestaña "Articulos" del formulario generico: desde que
+		// ModelForm reparte sus campos en grupos, solo se renderizan los del grupo activo, y el que
+		// abre por defecto es "Configuracion". Sin este click el campo no existe en el DOM.
+		await page.locator('#provider_order___BV_modal_outer_')
+			.locator('[data-testid="nav-item-Articulos"]')
+			.click()
 		await page.locator('[data-testid="provider_order-articles"]').click()
 		const articles_modal_input = page.locator('[data-testid="provider_order-articles-search-modal-input"]')
 		// Tecleo real: es lo que deja ya_se_busco en false y hace que el PRIMER Enter busque. Con
