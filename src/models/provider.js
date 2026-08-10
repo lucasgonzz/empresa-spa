@@ -6,6 +6,10 @@ export default {
 			type: 'number',
 			not_show_on_form: true,
 		},
+
+		{
+			group_title: 'Datos generales',
+		},
 		{
 			text: 'Nombre',
 			key: 'name',
@@ -36,6 +40,15 @@ export default {
 			if_has_extencion: 'ventas_en_dolares',
 		},
 		{
+			text: 'Observaciones',
+			key: 'observations',
+			type: 'textarea',
+		},
+
+		{
+			group_title: 'Precios y descuentos',
+		},
+		{
 			text: 'Setear precio con COSTO + IVA',
 			key: 'price_from_cost_mas_iva',
 			type: 'checkbox',
@@ -45,6 +58,12 @@ export default {
 			text: 'Margen de ganancia',
 			key: 'percentage_gain',
 			type: 'number',
+		},
+		{
+			text: 'Valor dolar',
+			key: 'dolar',
+			type: 'number',
+			is_price: true,
 		},
 		{
 			text: '% de comision ventas en NEGRO',
@@ -59,62 +78,6 @@ export default {
 			type: 'number',
 			if_has_extencion: 'comision_por_proveedores',
 			not_show: true,
-		},
-		{
-			text: 'Valor dolar',
-			key: 'dolar',
-			type: 'number',
-			is_price: true,
-		},
-		{
-			text: 'Telefono',
-			key: 'phone',
-			type: 'text',
-		},
-		{
-			text: 'Direccion',
-			key: 'address',
-			type: 'text',
-		},
-		{
-			text: 'Correo',
-			key: 'email',
-			type: 'text',
-			not_show: true,
-		},
-		{
-			text: 'Razon social',
-			key: 'razon_social',
-			type: 'text',
-			not_show: true,
-		},
-		{
-			text: 'Cuit',
-			key: 'cuit',
-			type: 'text',
-		},
-		{
-			text: 'Observaciones',
-			key: 'observations',
-			type: 'textarea',
-		},
-		{
-			text: 'Provincia',
-			key: 'provincia_id',
-			type: 'search',
-			use_store_models: true,
-		},
-		{
-			text: 'Localidad',
-			key: 'location_id',
-			type: 'search',
-			depends_on: 'provincia_id',
-		},
-		{
-			text: 'IVA',
-			key: 'iva_condition_id',
-			type: 'select',
-			value: 0,
 		},
 		{
 			text: 'Descuentos',
@@ -133,6 +96,59 @@ export default {
 		// 	},
 		// 	not_show: true,
 		// },
+
+		{
+			group_title: 'Datos de contacto',
+		},
+		{
+			text: 'Telefono',
+			key: 'phone',
+			type: 'text',
+		},
+		{
+			text: 'Provincia',
+			key: 'provincia_id',
+			type: 'search',
+			use_store_models: true,
+		},
+		{
+			text: 'Localidad',
+			key: 'location_id',
+			type: 'search',
+			depends_on: 'provincia_id',
+		},
+		{
+			text: 'Direccion',
+			key: 'address',
+			type: 'text',
+		},
+		{
+			text: 'Correo',
+			key: 'email',
+			type: 'text',
+			not_show: true,
+		},
+
+		{
+			group_title: 'Facturacion',
+		},
+		{
+			text: 'IVA',
+			key: 'iva_condition_id',
+			type: 'select',
+			value: 0,
+		},
+		{
+			text: 'Cuit',
+			key: 'cuit',
+			type: 'text',
+		},
+		{
+			text: 'Razon social',
+			key: 'razon_social',
+			type: 'text',
+			not_show: true,
+		},
 	],
 	singular_model_name_spanish: 'Proveedor',
 	plural_model_name_spanish: 'Proveedores',
