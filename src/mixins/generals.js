@@ -137,6 +137,28 @@ export default {
         ocultar_aplicar_iva_al_costo_si_usa_condicion_fiscal_v_if_function(prop, model) {
             return !(model && model.usar_condicion_fiscal_en_costeo)
         },
+        /**
+         * Lo simetrico de la funcion de arriba: muestra el select de condicion de IVA SOLO cuando
+         * la dinamica de costeo por condicion fiscal esta activada.
+         *
+         * Con el checkbox apagado, iva_va_al_costo() resuelve por la tilde historica
+         * aplicar_iva_al_costo y la condicion fiscal se ignora por completo: elegir Responsable
+         * Inscripto o Monotributista no cambia absolutamente nada. Dejarlo a la vista invita a
+         * tocarlo creyendo que hace algo, que es el mismo motivo por el que se oculta la tilde
+         * historica en el caso contrario.
+         *
+         * No es un caso de borde: la migracion 2026_07_27_120000 deja el checkbox en 0 para TODAS
+         * las cuentas existentes a proposito (solo las nuevas nacen en 1, desde
+         * HelperController::store_user), asi que hoy es el estado por defecto de la base instalada.
+         * Hallazgo 20260805-condicion-de-iva-visible-aunque-no-tenga-efecto.
+         *
+         * @param {Object} prop propiedad del modelo que declara este v_if_function.
+         * @param {Object} model el usuario (users) que se esta editando.
+         * @returns {Boolean}
+         */
+        mostrar_condicion_iva_si_usa_condicion_fiscal_v_if_function(prop, model) {
+            return !!(model && model.usar_condicion_fiscal_en_costeo)
+        },
 
         set_expense_caja_id(prop_payment_method, model) {
 

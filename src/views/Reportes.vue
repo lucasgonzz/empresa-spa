@@ -26,6 +26,16 @@
 		No se referencian desde el template: si parecen sin uso, no borrar. -->
 		<sale-modal></sale-modal>
 		<model-index model_name="provider_order"></model-index>
+		<!-- Los otros cuatro tipos que el backend devuelve en el drill-down. El grupo 319 monto solo
+		los dos de arriba y escondio el boton para estos, que era lo correcto entonces: mejor sin
+		boton que con un boton muerto. Ahora se montan, asi que el boton vuelve a aparecer y abre.
+		expense es el drill-down de Gastos operativos (de los mas usados del Estado de Resultados),
+		current_acount son cobranzas y pagos a proveedores, y movimiento_caja y cheque son los dos de
+		Flujo de Caja. Hallazgo 20260803-reportes-comprobantes-sin-modal. -->
+		<model-index model_name="expense"></model-index>
+		<model-index model_name="current_acount"></model-index>
+		<model-index model_name="movimiento_caja"></model-index>
+		<model-index model_name="cheque"></model-index>
 	</div>
 </template>
 <script>

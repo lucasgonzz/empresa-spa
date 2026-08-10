@@ -102,12 +102,22 @@ export default {
 			}
 		},
 		/* Un tipo entra a este mapa cuando su modal esta efectivamente montado en
-		   views/Reportes.vue, no antes: los que quedaron afuera (expense, current_acount,
-		   cheque, movimiento_caja) eran un clic muerto, no una funcionalidad que se saco. */
+		   views/Reportes.vue, no antes: un tipo mapeado sin su modal montado es un clic muerto.
+		   Desde la mision 10 (10/8/2026) estan los seis tipos que devuelve el backend. Si mañana
+		   aparece un link_tipo nuevo: primero se monta su modal en Reportes.vue, despues entra aca. */
 		modelo_por_link_tipo() {
 			return {
 				sale: 'sale',
 				provider_order: 'provider_order',
+				// Los cuatro que agrego la mision 10 (hallazgo 20260803-reportes-comprobantes-sin-modal),
+				// ahora que views/Reportes.vue monta sus modales. El valor es el model_name del store,
+				// no el nombre del link: movimiento_caja apunta a 'movimiento_caja' y NO a 'caja', que
+				// es otro modelo (la caja es el contenedor; el movimiento es el comprobante que el
+				// usuario quiere ver). Ese mapeo equivocado es parte del hallazgo.
+				expense: 'expense',
+				current_acount: 'current_acount',
+				movimiento_caja: 'movimiento_caja',
+				cheque: 'cheque',
 			}
 		},
 		pagina_actual: {

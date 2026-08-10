@@ -101,6 +101,11 @@ export default {
 			descriptions: [
 				'Determina como se calculan los costos. Un Monotributista no recupera el IVA de sus compras, asi que el IVA forma parte del costo. Un Responsable Inscripto lo recupera, asi que el IVA se suma al momento de vender.',
 			],
+			// Simetrico de la tilde historica de arriba: con el checkbox de abajo apagado, este
+			// select no gobierna nada (iva_va_al_costo() resuelve por aplicar_iva_al_costo y la
+			// condicion fiscal se ignora), asi que se oculta en vez de dejarlo a la vista invitando
+			// a tocarlo. Mismo mecanismo de v_if_function, no uno nuevo.
+			v_if_function: 'mostrar_condicion_iva_si_usa_condicion_fiscal_v_if_function',
 		},
 		// Grupo 231, prompt 06: activa la dinamica de costeo por condicion fiscal (grupo 231,
 		// prompt 02) en reemplazo de la tilde historica "aplicar_iva_al_costo".
