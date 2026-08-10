@@ -4,6 +4,14 @@
 	:title="title"
 	hide-footer
 	id="movimientos-caja">
+		<!--
+			listado_paginado_por_defecto en false: este modal ya carga los movimientos
+			scopeados por la apertura elegida (route_prefix = apertura_caja.id +
+			movimiento_caja/getModels, ver clicked() en aperturas/Index.vue) antes de
+			abrirse. Mismo problema que en aperturas/Index.vue: movimiento_cajas tampoco
+			tiene columna user_id, asi que el runListadoPorDefecto del grupo 221 rompe con
+			500 apenas monta. Ver hallazgo 20260810-buscador-general-modelos-sin-user-id.
+		-->
 		<view-component
 		@modelSaved="actualizar_info"
 		@modelDeleted="actualizar_info"
@@ -11,6 +19,7 @@
 		@clicked="clicked"
 		:show_btn_save="show_btn_save"
 		:props_to_send_on_save="props_to_send_on_save"
+		:listado_paginado_por_defecto="false"
 		model_name="movimiento_caja">
 			<template #header>
 				<info-apertura-caja></info-apertura-caja>
