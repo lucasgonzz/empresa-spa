@@ -38,10 +38,20 @@
 			</div>
 		</div>
 
+		<!--
+			listado_paginado_por_defecto en false: BtnAperturas.vue YA carga las aperturas
+			scopeadas por esta caja (route_prefix = caja.id + apertura_caja/getModels) antes
+			de abrir el modal. Sin este corte, el view-component dispara ademas su propio
+			runListadoPorDefecto (grupo 221) contra global-search/apertura_caja, que no
+			respeta route_prefix (trae aperturas de TODAS las cajas del usuario) y encima
+			rompe con 500 porque apertura_cajas no tiene columna user_id (el dueno vive en
+			cajas.user_id, un nivel arriba). Ver hallazgo 20260810-buscador-general-modelos-sin-user-id.
+		-->
 		<view-component
 		@clicked="clicked"
 		:set_model_on_row_selected="false"
 		:show_btn_create="false"
+		:listado_paginado_por_defecto="false"
 		model_name="apertura_caja">
 
 			<!--
