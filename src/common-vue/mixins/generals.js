@@ -893,17 +893,23 @@ export default {
 						if (typeof finded_model != 'undefined') {
 							// console.log('encontro: ')
 							// console.log(finded_model)
-							return finded_model[prop_name]	
+							return finded_model[prop_name]
 						}
-						console.log('no se encontro la relacion para '+relationship)
-						return null
-					} else if (model[relationship] && model[relationship][prop_name]) {
-						return model[relationship][prop_name] 
 					}
-					// let _model = this.$store.state[relationship].models.find(model_ => {
-					// 	return model_.id == model[prop.key]
-					// })
-					// return _model[prop_name]
+
+					// El orden importa y el fallback no puede ser un `else`. Antes esta rama devolvia
+					// null cuando el modelo no estaba en el store, aunque la relacion viajara cargada
+					// en la respuesta: la columna Proveedor del Listado quedaba vacia para todo
+					// articulo cuyo proveedor no estuviera entre los descargados (4/8/2026). El nombre
+					// de la relacion se deriva de la clave, no de prop.store, porque hay props (cheque:
+					// endosado_desde_client_id) donde el store apunta a `client` pero la relacion
+					// embebida se llama distinto y leer la del store devolveria otro modelo.
+					let embedded_relationship = this.modelNameFromRelationKey(prop, false, false)
+					if (model[embedded_relationship] && model[embedded_relationship][prop_name]) {
+						return model[embedded_relationship][prop_name]
+					}
+
+					return null
 				} else {
 					return 'S/A'
 				}
@@ -1183,6 +1189,22 @@ export default {
 			return options
 
 		},
+		/**
+		 * Arma options para un <select> a partir de `options` del store (catalogo completo, sin
+		 * withAll ni paginar) en vez de `models` (parcial/paginado). Pensado para props de un store
+		 * construido con __base_store (los unicos que tienen `options` en su state) cuyo catalogo
+		 * dejo de descargarse al iniciar sesion y ahora se pide con la accion getOptions de Vuex al
+		 * abrir la pantalla que lo necesita (grupo 332, 4/8/2026). No usar con stores que no vengan
+		 * del factory: esos no tienen `options` en su state.
+		 */
+		getOptionsFromCatalog(prop) {
+			let store = prop.store || prop.key.substring(0, prop.key.length - 3)
+			let options = [{ value: 0, text: 'Seleccione ' + this.propText(prop) }]
+			this.$store.state[store].options.forEach(item => {
+				options.push({ value: item.id, text: item.name })
+			})
+			return options
+		},
 		getOptions(prop, model = null, model_name = null, add_opcion_0 = true) {
 			let store
 
@@ -1347,6 +1369,48 @@ export default {
 					text,
 				})
 			})
+
+			return options
+		},
+		/**
+		 * Tarea 4 — opciones del select "Opciones de redondeo" de la configuración de la cuenta
+		 * (user.modo_redondeo). Reemplaza a las cuatro tildes sueltas de redondeo.
+		 *
+		 * El orden es de paso más grande a más chico, que es como lo lee el cliente. NO es el orden
+		 * en que están los `if` de ArticleHelper::redondear(), que aplica el de a 50 después del de
+		 * a 10.
+		 *
+		 * Los textos dicen "al más cercano" contra "siempre hacia arriba", y aclaran el mínimo de
+		 * $100 de la opción de centenas, porque son diferencias reales de comportamiento entre
+		 * opciones que ahora conviven en la misma lista: viéndolas juntas cualquiera asume que
+		 * funcionan igual, y no funcionan igual.
+		 *
+		 * @param {Object} prop - Definición declarativa del campo (no se usa; va por firma común de dynamic_options_function).
+		 * @param {Object} model - Instancia de user que se está editando.
+		 * @returns {Array<{value: string, text: string, disabled: boolean|undefined}>}
+		 */
+		get_modo_redondeo_options(prop, model) {
+			let options = [
+				{ value: 'sin_redondeo', text: 'Sin redondeo' },
+				{ value: 'miles', text: 'Redondear de a 1000 (al mas cercano)' },
+				{ value: 'centenas', text: 'Redondear de a 100 (al mas cercano, solo en precios mayores a $100)' },
+				{ value: 'cincuenta', text: 'Redondear de a 50 (siempre hacia arriba)' },
+				{ value: 'decenas', text: 'Redondear de a 10 (al mas cercano)' },
+				{ value: 'centavos', text: 'Redondear a peso entero (sin centavos)' },
+			]
+
+			// "Combinacion personalizada" solo aparece si el usuario efectivamente está en ese
+			// estado (dos o más columnas de redondeo prendidas, que es lo que devuelve el accessor
+			// del backend). Va deshabilitada: sirve para que vea en qué configuración está, pero no
+			// para volver a elegirla una vez que se movió a otra — el backend no sabría a qué
+			// combinación volver.
+			if (model && model.modo_redondeo == 'personalizado') {
+				options.push({
+					value: 'personalizado',
+					text: 'Combinacion personalizada (configuracion actual)',
+					disabled: true,
+				})
+			}
 
 			return options
 		},

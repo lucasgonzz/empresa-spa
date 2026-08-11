@@ -1735,13 +1735,18 @@ export default {
 
 	// ─── Label moderno: compacto, peso alto, tipografía uppercase sutil ───────
 	// Similar a LoginForm: pequeño, oscuro, con letra-espaciado para legibilidad
+	// Los colores van por token con el literal viejo de fallback, y NO por una regla en
+	// _dark_theme.sass: el <style> del componente le gana por especificidad al tema global, asi que
+	// el arreglo tiene que vivir aca adentro. Vale para todos los bloques de abajo.
 	.form-label
 		font-size: 0.78rem
 		font-weight: 700
-		color: #374151
+		color: var(--color-text-secondary, #374151)
 		text-transform: uppercase
 		letter-spacing: 0.045em
-		margin-bottom: 0.38rem
+		// Sube de 0.38rem: el label quedaba pegado al input y al valor de solo lectura. Aplica a
+		// los DOS modos, no es un ajuste del tema oscuro.
+		margin-bottom: 0.6rem
 		display: block
 		transition: color 0.15s ease
 
@@ -1761,38 +1766,43 @@ export default {
 		align-items: center
 		min-height: 34px
 		padding: 0.28rem 0.75rem
-		background: #f3f4f6
+		background: var(--bg-section, #f3f4f6)
 		border-radius: 8px
 		font-size: 0.9rem
 		font-weight: 600
-		color: #111827
+		color: var(--color-text-primary, #111827)
 		margin-left: 0
 
 	// ─── Valor de solo lectura (only_show / from_pre_view) ────────────────────
-	// Contenedor tipo "input deshabilitado" con fondo #f3f4f6 (igual que LoginForm)
+	// Contenedor tipo "input deshabilitado" con el fondo de seccion del tema (igual que LoginForm)
 	.model-form__only-show
 		display: inline-flex
 		align-items: center
 		min-height: 34px
 		padding: 0.28rem 0.75rem
-		background: #f3f4f6
+		background: var(--bg-section, #f3f4f6)
 		border-radius: 8px
-		border: 1px solid transparent
+		// El borde era transparent a proposito (reservaba el espacio sin dibujarlo). Con el token
+		// pasa a verse en modo oscuro, que es lo que hace falta para que la pildora se recorte
+		// contra el fondo del modal; en claro es un gris muy suave que casi no se nota.
+		border: 1px solid var(--color-border-secondary, transparent)
 		line-height: 1.45
 		max-width: 100%
+		// Un respiro extra respecto del label, para cuando el label ocupa dos renglones.
+		margin-top: 0.1rem
 
 	// Texto del valor presente: legible, peso medio, oscuro
 	.model-form__only-show-value
 		font-size: 0.9rem
 		font-weight: 500
-		color: #111827
+		color: var(--color-text-primary, #111827)
 		word-break: break-word
 
 	// Campo vacío: indicador visual en gris claro itálica
 	.model-form__no-data
 		font-size: 0.8rem
 		font-style: italic
-		color: #9ca3af
+		color: var(--color-text-secondary, #9ca3af)
 
 	// ─── Badge boolean (Sí / No) ──────────────────────────────────────────────
 	.model-form__boolean-badge
@@ -1843,7 +1853,9 @@ export default {
 		.model-form__toggle-track
 			position: absolute
 			inset: 0
-			background: #d1d5db
+			// El gris del apagado necesita su propio token: sobre fondo oscuro este #d1d5db es una
+			// pastilla clara que se lee como encendida.
+			background: var(--toggle-track-off, #d1d5db)
 			border-radius: 9999px
 			transition: background 0.2s ease
 
@@ -1877,7 +1889,7 @@ export default {
 	.model-form__meta-row
 		margin-top: 0.25rem
 		padding-top: 1.25rem
-		border-top: 1px solid #e5e7eb
+		border-top: 1px solid var(--color-border, #e5e7eb)
 		width: 100%
 
 	// Anula el margin-bottom grande de las columnas del grid principal
@@ -1894,7 +1906,7 @@ export default {
 		align-items: center
 		min-height: 34px
 		padding: 0.28rem 0.75rem
-		background: #f3f4f6
+		background: var(--bg-section, #f3f4f6)
 		border-radius: 8px
 		border: 1px solid transparent
 		line-height: 1.45
@@ -1904,7 +1916,7 @@ export default {
 	.model-form__meta-value
 		font-size: 0.875rem
 		font-weight: 500
-		color: #4b5563
+		color: var(--color-text-secondary, #4b5563)
 		word-break: break-word
 
 // ─── Popover de instrucciones: rediseño ancho + estilo Apple ──────────────────

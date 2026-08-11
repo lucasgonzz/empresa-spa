@@ -143,6 +143,10 @@ export default {
 				modal_id = 'article-import-result-notification'
 			}
 
+			if (notification_modal === 'price_update_result') {
+				modal_id = 'price-update-result-notification'
+			}
+
 			this.$bvModal.show(modal_id)
 		},
 	}

@@ -185,15 +185,28 @@
 							<div v-infinite-scroll="loadMore" infinite-scroll-disabled="busy" infinite-scroll-distance="10"></div> -->
 						</template>
 					</tbody>
+					<!--
+						El estado vacío va como fila de la tabla y no como bloque suelto debajo: con un td de
+						colspan completo, el fondo cubre el ancho REAL de la tabla incluso cuando hay scroll
+						horizontal, y las esquinas inferiores redondeadas de tbody tr:last-child aplican solas.
+						Como <p> hermano de la tabla no heredaba nada de eso: quedaba transparente y, al scrollear
+						de costado, cortado.
+					-->
+					<tbody
+					v-else-if="show_empty_text">
+						<tr
+						class="empty-state-row">
+							<td
+							:colspan="fields.length">
+								<empty-state
+								:title="empty_state_title"
+								:hint="empty_state_hint"></empty-state>
+							</td>
+						</tr>
+					</tbody>
 					<slot name="btn_add_to_show"></slot>
 				</table>
-				<p
-				v-if="!loading && !models.length && show_empty_text"
-				class="text-with-icon">
-					<i class="icon-eye-slash"></i>
-					No hay {{ plural(model_name) }}
-				</p>
-				<!-- <div 
+				<!-- <div
 				v-if="models.length && show_buttons_scroll"
 				class="scroll-buttons">
 					<div 
@@ -234,6 +247,7 @@ export default {
 		Ordenar: () => import('@/common-vue/components/display/table/Ordenar'),
 		BtnFilter: () => import('@/common-vue/components/display/table/BtnFilter'),
 		Pagination: () => import('@/common-vue/components/display/table/pagination/Index'),
+		EmptyState: () => import('@/common-vue/components/display/EmptyState'),
 	},
 	props: {
 		properties: {
@@ -619,6 +633,27 @@ export default {
 				}
 			}
 			return used_keys.join(',')
+		},
+		/**
+		 * Título del estado vacío. Cambia según haya o no filtros aplicados: "no hay nada" y
+		 * "tu búsqueda no encontró nada" son situaciones distintas y el usuario necesita
+		 * distinguirlas para saber si tiene que limpiar filtros o cargar datos.
+		 */
+		empty_state_title() {
+			if (this.table_filters_signature !== '') {
+				return 'No se encontraron resultados'
+			}
+			return 'No hay ' + this.plural(this.model_name)
+		},
+		/**
+		 * Ayuda secundaria: solo cuando hay filtros activos. Sin filtros el título ya lo dice todo
+		 * y una línea extra sería ruido.
+		 */
+		empty_state_hint() {
+			if (this.table_filters_signature !== '') {
+				return 'Probá con otros filtros o limpiá los que tenés aplicados.'
+			}
+			return null
 		},
 	},
 	watch: {
@@ -1413,7 +1448,9 @@ export default {
 	/* Recorta las barras de scroll de .cont-table contra este radio (lo que arregla este prompt). */
 	overflow: hidden
 	/* Sombra sutil movida acá (antes vivía en .cont-table) para que siga pegada al borde real de la tabla. */
-	box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px
+	/* El color va por token (declarado en los dos bloques de _dark_theme.sass): este gris claro es */
+	/* invisible sobre fondo oscuro, donde la sombra tiene que ser negra para leerse. */
+	box-shadow: var(--shadow-color, rgba(99, 99, 99, 0.2)) 0px 2px 8px 0px
 	/* OJO: nunca poner position:relative/absolute/sticky acá. setHeight() calcula */
 	/* window.innerHeight - table.offsetTop, y offsetTop se mide contra el offsetParent (el ancestro */
 	/* posicionado más cercano). Si este wrapper quedara posicionado, pasaría a ser el offsetParent */
@@ -1485,8 +1522,9 @@ export default {
 	.b-skeleton-table
 		@if ($theme == 'dark')
 			background: rgba(0,0,0,.8)
-		@else 
-			background: rgba(255,255,255,.8)
+		@else
+			/* Token con fallback para que el skeleton de carga no destelle blanco en modo oscuro. */
+			background: var(--bg-card, rgba(255,255,255,.8))
 	
 	.common-table
 		// El redondeo (arriba y abajo) lo recorta .cont-table, que es el que scrollea de verdad.
@@ -1512,10 +1550,13 @@ export default {
 			@else
 				color: #000
 
-			&:hover  
+			&:hover
 				// font-weight: bold
-				td 
-					background: rgba(0, 0, 0, .2)
+				td
+					/* El negro translucido estaba pensado para filas blancas: sobre fondo oscuro */
+					/* oscurece cuando deberia aclarar. El token resuelve los dos modos, y va aca */
+					/* adentro porque el selector del componente le gana por especificidad al tema. */
+					background: var(--bg-hover, rgba(0, 0, 0, .2))
 
 		th, td 
 			// white-space: nowrap
@@ -1531,9 +1572,14 @@ export default {
 			top: 0px
 			/* Fondo en el th sticky (no solo en .cont-th): evita que se vea tbody al scrollear por el padding nativo del th. */
 			padding: 0
-			background: #2C2C2C
+			/* Token con fallback al literal viejo, por el mismo motivo de especificidad que el td: el */
+			/* arreglo tiene que vivir adentro del componente. Es --bg-table-header y NO --bg-section: */
+			/* el header va oscuro en los DOS modos (decision de Lucas, 5/8/2026), y --bg-section en */
+			/* claro es casi blanco, con lo cual el header le cambiaria a todos los clientes que hoy */
+			/* usan modo claro. */
+			background: var(--bg-table-header, #2C2C2C)
 			/* Sombra hacia arriba: tapa el hueco de 1–2px por redondeo de subpíxeles al componer capas sticky. */
-			box-shadow: 0 -2px 0 0 #2C2C2C
+			box-shadow: 0 -2px 0 0 var(--bg-table-header, #2C2C2C)
 
 			&:first-child
 				border-top-left-radius: 12px
@@ -1572,7 +1618,12 @@ export default {
 				padding: 10px 15px
 				font-size: 17px
 				font-weight: bold
-				background: #2C2C2C
+				/* Mismo criterio que el th que lo contiene: token adentro del componente con el */
+				/* literal viejo de fallback, que es lo unico que le gana a la especificidad de */
+				/* .cont-table .common-table. */
+				background: var(--bg-table-header, #2C2C2C)
+				/* El texto queda con el literal claro: va sobre un header oscuro en los dos modos, */
+				/* asi que --color-text-primary no sirve aca (en claro es #212529 y no se leeria). */
 				color: #f1f3f4
 				
 				@if ($theme == 'dark')
@@ -1605,9 +1656,15 @@ export default {
 				border-bottom: 1px solid rgba(255,255,255,.2)
 				font-weight: bold
 			@else
-				border-bottom: 1px solid rgba(0,0,0,.2)
+				/* Token con el literal viejo de fallback, y NO una regla en _dark_theme.sass: este */
+				/* selector (.cont-table .common-table td) pesa (0,2,1) y el del tema */
+				/* (html.dark-mode table tbody tr) pesa (0,1,4) — dos clases le ganan a una clase por */
+				/* mas elementos que traiga, asi que el tema global no puede vencer al componente sin */
+				/* !important. El fallback deja el modo claro igual, porque :root define el mismo valor. */
+				/* Con el #FFF suelto la tabla quedaba blanca con letras casi blancas en modo oscuro. */
+				border-bottom: 1px solid var(--color-border, rgba(0,0,0,.2))
 				// background: #f1f3f4
-				background: #FFF
+				background: var(--bg-card, #FFF)
 
 		tbody
 			tr:last-child
@@ -1619,6 +1676,23 @@ export default {
 					/* Esquina inferior derecha de la última fila de datos. */
 					border-bottom-right-radius: 12px
 					overflow: hidden
+
+			tr.empty-state-row
+				td
+					/* El td trae width/max-width de 800px y padding de celda pensados para datos: */
+					/* acá estorban, el contenido lo centra el propio componente. */
+					width: auto
+					max-width: none
+					padding: 0
+					border-bottom: 0
+					/* El mismo blanco que tienen las filas reales y las del skeleton (en modo */
+					/* oscuro, la superficie equivalente). Es lo que faltaba: el <p> viejo vivía */
+					/* fuera de la tabla y no heredaba ningún fondo. */
+					background: var(--bg-card, #FFF)
+				/* No es una fila clickeable: el realce de hover de las filas de datos no aplica. */
+				&:hover
+					td
+						background: var(--bg-card, #FFF)
 
 			tr.skeleton-row
 				td
@@ -1696,9 +1770,12 @@ export default {
 			font-weight: bold
 			margin-top: 15px
 			z-index: 300
-			@if ($theme == 'dark') 
-				color: rgba(255,255,255,.9)
-				background: #2C2C2C 
+			/* Esta regla estaba adentro de un @if ($theme == 'dark'), o sea que hoy no se emitia y */
+			/* estas filas de titulo quedaban sin fondo propio: son un td sticky, y sin fondo se les */
+			/* transparenta el contenido de la tabla al scrollear. Sale del @if y queda siempre */
+			/* activa, con token y el literal viejo de fallback. */
+			color: var(--color-text-primary, rgba(255,255,255,.9))
+			background: var(--bg-section, #2C2C2C)
 			@media screen and (max-width: 768px)
 				padding-left: 15px	
 

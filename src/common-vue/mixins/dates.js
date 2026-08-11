@@ -24,10 +24,27 @@ import numeral from 'numeral'
 // numeral.locale('es_custom')
 
 export default {
+	/*
+	 * OJO CON LOS NOMBRES DE ESTOS METODOS.
+	 *
+	 * Este mixin es GLOBAL: main.js -> Vue.mixin(app) -> common-vue/mixins/app.js -> mixins: [dates].
+	 * Todo lo que se declare aca se inyecta en TODA instancia de Vue del sistema.
+	 *
+	 * En Vue 2, initState() corre initProps() y DESPUES initMethods(), y initMethods hace
+	 * vm[key] = bind(methods[key], vm). O sea que un metodo de este archivo PISA cualquier prop
+	 * que se llame igual, en cualquier componente, y this.<prop> pasa a devolver la funcion
+	 * bindeada -- que concatenada a un string da "function () { [native code] }".
+	 *
+	 * Falla en silencio: Vue solo emite un warning de desarrollo en consola
+	 * ("Method X has already been defined as a prop"), nunca una excepcion.
+	 *
+	 * Ya paso: aca vivia un metodo phone() muerto que pisaba la prop `phone` de
+	 * WhatsappBtn.vue y hacia que el boton de WhatsApp abriera un chat inexistente
+	 * (grupo 373, 7/8/2026). Antes de agregar un metodo aca, elegir un nombre que
+	 * ningun componente vaya a querer usar como prop (date, price, hour ya son riesgosos)
+	 * y correr herramientas/detectar-props-pisadas.py del repo claude-comerciocity.
+	 */
 	methods: {
-		phone(phone) {
-			return phone.substr(4)
-		},
 		date(d, complete = false) {
 			if (d) {
 				if (complete) {

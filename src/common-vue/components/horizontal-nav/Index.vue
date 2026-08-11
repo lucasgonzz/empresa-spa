@@ -472,6 +472,12 @@ export default {
 		& > div 
 			margin-top: 15px
 /* Pista gris segmentada (mismo estilo que impl-detail-tab-bar en admin Implementations) */
+/* Los colores van como token con el literal viejo de fallback, y NO como una regla en */
+/* _dark_theme.sass: este bloque es `scoped`, asi que Vue le pega un [data-v-...] a cada selector y */
+/* una regla del tema tendria que pelear contra esa especificidad. Las custom properties, en cambio, */
+/* se declaran en html y viajan por herencia: atraviesan el scope sin pelear con nadie. */
+/* El fondo usa su propio token (--bg-nav) y no --bg-section: en modo claro --bg-section es #f8f9fa y */
+/* la barra quedaria mas clara de lo que es hoy, y nadie pidio tocar el modo claro. */
 .horizontal-nav
 	display: inline-flex
 	width: fit-content
@@ -481,7 +487,7 @@ export default {
 	padding: 4px
 	overflow-x: auto
 	overflow-y: hidden
-	background-color: #E3E3E3
+	background-color: var(--bg-nav, #E3E3E3)
 	border-radius: 8px
 
 	@media screen and (max-width: 576px)
@@ -505,14 +511,16 @@ export default {
 		font-size: 0.875rem
 		font-weight: 500
 		line-height: 1.25
-		color: #6c757d
+		color: var(--color-text-secondary, #6c757d)
 		background-color: transparent
 		white-space: nowrap
 		transition: color 0.12s ease, background-color 0.12s ease, box-shadow 0.12s ease
 
 		&:hover:not(.active)
-			color: #0d6efd
-			background-color: #e7f1ff
+			color: var(--color-primary, #0d6efd)
+			/* Token propio y no --bg-hover: este celeste es un hover AZULADO a proposito, y */
+			/* --bg-hover en claro es un gris (#f1f3f5) que le sacaria el matiz. */
+			background-color: var(--bg-nav-hover, #e7f1ff)
 
 		&:focus,
 		&:focus-visible
@@ -520,17 +528,22 @@ export default {
 			outline: none
 
 		&:focus-visible
-			outline: 2px solid #0d6efd
+			outline: 2px solid var(--color-primary, #0d6efd)
 			outline-offset: 2px
 
 		/* Pestaña activa: relleno azul sólido como btn-primary */
+		/* El azul del componente es UNO SOLO, por token: #0d6efd y el #007bff de :root son el mismo */
+		/* azul primario con dos versiones de Bootstrap de diferencia, y dejar la pestaña activa con el */
+		/* literal congelaba dos azules distintos conviviendo en el mismo componente. */
 		&.active
 			color: #fff
-			background-color: #0d6efd
+			background-color: var(--color-primary, #0d6efd)
 			font-weight: 600
 			box-shadow: 0 1px 2px rgba(13, 110, 253, 0.28)
 
 			&:hover
 				color: #fff
+				/* Queda literal: es el primario OSCURECIDO para el hover, no el primario. No hay */
+				/* token para esa variante y el tema no lo necesita: funciona igual en los dos modos. */
 				background-color: #0b5ed7
 </style>

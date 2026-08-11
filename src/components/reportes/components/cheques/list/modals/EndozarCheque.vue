@@ -2,7 +2,8 @@
 	<b-modal
 	hide-footer
 	title="Endosar cheque"
-	id="endosar-cheque">
+	id="endosar-cheque"
+	@shown="onShown">
 
 			<p>
 				¿Seguro que quiere endosar este cheque como cobrado?
@@ -12,7 +13,7 @@
 			label="Indique el proveedor">
 				<b-form-select
 				v-model="provider_id"
-				:options="getOptions({key: 'provider_id', text: 'Seleccione proveedor'})"></b-form-select> 
+				:options="getOptionsFromCatalog({key: 'provider_id', text: 'Seleccione proveedor'})"></b-form-select>
 			</b-form-group>
 
 			<b-button
@@ -36,6 +37,9 @@ export default {
 		}
 	},
 	methods: {
+		onShown() {
+			this.$store.dispatch('provider/getOptions')
+		},
 		endosar() {
 
 			if (this.provider_id == 0) {

@@ -329,8 +329,16 @@ export default {
                 let price = article.final_price
 
                 price = this.aplicar_monto_descuento(price, prop.key.substr(15))
-                
-                return this.price(this.redondear(price))
+
+                // 🔴 Sin redondear, y es a proposito. Esta es la columna con el nombre del metodo
+                // de pago en el buscador de Vender: el numero que el vendedor le lee al cliente.
+                // El precio que llega aca ya tiene aplicado el descuento por forma de pago, y el
+                // backend NUNCA redondea despues de un descuento -- ArticleHelper::redondear() se
+                // aplica una sola vez, sobre el precio de catalogo. El importe que la venta cobra
+                // tampoco se redondea. Cuando esto llamaba a redondear(), un cliente con "de a 50"
+                // y 12% de descuento veia $900 en esta columna y el sistema le cobraba $880.
+                // La regla, decidida el 11/8/2026: la SPA no redondea, muestra lo que se cobra.
+                return this.price(price)
             }
         },
         cajaGetColor(caja) {

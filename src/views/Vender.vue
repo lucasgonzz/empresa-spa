@@ -71,14 +71,40 @@ export default {
 		/* Perfiles PDF para configurar opciones de impresión del atajo */
 		this.$store.dispatch('pdf_column_profile/getModels')
 
-		/* Inicializar el log de auditoría para una nueva sesión de venta */
-		this.$store.commit('vender/init_sale_log')
-		this.set_default_articles()
-		this.setPriceType()
-		this.setDefaultPaymentMethod()
-		this.set_omitir_en_cuenta_corriente()
-		this.set_caja_por_defecto()
-		this.$store.commit('vender/clear_sale_log')
+		/*
+			Los valores por defecto se aplican una vez por VENTA, no cada vez que se entra
+			al modulo. Sin esta guarda, salir a otro modulo y volver pisaba lo que el
+			operador ya habia elegido (omitir en cuenta corriente, lista de precios, caja,
+			los articulos por defecto que habia quitado) y ademas vaciaba el log de
+			auditoria de la venta en curso: la venta se guardaba sin el rastro de lo que se
+			hizo antes de salir.
+
+			La bandera vive en el store (vender/venta_en_curso_inicializada) porque el
+			estado de la venta sobrevive a la navegacion y este created() no: el
+			router-view no tiene keep-alive, asi que la vista se destruye al salir y se
+			construye de nuevo al volver.
+
+			La apaga limpiar_vender(), que corre al guardar, al cancelar una venta previa y
+			con el boton Limpiar: en los tres casos empieza una venta nueva y los defaults
+			tienen que volver.
+		*/
+		if (!this.$store.state.vender.venta_en_curso_inicializada) {
+			/* Inicializar el log de auditoría para una nueva sesión de venta */
+			this.$store.commit('vender/init_sale_log')
+			this.set_default_articles()
+			this.setPriceType()
+			this.setDefaultPaymentMethod()
+			this.set_omitir_en_cuenta_corriente()
+			this.set_caja_por_defecto()
+			this.$store.commit('vender/clear_sale_log')
+
+			/*
+				Explicito ademas de las mutaciones que la prenden solas: un negocio que no
+				usa listas de precios, no tiene caja por defecto y no tiene
+				siempre_omitir_en_cuenta_corriente no dispara ninguna de ellas.
+			*/
+			this.$store.commit('vender/set_venta_en_curso_inicializada', true)
+		}
 	},
 	mounted() {
 		/*
@@ -96,9 +122,18 @@ export default {
 	beforeRouteLeave(to, from, next) {
 		this.$store.commit('sale/setSelected', [])
 
-		if (this.index_previus_sales != 0) {
-			this.cancelPreviusSale()
-		}
+		/*
+			Salir del modulo YA NO cancela la edicion de una venta guardada.
+
+			Antes se llamaba a cancelPreviusSale() cuando index_previus_sales != 0, y eso
+			ejecutaba limpiar_vender(): se perdia la edicion entera (items, cliente,
+			descuentos, observaciones, adjuntos) por salir un segundo a otro modulo.
+
+			El bloqueo actualizandose_por queda tomado mientras la edicion siga viva, que es
+			lo que corresponde: la persona la sigue editando. Se libera al actualizar la
+			venta, o con el boton Cancelar de PreviusSaleData.vue, que sigue llamando a
+			cancelPreviusSale() sin cambios. Decision de Lucas, 11/8/2026.
+		*/
 		next()
 	},
 	watch: {

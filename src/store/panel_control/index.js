@@ -3,7 +3,6 @@ axios.defaults.withCredentials = true
 axios.defaults.baseURL = process.env.VUE_APP_API_URL
 
 import provider from '@/store/panel_control/provider/index'
-import provider_store from '@/store/provider'
 import moment from 'moment'
 import generals from '@/common-vue/mixins/generals'
 export default {
@@ -23,6 +22,12 @@ export default {
 		provider_articles_per_page: 10,
 		selected_provider: null,
 		providers_formated: [],
+		/**
+		 * Cuantos article_performance no encontraron su proveedor en providers_formated,
+		 * en la ultima corrida SIN query de busqueda (grupo 342, 4/8/2026). Solo
+		 * diagnostico, sin UI que lo muestre todavia.
+		 */
+		articulos_sin_proveedor_en_indice: 0,
 
 		use_per_page: true,
 		// Se usa cuando es belongs_to_many_from_dates. Por ejemplo para ver los pagos de un cliente
@@ -297,9 +302,18 @@ export default {
 		setSelectedProvider(state, value) {
 			state.selected_provider = value 
 		},
-		setProvidersFormated(state, query = null) {
+		/**
+		 * Antes esto importaba el modulo crudo de provider (`@/store/provider`) y leia
+		 * provider_store.state.models directo. El state de un modulo armado con
+		 * __base_store (factory) es una funcion hasta que Vuex lo registra -- nunca se
+		 * reemplaza por el objeto vivo -- asi que esa lectura siempre fue `undefined` y
+		 * este metodo nunca pudo haber funcionado tal cual estaba escrito (grupo 342,
+		 * 4/8/2026). Ahora el catalogo llega por payload, resuelto por quien comitea (que
+		 * si tiene acceso real al store vivo via this.$store.state.provider.options).
+		 */
+		setProvidersFormated(state, { providers = [], query = null } = {}) {
 			let providers_formated = []
-			provider_store.state.models.forEach(provider => {
+			providers.forEach(provider => {
 				if (query) {
 					if (provider.name.toLowerCase().includes(query.toLowerCase())) {
 						providers_formated[provider.id] = {
@@ -325,21 +339,34 @@ export default {
 				}
 			})
 
+			/**
+			 * Este acumulador se indexa por provider_id y suma solo lo que encuentra. Cuando
+			 * la fuente era el store paginado, todo articulo de un proveedor fuera de los 100
+			 * descargados se descartaba sin aviso y la rentabilidad por proveedor quedaba
+			 * subestimada sin ningun error visible (4/8/2026). La fuente tiene que ser el
+			 * catalogo completo (options), no una coleccion parcial.
+			 */
+			let articulos_sin_proveedor_en_indice = 0
+
 			state.models.forEach(article_performance => {
 				if (providers_formated[article_performance.provider_id]) {
 					if (article_performance.cost) {
-						// providers_formated[article_performance.provider_id].cost += Number(article_performance.cost) 
-						providers_formated[article_performance.provider_id].total_costs += Number(article_performance.cost) * Number(article_performance.amount) 
+						// providers_formated[article_performance.provider_id].cost += Number(article_performance.cost)
+						providers_formated[article_performance.provider_id].total_costs += Number(article_performance.cost) * Number(article_performance.amount)
 					}
 					if (article_performance.price) {
-						// providers_formated[article_performance.provider_id].price += Number(article_performance.price) 
-						providers_formated[article_performance.provider_id].total_prices += Number(article_performance.price) * Number(article_performance.amount) 
+						// providers_formated[article_performance.provider_id].price += Number(article_performance.price)
+						providers_formated[article_performance.provider_id].total_prices += Number(article_performance.price) * Number(article_performance.amount)
 					}
 					if (article_performance.amount) {
-						providers_formated[article_performance.provider_id].unidades_vendidas += Number(article_performance.amount) 
+						providers_formated[article_performance.provider_id].unidades_vendidas += Number(article_performance.amount)
 					}
+				} else if (!query) {
+					articulos_sin_proveedor_en_indice++
 				}
 			})
+
+			state.articulos_sin_proveedor_en_indice = articulos_sin_proveedor_en_indice
 
 			console.log('rentabilidad providers_formated')
 			console.log(providers_formated)
@@ -360,7 +387,9 @@ export default {
 			}
 			return dispatch('_getModels')
 		},
-		_getModels({commit, state, dispatch}) {
+		_getModels({commit, state, dispatch}, payload = {}) {
+			/** Cuántas páginas ya se pidieron para el meses_atras actual (arranca en 1). */
+			let intentos = payload.intentos || 1
 			commit('setLoading', true)
 			let url = '/api/'+generals.methods.routeString(state.model_name)
 			if (state.plural_model_name) {
@@ -369,19 +398,19 @@ export default {
 				} else {
 					url += '/0'
 				}
-			} 
+			}
 			url += '/'+state.meses_atras
 			if (state.route_prefix) {
 				url += '/'+state.route_prefix
-			} 
+			}
 			if (state.from_dates) {
 				url += '/from-date/'+state.from_date
-			} 
+			}
 			if (state.until_date != '') {
 				url += '/'+state.until_date
 			}
 			if (state.use_per_page) {
-				url += '?page='+state.page 
+				url += '?page='+state.page+'&per_page='+state.per_page
 			}
 			return axios.get(url)
 			.then(res => {
@@ -393,9 +422,22 @@ export default {
 					console.log('se cargo '+state.model_name+' meses_atras: '+state.meses_atras+' page: '+state.page)
 					commit('incrementPage')
 					commit('addModels', loaded_models)
-					if (loaded_models.length == state.per_page) {
-						dispatch('_getModels')
+					/*
+						La condición es current_page < last_page, no comparar la cantidad de filas
+						recibidas contra el per_page del store. Esa comparación asumía que el front y
+						el backend usaban el mismo tamaño de página sin que nadie lo verificara: el
+						store de article decía 200, el controller paginaba de a 500, la igualdad nunca
+						daba verdadero y el listado se cortaba en la primera página (4/8/2026). El
+						backend ya devuelve current_page y last_page en la misma respuesta. El eje de
+						meses_atras (mas abajo) no cambia: sigue encadenando por su cuenta cuando esta
+						pagina ya se termino de traer.
+					*/
+					if (res.data.models.current_page < res.data.models.last_page && intentos < 500) {
+						dispatch('_getModels', {intentos: intentos + 1})
 					} else {
+						if (res.data.models.current_page < res.data.models.last_page) {
+							console.log('se corto la descarga de ' + state.model_name + ' por alcanzar el tope de seguridad de 500 paginas (revisar last_page del backend)')
+						}
 						commit('setPage', 1)
 						if (state.meses_atras == 0) {
 							commit('setLoading', false)

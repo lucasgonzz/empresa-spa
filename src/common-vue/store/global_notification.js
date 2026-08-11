@@ -13,6 +13,8 @@ export default {
 		import_stats: null,
 		/* Configuración de la importación (rango, operación, opciones del paso 3). */
 		import_options: null,
+		/* Resultado del recálculo de precios (modal price_update_result). */
+		price_stats: null,
 	},
 	mutations: {
 		set_functions_to_execute(state, value) {
@@ -36,6 +38,9 @@ export default {
 		set_import_options(state, value) {
 			state.import_options = value
 		},
+		set_price_stats(state, value) {
+			state.price_stats = value
+		},
 		/*
 		 * Carga el payload completo de una GlobalNotification broadcast.
 		 */
@@ -47,6 +52,7 @@ export default {
 			state.notification_modal = notification.notification_modal || 'global_notification'
 			state.import_stats = notification.import_stats || null
 			state.import_options = notification.import_options || null
+			state.price_stats = notification.price_stats || null
 		},
 	},
 	actions: {

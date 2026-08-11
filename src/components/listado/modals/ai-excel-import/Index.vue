@@ -1143,7 +1143,9 @@ export default {
 		 * Se transforman en opciones para b-form-select.
 		 */
 		providers() {
-			return this.$store.state.provider.models
+			// Catalogo completo (options), no el store paginado (models) que ya no se descarga
+			// entero al iniciar sesion (grupo 332/342, 4/8/2026). Se pide en created().
+			return this.$store.state.provider.options
 		},
 
 		/*
@@ -1586,6 +1588,7 @@ export default {
 					{ value: 'razon_social',             text: 'Razón social' },
 					{ value: 'numero',                   text: 'Número de cliente' },
 					{ value: 'vendedor',                 text: 'Vendedor' },
+					{ value: 'sucursal',                 text: 'Sucursal' },
 					{ value: 'condicion_frente_al_iva',  text: 'Condición frente al IVA' },
 					{ value: 'tipo_de_precio',           text: 'Tipo de precio' },
 					{ value: 'saldo_actual',             text: 'Saldo actual' },
@@ -2782,6 +2785,7 @@ export default {
 				razon_social:         'Razón social',
 				numero:               'Número',
 				vendedor:             'Vendedor',
+				sucursal:             'Sucursal',
 				condicion_frente_al_iva: 'Cond. IVA',
 				tipo_de_precio:       'Tipo precio',
 				saldo_actual:         'Saldo',
@@ -3147,6 +3151,10 @@ export default {
 		if (this.price_types.length === 0) {
 			this.$store.dispatch('price_type/getModels')
 		}
+
+		// getOptions ya se guarda solo si ya esta cargado (options_loaded), asi que no hace
+		// falta un guard extra aca.
+		this.$store.dispatch('provider/getOptions')
 	},
 
 	/*

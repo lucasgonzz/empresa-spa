@@ -505,6 +505,10 @@ export default {
 						group_title: group_title,
 						store: prop.store,
 						depends_on: prop.depends_on,
+						// Sin esto, un prop con search_from_api (ej. article.provider_id) perdia
+						// la bandera en la actualizacion masiva y quedaba buscando contra el
+						// store vacio (grupo 342, 4/8/2026).
+						search_from_api: prop.search_from_api,
 						value: '',
 					})
 				} else if ((prop.type_to_update && prop.type_to_update == 'checkbox') || prop.type == 'checkbox') {

@@ -5,7 +5,7 @@
 		label="Proveedor de estos articulos">
 			<b-form-select
 			v-model="props_to_send.provider_id"
-			:options="getOptions({key: 'provider_id', text: 'Proveedor'})"></b-form-select>
+			:options="getOptionsFromCatalog({key: 'provider_id', text: 'Proveedor'})"></b-form-select>
 		</b-form-group>
 		<hr>
 	</div>
@@ -14,6 +14,9 @@
 export default {
 	props: {
 		props_to_send: Object,
+	},
+	created() {
+		this.$store.dispatch('provider/getOptions')
 	},
 }
 </script>

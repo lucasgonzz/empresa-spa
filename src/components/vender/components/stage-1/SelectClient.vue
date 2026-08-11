@@ -21,7 +21,7 @@
 			:tax_id_afip_lookup_on_second_enter="true"
 			placeholder="Buscar cliente, CUIT o DNI"
 			input_icon="icon-user-o"
-			:props_extras="props_extras"
+			:props_to_send_to_api="props_to_send_to_api"
 			set_selected_model_with_model_prop
 			@requestClientAfipLookup="onRequestClientAfipLookup"
 			@clearSelected="clearSelected"></search-component>
@@ -88,16 +88,32 @@ export default {
 				this.$store.commit('vender/set_send_mail', value)
 			}
 		},
-		props_extras() {
-			if (this.hasExtencion('filtrar_clientes_por_sucursal_en_vender')) {
-				return [
-					{
-						key: 'address_id',
-						value: this.address_id
-					}
-				]
+		// Filtro por sucursal del buscador de clientes de VENDER.
+		//
+		// Viaja por props_to_send_to_api y NO por props_extras: este buscador tiene
+		// search_from_api, y Modal.vue solo consume props_extras dentro de su rama de busqueda
+		// offline, asi que por ese canal el filtro nunca llegaba al backend (medido el 11/8/2026:
+		// era codigo muerto desde el dia uno).
+		//
+		// El parametro address_id_con_nulos lo entiende SearchController@searchFromModal y trae
+		// tambien a los clientes sin sucursal asignada: la regla unica del sistema es que un
+		// cliente sin sucursal aparece en TODAS las sucursales (decision de Lucas, 11/8/2026).
+		props_to_send_to_api() {
+			if (!this.hasExtencion('filtrar_clientes_por_sucursal_en_vender')) {
+				return []
 			}
-			return []
+			let address_id = this.$store.state.vender.address_id
+			// Sin sucursal elegida en VENDER (arranca en 0) no se filtra nada: un negocio que
+			// todavia no eligio sucursal no puede quedarse sin clientes en el buscador.
+			if (!address_id) {
+				return []
+			}
+			return [
+				{
+					key: 'address_id_con_nulos',
+					value: address_id
+				}
+			]
 		},
 		// Determina si se puede elegir/cambiar el cliente en VENDER.
 		// - Venta nueva: siempre.

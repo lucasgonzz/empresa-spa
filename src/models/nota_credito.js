@@ -23,7 +23,9 @@ export default {
 		{
 			text: 'Cliente',
 			key: 'client_id',
-			use_store_models: true,
+			// El catalogo de clientes no se descarga entero al iniciar sesion (grupo 332,
+			// 4/8/2026): la tabla lee la relacion embebida en vez del store.
+			search_from_api: true,
 			// model_name: 'client'
 			only_show: true,
 			type: 'text',

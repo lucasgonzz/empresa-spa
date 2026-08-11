@@ -488,14 +488,22 @@ export default {
 					this.query = this.model[this.prop.key]
 					this.selected_model = null
 				} else if (this.model && this.prop && this.model[this.prop.key]) {
+					let selected_model = null
 					if (this.prop.use_store_models) {
-						let model = this.$store.state[this.modelNameFromRelationKey(this.prop)].models.find(_model => {
+						selected_model = this.$store.state[this.modelNameFromRelationKey(this.prop)].models.find(_model => {
 							return _model.id == this.model[this.prop.key]
 						})
-						this.selected_model = model
-					} else {
-						this.selected_model = this.model[this.modelNameFromRelationKey(this.prop)]
 					}
+
+					// Mismo orden que propertyText(): el store es un intento, no una salida.
+					// Si el modelo no esta ahi, cae a la relacion embebida, derivada de la
+					// clave (no de prop.store), o el campo quedaba vacio al editar un modelo
+					// cuyo relacionado no estaba entre los descargados (4/8/2026).
+					if (!selected_model) {
+						selected_model = this.model[this.modelNameFromRelationKey(this.prop, false, false)]
+					}
+
+					this.selected_model = selected_model
 				} else if (this.set_selected_model_with_model_prop && this.model) {
 					this.selected_model = this.model 
 				} else if (this.set_selected_model_with_model_prop) {
@@ -566,6 +574,9 @@ export default {
 .cont-search-input-btn
 	display: flex
 	width: 100%
+// Los colores van por token con el literal viejo de fallback, adentro del componente: el <style>
+// del componente le gana por especificidad a las reglas del tema global, asi que una regla en
+// _dark_theme.sass no alcanzaria. El !important de .bg-gray es el que ya estaba, no se agrega uno.
 .cont-search
 	width: 100%
 	position: relative
@@ -581,9 +592,11 @@ export default {
 	// !important) y el efecto era que el diseno nuevo no se veia NUNCA: siempre ganaba el
 	// rectangulo viejo. Si en algun momento parece que el buscador "volvio a verse cuadrado",
 	// mira aca primero.
+	// Los colores van por token (grupo 360, modo oscuro) con el literal viejo de fallback: el
+	// markup viejo tambien tiene que responder al tema.
 	&:not(.cont-search--field)
-		box-shadow: 0 2px 4px rgb(0 0 0 / 15%) !important
-		border: 1px solid #ced4da
+		box-shadow: 0 2px 4px var(--shadow-color, rgba(0, 0, 0, 0.15)) !important
+		border: 1px solid var(--color-border, #ced4da)
 		border-radius: 0.25rem
 
 .cont-search-on-models
@@ -593,8 +606,9 @@ export default {
 	flex-direction: row
 	margin-left: 15px
 
+// El recuadro de la lupa: era el bloque blanco pegado al input en modo oscuro.
 .icon
-	background: #FFF
+	background: var(--bg-section, #FFF)
 	width: 40px
 	display: flex
 	flex-direction: row
@@ -603,13 +617,14 @@ export default {
 	justify-content: flex-end
 	border-radius: 0.25rem 0 0 0.25rem
 	i
-		color: rgba(0, 0, 0, .6)
+		color: var(--color-text-secondary, rgba(0, 0, 0, .6))
 	@if ($theme == 'dark')
 		background: #333 !important
 		i
 			color: #FFF
+// Estado deshabilitado del buscador.
 .bg-gray
-	background: #e9ecef !important
+	background: var(--bg-hover, #e9ecef) !important
 .input-search
 	border-radius: 0 0.25rem 0.25rem 0
 	box-shadow: none !important

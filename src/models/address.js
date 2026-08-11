@@ -69,6 +69,21 @@ export default {
 				'Cuando se hace una venta en negro desde esta sucursal y no se especifica la información de facturación, los datos fiscales del comprobante (razón social, domicilio, CUIT, ingresos brutos, etc.) se toman del afip_information que elijas acá. Si lo dejás vacío, se usa la facturación por defecto del negocio.',
 			],
 		},
+		{
+			/**
+			 * Logo propio de la sucursal (columna addresses.image_url, tarea 17).
+			 * La subida la resuelve el endpoint generico set-image/{prop}, el mismo que
+			 * usa la imagen de una marca (src/models/brand.js): por eso alcanza con
+			 * declarar type: 'image' y no hay nada de carga de archivos aca.
+			 */
+			text: 'Logo',
+			key: 'image_url',
+			type: 'image',
+			value: '',
+			descriptions: [
+				'Si cargás un logo acá, se usa en los comprobantes de esta sucursal en lugar del logo del negocio. Si lo dejás vacío, se sigue usando el logo del negocio.',
+			],
+		},
 	],
 	abm_descripcion: {
 		para_que_sirve: 'Registra las sucursales y depósitos del negocio con sus datos de contacto.',

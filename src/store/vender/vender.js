@@ -284,6 +284,26 @@ export default {
 		*/
 		ultima_venta_sesion: null,
 
+		/*
+			Marca que la venta en curso YA recibio sus valores por defecto.
+
+			Existe porque los defaults se aplican una vez por VENTA y no una vez por VISITA
+			al modulo: views/Vender.vue los aplica en su created(), y ese created() corre
+			cada vez que se entra a Vender, porque el router-view no tiene keep-alive y la
+			vista se destruye al salir. Sin esta bandera, salir un momento a otro modulo y
+			volver pisaba lo que el operador ya habia elegido (omitir en cuenta corriente,
+			lista de precios, caja, los articulos por defecto que habia quitado) y ademas
+			vaciaba el log de auditoria de la venta en curso.
+
+			La apaga limpiar_vender(), en su ultima linea: ahi empieza una venta nueva y
+			los defaults tienen que volver.
+
+			Vive solo en memoria a proposito, igual que ultima_venta_sesion: refrescar la
+			pagina vuelve a arrancar con los defaults. No persistir en localStorage ni
+			sessionStorage.
+		*/
+		venta_en_curso_inicializada: false,
+
 		afip_results: null,
 
 		discount_percentage: null,
@@ -339,6 +359,14 @@ export default {
 		props_to_show: [],
 	},
 	mutations: {
+		/*
+			Marca la venta en curso como ya inicializada (ver el comentario de la propiedad
+			en el state). La prenden ademas, por su cuenta, las mutaciones que significan que
+			esta venta ya tiene contenido o configuracion decidida, y la apaga limpiar_vender().
+		*/
+		set_venta_en_curso_inicializada(state, value) {
+			state.venta_en_curso_inicializada = !!value
+		},
 		/**
 		 * Activa o desactiva el registro de auditoría (p. ej. durante hidratación al editar).
 		 */
@@ -473,9 +501,13 @@ export default {
 			// console.log('vender/setItems')
 			state.items = value
 			// console.log(state.items)
+			/* Esta venta ya tiene contenido: no le corresponden mas los defaults */
+			state.venta_en_curso_inicializada = true
 		},
 		addItem(state, value) {
 			state.items.unshift(value)
+			/* Esta venta ya tiene contenido: no le corresponden mas los defaults */
+			state.venta_en_curso_inicializada = true
 		},
 		replceItem(state, value) {
 			// Guardamos estado anterior para registrar cambios de item editado.
@@ -541,6 +573,8 @@ export default {
 		},
 		addCombo(state, value) {
 			state.items.unshift(value)
+			/* Esta venta ya tiene contenido: no le corresponden mas los defaults */
+			state.venta_en_curso_inicializada = true
 		},
 		setNewArticle(state, value) {
 			state.new_article = value
@@ -549,6 +583,8 @@ export default {
 			console.log('addItem:')
 			console.log(item)
 			state.items.unshift(item)
+			/* Esta venta ya tiene contenido: no le corresponden mas los defaults */
+			state.venta_en_curso_inicializada = true
 			append_sale_log_entry(state, {
 				event_key: 'item_added',
 				source_component: 'vender/addItem',
@@ -614,6 +650,8 @@ export default {
 		setPriceType(state, value) {
 			const previous_price_type = get_safe_clone(state.price_type)
 			state.price_type = value
+			/* Configuracion decidida para esta venta: no le corresponden mas los defaults */
+			state.venta_en_curso_inicializada = true
 			append_sale_log_entry(state, {
 				event_key: 'price_list_changed',
 				source_component: 'vender/setPriceType',
@@ -629,7 +667,13 @@ export default {
 			state.save_current_acount = value
 		},
 		set_omitir_en_cuenta_corriente(state, value) {
-			state.omitir_en_cuenta_corriente = value 
+			state.omitir_en_cuenta_corriente = value
+			/*
+				Sin condicion de valor a proposito: destildarlo (0) es una decision del
+				operador tanto como tildarlo, y es justamente la que se perdia al volver
+				al modulo cuando el dueno tiene siempre_omitir_en_cuenta_corriente.
+			*/
+			state.venta_en_curso_inicializada = true
 		},
 		setMakeCurrentAcountPago(state, value) {
 			state.make_current_acount_pago = value
@@ -652,6 +696,8 @@ export default {
 		setCurrentAcountPaymentMethodId(state, value) {
 			const previous_payment_method_id = state.current_acount_payment_method_id
 			state.current_acount_payment_method_id = value
+			/* Configuracion decidida para esta venta: no le corresponden mas los defaults */
+			state.venta_en_curso_inicializada = true
 			append_sale_log_entry(state, {
 				event_key: 'payment_method_changed',
 				source_component: 'vender/setCurrentAcountPaymentMethodId',
@@ -700,6 +746,11 @@ export default {
 		setClient(state, value) {
 			const previous_client = get_safe_clone(state.client)
 			state.client = value
+			/*
+				Sin condicion de valor: quitar el cliente (null) tambien es una decision del
+				operador sobre esta venta.
+			*/
+			state.venta_en_curso_inicializada = true
 			append_sale_log_entry(state, {
 				event_key: 'client_changed',
 				source_component: 'vender/setClient',
@@ -745,7 +796,9 @@ export default {
 		},
 		set_caja_id(state, value) {
 			const previous_caja_id = state.caja_id
-			state.caja_id = value 
+			state.caja_id = value
+			/* Configuracion decidida para esta venta: no le corresponden mas los defaults */
+			state.venta_en_curso_inicializada = true
 			append_sale_log_entry(state, {
 				event_key: 'caja_changed',
 				source_component: 'vender/set_caja_id',

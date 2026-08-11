@@ -19,6 +19,22 @@
 	--bg-card: #fff
 	--bg-section: #f8f9fa
 	--bg-hover: #f1f3f5
+	// Color de las sombras de elevacion (tablas, tarjetas). En claro es el gris de siempre; en
+	// oscuro tiene que ser negro, porque un gris claro sobre fondo oscuro directamente no se ve.
+	--shadow-color: rgba(99, 99, 99, 0.2)
+	// Header de las tablas del listado. Token DEDICADO y no --bg-section: el header es oscuro en
+	// los DOS modos (decision de Lucas, 5/8/2026, grupo 360). Si usara --bg-section, en modo claro
+	// pasaria de gris oscuro con texto claro a casi blanco, que es un cambio visible para todos los
+	// clientes -- ninguno de los cuales pidio tocar el modo claro.
+	--bg-table-header: #2C2C2C
+	// Pista del nav horizontal y su hover azulado. Tokens propios y no --bg-section/--bg-hover:
+	// la pista tiene su propio gris (mas oscuro que el fondo de la pagina) y el hover es azulado a
+	// proposito, no un gris.
+	--bg-nav: #E3E3E3
+	--bg-nav-hover: #e7f1ff
+	// Gris del toggle apagado (ModelForm). En oscuro necesita su propio valor: el gris claro de
+	// modo claro se lee como "encendido" sobre el fondo del modal.
+	--toggle-track-off: #d1d5db
 
 	// Estados del modulo de Cajas (grupo 371). El verde apagado marca la caja ABIERTA, que es
 	// el estado que interesa encontrar de un vistazo. La caja CERRADA va en gris neutro a
@@ -44,17 +60,34 @@
 	--btn-peligro-borde: #b4443f
 	--btn-peligro-texto: #9c3a36
 
+// La escala arranca en #23262b y NO mas abajo, aunque el negro casi puro parezca mas elegante:
+// probado en pantalla (grupo 360, fase 2), el #14161a original se leia apagado y, sobre todo,
+// dejaba a los modales sin despegarse del fondo, porque la distancia entre --color-bg y --bg-card
+// era demasiado chica para leerse como elevacion. Se mantiene el orden relativo de los tres fondos
+// (bg < section < card) y se agranda la distancia. Los bordes suben de 0.10/0.07 a 0.14/0.09 por el
+// mismo motivo: sobre un fondo mas claro, los viejos dejaban de verse.
 html.dark-mode
-	--color-bg: #14161a
-	--bg-card: #1e2127
-	--bg-section: #191c21
-	--bg-hover: #23272e
-	--color-text-primary: #e6e8eb
-	--color-text-secondary: #9aa1a9
-	--color-border: rgba(255, 255, 255, 0.10)
-	--color-border-secondary: rgba(255, 255, 255, 0.07)
-	--color-border-tertiary: rgba(255, 255, 255, 0.10)
-	--color-primary: #3b9dff
+	--color-bg: #23262b
+	--bg-card: #2e333a
+	--bg-section: #272b31
+	--bg-hover: #3a4048
+	--color-text-primary: #e8eaed
+	--color-text-secondary: #aab2bd
+	--color-border: rgba(255, 255, 255, 0.14)
+	--color-border-secondary: rgba(255, 255, 255, 0.09)
+	--color-border-tertiary: rgba(255, 255, 255, 0.14)
+	--color-primary: #4da3ff
+	--shadow-color: rgba(0, 0, 0, 0.45)
+	// Mas oscuro que las filas (--bg-card #2e333a) y que el fondo general (--color-bg #23262b),
+	// que es la misma relacion que tiene en modo claro: el header se despega hacia abajo, no se
+	// funde con la tabla.
+	--bg-table-header: #1c1f24
+	// La pista va un escalon POR ENCIMA del fondo (#23262b), igual que en claro va un escalon por
+	// debajo: en los dos casos se despega del fondo de la pagina. El hover mantiene el matiz azulado
+	// con el azul del tema en baja opacidad, en vez de un gris plano.
+	--bg-nav: #2b2f36
+	--bg-nav-hover: rgba(77, 163, 255, 0.16)
+	--toggle-track-off: #5a626d
 
 	// Contraparte oscura de los estados de Cajas (grupo 371). Los fondos van en rgba sobre el
 	// acento en vez de un color plano: asi se apoyan sobre --bg-card sin pelearse con el.
@@ -284,6 +317,21 @@ html.dark-mode
 	.page-item.active .page-link
 		background-color: var(--color-primary)
 		border-color: var(--color-primary)
+
+	// Checkboxes y radios cuadrados de bootstrap-vue (.custom-control). Van aca y no en el
+	// componente porque son clases GLOBALES que usan decenas de pantallas: el cuadradito lo dibuja
+	// el ::before del label, que sin esto queda blanco sobre el modal oscuro. El estado marcado no
+	// se toca: bootstrap lo pinta con el azul primario, y los colores de accion se mantienen
+	// iguales en los dos modos.
+	.custom-control-label::before
+		background-color: var(--bg-section)
+		border-color: var(--color-border)
+
+	.custom-control-input:not(:checked) ~ .custom-control-label::before
+		background-color: var(--bg-section)
+
+	.custom-control-label
+		color: var(--color-text-primary)
 
 // Lo que queda explicitamente afuera de esta primera fase (no es un olvido):
 //

@@ -1,6 +1,7 @@
 <template>
 	<div class="notification-modals">
 		<article-import-result-modal></article-import-result-modal>
+		<price-update-result-modal></price-update-result-modal>
 	</div>
 </template>
 
@@ -12,6 +13,7 @@
 export default {
 	components: {
 		ArticleImportResultModal: () => import('@/components/common/notification-modals/ArticleImportResultModal'),
+		PriceUpdateResultModal: () => import('@/components/common/notification-modals/PriceUpdateResultModal'),
 	},
 }
 </script>

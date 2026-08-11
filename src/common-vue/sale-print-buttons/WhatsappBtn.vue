@@ -53,9 +53,25 @@ export default {
 
 		 * como siempre. Lo usa Vender para permitir un numero editado a mano.
 
+		 *
+
+		 * NO renombrar a `phone`: `common-vue/mixins/dates.js` es un mixin GLOBAL
+
+		 * (main.js -> Vue.mixin(app) -> app.js -> mixins: [dates]) y declaraba un metodo
+
+		 * `phone()`. En Vue 2, initState corre initProps() y despues initMethods(), y
+
+		 * initMethods hace vm[key] = bind(methods[key], vm): el metodo pisa la prop y
+
+		 * this.phone pasa a valer la funcion bindeada, que concatenada da
+
+		 * "function () { [native code] }". Eso es lo que se colaba en el link de WhatsApp
+
+		 * hasta el 7/8/2026. Vue solo avisa con un warning de desarrollo en consola.
+
 		 */
 
-		phone: {
+		phone_override: {
 
 			type: String,
 
@@ -105,17 +121,29 @@ export default {
 
 		/**
 
-		 * Telefono efectivo a usar para el link de WhatsApp: el prop `phone` (override)
+		 * Telefono efectivo para el link de WhatsApp: el prop `phone_override` tiene
 
-		 * tiene prioridad; si no vino, cae al telefono del cliente de la venta, igual
+		 * prioridad; si no vino, cae al telefono del cliente de la venta, igual que el
 
-		 * que el comportamiento historico.
+		 * comportamiento historico.
+
+		 *
+
+		 * Se devuelve solo con digitos porque api.whatsapp.com no acepta espacios,
+
+		 * guiones, parentesis ni el simbolo +. Es el mismo criterio que ya aplica el
+
+		 * backend en WhatsappPhoneHelper::normalize() (empresa-api), para que los dos
+
+		 * caminos de envio interpreten igual un mismo `clients.phone`.
 
 		 */
 
 		effective_phone() {
 
-			return this.phone || (this.sale.client && this.sale.client.phone) || ''
+			const raw = this.phone_override || (this.sale.client && this.sale.client.phone) || ''
+
+			return String(raw).replace(/\D/g, '')
 
 		},
 
@@ -125,29 +153,57 @@ export default {
 
 		/**
 
-		 * Abre WhatsApp con mensaje y enlace al PDF del comprobante.
+		 * Abre WhatsApp con el mensaje y el enlace al PDF del comprobante.
 
 		 */
 
 		whatsapp() {
 
+			/* Sin digitos no hay chat posible: mejor avisar que abrir una pestaña que no lleva a ningun lado */
+
+			if (!this.effective_phone) {
+
+				this.$toast.error('El telefono no tiene un numero valido para WhatsApp')
+
+				return
+
+			}
+
 			/* Saludo generico si no hay cliente asignado (Vender permite enviar sin cliente) */
 
-			let saludo = this.client_name() ? ('Hola ' + this.client_name() + ', ') : 'Hola, '
+			const saludo = this.client_name() ? ('Hola ' + this.client_name() + ', ') : 'Hola, '
 
-			let link = 'https://api.whatsapp.com/send?phone=' + this.effective_phone + '&text=' + saludo + 'te acercamos el comprobante de tu compra N° ' + this.sale.num + ': '
-
-
+			let mensaje = saludo + 'te acercamos el comprobante de tu compra N° ' + this.sale.num + ': '
 
 			if (this.from_budget) {
 
-				link += this.owner.api_url + '/budget/pdf/' + this.sale.id + '/1'
+				/* La ruta de empresa-api es budget/pdf/{id}/{with_prices}/{with_images}: los tres
+
+				 * segmentos son obligatorios. Con dos, Laravel devuelve 404. El /1/0 es el mismo
+
+				 * "Con precios" que arma el dropdown de impresion de ModalButtons.vue. */
+
+				mensaje += this.owner.api_url + '/budget/pdf/' + this.sale.id + '/1/0'
 
 			} else {
 
-				link += this.build_sale_pdf_url()
+				mensaje += this.build_sale_pdf_url()
 
 			}
+
+			/* encodeURIComponent NO es defensivo: el mensaje termina con la URL del PDF, que trae
+
+			 * ?pdf_column_profile_id=..&afip_ticket_id=.. Sin codificar, ese & lo lee api.whatsapp.com
+
+			 * como separador de SUS parametros y el texto compartido se corta ahi, dejando al cliente
+
+			 * un link sin afip_ticket_id (o sea, el PDF sin la factura ARCA). El telefono ya es solo
+
+			 * digitos, asi que no necesita codificarse. */
+
+			const link = 'https://api.whatsapp.com/send?phone=' + this.effective_phone +
+
+				'&text=' + encodeURIComponent(mensaje)
 
 			window.open(link)
 

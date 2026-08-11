@@ -27,13 +27,15 @@ export default {
 		{
 			text: 'Endozado desde cliente',
 			key: 'endosado_desde_client_id',
+			// store: 'client' es el modelo contra el que busca el modal (search-from-modal/client),
+			// no el nombre de la relacion embebida: esa se llama endosado_desde_client y se deriva
+			// de la clave (grupo 332, 4/8/2026, ver propertyText()).
 			store: 'client',
 			type: 'search',
 			// La busqueda va siempre contra la API (global-search/client), nunca contra el store:
 			// hay cuentas con miles de clientes y el resultado no puede depender de que la descarga
 			// del store haya terminado. No sacar.
 			search_from_api: true,
-			use_store_models: true,
 		},
 		{
 			text: 'Proveedor',
@@ -47,13 +49,15 @@ export default {
 		{
 			text: 'Endozado al proveedor',
 			key: 'endosado_a_provider_id',
+			// store: 'provider' es el modelo contra el que busca el modal (search-from-modal/provider),
+			// no el nombre de la relacion embebida: esa se llama endosado_a_provider y se deriva de
+			// la clave (grupo 332, 4/8/2026, ver propertyText()).
 			store: 'provider',
 			type: 'search',
 			// La busqueda va siempre contra la API (global-search/provider), nunca contra el store:
 			// hay cuentas con miles de proveedores y el resultado no puede depender de que la
 			// descarga del store haya terminado. No sacar.
 			search_from_api: true,
-			use_store_models: true,
 		},
 		{
 			text: 'Banco',

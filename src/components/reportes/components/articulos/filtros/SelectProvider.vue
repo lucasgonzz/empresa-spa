@@ -6,6 +6,7 @@
 	:prop="{text: 'Proveedor', key: 'provider_id'}"
 	model_name="provider"
 	id="search-provider"
+	search_from_api
 	:props_to_filter="['name']"></search-component>
 </template>
 <script>
