@@ -762,10 +762,11 @@ export default {
          *
          * Las tres llamadas estaban mal por el mismo motivo: le pasaban un precio que el backend
          * NO redondea. Dos le pasaban un precio con el descuento por forma de pago ya aplicado
-         * (el buscador de Vender y la consultora de precios), y la tercera le pasaba el COSTO
-         * (la columna "Precio" del Listado). El backend aplica redondear() una sola vez, sobre el
-         * precio final de catalogo. El sintoma medido: un cliente con "de a 50" y 12% de descuento
-         * veia $900 donde el sistema cobraba $880.
+         * (el buscador de Vender y la consultora de precios), y la tercera le pasaba el PRECIO
+         * MANUAL, `article.price` (la columna del Listado) -- que no es el precio final ni el
+         * costo, sino el override que el backend usa como BASE para calcular el final. El backend
+         * aplica redondear() una sola vez, sobre el precio final de catalogo. El sintoma medido:
+         * un cliente con "de a 50" y 12% de descuento veia $900 donde el sistema cobraba $880.
          *
          * ⚠️ Si alguna vez volves a llamarla, la unica invocacion legitima es sobre un precio de
          * CATALOGO que el backend ya redondeo, para que el redondeo sea idempotente. Nunca sobre un
