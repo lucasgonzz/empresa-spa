@@ -23,7 +23,8 @@
 				</h4>
 				<span
 				v-if="origen_texto"
-				class="price-update-result-modal__chip">
+				class="price-update-result-modal__chip"
+				:title="origen_texto">
 					{{ origen_texto }}
 				</span>
 			</div>
@@ -48,7 +49,11 @@
 				</div>
 
 				<div class="price-update-result-modal__proveedores">
-					<p class="price-update-result-modal__proveedores-titulo">
+					<!-- Con la lista vacia el encabezado no cuenta nada: "37 articulos" arriba
+					     de "0 proveedores" son dos numeros que no cierran entre si. -->
+					<p
+					v-if="!lista_vacia"
+					class="price-update-result-modal__proveedores-titulo">
 						{{ texto_proveedores }}
 					</p>
 
@@ -137,13 +142,16 @@ export default {
 			 */
 			visible: false,
 			/**
-			 * Corrida que pidió la lista que está en vuelo.
+			 * Número del pedido de la lista que vale. Cada pedido nuevo lo incrementa y las
+			 * respuestas viejas se descartan comparando contra él.
 			 *
-			 * Sin esto, cerrar el modal mientras carga y abrirlo de nuevo con otra corrida
-			 * mostraba los proveedores de la corrida anterior: el .then de la respuesta vieja
-			 * llegaba después y escribía igual.
+			 * Se cuenta por pedido y no por corrida a propósito: cerrar el modal justo cuando
+			 * llega otra notificación puede dejar dos pedidos en vuelo de LA MISMA corrida, y
+			 * si el primero falla y el segundo anda, el cartel de error del primero se queda
+			 * pegado arriba de una lista que sí llegó. Comparando ids de corrida eso no se
+			 * puede distinguir; comparando pedidos, sí.
 			 */
-			run_id_pedido: null,
+			pedido_en_curso: 0,
 		}
 	},
 	computed: {
@@ -200,6 +208,10 @@ export default {
 				return this.proveedores.length
 			}
 			return this.price_stats.proveedores_cantidad || 0
+		},
+		/** La respuesta llegó y no trajo ni un proveedor. */
+		lista_vacia() {
+			return this.proveedores_cargados && this.proveedores.length === 0
 		},
 		texto_proveedores() {
 			if (this.proveedores_cantidad === 1) {
@@ -272,14 +284,17 @@ export default {
 				return
 			}
 
-			this.run_id_pedido = run_id
+			this.pedido_en_curso++
+
+			let pedido = this.pedido_en_curso
+
 			this.cargando_proveedores = true
 			this.error_proveedores = false
 
 			this.$api.get('price-update-run/' + run_id + '/desglose')
 			.then(res => {
-				/* Llegó tarde: el modal ya se cerró, o ya está mostrando otra corrida. */
-				if (this.run_id_pedido !== run_id) {
+				/* Llegó tarde: el modal se cerró, cambió de corrida, o volvió a pedir. */
+				if (pedido !== this.pedido_en_curso) {
 					return
 				}
 
@@ -288,7 +303,7 @@ export default {
 				this.cargando_proveedores = false
 			})
 			.catch(() => {
-				if (this.run_id_pedido !== run_id) {
+				if (pedido !== this.pedido_en_curso) {
 					return
 				}
 
@@ -308,7 +323,8 @@ export default {
 			this.proveedores_cargados = false
 			this.cargando_proveedores = false
 			this.error_proveedores = false
-			this.run_id_pedido = null
+			/* Invalida lo que esté en vuelo: su respuesta ya no tiene dónde ir. */
+			this.pedido_en_curso++
 		},
 		/**
 		 * Muestra la corrida que esté ahora en el store. Es lo que hace on_shown, pero
@@ -355,9 +371,9 @@ export default {
 		 * @param {Number|null} run_id_anterior
 		 * @return {void}
 		 */
-		run_id(run_id_nuevo, run_id_anterior) {
+		run_id(run_id_nuevo) {
 			/* Cerrado: lo que corresponda lo va a hacer on_shown cuando se abra. */
-			if (!this.visible || run_id_nuevo === run_id_anterior) {
+			if (!this.visible) {
 				return
 			}
 
@@ -418,6 +434,13 @@ export default {
 		color: #475569
 		font-size: 0.8rem
 		font-weight: 500
+		// Con el detalle del origen pegado, el texto llega a ~170 caracteres. Sin tope se
+		// blockifica y envuelve en tres lineas adentro de un border-radius de 999px: queda
+		// una pildora deforme. El texto completo va en el title.
+		max-width: 100%
+		white-space: nowrap
+		overflow: hidden
+		text-overflow: ellipsis
 
 	&__numero
 		display: flex
