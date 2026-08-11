@@ -1030,7 +1030,55 @@ export default {
 
 			/* Al cambiar columnas (p. ej. depósitos o listas de precio al iniciar), no perder criterios activos. */
 			let merged_filters = this.merge_table_filters_preserving_active_values(new_filters, existing_filters)
+			this.sembrar_orden_por_defecto(merged_filters)
 			this.$store.commit(this.model_name+'/setFilters', merged_filters)
+		},
+		/**
+		 * Deja marcado en los filtros el orden con el que el listado por defecto ya viene ordenado:
+		 * id DESC. Sin esto, el header no muestra ninguna flecha activa aunque la tabla esté
+		 * ordenada, porque Ordenar.vue decide qué flecha pinta leyendo SOLO `filter.ordenar_de`,
+		 * y runListadoPorDefecto manda el orden como dos campos sueltos del payload de
+		 * global-search (`order_by` / `order_direction`) que nunca tocan state.filters. Son dos
+		 * mecanismos que nunca se hablaron.
+		 *
+		 * 🔴 Va acá, en la construcción de los filtros, y NO adentro de runListadoPorDefecto: esa
+		 * action la dispara view/Index.vue en su created(), y en Vue el created del padre corre
+		 * ANTES que el del hijo, así que en ese momento state.filters todavía está vacío y el
+		 * sembrado se perdería. Es el mismo patrón que ya usa
+		 * bootstrap_papelera_default_search_from_props() para deleted_at.
+		 *
+		 * Si el usuario ya eligió un orden a mano, no se toca nada: ese orden manda sobre el
+		 * default y no se puede volver a pisar (Ordenar.vue limpia el ordenar_de de los demás
+		 * filtros al setear el suyo, y merge_table_filters_preserving_active_values lo conserva
+		 * cuando los filtros se reconstruyen).
+		 *
+		 * Si el modelo no declara una prop `id` no hay ninguna columna que prender, y eso está
+		 * bien: no se inventa una.
+		 *
+		 * @param {Array} filters Filtros ya construidos, se modifican en el lugar.
+		 * @return {void}
+		 */
+		sembrar_orden_por_defecto(filters) {
+			if (this.papelera || !filters || !filters.length) {
+				return
+			}
+
+			let hay_orden_elegido = false
+			filters.forEach(filter => {
+				if (filter.ordenar_de) {
+					hay_orden_elegido = true
+				}
+			})
+
+			if (hay_orden_elegido) {
+				return
+			}
+
+			filters.forEach(filter => {
+				if (filter.key === 'id') {
+					filter.ordenar_de = 'DESC'
+				}
+			})
 		},
 		/**
 		 * Entrada a papelera: reconstruye filtros desde columnas, orden único deleted_at DESC y POST search+papelera.
