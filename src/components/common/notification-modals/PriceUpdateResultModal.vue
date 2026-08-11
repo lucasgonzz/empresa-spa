@@ -75,6 +75,15 @@
 							{{ nombre }}
 						</li>
 					</ul>
+
+					<!-- La lista llego vacia: puede pasar si los articulos que cambiaron se
+					     borraron entre que cerro la corrida y se abrio el modal. Sin esto
+					     quedaba el titulo colgado, sin lista y sin explicacion. -->
+					<p
+					v-else-if="proveedores_cargados"
+					class="price-update-result-modal__aviso">
+						No quedaron proveedores para mostrar.
+					</p>
 				</div>
 			</template>
 
@@ -112,6 +121,22 @@ export default {
 			/** Nombres traídos del endpoint. */
 			proveedores: [],
 			/**
+			 * Si la respuesta del endpoint ya llegó.
+			 *
+			 * No alcanza con mirar si la lista tiene elementos: una lista vacía que ya llegó
+			 * y una que todavía no llegó se muestran distinto, y el encabezado tiene que
+			 * decir 0 en la primera en vez de seguir mostrando el número del broadcast.
+			 */
+			proveedores_cargados: false,
+			/**
+			 * Si el modal está a la vista.
+			 *
+			 * Lo necesita el watch de run_id para distinguir la apertura normal (donde el
+			 * trabajo lo hace on_shown) de una notificación que llega con el modal ya
+			 * abierto (donde on_shown no se dispara nunca).
+			 */
+			visible: false,
+			/**
 			 * Corrida que pidió la lista que está en vuelo.
 			 *
 			 * Sin esto, cerrar el modal mientras carga y abrirlo de nuevo con otra corrida
@@ -125,14 +150,31 @@ export default {
 		price_stats() {
 			return this.$store.state.global_notification.price_stats || {}
 		},
+		/** Corrida que el modal está mostrando ahora mismo. */
+		run_id() {
+			return this.price_stats.run_id || null
+		},
 		articulos_actualizados() {
 			return this.price_stats.articulos_actualizados || 0
 		},
 		sin_cambios() {
 			return !!this.price_stats.sin_cambios
 		},
+		/**
+		 * El chip que dice por qué se recalculó. Con el detalle pegado cuando lo hay: saber
+		 * que fue "por un cambio en un tipo de precio" sirve, pero saber en cuál sirve más, y
+		 * el backend ya lo manda recortado justamente para esto.
+		 *
+		 * @return {String}
+		 */
 		origen_texto() {
-			return this.price_stats.origen_texto || ''
+			let texto = this.price_stats.origen_texto || ''
+
+			if (texto && this.price_stats.origen_detalle) {
+				texto += ': ' + this.price_stats.origen_detalle
+			}
+
+			return texto
 		},
 		titulo() {
 			if (this.sin_cambios) {
@@ -154,7 +196,7 @@ export default {
 		 * @return {Number}
 		 */
 		proveedores_cantidad() {
-			if (this.proveedores.length) {
+			if (this.proveedores_cargados) {
 				return this.proveedores.length
 			}
 			return this.price_stats.proveedores_cantidad || 0
@@ -224,7 +266,7 @@ export default {
 		 * @return {void}
 		 */
 		cargar_proveedores() {
-			let run_id = this.price_stats.run_id
+			let run_id = this.run_id
 
 			if (!run_id || this.sin_cambios) {
 				return
@@ -242,6 +284,7 @@ export default {
 				}
 
 				this.proveedores = res.data.proveedores || []
+				this.proveedores_cargados = true
 				this.cargando_proveedores = false
 			})
 			.catch(() => {
@@ -253,17 +296,38 @@ export default {
 				this.cargando_proveedores = false
 			})
 		},
-		on_shown() {
-			this.animar_numero()
-			this.cargar_proveedores()
-		},
-		on_hidden() {
+		/**
+		 * Deja el modal como recién abierto: sin números, sin lista y sin nada en vuelo.
+		 *
+		 * @return {void}
+		 */
+		reiniciar() {
 			this.cancelar_animacion()
 			this.numero_animado = 0
 			this.proveedores = []
+			this.proveedores_cargados = false
 			this.cargando_proveedores = false
 			this.error_proveedores = false
 			this.run_id_pedido = null
+		},
+		/**
+		 * Muestra la corrida que esté ahora en el store. Es lo que hace on_shown, pero
+		 * llamable también con el modal ya abierto.
+		 *
+		 * @return {void}
+		 */
+		mostrar_corrida() {
+			this.reiniciar()
+			this.animar_numero()
+			this.cargar_proveedores()
+		},
+		on_shown() {
+			this.visible = true
+			this.mostrar_corrida()
+		},
+		on_hidden() {
+			this.visible = false
+			this.reiniciar()
 		},
 		/**
 		 * Reusa la función que ya existe para el modal de importación: refresca artículos,
@@ -274,6 +338,40 @@ export default {
 		aceptar() {
 			this.update_articles_after_import()
 			this.$bvModal.hide('price-update-result-notification')
+		},
+	},
+	watch: {
+		/**
+		 * 🔴 Otra corrida llegó con el modal ya abierto, que desde que cada disparo tiene su
+		 * propia notificación es el caso NORMAL: dos recálculos seguidos mandan dos avisos.
+		 *
+		 * bootstrap-vue descarta el show() de un modal que ya está visible, así que el evento
+		 * `shown` no se vuelve a emitir y on_shown no corre. Sin esto, el chip y el título
+		 * pasaban a ser de la corrida nueva (son computed sobre el store) mientras el número
+		 * grande y la lista de proveedores seguían siendo los de la anterior: el usuario veía
+		 * un número que no era de ninguna de las dos, sin que nada fallara.
+		 *
+		 * @param {Number|null} run_id_nuevo
+		 * @param {Number|null} run_id_anterior
+		 * @return {void}
+		 */
+		run_id(run_id_nuevo, run_id_anterior) {
+			/* Cerrado: lo que corresponda lo va a hacer on_shown cuando se abra. */
+			if (!this.visible || run_id_nuevo === run_id_anterior) {
+				return
+			}
+
+			/*
+			 * Una notificación global que no es de precios pisó el store y se llevó
+			 * price_stats. Este modal ya no tiene qué mostrar: dejarlo abierto con los
+			 * números viejos es peor que cerrarlo.
+			 */
+			if (!run_id_nuevo) {
+				this.$bvModal.hide('price-update-result-notification')
+				return
+			}
+
+			this.mostrar_corrida()
 		},
 	},
 	beforeDestroy() {
