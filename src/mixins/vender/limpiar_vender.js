@@ -90,6 +90,14 @@ export default {
 			this.setEmployeeVender()
 
 			this.setPriceType()
+
+			/*
+				Va ultima a proposito: setPriceType() y el resto de los commits de arriba
+				prenden la bandera. Si el apagado no fuera lo ultimo, la venta nueva quedaria
+				marcada como ya inicializada y no recibiria sus valores por defecto al volver
+				a entrar al modulo.
+			*/
+			this.$store.commit('vender/set_venta_en_curso_inicializada', false)
 		},
 		limpiar_descuentos() {
 
