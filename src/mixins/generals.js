@@ -754,6 +754,23 @@ export default {
          * Redondeo de DISPLAY: replica exactamente lo que hace ArticleHelper::redondear() en el
          * backend, que es la unica fuente de verdad del precio guardado.
          *
+         * 🔴 HOY NO LA LLAMA NADIE, Y ESO ES DELIBERADO. No es codigo olvidado: las tres llamadas
+         * que tenia se sacaron el 11/8/2026 por decision de Lucas, con la regla "la SPA no
+         * redondea: muestra el numero que el backend calculo y que la venta va a cobrar". Se
+         * conserva la funcion —no la llamada— porque es el espejo en JS de la cadena del backend y
+         * la referencia correcta el dia que haga falta.
+         *
+         * Las tres llamadas estaban mal por el mismo motivo: le pasaban un precio que el backend
+         * NO redondea. Dos le pasaban un precio con el descuento por forma de pago ya aplicado
+         * (el buscador de Vender y la consultora de precios), y la tercera le pasaba el COSTO
+         * (la columna "Precio" del Listado). El backend aplica redondear() una sola vez, sobre el
+         * precio final de catalogo. El sintoma medido: un cliente con "de a 50" y 12% de descuento
+         * veia $900 donde el sistema cobraba $880.
+         *
+         * ⚠️ Si alguna vez volves a llamarla, la unica invocacion legitima es sobre un precio de
+         * CATALOGO que el backend ya redondeo, para que el redondeo sea idempotente. Nunca sobre un
+         * precio con un descuento aplicado, nunca sobre un costo.
+         *
          * Tarea 4 — antes esta funcion conocia una sola de las cinco opciones
          * (redondear_centenas_en_vender) y ademas la implementaba distinto del backend: usaba
          * Math.ceil y no tenia el guard de > 100. O sea que un articulo de $80 con esa opcion
