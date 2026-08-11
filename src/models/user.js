@@ -106,28 +106,32 @@ export default {
 			 	'Si se activa, cada articulo un precio final para cada lista de precio que haya creada.',
 			],
 		},
-		{
-			text: 'Redondear precios de a centenas',
-			key: 'redondear_centenas_en_vender',
-			type: 'checkbox',
-		},
 		/*
-		 * Configuraciones de redondeo adicionales usadas por el backend al calcular precios finales.
+		 * Tarea 4 — las cuatro tildes de redondeo (centenas, decenas, de a 50 y centavos) se
+		 * reemplazaron por este unico select. Las cinco columnas booleanas siguen existiendo en la
+		 * base y siguen siendo lo que lee ArticleHelper::redondear(): el select es una fachada que
+		 * las lee (accessor modo_redondeo del modelo User) y las escribe (UserController@update).
+		 *
+		 * No se colapsaron a una columna nueva a proposito: hay clientes con dos flags prendidos, y
+		 * como el backend los encadena, esa combinacion da un resultado que ningun valor unico
+		 * representa. A esos se les muestra "Combinacion personalizada" y no se les toca nada hasta
+		 * que elijan otra opcion.
 		 */
 		{
-			text: 'Redondear precios en decenas',
-			key: 'redondear_precios_en_decenas',
-			type: 'checkbox',
-		},
-		{
-			text: 'Redondear precios de a 50',
-			key: 'redondear_de_a_50',
-			type: 'checkbox',
-		},
-		{
-			text: 'Redondear precios en centavos',
-			key: 'redondear_precios_en_centavos',
-			type: 'checkbox',
+			text: 'Opciones de redondeo',
+			key: 'modo_redondeo',
+			type: 'select',
+			// options: [] intencional (mismo patron que sale_factura_print_option en este archivo y
+			// que address.default_afip_information_id): FieldSelectInput monta el componente
+			// generico de relacion cuando typeof prop.options == 'undefined', y esta key no es un
+			// "*_id". Las opciones reales las calcula dynamic_options_function en tiempo real.
+			options: [],
+			dynamic_options_function: 'get_modo_redondeo_options',
+			descriptions:
+			[
+				'Define como se redondean los precios finales de venta.',
+				'Se aplica al recalcular los precios: al elegir una opcion distinta se vuelven a calcular los precios de todos los articulos.',
+			],
 		},
 		{
 			text: 'Aplicar los descuentos y recargos en los articulos antes del margen de ganancia',

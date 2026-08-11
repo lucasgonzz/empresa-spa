@@ -1350,6 +1350,48 @@ export default {
 			return options
 		},
 		/**
+		 * Tarea 4 — opciones del select "Opciones de redondeo" de la configuración de la cuenta
+		 * (user.modo_redondeo). Reemplaza a las cuatro tildes sueltas de redondeo.
+		 *
+		 * El orden es de paso más grande a más chico, que es como lo lee el cliente. NO es el orden
+		 * en que están los `if` de ArticleHelper::redondear(), que aplica el de a 50 después del de
+		 * a 10.
+		 *
+		 * Los textos dicen "al más cercano" contra "siempre hacia arriba", y aclaran el mínimo de
+		 * $100 de la opción de centenas, porque son diferencias reales de comportamiento entre
+		 * opciones que ahora conviven en la misma lista: viéndolas juntas cualquiera asume que
+		 * funcionan igual, y no funcionan igual.
+		 *
+		 * @param {Object} prop - Definición declarativa del campo (no se usa; va por firma común de dynamic_options_function).
+		 * @param {Object} model - Instancia de user que se está editando.
+		 * @returns {Array<{value: string, text: string, disabled: boolean|undefined}>}
+		 */
+		get_modo_redondeo_options(prop, model) {
+			let options = [
+				{ value: 'sin_redondeo', text: 'Sin redondeo' },
+				{ value: 'miles', text: 'Redondear de a 1000 (al mas cercano)' },
+				{ value: 'centenas', text: 'Redondear de a 100 (al mas cercano, solo en precios mayores a $100)' },
+				{ value: 'cincuenta', text: 'Redondear de a 50 (siempre hacia arriba)' },
+				{ value: 'decenas', text: 'Redondear de a 10 (al mas cercano)' },
+				{ value: 'centavos', text: 'Redondear a peso entero (sin centavos)' },
+			]
+
+			// "Combinacion personalizada" solo aparece si el usuario efectivamente está en ese
+			// estado (dos o más columnas de redondeo prendidas, que es lo que devuelve el accessor
+			// del backend). Va deshabilitada: sirve para que vea en qué configuración está, pero no
+			// para volver a elegirla una vez que se movió a otra — el backend no sabría a qué
+			// combinación volver.
+			if (model && model.modo_redondeo == 'personalizado') {
+				options.push({
+					value: 'personalizado',
+					text: 'Combinacion personalizada (configuracion actual)',
+					disabled: true,
+				})
+			}
+
+			return options
+		},
+		/**
 		 * true cuando la sucursal todavía no tiene ningún afip_information cargado: en ese
 		 * caso el select de "Facturación por defecto" se deshabilita (no tiene sentido elegir
 		 * entre opciones que no existen) y se muestra un aviso (address_default_afip_information_warning_text).

@@ -750,14 +750,65 @@ export default {
             // console.log(price)
             return price = Number(price) / Number(this.$store.state.vender.valor_dolar) 
         },
+        /**
+         * Redondeo de DISPLAY: replica exactamente lo que hace ArticleHelper::redondear() en el
+         * backend, que es la unica fuente de verdad del precio guardado.
+         *
+         * Tarea 4 — antes esta funcion conocia una sola de las cinco opciones
+         * (redondear_centenas_en_vender) y ademas la implementaba distinto del backend: usaba
+         * Math.ceil y no tenia el guard de > 100. O sea que un articulo de $80 con esa opcion
+         * activa se MOSTRABA en $100 aunque el precio real fuera $80: el display inventaba plata
+         * que no estaba en la base.
+         *
+         * La invariante que hay que sostener: este redondeo tiene que ser idempotente sobre un
+         * precio que el backend ya redondeo, y no puede redondear un precio que el backend no
+         * habria redondeado. Se cumple replicando la cadena tal cual, incluidas dos cosas que
+         * parecen detalles y no lo son: los cinco flags se ENCADENAN (no hay early return, cada uno
+         * pisa el precio del anterior) y el de a 50 va DESPUES del de a 10.
+         *
+         * @param {number} price - Precio a redondear para mostrar.
+         * @returns {number}
+         */
         redondear(price) {
-            if (this.owner.redondear_centenas_en_vender) {
-                price = this.redondear_centenas(price)
+            let num = Number(price)
+
+            if (this.owner.redondear_miles_en_vender) {
+                num = Math.round(num / 1000) * 1000
             }
-            return price
+
+            if (this.owner.redondear_centenas_en_vender) {
+                // El guard de > 100 es del backend y hay que respetarlo: sin el, un precio de $80
+                // se mostraria en $100.
+                if (num > 100) {
+                    num = this.redondear_centenas(num)
+                }
+            }
+
+            if (this.owner.redondear_precios_en_decenas) {
+                num = Math.round(num / 10) * 10
+            }
+
+            if (this.owner.redondear_de_a_50) {
+                // Esta es la unica que va siempre hacia arriba, igual que el ceil del backend.
+                num = Math.ceil(num / 50) * 50
+            }
+
+            if (this.owner.redondear_precios_en_centavos) {
+                num = Math.round(num)
+            }
+
+            return num
         },
+        /**
+         * Redondeo a la centena mas cercana. Math.round y no Math.ceil: el backend usa
+         * round($price, -2). Para precios positivos, Math.round de JS y round de PHP coinciden
+         * (los dos mandan el .5 hacia arriba).
+         *
+         * @param {number} num
+         * @returns {number}
+         */
         redondear_centenas(num) {
-            return Math.ceil(num / 100) * 100;
+            return Math.round(num / 100) * 100;
         },
         aplicar_tipos_de_precio(item, price) {
 
