@@ -1,7 +1,7 @@
 <template>
 	<b-modal
 	id="price-update-result-notification"
-	size="lg"
+	size="md"
 	hide-footer
 	hide-header
 	centered
@@ -47,92 +47,34 @@
 					</span>
 				</div>
 
-				<div class="price-update-result-modal__listas">
-					<!-- Proveedores -->
-					<div class="price-update-result-modal__lista">
-						<h6 class="price-update-result-modal__lista-titulo">Por proveedor</h6>
-						<div
-						v-for="(item, index) in proveedores_visibles"
-						:key="'prov-' + index"
-						class="price-update-result-modal__fila"
-						:style="estilo_fila(index)">
-							<span class="price-update-result-modal__fila-nombre" :title="item.nombre">
-								{{ item.nombre }}
-							</span>
-							<div class="price-update-result-modal__barra-carril">
-								<div
-								class="price-update-result-modal__barra"
-								:style="estilo_barra(item.cantidad, maximo_proveedores)"></div>
-							</div>
-							<span class="price-update-result-modal__fila-cantidad">{{ item.cantidad }}</span>
-						</div>
+				<div class="price-update-result-modal__proveedores">
+					<p class="price-update-result-modal__proveedores-titulo">
+						{{ texto_proveedores }}
+					</p>
 
-						<p
-						v-if="proveedores.otros_grupos > 0 && !proveedores_expandidos"
-						class="price-update-result-modal__restantes">
-							y {{ proveedores.otros_cantidad }} artículos más en otros
-							{{ proveedores.otros_grupos }}
-							{{ proveedores.otros_grupos === 1 ? 'proveedor' : 'proveedores' }}
-						</p>
+					<p
+					v-if="cargando_proveedores"
+					class="price-update-result-modal__aviso">
+						Cargando los proveedores...
+					</p>
 
-						<b-button
-						v-if="proveedores.otros_grupos > 0 && !proveedores_expandidos"
-						size="sm"
-						variant="link"
-						:disabled="cargando_proveedores"
-						@click="ver_restantes('provider')">
-							{{ cargando_proveedores ? 'Cargando...' : 'Ver los ' + proveedores.total_grupos + ' proveedores' }}
-						</b-button>
+					<p
+					v-else-if="error_proveedores"
+					class="price-update-result-modal__error">
+						No se pudo cargar la lista de proveedores. Los precios igual se actualizaron.
+					</p>
 
-						<p
-						v-if="error_proveedores"
-						class="price-update-result-modal__error">
-							No se pudo cargar el detalle. Probá de nuevo en un momento.
-						</p>
-					</div>
-
-					<!-- Categorias -->
-					<div class="price-update-result-modal__lista">
-						<h6 class="price-update-result-modal__lista-titulo">Por categoría</h6>
-						<div
-						v-for="(item, index) in categorias_visibles"
-						:key="'cat-' + index"
-						class="price-update-result-modal__fila"
-						:style="estilo_fila(index)">
-							<span class="price-update-result-modal__fila-nombre" :title="item.nombre">
-								{{ item.nombre }}
-							</span>
-							<div class="price-update-result-modal__barra-carril">
-								<div
-								class="price-update-result-modal__barra price-update-result-modal__barra--categoria"
-								:style="estilo_barra(item.cantidad, maximo_categorias)"></div>
-							</div>
-							<span class="price-update-result-modal__fila-cantidad">{{ item.cantidad }}</span>
-						</div>
-
-						<p
-						v-if="categorias.otros_grupos > 0 && !categorias_expandidas"
-						class="price-update-result-modal__restantes">
-							y {{ categorias.otros_cantidad }} artículos más en otras
-							{{ categorias.otros_grupos }}
-							{{ categorias.otros_grupos === 1 ? 'categoría' : 'categorías' }}
-						</p>
-
-						<b-button
-						v-if="categorias.otros_grupos > 0 && !categorias_expandidas"
-						size="sm"
-						variant="link"
-						:disabled="cargando_categorias"
-						@click="ver_restantes('category')">
-							{{ cargando_categorias ? 'Cargando...' : 'Ver las ' + categorias.total_grupos + ' categorías' }}
-						</b-button>
-
-						<p
-						v-if="error_categorias"
-						class="price-update-result-modal__error">
-							No se pudo cargar el detalle. Probá de nuevo en un momento.
-						</p>
-					</div>
+					<ul
+					v-else-if="proveedores.length"
+					class="price-update-result-modal__lista">
+						<li
+						v-for="nombre in proveedores"
+						:key="nombre"
+						class="price-update-result-modal__item"
+						:title="nombre">
+							{{ nombre }}
+						</li>
+					</ul>
 				</div>
 			</template>
 
@@ -153,8 +95,9 @@ import global_notification_functions from '@/mixins/global_notification_function
  * Modal de resultado del recálculo de precios.
  *
  * Hermano del de resultado de importación: mismo mecanismo (notification_modal en el
- * broadcast → id de b-modal), misma nomenclatura BEM, y el mismo criterio de traer sólo el
- * top en el payload y pedir el resto por endpoint.
+ * broadcast → id de b-modal) y misma nomenclatura BEM. Muestra cuántos artículos cambiaron
+ * de precio, de cuántos proveedores, y los nombres de esos proveedores — sin conteos por
+ * proveedor y sin categorías (decisión de Lucas, 11/8/2026).
  */
 export default {
 	mixins: [global_notification_functions],
@@ -164,15 +107,18 @@ export default {
 			numero_animado: 0,
 			/** id del requestAnimationFrame en curso, para poder cancelarlo al cerrar. */
 			animacion_id: null,
-			proveedores_expandidos: false,
-			categorias_expandidas: false,
 			cargando_proveedores: false,
-			cargando_categorias: false,
 			error_proveedores: false,
-			error_categorias: false,
-			/** Listas completas traídas del endpoint; pisan a las del broadcast. */
-			proveedores_completos: null,
-			categorias_completas: null,
+			/** Nombres traídos del endpoint. */
+			proveedores: [],
+			/**
+			 * Corrida que pidió la lista que está en vuelo.
+			 *
+			 * Sin esto, cerrar el modal mientras carga y abrirlo de nuevo con otra corrida
+			 * mostraba los proveedores de la corrida anterior: el .then de la respuesta vieja
+			 * llegaba después y escribía igual.
+			 */
+			run_id_pedido: null,
 		}
 	},
 	computed: {
@@ -200,76 +146,27 @@ export default {
 			}
 			return 'bi bi-graph-up-arrow'
 		},
-		proveedores() {
-			return this.price_stats.proveedores || { items: [], otros_cantidad: 0, otros_grupos: 0, total_grupos: 0 }
-		},
-		categorias() {
-			return this.price_stats.categorias || { items: [], otros_cantidad: 0, otros_grupos: 0, total_grupos: 0 }
-		},
-		proveedores_visibles() {
-			if (this.proveedores_completos) {
-				return this.proveedores_completos
+		/**
+		 * Mientras la lista no llegó vale el número del broadcast; cuando llega manda la
+		 * lista. Así el encabezado nunca dice un número distinto al de los nombres que se
+		 * ven abajo, que es lo que el usuario lee como un error.
+		 *
+		 * @return {Number}
+		 */
+		proveedores_cantidad() {
+			if (this.proveedores.length) {
+				return this.proveedores.length
 			}
-			return this.proveedores.items || []
+			return this.price_stats.proveedores_cantidad || 0
 		},
-		categorias_visibles() {
-			if (this.categorias_completas) {
-				return this.categorias_completas
+		texto_proveedores() {
+			if (this.proveedores_cantidad === 1) {
+				return 'Se actualizaron precios de 1 proveedor'
 			}
-			return this.categorias.items || []
-		},
-		/** La barra más larga es la del grupo más grande; el resto se mide contra esa. */
-		maximo_proveedores() {
-			return this.maximo_de(this.proveedores_visibles)
-		},
-		maximo_categorias() {
-			return this.maximo_de(this.categorias_visibles)
+			return 'Se actualizaron precios de ' + this.proveedores_cantidad + ' proveedores'
 		},
 	},
 	methods: {
-		/**
-		 * @param {Array} items
-		 * @return {Number}
-		 */
-		maximo_de(items) {
-			let maximo = 0
-
-			items.forEach(item => {
-				if (item.cantidad > maximo) {
-					maximo = item.cantidad
-				}
-			})
-
-			if (maximo === 0) {
-				return 1
-			}
-
-			return maximo
-		},
-		/**
-		 * Ancho de la barra, en porcentaje del grupo más grande.
-		 *
-		 * @param {Number} cantidad
-		 * @param {Number} maximo
-		 * @return {Object}
-		 */
-		estilo_barra(cantidad, maximo) {
-			return {
-				width: Math.round((cantidad / maximo) * 100) + '%',
-			}
-		},
-		/**
-		 * Retardo escalonado por fila: las barras entran una atrás de la otra en vez de
-		 * todas juntas, que es lo que hace que se lea como un gráfico y no como un salto.
-		 *
-		 * @param {Number} index
-		 * @return {Object}
-		 */
-		estilo_fila(index) {
-			return {
-				'animation-delay': (index * 40) + 'ms',
-			}
-		},
 		/**
 		 * Cuenta desde 0 hasta el total con requestAnimationFrame.
 		 *
@@ -321,65 +218,52 @@ export default {
 			}
 		},
 		/**
-		 * Trae el desglose completo del endpoint. El broadcast sólo puede llevar el top: el
+		 * Trae los nombres de los proveedores. El broadcast sólo puede llevar números: el
 		 * límite de Pusher son 10 KB y pasarse significa que la notificación no llega.
 		 *
-		 * @param {String} tipo 'provider' | 'category'
 		 * @return {void}
 		 */
-		ver_restantes(tipo) {
+		cargar_proveedores() {
 			let run_id = this.price_stats.run_id
 
-			if (!run_id) {
+			if (!run_id || this.sin_cambios) {
 				return
 			}
 
-			let es_proveedor = tipo === 'provider'
+			this.run_id_pedido = run_id
+			this.cargando_proveedores = true
+			this.error_proveedores = false
 
-			if (es_proveedor) {
-				this.cargando_proveedores = true
-				this.error_proveedores = false
-			} else {
-				this.cargando_categorias = true
-				this.error_categorias = false
-			}
-
-			this.$api.get('price-update-run/' + run_id + '/desglose?tipo=' + tipo + '&limit=50')
+			this.$api.get('price-update-run/' + run_id + '/desglose')
 			.then(res => {
-				if (es_proveedor) {
-					this.proveedores_completos = res.data.items || []
-					this.proveedores_expandidos = true
-					this.cargando_proveedores = false
-				} else {
-					this.categorias_completas = res.data.items || []
-					this.categorias_expandidas = true
-					this.cargando_categorias = false
+				/* Llegó tarde: el modal ya se cerró, o ya está mostrando otra corrida. */
+				if (this.run_id_pedido !== run_id) {
+					return
 				}
-			})
-			.catch(err => {
-				console.log(err)
 
-				if (es_proveedor) {
-					this.error_proveedores = true
-					this.cargando_proveedores = false
-				} else {
-					this.error_categorias = true
-					this.cargando_categorias = false
+				this.proveedores = res.data.proveedores || []
+				this.cargando_proveedores = false
+			})
+			.catch(() => {
+				if (this.run_id_pedido !== run_id) {
+					return
 				}
+
+				this.error_proveedores = true
+				this.cargando_proveedores = false
 			})
 		},
 		on_shown() {
 			this.animar_numero()
+			this.cargar_proveedores()
 		},
 		on_hidden() {
 			this.cancelar_animacion()
 			this.numero_animado = 0
-			this.proveedores_expandidos = false
-			this.categorias_expandidas = false
-			this.proveedores_completos = null
-			this.categorias_completas = null
+			this.proveedores = []
+			this.cargando_proveedores = false
 			this.error_proveedores = false
-			this.error_categorias = false
+			this.run_id_pedido = null
 		},
 		/**
 		 * Reusa la función que ya existe para el modal de importación: refresca artículos,
@@ -454,77 +338,41 @@ export default {
 		color: #64748b
 		margin-top: 4px
 
-	&__listas
-		display: flex
-		flex-direction: row
-		gap: 24px
+	&__proveedores
+		text-align: center
 
-		@media screen and (max-width: 768px)
-			flex-direction: column
+	&__proveedores-titulo
+		font-size: 0.9rem
+		font-weight: 600
+		color: #334155
+		margin: 0 0 10px 0
 
 	&__lista
-		flex: 1
-		min-width: 0
+		list-style: none
+		margin: 0
+		padding: 0
+		max-height: 220px
+		overflow-y: auto
+		border-top: 1px solid rgba(148, 163, 184, 0.25)
 
-	&__lista-titulo
-		font-size: 0.72rem
-		font-weight: 700
-		text-transform: uppercase
-		letter-spacing: 0.05em
-		color: #94a3b8
-		margin-bottom: 12px
-
-	&__fila
-		display: flex
-		align-items: center
-		gap: 10px
-		margin-bottom: 8px
-		opacity: 0
-		animation: price-update-fila-entra 0.35s ease forwards
-
-	&__fila-nombre
-		flex: 0 0 38%
-		font-size: 0.82rem
+	&__item
+		padding: 7px 10px
+		font-size: 0.85rem
 		color: #334155
+		border-bottom: 1px solid rgba(148, 163, 184, 0.18)
 		white-space: nowrap
 		overflow: hidden
 		text-overflow: ellipsis
 
-	&__barra-carril
-		flex: 1
-		height: 8px
-		border-radius: 999px
-		background: rgba(148, 163, 184, 0.18)
-		overflow: hidden
-		min-width: 0
-
-	&__barra
-		height: 100%
-		border-radius: 999px
-		background: #2563eb
-		transform-origin: left center
-		animation: price-update-barra-crece 0.45s ease forwards
-
-		&--categoria
-			background: #7c3aed
-
-	&__fila-cantidad
-		flex: 0 0 auto
-		font-size: 0.82rem
-		font-weight: 700
-		color: #334155
-		min-width: 32px
-		text-align: right
-
-	&__restantes
-		font-size: 0.78rem
+	&__aviso
+		font-size: 0.8rem
 		color: #94a3b8
-		margin: 8px 0 0 0
+		margin: 0
 
 	&__error
-		font-size: 0.78rem
+		font-size: 0.8rem
 		color: #c82333
-		margin: 8px 0 0 0
+		margin: 0
 
 	&__vacio
 		text-align: center
@@ -538,18 +386,4 @@ export default {
 		display: flex
 		justify-content: center
 		margin-top: 24px
-
-@keyframes price-update-fila-entra
-	from
-		opacity: 0
-		transform: translateY(6px)
-	to
-		opacity: 1
-		transform: translateY(0)
-
-@keyframes price-update-barra-crece
-	from
-		transform: scaleX(0)
-	to
-		transform: scaleX(1)
 </style>
