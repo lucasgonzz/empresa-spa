@@ -34,14 +34,32 @@ export default {
 			/** Página en la que está parado el usuario; si no hay ninguna, la primera. */
 			let page = store_state.filter_page || 1
 
+			/*
+			 * El spinner del botón sale de article.loading, así que hay que prenderlo y apagarlo
+			 * acá: el camino nuevo no lo toca solo. runListadoPorDefecto va en modo silencioso
+			 * (sin overlay global) a propósito, y runGlobalSearch muestra el overlay pero no este
+			 * flag. Sin esto, el usuario aprieta el botón y no ve absolutamente nada hasta que la
+			 * tabla cambia sola.
+			 */
+			this.$store.commit('article/setLoading', true)
+
 			// Mismo criterio que refresh_filter_results: si lo que se ve es el listado por defecto
 			// se refresca por ahí, y si hay una búsqueda real del usuario se re-ejecuta esa
 			// búsqueda. "Actualizar" nunca borra lo que el usuario estaba mirando.
-			if (store_state.listado_por_defecto) {
-				return this.$store.dispatch('article/runListadoPorDefecto', { page: page })
-			}
+			let refresco = store_state.listado_por_defecto
+				? this.$store.dispatch('article/runListadoPorDefecto', { page: page })
+				: this.$store.dispatch('article/runGlobalSearch', { page: page })
 
-			return this.$store.dispatch('article/runGlobalSearch', { page: page })
+			return refresco
+				.then(res => {
+					this.$store.commit('article/setLoading', false)
+					return res
+				})
+				.catch(err => {
+					this.$store.commit('article/setLoading', false)
+					this.$toast.error('Error al actualizar el listado')
+					console.log(err)
+				})
 		},
 	}
 }
