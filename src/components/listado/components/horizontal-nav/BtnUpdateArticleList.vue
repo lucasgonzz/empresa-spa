@@ -4,7 +4,7 @@
 	:title="tooltip_text"
 	@click="update_article_list"
 	:disabled="is_loading"
-	class="btn-update-article-list toolbar-btn--icono"
+	class="btn-update-article-list toolbar-btn--icono toolbar-btn--tinte-azul"
 	dusk="btn_update_article_list"
 	size="sm">
 		<i

@@ -1,7 +1,7 @@
 <template>
 	<b-dropdown
 	right
-	class="toolbar-btn--icono"
+	class="toolbar-btn--icono toolbar-btn--tinte-violeta"
 	size="sm"
 	:toggle-attrs="{ title: 'Depósitos', 'aria-label': 'Depósitos' }">
 		<!-- Botón del dropdown solo-ícono (sin texto), con tooltip descriptivo -->

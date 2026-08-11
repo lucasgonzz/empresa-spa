@@ -235,8 +235,16 @@ export default {
 			margin-left: 10px
 
 /* Menú del dropdown de seleccionados/filtrados: altura máxima y scroll vertical */
+// El min-width no es cosmético: sin él el menú cae al 10rem por defecto de Bootstrap, y de esos
+// 160px se comen 32 el icon-wrap y 12 el gap. En Proveedores, que tiene solo dos opciones cortas,
+// "Actualizar" quedaba partido en dos renglones; en el Listado no se veía porque alguna opción
+// larga inyectada por slot ensanchaba el menú sola.
+//
+// (Comentarios con // y no con /* */ de varias líneas: en Sass indentado el */ suelto en su
+// propio renglón se parsea como selector y el build se cae.)
 #btn_filtrados_dropdown .dropdown-menu,
 #btn_seleccionados_dropdown .dropdown-menu
+	min-width: 220px
 	max-height: 70vh
 	overflow-y: auto
 
@@ -316,7 +324,11 @@ export default {
 
 		white-space: normal
 
-		word-break: break-word
+		// overflow-wrap en vez de word-break: los dos evitan que una opción larga inyectada por
+		// un slot desborde el menú, pero word-break partía también palabras cortas cuando el
+		// menú era angosto. Con el min-width de arriba y esto, "Actualizar" entra en un renglón
+		// y una opción larga sigue sin desbordar.
+		overflow-wrap: break-word
 
 /* Variante de peligro para acciones destructivas */
 

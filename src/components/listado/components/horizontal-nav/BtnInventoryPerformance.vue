@@ -4,7 +4,7 @@
 	v-b-tooltip.hover
 	title="Rendimiento del inventario"
 	aria-label="Rendimiento del inventario"
-	class="toolbar-btn--icono"
+	class="toolbar-btn--icono toolbar-btn--tinte-verde"
 	v-b-modal="'inventory-performance'"
 	size="sm">
 		<i class="bi bi-box-seam"></i>

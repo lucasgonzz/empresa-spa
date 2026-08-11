@@ -1,6 +1,9 @@
 <template>
 	
-	<div class="j-end align-center w-100">
+	<!-- view-header__group: la separacion entre estos botones la da el gap del contenedor, no un -->
+	<!-- margen de cada hijo. Sin esta clase quedan pegados: el gap de .view-header__right separa -->
+	<!-- este bloque entero de sus vecinos, pero este div es su unico hijo. -->
+	<div class="j-end align-center w-100 view-header__group">
 
 		<btn-update-article-list
 		class="d-none d-md-block"></btn-update-article-list>

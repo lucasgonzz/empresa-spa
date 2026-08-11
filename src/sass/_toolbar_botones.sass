@@ -22,6 +22,12 @@
 	--toolbar-btn-gap: 8px
 	// Separacion entre grupos distintos.
 	--toolbar-group-gap: 16px
+	// Estado "seleccion multiple activa". Ambar apagado, NO el #ffc107 de Bootstrap: ver la nota
+	// larga en la regla .toolbar-btn--activo, mas abajo. Es la misma familia que ya usa el chip
+	// de pesos de caja (caja-totales__chip--ars), asi que no suma un color nuevo al sistema.
+	--toolbar-btn-seleccion: #d97706
+	--toolbar-btn-seleccion-bg: rgba(217, 119, 6, 0.12)
+	--toolbar-btn-seleccion-bg-hover: rgba(217, 119, 6, 0.2)
 
 // El campo es pill y los botones son squircle, y es A PROPOSITO.
 //
@@ -111,29 +117,187 @@
 		i
 			color: #fff
 
-	// --- Estado activo: azul tenue, no amarillo ---------------------------------------------
-	// Marca un MODO (seleccion multiple activa, filtros aplicados), no una urgencia. El amarillo
-	// que usaba antes era el unico color que gritaba en toda la barra sin senalar nada urgente.
-	.toolbar-btn--activo,
-	.toolbar-btn--activo > .btn
-		background: rgba(0, 123, 255, 0.12)
+	// --- El split de "Crear" ----------------------------------------------------------------
+	// BtnCreate.vue pone .toolbar-btn--acento en el propio <b-button>, asi que ahi el elemento
+	// con la clase ES el boton. ExcelDropDown.vue la pone en el CONTENEDOR, que BootstrapVue
+	// renderiza como un div.btn-group con dos .btn adentro (la accion y el caret) que NO llevan
+	// la clase. Sin las dos reglas de abajo pasan dos cosas juntas: los hijos caen en la regla
+	// neutra --que con sus tres :not() tiene especificidad (0,5,0) contra los (0,3,0) del acento,
+	// y por eso gana-- y quedan blancos, y el fondo azul del contenedor asoma por los bordes
+	// como un halo alrededor.
+	//
+	// Se resuelve por especificidad y orden, NO con !important: un !important aca se pelea
+	// despues con los estados hover/focus/disabled de Bootstrap y la deuda vuelve peor.
+	//
+	// 🔴 Los dos :not() de la regla de abajo NO son ruido: estan para empatarle en especificidad
+	// a la regla neutra (0,5,0 contra 0,5,0) y ganarle por orden de declaracion. Si alguien los
+	// "simplifica", el split vuelve a verse blanco con halo azul.
+	.toolbar-btn--acento > .btn:not(.btn-link):not(.dropdown-item)
+		background: var(--color-primary)
 		border: 1px solid var(--color-primary)
-		color: var(--color-primary)
+		color: #fff
 
 		&:hover,
 		&:focus
-			background: rgba(0, 123, 255, 0.18)
+			filter: brightness(0.92)
+			background: var(--color-primary)
 			border-color: var(--color-primary)
-			color: var(--color-primary)
+			color: #fff
 
 		i
-			color: var(--color-primary)
+			color: #fff
+
+	// El contenedor del split no pinta nada: el color lo ponen sus dos botones. Si conservara el
+	// fondo y el borde, volveria a asomar por fuera de ellos.
+	.toolbar-btn--acento.btn-group
+		background: transparent
+		border: 0
+		padding: 0
+
+	// El caret se separa de la accion por una linea interna tenue, no por un cambio de fondo:
+	// el split tiene que leerse como UN boton, no como dos.
+	.toolbar-btn--acento > .dropdown-toggle-split
+		border-left: 1px solid rgba(255, 255, 255, 0.35)
+
+	// --- Grupos de botones: una sola pieza --------------------------------------------------
+	// Los .btn-group de la barra (seleccion, filtros, y el split de Crear) se veian como botones
+	// sueltos porque la regla de altura de mas arriba le pone el radio del token a TODOS los .btn
+	// y este archivo se importa despues de Bootstrap (ver app.sass), asi que pisaba los
+	// border-radius: 0 que Bootstrap le da al medio de un grupo.
+	//
+	// Se resuelve por POSICION REAL (:first-child / :last-child) y no por una lista de
+	// componentes: btn-restart-filter tiene v-if, asi que quien es "el ultimo del grupo" cambia
+	// segun el estado, y un miembro puede ser un b-dropdown, que a su vez renderiza otro
+	// .btn-group adentro.
+	.btn-group
+		> .btn,
+		> .dropdown > .btn,
+		> .btn-group > .btn
+			border-radius: 0
+
+		> :first-child,
+		> :first-child > .btn
+			border-top-left-radius: var(--toolbar-btn-radius)
+			border-bottom-left-radius: var(--toolbar-btn-radius)
+
+		> :last-child,
+		> :last-child > .btn
+			border-top-right-radius: var(--toolbar-btn-radius)
+			border-bottom-right-radius: var(--toolbar-btn-radius)
+
+		// Borde compartido: sin esto queda una linea de 2px entre boton y boton.
+		> * + *
+			margin-left: -1px
+
+	// --- Estado activo: ambar apagado (11/8/2026) -------------------------------------------
+	// La mision 13 habia pasado este estado de amarillo a azul tenue, con el argumento de que el
+	// amarillo era el unico color que gritaba en la barra sin senalar nada urgente. Lucas lo uso
+	// asi una semana y lo REVIRTIO: el amarillo era justamente lo que le permitia ver de un
+	// vistazo que estaba en modo seleccion, y en azul se confundia con el resto de la barra.
+	//
+	// Lo que se conserva de aquella decision es no volver al #ffc107 de Bootstrap, que era el
+	// que resultaba chillon: este ambar es apagado y de la misma familia que el chip de caja.
+	//
+	// O sea: si estas leyendo esto porque te dieron ganas de "unificar" este estado con el azul
+	// del resto, eso ya se probo y se descarto con el sistema en uso.
+	//
+	// Va en los DOS controles del grupo de seleccion --el boton y el dropdown de seleccionados,
+	// que se alcanza por su id-- porque son un grupo: si uno va ambar y el otro neutro, el grupo
+	// se parte visualmente. El dropdown de FILTRADOS sigue neutro a proposito: el ambar significa
+	// "estas en modo seleccion", no "hay filtros".
+	.toolbar-btn--activo,
+	.toolbar-btn--activo > .btn,
+	#btn_seleccionados_dropdown > .btn
+		background: var(--toolbar-btn-seleccion-bg)
+		border: 1px solid var(--toolbar-btn-seleccion)
+		color: var(--toolbar-btn-seleccion)
+
+		&:hover,
+		&:focus
+			background: var(--toolbar-btn-seleccion-bg-hover)
+			border-color: var(--toolbar-btn-seleccion)
+			color: var(--toolbar-btn-seleccion)
+
+		i
+			color: var(--toolbar-btn-seleccion)
+
+	// --- Tintes de icono de los botones de modulo -------------------------------------------
+	// Los tres botones de modulo del Listado (actualizar lista, rendimiento de inventario y
+	// depositos) se veian todos iguales en gris y no habia forma de distinguirlos de un vistazo.
+	//
+	// El color va en el ICONO, no en el relleno, y es a proposito. La mision 13 establecio que
+	// hay UNA sola accion con relleno macizo en la barra, y que los tres rellenos de colores
+	// distintos que convivian antes eran justamente el problema. Tintar los iconos los distingue
+	// sin devolver la barra a ese estado: "Crear" sigue siendo lo unico solido.
+	//
+	// Los tonos son de la misma familia de saturacion, apagados, no los primary/success solidos
+	// de Bootstrap. En hover el fondo toma el mismo tono al 10%, asi que el boton confirma cual
+	// es sin cambiar de peso visual.
+	// 🔴 Los :not() repetidos de abajo estan por especificidad, igual que en el split de "Crear":
+	// la regla neutra pinta `i { color: inherit }` con (0,5,1) y un `.toolbar-btn--tinte-azul i`
+	// pelado --que seria (0,3,1)-- pierde y el icono queda gris. Con el .btn y los dos :not()
+	// empatan en (0,5,1) y gana esta por venir despues. No los saques.
+	.toolbar-btn--tinte-azul,
+	.toolbar-btn--tinte-verde,
+	.toolbar-btn--tinte-violeta
+		&.btn:not(.btn-link):not(.dropdown-item) i,
+		> .btn:not(.btn-link):not(.dropdown-item) i
+			color: var(--toolbar-tinte)
+
+		&.btn:not(.btn-link):not(.dropdown-item):hover,
+		&.btn:not(.btn-link):not(.dropdown-item):focus,
+		> .btn:not(.btn-link):not(.dropdown-item):hover,
+		> .btn:not(.btn-link):not(.dropdown-item):focus
+			background: var(--toolbar-tinte-bg)
+			border-color: var(--toolbar-tinte)
+
+	.toolbar-btn--tinte-azul
+		--toolbar-tinte: #2563eb
+		--toolbar-tinte-bg: rgba(37, 99, 235, 0.1)
+
+	.toolbar-btn--tinte-verde
+		--toolbar-tinte: #059669
+		--toolbar-tinte-bg: rgba(5, 150, 105, 0.1)
+
+	.toolbar-btn--tinte-violeta
+		--toolbar-tinte: #7c3aed
+		--toolbar-tinte-bg: rgba(124, 58, 237, 0.1)
 
 	// --- Dropdowns --------------------------------------------------------------------------
 	// El caret de Bootstrap suma ancho a la derecha y descentra el icono en los toggles de solo
 	// icono; se saca ahi y se deja donde el boton tiene texto.
 	.toolbar-btn--icono .dropdown-toggle::after
 		display: none
+
+// --- Contrapartes de tema oscuro ------------------------------------------------------------
+// Los tokens de arriba que salen de _dark_theme.sass (--bg-card, --color-border, etc.) ya cambian
+// solos. Los colores que esta barra define por su cuenta --el ambar del estado de seleccion y los
+// tres tintes de icono-- no, y en oscuro se apagan tanto que dejan de senalar nada: un #d97706
+// sobre #1e2127 queda a un contraste que no se lee de reojo, que es justamente como se mira una
+// barra de herramientas. Se suben un escalon de luminosidad y se levanta un poco la opacidad del
+// relleno, que sobre fondo oscuro rinde menos.
+html.dark-mode
+	--toolbar-btn-seleccion: #f59e0b
+	--toolbar-btn-seleccion-bg: rgba(245, 158, 11, 0.16)
+	--toolbar-btn-seleccion-bg-hover: rgba(245, 158, 11, 0.24)
+
+html.dark-mode .view-header-toolbar
+	.toolbar-btn--tinte-azul
+		--toolbar-tinte: #60a5fa
+		--toolbar-tinte-bg: rgba(96, 165, 250, 0.16)
+
+	.toolbar-btn--tinte-verde
+		--toolbar-tinte: #34d399
+		--toolbar-tinte-bg: rgba(52, 211, 153, 0.16)
+
+	.toolbar-btn--tinte-violeta
+		--toolbar-tinte: #a78bfa
+		--toolbar-tinte-bg: rgba(167, 139, 250, 0.16)
+
+	// El divisor del split se apoya sobre el azul del acento, que en oscuro es mas claro: la
+	// linea blanca al 35% se le pierde encima.
+	.toolbar-btn--acento > .dropdown-toggle-split
+		border-left-color: rgba(0, 0, 0, 0.25)
 
 // El "tamaño chico" de la interfaz baja la altura de TODA la barra de forma coherente, pill
 // incluido, en vez de achicar los botones y dejar el campo alto. La regla de _ui_sizes.sass que
