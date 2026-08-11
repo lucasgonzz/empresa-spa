@@ -691,7 +691,22 @@ export default function __base_store(options = {}) {
 			//
 			// Va aca y no en filtrar() porque este es el punto por donde pasan TODOS los caminos que
 			// aplican filtros de columna, incluida la paginacion, que tambien entra sin `props`.
-			if (column_filters.length > 0) {
+			//
+			// 🔴 Se cuentan los filtros con criterio de VALOR, no los que viajan al backend.
+			// column_filters incluye los que solo tienen `ordenar_de`, porque sin ellos la columna
+			// no se ordenaria; pero ordenar NO es filtrar. Contarlos aca hacia que ordenar una
+			// columna prendiera el cartel de "N filtrados" sin que el usuario filtrara nada, y que
+			// la exportacion creyera que habia filtros. Es la misma clase de mentira que este flag
+			// vino a arreglar, en el sentido contrario.
+			let filtros_con_valor = 0
+
+			state.filters.forEach(filter => {
+				if (filters_mixin.methods.filter_has_value_criteria(filter)) {
+					filtros_con_valor++
+				}
+			})
+
+			if (filtros_con_valor > 0) {
 				commit('set_listado_por_defecto', false)
 			}
 
@@ -765,9 +780,14 @@ export default function __base_store(options = {}) {
 					// Salvo que haya filtros de columna activos: ahí lo que se ve está filtrado, y
 					// marcarlo como listado por defecto volvería a esconder el botón de limpiar
 					// filtros. Pasa al volver a un módulo que quedó con filtros puestos en el store.
+					//
+					// Criterios de VALOR, no de orden: un listado ordenado por una columna sigue
+					// siendo el listado por defecto. Si contara el orden, volver a un modulo que
+					// quedo ordenado -o apretar "Quitar filtros", que deja el orden por defecto-
+					// dejaria el flag en false y el cartel de "N filtrados" prendido sin filtros.
 					let hay_filtros_de_columna = false
 					state.filters.forEach(filter => {
-						if (filters_mixin.methods.filter_has_active_values(filter)) {
+						if (filters_mixin.methods.filter_has_value_criteria(filter)) {
 							hay_filtros_de_columna = true
 						}
 					})

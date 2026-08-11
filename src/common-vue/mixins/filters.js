@@ -11,14 +11,41 @@ export default {
 				return false
 			}
 
+			/*
+				El ORDEN cuenta como criterio activo SOLO para decidir que este filtro viaja al
+				backend: sin el, la columna no se ordenaria. NO cuenta para decidir si el usuario
+				"filtro" algo -- para eso esta filter_has_value_criteria(), abajo.
+
+				La diferencia no es cosmetica: ordenar una columna prendia el cartel de
+				"N filtrados" sin que nadie filtrara nada, y hacia que "Exportar Excel" creyera
+				que habia filtros y encolara la tabla ENTERA en silencio, porque el backend no
+				recibia ningun WHERE.
+			*/
+			if (filter.ordenar_de !== null && filter.ordenar_de !== '' && typeof filter.ordenar_de !== 'undefined') {
+				return true
+			}
+
+			return this.filter_has_value_criteria(filter)
+		},
+		/**
+		 * Igual que filter_has_active_values pero SIN el criterio de orden: dice si el usuario
+		 * puso un criterio de VALOR (un texto, un rango, un select, en blanco / no en blanco).
+		 *
+		 * Es la que hay que usar para decidir si el listado esta filtrado: si el flag o la
+		 * exportacion miraran el orden, ordenar una columna contaria como filtrar.
+		 *
+		 * @param {Object} filter
+		 * @returns {boolean}
+		 */
+		filter_has_value_criteria(filter) {
+			if (!filter) {
+				return false
+			}
+
 			if (typeof filter.en_blanco !== 'undefined' && filter.en_blanco) {
 				return true
 			}
 			if (typeof filter.no_en_blanco !== 'undefined' && filter.no_en_blanco) {
-				return true
-			}
-
-			if (filter.ordenar_de !== null && filter.ordenar_de !== '' && typeof filter.ordenar_de !== 'undefined') {
 				return true
 			}
 
@@ -58,7 +85,13 @@ export default {
 				|| (typeof filter.igual_que !== 'undefined' && filter.igual_que !== '')
 		},
 		/**
-		 * Devuelve solo los filtros con criterio activo, listos para backend.
+		 * Devuelve solo los filtros con criterio de VALOR, listos para backend.
+		 *
+		 * Mira filter_has_value_criteria y NO filter_has_active_values: si contara el orden, en un
+		 * listado recien abierto y ordenado por una columna esto devolveria un filtro, los
+		 * consumidores creerian que hay filtros activos, y en vez del toast "No hay filtros activos
+		 * para exportar" encolarian un export de la tabla ENTERA -- sin ningun WHERE del lado del
+		 * backend. En un catalogo grande eso es un archivo enorme que nadie pidio.
 		 *
 		 * @param {Array} filters
 		 * @returns {Array}
@@ -71,7 +104,7 @@ export default {
 			}
 
 			filters.forEach(filter => {
-				if (!this.filter_has_active_values(filter)) {
+				if (!this.filter_has_value_criteria(filter)) {
 					return
 				}
 				active_filters.push(filter)

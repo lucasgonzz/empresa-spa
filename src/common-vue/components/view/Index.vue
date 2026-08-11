@@ -611,7 +611,6 @@ export default {
 		    return props
 		},
 		modelSaved(model) {
-			console.log('22222')
 			this.$emit('modelSaved', model)
 		},
 		press_delete_btn() {
