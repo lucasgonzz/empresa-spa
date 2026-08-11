@@ -37,6 +37,13 @@
 	--caja-cerrar-acento: #b4443f
 	--caja-cerrar-texto: #9c3a36
 
+	// Boton destructivo en su version suave (footer del modal de formulario, 10/8/2026).
+	// Nacen de la paleta de --caja-cerrar-* del grupo 371 a proposito: es el mismo rojo del
+	// sistema, con nombre generico porque aca no habla de cajas.
+	--btn-peligro-fondo: #fdf3f2
+	--btn-peligro-borde: #b4443f
+	--btn-peligro-texto: #9c3a36
+
 html.dark-mode
 	--color-bg: #14161a
 	--bg-card: #1e2127
@@ -62,6 +69,12 @@ html.dark-mode
 	--caja-cerrar-fondo: rgba(180, 68, 63, 0.16)
 	--caja-cerrar-acento: #d98680
 	--caja-cerrar-texto: #e5a29d
+
+	// Contraparte oscura del boton destructivo suave: el fondo va en rgba sobre el acento en
+	// vez de un color plano, igual que los estados de Cajas, para apoyarse en --bg-card.
+	--btn-peligro-fondo: rgba(180, 68, 63, 0.16)
+	--btn-peligro-borde: #d98680
+	--btn-peligro-texto: #e5a29d
 
 	// El navegador pinta con esto las barras de scroll, los selects nativos y los date
 	// pickers del sistema: una linea que resuelve media docena de rincones blancos.

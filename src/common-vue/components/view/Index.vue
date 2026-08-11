@@ -28,8 +28,7 @@
     	:not_show_delete_text="not_show_delete_text"
     	:delete_text="delete_text"
     	:save_check_function="save_check_function"
-    	:props_to_send_on_save_function="props_to_send_on_save_function"
-    	:show_only_guardar="show_only_guardar">
+    	:props_to_send_on_save_function="props_to_send_on_save_function">
     		<template #model_modal_title>
     			<slot name="model_modal_title"></slot>
     		</template>
@@ -346,10 +345,6 @@ export default {
 		slice_models: {
 			type: Boolean,
 			default: false,
-		},
-		show_only_guardar: {
-			type: Boolean,
-			default: true,
 		},
 		properties_to_show: {
 			type: Array,
