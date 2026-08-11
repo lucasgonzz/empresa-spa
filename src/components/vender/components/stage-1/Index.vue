@@ -125,13 +125,22 @@ export default {
 		}
 	},
 	created() {
-		/* Colapsar si ya hay datos de configuración seleccionados (ej: venta previa) */
-		const has_config_data = !!(
-			this.$store.state.vender.payment_method_id
-			|| this.$store.state.vender.address_id
+		/*
+			Colapsar si ya hay una venta en curso: arranca abierta en una venta nueva vacia
+			y colapsada al volver al modulo con una venta ya armada.
+
+			Antes se miraba vender.payment_method_id, propiedad que NO existe en el state
+			(la real se llama current_acount_payment_method_id), asi que ese termino nunca
+			evaluaba nada. Ojo: NO alcanza con corregirle el nombre — el metodo de pago
+			tiene un valor por defecto desde que se entra al modulo, asi que la etapa
+			quedaria colapsada practicamente siempre.
+		*/
+		const hay_venta_en_curso = !!(
+			this.$store.state.vender.items.length
 			|| this.$store.state.vender.client
+			|| this.$store.state.vender.previus_sales.index > 0
 		)
-		this.stage1_open = !has_config_data
+		this.stage1_open = !hay_venta_en_curso
 	},
 	mounted() {
 		/*
