@@ -154,38 +154,106 @@
 		border: 0
 		padding: 0
 
-	// El caret se separa de la accion por una linea interna tenue, no por un cambio de fondo:
-	// el split tiene que leerse como UN boton, no como dos.
-	.toolbar-btn--acento > .dropdown-toggle-split
-		border-left: 1px solid rgba(255, 255, 255, 0.35)
+	// El split como pieza unica. Va aparte del bloque de grupos de mas abajo porque el split ES
+	// un b-dropdown --`div.btn-group.dropdown > [boton, caret, ul.dropdown-menu]`-- y ahi el
+	// ultimo hijo es el MENU: apuntarle con :last-child le da radio al desplegable y deja el
+	// caret redondo de los dos lados.
+	.toolbar-btn--acento.b-dropdown
 
-	// --- Grupos de botones: una sola pieza --------------------------------------------------
-	// Los .btn-group de la barra (seleccion, filtros, y el split de Crear) se veian como botones
-	// sueltos porque la regla de altura de mas arriba le pone el radio del token a TODOS los .btn
-	// y este archivo se importa despues de Bootstrap (ver app.sass), asi que pisaba los
-	// border-radius: 0 que Bootstrap le da al medio de un grupo.
-	//
-	// Se resuelve por POSICION REAL (:first-child / :last-child) y no por una lista de
-	// componentes: btn-restart-filter tiene v-if, asi que quien es "el ultimo del grupo" cambia
-	// segun el estado, y un miembro puede ser un b-dropdown, que a su vez renderiza otro
-	// .btn-group adentro.
-	.btn-group
-		> .btn,
-		> .dropdown > .btn,
-		> .btn-group > .btn
+		// Los dos botones se aplanan entre si...
+		> .btn:not(.btn-link):not(.dropdown-item)
 			border-radius: 0
 
-		> :first-child,
-		> :first-child > .btn
+		// ...y las puntas van al boton principal, que es siempre el primer hijo...
+		> .btn:not(.btn-link):not(.dropdown-item):first-child
 			border-top-left-radius: var(--toolbar-btn-radius)
 			border-bottom-left-radius: var(--toolbar-btn-radius)
 
-		> :last-child,
-		> :last-child > .btn
+		// ...y al caret, que se identifica por su clase y no por su posicion, justamente porque
+		// atras suyo viene el menu. El margin-left negativo comparte el borde con la accion.
+		> .dropdown-toggle-split.btn:not(.btn-link):not(.dropdown-item)
+			border-top-right-radius: var(--toolbar-btn-radius)
+			border-bottom-right-radius: var(--toolbar-btn-radius)
+			margin-left: -1px
+
+	// El caret se separa de la accion por una linea interna tenue, no por un cambio de fondo:
+	// el split tiene que leerse como UN boton, no como dos.
+	//
+	// 🔴 El .btn y los dos :not() estan por especificidad, igual que en la regla de acento: el
+	// caret tambien matchea `.toolbar-btn--acento > .btn:not(.btn-link):not(.dropdown-item)`, que
+	// es (0,5,0) y declara `border: 1px solid var(--color-primary)`. Con el selector pelado
+	// --(0,3,0)-- el borde izquierdo quedaba del color del relleno, o sea invisible, y la linea
+	// que este comentario describia no existia en pantalla. Con esto es (0,6,0) y gana. El
+	// hover/focus se declara aparte a proposito: el hover del acento es (0,6,0) y empataria, y no
+	// quiero que esto dependa del orden en que quedaron las reglas del archivo.
+	.toolbar-btn--acento > .dropdown-toggle-split.btn:not(.btn-link):not(.dropdown-item)
+		border-left: 1px solid rgba(255, 255, 255, 0.35)
+
+		&:hover,
+		&:focus
+			border-left-color: rgba(255, 255, 255, 0.35)
+
+	// --- Grupos de botones: una sola pieza --------------------------------------------------
+	// Los .btn-group de la barra (seleccion y filtros) tienen que leerse como una sola pieza:
+	// radio del token en las puntas, 0 en las uniones, y un solo borde compartido entre control
+	// y control.
+	//
+	// 🔴 Dos cosas que la primera version de este bloque dio por sentadas y estaban mal medidas
+	// (corregido el 11/8/2026, intento 2 de la mision 19):
+	//
+	// 1. ESPECIFICIDAD. La regla de altura de mas arriba es (0,4,0) --lleva .view-header-toolbar,
+	//    .btn y sus dos :not()-- y declara border-radius con el token. Un `.btn-group > .btn`
+	//    pelado es (0,3,0) y PIERDE longhand por longhand, asi que los botones conservaban sus
+	//    cuatro esquinas redondas mientras el margin-left: -1px si aplicaba: cada union quedaba
+	//    con dos esquinas encimadas, o sea peor que antes del cambio. Por eso los selectores de
+	//    abajo repiten .btn y los dos :not(): con eso el aplanado queda en (0,6,0) --y en (0,7,0)
+	//    su variante para el toggle de un dropdown miembro-- y las puntas en (0,7,0) / (0,8,0),
+	//    asi que todos ganan sin recurrir a !important.
+	//
+	// 2. EL DOM QUE RENDERIZA BOOTSTRAP-VUE. Un b-dropdown es
+	//    `div.dropdown.b-dropdown.btn-group > [split?, toggle, ul.dropdown-menu]` --la clase
+	//    btn-group se la pone siempre que no sea `block`, ver dropdownClasses en
+	//    node_modules/bootstrap-vue/src/components/dropdown/dropdown.js--, asi que su :last-child
+	//    es el MENU y nunca un boton, y ademas TODO dropdown de la barra matchea `.btn-group`.
+	//    Sin el :not(.b-dropdown) de abajo, el menu desplegable de todos los dropdowns se llevaba
+	//    el radio derecho y el margin-left: -1px. Este bloque es para el grupo que arma el
+	//    template (.opciones-grupos__group); el split de "Crear", que si es un b-dropdown, se
+	//    resuelve en su propio bloque mas arriba.
+	.btn-group:not(.b-dropdown)
+
+		// Las uniones se aplanan y las puntas se las devuelven las dos reglas siguientes.
+		//
+		// Se apunta a los hijos DIRECTOS del grupo y al toggle de un dropdown miembro, y no con un
+		// combinador descendiente: un `.btn` cualquiera adentro del grupo tambien alcanzaria a los
+		// que vivan dentro de un ul.dropdown-menu --que no son parte de la pieza-- y les sacaria el
+		// radio sin que se entienda por que. Hoy esos menus solo tienen `a.dropdown-item`, ya
+		// excluidos, asi que es una precaucion para el que agregue un boton comun ahi adentro.
+		> .btn:not(.btn-link):not(.dropdown-item),
+		> .b-dropdown > .btn:not(.btn-link):not(.dropdown-item)
+			border-radius: 0
+
+		// Punta izquierda: el primer hijo del grupo. Puede ser un boton suelto (btn-seleccion) o
+		// un b-dropdown, y en ese caso el que se pinta es su toggle: el ul.dropdown-menu no es
+		// .btn, asi que queda afuera solo. La variante del dropdown nombra .b-dropdown para
+		// llegar a (0,8,0) y ganarle al aplanado de arriba --(0,7,0) en ese mismo elemento-- por
+		// especificidad y no por orden de declaracion.
+		> :first-child.btn:not(.btn-link):not(.dropdown-item),
+		> :first-child.b-dropdown > .btn:not(.btn-link):not(.dropdown-item)
+			border-top-left-radius: var(--toolbar-btn-radius)
+			border-bottom-left-radius: var(--toolbar-btn-radius)
+
+		// Punta derecha: idem con el ultimo hijo. Se resuelve por posicion real y no por una
+		// lista de componentes porque btn-restart-filter tiene v-if: cuando no esta, el ultimo
+		// del grupo de filtros pasa a ser el dropdown. (Un v-if falso deja un nodo comentario,
+		// que no cuenta para :last-child.)
+		> :last-child.btn:not(.btn-link):not(.dropdown-item),
+		> :last-child.b-dropdown > .btn:not(.btn-link):not(.dropdown-item)
 			border-top-right-radius: var(--toolbar-btn-radius)
 			border-bottom-right-radius: var(--toolbar-btn-radius)
 
-		// Borde compartido: sin esto queda una linea de 2px entre boton y boton.
+		// Borde compartido: sin esto queda una linea de 2px entre control y control. Va sobre los
+		// hijos directos del grupo, que son controles; el menu de un dropdown miembro es hijo de
+		// ese dropdown y no de esto, asi que no lo toca.
 		> * + *
 			margin-left: -1px
 
@@ -205,9 +273,21 @@
 	// que se alcanza por su id-- porque son un grupo: si uno va ambar y el otro neutro, el grupo
 	// se parte visualmente. El dropdown de FILTRADOS sigue neutro a proposito: el ambar significa
 	// "estas en modo seleccion", no "hay filtros".
-	.toolbar-btn--activo,
-	.toolbar-btn--activo > .btn,
-	#btn_seleccionados_dropdown > .btn
+	//
+	// 🔴 El .btn y los dos :not() del primer selector NO son ruido (corregido el 11/8/2026):
+	// BtnSeleccion.vue pone toolbar-btn--activo sobre el propio <b-button>, asi que el elemento
+	// con la clase ES el .btn y matchea tambien la regla neutra, que es (0,5,0). Un
+	// `.toolbar-btn--activo` pelado es (0,2,0) y perdia, con lo cual el dropdown quedaba ambar y
+	// el boton neutro: el grupo partido en dos que este comentario dice estar evitando. Por el
+	// mismo mecanismo, el azul tenue que la mision 13 puso aca tampoco aplico nunca, y por eso el
+	// estado de seleccion "perdio su color". Con el .btn y los tres :not() queda en (0,6,0) y le
+	// gana a la neutra por ESPECIFICIDAD y no por orden de declaracion, que es la diferencia entre
+	// una regla que se sostiene y una que se rompe sola el dia que alguien reordene el archivo. El
+	// :not(.toolbar-btn--acento) ademas dice algo cierto: un control de acento nunca va ambar.
+	// La variante `> .btn` cubre el caso en que la clase esta en el contenedor.
+	.toolbar-btn--activo.btn:not(.btn-link):not(.dropdown-item):not(.toolbar-btn--acento),
+	.toolbar-btn--activo > .btn:not(.btn-link):not(.dropdown-item):not(.toolbar-btn--acento),
+	#btn_seleccionados_dropdown > .btn:not(.btn-link):not(.dropdown-item)
 		background: var(--toolbar-btn-seleccion-bg)
 		border: 1px solid var(--toolbar-btn-seleccion)
 		color: var(--toolbar-btn-seleccion)
@@ -235,8 +315,8 @@
 	// es sin cambiar de peso visual.
 	// 🔴 Los :not() repetidos de abajo estan por especificidad, igual que en el split de "Crear":
 	// la regla neutra pinta `i { color: inherit }` con (0,5,1) y un `.toolbar-btn--tinte-azul i`
-	// pelado --que seria (0,3,1)-- pierde y el icono queda gris. Con el .btn y los dos :not()
-	// empatan en (0,5,1) y gana esta por venir despues. No los saques.
+	// pelado --que anidado aca es (0,2,1)-- pierde y el icono queda gris. Con el .btn y los dos
+	// :not() empatan en (0,5,1) y gana esta por venir despues. No los saques.
 	.toolbar-btn--tinte-azul,
 	.toolbar-btn--tinte-verde,
 	.toolbar-btn--tinte-violeta
@@ -296,8 +376,17 @@ html.dark-mode .view-header-toolbar
 
 	// El divisor del split se apoya sobre el azul del acento, que en oscuro es mas claro: la
 	// linea blanca al 35% se le pierde encima.
-	.toolbar-btn--acento > .dropdown-toggle-split
+	//
+	// Repite el .btn y los dos :not() de la regla clara por la misma razon que ella, y ademas por
+	// una propia: la clara quedo en (0,6,0) y este selector con `html.dark-mode` pelado es
+	// (0,4,1), o sea que perdia la comparacion --primero se cuentan las clases-- y el tema oscuro
+	// no se aplicaba. Un `html.dark-mode` no gana solo por ser mas especifico "a ojo".
+	.toolbar-btn--acento > .dropdown-toggle-split.btn:not(.btn-link):not(.dropdown-item)
 		border-left-color: rgba(0, 0, 0, 0.25)
+
+		&:hover,
+		&:focus
+			border-left-color: rgba(0, 0, 0, 0.25)
 
 // El "tamaño chico" de la interfaz baja la altura de TODA la barra de forma coherente, pill
 // incluido, en vez de achicar los botones y dejar el campo alto. La regla de _ui_sizes.sass que

@@ -34,8 +34,10 @@ $accent-compras: #d97706
 	gap: 10px
 	padding: 8px 12px
 	border-radius: 10px
-	// Tokens en vez de los #fff / #e2e8f0 del chip de caja: son los mismos valores en tema claro
-	// pero tienen contraparte en html.dark-mode, asi que el chip no queda blanco sobre oscuro.
+	// Tokens en vez de los #fff / #e2e8f0 del chip de caja: el fondo es el mismo blanco y el borde
+	// queda en #dee2e6 en vez de #e2e8f0 --un gris practicamente indistinguible al lado--, y a
+	// cambio los dos tienen contraparte en html.dark-mode, asi que el chip no queda blanco sobre
+	// oscuro como le pasa al de caja.
 	border: 1px solid var(--color-border)
 	background: var(--bg-card)
 	box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06)
