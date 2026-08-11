@@ -105,6 +105,25 @@
 		border: 1px solid var(--color-primary)
 		color: #fff
 
+		i
+			color: #fff
+
+	// 🔴 El hover se declara aparte y EXCLUYE al contenedor de un dropdown, y el motivo no es
+	// estetico (medido el 11/8/2026, mision 20):
+	//
+	// `filter` crea un contexto de contencion igual que `transform`, asi que un elemento con filter
+	// se vuelve el bloque contenedor de TODOS sus descendientes `position: fixed`. Cuando la clase
+	// esta en el contenedor de un b-dropdown --que es el caso de ExcelDropDown.vue-- el menu
+	// desplegado es hijo suyo, asi que apoyar el mouse sobre el menu activaba el :hover del
+	// contenedor, se aplicaba el filter, y el submenu de Importacion/Exportacion --que se posiciona
+	// fixed contra el viewport-- pasaba a anclarse al contenedor y quedaba recortado. Ese era el
+	// "se rompe el diseno al pasar el mouse por Importacion". De yapa, el filter oscurecia el menu
+	// entero mientras el puntero estuviera adentro.
+	//
+	// Con el :not(.b-dropdown) el filter queda donde tiene sentido: sobre el boton que el mouse esta
+	// tocando. En el split, cada uno de los dos botones tiene su propio hover unas lineas mas abajo.
+	.toolbar-btn--acento:not(.b-dropdown),
+	.toolbar-btn--acento > .btn
 		&:hover,
 		&:focus
 			// filter en vez de un segundo color hardcodeado: --color-primary cambia de valor
@@ -112,9 +131,6 @@
 			filter: brightness(0.92)
 			background: var(--color-primary)
 			border-color: var(--color-primary)
-			color: #fff
-
-		i
 			color: #fff
 
 	// --- El split de "Crear" ----------------------------------------------------------------
