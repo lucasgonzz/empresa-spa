@@ -611,8 +611,74 @@ export default {
 		    return props
 		},
 		modelSaved(model) {
-			console.log('22222')
+			this.refrescar_listado_si_es_alta(model)
 			this.$emit('modelSaved', model)
+		},
+		/**
+		 * Vuelve a pedir el listado cuando lo que se guardó fue un ALTA y la tabla está mostrando
+		 * `filtered`.
+		 *
+		 * El problema: la mutación `add` hace unshift en state.models, pero contra state.filtered
+		 * sólo reemplaza si el id ya estaba. Un id nuevo no se inserta nunca, y como
+		 * display/Index.vue renderiza `filtered` mientras is_filtered esté en true --que ahora se
+		 * prende con sólo entrar al módulo, por el listado por defecto-- el registro recién creado
+		 * queda invisible hasta recargar la página.
+		 *
+		 * 🔴 Por qué NO se arregla insertando en `filtered` desde `add`: esa mutación se commitea
+		 * desde decenas de lugares que NO son altas (editar desde un modal, confirmar un pedido,
+		 * guardar una imagen, cerrar una venta). Insertar a ciegas metería en el listado filtrado
+		 * filas que no cumplen el criterio de búsqueda activo, y además dejaría mintiendo a
+		 * total_filter_results y total_filter_pages. El camino correcto es volver a pedir el
+		 * listado, que es lo que ya hace refresh_filter_results() después de los borrados masivos.
+		 *
+		 * Cómo se distingue un alta de una edición sin cambiarle la firma al evento: en una edición
+		 * `add` ya corrió y ya reemplazó la fila en `filtered` antes de que llegue modelSaved, así
+		 * que alcanza con preguntar si el id está en la lista. Si no está, es alta.
+		 *
+		 * Página 1 en los dos casos: con orden id DESC el registro nuevo vive ahí, y refrescar la
+		 * página 3 no mostraría nada nuevo, que el usuario leería como "no se guardó".
+		 *
+		 * @param {Object} model Modelo que se acaba de guardar.
+		 * @return {void}
+		 */
+		refrescar_listado_si_es_alta(model) {
+			// La papelera tiene su propio submodulo de store y su propio flujo, igual que en el
+			// corte 2 de disparar_listado_por_defecto.
+			if (this.papelera || !model || !model.id) {
+				return
+			}
+
+			// Los hijos de una relación has-many NO entran por acá: model/Index.vue los emite por
+			// `has_many_saved`, que es un evento aparte. Por eso no hace falta un corte extra: a
+			// `modelSaved` sólo llega el modelo del propio listado.
+
+			let store_state = this.$store.state[this.model_name]
+
+			if (!store_state || !store_state.is_filtered) {
+				return
+			}
+
+			let ya_esta_en_la_tabla = false
+			store_state.filtered.forEach(model_de_la_tabla => {
+				if (model_de_la_tabla.id == model.id) {
+					ya_esta_en_la_tabla = true
+				}
+			})
+
+			// Es una edición: `add` ya actualizó la fila en el lugar y no hace falta refrescar nada.
+			if (ya_esta_en_la_tabla) {
+				return
+			}
+
+			// Mismo criterio que refresh_filter_results: se refresca por el camino que armó lo que
+			// se está viendo. Si hay una búsqueda real del usuario y el modelo nuevo no la cumple,
+			// después de refrescar no aparece, y eso es correcto: no se fuerza su inserción.
+			if (store_state.listado_por_defecto) {
+				this.$store.dispatch(this.model_name + '/runListadoPorDefecto', { page: 1 })
+				return
+			}
+
+			this.$store.dispatch(this.model_name + '/runGlobalSearch', { page: 1 })
 		},
 		press_delete_btn() {
 			this.$emit('press_delete_btn')

@@ -90,6 +90,20 @@ export default {
 				filter.que_contenga = ''
 				filter.checkbox = -1
 				filter.ordenar_de = ''
+
+				/*
+					En blanco / No en blanco y value tambien se limpian, o el boton queda pegado:
+					filter_has_value_criteria los cuenta como criterio activo, asi que despues de
+					apretar "Quitar filtros" con un filtro "En blanco" puesto desde la lupa,
+					runListadoPorDefecto no volvia a prender el flag y el boton seguia visible
+					sin hacer nada al reapretarlo.
+				*/
+				filter.en_blanco = false
+				filter.no_en_blanco = false
+
+				if (typeof filter.value !== 'undefined') {
+					filter.value = filter.type == 'select' || filter.type == 'search' ? 0 : ''
+				}
 			})
 		},
 	},

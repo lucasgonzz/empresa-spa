@@ -35,14 +35,20 @@ export default {
 			}
 			return 'bi bi-clock-history'
 		},
-		/** Ayuda al pasar el mouse sobre el control. */
+		/**
+		 * Ayuda al pasar el mouse sobre el control.
+		 *
+		 * Decía "Cargar los artículos modificados recientemente en el listado", y eso era mentira
+		 * incluso antes de esta misión: el endpoint que llamaba ordena por id y devuelve los más
+		 * nuevos, no los más modificados. Ahora dice lo que hace.
+		 */
 		tooltip_text() {
-			return 'Cargar los artículos modificados recientemente en el listado'
+			return 'Actualizar el listado'
 		},
 	},
 	methods: {
 		/**
-		 * Dispara la recarga de artículos vía mixin (`articles-ultimos-actualizados`).
+		 * Vuelve a pedir el listado por el mismo camino que lo armó (ver el mixin).
 		 */
 		update_article_list() {
 			if (this.is_loading) {

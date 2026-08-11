@@ -32,12 +32,19 @@ class="control-fecha">
 			</div>
 
 			<span
-			v-if="change_from_dates_option && muestra_dias"
+			v-if="change_from_dates_option && muestra_calendario"
 			class="control-fecha__separador control-fecha__separador--desktop"></span>
 
-			<!-- El calendario se muestra SIEMPRE, incluso en Historico y con una busqueda activa:
-			     es la salida para volver a una fecha sin tener que deshacer nada antes. -->
+			<!-- El calendario se muestra en modo "Por fecha", y siempre en los modulos que no
+			     tienen selector de modo (Ventas), donde from_dates no es una eleccion del usuario.
+			     En Historico no se renderiza: un rango de fechas ahi no significa nada.
+
+			     Decision de Lucas del 11/8/2026, que revierte la de la mision 3 (aquella lo dejaba
+			     visible SIEMPRE como salida para volver a una fecha sin deshacer nada antes). El
+			     costo, asumido: para volver a una fecha desde Historico hay que apretar "Por fecha"
+			     primero y despues el calendario. -->
 			<button
+			v-if="muestra_calendario"
 			type="button"
 			class="control-fecha__calendario"
 			title="Elegir fecha o rango"
@@ -224,6 +231,23 @@ export default {
 		 */
 		muestra_dias() {
 			return this.mostrar_dias && this.has_permission
+		},
+		/**
+		 * El boton de calendario se muestra en modo "Por fecha".
+		 *
+		 * 🔴 La condicion NO puede ser "mostrar si from_dates": en los modulos que no tienen
+		 * selector de modo (Ventas, que no pasa change_from_dates_option) el flag from_dates no
+		 * representa una eleccion del usuario, y atarle el calendario lo apagaria ahi para siempre
+		 * si ese store arranca en false. Por eso son dos casos: sin selector, siempre; con
+		 * selector, solo en "Por fecha".
+		 *
+		 * @returns {Boolean}
+		 */
+		muestra_calendario() {
+			if (!this.change_from_dates_option) {
+				return true
+			}
+			return this.es_modo(true)
 		},
 	},
 	watch: {
