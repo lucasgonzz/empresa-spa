@@ -681,6 +681,20 @@ export default function __base_store(options = {}) {
 				}
 			})
 
+			// Con filtros de columna activos, lo que se ve NO es el listado por defecto, aunque la
+			// llamada no traiga `props`. El caso: filtrar desde la lupa de una columna termina en
+			// filtrar() de display/table/Index.vue, que dispatchea { page: 1 } sin props; con eso
+			// `es_busqueda_nueva` queda en false, el commit de arriba no corre, y el flag se queda
+			// en el true que le dejo runListadoPorDefecto al entrar al modulo. Resultado: el boton
+			// de limpiar filtros (v-if de BtnRestartFilter) no se monta nunca por ese camino, y el
+			// tooltip del dropdown de acciones dice "Acciones sobre todos" con un filtro puesto.
+			//
+			// Va aca y no en filtrar() porque este es el punto por donde pasan TODOS los caminos que
+			// aplican filtros de columna, incluida la paginacion, que tambien entra sin `props`.
+			if (column_filters.length > 0) {
+				commit('set_listado_por_defecto', false)
+			}
+
 			return axios.post(
 				'/api/global-search/' + generals.methods.routeString(state.model_name) + '?page=' + page,
 				Object.assign({}, search_payload, {per_page: per_page, filters: column_filters})
@@ -731,7 +745,7 @@ export default function __base_store(options = {}) {
 		 * @param {Number} [payload.page] Página a consultar (por defecto, 1).
 		 * @returns {Promise}
 		 */
-		runListadoPorDefecto({commit, dispatch}, payload = {}) {
+		runListadoPorDefecto({commit, dispatch, state}, payload = {}) {
 			/** Página a pedir: la que venga en el payload, o la primera. */
 			let page = (payload && payload.page) ? payload.page : 1
 
@@ -747,7 +761,21 @@ export default function __base_store(options = {}) {
 			})
 				.then(res => {
 					// Confirma que lo que se ve es el listado por defecto, no una búsqueda del usuario.
-					commit('set_listado_por_defecto', true)
+					//
+					// Salvo que haya filtros de columna activos: ahí lo que se ve está filtrado, y
+					// marcarlo como listado por defecto volvería a esconder el botón de limpiar
+					// filtros. Pasa al volver a un módulo que quedó con filtros puestos en el store.
+					let hay_filtros_de_columna = false
+					state.filters.forEach(filter => {
+						if (filters_mixin.methods.filter_has_active_values(filter)) {
+							hay_filtros_de_columna = true
+						}
+					})
+
+					if (!hay_filtros_de_columna) {
+						commit('set_listado_por_defecto', true)
+					}
+
 					return res
 				})
 		},
