@@ -77,6 +77,9 @@
 		:extra_filters="extra_filters"
 		:default_extra_props="default_extra_props"
 		:filtros_fijos_por_defecto="filtros_fijos_por_defecto"
+		:show_previus_days="show_previus_days"
+		:model_name_for_get_models="model_name_for_get_models"
+		:check_permissions_previus_days="check_permissions_previus_days"
 		:model_name="model_name">
 			<template v-slot:btn_create>
 				<slot name="horizontal_nav_btn_create"></slot>
@@ -148,7 +151,7 @@
 		:check_permissions_previus_days="check_permissions_previus_days"
 		:models_to_show="models_to_show"
 		:show_models_if_empty="show_models_if_empty"
-		:show_previus_days="show_previus_days"
+		:show_previus_days="show_view_header ? false : show_previus_days"
 		:show_search_nav="show_search_nav"
 		:model_name="model_name"
 		:set_table_height="set_table_height"

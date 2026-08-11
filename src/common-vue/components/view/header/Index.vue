@@ -92,10 +92,19 @@
 
 			<slot name="horizontal_nav_center"></slot>
 
-			<display-nav
-			v-if="change_from_dates_option"
+			<!--
+				Control unico de fecha (mision 3): absorbe el nav de dias, el boton "Por fecha" y el
+				selector "Por fecha / Historico" que antes vivian en una fila propia arriba de la
+				tabla mas el display-nav de aca. Se muestra cuando el modulo declara alguna de las
+				dos cosas: modo (change_from_dates_option) o dias (mostrar_dias_en_header).
+			-->
+			<control-fecha
+			v-if="change_from_dates_option || mostrar_dias_en_header"
+			:model_name="model_name"
+			:model_name_for_get_models="model_name_for_get_models"
 			:change_from_dates_option="change_from_dates_option"
-			:model_name="model_name"></display-nav>
+			:mostrar_dias="mostrar_dias_en_header"
+			:check_permissions="check_permissions_previus_days"></control-fecha>
 		</div>
 	</div>
 </template>
@@ -114,8 +123,8 @@ export default {
 		BuscadorGeneral: () => import('@/common-vue/components/view/header/buscador-general/Index'),
 
 		// De horizontal-nav original
+		ControlFecha: () => import('@/common-vue/components/previus-days/ControlFecha'),
 		ExcelDropDown: () => import('@/common-vue/components/horizontal-nav/ExcelDropDown'),
-		DisplayNav: () => import('@/common-vue/components/horizontal-nav/DisplayNav'),
 	},
 	props: {
 		model_name: String,
@@ -149,6 +158,26 @@ export default {
 			default: true,
 		},
 		show_actualizar_option: Boolean,
+		/**
+		 * Si la vista fuerza que se vean (o no) las celdas de dia. Llega desde la vista y NO se
+		 * recalcula aca: views/Ventas.vue lo decide con una regla propia (la extension sales.hide,
+		 * que deja los dias solo en la ruta VentasAll). Si el encabezado lo dedujera por su cuenta,
+		 * esa extension se romperia en silencio para los clientes que la tengan. En null, manda el
+		 * from_dates del store.
+		 */
+		show_previus_days: {
+			type: Boolean,
+			default: null,
+		},
+		/** Modelo contra el que se piden los dias, cuando no es el mismo del listado (Caja vieja). */
+		model_name_for_get_models: {
+			type: String,
+			default: null,
+		},
+		check_permissions_previus_days: {
+			type: Boolean,
+			default: true,
+		},
 		/**
 		 * Muestra el buscador general en la zona centro. Se puede apagar en un módulo puntual
 		 * donde no aplique. Default true.
@@ -188,6 +217,20 @@ export default {
 		},
 	},
 	computed: {
+		/**
+		 * Condicion para mostrar las celdas de dia. Es la misma que hoy vive repartida entre
+		 * view/List.vue y las vistas, sin inventar una nueva: manda la prop si la vista la declara,
+		 * y si no el from_dates del store; y en los dos casos, una busqueda activa las apaga.
+		 *
+		 * @returns {boolean}
+		 */
+		mostrar_dias_en_header() {
+			var por_fecha = this.show_previus_days !== null
+				? this.show_previus_days
+				: this.$store.state[this.model_name].from_dates
+
+			return !!por_fecha && !this.$store.state[this.model_name].is_filtered
+		},
 		/**
 		 * Indica si el usuario puede crear registros del modelo (según permisos, si se chequean).
 		 *
