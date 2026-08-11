@@ -106,7 +106,9 @@ export default {
 					// El nombre de la sucursal vive en la columna street y no en name, por eso el value_prop.
 					// OJO: el importador clasico manda prop_<text>, no prop_<key> (el componente comun no copia
 					// la key), asi que esto llega al backend como 'sucursal' solo porque getImportColumns()
-					// hace strtolower('Sucursal'). Si se cambia el text, hay que agregar el alias en ClientImport.
+					// hace strtolower('Sucursal'). Si se cambia el text hay que pasar ClientImport a
+					// getColumnValueByAliases (como tipo_de_precio), y ademas se invalidan los presets
+					// guardados de los usuarios, que se restauran matcheando por text.
 					relation_options: {
 						store_module: 'address',
 						prefix: 'Valores existentes:',
