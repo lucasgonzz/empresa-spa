@@ -48,7 +48,7 @@
 				class="buscador-general__icon-btn"
 				title="Limpiar busqueda"
 				@click="limpiar">
-					<i class="icon-undo"></i>
+					<i class="bi bi-x-lg"></i>
 				</button>
 
 				<!-- Lupa: la busqueda se dispara con Enter; el click es un atajo opcional -->
@@ -57,7 +57,7 @@
 				class="buscador-general__icon-btn buscador-general__search"
 				title="Buscar"
 				@click="buscar">
-					<i class="icon-search"></i>
+					<i class="bi bi-search"></i>
 				</button>
 			</div>
 
@@ -1527,10 +1527,15 @@ export default {
 		align-items: center
 		flex: 1 1 auto
 		min-width: 0
-		background: #fff
-		border: 1px solid #e2e4e7
-		border-radius: 22px
-		height: 40px
+		// Los hexadecimales de estas dos lineas pasaron a tokens de _dark_theme.sass (mision 13):
+		// el resto del bloque todavia usa hex fijos y queda blanco en modo oscuro, lo que esta
+		// registrado como hallazgo aparte. Se convirtio lo que esta mision tocaba igual.
+		background: var(--bg-card)
+		border: 1px solid var(--color-border)
+		// Radio = altura / 2: el campo es una capsula. Los botones de al lado van a 10px a
+		// proposito (ver la nota larga en src/sass/_toolbar_botones.sass).
+		border-radius: calc(var(--toolbar-control-h) / 2)
+		height: var(--toolbar-control-h)
 		padding: 0 6px 0 4px
 		transition: border-color 0.15s ease, box-shadow 0.15s ease
 		// Sombra sutil permanente que envuelve el pill entero (icono + input + lupa),

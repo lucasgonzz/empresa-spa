@@ -1,0 +1,144 @@
+// Vocabulario visual de la barra de encabezado de los listados (mision 13, 10/8/2026).
+//
+// Todo lo que rodea al pill del buscador general vivia en el estado anterior a su rediseño: los
+// botones median ~31px contra los 40 del pill, usaban el radio 4px de Bootstrap contra sus 22, y
+// convivian cinco pesos visuales distintos (tres rellenos solidos de tres colores, dos outlines y
+// un amarillo) que no comunicaban jerarquia sino que se habian agregado en momentos distintos.
+//
+// Estas reglas se declaran UNA SOLA VEZ, aca, y no en el <style> de cada componente: que los
+// valores estuvieran dispersos es justamente el problema que esta mision viene a cerrar. Si
+// necesitas cambiar la altura o el radio de la barra, se cambia el token de abajo y listo.
+//
+// Los colores salen SIEMPRE de los tokens de _dark_theme.sass (--bg-card, --color-border,
+// --color-text-primary, --bg-hover, --color-primary), nunca de hexadecimales: son los que tienen
+// contraparte en `html.dark-mode`. Un hex fijo aca deja la barra blanca en modo oscuro.
+
+:root
+	// Altura unica de TODO lo que vive en la barra: pill del buscador, botones y dropdowns.
+	--toolbar-control-h: 36px
+	// Esquinas de los botones. Ver la nota de abajo sobre por que NO es la mitad de la altura.
+	--toolbar-btn-radius: 10px
+	// Separacion entre controles de un mismo grupo.
+	--toolbar-btn-gap: 8px
+	// Separacion entre grupos distintos.
+	--toolbar-group-gap: 16px
+
+// El campo es pill y los botones son squircle, y es A PROPOSITO.
+//
+// El pill del buscador mantiene radio = altura / 2 (18px con 36 de alto); los botones van a 10px.
+// Es la convencion de la referencia de la que viene todo este rediseño: un campo de busqueda es una
+// capsula, un boton de barra de herramientas tiene esquinas suaves pero no es una capsula.
+//
+// Si estas leyendo esto porque te dieron ganas de "unificar" los dos radios a uno solo: no. Eso es
+// exactamente lo que se decidio no hacer, y el resultado de unificarlos es que la barra deja de
+// distinguir el campo donde se escribe de los botones que se aprietan.
+
+.view-header-toolbar
+
+	// --- Espaciado: lo da el gap del contenedor, no los margenes de cada hijo ---------------
+	// Los componentes traian m-l-10 / m-l-15 propios que se SUMABAN al gap del flex, y el
+	// espaciado quedaba desparejo entre un par de botones y el siguiente.
+	.view-header__left,
+	.view-header__right
+		gap: var(--toolbar-group-gap)
+
+	.view-header__group
+		display: flex
+		flex-direction: row
+		align-items: center
+		gap: var(--toolbar-btn-gap)
+
+	// --- Altura unica -----------------------------------------------------------------------
+	// Este bloque reemplaza al de overrides de btn-sm que vivia en el <style> de
+	// view/header/Index.vue: aquel los ACHICABA a ~31px, que era la mitad del problema.
+	.btn:not(.btn-link):not(.dropdown-item),
+	.dropdown > .btn
+		height: var(--toolbar-control-h)
+		display: inline-flex
+		align-items: center
+		justify-content: center
+		padding: 0 12px
+		font-size: 0.875rem
+		line-height: 1
+		border-radius: var(--toolbar-btn-radius)
+		// La sombra es señal exclusiva del pill y de las tablas: una barra con ocho sombras es
+		// ruido. Que el campo tenga mas presencia que los botones es jerarquia, no descuido.
+		box-shadow: none
+		transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease
+
+	// --- Neutro por defecto -----------------------------------------------------------------
+	// Mismo idioma que los botones de icono que ya viven DENTRO del pill del buscador. El color
+	// de la paleta no cambia: cambia donde se aplica, que era el pedido.
+	.btn:not(.btn-link):not(.dropdown-item):not(.toolbar-btn--acento)
+		background: var(--bg-card)
+		border: 1px solid var(--color-border)
+		color: var(--color-text-primary)
+
+		&:hover,
+		&:focus
+			background: var(--bg-hover)
+			border-color: var(--color-border)
+			color: var(--color-text-primary)
+
+		i
+			color: inherit
+
+	// --- Botones de solo icono: cuadrados de 36x36 ------------------------------------------
+	// Todos los de la barra menos "Crear" son solo-icono. Heredaban el padding horizontal de
+	// Bootstrap, asi que eran rectangulos con el icono descentrado en su caja.
+	.toolbar-btn--icono,
+	.toolbar-btn--icono > .btn
+		width: var(--toolbar-control-h)
+		padding: 0
+
+	// --- La unica accion de acento: Crear ---------------------------------------------------
+	// Es la accion primaria de la vista y el unico control que conserva texto ademas del icono.
+	.toolbar-btn--acento,
+	.toolbar-btn--acento > .btn
+		background: var(--color-primary)
+		border: 1px solid var(--color-primary)
+		color: #fff
+
+		&:hover,
+		&:focus
+			// filter en vez de un segundo color hardcodeado: --color-primary cambia de valor
+			// entre el tema claro y el oscuro, y un hex de hover fijo se pelearia con uno de los dos.
+			filter: brightness(0.92)
+			background: var(--color-primary)
+			border-color: var(--color-primary)
+			color: #fff
+
+		i
+			color: #fff
+
+	// --- Estado activo: azul tenue, no amarillo ---------------------------------------------
+	// Marca un MODO (seleccion multiple activa, filtros aplicados), no una urgencia. El amarillo
+	// que usaba antes era el unico color que gritaba en toda la barra sin senalar nada urgente.
+	.toolbar-btn--activo,
+	.toolbar-btn--activo > .btn
+		background: rgba(0, 123, 255, 0.12)
+		border: 1px solid var(--color-primary)
+		color: var(--color-primary)
+
+		&:hover,
+		&:focus
+			background: rgba(0, 123, 255, 0.18)
+			border-color: var(--color-primary)
+			color: var(--color-primary)
+
+		i
+			color: var(--color-primary)
+
+	// --- Dropdowns --------------------------------------------------------------------------
+	// El caret de Bootstrap suma ancho a la derecha y descentra el icono en los toggles de solo
+	// icono; se saca ahi y se deja donde el boton tiene texto.
+	.toolbar-btn--icono .dropdown-toggle::after
+		display: none
+
+// El "tamaño chico" de la interfaz baja la altura de TODA la barra de forma coherente, pill
+// incluido, en vez de achicar los botones y dejar el campo alto. La regla de _ui_sizes.sass que
+// achica `.btn` sigue aplicando a los botones del resto del sistema; aca gana esta porque los
+// controles de la barra toman su altura del token, no del padding.
+.ui-small .view-header-toolbar
+	--toolbar-control-h: 32px
+	--toolbar-btn-radius: 9px

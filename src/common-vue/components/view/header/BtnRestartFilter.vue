@@ -5,10 +5,9 @@
 	:title="tooltip_text"
 	:aria-label="tooltip_text"
 	@click="restartSearch"
-	class="btn-header-action"
+	class="btn-header-action toolbar-btn--icono"
 	id="btn_restart_filter"
-	size="sm"
-	variant="outline-secondary">
+	size="sm">
 		<i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
 	</b-button>
 </template>

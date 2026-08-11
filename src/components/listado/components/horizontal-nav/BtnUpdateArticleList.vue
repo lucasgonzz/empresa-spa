@@ -4,10 +4,9 @@
 	:title="tooltip_text"
 	@click="update_article_list"
 	:disabled="is_loading"
-	class="btn-update-article-list m-l-15"
+	class="btn-update-article-list toolbar-btn--icono"
 	dusk="btn_update_article_list"
-	size="sm"
-	variant="outline-primary">
+	size="sm">
 		<i
 		:class="loading_icon_class"
 		aria-hidden="true"></i>

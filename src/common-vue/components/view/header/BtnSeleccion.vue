@@ -9,7 +9,7 @@
 	:variant="variant"
 	:aria-pressed="is_selecteable ? 'true' : 'false'"
 	@click="toggle_selection_mode"
-	class="btn-header-action"
+	:class="['btn-header-action', 'toolbar-btn--icono', is_selecteable ? 'toolbar-btn--activo' : '']"
 	size="sm">
 		<i
 		:class="selection_icon_class"

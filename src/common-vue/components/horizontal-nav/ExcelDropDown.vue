@@ -28,7 +28,7 @@
 
 		size="sm"
 
-		variant="primary"
+		class="toolbar-btn--acento"
 
 		boundary="viewport"
 
@@ -50,7 +50,7 @@
 
 				:data-testid="'btn-crear-'+model_name">
 
-					<i class="icon-plus"></i>
+					<i class="bi bi-plus-lg"></i>
 
 					Crear
 

@@ -24,7 +24,6 @@
 
 				<slot name="btn_create">
 					<excel-drop-down
-					class="m-l-10"
 					v-if="show_excel_drop_down"
 					:check_permissions="check_permissions"
 					:can_create="can_create"
@@ -37,7 +36,6 @@
 
 					<btn-create
 					v-else-if="show_btn_create && can_create"
-					class="m-l-10"
 					:with_margin="false"
 					:block="false"
 					button_size="sm"
@@ -282,18 +280,13 @@ export default {
 	.view-header__right--fechas
 		margin-top: 10px
 
-/* Altura unificada de botones/dropdowns (misma que btn-sm) */
+// La altura, el radio, el color y el espaciado de los controles de esta barra ya NO se declaran
+// aca: viven en src/sass/_toolbar_botones.sass, que es global y los define una sola vez para todos
+// los modulos. Lo que habia en este lugar era el bloque que los achicaba a la metrica de btn-sm
+// (~31px) mientras el pill del buscador media 40, que era justamente la desalineacion que la
+// mision 13 vino a cerrar. No reponerlo: dos lugares declarando la misma altura es como empezo
+// este problema.
 .view-header-toolbar
-	::v-deep .btn:not(.btn-link):not(.dropdown-item)
-		padding: 0.25rem 0.5rem
-		font-size: 0.875rem
-		line-height: 1.5
-
-	::v-deep .dropdown > .btn
-		padding: 0.25rem 0.5rem
-		font-size: 0.875rem
-		line-height: 1.5
-
 	/* Buscador listado en horizontal_nav_center: input alineado con btn-sm */
 	::v-deep .buscador-listado
 		.cont-search
