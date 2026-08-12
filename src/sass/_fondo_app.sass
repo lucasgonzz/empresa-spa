@@ -1,0 +1,63 @@
+// Fondo de la aplicacion: color base + degradado difuso (mision 27, 11/8/2026).
+//
+// Lucas, textual: que el fondo sea "un poquitito mas oscuro" para que las tarjetas blancas se
+// despeguen, y que tenga "algun fondo al estilo Apple, como ese efecto de lente desenfocado, asi
+// como se le dio a la pagina de experiencia en la demo del sistema de admin. Algo asi, no tan
+// brusco".
+//
+// De donde salen los valores: NO de memoria. Son los mismos dos radial-gradient de la pagina de
+// experiencia del admin (admin-spa: src/assets/scss/demo-experiencia.scss, grupo 322), con sus
+// mismas posiciones y su misma pareja de colores de marca --azul #0b84f8 e indigo #3a31fc--, y
+// con las opacidades bajadas de 0,12-0,35 a 0,05-0,06. Aquello es una landing donde el fondo ES
+// el protagonista; esto es un ERP donde arriba hay tablas de doscientas filas.
+//
+// 🔴 El techo de intensidad es la instruccion, no un matiz: si al mirar la pantalla se distingue
+// "un degradado", esta demasiado fuerte. Lo que se busca es que el fondo deje de leerse como un
+// plano muerto. Si alguien sube estas opacidades "para que se note", esta deshaciendo el pedido.
+//
+// 🔴 Sin filter: blur() y sin backdrop-filter, a proposito y no por olvido. El desenfoque lo da el
+// propio degradado (paradas suaves y transparencia alta). Un blur sobre un elemento a pantalla
+// completa cuesta caro en repintado y, peor, crea un contexto de contencion que se lleva por
+// delante todo lo que este position: fixed adentro -- exactamente el mecanismo que rompia el
+// submenu de Importacion y que esta documentado en _toolbar_botones.sass.
+//
+// 🔴 Por que este archivo se importa ULTIMO en app.sass: la regla oscura de abajo empata en
+// especificidad (1,1,1) con la de _dark_theme.sass, que declara `#app { background: ... }` en
+// shorthand y por lo tanto pisaria el background-image. Gana por orden de declaracion. La regla
+// clara no depende de eso: `html #app` es (1,0,1) y le gana por especificidad al `#app` (1,0,0)
+// de common-vue/sass/_app_vue.sass, que es el que traia el degradado vertical anterior.
+
+// Las dos manchas, fijas al viewport (background-attachment: fixed): al scrollear la pagina el
+// fondo no viaja con el contenido. Se resuelve asi y no con un pseudo-elemento position: fixed
+// porque un ::before a pantalla completa obligaria a pelear con el z-index de todo lo que #app
+// tiene adentro, y el unico costo de esta version es un repintado que este fondo --sin blur y sin
+// animacion-- hace barato.
+html #app
+	background-color: var(--color-bg)
+	background-image: radial-gradient(120% 90% at 20% 15%, rgba(11, 132, 248, 0.06), transparent 60%), radial-gradient(100% 80% at 85% 90%, rgba(58, 49, 252, 0.05), transparent 55%)
+	background-attachment: fixed
+	background-repeat: no-repeat
+	background-position: center center
+
+// El body toma el mismo color base para que el rebote del scroll (overscroll) no muestre el blanco
+// del navegador por arriba o por abajo de #app.
+html body
+	background-color: var(--color-bg)
+
+// Contraparte oscura. Las manchas van todavia mas tenues: sobre #23262b una mancha de color al 6%
+// ya se lee como suciedad, no como profundidad.
+//
+// ⚠️ Lo que NO se toca aca es el escalon de gris del fondo oscuro, aunque la mision lo pedia
+// ("el fondo oscuro se aclara un punto"). Ese pedido estaba escrito sobre --color-bg: #14161a, que
+// es el valor que el archivo tenia cuando se dicto la mision; hoy vale #23262b porque el grupo 360
+// (fase 2) ya hizo exactamente esa correccion, probandola en pantalla: el #14161a se leia apagado
+// y dejaba a los modales sin despegarse del fondo. Aclararlo otro punto ahora achicaria la
+// distancia con --bg-card (#2e333a), que es lo que hace que una tarjeta se lea como elevada --o
+// sea, iria en contra del objetivo de la mision, que es MAS contraste entre fondo y tarjeta, no
+// menos. Queda anotado en el INFORME.md con los dos numeros.
+html.dark-mode #app
+	background-color: var(--color-bg)
+	background-image: radial-gradient(120% 90% at 20% 15%, rgba(11, 132, 248, 0.05), transparent 60%), radial-gradient(100% 80% at 85% 90%, rgba(58, 49, 252, 0.04), transparent 55%)
+	background-attachment: fixed
+	background-repeat: no-repeat
+	background-position: center center

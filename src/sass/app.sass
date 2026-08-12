@@ -12,3 +12,6 @@
 // desplegables cuelgan de los controles de la barra y tienen que poder ganarles cuando empatan en
 // especificidad.
 @import 'menus_desplegables.sass'
+// Va ULTIMO: su regla de tema oscuro empata en especificidad con el `#app` de dark_theme.sass y
+// tiene que ganarle por orden de declaracion. Ver la nota larga en el propio archivo.
+@import 'fondo_app.sass'
