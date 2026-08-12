@@ -3,12 +3,14 @@
 // Los tres menus de la barra de encabezado --"Crear", acciones sobre filtrados y acciones sobre
 // seleccionados-- son la misma pieza de interfaz y tienen que verse igual. Hasta esta mision cada
 // uno traia su propia version del ITEM, con dos prefijos de clase distintos y dos juegos de
-// valores distintos, declarados en cuatro <style> de componentes:
+// valores distintos, repartidos en los <style> de cuatro componentes:
 //
-//   .excel-dropdown-option    -> horizontal-nav/ExcelDropdownOptionItem.vue    (menu Crear)
-//   .article-dropdown-option  -> declarado DOS veces, en los <style> de
-//                                common-vue/.../opciones-filtrados-seleccion/Index.vue y de
-//                                listado/components/selected-filtered-options/Index.vue
+//   .excel-dropdown-option        -> horizontal-nav/ExcelDropdownOptionItem.vue    (menu Crear)
+//   .article-dropdown-option      -> declarado DOS veces, en los <style> de
+//                                    common-vue/.../opciones-filtrados-seleccion/Index.vue y de
+//                                    listado/components/selected-filtered-options/Index.vue
+//   .excel-dropdown-section-title -> excel-dropdown-options/ExcelPriceTypes.vue, un cuarto camino
+//                                    para el unico encabezado de seccion del menu de Crear
 //
 // Ninguno de esos dos <style> era scoped, o sea que eran globales igual que este archivo, con el
 // agregado de que no se entendia a quien le pertenecian: el componente compartido de common-vue se
@@ -56,7 +58,17 @@
 // aparece al pasar el max-height y se come ~15px del ancho de contenido-- el contenido ya no entra
 // y aparece la barra horizontal. Con el ancho forzado a 250px la medicion daba scrollWidth 300
 // contra clientWidth 248; con `overflow-x: hidden` y el min-width flexible, 248 contra 248.
-.excel-create-dropdown-menu,
+//
+// 🔴 `.excel-create-dropdown-menu.dropdown-menu` y no `.excel-create-dropdown-menu` a secas, y esto
+// se descubrio midiendo el bundle de produccion, no el codigo: `src/App.vue` importa `app.sass` y
+// DESPUES `_custom.scss` (que es el que trae Bootstrap), asi que en el CSS final el
+// `.dropdown-menu { min-width: 10rem; padding: .5rem 0 }` de Bootstrap queda **despues** de este
+// archivo. Con el selector de una sola clase empatan en especificidad (0,1,0) y gana Bootstrap por
+// orden: el menu de Crear caia de 300px a 160px y perdia su padding. Con la clase de Bootstrap
+// sumada queda (0,2,0) y gana sin recurrir a !important --que es lo que tenia antes, y de ahi salia.
+//
+// Los otros dos no lo necesitan: van por id, o sea (1,1,0), y ya le ganaban.
+.excel-create-dropdown-menu.dropdown-menu,
 #btn_seleccionados_dropdown .dropdown-menu,
 #btn_filtrados_dropdown .dropdown-menu
 	// min() y no 300px pelado: en CSS el min-width le gana al max-width, asi que un 300px fijo
@@ -77,12 +89,12 @@
 		margin: 6px 12px
 		border-top-color: var(--color-border)
 
-// El submenu de Importacion/Exportacion se posiciona con estilos INLINE desde el JS de
-// ExcelDropdownSubmenu.vue (min-width, width, max-width, top/left), y un inline le gana a
-// cualquier regla de hoja. Aca va solo lo que el inline no toca: sin esto, el submenu era el unico
-// de los cuatro contenedores sin freno al desborde horizontal.
-.excel-dropdown-submenu__menu
-	overflow-x: hidden
+// El submenu de Importacion/Exportacion NO lleva este tratamiento, y es a proposito: su ancho y su
+// posicion los fija el JS de ExcelDropdownSubmenu.vue con estilos inline (`width: max-content`,
+// `min-width`, `max-width: calc(100vw - 24px)`), o sea que no puede desbordar por contenido, y la
+// mision 28 tiene el submenu explicitamente fuera de alcance. Un `overflow-x: hidden` aca ademas no
+// seria gratis: por CSS Overflow, en cuanto un eje deja de ser `visible` el otro pasa de `visible` a
+// `auto`, asi que el submenu se convertiria en contenedor de scroll sin que nadie lo haya pedido.
 
 // ============================= El item =============================
 //
@@ -163,12 +175,17 @@
 // poca especificidad que tenga. Medir el contraste del contenedor no dice nada sobre el glifo.
 //
 // La causa se arreglo en su origen (ese selector ahora va acotado al boton), y esto queda como red
-// de seguridad con especificidad suficiente --(0,3,1) contra los (0,2,1) de aquella regla-- para
-// que una regla descendiente futura sobre `i` no vuelva a apagar los iconos en silencio. `inherit`
-// y no un color: el valor sigue estando declarado una sola vez, en la celda de aca arriba.
+// de seguridad. `inherit` y no un color: el valor sigue declarado una sola vez, en la celda de aca
+// arriba.
+//
+// Honestidad sobre cuanto protege, porque un comentario que promete de mas es peor que no tenerlo:
+// las dos primeras lineas son (0,2,1), exactamente lo mismo que `.view-header-toolbar
+// .toolbar-btn--acento i`, asi que le ganan por ORDEN --`app.sass` importa este archivo despues de
+// `toolbar_botones`-- y no por especificidad. Las dos que van por id son (1,1,1) y ahi si no hay
+// empate posible. O sea: esto ataja una regla descendiente futura declarada antes que este archivo,
+// no una declarada despues con mas peso.
 .excel-create-dropdown-menu .excel-dropdown-option__icon-wrap i,
 .excel-dropdown-submenu__menu .excel-dropdown-option__icon-wrap i,
-.excel-create-dropdown-menu .article-dropdown-option__icon-wrap i,
 #btn_seleccionados_dropdown .article-dropdown-option__icon-wrap i,
 #btn_filtrados_dropdown .article-dropdown-option__icon-wrap i
 	color: inherit
@@ -178,12 +195,27 @@
 // Mismo hover en los tres: la celda se aclara hacia el fondo de tarjeta y toma el color del texto
 // como borde. Va con tokens porque con el rgba(0,0,0,0.1) que usaba antes el menu de Crear, sobre
 // fondo oscuro el hover OSCURECIA la celda en vez de destacarla.
-.excel-dropdown-option.dropdown-item:hover,
-.excel-dropdown-option.dropdown-item:focus,
-.excel-dropdown-option.dropdown-item:active,
-.article-dropdown-option:hover,
-.article-dropdown-option:focus,
-.article-dropdown-option:active
+//
+// 🔴 Los :not() EXCLUYEN las dos variantes, y no son cosmeticos: sin ellos este bloque le gana a las
+// variantes por especificidad y las apaga justo cuando el usuario apunta el item.
+//   - El deshabilitado quedaba peor que antes: la celda se encendia con --color-text-primary y borde
+//     fuerte mientras el label seguia gris, o sea que el item se leia MITAD habilitado. Y el
+//     pointer-events: none de Bootstrap no lo salva, porque esta en el <a class="dropdown-item"> y
+//     la clase de variante vive en el <li>, que si recibe hover.
+//   - El destructivo lo mismo del lado excel, donde este selector es (0,4,0) contra los (0,3,0) de
+//     la variante. Hoy no se ve porque ningun item del menu de Crear usa variant="danger", pero el
+//     criterio de la mision pide que la variante se comporte igual en las dos familias.
+// Excluyendo en vez de subir la especificidad del otro lado, no hay competencia que resolver.
+//
+// Y del lado de article va :focus-within y no :focus: la clase esta en el <li>, que no es focusable,
+// asi que un :focus ahi no se activa nunca y el estado por teclado no existia. El que recibe el foco
+// es el <a> de adentro.
+.excel-dropdown-option.dropdown-item:not(.excel-dropdown-option--danger):hover,
+.excel-dropdown-option.dropdown-item:not(.excel-dropdown-option--danger):focus,
+.excel-dropdown-option.dropdown-item:not(.excel-dropdown-option--danger):active,
+.article-dropdown-option:not(.article-dropdown-option--danger):not(.article-dropdown-option--disabled):hover,
+.article-dropdown-option:not(.article-dropdown-option--danger):not(.article-dropdown-option--disabled):focus-within,
+.article-dropdown-option:not(.article-dropdown-option--danger):not(.article-dropdown-option--disabled):active
 	.excel-dropdown-option__icon-wrap,
 	.article-dropdown-option__icon-wrap
 		background-color: var(--bg-card)
@@ -232,26 +264,53 @@
 
 // ============================= Encabezados de seccion =============================
 //
-// IMAGENES INTELIGENTES, DESCRIPCIONES INTELIGENTES, DOCUMENTOS PDF, EXCEL PARA CLIENTES.
+// IMAGENES INTELIGENTES, DESCRIPCIONES INTELIGENTES, DOCUMENTOS PDF (de los menus de filtrados y
+// seleccionados) y EXCEL PARA CLIENTES (del de Crear). Venian por tres caminos distintos.
 //
 // Mismo caso que el item: b-dropdown-header pone la clase del componente en el <li> y deja el
 // `dropdown-header` de Bootstrap en el <header> de adentro. Todo lo que el <style> anterior
 // declaraba sobre `.article-dropdown-section-header` --font-size 0.7rem, color #333, padding-- caia
 // en el <li> y lo pisaba Bootstrap en el <header>: medido el 11/8/2026, el texto salia a 14px
 // (el .875rem de Bootstrap, no los 11,2px que el componente creia poner) y en #6c757d.
-.article-dropdown-section-header
+// Y el tercero, `excel-dropdown-section-title` ("Excel para Clientes"), es el encabezado del menu de
+// Crear y venia por otro camino todavia: un b-dropdown-text con su propio <style> en
+// ExcelPriceTypes.vue, a 0.85rem/600/0.02em y con un `color: #6c757d` fijo --que sobre el --bg-card
+// oscuro da 2,73:1, o sea el mismo hexadecimal ilegible que esta mision saca de los otros dos--.
+// b-dropdown-text tiene el mismo reparto: la clase del componente al <li>, `.b-dropdown-text` al <p>.
+//
+// La tipografia se declara sobre el <li> Y sobre el hijo interno a la vez, en un solo bloque con los
+// dos selectores. El hijo la necesita para ganarle a Bootstrap, que la declara directa; y el <li> la
+// necesita para el unico consumidor que NO tiene hijo interno: el <p> de "Sin plantillas (...)" de
+// ArticleTablePdfProfiles.vue, que usa esta clase para un texto de estado vacio. Sin la mitad del
+// <li>, ese texto perdia el uppercase, el bold y el interletrado sin que nadie lo hubiera pedido.
+.article-dropdown-section-header,
+.article-dropdown-section-header > .dropdown-header,
+.excel-dropdown-section-title,
+.excel-dropdown-section-title > .b-dropdown-text
+	font-size: 0.7rem
+	font-weight: 700
+	letter-spacing: 0.06em
+	text-transform: uppercase
+	color: var(--color-text-secondary)
+	background: transparent
+	border: none
+	// Bootstrap le pone `white-space: nowrap` al .dropdown-header: un titulo de seccion largo se
+	// recortaba en vez de bajar de renglon, igual que pasaba con los labels.
+	white-space: normal
+
+// El padding vive en el elemento que pinta: el <li> no aporta ninguno y el hijo interno lo pone
+// entero. (El <p> de ArticleTablePdfProfiles trae el suyo por las utilidades px-3 py-2 de Bootstrap,
+// que son !important, asi que el `padding: 0` del <li> no lo afecta.)
+.article-dropdown-section-header,
+.excel-dropdown-section-title
 	padding: 0
 
-	> .dropdown-header
-		padding: 10px var(--menu-desp-item-pad-x) 6px
-		font-size: 0.7rem
-		font-weight: 700
-		letter-spacing: 0.06em
-		text-transform: uppercase
-		color: var(--color-text-secondary)
-		background: transparent
-		border: none
+.article-dropdown-section-header > .dropdown-header,
+.excel-dropdown-section-title > .b-dropdown-text
+	padding: 10px var(--menu-desp-item-pad-x) 6px
+	margin-bottom: 0
 
+.article-dropdown-section-header
 	&__content
 		display: flex
 		align-items: center
