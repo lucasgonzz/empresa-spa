@@ -35,7 +35,13 @@
 
 		<!-- Aviso de regeneracion en background: el reporte vigente sigue siendo util mientras se
 		recalcula, asi que esto es una nota del sistema que convive con datos validos y no una
-		interrupcion. El icono va al lado del texto, no arriba y en grande (ver el <style>). -->
+		interrupcion. El icono va al lado del texto, no arriba y en grande (ver el bloque de estilos
+		de mas abajo).
+
+		Y no, la palabra "style" entre signos de menor y mayor NO va escrita aca aunque quede mas
+		claro: la revalidacion del carril de merge cuenta las aperturas y los cierres de ese tag en
+		el archivo entero --comentarios incluidos-- y una mencion suelta le da 2 aperturas contra 1
+		cierre, o sea que frena el merge. Paso el 12/8/2026. -->
 		<div
 		v-if="inventory_performance && inventory_performance_generating"
 		class="inventario-aviso"
