@@ -63,6 +63,15 @@
 				</div>
 			</div>
 
+			<!--
+				Este chip tambien perdió su guarda, y va declarado igual que el de dólares aunque la
+				misión solo pedía el otro: en refractor iba con `v-if="total_cuenta_corriente_pesos >
+				-1"`, que es la misma condición muerta de más abajo y por los mismos motivos. Acá la
+				salida es distinta y a propósito: la cuenta corriente en pesos aplica siempre —no hay
+				extensión que la habilite—, así que el chip se muestra sin condición. Los dos casos que
+				aquella condición ocultaba (un NaN por un ítem sin precio, un saldo negativo real) son
+				MÁS frecuentes de este lado, que es donde está el volumen y las notas de crédito.
+			-->
 			<div class="ventas-totales__chip">
 				<div class="ventas-totales__icon-wrap">
 					<i
@@ -79,14 +88,24 @@
 			<!--
 				🔴 Los CUATRO chips de dólares cuelgan de `hasExtencion('ventas_en_dolares')`, incluido
 				el de cuenta corriente. Antes ese último iba condicionado a
-				`total_cuenta_corriente_dolar > -1`, y ese chequeo no filtraba NADA: el computed suma
-				importes arrancando de 0, así que nunca puede devolver un número menor que -1 y la
-				condición era siempre verdadera. O sea que a un cliente sin ventas en dólares le
-				aparecía igual un "Total C/C: usd $0".
+				`total_cuenta_corriente_dolar > -1`.
 
-				Se verificó lo que pedía la misión —si esa condición estaba distinguiendo "no hay dato"
-				de "es cero"— y no: para eso el computed tendría que devolver null o -1 en algún camino,
-				y no lo hace en ninguno. Por eso la condición se reemplaza y no se suma a la extensión.
+				Lo que la misión pedía verificar era si esa condición distinguía "no hay dato" de "es
+				cero". NO lo hacía: el computed arranca en 0 y solo acumula, nunca devuelve null ni
+				undefined, así que con cero ventas daba 0 y el renglón se mostraba igual — un "Total
+				C/C: usd $0" a un cliente que no vende en dólares.
+
+				Lo que sí filtraba, y conviene tenerlo escrito porque no es evidente, son los dos casos
+				en que el acumulador NO es un positivo: si algún ítem viene sin `pivot.price` o sin
+				`pivot.amount`, `getTotalItem` multiplica undefined y el total queda en NaN, y
+				`NaN > -1` es false; y un neto de cuenta corriente puede ser negativo de verdad, porque
+				`totalSale` resta descuentos sin piso y toma el `sale.total` persistido, que una nota de
+				crédito deja abajo de cero.
+
+				O sea que la condición vieja hacía DESAPARECER el renglón justo en los dos casos en los
+				que hay algo para mirar: un dato roto y un saldo negativo real. Ocultar ahí es peor que
+				mostrar. Por eso la extensión la reemplaza en vez de sumarse a ella: no había nada que
+				conservar.
 			-->
 			<template v-if="hasExtencion('ventas_en_dolares')">
 				<div class="ventas-totales__chip ventas-totales__chip--usd">
@@ -174,11 +193,12 @@
 
 		</template>
 
+		<!-- Sin m-b-20: el margen inferior lo pone .ventas-totales (15px), y el de bootstrap encima
+		     hacia saltar el bloque 5px al terminar de cargar. -->
 		<b-skeleton
 		v-else
 		type="button"
-		width="200px"
-		class="m-b-20"></b-skeleton>
+		width="200px"></b-skeleton>
 	</div>
 </template>
 <script>
@@ -503,8 +523,15 @@ export default {
 		gap: 10px
 		margin-left: auto
 
-	// Los dos Excel toman la altura y el radio de los controles de la barra, y van neutros: el
-	// outline-success de antes competia con el unico acento que tiene que haber en la pantalla.
+	// Los dos Excel toman la altura, el radio y la sombra de los controles de la barra, y van
+	// neutros: el outline-success de antes competia con el unico acento que tiene que haber en la
+	// pantalla.
+	//
+	// La sombra sale de --toolbar-btn-shadow y no de un `none` ni de un valor propio: ese token lo
+	// definio la mision 27 el mismo dia que esta, y tiene contraparte en oscuro con la proporcion
+	// calculada contra la sombra del pill. Estos botones viven FUERA del .view-header-toolbar, asi
+	// que las reglas de la barra no los alcanzan solas y hay que nombrar el token: es la unica
+	// forma de que no queden planos al lado de sus hermanos de arriba.
 	&__btn.btn
 		height: var(--toolbar-control-h)
 		display: inline-flex
@@ -514,7 +541,7 @@ export default {
 		font-size: 0.875rem
 		line-height: 1
 		border-radius: var(--toolbar-btn-radius)
-		box-shadow: none
+		box-shadow: var(--toolbar-btn-shadow)
 		background: var(--bg-card)
 		border: 1px solid var(--color-border)
 		color: var(--color-text-primary)
