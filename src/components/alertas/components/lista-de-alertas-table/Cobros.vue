@@ -51,12 +51,17 @@
 
 			</b-table>
 
-			<div 
+			<!--
+				Estado vacío con el vocabulario del sistema (display/EmptyState). Antes era
+				el cartel azul con el ícono de 4em de la clase de textos vieja: esa clase NO se toca
+				porque la usan ~40 componentes del sistema, se deja de usar acá y nada más.
+				La pista dice que es buena noticia: una alerta vacía no es un módulo sin datos.
+			-->
+			<empty-state
 			v-else
-			class="text-with-icon">
-				No hay ventas por cobrar
-				<i class="icon-eye-slash"></i>
-			</div>
+			icon_class="bi bi-cash-coin"
+			title="No hay ventas por cobrar"
+			hint="Ningún cliente tiene ventas pendientes de cobro en su cuenta corriente."></empty-state>
 
 		</div>
 
@@ -66,6 +71,7 @@
 <script>
 export default {
 	components: {
+		EmptyState: () => import('@/common-vue/components/display/EmptyState'),
 		CurrentAcounts: () => import('@/components/common/current-acounts/Index'),
 		VentasSinCobrar: () => import('@/components/alertas/modals/cobros/VentasSinCobrar'),
 	},

@@ -1,8 +1,14 @@
 <template>
 	<div>
 
+		<!--
+			Sin clase de margen, igual que Comprobantes y Listado, que montan este mismo componente.
+			Antes tenía `m-b-40`: 40px de hueco entre las pestañas y el contenido, que se notaban
+			sobre todo en movimientos de depósitos, que arranca directo con su barra de herramientas.
+			El aire que queda lo pone el propio nav (`& > div { margin-top: 15px }`) más el margen de
+			cada sección.
+		-->
 		<horizontal-nav
-		class="m-b-40"
 		@setSelected="setSelectedView"
 		set_view
 		emitir_setSelected_al_inicio
