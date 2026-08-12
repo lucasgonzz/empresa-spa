@@ -1,117 +1,184 @@
 <template>
+	<!--
+		Bloque de totales del módulo de Ventas (misión 32, 11/8/2026).
+
+		Antes era una hilera de <p> separados por caracteres `|` literales, con dos botones verdes
+		`outline-success` colgando a la derecha y el contador de ventas viviendo aparte. Ahora usa el
+		mismo vocabulario de chip que el módulo de Cajas —ícono en celda, etiqueta chica arriba, valor
+		grande abajo— porque ese problema ya estaba resuelto en este sistema y no hacía falta un
+		quinto estilo de tarjeta.
+
+		Los permisos NO cambiaron: `can('sale.index.total')` gobierna el bloque entero y `is_admin`
+		gobierna costos, ganancia y los dos Excel, igual que antes.
+	-->
 	<div
 	v-if="can('sale.index.total')"
-	class="cont-total-ventas">
-		<div>
+	class="ventas-totales">
+
+		<template v-if="!loading">
+
+			<!-- ============ Pesos ============ -->
+			<div class="ventas-totales__chip ventas-totales__chip--total">
+				<div class="ventas-totales__icon-wrap">
+					<i
+					class="bi bi-cash-stack"
+					aria-hidden="true"></i>
+				</div>
+				<div class="ventas-totales__body">
+					<span class="ventas-totales__label">Total</span>
+					<span class="ventas-totales__value">{{ price(total) }}</span>
+					<span
+					class="ventas-totales__meta"
+					v-if="total_selected_payment_method > 0">
+						{{ price(total_selected_payment_method) }} en {{ selected_payment_method }}
+					</span>
+				</div>
+			</div>
+
 			<div
-			class="j-start align-start"
-			v-if="!loading">
+			class="ventas-totales__chip"
+			v-if="is_admin">
+				<div class="ventas-totales__icon-wrap">
+					<i
+					class="bi bi-tag"
+					aria-hidden="true"></i>
+				</div>
+				<div class="ventas-totales__body">
+					<span class="ventas-totales__label">Costos</span>
+					<span class="ventas-totales__value">{{ price(total_cost) }}</span>
+				</div>
+			</div>
+
+			<div
+			class="ventas-totales__chip ventas-totales__chip--ganancia"
+			v-if="is_admin">
+				<div class="ventas-totales__icon-wrap">
+					<i
+					class="bi bi-graph-up-arrow"
+					aria-hidden="true"></i>
+				</div>
+				<div class="ventas-totales__body">
+					<span class="ventas-totales__label">Ganancia</span>
+					<span class="ventas-totales__value">{{ price(total_ganancia) }}</span>
+				</div>
+			</div>
+
+			<div class="ventas-totales__chip">
+				<div class="ventas-totales__icon-wrap">
+					<i
+					class="bi bi-person-lines-fill"
+					aria-hidden="true"></i>
+				</div>
+				<div class="ventas-totales__body">
+					<span class="ventas-totales__label">Cuenta corriente</span>
+					<span class="ventas-totales__value">{{ price(total_cuenta_corriente_pesos) }}</span>
+				</div>
+			</div>
+
+			<!-- ============ Dólares ============ -->
+			<!--
+				🔴 Los CUATRO chips de dólares cuelgan de `hasExtencion('ventas_en_dolares')`, incluido
+				el de cuenta corriente. Antes ese último iba condicionado a
+				`total_cuenta_corriente_dolar > -1`, y ese chequeo no filtraba NADA: el computed suma
+				importes arrancando de 0, así que nunca puede devolver un número menor que -1 y la
+				condición era siempre verdadera. O sea que a un cliente sin ventas en dólares le
+				aparecía igual un "Total C/C: usd $0".
+
+				Se verificó lo que pedía la misión —si esa condición estaba distinguiendo "no hay dato"
+				de "es cero"— y no: para eso el computed tendría que devolver null o -1 en algún camino,
+				y no lo hace en ninguno. Por eso la condición se reemplaza y no se suma a la extensión.
+			-->
+			<template v-if="hasExtencion('ventas_en_dolares')">
+				<div class="ventas-totales__chip ventas-totales__chip--usd">
+					<div class="ventas-totales__icon-wrap">
+						<i
+						class="bi bi-currency-exchange"
+						aria-hidden="true"></i>
+					</div>
+					<div class="ventas-totales__body">
+						<span class="ventas-totales__label">Total USD</span>
+						<span class="ventas-totales__value">{{ price(total_usd) }}</span>
+					</div>
+				</div>
 
 				<div
-				class="cont-totales">
-					
-					<div
-					class="j-start align-center">
-						<p
-						class="total-ventas">
-							Total {{ price(total) }} 
-						</p>
-						<p
-						class="m-l-10 m-b-0"
-						v-if="total_selected_payment_method > 0">
-							({{ price(total_selected_payment_method) }} {{ selected_payment_method }})
-						</p> 
-
-						<p
-						class="text-left d-none d-lg-block m-b-0 m-md-l-10"
-						v-if="is_admin">
-							| Costos <strong>{{ price(total_cost) }}</strong>
-						</p> 
-
-						<p
-						class="text-left d-none d-lg-block m-b-0 m-md-l-10"
-						v-if="is_admin">
-							| Ganancia <strong>{{ price(total_ganancia) }}</strong>
-						</p> 
+				class="ventas-totales__chip ventas-totales__chip--usd"
+				v-if="is_admin">
+					<div class="ventas-totales__icon-wrap">
+						<i
+						class="bi bi-tag"
+						aria-hidden="true"></i>
 					</div>
-					<div
-					class="f-columns align-start">
-
-
-						<p
-						class="m-0"
-						v-if="total_cuenta_corriente_pesos > -1">
-							Total C/C: {{ price(total_cuenta_corriente_pesos) }}
-						</p>
+					<div class="ventas-totales__body">
+						<span class="ventas-totales__label">Costos USD</span>
+						<span class="ventas-totales__value">{{ price(total_cost_usd) }}</span>
 					</div>
+				</div>
 
-					<div
-					class="j-start align-center m-t-15"
-					v-if="hasExtencion('ventas_en_dolares')">
-						<p
-						class="total-ventas">
-							Total USD {{ price(total_usd) }}
-						</p>
-
-						<p
-						class="text-left m-b-0 m-md-l-10"
-						v-if="is_admin">
-							| Costos <strong>{{ price(total_cost_usd) }}</strong>
-						</p> 
-
-						<p
-						class="text-left m-b-0 m-md-l-10"
-						v-if="is_admin">
-							| Ganancia <strong>{{ price(total_ganancia_usd) }}</strong>
-						</p> 
+				<div
+				class="ventas-totales__chip ventas-totales__chip--usd"
+				v-if="is_admin">
+					<div class="ventas-totales__icon-wrap">
+						<i
+						class="bi bi-graph-up-arrow"
+						aria-hidden="true"></i>
 					</div>
-					<div
-					class="f-columns align-start">
-						<p
-						class="m-0"
-						v-if="total_cuenta_corriente_dolar > -1">
-							Total C/C: usd {{ price(total_cuenta_corriente_dolar) }}
-						</p>
+					<div class="ventas-totales__body">
+						<span class="ventas-totales__label">Ganancia USD</span>
+						<span class="ventas-totales__value">{{ price(total_ganancia_usd) }}</span>
+					</div>
+				</div>
+
+				<div class="ventas-totales__chip ventas-totales__chip--usd">
+					<div class="ventas-totales__icon-wrap">
+						<i
+						class="bi bi-person-lines-fill"
+						aria-hidden="true"></i>
+					</div>
+					<div class="ventas-totales__body">
+						<span class="ventas-totales__label">Cuenta corriente USD</span>
+						<span class="ventas-totales__value">{{ price(total_cuenta_corriente_dolar) }}</span>
+					</div>
+				</div>
+			</template>
+
+			<!-- ============ Contador y acciones, a la derecha ============ -->
+			<div class="ventas-totales__derecha">
+				<div class="ventas-totales__chip ventas-totales__chip--cantidad">
+					<div class="ventas-totales__icon-wrap">
+						<i
+						class="bi bi-receipt-cutoff"
+						aria-hidden="true"></i>
+					</div>
+					<div class="ventas-totales__body">
+						<span class="ventas-totales__label">Ventas</span>
+						<span class="ventas-totales__value">{{ cantidad_ventas }}</span>
 					</div>
 				</div>
 
 				<b-button
 				v-if="is_admin"
 				@click="export_excel"
-				class="m-l-10"
-				variant="outline-success"
-				size="sm">
-					<i class="icon-download"></i>
+				class="ventas-totales__btn">
+					<i class="bi bi-download"></i>
 					Excel
 				</b-button>
 				<b-button
 				v-if="is_admin"
 				@click="export_breakdown_excel"
-				class="m-l-10"
-				variant="outline-success"
-				size="sm">
-					<i class="icon-download"></i>
+				class="ventas-totales__btn">
+					<i class="bi bi-download"></i>
 					Excel full
 				</b-button>
 			</div>
-			<b-skeleton 
-			v-else
-			type="button"
-			width="200px" 
-			class="m-b-20"></b-skeleton>
-		</div>
-		<div>
-			<p 
-			v-if="!loading"
-			class="cantidad-ventas">
-				{{ cantidad_ventas }} ventas	
-			</p>
-			<b-skeleton 
-			v-else
-			type="button"
-			width="200px" 
-			class="m-b-20"></b-skeleton>
-		</div>
+
+		</template>
+
+		<b-skeleton
+		v-else
+		type="button"
+		width="200px"
+		class="m-b-20"></b-skeleton>
 	</div>
 </template>
 <script>
@@ -120,7 +187,7 @@ export default {
 	mixins: [sale],
 	computed: {
 		loading() {
-			return this.$store.state.sale.loading  
+			return this.$store.state.sale.loading
 		},
 		selected_payment_method_id() {
 			return this.$store.state.sale.payment_method_show_option
@@ -128,7 +195,7 @@ export default {
 		selected_payment_method() {
 			let payment_method = this.$store.state.current_acount_payment_method.models.find(p => p.id == this.selected_payment_method_id)
 			if (typeof payment_method != 'undefined') {
-				return payment_method.name 
+				return payment_method.name
 			}
 			return ''
 		},
@@ -142,7 +209,7 @@ export default {
 					}
 				})
 			}
-			return total 
+			return total
 		},
 		total_cuenta_corriente_pesos() {
 			let total = 0
@@ -155,8 +222,8 @@ export default {
 					total += Number(this.totalSale(model, false))
 				}
 			})
-			return total 
-		},	
+			return total
+		},
 		total_cuenta_corriente_dolar() {
 			let total = 0
 			this.sales_to_show.forEach(model => {
@@ -168,8 +235,8 @@ export default {
 					total += Number(this.totalSale(model, false))
 				}
 			})
-			return total 
-		},	
+			return total
+		},
 		total() {
 			let total = 0
 			this.sales_to_show.forEach(model => {
@@ -177,7 +244,7 @@ export default {
 					total += Number(this.totalSale(model, false))
 				}
 			})
-			return total 
+			return total
 		},
 		total_cost() {
 			/* Acumulador de costos para ventas en pesos. */
@@ -187,7 +254,7 @@ export default {
 					total += Number(model.total_cost)
 				}
 			})
-			return total 
+			return total
 		},
 		total_ganancia() {
 			/* Acumulador de ganancia persistida para ventas en pesos. */
@@ -208,7 +275,7 @@ export default {
 					total += Number(this.totalSale(model, false))
 				}
 			})
-			return total 
+			return total
 		},
 		total_cost_usd() {
 			/* Acumulador de costos para ventas en dolares. */
@@ -218,7 +285,7 @@ export default {
 					total += Number(model.total_cost)
 				}
 			})
-			return total 
+			return total
 		},
 		total_ganancia_usd() {
 			/* Acumulador de ganancia persistida para ventas en dolares. */
@@ -236,7 +303,7 @@ export default {
 			this.sales_to_show.forEach(model => {
 				total++
 			})
-			return total 
+			return total
 		},
 		from_date() {
 			return this.$store.state.sale.from_date
@@ -338,24 +405,155 @@ export default {
 }
 </script>
 <style lang="sass">
-.cont-total-ventas
-	// display: flex
-	// flex-direction: row 
-	// justify-content: space-between
-	// align-items: center
+// El vocabulario de chip es el de caja-totales (caja/components/horizontal-nav-center/Total.vue),
+// con una diferencia deliberada: allá los colores son hexadecimales fijos y acá salen de los tokens
+// de _dark_theme.sass. Ese componente es scoped y vive en una pantalla que todavia no paso por el
+// tema oscuro; este bloque si tiene que leerse en html.dark-mode, que es el punto 10 del criterio.
+.ventas-totales
+	display: flex
+	flex-direction: row
+	flex-wrap: wrap
+	align-items: stretch
+	gap: 10px
+	margin-bottom: 15px
 
-	.cont-totales
-		display: flex 
+	&__chip
+		display: flex
+		align-items: center
+		gap: 10px
+		padding: 8px 12px
+		border-radius: 10px
+		border: 1px solid var(--color-border)
+		background: var(--bg-card)
+		box-shadow: 0 1px 3px var(--shadow-color)
+		min-width: 0
+
+		.ventas-totales__icon-wrap
+			background: var(--bg-hover)
+			color: var(--color-text-secondary)
+
+	// El total en pesos es el numero que se viene a mirar: es el unico chip con acento.
+	&__chip--total
+		.ventas-totales__icon-wrap
+			background: var(--ventas-total-bg)
+			color: var(--ventas-total-acento)
+
+		.ventas-totales__value
+			color: var(--ventas-total-acento)
+			font-size: 1.25rem
+
+	&__chip--ganancia
+		.ventas-totales__icon-wrap
+			background: var(--ventas-ganancia-bg)
+			color: var(--ventas-ganancia-acento)
+
+	&__chip--usd
+		.ventas-totales__icon-wrap
+			background: var(--ventas-usd-bg)
+			color: var(--ventas-usd-acento)
+
+	&__icon-wrap
+		flex-shrink: 0
+		width: 34px
+		height: 34px
+		border-radius: 8px
+		display: flex
+		align-items: center
+		justify-content: center
+
+		i
+			font-size: 1rem
+			line-height: 1
+
+	&__body
+		display: flex
 		flex-direction: column
-	.total-ventas 
-		margin-bottom: 0
-		font-size: 1.5em 
-		font-weight: bold 
-		text-align: left
-	.cantidad-ventas 
-		margin-bottom: 0
-		font-size: 25px 
-		font-weight: bold 
-		text-align: right
+		min-width: 0
+		gap: 1px
+
+	&__label
+		font-size: 0.68rem
+		font-weight: 600
+		color: var(--color-text-secondary)
+		text-transform: uppercase
+		letter-spacing: 0.04em
+		line-height: 1.2
+		white-space: nowrap
+
+	&__value
+		font-size: 1rem
+		font-weight: 700
+		line-height: 1.2
+		white-space: nowrap
+		color: var(--color-text-primary)
+
+	&__meta
+		font-size: 0.68rem
+		color: var(--color-text-secondary)
+		line-height: 1.2
+		white-space: nowrap
+
+	// El contador y los dos Excel se van a la derecha con margin-left auto, no con un
+	// justify-content del contenedor: asi los chips de la izquierda siguen pegados entre si cuando
+	// la fila se corta y baja.
+	&__derecha
+		display: flex
+		flex-direction: row
+		align-items: center
+		gap: 10px
+		margin-left: auto
+
+	// Los dos Excel toman la altura y el radio de los controles de la barra, y van neutros: el
+	// outline-success de antes competia con el unico acento que tiene que haber en la pantalla.
+	&__btn.btn
+		height: var(--toolbar-control-h)
+		display: inline-flex
+		align-items: center
+		gap: 6px
+		padding: 0 12px
+		font-size: 0.875rem
+		line-height: 1
+		border-radius: var(--toolbar-btn-radius)
+		box-shadow: none
+		background: var(--bg-card)
+		border: 1px solid var(--color-border)
+		color: var(--color-text-primary)
+
+		&:hover,
+		&:focus
+			background: var(--bg-hover)
+			border-color: var(--color-border)
+			color: var(--color-text-primary)
+
+		i
+			color: inherit
+
+	@media screen and (max-width: 576px)
+		gap: 8px
+
+		&__derecha
+			margin-left: 0
+			width: 100%
+
+		&__btn.btn
+			flex: 1 1 0
+
+// Acentos propios del bloque. Son los mismos tres tonos que ya usan los chips de Cajas y los
+// tintes de icono de la barra, declarados como tokens para tener contraparte en oscuro: un ambar
+// o un verde de modo claro sobre el #2e333a del oscuro se apaga hasta dejar de senalar nada.
+:root
+	--ventas-total-acento: #d97706
+	--ventas-total-bg: rgba(217, 119, 6, 0.12)
+	--ventas-ganancia-acento: #059669
+	--ventas-ganancia-bg: rgba(5, 150, 105, 0.12)
+	--ventas-usd-acento: #0891b2
+	--ventas-usd-bg: rgba(8, 145, 178, 0.12)
+
+html.dark-mode
+	--ventas-total-acento: #f59e0b
+	--ventas-total-bg: rgba(245, 158, 11, 0.16)
+	--ventas-ganancia-acento: #34d399
+	--ventas-ganancia-bg: rgba(52, 211, 153, 0.16)
+	--ventas-usd-acento: #22d3ee
+	--ventas-usd-bg: rgba(34, 211, 238, 0.16)
 </style>
-	

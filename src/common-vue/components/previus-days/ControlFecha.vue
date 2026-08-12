@@ -5,7 +5,16 @@ class="control-fecha">
 	<modal-from-dates
 	:model_name="model_name"></modal-from-dates>
 
-	<div class="control-fecha__pastilla">
+	<!--
+		La clase --sin-modo marca los modulos que no tienen selector de modo (Ventas). No es
+		cosmetica: en telefono la pastilla se apila en dos filas, y sin modo la primera fila queda
+		con un unico boton de calendario flotando ARRIBA de los dias. Ese era el defecto principal
+		reportado el 11/8/2026. Con la clase, esos modulos conservan la fila unica tambien en
+		telefono, que es como se ve en escritorio.
+	-->
+	<div
+	class="control-fecha__pastilla"
+	:class="{ 'control-fecha__pastilla--sin-modo': !change_from_dates_option }">
 
 		<!-- Fila 1 en telefono; en desktop es parte de la unica fila. Lleva el segmento de modo y
 		     el boton de calendario, que son los dos controles que siempre estan. -->
@@ -490,7 +499,12 @@ export default {
 	.control-fecha__carril
 		display: flex
 		align-items: center
-		gap: 2px
+		// 8px y no 2px (mision 32, pedido de Lucas: "esta todo como muy junto y no llega a verse
+		// bien"). El aire va en el GAP y no en el padding de la celda a proposito: el padding es lo
+		// que separa visualmente la celda de dia del item de modo --ver la nota del encabezado de
+		// esta hoja-- y agrandarlo los acerca a leerse como el mismo control. La semana sigue sin
+		// partirse en dos lineas en ningun ancho porque el carril scrollea, no envuelve.
+		gap: 8px
 		min-width: 0
 		overflow-x: auto
 		// La barra de scroll se oculta: el carril se descubre arrastrando, y una barra gris debajo
@@ -656,4 +670,24 @@ export default {
 		.control-fecha__rango
 			flex: 1 1 auto
 			justify-content: center
+
+		// Modulos SIN selector de modo (Ventas): la pastilla NO se apila. Con una sola fila de
+		// controles, apilarla dejaba el boton de calendario solo, arriba de los dias y alineado a la
+		// derecha -- que es el defecto que reporto Lucas el 11/8/2026. Acá el calendario queda a la
+		// izquierda y los dias ocupan el resto, igual que en escritorio.
+		.control-fecha__pastilla--sin-modo
+			flex-direction: row
+			align-items: center
+			gap: 6px
+
+			.control-fecha__fila-principal
+				flex: 0 0 auto
+
+			.control-fecha__dias
+				flex: 1 1 auto
+				min-width: 0
+
+			// El carril se encoge con la fila en vez de empujar el calendario fuera de la pastilla.
+			.control-fecha__carril
+				min-width: 0
 </style>

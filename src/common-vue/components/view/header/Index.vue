@@ -313,6 +313,11 @@ export default {
 
 	.view-header__center
 		margin-top: 10px
+		// El margen de ABAJO lo agrega la mision 32: el buscador general quedaba pegado a lo que
+		// sigue en telefono. La separacion existia solo por el margin-top de --fechas, y esa clase
+		// cuelga de change_from_dates_option, que en Ventas es false -- justamente el modulo donde
+		// se reporto el defecto. Puesto de este lado sirve para los dos casos.
+		margin-bottom: 10px
 
 	/* Zona derecha centrada; NO se oculta. Sin display-nav colapsa sin hueco */
 	.view-header__right
