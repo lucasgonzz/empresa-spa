@@ -1,6 +1,20 @@
 <template>
 	<div
 	class="abm-search">
+		<!--
+			La lupa es el mismo icono que el del buscador general de los listados
+			(view/header/buscador-general/Index.vue), para que se lean como el mismo buscador y no
+			como dos (mision 33).
+
+			Lo que NO se copia es la posicion, y va dicho para que nadie lo "empareje" despues: alla
+			la lupa esta a la DERECHA y es un boton que dispara la busqueda; aca va a la izquierda y
+			es decorativa (pointer-events: none), porque este buscador filtra mientras se escribe y
+			no tiene nada que disparar. La derecha de este pill, ademas, no esta libre.
+		-->
+		<i
+		class="bi bi-search abm-search-lupa"
+		aria-hidden="true"></i>
+
 		<b-form-input
 		class="abm-search-input"
 		v-model="query"
@@ -235,18 +249,46 @@ export default {
 <style lang="sass" scoped>
 .abm-search
 	position: relative
-	flex: 1 1 260px
+	// 🔴 `flex: 0 0 300px` y no `1 1 260px` (mision 33): en esta fila el que cede espacio es el nav
+	// de modulos --que tiene scroll horizontal para eso--, no el buscador. Con el buscador
+	// encogible, en Articulos se comprimia hasta quedar inutil antes de que el nav cediera un pixel.
+	flex: 0 0 300px
 	min-width: 0
 	max-width: 360px
 
+	@media screen and (max-width: 768px)
+		flex: 1 1 100%
+		max-width: none
+
 	// Estilo pill igual al buscador general de los Listados (buscador-general/Index.vue),
 	// para reemplazar el input gris default de Bootstrap heredado de _inputs.sass
+	// La lupa va absoluta adentro de la pastilla y sin eventos: es un indicador, no un boton --el
+	// buscador filtra mientras se escribe--.
+	//
+	// 🔴 El color es el mismo gris literal que el placeholder de este pill y NO
+	// var(--color-text-secondary), aunque el token sea lo que corresponderia en cualquier otro lado.
+	// Motivo: este pill todavia tiene su fondo clavado a mano en #fff --junto con el borde y el
+	// texto, todos preexistentes--, asi que en html.dark-mode el token resolveria a #aab2bd sobre
+	// blanco, o sea gris claro sobre blanco: 2,1:1, practicamente invisible. Un token de texto solo
+	// sirve si el fondo tambien es un token. Cuando alguien tokenice el pill entero, esta linea se
+	// cambia por --color-text-secondary y recien ahi vale.
+	.abm-search-lupa
+		position: absolute
+		left: 14px
+		top: 50%
+		transform: translateY(-50%)
+		font-size: 0.95rem
+		line-height: 1
+		color: #9aa0a6
+		pointer-events: none
+
 	.abm-search-input
 		width: 100%
 		height: 40px
 		border: 1px solid #e2e4e7
 		border-radius: 22px
-		padding: 0 16px
+		// El padding de la izquierda le deja lugar a la lupa.
+		padding: 0 16px 0 38px
 		font-size: 0.9rem
 		color: #1d1d1f
 		background: #fff

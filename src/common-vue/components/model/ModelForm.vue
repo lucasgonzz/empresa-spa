@@ -95,7 +95,7 @@
 									:class="colorLabel(prop)"
 									class="model-form__only-show-value"
 									v-html="propertyText(model, prop, false, !prop.from_pre_view)"
-									v-if="propertyText(model, prop) != '' || propertyText(model, prop) == 0">
+									v-if="propertyText(model, prop) != '' || propertyText(model, prop) === 0">
 									</span>
 									<!-- Sin valor: indicador visual sutil en gris itálica -->
 									<span
