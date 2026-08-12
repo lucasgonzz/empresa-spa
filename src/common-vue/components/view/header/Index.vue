@@ -7,7 +7,9 @@
 		Derecha (módulo): botones propios del módulo (slot horizontal_nav_center) + display-nav de fechas.
 
 		Regla crítica: la zona derecha NUNCA se oculta con CSS en ningún breakpoint. Los botones de
-		módulo (Inventario/Depósitos) se auto-ocultan en teléfono por sus propias clases d-none d-md-block;
+		módulo (Inventario/Depósitos) se auto-ocultan en teléfono por su clase toolbar-btn--desde-md
+		(misión 35: reemplaza al par d-none d-md-block, que con su display:block !important pisaba el
+		inline-flex con el que se centra el ícono — ver la nota en src/sass/_toolbar_botones.sass);
 		el display-nav de fechas de Ventas (change_from_dates_option) se ve SIEMPRE, en todos los tamaños.
 	-->
 	<div class="view-header-toolbar view-header p-t-15">
@@ -94,7 +96,7 @@
 		</div>
 
 		<!-- ZONA DERECHA — módulo. ⚠️ NUNCA se oculta con CSS (ver comentario del template). -->
-		<!-- Los botones de módulo se auto-ocultan en teléfono por sus clases d-none d-md-block. -->
+		<!-- Los botones de módulo se auto-ocultan en teléfono por su clase toolbar-btn--desde-md. -->
 		<!-- El display-nav de fechas es visible en todos los breakpoints; en teléfono baja a fila propia. -->
 		<div
 		class="view-header__right"

@@ -60,11 +60,23 @@ export default {
 }
 </script>
 <style scoped>
-.btn-update-article-list {
-	display: inline-flex;
-	align-items: center;
-	white-space: nowrap;
-}
+/*
+	Este bloque declaraba ademas `display: inline-flex`, `align-items: center` y
+	`white-space: nowrap`, y las tres se sacaron (mision 35, 12/8/2026).
+
+	Las dos primeras porque no decidian nada: un selector scoped de una clase es (0,2,0) y la regla
+	de altura de la barra --src/sass/_toolbar_botones.sass, (0,4,0)-- ya las declara. Le faltaba
+	justo `justify-content`, asi que quien leyera este bloque creeria que aca se resuelve el
+	centrado del icono, y no: se resuelve alla.
+
+	`white-space: nowrap` es otro caso y conviene no confundirlos: Bootstrap 4.6 NO lo declara en
+	`.btn` (lo saco en 4.3, y `$btn-white-space` es `null` por defecto). O sea que esa si era la
+	unica declaracion. Se saca igual porque este boton es solo-icono y no tiene texto que envolver,
+	pero si algun dia se le agrega una etiqueta hay que reponerla.
+
+	El centrado de los botones de esta barra vive en UN solo lugar. Reponer parte de esa metrica
+	aca es como empezo el problema.
+*/
 
 /* Giro suave del icono mientras article.loading está activo. */
 .spin-icon {

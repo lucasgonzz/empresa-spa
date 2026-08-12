@@ -110,10 +110,69 @@
 	// --- Botones de solo icono: cuadrados de 36x36 ------------------------------------------
 	// Todos los de la barra menos "Crear" son solo-icono. Heredaban el padding horizontal de
 	// Bootstrap, asi que eran rectangulos con el icono descentrado en su caja.
+	//
+	// El ancho va sobre el elemento que lleva la clase --que puede ser el propio boton
+	// (BtnUpdateArticleList) o el contenedor de un b-dropdown (DepositButtons)-- y tambien sobre
+	// el boton de adentro en el segundo caso.
 	.toolbar-btn--icono,
 	.toolbar-btn--icono > .btn
 		width: var(--toolbar-control-h)
+
+	// 🔴 El `padding: 0` va en una regla APARTE, con los mismos dos :not() que la regla de altura,
+	// y no es cosmetico: escrito como `.toolbar-btn--icono` a secas era (0,2,0) contra los (0,4,0)
+	// de `.view-header-toolbar .btn:not(.btn-link):not(.dropdown-item)`, asi que PERDIA y el
+	// `padding: 0 12px` de aquella seguia vigente. O sea que este bloque decia achicar el padding
+	// a cero y no lo hizo nunca, desde la mision 13.
+	//
+	// La consecuencia es la que reporto Lucas y la mision 27 no encontro: con 36px de ancho, 1px
+	// de borde por lado y 12px de padding por lado, la caja de contenido quedaba en 10px para un
+	// glifo de 14px. El icono no entraba y desbordaba. Medido en la aplicacion corriendo
+	// (mision 35, 12/8/2026): 13px a la izquierda contra 9px a la derecha en los dos botones cuya
+	// raiz es el <b-button>, y 11/11 en el dropdown --el unico que se veia bien-- por el motivo
+	// que explica la nota de .toolbar-btn--desde-md, unas lineas mas abajo.
+	//
+	// Con (0,5,0) esta le gana a la de altura por especificidad, no por orden de declaracion.
+	.toolbar-btn--icono.btn:not(.btn-link):not(.dropdown-item),
+	.toolbar-btn--icono > .btn:not(.btn-link):not(.dropdown-item)
 		padding: 0
+
+	// --- Visibilidad responsive que NO pisa el display del control --------------------------
+	// Reemplaza al par `d-none d-md-block` de Bootstrap en los botones de modulo del Listado.
+	//
+	// 🔴 El problema de `d-md-block` no es que oculte mal, es que declara `display: block
+	// !important`. Cuando la clase cae sobre el propio <b-button> --que es el caso de
+	// BtnUpdateArticleList y BtnInventoryPerformance, donde la raiz del componente ES el boton--
+	// ese !important pisa el `display: inline-flex` de la regla de altura de aca arriba, y con el
+	// se caen el `justify-content: center` y el `align-items: center` que centran el icono. En
+	// DepositButtons la clase cae en el contenedor del b-dropdown, asi que el .btn de adentro
+	// conserva su inline-flex: el unico que se veia centrado era justamente el unico donde la
+	// clase no tocaba el boton.
+	//
+	// Con el padding ya en cero el glifo entra en la caja y no habria desborde que repartir, pero
+	// la clase se saca igual: un centrado que depende de `text-align` heredado en vez del flex
+	// declarado es el mismo defecto esperando a la proxima variacion de tipografia.
+	//
+	// El umbral es EL MISMO que el de Bootstrap (`d-md-*` corta en 768px), asi que ningun boton
+	// aparece ni desaparece en un ancho distinto al de hoy.
+	@media (max-width: 767.98px)
+		.toolbar-btn--desde-md,
+		.toolbar-btn--desde-md.btn:not(.btn-link):not(.dropdown-item)
+			display: none
+
+	// Y arriba del umbral, el elemento que NO es un boton --el contenedor de un b-dropdown--
+	// conserva el `display: block` que le daba `d-md-block`. El `:not(.btn)` es justamente para no
+	// tocar a los botones, que es todo el punto del bloque de arriba.
+	//
+	// 🔴 Va adentro de su propia media query, y NO suelta, aunque suelta parezca equivalente. Una
+	// media query no suma especificidad: escrita suelta queda en (0,3,0) contra los (0,2,0) del
+	// selector de arriba, le gana en TODO ancho, y el dropdown de depositos deja de ocultarse en
+	// telefono. Eso se midio pasando: en 375px y en 360px el dropdown seguia visible cuando antes
+	// no lo estaba --una regresion del punto 5 del criterio de aceptacion, introducida por el
+	// arreglo del punto 4--. Con las dos reglas en rangos de ancho disjuntos no compiten nunca, que
+	// es ademas lo que hace Bootstrap con este mismo par de umbrales.
+	@media (min-width: 768px)
+		.toolbar-btn--desde-md:not(.btn)
+			display: block
 
 	// --- La unica accion de acento: Crear ---------------------------------------------------
 	// Es la accion primaria de la vista y el unico control que conserva texto ademas del icono.
