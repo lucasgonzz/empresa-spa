@@ -8,3 +8,6 @@
 // Va DESPUES de ui_sizes y de dark_theme: usa sus tokens de color y tiene que poder ganarle al
 // `.ui-small .btn` de ui_sizes en los controles de la barra de encabezado.
 @import 'toolbar_botones.sass'
+// Va ULTIMO: su regla de tema oscuro empata en especificidad con el `#app` de dark_theme.sass y
+// tiene que ganarle por orden de declaracion. Ver la nota larga en el propio archivo.
+@import 'fondo_app.sass'

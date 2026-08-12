@@ -196,6 +196,17 @@ export default {
 	padding: 0 0.5rem
 
 // Chip flotante: ancho según contenido en desktop; card compacta en mobile.
+//
+// Altura (misión 27, 11/8/2026): la toma del mismo token que el resto de los controles del
+// sistema, en vez de derivarla de su propio padding. Pedido de Lucas: "con un alto acorde al
+// buscador general, que está sobre ese componente" — era el único control de esa zona que no
+// respetaba la altura del sistema, y con el padding propio medía ~37px contra los 36 del pill.
+// El padding vertical pasa a 0 porque ahora la caja la fija la altura; el horizontal queda igual.
+//
+// El radio de cápsula (999px) se MANTIENE a propósito: es la misma lógica que el pill del
+// buscador, y está bien que esto se lea como una cápsula y no como un botón. Los botones de la
+// barra van a --toolbar-btn-radius justamente porque son otra cosa (ver la nota larga en
+// src/sass/_toolbar_botones.sass).
 .table-filter-pagination-bar
 	display: inline-flex
 	align-items: center
@@ -205,17 +216,19 @@ export default {
 	width: auto
 	max-width: 100%
 	box-sizing: border-box
-	padding: 0.4rem 0.85rem
+	height: var(--toolbar-control-h)
+	padding: 0 0.85rem
 	border-radius: 999px
 	border: 1px solid transparent
-	@if ($theme == 'dark')
-		background-color: rgba(42, 42, 42, 0.96)
-		border-color: rgba(255, 255, 255, 0.08)
-		box-shadow: 0 4px 18px rgba(0, 0, 0, 0.28)
-	@else
-		background-color: rgba(255, 255, 255, 0.98)
-		border-color: rgba(0, 0, 0, 0.06)
-		box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08)
+	// Estas tres líneas se convirtieron de `@if ($theme)` a tokens porque esta misión las tocaba
+	// igual por el cambio de altura. El resto del archivo sigue con `@if ($theme == 'dark')`, que
+	// es una variable de COMPILACIÓN de Sass y no la clase `html.dark-mode` en tiempo de ejecución
+	// que usa el resto del sistema: o sea que este componente no participa del tema oscuro
+	// dinámico. Arreglarlo entero estaba fuera del alcance de la misión y quedó como hallazgo, con
+	// la lista exacta de líneas.
+	background-color: var(--bg-card)
+	border-color: var(--color-border)
+	box-shadow: 0 4px 16px var(--shadow-color)
 
 // Contador de resultados: tipografía secundaria, sin dominar la barra.
 .pagination-bar-meta
@@ -322,6 +335,10 @@ export default {
 		align-items: stretch
 		width: 100%
 		max-width: 20rem
+		// Vuelve a altura automática: acá la barra se apila en tres filas y una caja de 36px las
+		// aplastaría. La altura fija es para la variante en línea del escritorio, que es la que
+		// tiene que alinearse con el pill del buscador.
+		height: auto
 		padding: 0.65rem 0.75rem
 		border-radius: 0.85rem
 		gap: 0.55rem

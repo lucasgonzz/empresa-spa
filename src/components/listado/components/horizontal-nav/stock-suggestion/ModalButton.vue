@@ -1,6 +1,9 @@
 <template>
+	<!--
+		Sin m-l-15 (mision 27, 11/8/2026): el espaciado de la barra lo da el gap de
+		.view-header__group y este margen se le sumaba encima. Ver ArticlePdfPersonalizado.vue.
+	-->
 	<b-button
-	class="m-l-15"
 	@click="show_modal">
 		<i class="icon-refresh"></i>
 		Sugerencias

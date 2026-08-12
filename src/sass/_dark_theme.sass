@@ -15,7 +15,12 @@
 	--color-border: #dee2e6
 	--color-border-secondary: #e9ecef
 	--color-border-tertiary: #dee2e6
-	--color-bg: #f8f9fa
+	// Baja un escalon (era #f8f9fa) por pedido de Lucas del 11/8/2026: contra un gris casi blanco,
+	// una tarjeta blanca o el pill del buscador no se despegan y todo el contraste lo tiene que
+	// poner el borde. El escalon lo da el FONDO bajando y no la tarjeta subiendo, porque --bg-card
+	// ya esta en blanco puro. La superficie que se ve en pantalla la termina de armar
+	// _fondo_app.sass, que apoya dos manchas muy diluidas sobre este color.
+	--color-bg: #eef0f4
 	--bg-card: #fff
 	--bg-section: #f8f9fa
 	--bg-hover: #f1f3f5
