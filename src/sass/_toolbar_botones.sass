@@ -105,8 +105,28 @@
 		border: 1px solid var(--color-primary)
 		color: #fff
 
-		i
-			color: #fff
+	// 🔴 El blanco del icono va acotado al BOTON, y no al contenedor con un combinador
+	// descendiente. Esta linea es la causa medida del "los iconos del menu de Crear no se ven"
+	// (mision 28, 11/8/2026), que la mision 20 no habia podido cerrar:
+	//
+	// ExcelDropDown.vue le pone .toolbar-btn--acento al CONTENEDOR del b-dropdown, y el
+	// ul.dropdown-menu es hijo de ese contenedor. Con el selector descendiente `.toolbar-btn--acento
+	// i`, el color: #fff le pegaba tambien a los iconos de adentro del menu desplegado. Medido en el
+	// navegador: color computado del <i> = rgb(255,255,255) sobre una celda rgb(241,243,245), 1,11:1.
+	//
+	// Y no alcanzaba con subirle el contraste a la celda --que es lo que hizo la mision 20-- porque
+	// una declaracion directa sobre el <i> le gana SIEMPRE a lo que el <i> heredaria del padre, por
+	// poca especificidad que tenga. El contraste del contenedor no dice nada sobre el glifo.
+	//
+	// Es el mismo modo de falla del `:not(.b-dropdown)` del hover de aca abajo: la clase esta en el
+	// contenedor, el menu es su hijo, y todo lo que se escriba con un descendiente se le aplica.
+	//
+	// Los dos selectores cubren las dos formas de uso: BtnCreate.vue pone la clase en el propio
+	// <b-button> (ahi el elemento con la clase ES el boton) y ExcelDropDown.vue en el contenedor
+	// del split (ahi los botones son sus hijos directos).
+	.toolbar-btn--acento.btn i,
+	.toolbar-btn--acento > .btn i
+		color: #fff
 
 	// 🔴 El hover se declara aparte y EXCLUYE al contenedor de un dropdown, y el motivo no es
 	// estetico (medido el 11/8/2026, mision 20):

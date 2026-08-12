@@ -64,188 +64,22 @@ export default {
 </script>
 
 <style lang="sass">
+/* Contenedor de opciones que el Listado inyecta por slot en el dropdown de seleccionados/filtrados */
 
-/* Contenedor de opciones del dropdown de seleccionados/filtrados en listado de articulos */
+// Ya no declara min-width: el ancho del menu lo declara el propio menu, en
+// src/sass/_menus_desplegables.sass (mision 28). Ese min-width: 300px sobre el CONTENIDO era el que
+// producia la barra de scroll horizontal: en cuanto algo le acotaba el ancho al menu --Popper en
+// una pantalla angosta, o la barra vertical que aparece al pasar el max-height y se come ~15px--,
+// el contenido ya no entraba. Medido: con el menu forzado a 250px daba scrollWidth 300 contra
+// clientWidth 248.
+//
+// El diseño de los items (.article-dropdown-option y sus variantes) y el de los encabezados de
+// seccion tambien viven ahi: estaban declarados DOS veces, aca y en el <style> no scoped de
+// common-vue/.../opciones-filtrados-seleccion/Index.vue, con los mismos valores escritos a mano.
 
 .article-selected-options-dropdown
 
-	min-width: 300px
-
 	padding: 4px 0
-
-
-
-	.dropdown-divider
-
-		margin: 6px 12px
-
-		border-top-color: rgba(0, 0, 0, 0.08)
-
-
-
-/* Encabezado de cada bloque del menu */
-
-.article-dropdown-section-header
-
-	padding: 10px 0px 6px
-
-	font-size: 0.7rem
-
-	font-weight: 700
-
-	letter-spacing: 0.06em
-
-	text-transform: uppercase
-
-	color: #333
-
-	background: transparent
-
-	border: none
-
-
-
-	&__content
-
-		display: flex
-
-		align-items: center
-
-		gap: 8px
-
-
-
-	&__icon
-
-		font-size: 0.95rem
-
-		opacity: 0.85
-
-		color: #495057
-
-
-
-	&__text
-
-		line-height: 1.2
-
-
-
-/* Opcion individual: icono en celda + label */
-
-.article-dropdown-option
-
-	padding: 0
-
-
-
-	&.dropdown-item
-
-		padding: 0
-
-
-
-	&:hover,
-
-	&:focus,
-
-	&:active
-
-		.article-dropdown-option__icon-wrap
-
-			background-color: rgba(255, 255, 255, 0.22)
-
-			color: inherit
-
-
-
-	&__content
-
-		display: flex
-
-		align-items: center
-
-		gap: 12px
-
-		width: 100%
-
-		padding: 5px 0px
-
-		min-height: 42px
-
-
-
-	&__icon-wrap
-
-		display: flex
-
-		align-items: center
-
-		justify-content: center
-
-		flex-shrink: 0
-
-		width: 32px
-
-		height: 32px
-
-		border-radius: 8px
-
-		background-color: rgba(0, 0, 0, 0.06)
-
-		color: #495057
-
-		font-size: 1rem
-
-		transition: background-color 0.15s ease, color 0.15s ease
-
-
-
-	&__label
-
-		flex: 1
-
-		font-size: 0.9rem
-
-		font-weight: 500
-
-		line-height: 1.35
-
-		color: #212529
-
-		text-align: left
-
-		white-space: normal
-
-		word-break: break-word
-
-
-
-/* Variante de peligro para acciones destructivas */
-
-.article-dropdown-option--danger
-
-	.article-dropdown-option__icon-wrap
-
-		background-color: rgba(220, 53, 69, 0.12)
-
-		color: #c82333
-
-
-
-	.article-dropdown-option__label
-
-		color: #c82333
-
-
-
-	&:hover,
-
-	&:focus
-
-		.article-dropdown-option__icon-wrap
-
-			background-color: rgba(220, 53, 69, 0.2)
 
 </style>
 

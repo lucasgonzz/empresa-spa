@@ -405,22 +405,9 @@ export default {
 }
 </script>
 
-<style lang="sass">
-.excel-create-dropdown-menu
-	min-width: 300px !important
-	max-width: calc(100vw - 24px)
-	max-height: 70vh
-	overflow-y: auto
-	overflow-x: hidden
-	padding-top: 0.35rem
-	padding-bottom: 0.35rem
-	text-align: left
-
-	> li
-		width: 100%
-
-	.dropdown-item
-		text-align: left
-		border: none
-		box-shadow: none
-</style>
+<!--
+	Sin <style> propio: el tratamiento de .excel-create-dropdown-menu (ancho, alto maximo, overflow
+	y padding) es el mismo de los otros dos menus del listado y vive en
+	src/sass/_menus_desplegables.sass desde la mision 28. Tenerlo aca era la mitad del bug del scroll
+	horizontal: el de Crear declaraba overflow-x y max-width, y los otros dos no.
+-->

@@ -8,3 +8,7 @@
 // Va DESPUES de ui_sizes y de dark_theme: usa sus tokens de color y tiene que poder ganarle al
 // `.ui-small .btn` de ui_sizes en los controles de la barra de encabezado.
 @import 'toolbar_botones.sass'
+// Va DESPUES de toolbar_botones por el mismo motivo que aquel va despues de dark_theme: los menus
+// desplegables cuelgan de los controles de la barra y tienen que poder ganarles cuando empatan en
+// especificidad.
+@import 'menus_desplegables.sass'
