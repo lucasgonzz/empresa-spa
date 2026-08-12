@@ -37,6 +37,7 @@
 				<input
 				type="number"
 				class="filtros-fijos__number"
+				:data-testid="'filtro-fijo-'+filtro.key"
 				:value="valorActual(filtro)"
 				@input="onNumberInput(filtro, $event)"
 				@keyup.enter="$emit('enter')">
@@ -59,6 +60,7 @@
 			<button
 			type="button"
 			class="filtros-fijos__remove"
+			:data-testid="'filtro-fijo-quitar-'+filtro.key"
 			title="Quitar filtro"
 			@click="$emit('quitar', { key: filtro.key })">×</button>
 		</div>

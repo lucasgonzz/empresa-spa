@@ -31,6 +31,7 @@
 				type="button"
 				class="filtro-fijo-modal__card"
 				:class="{ 'filtro-fijo-modal__card--active': filter_kind === 'numeric_comparison' }"
+				data-testid="filtro-fijo-tipo-comparacion"
 				@click="filter_kind = 'numeric_comparison'">
 					<span class="filtro-fijo-modal__card-title">Comparar contra un valor</span>
 					<span class="filtro-fijo-modal__card-desc">Igual a, mayor a, menor a, etc.</span>

@@ -1322,17 +1322,23 @@ export default {
 				// el grupo en modo 'alguna' (ver prompt 03 del grupo 179 para la semantica exacta).
 				conector: this.conector,
 				extra_filters: this.extra_filters_finales,
-				// Quien disparo la busqueda. Se normaliza en vez de confiar en el argumento: los
-				// `@keyup.enter` y `@enter` de los controles pasan su propio evento si alguien los
-				// engancha sin parentesis, y un KeyboardEvent no es un origen.
-				origen: origen === 'lupa' ? 'lupa' : 'enter',
 			}
 
 			if (this.modo === 'modal') {
 				// Modo embebido (prompt 08 del grupo 179): no toca el store, el modal de busqueda
 				// (Modal.vue) es quien decide que hacer con este payload (armar el POST a
 				// global-search, filtrar en memoria si esta offline, etc).
-				this.$emit('buscar', payload)
+				//
+				// `origen` viaja SOLO por esta rama y no dentro del payload de arriba: en modo
+				// header ese mismo objeto se despacha a runGlobalSearch, que lo guarda en el store
+				// y lo remanda en cada pagina, o sea que un campo que solo le sirve al modal
+				// terminaria viajando al backend en cada busqueda del sistema.
+				//
+				// Se normaliza en vez de confiar en el argumento: un `@keyup.enter="buscar"`
+				// enganchado sin parentesis pasaria su KeyboardEvent, y un evento no es un origen.
+				this.$emit('buscar', Object.assign({}, payload, {
+					origen: origen === 'lupa' ? 'lupa' : 'enter',
+				}))
 			} else {
 				payload.page = 1
 				this.$store.dispatch(this.model_name + '/runGlobalSearch', payload)
