@@ -1,7 +1,25 @@
 <template>
+	<!--
+		Modal del reporte de inventario del Listado (rehecho en la mision 31, 11/8/2026).
+
+		Muestra EXACTAMENTE los mismos datos que la version anterior y sigue leyendolos del mismo
+		reporte: no se toco el store, ni el mixin, ni el endpoint, ni el calculo. Lo que cambia es
+		la forma: antes eran cuatro tarjetas con encabezado gris, todas del mismo peso, con los
+		numeros en el mismo cuerpo que sus etiquetas y dos circulos de progreso dibujados a mano.
+		Ahora los totales encabezan --que es lo que se viene a mirar-- y las proporciones se leen
+		como graficos, con la libreria que el sistema ya usa (chart.js 2 via vue-chartjs, la misma
+		de los reportes). No se instalo ningun paquete.
+
+		El chasis del modal --radio, header, footer-- lo pone _modals.sass (mision 29). Aca solo
+		vive el cuerpo.
+
+		El ancho baja de "xl" a "lg": con los tres paneles compactos ya no hacen falta cuatro
+		columnas, y en un notebook de 1366x768 el modal entra sin scroll, que era uno de los
+		criterios de aceptacion.
+	-->
 	<b-modal
 	hide-footer
-	size="xl"
+	size="lg"
 	title="Inventario"
 	id="inventory-performance"
 	@show="get_inventory_performance_models">
@@ -11,7 +29,7 @@
 		de soporte recurrente. -->
 		<p
 		v-if="inventory_performance"
-		class="text-muted m-b-10">
+		class="inventario-fecha">
 			Calculado el {{ date(inventory_performance.created_at) }} a las {{ hour(inventory_performance.created_at) }}
 		</p>
 
@@ -31,41 +49,25 @@
 			<i class="icon-eye-slash"></i>
 		</div>
 
-		<b-row
-		v-else
-		class="m-t-15">
-			<b-col
-			class="m-b-25 m-b-xl-0"
-			md="6"
-			xl="3">
+		<template v-else>
 
+			<!-- Los tres totales, arriba y grandes -->
+			<valor-del-inventario></valor-del-inventario>
+
+			<!-- La aclaracion viaja con los totales porque es sobre ELLOS: los valores de costos y
+			precios solo suman los articulos que tienen el stock indicado. Antes vivia adentro de la
+			tarjeta de valor; ahora que los totales encabezan el modal, la aclaracion los sigue. -->
+			<p class="inventario-aclaracion">
+				Solo se tienen en cuenta los artículos que tienen indicado su stock (actualmente, el {{ inventory_performance.porcentaje_stockeado }}% del inventario)
+			</p>
+
+			<div class="inventario-paneles">
 				<inventario-stockeado></inventario-stockeado>
-			</b-col>
-
-			<b-col
-			class="m-b-25 m-b-xl-0"
-			md="6"
-			xl="3">
-
-				<valor-del-inventario></valor-del-inventario>
-			</b-col>
-
-			<b-col
-			class="m-b-25 m-b-xl-0"
-			md="6"
-			xl="3">
-
 				<costos-articulos></costos-articulos>
-			</b-col>
-
-			<b-col
-			class="m-b-25 m-b-xl-0"
-			md="6"
-			xl="3">
 				<estado-del-stock></estado-del-stock>
-			</b-col>
+			</div>
 
-		</b-row>
+		</template>
 	</b-modal>
 </template>
 <script>
@@ -80,3 +82,239 @@ export default {
 	},
 }
 </script>
+<style lang="sass">
+// El bloque NO va scoped a proposito: los paneles viven en componentes hijos y el estilo del
+// modal es uno solo. Va anidado bajo el id del modal --que es el mismo con el que se abre por
+// v-b-modal-- para que no se escape a ninguna otra pantalla.
+//
+// Todos los colores salen de tokens de _dark_theme.sass, sin un solo hexadecimal: este modal se
+// monta colgando de <body>, FUERA de #app, asi que un hex lo dejaria blanco en modo oscuro (la
+// razon esta explicada en el encabezado de _dark_theme.sass, y es por lo que los tokens viven
+// en :root).
+#inventory-performance
+
+	.inventario-fecha
+		margin: 0 0 14px
+		font-size: 0.8125rem
+		color: var(--color-text-secondary)
+
+	// --- Los tres totales -------------------------------------------------------------------
+	// Vocabulario tomado de caja/components/horizontal-nav-center/Total.vue (caja-totales__chip):
+	// icono en su caja, etiqueta chica en mayusculas y valor grande. Se copia el lenguaje, no el
+	// archivo: aca los colores salen de tokens y alla eran hexadecimales.
+	.inventario-totales
+		display: flex
+		flex-direction: row
+		flex-wrap: wrap
+		gap: 10px
+
+	.inventario-chip
+		display: flex
+		flex-direction: row
+		align-items: center
+		gap: 10px
+		flex: 1 1 0
+		min-width: 150px
+		padding: 10px 14px
+		border-radius: var(--toolbar-btn-radius)
+		border: 1px solid var(--color-border)
+		background: var(--bg-card)
+
+		&__icon
+			flex-shrink: 0
+			width: 34px
+			height: 34px
+			border-radius: 8px
+			display: flex
+			align-items: center
+			justify-content: center
+			background: var(--bg-hover)
+			color: var(--color-text-secondary)
+
+			i
+				font-size: 1rem
+				line-height: 1
+
+			// Los dos valores de plata llevan el color; la cantidad de articulos queda neutra.
+			// Es la jerarquia que pedia la mision: que el numero mas importante se vea como tal,
+			// en vez de que los cuatro bloques pesen lo mismo.
+			&--costos
+				color: var(--color-primary)
+
+			&--precios
+				color: var(--caja-abierta-acento)
+
+		&__body
+			display: flex
+			flex-direction: column
+			min-width: 0
+			gap: 1px
+
+		&__label
+			font-size: 0.68rem
+			font-weight: 600
+			color: var(--color-text-secondary)
+			text-transform: uppercase
+			letter-spacing: 0.04em
+			line-height: 1.2
+
+		&__value
+			font-size: 1.25rem
+			font-weight: 700
+			line-height: 1.2
+			color: var(--color-text-primary)
+			white-space: nowrap
+
+	.inventario-aclaracion
+		margin: 10px 0 0
+		font-size: 0.8125rem
+		line-height: 1.35
+		color: var(--color-text-secondary)
+
+	// --- Los tres paneles -------------------------------------------------------------------
+	// Grid y no b-row/b-col: son tres piezas del mismo ancho que tienen que apilarse juntas, y el
+	// grid lo resuelve con una linea en vez de con tres clases de breakpoint por columna.
+	.inventario-paneles
+		display: grid
+		grid-template-columns: repeat(3, 1fr)
+		gap: 12px
+		margin-top: 16px
+
+	.inventario-panel
+		display: flex
+		flex-direction: column
+		align-items: stretch
+		padding: 14px
+		border-radius: var(--toolbar-btn-radius)
+		border: 1px solid var(--color-border)
+		background: var(--bg-card)
+
+		&__titulo
+			margin: 0 0 10px
+			font-size: 0.75rem
+			font-weight: 600
+			text-transform: uppercase
+			letter-spacing: 0.04em
+			color: var(--color-text-secondary)
+
+		// La dona y su numero comparten caja: el canvas ocupa el alto y el numero se apoya encima
+		// con position absolute. Sin `position: relative` aca, ese numero se iria al modal.
+		&__grafico
+			position: relative
+			height: 128px
+
+		&__centro
+			position: absolute
+			top: 0
+			left: 0
+			right: 0
+			bottom: 0
+			display: flex
+			flex-direction: column
+			align-items: center
+			justify-content: center
+			// El numero no tiene que robarle el mouse al canvas.
+			pointer-events: none
+
+		&__centro-valor
+			font-size: 1.5rem
+			font-weight: 700
+			line-height: 1
+			color: var(--color-text-primary)
+
+		&__centro-label
+			margin-top: 2px
+			font-size: 0.7rem
+			color: var(--color-text-secondary)
+
+		// La barra apilada del estado del stock ocupa el lugar de la dona en su panel, con menos
+		// alto: es una sola linea. El margen de abajo la separa de su detalle.
+		&__barra
+			height: 26px
+			margin: 46px 0 42px
+
+		&__detalle
+			margin: 12px 0 0
+			display: flex
+			flex-direction: column
+			gap: 6px
+
+		&__fila
+			display: flex
+			flex-direction: row
+			align-items: baseline
+			justify-content: space-between
+			gap: 8px
+
+			dt
+				display: flex
+				flex-direction: row
+				align-items: center
+				gap: 6px
+				font-size: 0.8125rem
+				font-weight: 400
+				color: var(--color-text-secondary)
+
+			dd
+				margin: 0
+				font-size: 0.95rem
+				font-weight: 600
+				color: var(--color-text-primary)
+
+		// Los puntos de color repiten los de la barra apilada, que es lo que convierte a la barra
+		// en algo legible: sin ellos habria que adivinar cual tramo es cual.
+		&__punto
+			width: 8px
+			height: 8px
+			border-radius: 50%
+			flex-shrink: 0
+
+			&--sin-stock
+				background: var(--caja-cerrar-acento)
+
+			&--minimo
+				background: var(--toolbar-btn-seleccion)
+
+		// 🔴 El botón declara su aspecto acá, y no alcanza con sacarle el `variant="success"`:
+		// medido el 11/8/2026 con el CSS del build, un `b-button` sin variant cae en el
+		// `btn-secondary` de Bootstrap, que es un gris MACIZO con letra blanca. La regla neutra
+		// del sistema vive en `_toolbar_botones.sass` acotada a `.view-header-toolbar`, y este
+		// modal no está adentro de esa barra, así que no le llega. O sea que sacar el variant
+		// cambiaba un botón verde macizo por uno gris macizo.
+		//
+		// Se repite el vocabulario en vez de ensanchar aquel selector a todo el sistema: eso
+		// último le cambiaría el aspecto a cada botón sin variant de la aplicación, que es
+		// bastante más de lo que esta misión vino a hacer. Queda como hallazgo.
+		&__excel
+			margin-top: 12px
+			align-self: flex-start
+			height: var(--toolbar-control-h)
+			padding: 0 12px
+			border-radius: var(--toolbar-btn-radius)
+			background: var(--bg-card)
+			border: 1px solid var(--color-border)
+			color: var(--color-text-primary)
+			box-shadow: var(--toolbar-btn-shadow)
+
+			&:hover,
+			&:focus
+				background: var(--bg-hover)
+				border-color: var(--color-border)
+				color: var(--color-text-primary)
+
+			i
+				color: var(--color-text-secondary)
+
+	// --- Mobile -----------------------------------------------------------------------------
+	// Los paneles se apilan y los chips pasan a ocupar el ancho completo: tres chips de 150px en
+	// una pantalla de 360 se rompen en dos filas desparejas.
+	@media (max-width: 767px)
+		.inventario-paneles
+			grid-template-columns: 1fr
+
+		.inventario-chip
+			flex: 1 1 100%
+
+		.inventario-panel__barra
+			margin: 20px 0
+</style>
