@@ -107,7 +107,11 @@
 
 	// 🔴 El blanco del icono va acotado al BOTON, y no al contenedor con un combinador
 	// descendiente. Esta linea es la causa medida del "los iconos del menu de Crear no se ven"
-	// (mision 28, 11/8/2026), que la mision 20 no habia podido cerrar:
+	// (mision 28, 11/8/2026). El bug nacio ACA, en la mision 13 (commit 7fac2be): antes de ese
+	// rediseño de la barra el icono heredaba el #495057 de su celda --apagado, pero visible a
+	// 7,17:1--. La mision 20 lo intento cerrar subiendo el contraste de la celda y no podia
+	// funcionar, por lo que dice el parrafo de abajo. O sea que el rediseño de la barra apago los
+	// iconos de un menu que ni siquiera estaba mirando:
 	//
 	// ExcelDropDown.vue le pone .toolbar-btn--acento al CONTENEDOR del b-dropdown, y el
 	// ul.dropdown-menu es hijo de ese contenedor. Con el selector descendiente `.toolbar-btn--acento
