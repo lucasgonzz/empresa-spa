@@ -395,7 +395,13 @@ html.dark-mode
 	// mismo criterio con el que --shadow-color de _dark_theme.sass pasa de gris a negro. Se mantiene
 	// la geometria (1px de desplazamiento, 3px de desenfoque) para que siga siendo la version chica
 	// de la sombra del pill y no otra sombra distinta.
-	--toolbar-btn-shadow: rgba(0, 0, 0, 0.32) 0px 1px 3px 0px
+	//
+	// El 0,27 no es un numero al voleo: es la MISMA PROPORCION que en claro. Ahi el pill va al 0,2
+	// y el boton al 0,12 (60%); aca el pill va al 0,45 --que es --shadow-color en oscuro, ver
+	// buscador-general/Index.vue-- y el boton al 0,27, que es el mismo 60%. Si se toca uno de los
+	// dos valores hay que tocar el otro, o la jerarquia se mantiene en un modo y se da vuelta en
+	// el otro, que es exactamente lo que pasaba antes de esta mision.
+	--toolbar-btn-shadow: rgba(0, 0, 0, 0.27) 0px 1px 3px 0px
 	--toolbar-btn-seleccion: #f59e0b
 	--toolbar-btn-seleccion-bg: rgba(245, 158, 11, 0.16)
 	--toolbar-btn-seleccion-bg-hover: rgba(245, 158, 11, 0.24)
