@@ -38,7 +38,9 @@
 		interrupcion. El icono va al lado del texto, no arriba y en grande (ver el <style>). -->
 		<div
 		v-if="inventory_performance && inventory_performance_generating"
-		class="inventario-aviso">
+		class="inventario-aviso"
+		role="status"
+		aria-live="polite">
 			<i class="bi bi-arrow-repeat inventario-aviso__icono" aria-hidden="true"></i>
 			<span>Estamos actualizando el reporte de inventario. Los datos de abajo van a refrescarse solos apenas termine.</span>
 		</div>
