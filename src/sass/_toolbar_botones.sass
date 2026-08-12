@@ -520,3 +520,11 @@ html.dark-mode select.toolbar-select.custom-select
 	background-color: var(--bg-card)
 	color: var(--color-text-primary)
 	border-color: var(--color-border)
+
+// Y el mismo cierre para el tamaño chico, por consistencia con el bloque de arriba: el selector
+// base empata en (0,2,1) con `.ui-small select.custom-select` de _ui_sizes.sass y le gana solo por
+// orden de importacion. Dejarlo asi mientras el empate del tema oscuro si se cerraba por
+// especificidad era deuda gratuita: son los dos el mismo problema y el arreglo cuesta una linea.
+.ui-small select.toolbar-select.custom-select
+	height: var(--toolbar-control-h)
+	border-radius: var(--toolbar-btn-radius)

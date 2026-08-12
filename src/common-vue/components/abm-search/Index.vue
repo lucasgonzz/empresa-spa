@@ -2,10 +2,14 @@
 	<div
 	class="abm-search">
 		<!--
-			La lupa es la misma que la del buscador general de los listados
-			(view/header/buscador-general/Index.vue): mismo icono de bootstrap-icons y misma posicion
-			adentro de la pastilla, para que sean el mismo gesto y no dos buscadores distintos
-			(mision 33).
+			La lupa es el mismo icono que el del buscador general de los listados
+			(view/header/buscador-general/Index.vue), para que se lean como el mismo buscador y no
+			como dos (mision 33).
+
+			Lo que NO se copia es la posicion, y va dicho para que nadie lo "empareje" despues: alla
+			la lupa esta a la DERECHA y es un boton que dispara la busqueda; aca va a la izquierda y
+			es decorativa (pointer-events: none), porque este buscador filtra mientras se escribe y
+			no tiene nada que disparar. La derecha de este pill, ademas, no esta libre.
 		-->
 		<i
 		class="bi bi-search abm-search-lupa"
@@ -260,6 +264,14 @@ export default {
 	// para reemplazar el input gris default de Bootstrap heredado de _inputs.sass
 	// La lupa va absoluta adentro de la pastilla y sin eventos: es un indicador, no un boton --el
 	// buscador filtra mientras se escribe--.
+	//
+	// 🔴 El color es el mismo gris literal que el placeholder de este pill y NO
+	// var(--color-text-secondary), aunque el token sea lo que corresponderia en cualquier otro lado.
+	// Motivo: este pill todavia tiene su fondo clavado a mano en #fff --junto con el borde y el
+	// texto, todos preexistentes--, asi que en html.dark-mode el token resolveria a #aab2bd sobre
+	// blanco, o sea gris claro sobre blanco: 2,1:1, practicamente invisible. Un token de texto solo
+	// sirve si el fondo tambien es un token. Cuando alguien tokenice el pill entero, esta linea se
+	// cambia por --color-text-secondary y recien ahi vale.
 	.abm-search-lupa
 		position: absolute
 		left: 14px
@@ -267,7 +279,7 @@ export default {
 		transform: translateY(-50%)
 		font-size: 0.95rem
 		line-height: 1
-		color: var(--color-text-secondary)
+		color: #9aa0a6
 		pointer-events: none
 
 	.abm-search-input

@@ -48,12 +48,6 @@ export default {
 		flex: 1 1 auto
 		min-width: 0
 
-		// Mismo caso que en la cabecera de Ventas: horizontal-nav le pone un margin-top de 15px a su
-		// pista, pensado para cuando va solo en su fila. Adentro de esta, con align-items: center,
-		// ese margen entra en la caja y desalinea las pestañas contra los controles de la derecha.
-		.cont-navs .cont-left > div
-			margin-top: 0
-
 	&__fechas
 		flex: 0 0 auto
 
@@ -64,4 +58,19 @@ export default {
 		&__nav,
 		&__fechas
 			flex: 1 1 100%
+
+// Mismo caso que en la cabecera de Ventas: horizontal-nav le pone un margin-top de 15px a su pista,
+// pensado para cuando el nav va solo en su fila. Adentro de esta, con align-items: center, ese margen
+// entra en la caja y deja las pestañas ~7px mas abajo que la barra de fechas.
+//
+// 🔴 La clase va DUPLICADA a proposito, y la regla vive a nivel raiz y no anidada bajo `&__nav` --que
+// la expandiria a `.payment-plan-fila__nav .payment-plan-fila__nav`, o sea pidiendo un descendiente
+// con la misma clase, que no existe--. El motivo de duplicarla: la regla de horizontal-nav es scoped,
+// `.cont-navs .cont-left > div[data-v-xxx]`, que es (0,3,1) -- exactamente lo mismo que este selector
+// con la clase una sola vez. En un empate decide el orden de inyeccion, y horizontal-nav llega por un
+// chunk async que se resuelve DESPUES de este modulo: ganaba el margen de 15px y el arreglo no hacia
+// nada. Con la clase repetida esto es (0,4,1) y gana por especificidad, que no depende de en que
+// orden bajen los chunks.
+.payment-plan-fila__nav.payment-plan-fila__nav .cont-navs .cont-left > div
+	margin-top: 0
 </style>
