@@ -31,6 +31,7 @@
 				type="button"
 				class="filtro-fijo-modal__card"
 				:class="{ 'filtro-fijo-modal__card--active': filter_kind === 'numeric_comparison' }"
+				data-testid="filtro-fijo-tipo-comparacion"
 				@click="filter_kind = 'numeric_comparison'">
 					<span class="filtro-fijo-modal__card-title">Comparar contra un valor</span>
 					<span class="filtro-fijo-modal__card-desc">Igual a, mayor a, menor a, etc.</span>
@@ -96,6 +97,7 @@
 			<b-button
 			v-if="tipo_de_filtro !== 'no_soportado'"
 			variant="primary"
+			data-testid="filtro-fijo-agregar"
 			@click="agregar">
 				{{ ya_agregada ? 'Guardar cambios' : 'Agregar al buscador' }}
 			</b-button>
