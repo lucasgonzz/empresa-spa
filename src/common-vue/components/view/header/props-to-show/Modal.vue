@@ -26,13 +26,25 @@
 
 		<template #modal-footer>
 
-			<b-button
+			<!--
 
-			block
+				Sin `block` y sin `m-t-15`: el boton dejo de ser una franja azul de ancho completo.
+
+				El footer del chasis global (common-vue/sass/_modals.sass) ya lo empuja a la derecha
+
+				y le da la altura, asi que aca solo queda el boton. Su chasis sale del <style> de
+
+				abajo, con los mismos valores que la tarea 2 definio para el footer del modal de
+
+				formulario: no se inventa un tercer boton de footer.
+
+			-->
+
+			<b-button
 
 			@click="save"
 
-			class="m-t-15"
+			class="props-to-show-footer__listo"
 
 			variant="primary">
 
@@ -305,7 +317,69 @@ export default {
 
 		/**
 
-		 * Guarda preferencias del usuario y limpia filtros porque cambiaron las columnas.
+		 * Guarda preferencias del usuario, limpia filtros porque cambiaron las columnas y vuelve
+
+		 * a pedir lo que se estaba viendo.
+
+		 *
+
+		 * 🔴 Los tres pasos son uno solo y no se pueden separar. Limpiar sin volver a pedir deja la
+
+		 * tabla EN BLANCO, y no es evidente leyendo ninguno de los dos archivos por separado:
+
+		 *
+
+		 *   1. `clear_module_filters_after_column_change` apaga `is_filtered` y vacia `filtered`.
+
+		 *   2. `display/Index.vue`, en `models_to_show()`, elige que renderiza segun ese mismo flag:
+
+		 *      con `is_filtered` prendido devuelve `filtered`, y apagado devuelve `models`.
+
+		 *   3. Desde el refactor el listado entra al modulo con `is_filtered` en true y los modelos
+
+		 *      viven en `filtered` (misma causa que documento la tarea 22). `runGlobalSearch` y
+
+		 *      `runListadoPorDefecto` NO escriben `models`, asi que al apagar el flag la tabla pasa
+
+		 *      a mirar un array que ese camino nunca llena.
+
+		 *
+
+		 * Ojo con el sintoma, porque no siempre es el mismo: `models` puede tener algo por otros
+
+		 * caminos --los articulos por defecto de Vender que siembra start_methods.js, los que se
+
+		 * dieron de alta o editaron en la sesion (`add` hace unshift), los que llegan por
+
+		 * websocket--. En esas sesiones la tabla no quedaba en blanco: quedaba mostrando un puñado
+
+		 * de filas sueltas con pinta de listado completo, que es peor. El arreglo cubre las dos.
+
+		 *
+
+		 * Y encima no se veia el estado vacio, por el mismo flag: `Listado.vue` calcula
+
+		 * `show_empty_text` como `state.article.is_filtered`, asi que al apagarlo desaparecia
+
+		 * tambien el cartel de "no hay resultados" y quedaba una zona en blanco sin explicacion.
+
+		 *
+
+		 * El patron correcto ya existia en el repo: `view/header/BtnRestartFilter.vue` hace estas
+
+		 * mismas seis mutaciones y despues dispatchea una carga. Aca faltaba esa segunda mitad.
+
+		 *
+
+		 * Se re-ejecuta con `runGlobalSearch` y no con `runListadoPorDefecto` a proposito: el
+
+		 * primero reusa `global_search_payload`, o sea que conserva lo que el usuario haya buscado
+
+		 * en el buscador general, y el segundo lo descartaria y lo devolveria al listado completo.
+
+		 * Los filtros de columna SI se pierden, que es lo que la limpieza busca: `runGlobalSearch`
+
+		 * los adjunta desde `state.filters`, que quedo vacio.
 
 		 *
 
@@ -337,9 +411,23 @@ export default {
 
 
 
+			// Hay que mirar el estado ANTES de limpiarlo: si el modulo no estaba filtrado, la
+
+			// limpieza no le saco nada de la pantalla y no hay nada que recargar.
+
+			let modulo = this.$store.state[this.model_name]
+
+			let estaba_filtrado = !!(modulo && modulo.is_filtered)
+
+			let payload_de_busqueda = modulo ? modulo.global_search_payload : null
+
+
+
 			clear_module_filters_after_column_change(this.$store, this.model_name)
 
 			apply_column_preference_rows_to_module_store(this.$store, this.model_name, rows_to_save)
+
+			this.recargar_listado_despues_de_limpiar(estaba_filtrado, payload_de_busqueda)
 
 
 
@@ -348,6 +436,200 @@ export default {
 			.then(function () {
 
 				self.$bvModal.hide('props-to-show-' + self.model_name)
+
+			})
+
+		},
+
+		/**
+
+		 * Vuelve a pedir lo que el listado estaba mostrando, despues de que la limpieza de filtros
+
+		 * dejara el modulo sin nada que renderizar. El porque largo esta arriba, en save().
+
+		 *
+
+		 * Las tres guardas, y por que cada una:
+
+		 *
+
+		 * 1. `estaba_filtrado`. Si el modulo no estaba filtrado, la limpieza no le saco nada de la
+
+		 *    pantalla: recargar seria trafico gratis. Se mide ANTES de limpiar, obvio.
+
+		 * 2. **La accion tiene que existir.** No alcanza con que el modulo tenga `is_filtered`: hay
+
+		 *    una decena de stores escritos a mano que NO salen de `__base_store` (recipe, pending,
+
+		 *    road_map, panel_control, deposit_movement, seller_commission, papelera/*, y algunos
+
+		 *    mas) y que igual tienen `is_filtered` y `set_props_to_show`, o sea que abren este
+
+		 *    mismo modal. Ahi `runListadoPorDefecto` no existe y el dispatch seria un
+
+		 *    "unknown action type". Es el mismo idiom que ya usa `usa_props_to_show` mas arriba
+
+		 *    en este archivo, pero contra `_actions` en vez de `_mutations`.
+
+		 * 3. Con que se recarga. Ver abajo: no es indistinto.
+
+		 *
+
+		 * @param {boolean} estaba_filtrado Si el modulo tenia is_filtered antes de la limpieza.
+
+		 * @param {Object|null} payload_de_busqueda global_search_payload de antes de la limpieza.
+
+		 * @return {void}
+
+		 */
+
+		recargar_listado_despues_de_limpiar(estaba_filtrado, payload_de_busqueda) {
+
+			if (!estaba_filtrado) {
+
+				return
+
+			}
+
+			let prefijo = this.model_name + '/'
+
+
+
+			// Con que se recarga NO es indistinto, y es la parte facil de hacer mal:
+
+			//
+
+			// - Si el usuario tenia una busqueda escrita en el buscador general, hay que repetirla:
+
+			//   `runGlobalSearch` sin `props` reusa `global_search_payload` y la conserva.
+
+			// - Si no la tenia, va `runListadoPorDefecto`, y NO `runGlobalSearch` con el payload
+
+			//   vacio que dejo la carga inicial. Los dos traen las mismas filas, pero solo el
+
+			//   primero repone `listado_por_defecto` en true. Ese flag es el que mira
+
+			//   `BtnRestartFilter` (junto con is_filtered) para mostrarse: dejandolo en false con
+
+			//   los filtros ya vacios, el boton "Limpiar filtros" queda visible sin ningun filtro
+
+			//   puesto. Es la misma clase de mentira que documenta el comentario largo de
+
+			//   `runListadoPorDefecto` en __base_store.js.
+
+			// Los `extra_filters` cuentan como busqueda: el buscador general deja buscar SIN texto
+
+			// cuando hay filtros fijos puestos (por ejemplo solo por categoria). Sin esta rama, un
+
+			// usuario que hubiera destildado todas las props y filtrara solo por categoria perdia
+
+			// ese filtro al guardar columnas, porque runListadoPorDefecto manda extra_filters: [].
+
+			// El payload del listado por defecto siempre los lleva vacios, asi que la distincion es
+
+			// exacta y no hay falsos positivos.
+
+			let hay_busqueda_escrita = !!(
+
+				payload_de_busqueda
+
+				&& (
+
+					(payload_de_busqueda.query_value && String(payload_de_busqueda.query_value).trim() !== '')
+
+					|| (payload_de_busqueda.props && payload_de_busqueda.props.length)
+
+					|| (payload_de_busqueda.extra_filters && payload_de_busqueda.extra_filters.length)
+
+				)
+
+			)
+
+
+
+			let accion = hay_busqueda_escrita ? 'runGlobalSearch' : 'runListadoPorDefecto'
+
+			if (!this.$store._actions[prefijo + accion]) {
+
+				return
+
+			}
+
+
+
+			// El overlay global lo prende y lo apaga `save_preference_in_api`, que corre EN
+
+			// PARALELO con esto: si el PUT gana la carrera, apaga el overlay mientras la busqueda
+
+			// sigue viajando y se ve un parpadeo de "No hay articulos" sobre la tabla vacia. El
+
+			// loading del modulo es el que hace que la tabla muestre su skeleton, y estas dos
+
+			// acciones no lo tocan (solo mueven el de auth), asi que se maneja aca -- igual que lo
+
+			// hace el mixin actualizar_lista_de_articulos, por el mismo motivo.
+
+			let self = this
+
+			let tiene_loading = typeof this.$store.state[this.model_name].loading != 'undefined'
+
+			if (tiene_loading) {
+
+				this.$store.commit(prefijo + 'setLoading', true)
+
+			}
+
+
+
+			let recarga = hay_busqueda_escrita
+
+				? this.$store.dispatch(prefijo + accion, { page: 1 })
+
+				: this.$store.dispatch(prefijo + accion)
+
+
+
+			// 🔴 Si no hay promesa a la que colgarse, hay que APAGAR el loading acá mismo. Salir sin
+
+			// hacerlo lo dejaria prendido para siempre y la tabla se quedaria con el skeleton
+
+			// puesto, que es peor que el bug que este metodo viene a arreglar. Hoy la rama es
+
+			// inalcanzable --en Vuex 3 dispatch solo devuelve undefined cuando la accion no existe,
+
+			// y eso ya lo descarto la guarda de _actions de arriba-- pero una guarda defensiva que
+
+			// deja el estado roto no es defensiva.
+
+			if (!recarga || typeof recarga.then != 'function') {
+
+				if (tiene_loading) {
+
+					this.$store.commit(prefijo + 'setLoading', false)
+
+				}
+
+				return
+
+			}
+
+			if (!tiene_loading) {
+
+				return
+
+			}
+
+			recarga
+
+			.then(function () {
+
+				self.$store.commit(prefijo + 'setLoading', false)
+
+			})
+
+			.catch(function () {
+
+				self.$store.commit(prefijo + 'setLoading', false)
 
 			})
 
@@ -491,7 +773,83 @@ export default {
 
 	z-index: 2
 
-	border-top: 1px solid rgba(0,0,0,.1)
+	// El borde iba en rgba(0,0,0,.1): sobre el modal oscuro es negro sobre negro y la franja no
+
+	// se separaba del cuerpo. El token tiene contraparte en html.dark-mode.
+
+	//
+
+	// Esta regla empata en especificidad con la del chasis global (common-vue/sass/_modals.sass)
+
+	// y vive en el chunk de este componente, asi que le gana por orden de carga. Por eso el color
+
+	// hay que repetirlo aca: si esta linea se borrara, el borde lo pondria el chasis igual, pero
+
+	// mientras exista, manda esta.
+
+	border-top: 1px solid var(--color-border)
+
+
+
+	// Boton "Listo": mismo chasis que definio la tarea 2 para el footer del modal de formulario
+
+	// (.model-modal-footer .btn). Los valores se repiten en vez de reusar aquella clase porque
+
+	// alla estan anidados bajo su propio contenedor a proposito, para no filtrarse a los 147 usos
+
+	// de btn-loader del sistema.
+
+	.props-to-show-footer__listo
+
+		height: 38px
+
+		padding: 0 18px
+
+		border-radius: 10px
+
+		font-size: 0.875rem
+
+		font-weight: 600
+
+		line-height: 1
+
+		display: inline-flex
+
+		align-items: center
+
+		justify-content: center
+
+		border: 1px solid transparent
+
+		background: var(--color-primary)
+
+		border-color: var(--color-primary)
+
+		color: #fff
+
+		transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease
+
+
+
+		&:hover
+
+			// brightness y no un token de azul oscuro: --color-primary vale distinto en claro y
+
+			// en oscuro, y un hex de hover fijo se pelearia con uno de los dos.
+
+			filter: brightness(0.94)
+
+			background: var(--color-primary)
+
+			border-color: var(--color-primary)
+
+
+
+		&:focus-visible
+
+			outline: none
+
+			box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25)
 
 </style>
 

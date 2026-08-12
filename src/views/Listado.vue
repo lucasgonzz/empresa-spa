@@ -244,8 +244,26 @@ export default {
 		has_permission_create_dropdown() {
 			return this.authenticated && this.can('article.export_excel_clients')
 		},
+		/**
+		 * Si el listado no tiene nada para mostrar, hay que decirlo. Siempre.
+		 *
+		 * Antes esto devolvía `is_filtered`, y ese flag no habla de si hay resultados: habla de por
+		 * qué camino se cargaron. Cualquier cosa que lo apague deja la tabla en blanco Y MUDA — sin
+		 * filas y sin el cartel que explica que no hay nada—, que es peor que decir "no hay
+		 * artículos". Pasó de verdad el 11/8/2026: al guardar el modal de propiedades para mostrar,
+		 * la limpieza de filtros apagaba el flag y la tabla quedaba en blanco sin ninguna
+		 * explicación (ver el comentario largo de `props-to-show/Modal.vue`, método `save`).
+		 *
+		 * No hay riesgo de que el cartel aparezca mientras carga: en `display/table/Index.vue` el
+		 * `v-else-if="show_empty_text"` va después del tbody de skeleton, que gana con `loading`.
+		 * Y el texto ya distingue solo los dos casos, mirando los filtros activos: "No hay
+		 * artículos" cuando no hay ninguno, "No se encontraron resultados" cuando la búsqueda no
+		 * trajo nada.
+		 *
+		 * @returns {boolean}
+		 */
 		show_empty_text() {
-			return this.$store.state.article.is_filtered
+			return true
 		},
 		/**
 		 * Filtros fijos por defecto del buscador general (prompt 09 del grupo 179): solo para

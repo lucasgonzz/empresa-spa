@@ -54,7 +54,7 @@
 
 				size="sm"
 
-				variant="outline-primary">
+				variant="outline-secondary">
 
 					Limpiar todo
 
@@ -68,7 +68,7 @@
 
 				class="m-0"
 
-				variant="primary">
+				variant="outline-secondary">
 
 					Marcar todo
 
@@ -444,13 +444,11 @@
 
 						<b-input-group
 
-						prepend="Ancho"
-
 						append="px">
 
 							<b-form-input
 
-							style="max-width: 100px"
+							title="Ancho de la columna, en pixeles"
 
 							type="number"
 
@@ -1200,18 +1198,25 @@ export default {
 
 
 
-/* Input del buscador con estilo propio (pill), pisando el estilo global de _inputs.sass */
+// Input del buscador (pill), pisando el estilo global de _inputs.sass.
+// La altura y el radio salen de los tokens de la barra de herramientas del listado
+// (src/sass/_toolbar_botones.sass): es el mismo control, no uno parecido. Pill = radio la mitad
+// de la altura, que es la convencion que ese archivo explica para un campo de busqueda.
+// Los colores pasaron de #fff / #e2e4e7 / #9aa0a6 fijos a tokens: este modal se monta colgando
+// de <body>, fuera de #app, y con los hex el campo quedaba blanco en modo oscuro.
 .columns-preferences-config .columns-preferences-config__search-wrap .columns-preferences-config__search
 
-	height: 40px
+	height: var(--toolbar-control-h)
 
-	border-radius: 20px
+	border-radius: calc(var(--toolbar-control-h) / 2)
 
-	border: 1px solid #e2e4e7
+	border: 1px solid var(--color-border)
 
-	background: #fff
+	background: var(--bg-card)
 
-	padding: 0 16px 0 40px
+	color: var(--color-text-primary)
+
+	padding: 0 16px 0 38px
 
 	font-size: 14px
 
@@ -1223,7 +1228,7 @@ export default {
 
 	&:focus
 
-		border-color: #007bff
+		border-color: var(--color-primary)
 
 		box-shadow: 0 0 0 3px rgba(0, 123, 255, .12)
 
@@ -1231,15 +1236,23 @@ export default {
 
 	&::placeholder
 
-		color: #9aa0a6
+		color: var(--color-text-secondary)
 
 
 
-/* Grupo de botones: ancho minimo por boton para que "Limpiar todo" y "Marcar todo" */
-/* no corten renglon, alineados en alto (40px) con el buscador nuevo. */
+// Los dos botones de la barra hablan el vocabulario de la barra de herramientas del listado
+// (src/sass/_toolbar_botones.sass): la misma altura que el buscador de al lado, radio de squircle
+// y no de pastilla, y neutros. Antes "Marcar todo" era azul macizo y se llevaba el unico acento
+// de la pantalla, que le corresponde al boton "Listo" del footer.
+// El b-button-group de bootstrap-vue pega los botones borde con borde y les come los radios
+// internos: se desarma con gap y devolviendole el radio a cada uno. El !important del radio no es
+// por comodidad: `.btn-group > .btn:not(:last-child)` es (0,4,0) y esta regla (0,2,0), asi que por
+// especificidad no hay forma de ganarle sin encadenar selectores que despues nadie entiende.
 .columns-preferences-config__btn-group
 
 	flex: 0 0 auto
+
+	gap: var(--toolbar-btn-gap)
 
 	.btn
 
@@ -1251,7 +1264,61 @@ export default {
 
 		padding-right: 16px
 
-		height: 40px
+		height: var(--toolbar-control-h)
+
+		font-size: 0.875rem
+
+		border-radius: var(--toolbar-btn-radius) !important
+
+		background: var(--bg-card)
+
+		border: 1px solid var(--color-border)
+
+		color: var(--color-text-primary)
+
+		box-shadow: none
+
+		transition: background-color .15s ease, border-color .15s ease
+
+		// Bootstrap pinta .btn-outline-secondary en :hover, :focus y :active por separado y con
+
+		// mas especificidad que esta regla, asi que hay que cubrir los tres o el boton se pone
+
+		// gris macizo con texto blanco justo al apretarlo. Es la misma trampa que ya documenta el
+
+		// footer del modal de formulario en model/Index.vue.
+
+		&:hover,
+
+		&:focus,
+
+		&:not(:disabled):not(.disabled):active,
+
+		&:not(:disabled):not(.disabled):active:focus
+
+			background: var(--bg-hover)
+
+			border-color: var(--color-border)
+
+			color: var(--color-text-primary)
+
+			box-shadow: none
+
+		&:focus-visible
+
+			outline: none
+
+			border-color: var(--color-primary)
+
+			box-shadow: 0 0 0 3px rgba(59, 130, 246, .25)
+
+		// El gap de arriba mide 1px menos de lo que dice: .btn-group le pone margin-left: -1px a
+
+		// todos menos al primero, para solapar los bordes de unos botones pegados que ya no estan.
+
+		& + .btn
+
+			margin-left: 0
 
 
 
@@ -1497,6 +1564,102 @@ export default {
 		padding: 24px 12px
 
 		font-size: 13px
+
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// La fila baja de peso (tarea 30).
+
+// El modal se leia como una lista de bloques enormes: cada fila traia un <hr> propio, los
+// controles venian en tres tamanos distintos y el campo de ancho ocupaba media fila para un
+// solo numero. Nada de esto cambia el markup ni la logica -- se resuelve todo desde aca.
+
+// Los separadores eran <hr>, que en bootstrap trae 1rem de margen ARRIBA y ABAJO: 32px de aire
+// por fila, mas que el contenido de la fila. Se apagan y el separador pasa a ser un borde de la
+// propia fila, que no ocupa alto.
+// ═══════════════════════════════════════════════════════════════════════════════
+.columns-preferences-config
+
+	hr
+		display: none
+
+	.props-row
+		padding: 6px 2px
+		border-bottom: 1px solid var(--color-border-secondary)
+
+		&:last-child
+			border-bottom: none
+
+	// Los tres controles de ordenar (asa + dos flechas) competian de igual a igual siendo la
+	// misma tarea. El asa queda como el control principal --es el que se usa-- y las flechas
+	// bajan a un peso claramente secundario: sin relleno, sin borde y en el color de texto
+	// apagado, hasta que se las apunta.
+	.props-row
+		// Mismo alto que las flechas: lo que la vuelve el control principal es que es la unica
+		// con fondo y borde, no que sea mas grande. Con la altura de la barra (36px) pasaba a
+		// ser el elemento mas alto de la fila y le ponia piso al alto, justo en la mision que
+		// viene a bajarlo.
+		.drag-handle
+			width: 28px
+			height: 28px
+			border-color: var(--color-border)
+			border-radius: var(--toolbar-btn-radius)
+			background: var(--bg-card)
+			color: var(--color-text-primary)
+
+			&:hover
+				background: var(--bg-hover)
+
+		.btn
+			height: 28px
+			min-width: 28px
+			padding: 0 6px
+			border-radius: 8px
+			background: transparent
+			border-color: transparent
+			color: var(--color-text-secondary)
+			box-shadow: none
+
+			&:hover:not(:disabled)
+				background: var(--bg-hover)
+				border-color: var(--color-border)
+				color: var(--color-text-primary)
+
+			&:disabled
+				opacity: .35
+
+	// El campo de ancho: el label "Ancho" ya se saco del markup y queda el sufijo "px", que
+	// alcanza para saber que es. Achicado, porque son tres digitos.
+	.props-row
+		.input-group
+			width: auto
+
+			.form-control
+				max-width: 68px
+				height: 32px
+				font-size: 0.875rem
+
+			.input-group-text
+				height: 32px
+				padding: 0 8px
+				font-size: 0.8125rem
+				background: var(--bg-section)
+				border-color: var(--color-border)
+				color: var(--color-text-secondary)
+
+	// El separador "|" entre el toggle de salto de linea y el ancho: con la fila ya compacta,
+	// los margenes de 15px de cada lado eran mas ruido que ayuda.
+	.ancho-wrapper
+		gap: 10px
+
+		> .m-l-15.m-r-15
+			margin-left: 0 !important
+			margin-right: 0 !important
+			color: var(--color-border)
+
+		.custom-control-label
+			font-size: 0.875rem
+			color: var(--color-text-primary)
 
 </style>
 
