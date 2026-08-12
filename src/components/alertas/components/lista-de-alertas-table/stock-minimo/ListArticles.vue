@@ -19,7 +19,7 @@
 					<i class="bi bi-box-seam" aria-hidden="true"></i>
 				</div>
 				<div class="totales-chip__body">
-					<span class="totales-chip__label">Bajo el minimo</span>
+					<span class="totales-chip__label">Bajo el mínimo</span>
 					<span class="totales-chip__value">{{ inventory_performance.stock_minimo }}</span>
 				</div>
 			</div>
@@ -51,7 +51,7 @@
 					<span
 					v-if="inventory_performance.stock_negativo > 0"
 					class="totales-chip__meta">
-						Suele ser una venta sin ingreso registrado
+						Suele ser una venta sin ingreso registrado, o un error de carga
 					</span>
 				</div>
 			</div>
@@ -61,11 +61,11 @@
 					<i class="bi bi-cash-stack" aria-hidden="true"></i>
 				</div>
 				<div class="totales-chip__body">
-					<span class="totales-chip__label">Costo de reposicion</span>
+					<span class="totales-chip__label">Costo de reposición</span>
 					<span class="totales-chip__value">{{ price(inventory_performance.costo_reposicion_stock_minimo) }}</span>
 					<!-- La aclaracion vive en el chip al que se refiere, no suelta al pie de la tarjeta. -->
 					<span class="totales-chip__meta">
-						Lo que falta para llegar al minimo, sin los articulos sin costo
+						Lo que costaría comprar lo que falta para llegar al mínimo, sin los artículos sin costo cargado
 					</span>
 				</div>
 			</div>
@@ -123,8 +123,8 @@
 		<empty-state
 		v-else-if="sin_resultados"
 		:icon_class="hay_busqueda_activa ? 'bi bi-search' : 'bi bi-check2-circle'"
-		:title="hay_busqueda_activa ? 'Ningun articulo coincide con la busqueda' : 'No hay articulos con stock minimo'"
-		:hint="hay_busqueda_activa ? 'Probá con otro nombre, codigo de barras o codigo de proveedor.' : 'Ningun articulo bajo del minimo que tenés configurado.'"></empty-state>
+		:title="hay_busqueda_activa ? 'Ningún artículo coincide con la búsqueda' : 'No hay artículos con stock mínimo'"
+		:hint="hay_busqueda_activa ? 'Probá con otro nombre, código de barras o código de proveedor.' : 'Ningún artículo está por debajo del mínimo que tenés configurado.'"></empty-state>
 
 		<!-- Caso 3: hay reporte y filas para mostrar -->
 		<template v-else-if="inventory_performance">
