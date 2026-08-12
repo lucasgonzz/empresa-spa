@@ -2,6 +2,7 @@
 	<b-modal
 	:id="modal_id"
 	size="md"
+	modal-class="filter-modal"
 	:title="'Filtrar por '+field_label"
 	:no-close-on-backdrop="false"
 	@shown="on_modal_shown"
@@ -183,6 +184,23 @@ export default {
 	font-weight: bold
 	color: #000
 
+// ─── Ancho del modal de filtro por columna (misión 29) ──────────────────────
+// El size="md" de Bootstrap son 500px y le sobraban: adentro hay un solo campo
+// por criterio. Cuatro quintos de eso son los 400 que pidió Lucas. No se baja a
+// size="sm" (300px) porque ahí los dos botones del footer no entran en una línea.
+//
+// Va SOLO el max-width, sin `width: 100%`. Con el width puesto se rompe mobile:
+// bootstrap le da al .modal-dialog `width: auto` + `margin: .5rem`, y recién a
+// partir de 576px le pone `margin: 1.75rem auto`. O sea que abajo de 576 no hay
+// centrado automático: con `width: 100%` el diálogo mide todo el ancho del
+// .modal pero arranca corrido 8px, se va 8px por la derecha y ahí lo recorta el
+// `overflow: hidden` del .modal — se ve el modal desplazado con el borde derecho
+// (y su curva) comido. Con `width: auto`, en una pantalla de 360px el diálogo
+// mide 344 y queda centrado, que es lo que se quería.
+.filter-modal
+	.modal-dialog
+		max-width: 400px
+
 // ────────────────────────────────────────────────────────────────────────
 // Rediseño del modal de filtro por columna (Grupo 273, Prompt 06). Único
 // lugar de estilos para los 7 subcomponentes que renderizan adentro
@@ -212,6 +230,33 @@ export default {
 			box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15)
 			outline: none
 			background: #fff
+
+	// El campo de una relación belongs-to-many (search/Index.vue) dibuja su borde en el
+	// CONTENEDOR (.search-field) y no en el input. Esto NO es lo que arregla el "alto de
+	// área de texto" —eso era un margen, y se sacó en el <style> de filter/Index.vue—:
+	// esto es lo que hace que el alto quede EXACTO y no parecido.
+	//
+	// El input de adentro también es .form-control, así que la regla de arriba le llega.
+	// Con los 38px puestos en el input, el campo termina en 38 + los 2px de borde de cada
+	// lado = 42, contra los 38 de un filtro de texto. La altura tiene que ir en el
+	// contenedor y el input quedar en auto — la mitad de este razonamiento ya está escrita
+	// en el <style> de search/Index.vue, que por eso NO le pone height al input. Lo que se
+	// agrega acá es clavar el contenedor, y es propio de este modal: adentro de
+	// .filter-modal-body todo mide 38px (inputs, selects y los dos botones del footer), así
+	// que un campo que se autodimensiona no iguala por casualidad. Con la preferencia
+	// .ui-small activa, sin esta línea el campo caería a ~33px al lado de uno de 38.
+	//
+	// Va acá, después del bloque .form-control y en el mismo archivo, a propósito: las dos
+	// reglas tienen la misma especificidad (dos clases), así que lo único que decide es el
+	// orden, y dentro de un mismo archivo el orden es fijo. Si esto viviera en otro .vue,
+	// quién gana dependería de en qué orden el bundler cargue los dos chunks — y ese orden
+	// varía de verdad, según si algo ya trajo el chunk de search/Index.vue antes (el form
+	// de alta, la actualización masiva, Vender).
+	.search-field
+		height: 38px
+
+	.search-field__input
+		height: auto
 
 	// Cada criterio (b-form-group) es su propia fila, con el label chico
 	// arriba del input (b-form-group sin label-for renderiza un <legend>,
