@@ -43,6 +43,11 @@ export default {
 		// entre esta fila y la de totales --que salen del margin-bottom de aca abajo--. Las dos
 		// primeras filas quedaban pegadas y la tercera no.
 		//
+		// Medido tambien CON empleados cargados, porque ahi es donde el neutralizador de mas abajo
+		// podria no ganar y el aire real seria otro: la pista de empleados computa `margin-top: 0`,
+		// el aire hasta lo primero que se ve sigue dando 15px, y las pestañas quedan a 1,25px de los
+		// filtros. O sea que el numero no depende de cuantos empleados tenga cargados el cliente.
+		//
 		// 🔴 Va como `margin-top` de la fila de abajo y NO como `margin-bottom` del nav de
 		// sucursales, a proposito: ese nav es un `horizontal-nav` compartido, y tocarlo cambiaria
 		// todos los modulos que lo montan. Ademas su pista ya trae un `margin-top: 15px` propio

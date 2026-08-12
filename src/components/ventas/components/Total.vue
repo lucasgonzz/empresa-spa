@@ -468,16 +468,20 @@ export default {
 	// verde macizo competia con el unico acento de la pantalla. Lucas lo uso asi y pidio el punto
 	// medio: que se distingan de los chips, pero sin volver a ser botones verdes.
 	//
-	// La solucion es la misma que ya usan los botones de modulo del Listado: el color va en el
+	// La solucion es la misma IDEA que usan los botones de modulo del Listado: el color va en el
 	// ICONO, y el fondo solo aparece al pasar el mouse. El relleno macizo sigue reservado para el
 	// unico acento de la pantalla, asi que la decision de la 32 no se cae: se corrige el valor.
+	// (El tono del glifo es el mismo; el relleno del hover queda en 0,12 de alpha contra el 0,10 de
+	// aquellos, porque es el valor que ya trae el token de totales. La diferencia no se ve, pero no
+	// son el mismo numero y conviene no decir que lo son.)
 	//
-	// 🔴 Y el verde NO se declara de nuevo: sale de `--totales-acento-positivo`, que ya vive en
-	// _chips_totales.sass --el archivo de este mismo bloque-- y ya tiene su contraparte mas clara en
-	// `html.dark-mode`. Es exactamente el mismo #059669 que el `--toolbar-tinte` verde de la barra.
-	// Reusarlo es lo que evita un tercer juego de verdes: el sistema ya tiene dos declarados con los
-	// mismos valores (el de totales y el de la barra), y sumar uno mas para estos dos botones era el
-	// camino corto. Que sean dos y no uno esta registrado como hallazgo aparte.
+	// 🔴 Y el verde NO se declara de nuevo: sale de `--totales-acento-positivo`, que vive en
+	// src/sass/_chips_totales.sass --el archivo que declara el vocabulario de ESTE bloque de
+	// totales, no este <style>-- y que ya tiene su contraparte mas clara en `html.dark-mode`. Es
+	// exactamente el mismo #059669 que el `--toolbar-tinte` verde de la barra del Listado. Reusarlo
+	// es lo que evita un tercer juego de verdes: el sistema ya tiene dos declarados con los mismos
+	// valores, y sumar uno mas para estos dos botones era el camino corto. Que sean dos y no uno
+	// esta registrado como hallazgo aparte.
 	//
 	// La sombra sale de --toolbar-btn-shadow y no de un `none` ni de un valor propio: ese token lo
 	// definio la mision 27, y tiene contraparte en oscuro con la proporcion calculada contra la
