@@ -40,9 +40,38 @@ export default {
 			default: '--color-primary',
 		},
 	},
+	computed: {
+		/**
+		 * Preferencia de modo oscuro del usuario, que es la fuente de verdad del tema: llega en
+		 * `GET api/user` y App.vue es quien pone o saca la clase `dark-mode` en <html> (ver
+		 * utils/dark_mode.js). Se observa para poder REDIBUJAR: el canvas guarda los colores
+		 * con los que se pinto, asi que a diferencia del resto del modal --que es CSS con
+		 * var() y se actualiza solo-- un grafico se queda con la paleta del tema anterior.
+		 *
+		 * @returns {Boolean}
+		 */
+		tema_oscuro() {
+			let user = this.$store.state.auth.user
+			return !!(user && user.dark_mode)
+		},
+	},
 	watch: {
 		porcentaje() {
 			this.dibujar()
+		},
+		/**
+		 * 🔴 Sin esto, cambiar de tema con el modal ABIERTO dejaba la dona pintada con los
+		 * colores viejos, y no se arreglaba cerrando y volviendo a abrir: el b-modal no lleva
+		 * `lazy`, asi que su contenido no se vuelve a montar y `mounted()` no corre de nuevo.
+		 *
+		 * Va en $nextTick porque el orden entre este watcher y el de App.vue --que es el que
+		 * efectivamente pone la clase en <html>-- no esta garantizado: sin esperar al tick se
+		 * podrian volver a leer los tokens del tema que se esta abandonando.
+		 */
+		tema_oscuro() {
+			this.$nextTick(() => {
+				this.dibujar()
+			})
 		},
 	},
 	mounted() {

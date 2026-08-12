@@ -41,6 +41,19 @@ export default {
 			default: 0,
 		},
 	},
+	computed: {
+		/**
+		 * Preferencia de modo oscuro del usuario. Misma razon y mismo mecanismo que en
+		 * GraficoDona.vue: el canvas conserva los colores con los que se pinto y hay que
+		 * redibujarlo, porque el resto del modal se actualiza solo por CSS y el grafico no.
+		 *
+		 * @returns {Boolean}
+		 */
+		tema_oscuro() {
+			let user = this.$store.state.auth.user
+			return !!(user && user.dark_mode)
+		},
+	},
 	watch: {
 		sin_stock() {
 			this.dibujar()
@@ -50,6 +63,15 @@ export default {
 		},
 		total() {
 			this.dibujar()
+		},
+		/**
+		 * Ver la nota larga del mismo watcher en GraficoDona.vue: el $nextTick es para que la
+		 * clase `dark-mode` ya este puesta en <html> cuando se vuelvan a leer los tokens.
+		 */
+		tema_oscuro() {
+			this.$nextTick(() => {
+				this.dibujar()
+			})
 		},
 	},
 	mounted() {
