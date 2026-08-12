@@ -37,11 +37,15 @@ export default {
 // 🔴 El tamano chico de la interfaz necesita SU PROPIA regla, y por dos motivos distintos que se
 // suman (medido el 11/8/2026; sin esto el select se descolgaba de la barra con .ui-small):
 //
-// 1. Los 32px de .ui-small los declara `.ui-small .view-header-toolbar`, y esta fila NO vive
-//    adentro de la barra: var(--toolbar-control-h) le resolvia siempre 36px desde :root. Por eso
-//    los tokens se vuelven a declarar aca. Si, los dos numeros quedan duplicados respecto de
-//    _toolbar_botones.sass: el dia que cambien, cambian en los dos lados. Lo que se evita es
-//    repetirlos en cada declaracion de height y border-radius de este archivo.
+// 1. ⚠️ Este motivo YA NO RIGE desde el 11/8/2026 (mision 27) y se deja escrito para que nadie lo
+//    reponga: los 32px de .ui-small los declaraba `.ui-small .view-header-toolbar` --acotado a la
+//    barra de encabezado-- y esta fila NO vive adentro de la barra, asi que
+//    var(--toolbar-control-h) le resolvia siempre 36px desde :root. Ese selector paso a `.ui-small`
+//    a secas, que se aplica sobre #app, de modo que ahora los dos tokens le llegan solos por
+//    herencia y la redeclaracion de abajo quedo redundante (declara los mismos dos valores). Se
+//    deja porque el motivo 2 sigue necesitando el bloque igual, y borrar los tokens de adentro no
+//    ahorraria nada. Si algun dia cambian los valores en _toolbar_botones.sass, estos dos hay que
+//    borrarlos, no actualizarlos.
 // 2. _ui_sizes.sass declara `.ui-small select.custom-select { height: auto }` con (0,2,1), y
 //    b-form-select renderiza justamente un select.custom-select. `.cont-nav-compras select` es
 //    (0,1,1) y perdia: con .ui-small activo el select se quedaba sin altura del todo. El selector

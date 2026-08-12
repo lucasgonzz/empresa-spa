@@ -1540,13 +1540,26 @@ export default {
 		transition: border-color 0.15s ease, box-shadow 0.15s ease
 		// Sombra sutil permanente que envuelve el pill entero (icono + input + lupa),
 		// mismo criterio que la sombra de las tablas del sistema.
-		box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px
+		//
+		// El color sale del token --shadow-color y ya no del hexadecimal fijo (mision 27,
+		// 11/8/2026). En modo claro el token vale exactamente `rgba(99, 99, 99, 0.2)`, o sea
+		// que la sombra queda IDENTICA a la que habia; lo que cambia es el modo oscuro, donde
+		// el token pasa a negro (`rgba(0, 0, 0, 0.45)`) porque un gris claro sobre fondo
+		// oscuro directamente no se ve.
+		//
+		// 🔴 Por que se toca esto en una mision que no venia a tocar el pill: esta mision le da
+		// sombra a los botones de la barra, y el pedido de Lucas es que la del pill siga siendo
+		// MAS presente que la de ellos. Con el hex fijo eso se cumplia solo en claro: en oscuro
+		// el pill quedaba sin sombra visible y los botones --que si tienen contraparte oscura--
+		// pasaban a tener mas presencia que el campo. La jerarquia quedaba dada vuelta justo en
+		// el modo que nadie mira dos veces.
+		box-shadow: var(--shadow-color) 0px 2px 8px 0px
 
 		// Anillo azul al enfocar el input (color $blue de _custom.scss): se suma a la
 		// sombra base, no la reemplaza
 		&:focus-within
 			border-color: #007bff
-			box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px, 0 0 0 3px rgba(0, 123, 255, 0.15)
+			box-shadow: var(--shadow-color) 0px 2px 8px 0px, 0 0 0 3px rgba(0, 123, 255, 0.15)
 
 	// El desplegable de propiedades se integra al pill (ver PropertiesDropdown.vue)
 	.buscador-general__props
