@@ -21,6 +21,7 @@
 			<select
 			v-if="filtro.filter_kind === 'relation'"
 			class="filtros-fijos__select"
+			:data-testid="'filtro-fijo-'+filtro.key"
 			:value="valorActual(filtro)"
 			@change="onRelationChange(filtro, $event)"
 			@keyup.enter="$emit('enter')">

@@ -39,7 +39,7 @@
 				:id="input_id"
 				:data-testid="input_id"
 				:placeholder="placeholder"
-				@keyup.enter="buscar">
+				@keyup.enter="buscar('enter')">
 
 				<!-- Limpiar: solo cuando hay una busqueda del buscador general activa -->
 				<button
@@ -51,12 +51,18 @@
 					<i class="bi bi-x-lg"></i>
 				</button>
 
-				<!-- Lupa: la busqueda se dispara con Enter; el click es un atajo opcional -->
+				<!--
+					Lupa: la busqueda se dispara con Enter; el click es un atajo opcional.
+					Declara su origen ('lupa') a proposito: adentro del modal de busqueda, el Enter
+					tiene el atajo del segundo Enter --que selecciona el resultado en vez de volver
+					a buscar-- y un boton que dice "Buscar" no puede hacer eso. Ver buscar().
+				-->
 				<button
 				type="button"
 				class="buscador-general__icon-btn buscador-general__search"
 				title="Buscar"
-				@click="buscar">
+				:data-testid="input_id ? input_id+'-lupa' : 'buscador-general-lupa'"
+				@click="buscar('lupa')">
 					<i class="bi bi-search"></i>
 				</button>
 			</div>
@@ -72,7 +78,7 @@
 			:values="filtros_values"
 			@input="onInputFiltroFijo"
 			@quitar="onQuitarFiltroFijo"
-			@enter="buscar"></filtros-fijos>
+			@enter="buscar('enter')"></filtros-fijos>
 
 			<!-- Filtros propios del modulo (ej: categoria / stock del listado). Fuera del pill. -->
 			<div class="buscador-general__extra">
@@ -995,6 +1001,30 @@ export default {
 		onInputFiltroFijo(payload) {
 			this.filtros_touched = true
 			this.$set(this.filtros_values, payload.key, payload.value)
+			this.avisarCambioDeCriterios()
+		},
+
+		/**
+		 * Avisa que el usuario cambio los criterios de busqueda. No el texto --de eso ya se entera
+		 * quien escucha el teclado del input-- sino todo lo demas: los filtros fijos (alta, baja y
+		 * cambio de valor), las propiedades tildadas, el modo de coincidencia y el conector.
+		 *
+		 * Existe por el atajo del segundo Enter del modal de busqueda: despues de buscar, el Enter
+		 * siguiente selecciona el resultado en vez de volver a buscar. Ese atajo solo se apagaba
+		 * tipeando en el campo de texto, asi que agregar un filtro dejaba prendido el atajo y el
+		 * Enter siguiente seleccionaba el resultado VIEJO --calculado sin ese filtro--. Lo reporto
+		 * Lucas el 12/8/2026 y es el motivo de la mision 39.
+		 *
+		 * 🔴 Se emite desde los handlers de interaccion y NO desde un watcher con `deep: true` sobre
+		 * `filtros_fijos`/`filtros_values`/`selected_props`, aunque parezca mas corto: la siembra
+		 * inicial y la restauracion de la configuracion guardada escriben esas mismas variables, y
+		 * no son cambios del usuario. Un watcher no las puede distinguir y apagaria el atajo apenas
+		 * se abre el buscador, que es exactamente el modo de falla silencioso de este arreglo.
+		 *
+		 * @return {void}
+		 */
+		avisarCambioDeCriterios() {
+			this.$emit('criterios-cambiaron')
 		},
 
 		/**
@@ -1066,6 +1096,7 @@ export default {
 				this.filtros_fijos.splice(index, 1, filtro)
 			}
 			this.$set(this.filtros_values, filtro.key, this.valorInicialDeFiltro(filtro))
+			this.avisarCambioDeCriterios()
 
 			// Actualiza el historial (para el proximo persist) y persiste ya mismo.
 			this.filtros_historial[filtro.key] = {
@@ -1100,6 +1131,7 @@ export default {
 				this.filtros_fijos.splice(index, 1)
 			}
 			this.$delete(this.filtros_values, payload.key)
+			this.avisarCambioDeCriterios()
 
 			// Guarda en el historial como visible:false, conservando la configuracion previa que
 			// ya tuviera (filter_kind/operator/default_value) para no perderla.
@@ -1123,6 +1155,7 @@ export default {
 			this.selection_touched = true
 			this.$set(this.keyword_modes, payload.key, payload.mode)
 			this.schedulePersistSelection()
+			this.avisarCambioDeCriterios()
 		},
 
 		/**
@@ -1144,6 +1177,7 @@ export default {
 			})
 			this.keyword_modes = modes
 			this.schedulePersistSelection()
+			this.avisarCambioDeCriterios()
 		},
 
 		/**
@@ -1156,6 +1190,7 @@ export default {
 			this.selection_touched = true
 			this.conector = value
 			this.schedulePersistSelection()
+			this.avisarCambioDeCriterios()
 		},
 
 		/**
@@ -1171,6 +1206,7 @@ export default {
 			} else {
 				this.selected_props.splice(index, 1)
 			}
+			this.avisarCambioDeCriterios()
 		},
 
 		/**
@@ -1186,6 +1222,7 @@ export default {
 			} else {
 				this.selected_relations.splice(index, 1)
 			}
+			this.avisarCambioDeCriterios()
 		},
 
 		/**
@@ -1206,6 +1243,7 @@ export default {
 			this.selected_props = own_keys
 			this.selected_relations = relation_keys
 			this.schedulePersistSelection()
+			this.avisarCambioDeCriterios()
 		},
 
 		/**
@@ -1218,6 +1256,7 @@ export default {
 			this.selected_props = []
 			this.selected_relations = []
 			this.schedulePersistSelection()
+			this.avisarCambioDeCriterios()
 		},
 
 		/**
@@ -1226,9 +1265,12 @@ export default {
 		 * solo se frena el caso realmente vacio (sin texto y sin extra_filters activos). Ademas
 		 * persiste la seleccion actual.
 		 *
+		 * @param {String} [origen] 'enter' | 'lupa'. Viaja en el payload del modo modal para que
+		 *                          Modal.vue sepa si puede aplicar el atajo del segundo Enter: la
+		 *                          lupa dice "buscar" y tiene que buscar siempre.
 		 * @return {void}
 		 */
-		buscar() {
+		buscar(origen) {
 			// Si hay extra_filters activos (del modulo y/o filtros fijos del usuario ya
 			// combinados), se permite buscar sin texto (ej: solo por categoria).
 			let has_extra_filters = this.extra_filters_finales && this.extra_filters_finales.length > 0
@@ -1280,6 +1322,10 @@ export default {
 				// el grupo en modo 'alguna' (ver prompt 03 del grupo 179 para la semantica exacta).
 				conector: this.conector,
 				extra_filters: this.extra_filters_finales,
+				// Quien disparo la busqueda. Se normaliza en vez de confiar en el argumento: los
+				// `@keyup.enter` y `@enter` de los controles pasan su propio evento si alguien los
+				// engancha sin parentesis, y un KeyboardEvent no es un origen.
+				origen: origen === 'lupa' ? 'lupa' : 'enter',
 			}
 
 			if (this.modo === 'modal') {

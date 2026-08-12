@@ -24,6 +24,7 @@ hide-footer
 			@keydown.native.up="selectUp"
 			@keydown.native.down="selectDown"
 			@buscar="onBuscarDesdeBuscadorGeneral"
+			@criterios-cambiaron="onCriteriosCambiaron"
 			@limpiar="onLimpiarDesdeBuscadorGeneral"></buscador-general>
 
 			<slot name="search_input_right"></slot>
@@ -1017,7 +1018,34 @@ export default {
 		onBuscarDesdeBuscadorGeneral(payload) {
 			this.ultima_busqueda_buscador_general = payload
 			this.query = payload.query_value
+
+			// La lupa busca siempre. El atajo del segundo Enter --que en vez de buscar selecciona el
+			// resultado-- es del teclado y solo del teclado: un boton que dice "Buscar" y a veces
+			// elige un resultado es un boton que hace dos cosas distintas segun un estado que el
+			// usuario no ve. Lucas lo reporto como parte del mismo problema, el 12/8/2026.
+			//
+			// El flujo de AFIP no se toca: vive en seleccionar_resultado() y se dispara con el
+			// SEGUNDO Enter (tax_id_afip_lookup_on_second_enter), que sigue pasando por pulso_enter.
+			if (payload.origen === 'lupa') {
+				this.search()
+				return
+			}
+
 			this.pulso_enter()
+		},
+
+		/**
+		 * El buscador general avisa que cambiaron los criterios --un filtro fijo, una propiedad
+		 * tildada, el conector--. Eso invalida la busqueda anterior: el proximo Enter tiene que
+		 * volver a buscar, no seleccionar el resultado que se calculo sin ese criterio.
+		 *
+		 * Es el mismo efecto que `reset_ya_se_busco` produce al tipear, para los cambios que no
+		 * pasan por el teclado del input, que eran justamente los que quedaban afuera.
+		 *
+		 * @return {void}
+		 */
+		onCriteriosCambiaron() {
+			this.ya_se_busco = false
 		},
 		seleccionar_resultado() { 
 			if (!this.loading) {

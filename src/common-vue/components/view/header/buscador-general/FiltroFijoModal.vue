@@ -96,6 +96,7 @@
 			<b-button
 			v-if="tipo_de_filtro !== 'no_soportado'"
 			variant="primary"
+			data-testid="filtro-fijo-agregar"
 			@click="agregar">
 				{{ ya_agregada ? 'Guardar cambios' : 'Agregar al buscador' }}
 			</b-button>

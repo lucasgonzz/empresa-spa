@@ -16,7 +16,8 @@
 	boundary="viewport"
 	:popper-opts="dropdown_popper_opts"
 	toggle-class="buscador-general-dropdown__toggle"
-	menu-class="buscador-general-dropdown__menu">
+	menu-class="buscador-general-dropdown__menu"
+	data-testid="buscador-general-props-dropdown">
 		<template #button-content>
 			<i class="icon-filter" :title="dropdown_title"></i>
 			<!--
@@ -83,6 +84,7 @@
 				type="button"
 				class="buscador-general-dropdown__row-label"
 				:class="{ 'buscador-general-dropdown__row-label--activa': es_filtro_fijo_activo(item) }"
+				:data-testid="'buscador-general-prop-config-'+item.key"
 				:title="'Configurar '+display_text(item.text)+' como filtro fijo'"
 				@click.stop="$emit('configure', { key: item.key, kind: item.kind })">
 					<span class="buscador-general-dropdown__row-label-text">{{ display_text(item.text) }}</span>
