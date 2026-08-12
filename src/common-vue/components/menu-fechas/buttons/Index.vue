@@ -2,8 +2,6 @@
 	<div class="buttons m-b-15 m-lg-b-0 align-center">
 		<b-button
 		v-for="fecha in fechas"
-		class="m-r-10"
-		size="lg"
 		@click="clicked(fecha)"
 		:variant="active(fecha) ? 'primary' : 'outline-primary'">
 			{{ fecha }}

@@ -3,23 +3,34 @@
 		<b-col cols="12">
 			<div class="date-selector">
 
-				<!-- Control segmentado: mismo patrón visual que horizontal-nav -->
-				<div
-				ref="horizontal_nav"
-				class="horizontal-nav date-mode-selector"
-				:class="{ 'has_horizontal_scroll': has_horizontal_scroll }">
+				<!--
+					Fila superior: el segmentado a la izquierda y la última actualización a la
+					derecha (misión 33). Antes la info era una segunda b-col de ancho completo
+					colgando abajo de todo, que es lo que hacía que la cabecera de Reportes gastara
+					dos filas para dos datos cortos.
+				-->
+				<div class="date-selector__fila">
+
+					<!-- Control segmentado: mismo patrón visual que horizontal-nav -->
 					<div
-					class="item apretable"
-					:class="{ active: rango_temporal == 'dia-actual' }"
-					@click="set_mode('dia-actual')">
-						Hoy
+					ref="horizontal_nav"
+					class="horizontal-nav date-mode-selector"
+					:class="{ 'has_horizontal_scroll': has_horizontal_scroll }">
+						<div
+						class="item apretable"
+						:class="{ active: rango_temporal == 'dia-actual' }"
+						@click="set_mode('dia-actual')">
+							Hoy
+						</div>
+						<div
+						class="item apretable"
+						:class="{ active: rango_temporal == 'rango-de-fechas' }"
+						@click="set_mode('rango-de-fechas')">
+							Rango de fechas
+						</div>
 					</div>
-					<div
-					class="item apretable"
-					:class="{ active: rango_temporal == 'rango-de-fechas' }"
-					@click="set_mode('rango-de-fechas')">
-						Rango de fechas
-					</div>
+
+					<info-time></info-time>
 				</div>
 
 				<!-- Campos de fecha: solo visibles en modo rango -->
@@ -66,9 +77,6 @@
 
 			</div>
 		</b-col>
-
-		<!-- Información de la última actualización (solo para 'Hoy') -->
-		<info-time></info-time>
 	</b-row>
 </template>
 <script>
@@ -164,6 +172,22 @@ export default {
 	flex-direction: column
 	align-items: flex-start
 	gap: 14px
+
+/* Fila superior: segmentado a la izquierda, última actualización a la derecha */
+.date-selector__fila
+	display: flex
+	flex-direction: row
+	align-items: center
+	justify-content: space-between
+	gap: 16px
+	width: 100%
+
+	// En teléfono la info cae debajo del segmentado --ahí sí apilado está bien-- y se alinea a la
+	// izquierda con él.
+	@media screen and (max-width: 768px)
+		flex-direction: column
+		align-items: flex-start
+		gap: 8px
 
 /* Pista gris segmentada — mismos estilos que horizontal-nav, ancho al contenido */
 .date-mode-selector.horizontal-nav

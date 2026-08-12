@@ -18,17 +18,17 @@
 		<template v-if="!loading">
 
 			<!-- ============ Pesos ============ -->
-			<div class="ventas-totales__chip ventas-totales__chip--total">
-				<div class="ventas-totales__icon-wrap">
+			<div class="totales-chip totales-chip--principal">
+				<div class="totales-chip__icon-wrap">
 					<i
 					class="bi bi-cash-stack"
 					aria-hidden="true"></i>
 				</div>
-				<div class="ventas-totales__body">
-					<span class="ventas-totales__label">Total</span>
-					<span class="ventas-totales__value">{{ price(total) }}</span>
+				<div class="totales-chip__body">
+					<span class="totales-chip__label">Total</span>
+					<span class="totales-chip__value">{{ price(total) }}</span>
 					<span
-					class="ventas-totales__meta"
+					class="totales-chip__meta"
 					v-if="total_selected_payment_method > 0">
 						{{ price(total_selected_payment_method) }} en {{ selected_payment_method }}
 					</span>
@@ -45,30 +45,30 @@
 				le desarma la fila de ícono + cuerpo.
 			-->
 			<div
-			class="ventas-totales__chip d-none d-lg-flex"
+			class="totales-chip d-none d-lg-flex"
 			v-if="is_admin">
-				<div class="ventas-totales__icon-wrap">
+				<div class="totales-chip__icon-wrap">
 					<i
 					class="bi bi-tag"
 					aria-hidden="true"></i>
 				</div>
-				<div class="ventas-totales__body">
-					<span class="ventas-totales__label">Costos</span>
-					<span class="ventas-totales__value">{{ price(total_cost) }}</span>
+				<div class="totales-chip__body">
+					<span class="totales-chip__label">Costos</span>
+					<span class="totales-chip__value">{{ price(total_cost) }}</span>
 				</div>
 			</div>
 
 			<div
-			class="ventas-totales__chip ventas-totales__chip--ganancia d-none d-lg-flex"
+			class="totales-chip totales-chip--positivo d-none d-lg-flex"
 			v-if="is_admin">
-				<div class="ventas-totales__icon-wrap">
+				<div class="totales-chip__icon-wrap">
 					<i
 					class="bi bi-graph-up-arrow"
 					aria-hidden="true"></i>
 				</div>
-				<div class="ventas-totales__body">
-					<span class="ventas-totales__label">Ganancia</span>
-					<span class="ventas-totales__value">{{ price(total_ganancia) }}</span>
+				<div class="totales-chip__body">
+					<span class="totales-chip__label">Ganancia</span>
+					<span class="totales-chip__value">{{ price(total_ganancia) }}</span>
 				</div>
 			</div>
 
@@ -81,15 +81,15 @@
 				aquella condición ocultaba (un NaN por un ítem sin precio, un saldo negativo real) son
 				MÁS frecuentes de este lado, que es donde está el volumen y las notas de crédito.
 			-->
-			<div class="ventas-totales__chip">
-				<div class="ventas-totales__icon-wrap">
+			<div class="totales-chip">
+				<div class="totales-chip__icon-wrap">
 					<i
 					class="bi bi-person-lines-fill"
 					aria-hidden="true"></i>
 				</div>
-				<div class="ventas-totales__body">
-					<span class="ventas-totales__label">Cuenta corriente</span>
-					<span class="ventas-totales__value">{{ price(total_cuenta_corriente_pesos) }}</span>
+				<div class="totales-chip__body">
+					<span class="totales-chip__label">Cuenta corriente</span>
+					<span class="totales-chip__value">{{ price(total_cuenta_corriente_pesos) }}</span>
 				</div>
 			</div>
 
@@ -117,70 +117,70 @@
 				conservar.
 			-->
 			<template v-if="hasExtencion('ventas_en_dolares')">
-				<div class="ventas-totales__chip ventas-totales__chip--usd">
-					<div class="ventas-totales__icon-wrap">
+				<div class="totales-chip totales-chip--usd">
+					<div class="totales-chip__icon-wrap">
 						<i
 						class="bi bi-currency-exchange"
 						aria-hidden="true"></i>
 					</div>
-					<div class="ventas-totales__body">
-						<span class="ventas-totales__label">Total USD</span>
-						<span class="ventas-totales__value">{{ price(total_usd) }}</span>
+					<div class="totales-chip__body">
+						<span class="totales-chip__label">Total USD</span>
+						<span class="totales-chip__value">{{ price(total_usd) }}</span>
 					</div>
 				</div>
 
 				<div
-				class="ventas-totales__chip ventas-totales__chip--usd"
+				class="totales-chip totales-chip--usd"
 				v-if="is_admin">
-					<div class="ventas-totales__icon-wrap">
+					<div class="totales-chip__icon-wrap">
 						<i
 						class="bi bi-tag"
 						aria-hidden="true"></i>
 					</div>
-					<div class="ventas-totales__body">
-						<span class="ventas-totales__label">Costos USD</span>
-						<span class="ventas-totales__value">{{ price(total_cost_usd) }}</span>
+					<div class="totales-chip__body">
+						<span class="totales-chip__label">Costos USD</span>
+						<span class="totales-chip__value">{{ price(total_cost_usd) }}</span>
 					</div>
 				</div>
 
 				<div
-				class="ventas-totales__chip ventas-totales__chip--usd"
+				class="totales-chip totales-chip--usd"
 				v-if="is_admin">
-					<div class="ventas-totales__icon-wrap">
+					<div class="totales-chip__icon-wrap">
 						<i
 						class="bi bi-graph-up-arrow"
 						aria-hidden="true"></i>
 					</div>
-					<div class="ventas-totales__body">
-						<span class="ventas-totales__label">Ganancia USD</span>
-						<span class="ventas-totales__value">{{ price(total_ganancia_usd) }}</span>
+					<div class="totales-chip__body">
+						<span class="totales-chip__label">Ganancia USD</span>
+						<span class="totales-chip__value">{{ price(total_ganancia_usd) }}</span>
 					</div>
 				</div>
 
-				<div class="ventas-totales__chip ventas-totales__chip--usd">
-					<div class="ventas-totales__icon-wrap">
+				<div class="totales-chip totales-chip--usd">
+					<div class="totales-chip__icon-wrap">
 						<i
 						class="bi bi-person-lines-fill"
 						aria-hidden="true"></i>
 					</div>
-					<div class="ventas-totales__body">
-						<span class="ventas-totales__label">Cuenta corriente USD</span>
-						<span class="ventas-totales__value">{{ price(total_cuenta_corriente_dolar) }}</span>
+					<div class="totales-chip__body">
+						<span class="totales-chip__label">Cuenta corriente USD</span>
+						<span class="totales-chip__value">{{ price(total_cuenta_corriente_dolar) }}</span>
 					</div>
 				</div>
 			</template>
 
 			<!-- ============ Contador y acciones, a la derecha ============ -->
 			<div class="ventas-totales__derecha">
-				<div class="ventas-totales__chip">
-					<div class="ventas-totales__icon-wrap">
+				<div class="totales-chip">
+					<div class="totales-chip__icon-wrap">
 						<i
 						class="bi bi-receipt-cutoff"
 						aria-hidden="true"></i>
 					</div>
-					<div class="ventas-totales__body">
-						<span class="ventas-totales__label">Ventas</span>
-						<span class="ventas-totales__value">{{ cantidad_ventas }}</span>
+					<div class="totales-chip__body">
+						<span class="totales-chip__label">Ventas</span>
+						<span class="totales-chip__value">{{ cantidad_ventas }}</span>
 					</div>
 				</div>
 
@@ -434,10 +434,12 @@ export default {
 }
 </script>
 <style lang="sass">
-// El vocabulario de chip es el de caja-totales (caja/components/horizontal-nav-center/Total.vue),
-// con una diferencia deliberada: allá los colores son hexadecimales fijos y acá salen de los tokens
-// de _dark_theme.sass. Ese componente es scoped y vive en una pantalla que todavia no paso por el
-// tema oscuro; este bloque si tiene que leerse en html.dark-mode, que es el punto 10 del criterio.
+// El VOCABULARIO del chip --caja, celda del icono, etiqueta, valor y los tres acentos-- ya no vive
+// aca: lo declara src/sass/_chips_totales.sass desde la mision 34, porque Comprobantes es el tercer
+// modulo que lo necesita y tres copias del mismo chip era la deuda que esta tanda viene a pagar.
+//
+// Lo que queda es lo que si es propio de este bloque: como se ordenan los chips, que se va a la
+// derecha, y los dos botones de Excel.
 .ventas-totales
 	display: flex
 	flex-direction: row
@@ -445,82 +447,6 @@ export default {
 	align-items: stretch
 	gap: 10px
 	margin-bottom: 15px
-
-	&__chip
-		display: flex
-		align-items: center
-		gap: 10px
-		padding: 8px 12px
-		border-radius: 10px
-		border: 1px solid var(--color-border)
-		background: var(--bg-card)
-		box-shadow: 0 1px 3px var(--shadow-color)
-		min-width: 0
-
-		.ventas-totales__icon-wrap
-			background: var(--bg-hover)
-			color: var(--color-text-secondary)
-
-	// El total en pesos es el numero que se viene a mirar: es el unico chip con acento.
-	&__chip--total
-		.ventas-totales__icon-wrap
-			background: var(--ventas-total-bg)
-			color: var(--ventas-total-acento)
-
-		.ventas-totales__value
-			color: var(--ventas-total-acento)
-			font-size: 1.25rem
-
-	&__chip--ganancia
-		.ventas-totales__icon-wrap
-			background: var(--ventas-ganancia-bg)
-			color: var(--ventas-ganancia-acento)
-
-	&__chip--usd
-		.ventas-totales__icon-wrap
-			background: var(--ventas-usd-bg)
-			color: var(--ventas-usd-acento)
-
-	&__icon-wrap
-		flex-shrink: 0
-		width: 34px
-		height: 34px
-		border-radius: 8px
-		display: flex
-		align-items: center
-		justify-content: center
-
-		i
-			font-size: 1rem
-			line-height: 1
-
-	&__body
-		display: flex
-		flex-direction: column
-		min-width: 0
-		gap: 1px
-
-	&__label
-		font-size: 0.68rem
-		font-weight: 600
-		color: var(--color-text-secondary)
-		text-transform: uppercase
-		letter-spacing: 0.04em
-		line-height: 1.2
-		white-space: nowrap
-
-	&__value
-		font-size: 1rem
-		font-weight: 700
-		line-height: 1.2
-		white-space: nowrap
-		color: var(--color-text-primary)
-
-	&__meta
-		font-size: 0.68rem
-		color: var(--color-text-secondary)
-		line-height: 1.2
-		white-space: nowrap
 
 	// El contador y los dos Excel se van a la derecha con margin-left auto, no con un
 	// justify-content del contenedor: asi los chips de la izquierda siguen pegados entre si cuando
@@ -540,10 +466,10 @@ export default {
 	// pantalla.
 	//
 	// La sombra sale de --toolbar-btn-shadow y no de un `none` ni de un valor propio: ese token lo
-	// definio la mision 27 el mismo dia que esta, y tiene contraparte en oscuro con la proporcion
-	// calculada contra la sombra del pill. Estos botones viven FUERA del .view-header-toolbar, asi
-	// que las reglas de la barra no los alcanzan solas y hay que nombrar el token: es la unica
-	// forma de que no queden planos al lado de sus hermanos de arriba.
+	// definio la mision 27, y tiene contraparte en oscuro con la proporcion calculada contra la
+	// sombra del pill. Estos botones viven FUERA del .view-header-toolbar, asi que las reglas de la
+	// barra no los alcanzan solas y hay que nombrar el token: es la unica forma de que no queden
+	// planos al lado de sus hermanos de arriba.
 	&__btn.btn
 		height: var(--toolbar-control-h)
 		display: inline-flex
@@ -576,23 +502,4 @@ export default {
 
 		&__btn.btn
 			flex: 1 1 0
-
-// Acentos propios del bloque. Son los mismos tres tonos que ya usan los chips de Cajas y los
-// tintes de icono de la barra, declarados como tokens para tener contraparte en oscuro: un ambar
-// o un verde de modo claro sobre el #2e333a del oscuro se apaga hasta dejar de senalar nada.
-:root
-	--ventas-total-acento: #d97706
-	--ventas-total-bg: rgba(217, 119, 6, 0.12)
-	--ventas-ganancia-acento: #059669
-	--ventas-ganancia-bg: rgba(5, 150, 105, 0.12)
-	--ventas-usd-acento: #0891b2
-	--ventas-usd-bg: rgba(8, 145, 178, 0.12)
-
-html.dark-mode
-	--ventas-total-acento: #f59e0b
-	--ventas-total-bg: rgba(245, 158, 11, 0.16)
-	--ventas-ganancia-acento: #34d399
-	--ventas-ganancia-bg: rgba(52, 211, 153, 0.16)
-	--ventas-usd-acento: #22d3ee
-	--ventas-usd-bg: rgba(34, 211, 238, 0.16)
 </style>

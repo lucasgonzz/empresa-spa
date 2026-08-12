@@ -87,6 +87,17 @@
 			<template v-slot:horizontal_nav_center>
 				<slot name="horizontal_nav_center"></slot>
 			</template>
+			<!--
+				🔴 El puente del slot de acciones de la izquierda (misión 34). Sin esta línea el slot
+				existe en el view-header y se puede escribir desde una vista, pero NO LLEGA: las vistas
+				montan sobre ESTE componente, no sobre el header, y Vue 2 descarta en silencio el
+				contenido de un slot que el hijo nunca renderiza — sin warning, sin error de
+				compilación, simplemente no se dibuja. Le pasó a esta misma misión: el botón de Excel
+				de Comprobantes desapareció de las dos zonas del header y lo agarró la verificación.
+			-->
+			<template v-slot:acciones_izquierda>
+				<slot name="acciones_izquierda"></slot>
+			</template>
 			<template v-slot:search_extra>
 				<slot name="search_extra"></slot>
 			</template>
