@@ -20,6 +20,7 @@
 		<div class="cont-table-wrapper">
 			<div
 			:id="id"
+			ref="cont_table"
 			class="cont-table"
 			:class="{ 'cont-table--loading': loading }">
 				<table
@@ -198,9 +199,23 @@
 						class="empty-state-row">
 							<td
 							:colspan="fields.length">
-								<empty-state
-								:title="empty_state_title"
-								:hint="empty_state_hint"></empty-state>
+								<!--
+									El td mide el ancho REAL de la tabla (colspan completo), y eso es lo que
+									queremos para el FONDO. Pero el contenido centrado sobre ese ancho cae a
+									mitad del scroll: en Ventas la tabla mide varias pantallas y el mensaje
+									quedaba dibujado fuera de lo visible. Este envoltorio sticky se ancla al
+									borde izquierdo del área visible y mide lo que se ve (ancho medido por JS
+									en medir_ancho_visible), así que su contenido queda centrado en pantalla y
+									sigue ahí al scrollear de costado. El sticky va en el DIV y no en el td:
+									si fuera el td, el fondo se movería con él y dejaría un hueco al costado.
+								-->
+								<div
+								class="empty-state-sticky"
+								:style="empty_state_sticky_style">
+									<empty-state
+									:title="empty_state_title"
+									:hint="empty_state_hint"></empty-state>
+								</div>
 							</td>
 						</tr>
 					</tbody>
@@ -329,6 +344,7 @@ export default {
 	mounted() {
 		let that = this
 		that.update_all_header_filter_fit()
+		this.observar_ancho_visible()
 		setTimeout(() => {
 
 			this.scroll_margenes()
@@ -353,6 +369,8 @@ export default {
 	beforeDestroy() {
 		// Evita leaks de listeners de mousemove/mouseleave si el componente se destruye con la tabla enganchada.
 		this.unbind_scroll_margenes()
+		// Y del observer del ancho visible: una tabla que se destruye no tiene que seguir midiéndose.
+		this.dejar_de_observar_ancho_visible()
 	},
 	data() {
 		return {
@@ -381,9 +399,34 @@ export default {
 			// y abajo) + alto del .cont-tr con los botones (~56px). Debe coincidir con el min-height
 			// de .cont-tr-skeleton en el bloque de estilos de más abajo.
 			skeleton_row_height_px: 68,
+			// Ancho visible (px) de .cont-table, para que el estado vacío se centre respecto de lo que
+			// se ve y no del ancho real de la tabla. null mientras no se pudo medir: ahí el envoltorio
+			// no lleva width y se comporta como antes de este cambio.
+			ancho_visible_cont_table: null,
+			// ResizeObserver de .cont-table (se desconecta en beforeDestroy).
+			observer_ancho_visible: null,
 		}
 	},
 	computed: {
+		/**
+		 * Ancho del envoltorio sticky del estado vacío: el del área visible, para que el mensaje
+		 * quede centrado en la pantalla y no a mitad del scroll horizontal de la tabla.
+		 *
+		 * Devuelve null mientras no se pudo medir: sin width, el div ocupa el ancho del td y se ve
+		 * igual que antes de este cambio. En una tabla sin scroll horizontal las dos medidas
+		 * coinciden, así que ahí tampoco cambia nada.
+		 *
+		 * @return {Object|null}
+		 */
+		empty_state_sticky_style() {
+			if (!this.ancho_visible_cont_table) {
+				return null
+			}
+
+			return {
+				width: this.ancho_visible_cont_table + 'px',
+			}
+		},
 		// models_to_show() {
 		// 	let to_show = this.models.slice(0, (this.cant_models_to_show * this.index_to_show))
 		// 	return to_show
@@ -1408,6 +1451,65 @@ export default {
 		    this.scroll_leave_handler = stopScroll;
 		},
 		/**
+		 * Empieza a observar el ancho visible de .cont-table.
+		 *
+		 * Se resolvió midiendo por JS y no solo con CSS porque el envoltorio sticky del estado vacío
+		 * necesita un ancho concreto —el del área visible— y no hay forma de expresarlo en CSS acá:
+		 * `100%` mide el td (o sea el ancho real de la tabla, que es justo el problema) y `100vw` mide
+		 * la ventana entera, que es más ancha que el contenedor porque el menú lateral está a la
+		 * izquierda. Este archivo ya mide alturas por JS, así que es coherente con lo que hay.
+		 *
+		 * Va con ResizeObserver y no con el resize de window porque el ancho también cambia al
+		 * abrir/cerrar el menú lateral, y eso no dispara ningún resize de la ventana.
+		 *
+		 * @return {void}
+		 */
+		observar_ancho_visible() {
+			this.medir_ancho_visible()
+
+			// Sin ResizeObserver (navegador viejo) queda la medición del mounted: el estado vacío se
+			// centra bien igual, solo no se reacomoda si cambia el ancho. Es degradación, no error.
+			if (typeof ResizeObserver == 'undefined') {
+				return
+			}
+
+			let cont_table = this.$refs.cont_table
+			if (!cont_table) {
+				return
+			}
+
+			let that = this
+			this.observer_ancho_visible = new ResizeObserver(function() {
+				that.medir_ancho_visible()
+			})
+			this.observer_ancho_visible.observe(cont_table)
+		},
+		/**
+		 * Guarda el ancho visible de .cont-table (clientWidth, o sea sin la barra de scroll vertical).
+		 *
+		 * @return {void}
+		 */
+		medir_ancho_visible() {
+			let cont_table = this.$refs.cont_table
+			if (!cont_table) {
+				return
+			}
+
+			this.ancho_visible_cont_table = cont_table.clientWidth
+		},
+		/**
+		 * Desconecta el observer del ancho visible.
+		 *
+		 * @return {void}
+		 */
+		dejar_de_observar_ancho_visible() {
+			if (this.observer_ancho_visible) {
+				this.observer_ancho_visible.disconnect()
+			}
+
+			this.observer_ancho_visible = null
+		},
+		/**
 		 * Remueve los listeners de scroll_margenes del elemento al que estén enganchados actualmente.
 		 */
 		unbind_scroll_margenes() {
@@ -1689,6 +1791,35 @@ export default {
 					/* oscuro, la superficie equivalente). Es lo que faltaba: el <p> viejo vivía */
 					/* fuera de la tabla y no heredaba ningún fondo. */
 					background: var(--bg-card, #FFF)
+					/* 🔴 NO cambiar a hidden: esta fila es tr:last-child del tbody, así que la regla */
+					/* de las esquinas redondeadas de más arriba le pone overflow: hidden, y un */
+					/* ancestro con overflow distinto de visible se convierte en el contenedor de */
+					/* anclaje del position: sticky de adentro. Con hidden, el mensaje se ancla al */
+					/* PROPIO td —que no scrollea— y viaja con la tabla: medido en la aplicación el */
+					/* 12/8/2026, con scrollLeft 1642 el mensaje quedaba en left: -1569, o sea fuera */
+					/* de la pantalla, que es exactamente el defecto que esta misión vino a arreglar. */
+					/* El redondeo del fondo no se pierde: border-radius sigue aplicando, hidden solo */
+					/* recortaba contenido, y acá el contenido no llega a las esquinas. */
+					/* Va con :first-child/:last-child y no a secas porque el selector que pone el */
+					/* hidden (tbody tr:last-child td:first-child) pesa (0,2,3) y le ganaba a un */
+					/* "tr.empty-state-row td" pelado, que pesa (0,1,2). Medido: sin esto la regla */
+					/* no aplicaba y el computed del td seguía en hidden. */
+					&:first-child,
+					&:last-child
+						overflow: visible
+
+					.empty-state-sticky
+						/* Anclado al borde izquierdo del área visible: el mensaje queda centrado en */
+						/* la pantalla y sigue ahí mientras el usuario scrollea de costado, en vez de */
+						/* quedar dibujado a mitad del ancho real de la tabla y fuera de lo visible. */
+						/* El ancho lo pone JS (empty_state_sticky_style): tiene que ser el del área */
+						/* visible, y eso no se puede expresar en CSS acá — 100% mide el td y 100vw */
+						/* mide la ventana, que es más ancha porque el menú lateral está a la izquierda. */
+						/* OJO: el sticky va acá y NO en el td. Si fuera el td, el fondo blanco se */
+						/* movería con el mensaje y al scrollear quedaría un tramo transparente al */
+						/* costado, que es exactamente lo que el td con colspan vino a resolver. */
+						position: sticky
+						left: 0
 				/* No es una fila clickeable: el realce de hover de las filas de datos no aplica. */
 				&:hover
 					td
