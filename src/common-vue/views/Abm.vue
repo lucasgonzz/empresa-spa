@@ -241,10 +241,28 @@ export default {
 	width: 100%
 	margin-bottom: 15px
 
+	// 🔴 `nowrap` y no `wrap` (mision 33). La intencion de esta fila ya estaba escrita --que el
+	// buscador quede al lado del nav-- y aun asi no funcionaba: con `flex-wrap: wrap`, el nav de
+	// modulos de Articulos, que trae trece pestañas, supera el ancho disponible y ENVUELVE, asi que
+	// el buscador cae a la linea de abajo. `flex: 0 1 auto` permite encoger, pero un contenedor flex
+	// no baja de su ancho de contenido sin `min-width: 0`, y el contenido son trece pestañas.
+	flex-wrap: nowrap
+
 	// El horizontal-nav de modulos viene con width:100% (pensado para cuando va solo en su fila,
 	// como en los Listados). Aca conviven con el buscador, asi que le pedimos que ocupe
 	// solo el ancho de su contenido y no fuerce al buscador a la linea de abajo.
+	//
+	// El min-width: 0 es lo que hace que ese `flex: 0 1 auto` sirva de algo: el sobrante lo resuelve
+	// el scroll horizontal que el nav ya tiene.
 	::v-deep .cont-navs
 		width: auto
 		flex: 0 1 auto
+		min-width: 0
+
+	::v-deep .cont-left
+		min-width: 0
+
+	// En telefono vuelve el wrap: ahi el buscador abajo del nav es lo correcto.
+	@media screen and (max-width: 768px)
+		flex-wrap: wrap
 </style>

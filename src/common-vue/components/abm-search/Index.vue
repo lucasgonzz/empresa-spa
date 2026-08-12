@@ -1,6 +1,16 @@
 <template>
 	<div
 	class="abm-search">
+		<!--
+			La lupa es la misma que la del buscador general de los listados
+			(view/header/buscador-general/Index.vue): mismo icono de bootstrap-icons y misma posicion
+			adentro de la pastilla, para que sean el mismo gesto y no dos buscadores distintos
+			(mision 33).
+		-->
+		<i
+		class="bi bi-search abm-search-lupa"
+		aria-hidden="true"></i>
+
 		<b-form-input
 		class="abm-search-input"
 		v-model="query"
@@ -235,18 +245,38 @@ export default {
 <style lang="sass" scoped>
 .abm-search
 	position: relative
-	flex: 1 1 260px
+	// 🔴 `flex: 0 0 300px` y no `1 1 260px` (mision 33): en esta fila el que cede espacio es el nav
+	// de modulos --que tiene scroll horizontal para eso--, no el buscador. Con el buscador
+	// encogible, en Articulos se comprimia hasta quedar inutil antes de que el nav cediera un pixel.
+	flex: 0 0 300px
 	min-width: 0
 	max-width: 360px
 
+	@media screen and (max-width: 768px)
+		flex: 1 1 100%
+		max-width: none
+
 	// Estilo pill igual al buscador general de los Listados (buscador-general/Index.vue),
 	// para reemplazar el input gris default de Bootstrap heredado de _inputs.sass
+	// La lupa va absoluta adentro de la pastilla y sin eventos: es un indicador, no un boton --el
+	// buscador filtra mientras se escribe--.
+	.abm-search-lupa
+		position: absolute
+		left: 14px
+		top: 50%
+		transform: translateY(-50%)
+		font-size: 0.95rem
+		line-height: 1
+		color: var(--color-text-secondary)
+		pointer-events: none
+
 	.abm-search-input
 		width: 100%
 		height: 40px
 		border: 1px solid #e2e4e7
 		border-radius: 22px
-		padding: 0 16px
+		// El padding de la izquierda le deja lugar a la lupa.
+		padding: 0 16px 0 38px
 		font-size: 0.9rem
 		color: #1d1d1f
 		background: #fff

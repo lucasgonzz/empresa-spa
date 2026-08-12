@@ -911,7 +911,24 @@ export default {
 
 					return null
 				} else {
-					return 'S/A'
+					// Celda vacia y no 'S/A' (mision 33, pedido de Lucas): una relacion sin valor no
+					// es informacion, y "S/A" ensuciaba la columna Proveedor de cualquier listado con
+					// articulos sueltos.
+					//
+					// Se reviso ANTES quien llama a propertyText(), porque un cambio de valor de
+					// retorno aca se ve lejos: son diez llamadores y los diez son de presentacion en
+					// pantalla --las tablas (Tr.vue, TableComponent.vue, PivotProp.vue,
+					// TablePivotPropsToSet.vue), las tarjetas (CardComponent.vue), el ModelForm y el
+					// modal de precio final--. Los tres que arman objetos en vez de imprimir texto
+					// (TableComponent items(), remito/ArticlesTable table_items() y
+					// alertas/.../ListArticles table_items()) alimentan un `:items` de b-table, o sea
+					// tambien pantalla. Ningun Excel ni PDF pasa por aca: esos los arma el backend y
+					// el SPA solo descarga el blob.
+					//
+					// Efecto lateral conocido y buscado: ModelForm.vue ya trataba la cadena vacia
+					// como "no mostrar" (`v-if="propertyText(...) != '' || ... == 0"`), asi que ahi
+					// el renglon de una relacion vacia deja de aparecer en vez de decir "S/A".
+					return ''
 				}
 			}
 			if (from_pivot) {

@@ -1,6 +1,7 @@
 <template>
 	<div>
 		<b-form-select
+		class="toolbar-select"
 		v-model="afip_ticket_show_option"
 		:options="afip_ticket_options"></b-form-select>
 	</div>
@@ -35,28 +36,12 @@ export default {
 	},
 }
 </script>
-<style lang="sass">
-.afip-ticket-ventas-cobradas-nav
-	display: flex
-	justify-content: flex-end
+<!--
+	Sin <style> propio desde la misión 33: la altura, el radio, la tipografía y los colores del
+	control salen de `.toolbar-select`, declarada una sola vez en src/sass/_toolbar_botones.sass.
 
-	@media screen and (max-width: 800px)
-		// flex-direction: column
-		flex-wrap: wrap
-		justify-content: space-around
-
-	align-items: center 
-	flex-direction: row
-	width: 100%
-
-	select 
-		width: 250px
-		margin-left: 15px
-		&:first-child
-			margin-left: 0
-
-		@media screen and (max-width: 800px)
-			width: 45%
-			margin-left: 0
-			margin-bottom: 10px
-</style>
+	Lo que había acá era un bloque `.afip-ticket-ventas-cobradas-nav` copiado del nav de Ventas, con
+	un `select { width: 250px }` adentro. Ese selector no existe en el template de este componente,
+	así que **no aplicaba a nada**: por eso el control se veía con la tipografía y el padding crudos
+	de Bootstrap, con el texto pegado al techo, al lado de controles de 36px.
+-->
