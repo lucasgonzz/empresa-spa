@@ -1467,8 +1467,9 @@ export default {
 		observar_ancho_visible() {
 			this.medir_ancho_visible()
 
-			// Sin ResizeObserver (navegador viejo) queda la medición del mounted: el estado vacío se
-			// centra bien igual, solo no se reacomoda si cambia el ancho. Es degradación, no error.
+			// Sin ResizeObserver (navegador viejo) queda la medición del mounted, que alcanza mientras
+			// el ancho no cambie. Ojo que si ESA medición dio 0 —contenedor todavía oculto— no hay
+			// nada que la corrija después y el estado vacío se comporta como antes de este cambio.
 			if (typeof ResizeObserver == 'undefined') {
 				return
 			}
@@ -1477,6 +1478,10 @@ export default {
 			if (!cont_table) {
 				return
 			}
+
+			// Idempotente: si esto se llamara dos veces, el observer anterior quedaría observando
+			// para siempre porque la referencia se pisa.
+			this.dejar_de_observar_ancho_visible()
 
 			let that = this
 			this.observer_ancho_visible = new ResizeObserver(function() {
@@ -1800,10 +1805,14 @@ export default {
 					/* de la pantalla, que es exactamente el defecto que esta misión vino a arreglar. */
 					/* El redondeo del fondo no se pierde: border-radius sigue aplicando, hidden solo */
 					/* recortaba contenido, y acá el contenido no llega a las esquinas. */
-					/* Va con :first-child/:last-child y no a secas porque el selector que pone el */
-					/* hidden (tbody tr:last-child td:first-child) pesa (0,2,3) y le ganaba a un */
-					/* "tr.empty-state-row td" pelado, que pesa (0,1,2). Medido: sin esto la regla */
-					/* no aplicaba y el computed del td seguía en hidden. */
+					/* Va con :first-child/:last-child y no a secas: sin ellos este selector pesa */
+					/* menos que el que pone el hidden (tbody tr:last-child td:first-child) y no */
+					/* aplicaba — medido, el computed del td seguía en hidden. */
+					/* 🔴 Con ellos QUEDA EMPATADO, no le gana: los dos selectores compilados pesan */
+					/* (0,4,3) contando los ancestros. Esta regla se impone porque va DESPUÉS en el */
+					/* archivo, así que mover este bloque arriba del de las esquinas redondeadas lo */
+					/* rompe en silencio y vuelve el defecto. Lo agarra el primer test de */
+					/* e2e/tests/estado-vacio-centrado.spec.js, que es la red que queda. */
 					&:first-child,
 					&:last-child
 						overflow: visible
