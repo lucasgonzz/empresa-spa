@@ -33,21 +33,32 @@
 			Calculado el {{ date(inventory_performance.created_at) }} a las {{ hour(inventory_performance.created_at) }}
 		</p>
 
-		<!-- Aviso de regeneracion en background: el reporte vigente sigue siendo util mientras se recalcula -->
+		<!-- Aviso de regeneracion en background: el reporte vigente sigue siendo util mientras se
+		recalcula, asi que esto es una nota del sistema que convive con datos validos y no una
+		interrupcion. El icono va al lado del texto, no arriba y en grande (ver el bloque de estilos
+		de mas abajo).
+
+		Y no, la palabra "style" entre signos de menor y mayor NO va escrita aca aunque quede mas
+		claro: la revalidacion del carril de merge cuenta las aperturas y los cierres de ese tag en
+		el archivo entero --comentarios incluidos-- y una mencion suelta le da 2 aperturas contra 1
+		cierre, o sea que frena el merge. Paso el 12/8/2026. -->
 		<div
 		v-if="inventory_performance && inventory_performance_generating"
-		class="text-with-icon m-b-15">
-			Estamos actualizando el reporte de inventario. Los datos de abajo van a refrescarse solos apenas termine.
-			<i class="icon-refresh"></i>
+		class="inventario-aviso"
+		role="status"
+		aria-live="polite">
+			<i class="bi bi-arrow-repeat inventario-aviso__icono" aria-hidden="true"></i>
+			<span>Estamos actualizando el reporte de inventario. Los datos de abajo van a refrescarse solos apenas termine.</span>
 		</div>
 
-		<!-- Sin reporte todavia: mostrar "0 articulos / $0 en costos" seria informacion falsa, no vacia -->
-		<div
+		<!-- Sin reporte todavia: mostrar "0 articulos / $0 en costos" seria informacion falsa, no
+		vacia. Es un estado vacio y se dice con el vocabulario que el sistema ya tiene para eso
+		--circulo con el icono, titulo y pista debajo--, reusando el componente en vez de repetirlo. -->
+		<empty-state
 		v-if="!inventory_performance"
-		class="text-with-icon m-t-15">
-			Estamos calculando el reporte de inventario. Los datos van a aparecer solos en unos minutos.
-			<i class="icon-eye-slash"></i>
-		</div>
+		icon_class="bi bi-hourglass-split"
+		title="Estamos calculando el reporte de inventario"
+		hint="Los datos van a aparecer solos en unos minutos."></empty-state>
 
 		<template v-else>
 
@@ -75,6 +86,7 @@ import inventory_performance from '@/mixins/inventory_performance'
 export default {
 	mixins: [inventory_performance],
 	components: {
+		EmptyState: () => import('@/common-vue/components/display/EmptyState'),
 		InventarioStockeado: () => import('@/components/listado/modals/inventory-performance/InventarioStockeado'),
 		ValorDelInventario: () => import('@/components/listado/modals/inventory-performance/ValorDelInventario'),
 		CostosArticulos: () => import('@/components/listado/modals/inventory-performance/CostosArticulos'),
@@ -97,6 +109,37 @@ export default {
 		margin: 0 0 14px
 		font-size: 0.8125rem
 		color: var(--color-text-secondary)
+
+	// --- Aviso de regeneracion en background --------------------------------------------------
+	// 🔴 A proposito NO usa `.text-with-icon` de common-vue/sass/_texts.sass, que es lo que tenia
+	// hasta la mision 36: esa clase pinta el texto de lighten($blue, 10) a 1.2em centrado y pone
+	// el icono en `4em` con `display: block` --el cartel azul con el icono gigante de la captura
+	// del 12/8/2026--. La clase NO se toca porque la usan ~40 componentes del sistema; el
+	// tratamiento propio vive aca, anidado bajo el id del modal, asi que no se escapa a ningun
+	// otro lado.
+	.inventario-aviso
+		display: flex
+		flex-direction: row
+		align-items: flex-start
+		gap: 8px
+		margin: 0 0 14px
+		padding: 8px 12px
+		border-radius: var(--toolbar-btn-radius)
+		border: 1px solid var(--color-border)
+		background: var(--bg-section)
+		font-size: 0.8125rem
+		line-height: 1.35
+		color: var(--color-text-secondary)
+
+		&__icono
+			flex-shrink: 0
+			// El icono acompana a la PRIMERA linea del texto: con `align-items: flex-start` y el
+			// mismo line-height que el parrafo queda a su altura, en vez de flotar en el medio
+			// cuando el texto entra en dos renglones (que es lo que pasa en telefono).
+			line-height: 1.35
+			// Una sola cosa animada, y es esta: el giro del icono es lo que dice que hay algo en
+			// curso. Nada mas parpadea ni se mueve, para que la nota siga siendo una nota.
+			animation: inventario-aviso-girar 1.6s linear infinite
 
 	// --- Los tres totales -------------------------------------------------------------------
 	// Vocabulario tomado de caja/components/horizontal-nav-center/Total.vue (caja-totales__chip):
@@ -176,11 +219,27 @@ export default {
 	// grid lo resuelve con una linea en vez de con tres clases de breakpoint por columna.
 	.inventario-paneles
 		display: grid
-		grid-template-columns: repeat(3, 1fr)
+		// `auto-fit` + `minmax` en lugar de las tres columnas fijas que dejo la mision 31: entre
+		// 768px y el ancho completo del modal las tres columnas no entraban y el tercer panel se
+		// cortaba contra el borde (captura de Lucas del 12/8/2026). El defecto vivia justo en el
+		// medio, porque el unico breakpoint estaba en 767px. Asi la grilla decide sola: tres
+		// columnas en el modal ancho, dos cuando dejan de entrar y una en telefono.
+		//
+		// El minimo son 240px y sale del contenido real del panel mas ancho de los tres --el de
+		// estado del stock--: 14px de padding a cada lado mas el boton "Excel de stock minimo" con
+		// su icono, que a 0.875rem mide poco mas de 200px. Con menos que eso el boton se parte en
+		// dos renglones antes de que la grilla se decida a bajar de columna.
+		grid-template-columns: repeat(auto-fit, minmax(240px, 1fr))
 		gap: 12px
 		margin-top: 16px
 
 	.inventario-panel
+		// 🔴 La causa de fondo del desborde, y sin esto el `auto-fit` de arriba tampoco alcanza:
+		// un item de grilla tiene `min-width: auto`, o sea que NO baja del ancho de su propio
+		// contenido y desborda su columna en vez de encogerse. Es la misma linea de la que
+		// dependieron la cabecera de Ventas (mision 32) y la fila de ABM (mision 33) -- el mismo
+		// error por tercera vez, por eso queda escrito y no se "simplifica" sacandolo.
+		min-width: 0
 		display: flex
 		flex-direction: column
 		align-items: stretch
@@ -308,6 +367,10 @@ export default {
 	// --- Mobile -----------------------------------------------------------------------------
 	// Los paneles se apilan y los chips pasan a ocupar el ancho completo: tres chips de 150px en
 	// una pantalla de 360 se rompen en dos filas desparejas.
+	//
+	// La linea de los paneles ya no es la que los apila --de eso se ocupa el `auto-fit`, que en
+	// un modal de telefono da una sola columna--: queda como red de seguridad para un contenedor
+	// mas angosto que el minimo de 240px, donde una pista fija de ese ancho desbordaria igual.
 	@media (max-width: 767px)
 		.inventario-paneles
 			grid-template-columns: 1fr
@@ -317,4 +380,19 @@ export default {
 
 		.inventario-panel__barra
 			margin: 20px 0
+
+// El @keyframes va al nivel de arriba y NO adentro de `#inventory-performance`: una regla
+// @keyframes no se acota a un selector --el nombre es global igual--, asi que anidarla solo
+// confundiria al que la lea. Por eso el nombre lleva el prefijo del modal.
+@keyframes inventario-aviso-girar
+	from
+		transform: rotate(0deg)
+	to
+		transform: rotate(360deg)
+
+// Quien pidio menos movimiento en su sistema operativo ve la nota quieta. El aviso no depende de
+// la animacion para entenderse: el texto ya dice que el reporte se esta actualizando.
+@media (prefers-reduced-motion: reduce)
+	#inventory-performance .inventario-aviso__icono
+		animation: none
 </style>
