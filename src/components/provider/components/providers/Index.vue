@@ -47,5 +47,22 @@ export default {
 		ComercioCityUser: () => import('@/components/common/ComercioCityUser'),
 		BuscadorRapido: () => import('@/common-vue/components/buscador-rapido/Index'),
 	},
+	created() {
+		/*
+			El catalogo de proveedores ya no se descarga al iniciar sesion (mision 43, 12/8/2026),
+			asi que este listado --que es el ABM de proveedores-- tiene que pedirlo el.
+
+			🔴 Medido en la aplicacion, no deducido: sin esto la tabla dice "No hay Proveedores"
+			con 11 proveedores en la base. La tabla de la mision daba por hecho que los cinco
+			lugares que usan el store ya lo pedian, y este NO lo hacia: funcionaba solo porque la
+			entrada seguia colgada en call_methods.js desde el grupo 332.
+
+			Se pide solo si el store esta vacio (mismo patron que
+			panel-control/components/proveedores/Index.vue).
+		*/
+		if (!this.$store.state.provider.models.length) {
+			this.$store.dispatch('provider/getModels')
+		}
+	},
 }
 </script>

@@ -5,6 +5,15 @@ export default {
         return {
             /** Nombre del canal support.user.* actualmente suscrito (para Echo.leave al cambiar de usuario). */
             support_user_echo_channel: null,
+            /** Nombre del canal order.created.* actualmente suscrito, para no suscribirse dos veces. */
+            order_created_echo_channel: null,
+            /** true una vez que se engancho el listener de reconexion de Echo (se engancha una sola vez). */
+            reconexion_de_echo_enganchada: false,
+            /**
+             * true cuando Echo ya estuvo conectado alguna vez. Sirve para distinguir la primera
+             * conexion de una reconexion: solo la reconexion tiene que re-pedir los pedidos.
+             */
+            echo_ya_estuvo_conectado: false,
         }
     },
     watch: {
@@ -24,9 +33,104 @@ export default {
                 this.$store.dispatch('message/setChatsToShow')
                 this.checkIfIsMessagesView(notification)
             });
+            // Aviso en tiempo real de que entro un pedido nuevo en la tienda.
+            this.escuchar_pedidos_nuevos()
             // Suscribe canal de soporte para chat interno con admin.
             this.listenSupportChannel()
 		},
+        /**
+         * Se suscribe al canal por el que `tienda-api` avisa que entro un pedido nuevo
+         * (mision 42, 12/8/2026). Hasta ahora eso se sabia preguntando cada 20 segundos.
+         *
+         * @return {void}
+         */
+        escuchar_pedidos_nuevos() {
+            // Un comercio sin tienda online no tiene pedidos: no hay nada que escuchar. Es la
+            // misma guarda que usa el polling de start_methods.js.
+            if (!this.Echo || !this.owner || !this.owner.online || !this.owner_id) {
+                return
+            }
+
+            /** Canal publico del comercio dueño del pedido, tal como lo emite tienda-api. */
+            const order_created_channel = 'order.created.' + this.owner_id
+
+            // listenChannelsLocal() corre en el watch de `authenticated`, que puede dispararse mas
+            // de una vez en la misma sesion: sin esta guarda se acumularian listeners y cada
+            // pedido nuevo dispararia N requests.
+            if (this.order_created_echo_channel === order_created_channel) {
+                return
+            }
+            if (this.order_created_echo_channel) {
+                this.Echo.leave(this.order_created_echo_channel)
+            }
+            this.order_created_echo_channel = order_created_channel
+
+            /*
+                🔴 Tiene que ser .notification(), NO .listen('.OrderCreated', ...).
+
+                Lo que viaja por el cable es una notificacion de Laravel envuelta en
+                `Illuminate\Notifications\Events\BroadcastNotificationCreated`, y
+                `Channel.notification(cb)` de Echo es azucar de listen() sobre exactamente ese
+                nombre. Un .listen('.OrderCreated') no recibiria NADA NUNCA y no habria ningun
+                error a la vista, ni en el navegador ni en el servidor. Es el modo de falla mas
+                probable de este cambio y esta medido en el INFORME.md de la mision 42.
+
+                Es el mismo mecanismo que message.from_buyer.{id}, unas lineas mas arriba.
+            */
+            this.Echo.channel(order_created_channel)
+            .notification(() => {
+                /*
+                    El evento solo avisa que hay que ir a buscar: la lista se pide a empresa-api y
+                    NO se arma con el payload. El payload trae order_id y order_num, y salen de la
+                    base de tienda-api, que es otra base -- construir la fila con eso seria armar
+                    un pedido que empresa-api nunca devolvio.
+                */
+                this.$store.dispatch('order/getUnconfirmedModels')
+            })
+
+            this.escuchar_reconexion_de_echo()
+        },
+        /**
+         * Vuelve a pedir los pedidos sin confirmar cada vez que Echo se reconecta.
+         *
+         * 🔴 Es el agujero que el broadcast solo NO cubre: los eventos que ocurrieron mientras la
+         * conexion estaba caida no se reenvian cuando vuelve. Sin esto, un pedido que entro con la
+         * pestana desconectada no aparece hasta el proximo polling.
+         *
+         * @return {void}
+         */
+        escuchar_reconexion_de_echo() {
+            if (this.reconexion_de_echo_enganchada) {
+                return
+            }
+
+            // El conector de Pusher lo expone Echo (ver la config de main.js). Se chequea en vez
+            // de asumirlo: si algun dia cambia el broadcaster, esto deja de existir y lo unico que
+            // se pierde es el refresco al reconectar, no la pantalla.
+            if (!this.Echo.connector || !this.Echo.connector.pusher || !this.Echo.connector.pusher.connection) {
+                return
+            }
+
+            /** Conexion de Pusher, que es la que emite los cambios de estado. */
+            const connection = this.Echo.connector.pusher.connection
+
+            // Si ya esta conectado cuando nos enganchamos --que es lo normal, porque Echo se crea
+            // en main.js y conecta mucho antes de que resuelva la sesion--, entonces cualquier
+            // 'connected' que venga despues ES una reconexion.
+            this.echo_ya_estuvo_conectado = connection.state == 'connected'
+            this.reconexion_de_echo_enganchada = true
+
+            connection.bind('connected', () => {
+                if (!this.echo_ya_estuvo_conectado) {
+                    // Primera conexion: los sin confirmar ya los pide startMethods(), pedirlos de
+                    // nuevo aca seria un request al pedo en cada arranque.
+                    this.echo_ya_estuvo_conectado = true
+                    return
+                }
+                console.log('Echo reconecto: se vuelven a pedir los pedidos sin confirmar')
+                this.$store.dispatch('order/getUnconfirmedModels')
+            })
+        },
         checkIfIsMessagesView(noti) {
             if (this.$route.name == 'online' && this.view == 'mensajes' && this.$route.params.sub_view == noti.message.buyer_id) {
                 console.log('se marcaron mensajes como leidos desde broadcast')
