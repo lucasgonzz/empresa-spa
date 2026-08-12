@@ -41,6 +41,22 @@ export default {
 	flex-wrap: nowrap
 	align-items: center
 	gap: var(--toolbar-group-gap)
+	// 🔴 Este margen iguala la separacion con el nav de secciones de Clientes a la que tienen las
+	// otras dos secciones (mision 40, 12/8/2026). Medido antes, del borde de abajo de la pista de
+	// secciones al primer control de cada seccion: clientes 15px, vendedores 15px, planes de pago
+	// 0px.
+	//
+	// La causa de la diferencia es una sola y conviene tenerla escrita: en clientes y en vendedores
+	// el aire NO lo pone nadie a proposito, lo hereda el `p-t-15` del `.view-header-toolbar` que
+	// monta el `view-component` de cada una. Esta seccion no monta `view-component` --tiene su
+	// propia fila desde la mision 33-- asi que no heredaba nada.
+	//
+	// Va como margen de esta fila y no como `margin-bottom` del nav de secciones, que seria lo
+	// estructuralmente correcto, por una razon concreta: ese margen se sumaria al padding que las
+	// otras dos ya heredan y las dejaria en 30px. Arreglar eso de raiz es sacarle el padding al
+	// `view-header-toolbar`, que lo monta todo el sistema y excede a esta mision. Queda como
+	// hallazgo.
+	margin-top: 15px
 	margin-bottom: 15px
 
 	// El nav es el que cede espacio: tiene scroll horizontal propio para eso.

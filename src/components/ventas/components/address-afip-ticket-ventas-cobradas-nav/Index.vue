@@ -38,6 +38,17 @@ export default {
 		flex-wrap: nowrap
 		align-items: center
 		gap: var(--toolbar-group-gap)
+		// El aire con el nav de sucursales de arriba lo pone ESTA fila y nadie mas (mision 40,
+		// 12/8/2026). Medido antes: 0px entre sucursales y esta fila, contra los 15px que ya habia
+		// entre esta fila y la de totales --que salen del margin-bottom de aca abajo--. Las dos
+		// primeras filas quedaban pegadas y la tercera no.
+		//
+		// 🔴 Va como `margin-top` de la fila de abajo y NO como `margin-bottom` del nav de
+		// sucursales, a proposito: ese nav es un `horizontal-nav` compartido, y tocarlo cambiaria
+		// todos los modulos que lo montan. Ademas su pista ya trae un `margin-top: 15px` propio
+		// (`.cont-navs .cont-left > div`), asi que un margen del lado de arriba se sumaria al de
+		// abajo en cuanto alguien reordene algo: el hueco tiene que salir de una sola declaracion.
+		margin-top: 15px
 		margin-bottom: 15px
 
 	// El nav es el que cede espacio. Ver la nota del template sobre el min-width.
