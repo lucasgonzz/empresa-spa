@@ -1,11 +1,16 @@
 <template>
+	<!--
+		Neutro y sin `size`, como el resto del grupo de acciones: desde la mision 34 este boton vive
+		en la fila de la izquierda del view-header, y ahi la altura, el radio y el color los pone
+		_toolbar_botones.sass. El unico control con relleno de acento de esa barra sigue siendo
+		"Crear", asi que se va el variant="outline-success". El m-r-20 tambien: la separacion la da el
+		gap del grupo.
+	-->
 	<b-button
 	v-if="is_admin"
 	@click="export_excel"
-	class="m-r-20"
-	variant="outline-success"
-	size="sm">
-		<i class="icon-download"></i>
+	class="btn-excel-comprobantes">
+		<i class="bi bi-download"></i>
 		Excel
 	</b-button>
 </template>

@@ -1,0 +1,114 @@
+// Vocabulario visual de los bloques de totales (mision 34, 12/8/2026).
+//
+// Es el chip que nacio en el modulo de Cajas --icono en celda, etiqueta chica arriba, valor grande
+// abajo-- y que la mision 32 llevo al bloque de totales de Ventas. Esta mision lo saca del <style> de
+// Ventas y lo pone acá porque Comprobantes es el TERCER modulo que lo necesita, y tres declaraciones
+// del mismo chip es exactamente la deuda que esta tanda viene a pagar.
+//
+// El prefijo es neutro (`totales-chip`) y no `ventas-totales`: el vocabulario no es de ningun modulo.
+// Cada bloque conserva su propia clase contenedora para lo que si es suyo --que chips muestra, como
+// los ordena, que se va a la derecha--; lo compartido es como se ve un chip.
+//
+// Todos los colores salen de tokens de _dark_theme.sass. `caja-totales` de Cajas todavia usa
+// hexadecimales fijos y es `scoped`: migrarlo tambien queda pendiente y no lo hace esta mision,
+// porque tocar Cajas no estaba en su alcance.
+
+:root
+	// Los tres acentos del sistema para totales. Nacieron en el chip de Cajas y los formalizo la
+	// mision 32 como tokens para que tengan contraparte en oscuro: un ambar o un verde de modo claro
+	// sobre el #2e333a del oscuro se apaga hasta dejar de senalar nada.
+	--totales-acento-principal: #d97706
+	--totales-acento-principal-bg: rgba(217, 119, 6, 0.12)
+	--totales-acento-positivo: #059669
+	--totales-acento-positivo-bg: rgba(5, 150, 105, 0.12)
+	--totales-acento-usd: #0891b2
+	--totales-acento-usd-bg: rgba(8, 145, 178, 0.12)
+
+html.dark-mode
+	--totales-acento-principal: #f59e0b
+	--totales-acento-principal-bg: rgba(245, 158, 11, 0.16)
+	--totales-acento-positivo: #34d399
+	--totales-acento-positivo-bg: rgba(52, 211, 153, 0.16)
+	--totales-acento-usd: #22d3ee
+	--totales-acento-usd-bg: rgba(34, 211, 238, 0.16)
+
+// ============================= El chip =============================
+.totales-chip
+	display: flex
+	align-items: center
+	gap: 10px
+	padding: 8px 12px
+	border-radius: 10px
+	border: 1px solid var(--color-border)
+	background: var(--bg-card)
+	box-shadow: 0 1px 3px var(--shadow-color)
+	min-width: 0
+
+	.totales-chip__icon-wrap
+		background: var(--bg-hover)
+		color: var(--color-text-secondary)
+
+// El chip protagonista: el numero que se viene a mirar. Es el unico con acento.
+.totales-chip--principal
+	.totales-chip__icon-wrap
+		background: var(--totales-acento-principal-bg)
+		color: var(--totales-acento-principal)
+
+	.totales-chip__value
+		color: var(--totales-acento-principal)
+		font-size: 1.25rem
+
+.totales-chip--positivo
+	.totales-chip__icon-wrap
+		background: var(--totales-acento-positivo-bg)
+		color: var(--totales-acento-positivo)
+
+.totales-chip--usd
+	.totales-chip__icon-wrap
+		background: var(--totales-acento-usd-bg)
+		color: var(--totales-acento-usd)
+
+.totales-chip__icon-wrap
+	flex-shrink: 0
+	width: 34px
+	height: 34px
+	border-radius: 8px
+	display: flex
+	align-items: center
+	justify-content: center
+
+	i
+		font-size: 1rem
+		line-height: 1
+
+.totales-chip__body
+	display: flex
+	flex-direction: column
+	min-width: 0
+	gap: 1px
+
+.totales-chip__label
+	font-size: 0.68rem
+	font-weight: 600
+	color: var(--color-text-secondary)
+	text-transform: uppercase
+	letter-spacing: 0.04em
+	line-height: 1.2
+	white-space: nowrap
+
+.totales-chip__value
+	font-size: 1rem
+	font-weight: 700
+	line-height: 1.2
+	white-space: nowrap
+	color: var(--color-text-primary)
+
+.totales-chip__meta
+	font-size: 0.68rem
+	color: var(--color-text-secondary)
+	line-height: 1.2
+	white-space: nowrap
+
+@media screen and (max-width: 576px)
+	.totales-chip__value
+		font-size: 0.92rem

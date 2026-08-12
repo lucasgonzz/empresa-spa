@@ -22,6 +22,16 @@
 				v-if="show_btn_props_to_show"
 				:model_name="model_name"></props-to-show>
 
+				<!--
+					Slot para los botones propios del modulo que van del lado de las ACCIONES, pegados
+					al de propiedades para mostrar (mision 34). Nace para el boton de Excel de
+					Comprobantes, que vivia a la derecha del buscador general.
+
+					Va vacio por defecto, asi que ningun modulo cambia por existir: los que montan sus
+					botones en `horizontal_nav_center` --la zona derecha-- siguen exactamente igual.
+				-->
+				<slot name="acciones_izquierda"></slot>
+
 				<slot name="btn_create">
 					<excel-drop-down
 					v-if="show_excel_drop_down"
