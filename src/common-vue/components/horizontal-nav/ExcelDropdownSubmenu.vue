@@ -252,11 +252,11 @@ export default {
 	width: 100%
 	list-style: none
 
+	// El padding, el borde y el hover de la celda del icono son los del item comun y viven en
+	// src/sass/_menus_desplegables.sass: este toggle lleva `dropdown-item excel-dropdown-option`
+	// igual que los demas. Aca queda solo lo que es propio de ser un <button> y no un <a>.
 	&__toggle
 		width: 100%
-		padding: 8px 1.25rem !important
-		border: none !important
-		box-shadow: none !important
 		outline: none
 		background: transparent
 		text-align: left
@@ -267,14 +267,7 @@ export default {
 		&:focus,
 		&:active
 			background-color: var(--bg-hover)
-			border: none !important
-			box-shadow: none !important
 			outline: none
-
-			.excel-dropdown-option__icon-wrap
-				background-color: var(--bg-card)
-				border-color: var(--color-text-primary)
-				color: var(--color-text-primary)
 
 		.excel-dropdown-option__inner
 			width: 100%

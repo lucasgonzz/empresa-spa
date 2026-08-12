@@ -51,12 +51,9 @@ export default {
 	},
 }
 </script>
-<style lang="sass">
-.excel-dropdown-section-title
-	font-size: 0.85rem
-	font-weight: 600
-	color: #6c757d
-	text-transform: uppercase
-	letter-spacing: 0.02em
-	padding: 0.25rem 1.5rem
-</style>
+<!--
+	Sin <style> propio: "Excel para Clientes" es un encabezado de seccion del menu de Crear y usa el
+	mismo tratamiento que los de los otros dos menus, declarado en src/sass/_menus_desplegables.sass
+	desde la mision 28. El color salia de un #6c757d fijo, que sobre el fondo oscuro del menu daba
+	2,73:1.
+-->
