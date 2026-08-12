@@ -109,6 +109,12 @@ html.dark-mode
 	line-height: 1.2
 	white-space: nowrap
 
-@media screen and (max-width: 576px)
-	.totales-chip__value
-		font-size: 0.92rem
+// ⚠️ Acá había un `@media (max-width: 576px)` que bajaba el valor a 0.92rem, heredado del chip de
+// Cajas. Se saca por dos motivos que la verificación midió: no hacía nada donde importa --era
+// (0,1,0) contra el (0,2,0) del chip principal, y las media queries no suman especificidad, así que
+// el total seguía en 1.25rem-- y sí le pegaba a los chips no-principales de Ventas, que antes de
+// esta misión no tenían ningún override en 576px. Mudar el vocabulario a un partial no puede mover
+// píxeles en el módulo del que se lo saca.
+//
+// Si algún día hace falta achicar el valor en pantallas chicas, va con la especificidad que
+// corresponda y declarado como decisión, no heredado de un archivo que se estaba mudando.

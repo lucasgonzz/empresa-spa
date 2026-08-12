@@ -8,8 +8,7 @@
 	-->
 	<b-button
 	v-if="is_admin"
-	@click="export_excel"
-	class="btn-excel-comprobantes">
+	@click="export_excel">
 		<i class="bi bi-download"></i>
 		Excel
 	</b-button>
