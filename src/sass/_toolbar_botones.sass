@@ -509,3 +509,14 @@ select.toolbar-select.custom-select
 	// controles y estirarse al 100% los desalinea.
 	width: auto
 	max-width: 100%
+
+// 🔴 Y el tema oscuro necesita su propia linea, que la verificacion de la mision 33 encontro
+// faltando: `html.dark-mode .custom-select { background: var(--bg-section) }` de _dark_theme.sass
+// tambien es (0,2,1), o sea que EMPATA con el selector de arriba igual que el de _ui_sizes. Los dos
+// empates los estaba ganando el orden de importacion de app.sass y nada mas; este los cierra por
+// especificidad (0,3,1) para el que importa, que es el fondo: sin esto, el select de una barra queda
+// en --bg-section mientras los de Ventas quedan en --bg-card, o sea el mismo control en dos tonos.
+html.dark-mode select.toolbar-select.custom-select
+	background-color: var(--bg-card)
+	color: var(--color-text-primary)
+	border-color: var(--color-border)

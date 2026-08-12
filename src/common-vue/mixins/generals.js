@@ -925,9 +925,19 @@ export default {
 					// tambien pantalla. Ningun Excel ni PDF pasa por aca: esos los arma el backend y
 					// el SPA solo descarga el blob.
 					//
-					// Efecto lateral conocido y buscado: ModelForm.vue ya trataba la cadena vacia
-					// como "no mostrar" (`v-if="propertyText(...) != '' || ... == 0"`), asi que ahi
-					// el renglon de una relacion vacia deja de aparecer en vez de decir "S/A".
+					// 🔴 Y hubo que tocar UNA cosa mas por este cambio, que la verificacion encontro:
+					// ModelForm.vue decidia con `v-if="propertyText(...) != '' || propertyText(...)
+					// == 0"`, y en JS `'' == 0` es TRUE --el string vacio coerciona a 0--, asi que la
+					// cadena vacia seguia entrando por el `v-if` y renderizaba un <span> vacio adentro
+					// de la pildora gris de .model-form__only-show: un recuadro de 34px sin nada,
+					// justo cuando ese componente ya tenia un "Sin datos" preparado para el caso. Se
+					// cambio a `=== 0`, que sigue cubriendo el valor numerico cero (el motivo por el
+					// que esa condicion existe) y deja caer la cadena vacia al else.
+					//
+					// Otros dos efectos, estos si buscados: en las tarjetas
+					// (display/cards/CardComponent.vue) el segundo renglon del titulo desaparece
+					// cuando esa relacion esta vacia --antes decia "S/A"--, y el placeholder de las
+					// celdas editables de TableComponent queda vacio.
 					return ''
 				}
 			}
