@@ -18,7 +18,7 @@
 		<template v-if="!loading">
 
 			<!-- ============ Pesos ============ -->
-			<div class="totales-chip totales-chip--principal ventas-totales__chip">
+			<div class="totales-chip totales-chip--principal">
 				<div class="totales-chip__icon-wrap">
 					<i
 					class="bi bi-cash-stack"
@@ -45,7 +45,7 @@
 				le desarma la fila de ícono + cuerpo.
 			-->
 			<div
-			class="totales-chip ventas-totales__chip d-none d-lg-flex"
+			class="totales-chip d-none d-lg-flex"
 			v-if="is_admin">
 				<div class="totales-chip__icon-wrap">
 					<i
@@ -59,7 +59,7 @@
 			</div>
 
 			<div
-			class="totales-chip totales-chip--positivo totales-chip ventas-totales__chip d-none d-lg-flex"
+			class="totales-chip totales-chip--positivo d-none d-lg-flex"
 			v-if="is_admin">
 				<div class="totales-chip__icon-wrap">
 					<i
@@ -81,7 +81,7 @@
 				aquella condición ocultaba (un NaN por un ítem sin precio, un saldo negativo real) son
 				MÁS frecuentes de este lado, que es donde está el volumen y las notas de crédito.
 			-->
-			<div class="totales-chip ventas-totales__chip">
+			<div class="totales-chip">
 				<div class="totales-chip__icon-wrap">
 					<i
 					class="bi bi-person-lines-fill"
@@ -117,7 +117,7 @@
 				conservar.
 			-->
 			<template v-if="hasExtencion('ventas_en_dolares')">
-				<div class="totales-chip totales-chip--usd ventas-totales__chip">
+				<div class="totales-chip totales-chip--usd">
 					<div class="totales-chip__icon-wrap">
 						<i
 						class="bi bi-currency-exchange"
@@ -130,7 +130,7 @@
 				</div>
 
 				<div
-				class="totales-chip totales-chip--usd ventas-totales__chip"
+				class="totales-chip totales-chip--usd"
 				v-if="is_admin">
 					<div class="totales-chip__icon-wrap">
 						<i
@@ -144,7 +144,7 @@
 				</div>
 
 				<div
-				class="totales-chip totales-chip--usd ventas-totales__chip"
+				class="totales-chip totales-chip--usd"
 				v-if="is_admin">
 					<div class="totales-chip__icon-wrap">
 						<i
@@ -157,7 +157,7 @@
 					</div>
 				</div>
 
-				<div class="totales-chip totales-chip--usd ventas-totales__chip">
+				<div class="totales-chip totales-chip--usd">
 					<div class="totales-chip__icon-wrap">
 						<i
 						class="bi bi-person-lines-fill"
@@ -172,7 +172,7 @@
 
 			<!-- ============ Contador y acciones, a la derecha ============ -->
 			<div class="ventas-totales__derecha">
-				<div class="totales-chip ventas-totales__chip">
+				<div class="totales-chip">
 					<div class="totales-chip__icon-wrap">
 						<i
 						class="bi bi-receipt-cutoff"
