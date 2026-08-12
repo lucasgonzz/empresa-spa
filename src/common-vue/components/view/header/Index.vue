@@ -313,16 +313,22 @@ export default {
 
 	.view-header__center
 		margin-top: 10px
-		// El margen de ABAJO lo agrega la mision 32: el buscador general quedaba pegado a lo que
-		// sigue en telefono. La separacion existia solo por el margin-top de --fechas, y esa clase
-		// cuelga de change_from_dates_option, que en Ventas es false -- justamente el modulo donde
-		// se reporto el defecto. Puesto de este lado sirve para los dos casos.
-		margin-bottom: 10px
 
 	/* Zona derecha centrada; NO se oculta. Sin display-nav colapsa sin hueco */
 	.view-header__right
 		justify-self: stretch
 		justify-content: center
+		// La separacion con el buscador general la pone la zona derecha, y va en el selector SIN
+		// modificador (mision 32). El buscador quedaba pegado a lo que sigue en telefono porque el
+		// unico margen que existia era el de --fechas, y esa clase cuelga de
+		// change_from_dates_option, que en Ventas es false -- justamente el modulo donde se reporto
+		// el defecto.
+		//
+		// 🔴 Va aca y no como margin-bottom del buscador: los margenes de items de grid NO colapsan,
+		// asi que un margen de este lado mas el de --fechas de abajo daban 20px en los modulos que si
+		// tienen selector de modo (Compras, notas de credito, Mercado Libre, Tienda Nube, depositos).
+		// Declarado en el selector base, el modificador redeclara el mismo valor y no se suma.
+		margin-top: 10px
 
 	/* Con display-nav de fechas (Ventas): separación de su fila propia */
 	.view-header__right--fechas

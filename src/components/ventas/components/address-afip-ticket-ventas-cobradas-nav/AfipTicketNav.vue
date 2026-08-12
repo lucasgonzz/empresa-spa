@@ -176,8 +176,23 @@ export default {
 	width: auto
 	max-width: 100%
 
-	/** Selects del nav (factura, cobro, medio de pago) */
-	.afip-ticket-nav-select
+	// 🔴 Los tres selectores llevan `.custom-select` ademas de su clase propia, y no es ruido: son
+	// dos reglas del sistema que le ganan a una sola clase y dejan estos tres controles distintos de
+	// todos los demas de la barra.
+	//
+	// 1. `_ui_sizes.sass` declara `.ui-small select.custom-select { height: auto }` con (0,2,1), y
+	//    b-form-select renderiza justamente un `select.custom-select`. Con la interfaz en tamaño
+	//    chico los tres selects caian a 30,8px mientras el pill, el buscador y los botones median 32.
+	//    Es EXACTAMENTE la trampa que provider/components/orders/nav/Index.vue ya documento y
+	//    resolvio el 11/8/2026 en el modulo de al lado.
+	// 2. `html.dark-mode .custom-select { background: var(--bg-section) }` es (0,2,1) y le ganaba al
+	//    fondo de aca: en oscuro el buscador quedaba #2e333a y los tres selects #272b31, o sea el
+	//    grupo que tiene que leerse como una sola pieza partido en dos tonos.
+	//
+	// Con la clase de bootstrap sumada esto queda en (0,3,0) --tres clases contra dos clases y un
+	// elemento-- y gana las dos comparaciones sin recurrir a !important. El buscador zafaba de
+	// casualidad porque se escribio `&__input.form-control`, que ya era (0,3,0).
+	.afip-ticket-nav-select.custom-select
 		flex-shrink: 0
 		font-size: 0.8125rem
 		padding-left: 0.6rem
@@ -188,17 +203,20 @@ export default {
 		background-color: var(--bg-card)
 		color: var(--color-text-primary)
 
-		&--factura
-			width: 118px
-			max-width: 118px
+	// Los anchos van en selectores propios y no anidados con `&--`: adentro del bloque de arriba el
+	// `&` expande al selector padre ENTERO, o sea que `&--factura` daria
+	// `.afip-ticket-nav-select.custom-select--factura`, que no existe en ningun lado.
+	.afip-ticket-nav-select--factura.custom-select
+		width: 118px
+		max-width: 118px
 
-		&--cobradas
-			width: 108px
-			max-width: 108px
+	.afip-ticket-nav-select--cobradas.custom-select
+		width: 108px
+		max-width: 108px
 
-		&--pago
-			width: 132px
-			max-width: 132px
+	.afip-ticket-nav-select--pago.custom-select
+		width: 132px
+		max-width: 132px
 
 	/** Buscador por N° de comprobante AFIP */
 	.afip-ticket-cbte-search
@@ -239,7 +257,7 @@ export default {
 		justify-content: flex-start
 		width: 100%
 
-		.afip-ticket-nav-select
+		.afip-ticket-nav-select.custom-select
 			flex: 1 1 calc(50% - var(--toolbar-btn-gap))
 			width: auto
 			max-width: none

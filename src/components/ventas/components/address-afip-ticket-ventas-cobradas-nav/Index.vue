@@ -45,6 +45,16 @@ export default {
 		flex: 1 1 auto
 		min-width: 0
 
+		// 🔴 Y hay que neutralizar el margen de arriba de la pista, que viene de
+		// `horizontal-nav/Index.vue` (`.cont-navs .cont-left > div { margin-top: 15px }`). Ese margen
+		// tenia sentido cuando el nav era una fila propia; adentro de esta fila, como el
+		// `align-items: center` centra la caja del nav CON el margen incluido, las pestañas quedaban
+		// 7,45px mas abajo que los filtros. Y peor: el corrimiento dependia de cuantos empleados
+		// tuviera cargados el cliente --con siete, la barra de scroll del nav le sube el alto a la
+		// pista y compensaba de casualidad--, o sea que se veia distinto en cada instalacion.
+		.cont-navs .cont-left > div
+			margin-top: 0
+
 	// Los filtros conservan su ancho: son cuatro controles de medida fija y encogerlos los vuelve
 	// ilegibles antes que util.
 	&__filtros

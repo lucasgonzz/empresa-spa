@@ -35,8 +35,17 @@
 				</div>
 			</div>
 
+			<!--
+				El `d-none d-lg-block` viene de refractor y se conserva: los dos <p> de Costos y
+				Ganancia en pesos estaban ocultos abajo de 992px. Es una decisión de qué se muestra y
+				esta misión es de disposición, así que no le tocaba cambiarla. (Los de USD nunca las
+				tuvieron, así que ahí no hay nada que conservar.)
+
+				`d-lg-flex` y no `d-lg-block`: el chip es un contenedor flex y con `display: block` se
+				le desarma la fila de ícono + cuerpo.
+			-->
 			<div
-			class="ventas-totales__chip"
+			class="ventas-totales__chip d-none d-lg-flex"
 			v-if="is_admin">
 				<div class="ventas-totales__icon-wrap">
 					<i
@@ -50,7 +59,7 @@
 			</div>
 
 			<div
-			class="ventas-totales__chip ventas-totales__chip--ganancia"
+			class="ventas-totales__chip ventas-totales__chip--ganancia d-none d-lg-flex"
 			v-if="is_admin">
 				<div class="ventas-totales__icon-wrap">
 					<i
@@ -163,7 +172,7 @@
 
 			<!-- ============ Contador y acciones, a la derecha ============ -->
 			<div class="ventas-totales__derecha">
-				<div class="ventas-totales__chip ventas-totales__chip--cantidad">
+				<div class="ventas-totales__chip">
 					<div class="ventas-totales__icon-wrap">
 						<i
 						class="bi bi-receipt-cutoff"
@@ -519,7 +528,10 @@ export default {
 	&__derecha
 		display: flex
 		flex-direction: row
-		align-items: center
+		// `stretch` y no `center`: el contenedor estira con la hilera (el padre es align-items:
+		// stretch) pero adentro centraba, asi que el chip del contador se quedaba en su alto natural
+		// de 52px contra los 56 de sus hermanos y sus bordes quedaban 2px para adentro.
+		align-items: stretch
 		gap: 10px
 		margin-left: auto
 
