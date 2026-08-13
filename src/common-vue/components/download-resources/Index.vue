@@ -345,9 +345,14 @@ export default {
 			.catch(err => {
 				// 🔴 Si la llamada masiva entera se cae (red, 500, sesion vencida) NO se puede
 				// dejar la sesion sin catalogos: se cae al camino viejo, cada modelo por su
-				// endpoint individual. Es mas lento, pero es exactamente lo que hacia el sistema
-				// antes de esta mision, o sea que el peor caso de la llamada nueva es el
-				// comportamiento anterior y no una pantalla vacia.
+				// endpoint individual, y la sesion arranca igual.
+				//
+				// Ojo con una diferencia que NO es menor: el camino viejo mandaba esas requests en
+				// serie, o sea con contrapresion natural. Este repliegue las manda todas juntas, asi
+				// que si la masiva fallo justamente porque el servidor esta saturado, la SPA le tira
+				// encima ~70 requests en el mismo instante. Es el precio de no dejar la pantalla
+				// vacia, pero conviene saberlo antes de tocar esto: si algun dia hay que amortiguarlo,
+				// se hace de a tandas aca, no volviendo a encadenar el camino feliz.
 				console.log(err)
 				return this.pedir_sueltos(model_names)
 			})
@@ -363,6 +368,18 @@ export default {
 			let promesas = []
 
 			model_names.forEach(model_name => {
+				// Guarda contra un nombre que no tenga modulo Vuex. Hoy no puede pasar --los
+				// nombres salen de nuestra propia lista o de lo que el backend devolvio en
+				// no_soportados, que es lo que le mandamos-- pero sin esto un dispatch a una accion
+				// inexistente devuelve undefined y el .then de abajo tira un TypeError SINCRONO,
+				// adentro del forEach, que se lleva puesto el .then de pedir_masivo y hace que se
+				// vuelvan a pedir de a uno los 69 que ya se habian commiteado.
+				if (!this.$store._actions[model_name + '/getModels']) {
+					console.log('recursos-iniciales: no hay store para ' + model_name + ', se saltea')
+					this.marcar_descargado(model_name)
+					return
+				}
+
 				promesas.push(
 					this.$store.dispatch(model_name + '/getModels')
 					.then(() => {
@@ -395,6 +412,19 @@ export default {
 		},
 		/**
 		 * Marca la fila del panel como lista y avisa que la dependencia ya esta disponible.
+		 *
+		 * ⚠️ "Lista" quiere decir "ya no se esta esperando", NO "los datos llegaron". El
+		 * `_getModels` de __base_store se come el error HTTP y resuelve igual, asi que un catalogo
+		 * que fallo llega hasta aca por el `.then` y queda con el tilde puesto. Si el que fallo es
+		 * address, price_type o current_acount_payment_method_discount,
+		 * article_dynamic_dependencies_ready() da true con la coleccion vacia y las columnas
+		 * dinamicas de articulo quedan afuera de props_to_show para toda la sesion.
+		 *
+		 * Esto NO lo introdujo la mision 43 --el codigo viejo marcaba igual despues del await-- y
+		 * arreglarlo de raiz es del lado de los stores, que esta fuera del alcance de esta mision.
+		 * Queda dicho aca para que el proximo no lea los comentarios de arriba y crea que hay una
+		 * proteccion que no existe. Hallazgo:
+		 * prompts/hallazgos/20260812-una-descarga-fallida-del-arranque-queda-marcada-como-lista.json
 		 *
 		 * @param {string} model_name
 		 * @return {void}

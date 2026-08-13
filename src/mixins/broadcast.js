@@ -45,14 +45,18 @@ export default {
          * @return {void}
          */
         escuchar_pedidos_nuevos() {
-            // Un comercio sin tienda online no tiene pedidos: no hay nada que escuchar. Es la
-            // misma guarda que usa el polling de start_methods.js.
-            if (!this.Echo || !this.owner || !this.owner.online || !this.owner_id) {
+            if (!this.Echo) {
                 return
             }
 
-            /** Canal publico del comercio dueño del pedido, tal como lo emite tienda-api. */
-            const order_created_channel = 'order.created.' + this.owner_id
+            /**
+             * Canal publico del comercio dueño del pedido, tal como lo emite tienda-api. Queda en
+             * null si este comercio no tiene tienda online: no hay pedidos que escuchar, que es la
+             * misma guarda que usa el polling de start_methods.js.
+             */
+            const order_created_channel = (this.owner && this.owner.online && this.owner_id)
+                ? 'order.created.' + this.owner_id
+                : null
 
             // listenChannelsLocal() corre en el watch de `authenticated`, que puede dispararse mas
             // de una vez en la misma sesion: sin esta guarda se acumularian listeners y cada
@@ -60,10 +64,18 @@ export default {
             if (this.order_created_echo_channel === order_created_channel) {
                 return
             }
+            // 🔴 El Echo.leave va ANTES de cortar por "no hay canal nuevo", no despues. Si en la
+            // misma pestaña se cierra sesion y entra un usuario de OTRO comercio sin tienda online,
+            // salir temprano dejaria viva la suscripcion al canal del comercio anterior: cada pedido
+            // de ese otro comercio seguiria disparando getUnconfirmedModels en esta sesion.
             if (this.order_created_echo_channel) {
                 this.Echo.leave(this.order_created_echo_channel)
             }
             this.order_created_echo_channel = order_created_channel
+
+            if (!order_created_channel) {
+                return
+            }
 
             /*
                 🔴 Tiene que ser .notification(), NO .listen('.OrderCreated', ...).

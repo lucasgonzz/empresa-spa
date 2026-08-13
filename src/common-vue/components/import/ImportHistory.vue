@@ -742,15 +742,39 @@ export default {
 		// 		this.$bvModal.show('articulos-creados')
 		// 	})
 		// },
+		/**
+		 * Nombre del proveedor de una importacion.
+		 *
+		 * 🔴 Busca primero en el catalogo liviano (`options`) y despues en `models`, y ese orden
+		 * importa: desde la mision 43 (12/8/2026) el catalogo de proveedores ya no se descarga al
+		 * iniciar sesion, asi que `models` esta vacio salvo que la pantalla que abrio este historial
+		 * lo haya pedido. Antes esta columna se veia por el arranque; sin este cambio quedaba en
+		 * blanco, sin ningun error, para cualquiera que entrara desde el Listado.
+		 *
+		 * `options` (id + name, grupo 332) es exactamente lo que hace falta aca: un nombre.
+		 *
+		 * @param {object} model
+		 * @returns {string|null}
+		 */
 		getProvider(model) {
-			let provider = this.getModelFromId('provider', model.provider_id)
+			let provider = this.$store.state.provider.options.find(item => {
+				return item.id == model.provider_id
+			})
+			if (typeof provider == 'undefined') {
+				provider = this.getModelFromId('provider', model.provider_id)
+			}
 			if (typeof provider != 'undefined' && provider !== null && provider.name) {
 				return provider.name
-			} 
+			}
 			return null
 		},
 		getModels() {
-			this.loading = true 
+			// El catalogo liviano de proveedores, que es lo que resuelve la columna Proveedor de la
+			// tabla (ver getProvider). getOptions tiene su propia guarda: si ya se pidio en esta
+			// sesion no repite la descarga.
+			this.$store.dispatch('provider/getOptions')
+
+			this.loading = true
 			this.$api.get('import-history/'+this.model_name)
 			.then(res => {
 				console.log(res)
