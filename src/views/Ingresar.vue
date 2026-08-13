@@ -57,6 +57,8 @@
 </div>
 </template>
 <script>
+import { resolver, NINGUNO } from '@/utils/criterio_de_precio'
+
 export default {
 	name: 'Ingresar',
 	components: {
@@ -128,10 +130,29 @@ export default {
 		},
 		validate() {
 			var ok = true
+
+			/*
+			 * Mision 44: el criterio de "este articulo tiene con que armar un precio" es el
+			 * mismo del back (utils/criterio_de_precio.js). Antes preguntaba `price == ''` y
+			 * `percentage_gain == ''`, asi que un 0 escrito en cualquiera de los dos campos
+			 * pasaba la validacion ("0" == '' es falso en JS) y el articulo se guardaba sin
+			 * ningun precio real; y le alcanzaba con que el proveedor tuviera margen, sin
+			 * mirar ni el checkbox de aplicarlo ni el costo, que son las dos condiciones sin
+			 * las cuales ese margen no produce ningun precio.
+			 *
+			 * El proveedor se busca en el store paginado porque en esta vista el articulo se
+			 * esta creando y todavia no tiene la relacion embebida; si no esta en el store
+			 * queda null y se cae en pedir el precio, que es el lado seguro.
+			 */
 			let provider = this.modelsStoreFromName('provider').find(model => {
 				return model.id == this.article.provider_id
 			})
-			if (this.article.price == '' && this.article.percentage_gain == '' && (typeof provider == 'undefined' || !provider.percentage_gain)) {
+
+			if (typeof provider == 'undefined') {
+				provider = null
+			}
+
+			if (resolver(this.article, provider) === NINGUNO) {
 				ok = false
 				this.$toast.error('El campo precio es obligatorio')
 				document.getElementById('article-price').focus()

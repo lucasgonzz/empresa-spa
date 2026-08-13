@@ -29,7 +29,7 @@
 			</b-form-checkbox>
 		</b-form-group> -->
 		<b-form-checkbox
-		v-if="percentage_gain"
+		v-if="hay_percentage_gain"
 		v-model="article.apply_provider_percentage_gain"
         :value="1"
         :unchecked-value="0">
@@ -50,7 +50,19 @@ export default {
 			} else if (this.selectedProvider(this.article) && this.selectedProvider(this.article).percentage_gain) {
 				return this.selectedProvider(this.article).percentage_gain
 			}
-			return null 
+			return null
+		},
+		/*
+		 * Mision 44: este checkbox es el UNICO control que existe para sacarle a un articulo
+		 * el margen del proveedor. Se mostraba con `v-if="percentage_gain"`, o sea por
+		 * truthiness: con un margen del proveedor de 0 quedaba OCULTO, mientras que el back
+		 * (y por lo tanto PriceInput.vue) considera que un 0 cargado SI es margen del
+		 * proveedor y bloquea el precio manual con el cartel "Elimine el margen de ganancia
+		 * del proveedor". El usuario leia que tenia que eliminar algo que no podia ver.
+		 * Se mide "cargado", igual que el back.
+		 */
+		hay_percentage_gain() {
+			return this.percentage_gain !== null && typeof this.percentage_gain != 'undefined' && this.percentage_gain !== ''
 		},
 		provider_price_list() {
 			let provider_price_list = this.provider_price_lists.find(model => {
