@@ -528,7 +528,10 @@ $panel-demo-ancho: 500px
 	top: 50%
 	left: 50%
 	transform: translate(-50%, -50%)
-	width: min(80vw, 960px)
+	// Sin min(): SASS lo toma como su propia funcion y con vw y px juntos tira
+	// "Incompatible units". El par width/max-width da lo mismo y no depende de eso.
+	width: 80vw
+	max-width: 960px
 	max-height: 80vh
 	z-index: 1060
 
@@ -591,21 +594,17 @@ $panel-demo-ancho: 500px
 	backdrop-filter: blur(6px)
 	z-index: 1050
 
-/*
-	Los tres anchos de la regla dura.
-
-	Tablet (768-1024): el panel de 500px fijos se come mas de la mitad de la pantalla, asi que
-	pasa a 55% con tope de 500px. El sistema de atras sigue usable.
-*/
+// Los tres anchos de la regla dura.
+//
+// Tablet (768-1024): el panel de 500px fijos se come mas de la mitad de la pantalla, asi que
+// pasa a 55% con tope de 500px. El sistema de atras sigue usable.
 @media (max-width: 1024px)
 	.panel-demo
 		width: 55%
 		min-width: 380px
 
-/*
-	Telefono (< 768): 500px sobre 360px no es un panel, es una pared. Pasa a hoja completa
-	sobre el sistema, y el tirador se mete adentro del borde para no quedar fuera de pantalla.
-*/
+// Telefono (< 768): 500px sobre 360px no es un panel, es una pared. Pasa a hoja completa
+// sobre el sistema, y el tirador se mete adentro del borde para no quedar fuera de pantalla.
 @media (max-width: 767px)
 	.panel-demo
 		width: 100%
