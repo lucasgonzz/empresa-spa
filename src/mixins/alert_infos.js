@@ -23,21 +23,30 @@ export default {
 		is_online_view() {
 			return this.route_name == 'online'
 		},
-        orders() {
-            return this.$store.state.order.models 
-        },
         unconfirmed_orders_history() {
-            return this.$store.state.order.unconfirmed_models 
+            return this.$store.state.order.unconfirmed_models
         },
+        /**
+         * Pedidos sin confirmar que alimentan la alerta del nav y el modal de alertas.
+         *
+         * 🔴 Sale de UNA sola coleccion, y ese es el arreglo (mision 43, 12/8/2026). Antes se
+         * concatenaban dos: `unconfirmed_models` (que pide start_methods.js, sin filtro de fecha)
+         * y `order.models` (que bajaba el arranque, y eran los pedidos DEL DIA). Un pedido sin
+         * confirmar de hoy estaba en las dos y se contaba y se listaba dos veces. Se corrige por
+         * construccion y no deduplicando por id: `order` salio del arranque (ver call_methods.js),
+         * asi que `order.models` ya no tiene los pedidos del dia al iniciar, y de todas formas
+         * `unconfirmed_models` los incluye a todos -- es el unico endpoint que trae los sin
+         * confirmar de cualquier fecha.
+         *
+         * Ver prompts/hallazgos/20260811-arranque-baja-pedidos-del-dia-y-la-alerta-los-duplica.json
+         *
+         * @returns {Array}
+         */
         unconfirmed_orders() {
             if (this.has_online) {
-                let unconfirmed_orders_history = this.unconfirmed_orders_history.filter(order => {
+                return this.unconfirmed_orders_history.filter(order => {
                     return order.order_status.name == 'Sin confirmar' && order.buyer
                 })
-                let unconfirmed_orders = this.orders.filter(order => {
-                    return order.order_status.name == 'Sin confirmar' && order.buyer
-                })
-                return unconfirmed_orders_history.concat(unconfirmed_orders)
             }
             return []
         },

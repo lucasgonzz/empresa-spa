@@ -135,6 +135,50 @@
 			</p>
 		</div>
 
+		<!--
+			Columnas de precio que no se aplicaron (misión 44): el artículo ya se maneja por
+			la otra, así que la del Excel se salteó. Informativo, no un error: la fila se
+			procesó bien y por eso tampoco suma a conflicts_count.
+		-->
+		<div
+		v-if="hay_columnas_de_precio_ignoradas"
+		class="article-import-result-modal__skipped-prices m-t-15">
+			<p class="article-import-result-modal__skipped-prices-title">
+				Columnas de precio que no se aplicaron
+			</p>
+			<p
+			v-if="precios_manuales_ignorados > 0"
+			class="article-import-result-modal__skipped-prices-text">
+				En {{ precios_manuales_ignorados }} artículo{{ precios_manuales_ignorados > 1 ? 's' : '' }} no se aplicó el precio del Excel porque el artículo se maneja por margen de ganancia. Para fijarles el precio a mano, primero hay que sacarles el margen desde la ficha del artículo.
+			</p>
+			<p
+			v-if="margenes_ignorados > 0"
+			class="article-import-result-modal__skipped-prices-text">
+				En {{ margenes_ignorados }} artículo{{ margenes_ignorados > 1 ? 's' : '' }} no se aplicó el margen del Excel porque el artículo tiene un precio manual cargado. Para pasarlos a margen, primero hay que borrarles el precio manual desde la ficha del artículo.
+			</p>
+			<ul
+			v-if="columnas_de_precio_ignoradas_a_mostrar.length"
+			class="small article-import-result-modal__skipped-prices-list m-b-0">
+				<li
+				v-for="(item, index) in columnas_de_precio_ignoradas_a_mostrar"
+				:key="'skipped-price-' + index">
+					Fila {{ item.fila }}<span v-if="item.nombre_excel"> · {{ item.nombre_excel }}</span> — {{ campo_de_precio_label(item.campo) }}
+				</li>
+			</ul>
+			<!--
+				A diferencia de las sobrescrituras, acá NO se manda al historial de
+				importaciones: el botón que abre ese detalle está gateado en conflicts_count,
+				y este tipo no suma ahí a propósito, así que una importación cuyo único
+				"conflicto" sean columnas de precio salteadas no muestra el botón. Prometerlo
+				sería mandar al usuario a una pantalla donde no hay nada que abrir.
+			-->
+			<p
+			v-if="hay_mas_columnas_de_precio_ignoradas"
+			class="text-muted small m-t-5 m-b-0">
+				y {{ columnas_de_precio_ignoradas_count - columnas_de_precio_ignoradas_a_mostrar.length }} artículo{{ (columnas_de_precio_ignoradas_count - columnas_de_precio_ignoradas_a_mostrar.length) > 1 ? 's' : '' }} más.
+			</p>
+		</div>
+
 		<!-- Configuración utilizada en la importación -->
 		<div
 		v-if="show_import_options"
@@ -287,6 +331,24 @@ export default {
 			 * conteo porque ahora el backend devuelve como mucho 5. Null hasta que llega.
 			 */
 			sobrescrituras_total: null,
+
+			/*
+			 * Misión 44: filas donde una columna de precio del Excel no se aplicó porque el
+			 * artículo ya se maneja por la otra (import_conflicts tipo
+			 * 'columna_de_precio_ignorada'). Se piden acotadas al endpoint: un Excel de
+			 * 20.000 filas puede generar 20.000 de estas y el modal no las puede traer todas.
+			 */
+			columnas_de_precio_ignoradas: [],
+
+			/* Total real del tipo, según el agregado SQL del endpoint (no .length). */
+			columnas_de_precio_ignoradas_total: null,
+
+			/*
+			 * Desglose por campo, del `resumen` del endpoint (agregado SQL sobre el total
+			 * del historial). Hace falta separado porque cada campo tiene su propio mensaje
+			 * y su propio "qué hacer".
+			 */
+			columnas_de_precio_ignoradas_por_campo: {},
 		}
 	},
 
@@ -535,6 +597,52 @@ export default {
 		},
 
 		/*
+		 * Misión 44: cantidad de artículos a los que no se les aplicó el PRECIO del Excel
+		 * porque se manejan por margen de ganancia. Sale del `resumen` del endpoint
+		 * (agregado SQL), no de la lista traída, que viene cortada en 5.
+		 */
+		precios_manuales_ignorados() {
+			return this.columnas_de_precio_ignoradas_por_campo.price || 0
+		},
+
+		/*
+		 * Misión 44: cantidad de artículos a los que no se les aplicó el MARGEN del Excel
+		 * porque tienen un precio manual cargado.
+		 */
+		margenes_ignorados() {
+			return this.columnas_de_precio_ignoradas_por_campo.percentage_gain || 0
+		},
+
+		/*
+		 * Total de columnas de precio salteadas: el total real del endpoint si llegó, y si
+		 * no la suma del desglose por campo. Nunca la longitud de la lista.
+		 */
+		columnas_de_precio_ignoradas_count() {
+			if (typeof this.columnas_de_precio_ignoradas_total === 'number') {
+				return this.columnas_de_precio_ignoradas_total
+			}
+
+			return this.precios_manuales_ignorados + this.margenes_ignorados
+		},
+
+		/*
+		 * True si hay algo que mostrar en la sección. Se mira el conteo y no la lista: los
+		 * dos mensajes con los totales valen aunque la lista de ejemplo venga vacía.
+		 */
+		hay_columnas_de_precio_ignoradas() {
+			return this.columnas_de_precio_ignoradas_count > 0
+		},
+
+		/* Primeras 5 filas como ejemplo; el resto queda resumido. */
+		columnas_de_precio_ignoradas_a_mostrar() {
+			return this.columnas_de_precio_ignoradas.slice(0, 5)
+		},
+
+		hay_mas_columnas_de_precio_ignoradas() {
+			return this.columnas_de_precio_ignoradas_count > this.columnas_de_precio_ignoradas_a_mostrar.length
+		},
+
+		/*
 		 * Prompt 05 (grupo 291): true si el endpoint acotado de artículos con código
 		 * repetido devolvió menos artículos que el total real, para avisar que la lista
 		 * está truncada.
@@ -599,6 +707,9 @@ export default {
 		on_modal_show() {
 			/* Prompt 06 (grupo 265): pedir las sobrescrituras si import_stats no las trae ya. */
 			this.fetch_sobrescrituras()
+
+			/* Misión 44: columnas de precio que no se aplicaron. */
+			this.fetch_columnas_de_precio_ignoradas()
 		},
 
 		on_modal_hide() {
@@ -610,6 +721,9 @@ export default {
 			this.repeated_code_total = null
 			this.sobrescrituras = []
 			this.sobrescrituras_total = null
+			this.columnas_de_precio_ignoradas = []
+			this.columnas_de_precio_ignoradas_total = null
+			this.columnas_de_precio_ignoradas_por_campo = {}
 		},
 
 		/*
@@ -693,6 +807,66 @@ export default {
 			.catch(() => {
 				/* Silencioso: es informativo, no bloquea nada del resultado de la importación. */
 			})
+		},
+
+		/*
+		 * Misión 44: trae las columnas de precio que la importación salteó
+		 * (import_conflicts tipo 'columna_de_precio_ignorada').
+		 *
+		 * Se pide con limit=5 y el conteo sale del `resumen` del backend (agregado SQL
+		 * agrupado por tipo y campo), no de la longitud de la lista: un Excel de 20.000
+		 * filas puede generar un conflicto por fila y el modal solo muestra 5 ejemplos.
+		 * El desglose por campo es lo que decide cuál de los dos mensajes se muestra.
+		 */
+		fetch_columnas_de_precio_ignoradas() {
+			if (!this.is_success) {
+				return
+			}
+
+			let import_history_id = (this.import_stats || {}).import_history_id
+
+			if (!import_history_id) {
+				return
+			}
+
+			this.$api.get('import-history/' + import_history_id + '/conflicts?tipo=columna_de_precio_ignorada&limit=5')
+			.then(res => {
+				this.columnas_de_precio_ignoradas = res.data.conflicts || []
+
+				this.columnas_de_precio_ignoradas_total = typeof res.data.total === 'number'
+					? res.data.total
+					: this.columnas_de_precio_ignoradas.length
+
+				let por_campo = {}
+
+				let resumen = res.data.resumen || []
+
+				resumen.forEach(function(item) {
+					if (item.tipo === 'columna_de_precio_ignorada') {
+						por_campo[item.campo] = (por_campo[item.campo] || 0) + Number(item.total || 0)
+					}
+				})
+
+				this.columnas_de_precio_ignoradas_por_campo = por_campo
+			})
+			.catch(() => {
+				/* Silencioso: es informativo, no bloquea nada del resultado de la importación. */
+			})
+		},
+
+		/*
+		 * Misión 44: nombre visible de la columna salteada.
+		 */
+		campo_de_precio_label(campo) {
+			if (campo === 'price') {
+				return 'no se aplicó el precio del Excel'
+			}
+
+			if (campo === 'percentage_gain') {
+				return 'no se aplicó el margen del Excel'
+			}
+
+			return campo
 		},
 
 		/*
@@ -936,6 +1110,34 @@ export default {
 	margin: 0 0 8px
 
 .article-import-result-modal__overwrites-list
+	list-style: none
+	padding: 0
+	margin: 0
+	color: #495057
+
+	li
+		padding: 3px 0
+
+// Columnas de precio que no se aplicaron (misión 44): mismo tono neutro que las
+// sobrescrituras — es información, no un error.
+.article-import-result-modal__skipped-prices
+	background: #f8f9fb
+	border: 1px solid rgba(0, 0, 0, 0.06)
+	border-radius: 12px
+	padding: 14px 16px
+
+.article-import-result-modal__skipped-prices-title
+	font-size: 14px
+	font-weight: 700
+	color: #343a40
+	margin: 0 0 8px
+
+.article-import-result-modal__skipped-prices-text
+	font-size: 13px
+	color: #495057
+	margin: 0 0 8px
+
+.article-import-result-modal__skipped-prices-list
 	list-style: none
 	padding: 0
 	margin: 0

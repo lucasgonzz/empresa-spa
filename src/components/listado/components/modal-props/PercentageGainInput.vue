@@ -27,13 +27,22 @@
 	</div>
 </template>
 <script>
+import { usa_precio_manual } from '@/utils/criterio_de_precio'
+
 export default {
 	computed: {
 		article() {
 			return this.$store.state.article.model
 		},
+		/*
+		 * Mision 44: exige precio manual > 0, con el mismo criterio que el back
+		 * (utils/criterio_de_precio.js es el espejo de CriterioDePrecioHelper.php).
+		 * Antes bastaba con que price no fuera null ni cadena vacia, asi que un precio
+		 * guardado en 0 bloqueaba el margen de ganancia sin que el back considerara que
+		 * ese articulo tuviera precio manual.
+		 */
 		disabled() {
-			return this.article && typeof this.article.price != 'undefined' && this.article.price !== null && this.article.price != ''
+			return usa_precio_manual(this.article)
 		},
 		/**
 		 * Margen que implica el precio cargado a mano, derivado en vivo de articles.base_margen
@@ -58,7 +67,7 @@ export default {
 			}
 
 			return Math.round((precio - base) / base * 100 * 100) / 100
-		},
+		}
 	},
 	methods: {
 		info() {

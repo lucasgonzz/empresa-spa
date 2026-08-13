@@ -30,7 +30,7 @@ export default {
 
 			// this.get_ultimos_articulos_actualizados()
 
-			// Llamo cada 20 segundos a peidos online
+			// Red de seguridad de los pedidos online + polling de mensajes de compradores
 			this.escuchar_orders_y_messages()
 
 		this.get_inventory_performance()
@@ -95,13 +95,28 @@ export default {
 		escuchar_orders_y_messages() {
 			if (this.owner.online) {
 
+				/*
+					🔴 ESTE INTERVALO NO SE BORRA, aunque el aviso de pedido nuevo ya llegue por
+					broadcast (mision 43, 12/8/2026; el canal se escucha en mixins/broadcast.js).
+
+					Bajo de 20 segundos a 5 minutos porque el broadcast hace el trabajo en tiempo
+					real. Sigue existiendo porque es la red de seguridad: si Pusher se cae, si las
+					credenciales de tienda-api y empresa-spa dejan de apuntar a la misma app, o si
+					la pestana pierde la conexion y el navegador no la recupera, el comercio deja
+					de ver los pedidos nuevos y NO SE ENTERA -- no hay error en ningun lado. Un
+					pedido de la tienda que nadie mira es plata perdida.
+
+					Cinco minutos es el peor caso de demora si el broadcast no llega; con el
+					broadcast andando, el aviso es inmediato.
+				*/
 				setInterval(() => {
 					if (this.$route.name != 'online') {
-						
+
 						this.$store.dispatch('order/getUnconfirmedModels')
 					}
-				}, 20000)
+				}, 300000)
 
+				// El polling de mensajes de compradores es otro asunto y queda como estaba.
 				setInterval(() => {
 					if (this.$route.name != 'online') {
 						
