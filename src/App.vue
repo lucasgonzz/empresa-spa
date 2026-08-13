@@ -15,12 +15,15 @@
         <synced-version-notifications></synced-version-notifications>
 
         <!--
-            Panel de tutoriales de la demo (misión 51). El v-if es la guarda que protege a los
-            ~40 clientes reales: `es_demo` solo lo prende DemoIngreso.vue, así que para un
-            cliente el componente NO se monta, su chunk no se descarga y no se hace ninguna
-            llamada. Es v-if y no v-show a propósito.
+            Panel de tutoriales de la demo (misión 51, corregido por la 52). El v-if es la guarda
+            que protege a los ~40 clientes reales: para un cliente el componente NO se monta, su
+            chunk no se descarga y no se hace ninguna llamada. Es v-if y no v-show a propósito.
+
+            El getter mira dos fuentes: el marcador en memoria que prende DemoIngreso.vue, y
+            `user.es_sesion_demo`, que viaja en la respuesta de `auth/me` que este arranque ya
+            paga. La segunda es la que hace que el panel vuelva después de un F5.
         -->
-        <panel-demo v-if="$store.state.demo.es_demo"></panel-demo>
+        <panel-demo v-if="$store.getters['demo/activa']"></panel-demo>
 
         <b-container
         fluid>

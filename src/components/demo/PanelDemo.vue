@@ -170,7 +170,6 @@ export default {
 			clip_abierto_id: null,
 			// El video crece mientras reproduce y vuelve al pausar. No es fullscreen del navegador.
 			video_grande: false,
-			notas: '',
 			// Handle del debounce de las notas. 3 segundos, por la pieza 3.
 			temporizador_nota: null,
 			// Secciones que ya reportaron `seccion.completada`, para no repetirlo.
@@ -186,6 +185,19 @@ export default {
 		},
 		clips_vistos() {
 			return this.$store.state.demo.clips_vistos
+		},
+		/**
+		 * Las notas viven en el store y no en `data()` porque tienen que sobrevivir al F5
+		 * (misión 52): el store las siembra con el texto del último `nota.escrita` al cargar
+		 * el plan. El `set` no despacha nada — el reporte sigue yendo por el debounce.
+		 */
+		notas: {
+			get() {
+				return this.$store.state.demo.notas
+			},
+			set(texto) {
+				this.$store.commit('demo/setNotas', texto)
+			},
 		},
 	},
 	mounted() {

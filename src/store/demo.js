@@ -27,16 +27,51 @@ export default {
 		secciones: [],
 		/** Mientras se pide el plan. El panel no se dibuja hasta que hay secciones. */
 		cargando: false,
-		/** Ids de los clips cuyo video llegó al final en esta sesión. */
+		/**
+		 * Ids de los clips cuyo video llegó al final. Se siembra desde el `visto` que devuelve
+		 * el plan —o sea desde los eventos ya persistidos— y después se le suman los de esta
+		 * sesión. Por eso sobrevive al F5 (misión 52).
+		 */
 		clips_vistos: [],
+		/** Texto de las notas, restaurado del último `nota.escrita` (misión 52). */
+		notas: '',
 	},
 	getters: {
 		/**
+		 * ¿Esta sesión es una demo?
+		 *
+		 * Dos fuentes, y la segunda es la que hace que el panel sobreviva al F5 (misión 52):
+		 *
+		 * 1. `es_demo` en memoria, que prende `DemoIngreso.vue` al canjear el token. Cubre el
+		 *    primer montaje, cuando `auth/me` todavía no volvió.
+		 * 2. `user.es_sesion_demo`, que viaja en la respuesta de `GET /api/user` — la llamada
+		 *    que el arranque **ya paga** para todos los usuarios. Después de recargar, la
+		 *    memoria está vacía pero la cookie de sesión sigue, así que esta es la que manda.
+		 *
+		 * Para un cliente real las dos dan false, así que el panel no se monta y no se pide
+		 * ningún plan: cero requests y cero queries agregadas al arranque.
+		 *
 		 * @param {Object} state
+		 * @param {Object} getters
+		 * @param {Object} rootState
+		 * @returns {Boolean}
+		 */
+		activa(state, getters, rootState) {
+			if (state.es_demo) {
+				return true
+			}
+
+			const user = rootState.auth ? rootState.auth.user : null
+
+			return Boolean(user && user.es_sesion_demo)
+		},
+		/**
+		 * @param {Object} state
+		 * @param {Object} getters
 		 * @returns {Boolean} Si hay algo que mostrar en el panel.
 		 */
-		hay_plan(state) {
-			return state.es_demo && state.secciones.length > 0
+		hay_plan(state, getters) {
+			return getters.activa && state.secciones.length > 0
 		},
 	},
 	mutations: {
@@ -57,6 +92,9 @@ export default {
 				state.clips_vistos.push(clip_id)
 			}
 		},
+		setNotas(state, texto) {
+			state.notas = typeof texto === 'string' ? texto : ''
+		},
 	},
 	actions: {
 		/**
@@ -69,8 +107,8 @@ export default {
 		 * @param {Object} context
 		 * @returns {Promise}
 		 */
-		cargar_plan({ commit, state }) {
-			if (!state.es_demo) {
+		cargar_plan({ commit, getters }) {
+			if (!getters.activa) {
 				return Promise.resolve()
 			}
 
@@ -84,6 +122,26 @@ export default {
 						return
 					}
 					commit('setSecciones', response.data.secciones)
+
+					/**
+					 * Estado restaurado (misión 52). Sale de los eventos que la instancia ya
+					 * tenía persistidos, así que después de un F5 el lead ve marcados los clips
+					 * que miró y "Probar" desbloqueado en ellos, en vez de que se le exija
+					 * volver a mirarlos enteros.
+					 *
+					 * Se siembra por mutación, sin despachar `reportar`: montar el panel no es
+					 * abrir un clip. Si restaurar emitiera eventos, el registro del admin se
+					 * llenaría de aperturas fantasma cada vez que el lead recarga.
+					 */
+					response.data.secciones.forEach(function (seccion) {
+						(seccion.clips || []).forEach(function (clip) {
+							if (clip.visto) {
+								commit('agregarClipVisto', clip.id)
+							}
+						})
+					})
+
+					commit('setNotas', response.data.notas || '')
 				})
 				.catch(function (error) {
 					// Que no haya plan no puede romperle la demo al lead: entra igual, sin panel.
@@ -105,8 +163,8 @@ export default {
 		 * @param {Object} payload {nombre, clip_id, datos}
 		 * @returns {Promise}
 		 */
-		reportar({ state }, payload) {
-			if (!state.es_demo) {
+		reportar({ getters }, payload) {
+			if (!getters.activa) {
 				return Promise.resolve()
 			}
 
