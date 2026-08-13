@@ -197,6 +197,20 @@ export function table_column_preference_columns_from_store(store_context, model_
 }
 
 /**
+ * Id del modal "Columnas a mostrar" de una relación belongs_to_many.
+ *
+ * Vive acá y no en el componente porque hay dos lugares que lo necesitan: BelongsToManyTable, que
+ * monta el modal, y ModelForm, que dibuja el botón que lo abre al lado del buscador de la relación.
+ *
+ * @param {string} parent_model_name Modelo padre (ej: 'provider_order').
+ * @param {string} prop_key Clave de la relación (ej: 'articles').
+ * @returns {string}
+ */
+export function belongs_to_many_columns_modal_id(parent_model_name, prop_key) {
+	return `btm-cols-${parent_model_name}-${prop_key}`
+}
+
+/**
  * Propiedades base del modelo aptas para preferencias de tabla.
  *
  * @param {Object} store

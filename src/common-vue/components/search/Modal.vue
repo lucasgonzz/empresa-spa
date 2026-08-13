@@ -253,6 +253,26 @@ export default {
 			type: String,
 			default: null,
 		},
+		/**
+		 * Ambito de la preferencia de columnas de los resultados (13/8/2026).
+		 *
+		 * La preferencia se guarda como `table-column-preference/<modelo>/<tipo>`. Con el tipo fijo
+		 * en 'search', TODOS los buscadores del mismo modelo comparten una sola configuracion: el de
+		 * Vender, el de Compras y el de movimientos de deposito escriben y leen la misma fila. Eso
+		 * funcionaba mientras cada uno solo podia guardar sus propias columnas declaradas, pero desde
+		 * que el selector ofrece todas las propiedades del modelo, lo que uno guarda le aparece al
+		 * otro.
+		 *
+		 * Cuando el consumidor declara sus propias `props_to_show` --o sea, cuando su conjunto de
+		 * columnas NO es el del modelo-- pasa un ambito y la preferencia queda separada, con el mismo
+		 * criterio que ya usa la tabla de la relacion (`btm_<modelo padre>_<relacion>`). Los
+		 * buscadores que usan las columnas del modelo no pasan nada y siguen compartiendo 'search',
+		 * que es lo correcto: tienen todos el mismo conjunto.
+		 */
+		preference_scope: {
+			type: String,
+			default: null,
+		},
 	},
 	data() {
 		return {
@@ -310,6 +330,9 @@ export default {
 		model_name() {
 			this.loadSearchColumnsPreference()
 		},
+		preference_scope() {
+			this.loadSearchColumnsPreference()
+		},
 		query_value() {
 			// El padre ya tiene el valor: se suelta la copia local para no quedar pisando una
 			// limpieza hecha desde afuera (ej. clear_query).
@@ -333,6 +356,18 @@ export default {
 		},
 		modal_id() {
 			return this._id+'-search-modal'
+		},
+		/**
+		 * Tipo de preferencia con el que se guardan y leen las columnas de los resultados.
+		 * Ver la prop preference_scope.
+		 *
+		 * @returns {String}
+		 */
+		search_preference_type() {
+			if (this.preference_scope) {
+				return 'search_' + this.preference_scope
+			}
+			return 'search'
 		},
 		title() {
 			if (this.prop) {
@@ -447,12 +482,73 @@ export default {
 			this.foco_en_input()
 		},
 		getModelSearchProperties() {
-			let props = this.propsToShowInSearchModal(this.model_name)
-			const omit = this.search_modal_omit_property_keys || []
-			if (omit.length) {
-				props = props.filter(prop => prop && prop.key && !omit.includes(prop.key))
+			return this.propsToShowInSearchModal(this.model_name)
+		},
+		/**
+		 * Propiedades que el consumidor (o el modelo) declara para la tabla de resultados. Son las
+		 * que arrancan visibles cuando el usuario todavia no configuro nada, y mandan sobre la
+		 * definicion del modelo porque pueden traer texto, function o ancho propios.
+		 *
+		 * @returns {Array}
+		 */
+		getDeclaredSearchProperties() {
+			if (this.props_to_show) {
+				return this.props_to_show
 			}
-			return props
+			return this.getModelSearchProperties()
+		},
+		/**
+		 * Universo completo de propiedades del modelo, el mismo que ofrece el listado.
+		 *
+		 * Existe porque hasta el 13/8/2026 la configuracion de "Propiedades en resultados de
+		 * busqueda" solo listaba las props declaradas en `belongs_to_many.props_to_show` del modelo
+		 * padre (en Compras eran 5), y el usuario no tenia forma de mostrar ninguna otra propiedad
+		 * del articulo. Lo declarado ahora define la visibilidad por defecto, no el universo.
+		 *
+		 * Se descartan las props que no son columnas: separadores de grupo, botones y relaciones.
+		 *
+		 * @returns {Array}
+		 */
+		getAllModelProperties() {
+			let props
+			try {
+				props = this.modelPropertiesFromName(this.model_name)
+			} catch (error) {
+				return []
+			}
+			props = props.filter(prop => {
+				return prop
+					&& typeof prop.group_title == 'undefined'
+					&& typeof prop.no_mostrar_nunca == 'undefined'
+					&& typeof prop.key != 'undefined'
+					&& prop.key !== null
+					&& prop.key !== ''
+					&& !prop.button
+					&& prop.type != 'button'
+					// Las relaciones se declaran con las claves has_many / belongs_to_many, NO con
+					// type: ningun modelo del sistema usa type: 'has_many'. Filtrar por type era
+					// filtrar nada, y el selector terminaba ofreciendo columnas como "Descripciones"
+					// u "Ofertas para VENDER", que el buscador ni siquiera trae.
+					&& !prop.has_many
+					&& !prop.belongs_to_many
+			})
+			return this.check_extencions(props)
+		},
+		/**
+		 * Visibilidad por defecto de una propiedad en los resultados de busqueda.
+		 *
+		 * `default_hidden_in_search` lo marca getBaseSearchProperties() sobre las props que entran
+		 * solo para poder elegirse: estan disponibles en la configuracion, pero apagadas, para que
+		 * la tabla de resultados siga viendose igual que antes hasta que el usuario decida otra cosa.
+		 *
+		 * @param {Object} prop
+		 * @returns {Boolean}
+		 */
+		defaultVisibleInSearch(prop) {
+			if (prop.default_hidden_in_search) {
+				return false
+			}
+			return typeof prop.not_show == 'undefined' ? true : !prop.not_show
 		},
 		appendSearchModalExtraProperties(base_properties) {
 			const merged = (base_properties || []).filter(prop => prop && prop.key)
@@ -466,7 +562,9 @@ export default {
 				}
 				if (typeof key_to_index[extra.key] != 'undefined') {
 					const index = key_to_index[extra.key]
-					merged[index] = { ...merged[index], ...extra }
+					// Una prop declarada como extra por el consumidor es siempre una prop pedida:
+					// aunque el modelo la haya aportado apagada, aca se prende.
+					merged[index] = { ...merged[index], ...extra, default_hidden_in_search: false }
 				} else {
 					key_to_index[extra.key] = merged.length
 					merged.push(extra)
@@ -475,26 +573,56 @@ export default {
 			return merged
 		},
 		getBaseSearchProperties() {
-			let base
-			if (this.props_to_show) {
-				base = this.props_to_show
-			} else {
-				base = this.getModelSearchProperties()
-			}
-			return this.appendSearchModalExtraProperties(base)
+			/* Primero lo declarado, en su orden: es lo que se ve por defecto en los resultados. */
+			const merged = []
+			const key_to_index = {}
+			;(this.getDeclaredSearchProperties() || []).forEach(prop => {
+				if (!prop || !prop.key || typeof key_to_index[prop.key] != 'undefined') {
+					return
+				}
+				key_to_index[prop.key] = merged.length
+				merged.push(prop)
+			})
+
+			/*
+			 * Despues el resto del modelo, disponible para elegir pero apagado.
+			 *
+			 * Si la propiedad ya venia declarada NO se toca: la declaracion del modelo padre puede
+			 * omitir a proposito cosas que si estan en el modelo relacionado (una `function` de
+			 * display, un `not_show`, un `type` distinto), y mezclarlas cambiaria como se dibuja
+			 * una columna que hoy se ve bien.
+			 */
+			this.getAllModelProperties().forEach(model_prop => {
+				if (typeof key_to_index[model_prop.key] != 'undefined') {
+					return
+				}
+				key_to_index[model_prop.key] = merged.length
+				merged.push({ ...model_prop, default_hidden_in_search: true })
+			})
+
+			const omit = this.search_modal_omit_property_keys || []
+			const filtered = omit.length
+				? merged.filter(prop => prop && prop.key && !omit.includes(prop.key))
+				: merged
+
+			return this.appendSearchModalExtraProperties(filtered)
 		},
 		openColumnsConfig() {
 			this.buildSearchConfigRows()
 			this.$bvModal.show(this.modal_id + '-columns-config')
 		},
+		/**
+		 * Ancho por defecto de una columna de resultados.
+		 *
+		 * Delega en el helper compartido: antes este metodo repetia la cuenta pero sin el caso de
+		 * las columnas angostas (id, num), asi que el selector mostraba 100 px y la tabla dibujaba
+		 * 200 para la misma columna, y el primer "Listo" guardaba el 100 que el usuario nunca eligio.
+		 *
+		 * @param {Object} prop
+		 * @returns {Number}
+		 */
 		search_modal_default_width(prop) {
-			if (prop.table_width && Number(prop.table_width) > 0) {
-				return Number(prop.table_width)
-			}
-			if (prop.table_width === 'lg') {
-				return 300
-			}
-			return 200
+			return default_column_width_for_property(prop)
 		},
 		buildSearchConfigRows() {
 			const base_properties = this.getBaseSearchProperties()
@@ -502,7 +630,7 @@ export default {
 			const defaults = base_properties.map((prop, index) => ({
 				key: prop.key,
 				label: this.propText(prop),
-				visible: typeof prop.not_show == 'undefined' ? true : !prop.not_show,
+				visible: this.defaultVisibleInSearch(prop),
 				order: index,
 				width: default_column_width_for_property(prop),
 				wrap_content: !!prop.table_wrap_content,
@@ -555,7 +683,7 @@ export default {
 				.map((prop, index) => ({
 					key: prop.key,
 					label: this.propText(prop),
-					visible: typeof prop.not_show == 'undefined' ? true : !prop.not_show,
+					visible: this.defaultVisibleInSearch(prop),
 					order: index,
 					width: this.search_modal_default_width(prop),
 					wrap_content: !!prop.table_wrap_content,
@@ -580,13 +708,13 @@ export default {
 				.filter(Boolean)
 		},
 		async loadSearchColumnsPreference() {
-			const store_rows = this.tableColumnPreferenceColumnsFromStore(this.model_name, 'search')
+			const store_rows = this.tableColumnPreferenceColumnsFromStore(this.model_name, this.search_preference_type)
 			if (store_rows && store_rows.length) {
 				this.search_preference_columns = store_rows
 				return
 			}
 			try {
-				const res = await this.$api.get('table-column-preference/' + this.model_name + '/search')
+				const res = await this.$api.get('table-column-preference/' + this.model_name + '/' + this.search_preference_type)
 				if (res.data && res.data.model && Array.isArray(res.data.model.columns)) {
 					this.search_preference_columns = res.data.model.columns
 				} else {
@@ -596,9 +724,44 @@ export default {
 				this.search_preference_columns = []
 			}
 		},
+		/**
+		 * Claves que esta preferencia tiene derecho a guardar.
+		 *
+		 * La preferencia de busqueda se guarda por MODELO (`table-column-preference/article/search`),
+		 * asi que la comparten todos los buscadores del mismo modelo: el de Compras, el de Vender, el
+		 * de movimientos de deposito. Desde que el selector ofrece TODAS las propiedades del modelo,
+		 * guardar la lista entera significaria escribir `visible: false` para las ~75 propiedades que
+		 * este consumidor no declara, y esos false apagarian columnas en los otros buscadores, que si
+		 * las declaran. Por eso solo se persiste lo que este consumidor declara, lo que el usuario
+		 * dejo prendido, y lo que ya estaba guardado de antes: el resto simplemente no existe en la
+		 * preferencia y cada buscador le sigue aplicando su propio default.
+		 *
+		 * @returns {Object} Mapa key -> true.
+		 */
+		savableSearchPreferenceKeys() {
+			const keys = {}
+			;(this.getDeclaredSearchProperties() || []).forEach(prop => {
+				if (prop && prop.key) {
+					keys[prop.key] = true
+				}
+			})
+			;(this.search_modal_extra_properties || []).forEach(prop => {
+				if (prop && prop.key) {
+					keys[prop.key] = true
+				}
+			})
+			;(this.search_preference_columns || []).forEach(row => {
+				if (row && row.key) {
+					keys[row.key] = true
+				}
+			})
+			return keys
+		},
 		async saveSearchColumnsPreference() {
+			const savable_keys = this.savableSearchPreferenceKeys()
 			const rows_to_save = this.search_config_rows
 				.filter(row => row.key)
+				.filter(row => row.visible || savable_keys[row.key])
 				.map((row, index) => ({
 					key: row.key,
 					visible: !!row.visible,
@@ -607,7 +770,7 @@ export default {
 					wrap_content: !!row.wrap_content,
 				}))
 			try {
-				await this.$api.put('table-column-preference/' + this.model_name + '/search', {
+				await this.$api.put('table-column-preference/' + this.model_name + '/' + this.search_preference_type, {
 					columns: rows_to_save,
 				})
 				this.search_preference_columns = rows_to_save

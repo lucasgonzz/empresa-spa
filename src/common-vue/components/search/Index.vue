@@ -33,6 +33,7 @@
 		:tax_id_afip_lookup_on_second_enter="tax_id_afip_lookup_on_second_enter"
 		:no_exist_message="no_exist_message"
 		:contexto="contexto"
+		:preference_scope="preference_scope"
 		@callSearchModal="callSearchModal"
 		@setQuery="setQuery"
 		@setNotShowModel="setNotShowModel"
@@ -78,34 +79,16 @@
 						</div>
 					</div>
 				</div>
-				<div
-				v-if="prop && prop.search_on_models_by"
-				class="cont-search-on-models">
-					<div
-					class="search-field"
-					:class="is_disabled ? 'search-field--disabled' : ''">
-						<input
-						class="input-search search-field__input form-control"
-						type="text"
-						autocomplete="off"
-						@keyup.enter="searchOnModels"
-						@keyup="limpiar_busqueda_por_borrar"
-						v-model="search_query"
-						:placeholder="_placeholder_search">
+				<!--
+					Lugar a la derecha del input que abre el modal de busqueda.
 
-						<div
-						v-if="on_models_searched"
-						class="search-field__icon"
-						@click="resetModels">
-							<i class="icon-redo"></i>
-						</div>
-						<div
-						v-else
-						class="search-field__icon">
-							<i class="icon-search"></i>
-						</div>
-					</div>
-				</div>
+					Hasta el 13/8/2026 aca vivia un segundo input, "Buscar dentro de <modelos>", que
+					filtraba en memoria los modelos ya cargados en la relacion. Lucas lo saco: el
+					espacio pasa a ocuparlo el boton que elige que columnas se ven en la tabla de la
+					relacion, que es la accion que el usuario busca en ese lugar. Quien llene este
+					slot decide que va: hoy lo llena ModelForm con ese boton.
+				-->
+				<slot name="input_right"></slot>
 			</div>
 		</div>
 		<selected-info
@@ -203,6 +186,11 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+		/**
+		 * Nombre del modelo padre. Quedo declarada despues de sacar el input de "buscar dentro de"
+		 * (13/8/2026) porque varios consumidores la siguen pasando; sin declararla, Vue la dejaria
+		 * caer como atributo suelto en el div raiz.
+		 */
 		model_name_for_search_on_models: {
 			type: String,
 			default: null,
@@ -285,11 +273,18 @@ export default {
 			type: String,
 			default: null,
 		},
+		/**
+		 * Ambito de la preferencia de columnas de los resultados. Se reenvia tal cual al modal;
+		 * la explicacion larga esta en search/Modal.vue.
+		 */
+		preference_scope: {
+			type: String,
+			default: null,
+		},
 	},
 	data() {
 		return {
 			query: '',
-			search_query: '',
 			models_to_search: [],
 			preview_results: [],
 			selected_model: null,
@@ -310,9 +305,6 @@ export default {
 			}
 			return 'Agregar '+this.singular(this.model_name)
 		},
-		_placeholder_search() {
-			return 'Buscar dentro de '+this.plural(this.model_name)
-		},
 		is_disabled() {
 			if (this.prop && this.prop.only_show) {
 				return true 
@@ -322,16 +314,6 @@ export default {
 			}
 			return false
 		},
-		on_models_searched() {
-			let relations_filtered = this.$store.state[this.model_name_for_search_on_models].relations_filtered
-			if (typeof relations_filtered != 'undefined') {
-				let finded = relations_filtered.find(relation => {
-					return relation == this.prop.key
-				})
-				return typeof finded != 'undefined'
-			}			
-			return false
-		}
 	},
 	watch: {
 		model() {
@@ -356,28 +338,6 @@ export default {
 		 */
 		onRequestClientAfipLookupFromModal(payload) {
 			this.$emit('requestClientAfipLookup', payload)
-		},
-		searchOnModels() {
-			if (this.prop && this.search_query.length > 1) {
-				this.resetModels(false)
-				let results = this.getOriginalModel(this.model_name_for_search_on_models, this.model)[this.prop.key].filter(model => {
-					return model[this.prop.search_on_models_by].toLowerCase().includes(this.search_query.toLowerCase())
-				})
-				this.$set(this.model, this.prop.key, results)
-				this.setModel(this.model, this.model_name_for_search_on_models, [], false)
-				this.$store.commit(this.model_name_for_search_on_models+'/addRelationFiltered', this.prop.key)
-			}
-		},
-		limpiar_busqueda_por_borrar() {
-			if (this.prop && this.search_query.length == 0) {
-				this.resetModels()
-			}
-		},
-		resetModels(clear_query = true) {
-			this.removeRelationFiltered(this.model_name_for_search_on_models, this.model, this.prop.key)
-			if (clear_query) {
-				this.search_query = ''
-			}
 		},
 		updateSearch() {
 			this.setSelectedModelProp()
@@ -573,6 +533,7 @@ export default {
 	// display: flex
 .cont-search-input-btn
 	display: flex
+	align-items: center
 	width: 100%
 // Los colores van por token con el literal viejo de fallback, adentro del componente: el <style>
 // del componente le gana por especificidad a las reglas del tema global, asi que una regla en
@@ -599,12 +560,10 @@ export default {
 		border: 1px solid var(--color-border, #ced4da)
 		border-radius: 0.25rem
 
-.cont-search-on-models
-	width: 40%
-	position: relative
-	display: flex
-	flex-direction: row
-	margin-left: 15px
+// Separacion entre el campo de busqueda y lo que se pone a su derecha (hoy, el boton de columnas
+// de la relacion). Antes este margen lo traia el input de "buscar dentro de", que ya no existe.
+.cont-search-input-btn > *:not(:first-child)
+	margin-left: 10px
 
 // El recuadro de la lupa: era el bloque blanco pegado al input en modo oscuro.
 .icon
@@ -636,41 +595,49 @@ export default {
 // Antes esto era un pill redondeado copiado del buscador general; se cambio el 5/8/2026 porque
 // el campo tiene que ser indistinguible del resto de los inputs del formulario, no un control
 // aparte. El pill sigue vivo donde tiene sentido: .buscador-general__pill, que es otro componente.
+// Rediseñado el 13/8/2026 junto con los campos del formulario del modal (ver el bloque de
+// .form-control en model/ModelForm.vue): borde de 1px, esquinas de 10px, la altura de los
+// controles del sistema y un anillo suave al enfocar, igual que el pill del buscador general.
+// Antes era un rectangulo de 2px que pasaba a 3px al enfocar (movia la fila un pixel) con un halo
+// azul de 8px y la sombra gris asimetrica que common-vue/sass/_inputs.sass le pone a todo input.
 .search-field
 	display: flex
 	align-items: center
 	width: 100%
-	background: #fff
-	border: 2px solid #ced4da
-	border-radius: 5px
-	box-shadow: rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px
+	min-height: var(--toolbar-control-h, 36px)
+	background: var(--bg-card, #fff)
+	border: 1px solid var(--color-border, #ced4da)
+	border-radius: 10px
+	box-shadow: none
 	transition: border-color 0.15s ease, box-shadow 0.15s ease
-	@if ($theme == 'dark')
-		background: #1d1d1d !important
-		border-color: #444
 
 	&:focus-within
-		border: 3px solid #007bff
-		box-shadow: 0 0 8px rgba(0, 123, 255, 0.8)
-		background-color: #f8fbff
+		border-color: var(--color-primary, #007bff)
+		box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15)
 
-	// Input plano: la tipografia, el padding y la preferencia .ui-small los hereda de
-	// .form-control (ver src/sass/_inputs.sass y src/sass/_ui_sizes.sass), no se copian a mano.
-	// Lo unico que se le saca es lo que ahora dibuja el contenedor.
-	.search-field__input
+	// Input plano: el contenedor dibuja el borde, el input solo escribe.
+	// El selector incluye .form-control a proposito: sin esa clase empata en especificidad con
+	// `.model-form .form-control` (el bloque de campos del formulario del modal) y quien gana
+	// depende del orden en que se carguen los chunks. Con ella, este bloque manda siempre.
+	.search-field__input.form-control
 		flex: 1 1 auto
 		min-width: 0
 		// height: auto y no el height de Bootstrap: .form-control trae
-		// height: calc(1.5em + .75rem + 2px), que ya incluye 2px de borde propio. Como aca el
-		// borde lo pone .search-field, ese height dejaria el campo 2px mas alto que el resto.
+		// height: calc(1.5em + .75rem + 2px), que ya incluye el borde propio. Como aca el borde lo
+		// pone .search-field, ese height dejaria el campo mas alto que el resto.
 		height: auto
+		min-height: 0
+		padding: 0.25rem 0.7rem
+		font-size: 0.95rem
+		line-height: 1.45
 		border: none
+		border-radius: 0
 		outline: none
 		background: transparent
 		box-shadow: none
 
-		// src/sass/_inputs.sass le pinta a todo input:focus un borde azul de 3px con halo. Sin
-		// apagarlo aca se verian DOS bordes azules, el del input adentro del del contenedor.
+		// src/sass/_inputs.sass le pinta a todo input:focus un borde azul con halo. Sin apagarlo
+		// aca se verian DOS bordes azules, el del input adentro del del contenedor.
 		&:focus
 			border: none
 			box-shadow: none
@@ -683,12 +650,13 @@ export default {
 		justify-content: center
 		flex: 0 0 auto
 		width: 34px
-		color: rgba(0, 0, 0, .5)
+		// Por token: el bloque @if ($theme == 'dark') que estaba aca nunca compila ($theme es
+		// siempre 'light' en _custom.scss), asi que en modo oscuro el icono quedaba gris oscuro
+		// sobre fondo oscuro.
+		color: var(--color-text-secondary, rgba(0, 0, 0, .5))
 		cursor: pointer
 		i
 			font-size: 1.1rem
-		@if ($theme == 'dark')
-			color: rgba(255, 255, 255, .7)
 
 	// Deshabilitado: gris el campo entero, como cualquier .form-control:disabled. Antes el gris
 	// se le ponia solo al icono y quedaba un cuadradito gris adentro de un campo blanco.

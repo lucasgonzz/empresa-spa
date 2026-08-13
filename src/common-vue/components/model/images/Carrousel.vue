@@ -1,5 +1,13 @@
 <template>
-<div>
+<!--
+	Campo de imagenes de un modelo (prop.type == 'images'), rediseñado el 13/8/2026.
+
+	Antes era una pila suelta: un texto azul gigante de "No hay imagenes" con un ojo tachado de 4em,
+	un grupo de tres botones soldados donde el engranaje de configuracion pesaba igual que la accion
+	principal, y el input de archivo colgando abajo. Ahora hay tres bloques con jerarquia: el visor
+	(carrusel o estado vacio), la fila de acciones y la zona de arrastre.
+-->
+<div class="images-field">
     <confirm
     text="la imagen"
     :actions="[model_name+'/deleteImageModel']"
@@ -7,100 +15,123 @@
     :model_name="model_name"
     toast="Imagen eliminada"></confirm>
 
-	<carousel
-	ref="carousel"
-	class="m-b-10 m-l-40 m-r-40"
-	v-if="model[prop.key].length"
-	navigationEnabled
-	navigationNextLabel="<i class='icon-right'></i>"
-	navigationPrevLabel="<i class='icon-left'></i>"
-	paginationColor="#A9A9A9"
-	:paginationPadding="5"
-	loop
-	:perPage="1"
-	:adjustableHeight="false">
-		<slide
-		v-for="(image, index) in model[prop.key]"
-		:data-index="index"
-		:key="image.id">
-			<vue-load-image>
-				<img
-				@load="onImageLoaded"
-				slot="image"
-				class="s-2 b-r-1" 
-				:src="image.hosting_url">
-				
-		        <b-spinner
-				slot="preloader"
-		        variant="success"></b-spinner>
-
-				<div slot="error">
-					Imagen no encontrada
-				</div>
-			</vue-load-image>
-			<b-button
-			class="btn-delete"
-			@click="setDelete(image)"
-			variant="danger">
-				Eliminar imagen
-			</b-button>
-		</slide>
-	</carousel>
-	<p 
-	v-else
-	class="text-with-icon">
-		<i class="icon-eye-slash"></i>
-		No hay imagenes
-	</p>
+	<!-- Visor: carrusel cuando ya hay imagenes cargadas -->
 	<div
-	class="cont-btn-input"
-	v-if="show_btn_google">
-		
-		<b-button-group
-		class="m-b-10">
-			<b-button
-			variant="primary"
-			@click="open_auto_timeout_config">
-				<i class="icon-configuration"></i>
-			</b-button>
-			<b-button
-		    variant="primary"
-		    @click="launchLuckyFlow">
-				<i class="icon-search"></i>
-				Automatica
-			</b-button>
-			<b-button
-			variant="outline-primary"
-			@click="searchImage">
-				<i class="icon-search"></i>
-				Manual
-			</b-button>
-		</b-button-group>
+	v-if="model[prop.key].length"
+	class="images-field__visor">
+		<carousel
+		ref="carousel"
+		navigationEnabled
+		navigationNextLabel="<i class='bi bi-chevron-right'></i>"
+		navigationPrevLabel="<i class='bi bi-chevron-left'></i>"
+		paginationColor="#c7c9cc"
+		paginationActiveColor="#007bff"
+		:paginationPadding="4"
+		:paginationSize="7"
+		loop
+		:perPage="1"
+		:adjustableHeight="false">
+			<slide
+			v-for="(image, index) in model[prop.key]"
+			:data-index="index"
+			:key="image.id">
+				<div class="images-field__slide">
+					<vue-load-image>
+						<img
+						@load="onImageLoaded"
+						slot="image"
+						class="images-field__img"
+						:src="image.hosting_url">
 
-		<b-form-file
-		:id="input_file_name"
-		class="file-reader-input-with-button"
-		browse-text="Buscar en pc"
-		v-model="file"
-		variant="primary"
-		:state="Boolean(file)"
-		@change="upload"
-		placeholder="Arrastre su imagen aquí..."
-		drop-placeholder="Solta la imagen aqui..."
-		></b-form-file>
+				        <b-spinner
+						slot="preloader"
+				        variant="primary"></b-spinner>
 
+						<div
+						slot="error"
+						class="images-field__error">
+							<i class="bi bi-image-alt"></i>
+							Imagen no encontrada
+						</div>
+					</vue-load-image>
+
+					<!--
+						Eliminar: boton redondo en la esquina de la imagen, no una barra roja tapando
+						el centro. Se ve siempre (semitransparente) para que no haya que descubrirlo
+						pasando el mouse, y se enciende al hover.
+					-->
+					<button
+					type="button"
+					class="images-field__eliminar"
+					title="Eliminar esta imagen"
+					@click="setDelete(image)">
+						<i class="bi bi-trash"></i>
+					</button>
+				</div>
+			</slide>
+		</carousel>
+
+		<p class="images-field__contador">
+			{{ model[prop.key].length }}
+			{{ model[prop.key].length == 1 ? 'imagen cargada' : 'imagenes cargadas' }}
+		</p>
 	</div>
-	<b-form-file
+
+	<!-- Visor: estado vacio -->
+	<div
 	v-else
+	class="images-field__vacio">
+		<div class="images-field__vacio-icono">
+			<i class="bi bi-images"></i>
+		</div>
+		<p class="images-field__vacio-titulo">
+			Sin imagenes
+		</p>
+		<p class="images-field__vacio-detalle">
+			Subi una desde tu equipo, o buscala en internet.
+		</p>
+	</div>
+
+	<!-- Acciones de busqueda en internet -->
+	<div
+	v-if="show_btn_google"
+	class="images-field__acciones">
+		<button
+		type="button"
+		class="images-field__accion images-field__accion--principal"
+		@click="launchLuckyFlow">
+			<i class="bi bi-magic"></i>
+			Automatica
+		</button>
+		<button
+		type="button"
+		class="images-field__accion"
+		@click="searchImage">
+			<i class="bi bi-search"></i>
+			Manual
+		</button>
+		<button
+		type="button"
+		class="images-field__accion images-field__accion--icono"
+		title="Tiempo de espera de la seleccion automatica"
+		@click="open_auto_timeout_config">
+			<i class="bi bi-gear"></i>
+		</button>
+	</div>
+
+	<!-- Zona de arrastre / seleccion desde el equipo -->
+	<!--
+		Sin :state: valia Boolean(file), y como el archivo se limpia apenas se sube, el campo
+		quedaba SIEMPRE en estado invalido (borde rojo) sin que nada estuviera mal.
+	-->
+	<b-form-file
 	:id="input_file_name"
-	class="file-reader-input"
-	browse-text="Buscar"
+	class="images-field__file"
+	browse-text="Buscar en mi equipo"
 	v-model="file"
-	variant="primary"
-	:state="Boolean(file)"
 	@change="upload"
-	placeholder="Seleccione la imagen o arrastrala hasta aquí"
-	drop-placeholder="Solta la imagen aqui..."
+	placeholder="Arrastra una imagen hasta aca"
+	drop-placeholder="Solta la imagen aca"
 	></b-form-file>
 
 	<b-modal
@@ -180,6 +211,17 @@ export default {
 		//         alert('se puso en '+newHeight)
 		//     })
 		// },
+		/**
+		* Ajusta el alto del carrusel al de la imagen que se acaba de cargar.
+		*
+		* Mide el alto REAL de la imagen ya renderizada. Antes lo calculaba proyectando la relacion
+		* de aspecto sobre el ancho del carrusel (ancho * naturalHeight / naturalWidth), cuenta que
+		* ignoraba el max-height del CSS: con una foto vertical el carrusel se estiraba cientos de
+		* pixeles de mas y quedaba un hueco blanco enorme debajo de la imagen.
+		*
+		* @param {Event} event Evento load del <img>.
+		* @return {void}
+		*/
 		onImageLoaded(event) {
 
 		    const img = event.target
@@ -191,13 +233,15 @@ export default {
 		        const carouselEl = this.$refs.carousel.$el
 		        const inner = carouselEl.querySelector('.VueCarousel-inner')
 
-		        const containerWidth = carouselEl.clientWidth
+		        if (!inner) return
 
-		        // Calculamos el alto real proporcional
-		        const ratio = img.naturalHeight / img.naturalWidth
-		        const calculatedHeight = containerWidth * ratio
+		        /* Alto ocupado por la imagen ya dibujada. */
+		        const rendered_height = img.clientHeight || img.offsetHeight
 
-		        inner.style.height = calculatedHeight + 'px'
+		        if (!rendered_height) return
+
+		        /* + el padding vertical del slide (6px arriba y 6px abajo, ver images/Index.vue). */
+		        inner.style.height = (rendered_height + 12) + 'px'
 		    })
 		},
 		upload(event) {
@@ -291,54 +335,3 @@ export default {
 	}
 }
 </script>
-<style scoped lang="sass">
-.VueCarousel-inner
-	// height: 50vh !important
-.VueCarousel-slide
-	position: relative
-	display: flex
-	align-items: center
-	justify-content: center
-	height: auto
-	// height: 50vh !important
-	padding: 20px 0
-	&:hover > .btn-delete 
-		display: block
-	.btn-delete 
-		position: absolute
-		top: 50%
-		transform: translateY(-50%)
-		left: 50%
-		transform: translateX(-50%)
-		display: none 
-
-	img 
-		max-width: 100%
-		object-fit: contain
-		@media screen and (max-width: 992px)
-			// max-height: 70vh
-		@media screen and (min-width: 992px)
-			// max-height: 50vh
-			// max-height: 50vh
-			// max-height: calc(100vh - 150px)
-
-.cont-btn-input
-	display: flex 
-	flex-direction: column 
-	align-items: center 
-	justify-content: space-between
-	
-	// button 
-	// 	width: 120px
-	// 	font-size: 14px
-	// 	margin-right: 10px
-
-	.file-reader-input-with-button
-		// width: 250px !important
-		// margin: 15px 0
-
-.file-reader-input
-	width: 100% !important
-	margin: 15px 0
-
-</style>

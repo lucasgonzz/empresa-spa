@@ -124,7 +124,26 @@
 									:props_to_send_to_api="prop.props_to_send_to_api"
 									:limpiar_resultados_de_busqueda="prop.limpiar_resultados_de_busqueda"
 									:function_props_to_send_to_api="prop.function_props_to_send_to_api"
-									@set-selected="setSelected"></field-search-input>
+									:preference_scope="search_preference_scope(prop)"
+									@set-selected="setSelected">
+
+										<!--
+											A la derecha del buscador de la relacion: el boton que elige que
+											columnas se ven en la tabla de esa relacion. El modal lo monta
+											BelongsToManyTable (es el dueno de la configuracion); aca solo se
+											lo abre por id, que sale del mismo helper que usa ese componente.
+										-->
+										<template #input_right>
+											<b-button
+											v-if="show_belongs_to_many_columns_btn(prop)"
+											class="btm-columnas-btn"
+											title="Elegir que columnas se ven"
+											@click="open_belongs_to_many_columns_modal(prop)">
+												<i class="bi bi-layout-three-columns"></i>
+											</b-button>
+										</template>
+
+									</field-search-input>
 
 									<belongs-to-many-checkbox
 									v-else-if="prop.belongs_to_many && prop.type == 'checkbox'"
@@ -337,6 +356,7 @@
 								:prop="prop"
 								:model="model"
 								:parent_model_name="model_name"
+								:show_columns_config_btn="!show_belongs_to_many_columns_btn(prop)"
 								:show_btn_remove_belongs_to_many="show_btn_remove_belongs_to_many"
 								@remove-model="removeModel(prop, $event)">
 										<template #belongs="slotProps">
@@ -477,6 +497,7 @@ import PaymentMethodsTable from '@/components/expenses/components/PaymentMethods
 
 import model_functions from '@/common-vue/mixins/model_functions'
 import {
+	belongs_to_many_columns_modal_id,
 	form_has_many_cols_from_store,
 	save_form_has_many_cols,
 	default_has_many_form_cols,
@@ -974,6 +995,24 @@ export default {
 			}
 			return null
 		},
+		/**
+		 * Ambito de la preferencia de columnas de los resultados de busqueda de esta relacion.
+		 *
+		 * Devuelve un ambito propio SOLO cuando la relacion declara sus propias `props_to_show`, o
+		 * sea cuando su conjunto de columnas no es el del modelo. Sin esto, los articulos de una
+		 * compra y los articulos de Vender comparten la misma preferencia guardada
+		 * (`table-column-preference/article/search`) y las columnas que uno elige le aparecen al
+		 * otro. Ver la explicacion completa en la prop preference_scope de search/Modal.vue.
+		 *
+		 * @param {Object} prop
+		 * @returns {String|null}
+		 */
+		search_preference_scope(prop) {
+			if (prop.belongs_to_many && prop.belongs_to_many.props_to_show) {
+				return this.model_name + '_' + prop.key
+			}
+			return null
+		},
 		props_to_filter(prop) {
 			if (
 				prop.belongs_to_many
@@ -1076,10 +1115,55 @@ export default {
 		useSearch(prop) {
 			if (prop.no_editar_una_vez_creado_el_modelo) {
 				if (this.model.id) {
-					return false 
+					return false
 				}
-			} 
+			}
 			return prop.type == 'search'
+		},
+		/**
+		 * Si el boton de "elegir columnas" de una relacion se dibuja al lado de su buscador.
+		 *
+		 * Solo cuando esta prop dibuja las dos cosas: el buscador (field-search-input) y la tabla de
+		 * la relacion (belongs-to-many-table). Si no hay buscador, el boton lo sigue dibujando
+		 * BelongsToManyTable arriba de su tabla. Las condiciones son las mismas que los v-if del
+		 * template, a proposito: si una cambia, tienen que cambiar las dos.
+		 *
+		 * @param {Object} prop
+		 * @returns {Boolean}
+		 */
+		show_belongs_to_many_columns_btn(prop) {
+			/*
+			 * only_show / from_pre_view abren la PRIMERA rama del v-if del template, antes que el
+			 * buscador: en esas props no hay field-search-input y por lo tanto no hay donde poner el
+			 * boton. Sin este corte, la relacion se quedaba sin boton en ningun lado (el de
+			 * BelongsToManyTable tambien se apagaba). Pasa en presupuestos, ventas y notas de credito.
+			 */
+			if (prop.only_show || prop.from_pre_view) {
+				return false
+			}
+			if (!this.useSearch(prop)) {
+				return false
+			}
+			if (!prop.belongs_to_many || prop.belongs_to_many.related_with_all) {
+				return false
+			}
+			if (prop.type == 'checkbox') {
+				return false
+			}
+			if (this.model_name === 'pdf_column_profile' && prop.key === 'pdf_column_options') {
+				return false
+			}
+			/* Misma condicion que show_btn_columns_config en BelongsToManyTable. */
+			return !!(this.model_name && prop.store)
+		},
+		/**
+		 * Abre el modal de columnas de la relacion. El modal lo monta BelongsToManyTable.
+		 *
+		 * @param {Object} prop
+		 * @returns {void}
+		 */
+		open_belongs_to_many_columns_modal(prop) {
+			this.$bvModal.show(belongs_to_many_columns_modal_id(this.model_name, prop.key))
 		},
 		removeModel(prop, model) {
 			let index = this.model[prop.key].findIndex(_model => {
@@ -1746,13 +1830,62 @@ export default {
 		letter-spacing: 0.045em
 		// Sube de 0.38rem: el label quedaba pegado al input y al valor de solo lectura. Aplica a
 		// los DOS modos, no es un ajuste del tema oscuro.
-		margin-bottom: 0.6rem
+		// Sube de 0.6rem (13/8/2026, pedido de Lucas): con los campos mas bajos, el label quedaba
+		// otra vez pegado al input. Es el aire entre el label y su campo, en los dos modos.
+		margin-bottom: 0.85rem
 		display: block
 		transition: color 0.15s ease
 
 	// Sin margen extra; el col maneja el espacio vertical entre campos
 	.form-group
 		margin-bottom: 0 !important
+
+	// ─── Campos del formulario ───────────────────────────────────────────────
+	// Mismo lenguaje visual que el resto del sistema nuevo (el pill del buscador general y el
+	// modal de filtros): borde de 1px, esquinas de 10px, la altura de los controles del sistema
+	// (--toolbar-control-h) y un anillo suave al enfocar.
+	//
+	// src/sass/_inputs.sass le pone a TODO input del sistema un borde de 2px que pasa a 3px al
+	// enfocar (la fila se movia 1px), un halo azul de 8px y una tipografia de 1.4rem, que es lo
+	// que hacia que estos campos se vieran altos y anticuados. common-vue/sass/_inputs.sass suma
+	// una sombra gris asimetrica. Nada de eso se toca a nivel global --lo usan pantallas viejas
+	// de todo el sistema--: se lo pisa aca adentro, que es el formulario del modal de un modelo.
+	//
+	// min-height y no height: si la tipografia es mas grande que lo previsto, el campo tiene que
+	// poder crecer en vez de recortar el texto.
+	//
+	// La preferencia de tamano chico sigue mandando por dos vias distintas, las dos a proposito:
+	// `.ui-small input.form-control` (src/sass/_ui_sizes.sass) le gana a esta regla por
+	// especificidad en font-size y padding, y --toolbar-control-h vale 32px bajo .ui-small
+	// (src/sass/_toolbar_botones.sass), asi que el min-height baja solo. El campo queda mas
+	// compacto, que es lo que la preferencia pide.
+	.form-control,
+	.custom-select,
+	.b-form-datepicker .form-control
+		min-height: var(--toolbar-control-h, 36px)
+		height: auto
+		padding: 0.25rem 0.7rem
+		font-size: 0.95rem
+		line-height: 1.45
+		border: 1px solid var(--color-border, #ced4da)
+		border-radius: 10px
+		box-shadow: none
+		transition: border-color 0.15s ease, box-shadow 0.15s ease
+
+		&:focus
+			border: 1px solid var(--color-primary, #007bff)
+			box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15)
+			outline: none
+
+	// El select nativo necesita lugar para su flecha, y .ui-small ya lo resuelve con height: auto.
+	.custom-select
+		padding-right: 1.75rem
+
+	// El textarea crece con el contenido: no le corresponde la altura de un control de una linea.
+	textarea.form-control
+		min-height: 0
+		padding: 0.45rem 0.7rem
+		line-height: 1.5
 
 	hr
 		width: 100%

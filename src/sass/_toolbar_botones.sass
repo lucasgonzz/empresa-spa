@@ -587,3 +587,58 @@ html.dark-mode select.toolbar-select.custom-select
 .ui-small select.toolbar-select.custom-select
 	height: var(--toolbar-control-h)
 	border-radius: var(--toolbar-btn-radius)
+
+// --- El boton de "elegir columnas" de una relacion ---------------------------------------------
+// Mismo control que .toolbar-btn--icono de arriba, pero para los formularios: la tabla de una
+// relacion belongs_to_many dentro del modal de un modelo (articulos de una compra, de un
+// presupuesto, de una venta). Lo dibujan DOS componentes distintos --ModelForm.vue lo pone al lado
+// del buscador de la relacion, y BelongsToManyTable.vue arriba de su tabla cuando no hay buscador--
+// asi que vive aca y no en el <style> de ninguno de los dos: los dos se cargan de forma diferida y
+// el estilo tiene que estar antes que cualquiera de ellos, o el boton se ve un instante como un
+// btn-secondary de bootstrap.
+//
+// Va FUERA de .view-header-toolbar por el mismo motivo que el select de barra: eso es la barra de un
+// modulo y esto vive adentro de un modal. Se replican los tokens de la barra, no los literales.
+//
+// El selector lleva `.btn` (bootstrap-vue siempre la agrega) para ganarle a `.btn-secondary` de
+// bootstrap, que es (0,1,0). Los estados :hover / :focus / :active se nombran los tres porque
+// bootstrap declara `.btn-secondary:not(:disabled):not(.disabled):active` en (0,4,0): sin la
+// pseudoclase :not repetida aca, el boton parpadea gris oscuro al apretarlo.
+.btm-columnas-btn.btn
+	display: inline-flex
+	align-items: center
+	justify-content: center
+	flex: 0 0 auto
+	width: var(--toolbar-control-h)
+	height: var(--toolbar-control-h)
+	padding: 0
+	border-radius: var(--toolbar-btn-radius)
+	background: var(--bg-card)
+	border: 1px solid var(--color-border)
+	color: var(--color-text-primary)
+	box-shadow: var(--toolbar-btn-shadow)
+	transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease
+
+	i
+		color: inherit
+		font-size: 0.95rem
+		line-height: 1
+
+.btm-columnas-btn.btn:hover,
+.btm-columnas-btn.btn:focus,
+.btm-columnas-btn.btn:not(:disabled):not(.disabled):active,
+.btm-columnas-btn.btn:not(:disabled):not(.disabled):active:focus
+	background: var(--bg-hover)
+	border-color: var(--color-border)
+	color: var(--color-text-primary)
+
+.btm-columnas-btn.btn:focus
+	outline: none
+	box-shadow: var(--toolbar-btn-shadow), 0 0 0 3px rgba(0, 123, 255, 0.15)
+
+// El anillo del boton apretado necesita su propia linea: bootstrap declara la sombra gris de
+// .btn-secondary en `:not(:disabled):not(.disabled):active:focus`, que es (0,5,0), y la regla de
+// arriba es (0,3,0). Sin esto, mientras se mantiene apretado el boton muestra el anillo gris de
+// bootstrap y recien al soltar vuelve al azul.
+.btm-columnas-btn.btn:not(:disabled):not(.disabled):active:focus
+	box-shadow: var(--toolbar-btn-shadow), 0 0 0 3px rgba(0, 123, 255, 0.15)
