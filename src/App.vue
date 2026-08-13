@@ -14,6 +14,14 @@
         <articles-stock-minimo></articles-stock-minimo>
         <synced-version-notifications></synced-version-notifications>
 
+        <!--
+            Panel de tutoriales de la demo (misión 51). El v-if es la guarda que protege a los
+            ~40 clientes reales: `es_demo` solo lo prende DemoIngreso.vue, así que para un
+            cliente el componente NO se monta, su chunk no se descarga y no se hace ninguna
+            llamada. Es v-if y no v-show a propósito.
+        -->
+        <panel-demo v-if="$store.state.demo.es_demo"></panel-demo>
+
         <b-container
         fluid>
             <payment-expire></payment-expire>
@@ -48,6 +56,8 @@ export default {
         AfipReenviarFacturas: () => import('@/components/common/afip-reenviar-facturas/Index'),
         ArticlesStockMinimo: () => import('@/components/common/ArticlesStockMinimo'),
         SyncedVersionNotifications: () => import('@/components/common/SyncedVersionNotifications'),
+        // Carga diferida: sin demo, este chunk no se descarga nunca (misión 51).
+        PanelDemo: () => import('@/components/demo/PanelDemo'),
     },
     computed: {
         uiSizeClass() {

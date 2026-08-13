@@ -65,6 +65,11 @@ export default {
 					self.mostrar_error()
 					return
 				}
+				// Marcador de sesion de demo (mision 51). Esta es la UNICA puerta de entrada a
+				// una demo, asi que es el unico lugar donde se prende: mientras siga apagado,
+				// App.vue no monta el panel y nadie pide el plan. Un cliente real nunca pasa
+				// por aca, y por eso su arranque no agrega ni una llamada.
+				self.$store.commit('demo/setEsDemo', true)
 				// Guarda por si el watcher de App.vue ya navegó: evita un push duplicado.
 				if (self.$route.name === 'demoIngreso') {
 					self.redirect()

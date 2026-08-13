@@ -16,6 +16,9 @@ import chart from '@/store/chart/index'
 
 import papelera from '@/store/papelera/index'
 
+// Estado de la demo del lead (misión 51). Arranca apagado: para un cliente real no hace nada.
+import demo from '@/store/demo'
+
 import article from '@/store/article'
 import brand from '@/store/brand'
 import category from '@/store/category'
@@ -274,7 +277,9 @@ export default new Vuex.Store({
         chart,
 
         papelera,
-        
+
+        demo,
+
         article,
         brand,
         category,
