@@ -131,6 +131,11 @@
 				lead escribe para que el closer lo tenga antes de la llamada.
 			-->
 			<footer class="panel-demo__notas">
+				<!--
+					El maxlength no es cosmético: el emisor descarta `datos` por encima de 2 KB
+					serializados, así que sin tope el lead podía escribir un texto que después
+					no se le restauraba nunca. 1500 caracteres dejan margen para el JSON.
+				-->
 				<label class="panel-demo__notas-texto" for="panel-demo-notas">
 					Anotá acá cualquier duda que te surja: las repasamos en la llamada
 				</label>
@@ -139,6 +144,7 @@
 				v-model="notas"
 				class="panel-demo__notas-campo"
 				rows="3"
+				maxlength="1500"
 				@input="al_escribir_nota"></textarea>
 			</footer>
 		</aside>
@@ -151,9 +157,9 @@
 /**
  * Panel lateral de tutoriales de la demo (misión 51).
  *
- * Este componente solo se monta dentro de una sesión de demo: `App.vue` lo condiciona a
- * `demo/es_demo`, que únicamente prende `DemoIngreso.vue`. Un cliente real nunca lo crea ni
- * descarga su chunk.
+ * Este componente solo se monta dentro de una sesión de demo: `App.vue` lo condiciona al getter
+ * `demo/activa`, que mira el marcador del ingreso y `user.es_sesion_demo`. Un cliente real nunca
+ * lo crea ni ejecuta.
  *
  * 🔴 El panel NO marca nada como `completo`. `clip.terminado` lleva el hito del roadmap a
  * `parcial` del lado del admin; a `completo` lo lleva el evento de negocio que dispara el lead
@@ -172,8 +178,6 @@ export default {
 			video_grande: false,
 			// Handle del debounce de las notas. 3 segundos, por la pieza 3.
 			temporizador_nota: null,
-			// Secciones que ya reportaron `seccion.completada`, para no repetirlo.
-			secciones_reportadas: [],
 		}
 	},
 	computed: {
@@ -185,6 +189,14 @@ export default {
 		},
 		clips_vistos() {
 			return this.$store.state.demo.clips_vistos
+		},
+		/**
+		 * Vive en el store, no en `data()`, para que sobreviva al F5 igual que `clips_vistos`
+		 * (misión 52). Si sólo sobreviviera uno de los dos, `seccion.completada` se re-emitiría
+		 * en cada recarga: volvería el estado que dispara el evento y no el que lo frena.
+		 */
+		secciones_reportadas() {
+			return this.$store.state.demo.secciones_reportadas
 		},
 		/**
 		 * Las notas viven en el store y no en `data()` porque tienen que sobrevivir al F5
@@ -348,7 +360,7 @@ export default {
 				return
 			}
 
-			this.secciones_reportadas.push(seccion.id)
+			this.$store.commit('demo/agregarSeccionReportada', seccion.id)
 
 			this.$store.dispatch('demo/reportar', {
 				nombre: 'seccion.completada',

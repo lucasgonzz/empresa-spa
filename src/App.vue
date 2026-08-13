@@ -16,8 +16,15 @@
 
         <!--
             Panel de tutoriales de la demo (misión 51, corregido por la 52). El v-if es la guarda
-            que protege a los ~40 clientes reales: para un cliente el componente NO se monta, su
-            chunk no se descarga y no se hace ninguna llamada. Es v-if y no v-show a propósito.
+            que protege a los ~40 clientes reales: para un cliente el componente NO se monta, no
+            se ejecuta una línea suya y no se hace ninguna llamada. Es v-if y no v-show a propósito.
+
+            🔴 Lo que NO hace la guarda, y conviene que esté escrito para que nadie lo prometa de
+            nuevo: el chunk igual se DESCARGA. Vue CLI registra el plugin `prefetch` por defecto y
+            este repo no lo borra en vue.config.js, así que el navegador se baja todos los chunks
+            async con <link rel="prefetch"> (medido: 861 en el dist del 12/8). Es descarga de baja
+            prioridad después del load, no ejecución — pero no es cero, y decir que sí lo era fue
+            una afirmación falsa en la misión 51.
 
             El getter mira dos fuentes: el marcador en memoria que prende DemoIngreso.vue, y
             `user.es_sesion_demo`, que viaja en la respuesta de `auth/me` que este arranque ya

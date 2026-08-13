@@ -3,20 +3,48 @@ import axios from 'axios'
 axios.defaults.withCredentials = true
 
 /**
+ * Ids de las secciones cuyos clips de núcleo ya están todos vistos.
+ *
+ * Se calcula al restaurar para sembrar `secciones_reportadas`: una sección que ya estaba
+ * completa antes del F5 no puede volver a reportar `seccion.completada`.
+ *
+ * @param {Array} secciones
+ * @returns {Array}
+ */
+function secciones_completas(secciones) {
+	if (!Array.isArray(secciones)) {
+		return []
+	}
+
+	return secciones.filter(function (seccion) {
+		const nucleo = (seccion.clips || []).filter(function (clip) {
+			return clip.tipo !== 'biblioteca'
+		})
+
+		return nucleo.length > 0 && nucleo.every(function (clip) {
+			return Boolean(clip.visto)
+		})
+	}).map(function (seccion) {
+		return seccion.id
+	})
+}
+
+/**
  * Estado de la demo del lead (misión 51).
  *
  * 🔴 La razón de ser de este store es que un cliente real no pague NADA por la demo.
  *
- * `es_demo` arranca en false y **solo lo pone en true `DemoIngreso.vue`**, que es la única
- * puerta de entrada a una sesión de demo. Mientras siga en false, `App.vue` no monta el panel
- * (`v-if`, no `v-show`: el componente no se crea) y nadie llama a `GET /api/demo/plan`. O sea
- * que el arranque de un cliente real agrega **cero** llamadas y cero componentes.
+ * El panel se monta si el getter `activa` da true, y ese getter mira dos fuentes: el marcador
+ * `es_demo` que prende `DemoIngreso.vue` al canjear el token, y `user.es_sesion_demo`, que viaja
+ * en la respuesta de `GET /api/user` — la llamada que el arranque **ya paga** para todos los
+ * usuarios. Mientras las dos den false, `App.vue` no monta el panel (`v-if`, no `v-show`: el
+ * componente no se crea) y nadie llama a `GET /api/demo/plan`. El arranque de un cliente real
+ * agrega **cero** llamadas y cero queries.
  *
- * Consecuencia asumida y declarada: el marcador vive en memoria, así que si el lead RECARGA la
- * página el panel no vuelve. No se usa `localStorage` —está prohibido en este repo— ni
- * `sessionStorage`, que tendría el mismo problema de ser un estado que sobrevive al logout.
- * La alternativa era preguntarle al backend en cada arranque si corresponde, y eso es
- * exactamente la llamada de más que la misión prohíbe. Está en el INFORME.
+ * La segunda fuente es la que hace que el panel sobreviva al F5 (misión 52): después de recargar
+ * la memoria está vacía pero la cookie de sesión sigue. No se usa `localStorage` —está prohibido
+ * en este repo— ni `sessionStorage`. La misión 51 había resuelto esto sólo con memoria y declaró
+ * la limitación; la 52 la corrigió sin pagar una llamada nueva.
  */
 export default {
 	namespaced: true,
@@ -35,6 +63,12 @@ export default {
 		clips_vistos: [],
 		/** Texto de las notas, restaurado del último `nota.escrita` (misión 52). */
 		notas: '',
+		/**
+		 * Secciones que ya reportaron `seccion.completada`. Vive acá y no en el componente
+		 * porque tiene que sobrevivir al F5 igual que `clips_vistos`: si sólo sobreviviera uno
+		 * de los dos, el evento se re-emitiría en cada recarga (misión 52).
+		 */
+		secciones_reportadas: [],
 	},
 	getters: {
 		/**
@@ -65,14 +99,6 @@ export default {
 
 			return Boolean(user && user.es_sesion_demo)
 		},
-		/**
-		 * @param {Object} state
-		 * @param {Object} getters
-		 * @returns {Boolean} Si hay algo que mostrar en el panel.
-		 */
-		hay_plan(state, getters) {
-			return getters.activa && state.secciones.length > 0
-		},
 	},
 	mutations: {
 		setEsDemo(state, valor) {
@@ -95,6 +121,14 @@ export default {
 		setNotas(state, texto) {
 			state.notas = typeof texto === 'string' ? texto : ''
 		},
+		setSeccionesReportadas(state, ids) {
+			state.secciones_reportadas = Array.isArray(ids) ? ids : []
+		},
+		agregarSeccionReportada(state, seccion_id) {
+			if (seccion_id && state.secciones_reportadas.indexOf(seccion_id) === -1) {
+				state.secciones_reportadas.push(seccion_id)
+			}
+		},
 	},
 	actions: {
 		/**
@@ -107,7 +141,7 @@ export default {
 		 * @param {Object} context
 		 * @returns {Promise}
 		 */
-		cargar_plan({ commit, getters }) {
+		cargar_plan({ commit, getters, state }) {
 			if (!getters.activa) {
 				return Promise.resolve()
 			}
@@ -141,7 +175,27 @@ export default {
 						})
 					})
 
-					commit('setNotas', response.data.notas || '')
+					/**
+					 * 🔴 Las notas se siembran SOLO si el lead todavía no escribió nada.
+					 *
+					 * El textarea está usable desde el primer frame, y este plan vuelve unos
+					 * cientos de milisegundos después. Si el lead ya empezó a tipear, sembrar
+					 * le pisa el store con el texto viejo —el DOM no, porque Vue no toca un
+					 * campo con foco— y el debounce que ya estaba armado termina reportando un
+					 * `nota.escrita` con contenido que el lead nunca escribió, mientras lo que
+					 * sí escribió se pierde. Por eso la siembra cede ante lo que haya en curso.
+					 */
+					if (state.notas === '') {
+						commit('setNotas', response.data.notas || '')
+					}
+
+					/**
+					 * Secciones que ya estaban completas antes de recargar. Sin esto,
+					 * `seccion.completada` se re-emitía después de cada F5: `clips_vistos` sí
+					 * sobrevivía a la recarga y el registro de "ya lo reporté" no, así que el
+					 * estado que DISPARA el evento volvía y el que lo FRENA no.
+					 */
+					commit('setSeccionesReportadas', secciones_completas(response.data.secciones))
 				})
 				.catch(function (error) {
 					// Que no haya plan no puede romperle la demo al lead: entra igual, sin panel.
