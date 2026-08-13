@@ -58,7 +58,6 @@
 	:extra_properties_for_modal="price_type_modal_extra_properties"
 	@addressMovement="addressMovement"
 	:show_empty_text="show_empty_text"
-	:default_extra_props="['bar_code', 'sku', 'provider_code', 'id']"
 	:filtros_fijos_por_defecto="filtros_fijos_por_defecto"
 	model_name="article">
 

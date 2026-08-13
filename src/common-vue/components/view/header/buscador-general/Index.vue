@@ -112,6 +112,8 @@
 	</div>
 </template>
 <script>
+import { global_search_default_keys } from '@/common-vue/config/global_search_defaults'
+
 export default {
 	/**
 	 * BuscadorGeneral — buscador unico por modelo, derivado de la definicion declarativa
@@ -640,31 +642,55 @@ export default {
 		},
 
 		/**
-		 * Seleccion por defecto (sin preferencia guardada): 'name' (si el modelo lo tiene) mas las
-		 * keys de default_extra_props que existan en own_props. Ninguna relacion por defecto.
+		 * Seleccion por defecto (sin preferencia guardada): las keys que declara la tabla
+		 * `global_search_defaults` para este modelo (fallback 'name' para los modelos que no estan
+		 * en la tabla, ej: los ABM), mas las `default_extra_props` que pase el modulo como override
+		 * puntual.
+		 *
+		 * Las keys se reparten segun donde existan: las de own_props van a selected_props y las de
+		 * relation_props a selected_relations. Antes esto terminaba siempre con
+		 * `selected_relations = []`, asi que ningun default podia incluir una relacion — y la mitad
+		 * de los defaults que pide la tabla son relaciones (cliente y empleado en Ventas, proveedor
+		 * en Compras, cliente en Pedidos, sucursal y empleado en Cajas, concepto en Movimientos).
+		 *
+		 * Una key que no exista en ninguna de las dos listas se ignora sin error: own_props y
+		 * relation_props ya pasaron por check_extencions, asi que una prop gateada por una extension
+		 * que este cliente no tiene simplemente no esta. Por lo mismo el reparto se calcula cada vez
+		 * que se aplica el default y no se cachea en `data`.
 		 *
 		 * @return {void}
 		 */
 		applyDefaultSelection() {
-			// Keys disponibles entre las props propias del modelo, para validar que 'name' y las
-			// default_extra_props realmente existan antes de tildarlas.
-			let own_keys = []
+			// Keys disponibles hoy para este cliente, separadas por tipo.
+			let own_disponibles = {}
 			this.own_props.forEach(function (property) {
-				own_keys.push(property.key)
+				own_disponibles[property.key] = true
 			})
-			let default_props = []
-			if (own_keys.indexOf('name') !== -1) {
-				default_props.push('name')
-			}
-			// Suma las keys extra del modulo (ej: bar_code/sku/provider_code/id en el Listado de
-			// articulos) que existan en own_props, sin duplicar.
+			let relation_disponibles = {}
+			this.relation_props.forEach(function (property) {
+				relation_disponibles[property.key] = true
+			})
+
+			// Tabla de defaults del modelo + las keys extra que pase el modulo (la prop se conserva
+			// como override puntual, ya no hay ninguna vista que la use).
+			let keys = global_search_default_keys(this.model_name)
 			this.default_extra_props.forEach(function (key) {
-				if (own_keys.indexOf(key) !== -1 && default_props.indexOf(key) === -1) {
+				if (keys.indexOf(key) === -1) {
+					keys.push(key)
+				}
+			})
+
+			let default_props = []
+			let default_relations = []
+			keys.forEach(function (key) {
+				if (own_disponibles[key] && default_props.indexOf(key) === -1) {
 					default_props.push(key)
+				} else if (relation_disponibles[key] && default_relations.indexOf(key) === -1) {
+					default_relations.push(key)
 				}
 			})
 			this.selected_props = default_props
-			this.selected_relations = []
+			this.selected_relations = default_relations
 		},
 
 		/**

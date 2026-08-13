@@ -12,7 +12,13 @@ export default {
 			text: 'Cliente',
 			key: 'buyer_id',
 			store: 'buyer',
-			type: '',
+			// type 'search' (antes venia vacio) para que el buscador general la reconozca como
+			// relacion: relation_props exige type 'search' o 'select' y key terminada en "_id", y
+			// por eso "Cliente" no aparecia entre las propiedades del buscador de Pedidos online.
+			// Mismo par exacto que sale.js declara para client_id, que es el precedente por el que
+			// el cliente si aparece en el buscador de Ventas. Order::buyer() ya existe en la API.
+			type: 'search',
+			search_from_api: true,
 			only_show: true,
 			value: '',
 			is_title: true,
