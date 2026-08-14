@@ -584,11 +584,22 @@ export default {
                 from_pivot
                 && item.pivot
                 /*
-                    Comparacion explicita contra null/undefined y no `&& item.pivot.price` a secas:
-                    un 0 es falsy en javascript, asi que una linea que se vendio a 0 se caia al camino
-                    del precio actual del articulo. Un 0 guardado es un precio guardado y se respeta.
+                    Comparacion explicita en vez de `&& item.pivot.price` a secas, para que un
+                    precio guardado en 0 no se caiga al camino del precio actual del articulo.
+
+                    Con la salvedad de que hoy ese caso NO era alcanzable y conviene saberlo: la
+                    columna es decimal y PDO la devuelve como STRING, asi que lo que llega es
+                    "0.00", que en javascript es truthy. La condicion vieja ya tomaba la rama
+                    correcta. Esto lo blinda contra el dia en que el precio llegue como numero
+                    —un cast en el modelo, un endpoint nuevo, un item armado en el front— sin
+                    cambiar ningun comportamiento de hoy.
+
+                    El string vacio se excluye a proposito: Number('') es 0, asi que sin esa
+                    guarda una linea con precio vacio pasaria a mostrarse en $0 en vez de tomar
+                    el precio actual del articulo, que es lo que hace hoy.
                 */
                 && item.pivot.price !== null
+                && item.pivot.price !== ''
                 && typeof item.pivot.price != 'undefined'
                 && (
                     !this.hasExtencion('lista_de_precios_por_rango_de_cantidad_vendida')
