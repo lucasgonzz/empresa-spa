@@ -15,6 +15,12 @@ export default {
 		import_options: null,
 		/* Resultado del recálculo de precios (modal price_update_result). */
 		price_stats: null,
+		/*
+		 * Corrida de análisis de Excel terminada (modal excel_analysis_ready):
+		 * { uuid, tipo, estado, error, model, original_filename }. A propósito no
+		 * trae el resumen del análisis — el aviso solo dice que terminó.
+		 */
+		excel_analysis: null,
 	},
 	mutations: {
 		set_functions_to_execute(state, value) {
@@ -41,6 +47,9 @@ export default {
 		set_price_stats(state, value) {
 			state.price_stats = value
 		},
+		set_excel_analysis(state, value) {
+			state.excel_analysis = value
+		},
 		/*
 		 * Carga el payload completo de una GlobalNotification broadcast.
 		 */
@@ -53,6 +62,7 @@ export default {
 			state.import_stats = notification.import_stats || null
 			state.import_options = notification.import_options || null
 			state.price_stats = notification.price_stats || null
+			state.excel_analysis = notification.excel_analysis || null
 		},
 	},
 	actions: {

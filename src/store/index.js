@@ -232,6 +232,7 @@ import search_by_cuit from './search_by_cuit'
 import tag from '@/store/tag'
 
 import import_status from '@/store/import_status'
+import excel_analysis from '@/store/excel_analysis'
 import filter_history from '@/store/filter_history'
 
 import provider_order_afip_ticket_iva from '@/store/provider_order_afip_ticket_iva'
@@ -488,6 +489,7 @@ export default new Vuex.Store({
         tag,
 
         import_status,
+        excel_analysis,
         filter_history,
 
         provider_order_afip_ticket_iva,

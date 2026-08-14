@@ -4,6 +4,7 @@
 	size="lg"
 	hide-footer
 	:title="modal_title"
+	@show="on_show"
 	@hide="reset">
 
 		<!-- Indicador de pasos -->
@@ -106,6 +107,50 @@
 				</b-spinner>
 				{{ loading ? 'Analizando con IA...' : 'Analizar con IA' }}
 			</b-button>
+
+			<!--
+				Estado de la corrida DENTRO del modal. Antes esto vivia en el loading
+				global (auth/setLoading + auth/setMessage), que tapaba la aplicacion
+				entera: con un archivo de 20.000 filas el usuario se quedaba varios
+				minutos sin sistema. Ahora el progreso se muestra aca y la app queda libre.
+			-->
+			<div
+			v-if="loading && analysis_paso"
+			class="ai-import-progreso m-t-15">
+
+				<p class="text-muted small m-b-5">
+					{{ analysis_paso }}
+					<span v-if="analysis_progreso"> ({{ analysis_progreso }}%)</span>
+				</p>
+
+				<b-progress
+				v-if="analysis_progreso"
+				:value="analysis_progreso"
+				max="100"
+				height="6px"
+				class="m-b-10">
+				</b-progress>
+
+				<!--
+					El ofrecimiento explicito de irse. Aparece a los 20 segundos, que es
+					cuando el analisis dejo de ser "un momentito" y el usuario empieza a
+					preguntarse si se colgo.
+				-->
+				<div v-if="analysis_es_archivo_grande">
+					<p class="text-muted small m-b-10">
+						Los archivos grandes pueden tardar unos minutos. Podés cerrar esta ventana
+						y seguir trabajando: te avisamos cuando el análisis esté listo.
+					</p>
+					<b-button
+					variant="outline-secondary"
+					size="sm"
+					block
+					@click="seguir_en_segundo_plano">
+						Seguir en segundo plano
+					</b-button>
+				</div>
+
+			</div>
 
 		</div>
 
@@ -322,6 +367,44 @@
 					</b-spinner>
 					{{ loading_recomendacion ? 'Generando recomendación...' : 'Confirmar y configurar importación' }}
 				</b-button>
+			</div>
+
+			<!--
+				Mismo tratamiento que el paso 1: la recomendacion tambien recorre el
+				archivo entero tres veces y vuelve a llamar a Claude, asi que tambien
+				puede tardar minutos y tampoco tiene por que retener al usuario.
+			-->
+			<div
+			v-if="loading_recomendacion && analysis_paso"
+			class="ai-import-progreso m-t-15">
+
+				<p class="text-muted small m-b-5">
+					{{ analysis_paso }}
+					<span v-if="analysis_progreso"> ({{ analysis_progreso }}%)</span>
+				</p>
+
+				<b-progress
+				v-if="analysis_progreso"
+				:value="analysis_progreso"
+				max="100"
+				height="6px"
+				class="m-b-10">
+				</b-progress>
+
+				<div v-if="analysis_es_archivo_grande">
+					<p class="text-muted small m-b-10">
+						Podés cerrar esta ventana y seguir trabajando: te avisamos cuando la
+						recomendación esté lista.
+					</p>
+					<b-button
+					variant="outline-secondary"
+					size="sm"
+					block
+					@click="seguir_en_segundo_plano">
+						Seguir en segundo plano
+					</b-button>
+				</div>
+
 			</div>
 
 		</div>
@@ -1092,6 +1175,27 @@ export default {
 			 * en su valor final.
 			 */
 			analysis_warning_timer_id: null,
+
+			/*
+			 * uuid de la corrida de análisis vigente. Es lo que hace que la corrida
+			 * exista fuera de este componente: con él se la vuelve a encontrar después
+			 * de cerrar el modal, y viaja a /get-recomendacion para que el paso 3
+			 * también se pueda reconstruir.
+			 */
+			analysis_uuid: null,
+
+			/* Ídem para la corrida de recomendación (paso 2 → 3). */
+			recomendacion_uuid: null,
+
+			/* Paso y progreso que reporta el backend, para mostrarlos dentro del modal. */
+			analysis_paso: '',
+			analysis_progreso: 0,
+
+			/*
+			 * True cuando la corrida pasó los 20 segundos. Dispara el aviso de que el
+			 * archivo es grande y de que se puede cerrar el modal mientras tanto.
+			 */
+			analysis_es_archivo_grande: false,
 		}
 	},
 
@@ -1704,6 +1808,16 @@ export default {
 	watch: {
 
 		/*
+		 * Orden de apertura dejada por el aviso de "terminó el análisis". Cubre el
+		 * caso en que el usuario nunca se fue del módulo y este componente ya estaba
+		 * montado cuando llegó el aviso; el caso contrario (viene de otra pantalla)
+		 * lo cubre created().
+		 */
+		'$store.state.excel_analysis.abrir_en'() {
+			this.consumir_orden_de_apertura()
+		},
+
+		/*
 		 * Al elegir archivo (v-model de b-form-file), detectamos última fila como en import clásico.
 		 */
 		file(new_file) {
@@ -2114,19 +2228,28 @@ export default {
 				let fallos_consecutivos = 0
 
 				/*
+				 * Marca que el usuario está mirando esta corrida acá. Mientras dure, el
+				 * aviso de "terminó el análisis" no se le muestra: el resultado va a
+				 * aparecer solo en esta misma pantalla. Es el único punto por el que
+				 * pasan todos los seguimientos, así que es el único lugar donde hay que
+				 * marcarlo.
+				 */
+				self.$store.commit('excel_analysis/set_siguiendo_uuid', analysis_uuid)
+
+				/*
 				 * Aviso de "archivo grande" a los 20 segundos: si para entonces el
-				 * análisis todavía no terminó, tranquiliza al usuario para que no
-				 * cierre el modal pensando que se colgó. Tiene que morir en TODOS los
-				 * caminos de salida (éxito, error o cancelación) o ensucia
-				 * auth/setMessage después de que el flujo que corresponda ya lo dejó
-				 * en su valor final — el store de auth es compartido por toda la app.
+				 * análisis todavía no terminó, se le ofrece al usuario irse a hacer
+				 * otra cosa. Antes este aviso iba a auth/setMessage —el mensaje del
+				 * loading global— y decía "podés dejar esta ventana abierta", que era
+				 * la única opción que tenía: la ventana lo tenía preso. Ahora es un
+				 * texto del propio modal y dice lo contrario, porque ahora puede irse.
+				 *
+				 * Sigue teniendo que morir en TODOS los caminos de salida, para no
+				 * quedar colgado bajo un modal que ya mostró su resultado.
 				 */
 				self.analysis_warning_timer_id = setTimeout(function() {
 					if (token_corrida !== self.analysis_polling_token) return
-					self.$store.commit(
-						'auth/setMessage',
-						'Los archivos grandes pueden tardar unos minutos. Podés dejar esta ventana abierta.'
-					)
+					self.analysis_es_archivo_grande = true
 				}, 20000)
 
 				function limpiar_timer_de_aviso() {
@@ -2149,12 +2272,24 @@ export default {
 
 						fallos_consecutivos = 0
 
-						if (res.data.paso) {
-							self.$store.commit(
-								'auth/setMessage',
-								res.data.progreso ? (res.data.paso + ' (' + res.data.progreso + '%)') : res.data.paso
-							)
-						}
+						/*
+						 * El paso y el progreso van a estado local del modal, no al
+						 * mensaje del loading global: el loading global tapa la app
+						 * entera, y la app entera es exactamente lo que el usuario tiene
+						 * que poder seguir usando mientras esto corre.
+						 */
+						self.analysis_paso     = res.data.paso || ''
+						self.analysis_progreso = res.data.progreso || 0
+
+						/* Mantiene vivo el estado de la corrida para el resto de la app. */
+						self.$store.commit('excel_analysis/set_corrida', {
+							uuid:     analysis_uuid,
+							tipo:     res.data.tipo,
+							estado:   res.data.estado,
+							progreso: res.data.progreso,
+							paso:     res.data.paso,
+							contexto: res.data.contexto,
+						})
 
 						/*
 						 * Grupo 303 (corrige el correctivo del grupo 299): acá NO va un
@@ -2250,6 +2385,18 @@ export default {
 			/* Informamos al backend qué modelo analizar para elegir el analizador correcto. */
 			form_data.append('model', self.model)
 
+			/*
+			 * Rango de filas y detección de cabecera, que se calcularon leyendo el
+			 * Excel acá en el navegador. Antes no viajaban: no hacía falta, porque el
+			 * modal que los había calculado era el mismo que después los usaba para
+			 * importar. Ahora el paso 2 se puede abrir desde otra pestaña o después de
+			 * un F5, cuando el archivo local ya no existe y estos tres valores no se
+			 * pueden volver a calcular. El backend los guarda y los devuelve.
+			 */
+			form_data.append('start_row', self.start_row)
+			form_data.append('finish_row', self.finish_row)
+			form_data.append('has_header_row', self.has_header_row ? 1 : 0)
+
 			/* Solo sube el archivo y lo encola: si tarda más de 2 minutos, es la subida, no el análisis. */
 			let config = {
 				headers: { 'content-type': 'multipart/form-data' },
@@ -2266,8 +2413,15 @@ export default {
 			 */
 			let token_corrida = ++self.analysis_polling_token
 
-			self.$store.commit('auth/setMessage', 'Analizando archivo con IA...')
-			self.$store.commit('auth/setLoading', true)
+			/*
+			 * Ya no se prende el loading global (auth/setLoading). Ese overlay tapaba
+			 * la aplicación entera durante todo el análisis, que es de lo que se
+			 * trataba el problema: un archivo de 20.000 filas dejaba al usuario sin
+			 * sistema por varios minutos. El estado de la corrida se muestra ahora
+			 * dentro del modal, y el modal se puede cerrar.
+			 */
+			self.analysis_paso     = 'Subiendo el archivo…'
+			self.analysis_progreso = 0
 
 			self.$api.post('ai-excel-import/analyze', form_data, config)
 			.then(function(res) {
@@ -2275,51 +2429,42 @@ export default {
 				/* Punto de chequeo: el .then del POST inicial, antes de llamar al helper. */
 				if (token_corrida !== self.analysis_polling_token) return
 
+				/*
+				 * Guardamos el uuid apenas lo tenemos. Es lo que convierte a esta
+				 * corrida en algo que existe fuera de este componente: con él se la
+				 * puede volver a encontrar después de cerrar el modal, y es lo que
+				 * viaja a /get-recomendacion para poder reconstruir el paso 3.
+				 */
+				self.analysis_uuid = res.data.analysis_uuid
+
+				self.$store.commit('excel_analysis/set_corrida', {
+					uuid:   res.data.analysis_uuid,
+					tipo:   'analisis',
+					estado: res.data.estado || 'pendiente',
+					/*
+					 * El módulo va desde el vamos, aunque el backend todavía no haya
+					 * devuelto contexto: es lo que evita que el modal de artículos
+					 * retome una corrida de clientes, y hay tres instancias de este
+					 * componente vivas al mismo tiempo.
+					 */
+					contexto: { model: self.model },
+				})
+
 				return self.esperar_analisis_terminado(res.data.analysis_uuid, token_corrida)
 				.then(function(resultado) {
 
 					if (token_corrida !== self.analysis_polling_token) return
 
-					self.loading = false
-					self.$store.commit('auth/setLoading', false)
-					self.$store.commit('auth/setMessage', '')
-
-					self.excel_path        = resultado.excel_path
-					self.column_mapping    = self.normalize_column_mapping(resultado.column_mapping)
-					self.selected_provider_id = resultado.provider_id
-					self.provider_confidence  = resultado.provider_confidence
-
-					/* Guardar índice de columna provider_code para refresh-provider-stats al cambiar proveedor. */
-					const provider_col = resultado.column_mapping.find(
-						col => col.system_property === 'codigo_de_proveedor'
-					)
-					self.provider_code_column_index = provider_col ? provider_col.excel_column_index : null
-
-					/* Datos del preanálisis de duplicados (la recomendación se genera al confirmar el paso 2). */
-					self.duplicate_stats = resultado.duplicate_stats || null
-					self.preview_rows    = resultado.preview_rows || []
-
-					/* Prompt 03 (grupo 239): estadísticas de números con punto ambiguos por columna. */
-					self.formatos_numericos = resultado.formatos_numericos || null
-
-					/* Notas globales de asistencia que Claude generó sobre el archivo completo. */
-					self.assistant_notes = resultado.assistant_notes || []
-
-					/* Prompt 06 (grupo 229): placeholders, cadena de identificación y nombres repetidos. */
-					self.placeholders           = resultado.placeholders || []
-					self.cadena_identificacion  = resultado.cadena_identificacion || null
-					self.nombres_duplicados     = resultado.nombres_duplicados || null
-
+					self.terminar_seguimiento()
+					self.aplicar_resultado_analisis(resultado)
 					self.step = 2
 				})
 				.catch(function(mensaje) {
 
-					/* Punto de chequeo: no escribir error_message sobre una corrida ya cancelada. */
+					/* Punto de chequeo: no escribir error_message sobre una corrida ya soltada. */
 					if (token_corrida !== self.analysis_polling_token) return
 
-					self.loading = false
-					self.$store.commit('auth/setLoading', false)
-					self.$store.commit('auth/setMessage', '')
+					self.terminar_seguimiento()
 					self.error_message = mensaje
 				})
 			})
@@ -2328,9 +2473,7 @@ export default {
 				/* Punto de chequeo: el .catch del POST inicial, antes de tocar loading/error_message. */
 				if (token_corrida !== self.analysis_polling_token) return
 
-				self.loading = false
-				self.$store.commit('auth/setLoading', false)
-				self.$store.commit('auth/setMessage', '')
+				self.terminar_seguimiento()
 
 				let message = 'Error al analizar el archivo.'
 
@@ -2340,6 +2483,43 @@ export default {
 
 				self.error_message = message
 			})
+		},
+
+		/*
+		 * Vuelca en el modal el resultado de una corrida de análisis, venga de la
+		 * espera en vivo (el usuario se quedó mirando) o de una rehidratación (el
+		 * usuario se fue y volvió). Los dos caminos tienen que dejar el paso 2
+		 * exactamente igual, así que hay un solo lugar donde se arma.
+		 *
+		 * @param {Object} resultado  "resultado" tal como lo devuelve la API
+		 * @return {void}
+		 */
+		aplicar_resultado_analisis(resultado) {
+			this.excel_path           = resultado.excel_path
+			this.column_mapping       = this.normalize_column_mapping(resultado.column_mapping)
+			this.selected_provider_id = resultado.provider_id
+			this.provider_confidence  = resultado.provider_confidence
+
+			/* Guardar índice de columna provider_code para refresh-provider-stats al cambiar proveedor. */
+			const provider_col = resultado.column_mapping.find(
+				col => col.system_property === 'codigo_de_proveedor'
+			)
+			this.provider_code_column_index = provider_col ? provider_col.excel_column_index : null
+
+			/* Datos del preanálisis de duplicados (la recomendación se genera al confirmar el paso 2). */
+			this.duplicate_stats = resultado.duplicate_stats || null
+			this.preview_rows    = resultado.preview_rows || []
+
+			/* Prompt 03 (grupo 239): estadísticas de números con punto ambiguos por columna. */
+			this.formatos_numericos = resultado.formatos_numericos || null
+
+			/* Notas globales de asistencia que Claude generó sobre el archivo completo. */
+			this.assistant_notes = resultado.assistant_notes || []
+
+			/* Prompt 06 (grupo 229): placeholders, cadena de identificación y nombres repetidos. */
+			this.placeholders           = resultado.placeholders || []
+			this.cadena_identificacion  = resultado.cadena_identificacion || null
+			this.nombres_duplicados     = resultado.nombres_duplicados || null
 		},
 
 		/*
@@ -2355,89 +2535,52 @@ export default {
 			/* Mismo motivo y mismo criterio que run_analyze_request(): ver ese comentario. */
 			let token_corrida = ++self.analysis_polling_token
 
-			self.$store.commit('auth/setMessage', 'Generando recomendación con IA...')
-			self.$store.commit('auth/setLoading', true)
+			/* Ídem run_analyze_request(): sin loading global, el estado se muestra en el modal. */
+			self.analysis_paso     = 'Generando recomendación con IA…'
+			self.analysis_progreso = 0
 
 			self.$api.post('ai-excel-import/get-recomendacion', {
 				excel_path:                 self.excel_path,
 				provider_id:                self.selected_provider_id,
 				provider_code_column_index: self.provider_code_column_index,
 				column_mapping:             self.column_mapping,
+				/*
+				 * uuid del análisis del que salió este paso 2. El backend lo guarda para
+				 * que, si el usuario se va y vuelve, se pueda reconstruir el paso 3
+				 * completo: la recomendación sola no alcanza, la pantalla también muestra
+				 * duplicados, placeholders y cadena de identificación, que son del análisis.
+				 */
+				analysis_uuid:              self.analysis_uuid,
 			}, { timeout: 120000 })
 			.then(function(res) {
 
 				/* Punto de chequeo: el .then del POST inicial, antes de llamar al helper. */
 				if (token_corrida !== self.analysis_polling_token) return
 
+				self.recomendacion_uuid = res.data.analysis_uuid
+
+				self.$store.commit('excel_analysis/set_corrida', {
+					uuid:   res.data.analysis_uuid,
+					tipo:   'recomendacion',
+					estado: res.data.estado || 'pendiente',
+					/* Ídem run_analyze_request(): el módulo desde el vamos. */
+					contexto: { model: self.model },
+				})
+
 				return self.esperar_analisis_terminado(res.data.analysis_uuid, token_corrida)
 				.then(function(resultado) {
 
 					if (token_corrida !== self.analysis_polling_token) return
 
-					self.loading_recomendacion = false
-					self.$store.commit('auth/setLoading', false)
-					self.$store.commit('auth/setMessage', '')
-
-					self.recomendacion_configuracion = resultado.recomendacion_configuracion || null
-
-					/*
-					 * Prompt 03 (grupo 239): refrescar formatos_numericos con el recalculo del
-					 * backend, por si el usuario corrigió el mapeo de columnas en el paso 2.
-					 */
-					self.formatos_numericos = resultado.formatos_numericos || null
-
-					/* Actualizar duplicate_stats con los conteos recalculados para el proveedor confirmado. */
-					if (self.duplicate_stats) {
-						self.duplicate_stats = {
-							...self.duplicate_stats,
-							provider_codes_existentes_mismo_proveedor:   resultado.provider_codes_existentes_mismo_proveedor,
-							provider_codes_existentes_otros_proveedores: resultado.provider_codes_existentes_otros_proveedores,
-						}
-					}
-
-					/* Preseleccionar los valores recomendados. */
-					if (self.recomendacion_configuracion) {
-
-						/*
-						 * Grupo 284, prompt 04: politica_colision valida contra los tres valores
-						 * nuevos. 'actualizar_uno' es el valor legado (backend, prompt 02): se
-						 * traduce a 'saltear_y_reportar', la opción más cercana a su intención
-						 * original. Sin un valor reconocido, no se preselecciona nada (igual que
-						 * antes, cuando la recomendación no traía un valor válido).
-						 */
-						let politica_colision_recomendada = self.recomendacion_configuracion.politica_colision
-						if (politica_colision_recomendada === 'actualizar_uno') {
-							politica_colision_recomendada = 'saltear_y_reportar'
-						}
-						if (
-							politica_colision_recomendada === 'actualizar_todos'
-							|| politica_colision_recomendada === 'saltear_y_reportar'
-							|| politica_colision_recomendada === 'crear_nuevo'
-						) {
-							self.politica_colision = politica_colision_recomendada
-						}
-
-						/*
-						 * Prompt 06 (grupo 265): igual patrón defensivo — si no viene o no es uno
-						 * de los dos valores válidos, se deja el default ('ultima_gana').
-						 */
-						if (
-							self.recomendacion_configuracion.politica_intra_archivo === 'ultima_gana'
-							|| self.recomendacion_configuracion.politica_intra_archivo === 'productos_distintos'
-						) {
-							self.politica_intra_archivo = self.recomendacion_configuracion.politica_intra_archivo
-						}
-					}
-
+					self.terminar_seguimiento()
+					self.aplicar_resultado_recomendacion(resultado)
 					self.step = 3
 				})
 				.catch(function(mensaje) {
 
 					if (token_corrida !== self.analysis_polling_token) return
 
-					self.loading_recomendacion = false
-					self.$store.commit('auth/setLoading', false)
-					self.$store.commit('auth/setMessage', '')
+					self.terminar_seguimiento()
 					self.$toast.error(mensaje)
 				})
 			})
@@ -2446,9 +2589,7 @@ export default {
 				/* Punto de chequeo: el .catch del POST inicial. */
 				if (token_corrida !== self.analysis_polling_token) return
 
-				self.loading_recomendacion = false
-				self.$store.commit('auth/setLoading', false)
-				self.$store.commit('auth/setMessage', '')
+				self.terminar_seguimiento()
 
 				let message = 'Error al generar la recomendación.'
 				if (err.response && err.response.data && err.response.data.message) {
@@ -2457,6 +2598,69 @@ export default {
 
 				self.$toast.error(message)
 			})
+		},
+
+		/*
+		 * Vuelca en el modal el resultado de una corrida de recomendación. Mismo
+		 * criterio que aplicar_resultado_analisis(): un solo lugar donde se arma el
+		 * paso 3, lo haya esperado el usuario o lo esté reabriendo después.
+		 *
+		 * @param {Object} resultado  "resultado" tal como lo devuelve la API
+		 * @return {void}
+		 */
+		aplicar_resultado_recomendacion(resultado) {
+			this.loading_recomendacion = false
+
+			this.recomendacion_configuracion = resultado.recomendacion_configuracion || null
+
+			/*
+			 * Prompt 03 (grupo 239): refrescar formatos_numericos con el recalculo del
+			 * backend, por si el usuario corrigió el mapeo de columnas en el paso 2.
+			 */
+			this.formatos_numericos = resultado.formatos_numericos || null
+
+			/* Actualizar duplicate_stats con los conteos recalculados para el proveedor confirmado. */
+			if (this.duplicate_stats) {
+				this.duplicate_stats = {
+					...this.duplicate_stats,
+					provider_codes_existentes_mismo_proveedor:   resultado.provider_codes_existentes_mismo_proveedor,
+					provider_codes_existentes_otros_proveedores: resultado.provider_codes_existentes_otros_proveedores,
+				}
+			}
+
+			/* Preseleccionar los valores recomendados. */
+			if (this.recomendacion_configuracion) {
+
+				/*
+				 * Grupo 284, prompt 04: politica_colision valida contra los tres valores
+				 * nuevos. 'actualizar_uno' es el valor legado (backend, prompt 02): se
+				 * traduce a 'saltear_y_reportar', la opción más cercana a su intención
+				 * original. Sin un valor reconocido, no se preselecciona nada (igual que
+				 * antes, cuando la recomendación no traía un valor válido).
+				 */
+				let politica_colision_recomendada = this.recomendacion_configuracion.politica_colision
+				if (politica_colision_recomendada === 'actualizar_uno') {
+					politica_colision_recomendada = 'saltear_y_reportar'
+				}
+				if (
+					politica_colision_recomendada === 'actualizar_todos'
+					|| politica_colision_recomendada === 'saltear_y_reportar'
+					|| politica_colision_recomendada === 'crear_nuevo'
+				) {
+					this.politica_colision = politica_colision_recomendada
+				}
+
+				/*
+				 * Prompt 06 (grupo 265): igual patrón defensivo — si no viene o no es uno
+				 * de los dos valores válidos, se deja el default ('ultima_gana').
+				 */
+				if (
+					this.recomendacion_configuracion.politica_intra_archivo === 'ultima_gana'
+					|| this.recomendacion_configuracion.politica_intra_archivo === 'productos_distintos'
+				) {
+					this.politica_intra_archivo = this.recomendacion_configuracion.politica_intra_archivo
+				}
+			}
 		},
 
 		/**
@@ -3060,20 +3264,29 @@ export default {
 		},
 
 		/*
-		 * Grupo 299 (correctivo de cancelación de polling, segundo intento): cancela
-		 * cualquier corrida de análisis/recomendación en curso. Se llama desde
-		 * reset() (disparado por @hide del modal: ESC, clic afuera, o cierre
-		 * explícito) y desde beforeDestroy() (navegación fuera de la vista).
+		 * Deja de seguir la corrida desde este componente. Se llama al cerrar el
+		 * modal (@hide: ESC, clic afuera o cierre explícito) y al destruirlo
+		 * (navegación fuera de la vista).
 		 *
-		 * Hace las cuatro cosas que exige la cancelación:
+		 * 🔴 SOLTAR NO ES CANCELAR, y este método se llamaba cancelar_analisis_en_curso().
+		 * El nombre viejo describía la intención del grupo 299 pero nunca describió lo
+		 * que pasaba del otro lado: la corrida es un job en un worker y nadie la
+		 * cancelaba nunca; lo único que se cancelaba era el polling, y con él se tiraba
+		 * a la basura un resultado que el servidor iba a terminar igual, minutos
+		 * después, sin que nadie lo consumiera. Esa era la razón de fondo por la que
+		 * cerrar el modal se sentía como perder el trabajo hecho.
+		 *
+		 * Ahora el resultado se recupera por el aviso que manda el job al terminar, así
+		 * que soltar el polling no cuesta nada: es simplemente dejar de preguntar.
+		 *
+		 * Sigue haciendo lo mismo que hacía, y por los mismos motivos:
 		 * 1. invalida el token vigente, de modo que cualquier request ya en vuelo
 		 *    — el POST inicial incluido — quede huérfano al volver;
 		 * 2 y 3. limpia los timers pendientes (polling y aviso de archivo grande);
-		 * 4. apaga el indicador global de carga y los flags locales SIN depender de
-		 *    que la Promise en curso se resuelva o rechace, porque cuando se
-		 *    cancela no va a hacer ninguna de las dos cosas.
+		 * 4. apaga los flags locales SIN depender de que la Promise en curso se
+		 *    resuelva o rechace, porque una vez soltada no va a hacer ninguna de las dos.
 		 */
-		cancelar_analisis_en_curso() {
+		soltar_seguimiento_del_analisis() {
 			this.analysis_polling_token++
 
 			if (this.analysis_polling_timer_id) {
@@ -3086,19 +3299,374 @@ export default {
 				this.analysis_warning_timer_id = null
 			}
 
-			this.$store.commit('auth/setLoading', false)
-			this.$store.commit('auth/setMessage', '')
 			this.loading = false
 			this.loading_recomendacion = false
+			this.analysis_paso = ''
+			this.analysis_progreso = 0
+			this.analysis_es_archivo_grande = false
+
+			/*
+			 * Deja de estar mirando la corrida: desde acá en adelante, si termina, el
+			 * aviso sí le tiene que llegar — es el punto entero del cambio.
+			 */
+			this.$store.commit('excel_analysis/set_siguiendo_uuid', null)
+		},
+
+		/*
+		 * Cierra el seguimiento de una corrida que YA terminó: limpia los timers y
+		 * los indicadores, sin tocar el token.
+		 *
+		 * La diferencia con soltar_seguimiento_del_analisis() es justamente el token,
+		 * y no es un detalle: el token es del caller, que lo vuelve a chequear en el
+		 * callback que consume el resultado. Invalidarlo acá dejaría huérfano a ese
+		 * mismo callback — es el bug que dejaba el modal clavado en "Analizando el
+		 * archivo con IA... (40%)" para siempre (grupo 303, 1/8/2026).
+		 */
+		terminar_seguimiento() {
+			if (this.analysis_warning_timer_id) {
+				clearTimeout(this.analysis_warning_timer_id)
+				this.analysis_warning_timer_id = null
+			}
+
+			this.loading = false
+			this.loading_recomendacion = false
+			this.analysis_paso = ''
+			this.analysis_progreso = 0
+			this.analysis_es_archivo_grande = false
+
+			/*
+			 * La corrida terminó con el usuario mirando, así que ya se enteró: se marca
+			 * vista. Sin esto, la próxima vez que cargue la SPA le volveríamos a
+			 * ofrecer, como novedad, el análisis que acaba de ver terminar.
+			 *
+			 * Vale también cuando terminó con error: el error se lo mostró esta misma
+			 * pantalla. Si nunca hubo corrida (falló el POST inicial), no hay uuid y
+			 * esto no hace nada.
+			 */
+			const siguiendo_uuid = this.$store.state.excel_analysis.siguiendo_uuid
+
+			this.$store.commit('excel_analysis/set_siguiendo_uuid', null)
+
+			if (siguiendo_uuid) {
+				this.$store.dispatch('excel_analysis/marcar_visto', siguiendo_uuid)
+			}
+		},
+
+		/*
+		 * Reabre el modal en el estado en que quedó una corrida, sin el archivo local
+		 * y sin nada guardado en memoria del navegador. Es lo que ejecuta el botón
+		 * "Ver resultado" del aviso.
+		 *
+		 * Para una corrida de análisis alcanza con su propio resultado (paso 2). Para
+		 * una recomendación hacen falta las dos: primero el análisis padre, que es de
+		 * donde salen duplicados, placeholders y cadena de identificación, y recién
+		 * encima la recomendación (paso 3).
+		 *
+		 * @param {Object} orden  { uuid, tipo } de la corrida a abrir
+		 * @return {void}
+		 */
+		abrir_desde_corrida(orden) {
+			let self = this
+
+			if (!orden || !orden.uuid) {
+				return
+			}
+
+			/* Empezamos de cero: puede haber quedado estado de una importación anterior. */
+			self.reset()
+			self.loading = true
+
+			/*
+			 * Misma disciplina de token que el resto del componente, y por el mismo
+			 * motivo: entre este GET y su respuesta el usuario puede cerrar el modal.
+			 * Sin el chequeo, la respuesta llegaría igual y dejaría el modal cerrado
+			 * parado en el paso 2 — de modo que la próxima vez que lo abriera se
+			 * encontraría con el resumen de una importación que ya había descartado.
+			 *
+			 * Se captura DESPUÉS del reset(), que es quien incrementa el token.
+			 */
+			let token_corrida = self.analysis_polling_token
+
+			self.$api.get('ai-excel-import/analysis/' + orden.uuid, { timeout: 30000 })
+			.then(function(res) {
+
+				if (token_corrida !== self.analysis_polling_token) return
+
+				/*
+				 * El usuario está viendo el resultado (o el error): la corrida deja de
+				 * ser una novedad pendiente. Se marca acá, una sola vez, para los tres
+				 * desenlaces de abajo.
+				 */
+				if (res.data.estado === 'listo' || res.data.estado === 'error') {
+					self.$store.dispatch('excel_analysis/marcar_visto', orden.uuid)
+				}
+
+				if (res.data.estado === 'error') {
+					self.loading = false
+					self.error_message = res.data.error || 'Ocurrió un error al analizar el archivo.'
+					return
+				}
+
+				/*
+				 * La corrida todavía está trabajando. Puede pasar: el usuario abre el
+				 * modal por su cuenta mientras el análisis corre, o el aviso llega justo
+				 * cuando ya estaba mirando. Se muestra el paso 1 siguiéndola en vivo.
+				 */
+				if (res.data.estado !== 'listo') {
+					self.retomar_seguimiento(orden.uuid, res.data)
+					return
+				}
+
+				if (res.data.tipo !== 'recomendacion') {
+					self.analysis_uuid = orden.uuid
+					self.aplicar_contexto_analisis(res.data.contexto)
+					self.aplicar_resultado_analisis(res.data.resultado)
+					self.loading = false
+					self.step = 2
+					return
+				}
+
+				/* Recomendación: hay que traer también el análisis del que salió. */
+				const contexto = res.data.contexto || {}
+
+				if (!contexto.analysis_uuid) {
+					/*
+					 * Recomendación sin análisis padre: son las corridas encoladas antes de
+					 * este cambio, que no guardaban el uuid. No hay forma de rearmar el paso
+					 * 3 con lo que quedó, así que se dice y se empieza de nuevo — es un caso
+					 * que se apaga solo en 48 horas, cuando la limpieza se lleve esas corridas.
+					 */
+					self.loading = false
+					self.error_message = 'Este análisis es de una versión anterior y no se puede reabrir. Volvé a subir el archivo.'
+					return
+				}
+
+				self.recomendacion_uuid = orden.uuid
+
+				self.$api.get('ai-excel-import/analysis/' + contexto.analysis_uuid, { timeout: 30000 })
+				.then(function(res_analisis) {
+
+					if (token_corrida !== self.analysis_polling_token) return
+
+					if (res_analisis.data.estado !== 'listo') {
+						self.loading = false
+						self.error_message = 'No se pudo recuperar el análisis original. Volvé a subir el archivo.'
+						return
+					}
+
+					self.analysis_uuid = contexto.analysis_uuid
+					self.aplicar_contexto_analisis(res_analisis.data.contexto)
+					self.aplicar_resultado_analisis(res_analisis.data.resultado)
+
+					/*
+					 * Encima del paso 2 va lo que el usuario había confirmado a mano antes de
+					 * pedir la recomendación: si eligió otro proveedor o corrigió el mapeo, eso
+					 * es lo que vale, no lo que había inferido la IA.
+					 */
+					if (contexto.provider_id) {
+						self.selected_provider_id = contexto.provider_id
+					}
+					if (contexto.provider_code_column_index !== null && contexto.provider_code_column_index !== undefined) {
+						self.provider_code_column_index = contexto.provider_code_column_index
+					}
+					if (contexto.column_mapping && contexto.column_mapping.length) {
+						self.column_mapping = self.normalize_column_mapping(contexto.column_mapping)
+					}
+
+					self.aplicar_resultado_recomendacion(res.data.resultado)
+					self.loading = false
+					self.step = 3
+				})
+				.catch(function() {
+					if (token_corrida !== self.analysis_polling_token) return
+
+					self.loading = false
+					self.error_message = 'No se pudo recuperar el análisis original. Volvé a subir el archivo.'
+				})
+			})
+			.catch(function() {
+				if (token_corrida !== self.analysis_polling_token) return
+
+				self.loading = false
+				self.error_message = 'No se pudo recuperar el análisis. Volvé a subir el archivo.'
+			})
+		},
+
+		/*
+		 * Restituye el rango de filas y la detección de cabecera que el navegador
+		 * había calculado al elegir el archivo. Sin esto, un modal reabierto
+		 * importaría con los defaults (fila 2 a la 1000) en vez de con el rango real
+		 * del Excel, que es de las pocas cosas de este flujo que fallan en silencio.
+		 *
+		 * @param {Object} contexto  "contexto" tal como lo devuelve la API
+		 * @return {void}
+		 */
+		aplicar_contexto_analisis(contexto) {
+			if (!contexto) {
+				return
+			}
+
+			if (contexto.start_row) {
+				this.start_row = contexto.start_row
+			}
+
+			if (contexto.finish_row) {
+				this.finish_row = contexto.finish_row
+				this.finish_row_original = contexto.finish_row
+			}
+
+			if (contexto.has_header_row !== null && contexto.has_header_row !== undefined) {
+				/* Viaja como 1/0 en el multipart del análisis. */
+				this.has_header_row = contexto.has_header_row == 1
+			}
+		},
+
+		/*
+		 * Vuelve a engancharse a una corrida que sigue trabajando, mostrando el paso 1
+		 * con su progreso. Se usa al reabrir el modal sobre un análisis en curso.
+		 *
+		 * @param {string} uuid          uuid de la corrida
+		 * @param {Object} estado_actual  última respuesta de /analysis/{uuid}
+		 * @return {void}
+		 */
+		retomar_seguimiento(uuid, estado_actual) {
+			let self = this
+
+			self.loading = true
+			self.analysis_paso     = estado_actual.paso || 'Analizando el archivo con IA…'
+			self.analysis_progreso = estado_actual.progreso || 0
+
+			const es_recomendacion = estado_actual.tipo === 'recomendacion'
+
+			if (es_recomendacion) {
+				self.recomendacion_uuid = uuid
+			} else {
+				self.analysis_uuid = uuid
+			}
+
+			self.aplicar_contexto_analisis(estado_actual.contexto)
+
+			/* Mismo criterio de token que los dos POST: se captura antes de esperar. */
+			let token_corrida = ++self.analysis_polling_token
+
+			self.esperar_analisis_terminado(uuid, token_corrida)
+			.then(function(resultado) {
+
+				if (token_corrida !== self.analysis_polling_token) return
+
+				self.terminar_seguimiento()
+
+				if (es_recomendacion) {
+					/*
+					 * Una recomendación que termina mientras la miramos necesita el paso 2
+					 * armado abajo, y eso vive en el análisis padre: se rearma todo desde
+					 * cero por el camino de siempre, que ya sabe hacerlo.
+					 */
+					self.abrir_desde_corrida({ uuid: uuid, tipo: 'recomendacion' })
+					return
+				}
+
+				self.aplicar_resultado_analisis(resultado)
+				self.step = 2
+			})
+			.catch(function(mensaje) {
+
+				if (token_corrida !== self.analysis_polling_token) return
+
+				self.terminar_seguimiento()
+				self.error_message = mensaje
+			})
+		},
+
+		/*
+		 * Cierra el modal dejando la corrida trabajando. El aviso de que terminó
+		 * llega solo, por broadcast.
+		 */
+		seguir_en_segundo_plano() {
+			this.$bvModal.hide(this.modal_id)
+		},
+
+		/*
+		 * Toma la orden de apertura que dejó el aviso, si es para esta instancia del
+		 * modal, y la ejecuta.
+		 *
+		 * El chequeo de model no es decorativo: de este componente hay tres instancias
+		 * vivas al mismo tiempo (artículos, clientes y proveedores), cada una con su
+		 * propio id de modal. Sin el filtro, un análisis de clientes abriría también
+		 * el modal de artículos.
+		 *
+		 * @return {void}
+		 */
+		consumir_orden_de_apertura() {
+			const orden = this.$store.state.excel_analysis.abrir_en
+
+			if (!orden || !orden.uuid) {
+				return
+			}
+
+			if ((orden.model || 'article') !== this.model) {
+				return
+			}
+
+			/* Se consume una sola vez: si no, cada reapertura del modal la repetiría. */
+			this.$store.commit('excel_analysis/set_abrir_en', null)
+
+			/*
+			 * Primero se arranca la carga y recién después se muestra el modal, no al
+			 * revés: mostrarlo dispara @show, y @show también intenta retomar la
+			 * corrida en curso. Con la carga ya arrancada, esa segunda vía se ve a sí
+			 * misma ocupada y no hace nada, en vez de largar un segundo pedido en
+			 * paralelo por la misma corrida.
+			 */
+			this.abrir_desde_corrida(orden)
+			this.$bvModal.show(this.modal_id)
+		},
+
+		/*
+		 * Al abrir el modal a mano (menú → Importar con IA) con una corrida todavía
+		 * trabajando, se retoma esa corrida en lugar de mostrar el paso 1 vacío.
+		 *
+		 * Sin esto, el usuario que se cansó de esperar y volvió a entrar vería un
+		 * formulario limpio, subiría el mismo archivo otra vez y pondría un segundo
+		 * análisis pesado en la misma cola que el primero — que es exactamente el
+		 * escenario que hace que los dos tarden el doble.
+		 *
+		 * @return {void}
+		 */
+		on_show() {
+			/* Ya hay una apertura dirigida en marcha (ver consumir_orden_de_apertura). */
+			if (this.loading || this.loading_recomendacion) {
+				return
+			}
+
+			if (!this.$store.getters['excel_analysis/hay_corrida_en_curso']) {
+				return
+			}
+
+			const corrida = this.$store.state.excel_analysis.corrida
+			const contexto = corrida.contexto || {}
+
+			/* Una corrida de clientes no tiene nada que hacer en el modal de artículos. */
+			if ((contexto.model || 'article') !== this.model) {
+				return
+			}
+
+			this.abrir_desde_corrida({ uuid: corrida.uuid, tipo: corrida.tipo })
 		},
 
 		/*
 		 * Resetea el estado del modal al cerrarlo para que la próxima vez
 		 * empiece desde el paso 1 limpio.
+		 *
+		 * Lo que NO hace es tocar la corrida del servidor: si había un análisis
+		 * trabajando, sigue trabajando y va a avisar cuando termine. Limpiar la
+		 * pantalla y abandonar el trabajo dejaron de ser la misma cosa.
 		 */
 		reset() {
-			this.cancelar_analisis_en_curso()
+			this.soltar_seguimiento_del_analisis()
 
+			this.analysis_uuid     = null
+			this.recomendacion_uuid = null
 			this.step          = 1
 			this.file          = null
 			this.file_processing = false
@@ -3158,13 +3726,26 @@ export default {
 	},
 
 	/*
-	 * Grupo 299 (correctivo de cancelación de polling, segundo intento): si el
-	 * componente se destruye (navegación fuera de la vista) con un análisis o una
-	 * recomendación en curso, cancela igual que reset() — si no, el polling sigue
-	 * pegándole a la API con el componente ya destruido.
+	 * El caso normal del botón "Ver resultado": el aviso dejó la orden en el store
+	 * y navegó hasta acá, así que este componente recién se está montando y su
+	 * watch todavía no existía cuando la orden se escribió.
+	 *
+	 * Va en mounted() y no en created() porque $bvModal.show() emite un evento que
+	 * escucha el <b-modal>: en created() ese hijo todavía no existe y el pedido de
+	 * apertura se perdería sin ningún error a la vista.
+	 */
+	mounted() {
+		this.consumir_orden_de_apertura()
+	},
+
+	/*
+	 * Si el componente se destruye (navegación fuera de la vista) con una corrida
+	 * en curso, suelta el seguimiento — si no, el polling sigue pegándole a la API
+	 * con el componente ya destruido. La corrida en sí sigue su curso en el
+	 * servidor y avisa cuando termina.
 	 */
 	beforeDestroy() {
-		this.cancelar_analisis_en_curso()
+		this.soltar_seguimiento_del_analisis()
 	},
 
 }
