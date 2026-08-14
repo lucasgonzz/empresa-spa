@@ -15,7 +15,7 @@ export default {
                 el, aunque el cliente tenga otra asignada. Cambiarsela por atras cambia los precios
                 de todas las lineas.
             */
-            if (!force_reset && this.editando_venta_previa) {
+            if (!force_reset && (this.$store.getters['vender/previus_sales/editando_venta_previa'] || !!this.$store.state.vender.budget)) {
                 return
             }
             console.log('setPriceType')

@@ -31,7 +31,7 @@ export default {
                 current_acount_payment_method_id en 0, que es falsy, o sea que justo el estado que
                 hay que proteger es el que ese guard no distingue de "el usuario no eligio nada".
             */
-            if (!force_reset && this.editando_venta_previa) {
+            if (!force_reset && (this.$store.getters['vender/previus_sales/editando_venta_previa'] || !!this.$store.state.vender.budget)) {
                 return
             }
             // Sin forzar: conservar la selección del usuario al volver a Vender desde otro módulo

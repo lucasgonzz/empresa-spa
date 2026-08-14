@@ -90,7 +90,23 @@ export default {
 				console.log(err)
 				this.$toast.error('No se pudo cargar la venta')
 				this.$store.commit('auth/setLoading', false)
-				this.$store.commit('vender/previus_sales/set_abriendo_venta_previa', false)
+
+				/*
+					🔴 limpiar_vender() y no solo apagar el flag: al llegar aca el created() de
+					Vender.vue YA corrio y ya se salteo los cinco defaults del comercio -porque
+					para el se estaba abriendo una venta guardada- y ya dejo marcada la venta como
+					inicializada. Si solo se apagara el flag, el operador quedaria en una venta
+					nueva sin lista de precios, sin metodo de pago, sin caja, sin articulos por
+					defecto y sin siempre_omitir_en_cuenta_corriente, y salir del modulo y volver
+					no lo arreglaria: la marca de inicializada ya esta puesta. El caso mas caro es
+					justo el ultimo, porque el comercio terminaria registrando la venta en la
+					cuenta corriente del cliente contra su propia configuracion.
+
+					limpiar_vender() apaga el flag, apaga esa marca y vuelve a aplicar los
+					defaults, que es exactamente el estado al que hay que volver cuando la venta
+					que se pidio abrir no se pudo abrir.
+				*/
+				this.limpiar_vender()
 			})
 		},
 		load_previus_sale_attachments(sale_id) {

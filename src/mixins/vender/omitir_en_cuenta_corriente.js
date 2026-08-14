@@ -24,7 +24,7 @@ export default {
                 los datos de la venta se aplican a los 500 ms y los reintentos van hasta los 10
                 segundos.
             */
-            if (!force_reset && this.editando_venta_previa) {
+            if (!force_reset && (this.$store.getters['vender/previus_sales/editando_venta_previa'] || !!this.$store.state.vender.budget)) {
                 return
             }
             if (this.authenticated) {

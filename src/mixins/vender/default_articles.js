@@ -25,7 +25,7 @@ export default {
 				por defecto del comercio. Corre en el created() de Vender.vue, o sea ANTES de que
 				llegue la venta, y por eso el getter mira tambien el flag de "abriendo".
 			*/
-			if (this.editando_venta_previa) {
+			if (this.$store.getters['vender/previus_sales/editando_venta_previa'] || !!this.$store.state.vender.budget) {
 				return
 			}
 			if (
