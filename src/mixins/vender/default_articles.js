@@ -20,7 +20,12 @@ export default {
 
 		// Defautl Articles
 		set_default_articles() {
-			if (this.index_previus_sales > 0) {
+			/*
+				Guard: a una venta que se esta abriendo para editar no se le agregan los articulos
+				por defecto del comercio. Corre en el created() de Vender.vue, o sea ANTES de que
+				llegue la venta, y por eso el getter mira tambien el flag de "abriendo".
+			*/
+			if (this.editando_venta_previa) {
 				return
 			}
 			if (

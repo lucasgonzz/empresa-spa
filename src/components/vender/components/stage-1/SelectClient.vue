@@ -124,7 +124,7 @@ export default {
 			if (this.budget) {
 				return this.budget.budget_status_id != 2
 			}
-			if (this.index_previus_sales == 0) {
+			if (!this.editando_venta_previa) {
 				return true
 			}
 			return !!(this.previus_sale && this.previus_sale.omitir_en_cuenta_corriente)
@@ -134,7 +134,7 @@ export default {
 		client() {
 			// En edición (venta previa o presupuesto existente) se conservan los precios
 			// ya guardados: se recalcula desde el pivot, igual que las ventas en edición.
-			if (this.index_previus_sales > 0 || this.budget) {
+			if (this.editando_venta_previa || this.budget) {
 				this.setItemsPrices(false, true)
 			} else {
 				this.setItemsPrices(false, false)
@@ -210,7 +210,7 @@ export default {
 		// Devuelve true si se está editando un comprobante ya guardado (presupuesto o venta previa),
 		// false si es una venta nueva en curso.
 		en_edicion_vender() {
-			return !!this.budget || this.index_previus_sales > 0
+			return !!this.budget || this.editando_venta_previa
 		},
 		// Si el negocio usa listas de precios y el cliente elegido tiene asignada una lista distinta
 		// a la que ya tiene el comprobante, avisa que se mantiene la lista original (los precios no cambian).

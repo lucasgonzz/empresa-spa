@@ -145,12 +145,12 @@ export default {
 		},
 
 		/**
-		 * Índice de venta previa activa (0 = venta nueva).
+		 * Se esta editando una venta guardada.
 		 *
-		 * @returns {number}
+		 * @returns {boolean}
 		 */
-		index_previus_sale() {
-			return this.$store.state.vender.previus_sales.index
+		editando_venta_previa() {
+			return this.$store.getters['vender/previus_sales/editando_venta_previa']
 		},
 
 		/**
@@ -170,7 +170,7 @@ export default {
 		 * @returns {Object|null}
 		 */
 		sale() {
-			if (this.index_previus_sale > 0) {
+			if (this.editando_venta_previa) {
 				return this.previus_sale
 			}
 			if (this.maked_sale) {

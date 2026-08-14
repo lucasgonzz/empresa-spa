@@ -138,7 +138,7 @@ export default {
 		const hay_venta_en_curso = !!(
 			this.$store.state.vender.items.length
 			|| this.$store.state.vender.client
-			|| this.$store.state.vender.previus_sales.index > 0
+			|| this.$store.getters['vender/previus_sales/editando_venta_previa']
 		)
 		this.stage1_open = !hay_venta_en_curso
 	},

@@ -106,7 +106,7 @@ export default {
 
 			combo.final_price = Number(combo.price)
 			this.$store.commit('vender/addItem', combo)
-			if (this.index_previus_sales > 0) {
+			if (this.editando_venta_previa) {
 				this.setItemsPrices(true, false)
 			} else {
 				this.setItemsPrices(true, false)

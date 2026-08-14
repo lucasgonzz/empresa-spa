@@ -103,7 +103,7 @@
 					<!-- Aviso del motivo por el que la opción está deshabilitada -->
 					<p
 					class="vender-rate-panel__section-hint"
-					v-if="sin_recargos_seleccionados && index_previus_sales == 0">
+					v-if="sin_recargos_seleccionados && !editando_venta_previa">
 						Seleccioná al menos un recargo de los de arriba para poder usar esta opción.
 					</p>
 
@@ -140,7 +140,7 @@ export default {
 	computed: {
 		desactivar_recargos() {
 			if (
-				this.index_previus_sales > 0 && this.previus_sale.aplicar_recargos_directo_a_items
+				this.editando_venta_previa && this.previus_sale.aplicar_recargos_directo_a_items
 			) {
 				return true
 			}
@@ -167,7 +167,7 @@ export default {
 		 * @returns {boolean}
 		 */
 		desactivar_recargos_a_precios_de_articulos() {
-			if (this.index_previus_sales > 0) {
+			if (this.editando_venta_previa) {
 				return true
 			}
 			return this.sin_recargos_seleccionados
@@ -196,7 +196,7 @@ export default {
 				if (
 					!value.length
 					&& this.aplicar_recargos_directo_a_items
-					&& this.index_previus_sales == 0
+					&& !this.editando_venta_previa
 				) {
 					this.$store.commit('vender/set_aplicar_recargos_directo_a_items', 0)
 				}

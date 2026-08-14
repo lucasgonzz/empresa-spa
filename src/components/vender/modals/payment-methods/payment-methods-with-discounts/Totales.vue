@@ -26,7 +26,7 @@ export default {
         total_vender() { 
         	this.total_a_repartir_with_discounts = this.total_vender
         	
-        	if (this.index_previus_sale == 0) {
+        	if (!this.$store.getters['vender/previus_sales/editando_venta_previa']) {
         		this.metodos_de_pago_seleccionados = []
         		this.total_repartido_with_discounts = 0
         	} else {

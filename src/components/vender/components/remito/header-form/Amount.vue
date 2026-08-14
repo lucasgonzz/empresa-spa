@@ -81,9 +81,6 @@ export default {
 		item() {
 			return this.$store.state.vender.item
 		},
-		index_previus_sale() {
-			return this.$store.state.vender.previus_sales.index
-		},
         previus_sale() {
             return this.$store.state.vender.previus_sales.previus_sale
         },

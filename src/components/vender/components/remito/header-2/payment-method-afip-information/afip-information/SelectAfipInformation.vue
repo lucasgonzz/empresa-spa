@@ -92,7 +92,7 @@ export default {
 
 		disabled() {
 
-			if (this.index_previus_sales > 0 || this.guardar_como_presupuesto) {
+			if (this.editando_venta_previa || this.guardar_como_presupuesto) {
 
 				return true
 

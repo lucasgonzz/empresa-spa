@@ -36,35 +36,30 @@ export default {
 		},
 	},
 	methods: {
-		setPreviusSale(sale) {
-			this.loading_index = true 
-			this.$api.get('previus-next-index/sale/'+sale.id)
-			.then(res => {
-				this.loading_index = false
-				
-				if (
-					res.data.actualizandose_por
-					&& res.data.actualizandose_por.id != this.user.id
-				) {
-					this.$toast.error('Se esta actualizando por '+res.data.actualizandose_por.name)
-				} else {
+		/*
+			Abre una venta guardada para actualizarla.
 
-					this.$store.commit('vender/previus_sales/setIndex', res.data.index)
-					this.callGetSale()
-					console.log('redirigiendo a vender')
-					this.$router.push({name: 'vender', params: {view: 'remito'}})
-				}
-			})
-			.catch(err => {
-				this.loading_index = false
-				console.log(err)
-			})
-		},	
-		callGetSale() {
+			Ya no hay round-trip por la posicion de la venta: se llama derecho a la carga por id.
+			El chequeo de `actualizandose_por` que habia aca estaba inerte —el endpoint nunca
+			devolvio ese campo, el codigo que lo devolvia esta comentado en el controlador— y se
+			deja inerte a proposito: hay valores viejos de actualizandose_por_id en produccion y
+			activarlo empezaria a bloquear ventas que no esta editando nadie.
+
+			El flag va ANTES de navegar y de forma sincrona: es lo que le dice a
+			set_default_articles() que hay una venta en camino, y ese guard corre en el created()
+			de Vender.vue, medio segundo antes de que la venta llegue.
+		*/
+		setPreviusSale(sale) {
+			this.$store.commit('vender/previus_sales/set_abriendo_venta_previa', true)
+			this.callGetSale(sale.id)
+			console.log('redirigiendo a vender')
+			this.$router.push({name: 'vender', params: {view: 'remito'}})
+		},
+		callGetSale(sale_id) {
 
 			this.$store.commit('auth/setMessage', 'Cargando venta')
 			this.$store.commit('auth/setLoading', true)
-			this.$store.dispatch('vender/previus_sales/getSale')
+			this.$store.dispatch('vender/previus_sales/getSaleById', sale_id)
 			.then(() => {
 
 				setTimeout(() => {
@@ -88,9 +83,14 @@ export default {
 				}, 500)
 			})
 			.catch(err => {
-				this.$toast.error('Error')
+				/*
+					Antes esto era un console.log y nada mas: la venta no cargaba, VENDER quedaba
+					vacio y el usuario no se enteraba de que habia fallado algo.
+				*/
 				console.log(err)
+				this.$toast.error('No se pudo cargar la venta')
 				this.$store.commit('auth/setLoading', false)
+				this.$store.commit('vender/previus_sales/set_abriendo_venta_previa', false)
 			})
 		},
 		load_previus_sale_attachments(sale_id) {
@@ -467,6 +467,11 @@ export default {
 				item.pivot = article.pivot
 				item.cost = Number(article.pivot.cost)
 				item.price = Number(article.price)
+				// getPriceVender usa final_price cuando corresponde el precio actual del articulo en vez del
+				// guardado (extension lista_de_precios_por_rango_de_cantidad_vendida). Si no se copia aca queda
+				// undefined y la linea se pinta en $0. Es la causa del bug de precios en 0 de San Cayetano.
+				item.final_price = article.final_price
+				item.final_price_blanco = article.final_price_blanco
 				item.amount = Number(article.pivot.amount)
 				item.article_variant_id = Number(article.pivot.article_variant_id)
 				// Se conserva iva_id para recalcular precio segun iva_aplicado al editar.

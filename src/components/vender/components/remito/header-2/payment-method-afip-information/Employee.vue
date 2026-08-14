@@ -3,7 +3,7 @@
 	v-if="authenticated && hasExtencion('cambiar_empleado_en_vender') && can('vender.change_employee')"
 	prepend="Empleado">
 		<b-form-select
-		:disabled="index_previus_sales != 0"
+		:disabled="editando_venta_previa"
 		v-model="employee_id"
 		:options="getOptions({key: 'employee_id', text: 'Empleado'})"></b-form-select>
 	</b-input-group> 

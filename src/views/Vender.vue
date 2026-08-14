@@ -125,7 +125,7 @@ export default {
 		/*
 			Salir del modulo YA NO cancela la edicion de una venta guardada.
 
-			Antes se llamaba a cancelPreviusSale() cuando index_previus_sales != 0, y eso
+			Antes se llamaba a cancelPreviusSale() cuando se estaba editando una venta guardada, y eso
 			ejecutaba limpiar_vender(): se perdia la edicion entera (items, cliente,
 			descuentos, observaciones, adjuntos) por salir un segundo a otro modulo.
 

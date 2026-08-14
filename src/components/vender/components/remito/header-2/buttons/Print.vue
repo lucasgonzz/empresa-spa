@@ -161,9 +161,9 @@ export default {
 
 		},
 
-		index_previus_sale() {
+		editando_venta_previa() {
 
-			return this.$store.state.vender.previus_sales.index
+			return this.$store.getters['vender/previus_sales/editando_venta_previa']
 
 		},
 
@@ -185,7 +185,7 @@ export default {
 
 		sale() {
 
-			if (this.index_previus_sale > 0) {
+			if (this.editando_venta_previa) {
 
 				return this.previus_sale
 

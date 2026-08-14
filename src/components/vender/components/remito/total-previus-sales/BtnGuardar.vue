@@ -82,7 +82,7 @@ export default {
 			if (!this.loader && this.check()) {
 				if (this.guardar_como_presupuesto) {
 					this.guardar_presupuesto()
-				} else if (this.index_previus_sales == 0) {
+				} else if (!this.editando_venta_previa) {
 					this.guardar_venta(false)
 				} else {
 					this.updateSale()
@@ -124,7 +124,7 @@ export default {
 			if (this.guardar_como_presupuesto) {
 				return 'Guardar Presupuesto'
 			}
-			if (this.index_previus_sales == 0) {
+			if (!this.editando_venta_previa) {
 				// return 'COBRAR'
 				return 'Guardar venta'
 			}
@@ -148,14 +148,14 @@ export default {
 		updating() {
 			return this.$store.state.vender.previus_sales.updating
 		},
-		index_previus_sales() {
-			return this.$store.state.vender.previus_sales.index
+		editando_venta_previa() {
+			return this.$store.getters['vender/previus_sales/editando_venta_previa']
 		},
 		vendiendo() {
 			return this.$store.state.vender.vendiendo
 		},
 		loader() {
-			if (this.index_previus_sales == 0) {
+			if (!this.editando_venta_previa) {
 				return this.vendiendo
 			}
 			return this.updating

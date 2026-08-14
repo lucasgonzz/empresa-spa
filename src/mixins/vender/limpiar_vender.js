@@ -30,7 +30,11 @@ export default {
 		limpiar_vender() {
 			console.log('limpiar_vender')
 			
-			this.$store.commit('vender/previus_sales/setIndex', 0)
+			/*
+				Estas dos son ahora la unica senal de que se dejo de editar una venta previa: el
+				indice posicional que habia aca era codigo muerto de la navegacion anterior/siguiente.
+			*/
+			this.$store.commit('vender/previus_sales/set_abriendo_venta_previa', false)
 			this.$store.commit('vender/previus_sales/setPreviusSale', {})
 			this.$store.commit('vender/setToCheck', 0)
 			this.$store.commit('vender/setChecked', 0)

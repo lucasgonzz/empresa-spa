@@ -66,15 +66,15 @@ export default {
 		client() {
 			return this.$store.state.vender.client
 		},
-		index_previus_sales() {
-			return this.$store.state.vender.previus_sales.index
+		editando_venta_previa() {
+			return this.$store.getters['vender/previus_sales/editando_venta_previa']
 		},
 		disabled() {
 			// if (this.budget !== null) {
 			// // if (this.previus_sale.id || this.budget !== null) {
 			// 	return true
 			// }
-			if (this.index_previus_sales > 0) {
+			if (this.editando_venta_previa) {
 			// if (this.previus_sale.id || this.budget !== null) {
 				return true
 			}

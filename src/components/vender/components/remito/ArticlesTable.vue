@@ -316,7 +316,7 @@ export default {
 			// 		{ key: 'unidades_individuales', label: 'U. Individuales' },
 			// 	)
 			// }
-			if (this.index_previus_sales > 0) {
+			if (this.editando_venta_previa) {
 				if (this.hasExtencion('check_sales') && !this.previus_sale.confirmed && (this.previus_sale.to_check || this.previus_sale.checked)) {
 					fields.push(
 						{ key: 'checked_amount', label: 'U. chequeadas' },

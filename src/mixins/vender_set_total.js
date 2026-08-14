@@ -48,7 +48,8 @@ export default {
 			return this.$store.state.surchage.models 
 		},
 		from_pivot() {
-			return this.index_previus_sales != 0 || this.budget
+			/* El || budget no sobra: actualizar un presupuesto en VENDER entra por aca. */
+			return this.$store.getters['vender/previus_sales/editando_venta_previa'] || !!this.budget
 		},
 		cuota_descuento() {
 			return this.$store.state.vender.cuota_descuento 
