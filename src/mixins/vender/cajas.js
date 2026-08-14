@@ -43,7 +43,28 @@ export default {
 		},
 	},
 	methods: {
-		set_caja_por_defecto() {
+		/**
+		 * Asigna la caja por defecto del metodo de pago y la sucursal a una venta NUEVA.
+		 *
+		 * @param {boolean} force_reset true: accion explicita, aplica igual en edicion.
+		 */
+		set_caja_por_defecto(force_reset = false) {
+
+			/*
+				Una venta guardada trae su caja y no se le cambia por atras. El guard va adentro
+				porque esta funcion no la llama solo el created(): tambien la disparan los watchers
+				de payment_methods, addresses y cajas, que se resuelven cuando llegan esos modelos
+				—o sea despues de que se aplico la venta que se esta editando—.
+			*/
+			/*
+				Se lee el getter del store y no un computed: este mixin no incluye
+				mixins/vender/computed, asi que `this.editando_venta_previa` seria undefined y el
+				guard no cortaria nunca — que es exactamente el modo de falla silencioso que esta
+				mision viene a cerrar.
+			*/
+			if (!force_reset && this.$store.getters['vender/previus_sales/editando_venta_previa']) {
+				return
+			}
 
 			console.log('---------------------')
 			console.log('set_caja_por_defecto')

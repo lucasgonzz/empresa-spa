@@ -42,7 +42,13 @@ export default {
 			set(value) {
 				this.$store.commit('vender/set_omitir_en_cuenta_corriente', value)
 				if (value == 1) {
-					this.setDefaultPaymentMethod()
+					/*
+						force_reset en true porque esto es el usuario tocando el checkbox, no un
+						default del comercio: tiene que asignar el metodo de pago tambien cuando
+						se esta editando una venta guardada, donde los defaults automaticos estan
+						frenados a proposito.
+					*/
+					this.setDefaultPaymentMethod(true)
 				} else {
 
 					this.bloquear_metodo_de_pago()

@@ -238,7 +238,12 @@ export default {
 		clearSelected() {
 			this.$store.commit('vender/setClient', null)
 			this.$store.commit('vender/set_send_mail', 0)
-			this.setPriceType()
+			/*
+				force_reset en true: sacar el cliente a mano es una accion explicita del usuario,
+				no un default del comercio, asi que recalcular la lista de precios corresponde
+				tambien cuando se esta editando un comprobante guardado.
+			*/
+			this.setPriceType(true)
 			this.habilitar_metodo_de_pago()
 			this.set_afip_tipo_comprobante()
 		},

@@ -88,20 +88,34 @@ export default {
 			con el boton Limpiar: en los tres casos empieza una venta nueva y los defaults
 			tienen que volver.
 		*/
+		/*
+			Editar un comprobante existente NO es empezar una venta nueva: sus valores ya
+			estan guardados y los defaults del comercio los pisarian. San Cayetano perdia la
+			venta de la cuenta corriente por esto (13/8/2026). No sacar el guard.
+		*/
+		let editando = this.$store.getters['vender/previus_sales/editando_venta_previa'] || !!this.budget
+
 		if (!this.$store.state.vender.venta_en_curso_inicializada) {
-			/* Inicializar el log de auditoría para una nueva sesión de venta */
-			this.$store.commit('vender/init_sale_log')
-			this.set_default_articles()
-			this.setPriceType()
-			this.setDefaultPaymentMethod()
-			this.set_omitir_en_cuenta_corriente()
-			this.set_caja_por_defecto()
-			this.$store.commit('vender/clear_sale_log')
+
+			if (!editando) {
+				/* Inicializar el log de auditoría para una nueva sesión de venta */
+				this.$store.commit('vender/init_sale_log')
+				this.set_default_articles()
+				this.setPriceType()
+				this.setDefaultPaymentMethod()
+				this.set_omitir_en_cuenta_corriente()
+				this.set_caja_por_defecto()
+				this.$store.commit('vender/clear_sale_log')
+			}
 
 			/*
 				Explicito ademas de las mutaciones que la prenden solas: un negocio que no
 				usa listas de precios, no tiene caja por defecto y no tiene
 				siempre_omitir_en_cuenta_corriente no dispara ninguna de ellas.
+
+				Y va AFUERA del guard de edicion a proposito: editando un comprobante hay
+				que marcar la venta como inicializada igual, para que salir del modulo y
+				volver no dispare los defaults sobre una venta que ya tiene los suyos.
 			*/
 			this.$store.commit('vender/set_venta_en_curso_inicializada', true)
 		}

@@ -14,6 +14,26 @@ export default {
          *                            false: solo asigna si aún no hay método (id 0), p. ej. al entrar a Vender.
          */
         setDefaultPaymentMethod(force_reset = false) {
+            /*
+                Editando un comprobante guardado no se aplica ningun default: la venta ya tiene su
+                metodo de pago (o ninguno, a proposito, si va a la cuenta corriente).
+
+                El guard va ACA ADENTRO y no en el llamador porque lo que produce el bug son los
+                reintentos: cuando la autenticacion no esta lista, esta funcion se reagenda sola a
+                los 2, 4, 6, 8 y 10 segundos, y la venta que se esta editando se aplica a los 500
+                ms. Todos los reintentos caen despues. Un guard en el llamador no los frena.
+
+                force_reset en true es una accion explicita -guardar una venta, limpiar, o el
+                usuario tocando el checkbox de omitir cuenta corriente-, y ahi si tiene que
+                aplicar, tambien en edicion.
+
+                Ojo con por que no alcanza el guard de abajo: una venta a cuenta corriente tiene
+                current_acount_payment_method_id en 0, que es falsy, o sea que justo el estado que
+                hay que proteger es el que ese guard no distingue de "el usuario no eligio nada".
+            */
+            if (!force_reset && this.editando_venta_previa) {
+                return
+            }
             // Sin forzar: conservar la selección del usuario al volver a Vender desde otro módulo
             if (!force_reset && this.current_acount_payment_method_id) {
                 return
