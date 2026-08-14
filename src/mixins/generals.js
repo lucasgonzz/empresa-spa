@@ -581,9 +581,12 @@ export default {
                     Si es golonorte, no se usa el precio del articulo al momento de crear la venta.
                     Se omite este if y se aplica el precio actual de la lista de precio seleccionada
                 */
-                from_pivot 
-                && item.pivot 
-                && item.pivot.price
+                from_pivot
+                && item.pivot
+                // Comparacion explicita contra null/undefined: un precio guardado en 0 es falsy y
+                // con la condicion a secas se caia al camino del precio actual del articulo.
+                && item.pivot.price !== null
+                && typeof item.pivot.price != 'undefined'
                 && (
                     !this.hasExtencion('lista_de_precios_por_rango_de_cantidad_vendida')
                     || item.is_combo
