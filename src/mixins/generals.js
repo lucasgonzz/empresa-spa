@@ -585,8 +585,11 @@ export default {
                 && item.pivot
                 // Comparacion explicita contra null/undefined: un precio guardado en 0 es falsy y
                 // con la condicion a secas se caia al camino del precio actual del articulo.
+                // El string vacio sigue afuera a proposito: no es un precio guardado en 0, es la
+                // ausencia de precio, y antes de este cambio tambien caia al precio actual.
                 && item.pivot.price !== null
                 && typeof item.pivot.price != 'undefined'
+                && item.pivot.price !== ''
                 && (
                     !this.hasExtencion('lista_de_precios_por_rango_de_cantidad_vendida')
                     || item.is_combo
