@@ -460,6 +460,11 @@ export default {
 				item.pivot = article.pivot
 				item.cost = Number(article.pivot.cost)
 				item.price = Number(article.price)
+				// getPriceVender usa final_price cuando corresponde el precio actual del articulo en vez del
+				// guardado (extension lista_de_precios_por_rango_de_cantidad_vendida). Si no se copia aca queda
+				// undefined y la linea se pinta en $0.
+				item.final_price = article.final_price
+				item.final_price_blanco = article.final_price_blanco
 				item.amount = Number(article.pivot.amount)
 				item.article_variant_id = Number(article.pivot.article_variant_id)
 				// Se conserva iva_id para recalcular precio segun iva_aplicado al editar.
