@@ -12,6 +12,10 @@ export default {
 			key: 'provider_id',
 			store: 'provider',
 			type: 'search',
+			// La busqueda va contra la API y no contra los modelos del store: el store no
+			// siempre termina de descargar todos los proveedores, asi que buscar en local
+			// devolvia resultados incompletos al asignarle el proveedor a una compra.
+			search_from_api: true,
 			value: 0,
 			is_title: true,
 			required: true,
