@@ -14,6 +14,13 @@ export default {
          *                            false: solo asigna si aún no hay método (id 0), p. ej. al entrar a Vender.
          */
         setDefaultPaymentMethod(force_reset = false) {
+            // Se esta editando una venta previa o un presupuesto: el default del comercio no tiene
+            // que pisar el metodo de pago que trae la venta. El return va aca adentro y no en el
+            // llamador porque es lo unico que frena los reintentos ya agendados por setTimeout.
+            // Con force_reset en true si aplica: es el llamado de despues de guardar y el de limpiar.
+            if (!force_reset && (this.index_previus_sales > 0 || this.budget)) {
+                return
+            }
             // Sin forzar: conservar la selección del usuario al volver a Vender desde otro módulo
             if (!force_reset && this.current_acount_payment_method_id) {
                 return
