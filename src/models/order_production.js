@@ -11,6 +11,9 @@ export default {
 			key: 'client_id',
 			store: 'client',
 			type: 'search',
+			// Misma razon que el proveedor en provider_order: se busca contra la API para no
+			// depender de que el store haya terminado de descargar todos los clientes.
+			search_from_api: true,
 			is_title: true,
 		},
 		{
