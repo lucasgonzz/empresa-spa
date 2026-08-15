@@ -201,6 +201,15 @@ const routes = [
         name: 'sugerencias_compra',
         component: () => import('@/views/SugerenciasDeCompra')
     },
+    {
+        // Motor de ofertas por cliente (extension 'motor_de_ofertas'). Sin :id
+        // muestra el listado; con :id, el detalle de esa corrida. El MISMO
+        // componente se monta ademas en /online/promociones (Tienda Online ->
+        // Promociones), que no necesita ruta propia: entra por la de /online.
+        path: '/ofertas/:id?',
+        name: 'ofertas',
+        component: () => import('@/views/Ofertas')
+    },
     // {
     //     path: '/ventas',
     //     name: 'ventas',

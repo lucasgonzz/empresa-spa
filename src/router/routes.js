@@ -319,6 +319,18 @@ export default [
 				can: 'cupon.index',
 				icon: 'ticket-perforated',
 			},
+			{
+				/*
+					Promociones (motor de ofertas, 15/8/2026): va con `function:` como
+					sus hermanos, por el motivo del comentario de arriba. Es EXACTAMENTE
+					la misma pantalla que IA -> Ofertas, un componente en dos entradas.
+				*/
+				text: 'Promociones',
+				name: 'online_promociones',
+				function: 'ir_a_online_promociones',
+				can: 'buyer.index',
+				icon: 'tag',
+			},
 		],
 	},
 	{
@@ -500,7 +512,7 @@ export default [
 		name: 'ia',
 		function: 'ir_a_modulo_ia',
 		icon: 'stars',
-		if_has_alguna_extencion: ['sugerencias_inteligentes', 'sugerencias_compras'],
+		if_has_alguna_extencion: ['sugerencias_inteligentes', 'sugerencias_compras', 'motor_de_ofertas'],
 		childrens: [
 			{
 				text: 'Sugerencias',
@@ -522,6 +534,15 @@ export default [
 				// que asistente_ia (PLAN §0-bis R8 / INSUMOS-MEDIDOS.md §12).
 				if_has_extencion: 'sugerencias_compras',
 				icon: 'cart-plus',
+			},
+			{
+				// La MISMA pantalla que Tienda Online -> Promociones, no dos vistas.
+				text: 'Ofertas',
+				path: '/ofertas',
+				name: 'ofertas',
+				component: '@/views/Ofertas',
+				if_has_extencion: 'motor_de_ofertas',
+				icon: 'tag',
 			},
 		],
 	},

@@ -21,8 +21,9 @@ export default {
 		 * Entrada del módulo padre "IA" de la nav (D29). Antes mandaba siempre a
 		 * Sugerencias de stock, que era su único submódulo; con "sugerencias de
 		 * compra" (15/8/2026) ya no alcanza con eso, así que decide por extensión:
-		 * stock si la tiene (prioridad histórica), si no compras, y si no tiene
-		 * ninguna no navega a ningún lado (el padre tampoco debería estar visible
+		 * stock si la tiene (prioridad histórica), si no compras, si no ofertas
+		 * (15/8/2026), y si no tiene ninguna no navega a ningún lado (el padre
+		 * tampoco debería estar visible
 		 * en ese caso, ver if_has_alguna_extencion de router/routes.js). El guard
 		 * evita el NavigationDuplicated de apretar el padre estando ya en el
 		 * listado del destino (desde un detalle sí navega).
@@ -33,6 +34,8 @@ export default {
 				destino = 'sugerencias_stock'
 			} else if (this.hasExtencion('sugerencias_compras')) {
 				destino = 'sugerencias_compra'
+			} else if (this.hasExtencion('motor_de_ofertas')) {
+				destino = 'ofertas'
 			}
 			if (!destino) {
 				return
@@ -57,6 +60,17 @@ export default {
 				return
 			}
 			this.$router.push({name: 'online', params: {view: 'cupones'}})
+		},
+		/**
+		 * Promociones: la vista del motor de ofertas por cliente, montada también
+		 * abajo de Tienda Online. Es el MISMO componente que IA -> Ofertas; la
+		 * única diferencia es que acá nunca hay :id, así que siempre cae al listado.
+		 */
+		ir_a_online_promociones() {
+			if (this.$route.name == 'online' && this.$route.params.view == 'promociones') {
+				return
+			}
+			this.$router.push({name: 'online', params: {view: 'promociones'}})
 		},
 		toProduccion() {
 			if (this.user) {
