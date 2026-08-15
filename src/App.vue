@@ -8,6 +8,7 @@
         <nav-component></nav-component>
         <btn-scroll-top></btn-scroll-top>
         <support-chat-floating-button></support-chat-floating-button>
+        <asistente-ia-floating-button></asistente-ia-floating-button>
         <offline-articles-progress
         :offline_articles_sync_progress="offline_articles_sync_progress"></offline-articles-progress>
         <afip-reenviar-facturas></afip-reenviar-facturas>
@@ -46,6 +47,7 @@ import LogoLoading from '@/common-vue/components/LogoLoading'
 import NavComponent from '@/components/nav/Index'
 import BtnScrollTop from '@/common-vue/components/nav/BtnScrollTop'
 import SupportChatFloatingButton from '@/common-vue/components/support-chat/FloatingButton'
+import AsistenteIaFloatingButton from '@/components/asistente-ia/FloatingButton'
 
 import app from '@/common-vue/mixins/app'
 import start_methods from '@/mixins/start_methods'
@@ -61,6 +63,7 @@ export default {
         NavComponent,
         BtnScrollTop,
         SupportChatFloatingButton,
+        AsistenteIaFloatingButton,
         OfflineArticlesProgress: () => import('@/common-vue/components/offline-sync-articles/Progress'),
         PaymentExpire: () => import('@/components/nav/PaymentExpire'),
         AfipReenviarFacturas: () => import('@/components/common/afip-reenviar-facturas/Index'),
