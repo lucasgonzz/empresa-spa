@@ -568,6 +568,39 @@ export default {
 
 
 		{
+			group_title: 'Sugerencias inteligentes de compra',
+		},
+		/*
+		 * Configuracion de la extension 'sugerencias_compras': periodicidad de la
+		 * generacion automatica de la sugerencia de compra a proveedores (comando
+		 * compras:generar). Persiste en sugerencias_compras_periodicidad de users
+		 * via UserController@update, mismo camino que sugerencias_periodicidad de
+		 * arriba (stock). A diferencia de stock, aca no hay modo/origen/limite_origen
+		 * por defecto: los cuatro parametros del motor de compras se cargan en el
+		 * form de "Nueva sugerencia" de la vista propia, no en Configuracion general.
+		 * Sin la extension, el grupo entero desaparece de Configuracion general.
+		 */
+		{
+			text: 'Generar sugerencias de compra automaticamente',
+			key: 'sugerencias_compras_periodicidad',
+			type: 'select',
+			options: [
+				{text: 'Nunca', value: 'nunca'},
+				{text: 'Todos los dias', value: 'diaria'},
+				{text: 'Una vez por semana', value: 'semanal'},
+				{text: 'Cada quince dias', value: 'quincenal'},
+				{text: 'Una vez por mes', value: 'mensual'},
+			],
+			if_has_extencion: 'sugerencias_compras',
+			descriptions: [
+				'El sistema genera una sugerencia de compra a proveedores con la frecuencia que elijas, a la madrugada, usando los defaults del motor.',
+				'Cuando la sugerencia queda lista te llega una notificacion para abrirla con un click.',
+				'Con "Nunca", las sugerencias se generan unicamente a mano desde la pantalla de Sugerencias de compra.',
+			],
+		},
+
+
+		{
 			group_title: 'Produccion',
 		},
 		{

@@ -262,9 +262,18 @@ export default {
 			return Number(valor).toFixed(decimales)
 		},
 		/**
-		 * true cuando el proveedor elegido no es el titular del articulo: misma
-		 * condicion que el filtro server-side solo_cambio_de_proveedor, para
-		 * marcar la fila con un icono aunque el filtro este apagado.
+		 * true solo ante un cambio REAL entre dos proveedores conocidos: el
+		 * elegido y el titular tienen que existir los dos (si el articulo nunca
+		 * tuvo proveedor habitual, provider_id_titular es null y no hay "cambio"
+		 * que marcar, aunque se le haya podido asignar uno para esta compra) y
+		 * ser distintos entre si. Misma condicion que el filtro server-side
+		 * solo_cambio_de_proveedor (PurchaseSuggestionController::articles()),
+		 * para marcar la fila con un icono aunque el filtro este apagado.
+		 *
+		 * Nota: esta funcion se llama solo dentro del v-else de
+		 * !data.item.provider_id (arriba, en el template), asi que en la
+		 * practica linea.provider_id ya llega truthy; el chequeo queda igual
+		 * para que la condicion sea correcta por si sola, sin depender de eso.
 		 */
 		es_cambio_de_proveedor(linea) {
 			return !!linea.provider_id && !!linea.provider_id_titular && linea.provider_id != linea.provider_id_titular
