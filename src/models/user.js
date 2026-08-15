@@ -601,6 +601,38 @@ export default {
 
 
 		{
+			group_title: 'Motor de ofertas por cliente',
+		},
+		/*
+		 * Configuracion de la extension 'motor_de_ofertas': periodicidad de la
+		 * generacion automatica de la corrida de ofertas personalizadas por cliente
+		 * (comando ofertas:generar). Persiste en ofertas_periodicidad de users via
+		 * UserController@update, mismo camino que las dos periodicidades de arriba
+		 * (stock y compras). Los parametros del motor se cargan en el form de
+		 * "Nueva corrida" de la vista propia, no aca. Sin la extension, el grupo
+		 * entero desaparece de Configuracion general.
+		 */
+		{
+			text: 'Generar ofertas para clientes automaticamente',
+			key: 'ofertas_periodicidad',
+			type: 'select',
+			options: [
+				{text: 'Nunca', value: 'nunca'},
+				{text: 'Todos los dias', value: 'diaria'},
+				{text: 'Una vez por semana', value: 'semanal'},
+				{text: 'Cada quince dias', value: 'quincenal'},
+				{text: 'Una vez por mes', value: 'mensual'},
+			],
+			if_has_extencion: 'motor_de_ofertas',
+			descriptions: [
+				'El sistema arma ofertas personalizadas para tus clientes con la frecuencia que elijas, a la madrugada.',
+				'Cada oferta nace como sugerencia: vos revisas el descuento y la fecha de vencimiento antes de activarla.',
+				'Con "Nunca", las ofertas se generan unicamente a mano desde la pantalla de Ofertas.',
+			],
+		},
+
+
+		{
 			group_title: 'Produccion',
 		},
 		{
