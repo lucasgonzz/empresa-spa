@@ -39,8 +39,10 @@
 				Cargando mensajes anteriores...
 			</p>
 			<template v-for="(message, index) in mensajes_visibles">
+				<!-- local_id primero: un globo que nació optimista conserva su key al
+				confirmarse y Vue no re-monta el nodo (la entrada no parpadea). -->
 				<message-bubble
-				:key="message.id || message.local_id"
+				:key="message.local_id || message.id"
 				:message="message"
 				@retry="reintentar"></message-bubble>
 				<!-- Puente al submódulo que originó la conversación, debajo del primer

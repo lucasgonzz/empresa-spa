@@ -103,6 +103,12 @@ export default {
 		// true cuando la espera de la respuesta pasó los 180s sin resolverse (el texto
 		// de demora lo muestra la conversación; ver R8 del plan: cola compartida).
 		respuesta_demorada: false,
+
+		// true cuando el próximo cambio de selección NO tiene que recargar mensajes.
+		// Lo prende createConversation al crear en medio de un envío: sin esta marca,
+		// el watch del panel pediría la página de una conversación todavía vacía y
+		// el setMessages pisaría el globo optimista que acaba de subir.
+		seleccion_sin_recarga: false,
 	},
 	getters: {
 		/**
@@ -218,6 +224,9 @@ export default {
 		setRespuestaDemorada(state, value) {
 			state.respuesta_demorada = value
 		},
+		setSeleccionSinRecarga(state, value) {
+			state.seleccion_sin_recarga = value
+		},
 	},
 	actions: {
 		/**
@@ -246,6 +255,9 @@ export default {
 			return axios.post('/api/ai-conversations')
 				.then(res => {
 					commit('upsertConversation', res.data.model)
+					// La selección no dispara recarga: la conversación recién nace y el
+					// globo optimista del primer mensaje ya está en pantalla.
+					commit('setSeleccionSinRecarga', true)
 					commit('setSelectedConversationId', res.data.model.id)
 					return res.data.model
 				})
@@ -368,9 +380,15 @@ export default {
 						contenido: contenido,
 					})
 						.then(res => {
+							// Conserva el local_id para que el :key del globo no cambie: si
+							// cambiara, Vue re-montaría el nodo y la animación de entrada
+							// parpadearía en la transición enviando -> enviado.
 							commit('replaceLocalMessage', {
 								local_id: local_id,
-								message: Object.assign({}, res.data.user_message, { estado_local: 'enviado' }),
+								message: Object.assign({}, res.data.user_message, {
+									estado_local: 'enviado',
+									local_id: local_id,
+								}),
 							})
 							commit('appendMessage', res.data.assistant_message)
 							// La conversación subió al tope de la bandeja.

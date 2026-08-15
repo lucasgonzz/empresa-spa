@@ -153,6 +153,13 @@ export default {
 		 * (conversación nueva sin crear) no hay nada que pedir.
 		 */
 		selected_conversation_id(id) {
+			// La selección que hace createConversation al enviar el primer mensaje
+			// NO recarga: la conversación recién nace vacía en el backend y el GET
+			// pisaría el globo optimista que ya está en pantalla.
+			if (this.$store.state.ai_chat.seleccion_sin_recarga) {
+				this.$store.commit('ai_chat/setSeleccionSinRecarga', false)
+				return
+			}
 			if (id) {
 				this.$store.dispatch('ai_chat/getMessages', {
 					conversation_id: id,
