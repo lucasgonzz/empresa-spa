@@ -65,5 +65,39 @@ export default __base_store({
 					return res
 				})
 		},
+
+		/**
+		 * Guarda la configuración TÉCNICA de la conexión con Kapso (solapa "Conexión" del modal
+		 * del módulo, misión whatsapp-agente): las tres credenciales y el switch de activo.
+		 *
+		 * Manda SOLO estos 4 campos, y es a propósito: el controller de la API arma el
+		 * `updateOrCreate` leyendo campo por campo con `$request->has(...)`, así que lo que no
+		 * viaja no se toca. Gracias a eso esta pantalla y la del agente (`updateAgentConfig`)
+		 * pegan al mismo endpoint sin pisarse. Si alguna vez se manda el form entero desde acá,
+		 * un guardado de conexión le borra la personalidad al agente (y al revés).
+		 *
+		 * Sin `.catch()` a propósito: el error tiene que llegar entero al componente, que es
+		 * quien muestra el `message` del 422 (ej: "no se puede activar el bot sin credenciales").
+		 *
+		 * @param {Object} payload
+		 * @param {string} payload.phone_number_id ID del número del negocio en Kapso.
+		 * @param {string} payload.kapso_api_key Clave para mandarle mensajes a Kapso.
+		 * @param {string} payload.webhook_secret Secreto con el que se firma cada mensaje entrante.
+		 * @param {boolean} payload.is_active Si el bot está prendido.
+		 * @returns {Promise}
+		 */
+		updateConnectionConfig({ commit, state }, payload) {
+			return axios.put('/api/' + state.route_string, {
+				phone_number_id: payload.phone_number_id,
+				kapso_api_key: payload.kapso_api_key,
+				webhook_secret: payload.webhook_secret,
+				is_active: payload.is_active,
+			})
+				.then(res => {
+					// Refleja el modelo guardado (incluye los campos del agente que ya tenía).
+					commit('setModels', [res.data.model])
+					return res
+				})
+		},
 	},
 })
