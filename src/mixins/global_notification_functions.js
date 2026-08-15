@@ -89,5 +89,38 @@ export default {
 				this.$router.push({name: 'sugerencias_stock'})
 			}
 		},
+		/**
+		 * Boton "Charlar con la IA" de la notificacion de sugerencia lista (D21/D22).
+		 * Lee de info_to_show los ids que ProcessStockSuggestionChunkJob suma cuando
+		 * existe conversacion. La conversacion de una sugerencia se crea para el
+		 * DUEÑO (D25): si quien mira la notificacion es otra persona, se cae a la
+		 * vista de sugerencias sin pedirle nada al servidor (el indice del chat
+		 * igual no se la devolveria: la tenencia es por persona).
+		 */
+		abrir_conversacion_de_sugerencia() {
+			let conversation_id = null
+			let auth_user_id = null
+			let info_to_show = this.$store.state.global_notification.info_to_show
+
+			if (Array.isArray(info_to_show)) {
+				info_to_show.forEach(info => {
+					if (info) {
+						if (!conversation_id && info.ai_conversation_id) {
+							conversation_id = info.ai_conversation_id
+						}
+						if (!auth_user_id && info.ai_conversation_auth_user_id) {
+							auth_user_id = info.ai_conversation_auth_user_id
+						}
+					}
+				})
+			}
+
+			if (!conversation_id || !this.user || Number(auth_user_id) !== Number(this.user.id)) {
+				this.ir_a_sugerencias_de_stock()
+				return
+			}
+
+			this.abrir_chat_ia(conversation_id)
+		},
 	}
 }

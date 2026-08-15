@@ -290,11 +290,36 @@ export default [
 			'order.index',
 			'buyer.index',
 		],
-		/* Badge: pedidos sin confirmar + mensajes de chat sin leer (ver online_menu_alert_count) */
+		/* Badge: pedidos sin confirmar (Mensajes quedó oculto; ver online_menu_alert_count) */
 		budget_function: 'online_menu_alert_count',
 		image_url: 'nuevos-nav-icons/online.png',
 		icon: 'shop',
 		// image_url: 'nav-icons/tienda.png',
+		/*
+			Las secciones se navegan desde acá porque Online.vue ya no monta su nav
+			horizontal (misión "chat IA", 15/8/2026). Los hijos van con `function:` y
+			NO con name 'online' + params: toRoute() (common-vue/mixins/nav.js:141-146)
+			corta con `if (route_name == this.route_name) return`, así que un hijo
+			llamado 'online' no navegaría nunca estando ya adentro de /online — que es
+			justo el caso de uso. Costo conocido y cosmético: los hijos no se pintan
+			"activos" (isActiveRoute compara contra route_name).
+		*/
+		childrens: [
+			{
+				text: 'Clientes',
+				name: 'online_clientes',
+				function: 'ir_a_online_clientes',
+				can: 'buyer.index',
+				icon: 'people',
+			},
+			{
+				text: 'Cupones',
+				name: 'online_cupones',
+				function: 'ir_a_online_cupones',
+				can: 'cupon.index',
+				icon: 'ticket-perforated',
+			},
+		],
 	},
 	{
 		text: 'WhatsApp',
@@ -456,14 +481,38 @@ export default [
 		icon: 'graph-up-arrow',
 	},
 	{
-		text: 'Sugerencias',
-		path: '/sugerencias-de-stock',
-		name: 'sugerencias_stock',
-		component: '@/views/SugerenciasDeStock',
-		// Mismo gateo que usa el backend en check_extencion_empresa: sin la
-		// extension, el modulo no aparece en el menu y el flujo viejo de modales
-		// del Listado sigue siendo el unico camino.
+		/*
+			Módulo padre "IA" (misión "chat IA", 15/8/2026). El `name: 'ia'` es
+			EXPLÍCITO y propio: openItem del NavVertical compara contra route.name y
+			un padre sin name colisionaría. Va con `function:` y no con `path:`
+			porque setRoute() (common-vue/mixins/nav.js:106-140) ejecuta la función
+			antes que cualquier otra rama, y así el padre no necesita una ruta
+			propia en router/index.js.
+
+			Gate: hoy el único hijo es Sugerencias, así que el padre puede llevar su
+			misma extensión. Cuando lleguen compras/ofertas con OTRAS extensiones,
+			este if_has_extencion se SACA del padre (showRoute trata el array como
+			AND, no OR) y cada hijo se gatea solo — ojo que sin extensión en el
+			padre, showRoute no lo esconde por extensión si ningún hijo pasa: ese
+			caso hay que mirarlo cuando llegue.
+		*/
+		text: 'IA',
+		name: 'ia',
+		function: 'ir_a_modulo_ia',
+		icon: 'stars',
 		if_has_extencion: 'sugerencias_inteligentes',
-		icon: 'lightbulb',
+		childrens: [
+			{
+				text: 'Sugerencias',
+				path: '/sugerencias-de-stock',
+				name: 'sugerencias_stock',
+				component: '@/views/SugerenciasDeStock',
+				// Mismo gateo que usa el backend en check_extencion_empresa: sin la
+				// extension, el modulo no aparece en el menu y el flujo viejo de modales
+				// del Listado sigue siendo el unico camino.
+				if_has_extencion: 'sugerencias_inteligentes',
+				icon: 'lightbulb',
+			},
+		],
 	},
 ]

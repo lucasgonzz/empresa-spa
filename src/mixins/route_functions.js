@@ -17,6 +17,33 @@ export default {
 			}
 			this.$store.commit('ai_chat/setPanelAbierto', true)
 		},
+		/**
+		 * Entrada del módulo padre "IA" de la nav (D29): hoy lleva a Sugerencias,
+		 * que es su único submódulo. El guard evita el NavigationDuplicated de
+		 * apretar el padre estando ya en el listado (desde un detalle sí navega).
+		 */
+		ir_a_modulo_ia() {
+			if (this.$route.name != 'sugerencias_stock' || this.$route.params.id) {
+				this.$router.push({name: 'sugerencias_stock'})
+			}
+		},
+		/**
+		 * Hijos de "Tienda Online" (D31). Son funciones y no entradas con name
+		 * 'online' + params porque toRoute() corta cuando el name de la ruta ya es
+		 * el actual, y estos hijos se usan justamente estando adentro de /online.
+		 */
+		ir_a_online_clientes() {
+			if (this.$route.name == 'online' && this.$route.params.view == 'clientes') {
+				return
+			}
+			this.$router.push({name: 'online', params: {view: 'clientes'}})
+		},
+		ir_a_online_cupones() {
+			if (this.$route.name == 'online' && this.$route.params.view == 'cupones') {
+				return
+			}
+			this.$router.push({name: 'online', params: {view: 'cupones'}})
+		},
 		toProduccion() {
 			if (this.user) {
 				if (this.hasExtencion('production.order_production')) {

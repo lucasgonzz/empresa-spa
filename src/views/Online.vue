@@ -1,20 +1,21 @@
 <template>
 	<div>
-		<nav-component></nav-component>
-
+		<!--
+			Misión "chat IA" (15/8/2026): la vista dejó de montar NavComponent (las
+			secciones se navegan desde la nav vertical, hijos de "Tienda Online") y
+			Messages (el módulo de mensajes quedó OCULTO sin borrarse: los archivos
+			de components/online/components/messages/ siguen intactos en disco).
+		-->
 		<orders></orders>
 		<buyers></buyers>
-		<messages></messages>
 		<cupons></cupons>
 	</div>
 </template>
 <script>
 export default {
 	components: {
-		NavComponent: () => import('@/components/online/components/NavComponent'),
 		Orders: () => import('@/components/online/components/orders/Index'),
 		Buyers: () => import('@/components/online/components/buyer/Index'),
-		Messages: () => import('@/components/online/components/messages/Index'),
 		Cupons: () => import('@/components/online/components/cupons/Index'),
 	}
 }
