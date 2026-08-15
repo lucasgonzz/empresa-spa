@@ -22,11 +22,20 @@
 				<i class="bi bi-stars"></i>
 			</span>
 		</button>
+		<!-- El panel vive en el store (panel_abierto) para que abrir_chat_ia()
+		pueda abrirlo desde cualquier lado, ej: la notificación de sugerencias. -->
+		<asistente-ia-panel
+		v-if="panel_abierto"></asistente-ia-panel>
 	</div>
 </template>
 
 <script>
+import AsistenteIaPanel from '@/components/asistente-ia/Panel'
+
 export default {
+	components: {
+		AsistenteIaPanel,
+	},
 	data() {
 		return {
 			// Posición horizontal guardada del botón (px desde la izquierda del viewport); null hasta hidratar.
@@ -63,6 +72,9 @@ export default {
 		 */
 		should_show() {
 			return this.authenticated && this.hasExtencion('asistente_ia')
+		},
+		panel_abierto() {
+			return this.$store.state.ai_chat.panel_abierto
 		},
 		/**
 		 * Logo del negocio: el de la tienda online si existe, si no la imagen de la
