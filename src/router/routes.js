@@ -455,4 +455,15 @@ export default [
 		image_url: 'nav-icons/consulta_precios.png',
 		icon: 'graph-up-arrow',
 	},
+	{
+		text: 'Sugerencias',
+		path: '/sugerencias-de-stock',
+		name: 'sugerencias_stock',
+		component: '@/views/SugerenciasDeStock',
+		// Mismo gateo que usa el backend en check_extencion_empresa: sin la
+		// extension, el modulo no aparece en el menu y el flujo viejo de modales
+		// del Listado sigue siendo el unico camino.
+		if_has_extencion: 'sugerencias_inteligentes',
+		icon: 'lightbulb',
+	},
 ]

@@ -182,6 +182,15 @@ const routes = [
         name: 'devoluciones',
         component: () => import('@/views/Devoluciones')
     },
+    {
+        // Vista propia de sugerencias inteligentes de stock (extension
+        // 'sugerencias_inteligentes'). Sin :id muestra el listado; con :id, el
+        // detalle. El gate por extension vive en el menu (routes.js), en el
+        // componente (aviso si no la tiene) y en el backend (403).
+        path: '/sugerencias-de-stock/:id?',
+        name: 'sugerencias_stock',
+        component: () => import('@/views/SugerenciasDeStock')
+    },
     // {
     //     path: '/ventas',
     //     name: 'ventas',
