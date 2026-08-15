@@ -30,7 +30,7 @@
 // owner. Queda escalado.
 
 /** Hosts de Pusher a los que el navegador del test no se conecta. */
-const PUSHER_WS = /(^|\.)pusher(app)?\.com/
+const PUSHER = /pusher(app)?\.com/
 
 /**
  * Deja al navegador de esta pagina sin conexion a Pusher.
@@ -38,21 +38,28 @@ const PUSHER_WS = /(^|\.)pusher(app)?\.com/
  * Hay que llamarla ANTES del primer page.goto(): despues de que la aplicacion instancio Echo ya
  * no sirve.
  *
- * El handler no llama a connectToServer() a proposito: Playwright se queda con la punta del
- * socket y nunca abre la conexion real, asi que pusher-js reintenta contra un socket que no
- * responde y no llega un solo evento. No se corta con abort/close porque un cierre inmediato hace
- * que pusher-js reintente en rafaga y llene la consola de errores.
+ * 🔴 Se cortan LOS DOS caminos, y hacen falta los dos. Cortar solo el WebSocket no alcanza:
+ * pusher-js tiene transportes de repliegue por HTTP (sockjs, xhr_streaming, xhr_polling) y se pasa
+ * a ellos cuando el socket no le responde. Medido el 15/8/2026: con solo el WebSocket
+ * interceptado, la primera corrida quedo limpia y una posterior igual recibio el aviso "Precios
+ * actualizados" de otro entorno, que aparecio como modal encima del buscador de articulos y mato
+ * el spec de compras.
+ *
+ * El handler del WebSocket no llama a connectToServer() a proposito: Playwright se queda con la
+ * punta del socket y nunca abre la conexion real. No se cierra de una porque un cierre inmediato
+ * hace que pusher-js reintente en rafaga y llene la consola de errores.
  *
  * @param {import('@playwright/test').Page} page
  * @returns {Promise<void>}
  */
 async function aislar_broadcasts(page) {
-	await page.routeWebSocket(PUSHER_WS, () => {
+	await page.routeWebSocket(PUSHER, () => {
 		// A proposito vacio: ver el comentario de arriba.
 	})
+	await page.route(PUSHER, route => route.abort())
 }
 
 module.exports = {
-	PUSHER_WS,
+	PUSHER,
 	aislar_broadcasts,
 }

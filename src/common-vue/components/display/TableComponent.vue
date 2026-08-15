@@ -373,15 +373,39 @@ export default {
 		this.desenganchar_scroll_margenes()
 	},
 	watch: {
+		/**
+		 * Selecciona la fila que indica selected_index (navegacion por teclado y autoseleccion de
+		 * la primera fila del modal de busqueda).
+		 *
+		 * 🔴 is_from_keydown se baja en el $nextTick y NO con un setTimeout de 500 ms, y ese cambio
+		 * es el arreglo del hallazgo 20260810-modal-de-busqueda-ignora-el-click-los-primeros-500ms.
+		 *
+		 * Que hace la guarda: selectRow() de b-table dispara su propio evento row-selected, que
+		 * llega a onRowSelected() igual que si el usuario hubiera clickeado. Sin la guarda, mover
+		 * la seleccion con las flechas equivaldria a elegir el resultado, y el modal se cerraria
+		 * solo apenas apretas una flecha. La guarda existe para tapar ESA emision, la que provoca
+		 * la linea de arriba, y nada mas.
+		 *
+		 * Por que 500 ms estaba mal: la emision de selectRow() sale en el mismo ciclo de flush de
+		 * watchers que esta linea, o sea muchisimo antes de esos 500 ms. Lo que quedaba tapado el
+		 * resto del tiempo eran los clicks REALES del usuario: onRowSelected() descarta el evento
+		 * entero, asi que clickear el resultado apenas aparece no seleccionaba nada y el modal
+		 * quedaba abierto tapando el formulario. Le pasa a cualquiera que clickee rapido, que es lo
+		 * normal cuando ya sabe lo que estaba buscando.
+		 *
+		 * Por que $nextTick alcanza y no se pasa de corto: el callback de $nextTick corre despues
+		 * de que termina el flush de watchers en curso, y el watcher de selectedRows de b-table
+		 * --el que emite row-selected-- se encola en ese mismo flush. O sea que la emision
+		 * programatica ya paso cuando la guarda se baja. Un click del usuario, en cambio, llega en
+		 * una tarea posterior, con la guarda ya abajo.
+		 */
 		selected_index() {
-			console.log('watch selected_index')
 			if (this.selected_index != -1 && this.selected_index <= (this.items.length - 1)) {
 				this.is_from_keydown = true
 				this.$refs.tableComponent.selectRow(this.selected_index)
-				setTimeout(() => {
+				this.$nextTick(() => {
 					this.is_from_keydown = false
-				}, 500)
-				console.log('se selecciono la fila '+this.selected_index)
+				})
 
 				this.scroll_to_selected()
 			}

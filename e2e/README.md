@@ -37,12 +37,19 @@ ella `src/main.js` tira `You must pass your app key when you instantiate Pusher`
 app: la página queda en blanco, sin un solo `data-testid`, y desde el test se ve como "no encuentro
 el input de login".
 
-> ⚠️ **Estado conocido (10/8/2026):** con la API servida por `php artisan serve` la suite todavía no
-> corre entera. Ese servidor atiende **un request por vez** y el arranque de la SPA son ~73 llamadas:
-> medido, la descarga de recursos no termina en 120 s (a los 117 s iba por 35 de 73) y una búsqueda
-> lanzada en el medio tarda ~9 s en responder. El proyecto `setup` (login) pasa; los dos specs mueren
-> compitiendo con esa cola. Está registrado como hallazgo y escalado: la salida pasa por servir la
-> API con concurrencia o por achicar el arranque, y ninguna de las dos es del harness.
+> ⚠️ **Estado conocido (15/8/2026).** Lo de abajo reemplaza al estado del 10/8, que decía que la
+> descarga de recursos no terminaba en 120 s: eso lo resolvió la misión 41 al reemplazar las ~70
+> llamadas del arranque por un solo `POST /recursos-iniciales`. Medido hoy: la descarga completa
+> son **68 recursos en 35-45 s** y el proyecto `setup` pasa en ~48 s.
+>
+> `alta-compra.spec.js` **todavía no termina**, y ya no es por el arranque. Carga los 10 artículos
+> correctamente y muere al guardar, con la validación *"Ingrese Deposito"*. La causa está medida y
+> **no es del harness**: `common-vue/components/model/Index.vue` (`model()`) devuelve una **copia
+> nueva** del modelo del store en cada recálculo cuando el modelo no declara `full_reactivity`. El
+> toggle "Los precios ya incluyen IVA" escribe directo en el modelo del store, eso recalcula el
+> computed, y la copia con la que trabaja el formulario se reemplaza por una recién sacada del
+> store: **se pierde el depósito y cualquier otro campo editado antes**. Le pasa igual a una
+> persona. Ver el hallazgo `20260815-el-formulario-pierde-lo-editado-cuando-algo-escribe-en-el-modelo-del-store`.
 
 ---
 

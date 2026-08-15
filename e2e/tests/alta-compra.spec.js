@@ -117,8 +117,17 @@ async function search_and_select(page, field_testid, query) {
  */
 async function elegir_primer_resultado(page, field_testid) {
 	const modal = page.locator(`#${field_testid}-search-modal`)
+	// 🔴 La fila se busca DENTRO del modal, no en todo el documento. Un
+	// page.locator('[data-testid="search-result-row"]') suelto agarra la primera del DOM, que no
+	// tiene por que ser un resultado de busqueda: hasta el 15/8/2026 display/table/Tr.vue le ponia
+	// ese mismo testid a cualquier tabla de seleccion simple, y la grilla de articulos de la compra
+	// esta ANTES en el DOM que el modal. Con un articulo ya cargado, el click caia sobre la fila de
+	// la compra --tapada por el modal abierto-- y se iba en timeout sin tocar el resultado. El
+	// testid ya se corrigio del lado del producto; acotar el selector es lo que evita que la
+	// proxima colision de nombres vuelva a leerse como un bug de la aplicacion.
+	const fila = modal.locator('[data-testid="search-result-row"]').first()
 	await expect(async () => {
-		await page.locator('[data-testid="search-result-row"]').first().click()
+		await fila.click()
 		await expect(modal).toBeHidden({ timeout: 1500 })
 	}).toPass({ timeout: 30000 })
 }
