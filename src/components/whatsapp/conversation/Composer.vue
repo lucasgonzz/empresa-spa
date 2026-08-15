@@ -98,13 +98,63 @@
 
 		<div class="whatsapp-composer__input-row">
 			<b-form-textarea
+			v-if="!audio_recording"
 			v-model="text"
 			id="whatsapp-composer-text"
 			:placeholder="placeholder"
 			rows="2"
 			max-rows="6"
 			@keydown.enter="onKeydownEnter"></b-form-textarea>
+
+			<!-- Mientras graba, esta franja REEMPLAZA al textarea (no se agrega al lado): en un
+			teléfono de 360px las dos cosas juntas no entran, y escribir mientras se graba no es
+			un flujo real. Cancelar es un botón y no un deslizamiento porque el molde tampoco
+			tiene "cancelar deslizando" y escribirlo desde cero no está en el pedido. -->
+			<div
+			v-else
+			class="whatsapp-composer__grabando">
+				<span class="whatsapp-composer__grabando-punto"></span>
+				<span class="whatsapp-composer__grabando-reloj">
+					{{ audio_elapsed_label }}
+				</span>
+				<span class="whatsapp-composer__grabando-ayuda">
+					Grabando nota de voz
+				</span>
+				<button
+				type="button"
+				class="btn btn-sm btn-link whatsapp-composer__grabando-cancelar"
+				@click="cancel_audio_recording">
+					Cancelar
+				</button>
+			</div>
+
+			<!--
+			🔴 Botón HTML pelado y no <b-button> a propósito: acá cuelgan los seis manejadores
+			del gesto (touch y mouse) y la grabación tiene que arrancar SINCRÓNICAMENTE adentro
+			del touchstart, si no en iOS la nota sale muda. Un componente en el medio es una capa
+			más entre el gesto real y `audioContext.resume()`, y no hay nada que ganar: las
+			clases de Bootstrap 4 dan el mismo botón.
+			-->
+			<button
+			type="button"
+			class="btn btn-sm whatsapp-composer__mic"
+			:class="audio_recording ? 'btn-danger' : 'btn-outline-secondary'"
+			:disabled="enviando_adjunto"
+			:title="titulo_microfono"
+			@click="on_audio_click"
+			@mousedown="on_audio_mousedown"
+			@mouseup="on_audio_mouseup_or_leave"
+			@mouseleave="on_audio_mouseup_or_leave"
+			@touchstart.prevent="on_audio_touchstart"
+			@touchend.prevent="on_audio_touchend"
+			@touchcancel.prevent="on_audio_touchcancel">
+				<i
+				class="bi"
+				:class="audio_recording ? 'bi-stop-circle-fill' : 'bi-mic'"></i>
+			</button>
+
 			<btn-loader
+			v-if="!audio_recording"
 			:loader="sending"
 			:block="false"
 			icon="send"
@@ -117,6 +167,7 @@
 </template>
 <script>
 import TemplatesModal from '@/components/whatsapp/conversation/TemplatesModal'
+import audio_recorder_button from '@/mixins/audio_recorder_button'
 
 /**
  * Tope local de una imagen, en bytes. Está duplicado a propósito con el del backend: el de
@@ -130,6 +181,17 @@ export default {
 		TemplatesModal,
 		BtnLoader: () => import('@/common-vue/components/BtnLoader'),
 	},
+	/*
+		El mixin trae el ciclo completo del botón de grabar: los seis manejadores del gesto, el
+		cronómetro y el grabador ogg/opus. Este componente solo cumple su contrato:
+		`on_audio_blob(blob)` (obligatorio), `can_record_audio()` y `on_audio_error(message)`.
+
+		Ojo con los hooks: el mixin define su propio `beforeDestroy` (cancela la grabación para
+		que ninguna vista deje el micrófono abierto). En Vue 2 el hook del mixin y el del
+		componente corren LOS DOS —primero el del mixin—, así que el `beforeDestroy` de abajo no
+		lo pisa. Si se quisiera reemplazar, habría que sacarlo del mixin.
+	*/
+	mixins: [audio_recorder_button],
 	data() {
 		return {
 			text: '',
@@ -170,6 +232,19 @@ export default {
 				return 'Simulación: lo que escribas se guarda pero no le llega al cliente'
 			}
 			return 'Escribí un mensaje (Enter para enviar, Shift+Enter para salto de línea)'
+		},
+		/**
+		 * Ayuda del micrófono. El botón tiene dos semánticas y ninguna se ve mirándolo, así que
+		 * se explican acá: un toque corto empieza a grabar y deja grabando (el próximo toque
+		 * corta y manda), y mantenerlo apretado graba mientras esté apretado (walkie-talkie).
+		 *
+		 * @returns {string}
+		 */
+		titulo_microfono() {
+			if (this.audio_recording) {
+				return 'Grabando ' + this.audio_elapsed_label + '. Tocá para cortar y enviar'
+			}
+			return 'Tocá para grabar una nota de voz, o mantené apretado para grabar mientras lo apretás'
 		},
 	},
 	beforeDestroy() {
@@ -339,6 +414,61 @@ export default {
 			this.adjunto = null
 		},
 		/**
+		 * Contrato del mixin `audio_recorder_button` (obligatorio): llega el Blob 'audio/ogg' ya
+		 * cerrado y válido, y este componente decide qué hacer con él. Acá se manda derecho: la
+		 * nota de voz no tiene previsualización a propósito, porque el gesto que la produce
+		 * ("soltá y sale") es el de WhatsApp y meterle un paso de confirmación en el medio lo
+		 * rompe. Para descartarla está Cancelar, que corta antes de que exista el blob.
+		 *
+		 * Va envuelto en un `File` y no como Blob pelado porque el backend lee
+		 * `$request->file('file')`: un Blob sin nombre viaja en el multipart sin `filename`, y
+		 * PHP lo toma como campo de texto, no como archivo subido. El nombre además le da la
+		 * extensión `.ogg`, que es lo que hace que Meta lo muestre como nota de voz.
+		 *
+		 * @param {Blob} blob
+		 * @returns {void}
+		 */
+		on_audio_blob(blob) {
+			let self = this
+			if (!this.chat) {
+				return
+			}
+			this.enviando_adjunto = true
+			this.$store.dispatch('whatsapp_chat/sendMedia', {
+				chat_id: this.chat.id,
+				file: new File([blob], 'nota.ogg', { type: 'audio/ogg' }),
+				caption: '',
+			})
+			.then(function (data) {
+				self.enviando_adjunto = false
+				self.avisar_si_no_salio(data)
+			})
+			.catch(function (err) {
+				self.enviando_adjunto = false
+				self.manejar_error_de_envio(err, 'No se pudo enviar la nota de voz')
+			})
+		},
+		/**
+		 * Contrato del mixin: no arrancar a grabar si ya hay un adjunto viajando. Es el mismo
+		 * indicador que usa la foto porque el endpoint es uno solo y el estado de "hay algo
+		 * subiendo" también.
+		 *
+		 * @returns {boolean}
+		 */
+		can_record_audio() {
+			return !this.enviando_adjunto
+		},
+		/**
+		 * Contrato del mixin: el default es `alert()`, que en este sistema desentona. Los errores
+		 * que llegan por acá son de permisos del micrófono o de un cierre que no confirmó.
+		 *
+		 * @param {string} message
+		 * @returns {void}
+		 */
+		on_audio_error(message) {
+			this.$toast.error(message)
+		},
+		/**
 		 * Pide una sugerencia de la IA y la carga en el input, editable antes de enviar
 		 * (nunca se envía sola).
 		 */
@@ -440,4 +570,59 @@ export default {
 		gap: 8px
 		textarea
 			flex: 1
+	&__mic
+		// No se achica: en teléfono el textarea se lleva todo el ancho sobrante y sin esto el
+		// botón quedaba de 20px, imposible de apretar con el dedo.
+		flex-shrink: 0
+		align-self: flex-end
+	&__grabando
+		display: flex
+		flex-direction: row
+		align-items: center
+		gap: 8px
+		flex: 1
+		// `min-width: 0` para que el texto de ayuda se pueda recortar en pantallas angostas en
+		// vez de estirar la fila y empujar el micrófono fuera del composer.
+		min-width: 0
+		background: #fff6e5
+		border: 1px solid rgba(0, 0, 0, .08)
+		border-radius: 8px
+		padding: 8px 10px
+		&-punto
+			width: 10px
+			height: 10px
+			border-radius: 50%
+			background: #d9534f
+			flex-shrink: 0
+			animation: whatsapp-composer-latido 1.2s ease-in-out infinite
+		&-reloj
+			font-variant-numeric: tabular-nums
+			font-size: .9rem
+			color: #d9534f
+			flex-shrink: 0
+		&-ayuda
+			font-size: .78rem
+			color: rgba(0, 0, 0, .6)
+			overflow: hidden
+			text-overflow: ellipsis
+			white-space: nowrap
+		&-cancelar
+			margin-left: auto
+			flex-shrink: 0
+			color: rgba(0, 0, 0, .6)
+
+// El latido es la única señal de que el micrófono está abierto de verdad; el cronómetro corre
+// aunque la grabación haya fallado. Se apaga con `prefers-reduced-motion`, igual que hace el
+// panel del asistente IA.
+@keyframes whatsapp-composer-latido
+	0%
+		opacity: 1
+	50%
+		opacity: .25
+	100%
+		opacity: 1
+
+@media (prefers-reduced-motion: reduce)
+	.whatsapp-composer__grabando-punto
+		animation: none
 </style>
