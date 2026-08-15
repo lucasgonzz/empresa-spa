@@ -1,8 +1,8 @@
 <template>
 	<!--
 		Esta raíz no dibuja nada ni ocupa lugar: existe porque Vue 2 no tiene fragments y el
-		telón, el panel y (más adelante) el visor de imagen tienen que ser HERMANOS, los tres
-		con position: fixed. Si el visor colgara de adentro del panel quedaría recortado por su
+		telón, el panel y el visor de imagen tienen que ser HERMANOS, los tres con
+		position: fixed. Si el visor colgara de adentro del panel quedaría recortado por su
 		overflow: hidden, y en Vue 2 no hay <teleport> para sacarlo de ahí.
 	-->
 	<div class="whatsapp-sidebar">
@@ -61,10 +61,28 @@
 				</div>
 			</div>
 		</transition>
+
+		<!--
+			🔴 El visor va ACÁ, hermano del panel y afuera de la <transition>, no adentro de la
+			burbuja que muestra la miniatura. Dos motivos, los dos duros. Uno: el panel tiene
+			`overflow: hidden`, así que colgado ahí adentro el visor quedaría recortado al ancho
+			del sidebar en vez de ocupar la pantalla. Dos: cualquier `transform` —el de la
+			transición de entrada, sin ir más lejos— convierte al elemento en bloque contenedor
+			de sus hijos `position: fixed`, que dejarían de estar anclados al viewport.
+			En Vue 3 esto se resuelve con <teleport to="body">, que en Vue 2 no existe.
+
+			Se monta siempre y se muestra por prop en vez de ponerle un `v-if` acá: el componente
+			tiene que seguir vivo para que su watch de `show` enganche y suelte Escape.
+		-->
+		<image-lightbox
+		:show="!!lightbox_url"
+		:image_url="lightbox_url || ''"
+		@close="cerrar_lightbox"></image-lightbox>
 	</div>
 </template>
 <script>
 import Conversation from '@/components/whatsapp/conversation/Index'
+import ImageLightbox from '@/components/whatsapp/conversation/ImageLightbox'
 import VenderResizer from '@/components/vender/components/VenderResizer'
 
 // Límites del ancho del panel en escritorio, en px.
@@ -92,6 +110,7 @@ const CLAVE_ANCHO = 'whatsapp_sidebar_width'
 export default {
 	components: {
 		Conversation,
+		ImageLightbox,
 		VenderResizer,
 	},
 	data() {
@@ -108,6 +127,14 @@ export default {
 		},
 		es_movil() {
 			return this.viewport_width < 768
+		},
+		/**
+		 * URL de la imagen que se está mirando a pantalla completa, o null. La escribe
+		 * `MessageBubble.vue` commiteando `setLightboxUrl`: la burbuja no tiene forma de llegar
+		 * hasta acá por props (hay tres componentes de por medio) y tampoco emite eventos.
+		 */
+		lightbox_url() {
+			return this.$store.state.whatsapp_chat.lightbox_url
 		},
 		/**
 		 * En escritorio el ancho es el elegido; en teléfono lo fija el CSS (pantalla completa),
@@ -149,10 +176,19 @@ export default {
 		let self = this
 		window.removeEventListener('resize', self.on_window_resize)
 		document.removeEventListener('keydown', self.on_document_keydown)
+		/*
+			El visor vive adentro de este componente pero su estado vive en el store, que sobrevive
+			al cierre del sidebar. Si no se limpia acá, la próxima vez que se abriera una
+			conversación aparecería de entrada la foto que alguien miró hace media hora.
+		*/
+		this.cerrar_lightbox()
 	},
 	methods: {
 		cerrar() {
 			this.$store.commit('whatsapp_chat/setSidebarAbierto', false)
+		},
+		cerrar_lightbox() {
+			this.$store.commit('whatsapp_chat/setLightboxUrl', null)
 		},
 		/**
 		 * Ancho inicial: el que quedó guardado la última vez, o el default. Se acota igual,

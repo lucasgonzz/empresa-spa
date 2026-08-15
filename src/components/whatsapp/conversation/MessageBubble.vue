@@ -19,7 +19,30 @@
 			Simulado
 		</span>
 
-		<p class="whatsapp-bubble__text">
+		<!-- Medio adjunto. Va ARRIBA del texto porque así lo dibuja WhatsApp: el epígrafe de una
+		foto va abajo de la foto, y la transcripción de una nota de voz abajo del reproductor.
+		El front NUNCA arma la URL: lee `media_src`, que el backend devuelve ya resuelta (puede
+		ser una URL ajena, o la ruta autenticada propia si el archivo es nuestro). -->
+		<button
+		v-if="muestra_imagen"
+		type="button"
+		class="whatsapp-bubble__image-btn"
+		title="Ver la imagen completa"
+		@click="abrir_lightbox">
+			<img
+			:src="message.media_src"
+			class="whatsapp-bubble__image"
+			alt="Imagen del mensaje">
+		</button>
+
+		<audio-player
+		v-else-if="muestra_audio"
+		:src="message.media_src"
+		:is_outgoing="is_out"></audio-player>
+
+		<p
+		v-if="muestra_texto"
+		class="whatsapp-bubble__text">
 			{{ message.body }}
 		</p>
 
@@ -118,7 +141,25 @@
 </template>
 <script>
 import moment from 'moment'
+import AudioPlayer from '@/components/whatsapp/conversation/AudioPlayer'
+
+// Cuerpos de relleno que el backend escribe cuando el mensaje es SOLO un medio, para que la fila
+// nunca quede con `body` vacío. Con la imagen o el reproductor dibujados arriba, repetirlos abajo
+// no le dice nada al operador.
+//
+// 🔴 `'[Audio sin transcripción]'` NO está en esta lista y no tiene que estarlo: ese sí informa
+// algo real —que la nota de voz llegó pero Kapso no la pudo pasar a texto—, y el operador tiene
+// que verlo para saber que la única forma de enterarse de qué dice es escuchándola.
+const CUERPOS_DE_RELLENO = [
+	'[Imagen recibida]',
+	'[Imagen enviada]',
+	'[Audio enviado]',
+]
+
 export default {
+	components: {
+		AudioPlayer,
+	},
 	props: {
 		message: {
 			type: Object,
@@ -261,6 +302,40 @@ export default {
 			}
 			return titles[this.message.delivery_status] || ''
 		},
+		/**
+		 * Hay una imagen para dibujar. Se piden las dos cosas: que el mensaje SEA de tipo imagen y
+		 * que el backend haya podido resolver el archivo. La fila puede existir con `media_type`
+		 * cargado y `media_src` en null: es a propósito, la ventana de 24 h se abre igual aunque
+		 * la descarga desde Kapso haya fallado. En ese caso queda el texto y nada más.
+		 *
+		 * `==` y no `===` a propósito, igual que en el resto del archivo.
+		 *
+		 * @returns {boolean}
+		 */
+		muestra_imagen() {
+			return this.message.media_type == 'image' && !!this.message.media_src
+		},
+		/**
+		 * Ídem para la nota de voz. La transcripción no vive acá: viaja en el `body` y se dibuja
+		 * abajo del reproductor como cualquier texto.
+		 *
+		 * @returns {boolean}
+		 */
+		muestra_audio() {
+			return this.message.media_type == 'audio' && !!this.message.media_src
+		},
+		/**
+		 * Oculta los cuerpos de relleno (ver `CUERPOS_DE_RELLENO`). Sin esto, abajo de cada foto
+		 * sin epígrafe quedaba colgado un `[Imagen recibida]` que no le suma nada al operador.
+		 *
+		 * La comparación es exacta y no un "empieza con": si el cliente escribiera justo ese
+		 * texto se perdería, pero cualquier cosa más laxa se comería epígrafes reales.
+		 *
+		 * @returns {boolean}
+		 */
+		muestra_texto() {
+			return CUERPOS_DE_RELLENO.indexOf(this.message.body) == -1
+		},
 	},
 	watch: {
 		cuenta_regresiva_activa: {
@@ -386,6 +461,19 @@ export default {
 				page: 1,
 			})
 		},
+		/**
+		 * Abre la imagen a pantalla completa.
+		 *
+		 * 🔴 No emite un evento hacia arriba ni monta el visor acá adentro. La burbuja vive dentro
+		 * del panel del sidebar, que tiene `overflow: hidden`: un visor colgado de esta burbuja
+		 * quedaría recortado al ancho del sidebar, y en Vue 2 no hay `<teleport>` para sacarlo.
+		 * Se avisa por el store y el visor —que es hermano del panel, no hijo— se abre solo.
+		 * De paso, la burbuja sigue sin emitir un solo evento, que es lo que la deja moverse de
+		 * lugar en el árbol sin tocarla.
+		 */
+		abrir_lightbox() {
+			this.$store.commit('whatsapp_chat/setLightboxUrl', this.message.media_src)
+		},
 	},
 }
 </script>
@@ -430,6 +518,32 @@ export default {
 		border-radius: 4px
 		padding: 1px 5px
 		margin-bottom: 3px
+	// La miniatura es un <button> y no un <img> suelto para que se pueda abrir con Enter y con
+	// el lector de pantalla, no solo con el mouse. De ahí que haya que sacarle todo el aspecto
+	// de botón que le pone el navegador.
+	&__image-btn
+		display: block
+		max-width: 100%
+		margin: 0 0 4px 0
+		padding: 0
+		border: none
+		background: transparent
+		cursor: zoom-in
+	&__image
+		display: block
+		// El 100% es lo que la mantiene adentro de la burbuja en teléfono; los 280px son para
+		// que en escritorio no ocupe media conversación.
+		max-width: min(100%, 280px)
+		max-height: 180px
+		width: auto
+		object-fit: cover
+		border-radius: 6px
+	// El reproductor viene del molde con `min-width: 200px`, que sumado al padding de la burbuja
+	// no entra en el 70% de un sidebar puesto en su ancho mínimo (320px) y se desbordaba. Acá se
+	// lo deja encoger: el waveform es flexible y aguanta perfecto un poco menos de ancho.
+	.wa-audio-player
+		min-width: 0
+		max-width: 100%
 	&__text
 		margin: 0
 		white-space: pre-wrap
