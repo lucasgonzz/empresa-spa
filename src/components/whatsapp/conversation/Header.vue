@@ -6,8 +6,20 @@
 			<strong class="whatsapp-header__name">
 				{{ chat_name }}
 			</strong>
-			<span class="whatsapp-header__phone">
-				{{ chat.phone }}
+			<span class="whatsapp-header__sub">
+				<span class="whatsapp-header__phone">
+					{{ chat.phone }}
+				</span>
+				<!-- El chat está corriendo sobre un entrante simulado: nada de lo que salga de
+				acá llega al cliente hasta que escriba de verdad. -->
+				<b-badge
+				v-if="en_simulacion"
+				variant="warning"
+				class="whatsapp-header__sim"
+				title="El último mensaje entrante lo simulaste vos. Los envíos hacia WhatsApp están frenados hasta que el cliente escriba de verdad.">
+					<i class="bi bi-cone-striped"></i>
+					Simulación
+				</b-badge>
 			</span>
 		</div>
 
@@ -72,6 +84,12 @@ export default {
 		},
 		messages() {
 			return this.$store.state.whatsapp_chat.messages
+		},
+		/**
+		 * El chat abierto está en modo simulación (getter de `store/whatsapp_chat.js`).
+		 */
+		en_simulacion() {
+			return this.$store.getters['whatsapp_chat/chat_en_simulacion']
 		},
 		chat_name() {
 			if (!this.chat) {
@@ -172,9 +190,21 @@ export default {
 		min-width: 0
 	&__name
 		font-size: .95rem
+	&__sub
+		display: flex
+		flex-direction: row
+		align-items: center
+		gap: 6px
+		min-width: 0
 	&__phone
 		font-size: .75rem
 		color: rgba(0, 0, 0, .5)
+	&__sim
+		flex-shrink: 0
+		white-space: nowrap
+		display: inline-flex
+		align-items: center
+		gap: 4px
 	&__actions
 		display: flex
 		flex-direction: row

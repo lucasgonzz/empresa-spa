@@ -2,6 +2,25 @@
 	<div
 	v-if="chat"
 	class="whatsapp-composer">
+		<!-- Chat en simulación: el backend FRENA todo envío de texto hacia WhatsApp mientras el
+		último entrante sea simulado. Sin este aviso el operador escribía, apretaba enviar, la
+		fila se guardaba y no salía nada: fallaba en silencio. -->
+		<div
+		v-if="en_simulacion"
+		class="whatsapp-composer__simulacion">
+			<strong class="whatsapp-composer__simulacion-titulo">
+				<i class="bi bi-cone-striped"></i>
+				Chat en simulación: los envíos a WhatsApp están frenados
+			</strong>
+			<span class="whatsapp-composer__simulacion-detalle">
+				El último mensaje entrante lo inyectaste vos desde "Simular mensaje", así que la
+				ventana de 24 h está forzada y no hay una conversación real abierta con este
+				número. Lo que mandes se va a guardar acá y lo vas a ver en la conversación,
+				pero <strong>al cliente no le llega</strong>. Se destraba solo en cuanto el
+				cliente escriba de verdad.
+			</span>
+		</div>
+
 		<div class="whatsapp-composer__toolbar">
 			<b-button
 			size="sm"
@@ -24,7 +43,7 @@
 			<b-form-textarea
 			v-model="text"
 			id="whatsapp-composer-text"
-			placeholder="Escribí un mensaje (Enter para enviar, Shift+Enter para salto de línea)"
+			:placeholder="placeholder"
 			rows="2"
 			max-rows="6"
 			@keydown.enter="onKeydownEnter"></b-form-textarea>
@@ -57,6 +76,24 @@ export default {
 		chat() {
 			let selected_chat_id = this.$store.state.whatsapp_chat.selected_chat_id
 			return this.$store.state.whatsapp_chat.chats.find(c => c.id == selected_chat_id) || null
+		},
+		/**
+		 * El chat abierto está en modo simulación (ver el getter en `store/whatsapp_chat.js`:
+		 * se resuelve mirando el último entrante cargado, que es lo único que el broadcast
+		 * mantiene al día).
+		 */
+		en_simulacion() {
+			return this.$store.getters['whatsapp_chat/chat_en_simulacion']
+		},
+		/**
+		 * En simulación el placeholder también lo dice: el aviso de arriba se puede pasar por
+		 * alto, el cursor no.
+		 */
+		placeholder() {
+			if (this.en_simulacion) {
+				return 'Simulación: lo que escribas se guarda pero no le llega al cliente'
+			}
+			return 'Escribí un mensaje (Enter para enviar, Shift+Enter para salto de línea)'
 		},
 	},
 	methods: {
@@ -128,6 +165,33 @@ export default {
 	padding: 8px 14px 14px 14px
 	background: #ffffff
 	border-top: 1px solid rgba(0, 0, 0, .08)
+	&__simulacion
+		display: flex
+		flex-direction: column
+		gap: 2px
+		background: #fff6e5
+		border: 1px dashed #d39e00
+		border-radius: 8px
+		padding: 8px 10px
+		margin-bottom: 8px
+		text-align: left
+		&-titulo
+			display: flex
+			flex-direction: row
+			align-items: center
+			gap: 6px
+			font-size: .8rem
+			color: #8a5b00
+		&-detalle
+			font-size: .74rem
+			line-height: 1.35
+			color: rgba(0, 0, 0, .65)
+			// En teléfono el detalle come media pantalla. Se recorta a tres líneas y el resto
+			// queda accesible al tocarlo (el título ya dice lo que hay que saber para no
+			// mandar un mensaje creyendo que sale).
+			@media screen and (max-width: 575px)
+				max-height: 3.5em
+				overflow-y: auto
 	&__toolbar
 		display: flex
 		flex-direction: row

@@ -32,6 +32,33 @@
 			</small>
 		</div>
 
+		<b-form-group
+		label="Espera antes de responder (segundos)">
+			<b-form-input
+			v-model="form.ai_reply_delay_seconds"
+			type="number"
+			min="0"
+			max="600"></b-form-input>
+			<small class="text-muted whatsapp-agent-config__hint">
+				Segundos que espera el agente antes de responder. Si el cliente manda varios
+				mensajes seguidos, el agente espera a que termine y responde una sola vez a todos.
+				En 0 responde al instante.
+			</small>
+		</b-form-group>
+
+		<b-form-group
+		label="Espera para confirmar antes de enviar (segundos)">
+			<b-form-input
+			v-model="form.ai_confirm_delay_seconds"
+			type="number"
+			min="0"
+			max="3600"></b-form-input>
+			<small class="text-muted whatsapp-agent-config__hint">
+				Segundos que el mensaje generado espera tu confirmación antes de enviarse solo.
+				En 0 se envía automáticamente, sin esperar.
+			</small>
+		</b-form-group>
+
 		<div class="whatsapp-agent-config__actions">
 			<btn-loader
 			text="Guardar"
@@ -49,10 +76,14 @@ export default {
 	data() {
 		return {
 			// Copia local editable de la configuración (se sincroniza con el store al cargar/guardar).
+			// Los dos delays arrancan en 0 = comportamiento de siempre (responde y envía al toque):
+			// así, si el backend todavía no tiene la columna cargada, nada cambia de golpe.
 			form: {
 				agent_personality: '',
 				ai_enabled_default: true,
 				auto_send_sale_pdf: false,
+				ai_reply_delay_seconds: 0,
+				ai_confirm_delay_seconds: 0,
 			},
 			loading: false,
 		}
@@ -78,13 +109,18 @@ export default {
 					? true
 					: !!value.ai_enabled_default
 				this.form.auto_send_sale_pdf = !!value.auto_send_sale_pdf
+				// `Number(...) || 0` de una: la API los manda como número, pero un registro viejo
+				// (anterior a la migración) los trae null/undefined y el input numérico devuelve
+				// string. En los dos casos el fallback correcto es 0 = sin espera.
+				this.form.ai_reply_delay_seconds = Number(value.ai_reply_delay_seconds) || 0
+				this.form.ai_confirm_delay_seconds = Number(value.ai_confirm_delay_seconds) || 0
 			},
 		},
 	},
 	methods: {
 		/**
-		 * Guarda la personalidad y los dos toggles. Usa el indicador global de carga (además
-		 * del loading local del botón) según la convención del proyecto.
+		 * Guarda la personalidad, los dos toggles y los dos tiempos de espera. Usa el indicador
+		 * global de carga (además del loading local del botón) según la convención del proyecto.
 		 */
 		save() {
 			this.loading = true

@@ -40,6 +40,9 @@ export default {
 			// Alto del contenedor antes de anteponer una página vieja, para restaurar el scroll
 			// exactamente donde estaba el usuario (si no, el scroll "saltaría" al tope).
 			scroll_height_before_prepend: 0,
+			// Id del último mensaje entrante con el que ya se reconcilió la conversación contra
+			// la base (ver `reconciliar_pendiente_tras_entrante`). Evita el bucle de recargas.
+			ultimo_entrante_reconciliado: null,
 		}
 	},
 	computed: {
@@ -71,6 +74,7 @@ export default {
 			this.$nextTick(() => {
 				this.scrollToBottom()
 			})
+			this.ultimo_entrante_reconciliado = null
 		},
 		'messages.length'(new_length, old_length) {
 			// Si se agregó un mensaje nuevo al final (no una página vieja anteponiéndose) y el
@@ -79,6 +83,7 @@ export default {
 				this.$nextTick(() => {
 					this.scrollToBottom()
 				})
+				this.reconciliar_pendiente_tras_entrante()
 			}
 		},
 		loading_more(is_loading_more) {
@@ -99,6 +104,40 @@ export default {
 			if (this.$refs.container) {
 				this.$refs.container.scrollTop = this.$refs.container.scrollHeight
 			}
+		},
+		/**
+		 * Cuando el cliente vuelve a escribir, el backend BORRA la respuesta del agente que
+		 * estaba esperando confirmación (`WhatsappChatHelper::discard_pending_ai_messages()`),
+		 * y el broadcast de ese borrado viaja SIN mensaje adjunto a propósito: no hay ninguna
+		 * fila que actualizar, el front tiene que recargar los mensajes del chat.
+		 *
+		 * Sin esto, la conversación se quedaba mostrando un globo "esperando tu aprobación" de
+		 * un mensaje que en la base ya no existe: el operador lo veía evaporarse recién al
+		 * recargar la pantalla.
+		 *
+		 * 🔴 No se saca el globo a ojo del lado del front porque el descarte NO es
+		 * incondicional: el backend solo lo hace si el bot está activo Y el chat tiene la IA
+		 * prendida. Adivinarlo mal escondería una respuesta que sigue viva y que se va a
+		 * enviar sola. Se vuelve a pedir la página 1 (en silencio, sin parpadear la
+		 * conversación) y se muestra lo que la base diga.
+		 *
+		 * El `ultimo_entrante_reconciliado` es lo que evita el bucle: si el pendiente
+		 * sobrevivió, la recarga deja todo igual y esto volvería a dispararse solo.
+		 */
+		reconciliar_pendiente_tras_entrante() {
+			let ultimo = this.messages[this.messages.length - 1]
+			if (!ultimo || ultimo.direction != 'in' || ultimo.id == this.ultimo_entrante_reconciliado) {
+				return
+			}
+			if (!this.messages.some(m => m.ai_status == 'a_confirmar')) {
+				return
+			}
+			this.ultimo_entrante_reconciliado = ultimo.id
+			this.$store.dispatch('whatsapp_chat/getMessages', {
+				chat_id: this.chat_id,
+				page: 1,
+				silent: true,
+			})
 		},
 		/**
 		 * Scroll infinito hacia arriba: cuando el usuario se acerca al tope del contenedor,

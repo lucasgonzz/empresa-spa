@@ -11,6 +11,19 @@
 				<i class="bi bi-plus-lg"></i>
 				Nuevo chat
 			</b-button>
+			<!-- Simular un mensaje entrante del cliente: mismo criterio is_owner que la
+			configuración, porque el endpoint `whatsapp-bot/simulate-inbound` también es solo
+			del dueño (devuelve 403 al resto). -->
+			<b-button
+			v-if="is_owner"
+			size="sm"
+			variant="outline-warning"
+			class="whatsapp-chats-list__simulate-btn"
+			title="Simular un mensaje del cliente (no le llega nada a nadie)"
+			v-b-modal="'whatsapp-simulate-inbound'">
+				<i class="bi bi-cone-striped"></i>
+			</b-button>
+
 			<!-- Configuración del agente y plantillas: solo el dueño la ve/edita (patrón is_owner del proyecto) -->
 			<b-button
 			v-if="is_owner"
@@ -44,6 +57,7 @@
 		</div>
 
 		<new-chat-modal></new-chat-modal>
+		<simulate-inbound-modal v-if="is_owner"></simulate-inbound-modal>
 		<whatsapp-config v-if="is_owner"></whatsapp-config>
 	</div>
 </template>
@@ -51,12 +65,14 @@
 import ChatSearch from '@/components/whatsapp/chats-list/ChatSearch'
 import ChatRow from '@/components/whatsapp/chats-list/ChatRow'
 import NewChatModal from '@/components/whatsapp/chats-list/NewChatModal'
+import SimulateInboundModal from '@/components/whatsapp/chats-list/SimulateInboundModal'
 import WhatsappConfig from '@/components/whatsapp/config/Index'
 export default {
 	components: {
 		ChatSearch,
 		ChatRow,
 		NewChatModal,
+		SimulateInboundModal,
 		WhatsappConfig,
 	},
 	computed: {
@@ -99,9 +115,17 @@ export default {
 		flex-direction: row
 		align-items: center
 		padding: 8px 8px 4px 0
+		// Con el botón de simular ya son cuatro cosas en la fila. En la franja de tablet
+		// (992-1024px) la columna de chats mide unos 330px y sin permitir el salto de línea el
+		// buscador quedaba aplastado a nada.
+		flex-wrap: wrap
+		row-gap: 4px
 	&__new-btn
 		flex-shrink: 0
 		white-space: nowrap
+		margin-right: 8px
+	&__simulate-btn
+		flex-shrink: 0
 		margin-right: 8px
 	&__config-btn
 		flex-shrink: 0
