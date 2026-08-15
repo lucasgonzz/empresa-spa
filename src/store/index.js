@@ -224,6 +224,8 @@ import sale_channel from '@/store/sale_channel'
 import article_ubication from '@/store/article_ubication'
 import stock_suggestion from '@/store/stock_suggestion'
 import stock_suggestion_article from '@/store/stock_suggestion_article'
+import purchase_suggestion from '@/store/purchase_suggestion'
+import purchase_suggestion_article from '@/store/purchase_suggestion_article'
 
 import article_price_range from '@/store/article_price_range'
 
@@ -483,6 +485,8 @@ export default new Vuex.Store({
         article_ubication,
         stock_suggestion,
         stock_suggestion_article,
+        purchase_suggestion,
+        purchase_suggestion_article,
 
         article_price_range,
 
