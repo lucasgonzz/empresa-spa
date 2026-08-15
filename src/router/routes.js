@@ -329,6 +329,14 @@ export default [
 				name: 'online_promociones',
 				function: 'ir_a_online_promociones',
 				can: 'buyer.index',
+				/*
+					Sin este gate, un comercio con la extension `online` pero SIN el motor
+					de ofertas ve la entrada en el menu, entra, y se come el cartel de
+					"este modulo requiere la extension" — o sea que le estamos mostrando
+					una funcion que no compro. Su gemela de IA -> Ofertas ya lo tiene, y
+					por eso ahi no pasaba. Lo detecto el chequeo independiente del 15/8/2026.
+				*/
+				if_has_extencion: 'motor_de_ofertas',
 				icon: 'tag',
 			},
 		],
