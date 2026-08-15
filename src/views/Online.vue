@@ -9,6 +9,11 @@
 		<orders></orders>
 		<buyers></buyers>
 		<cupons></cupons>
+		<!--
+			Promociones (15/8/2026): wrapper fino del motor de ofertas por cliente.
+			Monta el MISMO componente que la vista propia del módulo IA.
+		-->
+		<promociones></promociones>
 	</div>
 </template>
 <script>
@@ -17,6 +22,7 @@ export default {
 		Orders: () => import('@/components/online/components/orders/Index'),
 		Buyers: () => import('@/components/online/components/buyer/Index'),
 		Cupons: () => import('@/components/online/components/cupons/Index'),
+		Promociones: () => import('@/components/online/components/promociones/Index'),
 	},
 	created() {
 		// Sin NavComponent nadie selecciona sección: /online pelado (URL directa
