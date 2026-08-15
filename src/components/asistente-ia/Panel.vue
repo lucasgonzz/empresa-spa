@@ -45,8 +45,9 @@
 					</button>
 				</div>
 
-				<!-- La conversación abierta y el composer se montan acá (pieza P13). -->
 				<div class="asistente-ia-panel__cuerpo">
+					<conversation></conversation>
+					<composer></composer>
 				</div>
 			</div>
 		</div>
@@ -55,6 +56,8 @@
 
 <script>
 import ConversationList from '@/components/asistente-ia/ConversationList'
+import Conversation from '@/components/asistente-ia/Conversation'
+import Composer from '@/components/asistente-ia/Composer'
 import VenderResizer from '@/components/vender/components/VenderResizer'
 
 // Límites del ancho de la sidebar en px (D38).
@@ -65,6 +68,8 @@ const SIDEBAR_DEFAULT = 260
 export default {
 	components: {
 		ConversationList,
+		Conversation,
+		Composer,
 		VenderResizer,
 	},
 	data() {
