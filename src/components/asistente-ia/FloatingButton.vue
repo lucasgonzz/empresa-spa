@@ -283,7 +283,11 @@ export default {
 			})
 		},
 		/**
-		 * Al redimensionar la ventana, vuelve a acotar la posición guardada.
+		 * Al redimensionar la ventana, vuelve a acotar la posición SOLO en
+		 * pantalla: achicar la ventana no es un gesto del usuario sobre el
+		 * botón, y persistir el clamp pisaría (en localStorage y en la base)
+		 * la posición que la persona eligió arrastrando — la persistencia
+		 * vive únicamente en el fin del drag (arreglo post-chequeo).
 		 */
 		on_window_resize_for_floating_button() {
 			if (this.button_left_px == null || this.button_top_px == null) {
@@ -292,7 +296,6 @@ export default {
 			const clamped = this.clamp_button_position(this.button_left_px, this.button_top_px)
 			this.button_left_px = clamped.left
 			this.button_top_px = clamped.top
-			this.persist_floating_button_position(clamped.left, clamped.top)
 		},
 		/**
 		 * Inicia posible arrastre del botón (mouse o touch).

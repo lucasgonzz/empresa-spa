@@ -17,6 +17,15 @@ export default {
 		Orders: () => import('@/components/online/components/orders/Index'),
 		Buyers: () => import('@/components/online/components/buyer/Index'),
 		Cupons: () => import('@/components/online/components/cupons/Index'),
-	}
+	},
+	created() {
+		// Sin NavComponent nadie selecciona sección: /online pelado (URL directa
+		// o marcador) quedaba en blanco porque los tres hijos se gatean por
+		// $route.params.view. Se entra por Pedidos con replace (no push, para no
+		// ensuciar el historial) y catch anti-NavigationDuplicated.
+		if (!this.$route.params.view) {
+			this.$router.replace({name: 'online', params: {view: 'pedidos'}}).catch(() => {})
+		}
+	},
 }
 </script>

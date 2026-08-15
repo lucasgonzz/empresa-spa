@@ -290,7 +290,7 @@ export default {
 		 *
 		 * @param {Object} payload { conversation_id, page }
 		 */
-		getMessages({ commit, dispatch }, payload) {
+		getMessages({ commit, state, dispatch }, payload) {
 			let conversation_id = payload.conversation_id
 			let page = payload.page || 1
 			if (page == 1) {
@@ -304,6 +304,14 @@ export default {
 				},
 			})
 				.then(res => {
+					// Respuesta tardía de OTRA conversación (scrolleás la A, clickeás la B,
+					// la página de A llega después): se apaga solo el loading que esta
+					// petición prendió y no se toca nada más — sin el guard, la página de A
+					// se mezclaba (prepend) o pisaba (page 1) los mensajes de B en pantalla.
+					if (conversation_id != state.selected_conversation_id) {
+						commit(page == 1 ? 'setLoadingMessages' : 'setLoadingMoreMessages', false)
+						return
+					}
 					let paginator = res.data.models
 					// El backend devuelve DESC (más nuevo primero); para renderizar de arriba
 					// a abajo se necesita orden ascendente, así que se invierte cada página.
@@ -331,6 +339,13 @@ export default {
 					commit('setMessagesLastPage', paginator.last_page)
 				})
 				.catch(err => {
+					// Mismo guard que el .then: si la conversación pedida ya no es la
+					// abierta, esta falla es de una petición descartada — apagar los dos
+					// flags acá pisaría el loading de la conversación vigente.
+					if (conversation_id != state.selected_conversation_id) {
+						commit(page == 1 ? 'setLoadingMessages' : 'setLoadingMoreMessages', false)
+						return
+					}
 					commit('setLoadingMessages', false)
 					commit('setLoadingMoreMessages', false)
 					console.log(err)
