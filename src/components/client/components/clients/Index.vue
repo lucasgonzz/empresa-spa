@@ -34,6 +34,17 @@
 				<btn-current-acounts
 				:model="slotProps.model"
 				model_name="client"></btn-current-acounts>
+
+				<!--
+					🔴 Va como HERMANO de <btn-current-acounts>, nunca adentro suyo.
+					Ese componente es un v-for sobre model.credit_accounts y dibuja un botón por
+					moneda (pesos, dólares si el negocio tiene la extensión): metido ahí adentro,
+					el de WhatsApp se repetiría una vez por cada cuenta corriente del cliente.
+				-->
+				<btn-whatsapp-chat
+				:phone="slotProps.model.phone"
+				:client_id="slotProps.model.id"
+				:display_name="slotProps.model.name"></btn-whatsapp-chat>
 			</template>
 		</view-component>
 	</div>
@@ -43,6 +54,7 @@ export default {
 	components: {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 		BtnCurrentAcounts: () => import('@/components/common/BtnCurrentAcounts'),
+		BtnWhatsappChat: () => import('@/components/common/BtnWhatsappChat'),
 		ComercioCityUser: () => import('@/components/common/ComercioCityUser'),
 		CreateBuyer: () => import('@/components/client/components/clients/CreateBuyer'),
 		SaldosClientesFiltrados: () => import('@/components/client/components/clients/SaldosClientesFiltrados'),
