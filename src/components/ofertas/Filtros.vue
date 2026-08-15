@@ -68,6 +68,10 @@ export default {
 				{value: 'afinidad', text: 'Ya lo compro antes'},
 				{value: 'carrito_abandonado', text: 'Lo dejo en el carrito'},
 				{value: 'reactivacion', text: 'Hace rato que no compra'},
+				// Lo que miro y lo que busco en la tienda sin llegar a ponerlo en el
+				// carrito. Los eventos los escribe la tienda: hasta que este
+				// desplegada, esta opcion filtra a una tabla vacia, que es correcto.
+				{value: 'interes_ecommerce', text: 'Lo miro o lo busco en la tienda'},
 			]
 		},
 		opciones_orden() {

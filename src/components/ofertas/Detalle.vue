@@ -65,6 +65,30 @@
 				{{ leyenda_excluidos }}
 			</b-alert>
 
+			<!--
+				La otra mitad de la misma pregunta, del lado de los articulos: a
+				cuantos el motor no les pudo calcular un descuento seguro, y por que.
+				No es una estadistica de relleno: "200 no tienen el costo cargado" es
+				una tarea concreta, y es la unica forma de que el comerciante se
+				entere de que tiene el catalogo a medio cargar. Solo aparece si hubo
+				alguna: una corrida limpia no necesita decir que no excluyo nada.
+			-->
+			<b-alert
+			v-if="corrida.status == 'terminado' && exclusiones.length"
+			show
+			variant="secondary"
+			class="ofertas-detalle__excluidos">
+				<i class="bi bi-exclamation-triangle m-r-5"></i>
+				{{ leyenda_articulos_excluidos }}
+				<ul class="m-b-0 m-t-5">
+					<li
+					v-for="exclusion in exclusiones"
+					:key="exclusion.motivo">
+						<strong>{{ exclusion.cantidad }}</strong> {{ exclusion.texto }}
+					</li>
+				</ul>
+			</b-alert>
+
 			<b-alert
 			v-if="corrida.status == 'pendiente'"
 			show
@@ -144,6 +168,30 @@ export default {
 				return '1 cliente quedo afuera porque tiene ventas sin cobrar.'
 			}
 			return cantidad + ' clientes quedaron afuera porque tienen ventas sin cobrar.'
+		},
+		/*
+			El desglose de articulos excluidos ya viene explicado del backend
+			(OfferSuggestion::$appends -> exclusiones_explicadas): el texto de cada
+			motivo vive en OfertaSugeridaService::texto_de_exclusion() y de ahi lo
+			leen tanto esta pantalla como el bloque de datos de la IA. Aca no se
+			traduce nada, para que no haya dos redacciones del mismo motivo.
+		*/
+		exclusiones() {
+			if (!Array.isArray(this.corrida.exclusiones_explicadas)) {
+				return []
+			}
+			return this.corrida.exclusiones_explicadas
+		},
+		/**
+		 * El encabezado del desglose, con el singular resuelto como el de los
+		 * clientes: esta linea la lee el comerciante, no un programador.
+		 */
+		leyenda_articulos_excluidos() {
+			let total = this.exclusiones.reduce((suma, e) => suma + Number(e.cantidad), 0)
+			if (total == 1) {
+				return '1 articulo quedo afuera porque no se le puede calcular un descuento seguro:'
+			}
+			return total + ' articulos quedaron afuera porque no se les puede calcular un descuento seguro:'
 		},
 	},
 	watch: {

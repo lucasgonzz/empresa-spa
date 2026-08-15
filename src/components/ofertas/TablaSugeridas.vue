@@ -167,8 +167,11 @@ export default {
 	methods: {
 		/**
 		 * Criterio en criollo. Los strings crudos ('afinidad', 'carrito_abandonado',
-		 * 'reactivacion') son los que guarda offer_suggestion_lines.criterio y los
-		 * mismos que manda el filtro; el texto es solo de presentacion.
+		 * 'reactivacion', 'interes_ecommerce') son los que guarda
+		 * offer_suggestion_lines.criterio y los mismos que manda el filtro de
+		 * Filtros.vue; el texto es solo de presentacion. Si se agrega un criterio en
+		 * CriteriosDeOfertaService, se agrega en los dos lugares o el select filtra
+		 * por algo que la tabla muestra con el string crudo.
 		 */
 		texto_criterio(criterio) {
 			if (criterio == 'afinidad') {
@@ -179,6 +182,9 @@ export default {
 			}
 			if (criterio == 'reactivacion') {
 				return 'Hace rato que no compra'
+			}
+			if (criterio == 'interes_ecommerce') {
+				return 'Lo miro o lo busco en la tienda'
 			}
 			return criterio
 		},
