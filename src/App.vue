@@ -9,6 +9,14 @@
         <btn-scroll-top></btn-scroll-top>
         <support-chat-floating-button></support-chat-floating-button>
         <asistente-ia-floating-button></asistente-ia-floating-button>
+        <!--
+            Anfitrión del sidebar de WhatsApp. Va acá arriba, y no adentro del módulo, porque
+            desde este refactor la conversación se abre también desde Clientes, Pedidos y
+            Compradores: si el sidebar y la suscripción a Echo vivieran en views/Whatsapp.vue,
+            fuera del módulo no habría ni conversación ni tiempo real. El componente se gatea
+            solo (sesión + extensión `whatsapp`), igual que el botón del asistente IA.
+        -->
+        <whatsapp-sidebar-host></whatsapp-sidebar-host>
         <offline-articles-progress
         :offline_articles_sync_progress="offline_articles_sync_progress"></offline-articles-progress>
         <afip-reenviar-facturas></afip-reenviar-facturas>
@@ -48,6 +56,7 @@ import NavComponent from '@/components/nav/Index'
 import BtnScrollTop from '@/common-vue/components/nav/BtnScrollTop'
 import SupportChatFloatingButton from '@/common-vue/components/support-chat/FloatingButton'
 import AsistenteIaFloatingButton from '@/components/asistente-ia/FloatingButton'
+import WhatsappSidebarHost from '@/components/whatsapp/SidebarHost'
 
 import app from '@/common-vue/mixins/app'
 import start_methods from '@/mixins/start_methods'
@@ -64,6 +73,7 @@ export default {
         BtnScrollTop,
         SupportChatFloatingButton,
         AsistenteIaFloatingButton,
+        WhatsappSidebarHost,
         OfflineArticlesProgress: () => import('@/common-vue/components/offline-sync-articles/Progress'),
         PaymentExpire: () => import('@/components/nav/PaymentExpire'),
         AfipReenviarFacturas: () => import('@/components/common/afip-reenviar-facturas/Index'),

@@ -53,6 +53,18 @@ export default {
 		messages_page: 1,
 		// Última página disponible (según el paginator de Laravel); null hasta la primera carga.
 		messages_last_page: null,
+
+		/*
+			El sidebar de conversación se abre y se cierra desde acá, y no con una prop del
+			componente, porque este store es un singleton: hay UNA sola `selected_chat_id` y UN
+			solo array `messages` en toda la aplicación. Una prop `chat` sería una segunda fuente
+			de verdad para lo mismo. Además el botón de Compradores despacha desde
+			`mixins/model_functions.js`, donde no hay componente ni template en el que colgar una
+			prop. Es el mismo camino que ya usa el asistente IA (`ai_chat.panel_abierto`).
+		*/
+		sidebar_abierto: false,
+		// URL de la imagen que se está mirando a pantalla completa (null = visor cerrado).
+		lightbox_url: null,
 	},
 	mutations: {
 		setLoadingChats(state, value) {
@@ -159,6 +171,15 @@ export default {
 		setMessagesLastPage(state, value) {
 			state.messages_last_page = value
 		},
+		setSidebarAbierto(state, value) {
+			state.sidebar_abierto = !!value
+		},
+		/**
+		 * Abre (con una URL) o cierra (con null) el visor de imagen a pantalla completa.
+		 */
+		setLightboxUrl(state, value) {
+			state.lightbox_url = value || null
+		},
 	},
 	getters: {
 		/**
@@ -232,6 +253,41 @@ export default {
 				.then(res => {
 					commit('upsertChat', res.data.model)
 					return res.data.model
+				})
+		},
+		/**
+		 * Deja el sidebar abierto y parado en una conversación. Es la única puerta de entrada
+		 * al sidebar desde el resto del sistema (bandeja, Clientes, Pedidos, Compradores).
+		 *
+		 * 🔴 Acá NO se cargan los mensajes ni se marca leído a propósito. Eso lo dispara el
+		 * `watch` de `selected_chat_id` que vive adentro de `conversation/Index.vue`: si la
+		 * carga la hiciera cada quien que selecciona un chat, volveríamos a tener el trío
+		 * `setSelectedChatId` + `setMessages([])` + `getMessages()` copiado en cada llamador —
+		 * que es exactamente el acoplamiento que este refactor viene a sacar, y el motivo por
+		 * el que entrar por link directo a /whatsapp/{id} abría la conversación vacía.
+		 *
+		 * Con `phone` no hace falta chequear antes si el chat existe: `createChat` es
+		 * idempotente por teléfono (el backend busca por `user_id` + `phone` y solo crea si no
+		 * lo encuentra), así que despachar y abrir alcanza.
+		 *
+		 * @param {Object} payload { chat_id } o { phone, client_id }
+		 * @returns {Promise} resuelve con el id del chat abierto.
+		 */
+		abrirChat({ commit, dispatch }, payload) {
+			if (payload.chat_id) {
+				commit('setSelectedChatId', payload.chat_id)
+				commit('setSidebarAbierto', true)
+				return Promise.resolve(payload.chat_id)
+			}
+			let self_commit = commit
+			return dispatch('createChat', {
+				phone: payload.phone,
+				client_id: payload.client_id || null,
+			})
+				.then(function (model) {
+					self_commit('setSelectedChatId', model.id)
+					self_commit('setSidebarAbierto', true)
+					return model.id
 				})
 		},
 		/**

@@ -18,6 +18,38 @@ export default {
 			this.$store.commit('ai_chat/setPanelAbierto', true)
 		},
 		/**
+		 * Abre el sidebar de WhatsApp parado en una conversación, desde cualquier parte del
+		 * sistema (la bandeja del módulo, Clientes, Pedidos online, Compradores).
+		 *
+		 * Vive acá por el mismo motivo que `abrir_chat_ia()`: este mixin entra por
+		 * `common-vue/mixins/app.js` a `Vue.mixin()`, así que el método queda disponible en
+		 * TODA la app sin importar nada y sin tocar `common-vue`. Es lo que permite que el
+		 * botón de Compradores —que no tiene componente propio, se declara en `models/buyer.js`
+		 * y se despacha desde `mixins/model_functions.js`— pueda abrir el sidebar igual que
+		 * cualquier componente con template.
+		 *
+		 * `display_name` se acepta en el payload porque es lo que el llamador tiene a mano para
+		 * nombrar al contacto, pero hoy **no viaja al backend**: `POST api/whatsapp-chats` solo
+		 * lee `phone` y `client_id` (ver `WhatsappChatController::store()`). Queda documentado
+		 * para que nadie lo mande esperando que se guarde.
+		 *
+		 * @param {Object} payload { chat_id } o { phone, client_id, display_name }
+		 * @returns {Promise}
+		 */
+		abrir_chat_whatsapp(payload) {
+			let self = this
+			let datos = payload || {}
+			if (!datos.chat_id && !datos.phone) {
+				this.$toast.error('No se pudo abrir la conversación de WhatsApp: falta el teléfono')
+				return Promise.resolve(null)
+			}
+			return this.$store.dispatch('whatsapp_chat/abrirChat', datos)
+				.catch(function (err) {
+					console.log(err)
+					self.$toast.error('No se pudo abrir la conversación de WhatsApp')
+				})
+		},
+		/**
 		 * Entrada del módulo padre "IA" de la nav (D29). Antes mandaba siempre a
 		 * Sugerencias de stock, que era su único submódulo; con "sugerencias de
 		 * compra" (15/8/2026) ya no alcanza con eso, así que decide por extensión:
