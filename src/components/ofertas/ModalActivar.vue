@@ -363,5 +363,9 @@ export default {
 	&__encabezado
 		font-size: 1.05rem
 .ofertas-activar__tramo
-	flex-wrap: nowrap
+	// En telefono los tres inputs y el boton no entran en una linea: que
+	// envuelvan en vez de espicharse hasta quedar inusables. En escritorio y
+	// tablet entran, asi que el wrap no cambia nada.
+	flex-wrap: wrap
+	row-gap: 5px
 </style>
