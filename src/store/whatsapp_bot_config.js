@@ -41,16 +41,19 @@ export default __base_store({
 		},
 
 		/**
-		 * Guarda la configuración funcional del agente (grupo 137, Prompt 07): personalidad y
-		 * los dos toggles de automatización. Pega al mismo endpoint que la config técnica de
-		 * Kapso (ABM → Integraciones), pero manda solo estos 3 campos: el controller de la API
-		 * arma el `updateOrCreate` con `$request->has(...)` por campo, así que no pisa los
-		 * campos técnicos que esta pantalla no conoce.
+		 * Guarda la configuración funcional del agente (grupo 137, Prompt 07): personalidad,
+		 * los dos toggles de automatización y los dos tiempos de espera. Pega al mismo endpoint
+		 * que la config técnica de Kapso (ABM → Integraciones y la solapa "Conexión"), pero
+		 * manda solo estos 5 campos: el controller de la API arma el `updateOrCreate` con
+		 * `$request->has(...)` por campo, así que no pisa los campos técnicos que esta pantalla
+		 * no conoce.
 		 *
 		 * @param {Object} payload
 		 * @param {string} payload.agent_personality Texto libre con la personalidad del agente.
 		 * @param {boolean} payload.ai_enabled_default Si los chats nuevos nacen con IA prendida.
 		 * @param {boolean} payload.auto_send_sale_pdf Si se manda el PDF de la venta automáticamente.
+		 * @param {number|string} payload.ai_reply_delay_seconds Espera antes de generar la respuesta.
+		 * @param {number|string} payload.ai_confirm_delay_seconds Espera de confirmación antes de enviar.
 		 * @returns {Promise}
 		 */
 		updateAgentConfig({ commit, state }, payload) {
@@ -58,6 +61,10 @@ export default __base_store({
 				agent_personality: payload.agent_personality,
 				ai_enabled_default: payload.ai_enabled_default,
 				auto_send_sale_pdf: payload.auto_send_sale_pdf,
+				// Van casteados sí o sí: el input numérico los entrega como string y la
+				// validación del backend es `integer`, así que un "30" pelado la voltea.
+				ai_reply_delay_seconds: Number(payload.ai_reply_delay_seconds) || 0,
+				ai_confirm_delay_seconds: Number(payload.ai_confirm_delay_seconds) || 0,
 			})
 				.then(res => {
 					// Refleja el modelo guardado (incluye los campos técnicos que ya tenía).
