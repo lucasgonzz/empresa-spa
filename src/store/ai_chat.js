@@ -36,6 +36,34 @@ let proximo_local_id = 0
 let preferencias_pendientes = null
 let preferencias_timer_id = null
 
+/**
+ * Estado de la espera de respuesta (polling de respaldo del broadcast, D46).
+ * Patrón del modal de importación IA (ai-excel-import, grupos 297/299/303):
+ * `token` identifica la corrida y las puertas de los helpers SOLO LO LEEN. El
+ * único lugar autorizado a incrementarlo es la acción cancelarEsperaDeRespuesta;
+ * las salidas naturales del polling (respuesta lista, 5 fallos de red seguidos,
+ * corte a los 180s) simplemente dejan de agendar y limpian el timer.
+ */
+let espera = {
+	token: 0,
+	timer_id: null,
+	message_id: null,
+	conversation_id: null,
+}
+
+/**
+ * Cierre de una salida NATURAL del polling: limpia timer y referencias sin
+ * invalidar el token (ver comentario de arriba).
+ */
+function terminar_espera_sin_invalidar() {
+	if (espera.timer_id) {
+		clearTimeout(espera.timer_id)
+		espera.timer_id = null
+	}
+	espera.message_id = null
+	espera.conversation_id = null
+}
+
 export default {
 	namespaced: true,
 	state: {
@@ -226,9 +254,14 @@ export default {
 		 * Borra una conversación (y sus mensajes, del lado del backend). Si era la
 		 * abierta, pasa a la siguiente con actividad o deja una conversación nueva.
 		 */
-		deleteConversation({ commit, state }, conversation_id) {
+		deleteConversation({ commit, state, dispatch }, conversation_id) {
 			return axios.delete('/api/ai-conversations/' + conversation_id)
 				.then(() => {
+					// Si se estaba esperando una respuesta de esta conversación, ya no
+					// hay a quién esperarle (R3: la carrera del job con lo borrado).
+					if (espera.conversation_id == conversation_id) {
+						dispatch('cancelarEsperaDeRespuesta')
+					}
 					commit('removeConversation', conversation_id)
 					if (state.selected_conversation_id == conversation_id) {
 						let siguiente = state.conversations.length ? state.conversations[0].id : null
@@ -245,7 +278,7 @@ export default {
 		 *
 		 * @param {Object} payload { conversation_id, page }
 		 */
-		getMessages({ commit }, payload) {
+		getMessages({ commit, dispatch }, payload) {
 			let conversation_id = payload.conversation_id
 			let page = payload.page || 1
 			if (page == 1) {
@@ -266,6 +299,18 @@ export default {
 					if (page == 1) {
 						commit('setMessages', chronological_chunk)
 						commit('setLoadingMessages', false)
+						// Si la conversación quedó con una respuesta a medio generar
+						// (reapertura del panel, F5, reconexión), la espera se re-arma:
+						// sin esto el pendiente dependería solo del evento de Echo.
+						if (chronological_chunk.length) {
+							let ultimo = chronological_chunk[chronological_chunk.length - 1]
+							if (ultimo.rol == 'assistant' && ultimo.estado == 'pendiente' && espera.message_id != ultimo.id) {
+								dispatch('esperarRespuesta', {
+									conversation_id: conversation_id,
+									message_id: ultimo.id,
+								})
+							}
+						}
 					} else {
 						commit('prependMessages', chronological_chunk)
 						commit('setLoadingMoreMessages', false)
@@ -333,6 +378,11 @@ export default {
 								id: conversation_id,
 								last_message_at: new Date().toISOString(),
 							})
+							// Arranca el polling de respaldo del broadcast (D46).
+							dispatch('esperarRespuesta', {
+								conversation_id: conversation_id,
+								message_id: res.data.assistant_message.id,
+							})
 							return res.data
 						})
 				})
@@ -361,6 +411,158 @@ export default {
 		retryMessage({ commit, dispatch }, message) {
 			commit('removeLocalMessage', message.local_id)
 			return dispatch('sendMessage', { contenido: message.contenido })
+		},
+		/**
+		 * Busca UN mensaje por REST. Es la otra mitad del evento liviano
+		 * `ChatIaMensajeActualizado` (D8/D45): el broadcast avisa ids y estado, y el
+		 * texto se pide siempre por acá, autenticado. También lo usa el polling.
+		 *
+		 * @param {Object} payload { conversation_id, message_id }
+		 */
+		fetchMessage({ state, commit, dispatch }, payload) {
+			return axios.get('/api/ai-conversations/' + payload.conversation_id + '/messages/' + payload.message_id)
+				.then(res => {
+					let model = res.data.model
+					// Solo pisa la conversación en pantalla; si el usuario ya está en
+					// otra, con refrescar la bandeja alcanza.
+					if (state.selected_conversation_id == payload.conversation_id) {
+						commit('patchMessage', model)
+					}
+					if (model.estado != 'pendiente') {
+						// La respuesta llegó (o quedó en error amigable): si el polling
+						// seguía esperando este mensaje, ya no tiene nada que esperar.
+						if (espera.message_id == payload.message_id) {
+							dispatch('cancelarEsperaDeRespuesta')
+						}
+						// Refresca la bandeja: sube last_message_at y trae el título que
+						// el job de inferencia haya escrito mientras tanto (D20).
+						dispatch('getConversations')
+					}
+					return model
+				})
+		},
+		/**
+		 * Polling de respaldo del broadcast (D46), molde ai-excel-import: token de
+		 * corrida chequeado en las CUATRO puertas (antes de la consulta, en el .then,
+		 * en el .catch y en el agendador), 5 fallos de red seguidos para rendirse,
+		 * cadencia de 3s los primeros 30s y 6s después, y corte a los 180s dejando
+		 * el aviso de demora (R8: la cola es compartida con las importaciones).
+		 * Arranca al enviar y se apaga en cuanto el mensaje deja de estar pendiente,
+		 * por evento o por el propio polling.
+		 *
+		 * @param {Object} payload { conversation_id, message_id }
+		 */
+		esperarRespuesta({ state, commit, dispatch }, payload) {
+			// Una espera nueva invalida cualquier corrida anterior (único ++token).
+			dispatch('cancelarEsperaDeRespuesta')
+
+			// El token se captura DESPUÉS de cancelar, que es quien lo incrementó.
+			let token_corrida = espera.token
+			espera.message_id = payload.message_id
+			espera.conversation_id = payload.conversation_id
+
+			let inicio = Date.now()
+			let fallos_consecutivos = 0
+
+			function consultar() {
+
+				/* Punto de chequeo: la función que ejecuta la consulta. */
+				if (token_corrida !== espera.token) return
+
+				axios.get('/api/ai-conversations/' + payload.conversation_id + '/messages/' + payload.message_id, {
+					timeout: 30000,
+				})
+					.then(res => {
+
+						/* Punto de chequeo: el .then de cada GET de polling. */
+						if (token_corrida !== espera.token) return
+
+						fallos_consecutivos = 0
+						let model = res.data.model
+
+						if (model.estado != 'pendiente') {
+							terminar_espera_sin_invalidar()
+							commit('setRespuestaDemorada', false)
+							if (state.selected_conversation_id == payload.conversation_id) {
+								commit('patchMessage', model)
+							}
+							dispatch('getConversations')
+							return
+						}
+
+						agendar_proxima_consulta()
+					})
+					.catch(err => {
+
+						/* Punto de chequeo: el .catch de cada GET de polling. */
+						if (token_corrida !== espera.token) return
+
+						// Un 404 no es un corte de red: la conversación o el mensaje ya
+						// no existen (borrados en el medio) y no hay nada que esperar.
+						if (err.response && err.response.status == 404) {
+							terminar_espera_sin_invalidar()
+							return
+						}
+
+						// Un fallo suelto no aborta la espera; recién 5 SEGUIDOS rinden
+						// el polling (el evento de Echo sigue siendo la otra vía).
+						fallos_consecutivos = fallos_consecutivos + 1
+
+						if (fallos_consecutivos >= 5) {
+							terminar_espera_sin_invalidar()
+							console.log('Polling del chat IA rendido tras 5 fallos de red seguidos')
+							return
+						}
+
+						agendar_proxima_consulta()
+					})
+			}
+
+			function agendar_proxima_consulta() {
+
+				/* Punto de chequeo: el agendador del siguiente ciclo. */
+				if (token_corrida !== espera.token) return
+
+				let transcurrido = Date.now() - inicio
+
+				if (transcurrido >= 180000) {
+					terminar_espera_sin_invalidar()
+					// El mensaje sigue 'pendiente' en el backend: el indicador de
+					// pensando queda, con el aviso de demora abajo, y si al final la
+					// respuesta llega el evento de Echo la registra igual.
+					commit('setRespuestaDemorada', true)
+					return
+				}
+
+				/* Cada 3s el primer medio minuto; cada 6s después (menos ruido). */
+				let intervalo = transcurrido < 30000 ? 3000 : 6000
+
+				espera.timer_id = setTimeout(function () {
+
+					/* Punto de chequeo: al disparar el timer. */
+					if (token_corrida !== espera.token) return
+
+					consultar()
+
+				}, intervalo)
+			}
+
+			consultar()
+		},
+		/**
+		 * ÚNICO lugar autorizado a invalidar el token de la espera (regla del molde,
+		 * grupo 303). Lo usan: una espera nueva al arrancar, fetchMessage cuando el
+		 * mensaje esperado se resolvió por evento, y el borrado de la conversación.
+		 */
+		cancelarEsperaDeRespuesta({ commit }) {
+			espera.token = espera.token + 1
+			if (espera.timer_id) {
+				clearTimeout(espera.timer_id)
+				espera.timer_id = null
+			}
+			espera.message_id = null
+			espera.conversation_id = null
+			commit('setRespuestaDemorada', false)
 		},
 		/**
 		 * Persiste las preferencias de UI de la PERSONA (posición del botón flotante,

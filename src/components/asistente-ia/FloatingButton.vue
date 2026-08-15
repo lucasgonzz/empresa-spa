@@ -64,6 +64,13 @@ export default {
 			suppress_primary_mouse_down_until_ms: 0,
 			// True si la sesión de arrastre actual comenzó con touchstart (para coordinar suppress de mouse sintético).
 			drag_started_with_touch: false,
+			// Nombre del canal chat.user.* actualmente suscrito (para Echo.leave al cambiar de persona).
+			ai_chat_echo_channel: null,
+			// true una vez enganchado el listener de reconexión de Echo (se engancha una sola vez).
+			reconexion_del_chat_enganchada: false,
+			// true cuando Echo ya estuvo conectado alguna vez: distingue la primera
+			// conexión (no hay nada que refrescar) de una reconexión real.
+			echo_del_chat_ya_estuvo_conectado: false,
 		}
 	},
 	computed: {
@@ -117,6 +124,7 @@ export default {
 	},
 	mounted() {
 		this.hydrate_floating_button_position()
+		this.suscribir_canal_del_chat()
 		const self = this
 		window.addEventListener('resize', self.on_window_resize_for_floating_button)
 	},
@@ -124,14 +132,27 @@ export default {
 		const self = this
 		window.removeEventListener('resize', self.on_window_resize_for_floating_button)
 		this.detach_drag_listeners()
+		if (this.ai_chat_echo_channel && this.Echo) {
+			this.Echo.leave(this.ai_chat_echo_channel)
+			this.ai_chat_echo_channel = null
+		}
 	},
 	watch: {
 		/**
 		 * Tras auth/me (o al cambiar de persona en la misma pestaña) re-hidrata la
-		 * posición desde la fila del usuario: la base es la fuente de verdad (D3).
+		 * posición desde la fila del usuario (la base es la fuente de verdad, D3) y
+		 * re-suscribe el canal privado de ESA persona.
 		 */
 		'user.id'() {
 			this.hydrate_floating_button_position()
+			this.suscribir_canal_del_chat()
+		},
+		/**
+		 * La extensión puede resolverse después del arranque: cuando el botón
+		 * aparece o desaparece, la suscripción lo sigue.
+		 */
+		should_show() {
+			this.suscribir_canal_del_chat()
 		},
 	},
 	methods: {
@@ -387,6 +408,110 @@ export default {
 			document.removeEventListener('touchmove', self.on_floating_touch_move)
 			document.removeEventListener('touchend', self.on_floating_pointer_up)
 			document.removeEventListener('touchcancel', self.on_floating_pointer_up)
+		},
+		/**
+		 * Se suscribe al canal PRIVADO por persona `chat.user.{auth_user_id}` (D8/D45).
+		 * Vive acá y no en el panel porque el botón está montado siempre que la
+		 * extensión esté activa: una respuesta puede llegar con el panel cerrado y
+		 * hay que registrarla igual. El authorizer custom de canales privados ya
+		 * está resuelto en main.js.
+		 *
+		 * 🔴 El Echo.leave va ANTES de cortar por "no hay canal nuevo": si en la
+		 * misma pestaña entra otra persona (o se pierde la extensión), el canal
+		 * anterior no puede quedar vivo escuchando conversaciones ajenas.
+		 */
+		suscribir_canal_del_chat() {
+			if (!this.Echo) {
+				return
+			}
+			const canal = (this.should_show && this.user && this.user.id)
+				? 'chat.user.' + this.user.id
+				: null
+			// Guarda de doble suscripción: watch de user.id y de should_show pueden
+			// dispararse varias veces en la misma sesión.
+			if (this.ai_chat_echo_channel === canal) {
+				return
+			}
+			if (this.ai_chat_echo_channel) {
+				this.Echo.leave(this.ai_chat_echo_channel)
+			}
+			this.ai_chat_echo_channel = canal
+			if (!canal) {
+				return
+			}
+			/*
+				🔴 Tiene que ser .listen('.ChatIaMensajeActualizado'), CON el punto
+				inicial: es un Event con broadcastAs, NO una notificación de Laravel.
+				Un .notification() acá no recibiría NADA NUNCA y sin ningún error a la
+				vista (la trampa está documentada en src/mixins/broadcast.js:80-91).
+			*/
+			this.Echo.private(canal)
+				.listen('.ChatIaMensajeActualizado', (payload) => {
+					this.on_chat_ia_mensaje_actualizado(payload)
+				})
+
+			this.escuchar_reconexion_de_echo_del_chat()
+		},
+		/**
+		 * El evento es liviano a propósito (tres ids y un estado, jamás el texto:
+		 * puede traer saldos de clientes y no viaja por Pusher, D8/R4). Con la
+		 * conversación abierta se busca el mensaje por REST; si es de otra, alcanza
+		 * con refrescar la bandeja cuando el panel está a la vista.
+		 */
+		on_chat_ia_mensaje_actualizado(payload) {
+			if (!payload || !payload.ai_conversation_id || !payload.ai_message_id) {
+				return
+			}
+			const chat_state = this.$store.state.ai_chat
+			if (chat_state.selected_conversation_id == payload.ai_conversation_id) {
+				this.$store.dispatch('ai_chat/fetchMessage', {
+					conversation_id: payload.ai_conversation_id,
+					message_id: payload.ai_message_id,
+				})
+					.catch(err => {
+						// Si el REST falla, el polling de respaldo sigue en carrera.
+						console.log(err)
+					})
+			} else if (chat_state.panel_abierto) {
+				this.$store.dispatch('ai_chat/getConversations')
+			}
+		},
+		/**
+		 * Vuelve a pedir los mensajes de la conversación abierta cada vez que Echo
+		 * se reconecta. Réplica LOCAL de escuchar_reconexion_de_echo del mixin
+		 * compartido (src/mixins/broadcast.js:106-145), que no se toca porque al
+		 * reconectar dispara order/getUnconfirmedModels y no tiene nada que ver:
+		 * los eventos que ocurrieron con la conexión caída no se reenvían solos.
+		 */
+		escuchar_reconexion_de_echo_del_chat() {
+			if (this.reconexion_del_chat_enganchada) {
+				return
+			}
+			// El conector de Pusher lo expone Echo (config de main.js). Se chequea en
+			// vez de asumirlo: si cambia el broadcaster solo se pierde este refresco.
+			if (!this.Echo.connector || !this.Echo.connector.pusher || !this.Echo.connector.pusher.connection) {
+				return
+			}
+			const connection = this.Echo.connector.pusher.connection
+			// Si ya está conectado cuando nos enganchamos (lo normal: Echo conecta en
+			// main.js mucho antes de resolver la sesión), cualquier 'connected'
+			// posterior ES una reconexión.
+			this.echo_del_chat_ya_estuvo_conectado = connection.state == 'connected'
+			this.reconexion_del_chat_enganchada = true
+			connection.bind('connected', () => {
+				if (!this.echo_del_chat_ya_estuvo_conectado) {
+					this.echo_del_chat_ya_estuvo_conectado = true
+					return
+				}
+				const chat_state = this.$store.state.ai_chat
+				if (chat_state.selected_conversation_id) {
+					// getMessages re-arma la espera si el último quedó pendiente.
+					this.$store.dispatch('ai_chat/getMessages', {
+						conversation_id: chat_state.selected_conversation_id,
+						page: 1,
+					})
+				}
+			})
 		},
 		/**
 		 * Alterna la visibilidad del panel del asistente (el estado vive en el store
