@@ -1,5 +1,22 @@
 export default {
 	methods: {
+		/**
+		 * Abre el panel del chat del asistente IA, opcionalmente parado en una
+		 * conversación puntual (ej: la que creó una sugerencia de stock, D22/D23).
+		 *
+		 * Vive acá porque este mixin entra por common-vue/mixins/app.js a Vue.mixin():
+		 * queda disponible en TODA la app (incluido el modal de la notificación global)
+		 * sin tocar common-vue. Si no se pasa id, se respeta la conversación que ya
+		 * estuviera seleccionada: al abrir, el panel cae solo a la última con actividad.
+		 *
+		 * @param {number|null} conversation_id
+		 */
+		abrir_chat_ia(conversation_id = null) {
+			if (conversation_id) {
+				this.$store.commit('ai_chat/setSelectedConversationId', conversation_id)
+			}
+			this.$store.commit('ai_chat/setPanelAbierto', true)
+		},
 		toProduccion() {
 			if (this.user) {
 				if (this.hasExtencion('production.order_production')) {
