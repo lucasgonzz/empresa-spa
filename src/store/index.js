@@ -226,6 +226,8 @@ import stock_suggestion from '@/store/stock_suggestion'
 import stock_suggestion_article from '@/store/stock_suggestion_article'
 import purchase_suggestion from '@/store/purchase_suggestion'
 import purchase_suggestion_article from '@/store/purchase_suggestion_article'
+import offer_suggestion from '@/store/offer_suggestion'
+import offer_suggestion_line from '@/store/offer_suggestion_line'
 
 import article_price_range from '@/store/article_price_range'
 
@@ -487,6 +489,8 @@ export default new Vuex.Store({
         stock_suggestion_article,
         purchase_suggestion,
         purchase_suggestion_article,
+        offer_suggestion,
+        offer_suggestion_line,
 
         article_price_range,
 
