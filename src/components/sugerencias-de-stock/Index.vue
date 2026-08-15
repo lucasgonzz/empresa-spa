@@ -16,20 +16,24 @@
 			Comunicate con ComercioCity si queres activarla.
 		</b-alert>
 
-		<listado
-		v-else></listado>
+		<template v-else>
+			<detalle
+			v-if="$route.params.id"></detalle>
+			<listado
+			v-else></listado>
+		</template>
 
 	</div>
 </template>
 <script>
 /*
-	Decide que se muestra dentro de la vista propia de sugerencias. El listado es la
-	pantalla principal; el detalle (segun $route.params.id) se conecta en la pieza
-	siguiente de la construccion.
+	Decide que se muestra dentro de la vista propia de sugerencias: sin id en la
+	ruta, el listado; con id, el detalle de esa sugerencia.
 */
 export default {
 	components: {
 		Listado: () => import('@/components/sugerencias-de-stock/Listado'),
+		Detalle: () => import('@/components/sugerencias-de-stock/Detalle'),
 	},
 	computed: {
 		/**
