@@ -259,29 +259,46 @@ export default {
 			return !isNaN(Number(valor)) && Number(valor) >= 1 && Number(valor) <= this.techo
 		},
 		/**
-		 * Mismas reglas que valida el backend: tramos seguidos, sin huecos,
-		 * creciendo, el ultimo sin tope, y ninguno por encima del techo.
+		 * Mismas reglas que valida ClientOfferController::validar_tramos(): el primero
+		 * arranca en 1 EXACTO, cada uno empieza donde termino el anterior, el ultimo va
+		 * sin tope, y ninguno pasa el techo.
+		 *
+		 * Ojo con lo que decia este comentario hasta el 15/8/2026 ("mismas reglas que el
+		 * backend") sin serlo: pedia min >= 1 en vez de min == 1, y salteaba el chequeo de
+		 * contigüidad cada vez que el tope anterior quedaba vacio. Con eso el boton se
+		 * habilitaba sobre tramos que el backend despues rechazaba con 422, o sea que la
+		 * validacion del front no le ahorraba el viaje a nadie y encima daba a entender que
+		 * estaba todo bien. Cuando las dos no coinciden, la que manda es la del backend:
+		 * es la que decide si la fila se escribe.
+		 *
+		 * Se lleva un `esperado_min` en vez de un `tope_anterior` que puede ser null, que
+		 * es lo mismo que hace el backend y lo que cierra el agujero: sin tope anterior no
+		 * hay con que comparar y el tramo pasaba sin control.
 		 */
 		error_de_tramos() {
 			if (!this.tramos.length) {
 				return 'Agrega al menos un tramo de cantidad.'
 			}
 			let error = ''
-			let tope_anterior = null
+			let esperado_min = 1
 			this.tramos.forEach((tramo, index) => {
 				let ultimo = index == this.tramos.length - 1
-				if (!error && !(Number(tramo.min) >= 1)) {
-					error = 'Cada tramo arranca en una cantidad de 1 o mas.'
+				let max = tramo.max === '' || tramo.max === null || tramo.max === undefined
+					? null
+					: Number(tramo.max)
+				if (!error && Number(tramo.min) != esperado_min) {
+					// Cubre las dos fallas de una, igual que el backend: el primero que no
+					// arranca en 1, y el hueco o el solapamiento entre dos consecutivos.
+					error = 'Los tramos tienen que arrancar en 1 unidad y ser seguidos: el tramo '
+						+ (index + 1) + ' tiene que empezar en ' + esperado_min + '.'
 				} else if (!error && !this.porcentaje_valido(tramo.porcentaje)) {
 					error = 'Cada tramo necesita un descuento entre 1% y el techo de ' + this.techo + '%.'
-				} else if (!error && ultimo && tramo.max) {
+				} else if (!error && ultimo && max !== null) {
 					error = 'El ultimo tramo va sin "hasta": vale de esa cantidad en adelante.'
-				} else if (!error && !ultimo && !(Number(tramo.max) >= Number(tramo.min))) {
+				} else if (!error && !ultimo && (max === null || max < Number(tramo.min))) {
 					error = 'Los tramos del medio necesitan un "hasta" mayor o igual que el "desde".'
-				} else if (!error && tope_anterior !== null && Number(tramo.min) != tope_anterior + 1) {
-					error = 'Los tramos tienen que ser seguidos: cada uno arranca donde termino el anterior.'
 				}
-				tope_anterior = tramo.max ? Number(tramo.max) : null
+				esperado_min = max === null ? esperado_min : max + 1
 			})
 			return error
 		},
