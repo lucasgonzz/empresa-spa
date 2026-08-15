@@ -32,6 +32,20 @@
 			</small>
 		</div>
 
+		<!-- Va en esta solapa y no en "Conexión" porque es comportamiento del agente, no una
+		credencial. Nace apagado: prendido, cada foto que el agente mira se paga aparte. -->
+		<div class="whatsapp-agent-config__toggle-group">
+			<b-form-checkbox
+			v-model="form.ai_vision_enabled"
+			switch>
+				Que la IA mire las fotos que manda el cliente
+			</b-form-checkbox>
+			<small class="text-muted">
+				Apagado, el agente sabe que llegó una imagen pero no la interpreta. Prendido,
+				cada foto que analiza tiene un costo extra.
+			</small>
+		</div>
+
 		<b-form-group
 		label="Espera antes de responder (segundos)">
 			<b-form-input
@@ -84,6 +98,9 @@ export default {
 				auto_send_sale_pdf: false,
 				ai_reply_delay_seconds: 0,
 				ai_confirm_delay_seconds: 0,
+				// Arranca apagado, igual que el default de la columna en la base: prender la
+				// visión sin que el dueño lo pida le sumaría un costo por cada foto que llegue.
+				ai_vision_enabled: false,
 			},
 			loading: false,
 		}
@@ -114,12 +131,16 @@ export default {
 				// string. En los dos casos el fallback correcto es 0 = sin espera.
 				this.form.ai_reply_delay_seconds = Number(value.ai_reply_delay_seconds) || 0
 				this.form.ai_confirm_delay_seconds = Number(value.ai_confirm_delay_seconds) || 0
+				// `!!` de una: un registro anterior a la migración lo trae null/undefined, y en
+				// los dos casos el default correcto es apagado. Además la API lo puede mandar
+				// como 0/1 si algún día se le cae el cast del modelo.
+				this.form.ai_vision_enabled = !!value.ai_vision_enabled
 			},
 		},
 	},
 	methods: {
 		/**
-		 * Guarda la personalidad, los dos toggles y los dos tiempos de espera. Usa el indicador
+		 * Guarda la personalidad, los tres toggles y los dos tiempos de espera. Usa el indicador
 		 * global de carga (además del loading local del botón) según la convención del proyecto.
 		 */
 		save() {
