@@ -47,6 +47,22 @@ export default {
 		},
 		{
 			/**
+			 * Origen preferente de reposicion para las sugerencias inteligentes de
+			 * stock (columna addresses.es_deposito_origen). Es un concepto distinto
+			 * de default_address (que solo preselecciona el destino en algunos
+			 * formularios): aca se marca desde donde conviene sacar mercaderia
+			 * cuando el sistema sugiere movimientos entre sucursales. Puede haber
+			 * varias sucursales marcadas, o ninguna (y todo funciona como siempre).
+			 */
+			text: 'Deposito de origen para sugerencias',
+			key: 'es_deposito_origen',
+			type: 'checkbox',
+			value: 0,
+			if_has_extencion: 'sugerencias_inteligentes',
+			description: 'Si se marca, las sugerencias inteligentes de stock van a preferir esta sucursal como origen de los movimientos. Si ninguna sucursal esta marcada, el origen se elige por stock como siempre.',
+		},
+		{
+			/**
 			 * Vincula la sucursal con el afip_information que se usa por defecto al facturar
 			 * ventas en negro desde acá (prompt 440, columna default_afip_information_id
 			 * agregada en el prompt 438). Las opciones son SOLO los afip_information que

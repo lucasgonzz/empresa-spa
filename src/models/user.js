@@ -488,6 +488,86 @@ export default {
 
 
 		{
+			group_title: 'Sugerencias inteligentes de stock',
+		},
+		/*
+		 * Configuracion de la extension 'sugerencias_inteligentes': periodicidad de la
+		 * generacion automatica y valores por defecto de cada sugerencia (los usa la
+		 * corrida automatica y precargan el form de "Nueva sugerencia" de la vista
+		 * propia). Persisten en columnas sugerencias_* de users via UserController@update,
+		 * el mismo camino que usar_condicion_fiscal_en_costeo. Sin la extension, el
+		 * grupo entero desaparece de Configuracion general.
+		 */
+		{
+			text: 'Generar sugerencias automaticamente',
+			key: 'sugerencias_periodicidad',
+			type: 'select',
+			options: [
+				{text: 'Nunca', value: 'nunca'},
+				{text: 'Todos los dias', value: 'diaria'},
+				{text: 'Una vez por semana', value: 'semanal'},
+				{text: 'Cada quince dias', value: 'quincenal'},
+				{text: 'Una vez por mes', value: 'mensual'},
+			],
+			if_has_extencion: 'sugerencias_inteligentes',
+			descriptions: [
+				'El sistema genera solo una sugerencia de movimientos de stock con la frecuencia que elijas, a la madrugada, usando los valores por defecto de abajo.',
+				'Cuando la sugerencia queda lista te llega una notificacion para abrirla con un click.',
+				'Con "Nunca", las sugerencias se generan unicamente a mano desde la pantalla de sugerencias.',
+			],
+		},
+		{
+			text: 'Objetivo por defecto',
+			key: 'sugerencias_modo',
+			type: 'select',
+			options: [
+				{text: 'Minimo', value: 'minimo'},
+				{text: 'Ideal', value: 'ideal'},
+				{text: 'Maximo', value: 'maximo'},
+			],
+			if_has_extencion: 'sugerencias_inteligentes',
+			descriptions: [
+				'Hasta donde completar el stock de cada deposito en las sugerencias generadas automaticamente (y como valor inicial al crear una a mano).',
+				'MINIMO: sugiere stock solo para los depositos que estan por debajo de su stock minimo.',
+				'IDEAL: lleva cada deposito a su valor ideal, calculado como (minimo + maximo) / 2.',
+				'MAXIMO: lleva cada deposito hasta su stock maximo definido.',
+			],
+		},
+		{
+			text: 'Eleccion del origen por defecto',
+			key: 'sugerencias_origen',
+			type: 'select',
+			options: [
+				{text: 'Absoluto', value: 'absoluto'},
+				{text: 'Relativo', value: 'relativo'},
+			],
+			if_has_extencion: 'sugerencias_inteligentes',
+			descriptions: [
+				'Como elegir el deposito desde el cual mover stock cuando no hay depositos de origen designados (o para desempatar entre ellos).',
+				'ABSOLUTO: el deposito con mayor cantidad de stock en total.',
+				'RELATIVO: el deposito mas lleno respecto de su propio stock maximo.',
+			],
+		},
+		{
+			text: 'Limite del origen por defecto',
+			key: 'sugerencias_limite_origen',
+			type: 'select',
+			options: [
+				{text: 'Minimo', value: 'minimo'},
+				{text: 'Ideal', value: 'ideal'},
+				{text: 'Sin limite', value: 'sin_limite'},
+			],
+			if_has_extencion: 'sugerencias_inteligentes',
+			descriptions: [
+				'Hasta donde permitir vaciar el deposito origen al sugerir movimientos.',
+				'MINIMO: no se mueve stock si eso deja al origen por debajo de su stock minimo.',
+				'IDEAL: se puede vaciar el origen hasta su nivel ideal.',
+				'SIN LIMITE: se puede mover todo el stock necesario, aunque el origen quede vacio.',
+			],
+		},
+
+
+		{
 			group_title: 'Produccion',
 		},
 		{
