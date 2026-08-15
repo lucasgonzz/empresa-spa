@@ -30,7 +30,7 @@
 		description="Cuanto tarda en llegar el pedido una vez hecho; se suma a la cobertura objetivo.">
 			<b-form-input
 			type="number"
-			min="0"
+			min="1"
 			step="1"
 			v-model.number="dias_lead_time"></b-form-input>
 		</b-form-group>
@@ -48,7 +48,7 @@
 		<div
 		v-if="form_invalido"
 		class="text-muted small m-t-10">
-			Completa los cuatro campos con numeros validos para continuar (el de lead time puede ser 0).
+			Completa los cuatro campos con numeros enteros validos (minimo 1) para continuar.
 		</div>
 
 		<div class="j-end m-t-15">
@@ -85,7 +85,8 @@
 	que borrar el input manda "" en vez de un numero. Del lado del back eso se
 	casteaba con (int) a 0, y con dias_cobertura_objetivo/dias_lead_time en 0
 	la cantidad sugerida de CADA linea disparada caia al piso de 1 ("compra 1
-	de cada cosa") sin ningun aviso. El back ahora valida y devuelve 422; esta
+	de cada cosa") sin ningun aviso. El back ahora valida (min 1 en los
+	cuatro, PurchaseSuggestionController::MIN_DIAS_*) y devuelve 422; esta
 	parte es la del front: no dejar mandar el request con algo vacio o
 	invalido, y mostrar el mensaje si el 422 igual llega (limite distinto al
 	del front, cuenta corriendo, etc).
@@ -107,20 +108,21 @@ export default {
 		 * dejar mandar un "" que el back convertiria en 0.
 		 */
 		form_invalido() {
-			return !this.es_dias_valido(this.dias_punto_pedido, 1)
-				|| !this.es_dias_valido(this.dias_cobertura_objetivo, 1)
-				|| !this.es_dias_valido(this.dias_lead_time, 0)
-				|| !this.es_dias_valido(this.dias_vigencia_oferta, 1)
+			return !this.es_dias_valido(this.dias_punto_pedido)
+				|| !this.es_dias_valido(this.dias_cobertura_objetivo)
+				|| !this.es_dias_valido(this.dias_lead_time)
+				|| !this.es_dias_valido(this.dias_vigencia_oferta)
 		},
 	},
 	methods: {
 		/**
-		 * Entero valido (no "", no null, no decimal suelto) y no menor al
-		 * minimo que ya declara cada b-form-input (1 en los tres primeros, 0
-		 * en lead time porque un pedido puede llegar el mismo dia).
+		 * Entero valido (no "", no null, no decimal suelto) y no menor a 1:
+		 * mismo minimo que declara cada b-form-input y que exige el back en
+		 * los cuatro parametros (PurchaseSuggestionController::MIN_DIAS_*,
+		 * incluido dias_lead_time: en 0 la cantidad tambien se cae a 1).
 		 */
-		es_dias_valido(valor, minimo) {
-			return Number.isInteger(valor) && valor >= minimo
+		es_dias_valido(valor) {
+			return Number.isInteger(valor) && valor >= 1
 		},
 		/**
 		 * Reinicia los cuatro parametros a los defaults del motor cada vez que se
