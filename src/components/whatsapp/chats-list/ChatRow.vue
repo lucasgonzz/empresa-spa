@@ -21,6 +21,19 @@
 		<div class="whatsapp-chat-row__sub">
 			<span class="whatsapp-chat-row__phone">
 				{{ chat.phone }}
+				<!-- El último entrante de este chat fue simulado: los envíos hacia WhatsApp
+				están frenados. Sale de `whatsapp_chats.last_inbound_simulated`, que llega con
+				el listado; el broadcast en vivo NO manda esa columna, así que si el cliente
+				escribe de verdad la marca se apaga recién al recargar la bandeja o al abrir el
+				chat (adentro de la conversación el dato se saca del último mensaje y siempre
+				está al día). -->
+				<span
+				v-if="chat.last_inbound_simulated == 1"
+				class="whatsapp-chat-row__sim"
+				title="Chat en simulación: el último mensaje entrante lo simulaste vos y los envíos están frenados.">
+					<i class="bi bi-cone-striped"></i>
+					SIM
+				</span>
 			</span>
 			<b-badge
 			v-if="chat.unread_count > 0"
@@ -114,4 +127,16 @@ export default {
 	&__phone
 		font-size: .8rem
 		color: rgba(0, 0, 0, .5)
+	&__sim
+		display: inline-flex
+		align-items: center
+		gap: 3px
+		font-size: .62rem
+		font-weight: 700
+		letter-spacing: .03em
+		color: #8a6d3b
+		background: rgba(255, 193, 7, .22)
+		border-radius: 4px
+		padding: 0 4px
+		margin-left: 5px
 </style>

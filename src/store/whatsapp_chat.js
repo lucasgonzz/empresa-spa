@@ -22,6 +22,11 @@ axios.defaults.baseURL = process.env.VUE_APP_API_URL
  * - PUT    whatsapp-chats/{id}/read        -> { model }
  * - POST   whatsapp-chats/{id}/suggest     -> { suggestion }
  * - POST   whatsapp-chats/{id}/summary     -> { summary }
+ *
+ * Contrato agregado en la misión whatsapp-agente (confirmado contra empresa-api):
+ * - POST   whatsapp-bot/simulate-inbound   -> 201 { model } (phone, body) | 403 no dueño | 429 throttle 10/min
+ * - PUT    whatsapp-chats/messages/{id}/confirm -> { model } | 422 { code: 'ya_en_envio' | 'ya_no_esta_pendiente' | 'fuera_de_ventana' | 'envio_fallido' }
+ * - DELETE whatsapp-chats/messages/{id}    -> { message } | 422 { code: 'ya_en_envio' | 'ya_no_esta_pendiente' }
  */
 export default {
 	namespaced: true,
@@ -119,6 +124,29 @@ export default {
 				state.messages.splice(index, 1, Object.assign({}, state.messages[index], message))
 			}
 		},
+		/**
+		 * Saca un mensaje de la conversación abierta: el backend BORRA la fila cuando se
+		 * descarta una respuesta del agente (`DELETE whatsapp-chats/messages/{id}`), así que
+		 * acá no hay nada que actualizar, hay que sacarlo.
+		 */
+		removeMessage(state, message_id) {
+			state.messages = state.messages.filter(m => m.id != message_id)
+		},
+		/**
+		 * Saca de la conversación abierta TODAS las respuestas del agente que estaban esperando
+		 * confirmación (`ai_status = 'a_confirmar'`).
+		 *
+		 * Espeja lo que hace `WhatsappChatHelper::discard_pending_ai_messages()` en el backend:
+		 * cada vez que una persona interviene en el chat —contesta a mano, manda una plantilla o
+		 * apaga la IA— esas filas se BORRAN, para que la IA no crea que ya contestó y para que
+		 * nadie vea en la conversación un mensaje que el cliente jamás recibió. El broadcast de
+		 * ese borrado viaja sin mensaje adjunto (no se puede "actualizar" una fila que ya no
+		 * existe), así que sin este espejo el globo pendiente quedaba colgado en pantalla hasta
+		 * recargar.
+		 */
+		removePendingAiMessages(state) {
+			state.messages = state.messages.filter(m => m.ai_status != 'a_confirmar')
+		},
 		setLoadingMessages(state, value) {
 			state.loading_messages = value
 		},
@@ -130,6 +158,47 @@ export default {
 		},
 		setMessagesLastPage(state, value) {
 			state.messages_last_page = value
+		},
+	},
+	getters: {
+		/**
+		 * Chat abierto en el panel de conversación (null si no hay ninguno seleccionado).
+		 */
+		selected_chat(state) {
+			if (!state.selected_chat_id) {
+				return null
+			}
+			return state.chats.find(c => c.id == state.selected_chat_id) || null
+		},
+		/**
+		 * El chat abierto está en modo simulación: su último mensaje entrante lo inyectó el
+		 * dueño desde "Simular mensaje" y no lo escribió el cliente.
+		 *
+		 * Mientras esté así, el backend FRENA todo envío de texto o documento hacia WhatsApp
+		 * (`WhatsappBotSendService::chat_en_simulacion()`): la fila se guarda igual y se ve en
+		 * la conversación, pero al cliente no le llega nada. Es lo que el composer y las
+		 * burbujas tienen que avisar.
+		 *
+		 * 🔴 Se mira PRIMERO el último entrante ya cargado en la conversación y recién después
+		 * la columna `last_inbound_simulated` del chat, y el orden no es un detalle: el
+		 * broadcast `WhatsappChatUpdated` manda un chat liviano (solo id, unread_count y
+		 * last_message_at) que NO trae esa columna, así que cuando el cliente escribe de verdad
+		 * y el chat sale de simulación, la marca del chat se queda vieja hasta la próxima
+		 * recarga de la bandeja. El mensaje, en cambio, viaja entero con su `is_simulated`, así
+		 * que mirándolo a él la conversación abierta se corrige sola.
+		 *
+		 * Las comparaciones van con `==` a propósito: `is_simulated` llega booleano (está
+		 * casteado en el modelo) pero `last_inbound_simulated` no lo está y puede llegar como
+		 * 0/1. Con `==` los dos casos salen bien, y `'0'` —que sería `true` con `!!`— también.
+		 */
+		chat_en_simulacion(state, getters) {
+			for (let i = state.messages.length - 1; i >= 0; i--) {
+				if (state.messages[i].direction == 'in') {
+					return state.messages[i].is_simulated == 1
+				}
+			}
+			let chat = getters.selected_chat
+			return !!chat && chat.last_inbound_simulated == 1
 		},
 	},
 	actions: {
@@ -169,13 +238,22 @@ export default {
 		 * Trae una página de mensajes del chat indicado.
 		 * page=1 reemplaza la conversación (apertura de chat); page>1 antepone (scroll hacia arriba).
 		 *
-		 * @param {Object} payload { chat_id, page }
+		 * @param {Object} payload { chat_id, page, silent }
+		 * @param {boolean} payload.silent Recarga la página 1 SIN prender el indicador de carga.
+		 *                                 Se usa para reconciliar la conversación con la base
+		 *                                 (ver `Messages.vue`) cuando ya hay mensajes en
+		 *                                 pantalla: con el indicador prendido la conversación
+		 *                                 entera parpadeaba a "Cargando mensajes..." por una
+		 *                                 recarga que el operador ni pidió.
 		 */
 		getMessages({ commit }, payload) {
 			let chat_id = payload.chat_id
 			let page = payload.page || 1
+			let silent = !!payload.silent
 			if (page == 1) {
-				commit('setLoadingMessages', true)
+				if (!silent) {
+					commit('setLoadingMessages', true)
+				}
 			} else {
 				commit('setLoadingMoreMessages', true)
 			}
@@ -216,6 +294,11 @@ export default {
 				body: payload.body,
 			})
 				.then(res => {
+					// El backend descarta las respuestas del agente que esperaban confirmación
+					// ANTES de mandar lo que escribió el operador (es una intervención humana:
+					// si no, el cliente recibiría dos respuestas descoordinadas). Se espeja acá
+					// porque esas filas ya no existen en la base.
+					commit('removePendingAiMessages')
 					commit('appendMessage', res.data.model)
 					return res.data.model
 				})
@@ -231,6 +314,9 @@ export default {
 				variables: payload.variables,
 			})
 				.then(res => {
+					// Misma intervención humana que en sendMessage(): el backend borra lo que
+					// el agente dejó esperando confirmación antes de mandar la plantilla.
+					commit('removePendingAiMessages')
 					commit('appendMessage', res.data.model)
 					return res.data.model
 				})
@@ -242,6 +328,12 @@ export default {
 			return axios.put('/api/whatsapp-chats/' + chat_id + '/toggle-ai')
 				.then(res => {
 					commit('upsertChat', res.data.model)
+					// Apagar la IA del chat también es una intervención humana y el backend
+					// descarta ahí mismo lo que el agente dejó esperando confirmación
+					// (`WhatsappChatController::toggle_ai()`). Al prender no hay nada que sacar.
+					if (!res.data.model.ai_enabled) {
+						commit('removePendingAiMessages')
+					}
 					return res.data.model
 				})
 		},
@@ -288,6 +380,62 @@ export default {
 			return axios.post('/api/whatsapp-chats/' + chat_id + '/summary')
 				.then(res => {
 					return res.data.summary
+				})
+		},
+		/**
+		 * Inyecta un mensaje entrante como si lo hubiera escrito el cliente por WhatsApp
+		 * (misión whatsapp-agente). Solo el dueño puede: el backend devuelve 403 al resto.
+		 *
+		 * El mensaje recorre el mismo camino que uno real (persistencia, ventana de 24 h,
+		 * agrupación con su demora y agente), pero queda marcado como simulado y lo que el
+		 * agente conteste NO sale hacia WhatsApp. La respuesta 201 trae el chat completo, así
+		 * que se hace upsert en la bandeja: viene con `last_inbound_simulated` ya en true.
+		 *
+		 * Sin `.catch()` a propósito: el 429 del throttle (10 por minuto) y el 403 los tiene
+		 * que poder distinguir el componente para decir algo distinto en cada caso.
+		 *
+		 * @param {Object} payload { phone, body }
+		 * @returns {Promise} resuelve con el chat (o null si el backend no lo pudo recuperar).
+		 */
+		simulateInbound({ commit }, payload) {
+			return axios.post('/api/whatsapp-bot/simulate-inbound', {
+				phone: payload.phone,
+				body: payload.body,
+			})
+				.then(res => {
+					if (res.data.model) {
+						commit('upsertChat', res.data.model)
+					}
+					return res.data.model
+				})
+		},
+		/**
+		 * Confirma y manda ahora una respuesta del agente que estaba esperando aprobación.
+		 * Devuelve el mensaje ya actualizado (`ai_status = 'enviado'`).
+		 *
+		 * Sin `.catch()`: los 422 con `code` ('ya_en_envio', 'ya_no_esta_pendiente',
+		 * 'fuera_de_ventana', 'envio_fallido') los interpreta el componente.
+		 *
+		 * @param {number} message_id
+		 */
+		confirmAiMessage({ commit }, message_id) {
+			return axios.put('/api/whatsapp-chats/messages/' + message_id + '/confirm')
+				.then(res => {
+					commit('patchMessage', res.data.model)
+					return res.data.model
+				})
+		},
+		/**
+		 * Descarta una respuesta del agente que estaba esperando aprobación: el backend cancela
+		 * el auto-envío y BORRA la fila, así que acá se saca de la conversación.
+		 *
+		 * @param {number} message_id
+		 */
+		discardAiMessage({ commit }, message_id) {
+			return axios.delete('/api/whatsapp-chats/messages/' + message_id)
+				.then(res => {
+					commit('removeMessage', message_id)
+					return res.data
 				})
 		},
 	},
