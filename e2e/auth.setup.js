@@ -7,6 +7,8 @@
 // el setup falla explicitamente en vez de intentar loguear con un valor vacio/hardcodeado.
 const { test: setup, expect } = require('@playwright/test')
 const path = require('path')
+const { esperar_recursos_descargados } = require('./helpers/recursos')
+const { aislar_broadcasts } = require('./helpers/entorno')
 
 const AUTH_FILE = path.join(__dirname, '.auth', 'user.json')
 
@@ -20,6 +22,9 @@ setup('login', async ({ page }) => {
 		)
 	}
 
+	// Antes de la primera navegacion: ver el comentario largo de helpers/entorno.js.
+	await aislar_broadcasts(page)
+
 	await page.goto('/login')
 
 	// Selectores por data-testid (agregados en LoginForm.vue, prompt 617).
@@ -31,6 +36,15 @@ setup('login', async ({ page }) => {
 	// usar waitForTimeout: si el login falla (credenciales invalidas) esto va a fallar por
 	// timeout con un mensaje claro, no en silencio.
 	await expect(page).not.toHaveURL(/\/login/, { timeout: 15000 })
+
+	// Entrar al sistema no es llegar a una URL: apenas hay sesion, la aplicacion se pone a bajar
+	// los catalogos del arranque y hasta que no termina esta a medio cargar. Se espera aca, con el
+	// recorrido completo (tarjeta -> panel -> "Todo listo"), por dos motivos: deja verificado de una
+	// que la puerta al panel funciona, y no se guarda la sesion en el storageState hasta que el
+	// arranque completo dio la vuelta sin romperse. Cada spec vuelve a esperar por su cuenta: el
+	// storageState lleva cookies y localStorage, no el store de Vuex, asi que en una pagina nueva
+	// los recursos se bajan de nuevo.
+	await esperar_recursos_descargados(page)
 
 	await page.context().storageState({ path: AUTH_FILE })
 })

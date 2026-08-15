@@ -69,6 +69,42 @@ npm run test:e2e:ui        # modo interactivo (Playwright UI), para debuggear pa
 npm run test:e2e:codegen   # grabador: abre el navegador y genera el codigo del test al interactuar
 ```
 
+## Esperar la descarga de recursos del arranque
+
+**Todo test que entre al sistema tiene que esperar esto antes de tocar nada.** Apenas hay sesión,
+`common-vue/components/download-resources/Index.vue` se pone a bajar los catálogos del arranque
+(rubros, proveedores, tipos de precio, preferencias de columnas de las tablas). Hasta que no
+termina, los selects vienen vacíos y las grillas todavía no saben con qué columnas dinámicas
+trabajar: un test que arranca antes no encuentra un bug, encuentra el sistema a medio cargar.
+
+```js
+const { esperar_recursos_descargados } = require('../helpers/recursos')
+
+test.beforeEach(async ({ page }) => {
+	await page.goto('/proveedores/compras')
+	await esperar_recursos_descargados(page)
+})
+```
+
+Por defecto el helper hace el recorrido de una persona: clickea la tarjeta de progreso de arriba a
+la derecha, mira el detalle recurso por recurso en el panel lateral, espera a que diga *Todo listo*
+y lo cierra. Con `{ abrir_panel: false }` solo espera, sin abrir nada.
+
+**Lo que NO hay que hacer es esperar a que la tarjeta desaparezca.** Se esconde sola 3 segundos
+después de terminar, o sea que "no está" tanto cuando la descarga terminó como cuando todavía no
+empezó (aparece recién ~1 s después de montar el componente). La condición estable es
+`[data-testid="recursos-estado"]` con `data-estado="listo"`: es el elemento raíz de
+`download-resources/Index.vue` y vive mientras viva la nav. Lleva además `data-descargados` y
+`data-total`, y el panel publica una fila por recurso en `[data-testid="recursos-panel-fila"]`
+con `data-recurso` y `data-estado`.
+
+⚠️ `listo` quiere decir *"ya no se espera a nadie"*, no *"llegaron todos los datos"*: un catálogo
+que falló se marca igual (ver `marcar_descargado` en `Index.vue` y el hallazgo
+`20260812-una-descarga-fallida-del-arranque-queda-marcada-como-lista`).
+
+El `storageState` guarda cookies y localStorage, **no** el store de Vuex, así que cada spec baja
+los recursos de nuevo en su propia página. Que `auth.setup.js` ya haya esperado no exime al spec.
+
 ## Convencion de selectores: `data-testid`
 
 Los tests **siempre** seleccionan por `data-testid`. Nunca por clase de Bootstrap, posicion o

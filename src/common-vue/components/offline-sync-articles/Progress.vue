@@ -131,10 +131,18 @@ export default {
 <style lang="sass">
 @import '@/sass/_custom'
 
+// 🔴 Este `top` no es estetico: deja libre la primera franja de la esquina, que es de la tarjeta
+// de recursos del arranque (.recursos-tarjeta, top 14px, ~48px de alto).
+//
+// Las dos tarjetas se muestran en el mismo momento --las dos son del arranque-- y estaban las dos
+// en top 10px / right 20px / z-index 1000, en la misma esquina. Como esta se monta despues en
+// App.vue, ganaba por orden de pintado y tapaba a la otra por completo: quedaba invisible y, desde
+// que se le puede hacer clic para desplegar el panel de recursos, tambien inclickeable. Le pasa a
+// cualquier usuario con offline activado, no es un problema de los tests.
 #offline-articles-progress
 	width: 320px
 	position: fixed
-	top: 10px
+	top: 72px
 	right: 20px
 	border-radius: 8px
 	padding: 12px

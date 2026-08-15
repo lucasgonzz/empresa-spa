@@ -3,7 +3,15 @@
 	<div
 	v-if="visible"
 	class="recursos-tarjeta"
-	:class="{ 'recursos-tarjeta--compacta': compacta }">
+	:class="{ 'recursos-tarjeta--compacta': compacta }"
+	data-testid="recursos-tarjeta"
+	:data-estado="estado"
+	role="button"
+	tabindex="0"
+	title="Ver el detalle de los recursos"
+	@click="$emit('abrir_panel')"
+	@keydown.enter.prevent="$emit('abrir_panel')"
+	@keydown.space.prevent="$emit('abrir_panel')">
 
 		<span class="recursos-tarjeta__texto">
 			{{ texto }}
@@ -58,6 +66,20 @@ export default {
 		},
 		texto() {
 			return this.terminado ? 'Recursos descargados' : 'Descargando recursos'
+		},
+		/**
+		 * Estado de la descarga, publicado en el DOM de la tarjeta.
+		 *
+		 * Sirve para dos cosas: distinguir a simple vista la tarjeta que todavia esta trabajando
+		 * de la que ya termino, y darle a un test end to end una condicion que mirar sin depender
+		 * del texto visible. La condicion ESTABLE de "termino todo" no es esta --la tarjeta se
+		 * esconde sola a los 3 segundos-- sino el data-estado del elemento raiz de
+		 * download-resources/Index.vue, que no se va nunca.
+		 *
+		 * @returns {string} 'descargando' | 'listo'
+		 */
+		estado() {
+			return this.terminado ? 'listo' : 'descargando'
 		},
 	},
 	watch: {
@@ -136,7 +158,10 @@ export default {
 	position: fixed
 	top: 14px
 	right: 20px
-	z-index: 1000
+	// Un punto por encima del resto de las tarjetas fijas de la esquina (#offline-articles-progress
+	// esta en 1000): esta es la unica de las dos que se clickea, asi que si alguna vez vuelven a
+	// solaparse, la que gana tiene que ser la interactiva y no la informativa.
+	z-index: 1001
 	display: flex
 	flex-direction: row
 	align-items: center
@@ -148,9 +173,20 @@ export default {
 	-webkit-backdrop-filter: saturate(180%) blur(20px)
 	border: 1px solid rgba(0, 0, 0, .06)
 	box-shadow: 0 8px 30px rgba(0, 0, 0, .12)
+	// La tarjeta es el acceso al panel lateral con el detalle de los recursos: se clickea.
+	cursor: pointer
+	user-select: none
 	// El achique se anima por el ancho maximo del texto, no por el ancho de la tarjeta:
 	// una pildora con ancho automatico no se puede animar de otra manera.
-	transition: padding .42s cubic-bezier(.22, .61, .36, 1), gap .42s cubic-bezier(.22, .61, .36, 1)
+	transition: padding .42s cubic-bezier(.22, .61, .36, 1), gap .42s cubic-bezier(.22, .61, .36, 1), box-shadow .18s ease, transform .18s ease
+
+	&:hover
+		box-shadow: 0 10px 34px rgba(0, 0, 0, .18)
+		transform: translateY(-1px)
+
+	&:focus-visible
+		outline: 2px solid $blue
+		outline-offset: 2px
 
 .recursos-tarjeta__texto
 	font-size: 13px

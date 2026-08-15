@@ -60,14 +60,20 @@ module.exports = defineConfig({
 	// Un test que pasa recien al reintentar esconde un problema real: sin reintentos en local.
 	retries: 0,
 
-	// 2 minutos por test, muy por encima del default de 30 segundos. Es holgado a proposito: en
+	// 4 minutos por test, muy por encima del default de 30 segundos. Es holgado a proposito: en
 	// local, contra WAMP y con la SPA sin buildear, el arranque real es lento y variable. Medido el
 	// 4/8/2026 sobre e2e/tests/alta-compra.spec.js: la navegacion inicial a /proveedores/compras
 	// tarda entre 5,8 y 9,2 segundos, el click que abre el alta otros 9, y la busqueda del proveedor
 	// devolvio resultados recien pasados los 16 segundos. Con 30 segundos el presupuesto se agota en
 	// el arranque y el timeout PARECE un bug de la aplicacion sin serlo. Bajar este numero sin haber
 	// acelerado antes el arranque solo trae rojos que no corresponden a bugs.
-	timeout: 120000,
+	//
+	// Subido de 120000 a 240000 el 15/8/2026: el presupuesto es del test ENTERO, hooks incluidos, y
+	// desde que cada test espera en su beforeEach a que termine la descarga de recursos del arranque
+	// (~35-45 s medidos aca, ver e2e/helpers/recursos.js) los 2 minutos se consumian antes de que el
+	// spec de compras llegara a cargar sus 10 articulos. La API la sirve `php artisan serve`, que
+	// atiende UN request por vez, asi que cada busqueda del modal espera su turno.
+	timeout: 240000,
 
 	// 30 segundos por asercion (default: 5). Con los tiempos de arranque de arriba, 5 segundos es
 	// corto para este sistema: el expect(page).not.toHaveURL(/\/login/) del setup ya venia

@@ -8,6 +8,8 @@
 // No se hardcodea el total esperado: eso ya lo verifican los tests PHPUnit de los prompts 614-616.
 // Aca se verifica COHERENCIA entre lo que muestra la pantalla y lo que persistio el servidor.
 const { test, expect } = require('@playwright/test')
+const { esperar_recursos_descargados } = require('../helpers/recursos')
+const { aislar_broadcasts } = require('../helpers/entorno')
 
 /**
  * Articulos del fixture (prompt 613) con su costo base y el proveedor al que pertenecen.
@@ -122,9 +124,23 @@ async function elegir_primer_resultado(page, field_testid) {
 }
 
 test.describe('Compras: alta de compra completa', () => {
-	test('carga una compra con 10 articulos, costos actualizados y facturacion automatica', async ({ page }) => {
-		// 1. Entrar al modulo de compras y abrir el alta.
+	// El alta de una compra depende de catalogos que la aplicacion baja al arrancar: el buscador de
+	// proveedores, el select de deposito, los tipos de precio y las preferencias de columnas de la
+	// grilla de articulos. Entrar y empezar a clickear mientras eso todavia esta en vuelo da
+	// selects vacios y filas sin columnas, que se lee como un test roto sin que haya nada roto.
+	// Por eso: se entra, se despliega el panel de recursos desde la tarjeta, y recien cuando dice
+	// "Todo listo" empieza el test. Ver e2e/helpers/recursos.js.
+	test.beforeEach(async ({ page }) => {
+		// Antes de navegar: sin esto, un broadcast disparado desde otro entorno de la misma
+		// maquina abre un modal encima del formulario a mitad del test. Ver helpers/entorno.js.
+		await aislar_broadcasts(page)
+
 		await page.goto('/proveedores/compras')
+		await esperar_recursos_descargados(page)
+	})
+
+	test('carga una compra con 10 articulos, costos actualizados y facturacion automatica', async ({ page }) => {
+		// 1. Abrir el alta (ya estamos en el modulo de compras, ver el beforeEach).
 		await page.locator('[data-testid="btn-crear-provider_order"]').click()
 
 		// 2. Proveedor Buenos Aires y deposito Principal. Los dos viven en la pestaña
