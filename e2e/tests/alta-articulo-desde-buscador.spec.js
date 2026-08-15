@@ -5,7 +5,8 @@
 //
 // Usa un nombre unico con timestamp para que el test se pueda repetir sin chocar con una corrida
 // anterior (un articulo con ese nombre nunca deberia existir ya en la base).
-const { test, expect } = require('@playwright/test')
+const { test, expect } = require('../fixtures')
+const { esperar_recursos_descargados } = require('../helpers/recursos')
 
 const AMOUNT = '3'
 const COST = '150'
@@ -16,6 +17,10 @@ test.describe('Compras: alta de articulo desde el buscador', () => {
 
 		// 1. Abrir una compra nueva (proveedor Rosario, no hace falta mas que eso para este flujo).
 		await page.goto('/proveedores/compras')
+		// Antes de tocar nada: el sistema baja los catalogos del arranque y hasta que no
+		// termina esta a medio cargar (ver e2e/helpers/recursos.js). Sin abrir el panel: eso lo
+		// verifican auth.setup.js y alta-compra.spec.js.
+		await esperar_recursos_descargados(page, { abrir_panel: false })
 		await page.locator('[data-testid="btn-crear-provider_order"]').click()
 
 		await page.locator('[data-testid="provider_order-provider_id"]').click()

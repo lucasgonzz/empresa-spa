@@ -131,18 +131,19 @@ export default {
 <style lang="sass">
 @import '@/sass/_custom'
 
-// 🔴 Este `top` no es estetico: deja libre la primera franja de la esquina, que es de la tarjeta
-// de recursos del arranque (.recursos-tarjeta, top 14px, ~48px de alto).
-//
-// Las dos tarjetas se muestran en el mismo momento --las dos son del arranque-- y estaban las dos
-// en top 10px / right 20px / z-index 1000, en la misma esquina. Como esta se monta despues en
+// Esta tarjeta comparte esquina con la de recursos del arranque (.recursos-tarjeta): las dos se
+// muestran al mismo tiempo y las dos viven en top ~10px / right 20px. Como esta se monta despues en
 // App.vue, ganaba por orden de pintado y tapaba a la otra por completo: quedaba invisible y, desde
-// que se le puede hacer clic para desplegar el panel de recursos, tambien inclickeable. Le pasa a
-// cualquier usuario con offline activado, no es un problema de los tests.
+// que se le puede hacer clic para desplegar el panel de recursos, tambien inclickeable.
+//
+// Se resuelve del otro lado, subiendole el z-index a la pastilla de recursos (que es la unica de
+// las dos que se clickea), y NO bajando esta. Bajarla se probo el 15/8/2026 --top: 72px-- y el
+// remedio salio peor: a esa altura la tarjeta se apoya sobre el encabezado de la tabla del listado
+// y le roba los clicks a los botones de filtro de las columnas.
 #offline-articles-progress
 	width: 320px
 	position: fixed
-	top: 72px
+	top: 10px
 	right: 20px
 	border-radius: 8px
 	padding: 12px

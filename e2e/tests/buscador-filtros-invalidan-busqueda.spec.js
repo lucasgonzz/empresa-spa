@@ -31,7 +31,9 @@
 // suite que termina y tres tests que mueren esperando la cola. La contra, y queda escrita: si el
 // primero falla, los siguientes quedan en skipped; y el orden importa, porque el ultimo cierra el
 // modal seleccionando.
-const { test, expect } = require('@playwright/test')
+const { test, expect } = require('../fixtures')
+const { esperar_recursos_descargados } = require('../helpers/recursos')
+const { aislar_broadcasts } = require('../helpers/entorno')
 const path = require('path')
 
 const PROVEEDOR_DEL_FIXTURE = 'Rosario'
@@ -125,6 +127,9 @@ test.beforeAll(async ({ browser }) => {
 		storageState: path.join(__dirname, '..', '.auth', 'user.json'),
 	})
 	page = await context.newPage()
+	// Este spec arma su propia pagina, asi que el fixture de e2e/fixtures.js no la toca: el
+	// aislamiento de broadcasts hay que pedirlo a mano y antes de navegar.
+	await aislar_broadcasts(page)
 	page.on('request', function (request) {
 		if (request.method() !== 'POST') {
 			return
@@ -140,6 +145,9 @@ test.beforeAll(async ({ browser }) => {
 	})
 
 	await page.goto('/proveedores/compras')
+	// Hasta que no terminan de bajar los catalogos del arranque, el buscador todavia no sabe con
+	// que columnas dinamicas trabajar (ver e2e/helpers/recursos.js).
+	await esperar_recursos_descargados(page, { abrir_panel: false })
 	await page.locator('[data-testid="btn-crear-provider_order"]').click()
 	await asegurar_modal_abierto()
 })
