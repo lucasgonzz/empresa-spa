@@ -33,6 +33,13 @@ export default {
 			order: 'prioridad',
 		},
 		loading_articles: false,
+		/*
+			Token de la ultima peticion de getArticles (patron de los grupos
+			299/303, como el modal de analisis IA): dos pedidos en vuelo (cambio
+			rapido de filtro o de pagina) pueden resolverse fuera de orden, y sin
+			token la respuesta vieja pisaria a la nueva en la tabla.
+		*/
+		peticion_token: 0,
 	},
 	mutations: {
 		set_stock_suggestion_articles(state, value) {
@@ -57,6 +64,9 @@ export default {
 		set_loading_articles(state, value) {
 			state.loading_articles = value
 		},
+		incrementar_peticion_token(state) {
+			state.peticion_token++
+		},
 	},
 	actions: {
 		/**
@@ -77,6 +87,12 @@ export default {
 			let page = payload.page || 1
 			commit('set_loading_articles', true)
 
+			// Se captura el token ANTES de despachar: si al volver la respuesta
+			// el token del state ya es otro, hubo un pedido mas nuevo y esta
+			// respuesta se descarta (el loading lo apaga el pedido vigente).
+			commit('incrementar_peticion_token')
+			let token = state.peticion_token
+
 			let params = {
 				page: page,
 				per_page: state.paginacion.per_page,
@@ -92,6 +108,9 @@ export default {
 
 			return axios.get('/api/stock-suggestion/' + state.stock_suggestion_id + '/articles', {params: params})
 			.then(res => {
+				if (token != state.peticion_token) {
+					return
+				}
 				commit('set_loading_articles', false)
 				let paginator = res.data.models
 				commit('set_articles', paginator.data)
@@ -103,6 +122,9 @@ export default {
 				})
 			})
 			.catch(err => {
+				if (token != state.peticion_token) {
+					return
+				}
 				commit('set_loading_articles', false)
 				console.log(err)
 			})

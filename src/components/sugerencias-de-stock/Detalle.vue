@@ -37,8 +37,14 @@
 				· {{ sugerencia.origen_generacion == 'automatica' ? 'Generacion automatica' : 'Generacion manual' }}
 			</p>
 
+			<!--
+				reintentado: el boton "Reintentar" del resumen ya dejo el estado en
+				pendiente en el backend; recargar aca re-arma el polling existente,
+				que es el que va a levantar el resumen nuevo cuando este.
+			-->
 			<resumen-ia
-			:sugerencia="sugerencia"></resumen-ia>
+			:sugerencia="sugerencia"
+			@reintentado="cargar"></resumen-ia>
 
 			<b-alert
 			v-if="sugerencia.status == 'pendiente'"
@@ -85,6 +91,12 @@ export default {
 			poll_timer: null,
 			// true una vez pedida la primera pagina de lineas, para no re-pedirla en cada poll.
 			articulos_pedidos: false,
+			/*
+				true desde beforeDestroy: un .then de cargar() que llegue con la vista
+				ya cerrada no debe re-programar el timer (resucitaria el polling que
+				beforeDestroy acababa de cancelar y quedaria girando sin pantalla).
+			*/
+			destruido: false,
 		}
 	},
 	computed: {
@@ -122,6 +134,7 @@ export default {
 		this.iniciar()
 	},
 	beforeDestroy() {
+		this.destruido = true
 		this.cancelar_poll()
 	},
 	methods: {
@@ -162,7 +175,9 @@ export default {
 					})
 				}
 
-				if (self.debe_seguir_polleando()) {
+				// El guard de destruido evita resucitar el timer si la respuesta
+				// llego con el componente ya desmontado.
+				if (self.debe_seguir_polleando() && !self.destruido) {
 					self.programar_poll()
 				}
 			})
