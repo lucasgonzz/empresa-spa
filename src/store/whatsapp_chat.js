@@ -27,6 +27,10 @@ axios.defaults.baseURL = process.env.VUE_APP_API_URL
  * - POST   whatsapp-bot/simulate-inbound   -> 201 { model } (phone, body) | 403 no dueño | 429 throttle 10/min
  * - PUT    whatsapp-chats/messages/{id}/confirm -> { model } | 422 { code: 'ya_en_envio' | 'ya_no_esta_pendiente' | 'fuera_de_ventana' | 'envio_fallido' }
  * - DELETE whatsapp-chats/messages/{id}    -> { message } | 422 { code: 'ya_en_envio' | 'ya_no_esta_pendiente' }
+ *
+ * Contrato agregado en la misión whatsapp-sidebar-multimedia (confirmado contra empresa-api):
+ * - POST   whatsapp-chats/{id}/media       -> 201 { model, enviado } (multipart: file, caption)
+ *                                             | 422 { code: 'fuera_de_ventana' } | 422 { message } (tipo o tamaño)
  */
 export default {
 	namespaced: true,
@@ -357,6 +361,42 @@ export default {
 					commit('removePendingAiMessages')
 					commit('appendMessage', res.data.model)
 					return res.data.model
+				})
+		},
+		/**
+		 * Manda una foto o una nota de voz que el operador armó en el composer.
+		 *
+		 * Es el único envío del módulo que NO viaja como JSON: el archivo es binario, así que
+		 * va en un `FormData` (multipart). El `Content-Type` con el boundary lo pone axios solo
+		 * al detectar el FormData; declararlo a mano rompe el multipart porque el boundary se
+		 * pierde.
+		 *
+		 * Devuelve `res.data` entero y no solo el modelo, a diferencia de `sendMessage`: el
+		 * backend contesta `201 { model, enviado }` y el componente necesita los dos, `model`
+		 * para dibujar la burbuja y `enviado` para saber si el archivo SALIÓ de verdad hacia
+		 * WhatsApp (la fila se guarda igual cuando no sale).
+		 *
+		 * Sin `.catch()` a propósito, igual que `sendMessage`: los 422 —`fuera_de_ventana`, el
+		 * tipo de archivo y el tamaño— los tiene que poder distinguir el componente para decir
+		 * algo distinto en cada caso.
+		 *
+		 * @param {Object} payload { chat_id, file, caption }
+		 * @param {File} payload.file Archivo a mandar (imagen o audio ogg de una nota de voz).
+		 * @param {string} payload.caption Epígrafe, solo para imágenes (el audio no acepta).
+		 * @returns {Promise} resuelve con { model, enviado }.
+		 */
+		sendMedia({ commit }, payload) {
+			let form_data = new FormData()
+			form_data.append('file', payload.file)
+			form_data.append('caption', payload.caption || '')
+			return axios.post('/api/whatsapp-chats/' + payload.chat_id + '/media', form_data)
+				.then(res => {
+					// Misma intervención humana que en sendMessage(): el backend descarta las
+					// respuestas del agente que esperaban confirmación antes de mandar el
+					// archivo, así que esas filas ya no existen en la base.
+					commit('removePendingAiMessages')
+					commit('appendMessage', res.data.model)
+					return res.data
 				})
 		},
 		/**
