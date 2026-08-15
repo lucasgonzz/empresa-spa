@@ -25,6 +25,13 @@
 export default {
 	methods: {
 		show_modal_sugerencias() {
+			// Con la extension de sugerencias inteligentes, el item lleva a la vista
+			// propia (los modales apilados se retiran para quien la tiene); sin la
+			// extension, se abre el modal historico tal cual siempre.
+			if (this.hasExtencion('sugerencias_inteligentes')) {
+				this.$router.push({name: 'sugerencias_stock'})
+				return
+			}
 			this.$store.dispatch('stock_suggestion/getModels')
 			this.$bvModal.show('stock-suggestions')
 		},

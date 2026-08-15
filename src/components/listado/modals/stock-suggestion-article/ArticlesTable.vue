@@ -1,19 +1,35 @@
 <template>
-	<b-table
-	head-variant="dark"
-	responsive
-	:fields="fields"
-	:items="items">
-		<template #cell(seleccionado)="data">
-			<b-form-checkbox
-			:id="'stock-suggestion-article-checkbox-' + data.item._row_selection_key"
-			:value="data.item._row_selection_key"
-			:disabled="!has_valid_article_id(data.item)"
-			v-model="selected_row_keys"
-			@change="on_change_selection">
-			</b-form-checkbox>
-		</template>
-	</b-table>
+	<div>
+		<!--
+			El backend corta la respuesta en 2000 lineas (con la clave 'truncado' en el
+			payload). El flag no llega hasta aca porque el POST lo hace NavComponent y
+			solo comitea los models, asi que el aviso se infiere del tope: con 2000
+			filas cargadas, casi seguro hay mas del otro lado.
+		-->
+		<b-alert
+		v-if="resultado_posiblemente_truncado"
+		show
+		variant="warning"
+		class="m-b-10">
+			Se muestran las primeras 2000 lineas. Filtra por deposito para ver un resultado completo.
+		</b-alert>
+
+		<b-table
+		head-variant="dark"
+		responsive
+		:fields="fields"
+		:items="items">
+			<template #cell(seleccionado)="data">
+				<b-form-checkbox
+				:id="'stock-suggestion-article-checkbox-' + data.item._row_selection_key"
+				:value="data.item._row_selection_key"
+				:disabled="!has_valid_article_id(data.item)"
+				v-model="selected_row_keys"
+				@change="on_change_selection">
+				</b-form-checkbox>
+			</template>
+		</b-table>
+	</div>
 </template>
 <script>
 export default {
@@ -48,7 +64,14 @@ export default {
 	},
 	computed: {
 		stock_suggestion_articles() {
-			return this.$store.state.stock_suggestion_article.stock_suggestion_articles 
+			return this.$store.state.stock_suggestion_article.stock_suggestion_articles
+		},
+		/**
+		 * true cuando la cantidad de filas cargadas alcanzo el tope de 2000 que el
+		 * backend impone a este endpoint (ver comentario del template).
+		 */
+		resultado_posiblemente_truncado() {
+			return this.stock_suggestion_articles.length >= 2000
 		},
 		fields() {
 			return [
