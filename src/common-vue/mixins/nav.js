@@ -83,13 +83,23 @@ export default {
 				cambia el comportamiento de ninguna ruta existente (PLAN §0-bis R8).
 			*/
 			if (show && route.if_has_alguna_extencion) {
-				let alguna_extencion = false
-				route.if_has_alguna_extencion.forEach(extencion => {
-					if (this.hasExtencion(extencion)) {
-						alguna_extencion = true
-					}
-				})
-				show = alguna_extencion
+				if (Array.isArray(route.if_has_alguna_extencion)) {
+					let alguna_extencion = false
+					route.if_has_alguna_extencion.forEach(extencion => {
+						if (this.hasExtencion(extencion)) {
+							alguna_extencion = true
+						}
+					})
+					show = alguna_extencion
+				} else {
+					// Guarda de tipo (arreglo de bloqueante de merge, 15/8/2026): if_has_alguna_extencion
+					// es un array de slugs a propósito (OR entre extensiones). Sin este guard, una ruta
+					// mal armada (un string suelto, un objeto, lo que sea) revienta el forEach con un
+					// TypeError -- y como nav.js es un mixin COMPARTIDO entre proyectos, ese error no
+					// queda aislado en una ruta: tira abajo el menú entero para todos los usuarios. Se
+					// prefiere no mostrar esta ruta puntual antes que romper el resto del menú.
+					show = false
+				}
 			}
 			return show
 		},
