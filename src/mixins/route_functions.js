@@ -18,13 +18,27 @@ export default {
 			this.$store.commit('ai_chat/setPanelAbierto', true)
 		},
 		/**
-		 * Entrada del módulo padre "IA" de la nav (D29): hoy lleva a Sugerencias,
-		 * que es su único submódulo. El guard evita el NavigationDuplicated de
-		 * apretar el padre estando ya en el listado (desde un detalle sí navega).
+		 * Entrada del módulo padre "IA" de la nav (D29). Antes mandaba siempre a
+		 * Sugerencias de stock, que era su único submódulo; con "sugerencias de
+		 * compra" (15/8/2026) ya no alcanza con eso, así que decide por extensión:
+		 * stock si la tiene (prioridad histórica), si no compras, y si no tiene
+		 * ninguna no navega a ningún lado (el padre tampoco debería estar visible
+		 * en ese caso, ver if_has_alguna_extencion de router/routes.js). El guard
+		 * evita el NavigationDuplicated de apretar el padre estando ya en el
+		 * listado del destino (desde un detalle sí navega).
 		 */
 		ir_a_modulo_ia() {
-			if (this.$route.name != 'sugerencias_stock' || this.$route.params.id) {
-				this.$router.push({name: 'sugerencias_stock'})
+			let destino = null
+			if (this.hasExtencion('sugerencias_inteligentes')) {
+				destino = 'sugerencias_stock'
+			} else if (this.hasExtencion('sugerencias_compras')) {
+				destino = 'sugerencias_compra'
+			}
+			if (!destino) {
+				return
+			}
+			if (this.$route.name != destino || this.$route.params.id) {
+				this.$router.push({name: destino})
 			}
 		},
 		/**

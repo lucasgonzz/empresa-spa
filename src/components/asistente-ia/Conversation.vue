@@ -57,7 +57,7 @@
 					variant="outline-primary"
 					@click="ir_al_origen">
 						<i class="bi bi-box-arrow-up-right"></i>
-						Ver la sugerencia
+						{{ texto_boton_de_origen }}
 					</b-button>
 				</div>
 			</template>
@@ -86,6 +86,18 @@ import PensandoIndicator from '@/components/asistente-ia/PensandoIndicator'
  */
 const RUTA_POR_ORIGEN = {
 	sugerencia_stock: 'sugerencias_stock',
+	sugerencia_compra: 'sugerencias_compra',
+}
+
+/**
+ * Texto del botón de puente al submódulo, por origen (misión "sugerencias de
+ * compra", 15/8/2026): antes era un string fijo "Ver la sugerencia" en el
+ * template; con un segundo origen hacía falta distinguir a cuál sugerencia
+ * lleva. Toda clave nueva de RUTA_POR_ORIGEN necesita su par acá.
+ */
+const ETIQUETA_POR_ORIGEN = {
+	sugerencia_stock: 'Ver la sugerencia',
+	sugerencia_compra: 'Ver la sugerencia de compra',
 }
 
 export default {
@@ -158,6 +170,19 @@ export default {
 				return this.user.online_configuration.logo_url
 			}
 			return this.user.image_url || null
+		},
+		/**
+		 * Texto del botón de puente al submódulo (D24), según el origen de la
+		 * conversación abierta. Reemplaza el "Ver la sugerencia" hardcodeado que
+		 * tenía el template: con dos orígenes posibles hacía falta distinguir a
+		 * cuál sugerencia lleva. El fallback solo se usaría si algún origen quedara
+		 * en RUTA_POR_ORIGEN sin su par en ETIQUETA_POR_ORIGEN.
+		 */
+		texto_boton_de_origen() {
+			if (this.conversation && ETIQUETA_POR_ORIGEN[this.conversation.origen]) {
+				return ETIQUETA_POR_ORIGEN[this.conversation.origen]
+			}
+			return 'Ver la sugerencia'
 		},
 	},
 	mounted() {

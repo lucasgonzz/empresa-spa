@@ -191,6 +191,16 @@ const routes = [
         name: 'sugerencias_stock',
         component: () => import('@/views/SugerenciasDeStock')
     },
+    {
+        // Vista propia de sugerencias de compra a proveedores (extension
+        // 'sugerencias_compras'). Mismo patron que sugerencias-de-stock de arriba:
+        // sin :id muestra el listado; con :id, el detalle. El router no procesa
+        // extensiones: el gate vive en el menu (routes.js), en el componente
+        // (aviso si no la tiene) y en el backend (403).
+        path: '/sugerencias-de-compra/:id?',
+        name: 'sugerencias_compra',
+        component: () => import('@/views/SugerenciasDeCompra')
+    },
     // {
     //     path: '/ventas',
     //     name: 'ventas',

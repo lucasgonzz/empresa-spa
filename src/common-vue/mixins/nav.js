@@ -75,7 +75,23 @@ export default {
 					})
 				}
 			}
-			return show 
+			/*
+				Bloque ADITIVO (misión "sugerencias de compra", 15/8/2026): OR entre
+				extensiones, para padres con hijos gateados por extensiones distintas
+				(if_has_extencion de arriba es un AND duro y no sirve para ese caso).
+				Hoy ninguna ruta usa if_has_alguna_extencion todavía, así que esto no
+				cambia el comportamiento de ninguna ruta existente (PLAN §0-bis R8).
+			*/
+			if (show && route.if_has_alguna_extencion) {
+				let alguna_extencion = false
+				route.if_has_alguna_extencion.forEach(extencion => {
+					if (this.hasExtencion(extencion)) {
+						alguna_extencion = true
+					}
+				})
+				show = alguna_extencion
+			}
+			return show
 		},
 		tiene_permiso_para_la_ruta(route) {
 

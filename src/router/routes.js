@@ -489,18 +489,18 @@ export default [
 			antes que cualquier otra rama, y así el padre no necesita una ruta
 			propia en router/index.js.
 
-			Gate: hoy el único hijo es Sugerencias, así que el padre puede llevar su
-			misma extensión. Cuando lleguen compras/ofertas con OTRAS extensiones,
-			este if_has_extencion se SACA del padre (showRoute trata el array como
-			AND, no OR) y cada hijo se gatea solo — ojo que sin extensión en el
-			padre, showRoute no lo esconde por extensión si ningún hijo pasa: ese
-			caso hay que mirarlo cuando llegue.
+			Gate (misión "sugerencias de compra", 15/8/2026): ahora hay DOS hijos con
+			extensiones distintas, así que el padre ya NO lleva if_has_extencion
+			(showRoute trataría el array como AND, no OR, y dejaría sin ver "IA" a
+			quien solo tiene una de las dos). En su lugar lleva
+			if_has_alguna_extencion (bloque aditivo de nav.js:showRoute, OR entre
+			extensiones) y cada hijo se gatea solo con su propio if_has_extencion.
 		*/
 		text: 'IA',
 		name: 'ia',
 		function: 'ir_a_modulo_ia',
 		icon: 'stars',
-		if_has_extencion: 'sugerencias_inteligentes',
+		if_has_alguna_extencion: ['sugerencias_inteligentes', 'sugerencias_compras'],
 		childrens: [
 			{
 				text: 'Sugerencias',
@@ -512,6 +512,16 @@ export default [
 				// del Listado sigue siendo el unico camino.
 				if_has_extencion: 'sugerencias_inteligentes',
 				icon: 'lightbulb',
+			},
+			{
+				text: 'Compras',
+				path: '/sugerencias-de-compra',
+				name: 'sugerencias_compra',
+				component: '@/views/SugerenciasDeCompra',
+				// Extension propia: es funcionalidad vendible aparte, mismo criterio
+				// que asistente_ia (PLAN §0-bis R8 / INSUMOS-MEDIDOS.md §12).
+				if_has_extencion: 'sugerencias_compras',
+				icon: 'cart-plus',
 			},
 		],
 	},
