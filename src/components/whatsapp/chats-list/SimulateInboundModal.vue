@@ -140,10 +140,9 @@ export default {
 					self.$store.dispatch('whatsapp_chat/getChats')
 					return
 				}
-				self.$store.commit('whatsapp_chat/setSelectedChatId', chat.id)
-				// Limpia la conversación anterior para no mezclar mensajes de otro chat.
-				self.$store.commit('whatsapp_chat/setMessages', [])
-				self.$store.dispatch('whatsapp_chat/getMessages', {chat_id: chat.id, page: 1})
+				// Antes acá se repetía el trío setSelectedChatId + setMessages + getMessages:
+				// ahora la carga la dispara el watch de conversation/Index.vue.
+				self.abrir_chat_whatsapp({chat_id: chat.id})
 				self.$toast.success('Mensaje simulado. La respuesta del agente aparece sola cuando esté lista.')
 			})
 			.catch(err => {

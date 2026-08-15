@@ -88,19 +88,16 @@ export default {
 	},
 	methods: {
 		/**
-		 * Abre la conversación del chat elegido: fija el seleccionado, carga la primera
-		 * página de mensajes y marca el chat como leído (limpia su badge).
+		 * Abre la conversación del chat elegido en el sidebar.
+		 *
+		 * Antes acá vivía una de las tres copias del trío `setSelectedChatId` +
+		 * `setMessages([])` + `getMessages()`. La carga la dispara ahora el watch de
+		 * `conversation/Index.vue`: desde acá solo se dice cuál es el chat.
 		 *
 		 * @param {Object} chat
 		 */
 		selectChat(chat) {
-			this.$store.commit('whatsapp_chat/setSelectedChatId', chat.id)
-			// Limpia la conversación anterior para no mostrar mensajes de otro chat mientras carga.
-			this.$store.commit('whatsapp_chat/setMessages', [])
-			this.$store.dispatch('whatsapp_chat/getMessages', {chat_id: chat.id, page: 1})
-			if (chat.unread_count > 0) {
-				this.$store.dispatch('whatsapp_chat/markRead', chat.id)
-			}
+			this.abrir_chat_whatsapp({chat_id: chat.id})
 		},
 	},
 }

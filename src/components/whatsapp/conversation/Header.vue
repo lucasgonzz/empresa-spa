@@ -59,6 +59,16 @@
 					Copiar conversación
 				</b-dropdown-item>
 			</b-dropdown>
+
+			<!-- Cierra el sidebar. Es un <button> pelado y no un b-button porque tiene que
+			leerse como la × de un panel, no como una acción más de la fila de la derecha. -->
+			<button
+			class="whatsapp-header__cerrar"
+			type="button"
+			title="Cerrar la conversación"
+			@click="cerrar_sidebar">
+				<i class="bi bi-x-lg"></i>
+			</button>
 		</div>
 
 		<link-client-modal
@@ -78,9 +88,10 @@ export default {
 		SummaryModal,
 	},
 	computed: {
+		// El getter del store hace exactamente esto y ya existía; este computed estaba copiado
+		// byte por byte también en conversation/Index.vue y en Composer.vue.
 		chat() {
-			let selected_chat_id = this.$store.state.whatsapp_chat.selected_chat_id
-			return this.$store.state.whatsapp_chat.chats.find(c => c.id == selected_chat_id) || null
+			return this.$store.getters['whatsapp_chat/selected_chat']
 		},
 		messages() {
 			return this.$store.state.whatsapp_chat.messages
@@ -102,6 +113,13 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * El sidebar no recibe props ni emite eventos: se cierra commiteando el store, que es
+		 * de donde saca su visibilidad.
+		 */
+		cerrar_sidebar() {
+			this.$store.commit('whatsapp_chat/setSidebarAbierto', false)
+		},
 		toggleAi() {
 			this.$store.dispatch('whatsapp_chat/toggleAi', this.chat.id)
 			.catch(err => {
@@ -214,4 +232,18 @@ export default {
 	&__ai-toggle
 		margin-right: 4px
 		margin-bottom: 0
+	&__cerrar
+		flex-shrink: 0
+		width: 32px
+		height: 32px
+		border: none
+		border-radius: 8px
+		background: transparent
+		color: rgba(0, 0, 0, .55)
+		display: flex
+		align-items: center
+		justify-content: center
+		&:hover
+			background: rgba(0, 0, 0, .06)
+			color: rgba(0, 0, 0, .8)
 </style>

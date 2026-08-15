@@ -73,9 +73,10 @@ export default {
 		}
 	},
 	computed: {
+		// El getter del store hace exactamente esto y ya existía; este computed estaba copiado
+		// byte por byte también en conversation/Index.vue y en Header.vue.
 		chat() {
-			let selected_chat_id = this.$store.state.whatsapp_chat.selected_chat_id
-			return this.$store.state.whatsapp_chat.chats.find(c => c.id == selected_chat_id) || null
+			return this.$store.getters['whatsapp_chat/selected_chat']
 		},
 		/**
 		 * El chat abierto está en modo simulación (ver el getter en `store/whatsapp_chat.js`:
