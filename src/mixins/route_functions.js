@@ -28,10 +28,11 @@ export default {
 		 * y se despacha desde `mixins/model_functions.js`— pueda abrir el sidebar igual que
 		 * cualquier componente con template.
 		 *
-		 * `display_name` se acepta en el payload porque es lo que el llamador tiene a mano para
-		 * nombrar al contacto, pero hoy **no viaja al backend**: `POST api/whatsapp-chats` solo
-		 * lee `phone` y `client_id` (ver `WhatsappChatController::store()`). Queda documentado
-		 * para que nadie lo mande esperando que se guarde.
+		 * `display_name` viaja hasta la base: lo reenvía `whatsapp_chat/abrirChat`, lo valida
+		 * `WhatsappChatController::store()` y se guarda en `whatsapp_chats.display_name`. Es lo
+		 * que hace que abrir un chat nuevo desde un pedido o desde Compradores muestre el nombre
+		 * del comprador y no un número pelado — desde Clientes el nombre ya salía del cliente
+		 * vinculado. Solo se usa al **crear**: si el chat ya existía, no le pisa el nombre.
 		 *
 		 * @param {Object} payload { chat_id } o { phone, client_id, display_name }
 		 * @returns {Promise}

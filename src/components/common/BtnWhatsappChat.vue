@@ -32,10 +32,9 @@ import { normalizar_telefono } from '@/utils/whatsapp_phone'
  * estado vive en `store/whatsapp_chat.js`, que es singleton. No hace falta chequear antes si el
  * chat existe: `createChat` es idempotente por teléfono (crea o recupera).
  *
- * ⚠️ `display_name` se pasa porque es lo que el llamador tiene a mano, pero HOY NO VIAJA:
- * `POST api/whatsapp-chats` solo lee `phone` y `client_id` (ver `WhatsappChatController::store()`).
- * O sea que abrir un chat nuevo desde acá no le pone el nombre al contacto. Está puesto para no
- * tener que tocar los tres llamadores el día que el backend lo acepte.
+ * `display_name` viaja hasta la base y le pone el nombre al contacto cuando el chat se crea: lo
+ * reenvía `whatsapp_chat/abrirChat` y lo guarda `WhatsappChatController::store()`. Solo aplica al
+ * crear — si el chat ya existía, no le pisa el nombre que tenía.
  *
  * ⚠️ Sobre el nombre de la prop `phone`: en Vue 2 `initMethods` corre DESPUÉS de `initProps` y
  * hace `vm[key] = bind(...)`, así que un método de un mixin global PISA cualquier prop que se

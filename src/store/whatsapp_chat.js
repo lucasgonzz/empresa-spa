@@ -274,7 +274,13 @@ export default {
 		 * idempotente por teléfono (el backend busca por `user_id` + `phone` y solo crea si no
 		 * lo encuentra), así que despachar y abrir alcanza.
 		 *
-		 * @param {Object} payload { chat_id } o { phone, client_id }
+		 * 🔴 EL PAYLOAD SE REARMA CAMPO POR CAMPO, ASÍ QUE UN CAMPO NUEVO HAY QUE AGREGARLO ACÁ
+		 * TAMBIÉN. No es paranoia: `display_name` se agregó en los tres botones, en el mixin, en
+		 * la validación del endpoint y en la columna, y aun así el contacto seguía apareciendo
+		 * como un número pelado — porque esta función lo descartaba en silencio antes del POST.
+		 * Si mañana se suma otro dato del contacto y solo se toca el botón, va a pasar lo mismo.
+		 *
+		 * @param {Object} payload { chat_id } o { phone, client_id, display_name }
 		 * @returns {Promise} resuelve con el id del chat abierto.
 		 */
 		abrirChat({ commit, dispatch }, payload) {
@@ -287,6 +293,7 @@ export default {
 			return dispatch('createChat', {
 				phone: payload.phone,
 				client_id: payload.client_id || null,
+				display_name: payload.display_name || null,
 			})
 				.then(function (model) {
 					self_commit('setSelectedChatId', model.id)

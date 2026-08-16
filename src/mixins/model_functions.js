@@ -645,9 +645,9 @@ export default {
             normalizar: cambiarlo sería tocarle el link a quien hoy funciona, y este método no
             está para arreglar eso.
 
-            display_name se manda porque es lo que hay a mano, pero hoy el backend no lo guarda
-            (WhatsappChatController::store() solo lee phone y client_id). Y no se manda
-            client_id: un Buyer de la tienda no es un Client del ERP.
+            display_name se manda y se guarda: es lo que hace que el comprador aparezca con su
+            nombre y no como un numero pelado, porque aca no hay cliente del ERP de donde sacarlo.
+            Y no se manda client_id a proposito: un Buyer de la tienda no es un Client del ERP.
         */
         sendWhatsApp(model) {
             if (this.hasExtencion('whatsapp')) {
