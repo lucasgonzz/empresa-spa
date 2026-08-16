@@ -216,6 +216,18 @@ export default {
 			return this.$store.getters['whatsapp_chat/selected_chat']
 		},
 		/**
+		 * Id de la conversación abierta. Se lee del state y NO de `chat.id` a propósito: cuando se
+		 * salta a un chat que todavía no está en la bandeja (link directo, o un chat recién
+		 * creado), el getter devuelve null por un instante, y un watch colgado de `chat` no vería
+		 * el cambio hasta que la bandeja termine de llegar. Es el mismo computed que mira
+		 * `Messages.vue`.
+		 *
+		 * @returns {number|null}
+		 */
+		chat_id() {
+			return this.$store.state.whatsapp_chat.selected_chat_id
+		},
+		/**
 		 * El chat abierto está en modo simulación (ver el getter en `store/whatsapp_chat.js`:
 		 * se resuelve mirando el último entrante cargado, que es lo único que el broadcast
 		 * mantiene al día).
@@ -246,6 +258,66 @@ export default {
 			}
 			return 'Tocá para grabar una nota de voz, o mantené apretado para grabar mientras lo apretás'
 		},
+	},
+	watch: {
+		/**
+		 * 🔴 Todo lo que el operador tiene a medio armar es de la conversación que está abierta:
+		 * al saltar a otra, se tira.
+		 *
+		 * Sin esto, la foto elegida con el clip para el cliente A seguía armada en la
+		 * previsualización después de clickear al cliente B en la bandeja —que queda visible al
+		 * lado del sidebar justamente para poder saltar de un chat a otro—, y como
+		 * `enviar_adjunto()` resuelve `this.chat.id` recién en el momento de mandar, la foto de un
+		 * cliente le salía a otro. Con la nota de voz era peor todavía: el micrófono seguía abierto
+		 * durante el cambio y el audio grabado para A se enviaba a B.
+		 *
+		 * Es la misma omisión que `Messages.vue` ya tenía resuelta con su propio `watch: chat_id`.
+		 * El arreglo va acá y no con un `:key` en `conversation/Index.vue` porque recrear el árbol
+		 * entero en cada salto se llevaría puestos el scroll de la conversación y el modal de
+		 * plantillas, para limpiar un estado que es de este componente y de nadie más.
+		 */
+		chat_id() {
+			/*
+				Cancelar cierra el micrófono de verdad (`_force_release()` corta los tracks del
+				stream) y descarta lo grabado: con `cancel()` el blob nunca llega a
+				`on_audio_blob`. Se llama sin condición porque también limpia el temporizador del
+				"mantener apretado", que puede estar por arrancar una grabación.
+			*/
+			this.cancel_audio_recording()
+			this.cancelar_adjunto()
+			/*
+				Decisión tomada a conciencia: el borrador de TEXTO también se limpia, aunque
+				arrastrarlo de un chat a otro sea anterior a esta misión y no una regresión nuestra.
+				Un mensaje escrito para el cliente A no puede quedar cargado en el input con el
+				cliente B abierto: es el mismo accidente que el de la foto, a un Enter de distancia.
+				Y como en el sistema no hay borradores por chat en ningún lado, tirar la foto pero
+				dejar el texto sería el más confuso de los tres comportamientos posibles.
+			*/
+			this.text = ''
+		},
+		/**
+		 * Se anota a qué conversación pertenece la grabación que arranca.
+		 *
+		 * Hace falta porque `cancel_audio_recording()` no alcanza en una ventana chica pero real:
+		 * si el operador ya soltó el micrófono, el grabador queda en estado 'stopping' (esperando
+		 * la duración mínima y el cierre del encoder) y ahí `cancel()` es un no-op a propósito
+		 * —ver `oggOpusRecorder.js`—, así que el blob igual va a llegar. Si en ese segundo el
+		 * operador cambió de chat, `on_audio_blob` lo descarta comparando contra esta marca.
+		 *
+		 * @param {boolean} esta_grabando
+		 */
+		audio_recording(esta_grabando) {
+			if (esta_grabando) {
+				this._chat_de_la_grabacion = this.chat_id
+			}
+		},
+	},
+	created() {
+		/*
+			Chat dueño de la grabación en curso. No va en `data()` porque no lo lee ningún template
+			—misma razón por la que el mixin deja afuera las marcas del gesto.
+		*/
+		this._chat_de_la_grabacion = null
 	},
 	beforeDestroy() {
 		// El sidebar destruye este componente cada vez que se cierra: si la previsualización
@@ -433,6 +505,16 @@ export default {
 			if (!this.chat) {
 				return
 			}
+			/*
+				La nota se manda al chat en el que se grabó, o no se manda. El blob llega
+				asincrónico (el encoder tarda en cerrar el ogg), así que para cuando aparece el
+				operador puede estar mirando otra conversación: ver el watch de `audio_recording`
+				para el porqué de la marca. `!=` y no `!==`, como el resto de las comparaciones de
+				id del módulo.
+			*/
+			if (this._chat_de_la_grabacion != this.chat_id) {
+				return
+			}
 			this.enviando_adjunto = true
 			this.$store.dispatch('whatsapp_chat/sendMedia', {
 				chat_id: this.chat.id,
@@ -476,10 +558,21 @@ export default {
 			if (!this.chat) {
 				return
 			}
+			/*
+				La sugerencia se pide para ESTE chat y solo sirve para este chat: si mientras viaja
+				el operador salta a otra conversación, se descarta. Si no, la respuesta que la IA
+				escribió leyendo la conversación del cliente A —con los datos de A adentro—
+				aparecía escrita en el input con el cliente B abierto, lista para mandarse de un
+				Enter. Es el mismo problema que resuelve el watch de `chat_id`, por el otro lado.
+			*/
+			let chat_pedido = this.chat.id
 			this.suggesting = true
-			this.$store.dispatch('whatsapp_chat/suggest', this.chat.id)
+			this.$store.dispatch('whatsapp_chat/suggest', chat_pedido)
 			.then(suggestion => {
 				this.suggesting = false
+				if (chat_pedido != this.chat_id) {
+					return
+				}
 				this.text = suggestion || ''
 			})
 			.catch(err => {
