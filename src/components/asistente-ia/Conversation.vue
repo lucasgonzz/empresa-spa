@@ -87,6 +87,7 @@ import PensandoIndicator from '@/components/asistente-ia/PensandoIndicator'
 const RUTA_POR_ORIGEN = {
 	sugerencia_stock: 'sugerencias_stock',
 	sugerencia_compra: 'sugerencias_compra',
+	sugerencia_oferta: 'ofertas',
 }
 
 /**
@@ -98,6 +99,7 @@ const RUTA_POR_ORIGEN = {
 const ETIQUETA_POR_ORIGEN = {
 	sugerencia_stock: 'Ver la sugerencia',
 	sugerencia_compra: 'Ver la sugerencia de compra',
+	sugerencia_oferta: 'Ver las ofertas sugeridas',
 }
 
 export default {

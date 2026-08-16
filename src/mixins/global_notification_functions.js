@@ -191,5 +191,65 @@ export default {
 
 			this.abrir_chat_ia(conversation_id)
 		},
+		/**
+		 * Abre el detalle de la corrida de ofertas que la notificacion anuncia como
+		 * lista. Molde de ir_a_sugerencias_de_compra(): el id viaja en info_to_show
+		 * (clave offer_suggestion_id o un value numerico) y sin id se cae al
+		 * listado. El NOMBRE del metodo es el contrato con el backend: es el
+		 * function_name que manda ProcessOfferSuggestionChunkJob, y renombrarlo aca
+		 * deja el boton de la notificacion sin hacer nada.
+		 */
+		ir_a_ofertas() {
+			let id = null
+			let info_to_show = this.$store.state.global_notification.info_to_show
+			if (Array.isArray(info_to_show)) {
+				info_to_show.forEach(info => {
+					if (!id && info) {
+						if (info.offer_suggestion_id) {
+							id = info.offer_suggestion_id
+						} else if (info.value && !isNaN(Number(info.value))) {
+							id = Number(info.value)
+						}
+					}
+				})
+			}
+			if (id) {
+				// Ya parado en ese detalle no hay adonde ir (el push duplicado tiraria NavigationDuplicated).
+				if (this.$route.name == 'ofertas' && this.$route.params.id == '' + id) {
+					return
+				}
+				this.$router.push({name: 'ofertas', params: {id: '' + id}})
+			} else if (this.$route.name != 'ofertas' || this.$route.params.id) {
+				this.$router.push({name: 'ofertas'})
+			}
+		},
+		/**
+		 * Boton "Charlar con la IA" de la notificacion de ofertas listas. La
+		 * conversacion se crea para el DUEÑO: si la mira otra persona, se cae a la
+		 * vista de ofertas sin pedirle nada al servidor (el indice del chat igual
+		 * no se la devolveria: la tenencia es por persona).
+		 */
+		abrir_conversacion_de_oferta() {
+			let conversation_id = null
+			let auth_user_id = null
+			let info_to_show = this.$store.state.global_notification.info_to_show
+			if (Array.isArray(info_to_show)) {
+				info_to_show.forEach(info => {
+					if (info) {
+						if (!conversation_id && info.ai_conversation_id) {
+							conversation_id = info.ai_conversation_id
+						}
+						if (!auth_user_id && info.ai_conversation_auth_user_id) {
+							auth_user_id = info.ai_conversation_auth_user_id
+						}
+					}
+				})
+			}
+			if (!conversation_id || !this.user || Number(auth_user_id) !== Number(this.user.id)) {
+				this.ir_a_ofertas()
+				return
+			}
+			this.abrir_chat_ia(conversation_id)
+		},
 	}
 }
