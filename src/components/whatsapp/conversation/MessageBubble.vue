@@ -40,6 +40,23 @@
 		:src="message.media_src"
 		:is_outgoing="is_out"></audio-player>
 
+		<!-- 🔴 El mensaje trae un medio pero no hay archivo para dibujar. Es un estado normal y
+		esperado, no una rareza: el backend registra la imagen entrante aunque la descarga falle,
+		a propósito, porque lo que abre la ventana de 24 h es la fila y no el archivo. Sin este
+		aviso la burbuja quedaba con la hora y NADA más —el body era el relleno `[Imagen recibida]`
+		y se ocultaba—, así que el operador veía el chat subir a la cabeza de la bandeja con el
+		badge de no leído, lo abría, y se encontraba un globo vacío: cero indicación de que el
+		cliente le había mandado una foto. -->
+		<div
+		v-else-if="medio_sin_archivo"
+		class="whatsapp-bubble__medio-faltante"
+		:title="titulo_medio_faltante">
+			<i
+			class="bi"
+			:class="message.media_type == 'audio' ? 'bi-mic-mute' : 'bi-image'"></i>
+			{{ etiqueta_medio_faltante }}
+		</div>
+
 		<p
 		v-if="muestra_texto"
 		class="whatsapp-bubble__text">
@@ -150,6 +167,10 @@ import AudioPlayer from '@/components/whatsapp/conversation/AudioPlayer'
 // 🔴 `'[Audio sin transcripción]'` NO está en esta lista y no tiene que estarlo: ese sí informa
 // algo real —que la nota de voz llegó pero Kapso no la pudo pasar a texto—, y el operador tiene
 // que verlo para saber que la única forma de enterarse de qué dice es escuchándola.
+//
+// 🔴 Estar en esta lista NO quiere decir "no se muestra nunca": ver `muestra_texto`, que lo
+// oculta solo cuando arriba quedó un medio dibujado. Si no hay medio, el relleno es lo único que
+// le queda a la burbuja.
 const CUERPOS_DE_RELLENO = [
 	'[Imagen recibida]',
 	'[Imagen enviada]',
@@ -325,8 +346,64 @@ export default {
 			return this.message.media_type == 'audio' && !!this.message.media_src
 		},
 		/**
+		 * El mensaje declara un medio pero no hay archivo para dibujar: `media_type` cargado y
+		 * `media_src` en null.
+		 *
+		 * Es un estado normal, previsto por el backend, no una fila corrupta. Pasa cuando la
+		 * resolución de la URL no matchea ninguna de sus cuatro rutas candidatas (el servicio
+		 * loguea un warning obligatorio ahí justamente porque el payload de medios de Kapso no
+		 * está documentado), cuando el mime queda afuera de la lista blanca, cuando el archivo
+		 * pasa los 20 MB, o cuando el CDN devuelve error. En todos esos casos la fila se guarda
+		 * igual: es lo que abre la ventana de 24 h.
+		 *
+		 * @returns {boolean}
+		 */
+		medio_sin_archivo() {
+			return !!this.message.media_type && !this.message.media_src
+		},
+		/**
+		 * Qué llegó, en palabras, para el aviso de medio sin archivo. Los dos tipos son femeninos
+		 * ("Imagen", "Nota de voz"), así que la concordancia sale sola.
+		 *
+		 * @returns {string}
+		 */
+		etiqueta_medio_faltante() {
+			let tipo = this.message.media_type == 'audio' ? 'Nota de voz' : 'Imagen'
+			if (this.is_out) {
+				return tipo + ' enviada (el archivo no está disponible)'
+			}
+			return tipo + ' recibida (no se pudo descargar)'
+		},
+		/**
+		 * @returns {string}
+		 */
+		titulo_medio_faltante() {
+			if (this.is_out) {
+				return 'El archivo se envió pero ya no está disponible en el servidor.'
+			}
+			return 'El cliente mandó este archivo por WhatsApp pero no se pudo descargar. Si necesitás verlo, pedile que lo mande de nuevo.'
+		},
+		/**
+		 * Arriba del texto quedó algo dibujado: la miniatura, el reproductor, o el aviso de que
+		 * el medio llegó sin archivo.
+		 *
+		 * @returns {boolean}
+		 */
+		hay_medio_visible() {
+			return this.muestra_imagen || this.muestra_audio || this.medio_sin_archivo
+		},
+		/**
 		 * Oculta los cuerpos de relleno (ver `CUERPOS_DE_RELLENO`). Sin esto, abajo de cada foto
 		 * sin epígrafe quedaba colgado un `[Imagen recibida]` que no le suma nada al operador.
+		 *
+		 * 🔴 Pero se ocultan SOLO cuando arriba hay un medio dibujado, y esa condición no se puede
+		 * "simplificar" sacándola: el relleno es lo ÚNICO que queda en la burbuja cuando el medio
+		 * no se puede mostrar. Ocultándolo siempre, un mensaje de imagen sin archivo —que existe a
+		 * propósito, ver `medio_sin_archivo`— se dibujaba como un globo con la hora y nada más. El
+		 * backend registra esa fila para que la ventana de 24 h se abra igual aunque el archivo no
+		 * baje; una burbuja vacía en pantalla anula esa decisión, porque el operador nunca se
+		 * entera de que el cliente le mandó una foto. La asimetría de `CUERPOS_DE_RELLENO` dice lo
+		 * mismo: `'[Audio sin transcripción]'` quedó afuera de la lista justamente para que se vea.
 		 *
 		 * La comparación es exacta y no un "empieza con": si el cliente escribiera justo ese
 		 * texto se perdería, pero cualquier cosa más laxa se comería epígrafes reales.
@@ -334,6 +411,9 @@ export default {
 		 * @returns {boolean}
 		 */
 		muestra_texto() {
+			if (!this.hay_medio_visible) {
+				return true
+			}
 			return CUERPOS_DE_RELLENO.indexOf(this.message.body) == -1
 		},
 	},
@@ -544,6 +624,24 @@ export default {
 	.wa-audio-player
 		min-width: 0
 		max-width: 100%
+	// Aviso de medio sin archivo. Va como bloque punteado y tenue, y no como una línea de texto
+	// más, para que se lea de un vistazo que eso NO lo escribió el cliente: es el sistema
+	// avisando que llegó algo que no puede mostrar.
+	&__medio-faltante
+		display: flex
+		flex-direction: row
+		align-items: center
+		gap: 6px
+		margin-bottom: 4px
+		padding: 5px 8px
+		border: 1px dashed rgba(0, 0, 0, .18)
+		border-radius: 6px
+		font-size: .74rem
+		color: rgba(0, 0, 0, .55)
+		text-align: left
+		i
+			font-size: .95rem
+			flex-shrink: 0
 	&__text
 		margin: 0
 		white-space: pre-wrap
