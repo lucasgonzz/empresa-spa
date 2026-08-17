@@ -112,6 +112,24 @@
 					</b-table>
 				</template>
 
+				<!--
+					🔴 LO QUE NO SE SABE TAMBIÉN SE MUESTRA. La columna "Compró" cuenta las veces
+					que ese artículo apareció en una compra cerrada, pero el evento
+					`checkout_complete` no garantiza traer el artículo: el tracking de la tienda
+					puede mandarlo sin `article_id`. Mostrar el detalle por artículo sin decir
+					cuántas compras quedaron afuera sería el mismo silencio de antes con mejor
+					cara — el comerciante sumaría la columna y no le daría el total de compras.
+					Va afuera del `v-if` de la tabla a propósito: si NINGUNA compra se pudo
+					atribuir no hay tabla que dibujar, y es justo cuando más hay que decirlo.
+				-->
+				<b-alert
+				v-if="texto_compras_sin_articulo"
+				class="small m-b-20"
+				show
+				variant="secondary">
+					{{ texto_compras_sin_articulo }}
+				</b-alert>
+
 				<!-- 6. Qué buscó -->
 				<template v-if="actividad.busquedas.length">
 					<h6 class="actividad-cliente__seccion">
@@ -276,6 +294,16 @@ export default {
 				{ key: 'vistas', label: 'Veces que lo miró' },
 				{ key: 'tiempo_segundos', label: 'Tiempo' },
 				{ key: 'agregados_al_carrito', label: 'Al carrito' },
+				/*
+					"Qué compró" es una de las cinco señales que se pidieron por nombre, y hasta
+					el 17/8/2026 no estaba en ninguna parte de esta pantalla: el artículo comprado
+					asomaba SOLO en la línea de tiempo, que está topeada en 50 eventos y que con
+					"Todo el historial" directamente no existe. El comerciante que preguntaba qué
+					compró veía "Compras: 3" y nada más.
+					El formatter deja el 0 explícito en vez de una celda vacía: "no lo compró" es
+					un dato, y una celda en blanco se lee como "no sabemos".
+				*/
+				{ key: 'comprados', label: 'Compró', formatter: value => Number(value) || 0 },
 				{ key: 'ultima_vez', label: 'Última vez' },
 			]
 		},
@@ -290,6 +318,17 @@ export default {
 		/**
 		 * Las tarjetas de totales, ya formateadas. Se arman acá y no en el template para que el
 		 * envoltorio (el v-for) no tenga que saber nada de cómo se formatea cada número.
+		 *
+		 * 🔴 VAN TODOS LOS TOTALES QUE VIAJAN AL PROMPT DE LA IA, Y NO UN SUBCONJUNTO. Hasta el
+		 * 17/8/2026 faltaban `quitados_del_carrito` y `checkouts_empezados`, que sí se le mandan
+		 * a la IA: el párrafo de arriba podía decir "empezó a comprar una vez y no cerró" y no
+		 * había un solo número abajo que lo respaldara — justo lo contrario de lo que promete
+		 * `ResumenIa.vue` ("los números de abajo son la prueba de lo que este párrafo dice"), y
+		 * peor todavía con "Todo el historial", donde tampoco hay línea de tiempo donde buscarlo.
+		 * Si mañana se le suma un dato al prompt, la tarjeta va en el mismo commit.
+		 *
+		 * El orden sigue el embudo del comprador —miró, buscó, puso en el carrito, sacó, empezó
+		 * a comprar, compró— porque así se lee de un vistazo dónde se cayó.
 		 */
 		tarjetas_de_totales() {
 			if (!this.actividad || !this.actividad.totales) {
@@ -302,10 +341,39 @@ export default {
 				{ titulo: 'Tiempo total', valor: this.tiempo_en_criollo(totales.tiempo_total_segundos) },
 				{ titulo: 'Búsquedas', valor: this.busquedas_en_criollo(totales) },
 				{ titulo: 'Al carrito', valor: totales.agregados_al_carrito },
+				{ titulo: 'Sacó del carrito', valor: totales.quitados_del_carrito },
+				// El carrito abandonado es de lo más accionable que tiene esta pantalla: alguien
+				// que empezó a comprar y no cerró está a un mensaje de comprar.
+				{ titulo: 'Empezó a comprar', valor: totales.checkouts_empezados },
 				{ titulo: 'Compras', valor: totales.compras },
 				{ titulo: 'Monto comprado', valor: this.price(totales.monto_comprado) },
 				{ titulo: 'Última actividad', valor: this.fecha_en_criollo(totales.ultima_actividad) },
 			]
+		},
+		/**
+		 * El aviso de cuántas compras del periodo el tracking no pudo atribuir a ningún
+		 * artículo, o '' cuando las pudo atribuir todas.
+		 *
+		 * Sale de `totales.compras_sin_articulo`, que cuenta los `checkout_complete` que
+		 * llegaron sin `article_id`. Ese caso existe de verdad —el evento no garantiza traerlo—
+		 * y hasta ahora el porqué estaba escrito con lujo de detalle en un docblock de PHP, o
+		 * sea en ningún lado para el comerciante.
+		 *
+		 * @returns {String}
+		 */
+		texto_compras_sin_articulo() {
+			if (!this.actividad || !this.actividad.totales) {
+				return ''
+			}
+			let sin_atribuir = Number(this.actividad.totales.compras_sin_articulo) || 0
+			if (!sin_atribuir) {
+				return ''
+			}
+			let cuantas = sin_atribuir == 1
+				? 'una compra no se pudo atribuir'
+				: sin_atribuir + ' compras no se pudieron atribuir'
+			return 'De lo que compró en este periodo, ' + cuantas
+				+ ' a ningún artículo: la tienda no siempre manda cuál fue. Esas compras no están sumadas en el detalle por artículo.'
 		},
 	},
 	methods: {
@@ -346,6 +414,14 @@ export default {
 		},
 		/**
 		 * Segundos a algo que se pueda leer de un vistazo. Nunca muestra "610 segundos".
+		 *
+		 * 🔴 LOS MINUTOS SE TRUNCAN (`Math.floor`), Y LA CONVENCIÓN ES UNA SOLA EN TODO EL
+		 * SISTEMA. La otra punta es `ConsultasSistemaIaHelper` de `empresa-api` (las tools
+		 * `consultar_actividad_de_un_cliente` e `interesados_en_un_articulo`), que le pasa los
+		 * mismos segundos a la IA convertidos a minutos. Hasta el 17/8/2026 allá se redondeaba
+		 * y acá se truncaba: con 220 segundos medidos, esta pantalla decía 3 min y el agente de
+		 * WhatsApp decía 4, sobre el mismo artículo del mismo cliente. Se unificó a truncar,
+		 * que es lo que ya hacía la pantalla. Si tocás una punta, tocá la otra.
 		 */
 		tiempo_en_criollo(segundos) {
 			let total = Number(segundos) || 0
@@ -433,7 +509,9 @@ export default {
 	&__tabla
 		// responsive + min-width: la tabla scrollea horizontal en tablet y telefono en vez de
 		// espichar las celdas hasta que el nombre del articulo quede en una letra por linea.
-		min-width: 620px
+		// 700 y no 620 desde que la tabla de articulos tiene la columna "Compro": con el ancho
+		// viejo la columna nueva entraba a costa de espichar el nombre del articulo.
+		min-width: 700px
 	&__linea
 		list-style: none
 		padding-left: 0

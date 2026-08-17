@@ -28,6 +28,13 @@ axios.defaults.baseURL = process.env.VUE_APP_API_URL
  * lee del agregado por día, y eso se nota en la respuesta: `fuente` viene 'agregado',
  * `linea_de_tiempo` viene siempre [] y las fechas vienen sin hora.
  *
+ * Dos claves del bloque `actividad` que se agregaron el 17/8/2026 y que van juntas o no van:
+ * `articulos[].comprados` (veces que ese artículo apareció en una compra cerrada del periodo) y
+ * `totales.compras_sin_articulo` (compras que el tracking NO pudo atribuir a ningún artículo,
+ * porque `checkout_complete` no garantiza traer el artículo). La segunda es la que vuelve
+ * honesta a la primera: mostrar el detalle por artículo sin decir cuánto quedó afuera hace que
+ * la columna no cierre con el total de compras y nadie sepa por qué.
+ *
  * 🔴 El resumen NO manda los números calculados: el endpoint los recalcula del lado del
  * servidor. Mandarlos desde acá sería dejar que el navegador le dicte a la IA qué decir.
  */
