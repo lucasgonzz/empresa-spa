@@ -14,14 +14,23 @@
 // la maquina comparten una sola app de Pusher y los canales son publicos (ver helpers/entorno.js),
 // el aviso le llego a los specs que corrieron despues, en OTRA pagina. O sea que la contaminacion
 // no es solo entre entornos: tambien es entre specs de esta misma suite.
+//
+// Lo segundo que agrega: cuando un test termina en rojo, imprime en el momento que fue lo que
+// fallo, en vez de dejar a quien mira la consola esperando el resumen del final (ver
+// helpers/informe-de-fallo.js).
 const base = require('@playwright/test')
 const { aislar_broadcasts } = require('./helpers/entorno')
+const { informar_si_fallo } = require('./helpers/informe-de-fallo')
 
 const test = base.test.extend({
 	page: async ({ page }, use) => {
 		await aislar_broadcasts(page)
 		await use(page)
 	},
+})
+
+test.afterEach(async ({}, testInfo) => {
+	informar_si_fallo(testInfo)
 })
 
 module.exports = {

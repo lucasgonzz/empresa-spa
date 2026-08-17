@@ -1520,16 +1520,91 @@ export default {
 			console.log('*********************')
 
 		},
+		/**
+		 * Deja el foco en el primer campo editable del pivote de la fila recien agregada (en una
+		 * compra, "Cantidad"), para poder tipear la cantidad sin tocar el mouse.
+		 *
+		 * 🔴 El fallo MEDIDO que esto arregla (17/8/2026) esta en primerInputDelPivote, no aca:
+		 * la version anterior apuntaba siempre a properties_to_set[0] del modelo y, con una
+		 * preferencia de columnas que oculte esa primera columna, buscaba un elemento que no existe
+		 * y no enfocaba nada. Reproducido en el slot con "Cantidad" oculta: el foco quedaba en el
+		 * buscador (provider_order-articles) en vez de ir a la fila nueva.
+		 *
+		 * Lo de reintentar es lo segundo, y es endurecimiento, no un fallo medido: el modelo se
+		 * agrega desde el modal del buscador (common-vue/components/search/Modal.vue), que emite
+		 * setSelected y CIERRA el modal en la misma vuelta. Mientras el modal se cierra --~300 ms de
+		 * transicion-- b-modal tiene su trampa de foco puesta (enforce-focus devuelve adentro
+		 * cualquier focusin de afuera) y al terminar le devuelve el foco al elemento que lo abrio,
+		 * que es el buscador. Un unico focus() a los 300 ms cae justo en esa ventana y depende de
+		 * ganar una carrera. Medido en el slot, hoy la gana; no hay motivo para dejarlo atado a eso.
+		 *
+		 * Se reintenta hasta que el foco QUEDA --document.activeElement es el input-- y no una
+		 * cantidad fija de veces: esa es la condicion real, no una espera a ojo. En cuanto queda, el
+		 * ciclo corta, asi que no le pelea el foco al usuario si el usuario ya eligio otro campo.
+		 *
+		 * @param {Object} prop propiedad belongs_to_many a la que se agrego el modelo.
+		 * @param {Object} model_to_add modelo recien agregado; su id arma el nombre de la clase.
+		 * @returns {void}
+		 */
 		setTableFocus(prop, model_to_add) {
-			if (prop.belongs_to_many.properties_to_set && prop.belongs_to_many.properties_to_set.length) {
-				setTimeout(() => {
-					let class_name = prop.belongs_to_many.model_name+'-'+prop.belongs_to_many.properties_to_set[0].key+'-'+model_to_add.id
-					let elements = document.getElementsByClassName(class_name) 
-					if (elements.length) {
-						elements[elements.length-1].focus()
-					}
-				}, 300)
+			if (!prop.belongs_to_many.properties_to_set || !prop.belongs_to_many.properties_to_set.length) {
+				return
 			}
+
+			let self = this
+			let intentos = 0
+			// 24 x 50 ms = 1,2 s: mas que la transicion de cierre del modal y que el devolver-foco
+			// que dispara al terminar, con margen para una maquina cargada (seis slots a la vez).
+			let maximo_de_intentos = 24
+
+			let intentar = function() {
+				let input = self.primerInputDelPivote(prop, model_to_add)
+
+				if (input) {
+					if (document.activeElement === input) {
+						return
+					}
+					input.focus()
+				}
+
+				intentos++
+				if (intentos < maximo_de_intentos) {
+					setTimeout(intentar, 50)
+				}
+			}
+
+			setTimeout(intentar, 50)
+		},
+		/**
+		 * Primer campo editable del pivote que EXISTE en el DOM para la fila recien agregada.
+		 *
+		 * No se toma properties_to_set[0] a ciegas: desde que las columnas de una relacion se
+		 * pueden configurar por usuario (form/BelongsToManyTable.vue), la primera columna declarada
+		 * en el modelo puede estar oculta para quien esta cargando. El foco tiene que ir al primer
+		 * campo que esa persona realmente ve, no a uno que no se dibujo.
+		 *
+		 * El nombre de la clase es el mismo que arma PivotProp.vue con inputId(prop). Se toma el
+		 * ultimo elemento, no el primero, por el mismo motivo que la version anterior de este
+		 * metodo: si la misma fila esta dibujada por dos tablas a la vez, la de mas abajo en el DOM
+		 * es la que el usuario esta usando.
+		 *
+		 * @param {Object} prop propiedad belongs_to_many.
+		 * @param {Object} model_to_add modelo recien agregado.
+		 * @returns {HTMLElement|null} el input, o null si todavia no se dibujo ninguno.
+		 */
+		primerInputDelPivote(prop, model_to_add) {
+			let encontrado = null
+			prop.belongs_to_many.properties_to_set.forEach(prop_to_set => {
+				if (encontrado) {
+					return
+				}
+				let class_name = prop.belongs_to_many.model_name+'-'+prop_to_set.key+'-'+model_to_add.id
+				let elements = document.getElementsByClassName(class_name)
+				if (elements.length) {
+					encontrado = elements[elements.length-1]
+				}
+			})
+			return encontrado
 		},
 		clickEnter(prop) {
 			/*

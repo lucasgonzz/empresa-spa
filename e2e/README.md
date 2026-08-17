@@ -37,25 +37,23 @@ ella `src/main.js` tira `You must pass your app key when you instantiate Pusher`
 app: la página queda en blanco, sin un solo `data-testid`, y desde el test se ve como "no encuentro
 el input de login".
 
-> ⚠️ **Estado de la suite (15/8/2026): 9 pasan, 2 fallan.** Reemplaza al estado del 10/8, que decía
-> que la descarga de recursos no terminaba en 120 s: eso lo resolvió la misión 41 al cambiar las ~70
-> llamadas del arranque por un solo `POST /recursos-iniciales`. Medido hoy: **68 recursos en 35-45 s**
-> y el proyecto `setup` en ~20-48 s. La corrida completa son ~12 minutos.
+> ⚠️ **Estado de la suite (17/8/2026): 10 pasan, 1 falla.** Reemplaza al estado del 15/8. Medido:
+> **68 recursos en 35-45 s** por cada spec que entra a un módulo. La corrida completa son ~11 minutos.
 >
-> En verde: `setup`, `alta-compra`, los tres de `buscador-filtros-invalidan-busqueda`, los tres de
-> `estado-vacio-centrado` y `menu-crear-submenu-importacion`.
+> - `alta-articulo-desde-buscador` **está en verde desde el 17/8/2026**, y no se tocó ninguna
+>   aserción para lograrlo. Lo que estaba mal era *dónde* miraba el test: un artículo recién creado
+>   desde el buscador nace con `status = 'inactive'`, y `props_to_show` declara el nombre con
+>   `show_in_input_if: ['status', '=', 'inactive']`, así que la celda del nombre es un **textarea
+>   editable** —correcto: es para poder completar el artículo sin salir de la compra—. El nombre
+>   estaba ahí, en el `value`; `toContainText` sobre el `<tr>` lee texto y el `value` de un input no
+>   es texto. Ahora se lee la celda por `data-testid` con el sufijo `-editable` (ver la convención
+>   más abajo) y se compara con `toHaveValue`. Se le sumó además la aserción que faltaba: que el
+>   foco quede en el campo Cantidad de la fila nueva.
+> - `limpiar-filtros-desde-columna` **sigue en rojo**: el clic sobre la lupa de la columna "Nombre"
+>   lo intercepta `.cont-th`. Ojo que este spec ubica la columna por texto visible
+>   (`hasText: 'Nombre'`), que es justamente lo que la convención de más abajo prohíbe.
 >
-> **Los dos rojos ya estaban rojos antes de esta tanda de arreglos**, verificado corriéndolos contra
-> el commit base con `src` y `e2e` originales:
->
-> - `alta-articulo-desde-buscador`: el artículo se crea y se agrega a la compra, pero la **celda del
->   nombre de la fila queda vacía**, así que la aserción de que la fila contiene el nombre falla.
->   Comprobado que no lo causa `full_reactivity`: apagándolo el fallo es idéntico.
-> - `limpiar-filtros-desde-columna`: el clic sobre la lupa de la columna "Nombre" lo intercepta
->   `.cont-th`. Ojo que este spec ubica la columna por texto visible (`hasText: 'Nombre'`), que es
->   justamente lo que la convención de más abajo prohíbe.
->
-> Los dos están en el hallazgo `20260815-dos-specs-e2e-que-nacieron-en-rojo`.
+> El hallazgo `20260815-dos-specs-e2e-que-nacieron-en-rojo` queda válido para el segundo.
 
 ---
 
@@ -81,6 +79,24 @@ npm run test:e2e           # corre los specs una vez, en Chromium, sin UI
 npm run test:e2e:ui        # modo interactivo (Playwright UI), para debuggear paso a paso
 npm run test:e2e:codegen   # grabador: abre el navegador y genera el codigo del test al interactuar
 ```
+
+## Cuando un test falla, que mirar
+
+Un test en rojo imprime **en el momento** un bloque con el nombre del test, el archivo y la línea,
+el mensaje del error (locator, esperado, recibido y el call log) y dónde quedan la captura y el
+trace. Antes eso solo salía en el resumen del final de la corrida: entre la cruz y el detalle
+pasaban minutos, y si uno cortaba con `Ctrl+C` al ver la cruz, el resumen no se imprimía nunca y la
+consola quedaba sin ninguna información. Lo engancha `e2e/fixtures.js` (y `e2e/auth.setup.js` por
+su cuenta) llamando a `e2e/helpers/informe-de-fallo.js`.
+
+Además de eso quedan, para cada fallo:
+
+```
+npx playwright show-report                          # el informe html de toda la corrida
+npx playwright show-trace test-results/<carpeta>/trace.zip   # el trace navegable de un fallo
+```
+
+El trace es lo que evita repetir los ~11 minutos: trae el DOM de cada paso, la red y la consola.
 
 ## Esperar la descarga de recursos del arranque
 
@@ -115,8 +131,19 @@ con `data-recurso` y `data-estado`.
 que falló se marca igual (ver `marcar_descargado` en `Index.vue` y el hallazgo
 `20260812-una-descarga-fallida-del-arranque-queda-marcada-como-lista`).
 
-El `storageState` guarda cookies y localStorage, **no** el store de Vuex, así que cada spec baja
-los recursos de nuevo en su propia página. Que `auth.setup.js` ya haya esperado no exime al spec.
+### El `setup` de login NO espera los recursos
+
+`auth.setup.js` hace login, guarda el `storageState` y se va. **No espera la descarga**, y eso es a
+propósito desde el 17/8/2026.
+
+El `storageState` guarda cookies y localStorage, **no** el store de Vuex: los ~68 catálogos no
+quedan guardados en ningún lado. Esperarlos en el setup era pagar 35-45 segundos por una descarga
+que se tiraba dos segundos después, cuando ese navegador se cerraba — y el primer spec arrancaba en
+una página nueva y la volvía a hacer igual. La espera pertenece a cada spec que entra a la interfaz
+de un módulo, como primer paso después de su `page.goto()`, y ahí está.
+
+El recorrido completo por la tarjeta y el panel (el helper sin `{ abrir_panel: false }`), que antes
+también se hacía en el setup, lo cubre `alta-compra.spec.js`.
 
 ## Convencion de selectores: `data-testid`
 
@@ -137,6 +164,14 @@ por campo — se sigue la misma convencion que ya usaban los atributos `id`/`dus
   la compra). Como el id real de un articulo recien creado no se conoce de antemano, los tests
   ubican la fila recien agregada con `.last()` sobre `[data-testid^="article-amount-"]` (las
   filas se agregan siempre al final, ver `ModelForm.vue` linea ~1311).
+- **Celda de una fila que se edita en linea porque el modelo esta incompleto (`Tr.vue`,
+  `show_in_input_if`)**: `data-testid="<model_name>-<key>-<id>-editable"`. Ejemplo:
+  `article-name-47-editable` (el nombre de un articulo recien creado, que nace con
+  `status = 'inactive'`). El sufijo `-editable` no es decorativo: sin el, el testid seria
+  identico al de una columna del pivote, y la misma key puede existir en los dos lados a la vez
+  (por eso `form/BelongsToManyTable.vue` desambigua las etiquetas con "(pivot)"). **Estas celdas
+  se leen con `toHaveValue`, no con `toContainText`**: el `value` de un input no es texto, y una
+  asercion sobre el `<tr>` las ve vacias con la interfaz andando bien.
 - **Boton de guardar/crear generico**: `btn-guardar-<model_name>` y `btn-crear-<model_name>`
   (mismo criterio que los atributos `dusk` ya existentes `btn_guardar_<model_name>` /
   `btn_create_<model_name>`, agregados en paralelo).
