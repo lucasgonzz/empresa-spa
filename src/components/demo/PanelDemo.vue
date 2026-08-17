@@ -24,7 +24,30 @@
 
 			<div class="panel-demo__cuerpo">
 
-				<div v-if="cargando" class="panel-demo__cargando">Cargando tu recorrido...</div>
+				<!--
+					Esqueleto de carga. Solo se ve cuando el panel se monta sin el plan en mano
+					—o sea despues de un F5—: entrando por el link, el ingreso ya lo espero.
+				-->
+				<div
+				v-if="cargando"
+				class="panel-demo__esqueleto"
+				role="status"
+				aria-label="Cargando tu recorrido">
+					<span
+					v-for="n in 4"
+					:key="n"
+					class="panel-demo__esqueleto-barra"></span>
+				</div>
+
+				<!--
+					El plan volvio vacio: un 204 (instancia sin canal) o una caida. Antes acá no
+					quedaba nada y el panel se veia roto; el lead no tiene por que deducir que
+					eso era un estado previsto.
+				-->
+				<p v-else-if="sin_recorrido" class="panel-demo__vacio">
+					Tu recorrido todavía no está listo. Mientras tanto podés recorrer el sistema
+					por tu cuenta, y anotar acá abajo cualquier duda.
+				</p>
 
 				<section
 				v-for="seccion in secciones"
@@ -32,53 +55,52 @@
 				class="panel-demo__seccion">
 
 					<div class="panel-demo__seccion-encabezado">
-						<h3 class="panel-demo__seccion-titulo">{{ seccion.titulo }}</h3>
-						<!-- El denominador es lo que le toco a ESTE lead, nunca un total global. -->
-						<span class="panel-demo__progreso">{{ vistos_de(seccion) }}/{{ nucleo_de(seccion).length }}</span>
+						<div class="panel-demo__seccion-fila">
+							<h3 class="panel-demo__seccion-titulo">{{ seccion.titulo }}</h3>
+							<!-- El denominador es lo que le toco a ESTE lead, nunca un total global. -->
+							<span class="panel-demo__progreso">{{ vistos_de(seccion) }}/{{ nucleo_de(seccion).length }}</span>
+						</div>
+						<!--
+							El mismo dato que el numerito, pero leible de un vistazo. No agrega
+							informacion: le da forma a la que ya estaba.
+						-->
+						<div class="panel-demo__medidor">
+							<div
+							class="panel-demo__medidor-relleno"
+							:style="{ width: porcentaje_de(seccion) + '%' }"></div>
+						</div>
 					</div>
 
 					<ul class="panel-demo__lista">
 						<li
 						v-for="clip in nucleo_de(seccion)"
 						:key="clip.id"
-						class="panel-demo__item">
+						class="panel-demo__item"
+						:class="{ 'panel-demo__item--abierto': esta_abierto(clip) }">
 							<button
 							type="button"
 							class="panel-demo__item-boton"
 							:class="{ 'panel-demo__item-boton--hecho': fue_visto(clip) }"
+							:aria-expanded="esta_abierto(clip) ? 'true' : 'false'"
 							@click="alternar_clip(clip)">
-								<span class="panel-demo__item-marca">{{ fue_visto(clip) ? '✓' : '' }}</span>
+								<span
+								class="panel-demo__item-marca"
+								:class="{ 'panel-demo__item-marca--hecha': fue_visto(clip) }"
+								aria-hidden="true"></span>
 								<span class="panel-demo__item-titulo">{{ clip.titulo }}</span>
+								<span class="panel-demo__item-flecha" aria-hidden="true"></span>
 							</button>
 
-							<div v-if="clip_abierto_id === clip.id" class="panel-demo__tarjeta">
-								<video
-								v-if="clip.url"
-								ref="video"
-								class="panel-demo__video"
-								:class="{ 'panel-demo__video--grande': video_grande }"
-								:src="clip.url"
-								controls
-								playsinline
-								@play="al_reproducir"
-								@pause="al_pausar"
-								@ended="al_terminar(clip)"></video>
-
-								<!--
-									Un clip sin video grabado se abre igual y "Probar" queda
-									habilitado: si no, con los videos sin subir la demo queda
-									intransitable.
-								-->
-								<p v-else class="panel-demo__sin-video">Este video todavía no está disponible.</p>
-
-								<button
-								type="button"
-								class="panel-demo__probar"
-								:disabled="!puede_probar(clip)"
-								@click="probar()">
-									Probar
-								</button>
-							</div>
+							<tarjeta-clip
+							v-if="esta_abierto(clip)"
+							ref="tarjeta"
+							:clip="clip"
+							:grande="video_grande"
+							:puede_probar="puede_probar(clip)"
+							@reproducir="al_reproducir"
+							@pausar="al_pausar"
+							@terminado="al_terminar(clip)"
+							@probar="probar"></tarjeta-clip>
 						</li>
 					</ul>
 
@@ -89,37 +111,28 @@
 							<li
 							v-for="clip in biblioteca_de(seccion)"
 							:key="clip.id"
-							class="panel-demo__item">
+							class="panel-demo__item"
+							:class="{ 'panel-demo__item--abierto': esta_abierto(clip) }">
 								<button
 								type="button"
 								class="panel-demo__item-boton panel-demo__item-boton--secundario"
+								:aria-expanded="esta_abierto(clip) ? 'true' : 'false'"
 								@click="alternar_clip(clip)">
+									<span class="panel-demo__item-marca panel-demo__item-marca--suelta" aria-hidden="true"></span>
 									<span class="panel-demo__item-titulo">{{ clip.titulo }}</span>
+									<span class="panel-demo__item-flecha" aria-hidden="true"></span>
 								</button>
 
-								<div v-if="clip_abierto_id === clip.id" class="panel-demo__tarjeta">
-									<video
-									v-if="clip.url"
-									ref="video"
-									class="panel-demo__video"
-									:class="{ 'panel-demo__video--grande': video_grande }"
-									:src="clip.url"
-									controls
-									playsinline
-									@play="al_reproducir"
-									@pause="al_pausar"
-									@ended="al_terminar(clip)"></video>
-
-									<p v-else class="panel-demo__sin-video">Este video todavía no está disponible.</p>
-
-									<button
-									type="button"
-									class="panel-demo__probar"
-									:disabled="!puede_probar(clip)"
-									@click="probar()">
-										Probar
-									</button>
-								</div>
+								<tarjeta-clip
+								v-if="esta_abierto(clip)"
+								ref="tarjeta"
+								:clip="clip"
+								:grande="video_grande"
+								:puede_probar="puede_probar(clip)"
+								@reproducir="al_reproducir"
+								@pausar="al_pausar"
+								@terminado="al_terminar(clip)"
+								@probar="probar"></tarjeta-clip>
 							</li>
 						</ul>
 					</div>
@@ -146,6 +159,14 @@
 				rows="3"
 				maxlength="1500"
 				@input="al_escribir_nota"></textarea>
+				<!--
+					El contador aparece solo cerca del tope. Mostrarlo siempre seria ruido: el
+					lead escribe dos renglones y no le importa. Cuando esta por chocarse con el
+					limite, sin aviso, parece que el campo se rompio.
+				-->
+				<p v-if="cerca_del_tope" class="panel-demo__notas-restante">
+					Te quedan {{ caracteres_restantes }} caracteres
+				</p>
 			</footer>
 		</aside>
 
@@ -154,6 +175,18 @@
 	</div>
 </template>
 <script>
+import TarjetaClip from '@/components/demo/TarjetaClip'
+
+/**
+ * Espeja el `maxlength="1500"` del template, que NO es cosmetico: el emisor descarta `datos`
+ * por encima de 2 KB serializados. El literal se deja tambien en el HTML a proposito, para que
+ * quien busque "maxlength" lo encuentre donde se aplica.
+ */
+const TOPE_NOTAS = 1500
+
+/** A partir de aca aparece el contador de caracteres restantes. */
+const AVISO_TOPE_NOTAS = 1200
+
 /**
  * Panel lateral de tutoriales de la demo (misión 51).
  *
@@ -166,6 +199,9 @@
  * haciendo la acción de verdad en el sistema. Eso no es un defecto y no hay que "arreglarlo".
  */
 export default {
+	components: {
+		TarjetaClip,
+	},
 	data() {
 		return {
 			// El panel arranca abierto: es lo primero que el lead tiene que ver al entrar.
@@ -211,9 +247,32 @@ export default {
 				this.$store.commit('demo/setNotas', texto)
 			},
 		},
+		/**
+		 * El plan ya volvió y no trajo secciones. No es lo mismo que "todavía no volvió": eso
+		 * es el esqueleto.
+		 *
+		 * @returns {Boolean}
+		 */
+		sin_recorrido() {
+			return this.$store.state.demo.plan_cargado && this.secciones.length === 0
+		},
+		/**
+		 * @returns {Number}
+		 */
+		caracteres_restantes() {
+			return TOPE_NOTAS - this.notas.length
+		},
+		/**
+		 * @returns {Boolean}
+		 */
+		cerca_del_tope() {
+			return this.notas.length >= AVISO_TOPE_NOTAS
+		},
 	},
 	mounted() {
-		// Única llamada del panel, y solo ocurre dentro de una demo.
+		// Única llamada del panel, y solo ocurre dentro de una demo. Entrando por el link el
+		// ingreso ya la despachó y el store memorizó la promesa, así que acá no se paga un
+		// segundo GET: se reusa el mismo. Después de un F5 este es el que la dispara.
 		this.$store.dispatch('demo/cargar_plan')
 	},
 	beforeDestroy() {
@@ -249,6 +308,13 @@ export default {
 			return this.clips_vistos.indexOf(clip.id) !== -1
 		},
 		/**
+		 * @param {Object} clip
+		 * @returns {Boolean}
+		 */
+		esta_abierto(clip) {
+			return this.clip_abierto_id === clip.id
+		},
+		/**
 		 * @param {Object} seccion
 		 * @returns {Number} Clips de núcleo de esta sección que el lead ya terminó.
 		 */
@@ -257,6 +323,21 @@ export default {
 			return this.nucleo_de(seccion).filter(function (clip) {
 				return self.fue_visto(clip)
 			}).length
+		},
+		/**
+		 * Ancho del medidor de la sección. Es el mismo dato del numerito, en porcentaje.
+		 *
+		 * @param {Object} seccion
+		 * @returns {Number}
+		 */
+		porcentaje_de(seccion) {
+			const total = this.nucleo_de(seccion).length
+
+			if (total === 0) {
+				return 0
+			}
+
+			return Math.round((this.vistos_de(seccion) / total) * 100)
 		},
 		/**
 		 * "Probar" se desbloquea cuando el video llegó al final —adelantar vale— o cuando el
@@ -295,19 +376,22 @@ export default {
 		/**
 		 * Pausa el video desde el fondo difuminado, que es la forma natural de "salir".
 		 *
+		 * La tarjeta abierta es una sola, pero el `ref` está adentro de un `v-for`, así que Vue
+		 * lo entrega como arreglo. Se contemplan las dos formas por las dudas.
+		 *
 		 * @returns {void}
 		 */
 		pausar_video() {
-			const videos = this.$refs.video
+			const tarjetas = this.$refs.tarjeta
 
-			if (!videos) {
+			if (!tarjetas) {
 				return
 			}
 
-			const video = Array.isArray(videos) ? videos[0] : videos
+			const tarjeta = Array.isArray(tarjetas) ? tarjetas[0] : tarjetas
 
-			if (video && typeof video.pause === 'function') {
-				video.pause()
+			if (tarjeta && typeof tarjeta.pausar === 'function') {
+				tarjeta.pausar()
 			}
 		},
 		/**
@@ -413,6 +497,12 @@ export default {
 </script>
 <style lang="sass">
 $panel-demo-ancho: 500px
+// Paleta de marca de ComercioCity: la del logo y la de la pagina de experiencia.
+$panel-demo-celeste: #0B84F8
+$panel-demo-violeta: #3A31FC
+$panel-demo-tinta: #111827
+$panel-demo-gris: #6b7280
+$panel-demo-linea: rgba(17, 24, 39, 0.07)
 
 .panel-demo
 	position: fixed
@@ -423,37 +513,85 @@ $panel-demo-ancho: 500px
 	max-width: 100%
 	z-index: 1040
 	display: flex
-	transition: transform 0.35s ease
+	transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)
 
 .panel-demo--colapsado
 	transform: translateX(100%)
 
 .panel-demo__hoja
+	position: relative
+	// Debajo del tirador: el halo animado del borde no tiene que pasarle por encima.
+	z-index: 1
 	display: flex
 	flex-direction: column
 	width: 100%
 	height: 100%
 	background: #ffffff
-	border-left: 1px solid #e5e7eb
+	border-left: 1px solid $panel-demo-linea
 	box-shadow: -8px 0 24px rgba(17, 24, 39, 0.06)
+
+// ---------------------------------------------------------------------------------------
+// El halo del borde izquierdo (punto 4 de la mision del 17/8).
+//
+// Son dos capas sobre el mismo borde: `::before` es el filo nitido de 3px y `::after` el
+// resplandor difuso que se derrama hacia el sistema. Las dos miden el DOBLE de alto que el
+// panel y se mueven con `transform`, no con `background-position`: transform lo resuelve el
+// compositor y no repinta nada, y el degradado tiene periodo 1/2 de su alto, asi que correrlo
+// -50% deja la imagen identica y el ciclo no se ve.
+//
+// Es el unico momento animado del panel a proposito. La estetica de referencia es Apple, y
+// Apple no significa mas animaciones: significa pocos momentos, bien elegidos.
+// ---------------------------------------------------------------------------------------
+.panel-demo__hoja::before,
+.panel-demo__hoja::after
+	content: ''
+	position: absolute
+	top: 0
+	height: 200%
+	pointer-events: none
+	background: linear-gradient(180deg, $panel-demo-celeste, $panel-demo-violeta, $panel-demo-celeste, $panel-demo-violeta, $panel-demo-celeste)
+	animation: panel-demo-halo 9s linear infinite
+	will-change: transform
+
+// Con el panel colapsado el halo esta fuera de pantalla: que siga corriendo es gastar
+// bateria del lead para nada.
+.panel-demo--colapsado .panel-demo__hoja::before,
+.panel-demo--colapsado .panel-demo__hoja::after
+	animation-play-state: paused
+
+.panel-demo__hoja::before
+	left: -1px
+	width: 3px
+
+.panel-demo__hoja::after
+	left: -13px
+	width: 14px
+	filter: blur(9px)
+	opacity: 0.45
 
 .panel-demo__tirador
 	position: absolute
 	top: 50%
 	left: -36px
+	// Arriba del halo del borde.
+	z-index: 2
 	transform: translateY(-50%)
 	width: 36px
 	height: 72px
-	border: 1px solid #e5e7eb
+	border: 1px solid $panel-demo-linea
 	border-right: none
-	border-radius: 8px 0 0 8px
+	border-radius: 10px 0 0 10px
 	background: #ffffff
-	color: #111827
+	color: $panel-demo-tinta
 	cursor: pointer
 	display: flex
 	align-items: center
 	justify-content: center
 	box-shadow: -4px 0 12px rgba(17, 24, 39, 0.08)
+	transition: color 0.2s ease
+
+.panel-demo__tirador:hover
+	color: $panel-demo-celeste
 
 .panel-demo__tirador--llamando
 	animation: panel-demo-latido 1.6s ease-in-out infinite
@@ -463,48 +601,115 @@ $panel-demo-ancho: 500px
 	line-height: 1
 
 .panel-demo__encabezado
-	padding: 1.5rem 1.5rem 1rem
-	border-bottom: 1px solid #f3f4f6
+	padding: 1.5rem 1.5rem 1.125rem
+	border-bottom: 1px solid $panel-demo-linea
 
 .panel-demo__titulo
-	font-size: 1.125rem
+	font-size: 1.25rem
 	font-weight: 600
-	color: #111827
+	// Tracking negativo: los titulos grandes se leen separados si se los deja en cero.
+	letter-spacing: -0.02em
+	line-height: 1.2
+	color: $panel-demo-tinta
 	margin: 0
 
 .panel-demo__bajada
 	font-size: 0.875rem
-	color: #6b7280
+	line-height: 1.45
+	color: $panel-demo-gris
 	margin: 0.25rem 0 0
 
+// El cuerpo va en gris muy claro y cada seccion en una tarjeta blanca: es lo que separa una
+// seccion de la otra sin dibujar una sola linea de mas.
 .panel-demo__cuerpo
 	flex: 1 1 auto
 	overflow-y: auto
-	padding: 1rem 1.5rem
+	padding: 1rem 1.25rem 1.25rem
+	background: #f7f7f8
 
-.panel-demo__cargando
+.panel-demo__esqueleto
+	display: flex
+	flex-direction: column
+	gap: 0.75rem
+	padding: 1rem 1.125rem
+	border-radius: 14px
+	background: #ffffff
+	border: 1px solid $panel-demo-linea
+
+.panel-demo__esqueleto-barra
+	height: 12px
+	border-radius: 999px
+	background: #ececee
+	animation: panel-demo-respirar 1.5s ease-in-out infinite
+
+.panel-demo__esqueleto-barra:nth-child(1)
+	width: 55%
+
+.panel-demo__esqueleto-barra:nth-child(2)
+	width: 88%
+
+.panel-demo__esqueleto-barra:nth-child(3)
+	width: 76%
+
+.panel-demo__esqueleto-barra:nth-child(4)
+	width: 62%
+
+.panel-demo__vacio
+	margin: 0
+	padding: 1rem 1.125rem
+	border-radius: 14px
+	background: #ffffff
+	border: 1px solid $panel-demo-linea
 	font-size: 0.875rem
-	color: #6b7280
+	line-height: 1.5
+	color: $panel-demo-gris
 
 .panel-demo__seccion
-	margin-bottom: 1.75rem
+	margin-bottom: 0.875rem
+	padding: 1rem 0.375rem 0.5rem
+	border-radius: 14px
+	background: #ffffff
+	border: 1px solid $panel-demo-linea
+	box-shadow: 0 1px 2px rgba(17, 24, 39, 0.03)
+
+.panel-demo__seccion:last-child
+	margin-bottom: 0
 
 .panel-demo__seccion-encabezado
+	padding: 0 0.75rem
+	margin-bottom: 0.75rem
+
+.panel-demo__seccion-fila
 	display: flex
 	align-items: baseline
 	justify-content: space-between
-	margin-bottom: 0.5rem
+	gap: 0.75rem
 
 .panel-demo__seccion-titulo
 	font-size: 0.9375rem
 	font-weight: 600
-	color: #111827
+	letter-spacing: -0.01em
+	color: $panel-demo-tinta
 	margin: 0
 
 .panel-demo__progreso
-	font-size: 0.8125rem
-	color: #6b7280
+	flex: 0 0 auto
+	font-size: 0.75rem
+	color: $panel-demo-gris
 	font-variant-numeric: tabular-nums
+
+.panel-demo__medidor
+	height: 3px
+	margin-top: 0.5rem
+	border-radius: 999px
+	background: #ececee
+	overflow: hidden
+
+.panel-demo__medidor-relleno
+	height: 100%
+	border-radius: 999px
+	background: linear-gradient(90deg, $panel-demo-celeste, $panel-demo-violeta)
+	transition: width 0.45s cubic-bezier(0.32, 0.72, 0, 1)
 
 .panel-demo__lista
 	list-style: none
@@ -512,101 +717,163 @@ $panel-demo-ancho: 500px
 	padding: 0
 
 .panel-demo__item
-	margin-bottom: 0.25rem
+	margin: 0
+
+// Separador metido para adentro, como en una lista agrupada de iOS: la linea no llega a los
+// bordes de la tarjeta, asi que separa sin dibujar una reja.
+.panel-demo__item + .panel-demo__item::before
+	content: ''
+	display: block
+	height: 1px
+	margin: 0 0.75rem
+	background: rgba(17, 24, 39, 0.05)
+
+// El item abierto ya se distingue por su fondo: la linea de arriba del siguiente sobra.
+.panel-demo__item--abierto + .panel-demo__item::before
+	background: transparent
 
 .panel-demo__item-boton
 	display: flex
 	align-items: center
-	gap: 0.5rem
+	gap: 0.625rem
 	width: 100%
 	text-align: left
 	background: transparent
 	border: none
-	padding: 0.5rem 0
+	border-radius: 10px
+	padding: 0.625rem 0.75rem
 	font-size: 0.9375rem
-	color: #111827
+	line-height: 1.35
+	color: $panel-demo-tinta
 	cursor: pointer
+	transition: background 0.15s ease
+
+.panel-demo__item-boton:hover
+	background: rgba(17, 24, 39, 0.035)
+
+.panel-demo__item-boton:focus-visible
+	outline: 2px solid $panel-demo-celeste
+	outline-offset: -2px
+
+.panel-demo__item--abierto .panel-demo__item-boton
+	background: rgba(11, 132, 248, 0.06)
 
 .panel-demo__item-boton--secundario
-	color: #6b7280
+	font-size: 0.875rem
+	color: $panel-demo-gris
 
 .panel-demo__item-boton--hecho .panel-demo__item-titulo
-	color: #6b7280
+	color: $panel-demo-gris
 
+.panel-demo__item-titulo
+	flex: 1 1 auto
+
+// Circulo de estado. Vacio mientras el clip no se termino, y con el tilde de marca cuando si.
 .panel-demo__item-marca
-	width: 1rem
-	color: #16a34a
+	position: relative
+	flex: 0 0 auto
+	width: 18px
+	height: 18px
+	border-radius: 50%
+	border: 1.5px solid #d4d4d8
+	transition: border-color 0.2s ease
 
-.panel-demo__tarjeta
-	padding: 0.5rem 0 1rem
+.panel-demo__item-marca--hecha
+	border-color: transparent
+	background: linear-gradient(135deg, $panel-demo-celeste, $panel-demo-violeta)
 
-.panel-demo__video
-	width: 100%
-	border-radius: 8px
-	background: #000000
-	display: block
-	transition: all 0.3s ease
+.panel-demo__item-marca--hecha::after
+	content: ''
+	position: absolute
+	top: 3px
+	left: 6px
+	width: 4px
+	height: 8px
+	border: solid #ffffff
+	border-width: 0 1.5px 1.5px 0
+	transform: rotate(45deg)
 
-.panel-demo__video--grande
-	position: fixed
+// Los de biblioteca llevan un punto, no un circulo de estado: NO suman al progreso, y un
+// circulo vacio al lado de otros que se tildan promete un tilde que nunca va a llegar. El
+// punto ocupa el mismo lugar, asi que los titulos siguen alineados con los de arriba.
+.panel-demo__item-marca--suelta
+	border-color: transparent
+
+.panel-demo__item-marca--suelta::after
+	content: ''
+	position: absolute
 	top: 50%
 	left: 50%
-	transform: translate(-50%, -50%)
-	// Sin min(): SASS lo toma como su propia funcion y con vw y px juntos tira
-	// "Incompatible units". El par width/max-width da lo mismo y no depende de eso.
-	width: 80vw
-	max-width: 960px
-	max-height: 80vh
-	z-index: 1060
+	width: 4px
+	height: 4px
+	margin: -2px 0 0 -2px
+	border-radius: 50%
+	background: #c4c4c8
 
-.panel-demo__sin-video
-	font-size: 0.875rem
-	color: #6b7280
-	margin: 0 0 0.75rem
+.panel-demo__item-flecha
+	flex: 0 0 auto
+	width: 7px
+	height: 7px
+	margin-right: 2px
+	border: solid #c4c4c8
+	border-width: 0 1.5px 1.5px 0
+	transform: rotate(-45deg)
+	transition: transform 0.2s cubic-bezier(0.32, 0.72, 0, 1)
 
-.panel-demo__probar
-	margin-top: 0.75rem
-	padding: 0.5rem 1.25rem
-	border-radius: 8px
-	border: none
-	background: #111827
-	color: #ffffff
-	font-size: 0.875rem
-	cursor: pointer
-
-.panel-demo__probar:disabled
-	background: #e5e7eb
-	color: #9ca3af
-	cursor: not-allowed
+.panel-demo__item--abierto .panel-demo__item-flecha
+	transform: rotate(45deg)
+	border-color: $panel-demo-celeste
 
 .panel-demo__biblioteca
-	margin-top: 1rem
-	padding-top: 0.75rem
-	border-top: 1px solid #f3f4f6
+	margin-top: 0.5rem
+	padding: 0.75rem 0 0
+	border-top: 1px solid $panel-demo-linea
 
 .panel-demo__biblioteca-titulo
-	font-size: 0.8125rem
+	font-size: 0.6875rem
 	font-weight: 600
-	color: #6b7280
+	text-transform: uppercase
+	// Tracking positivo: el texto chico y en mayusculas necesita aire para leerse.
+	letter-spacing: 0.06em
+	color: #9ca3af
 	margin: 0 0 0.25rem
+	padding: 0 0.75rem
 
 .panel-demo__notas
-	padding: 1rem 1.5rem
-	border-top: 1px solid #f3f4f6
+	padding: 1rem 1.25rem 1.125rem
+	border-top: 1px solid $panel-demo-linea
+	background: #ffffff
 
 .panel-demo__notas-texto
 	display: block
 	font-size: 0.8125rem
-	color: #6b7280
-	margin-bottom: 0.375rem
+	line-height: 1.4
+	color: $panel-demo-gris
+	margin-bottom: 0.5rem
 
 .panel-demo__notas-campo
 	width: 100%
-	border: 1px solid #e5e7eb
-	border-radius: 8px
-	padding: 0.5rem
+	border: 1px solid #e4e4e7
+	border-radius: 12px
+	padding: 0.625rem 0.75rem
 	font-size: 0.875rem
+	line-height: 1.45
+	color: $panel-demo-tinta
+	background: #fafafa
 	resize: vertical
+	transition: border-color 0.15s ease, background 0.15s ease
+
+.panel-demo__notas-campo:focus
+	outline: none
+	background: #ffffff
+	border-color: $panel-demo-celeste
+
+.panel-demo__notas-restante
+	margin: 0.375rem 0 0
+	font-size: 0.75rem
+	color: $panel-demo-gris
+	text-align: right
+	font-variant-numeric: tabular-nums
 
 .panel-demo__fondo
 	position: fixed
@@ -629,6 +896,8 @@ $panel-demo-ancho: 500px
 
 // Telefono (< 768): 500px sobre 360px no es un panel, es una pared. Pasa a hoja completa
 // sobre el sistema, y el tirador se mete adentro del borde para no quedar fuera de pantalla.
+//
+// El ancho del video agrandado en telefono vive en TarjetaClip.vue, que es donde quedo el marco.
 @media (max-width: 767px)
 	.panel-demo
 		width: 100%
@@ -642,12 +911,63 @@ $panel-demo-ancho: 500px
 	.panel-demo--colapsado .panel-demo__tirador
 		right: 100%
 
-	.panel-demo__video--grande
-		width: 94vw
+	.panel-demo__cuerpo
+		padding: 0.875rem 0.875rem 1rem
+
+	.panel-demo__encabezado
+		padding: 1.125rem 1.125rem 0.875rem
+
+	.panel-demo__notas
+		padding: 0.875rem 1.125rem 1rem
 
 @keyframes panel-demo-latido
 	0%, 100%
 		transform: translateY(-50%) scale(1)
 	50%
 		transform: translateY(-50%) scale(1.12)
+
+@keyframes panel-demo-halo
+	from
+		transform: translateY(0)
+	to
+		transform: translateY(-50%)
+
+@keyframes panel-demo-respirar
+	0%, 100%
+		opacity: 1
+	50%
+		opacity: 0.55
+
+// 🔴 Con `prefers-reduced-motion: reduce` todo esto queda en un ESTADO ESTATICO, no en una
+// version suave del mismo movimiento. El halo del borde sigue estando —es identidad de marca,
+// no decoracion— pero deja de viajar: un degradado fijo celeste -> violeta.
+@media (prefers-reduced-motion: reduce)
+	.panel-demo
+		transition: none
+
+	.panel-demo__hoja::before,
+	.panel-demo__hoja::after
+		height: 100%
+		animation: none
+		transform: none
+		background: linear-gradient(180deg, $panel-demo-celeste, $panel-demo-violeta)
+
+	.panel-demo__tirador--llamando
+		animation: none
+		// El equivalente estatico del latido: el tirador queda pintado con el color de marca
+		// en vez de moverse. Sigue diciendo "volve por aca".
+		border-color: $panel-demo-celeste
+		color: $panel-demo-celeste
+		box-shadow: -4px 0 14px rgba(11, 132, 248, 0.28)
+
+	.panel-demo__esqueleto-barra
+		animation: none
+
+	.panel-demo__medidor-relleno,
+	.panel-demo__item-boton,
+	.panel-demo__item-flecha,
+	.panel-demo__item-marca,
+	.panel-demo__notas-campo,
+	.panel-demo__tirador
+		transition: none
 </style>

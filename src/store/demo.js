@@ -72,9 +72,9 @@ export default {
 		/**
 		 * El pedido del plan ya terminó, haya traído secciones o no.
 		 *
-		 * Es lo que mira el ingreso para saber que puede soltar la pantalla de espera. No alcanza
-		 * con `!cargando`, que también es false ANTES de pedir nada: con `cargando` solo, el
-		 * ingreso no distingue "todavía no arrancó" de "ya terminó".
+		 * Lo mira el panel para separar "todavía no cargó" de "cargó y vino vacío", que es la
+		 * diferencia entre mostrar el esqueleto y mostrar el mensaje de que no hay recorrido.
+		 * Con `cargando` solo no alcanza: también es false ANTES de pedir nada.
 		 */
 		plan_cargado: false,
 		/**
