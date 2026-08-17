@@ -97,8 +97,8 @@ export default {
 				// 🔴 `auth/me` apaga el overlay por su cuenta cuando termina (auth.js lo
 				// maneja adentro), así que hay que volver a prenderlo para cubrir la espera
 				// del plan. Sin esto el lead se come una pantalla en blanco y sin mensaje
-				// justo en el tramo final del ingreso. Prender y apagar caen en el mismo tick
-				// de Vue, así que el overlay no llega a parpadear.
+				// justo en el tramo final del ingreso. Ese apagado y este prendido caen en el
+				// mismo tick de Vue, así que el overlay no llega a parpadear.
 				self.prender_espera()
 
 				// Recién ahora `demo/activa` da true, así que el plan ya se puede pedir.
