@@ -259,6 +259,7 @@ import c_a_payment_method_type from '@/store/c_a_payment_method_type'
 import sale_status from '@/store/sale_status'
 import sale_sender_info from '@/store/sale_sender_info'
 import inputs_size from '@/store/inputs_size'
+import actividad_cliente from '@/store/actividad_cliente'
 
 
 Vue.use(Vuex)
@@ -521,5 +522,6 @@ export default new Vuex.Store({
         sale_status,
         sale_sender_info,
         inputs_size,
+        actividad_cliente,
     }
 })

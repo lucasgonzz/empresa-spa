@@ -45,8 +45,24 @@
 				:phone="slotProps.model.phone"
 				:client_id="slotProps.model.id"
 				:display_name="slotProps.model.name"></btn-whatsapp-chat>
+
+				<!--
+					Tercero de la fila, y también HERMANO y no anidado, por el mismo motivo que
+					el de WhatsApp. Se entra por client_id: un cliente del ERP puede tener
+					varios compradores en la tienda y la actividad viene sumada entre todos.
+				-->
+				<btn-actividad-cliente
+				:client_id="slotProps.model.id"
+				:nombre="slotProps.model.name"></btn-actividad-cliente>
 			</template>
 		</view-component>
+
+		<!--
+			El modal va como HERMANO del <view-component> y fuera del slot: adentro del slot se
+			instanciaría una vez por fila de la tabla. Es una sola instancia por vista y el
+			botón la alcanza por el id 'actividad-cliente'.
+		-->
+		<actividad-cliente-modal></actividad-cliente-modal>
 	</div>
 </template>
 <script>
@@ -55,6 +71,8 @@ export default {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 		BtnCurrentAcounts: () => import('@/components/common/BtnCurrentAcounts'),
 		BtnWhatsappChat: () => import('@/components/common/BtnWhatsappChat'),
+		BtnActividadCliente: () => import('@/components/common/BtnActividadCliente'),
+		ActividadClienteModal: () => import('@/components/actividad-cliente/Modal'),
 		ComercioCityUser: () => import('@/components/common/ComercioCityUser'),
 		CreateBuyer: () => import('@/components/client/components/clients/CreateBuyer'),
 		SaldosClientesFiltrados: () => import('@/components/client/components/clients/SaldosClientesFiltrados'),
