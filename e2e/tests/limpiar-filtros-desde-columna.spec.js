@@ -14,11 +14,16 @@
 // Selectores: se usan los que ya existen en el DOM (.th-filter-btn de BtnFilter.vue, el id del
 // b-modal que arma table/Index.vue como 'filter-modal-' + model_name, y las clases del footer de
 // FilterModal.vue). No se agrego ningun data-testid nuevo para este test.
-const { test, expect } = require('@playwright/test')
+const { test, expect } = require('../fixtures')
+const { esperar_recursos_descargados } = require('../helpers/recursos')
 
 test.describe('Listado: limpiar filtros con un filtro de columna', () => {
 	test('el boton de limpiar filtros aparece al filtrar desde la lupa de una columna', async ({ page }) => {
 		await page.goto('/listado-de-articulos')
+		// Antes de tocar nada: el sistema baja los catalogos del arranque y hasta que no
+		// termina esta a medio cargar (ver e2e/helpers/recursos.js). Sin abrir el panel: eso lo
+		// verifican auth.setup.js y alta-compra.spec.js.
+		await esperar_recursos_descargados(page, { abrir_panel: false })
 
 		// El boton no tiene que estar antes de filtrar: al entrar al modulo lo que se ve es el
 		// listado por defecto. Esta primera asercion es la mitad del test -- sin ella, una version

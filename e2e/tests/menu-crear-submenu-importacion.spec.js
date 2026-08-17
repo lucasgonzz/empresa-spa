@@ -22,11 +22,16 @@
 // Selectores: se usan los que ya existen en el DOM (el id que arma b-dropdown como
 // 'dropdown_' + model_name, y las clases de ExcelDropdownSubmenu / ExcelDropdownOptionItem). No se
 // agrego ningun data-testid nuevo para este test.
-const { test, expect } = require('@playwright/test')
+const { test, expect } = require('../fixtures')
+const { esperar_recursos_descargados } = require('../helpers/recursos')
 
 test.describe('Listado: submenu de Importacion del menu Crear', () => {
 	test('el submenu se despliega sin que el menu principal pierda opciones', async ({ page }) => {
 		await page.goto('/listado-de-articulos')
+		// Antes de tocar nada: el sistema baja los catalogos del arranque y hasta que no
+		// termina esta a medio cargar (ver e2e/helpers/recursos.js). Sin abrir el panel: eso lo
+		// verifican auth.setup.js y alta-compra.spec.js.
+		await esperar_recursos_descargados(page, { abrir_panel: false })
 
 		// El menu de "Crear" es un b-dropdown split: el caret es el que despliega.
 		const dropdown_crear = page.locator('#dropdown_article')

@@ -524,4 +524,29 @@ export default {
 	plural_model_name_spanish: 'Compras',
 	create_model_name_spanish: 'Nueva Compra',
 	text_delete: 'la',
+	/*
+		🔴 Sin esto el formulario de la compra PIERDE lo que el usuario ya cargo.
+
+		El computed model() de common-vue/components/model/Index.vue devuelve una COPIA nueva del
+		modelo del store (`{...model}`) para todo modelo que no declare esto. ModelForm escribe en
+		esa copia, pero varios controles propios de este modulo --el toggle "Los precios ya incluyen
+		IVA" (PreciosIncluyenIva.vue), y Total.vue / IvaBreakdown / PriceDescription para leer--
+		hablan directo con el modelo del STORE, porque el slot de ModelForm no les pasa el modelo del
+		formulario. Entonces, apenas el toggle escribia en el store, el computed se recalculaba,
+		devolvia una copia recien sacada de ahi y se borraba todo lo editado hasta ese momento.
+
+		Se veia asi: elegis el deposito, tocas el toggle de IVA, y al guardar salta "Ingrese
+		Deposito" con el select otra vez en "Seleccione Deposito". No era solo el deposito: se perdia
+		cualquier campo cargado antes de esa escritura. Medido el 15/8/2026 leyendo los tres objetos
+		desde el navegador (hallazgo
+		20260815-el-formulario-pierde-lo-editado-cuando-algo-escribe-en-el-modelo-del-store).
+
+		Con esto los dos lados quedan sobre el MISMO objeto, que es lo que los componentes propios
+		del modulo ya venian asumiendo. La contra a tener presente: el formulario ahora mutua el
+		modelo del store en vivo, y setModel lo guarda por referencia (store/__base_store.js), asi
+		que editar una compra y cerrar sin guardar deja los cambios en el objeto hasta que se vuelva
+		a cargar el modelo. Decision de Lucas del 15/8/2026 frente a la alternativa de pasar el
+		modelo por el scope del slot, que dejaba a Total.vue e IvaBreakdown sin enterarse del cambio.
+	*/
+	full_reactivity: true,
 }

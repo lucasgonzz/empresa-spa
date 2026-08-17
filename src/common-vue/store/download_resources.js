@@ -13,6 +13,28 @@ export default {
 		setVisibility(state) {
 			state.visibility = !state.visibility
 		},
+		/**
+		 * Abre el panel lateral de recursos.
+		 *
+		 * Existe aparte de setVisibility porque aquella es un TOGGLE: quien quiere ABRIR el panel
+		 * --hoy la tarjeta de progreso de arriba a la derecha-- tendria que saber de antemano en
+		 * que estado esta, y si ya estaba abierto se lo cerraria. Estas dos fijan el valor.
+		 *
+		 * @param {object} state
+		 * @return {void}
+		 */
+		abrir_panel(state) {
+			state.visibility = true
+		},
+		/**
+		 * Cierra el panel lateral de recursos.
+		 *
+		 * @param {object} state
+		 * @return {void}
+		 */
+		cerrar_panel(state) {
+			state.visibility = false
+		},
 		setStartDownload(state) {
 			state.start_download = !state.start_download
 			console.log('setStartDownload QUEDO EN '+state.start_download)

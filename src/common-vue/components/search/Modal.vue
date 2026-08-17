@@ -4,7 +4,8 @@
 size="xl"
 hide-footer
 :id="modal_id"
-@show="onModalShow">
+@show="onModalShow"
+@hidden="onModalHidden">
 	<div
 	class="search-component-modal">
 		<div class="header">
@@ -285,6 +286,9 @@ export default {
 			saving_if_not_exist: false,
 			esperando: false,
 			no_hacer_seleccion: false,
+			// Si el b-modal esta en pantalla. Lo llevan onModalShow/onModalHidden y lo usa
+			// emitSetSelected para no levantar una guarda que despues nadie podria bajar.
+			modal_visible: false,
 
 			per_page: 50,
 			current_page: null,
@@ -458,6 +462,7 @@ export default {
 		 * No toca this.results, que puede venir precargado por preview_results.
 		 */
 		onModalShow() {
+			this.modal_visible = true
 			this.busqueda_realizada = false
 			this.total_results = 0
 			this.current_page = null
@@ -465,6 +470,16 @@ export default {
 			// Un criterio tipeado en una apertura anterior no debe ganarle a lo que traiga el padre
 			// en esta apertura nueva (ver query_local en data()).
 			this.query_local = null
+		},
+		/**
+		 * El modal termino de cerrarse: se libera la guarda que impide reabrirlo.
+		 *
+		 * Ver emitSetSelected para el motivo por el que la guarda existe y por que se baja aca y no
+		 * con un temporizador.
+		 */
+		onModalHidden() {
+			this.modal_visible = false
+			this.$emit('setNotShowModel', false)
 		},
 		/**
 		 * El usuario toco el boton de limpiar del pill (icono de deshacer). El buscador general ya
@@ -1126,32 +1141,59 @@ export default {
 			this.ya_se_busco = true
 			this.busqueda_realizada = true
 		},
+		/**
+		 * Ordena los resultados alfabeticamente por la propiedad de filtro.
+		 *
+		 * 🔴 Los parentesis de abajo son el arreglo, no un detalle de estilo. Estaba escrito
+		 * `a[key]+''.localeCompare(b[key])`, y por precedencia de operadores eso NO es
+		 * "(a[key]+'').localeCompare(...)": primero se evalua `''.localeCompare(b[key])`, que da
+		 * -1, y despues se concatena con a[key]. O sea que el comparador devolvia un string tipo
+		 * "Martillo acero-1"; sort() lo convierte a numero, da NaN, lo trata como 0 y NO REORDENA
+		 * NADA. La lista quedaba en el orden en que la mando la API.
+		 *
+		 * Se veia asi: buscando "Martillo" con dos articulos que empiezan igual --"Martillo acero"
+		 * (id 1) y "Martillo" (id 10)-- el primer resultado era "Martillo acero", el mas largo,
+		 * porque venia primero por id. Quien busca el nombre exacto y toca el primer resultado se
+		 * lleva otro articulo.
+		 *
+		 * Las dos puntas se fuerzan a string: un valor null o un numero no tienen localeCompare y
+		 * romperian el sort entero.
+		 */
 		orderAlpabethic() {
 			if (this.prop_to_filter && this.prop_to_filter.key) {
 
-				console.log('orderAlpabethic')
-				console.log(this.prop_to_filter)
-				console.log('results')
-				console.log(this.results)
+				let key = this.prop_to_filter.key
+
 				this.results = this.results.sort((a, b) => {
-					return a[this.prop_to_filter.key]+''.localeCompare(b[this.prop_to_filter.key])
+					return (a[key] + '').localeCompare(b[key] + '')
 				})
 			}
 		},
+		/**
+		 * Autoselecciona la primera fila del resultado.
+		 *
+		 * no_hacer_seleccion tapa esa autoseleccion para que no se lea como una eleccion del
+		 * usuario. Ojo con el camino de auto_select = false: antes se prendia la guarda y no la
+		 * bajaba NADIE, asi que un campo declarado con auto_select: false dejaba a su modal sin
+		 * poder seleccionar nada en toda su vida (TableComponent::onRowSelected descarta el evento
+		 * mientras la guarda este arriba). Si no hay autoseleccion no hay nada que tapar.
+		 */
 		setFirstSelectedRow() {
-			this.no_hacer_seleccion = true
 			console.log('-> setFirstSelectedRow')
-			if (this.auto_select) {
-				setTimeout(() => {
-					console.log('this.selected_index = -1')
-					this.selected_index = -1
-					setTimeout(() => {
-						this.selected_index = 0
-						console.log('se autoselecciono la primer fila')
-						this.no_hacer_seleccion = false
-					}, 100)
-				}, 100)
+			if (!this.auto_select) {
+				this.no_hacer_seleccion = false
+				return
 			}
+			this.no_hacer_seleccion = true
+			setTimeout(() => {
+				console.log('this.selected_index = -1')
+				this.selected_index = -1
+				setTimeout(() => {
+					this.selected_index = 0
+					console.log('se autoselecciono la primer fila')
+					this.no_hacer_seleccion = false
+				}, 100)
+			}, 100)
 		},
 		reset_ya_se_busco(event) {
 			console.log('reset_ya_se_busco')
@@ -1314,8 +1356,34 @@ export default {
 			// this.results = []
 			// this.$bvModal.hide(this.modal_id)
 		},
+		/**
+		 * Cierra el modal con el resultado elegido y avisa al padre.
+		 *
+		 * 🔴 La guarda not_show_modal se baja en el evento `hidden` del b-modal (ver
+		 * onModalHidden) y NO con un setTimeout de 500 ms. Es el mismo arreglo, y por el mismo
+		 * motivo, que el de is_from_keydown en display/TableComponent.vue.
+		 *
+		 * Que hace la guarda: mientras esta arriba, callSearchModal() de search/Index.vue no abre
+		 * nada. Existe porque el input del campo abre el modal con su propio @click, y al cerrarse
+		 * el modal el foco vuelve al input: sin la guarda, el cierre podia encadenarse con una
+		 * reapertura inmediata y el modal quedaba rebotando.
+		 *
+		 * Por que 500 ms estaba mal: el cierre del modal tarda lo que tarda su transicion, no 500
+		 * ms. El resto de esa ventana quedaba tapando el clic REAL del usuario sobre el campo, y
+		 * ese clic no se encola en ningun lado: se pierde y no pasa nada. Al cargar una compra,
+		 * donde se eligen articulos uno atras del otro, es exactamente el momento en que se
+		 * vuelve a clickear. Medido el 15/8/2026 en el slot 1: despues de elegir un articulo y
+		 * completar cantidad, costo y recibida, el primer clic en el campo no abria el modal y
+		 * hacia falta un segundo (847 ms).
+		 *
+		 * La guarda se levanta solo si hay un cierre real por venir. Si el modal no estaba
+		 * visible no habria evento `hidden` que la baje, y el campo quedaria muerto para siempre.
+		 */
 		emitSetSelected(model) {
-			this.$emit('setNotShowModel', true)
+			if (this.modal_visible) {
+				this.$emit('setNotShowModel', true)
+			}
+
 			this.$emit('setSelected', model, this.results)
 
 			if (this.limpiar_resultados_de_busqueda) {
@@ -1323,9 +1391,6 @@ export default {
 				this.results = []
 			}
 			this.$bvModal.hide(this.modal_id)
-			setTimeout(() => {
-				this.$emit('setNotShowModel', false)
-			}, 500)
 		},
 	}
 }

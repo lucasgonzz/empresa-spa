@@ -7,7 +7,8 @@
 //
 // No se hardcodea el total esperado: eso ya lo verifican los tests PHPUnit de los prompts 614-616.
 // Aca se verifica COHERENCIA entre lo que muestra la pantalla y lo que persistio el servidor.
-const { test, expect } = require('@playwright/test')
+const { test, expect } = require('../fixtures')
+const { esperar_recursos_descargados } = require('../helpers/recursos')
 
 /**
  * Articulos del fixture (prompt 613) con su costo base y el proveedor al que pertenecen.
@@ -61,6 +62,24 @@ const RECEIVED_CON_AUMENTO = '8'
  * @param {string} nombre Titulo del grupo, tal cual lo declara src/models/provider_order.js.
  * @returns {Promise<void>}
  */
+/**
+ * Convierte a numero un importe tal como lo muestra la pantalla, en formato es-AR: simbolo de
+ * moneda adelante, punto como separador de miles y coma como decimal ("$40.527,50" -> 40527.5).
+ *
+ * @param {string} texto
+ * @returns {number}
+ */
+function numero_de_pantalla(texto) {
+	const limpio = String(texto)
+		// Se queda con digitos, separadores y el signo; saca "$" y espacios.
+		.replace(/[^\d.,-]/g, '')
+		// El punto es separador de miles: se descarta.
+		.replace(/\./g, '')
+		// La coma es el separador decimal.
+		.replace(',', '.')
+	return Number(limpio)
+}
+
 async function abrir_pestania(page, nombre) {
 	await page.locator('#provider_order___BV_modal_outer_')
 		.locator(`[data-testid="nav-item-${nombre}"]`)
@@ -95,19 +114,21 @@ async function search_and_select(page, field_testid, query) {
  * Clickea el primer resultado del modal y espera la SEÑAL REAL de que la seleccion ocurrio: que el
  * modal se haya cerrado. Si no se cerro, vuelve a clickear.
  *
- * Por que hace falta reintentar, y por que esto no es un sleep disfrazado: cuando la busqueda
- * termina, el modal autoselecciona la primera fila (selected_index), y ese watch de TableComponent
- * levanta una guarda `is_from_keydown` que se baja con un setTimeout de 500 ms. Mientras la guarda
- * esta arriba, TableComponent::onRowSelected() descarta el evento entero: el click en la fila no
- * emite nada, no seleccciona y el modal queda abierto tapando el formulario. Playwright clickea
- * apenas la fila aparece, o sea casi siempre DENTRO de esos 500 ms. Medido el 10/8/2026: tras el
- * click el modal seguia con clase "modal fade show" a los 12 segundos, y en la consola salian los
- * dos "onRowSelected items:" de TableComponent sin un solo "onRowSelected para SEARCH MODAL".
+ * Por que sigue habiendo un reintento, y por que esto no es un sleep disfrazado.
  *
- * Es un bug real del producto y le pasa igual a una persona que clickee rapido; quedo registrado
- * como hallazgo y escalado, porque arreglarlo de raiz cambia el comportamiento de la navegacion por
- * teclado para todos los usuarios. Lo de aca NO tapa el sintoma con un timeout mas largo: espera la
- * condicion observable correcta (modal cerrado) y, si no se cumple, repite la MISMA accion.
+ * La causa grande ya no esta: hasta el 15/8/2026 el watch de selected_index de TableComponent
+ * levantaba la guarda `is_from_keydown` por 500 ms enteros y onRowSelected() descartaba el evento
+ * entero mientras tanto, asi que el click sobre el resultado no seleccionaba nada y el modal
+ * quedaba abierto. Eso se arreglo de raiz (la guarda ahora se baja en el $nextTick, que es cuando
+ * ya paso la emision que tenia que tapar) y hoy el modal cierra al PRIMER click.
+ *
+ * Lo que queda es una ventana mas corta: setFirstSelectedRow() de search/Modal.vue prende
+ * no_hacer_seleccion y la baja recien 200 ms despues, junto con la autoseleccion. Un click que cae
+ * ahi adentro se sigue perdiendo. El reintento cubre eso, y ademas cubre que la busqueda pegue a la
+ * API y la fila aparezca antes de que los datos esten renderizados.
+ *
+ * Lo de aca NO tapa el sintoma con un timeout mas largo: espera la condicion observable correcta
+ * (modal cerrado) y, si no se cumple, repite la MISMA accion.
  *
  * @param {import('@playwright/test').Page} page
  * @param {string} field_testid data-testid del input principal del campo search.
@@ -115,16 +136,36 @@ async function search_and_select(page, field_testid, query) {
  */
 async function elegir_primer_resultado(page, field_testid) {
 	const modal = page.locator(`#${field_testid}-search-modal`)
+	// 🔴 La fila se busca DENTRO del modal, no en todo el documento. Un
+	// page.locator('[data-testid="search-result-row"]') suelto agarra la primera del DOM, que no
+	// tiene por que ser un resultado de busqueda: hasta el 15/8/2026 display/table/Tr.vue le ponia
+	// ese mismo testid a cualquier tabla de seleccion simple, y la grilla de articulos de la compra
+	// esta ANTES en el DOM que el modal. Con un articulo ya cargado, el click caia sobre la fila de
+	// la compra --tapada por el modal abierto-- y se iba en timeout sin tocar el resultado. El
+	// testid ya se corrigio del lado del producto; acotar el selector es lo que evita que la
+	// proxima colision de nombres vuelva a leerse como un bug de la aplicacion.
+	const fila = modal.locator('[data-testid="search-result-row"]').first()
 	await expect(async () => {
-		await page.locator('[data-testid="search-result-row"]').first().click()
+		await fila.click()
 		await expect(modal).toBeHidden({ timeout: 1500 })
 	}).toPass({ timeout: 30000 })
 }
 
 test.describe('Compras: alta de compra completa', () => {
-	test('carga una compra con 10 articulos, costos actualizados y facturacion automatica', async ({ page }) => {
-		// 1. Entrar al modulo de compras y abrir el alta.
+	// El alta de una compra depende de catalogos que la aplicacion baja al arrancar: el buscador de
+	// proveedores, el select de deposito, los tipos de precio y las preferencias de columnas de la
+	// grilla de articulos. Entrar y empezar a clickear mientras eso todavia esta en vuelo da
+	// selects vacios y filas sin columnas, que se lee como un test roto sin que haya nada roto.
+	// Por eso: se entra, se despliega el panel de recursos desde la tarjeta, y recien cuando dice
+	// "Todo listo" empieza el test. Ver e2e/helpers/recursos.js.
+	test.beforeEach(async ({ page }) => {
+		// El aislamiento de broadcasts ya viene puesto por el fixture de e2e/fixtures.js.
 		await page.goto('/proveedores/compras')
+		await esperar_recursos_descargados(page)
+	})
+
+	test('carga una compra con 10 articulos, costos actualizados y facturacion automatica', async ({ page }) => {
+		// 1. Abrir el alta (ya estamos en el modulo de compras, ver el beforeEach).
 		await page.locator('[data-testid="btn-crear-provider_order"]').click()
 
 		// 2. Proveedor Buenos Aires y deposito Principal. Los dos viven en la pestaña
@@ -185,12 +226,20 @@ test.describe('Compras: alta de compra completa', () => {
 
 		// El total mostrado en pantalla debe coincidir con el total que devolvio la API.
 		// El total vive en la pestaña "Total" del formulario.
+		//
+		// Se compara el NUMERO, no el string formateado. Antes se exigia que el texto contuviera
+		// el total con dos decimales (toLocaleString es-AR), y eso fijaba un detalle de
+		// presentacion que este test nunca quiso fijar: price() --common-vue/mixins/dates.js--
+		// recorta los decimales A PROPOSITO cuando son ",00", asi que un total redondo se muestra
+		// "$40.527" y la asercion fallaba con la pantalla y el servidor perfectamente de acuerdo.
+		// Lo que este paso verifica, y lo dice su propio encabezado, es COHERENCIA entre pantalla y
+		// servidor. Comparar el numero la mantiene estricta --un total distinto sigue poniendo el
+		// test en rojo-- sin atarla a si la app imprime o no los centavos.
 		await abrir_pestania(page, 'Total')
 		const total_text = await page.locator('[data-testid="compra-total"]').innerText()
 		const total_from_server = Number(saved_model.total)
-		expect(total_text).toContain(
-			total_from_server.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-		)
+		// El total se redondea a 2 decimales porque es lo maximo que la pantalla puede mostrar.
+		expect(numero_de_pantalla(total_text)).toBe(Number(total_from_server.toFixed(2)))
 
 		// Los descuentos del proveedor (10% y 5%) deben haber quedado precargados en la compra.
 		// Se lee el texto del contenedor de descuentos (ubicado por data-testid, no por clase):

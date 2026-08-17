@@ -8,7 +8,9 @@
 //
 // Por eso la aserción es "está dentro del viewport" y no "existe en el DOM": existir en el DOM es
 // justo lo que ya pasaba cuando el defecto estaba presente.
-const { test, expect } = require('@playwright/test')
+const { test, expect } = require('../fixtures')
+const { esperar_recursos_descargados } = require('../helpers/recursos')
+const { aislar_broadcasts } = require('../helpers/entorno')
 
 /**
  * Módulo que queda vacío con el fixture del harness y que tiene scroll horizontal de sobra.
@@ -40,6 +42,9 @@ test.describe('Estado vacío de las tablas', () => {
 
 		page = await browser.newPage()
 		page.setDefaultTimeout(180000)
+		// Este spec arma su propia pagina, asi que el fixture de e2e/fixtures.js no la toca: el
+		// aislamiento de broadcasts hay que pedirlo a mano y antes de navegar.
+		await aislar_broadcasts(page)
 
 		await page.goto('/login')
 
@@ -54,6 +59,10 @@ test.describe('Estado vacío de las tablas', () => {
 				.catch(() => null)
 		}
 		await page.waitForURL(url => !/\/login/.test(url.toString()), { timeout: 240000 })
+
+		// Entrar no es llegar a una URL: recien cuando terminan de bajar los catalogos del arranque
+		// las tablas saben con que columnas se arman, que es justo lo que este spec mide.
+		await esperar_recursos_descargados(page, { abrir_panel: false })
 
 		// Navegación por el router: un goto() recarga la SPA, y con eso se pierde la sesión (vive en
 		// memoria) y se vuelve a pagar el arranque entero.

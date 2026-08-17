@@ -37,12 +37,25 @@ ella `src/main.js` tira `You must pass your app key when you instantiate Pusher`
 app: la página queda en blanco, sin un solo `data-testid`, y desde el test se ve como "no encuentro
 el input de login".
 
-> ⚠️ **Estado conocido (10/8/2026):** con la API servida por `php artisan serve` la suite todavía no
-> corre entera. Ese servidor atiende **un request por vez** y el arranque de la SPA son ~73 llamadas:
-> medido, la descarga de recursos no termina en 120 s (a los 117 s iba por 35 de 73) y una búsqueda
-> lanzada en el medio tarda ~9 s en responder. El proyecto `setup` (login) pasa; los dos specs mueren
-> compitiendo con esa cola. Está registrado como hallazgo y escalado: la salida pasa por servir la
-> API con concurrencia o por achicar el arranque, y ninguna de las dos es del harness.
+> ⚠️ **Estado de la suite (15/8/2026): 9 pasan, 2 fallan.** Reemplaza al estado del 10/8, que decía
+> que la descarga de recursos no terminaba en 120 s: eso lo resolvió la misión 41 al cambiar las ~70
+> llamadas del arranque por un solo `POST /recursos-iniciales`. Medido hoy: **68 recursos en 35-45 s**
+> y el proyecto `setup` en ~20-48 s. La corrida completa son ~12 minutos.
+>
+> En verde: `setup`, `alta-compra`, los tres de `buscador-filtros-invalidan-busqueda`, los tres de
+> `estado-vacio-centrado` y `menu-crear-submenu-importacion`.
+>
+> **Los dos rojos ya estaban rojos antes de esta tanda de arreglos**, verificado corriéndolos contra
+> el commit base con `src` y `e2e` originales:
+>
+> - `alta-articulo-desde-buscador`: el artículo se crea y se agrega a la compra, pero la **celda del
+>   nombre de la fila queda vacía**, así que la aserción de que la fila contiene el nombre falla.
+>   Comprobado que no lo causa `full_reactivity`: apagándolo el fallo es idéntico.
+> - `limpiar-filtros-desde-columna`: el clic sobre la lupa de la columna "Nombre" lo intercepta
+>   `.cont-th`. Ojo que este spec ubica la columna por texto visible (`hasText: 'Nombre'`), que es
+>   justamente lo que la convención de más abajo prohíbe.
+>
+> Los dos están en el hallazgo `20260815-dos-specs-e2e-que-nacieron-en-rojo`.
 
 ---
 
@@ -68,6 +81,42 @@ npm run test:e2e           # corre los specs una vez, en Chromium, sin UI
 npm run test:e2e:ui        # modo interactivo (Playwright UI), para debuggear paso a paso
 npm run test:e2e:codegen   # grabador: abre el navegador y genera el codigo del test al interactuar
 ```
+
+## Esperar la descarga de recursos del arranque
+
+**Todo test que entre al sistema tiene que esperar esto antes de tocar nada.** Apenas hay sesión,
+`common-vue/components/download-resources/Index.vue` se pone a bajar los catálogos del arranque
+(rubros, proveedores, tipos de precio, preferencias de columnas de las tablas). Hasta que no
+termina, los selects vienen vacíos y las grillas todavía no saben con qué columnas dinámicas
+trabajar: un test que arranca antes no encuentra un bug, encuentra el sistema a medio cargar.
+
+```js
+const { esperar_recursos_descargados } = require('../helpers/recursos')
+
+test.beforeEach(async ({ page }) => {
+	await page.goto('/proveedores/compras')
+	await esperar_recursos_descargados(page)
+})
+```
+
+Por defecto el helper hace el recorrido de una persona: clickea la tarjeta de progreso de arriba a
+la derecha, mira el detalle recurso por recurso en el panel lateral, espera a que diga *Todo listo*
+y lo cierra. Con `{ abrir_panel: false }` solo espera, sin abrir nada.
+
+**Lo que NO hay que hacer es esperar a que la tarjeta desaparezca.** Se esconde sola 3 segundos
+después de terminar, o sea que "no está" tanto cuando la descarga terminó como cuando todavía no
+empezó (aparece recién ~1 s después de montar el componente). La condición estable es
+`[data-testid="recursos-estado"]` con `data-estado="listo"`: es el elemento raíz de
+`download-resources/Index.vue` y vive mientras viva la nav. Lleva además `data-descargados` y
+`data-total`, y el panel publica una fila por recurso en `[data-testid="recursos-panel-fila"]`
+con `data-recurso` y `data-estado`.
+
+⚠️ `listo` quiere decir *"ya no se espera a nadie"*, no *"llegaron todos los datos"*: un catálogo
+que falló se marca igual (ver `marcar_descargado` en `Index.vue` y el hallazgo
+`20260812-una-descarga-fallida-del-arranque-queda-marcada-como-lista`).
+
+El `storageState` guarda cookies y localStorage, **no** el store de Vuex, así que cada spec baja
+los recursos de nuevo en su propia página. Que `auth.setup.js` ya haya esperado no exime al spec.
 
 ## Convencion de selectores: `data-testid`
 

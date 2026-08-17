@@ -1,6 +1,17 @@
 <template>
-<div>
-	
+<!--
+	El elemento raiz publica el estado de la descarga del arranque. Es el unico lugar donde ese
+	estado esta SIEMPRE disponible: la tarjeta de progreso se esconde sola a los 3 segundos de
+	terminar, y el panel lateral solo existe cuando esta abierto. Este div vive mientras viva la
+	nav, asi que cualquiera que necesite saber si el sistema termino de cargar --un test end to
+	end, sin ir mas lejos-- lo mira aca.
+-->
+<div
+data-testid="recursos-estado"
+:data-estado="estado_descarga"
+:data-descargados="descargados_count"
+:data-total="models_to_download.length">
+
 	<b-sidebar
 	right
 	no-header
@@ -9,7 +20,9 @@
 	v-model="visibility"
 	shadow>
 		<template v-slot:default="{ hide }">
-			<div class="recursos-panel">
+			<div
+			class="recursos-panel"
+			data-testid="recursos-panel">
 
 				<div class="recursos-panel__header">
 
@@ -20,12 +33,15 @@
 						<button
 						type="button"
 						class="recursos-panel__cerrar"
+						data-testid="recursos-panel-cerrar"
 						@click="hide">
 							<i class="icon-cancel"></i>
 						</button>
 					</div>
 
-					<p class="recursos-panel__subtitulo">
+					<p
+					class="recursos-panel__subtitulo"
+					data-testid="recursos-panel-subtitulo">
 						{{ subtitulo }}
 					</p>
 
@@ -41,6 +57,9 @@
 					<div
 					class="recursos-panel__fila"
 					:class="clase_fila(model)"
+					data-testid="recursos-panel-fila"
+					:data-recurso="model.model_name"
+					:data-estado="estado_fila(model)"
 					v-for="model in models_to_download"
 					:key="model.model_name">
 						<span class="recursos-panel__estado">
@@ -73,7 +92,8 @@
 	</b-sidebar>
 
 	<recursos-progress
-	:models_to_download="models_to_download"></recursos-progress>
+	:models_to_download="models_to_download"
+	@abrir_panel="abrir_panel"></recursos-progress>
 </div>
 </template>
 <script>
@@ -120,8 +140,17 @@ export default {
 				}
 				return this.$store.state.download_resources.visibility
 			},
+			/**
+			 * 🔴 Este setter estaba vacio y no es cosmetico que ahora escriba.
+			 *
+			 * b-sidebar tiene estado interno propio, asi que cerrar con la X o con Escape lo
+			 * escondia en pantalla igual, pero el store se quedaba en `true` para siempre. A
+			 * partir de ahi la mutacion que abre el panel ya no cambiaba nada --el valor que
+			 * commiteaba era el que el store ya tenia-- y el panel no se volvia a abrir en toda
+			 * la sesion: el segundo clic en la tarjeta no hacia nada.
+			 */
 			set(value) {
-				// this.$store.commit('download_resources/setVisibility')
+				this.$store.commit('download_resources/' + (value ? 'abrir_panel' : 'cerrar_panel'))
 			}
 		},
 		start_download() {
@@ -150,6 +179,26 @@ export default {
 			}
 			return this.descargados_count + ' de ' + this.models_to_download.length + ' listos'
 		},
+		/**
+		 * Estado de la descarga del arranque, publicado como data-estado en el elemento raiz.
+		 *
+		 * Los tres valores y que significan:
+		 *  - 'pendiente':   la lista todavia no se armo (setModels corre a los 1000 ms de montar).
+		 *  - 'descargando': hay recursos en vuelo.
+		 *  - 'listo':       ya no queda ninguno esperando.
+		 *
+		 * ⚠️ 'listo' significa "no se espera mas a nadie", NO "llegaron todos los datos": una
+		 * descarga que falla se marca igual (ver marcar_descargado). Es la misma semantica que ya
+		 * tenian la barra de progreso y la tarjeta; aca solo se le pone nombre.
+		 *
+		 * @returns {string}
+		 */
+		estado_descarga() {
+			if (!this.models_to_download.length) {
+				return 'pendiente'
+			}
+			return this.todo_listo ? 'listo' : 'descargando'
+		},
 	},
 	created() {
 		setTimeout(() => {
@@ -171,6 +220,18 @@ export default {
 	},
 	methods: {
 		/**
+		 * Abre el panel lateral con el detalle de los recursos.
+		 *
+		 * Lo dispara la tarjeta de progreso de arriba a la derecha, que es la unica puerta de
+		 * entrada al panel desde que el arranque dejo de abrirlo solo (ver el comentario de
+		 * callMethods en common-vue/mixins/app.js).
+		 *
+		 * @return {void}
+		 */
+		abrir_panel() {
+			this.$store.commit('download_resources/abrir_panel')
+		},
+		/**
 		 * Clase de la fila segun en que estado esta ese recurso.
 		 *
 		 * @param {object} model
@@ -184,6 +245,19 @@ export default {
 				return 'recursos-panel__fila--listo'
 			}
 			return 'recursos-panel__fila--pendiente'
+		},
+		/**
+		 * Lo mismo que clase_fila pero como dato, para publicarlo en data-estado. La clase es
+		 * presentacion y puede cambiar de nombre con el diseño; esto es el estado del recurso.
+		 *
+		 * @param {object} model
+		 * @returns {string} 'pendiente' | 'descargando' | 'listo'
+		 */
+		estado_fila(model) {
+			if (model.downloading) {
+				return 'descargando'
+			}
+			return model.downloaded ? 'listo' : 'pendiente'
 		},
 		setModels() {
 			// Se vacia la lista antes de armarla porque setModels() tambien se llama cuando cambia
