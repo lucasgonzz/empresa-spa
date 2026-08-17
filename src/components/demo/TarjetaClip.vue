@@ -174,6 +174,11 @@ $tarjeta-clip-violeta: #3A31FC
 // El sangrado horizontal es el mismo que el del boton del item, para que el marco del video
 // quede alineado con el titulo del clip y no colgado del borde de la tarjeta.
 .tarjeta-clip
+	// Declarado y no heredado. Hasta el 17/8/2026 el centrado del boton "Probar" y del aviso
+	// de video faltante venia del `text-align: center` que `#app` le pone a todo el ERP: la
+	// tarjeta se veia bien de casualidad. Ahora que la hoja del panel declara `left` para que
+	// los titulos largos no salgan centrados, lo que acá SI se busca centrado se dice acá.
+	text-align: center
 	padding: 0.25rem 0.75rem 0.875rem
 
 .tarjeta-clip__marco

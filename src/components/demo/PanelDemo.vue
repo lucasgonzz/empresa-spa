@@ -520,8 +520,27 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 
 .panel-demo__hoja
 	position: relative
-	// Debajo del tirador: el halo animado del borde no tiene que pasarle por encima.
-	z-index: 1
+	// 🔴 La hoja NO lleva z-index, y eso NO es un olvido.
+	//
+	// Con `z-index: 1` la hoja abria un contexto de apilamiento propio, y adentro de un
+	// contexto los z-index de los hijos se resuelven CONTRA ESE 1, no contra el panel. El
+	// video agrandado (`.tarjeta-clip__marco--grande`, z-index 1060) quedaba encerrado ahi
+	// y no podia subir por encima de `.panel-demo__fondo` (z-index 1050), que es hermano de
+	// la hoja: medido el 17/8/2026, el video agrandado salia DEBAJO del vidrio esmerilado,
+	// borroso y oscurecido, y sus controles nativos no recibian un solo click
+	// (`elementFromPoint` sobre el boton de play devolvia `.panel-demo__fondo`).
+	//
+	// El z-index estaba puesto para que el halo del borde no le pasara por encima al
+	// tirador. Eso sigue valiendo sin el: los pseudo-elementos del halo son posicionados con
+	// z-index `auto` y el tirador tiene z-index 2, asi que el tirador pinta arriba igual.
+	// Verificado con captura del tirador en los tres anchos.
+	//
+	// El `text-align` va declarado por el mismo motivo por el que no va el z-index: el panel
+	// no puede depender del CSS global del ERP. `#app` trae `text-align: center` y de ahi lo
+	// heredaba todo el panel; solo se notaba cuando un texto envolvia (un titulo de seccion
+	// largo en tablet salia centrado en la segunda linea, contra la lista que va a la
+	// izquierda). Los dos lugares donde el centrado SI se busca se vuelven a declarar abajo.
+	text-align: left
 	display: flex
 	flex-direction: column
 	width: 100%
@@ -601,6 +620,9 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 	line-height: 1
 
 .panel-demo__encabezado
+	// Declarado, no heredado: el titulo del panel va centrado a proposito, y con la hoja
+	// alineada a la izquierda hay que decirlo acá o cambia sin que nadie lo haya pedido.
+	text-align: center
 	padding: 1.5rem 1.5rem 1.125rem
 	border-bottom: 1px solid $panel-demo-linea
 
@@ -830,6 +852,8 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 	border-top: 1px solid $panel-demo-linea
 
 .panel-demo__biblioteca-titulo
+	// Mismo caso que el encabezado: el rotulo va centrado a proposito y se declara.
+	text-align: center
 	font-size: 0.6875rem
 	font-weight: 600
 	text-transform: uppercase
@@ -893,6 +917,10 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 	.panel-demo
 		width: 55%
 		min-width: 380px
+		// 🔴 El tope tiene que estar. Sin el, cruzar de 1025 a 1024px AGRANDABA el panel de
+		// 500 a 563px (55% de 1024): achicar la ventana ensanchaba el panel, que es justo al
+		// reves de lo que la regla busca. Medido el 17/8/2026 redimensionando en vivo.
+		max-width: $panel-demo-ancho
 
 // Telefono (< 768): 500px sobre 360px no es un panel, es una pared. Pasa a hoja completa
 // sobre el sistema, y el tirador se mete adentro del borde para no quedar fuera de pantalla.
@@ -902,14 +930,39 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 	.panel-demo
 		width: 100%
 		min-width: 0
+		// Suelta el tope de 500px que puso la media query de tablet: esta también la cumple
+		// (767 < 1024) y sin esto, entre 500 y 767px la hoja quedaba en 500px en vez de
+		// completa. Medido: a 767px el panel salía de 500px y no de 767.
+		max-width: 100%
 
+	// 🔴 El tirador tiene que cambiar de lado segun el panel este abierto o cerrado, y en
+	// telefono NO son la misma regla.
+	//
+	// Con la hoja ocupando el 100% del ancho, `right: 100%` deja el tirador a la IZQUIERDA
+	// del panel, o sea fuera de la pantalla: medido el 17/8/2026 a 360px y a 390px, quedaban
+	// 1 de sus 36px visibles (2,8%). El lead que entraba por telefono no tenia forma de
+	// cerrar el panel, y el panel le tapaba el sistema entero.
+	//
+	// Abierto, entonces, el tirador se mete ADENTRO del borde de la hoja (`left: 0`), que es
+	// lo que el comentario de esta media query decia y el CSS no hacia. Cerrado, la hoja se
+	// fue 100% a la derecha y ahi `right: 100%` si lo deja sobre la pantalla.
 	.panel-demo__tirador
-		left: auto
-		right: 100%
-		margin-right: -1px
+		left: 0
+		right: auto
+		margin-right: 0
+		// Espeja el borde y la sombra: pegado por su izquierda, el filo va del otro lado.
+		border-left: none
+		border-right: 1px solid $panel-demo-linea
+		border-radius: 0 10px 10px 0
+		box-shadow: 4px 0 12px rgba(17, 24, 39, 0.08)
 
 	.panel-demo--colapsado .panel-demo__tirador
+		left: auto
 		right: 100%
+		border-right: none
+		border-left: 1px solid $panel-demo-linea
+		border-radius: 10px 0 0 10px
+		box-shadow: -4px 0 12px rgba(17, 24, 39, 0.08)
 
 	.panel-demo__cuerpo
 		padding: 0.875rem 0.875rem 1rem
