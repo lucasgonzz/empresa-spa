@@ -70,17 +70,31 @@
 					</div>
 
 
+					<!--
+						Celda que se edita en linea porque el modelo todavia esta incompleto
+						(show_in_input_if). El data-testid lleva el sufijo "-editable" para no
+						chocar con el de PivotProp.vue, que usa exactamente el mismo
+						<model>-<key>-<id> para las columnas del pivote: la misma key puede existir
+						como propiedad del modelo y como columna del pivote (ver el manejo de
+						colisiones "(pivot)" en form/BelongsToManyTable.vue).
+
+						Sin esto, un test no tiene forma de leer el valor de esta celda por
+						data-testid: el texto de la fila no incluye el value de un input, asi que
+						una asercion sobre el <tr> ve la celda vacia con la interfaz andando bien.
+					-->
 					<div
 					v-else-if="showInput(prop, model)">
 						<b-form-textarea
 						v-if="prop.type == 'textarea'"
 						:class="getInputSize(prop)"
+						:data-testid="model_name+'-'+prop.key+'-'+model.id+'-editable'"
 						:placeholder="propertyText(model, prop)"
 						v-model="model[prop.key]"></b-form-textarea>
 
 						<b-form-input
 						v-if="prop.type == 'text'"
 						:class="getInputSize(prop)"
+						:data-testid="model_name+'-'+prop.key+'-'+model.id+'-editable'"
 						:placeholder="propertyText(model, prop)"
 						v-model="model[prop.key]"></b-form-input>
 

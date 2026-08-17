@@ -81,10 +81,24 @@ test.describe('Compras: alta de articulo desde el buscador', () => {
 		const row_testid = await new_row_amount_input.getAttribute('data-testid')
 		const row_id = row_testid.replace('article-amount-', '')
 
-		// La fila debe mostrar el nombre recien creado (lectura de contenido sobre un elemento
-		// ya ubicado por data-testid, no una seleccion por texto).
-		const row = page.locator(`tr:has([data-testid="article-amount-${row_id}"])`)
-		await expect(row).toContainText(unique_article_name)
+		// La fila debe mostrar el nombre recien creado.
+		//
+		// 🔴 Se lee el VALOR de la celda, no el texto de la fila, y no es un rodeo: un articulo
+		// recien creado desde el buscador nace con status 'inactive', y props_to_show declara el
+		// nombre con show_in_input_if: ['status', '=', 'inactive'] (src/models/provider_order.js),
+		// asi que la celda es un textarea editable para poder completar el articulo sin salir de la
+		// compra. Eso es lo correcto y es lo que se ve en pantalla. Lo que estaba mal era la
+		// asercion: toContainText sobre el <tr> lee texto, y el value de un input no es texto, asi
+		// que el test daba rojo con la interfaz andando bien (README, corrida del 15/8/2026).
+		// El data-testid con sufijo "-editable" lo emite Tr.vue para estas celdas.
+		const name_cell = page.locator(`[data-testid="article-name-${row_id}-editable"]`)
+		await expect(name_cell).toHaveValue(unique_article_name)
+
+		// Agregado el articulo, el foco tiene que quedar solo en el primer campo del pivote
+		// --Cantidad--: es lo que deja seguir cargando con el teclado, y ademas es lo unico que
+		// trae esa columna a la parte visible de la tabla, que arranca scrolleada a la izquierda.
+		// Lo hace setTableFocus en common-vue/components/model/ModelForm.vue.
+		await expect(new_row_amount_input).toBeFocused()
 
 		// 4. Cargar cantidad y costo del articulo recien creado.
 		await new_row_amount_input.fill(AMOUNT)

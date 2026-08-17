@@ -82,8 +82,18 @@ module.exports = defineConfig({
 		timeout: 30000,
 	},
 
-	// Reporter legible en consola local.
-	reporter: [['list']],
+	// Dos reporters, y los dos hacen falta:
+	//
+	// - "list": la corrida en vivo en la consola. El detalle del error lo junta para el resumen del
+	//   final, asi que el que hace falta ANTES de ese resumen lo imprime e2e/fixtures.js apenas el
+	//   test termina (ver e2e/helpers/informe-de-fallo.js).
+	// - "html": el informe navegable en playwright-report/, con la captura y el trace de cada
+	//   fallo. `open: 'never'` porque un slot no puede quedarse con un navegador abierto esperando
+	//   que alguien lo cierre: se mira despues, a mano, con `npx playwright show-report`.
+	reporter: [
+		['list'],
+		['html', { open: 'never' }],
+	],
 
 	use: {
 		baseURL: BASE_URL,
