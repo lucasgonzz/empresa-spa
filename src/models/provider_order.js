@@ -235,18 +235,30 @@ export default {
 						show: true,
 					},
 				],
+				// Los table_width van explicitos a proposito: el ancho por defecto de una columna de
+				// pivot_set no esta en un solo lugar, esta repartido y con valores distintos segun el
+				// camino de render (300 en BelongsToManyTable.vue:390; 300 o 150 en
+				// common-vue/components/display/table/Index.vue:575/567 segun la prop tenga o no
+				// if_has_extencion). Fijar el ancho aca es lo unico que hace que la tabla de compras se
+				// vea igual por los dos caminos, asi que no son redundantes con ningun default: no los
+				// borres.
+				// Ojo: esto solo lo ven los usuarios que todavia no guardaron su preferencia
+				// btm_provider_order_articles, porque BelongsToManyTable.vue:434 le da prioridad al
+				// ancho guardado.
 				properties_to_set: [
 					{
 						text: 'Cantidad',
 						key: 'amount',
 						value: '',
-						type: 'number'
+						type: 'number',
+						table_width: 150,
 					},
 					{
 						text: 'Cant Recibida',
 						key: 'received',
 						value: '',
-						type: 'number'
+						type: 'number',
+						table_width: 150,
 					},
 					{
 						text: 'Costo',
@@ -257,6 +269,7 @@ export default {
 						type: 'number',
 						// Hasta 4 decimales en BD; en UI solo se muestran 3.º/4.º si el usuario los usa.
 						variable_decimals: { min: 2, max: 4 },
+						table_width: 200,
 					},
 					{
 						text: 'Precio',
@@ -264,12 +277,14 @@ export default {
 						value: {
 							key: 'price',
 						},
-						type: 'number'
+						type: 'number',
+						table_width: 200,
 					},
 					{
 						text: 'Descuento',
 						key: 'discount',
 						type: 'number',
+						table_width: 200,
 					},
 					{
 						text: 'Costo en dolares',
@@ -279,13 +294,15 @@ export default {
 						value: {
 							key: 'cost_in_dollars',
 						},
-						type: 'checkbox'
+						type: 'checkbox',
+						table_width: 200,
 					},
 					{
 						text: 'Actualizar proveedor en el sistema',
 						key: 'update_provider',
 						value: 0,
-						type: 'checkbox'
+						type: 'checkbox',
+						table_width: 200,
 					},
 					{
 						text: 'Iva',
@@ -296,6 +313,7 @@ export default {
 							key: 'iva_id',
 						},
 						size: 'md',
+						table_width: 200,
 					},
 					{
 						text: 'Notas',
