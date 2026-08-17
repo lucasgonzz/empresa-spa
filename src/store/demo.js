@@ -9,8 +9,17 @@ axios.defaults.withCredentials = true
  * hace que el ingreso y el panel compartan UNA sola llamada. `DemoIngreso.vue` despacha
  * `cargar_plan` para poder esperarlo antes de soltar la pantalla del sistema, y el panel lo
  * vuelve a despachar cuando se monta, unos milisegundos después. Sin este enganche serían dos
- * `GET /api/demo/plan` por ingreso. Si la guardáramos en el state, Vuex envolvería la promesa en
- * un observable al pedo y la dejaría serializable-mente rara en las devtools.
+ * `GET /api/demo/plan` por ingreso.
+ *
+ * Por qué no va en el `state`: el state de Vuex es el modelo que la vista dibuja y que las
+ * devtools muestran como un snapshot de datos. Una promesa no es un dato, no la renderiza nadie
+ * y en el inspector figura como un objeto opaco al lado de `secciones` y `notas`, que sí lo son.
+ *
+ * (Antes acá decía que Vuex "envolvería la promesa en un observable al pedo". Eso es falso y se
+ * corrige para que nadie lo repita: el `observe()` de Vue 2 sólo camina arrays y plain objects
+ * —`Object.prototype.toString.call()` tiene que dar `[object Object]`—, y una promesa da
+ * `[object Promise]`, así que se saltea. Guardarla en el state no costaría reactividad: costaría
+ * ensuciar el modelo.)
  *
  * Se vacía sola en cada carga de la página, que es exactamente la vida útil que necesita.
  */

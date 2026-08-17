@@ -19,7 +19,7 @@
 			@error="marcar_fallo"
 			@play="$emit('reproducir')"
 			@pause="$emit('pausar')"
-			@ended="$emit('terminado')"></video>
+			@ended="al_terminar"></video>
 
 			<!--
 				Capa de carga sobre el marco. Sin esto el clip se abre como un rectangulo negro
@@ -133,6 +133,22 @@ export default {
 		marcar_fallo() {
 			this.cargando = false
 			this.fallo = true
+		},
+		/**
+		 * El video llego al final.
+		 *
+		 * 🔴 Apaga `cargando` ademas de avisarle al panel, y eso NO es redundante: varios
+		 * navegadores emiten `waiting` justo antes de `ended` cuando el buffer se queda corto en
+		 * el ultimo pedacito. Ese `waiting` prende el indicador y despues de `ended` ya no llega
+		 * ningun `canplay` ni `playing` que lo apague, asi que el anillo girando y el texto
+		 * "Cargando el video" quedaban pegados encima de un video terminado, sin nada que los
+		 * sacara salvo cerrar y volver a abrir el clip.
+		 *
+		 * @returns {void}
+		 */
+		al_terminar() {
+			this.cargando = false
+			this.$emit('terminado')
 		},
 		/**
 		 * Vuelve a pedir el video. Una URL firmada vencida o un corte de red se arreglan solos

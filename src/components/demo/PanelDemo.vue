@@ -25,8 +25,19 @@
 			<div class="panel-demo__cuerpo">
 
 				<!--
-					Esqueleto de carga. Solo se ve cuando el panel se monta sin el plan en mano
-					—o sea despues de un F5—: entrando por el link, el ingreso ya lo espero.
+					Esqueleto de carga: el panel esta montado y el plan todavia no volvio.
+
+					Se ve en tres casos, no solo despues de un F5 como decia antes este
+					comentario:
+
+					1. F5 con la sesion viva: el panel se monta y es el que dispara el plan.
+					2. Durante el propio ingreso por el link. `DemoIngreso.vue` prende
+					   `demo/setEsDemo` ANTES de esperar el plan, y ese commit ya hace true al
+					   getter `demo/activa`, asi que App.vue monta el panel enseguida. Queda
+					   detras del overlay del ingreso, pero montado y con el esqueleto puesto.
+					3. Si en ese ingreso salta el techo de espera (TECHO_ESPERA_PLAN): el lead
+					   entra al sistema con el plan todavia en vuelo y ve el esqueleto de verdad.
+					   Es el caso que este esqueleto existe para cubrir.
 				-->
 				<div
 				v-if="cargando"
