@@ -78,8 +78,13 @@ export default {
 				return self.$axios.post('/api/demo/ingreso', { t: token })
 			})
 			.then(function () {
-				// Se reusa la acción existente para cargar el usuario autenticado: con el
-				// `return` agregado en auth.js, este `.then()` ahora sí espera a que termine.
+				// Se reusa la acción existente para cargar el usuario autenticado. Este `.then()`
+				// espera de verdad porque la acción devuelve su cadena de promesas.
+				//
+				// 🔴 El archivo es `src/store/auth.js`, que es el que `src/store/index.js`
+				// registra bajo el namespace `auth`. Hay un segundo `auth.js` en
+				// `src/common-vue/store/` que NO importa nadie en este repo: decir "auth.js" a
+				// secas ya hizo que dos revisiones diagnosticaran sobre el archivo equivocado.
 				return self.$store.dispatch('auth/me')
 			})
 			.then(function () {

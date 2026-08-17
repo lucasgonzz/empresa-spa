@@ -32,10 +32,23 @@ export default {
 		},
 	},
 	actions: {
+		/**
+		 * 🔴 OJO AL LEER ESTE ARCHIVO: en `empresa-spa` este módulo NO es el que se registra.
+		 *
+		 * `src/store/index.js` importa `@/store/auth`, y es ese el que responde a
+		 * `dispatch('auth/me')`. Esta copia de `common-vue` no la importa nadie (verificado el
+		 * 17/8/2026 con `git grep "common-vue/store/auth"`: cero resultados). Dos verificadores
+		 * independientes diagnosticaron sobre este archivo creyendo que era el vivo, así que
+		 * queda escrito.
+		 *
+		 * Se agrega igual el `return` que le faltaba —es el mismo que `src/store/auth.js` ya
+		 * tiene desde el 27/7/2026— para que quien encadene un `.then()` sobre el dispatch sepa
+		 * cuándo terminaron de verdad las dos llamadas HTTP, y no antes.
+		 */
 		me({commit}) {
 			commit('setMessage', 'Iniciando')
 			commit('setLoading', true)
-			axios.get('/sanctum/csrf-cookie')
+			return axios.get('/sanctum/csrf-cookie')
 			.then(() => {
 				return axios.get('/api/user')
 				.then(res => {
