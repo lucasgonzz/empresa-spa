@@ -3,6 +3,20 @@ import axios from 'axios'
 axios.defaults.withCredentials = true
 
 /**
+ * Promesa en vuelo (o ya resuelta) del pedido del plan.
+ *
+ * 🔴 Vive en el módulo y NO en el state a propósito: no es un dato reactivo, es el enganche que
+ * hace que el ingreso y el panel compartan UNA sola llamada. `DemoIngreso.vue` despacha
+ * `cargar_plan` para poder esperarlo antes de soltar la pantalla del sistema, y el panel lo
+ * vuelve a despachar cuando se monta, unos milisegundos después. Sin este enganche serían dos
+ * `GET /api/demo/plan` por ingreso. Si la guardáramos en el state, Vuex envolvería la promesa en
+ * un observable al pedo y la dejaría serializable-mente rara en las devtools.
+ *
+ * Se vacía sola en cada carga de la página, que es exactamente la vida útil que necesita.
+ */
+let promesa_plan = null
+
+/**
  * Ids de las secciones cuyos clips de núcleo ya están todos vistos.
  *
  * Se calcula al restaurar para sembrar `secciones_reportadas`: una sección que ya estaba
@@ -55,6 +69,14 @@ export default {
 		secciones: [],
 		/** Mientras se pide el plan. El panel no se dibuja hasta que hay secciones. */
 		cargando: false,
+		/**
+		 * El pedido del plan ya terminó, haya traído secciones o no.
+		 *
+		 * Es lo que mira el ingreso para saber que puede soltar la pantalla de espera. No alcanza
+		 * con `!cargando`, que también es false ANTES de pedir nada: con `cargando` solo, el
+		 * ingreso no distingue "todavía no arrancó" de "ya terminó".
+		 */
+		plan_cargado: false,
 		/**
 		 * Ids de los clips cuyo video llegó al final. Se siembra desde el `visto` que devuelve
 		 * el plan —o sea desde los eventos ya persistidos— y después se le suman los de esta
@@ -110,6 +132,9 @@ export default {
 		setCargando(state, valor) {
 			state.cargando = Boolean(valor)
 		},
+		setPlanCargado(state, valor) {
+			state.plan_cargado = Boolean(valor)
+		},
 		/**
 		 * Marca un clip como visto. Idempotente: el video puede llegar al final más de una vez.
 		 */
@@ -132,11 +157,17 @@ export default {
 	},
 	actions: {
 		/**
-		 * Pide el plan de la demo. Se llama UNA vez, desde el panel, y solo cuando
+		 * Pide el plan de la demo. Se llama UNA vez por carga de página, y solo cuando
 		 * `es_demo` ya es true.
 		 *
 		 * Un 204 (instancia sin canal, o demo sin plan) deja las secciones vacías y el panel
 		 * no se muestra: es un caso previsto, no un error.
+		 *
+		 * 🔴 Devuelve SIEMPRE la misma promesa (`promesa_plan`). Desde el 17/8/2026 hay dos
+		 * lugares que lo despachan —el ingreso, que lo espera antes de mostrar el sistema, y el
+		 * panel al montarse— y sin la memoria serían dos GET idénticos con dos milisegundos de
+		 * diferencia. Reintentar no tiene sentido acá: esta acción nunca rechaza, así que un
+		 * segundo despacho no arreglaría nada que el primero no haya resuelto ya.
 		 *
 		 * @param {Object} context
 		 * @returns {Promise}
@@ -146,9 +177,13 @@ export default {
 				return Promise.resolve()
 			}
 
+			if (promesa_plan) {
+				return promesa_plan
+			}
+
 			commit('setCargando', true)
 
-			return axios.get('/api/demo/plan')
+			promesa_plan = axios.get('/api/demo/plan')
 				.then(function (response) {
 					// El 204 llega sin cuerpo: axios deja data en string vacío.
 					if (response.status === 204 || !response.data || !response.data.secciones) {
@@ -204,7 +239,12 @@ export default {
 				})
 				.then(function () {
 					commit('setCargando', false)
+					// Se prende también cuando el plan vino vacío o falló: el ingreso pregunta
+					// "¿terminó?", no "¿salió bien?". Una demo sin panel se entra igual.
+					commit('setPlanCargado', true)
 				})
+
+			return promesa_plan
 		},
 		/**
 		 * Reporta un evento de UX al bus de la misión 50.
