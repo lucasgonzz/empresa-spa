@@ -41,14 +41,18 @@ export default {
 		 * independientes diagnosticaron sobre este archivo creyendo que era el vivo, así que
 		 * queda escrito.
 		 *
-		 * Se agrega igual el `return` que le faltaba —es el mismo que `src/store/auth.js` ya
-		 * tiene desde el 27/7/2026— para que quien encadene un `.then()` sobre el dispatch sepa
-		 * cuándo terminaron de verdad las dos llamadas HTTP, y no antes.
+		 * 🔴 Y NO se le agrega acá el `return` que le falta (el que `src/store/auth.js` sí tiene
+		 * desde el 27/7/2026), aunque sea tentador de paso. En este repo no arreglaría nada
+		 * —nadie lo importa—, y `common-vue` se copia a mano entre repos: en uno donde este
+		 * módulo SÍ esté registrado, ese `return` cambia cuándo dispara el `.then()` de todos
+		 * sus consumidores. Sería un cambio funcional en código compartido, sin nadie que lo
+		 * haya verificado del otro lado. Si alguna vez hace falta, se hace en el repo donde el
+		 * módulo esté vivo y se mide ahí.
 		 */
 		me({commit}) {
 			commit('setMessage', 'Iniciando')
 			commit('setLoading', true)
-			return axios.get('/sanctum/csrf-cookie')
+			axios.get('/sanctum/csrf-cookie')
 			.then(() => {
 				return axios.get('/api/user')
 				.then(res => {
