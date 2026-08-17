@@ -75,13 +75,20 @@
 						por el mismo motivo, que la rama wa.me de `mixins/model_functions.js`
 						(`sendWhatsApp`), que esta marcada alla con estas mismas palabras.
 						El `@click.stop` va por prudencia: la celda vive adentro de una b-table.
+
+						🔴 Y EL REPLIEGUE TIENE DOS CONDICIONES, NO UNA. Aca se ve solo la primera
+						(no tiene la extension). La segunda —la ventana de 24 h de Meta cerrada,
+						que es el estado de TODO chat nuevo— recien se sabe con el chat en la
+						mano, asi que la resuelve `whatsapp_chat/abrirChatOLinkExterno` en el
+						click y termina abriendo esta misma URL.
 					-->
 					<b-button
 					v-if="data.item.whatsapp_url && puede_abrir_el_agente(data.item)"
 					class="m-l-5"
 					size="sm"
 					variant="link"
-					title="Abrir la conversación de WhatsApp con el mensaje ya escrito"
+					:disabled="avisando_id == data.item.id"
+					title="Avisarle por WhatsApp con el mensaje ya escrito"
 					@click.stop="avisar_por_el_agente(data.item)">
 						<i class="bi bi-whatsapp text-success"></i>
 					</b-button>
@@ -132,6 +139,10 @@ export default {
 		return {
 			// id de la oferta que se esta cancelando, para no dejar apretar dos veces.
 			cancelando_id: null,
+			// id de la oferta cuyo aviso por WhatsApp esta resolviendo por donde sale. Mismo
+			// criterio que `cancelando_id`: el camino tiene un POST de por medio y dos clicks
+			// abririan dos pestañas.
+			avisando_id: null,
 		}
 	},
 	computed: {
@@ -234,27 +245,58 @@ export default {
 			return partes.join(' · ')
 		},
 		/**
-		 * true cuando el aviso puede salir por el agente en vez de por el link externo.
+		 * true cuando el aviso PUEDE llegar a salir por el agente. No promete que salga por
+		 * ahi: promete que vale la pena preguntarlo.
 		 *
 		 * El gate es `hasExtencion('whatsapp')` y no otra cosa: es el mismo criterio que ya usan
 		 * `BtnWhatsappChat`, `model_functions.sendWhatsApp` y `SidebarHost`, y sin esa extension
 		 * el sidebar NI SIQUIERA SE MONTA EN EL DOM, asi que abrirlo seria un click muerto.
+		 *
+		 * 🔴 La otra mitad de la decision —la ventana de 24 h de Meta— NO se puede contestar
+		 * aca: depende del `last_inbound_at` del chat, y el chat todavia no existe. La resuelve
+		 * `whatsapp_chat/abrirChatOLinkExterno` despues del click, con el modelo en la mano.
 		 */
 		puede_abrir_el_agente(oferta) {
 			return !!this.hasExtencion('whatsapp') && !!telefono_de_chat_de_oferta(oferta)
 		},
 		/**
-		 * Abre el sidebar de WhatsApp con el mensaje de la oferta ya escrito en el composer, en
-		 * vez de sacar al operador del sistema a una pestaña de api.whatsapp.com.
+		 * Manda el aviso de la oferta por donde de verdad pueda salir: el sidebar del agente si
+		 * la ventana de 24 h esta abierta, y si no la pestaña de api.whatsapp.com de siempre.
+		 * Quien decide es la accion del store; aca esta el click, que es lo unico que no se
+		 * puede mudar.
+		 *
+		 * 🔴 LA PESTAÑA SE PIDE ACA, SINCRONICAMENTE, Y ESTA LINEA NO SE PUEDE MOVER ADENTRO DEL
+		 * `.then()`. El navegador solo deja abrir una pestaña mientras esta atendiendo el gesto
+		 * del operador; una vez que la promesa del POST vuelve, ese permiso ya se perdio y el
+		 * bloqueador de pop-ups se come la pestaña sin decir nada. Por eso se abre en blanco
+		 * antes de saber si hace falta, y la accion la navega o la cierra segun como termine
+		 * (ver `navegar_pestana()` en `store/whatsapp_chat.js`).
 		 *
 		 * Aca no hay ningun modal que cerrar: la tabla vive en la vista, no adentro de uno.
 		 */
 		avisar_por_el_agente(oferta) {
-			this.abrir_chat_whatsapp({
+			let self = this
+			let pestana = window.open('', '_blank')
+			this.avisando_id = oferta.id
+			this.$store.dispatch('whatsapp_chat/abrirChatOLinkExterno', {
 				phone: telefono_de_chat_de_oferta(oferta),
 				client_id: oferta.client_id,
 				display_name: oferta.client && oferta.client.name ? oferta.client.name : '',
 				borrador: mensaje_de_oferta(oferta.whatsapp_url),
+				url_externa: oferta.whatsapp_url,
+				pestana: pestana,
+			})
+			.then(function(resultado) {
+				self.avisando_id = null
+				if (!resultado.por_el_agente && resultado.link_bloqueado) {
+					// Un aviso que no salio no puede terminar en silencio: es exactamente el
+					// modo de falla que este boton vino a arreglar.
+					self.$bvToast.toast('El navegador bloqueo la pestaña de WhatsApp. Permiti las ventanas emergentes de este sitio y volve a intentarlo.', {
+						title: 'No se pudo abrir WhatsApp',
+						variant: 'warning',
+						solid: true,
+					})
+				}
 			})
 		},
 		/**

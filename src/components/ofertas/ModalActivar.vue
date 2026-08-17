@@ -147,12 +147,26 @@
 					que no hace absolutamente nada. Es el mismo criterio, y por el mismo motivo, que la
 					rama wa.me de `mixins/model_functions.js` (`sendWhatsApp`), que está marcada allá con
 					estas mismas palabras.
+
+					🔴 Y OJO: EL REPLIEGUE AL LINK EXTERNO TIENE DOS CONDICIONES, NO UNA. Acá se ve
+					solo la primera (no tiene la extensión), porque es la única que se puede saber
+					antes de apretar. La segunda —la ventana de 24 h de Meta cerrada, que es el estado
+					de TODO chat nuevo— recién se sabe con el chat en la mano, así que la resuelve
+					`whatsapp_chat/abrirChatOLinkExterno` en el click y termina abriendo esta misma
+					URL. Por eso el botón de arriba no garantiza sidebar: garantiza que el aviso sale.
 				-->
 				<b-button
 				v-if="resultado.whatsapp_url && puede_abrir_el_agente(resultado)"
 				variant="success"
+				:disabled="avisando"
 				@click="avisar_por_el_agente(resultado)">
-					<i class="bi bi-whatsapp m-r-5"></i>
+					<b-spinner
+					v-if="avisando"
+					small
+					class="m-r-5"></b-spinner>
+					<i
+					v-else
+					class="bi bi-whatsapp m-r-5"></i>
 					Avisarle por WhatsApp
 				</b-button>
 				<a
@@ -202,6 +216,9 @@ export default {
 			loading: false,
 			// La oferta creada, para mostrar el aviso al cliente sin cerrar el modal.
 			resultado: null,
+			// true mientras el aviso por WhatsApp está resolviendo por dónde sale. Apaga el
+			// botón: el camino tiene un POST de por medio y dos clicks abrirían dos pestañas.
+			avisando: false,
 		}
 	},
 	computed: {
@@ -240,6 +257,7 @@ export default {
 		 */
 		cargar_desde_la_linea() {
 			this.resultado = null
+			this.avisando = false
 			if (!this.linea) {
 				return
 			}
@@ -342,30 +360,65 @@ export default {
 			this.$bvModal.hide('oferta-modal-activar')
 		},
 		/**
-		 * true cuando el aviso puede salir por el agente en vez de por el link externo.
+		 * true cuando el aviso PUEDE llegar a salir por el agente. No promete que salga por
+		 * ahi: promete que vale la pena preguntarlo.
 		 *
 		 * El gate es `hasExtencion('whatsapp')` y no otra cosa: es el mismo criterio que ya usan
 		 * `BtnWhatsappChat`, `model_functions.sendWhatsApp` y `SidebarHost`, y sin esa extensión
 		 * el sidebar NI SIQUIERA SE MONTA EN EL DOM, así que abrirlo seria un click muerto.
+		 *
+		 * 🔴 La otra mitad de la decision —la ventana de 24 h de Meta— NO se puede contestar
+		 * aca: depende del `last_inbound_at` del chat, y el chat todavia no existe. La resuelve
+		 * `whatsapp_chat/abrirChatOLinkExterno` despues del click, con el modelo en la mano.
 		 */
 		puede_abrir_el_agente(oferta) {
 			return !!this.hasExtencion('whatsapp') && !!telefono_de_chat_de_oferta(oferta)
 		},
 		/**
-		 * Abre el sidebar de WhatsApp con el mensaje de la oferta ya escrito en el composer, en
-		 * vez de sacar al operador del sistema a una pestaña de api.whatsapp.com.
+		 * Manda el aviso de la oferta por donde de verdad pueda salir: el sidebar del agente si
+		 * la ventana de 24 h esta abierta, y si no la pestaña de api.whatsapp.com de siempre.
+		 * Quien decide es la accion del store; aca esta el click, que es lo unico que no se
+		 * puede mudar.
 		 *
-		 * El modal se cierra ANTES de abrir el sidebar: en telefono el sidebar ocupa toda la
+		 * 🔴 LA PESTAÑA SE PIDE ACA, SINCRONICAMENTE, Y ESTA LINEA NO SE PUEDE MOVER ADENTRO DEL
+		 * `.then()`. El navegador solo deja abrir una pestaña mientras esta atendiendo el gesto
+		 * del operador; una vez que la promesa del POST vuelve, ese permiso ya se perdio y el
+		 * bloqueador de pop-ups se come la pestaña sin decir nada. Por eso se abre en blanco
+		 * antes de saber si hace falta, y la accion la navega o la cierra segun como termine
+		 * (ver `navegar_pestana()` en `store/whatsapp_chat.js`).
+		 *
+		 * El modal se cierra SOLO en la rama del sidebar: en telefono el sidebar ocupa toda la
 		 * pantalla y quedaria discutiendo el z-index con el modal, y ademas el operador se esta
-		 * yendo a la conversacion — dejarle el modal abajo no le sirve para nada.
+		 * yendo a la conversacion. En la rama del link externo el operador se va a otra pestaña
+		 * y vuelve, asi que el modal se queda como estaba —igual que antes de esta mision.
 		 */
 		avisar_por_el_agente(oferta) {
-			this.$bvModal.hide('oferta-modal-activar')
-			this.abrir_chat_whatsapp({
+			let self = this
+			let pestana = window.open('', '_blank')
+			this.avisando = true
+			this.$store.dispatch('whatsapp_chat/abrirChatOLinkExterno', {
 				phone: telefono_de_chat_de_oferta(oferta),
 				client_id: oferta.client_id,
 				display_name: oferta.client && oferta.client.name ? oferta.client.name : '',
 				borrador: mensaje_de_oferta(oferta.whatsapp_url),
+				url_externa: oferta.whatsapp_url,
+				pestana: pestana,
+			})
+			.then(function(resultado) {
+				self.avisando = false
+				if (resultado.por_el_agente) {
+					self.$bvModal.hide('oferta-modal-activar')
+					return
+				}
+				if (resultado.link_bloqueado) {
+					// Un aviso que no salio no puede terminar en silencio: es exactamente el
+					// modo de falla que este boton vino a arreglar.
+					self.$bvToast.toast('El navegador bloqueo la pestaña de WhatsApp. Permiti las ventanas emergentes de este sitio y volve a intentarlo.', {
+						title: 'No se pudo abrir WhatsApp',
+						variant: 'warning',
+						solid: true,
+					})
+				}
 			})
 		},
 		/**
