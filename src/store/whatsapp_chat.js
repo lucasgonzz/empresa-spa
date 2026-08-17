@@ -1,6 +1,94 @@
 import axios from 'axios'
+import moment from 'moment'
 axios.defaults.withCredentials = true
 axios.defaults.baseURL = process.env.VUE_APP_API_URL
+
+/**
+ * ¿El chat está adentro de la ventana de 24 h de Meta, o sea que se le puede mandar texto
+ * libre?
+ *
+ * 🔴 ES EL ESPEJO EXACTO de `WhatsappChat::is_within_service_window()` (empresa-api,
+ * `app/Models/WhatsappChat.php:76-83`), y se calcula acá porque el modelo NO manda la
+ * respuesta ya masticada: `WhatsappChat` no tiene `$appends` ni accessor de ventana, así que
+ * lo único que viaja en el JSON es la columna `last_inbound_at` (verificado en el modelo y en
+ * `WhatsappChatController::store()`, que devuelve `fullModel('WhatsappChat', ...)`, o sea el
+ * modelo entero con sus columnas).
+ *
+ * Las dos mitades de la regla, y ninguna es de adorno:
+ * - `last_inbound_at` en null ⇒ ventana CERRADA. Es el estado de TODO chat recién creado por
+ *   un botón del sistema, que es exactamente el caso del aviso de una oferta: el comercio le
+ *   escribe primero y el cliente todavía no contestó nunca.
+ * - Pasadas 24 h desde el último entrante ⇒ cerrada.
+ *
+ * `moment().diff(..., 'hours')` trunca igual que el `diffInHours()` de Carbon, así que el
+ * `< 24` corta en el mismo lugar de los dos lados. Y `last_inbound_at` viaja casteado a
+ * datetime, o sea en ISO-8601 con zona: `moment()` lo lee como instante absoluto y no hay
+ * corrimiento posible por zona horaria (es el mismo `moment(datetime)` que ya usa
+ * `chats-list/ChatRow.vue` sobre `last_message_at`).
+ *
+ * @param {Object|null} chat Modelo de whatsapp_chats como lo devuelve el backend.
+ * @returns {Boolean}
+ */
+function ventana_de_24h_abierta(chat) {
+	if (!chat || !chat.last_inbound_at) {
+		return false
+	}
+	return moment().diff(moment(chat.last_inbound_at), 'hours') < 24
+}
+
+/**
+ * Cierra la pestaña que se había abierto por las dudas, si sigue viva.
+ *
+ * @param {Window|null} pestana
+ * @returns {void}
+ */
+function cerrar_pestana(pestana) {
+	if (pestana && !pestana.closed) {
+		pestana.close()
+	}
+}
+
+/**
+ * Manda a la URL externa la pestaña que el click del operador ya abrió.
+ *
+ * 🔴 POR QUÉ LA PESTAÑA LLEGA ABIERTA Y VACÍA DESDE EL COMPONENTE, Y NO SE ABRE ACÁ.
+ * Este código corre adentro de un `.then()`, o sea después de que la promesa del POST volvió,
+ * y para entonces el navegador YA NO CONSIDERA que estamos atendiendo el click del operador:
+ * un `window.open()` disparado ahí lo come el bloqueador de pop-ups y el aviso no sale nunca,
+ * en silencio. Por eso el que atiende el click abre la pestaña en blanco SINCRÓNICAMENTE
+ * —ahí el gesto todavía vale— y acá solo se la navega (o se la cierra, si al final el mensaje
+ * sale por el agente). El precio es un parpadeo de pestaña en blanco en el caso en que no
+ * hace falta; el precio de "simplificarlo" es un botón que no manda nada.
+ *
+ * @param {Window|null} pestana Pestaña abierta en el click, o null si el navegador no la dio.
+ * @param {String} url
+ * @returns {Boolean} false SOLO si había una URL para abrir y el navegador no dejó abrirla.
+ */
+function navegar_pestana(pestana, url) {
+	if (!url) {
+		// No puede pasar desde los botones de la oferta (no se dibujan sin `whatsapp_url`),
+		// pero si pasara, la pestaña en blanco no se queda colgada.
+		cerrar_pestana(pestana)
+		return true
+	}
+	let destino = pestana
+	if (!destino || destino.closed) {
+		// La pestaña se pidió sincrónicamente y aun así no está: o el bloqueador ganó, o el
+		// operador la cerró. Se reintenta —ya fuera del gesto, así que puede volver a fallar—
+		// y si tampoco sale, el que llamó tiene que DECIRLO: un aviso que no salió no puede
+		// terminar en silencio.
+		destino = window.open(url, '_blank')
+		if (!destino) {
+			return false
+		}
+	}
+	// Mismo `rel="noopener"` que lleva el `<a>` del repliegue: la pestaña externa no se queda
+	// con una referencia viva a la ventana del ERP. Se anula ANTES de navegar, mientras la
+	// pestaña todavía es `about:blank` y accesible.
+	destino.opener = null
+	destino.location.href = url
+	return true
+}
 
 /**
  * Store del módulo WhatsApp (grupo 137, Prompt 06): lista de chats + conversación abierta.
@@ -69,6 +157,35 @@ export default {
 		sidebar_abierto: false,
 		// URL de la imagen que se está mirando a pantalla completa (null = visor cerrado).
 		lightbox_url: null,
+
+		/*
+			Texto que el que abrió la conversación quiere dejar cargado en el composer (hoy: el
+			mensaje de una oferta). `{chat_id, texto}` o null.
+
+			Lleva el `chat_id` adentro porque entre que se deja y se lee puede haber un POST de
+			por medio, y el composer tiene que poder confirmar que el borrador es de la
+			conversación que está mirando.
+
+			🔴 QUÉ PASA DE VERDAD CON ESTE VALOR, que hasta el 17/8/2026 este comentario contaba
+			mal. Decía "es de UN SOLO USO: el composer lo consume y lo borra, así que no puede
+			reaparecer al volver a este chat": lo segundo era mentira. `tomar_borrador()` se
+			llamaba solo desde el `created()` y desde el watch de `chat_id`, y cuando el sidebar
+			YA estaba abierto en ese mismo chat no corría ninguno de los dos (el componente ya
+			existe y `selected_chat_id` no cambia de valor, así que Vue no dispara el watch). El
+			borrador quedaba vivo en el state y aparecía escrito minutos después, la próxima vez
+			que el operador saliera de ese chat y volviera.
+
+			Hoy sí es de un solo uso, y es de un solo uso porque el composer lo mira en LOS TRES
+			momentos en que puede llegar (ver el docblock de `tomar_borrador()` en
+			`conversation/Composer.vue`). Además `abrirChat` lo pisa —con el borrador nuevo o
+			con null— en cada apertura, así que ni siquiera un borrador que nadie llegó a
+			consumir puede sobrevivir a la apertura siguiente.
+
+			Lo que sí era verdad desde el principio, y lo sigue siendo: no se puede filtrar a
+			otro chat. El composer solo se lo queda si el `chat_id` del borrador es el que tiene
+			abierto.
+		*/
+		borrador: null,
 	},
 	mutations: {
 		setLoadingChats(state, value) {
@@ -184,6 +301,14 @@ export default {
 		setLightboxUrl(state, value) {
 			state.lightbox_url = value || null
 		},
+		/**
+		 * Deja (con `{chat_id, texto}`) o consume (con null) el borrador del composer.
+		 *
+		 * @param {Object|null} value
+		 */
+		setBorrador(state, value) {
+			state.borrador = value || null
+		},
 	},
 	getters: {
 		/**
@@ -281,24 +406,110 @@ export default {
 		 * Si mañana se suma otro dato del contacto y solo se toca el botón, va a pasar lo mismo.
 		 *
 		 * @param {Object} payload { chat_id } o { phone, client_id, display_name }
+		 * @param {string} [payload.borrador] Texto para dejar escrito en el composer al abrir
+		 *                                    (hoy: el mensaje de una oferta). NO viaja al backend.
 		 * @returns {Promise} resuelve con el id del chat abierto.
 		 */
 		abrirChat({ commit, dispatch }, payload) {
+			// El borrador se commitea ANTES de seleccionar el chat, en las dos ramas: el composer lo
+			// busca tanto en su created() como en su watch de chat_id, y los dos corren después.
 			if (payload.chat_id) {
+				commit('setBorrador', payload.borrador ? {chat_id: payload.chat_id, texto: payload.borrador} : null)
 				commit('setSelectedChatId', payload.chat_id)
 				commit('setSidebarAbierto', true)
 				return Promise.resolve(payload.chat_id)
 			}
 			let self_commit = commit
+			let borrador = payload.borrador || ''
+			// 🔴 `borrador` NO viaja en este POST: `WhatsappChatController::store()` espera phone,
+			// client_id y display_name, y nada más. Es el mismo campo-por-campo que el docblock de
+			// arriba avisa, mirado del otro lado: lo que va al backend se elige a mano, y lo que es
+			// del front se queda acá.
 			return dispatch('createChat', {
 				phone: payload.phone,
 				client_id: payload.client_id || null,
 				display_name: payload.display_name || null,
 			})
 				.then(function (model) {
+					self_commit('setBorrador', borrador ? {chat_id: model.id, texto: borrador} : null)
 					self_commit('setSelectedChatId', model.id)
 					self_commit('setSidebarAbierto', true)
 					return model.id
+				})
+		},
+		/**
+		 * Abre la conversación en el sidebar SOLO si el agente la puede entregar de verdad; si
+		 * no, manda el aviso por el link externo de WhatsApp, que es el camino que siempre
+		 * funcionó.
+		 *
+		 * 🔴 EL PORQUÉ, QUE ES TODO EL PUNTO DE ESTA ACCIÓN.
+		 * El aviso de una oferta es un mensaje SALIENTE EN FRÍO: el comercio le escribe primero
+		 * al cliente. Pero el agente sale por la Cloud API de Meta, y ahí un saliente en frío no
+		 * se puede mandar: `WhatsappChatController::send_message()` corta con 422
+		 * `fuera_de_ventana` cuando `is_within_service_window()` da false, y eso pasa SIEMPRE en
+		 * un chat recién creado, porque `last_inbound_at` viene en null. O sea que abrir el
+		 * sidebar con el mensaje escrito, tal cual, terminaba con el operador apretando Enter y
+		 * comiéndose "pasaron más de 24 h desde el último mensaje del cliente", con el texto
+		 * descartado. El link externo que este botón reemplazó abría el WhatsApp propio del
+		 * comerciante y NO tiene esa restricción: el mensaje salía.
+		 *
+		 * Por eso el repliegue cubre DOS condiciones y no una: sin la extensión `whatsapp` (eso
+		 * lo decide el componente, que es el que tiene `hasExtencion`) O con la ventana de 24 h
+		 * cerrada (eso se decide acá). El sidebar queda para cuando el mensaje va a salir.
+		 *
+		 * 🔴 LA VENTANA NO SE PUEDE SABER ANTES DE TENER EL CHAT, y por eso hay un POST de por
+		 * medio aunque después no usemos el sidebar. `createChat` es idempotente por teléfono
+		 * (el backend busca por `user_id` + `phone` y solo crea si no lo encuentra), así que
+		 * pedirlo no duplica nada: deja la conversación armada para cuando el cliente conteste,
+		 * y de paso devuelve el `last_inbound_at` que es lo único que contesta la pregunta.
+		 * Si el POST falla, el aviso NO se pierde: se cae al link externo igual.
+		 *
+		 * @param {Object} payload
+		 * @param {String} payload.phone Teléfono normalizado (solo dígitos).
+		 * @param {Number|null} payload.client_id
+		 * @param {String|null} payload.display_name
+		 * @param {String} payload.borrador Texto a dejar escrito en el composer.
+		 * @param {String} payload.url_externa El `whatsapp_url` de la oferta (el repliegue).
+		 * @param {Window|null} payload.pestana Pestaña que el componente abrió en el click, para
+		 *                                      esquivar el bloqueador de pop-ups (ver
+		 *                                      `navegar_pestana()`).
+		 * @returns {Promise} resuelve con {por_el_agente, link_bloqueado}. `link_bloqueado` es
+		 *                    true cuando había que abrir la pestaña externa y el navegador no
+		 *                    dejó: el que llama tiene que avisarlo en pantalla.
+		 */
+		abrirChatOLinkExterno({ dispatch }, payload) {
+			let pestana = payload.pestana || null
+			let url = payload.url_externa || ''
+			let borrador = payload.borrador || ''
+			return dispatch('createChat', {
+				phone: payload.phone,
+				client_id: payload.client_id || null,
+				display_name: payload.display_name || null,
+			})
+				.catch(function (err) {
+					// Un chat que no se pudo crear se trata igual que una ventana cerrada: no
+					// hay agente posible, pero el aviso tiene que salir igual.
+					console.log(err)
+					return null
+				})
+				.then(function (model) {
+					if (!ventana_de_24h_abierta(model)) {
+						return {
+							por_el_agente: false,
+							link_bloqueado: !navegar_pestana(pestana, url),
+						}
+					}
+					cerrar_pestana(pestana)
+					return dispatch('abrirChat', {
+						chat_id: model.id,
+						borrador: borrador,
+					})
+						.then(function () {
+							return {
+								por_el_agente: true,
+								link_bloqueado: false,
+							}
+						})
 				})
 		},
 		/**

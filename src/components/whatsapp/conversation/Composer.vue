@@ -228,6 +228,19 @@ export default {
 			return this.$store.state.whatsapp_chat.selected_chat_id
 		},
 		/**
+		 * El borrador que dejó quien abrió la conversación (`{chat_id, texto}` o null).
+		 *
+		 * Se expone como computed —y no se lee solo adentro del método— porque hace falta que
+		 * sea REACTIVO: hay un caso en el que este componente ya existe y el chat abierto no
+		 * cambia, así que el único aviso de que llegó un borrador nuevo es que este valor
+		 * cambió. Ver el watch de abajo y el docblock de `tomar_borrador()`.
+		 *
+		 * @returns {Object|null}
+		 */
+		borrador() {
+			return this.$store.state.whatsapp_chat.borrador
+		},
+		/**
 		 * El chat abierto está en modo simulación (ver el getter en `store/whatsapp_chat.js`:
 		 * se resuelve mirando el último entrante cargado, que es lo único que el broadcast
 		 * mantiene al día).
@@ -294,6 +307,33 @@ export default {
 				dejar el texto sería el más confuso de los tres comportamientos posibles.
 			*/
 			this.text = ''
+			// Y recién DESPUÉS de esa limpieza se toma el borrador, si es de este chat: al revés
+			// se pisaría solo. Ver el docblock de tomar_borrador().
+			this.tomar_borrador()
+		},
+		/**
+		 * Llegó (o se consumió) un borrador con el componente ya montado.
+		 *
+		 * 🔴 ESTE ES EL CASO QUE FALTABA Y EL QUE ROMPÍA: el sidebar ya abierto en ESTA MISMA
+		 * conversación. Ahí `selected_chat_id` se vuelve a commitear con el valor que ya tenía,
+		 * la mutación no cambia nada y Vue no dispara el watch de `chat_id`; y el componente ya
+		 * existe, así que tampoco hay `created()`. El operador con dos ofertas activas del mismo
+		 * cliente apretaba el ícono de la segunda y en pantalla seguía escrito el mensaje de la
+		 * primera: un Enter y le mandaba la oferta equivocada, con 201 y aviso de éxito.
+		 *
+		 * 🔴 VA EN `$nextTick` Y NO DERECHO, y no es cosmético. Cuando el chat SÍ cambia (el
+		 * caso del sidebar abierto en otra conversación), este watch y el de `chat_id` se
+		 * disparan los dos en la misma vuelta del scheduler, y el orden entre ellos depende de
+		 * en qué orden se declararon. Si este corriera primero y sin diferir, tomaría el
+		 * borrador y acto seguido el watch de `chat_id` lo borraría con su `this.text = ''`,
+		 * dejando el composer vacío. Diferir a `$nextTick` lo saca de esa carrera: el callback
+		 * corre después de TODOS los watchers de esa vuelta, así que para entonces la limpieza
+		 * de `chat_id` ya pasó (y si ese watch ya consumió el borrador, acá no queda nada que
+		 * hacer y `tomar_borrador()` sale por su guarda). No lo "simplifiques" sacándole el
+		 * nextTick.
+		 */
+		borrador() {
+			this.$nextTick(this.tomar_borrador)
 		},
 		/**
 		 * Se anota a qué conversación pertenece la grabación que arranca.
@@ -318,6 +358,7 @@ export default {
 			—misma razón por la que el mixin deja afuera las marcas del gesto.
 		*/
 		this._chat_de_la_grabacion = null
+		this.tomar_borrador()
 	},
 	beforeDestroy() {
 		// El sidebar destruye este componente cada vez que se cierra: si la previsualización
@@ -580,6 +621,43 @@ export default {
 				console.log(err)
 				this.$toast.error('No se pudo generar la sugerencia')
 			})
+		},
+		/**
+		 * Toma el borrador que dejó quien abrió esta conversación (hoy, el botón de una
+		 * oferta) y lo carga en el input. Es de UN SOLO USO: se consume del store apenas se
+		 * lee, así que no puede reaparecer al volver a este chat ni filtrarse a otro. Y sólo
+		 * se toma si el `chat_id` del borrador es el que está abierto — la misma guarda que
+		 * ya usa `suggest()` para que una respuesta pedida para el cliente A no aparezca
+		 * escrita con el cliente B abierto.
+		 *
+		 * 🔴 SE LLAMA DESDE TRES LUGARES, UNO POR CADA ESTADO EN EL QUE PUEDE ESTAR EL SIDEBAR
+		 * CUANDO ALGUIEN APRIETA UN BOTÓN QUE DEJA BORRADOR. Los tres hacen falta y ninguno
+		 * cubre al otro. Si mañana aparece un cuarto estado, esta lista queda corta: hasta el
+		 * 17/8/2026 enumeraba dos como si fueran todos, y el que faltaba era justo el que
+		 * mandaba el mensaje equivocado.
+		 *
+		 * 1. Sidebar CERRADO → `created()`. Quien abre el chat deja `selected_chat_id` puesto
+		 *    ANTES de que este componente exista (y encima `conversation/Index.vue` no dibuja
+		 *    el composer hasta que el chat aparece en la bandeja): el watch de `chat_id` no se
+		 *    dispara nunca, y sin el `created()` el borrador no se carga.
+		 * 2. Sidebar ABIERTO en OTRA conversación → `watch: chat_id`. El componente ya existe y
+		 *    lo que corre es ese watch, que arranca limpiando `this.text`; por eso la toma va
+		 *    DESPUÉS de esa línea, o se pisa sola.
+		 * 3. Sidebar ABIERTO en ESTA MISMA conversación → `watch: borrador`. No corre ninguno
+		 *    de los dos anteriores: el componente ya existe y `selected_chat_id` se commitea
+		 *    con el valor que ya tenía, así que Vue no dispara nada. Es el caso más común de
+		 *    todos —un cliente con dos ofertas activas y el operador clickeando la segunda— y
+		 *    era el que quedaba afuera.
+		 *
+		 * @returns {void}
+		 */
+		tomar_borrador() {
+			let borrador = this.borrador
+			if (!borrador || borrador.chat_id != this.chat_id) {
+				return
+			}
+			this.text = borrador.texto
+			this.$store.commit('whatsapp_chat/setBorrador', null)
 		},
 	},
 }

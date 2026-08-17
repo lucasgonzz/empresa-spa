@@ -34,7 +34,16 @@ export default {
 		 * del comprador y no un número pelado — desde Clientes el nombre ya salía del cliente
 		 * vinculado. Solo se usa al **crear**: si el chat ya existía, no le pisa el nombre.
 		 *
+		 * `borrador` es lo contrario: NO viaja a la base. Es el texto que el que abre la
+		 * conversación quiere dejar ya escrito en el composer (hoy, el mensaje de una oferta),
+		 * y muere en el front — `whatsapp_chat/abrirChat` lo guarda en `state.borrador` y el
+		 * composer lo consume de una sola vez. 🔴 Acá el payload se pasa ENTERO al dispatch, así
+		 * que una clave nueva llega sola; el que sí lo rearma campo por campo es `abrirChat`
+		 * antes del POST, y ahí es donde hay que acordarse de agregarla (su docblock lo avisa,
+		 * y `display_name` ya se perdió una vez justo por eso).
+		 *
 		 * @param {Object} payload { chat_id } o { phone, client_id, display_name }
+		 * @param {string} [payload.borrador] Texto a dejar cargado en el composer.
 		 * @returns {Promise}
 		 */
 		abrir_chat_whatsapp(payload) {
