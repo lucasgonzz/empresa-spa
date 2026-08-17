@@ -69,6 +69,16 @@ export default {
 		sidebar_abierto: false,
 		// URL de la imagen que se está mirando a pantalla completa (null = visor cerrado).
 		lightbox_url: null,
+
+		/*
+			Texto que el que abrió la conversación quiere dejar cargado en el composer (hoy: el
+			mensaje de una oferta). `{chat_id, texto}` o null. Es de UN SOLO USO: el composer lo
+			consume y lo borra, así que no puede reaparecer al volver a este chat ni filtrarse a
+			otro. Lleva el `chat_id` adentro porque entre que se deja y se lee puede haber un POST
+			de por medio, y el composer tiene que poder confirmar que el borrador es de la
+			conversación que está mirando.
+		*/
+		borrador: null,
 	},
 	mutations: {
 		setLoadingChats(state, value) {
@@ -184,6 +194,14 @@ export default {
 		setLightboxUrl(state, value) {
 			state.lightbox_url = value || null
 		},
+		/**
+		 * Deja (con `{chat_id, texto}`) o consume (con null) el borrador del composer.
+		 *
+		 * @param {Object|null} value
+		 */
+		setBorrador(state, value) {
+			state.borrador = value || null
+		},
 	},
 	getters: {
 		/**
@@ -281,21 +299,32 @@ export default {
 		 * Si mañana se suma otro dato del contacto y solo se toca el botón, va a pasar lo mismo.
 		 *
 		 * @param {Object} payload { chat_id } o { phone, client_id, display_name }
+		 * @param {string} [payload.borrador] Texto para dejar escrito en el composer al abrir
+		 *                                    (hoy: el mensaje de una oferta). NO viaja al backend.
 		 * @returns {Promise} resuelve con el id del chat abierto.
 		 */
 		abrirChat({ commit, dispatch }, payload) {
+			// El borrador se commitea ANTES de seleccionar el chat, en las dos ramas: el composer lo
+			// busca tanto en su created() como en su watch de chat_id, y los dos corren después.
 			if (payload.chat_id) {
+				commit('setBorrador', payload.borrador ? {chat_id: payload.chat_id, texto: payload.borrador} : null)
 				commit('setSelectedChatId', payload.chat_id)
 				commit('setSidebarAbierto', true)
 				return Promise.resolve(payload.chat_id)
 			}
 			let self_commit = commit
+			let borrador = payload.borrador || ''
+			// 🔴 `borrador` NO viaja en este POST: `WhatsappChatController::store()` espera phone,
+			// client_id y display_name, y nada más. Es el mismo campo-por-campo que el docblock de
+			// arriba avisa, mirado del otro lado: lo que va al backend se elige a mano, y lo que es
+			// del front se queda acá.
 			return dispatch('createChat', {
 				phone: payload.phone,
 				client_id: payload.client_id || null,
 				display_name: payload.display_name || null,
 			})
 				.then(function (model) {
+					self_commit('setBorrador', borrador ? {chat_id: model.id, texto: borrador} : null)
 					self_commit('setSelectedChatId', model.id)
 					self_commit('setSidebarAbierto', true)
 					return model.id

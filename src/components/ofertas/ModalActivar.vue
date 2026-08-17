@@ -140,8 +140,23 @@
 					No se le pudo avisar por mail (no hay direccion valida cargada). La
 					oferta esta activa igual.
 				</p>
+				<!--
+					🔴 LA RAMA DEL LINK EXTERNO NO ES CÓDIGO MUERTO. No la borres.
+					WhatsApp es una extensión que se contrata aparte, y `SidebarHost.vue` NO MONTA el
+					sidebar sin ella: sin esta rama, el comercio que no la tiene se queda con un botón
+					que no hace absolutamente nada. Es el mismo criterio, y por el mismo motivo, que la
+					rama wa.me de `mixins/model_functions.js` (`sendWhatsApp`), que está marcada allá con
+					estas mismas palabras.
+				-->
+				<b-button
+				v-if="resultado.whatsapp_url && puede_abrir_el_agente(resultado)"
+				variant="success"
+				@click="avisar_por_el_agente(resultado)">
+					<i class="bi bi-whatsapp m-r-5"></i>
+					Avisarle por WhatsApp
+				</b-button>
 				<a
-				v-if="resultado.whatsapp_url"
+				v-else-if="resultado.whatsapp_url"
 				class="btn btn-success"
 				target="_blank"
 				rel="noopener"
@@ -162,6 +177,7 @@
 </template>
 <script>
 import moment from 'moment'
+import { telefono_de_chat_de_oferta, mensaje_de_oferta } from '@/utils/whatsapp_phone'
 /*
 	La pantalla clave del modulo: activar una oferta sugerida. Muestra el techo
 	al lado del porcentaje, deja elegir descuento por unidad o por cantidad,
@@ -324,6 +340,33 @@ export default {
 		},
 		cerrar() {
 			this.$bvModal.hide('oferta-modal-activar')
+		},
+		/**
+		 * true cuando el aviso puede salir por el agente en vez de por el link externo.
+		 *
+		 * El gate es `hasExtencion('whatsapp')` y no otra cosa: es el mismo criterio que ya usan
+		 * `BtnWhatsappChat`, `model_functions.sendWhatsApp` y `SidebarHost`, y sin esa extensión
+		 * el sidebar NI SIQUIERA SE MONTA EN EL DOM, así que abrirlo seria un click muerto.
+		 */
+		puede_abrir_el_agente(oferta) {
+			return !!this.hasExtencion('whatsapp') && !!telefono_de_chat_de_oferta(oferta)
+		},
+		/**
+		 * Abre el sidebar de WhatsApp con el mensaje de la oferta ya escrito en el composer, en
+		 * vez de sacar al operador del sistema a una pestaña de api.whatsapp.com.
+		 *
+		 * El modal se cierra ANTES de abrir el sidebar: en telefono el sidebar ocupa toda la
+		 * pantalla y quedaria discutiendo el z-index con el modal, y ademas el operador se esta
+		 * yendo a la conversacion — dejarle el modal abajo no le sirve para nada.
+		 */
+		avisar_por_el_agente(oferta) {
+			this.$bvModal.hide('oferta-modal-activar')
+			this.abrir_chat_whatsapp({
+				phone: telefono_de_chat_de_oferta(oferta),
+				client_id: oferta.client_id,
+				display_name: oferta.client && oferta.client.name ? oferta.client.name : '',
+				borrador: mensaje_de_oferta(oferta.whatsapp_url),
+			})
 		},
 		/**
 		 * Crea la oferta. El backend re-valida el techo con los datos de HOY y

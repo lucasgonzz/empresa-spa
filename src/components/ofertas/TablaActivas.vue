@@ -67,8 +67,26 @@
 					title="No habia mail valido ni en el comprador de la tienda ni en el cliente">
 						Sin mail
 					</b-badge>
+					<!--
+						🔴 LA RAMA DEL LINK EXTERNO NO ES CÓDIGO MUERTO. No la borres.
+						WhatsApp es una extension que se contrata aparte, y `SidebarHost.vue` NO
+						MONTA el sidebar sin ella: sin esta rama, el comercio que no la tiene se
+						queda con un icono que no hace absolutamente nada. Es el mismo criterio, y
+						por el mismo motivo, que la rama wa.me de `mixins/model_functions.js`
+						(`sendWhatsApp`), que esta marcada alla con estas mismas palabras.
+						El `@click.stop` va por prudencia: la celda vive adentro de una b-table.
+					-->
+					<b-button
+					v-if="data.item.whatsapp_url && puede_abrir_el_agente(data.item)"
+					class="m-l-5"
+					size="sm"
+					variant="link"
+					title="Abrir la conversación de WhatsApp con el mensaje ya escrito"
+					@click.stop="avisar_por_el_agente(data.item)">
+						<i class="bi bi-whatsapp text-success"></i>
+					</b-button>
 					<a
-					v-if="data.item.whatsapp_url"
+					v-else-if="data.item.whatsapp_url"
 					class="m-l-5"
 					target="_blank"
 					rel="noopener"
@@ -104,6 +122,7 @@
 	</div>
 </template>
 <script>
+import { telefono_de_chat_de_oferta, mensaje_de_oferta } from '@/utils/whatsapp_phone'
 /*
 	Las ofertas ya cargadas como promocion: lo que la tienda le muestra hoy a cada
 	cliente. Sale del mismo store que las sugeridas, con action y token propios.
@@ -213,6 +232,30 @@ export default {
 				partes.push(rango + ': ' + tramo.porcentaje + '%')
 			})
 			return partes.join(' · ')
+		},
+		/**
+		 * true cuando el aviso puede salir por el agente en vez de por el link externo.
+		 *
+		 * El gate es `hasExtencion('whatsapp')` y no otra cosa: es el mismo criterio que ya usan
+		 * `BtnWhatsappChat`, `model_functions.sendWhatsApp` y `SidebarHost`, y sin esa extension
+		 * el sidebar NI SIQUIERA SE MONTA EN EL DOM, asi que abrirlo seria un click muerto.
+		 */
+		puede_abrir_el_agente(oferta) {
+			return !!this.hasExtencion('whatsapp') && !!telefono_de_chat_de_oferta(oferta)
+		},
+		/**
+		 * Abre el sidebar de WhatsApp con el mensaje de la oferta ya escrito en el composer, en
+		 * vez de sacar al operador del sistema a una pestaña de api.whatsapp.com.
+		 *
+		 * Aca no hay ningun modal que cerrar: la tabla vive en la vista, no adentro de uno.
+		 */
+		avisar_por_el_agente(oferta) {
+			this.abrir_chat_whatsapp({
+				phone: telefono_de_chat_de_oferta(oferta),
+				client_id: oferta.client_id,
+				display_name: oferta.client && oferta.client.name ? oferta.client.name : '',
+				borrador: mensaje_de_oferta(oferta.whatsapp_url),
+			})
 		},
 		/**
 		 * Cancela una oferta vigente. El backend no borra la fila: le pone

@@ -294,6 +294,9 @@ export default {
 				dejar el texto sería el más confuso de los tres comportamientos posibles.
 			*/
 			this.text = ''
+			// Y recién DESPUÉS de esa limpieza se toma el borrador, si es de este chat: al revés
+			// se pisaría solo. Ver el docblock de tomar_borrador().
+			this.tomar_borrador()
 		},
 		/**
 		 * Se anota a qué conversación pertenece la grabación que arranca.
@@ -318,6 +321,7 @@ export default {
 			—misma razón por la que el mixin deja afuera las marcas del gesto.
 		*/
 		this._chat_de_la_grabacion = null
+		this.tomar_borrador()
 	},
 	beforeDestroy() {
 		// El sidebar destruye este componente cada vez que se cierra: si la previsualización
@@ -580,6 +584,33 @@ export default {
 				console.log(err)
 				this.$toast.error('No se pudo generar la sugerencia')
 			})
+		},
+		/**
+		 * Toma el borrador que dejó quien abrió esta conversación (hoy, el botón de una
+		 * oferta) y lo carga en el input. Es de UN SOLO USO: se consume del store apenas se
+		 * lee, así que no puede reaparecer al volver a este chat ni filtrarse a otro. Y sólo
+		 * se toma si el `chat_id` del borrador es el que está abierto — la misma guarda que
+		 * ya usa `suggest()` para que una respuesta pedida para el cliente A no aparezca
+		 * escrita con el cliente B abierto.
+		 *
+		 * 🔴 SE LLAMA EN DOS LUGARES Y HACEN FALTA LOS DOS.
+		 * Con el sidebar CERRADO, quien abre el chat deja `selected_chat_id` puesto ANTES de
+		 * que este componente exista (y encima `conversation/Index.vue` no dibuja el composer
+		 * hasta que el chat aparece en la bandeja): el watch de `chat_id` no se dispara nunca
+		 * y sin el `created()` el borrador no se carga.
+		 * Con el sidebar ABIERTO en otra conversación, el componente ya existe y lo que corre
+		 * es el watch — que arranca limpiando `this.text`, así que la toma tiene que ir
+		 * DESPUÉS de esa línea o se pisa sola.
+		 *
+		 * @returns {void}
+		 */
+		tomar_borrador() {
+			let borrador = this.$store.state.whatsapp_chat.borrador
+			if (!borrador || borrador.chat_id != this.chat_id) {
+				return
+			}
+			this.text = borrador.texto
+			this.$store.commit('whatsapp_chat/setBorrador', null)
 		},
 	},
 }
