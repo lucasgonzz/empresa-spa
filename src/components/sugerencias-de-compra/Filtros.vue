@@ -5,6 +5,7 @@
 		class="m-r-25 m-b-0"
 		label="Proveedor">
 			<b-form-select
+			class="toolbar-select"
 			v-model="provider_id"
 			:options="opciones_proveedor"></b-form-select>
 		</b-form-group>
@@ -13,6 +14,7 @@
 		class="m-r-25 m-b-0"
 		label="Ordenar por">
 			<b-form-select
+			class="toolbar-select"
 			v-model="order"
 			:options="opciones_orden"></b-form-select>
 		</b-form-group>

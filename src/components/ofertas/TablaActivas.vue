@@ -6,6 +6,7 @@
 			class="m-r-25 m-b-0"
 			label="Estado">
 				<b-form-select
+				class="toolbar-select"
 				v-model="estado"
 				:options="opciones_estado"></b-form-select>
 			</b-form-group>
@@ -13,6 +14,7 @@
 			class="m-b-0"
 			label="Cliente">
 				<b-form-select
+				class="toolbar-select"
 				v-model="client_id"
 				:options="opciones_cliente"></b-form-select>
 			</b-form-group>
