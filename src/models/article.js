@@ -87,13 +87,11 @@ export default {
 			// Sin prop "store" el buscador resuelve el store por la key (provider_id -> provider).
 			// La busqueda va siempre contra la API (global-search/provider), nunca contra el store:
 			// hay cuentas con miles de proveedores y el resultado no puede depender de que la
-			// descarga del store haya terminado. No sacar.
+			// descarga del store haya terminado (el catalogo dejo de bajarse entero al iniciar
+			// sesion, grupo 332, 4/8/2026; la tabla resuelve el nombre por la relacion embebida). No sacar.
 			search_from_api: true,
 			use_to_show_in_search_modal: true,
 			use_to_update: true,
-			// El catalogo de proveedores no se descarga entero al iniciar sesion (grupo 332,
-			// 4/8/2026): el buscador va contra la API y la tabla lee la relacion embebida.
-			search_from_api: true,
 			filter_modal_position: 4,
 			keep_after_create: true,
 			can: 'article.provider',
