@@ -53,7 +53,7 @@
 			variant="outline-secondary"
 			@click="$bvModal.show('whatsapp-simulate-in-chat')">
 				<i class="bi bi-play-fill"></i>
-				Simular mensaje
+				Simular mensaje del cliente
 			</b-button>
 		</div>
 

@@ -80,6 +80,18 @@ export default {
 	},
 	mounted() {
 		this.suscribir_canal_de_whatsapp()
+		/*
+			Config del bot (personalidad, habilidades, toggles como chat_simulation_enabled):
+			se pide aca y no en views/Whatsapp.vue porque la conversacion se abre desde
+			Clientes, Pedidos y Compradores sin pasar nunca por el modulo (ver el docblock
+			de arriba). Sin esto, el boton "Simular mensaje" de Composer.vue leia siempre
+			config == null fuera del modulo, aunque el toggle estuviera prendido en la
+			base, porque nada disparaba la carga. Guard igual al de sidebar/Index.vue con
+			whatsapp_template: no pedirla de nuevo si ya esta.
+		*/
+		if (!this.$store.state.whatsapp_bot_config.models.length) {
+			this.$store.dispatch('whatsapp_bot_config/getModels')
+		}
 	},
 	beforeDestroy() {
 		if (this.whatsapp_echo_channel && this.Echo) {
