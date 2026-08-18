@@ -37,46 +37,48 @@
 			Todavia no hay sugerencias generadas. Crea la primera con el boton "Nueva sugerencia".
 		</b-alert>
 
-		<b-table
+		<div
 		v-else
-		head-variant="dark"
-		responsive
-		hover
-		class="sugerencias-compra-listado__tabla"
-		:fields="fields"
-		:items="sugerencias"
-		@row-clicked="ver_detalle">
+		class="tabla-modulo-wrapper">
+			<b-table
+			responsive
+			hover
+			table-class="tabla-modulo sugerencias-compra-listado__tabla"
+			:fields="fields"
+			:items="sugerencias"
+			@row-clicked="ver_detalle">
 
-			<template #cell(created_at)="data">
-				{{ date(data.item.created_at, true) }}
-			</template>
+				<template #cell(created_at)="data">
+					{{ date(data.item.created_at, true) }}
+				</template>
 
-			<template #cell(origen_generacion)="data">
-				<span v-if="data.item.origen_generacion == 'automatica'">
-					Automatica
-				</span>
-				<span v-else>
-					Manual
-				</span>
-			</template>
+				<template #cell(origen_generacion)="data">
+					<span v-if="data.item.origen_generacion == 'automatica'">
+						Automatica
+					</span>
+					<span v-else>
+						Manual
+					</span>
+				</template>
 
-			<template #cell(status)="data">
-				<b-badge
-				:variant="estado_variant(data.item)"
-				:title="titulo_estado(data.item)">
-					{{ estado_texto(data.item) }}
-				</b-badge>
-			</template>
+				<template #cell(status)="data">
+					<b-badge
+					:variant="estado_variant(data.item)"
+					:title="titulo_estado(data.item)">
+						{{ estado_texto(data.item) }}
+					</b-badge>
+				</template>
 
-			<template #cell(articles_count)="data">
-				{{ typeof data.item.articles_count == 'undefined' || data.item.articles_count === null ? '—' : data.item.articles_count }}
-			</template>
+				<template #cell(articles_count)="data">
+					{{ typeof data.item.articles_count == 'undefined' || data.item.articles_count === null ? '—' : data.item.articles_count }}
+				</template>
 
-			<template #cell(total_estimado)="data">
-				{{ price(data.item.total_estimado) }}
-			</template>
+				<template #cell(total_estimado)="data">
+					{{ price(data.item.total_estimado) }}
+				</template>
 
-		</b-table>
+			</b-table>
+		</div>
 	</div>
 </template>
 <script>

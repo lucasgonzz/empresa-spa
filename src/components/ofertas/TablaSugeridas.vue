@@ -25,70 +25,72 @@
 			<!--
 				responsive: en tablet y telefono la tabla no se puede achicar sin
 				volverse ilegible, asi que scrollea en horizontal dentro de su caja
-				(el ancho minimo lo fija el sass de abajo) en vez de apretar las
-				columnas hasta partir los numeros.
+				(el ancho minimo lo fija el sass de abajo, sobre la table-class, asi
+				que el scroll queda adentro de tabla-modulo-wrapper) en vez de apretar
+				las columnas hasta partir los numeros.
 			-->
-			<b-table
-			head-variant="dark"
-			responsive
-			class="ofertas-sugeridas__tabla"
-			:fields="fields"
-			:items="lineas">
+			<div class="tabla-modulo-wrapper">
+				<b-table
+				responsive
+				table-class="tabla-modulo ofertas-sugeridas__tabla"
+				:fields="fields"
+				:items="lineas">
 
-				<template #cell(client_nombre)="data">
-					{{ data.item.client_nombre }}
-					<i
-					v-if="data.item.es_buen_pagador"
-					class="bi bi-check-circle text-success m-l-5"
-					title="Este cliente paga al dia"></i>
-				</template>
+					<template #cell(client_nombre)="data">
+						{{ data.item.client_nombre }}
+						<i
+						v-if="data.item.es_buen_pagador"
+						class="bi bi-check-circle text-success m-l-5"
+						title="Este cliente paga al dia"></i>
+					</template>
 
-				<template #cell(criterio)="data">
-					<b-badge variant="light">
-						{{ texto_criterio(data.item.criterio) }}
-					</b-badge>
-					<div
-					v-if="data.item.criterio_detalle"
-					class="text-muted small">
-						{{ data.item.criterio_detalle }}
-					</div>
-					<!-- La frase de la IA va como tooltip: es un extra, no el dato -->
-					<i
-					v-if="data.item.motivo_ia"
-					class="bi bi-stars text-primary"
-					:title="data.item.motivo_ia"></i>
-				</template>
+					<template #cell(criterio)="data">
+						<b-badge variant="light">
+							{{ texto_criterio(data.item.criterio) }}
+						</b-badge>
+						<div
+						v-if="data.item.criterio_detalle"
+						class="text-muted small">
+							{{ data.item.criterio_detalle }}
+						</div>
+						<!-- La frase de la IA va como tooltip: es un extra, no el dato -->
+						<i
+						v-if="data.item.motivo_ia"
+						class="bi bi-stars text-primary"
+						:title="data.item.motivo_ia"></i>
+					</template>
 
-				<!--
-					El techo va SIEMPRE al lado del porcentaje: es lo que le muestra al
-					comerciante que el descuento esta acotado por el margen del articulo
-					y no lo invento nadie. Sin esto, el numero sugerido parece arbitrario.
-				-->
-				<template #cell(porcentaje_sugerido)="data">
-					<strong>{{ data.item.porcentaje_sugerido }}%</strong>
-					<div
-					class="text-muted small"
-					title="Maximo que no rompe el margen del articulo">
-						techo {{ data.item.porcentaje_techo }}%
-					</div>
-				</template>
+					<!--
+						El techo va SIEMPRE al lado del porcentaje: es lo que le muestra al
+						comerciante que el descuento esta acotado por el margen del articulo
+						y no lo invento nadie. Sin esto, el numero sugerido parece arbitrario.
+					-->
+					<template #cell(porcentaje_sugerido)="data">
+						<strong>{{ data.item.porcentaje_sugerido }}%</strong>
+						<div
+						class="text-muted small"
+						title="Maximo que no rompe el margen del articulo">
+							techo {{ data.item.porcentaje_techo }}%
+						</div>
+					</template>
 
-				<template #cell(client_offer_id)="data">
-					<b-badge
-					v-if="data.item.client_offer_id"
-					variant="success">
-						Activada
-					</b-badge>
-					<b-button
-					v-else
-					size="sm"
-					variant="primary"
-					@click="abrir_activar(data.item)">
-						Activar
-					</b-button>
-				</template>
+					<template #cell(client_offer_id)="data">
+						<b-badge
+						v-if="data.item.client_offer_id"
+						variant="success">
+							Activada
+						</b-badge>
+						<b-button
+						v-else
+						size="sm"
+						variant="primary"
+						@click="abrir_activar(data.item)">
+							Activar
+						</b-button>
+					</template>
 
-			</b-table>
+				</b-table>
+			</div>
 
 			<b-pagination
 			v-if="paginacion.total > paginacion.per_page"
@@ -211,5 +213,8 @@ export default {
 		// Piso de ancho: con nueve columnas, abajo de esto las celdas se parten y
 		// los porcentajes quedan ilegibles. Con el responsive de la tabla, esto es
 		// lo que dispara el scroll horizontal en tablet y telefono en vez de apretar.
+		// Va sobre la <table> --por eso la clase entra por table-class y no por
+		// class--: antes estaba puesta sobre el envoltorio (el div .table-responsive
+		// que scrollea) y el ancho minimo terminaba empujando el scroll a la pagina.
 		min-width: 900px
 </style>

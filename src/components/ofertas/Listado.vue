@@ -50,36 +50,38 @@
 			Todavia no se busco ninguna oferta. Arranca con el boton "Buscar ofertas nuevas".
 		</b-alert>
 
-		<b-table
+		<div
 		v-else
-		head-variant="dark"
-		responsive
-		hover
-		class="ofertas-listado__tabla"
-		:fields="fields"
-		:items="corridas"
-		@row-clicked="ver_detalle">
+		class="tabla-modulo-wrapper">
+			<b-table
+			responsive
+			hover
+			table-class="tabla-modulo ofertas-listado__tabla"
+			:fields="fields"
+			:items="corridas"
+			@row-clicked="ver_detalle">
 
-			<template #cell(status)="data">
-				<b-badge
-				:variant="estado(data.item).variant"
-				:title="data.item.status == 'error' && data.item.error_mensaje ? data.item.error_mensaje : ''">
-					{{ estado(data.item).texto }}
-				</b-badge>
-			</template>
+				<template #cell(status)="data">
+					<b-badge
+					:variant="estado(data.item).variant"
+					:title="data.item.status == 'error' && data.item.error_mensaje ? data.item.error_mensaje : ''">
+						{{ estado(data.item).texto }}
+					</b-badge>
+				</template>
 
-			<!--
-				El conteo de excluidos por deuda no es decoracion: muestra que el motor
-				tuvo criterio y no le ofrecio nada a quien debe plata. La leyenda
-				completa esta en el detalle; aca va el numero con el porque en el tooltip.
-			-->
-			<template #cell(total_clientes_excluidos_por_deuda)="data">
-				<span :title="leyenda_excluidos(data.item)">
-					{{ numero_o_guion(data.item.total_clientes_excluidos_por_deuda) }}
-				</span>
-			</template>
+				<!--
+					El conteo de excluidos por deuda no es decoracion: muestra que el motor
+					tuvo criterio y no le ofrecio nada a quien debe plata. La leyenda
+					completa esta en el detalle; aca va el numero con el porque en el tooltip.
+				-->
+				<template #cell(total_clientes_excluidos_por_deuda)="data">
+					<span :title="leyenda_excluidos(data.item)">
+						{{ numero_o_guion(data.item.total_clientes_excluidos_por_deuda) }}
+					</span>
+				</template>
 
-		</b-table>
+			</b-table>
+		</div>
 	</div>
 </template>
 <script>

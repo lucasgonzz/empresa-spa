@@ -47,73 +47,75 @@
 				</span>
 			</div>
 
-			<b-table
-			head-variant="dark"
-			responsive
-			:fields="fields"
-			:items="articles">
+			<div class="tabla-modulo-wrapper">
+				<b-table
+				responsive
+				table-class="tabla-modulo tabla-priorizada-compra__tabla"
+				:fields="fields"
+				:items="articles">
 
-				<template #cell(seleccionado)="data">
-					<b-form-checkbox
-					:value="data.item.purchase_suggestion_article_id"
-					v-model="selected_ids">
-					</b-form-checkbox>
-				</template>
+					<template #cell(seleccionado)="data">
+						<b-form-checkbox
+						:value="data.item.purchase_suggestion_article_id"
+						v-model="selected_ids">
+						</b-form-checkbox>
+					</template>
 
-				<template #cell(prioridad)="data">
-					{{ data.item.prioridad === null || typeof data.item.prioridad == 'undefined' ? '—' : data.item.prioridad }}
-				</template>
+					<template #cell(prioridad)="data">
+						{{ data.item.prioridad === null || typeof data.item.prioridad == 'undefined' ? '—' : data.item.prioridad }}
+					</template>
 
-				<template #cell(stock_global)="data">
-					{{ numero_o_guion(data.item.stock_global, 0) }}
-				</template>
+					<template #cell(stock_global)="data">
+						{{ numero_o_guion(data.item.stock_global, 0) }}
+					</template>
 
-				<template #cell(stock_min_global)="data">
-					{{ numero_o_guion(data.item.stock_min_global, 0) }}
-				</template>
+					<template #cell(stock_min_global)="data">
+						{{ numero_o_guion(data.item.stock_min_global, 0) }}
+					</template>
 
-				<template #cell(velocidad_diaria)="data">
-					{{ numero_o_guion(data.item.velocidad_diaria, 2) }}
-				</template>
+					<template #cell(velocidad_diaria)="data">
+						{{ numero_o_guion(data.item.velocidad_diaria, 2) }}
+					</template>
 
-				<template #cell(cobertura_dias)="data">
-					<!-- Cobertura null = el articulo no registra ventas: cobertura infinita, no urgente -->
-					{{ numero_o_guion(data.item.cobertura_dias, 1) }}
-				</template>
+					<template #cell(cobertura_dias)="data">
+						<!-- Cobertura null = el articulo no registra ventas: cobertura infinita, no urgente -->
+						{{ numero_o_guion(data.item.cobertura_dias, 1) }}
+					</template>
 
-				<template #cell(provider_nombre)="data">
-					<b-badge
-					v-if="!data.item.provider_id"
-					variant="warning"
-					title="Ningun proveedor tiene oferta vigente ni es el titular del articulo">
-						Sin proveedor asignado
-					</b-badge>
-					<span v-else>
-						{{ data.item.provider_nombre }}
-						<i
-						v-if="es_cambio_de_proveedor(data.item)"
-						class="bi bi-arrow-left-right text-warning m-l-5"
-						:title="'Proveedor habitual: ' + (data.item.provider_titular_nombre || '—')"></i>
-					</span>
-				</template>
+					<template #cell(provider_nombre)="data">
+						<b-badge
+						v-if="!data.item.provider_id"
+						variant="warning"
+						title="Ningun proveedor tiene oferta vigente ni es el titular del articulo">
+							Sin proveedor asignado
+						</b-badge>
+						<span v-else>
+							{{ data.item.provider_nombre }}
+							<i
+							v-if="es_cambio_de_proveedor(data.item)"
+							class="bi bi-arrow-left-right text-warning m-l-5"
+							:title="'Proveedor habitual: ' + (data.item.provider_titular_nombre || '—')"></i>
+						</span>
+					</template>
 
-				<template #cell(costo_estimado)="data">
-					{{ price(data.item.costo_estimado) }}
-				</template>
+					<template #cell(costo_estimado)="data">
+						{{ price(data.item.costo_estimado) }}
+					</template>
 
-				<template #cell(costo_proveedor_titular)="data">
-					{{ price(data.item.costo_proveedor_titular) }}
-				</template>
+					<template #cell(costo_proveedor_titular)="data">
+						{{ price(data.item.costo_proveedor_titular) }}
+					</template>
 
-				<template #cell(ahorro_estimado)="data">
-					{{ data.item.ahorro_estimado === null || typeof data.item.ahorro_estimado == 'undefined' ? '—' : price(data.item.ahorro_estimado) }}
-				</template>
+					<template #cell(ahorro_estimado)="data">
+						{{ data.item.ahorro_estimado === null || typeof data.item.ahorro_estimado == 'undefined' ? '—' : price(data.item.ahorro_estimado) }}
+					</template>
 
-				<template #cell(oferta_fecha)="data">
-					{{ data.item.oferta_fecha ? date(data.item.oferta_fecha) : '—' }}
-				</template>
+					<template #cell(oferta_fecha)="data">
+						{{ data.item.oferta_fecha ? date(data.item.oferta_fecha) : '—' }}
+					</template>
 
-			</b-table>
+				</b-table>
+			</div>
 
 			<b-pagination
 			v-if="paginacion.total > paginacion.per_page"
@@ -336,3 +338,14 @@ export default {
 	}
 }
 </script>
+
+<style lang="sass">
+.tabla-priorizada-compra
+	// Piso de ancho: con dieciseis columnas, abajo de esto las celdas se parten. Con el responsive
+	// de la tabla, esto es lo que dispara el scroll horizontal en tablet y telefono en vez de
+	// apretar. Va sobre la <table> --por eso la clase entra por `table-class` y no por `class`--:
+	// puesto sobre el div .table-responsive el que se ensancha es el contenedor que scrollea, y el
+	// scroll se le escapa a la pagina.
+	&__tabla
+		min-width: 1100px
+</style>
