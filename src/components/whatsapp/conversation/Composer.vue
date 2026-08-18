@@ -45,6 +45,16 @@
 				<i class="bi bi-paperclip"></i>
 				Foto
 			</b-button>
+			<!-- Gateado por el toggle chat_simulation_enabled: apagado por default, así los
+			clientes ya activos no ven un botón nuevo que no pidieron. -->
+			<b-button
+			v-if="is_owner && config && config.chat_simulation_enabled"
+			size="sm"
+			variant="outline-secondary"
+			@click="$bvModal.show('whatsapp-simulate-in-chat')">
+				<i class="bi bi-play-fill"></i>
+				Simular mensaje
+			</b-button>
 		</div>
 
 		<!-- El input real nunca se ve: lo abre el botón de arriba. Es el mismo camino que usa el
@@ -163,10 +173,13 @@
 
 		<templates-modal
 		:chat="chat"></templates-modal>
+		<simulate-in-chat-modal
+		:chat="chat"></simulate-in-chat-modal>
 	</div>
 </template>
 <script>
 import TemplatesModal from '@/components/whatsapp/conversation/TemplatesModal'
+import SimulateInChatModal from '@/components/whatsapp/conversation/SimulateInChatModal'
 import audio_recorder_button from '@/mixins/audio_recorder_button'
 
 /**
@@ -179,6 +192,7 @@ const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 export default {
 	components: {
 		TemplatesModal,
+		SimulateInChatModal,
 		BtnLoader: () => import('@/common-vue/components/BtnLoader'),
 	},
 	/*
@@ -270,6 +284,15 @@ export default {
 				return 'Grabando ' + this.audio_elapsed_label + '. Tocá para cortar y enviar'
 			}
 			return 'Tocá para grabar una nota de voz, o mantené apretado para grabar mientras lo apretás'
+		},
+		/**
+		 * Config del agente (mismo patrón que usa `whatsapp/config/AgentConfig.vue`): de acá se
+		 * lee `chat_simulation_enabled` para gatear el botón de simular del toolbar.
+		 *
+		 * @returns {Object|null}
+		 */
+		config() {
+			return this.$store.state.whatsapp_bot_config.models[0] || null
 		},
 	},
 	watch: {
