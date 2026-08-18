@@ -42,15 +42,16 @@ export default __base_store({
 
 		/**
 		 * Guarda la configuración funcional del agente (grupo 137, Prompt 07): personalidad,
-		 * los dos toggles de automatización, los dos tiempos de espera y —desde la misión
-		 * whatsapp-sidebar-multimedia— el interruptor de visión. Pega al mismo endpoint que la
-		 * config técnica de Kapso (ABM → Integraciones y la solapa "Conexión"), pero manda solo
-		 * estos 6 campos: el controller de la API arma el `updateOrCreate` con
+		 * habilidades, los dos toggles de automatización, los dos tiempos de espera y el
+		 * interruptor de visión (misión whatsapp-sidebar-multimedia). Pega al mismo endpoint que
+		 * la config técnica de Kapso (ABM → Integraciones y la solapa "Conexión"), pero manda solo
+		 * estos 7 campos: el controller de la API arma el `updateOrCreate` con
 		 * `$request->has(...)` por campo, así que no pisa los campos técnicos que esta pantalla
 		 * no conoce.
 		 *
 		 * @param {Object} payload
 		 * @param {string} payload.agent_personality Texto libre con la personalidad del agente.
+		 * @param {string} payload.agent_skills Texto libre con el rubro/vocabulario del agente.
 		 * @param {boolean} payload.ai_enabled_default Si los chats nuevos nacen con IA prendida.
 		 * @param {boolean} payload.auto_send_sale_pdf Si se manda el PDF de la venta automáticamente.
 		 * @param {number|string} payload.ai_reply_delay_seconds Espera antes de generar la respuesta.
@@ -61,6 +62,7 @@ export default __base_store({
 		updateAgentConfig({ commit, state }, payload) {
 			return axios.put('/api/' + state.route_string, {
 				agent_personality: payload.agent_personality,
+				agent_skills: payload.agent_skills,
 				ai_enabled_default: payload.ai_enabled_default,
 				auto_send_sale_pdf: payload.auto_send_sale_pdf,
 				// Van casteados sí o sí: el input numérico los entrega como string y la
@@ -72,7 +74,7 @@ export default __base_store({
 				// backend arma el `updateOrCreate` con `$request->has()` campo por campo: si
 				// este campo viajara también en la de Conexión, guardar las credenciales le
 				// apagaría la visión al agente sin que nadie lo pida. Es la misma razón por la
-				// que la personalidad tampoco viaja de allá.
+				// que la personalidad y las habilidades tampoco viajan de allá.
 				ai_vision_enabled: !!payload.ai_vision_enabled,
 			})
 				.then(res => {
