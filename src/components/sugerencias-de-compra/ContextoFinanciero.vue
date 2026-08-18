@@ -1,7 +1,7 @@
 <template>
 	<b-card
 	v-if="contexto"
-	class="contexto-financiero m-b-15">
+	class="card-modulo contexto-financiero m-b-15">
 
 		<h6 class="contexto-financiero__titulo">
 			<i class="bi bi-cash-stack m-r-5"></i>
