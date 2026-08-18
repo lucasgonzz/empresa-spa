@@ -5,6 +5,7 @@
 		class="m-r-25 m-b-0"
 		label="Deposito origen">
 			<b-form-select
+			class="toolbar-select"
 			v-model="from_address_id"
 			:options="opciones_origen"></b-form-select>
 		</b-form-group>
@@ -13,6 +14,7 @@
 		class="m-r-25 m-b-0"
 		label="Deposito destino">
 			<b-form-select
+			class="toolbar-select"
 			v-model="to_address_id"
 			:options="opciones_destino"></b-form-select>
 		</b-form-group>
@@ -21,6 +23,7 @@
 		class="m-b-0"
 		label="Ordenar por">
 			<b-form-select
+			class="toolbar-select"
 			v-model="order"
 			:options="opciones_orden"></b-form-select>
 		</b-form-group>

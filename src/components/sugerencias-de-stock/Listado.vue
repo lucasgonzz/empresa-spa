@@ -1,19 +1,20 @@
 <template>
 	<div class="sugerencias-listado">
 
-		<div class="j-between align-center m-t-15 m-b-15">
+		<div class="j-between align-center p-t-15 m-b-15">
 			<h4 class="m-b-0">
 				Sugerencias de stock
 			</h4>
 			<div class="j-end align-center">
 				<b-button
-				class="m-r-10"
+				class="btn-modulo m-r-10"
 				variant="outline-secondary"
 				title="Actualizar el listado"
 				@click="refrescar">
 					<i class="bi bi-arrow-clockwise"></i>
 				</b-button>
 				<b-button
+				class="btn-modulo"
 				variant="primary"
 				@click="nueva_sugerencia">
 					<i class="bi bi-plus-lg m-r-5"></i>
@@ -37,43 +38,45 @@
 			Todavia no hay sugerencias generadas. Crea la primera con el boton "Nueva sugerencia".
 		</b-alert>
 
-		<b-table
+		<div
 		v-else
-		head-variant="dark"
-		responsive
-		hover
-		class="sugerencias-listado__tabla"
-		:fields="fields"
-		:items="sugerencias"
-		@row-clicked="ver_detalle">
+		class="tabla-modulo-wrapper">
+			<b-table
+			responsive
+			hover
+			table-class="tabla-modulo sugerencias-listado__tabla"
+			:fields="fields"
+			:items="sugerencias"
+			@row-clicked="ver_detalle">
 
-			<template #cell(created_at)="data">
-				{{ date(data.item.created_at, true) }}
-			</template>
+				<template #cell(created_at)="data">
+					{{ date(data.item.created_at, true) }}
+				</template>
 
-			<template #cell(origen_generacion)="data">
-				<span v-if="data.item.origen_generacion == 'automatica'">
-					Automatica
-				</span>
-				<span v-else>
-					Manual
-				</span>
-			</template>
+				<template #cell(origen_generacion)="data">
+					<span v-if="data.item.origen_generacion == 'automatica'">
+						Automatica
+					</span>
+					<span v-else>
+						Manual
+					</span>
+				</template>
 
-			<template #cell(status)="data">
-				<b-badge
-				:variant="estado_variant(data.item)"
-				:title="titulo_estado(data.item)">
-					{{ estado_texto(data.item) }}
-				</b-badge>
-			</template>
+				<template #cell(status)="data">
+					<b-badge
+					:variant="estado_variant(data.item)"
+					:title="titulo_estado(data.item)">
+						{{ estado_texto(data.item) }}
+					</b-badge>
+				</template>
 
-			<template #cell(articles_count)="data">
-				<!-- Sugerencias guardadas antes de la v2 pueden no traer el conteo -->
-				{{ typeof data.item.articles_count == 'undefined' || data.item.articles_count === null ? '—' : data.item.articles_count }}
-			</template>
+				<template #cell(articles_count)="data">
+					<!-- Sugerencias guardadas antes de la v2 pueden no traer el conteo -->
+					{{ typeof data.item.articles_count == 'undefined' || data.item.articles_count === null ? '—' : data.item.articles_count }}
+				</template>
 
-		</b-table>
+			</b-table>
+		</div>
 	</div>
 </template>
 <script>

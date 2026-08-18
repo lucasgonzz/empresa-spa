@@ -4,7 +4,7 @@
 		<!-- Escribiendose: la corrida termino y el job del resumen esta en la cola -->
 		<b-card
 		v-if="estado == 'pendiente'"
-		class="resumen-ia-compra__card m-b-15">
+		class="card-modulo resumen-ia-compra__card m-b-15">
 			<div class="j-start align-center">
 				<b-spinner
 				small
@@ -18,7 +18,7 @@
 		<!-- Listo: el texto en criollo que escribio la IA sobre el resultado ya calculado -->
 		<b-card
 		v-else-if="estado == 'listo' && sugerencia.resumen_ia"
-		class="resumen-ia-compra__card m-b-15">
+		class="card-modulo resumen-ia-compra__card m-b-15">
 			<h6 class="resumen-ia-compra__titulo">
 				<i class="bi bi-stars m-r-5"></i>
 				Resumen
@@ -42,9 +42,8 @@
 				No se pudo generar el resumen de esta sugerencia.
 			</p>
 			<b-button
-			size="sm"
 			variant="outline-secondary"
-			class="m-l-10"
+			class="btn-modulo m-l-10"
 			:disabled="enviando_reintento"
 			@click="reintentar">
 				<b-spinner

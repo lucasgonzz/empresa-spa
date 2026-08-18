@@ -1,0 +1,312 @@
+// Vocabulario visual de los modulos que NO se dibujan con el Display generico.
+//
+// El sistema tiene UNA tabla, UN boton de barra y UNA paginacion, y todos viven adentro de la
+// maquinaria del ABM generico: la tabla es common-vue/components/display/table/Index.vue y exige
+// un model_name registrado en Vuex, los botones viven adentro de .view-header-toolbar y la
+// paginacion es display/table/pagination/Index.vue, atada al mismo model_name. Un modulo que
+// dibuja sus propios datos --el modulo de IA: sugerencias de stock, sugerencias de compra y
+// ofertas-- no puede usar esa maquinaria, y hasta hoy quedaba con el default crudo de
+// bootstrap-vue al lado de pantallas con radio 12px, sombra y header oscuro.
+//
+// Este archivo extrae el LENGUAJE VISUAL de esos tres componentes --radios, sombras, alturas,
+// tokens de color-- sin su maquinaria de datos. Los valores no se eligen de nuevo: se copian de
+// la fuente, que queda citada en cada bloque. Si algun dia cambia el radio de las tablas del
+// sistema, hay que cambiarlo en los dos lados; el precio de no reescribir el modulo entero.
+//
+// Va en una hoja global y no en el <style> de cada componente por el mismo motivo que
+// .btm-columnas-btn en _toolbar_botones.sass: los componentes se cargan de forma diferida y el
+// estilo tiene que estar cargado ANTES que cualquiera de ellos, o el control se ve un instante
+// con el default de bootstrap.
+//
+// Colores SIEMPRE por token (_dark_theme.sass). El unico literal es el texto del thead, y esta
+// justificado abajo.
+
+// --- La tabla ----------------------------------------------------------------------------------
+// Copia el chasis de .cont-table-wrapper / .cont-table / .common-table
+// (common-vue/components/display/table/Index.vue, lineas 1543-1701).
+//
+// El wrapper es un div PROPIO, externo, y no la clase puesta sobre el <b-table>: bootstrap-vue
+// con `responsive` ya genera su propio <div class="table-responsive"> con overflow-x:auto, y por
+// spec el border-radius de un elemento no recorta sus propias barras de scroll. Hace falta un
+// contenedor de afuera con overflow:hidden. Es exactamente el motivo por el que .cont-table-wrapper
+// existe y esta documentado alla.
+.tabla-modulo-wrapper
+	box-sizing: border-box
+	width: 100%
+	border-radius: 12px
+	overflow: hidden
+	// Mismo valor y mismo token que .cont-table-wrapper: el gris claro es invisible sobre fondo
+	// oscuro, por eso el color va por token y no literal.
+	box-shadow: var(--shadow-color) 0px 2px 8px 0px
+
+	// El div que genera bootstrap-vue: es el que scrollea de verdad.
+	.table-responsive
+		margin-bottom: 0
+
+		// Barra de scroll del sistema: 15px, pista transparente y pildora azul separada del borde
+		// con el truco de borde transparente + background-clip. Copiado de .cont-table.
+		&::-webkit-scrollbar
+			width: 15px
+			height: 15px
+
+		&::-webkit-scrollbar-track
+			background: transparent
+
+		&::-webkit-scrollbar-corner
+			background: transparent
+
+		&::-webkit-scrollbar-thumb
+			background: var(--color-primary)
+			border-radius: 8px
+			border: 3px solid transparent
+			background-clip: padding-box
+
+	// 🔴 El selector va con DOS clases a proposito (.tabla-modulo-wrapper .tabla-modulo), y no con
+	// .tabla-modulo sola. El motivo es _dark_theme.sass, que pinta el header de cualquier tabla con
+	// `html.dark-mode table thead th` --(0,1,4): una clase y cuatro elementos--. Un
+	// `.tabla-modulo thead th` es (0,1,2) y PIERDE. Con las dos clases queda (0,2,2) y gana, porque
+	// la cantidad de clases decide antes que la de elementos. Es la misma solucion que usa
+	// `.cont-table .common-table th` en el componente del Display.
+	.tabla-modulo
+		width: 100%
+		margin-bottom: 0
+
+		// _tables.sass le pone a TODO <tbody> del sistema `border: 2px solid #DDDDDD` y un
+		// border-radius propio de 10px abajo (linea 11-14). Ese marco gris se ve como un rectangulo
+		// mal recortado adentro de nuestra caja redondeada, y en modo oscuro ademas queda claro
+		// sobre oscuro. El redondeo lo pone el wrapper, asi que aca se apaga.
+		tbody
+			border: none
+			border-radius: 0
+
+		thead th
+			// Token DEDICADO y no --bg-section: el header de tabla va oscuro en los DOS modos
+			// (decision de Lucas, 5/8/2026). Es la misma regla que el th del Display.
+			background-color: var(--bg-table-header)
+			// Literal a proposito, y es el unico del archivo: el texto va sobre un header oscuro en
+			// los dos modos, asi que --color-text-primary no sirve (en claro es #212529 y no se
+			// leeria). Mismo valor que .cont-th del Display.
+			color: #f1f3f4
+			// Bootstrap le pone al thead th `border-bottom: 2px solid #dee2e6`: sobre el header
+			// oscuro queda una linea clara que no existe en las tablas del sistema.
+			border-top: none
+			border-bottom: none
+			// 🔴 !important, medido en la aplicacion real y no adivinado: b-table siempre agrega la
+			// clase base de Bootstrap `table`, y TableComponent.vue (common-vue/components/display/
+			// TableComponent.vue:890-894, sin scope, cargado global) tiene `.table th, .table td`
+			// con `padding: 5px !important` cuando `$table_font_small` es true (lo es siempre,
+			// _custom.scss:8). Sin este !important, el padding de acá se ve pisado en el navegador
+			// aunque en el codigo fuente parezca ganar por especificidad — un !important le gana a
+			// cualquier regla normal sin importar cuantas clases tenga. Verificado con
+			// getComputedStyle sobre la tabla de "Busquedas del motor" corriendo de verdad.
+			padding: 10px 15px !important
+			font-size: 0.9375rem
+			font-weight: 600
+			white-space: nowrap
+			vertical-align: middle
+
+		td
+			// Mismo motivo que el thead de arriba: sin !important, TableComponent.vue lo pisa a 5px.
+			padding: 8px 15px !important
+			vertical-align: middle
+			font-size: 0.875rem
+			border-top: 1px solid var(--color-border)
+
+		// La primera fila pega contra el header: la linea de arriba sobra.
+		tbody tr:first-child td
+			border-top: none
+
+	// 🔴 El hover se pinta en el <td> y NO en el <tr>, y esto no es capricho. _tables.sass declara
+	// `table tbody tr { background-color: #FFF !important }` para modo claro y _dark_theme.sass
+	// declara `html.dark-mode table tbody tr { background-color: var(--bg-card) !important }`. Un
+	// !important le gana a cualquier declaracion normal sin importar la especificidad, asi que
+	// cualquier fondo de hover puesto sobre el <tr> no se ve nunca. Pintando el <td> el problema
+	// desaparece: son elementos distintos y el fondo del td se dibuja encima del de su fila. Es la
+	// misma solucion que usa .common-table en el Display.
+	//
+	// El `.table-hover` es el que decide: bootstrap-vue lo agrega solo cuando la tabla lleva la
+	// prop `hover`. Las tablas del modulo que no son clickeables no la llevan y no se iluminan.
+	.tabla-modulo.table-hover tbody tr:hover td
+		background: var(--bg-hover)
+
+// --- Los botones -------------------------------------------------------------------------------
+// Copia la GEOMETRIA de los botones de .view-header-toolbar (_toolbar_botones.sass:66-92): altura,
+// radio, padding, tipografia y sombra, con los mismos tokens.
+//
+// 🔴 A proposito NO copia los COLORES. La barra de encabezado neutraliza todos sus botones
+// (--bg-card + --color-border) porque ahi la jerarquia la da la posicion. En el modulo de IA el
+// color ES informacion: "Buscar ofertas nuevas" es primary, "Cancelar" es outline-danger,
+// "Volver" es outline-secondary. Neutralizarlos borraria la diferencia entre confirmar y cancelar.
+// Esta clase solo empareja la forma; la prop `variant` de bootstrap-vue sigue mandando el color.
+//
+// El `.btn` del selector no es adorno: bootstrap-vue siempre la agrega, y con dos clases el
+// selector queda en (0,2,0), que le gana a `.btn-sm` (0,1,0) y empata con `.ui-small .btn` de
+// _ui_sizes.sass --ese empate lo gana este archivo por orden de importacion en app.sass, que va
+// despues--.
+.btn-modulo.btn
+	height: var(--toolbar-control-h)
+	display: inline-flex
+	align-items: center
+	justify-content: center
+	padding: 0 12px
+	font-size: 0.875rem
+	line-height: 1
+	border-radius: var(--toolbar-btn-radius)
+	box-shadow: var(--toolbar-btn-shadow)
+	transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease
+
+// Variante para los botones que viven ADENTRO de una celda de tabla. Los 36px del token son la
+// altura de un control de barra; metidos en una fila de tabla estiran todas las filas y la tabla
+// pasa a ocupar el doble de alto. Se usa SIEMPRE junto a .btn-modulo (la geometria base la pone
+// aquella; esta solo pisa los cuatro valores que cambian) y por eso se declara despues: empatan en
+// (0,2,0) y gana el orden.
+.btn-modulo--fila.btn
+	height: 28px
+	padding: 0 10px
+	font-size: 0.8125rem
+	border-radius: 8px
+	box-shadow: none
+
+// --- La tarjeta --------------------------------------------------------------------------------
+// El fondo de .card ya lo resuelve _dark_theme.sass en los dos modos; lo que desentona es la forma:
+// bootstrap le da 0.25rem de radio y ninguna sombra, contra los 12px y la sombra de las tablas y
+// los bloques del sistema.
+.card-modulo.card
+	border-radius: 12px
+	border: 1px solid var(--color-border)
+	box-shadow: var(--shadow-color) 0px 2px 8px 0px
+
+// --- La paginacion -----------------------------------------------------------------------------
+// Copia la capsula de common-vue/components/display/table/pagination/Index.vue: barra de altura
+// --toolbar-control-h, radio 999px, contador de resultados a la izquierda, separador, y botones de
+// pagina circulares de 26px.
+//
+// NO copia el selector "por pagina" de aquel componente: ese lee y escribe el per_page en el store
+// del modelo generico, y el modulo de IA recibe el suyo del backend. Meterlo aca seria agregar
+// maquinaria de datos a una mision visual.
+//
+// Y NO copia sus `@if ($theme == 'dark')`: el propio archivo documenta que esa rama no se compila
+// nunca ($theme esta fijada en 'light' en _custom.scss) y que lo correcto son los tokens.
+.paginacion-modulo
+	display: flex
+	justify-content: center
+	width: 100%
+	box-sizing: border-box
+
+	&__barra
+		display: inline-flex
+		align-items: center
+		justify-content: center
+		flex-wrap: nowrap
+		gap: 0.65rem
+		width: auto
+		max-width: 100%
+		box-sizing: border-box
+		height: var(--toolbar-control-h)
+		padding: 0 0.85rem
+		// Capsula, no boton: es la misma decision del componente original. Los botones van a
+		// --toolbar-btn-radius justamente porque son otra cosa.
+		border-radius: 999px
+		border: 1px solid var(--color-border)
+		background-color: var(--bg-card)
+		box-shadow: 0 4px 16px var(--shadow-color)
+
+	&__meta
+		font-size: 0.8125rem
+		font-weight: 500
+		line-height: 1.2
+		white-space: nowrap
+		color: var(--color-text-primary)
+		// Texto secundario resuelto con opacidad y no con un gris fijo: asi funciona en los dos
+		// modos sin agregar un token nuevo al sistema.
+		opacity: 0.72
+
+	&__separador
+		display: inline-block
+		width: 1px
+		height: 1.35rem
+		flex-shrink: 0
+		background-color: var(--color-border)
+
+	&__pages
+		flex-shrink: 0
+
+		// 🔴 `&.pagination` y NO un descendiente. b-pagination renderiza UN SOLO elemento:
+		// <ul class="pagination b-pagination b-pagination-pills paginacion-modulo__pages">. Las dos
+		// clases viven en el MISMO nodo, asi que `.paginacion-modulo__pages .pagination` no matchea
+		// nada. Ademas sube el selector a (0,3,0), que es lo que le gana a
+		// `html.dark-mode .page-link` de _dark_theme.sass --(0,2,1)--: sin eso, en modo oscuro los
+		// botones de pagina quedan en --bg-card, el mismo tono que la capsula que los contiene, y
+		// se funden con ella.
+		&.pagination
+			margin: 0
+			gap: 0.15rem
+
+		.page-item
+			display: flex
+			margin: 0
+
+		&.pagination .page-link
+			display: flex
+			align-items: center
+			justify-content: center
+			height: 26px
+			min-width: 26px
+			padding: 0 0.3rem
+			border: none
+			border-radius: 999px
+			font-size: 0.8125rem
+			line-height: 1
+			transition: background-color 0.15s ease, color 0.15s ease
+			// Reposo en --bg-section y hover en --bg-hover: es la semantica de los dos tokens y
+			// ademas los separa del fondo de la capsula (--bg-card) en los dos temas.
+			background-color: var(--bg-section)
+			color: var(--color-text-primary)
+
+		// 🔴 NO poner `box-shadow: none` en el .page-link. Bootstrap dibuja el anillo de foco de
+		// teclado con box-shadow y le apaga el outline; un `none` aca deja el control sin ningun
+		// indicador de foco. Es un bug ya cometido y arreglado en el componente original.
+
+		// El `:not(.active)` es necesario: `.page-item.active .page-link` de bootstrap es (0,3,0) y
+		// una regla de hover con la pseudoclase llega a (0,4,0). Sin el :not(), pasar el mouse por
+		// la pagina actual le saca el azul de activa.
+		&.pagination .page-item:not(.active) .page-link:hover,
+		&.pagination .page-item:not(.active) .page-link:focus
+			background-color: var(--bg-hover)
+			color: var(--color-text-primary)
+
+		.page-item.active .page-link
+			font-weight: 600
+
+		.page-item.disabled .page-link
+			opacity: 0.45
+
+// Telefono: la capsula se apila en dos filas y el boton vuelve a tamaño de dedo. Los 26px salen de
+// tener que dejar aire adentro de una caja de 36px, que es una restriccion del escritorio; aca la
+// barra va con height:auto y achicar el boton solo empeoraria el toque.
+@media (max-width: 575px)
+	.paginacion-modulo
+		&__barra
+			flex-direction: column
+			align-items: stretch
+			width: 100%
+			max-width: 20rem
+			height: auto
+			padding: 0.65rem 0.75rem
+			border-radius: 0.85rem
+			gap: 0.55rem
+
+		&__meta
+			text-align: center
+
+		&__separador
+			display: none
+
+		&__pages
+			display: flex
+			justify-content: center
+			width: 100%
+
+			&.pagination .page-link
+				height: 34px
+				min-width: 34px

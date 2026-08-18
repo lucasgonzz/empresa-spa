@@ -1,12 +1,11 @@
 <template>
 	<div class="sugerencia-compra-detalle">
 
-		<div class="j-between align-center m-t-15 m-b-15">
+		<div class="j-between align-center p-t-15 m-b-15">
 			<h4 class="m-b-0">
 				<b-button
 				variant="outline-secondary"
-				size="sm"
-				class="m-r-10"
+				class="btn-modulo m-r-10"
 				@click="volver">
 					<i class="bi bi-arrow-left"></i>
 					Volver

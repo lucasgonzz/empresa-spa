@@ -19,8 +19,7 @@
 			<div class="j-between align-center m-b-10">
 				<div class="j-start align-center">
 					<b-button
-					class="m-r-10"
-					size="sm"
+					class="btn-modulo m-r-10"
 					variant="outline-secondary"
 					@click="toggle_seleccionar_pagina">
 						{{ pagina_entera_seleccionada ? 'Deseleccionar pagina' : 'Seleccionar pagina' }}
@@ -31,7 +30,7 @@
 						{{ selected_ids.length }} seleccionado/s
 					</span>
 					<b-button
-					size="sm"
+					class="btn-modulo"
 					variant="primary"
 					:disabled="!selected_ids.length || loading_crear"
 					@click="crear_movimientos">
@@ -47,45 +46,66 @@
 				</span>
 			</div>
 
-			<b-table
-			head-variant="dark"
-			responsive
-			:fields="fields"
-			:items="articles">
+			<div class="tabla-modulo-wrapper">
+				<b-table
+				responsive
+				table-class="tabla-modulo tabla-priorizada__tabla"
+				:fields="fields"
+				:items="articles">
 
-				<template #cell(seleccionado)="data">
-					<b-form-checkbox
-					:value="data.item.stock_suggestion_article_id"
-					v-model="selected_ids">
-					</b-form-checkbox>
-				</template>
+					<template #cell(seleccionado)="data">
+						<b-form-checkbox
+						:value="data.item.stock_suggestion_article_id"
+						v-model="selected_ids">
+						</b-form-checkbox>
+					</template>
 
-				<template #cell(prioridad)="data">
-					{{ data.item.prioridad === null || typeof data.item.prioridad == 'undefined' ? '—' : data.item.prioridad }}
-				</template>
+					<template #cell(prioridad)="data">
+						{{ data.item.prioridad === null || typeof data.item.prioridad == 'undefined' ? '—' : data.item.prioridad }}
+					</template>
 
-				<template #cell(velocidad_diaria)="data">
-					{{ numero_o_guion(data.item.velocidad_diaria, 2) }}
-				</template>
+					<template #cell(velocidad_diaria)="data">
+						{{ numero_o_guion(data.item.velocidad_diaria, 2) }}
+					</template>
 
-				<template #cell(cobertura_dias)="data">
-					<!-- Cobertura null = el articulo no registra ventas: cobertura infinita, no urgente -->
-					{{ numero_o_guion(data.item.cobertura_dias, 1) }}
-				</template>
+					<template #cell(cobertura_dias)="data">
+						<!-- Cobertura null = el articulo no registra ventas: cobertura infinita, no urgente -->
+						{{ numero_o_guion(data.item.cobertura_dias, 1) }}
+					</template>
 
-				<template #cell(stock_destino)="data">
-					{{ numero_o_guion(data.item.stock_destino, 0) }}
-				</template>
+					<template #cell(stock_destino)="data">
+						{{ numero_o_guion(data.item.stock_destino, 0) }}
+					</template>
 
-			</b-table>
+				</b-table>
+			</div>
 
-			<b-pagination
-			v-if="paginacion.total > paginacion.per_page"
-			class="m-0"
-			pills
-			v-model="pagina_actual"
-			:total-rows="paginacion.total"
-			:per-page="paginacion.per_page"></b-pagination>
+			<!--
+				Capsula de paginacion del sistema (misma forma que
+				common-vue/components/display/table/pagination/Index.vue). El contador de
+				resultados se muestra aunque haya una sola pagina: sirve igual. Los botones de
+				pagina y su separador aparecen recien cuando hay mas de una.
+			-->
+			<div
+			v-if="paginacion.total"
+			class="paginacion-modulo m-t-15">
+				<div class="paginacion-modulo__barra">
+					<span class="paginacion-modulo__meta">
+						{{ paginacion.total }} resultados
+					</span>
+					<template v-if="paginacion.total > paginacion.per_page">
+						<span
+						class="paginacion-modulo__separador"
+						aria-hidden="true"></span>
+						<b-pagination
+						class="paginacion-modulo__pages m-0"
+						pills
+						v-model="pagina_actual"
+						:total-rows="paginacion.total"
+						:per-page="paginacion.per_page"></b-pagination>
+					</template>
+				</div>
+			</div>
 
 		</template>
 
@@ -261,3 +281,13 @@ export default {
 	}
 }
 </script>
+<style lang="sass">
+.tabla-priorizada
+	// Piso de ancho: con doce columnas, abajo de esto las celdas se parten. Con el responsive
+	// de la tabla, esto es lo que dispara el scroll horizontal en tablet y telefono en vez de
+	// apretar. Va sobre la <table> --por eso la clase entra por `table-class` y no por `class`--:
+	// puesto sobre el div .table-responsive el que se ensancha es el contenedor que scrollea, y el
+	// scroll se le escapa a la pagina.
+	&__tabla
+		min-width: 900px
+</style>
