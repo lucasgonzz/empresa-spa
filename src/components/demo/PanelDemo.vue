@@ -60,94 +60,143 @@
 					por tu cuenta, y anotar acá abajo cualquier duda.
 				</p>
 
-				<section
-				v-for="seccion in secciones"
-				:key="seccion.id"
-				class="panel-demo__seccion">
+				<!--
+					Carrusel horizontal de secciones (una por pantalla), en vez del scroll
+					vertical con todas juntas que había antes. `seccion_actual` nunca es null
+					acá adentro: este bloque solo se dibuja con secciones.length > 0.
+				-->
+				<template v-else-if="secciones.length > 0">
 
-					<div class="panel-demo__seccion-encabezado">
-						<div class="panel-demo__seccion-fila">
-							<h3 class="panel-demo__seccion-titulo">{{ seccion.titulo }}</h3>
-							<!-- El denominador es lo que le toco a ESTE lead, nunca un total global. -->
-							<span class="panel-demo__progreso">{{ vistos_de(seccion) }}/{{ nucleo_de(seccion).length }}</span>
+					<div class="panel-demo__carrusel-nav">
+						<button
+						type="button"
+						class="panel-demo__carrusel-flecha"
+						:disabled="seccion_actual_index === 0"
+						aria-label="Sección anterior"
+						@click="anterior">‹</button>
+
+						<div class="panel-demo__carrusel-info">
+							<span class="panel-demo__carrusel-insignia" aria-hidden="true">
+								<i :class="['bi', icono_de(seccion_actual)]"></i>
+							</span>
+							<h3 class="panel-demo__carrusel-titulo">{{ seccion_actual.titulo }}</h3>
 						</div>
-						<!--
-							El mismo dato que el numerito, pero leible de un vistazo. No agrega
-							informacion: le da forma a la que ya estaba.
-						-->
-						<div class="panel-demo__medidor">
-							<div
-							class="panel-demo__medidor-relleno"
-							:style="{ width: porcentaje_de(seccion) + '%' }"></div>
+
+						<button
+						type="button"
+						class="panel-demo__carrusel-flecha"
+						:disabled="seccion_actual_index === secciones.length - 1"
+						aria-label="Siguiente sección"
+						@click="siguiente">›</button>
+					</div>
+
+					<!-- Progreso del carrusel: qué sección es esta dentro del total. -->
+					<div class="panel-demo__carrusel-progreso" role="status" aria-live="polite">
+						<span class="panel-demo__carrusel-numero">{{ seccion_actual_index + 1 }} de {{ secciones.length }}</span>
+						<div v-if="secciones.length > 1" class="panel-demo__carrusel-puntos">
+							<span
+							v-for="(seccion, indice) in secciones"
+							:key="seccion.id"
+							class="panel-demo__carrusel-punto"
+							:class="{ 'panel-demo__carrusel-punto--activo': indice === seccion_actual_index }"
+							aria-hidden="true"></span>
 						</div>
 					</div>
 
-					<ul class="panel-demo__lista">
-						<li
-						v-for="clip in nucleo_de(seccion)"
-						:key="clip.id"
-						class="panel-demo__item"
-						:class="{ 'panel-demo__item--abierto': esta_abierto(clip) }">
-							<button
-							type="button"
-							class="panel-demo__item-boton"
-							:class="{ 'panel-demo__item-boton--hecho': fue_visto(clip) }"
-							:aria-expanded="esta_abierto(clip) ? 'true' : 'false'"
-							@click="alternar_clip(clip)">
-								<span
-								class="panel-demo__item-marca"
-								:class="{ 'panel-demo__item-marca--hecha': fue_visto(clip) }"
-								aria-hidden="true"></span>
-								<span class="panel-demo__item-titulo">{{ clip.titulo }}</span>
-								<span class="panel-demo__item-flecha" aria-hidden="true"></span>
-							</button>
+					<div class="panel-demo__carrusel-viewport">
+						<div
+						class="panel-demo__carrusel-riel"
+						:style="{ transform: 'translateX(-' + (seccion_actual_index * 100) + '%)' }">
 
-							<tarjeta-clip
-							v-if="esta_abierto(clip)"
-							ref="tarjeta"
-							:clip="clip"
-							:grande="video_grande"
-							:puede_probar="puede_probar(clip)"
-							@reproducir="al_reproducir"
-							@pausar="al_pausar"
-							@terminado="al_terminar(clip)"
-							@probar="probar"></tarjeta-clip>
-						</li>
-					</ul>
+							<section
+							v-for="seccion in secciones"
+							:key="seccion.id"
+							class="panel-demo__seccion">
 
-					<!-- Los de biblioteca van abajo y NO suman al progreso. -->
-					<div v-if="biblioteca_de(seccion).length > 0" class="panel-demo__biblioteca">
-						<h4 class="panel-demo__biblioteca-titulo">Recursos adicionales</h4>
-						<ul class="panel-demo__lista">
-							<li
-							v-for="clip in biblioteca_de(seccion)"
-							:key="clip.id"
-							class="panel-demo__item"
-							:class="{ 'panel-demo__item--abierto': esta_abierto(clip) }">
-								<button
-								type="button"
-								class="panel-demo__item-boton panel-demo__item-boton--secundario"
-								:aria-expanded="esta_abierto(clip) ? 'true' : 'false'"
-								@click="alternar_clip(clip)">
-									<span class="panel-demo__item-marca panel-demo__item-marca--suelta" aria-hidden="true"></span>
-									<span class="panel-demo__item-titulo">{{ clip.titulo }}</span>
-									<span class="panel-demo__item-flecha" aria-hidden="true"></span>
-								</button>
+								<div class="panel-demo__seccion-encabezado">
+									<!--
+										El titulo de la seccion ya se muestra arriba, en la franja
+										del carrusel. Acá adentro de la tarjeta se mantiene el
+										contador y la barra de progreso, sin duplicar el titulo.
+									-->
+									<!-- El denominador es lo que le toco a ESTE lead, nunca un total global. -->
+									<span class="panel-demo__progreso">{{ vistos_de(seccion) }}/{{ nucleo_de(seccion).length }} vistos</span>
+									<div class="panel-demo__medidor">
+										<div
+										class="panel-demo__medidor-relleno"
+										:style="{ width: porcentaje_de(seccion) + '%' }"></div>
+									</div>
+								</div>
 
-								<tarjeta-clip
-								v-if="esta_abierto(clip)"
-								ref="tarjeta"
-								:clip="clip"
-								:grande="video_grande"
-								:puede_probar="puede_probar(clip)"
-								@reproducir="al_reproducir"
-								@pausar="al_pausar"
-								@terminado="al_terminar(clip)"
-								@probar="probar"></tarjeta-clip>
-							</li>
-						</ul>
+								<ul class="panel-demo__lista">
+									<li
+									v-for="clip in nucleo_de(seccion)"
+									:key="clip.id"
+									class="panel-demo__item"
+									:class="{ 'panel-demo__item--abierto': esta_abierto(clip) }">
+										<button
+										type="button"
+										class="panel-demo__item-boton"
+										:class="{ 'panel-demo__item-boton--hecho': fue_visto(clip) }"
+										:aria-expanded="esta_abierto(clip) ? 'true' : 'false'"
+										@click="alternar_clip(clip)">
+											<span
+											class="panel-demo__item-marca"
+											:class="{ 'panel-demo__item-marca--hecha': fue_visto(clip) }"
+											aria-hidden="true"></span>
+											<span class="panel-demo__item-titulo">{{ clip.titulo }}</span>
+											<span class="panel-demo__item-flecha" aria-hidden="true"></span>
+										</button>
+
+										<tarjeta-clip
+										v-if="esta_abierto(clip)"
+										ref="tarjeta"
+										:clip="clip"
+										:grande="video_grande"
+										:puede_probar="puede_probar(clip)"
+										@reproducir="al_reproducir"
+										@pausar="al_pausar"
+										@terminado="al_terminar(clip)"
+										@probar="probar"></tarjeta-clip>
+									</li>
+								</ul>
+
+								<!-- Los de biblioteca van abajo y NO suman al progreso. -->
+								<div v-if="biblioteca_de(seccion).length > 0" class="panel-demo__biblioteca">
+									<h4 class="panel-demo__biblioteca-titulo">Recursos adicionales</h4>
+									<ul class="panel-demo__lista">
+										<li
+										v-for="clip in biblioteca_de(seccion)"
+										:key="clip.id"
+										class="panel-demo__item"
+										:class="{ 'panel-demo__item--abierto': esta_abierto(clip) }">
+											<button
+											type="button"
+											class="panel-demo__item-boton panel-demo__item-boton--secundario"
+											:aria-expanded="esta_abierto(clip) ? 'true' : 'false'"
+											@click="alternar_clip(clip)">
+												<span class="panel-demo__item-marca panel-demo__item-marca--suelta" aria-hidden="true"></span>
+												<span class="panel-demo__item-titulo">{{ clip.titulo }}</span>
+												<span class="panel-demo__item-flecha" aria-hidden="true"></span>
+											</button>
+
+											<tarjeta-clip
+											v-if="esta_abierto(clip)"
+											ref="tarjeta"
+											:clip="clip"
+											:grande="video_grande"
+											:puede_probar="puede_probar(clip)"
+											@reproducir="al_reproducir"
+											@pausar="al_pausar"
+											@terminado="al_terminar(clip)"
+											@probar="probar"></tarjeta-clip>
+										</li>
+									</ul>
+								</div>
+							</section>
+						</div>
 					</div>
-				</section>
+				</template>
 			</div>
 
 			<!--
@@ -225,6 +274,8 @@ export default {
 			video_grande: false,
 			// Handle del debounce de las notas. 3 segundos, por la pieza 3.
 			temporizador_nota: null,
+			// Sección visible del carrusel horizontal. Un solo índice para todas las secciones.
+			indice_seccion: 0,
 		}
 	},
 	computed: {
@@ -266,6 +317,26 @@ export default {
 		 */
 		sin_recorrido() {
 			return this.$store.state.demo.plan_cargado && this.secciones.length === 0
+		},
+		/**
+		 * Clampeado contra el total de secciones: defensivo por si el plan llega con menos
+		 * secciones de las que había cuando se movió el carrusel (no debería pasar en la
+		 * práctica, el plan no cambia en vivo, pero un índice fuera de rango rompe el render).
+		 *
+		 * @returns {Number}
+		 */
+		seccion_actual_index() {
+			if (this.secciones.length === 0) {
+				return 0
+			}
+
+			return Math.min(this.indice_seccion, this.secciones.length - 1)
+		},
+		/**
+		 * @returns {Object|null}
+		 */
+		seccion_actual() {
+			return this.secciones[this.seccion_actual_index] || null
 		},
 		/**
 		 * @returns {Number}
@@ -349,6 +420,70 @@ export default {
 			}
 
 			return Math.round((this.vistos_de(seccion) / total) * 100)
+		},
+		/**
+		 * Ícono de la franja del carrusel. Por título y no por id: el catálogo no trae un
+		 * campo `icono` (agregarlo es cambio de `empresa-api`, fuera de esta misión), pero los
+		 * seis títulos de sección son fijos y conocidos.
+		 *
+		 * @param {Object} seccion
+		 * @returns {String} Clase de Bootstrap Icons, ya instalado en el proyecto.
+		 */
+		icono_de(seccion) {
+			if (!seccion || !seccion.titulo) {
+				return 'bi-circle'
+			}
+
+			const titulo = seccion.titulo.toLowerCase()
+
+			if (titulo.indexOf('listado') !== -1) {
+				return 'bi-boxes'
+			}
+			if (titulo.indexOf('vender') !== -1) {
+				return 'bi-cart-check'
+			}
+			if (titulo.indexOf('ventas') !== -1) {
+				return 'bi-receipt'
+			}
+			if (titulo.indexOf('compras') !== -1) {
+				return 'bi-truck'
+			}
+			if (titulo.indexOf('tesorer') !== -1 || titulo.indexOf('reportes') !== -1) {
+				return 'bi-graph-up-arrow'
+			}
+			if (titulo.indexOf('ecommerce') !== -1) {
+				return 'bi-shop'
+			}
+
+			return 'bi-circle'
+		},
+		/**
+		 * Mueve el carrusel a una sección puntual. Cierra cualquier clip abierto: cambiar de
+		 * sección con un video reproduciendo lo dejaría reproduciendo detrás del `translateX`,
+		 * fuera de pantalla.
+		 *
+		 * @param {Number} indice
+		 * @returns {void}
+		 */
+		cambiar_seccion(indice) {
+			this.pausar_video()
+			this.clip_abierto_id = null
+			this.video_grande = false
+			this.indice_seccion = indice
+		},
+		anterior() {
+			if (this.seccion_actual_index === 0) {
+				return
+			}
+
+			this.cambiar_seccion(this.seccion_actual_index - 1)
+		},
+		siguiente() {
+			if (this.seccion_actual_index === this.secciones.length - 1) {
+				return
+			}
+
+			this.cambiar_seccion(this.seccion_actual_index + 1)
 		},
 		/**
 		 * "Probar" se desbloquea cuando el video llegó al final —adelantar vale— o cuando el
@@ -558,10 +693,12 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 	height: 100%
 	background: #ffffff
 	border-left: 1px solid $panel-demo-linea
-	box-shadow: -8px 0 24px rgba(17, 24, 39, 0.06)
+	// 20% menos intensa que antes (pedido del 18/8: "un poco mas tranquilo el color"). Era
+	// rgba(17, 24, 39, 0.06).
+	box-shadow: -8px 0 24px rgba(17, 24, 39, 0.048)
 
 // ---------------------------------------------------------------------------------------
-// El halo del borde izquierdo (punto 4 de la mision del 17/8).
+// El halo del borde izquierdo (punto 4 de la mision del 17/8, atenuado el 18/8).
 //
 // Son dos capas sobre el mismo borde: `::before` es el filo nitido de 3px y `::after` el
 // resplandor difuso que se derrama hacia el sistema. Las dos miden el DOBLE de alto que el
@@ -597,7 +734,9 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 	left: -13px
 	width: 14px
 	filter: blur(9px)
-	opacity: 0.45
+	// 20% menos llamativo que antes (era 0.45). El filo nitido de `::before` no se toca: es
+	// el que marca el borde, este es solo el resplandor que se derrama.
+	opacity: 0.36
 
 .panel-demo__tirador
 	position: absolute
@@ -636,6 +775,9 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 	text-align: center
 	padding: 1.5rem 1.5rem 1.125rem
 	border-bottom: 1px solid $panel-demo-linea
+	// Lavado de marca muy sutil (pedido del 18/8: mas contraste, menos "colores de sistema").
+	// Un solo momento de color arriba de todo, no un fondo entero — restraint, no saturacion.
+	background: linear-gradient(180deg, rgba(11, 132, 248, 0.05), rgba(58, 49, 252, 0.015) 70%, transparent)
 
 .panel-demo__titulo
 	font-size: 1.25rem
@@ -652,13 +794,14 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 	color: $panel-demo-gris
 	margin: 0.25rem 0 0
 
-// El cuerpo va en gris muy claro y cada seccion en una tarjeta blanca: es lo que separa una
-// seccion de la otra sin dibujar una sola linea de mas.
+// El cuerpo ya no es gris de sistema plano (pedido del 18/8: mas contraste, fondo al estilo
+// de la pagina de experiencia). Es un lavado de marca fijo —no animado, no es el halo del
+// borde— que da caracter sin competir con la tarjeta blanca de la seccion de encima.
 .panel-demo__cuerpo
 	flex: 1 1 auto
 	overflow-y: auto
 	padding: 1rem 1.25rem 1.25rem
-	background: #f7f7f8
+	background: linear-gradient(160deg, rgba(11, 132, 248, 0.05) 0%, rgba(58, 49, 252, 0.025) 45%, #f6f6f8 75%)
 
 .panel-demo__esqueleto
 	display: flex
@@ -697,36 +840,141 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 	line-height: 1.5
 	color: $panel-demo-gris
 
-.panel-demo__seccion
-	margin-bottom: 0.875rem
-	padding: 1rem 0.375rem 0.5rem
-	border-radius: 14px
-	background: #ffffff
-	border: 1px solid $panel-demo-linea
-	box-shadow: 0 1px 2px rgba(17, 24, 39, 0.03)
-
-.panel-demo__seccion:last-child
-	margin-bottom: 0
-
-.panel-demo__seccion-encabezado
-	padding: 0 0.75rem
+// ---------------------------------------------------------------------------------------
+// Carrusel horizontal de secciones (punto 1-2 de la mision del 18/8). El viewport recorta
+// lo que no es la seccion activa; el riel es el que se desplaza, con `transform` (mismo
+// motivo que el halo del borde: lo resuelve el compositor, no repinta el resto del panel).
+// ---------------------------------------------------------------------------------------
+.panel-demo__carrusel-nav
+	display: flex
+	align-items: center
+	justify-content: space-between
+	gap: 0.5rem
 	margin-bottom: 0.75rem
 
-.panel-demo__seccion-fila
+.panel-demo__carrusel-flecha
+	flex: 0 0 auto
 	display: flex
-	align-items: baseline
-	justify-content: space-between
-	gap: 0.75rem
+	align-items: center
+	justify-content: center
+	width: 32px
+	height: 32px
+	border-radius: 50%
+	border: 1px solid $panel-demo-linea
+	background: #ffffff
+	color: $panel-demo-tinta
+	font-size: 1.125rem
+	line-height: 1
+	cursor: pointer
+	transition: border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease
 
-.panel-demo__seccion-titulo
+.panel-demo__carrusel-flecha:hover:not(:disabled)
+	border-color: $panel-demo-celeste
+	color: $panel-demo-celeste
+
+.panel-demo__carrusel-flecha:focus-visible
+	outline: 2px solid $panel-demo-celeste
+	outline-offset: 2px
+
+.panel-demo__carrusel-flecha:disabled
+	opacity: 0.35
+	cursor: default
+
+// El titulo va centrado entre las dos flechas, con el icono de la seccion arriba: es el
+// pedido explicito de Lucas (titulo centrado, flechas a los dos margenes).
+.panel-demo__carrusel-info
+	flex: 1 1 auto
+	min-width: 0
+	display: flex
+	flex-direction: column
+	align-items: center
+	gap: 0.25rem
+	text-align: center
+
+.panel-demo__carrusel-insignia
+	display: flex
+	align-items: center
+	justify-content: center
+	width: 30px
+	height: 30px
+	border-radius: 50%
+	background: linear-gradient(135deg, rgba(11, 132, 248, 0.12), rgba(58, 49, 252, 0.12))
+	color: $panel-demo-celeste
+	font-size: 0.9375rem
+
+.panel-demo__carrusel-titulo
 	font-size: 0.9375rem
 	font-weight: 600
 	letter-spacing: -0.01em
 	color: $panel-demo-tinta
 	margin: 0
+	white-space: nowrap
+	overflow: hidden
+	text-overflow: ellipsis
+	max-width: 100%
+
+// Progreso del carrusel: el numero "N de M" y, si hay mas de una seccion, los puntos. Dos
+// formas de leer lo mismo, como pidio Lucas — el numero es preciso, los puntos son de un
+// vistazo.
+.panel-demo__carrusel-progreso
+	display: flex
+	flex-direction: column
+	align-items: center
+	gap: 0.375rem
+	margin-bottom: 0.875rem
+
+.panel-demo__carrusel-numero
+	font-size: 0.6875rem
+	font-weight: 600
+	letter-spacing: 0.04em
+	text-transform: uppercase
+	color: $panel-demo-gris
+	font-variant-numeric: tabular-nums
+
+.panel-demo__carrusel-puntos
+	display: flex
+	align-items: center
+	gap: 0.375rem
+
+.panel-demo__carrusel-punto
+	width: 6px
+	height: 6px
+	border-radius: 50%
+	background: #d4d4d8
+	transition: background 0.2s ease, transform 0.2s ease
+
+.panel-demo__carrusel-punto--activo
+	background: linear-gradient(135deg, $panel-demo-celeste, $panel-demo-violeta)
+	transform: scale(1.35)
+
+.panel-demo__carrusel-viewport
+	overflow: hidden
+
+.panel-demo__carrusel-riel
+	display: flex
+	transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1)
+
+@media (prefers-reduced-motion: reduce)
+	.panel-demo__carrusel-riel
+		transition: none
+
+.panel-demo__seccion
+	flex: 0 0 100%
+	min-width: 0
+	padding: 1rem 0.375rem 0.5rem
+	border-radius: 14px
+	background: #ffffff
+	// Sin box-shadow a proposito (punto 3 de la mision del 18/8): antes esta tarjeta era la
+	// que le daba sombra a los items de adentro. El borde solo ya alcanza para separarla del
+	// fondo del cuerpo, que ahora tiene mas caracter (ver mas abajo).
+	border: 1px solid $panel-demo-linea
+
+.panel-demo__seccion-encabezado
+	padding: 0 0.75rem
+	margin-bottom: 0.75rem
 
 .panel-demo__progreso
-	flex: 0 0 auto
+	display: block
 	font-size: 0.75rem
 	color: $panel-demo-gris
 	font-variant-numeric: tabular-nums
@@ -749,21 +997,24 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 	margin: 0
 	padding: 0
 
+// Cada item es su propia tarjeta (punto 3 de la mision del 18/8), no una fila dentro de una
+// lista con separador de 1px: es lo que pidio Lucas como "mas separados entre ellos
+// verticalmente". Sin box-shadow — el borde alcanza, y el estado abierto se lee por el color
+// del borde y un lavado de fondo, no por una sombra.
 .panel-demo__item
-	margin: 0
+	margin: 0 0 0.625rem
+	border-radius: 12px
+	border: 1px solid $panel-demo-linea
+	background: #ffffff
+	overflow: hidden
+	transition: border-color 0.2s ease, background 0.2s ease
 
-// Separador metido para adentro, como en una lista agrupada de iOS: la linea no llega a los
-// bordes de la tarjeta, asi que separa sin dibujar una reja.
-.panel-demo__item + .panel-demo__item::before
-	content: ''
-	display: block
-	height: 1px
-	margin: 0 0.75rem
-	background: rgba(17, 24, 39, 0.05)
+.panel-demo__item:last-child
+	margin-bottom: 0
 
-// El item abierto ya se distingue por su fondo: la linea de arriba del siguiente sobra.
-.panel-demo__item--abierto + .panel-demo__item::before
-	background: transparent
+.panel-demo__item--abierto
+	border-color: rgba(11, 132, 248, 0.35)
+	background: linear-gradient(180deg, rgba(11, 132, 248, 0.05), rgba(58, 49, 252, 0.02))
 
 .panel-demo__item-boton
 	display: flex
@@ -773,8 +1024,7 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 	text-align: left
 	background: transparent
 	border: none
-	border-radius: 10px
-	padding: 0.625rem 0.75rem
+	padding: 0.75rem 0.875rem
 	font-size: 0.9375rem
 	line-height: 1.35
 	color: $panel-demo-tinta
@@ -782,14 +1032,11 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 	transition: background 0.15s ease
 
 .panel-demo__item-boton:hover
-	background: rgba(17, 24, 39, 0.035)
+	background: rgba(17, 24, 39, 0.03)
 
 .panel-demo__item-boton:focus-visible
 	outline: 2px solid $panel-demo-celeste
 	outline-offset: -2px
-
-.panel-demo__item--abierto .panel-demo__item-boton
-	background: rgba(11, 132, 248, 0.06)
 
 .panel-demo__item-boton--secundario
 	font-size: 0.875rem
