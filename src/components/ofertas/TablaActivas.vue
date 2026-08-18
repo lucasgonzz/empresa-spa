@@ -106,8 +106,8 @@
 					<template #cell(acciones)="data">
 						<b-button
 						v-if="data.item.estado == 'activa'"
-						size="sm"
 						variant="outline-danger"
+						class="btn-modulo btn-modulo--fila"
 						:disabled="cancelando_id == data.item.id"
 						@click="cancelar(data.item)">
 							Cancelar

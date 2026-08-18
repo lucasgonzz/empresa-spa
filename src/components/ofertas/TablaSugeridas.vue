@@ -82,8 +82,8 @@
 						</b-badge>
 						<b-button
 						v-else
-						size="sm"
 						variant="primary"
+						class="btn-modulo btn-modulo--fila"
 						@click="abrir_activar(data.item)">
 							Activar
 						</b-button>

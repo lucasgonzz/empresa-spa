@@ -68,14 +68,15 @@
 						v-model.number="tramo.porcentaje"></b-form-input>
 						<b-button
 						variant="outline-danger"
+						class="btn-modulo btn-modulo--fila"
 						title="Quitar el tramo"
 						@click="quitar_tramo(index)">
 							<i class="bi bi-x"></i>
 						</b-button>
 					</div>
 					<b-button
-					size="sm"
 					variant="outline-secondary"
+					class="btn-modulo"
 					@click="agregar_tramo">
 						<i class="bi bi-plus-lg m-r-5"></i>
 						Agregar tramo
@@ -99,13 +100,14 @@
 
 				<div class="j-end m-t-15">
 					<b-button
-					class="m-r-10"
+					class="btn-modulo m-r-10"
 					variant="outline-secondary"
 					:disabled="loading"
 					@click="cerrar">
 						Cancelar
 					</b-button>
 					<b-button
+					class="btn-modulo"
 					variant="primary"
 					:disabled="loading || !!error_form"
 					@click="activar">
@@ -158,6 +160,7 @@
 				<b-button
 				v-if="resultado.whatsapp_url && puede_abrir_el_agente(resultado)"
 				variant="success"
+				class="btn-modulo"
 				:disabled="avisando"
 				@click="avisar_por_el_agente(resultado)">
 					<b-spinner

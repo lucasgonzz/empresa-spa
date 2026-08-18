@@ -5,8 +5,7 @@
 			<h4 class="m-b-0">
 				<b-button
 				variant="outline-secondary"
-				size="sm"
-				class="m-r-10"
+				class="btn-modulo m-r-10"
 				@click="volver">
 					<i class="bi bi-arrow-left"></i>
 					Volver

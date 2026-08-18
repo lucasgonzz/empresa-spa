@@ -43,9 +43,8 @@
 				No se pudo generar el resumen de estas ofertas.
 			</p>
 			<b-button
-			size="sm"
 			variant="outline-secondary"
-			class="m-l-10"
+			class="btn-modulo m-l-10"
 			:disabled="enviando_reintento"
 			@click="reintentar">
 				<b-spinner
