@@ -19,6 +19,10 @@ export default {
 			text: 'Cliente',
 			key: 'client_id',
 			type: 'search',
+			// La busqueda va siempre contra la API (search-from-modal/client), nunca contra el
+			// store: hay cuentas con miles de clientes y el resultado no puede depender de que la
+			// descarga del store haya terminado. No sacar.
+			search_from_api: true,
 		},
 		{
 			text: 'Endozado desde cliente',

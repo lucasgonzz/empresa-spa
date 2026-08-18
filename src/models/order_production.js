@@ -12,6 +12,10 @@ export default {
 			store: 'client',
 			type: 'search',
 			is_title: true,
+			// La busqueda va siempre contra la API (search-from-modal/client), nunca contra el
+			// store: hay cuentas con miles de clientes y el resultado no puede depender de que la
+			// descarga del store haya terminado. No sacar.
+			search_from_api: true,
 		},
 		{
 			text: 'Fecha de inicio',
