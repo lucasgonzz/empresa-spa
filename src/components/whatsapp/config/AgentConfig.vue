@@ -71,6 +71,21 @@
 			</small>
 		</div>
 
+		<!-- Gatea el botón de "Simular mensaje del cliente" tanto en la conversación como en el
+		header de la bandeja (chats-list/Index.vue). Nace apagado: sin esto, a los clientes ya
+		activos les aparecería un botón nuevo sin haberlo pedido. -->
+		<div class="whatsapp-agent-config__toggle-group">
+			<b-form-checkbox
+			v-model="form.chat_simulation_enabled"
+			switch>
+				Permitir simular mensajes del cliente en la conversación
+			</b-form-checkbox>
+			<small class="text-muted">
+				Habilita un botón en cada conversación para probar cómo responde el agente. No
+				le llega nada a nadie.
+			</small>
+		</div>
+
 		<b-form-group
 		label="Espera antes de responder (segundos)">
 			<b-form-input
@@ -135,6 +150,9 @@ export default {
 				// Arranca apagado, igual que el default de la columna en la base: prender la
 				// visión sin que el dueño lo pida le sumaría un costo por cada foto que llegue.
 				ai_vision_enabled: false,
+				// Arranca apagado por el mismo motivo: sin esto, a los clientes ya activos les
+				// aparecería de golpe un botón nuevo que nadie pidió.
+				chat_simulation_enabled: false,
 			},
 			loading: false,
 		}
@@ -191,6 +209,7 @@ export default {
 				// los dos casos el default correcto es apagado. Además la API lo puede mandar
 				// como 0/1 si algún día se le cae el cast del modelo.
 				this.form.ai_vision_enabled = !!value.ai_vision_enabled
+				this.form.chat_simulation_enabled = !!value.chat_simulation_enabled
 			},
 		},
 	},
