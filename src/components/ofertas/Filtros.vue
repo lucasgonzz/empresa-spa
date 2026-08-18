@@ -5,6 +5,7 @@
 		class="m-r-25 m-b-0"
 		label="Cliente">
 			<b-form-select
+			class="toolbar-select"
 			v-model="client_id"
 			:options="opciones_cliente"></b-form-select>
 		</b-form-group>
@@ -13,6 +14,7 @@
 		class="m-r-25 m-b-0"
 		label="Por que se sugiere">
 			<b-form-select
+			class="toolbar-select"
 			v-model="criterio"
 			:options="opciones_criterio"></b-form-select>
 		</b-form-group>
@@ -21,6 +23,7 @@
 		class="m-r-25 m-b-0"
 		label="Ordenar por">
 			<b-form-select
+			class="toolbar-select"
 			v-model="order"
 			:options="opciones_orden"></b-form-select>
 		</b-form-group>

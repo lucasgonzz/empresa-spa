@@ -1,7 +1,7 @@
 <template>
 	<b-card
 	v-if="contexto"
-	class="contexto-financiero m-b-15">
+	class="card-modulo contexto-financiero m-b-15">
 
 		<h6 class="contexto-financiero__titulo">
 			<i class="bi bi-cash-stack m-r-5"></i>
@@ -17,28 +17,30 @@
 			Disponible en cajas (pesos): <strong>{{ price(contexto.caja_disponible_pesos) }}</strong>
 		</p>
 
-		<b-table
+		<div
 		v-if="contexto.proveedores && contexto.proveedores.length"
-		small
-		responsive
-		head-variant="light"
-		class="contexto-financiero__tabla"
-		:fields="fields"
-		:items="contexto.proveedores">
+		class="tabla-modulo-wrapper">
+			<b-table
+			small
+			responsive
+			table-class="tabla-modulo contexto-financiero__tabla"
+			:fields="fields"
+			:items="contexto.proveedores">
 
-			<template #cell(deuda_pesos)="data">
-				{{ price(data.item.deuda_pesos) }}
-			</template>
+				<template #cell(deuda_pesos)="data">
+					{{ price(data.item.deuda_pesos) }}
+				</template>
 
-			<template #cell(deuda_dolares)="data">
-				{{ price(data.item.deuda_dolares) }}
-			</template>
+				<template #cell(deuda_dolares)="data">
+					{{ price(data.item.deuda_dolares) }}
+				</template>
 
-			<template #cell(total_estimado)="data">
-				{{ price(data.item.total_estimado) }}
-			</template>
+				<template #cell(total_estimado)="data">
+					{{ price(data.item.total_estimado) }}
+				</template>
 
-		</b-table>
+			</b-table>
+		</div>
 
 		<!--
 			Leyenda fija y visible (PLAN §5.5/D9): la plata es dato de contexto, no

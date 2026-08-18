@@ -53,13 +53,14 @@
 
 		<div class="j-end m-t-15">
 			<b-button
-			class="m-r-10"
+			class="btn-modulo m-r-10"
 			variant="outline-secondary"
 			:disabled="loading"
 			@click="cerrar">
 				Cancelar
 			</b-button>
 			<b-button
+			class="btn-modulo"
 			variant="primary"
 			:disabled="loading || form_invalido"
 			@click="guardar">

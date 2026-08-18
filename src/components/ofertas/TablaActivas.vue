@@ -6,6 +6,7 @@
 			class="m-r-25 m-b-0"
 			label="Estado">
 				<b-form-select
+				class="toolbar-select"
 				v-model="estado"
 				:options="opciones_estado"></b-form-select>
 			</b-form-group>
@@ -13,6 +14,7 @@
 			class="m-b-0"
 			label="Cliente">
 				<b-form-select
+				class="toolbar-select"
 				v-model="client_id"
 				:options="opciones_cliente"></b-form-select>
 			</b-form-group>
@@ -33,96 +35,116 @@
 
 		<template v-else>
 
-			<!-- responsive + min-width en el sass: scroll horizontal en vez de celdas apretadas -->
-			<b-table
-			head-variant="dark"
-			responsive
-			class="ofertas-activas__tabla"
-			:fields="fields"
-			:items="ofertas">
+			<!-- El min-width vive en el sass, sobre la table-class: adentro de tabla-modulo-wrapper el scroll horizontal queda contenido en la caja redondeada -->
+			<div class="tabla-modulo-wrapper">
+				<b-table
+				responsive
+				table-class="tabla-modulo ofertas-activas__tabla"
+				:fields="fields"
+				:items="ofertas">
 
-				<template #cell(descuento)="data">
-					<span v-if="data.item.tipo_descuento == 'cantidad'">
-						{{ texto_tramos(data.item) }}
-					</span>
-					<strong v-else>
-						{{ data.item.porcentaje }}%
-					</strong>
-				</template>
+					<template #cell(descuento)="data">
+						<span v-if="data.item.tipo_descuento == 'cantidad'">
+							{{ texto_tramos(data.item) }}
+						</span>
+						<strong v-else>
+							{{ data.item.porcentaje }}%
+						</strong>
+					</template>
 
-				<!--
-					El aviso es un extra, no una precondicion: una oferta sin mail valido
-					se activa igual y queda marcada como no avisada.
-				-->
-				<template #cell(aviso)="data">
-					<b-badge
-					v-if="data.item.notificada_email_at"
-					variant="success"
-					:title="data.item.email_destino">
-						Mail enviado
-					</b-badge>
-					<b-badge
-					v-else
-					variant="secondary"
-					title="No habia mail valido ni en el comprador de la tienda ni en el cliente">
-						Sin mail
-					</b-badge>
 					<!--
-						🔴 LA RAMA DEL LINK EXTERNO NO ES CÓDIGO MUERTO. No la borres.
-						WhatsApp es una extension que se contrata aparte, y `SidebarHost.vue` NO
-						MONTA el sidebar sin ella: sin esta rama, el comercio que no la tiene se
-						queda con un icono que no hace absolutamente nada. Es el mismo criterio, y
-						por el mismo motivo, que la rama wa.me de `mixins/model_functions.js`
-						(`sendWhatsApp`), que esta marcada alla con estas mismas palabras.
-						El `@click.stop` va por prudencia: la celda vive adentro de una b-table.
-
-						🔴 Y EL REPLIEGUE TIENE DOS CONDICIONES, NO UNA. Aca se ve solo la primera
-						(no tiene la extension). La segunda —la ventana de 24 h de Meta cerrada,
-						que es el estado de TODO chat nuevo— recien se sabe con el chat en la
-						mano, asi que la resuelve `whatsapp_chat/abrirChatOLinkExterno` en el
-						click y termina abriendo esta misma URL.
+						El aviso es un extra, no una precondicion: una oferta sin mail valido
+						se activa igual y queda marcada como no avisada.
 					-->
-					<b-button
-					v-if="data.item.whatsapp_url && puede_abrir_el_agente(data.item)"
-					class="m-l-5"
-					size="sm"
-					variant="link"
-					:disabled="avisando_id == data.item.id"
-					title="Avisarle por WhatsApp con el mensaje ya escrito"
-					@click.stop="avisar_por_el_agente(data.item)">
-						<i class="bi bi-whatsapp text-success"></i>
-					</b-button>
-					<a
-					v-else-if="data.item.whatsapp_url"
-					class="m-l-5"
-					target="_blank"
-					rel="noopener"
-					:href="data.item.whatsapp_url"
-					title="Abrir WhatsApp con el mensaje ya escrito">
-						<i class="bi bi-whatsapp text-success"></i>
-					</a>
-				</template>
+					<template #cell(aviso)="data">
+						<b-badge
+						v-if="data.item.notificada_email_at"
+						variant="success"
+						:title="data.item.email_destino">
+							Mail enviado
+						</b-badge>
+						<b-badge
+						v-else
+						variant="secondary"
+						title="No habia mail valido ni en el comprador de la tienda ni en el cliente">
+							Sin mail
+						</b-badge>
+						<!--
+							🔴 LA RAMA DEL LINK EXTERNO NO ES CÓDIGO MUERTO. No la borres.
+							WhatsApp es una extension que se contrata aparte, y `SidebarHost.vue` NO
+							MONTA el sidebar sin ella: sin esta rama, el comercio que no la tiene se
+							queda con un icono que no hace absolutamente nada. Es el mismo criterio, y
+							por el mismo motivo, que la rama wa.me de `mixins/model_functions.js`
+							(`sendWhatsApp`), que esta marcada alla con estas mismas palabras.
+							El `@click.stop` va por prudencia: la celda vive adentro de una b-table.
 
-				<template #cell(acciones)="data">
-					<b-button
-					v-if="data.item.estado == 'activa'"
-					size="sm"
-					variant="outline-danger"
-					:disabled="cancelando_id == data.item.id"
-					@click="cancelar(data.item)">
-						Cancelar
-					</b-button>
-				</template>
+							🔴 Y EL REPLIEGUE TIENE DOS CONDICIONES, NO UNA. Aca se ve solo la primera
+							(no tiene la extension). La segunda —la ventana de 24 h de Meta cerrada,
+							que es el estado de TODO chat nuevo— recien se sabe con el chat en la
+							mano, asi que la resuelve `whatsapp_chat/abrirChatOLinkExterno` en el
+							click y termina abriendo esta misma URL.
+						-->
+						<b-button
+						v-if="data.item.whatsapp_url && puede_abrir_el_agente(data.item)"
+						class="m-l-5"
+						size="sm"
+						variant="link"
+						:disabled="avisando_id == data.item.id"
+						title="Avisarle por WhatsApp con el mensaje ya escrito"
+						@click.stop="avisar_por_el_agente(data.item)">
+							<i class="bi bi-whatsapp text-success"></i>
+						</b-button>
+						<a
+						v-else-if="data.item.whatsapp_url"
+						class="m-l-5"
+						target="_blank"
+						rel="noopener"
+						:href="data.item.whatsapp_url"
+						title="Abrir WhatsApp con el mensaje ya escrito">
+							<i class="bi bi-whatsapp text-success"></i>
+						</a>
+					</template>
 
-			</b-table>
+					<template #cell(acciones)="data">
+						<b-button
+						v-if="data.item.estado == 'activa'"
+						variant="outline-danger"
+						class="btn-modulo btn-modulo--fila"
+						:disabled="cancelando_id == data.item.id"
+						@click="cancelar(data.item)">
+							Cancelar
+						</b-button>
+					</template>
 
-			<b-pagination
-			v-if="paginacion.total > paginacion.per_page"
-			class="m-0"
-			pills
-			v-model="pagina_actual"
-			:total-rows="paginacion.total"
-			:per-page="paginacion.per_page"></b-pagination>
+				</b-table>
+			</div>
+
+			<!--
+				Capsula de paginacion del sistema (misma forma que
+				common-vue/components/display/table/pagination/Index.vue). El contador de
+				resultados se muestra aunque haya una sola pagina: sirve igual. Los botones de
+				pagina y su separador aparecen recien cuando hay mas de una.
+			-->
+			<div
+			v-if="paginacion.total"
+			class="paginacion-modulo m-t-15">
+				<div class="paginacion-modulo__barra">
+					<span class="paginacion-modulo__meta">
+						{{ paginacion.total }} resultados
+					</span>
+					<template v-if="paginacion.total > paginacion.per_page">
+						<span
+						class="paginacion-modulo__separador"
+						aria-hidden="true"></span>
+						<b-pagination
+						class="paginacion-modulo__pages m-0"
+						pills
+						v-model="pagina_actual"
+						:total-rows="paginacion.total"
+						:per-page="paginacion.per_page"></b-pagination>
+					</template>
+				</div>
+			</div>
 
 		</template>
 
