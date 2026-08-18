@@ -116,13 +116,32 @@
 				</b-table>
 			</div>
 
-			<b-pagination
-			v-if="paginacion.total > paginacion.per_page"
-			class="m-0"
-			pills
-			v-model="pagina_actual"
-			:total-rows="paginacion.total"
-			:per-page="paginacion.per_page"></b-pagination>
+			<!--
+				Capsula de paginacion del sistema (misma forma que
+				common-vue/components/display/table/pagination/Index.vue). El contador de
+				resultados se muestra aunque haya una sola pagina: sirve igual. Los botones de
+				pagina y su separador aparecen recien cuando hay mas de una.
+			-->
+			<div
+			v-if="paginacion.total"
+			class="paginacion-modulo m-t-15">
+				<div class="paginacion-modulo__barra">
+					<span class="paginacion-modulo__meta">
+						{{ paginacion.total }} resultados
+					</span>
+					<template v-if="paginacion.total > paginacion.per_page">
+						<span
+						class="paginacion-modulo__separador"
+						aria-hidden="true"></span>
+						<b-pagination
+						class="paginacion-modulo__pages m-0"
+						pills
+						v-model="pagina_actual"
+						:total-rows="paginacion.total"
+						:per-page="paginacion.per_page"></b-pagination>
+					</template>
+				</div>
+			</div>
 
 		</template>
 
