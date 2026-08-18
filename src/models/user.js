@@ -295,19 +295,6 @@ export default {
 				'Valor recomendado: 10. Se ajusta entre 8 y 14.',
 			],
 		},
-		// Controla si el logo ocupa todo el ancho del ticket o aparece en un lado.
-		// Cuando está activado, el logo ocupa todo el ancho y los datos de la empresa van debajo.
-		// Cuando está desactivado, el logo va a la izquierda y los datos a la derecha.
-		{
-			text: 'El logo ocupa todo el ancho del ticket',
-			key: 'sale_ticket_logo_full_width',
-			type: 'checkbox',
-			descriptions: [
-				'Activado: el logo se muestra a todo el ancho y los datos de la empresa quedan debajo.',
-				'Desactivado: el logo va a la izquierda y los datos a la derecha (como hasta ahora).',
-			],
-		},
-
 
 
 
