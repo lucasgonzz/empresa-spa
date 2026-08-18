@@ -1,7 +1,7 @@
 <template>
 	<div class="sugerencias-compra-listado">
 
-		<div class="j-between align-center m-t-15 m-b-15">
+		<div class="j-between align-center p-t-15 m-b-15">
 			<h4 class="m-b-0">
 				Sugerencias de compra
 			</h4>
