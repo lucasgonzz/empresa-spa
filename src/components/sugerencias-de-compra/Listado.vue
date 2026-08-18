@@ -7,13 +7,14 @@
 			</h4>
 			<div class="j-end align-center">
 				<b-button
-				class="m-r-10"
+				class="btn-modulo m-r-10"
 				variant="outline-secondary"
 				title="Actualizar el listado"
 				@click="refrescar">
 					<i class="bi bi-arrow-clockwise"></i>
 				</b-button>
 				<b-button
+				class="btn-modulo"
 				variant="primary"
 				@click="nueva_sugerencia">
 					<i class="bi bi-plus-lg m-r-5"></i>
