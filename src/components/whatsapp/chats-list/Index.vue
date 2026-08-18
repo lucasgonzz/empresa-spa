@@ -13,9 +13,11 @@
 			</b-button>
 			<!-- Simular un mensaje entrante del cliente: mismo criterio is_owner que la
 			configuración, porque el endpoint `whatsapp-bot/simulate-inbound` también es solo
-			del dueño (devuelve 403 al resto). -->
+			del dueño (devuelve 403 al resto). Gateado TAMBIÉN por chat_simulation_enabled: es
+			el mismo toggle que gatea el botón equivalente dentro de la conversación
+			(conversation/Composer.vue), para que sea honesto en los dos lugares. -->
 			<b-button
-			v-if="is_owner"
+			v-if="is_owner && config && config.chat_simulation_enabled"
 			size="sm"
 			variant="outline-warning"
 			class="whatsapp-chats-list__simulate-btn"
@@ -84,6 +86,16 @@ export default {
 		},
 		selected_chat_id() {
 			return this.$store.state.whatsapp_chat.selected_chat_id
+		},
+		/**
+		 * Config del agente (mismo patrón que usa `whatsapp/config/AgentConfig.vue` y
+		 * `conversation/Composer.vue`): de acá se lee `chat_simulation_enabled` para gatear el
+		 * botón de simular del header, igual que su equivalente dentro de la conversación.
+		 *
+		 * @returns {Object|null}
+		 */
+		config() {
+			return this.$store.state.whatsapp_bot_config.models[0] || null
 		},
 	},
 	methods: {
