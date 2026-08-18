@@ -86,7 +86,10 @@ export default {
 			type: 'search',
 			use_to_show_in_search_modal: true,
 			use_to_update: true,
-			use_store_models: true,
+			// La busqueda va siempre contra la API (search-from-modal/provider), nunca contra el
+			// store: hay cuentas con miles de proveedores y el resultado no puede depender de que
+			// la descarga del store haya terminado. No sacar.
+			search_from_api: true,
 			filter_modal_position: 4,
 			keep_after_create: true,
 			can: 'article.provider',

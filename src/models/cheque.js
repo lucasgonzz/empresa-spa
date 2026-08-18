@@ -19,25 +19,33 @@ export default {
 			text: 'Cliente',
 			key: 'client_id',
 			type: 'search',
+			// La busqueda va siempre contra la API (search-from-modal/client), nunca contra el
+			// store: hay cuentas con miles de clientes y el resultado no puede depender de que la
+			// descarga del store haya terminado. No sacar.
+			search_from_api: true,
 		},
 		{
 			text: 'Endozado desde cliente',
 			key: 'endosado_desde_client_id',
 			store: 'client',
 			type: 'search',
-			use_store_models: true,
+			search_from_api: true,
 		},
 		{
 			text: 'Proveedor',
 			key: 'provider_id',
 			type: 'search',
-		}, 
+			// La busqueda va siempre contra la API (search-from-modal/provider), nunca contra el
+			// store: hay cuentas con miles de proveedores y el resultado no puede depender de que
+			// la descarga del store haya terminado. No sacar.
+			search_from_api: true,
+		},
 		{
 			text: 'Endozado al proveedor',
 			key: 'endosado_a_provider_id',
 			store: 'provider',
 			type: 'search',
-			use_store_models: true,
+			search_from_api: true,
 		},
 		{
 			text: 'Banco',

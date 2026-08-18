@@ -81,6 +81,10 @@ export default {
 			type: 'search',
 			store: 'client',
 			only_show: true,
+			// La busqueda va siempre contra la API (search-from-modal/client), nunca contra el
+			// store: hay cuentas con miles de clientes y el resultado no puede depender de que la
+			// descarga del store haya terminado. No sacar.
+			search_from_api: true,
 			// v_if: ['client_id', '!=', null],
 			// button: {
 			// 	function: 'showClientCurrentAcount',
