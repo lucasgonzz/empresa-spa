@@ -19,8 +19,7 @@
 			<div class="j-between align-center m-b-10">
 				<div class="j-start align-center">
 					<b-button
-					class="m-r-10"
-					size="sm"
+					class="btn-modulo m-r-10"
 					variant="outline-secondary"
 					@click="toggle_seleccionar_pagina">
 						{{ pagina_entera_seleccionada ? 'Deseleccionar pagina' : 'Seleccionar pagina' }}
@@ -31,7 +30,7 @@
 						{{ selected_ids.length }} seleccionado/s
 					</span>
 					<b-button
-					size="sm"
+					class="btn-modulo"
 					variant="primary"
 					:disabled="!selected_ids.length || loading_crear"
 					@click="crear_movimientos">
