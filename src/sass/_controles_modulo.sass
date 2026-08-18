@@ -91,14 +91,23 @@
 			// oscuro queda una linea clara que no existe en las tablas del sistema.
 			border-top: none
 			border-bottom: none
-			padding: 10px 15px
+			// 🔴 !important, medido en la aplicacion real y no adivinado: b-table siempre agrega la
+			// clase base de Bootstrap `table`, y TableComponent.vue (common-vue/components/display/
+			// TableComponent.vue:890-894, sin scope, cargado global) tiene `.table th, .table td`
+			// con `padding: 5px !important` cuando `$table_font_small` es true (lo es siempre,
+			// _custom.scss:8). Sin este !important, el padding de acá se ve pisado en el navegador
+			// aunque en el codigo fuente parezca ganar por especificidad — un !important le gana a
+			// cualquier regla normal sin importar cuantas clases tenga. Verificado con
+			// getComputedStyle sobre la tabla de "Busquedas del motor" corriendo de verdad.
+			padding: 10px 15px !important
 			font-size: 0.9375rem
 			font-weight: 600
 			white-space: nowrap
 			vertical-align: middle
 
 		td
-			padding: 8px 15px
+			// Mismo motivo que el thead de arriba: sin !important, TableComponent.vue lo pisa a 5px.
+			padding: 8px 15px !important
 			vertical-align: middle
 			font-size: 0.875rem
 			border-top: 1px solid var(--color-border)
