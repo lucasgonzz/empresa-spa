@@ -1,22 +1,38 @@
 <template>
 	<div
 	:id="'btn-factura-'+afip_ticket.id"
-	class="btn-factura s-1">
-		<p class="title-factura">
-			Factura 
-			<span
-			v-if="afip_ticket.cbte_numero">
-				N° {{ afip_ticket.cbte_numero }}
-			</span>
-			<span
+	class="factura-card s-1"
+	:class="afip_ticket.cae ? 'border-primary' : 'border-danger'">
+		<div class="factura-card__header">
+			<div class="factura-card__title">
+				<i class="bi bi-receipt factura-card__icon"></i>
+				<span>
+					Factura
+					<strong v-if="afip_ticket.cbte_numero">N° {{ afip_ticket.cbte_numero }}</strong>
+					<span
+					v-else
+					class="text-muted">(sin numero)</span>
+				</span>
+			</div>
+
+			<b-button
+			v-if="afip_ticket.cae"
+			variant="primary"
+			size="sm"
+			title="Imprimir factura"
+			@click.stop="print">
+				<i class="bi bi-printer"></i>
+			</b-button>
+			<b-badge
+			variant="danger"
 			v-else>
-				(sin numero)
-			</span>
-		</p>
+				SIN CAE
+			</b-badge>
+		</div>
 
 		<b-popover
-		:target="'btn-factura-'+afip_ticket.id" 
-		triggers="hover" 
+		:target="'btn-factura-'+afip_ticket.id"
+		triggers="hover"
 		placement="left">
 		    <template #title><strong>{{ title_description }}</strong></template>
 		    <p
@@ -25,139 +41,122 @@
 		    </p>
 		 </b-popover>
 
-
-		<div
-		class="j-start align-center">
-			
-			<b-button
-			v-if="afip_ticket.cae"
-			variant="primary"
-			class="m-r-10"
-			@click.stop="print"
-			size="sm">
-				<i class="icon-print"></i>
-			</b-button>
-			<b-badge
-			variant="danger"
-			class="m-r-10"
-			v-else>
-				SIN CAE
-			</b-badge>
+		<b-button-group
+		size="sm"
+		class="factura-card__actions"
+		v-if="show_acciones(afip_ticket)">
 
 			<b-button
 			@click.stop="consultar(afip_ticket)"
-			size="sm"
 			variant="success"
+			title="Consultar comprobante ante ARCA"
 			v-if="!afip_ticket.cae && afip_ticket.cbte_numero">
+				<i class="bi bi-arrow-repeat"></i>
 				Consultar
 			</b-button>
 
 			<!-- Observaciones -->
 			<b-button
-			size="sm"
 			@click.stop="showObservations(afip_ticket)"
 			variant="warning"
+			title="Ver observaciones"
 			v-if="afip_ticket.afip_observations.length">
-				<i class="icon-eye"></i>
+				<i class="bi bi-info-circle"></i>
 				{{ afip_ticket.afip_observations.length }}
 			</b-button>
 
-
 			<!-- Errores -->
 			<b-button
-			size="sm"
 			@click.stop="showErrors(afip_ticket)"
 			variant="danger"
+			title="Ver errores"
 			v-if="afip_ticket.afip_errors.length">
-				<i class="icon-eye"></i>
+				<i class="bi bi-exclamation-triangle"></i>
 				{{ afip_ticket.afip_errors.length }}
 			</b-button>
 
-
-
 			<!-- Eliminar -->
 			<b-button
-			size="sm"
 			@click.stop="delete_afip_ticket(afip_ticket)"
 			variant="outline-danger"
+			title="Eliminar factura"
 			v-if="puede_eliminar(afip_ticket)">
-				<i class="icon-trash"></i>
+				<i class="bi bi-trash"></i>
 			</b-button>
 
+		</b-button-group>
 
-
-		</div>
-
-			
-		<div 
+		<div
 		v-for="nota_credito_afip in afip_ticket.nota_credito_afip"
 		:key="'btn-nc-'+nota_credito_afip.id"
-		:id="'btn-nc-'+nota_credito_afip.id" 
-		class="btn-factura m-t-10">
-			<p class="title-factura">
-				Nota de credito
-				<span
-				v-if="nota_credito_afip.cbte_numero">
-					N° {{ nota_credito_afip.cbte_numero }}
-				</span>
-				<span
+		:id="'btn-nc-'+nota_credito_afip.id"
+		class="factura-card m-t-10"
+		:class="nota_credito_afip.cae ? 'border-primary' : 'border-danger'">
+			<div class="factura-card__header">
+				<div class="factura-card__title">
+					<i class="bi bi-receipt-cutoff factura-card__icon"></i>
+					<span>
+						Nota de credito
+						<strong v-if="nota_credito_afip.cbte_numero">N° {{ nota_credito_afip.cbte_numero }}</strong>
+						<span
+						v-else
+						class="text-muted">(sin numero)</span>
+					</span>
+				</div>
+
+				<b-button
+				v-if="nota_credito_afip.cae"
+				variant="primary"
+				size="sm"
+				title="Imprimir nota de credito"
+				@click.stop="print_nota_credito_afip_ticket(nota_credito_afip)">
+					<i class="bi bi-printer"></i>
+				</b-button>
+				<b-badge
+				variant="danger"
 				v-else>
-					(sin numero)
-				</span>
-			</p>
+					SIN CAE
+				</b-badge>
+			</div>
 
-			<b-button
-			v-if="nota_credito_afip.cae"
-			variant="primary"
-			class="m-r-10"
+			<b-button-group
 			size="sm"
-			@click.stop="print_nota_credito_afip_ticket(nota_credito_afip)">
-				<i class="icon-print"></i>
-			</b-button>
-			<b-badge
-			class="m-r-10"
-			variant="danger"
-			v-else>
-				SIN CAE
-			</b-badge>
-
-			<div
-			class="j-start align-center">
+			class="factura-card__actions"
+			v-if="show_acciones_nota_credito(nota_credito_afip)">
 
 				<b-button
 				@click.stop="consultar_nota_credito_afip_ticket(nota_credito_afip)"
-				size="sm"
 				variant="success"
-				class="m-r-10"
+				title="Consultar comprobante ante ARCA"
 				v-if="!nota_credito_afip.cae && nota_credito_afip.cbte_numero">
+					<i class="bi bi-arrow-repeat"></i>
 					Consultar
 				</b-button>
 
 				<!-- Errores -->
 				<b-button
-				size="sm"
 				@click.stop="showErrors(nota_credito_afip)"
 				variant="danger"
-				class="m-r-10"
+				title="Ver errores"
 				v-if="nota_credito_afip.afip_errors.length">
-					<i class="icon-eye"></i>
+					<i class="bi bi-exclamation-triangle"></i>
 					{{ nota_credito_afip.afip_errors.length }}
 				</b-button>
 
 				<!-- Eliminar ticket NC AFIP (misma regla que factura: sin CAE y consultado o sin número) -->
 				<b-button
-				size="sm"
 				@click.stop="delete_nota_credito_afip_ticket(nota_credito_afip)"
 				variant="outline-danger"
+				title="Eliminar nota de credito"
 				v-if="puede_eliminar(nota_credito_afip)">
-					<i class="icon-trash"></i>
+					<i class="bi bi-trash"></i>
 				</b-button>
 
-			</div>
+			</b-button-group>
 
 			<b-popover
-			:target="'btn-nc-'+nota_credito_afip.id" 
-			triggers="hover" 
+			:target="'btn-nc-'+nota_credito_afip.id"
+			triggers="hover"
 			placement="left">
 			    <template #title><strong>{{ title_description_nota_credito(nota_credito_afip) }}</strong></template>
 			    <p
@@ -290,6 +289,30 @@ export default {
 				return true
 			}
 			return false
+		},
+		/**
+		 * Indica si la fila de acciones secundarias de la factura tiene al menos un botón para
+		 * mostrar (evita renderizar el b-button-group vacío, que se ve como una caja sin nada).
+		 *
+		 * @param {Object} afip_ticket
+		 * @returns {boolean}
+		 */
+		show_acciones(afip_ticket) {
+			return (!afip_ticket.cae && !!afip_ticket.cbte_numero)
+				|| !!afip_ticket.afip_observations.length
+				|| !!afip_ticket.afip_errors.length
+				|| this.puede_eliminar(afip_ticket)
+		},
+		/**
+		 * Misma idea que show_acciones, para la fila de acciones de la nota de crédito.
+		 *
+		 * @param {Object} nota_credito_afip
+		 * @returns {boolean}
+		 */
+		show_acciones_nota_credito(nota_credito_afip) {
+			return (!nota_credito_afip.cae && !!nota_credito_afip.cbte_numero)
+				|| !!nota_credito_afip.afip_errors.length
+				|| this.puede_eliminar(nota_credito_afip)
 		},
 		showObservations(afip_ticket) {
 			this.$store.commit('afip_ticket/set_model', afip_ticket)
@@ -494,16 +517,36 @@ export default {
 }
 </script>
 <style lang="sass">
-.btn-factura
-	padding: 10px
-	background: rgba(0,0,0,.2)
+// Tarjeta de factura/nota de credito ARCA: identidad (icono + numero) e imprimir arriba,
+// acciones secundarias abajo agrupadas. El acento de color viene de las utilidades bootstrap
+// border-primary/border-danger (aplicadas via :class en el template), asi que siempre queda
+// igual al resto de los botones "primary"/"danger" del sistema aunque cambie el tema.
+.factura-card
+	padding: 10px 12px
+	background: rgba(0,0,0,.15)
 	border-radius: 5px
+	border-left-width: 4px
+	border-left-style: solid
 
-	p 
-		margin: 0
+	&__header
+		display: flex
+		align-items: center
+		justify-content: space-between
+		gap: 10px
 
-	.title-factura
+	&__title
+		display: flex
+		align-items: center
+		gap: 8px
 		font-size: 14px
 		font-weight: bold
+		min-width: 0
+
+	&__icon
+		font-size: 16px
+		flex-shrink: 0
+
+	&__actions
+		margin-top: 8px
 
 </style>
