@@ -67,9 +67,19 @@ export default {
 </script>
 
 <style lang="sass">
-// Estética tipo Claude: el usuario escribe en burbuja, el asistente contesta
-// como texto directo sobre el fondo, sin globo. Entrada sutil de abajo hacia
-// arriba para que el mensaje "suba" a la conversación (D41).
+// Los dos roles van en viñeta, y se distinguen por la FORMA y no por dos rellenos
+// peleándose (pedido de Lucas, 19/8/2026: antes el asistente era texto suelto sobre el
+// fondo del panel y se leía desprolijo):
+//
+//   usuario   -> globo RELLENO (--bg-section), pegado a la derecha, angosto
+//   asistente -> tarjeta CONTORNEADA (--bg-card + borde), pegada a la izquierda, ancha
+//
+// El asistente lleva el mismo color que el panel y es el BORDE el que dibuja la viñeta.
+// Es a propósito: un segundo relleno gris al lado del del usuario emparejaba los dos
+// roles y costaba más seguir quién dijo qué. Anda en los dos temas porque los tres
+// tokens (--bg-card, --bg-section, --color-border) tienen contraparte oscura.
+//
+// Entrada sutil de abajo hacia arriba para que el mensaje "suba" a la conversación (D41).
 .asistente-ia-globo
 	margin-bottom: 14px
 	animation: asistente-ia-globo-entrada .18s ease-out
@@ -86,7 +96,14 @@ export default {
 	&--asistente
 		align-self: flex-start
 		max-width: 96%
-		padding: 0 2px
+		background: var(--bg-card, #fff)
+		border: 1px solid var(--color-border, #dee2e6)
+		border-radius: 14px
+		padding: 9px 14px
+		// Sombra de un píxel y nada más: la viñeta tiene que despegarse del panel sin
+		// convertirse en una tarjeta flotante. Una sombra más grande, repetida en cada
+		// mensaje, ensucia toda la conversación.
+		box-shadow: 0 1px 2px var(--shadow-color, rgba(99, 99, 99, .2))
 
 	// Mientras el POST no confirmó, el globo respira en baja opacidad (D41).
 	&--enviando
@@ -96,9 +113,12 @@ export default {
 		border-color: var(--btn-peligro-borde, #b4443f)
 
 	// Un error del lado de la IA llega como contenido amigable (D18): se lee
-	// como un mensaje más, apenas teñido para distinguirlo.
+	// como un mensaje más, apenas teñido para distinguirlo. Ahora que hay viñeta,
+	// el borde acompaña al texto: si no, el teñido quedaba adentro de una tarjeta
+	// de contorno neutro y no se leía como un estado distinto.
 	&--error-respuesta
 		color: var(--caja-cerrar-texto, #9c3a36)
+		border-color: var(--btn-peligro-borde, #b4443f)
 
 	&__texto
 		margin: 0

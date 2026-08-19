@@ -351,10 +351,12 @@ export default {
 			object-fit: cover
 			display: block
 
-	// El puente al submódulo cuelga del primer mensaje del asistente (D24).
+	// El puente al submódulo cuelga del primer mensaje del asistente (D24). El margen
+	// superior era -6px para pegarlo al texto suelto que el asistente tenía antes; con la
+	// viñeta (19/8/2026) ese negativo lo mete contra el borde del recuadro, así que va 0.
 	&__origen
 		align-self: flex-start
-		margin: -6px 0 14px 0
+		margin: 0 0 14px 0
 		padding: 0 2px
 
 	&__demora
