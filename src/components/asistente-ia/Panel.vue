@@ -258,6 +258,28 @@ export default {
 			return Math.min(Math.max(PANEL_MIN, width), PANEL_MAX)
 		},
 		/**
+		 * Igual que el anterior, pero además contra lo que ENTRA EN LA PANTALLA de ahora.
+		 *
+		 * 🔴 Solo se usa al ARRASTRAR, nunca al hidratar, y la diferencia importa. El
+		 * ancho visible lo topea el `max-width: 96vw` del CSS, así que sin este corte el
+		 * número seguía creciendo hasta 1600 con el borde ya clavado: en una pantalla de
+		 * 1366px son ~145px de cursor sin efecto, y para achicar había que arrastrar de
+		 * vuelta todo lo acumulado antes de ver moverse algo.
+		 *
+		 * Al hidratar NO se aplica, a propósito: el ancho es de la persona y no del
+		 * dispositivo, y recortarlo ahí convertiría una visita desde el teléfono en una
+		 * pérdida permanente del ancho elegido en el escritorio.
+		 */
+		clamp_panel_width_visible(width) {
+			let tope_pantalla = PANEL_MAX
+			if (typeof window !== 'undefined' && window.innerWidth) {
+				tope_pantalla = Math.min(PANEL_MAX, Math.floor(window.innerWidth * 0.96))
+			}
+			// Si la pantalla es tan angosta que ni el mínimo entra, manda PANEL_MIN: el
+			// max-width del CSS se encarga de que igual no desborde.
+			return Math.min(Math.max(PANEL_MIN, width), Math.max(PANEL_MIN, tope_pantalla))
+		},
+		/**
 		 * Suma el delta de una manija de borde, que ya viene orientado hacia afuera.
 		 *
 		 * 🔴 El ×2 no sobra. El modal está CENTRADO en el overlay, así que su ancho se
@@ -266,7 +288,7 @@ export default {
 		 * cursor y el arrastre se siente pegajoso.
 		 */
 		on_panel_resize(delta) {
-			this.panel_width_px = this.clamp_panel_width(this.panel_width_px + (delta * 2))
+			this.panel_width_px = this.clamp_panel_width_visible(this.panel_width_px + (delta * 2))
 		},
 		/**
 		 * Al soltar se persiste, igual que la sidebar: en el store para reaperturas del
@@ -365,6 +387,12 @@ export default {
 		min-width: 0
 		display: flex
 		flex-direction: column
+		// 🔴 Franja reservada para la manija derecha. La conversación scrollea sola
+		// (overflow-y: auto) y su barra de scroll se apoya en el borde derecho de este
+		// contenedor: sin estos 6px, la barra queda DEBAJO de la manija y agarrar el thumb
+		// redimensiona el modal en lugar de scrollear. El padding no mueve una barra de
+		// scroll, hay que angostar el contenedor -- por eso va acá y no en la conversación.
+		padding-right: 6px
 
 	&__header
 		height: 52px

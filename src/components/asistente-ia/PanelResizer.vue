@@ -148,14 +148,11 @@ export default {
 	background: transparent
 	transition: background .15s ease
 
-	// Zona de agarre más ancha que la franja visible, sin correr el borde del modal.
-	&::before
-		content: ''
-		position: absolute
-		top: 0
-		bottom: 0
-		left: -3px
-		right: -3px
+	// 🔴 Sin zona de agarre ampliada, a diferencia de VenderResizer. Aquel vive ENTRE
+	// dos paneles, donde a los costados no hay nada; éste se apoya sobre el borde del
+	// modal, y todo píxel que se estire hacia adentro le come el control que esté ahí
+	// (del lado derecho, la barra de scroll de la conversación). El agarre son los 6px
+	// exactos que se ven, y el panel reserva su franja con un padding.
 
 	&:hover, &.asistente-ia-resizer--activo
 		background: var(--color-border-secondary, #adb5bd)
