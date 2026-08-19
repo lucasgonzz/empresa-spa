@@ -5,8 +5,9 @@
 	class="m-l-5"
 	@click.stop="show"
 	variant="outline-info"
+	title="Ver detalle del precio final"
 	size="sm">
-		?
+		<i class="bi bi-question-circle"></i>
 	</b-button>
 </template>
 <script>

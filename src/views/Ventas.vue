@@ -54,14 +54,16 @@
 				class="m-l-5"
 				variant="danger"
 				v-if="props.model.en_acopio">
+					<i class="bi bi-archive"></i>
 					Acopio
 				</b-badge>
 
 				<b-badge
 				class="m-l-5"
 				variant="success"
+				title="Correo enviado al cliente"
 				v-if="props.model.send_mail">
-					<i class="icon-message"></i>
+					<i class="bi bi-envelope"></i>
 				</b-badge>
 
 				<!-- Distintivo visual para ventas contenedoras de facturación -->
@@ -69,7 +71,7 @@
 				class="m-l-5"
 				variant="warning"
 				v-if="props.model.is_consolidacion_facturacion">
-					<i class="icon-layers"></i>
+					<i class="bi bi-layers"></i>
 					Consolidada
 				</b-badge>
 
@@ -78,7 +80,7 @@
 				class="m-l-5"
 				variant="info"
 				v-if="props.model.consolidacion_facturacion_id">
-					<i class="icon-clipboard"></i>
+					<i class="bi bi-clipboard-check"></i>
 					Facturada en consolidación
 				</b-badge>
 			</div>
