@@ -65,9 +65,18 @@ export default {
 	 * Escape sin soltar el botón), los listeners quedarían colgados de document para
 	 * siempre, moviendo un ancho que ya no existe. Mismo motivo por el que Panel.vue
 	 * limpia los suyos.
+	 *
+	 * 🔴 Y ahí también hay que emitir `resize-end`, no solo limpiar: es el evento que
+	 * persiste el ancho. Sin esto, cerrar con Escape sin haber soltado el botón tiraba
+	 * a la basura el ancho recién elegido, en silencio y sin nada que lo denunciara.
 	 */
 	beforeDestroy() {
 		this.soltar_listeners()
+
+		if (this.arrastrando) {
+			this.arrastrando = false
+			this.$emit('resize-end')
+		}
 	},
 	methods: {
 		/**
@@ -98,6 +107,18 @@ export default {
 		 */
 		on_mousemove(event) {
 			if (!this.arrastrando) {
+				return
+			}
+
+			/*
+			 * 🔴 Red por si el `mouseup` nunca llegó: alt-tab con el botón apretado, o
+			 * soltarlo afuera de la ventana. Sin esto `arrastrando` quedaba en true con
+			 * los listeners vivos, y al volver el mouse a la página el modal se seguía
+			 * redimensionando solo, sin ningún botón apretado y al doble de velocidad que
+			 * el cursor. `buttons` es una máscara: 0 significa que no hay ninguno.
+			 */
+			if (event.buttons === 0) {
+				this.on_mouseup()
 				return
 			}
 

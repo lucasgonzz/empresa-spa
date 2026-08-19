@@ -297,10 +297,19 @@ export default {
 	overflow-y: auto
 	padding: 16px 18px 6px 18px
 
+	// 🔴 900 y no 640 (decisión de Lucas, 19/8/2026). El tope viejo lo alcanzaba el
+	// panel con apenas 942px de ancho, así que desde el default nuevo de 984 en adelante
+	// TODO lo que se ganaba estirando el modal se convertía en margen vacío y la
+	// conversación no se movía: la manija existía pero no servía para nada.
+	//
+	// Sigue habiendo un tope, y no es capricho: una línea de texto muy larga se lee peor
+	// porque el ojo pierde el renglón al volver. 900 es el punto donde estirar el panel
+	// hasta el máximo todavía agranda la conversación sin que las líneas se vuelvan
+	// incómodas. Sacarlo del todo NO es "mejor": es volver al problema que el tope evita.
 	&__mensajes
 		display: flex
 		flex-direction: column
-		max-width: 640px
+		max-width: 900px
 		margin: 0 auto
 
 	&__aviso

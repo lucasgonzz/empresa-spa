@@ -45,11 +45,23 @@ export default {
 </script>
 
 <style lang="sass">
+// Lleva la MISMA viñeta que un mensaje del asistente (ver MessageBubble.vue), y no es
+// cosmético: los puntitos ocupan el lugar donde en un segundo va a estar la respuesta.
+// Sueltos sobre el fondo, la llegada del texto se veía como un salto de "nada" a
+// "tarjeta con borde" -- exactamente el tirón que la viñeta vino a sacar. Con el
+// recuadro puesto desde antes, el bloque se queda quieto y solo se le cambia el
+// contenido. Si algún día cambia el aspecto del globo del asistente, este va con él.
 .asistente-ia-pensando
+	align-self: flex-start
 	display: flex
 	align-items: center
 	gap: 10px
-	padding: 2px 2px 14px 2px
+	margin-bottom: 14px
+	padding: 9px 14px
+	background: var(--bg-hover, #f1f3f5)
+	border: 1px solid var(--color-border, #dee2e6)
+	border-radius: 14px
+	box-shadow: 0 1px 2px var(--shadow-color, rgba(99, 99, 99, .2))
 
 	&__avatar
 		position: relative
@@ -82,7 +94,9 @@ export default {
 		height: 14px
 		border-radius: 999px
 		background: var(--color-primary, #007bff)
-		border: 1.5px solid var(--bg-card, #fff)
+		// Recorte contra el fondo que tiene DETRAS, que desde la viñeta es el del globo
+		// y ya no el del panel.
+		border: 1.5px solid var(--bg-hover, #f1f3f5)
 		color: #fff
 		font-size: 7px
 		line-height: 1
