@@ -99,6 +99,25 @@ export default __base_store({
 			]
 		},
 		/**
+		 * Override de la mutation del factory, para que el select de sucursal no se desincronice
+		 * del filtro que efectivamente se manda.
+		 *
+		 * Quien la llama es el boton "Quitar filtros" (BtnRestartFilter), que es generico y no sabe
+		 * que existe `address_id_filtro`. Sin este override, ese boton dejaba el array vacio —o sea
+		 * el listado sin filtrar— pero el select seguia mostrando una sucursal elegida: la pantalla
+		 * diciendo una cosa y la consulta haciendo otra, que es peor que cualquiera de las dos.
+		 *
+		 * @param {Object} state Estado del módulo.
+		 * @param {Array} value Filtros de barra. Vacío = se limpiaron.
+		 */
+		set_extra_filters_de_barra(state, value) {
+			state.extra_filters_de_barra = value
+
+			if (!value.length) {
+				state.address_id_filtro = 0
+			}
+		},
+		/**
 		 * Guarda explicación/steps del precio final (usado en UI).
 		 */
 		set_final_price_description(state, value) {

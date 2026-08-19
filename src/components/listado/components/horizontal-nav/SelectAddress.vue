@@ -16,7 +16,7 @@
 	-->
 	<b-form-select
 	v-if="addresses.length"
-	class="toolbar-select toolbar-btn--desde-md"
+	class="toolbar-select"
 	title="Filtrar el listado por sucursal"
 	aria-label="Filtrar el listado por sucursal"
 	dusk="select_address_filtro_listado"
@@ -24,17 +24,41 @@
 	:options="address_options"></b-form-select>
 </template>
 <script>
+import { puede_ver_address } from '@/common-vue/helpers/article_dynamic_table_columns'
+
 export default {
 	computed: {
 		/**
-		 * Sucursales de la cuenta. Ya estan en el store cuando se entra al Listado: son las mismas
-		 * que el mixin payment_method_discounts_addresses_columns usa para armar una columna de
-		 * stock por sucursal en la tabla. No hace falta pedirlas de nuevo.
+		 * Sucursales que este usuario tiene permitido ver, no todas las de la cuenta.
+		 *
+		 * 🔴 El filtro por `puede_ver_address` NO es opcional: un empleado con el permiso
+		 * `article.stock_only_sucursal` ve en la tabla una sola columna de sucursal --la suya--,
+		 * porque article_dynamic_table_columns.js:128 aplica ese mismo gate al armar las columnas.
+		 * Sin este filtro, el select le listaba TODAS las sucursales por nombre de calle y lo
+		 * dejaba filtrar por cualquiera: le filtraba el nombre de las sucursales que no puede ver
+		 * y qué articulos tienen stock cargado en ellas.
+		 *
+		 * Los modelos ya estan en el store al entrar al Listado (los usa el mixin de columnas), asi
+		 * que no hay que pedir nada.
 		 *
 		 * @returns {Array}
 		 */
 		addresses() {
-			return this.$store.state.address.models
+			let self = this
+
+			return this.$store.state.address.models.filter(function (address) {
+				return puede_ver_address(self, address)
+			})
+		},
+		/**
+		 * Ids visibles, como texto, solo para que el watch de abajo pueda detectar que la sucursal
+		 * elegida dejo de existir. Se compara un string y no el array porque el ABM puede mutar la
+		 * lista en el lugar, y ahi la referencia no cambia y el watch no dispararia.
+		 *
+		 * @returns {String}
+		 */
+		address_ids() {
+			return this.addresses.map(function (address) { return address.id }).join(',')
 		},
 		/**
 		 * Opciones del select. El 0 es "todas las sucursales" y es el valor por defecto: entrar al
@@ -83,6 +107,33 @@ export default {
 			}
 		},
 	},
+	watch: {
+		/**
+		 * Si la sucursal elegida desaparece de la lista --la borraron desde el ABM, o cambio el
+		 * permiso del usuario--, el filtro vuelve a "todas".
+		 *
+		 * Sin esto quedaban dos estados rotos: con otras sucursales cargadas, el select se
+		 * renderizaba EN BLANCO mientras el listado seguia filtrado por un id muerto; y si era la
+		 * unica sucursal, el `v-if` desmontaba el select entero y el filtro se seguia aplicando en
+		 * cada request sin que quedara ningun control en pantalla para sacarlo.
+		 */
+		address_ids() {
+			if (!this.address_id_filtro) {
+				return
+			}
+
+			let self = this
+
+			let sigue_existiendo = this.addresses.find(function (address) {
+				return address.id == self.address_id_filtro
+			})
+
+			if (typeof sigue_existiendo == 'undefined') {
+				// Pasa por el setter a proposito: commitea y vuelve a pedir el listado sin filtro.
+				this.address_id_filtro = 0
+			}
+		},
+	},
 }
 </script>
 <!--
@@ -95,5 +146,10 @@ export default {
 	`gap` de `.view-header__group`. Un margen propio se SUMARIA a ese gap y este control quedaria
 	mas separado que sus vecinos, que es justo lo contrario de lo que se pidio.
 
-	`toolbar-btn--desde-md` lo oculta en telefono, igual que a los tres botones de al lado.
+	🔴 Este control NO lleva `toolbar-btn--desde-md`, aunque sus tres vecinos si, y la asimetria es
+	deliberada: esa clase es `display: none` abajo de 768px. Esconder un boton esconde una ACCION,
+	que el usuario puede no hacer y no pasa nada. Esconder este select esconde ESTADO: el listado
+	quedaria filtrado, sin el control que lo explica y sin ningun otro cartel que lo denuncie, y el
+	usuario veria un listado al que le faltan articulos sin nada con que deshacerlo. Un filtro
+	activo tiene que ser visible en todos los anchos.
 -->

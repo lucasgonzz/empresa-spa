@@ -846,7 +846,17 @@ export default function __base_store(options = {}) {
 				}
 			})
 
-			if (filtros_con_valor > 0) {
+			// Los filtros de barra cuentan igual que los de columna para este flag, y no es un
+			// detalle: entran por el MISMO agujero que describe el comentario de arriba. El control
+			// de barra dispatchea `{ page: 1 }` sin `props`, con lo cual `es_busqueda_nueva` queda
+			// en false, el commit de mas arriba no corre, y el flag se queda en el true que le dejo
+			// runListadoPorDefecto al entrar al modulo.
+			//
+			// Sin esto, con una sucursal elegida el sistema entero cree que esta mostrando el
+			// listado COMPLETO mientras la tabla esta filtrada: el boton de limpiar filtros no se
+			// monta (su v-if pide !listado_por_defecto) y el tooltip del dropdown de acciones
+			// masivas dice "Acciones sobre todos (N)" sobre un conjunto recortado.
+			if (filtros_con_valor > 0 || state.extra_filters_de_barra.length) {
 				commit('set_listado_por_defecto', false)
 			}
 
