@@ -1,0 +1,20 @@
+# Sesiones guardadas con storageState: tienen las cookies de un usuario logueado.
+# NUNCA se commitean.
+auth-state*.json
+
+# Material generado: video, audio, frames sueltos. Se regenera corriendo los scripts, y son
+# decenas de MB de binarios que no tienen por que vivir en el repo de la SPA.
+salida/
+salida-demo/
+salida-demo-timeada/
+salida-cdp/
+salida-audio/
+salida-final/
+salida-exploracion/
+
+# Recortes de las comparaciones de calidad.
+cmp-*.png
+comparacion-*.png
+referencia-*.png
+f-cdp.png
+f-recordvideo.png
