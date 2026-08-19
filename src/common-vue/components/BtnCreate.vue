@@ -1,13 +1,16 @@
 <template>
+	<!-- Mismo data-testid que expone ExcelDropDown.vue en la rama v-if del slot btn_create: -->
+	<!-- la igualdad es intencional, para que un test no dependa de cual de los dos le tocó. -->
 	<b-button
 	:dusk="'btn_create_'+model_name"
-	:class="with_margin ? 'm-b-15' : ''"
+	:data-testid="'btn-crear-'+model_name"
+	:class="[with_margin ? 'm-b-15' : '', 'toolbar-btn--acento']"
 	:data-tour="model_name === 'article' ? 'listado.boton_crear_articulo' : null"
 	@click="create"
 	:block="block ? true : false"
 	:size="button_size"
 	variant="primary">
-		<i class="icon-plus"></i>
+		<i class="bi bi-plus-lg"></i>
 		Crear
 	</b-button>
 </template>

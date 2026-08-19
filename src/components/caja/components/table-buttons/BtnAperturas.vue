@@ -1,14 +1,16 @@
 <template>
-	<b-button
-	class="m-l-10"
-	@click.stop="show_aperturas">
-		Aperturas
-	</b-button>
+	<btn-accion
+	icono="bi bi-clock-history"
+	texto="Aperturas"
+	@clicked="show_aperturas"></btn-accion>
 </template>
 <script>
 export default {
 	props: {
 		caja: Object,
+	},
+	components: {
+		BtnAccion: () => import('@/components/caja/components/table-buttons/BtnAccion'),
 	},
 	methods: {
 		show_aperturas() {

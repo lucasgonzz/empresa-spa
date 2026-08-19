@@ -1,15 +1,18 @@
 <template>
-	<b-row
-	v-if="show">
-		<b-col
-		cols="12">
-			<horizontal-nav
-			class="m-b-15"
-			:items="items"
-			set_sub_view
-			:show_display="false"></horizontal-nav>
-		</b-col>
-	</b-row>
+	<!--
+		Sin b-row/b-col desde la misión 32: este nav ahora vive adentro de una fila flex junto a los
+		filtros de facturación (ver address-afip-ticket-ventas-cobradas-nav/Index.vue), y los
+		márgenes negativos de una b-row rompían esa fila. El margen inferior también se fue: lo pone
+		la fila que lo contiene, una sola vez para los dos.
+	-->
+	<div
+	v-if="show"
+	class="employee-nav">
+		<horizontal-nav
+		:items="items"
+		set_sub_view
+		:show_display="false"></horizontal-nav>
+	</div>
 </template>
 <script>
 import moment from 'moment'
@@ -79,3 +82,13 @@ export default {
 	}
 }
 </script>
+<style lang="sass">
+// El min-width: 0 va también acá adentro: el que tiene que poder encogerse es la pista del nav, no
+// solo el contenedor. Sin esto, el `width: max-content` que arma la lista de empleados empuja igual
+// aunque el padre ya haya cedido.
+.employee-nav
+	min-width: 0
+
+	.horizontal-nav
+		min-width: 0
+</style>

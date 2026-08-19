@@ -20,12 +20,12 @@
 
 			</b-table>
 
-			<div 
+			<!-- Estado vacío del sistema (display/EmptyState), en vez del cartel azul viejo. -->
+			<empty-state
 			v-else
-			class="text-with-icon">
-				No hay pedidos sin confirmar
-				<i class="icon-eye-slash"></i>
-			</div>
+			icon_class="bi bi-bag-check"
+			title="No hay pedidos sin confirmar"
+			hint="Todos los pedidos que entraron por la tienda ya están confirmados."></empty-state>
 
 		</div>
 	</div>
@@ -33,6 +33,9 @@
 </template>
 <script>
 export default {
+	components: {
+		EmptyState: () => import('@/common-vue/components/display/EmptyState'),
+	},
 	computed: {
 		fields() {
 			return [

@@ -1,0 +1,9 @@
+@import '@/sass/_custom.scss'
+
+/* Scroll horizontal en navs segmentados: espacio extra al interactuar para no tapar ítems */
+.horizontal-nav
+	transition: padding-bottom 0.12s ease
+
+	&.has_horizontal_scroll:hover,
+	&.has_horizontal_scroll:focus-within
+		padding-bottom: 14px

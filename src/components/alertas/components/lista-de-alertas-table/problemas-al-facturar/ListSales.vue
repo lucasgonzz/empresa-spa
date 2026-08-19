@@ -31,12 +31,12 @@
 
 		</b-table>
 
-		<div 
+		<!-- Estado vacío del sistema (display/EmptyState), en vez del cartel azul viejo. -->
+		<empty-state
 		v-else
-		class="text-with-icon">
-			No hay problemas al facturar
-			<i class="icon-eye-slash"></i>
-		</div>
+		icon_class="bi bi-receipt"
+		title="No hay problemas al facturar"
+		hint="Todos los comprobantes se emitieron sin errores en ARCA."></empty-state>
 
 	</div>
 
@@ -44,6 +44,7 @@
 <script>
 export default {
 	components: {
+		EmptyState: () => import('@/common-vue/components/display/EmptyState'),
 		CurrentAcounts: () => import('@/components/common/current-acounts/Index'),
         SaleModal: () => import('@/components/common/SaleModal'),
 		AfipButtons: () => import('@/components/ventas/components/table-buttons/AfipButtons'),

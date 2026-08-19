@@ -16,6 +16,13 @@ import select_payment_methods from '@/mixins/vender/select_payment_methods'
 export default {
 	mixins: [select_payment_methods, cuotas],
 	computed: {
+		/*
+		 * Prompt 266 (Fase 2, Capa 3): metodo de pago unico seleccionado en VENDER. Habilita el
+		 * filtro por `cuota.payment_method_id` definido en mixins/cuotas.
+		 */
+		payment_method_id_for_cuotas() {
+			return this.current_acount_payment_method_id
+		},
 		selected_payment_methods() {
 			return this.$store.state.vender.selected_payment_methods
 		},

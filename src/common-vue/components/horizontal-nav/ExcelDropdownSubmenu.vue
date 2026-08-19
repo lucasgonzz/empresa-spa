@@ -35,8 +35,20 @@
 <script>
 /**
  * Ítem de menú con submenú lateral para el dropdown Crear (exportación / importación).
- * El submenú se renderiza en body con posición fija para no quedar recortado
- * por el overflow del menú principal.
+ *
+ * El submenú se posiciona con `position: fixed` y coordenadas de viewport, y —esto es lo
+ * importante— **vive donde Vue lo puso**. Antes se movía a `document.body` con appendChild, más un
+ * hook `updated()` que lo devolvía ahí cada vez que Vue lo reinsertaba. Eso rompía el menú entero al
+ * pasar el mouse por Importación: Vue 2 parchea comparando el DOM real contra su árbol virtual, y un
+ * nodo movido por afuera deja al algoritmo trabajando con referencias a hermanos que ya no están
+ * donde cree, así que se perdían opciones del menú padre.
+ *
+ * El motivo original de mudarlo era escapar del `overflow-y: auto` del menú padre, y era un motivo
+ * real: Popper 1.16 posiciona el `.dropdown-menu` con `transform: translate3d(...)` por defecto, y
+ * un ancestro transformado se vuelve el bloque contenedor de sus descendientes `fixed` —o sea que el
+ * fixed no servía de nada—. Se resuelve en el origen: `ExcelDropDown.vue` le pasa a Popper
+ * `gpuAcceleration: false`, con lo cual posiciona con top/left, no hay transform, y este submenú
+ * fixed vuelve a anclarse al viewport sin necesidad de escaparse del árbol.
  */
 export default {
 	props: {
@@ -63,8 +75,6 @@ export default {
 			menu_style: {},
 			// Timeout para cerrar al salir del ítem padre hacia el submenú.
 			close_timeout: null,
-			// True cuando el nodo del submenú ya fue movido a document.body.
-			menu_appended: false,
 		}
 	},
 	mounted() {
@@ -76,44 +86,8 @@ export default {
 		window.removeEventListener('resize', this.reposition_submenu)
 		document.removeEventListener('click', this.on_document_click, true)
 		this.clear_close_timeout()
-		this.remove_menu_from_body()
-	},
-	updated() {
-		// Vue puede reinsertar el nodo en el li tras un re-render; lo devolvemos al body.
-		if (this.menu_appended && this.$refs.submenu_menu && this.$refs.submenu_menu.parentNode !== document.body) {
-			document.body.appendChild(this.$refs.submenu_menu)
-			if (this.submenu_open) {
-				this.update_menu_position()
-			}
-		}
 	},
 	methods: {
-		/**
-		 * Mueve el submenú al body para escapar del overflow del dropdown padre.
-		 *
-		 * @return {void}
-		 */
-		append_menu_to_body() {
-			if (this.menu_appended || !this.$refs.submenu_menu) {
-				return
-			}
-			document.body.appendChild(this.$refs.submenu_menu)
-			this.menu_appended = true
-		},
-		/**
-		 * Elimina el submenú del body al destruir el componente.
-		 *
-		 * @return {void}
-		 */
-		remove_menu_from_body() {
-			if (!this.menu_appended || !this.$refs.submenu_menu) {
-				return
-			}
-			if (this.$refs.submenu_menu.parentNode === document.body) {
-				document.body.removeChild(this.$refs.submenu_menu)
-			}
-			this.menu_appended = false
-		},
 		/**
 		 * Alterna la visibilidad del submenú al hacer click en el ítem padre.
 		 *
@@ -134,8 +108,11 @@ export default {
 		open_submenu() {
 			this.clear_close_timeout()
 			this.submenu_open = true
+			// El nextTick queda porque la posicion se calcula a partir del rect del toggle y del
+			// tamano ya renderizado del submenu: hay que esperar a que Vue lo pinte. No es un parche
+			// de timing contra otro proceso -- eso era lo que hacia falta cuando el nodo se movia a
+			// body y competia con el patching.
 			this.$nextTick(() => {
-				this.append_menu_to_body()
 				this.update_menu_position()
 				document.addEventListener('click', this.on_document_click, true)
 			})
@@ -250,7 +227,16 @@ export default {
 				position: 'fixed',
 				top: top + 'px',
 				left: left + 'px',
-				zIndex: 1070,
+				// 1001 y no 1070: alcanza para quedar arriba del menu padre (.dropdown-menu de
+				// Bootstrap es 1000) y se queda en la franja que le corresponde, en vez de meterse
+				// en la de los tooltips.
+				//
+				// Precision, porque el comentario anterior afirmaba de mas: ahora que el submenu
+				// vive DENTRO del menu -- que es fixed con z-index 1000 y por lo tanto crea su
+				// propio contexto de apilamiento -- su z-index se resuelve adentro de ese contexto
+				// y no podria pintar sobre un modal ni con 1070. Ese riesgo era real mientras el
+				// nodo estaba teleportado a body; hoy es solo higiene.
+				zIndex: 1001,
 				minWidth: menu_min_width + 'px',
 				width: 'max-content',
 				maxWidth: 'calc(100vw - 24px)',
@@ -266,11 +252,11 @@ export default {
 	width: 100%
 	list-style: none
 
+	// El padding, el borde y el hover de la celda del icono son los del item comun y viven en
+	// src/sass/_menus_desplegables.sass: este toggle lleva `dropdown-item excel-dropdown-option`
+	// igual que los demas. Aca queda solo lo que es propio de ser un <button> y no un <a>.
 	&__toggle
 		width: 100%
-		padding: 8px 1.25rem !important
-		border: none !important
-		box-shadow: none !important
 		outline: none
 		background: transparent
 		text-align: left
@@ -280,14 +266,8 @@ export default {
 		&:hover,
 		&:focus,
 		&:active
-			background-color: #f8f9fa
-			border: none !important
-			box-shadow: none !important
+			background-color: var(--bg-hover)
 			outline: none
-
-			.excel-dropdown-option__icon-wrap
-				background-color: rgba(0, 0, 0, 0.1)
-				color: #343a40
 
 		.excel-dropdown-option__inner
 			width: 100%
@@ -296,14 +276,24 @@ export default {
 	display: none
 	margin: 0
 	padding: 0.35rem 0
-	background-color: #fff
-	border: none
+	// Tokens en vez de #fff pelado: el submenu flota sobre lo que haya debajo, asi que en tema
+	// oscuro un fondo blanco fijo lo dejaba como un recorte de papel sobre la pantalla.
+	background-color: var(--bg-card)
+	// Tenia border: none y box-shadow: none, o sea que flotaba sin ningun limite visual sobre el
+	// contenido de atras y no se entendia donde terminaba.
+	border: 1px solid var(--color-border)
 	border-radius: 0.25rem
-	box-shadow: none
+	box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12)
 	min-width: 280px
 	width: max-content
 	max-width: calc(100vw - 24px)
 
 	&.show
 		display: block
+
+// La sombra clara es azul-oscura al 12%: sobre el #1e2127 del tema oscuro no se ve nada, y el
+// submenu vuelve a quedar sin limite contra lo que tenga atras. En oscuro se apoya en negro con
+// mas opacidad, que es lo que separa dos superficies oscuras.
+html.dark-mode .excel-dropdown-submenu__menu
+	box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45)
 </style>

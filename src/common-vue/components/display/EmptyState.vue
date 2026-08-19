@@ -11,6 +11,11 @@
 		class="display-empty-state__hint">
 			{{ hint }}
 		</p>
+		<div
+		v-if="$slots.default"
+		class="display-empty-state__action">
+			<slot></slot>
+		</div>
 	</div>
 </template>
 <script>
@@ -72,4 +77,7 @@ export default {
 	font-size: .85rem
 	line-height: 1.45
 	color: var(--color-text-secondary, #6c757d)
+
+.display-empty-state__action
+	margin-top: 16px
 </style>

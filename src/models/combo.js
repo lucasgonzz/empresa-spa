@@ -57,6 +57,12 @@ export default {
 			}
 		},
 	],
+	abm_descripcion: {
+		para_que_sirve: 'Arma paquetes de varios artículos que se venden juntos con un precio propio.',
+		implicancias: 'Al vender un combo se descuenta el stock de cada artículo que lo compone. El precio del combo es independiente de la suma de los precios individuales, así que podés ofrecerlo como promoción.',
+		como_se_utiliza: 'Creá el combo, agregale los artículos con sus cantidades y definí costo y precio de venta. Después lo buscás en Vender como cualquier artículo.',
+		palabras_clave: ['pack', 'promocion', 'paquete', 'kit', 'oferta'],
+	},
 	singular_model_name_spanish: 'Combo',
 	plural_model_name_spanish: 'Combos',
 	create_model_name_spanish: 'Nuevo Combo',

@@ -4,6 +4,7 @@ axios.defaults.baseURL = process.env.VUE_APP_API_URL
 
 import moment from 'moment'
 import generals from '@/common-vue/mixins/generals'
+import filters_mixin from '@/common-vue/mixins/filters'
 
 /**
  * Tope de iteraciones del encadenado de páginas por store, por corrida. Un `last_page`
@@ -91,9 +92,32 @@ export default function __base_store(options = {}) {
 
 			props_to_show: [],
 
-			// Flag que indica si el estado filtered fue cargado por BuscadorRapido (sin usar el FilterForm).
+			// Flag que indica si el estado filtered fue cargado por un buscador rápido sin usar el FilterForm (ej. el buscador general).
 			// Permite distinguir entre "filtrado por formulario" y "filtrado por buscador rápido".
 			filtered_without_filter_form: false,
+
+			// Payload completo (query_value, props, relation_props, extra_filters) de la última búsqueda
+			// disparada por el buscador general (BuscadorGeneral). Se persiste para que la paginación
+			// pueda repetir la misma búsqueda solo cambiando la página, sin volver a armar el payload.
+			global_search_payload: null,
+
+			// Desglose de coincidencias de la ultima busqueda del buscador general (grupo 274): que
+			// propiedad aporto cada resultado de la pagina que se esta viendo. null cuando la respuesta
+			// no lo trae (listado por defecto, o busqueda sin criterio de texto).
+			global_search_matches: null,
+
+			// Contador que se incrementa SOLO cuando el usuario dispara una busqueda nueva (no en los
+			// cambios de pagina). El componente de notificacion lo observa para saber cuando mostrarse:
+			// sin esto, la notificacion reaparecia en cada clic de la paginacion, que es la clase de
+			// insistencia que hace que un cartel util se vuelva molesto.
+			global_search_matches_nonce: 0,
+
+			// Flag que distingue "listado por defecto" (filtered poblado por la carga automática al
+			// entrar al módulo, con todos los registros paginados) de una búsqueda real escrita por el
+			// usuario. La UI lo usa para no mostrar carteles de "filtro activo" (título "con filtro",
+			// botón de limpiar búsqueda, botón de quitar filtros) cuando en realidad no hay ningún
+			// criterio puesto, solo el listado inicial.
+			listado_por_defecto: false,
 
 			/**
 			 * Origen del último dropdown masivo (filtrados vs seleccionados).
@@ -357,13 +381,49 @@ export default function __base_store(options = {}) {
 
 		/**
 		 * Activa o desactiva el flag que indica que filtered fue cargado
-		 * por BuscadorRapido (sin pasar por el formulario de filtros).
+		 * por un buscador rápido sin pasar por el formulario de filtros (ej. el buscador general).
 		 *
 		 * @param {Object} state  Estado del módulo.
 		 * @param {Boolean} value true cuando viene del buscador rápido, false en cualquier reset.
 		 */
 		set_filtered_without_filter_form(state, value) {
 			state.filtered_without_filter_form = value
+		},
+		/**
+		 * Persiste (o limpia, con `null`) el payload completo de la última búsqueda del buscador general,
+		 * para que la paginación pueda repetirla cambiando solo la página.
+		 *
+		 * @param {Object} state Estado del módulo.
+		 * @param {Object|null} value Payload completo (query_value, props, relation_props, extra_filters) o null.
+		 */
+		setGlobalSearchPayload(state, value) {
+			state.global_search_payload = value
+		},
+		/**
+		 * Guarda el desglose de coincidencias de la ultima busqueda, o lo limpia con null.
+		 * Incrementa el nonce solo cuando `es_busqueda_nueva` es true (ver doc del state).
+		 *
+		 * @param {Object} state Estado del modulo.
+		 * @param {Object} payload
+		 * @param {Object|null} payload.matches Desglose devuelto por el backend, o null.
+		 * @param {Boolean} payload.es_busqueda_nueva true cuando la disparo el usuario, false en paginacion.
+		 */
+		setGlobalSearchMatches(state, payload) {
+			state.global_search_matches = (payload && payload.matches) ? payload.matches : null
+			if (payload && payload.es_busqueda_nueva) {
+				state.global_search_matches_nonce++
+			}
+		},
+		/**
+		 * Activa o desactiva el flag que indica que `filtered` viene de la carga automática
+		 * del listado por defecto (no de una búsqueda escrita por el usuario).
+		 *
+		 * @param {Object} state Estado del módulo.
+		 * @param {Boolean} value true cuando el listado activo es el "por defecto", false en cualquier
+		 *   búsqueda o filtro real del usuario.
+		 */
+		set_listado_por_defecto(state, value) {
+			state.listado_por_defecto = value
 		},
 		/**
 		 * Guarda si la acción masiva se originó en el dropdown de filtrados.
@@ -458,6 +518,10 @@ export default function __base_store(options = {}) {
 			commit('setIsFiltered', false)
 			// Resetear el flag de buscador rápido al recargar modelos desde el servidor.
 			commit('set_filtered_without_filter_form', false)
+			// Limpiar el payload persistido del buscador general para no dejarlo colgado de una búsqueda vieja.
+			commit('setGlobalSearchPayload', null)
+			// Esta carga ya no es el "listado por defecto" armado por runListadoPorDefecto.
+			commit('set_listado_por_defecto', false)
 			if (state.use_per_page) {
 				commit('setPage', 1)
 				commit('setModels', [])
@@ -652,11 +716,200 @@ export default function __base_store(options = {}) {
 					commit('setFiltered', rows)
 					commit('setTotalFilterPages', res.data.last_page)
 					commit('setTotalFilterResults', res.data.total)
+					// Un filtro real del formulario de filtros nunca es el listado por defecto.
+					commit('set_listado_por_defecto', false)
 				})
 				.catch(err => {
 					commit('auth/setLoading', false, {root: true})
 					commit('auth/setMessage', '', {root: true})
 					console.log(err)
+				})
+		},
+
+		/**
+		 * Ejecuta el buscador general (POST global-search/{model_name}) contra props propias
+		 * (OR + AND de keywords) y relaciones (whereHas), más AND de extra_filters propios del módulo.
+		 * Persiste el payload completo en el store para que la paginación pueda repetir la misma
+		 * búsqueda solo pisando la página, sin volver a armar props/relation_props/extra_filters.
+		 *
+		 * @param {Object} context commit, state
+		 * @param {Object} payload
+		 * @param {Number} [payload.page] Página a consultar (si no viene, usa state.filter_page).
+		 * @param {String} [payload.query_value] Criterio de texto. Si el payload no trae `props`
+		 *   (caso paginación: llega solo `{ page }`), se asume que es un cambio de página y se
+		 *   reusa el payload persistido en `state.global_search_payload`.
+		 * @param {Array} [payload.props] Props propias del modelo a buscar (OR).
+		 * @param {Array} [payload.relation_props] Relaciones a buscar, cada una `{ relation, props }`.
+		 * @param {Array} [payload.extra_filters] Filtros extra propios del módulo (AND).
+		 * @param {String} [payload.order_by] Columna de orden. Viaja dentro del payload persistido en
+		 *   `state.global_search_payload` para que la paginación (que solo manda `{ page }`) repita el
+		 *   mismo orden en vez de caer al orden por defecto del backend (created_at DESC).
+		 * @param {String} [payload.order_direction] Dirección del orden ('ASC'/'DESC'), misma lógica
+		 *   de persistencia que `order_by`.
+		 * @param {Boolean} [payload.silencioso] Si es true, no muestra el overlay global de carga
+		 *   (`auth/setLoading` / `auth/setMessage`). Pensado para el listado por defecto, que se
+		 *   dispara solo al entrar al módulo y no debería sentirse como una búsqueda del usuario.
+		 * @returns {Promise}
+		 */
+		runGlobalSearch({commit, state}, payload = {}) {
+			/**
+			 * Payload completo a enviar: si viene con `props` es una búsqueda nueva (se persiste,
+			 * incluyendo `order_by`/`order_direction` si vinieron, ya que se persiste el payload entero);
+			 * si no (solo `{ page }`), es un cambio de página y se reusa el payload persistido.
+			 */
+			let search_payload = payload
+			/** true cuando esta llamada es una búsqueda nueva del usuario (trae `props`), false cuando es un cambio de página (solo `{ page }`, reusa el payload persistido). */
+			let es_busqueda_nueva = !!(payload && payload.props)
+			if (es_busqueda_nueva) {
+				commit('setGlobalSearchPayload', payload)
+				// Es una búsqueda real del usuario: a partir de ahora deja de ser el listado por defecto.
+				commit('set_listado_por_defecto', false)
+			} else {
+				search_payload = state.global_search_payload || {}
+			}
+
+			/** Página objetivo: la que viene en el payload de paginación, o la actual del store. */
+			let page = (payload && payload.page) ? payload.page : state.filter_page
+			/** Cantidad por página, alineada con el resto de búsquedas filtradas. */
+			let per_page = state.filter_per_page || 5
+			/** Nombre plural en español del modelo para el mensaje de feedback al usuario. */
+			let plural_model_name = generals.methods.plural(state.model_name)
+			/** Modo silencioso: no muestra el overlay global de carga (ver doc de la action). */
+			let silencioso = !!(payload && payload.silencioso)
+
+			if (!silencioso) {
+				commit('auth/setMessage', 'Buscando ' + plural_model_name, {root: true})
+				commit('auth/setLoading', true, {root: true})
+			}
+
+			// Filtros de columna vigentes (los de la lupa de cada header). Se leen del store EN CADA
+			// request y NUNCA se guardan dentro de global_search_payload: ese payload se persiste para
+			// que la paginacion repita la misma busqueda, y si los filtros viajaran adentro, un filtro
+			// que el usuario borro seguiria aplicandose al cambiar de pagina. state.filters es la unica
+			// fuente de verdad de los filtros; el payload persistido solo describe la busqueda de texto.
+			let column_filters = []
+			state.filters.forEach(filter => {
+				if (filters_mixin.methods.filter_has_active_values(filter)) {
+					column_filters.push(filter)
+				}
+			})
+
+			// Con filtros de columna activos, lo que se ve NO es el listado por defecto, aunque la
+			// llamada no traiga `props`. El caso: filtrar desde la lupa de una columna termina en
+			// filtrar() de display/table/Index.vue, que dispatchea { page: 1 } sin props; con eso
+			// `es_busqueda_nueva` queda en false, el commit de arriba no corre, y el flag se queda
+			// en el true que le dejo runListadoPorDefecto al entrar al modulo. Resultado: el boton
+			// de limpiar filtros (v-if de BtnRestartFilter) no se monta nunca por ese camino, y el
+			// tooltip del dropdown de acciones dice "Acciones sobre todos" con un filtro puesto.
+			//
+			// Va aca y no en filtrar() porque este es el punto por donde pasan TODOS los caminos que
+			// aplican filtros de columna, incluida la paginacion, que tambien entra sin `props`.
+			//
+			// 🔴 Se cuentan los filtros con criterio de VALOR, no los que viajan al backend.
+			// column_filters incluye los que solo tienen `ordenar_de`, porque sin ellos la columna
+			// no se ordenaria; pero ordenar NO es filtrar. Contarlos aca hacia que ordenar una
+			// columna prendiera el cartel de "N filtrados" sin que el usuario filtrara nada, y que
+			// la exportacion creyera que habia filtros. Es la misma clase de mentira que este flag
+			// vino a arreglar, en el sentido contrario.
+			let filtros_con_valor = 0
+
+			state.filters.forEach(filter => {
+				if (filters_mixin.methods.filter_has_value_criteria(filter)) {
+					filtros_con_valor++
+				}
+			})
+
+			if (filtros_con_valor > 0) {
+				commit('set_listado_por_defecto', false)
+			}
+
+			return axios.post(
+				'/api/global-search/' + generals.methods.routeString(state.model_name) + '?page=' + page,
+				Object.assign({}, search_payload, {per_page: per_page, filters: column_filters})
+			)
+				.then(res => {
+					if (!silencioso) {
+						commit('auth/setLoading', false, {root: true})
+						commit('auth/setMessage', '', {root: true})
+					}
+
+					/** Filas devueltas: el endpoint responde envuelto en `models` (paginador Laravel). */
+					let rows = (res.data.models && res.data.models.data) ? res.data.models.data : []
+					commit('setSelected', [])
+					commit('setFilterPage', page)
+					commit('setFiltered', rows)
+					commit('setIsFiltered', true)
+					commit('setTotalFilterPages', res.data.models ? res.data.models.last_page : null)
+					commit('setTotalFilterResults', res.data.models ? res.data.models.total : 0)
+					// Marcar que el filtered fue cargado por el buscador general (no por el form de filtros).
+					commit('set_filtered_without_filter_form', true)
+
+					commit('setGlobalSearchMatches', {
+						matches: res.data.matches ? res.data.matches : null,
+						es_busqueda_nueva: es_busqueda_nueva,
+					})
+				})
+				.catch(err => {
+					if (!silencioso) {
+						commit('auth/setLoading', false, {root: true})
+						commit('auth/setMessage', '', {root: true})
+					}
+					console.log(err)
+				})
+		},
+
+		/**
+		 * Carga automática de la tabla al entrar a un módulo: pide "todos los registros" (sin ningún
+		 * criterio) contra el mismo endpoint que usa el buscador general (`global-search`), en vez del
+		 * `index` de siempre, porque el `index` no pagina ni devuelve el total de resultados y este
+		 * listado necesita ambas cosas para la barra de paginación.
+		 *
+		 * Delega en `runGlobalSearch` en modo silencioso (sin overlay de carga) para que abrir el
+		 * módulo no se sienta más lento que hoy, y deja marcado `listado_por_defecto` en true para que
+		 * la UI no muestre carteles de "filtro activo" sobre este listado.
+		 *
+		 * @param {Object} context commit, dispatch
+		 * @param {Object} payload
+		 * @param {Number} [payload.page] Página a consultar (por defecto, 1).
+		 * @returns {Promise}
+		 */
+		runListadoPorDefecto({commit, dispatch, state}, payload = {}) {
+			/** Página a pedir: la que venga en el payload, o la primera. */
+			let page = (payload && payload.page) ? payload.page : 1
+
+			return dispatch('runGlobalSearch', {
+				query_value: '',
+				props: [],
+				relation_props: [],
+				extra_filters: [],
+				order_by: 'id',
+				order_direction: 'DESC',
+				page: page,
+				silencioso: true,
+			})
+				.then(res => {
+					// Confirma que lo que se ve es el listado por defecto, no una búsqueda del usuario.
+					//
+					// Salvo que haya filtros de columna activos: ahí lo que se ve está filtrado, y
+					// marcarlo como listado por defecto volvería a esconder el botón de limpiar
+					// filtros. Pasa al volver a un módulo que quedó con filtros puestos en el store.
+					//
+					// Criterios de VALOR, no de orden: un listado ordenado por una columna sigue
+					// siendo el listado por defecto. Si contara el orden, volver a un modulo que
+					// quedo ordenado -o apretar "Quitar filtros", que deja el orden por defecto-
+					// dejaria el flag en false y el cartel de "N filtrados" prendido sin filtros.
+					let hay_filtros_de_columna = false
+					state.filters.forEach(filter => {
+						if (filters_mixin.methods.filter_has_value_criteria(filter)) {
+							hay_filtros_de_columna = true
+						}
+					})
+
+					if (!hay_filtros_de_columna) {
+						commit('set_listado_por_defecto', true)
+					}
+
+					return res
 				})
 		},
 	}
@@ -677,6 +930,10 @@ export default function __base_store(options = {}) {
 			commit('setIsFiltered', false)
 			// Resetear el flag de buscador rápido al recargar modelos desde el servidor.
 			commit('set_filtered_without_filter_form', false)
+			// Limpiar el payload persistido del buscador general para no dejarlo colgado de una búsqueda vieja.
+			commit('setGlobalSearchPayload', null)
+			// Esta carga ya no es el "listado por defecto" armado por runListadoPorDefecto.
+			commit('set_listado_por_defecto', false)
 			if (state.use_per_page) {
 				commit('setPage', 1)
 				commit('setModels', [])

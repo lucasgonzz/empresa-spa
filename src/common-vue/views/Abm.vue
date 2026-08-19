@@ -2,12 +2,17 @@
 	<b-row
 	v-if="authenticated">
 		<b-col>
-			<horizontal-nav
+			<div
 			v-if="has_views"
-			:show_display="false"
-			@setSelected="setSelectedView"
-			set_view
-			:items="views"></horizontal-nav>
+			class="abm-modulos-row">
+				<horizontal-nav
+				:show_display="false"
+				@setSelected="setSelectedView"
+				set_view
+				:items="views"></horizontal-nav>
+
+				<abm-search></abm-search>
+			</div>
 
 			<horizontal-nav
 			:show_display="false"
@@ -35,6 +40,7 @@ import routes from '@/router/routes'
 export default {
 	mixins: [abm],
 	components: {
+		AbmSearch: () => import('@/common-vue/components/abm-search/Index'),
 		HorizontalNav: () => import('@/common-vue/components/horizontal-nav/Index'),
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 		BtnDuplicatePdfProfile: () => import('@/common-vue/components/pdf/BtnDuplicatePdfProfile'),
@@ -225,3 +231,49 @@ export default {
 	}
 }
 </script>
+<style scoped lang="sass">
+.abm-modulos-row
+	display: flex
+	align-items: center
+	justify-content: space-between
+	gap: 15px
+	width: 100%
+	margin-bottom: 15px
+
+	// 🔴 `nowrap` y no `wrap` (mision 33). La intencion de esta fila ya estaba escrita --que el
+	// buscador quede al lado del nav-- y aun asi no funcionaba: con `flex-wrap: wrap` el nav supera
+	// el ancho disponible y ENVUELVE, asi que el buscador cae a la linea de abajo. `flex: 0 1 auto`
+	// permite encoger, pero un contenedor flex no baja de su ancho de contenido sin `min-width: 0`.
+	//
+	// Precision que dejo la verificacion: el nav de esta fila es el de las VISTAS del ABM
+	// (`:items="views"`, las catorce de mixins/abm.js mas vinoteca y meli), que son las mismas en
+	// toda la seccion. El nav de modelos de cada vista va aparte, fuera de esta fila. O sea que esto
+	// no es "Articulos entra y los demas no": en TODOS los ABM el nav cede los ~315px del buscador y
+	// resuelve el sobrante con su scroll.
+	flex-wrap: nowrap
+
+	// El horizontal-nav de modulos viene con width:100% (pensado para cuando va solo en su fila,
+	// como en los Listados). Aca conviven con el buscador, asi que le pedimos que ocupe
+	// solo el ancho de su contenido y no fuerce al buscador a la linea de abajo.
+	//
+	// El min-width: 0 es lo que hace que ese `flex: 0 1 auto` sirva de algo: el sobrante lo resuelve
+	// el scroll horizontal que el nav ya tiene.
+	::v-deep .cont-navs
+		width: auto
+		flex: 0 1 auto
+		min-width: 0
+
+		// horizontal-nav le pone un margin-top de 15px a su pista, pensado para cuando el nav va
+		// solo en su fila. Adentro de esta, con align-items: center, ese margen entra en la caja y
+		// deja las pestañas ~7px mas abajo que el buscador. Con `wrap` no se veia porque caian en
+		// renglones distintos; el nowrap lo expone. Misma linea que en payment-plan/Index.vue.
+		.cont-left > div
+			margin-top: 0
+
+	::v-deep .cont-left
+		min-width: 0
+
+	// En telefono vuelve el wrap: ahi el buscador abajo del nav es lo correcto.
+	@media screen and (max-width: 768px)
+		flex-wrap: wrap
+</style>

@@ -61,10 +61,16 @@ export default {
 				return address.street + ' ' + address.street_number 
 			}
 		},
-		sendMessage(buyer) {
-			this.$router.push({name: 'Online', params: {view: 'mensajes', chat_id: buyer.id}})
-			this.$store.commit('message/setSelectedBuyer', buyer)
-			this.$bvModal.hide('order-details')
+		sendMessage() {
+			/*
+				Neutralizado en la misión "chat IA" (15/8/2026): el módulo de mensajes
+				de la tienda quedó OCULTO (Online.vue ya no lo monta), así que no hay
+				vista adonde llevar. Además esta navegación ya estaba rota desde antes:
+				hacía push({name: 'Online'}) con mayúscula y el router registra
+				'online' en minúscula, o sea que el push tiraba error de vue-router.
+				Se corta acá y el código de messages/ sigue intacto en disco.
+			*/
+			return
 		},
 		messagesNotRead(buyer) {
 			let messages_not_read = 0

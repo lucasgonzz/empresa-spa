@@ -22,7 +22,15 @@
 		:props_to_send_to_api="props_to_send_to_api"
 		:limpiar_resultados_de_busqueda="limpiar_resultados_de_busqueda"
 		:function_props_to_send_to_api="function_props_to_send_to_api"
-		:prop="prop"></search-component>
+		:preference_scope="preference_scope"
+		:prop="prop">
+
+			<!-- A la derecha del campo: lo llena el consumidor (ModelForm pone ahi el boton de columnas). -->
+			<template #input_right>
+				<slot name="input_right"></slot>
+			</template>
+
+		</search-component>
 	</div>
 </template>
 
@@ -109,6 +117,13 @@ export default {
 			default: null,
 		},
 		function_props_to_send_to_api: {
+			type: [String, null],
+			default: null,
+		},
+		/**
+		 * Ambito de la preferencia de columnas de los resultados de busqueda (ver search/Modal.vue).
+		 */
+		preference_scope: {
 			type: [String, null],
 			default: null,
 		},

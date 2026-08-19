@@ -51,6 +51,11 @@ export default {
 				function: 'sendWhatsApp',
 			}
 		},
+		/*
+			Botón "Mensaje" oculto en la misión "chat IA" (15/8/2026): el módulo de
+			mensajes de la tienda quedó fuera de pantalla (Online.vue ya no lo monta)
+			y este botón navegaba justo ahí. La entrada queda comentada, no borrada,
+			por si el módulo vuelve.
 		{
 			text: 'Mensaje',
 			key: 'meessage',
@@ -60,6 +65,7 @@ export default {
 				function: 'sendMessage',
 			}
 		},
+		*/
 		{
 			text: 'Ultimo login',
 			key: 'last_login',

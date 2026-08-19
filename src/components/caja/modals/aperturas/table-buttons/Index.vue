@@ -1,6 +1,6 @@
 <template>
 	<div
-	class="j-end">
+	class="aperturas-acciones">
 		<btn-excel
 		:apertura_caja="apertura_caja"></btn-excel>
 
@@ -20,3 +20,14 @@ export default {
 
 }
 </script>
+<style scoped lang="sass">
+// El espaciado entre botones lo pone el contenedor y no el m-l-10 de cada boton, igual que en
+// la fila de Tesoreria. Reabrir tiene v-if: cuando no esta, renderiza un comentario vacio y no
+// deja hueco de gap.
+.aperturas-acciones
+	display: flex
+	flex-direction: row
+	align-items: center
+	justify-content: flex-end
+	gap: 8px
+</style>

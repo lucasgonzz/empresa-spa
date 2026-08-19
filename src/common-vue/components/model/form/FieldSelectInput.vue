@@ -6,6 +6,7 @@
 
 		<b-form-select
 		:id="model_name + '-' + prop.key"
+		:data-testid="model_name + '-' + prop.key"
 		@input="$emit('input-change')"
 		:disabled="disabled"
 		v-model="local_value"

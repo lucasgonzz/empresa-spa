@@ -21,6 +21,7 @@
 				ref="tableComponent"
 				:select-mode="_select_mode"
 				:tbody-tr-class="rowClass"
+				:tbody-tr-attr="rowAttrs"
 				@row-selected="onRowSelected">
 					<template v-slot:table_left_options>
 						<slot name="table_left_options" :model="model"></slot>
@@ -255,6 +256,7 @@
 <script>
 import BtnAddToShow from '@/common-vue/components/BtnAddToShow'
 import { fallback_column_width_px } from '@/common-vue/config/column_preference_defaults'
+import { bind_edge_auto_scroll, unbind_edge_auto_scroll } from '@/common-vue/helpers/edge_auto_scroll'
 
 export default {
 	components: {
@@ -340,6 +342,11 @@ export default {
 			type: Boolean,
 			default: false
 		},
+		// Permite a un consumidor apagar el auto-scroll horizontal por bordes (misma semantica que en los listados).
+		disable_scroll: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	data() {
 		return {
@@ -349,41 +356,90 @@ export default {
 			preview_image_url: '',
 			// Altura disponible calculada dinámicamente desde el top del contenedor hasta el borde inferior de la ventana
 			available_height: null,
+			// Handle de los listeners de auto-scroll por bordes. Se guarda para poder desengancharlos
+			// cuando el contenedor se recrea (v-if) o cuando se destruye el componente.
+			edge_scroll_handle: null,
 		}
 	},
 	mounted() {
 		window.addEventListener('keydown', this.handlePreviewKeydown)
 		this.recalcular_altura()
 		window.addEventListener('resize', this.recalcular_altura)
+		this.enganchar_scroll_margenes()
 	},
 	beforeDestroy() {
 		window.removeEventListener('keydown', this.handlePreviewKeydown)
 		window.removeEventListener('resize', this.recalcular_altura)
+		this.desenganchar_scroll_margenes()
 	},
 	watch: {
+		/**
+		 * Selecciona la fila que indica selected_index (navegacion por teclado y autoseleccion de
+		 * la primera fila del modal de busqueda).
+		 *
+		 * 🔴 is_from_keydown se baja en el $nextTick y NO con un setTimeout de 500 ms, y ese cambio
+		 * es el arreglo del hallazgo 20260810-modal-de-busqueda-ignora-el-click-los-primeros-500ms.
+		 *
+		 * Que hace la guarda: selectRow() de b-table dispara su propio evento row-selected, que
+		 * llega a onRowSelected() igual que si el usuario hubiera clickeado. Sin la guarda, mover
+		 * la seleccion con las flechas equivaldria a elegir el resultado, y el modal se cerraria
+		 * solo apenas apretas una flecha. La guarda existe para tapar ESA emision, la que provoca
+		 * la linea de arriba, y nada mas.
+		 *
+		 * Por que 500 ms estaba mal: la emision de selectRow() sale en el mismo ciclo de flush de
+		 * watchers que esta linea, o sea muchisimo antes de esos 500 ms. Lo que quedaba tapado el
+		 * resto del tiempo eran los clicks REALES del usuario: onRowSelected() descarta el evento
+		 * entero, asi que clickear el resultado apenas aparece no seleccionaba nada y el modal
+		 * quedaba abierto tapando el formulario. Le pasa a cualquiera que clickee rapido, que es lo
+		 * normal cuando ya sabe lo que estaba buscando.
+		 *
+		 * Por que $nextTick alcanza y no se pasa de corto: el callback de $nextTick corre despues
+		 * de que termina el flush de watchers en curso, y el watcher de selectedRows de b-table
+		 * --el que emite row-selected-- se encola en ese mismo flush. O sea que la emision
+		 * programatica ya paso cuando la guarda se baja. Un click del usuario, en cambio, llega en
+		 * una tarea posterior, con la guarda ya abajo.
+		 */
 		selected_index() {
-			console.log('watch selected_index')
 			if (this.selected_index != -1 && this.selected_index <= (this.items.length - 1)) {
 				this.is_from_keydown = true
 				this.$refs.tableComponent.selectRow(this.selected_index)
-				setTimeout(() => {
+				this.$nextTick(() => {
 					this.is_from_keydown = false
-				}, 500)
-				console.log('se selecciono la fila '+this.selected_index)
+				})
 
 				this.scroll_to_selected()
 			}
 		},
+		models() {
+			// El alto disponible depende de donde arranca la tabla, y eso se mueve cuando cambia el
+			// contenido de arriba (titulo de resultados, paginacion) o cuando el contenedor se
+			// recrea por el v-if. Sin esto, el modal conserva el tope de la busqueda anterior.
+			this.recalcular_altura()
+			// El contenedor .table-component-scroll tambien se recrea (v-if="models.length"), asi
+			// que hay que re-enganchar el auto-scroll de margenes despues de cada busqueda/pagina.
+			this.enganchar_scroll_margenes()
+		},
 	},
 	computed: {
 		/**
-		 * Estilos inline del wrapper scroll: altura dinámica hasta el borde inferior de la ventana.
-		 * Fallback a 70vh hasta que mounted() calcule available_height.
+		 * Estilos inline del wrapper scroll.
+		 * En un listado la tabla ocupa un alto fijo hasta el borde inferior de la ventana.
+		 * En el modal de busqueda (is_from_search_modal) NO se fija height: solo un maxHeight, para
+		 * que la tabla mida lo que miden sus filas — con 6 resultados no puede quedar un hueco de
+		 * media pantalla — y recien scrollee cuando los resultados pasan el alto disponible.
+		 * Fallback a 70vh hasta que recalcular_altura() calcule available_height.
 		 */
 		container_style() {
 			var height = this.available_height
 				? Math.max(200, this.available_height) + 'px'
 				: '70vh'
+			if (this.is_from_search_modal) {
+				return {
+					maxHeight: height,
+					overflowY: 'auto',
+					overflowX: 'auto',
+				}
+			}
 			return {
 				height: height,
 				maxHeight: height,
@@ -494,7 +550,7 @@ export default {
 	methods: {
 		/**
 		 * Recalcula la altura disponible del contenedor de tabla según su posición en viewport.
-		 * Resta 8px de margen inferior para evitar scroll residual en la página.
+		 * Resta un margen inferior para evitar scroll residual en la página.
 		 */
 		recalcular_altura: function() {
 			var self = this
@@ -502,7 +558,11 @@ export default {
 				var el = self.$refs.tabla_contenedor
 				if (el) {
 					var top = el.getBoundingClientRect().top
-					var height = window.innerHeight - top - 8
+					// Margen inferior: 8px alcanza en un listado (la tabla llega hasta abajo de
+					// todo). Dentro del modal se deja mas aire para que el modal respire y no
+					// quede pegado al borde de la ventana.
+					var margen = self.is_from_search_modal ? 40 : 8
+					var height = window.innerHeight - top - margen
 					self.available_height = height
 				}
 			})
@@ -523,6 +583,42 @@ export default {
 				this.closeImagePreview()
 			}
 		},
+		/**
+		 * Engancha el auto-scroll horizontal de margenes sobre el contenedor de la tabla.
+		 * Idempotente: si ya esta enganchado al mismo elemento no vuelve a enganchar; si el
+		 * contenedor se recreo (el v-if de models/loading lo destruye y lo vuelve a crear), limpia
+		 * los listeners viejos antes de re-enganchar.
+		 */
+		enganchar_scroll_margenes() {
+			if (
+				this.is_mobile
+				|| !this.owner
+				|| !this.owner.scroll_en_tablas
+				|| this.disable_scroll
+			) {
+				return
+			}
+			var self = this
+			self.$nextTick(function() {
+				var el = self.$refs.tabla_contenedor
+				if (!el) {
+					self.desenganchar_scroll_margenes()
+					return
+				}
+				if (self.edge_scroll_handle && self.edge_scroll_handle.el === el) {
+					return
+				}
+				self.desenganchar_scroll_margenes()
+				self.edge_scroll_handle = bind_edge_auto_scroll(el)
+			})
+		},
+		/**
+		 * Remueve los listeners de auto-scroll de margenes del elemento al que esten enganchados.
+		 */
+		desenganchar_scroll_margenes() {
+			unbind_edge_auto_scroll(this.edge_scroll_handle)
+			this.edge_scroll_handle = null
+		},
 		scroll_to_selected() {
 			const filas = this.$refs.tabla_contenedor.querySelectorAll('tbody tr')
       const fila = filas[this.selected_index]
@@ -534,6 +630,42 @@ export default {
 			if (this.model_name && this.hasColor(this.model_name)) {
 				return this[this.model_name+'GetColor'](this.models.find(model => model.id == item.id))
 			}
+		},
+		/**
+		 * data-testid de cada fila, con la MISMA convencion que documenta e2e/README.md y que ya
+		 * aplica display/table/Tr.vue: "search-result-row" para una fila del modal de busqueda,
+		 * "<model_name>-row-<id>" para una fila de listado.
+		 *
+		 * Por que hace falta aca tambien, y por que no alcanzaba con Tr.vue: son dos tablas
+		 * distintas. Tr.vue es la tabla propia de display/table/Index.vue; ESTE componente renderiza
+		 * con <b-table> de bootstrap-vue, que arma sus <tr> por su cuenta y nunca pasa por Tr.vue.
+		 * El modal de busqueda usa este camino, asi que la fila de resultado salia SIN ningun
+		 * data-testid: la busqueda encontraba al proveedor, la fila se veia en pantalla, y el test
+		 * igual moria esperando [data-testid="search-result-row"]. Medido el 10/8/2026 volcando el
+		 * DOM real de la fila: clases "b-table-row-selected table-active", atributo data-testid
+		 * ausente. Es tambien el motivo por el que faltaba "provider_order-row-<id>" en el listado.
+		 *
+		 * El discriminante es is_from_search_modal (lo pasa search/Modal.vue) y NO _select_mode:
+		 * _select_mode vale 'single' en los dos casos cuando el store no es seleccionable, asi que
+		 * usarlo dejaria las filas de un listado comun llamandose "search-result-row".
+		 *
+		 * Solo agrega un atributo: no cambia el render ni el comportamiento de la tabla.
+		 *
+		 * @param {object} item Fila tal como la arma el computed items() (siempre trae id).
+		 * @param {string} type Tipo de fila de b-table ('row' | 'row-details').
+		 * @returns {object} Atributos extra para el <tr>.
+		 */
+		rowAttrs(item, type) {
+			if (type != 'row' || !item) {
+				return {}
+			}
+			if (this.is_from_search_modal) {
+				return { 'data-testid': 'search-result-row' }
+			}
+			if (this.model_name && typeof item.id != 'undefined') {
+				return { 'data-testid': this.model_name + '-row-' + item.id }
+			}
+			return {}
 		},
 		download() {
 			this.$store.dispatch(this.model_name+'/getModels')

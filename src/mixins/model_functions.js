@@ -2,6 +2,7 @@ import moment from 'moment'
 import dates from '@/common-vue/mixins/dates'
 import select_payment_methods from '@/mixins/vender/select_payment_methods'
 import db from '@/offline/db'
+import { normalizar_telefono } from '@/utils/whatsapp_phone'
 export default {
     mixins: [select_payment_methods],
     computed: {
@@ -621,7 +622,41 @@ export default {
             } 
             return total  
         },
+        /*
+            Botón "WhatsApp" de la tabla de Compradores de la tienda online. El botón no vive en
+            ningún .vue: se declara en src/models/buyer.js y la tabla genérica lo despacha por
+            acá (callMethod -> getFunctionValue -> this[prop.button.function]). Como no hay
+            componente ni template en el que colgar una prop, el enganche del sidebar tiene que
+            entrar adentro de este método; por eso abrir_chat_whatsapp() vive en un mixin GLOBAL
+            y no se importa.
+
+            🔴 LA RAMA wa.me NO ES CÓDIGO MUERTO. No la borres.
+
+            WhatsApp es una extensión que se contrata aparte, y hay negocios que no la tienen
+            pero usan este botón todos los días para saltar al WhatsApp Web del comprador. El
+            arreglo "obvio" —ponerle if_has_extencion: 'whatsapp' a la entrada de
+            src/models/buyer.js, que es lo que el sistema de tablas ofrece para gatear un botón—
+            le haría DESAPARECER el botón a todos ellos. Eso es una regresión, no una mejora, y
+            es exactamente por eso que src/models/buyer.js quedó sin tocar y el botón se
+            reemplaza por dentro: un solo archivo modificado y cero pérdida de funcionalidad.
+
+            Con la extensión, el teléfono se normaliza a solo dígitos porque es lo que espera
+            POST api/whatsapp-chats. Sin ella se conserva el model.phone CRUDO de siempre, sin
+            normalizar: cambiarlo sería tocarle el link a quien hoy funciona, y este método no
+            está para arreglar eso.
+
+            display_name se manda y se guarda: es lo que hace que el comprador aparezca con su
+            nombre y no como un numero pelado, porque aca no hay cliente del ERP de donde sacarlo.
+            Y no se manda client_id a proposito: un Buyer de la tienda no es un Client del ERP.
+        */
         sendWhatsApp(model) {
+            if (this.hasExtencion('whatsapp')) {
+                this.abrir_chat_whatsapp({
+                    phone: normalizar_telefono(model.phone),
+                    display_name: model.name,
+                })
+                return
+            }
             window.open('https://wa.me/'+model.phone)
         },
         sendMessage(model) {

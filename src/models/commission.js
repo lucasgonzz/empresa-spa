@@ -89,6 +89,12 @@ export default {
 			}
 		},
 	],
+	abm_descripcion: {
+		para_que_sirve: 'Define las reglas de comisión porcentual para los vendedores según las condiciones de la venta.',
+		implicancias: 'Cuando una venta entra en el rango de descuento definido (desde/hasta) y coincide el tipo de venta, el sistema genera automáticamente la comisión para los vendedores que correspondan. Podés incluir vendedores siempre, limitar solo a los vendedores del cliente o excluir vendedores puntuales.',
+		como_se_utiliza: 'Creá la regla indicando el rango de descuento de la venta, el tipo de venta, el porcentaje y a qué vendedores aplica. Las comisiones generadas se consultan en el módulo de vendedores.',
+		palabras_clave: ['vendedores', 'porcentaje', 'incentivo', 'liquidacion'],
+	},
 	singular_model_name_spanish: 'Comision',
 	plural_model_name_spanish: 'Comisiones',
 	create_model_name_spanish: 'Nueva',

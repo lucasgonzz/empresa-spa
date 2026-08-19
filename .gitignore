@@ -25,3 +25,13 @@ pnpm-debug.log*
 # Carpeta local del loop de Claude Code (hooks compartidos + scratch de prompts en curso).
 # No se versiona: current-prompt.md cambia en cada corrida y no aporta nada al historico del repo.
 .claude/
+
+# Harness de Playwright (prompt 617): credenciales y sesion de login nunca se commitean.
+# e2e/.env.e2e.example (con claves vacias) SI se commitea.
+e2e/.env.e2e
+e2e/.auth/
+
+# Artefactos de corridas de Playwright (traces, reportes html, resultados de test).
+/test-results/
+/playwright-report/
+/playwright/.cache/

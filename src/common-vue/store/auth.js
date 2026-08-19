@@ -32,6 +32,23 @@ export default {
 		},
 	},
 	actions: {
+		/**
+		 * 🔴 OJO AL LEER ESTE ARCHIVO: en `empresa-spa` este módulo NO es el que se registra.
+		 *
+		 * `src/store/index.js` importa `@/store/auth`, y es ese el que responde a
+		 * `dispatch('auth/me')`. Esta copia de `common-vue` no la importa nadie (verificado el
+		 * 17/8/2026 con `git grep "common-vue/store/auth"`: cero resultados). Dos verificadores
+		 * independientes diagnosticaron sobre este archivo creyendo que era el vivo, así que
+		 * queda escrito.
+		 *
+		 * 🔴 Y NO se le agrega acá el `return` que le falta (el que `src/store/auth.js` sí tiene
+		 * desde el 27/7/2026), aunque sea tentador de paso. En este repo no arreglaría nada
+		 * —nadie lo importa—, y `common-vue` se copia a mano entre repos: en uno donde este
+		 * módulo SÍ esté registrado, ese `return` cambia cuándo dispara el `.then()` de todos
+		 * sus consumidores. Sería un cambio funcional en código compartido, sin nadie que lo
+		 * haya verificado del otro lado. Si alguna vez hace falta, se hace en el repo donde el
+		 * módulo esté vivo y se mide ahí.
+		 */
 		me({commit}) {
 			commit('setMessage', 'Iniciando')
 			commit('setLoading', true)

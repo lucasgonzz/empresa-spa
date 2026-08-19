@@ -80,11 +80,13 @@ export default {
 			key: 'client_id',
 			type: 'search',
 			store: 'client',
-			only_show: true,
-			// La busqueda va siempre contra la API (search-from-modal/client), nunca contra el
-			// store: hay cuentas con miles de clientes y el resultado no puede depender de que la
-			// descarga del store haya terminado. No sacar.
+			// La busqueda va siempre contra la API (global-search/client), nunca contra el store:
+			// hay cuentas con miles de clientes y el resultado no puede depender de que la descarga
+			// del store haya terminado. Aca el campo es only_show, asi que el que lo usa es el modal
+			// de filtros del listado de ventas (ver filter_modal_position), que igual pasa la prop
+			// al buscador. No sacar.
 			search_from_api: true,
+			only_show: true,
 			// v_if: ['client_id', '!=', null],
 			// button: {
 			// 	function: 'showClientCurrentAcount',

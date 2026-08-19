@@ -1,6 +1,22 @@
 <template>
+	<!--
+		🔴 El discriminante del data-testid es is_from_search_modal y NO select_mode == 'single'.
+		Es la misma correccion que ya lleva escrita display/TableComponent.vue (ver rowAttrs) y que
+		aca habia quedado sin hacer.
+
+		select_mode vale 'single' en los dos casos cuando el store no es seleccionable, asi que con
+		el criterio viejo CUALQUIER tabla de una sola seleccion se llamaba "search-result-row". El
+		caso concreto que lo destapo: la grilla de articulos de una compra. Apenas se cargaba el
+		primer articulo, su fila pasaba a llamarse "search-result-row" igual que un resultado de
+		busqueda, y como esa grilla esta antes en el DOM que el modal, un
+		[data-testid="search-result-row"] se resolvia a la fila de la compra --que ademas queda
+		TAPADA por el modal abierto-- en vez de al resultado. Medido el 15/8/2026: al buscar el
+		segundo articulo habia una sola fila con ese testid en todo el documento y era
+		"Martillo acero", el articulo ya cargado.
+	-->
 	<tr
 	@click="onRowSelected(model)"
+	:data-testid="is_from_search_modal ? 'search-result-row' : (model_name + '-row-' + model.id)"
 	:class="rowClass(model)">
 		<td
 		v-for="(prop, index) in props"
@@ -54,17 +70,31 @@
 					</div>
 
 
+					<!--
+						Celda que se edita en linea porque el modelo todavia esta incompleto
+						(show_in_input_if). El data-testid lleva el sufijo "-editable" para no
+						chocar con el de PivotProp.vue, que usa exactamente el mismo
+						<model>-<key>-<id> para las columnas del pivote: la misma key puede existir
+						como propiedad del modelo y como columna del pivote (ver el manejo de
+						colisiones "(pivot)" en form/BelongsToManyTable.vue).
+
+						Sin esto, un test no tiene forma de leer el valor de esta celda por
+						data-testid: el texto de la fila no incluye el value de un input, asi que
+						una asercion sobre el <tr> ve la celda vacia con la interfaz andando bien.
+					-->
 					<div
 					v-else-if="showInput(prop, model)">
 						<b-form-textarea
 						v-if="prop.type == 'textarea'"
 						:class="getInputSize(prop)"
+						:data-testid="model_name+'-'+prop.key+'-'+model.id+'-editable'"
 						:placeholder="propertyText(model, prop)"
 						v-model="model[prop.key]"></b-form-textarea>
 
 						<b-form-input
 						v-if="prop.type == 'text'"
 						:class="getInputSize(prop)"
+						:data-testid="model_name+'-'+prop.key+'-'+model.id+'-editable'"
 						:placeholder="propertyText(model, prop)"
 						v-model="model[prop.key]"></b-form-input>
 
@@ -149,6 +179,15 @@ export default {
 		props: Array,
 		model_name: String,
 		select_mode: String,
+		// Si esta fila es un RESULTADO del modal de busqueda. Solo eso puede llamarse
+		// "search-result-row" (ver el comentario del template). Hoy el modal de busqueda renderiza
+		// por display/TableComponent.vue y no por esta tabla, asi que en la practica queda en
+		// false: la prop existe para que el dia que alguien monte esta tabla adentro del modal,
+		// tenga como decirlo, y para no volver a inferirlo de select_mode.
+		is_from_search_modal: {
+			type: Boolean,
+			default: false,
+		},
 		set_model_on_row_selected: Boolean,
 		cont_table_id: String,
 		pivot_parent_model: Object,

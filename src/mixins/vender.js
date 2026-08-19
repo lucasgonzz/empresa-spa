@@ -819,7 +819,7 @@ export default {
 
 			if (search_name) {
 
-				search_name.value = ''
+				this.setInputValueSync(search_name, '')
 
 				console.log('Se limpio nombre')
 

@@ -20,6 +20,7 @@
 		<div class="cont-table-wrapper">
 			<div
 			:id="id"
+			ref="cont_table"
 			class="cont-table"
 			:class="{ 'cont-table--loading': loading }">
 				<table
@@ -44,7 +45,6 @@
 									:class="{ 'force-show': filter_is_used(field.key) }">
 										
 										<ordenar
-										class="m-l-10"
 										@filtrar="filtrar"
 										:model_name="model_name"
 										:key="field.key"
@@ -199,9 +199,23 @@
 						class="empty-state-row">
 							<td
 							:colspan="fields.length">
-								<empty-state
-								:title="empty_state_title"
-								:hint="empty_state_hint"></empty-state>
+								<!--
+									El td mide el ancho REAL de la tabla (colspan completo), y eso es lo que
+									queremos para el FONDO. Pero el contenido centrado sobre ese ancho cae a
+									mitad del scroll: en Ventas la tabla mide varias pantallas y el mensaje
+									quedaba dibujado fuera de lo visible. Este envoltorio sticky se ancla al
+									borde izquierdo del área visible y mide lo que se ve (ancho medido por JS
+									en medir_ancho_visible), así que su contenido queda centrado en pantalla y
+									sigue ahí al scrollear de costado. El sticky va en el DIV y no en el td:
+									si fuera el td, el fondo se movería con él y dejaría un hueco al costado.
+								-->
+								<div
+								class="empty-state-sticky"
+								:style="empty_state_sticky_style">
+									<empty-state
+									:title="empty_state_title"
+									:hint="empty_state_hint"></empty-state>
+								</div>
 							</td>
 						</tr>
 					</tbody>
@@ -330,6 +344,7 @@ export default {
 	mounted() {
 		let that = this
 		that.update_all_header_filter_fit()
+		this.observar_ancho_visible()
 		setTimeout(() => {
 
 			this.scroll_margenes()
@@ -354,6 +369,8 @@ export default {
 	beforeDestroy() {
 		// Evita leaks de listeners de mousemove/mouseleave si el componente se destruye con la tabla enganchada.
 		this.unbind_scroll_margenes()
+		// Y del observer del ancho visible: una tabla que se destruye no tiene que seguir midiéndose.
+		this.dejar_de_observar_ancho_visible()
 	},
 	data() {
 		return {
@@ -382,9 +399,34 @@ export default {
 			// y abajo) + alto del .cont-tr con los botones (~56px). Debe coincidir con el min-height
 			// de .cont-tr-skeleton en el bloque de estilos de más abajo.
 			skeleton_row_height_px: 68,
+			// Ancho visible (px) de .cont-table, para que el estado vacío se centre respecto de lo que
+			// se ve y no del ancho real de la tabla. null mientras no se pudo medir: ahí el envoltorio
+			// no lleva width y se comporta como antes de este cambio.
+			ancho_visible_cont_table: null,
+			// ResizeObserver de .cont-table (se desconecta en beforeDestroy).
+			observer_ancho_visible: null,
 		}
 	},
 	computed: {
+		/**
+		 * Ancho del envoltorio sticky del estado vacío: el del área visible, para que el mensaje
+		 * quede centrado en la pantalla y no a mitad del scroll horizontal de la tabla.
+		 *
+		 * Devuelve null mientras no se pudo medir: sin width, el div ocupa el ancho del td y se ve
+		 * igual que antes de este cambio. En una tabla sin scroll horizontal las dos medidas
+		 * coinciden, así que ahí tampoco cambia nada.
+		 *
+		 * @return {Object|null}
+		 */
+		empty_state_sticky_style() {
+			if (!this.ancho_visible_cont_table) {
+				return null
+			}
+
+			return {
+				width: this.ancho_visible_cont_table + 'px',
+			}
+		},
 		// models_to_show() {
 		// 	let to_show = this.models.slice(0, (this.cant_models_to_show * this.index_to_show))
 		// 	return to_show
@@ -854,8 +896,13 @@ export default {
 				return this.$store.dispatch('papelera/' + this.model_name + '/run_papelera_search_from_store')
 			}
 
-			// En listado normal, delegamos en el store base del módulo.
-			return this.$store.dispatch(this.model_name + '/runFilter')
+			// Un solo camino para todos los filtrados del listado: global-search compone el criterio de
+			// texto del buscador general (payload persistido en el store) con los filtros de columna
+			// (state.filters, que runGlobalSearch adjunta en cada request). Antes había una bifurcación
+			// según si existía global_search_payload, y como el listado por defecto lo deja seteado
+			// siempre, la rama de runFilter quedaba inalcanzable y los filtros de columna no se
+			// aplicaban nunca (bug del 30/7/2026).
+			return this.$store.dispatch(this.model_name + '/runGlobalSearch', { page: 1 })
 		},
 		/**
 		 * Abre el modal de filtro para la columna indicada por la lupa.
@@ -1061,7 +1108,55 @@ export default {
 
 			/* Al cambiar columnas (p. ej. depósitos o listas de precio al iniciar), no perder criterios activos. */
 			let merged_filters = this.merge_table_filters_preserving_active_values(new_filters, existing_filters)
+			this.sembrar_orden_por_defecto(merged_filters)
 			this.$store.commit(this.model_name+'/setFilters', merged_filters)
+		},
+		/**
+		 * Deja marcado en los filtros el orden con el que el listado por defecto ya viene ordenado:
+		 * id DESC. Sin esto, el header no muestra ninguna flecha activa aunque la tabla esté
+		 * ordenada, porque Ordenar.vue decide qué flecha pinta leyendo SOLO `filter.ordenar_de`,
+		 * y runListadoPorDefecto manda el orden como dos campos sueltos del payload de
+		 * global-search (`order_by` / `order_direction`) que nunca tocan state.filters. Son dos
+		 * mecanismos que nunca se hablaron.
+		 *
+		 * 🔴 Va acá, en la construcción de los filtros, y NO adentro de runListadoPorDefecto: esa
+		 * action la dispara view/Index.vue en su created(), y en Vue el created del padre corre
+		 * ANTES que el del hijo, así que en ese momento state.filters todavía está vacío y el
+		 * sembrado se perdería. Es el mismo patrón que ya usa
+		 * bootstrap_papelera_default_search_from_props() para deleted_at.
+		 *
+		 * Si el usuario ya eligió un orden a mano, no se toca nada: ese orden manda sobre el
+		 * default y no se puede volver a pisar (Ordenar.vue limpia el ordenar_de de los demás
+		 * filtros al setear el suyo, y merge_table_filters_preserving_active_values lo conserva
+		 * cuando los filtros se reconstruyen).
+		 *
+		 * Si el modelo no declara una prop `id` no hay ninguna columna que prender, y eso está
+		 * bien: no se inventa una.
+		 *
+		 * @param {Array} filters Filtros ya construidos, se modifican en el lugar.
+		 * @return {void}
+		 */
+		sembrar_orden_por_defecto(filters) {
+			if (this.papelera || !filters || !filters.length) {
+				return
+			}
+
+			let hay_orden_elegido = false
+			filters.forEach(filter => {
+				if (filter.ordenar_de) {
+					hay_orden_elegido = true
+				}
+			})
+
+			if (hay_orden_elegido) {
+				return
+			}
+
+			filters.forEach(filter => {
+				if (filter.key === 'id') {
+					filter.ordenar_de = 'DESC'
+				}
+			})
 		},
 		/**
 		 * Entrada a papelera: reconstruye filtros desde columnas, orden único deleted_at DESC y POST search+papelera.
@@ -1356,6 +1451,70 @@ export default {
 		    this.scroll_leave_handler = stopScroll;
 		},
 		/**
+		 * Empieza a observar el ancho visible de .cont-table.
+		 *
+		 * Se resolvió midiendo por JS y no solo con CSS porque el envoltorio sticky del estado vacío
+		 * necesita un ancho concreto —el del área visible— y no hay forma de expresarlo en CSS acá:
+		 * `100%` mide el td (o sea el ancho real de la tabla, que es justo el problema) y `100vw` mide
+		 * la ventana entera, que es más ancha que el contenedor porque el menú lateral está a la
+		 * izquierda. Este archivo ya mide alturas por JS, así que es coherente con lo que hay.
+		 *
+		 * Va con ResizeObserver y no con el resize de window porque el ancho también cambia al
+		 * abrir/cerrar el menú lateral, y eso no dispara ningún resize de la ventana.
+		 *
+		 * @return {void}
+		 */
+		observar_ancho_visible() {
+			this.medir_ancho_visible()
+
+			// Sin ResizeObserver (navegador viejo) queda la medición del mounted, que alcanza mientras
+			// el ancho no cambie. Ojo que si ESA medición dio 0 —contenedor todavía oculto— no hay
+			// nada que la corrija después y el estado vacío se comporta como antes de este cambio.
+			if (typeof ResizeObserver == 'undefined') {
+				return
+			}
+
+			let cont_table = this.$refs.cont_table
+			if (!cont_table) {
+				return
+			}
+
+			// Idempotente: si esto se llamara dos veces, el observer anterior quedaría observando
+			// para siempre porque la referencia se pisa.
+			this.dejar_de_observar_ancho_visible()
+
+			let that = this
+			this.observer_ancho_visible = new ResizeObserver(function() {
+				that.medir_ancho_visible()
+			})
+			this.observer_ancho_visible.observe(cont_table)
+		},
+		/**
+		 * Guarda el ancho visible de .cont-table (clientWidth, o sea sin la barra de scroll vertical).
+		 *
+		 * @return {void}
+		 */
+		medir_ancho_visible() {
+			let cont_table = this.$refs.cont_table
+			if (!cont_table) {
+				return
+			}
+
+			this.ancho_visible_cont_table = cont_table.clientWidth
+		},
+		/**
+		 * Desconecta el observer del ancho visible.
+		 *
+		 * @return {void}
+		 */
+		dejar_de_observar_ancho_visible() {
+			if (this.observer_ancho_visible) {
+				this.observer_ancho_visible.disconnect()
+			}
+
+			this.observer_ancho_visible = null
+		},
+		/**
 		 * Remueve los listeners de scroll_margenes del elemento al que estén enganchados actualmente.
 		 */
 		unbind_scroll_margenes() {
@@ -1558,9 +1717,10 @@ export default {
 			.cont-th
 
 				position: relative
-				display: flex  
+				display: flex
 				flex-direction: row
 				justify-content: space-between
+				align-items: center
 				white-space: nowrap
 				padding: 10px 15px
 				font-size: 17px
@@ -1636,6 +1796,39 @@ export default {
 					/* oscuro, la superficie equivalente). Es lo que faltaba: el <p> viejo vivía */
 					/* fuera de la tabla y no heredaba ningún fondo. */
 					background: var(--bg-card, #FFF)
+					/* 🔴 NO cambiar a hidden: esta fila es tr:last-child del tbody, así que la regla */
+					/* de las esquinas redondeadas de más arriba le pone overflow: hidden, y un */
+					/* ancestro con overflow distinto de visible se convierte en el contenedor de */
+					/* anclaje del position: sticky de adentro. Con hidden, el mensaje se ancla al */
+					/* PROPIO td —que no scrollea— y viaja con la tabla: medido en la aplicación el */
+					/* 12/8/2026, con scrollLeft 1642 el mensaje quedaba en left: -1569, o sea fuera */
+					/* de la pantalla, que es exactamente el defecto que esta misión vino a arreglar. */
+					/* El redondeo del fondo no se pierde: border-radius sigue aplicando, hidden solo */
+					/* recortaba contenido, y acá el contenido no llega a las esquinas. */
+					/* Va con :first-child/:last-child y no a secas: sin ellos este selector pesa */
+					/* menos que el que pone el hidden (tbody tr:last-child td:first-child) y no */
+					/* aplicaba — medido, el computed del td seguía en hidden. */
+					/* 🔴 Con ellos QUEDA EMPATADO, no le gana: los dos selectores compilados pesan */
+					/* (0,4,3) contando los ancestros. Esta regla se impone porque va DESPUÉS en el */
+					/* archivo, así que mover este bloque arriba del de las esquinas redondeadas lo */
+					/* rompe en silencio y vuelve el defecto. Lo agarra el primer test de */
+					/* e2e/tests/estado-vacio-centrado.spec.js, que es la red que queda. */
+					&:first-child,
+					&:last-child
+						overflow: visible
+
+					.empty-state-sticky
+						/* Anclado al borde izquierdo del área visible: el mensaje queda centrado en */
+						/* la pantalla y sigue ahí mientras el usuario scrollea de costado, en vez de */
+						/* quedar dibujado a mitad del ancho real de la tabla y fuera de lo visible. */
+						/* El ancho lo pone JS (empty_state_sticky_style): tiene que ser el del área */
+						/* visible, y eso no se puede expresar en CSS acá — 100% mide el td y 100vw */
+						/* mide la ventana, que es más ancha porque el menú lateral está a la izquierda. */
+						/* OJO: el sticky va acá y NO en el td. Si fuera el td, el fondo blanco se */
+						/* movería con el mensaje y al scrollear quedaría un tramo transparente al */
+						/* costado, que es exactamente lo que el td con colspan vino a resolver. */
+						position: sticky
+						left: 0
 				/* No es una fila clickeable: el realce de hover de las filas de datos no aplica. */
 				&:hover
 					td
@@ -1682,13 +1875,20 @@ export default {
 					margin-right: 0
 
 		.cont-filter-buttons
-			display: flex  
-			flex-direction: row 
-			margin: -3px 0
+			display: flex
+			flex-direction: row
+			align-items: center
+			gap: 4px
 			// Colapsamos el ancho por defecto para que el `th` muestre solo el título.
 			// Al hacer hover, expandimos el contenedor para que quepan los botones.
 			max-width: 0
 			opacity: 0
+			// OJO (Prompt 07, Grupo 273): este overflow: hidden es lo que hace posible el colapso
+			// animado (max-width 0 -> 220px en hover) -- no se puede sacar. Por eso Ordenar.vue y
+			// BtnFilter.vue NUNCA pueden pintar nada fuera de su propio border-box (ej. un
+			// box-shadow de foco a lo Bootstrap): cualquier cosa que se pinte afuera cae justo en
+			// este borde de recorte y se ve cortada. Si en el futuro alguien "mejora" el foco de
+			// esos botones, que no sea con box-shadow externo.
 			overflow: hidden
 			pointer-events: none
 			transition: max-width 0.2s ease, opacity 0.2s ease

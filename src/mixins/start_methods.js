@@ -39,6 +39,54 @@ export default {
 
 		this.check_synced_version_notifications()
 
+		this.check_excel_analysis_en_curso()
+
+		},
+		/**
+		 * Recupera el análisis de Excel con IA que el usuario haya dejado corriendo.
+		 *
+		 * El aviso de "terminó" viaja por broadcast, y un broadcast solo le llega a
+		 * quien está conectado en ese momento: si encoló el análisis y cerró la
+		 * pestaña, el evento pasó sin nadie que lo escuche. Esto es lo que cierra ese
+		 * agujero, y es la misma red de seguridad que ya tienen los pedidos online
+		 * frente a una reconexión de Echo.
+		 *
+		 * Tres casos:
+		 *  - terminada y sin ver: se muestra el aviso, igual que si hubiera llegado en vivo.
+		 *  - todavía corriendo: queda en el store, y el aviso llega por broadcast cuando
+		 *    termine. El modal de importación también la usa para retomarla si lo abren.
+		 *  - no hay nada: no pasa nada.
+		 *
+		 * @return {void}
+		 */
+		check_excel_analysis_en_curso() {
+			this.$store.dispatch('excel_analysis/get_en_curso')
+			.then(run => {
+				if (!run) {
+					return
+				}
+
+				if (run.estado !== 'listo' && run.estado !== 'error') {
+					return
+				}
+
+				const contexto = run.contexto || {}
+
+				/*
+				 * Se arma el mismo payload que manda el broadcast, para que el modal de
+				 * aviso no tenga que saber por cuál de los dos caminos llegó.
+				 */
+				this.$store.commit('global_notification/set_excel_analysis', {
+					uuid:              run.uuid,
+					tipo:              run.tipo,
+					estado:            run.estado,
+					error:             run.error,
+					model:             contexto.model,
+					original_filename: contexto.original_filename,
+				})
+
+				this.$bvModal.show('excel-analysis-ready-notification')
+			})
 		},
 		check_synced_version_notifications() {
 			this.$store.dispatch('synced_version_notification/get_pending')

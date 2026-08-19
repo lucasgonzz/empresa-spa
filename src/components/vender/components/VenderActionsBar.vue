@@ -31,9 +31,11 @@
 			v-model="whatsapp_phone"
 			placeholder="Teléfono"
 			class="vender-actions-bar__whatsapp-input"
-			@blur="maybe_offer_update_client_phone">
+			@blur="maybe_offer_update_client_phone"
+			@keyup.enter="enviar_whatsapp_con_enter">
 			</b-form-input>
 			<whatsapp-btn
+			ref="whatsapp_btn"
 			:sale="sale"
 			:phone_override="whatsapp_phone"
 			:force_show="true"
@@ -225,6 +227,17 @@ export default {
 					this.actualizar_telefono_cliente(nuevo)
 				}
 			})
+		},
+		/**
+		 * Dispara el envío por WhatsApp al presionar Enter en el input de teléfono,
+		 * igual que si se presionara el botón de WhatsApp (mismo click, misma lógica).
+		 * No hace nada si el botón está deshabilitado (teléfono vacío).
+		 */
+		enviar_whatsapp_con_enter() {
+			if (!this.whatsapp_phone || !this.whatsapp_phone.trim()) {
+				return
+			}
+			this.$refs.whatsapp_btn.whatsapp()
 		},
 		/**
 		 * Actualiza el teléfono del cliente vía el endpoint dedicado (no pisa el resto de sus datos).
@@ -438,8 +451,9 @@ export default {
 	gap: 6px
 
 /* Input de teléfono editable junto al botón WhatsApp */
+/* Ancho ampliado para que el número completo (con código de área) se vea sin cortarse */
 .vender-actions-bar__whatsapp-input
-	width: 130px
+	width: 165px
 	height: 40px
 
 /* Etiqueta de contexto: número de la venta a la que apuntan imprimir/WhatsApp */

@@ -1,24 +1,31 @@
 <template>
 	<b-dropdown
 	v-if="show"
-	class="m-l-15"
 	right
 	:id="id"
 	size="sm"
 	:variant="variant"
-	:text="text_dropdown">
+	:toggle-attrs="{ title: tooltip_text, 'aria-label': tooltip_text }">
+		<template #button-content>
+			<i :class="icon_class" aria-hidden="true"></i>
+			<b-badge :variant="badge_variant" class="m-l-5">{{ count }}</b-badge>
+		</template>
 		<dropdown-option-item
-		v-if="puede_actualizar && show_actualizar_option && !ocultar_actualizar_eliminar_por_filtro"
+		v-if="puede_actualizar && show_actualizar_option"
 		id="btn_actualizar"
 		icon="icon-undo"
+		:disabled="ocultar_actualizar_eliminar_por_filtro"
+		:tooltip="ocultar_actualizar_eliminar_por_filtro ? texto_disabled_buscador_general : ''"
 		@click="setUpdate">
 			Actualizar
 		</dropdown-option-item>
 		<dropdown-option-item
 		id="btn_eliminar"
-		v-if="puede_eliminar && !ocultar_actualizar_eliminar_por_filtro"
+		v-if="puede_eliminar"
 		icon="icon-trash"
 		variant="danger"
+		:disabled="ocultar_actualizar_eliminar_por_filtro"
+		:tooltip="ocultar_actualizar_eliminar_por_filtro ? texto_disabled_buscador_general : ''"
 		@click="setDelete">
 			Eliminar
 		</dropdown-option-item>
@@ -64,17 +71,17 @@ export default {
 			}
 			return 'warning'
 		},
-		puede_eliminar() { 
+		puede_eliminar() {
 			if (this.check_permissions) {
 				return this.can(this.model_name+'.delete')
 			}
-			return true 
+			return true
 		},
-		puede_actualizar() { 
+		puede_actualizar() {
 			if (this.check_permissions) {
 				return this.can(this.model_name+'.update')
 			}
-			return true 
+			return true
 		},
 		text_dropdown() {
 			if (this.from_filter) {
@@ -84,6 +91,57 @@ export default {
 				return this.$store.state[this.model_name].total_filter_results + ' filtrados'
 			}
 			return 'Seleccion: ' + this.$store.state[this.model_name].selected.length
+		},
+		/** Cantidad a mostrar en el badge (seleccionados o filtrados según el modo). */
+		count() {
+			if (this.from_filter) {
+				if (this.papelera) {
+					return this.$store.state.papelera[this.model_name].total_filter_results
+				}
+				return this.$store.state[this.model_name].total_filter_results
+			}
+			return this.$store.state[this.model_name].selected.length
+		},
+		/** Ícono descriptivo del dropdown según el modo. */
+		icon_class() {
+			if (this.from_filter) {
+				return 'bi bi-funnel-fill'
+			}
+			return 'bi bi-check2-all'
+		},
+		/** Variante del badge para que contraste con la variante del botón. */
+		badge_variant() {
+			if (this.from_filter) {
+				return 'light'
+			}
+			return 'dark'
+		},
+		/**
+		 * True cuando lo que hay en pantalla es el listado por defecto (prompts 02/03 del grupo
+		 * 221), no un filtro puesto por el usuario. El store de papelera no tiene este flag (la
+		 * papelera nunca arma listado por defecto), por eso solo se lee del lado normal.
+		 *
+		 * @returns {Boolean}
+		 */
+		listado_por_defecto() {
+			if (this.papelera) {
+				return false
+			}
+			return !!this.$store.state[this.model_name].listado_por_defecto
+		},
+		/**
+		 * Texto del tooltip/aria del toggle (reemplaza al texto visible que se sacó). Cuando lo
+		 * que hay en pantalla es el listado por defecto, la palabra correcta es "todos": el
+		 * usuario no filtró nada, solo entró al módulo (prompt 04 del grupo 221, tarea 06).
+		 */
+		tooltip_text() {
+			if (this.from_filter) {
+				if (this.listado_por_defecto) {
+					return 'Acciones sobre todos (' + this.count + ')'
+				}
+				return 'Acciones sobre ' + this.count + ' filtrados'
+			}
+			return 'Acciones sobre ' + this.count + ' seleccionados'
 		},
 		show() {
 			if (this.from_filter) {
@@ -106,6 +164,16 @@ export default {
 				? this.$store.state.papelera[this.model_name]
 				: this.$store.state[this.model_name]
 			return !!module_state.filtered_without_filter_form
+		},
+		/**
+		 * Texto del tooltip cuando Actualizar/Eliminar por filtro estan deshabilitados por venir
+		 * de una busqueda del buscador general (ver ocultar_actualizar_eliminar_por_filtro). Explica
+		 * el motivo en vez de ocultar los botones sin mas.
+		 *
+		 * @returns {String}
+		 */
+		texto_disabled_buscador_general() {
+			return 'No disponible para resultados del buscador general. Para actualizar o eliminar varios registros a la vez, usá el buscador de filtros.'
 		},
 	},
 	methods: {

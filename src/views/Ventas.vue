@@ -31,8 +31,12 @@
     mostrar_models_que_vinienen_por_prop_siempre
 	model_name="sale">
 		<template v-slot:display_top>
+			<!--
+				El nav de empleados ya no se monta suelto acá: desde la misión 32 vive adentro de
+				address-afip-ticket-ventas-cobradas-nav, compartiendo fila con los filtros de
+				facturación, cobro y método de pago.
+			-->
 			<address-afip-ticket-ventas-cobradas-nav></address-afip-ticket-ventas-cobradas-nav>
-			<employee-nav></employee-nav>
 			<total></total>
 
 			<!-- Mostrar u ocultar ventas contenedoras de facturación en el listado. -->
@@ -105,7 +109,6 @@ export default {
 		AddressAfipTicketVentasCobradasNav: () => import('@/components/ventas/components/address-afip-ticket-ventas-cobradas-nav/Index'),
 		SaleModifications: () => import('@/components/ventas/modals/sale-modifications/Index'),
 		BtnSaleModifications: () => import('@/components/ventas/components/BtnSaleModifications'),
-		EmployeeNav: () => import('@/components/ventas/components/EmployeeNav'),
 		Total: () => import('@/components/ventas/components/Total'),
 		TableButtons: () => import('@/components/ventas/components/table-buttons/Index'),
 		// UpdatePrices: () => import('@/components/ventas/modals/update-prices/Index'),

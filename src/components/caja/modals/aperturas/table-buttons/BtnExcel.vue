@@ -1,15 +1,16 @@
 <template>
-	<b-button
-	@click.stop="excel"
-	variant="success">
-		<i class="icon-download"></i>
-		Excel
-	</b-button>
+	<btn-accion
+	icono="bi bi-file-earmark-spreadsheet"
+	texto="Excel"
+	@clicked="excel"></btn-accion>
 </template>
 <script>
 export default {
 	props: {
 		apertura_caja: Object,
+	},
+	components: {
+		BtnAccion: () => import('@/components/caja/components/table-buttons/BtnAccion'),
 	},
 	methods: {
 		excel() {

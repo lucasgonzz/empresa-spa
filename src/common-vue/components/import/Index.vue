@@ -143,6 +143,24 @@
 							</div>
 						</div>
 
+						<!--
+							Prompt 310: flag "permitir valores en blanco" por columna mapeada.
+							Solo se muestra si la columna ya tiene una posición asignada (mapeada),
+							para no ensuciar la pantalla con columnas que ni siquiera se van a importar.
+						-->
+						<div
+						v-if="column.position !== ''"
+						class="import-column-blank-flag">
+							<b-form-checkbox
+							:id="'blank-flag-'+index"
+							size="sm"
+							v-model="column.allow_blank">
+								<span class="import-column-blank-flag-text">
+									Permitir valores en blanco
+								</span>
+							</b-form-checkbox>
+						</div>
+
 						<transition name="import-description-slide">
 							<div
 							v-if="has_column_help(column) && column.show_description"
@@ -1216,6 +1234,8 @@ export default {
 		                position: item.position || (item.letra ? this.excel_column_to_number(item.letra) : ''),
 		                description: item.description,
 		                can_not_ignore: typeof item.can_not_ignore !== 'undefined' ? true : undefined,
+		                // Prompt 310: flag "permitir valores en blanco" guardado en el preset (default false para presets viejos).
+		                allow_blank: Boolean(item.allow_blank),
 		            }
 		        }
 		    })
@@ -1252,6 +1272,8 @@ export default {
 		            position: saved ? (saved.position || '') : '',
 		            ignored: 0,
 		            can_not_ignore: typeof def.can_not_ignore != 'undefined' ? true : undefined,
+		            // Prompt 310: flag "permitir valores en blanco" por columna, restaurado desde el preset guardado (default false).
+		            allow_blank: saved ? Boolean(saved.allow_blank) : false,
 		        })
 		    })
 
@@ -1329,6 +1351,8 @@ export default {
 					position: position,
 					ignored: 0,
 					can_not_ignore: typeof column.can_not_ignore != 'undefined' ? true : undefined,
+					// Prompt 310: flag "permitir valores en blanco" por columna, default false (omitir celdas vacías).
+					allow_blank: false,
 				})
 
 				if (typeof column.group_title == 'undefined') {
@@ -1349,10 +1373,12 @@ export default {
 				column.position = ''
 				column.letra = ''
 				column.ignored = 0
+				// Prompt 310: al limpiar posiciones, se resetea también el flag de valores en blanco.
+				column.allow_blank = false
 			})
 			this.positions_seted = false
 			console.log('Limpiando posiciones')
-		},	
+		},
 		async upload() {
 			if (this.check()) {
 
@@ -1382,11 +1408,15 @@ export default {
 
 						if (!column.ignored) {
 							form_data.append('prop_'+this.get_column_prop_key(column), column.position)
+
+							// Prompt 310: flag "permitir valores en blanco" de esta columna mapeada.
+							// Mismo esquema que "prop_<key>": el backend lo lee como "blank_<key>".
+							form_data.append('blank_'+this.get_column_prop_key(column), column.allow_blank ? 1 : 0)
 						} else {
 							// form_data.append('prop_ignore_'+column.text, column.position)
 							console.log('Se ignoro '+column.text)
 						}
-				    } 
+				    }
 
 				})
 				if (this.props_to_send) {
@@ -1447,6 +1477,8 @@ export default {
 		                letra: item.letra,
 		                position: item.position,
 		                can_not_ignore: item.can_not_ignore,
+		                // Prompt 310: se persiste el flag junto con la posición de la columna.
+		                allow_blank: Boolean(item.allow_blank),
 		            })
 		        }
 		    })
@@ -1747,6 +1779,18 @@ export default {
 		font-size: 12px
 		line-height: 1.45
 		color: #334155
+
+// Prompt 310: flag "permitir valores en blanco" por columna mapeada, estilo sutil (no compite con el resto de la card).
+.import-column-blank-flag
+	margin-top: 6px
+	padding-left: 2px
+
+	.custom-control-label
+		font-size: 11px
+		color: #64748b
+
+.import-column-blank-flag-text
+	font-size: 11px
 
 .import-description-slide-enter-active,
 .import-description-slide-leave-active

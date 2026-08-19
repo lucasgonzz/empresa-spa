@@ -11,6 +11,21 @@
 				<i class="bi bi-plus-lg"></i>
 				Nuevo chat
 			</b-button>
+			<!-- Simular un mensaje entrante del cliente: mismo criterio is_owner que la
+			configuración, porque el endpoint `whatsapp-bot/simulate-inbound` también es solo
+			del dueño (devuelve 403 al resto). Gateado TAMBIÉN por chat_simulation_enabled: es
+			el mismo toggle que gatea el botón equivalente dentro de la conversación
+			(conversation/Composer.vue), para que sea honesto en los dos lugares. -->
+			<b-button
+			v-if="is_owner && config && config.chat_simulation_enabled"
+			size="sm"
+			variant="outline-warning"
+			class="whatsapp-chats-list__simulate-btn"
+			title="Simular un mensaje del cliente (no le llega nada a nadie)"
+			v-b-modal="'whatsapp-simulate-inbound'">
+				<i class="bi bi-cone-striped"></i>
+			</b-button>
+
 			<!-- Configuración del agente y plantillas: solo el dueño la ve/edita (patrón is_owner del proyecto) -->
 			<b-button
 			v-if="is_owner"
@@ -44,6 +59,7 @@
 		</div>
 
 		<new-chat-modal></new-chat-modal>
+		<simulate-inbound-modal v-if="is_owner"></simulate-inbound-modal>
 		<whatsapp-config v-if="is_owner"></whatsapp-config>
 	</div>
 </template>
@@ -51,12 +67,14 @@
 import ChatSearch from '@/components/whatsapp/chats-list/ChatSearch'
 import ChatRow from '@/components/whatsapp/chats-list/ChatRow'
 import NewChatModal from '@/components/whatsapp/chats-list/NewChatModal'
+import SimulateInboundModal from '@/components/whatsapp/chats-list/SimulateInboundModal'
 import WhatsappConfig from '@/components/whatsapp/config/Index'
 export default {
 	components: {
 		ChatSearch,
 		ChatRow,
 		NewChatModal,
+		SimulateInboundModal,
 		WhatsappConfig,
 	},
 	computed: {
@@ -69,22 +87,29 @@ export default {
 		selected_chat_id() {
 			return this.$store.state.whatsapp_chat.selected_chat_id
 		},
+		/**
+		 * Config del agente (mismo patrón que usa `whatsapp/config/AgentConfig.vue` y
+		 * `conversation/Composer.vue`): de acá se lee `chat_simulation_enabled` para gatear el
+		 * botón de simular del header, igual que su equivalente dentro de la conversación.
+		 *
+		 * @returns {Object|null}
+		 */
+		config() {
+			return this.$store.state.whatsapp_bot_config.models[0] || null
+		},
 	},
 	methods: {
 		/**
-		 * Abre la conversación del chat elegido: fija el seleccionado, carga la primera
-		 * página de mensajes y marca el chat como leído (limpia su badge).
+		 * Abre la conversación del chat elegido en el sidebar.
+		 *
+		 * Antes acá vivía una de las tres copias del trío `setSelectedChatId` +
+		 * `setMessages([])` + `getMessages()`. La carga la dispara ahora el watch de
+		 * `conversation/Index.vue`: desde acá solo se dice cuál es el chat.
 		 *
 		 * @param {Object} chat
 		 */
 		selectChat(chat) {
-			this.$store.commit('whatsapp_chat/setSelectedChatId', chat.id)
-			// Limpia la conversación anterior para no mostrar mensajes de otro chat mientras carga.
-			this.$store.commit('whatsapp_chat/setMessages', [])
-			this.$store.dispatch('whatsapp_chat/getMessages', {chat_id: chat.id, page: 1})
-			if (chat.unread_count > 0) {
-				this.$store.dispatch('whatsapp_chat/markRead', chat.id)
-			}
+			this.abrir_chat_whatsapp({chat_id: chat.id})
 		},
 	},
 }
@@ -99,9 +124,17 @@ export default {
 		flex-direction: row
 		align-items: center
 		padding: 8px 8px 4px 0
+		// Con el botón de simular ya son cuatro cosas en la fila. En la franja de tablet
+		// (992-1024px) la columna de chats mide unos 330px y sin permitir el salto de línea el
+		// buscador quedaba aplastado a nada.
+		flex-wrap: wrap
+		row-gap: 4px
 	&__new-btn
 		flex-shrink: 0
 		white-space: nowrap
+		margin-right: 8px
+	&__simulate-btn
+		flex-shrink: 0
 		margin-right: 8px
 	&__config-btn
 		flex-shrink: 0

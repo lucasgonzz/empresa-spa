@@ -15,7 +15,12 @@
 	--color-border: #dee2e6
 	--color-border-secondary: #e9ecef
 	--color-border-tertiary: #dee2e6
-	--color-bg: #f8f9fa
+	// Baja un escalon (era #f8f9fa) por pedido de Lucas del 11/8/2026: contra un gris casi blanco,
+	// una tarjeta blanca o el pill del buscador no se despegan y todo el contraste lo tiene que
+	// poner el borde. El escalon lo da el FONDO bajando y no la tarjeta subiendo, porque --bg-card
+	// ya esta en blanco puro. La superficie que se ve en pantalla la termina de armar
+	// _fondo_app.sass, que apoya dos manchas muy diluidas sobre este color.
+	--color-bg: #eef0f4
 	--bg-card: #fff
 	--bg-section: #f8f9fa
 	--bg-hover: #f1f3f5
@@ -35,6 +40,30 @@
 	// Gris del toggle apagado (ModelForm). En oscuro necesita su propio valor: el gris claro de
 	// modo claro se lee como "encendido" sobre el fondo del modal.
 	--toggle-track-off: #d1d5db
+
+	// Estados del modulo de Cajas (grupo 371). El verde apagado marca la caja ABIERTA, que es
+	// el estado que interesa encontrar de un vistazo. La caja CERRADA va en gris neutro a
+	// proposito y NO en rojo: cerrar la caja es el final normal de la jornada, y el rojo la
+	// haria leer como un error. El rojo queda reservado para la ACCION de cerrar (--caja-cerrar-*),
+	// que si es una accion destructiva.
+	--caja-abierta-fondo: #f2f7f4
+	--caja-abierta-fondo-hover: #e8f1ec
+	--caja-abierta-acento: #2f7d5d
+	--caja-abierta-texto: #1e6047
+	--caja-cerrada-fondo: #f7f8f9
+	--caja-cerrada-fondo-hover: #eef0f2
+	--caja-cerrada-acento: #94a3b8
+	--caja-cerrada-texto: #64748b
+	--caja-cerrar-fondo: #fdf3f2
+	--caja-cerrar-acento: #b4443f
+	--caja-cerrar-texto: #9c3a36
+
+	// Boton destructivo en su version suave (footer del modal de formulario, 10/8/2026).
+	// Nacen de la paleta de --caja-cerrar-* del grupo 371 a proposito: es el mismo rojo del
+	// sistema, con nombre generico porque aca no habla de cajas.
+	--btn-peligro-fondo: #fdf3f2
+	--btn-peligro-borde: #b4443f
+	--btn-peligro-texto: #9c3a36
 
 // La escala arranca en #23262b y NO mas abajo, aunque el negro casi puro parezca mas elegante:
 // probado en pantalla (grupo 360, fase 2), el #14161a original se leia apagado y, sobre todo,
@@ -64,6 +93,26 @@ html.dark-mode
 	--bg-nav: #2b2f36
 	--bg-nav-hover: rgba(77, 163, 255, 0.16)
 	--toggle-track-off: #5a626d
+
+	// Contraparte oscura de los estados de Cajas (grupo 371). Los fondos van en rgba sobre el
+	// acento en vez de un color plano: asi se apoyan sobre --bg-card sin pelearse con el.
+	--caja-abierta-fondo: rgba(47, 125, 93, 0.16)
+	--caja-abierta-fondo-hover: rgba(47, 125, 93, 0.24)
+	--caja-abierta-acento: #57b48d
+	--caja-abierta-texto: #86d3b0
+	--caja-cerrada-fondo: rgba(148, 163, 184, 0.08)
+	--caja-cerrada-fondo-hover: rgba(148, 163, 184, 0.14)
+	--caja-cerrada-acento: #6b7280
+	--caja-cerrada-texto: #9aa1a9
+	--caja-cerrar-fondo: rgba(180, 68, 63, 0.16)
+	--caja-cerrar-acento: #d98680
+	--caja-cerrar-texto: #e5a29d
+
+	// Contraparte oscura del boton destructivo suave: el fondo va en rgba sobre el acento en
+	// vez de un color plano, igual que los estados de Cajas, para apoyarse en --bg-card.
+	--btn-peligro-fondo: rgba(180, 68, 63, 0.16)
+	--btn-peligro-borde: #d98680
+	--btn-peligro-texto: #e5a29d
 
 	// El navegador pinta con esto las barras de scroll, los selects nativos y los date
 	// pickers del sistema: una linea que resuelve media docena de rincones blancos.

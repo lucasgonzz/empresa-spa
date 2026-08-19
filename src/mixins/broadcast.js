@@ -7,6 +7,8 @@ export default {
             support_user_echo_channel: null,
             /** Nombre del canal order.created.* actualmente suscrito, para no suscribirse dos veces. */
             order_created_echo_channel: null,
+            /** Nombre del canal article_embeddings.* actualmente suscrito, para no suscribirse dos veces. */
+            embeddings_echo_channel: null,
             /** true una vez que se engancho el listener de reconexion de Echo (se engancha una sola vez). */
             reconexion_de_echo_enganchada: false,
             /**
@@ -35,9 +37,97 @@ export default {
             });
             // Aviso en tiempo real de que entro un pedido nuevo en la tienda.
             this.escuchar_pedidos_nuevos()
+            // Aviso por lote de que el asistente ya puede responder por articulos nuevos.
+            this.escuchar_embeddings_generados()
             // Suscribe canal de soporte para chat interno con admin.
             this.listenSupportChannel()
 		},
+        /**
+         * Se suscribe al canal por el que `empresa-api` avisa que TERMINO una tanda de generacion
+         * de embeddings con al menos un articulo vectorizado.
+         *
+         * Es un aviso POR LOTE, no por articulo, y esa es la decision de diseño: los jobs que
+         * despachan los observers cuando alguien edita un articulo a mano van sin tanda y no
+         * llegan nunca hasta aca. Si notificaramos por embedding, cargar veinte articulos
+         * seguidos serian veinte toasts.
+         *
+         * Para que sirve, en criollo: hasta que el embedding no existe, el agente de WhatsApp no
+         * encuentra ese articulo por mas que este cargado. El toast es lo unico que le avisa al
+         * dueño que ya puede probarlo.
+         *
+         * @return {void}
+         */
+        escuchar_embeddings_generados() {
+            if (!this.Echo || !this.owner_id) {
+                return
+            }
+
+            /** Canal publico del comercio, igual que article_batch_descriptions.{id} e import_status.{id}. */
+            const embeddings_channel = 'article_embeddings.' + this.owner_id
+
+            // Misma guarda que escuchar_pedidos_nuevos() y por el mismo motivo: listenChannelsLocal()
+            // corre en el watch de `authenticated`, que puede dispararse mas de una vez en la misma
+            // sesion, y sin esto se acumularian listeners (un toast por cada vez que se disparo).
+            if (this.embeddings_echo_channel === embeddings_channel) {
+                return
+            }
+            // 🔴 El Echo.leave va ANTES de asignar el canal nuevo: si en la misma pestaña se cierra
+            // sesion y entra un usuario de OTRO comercio, dejar viva la suscripcion anterior le
+            // mostraria a este usuario los avisos del comercio de antes.
+            if (this.embeddings_echo_channel) {
+                this.Echo.leave(this.embeddings_echo_channel)
+            }
+            this.embeddings_echo_channel = embeddings_channel
+
+            /*
+                🔴 Tiene que ser .listen('.ArticleEmbeddingsBatchGenerated'), NO .notification().
+
+                Es exactamente al reves que el canal order.created.{id} de unas lineas mas arriba, y
+                por eso se aclara: lo que viaja aca es un ShouldBroadcastNow con broadcastAs(), no
+                una notificacion de Laravel envuelta en BroadcastNotificationCreated. Un
+                .notification() sobre este canal no recibiria NADA NUNCA, sin ningun error a la
+                vista ni en el navegador ni en el servidor.
+
+                El precedente exacto es SearchDescriptionAutomatica.vue, que escucha
+                .ArticleBatchDescriptionsProcessed del mismo modo.
+            */
+            this.Echo.channel(embeddings_channel)
+            .listen('.ArticleEmbeddingsBatchGenerated', (payload) => {
+                // El backend ya no emite cuando no genero nada, pero el chequeo queda igual: un
+                // toast que dice "0 articulos" es peor que no avisar.
+                if (!payload || !payload.generados) {
+                    return
+                }
+
+                this.$toast.success(this.texto_de_embeddings_generados(payload.generados))
+            })
+
+            // 🔴 A diferencia de inventory_performance y SearchDescriptionAutomatica, que escuchan un
+            // evento puntual que ellos mismos dispararon y despues hacen leaveChannel(), esta
+            // suscripcion es permanente por sesion: el scheduler emite cada 30 minutos sin que el
+            // usuario haya pedido nada. Si se abandonara el canal despues del primer aviso, el
+            // segundo no llegaria nunca.
+        },
+        /**
+         * Texto del toast de embeddings, con el singular y el plural resueltos.
+         *
+         * Va en un metodo aparte y no armado en el listener para que el texto viva en un solo
+         * lugar y se pueda probar sin levantar Echo.
+         *
+         * No dice "embeddings" ni "vectores" a proposito: el dueño de una ferreteria no sabe que es
+         * eso. Tampoco dice "nuevos", porque la tanda mezcla articulos recien creados con otros que
+         * se re-vectorizaron por un cambio de nombre o de descripcion.
+         *
+         * @param {Number} cantidad Articulos que quedaron con embedding nuevo.
+         * @return {String}
+         */
+        texto_de_embeddings_generados(cantidad) {
+            if (cantidad == 1) {
+                return 'Asistente actualizado: 1 artículo'
+            }
+
+            return 'Asistente actualizado: ' + cantidad + ' artículos'
+        },
         /**
          * Se suscribe al canal por el que `tienda-api` avisa que entro un pedido nuevo
          * (mision 42, 12/8/2026). Hasta ahora eso se sabia preguntando cada 20 segundos.

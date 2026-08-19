@@ -1,0 +1,644 @@
+// Vocabulario visual de la barra de encabezado de los listados (mision 13, 10/8/2026).
+//
+// Todo lo que rodea al pill del buscador general vivia en el estado anterior a su rediseño: los
+// botones median ~31px contra los 40 del pill, usaban el radio 4px de Bootstrap contra sus 22, y
+// convivian cinco pesos visuales distintos (tres rellenos solidos de tres colores, dos outlines y
+// un amarillo) que no comunicaban jerarquia sino que se habian agregado en momentos distintos.
+//
+// Estas reglas se declaran UNA SOLA VEZ, aca, y no en el <style> de cada componente: que los
+// valores estuvieran dispersos es justamente el problema que esta mision viene a cerrar. Si
+// necesitas cambiar la altura o el radio de la barra, se cambia el token de abajo y listo.
+//
+// Los colores salen SIEMPRE de los tokens de _dark_theme.sass (--bg-card, --color-border,
+// --color-text-primary, --bg-hover, --color-primary), nunca de hexadecimales: son los que tienen
+// contraparte en `html.dark-mode`. Un hex fijo aca deja la barra blanca en modo oscuro.
+
+:root
+	// Altura unica de TODO lo que vive en la barra: pill del buscador, botones y dropdowns.
+	--toolbar-control-h: 36px
+	// Esquinas de los botones. Ver la nota de abajo sobre por que NO es la mitad de la altura.
+	--toolbar-btn-radius: 10px
+	// Separacion entre controles de un mismo grupo.
+	--toolbar-btn-gap: 8px
+	// Separacion entre grupos distintos.
+	--toolbar-group-gap: 16px
+	// Sombra de los controles de la barra (11/8/2026). Es la MISMA familia que la del pill del
+	// buscador --rgba(99, 99, 99, ·), el gris de las sombras del sistema-- con menos de todo:
+	// opacidad 0,12 contra 0,2, desenfoque 3px contra 8px y desplazamiento 1px contra 2px. Que sea
+	// la misma familia es lo que hace que se lean como el mismo sistema; que sea mas chica es lo
+	// que conserva la jerarquia.
+	--toolbar-btn-shadow: rgba(99, 99, 99, 0.12) 0px 1px 3px 0px
+	// Estado "seleccion multiple activa". Ambar apagado, NO el #ffc107 de Bootstrap: ver la nota
+	// larga en la regla .toolbar-btn--activo, mas abajo. Es la misma familia que ya usa el chip
+	// de pesos de caja (caja-totales__chip--ars), asi que no suma un color nuevo al sistema.
+	--toolbar-btn-seleccion: #d97706
+	--toolbar-btn-seleccion-bg: rgba(217, 119, 6, 0.12)
+	--toolbar-btn-seleccion-bg-hover: rgba(217, 119, 6, 0.2)
+
+// El campo es pill y los botones son squircle, y es A PROPOSITO.
+//
+// El pill del buscador mantiene radio = altura / 2 (18px con 36 de alto); los botones van a 10px.
+// Es la convencion de la referencia de la que viene todo este rediseño: un campo de busqueda es una
+// capsula, un boton de barra de herramientas tiene esquinas suaves pero no es una capsula.
+//
+// Si estas leyendo esto porque te dieron ganas de "unificar" los dos radios a uno solo: no. Eso es
+// exactamente lo que se decidio no hacer, y el resultado de unificarlos es que la barra deja de
+// distinguir el campo donde se escribe de los botones que se aprietan.
+
+.view-header-toolbar
+
+	// --- Espaciado: lo da el gap del contenedor, no los margenes de cada hijo ---------------
+	// Los componentes traian m-l-10 / m-l-15 propios que se SUMABAN al gap del flex, y el
+	// espaciado quedaba desparejo entre un par de botones y el siguiente.
+	.view-header__left,
+	.view-header__right
+		gap: var(--toolbar-group-gap)
+
+	.view-header__group
+		display: flex
+		flex-direction: row
+		align-items: center
+		gap: var(--toolbar-btn-gap)
+
+	// --- Altura unica -----------------------------------------------------------------------
+	// Este bloque reemplaza al de overrides de btn-sm que vivia en el <style> de
+	// view/header/Index.vue: aquel los ACHICABA a ~31px, que era la mitad del problema.
+	.btn:not(.btn-link):not(.dropdown-item),
+	.dropdown > .btn
+		height: var(--toolbar-control-h)
+		display: inline-flex
+		align-items: center
+		justify-content: center
+		padding: 0 12px
+		font-size: 0.875rem
+		line-height: 1
+		border-radius: var(--toolbar-btn-radius)
+		// Sombra muy leve, de la misma familia que la del pill del buscador (11/8/2026).
+		//
+		// 🔴 Esto REEMPLAZA al `box-shadow: none` que estuvo aca hasta hoy, y el comentario que lo
+		// acompañaba decia justo lo contrario: que la sombra era señal exclusiva del pill y de las
+		// tablas, y que "una barra con ocho sombras es ruido". Lucas reviso eso el 11/8/2026 con el
+		// sistema en uso y lo cambio a medias: le gusta el diseño de los botones y quiere que
+		// tengan "una leve sombra como tiene el buscador general para generar un poquito esa
+		// sensacion de profundidad. Muy leve como tiene el buscador general".
+		//
+		// O sea que el principio de jerarquia NO se cae, se corrige el valor: el pill sigue teniendo
+		// mas presencia que los botones (los tres numeros estan en el token, arriba), pero los
+		// botones dejan de ser planos del todo. El comentario se reescribe en vez de dejarlo
+		// contradiciendo al codigo que tiene al lado: el proximo que lo lea creeria que el codigo
+		// esta mal y lo "arreglaria" de vuelta.
+		box-shadow: var(--toolbar-btn-shadow)
+		transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease
+
+	// --- Neutro por defecto -----------------------------------------------------------------
+	// Mismo idioma que los botones de icono que ya viven DENTRO del pill del buscador. El color
+	// de la paleta no cambia: cambia donde se aplica, que era el pedido.
+	.btn:not(.btn-link):not(.dropdown-item):not(.toolbar-btn--acento)
+		background: var(--bg-card)
+		border: 1px solid var(--color-border)
+		color: var(--color-text-primary)
+
+		&:hover,
+		&:focus
+			background: var(--bg-hover)
+			border-color: var(--color-border)
+			color: var(--color-text-primary)
+
+		i
+			color: inherit
+
+	// --- Botones de solo icono: cuadrados de 36x36 ------------------------------------------
+	// Todos los de la barra menos "Crear" son solo-icono. Heredaban el padding horizontal de
+	// Bootstrap, asi que eran rectangulos con el icono descentrado en su caja.
+	//
+	// El ancho va sobre el elemento que lleva la clase --que puede ser el propio boton
+	// (BtnUpdateArticleList) o el contenedor de un b-dropdown (DepositButtons)-- y tambien sobre
+	// el boton de adentro en el segundo caso.
+	.toolbar-btn--icono,
+	.toolbar-btn--icono > .btn
+		width: var(--toolbar-control-h)
+
+	// 🔴 El `padding: 0` va en una regla APARTE, con los mismos dos :not() que la regla de altura,
+	// y no es cosmetico: escrito como `.toolbar-btn--icono` a secas era (0,2,0) contra los (0,4,0)
+	// de `.view-header-toolbar .btn:not(.btn-link):not(.dropdown-item)`, asi que PERDIA y el
+	// `padding: 0 12px` de aquella seguia vigente. O sea que este bloque decia achicar el padding
+	// a cero y no lo hizo nunca, desde la mision 13.
+	//
+	// La consecuencia es la que reporto Lucas y la mision 27 no encontro: con 36px de ancho, 1px
+	// de borde por lado y 12px de padding por lado, la caja de contenido quedaba en 10px para un
+	// glifo de 14px. El icono no entraba y desbordaba. Medido en la aplicacion corriendo
+	// (mision 35, 12/8/2026): 13px a la izquierda contra 9px a la derecha en los dos botones cuya
+	// raiz es el <b-button>, y 11/11 en el dropdown --el unico que se veia bien-- por el motivo
+	// que explica la nota de .toolbar-btn--desde-md, unas lineas mas abajo.
+	//
+	// Con (0,5,0) esta le gana a la de altura por especificidad, no por orden de declaracion.
+	.toolbar-btn--icono.btn:not(.btn-link):not(.dropdown-item),
+	.toolbar-btn--icono > .btn:not(.btn-link):not(.dropdown-item)
+		padding: 0
+
+	// --- Visibilidad responsive que NO pisa el display del control --------------------------
+	// Reemplaza al par `d-none d-md-block` de Bootstrap en los botones de modulo del Listado.
+	//
+	// 🔴 El problema de `d-md-block` no es que oculte mal, es que declara `display: block
+	// !important`. Cuando la clase cae sobre el propio <b-button> --que es el caso de
+	// BtnUpdateArticleList y BtnInventoryPerformance, donde la raiz del componente ES el boton--
+	// ese !important pisa el `display: inline-flex` de la regla de altura de aca arriba, y con el
+	// se caen el `justify-content: center` y el `align-items: center` que centran el icono. En
+	// DepositButtons la clase cae en el contenedor del b-dropdown, asi que el .btn de adentro
+	// conserva su inline-flex: el unico que se veia centrado era justamente el unico donde la
+	// clase no tocaba el boton.
+	//
+	// Con el padding ya en cero el glifo entra en la caja y no habria desborde que repartir, pero
+	// la clase se saca igual: un centrado que depende de `text-align` heredado en vez del flex
+	// declarado es el mismo defecto esperando a la proxima variacion de tipografia.
+	//
+	// El umbral es EL MISMO que el de Bootstrap (`d-md-*` corta en 768px), asi que ningun boton
+	// aparece ni desaparece en un ancho distinto al de hoy.
+	@media (max-width: 767.98px)
+		.toolbar-btn--desde-md,
+		.toolbar-btn--desde-md.btn:not(.btn-link):not(.dropdown-item)
+			display: none
+
+	// Y arriba del umbral, el elemento que NO es un boton --el contenedor de un b-dropdown--
+	// conserva el `display: block` que le daba `d-md-block`. El `:not(.btn)` es justamente para no
+	// tocar a los botones, que es todo el punto del bloque de arriba.
+	//
+	// 🔴 Va adentro de su propia media query, y NO suelta, aunque suelta parezca equivalente. Una
+	// media query no suma especificidad: escrita suelta queda en (0,3,0) contra los (0,2,0) del
+	// selector de arriba, le gana en TODO ancho, y el dropdown de depositos deja de ocultarse en
+	// telefono. Eso se midio pasando: en 375px y en 360px el dropdown seguia visible cuando antes
+	// no lo estaba --una regresion del punto 5 del criterio de aceptacion, introducida por el
+	// arreglo del punto 4--. Con las dos reglas en rangos de ancho disjuntos no compiten nunca, que
+	// es ademas lo que hace Bootstrap con este mismo par de umbrales.
+	@media (min-width: 768px)
+		.toolbar-btn--desde-md:not(.btn)
+			display: block
+
+	// --- La unica accion de acento: Crear ---------------------------------------------------
+	// Es la accion primaria de la vista y el unico control que conserva texto ademas del icono.
+	.toolbar-btn--acento,
+	.toolbar-btn--acento > .btn
+		background: var(--color-primary)
+		border: 1px solid var(--color-primary)
+		color: #fff
+
+	// 🔴 El blanco del icono va acotado al BOTON, y no al contenedor con un combinador
+	// descendiente. Esta linea es la causa medida del "los iconos del menu de Crear no se ven"
+	// (mision 28, 11/8/2026). El bug nacio ACA, en la mision 13 (commit 7fac2be): antes de ese
+	// rediseño de la barra el icono heredaba el #495057 de su celda --apagado, pero visible a
+	// 7,17:1--. La mision 20 lo intento cerrar subiendo el contraste de la celda y no podia
+	// funcionar, por lo que dice el parrafo de abajo. O sea que el rediseño de la barra apago los
+	// iconos de un menu que ni siquiera estaba mirando:
+	//
+	// ExcelDropDown.vue le pone .toolbar-btn--acento al CONTENEDOR del b-dropdown, y el
+	// ul.dropdown-menu es hijo de ese contenedor. Con el selector descendiente `.toolbar-btn--acento
+	// i`, el color: #fff le pegaba tambien a los iconos de adentro del menu desplegado. Medido en el
+	// navegador: color computado del <i> = rgb(255,255,255) sobre una celda rgb(241,243,245), 1,11:1.
+	//
+	// Y no alcanzaba con subirle el contraste a la celda --que es lo que hizo la mision 20-- porque
+	// una declaracion directa sobre el <i> le gana SIEMPRE a lo que el <i> heredaria del padre, por
+	// poca especificidad que tenga. El contraste del contenedor no dice nada sobre el glifo.
+	//
+	// Es el mismo modo de falla del `:not(.b-dropdown)` del hover de aca abajo: la clase esta en el
+	// contenedor, el menu es su hijo, y todo lo que se escriba con un descendiente se le aplica.
+	//
+	// Los dos selectores cubren las dos formas de uso: BtnCreate.vue pone la clase en el propio
+	// <b-button> (ahi el elemento con la clase ES el boton) y ExcelDropDown.vue en el contenedor
+	// del split (ahi los botones son sus hijos directos).
+	.toolbar-btn--acento.btn i,
+	.toolbar-btn--acento > .btn i
+		color: #fff
+
+	// 🔴 El hover se declara aparte y EXCLUYE al contenedor de un dropdown, y el motivo no es
+	// estetico (medido el 11/8/2026, mision 20):
+	//
+	// `filter` crea un contexto de contencion igual que `transform`, asi que un elemento con filter
+	// se vuelve el bloque contenedor de TODOS sus descendientes `position: fixed`. Cuando la clase
+	// esta en el contenedor de un b-dropdown --que es el caso de ExcelDropDown.vue-- el menu
+	// desplegado es hijo suyo, asi que apoyar el mouse sobre el menu activaba el :hover del
+	// contenedor, se aplicaba el filter, y el submenu de Importacion/Exportacion --que se posiciona
+	// fixed contra el viewport-- pasaba a anclarse al contenedor y quedaba recortado. Ese era el
+	// "se rompe el diseno al pasar el mouse por Importacion". De yapa, el filter oscurecia el menu
+	// entero mientras el puntero estuviera adentro.
+	//
+	// Con el :not(.b-dropdown) el filter queda donde tiene sentido: sobre el boton que el mouse esta
+	// tocando. En el split, cada uno de los dos botones tiene su propio hover unas lineas mas abajo.
+	.toolbar-btn--acento:not(.b-dropdown),
+	.toolbar-btn--acento > .btn
+		&:hover,
+		&:focus
+			// filter en vez de un segundo color hardcodeado: --color-primary cambia de valor
+			// entre el tema claro y el oscuro, y un hex de hover fijo se pelearia con uno de los dos.
+			filter: brightness(0.92)
+			background: var(--color-primary)
+			border-color: var(--color-primary)
+			color: #fff
+
+	// --- El split de "Crear" ----------------------------------------------------------------
+	// BtnCreate.vue pone .toolbar-btn--acento en el propio <b-button>, asi que ahi el elemento
+	// con la clase ES el boton. ExcelDropDown.vue la pone en el CONTENEDOR, que BootstrapVue
+	// renderiza como un div.btn-group con dos .btn adentro (la accion y el caret) que NO llevan
+	// la clase. Sin las dos reglas de abajo pasan dos cosas juntas: los hijos caen en la regla
+	// neutra --que con sus tres :not() tiene especificidad (0,5,0) contra los (0,3,0) del acento,
+	// y por eso gana-- y quedan blancos, y el fondo azul del contenedor asoma por los bordes
+	// como un halo alrededor.
+	//
+	// Se resuelve por especificidad y orden, NO con !important: un !important aca se pelea
+	// despues con los estados hover/focus/disabled de Bootstrap y la deuda vuelve peor.
+	//
+	// 🔴 Los dos :not() de la regla de abajo NO son ruido: estan para empatarle en especificidad
+	// a la regla neutra (0,5,0 contra 0,5,0) y ganarle por orden de declaracion. Si alguien los
+	// "simplifica", el split vuelve a verse blanco con halo azul.
+	.toolbar-btn--acento > .btn:not(.btn-link):not(.dropdown-item)
+		background: var(--color-primary)
+		border: 1px solid var(--color-primary)
+		color: #fff
+
+		&:hover,
+		&:focus
+			filter: brightness(0.92)
+			background: var(--color-primary)
+			border-color: var(--color-primary)
+			color: #fff
+
+		i
+			color: #fff
+
+	// El contenedor del split no pinta nada: el color lo ponen sus dos botones. Si conservara el
+	// fondo y el borde, volveria a asomar por fuera de ellos.
+	.toolbar-btn--acento.btn-group
+		background: transparent
+		border: 0
+		padding: 0
+
+	// El split como pieza unica. Va aparte del bloque de grupos de mas abajo porque el split ES
+	// un b-dropdown --`div.btn-group.dropdown > [boton, caret, ul.dropdown-menu]`-- y ahi el
+	// ultimo hijo es el MENU: apuntarle con :last-child le da radio al desplegable y deja el
+	// caret redondo de los dos lados.
+	.toolbar-btn--acento.b-dropdown
+
+		// Los dos botones se aplanan entre si...
+		> .btn:not(.btn-link):not(.dropdown-item)
+			border-radius: 0
+
+		// ...y las puntas van al boton principal, que es siempre el primer hijo...
+		> .btn:not(.btn-link):not(.dropdown-item):first-child
+			border-top-left-radius: var(--toolbar-btn-radius)
+			border-bottom-left-radius: var(--toolbar-btn-radius)
+
+		// ...y al caret, que se identifica por su clase y no por su posicion, justamente porque
+		// atras suyo viene el menu. El margin-left negativo comparte el borde con la accion.
+		> .dropdown-toggle-split.btn:not(.btn-link):not(.dropdown-item)
+			border-top-right-radius: var(--toolbar-btn-radius)
+			border-bottom-right-radius: var(--toolbar-btn-radius)
+			margin-left: -1px
+
+	// El caret se separa de la accion por una linea interna tenue, no por un cambio de fondo:
+	// el split tiene que leerse como UN boton, no como dos.
+	//
+	// 🔴 El .btn y los dos :not() estan por especificidad, igual que en la regla de acento: el
+	// caret tambien matchea `.toolbar-btn--acento > .btn:not(.btn-link):not(.dropdown-item)`, que
+	// es (0,5,0) y declara `border: 1px solid var(--color-primary)`. Con el selector pelado
+	// --(0,3,0)-- el borde izquierdo quedaba del color del relleno, o sea invisible, y la linea
+	// que este comentario describia no existia en pantalla. Con esto es (0,6,0) y gana. El
+	// hover/focus se declara aparte a proposito: el hover del acento es (0,6,0) y empataria, y no
+	// quiero que esto dependa del orden en que quedaron las reglas del archivo.
+	.toolbar-btn--acento > .dropdown-toggle-split.btn:not(.btn-link):not(.dropdown-item)
+		border-left: 1px solid rgba(255, 255, 255, 0.35)
+
+		&:hover,
+		&:focus
+			border-left-color: rgba(255, 255, 255, 0.35)
+
+	// --- Grupos de botones: una sola pieza --------------------------------------------------
+	// Los .btn-group de la barra (seleccion y filtros) tienen que leerse como una sola pieza:
+	// radio del token en las puntas, 0 en las uniones, y un solo borde compartido entre control
+	// y control.
+	//
+	// 🔴 Dos cosas que la primera version de este bloque dio por sentadas y estaban mal medidas
+	// (corregido el 11/8/2026, intento 2 de la mision 19):
+	//
+	// 1. ESPECIFICIDAD. La regla de altura de mas arriba es (0,4,0) --lleva .view-header-toolbar,
+	//    .btn y sus dos :not()-- y declara border-radius con el token. Un `.btn-group > .btn`
+	//    pelado es (0,3,0) y PIERDE longhand por longhand, asi que los botones conservaban sus
+	//    cuatro esquinas redondas mientras el margin-left: -1px si aplicaba: cada union quedaba
+	//    con dos esquinas encimadas, o sea peor que antes del cambio. Por eso los selectores de
+	//    abajo repiten .btn y los dos :not(): con eso el aplanado queda en (0,6,0) --y en (0,7,0)
+	//    su variante para el toggle de un dropdown miembro-- y las puntas en (0,7,0) / (0,8,0),
+	//    asi que todos ganan sin recurrir a !important.
+	//
+	// 2. EL DOM QUE RENDERIZA BOOTSTRAP-VUE. Un b-dropdown es
+	//    `div.dropdown.b-dropdown.btn-group > [split?, toggle, ul.dropdown-menu]` --la clase
+	//    btn-group se la pone siempre que no sea `block`, ver dropdownClasses en
+	//    node_modules/bootstrap-vue/src/components/dropdown/dropdown.js--, asi que su :last-child
+	//    es el MENU y nunca un boton, y ademas TODO dropdown de la barra matchea `.btn-group`.
+	//    Sin el :not(.b-dropdown) de abajo, el menu desplegable de todos los dropdowns se llevaba
+	//    el radio derecho y el margin-left: -1px. Este bloque es para el grupo que arma el
+	//    template (.opciones-grupos__group); el split de "Crear", que si es un b-dropdown, se
+	//    resuelve en su propio bloque mas arriba.
+	.btn-group:not(.b-dropdown)
+
+		// Las uniones se aplanan y las puntas se las devuelven las dos reglas siguientes.
+		//
+		// Se apunta a los hijos DIRECTOS del grupo y al toggle de un dropdown miembro, y no con un
+		// combinador descendiente: un `.btn` cualquiera adentro del grupo tambien alcanzaria a los
+		// que vivan dentro de un ul.dropdown-menu --que no son parte de la pieza-- y les sacaria el
+		// radio sin que se entienda por que. Hoy esos menus solo tienen `a.dropdown-item`, ya
+		// excluidos, asi que es una precaucion para el que agregue un boton comun ahi adentro.
+		> .btn:not(.btn-link):not(.dropdown-item),
+		> .b-dropdown > .btn:not(.btn-link):not(.dropdown-item)
+			border-radius: 0
+
+		// Punta izquierda: el primer hijo del grupo. Puede ser un boton suelto (btn-seleccion) o
+		// un b-dropdown, y en ese caso el que se pinta es su toggle: el ul.dropdown-menu no es
+		// .btn, asi que queda afuera solo. La variante del dropdown nombra .b-dropdown para
+		// llegar a (0,8,0) y ganarle al aplanado de arriba --(0,7,0) en ese mismo elemento-- por
+		// especificidad y no por orden de declaracion.
+		> :first-child.btn:not(.btn-link):not(.dropdown-item),
+		> :first-child.b-dropdown > .btn:not(.btn-link):not(.dropdown-item)
+			border-top-left-radius: var(--toolbar-btn-radius)
+			border-bottom-left-radius: var(--toolbar-btn-radius)
+
+		// Punta derecha: idem con el ultimo hijo. Se resuelve por posicion real y no por una
+		// lista de componentes porque btn-restart-filter tiene v-if: cuando no esta, el ultimo
+		// del grupo de filtros pasa a ser el dropdown. (Un v-if falso deja un nodo comentario,
+		// que no cuenta para :last-child.)
+		> :last-child.btn:not(.btn-link):not(.dropdown-item),
+		> :last-child.b-dropdown > .btn:not(.btn-link):not(.dropdown-item)
+			border-top-right-radius: var(--toolbar-btn-radius)
+			border-bottom-right-radius: var(--toolbar-btn-radius)
+
+		// Borde compartido: sin esto queda una linea de 2px entre control y control. Va sobre los
+		// hijos directos del grupo, que son controles; el menu de un dropdown miembro es hijo de
+		// ese dropdown y no de esto, asi que no lo toca.
+		> * + *
+			margin-left: -1px
+
+	// --- Estado activo: ambar apagado (11/8/2026) -------------------------------------------
+	// La mision 13 habia pasado este estado de amarillo a azul tenue, con el argumento de que el
+	// amarillo era el unico color que gritaba en la barra sin senalar nada urgente. Lucas lo uso
+	// asi una semana y lo REVIRTIO: el amarillo era justamente lo que le permitia ver de un
+	// vistazo que estaba en modo seleccion, y en azul se confundia con el resto de la barra.
+	//
+	// Lo que se conserva de aquella decision es no volver al #ffc107 de Bootstrap, que era el
+	// que resultaba chillon: este ambar es apagado y de la misma familia que el chip de caja.
+	//
+	// O sea: si estas leyendo esto porque te dieron ganas de "unificar" este estado con el azul
+	// del resto, eso ya se probo y se descarto con el sistema en uso.
+	//
+	// Va en los DOS controles del grupo de seleccion --el boton y el dropdown de seleccionados,
+	// que se alcanza por su id-- porque son un grupo: si uno va ambar y el otro neutro, el grupo
+	// se parte visualmente. El dropdown de FILTRADOS sigue neutro a proposito: el ambar significa
+	// "estas en modo seleccion", no "hay filtros".
+	//
+	// 🔴 El .btn y los dos :not() del primer selector NO son ruido (corregido el 11/8/2026):
+	// BtnSeleccion.vue pone toolbar-btn--activo sobre el propio <b-button>, asi que el elemento
+	// con la clase ES el .btn y matchea tambien la regla neutra, que es (0,5,0). Un
+	// `.toolbar-btn--activo` pelado es (0,2,0) y perdia, con lo cual el dropdown quedaba ambar y
+	// el boton neutro: el grupo partido en dos que este comentario dice estar evitando. Por el
+	// mismo mecanismo, el azul tenue que la mision 13 puso aca tampoco aplico nunca, y por eso el
+	// estado de seleccion "perdio su color". Con el .btn y los tres :not() queda en (0,6,0) y le
+	// gana a la neutra por ESPECIFICIDAD y no por orden de declaracion, que es la diferencia entre
+	// una regla que se sostiene y una que se rompe sola el dia que alguien reordene el archivo. El
+	// :not(.toolbar-btn--acento) ademas dice algo cierto: un control de acento nunca va ambar.
+	// La variante `> .btn` cubre el caso en que la clase esta en el contenedor.
+	.toolbar-btn--activo.btn:not(.btn-link):not(.dropdown-item):not(.toolbar-btn--acento),
+	.toolbar-btn--activo > .btn:not(.btn-link):not(.dropdown-item):not(.toolbar-btn--acento),
+	#btn_seleccionados_dropdown > .btn:not(.btn-link):not(.dropdown-item)
+		background: var(--toolbar-btn-seleccion-bg)
+		border: 1px solid var(--toolbar-btn-seleccion)
+		color: var(--toolbar-btn-seleccion)
+
+		&:hover,
+		&:focus
+			background: var(--toolbar-btn-seleccion-bg-hover)
+			border-color: var(--toolbar-btn-seleccion)
+			color: var(--toolbar-btn-seleccion)
+
+		i
+			color: var(--toolbar-btn-seleccion)
+
+	// --- Tintes de icono de los botones de modulo -------------------------------------------
+	// Los tres botones de modulo del Listado (actualizar lista, rendimiento de inventario y
+	// depositos) se veian todos iguales en gris y no habia forma de distinguirlos de un vistazo.
+	//
+	// El color va en el ICONO, no en el relleno, y es a proposito. La mision 13 establecio que
+	// hay UNA sola accion con relleno macizo en la barra, y que los tres rellenos de colores
+	// distintos que convivian antes eran justamente el problema. Tintar los iconos los distingue
+	// sin devolver la barra a ese estado: "Crear" sigue siendo lo unico solido.
+	//
+	// Los tonos son de la misma familia de saturacion, apagados, no los primary/success solidos
+	// de Bootstrap. En hover el fondo toma el mismo tono al 10%, asi que el boton confirma cual
+	// es sin cambiar de peso visual.
+	// 🔴 Los :not() repetidos de abajo estan por especificidad, igual que en el split de "Crear":
+	// la regla neutra pinta `i { color: inherit }` con (0,5,1) y un `.toolbar-btn--tinte-azul i`
+	// pelado --que anidado aca es (0,2,1)-- pierde y el icono queda gris. Con el .btn y los dos
+	// :not() empatan en (0,5,1) y gana esta por venir despues. No los saques.
+	.toolbar-btn--tinte-azul,
+	.toolbar-btn--tinte-verde,
+	.toolbar-btn--tinte-violeta
+		&.btn:not(.btn-link):not(.dropdown-item) i,
+		> .btn:not(.btn-link):not(.dropdown-item) i
+			color: var(--toolbar-tinte)
+
+		&.btn:not(.btn-link):not(.dropdown-item):hover,
+		&.btn:not(.btn-link):not(.dropdown-item):focus,
+		> .btn:not(.btn-link):not(.dropdown-item):hover,
+		> .btn:not(.btn-link):not(.dropdown-item):focus
+			background: var(--toolbar-tinte-bg)
+			border-color: var(--toolbar-tinte)
+
+	.toolbar-btn--tinte-azul
+		--toolbar-tinte: #2563eb
+		--toolbar-tinte-bg: rgba(37, 99, 235, 0.1)
+
+	.toolbar-btn--tinte-verde
+		--toolbar-tinte: #059669
+		--toolbar-tinte-bg: rgba(5, 150, 105, 0.1)
+
+	.toolbar-btn--tinte-violeta
+		--toolbar-tinte: #7c3aed
+		--toolbar-tinte-bg: rgba(124, 58, 237, 0.1)
+
+	// --- Dropdowns --------------------------------------------------------------------------
+	// El caret de Bootstrap suma ancho a la derecha y descentra el icono en los toggles de solo
+	// icono; se saca ahi y se deja donde el boton tiene texto.
+	.toolbar-btn--icono .dropdown-toggle::after
+		display: none
+
+// --- Contrapartes de tema oscuro ------------------------------------------------------------
+// Los tokens de arriba que salen de _dark_theme.sass (--bg-card, --color-border, etc.) ya cambian
+// solos. Los colores que esta barra define por su cuenta --el ambar del estado de seleccion y los
+// tres tintes de icono-- no, y en oscuro se apagan tanto que dejan de senalar nada: un #d97706
+// sobre #1e2127 queda a un contraste que no se lee de reojo, que es justamente como se mira una
+// barra de herramientas. Se suben un escalon de luminosidad y se levanta un poco la opacidad del
+// relleno, que sobre fondo oscuro rinde menos.
+html.dark-mode
+	// Un gris al 12% sobre un fondo oscuro directamente no se ve: la sombra pasa a negro, con el
+	// mismo criterio con el que --shadow-color de _dark_theme.sass pasa de gris a negro. Se mantiene
+	// la geometria (1px de desplazamiento, 3px de desenfoque) para que siga siendo la version chica
+	// de la sombra del pill y no otra sombra distinta.
+	//
+	// El 0,27 no es un numero al voleo: es la MISMA PROPORCION que en claro. Ahi el pill va al 0,2
+	// y el boton al 0,12 (60%); aca el pill va al 0,45 --que es --shadow-color en oscuro, ver
+	// buscador-general/Index.vue-- y el boton al 0,27, que es el mismo 60%. Si se toca uno de los
+	// dos valores hay que tocar el otro, o la jerarquia se mantiene en un modo y se da vuelta en
+	// el otro, que es exactamente lo que pasaba antes de esta mision.
+	--toolbar-btn-shadow: rgba(0, 0, 0, 0.27) 0px 1px 3px 0px
+	--toolbar-btn-seleccion: #f59e0b
+	--toolbar-btn-seleccion-bg: rgba(245, 158, 11, 0.16)
+	--toolbar-btn-seleccion-bg-hover: rgba(245, 158, 11, 0.24)
+
+html.dark-mode .view-header-toolbar
+	.toolbar-btn--tinte-azul
+		--toolbar-tinte: #60a5fa
+		--toolbar-tinte-bg: rgba(96, 165, 250, 0.16)
+
+	.toolbar-btn--tinte-verde
+		--toolbar-tinte: #34d399
+		--toolbar-tinte-bg: rgba(52, 211, 153, 0.16)
+
+	.toolbar-btn--tinte-violeta
+		--toolbar-tinte: #a78bfa
+		--toolbar-tinte-bg: rgba(167, 139, 250, 0.16)
+
+	// El divisor del split se apoya sobre el azul del acento, que en oscuro es mas claro: la
+	// linea blanca al 35% se le pierde encima.
+	//
+	// Repite el .btn y los dos :not() de la regla clara por la misma razon que ella, y ademas por
+	// una propia: la clara quedo en (0,6,0) y este selector con `html.dark-mode` pelado es
+	// (0,4,1), o sea que perdia la comparacion --primero se cuentan las clases-- y el tema oscuro
+	// no se aplicaba. Un `html.dark-mode` no gana solo por ser mas especifico "a ojo".
+	.toolbar-btn--acento > .dropdown-toggle-split.btn:not(.btn-link):not(.dropdown-item)
+		border-left-color: rgba(0, 0, 0, 0.25)
+
+		&:hover,
+		&:focus
+			border-left-color: rgba(0, 0, 0, 0.25)
+
+// El "tamaño chico" de la interfaz baja la altura de TODA la barra de forma coherente, pill
+// incluido, en vez de achicar los botones y dejar el campo alto. La regla de _ui_sizes.sass que
+// achica `.btn` sigue aplicando a los botones del resto del sistema; aca gana esta porque los
+// controles de la barra toman su altura del token, no del padding.
+//
+// 🔴 El selector es `.ui-small` a secas y ya no `.ui-small .view-header-toolbar` (mision 27,
+// 11/8/2026). Cuando se escribio, el token lo usaba unicamente la barra y acotarlo ahi era lo
+// prudente; desde hoy tambien lo usa la barra de paginacion de las tablas
+// (common-vue/components/display/table/pagination/Index.vue), que vive FUERA del view-header. Con
+// el selector viejo esa barra se quedaba en 36px mientras todo lo demas bajaba a 32, o sea el
+// mismo desalineado que esta mision viene a cerrar, pero al reves. El ambito natural del token es
+// el mismo que el de la preferencia: si la interfaz esta en tamaño chico, los controles del
+// sistema miden lo chico, esten donde esten.
+.ui-small
+	--toolbar-control-h: 32px
+	--toolbar-btn-radius: 9px
+
+// --- El select de barra ----------------------------------------------------------------------
+// Clase compartida para los `b-form-select` que viven en una barra de encabezado (mision 33,
+// 11/8/2026). Nace de tres implementaciones distintas del mismo control:
+//
+//   - los tres de Ventas (afip-ticket-nav-select, mision 32) resolvian esto anidado en su propio
+//     componente, o sea invisible para cualquier otro modulo;
+//   - el de Compras (SelectFacturacion.vue) no tenia NINGUN estilo --se veia con la tipografia y el
+//     padding de bootstrap al lado de controles de 36px--, y encima arrastraba una copia muerta del
+//     <style> de Ventas que no matcheaba su propio template;
+//   - y el de Compras ya habia necesitado su parche de .ui-small aparte (ver el bloque de
+//     provider/components/orders/nav/Index.vue).
+//
+// Va FUERA del bloque .view-header-toolbar a proposito: estos selects viven en barras de modulo que
+// no siempre estan adentro de esa clase. Y lleva `.custom-select` por la misma razon que la mision
+// 32 se la puso a los de Ventas: `_ui_sizes.sass` declara `.ui-small select.custom-select { height:
+// auto }` con (0,2,1) y una clase sola pierde, asi que con la interfaz en tamaño chico el control
+// se quedaba sin altura. Con las dos clases esto es (0,2,0)... que NO alcanza: por eso ademas se
+// nombra el elemento, y queda (0,2,1) empatado, ganando por orden de importacion --este archivo va
+// despues de ui_sizes en app.sass--. Si algun dia se reordenan los imports, esto se rompe: subirlo
+// a (0,3,0) es el arreglo.
+select.toolbar-select.custom-select
+	height: var(--toolbar-control-h)
+	border-radius: var(--toolbar-btn-radius)
+	// Padding vertical en cero y altura fija: es lo que centra el texto. Con el padding de bootstrap
+	// (.375rem arriba y abajo) mas una altura menor, el texto quedaba pegado al techo del control.
+	padding: 0 1.75rem 0 0.6rem
+	font-size: 0.875rem
+	line-height: 1
+	border: 1px solid var(--color-border)
+	background-color: var(--bg-card)
+	color: var(--color-text-primary)
+	// El ancho lo da el contenido, no el contenedor: estos selects viven en una fila con otros
+	// controles y estirarse al 100% los desalinea.
+	width: auto
+	max-width: 100%
+
+// 🔴 Y el tema oscuro necesita su propia linea, que la verificacion de la mision 33 encontro
+// faltando: `html.dark-mode .custom-select { background: var(--bg-section) }` de _dark_theme.sass
+// tambien es (0,2,1), o sea que EMPATA con el selector de arriba igual que el de _ui_sizes. Los dos
+// empates los estaba ganando el orden de importacion de app.sass y nada mas; este los cierra por
+// especificidad (0,3,1) para el que importa, que es el fondo: sin esto, el select de una barra queda
+// en --bg-section mientras los de Ventas quedan en --bg-card, o sea el mismo control en dos tonos.
+html.dark-mode select.toolbar-select.custom-select
+	background-color: var(--bg-card)
+	color: var(--color-text-primary)
+	border-color: var(--color-border)
+
+// Y el mismo cierre para el tamaño chico, por consistencia con el bloque de arriba: el selector
+// base empata en (0,2,1) con `.ui-small select.custom-select` de _ui_sizes.sass y le gana solo por
+// orden de importacion. Dejarlo asi mientras el empate del tema oscuro si se cerraba por
+// especificidad era deuda gratuita: son los dos el mismo problema y el arreglo cuesta una linea.
+.ui-small select.toolbar-select.custom-select
+	height: var(--toolbar-control-h)
+	border-radius: var(--toolbar-btn-radius)
+
+// --- El boton de "elegir columnas" de una relacion ---------------------------------------------
+// Mismo control que .toolbar-btn--icono de arriba, pero para los formularios: la tabla de una
+// relacion belongs_to_many dentro del modal de un modelo (articulos de una compra, de un
+// presupuesto, de una venta). Lo dibujan DOS componentes distintos --ModelForm.vue lo pone al lado
+// del buscador de la relacion, y BelongsToManyTable.vue arriba de su tabla cuando no hay buscador--
+// asi que vive aca y no en el <style> de ninguno de los dos: los dos se cargan de forma diferida y
+// el estilo tiene que estar antes que cualquiera de ellos, o el boton se ve un instante como un
+// btn-secondary de bootstrap.
+//
+// Va FUERA de .view-header-toolbar por el mismo motivo que el select de barra: eso es la barra de un
+// modulo y esto vive adentro de un modal. Se replican los tokens de la barra, no los literales.
+//
+// El selector lleva `.btn` (bootstrap-vue siempre la agrega) para ganarle a `.btn-secondary` de
+// bootstrap, que es (0,1,0). Los estados :hover / :focus / :active se nombran los tres porque
+// bootstrap declara `.btn-secondary:not(:disabled):not(.disabled):active` en (0,4,0): sin la
+// pseudoclase :not repetida aca, el boton parpadea gris oscuro al apretarlo.
+.btm-columnas-btn.btn
+	display: inline-flex
+	align-items: center
+	justify-content: center
+	flex: 0 0 auto
+	width: var(--toolbar-control-h)
+	height: var(--toolbar-control-h)
+	padding: 0
+	border-radius: var(--toolbar-btn-radius)
+	background: var(--bg-card)
+	border: 1px solid var(--color-border)
+	color: var(--color-text-primary)
+	box-shadow: var(--toolbar-btn-shadow)
+	transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease
+
+	i
+		color: inherit
+		font-size: 0.95rem
+		line-height: 1
+
+.btm-columnas-btn.btn:hover,
+.btm-columnas-btn.btn:focus,
+.btm-columnas-btn.btn:not(:disabled):not(.disabled):active,
+.btm-columnas-btn.btn:not(:disabled):not(.disabled):active:focus
+	background: var(--bg-hover)
+	border-color: var(--color-border)
+	color: var(--color-text-primary)
+
+.btm-columnas-btn.btn:focus
+	outline: none
+	box-shadow: var(--toolbar-btn-shadow), 0 0 0 3px rgba(0, 123, 255, 0.15)
+
+// El anillo del boton apretado necesita su propia linea: bootstrap declara la sombra gris de
+// .btn-secondary en `:not(:disabled):not(.disabled):active:focus`, que es (0,5,0), y la regla de
+// arriba es (0,3,0). Sin esto, mientras se mantiene apretado el boton muestra el anillo gris de
+// bootstrap y recien al soltar vuelve al azul.
+.btm-columnas-btn.btn:not(:disabled):not(.disabled):active:focus
+	box-shadow: var(--toolbar-btn-shadow), 0 0 0 3px rgba(0, 123, 255, 0.15)

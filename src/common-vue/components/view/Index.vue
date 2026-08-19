@@ -28,8 +28,7 @@
     	:not_show_delete_text="not_show_delete_text"
     	:delete_text="delete_text"
     	:save_check_function="save_check_function"
-    	:props_to_send_on_save_function="props_to_send_on_save_function"
-    	:show_only_guardar="show_only_guardar">
+    	:props_to_send_on_save_function="props_to_send_on_save_function">
     		<template #model_modal_title>
     			<slot name="model_modal_title"></slot>
     		</template>
@@ -74,12 +73,33 @@
 		:has_permission_create_dropdown="has_permission_create_dropdown"
 		:ask_selectable="ask_selectable"
 		:change_from_dates_option="change_from_dates_option"
+		:show_buscador_general="show_buscador_general"
+		:extra_filters="extra_filters"
+		:default_extra_props="default_extra_props"
+		:filtros_fijos_por_defecto="filtros_fijos_por_defecto"
+		:show_previus_days="show_previus_days"
+		:model_name_for_get_models="model_name_for_get_models"
+		:check_permissions_previus_days="check_permissions_previus_days"
 		:model_name="model_name">
 			<template v-slot:btn_create>
 				<slot name="horizontal_nav_btn_create"></slot>
 			</template>
 			<template v-slot:horizontal_nav_center>
 				<slot name="horizontal_nav_center"></slot>
+			</template>
+			<!--
+				🔴 El puente del slot de acciones de la izquierda (misión 34). Sin esta línea el slot
+				existe en el view-header y se puede escribir desde una vista, pero NO LLEGA: las vistas
+				montan sobre ESTE componente, no sobre el header, y Vue 2 descarta en silencio el
+				contenido de un slot que el hijo nunca renderiza — sin warning, sin error de
+				compilación, simplemente no se dibuja. Le pasó a esta misma misión: el botón de Excel
+				de Comprobantes desapareció de las dos zonas del header y lo agarró la verificación.
+			-->
+			<template v-slot:acciones_izquierda>
+				<slot name="acciones_izquierda"></slot>
+			</template>
+			<template v-slot:search_extra>
+				<slot name="search_extra"></slot>
 			</template>
 			
 			<template #options_drop_down>
@@ -142,7 +162,7 @@
 		:check_permissions_previus_days="check_permissions_previus_days"
 		:models_to_show="models_to_show"
 		:show_models_if_empty="show_models_if_empty"
-		:show_previus_days="show_previus_days"
+		:show_previus_days="show_view_header ? false : show_previus_days"
 		:show_search_nav="show_search_nav"
 		:model_name="model_name"
 		:set_table_height="set_table_height"
@@ -340,10 +360,6 @@ export default {
 			type: Boolean,
 			default: false,
 		},
-		show_only_guardar: {
-			type: Boolean,
-			default: true,
-		},
 		properties_to_show: {
 			type: Array,
 			default: null,
@@ -395,6 +411,46 @@ export default {
 			type: Boolean,
 			default: true,
 		},
+		/**
+		 * Muestra el buscador general en la zona centro del view-header. Se puede apagar en un
+		 * módulo puntual donde no aplique. Default true.
+		 */
+		show_buscador_general: {
+			type: Boolean,
+			default: true,
+		},
+		/**
+		 * Filtros extra propios del módulo que el header le pasa al buscador general
+		 * (ej: categoría/stock del listado). Formato esperado por el backend: [{ key, operator, value }].
+		 */
+		extra_filters: {
+			type: Array,
+			default: function () {
+				return []
+			},
+		},
+		/**
+		 * Keys extra que se suman a 'name' en el default del buscador general (ver
+		 * buscador-general/Index.vue, applyDefaultSelection). Ej: en el Listado de articulos suma
+		 * codigo de barras/SKU/codigo de proveedor/N°.
+		 */
+		default_extra_props: {
+			type: Array,
+			default: function () {
+				return []
+			},
+		},
+		/**
+		 * Filtros fijos por defecto que el módulo quiere sembrar la primera vez que un usuario usa
+		 * el buscador general de este modelo (ver buscador-general/Index.vue,
+		 * filtros_fijos_por_defecto). Formato: [{ key, filter_kind, operator, default_value }].
+		 */
+		filtros_fijos_por_defecto: {
+			type: Array,
+			default: function () {
+				return []
+			},
+		},
 		props_to_send_on_save_function: {
 			type: String,
 			default: null,
@@ -405,6 +461,18 @@ export default {
 		confirm_compensar_caja: {
 			type: Boolean,
 			default: false,
+		},
+		/**
+		 * Al entrar al módulo (o al cambiar de modelo dentro de un mismo ABM), dispara sola la
+		 * primera página del listado paginado por orden de id descendente (ver
+		 * `runListadoPorDefecto` en `__base_store.js`), para que la tabla muestre desde el primer
+		 * momento el contador de resultados y la paginación, sin esperar a que el usuario ordene a
+		 * mano por N°. Default true: se activa en todos los módulos salvo que uno puntual lo apague
+		 * pasando esta prop en false.
+		 */
+		listado_paginado_por_defecto: {
+			type: Boolean,
+			default: true,
 		},
 	},
 	computed: {
@@ -455,7 +523,77 @@ export default {
 			return this.show_btn_create
 		}
 	},
+	created() {
+		// Dispara el listado paginado por defecto al montar el componente (primera vez que se
+		// entra al módulo). El método decide internamente si corresponde o no.
+		this.disparar_listado_por_defecto()
+	},
+	watch: {
+		// El ABM (src/common-vue/views/Abm.vue) reusa este mismo view-component e intercambia el
+		// modelo con las solapas (marcas, rubros, formas de pago...). Sin este watch, solo el
+		// primer modelo de cada ABM traeria el listado paginado por defecto.
+		model_name() {
+			this.disparar_listado_por_defecto()
+		}
+	},
 	methods: {
+		/**
+		 * Decide si corresponde disparar el listado paginado por defecto (pagina 1, ordenado por id
+		 * descendente, ver `runListadoPorDefecto` en __base_store.js) y lo dispara si aplica.
+		 *
+		 * Corta sin hacer nada en los siguientes casos:
+		 * - la prop `listado_paginado_por_defecto` viene apagada.
+		 * - `papelera`: tiene su propio submodulo de store y su propio flujo.
+		 * - los modelos vienen por prop desde el modulo que lo usa (tablas embebidas en modales o
+		 *   en relaciones has-many), donde no corresponde pedir nada al servidor.
+		 * - el modulo se ve por fecha (ventas, compras, pedidos, gastos, cheques, presupuestos):
+		 *   ese flujo sigue entrando por dia/rango como hasta ahora.
+		 * - el usuario no tiene permiso de index sobre el modelo.
+		 * - ya hay una busqueda real del usuario activa (is_filtered en true y listado_por_defecto
+		 *   en false): evita pisarle al usuario lo que habia buscado al volver al modulo.
+		 *
+		 * @returns {void}
+		 */
+		disparar_listado_por_defecto() {
+
+			// Corte 1: el modulo puntual apago la prop.
+			if (!this.listado_paginado_por_defecto) {
+				return
+			}
+
+			// Corte 2: la papelera tiene su propio submodulo de store y su propio flujo.
+			if (this.papelera) {
+				return
+			}
+
+			// Corte 3: los modelos vienen por prop desde el modulo (tablas embebidas en modales o
+			// en has-many), no corresponde pedir nada al servidor.
+			if (this.mostrar_models_que_vinienen_por_prop_siempre) {
+				return
+			}
+			if (this.models_to_show.length && !this.show_view_header) {
+				return
+			}
+
+			// Corte 4: modulos que se ven por fecha (ventas, compras, pedidos, gastos, cheques,
+			// presupuestos) entran como hasta hoy, mostrando el dia o el rango elegido.
+			if (this.$store.state[this.model_name].from_dates) {
+				return
+			}
+
+			// Corte 5: el usuario no tiene permiso de index sobre este modelo.
+			if (!this.can_show_list) {
+				return
+			}
+
+			// Corte 6: ya hay una busqueda real del usuario activa, no se la pisamos.
+			if (this.$store.state[this.model_name].is_filtered && !this.$store.state[this.model_name].listado_por_defecto) {
+				return
+			}
+
+			// Ninguno de los cortes aplico: pide la primera pagina del listado por defecto.
+			this.$store.dispatch(this.model_name+'/runListadoPorDefecto')
+		},
 		check_propiedades_extras(original_props) {
 
 		    let props = original_props.map(p => ({ ...p }))
@@ -484,8 +622,74 @@ export default {
 		    return props
 		},
 		modelSaved(model) {
-			console.log('22222')
+			this.refrescar_listado_si_es_alta(model)
 			this.$emit('modelSaved', model)
+		},
+		/**
+		 * Vuelve a pedir el listado cuando lo que se guardó fue un ALTA y la tabla está mostrando
+		 * `filtered`.
+		 *
+		 * El problema: la mutación `add` hace unshift en state.models, pero contra state.filtered
+		 * sólo reemplaza si el id ya estaba. Un id nuevo no se inserta nunca, y como
+		 * display/Index.vue renderiza `filtered` mientras is_filtered esté en true --que ahora se
+		 * prende con sólo entrar al módulo, por el listado por defecto-- el registro recién creado
+		 * queda invisible hasta recargar la página.
+		 *
+		 * 🔴 Por qué NO se arregla insertando en `filtered` desde `add`: esa mutación se commitea
+		 * desde decenas de lugares que NO son altas (editar desde un modal, confirmar un pedido,
+		 * guardar una imagen, cerrar una venta). Insertar a ciegas metería en el listado filtrado
+		 * filas que no cumplen el criterio de búsqueda activo, y además dejaría mintiendo a
+		 * total_filter_results y total_filter_pages. El camino correcto es volver a pedir el
+		 * listado, que es lo que ya hace refresh_filter_results() después de los borrados masivos.
+		 *
+		 * Cómo se distingue un alta de una edición sin cambiarle la firma al evento: en una edición
+		 * `add` ya corrió y ya reemplazó la fila en `filtered` antes de que llegue modelSaved, así
+		 * que alcanza con preguntar si el id está en la lista. Si no está, es alta.
+		 *
+		 * Página 1 en los dos casos: con orden id DESC el registro nuevo vive ahí, y refrescar la
+		 * página 3 no mostraría nada nuevo, que el usuario leería como "no se guardó".
+		 *
+		 * @param {Object} model Modelo que se acaba de guardar.
+		 * @return {void}
+		 */
+		refrescar_listado_si_es_alta(model) {
+			// La papelera tiene su propio submodulo de store y su propio flujo, igual que en el
+			// corte 2 de disparar_listado_por_defecto.
+			if (this.papelera || !model || !model.id) {
+				return
+			}
+
+			// Los hijos de una relación has-many NO entran por acá: model/Index.vue los emite por
+			// `has_many_saved`, que es un evento aparte. Por eso no hace falta un corte extra: a
+			// `modelSaved` sólo llega el modelo del propio listado.
+
+			let store_state = this.$store.state[this.model_name]
+
+			if (!store_state || !store_state.is_filtered) {
+				return
+			}
+
+			let ya_esta_en_la_tabla = false
+			store_state.filtered.forEach(model_de_la_tabla => {
+				if (model_de_la_tabla.id == model.id) {
+					ya_esta_en_la_tabla = true
+				}
+			})
+
+			// Es una edición: `add` ya actualizó la fila en el lugar y no hace falta refrescar nada.
+			if (ya_esta_en_la_tabla) {
+				return
+			}
+
+			// Mismo criterio que refresh_filter_results: se refresca por el camino que armó lo que
+			// se está viendo. Si hay una búsqueda real del usuario y el modelo nuevo no la cumple,
+			// después de refrescar no aparece, y eso es correcto: no se fuerza su inserción.
+			if (store_state.listado_por_defecto) {
+				this.$store.dispatch(this.model_name + '/runListadoPorDefecto', { page: 1 })
+				return
+			}
+
+			this.$store.dispatch(this.model_name + '/runGlobalSearch', { page: 1 })
 		},
 		press_delete_btn() {
 			this.$emit('press_delete_btn')

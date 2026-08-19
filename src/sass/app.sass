@@ -5,3 +5,21 @@
 @import 'inputs.sass'
 @import 'ui_sizes.sass'
 @import 'dark_theme.sass'
+// Va DESPUES de ui_sizes y de dark_theme: usa sus tokens de color y tiene que poder ganarle al
+// `.ui-small .btn` de ui_sizes en los controles de la barra de encabezado.
+@import 'toolbar_botones.sass'
+// Va DESPUES de toolbar_botones por el mismo motivo que aquel va despues de dark_theme: los menus
+// desplegables cuelgan de los controles de la barra y tienen que poder ganarles cuando empatan en
+// especificidad.
+@import 'menus_desplegables.sass'
+// El chip de los bloques de totales. Va despues de dark_theme porque usa sus tokens, y es compartido
+// entre Ventas y Comprobantes desde la mision 34.
+@import 'chips_totales.sass'
+// Vocabulario visual de los modulos que dibujan sus propios datos (modulo de IA). Va DESPUES de
+// dark_theme --usa sus tokens--, de ui_sizes --tiene que ganarle al `.ui-small .btn` en los
+// botones del modulo, y empatan en especificidad-- y de toolbar_botones, de donde toma
+// --toolbar-control-h / --toolbar-btn-radius / --toolbar-btn-shadow.
+@import 'controles_modulo.sass'
+// Va ULTIMO: su regla de tema oscuro empata en especificidad con el `#app` de dark_theme.sass y
+// tiene que ganarle por orden de declaracion. Ver la nota larga en el propio archivo.
+@import 'fondo_app.sass'

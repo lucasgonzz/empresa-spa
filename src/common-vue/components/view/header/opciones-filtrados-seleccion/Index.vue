@@ -1,48 +1,64 @@
 <template>
-	<div>
+	<div class="opciones-grupos">
 		<update
 		@update="update"
 		:loading="loading"
-		:model_name="model_name"></update>	
+		:model_name="model_name"></update>
 
 		<confirm
 		:id="model_name+'-delete-models'"
 		:text="delete_text"
 		emit="deleteModels"
-		@deleteModels="deleteModels"></confirm>	
+		@deleteModels="deleteModels"></confirm>
 
-		<options-dropdown
-		:show_actualizar_option="show_actualizar_option"
-		:check_permissions="check_permissions"
-		@setUpdate="setUpdate"
-		@setDelete="setDelete"
-		:model_name="model_name">
-			<template #options_drop_down>
-				<slot name="options_drop_down"></slot>
-			</template>
+		<!-- Grupo SELECCIÓN: botón activar/quitar selección + dropdown de seleccionados, combinados en un solo button-group -->
+		<div class="btn-group opciones-grupos__group" role="group">
+			<btn-seleccion
+			:ask_selectable="ask_selectable"
+			:model_name="model_name"></btn-seleccion>
 
-			<template #options_drop_down_seleccion>
-				<slot name="options_drop_down_seleccion"></slot>
-			</template>
-		</options-dropdown>
+			<options-dropdown
+			:show_actualizar_option="show_actualizar_option"
+			:check_permissions="check_permissions"
+			@setUpdate="setUpdate"
+			@setDelete="setDelete"
+			:model_name="model_name">
+				<template #options_drop_down>
+					<slot name="options_drop_down"></slot>
+				</template>
 
-		<options-dropdown
+				<template #options_drop_down_seleccion>
+					<slot name="options_drop_down_seleccion"></slot>
+				</template>
+			</options-dropdown>
+		</div>
+
+		<!-- Grupo FILTROS: dropdown de filtrados + botón limpiar filtros, combinados en un solo button-group -->
+		<div
 		v-if="!papelera"
-		:papelera="papelera"
-		:show_actualizar_option="show_actualizar_option"
-		:check_permissions="check_permissions"
-		@setUpdate="setUpdate"
-		@setDelete="setDelete"
-		from_filter
-		:model_name="model_name">
-			<template #options_drop_down>
-				<slot name="options_drop_down"></slot>
-			</template>
+		class="btn-group opciones-grupos__group opciones-grupos__group--filtros"
+		role="group">
+			<options-dropdown
+			:papelera="papelera"
+			:show_actualizar_option="show_actualizar_option"
+			:check_permissions="check_permissions"
+			@setUpdate="setUpdate"
+			@setDelete="setDelete"
+			from_filter
+			:model_name="model_name">
+				<template #options_drop_down>
+					<slot name="options_drop_down"></slot>
+				</template>
 
-			<template #options_drop_down_filtro>
-				<slot name="options_drop_down_filtro"></slot>
-			</template>
-		</options-dropdown>
+				<template #options_drop_down_filtro>
+					<slot name="options_drop_down_filtro"></slot>
+				</template>
+			</options-dropdown>
+
+			<btn-restart-filter
+			:papelera="papelera"
+			:model_name="model_name"></btn-restart-filter>
+		</div>
 	</div>
 </template>
 <script>
@@ -55,11 +71,15 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+		/** Habilita el modo selección múltiple (viene desde grupo-estado); lo consume btn-seleccion. */
+		ask_selectable: Boolean,
 	},
 	components: {
 		Update: () => import('@/common-vue/components/view/header/opciones-filtrados-seleccion/Update'),
 		Confirm: () => import('@/common-vue/components/Confirm'),
 		OptionsDropdown: () => import('@/common-vue/components/view/header/opciones-filtrados-seleccion/OptionsDropdown'),
+		BtnSeleccion: () => import('@/common-vue/components/view/header/BtnSeleccion'),
+		BtnRestartFilter: () => import('@/common-vue/components/view/header/BtnRestartFilter'),
 	},
 	computed: {
 		delete_text() {
@@ -70,7 +90,7 @@ export default {
 		},
 		selecteds_id() {
 			return this.$store.state[this.model_name].selected.map(model => {
-				return model.id 
+				return model.id
 			})
 		},
 	},
@@ -85,12 +105,23 @@ export default {
 		/**
 		 * Re-ejecuta el filtrado actual para reflejar el estado real del servidor.
 		 * Se usa luego de eliminar (selección o por filtro) manteniendo el modo filtrado activo.
+		 * Si lo que estaba en pantalla era el listado por defecto (prompt 04 del grupo 221, flag
+		 * `listado_por_defecto` del store) el refresco tiene que ir por runListadoPorDefecto y no
+		 * por runFilter: ese listado nunca vino de un formulario de filtros, vino del buscador
+		 * general en modo silencioso, y runFilter no sabe reconstruir ese criterio.
 		 */
 		refresh_filter_results() {
 			// Si la vista no está filtrada y la acción no fue "from_filter", no hay nada que refrescar.
 			let is_filtered = this.$store.state[this.model_name].is_filtered
 			if (!this.from_filter && !is_filtered) {
 				return Promise.resolve()
+			}
+
+			// Listado por defecto activo: refresca por el mismo camino que lo armó, no por runFilter.
+			if (this.$store.state[this.model_name].listado_por_defecto) {
+				return this.$store.dispatch(this.model_name + '/runListadoPorDefecto', {
+					page: 1,
+				})
 			}
 
 			// Al eliminar puede cambiar la paginación; pedimos página 1 para evitar quedar parados en una página inválida.
@@ -191,110 +222,23 @@ export default {
 
 <style lang="sass">
 
-/* Menú del dropdown de seleccionados/filtrados: altura máxima y scroll vertical */
-#btn_filtrados_dropdown .dropdown-menu,
-#btn_seleccionados_dropdown .dropdown-menu
-	max-height: 70vh
-	overflow-y: auto
+.opciones-grupos
+	display: inline-flex
+	align-items: center
 
-/* Opción individual del dropdown de seleccionados/filtrados: icono en celda + label */
+	/* Grupo combinado (selección o filtros); sin margen propio, cada botón/dropdown va pegado */
+	&__group
+		margin: 0
 
-.article-dropdown-option
+		/* Separación entre el grupo de selección y el de filtros: solo margen, sin línea divisoria */
+		&--filtros
+			margin-left: 10px
 
-	padding: 0
-
-	&.dropdown-item
-
-		padding: 0
-
-	&:hover,
-
-	&:focus,
-
-	&:active
-
-		.article-dropdown-option__icon-wrap
-
-			background-color: rgba(255, 255, 255, 0.22)
-
-			color: inherit
-
-	&__content
-
-		display: flex
-
-		align-items: center
-
-		gap: 12px
-
-		width: 100%
-
-		padding: 5px 0px
-
-		min-height: 42px
-
-	&__icon-wrap
-
-		display: flex
-
-		align-items: center
-
-		justify-content: center
-
-		flex-shrink: 0
-
-		width: 32px
-
-		height: 32px
-
-		border-radius: 8px
-
-		background-color: rgba(0, 0, 0, 0.06)
-
-		color: #495057
-
-		font-size: 1rem
-
-		transition: background-color 0.15s ease, color 0.15s ease
-
-	&__label
-
-		flex: 1
-
-		font-size: 0.9rem
-
-		font-weight: 500
-
-		line-height: 1.35
-
-		color: #212529
-
-		text-align: left
-
-		white-space: normal
-
-		word-break: break-word
-
-/* Variante de peligro para acciones destructivas */
-
-.article-dropdown-option--danger
-
-	.article-dropdown-option__icon-wrap
-
-		background-color: rgba(220, 53, 69, 0.12)
-
-		color: #c82333
-
-	.article-dropdown-option__label
-
-		color: #c82333
-
-	&:hover,
-
-	&:focus
-
-		.article-dropdown-option__icon-wrap
-
-			background-color: rgba(220, 53, 69, 0.2)
+// El menú de estos dos dropdowns y el diseño de sus ítems viven en
+// src/sass/_menus_desplegables.sass desde la misión 28: son los mismos tres menús y tenían tres
+// juegos de valores distintos. Acá queda solo el layout de los grupos de botones de la barra.
+//
+// (Comentarios con // y no con /* */ de varias líneas: en Sass indentado el */ suelto en su
+// propio renglón se parsea como selector y el build se cae.)
 
 </style>

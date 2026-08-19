@@ -1,24 +1,25 @@
 <template>
-	<b-button-group
-	v-if="filter">
+	<div
+	v-if="filter"
+	class="th-filter-btns">
 
-		<b-button 
-		class="m-l-10"
-		size="sm"
+		<button
+		type="button"
+		class="th-filter-btn"
+		:class="{ 'th-filter-btn--active': filtro_usado }"
 		:id="'btn_filter_'+field.key"
-		:variant="filtro_usado ? 'success' : 'outline-primary'"
 		@click="toggleFilter(field.key)">
 			<i class="icon-search"></i>
-		</b-button>
+		</button>
 
-		<b-button 
-		size="sm"
+		<button
+		type="button"
 		v-if="filtro_usado"
-		variant="danger"
+		class="th-filter-btn th-filter-btn--danger"
 		@click="call_limpiar_filtro(field.key)">
 			<i class="icon-undo"></i>
-		</b-button>
-	</b-button-group>
+		</button>
+	</div>
 </template>
 <script>
 import filters from '@/common-vue/mixins/filters'
@@ -95,3 +96,61 @@ export default {
 	}
 }
 </script>
+<style lang="sass">
+// Botones de icono propios (Grupo 273, Prompt 07): mismo lenguaje que los
+// __icon-btn del pill del buscador general -- redondos, planos, sin sombra.
+// Reemplazan los b-button de Bootstrap, cuyo foco pintaba un box-shadow
+// FUERA del border-box: eso es justo lo que recortaba el overflow: hidden
+// de .cont-filter-buttons (ver table/Index.vue). Estos botones nunca
+// pintan nada fuera de su propia caja.
+.th-filter-btns
+	display: flex
+	align-items: center
+	gap: 4px
+
+.th-filter-btn
+	display: flex
+	align-items: center
+	justify-content: center
+	width: 24px
+	height: 24px
+	border-radius: 50%
+	border: none
+	background: transparent
+	box-shadow: none
+	padding: 0
+	cursor: pointer
+	color: #d1d5db
+	transition: background 0.15s ease, color 0.15s ease
+
+	i
+		font-size: 0.85rem
+
+	&:hover
+		background: rgba(255, 255, 255, .15)
+		color: #fff
+
+	&:focus-visible
+		outline: none
+		background: rgba(255, 255, 255, .25)
+		color: #fff
+
+	// Lupa con filtro activo: fondo verde suave (antes, variant="success").
+	&.th-filter-btn--active
+		background: rgba(34, 197, 94, 0.25)
+		color: #4ade80
+
+		&:hover
+			background: rgba(34, 197, 94, 0.35)
+
+// Boton de limpiar: solo se renderiza con filtro activo, rojo suave (antes, variant="danger").
+.th-filter-btn--danger
+	background: rgba(248, 113, 113, .18)
+	color: #fecaca
+
+	&:hover
+		background: rgba(248, 113, 113, .3)
+
+	&:focus-visible
+		background: rgba(248, 113, 113, .3)
+</style>

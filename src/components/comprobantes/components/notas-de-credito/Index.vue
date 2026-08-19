@@ -14,7 +14,12 @@
 		v-if="view == 'notas-de-credito'"
 		model_name="nota_credito">
 
-			<template #horizontal_nav_center>
+			<!--
+				El boton de Excel pasa del slot de la derecha (horizontal_nav_center, al lado del
+				buscador general) al grupo de acciones de la izquierda, pegado al de propiedades para
+				mostrar (mision 34, pedido de Lucas).
+			-->
+			<template #acciones_izquierda>
 				<btn-excel-export></btn-excel-export>
 			</template>
 

@@ -143,6 +143,29 @@ export default {
 		},  
 	},
 	methods: {
+		/**
+		 * Escribe un valor en un input del DOM avisandole a Vue.
+		 *
+		 * Existe porque asignar `input.value` a mano NO dispara ningun evento: un input con v-model
+		 * sigue teniendo su valor viejo en el estado del componente, y el proximo re-render lo vuelve a
+		 * pintar en pantalla, deshaciendo el cambio. El evento 'input' es exactamente lo que v-model
+		 * escucha, asi que despacharlo deja las dos puntas sincronizadas.
+		 *
+		 * Caso real que lo origino (5/8/2026): en Vender, despues de agregar un articulo, el criterio de
+		 * busqueda volvia a aparecer solo en el buscador por nombre.
+		 *
+		 * @param {HTMLElement|null} input - El input a escribir. Si es null no hace nada.
+		 * @param {String} value - Valor a dejar en el input.
+		 */
+		setInputValueSync(input, value) {
+			if (!input) {
+				return
+			}
+
+			input.value = value
+
+			input.dispatchEvent(new Event('input', { bubbles: true }))
+		},
 		html_text(text) {
 			return text.replace(/\n/g, '<br>');
 		},
@@ -888,7 +911,34 @@ export default {
 
 					return null
 				} else {
-					return 'S/A'
+					// Celda vacia y no 'S/A' (mision 33, pedido de Lucas): una relacion sin valor no
+					// es informacion, y "S/A" ensuciaba la columna Proveedor de cualquier listado con
+					// articulos sueltos.
+					//
+					// Se reviso ANTES quien llama a propertyText(), porque un cambio de valor de
+					// retorno aca se ve lejos: son diez llamadores y los diez son de presentacion en
+					// pantalla --las tablas (Tr.vue, TableComponent.vue, PivotProp.vue,
+					// TablePivotPropsToSet.vue), las tarjetas (CardComponent.vue), el ModelForm y el
+					// modal de precio final--. Los tres que arman objetos en vez de imprimir texto
+					// (TableComponent items(), remito/ArticlesTable table_items() y
+					// alertas/.../ListArticles table_items()) alimentan un `:items` de b-table, o sea
+					// tambien pantalla. Ningun Excel ni PDF pasa por aca: esos los arma el backend y
+					// el SPA solo descarga el blob.
+					//
+					// 🔴 Y hubo que tocar UNA cosa mas por este cambio, que la verificacion encontro:
+					// ModelForm.vue decidia con `v-if="propertyText(...) != '' || propertyText(...)
+					// == 0"`, y en JS `'' == 0` es TRUE --el string vacio coerciona a 0--, asi que la
+					// cadena vacia seguia entrando por el `v-if` y renderizaba un <span> vacio adentro
+					// de la pildora gris de .model-form__only-show: un recuadro de 34px sin nada,
+					// justo cuando ese componente ya tenia un "Sin datos" preparado para el caso. Se
+					// cambio a `=== 0`, que sigue cubriendo el valor numerico cero (el motivo por el
+					// que esa condicion existe) y deja caer la cadena vacia al else.
+					//
+					// Otros dos efectos, estos si buscados: en las tarjetas
+					// (display/cards/CardComponent.vue) el segundo renglon del titulo desaparece
+					// cuando esa relacion esta vacia --antes decia "S/A"--, y el placeholder de las
+					// celdas editables de TableComponent queda vacio.
+					return ''
 				}
 			}
 			if (from_pivot) {

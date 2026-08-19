@@ -22,10 +22,20 @@
 				<i class="bi bi-chat-square-text"></i>
 				Plantillas
 			</b-button>
+			<b-button
+			:variant="tab == 'conexion' ? 'primary' : 'outline-secondary'"
+			size="sm"
+			@click="tab = 'conexion'">
+				<i class="bi bi-plug"></i>
+				Conexión
+			</b-button>
 		</div>
 
 		<agent-config
 		v-if="tab == 'agente'"></agent-config>
+
+		<connection-config
+		v-else-if="tab == 'conexion'"></connection-config>
 
 		<templates
 		v-else></templates>
@@ -33,15 +43,20 @@
 </template>
 <script>
 import AgentConfig from '@/components/whatsapp/config/AgentConfig'
+import ConnectionConfig from '@/components/whatsapp/config/ConnectionConfig'
 import Templates from '@/components/whatsapp/config/Templates'
 export default {
 	components: {
 		AgentConfig,
+		ConnectionConfig,
 		Templates,
 	},
 	data() {
 		return {
-			// Sección activa dentro del modal de configuración: 'agente' | 'plantillas'.
+			// Sección activa dentro del modal de configuración: 'agente' | 'plantillas' | 'conexion'.
+			// El default sigue siendo 'agente' a propósito: es la solapa que se toca todos los
+			// días. 'conexion' se carga una vez cuando se da de alta el número y no se vuelve
+			// a mirar, así que no gana el primer lugar por ser la última que se agregó.
 			tab: 'agente',
 		}
 	},

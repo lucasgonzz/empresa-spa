@@ -1,16 +1,17 @@
 <template>
-	<b-button
+	<btn-accion
 	v-if="caja.abierta"
-	class="m-l-10"
-	@click.stop="show_movimientos"
-	variant="primary">
-		Mov
-	</b-button>
+	icono="bi bi-receipt"
+	texto="Movimientos"
+	@clicked="show_movimientos"></btn-accion>
 </template>
 <script>
 export default {
 	props: {
 		caja: Object,
+	},
+	components: {
+		BtnAccion: () => import('@/components/caja/components/table-buttons/BtnAccion'),
 	},
 	methods: {
 		show_movimientos() {

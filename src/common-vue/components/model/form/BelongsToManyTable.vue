@@ -1,18 +1,24 @@
 <template>
 	<div class="m-l-15">
 
-		<!-- Botón para abrir el modal de configuración de columnas (solo si hay modelo padre y store relacionado) -->
+		<!--
+			Boton para abrir el modal de configuracion de columnas.
+
+			Solo se dibuja aca cuando nadie mas lo dibuja por nosotros: en el formulario de un
+			modelo, ModelForm lo pone al lado del buscador de la relacion (donde antes estaba el
+			input de "buscar dentro de") y nos pasa show_columns_config_btn en false. Los consumidores
+			que usan esta tabla sueltos --SaleArticlesAttachmentTable-- no tienen buscador al lado,
+			asi que siguen viendolo aca arriba.
+		-->
 		<div
-		v-if="show_btn_columns_config"
+		v-if="show_own_columns_config_btn"
 		class="d-flex justify-content-end m-b-5">
 			<b-button
 			:id="'btm-cols-btn-'+modal_id"
 			v-b-modal="modal_id"
-			size="sm"
-			variant="outline-secondary"
-			title="Configurar columnas visibles">
-				<i class="icon-eye"></i>
-				<i class="icon-list p-l-10"></i>
+			class="btm-columnas-btn"
+			title="Elegir que columnas se ven">
+				<i class="bi bi-layout-three-columns"></i>
 			</b-button>
 		</div>
 
@@ -24,18 +30,29 @@
 		modal-class="props-to-show-modal"
 		body-class="props-to-show-body"
 		footer-class="props-to-show-footer"
-		title="Columnas a mostrar">
+		title="Columnas a mostrar"
+		@show="on_columns_modal_show"
+		@hidden="on_columns_modal_hidden">
 
 			<columns-preferences-config-modal
 			:config_rows="config_rows">
 			</columns-preferences-config-modal>
 
+			<!--
+				Mismo footer que "Propiedades en resultados de busqueda": Cancelar al lado de Listo,
+				los dos del mismo tamano. Antes Listo era un `block` que ocupaba todo el ancho y se
+				leia como una franja azul, que es justo lo que el chasis global de modales
+				(common-vue/sass/_modals.sass) ya evita empujando los botones a la derecha.
+			-->
 			<template #modal-footer>
 				<b-button
-				block
-				@click="save"
-				class="m-t-15"
-				variant="primary">
+				variant="secondary"
+				@click="$bvModal.hide(modal_id)">
+					Cancelar
+				</b-button>
+				<b-button
+				variant="primary"
+				@click="save">
 					Listo
 				</b-button>
 			</template>
@@ -79,6 +96,7 @@ import {
 	default_column_width_for_property,
 	fallback_column_width_px,
 } from '@/common-vue/config/column_preference_defaults'
+import { belongs_to_many_columns_modal_id } from '@/common-vue/helpers/column_preferences_helper'
 
 export default {
 	components: {
@@ -105,11 +123,28 @@ export default {
 			type: Boolean,
 			default: true,
 		},
+		/*
+		 * Si este componente tiene que dibujar el boton de configurar columnas.
+		 * ModelForm lo pone en false porque lo dibuja el mismo, al lado del buscador de la relacion.
+		 */
+		show_columns_config_btn: {
+			type: Boolean,
+			default: true,
+		},
 	},
 	data() {
 		return {
 			/* Filas de configuración de columnas para el modal (orden, visibilidad, ancho) */
 			config_rows: [],
+			/*
+			 * Copia de config_rows tomada al abrir el modal, para poder volver atrás si se cancela.
+			 * ColumnsPreferencesConfigModal edita las filas EN EL LUGAR (mueve el array con splice y
+			 * escribe row.visible), así que sin esta copia "Cancelar" solo cerraba la ventana: los
+			 * cambios descartados seguían vivos en config_rows y se guardaban con el próximo Listo.
+			 */
+			config_rows_snapshot: [],
+			/* True solo entre el click en Listo y el cierre del modal, para no deshacer lo guardado. */
+			columns_saved: false,
 			/* Configuración de pivote activa aplicada a la tabla. Null = usar prop.belongs_to_many por defecto */
 			active_belongs_to_many: this.prop.belongs_to_many,
 		}
@@ -121,7 +156,7 @@ export default {
 		 * Retorno: String con el id del modal b-modal.
 		 */
 		modal_id() {
-			return `btm-cols-${this.parent_model_name}-${this.prop.key}`
+			return belongs_to_many_columns_modal_id(this.parent_model_name, this.prop.key)
 		},
 		/*
 		 * Tipo de preferencia usado como identificador en la API y el store.
@@ -138,6 +173,14 @@ export default {
 		 */
 		show_btn_columns_config() {
 			return !!(this.parent_model_name && this.prop.store)
+		},
+		/*
+		 * Si el boton se dibuja dentro de este componente (arriba de la tabla).
+		 * El modal de configuracion se sigue montando aunque el boton lo dibuje otro.
+		 * Retorno: Boolean.
+		 */
+		show_own_columns_config_btn() {
+			return this.show_btn_columns_config && this.show_columns_config_btn
 		},
 		/*
 		 * Todas las propiedades válidas del modelo relacionado (ej: todas las props de article).
@@ -180,6 +223,26 @@ export default {
 		}
 	},
 	methods: {
+		/*
+		 * Se abre el modal: se guarda una copia de las filas tal como están, para poder restaurarlas
+		 * si el usuario cancela.
+		 * Retorno: void.
+		 */
+		on_columns_modal_show() {
+			this.config_rows_snapshot = this.config_rows.map(row => ({ ...row }))
+			this.columns_saved = false
+		},
+		/*
+		 * Se cerró el modal. Si no fue por Listo (Cancelar, la X, Escape o clic afuera), se deshacen
+		 * los cambios volviendo a la copia.
+		 * Retorno: void.
+		 */
+		on_columns_modal_hidden() {
+			if (this.columns_saved) {
+				return
+			}
+			this.config_rows = this.config_rows_snapshot.map(row => ({ ...row }))
+		},
 		/*
 		 * Arma un identificador único de fila cuando la misma key existe en modelo y pivot.
 		 * Parámetros: source (string), prop_key (string).
@@ -391,9 +454,14 @@ export default {
 		 * Aplica las filas de configuración actuales reconstruyendo active_belongs_to_many.
 		 * Separa las filas visibles por source y reconstruye props_to_show, pivot_props_to_show
 		 * y properties_to_set de forma consistente con lo que espera TableComponent.
+		 *
+		 * Parámetros:
+		 * - rows (Array): filas a aplicar. Tienen que traer `order` coherente con el orden real
+		 *   (ver la nota de save()). Por defecto usa config_rows, que es lo correcto cuando las
+		 *   filas vienen de init_preferences (ahi normalize_rows/get_default_rows ya renumeraron).
 		 * Retorno: void.
 		 */
-		apply_rows_to_active_pivot() {
+		apply_rows_to_active_pivot(rows = this.config_rows) {
 			const belongs = this.prop.belongs_to_many
 
 			/* Mapas de acceso rápido a las definiciones originales por key */
@@ -424,7 +492,7 @@ export default {
 			})
 
 			/* Tomar solo las filas visibles ordenadas por order */
-			const visible_sorted = this.config_rows
+			const visible_sorted = rows
 				.filter(row => row.visible)
 				.sort((a, b) => Number(a.order) - Number(b.order))
 
@@ -502,10 +570,21 @@ export default {
 					source: row.source || 'model_prop',
 				}))
 
-			/* Aplicar inmediatamente sin esperar respuesta de la API */
-			this.apply_rows_to_active_pivot()
+			/*
+			 * Aplicar inmediatamente sin esperar respuesta de la API.
+			 *
+			 * Va `rows_to_save` y NO `config_rows`: el modal de configuracion reordena moviendo los
+			 * elementos del array (splice/unshift/push) y nunca reescribe `row.order`, asi que en
+			 * config_rows el campo `order` queda con el orden ANTERIOR. apply_rows_to_active_pivot
+			 * ordena justamente por ese campo, y por eso la tabla se veia igual que antes hasta
+			 * cerrar y reabrir el modal del modelo: recien ahi init_preferences leia de la API las
+			 * filas con el `order` ya renumerado. rows_to_save es la unica version con el `order`
+			 * sacado de la posicion real (order: index). Bug reportado por Lucas el 13/8/2026.
+			 */
+			this.apply_rows_to_active_pivot(rows_to_save)
 
-			/* Cerrar el modal */
+			/* Cerrar el modal sin que on_columns_modal_hidden deshaga lo que se acaba de guardar */
+			this.columns_saved = true
 			this.$bvModal.hide(this.modal_id)
 
 			/* Guardar en la API de forma asíncrona */
@@ -528,3 +607,5 @@ export default {
 	},
 }
 </script>
+<!-- El estilo de .btm-columnas-btn vive en src/sass/_toolbar_botones.sass: el boton lo dibujan
+     este componente y ModelForm.vue, y los dos se cargan de forma diferida. -->

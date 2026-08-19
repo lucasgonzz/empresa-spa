@@ -9,7 +9,7 @@
 		size="sm">
 			?
 		</b-button>
-		<h4>
+		<h4 data-testid="compra-total">
 			{{ price(provider_order.total) }}
 		</h4>
 	</div>

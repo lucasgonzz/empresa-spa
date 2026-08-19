@@ -16,6 +16,9 @@ import chart from '@/store/chart/index'
 
 import papelera from '@/store/papelera/index'
 
+// Estado de la demo del lead (misión 51). Arranca apagado: para un cliente real no hace nada.
+import demo from '@/store/demo'
+
 import article from '@/store/article'
 import brand from '@/store/brand'
 import category from '@/store/category'
@@ -35,6 +38,7 @@ import current_acount_payment_method from '@/store/current_acount_payment_method
 import client from '@/store/client'
 import seller from '@/store/seller'
 import price_type from '@/store/price_type'
+import sale_tax from '@/store/sale_tax'
 import sale from '@/store/sale/index'
 import provider_order from '@/store/provider_order'
 import provider_order_status from '@/store/provider_order_status'
@@ -125,6 +129,7 @@ import caja from '@/store/caja'
 import apertura_caja from '@/store/apertura_caja'
 import movimiento_caja from '@/store/movimiento_caja'
 import concepto_movimiento_caja from '@/store/concepto_movimiento_caja'
+import caja_liquidacion_config from '@/store/caja_liquidacion_config'
 
 import default_payment_method_caja from '@/store/default_payment_method_caja'
 
@@ -184,6 +189,9 @@ import whatsapp_bot_config from '@/store/whatsapp_bot_config'
 import whatsapp_chat from '@/store/whatsapp_chat'
 import whatsapp_template from '@/store/whatsapp_template'
 
+// Chat del asistente IA (botón flotante + panel, extensión asistente_ia).
+import ai_chat from '@/store/ai_chat'
+
 import price_type_surchage from '@/store/price_type_surchage'
 
 import payment_plan from '@/store/payment_plan'
@@ -216,6 +224,10 @@ import sale_channel from '@/store/sale_channel'
 import article_ubication from '@/store/article_ubication'
 import stock_suggestion from '@/store/stock_suggestion'
 import stock_suggestion_article from '@/store/stock_suggestion_article'
+import purchase_suggestion from '@/store/purchase_suggestion'
+import purchase_suggestion_article from '@/store/purchase_suggestion_article'
+import offer_suggestion from '@/store/offer_suggestion'
+import offer_suggestion_line from '@/store/offer_suggestion_line'
 
 import article_price_range from '@/store/article_price_range'
 
@@ -227,6 +239,7 @@ import search_by_cuit from './search_by_cuit'
 import tag from '@/store/tag'
 
 import import_status from '@/store/import_status'
+import excel_analysis from '@/store/excel_analysis'
 import filter_history from '@/store/filter_history'
 
 import provider_order_afip_ticket_iva from '@/store/provider_order_afip_ticket_iva'
@@ -246,6 +259,7 @@ import c_a_payment_method_type from '@/store/c_a_payment_method_type'
 import sale_status from '@/store/sale_status'
 import sale_sender_info from '@/store/sale_sender_info'
 import inputs_size from '@/store/inputs_size'
+import actividad_cliente from '@/store/actividad_cliente'
 
 
 Vue.use(Vuex)
@@ -272,7 +286,9 @@ export default new Vuex.Store({
         chart,
 
         papelera,
-        
+
+        demo,
+
         article,
         brand,
         category,
@@ -292,6 +308,7 @@ export default new Vuex.Store({
         client,
         seller,
         price_type,
+        sale_tax,
         sale,
         provider_order,
         provider_order_status,
@@ -382,6 +399,7 @@ export default new Vuex.Store({
         apertura_caja,
         movimiento_caja,
         concepto_movimiento_caja,
+        caja_liquidacion_config,
 
         default_payment_method_caja,
 
@@ -437,6 +455,8 @@ export default new Vuex.Store({
         whatsapp_chat,
         whatsapp_template,
 
+        ai_chat,
+
         price_type_surchage,
 
         payment_plan,
@@ -468,6 +488,10 @@ export default new Vuex.Store({
         article_ubication,
         stock_suggestion,
         stock_suggestion_article,
+        purchase_suggestion,
+        purchase_suggestion_article,
+        offer_suggestion,
+        offer_suggestion_line,
 
         article_price_range,
 
@@ -479,6 +503,7 @@ export default new Vuex.Store({
         tag,
 
         import_status,
+        excel_analysis,
         filter_history,
 
         provider_order_afip_ticket_iva,
@@ -497,5 +522,6 @@ export default new Vuex.Store({
         sale_status,
         sale_sender_info,
         inputs_size,
+        actividad_cliente,
     }
 })
