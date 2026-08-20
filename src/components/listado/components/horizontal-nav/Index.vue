@@ -22,6 +22,17 @@
 		<!-- este bloque entero de sus vecinos, pero este div es su unico hijo. -->
 		<div class="j-end align-center w-100 view-header__group">
 
+			<!--
+				Filtro por sucursal (19/8/2026). Va PRIMERO, o sea a la izquierda del boton de
+				actualizar el listado, que es donde lo pidio Lucas.
+
+				No lleva margen propio: la separacion con el boton de al lado sale del `gap` de
+				.view-header__group, igual que la de los tres botones entre si. Ese es todo el
+				punto del comentario de arriba — un margen aca lo dejaria mas separado que sus
+				vecinos.
+			-->
+			<select-address></select-address>
+
 			<btn-update-article-list
 			class="toolbar-btn--desde-md"></btn-update-article-list>
 
@@ -63,6 +74,7 @@
 <script>
 export default {
 	components: {
+		SelectAddress: () => import('@/components/listado/components/horizontal-nav/SelectAddress'),
 		BtnUpdateArticleList: () => import('@/components/listado/components/horizontal-nav/BtnUpdateArticleList'),
 		BtnInventoryPerformance: () => import('@/components/listado/components/horizontal-nav/BtnInventoryPerformance'),
 		StockSuggestion: () => import('@/components/listado/components/horizontal-nav/stock-suggestion/Index'),

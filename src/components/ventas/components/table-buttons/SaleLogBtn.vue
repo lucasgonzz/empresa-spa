@@ -5,7 +5,9 @@
 		class="m-l-5"
 		@click.stop="show_sale_log"
 		variant="outline-secondary"
+		title="Ver auditoría de la venta"
 		size="sm">
+			<i class="bi bi-clock-history"></i>
 			Log
 		</b-button>
 

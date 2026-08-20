@@ -77,6 +77,16 @@ export default {
 			this.$store.commit(this.model_name + '/set_filtered_without_filter_form', false)
 			this.$store.commit(this.model_name + '/setGlobalSearchPayload', null)
 
+			// Y los filtros que aporta un control SIEMPRE VISIBLE de la barra del módulo (hoy: el
+			// select de sucursal del Listado). Sin esta línea el botón dejaba de cumplir lo que
+			// promete su propio tooltip —"Quitar TODOS los filtros y volver al listado COMPLETO"—:
+			// runListadoPorDefecto vuelve a leer estos filtros del state en cada request, así que
+			// el "listado completo" seguía recortado por la sucursal elegida.
+			//
+			// Es una mutación del factory y arranca en `[]` para todos los modelos, así que en
+			// cualquier módulo que no tenga control de barra esto es un no-op.
+			this.$store.commit(this.model_name + '/set_extra_filters_de_barra', [])
+
 			this.$store.dispatch(this.model_name + '/runListadoPorDefecto')
 		},
 		/**

@@ -7,13 +7,15 @@
 		size="sm">
 			<b-button
 			variant="primary"
+			title="Etiqueta de envío (PDF)"
 			@click.stop="abrir_modal_remitente">
-				<i class="icon-tag"></i>
+				<i class="bi bi-tag"></i>
 			</b-button>
 			<b-button
 			variant="outline-primary"
+			title="Datos de envío"
 			@click.stop="abrir_modal_envio">
-				<i class="icon-edit"></i>
+				<i class="bi bi-pencil"></i>
 			</b-button>
 		</b-button-group>
 

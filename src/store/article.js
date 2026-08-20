@@ -54,8 +54,69 @@ export default __base_store({
 		 * (p. ej. buscador-articulos). Oculta actualizar/eliminar masivos por filtro en UI.
 		 */
 		filtered_without_filter_form: false,
+
+		/**
+		 * Sucursal elegida en el select de la barra del Listado. 0 = todas las sucursales, que es
+		 * el estado por defecto: entrar al Listado no filtra por sucursal.
+		 *
+		 * Convive con `extra_filters_de_barra` (state del factory) y no lo reemplaza: el select
+		 * necesita un escalar para su v-model, y el request necesita el array con la forma
+		 * { key, operator, value }. Los dos los escribe la MISMA mutation, de una sola vez, para
+		 * que no puedan quedar diciendo cosas distintas.
+		 */
+		address_id_filtro: 0,
 	},
 	mutations: {
+		/**
+		 * Elige la sucursal por la que se filtra el Listado, y deja armado el filtro extra que
+		 * `runGlobalSearch` le manda al backend en cada request.
+		 *
+		 * El operador `address_stock_seteado` lo entiende ExtraFiltersHelper de la API: deja pasar
+		 * los artículos que tienen seteada la relación con esa sucursal, con stock 0, negativo o
+		 * positivo. Con 0 no se manda ningún filtro (todas las sucursales).
+		 *
+		 * La `key` va en 'address_id' aunque el backend no la use para nada en este operador: el
+		 * helper descarta los filtros sin `key` antes de mirar el operador, así que omitirla haría
+		 * que el filtro se ignorara en silencio.
+		 *
+		 * @param {Object} state Estado del módulo.
+		 * @param {Number} value id de la sucursal, o 0 para todas.
+		 */
+		set_address_id_filtro(state, value) {
+			state.address_id_filtro = value
+
+			if (!value) {
+				state.extra_filters_de_barra = []
+				return
+			}
+
+			state.extra_filters_de_barra = [
+				{
+					key: 'address_id',
+					operator: 'address_stock_seteado',
+					value: value,
+				}
+			]
+		},
+		/**
+		 * Override de la mutation del factory, para que el select de sucursal no se desincronice
+		 * del filtro que efectivamente se manda.
+		 *
+		 * Quien la llama es el boton "Quitar filtros" (BtnRestartFilter), que es generico y no sabe
+		 * que existe `address_id_filtro`. Sin este override, ese boton dejaba el array vacio —o sea
+		 * el listado sin filtrar— pero el select seguia mostrando una sucursal elegida: la pantalla
+		 * diciendo una cosa y la consulta haciendo otra, que es peor que cualquiera de las dos.
+		 *
+		 * @param {Object} state Estado del módulo.
+		 * @param {Array} value Filtros de barra. Vacío = se limpiaron.
+		 */
+		set_extra_filters_de_barra(state, value) {
+			state.extra_filters_de_barra = value
+
+			if (!value.length) {
+				state.address_id_filtro = 0
+			}
+		},
 		/**
 		 * Guarda explicación/steps del precio final (usado en UI).
 		 */
