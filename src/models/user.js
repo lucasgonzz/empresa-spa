@@ -119,6 +119,28 @@ export default {
 			],
 		},
 		/*
+		 * Mision costo-bruto-por-condicion-fiscal (20/8/2026): como se cargan los costos en esta
+		 * cuenta. Es el default del formulario del listado; ahi mismo se puede cambiar por carga.
+		 *
+		 * Solo aplica a Responsable Inscripto: el Monotributista carga siempre el bruto (recibe
+		 * Factura B, donde el IVA no viene discriminado y el neto no figura en ningun lado), asi
+		 * que para el este switch se oculta -- no gobierna nada y estaria invitando a tocarlo.
+		 *
+		 * 🔴 A diferencia de las dos opciones de arriba, cambiar esto NO recalcula ningun precio:
+		 * no toca el costo de los articulos ya cargados, solo como se interpreta el proximo numero
+		 * que alguien tipee.
+		 */
+		{
+			text: 'Los costos se cargan con IVA incluido',
+			key: 'costos_cargados_con_iva',
+			type: 'checkbox',
+			descriptions: [
+				'Activalo si al cargar un articulo o importar un Excel escribis el costo tal cual figura en la factura del proveedor, con IVA. El sistema le saca el IVA y guarda el costo sin IVA, que es el que usa para calcular los precios.',
+				'Desactivado, el costo que cargues se toma como precio de lista sin IVA. Podes cambiarlo articulo por articulo desde el formulario del listado.',
+			],
+			v_if_function: 'es_responsable_inscripto_v_if_function',
+		},
+		/*
 		 * Prompt 266 (Fase 2, Capa 3): modo "precio de etiqueta incluye la tarjeta mas cara".
 		 * Si esta activo, el precio final del articulo (el que se muestra en LISTADO y VENDER) ya
 		 * tiene incorporado el recargo del metodo de pago mas caro configurado. Al elegir un metodo
