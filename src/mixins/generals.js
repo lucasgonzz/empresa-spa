@@ -635,6 +635,19 @@ export default {
 
             let price
 
+            /*
+                Marca si el precio salio LITERALMENTE de item.pivot.price. Es lo unico que dice
+                en que moneda esta ese numero: el pivot se guarda en la moneda de la venta que lo
+                creo, asi que ese precio NO se vuelve a cotizar.
+
+                Ojo: NO alcanza con mirar si el item tiene pivot. De las cinco ramas de abajo,
+                una sola toma el precio del pivot; las otras cuatro lo toman del CATALOGO, que
+                siempre esta en pesos, y esas si hay que cotizarlas aunque el item tenga pivot.
+                Ese era el bug: editando una venta en dolares, cualquier item que cayera en una
+                rama de catalogo teniendo pivot se mostraba en pesos crudos.
+            */
+            let price_desde_pivot = false
+
             // Array de descripción del proceso de cálculo del precio para este item
             let item_des = []
 
@@ -686,6 +699,8 @@ export default {
             ) {
 
                 price = item.pivot.price
+                // Unica rama donde el precio viene del pivot: ya esta en la moneda de la venta.
+                price_desde_pivot = true
                 item_des.push('Precio del pivot (venta anterior): ' + this.price(price))
 
                 // Ajuste IVA sobre el precio del pivot
@@ -768,7 +783,7 @@ export default {
 
             // Cotización de moneda (se aplica al final, fuera de todas las ramas)
             let price_before_moneda = price
-            price = this.check_moneda(item, price, from_pivot)
+            price = this.check_moneda(item, price, from_pivot, price_desde_pivot)
             if (Number(price) !== Number(price_before_moneda)) {
                 item_des.push('Cotizacion moneda: ' + this.price(price_before_moneda) + ' -> ' + this.price(price))
             }
@@ -781,54 +796,85 @@ export default {
 
             return price
         },
-        check_moneda(item, price, from_pivot) {
+        /**
+         * Decide si el precio que viene de getPriceVender hay que llevarlo a la moneda de la
+         * venta en curso.
+         *
+         * El guard historico era `typeof item.pivot == 'undefined'`, o sea "si el item tiene
+         * pivot no cotices". Estaba mal: lo que importa no es que el item TENGA pivot, sino que
+         * el precio HAYA SALIDO del pivot. Cuatro de las cinco ramas de getPriceVender toman el
+         * precio del catalogo (en pesos) y esas hay que cotizarlas igual, tenga pivot o no.
+         *
+         * @param {Object} item
+         * @param {Number} price
+         * @param {Boolean} from_pivot          Si se esta editando una venta previa.
+         * @param {Boolean} price_desde_pivot   Si el precio salio literalmente de item.pivot.price.
+         */
+        check_moneda(item, price, from_pivot, price_desde_pivot = false) {
 
+            // Los items con price_type_monedas traen su propia moneda: no se tocan. Igual que hoy.
             if (
-                typeof item.price_type_monedas == 'undefined'
-                || !item.price_type_monedas.length
+                typeof item.price_type_monedas != 'undefined'
+                && item.price_type_monedas.length
             ) {
-
-                if (typeof item.pivot == 'undefined') {
-
-                    if (this.$store.state.vender.moneda_id == 2) {
-                        // La venta es en dolares
-
-
-                        if (!item.cost_in_dollars) {
-                            price = this.cotizar_a_dolar(price)
-                            // console.log('luego de cotizar_a_dolar: ')
-                            // console.log(price)
-                        } else {
-                            if (this.owner.cotizar_precios_en_dolares) {
-                                price = this.cotizar_a_dolar(price)
-                                // console.log('luego de cotizar_a_dolar: ')
-                                // console.log(price)
-                            } else {
-                                // console.log('no se cotizo a dolar')
-                            }
-                        } 
-
-                    } else if (this.$store.state.vender.moneda_id == 1) {
-
-                        // La venta es en pesos
-                        
-                        if (
-                            item.cost_in_dollars
-                            && !this.owner.cotizar_precios_en_dolares
-                        ) {
-                            price = this.cotizar_a_peso(price)
-                            // console.log('luego de cotizar_a_peso: ')
-                            // console.log(price)
-                        } else {
-                            // console.log('no se cotizo a peso')
-                        }
-
-                    }
-                } else {
-                    // console.log('no entro porque tiene pivot')
-                }
+                return price
             }
-            
+
+            /*
+                Si el precio salio del pivot ya esta en la moneda de la venta que se cargo, y esa
+                venta es la que definio vender.moneda_id. Convertirlo seria cotizar dos veces.
+            */
+            if (price_desde_pivot) {
+                return price
+            }
+
+            return this.convertir_precio_a_moneda_de_la_venta(item, price)
+        },
+        /**
+         * Convierte un precio de CATALOGO (en pesos) a la moneda de la venta en curso.
+         * Es el cuerpo que antes vivia adentro del if de check_moneda; no cambia ninguna regla.
+         *
+         * @param {Object} item
+         * @param {Number} price
+         * @returns {Number}
+         */
+        convertir_precio_a_moneda_de_la_venta(item, price) {
+
+            /*
+                Sin cotizacion no se convierte nada. Antes este guard no hacia falta tanto porque
+                la conversion corria en muchos menos casos; ahora que corre tambien con items que
+                tienen pivot, un valor_dolar en 0 o null dejaria el precio en Infinity o en NaN.
+            */
+            if (!Number(this.$store.state.vender.valor_dolar)) {
+                return price
+            }
+
+            if (this.$store.state.vender.moneda_id == 2) {
+                // La venta es en dolares
+
+                if (!item.cost_in_dollars) {
+                    price = this.cotizar_a_dolar(price)
+                } else {
+                    if (this.owner.cotizar_precios_en_dolares) {
+                        price = this.cotizar_a_dolar(price)
+                    }
+                }
+
+            } else if (this.$store.state.vender.moneda_id == 1) {
+
+                // La venta es en pesos
+
+                if (
+                    item.cost_in_dollars
+                    && !this.owner.cotizar_precios_en_dolares
+                ) {
+                    price = this.cotizar_a_peso(price)
+                }
+
+            }
+
+            // moneda_id null (presupuesto sin moneda): no matchea ninguna rama y el precio
+            // vuelve tal cual. Comportamiento de hoy, se conserva.
             return price
         },
         cotizar_a_peso(price) {
@@ -1070,6 +1116,16 @@ export default {
             }
             return '-'
         },
+        /**
+         * 🔴 ESTA FUNCION NO ESTA EN EL CAMINO DE VENDER. NO LA "ARREGLES" JUNTO CON check_moneda.
+         *
+         * Su unico consumidor en toda la SPA es src/mixins/online.js. Su rama de pivot hace
+         * `price * article.pivot.with_dolar`, tratando with_dolar como COTIZACION y no como
+         * booleano —coherente con que la columna es decimal—. Ademas SaleHelper::attachArticle()
+         * nunca escribe pivot.with_dolar, asi que para toda venta creada desde Vender ese campo
+         * es null y la multiplicacion nunca corre. Meterle una division para "corregir la moneda"
+         * romperia online.js sin arreglar nada de Vender.
+         */
         articlePrice(article, from_pivot = false, formated = true, in_dolars = false) {
             let price
             if (from_pivot) {
