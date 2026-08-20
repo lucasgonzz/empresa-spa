@@ -101,6 +101,20 @@ export default function __base_store(options = {}) {
 			// pueda repetir la misma búsqueda solo cambiando la página, sin volver a armar el payload.
 			global_search_payload: null,
 
+			// Filtros extra que vienen de un control SIEMPRE VISIBLE de la barra del módulo (hoy: el
+			// select de sucursal del Listado de artículos), en la forma { key, operator, value } que
+			// entiende ExtraFiltersHelper del backend.
+			//
+			// 🔴 Vive acá y NO adentro de global_search_payload, por la misma razón que state.filters:
+			// el payload se persiste para que la paginación repita la búsqueda, así que un criterio
+			// guardado ahí adentro seguiría aplicándose después de que el usuario lo sacó. Los
+			// criterios que el usuario puede cambiar en cualquier momento se leen del state EN CADA
+			// request; el payload persistido solo describe la búsqueda de texto.
+			//
+			// Arranca vacío y ningún módulo lo escribe salvo el que lo necesita: para todos los demás
+			// stores construidos con este factory, esto no cambia absolutamente nada.
+			extra_filters_de_barra: [],
+
 			// Desglose de coincidencias de la ultima busqueda del buscador general (grupo 274): que
 			// propiedad aporto cada resultado de la pagina que se esta viendo. null cuando la respuesta
 			// no lo trae (listado por defecto, o busqueda sin criterio de texto).
@@ -398,6 +412,19 @@ export default function __base_store(options = {}) {
 		 */
 		setGlobalSearchPayload(state, value) {
 			state.global_search_payload = value
+		},
+		/**
+		 * Reemplaza los filtros extra que aporta la barra del módulo (ver doc del state).
+		 *
+		 * Reemplaza y no acumula: el control de la barra es la única fuente de verdad de su propio
+		 * criterio, así que mandar el array entero es lo que garantiza que sacar el filtro lo saque
+		 * de verdad. Un push dejaría el criterio viejo adentro para siempre.
+		 *
+		 * @param {Object} state Estado del módulo.
+		 * @param {Array} value Filtros en la forma { key, operator, value }.
+		 */
+		set_extra_filters_de_barra(state, value) {
+			state.extra_filters_de_barra = value
 		},
 		/**
 		 * Guarda el desglose de coincidencias de la ultima busqueda, o lo limpia con null.
@@ -819,13 +846,35 @@ export default function __base_store(options = {}) {
 				}
 			})
 
-			if (filtros_con_valor > 0) {
+			// Los filtros de barra cuentan igual que los de columna para este flag, y no es un
+			// detalle: entran por el MISMO agujero que describe el comentario de arriba. El control
+			// de barra dispatchea `{ page: 1 }` sin `props`, con lo cual `es_busqueda_nueva` queda
+			// en false, el commit de mas arriba no corre, y el flag se queda en el true que le dejo
+			// runListadoPorDefecto al entrar al modulo.
+			//
+			// Sin esto, con una sucursal elegida el sistema entero cree que esta mostrando el
+			// listado COMPLETO mientras la tabla esta filtrada: el boton de limpiar filtros no se
+			// monta (su v-if pide !listado_por_defecto) y el tooltip del dropdown de acciones
+			// masivas dice "Acciones sobre todos (N)" sobre un conjunto recortado.
+			if (filtros_con_valor > 0 || state.extra_filters_de_barra.length) {
 				commit('set_listado_por_defecto', false)
 			}
 
+			// Filtros extra que viajan al backend: los de la búsqueda persistida (los que arma el
+			// buscador general con sus filtros fijos) MÁS los del control de barra del módulo.
+			//
+			// Se concatenan y no se pisan: son dos criterios distintos que el usuario puede tener
+			// puestos a la vez (ej: "categoría Bebidas" en el buscador y "Sucursal Centro" en la
+			// barra), y quedarse con uno solo haría desaparecer el otro sin que nada lo muestre.
+			//
+			// Los de barra se leen del state EN CADA request, igual que column_filters y por el
+			// mismo motivo (ver la doc de extra_filters_de_barra en el state).
+			let extra_filters_del_payload = (search_payload && search_payload.extra_filters) ? search_payload.extra_filters : []
+			let extra_filters_request = extra_filters_del_payload.concat(state.extra_filters_de_barra)
+
 			return axios.post(
 				'/api/global-search/' + generals.methods.routeString(state.model_name) + '?page=' + page,
-				Object.assign({}, search_payload, {per_page: per_page, filters: column_filters})
+				Object.assign({}, search_payload, {per_page: per_page, filters: column_filters, extra_filters: extra_filters_request})
 			)
 				.then(res => {
 					if (!silencioso) {

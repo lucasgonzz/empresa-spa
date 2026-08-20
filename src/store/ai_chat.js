@@ -18,7 +18,7 @@ axios.defaults.baseURL = process.env.VUE_APP_API_URL
  * - POST   ai-conversations/{id}/messages            -> 201 { user_message, assistant_message }
  *                                                       | 409 { code: 'respuesta_en_curso' } si ya hay un assistant pendiente
  * - GET    ai-conversations/{id}/messages/{msg_id}   -> { model } (para el aviso liviano del broadcast y el polling)
- * - PUT    user/set-chat-ia-preferencias             -> 200 (body { chat_ia_fab_position, chat_ia_sidebar_width }, los dos opcionales)
+ * - PUT    user/set-chat-ia-preferencias             -> 200 (body { chat_ia_fab_position, chat_ia_sidebar_width, chat_ia_panel_width }, los tres opcionales)
  *
  * El evento `ChatIaMensajeActualizado` (canal privado `chat.user.{auth_user_id}`) avisa solo
  * `{ ai_conversation_id, ai_message_id, estado }`: el texto del mensaje se busca SIEMPRE por
@@ -99,6 +99,12 @@ export default {
 		// no solo en el componente porque el panel se desmonta al cerrarse y auth.user
 		// no se refresca hasta el próximo arranque.
 		sidebar_width: null,
+
+		// Ancho elegido del MODAL ENTERO en esta sesión (19/8/2026). Misma mecánica y
+		// mismo motivo que sidebar_width, del que es independiente: uno es la columna de
+		// conversaciones y el otro es el modal que la contiene. null = usar
+		// `user.chat_ia_panel_width` o el default de 984.
+		panel_width: null,
 
 		// true cuando la espera de la respuesta pasó los 180s sin resolverse (el texto
 		// de demora lo muestra la conversación; ver R8 del plan: cola compartida).
@@ -220,6 +226,9 @@ export default {
 		},
 		setSidebarWidth(state, value) {
 			state.sidebar_width = value
+		},
+		setPanelWidth(state, value) {
+			state.panel_width = value
 		},
 		setRespuestaDemorada(state, value) {
 			state.respuesta_demorada = value
@@ -599,11 +608,18 @@ export default {
 		},
 		/**
 		 * Persiste las preferencias de UI de la PERSONA (posición del botón flotante,
-		 * ancho de la sidebar) con un debounce de 500 ms: una sola escritura por gesto,
-		 * y si dos gestos se pisan los payloads se funden. El endpoint resuelve con
-		 * Auth::user() (mismo criterio que set-dark-mode: es por persona, no por cuenta).
+		 * ancho de la sidebar, ancho del modal) con un debounce de 500 ms: una sola
+		 * escritura por gesto, y si dos gestos se pisan los payloads se funden. El endpoint
+		 * resuelve con Auth::user() (mismo criterio que set-dark-mode: es por persona, no
+		 * por cuenta).
 		 *
-		 * @param {Object} payload { chat_ia_fab_position?, chat_ia_sidebar_width? }
+		 * ⚠️ El .catch() de abajo se traga el error a propósito (una coordenada perdida no
+		 * justifica molestar al usuario), y eso vuelve INVISIBLE un 422 por rango. Los
+		 * rangos que valida el endpoint y los que clampa Panel.vue tienen que decir el
+		 * mismo número: si divergen, el ancho se pierde en silencio y recién se nota al
+		 * recargar.
+		 *
+		 * @param {Object} payload { chat_ia_fab_position?, chat_ia_sidebar_width?, chat_ia_panel_width? }
 		 */
 		savePreferences(context, payload) {
 			preferencias_pendientes = Object.assign({}, preferencias_pendientes || {}, payload)

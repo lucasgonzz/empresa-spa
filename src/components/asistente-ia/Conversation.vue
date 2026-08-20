@@ -297,10 +297,19 @@ export default {
 	overflow-y: auto
 	padding: 16px 18px 6px 18px
 
+	// 🔴 900 y no 640 (decisión de Lucas, 19/8/2026). El tope viejo lo alcanzaba el
+	// panel con apenas 942px de ancho, así que desde el default nuevo de 984 en adelante
+	// TODO lo que se ganaba estirando el modal se convertía en margen vacío y la
+	// conversación no se movía: la manija existía pero no servía para nada.
+	//
+	// Sigue habiendo un tope, y no es capricho: una línea de texto muy larga se lee peor
+	// porque el ojo pierde el renglón al volver. 900 es el punto donde estirar el panel
+	// hasta el máximo todavía agranda la conversación sin que las líneas se vuelvan
+	// incómodas. Sacarlo del todo NO es "mejor": es volver al problema que el tope evita.
 	&__mensajes
 		display: flex
 		flex-direction: column
-		max-width: 640px
+		max-width: 900px
 		margin: 0 auto
 
 	&__aviso
@@ -351,10 +360,12 @@ export default {
 			object-fit: cover
 			display: block
 
-	// El puente al submódulo cuelga del primer mensaje del asistente (D24).
+	// El puente al submódulo cuelga del primer mensaje del asistente (D24). El margen
+	// superior era -6px para pegarlo al texto suelto que el asistente tenía antes; con la
+	// viñeta (19/8/2026) ese negativo lo mete contra el borde del recuadro, así que va 0.
 	&__origen
 		align-self: flex-start
-		margin: -6px 0 14px 0
+		margin: 0 0 14px 0
 		padding: 0 2px
 
 	&__demora
