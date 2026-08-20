@@ -268,6 +268,24 @@ export default {
 				this.cost_incluye_iva = this.cuenta_es_monotributista
 					? true
 					: !!(this.owner && this.owner.costos_cargados_con_iva)
+
+				/*
+				 * 🔴 El flag SIEMPRE viaja, y arranca en false. No es opcional.
+				 *
+				 * `article.cost` en el store es el NETO que devolvio el servidor, y el backend
+				 * decide si descomponer con costo_tipeado_es_bruto($user, $cost_incluye_iva): si la
+				 * clave no llega, cae al default de la cuenta, que para Monotributista es "bruto"
+				 * incondicional. O sea que un guardado que ni toca el costo -- corregir el nombre,
+				 * cambiar la categoria -- le hacia el back-out a un numero que YA era neto:
+				 * 1000 -> 826,45 -> 683,01, un 21% por guardado y sin necesidad de ninguna
+				 * secuencia rara. Lo encontro el segundo checker de la Fase 5, midiendolo.
+				 *
+				 * Escribir este flag NO es "mutar la fila del listado" como hacia la version que
+				 * introdujo ese bug: no existe ninguna columna `cost_incluye_iva`, no se muestra en
+				 * ningun lado y no cambia el costo. Es una declaracion sobre el request que se esta
+				 * por armar. El costo en si lo sigue tocando unicamente set_costo().
+				 */
+				this.$set(this.article, 'cost_incluye_iva', false)
 			},
 		},
 	},
