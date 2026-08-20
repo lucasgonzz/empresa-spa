@@ -642,9 +642,10 @@ export default {
 
                 Ojo: NO alcanza con mirar si el item tiene pivot. De las cinco ramas de abajo,
                 una sola toma el precio del pivot; las otras cuatro lo toman del CATALOGO, que
-                siempre esta en pesos, y esas si hay que cotizarlas aunque el item tenga pivot.
-                Ese era el bug: editando una venta en dolares, cualquier item que cayera en una
-                rama de catalogo teniendo pivot se mostraba en pesos crudos.
+                esta en la moneda del ARTICULO y no en la de la venta, asi que hay que pasarlo a
+                la moneda de la venta aunque el item tenga pivot. Ese era el bug: editando una
+                venta en dolares, cualquier item que cayera en una rama de catalogo teniendo
+                pivot se mostraba sin convertir.
             */
             let price_desde_pivot = false
 
@@ -803,11 +804,15 @@ export default {
          * El guard historico era `typeof item.pivot == 'undefined'`, o sea "si el item tiene
          * pivot no cotices". Estaba mal: lo que importa no es que el item TENGA pivot, sino que
          * el precio HAYA SALIDO del pivot. Cuatro de las cinco ramas de getPriceVender toman el
-         * precio del catalogo (en pesos) y esas hay que cotizarlas igual, tenga pivot o no.
+         * precio del catalogo -que esta en la moneda del ARTICULO, no en la de la venta- y esas
+         * hay que convertirlas igual, tenga pivot o no.
          *
          * @param {Object} item
          * @param {Number} price
-         * @param {Boolean} from_pivot          Si se esta editando una venta previa.
+         * @param {Boolean} from_pivot          Si se esta editando una venta previa. El cuerpo NO
+         *                                      lo lee: queda en la firma por compatibilidad con la
+         *                                      llamada de getPriceVender, que lo sigue pasando. La
+         *                                      decision de convertir la toma price_desde_pivot.
          * @param {Boolean} price_desde_pivot   Si el precio salio literalmente de item.pivot.price.
          */
         check_moneda(item, price, from_pivot, price_desde_pivot = false) {
@@ -831,7 +836,14 @@ export default {
             return this.convertir_precio_a_moneda_de_la_venta(item, price)
         },
         /**
-         * Convierte un precio de CATALOGO (en pesos) a la moneda de la venta en curso.
+         * Lleva un precio de CATALOGO a la moneda de la venta en curso.
+         *
+         * Ojo con la direccion: el precio de catalogo esta en la moneda del ARTICULO, que no es
+         * necesariamente pesos. Para un articulo con cost_in_dollars y
+         * owner.cotizar_precios_en_dolares apagado, el final_price esta EN DOLARES -por eso
+         * existe cotizar_a_peso()-. O sea que esto no es 'pasar de pesos a la moneda de la
+         * venta': es pasar de la moneda del articulo a la moneda de la venta.
+         *
          * Es el cuerpo que antes vivia adentro del if de check_moneda; no cambia ninguna regla.
          *
          * @param {Object} item
@@ -840,17 +852,27 @@ export default {
          */
         convertir_precio_a_moneda_de_la_venta(item, price) {
 
-            /*
-                Sin cotizacion no se convierte nada. Antes este guard no hacia falta tanto porque
-                la conversion corria en muchos menos casos; ahora que corre tambien con items que
-                tienen pivot, un valor_dolar en 0 o null dejaria el precio en Infinity o en NaN.
-            */
-            if (!Number(this.$store.state.vender.valor_dolar)) {
-                return price
-            }
-
             if (this.$store.state.vender.moneda_id == 2) {
                 // La venta es en dolares
+
+                /*
+                    Sin cotizacion no se puede pasar a dolares: cotizar_a_dolar DIVIDE por
+                    valor_dolar, y un 0 deja el precio en Infinity.
+
+                    El guard va ADENTRO de esta rama y no al principio de la funcion, y es
+                    deliberado: la rama de pesos MULTIPLICA, asi que con valor_dolar en 0
+                    muestra $0 -roto, pero a la vista-. Si se cortara antes, ese mismo item se
+                    mostraria con su precio en dolares como si fueran pesos: roto y creible,
+                    que es peor. Un $0 se ve y se corrige; un precio plausible que esta mal se
+                    cobra. Preservar el comportamiento visible del camino de pesos es la
+                    decision, no un olvido.
+
+                    Y el 0 llega por un camino normal: en total-previus-sales/Moneda.vue, si el
+                    operador vacia el input, Number('') es 0 y eso se commitea al store.
+                */
+                if (!Number(this.$store.state.vender.valor_dolar)) {
+                    return price
+                }
 
                 if (!item.cost_in_dollars) {
                     price = this.cotizar_a_dolar(price)
