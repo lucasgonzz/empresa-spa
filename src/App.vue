@@ -22,6 +22,12 @@
         <afip-reenviar-facturas></afip-reenviar-facturas>
         <articles-stock-minimo></articles-stock-minimo>
         <synced-version-notifications></synced-version-notifications>
+        <!--
+            Cotización del dólar. Se autogatea en su propia raíz (extensión + rol), igual que
+            whatsapp-sidebar-host y el botón del asistente IA: montarlo acá no significa que se
+            ejecute para todos.
+        -->
+        <cotizacion-dolar-modal></cotizacion-dolar-modal>
 
         <!--
             Panel de tutoriales de la demo (misión 51, corregido por la 52). El v-if es la guarda
@@ -86,6 +92,7 @@ export default {
         AfipReenviarFacturas: () => import('@/components/common/afip-reenviar-facturas/Index'),
         ArticlesStockMinimo: () => import('@/components/common/ArticlesStockMinimo'),
         SyncedVersionNotifications: () => import('@/components/common/SyncedVersionNotifications'),
+        CotizacionDolarModal: () => import('@/components/common/cotizacion-dolar/Modal'),
         // Carga diferida: sin demo, este chunk no se descarga nunca (misión 51).
         PanelDemo: () => import('@/components/demo/PanelDemo'),
     },

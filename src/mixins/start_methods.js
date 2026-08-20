@@ -1,7 +1,8 @@
 import set_employee_vender from '@/mixins/set_employee_vender'
 import inventory_performance from '@/mixins/inventory_performance'
+import cotizacion_dolar from '@/mixins/cotizacion_dolar'
 export default {
-	mixins: [set_employee_vender, inventory_performance],
+	mixins: [set_employee_vender, inventory_performance, cotizacion_dolar],
 	methods: {
 		startMethods() {
 			console.log('llamando startMethods')
@@ -40,6 +41,10 @@ export default {
 		this.check_synced_version_notifications()
 
 		this.check_excel_analysis_en_curso()
+
+		// Va ultimo a proposito: es el chequeo que menos urge y el que mas puede tardar,
+		// porque por detras del backend sale a una API de terceros.
+		this.check_cotizacion_dolar()
 
 		},
 		/**
