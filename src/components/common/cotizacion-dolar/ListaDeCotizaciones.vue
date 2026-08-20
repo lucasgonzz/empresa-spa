@@ -126,6 +126,9 @@ export default {
 			required: true,
 		},
 	},
+	created() {
+		this.sembrar_defaults_de_referencia()
+	},
 	computed: {
 		cotizaciones() {
 			return this.$store.state.dolar_cotizacion.cotizaciones
@@ -188,6 +191,35 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Baja los defaults de la referencia AL DATO, no solo a lo que se ve.
+		 *
+		 * 🔴 Este método existe por un bug concreto, no por prolijidad. Los getters
+		 * `casa_de_referencia` y `punta_de_referencia` resuelven el default adentro del get
+		 * (`this.value.casa || CASA_POR_DEFAULT`), así que los selects dibujaban "Blue / venta"
+		 * mientras `value.casa` y `value.punta` seguían en null. Y `b-form-select` no emite nada
+		 * al montarse —solo en el change—, así que ese null viajaba tal cual en el POST, contra
+		 * una validación que pide las dos required: el Guardar devolvía 422 SIEMPRE, y elegir en
+		 * el select la misma opción que ya mostraba tampoco disparaba nada.
+		 *
+		 * A quién le pegaba: al comercio que editó "Valor dolar" a mano desde Configuración, que
+		 * queda sin referencia y por lo tanto sin avisos, y para quien esta pantalla es la única
+		 * salida. La salida estaba tapiada y el único síntoma era un error en inglés.
+		 *
+		 * La regla que deja: lo que se muestra por default tiene que estar en el dato, no
+		 * calculado al vuelo en la vista. Si no, el formulario promete algo que no manda.
+		 *
+		 * @returns {void}
+		 */
+		sembrar_defaults_de_referencia() {
+			if (this.value.casa && this.value.punta) {
+				return
+			}
+			this.emitir({
+				casa: this.value.casa || CASA_POR_DEFAULT,
+				punta: this.value.punta || PUNTA_POR_DEFAULT,
+			})
+		},
 		/**
 		 * Una punta de una casa preestablecida.
 		 *

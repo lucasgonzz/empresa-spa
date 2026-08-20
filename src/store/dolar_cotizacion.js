@@ -35,7 +35,17 @@ axios.defaults.baseURL = process.env.VUE_APP_API_URL
  *     -- y en el caso del 409 hablaría de un error nuestro cuando lo que se cayó es un
  *     servicio de terceros.
  */
-const CONFIG_SIN_MODAL_DE_ERROR = { skip_global_error_event: true }
+/*
+ * 🔴 Las DOS banderas, no solo la primera. `skip_global_error_event` apaga el modal de error
+ * global, pero el toast de validación lo apaga `skip_global_validation_toast`, que es otra
+ * bandera y se evalúa ANTES en el if de `main.js` (línea 165). Con una sola, cualquier 422 de
+ * esta funcionalidad se reportaba dos veces: el toast global por arriba y el b-alert rojo
+ * adentro del modal, diciendo lo mismo.
+ */
+const CONFIG_SIN_MODAL_DE_ERROR = {
+	skip_global_error_event: true,
+	skip_global_validation_toast: true,
+}
 
 /**
  * El mensaje que mandó el backend, tal cual, o el de repliegue si no vino ninguno.
@@ -52,6 +62,22 @@ function mensaje_del_backend(err, de_repliegue) {
 	let data = err && err.response && err.response.data ? err.response.data : null
 	if (data && data.error && data.error.mensaje) {
 		return data.error.mensaje
+	}
+	/*
+	 * 🔴 `errors` ANTES que `message`, y no al revés.
+	 *
+	 * En un 422 Laravel pone en `message` la cadena fija 'The given data was invalid.' y deja los
+	 * mensajes de verdad —los que escribimos nosotros, en castellano— colgando de `errors`. Como
+	 * este archivo miraba solo `message`, cualquier error de validación se le mostraba al usuario
+	 * en inglés y sin decir qué campo estaba mal, y el mensaje custom del backend
+	 * ("la casa de referencia tiene que ser la misma que el origen") no se veía nunca.
+	 */
+	if (data && data.errors) {
+		for (let campo in data.errors) {
+			if (Array.isArray(data.errors[campo]) && data.errors[campo].length) {
+				return data.errors[campo][0]
+			}
+		}
 	}
 	if (data && data.message) {
 		return data.message
@@ -71,6 +97,13 @@ export default {
 		valor_dolar_actual: null,
 		avisar_cambios: true,
 		variacion_minima: 1,
+		/*
+		 * 🔴 Si las dos de arriba son las del comercio o todavía son los defaults de este archivo.
+		 * Arranca en false y solo `set_respuesta` la pone en true. Sin esta distinción, un GET que
+		 * falla a nivel de red deja los defaults puestos y el POST siguiente los guarda como si el
+		 * usuario los hubiera elegido, apagándole la configuración que tenía.
+		 */
+		preferencias_cargadas: false,
 		// La medición. null = NO SE PUDO MEDIR. Nunca un 0 de consuelo.
 		comparacion: null,
 		// { motivo, mensaje } cuando estado == 'proveedor_caido'. null cuando está todo bien.
@@ -126,6 +159,12 @@ export default {
 				: 1
 			state.comparacion = respuesta.comparacion || null
 			state.error = respuesta.error || null
+			/*
+			 * Recién acá las preferencias son las del comercio y no los defaults de este archivo.
+			 * El modal lo usa para decidir si las manda en el POST: mandar un default como si
+			 * fuera una elección del usuario le pisa lo que había configurado.
+			 */
+			state.preferencias_cargadas = true
 		},
 		/**
 		 * Deja el módulo en "no se pudo medir".
@@ -156,6 +195,19 @@ export default {
 				state.seleccion_actual = respuesta.seleccion_actual
 			}
 			state.comparacion = null
+		},
+		/**
+		 * Marca en la medición vigente que el usuario ya la vio y la pospuso.
+		 *
+		 * No borra `comparacion`: la variación se sigue mostrando si el usuario abre el modal a
+		 * mano. Lo único que cambia es que el arranque deja de abrirlo solo (ver `debe_avisar`).
+		 */
+		set_pospuesto(state, valor) {
+			if (state.comparacion) {
+				state.comparacion = Object.assign({}, state.comparacion, {
+					pospuesto: Number(valor) === Number(state.comparacion.valor_nuevo),
+				})
+			}
 		},
 		set_preferencias(state, data) {
 			let respuesta = data || {}
@@ -215,10 +267,22 @@ export default {
 		/**
 		 * El único caso en el que el modal se abre solo al iniciar sesión.
 		 */
+		/**
+		 * El único caso en el que el arranque abre el modal solo.
+		 *
+		 * 🔴 `pospuesto` es la condición que faltaba: sin ella, el que apretaba "Ahora no" volvía
+		 * a ver el mismo modal con los mismos números en cada inicio de sesión y en cada F5,
+		 * porque la referencia solo se mueve cuando el usuario ACEPTA. Lucas pidió que se avise
+		 * "cuando se detecte un nuevo cambio", no que se repita el aviso viejo.
+		 *
+		 * Ojo: esto filtra si el modal aparece SOLO. Abierto a mano desde Configuración, la
+		 * variación se muestra igual — el usuario preguntó y merece la respuesta completa.
+		 */
 		debe_avisar(state) {
 			return state.estado === 'ok'
 				&& !!state.comparacion
 				&& !!state.comparacion.supera_umbral
+				&& !state.comparacion.pospuesto
 				&& state.avisar_cambios
 		},
 	},
@@ -309,14 +373,29 @@ export default {
 		 *
 		 * @returns {Promise}
 		 */
-		guardar_preferencias({ commit }, { avisar_cambios, variacion_minima }) {
+		guardar_preferencias({ commit }, { avisar_cambios, variacion_minima, pospuesto_valor }) {
 			commit('set_error_al_guardar', null)
-			return axios.put('/api/dolar-cotizacion/preferencias', {
+			let payload = {
 				avisar_cambios: avisar_cambios,
 				variacion_minima: variacion_minima,
-			}, CONFIG_SIN_MODAL_DE_ERROR)
+			}
+			/*
+			 * `pospuesto_valor` viaja solo cuando el usuario cerró con "Ahora no" habiendo una
+			 * medición. El backend lo trata como opcional: no mandarlo es "no lo cambies".
+			 */
+			if (pospuesto_valor) {
+				payload.pospuesto_valor = pospuesto_valor
+			}
+			return axios.put('/api/dolar-cotizacion/preferencias', payload, CONFIG_SIN_MODAL_DE_ERROR)
 				.then(res => {
 					commit('set_preferencias', res.data)
+					/*
+					 * Lo pospuesto se refleja en el state para que el modal no vuelva a abrirse
+					 * solo en este mismo arranque si algo dispara otra consulta.
+					 */
+					if (pospuesto_valor) {
+						commit('set_pospuesto', pospuesto_valor)
+					}
 					return res.data
 				})
 				.catch(err => {

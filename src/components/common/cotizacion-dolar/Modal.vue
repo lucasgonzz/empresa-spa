@@ -257,25 +257,6 @@
 						</b-button>
 					</div>
 
-					<div class="cotizacion-dolar__preferencias">
-						<b-form-checkbox v-model="avisar_cambios">
-							Avisarme cuando cambie
-						</b-form-checkbox>
-						<div class="cotizacion-dolar__umbral">
-							<b-form-input
-							autocomplete="off"
-							class="cotizacion-dolar__umbral-input"
-							type="number"
-							step="0.1"
-							min="0.01"
-							max="100"
-							size="sm"
-							:disabled="!avisar_cambios"
-							v-model="variacion_minima"></b-form-input>
-							<span>%</span>
-						</div>
-					</div>
-
 					<div class="cotizacion-dolar__separador"></div>
 
 					<b-button
@@ -307,6 +288,45 @@
 
 				</template>
 
+				<!--
+					Las preferencias de aviso, UNA sola vez y para TODOS los estados.
+
+					🔴 Antes vivían adentro de la rama de "hay medición", así que el checkbox y el
+					umbral no existían en los otros tres: ni la primera vez que el comercio elige
+					cotización, ni cuando carga una manual sin referencia, ni con el proveedor
+					caído. Lucas pidió explícitamente que el aviso se pueda activar también cuando
+					la cotización es manual, y en esas pantallas no había forma de tocarlo — pero
+					el POST las mandaba igual, así que se guardaban valores que el usuario nunca
+					vio ni eligió.
+
+					Van al pie y no arriba del separador (como estaba en E6) para que queden en el
+					mismo lugar en las cuatro pantallas: es una preferencia de la cuenta, no parte
+					de la elección de este momento.
+
+					Se dibujan solo si las cargamos del backend: mostrar los defaults del store
+					como si fueran la configuración del comercio es peor que no mostrar nada.
+				-->
+				<div
+				v-if="preferencias_cargadas"
+				class="cotizacion-dolar__preferencias">
+					<b-form-checkbox v-model="avisar_cambios">
+						Avisarme cuando cambie
+					</b-form-checkbox>
+					<div class="cotizacion-dolar__umbral">
+						<b-form-input
+						autocomplete="off"
+						class="cotizacion-dolar__umbral-input"
+						type="number"
+						step="0.1"
+						min="0.01"
+						max="100"
+						size="sm"
+						:disabled="!avisar_cambios"
+						v-model="variacion_minima"></b-form-input>
+						<span>%</span>
+					</div>
+				</div>
+
 			</div>
 
 		</b-modal>
@@ -330,6 +350,21 @@
  * decidir si abrirlo—, y se paga a gusto: pasa solo en el caso E6, que es el raro, y a
  * cambio no hay ningún camino por el que el modal se abra mostrando datos de antes.
  */
+/*
+ * Referencia por default cuando el comercio no tiene ninguna elegida.
+ *
+ * 🔴 Están acá y no solo en ListaDeCotizaciones porque el dueño del dato es ESTE componente.
+ * El hijo también los siembra al montarse, pero ese emit lo pisa la sincronización del padre
+ * cuando llega la respuesta del GET, y el resultado era `casa: null, punta: null` viajando en un
+ * POST que las pide required: el Guardar volvía 422 siempre. Sembrarlos donde nace el dato lo
+ * hace independiente del orden en que se monten los componentes.
+ *
+ * Si cambian, cambian en los dos lados. Son la misma decisión escrita dos veces a propósito:
+ * importarlos del SFC del hijo lo metería en el chunk del padre y rompería su carga diferida.
+ */
+const CASA_POR_DEFAULT = 'blue'
+const PUNTA_POR_DEFAULT = 'venta'
+
 export default {
 	components: {
 		ListaDeCotizaciones: () => import('@/components/common/cotizacion-dolar/ListaDeCotizaciones'),
@@ -489,14 +524,42 @@ export default {
 			}
 			return 'Actualizaste la cotización ' + cuando
 		},
+		/**
+		 * Si las preferencias del state son las del comercio y no los defaults del store.
+		 *
+		 * @returns {Boolean}
+		 */
+		preferencias_cargadas() {
+			return this.$store.state.dolar_cotizacion.preferencias_cargadas
+		},
 		puede_guardar() {
 			if (!this.seleccion.origen) {
+				return false
+			}
+			/*
+			 * 🔴 Con el proveedor caído lo ÚNICO guardable es una cotización manual.
+			 *
+			 * Sin esta rama, el botón primario de esa pantalla arrancaba habilitado en cuanto el
+			 * comercio traía una selección preestablecida (que llega igual, porque es dato local),
+			 * y el POST estaba garantizado a devolver 409: no se puede guardar "el blue venta" sin
+			 * saber cuánto vale. Como la caché solo guarda éxitos, reintentar daba 409 de nuevo,
+			 * indefinidamente. Un botón que no puede funcionar nunca no se ofrece habilitado.
+			 */
+			if (this.hubo_error_de_proveedor && this.seleccion.origen !== 'manual') {
+				return false
+			}
+			/*
+			 * `casa` y `punta` se exigen en los DOS caminos, manual incluido: el backend las pide
+			 * required siempre. Antes el manual solo miraba el valor, así que un dato incompleto
+			 * llegaba al POST con el botón habilitado y volvía 422.
+			 */
+			if (!this.seleccion.casa || !this.seleccion.punta) {
 				return false
 			}
 			if (this.seleccion.origen === 'manual') {
 				return Number(this.seleccion.valor_manual) > 0
 			}
-			return !!this.seleccion.casa && !!this.seleccion.punta
+			return true
 		},
 		preferencias_cambiaron() {
 			let estado = this.$store.state.dolar_cotizacion
@@ -566,12 +629,32 @@ export default {
 			let estado = this.$store.state.dolar_cotizacion
 			let actual = estado.seleccion_actual
 			if (!actual || !actual.origen) {
-				return { origen: null, casa: null, punta: null, valor_manual: null }
+				return {
+					origen: null,
+					casa: CASA_POR_DEFAULT,
+					punta: PUNTA_POR_DEFAULT,
+					valor_manual: null,
+				}
 			}
+			/*
+			 * 🔴 `casa` y `punta` NUNCA salen de acá en null, aunque en base lo estén.
+			 *
+			 * Los selects de referencia muestran "Blue / venta" por default, pero lo resolvían
+			 * adentro de su getter: la pantalla mostraba una cosa y el dato seguía en null. Como
+			 * `b-form-select` no emite al montarse, ese null viajaba tal cual en el POST contra una
+			 * validación que las pide required, y el Guardar devolvía 422 SIEMPRE.
+			 *
+			 * A quién le pegaba: al comercio que editó "Valor dolar" a mano y quedó sin referencia
+			 * —y por lo tanto sin avisos—, para quien esta pantalla es la única salida. La salida
+			 * estaba tapiada, y el único síntoma era un error en inglés.
+			 *
+			 * La regla que deja: lo que el formulario muestra por default tiene que estar en el
+			 * dato, no calculado al vuelo en la vista. Si no, promete algo que no manda.
+			 */
 			return {
 				origen: actual.origen,
-				casa: actual.casa,
-				punta: actual.punta,
+				casa: actual.casa || CASA_POR_DEFAULT,
+				punta: actual.punta || PUNTA_POR_DEFAULT,
 				valor_manual: actual.origen === 'manual' ? estado.valor_dolar_actual : null,
 			}
 		},
@@ -614,15 +697,30 @@ export default {
 		 */
 		enviar(seleccion) {
 			let self = this
-			this.$store.dispatch('dolar_cotizacion/guardar', {
+			let payload = {
 				origen: seleccion.origen,
 				casa: seleccion.casa,
 				punta: seleccion.punta,
 				valor_manual: seleccion.valor_manual,
-				avisar_cambios: !!this.avisar_cambios,
-				variacion_minima: Number(this.variacion_minima),
 				disparo: this.$store.state.dolar_cotizacion.abierto_desde,
-			})
+			}
+
+			/*
+			 * 🔴 Las preferencias viajan SOLO si las cargamos de verdad del backend.
+			 *
+			 * Si el GET falló a nivel de red, `avisar_cambios` y `variacion_minima` quedaron en
+			 * los defaults del store (true / 1), y en esa pantalla el checkbox y el umbral ni se
+			 * dibujan. Mandarlos igual pisaba con esos defaults las preferencias reales del
+			 * comercio: el que había apagado el aviso y puesto 5% lo veía volver a 1% y prendido,
+			 * sin haber tocado nada. El backend ahora los toma como opcionales, así que no
+			 * mandarlos es exactamente "no los cambies".
+			 */
+			if (this.preferencias_cargadas) {
+				payload.avisar_cambios = !!this.avisar_cambios
+				payload.variacion_minima = Number(this.variacion_minima)
+			}
+
+			this.$store.dispatch('dolar_cotizacion/guardar', payload)
 			.then(respuesta => {
 				if (!respuesta) {
 					return
@@ -643,13 +741,27 @@ export default {
 		 */
 		ahora_no() {
 			let self = this
-			if (!this.preferencias_cambiaron) {
+
+			/*
+			 * 🔴 El valor que el usuario acaba de ver y decidió no adoptar. Se manda para que el
+			 * arranque no le repita el MISMO aviso en cada login y en cada F5: la referencia solo
+			 * se mueve cuando acepta, así que sin esto el modal volvía idéntico para siempre.
+			 * Solo aplica si hubo medición de verdad; si no la hubo, no hay nada que posponer.
+			 */
+			let pospuesto_valor = this.comparacion ? Number(this.comparacion.valor_nuevo) : null
+
+			/*
+			 * Se guarda si cambió alguna preferencia O si hay algo que posponer. Antes solo miraba
+			 * las preferencias, así que el "Ahora no" del caso más común no dejaba ningún rastro.
+			 */
+			if (!this.preferencias_cambiaron && !pospuesto_valor) {
 				this.cerrar()
 				return
 			}
 			this.$store.dispatch('dolar_cotizacion/guardar_preferencias', {
 				avisar_cambios: !!this.avisar_cambios,
 				variacion_minima: Number(this.variacion_minima),
+				pospuesto_valor: pospuesto_valor,
 			})
 			.then(respuesta => {
 				if (!respuesta) {
