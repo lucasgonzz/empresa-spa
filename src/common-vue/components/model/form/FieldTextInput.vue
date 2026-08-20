@@ -25,6 +25,16 @@
 				<i class="icon-search"></i>
 			</b-button>
 
+			<!-- Cotizacion del dolar de hoy. Aditivo como el boton de CUIT de arriba; la triple guarda es porque common-vue es codigo compartido con otros proyectos. -->
+			<b-button
+			v-if="prop.key == 'dollar' && model_name == 'user' && hasExtencion('costo_en_dolares')"
+			@click="$emit('chequear-cotizacion-dolar')"
+			class="m-l-5"
+			variant="outline-primary"
+			title="Ver la cotizacion de hoy">
+				<i class="icon-search"></i>
+			</b-button>
+
 			<bar-code-scanner
 			class="m-l-5"
 			v-if="prop.use_bar_code_scanner && has_bar_code_scanner"
