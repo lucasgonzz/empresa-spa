@@ -120,19 +120,19 @@ export default {
 			value: 0,
 			not_show: true,
 			/*
-			 * Mision costo-bruto-por-condicion-fiscal (20/8/2026): se SACO el
-			 * v_if_function 'es_responsable_inscripto_v_if_function' que lo escondia para
-			 * Monotributista (prompt 611), y sacarlo es obligatorio, no cosmetico.
+			 * Mision costo-bruto-por-condicion-fiscal (20/8/2026): el control NO se le muestra al
+			 * Monotributista, y eso es correcto justamente porque para el no hay nada que elegir.
 			 *
-			 * Ese ocultamiento tenia sentido mientras back_out_iva() ignoraba el flag para MT y
-			 * descomponia siempre: el control no hacia falta porque la condicion fiscal decidia.
-			 * Desde esta mision decide el flag, y para todos. Si siguiera oculto, un MT no
-			 * tendria NINGUNA forma de declarar que sus costos vienen con IVA -- que es
-			 * justamente su caso, porque recibe Factura B -- y cada compra suya se guardaria
-			 * como neta: 21% abajo, sin salida y sin que nada lo denuncie.
+			 * Todo lo que carga un MT es bruto por definicion (recibe Factura B), asi que
+			 * ArticlePricesHelper::el_costo_cargado_es_bruto() le devuelve true sin mirar este flag.
+			 * Mostrarselo seria ofrecerle una decision que el sistema despues ignora.
 			 *
-			 * Lo encontro un agente de construccion cruzando el plan de la API con este archivo.
+			 * 🔴 Este ocultamiento y el branching por condicion fiscal del backend van SIEMPRE juntos.
+			 * Durante un rato de esta misma mision se saco el branching y quedo el control oculto: un
+			 * MT no tenia ninguna forma de declarar bruto y cada compra suya se guardaba 21% abajo,
+			 * sin salida. Si alguna vez se vuelve a tocar uno, hay que tocar el otro.
 			 */
+			v_if_function: 'es_responsable_inscripto_v_if_function',
 		},
 		{
 			text: 'Actualizar precios',

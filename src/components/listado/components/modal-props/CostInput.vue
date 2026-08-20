@@ -33,7 +33,20 @@
 			la API), y es la razon por la que el plan v1 de esta misma mision habia evitado los dos
 			inputs. Si alguna vez aparece un :disabled aca, vuelve ese bug.
 		-->
-		<div>
+		<!--
+			🔴 El input de NETO no se le muestra al Monotributista (decision de Lucas, 20/8/2026):
+			"el monotributista no tiene que configurar nada de IVA".
+			
+			Todo lo que carga un MT es bruto POR DEFINICION -- recibe Factura B, donde el IVA no
+			viene discriminado y el neto no figura en ningun lado --, asi que ofrecerle un campo
+			"costo sin IVA" es ofrecerle escribir un numero que su comprobante no tiene. El sistema
+			le descompone siempre, solo, y por eso el backend tampoco le pregunta (ver
+			ArticlePricesHelper::el_costo_cargado_es_bruto).
+			
+			OJO: esto NO es un :disabled. El campo no existe para el MT, no aparece bloqueado. La
+			regla de "ningun input se bloquea nunca" sigue intacta.
+		-->
+		<div v-if="!cuenta_es_monotributista">
 			<label
 			class="text-muted d-block m-b-5"
 			:for="'article-' + prop.key">
@@ -50,11 +63,11 @@
 			@input="set_costo_neto($event)"></field-text-input>
 		</div>
 
-		<div class="m-t-10">
+		<div :class="{ 'm-t-10': !cuenta_es_monotributista }">
 			<label
 			class="text-muted d-block m-b-5"
 			:for="'article-' + prop_bruto.key">
-				Costo con IVA (bruto)
+				{{ label_bruto }}
 			</label>
 			<field-text-input
 			model_name="article"
@@ -83,11 +96,15 @@
 				Este articulo no tiene IVA que descontar (Exento, No Gravado o alicuota 0%): los dos
 				campos muestran el mismo numero y el costo se guarda tal cual lo cargues.
 			</span>
+			<span v-else-if="cuenta_es_monotributista">
+				Carga el costo tal cual figura en la factura de tu proveedor, con IVA incluido. El
+				sistema le saca el IVA ({{ alicuota }}%) y guarda el costo sin IVA, que es el que usa
+				para calcular los precios; el IVA vuelve a sumarse despues, una sola vez.
+			</span>
 			<span v-else>
 				Escribi en el campo que tengas a mano: el otro se actualiza solo con la alicuota del
-				articulo ({{ alicuota }}%). Si sos Monotributista, el numero de la factura de tu
-				proveedor va en "Costo con IVA"; el sistema le saca el IVA y guarda siempre el costo
-				sin IVA, que es el que despues usa para calcular los precios.
+				articulo ({{ alicuota }}%). Se guarda siempre el costo sin IVA, que es el que despues
+				usa el sistema para calcular los precios.
 			</span>
 		</small>
 
@@ -131,6 +148,29 @@ export default {
 		 * `cost_con_iva` NO es una columna ni viaja en el request: es solo el identificador del
 		 * control en pantalla. Lo que se manda son `cost` y `cost_incluye_iva` (ver set_costo_*).
 		 */
+		/**
+		 * Condicion fiscal leida del OWNER, no del usuario logueado.
+		 *
+		 * 🔴 Es a proposito que no se use la computed global "es_monotributista" (src/mixins/
+		 * generals.js), que lee this.user: si un EMPLEADO edita un articulo, this.user es el
+		 * empleado y no tiene condicion_iva_precios, asi que el front decidiria "Responsable
+		 * Inscripto" mientras el backend decide por el owner (UserHelper::user() devuelve el
+		 * owner). Las dos puntas discreparian y el empleado veria dos campos donde el sistema
+		 * solo respeta uno.
+		 */
+		cuenta_es_monotributista() {
+			return !!(this.owner && this.owner.condicion_iva_precios == 'MT')
+		},
+		/**
+		 * Para el Monotributista el de bruto es el UNICO campo, asi que no hace falta aclararle
+		 * que es "el bruto": para el, el costo es ese y no hay otro.
+		 */
+		label_bruto() {
+			if (this.cuenta_es_monotributista) {
+				return 'Costo (con IVA, como figura en la factura)'
+			}
+			return 'Costo con IVA (bruto)'
+		},
 		prop_bruto() {
 			return Object.assign({}, this.prop, {key: 'cost_con_iva'})
 		},
