@@ -136,9 +136,13 @@ export default {
 
                 self.emitir_una(index + 1)
             })
-            .catch(err => {
-                console.log('errores al facturar:')
-                console.log(err)
+            .catch(() => {
+                /*
+                    Red de seguridad: send_request ya avisa por toast y nunca rechaza, asi que
+                    aca solo puede llegar un error del bloque de arriba. La cadena sigue igual
+                    para que una respuesta rara no deje sin facturar a las ventas que vienen
+                    despues.
+                */
                 self.emitir_una(index + 1)
             })
         },

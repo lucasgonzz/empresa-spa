@@ -127,9 +127,10 @@
 						Reparto por alicuota
 					</p>
 					<p class="confirm-afip__alicuotas-ayuda">
-						Cargá en cada fila el importe <strong>total con IVA incluido</strong> de esa
-						alicuota, no la base imponible. La suma tiene que dar exactamente
-						{{ plata(monto_personalizado) }}. Si dejás todo en blanco se factura todo al 21%.
+						Arranca todo en el 21%: repartir es sacarle importe a esa fila y ponérselo a
+						otra. En cada fila va el importe <strong>total con IVA incluido</strong> de esa
+						alicuota, no la base imponible, y la suma tiene que dar exactamente
+						{{ plata(monto_personalizado) }}.
 					</p>
 
 					<div class="confirm-afip__grilla">
@@ -369,7 +370,21 @@ export default {
 			})
 			return filas
 		},
+		/**
+		 * 🔴 Si la tabla no esta a la vista, el reparto NO cuenta. Sin esta guarda quedaba
+		 * trabado el boton sin nada en pantalla que lo explicara: el usuario cargaba filas, despues
+		 * borraba el importe -o cambiaba a un punto de venta que no es RI-, la tabla desaparecia
+		 * pero filas_ivas conservaba los valores, asi que reparto_incompleto seguia en true y
+		 * btn_enviar_a_facturar quedaba deshabilitado. El toast de check() encima hablaba de una
+		 * tabla que no estaba. Solo se destrababa cerrando y reabriendo el modal.
+		 *
+		 * El watcher de mostrar_alicuotas ademas limpia las filas al esconderse, asi que tampoco
+		 * reaparece un reparto viejo de otro contexto.
+		 */
 		reparto_incompleto() {
+			if (!this.mostrar_alicuotas) {
+				return false
+			}
 			return this.hay_reparto_cargado && Math.abs(this.diferencia_alicuotas) > 0.01
 		},
 		/**
@@ -434,6 +449,39 @@ export default {
 				this.importe_personalizado_ivas = value
 			},
 		},
+		/*
+			El importe se sienta solo en la fila del 21 %, que es el default que pidio Lucas: el
+			usuario ve la plata donde va a ir a parar y repartir es sacarle de ahi para ponerle a
+			otra alicuota, en vez de arrancar con seis casilleros en blanco.
+
+			Solo se precarga si el reparto esta INTACTO respecto del importe anterior. Si el
+			usuario ya movio plata a mano, corregir el importe de arriba no le pisa lo que venia
+			armando: la diferencia queda a la vista en el pie y la arregla el.
+		*/
+		monto_personalizado(nuevo, viejo) {
+			if (nuevo <= 0) {
+				this.filas_ivas = this.filas_ivas_vacias()
+				return
+			}
+			if (this.reparto_intacto(viejo)) {
+				this.precargar_en_21(nuevo)
+			}
+		},
+		/*
+			La tabla se esconde cuando se borra el importe o cuando el punto de venta deja de ser
+			Responsable Inscripto. Las filas se limpian ahi mismo para que no quede un reparto
+			fantasma bloqueando el boton, ni reaparezca despues en un contexto distinto.
+		*/
+		mostrar_alicuotas(visible) {
+			if (!visible) {
+				this.filas_ivas = this.filas_ivas_vacias()
+				return
+			}
+			// Se hizo visible con las filas en cero: el importe se sienta en el 21 %.
+			if (this.reparto_intacto(0)) {
+				this.precargar_en_21(this.monto_personalizado)
+			}
+		},
 	},
 	methods: {
 		/** Las seis filas en blanco. Se usa en data() y cada vez que se abre el modal. */
@@ -447,8 +495,50 @@ export default {
 				{key: '0',  label: '0%',    porcentaje: 0,    importe: ''},
 			]
 		},
+		/**
+		 * 🔴 Se limpian LAS DOS cosas, y esa simetria es el punto: monto_a_facturar vive en el
+		 * store y hasta ahora solo se borraba al terminar la emision. O sea que abrir el modal para
+		 * la venta A, escribir un importe, cancelar y abrir el modal para la venta B dejaba el
+		 * importe de A cargado -ahora sin reparto- listo para facturarse sobre otra venta.
+		 */
 		al_abrir() {
+			this.monto_a_facturar = ''
 			this.filas_ivas = this.filas_ivas_vacias()
+		},
+		/**
+		 * true si nadie toco el reparto a mano: todo el importe de referencia sentado en la fila
+		 * del 21 % y las otras cinco en cero. Es la condicion para poder precargar sin pisarle
+		 * trabajo al usuario.
+		 *
+		 * @param {Number} monto_referencia
+		 * @returns {Boolean}
+		 */
+		reparto_intacto(monto_referencia) {
+			let referencia = this.redondear_plata(monto_referencia)
+			let intacto = true
+			this.filas_ivas.forEach(fila => {
+				let importe = this.redondear_plata(Number(fila.importe) || 0)
+				if (fila.key == '21') {
+					if (importe !== referencia) {
+						intacto = false
+					}
+				} else if (importe !== 0) {
+					intacto = false
+				}
+			})
+			return intacto
+		},
+		/**
+		 * Sienta todo el importe en la fila del 21 % y deja las otras cinco vacias, que para
+		 * todos los calculos es cero y en pantalla muestra el placeholder 0,00.
+		 *
+		 * @param {Number} monto
+		 */
+		precargar_en_21(monto) {
+			let importe = this.redondear_plata(monto)
+			this.filas_ivas.forEach(fila => {
+				fila.importe = fila.key == '21' ? importe : ''
+			})
 		},
 		/**
 		 * 🔴 price() del sistema devuelve '-' cuando el valor es falsy, y el 0 es falsy. Acá el
