@@ -302,17 +302,27 @@ export default {
 		 * El reparto por alicuota solo tiene sentido en Responsable Inscripto: en los demas
 		 * regimenes el backend ni lo mira.
 		 *
-		 * Se pregunta por las dos condiciones que NO son RI en vez de por el nombre de RI, que
-		 * es el fallback seguro que pide el plan: si el punto de venta no esta cargado o le
-		 * falta la condicion, la tabla se muestra igual y no pasa nada.
+		 * 🔴 Se pregunta AFIRMATIVAMENTE por 'Responsable inscripto', NO por el complemento
+		 * ("no es Monotributista ni Exento"). No es lo mismo: IvaConditionSeeder siembra CUATRO
+		 * nombres -'Responsable inscripto', 'Monotributista', 'Consumidor final' y 'Exento'-,
+		 * asi que el complemento dejaba afuera 'Consumidor final', que tambien es no-RI.
+		 *
+		 * El string sale de ese seeder y es EXACTAMENTE el mismo con el que compara
+		 * AfipImportesCalculator::calculate() en el backend. Espejar esa condicion es el punto:
+		 * si el front decide con una regla distinta de la del calculador, termina mostrando un
+		 * reparto que despues nadie aplica. No lo "simplifiques" al complemento.
+		 *
+		 * Fallback seguro: la tabla se esconde SOLO cuando la condicion se pudo resolver y no
+		 * es RI. Si no se encontro el punto de venta, o no vino la relacion iva_condition, se
+		 * muestra igual: en no-RI el backend ni la mira, asi que mostrarla de mas no tiene
+		 * riesgo fiscal, y esconderla de mas le saca al usuario una funcion que le corresponde.
 		 */
 		es_responsable_inscripto() {
 			let punto_de_venta = this.afip_information.find(model => model.id == this.ventas_afip_information_id)
 			if (!punto_de_venta || !punto_de_venta.iva_condition) {
 				return true
 			}
-			return punto_de_venta.iva_condition.name != 'Monotributista'
-				&& punto_de_venta.iva_condition.name != 'Exento'
+			return punto_de_venta.iva_condition.name == 'Responsable inscripto'
 		},
 		mostrar_alicuotas() {
 			return this.bloque_importe_visible
