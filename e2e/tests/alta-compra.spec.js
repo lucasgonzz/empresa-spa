@@ -9,6 +9,14 @@
 // Aca se verifica COHERENCIA entre lo que muestra la pantalla y lo que persistio el servidor.
 const { test, expect } = require('../fixtures')
 const { esperar_recursos_descargados } = require('../helpers/recursos')
+// abrir_pestania / search_and_select / elegir_primer_resultado nacieron en este archivo y se
+// mudaron a e2e/helpers/formulario.js cuando un segundo spec los necesito (mision del 19/8/2026).
+// El codigo es el mismo, con los comentarios que explican las dos trampas del modal de busqueda.
+const { abrir_pestania, search_and_select } = require('../helpers/formulario')
+// numero_de_pantalla tambien vivia aca; se mudo a helpers/numeros.js con la misma implementacion
+// (es-AR: punto de miles, coma decimal). El helper ademas documenta por que hace falta una segunda
+// funcion para las columnas con decimales variables, que este spec no lee.
+const { numero_de_pantalla } = require('../helpers/numeros')
 
 /**
  * Articulos del fixture (prompt 613) con su costo base y el proveedor al que pertenecen.
@@ -36,120 +44,6 @@ const ALL_ARTICLES = ARTICLES_BUENOS_AIRES.concat(ARTICLES_ROSARIO)
 
 const AMOUNT_PEDIDO = '10'
 const RECEIVED_CON_AUMENTO = '8'
-
-/**
- * Abre el buscador de un campo "search" generico de ModelForm, escribe la query dentro del
- * modal de busqueda y clickea el primer resultado. Reusable para el proveedor y para cada
- * articulo (ambos son campos type="search").
- *
- * @param {import('@playwright/test').Page} page
- * @param {string} field_testid data-testid del input principal (ej: "provider_order-provider_id").
- * @param {string} query texto a buscar.
- * @returns {Promise<void>}
- */
-/**
- * Abre una pestaña del formulario generico (ModelForm).
- *
- * Desde que ModelForm reparte sus campos en grupos, el formulario de la compra es un conjunto de
- * PESTAÑAS ("Configuracion", "Articulos", "Facturacion", "Descuentos y recargos", "Total") y solo
- * se renderizan los campos del grupo activo: los demas NO estan en el DOM. Este helper hace lo
- * mismo que un humano —clickear la pestaña— antes de tocar un campo que vive en otro grupo.
- *
- * Se acota al modal de la compra a proposito: la nav del modulo que quedo detras del modal usa el
- * mismo componente y los mismos data-testid ("proveedores", "compras").
- *
- * @param {import('@playwright/test').Page} page
- * @param {string} nombre Titulo del grupo, tal cual lo declara src/models/provider_order.js.
- * @returns {Promise<void>}
- */
-/**
- * Convierte a numero un importe tal como lo muestra la pantalla, en formato es-AR: simbolo de
- * moneda adelante, punto como separador de miles y coma como decimal ("$40.527,50" -> 40527.5).
- *
- * @param {string} texto
- * @returns {number}
- */
-function numero_de_pantalla(texto) {
-	const limpio = String(texto)
-		// Se queda con digitos, separadores y el signo; saca "$" y espacios.
-		.replace(/[^\d.,-]/g, '')
-		// El punto es separador de miles: se descarta.
-		.replace(/\./g, '')
-		// La coma es el separador decimal.
-		.replace(',', '.')
-	return Number(limpio)
-}
-
-async function abrir_pestania(page, nombre) {
-	await page.locator('#provider_order___BV_modal_outer_')
-		.locator(`[data-testid="nav-item-${nombre}"]`)
-		.click()
-}
-
-async function search_and_select(page, field_testid, query) {
-	await page.locator(`[data-testid="${field_testid}"]`).click()
-	const modal_input = page.locator(`[data-testid="${field_testid}-search-modal-input"]`)
-	// Tecleo real, caracter por caracter: fill() escribe el valor directo en el DOM y emite
-	// input, pero NINGUN keydown. El modal (src/common-vue/components/search/Modal.vue) arranca
-	// con ya_se_busco en true y solo lo pasa a false cuando reset_ya_se_busco recibe un keydown
-	// de una tecla que no sea Enter ni flecha. pressSequentially emite keydown/keypress/keyup por
-	// cada caracter, como un humano. El fill('') previo es necesario porque pressSequentially
-	// AGREGA al final de lo que ya haya en el input, no reemplaza.
-	await modal_input.fill('')
-	await modal_input.pressSequentially(query)
-	// Este Enter BUSCA porque el tecleo de arriba dejo ya_se_busco en false. Con fill() este
-	// mismo Enter caeria en seleccionar_resultado() y, sin resultados, crearia el modelo al vuelo
-	// (el alta al vuelo del segundo Enter): el test terminaria creando un proveedor "Buenos
-	// Aires" nuevo en vez de buscarlo. Es la trampa principal de este modal.
-	// La busqueda pega a la API (global-search/article): el usuario del fixture tiene
-	// download_articles desactivado, asi que search_from_api_in_provider_order (definida en
-	// src/mixins/model_functions.js) da true. El filtrado en memoria contra el store es el
-	// camino alternativo, para usuarios con los articulos descargados o sin conexion.
-	await modal_input.press('Enter')
-	// Auto-espera: el primer resultado tarda lo que tarde en filtrar/renderizar, sin waitForTimeout.
-	await elegir_primer_resultado(page, field_testid)
-}
-
-/**
- * Clickea el primer resultado del modal y espera la SEÑAL REAL de que la seleccion ocurrio: que el
- * modal se haya cerrado. Si no se cerro, vuelve a clickear.
- *
- * Por que sigue habiendo un reintento, y por que esto no es un sleep disfrazado.
- *
- * La causa grande ya no esta: hasta el 15/8/2026 el watch de selected_index de TableComponent
- * levantaba la guarda `is_from_keydown` por 500 ms enteros y onRowSelected() descartaba el evento
- * entero mientras tanto, asi que el click sobre el resultado no seleccionaba nada y el modal
- * quedaba abierto. Eso se arreglo de raiz (la guarda ahora se baja en el $nextTick, que es cuando
- * ya paso la emision que tenia que tapar) y hoy el modal cierra al PRIMER click.
- *
- * Lo que queda es una ventana mas corta: setFirstSelectedRow() de search/Modal.vue prende
- * no_hacer_seleccion y la baja recien 200 ms despues, junto con la autoseleccion. Un click que cae
- * ahi adentro se sigue perdiendo. El reintento cubre eso, y ademas cubre que la busqueda pegue a la
- * API y la fila aparezca antes de que los datos esten renderizados.
- *
- * Lo de aca NO tapa el sintoma con un timeout mas largo: espera la condicion observable correcta
- * (modal cerrado) y, si no se cumple, repite la MISMA accion.
- *
- * @param {import('@playwright/test').Page} page
- * @param {string} field_testid data-testid del input principal del campo search.
- * @returns {Promise<void>}
- */
-async function elegir_primer_resultado(page, field_testid) {
-	const modal = page.locator(`#${field_testid}-search-modal`)
-	// 🔴 La fila se busca DENTRO del modal, no en todo el documento. Un
-	// page.locator('[data-testid="search-result-row"]') suelto agarra la primera del DOM, que no
-	// tiene por que ser un resultado de busqueda: hasta el 15/8/2026 display/table/Tr.vue le ponia
-	// ese mismo testid a cualquier tabla de seleccion simple, y la grilla de articulos de la compra
-	// esta ANTES en el DOM que el modal. Con un articulo ya cargado, el click caia sobre la fila de
-	// la compra --tapada por el modal abierto-- y se iba en timeout sin tocar el resultado. El
-	// testid ya se corrigio del lado del producto; acotar el selector es lo que evita que la
-	// proxima colision de nombres vuelva a leerse como un bug de la aplicacion.
-	const fila = modal.locator('[data-testid="search-result-row"]').first()
-	await expect(async () => {
-		await fila.click()
-		await expect(modal).toBeHidden({ timeout: 1500 })
-	}).toPass({ timeout: 30000 })
-}
 
 test.describe('Compras: alta de compra completa', () => {
 	// El alta de una compra depende de catalogos que la aplicacion baja al arrancar: el buscador de
@@ -180,11 +74,11 @@ test.describe('Compras: alta de compra completa', () => {
 		// visible es el label). El estado se verifica sobre el input, que es el que lo tiene.
 		await page.locator('[data-testid="provider_order-precios_incluyen_iva-toggle"]').click()
 		await expect(page.locator('[data-testid="provider_order-precios_incluyen_iva"]')).toBeChecked()
-		await abrir_pestania(page, 'Facturacion')
+		await abrir_pestania(page, 'provider_order', 'Facturacion')
 		await page.locator('[data-testid="provider_order-modo_facturacion"]').selectOption('automatico')
 
 		// 4. Cargar los 10 articulos del fixture (5 de Buenos Aires + 5 de Rosario).
-		await abrir_pestania(page, 'Articulos')
+		await abrir_pestania(page, 'provider_order', 'Articulos')
 		for (const article of ALL_ARTICLES) {
 			const rows_before = await page.locator('[data-testid^="article-amount-"]').count()
 
@@ -235,7 +129,7 @@ test.describe('Compras: alta de compra completa', () => {
 		// Lo que este paso verifica, y lo dice su propio encabezado, es COHERENCIA entre pantalla y
 		// servidor. Comparar el numero la mantiene estricta --un total distinto sigue poniendo el
 		// test en rojo-- sin atarla a si la app imprime o no los centavos.
-		await abrir_pestania(page, 'Total')
+		await abrir_pestania(page, 'provider_order', 'Total')
 		const total_text = await page.locator('[data-testid="compra-total"]').innerText()
 		const total_from_server = Number(saved_model.total)
 		// El total se redondea a 2 decimales porque es lo maximo que la pantalla puede mostrar.
@@ -244,14 +138,14 @@ test.describe('Compras: alta de compra completa', () => {
 		// Los descuentos del proveedor (10% y 5%) deben haber quedado precargados en la compra.
 		// Se lee el texto del contenedor de descuentos (ubicado por data-testid, no por clase):
 		// no es una seleccion por texto, es una aserción de contenido sobre un elemento ya ubicado.
-		await abrir_pestania(page, 'Descuentos y recargos')
+		await abrir_pestania(page, 'provider_order', 'Descuentos y recargos')
 		const discounts_container = page.locator('[data-testid="provider_order-provider_order_discounts"]')
 		const discounts_text = await discounts_container.innerText()
 		expect(discounts_text).toContain('10')
 		expect(discounts_text).toContain('5')
 
 		// Los 2 articulos con recibida 8 deben seguir mostrando esa cantidad al reabrir.
-		await abrir_pestania(page, 'Articulos')
+		await abrir_pestania(page, 'provider_order', 'Articulos')
 		let count_received_8 = 0
 		const all_received = page.locator('[data-testid^="article-received-"]')
 		const total_received_inputs = await all_received.count()
