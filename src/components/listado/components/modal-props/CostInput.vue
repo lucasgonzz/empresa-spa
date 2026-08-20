@@ -10,10 +10,10 @@
 		<field-text-input
 		model_name="article"
 		:prop="prop"
-		:value="article.cost"
+		:value="valor_visible"
 		:disabled="false"
 		:prop_text="label_del_campo"
-		:price_value="price(article.cost)"
+		:price_value="price(valor_visible)"
 		:has_bar_code_scanner="false"
 		@input="set_costo($event)"></field-text-input>
 
@@ -25,7 +25,7 @@
 		-->
 		<div v-if="!cuenta_es_monotributista" class="m-t-5">
 			<b-form-checkbox
-			v-model="cost_incluye_iva"
+			:checked="cost_incluye_iva"
 			switch
 			@change="cambiar_modo($event)">
 				<span class="text-muted">El costo que estoy cargando incluye IVA</span>
@@ -44,6 +44,9 @@
 				<template v-if="costo_neto_derivado !== null">
 					Costo sin IVA: <strong>{{ price(costo_neto_derivado) }}</strong>.
 				</template>
+				<template v-else-if="valor_visible && !hay_iva_aplicable">
+					Este articulo no tiene IVA que descontar, asi que el costo se guarda tal cual.
+				</template>
 			</span>
 			<span v-else>
 				Costo base sin IVA. El IVA se suma al final segun la alicuota del articulo.
@@ -60,9 +63,7 @@ export default {
 	data() {
 		return {
 			/**
-			 * Que representa el numero que hay AHORA en el input: true = bruto (con IVA),
-			 * false = neto. Viaja al backend como "cost_incluye_iva" dentro del modelo, y es lo que
-			 * ArticlePricesHelper::costo_tipeado_es_bruto() usa para decidir si descomponer.
+			 * En que moneda se esta MIRANDO el campo: true = bruto (con IVA), false = neto.
 			 *
 			 * 🔴 Es una decision DE ENTRADA ("lo que estoy tipeando ahora incluye IVA"), no un
 			 * estado del articulo: no se guarda ninguna columna con esto. A proposito NO se repite
@@ -78,6 +79,11 @@ export default {
 		 * Articulo en edicion (modal de ModelForm), leido directo del store, mismo patron
 		 * que el resto de los componentes de "modal-props" de este mismo modulo (PriceInput.vue,
 		 * PercentageGainInput.vue).
+		 *
+		 * 🔴 ES LA MISMA REFERENCIA que la fila del listado: __base_store.js hace
+		 * `state.model = value.model` sin copiar. Cualquier $set sobre este objeto le cambia el
+		 * numero a la tabla de atras. Ver el bloque de set_costo() sobre por que este componente
+		 * NO lo toca hasta que la persona tipea.
 		 */
 		article() {
 			return this.$store.state.article.model
@@ -106,11 +112,52 @@ export default {
 			return !!(this.owner && this.owner.condicion_iva_precios == 'MT')
 		},
 		/**
-		 * El Monotributista no elige: siempre bruto. El Responsable Inscripto manda con el toggle,
-		 * que arranca en el default de su cuenta (users.costos_cargados_con_iva).
+		 * El Monotributista no elige: siempre bruto. El Responsable Inscripto manda con el toggle.
 		 */
 		modo_bruto() {
 			return this.cuenta_es_monotributista || this.cost_incluye_iva
+		},
+		/**
+		 * Alicuota del articulo, priorizando SIEMPRE el iva_id que hay ahora en el formulario.
+		 *
+		 * 🔴 No se usa get_item_iva_percentage() del mixin: ese helper mira primero la relacion
+		 * `article.iva`, que el listado carga con withAll() y por lo tanto SIEMPRE viene. El select
+		 * de IVA del modal escribe `iva_id` y nadie refresca la relacion, asi que el helper devuelve
+		 * la alicuota VIEJA aunque la persona acabe de cambiarla. El backend, en cambio, descompone
+		 * con la nueva (back_out_iva() fuerza load('iva') justamente por esto). Las dos puntas
+		 * mostraban numeros distintos: con un articulo pasado de 21% a 10,5%, la pantalla convertia
+		 * por 1,21 y la base guardaba dividiendo por 1,105.
+		 */
+		alicuota() {
+			let self = this
+
+			if (self.article && self.article.iva_id) {
+
+				let iva_models = self.$store.state.iva ? self.$store.state.iva.models : []
+
+				let iva_model = iva_models.find(model => {
+					return model.id == self.article.iva_id
+				})
+
+				if (typeof iva_model != 'undefined') {
+					return self.normalize_iva_percentage(iva_model.percentage)
+				}
+			}
+
+			// Sin iva_id resuelto (o sin el store de ivas cargado) se cae al helper de siempre.
+			return self.get_item_iva_percentage(self.article)
+		},
+		/**
+		 * Si hay un IVA real que sacar. Replica el criterio de ArticlePricesHelper::hasIva() (0,
+		 * Exento y No Gravado no cuentan) mas el de back_out_iva(), que ademas exige `aplicar_iva`
+		 * salvo para Monotributista. Sin esto la pantalla prometia una descomposicion que el
+		 * backend no iba a hacer.
+		 */
+		hay_iva_aplicable() {
+			if (!this.alicuota) {
+				return false
+			}
+			return this.cuenta_es_monotributista || !!(this.article && this.article.aplicar_iva)
 		},
 		/**
 		 * El label dice en que moneda esta el campo. Sin esto, "Costo base" arriba de un numero con
@@ -123,43 +170,80 @@ export default {
 			return this.propText(this.prop)
 		},
 		/**
-		 * Alicuota del articulo, resuelta con el helper que ya existe en el mixin generals: maneja
-		 * la relacion iva, el iva_id y el pivot, y normaliza Exento / No Gravado / vacio a 0.
+		 * Lo que se muestra en el input.
+		 *
+		 * 🔴 Es una computed DERIVADA, no un valor que se escriba en el store al abrir el modal.
+		 * La primera version de esta mision convertia articles.cost a bruto dentro de un watcher, y
+		 * como `article` es la misma referencia que la fila del listado, abrir un articulo le
+		 * cambiaba el costo a la tabla; alternar entre dos articulos volvia a convertir sobre lo ya
+		 * convertido y el numero se multiplicaba por 1,21 en cada vuelta, hasta que alguien tocaba
+		 * Guardar y eso llegaba a la base.
+		 *
+		 * La regla, entonces: el store SOLO se toca cuando la persona tipea (set_costo).
+		 *
+		 * `cost_incluye_iva` en el modelo significa "lo que hay en article.cost ya es el bruto
+		 * tipeado", asi que en ese caso se muestra tal cual y no se vuelve a convertir.
 		 */
-		alicuota() {
-			return this.get_item_iva_percentage(this.article)
+		valor_visible() {
+			if (!this.article || !this.article.cost) {
+				return this.article ? this.article.cost : null
+			}
+
+			if (this.article.cost_incluye_iva) {
+				return this.article.cost
+			}
+
+			if (!this.modo_bruto || !this.hay_iva_aplicable) {
+				return this.article.cost
+			}
+
+			// Se prefiere el bruto ya registrado (el valor exacto que se tipeo la vez anterior)
+			// sobre recalcularlo: el ida y vuelta puede correr un centavo y despues se amplifica
+			// con el margen.
+			if (this.article.cost_bruto) {
+				return this.article.cost_bruto
+			}
+
+			return (parseFloat(this.article.cost) * (1 + (this.alicuota / 100))).toFixed(2)
 		},
 		/**
-		 * Preview de lo que va a quedar guardado en articles.cost. Se muestra para que el usuario
-		 * vea la descomposicion en vivo y no tenga que confiar a ciegas. null cuando no hay nada que
-		 * descomponer (sin costo, o alicuota 0 / Exento / No Gravado).
+		 * Preview de lo que va a quedar guardado en articles.cost, para que la descomposicion se vea
+		 * y no haya que confiar a ciegas. null cuando no hay nada que descomponer.
 		 */
 		costo_neto_derivado() {
-			if (!this.article.cost || !this.alicuota) {
+			if (!this.valor_visible || !this.hay_iva_aplicable || !this.modo_bruto) {
 				return null
 			}
-			return parseFloat(this.article.cost) / (1 + (this.alicuota / 100))
+			return parseFloat(this.valor_visible) / (1 + (this.alicuota / 100))
 		},
 	},
 	methods: {
 		/**
-		 * El input guarda SIEMPRE lo que el usuario ve y tipea, y "cost_incluye_iva" dice que es.
-		 * El backend descompone segun ese flag, asi que abrir el modal y guardar sin tocar nada
-		 * deja el mismo costo que habia: es idempotente.
+		 * Unico punto que escribe en el store, y corre solo cuando la persona tipea.
+		 *
+		 * Se guarda el numero tal cual se ve, y `cost_incluye_iva` dice que es. El backend
+		 * descompone segun ese flag. Si nadie toca el campo, article.cost queda con el neto que
+		 * vino del servidor y el flag no se prende: guardar sin tocar nada deja el costo igual.
 		 */
 		set_costo(valor) {
 			this.$set(this.article, 'cost', valor)
 			this.$set(this.article, 'cost_incluye_iva', this.modo_bruto)
 		},
 		/**
-		 * Al cambiar el modo se convierte el numero que se esta viendo, para que el campo siga
-		 * representando la misma plata. Sin esto, pasar de neto a bruto dejaria el mismo 1000 en
-		 * pantalla significando dos cosas distintas.
+		 * Cambiar el modo solo cambia COMO SE MIRA el campo. Si la persona ya habia tipeado, se
+		 * convierte lo tipeado para que siga representando la misma plata; si no toco nada, no se
+		 * escribe en el store (valor_visible se recalcula solo).
 		 */
 		cambiar_modo(nuevo_valor) {
 			let self = this
 
-			if (self.article.cost && self.alicuota) {
+			self.cost_incluye_iva = nuevo_valor
+
+			if (!self.article.cost_incluye_iva) {
+				return
+			}
+
+			if (self.article.cost && self.hay_iva_aplicable) {
 
 				let factor = 1 + (self.alicuota / 100)
 
@@ -172,50 +256,18 @@ export default {
 
 			self.$set(self.article, 'cost_incluye_iva', nuevo_valor || self.cuenta_es_monotributista)
 		},
-		/**
-		 * Deja el campo mostrando el BRUTO cuando corresponde, apenas se abre el modal.
-		 *
-		 * Se prefiere cost_bruto (el valor exacto que se tipeo la vez anterior) sobre recalcularlo:
-		 * el ida y vuelta sobre un decimal(22,2) puede correr un centavo, y ese centavo despues se
-		 * amplifica con el margen. Si el articulo no tiene cost_bruto -- porque se cargo en neto, o
-		 * viene de antes de esta mision -- se deriva de cost con la alicuota.
-		 */
-		iniciar_modo() {
-			let self = this
-
-			self.cost_incluye_iva = self.cuenta_es_monotributista
-				? true
-				: !!(self.owner && self.owner.costos_cargados_con_iva)
-
-			if (!self.modo_bruto) {
-				self.$set(self.article, 'cost_incluye_iva', false)
-				return
-			}
-
-			if (self.article.cost_bruto) {
-
-				self.$set(self.article, 'cost', self.article.cost_bruto)
-
-			} else if (self.article.cost && self.alicuota) {
-
-				let bruto = parseFloat(self.article.cost) * (1 + (self.alicuota / 100))
-
-				self.$set(self.article, 'cost', bruto.toFixed(2))
-			}
-
-			self.$set(self.article, 'cost_incluye_iva', true)
-		},
 	},
 	watch: {
 		/**
-		 * El modal reusa la instancia entre articulos, asi que la conversion inicial se dispara por
-		 * el id y no por created(): sin esto, abrir un segundo articulo mostraria el neto crudo.
-		 * immediate cubre la primera apertura.
+		 * Al pasar a otro articulo se vuelve al default de la cuenta. No se escribe nada en el
+		 * store: la conversion la resuelve valor_visible.
 		 */
 		'article.id': {
 			immediate: true,
 			handler() {
-				this.iniciar_modo()
+				this.cost_incluye_iva = this.cuenta_es_monotributista
+					? true
+					: !!(this.owner && this.owner.costos_cargados_con_iva)
 			},
 		},
 	},
