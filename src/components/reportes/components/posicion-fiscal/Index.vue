@@ -1,5 +1,15 @@
 <template>
-	<!-- Posicion Fiscal: IVA / IIBB / Ganancias, en renglones separados como los pide la DDJJ (tarea 04) -->
+	<!-- Posicion Fiscal: IVA / IIBB / Ganancias, en renglones separados como los pide la DDJJ (tarea 04)
+
+		Cada renglon lleva data-testid + data-monto (y data-tipo en los saldos), misma convencion que
+		download-resources/Index.vue (data-estado/data-descargados/data-total).
+
+		🔴 El data-monto NO es redundante con el texto del renglon, y por eso esta. formatear() es
+		price(valor, false, false), que SIEMPRE recorta los dos decimales: una retencion de 1795,50
+		se imprime "$1.795". Un test que leyera el texto no podria distinguir 1795,50 de 1795,99, o
+		sea que no podria verificar el numero que este reporte existe para mostrar. El data-monto
+		lleva el valor crudo que devolvio la API, sin formatear.
+	-->
 	<div
 	v-if="view == 'posicion-fiscal'"
 	class="posicion-fiscal m-t-20 p-b-100">
@@ -24,6 +34,8 @@
 
 				<div
 				class="cascada-renglon apretable"
+				:data-testid="'posicion-fiscal-iva-debito'"
+				:data-monto="iva.iva_debito"
 				@click="abrirDetalle('iva_debito')">
 					<span class="cascada-renglon__label">
 						<span class="cascada-renglon__icono acento-fiscal">
@@ -35,6 +47,8 @@
 				</div>
 				<div
 				class="cascada-renglon apretable"
+				:data-testid="'posicion-fiscal-iva-credito'"
+				:data-monto="iva.iva_credito"
 				@click="abrirDetalle('iva_credito')">
 					<span class="cascada-renglon__label">
 						<span class="cascada-renglon__icono acento-fiscal">
@@ -46,6 +60,8 @@
 				</div>
 				<div
 				class="cascada-renglon apretable"
+				:data-testid="'posicion-fiscal-percepcion-iva'"
+				:data-monto="iva.percepcion_iva_sufrida"
 				@click="abrirDetalle('percepciones_iva')">
 					<span class="cascada-renglon__label">
 						<span class="cascada-renglon__icono acento-fiscal">
@@ -57,6 +73,8 @@
 				</div>
 				<div
 				class="cascada-renglon apretable"
+				:data-testid="'posicion-fiscal-retencion-iva'"
+				:data-monto="iva.retencion_iva_sufrida"
 				@click="abrirDetalle('retenciones')">
 					<span class="cascada-renglon__label">
 						<span class="cascada-renglon__icono acento-fiscal">
@@ -69,6 +87,9 @@
 
 				<div
 				class="cascada-renglon cascada-renglon--subtotal"
+				:data-testid="'posicion-fiscal-saldo-iva'"
+				:data-monto="iva.saldo"
+				:data-tipo="iva.tipo"
 				:class="{ 'cascada-renglon--favor': iva.tipo == 'a_favor' }">
 					<span class="cascada-renglon__label">
 						<span
@@ -104,6 +125,8 @@
 				<template v-else>
 					<div
 					class="cascada-renglon apretable"
+					:data-testid="'posicion-fiscal-iibb-determinado'"
+					:data-monto="iibb.iibb_determinado"
 					@click="abrirDetalle('percepciones_iibb')">
 						<span class="cascada-renglon__label">
 							<span class="cascada-renglon__icono acento-fiscal">
@@ -115,6 +138,8 @@
 					</div>
 					<div
 					class="cascada-renglon apretable"
+					:data-testid="'posicion-fiscal-percepcion-iibb'"
+					:data-monto="iibb.percepcion_iibb_sufrida"
 					@click="abrirDetalle('percepciones_iibb')">
 						<span class="cascada-renglon__label">
 							<span class="cascada-renglon__icono acento-fiscal">
@@ -126,6 +151,8 @@
 					</div>
 					<div
 					class="cascada-renglon apretable"
+					:data-testid="'posicion-fiscal-retencion-iibb'"
+					:data-monto="iibb.retencion_iibb_sufrida"
 					@click="abrirDetalle('retenciones')">
 						<span class="cascada-renglon__label">
 							<span class="cascada-renglon__icono acento-fiscal">
@@ -138,6 +165,9 @@
 
 					<div
 					class="cascada-renglon cascada-renglon--subtotal"
+					:data-testid="'posicion-fiscal-saldo-iibb'"
+					:data-monto="iibb.saldo"
+					:data-tipo="iibb.tipo"
 					:class="{ 'cascada-renglon--favor': iibb.tipo == 'a_favor' }">
 						<span class="cascada-renglon__label">
 							<span
@@ -158,6 +188,8 @@
 
 				<div
 				class="cascada-renglon apretable"
+				:data-testid="'posicion-fiscal-retencion-ganancias'"
+				:data-monto="ganancias.retencion_ganancias_sufrida"
 				@click="abrirDetalle('retenciones')">
 					<span class="cascada-renglon__label">
 						<span class="cascada-renglon__icono acento-fiscal">

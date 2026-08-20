@@ -4,6 +4,14 @@
 	<div
 	v-if="!loading">
 		
+		<!--
+			tbody-tr-attr le pone a cada fila data-testid="stock-movement-row" mas los datos del
+			movimiento como atributos (data-concepto, data-cantidad, data-stock-resultante,
+			data-deposito-destino). Es la unica forma de verificar por testid que una compra genero
+			su movimiento de stock y que el stock entro al deposito correcto: esta es una b-table
+			armada a mano (no pasa por display/table/Tr.vue), asi que no hereda ninguno de los
+			data-testid genericos de la tabla del sistema.
+		-->
 		<b-table
 		v-if="stock_movements.length"
 		class="s-2 b-r-1 animate__animated animate__fadeIn"
@@ -11,6 +19,7 @@
 		responsive
 		striped
 		id="stock-movement-table"
+		:tbody-tr-attr="row_attrs"
 		:fields="fields"
 		:items="items">
 			
@@ -125,6 +134,25 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Atributos de cada <tr> de la tabla de movimientos. Los valores salen del mismo objeto
+		 * `item` que ya arma el computed items(), asi que no pueden divergir de lo que se ve.
+		 *
+		 * @param {Object} item Fila ya armada por items().
+		 * @returns {Object} atributos a poner en el <tr>.
+		 */
+		row_attrs(item) {
+			if (!item) {
+				return {}
+			}
+			return {
+				'data-testid': 'stock-movement-row',
+				'data-concepto': item.concepto,
+				'data-cantidad': item.amount,
+				'data-stock-resultante': item.stock_resultante,
+				'data-deposito-destino': item.to_address,
+			}
+		},
 		btn_text(stock_movement) {
 			if (stock_movement.sale_id && stock_movement.sale) {
 				return 'Venta N° '+stock_movement.sale.num

@@ -28,12 +28,14 @@ class="control-fecha">
 			class="control-fecha__modo">
 				<div
 				class="control-fecha__modo-item apretable"
+				data-testid="control-fecha-modo-por-fecha"
 				:class="es_modo(true) ? 'active' : ''"
 				@click="setFromDates(true)">
 					Por fecha
 				</div>
 				<div
 				class="control-fecha__modo-item apretable"
+				data-testid="control-fecha-modo-historico"
 				:class="es_modo(false) ? 'active' : ''"
 				@click="setFromDates(false)">
 					Historico
@@ -108,6 +110,20 @@ class="control-fecha">
 					type="input"
 					width="220px"></b-skeleton>
 
+					<!--
+						🔴 Este boton NO es decoracion: en los modulos que se ven por fecha
+						(compras, ventas, pedidos, gastos, cheques, presupuestos) es lo UNICO que
+						dispara la carga del listado. view/Index.vue saltea a proposito el listado
+						paginado por defecto para estos modulos --lo dice su propio
+						disparar_listado_por_defecto()--, asi que entrar al modulo y no tocar nada
+						deja la tabla diciendo "No hay Compras" con las compras en la base. Un test
+						que entra y busca una fila sin clickear un dia se va en timeout sin que haya
+						nada roto.
+
+						data-fecha va normalizado a YYYY-MM-DD (el `date` que manda la API no tiene
+						formato garantizado) para que se pueda pedir un dia puntual sin depender del
+						texto visible, que esta en castellano y abreviado ("MAR. 18").
+					-->
 					<button
 					v-else
 					v-for="(day, i) in days"
@@ -115,6 +131,9 @@ class="control-fecha">
 					type="button"
 					:ref="isActive(day) ? 'dia_activo' : null"
 					class="control-fecha__dia"
+					data-testid="control-fecha-dia"
+					:data-fecha="fecha_iso(day.date)"
+					:data-activo="isActive(day) ? 'si' : 'no'"
 					:class="clase_dia(day)"
 					@click.right="setLimitDate(day.date)"
 					@click.prevent="clickDia(day)">
@@ -295,6 +314,15 @@ export default {
 			this.$store.commit(this.model_name+'/set_listado_por_defecto', false)
 			this.$store.commit(this.model_name+'/setGlobalSearchPayload', null)
 			this.$store.dispatch(this.model_name+'/getModels')
+		},
+		/**
+		 * Fecha de una celda normalizada a YYYY-MM-DD, para el data-fecha del boton.
+		 *
+		 * @param {String} date Fecha tal cual la manda la API (formato no garantizado).
+		 * @returns {String}
+		 */
+		fecha_iso(date) {
+			return moment(date).format('YYYY-MM-DD')
 		},
 		isActive(day) {
 			if (!this.has_until || this.until_date == '') {

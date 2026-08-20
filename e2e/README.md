@@ -32,28 +32,196 @@ Las tres cosas que el script corrige en la base y que no son obvias:
 | `users.activity_minutes = 0` | Es el lock de sesión única (`AuthHelper::ya_paso_el_tiempo`). Cada corrida hace un login con `session_id` nuevo, así que con el valor por defecto (60) la **segunda** corrida no puede loguear por una hora. El síntoma es un login que se queda en `/login` sin ningún error visible |
 | `session_id` y `last_activity` → `null` | Libera el lock que dejó la corrida anterior |
 
+🔴 **El fixture siembra las monedas desde el 19/8/2026.** Antes no, y sin ellas la lista de
+proveedores del SPA quedaba inusable en cuanto una compra generaba cuenta corriente:
+`credit_accounts` nace con `moneda_id`, `ProviderController` eager-loadea `credit_accounts.moneda`,
+y `components/common/BtnCurrentAcounts.vue` renderiza `credit_account.moneda.name` sin chequear
+null → *"Cannot read properties of null (reading 'name')"*, 82 errores de consola y el boton C/C
+sin renderizar. En una cuenta real `monedas` siempre esta sembrada, asi que era un hueco del
+fixture, no del producto. Lo arregla `TestingFerreteriaSeeder::seed_base_data()`, que ahora llama a
+`MonedaSeeder` detras de un chequeo de existencia (ese seeder usa `create()`, no `firstOrCreate`).
+
 Y una variable que el `.env.local` **tiene que** llevar: `VUE_APP_PUSHER_KEY` (y `_CLUSTER`). Sin
 ella `src/main.js` tira `You must pass your app key when you instantiate Pusher` antes de montar la
 app: la página queda en blanco, sin un solo `data-testid`, y desde el test se ve como "no encuentro
 el input de login".
 
-> ⚠️ **Estado de la suite (17/8/2026): 10 pasan, 1 falla.** Reemplaza al estado del 15/8. Medido:
-> **68 recursos en 35-45 s** por cada spec que entra a un módulo. La corrida completa son ~11 minutos.
+> ⚠️ **Estado de la suite (19/8/2026): 18 pasan, 1 falla.** Reemplaza al estado del 17/8. Medido en
+> el slot s8 sobre base recién sembrada: **10,9 minutos** la corrida completa, con la descarga de
+> recursos en 15-20 s por spec (los 35-45 s que decía la nota anterior eran con la máquina cargada).
 >
-> - `alta-articulo-desde-buscador` **está en verde desde el 17/8/2026**, y no se tocó ninguna
->   aserción para lograrlo. Lo que estaba mal era *dónde* miraba el test: un artículo recién creado
->   desde el buscador nace con `status = 'inactive'`, y `props_to_show` declara el nombre con
->   `show_in_input_if: ['status', '=', 'inactive']`, así que la celda del nombre es un **textarea
->   editable** —correcto: es para poder completar el artículo sin salir de la compra—. El nombre
->   estaba ahí, en el `value`; `toContainText` sobre el `<tr>` lee texto y el `value` de un input no
->   es texto. Ahora se lee la celda por `data-testid` con el sufijo `-editable` (ver la convención
->   más abajo) y se compara con `toHaveValue`. Se le sumó además la aserción que faltaba: que el
->   foco quede en el campo Cantidad de la fila nueva.
-> - `limpiar-filtros-desde-columna` **sigue en rojo**: el clic sobre la lupa de la columna "Nombre"
->   lo intercepta `.cont-th`. Ojo que este spec ubica la columna por texto visible
->   (`hasText: 'Nombre'`), que es justamente lo que la convención de más abajo prohíbe.
+> El único rojo es **`limpiar-filtros-desde-columna`**, que sigue igual que el 15/8: el clic sobre la
+> lupa de la columna "Nombre" lo intercepta un elemento que queda encima. Hoy el que intercepta es el
+> cartel de progreso `#offline-articles-progress` ("Actualizados: 0 | Eliminados: 0"), no `.cont-th`
+> como decía la nota vieja — o sea que el problema no es *qué* tapa el botón sino que el spec clickea
+> sin esperar a que la pantalla se asiente. Ojo además que ubica la columna por texto visible
+> (`hasText: 'Nombre'`), que es justo lo que la convención de más abajo prohíbe.
 >
-> El hallazgo `20260815-dos-specs-e2e-que-nacieron-en-rojo` queda válido para el segundo.
+> El hallazgo `20260815-dos-specs-e2e-que-nacieron-en-rojo` queda válido para ese spec.
+>
+> `compra-costeo-facturacion` (8 tests) entró en verde el 19/8/2026, y se verificó además que pasa
+> **dos veces seguidas sobre la misma base** sin volver a sembrar — ver "Posicion Fiscal se verifica
+> por DIFERENCIA" más abajo.
+
+---
+
+## Los specs, y que verifica cada uno
+
+| Spec | Que cubre |
+|---|---|
+| `alta-compra.spec.js` | Alta de una compra con 10 articulos, costos actualizados y facturacion automatica. Verifica **coherencia** pantalla ↔ servidor, no numeros absolutos. |
+| `alta-articulo-desde-buscador.spec.js` | Crear un articulo que no existe desde el buscador de articulos, adentro de una compra. |
+| `compra-costeo-facturacion.spec.js` | **El circuito completo de una compra**, de punta a punta (ver abajo). |
+| `buscador-filtros-invalidan-busqueda.spec.js` · `estado-vacio-centrado.spec.js` · `limpiar-filtros-desde-columna.spec.js` · `menu-crear-submenu-importacion.spec.js` | Comportamientos puntuales de la interfaz. |
+
+### `compra-costeo-facturacion.spec.js`
+
+Es el recorrido que Lucas hace a mano con calculadora: carga una compra y despues sigue el rastro
+que dejo en las cinco puntas que una compra mueve.
+
+1. **La compra** — proveedor con bonificaciones (10% y 5%, que la compra hereda sola), un articulo
+   creado al vuelo desde el buscador y otro que ya existia, "los precios ya incluyen IVA" apagado,
+   deposito, y las tres opciones irreversibles prendidas (actualizar precios, generar movimientos
+   de stock, generar movimiento en cuenta corriente). Facturacion automatica.
+2. **La factura** que el modo automatico genera sola: se le cargan percepciones y retenciones
+   derivadas del propio comprobante (percepcion de IVA 3% del neto, retencion de IVA 50% del IVA
+   facturado, etc.).
+3. **El costeo en el listado** — la cadena entera, con la cuenta hecha en el test y comparada
+   contra la pantalla y contra el servidor:
+
+   ```
+   costo bruto 1000
+     x (1 - 10%) x (1 - 5%)   bonificaciones del proveedor, EN CASCADA  -> costo real 855
+     x (1 + 40%)              margen de ganancia del articulo
+     / (1 - 3%)               impuestos sobre ventas (IIBB): division, no suma
+     x (1 + 21%)              IVA de venta (RRII: va al final, no al costo)
+                                                                        -> precio final 1493,16
+   ```
+
+4. **El stock** — que las 10 unidades entren al deposito de la compra y que quede el movimiento
+   ("Compra a proveedor", con su cantidad, deposito destino y stock resultante).
+5. **La plata** — la deuda en la cuenta corriente del proveedor, el pago por el total de la compra,
+   y los renglones de **Posicion Fiscal** (IVA credito, percepciones y retenciones sufridas).
+
+Tres cosas de este spec que conviene saber antes de tocarlo:
+
+- **Es serial y comparte estado** (`test.describe.serial`). El circuito es secuencial: no se puede
+  verificar la factura de una compra que todavia no existe. Si un test falla, los que siguen se
+  saltean, que es lo correcto — reportarian fallas derivadas.
+- **Posicion Fiscal se verifica por DIFERENCIA.** Ese reporte suma todos los comprobantes del
+  periodo, asi que el primer test del archivo no verifica nada: solo saca la foto previa. Sin eso,
+  una segunda corrida sobre la misma base veria el doble y daria rojo sin que haya nada mal.
+- **El spec apaga "Aplicar margen de ganancia del proveedor" en los dos articulos.** El proveedor
+  del fixture tiene `percentage_gain = 100`, y un articulo nacido desde el buscador de una compra
+  queda con ese flag prendido (lo hace `check_article_status()`), mientras que uno que ya existia
+  lo tiene apagado: sin nivelarlo, dos articulos con el mismo costo y el mismo margen darian
+  precios distintos y el numero esperado dependeria de un flag que este spec no vino a probar.
+
+### Helpers compartidos
+
+| Helper | Para que |
+|---|---|
+| `helpers/recursos.js` | Esperar la descarga de catalogos del arranque (ver mas abajo). **Todo spec lo necesita.** |
+| `helpers/entorno.js` | Aislar los broadcasts de Pusher. Ya viene puesto por `fixtures.js`. |
+| `helpers/formulario.js` | `abrir_pestania`, `search_and_select`, `elegir_primer_resultado`, `crear_desde_buscador` y `completar_campo`: las maniobras del formulario generico, con sus trampas documentadas. Nacieron inline en `alta-compra.spec.js` y se extrajeron el 19/8/2026. |
+| `helpers/numeros.js` | `numero_de_pantalla` (es-AR) y `numero_de_pantalla_variable` (punto decimal), mas `redondear`. **Cual usar no es opcional**, ver abajo. |
+| `helpers/informe-de-fallo.js` | Imprime el detalle del fallo en el momento, sin esperar el resumen final. |
+
+Y un chequeo que no es un test, para correr **antes** de agregar un `data-testid` nuevo:
+
+```
+node e2e/chequear-prefijos-de-testid.js
+```
+
+Lista los testids que caen adentro de algun prefijo que los specs usan con `^=`. Ver el porque en
+el propio archivo y en la nota sobre `celda-` de mas abajo.
+
+⚠️ **`alta-articulo-desde-buscador.spec.js` todavia tiene su propia copia inline** del click con
+reintento sobre el resultado de busqueda. Si lo tocas, hacelo apuntar a `helpers/formulario.js`.
+
+### 🔴 Un `fill()` puede perderse sin que nada avise
+
+Los inputs de `ModelForm` son **controlados**: `FieldTextInput.local_value` es un computed que lee
+de la prop `value` y emite `input`, sin estado propio. Si el modal todavia esta terminando de cargar
+el modelo cuando el test escribe, el valor tipeado se pisa con el del store y el input vuelve solo
+al valor viejo — sin error, sin warning.
+
+El sintoma es cruel: el formulario se guarda, el `PUT` sale 200, **y el servidor devuelve el valor
+anterior**. La asercion falla veinte lineas mas abajo (*"esperaba 3, recibi 3.5"*) y nada apunta al
+`fill`. Paso el 19/8/2026 con la alicuota del impuesto sobre ventas.
+
+Para campos cuyo valor se verifica *despues* (o peor: se usa para calcular otra cosa), usar
+`completar_campo(page, testid, valor)` de `helpers/formulario.js`, que reintenta el `fill` hasta que
+el campo efectivamente lo tiene.
+
+### 🔴 Los modulos que se ven por fecha no cargan nada hasta que clickeas un dia
+
+Compras, Ventas, Pedidos, Gastos, Cheques y Presupuestos **no disparan el listado al montarse**.
+`view/Index.vue` los saltea a proposito —lo dice su propio `disparar_listado_por_defecto()`— porque
+el flujo de esos modulos es *entrar por dia/rango*. Entonces:
+
+```js
+await page.goto('/proveedores/compras')
+await esperar_recursos_descargados(page, { abrir_panel: false })
+await page.locator('[data-testid="provider_order-row-2"]').click()   // ← timeout de 4 minutos
+```
+
+La tabla dice **"No hay Compras"** con las compras en la base, y el fallo apunta al selector de la
+fila, que no tiene nada de malo. Pasó el 19/8/2026 y costo una corrida entera.
+
+Lo que falta es el paso que hace una persona: elegir el dia.
+
+```js
+await page.goto('/proveedores/compras')
+await esperar_recursos_descargados(page, { abrir_panel: false })
+await page.locator('[data-testid="control-fecha-dia"][data-fecha="2026-08-19"]').click()
+```
+
+`ControlFecha.vue` publica una celda por dia con `data-testid="control-fecha-dia"`, su
+`data-fecha` en `YYYY-MM-DD` y `data-activo="si|no"`; y los dos modos con
+`control-fecha-modo-por-fecha` / `control-fecha-modo-historico` (Historico trae todo, sin filtro de
+fecha). El dia de HOY siempre se puede clickear; los demas solo si ya tienen movimientos
+(`clickDia()` corta con un toast si no).
+
+`compra-costeo-facturacion.spec.js` lo envuelve en `abrir_compras_del_dia()`.
+
+### 🔴 Los importes NO se imprimen todos con el mismo formato
+
+En una **misma fila** del listado de articulos conviven hoy los dos formatos:
+
+| Columna | Se ve | Formato |
+|---|---|---|
+| Costo base | `$2,000.00` | en-US (miles `,`, decimal `.`) |
+| Costo Real | `$2,000.00` | en-US |
+| Precio final | `$4.145,08` | es-AR (miles `.`, decimal `,`) |
+
+Medido el 19/8/2026 sobre "Martillo acero". La causa esta ubicada: las props con
+`variable_decimals` (`cost`, `costo_real`) se imprimen con `price_variable_decimals()`
+—`common-vue/mixins/generals/formatting.js:148`—, que devuelve `numeral(p).format(pattern)` **crudo**;
+`price()` —`common-vue/mixins/dates.js:63`— hace el intercambio de separadores a es-AR despues del
+format, y `price_variable_decimals()` no.
+
+No se corrigio: es un formateador compartido por todo el sistema y cambiarlo mueve cada precio de
+cada pantalla.
+
+🔴 **No hay forma de adivinar el formato mirando el texto**, y es importante entender por que antes
+de escribir un test que lea importes:
+
+```
+"$20.691"   ->  es-AR: veinte mil seiscientos noventa y uno   (price() recorta el ",00")
+"$20.691"   ->  en-US: veinte con seiscientos noventa y uno
+```
+
+El mismo texto, dos numeros. Por eso `helpers/numeros.js` expone **dos** funciones y quien lee
+elige, sabiendo con que formateador se imprimio ese campo:
+
+| Funcion | Para |
+|---|---|
+| `numero_de_pantalla` | Todo lo que sale por `price()`: precios finales, totales, cuenta corriente, montos de reportes. |
+| `numero_de_pantalla_variable` | Solo las props que declaran `variable_decimals` (hoy `cost` y `costo_real`), y los valores crudos de un `input`/`data-*`, donde el punto es decimal. |
+
+Si algun dia se corrige `price_variable_decimals()`, esas llamadas pasan a ser
+`numero_de_pantalla` y la segunda funcion se borra.
 
 ---
 
@@ -190,6 +358,54 @@ agregar nombres sueltos por campo hubiera significado tocar `provider_order.js` 
 declarativo) con flags ad-hoc solo para este modulo. La convencion generica es reusable de
 entrada por cualquier test futuro de cualquier otro modulo basado en `ModelForm`, sin tocar nada
 mas. Ver el reporte del prompt 617 para el detalle completo de archivos tocados.
+
+### Agregados el 19/8/2026 (mision del circuito completo de compra)
+
+Todos genericos y retrocompatibles, en la misma linea que los de arriba:
+
+- **Celda de tabla (solo lectura)**: `data-testid="celda-<model_name>-<key>-<id>"`. Es la unica
+  forma de leer por testid un valor que la tabla muestra como TEXTO —costo real, precio final,
+  stock, saldo de cuenta corriente—.
+
+  🔴 **Va en los DOS componentes de tabla del sistema**, y es facil no darse cuenta de que son dos:
+  `display/table/Tr.vue` (el que usa el listado de articulos) y `display/TableComponent.vue`
+  —una `b-table`, via `tdAttr`— que usa, entre otros, la cuenta corriente. Desde afuera no se
+  distinguen. Un testid que exista en una sola de las dos es peor que no tenerlo: el test anda en
+  un modulo y en el de al lado se va en timeout buscando una celda que en ese camino de render
+  nunca existio (paso el 19/8/2026 con `celda-current_acount-debe-4`). **Si se toca uno, se toca
+  el otro.**
+
+  🔴 **El discriminante va al PRINCIPIO, no al final, y eso lo enseño un rojo.** La primera version
+  uso `<model>-<key>-<id>-celda` y dejo `alta-articulo-desde-buscador.spec.js` en rojo: ese spec
+  ubica la fila recien agregada con `[data-testid^="article-amount-"]` (prefijo, porque no conoce el
+  id de antemano) y el sufijo `-celda` tambien empieza con `article-amount-`, asi que el selector
+  paso a ver 2 elementos donde habia 1. **Regla que queda: un `data-testid` nuevo nunca puede
+  compartir el comienzo con uno que ya existe**, porque los selectores de prefijo son la forma
+  estandar de este harness de encontrar una fila sin saber su id.
+- **Campo de fecha**: `data-testid="<model_name>-<key>"` en `model/form/DatePicker.vue`. Era el
+  unico tipo de campo del formulario generico sin testid (el `id` que ya tenia usa `_` en vez de
+  `-`, por razones historicas).
+- **Margen de ganancia del articulo**: `article-percentage_gain` en
+  `listado/components/modal-props/PercentageGainInput.vue`. Ese campo se renderiza por slot con un
+  componente propio, asi que no heredaba el testid generico de `ModelForm`.
+- **Posicion Fiscal**: un `data-testid` por renglon (`posicion-fiscal-iva-credito`,
+  `-percepcion-iva`, `-retencion-iva`, `-iibb-determinado`, `-percepcion-iibb`, `-retencion-iibb`,
+  `-retencion-ganancias`, `-saldo-iva`, `-saldo-iibb`, `-iva-debito`) **con `data-monto`**, y
+  `data-tipo` en los saldos. 🔴 El `data-monto` no es redundante con el texto: el reporte formatea
+  con `price(valor, false, false)`, que SIEMPRE recorta los dos decimales, asi que una retencion de
+  1795,50 se imprime `$1.795` y del texto no se puede sacar el numero. Mismo patron que
+  `download-resources/Index.vue` (`data-estado`/`data-descargados`/`data-total`).
+- **Movimientos de stock**: `data-testid="stock-movement-row"` por fila, con `data-concepto`,
+  `data-cantidad`, `data-stock-resultante` y `data-deposito-destino`
+  (`stock-movement-modal-info/TableComponent.vue`). Esa tabla es una `b-table` armada a mano: no
+  pasa por `Tr.vue` y no heredaba nada.
+- **Boton de movimientos de stock del listado**: `btn-stock-movements-<id>`. Lleva el id porque el
+  bloque de botones se repite en cada fila.
+- **Cuenta corriente**: `btn-current-acount-<model_id>-<moneda_id>` (el `id` que ya existia se
+  repite cuando el proveedor tiene cuenta en pesos y en dolares; el testid no repite ese error),
+  `btn-registrar-pago` (con `data-precargado="si|no"` segun haya un movimiento seleccionado),
+  `current-acount-pago-total`, y `pago-metodo-<i>` / `pago-monto-<i>` / `pago-caja-<i>` por cada
+  metodo de pago del pago.
 
 Al agregar tests nuevos: si el campo es parte de un `ModelForm` generico o una fila
 `belongs_to_many`, ya tiene `data-testid` con esta convencion — no hace falta tocar nada. Si es

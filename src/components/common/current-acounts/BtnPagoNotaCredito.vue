@@ -12,9 +12,19 @@
         variant="danger">
             Nota de credito
         </b-button>
+        <!--
+            Los dos botones llevan el MISMO data-testid a proposito: para quien los usa (persona o
+            test) son el mismo boton, "registrar un pago". Lo que cambia entre las dos ramas es de
+            donde sale el monto -- con un movimiento seleccionado, setToPay() lo precarga con el
+            saldo de ESE movimiento; sin seleccion, arranca vacio --, y eso se distingue por el
+            data-precargado, no por el nombre del boton (que ademas incluye el detalle del
+            movimiento, texto variable).
+        -->
         <b-button
         v-if="pago_para_esta"
         class="m-l-10"
+        data-testid="btn-registrar-pago"
+        data-precargado="si"
         @click="setToPay()"
         variant="primary">
             Registrar pago para {{ pago_para_esta.detalle }}
@@ -22,6 +32,8 @@
         <b-button
         v-else
         class="m-l-10"
+        data-testid="btn-registrar-pago"
+        data-precargado="no"
         @click="pago"
         variant="primary">
             Registrar pago

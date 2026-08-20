@@ -1,6 +1,13 @@
 <template>
 	<div>
+		<!--
+			Este control reemplaza al input generico de ModelForm para percentage_gain (se monta por
+			slot), asi que el data-testid que la convencion generica hubiera puesto no existe: hay
+			que ponerlo a mano y con el MISMO nombre (<model_name>-<key>), para que un test no tenga
+			que saber que este campo se renderiza distinto al resto del formulario.
+		-->
 		<b-form-input
+		data-testid="article-percentage_gain"
 		:disabled="disabled"
 		v-model="article.percentage_gain"
 		placeholder="Margen de ganancia"></b-form-input>
