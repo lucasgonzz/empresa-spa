@@ -967,6 +967,34 @@
 			</b-form-radio>
 		</b-form-group>
 
+			<!--
+				Misión costo-bruto-por-condicion-fiscal (20/8/2026): mismo control que el import
+				clásico. Solo para artículos: clientes y proveedores no tienen costo.
+
+				Se pregunta y no se infiere con la IA a propósito. El análisis no puede distinguir
+				un costo bruto de uno neto mirando la planilla (los dos son un número suelto), así
+				que adivinarlo sería equivocarse en silencio en el 21% del costo de cada artículo.
+			-->
+			<b-form-group v-if="model === 'article'">
+				<b-form-checkbox
+				id="ai-import-precios_incluyen_iva"
+				data-testid="ai-import-precios_incluyen_iva"
+				v-model="precios_incluyen_iva"
+				:value="1"
+				:unchecked-value="0">
+					Los costos de esta planilla son BRUTOS (ya tienen el IVA adentro)
+				</b-form-checkbox>
+				<small class="text-muted d-block m-t-5">
+					El costo del artículo se guarda siempre NETO, sin IVA.
+					<span v-if="costos_de_la_planilla_son_brutos">
+						Como está activada, el costo de cada fila del Excel se toma como BRUTO: ya tiene el IVA adentro y el sistema se lo saca con la alícuota de ese artículo para guardar el neto. Un artículo Exento, No Gravado o al 0% no tiene IVA para sacarle: su costo se importa tal cual.
+					</span>
+					<span v-else>
+						Como está desactivada, el costo de cada fila del Excel se toma como NETO y se importa tal cual, sin tocarlo. Es como venía funcionando la importación hasta ahora.
+					</span>
+				</small>
+			</b-form-group>
+
 			<!-- Error al importar -->
 			<b-alert
 			v-if="error_message"
@@ -1062,6 +1090,21 @@ export default {
 
 			/* Opción de operación: 0=solo actualizar, 1=crear y actualizar. */
 			create_and_edit: null,
+
+			/*
+			 * Misión costo-bruto-por-condicion-fiscal (20/8/2026): declaración de si los costos de
+			 * ESTA planilla vienen brutos (con IVA adentro) o netos. Equivale al flag
+			 * "precios_incluyen_iva" de la compra a proveedor y al check del import clásico
+			 * (src/components/listado/modals/import/Index.vue).
+			 *
+			 * Hace falta acá y no alcanza con tenerlo en el import clásico porque este flujo NO
+			 * pasa por ArticleController@import: postea a /ai-excel-import/import, que arma su
+			 * propio array para InitExcelImport. Toda clave que no se mande explícitamente acá
+			 * llega al backend con el default, y el default es "neto".
+			 *
+			 * Arranca en 0 (= costos netos), que es como venía importando este flujo hasta hoy.
+			 */
+			precios_incluyen_iva: 0,
 
 			/* Opciones avanzadas de importación, con los mismos defaults que el modal existente. */
 			actualizar_articulos_de_otro_proveedor: 1,
@@ -1208,6 +1251,14 @@ export default {
 		modal_id() {
 			if (this.model === 'article') return 'ai-excel-import-modal'
 			return 'ai-' + this.model + '-excel-import-modal'
+		},
+
+		/*
+		 * Estado del control "Los costos de esta planilla son BRUTOS", normalizado a booleano.
+		 * Solo se usa para elegir cuál de los dos textos de ayuda mostrar.
+		 */
+		costos_de_la_planilla_son_brutos() {
+			return Number(this.precios_incluyen_iva) === 1
 		},
 
 		/*
@@ -2838,6 +2889,17 @@ export default {
 				/* Campos específicos de artículos (ignorados por el backend para client/provider). */
 				registrar_art_cre: true,
 				registrar_art_act: true,
+				/*
+				 * Misión costo-bruto-por-condicion-fiscal (20/8/2026): cómo interpretar el costo de
+				 * cada fila, bruto (con IVA adentro) o neto. Se manda SIEMPRE, incluso apagado: si
+				 * la clave no viaja, el backend cae en su default y un cambio de default del otro
+				 * lado le cambia el costeo a este flujo sin que nadie lo haya declarado acá.
+				 *
+				 * Acá sí va como booleano real porque este endpoint recibe JSON. En el import
+				 * clásico viaja como 1/0, que es lo único seguro en un FormData (todo se serializa
+				 * a string y `(bool) 'false'` en PHP da TRUE).
+				 */
+				precios_incluyen_iva: this.model === 'article' && Number(this.precios_incluyen_iva) === 1,
 				permitir_provider_code_repetido:                    derived_flags.permitir_provider_code_repetido,
 				permitir_provider_code_repetido_en_multi_providers: derived_flags.permitir_provider_code_repetido_en_multi_providers,
 				actualizar_articulos_de_otro_proveedor:             derived_flags.actualizar_articulos_de_otro_proveedor,
@@ -3681,6 +3743,7 @@ export default {
 			this.selected_provider_id = null
 			this.provider_confidence  = 'bajo'
 			this.create_and_edit      = null
+			this.precios_incluyen_iva = 0
 			this.actualizar_articulos_de_otro_proveedor = 1
 			this.permitir_provider_code_repetido = 0
 			this.permitir_provider_code_repetido_en_multi_providers = 0

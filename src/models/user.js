@@ -119,27 +119,19 @@ export default {
 			],
 		},
 		/*
-		 * Mision costo-bruto-por-condicion-fiscal (20/8/2026): como se cargan los costos en esta
-		 * cuenta. Es el default del formulario del listado; ahi mismo se puede cambiar por carga.
+		 * Mision costo-bruto-por-condicion-fiscal, plan v2 (20/8/2026): ACA HABIA un switch de
+		 * cuenta, "Los costos se cargan con IVA incluido" (users.costos_cargados_con_iva), que era
+		 * el default de como interpretar el costo que alguien tipeaba. Se saco junto con la columna,
+		 * que se elimina de la base.
 		 *
-		 * Solo aplica a Responsable Inscripto: el Monotributista carga siempre el bruto (recibe
-		 * Factura B, donde el IVA no viene discriminado y el neto no figura en ningun lado), asi
-		 * que para el este switch se oculta -- no gobierna nada y estaria invitando a tocarlo.
-		 *
-		 * 🔴 A diferencia de las dos opciones de arriba, cambiar esto NO recalcula ningun precio:
-		 * no toca el costo de los articulos ya cargados, solo como se interpreta el proximo numero
-		 * que alguien tipee.
+		 * Por que ya no existe: un default de cuenta se colaba como declaracion. El que carga el
+		 * costo es el que dice si es neto o bruto, y lo dice en el momento y en el lugar de la
+		 * carga -- en el listado, eligiendo en cual de los dos inputs escribe (CostInput.vue); en
+		 * la compra, con provider_orders.precios_incluyen_iva; en el import de Excel, con un control
+		 * propio por planilla. Con eso no queda nada que adivinar a nivel cuenta, y de paso se evita
+		 * que un guardado que ni toca el costo lo descomponga porque la cuenta tenia el switch
+		 * prendido.
 		 */
-		{
-			text: 'Los costos se cargan con IVA incluido',
-			key: 'costos_cargados_con_iva',
-			type: 'checkbox',
-			descriptions: [
-				'Activalo si al cargar un articulo o importar un Excel escribis el costo tal cual figura en la factura del proveedor, con IVA. El sistema le saca el IVA y guarda el costo sin IVA, que es el que usa para calcular los precios.',
-				'Desactivado, el costo que cargues se toma como precio de lista sin IVA. Podes cambiarlo articulo por articulo desde el formulario del listado.',
-			],
-			v_if_function: 'es_responsable_inscripto_v_if_function',
-		},
 		/*
 		 * Prompt 266 (Fase 2, Capa 3): modo "precio de etiqueta incluye la tarjeta mas cara".
 		 * Si esta activo, el precio final del articulo (el que se muestra en LISTADO y VENDER) ya

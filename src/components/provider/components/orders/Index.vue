@@ -59,7 +59,8 @@ export default {
 		NavComponent: () => import('@/components/provider/components/orders/nav/Index'),
 		Total: () => import('@/components/provider/components/orders/Total'),
 		PriceDescription: () => import('@/components/provider/modals/orders/PriceDescription'),
-		// Prompt 611: control "Los precios ya incluyen IVA" con descripcion permanente
+		// Prompt 611: control de costos brutos/netos de la compra ("precios_incluyen_iva"), con
+		// descripcion permanente
 		PreciosIncluyenIva: () => import('@/components/provider/components/orders/PreciosIncluyenIva'),
 	},
 	computed: {

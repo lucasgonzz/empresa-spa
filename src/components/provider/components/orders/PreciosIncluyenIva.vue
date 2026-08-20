@@ -2,7 +2,9 @@
 	<div v-if="provider_order">
 
 		<!--
-			Toggle "Los precios ya incluyen IVA" de la compra a proveedor.
+			Toggle "Los costos que cargo en esta compra son BRUTOS (ya tienen el IVA adentro)" de la
+			compra a proveedor (prop "precios_incluyen_iva" de src/models/provider_order.js: la clave
+			no cambio, el titulo si).
 			Reemplaza el checkbox generico de ModelForm (slot #precios_incluyen_iva en Index.vue) para poder
 			agregarle debajo una descripcion PERMANENTE (no tooltip) que cambia segun el estado del toggle.
 			Reusa las mismas clases ".model-form__toggle*" (definidas en ModelForm.vue, sin scope, por eso
@@ -38,12 +40,12 @@
 			segun el estado del toggle.
 		-->
 		<small class="text-muted d-block m-t-5">
-			El costo del artículo se guarda siempre sin IVA (costo base).
+			El costo del artículo se guarda siempre NETO, sin IVA.
 			<span v-if="precios_incluyen_iva_activo">
-				Con esta opción activada, el precio que cargues se toma como precio final con IVA incluido: el sistema calcula el costo base descontando la alícuota de IVA de cada artículo.
+				Como está activada, el costo que tipeás en cada artículo se toma como BRUTO: ya tiene el IVA adentro y el sistema se lo saca con la alícuota de ese artículo para guardar el neto. Tipeá el número tal como figura en la lista o la factura del proveedor, con IVA. Un artículo Exento, No Gravado o al 0% no tiene IVA para sacarle: su costo se guarda tal cual lo tipeaste.
 			</span>
 			<span v-else>
-				Con esta opción desactivada, el precio que cargues se toma tal cual como costo base, y el IVA se suma por encima para armar la factura.
+				Como está desactivada, el costo que tipeás en cada artículo se toma como NETO y se guarda tal cual, sin tocarlo. Tipeá el número sin IVA; el IVA se suma después, por encima, para armar la factura.
 			</span>
 		</small>
 
