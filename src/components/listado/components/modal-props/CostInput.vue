@@ -22,14 +22,29 @@
 			Responsable Inscripto, que es el unico que puede elegir. El Monotributista carga siempre
 			el bruto (recibe Factura B, donde el IVA no viene discriminado y el neto no figura), asi
 			que no se le muestra una opcion que no tiene.
+			
+			🔴 Se DESHABILITA cuando el articulo no tiene una alicuota real (Exento / No Gravado /
+			0%): ahi no hay IVA adentro del numero por mas que alguien lo afirme, asi que el back-out
+			no va a pasar ni aca ni en la API (ArticlePricesHelper::hasIva). Hasta este cambio el
+			toggle se ofrecia igual y no hacia nada: el label decia "Costo con IVA" sobre un numero
+			que se guardaba tal cual. Se deshabilita en vez de esconderse para que se entienda por
+			que no esta disponible, en vez de que el control aparezca y desaparezca solo.
+			
+			OJO: `aplicar_iva = 0` ya NO lo bloquea. Desde el 20/8/2026 la declaracion explicita le
+			gana a ese flag en el backend (back_out_iva, cuarto parametro), porque `aplicar_iva` es
+			una decision sobre la VENTA y no sobre como leer lo que la persona acaba de tipear.
 		-->
 		<div v-if="!cuenta_es_monotributista" class="m-t-5">
 			<b-form-checkbox
 			:checked="cost_incluye_iva"
+			:disabled="!hay_iva_aplicable"
 			switch
 			@change="cambiar_modo($event)">
 				<span class="text-muted">El costo que estoy cargando incluye IVA</span>
 			</b-form-checkbox>
+			<small v-if="!hay_iva_aplicable && !modo_bruto" class="text-muted d-block">
+				Este articulo no tiene IVA que descontar, asi que el costo se carga sin IVA.
+			</small>
 		</div>
 
 		<!--
@@ -148,23 +163,32 @@ export default {
 			return self.get_item_iva_percentage(self.article)
 		},
 		/**
-		 * Si hay un IVA real que sacar. Replica el criterio de ArticlePricesHelper::hasIva() (0,
-		 * Exento y No Gravado no cuentan) mas el de back_out_iva(), que ademas exige `aplicar_iva`
-		 * salvo para Monotributista. Sin esto la pantalla prometia una descomposicion que el
-		 * backend no iba a hacer.
+		 * Si hay un IVA real que sacar. Replica el criterio de ArticlePricesHelper::hasIva():
+		 * alicuota 0, Exento y No Gravado no cuentan. Sin esto la pantalla prometia una
+		 * descomposicion que el backend no iba a hacer.
+		 *
+		 * 🔴 Ya NO mira `article.aplicar_iva`, y sacarlo fue un cambio deliberado del 20/8/2026.
+		 * Este formulario SIEMPRE manda `cost_incluye_iva` (ver el watch de article.id), o sea que
+		 * todo lo que sale de aca es una declaracion explicita, y desde esa fecha la declaracion
+		 * explicita le gana a `aplicar_iva` en back_out_iva(). Si esta computed lo siguiera
+		 * mirando, la pantalla mostraria "no hay IVA que descontar" sobre un articulo al que el
+		 * backend SI le va a sacar el 21%: las dos puntas discrepando otra vez, que es el error
+		 * que esta mision viene arrastrando desde el principio.
+		 *
+		 * Lo que queda: hasIva(), que es la unica puerta que la declaracion explicita no abre.
 		 */
 		hay_iva_aplicable() {
-			if (!this.alicuota) {
-				return false
-			}
-			return this.cuenta_es_monotributista || !!(this.article && this.article.aplicar_iva)
+			return !!this.alicuota
 		},
 		/**
 		 * El label dice en que moneda esta el campo. Sin esto, "Costo base" arriba de un numero con
 		 * IVA adentro es exactamente la confusion que esta mision vino a sacar.
+		 *
+		 * Tambien exige `hay_iva_aplicable`: sobre un articulo Exento no hay IVA que sacar, el
+		 * numero se guarda tal cual, y llamarlo "Costo con IVA" seria la misma confusion al reves.
 		 */
 		label_del_campo() {
-			if (this.modo_bruto) {
+			if (this.modo_bruto && this.hay_iva_aplicable) {
 				return 'Costo con IVA'
 			}
 			return this.propText(this.prop)
