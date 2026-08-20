@@ -505,6 +505,17 @@ export default {
 					sortable: prop.sortable,
 					thStyle: this.column_style(prop),
 					tdStyle: this.column_style(prop),
+					// data-testid de la celda, MISMA convencion que display/table/Tr.vue:
+					// "celda-<model_name>-<key>-<id>".
+					//
+					// 🔴 El sistema tiene DOS tablas: esta (b-table) y display/table/Index.vue +
+					// Tr.vue. Cual se usa depende del modulo --el listado de articulos usa la
+					// segunda, la cuenta corriente usa esta-- y desde afuera no se distinguen.
+					// Un data-testid que exista en una sola de las dos es peor que no tenerlo: el
+					// test funciona en un modulo y en el de al lado se va en timeout buscando una
+					// celda que en ese camino de render nunca existio (medido el 19/8/2026:
+					// celda-current_acount-debe-4). Si se toca uno de los dos, se toca el otro.
+					tdAttr: this.cellAttrs(prop.key),
 				})
 			})
 
@@ -666,6 +677,22 @@ export default {
 				return { 'data-testid': this.model_name + '-row-' + item.id }
 			}
 			return {}
+		},
+		/**
+		 * Devuelve la funcion `tdAttr` de una columna: le pone a cada <td> el data-testid de celda
+		 * con la convencion "celda-<model_name>-<key>-<id>" (ver el comentario en fields()).
+		 *
+		 * @param {string} key Key de la propiedad/columna.
+		 * @returns {Function} (value, key, item) => atributos del <td>, como los pide b-table.
+		 */
+		cellAttrs(key) {
+			let model_name = this.model_name
+			return function (value, cell_key, item) {
+				if (!item || typeof item.id == 'undefined') {
+					return {}
+				}
+				return { 'data-testid': 'celda-' + model_name + '-' + key + '-' + item.id }
+			}
 		},
 		download() {
 			this.$store.dispatch(this.model_name+'/getModels')

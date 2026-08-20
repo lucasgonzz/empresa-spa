@@ -1,10 +1,17 @@
 <template>
 	<div>
+		<!--
+			🔴 El data-testid lleva la moneda ademas del id del modelo, y el `id` de al lado NO.
+			Este v-for emite un boton por cada credit_account (pesos y dolares), asi que con la
+			extension ventas_en_dolares prendida los dos botones de un mismo proveedor comparten el
+			`id` --que en HTML tiene que ser unico y no lo es--. El testid no repite ese error.
+		-->
 		<b-button
 		v-for="credit_account in model.credit_accounts"
 		class="m-l-15"
 		v-if="show(credit_account)"
 		:id="'btn-current-acount-'+model.id"
+		:data-testid="'btn-current-acount-'+model.id+'-'+credit_account.moneda_id"
 		@click.stop="showCurrentAcounts(credit_account)"
 		variant="success">
 			C/C {{ credit_account.moneda.name }}
