@@ -36,15 +36,12 @@
 		-->
 		<div v-if="!cuenta_es_monotributista" class="m-t-5">
 			<b-form-checkbox
-			:checked="cost_incluye_iva"
+			:checked="cost_incluye_iva && hay_iva_aplicable"
 			:disabled="!hay_iva_aplicable"
 			switch
 			@change="cambiar_modo($event)">
 				<span class="text-muted">El costo que estoy cargando incluye IVA</span>
 			</b-form-checkbox>
-			<small v-if="!hay_iva_aplicable && !modo_bruto" class="text-muted d-block">
-				Este articulo no tiene IVA que descontar, asi que el costo se carga sin IVA.
-			</small>
 		</div>
 
 		<!--
@@ -54,13 +51,19 @@
 			su proveedor. Ahora queda siempre visible y cambia segun la condicion de IVA de la cuenta.
 		-->
 		<small class="text-muted d-block m-t-5">
-			<span v-if="modo_bruto">
+			<!--
+				El caso "no hay IVA que descontar" va PRIMERO y es excluyente. Antes era una rama de
+				adentro del modo bruto, asi que sobre un articulo Exento la pantalla mostraba las dos
+				frases seguidas: "El sistema calcula solo el costo sin IVA" y, abajo, "Este articulo no
+				tiene IVA que descontar". Se contradecian. Lo encontro el checker de la Fase 5.
+			-->
+			<span v-if="!hay_iva_aplicable">
+				Este articulo no tiene IVA que descontar: el costo se guarda tal cual lo cargues.
+			</span>
+			<span v-else-if="modo_bruto">
 				Carga el costo tal cual figura en la factura de tu proveedor, con IVA incluido. El sistema calcula solo el costo sin IVA.
 				<template v-if="costo_neto_derivado !== null">
 					Costo sin IVA: <strong>{{ price(costo_neto_derivado) }}</strong>.
-				</template>
-				<template v-else-if="valor_visible && !hay_iva_aplicable">
-					Este articulo no tiene IVA que descontar, asi que el costo se guarda tal cual.
 				</template>
 			</span>
 			<span v-else>
@@ -87,6 +90,17 @@ export default {
 			 * inputs bloqueados y sin salida (Mision 44, ver CriterioDePrecioHelper en la API).
 			 */
 			cost_incluye_iva: false,
+			/**
+			 * Si la persona TIPEO en el campo de costo durante esta apertura del modal.
+			 *
+			 * 🔴 Existe porque cambiar_modo() necesita distinguir "no toco nada" de "tipeo con el
+			 * toggle apagado", y article.cost_incluye_iva NO alcanza para eso: vale false en los dos
+			 * casos. Con ese guard, tipear 1500 en neto y despues prender el toggle no convertia nada
+			 * y el 1500 desaparecia de la pantalla (valor_visible caia en el cost_bruto viejo), pero
+			 * el 1500 se guardaba igual: la pantalla mostraba un numero y la base recibia otro.
+			 * Lo encontro el checker de la Fase 5.
+			 */
+			tipeo_manual: false,
 		}
 	},
 	computed: {
@@ -250,6 +264,7 @@ export default {
 		 * vino del servidor y el flag no se prende: guardar sin tocar nada deja el costo igual.
 		 */
 		set_costo(valor) {
+			this.tipeo_manual = true
 			this.$set(this.article, 'cost', valor)
 			this.$set(this.article, 'cost_incluye_iva', this.modo_bruto)
 		},
@@ -263,7 +278,16 @@ export default {
 
 			self.cost_incluye_iva = nuevo_valor
 
-			if (!self.article.cost_incluye_iva) {
+			/*
+			 * Si nadie tipeo, el store NO se toca: valor_visible recalcula sola, y el flag tiene
+			 * que quedarse en false para que un guardado sin tocar el costo no dispare el back-out
+			 * sobre un numero que ya era neto (el bug de 1000 -> 826,45 -> 683,01).
+			 *
+			 * El guard mira tipeo_manual y no article.cost_incluye_iva: ese vale false tanto cuando
+			 * nadie tipeo como cuando la persona tipeo con el toggle apagado, y en el segundo caso
+			 * lo tipeado SI hay que convertirlo.
+			 */
+			if (!self.tipeo_manual) {
 				return
 			}
 
@@ -289,6 +313,8 @@ export default {
 		'article.id': {
 			immediate: true,
 			handler() {
+				this.tipeo_manual = false
+
 				this.cost_incluye_iva = this.cuenta_es_monotributista
 					? true
 					: !!(this.owner && this.owner.costos_cargados_con_iva)
