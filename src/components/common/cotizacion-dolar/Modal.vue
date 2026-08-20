@@ -17,9 +17,18 @@
 		@show="al_abrir"
 		@hidden="al_cerrar">
 
+			<!--
+				Mientras el modal se está yendo no se dibuja nada nuevo. Guardar deja la
+				medición en null -- la referencia que se acaba de guardar es la de este mismo
+				momento, así que no hay nada medido -- y el modal sigue montado durante toda
+				la transición de salida: sin esto, el último cuadro del cierre exitoso sería
+				la pantalla de "no pudimos comparar", justo después de haber guardado bien.
+			-->
+			<div v-if="cerrando"></div>
+
 			<!-- E1. Spinner solo, sin texto de relleno. -->
 			<div
-			v-if="loading"
+			v-else-if="loading"
 			class="cotizacion-dolar__cargando">
 				<b-spinner></b-spinner>
 			</div>
@@ -341,6 +350,11 @@ export default {
 			avisar_cambios: true,
 			variacion_minima: 1,
 			mostrar_lista: false,
+			/*
+			 * El modal está en su transición de salida. Es local y no del store porque no es
+			 * un dato de la cotización: es el estado de ESTA pantalla mientras se va.
+			 */
+			cerrando: false,
 		}
 	},
 	computed: {
@@ -382,17 +396,22 @@ export default {
 			return 'No pudimos consultar las cotizaciones.'
 		},
 		/**
-		 * Hay una cotización elegida pero no hay medición.
+		 * No hay medición.
 		 *
 		 * Cubre los dos casos en los que el backend devuelve `comparacion` en null con el
 		 * proveedor andando: el valor cargado a mano sin referencia (E8), y la referencia
 		 * guardada que no sirve para medir (valor en 0 o nulo). Los dos terminan en la misma
 		 * pantalla porque los dos se resuelven igual: eligiendo una referencia.
+		 *
+		 * 🔴 No vuelve a preguntar por `estado` ni por `seleccion_actual`, y no es un olvido:
+		 * en el template se evalúa DESPUÉS del proveedor caído y del "nunca eligió", así que
+		 * acá ya solo queda decidir si hay medición o no. Al ser la rama terminal de "no hay",
+		 * la rama que sí muestra números no puede alcanzarse nunca con `comparacion` en null
+		 * -- que es la única forma de que este modal no reviente leyendo una medición que no
+		 * existe.
 		 */
 		sin_medicion() {
-			return this.estado === 'ok'
-				&& !!this.seleccion_actual
-				&& !this.comparacion
+			return !this.comparacion
 		},
 		texto_sin_medicion() {
 			if (this.seleccion_actual && this.seleccion_actual.origen === 'manual') {
@@ -505,6 +524,17 @@ export default {
 			this.$store.commit('dolar_cotizacion/set_abierto_desde', 'configuracion')
 			this.$store.commit('dolar_cotizacion/set_error_al_guardar', null)
 			this.mostrar_lista = false
+			this.cerrando = false
+		},
+		/**
+		 * Cierra el modal marcando primero que se está yendo, para que la transición de
+		 * salida no muestre un contenido distinto del que el usuario acaba de dejar.
+		 *
+		 * @returns {void}
+		 */
+		cerrar() {
+			this.cerrando = true
+			this.$bvModal.hide('cotizacion-dolar')
 		},
 		reintentar() {
 			this.$store.dispatch('dolar_cotizacion/consultar', { silencioso: false })
@@ -597,7 +627,7 @@ export default {
 				if (!respuesta) {
 					return
 				}
-				self.$bvModal.hide('cotizacion-dolar')
+				self.cerrar()
 			})
 		},
 		/**
@@ -614,7 +644,7 @@ export default {
 		ahora_no() {
 			let self = this
 			if (!this.preferencias_cambiaron) {
-				this.$bvModal.hide('cotizacion-dolar')
+				this.cerrar()
 				return
 			}
 			this.$store.dispatch('dolar_cotizacion/guardar_preferencias', {
@@ -625,7 +655,7 @@ export default {
 				if (!respuesta) {
 					return
 				}
-				self.$bvModal.hide('cotizacion-dolar')
+				self.cerrar()
 			})
 		},
 		nombre_de_casa(clave) {
