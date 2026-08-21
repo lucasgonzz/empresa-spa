@@ -5,11 +5,21 @@
 		v-if="label">
 			{{ label }} 
 		</label>
+		<!--
+			El id usa "_" por razones historicas; el data-testid usa "-", que es la convencion de
+			e2e/README.md (<model_name>-<key>) y la misma que emiten FieldTextInput/FieldSelectInput.
+			Sin esto, un campo de tipo date era el unico del formulario generico sin forma de
+			seleccionarlo por testid (caso concreto: la fecha de emision de la factura de compra,
+			que es la que fecha el comprobante en el Libro IVA y en Posicion Fiscal).
+			`prop` puede venir null (es su default), por eso el testid se calcula en un computed
+			que devuelve null en ese caso -- un :data-testid null no se renderiza.
+		-->
 		<input 
 		@change="setDate"
 		v-model="date_value"
 		type="date" 
 		:id="model_name+'_'+prop.key"
+		:data-testid="testid"
 		class="custom-date-picker">
 	</div>
 </template>
@@ -30,6 +40,20 @@ export default {
 			default: null
 		},
 		model_name: String,
+	},
+	computed: {
+		/**
+		 * data-testid del input, con la convencion <model_name>-<key> de e2e/README.md.
+		 *
+		 * @returns {String|null} null si el componente se uso sin prop (su default), para que el
+		 *                        atributo no se renderice en vez de salir como "algo-undefined".
+		 */
+		testid() {
+			if (!this.prop || !this.prop.key) {
+				return null
+			}
+			return this.model_name + '-' + this.prop.key
+		},
 	},
 	created() {
 		if (this.value) {

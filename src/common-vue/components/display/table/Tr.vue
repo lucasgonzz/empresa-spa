@@ -18,10 +18,28 @@
 	@click="onRowSelected(model)"
 	:data-testid="is_from_search_modal ? 'search-result-row' : (model_name + '-row-' + model.id)"
 	:class="rowClass(model)">
+		<!--
+			data-testid de la CELDA: "celda-<model_name>-<key>-<id>". Es la unica forma de leer por
+			testid un valor que la tabla muestra como TEXTO (costo real, precio final, stock, saldo);
+			los otros dos testids de esta misma tabla apuntan a inputs -- PivotProp.vue usa
+			<model>-<key>-<id> y la celda editable de mas abajo usa <model>-<key>-<id>-editable.
+
+			🔴 El discriminante va como PREFIJO y no como sufijo, y eso no es cuestion de gusto.
+			Los specs seleccionan la fila recien agregada de un pivote con selectores de prefijo
+			--[data-testid^="article-amount-"], para encontrarla sin saber su id-- y un sufijo
+			"-celda" tambien empieza con "article-amount-": la primera version de esto uso el sufijo
+			y puso en rojo a alta-articulo-desde-buscador.spec.js, que de golpe veia 2 elementos
+			donde habia 1 (medido el 19/8/2026, corrida completa de la suite). Cualquier testid
+			nuevo que comparta el comienzo con uno existente rompe esos selectores en silencio.
+
+			Va en el <td> y no en el <div> de adentro porque el <td> es el unico elemento que existe
+			siempre, sea cual sea el camino de render de la celda (slot, imagenes, boton, texto).
+		-->
 		<td
 		v-for="(prop, index) in props"
 		:key="prop.key + '-' + index"
 		v-if="showProperty(prop)"
+		:data-testid="'celda-' + model_name + '-' + prop.key + '-' + model.id"
 		:style="column_style(prop)">
 			<div 
 			:class="get_cell_classes(prop, index)"

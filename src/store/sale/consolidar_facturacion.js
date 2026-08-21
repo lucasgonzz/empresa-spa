@@ -38,11 +38,17 @@ export default {
          */
         modo_desde_seleccion: false,
 
-        /** Parámetros AFIP para la factura consolidada. */
+        /**
+         * Parámetros AFIP para la factura consolidada.
+         *
+         * 🔴 No hay monto_a_facturar y no se vuelve a agregar: por decisión de Lucas del
+         * 20/8/2026, si se consolidan varias ventas en una sola factura no se puede informar
+         * ningún importe personalizado. El backend además lo fuerza a null, así que agregarlo
+         * acá sólo lograría mandar un dato que se descarta.
+         */
         afip_information_id: null,
         afip_tipo_comprobante_id: null,
         afip_fecha_emision: null,
-        monto_a_facturar: null,
         forma_de_pago: null,
         agrupar_items: false,
     },
@@ -155,9 +161,6 @@ export default {
         setAfipFechaEmision(state, value) {
             state.afip_fecha_emision = value
         },
-        setMontoAFacturar(state, value) {
-            state.monto_a_facturar = value
-        },
         setFormaDePago(state, value) {
             state.forma_de_pago = value
         },
@@ -205,13 +208,18 @@ export default {
             commit('setError', null)
 
             try {
+                /**
+                 * 🔴 El payload NO lleva monto_a_facturar. Facturar un importe personalizado
+                 * sobre una consolidación no tiene sentido: la factura sale de varias ventas y
+                 * no hay forma de decir a cuál de ellas se le está recortando el importe.
+                 * Decisión de Lucas del 20/8/2026. El backend lo fuerza a null igual.
+                 */
                 const payload = {
                     client_id:                state.client_id,
                     sale_ids:                 state.sale_ids_seleccionados,
                     afip_information_id:      state.afip_information_id,
                     afip_tipo_comprobante_id: state.afip_tipo_comprobante_id,
                     afip_fecha_emision:       state.afip_fecha_emision,
-                    monto_a_facturar:         state.monto_a_facturar,
                     forma_de_pago:            state.forma_de_pago,
                     agrupar_items:            state.agrupar_items,
                 }

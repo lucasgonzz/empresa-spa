@@ -95,6 +95,9 @@ import payment_method_installment from '@/store/payment_method_installment'
 import plan from '@/store/plan'
 import plan_feature from '@/store/plan_feature'
 import dolar from '@/store/dolar'
+// Cotización del dólar de la cuenta. Es OTRA cosa que `dolar`, que guarda el precio de los
+// planes de ComercioCity traído de bluelytics sin sesión.
+import dolar_cotizacion from '@/store/dolar_cotizacion'
 import article_ticket_info from '@/store/article_ticket_info'
 import check from '@/store/check'
 import panel_control from '@/store/panel_control/index'
@@ -365,6 +368,7 @@ export default new Vuex.Store({
         plan,
         plan_feature,
         dolar,
+        dolar_cotizacion,
         article_ticket_info,
         check,
         panel_control,

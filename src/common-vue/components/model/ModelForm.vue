@@ -205,6 +205,7 @@
 									:placeholder="passwordPlaceholder(prop)"
 									@input="$set(model, prop.key, $event)"
 									@search-cuit="searchCUIT"
+									@chequear-cotizacion-dolar="$bvModal.show('cotizacion-dolar')"
 									@set-bar-code="setBarCode"
 									@blur="on_field_blur(prop)"
 									@enter="prop.key == 'cuit' ? searchCUIT() : clickEnter(prop)"></field-text-input>

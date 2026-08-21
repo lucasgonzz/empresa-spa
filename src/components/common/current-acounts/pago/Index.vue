@@ -20,11 +20,18 @@ hide-footer>
         </b-form-datepicker>
     </b-form-group>
     <b-form-group>
+        <!--
+            Deshabilitado a proposito: el monto total del pago no se tipea, sale de la suma de los
+            metodos de pago de mas abajo (update_total). El data-testid es para LEERLO, que es lo
+            unico que se puede hacer con el: es donde se ve el total que se le va a imputar al
+            proveedor.
+        -->
         <b-form-input
         disabled
         type="number"
         min="0"
         id="monto-pago"
+        data-testid="current-acount-pago-total"
         @keydown.enter="hacerPago"
         :placeholder="placeholder"
         v-model="pago.haber"></b-form-input>
@@ -73,6 +80,7 @@ hide-footer>
 	<btn-loader
     @clicked="hacerPago"
 	:loader="loading"
+	data-testid="btn-confirmar-pago"
 	text="Registrar pago"></btn-loader>
 </b-modal>
 </template>
