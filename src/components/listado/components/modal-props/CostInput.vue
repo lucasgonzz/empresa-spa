@@ -37,17 +37,30 @@
 			🔴 El input de NETO no se le muestra al Monotributista (decision de Lucas, 20/8/2026):
 			"el monotributista no tiene que configurar nada de IVA".
 			
-			Todo lo que carga un MT es bruto POR DEFINICION -- recibe Factura B, donde el IVA no
-			viene discriminado y el neto no figura en ningun lado --, asi que ofrecerle un campo
-			"costo sin IVA" es ofrecerle escribir un numero que su comprobante no tiene. El sistema
-			le descompone siempre, solo, y por eso el backend tampoco le pregunta (ver
-			ArticlePricesHelper::el_costo_cargado_es_bruto).
+			Para el MT no existe la distincion bruto/neto: carga el costo que le pasa su proveedor
+			-- recibe Factura B, donde el IVA no viene discriminado -- y ese numero se guarda TAL
+			CUAL. Ofrecerle un campo "costo sin IVA" seria ofrecerle escribir un numero que su
+			comprobante no tiene, y ademas el sistema ya no descompone nada para el (mision
+			`iva-fuera-del-costeo-monotributista`, 21/8/2026: el IVA no participa de su precio en
+			ningun punto). Ver ArticlePricesHelper::el_iva_participa_del_precio().
 			
 			OJO: esto NO es un :disabled. El campo no existe para el MT, no aparece bloqueado. La
 			regla de "ningun input se bloquea nunca" sigue intacta.
 		-->
-		<div v-if="!cuenta_es_monotributista">
+		<!--
+			🔴 Este campo es `articles.cost` DIRECTO, y para el Monotributista es el unico que ve.
+			
+			Mision `iva-fuera-del-costeo-monotributista` (21/8/2026): el MT carga el costo que le
+			pasa su proveedor y ese numero se guarda tal cual. No hay conversion que mostrar, no
+			hay bruto ni neto, y no se le nombra el IVA en ningun lado -- ni siquiera en un
+			sub-label, porque el label que ya pone ModelForm ("Costo base") alcanza.
+			
+			Para Responsable Inscripto si aparece el sub-label, porque abajo tiene el segundo
+			campo y hay que distinguirlos.
+		-->
+		<div>
 			<label
+			v-if="!cuenta_es_monotributista"
 			class="text-muted d-block m-b-5"
 			:for="'article-' + prop.key">
 				Costo sin IVA (neto)
@@ -63,11 +76,27 @@
 			@input="set_costo_neto($event)"></field-text-input>
 		</div>
 
-		<div :class="{ 'm-t-10': !cuenta_es_monotributista }">
+		<div v-if="!cuenta_es_monotributista" class="m-t-10">
+			<!--
+				🔴 Al Monotributista NO se le pone sub-label, y no se le menciona el IVA en ningun
+				lado de este campo (decision de Lucas, 21/8/2026): "no quiero que se le mencione el
+				IVA al monotributista".
+				
+				El motivo es que para el no existe la distincion: carga el costo que le pasa su
+				proveedor y listo. Como ve un solo campo, el label que ya pone ModelForm ("Costo
+				base") alcanza, y un sub-label seria una repeticion que ademas obliga a explicar
+				algo que no le interesa.
+				
+				Desde el 21/8/2026 ya no hay ninguna plomeria: lo que carga es lo que se guarda y lo
+				que se muestra. Lo unico de IVA que sigue a la vista para el MT es el select de
+				alicuota del articulo, que se conserva a proposito por si la cuenta pasa a
+				Responsable Inscripto mas adelante.
+			-->
 			<label
+			v-if="!cuenta_es_monotributista"
 			class="text-muted d-block m-b-5"
 			:for="'article-' + prop_bruto.key">
-				{{ label_bruto }}
+				Costo con IVA (bruto)
 			</label>
 			<field-text-input
 			model_name="article"
@@ -92,24 +121,29 @@
 			descontar") y se contradecian. Lo encontro el checker de la Fase 5.
 		-->
 		<small class="text-muted d-block m-t-10">
-			<span v-if="!hay_iva_aplicable">
+			<!--
+				Decia "los dos campos muestran el mismo numero" tambien para el Monotributista, que
+				ve uno solo. Se separan los dos casos.
+			-->
+			<span v-if="!hay_iva_aplicable && cuenta_es_monotributista">
+				El costo se guarda tal cual lo cargues.
+			</span>
+			<span v-else-if="!hay_iva_aplicable">
 				Este articulo no tiene IVA que descontar (Exento, No Gravado o alicuota 0%): los dos
 				campos muestran el mismo numero y el costo se guarda tal cual lo cargues.
 			</span>
 			<!--
 				🔴 Al Monotributista NO se le cuenta el ida y vuelta del IVA, y es a proposito.
 				
-				Una version de este texto decia "el sistema le saca el IVA y guarda el costo sin IVA;
-				el IVA vuelve a sumarse despues". Es literalmente cierto -- se guarda el neto y
-				iva_va_al_costo() se lo vuelve a sumar --, pero las dos operaciones se cancelan: el MT
-				carga 1210 y su costo real es 1210. Contarle una plomeria interna que no cambia el
-				numero solo lo hace dudar de si el sistema le esta tocando la plata. Lo unico que
-				necesita saber es que el costo que carga es el que manda.
+				Una version de este texto le explicaba un ida y vuelta del IVA que el sistema hacia por
+				dentro (se lo sacaba al guardar y se lo volvia a sumar al costear). Era cierto y no le
+				servia: las dos operaciones se cancelaban. Desde el 21/8/2026 ese ida y vuelta ni
+				siquiera existe. Lo unico que necesita saber es que el costo que carga es el que manda.
 			-->
 			<span v-else-if="cuenta_es_monotributista">
-				Carga el costo tal cual figura en la factura de tu proveedor, con IVA incluido. Ese es el
-				costo con el que el sistema calcula tus precios: como monotributista no recuperas el IVA,
-				lo que pagaste es tu costo.
+				Carga el costo tal cual te lo pasa tu proveedor. A ese costo se le aplican los descuentos
+				y recargos que tenga el articulo, y asi se llega al Costo Real, que es el que se usa para
+				calcular tus precios.
 			</span>
 			<span v-else>
 				Escribi en el campo que tengas a mano: el otro se actualiza solo con la alicuota del
@@ -170,16 +204,6 @@ export default {
 		 */
 		cuenta_es_monotributista() {
 			return !!(this.owner && this.owner.condicion_iva_precios == 'MT')
-		},
-		/**
-		 * Para el Monotributista el de bruto es el UNICO campo, asi que no hace falta aclararle
-		 * que es "el bruto": para el, el costo es ese y no hay otro.
-		 */
-		label_bruto() {
-			if (this.cuenta_es_monotributista) {
-				return 'Costo (con IVA, como figura en la factura)'
-			}
-			return 'Costo con IVA (bruto)'
 		},
 		prop_bruto() {
 			return Object.assign({}, this.prop, {key: 'cost_con_iva'})
@@ -246,6 +270,16 @@ export default {
 		valor_neto_visible() {
 			if (!this.article) {
 				return null
+			}
+
+			/*
+			 * 🔴 Para el Monotributista este campo es `cost` y nada mas: lo que cargo es lo que
+			 * esta guardado, asi que no hay ninguna conversion que hacer ni deshacer. Es el
+			 * cambio de fondo de la mision del 21/8/2026 -- antes el campo mostraba
+			 * cost x (1 + alicuota) porque en la base habia un neto que la persona nunca tipeo.
+			 */
+			if (this.cuenta_es_monotributista) {
+				return this.article.cost
 			}
 
 			// `cost_incluye_iva` en false significa "lo que hay en article.cost es el neto": es

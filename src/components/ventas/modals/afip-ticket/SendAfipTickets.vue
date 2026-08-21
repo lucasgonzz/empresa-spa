@@ -16,6 +16,13 @@
 	    		<i 
 	    		v-if="afip_ticket.maked"
 	    		class="icon-check text-success"></i>
+	    		<!--
+	    			Sin esta rama, la venta que fallaba se quedaba con el spinner girando hasta
+	    			que el modal se cerraba solo, porque el v-else miraba unicamente `maked`.
+	    		-->
+	    		<i
+	    		v-else-if="afip_ticket.fallo"
+	    		class="icon-cancel text-danger"></i>
 	    		<b-spinner
 	    		v-else
 	    		variant="primary"></b-spinner>
@@ -26,6 +33,9 @@
 	    		<strong
 	    		class="p-l-5"
 	    		v-if="afip_ticket.maked">| Factura emitida</strong>
+	    		<strong
+	    		class="p-l-5 text-danger"
+	    		v-if="afip_ticket.fallo">| No se pudo emitir</strong>
 
 	    		<strong
 	    		class="p-l-5 text-danger"

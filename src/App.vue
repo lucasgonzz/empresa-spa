@@ -20,6 +20,13 @@
         <offline-articles-progress
         :offline_articles_sync_progress="offline_articles_sync_progress"></offline-articles-progress>
         <afip-reenviar-facturas></afip-reenviar-facturas>
+        <!--
+            Facturacion de las ventas que se guardaron sin conexion. Va aca arriba, al lado de
+            afip-reenviar-facturas, porque el que llena su lista es el mixin offline -- que se
+            mezcla en este mismo App.vue -- y el modal tiene que existir en cualquier vista: la
+            conexion puede volver estando en cualquier pantalla, no solo en Vender.
+        -->
+        <facturar-ventas-offline></facturar-ventas-offline>
         <articles-stock-minimo></articles-stock-minimo>
         <synced-version-notifications></synced-version-notifications>
         <!--
@@ -90,6 +97,7 @@ export default {
         OfflineArticlesProgress: () => import('@/common-vue/components/offline-sync-articles/Progress'),
         PaymentExpire: () => import('@/components/nav/PaymentExpire'),
         AfipReenviarFacturas: () => import('@/components/common/afip-reenviar-facturas/Index'),
+        FacturarVentasOffline: () => import('@/components/common/facturar-ventas-offline/Index'),
         ArticlesStockMinimo: () => import('@/components/common/ArticlesStockMinimo'),
         SyncedVersionNotifications: () => import('@/components/common/SyncedVersionNotifications'),
         CotizacionDolarModal: () => import('@/components/common/cotizacion-dolar/Modal'),

@@ -9,6 +9,17 @@ export default {
 	state: {
 		problemas_al_facturar: [],
 		afip_tickets_for_make: [],
+		/*
+			Ventas que se guardaron sin conexion CON punto de venta y que al volver la conexion se
+			persistieron en el servidor sin factura. Cada elemento es
+			{ sale, afip: {...}, fecha_original } -- el contrato que devuelve sync_pending_sales().
+
+			Vive en el store y no en un evento porque el que produce la lista (el mixin offline,
+			mezclado en App.vue) y el que la consume (el modal, un chunk async) no arrancan al mismo
+			tiempo: el modal puede terminar de bajar despues de que la sincronizacion ya termino, y
+			un evento emitido antes de que exista el que escucha no lo escucha nadie.
+		*/
+		ventas_offline_para_facturar: [],
 		forma_de_pago: '',
 		permiso_existente: '',
 		incoterms: 'FOB',
@@ -56,6 +67,9 @@ export default {
 		},
 		add_afip_tickets_for_make(state, value) {
 			state.afip_tickets_for_make.push(value)
+		},
+		set_ventas_offline_para_facturar(state, value) {
+			state.ventas_offline_para_facturar = value
 		},
 		setLoading(state, value) {
 			state.loading = value
