@@ -16,8 +16,13 @@
 			<recordatorio-cobro
 			:client="client_seleccionado"></recordatorio-cobro>
 
+			<!--
+				🔴 El conteo del masivo NO es la cantidad de filas: es la cantidad de filas CON
+				cliente. El backend descarta las que no lo tienen, así que contar filas hacía que
+				la confirmación prometiera más envíos de los que el 202 después devolvía.
+			-->
 			<recordatorio-cobro-masivo
-			:total_clientes="ventas_sin_cobrar.length"></recordatorio-cobro-masivo>
+			:total_clientes="clientes_recordables"></recordatorio-cobro-masivo>
 
 			<div class="alertas-cobros">
 
@@ -54,19 +59,29 @@
 					</div>
 
 					<span class="alertas-cobros__contador">
-						{{ numero_es(ventas_sin_cobrar.length) }}
-						{{ ventas_sin_cobrar.length == 1 ? 'cliente con ventas por cobrar' : 'clientes con ventas por cobrar' }}
+						{{ numero_es(clientes_recordables) }}
+						{{ clientes_recordables == 1 ? 'cliente con ventas por cobrar' : 'clientes con ventas por cobrar' }}
 					</span>
 
 					<b-button
 					v-if="puede_recordar"
 					class="alertas-cobros__btn-masivo"
 					variant="success"
-					:disabled="!ventas_sin_cobrar.length"
+					:disabled="!clientes_recordables"
 					@click="abrir_masivo">
 						<i class="bi bi-whatsapp"></i>
 						Recordar a todos
 					</b-button>
+
+					<!--
+						La etiqueta del input promete un filtro universal y no lo es: una venta con
+						`dias_alerta_venta_no_cobrada_personalizado` propio se rige por SU umbral y
+						este número no la toca. Está pedido así y tiene un test que lo fija, pero
+						la pantalla tiene que decirlo.
+					-->
+					<p class="alertas-cobros__filtro-ayuda">
+						Las ventas con un plazo de aviso propio se siguen rigiendo por el suyo, no por este número.
+					</p>
 				</div>
 
 				<div
@@ -80,8 +95,16 @@
 
 						<div class="alertas-cobros__cliente-header">
 
+							<!--
+								⚠️ La fila puede no tener cliente: `ordenar_por_clientes()` agrupa
+								TODAS las ventas con `client_id` null en una sola fila. Es
+								preexistente y la tabla vieja lo mostraba como "NO HAY"; acá se
+								dice con todas las letras y nunca se entra a `alerta.client` sin
+								chequearlo, porque un `alerta.client.name` a secas rompe el
+								render de la lista entera.
+							-->
 							<p class="alertas-cobros__cliente-nombre">
-								{{ alerta.client.name }}
+								{{ nombre_del_cliente(alerta) }}
 							</p>
 
 							<div class="alertas-cobros__cliente-chips">
@@ -89,7 +112,7 @@
 								type="button"
 								class="alertas-cobros__chip"
 								:class="{'is-usd': credit_account.moneda_id == 2}"
-								v-for="credit_account in alerta.client.credit_accounts"
+								v-for="credit_account in cuentas_del_cliente(alerta)"
 								:key="credit_account.id"
 								@click="showCurrentAcounts(alerta.client, credit_account)">
 									{{ price(credit_account.saldo) }}
@@ -100,7 +123,7 @@
 
 							<div class="alertas-cobros__cliente-acciones">
 								<b-button
-								v-if="puede_recordar"
+								v-if="puede_recordar && alerta.client"
 								variant="success"
 								size="sm"
 								@click="abrir_recordatorio(alerta.client)">
@@ -108,10 +131,10 @@
 									Recordar por WhatsApp
 								</b-button>
 								<b-button
-								v-if="alerta.client.credit_accounts.length"
+								v-if="cuentas_del_cliente(alerta).length"
 								variant="outline-secondary"
 								size="sm"
-								@click="showCurrentAcounts(alerta.client, alerta.client.credit_accounts[0])">
+								@click="showCurrentAcounts(alerta.client, cuentas_del_cliente(alerta)[0])">
 									Ver cuenta
 								</b-button>
 							</div>
@@ -151,13 +174,18 @@
 								</a>
 							</div>
 
+							<!--
+								🔴 El enlace va SIEMPRE, tenga el cliente 1 venta o 50. El modal
+								de "Ventas sin cobrar" es el único lugar de toda la interfaz donde
+								se ven `pagandose` y la fecha exacta, dos columnas que la tarjeta
+								no tiene. Colgarlo de `ventas_restantes > 0` las dejaba
+								inalcanzables para cualquier cliente con 5 ventas o menos.
+							-->
 							<button
-							v-if="ventas_restantes(alerta) > 0"
 							type="button"
 							class="alertas-cobros__ventas-mas"
 							@click="showVentasSinCobrar(alerta.ventas_sin_cobrar)">
-								y {{ numero_es(ventas_restantes(alerta)) }}
-								{{ ventas_restantes(alerta) == 1 ? 'venta más' : 'ventas más' }} — ver el detalle
+								{{ texto_ver_detalle(alerta) }}
 							</button>
 						</div>
 					</div>
@@ -226,6 +254,19 @@ export default {
 		puede_recordar() {
 			return this.hasExtencion('whatsapp') && this.can('alerts.recordatorio_cobro')
 		},
+		/**
+		 * Cuántos CLIENTES hay en la lista, que no es lo mismo que cuántas filas.
+		 *
+		 * 🔴 `ordenar_por_clientes()` agrupa todas las ventas sin `client_id` en una sola fila
+		 * sin `client`, y el backend del masivo descarta esas filas antes de encolar. Contar
+		 * filas hacía que la pantalla prometiera "se le va a enviar a 6 clientes" y el 202
+		 * devolviera 5: el número de la confirmación tiene que ser el que se va a cumplir.
+		 *
+		 * @returns {Number}
+		 */
+		clientes_recordables() {
+			return this.ventas_sin_cobrar.filter(alerta => alerta.client).length
+		},
 	},
 	methods: {
 		/**
@@ -269,6 +310,49 @@ export default {
 		ventas_restantes(alerta) {
 			return alerta.ventas_sin_cobrar.length - MAX_VENTAS_EN_TARJETA
 		},
+		/**
+		 * El texto del enlace al detalle completo.
+		 *
+		 * Cuando hay ventas que no entraron en la tarjeta, el enlace se presenta por lo que
+		 * falta ("y 3 ventas más"). Cuando entraron todas, se presenta por lo que el modal
+		 * agrega y la tarjeta no tiene: lo que se está pagando y la fecha exacta. Si no,
+		 * clickear "ver el detalle" en un cliente con todo a la vista no parece llevar a nada.
+		 *
+		 * @param {Object} alerta Fila del endpoint: `{client, ventas_sin_cobrar}`.
+		 * @returns {String}
+		 */
+		texto_ver_detalle(alerta) {
+			let restantes = this.ventas_restantes(alerta)
+			if (restantes > 0) {
+				return 'y ' + this.numero_es(restantes) + (restantes == 1 ? ' venta más' : ' ventas más') + ' — ver el detalle'
+			}
+			return 'Ver el detalle: lo que se está pagando y la fecha exacta'
+		},
+		/**
+		 * El nombre del cliente de la fila, o el rótulo de la fila sin cliente.
+		 *
+		 * @param {Object} alerta Fila del endpoint.
+		 * @returns {String}
+		 */
+		nombre_del_cliente(alerta) {
+			if (alerta.client) {
+				return alerta.client.name
+			}
+			return 'Ventas sin cliente asignado'
+		},
+		/**
+		 * Las cuentas corrientes del cliente de la fila. Array vacío si la fila no tiene cliente
+		 * o el cliente todavía no tiene ninguna.
+		 *
+		 * @param {Object} alerta Fila del endpoint.
+		 * @returns {Array}
+		 */
+		cuentas_del_cliente(alerta) {
+			if (alerta.client && alerta.client.credit_accounts) {
+				return alerta.client.credit_accounts
+			}
+			return []
+		},
 		sale_pdf_url(sale) {
 			return process.env.VUE_APP_API_URL + '/sale/pdf/' + sale.id
 		},
@@ -303,8 +387,39 @@ export default {
 			this.$store.commit('sale/ventas_sin_cobrar/setVentasSinCobrar', ventas)
 			this.$bvModal.show('ventas-sin-cobrar')
 		},
+		/**
+		 * Lo que falta cobrar de una venta, CON su moneda.
+		 *
+		 * 🔴 `price()` antepone siempre `$` y no mira la moneda: una venta en dólares se dibujaba
+		 * "$300,00" mientras el WhatsApp que se le manda al cliente dice "USD 300". El operador
+		 * miraba una cifra en pesos y mandaba una en dólares. Se resuelve con
+		 * `current_acount_simbolo_moneda()`, el helper del sistema que ya usa el modelo de cuenta
+		 * corriente para lo mismo.
+		 *
+		 * @param {Object} sale Venta con su `current_acount` cargada.
+		 * @returns {String}
+		 */
 		lo_que_falta_pagarse(sale) {
-			return this.price(Number(sale.current_acount.debe) - Number(sale.current_acount.pagandose))
+			let falta = Number(sale.current_acount.debe) - Number(sale.current_acount.pagandose)
+			return this.current_acount_simbolo_moneda({moneda_id: this.moneda_de_la_venta(sale)}, falta)
+		},
+		/**
+		 * La moneda de una venta, con la MISMA cascada que usa `RecordatorioCobroSenderService`
+		 * para armar el mensaje: la de la venta, si no la de su cuenta corriente, y en última
+		 * instancia pesos. Si acá y allá no resolvieran igual, la tarjeta volvería a decir una
+		 * cosa y el WhatsApp otra, que es justo lo que se está arreglando.
+		 *
+		 * @param {Object} sale Venta con su `current_acount` cargada.
+		 * @returns {Number}
+		 */
+		moneda_de_la_venta(sale) {
+			if (sale.moneda_id) {
+				return Number(sale.moneda_id)
+			}
+			if (sale.current_acount && sale.current_acount.moneda_id) {
+				return Number(sale.current_acount.moneda_id)
+			}
+			return 1
 		},
 		showCurrentAcounts(client, credit_account) {
 			this.showCurrentAcount(client, credit_account)
@@ -359,6 +474,16 @@ export default {
 		&:focus
 			border: 1px solid var(--color-primary)
 			box-shadow: none
+
+	// La aclaración del filtro se lleva un renglón entero de la barra (`flex-basis: 100%` con el
+	// toolbar en `flex-wrap`), así que no le compite el lugar al input ni al botón masivo en
+	// ningún ancho.
+	&__filtro-ayuda
+		flex: 1 1 100%
+		margin-bottom: 0
+		font-size: 0.75rem
+		line-height: 1.4
+		color: var(--color-text-secondary)
 
 	&__contador
 		font-size: 0.8rem

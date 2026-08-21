@@ -103,6 +103,21 @@
 				</div>
 
 				<!--
+					El mensaje va a salir sin un solo link. No es un bloqueo (el recordatorio
+					sirve igual), pero sí es algo que el operador tiene que saber ANTES de
+					mandarlo: el cliente no va a poder abrir ni el PDF de las ventas ni el
+					resumen de cuenta, y sin este cartel el mensaje se ve perfectamente normal.
+				-->
+				<div
+				v-if="sin_links"
+				class="recordatorio-cobro__aviso">
+					<i class="bi bi-link-45deg"></i>
+					<span>
+						{{ texto_sin_links }}
+					</span>
+				</div>
+
+				<!--
 					No se puede mandar: ya lo recibió hoy, no tiene teléfono, la plantilla no está
 					aprobada. El motivo se muestra y el botón queda deshabilitado; no se esconde
 					el modal ni se manda igual "por las dudas".
@@ -197,15 +212,65 @@ export default {
 			}
 			return texto
 		},
+		/**
+		 * Cuántas ventas se le deben y qué pasa con el detalle, dicho sin mentir en NINGUNO de
+		 * los dos caminos.
+		 *
+		 * Por plantilla el backend devuelve `ventas_listadas => 0` y `ventas_restantes => total`,
+		 * y está bien que así sea: la plantilla no lista las ventas una por una (Meta rechaza los
+		 * parámetros con saltos de línea), el detalle viaja en el resumen de cuenta adjunto. Con
+		 * la condición vieja —el paréntesis colgado de `ventas_restantes > 0`— ese camino
+		 * anunciaba "3 ventas (se listan las 0 más viejas)".
+		 *
+		 * @returns {String}
+		 */
 		texto_ventas() {
 			if (!this.preview) {
 				return ''
 			}
-			let texto = this.numero_es(this.preview.ventas_total) + ' ventas'
+			let total = this.preview.ventas_total
+			let texto = this.numero_es(total) + (total == 1 ? ' venta' : ' ventas')
+			if (!this.preview.ventas_listadas) {
+				return texto + ' (no se listan una por una: el detalle va en el resumen de cuenta adjunto)'
+			}
 			if (this.preview.ventas_restantes > 0) {
-				texto += ' (se listan las ' + this.numero_es(this.preview.ventas_listadas) + ' más viejas)'
+				texto += ' (se listan las ' + this.numero_es(this.preview.ventas_listadas) + ' más viejas; el resto, en el resumen de cuenta)'
 			}
 			return texto
+		},
+		/**
+		 * true cuando el mensaje va a salir sin un solo link.
+		 *
+		 * Pasa cuando el owner no tiene cargada la `api_url`: el backend arma el cuerpo igual,
+		 * pero sin los renglones de las ventas ni el del PDF de cuenta corriente. En pantalla se
+		 * ve un mensaje perfectamente normal, así que sin este aviso el operador no tiene forma
+		 * de enterarse de que le está mandando al cliente un recordatorio pelado.
+		 *
+		 * Se resuelve con lo que ya viene en `preview`, sin campo nuevo: en texto libre los links
+		 * van escritos en el cuerpo, y por plantilla el único "link" posible es el documento
+		 * adjunto.
+		 *
+		 * @returns {Boolean}
+		 */
+		sin_links() {
+			if (!this.preview) {
+				return false
+			}
+			if (this.es_texto_libre) {
+				return !this.preview.body || this.preview.body.indexOf('http') == -1
+			}
+			return !this.preview.documento_url
+		},
+		/**
+		 * Qué le falta al mensaje y qué hay que hacer para que deje de faltarle.
+		 *
+		 * @returns {String}
+		 */
+		texto_sin_links() {
+			if (this.es_texto_libre) {
+				return 'El mensaje va a salir SIN los links a los PDF de las ventas ni al resumen de cuenta corriente. Suele ser porque falta cargar la dirección de la API del negocio en la configuración.'
+			}
+			return 'El mensaje va a salir SIN el resumen de cuenta corriente adjunto. Puede ser porque falta cargar la dirección de la API del negocio, o porque la cuenta corriente del cliente todavía no tiene movimientos.'
 		},
 		puede_enviar() {
 			return !this.cargando
@@ -233,7 +298,17 @@ export default {
 			}
 			this.cargando = true
 			this.$store.dispatch('sale/recordatorio_cobro/getPreview', this.client.id)
-			.then(() => {
+			.then(preview => {
+				/*
+					🔴 `null` significa "este pedido quedó viejo": mientras estaba en vuelo se
+					abrió el modal para otro cliente. El que manda es el pedido en curso, así que
+					acá no se apaga el spinner ni se toca nada. La guarda de verdad está en la
+					action del store (`getPreview`), que es la que impide que la preview de un
+					cliente se dibuje arriba de la de otro.
+				*/
+				if (preview === null) {
+					return
+				}
 				self.cargando = false
 			})
 			.catch(err => {
@@ -262,6 +337,15 @@ export default {
 		},
 		enviar() {
 			let self = this
+			/*
+				Último cinturón de la guarda anti-carrera: no se manda nada si lo que está
+				dibujado en pantalla no es la preview de ESTE cliente. Se manda el mensaje que se
+				leyó o no se manda nada.
+			*/
+			if (!this.preview || this.preview.client_id != this.client.id) {
+				this.$toast.error('La previsualización no corresponde a este cliente. Volvé a abrir el recordatorio.')
+				return
+			}
 			this.$store.dispatch('sale/recordatorio_cobro/enviar', this.client.id)
 			.then(data => {
 				/*
@@ -304,6 +388,7 @@ export default {
 		font-size: 0.9rem
 
 	&__error,
+	&__aviso,
 	&__bloqueo
 		display: flex
 		align-items: flex-start
@@ -318,6 +403,14 @@ export default {
 
 	&__bloqueo
 		margin-top: 14px
+
+	// El aviso de "sin links" comparte la caja con el bloqueo a propósito: no impide mandar,
+	// pero es una configuración faltante y tiene que leerse con el mismo peso, no como una nota
+	// al pie. El peso menor se lo da el `font-weight`, no un color nuevo.
+	&__aviso
+		margin-top: 14px
+		font-weight: 500
+		line-height: 1.45
 
 	// El canal es lo primero que se lee: es lo que explica por qué el mensaje de abajo tiene la
 	// forma que tiene.

@@ -34,11 +34,32 @@ export default {
 
 		/** Clientes que el backend NO encoló, con su motivo. 🔴 Se muestran, no se ocultan. */
 		salteados: [],
+
+		/**
+		 * Número del último pedido de previsualización. 🔴 Es el guard anti-carrera del modal
+		 * individual: sólo el pedido que tenga este número puede escribir `preview`.
+		 *
+		 * El motivo largo está en `getPreview()`. En corto: la preview de un cliente que llega
+		 * tarde no puede pisar la del cliente que el modal está mostrando ahora.
+		 */
+		preview_token: 0,
 	},
 
 	mutations: {
 		setPreview(state, value) {
 			state.preview = value
+		},
+		/**
+		 * Abre un pedido de previsualización nuevo e invalida los que estén en vuelo.
+		 *
+		 * Se llama antes de cada GET y también desde `reset()`, así cerrar el modal alcanza para
+		 * que una respuesta que venga en camino no escriba nada.
+		 *
+		 * @param {Object} state Estado del módulo.
+		 * @returns {void}
+		 */
+		nuevoPreviewToken(state) {
+			state.preview_token++
 		},
 		setEnviando(state, value) {
 			state.enviando = value
@@ -95,6 +116,9 @@ export default {
 			state.lote = null
 			state.enviando = false
 			state.salteados = []
+			// Cortar acá lo que esté en vuelo es parte del reset: si no, la preview del cliente
+			// anterior aterriza sobre el módulo ya limpio y lo vuelve a ensuciar.
+			state.preview_token++
 		},
 	},
 
@@ -106,11 +130,27 @@ export default {
 		 * 🔴 Previsualizar y enviar comparten el armado en el backend. Acá no se toca ni una
 		 * coma del `body`: si el front lo retocara, mostraría una cosa y saldría otra.
 		 *
-		 * @param {Object} context commit, rootState.
+		 * 🔴 GUARDA ANTI-CARRERA — NO SE SIMPLIFIQUE.
+		 *
+		 * Este GET tarda: del lado del backend son varias queries (ventas, chat, cuentas
+		 * corrientes, un `exists()` por cuenta). El operador abre "Recordar por WhatsApp" en Juan
+		 * Perez, se cansa de esperar, cierra el modal y abre el de Ana Lopez. Sin guarda, la
+		 * respuesta de Juan puede llegar DESPUÉS que la de Ana y pisar el state: la pantalla
+		 * muestra el nombre, el teléfono, los montos y el cuerpo del mensaje de Juan abajo del
+		 * título de Ana, y el botón "Enviar" manda el `client_id` de Ana. A Ana le llegaría un
+		 * mensaje distinto del que se leyó en pantalla — exactamente lo contrario de la garantía
+		 * de este módulo: el modal muestra el mensaje EXACTO que va a salir.
+		 *
+		 * Por eso cada pedido se lleva su número (`preview_token`) y sólo el último puede
+		 * commitear o hacer fallar la pantalla. Los viejos resuelven con `null` y no tocan nada.
+		 *
+		 * @param {Object} context commit, state, rootState.
 		 * @param {Number} client_id Cliente a previsualizar.
-		 * @returns {Promise}
+		 * @returns {Promise} Resuelve con la preview, o con null si el pedido quedó viejo.
 		 */
-		getPreview({commit, rootState}, client_id) {
+		getPreview({commit, state, rootState}, client_id) {
+			commit('nuevoPreviewToken')
+			let token = state.preview_token
 			commit('setPreview', null)
 			let url = 'api/recordatorio-cobro/preview/' + client_id
 			let dias = rootState.sale.ventas_sin_cobrar.dias
@@ -119,11 +159,20 @@ export default {
 			}
 			return axios.get(url)
 			.then(res => {
+				// Llegó tarde: el modal ya está mostrando otro cliente (o se cerró).
+				if (state.preview_token !== token) {
+					return null
+				}
 				commit('setPreview', res.data.preview)
 				return res.data.preview
 			})
 			.catch(err => {
 				console.log(err)
+				// El error de un pedido viejo tampoco se pinta: resuelve con null para que el
+				// modal lo ignore sin apagarle el spinner al pedido que sí está en curso.
+				if (state.preview_token !== token) {
+					return null
+				}
 				return Promise.reject(err)
 			})
 		},
