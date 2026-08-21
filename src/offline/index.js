@@ -236,8 +236,16 @@ export default {
                 */
                 const ventas_para_facturar = ventas_sincronizadas.filter(venta => venta.afip.ventas_afip_information_id)
 
-                console.log('ventas offline para facturar:')
-                console.log(ventas_para_facturar)
+                /*
+                    Aca NO se abre el modal. Los componentes de App.vue se importan con
+                    () => import(...), asi que el chunk del modal puede estar todavia bajando
+                    cuando esto termina, y en ese caso $bvModal.show() no hace nada Y NO AVISA.
+                    Se deja la lista en el store y el modal decide abrirse solo cuando exista,
+                    mirando el mismo estado desde su watch y desde su mounted().
+                */
+                if (ventas_para_facturar.length) {
+                    this.$store.commit('afip_ticket/set_ventas_offline_para_facturar', ventas_para_facturar)
+                }
 
             } finally {
                 /*
