@@ -6,6 +6,8 @@
 	<loading-afip-ticket></loading-afip-ticket>
 	<articles-loading-advise></articles-loading-advise>
 	<current-acounts></current-acounts>
+	<!-- Freno duro al superar el límite de crédito del cliente (misión 160) -->
+	<limite-credito-excedido></limite-credito-excedido>
 	<payment-methods></payment-methods>
 	<!-- Selector de variantes al escanear un articulo con variantes disponibles (Prompt 525) -->
 	<select-variant></select-variant>
@@ -54,6 +56,7 @@ export default {
 		LoadingAfipTicket: () => import('@/components/vender/modals/LoadingAfipTicket'),
 		SelectVariant: () => import('@/components/vender/modals/SelectVariant'),
 		CurrentAcounts: () => import('@/components/common/current-acounts/Index'),
+		LimiteCreditoExcedido: () => import('@/components/vender/modals/LimiteCreditoExcedido'),
 		ArticlesLoadingAdvise: () => import('@/components/common/ArticlesLoadingAdvise'),
 
 		/* Layout del wizard de venta */

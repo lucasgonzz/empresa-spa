@@ -140,6 +140,24 @@ export default {
 			})
 			.catch(err => {
 				console.log(err)
+
+				/*
+					422 del límite de crédito (misión 160). Es la autoridad -la guarda de
+					chequeos/limite_credito.js puede no haber tenido los datos-, así que abre el mismo
+					modal con los números que calculó el backend y se corta acá: sin este return
+					saldrían además los dos toasts genéricos de error encima del modal.
+				*/
+				if (err.response
+					&& err.response.status == 422
+					&& err.response.data
+					&& err.response.data.error_limite_credito) {
+
+					this.$store.commit('vender/set_limite_credito_excedido', err.response.data.limite_credito)
+					this.sonido_error()
+					this.$bvModal.show('limite-credito-excedido')
+					return
+				}
+
 				this.sonido_error()
 				this.$toast.error('Error al guardar venta', {
 					duration: 10000
