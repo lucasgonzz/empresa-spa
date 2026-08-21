@@ -42,7 +42,7 @@
 					</b-button>
 				</div>
 				<span class="text-muted small">
-					{{ paginacion.total }} linea/s
+					{{ numero_es(paginacion.total) }} linea/s
 				</span>
 			</div>
 
@@ -91,7 +91,7 @@
 			class="paginacion-modulo m-t-15">
 				<div class="paginacion-modulo__barra">
 					<span class="paginacion-modulo__meta">
-						{{ paginacion.total }} resultados
+						{{ numero_es(paginacion.total) }} resultados
 					</span>
 					<template v-if="paginacion.total > paginacion.per_page">
 						<span
@@ -226,7 +226,9 @@ export default {
 			if (valor === null || typeof valor == 'undefined' || valor === '') {
 				return '—'
 			}
-			return Number(valor).toFixed(decimales)
+			// Los decimales los sigue fijando quien llama; lo unico que cambia es que el
+			// numero sale con los separadores de la interfaz (1.234,50 y no 1234.50).
+			return this.numero_es_con_decimales(valor, decimales)
 		},
 		/**
 		 * Tilda o destilda todas las filas de la pagina visible.
@@ -260,7 +262,7 @@ export default {
 				let cantidad = res.data.deposit_movements.length
 				let mensaje = cantidad === 1
 					? 'Se creo 1 movimiento de deposito.'
-					: 'Se crearon ' + cantidad + ' movimientos de deposito.'
+					: 'Se crearon ' + self.numero_es(cantidad) + ' movimientos de deposito.'
 				self.$bvToast.toast(mensaje, {
 					title: 'Movimientos creados',
 					variant: 'success',

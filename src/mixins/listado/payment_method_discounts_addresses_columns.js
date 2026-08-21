@@ -130,7 +130,8 @@ export default {
 
 			if (typeof article_address != 'undefined') {
 
-				return article_address.pivot.amount
+				// Columna de texto del listado (su hermana de precios ya devuelve price()).
+				return this.numero_es(article_address.pivot.amount)
 			}
 
 			if (article.article_variants.length) {
@@ -150,7 +151,7 @@ export default {
 					})
 				})
 
-				return stock_in_address
+				return this.numero_es(stock_in_address)
 			}
 		},
 	},

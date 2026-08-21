@@ -6,7 +6,7 @@
 				<strong>{{ client.name }}</strong>
 			</h4>
 			<p>
-				{{ total_productos(_client.sales) }} productos
+				{{ numero_es(total_productos(_client.sales)) }} productos
 			</p>
 			<p>
 				<a :href="'tel:+54'+client.phone">

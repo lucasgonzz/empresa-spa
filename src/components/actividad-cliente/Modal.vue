@@ -192,7 +192,7 @@
 								No encontró nada
 							</b-badge>
 							<span v-if="evento.cantidad">
-								· {{ evento.cantidad }} unidades
+								· {{ numero_es(evento.cantidad) }} unidades
 							</span>
 							<span v-if="evento.monto">
 								· {{ price(evento.monto) }}
@@ -291,9 +291,9 @@ export default {
 		fields_articulos() {
 			return [
 				{ key: 'nombre', label: 'Artículo' },
-				{ key: 'vistas', label: 'Veces que lo miró' },
+				{ key: 'vistas', label: 'Veces que lo miró', formatter: value => this.numero_es(value) },
 				{ key: 'tiempo_segundos', label: 'Tiempo' },
-				{ key: 'agregados_al_carrito', label: 'Al carrito' },
+				{ key: 'agregados_al_carrito', label: 'Al carrito', formatter: value => this.numero_es(value) },
 				/*
 					"Qué compró" es una de las cinco señales que se pidieron por nombre, y hasta
 					el 17/8/2026 no estaba en ninguna parte de esta pantalla: el artículo comprado
@@ -303,15 +303,15 @@ export default {
 					El formatter deja el 0 explícito en vez de una celda vacía: "no lo compró" es
 					un dato, y una celda en blanco se lee como "no sabemos".
 				*/
-				{ key: 'comprados', label: 'Compró', formatter: value => Number(value) || 0 },
+				{ key: 'comprados', label: 'Compró', formatter: value => this.numero_es(Number(value) || 0) },
 				{ key: 'ultima_vez', label: 'Última vez' },
 			]
 		},
 		fields_busquedas() {
 			return [
 				{ key: 'termino', label: 'Término' },
-				{ key: 'veces', label: 'Veces' },
-				{ key: 'resultados', label: 'Resultados' },
+				{ key: 'veces', label: 'Veces', formatter: value => this.numero_es(value) },
+				{ key: 'resultados', label: 'Resultados', formatter: value => this.numero_es(value) },
 				{ key: 'ultima_vez', label: 'Última vez' },
 			]
 		},
@@ -336,16 +336,16 @@ export default {
 			}
 			let totales = this.actividad.totales
 			return [
-				{ titulo: 'Vistas', valor: totales.vistas },
-				{ titulo: 'Artículos distintos', valor: totales.articulos_distintos },
+				{ titulo: 'Vistas', valor: this.numero_es(totales.vistas) },
+				{ titulo: 'Artículos distintos', valor: this.numero_es(totales.articulos_distintos) },
 				{ titulo: 'Tiempo total', valor: this.tiempo_en_criollo(totales.tiempo_total_segundos) },
 				{ titulo: 'Búsquedas', valor: this.busquedas_en_criollo(totales) },
-				{ titulo: 'Al carrito', valor: totales.agregados_al_carrito },
-				{ titulo: 'Sacó del carrito', valor: totales.quitados_del_carrito },
+				{ titulo: 'Al carrito', valor: this.numero_es(totales.agregados_al_carrito) },
+				{ titulo: 'Sacó del carrito', valor: this.numero_es(totales.quitados_del_carrito) },
 				// El carrito abandonado es de lo más accionable que tiene esta pantalla: alguien
 				// que empezó a comprar y no cerró está a un mensaje de comprar.
-				{ titulo: 'Empezó a comprar', valor: totales.checkouts_empezados },
-				{ titulo: 'Compras', valor: totales.compras },
+				{ titulo: 'Empezó a comprar', valor: this.numero_es(totales.checkouts_empezados) },
+				{ titulo: 'Compras', valor: this.numero_es(totales.compras) },
 				{ titulo: 'Monto comprado', valor: this.price(totales.monto_comprado) },
 				{ titulo: 'Última actividad', valor: this.fecha_en_criollo(totales.ultima_actividad) },
 			]
@@ -371,7 +371,7 @@ export default {
 			}
 			let cuantas = sin_atribuir == 1
 				? 'una compra no se pudo atribuir'
-				: sin_atribuir + ' compras no se pudieron atribuir'
+				: this.numero_es(sin_atribuir) + ' compras no se pudieron atribuir'
 			return 'De lo que compró en este periodo, ' + cuantas
 				+ ' a ningún artículo: la tienda no siempre manda cuál fue. Esas compras no están sumadas en el detalle por artículo.'
 		},
@@ -444,9 +444,9 @@ export default {
 		 */
 		busquedas_en_criollo(totales) {
 			if (totales.busquedas_sin_resultado) {
-				return totales.busquedas + ' (' + totales.busquedas_sin_resultado + ' sin resultado)'
+				return this.numero_es(totales.busquedas) + ' (' + this.numero_es(totales.busquedas_sin_resultado) + ' sin resultado)'
 			}
-			return totales.busquedas
+			return this.numero_es(totales.busquedas)
 		},
 		/**
 		 * Fecha del backend a dd/mm/aaaa, con la hora solo si vino.

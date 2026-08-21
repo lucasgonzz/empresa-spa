@@ -83,9 +83,9 @@
 				</span>
 			</p>
 			<p class="m-b-10">
-				<strong>Registros afectados:</strong> {{ detail_model.affected_count }}
+				<strong>Registros afectados:</strong> {{ numero_es(detail_model.affected_count) }}
 				<span class="m-l-15">
-					<strong>Cambios:</strong> {{ detail_model.changes_count }}
+					<strong>Cambios:</strong> {{ numero_es(detail_model.changes_count) }}
 				</span>
 			</p>
 
@@ -95,7 +95,7 @@
 			<h6
 			v-if="detail_articles.length"
 			class="m-t-15 m-b-10">
-				Artículos modificados ({{ detail_articles.length }})
+				Artículos modificados ({{ numero_es(detail_articles.length) }})
 			</h6>
 
 			<div
@@ -187,8 +187,8 @@ export default {
 					action: model.action,
 					employee_name: null,
 					status: model.status,
-					affected_count: model.affected_count,
-					changes_count: model.changes_count,
+					affected_count: this.numero_es(model.affected_count),
+					changes_count: this.numero_es(model.changes_count),
 					actions: null,
 				})
 			})
@@ -333,7 +333,13 @@ export default {
 			if (value === null || typeof value === 'undefined') {
 				return '—'
 			}
-			return String(value)
+			// 🔴 Por aca pasa el valor viejo y el nuevo de CUALQUIER propiedad: un costo, un
+			// stock, un porcentaje y tambien texto (nombres, codigos, categorias). Solo se le
+			// cambian los separadores a lo que es un numero; el resto sale tal cual.
+			if (value === '' || typeof value === 'boolean' || isNaN(Number(value))) {
+				return String(value)
+			}
+			return this.numero_es(String(value))
 		},
 		clear_detail() {
 			this.detail_model = null

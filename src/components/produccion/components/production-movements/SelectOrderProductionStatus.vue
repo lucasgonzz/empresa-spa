@@ -121,7 +121,7 @@ export default {
 
 					options.push({
 						value: cantidades_actual.order_production_status.id,
-						text: cantidades_actual.order_production_status.name+' ('+cantidades_actual.current_amount+')',
+						text: cantidades_actual.order_production_status.name+' ('+this.numero_es(cantidades_actual.current_amount)+')',
 					})
 				}
 			})
@@ -162,7 +162,7 @@ export default {
 
 						let text = hacia_estado.name
 						if (typeof cantidad_actual != 'undefined') {
-							text += ' ('+cantidad_actual.current_amount+')'
+							text += ' ('+this.numero_es(cantidad_actual.current_amount)+')'
 						}
 						options.push({
 							value: hacia_estado.id,

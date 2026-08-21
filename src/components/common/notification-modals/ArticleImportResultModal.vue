@@ -88,7 +88,7 @@
 			size="sm"
 			class="p-0"
 			@click="toggle_repeated_code_list">
-				{{ show_repeated_code_list ? 'Ocultar' : 'Ver' }} los {{ repeated_code_count }} artículos creados con código repetido
+				{{ show_repeated_code_list ? 'Ocultar' : 'Ver' }} los {{ numero_es(repeated_code_count) }} artículos creados con código repetido
 			</b-button>
 			<div v-if="show_repeated_code_list" class="m-t-10">
 				<div v-if="loading_repeated_code_list" class="text-muted small">Cargando...</div>
@@ -109,7 +109,7 @@
 				<p
 				v-if="!loading_repeated_code_list && !repeated_code_articles_error && hay_mas_repeated_code_articles"
 				class="text-muted small m-t-5 m-b-0">
-					y {{ repeated_code_total - repeated_code_articles.length }} más…
+					y {{ numero_es(repeated_code_total - repeated_code_articles.length) }} más…
 				</p>
 			</div>
 		</div>
@@ -119,7 +119,7 @@
 		v-if="sobrescrituras_a_mostrar.length > 0"
 		class="article-import-result-modal__overwrites m-t-15">
 			<p class="article-import-result-modal__overwrites-title">
-				{{ sobrescrituras_count }} fila{{ sobrescrituras_count > 1 ? 's' : '' }} se resolv{{ sobrescrituras_count > 1 ? 'ieron' : 'ió' }} como repetida{{ sobrescrituras_count > 1 ? 's' : '' }}
+				{{ numero_es(sobrescrituras_count) }} fila{{ sobrescrituras_count > 1 ? 's' : '' }} se resolv{{ sobrescrituras_count > 1 ? 'ieron' : 'ió' }} como repetida{{ sobrescrituras_count > 1 ? 's' : '' }}
 			</p>
 			<ul class="small article-import-result-modal__overwrites-list m-b-0">
 				<li
@@ -131,7 +131,7 @@
 			<p
 			v-if="hay_mas_sobrescrituras"
 			class="text-muted small m-t-5 m-b-0">
-				y {{ sobrescrituras_count - sobrescrituras_a_mostrar.length }} más — velas en el historial de importaciones.
+				y {{ numero_es(sobrescrituras_count - sobrescrituras_a_mostrar.length) }} más — velas en el historial de importaciones.
 			</p>
 		</div>
 
@@ -149,12 +149,12 @@
 			<p
 			v-if="precios_manuales_ignorados > 0"
 			class="article-import-result-modal__skipped-prices-text">
-				En {{ precios_manuales_ignorados }} artículo{{ precios_manuales_ignorados > 1 ? 's' : '' }} no se aplicó el precio del Excel porque el artículo se maneja por margen de ganancia. Para fijarles el precio a mano, primero hay que sacarles el margen desde la ficha del artículo.
+				En {{ numero_es(precios_manuales_ignorados) }} artículo{{ precios_manuales_ignorados > 1 ? 's' : '' }} no se aplicó el precio del Excel porque el artículo se maneja por margen de ganancia. Para fijarles el precio a mano, primero hay que sacarles el margen desde la ficha del artículo.
 			</p>
 			<p
 			v-if="margenes_ignorados > 0"
 			class="article-import-result-modal__skipped-prices-text">
-				En {{ margenes_ignorados }} artículo{{ margenes_ignorados > 1 ? 's' : '' }} no se aplicó el margen del Excel porque el artículo tiene un precio manual cargado. Para pasarlos a margen, primero hay que borrarles el precio manual desde la ficha del artículo.
+				En {{ numero_es(margenes_ignorados) }} artículo{{ margenes_ignorados > 1 ? 's' : '' }} no se aplicó el margen del Excel porque el artículo tiene un precio manual cargado. Para pasarlos a margen, primero hay que borrarles el precio manual desde la ficha del artículo.
 			</p>
 			<ul
 			v-if="columnas_de_precio_ignoradas_a_mostrar.length"
@@ -175,7 +175,7 @@
 			<p
 			v-if="hay_mas_columnas_de_precio_ignoradas"
 			class="text-muted small m-t-5 m-b-0">
-				y {{ columnas_de_precio_ignoradas_count - columnas_de_precio_ignoradas_a_mostrar.length }} artículo{{ (columnas_de_precio_ignoradas_count - columnas_de_precio_ignoradas_a_mostrar.length) > 1 ? 's' : '' }} más.
+				y {{ numero_es(columnas_de_precio_ignoradas_count - columnas_de_precio_ignoradas_a_mostrar.length) }} artículo{{ (columnas_de_precio_ignoradas_count - columnas_de_precio_ignoradas_a_mostrar.length) > 1 ? 's' : '' }} más.
 			</p>
 		</div>
 

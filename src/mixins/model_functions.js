@@ -108,7 +108,7 @@ export default {
                 result.model 
                 && result.model.unidades_individuales
             ) {
-                this.$toast.warning(result.model.unidades_individuales+' unidades individuales')
+                this.$toast.warning(this.numero_es(result.model.unidades_individuales)+' unidades individuales')
             }
         },
         async search_articles_offline(query) {
@@ -225,8 +225,10 @@ export default {
 
                 if (typeof article_address != 'undefined') {
 
-                    return article_address.pivot.amount
-                } 
+                    // Es una columna de texto del buscador (igual que sus hermanas
+                    // get_price_..._in_vender, que ya devuelven price()): va formateada.
+                    return this.numero_es(article_address.pivot.amount)
+                }
                 return null
             }
         },

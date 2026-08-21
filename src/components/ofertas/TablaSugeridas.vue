@@ -18,7 +18,7 @@
 
 			<div class="j-between align-center m-b-10">
 				<span class="text-muted small">
-					{{ paginacion.total }} oferta/s sugerida/s
+					{{ numero_es(paginacion.total) }} oferta/s sugerida/s
 				</span>
 			</div>
 
@@ -66,11 +66,11 @@
 						y no lo invento nadie. Sin esto, el numero sugerido parece arbitrario.
 					-->
 					<template #cell(porcentaje_sugerido)="data">
-						<strong>{{ data.item.porcentaje_sugerido }}%</strong>
+						<strong>{{ porcentaje_es(data.item.porcentaje_sugerido) }}%</strong>
 						<div
 						class="text-muted small"
 						title="Maximo que no rompe el margen del articulo">
-							techo {{ data.item.porcentaje_techo }}%
+							techo {{ porcentaje_es(data.item.porcentaje_techo) }}%
 						</div>
 					</template>
 
@@ -103,7 +103,7 @@
 			class="paginacion-modulo m-t-15">
 				<div class="paginacion-modulo__barra">
 					<span class="paginacion-modulo__meta">
-						{{ paginacion.total }} resultados
+						{{ numero_es(paginacion.total) }} resultados
 					</span>
 					<template v-if="paginacion.total > paginacion.per_page">
 						<span

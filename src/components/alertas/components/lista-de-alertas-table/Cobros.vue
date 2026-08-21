@@ -45,7 +45,7 @@
 					<b-button
 					@click="showVentasSinCobrar(ventas_sin_cobrar[data.index].ventas_sin_cobrar)"
 					variant="success">
-						{{ ventas_sin_cobrar[data.index].ventas_sin_cobrar.length }} ventas
+						{{ numero_es(ventas_sin_cobrar[data.index].ventas_sin_cobrar.length) }} ventas
 					</b-button>
 				</template>
 
