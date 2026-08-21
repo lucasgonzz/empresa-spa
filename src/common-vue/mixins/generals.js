@@ -4,6 +4,7 @@ import numeral from 'numeral'
 import VueScreenSize from 'vue-screen-size'
 import generals_computed from '@/common-vue/mixins/generals/computed'
 import generals_formatting from '@/common-vue/mixins/generals/formatting'
+import { separadores_es, separadores_es_desde_dato } from '@/common-vue/helpers/formato_numero'
 import generals_model_meta from '@/common-vue/mixins/generals/model-meta'
 // Función reusada para armar las opciones del selector de PDF a imprimir en la factura
 // (mismo vocabulario que el atajo de impresión de Vender).
@@ -1047,10 +1048,45 @@ export default {
 				return this.strip_html(model[prop.key])
 			}
 			// Números con decimales variables (ej. costo en compras: 2 o 4 según uso real).
+			// Va la version _display, que es la que lleva separadores argentinos. La otra devuelve
+			// valor de dato y alimenta el guardado del pivot: no se usa para mostrar.
 			if (prop.type == 'number' && prop.variable_decimals) {
 				const min_decimals = prop.variable_decimals.min != null ? prop.variable_decimals.min : 2
 				const max_decimals = prop.variable_decimals.max != null ? prop.variable_decimals.max : 4
-				return this.format_number_variable_decimals(model[prop.key], min_decimals, max_decimals)
+				return this.format_number_variable_decimals_display(model[prop.key], min_decimals, max_decimals)
+			}
+			/*
+				Numeros sin `is_price` ni `variable_decimals`: stock, cantidades, porcentajes.
+				Hasta el 21/8/2026 caian en el `return model[prop.key]` de mas abajo y se veian
+				crudos, con el punto decimal con el que los manda Laravel ("1500.00", "25.00").
+
+				🔴 EL `if` DEL PUNTO NO ES UNA OPTIMIZACION, ES LO QUE EVITA ROMPER LOS
+				IDENTIFICADORES. En los models `type: 'number'` esta usado para dos cosas que no
+				tienen nada que ver: cantidades medibles y numeros que IDENTIFICAN algo (cuit, cuil,
+				dni, sale.num, punto de venta de AFIP, ids, posiciones, dias, milimetros). Formatear
+				todo `type: 'number'` en bloque haria que un CUIT se muestre 20.123.456.789.
+
+				El discriminador sale de los tipos reales de la base (medidos el 21/8/2026 sobre
+				empresa_testing_s8):
+				  - cantidades y porcentajes son columnas `decimal` -> Laravel las serializa como
+				    string CON punto decimal ("1500.00", "25.00")
+				  - los identificadores son `int` o `varchar` -> nunca traen punto
+
+				O sea: si tiene punto decimal, es una medida y se formatea. Si no, se deja como
+				esta. Es conservador a proposito — prefiere no formatear una cantidad guardada como
+				entero antes que arruinar un CUIT. Esos casos sueltos se arreglan en su componente.
+
+				No cambia CUANTOS decimales se ven: se pidio cambiar los separadores, no la
+				precision.
+			*/
+			if (prop.type == 'number') {
+				const valor_numerico = model[prop.key]
+				const es_medida = (typeof valor_numerico == 'string')
+					&& valor_numerico.indexOf('.') >= 0
+					&& !isNaN(Number(valor_numerico))
+				if (es_medida) {
+					return separadores_es_desde_dato(valor_numerico)
+				}
 			}
 			// Select con options declaradas en el model: muestra texto amigable en tablas/listados.
 			if (prop.type == 'select') {
@@ -1515,9 +1551,20 @@ export default {
 		hour_from_time(d) {
 			return moment(d, 'HH:mm:ss').format('HH:mm')
 		},
+		/*
+			OJO: este price() NO es el que se usa casi en ningun lado. El que gana en un componente
+			normal es el de common-vue/mixins/dates.js, porque en la cadena de app.js `dates` se
+			mergea despues que `generals`. Este solo gana en los componentes que declaran
+			`mixins: [generals]` a nivel componente (hoy: expenses/PaymentMethodsTable.vue y
+			ventas/modals/consolidar-facturacion/Index.vue).
+
+			Hasta el 21/8/2026 este devolvia el formato ingles ($1,234.56) mientras el resto de la
+			app mostraba $1.234,56, y por eso esas dos pantallas se veian distintas de todas las
+			demas. El separadores_es() de abajo es lo que las alinea.
+		*/
 		price(p, with_decimals = true, quitar_decimales_solo_si_no_es_00 = true) {
 			if (p) {
-				let price = numeral(p).format('$0,0.00')
+				let price = separadores_es(numeral(p).format('$0,0.00'))
 				if (with_decimals) {
 					return price
 				} else {

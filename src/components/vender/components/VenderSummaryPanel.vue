@@ -94,6 +94,7 @@
 </template>
 
 <script>
+import { numero_es } from '@/common-vue/helpers/formato_numero'
 /* Key de localStorage para persistir el estado colapsado/expandido del widget */
 const STORAGE_KEY_COLLAPSED = 'vender_summary_collapsed'
 
@@ -108,7 +109,7 @@ export default {
 		 */
 		currency(value) {
 			if (typeof value !== 'number') return '$ 0,00'
-			return '$ ' + value.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+			return '$ ' + numero_es(value, 2)
 		},
 	},
 	data() {

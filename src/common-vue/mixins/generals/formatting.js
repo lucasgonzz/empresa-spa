@@ -1,5 +1,6 @@
 import moment from 'moment'
 import numeral from 'numeral'
+import { separadores_es, separadores_es_desde_dato } from '@/common-vue/helpers/formato_numero'
 
 export default {
     methods: {
@@ -69,9 +70,15 @@ export default {
         hour_from_time(d) {
             return moment(d, 'HH:mm:ss').format('HH:mm')
         },
+        /*
+            Este price() queda tapado por el de generals.js (methods gana sobre mixins dentro del
+            mismo mixin padre), asi que hoy no lo alcanza nadie. Se le pone igual el separadores_es()
+            para que no sea una bomba: si alguien saca el de arriba, hereda el formato correcto en
+            vez de volver silenciosamente al formato ingles.
+        */
         price(p, with_decimals = true, quitar_decimales_solo_si_no_es_00 = true) {
             if (p) {
-                let price = numeral(p).format('$0,0.00')
+                let price = separadores_es(numeral(p).format('$0,0.00'))
                 if (with_decimals) {
                     return price
                 } else if (!quitar_decimales_solo_si_no_es_00 || price.substr(price.length - 2, price.length) == '00') {
@@ -98,13 +105,27 @@ export default {
             return '0.' + '0'.repeat(max_decimals - 1) + '1'
         },
         /**
-         * Formatea un número con decimales variables: muestra min_decimals por defecto
-         * y hasta max_decimals solo si el valor usa el 3.er o 4.o decimal (u otros extra).
+         * Decide CUANTOS decimales le corresponden a un número con decimales variables: muestra
+         * min_decimals por defecto y hasta max_decimals solo si el valor usa el 3.er o 4.o decimal.
+         *
+         * 🔴 Devuelve un valor de DATO, con punto decimal y sin separador de miles ('1234.5678'),
+         * y asi tiene que quedarse. NO le agregues separadores argentinos aca.
+         *
+         * El motivo: su salida no solo se muestra. normalize_variable_decimal_pivot_value() (mas
+         * abajo en este mismo archivo) la usa para NORMALIZAR EL VALOR QUE SE GUARDA, y los tres
+         * llamadores de esa funcion —display/table/PivotProp.vue:97,
+         * display/TablePivotPropsToSet.vue:81 y model/belongs-to-many/Modal.vue:104— escriben el
+         * resultado adentro de model.pivot en el blur de un input, o sea que viaja a la API. Una
+         * coma metida aca se guarda en la base y rompe el guardado de costos.
+         *
+         * Para MOSTRAR está format_number_variable_decimals_display(), abajo.
+         *
+         * Mision del 21/8/2026 — separadores de numeros.
          *
          * @param {*} value valor crudo del campo.
          * @param {number} min_decimals decimales mínimos visibles (por defecto 2).
          * @param {number} max_decimals decimales máximos almacenados/permitidos (por defecto 4).
-         * @returns {string} texto listo para mostrar en tablas y formularios.
+         * @returns {string} valor de dato, con punto decimal (ej: '1234.5678').
          */
         format_number_variable_decimals(value, min_decimals = 2, max_decimals = 4) {
             if (value === null || value === undefined || value === '') {
@@ -132,6 +153,21 @@ export default {
             return formatted
         },
         /**
+         * La version PARA MOSTRAR de format_number_variable_decimals().
+         *
+         * No vuelve a decidir cuantos decimales van: eso lo resuelve la funcion de dato, y esta
+         * solo le pone los separadores argentinos. Las dos existen separadas porque la de dato
+         * tambien alimenta el guardado (ver su comentario).
+         *
+         * @param {*} value valor crudo del campo.
+         * @param {number} min_decimals decimales mínimos visibles (por defecto 2).
+         * @param {number} max_decimals decimales máximos permitidos (por defecto 4).
+         * @returns {string} texto de pantalla (ej: '1.234,5678').
+         */
+        format_number_variable_decimals_display(value, min_decimals = 2, max_decimals = 4) {
+            return separadores_es_desde_dato(this.format_number_variable_decimals(value, min_decimals, max_decimals))
+        },
+        /**
          * Igual que price(), pero con cantidad de decimales variable en vez de fija en 2:
          * conserva el símbolo de moneda y el separador de miles que format_number_variable_decimals()
          * no pone (grupo 282, prompt 04).
@@ -153,7 +189,9 @@ export default {
             const decimal_part = formatted.indexOf('.') >= 0 ? formatted.split('.')[1] : ''
             const decimals = decimal_part.length
             const pattern = decimals > 0 ? '$0,0.' + '0'.repeat(decimals) : '$0,0'
-            return numeral(p).format(pattern)
+            // El swap va sobre la salida de numeral, nunca sobre su locale: ver la cabecera de
+            // common-vue/helpers/formato_numero.js.
+            return separadores_es(numeral(p).format(pattern))
         },
         /**
          * Normaliza un valor de pivot para guardarlo/mostrarlo con decimales variables.

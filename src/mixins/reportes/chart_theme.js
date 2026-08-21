@@ -4,6 +4,7 @@
  */
 // Desregistro global del plugin datalabels al cargar cualquier gráfico con tema de reportes
 import '@/plugins/chart_datalabels'
+import { separadores_es_desde_dato } from '@/common-vue/helpers/formato_numero'
 
 export default {
 	data() {
@@ -65,17 +66,19 @@ export default {
 		format_chart_axis_value(value) {
 			let abs_value = Math.abs(value)
 
+			// El decimal de los sufijos K/M tambien lleva coma: 1,5M y 12,3K, no 1.5M y 12.3K.
 			if (abs_value >= 1000000) {
 				let formatted = (value / 1000000).toFixed(abs_value >= 10000000 ? 0 : 1)
-				return formatted.replace(/\.0$/, '') + 'M'
+				return separadores_es_desde_dato(formatted.replace(/\.0$/, '')) + 'M'
 			}
 
 			if (abs_value >= 1000) {
 				let formatted = (value / 1000).toFixed(abs_value >= 10000 ? 0 : 1)
-				return formatted.replace(/\.0$/, '') + 'K'
+				return separadores_es_desde_dato(formatted.replace(/\.0$/, '')) + 'K'
 			}
 
-			return value
+			// Por debajo de mil no hay miles que separar, pero si puede haber decimal (999,5).
+			return separadores_es_desde_dato(value)
 		},
 
 		/**

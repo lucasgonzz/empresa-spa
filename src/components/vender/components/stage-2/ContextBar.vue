@@ -93,6 +93,7 @@
 </template>
 
 <script>
+import { numero_es } from '@/common-vue/helpers/formato_numero'
 export default {
 	name: 'ContextBar',
 	filters: {
@@ -104,7 +105,7 @@ export default {
 		 */
 		currency(value) {
 			if (typeof value !== 'number') return '$ 0,00'
-			return '$ ' + value.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+			return '$ ' + numero_es(value, 2)
 		},
 	},
 	data() {
@@ -310,7 +311,7 @@ export default {
 		 */
 		format_price(value) {
 			if (typeof value !== 'number') return '$ 0,00'
-			return '$ ' + value.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+			return '$ ' + numero_es(value, 2)
 		},
 
 		/**
