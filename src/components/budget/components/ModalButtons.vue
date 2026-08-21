@@ -34,6 +34,7 @@
 			<!-- Grupo: edicion del presupuesto (mismo lugar que 'Actualizar venta' en el modal de ventas) -->
 			<div class="budget-modal-buttons__group">
 				<btn-actualizar-en-vender></btn-actualizar-en-vender>
+				<btn-confirmar-anular :model="model"></btn-confirmar-anular>
 			</div>
 		</div>
 		<hr>
@@ -44,6 +45,7 @@ export default {
 	components: {
 		WhatsappBtn: () => import('@/common-vue/sale-print-buttons/WhatsappBtn'),
 		BtnActualizarEnVender: () => import('@/components/budget/components/BtnActualizarEnVender'),
+		BtnConfirmarAnular: () => import('@/components/budget/components/BtnConfirmarAnular'),
 	},
 	data() {
 		return {
