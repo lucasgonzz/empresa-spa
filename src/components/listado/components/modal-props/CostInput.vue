@@ -46,8 +46,20 @@
 			OJO: esto NO es un :disabled. El campo no existe para el MT, no aparece bloqueado. La
 			regla de "ningun input se bloquea nunca" sigue intacta.
 		-->
-		<div v-if="!cuenta_es_monotributista">
+		<!--
+			🔴 Este campo es `articles.cost` DIRECTO, y para el Monotributista es el unico que ve.
+			
+			Mision `iva-fuera-del-costeo-monotributista` (21/8/2026): el MT carga el costo que le
+			pasa su proveedor y ese numero se guarda tal cual. No hay conversion que mostrar, no
+			hay bruto ni neto, y no se le nombra el IVA en ningun lado -- ni siquiera en un
+			sub-label, porque el label que ya pone ModelForm ("Costo base") alcanza.
+			
+			Para Responsable Inscripto si aparece el sub-label, porque abajo tiene el segundo
+			campo y hay que distinguirlos.
+		-->
+		<div>
 			<label
+			v-if="!cuenta_es_monotributista"
 			class="text-muted d-block m-b-5"
 			:for="'article-' + prop.key">
 				Costo sin IVA (neto)
@@ -63,7 +75,7 @@
 			@input="set_costo_neto($event)"></field-text-input>
 		</div>
 
-		<div :class="{ 'm-t-10': !cuenta_es_monotributista }">
+		<div v-if="!cuenta_es_monotributista" class="m-t-10">
 			<!--
 				🔴 Al Monotributista NO se le pone sub-label, y no se le menciona el IVA en ningun
 				lado de este campo (decision de Lucas, 21/8/2026): "no quiero que se le mencione el
@@ -253,6 +265,16 @@ export default {
 		valor_neto_visible() {
 			if (!this.article) {
 				return null
+			}
+
+			/*
+			 * 🔴 Para el Monotributista este campo es `cost` y nada mas: lo que cargo es lo que
+			 * esta guardado, asi que no hay ninguna conversion que hacer ni deshacer. Es el
+			 * cambio de fondo de la mision del 21/8/2026 -- antes el campo mostraba
+			 * cost x (1 + alicuota) porque en la base habia un neto que la persona nunca tipeo.
+			 */
+			if (this.cuenta_es_monotributista) {
+				return this.article.cost
 			}
 
 			// `cost_incluye_iva` en false significa "lo que hay en article.cost es el neto": es
