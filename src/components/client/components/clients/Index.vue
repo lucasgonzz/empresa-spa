@@ -26,6 +26,10 @@
 	    		:model="slotProps.model"></create-buyer>
 			</template>
 
+			<template v-slot:limites_credito="slotProps">
+				<limites-de-credito :model="slotProps.model"></limites-de-credito>
+			</template>
+
 		<template #horizontal_nav_center>
 			<saldos-clientes-filtrados></saldos-clientes-filtrados>
 		</template>
@@ -75,6 +79,7 @@ export default {
 		ActividadClienteModal: () => import('@/components/actividad-cliente/Modal'),
 		ComercioCityUser: () => import('@/components/common/ComercioCityUser'),
 		CreateBuyer: () => import('@/components/client/components/clients/CreateBuyer'),
+		LimitesDeCredito: () => import('@/components/client/components/clients/LimitesDeCredito'),
 		SaldosClientesFiltrados: () => import('@/components/client/components/clients/SaldosClientesFiltrados'),
 		Import: () => import('@/components/client/components/clients/Import'),
 		BtnPdf: () => import('@/components/client/components/clients/BtnPdf'),
