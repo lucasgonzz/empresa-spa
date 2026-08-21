@@ -89,7 +89,7 @@ export default {
 			if (typeof credit_card != 'undefined') {
 				credit_card.credit_card_payment_plans.forEach(payment_plan => {
 					options.push({
-						text: payment_plan.installments+' cuotas con '+payment_plan.surchage+'% recargo',
+						text: payment_plan.installments+' cuotas con '+this.porcentaje_es(payment_plan.surchage)+'% recargo',
 						value: payment_plan.id 
 					})
 				})
