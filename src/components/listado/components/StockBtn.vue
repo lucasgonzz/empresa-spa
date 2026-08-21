@@ -10,7 +10,7 @@
 		variant="outline-primary">
 			<span
 			v-if="article.stock !== null">
-				{{ article.stock }}
+				{{ numero_es(article.stock) }}
 			</span> 
 			<span
 			v-else>

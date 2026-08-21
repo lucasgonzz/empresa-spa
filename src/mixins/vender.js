@@ -610,7 +610,7 @@ export default {
 					
 					console.log('cantidad_para_vender:')
 					console.log(Number(cantidad_para_vender))
-					this.$toast.error('Solo hay '+this.article.stock+' en stock')
+					this.$toast.error('Solo hay '+this.numero_es(this.article.stock)+' en stock')
 				}
 
 				// let store_article = this.$store.state.article.models.find(_article => {

@@ -130,7 +130,7 @@
 			</span>
 			<span v-else>
 				Escribi en el campo que tengas a mano: el otro se actualiza solo con la alicuota del
-				articulo ({{ alicuota }}%). Se guarda siempre el costo sin IVA, que es el que despues
+				articulo ({{ porcentaje_es(alicuota) }}%). Se guarda siempre el costo sin IVA, que es el que despues
 				usa el sistema para calcular los precios.
 			</span>
 		</small>

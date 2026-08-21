@@ -15,7 +15,7 @@
 
 		<span
 		v-else>
-			{{ article.stock }}
+			{{ numero_es(article.stock) }}
 		</span>
 
 	</div>

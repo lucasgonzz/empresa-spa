@@ -145,7 +145,9 @@ export default {
             // Acá podés usar tu toast/snackbar actual
             // Ejemplo genérico:
             this.$bvToast && this.$bvToast.toast(
-                'Tenés que repartir el total exacto. Sobrante: ' + Number(sobrante || 0).toFixed(2),
+                // price() con with_decimals en true para no perder los centavos: el sobrante casi
+                // siempre los tiene y es lo que el usuario necesita ver para cerrar el reparto.
+                'Tenés que repartir el total exacto. Sobrante: ' + this.price(Number(sobrante || 0), true),
                 {
                     title: 'Métodos de pago',
                     variant: 'danger',

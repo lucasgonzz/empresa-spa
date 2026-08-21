@@ -26,14 +26,14 @@
 					<span class="inventario-panel__punto inventario-panel__punto--sin-stock"></span>
 					Sin stock
 				</dt>
-				<dd>{{ model.sin_stock }}</dd>
+				<dd>{{ numero_es(model.sin_stock) }}</dd>
 			</div>
 			<div class="inventario-panel__fila">
 				<dt>
 					<span class="inventario-panel__punto inventario-panel__punto--minimo"></span>
 					En stock mínimo
 				</dt>
-				<dd>{{ model.stock_minimo }}</dd>
+				<dd>{{ numero_es(model.stock_minimo) }}</dd>
 			</div>
 		</dl>
 

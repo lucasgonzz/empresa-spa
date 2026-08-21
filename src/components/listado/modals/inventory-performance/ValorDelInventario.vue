@@ -42,7 +42,7 @@
 			</div>
 			<div class="inventario-chip__body">
 				<span class="inventario-chip__label">Cantidad de artículos</span>
-				<span class="inventario-chip__value">{{ model.cantidad_articulos }}</span>
+				<span class="inventario-chip__value">{{ numero_es(model.cantidad_articulos) }}</span>
 			</div>
 		</div>
 

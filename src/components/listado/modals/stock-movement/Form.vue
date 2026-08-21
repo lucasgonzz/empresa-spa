@@ -16,13 +16,13 @@
 			<p>
 				
 				<strong>
-					Este articulo tiene indicado unidades individuales, el valor que agregue se multiplicara por las {{ article.unidades_individuales }} unidades individuales
+					Este articulo tiene indicado unidades individuales, el valor que agregue se multiplicara por las {{ numero_es(article.unidades_individuales) }} unidades individuales
 				</strong>
 			</p>
 			<p
 			v-if="amount_ != ''">
 				<strong>
-					Unidades a agregar: {{ Number(amount_) * Number(article.unidades_individuales) }}
+					Unidades a agregar: {{ numero_es(Number(amount_) * Number(article.unidades_individuales)) }}
 				</strong>
 			</p>
 		</div>

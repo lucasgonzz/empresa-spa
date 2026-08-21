@@ -204,7 +204,7 @@ export default {
 			if (!pm) return null
 			/* El modelo payment_method puede tener un campo discount o porcentaje */
 			if (pm.discount && pm.discount > 0) {
-				return pm.name + ' — ' + pm.discount + '% desc.'
+				return pm.name + ' — ' + this.porcentaje_es(pm.discount) + '% desc.'
 			}
 			return null
 		},

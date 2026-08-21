@@ -55,10 +55,10 @@
 	class="precio-metodo-pago-seleccionado m-t-5">
 		Precio con este metodo: <strong>{{ price(precio_metodo_pago_seleccionado.price) }}</strong>
 		<span v-if="precio_metodo_pago_seleccionado.discount_percentage_vs_etiqueta > 0">
-			(-{{ precio_metodo_pago_seleccionado.discount_percentage_vs_etiqueta }}%)
+			(-{{ porcentaje_es(precio_metodo_pago_seleccionado.discount_percentage_vs_etiqueta) }}%)
 		</span>
 		<span v-else-if="precio_metodo_pago_seleccionado.discount_percentage_vs_etiqueta < 0">
-			(+{{ precio_metodo_pago_seleccionado.discount_percentage_vs_etiqueta * -1 }}%)
+			(+{{ porcentaje_es(precio_metodo_pago_seleccionado.discount_percentage_vs_etiqueta * -1) }}%)
 		</span>
 	</p>
 
@@ -122,9 +122,9 @@ export default {
 				if (typeof discount != 'undefined') {
 
 					if (Number(discount.discount_percentage) > 0) {
-						text += ' (-'+discount.discount_percentage+'%)'
+						text += ' (-'+this.porcentaje_es(discount.discount_percentage)+'%)'
 					} else {
-						text += ' (+'+Number(discount.discount_percentage)*-1+'%)'
+						text += ' (+'+this.porcentaje_es(Number(discount.discount_percentage)*-1)+'%)'
 					}
 				}
 				options.push({

@@ -69,7 +69,7 @@
 			precios solo suman los articulos que tienen el stock indicado. Antes vivia adentro de la
 			tarjeta de valor; ahora que los totales encabezan el modal, la aclaracion los sigue. -->
 			<p class="inventario-aclaracion">
-				Solo se tienen en cuenta los artículos que tienen indicado su stock (actualmente, el {{ inventory_performance.porcentaje_stockeado }}% del inventario)
+				Solo se tienen en cuenta los artículos que tienen indicado su stock (actualmente, el {{ porcentaje_es(inventory_performance.porcentaje_stockeado) }}% del inventario)
 			</p>
 
 			<div class="inventario-paneles">

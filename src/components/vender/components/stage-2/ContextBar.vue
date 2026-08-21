@@ -10,7 +10,8 @@
 		<div class="vender-context-bar__block vender-context-bar__block--total">
 			<span class="vender-context-bar__total-value">{{ total | currency }}</span>
 			<span class="vender-context-bar__sub-value">
-				{{ items.length }} {{ items.length === 1 ? 'producto' : 'productos' }} · {{ total_unidades }} {{ total_unidades === 1 ? 'unidad' : 'unidades' }}
+				<!-- El singular/plural se sigue decidiendo con el valor crudo (total_unidades === 1): el formateo va solo donde se muestra. -->
+				{{ items.length }} {{ items.length === 1 ? 'producto' : 'productos' }} · {{ numero_es(total_unidades) }} {{ total_unidades === 1 ? 'unidad' : 'unidades' }}
 			</span>
 		</div>
 

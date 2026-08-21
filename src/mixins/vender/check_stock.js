@@ -94,7 +94,7 @@ export default {
 							} else if (stock < cantidad_para_vender) {
 								
 								stock_disponible = false 
-								this.$toast.error('Solo hay '+stock+' en '+address.street)
+								this.$toast.error('Solo hay '+this.numero_es(stock)+' en '+address.street)
 
 							}
 						}
@@ -103,7 +103,7 @@ export default {
 						
 						stock_disponible = false 
 						
-						this.$toast.error('Solo hay '+item.stock+' en stock')
+						this.$toast.error('Solo hay '+this.numero_es(item.stock)+' en stock')
 					}
 
 				} else if (item.is_combo) {
@@ -119,7 +119,7 @@ export default {
 
 					articles_sin_stock.forEach(article => {
 
-						this.$toast.error(article.name+' solo tiene '+article.stock+' en stock')
+						this.$toast.error(article.name+' solo tiene '+this.numero_es(article.stock)+' en stock')
 					})
 
 				}
