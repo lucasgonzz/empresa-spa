@@ -39,7 +39,7 @@
 						mode="array"
 						:option_value="discount.id"
 						v-model="sale_discounts">
-							{{ discount.name }} {{ discount.percentage }}%
+							{{ discount.name }} {{ porcentaje_es(discount.percentage) }}%
 						</vender-toggle>
 					</div>
 				</div>
@@ -63,7 +63,7 @@
 							<div
 							class="vender-client-block__item-detail"
 							:id="'discount_'+discount.id">
-								{{ discount.name }} {{ discount.percentage }}%
+								{{ discount.name }} {{ porcentaje_es(discount.percentage) }}%
 
 								<span
 								v-if="discount.deleted_at">
@@ -72,13 +72,13 @@
 
 								<span
 								v-else-if="discount.updated_percentage">
-									({{ discount.updated_percentage }}% en este momento)
+									({{ porcentaje_es(discount.updated_percentage) }}% en este momento)
 								</span>
 
 								<p
 								class="text-muted"
 								v-if="!discount.deleted_at && discount.updated_percentage">
-									En caso de querer usar el valor actual del descuento ({{ discount.updated_percentage }}%), desmarcar para quitar el descuento, guardar la venta sin el descuento, y editar la venta para agregarle el descuento con el valor actualizado.
+									En caso de querer usar el valor actual del descuento ({{ porcentaje_es(discount.updated_percentage) }}%), desmarcar para quitar el descuento, guardar la venta sin el descuento, y editar la venta para agregarle el descuento con el valor actualizado.
 								</p>
 
 							</div>

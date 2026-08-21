@@ -17,7 +17,8 @@
                     </li>
                     <li class="list-group-item">{{ sales.length }} ventas</li>
                     <li class="list-group-item">{{ getTotalItems }} artículos</li>
-                    <li class="list-group-item">Total: ${{ total }}</li>
+                    <!-- El $ lo pone price(), que ademas separa con punto los miles y con coma los decimales. -->
+                    <li class="list-group-item">Total: {{ price(total) }}</li>
                 </ul>
             </div>
             <div class="modal-footer">

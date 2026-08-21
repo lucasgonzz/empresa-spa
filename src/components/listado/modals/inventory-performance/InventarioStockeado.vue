@@ -19,7 +19,7 @@
 			<!-- El numero va en HTML encima del canvas, no dibujado adentro: asi toma la
 			tipografia y los tokens del sistema y lo lee un lector de pantalla. -->
 			<div class="inventario-panel__centro">
-				<span class="inventario-panel__centro-valor">{{ porcentaje }}%</span>
+				<span class="inventario-panel__centro-valor">{{ porcentaje_es(porcentaje) }}%</span>
 				<span class="inventario-panel__centro-label">stockeado</span>
 			</div>
 		</div>
@@ -27,11 +27,11 @@
 		<dl class="inventario-panel__detalle">
 			<div class="inventario-panel__fila">
 				<dt>Stockeados</dt>
-				<dd>{{ model.stockeados }}</dd>
+				<dd>{{ numero_es(model.stockeados) }}</dd>
 			</div>
 			<div class="inventario-panel__fila">
 				<dt>Sin stockear</dt>
-				<dd>{{ model.sin_stockear }}</dd>
+				<dd>{{ numero_es(model.sin_stockear) }}</dd>
 			</div>
 		</dl>
 	</div>

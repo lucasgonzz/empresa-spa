@@ -7,7 +7,7 @@
 		</p>
 		<hr>
 		<p>
-			Cantidad: {{ producto.amount }}
+			Cantidad: {{ numero_es(producto.amount) }}
 		</p>
 	</div>
 </template>

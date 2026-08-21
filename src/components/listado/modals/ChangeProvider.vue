@@ -137,7 +137,7 @@ export default {
 		// Arma un texto corto por descuento, ej: "10%" o "$500"
 		discountText(discount) {
 			if (discount.percentage) {
-				return discount.percentage+'%'
+				return this.porcentaje_es(discount.percentage)+'%'
 			}
 			if (discount.amount) {
 				return this.price(discount.amount)

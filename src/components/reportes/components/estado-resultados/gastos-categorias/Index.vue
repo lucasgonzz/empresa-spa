@@ -13,7 +13,7 @@
 				class="gastos-categorias__punto"
 				:style="{backgroundColor: categoria.color}"></span>
 				<span class="gastos-categorias__nombre">{{ categoria.concepto }}</span>
-				<span class="gastos-categorias__monto">{{ formatear(categoria.total) }} ({{ categoria.porcentaje }}%)</span>
+				<span class="gastos-categorias__monto">{{ formatear(categoria.total) }} ({{ porcentaje_es(categoria.porcentaje) }}%)</span>
 			</span>
 		</div>
 	</div>
@@ -78,6 +78,11 @@ export default {
 			let colores = this.get_chart_colors(agrupadas.length)
 			let total_gastos = this.model.gastos_operativos
 
+			// `porcentaje` se guarda CRUDO ('35.5', punto decimal ingles) a proposito: es un
+			// dato del objeto categoria, no un texto de pantalla. Los separadores se aplican
+			// en el template con porcentaje_es(), que es el unico lugar donde se muestra
+			// (mision del 21/8/2026 — separadores de numeros). Si mañana alguien lo usa para
+			// ordenar o para el ancho de una barra, sigue siendo un numero parseable.
 			agrupadas.forEach((categoria, indice) => {
 				categoria.color = colores[indice]
 				categoria.porcentaje = (Math.round(Math.abs(categoria.total) / total_gastos * 1000) / 10).toFixed(1)

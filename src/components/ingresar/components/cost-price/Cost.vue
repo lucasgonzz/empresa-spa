@@ -25,7 +25,7 @@
 		:value="1"
 		:unchecked-value="0"
 		v-model="article.provider_cost_in_dollars">
-			Costo en dolares de {{ selectedProvider(article).name }} de ${{ selectedProvider(article).dolar }}
+			Costo en dolares de {{ selectedProvider(article).name }} de {{ price(selectedProvider(article).dolar) }}
 		</b-form-checkbox>
 	</b-col>
 </template>

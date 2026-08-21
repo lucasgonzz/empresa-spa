@@ -90,9 +90,9 @@
 								<span
 								v-else-if="prop.is_stock"
 	                :class="{
-	                  'text-danger font-weight-bold': parseFloat(propertyText(models[data.index], prop)) <= 0,
-	                  'font-weight-bold': parseFloat(propertyText(models[data.index], prop)) > 0,
-	                  
+	                  'text-danger font-weight-bold': valor_numerico_crudo(models[data.index], prop) <= 0,
+	                  'font-weight-bold': valor_numerico_crudo(models[data.index], prop) > 0,
+
 	                }"
 	              >
 									{{ propertyText(models[data.index], prop) }}
@@ -579,6 +579,40 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Valor numerico CRUDO de una prop, para decidir estilo (no para mostrar).
+		 *
+		 * 🔴 Existe para no leer nunca el texto que devuelve propertyText(). Antes la clase de la
+		 * celda de stock se decidia con `parseFloat(propertyText(model, prop))`, y eso se rompe en
+		 * cuanto el texto lleva separadores argentinos: `parseFloat('1.234,56')` devuelve **1.234**,
+		 * porque corta en la coma. Un stock de `0,5` daria 0 y la celda se pintaria de rojo como si
+		 * no hubiera stock.
+		 *
+		 * La regla general: el texto formateado es para el ojo, nunca para una cuenta ni para una
+		 * condicion. Si hay que decidir algo con el numero, se lee del model.
+		 *
+		 * Mision del 21/8/2026 — separadores de numeros.
+		 *
+		 * @param {Object} model fila de la tabla.
+		 * @param {Object} prop definicion de la columna.
+		 * @returns {number} el valor como numero, o 0 si no se puede leer.
+		 */
+		valor_numerico_crudo(model, prop) {
+			if (!model || !prop || !prop.key) {
+				return 0
+			}
+			/*
+				Las columnas de stock por deposito se declaran con `function` y una key que NO
+				existe en el model (`address_5`): el valor lo calcula la funcion recorriendo
+				article.addresses. Leer model['address_5'] daria undefined -> NaN -> 0, y la
+				columna entera quedaria pintada de rojo como si no hubiera stock.
+			*/
+			const valor = Number(prop.function ? this.getFunctionValue(prop, model) : model[prop.key])
+			if (isNaN(valor)) {
+				return 0
+			}
+			return valor
+		},
 		/**
 		 * Recalcula la altura disponible del contenedor de tabla según su posición en viewport.
 		 * Resta un margen inferior para evitar scroll residual en la página.

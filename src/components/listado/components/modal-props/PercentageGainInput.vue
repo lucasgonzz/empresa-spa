@@ -22,7 +22,7 @@
 			<div
 			v-if="margen_implicito !== null"
 			class="percentage-gain-input__implicito">
-				Ese precio implica un margen del {{ margen_implicito }}%
+				Ese precio implica un margen del {{ porcentaje_es(margen_implicito) }}%
 			</div>
 			<p class="m-b-0">
 				Elimine el precio manual para poder indicar el margen de ganancia.

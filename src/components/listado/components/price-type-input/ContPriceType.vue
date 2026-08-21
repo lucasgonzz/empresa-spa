@@ -96,7 +96,7 @@ export default {
 				return '0%'
 			}
 
-			return Math.round(parseFloat(valor) * 100) / 100 + '%'
+			return this.porcentaje_es(Math.round(parseFloat(valor) * 100) / 100) + '%'
 		},
 
 	},

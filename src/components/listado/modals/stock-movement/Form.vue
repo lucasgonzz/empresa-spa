@@ -16,13 +16,13 @@
 			<p>
 				
 				<strong>
-					Este articulo tiene indicado unidades individuales, el valor que agregue se multiplicara por las {{ article.unidades_individuales }} unidades individuales
+					Este articulo tiene indicado unidades individuales, el valor que agregue se multiplicara por las {{ numero_es(article.unidades_individuales) }} unidades individuales
 				</strong>
 			</p>
 			<p
 			v-if="amount_ != ''">
 				<strong>
-					Unidades a agregar: {{ Number(amount_) * Number(article.unidades_individuales) }}
+					Unidades a agregar: {{ numero_es(unidades_a_agregar) }}
 				</strong>
 			</p>
 		</div>
@@ -95,6 +95,23 @@ export default {
 		BtnLoader: () => import('@/common-vue/components/BtnLoader'),
 	},
 	computed: {
+		/*
+			El redondeo NO es cosmetico: mata la basura del float de la multiplicacion.
+			`Number(amount_) * Number(unidades_individuales)` con 12 x 102.88 da
+			1234.5600000000002 en JavaScript, y eso se mostraba tal cual en pantalla.
+			Redondear a 4 decimales borra el arrastre binario sin tocar ningun decimal real
+			(el stock es decimal(12,2) en la base), y el Number() de afuera saca los ceros
+			de mas, asi que un 2 exacto se sigue viendo "2" y no "2,0000".
+
+			Es display puro: no se guarda ni se manda a la API.
+		*/
+		unidades_a_agregar() {
+			const producto = Number(this.amount_) * Number(this.article.unidades_individuales)
+			if (isNaN(producto)) {
+				return 0
+			}
+			return Number(producto.toFixed(4))
+		},
 		article() {
 			return this.$store.state.article.model 
 		},

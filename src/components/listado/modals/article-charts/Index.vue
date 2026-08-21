@@ -15,7 +15,7 @@ hide-footer>
 			v-if="results.length">
 				<p
 				class="total-unidades-vendidas-number">
-					{{ total_unidades_vendidas }}
+					{{ numero_es(total_unidades_vendidas) }}
 				</p>
 				<p
 				class="total-unidades-vendidas-text">

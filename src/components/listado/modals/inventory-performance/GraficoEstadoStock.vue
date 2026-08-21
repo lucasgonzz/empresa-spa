@@ -169,7 +169,7 @@ export default {
 						label: function(tooltip_item, data) {
 							let nombre = data.datasets[tooltip_item.datasetIndex].label
 							let valor = data.datasets[tooltip_item.datasetIndex].data[tooltip_item.index]
-							return nombre + ': ' + valor + ' ' + that.etiquetaArticulos(valor)
+							return nombre + ': ' + that.numero_es(valor) + ' ' + that.etiquetaArticulos(valor)
 						},
 					},
 				},

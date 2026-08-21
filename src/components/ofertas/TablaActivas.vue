@@ -48,7 +48,7 @@
 							{{ texto_tramos(data.item) }}
 						</span>
 						<strong v-else>
-							{{ data.item.porcentaje }}%
+							{{ porcentaje_es(data.item.porcentaje) }}%
 						</strong>
 					</template>
 
@@ -130,7 +130,7 @@
 			class="paginacion-modulo m-t-15">
 				<div class="paginacion-modulo__barra">
 					<span class="paginacion-modulo__meta">
-						{{ paginacion.total }} resultados
+						{{ numero_es(paginacion.total) }} resultados
 					</span>
 					<template v-if="paginacion.total > paginacion.per_page">
 						<span
@@ -259,10 +259,11 @@ export default {
 			if (!Array.isArray(oferta.ranges) || !oferta.ranges.length) {
 				return '—'
 			}
+			let self = this
 			let partes = []
 			oferta.ranges.forEach(tramo => {
-				let rango = tramo.max ? tramo.min + ' a ' + tramo.max : tramo.min + ' o mas'
-				partes.push(rango + ': ' + tramo.porcentaje + '%')
+				let rango = tramo.max ? self.numero_es(tramo.min) + ' a ' + self.numero_es(tramo.max) : self.numero_es(tramo.min) + ' o mas'
+				partes.push(rango + ': ' + self.porcentaje_es(tramo.porcentaje) + '%')
 			})
 			return partes.join(' · ')
 		},

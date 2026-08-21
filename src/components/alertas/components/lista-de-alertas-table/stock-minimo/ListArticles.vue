@@ -20,7 +20,7 @@
 				</div>
 				<div class="totales-chip__body">
 					<span class="totales-chip__label">Bajo el mínimo</span>
-					<span class="totales-chip__value">{{ inventory_performance.stock_minimo }}</span>
+					<span class="totales-chip__value">{{ numero_es(inventory_performance.stock_minimo) }}</span>
 				</div>
 			</div>
 
@@ -30,7 +30,7 @@
 				</div>
 				<div class="totales-chip__body">
 					<span class="totales-chip__label">Sin stock</span>
-					<span class="totales-chip__value">{{ inventory_performance.sin_stock }}</span>
+					<span class="totales-chip__value">{{ numero_es(inventory_performance.sin_stock) }}</span>
 				</div>
 			</div>
 
@@ -47,7 +47,7 @@
 				</div>
 				<div class="totales-chip__body">
 					<span class="totales-chip__label">Con stock negativo</span>
-					<span class="totales-chip__value">{{ inventory_performance.stock_negativo }}</span>
+					<span class="totales-chip__value">{{ numero_es(inventory_performance.stock_negativo) }}</span>
 					<span
 					v-if="inventory_performance.stock_negativo > 0"
 					class="totales-chip__meta">

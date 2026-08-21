@@ -58,12 +58,14 @@ export default {
 		cuota_text(cuota) {
 			let text = cuota.cantidad_cuotas + ' cuotas'
 
+			// La cantidad de cuotas queda cruda a proposito: es un contador (3, 6, 12), no una
+			// medida. Los que se formatean son los porcentajes.
 			if (cuota.descuento) {
-				text += ' (-'+cuota.descuento+'%)'
+				text += ' (-'+this.porcentaje_es(cuota.descuento)+'%)'
 			}
 
 			if (cuota.recargo) {
-				text += ' (+'+cuota.recargo+'%)'
+				text += ' (+'+this.porcentaje_es(cuota.recargo)+'%)'
 			}
 
 			return text 

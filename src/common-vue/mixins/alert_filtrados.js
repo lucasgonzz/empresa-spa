@@ -49,8 +49,8 @@ export default {
 			if (filtered.length < total_filter_results) {
 				let label = this.plural ? this.plural(this.alert_model_name) : 'registros'
 				alert(
-					'Solo se tienen en cuenta los ' + filtered.length + ' '
-					+ label + ' descargados. No de los ' + total_filter_results + ' filtrados'
+					'Solo se tienen en cuenta los ' + this.numero_es(filtered.length) + ' '
+					+ label + ' descargados. No de los ' + this.numero_es(total_filter_results) + ' filtrados'
 				)
 			}
 		},

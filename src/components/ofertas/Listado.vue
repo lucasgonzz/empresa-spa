@@ -162,13 +162,14 @@ export default {
 			if (valor === null || typeof valor == 'undefined' || valor === '') {
 				return '—'
 			}
-			return valor
+			// El contador se muestra con los separadores de la interfaz: 12.500, no 12500.
+			return this.numero_es(valor)
 		},
 		leyenda_excluidos(corrida) {
 			if (!corrida.total_clientes_excluidos_por_deuda) {
 				return ''
 			}
-			return corrida.total_clientes_excluidos_por_deuda + ' clientes quedaron afuera porque tienen ventas sin cobrar'
+			return this.numero_es(corrida.total_clientes_excluidos_por_deuda) + ' clientes quedaron afuera porque tienen ventas sin cobrar'
 		},
 	}
 }

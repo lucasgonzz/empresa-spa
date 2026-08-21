@@ -15,7 +15,10 @@ export default {
         combos() {
             this.sale.combos.forEach(combo => {
                 
-                let text_name = combo.name + ' ('+combo.pivot.amount+')'
+                // Solo la cantidad del nombre. El ancho de las columnas se calcula con
+                // TICKET_WIDTH y los padStart de abajo, que quedan intactos: wrapText ya corta
+                // este texto a la mitad del ancho, asi que cambiarle el largo no descuadra nada.
+                let text_name = combo.name + ' ('+this.numero_es(combo.pivot.amount)+')'
                 let name = this.wrapText(text_name, Math.floor(this.TICKET_WIDTH * 0.5)); // Nombre ocupa la mitad
                 
                 let price = combo.pivot.price.padStart(Math.floor(this.TICKET_WIDTH * 0.25), " ");
@@ -39,7 +42,8 @@ export default {
         articulos() {
 
             this.sale_to_print.articles.forEach((article) => {
-                let text_name = article.name + ' ('+article.pivot.amount+')'
+                // Idem combos(): solo la cantidad del nombre, nunca los padStart de las columnas.
+                let text_name = article.name + ' ('+this.numero_es(article.pivot.amount)+')'
                 let name = this.wrapText(text_name, Math.floor(this.TICKET_WIDTH * 0.5)); // Nombre ocupa la mitad
                 
                 let price = article.pivot.price.padStart(Math.floor(this.TICKET_WIDTH * 0.25), " ");

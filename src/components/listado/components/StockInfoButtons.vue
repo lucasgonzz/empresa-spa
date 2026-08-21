@@ -6,13 +6,13 @@ class="m-l-0 m-sm-l-15 m-t-15 m-r-15">
 	v-b-modal="'articles-stock-min'"
 	variant="warning"
 	v-if="articles_stock_min.length">
-		{{ articles_stock_min.length }} con stock minimo
+		{{ numero_es(articles_stock_min.length) }} con stock minimo
 	</b-button>
 	<b-button
 	v-b-modal="'articles-stock-0'"
 	variant="danger"
 	v-if="articles_stock_0.length">
-		{{ articles_stock_0.length }} sin stock 
+		{{ numero_es(articles_stock_0.length) }} sin stock 
 	</b-button>
 	<b-button-group
 	v-if="is_admin"
@@ -60,7 +60,7 @@ export default {
 		},
 		aclaracion() {
 			if (this.is_filtered) {
-				return '. Solo se estan sumando '+this.filtered.length+' articulos de los '+this.total_results+' de la consulta. Continue descargando los siguientes resultados para aproximarse al total.'
+				return '. Solo se estan sumando '+this.numero_es(this.filtered.length)+' articulos de los '+this.numero_es(this.total_results)+' de la consulta. Continue descargando los siguientes resultados para aproximarse al total.'
 			}
 			return ''
 		}

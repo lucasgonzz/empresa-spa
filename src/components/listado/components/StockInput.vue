@@ -20,7 +20,7 @@
 
 		<span
 		v-else>
-			{{ model.stock }}
+			{{ numero_es(model.stock) }}
 		</span>
 	</div>
 </template>

@@ -5,10 +5,10 @@ title="Crear depositos"
 hide-footer
 id="create-article-addresses">
 	<p>
-		Stock actual de {{ article.name }}: {{ article.stock }}
+		Stock actual de {{ article.name }}: {{ numero_es(article.stock) }}
 	</p>
 	<p>
-		Stock restante para repartir: {{ stock_restante }}
+		Stock restante para repartir: {{ numero_es(stock_restante) }}
 	</p>
 	<p>
 		Ingrese el stock para los siguientes depositos

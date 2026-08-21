@@ -1,42 +1,38 @@
 // Lectura de importes tal como los imprime la pantalla.
 //
 // ─────────────────────────────────────────────────────────────────────────────────────────────
-// 🔴 Por que hay DOS funciones y no una que "se de cuenta sola"
+// 🔴 Desde el 21/8/2026 la aplicacion imprime TODO en es-AR: miles ".", decimal ","
 // ─────────────────────────────────────────────────────────────────────────────────────────────
 //
-// La aplicacion no formatea todos los importes igual. En una MISMA fila del listado de articulos
-// conviven hoy los dos formatos:
+// Hasta esa fecha convivian dos formatos en la MISMA fila del listado de articulos, porque
+// `price_variable_decimals()` devolvia el `numeral(p).format(pattern)` crudo (formato en-US) y
+// `price()` le daba vuelta los separadores:
 //
-//     Costo base    $2,000.00     <- miles ",", decimal "."   (formato en-US)
-//     Costo Real    $2,000.00     <- idem
-//     Precio final  $4.145,08     <- miles ".", decimal ","   (formato es-AR)
+//     Costo base    $2,000.00     <- en-US
+//     Precio final  $4.145,08     <- es-AR
 //
-// Medido el 19/8/2026 en el slot s8 sobre el articulo "Martillo acero". La causa esta ubicada: las
-// props con `variable_decimals` (`cost`, `costo_real`) se imprimen con `price_variable_decimals()`
-// --common-vue/mixins/generals/formatting.js:148--, que devuelve `numeral(p).format(pattern)`
-// CRUDO; `price()` --common-vue/mixins/dates.js:63-- hace el intercambio de separadores a es-AR
-// despues del format, y `price_variable_decimals()` no. No se corrige desde un test: es un
-// formateador compartido por todo el sistema y cambiarlo mueve cada precio de cada pantalla.
+// Eso se corrigio: los dos caminos pasan ahora por `separadores_es()` de
+// `src/common-vue/helpers/formato_numero.js`, que es el unico lugar del sistema que decide como se
+// ve un numero. La funcion `numero_de_pantalla_variable` que existia para leer el formato en-US ya
+// no tiene razon de ser y se borro.
 //
-// Y no alcanza con adivinar el formato mirando el texto, aunque sea tentador. La regla "el
-// separador decimal es el que esta mas a la derecha" funciona con "$2,000.00" y con "$4.145,08",
-// pero se rompe con el caso mas comun de todos:
+// Lo que NO cambio, y por eso sigue habiendo dos funciones:
+//
+//   - lo que se MUESTRA va en es-AR                      -> `numero_de_pantalla`
+//   - lo que es un DATO va con punto decimal y sin miles -> `numero_de_dato`
+//
+// Un dato es el `value` de un `&lt;input&gt;` (los campos editables no se tocaron: se siguen escribiendo
+// con punto) y cualquier atributo `data-*` que el sistema expone para que otro proceso lo lea.
+// La distincion es la misma que hace la aplicacion adentro, y es la que evita que un test compare
+// contra el texto de la pantalla cuando lo que quiere es el numero.
+//
+// Y ojo con adivinar el formato mirando el texto, que es tentador: la regla "el separador decimal
+// es el que esta mas a la derecha" se rompe con el caso mas comun de todos:
 //
 //     "$20.691"   -> es-AR, veinte mil seiscientos noventa y uno (price() recorta el ",00")
-//     "$20.691"   -> en-US, seria veinte con seiscientos noventa y uno
+//     "$20.691"   -> dato,  veinte con seiscientos noventa y uno
 //
-// El MISMO texto, dos numeros distintos. No hay heuristica que salve eso: quien lee tiene que
-// saber con que formateador se imprimio ese campo. Por eso las dos funciones estan separadas y
-// cada llamada elige.
-//
-// Cual usar:
-//   - `numero_de_pantalla`            -> todo lo que pasa por price(): precios finales, totales,
-//                                        importes de cuenta corriente, montos de un reporte. Es el
-//                                        formato que el sistema declara como propio.
-//   - `numero_de_pantalla_variable`   -> SOLO las props que declaran `variable_decimals` en su
-//                                        model (hoy `cost` y `costo_real` de article). Si algun dia
-//                                        se corrige price_variable_decimals(), estas llamadas pasan
-//                                        a ser `numero_de_pantalla` y esta funcion se borra.
+// El MISMO texto, dos numeros distintos. Quien lee tiene que saber que esta leyendo.
 
 /**
  * Deja solo digitos, separadores y el signo.
@@ -74,15 +70,15 @@ function numero_de_pantalla(texto) {
 }
 
 /**
- * Convierte a numero un importe impreso en formato en-US: coma como separador de miles y punto como
- * decimal ("$2,000.00" -> 2000).
+ * Convierte a numero un valor de DATO: punto decimal y sin separador de miles ("2000.00" -> 2000).
  *
- * Es el formato --no buscado-- de las props con `variable_decimals`. Ver el comentario de arriba.
+ * Es lo que sale de `inputValue()` sobre un campo editable y de un atributo `data-*`. NO sirve para
+ * leer una celda: para eso esta `numero_de_pantalla`.
  *
  * @param {string} texto
  * @returns {number} NaN si el texto no tiene ningun digito.
  */
-function numero_de_pantalla_variable(texto) {
+function numero_de_dato(texto) {
 	const limpio = limpiar(texto)
 
 	if (limpio === '' || limpio === '-') {
@@ -110,6 +106,6 @@ function redondear(valor, decimales = 2) {
 
 module.exports = {
 	numero_de_pantalla,
-	numero_de_pantalla_variable,
+	numero_de_dato,
 	redondear,
 }

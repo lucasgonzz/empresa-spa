@@ -254,10 +254,10 @@ export default {
 				cantidad_actual = address_actual.pivot.amount 
 			}
 
-			return '('+cantidad_actual+')'
+			return '('+this.numero_es(cantidad_actual)+')'
 		},	
 		address_variant_amount(variant_address) {
-			return '('+variant_address.pivot.amount+')'
+			return '('+this.numero_es(variant_address.pivot.amount)+')'
 		},
 		save() {
 			if (this.check()) {

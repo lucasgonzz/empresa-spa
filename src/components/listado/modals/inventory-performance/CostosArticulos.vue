@@ -16,7 +16,7 @@
 			token_color="--caja-abierta-acento"></grafico-dona>
 
 			<div class="inventario-panel__centro">
-				<span class="inventario-panel__centro-valor">{{ porcentaje }}%</span>
+				<span class="inventario-panel__centro-valor">{{ porcentaje_es(porcentaje) }}%</span>
 				<span class="inventario-panel__centro-label">con costo</span>
 			</div>
 		</div>
@@ -24,11 +24,11 @@
 		<dl class="inventario-panel__detalle">
 			<div class="inventario-panel__fila">
 				<dt>Con costos</dt>
-				<dd>{{ model.articulos_con_costos }}</dd>
+				<dd>{{ numero_es(model.articulos_con_costos) }}</dd>
 			</div>
 			<div class="inventario-panel__fila">
 				<dt>Sin costos</dt>
-				<dd>{{ model.articulos_sin_costos }}</dd>
+				<dd>{{ numero_es(model.articulos_sin_costos) }}</dd>
 			</div>
 		</dl>
 	</div>
