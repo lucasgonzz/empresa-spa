@@ -89,6 +89,41 @@
 				</div>
 			</div>
 
+			<!-- ======================= Fallidos ======================= -->
+			<!--
+				🔴 Los fallidos van agrupados por motivo, igual que los salteados. Un "38
+				fallidos" pelado no le dice al operador NADA de lo que tiene que hacer.
+				Y el caso más probable del día 1 es justamente ese: la plantilla
+				`cc_cli_recordatorio_cobro` nace `pendiente_meta` y se queda así hasta que
+				ComercioCity la apruebe a mano, así que el primer masivo va a fallar casi
+				entero por `plantilla_no_aprobada`. Sin el motivo escrito, el operador no
+				tiene forma de saber que lo que falta es un trámite con Meta y no algo que
+				él hizo mal.
+			-->
+			<div
+			v-if="fallidos_agrupados.length"
+			class="recordatorio-masivo__fallidos">
+
+				<span class="recordatorio-masivo__rotulo">
+					{{ numero_es(lote.fallidos) }} {{ lote.fallidos == 1 ? 'envío fallido' : 'envíos fallidos' }}
+				</span>
+
+				<div
+				v-for="grupo in fallidos_agrupados"
+				:key="grupo.motivo"
+				class="recordatorio-masivo__grupo is-error">
+					<p class="recordatorio-masivo__grupo-titulo">
+						{{ numero_es(grupo.cantidad) }} {{ grupo.cantidad == 1 ? 'fallido' : 'fallidos' }}:
+						{{ grupo.mensaje }}
+					</p>
+					<p
+					v-if="grupo.nombres.length"
+					class="recordatorio-masivo__grupo-clientes">
+						{{ grupo.nombres.join(', ') }}{{ grupo.nombres_recortados ? ', y algunos más' : '' }}
+					</p>
+				</div>
+			</div>
+
 			<!-- ======================= Salteados ======================= -->
 			<!--
 				🔴 Los salteados SE MUESTRAN, agrupados por motivo. Esconderlos deja al operador
@@ -151,6 +186,28 @@
 const INTERVALO_POLLING = 2000
 const MAX_TICKS = 150
 
+/*
+	Los motivos en criollo.
+
+	🔴 Estos textos los pone el front y no el backend, y no es un olvido: `salteados[]` viene con
+	su `mensaje` armado, pero `motivos_fallo` es sólo un mapa `motivo => cantidad`. Los slugs son
+	las constantes CODE_* de `RecordatorioCobroSenderService`, así que si el backend suma una,
+	acá hay que sumarla también — mientras tanto cae al fallback de `mensaje_de_motivo()`, que
+	dice algo entendible en vez de escupir el slug crudo.
+
+	Cada texto termina diciendo qué hacer, no sólo qué pasó: el operador que ve esto no puede
+	arreglar ninguno de estos casos apretando "reintentar".
+*/
+const MENSAJES_POR_MOTIVO = {
+	plantilla_no_aprobada: 'La plantilla de WhatsApp todavía no está aprobada por Meta. Es un trámite que hace ComercioCity, no algo que se pueda resolver desde acá: cuando esté aprobada, el envío funciona solo.',
+	sin_resumen_de_cuenta: 'No se les pudo armar el resumen de cuenta corriente, así que no se les mandó una plantilla que promete un adjunto que no existe. Suele ser una cuenta corriente sin movimientos.',
+	envio_no_confirmado: 'WhatsApp no confirmó el envío. Es una falla del servicio, no de los datos del cliente: se puede volver a intentar más tarde.',
+	sin_telefono: 'No tienen teléfono cargado en la ficha del cliente.',
+	sin_configuracion: 'El bot de WhatsApp del negocio no está configurado o está apagado.',
+	ya_recibio_hoy: 'Ya recibieron el recordatorio en las últimas 24 horas.',
+	sin_ventas: 'Ya no tienen ventas pendientes en el filtro actual.',
+}
+
 export default {
 	props: {
 		/**
@@ -211,6 +268,42 @@ export default {
 			})
 			return grupos
 		},
+		/**
+		 * Los fallidos juntados por motivo, con los nombres que el backend haya podido mandar.
+		 *
+		 * 🔴 La cantidad sale de `motivos_fallo` y NO de contar `fallos`: el array de fallos
+		 * viene topeado en 50 para que un masivo grande no infle el lote en cache. Contar la
+		 * lista diría "50 fallidos" en un lote de 300 y el número de arriba diría otra cosa.
+		 * `fallos` se usa sólo para poner nombres, y se avisa cuando quedaron afuera.
+		 *
+		 * Van ordenados de mayor a menor: el motivo que explica la mayoría es el que hay que
+		 * leer primero.
+		 *
+		 * @returns {Array}
+		 */
+		fallidos_agrupados() {
+			let self = this
+			if (!this.lote || !this.lote.motivos_fallo) {
+				return []
+			}
+			let fallos = this.lote.fallos ? this.lote.fallos : []
+			let grupos = []
+			Object.keys(this.lote.motivos_fallo).forEach(motivo => {
+				let nombres = fallos.filter(f => f.motivo == motivo).map(f => f.client_name)
+				let cantidad = self.lote.motivos_fallo[motivo]
+				grupos.push({
+					motivo: motivo,
+					mensaje: self.mensaje_de_motivo(motivo),
+					cantidad: cantidad,
+					nombres: nombres,
+					// El backend tope en 50: si de este motivo hay más de los que vinieron con
+					// nombre, se dice, en vez de dar a entender que la lista está completa.
+					nombres_recortados: nombres.length > 0 && nombres.length < cantidad,
+				})
+			})
+			grupos.sort((a, b) => b.cantidad - a.cantidad)
+			return grupos
+		},
 		titulo_progreso() {
 			if (!this.lote) {
 				return ''
@@ -232,6 +325,19 @@ export default {
 		this.limpiar_polling()
 	},
 	methods: {
+		/**
+		 * El texto legible de un motivo. Un motivo que este front no conozca sale explicado a
+		 * medias pero NUNCA como slug crudo: "envio_no_confirmado" no le dice nada a nadie.
+		 *
+		 * @param {String} motivo Slug del motivo, de las constantes CODE_* del backend.
+		 * @returns {String}
+		 */
+		mensaje_de_motivo(motivo) {
+			if (MENSAJES_POR_MOTIVO[motivo]) {
+				return MENSAJES_POR_MOTIVO[motivo]
+			}
+			return 'No se pudo mandar el recordatorio. Motivo informado por el sistema: ' + motivo + '.'
+		},
 		al_abrir() {
 			this.limpiar_polling()
 			this.paso = 'confirmar'
@@ -380,6 +486,10 @@ export default {
 		font-size: 0.85rem
 		color: var(--color-text-secondary)
 
+	// Los fallidos y los salteados se dibujan con la MISMA caja a propósito: para el operador
+	// son la misma pregunta ("¿a quién no le llegó y por qué?") y no hacía falta inventarles un
+	// segundo diseño.
+	&__fallidos,
 	&__salteados
 		margin-top: 20px
 		padding-top: 14px
@@ -394,10 +504,19 @@ export default {
 		border-radius: 10px
 		background: var(--bg-section)
 
+		// Lo único que separa un fallido de un salteado es el color del título y el borde: al
+		// salteado no le llegó porque no correspondía, al fallido no le llegó y sí correspondía.
+		&.is-error
+			border-color: var(--btn-peligro-texto)
+
+			.recordatorio-masivo__grupo-titulo
+				color: var(--btn-peligro-texto)
+
 	&__grupo-titulo
 		font-size: 0.88rem
 		font-weight: 600
 		margin-bottom: 4px
+		line-height: 1.45
 
 	&__grupo-clientes
 		font-size: 0.8rem
