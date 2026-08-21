@@ -488,7 +488,7 @@ export default {
 	overflow-x: auto
 	overflow-y: hidden
 	background-color: var(--bg-nav, #E3E3E3)
-	border-radius: 8px
+	border-radius: 10px
 
 	@media screen and (max-width: 576px)
 		-webkit-scrollbar 
@@ -505,7 +505,7 @@ export default {
 	/* Pestaña inactiva: texto secundario sobre fondo transparente */
 	.item
 		border: none
-		border-radius: 6px
+		border-radius: 8px
 		padding: 8px 12px
 		cursor: pointer
 		font-size: 0.875rem
