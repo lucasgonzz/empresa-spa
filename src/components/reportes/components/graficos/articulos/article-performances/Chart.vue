@@ -51,6 +51,10 @@ export default {
 				...bar_style,
 			}]
 
+			// Adentro de un callback de Chart.js no vale `this`: se captura antes, como en el
+			// resto de los graficos del repo (mision del 21/8/2026 — separadores de numeros).
+			let that = this
+
 			this.renderChart({
 				labels: labels,
 				datasets: datasets,
@@ -71,7 +75,7 @@ export default {
 				tooltips: {
 					callbacks: {
 						label: function(tooltip_item) {
-							return 'Unidades: ' + tooltip_item.yLabel
+							return 'Unidades: ' + that.numero_es(tooltip_item.yLabel)
 						},
 					},
 				},

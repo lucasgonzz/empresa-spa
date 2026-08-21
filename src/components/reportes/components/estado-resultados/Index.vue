@@ -252,7 +252,9 @@ export default {
 			if (valor === null || typeof valor == 'undefined') {
 				return '—'
 			}
-			return Math.round(valor * 100) / 100 + '%'
+			// porcentaje_es le pone la coma decimal y el punto de miles; el % lo sigue poniendo
+			// este metodo, igual que antes (mision del 21/8/2026 — separadores de numeros).
+			return this.porcentaje_es(Math.round(valor * 100) / 100) + '%'
 		},
 		/* true si el backend marco esta linea como no atribuible a la moneda actual (ej. iibb_determinado en dolares) */
 		no_atribuible(campo) {
@@ -272,7 +274,7 @@ export default {
 			if (!this.model.ventas_netas || !valor) {
 				return '—'
 			}
-			return Math.round(Math.abs(valor) / this.model.ventas_netas * 1000) / 10 + '%'
+			return this.porcentaje_es(Math.round(Math.abs(valor) / this.model.ventas_netas * 1000) / 10) + '%'
 		},
 		/**
 		 * Clase de color segun el signo del resultado (tarea 02): verde en positivo, rojo en

@@ -82,7 +82,9 @@ export default {
 							// (a diferencia del porcentaje de la cascada y de la barra de composicion).
 							let porcentaje = (Math.round(Math.abs(valor) / total_gastos * 1000) / 10).toFixed(1)
 
-							return nombre + ': ' + that.price(valor, false, false) + ' (' + porcentaje + '%)'
+							// Adentro del callback no vale `this`: el porcentaje se formatea con
+							// el `that` que ya se captura arriba (mision del 21/8/2026 — separadores).
+							return nombre + ': ' + that.price(valor, false, false) + ' (' + that.porcentaje_es(porcentaje) + '%)'
 						},
 					},
 				},

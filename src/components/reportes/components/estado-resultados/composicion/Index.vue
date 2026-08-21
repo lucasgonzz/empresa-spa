@@ -174,9 +174,10 @@ export default {
 		formatear(valor) {
 			return this.price(valor, false, false)
 		},
-		/* Mismo criterio que el porcentaje() del prompt 02 en estado-resultados/Index.vue: base ventas_netas, redondeo a un decimal, valor absoluto. toFixed(1) para que 35 no se lea como "35%" sino "35.0%" (consistente con el resto de la leyenda) */
+		/* Mismo criterio que el porcentaje() del prompt 02 en estado-resultados/Index.vue: base ventas_netas, redondeo a un decimal, valor absoluto. toFixed(1) para que 35 no se lea como "35%" sino "35,0%" (consistente con el resto de la leyenda).
+		   El toFixed devuelve el punto decimal ingles ('35.0'), asi que la salida pasa por porcentaje_es para que se lea '35,0' (mision del 21/8/2026 — separadores de numeros). Lo que devuelve este metodo solo se muestra: la barra reparte flex-grow con segmento.valor, no con el porcentaje. */
 		porcentaje(valor) {
-			return (Math.round(Math.abs(valor) / this.model.ventas_netas * 1000) / 10).toFixed(1)
+			return this.porcentaje_es((Math.round(Math.abs(valor) / this.model.ventas_netas * 1000) / 10).toFixed(1))
 		},
 		/* price(0, ...) devuelve '-' (mismo criterio que el resto de la app): en el caso borde de
 		   resultado_neto exactamente 0 evita el texto confuso "perdida de -" */
