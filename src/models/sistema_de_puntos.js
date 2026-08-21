@@ -26,12 +26,12 @@ export default {
 			type: 'number',
 			value: 1,
 			descriptions: [
-				'Junto con "Cada cuantos pesos se completa un tramo" arma la regla "N puntos cada $M".',
+				'Junto con "Cada cuántos pesos se completa un tramo" arma la regla "N puntos cada $M".',
 				'Con 1 punto por tramo y $1.000 por tramo, una compra de $10.000 le deja 10 puntos al cliente.',
 			],
 		},
 		{
-			text: 'Cada cuantos pesos se completa un tramo',
+			text: 'Cada cuántos pesos se completa un tramo',
 			key: 'puntos_cada',
 			type: 'number',
 			value: 1000,
@@ -41,7 +41,7 @@ export default {
 			],
 		},
 		{
-			text: 'Cuanto vale un punto al canjear (en pesos)',
+			text: 'Cuánto vale un punto al canjear (en pesos)',
 			key: 'valor_punto',
 			type: 'number',
 			value: 10,
@@ -51,7 +51,7 @@ export default {
 			],
 		},
 		{
-			text: 'Minimo de puntos para poder canjear',
+			text: 'Mínimo de puntos para poder canjear',
 			key: 'minimo_canje',
 			type: 'number',
 			value: 500,
@@ -61,7 +61,7 @@ export default {
 			],
 		},
 		{
-			text: 'Maximo de la compra que se puede pagar con puntos (%)',
+			text: 'Máximo de la compra que se puede pagar con puntos (%)',
 			key: 'tope_porcentaje',
 			type: 'number',
 			value: 20,
@@ -71,7 +71,7 @@ export default {
 			],
 		},
 		{
-			text: 'A los cuantos meses vencen los puntos',
+			text: 'A los cuántos meses vencen los puntos',
 			key: 'vencimiento_meses',
 			type: 'number',
 			value: 12,
