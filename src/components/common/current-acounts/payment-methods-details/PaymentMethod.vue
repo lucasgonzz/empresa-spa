@@ -44,6 +44,10 @@
 				</div>
 			</template>
 
+			<template #cell(_moneda)="data">
+				{{ moneda_label(data.item) }}
+			</template>
+
 			<template #cell(_monto)="data">
 				{{ price((data.item.pivot || {}).amount) }}
 			</template>
@@ -81,11 +85,23 @@ export default {
 		 * @returns {Array<Object>}
 		 */
 		table_fields() {
-			return [
+			let fields = [
 				{
 					key: 'name',
 					label: 'Método de pago',
 				},
+			]
+
+			// La moneda solo tiene sentido para quien puede cobrar en mas de una: sin la extension
+			// de ventas en dolares todos los metodos son en pesos y la columna seria ruido.
+			if (this.hasExtencion('ventas_en_dolares')) {
+				fields.push({
+					key: '_moneda',
+					label: 'Moneda',
+				})
+			}
+
+			fields = fields.concat([
 				{
 					key: '_monto',
 					label: 'Monto',
@@ -102,7 +118,9 @@ export default {
 					key: '_caja',
 					label: 'Caja destino',
 				},
-			]
+			])
+
+			return fields
 		},
 	},
 	methods: {
@@ -149,6 +167,27 @@ export default {
 				}
 			}
 			return text
+		},
+		/**
+		 * Nombre de la moneda con la que se cargo ese metodo de pago, leyendo `pivot.moneda_id`.
+		 *
+		 * Un pago viejo (anterior a que se guardara la moneda por metodo) no tiene `moneda_id` en
+		 * el pivot: en ese caso se muestra un guion en vez de asumir pesos, porque asumir seria
+		 * inventar un dato que nadie cargo.
+		 *
+		 * @param {Object} payment_method
+		 * @returns {string}
+		 */
+		moneda_label(payment_method) {
+			const moneda_id = (payment_method.pivot || {}).moneda_id
+			if (!moneda_id) {
+				return '—'
+			}
+			const moneda = this.$store.state.moneda.models.find(m => m.id == moneda_id)
+			if (typeof moneda === 'undefined') {
+				return '—'
+			}
+			return moneda.name
 		},
 		/**
 		 * Texto del monto cotizado (`pivot.amount_cotizado`) o guión si no aplica.
