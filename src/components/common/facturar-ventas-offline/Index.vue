@@ -70,12 +70,6 @@
 					ARCA no acepta comprobantes con más de 5 días de atraso, así que esta factura
 					va a salir con fecha {{ date(fila.fecha_comprobante) }} y no con la de la venta.
 				</p>
-
-				<p
-				v-if="!fila.tiene_importe"
-				class="ventas-offline__aviso is-alerta">
-					Esta venta no tiene importe a facturar. Revisala en Ventas antes de emitir.
-				</p>
 			</div>
 
 			<p class="ventas-offline__pie">
@@ -255,9 +249,9 @@ export default {
 				return 'Emitiendo facturas'
 			}
 			if (this.paso == 'resultado') {
-				return 'Resultado de la facturacion'
+				return 'Resultado de la facturación'
 			}
-			return 'Facturar ventas guardadas sin conexion'
+			return 'Facturar ventas guardadas sin conexión'
 		},
 		texto_encabezado() {
 			let cantidad = this.filas.length
@@ -446,22 +440,28 @@ export default {
 				}
 
 				/*
-					Una venta sin total_a_facturar se muestra igual pero DESTILDADA. Filtrarla la
-					escondería sin decir por que, y tildarla mandaria a ARCA una factura en cero.
-					La columna la escribe SaleHelper::set_total_a_facturar() al crear la venta, y
-					solo si vino punto de venta -- que es justo el filtro con el que llegamos aca,
-					asi que en el camino normal siempre esta.
-				*/
-				let tiene_importe = Number(venta.sale.total_a_facturar) > 0
+					🔴 TODAS nacen tildadas, que es lo que se pidio, y NO se usa
+					sale.total_a_facturar como criterio.
 
+					Se probo usarlo -- destildar la fila cuando esa columna no tiene importe -- y
+					corriendo la aplicacion de verdad las tres ventas volvieron con 0.00, asi que
+					el modal quedaba con todo destildado y el boton muerto: exactamente lo
+					contrario de lo pedido, y sin nada en pantalla que lo explicara.
+
+					La columna no sirve como semaforo y el repo ya lo tenia escrito en
+					ConfirmAfipTickets.vue: la escribe SaleHelper::set_total_a_facturar() una sola
+					vez, al crear la venta, queda vieja apenas la venta se edita y queda en null si
+					en ese momento no habia punto de venta. Por eso el camino de Ventas tampoco la
+					mira. El importe real lo recalcula el backend al emitir, con
+					AfipHelper::getImportes().
+				*/
 				filas.push({
 					sale: venta.sale,
 					afip: venta.afip,
 					fecha_original: fecha_original,
 					fecha_comprobante: fecha_comprobante,
 					fecha_ajustada: fecha_ajustada,
-					tiene_importe: tiene_importe,
-					seleccionada: tiene_importe,
+					seleccionada: true,
 				})
 			})
 
