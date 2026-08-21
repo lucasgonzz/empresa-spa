@@ -146,9 +146,10 @@ export default {
 					return
 				}
 
+				// Mismo motivo que en modal-props/FinalPrice.vue: el interceptor global ya avisa, y
+				// el mensaje que importa es el que queda adentro del modal abierto.
 				self.$store.commit('article/set_final_price_description_error', 'No se pudo obtener el calculo del precio')
 				self.$store.commit('article/set_final_price_description_cargando', false)
-				self.$toast.error('No se pudo obtener el calculo del precio')
 			})
 		},
 	},

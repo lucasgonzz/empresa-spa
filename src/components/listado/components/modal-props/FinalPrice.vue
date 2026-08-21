@@ -82,9 +82,13 @@ export default {
 
 				// El .catch() no es prolijidad: sin él el spinner queda girando para siempre, que es
 				// justo el modo de falla que este cambio introduce al abrir el modal antes de tiempo.
+				// Sin $toast.error propio: el interceptor global de main.js ya dispara el aviso de
+				// error para cualquier respuesta fallida, asi que sumarle uno mas dejaba TRES avisos
+				// por un solo error (el bloque de adentro del modal, este toast, y el global). El de
+				// adentro del modal es el que hace falta: el modal ya esta abierto y tiene que
+				// explicar por que esta vacio.
 				self.$store.commit('article/set_final_price_description_error', 'No se pudo obtener el cálculo del precio')
 				self.$store.commit('article/set_final_price_description_cargando', false)
-				self.$toast.error('No se pudo obtener el cálculo del precio')
 			})
 		}
 	}
