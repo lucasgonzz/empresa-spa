@@ -96,10 +96,20 @@
 				Este articulo no tiene IVA que descontar (Exento, No Gravado o alicuota 0%): los dos
 				campos muestran el mismo numero y el costo se guarda tal cual lo cargues.
 			</span>
+			<!--
+				🔴 Al Monotributista NO se le cuenta el ida y vuelta del IVA, y es a proposito.
+				
+				Una version de este texto decia "el sistema le saca el IVA y guarda el costo sin IVA;
+				el IVA vuelve a sumarse despues". Es literalmente cierto -- se guarda el neto y
+				iva_va_al_costo() se lo vuelve a sumar --, pero las dos operaciones se cancelan: el MT
+				carga 1210 y su costo real es 1210. Contarle una plomeria interna que no cambia el
+				numero solo lo hace dudar de si el sistema le esta tocando la plata. Lo unico que
+				necesita saber es que el costo que carga es el que manda.
+			-->
 			<span v-else-if="cuenta_es_monotributista">
-				Carga el costo tal cual figura en la factura de tu proveedor, con IVA incluido. El
-				sistema le saca el IVA ({{ alicuota }}%) y guarda el costo sin IVA, que es el que usa
-				para calcular los precios; el IVA vuelve a sumarse despues, una sola vez.
+				Carga el costo tal cual figura en la factura de tu proveedor, con IVA incluido. Ese es el
+				costo con el que el sistema calcula tus precios: como monotributista no recuperas el IVA,
+				lo que pagaste es tu costo.
 			</span>
 			<span v-else>
 				Escribi en el campo que tengas a mano: el otro se actualiza solo con la alicuota del
