@@ -43,6 +43,8 @@ import sale from '@/store/sale/index'
 import provider_order from '@/store/provider_order'
 import provider_order_status from '@/store/provider_order_status'
 import provider_order_afip_ticket from '@/store/provider_order_afip_ticket'
+// Escaneo de facturas de compra con IA (mision escaneo-factura-compra)
+import provider_order_scan from '@/store/provider_order_scan'
 import order from '@/store/order'
 import order_status from '@/store/order_status'
 import buyer from '@/store/buyer'
@@ -322,6 +324,7 @@ export default new Vuex.Store({
         provider_order,
         provider_order_status,
         provider_order_afip_ticket,
+        provider_order_scan,
         order,
         order_status,
         buyer,

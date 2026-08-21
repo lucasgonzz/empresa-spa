@@ -42,6 +42,8 @@ export default {
 
 		this.check_excel_analysis_en_curso()
 
+		this.check_escaneo_factura_en_curso()
+
 		// Va ultimo a proposito: es el chequeo que menos urge y el que mas puede tardar,
 		// porque por detras del backend sale a una API de terceros.
 		this.check_cotizacion_dolar()
@@ -91,6 +93,62 @@ export default {
 				})
 
 				this.$bvModal.show('excel-analysis-ready-notification')
+			})
+		},
+		/**
+		 * Deja el escaneo de facturas de compra en condiciones apenas arranca la SPA.
+		 *
+		 * Hace DOS cosas, y la primera es la que importa:
+		 *
+		 *  1. Carga los escaneos pendientes (listos y sin gestionar). 🔴 Es lo que
+		 *     enciende los botones rojos del listado de compras. Sin esto, un escaneo
+		 *     que terminó mientras el usuario no estaba conectado no se ve por ningún
+		 *     lado hasta que llegue otro broadcast — o sea, nunca.
+		 *  2. Recupera el aviso de "terminó" que se haya perdido, igual que
+		 *     check_excel_analysis_en_curso: un broadcast solo le llega a quien está
+		 *     conectado en ese momento, y si mandó el escaneo y cerró la pestaña, el
+		 *     evento pasó sin nadie que lo escuche.
+		 *
+		 * Todo gateado por la extensión: sin ella los endpoints devuelven 403 y no hay
+		 * nada que mostrar.
+		 *
+		 * @return {void}
+		 */
+		check_escaneo_factura_en_curso() {
+			if (!this.hasExtencion('escaneo_factura_compra')) {
+				return
+			}
+
+			this.$store.dispatch('provider_order_scan/get_pendientes')
+
+			this.$store.dispatch('provider_order_scan/get_en_curso')
+			.then(run => {
+				if (!run) {
+					return
+				}
+
+				if (run.estado !== 'listo' && run.estado !== 'error') {
+					return
+				}
+
+				const contexto = run.contexto || {}
+
+				/*
+				 * Se arma el mismo payload que manda el broadcast, para que el modal de
+				 * aviso no tenga que saber por cuál de los dos caminos llegó. Los datos
+				 * de la compra se leen del contexto o de la raíz de la corrida, lo que
+				 * venga: el aviso no se pierde por una clave de más o de menos.
+				 */
+				this.$store.commit('global_notification/set_provider_order_scan', {
+					uuid:               run.uuid,
+					provider_order_id:  run.provider_order_id || contexto.provider_order_id,
+					estado:             run.estado,
+					error:              run.error,
+					cantidad_articulos: contexto.cantidad_articulos,
+					provider_nombre:    contexto.provider_nombre,
+				})
+
+				this.$bvModal.show('provider-order-scan-ready-notification')
 			})
 		},
 		check_synced_version_notifications() {

@@ -305,6 +305,15 @@ export default {
 			if (this.message.source == 'sistema') {
 				return 'Sistema'
 			}
+			/*
+				🔴 Sin esta rama el recordatorio de cobro caía al fallback 'Vos' y le decía al
+				operador que ese mensaje lo había escrito él. No lo escribió nadie: lo mandó el
+				módulo de alertas. Y no se etiqueta como 'plantilla' aunque a veces salga por
+				plantilla, porque el otro camino es texto libre y ahí la etiqueta mentiría.
+			*/
+			if (this.message.source == 'recordatorio_cobro') {
+				return 'Recordatorio de cobro'
+			}
 			if (this.message.sent_by_user && this.message.sent_by_user.name) {
 				return this.message.sent_by_user.name
 			}
