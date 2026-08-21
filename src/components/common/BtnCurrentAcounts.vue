@@ -6,14 +6,28 @@
 			extension ventas_en_dolares prendida los dos botones de un mismo proveedor comparten el
 			`id` --que en HTML tiene que ser unico y no lo es--. El testid no repite ese error.
 		-->
+		<!--
+			Diseño (21/8/2026). Era `variant="success"`: verde MACIZO y sin icono, con el boton de
+			WhatsApp --que tambien es verde macizo-- pegado a su derecha en la misma celda de la
+			tabla de clientes. Los dos se leian como el mismo boton repetido y habia que leer el
+			texto para saber cual era cual.
+
+			Queda como acento suave del color primario: es la accion principal de la fila (abre la
+			cuenta corriente del cliente o del proveedor), asi que se distingue del verde de
+			contacto y del celeste de "Actividad" sin gritarles por encima. La geometria de
+			bootstrap no se toca, salvo el radio: lo que decide que este boton se lea parejo con
+			sus dos vecinos es el padding, y ese queda igual.
+		-->
 		<b-button
 		v-for="credit_account in model.credit_accounts"
-		class="m-l-15"
+		class="m-l-15 btn-cuenta-corriente"
 		v-if="show(credit_account)"
 		:id="'btn-current-acount-'+model.id"
 		:data-testid="'btn-current-acount-'+model.id+'-'+credit_account.moneda_id"
+		:title="'Abrir la cuenta corriente en '+credit_account.moneda.name"
 		@click.stop="showCurrentAcounts(credit_account)"
-		variant="success">
+		variant="light">
+			<i class="bi bi-journal-text"></i>
 			C/C {{ credit_account.moneda.name }}
 		</b-button> 
 	</div>
@@ -38,3 +52,42 @@ export default {
 	},
 }
 </script>
+<style scoped lang="sass">
+// Con `scoped`: todo lo de aca dentro es markup propio de este componente --el b-button renderiza
+// su raiz en esta plantilla, asi que recibe el atributo de scope-- y no tiene que alcanzar a
+// ningun hijo. Sin scope, un `.btn` suelto se le filtraria a las dos tablas donde vive.
+//
+// Los colores salen de tokens: este boton se dibuja adentro de #app, pero el sistema tiene modo
+// oscuro y un hex aca lo dejaria blanco.
+.btn-cuenta-corriente
+	display: inline-flex
+	align-items: center
+	justify-content: center
+	gap: 6px
+	// Mismo radio que los botones de la barra de encabezado de los listados
+	// (--toolbar-btn-radius, mision 13): es el radio con el que el sistema viene dibujando sus
+	// botones desde el rediseño de agosto.
+	border-radius: var(--toolbar-btn-radius, 10px)
+	background: var(--bg-card)
+	border: 1px solid var(--color-primary)
+	color: var(--color-primary)
+	font-weight: 500
+	box-shadow: var(--toolbar-btn-shadow, rgba(99, 99, 99, 0.12) 0px 1px 3px 0px)
+	transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease
+
+	&:hover,
+	&:focus,
+	&:not(:disabled):not(.disabled):active
+		background: var(--color-primary)
+		border-color: var(--color-primary)
+		// Literal a proposito: texto sobre el azul de accion, que es el mismo en los dos modos.
+		color: #fff
+
+	i
+		// El [class^='icon-'] global de _generals.sass corre los iconos .15em hacia abajo y les
+		// suma margenes propios; adentro de un boton flex el centrado lo da el contenedor.
+		top: 0
+		margin: 0
+		line-height: 1
+		color: inherit
+</style>
