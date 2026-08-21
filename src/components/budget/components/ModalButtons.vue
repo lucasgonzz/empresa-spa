@@ -34,6 +34,7 @@
 			<!-- Grupo: edicion del presupuesto (mismo lugar que 'Actualizar venta' en el modal de ventas) -->
 			<div class="budget-modal-buttons__group">
 				<btn-actualizar-en-vender></btn-actualizar-en-vender>
+				<btn-confirmar-anular :model="model"></btn-confirmar-anular>
 			</div>
 		</div>
 		<hr>
@@ -44,6 +45,7 @@ export default {
 	components: {
 		WhatsappBtn: () => import('@/common-vue/sale-print-buttons/WhatsappBtn'),
 		BtnActualizarEnVender: () => import('@/components/budget/components/BtnActualizarEnVender'),
+		BtnConfirmarAnular: () => import('@/components/budget/components/BtnConfirmarAnular'),
 	},
 	data() {
 		return {
@@ -85,8 +87,11 @@ export default {
 <style lang="sass">
 .budget-modal-buttons
 	display: flex
-	flex-flow: row nowrap
+	// Envuelve en vez de desbordar: con el boton de Confirmar/Anular son cuatro grupos en una
+	// sola fila, y en telefono (360-390px) `nowrap` los empujaba fuera del header del modal.
+	flex-flow: row wrap
 	align-items: center
+	gap: 6px 0
 	width: 100%
 	overflow: visible
 	padding: 6px 0

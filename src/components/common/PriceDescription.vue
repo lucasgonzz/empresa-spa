@@ -2,7 +2,7 @@
 	<b-modal
 	title="Cálculo del precio"
 	hide-footer
-	size="lg"
+	size="md"
 	id="final-price-description">
 
 		<!-- Mientras el servidor calcula. El modal ya esta abierto: esto es lo que reemplaza a la

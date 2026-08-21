@@ -64,10 +64,27 @@
 		</div>
 
 		<div :class="{ 'm-t-10': !cuenta_es_monotributista }">
+			<!--
+				🔴 Al Monotributista NO se le pone sub-label, y no se le menciona el IVA en ningun
+				lado de este campo (decision de Lucas, 21/8/2026): "no quiero que se le mencione el
+				IVA al monotributista".
+				
+				El motivo es que para el no existe la distincion: carga el costo que le pasa su
+				proveedor y listo. Como ve un solo campo, el label que ya pone ModelForm ("Costo
+				base") alcanza, y un sub-label seria una repeticion que ademas obliga a explicar
+				algo que no le interesa.
+				
+				Que por dentro el costo se guarde neto y el IVA se vuelva a sumar para el Costo
+				Real es plomeria: las dos operaciones se cancelan y el numero que el ve es el que
+				cargo. Lo unico de IVA que sigue a la vista para el MT es el select de alicuota
+				del articulo, que se conserva a proposito por si la cuenta pasa a Responsable
+				Inscripto mas adelante.
+			-->
 			<label
+			v-if="!cuenta_es_monotributista"
 			class="text-muted d-block m-b-5"
 			:for="'article-' + prop_bruto.key">
-				{{ label_bruto }}
+				Costo con IVA (bruto)
 			</label>
 			<field-text-input
 			model_name="article"
@@ -107,9 +124,9 @@
 				necesita saber es que el costo que carga es el que manda.
 			-->
 			<span v-else-if="cuenta_es_monotributista">
-				Carga el costo tal cual figura en la factura de tu proveedor, con IVA incluido. Ese es el
-				costo con el que el sistema calcula tus precios: como monotributista no recuperas el IVA,
-				lo que pagaste es tu costo.
+				Carga el costo tal cual te lo pasa tu proveedor. A ese costo se le aplican los descuentos
+				y recargos que tenga el articulo, y asi se llega al Costo Real, que es el que se usa para
+				calcular tus precios.
 			</span>
 			<span v-else>
 				Escribi en el campo que tengas a mano: el otro se actualiza solo con la alicuota del
@@ -170,16 +187,6 @@ export default {
 		 */
 		cuenta_es_monotributista() {
 			return !!(this.owner && this.owner.condicion_iva_precios == 'MT')
-		},
-		/**
-		 * Para el Monotributista el de bruto es el UNICO campo, asi que no hace falta aclararle
-		 * que es "el bruto": para el, el costo es ese y no hay otro.
-		 */
-		label_bruto() {
-			if (this.cuenta_es_monotributista) {
-				return 'Costo (con IVA, como figura en la factura)'
-			}
-			return 'Costo con IVA (bruto)'
 		},
 		prop_bruto() {
 			return Object.assign({}, this.prop, {key: 'cost_con_iva'})
