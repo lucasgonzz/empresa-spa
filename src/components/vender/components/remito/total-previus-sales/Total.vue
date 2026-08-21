@@ -41,11 +41,16 @@
 		</div>
 
 		
+		<!-- Este no pide nada al servidor: el desglose lo arma el front (mixins/vender_set_total.js)
+		     y ya esta en el store, asi que el v-b-modal directo abre al instante y esta bien. Lo
+		     unico que cambia es la forma del boton, para que sea el mismo en los cinco lugares que
+		     abren este modal. -->
 		<b-button
-		class="m-l-10"
-		variant="success"
+		class="btn-explicacion m-l-10"
+		variant="outline-secondary"
+		title="Ver cómo se calculó este total"
 		v-b-modal="'final-price-description'">
-			?
+			<i class="bi bi-question-lg"></i>
 		</b-button>
 
 		<div

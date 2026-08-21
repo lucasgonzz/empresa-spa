@@ -1,0 +1,434 @@
+// Vocabulario visual del desglose del calculo del precio (mision del 21/8/2026).
+//
+// Es el modal que abre el boton "?" del precio de un articulo, del precio de cada lista, del total
+// de una venta, del total de una compra y del total de Vender. Hasta esta mision era una lista de
+// parrafos de texto plano --el backend mandaba renglones ya concatenados ('Mas IVA de 21% =
+// $1.210,00') y el front pintaba <p> uno abajo del otro--, asi que para encontrar el IVA en una
+// cuenta con listas, impuestos sobre ventas y recargos habia que leer los 25 renglones enteros.
+//
+// Ahora cada renglon llega clasificado (`tipo`) desde el backend y se dibuja como una fila con
+// icono, concepto y monto. El color NO es decoracion: es la clasificacion. Un solo acento por
+// familia, tinte suave en la celda del icono, y el monto en el color de texto normal salvo en los
+// renglones de cierre. Es la misma economia que ya usan los chips de totales.
+//
+// 🔴 ESTE ARCHIVO NO DIBUJA NINGUNA <table>, Y NO ES CASUALIDAD. `_tables.sass` declara
+// `table tbody tr { background-color: #FFF !important }` y `_dark_theme.sass` declara
+// `html.dark-mode table tbody tr { background-color: var(--bg-card) !important }`. Un !important le
+// gana a cualquier declaracion normal sin importar la especificidad, asi que una tabla acá quedaria
+// con fondo blanco fijo en modo oscuro y sin forma de arreglarlo que no sea meter mas !important.
+// Ademas `TableComponent.vue` (sin scope, cargado global) tiene `.table th, .table td { padding:
+// 5px !important }` activo siempre. Se evita el terreno: div + flex. Si alguien mas adelante quiere
+// "mejorar" esto pasandolo a tabla, que lea este parrafo antes.
+//
+// 🔴 Los tokens van en `:root` y `html.dark-mode`, NUNCA en `#app` ni en `body`. `b-modal` se monta
+// colgando de <body>, fuera de `#app`: un token declarado ahi no llegaria. Es lo mismo que
+// documenta `_dark_theme.sass`.
+//
+// Va en hoja global y no en el <style> de los componentes por el motivo de siempre en este repo:
+// los componentes del modal se cargan diferidos (`() => import(...)`), asi que un estilo local se
+// inyecta despues del primer pintado y el modal se ve un instante con el default de bootstrap.
+
+// ============================= Los acentos =============================
+// Los valores no se eligen de cero: se copian de los tokens que el sistema ya tiene, y se cita la
+// fuente. margen/total salen de --totales-acento-positivo y cotizacion de --totales-acento-usd
+// (_chips_totales.sass); descuento de --totales-acento-principal (idem); impuesto de
+// --caja-cerrar-acento / --btn-peligro-borde (_dark_theme.sass).
+//
+// Se declaran con nombre propio en vez de reusar el token ajeno porque --totales-acento-principal
+// significa "el numero protagonista de un bloque de totales", no "descuento": el dia que Lucas
+// cambie el ambar de los totales, los descuentos de este modal no tienen por que moverse.
+//
+// El -bg va siempre en rgba() sobre el mismo acento y nunca en un color plano, asi se apoya sobre
+// --bg-card en los dos temas sin pelearse con el fondo.
+:root
+	--desglose-costo: #475569
+	--desglose-costo-bg: rgba(71, 85, 105, 0.12)
+	--desglose-margen: #059669
+	--desglose-margen-bg: rgba(5, 150, 105, 0.12)
+	--desglose-iva: #2563eb
+	--desglose-iva-bg: rgba(37, 99, 235, 0.12)
+	--desglose-descuento: #d97706
+	--desglose-descuento-bg: rgba(217, 119, 6, 0.12)
+	--desglose-recargo: #7c3aed
+	--desglose-recargo-bg: rgba(124, 58, 237, 0.12)
+	--desglose-impuesto: #b4443f
+	--desglose-impuesto-bg: rgba(180, 68, 63, 0.12)
+	--desglose-cotizacion: #0891b2
+	--desglose-cotizacion-bg: rgba(8, 145, 178, 0.12)
+	--desglose-manual: #4f46e5
+	--desglose-manual-bg: rgba(79, 70, 229, 0.12)
+	--desglose-total: #059669
+	--desglose-total-bg: rgba(5, 150, 105, 0.14)
+	// El neutro no tiene color propio: es el gris de texto secundario del tema, para que los
+	// renglones que no clasifican nada (notas, redondeos, unidades) no compitan con los que si.
+	--desglose-neutro: var(--color-text-secondary)
+	--desglose-neutro-bg: var(--bg-hover)
+
+html.dark-mode
+	--desglose-costo: #94a3b8
+	--desglose-costo-bg: rgba(148, 163, 184, 0.16)
+	--desglose-margen: #34d399
+	--desglose-margen-bg: rgba(52, 211, 153, 0.16)
+	--desglose-iva: #60a5fa
+	--desglose-iva-bg: rgba(96, 165, 250, 0.16)
+	--desglose-descuento: #f59e0b
+	--desglose-descuento-bg: rgba(245, 158, 11, 0.16)
+	--desglose-recargo: #a78bfa
+	--desglose-recargo-bg: rgba(167, 139, 250, 0.16)
+	--desglose-impuesto: #d98680
+	--desglose-impuesto-bg: rgba(180, 68, 63, 0.16)
+	--desglose-cotizacion: #22d3ee
+	--desglose-cotizacion-bg: rgba(34, 211, 238, 0.16)
+	--desglose-manual: #818cf8
+	--desglose-manual-bg: rgba(129, 140, 248, 0.16)
+	--desglose-total: #34d399
+	--desglose-total-bg: rgba(52, 211, 153, 0.18)
+
+// ============================= El cuerpo del modal =============================
+.desglose-precio
+	display: flex
+	flex-direction: column
+	gap: 2px
+	// Alto minimo puesto desde el primer render: el modal se abre ANTES de que llegue la respuesta
+	// (ese es el arreglo de esta mision), asi que sin esto el cuadro salta de tamaño cuando el
+	// spinner deja paso al contenido.
+	min-height: 220px
+
+// ============================= El encabezado de seccion =============================
+// Antes era un <h4> entre dos <hr>, que es tanto peso visual como el contenido. Acá es una etiqueta
+// chica con una linea al costado: separa sin gritar.
+.desglose-seccion
+	display: flex
+	align-items: center
+	gap: 10px
+	margin: 18px 0 8px
+
+	// El primero no lleva aire arriba: el modal ya tiene su padding.
+	&:first-child
+		margin-top: 0
+
+	&__texto
+		font-size: 0.68rem
+		font-weight: 700
+		text-transform: uppercase
+		letter-spacing: 0.06em
+		line-height: 1.2
+		color: var(--color-text-secondary)
+		white-space: normal
+
+	&__linea
+		flex: 1 1 auto
+		height: 1px
+		min-width: 12px
+		background: var(--color-border)
+
+// ============================= La fila =============================
+// Copia la anatomia del .totales-chip de _chips_totales.sass --celda de icono de 34px con radio 8px
+// y fondo tintado, etiqueta de 0.68rem en mayusculas con letter-spacing 0.04em-- pero con clase
+// propia: aquel es un chip suelto de una grilla de totales y este es una fila de una lista
+// vertical, con otro ritmo y con el monto a la derecha en vez de abajo.
+.desglose-linea
+	display: flex
+	align-items: center
+	gap: 12px
+	padding: 8px 10px
+	border-radius: 10px
+	// Sin borde ni sombra: son 25 filas seguidas, y encajonar cada una convierte la lista en una
+	// reja. El hover alcanza para señalar la fila que se esta leyendo.
+	transition: background-color 0.15s ease
+
+	&:hover
+		background: var(--bg-hover)
+
+	&__icono
+		flex-shrink: 0
+		width: 34px
+		height: 34px
+		border-radius: 8px
+		display: flex
+		align-items: center
+		justify-content: center
+		background: var(--desglose-neutro-bg)
+		color: var(--desglose-neutro)
+
+		i
+			font-size: 1rem
+			line-height: 1
+
+	&__cuerpo
+		display: flex
+		flex-direction: column
+		gap: 1px
+		min-width: 0
+		flex: 1 1 auto
+
+	&__etiqueta
+		font-size: 0.875rem
+		font-weight: 600
+		line-height: 1.25
+		color: var(--color-text-primary)
+		// Envuelve a proposito: las etiquetas de descuentos, recargos e impuestos llevan el nombre
+		// que configuro el usuario y pueden ser largas. Con nowrap empujarian el monto fuera de
+		// pantalla en telefono.
+		overflow-wrap: anywhere
+
+	&__detalle
+		font-size: 0.72rem
+		font-weight: 500
+		line-height: 1.25
+		color: var(--color-text-secondary)
+		overflow-wrap: anywhere
+
+	&__valor
+		flex-shrink: 0
+		margin-left: auto
+		font-size: 1rem
+		font-weight: 700
+		line-height: 1.25
+		white-space: nowrap
+		color: var(--color-text-primary)
+		// Numeros de ancho fijo: con 25 montos apilados, las comas que no alinean se leen como
+		// ruido.
+		font-variant-numeric: tabular-nums
+
+// El acento de cada familia se pinta SOLO en la celda del icono. El monto queda en el color de
+// texto del tema salvo en los renglones de cierre (--total, mas abajo): si cada fila tuviera el
+// monto de su color, la lista pasaria a ser un arcoiris y ninguna familia se distinguiria.
+.desglose-linea--costo .desglose-linea__icono
+	background: var(--desglose-costo-bg)
+	color: var(--desglose-costo)
+
+.desglose-linea--margen .desglose-linea__icono
+	background: var(--desglose-margen-bg)
+	color: var(--desglose-margen)
+
+.desglose-linea--iva .desglose-linea__icono
+	background: var(--desglose-iva-bg)
+	color: var(--desglose-iva)
+
+.desglose-linea--descuento .desglose-linea__icono
+	background: var(--desglose-descuento-bg)
+	color: var(--desglose-descuento)
+
+.desglose-linea--recargo .desglose-linea__icono
+	background: var(--desglose-recargo-bg)
+	color: var(--desglose-recargo)
+
+.desglose-linea--impuesto .desglose-linea__icono
+	background: var(--desglose-impuesto-bg)
+	color: var(--desglose-impuesto)
+
+.desglose-linea--cotizacion .desglose-linea__icono
+	background: var(--desglose-cotizacion-bg)
+	color: var(--desglose-cotizacion)
+
+.desglose-linea--manual .desglose-linea__icono
+	background: var(--desglose-manual-bg)
+	color: var(--desglose-manual)
+
+// El cierre de cada seccion. Es el unico renglon con el monto en color: es el numero que la persona
+// vino a ver, y es el que cierra el tramo.
+.desglose-linea--total
+	margin-top: 6px
+	padding-top: 12px
+	border-top: 1px solid var(--color-border)
+	border-radius: 0
+
+	&:hover
+		background: transparent
+
+	.desglose-linea__icono
+		background: var(--desglose-total-bg)
+		color: var(--desglose-total)
+
+	.desglose-linea__etiqueta
+		font-weight: 700
+
+	.desglose-linea__valor
+		font-size: 1.2rem
+		color: var(--desglose-total)
+
+// Las notas no son un paso del calculo, son una aclaracion. Van sin celda de icono tintada y con el
+// texto en secundario, para que no se lean como un renglon mas de la cuenta.
+.desglose-linea--nota
+	padding-top: 4px
+	padding-bottom: 4px
+
+	.desglose-linea__etiqueta
+		font-weight: 500
+		font-size: 0.8125rem
+		color: var(--color-text-secondary)
+
+// ============================= El estado de carga =============================
+.desglose-cargando
+	display: flex
+	flex-direction: column
+	align-items: center
+	justify-content: center
+	gap: 1rem
+	min-height: 220px
+
+	&__texto
+		margin: 0
+		font-size: 0.9rem
+		font-weight: 400
+		letter-spacing: 0.01em
+		color: var(--color-text-secondary)
+
+// El doble anillo esta copiado de common-vue/components/LogoLoading.vue, con dos diferencias
+// deliberadas: el color sale de var(--color-primary) en vez de la variable SASS $blue --asi anda en
+// los dos temas, que es justo lo que aquel archivo no resuelve porque su rama
+// `@if ($theme == 'dark')` no se compila nunca ($theme esta fijada en 'light' en _custom.scss)--, y
+// no hay overlay `position: fixed`: acá vive adentro del cuerpo del modal.
+.desglose-spinner
+	position: relative
+	width: 46px
+	height: 46px
+
+	&__anillo
+		position: absolute
+		inset: 0
+		border-radius: 50%
+		border: 3px solid transparent
+		border-top-color: var(--color-primary)
+		animation: desglose-spinner-girar 0.9s cubic-bezier(0.5, 0.15, 0.35, 0.85) infinite
+
+	&__anillo--interno
+		inset: 6px
+		border-top-color: var(--color-border)
+		animation-duration: 1.2s
+		animation-direction: reverse
+
+@keyframes desglose-spinner-girar
+	to
+		transform: rotate(360deg)
+
+// ============================= El estado de error =============================
+.desglose-error
+	display: flex
+	flex-direction: column
+	align-items: center
+	justify-content: center
+	gap: 0.75rem
+	min-height: 220px
+	text-align: center
+	color: var(--color-text-secondary)
+
+	i
+		font-size: 2rem
+		color: var(--desglose-impuesto)
+
+	p
+		margin: 0
+		font-size: 0.9rem
+
+// ============================= Sin nada que mostrar =============================
+// Un desglose guardado que quedo vacio. Comparte la forma del estado de error pero no su
+// color: no es una falla, es que no hay dato.
+.desglose-vacio
+	display: flex
+	flex-direction: column
+	align-items: center
+	justify-content: center
+	gap: 0.75rem
+	min-height: 220px
+	text-align: center
+	color: var(--color-text-secondary)
+
+	i
+		font-size: 2rem
+		opacity: 0.55
+
+	p
+		margin: 0
+		font-size: 0.9rem
+
+// ============================= El desglose viejo, en texto =============================
+// Los desgloses YA GUARDADOS en sales.price_description y provider_orders.price_description son
+// arrays de strings: no tienen `tipo` que colorear ni monto separado del texto. Se siguen mostrando
+// como parrafos --que es lo unico honesto que se puede hacer con ellos-- pero con el mismo ritmo
+// tipografico que el resto del modal, en vez del <h4> entre <hr> de antes.
+.desglose-texto
+	&__seccion
+		margin: 18px 0 8px
+		font-size: 0.68rem
+		font-weight: 700
+		text-transform: uppercase
+		letter-spacing: 0.06em
+		color: var(--color-text-secondary)
+		padding-bottom: 6px
+		border-bottom: 1px solid var(--color-border)
+
+		&:first-child
+			margin-top: 0
+
+	&__linea
+		margin: 0
+		padding: 5px 2px
+		font-size: 0.875rem
+		line-height: 1.4
+		color: var(--color-text-primary)
+
+// ============================= El boton "?" =============================
+// Un solo boton para los cinco lugares que abren este modal. Antes habia cuatro formas distintas:
+// `outline-success` con el caracter "?" (precio final del articulo, tarjeta de lista, total de una
+// compra), `success` con "?" (total de Vender) y `outline-info` con bi-question-circle (fila de
+// Ventas).
+//
+// 🔴 El selector va con DOS clases (.btn-explicacion.btn) y no con .btn-explicacion sola.
+// bootstrap-vue siempre agrega la clase base `btn`, asi que con dos clases el selector queda en
+// (0,2,0): le gana a `.btn-sm` (0,1,0) y EMPATA con `.ui-small .btn` de _ui_sizes.sass. Ese empate
+// lo gana este archivo por orden de importacion en app.sass, que va despues. Es el mismo mecanismo
+// que ya usa `.btn-modulo.btn` en _controles_modulo.sass.
+//
+// 28px y no --toolbar-control-h (36px) a proposito: este boton vive al lado de un precio grande y
+// adentro de las tarjetas de lista, no en la barra de encabezado. Mismo criterio que
+// `.btn-modulo--fila`.
+.btn-explicacion.btn
+	display: inline-flex
+	align-items: center
+	justify-content: center
+	flex-shrink: 0
+	width: 28px
+	height: 28px
+	padding: 0
+	border-radius: 999px
+	border: 1px solid var(--color-border)
+	background: var(--bg-section)
+	color: var(--color-text-secondary)
+	line-height: 1
+	transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease
+
+	i
+		font-size: 0.85rem
+		line-height: 1
+
+	&:hover,
+	&:focus
+		background: var(--bg-hover)
+		border-color: var(--color-primary)
+		color: var(--color-primary)
+
+// 🔴 NO agregar `box-shadow: none` en el estado de foco de este boton. Bootstrap dibuja el anillo de
+// foco de teclado con box-shadow y le apaga el outline: un `none` acá deja el control sin ningun
+// indicador de foco. Es un bug ya cometido y arreglado en `.paginacion-modulo__pages .page-link`
+// (_controles_modulo.sass).
+
+// ============================= Telefono =============================
+// A 360-390px el monto no entra en la misma linea que una etiqueta larga (los nombres de descuentos
+// y recargos los escribe el usuario). La fila pasa a dos renglones y el monto se alinea a la
+// derecha debajo del texto, en vez de empujar la fila fuera de pantalla.
+@media (max-width: 575px)
+	.desglose-linea
+		flex-wrap: wrap
+		padding: 8px 6px
+		gap: 10px
+
+		&__cuerpo
+			flex: 1 1 60%
+
+		&__valor
+			font-size: 0.95rem
+
+	.desglose-linea--total .desglose-linea__valor
+		font-size: 1.1rem

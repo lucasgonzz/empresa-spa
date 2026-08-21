@@ -220,12 +220,32 @@
 				<!-- <btn-add-to-show
 				:model_name="model_name"></btn-add-to-show> -->
 			</div>
-			<p
-			v-else-if="!models.length && model_name && (!is_mobile || downloadOnMobile(model_name))"
-			class="text-with-icon">
-				<i class="icon-eye-slash"></i>
-				No hay {{ plural(model_name) }}
-			</p>
+			<!--
+				Estado vacio de la tabla, ahora reemplazable por quien la usa.
+
+				🔴 El contenido por defecto del slot es EXACTAMENTE el que habia hasta el
+				21/8/2026 (el `.text-with-icon` con el ojo tachado), asi que ninguna de las
+				pantallas que montan esta tabla cambia si no llena el slot. Vue 2 usa el
+				contenido del <slot> como fallback cuando el padre no lo provee: no hace falta
+				ningun v-if adicional.
+
+				El unico envoltorio nuevo es este <div>, que existe para poder colgarle el
+				v-else-if de la cadena --el <p> lo llevaba puesto y un <slot> no puede llevarlo--.
+				El <p> de adentro conserva su clase, asi que su centrado y su margen no cambian.
+
+				Lo llena hoy el modal de cuenta corriente
+				(components/common/current-acounts/List.vue).
+			-->
+			<div
+			v-else-if="!models.length && model_name && (!is_mobile || downloadOnMobile(model_name))">
+				<slot name="estado_vacio">
+					<p
+					class="text-with-icon">
+						<i class="icon-eye-slash"></i>
+						No hay {{ plural(model_name) }}
+					</p>
+				</slot>
+			</div>
 			<div
 			v-else>
 				<p
