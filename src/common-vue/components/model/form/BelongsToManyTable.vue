@@ -96,7 +96,7 @@ import {
 	default_column_width_for_property,
 	fallback_column_width_px,
 } from '@/common-vue/config/column_preference_defaults'
-import { belongs_to_many_columns_modal_id } from '@/common-vue/helpers/column_preferences_helper'
+import { belongs_to_many_columns_modal_id, belongs_to_many_preference_type } from '@/common-vue/helpers/column_preferences_helper'
 
 export default {
 	components: {
@@ -164,7 +164,7 @@ export default {
 		 * Retorno: String con el tipo de preferencia.
 		 */
 		preference_type() {
-			return `btm_${this.parent_model_name}_${this.prop.key}`
+			return belongs_to_many_preference_type(this.parent_model_name, this.prop.key)
 		},
 		/*
 		 * Determina si debe mostrarse el botón de configurar columnas.
