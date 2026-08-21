@@ -246,6 +246,17 @@ export default {
 				incoterms: this.$store.state.vender.incoterms,
 				forma_de_pago: this.$store.state.vender.forma_de_pago,
 				permiso_existente: this.$store.state.vender.permiso_existente,
+				/*
+					🔴 La moneda y la cotizacion tienen que viajar SI O SI desde que la venta offline
+					se factura sola al volver la conexion.
+
+					Sin estas dos, SaleController::store() cae a `moneda_id = 1` y la venta se
+					persiste en pesos. Antes eso era feo pero inofensivo, porque esa venta no se
+					facturaba nunca. Ahora termina en un comprobante ante ARCA con el importe
+					equivocado, y eso solo se deshace con nota de credito.
+				*/
+				moneda_id: this.$store.state.vender.moneda_id,
+				valor_dolar: this.$store.state.vender.valor_dolar,
 				descuento: this.$store.state.vender.descuento,
 				fecha_entrega: this.$store.state.vender.fecha_entrega,
 				observations_ocultas: this.$store.state.vender.observations_ocultas,
