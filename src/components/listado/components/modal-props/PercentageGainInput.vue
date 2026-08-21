@@ -76,17 +76,6 @@ export default {
 			return Math.round((precio - base) / base * 100 * 100) / 100
 		}
 	},
-	methods: {
-		info() {
-			this.$api.get('article/final-price-description/'+this.article.id)
-			.then(res => {
-				console.log(res)
-
-				this.$store.commit('article/set_final_price_description', res.data.description)
-				this.$bvModal.show('final-price-description')
-			})
-		}
-	}
 }
 </script>
 <style lang="sass" scoped>

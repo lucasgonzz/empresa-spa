@@ -43,6 +43,31 @@ export default __base_store({
 		final_price_description: [],
 
 		/**
+		 * Desglose ESTRUCTURADO del cálculo del precio (clave `detalle` de la respuesta de
+		 * empresa-api): cada entrada es { tipo, clave, etiqueta, detalle, valor, texto }. Convive
+		 * con `final_price_description` de arriba, que es el mismo desglose en texto plano y sigue
+		 * siendo el fallback: ventas, compras y Vender solo tienen esa versión.
+		 */
+		final_price_detalle: [],
+
+		/** Prendido mientras el servidor calcula el desglose. El modal se abre antes de pedirlo. */
+		final_price_description_cargando: false,
+
+		/** Mensaje de error si el pedido del desglose falló. Null cuando no hubo error. */
+		final_price_description_error: null,
+
+		/**
+		 * Contador del pedido de desglose en vuelo.
+		 *
+		 * Existe porque el modal del artículo tiene un "?" por cada lista de precios y el endpoint
+		 * tarda (recalcula, guarda y encola sincronizaciones): tocar dos seguidos es lo normal. Sin
+		 * esto, la respuesta del primero llega después y pisa el desglose del segundo, o le apaga el
+		 * spinner. Cada llamada se queda con su número y descarta su propia respuesta si el
+		 * contador ya avanzó.
+		 */
+		final_price_description_pedido: 0,
+
+		/**
 		 * Feature localStorage: flags de control.
 		 * `use_local_storage` se activa manualmente desde UI/acción correspondiente.
 		 */
@@ -122,6 +147,30 @@ export default __base_store({
 		 */
 		set_final_price_description(state, value) {
 			state.final_price_description = value
+		},
+		/**
+		 * Guarda el desglose estructurado del precio (ver `final_price_detalle` en el state).
+		 */
+		set_final_price_detalle(state, value) {
+			state.final_price_detalle = value
+		},
+		/**
+		 * Prende/apaga el indicador de carga del desglose del precio.
+		 */
+		set_final_price_description_cargando(state, value) {
+			state.final_price_description_cargando = value
+		},
+		/**
+		 * Guarda el mensaje de error del desglose del precio (null para limpiarlo).
+		 */
+		set_final_price_description_error(state, value) {
+			state.final_price_description_error = value
+		},
+		/**
+		 * Número del pedido de desglose en vuelo (ver el comentario del state).
+		 */
+		set_final_price_description_pedido(state, value) {
+			state.final_price_description_pedido = value
 		},
 		/**
 		 * Marca filtrado sin criterios en store (búsqueda rápida vs modal de filtros).

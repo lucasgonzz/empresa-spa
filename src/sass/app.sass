@@ -20,6 +20,11 @@
 // botones del modulo, y empatan en especificidad-- y de toolbar_botones, de donde toma
 // --toolbar-control-h / --toolbar-btn-radius / --toolbar-btn-shadow.
 @import 'controles_modulo.sass'
+// Vocabulario del desglose del calculo del precio (el modal del boton "?"). Va DESPUES de
+// dark_theme --usa sus tokens--, de chips_totales --de donde copia la anatomia de la celda de
+// icono-- y sobre todo de ui_sizes: el boton .btn-explicacion empata en especificidad (0,2,0) con
+// el `.ui-small .btn` de aquel archivo, y ese empate se gana por orden de declaracion.
+@import 'desglose_precio.sass'
 // Va ULTIMO: su regla de tema oscuro empata en especificidad con el `#app` de dark_theme.sass y
 // tiene que ganarle por orden de declaracion. Ver la nota larga en el propio archivo.
 @import 'fondo_app.sass'
