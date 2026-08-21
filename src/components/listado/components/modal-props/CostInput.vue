@@ -37,11 +37,12 @@
 			🔴 El input de NETO no se le muestra al Monotributista (decision de Lucas, 20/8/2026):
 			"el monotributista no tiene que configurar nada de IVA".
 			
-			Todo lo que carga un MT es bruto POR DEFINICION -- recibe Factura B, donde el IVA no
-			viene discriminado y el neto no figura en ningun lado --, asi que ofrecerle un campo
-			"costo sin IVA" es ofrecerle escribir un numero que su comprobante no tiene. El sistema
-			le descompone siempre, solo, y por eso el backend tampoco le pregunta (ver
-			ArticlePricesHelper::el_costo_cargado_es_bruto).
+			Para el MT no existe la distincion bruto/neto: carga el costo que le pasa su proveedor
+			-- recibe Factura B, donde el IVA no viene discriminado -- y ese numero se guarda TAL
+			CUAL. Ofrecerle un campo "costo sin IVA" seria ofrecerle escribir un numero que su
+			comprobante no tiene, y ademas el sistema ya no descompone nada para el (mision
+			`iva-fuera-del-costeo-monotributista`, 21/8/2026: el IVA no participa de su precio en
+			ningun punto). Ver ArticlePricesHelper::el_iva_participa_del_precio().
 			
 			OJO: esto NO es un :disabled. El campo no existe para el MT, no aparece bloqueado. La
 			regla de "ningun input se bloquea nunca" sigue intacta.
@@ -86,11 +87,10 @@
 				base") alcanza, y un sub-label seria una repeticion que ademas obliga a explicar
 				algo que no le interesa.
 				
-				Que por dentro el costo se guarde neto y el IVA se vuelva a sumar para el Costo
-				Real es plomeria: las dos operaciones se cancelan y el numero que el ve es el que
-				cargo. Lo unico de IVA que sigue a la vista para el MT es el select de alicuota
-				del articulo, que se conserva a proposito por si la cuenta pasa a Responsable
-				Inscripto mas adelante.
+				Desde el 21/8/2026 ya no hay ninguna plomeria: lo que carga es lo que se guarda y lo
+				que se muestra. Lo unico de IVA que sigue a la vista para el MT es el select de
+				alicuota del articulo, que se conserva a proposito por si la cuenta pasa a
+				Responsable Inscripto mas adelante.
 			-->
 			<label
 			v-if="!cuenta_es_monotributista"
@@ -121,19 +121,24 @@
 			descontar") y se contradecian. Lo encontro el checker de la Fase 5.
 		-->
 		<small class="text-muted d-block m-t-10">
-			<span v-if="!hay_iva_aplicable">
+			<!--
+				Decia "los dos campos muestran el mismo numero" tambien para el Monotributista, que
+				ve uno solo. Se separan los dos casos.
+			-->
+			<span v-if="!hay_iva_aplicable && cuenta_es_monotributista">
+				El costo se guarda tal cual lo cargues.
+			</span>
+			<span v-else-if="!hay_iva_aplicable">
 				Este articulo no tiene IVA que descontar (Exento, No Gravado o alicuota 0%): los dos
 				campos muestran el mismo numero y el costo se guarda tal cual lo cargues.
 			</span>
 			<!--
 				🔴 Al Monotributista NO se le cuenta el ida y vuelta del IVA, y es a proposito.
 				
-				Una version de este texto decia "el sistema le saca el IVA y guarda el costo sin IVA;
-				el IVA vuelve a sumarse despues". Es literalmente cierto -- se guarda el neto y
-				iva_va_al_costo() se lo vuelve a sumar --, pero las dos operaciones se cancelan: el MT
-				carga 1210 y su costo real es 1210. Contarle una plomeria interna que no cambia el
-				numero solo lo hace dudar de si el sistema le esta tocando la plata. Lo unico que
-				necesita saber es que el costo que carga es el que manda.
+				Una version de este texto le explicaba un ida y vuelta del IVA que el sistema hacia por
+				dentro (se lo sacaba al guardar y se lo volvia a sumar al costear). Era cierto y no le
+				servia: las dos operaciones se cancelaban. Desde el 21/8/2026 ese ida y vuelta ni
+				siquiera existe. Lo unico que necesita saber es que el costo que carga es el que manda.
 			-->
 			<span v-else-if="cuenta_es_monotributista">
 				Carga el costo tal cual te lo pasa tu proveedor. A ese costo se le aplican los descuentos
