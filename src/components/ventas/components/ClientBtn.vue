@@ -69,6 +69,14 @@ export default {
 	font-weight: 500
 	color: var(--color-primary)
 	text-decoration: none
+	// 🔴 `box-shadow: none` en REPOSO, no solo en :hover. _inputs.sass declara
+	// `input, button, textarea, ... { box-shadow: rgba(0,0,0,.15) 1.95px 1.95px 2.6px }` para TODO
+	// <button> del sistema. Un boton sin relleno ni borde con esa sombra gris desplazada abajo a la
+	// derecha se ve como una mancha flotando; y declarandola solo en :hover, la sombra desaparecia
+	// justo al pasar el mouse, al reves de lo esperable. Ademas el mismo componente se veia
+	// distinto segun la pantalla: adentro del modal de Acopios no pasaba, porque ahi gana
+	// `.modal button { box-shadow: none }` de esa misma hoja.
+	box-shadow: none
 	transition: background 0.15s ease, border-color 0.15s ease
 
 	&:hover,
@@ -79,9 +87,14 @@ export default {
 		text-decoration: underline
 		box-shadow: none
 
-	i
-		// El [class^='icon-'] global de _generals.sass corre los iconos .15em hacia abajo y les
-		// suma margenes propios; adentro de un boton flex el centrado lo da el contenedor.
+	// Los iconos `icon-*` del sistema se dibujan con un ::before al que _generals.sass le
+	// pone `top: .15em` y margenes laterales, pensado para un icono adentro de un parrafo.
+	// En un boton flex el centrado lo da el contenedor, asi que se apaga. El reset va sobre
+	// el ::before y no sobre el <i>: la regla global apunta al pseudoelemento, y sobre el <i>
+	// no vencia nada. Los `bi bi-*` ni siquiera entran por ahi --el selector es
+	// [class^='icon-'] y ellos empiezan con `bi`--, pero el resto de esta regla si los toca.
+	i,
+	i::before
 		top: 0
 		margin: 0
 		line-height: 1

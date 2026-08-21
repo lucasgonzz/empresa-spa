@@ -168,9 +168,14 @@ export default {
 		white-space: nowrap
 		transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease
 
-		i
-			// El [class^='icon-'] global de _generals.sass corre los iconos hacia abajo y les suma
-			// margenes; adentro de un boton flex el centrado lo da el contenedor.
+		// Los iconos `icon-*` del sistema se dibujan con un ::before al que _generals.sass le
+		// pone `top: .15em` y margenes laterales, pensado para un icono adentro de un parrafo.
+		// En un boton flex el centrado lo da el contenedor, asi que se apaga. El reset va sobre
+		// el ::before y no sobre el <i>: la regla global apunta al pseudoelemento, y sobre el <i>
+		// no vencia nada. Los `bi bi-*` ni siquiera entran por ahi --el selector es
+		// [class^='icon-'] y ellos empiezan con `bi`--, pero el resto de esta regla si los toca.
+		i,
+		i::before
 			top: 0
 			margin: 0
 			line-height: 1

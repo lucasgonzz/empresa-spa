@@ -280,10 +280,15 @@ export default {
 		color: var(--color-text-secondary)
 		margin-bottom: 12px
 
-		i
-			font-size: 1.35rem
-			// El [class^='icon-'] global corre los iconos hacia abajo y les suma margenes; el
-			// centrado de este lo da el flex del circulo.
+		font-size: 1.35rem
+		// Los iconos `icon-*` del sistema se dibujan con un ::before al que _generals.sass le
+		// pone `top: .15em` y margenes laterales, pensado para un icono adentro de un parrafo.
+		// En un boton flex el centrado lo da el contenedor, asi que se apaga. El reset va sobre
+		// el ::before y no sobre el <i>: la regla global apunta al pseudoelemento, y sobre el <i>
+		// no vencia nada. Los `bi bi-*` ni siquiera entran por ahi --el selector es
+		// [class^='icon-'] y ellos empiezan con `bi`--, pero el resto de esta regla si los toca.
+		i,
+		i::before
 			top: 0
 			margin: 0
 			line-height: 1

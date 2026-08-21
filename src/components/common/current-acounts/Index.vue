@@ -173,9 +173,10 @@ export default {
 // y la de un PROVEEDOR) son el mismo componente con otro `from_model_name`. Lo que se escribe aca
 // vale para las dos por construccion: no hay dos copias que sincronizar.
 //
-// ⚠️ Si estas buscando el otro `current-acounts/` --el de `components/ventas/modals/`-- es una
-// copia muerta: nadie la importa salvo ella misma. No la edites creyendo que este modal sale de
-// ahi, porque no sale.
+// ⚠️ Si estas buscando el otro `current-acounts/` --el de `components/ventas/modals/`--: ese
+// Index.vue no lo monta nadie, asi que editarlo no cambia nada de lo que se ve. Pero la carpeta NO
+// esta muerta entera: `current-acounts/ChecksDetails.vue` de ACA importa `pago/CheckComponent.vue`
+// de ALLA. O sea que borrarla rompe el detalle de cheques de este mismo modal.
 //
 // POR QUE ESTE <style> NO LLEVA `scoped`. Casi todo lo de abajo tiene que alcanzar el interior de
 // componentes hijos --el b-table que dibuja TableComponent.vue, los botones que declara
@@ -242,6 +243,37 @@ export default {
 	// El modificador `--con-datos` lo pone List.vue solo cuando hay movimientos: sin el, una
 	// cuenta vacia mostraria una caja con sombra alrededor del cartel de "Sin movimientos", que es
 	// exactamente lo contrario de lo que un estado vacio tiene que hacer.
+	// 🔴 EL ALTO DE LA TABLA. Medido en la aplicacion corriendo el 21/8/2026, con el modal abierto
+	// sobre un proveedor con dos movimientos en 1440x900.
+	//
+	// TableComponent.vue le pone al contenedor que scrollea un `height` INLINE --no un
+	// max-height-- igual a `window.innerHeight - contenedor.top - 8` (container_style(), y su
+	// unica excepcion es `is_from_search_modal`). En un listado eso es exactamente lo que se
+	// quiere: la tabla llega hasta el fondo de la ventana. Adentro de un modal produce dos cosas
+	// malas a la vez, y las dos se ven:
+	//
+	//   1. Todo lo que va DESPUES de la tabla queda fuera de la pantalla por construccion. Medido:
+	//      footer en top 630 con la ventana en 900. O sea que "Registrar pago" --la accion
+	//      principal del modal-- solo se ve scrolleando. Ya pasaba antes de esta mision con los
+	//      botones sueltos en el cuerpo; con la franja de 60px del footer del sistema son ~80px en
+	//      vez de ~46px.
+	//   2. Con pocas filas queda media pantalla de caja blanca vacia debajo de la ultima.
+	//
+	// Se corrige donde se puede sin tocar el componente compartido: `height: auto` con !important
+	// (una regla !important le gana a un estilo inline normal) y un tope propio que ya descuenta
+	// el chrome del modal --header 60 + barra ~64 + aire 36 + footer 60, mas los margenes del
+	// dialogo--. Con eso la tabla mide lo que miden sus filas y recien scrollea cuando pasa el
+	// tope, que es el comportamiento que TableComponent ya tiene para el modal de busqueda.
+	.cc-tabla-wrapper .table-component-scroll
+		height: auto !important
+		max-height: calc(100vh - 320px) !important
+
+	// En una ventana muy baja --telefono acostado-- esa resta deja la tabla en casi nada o en
+	// negativo. Ahi manda un porcentaje del alto, que degrada bien.
+	@media screen and (max-height: 560px)
+		.cc-tabla-wrapper .table-component-scroll
+			max-height: 45vh !important
+
 	.cc-tabla-wrapper--con-datos
 		border-radius: var(--cc-tabla-radio)
 		overflow: hidden
@@ -352,18 +384,27 @@ export default {
 			white-space: nowrap
 			transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease
 
-			i
-				// El [class^='icon-'] global de _generals.sass empuja los iconos .15em hacia abajo y
-				// les mete margenes propios, pensado para un icono dentro de un parrafo. Adentro de
-				// un boton flex el centrado lo da el contenedor.
+			// Los iconos `icon-*` del sistema se dibujan con un ::before al que _generals.sass le
+			// pone `top: .15em` y margenes laterales, pensado para un icono adentro de un parrafo.
+			// En un boton flex el centrado lo da el contenedor, asi que se apaga. El reset va sobre
+			// el ::before y no sobre el <i>: la regla global apunta al pseudoelemento, y sobre el <i>
+			// no vencia nada. Los `bi bi-*` ni siquiera entran por ahi --el selector es
+			// [class^='icon-'] y ellos empiezan con `bi`--, pero el resto de esta regla si los toca.
+			i,
+			i::before
 				top: 0
 				margin: 0
 				line-height: 1
 
 		// Las dos columnas que declara models/current_acount.js usan la variante `info`, que es el
-		// celeste de bootstrap: sobre blanco no llega a 3:1, y ademas dos botones celestes macizos
-		// por fila gritaban mas que el importe de al lado, que es el dato que se viene a leer.
-		// Pasan a leerse como texto accionable, que es lo que son: abren el comprobante.
+		// celeste de bootstrap: dos botones celestes macizos por fila gritaban mas que el importe
+		// de al lado, que es el dato que se viene a leer. Pasan a leerse como texto accionable, que
+		// es lo que son: abren el comprobante.
+		//
+		// ⚠️ Sube el contraste pero NO lo resuelve: --color-primary en claro es #007bff sobre
+		// blanco = 3,99:1, y a 0.8125rem el texto no es "large", asi que sigue abajo del 4,5:1 de
+		// AA. Es el azul del sistema y esta en todas las pantallas, o sea que no es un problema que
+		// nazca aca ni que se pueda cerrar aca; queda anotado para cuando se revise la paleta.
 		.btn-info
 			background: transparent
 			border: 1px solid transparent
@@ -435,14 +476,30 @@ export default {
 			gap: var(--cc-gap)
 			justify-content: flex-start
 
-			> *
-				margin: 0 !important
+			// 🔴 `display: contents` y no `> div:empty { display: none }`, que fue el primer
+			// intento y cubria solo la mitad de los casos.
+			//
+			// Cada componente de la celda envuelve su boton en un div propio, y CerrarVenta anida
+			// DOS. Con el div como item del flex, un v-if que no dibuja nada igual se lleva su gap
+			// alrededor. `:empty` tapaba el caso de un div con solo un comentario adentro (Vue deja
+			// `<!---->`, y :empty ignora comentarios), pero NO el de CerrarVenta con la extension
+			// `cerrar_ventas` prendida y sin boton ni badge para mostrar: ahi el div de afuera
+			// contiene al de adentro, asi que no esta vacio.
+			//
+			// Con `display: contents` los envoltorios dejan de generar caja: el boton de adentro
+			// pasa a ser item directo del flex y un envoltorio sin contenido no ocupa ni se lleva
+			// gap, tenga adentro un comentario, otro div, o nada.
+			> div,
+			> div > div
+				display: contents
 
-			// Los componentes de la celda envuelven su boton en un div propio (CerrarVenta lo hace
-			// dos veces). Sin esto, un div que no dibuja nada sigue siendo un item del flex y se
-			// lleva el gap a su alrededor.
-			> div:empty
-				display: none
+			// La separacion la da el gap del contenedor. Estos margenes los escribe cada
+			// componente (`m-l-5` en CerrarVenta, `m-l-15` en otros) y salen de _helpers.scss con
+			// !important, asi que hay que igualarlos. Van por descendiente y no por `> *`: con
+			// `display: contents` arriba, los botones ya no son hijos directos.
+			.btn,
+			.badge
+				margin: 0 !important
 
 	// ─── Modo oscuro ─────────────────────────────────────────────────────────────────────────
 	// Solo los dos tokens que se declaran como rgba de un color de accion: el resto de la hoja usa

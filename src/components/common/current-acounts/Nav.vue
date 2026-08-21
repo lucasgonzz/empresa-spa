@@ -18,13 +18,20 @@
 			v-model="cantidad_movimientos"
 			@keydown.enter="getCurrentAcounts"
 			class="cc-toolbar__input"
+			aria-label="Cantidad de movimientos a mostrar"
 			min="1"
 			type="number"></b-form-input>
-			<label
+			<!--
+				La segunda mitad de la frase NO es otro <label for=""> apuntando al mismo input:
+				dos labels al mismo campo los concatenan NVDA y JAWS pero VoiceOver lee solo el
+				primero, y se escucharia "Ultimos" a secas. El nombre accesible lo da el
+				aria-label del input; esto es texto visible y nada mas.
+			-->
+			<span
 			class="cc-toolbar__label"
-			for="cc-cantidad-movimientos">
+			aria-hidden="true">
 				movimientos
-			</label>
+			</span>
 			<b-button
 			class="cc-toolbar__btn cc-toolbar__btn--acento"
 			variant="primary"
@@ -183,11 +190,13 @@ export default {
 		align-items: center
 		gap: var(--cc-gap, 8px)
 
-	// En pantallas anchas las acciones se van al borde derecho; cuando la barra envuelve, el grupo
-	// baja completo y arranca a la izquierda como cualquier otra fila.
-	.cc-toolbar__grupo--acciones
-		margin-left: auto
-
+	// 🔴 Sin `margin-left: auto`, y el motivo importa porque es contraintuitivo: en flexbox los
+	// margenes `auto` absorben el espacio libre ANTES de que se aplique `justify-content`, asi que
+	// un `margin-left: auto` empuja el grupo al borde derecho TAMBIEN cuando quedo solo en su
+	// linea. En tablet la barra envuelve justo (los cinco controles miden mas que el cuerpo del
+	// modal-xl a 768px), y el resultado era la primera fila pegada a la izquierda y la segunda
+	// pegada a la derecha, escalonadas. El `space-between` del contenedor ya manda las acciones al
+	// borde derecho mientras entran en una linea, que es lo unico que se buscaba.
 	.cc-toolbar__label
 		margin: 0
 		font-size: 0.8125rem
@@ -197,8 +206,19 @@ export default {
 
 	// El campo va con el radio de boton y no en capsula. La convencion del rediseño es explicita:
 	// la capsula es del CAMPO DE BUSQUEDA, y esto es una cantidad, no una busqueda.
-	.cc-toolbar__input
-		width: 74px
+	//
+	// 🔴 El selector suma `.form-control` --que el input ya trae de bootstrap-- y no es de mas:
+	// `html.dark-mode .form-control, ...` de _dark_theme.sass es (0,2,1) y le ganaba a
+	// `.cc-toolbar .cc-toolbar__input` (0,2,0) en `background-color`. El campo quedaba en
+	// --bg-section, que es EXACTAMENTE el mismo color que el fondo de esta barra: en modo oscuro
+	// el input se fundia con la barra y lo unico que lo delimitaba era el borde. Con la clase de
+	// mas queda (0,3,0) y gana.
+	//
+	// El ancho es 88 y no 74: con `type="number"`, Chrome dibuja las flechas del spinner (~16px)
+	// al pasar el mouse, y sobre 74 menos el padding quedaban ~38px utiles, asi que el numero
+	// centrado se corria solo al aparecer las flechas.
+	.cc-toolbar__input.form-control
+		width: 88px
 		height: var(--cc-control-h, 36px)
 		padding: 0 10px
 		text-align: center
@@ -235,8 +255,16 @@ export default {
 	// Neutro por defecto, igual que en la barra de los listados: el color de la paleta no cambia,
 	// cambia donde se aplica. Antes convivian tres rellenos macizos (dos azules y un rojo) que no
 	// comunicaban jerarquia sino el momento en que se habia agregado cada boton.
+	//
+	// 🔴 El selector del dropdown suma `.btn-light` --la variante que le pasa el template-- y no
+	// es ruido: con el menu DESPLEGADO, bootstrap declara
+	// `.show > .btn-light.dropdown-toggle { background-color: #dae0e5 }`, que es (0,3,0), igual
+	// que `.cc-toolbar .cc-toolbar__dropdown > .btn`. Un empate lo decide el orden de la hoja
+	// final, y en este proyecto bootstrap se reemite entero desde ~30 <style> de componente, varios
+	// de ellos chunks hermanos de este: el orden no es predecible. Con (0,4,0) gana siempre. Es la
+	// misma razon por la que _toolbar_botones.sass encadena :not() en sus selectores.
 	.cc-toolbar__btn:not(.cc-toolbar__btn--acento),
-	.cc-toolbar__dropdown > .btn
+	.cc-toolbar__dropdown > .btn.btn-light
 		background: var(--bg-card)
 		border: 1px solid var(--color-border)
 		color: var(--color-text-primary)
@@ -250,6 +278,12 @@ export default {
 
 		i
 			color: inherit
+
+	// Y con el menu abierto tampoco: la clase `.show` la pone bootstrap en el contenedor.
+	.cc-toolbar__dropdown.show > .btn.btn-light
+		background: var(--bg-hover)
+		border-color: var(--color-border)
+		color: var(--color-text-primary)
 
 	// La unica accion con peso visual de la barra: es la que vuelve a pedir los movimientos, o sea
 	// la unica que cambia lo que se ve en pantalla.
@@ -271,10 +305,14 @@ export default {
 	.cc-toolbar__dropdown > .btn::after
 		margin-left: 4px
 
-	// El [class^='icon-'] global de _generals.sass corre los iconos .15em hacia abajo y les suma
-	// margenes propios, pensado para un icono dentro de un parrafo. En un boton flex el centrado
-	// lo da el contenedor.
-	i
+	// Los iconos `icon-*` del sistema se dibujan con un ::before al que _generals.sass le
+	// pone `top: .15em` y margenes laterales, pensado para un icono adentro de un parrafo.
+	// En un boton flex el centrado lo da el contenedor, asi que se apaga. El reset va sobre
+	// el ::before y no sobre el <i>: la regla global apunta al pseudoelemento, y sobre el <i>
+	// no vencia nada. Los `bi bi-*` ni siquiera entran por ahi --el selector es
+	// [class^='icon-'] y ellos empiezan con `bi`--, pero el resto de esta regla si los toca.
+	i,
+	i::before
 		top: 0
 		margin: 0
 		line-height: 1

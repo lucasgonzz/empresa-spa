@@ -59,7 +59,14 @@ export default {
 //
 // Los colores salen de tokens: este boton se dibuja adentro de #app, pero el sistema tiene modo
 // oscuro y un hex aca lo dejaria blanco.
-.btn-cuenta-corriente
+// 🔴 El selector suma `.btn` --que el b-button ya trae-- y no es de mas. Con `.btn-cuenta-corriente`
+// a secas, el scoped compila a (0,2,0) contando el atributo de scope, y `html.dark-mode .btn-light`
+// de _dark_theme.sass es (0,2,1): el `html` suma un elemento y GANA en background, border-color y
+// color, que son justo las tres declaraciones que definen este boton. El resultado medido era el
+// peor posible: en modo oscuro el boton quedaba gris neutro en reposo y azul al pasar el mouse
+// --invertido respecto de modo claro--, porque el :hover de aca si ganaba con una clase mas.
+// Con `.btn.btn-cuenta-corriente` queda en (0,3,0) y gana en los dos modos.
+.btn.btn-cuenta-corriente
 	display: inline-flex
 	align-items: center
 	justify-content: center
@@ -83,9 +90,14 @@ export default {
 		// Literal a proposito: texto sobre el azul de accion, que es el mismo en los dos modos.
 		color: #fff
 
-	i
-		// El [class^='icon-'] global de _generals.sass corre los iconos .15em hacia abajo y les
-		// suma margenes propios; adentro de un boton flex el centrado lo da el contenedor.
+	// Los iconos `icon-*` del sistema se dibujan con un ::before al que _generals.sass le
+	// pone `top: .15em` y margenes laterales, pensado para un icono adentro de un parrafo.
+	// En un boton flex el centrado lo da el contenedor, asi que se apaga. El reset va sobre
+	// el ::before y no sobre el <i>: la regla global apunta al pseudoelemento, y sobre el <i>
+	// no vencia nada. Los `bi bi-*` ni siquiera entran por ahi --el selector es
+	// [class^='icon-'] y ellos empiezan con `bi`--, pero el resto de esta regla si los toca.
+	i,
+	i::before
 		top: 0
 		margin: 0
 		line-height: 1
