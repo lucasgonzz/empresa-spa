@@ -55,6 +55,7 @@
     body-class="p-0">
         <current-acounts-nav></current-acounts-nav>
         <!-- <color-info></color-info> -->
+        <saldo-y-limite></saldo-y-limite>
         <list></list>
 
         <!--
@@ -117,6 +118,7 @@ export default {
         ColorInfo,
         List,
         BtnPagoNotaCredito,
+        SaldoYLimite: () => import('@/components/common/current-acounts/SaldoYLimite'),
         ModelIndex: () => import('@/common-vue/components/model/Index'),
         SaleDetails: () => import('@/components/ventas/modals/details/Index'),
         BudgetModalButtons: () => import('@/components/budget/components/ModalButtons'),
