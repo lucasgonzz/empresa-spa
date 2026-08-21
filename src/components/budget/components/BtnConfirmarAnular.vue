@@ -152,19 +152,24 @@ export default {
 				.catch(err => {
 					this.terminar()
 
-					/**
-					 * El mensaje del back se muestra tal cual: los 422 de `anular` vienen de
-					 * `SaleHelper::motivo_por_el_que_no_se_puede_editar()`, que ya está redactado
-					 * para el usuario ("La venta ya fue facturada...", "El comercio tiene cajas
-					 * configuradas...").
-					 */
-					let message = 'No se pudo completar la acción'
-					if (err.response && err.response.data && err.response.data.message) {
-						message = err.response.data.message
+					/*
+						Si el back mandó un mensaje, acá no se muestra nada: ya lo mostró el handler
+						global (`main.js` despacha `errorEvent` para cualquier 4xx que no sea
+						validación de Laravel, y `common-vue/components/error/Index.vue` hace el
+						`$toast.warning`). Un toast local encima sería el mismo texto dos veces.
+
+						Los 422 de `anular` vienen de
+						`SaleHelper::motivo_por_el_que_no_se_puede_editar()`, que ya está redactado
+						para el usuario: "La venta ya fue facturada...", "El comercio tiene cajas
+						configuradas...".
+					*/
+					let hay_mensaje_del_back = Boolean(err.response && err.response.data && err.response.data.message)
+
+					if (!hay_mensaje_del_back) {
+						this.$toast.error('No se pudo completar la acción', {
+							duration: 8000
+						})
 					}
-					this.$toast.error(message, {
-						duration: 8000
-					})
 				})
 		},
 		terminar() {
