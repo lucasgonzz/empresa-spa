@@ -9,6 +9,38 @@
 		<select-provider
 		:props_to_send="props_to_send"></select-provider>
 
+		<!--
+			Mision costo-bruto-por-condicion-fiscal (20/8/2026): declaracion de si los costos de
+			ESTA planilla vienen brutos (con IVA adentro) o netos. Es el equivalente, para el
+			import, del flag "precios_incluyen_iva" de la compra a proveedor: quien carga el costo
+			declara que es ese numero, y el sistema guarda siempre el neto.
+
+			Va adentro de "props_to_send" y no como data suelta porque ese objeto es el unico
+			carril por el que el importador generico (common-vue/components/import/Index.vue)
+			mete claves extra en el FormData: recorre sus keys y hace form_data.append(key, valor).
+			Mismo carril que usa "provider_id".
+		-->
+		<b-form-group>
+			<b-form-checkbox
+			id="import-precios_incluyen_iva"
+			data-testid="import-precios_incluyen_iva"
+			v-model="props_to_send.precios_incluyen_iva"
+			:value="1"
+			:unchecked-value="0">
+				Los costos de esta planilla son BRUTOS (ya tienen el IVA adentro)
+			</b-form-checkbox>
+			<small class="text-muted d-block m-t-5">
+				El costo del artículo se guarda siempre NETO, sin IVA.
+				<span v-if="costos_de_la_planilla_son_brutos">
+					Como está activada, el costo de cada fila del Excel se toma como BRUTO: ya tiene el IVA adentro y el sistema se lo saca con la alícuota de ese artículo para guardar el neto. Un artículo Exento, No Gravado o al 0% no tiene IVA para sacarle: su costo se importa tal cual.
+				</span>
+				<span v-else>
+					Como está desactivada, el costo de cada fila del Excel se toma como NETO y se importa tal cual, sin tocarlo. Es como venía funcionando la importación hasta ahora.
+				</span>
+			</small>
+		</b-form-group>
+		<hr>
+
 	</import-component>
 </template>
 <script>
@@ -21,10 +53,32 @@ export default {
 		return {
 			props_to_send: {
 				provider_id: 0,
+				/*
+					Arranca en 0 (= los costos del Excel son netos) porque ese es el comportamiento
+					historico del import: una planilla que hoy importa bien tiene que seguir dando
+					el mismo resultado si nadie toca el control.
+
+					Viaja como 1/0 y NO como true/false a proposito: el FormData serializa todo a
+					string, y del otro lado `(bool) 'false'` en PHP da TRUE, o sea que mandar la
+					palabra "false" activaria el desglose de IVA justo en el caso en que el usuario
+					NO lo pidio. Con 1/0, `(bool) '0'` da false y no hay forma de que se de vuelta.
+					Es el mismo formato en el que ya viajan los blank_flags ("blank_<columna>" en
+					common-vue/components/import/Index.vue) y el resto de los checks de esta pantalla.
+				*/
+				precios_incluyen_iva: 0,
 			}
 		}
 	},
 	computed: {
+		/**
+		 * Estado del control "Los costos de esta planilla son BRUTOS", normalizado a booleano.
+		 * Solo se usa para elegir cual de los dos textos de ayuda mostrar.
+		 *
+		 * @return {Boolean}
+		 */
+		costos_de_la_planilla_son_brutos() {
+			return Number(this.props_to_send.precios_incluyen_iva) === 1
+		},
 		columns() {
 			console.log('Calculando columnas para importar:')
 			let columns = [
@@ -71,7 +125,11 @@ export default {
 				},
 				{
 					text: 'Costo',
-					description: 'Costo que pago a su proveedor al comprar este articulo. Coloque el valor literal, sin descuentos ni IVA, esos datos se colocan por fuera del costo para tener mejor articulado el calculo del "Precio Final"',
+					// La aclaracion sobre el IVA dejo de ser fija: ahora depende del check
+					// "Los costos de esta planilla son BRUTOS" que esta mas abajo en el mismo modal.
+					// Si esta descripcion sigue diciendo "sin IVA" a secas, contradice al control y
+					// el usuario no sabe cual de los dos le esta hablando.
+					description: 'Costo que pago a su proveedor al comprar este articulo. Coloquelo sin descuentos: esos datos se colocan por fuera del costo para tener mejor articulado el calculo del "Precio Final". Que el costo lleve o no el IVA adentro lo define el check "Los costos de esta planilla son BRUTOS (ya tienen el IVA adentro)", mas abajo en este mismo modal: desactivado, el costo va NETO (sin IVA) y se importa tal cual; activado, va BRUTO (con IVA) y el sistema se lo saca antes de guardarlo.',
 				},
 				{
 					text: 'Descuentos',
