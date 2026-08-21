@@ -158,6 +158,14 @@ export default {
 						'meli_item_condition',
 					],
 				},
+				// Extension: sistema de puntos para clientes
+				{
+					if_has_extencion: 'puntos_clientes',
+					view: 'puntos',
+					models: [
+						'sistema_de_puntos',
+					],
+				},
 			]
 		},
 	}

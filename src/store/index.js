@@ -264,6 +264,12 @@ import sale_sender_info from '@/store/sale_sender_info'
 import inputs_size from '@/store/inputs_size'
 import actividad_cliente from '@/store/actividad_cliente'
 
+// Sistema de puntos para clientes (extension puntos_clientes). Son DOS stores distintos a
+// proposito: `sistema_de_puntos` es el ABM de la configuracion y sale del factory comun, y
+// `puntos` es el estado de lectura del modulo (saldo, movimientos, reporte), que no es un ABM.
+import sistema_de_puntos from '@/store/sistema_de_puntos'
+import puntos from '@/store/puntos'
+
 
 Vue.use(Vuex)
 
@@ -527,5 +533,8 @@ export default new Vuex.Store({
         sale_sender_info,
         inputs_size,
         actividad_cliente,
+
+        sistema_de_puntos,
+        puntos,
     }
 })
