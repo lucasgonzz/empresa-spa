@@ -3,7 +3,7 @@
         <hr>
         <div
             v-for="(payment_method, index) in payment_methods"
-            :key="payment_method.__row_id"
+            :key="payment_method.__row_id || index"
             class="m-b-20 s-2 payment-method-card"
         >
 
