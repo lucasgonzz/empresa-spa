@@ -16,6 +16,7 @@
 
 		<template #table_left_options="props">
 			<div class="j-start align-center">
+				<btn-confirmar-anular :model="props.model"></btn-confirmar-anular>
 				<budget-duplicate-btn :model="props.model"></budget-duplicate-btn>
 			</div>
 		</template>
@@ -36,6 +37,7 @@ export default {
 		CurrentAcounts: () => import('@/components/common/current-acounts/Index'),
 		ClientBtn: () => import('@/components/ventas/components/ClientBtn'),
 		BudgetDuplicateBtn: () => import('@/components/budget/components/BudgetDuplicateBtn'),
+		BtnConfirmarAnular: () => import('@/components/budget/components/BtnConfirmarAnular'),
 	},
 	computed: {
 		show_previus_days() {

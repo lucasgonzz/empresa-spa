@@ -103,11 +103,34 @@ export default {
 			.catch(err => {
 				this.$store.commit('auth/setMessage', '')
 				this.$store.commit('auth/setLoading', false)
-				this.$toast.error('Error al guardar Presupuesto')
-				console.log(err)
-				this.$toast.error('Codigo: '+err.code+'. Detalle: '+err.message, {
-					duration: 100000,
-				})
+
+				/*
+					Si el backend mando un mensaje, ACA NO SE MUESTRA NADA: ya lo mostro el handler
+					global. El interceptor de `main.js` despacha `errorEvent` para cualquier 4xx que
+					no sea validacion de Laravel, y `common-vue/components/error/Index.vue` —montado
+					en `App.vue`— hace `$toast.warning(error.response.data.message)`.
+
+					Antes este catch tiraba dos toasts encima de ese: "Error al guardar Presupuesto"
+					y "Codigo: ERR_BAD_REQUEST. Detalle: Request failed with status code 422". O sea
+					que el mensaje util estaba, pero sepultado entre dos que no dicen nada.
+
+					Importa desde la mision 161, porque PUT budget/{id} ahora puede devolver un 422
+					redactado para el usuario ("El presupuesto esta confirmado. Anulalo antes de
+					editarlo."), al que se llega si alguien confirma el presupuesto —desde el listado
+					o desde otra pestaña— mientras vos lo estas editando en VENDER.
+
+					El detalle tecnico queda solo para cuando NO hay mensaje del back y el handler
+					global no tiene nada que mostrar: caida de red, timeout, respuesta sin cuerpo.
+				*/
+				let hay_mensaje_del_back = Boolean(err.response && err.response.data && err.response.data.message)
+
+				if (!hay_mensaje_del_back) {
+					this.$toast.error('Error al guardar Presupuesto')
+					console.log(err)
+					this.$toast.error('Codigo: '+err.code+'. Detalle: '+err.message, {
+						duration: 100000,
+					})
+				}
 			})
 		},
 		crear() {
