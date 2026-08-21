@@ -3,6 +3,12 @@
 		<!-- <edit-article></edit-article> -->
 		<import></import>
 
+		<!-- Escaneo de facturas de compra con IA (mision escaneo-factura-compra):
+		el modal de subida y el de revision viven aca, al lado del de importacion,
+		porque los dos trabajan sobre la compra que dejo seleccionada la fila. -->
+		<scan-invoice></scan-invoice>
+		<scan-invoice-review></scan-invoice-review>
+
 		<price-description></price-description>
 
 		<view-component 
@@ -25,6 +31,7 @@
 		<template v-slot:table_left_options="props">
 			<btn-export :model="props.model" />	
 			<btn-import :model="props.model" />
+			<btn-scan-invoice :model="props.model" />
 			<btn-view-received-diff :model="props.model" />
 		</template>
 
@@ -55,6 +62,10 @@ export default {
 		BtnExport: () => import('@/components/provider/components/orders/BtnExport'),
 		BtnImport: () => import('@/components/provider/components/orders/BtnImport'),
 		BtnViewReceivedDiff: () => import('@/components/provider/components/orders/BtnViewReceivedDiff'),
+		// Escaneo de facturas de compra con IA (mision escaneo-factura-compra)
+		BtnScanInvoice: () => import('@/components/provider/components/orders/BtnScanInvoice'),
+		ScanInvoice: () => import('@/components/provider/modals/orders/ScanInvoice'),
+		ScanInvoiceReview: () => import('@/components/provider/modals/orders/ScanInvoiceReview'),
 		IvaBreakdown: () => import('@/components/provider/components/orders/IvaBreakdown'),
 		NavComponent: () => import('@/components/provider/components/orders/nav/Index'),
 		Total: () => import('@/components/provider/components/orders/Total'),
