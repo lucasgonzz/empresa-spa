@@ -44,6 +44,16 @@
 			</template>
 		</div>
 
+		<!-- Nada que mostrar. Pasa con un desglose guardado que quedo vacio (una venta vieja, una
+		     compra sin renglones). El modal ahora abre siempre, asi que sin esta rama se veria un
+		     cuadro en blanco sin explicacion. -->
+		<div
+		v-else-if="!textos.length"
+		class="desglose-vacio">
+			<i class="bi bi-inbox"></i>
+			<p>No hay un desglose guardado para este total.</p>
+		</div>
+
 		<!--
 			El desglose viejo, en texto plano.
 

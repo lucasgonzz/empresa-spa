@@ -132,7 +132,10 @@ export default {
 					return
 				}
 
-				self.$store.commit('article/set_final_price_detalle', res.data.detalle ? res.data.detalle : [])
+				// Array.isArray y no un truthy pelado: si la respuesta trae algo que no es un array
+				// (pasa cuando el back no tiene nada que calcular), un objeto es truthy y terminaria
+				// guardado en un state declarado como Array, con warning de Vue y el modal vacio.
+				self.$store.commit('article/set_final_price_detalle', Array.isArray(res.data.detalle) ? res.data.detalle : [])
 				self.$store.commit('article/set_final_price_description', res.data.description)
 				self.$store.commit('article/set_final_price_description_cargando', false)
 			})

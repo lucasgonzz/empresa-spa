@@ -25,6 +25,11 @@ export const TIPOS = {
 	iva:           { icono: 'bi-receipt',         modificador: 'iva' },
 	descuento:     { icono: 'bi-tag',             modificador: 'descuento' },
 	recargo:       { icono: 'bi-plus-circle',     modificador: 'recargo' },
+	// Mismo color que el recargo --es de la misma familia: algo que la lista aplica sobre el
+	// precio-- pero con el icono al reves, porque RESTA. Los price_type_surchages se llaman
+	// "recargos" en el modelo y el codigo les hace -=; el icono es lo primero que entra por el
+	// ojo, asi que es el que tiene que decir el signo.
+	deduccion:     { icono: 'bi-dash-circle',     modificador: 'recargo' },
 	impuesto:      { icono: 'bi-bank',            modificador: 'impuesto' },
 	cotizacion:    { icono: 'bi-currency-dollar', modificador: 'cotizacion' },
 	unidades:      { icono: 'bi-boxes',           modificador: 'unidades' },

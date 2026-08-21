@@ -322,6 +322,27 @@ html.dark-mode
 		margin: 0
 		font-size: 0.9rem
 
+// ============================= Sin nada que mostrar =============================
+// Un desglose guardado que quedo vacio. Comparte la forma del estado de error pero no su
+// color: no es una falla, es que no hay dato.
+.desglose-vacio
+	display: flex
+	flex-direction: column
+	align-items: center
+	justify-content: center
+	gap: 0.75rem
+	min-height: 220px
+	text-align: center
+	color: var(--color-text-secondary)
+
+	i
+		font-size: 2rem
+		opacity: 0.55
+
+	p
+		margin: 0
+		font-size: 0.9rem
+
 // ============================= El desglose viejo, en texto =============================
 // Los desgloses YA GUARDADOS en sales.price_description y provider_orders.price_description son
 // arrays de strings: no tienen `tipo` que colorear ni monto separado del texto. Se siguen mostrando
