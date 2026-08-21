@@ -2,6 +2,7 @@ import __base_store from '@/store/__base_store'
 import axios from 'axios'
 import generals from '@/common-vue/mixins/generals'
 import ventas_sin_cobrar from '@/store/sale/ventas_sin_cobrar'
+import recordatorio_cobro from '@/store/sale/recordatorio_cobro'
 import consolidar_facturacion from '@/store/sale/consolidar_facturacion'
 
 /**
@@ -71,6 +72,7 @@ function sale_filters_have_active_criteria_except_afip(filters) {
 export default __base_store({
 	modules: {
 		ventas_sin_cobrar,
+		recordatorio_cobro,
 		consolidar_facturacion,
 	},
 	state: {

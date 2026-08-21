@@ -146,6 +146,11 @@ export default {
 						who = message.template_meta_name || 'Plantilla'
 					} else if (message.source == 'sistema') {
 						who = 'Sistema'
+					} else if (message.source == 'recordatorio_cobro') {
+						// Igual que en MessageBubble: sin esta rama el recordatorio caía al
+						// fallback 'Empresa' y la conversación copiada no dejaba ver que ese
+						// mensaje lo disparó el módulo de alertas y no una persona.
+						who = 'Recordatorio de cobro'
 					} else if (message.sent_by_user && message.sent_by_user.name) {
 						who = message.sent_by_user.name
 					} else {
