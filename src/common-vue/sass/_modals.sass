@@ -66,9 +66,16 @@
 // recorta el fondo del elemento que lo lleva.
 //
 // Medición del 11/8/2026, barriendo la diagonal desde el vértice del modal de
-// Cuenta corriente —el peor caso, porque va con `hide-footer` + `body-class="p-0"`
-// y su tabla llega hasta el borde—: hasta 4px del vértice se ve el fondo de atrás
-// y desde 5px el cuerpo del modal, idéntico en las dos variantes.
+// Cuenta corriente —entonces el peor caso, porque iba con `hide-footer` +
+// `body-class="p-0"` y su tabla llegaba hasta el borde—: hasta 4px del vértice se
+// ve el fondo de atrás y desde 5px el cuerpo del modal, idéntico en las dos
+// variantes.
+//
+// ⚠️ Ese modal dejó de ser el peor caso el 21/8/2026: su rediseño lo pasó al slot
+// `#modal-footer`, así que ya no va con `hide-footer` y su esquina de abajo la
+// redondea el footer, no el body. La medición y la conclusión siguen valiendo —lo
+// que cambió es el ejemplo—. Si hace falta volver a medirla, el peor caso hoy es
+// un modal con `hide-header`/`hide-footer` cuyo cuerpo pinte fondo pegado al borde.
 //
 // Y no es gratis: recorta también lo que se abra adentro del modal y salga de su
 // caja (el calendario de b-form-datepicker, un .dropdown-menu al final del
