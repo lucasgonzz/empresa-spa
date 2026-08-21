@@ -3,6 +3,24 @@
 	class="editable-cell"
 	:class="{ 'editable-cell--dudoso': dudoso }">
 
+		<!--
+			🔴 El campo numérico es type="text" con inputmode="decimal", y NO type="number".
+			Alguien va a querer "corregirlo" de vuelta: no lo hagas, esto se rompió una vez y
+			costaba plata en silencio.
+
+			En un <input type="number">, cuando el contenido no es un número válido PARA EL
+			NAVEGADOR, la propiedad `value` devuelve la cadena vacía. La coma decimal no es
+			válida ahí. O sea: el usuario del teléfono —que es el caso principal, porque la
+			foto se saca con el teléfono y el teclado que abre `inputmode="decimal"` es el que
+			tiene coma— escribía `2450,50`, apretaba Enter, y al v-model le llegaba ''. La
+			celda quedaba en "—", el costo viajaba en null, el backend saltea las claves nulas
+			y el artículo se cargaba con su costo viejo o sin ninguno. Cero peso a la compra y
+			a la deuda del proveedor, sin un solo mensaje.
+
+			Con type="text" la coma llega entera hasta `normalizar_numero()`, que es quien
+			decide qué significa. El teclado numérico del teléfono lo sigue abriendo
+			`inputmode="decimal"`, que es el atributo que de verdad manda en móviles.
+		-->
 		<b-form-input
 		v-if="editando"
 		ref="input"
@@ -10,7 +28,6 @@
 		class="editable-cell__input"
 		:type="tipo_de_input"
 		:inputmode="modo_de_teclado"
-		:step="paso"
 		:placeholder="placeholder"
 		v-model="borrador"
 		@blur="confirmar"
@@ -82,29 +99,24 @@ export default {
 			}
 			return String(this.value)
 		},
+		/*
+		 * 'fecha' es lo único que sigue siendo un input nativo especializado. Todo lo
+		 * demás —incluido lo numérico— es texto: ver el comentario rojo del template.
+		 */
 		tipo_de_input() {
 			if (this.tipo === 'fecha') {
 				return 'date'
 			}
-			if (this.tipo === 'numero') {
-				return 'number'
-			}
 			return 'text'
 		},
 		/*
-		 * En el teléfono, cantidad y costo tienen que abrir el teclado numérico. `type`
-		 * number ya lo hace en la mayoría de los navegadores, pero `inputmode` lo hace
-		 * en todos y además elige el teclado CON coma decimal.
+		 * En el teléfono, cantidad, costo y descuento tienen que abrir el teclado
+		 * numérico. Con type="text" el único que lo consigue es `inputmode`, y encima
+		 * elige el teclado CON coma decimal, que es el que corresponde en español.
 		 */
 		modo_de_teclado() {
 			if (this.tipo === 'numero') {
 				return 'decimal'
-			}
-			return null
-		},
-		paso() {
-			if (this.tipo === 'numero') {
-				return 'any'
 			}
 			return null
 		},
@@ -185,12 +197,96 @@ export default {
 			}
 
 			if (this.tipo === 'numero') {
-				/* La coma decimal del teclado en español no la entiende parseFloat. */
-				let numero = parseFloat(String(limpio).replace(',', '.'))
-				return isNaN(numero) ? null : numero
+				return this.normalizar_numero(limpio)
 			}
 
 			return limpio
+		},
+		/*
+		 * Convierte lo que tipeó una persona en un número de JavaScript, aguantando los
+		 * formatos que de verdad aparecen: "2450,50", "2.450,50", "2450.50", "$ 2.450,50",
+		 * "1.234", "10%".
+		 *
+		 * 🔴 Por qué no alcanza `parseFloat(x.replace(',', '.'))`, que era lo que había:
+		 *  - `replace` con un string reemplaza SOLO la primera aparición, así que
+		 *    "37.468,24" quedaba "37.468.24" y parseFloat cortaba en el segundo punto:
+		 *    devolvía 37,468 en vez de 37.468,24. Tres órdenes de magnitud de error en un
+		 *    costo, y sin ningún aviso.
+		 *  - Y el punto como separador de miles nunca se sacaba.
+		 *
+		 * Los criterios, escritos porque son decisiones y no obviedades:
+		 *
+		 *  1. Si conviven punto y coma, el que está MÁS A LA DERECHA es el decimal y el
+		 *     otro es separador de miles. Cubre "2.450,50" (argentino) y "2,450.50"
+		 *     (inglés) sin tener que adivinar el idioma.
+		 *  2. Si hay una sola coma, es decimal. Es el teclado en español: acá nadie
+		 *     escribe los miles con coma y sin punto. Si hay VARIAS comas, son miles a la
+		 *     inglesa ("1,234,567").
+		 *  3. 🔴 Punto solo, que es el caso ambiguo: "1.234" puede ser mil doscientos
+		 *     treinta y cuatro (formato argentino) o uno coma doscientos treinta y cuatro.
+		 *     CRITERIO ELEGIDO: si después del último punto hay EXACTAMENTE 3 dígitos y
+		 *     antes hay algo, se lee como separador de miles → 1234. En cualquier otro
+		 *     caso el punto es decimal → "2450.50" es 2450,5 y "1.5" es 1,5.
+		 *     Se eligió así porque en una factura de proveedor argentina los importes se
+		 *     imprimen con dos decimales, no con tres: un "1.234" con tres dígitos atrás
+		 *     es miles en el 99% de los casos, y quien quiera decir "uno coma doscientos
+		 *     treinta y cuatro" tiene la coma a mano en su propio teclado.
+		 *
+		 * @param {String|Number} valor
+		 * @return {Number|null}
+		 */
+		normalizar_numero(valor) {
+			/* Se sacan símbolo de moneda, %, espacios y cualquier letra: queda dígitos, . , y - */
+			let limpio = String(valor).replace(/[^\d.,-]/g, '')
+
+			if (limpio === '' || limpio === '-') {
+				return null
+			}
+
+			let negativo = limpio.charAt(0) === '-'
+			limpio = limpio.replace(/-/g, '')
+
+			let ultima_coma = limpio.lastIndexOf(',')
+			let ultimo_punto = limpio.lastIndexOf('.')
+
+			/* Cuál de los dos signos, si alguno, es el separador decimal. */
+			let decimal = null
+
+			if (ultima_coma !== -1 && ultimo_punto !== -1) {
+				/* Criterio 1: el de más a la derecha. */
+				decimal = ultima_coma > ultimo_punto ? ',' : '.'
+			} else if (ultima_coma !== -1) {
+				/* Criterio 2: una coma sola es decimal; varias son miles. */
+				decimal = limpio.split(',').length === 2 ? ',' : null
+			} else if (ultimo_punto !== -1) {
+				/* Criterio 3: el caso ambiguo. */
+				let decimales_tentativos = limpio.length - ultimo_punto - 1
+				let hay_algo_antes = ultimo_punto > 0
+				decimal = (decimales_tentativos === 3 && hay_algo_antes) ? null : '.'
+			}
+
+			if (decimal === null) {
+				/* Todo lo que hay son separadores de miles: se borran. */
+				limpio = limpio.replace(/[.,]/g, '')
+			} else {
+				/*
+				 * Se corta en el ÚLTIMO separador decimal y se limpia cada mitad. Así
+				 * "1.234.567,89" y "1,234,567.89" terminan los dos en "1234567.89", sin
+				 * depender de cuántos separadores de miles hubiera.
+				 */
+				let corte = limpio.lastIndexOf(decimal)
+				let enteros = limpio.slice(0, corte).replace(/[.,]/g, '')
+				let decimales = limpio.slice(corte + 1).replace(/[.,]/g, '')
+				limpio = enteros + '.' + decimales
+			}
+
+			let numero = parseFloat(limpio)
+
+			if (isNaN(numero)) {
+				return null
+			}
+
+			return negativo ? -numero : numero
 		},
 	},
 }

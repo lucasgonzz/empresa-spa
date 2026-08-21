@@ -23,6 +23,10 @@ axios.defaults.baseURL = process.env.VUE_APP_API_URL
  *    completo. Se pide recién cuando el usuario aprieta el botón rojo.
  *  - `compra`: la compra sobre la que se está trabajando (la fila del listado).
  *    El modal de revisión la necesita para saber el `modo_facturacion`.
+ *  - `abrir_en`: una orden puntual — "abrí la revisión de ESTE escaneo". La deja el
+ *    modal de aviso al apretar "Revisar ahora" y la consume el modal de revisión.
+ *    No es lo mismo que `pendientes`: puede haber escaneos pendientes y ninguna
+ *    orden de apertura, que es el caso normal.
  *
  * Endpoints (fijados en el plan de la misión, §4):
  * - GET  provider-order-scan/pendientes            -> { models: [ {provider_order_id, uuid, cantidad_articulos, created_at} ] }
@@ -60,6 +64,20 @@ export default {
 
 		/* True mientras se pide el detalle de un escaneo. */
 		cargando_detalle: false,
+
+		/*
+		 * Orden de apertura para el modal de revisión: { uuid, provider_order_id }.
+		 * Null cuando no hay nada pendiente de abrir.
+		 *
+		 * 🔴 Existe por el mismo motivo que `excel_analysis.abrir_en`: el modal de
+		 * revisión es lazy y vive adentro del listado de compras, así que cuando llega
+		 * el aviso de "terminó el escaneo" casi nunca está montado. El aviso deja la
+		 * orden ACÁ y recién después navega; el modal la consume en su created() si
+		 * todavía no estaba, o por un watch si ya estaba. Sin esto, "revisar ahora"
+		 * no se puede hacer: solo queda el camino largo de encontrar la fila en el
+		 * listado y apretar el botón rojo.
+		 */
+		abrir_en: null,
 	},
 	getters: {
 		/*
@@ -109,6 +127,15 @@ export default {
 		},
 		set_cargando_detalle(state, value) {
 			state.cargando_detalle = !!value
+		},
+		/*
+		 * Deja (o limpia, con null) la orden de "abrí la revisión de este escaneo".
+		 *
+		 * @param {Object} state
+		 * @param {Object|null} value  { uuid, provider_order_id }
+		 */
+		set_abrir_en(state, value) {
+			state.abrir_en = value || null
 		},
 		/*
 		 * Apaga el botón rojo de una compra sin volver a pedir la lista al servidor.

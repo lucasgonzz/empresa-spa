@@ -36,13 +36,20 @@
 				{{ texto }}
 			</p>
 
+			<!--
+				Los dos caminos que pidió Lucas, uno al lado del otro y sin ambigüedad:
+				"Revisar ahora" abre la revisión de este escaneo de una, y "Después" lo
+				deja pendiente para más tarde. No son dos formas de lo mismo: el de la
+				izquierda resuelve el escaneo ahora; el de la derecha lo posterga, y lo
+				que lo recupera después es el botón rojo de la fila de esa compra.
+			-->
 			<div class="buttons j-center">
 				<b-button
 				v-if="!hubo_error"
 				variant="primary"
 				class="m-r-15"
-				@click="ver_la_compra">
-					Ver la compra
+				@click="revisar_ahora">
+					Revisar ahora
 				</b-button>
 				<b-button
 				:variant="hubo_error ? 'primary' : 'outline-secondary'"
@@ -50,6 +57,13 @@
 					{{ hubo_error ? 'Entendido' : 'Después' }}
 				</b-button>
 			</div>
+
+			<p
+			v-if="!hubo_error"
+			class="provider-order-scan-ready-modal__pie">
+				Si elegís «Después», la compra queda con el botón rojo «Revisar escaneo»
+				prendido en el listado de compras.
+			</p>
 
 		</div>
 	</b-modal>
@@ -62,9 +76,10 @@
  * 'provider_order_scan_ready') o lo levanta start_methods al iniciar la SPA, cuando el
  * broadcast pasó mientras el usuario no estaba conectado.
  *
- * Molde: ExcelAnalysisReadyModal.vue. Su única responsabilidad es avisar y ofrecer el
- * paso siguiente. Todo lo caro —traer el resultado del escaneo y armar la tabla de
- * revisión— pasa recién si el usuario aprieta el botón rojo del listado.
+ * Molde: ExcelAnalysisReadyModal.vue. Su única responsabilidad es avisar y ofrecer los
+ * dos pasos siguientes posibles: revisar el escaneo ahora mismo, o dejarlo para después.
+ * Todo lo caro —traer el resultado del escaneo y armar la tabla de revisión— pasa recién
+ * si el usuario elige revisarlo.
  *
  * 🔴 Además refresca los pendientes cuando llega el aviso: el botón rojo de la compra
  * se enciende con lo que dice el servidor, y este es el momento en que ese hecho
@@ -129,17 +144,25 @@ export default {
 	},
 	methods: {
 		/*
-		 * Lleva al usuario al listado de compras, donde la compra escaneada tiene el
-		 * botón rojo "Revisar escaneo" prendido.
+		 * Abre la revisión de ESTE escaneo, de un clic, sin pasar por buscar la fila en
+		 * el listado.
 		 *
-		 * No se abre la revisión desde acá a propósito: ese modal vive adentro del
-		 * listado de compras, se carga de forma diferida, y en el momento en que corre
-		 * esto casi nunca está montado. Además el botón rojo no depende de que este
-		 * aviso haya existido — sale de la lista de pendientes del servidor —, así que
-		 * el camino es el mismo lo haya visto en vivo o no.
+		 * 🔴 El orden importa y es el mismo del aviso del análisis de Excel: PRIMERO se
+		 * deja la orden en el store y DESPUÉS se navega. El modal de revisión es lazy y
+		 * vive adentro del listado de compras, así que cuando corre esto casi nunca está
+		 * montado: la orden queda esperándolo y la levanta en su created(). Si el usuario
+		 * nunca se fue de compras y el modal ya estaba montado, la agarra por su watch.
+		 * Al revés —navegar y después dejar la orden— el created() ya pasó y no abre nada.
 		 */
-		ver_la_compra() {
-			this.$store.dispatch('provider_order_scan/marcar_visto', this.provider_order_scan.uuid)
+		revisar_ahora() {
+			const escaneo = this.provider_order_scan
+
+			this.$store.commit('provider_order_scan/set_abrir_en', {
+				uuid: escaneo.uuid,
+				provider_order_id: escaneo.provider_order_id,
+			})
+
+			this.$store.dispatch('provider_order_scan/marcar_visto', escaneo.uuid)
 			this.$store.dispatch('provider_order_scan/get_pendientes')
 
 			this.$bvModal.hide('provider-order-scan-ready-notification')
@@ -153,7 +176,8 @@ export default {
 		/*
 		 * "Después" / "Entendido": el usuario ya se enteró, que es todo lo que registra
 		 * visto_at. 🔴 Visto NO es gestionado: el botón rojo del listado sigue prendido
-		 * hasta que confirme o descarte el escaneo.
+		 * hasta que confirme o descarte el escaneo. Esta es la mitad "lo hago después"
+		 * de lo que pidió Lucas; la otra mitad es "Revisar ahora".
 		 */
 		descartar() {
 			this.$store.dispatch('provider_order_scan/marcar_visto', this.provider_order_scan.uuid)
@@ -221,4 +245,17 @@ export default {
 		text-align: center
 		color: #475569
 		margin-bottom: 24px
+
+	// Aclara qué pasa si elige "Después". Va abajo de los botones y no arriba: es la
+	// letra chica de una decisión que ya está tomada, no algo que haya que leer antes.
+	&__pie
+		text-align: center
+		color: #64748b
+		font-size: 0.78rem
+		margin: 16px 0 0 0
+
+html.dark-mode .provider-order-scan-ready-modal
+	&__texto,
+	&__pie
+		color: var(--color-text-secondary)
 </style>

@@ -179,14 +179,27 @@
  */
 
 /*
- * Techo de páginas por escaneo. Espeja `services.escaneo_factura_compra.max_imagenes`
- * del backend, que es quien decide de verdad (acá es solo para no dejar al usuario
- * elegir 9 fotos y que se las rechacen recién al mandar).
+ * 🔴 ESPEJO DE LA CONFIGURACIÓN DEL BACKEND. Estos dos números NO son la regla: son
+ * una copia, y pueden quedar desfasados.
+ *
+ * El valor que manda de verdad vive en `empresa-api`:
+ *   - config('services.escaneo_factura_compra.max_imagenes') ← env ESCANEO_FACTURA_MAX_IMAGENES
+ *   - config('services.escaneo_factura_compra.max_mb')       ← env ESCANEO_FACTURA_MAX_MB
+ * y el controlador de `POST /api/provider-order-scan` valida contra ESO, no contra esto.
+ *
+ * Acá están duplicados a propósito, para no dejar que el usuario elija nueve fotos, las
+ * suba por una conexión de teléfono y recién ahí se las rechacen. La contra es la de
+ * siempre con un espejo: si un cliente sube el techo en su `.env`, la SPA lo va a
+ * seguir frenando en estos números hasta que alguien los toque acá. Si aparece un
+ * "me deja subir hasta 6 y el backend acepta 10", el desajuste es este y se arregla
+ * moviendo estas dos constantes (o, mejor, exponiendo los valores en el endpoint que
+ * ya devuelve el contexto del comercio y leyéndolos de ahí).
  */
 const MAX_PAGINAS = 6
 
-/* Techo por archivo, en bytes. Espeja `max_mb` del backend (12 MB). */
-const MAX_BYTES = 12 * 1024 * 1024
+/* Techo por archivo, en bytes. Espejo de `max_mb` del backend. */
+const MAX_MB = 12
+const MAX_BYTES = MAX_MB * 1024 * 1024
 
 /* Contador para acuñar claves de lista estables (no reactivo a propósito). */
 let proximo_id = 0
@@ -281,7 +294,7 @@ export default {
 				}
 
 				if (archivo.size > MAX_BYTES) {
-					self.$toast.error('"' + archivo.name + '" pesa más de 12 MB.')
+					self.$toast.error('"' + archivo.name + '" pesa más de ' + MAX_MB + ' MB.')
 					return
 				}
 
