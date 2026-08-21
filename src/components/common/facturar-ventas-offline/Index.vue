@@ -6,8 +6,6 @@
 	centered
 	:title="titulo"
 	:no-close-on-backdrop="paso == 'emitiendo'"
-	:no-close-on-esc="paso == 'emitiendo'"
-	:hide-header-close="paso == 'emitiendo'"
 	dialog-class="ventas-offline-dialog"
 	@hidden="al_cerrar">
 
@@ -31,6 +29,14 @@
 					class="ventas-offline__check"
 					v-model="fila.seleccionada">
 						<span class="ventas-offline__num">N° {{ fila.sale.num }}</span>
+						<!--
+							La fecha de la venta va SIEMPRE a la vista y como dato propio, no
+							solo dentro del datepicker: ese muestra la fecha del COMPROBANTE, y
+							apenas el usuario la toca deja de haber en pantalla cualquier rastro
+							de cuando se hizo la venta, que es justo con lo que tiene que
+							comparar para decidir.
+						-->
+						<span class="ventas-offline__fecha-venta">Venta del {{ date(fila.fecha_original) }}</span>
 					</b-form-checkbox>
 
 					<span
@@ -61,9 +67,8 @@
 				<p
 				v-if="fila.fecha_ajustada"
 				class="ventas-offline__aviso">
-					La venta es del {{ date(fila.fecha_original) }}. ARCA no acepta comprobantes con
-					mas de 5 dias de atraso, asi que la factura va a salir con fecha
-					{{ date(fila.fecha_comprobante) }}.
+					ARCA no acepta comprobantes con más de 5 días de atraso, así que esta factura
+					va a salir con fecha {{ date(fila.fecha_comprobante) }} y no con la de la venta.
 				</p>
 
 				<p
@@ -74,8 +79,8 @@
 			</div>
 
 			<p class="ventas-offline__pie">
-				Las que dejes destildadas quedan guardadas sin factura. Podes facturarlas cuando
-				quieras desde Ventas: abris la venta y tocas «Emitir factura».
+				Las que dejes destildadas quedan guardadas sin factura. Podés facturarlas cuando
+				quieras desde Ventas: abrís la venta y tocás «Emitir factura».
 			</p>
 		</div>
 
@@ -104,22 +109,20 @@
 				variant="primary"></b-spinner>
 
 				<span
-				class="p-l-15"
 				v-if="item.sale">
 					Venta N° {{ item.sale.num }}
 				</span>
 
 				<strong
-				class="p-l-5"
 				v-if="item.maked">| Factura emitida</strong>
 				<strong
-				class="p-l-5 text-danger"
+				class="text-danger"
 				v-if="item.fallo">| No se pudo emitir</strong>
 				<strong
-				class="p-l-5 text-danger"
+				class="text-danger"
 				v-if="item.errors">| Con errores</strong>
 				<strong
-				class="p-l-5 text-danger"
+				class="text-danger"
 				v-if="item.observations">| Con Observaciones</strong>
 			</div>
 		</div>
@@ -136,14 +139,28 @@
 			<p
 			v-if="numeros_fallidos"
 			class="ventas-offline__aviso is-alerta">
-				Estas quedaron sin autorizar: {{ numeros_fallidos }}. Las vas a encontrar en
-				Alertas, en Problemas al facturar, y desde ahi las podes volver a mandar.
+				{{ texto_fallidas }}
+			</p>
+
+			<!--
+				Dos destinos y no uno, porque no siempre está en el mismo lado: "Problemas al
+				facturar" se arma con los AfipTicket sin CAE, y esa fila la crea el servidor. Si
+				el POST no llegó a salir -- que es el modo de falla más probable acá, con la
+				conexión recién recuperada -- no hay ticket, y la venta no aparece en esa
+				pantalla por más que el usuario la busque.
+			-->
+			<p
+			v-if="numeros_fallidos"
+			class="ventas-offline__aviso">
+				Si ARCA las rechazó, las vas a encontrar en Alertas, en Problemas al facturar. Si
+				no llegaron a salir, no van a estar ahí: abrí la venta en Ventas y tocá
+				«Emitir factura».
 			</p>
 
 			<p
 			v-if="hubo_errores_de_afip"
 			class="ventas-offline__aviso">
-				ARCA informo errores u observaciones en alguna de las facturas. El detalle esta en
+				ARCA informó errores u observaciones en alguna de las facturas. El detalle está en
 				la venta, en Ventas.
 			</p>
 		</div>
@@ -160,16 +177,31 @@
 					<b-button
 					class="ventas-offline-footer__principal"
 					variant="primary"
-					:disabled="!cantidad_seleccionada"
+					:disabled="paso != 'seleccion' || !cantidad_seleccionada"
 					@click="aceptar">
 						{{ texto_boton_emitir }}
 					</b-button>
 				</template>
 
+				<!--
+					🔴 El paso de emisión tiene salida. La tentación es trabarlo entero para que
+					nadie corte la cadena a la mitad, pero cerrar el modal NO corta nada: la
+					cadena vive en el mixin y sigue sola hasta el final. Lo único que se pierde
+					al cerrar es ver el progreso. En cambio, un modal sin salida deja la
+					aplicación entera bloqueada si un item nunca resuelve, y la única forma de
+					salir es recargar la página -- justo con ventas recién persistidas sin
+					factura, que es el peor momento para recargar.
+				-->
 				<template v-else-if="paso == 'emitiendo'">
 					<span class="ventas-offline-footer__esperando">
-						No cierres esta ventana hasta que termine.
+						Podés cerrar esta ventana: las facturas se emiten igual.
 					</span>
+					<b-button
+					class="ventas-offline-footer__principal"
+					variant="outline-secondary"
+					@click="cerrar">
+						Cerrar
+					</b-button>
 				</template>
 
 				<template v-else>
@@ -202,23 +234,21 @@ export default {
 			*/
 			paso: 'seleccion',
 			filas: [],
+			/*
+				La ventana de ARCA vive en data() y NO en un computed: un computed sin
+				dependencias reactivas se evalua una sola vez y queda cacheado para siempre, asi
+				que una pestaña abierta desde ayer calcularia la ventana con el dia de ayer --
+				exactamente el bug de un dia corrido que el comentario de abajo dice estar
+				evitando, entrando por la otra puerta. Se recalcula cada vez que se arman las
+				filas, que es el unico momento en que se usa.
+			*/
+			fecha_minima: '',
+			fecha_maxima: '',
 		}
 	},
 	computed: {
 		ventas_offline_para_facturar() {
 			return this.$store.state.afip_ticket.ventas_offline_para_facturar
-		},
-		/*
-			🔴 La ventana de ARCA se calcula con moment() y NO copiando el minDate()/maxDate() de
-			ConfirmAfipTickets.vue, que hacen new Date().toISOString().split('T')[0]. Eso es UTC:
-			en Argentina (UTC-3), despues de las 21:00 devuelve el dia siguiente y la ventana queda
-			corrida un dia entero. moment().format('YYYY-MM-DD') es hora local.
-		*/
-		fecha_minima() {
-			return moment().subtract(5, 'days').format('YYYY-MM-DD')
-		},
-		fecha_maxima() {
-			return moment().add(5, 'days').format('YYYY-MM-DD')
 		},
 		titulo() {
 			if (this.paso == 'emitiendo') {
@@ -232,9 +262,9 @@ export default {
 		texto_encabezado() {
 			let cantidad = this.filas.length
 			if (cantidad == 1) {
-				return 'Volvio la conexion. Se guardo 1 venta que tenia punto de venta y todavia no se facturo. Elegi si querés facturarla ahora.'
+				return 'Volvió la conexión. Se guardó 1 venta que tenía punto de venta y todavía no se facturó. Elegí si querés facturarla ahora.'
 			}
-			return 'Volvio la conexion. Se guardaron '+cantidad+' ventas que tenian punto de venta y todavia no se facturaron. Elegi cuales querés facturar ahora.'
+			return 'Volvió la conexión. Se guardaron '+cantidad+' ventas que tenían punto de venta y todavía no se facturaron. Elegí cuáles querés facturar ahora.'
 		},
 		cantidad_seleccionada() {
 			let cantidad = 0
@@ -292,6 +322,21 @@ export default {
 			})
 			return numeros.join(', ')
 		},
+		cantidad_fallidas() {
+			let cantidad = 0
+			this.afip_tickets_for_make.forEach(item => {
+				if (item.fallo) {
+					cantidad++
+				}
+			})
+			return cantidad
+		},
+		texto_fallidas() {
+			if (this.cantidad_fallidas == 1) {
+				return 'Esta quedó sin autorizar: '+this.numeros_fallidos+'.'
+			}
+			return 'Estas quedaron sin autorizar: '+this.numeros_fallidos+'.'
+		},
 		hubo_errores_de_afip() {
 			let hubo = false
 			this.afip_tickets_for_make.forEach(item => {
@@ -304,9 +349,12 @@ export default {
 		texto_resultado() {
 			if (this.emitidas_ok == this.total_a_emitir) {
 				if (this.total_a_emitir == 1) {
-					return 'Se emitio 1 factura.'
+					return 'Se emitió 1 factura.'
 				}
 				return 'Se emitieron '+this.total_a_emitir+' facturas.'
+			}
+			if (this.emitidas_ok == 1) {
+				return 'Se emitió 1 de '+this.total_a_emitir+' facturas.'
 			}
 			return 'Se emitieron '+this.emitidas_ok+' de '+this.total_a_emitir+' facturas.'
 		},
@@ -357,12 +405,30 @@ export default {
 		},
 		armar_filas() {
 			let filas = []
-			let minima = this.fecha_minima
-			let maxima = this.fecha_maxima
+
+			// Se recalcula al armar y no en un computed. Ver el comentario de data().
+			let minima = moment().subtract(5, 'days').format('YYYY-MM-DD')
+			let maxima = moment().add(5, 'days').format('YYYY-MM-DD')
+
+			this.fecha_minima = minima
+			this.fecha_maxima = maxima
 
 			this.ventas_offline_para_facturar.forEach(venta => {
 
-				let fecha_original = moment(venta.fecha_original).format('YYYY-MM-DD')
+				let momento = moment(venta.fecha_original)
+
+				/*
+					🔴 Sin el isValid(), una fecha rota se convertia en una fecha REAL y peor que
+					la de hoy: moment(null).format() devuelve la cadena 'Invalid date', y la
+					comparacion de strings de abajo la da por mayor que la maxima ('I' le gana a
+					'2' en ASCII), asi que caia en la rama de "muy nueva" y la factura salia con
+					fecha de hoy + 5 dias. Ante una fecha que no se entiende, el default sano es
+					hoy: es la que habria usado el backend si no le mandaramos ninguna.
+				*/
+				let fecha_original = momento.isValid()
+					? momento.format('YYYY-MM-DD')
+					: moment().format('YYYY-MM-DD')
+
 				let fecha_comprobante = fecha_original
 				let fecha_ajustada = false
 
@@ -402,6 +468,15 @@ export default {
 			this.filas = filas
 		},
 		aceptar() {
+			/*
+				Guarda contra el doble click: el boton se deshabilita por `paso`, pero eso recien
+				se ve en el proximo render. Dos clicks en el mismo tick largaban dos cadenas, y
+				la segunda le rearmaba la lista a la primera con los indices ya corridos.
+			*/
+			if (this.paso != 'seleccion') {
+				return
+			}
+
 			let items = []
 
 			this.filas.forEach(fila => {
@@ -450,9 +525,16 @@ export default {
 				return
 			}
 
-			this.paso = 'emitiendo'
+			/*
+				El paso cambia SOLO si el motor arrancó de verdad. iniciar_emision se niega si hay
+				otra cadena en vuelo, y si igual pasáramos a 'emitiendo' el modal se quedaría
+				mostrando el progreso de la emisión ajena.
+			*/
+			if (!this.iniciar_emision(items)) {
+				return
+			}
 
-			this.iniciar_emision(items)
+			this.paso = 'emitiendo'
 		},
 		cerrar() {
 			this.$bvModal.hide('facturar-ventas-offline')
@@ -508,8 +590,15 @@ export default {
 		white-space: nowrap
 
 	&__num
+		display: block
 		font-weight: 600
 		font-size: 0.95rem
+
+	&__fecha-venta
+		display: block
+		font-size: 0.75rem
+		color: var(--color-text-secondary)
+		white-space: nowrap
 
 	&__cliente
 		font-size: 0.9rem
@@ -544,10 +633,15 @@ export default {
 		padding-top: 14px
 		border-top: 1px solid var(--color-border)
 
+	// El gap va aca y no con las clases p-l-15 / p-l-5 que usa SendAfipTickets.vue: esas dos
+	// clases NO EXISTEN en el proyecto -- no estan definidas ni en src/sass/, ni en common-vue,
+	// ni en bootstrap --, asi que no separan nada y el texto queda pegado al icono. Las usan
+	// media docena de componentes viejos y ninguno se entero.
 	&__emision
 		display: flex
 		flex-direction: row
 		align-items: center
+		gap: 6px
 		padding: 6px 0
 
 		.spinner-border

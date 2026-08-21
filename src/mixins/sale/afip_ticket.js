@@ -136,11 +136,48 @@ export default {
          * @param {Array} items
          */
         iniciar_emision(items) {
+            /*
+                🔴 Una sola lista global gobierna DOS cosas: el corte del bucle y el body de cada
+                POST. Arrancar una cadena con otra en vuelo no la cancela -- la vieja sigue
+                avanzando sobre indices que ahora apuntan a OTRAS ventas: marca la fila
+                equivocada y llega a postear dos veces la misma factura contra ARCA, que despues
+                solo se deshace con nota de credito.
+
+                No es teorico: alcanza con emitir desde Ventas y que mientras tanto termine la
+                sincronizacion offline y se abra su modal encima del progreso.
+            */
+            if (this.hay_emision_en_curso()) {
+
+                this.$toast.error('Ya hay una emision de facturas en curso. Espera a que termine.')
+
+                return false
+            }
+
             this.$store.commit('afip_ticket/set_afip_tickets_for_make', [])
 
             this.setAfipTicketsForMake(items)
 
             this.emitir_una(0)
+
+            return true
+        },
+        /**
+         * ¿Quedo alguna venta del lote anterior sin resolver? Se deriva de la lista y no de una
+         * bandera aparte para que no exista el estado "la bandera quedo prendida": si el lote
+         * termino, todos sus items estan en maked o en fallo.
+         *
+         * @return {Boolean}
+         */
+        hay_emision_en_curso() {
+            let en_curso = false
+
+            this.afip_tickets_for_make.forEach(item => {
+                if (!item.maked && !item.fallo) {
+                    en_curso = true
+                }
+            })
+
+            return en_curso
         },
         /**
          * Emite las facturas de las ventas seleccionadas, de a una y en orden.
@@ -152,9 +189,12 @@ export default {
         enviar_afip_tickets() {
             let items = this.items_desde_seleccion()
 
-            this.$bvModal.show('send-afip-tickets')
+            // Si hay otra emision en vuelo no se abre el progreso: no hay nada que mostrar.
+            if (!this.iniciar_emision(items)) {
+                return
+            }
 
-            this.iniciar_emision(items)
+            this.$bvModal.show('send-afip-tickets')
         },
         /**
          * Emite la venta de la posicion index y encadena la siguiente.
@@ -178,25 +218,43 @@ export default {
 
             this.send_request(index)
             .then(res => {
+                let item = self.afip_tickets_for_make[index]
+
                 /*
-                    🔴 send_request traga el error en su propio .catch y devuelve resolved, asi
-                    que cuando la factura fallo aca llega `undefined`. Sin esta guarda,
-                    res.data reventaria y la cadena se cortaria en la primera venta que falla.
+                    🔴 Dos casos distintos, los dos terminan aca y los dos tienen que marcar el
+                    item como fallido:
+
+                    1. send_request traga el error en su propio .catch y devuelve resolved, asi
+                       que cuando la factura fallo aca llega `undefined`.
+                    2. La respuesta vino 200 pero SIN venta adentro. makeAfipTicket contesta
+                       `response(null, 200)` cuando no encuentra la venta, y con eso `res` es
+                       truthy: pasaba esta guarda y reventaba mas abajo, en la mutation sale/add,
+                       que hace value.id sobre undefined. El TypeError caia al .catch de abajo y
+                       la cadena seguia, pero el item quedaba sin `maked` Y sin `fallo`.
+
+                    Un item que no queda ni en uno ni en otro deja el progreso mostrando un
+                    spinner que no para nunca, porque no hay nada mas que lo mueva.
                 */
-                if (!res) {
+                if (!res || !res.data || !res.data.sale) {
+                    item.fallo = true
                     self.emitir_una(index + 1)
                     return
                 }
 
+                /*
+                    maked se prende ANTES de tocar el store: la factura ya salio, y si sale/add
+                    llegara a fallar por la forma de la respuesta, el progreso igual tiene que
+                    decir la verdad.
+                */
+                item.maked = true
+
                 self.$store.commit('sale/add', res.data.sale)
 
-                self.afip_tickets_for_make[index].maked = true
-
                 if (res.data.sale.afip_errors.length) {
-                    self.afip_tickets_for_make[index].errors = true
+                    item.errors = true
                 }
                 if (res.data.sale.afip_observations.length) {
-                    self.afip_tickets_for_make[index].observations = true
+                    item.observations = true
                 }
 
                 self.emitir_una(index + 1)
@@ -206,8 +264,14 @@ export default {
                     Red de seguridad: send_request ya avisa por toast y nunca rechaza, asi que
                     aca solo puede llegar un error del bloque de arriba. La cadena sigue igual
                     para que una respuesta rara no deje sin facturar a las ventas que vienen
-                    despues.
+                    despues, y el item se marca para que el progreso no quede colgado.
                 */
+                let item = self.afip_tickets_for_make[index]
+
+                if (item && !item.maked) {
+                    item.fallo = true
+                }
+
                 self.emitir_una(index + 1)
             })
         },
