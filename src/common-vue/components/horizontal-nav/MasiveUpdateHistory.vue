@@ -339,6 +339,14 @@ export default {
 			if (value === '' || typeof value === 'boolean' || isNaN(Number(value))) {
 				return String(value)
 			}
+			/*
+				🔴 No alcanza con "es un numero": un codigo de barras y un codigo de proveedor
+				tambien lo son, y saldrian con puntos de miles. Mismo criterio que propertyText()
+				en common-vue/mixins/generals.js: solo es una MEDIDA lo que trae punto decimal.
+			*/
+			if (String(value).indexOf('.') < 0) {
+				return String(value)
+			}
 			return this.numero_es(String(value))
 		},
 		clear_detail() {

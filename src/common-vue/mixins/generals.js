@@ -859,6 +859,12 @@ export default {
 					} else {
 						value = this.price(value)
 					}
+				} else if (prop.is_stock && value !== null && value !== '' && typeof value != 'undefined' && !isNaN(Number(value))) {
+					// Las columnas de stock por deposito se declaran con `function` y una key que no
+					// existe en el model (`address_5`). La funcion devuelve el valor crudo a
+					// proposito —TableComponent lo necesita numerico para decidir el color de la
+					// celda—, asi que los separadores se los ponemos aca, que es el borde de display.
+					value = separadores_es_desde_dato(value)
 				}
 				value = this._check_moneda(value, prop, model, from_pivot, pivot_parent_model)
 

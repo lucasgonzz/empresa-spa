@@ -601,7 +601,13 @@ export default {
 			if (!model || !prop || !prop.key) {
 				return 0
 			}
-			const valor = Number(model[prop.key])
+			/*
+				Las columnas de stock por deposito se declaran con `function` y una key que NO
+				existe en el model (`address_5`): el valor lo calcula la funcion recorriendo
+				article.addresses. Leer model['address_5'] daria undefined -> NaN -> 0, y la
+				columna entera quedaria pintada de rojo como si no hubiera stock.
+			*/
+			const valor = Number(prop.function ? this.getFunctionValue(prop, model) : model[prop.key])
 			if (isNaN(valor)) {
 				return 0
 			}

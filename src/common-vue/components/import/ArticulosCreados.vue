@@ -255,6 +255,16 @@ export default {
 		  }
 		  const numero = Number(valor)
 		  if (isNaN(numero)) return valor
+		  /*
+		    🔴 No alcanza con "es un numero": un codigo de barras (7791234567890) y un codigo de
+		    proveedor tambien lo son, y saldrian 7.791.234.567.890. Es el mismo problema del CUIT
+		    que propertyText() evita en common-vue/mixins/generals.js, y se resuelve igual: solo
+		    es una MEDIDA lo que trae punto decimal. Las columnas decimal de la base (costo, stock,
+		    porcentaje) llegan como "1500.0000"; los codigos e identificadores llegan sin punto.
+		  */
+		  if (String(valor).indexOf('.') < 0) {
+		    return valor
+		  }
 		  // Number(-1.00).toString() ya devuelve "-1": alcanza para quitar
 		  // los ceros/decimales sobrantes que trae el valor crudo del backend.
 		  // Encima van los separadores de la interfaz: 1234.5 -> 1.234,5

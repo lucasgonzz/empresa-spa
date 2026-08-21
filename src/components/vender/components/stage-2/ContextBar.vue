@@ -94,7 +94,10 @@
 </template>
 
 <script>
-import { numero_es } from '@/common-vue/helpers/formato_numero'
+// Se importa con alias: el mixin global ya expone un `numero_es(valor)` de un solo
+// argumento, y este de aca lleva la cantidad de decimales. Dos firmas con el mismo
+// nombre en el mismo archivo es una trampa para el que lo lea en seis meses.
+import { numero_es as numero_es_con_decimales } from '@/common-vue/helpers/formato_numero'
 export default {
 	name: 'ContextBar',
 	filters: {
@@ -106,7 +109,7 @@ export default {
 		 */
 		currency(value) {
 			if (typeof value !== 'number') return '$ 0,00'
-			return '$ ' + numero_es(value, 2)
+			return '$ ' + numero_es_con_decimales(value, 2)
 		},
 	},
 	data() {
@@ -312,7 +315,7 @@ export default {
 		 */
 		format_price(value) {
 			if (typeof value !== 'number') return '$ 0,00'
-			return '$ ' + numero_es(value, 2)
+			return '$ ' + numero_es_con_decimales(value, 2)
 		},
 
 		/**

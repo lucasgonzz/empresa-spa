@@ -225,9 +225,17 @@ export default {
 
                 if (typeof article_address != 'undefined') {
 
-                    // Es una columna de texto del buscador (igual que sus hermanas
-                    // get_price_..._in_vender, que ya devuelven price()): va formateada.
-                    return this.numero_es(article_address.pivot.amount)
+                    /*
+                        🔴 Devuelve el valor CRUDO, no el texto formateado. Quien le pone los
+                        separadores es propertyText(), en su rama de prop.function.
+
+                        El motivo: las props que usan esta funcion llevan `is_stock: true`
+                        (buscador-articulos/Index.vue y remito/header-form/ArticleName.vue), y
+                        TableComponent decide con ese valor si la celda va en rojo. Si esta funcion
+                        devuelve '1.234,50', el numero deja de poder leerse y toda la columna se
+                        pinta como si no hubiera stock.
+                    */
+                    return article_address.pivot.amount
                 }
                 return null
             }

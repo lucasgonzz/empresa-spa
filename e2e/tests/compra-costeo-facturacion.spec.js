@@ -48,7 +48,7 @@
 const { test, expect } = require('../fixtures')
 const { esperar_recursos_descargados } = require('../helpers/recursos')
 const { abrir_pestania, completar_campo, search_and_select, crear_desde_buscador } = require('../helpers/formulario')
-const { numero_de_pantalla, numero_de_pantalla_variable, redondear } = require('../helpers/numeros')
+const { numero_de_pantalla, numero_de_dato, redondear } = require('../helpers/numeros')
 
 // ── Datos de entrada de la compra ────────────────────────────────────────────────────────────
 
@@ -138,21 +138,6 @@ function precio_final_esperado(costo_real, margen, iibb, iva) {
 // ── Helpers de lectura de pantalla ───────────────────────────────────────────────────────────
 
 /**
- * Columnas cuyo texto usa el PUNTO como separador decimal, y no como separador de miles. Se leen
- * con numero_de_pantalla_variable; el resto, con numero_de_pantalla (es-AR).
- *
- * Son dos casos con origen distinto y el mismo efecto:
- *   - `cost` y `costo_real` declaran `variable_decimals` en el model, asi que salen por
- *     price_variable_decimals(), que no hace el intercambio de separadores a es-AR (ver
- *     e2e/helpers/numeros.js).
- *   - `stock` no es un precio: se imprime crudo, "10.00".
- *
- * 🔴 No es un detalle de estilo: "$20.691" leido con el parser equivocado da 20,691 en vez de
- * 20691, y "10.00" da 1000 en vez de 10. Las dos veces en silencio, sin excepcion ni warning.
- */
-const PROPS_CON_PUNTO_DECIMAL = ['cost', 'costo_real', 'stock']
-
-/**
  * Lee una celda de una tabla del sistema por su data-testid ("celda-<model>-<key>-<id>") y la
  * devuelve como numero, eligiendo el parser segun con que formateador se imprimio esa prop.
  *
@@ -167,9 +152,13 @@ async function celda_numerica(page, model_name, key, id) {
 	await expect(celda).toBeVisible()
 	const texto = await celda.innerText()
 
-	if (PROPS_CON_PUNTO_DECIMAL.indexOf(key) !== -1) {
-		return numero_de_pantalla_variable(texto)
-	}
+	/*
+		Un solo parser para todas las columnas. Hasta el 21/8/2026 habia que elegir: `cost` y
+		`costo_real` salian en formato en-US porque price_variable_decimals() no daba vuelta los
+		separadores, y `stock` salia crudo ("10.00"). Los tres se corrigieron y hoy toda celda se
+		imprime en es-AR. Los valores de DATO (inputValue, data-*) siguen con punto y se leen con
+		numero_de_dato.
+	*/
 	return numero_de_pantalla(texto)
 }
 
@@ -422,7 +411,7 @@ test.describe.serial('Compra: costeo, facturacion, stock, cuenta corriente y pos
 		// percepciones y retenciones, en vez de hardcodear numeros. Asi siguen siendo "acordes al
 		// importe de la factura" aunque mañana cambie el costo o la cantidad de la compra.
 		// Es el value de un input: trae el numero crudo del modelo ("20691.00"), sin formatear.
-		const total = numero_de_pantalla_variable(await page.locator('[data-testid="provider_order_afip_ticket-total"]').inputValue())
+		const total = numero_de_dato(await page.locator('[data-testid="provider_order_afip_ticket-total"]').inputValue())
 		expect(redondear(total)).toBe(redondear(Number(contexto.compra.total)))
 
 		const neto = costo_real_esperado(COSTO, BONIFICACIONES) * CANTIDAD * 2
@@ -596,11 +585,11 @@ test.describe.serial('Compra: costeo, facturacion, stock, cuenta corriente y pos
 			await expect(movimiento).toHaveAttribute('data-deposito-destino', DEPOSITO)
 			// data-cantidad y data-stock-resultante vienen del modelo sin formatear ("10.00"), asi que el
 			// punto es DECIMAL, no separador de miles.
-			expect(numero_de_pantalla_variable(await movimiento.getAttribute('data-cantidad'))).toBe(CANTIDAD)
+			expect(numero_de_dato(await movimiento.getAttribute('data-cantidad'))).toBe(CANTIDAD)
 
 			// El stock que quedo en el articulo tiene que ser el que dejo el movimiento: es lo que
 			// une "se movio stock" con "el listado lo muestra".
-			const stock_resultante = numero_de_pantalla_variable(await movimiento.getAttribute('data-stock-resultante'))
+			const stock_resultante = numero_de_dato(await movimiento.getAttribute('data-stock-resultante'))
 			expect(await celda_numerica(page, 'article', 'stock', id)).toBe(stock_resultante)
 
 			await page.keyboard.press('Escape')
@@ -650,7 +639,7 @@ test.describe.serial('Compra: costeo, facturacion, stock, cuenta corriente y pos
 		// primer metodo de pago. Lo escribe un setTimeout de 500 ms, por eso se espera el VALOR
 		// (toHaveValue reintenta) en vez de leerlo una sola vez.
 		await expect(page.locator('[data-testid="pago-monto-0"]')).toHaveValue(String(total))
-		expect(numero_de_pantalla_variable(await page.locator('[data-testid="current-acount-pago-total"]').inputValue())).toBe(total)
+		expect(numero_de_dato(await page.locator('[data-testid="current-acount-pago-total"]').inputValue())).toBe(total)
 
 		const [respuesta] = await Promise.all([
 			page.waitForResponse(res => res.url().includes('/current-acount/pago') && res.request().method() === 'POST'),

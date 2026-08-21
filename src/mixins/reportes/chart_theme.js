@@ -66,15 +66,22 @@ export default {
 		format_chart_axis_value(value) {
 			let abs_value = Math.abs(value)
 
-			// El decimal de los sufijos K/M tambien lleva coma: 1,5M y 12,3K, no 1.5M y 12.3K.
+			/*
+				El decimal de los sufijos K/M tambien lleva coma: 1,5M y 12,3K, no 1.5M y 12.3K.
+
+				Se cambia SOLO el decimal, sin agrupar de a mil: la mantisa de un sufijo es menor a
+				1000 por construccion, asi que agrupar no aporta nada y ademas rompe el borde del
+				redondeo (999.999 cae en la rama de los miles y toFixed(0) da "1000", que agrupado
+				saldria "1.000K").
+			*/
 			if (abs_value >= 1000000) {
 				let formatted = (value / 1000000).toFixed(abs_value >= 10000000 ? 0 : 1)
-				return separadores_es_desde_dato(formatted.replace(/\.0$/, '')) + 'M'
+				return formatted.replace(/\.0$/, '').replace('.', ',') + 'M'
 			}
 
 			if (abs_value >= 1000) {
 				let formatted = (value / 1000).toFixed(abs_value >= 10000 ? 0 : 1)
-				return separadores_es_desde_dato(formatted.replace(/\.0$/, '')) + 'K'
+				return formatted.replace(/\.0$/, '').replace('.', ',') + 'K'
 			}
 
 			// Por debajo de mil no hay miles que separar, pero si puede haber decimal (999,5).
