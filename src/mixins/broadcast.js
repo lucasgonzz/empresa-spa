@@ -126,7 +126,7 @@ export default {
                 return 'Asistente actualizado: 1 artículo'
             }
 
-            return 'Asistente actualizado: ' + cantidad + ' artículos'
+            return 'Asistente actualizado: ' + this.numero_es(cantidad) + ' artículos'
         },
         /**
          * Se suscribe al canal por el que `tienda-api` avisa que entro un pedido nuevo

@@ -258,7 +258,7 @@ export default {
 			if (cantidad == 1) {
 				return 'Volvió la conexión. Se guardó 1 venta que tenía punto de venta y todavía no se facturó. Elegí si querés facturarla ahora.'
 			}
-			return 'Volvió la conexión. Se guardaron '+cantidad+' ventas que tenían punto de venta y todavía no se facturaron. Elegí cuáles querés facturar ahora.'
+			return 'Volvió la conexión. Se guardaron '+this.numero_es(cantidad)+' ventas que tenían punto de venta y todavía no se facturaron. Elegí cuáles querés facturar ahora.'
 		},
 		cantidad_seleccionada() {
 			let cantidad = 0

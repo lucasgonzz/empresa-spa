@@ -3,7 +3,7 @@
 		<div class="batch-summary-row batch-summary-success">
 			<i class="bi bi-check-circle-fill m-r-10"></i>
 			<span>Artículos con imagen asignada:</span>
-			<strong class="m-l-10">{{ batch_result ? batch_result.processed : 0 }}</strong>
+			<strong class="m-l-10">{{ numero_es(batch_result ? batch_result.processed : 0) }}</strong>
 		</div>
 		<div
 		v-if="batch_result && batch_result.quota_reached"
@@ -14,14 +14,14 @@
 					<span>Se alcanzó el límite diario de búsquedas de Google.</span>
 				</div>
 				<small class="batch-summary-quota-hint">
-					{{ batch_result.skipped_by_quota }} artículo(s) quedaron sin procesar por este motivo. Podés retomar mañana cuando se renueve la cuota.
+					{{ numero_es(batch_result.skipped_by_quota) }} artículo(s) quedaron sin procesar por este motivo. Podés retomar mañana cuando se renueve la cuota.
 				</small>
 			</div>
 		</div>
 		<div class="batch-summary-row batch-summary-skipped">
 			<i class="bi bi-skip-forward-circle-fill m-r-10"></i>
 			<span>Artículos sin imagen asignada:</span>
-			<strong class="m-l-10">{{ batch_result ? batch_result.skipped : 0 }}</strong>
+			<strong class="m-l-10">{{ numero_es(batch_result ? batch_result.skipped : 0) }}</strong>
 		</div>
 		<div
 		v-if="batch_result && batch_result.needs_review > 0"
@@ -30,7 +30,7 @@
 			<div>
 				<div>
 					<span>Imágenes para revisar manualmente:</span>
-					<strong class="m-l-10">{{ batch_result.needs_review }}</strong>
+					<strong class="m-l-10">{{ numero_es(batch_result.needs_review) }}</strong>
 				</div>
 				<small class="batch-summary-review-hint">
 					Estas imágenes se asignaron pero pueden no ser las más adecuadas. Revisalas en el artículo.
@@ -321,9 +321,9 @@ export default {
 				}
 			})
 
-			return 'De los ' + total + ' artículos sin imagen: ' + no_google_results + ' no devolvieron resultados en Google, '
-				+ download_failed + ' encontraron imágenes que no se pudieron descargar, '
-				+ not_product + ' encontraron imágenes que no eran del producto.'
+			return 'De los ' + this.numero_es(total) + ' artículos sin imagen: ' + this.numero_es(no_google_results) + ' no devolvieron resultados en Google, '
+				+ this.numero_es(download_failed) + ' encontraron imágenes que no se pudieron descargar, '
+				+ this.numero_es(not_product) + ' encontraron imágenes que no eran del producto.'
 		},
 	},
 	watch: {

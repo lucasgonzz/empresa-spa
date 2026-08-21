@@ -74,7 +74,11 @@ export default {
 
 								return that.price(Math.round(value))
 							}
-							return value
+							// El unico otro dataset de este grafico es 'Unidades vendidas'
+							// (se arman los dos mas arriba, en setChart), asi que este branch
+							// es siempre una cantidad: va con numero_es, no con price
+							// (mision del 21/8/2026 — separadores de numeros).
+							return that.numero_es(value)
 						},
 					},
 				},

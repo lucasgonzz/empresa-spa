@@ -44,7 +44,7 @@
 				<p class="text-muted small m-b-5">
 					Última fila con contenido detectada: <strong>{{ finish_row }}</strong>.
 					<span v-if="excel_rows_to_import_count > 0">
-						Se importarán <strong>{{ excel_rows_to_import_count }}</strong> filas
+						Se importarán <strong>{{ numero_es(excel_rows_to_import_count) }}</strong> filas
 						(desde la fila <strong>{{ start_row }}</strong> hasta la <strong>{{ finish_row }}</strong>).
 					</span>
 				</p>
@@ -443,7 +443,7 @@
 					</p>
 
 					<p class="text-muted small m-b-8">
-						De las {{ cadena_identificacion.total_filas }} filas del archivo, se van a identificar así:
+						De las {{ numero_es(cadena_identificacion.total_filas) }} filas del archivo, se van a identificar así:
 					</p>
 
 					<ol class="ai-import-identification-chain-list">
@@ -453,7 +453,7 @@
 						class="ai-import-identification-chain-item">
 
 							<span class="ai-import-identification-chain-title">
-								{{ paso.label }} — {{ paso.filas }} filas
+								{{ paso.label }} — {{ numero_es(paso.filas) }} filas
 							</span>
 
 							<small class="d-block text-muted m-t-3">
@@ -483,7 +483,7 @@
 					show
 					variant="warning"
 					class="m-t-10 m-b-0">
-						{{ filas_sin_identificador }} filas no tienen ningún código utilizable y se van a crear
+						{{ numero_es(filas_sin_identificador) }} filas no tienen ningún código utilizable y se van a crear
 						como artículos nuevos sin posibilidad de actualizarse en futuras importaciones.
 					</b-alert>
 
@@ -496,35 +496,35 @@
 
 				<!-- Total de filas -->
 				<span class="ai-import-summary-chip">
-					📄 {{ duplicate_stats.total_filas_datos }} filas totales
+					📄 {{ numero_es(duplicate_stats.total_filas_datos) }} filas totales
 				</span>
 
 				<!-- Códigos de proveedor repetidos (solo si hay) -->
 				<span
 				v-if="duplicate_stats.provider_codes_duplicados_intra_archivo > 0"
 				class="ai-import-summary-chip ai-import-summary-chip--warning">
-					⚠️ {{ duplicate_stats.provider_codes_duplicados_intra_archivo }} cód. proveedor repetido{{ duplicate_stats.provider_codes_duplicados_intra_archivo > 1 ? 's' : '' }}
+					⚠️ {{ numero_es(duplicate_stats.provider_codes_duplicados_intra_archivo) }} cód. proveedor repetido{{ duplicate_stats.provider_codes_duplicados_intra_archivo > 1 ? 's' : '' }}
 				</span>
 
 				<!-- Códigos de barras repetidos (solo si hay) -->
 				<span
 				v-if="duplicate_stats.bar_codes_duplicados_intra_archivo > 0"
 				class="ai-import-summary-chip ai-import-summary-chip--warning">
-					⚠️ {{ duplicate_stats.bar_codes_duplicados_intra_archivo }} cód. barras repetido{{ duplicate_stats.bar_codes_duplicados_intra_archivo > 1 ? 's' : '' }}
+					⚠️ {{ numero_es(duplicate_stats.bar_codes_duplicados_intra_archivo) }} cód. barras repetido{{ duplicate_stats.bar_codes_duplicados_intra_archivo > 1 ? 's' : '' }}
 				</span>
 
 				<!-- Colisiones en BD (mismo proveedor) -->
 				<span
 				v-if="duplicate_stats.provider_codes_existentes_mismo_proveedor > 0"
 				class="ai-import-summary-chip ai-import-summary-chip--info">
-					🔁 {{ duplicate_stats.provider_codes_existentes_mismo_proveedor }} ya en BD (mismo proveedor)
+					🔁 {{ numero_es(duplicate_stats.provider_codes_existentes_mismo_proveedor) }} ya en BD (mismo proveedor)
 				</span>
 
 				<!-- Colisiones en BD (otros proveedores) -->
 				<span
 				v-if="duplicate_stats.provider_codes_existentes_otros_proveedores > 0"
 				class="ai-import-summary-chip ai-import-summary-chip--info">
-					🔁 {{ duplicate_stats.provider_codes_existentes_otros_proveedores }} ya en BD (otro proveedor)
+					🔁 {{ numero_es(duplicate_stats.provider_codes_existentes_otros_proveedores) }} ya en BD (otro proveedor)
 				</span>
 
 			</div>
@@ -556,7 +556,7 @@
 				<small
 				v-if="duplicate_stats && duplicate_stats.provider_codes_duplicados_intra_archivo > provider_codes_detail.length"
 				class="text-muted d-block m-t-5">
-					y {{ duplicate_stats.provider_codes_duplicados_intra_archivo - provider_codes_detail.length }} más...
+					y {{ numero_es(duplicate_stats.provider_codes_duplicados_intra_archivo - provider_codes_detail.length) }} más...
 				</small>
 
 			</div>
@@ -588,7 +588,7 @@
 				<small
 				v-if="duplicate_stats && duplicate_stats.bar_codes_duplicados_intra_archivo > bar_codes_detail.length"
 				class="text-muted d-block m-t-5">
-					y {{ duplicate_stats.bar_codes_duplicados_intra_archivo - bar_codes_detail.length }} más...
+					y {{ numero_es(duplicate_stats.bar_codes_duplicados_intra_archivo - bar_codes_detail.length) }} más...
 				</small>
 
 			</div>
@@ -812,7 +812,7 @@
 		v-if="duplicate_stats && duplicate_stats.provider_codes_duplicados_intra_archivo > 0"
 		label-class="ai-import-decision-title">
 			<template #label>
-				Este archivo tiene {{ duplicate_stats.provider_codes_duplicados_intra_archivo }}
+				Este archivo tiene {{ numero_es(duplicate_stats.provider_codes_duplicados_intra_archivo) }}
 				código{{ duplicate_stats.provider_codes_duplicados_intra_archivo > 1 ? 's' : '' }}
 				de proveedor repetido{{ duplicate_stats.provider_codes_duplicados_intra_archivo > 1 ? 's' : '' }}.
 				<small class="d-block text-muted font-weight-normal m-t-3">
@@ -940,10 +940,10 @@
 		class="text-muted small m-b-15">
 			Rango efectivo: filas {{ start_row }} a {{ finish_row }}
 			<span v-if="model === 'article'">
-				({{ excel_rows_to_import_count }} filas, aprox. {{ estimated_chunks_count }} chunks de 50 filas).
+				({{ numero_es(excel_rows_to_import_count) }} filas, aprox. {{ numero_es(estimated_chunks_count) }} chunks de 50 filas).
 			</span>
 			<span v-else>
-				({{ excel_rows_to_import_count }} filas).
+				({{ numero_es(excel_rows_to_import_count) }} filas).
 			</span>
 		</p>
 
@@ -1714,8 +1714,8 @@ export default {
 				return ''
 			}
 
-			return 'El archivo tiene ' + this.nombres_duplicados.cantidad_distintos + ' nombres repetidos en '
-				+ this.nombres_duplicados.filas_afectadas + ' filas. Si alguna de esas filas llega al escalón '
+			return 'El archivo tiene ' + this.numero_es(this.nombres_duplicados.cantidad_distintos) + ' nombres repetidos en '
+				+ this.numero_es(this.nombres_duplicados.filas_afectadas) + ' filas. Si alguna de esas filas llega al escalón '
 				+ 'de nombre, no se va a procesar y se va a reportar como problema.'
 		},
 

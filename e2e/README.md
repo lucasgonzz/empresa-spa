@@ -124,7 +124,7 @@ Tres cosas de este spec que conviene saber antes de tocarlo:
 | `helpers/recursos.js` | Esperar la descarga de catalogos del arranque (ver mas abajo). **Todo spec lo necesita.** |
 | `helpers/entorno.js` | Aislar los broadcasts de Pusher. Ya viene puesto por `fixtures.js`. |
 | `helpers/formulario.js` | `abrir_pestania`, `search_and_select`, `elegir_primer_resultado`, `crear_desde_buscador` y `completar_campo`: las maniobras del formulario generico, con sus trampas documentadas. Nacieron inline en `alta-compra.spec.js` y se extrajeron el 19/8/2026. |
-| `helpers/numeros.js` | `numero_de_pantalla` (es-AR) y `numero_de_pantalla_variable` (punto decimal), mas `redondear`. **Cual usar no es opcional**, ver abajo. |
+| `helpers/numeros.js` | `numero_de_pantalla` (lo que se muestra, es-AR) y `numero_de_dato` (lo que es dato, punto decimal), mas `redondear`. **Cual usar no es opcional**, ver abajo. |
 | `helpers/informe-de-fallo.js` | Imprime el detalle del fallo en el momento, sin esperar el resumen final. |
 
 Y un chequeo que no es un test, para correr **antes** de agregar un `data-testid` nuevo:
@@ -185,43 +185,42 @@ fecha). El dia de HOY siempre se puede clickear; los demas solo si ya tienen mov
 
 `compra-costeo-facturacion.spec.js` lo envuelve en `abrir_compras_del_dia()`.
 
-### 🔴 Los importes NO se imprimen todos con el mismo formato
+### 🔴 Lo que se MUESTRA va en es-AR; lo que es un DATO va con punto
 
-En una **misma fila** del listado de articulos conviven hoy los dos formatos:
+Desde el **21/8/2026** toda la interfaz imprime los numeros con la convencion argentina: punto para
+los miles, coma para los decimales.
 
-| Columna | Se ve | Formato |
-|---|---|---|
-| Costo base | `$2,000.00` | en-US (miles `,`, decimal `.`) |
-| Costo Real | `$2,000.00` | en-US |
-| Precio final | `$4.145,08` | es-AR (miles `.`, decimal `,`) |
+| Columna | Se ve |
+|---|---|
+| Costo base | `$2.000,00` |
+| Costo Real | `$2.000,00` |
+| Precio final | `$4.145,08` |
+| Stock | `10,00` |
 
-Medido el 19/8/2026 sobre "Martillo acero". La causa esta ubicada: las props con
-`variable_decimals` (`cost`, `costo_real`) se imprimen con `price_variable_decimals()`
-—`common-vue/mixins/generals/formatting.js:148`—, que devuelve `numeral(p).format(pattern)` **crudo**;
-`price()` —`common-vue/mixins/dates.js:63`— hace el intercambio de separadores a es-AR despues del
-format, y `price_variable_decimals()` no.
+Hasta esa fecha las tres primeras convivian con dos formatos distintos en la misma fila, porque
+`price_variable_decimals()` devolvia el `numeral(p).format(pattern)` crudo (en-US) y `price()` si
+daba vuelta los separadores. Se unifico: los dos caminos pasan por `separadores_es()` de
+`src/common-vue/helpers/formato_numero.js`, que es el unico lugar del sistema que decide como se ve
+un numero.
 
-No se corrigio: es un formateador compartido por todo el sistema y cambiarlo mueve cada precio de
-cada pantalla.
+**Lo que NO cambio** son los campos editables: un `&lt;input&gt;` se sigue escribiendo con punto decimal,
+y lo mismo vale para los atributos `data-*` que el sistema expone para que otro proceso los lea.
 
-🔴 **No hay forma de adivinar el formato mirando el texto**, y es importante entender por que antes
-de escribir un test que lea importes:
+🔴 **No hay forma de adivinar el formato mirando el texto**, y es importante entenderlo antes de
+escribir un test que lea importes:
 
 ```
-"$20.691"   ->  es-AR: veinte mil seiscientos noventa y uno   (price() recorta el ",00")
-"$20.691"   ->  en-US: veinte con seiscientos noventa y uno
+"$20.691"   ->  pantalla: veinte mil seiscientos noventa y uno   (price() recorta el ",00")
+"$20.691"   ->  dato:     veinte con seiscientos noventa y uno
 ```
 
-El mismo texto, dos numeros. Por eso `helpers/numeros.js` expone **dos** funciones y quien lee
-elige, sabiendo con que formateador se imprimio ese campo:
+El mismo texto, dos numeros. Por eso `helpers/numeros.js` expone **dos** funciones, y quien lee
+tiene que saber si esta leyendo pantalla o dato:
 
 | Funcion | Para |
 |---|---|
-| `numero_de_pantalla` | Todo lo que sale por `price()`: precios finales, totales, cuenta corriente, montos de reportes. |
-| `numero_de_pantalla_variable` | Solo las props que declaran `variable_decimals` (hoy `cost` y `costo_real`), y los valores crudos de un `input`/`data-*`, donde el punto es decimal. |
-
-Si algun dia se corrige `price_variable_decimals()`, esas llamadas pasan a ser
-`numero_de_pantalla` y la segunda funcion se borra.
+| `numero_de_pantalla` | Cualquier celda, chip o texto de la interfaz. Miles `.`, decimal `,`. |
+| `numero_de_dato` | El `value` de un `&lt;input&gt;` (`inputValue()`) y los atributos `data-*`. Decimal `.`, sin miles. |
 
 ---
 

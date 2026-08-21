@@ -209,9 +209,9 @@ export default {
 					if (typeof descuento != 'undefined') {
 						let percentage = Number(descuento.discount_percentage)
 						if (percentage > 0) {
-							this.des.push('Se aplico descuento del '+percentage+'% del metodo de pago '+descuento.current_acount_payment_method.name)
+							this.des.push('Se aplico descuento del '+this.porcentaje_es(percentage)+'% del metodo de pago '+descuento.current_acount_payment_method.name)
 						} else {
-							this.des.push('Se aplico recargo del '+percentage*-1+'% del metodo de pago '+descuento.current_acount_payment_method.name)
+							this.des.push('Se aplico recargo del '+this.porcentaje_es(percentage*-1)+'% del metodo de pago '+descuento.current_acount_payment_method.name)
 						}
 					}
 				}
@@ -309,7 +309,7 @@ export default {
 
 				if (this.cuota_descuento) {
 
-					this.des.push('Aplicando descuento de '+this.cuota_descuento+'% por pago en '+this.cantidad_cuotas+' cuotas')
+					this.des.push('Aplicando descuento de '+this.porcentaje_es(this.cuota_descuento)+'% por pago en '+this.cantidad_cuotas+' cuotas')
 
 					let monto_descuento = this.monto_credito * Number(this.cuota_descuento) / 100
 					this.des.push('Monto descuento: '+this.price(monto_descuento))
@@ -323,7 +323,7 @@ export default {
 				
 				} else if (this.cuota_recargo) {
 
-					this.des.push('Aplicando recargo de '+this.cuota_recargo+'% por pago en '+this.cantidad_cuotas+' cuotas')
+					this.des.push('Aplicando recargo de '+this.porcentaje_es(this.cuota_recargo)+'% por pago en '+this.cantidad_cuotas+' cuotas')
 
 					let monto_recargo = this.monto_credito * Number(this.cuota_recargo) / 100
 					this.des.push('Monto recargo: '+this.price(monto_recargo))
@@ -387,7 +387,7 @@ export default {
 		aplicar_descuento() {
 			if (this.descuento) {
 
-				this.des.push('Aplicando descuento del '+this.descuento+'% solo al total de los articulos de '+this.price(this.total_articles))
+				this.des.push('Aplicando descuento del '+this.porcentaje_es(this.descuento)+'% solo al total de los articulos de '+this.price(this.total_articles))
 				this.total_articles -= this.total_articles * Number(this.descuento) / 100 
 				this.des.push('Total articulos queda en '+this.price(this.total_articles))
 
@@ -416,7 +416,7 @@ export default {
 
 				sale_discounts.forEach(discount => {
 
-					this.des.push('Aplicando descuento del '+discount.percentage+'%')
+					this.des.push('Aplicando descuento del '+this.porcentaje_es(discount.percentage)+'%')
 
 					let monto_descuento = this.total_articles * Number(discount.percentage) / 100 
 					this.total_articles -= monto_descuento
@@ -458,7 +458,7 @@ export default {
 
 				this.surcahges_models_vender.forEach(_surchage => {
 					
-					this.des.push('Aplicando recargo del '+_surchage.percentage+'%')
+					this.des.push('Aplicando recargo del '+this.porcentaje_es(_surchage.percentage)+'%')
 					
 					let monto_recargo = this.total_articles * Number(_surchage.percentage) / 100 
 					this.total_articles += monto_recargo

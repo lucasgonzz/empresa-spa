@@ -43,7 +43,7 @@
 			</template>
 
 			<template #cell(created_models)="data">
-				{{ models[data.index].created_models }}
+				{{ numero_es(models[data.index].created_models) }}
 				<!-- <b-button
 				@click="modelos_creados(models[data.index])">
 					{{ models[data.index].created_models }}
@@ -51,7 +51,7 @@
 			</template>
 		
 			<template #cell(updated_models)="data">
-				{{ models[data.index].updated_models }}
+				{{ numero_es(models[data.index].updated_models) }}
 				<!-- <b-button
 				@click="modelos_actualizados(models[data.index])">
 					{{ models[data.index].updated_models }}
@@ -65,7 +65,7 @@
 				size="sm"
 				variant="warning"
 				@click="ver_conflictos(models[data.index])">
-					{{ models[data.index].conflicts_count }}
+					{{ numero_es(models[data.index].conflicts_count) }}
 				</b-button>
 				<span v-else class="text-muted">-</span>
 			</template>
@@ -205,7 +205,7 @@
 			<!-- Encabezado: fecha de la importacion y total de problemas detectados -->
 			<p class="mb-3">
 				<strong>Importación del {{ date((import_history_conflictos || {}).created_at, true) }}</strong>
-				— {{ total_conflictos }} problema<span v-if="total_conflictos != 1">s</span> detectado<span v-if="total_conflictos != 1">s</span>
+				— {{ numero_es(total_conflictos) }} problema<span v-if="total_conflictos != 1">s</span> detectado<span v-if="total_conflictos != 1">s</span>
 			</p>
 
 			<!-- Resumen por tipo de problema, como chips -->
@@ -216,7 +216,7 @@
 				v-for="(item, index) in resumen_conflictos"
 				:key="'resumen-'+index"
 				class="badge badge-warning conflictos-resumen__chip">
-					{{ tipo_conflicto_label(item.tipo) }} ({{ campo_conflicto_label(item.campo) }}): {{ item.total }}
+					{{ tipo_conflicto_label(item.tipo) }} ({{ campo_conflicto_label(item.campo) }}): {{ numero_es(item.total) }}
 				</span>
 			</div>
 
@@ -239,13 +239,13 @@
 					<template #cell(tipo)="data">
 						{{ tipo_conflicto_label(data.item.tipo) }}
 						<span v-if="data.item.tipo === 'ambiguo' && data.item.article_ids">
-							({{ data.item.article_ids.length }} artículos)
+							({{ numero_es(data.item.article_ids.length) }} artículos)
 						</span>
 						<span v-if="data.item.tipo === 'fila_sobrescrita' && data.item.fila_ganadora">
 							(sobrescrita por la fila {{ data.item.fila_ganadora }})
 						</span>
 						<span v-if="data.item.tipo === 'identificador_sin_asignar' && data.item.article_ids">
-							({{ data.item.article_ids.length }} artículos)
+							({{ numero_es(data.item.article_ids.length) }} artículos)
 						</span>
 					</template>
 
@@ -260,7 +260,7 @@
 				<p
 				v-if="hay_mas_conflictos"
 				class="text-muted small">
-					Se muestran las primeras {{ conflictos_a_mostrar.length }} filas de {{ total_conflictos }}. Corregí estas y volvé a importar para ver el resto.
+					Se muestran las primeras {{ numero_es(conflictos_a_mostrar.length) }} filas de {{ numero_es(total_conflictos) }}. Corregí estas y volvé a importar para ver el resto.
 				</p>
 
 			</div>
@@ -359,13 +359,13 @@ export default {
 				items.push({
 					created_at: this.date(model.created_at, true),
 					status: model.status,
-					created_models: model.created_models,
-					updated_models: model.updated_models,
-					articulos_creados: model.articulos_creados,
-					articulos_actualizados: model.articulos_actualizados,
-					articles_match: model.articles_match,
-					filas_procesadas: model.filas_procesadas,
-					articles_repetidos: model.articles_repetidos,
+					created_models: this.numero_es(model.created_models),
+					updated_models: this.numero_es(model.updated_models),
+					articulos_creados: this.numero_es(model.articulos_creados),
+					articulos_actualizados: this.numero_es(model.articulos_actualizados),
+					articles_match: this.numero_es(model.articles_match),
+					filas_procesadas: this.numero_es(model.filas_procesadas),
+					articles_repetidos: this.numero_es(model.articles_repetidos),
 					error_message: model.error_message,
 					error_trace: model.error_trace,
 					operacion: model.operacion_a_realizar,
@@ -580,8 +580,8 @@ export default {
 			let fecha = this.date(model.created_at, true)
 			let creados = model.created_models || 0
 			let actualizados = model.updated_models || 0
-			return 'Vas a revertir la importación del ' + fecha + '. Se van a eliminar los ' + creados +
-				' artículos que creó y los ' + actualizados + ' que actualizó van a volver a los valores ' +
+			return 'Vas a revertir la importación del ' + fecha + '. Se van a eliminar los ' + this.numero_es(creados) +
+				' artículos que creó y los ' + this.numero_es(actualizados) + ' que actualizó van a volver a los valores ' +
 				'que tenían antes. Esta acción no se puede deshacer.'
 		},
 	},

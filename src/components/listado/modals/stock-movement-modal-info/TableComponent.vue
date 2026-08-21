@@ -116,9 +116,12 @@ export default {
 				concepto = this.get_store_model('concepto_stock_movement', model.concepto_stock_movement_id)
 				items.push({
 					concepto: typeof concepto != 'undefined' && concepto !== null ? concepto.name : null,
-					amount: model.amount,
+					// La celda visible va con separadores; los data-* de mas abajo siguen llevando
+					// el valor CRUDO, que es lo que lee la suite e2e (y cualquier cosa que tenga
+					// que hacer una cuenta con esto).
+					amount: this.numero_es(model.amount),
 					article_variant: model.article_variant ? model.article_variant.variant_description : null,
-					stock_resultante: model.stock_resultante,
+					stock_resultante: this.numero_es(model.stock_resultante),
 					provider: this.getRelation('provider', 'provider_id', 'name', model),
 					from_address: this.getRelation('address', 'from_address_id', 'street', model),
 					to_address: this.getRelation('address', 'to_address_id', 'street', model),

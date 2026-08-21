@@ -26,7 +26,9 @@ export default {
             let cantidad_actual_en_estado_anterior = Number(this.estado_desde.current_amount)
 
             if (cantidad_a_guardar > cantidad_actual_en_estado_anterior) {
-                this.$toast.error('No puede pasar mas de '+cantidad_actual_en_estado_anterior+' unidades, que son las que hay en el estado '+this.estado_desde.order_production_status.name, {
+                // Solo se formatea el texto del aviso; el valor que se le devuelve al input
+                // sigue siendo el numero crudo, porque es lo que se guarda.
+                this.$toast.error('No puede pasar mas de '+this.numero_es(cantidad_actual_en_estado_anterior)+' unidades, que son las que hay en el estado '+this.estado_desde.order_production_status.name, {
                 	duration: 10000
                 })
                 this.production_movement.amount = cantidad_actual_en_estado_anterior

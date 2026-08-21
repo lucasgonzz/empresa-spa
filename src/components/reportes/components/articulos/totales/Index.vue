@@ -11,7 +11,7 @@
 					</strong>
 				</h3>
 				<h4>
-					Unidades vendidas: {{ unidades_vendidas }}
+					Unidades vendidas: {{ numero_es(unidades_vendidas) }}
 				</h4>
 			</div>
 		</b-col>

@@ -180,7 +180,7 @@
 					</div>
 					<div class="totales-chip__body">
 						<span class="totales-chip__label">Ventas</span>
-						<span class="totales-chip__value">{{ cantidad_ventas }}</span>
+						<span class="totales-chip__value">{{ numero_es(cantidad_ventas) }}</span>
 					</div>
 				</div>
 

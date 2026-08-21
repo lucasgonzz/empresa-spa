@@ -56,7 +56,7 @@
 							class="vender-client-block__item-detail"
 							:id="'surchage_'+surchage.id">
 
-								{{ surchage.name }} {{ surchage.percentage }}%
+								{{ surchage.name }} {{ porcentaje_es(surchage.percentage) }}%
 
 								<span
 								v-if="surchage.deleted_at">
@@ -65,13 +65,13 @@
 
 								<span
 								v-else-if="surchage.updated_percentage">
-									({{ surchage.updated_percentage }}% en este momento)
+									({{ porcentaje_es(surchage.updated_percentage) }}% en este momento)
 								</span>
 
 								<p
 								class="text-muted"
 								v-if="!surchage.deleted_at && surchage.updated_percentage">
-									En caso de querer usar el valor actual del recargo ({{ surchage.updated_percentage }}%), desmarcar para quitar el recargo, guardar la venta sin el recargo, y editar la venta para agregarle el recargo con el valor actualizado.
+									En caso de querer usar el valor actual del recargo ({{ porcentaje_es(surchage.updated_percentage) }}%), desmarcar para quitar el recargo, guardar la venta sin el recargo, y editar la venta para agregarle el recargo con el valor actualizado.
 								</p>
 							</div>
 						</vender-toggle>

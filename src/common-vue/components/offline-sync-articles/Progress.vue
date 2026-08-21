@@ -20,11 +20,11 @@ class="offline-articles-progress-active">
 	</p>
 
 	<p class="m-b-0">
-		Procesados: {{ progress_processed }} / {{ progress_total }}
+		Procesados: {{ numero_es(progress_processed) }} / {{ numero_es(progress_total) }}
 	</p>
 
 	<p class="m-b-0">
-		Actualizados: {{ progress_updated_downloaded }} | Eliminados: {{ progress_deleted_processed }}
+		Actualizados: {{ numero_es(progress_updated_downloaded) }} | Eliminados: {{ numero_es(progress_deleted_processed) }}
 	</p>
 </div>
 </template>

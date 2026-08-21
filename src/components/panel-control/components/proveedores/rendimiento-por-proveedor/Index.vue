@@ -19,7 +19,7 @@
 					<h5
 					v-if="stock_actual">
 						<strong>
-							Stock actual: {{ stock_actual }}
+							Stock actual: {{ numero_es(stock_actual) }}
 						</strong>
 					</h5>
 				</div>

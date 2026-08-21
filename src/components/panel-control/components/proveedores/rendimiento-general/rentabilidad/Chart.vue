@@ -75,7 +75,10 @@ export default {
 				tooltips: {
 					callbacks: {
 						label: function(tooltipItem, data) {
-							return Math.round(tooltipItem.yLabel)+'%'
+							// Adentro del callback no vale `this`, se usa el `that` de arriba.
+							// Es un entero, pero una rentabilidad de 1200% tiene que leerse
+							// "1.200%" (mision del 21/8/2026 — separadores de numeros).
+							return that.porcentaje_es(Math.round(tooltipItem.yLabel))+'%'
 						}
 					}
 				}

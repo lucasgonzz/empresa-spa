@@ -83,7 +83,7 @@
 					<li
 					v-for="exclusion in exclusiones"
 					:key="exclusion.motivo">
-						<strong>{{ exclusion.cantidad }}</strong> {{ exclusion.texto }}
+						<strong>{{ numero_es(exclusion.cantidad) }}</strong> {{ exclusion.texto }}
 					</li>
 				</ul>
 			</b-alert>
@@ -166,7 +166,7 @@ export default {
 			if (cantidad == 1) {
 				return '1 cliente quedo afuera porque tiene ventas sin cobrar.'
 			}
-			return cantidad + ' clientes quedaron afuera porque tienen ventas sin cobrar.'
+			return this.numero_es(cantidad) + ' clientes quedaron afuera porque tienen ventas sin cobrar.'
 		},
 		/*
 			El desglose de articulos excluidos ya viene explicado del backend
@@ -190,7 +190,7 @@ export default {
 			if (total == 1) {
 				return '1 articulo quedo afuera porque no se le puede calcular un descuento seguro:'
 			}
-			return total + ' articulos quedaron afuera porque no se les puede calcular un descuento seguro:'
+			return this.numero_es(total) + ' articulos quedaron afuera porque no se les puede calcular un descuento seguro:'
 		},
 	},
 	watch: {

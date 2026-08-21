@@ -108,7 +108,7 @@ export default {
                 result.model 
                 && result.model.unidades_individuales
             ) {
-                this.$toast.warning(result.model.unidades_individuales+' unidades individuales')
+                this.$toast.warning(this.numero_es(result.model.unidades_individuales)+' unidades individuales')
             }
         },
         async search_articles_offline(query) {
@@ -225,8 +225,18 @@ export default {
 
                 if (typeof article_address != 'undefined') {
 
+                    /*
+                        🔴 Devuelve el valor CRUDO, no el texto formateado. Quien le pone los
+                        separadores es propertyText(), en su rama de prop.function.
+
+                        El motivo: las props que usan esta funcion llevan `is_stock: true`
+                        (buscador-articulos/Index.vue y remito/header-form/ArticleName.vue), y
+                        TableComponent decide con ese valor si la celda va en rojo. Si esta funcion
+                        devuelve '1.234,50', el numero deja de poder leerse y toda la columna se
+                        pinta como si no hubiera stock.
+                    */
                     return article_address.pivot.amount
-                } 
+                }
                 return null
             }
         },

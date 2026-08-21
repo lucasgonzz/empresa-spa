@@ -28,7 +28,7 @@
 				:key="discount.id"
 				:value="discount.id"
 				v-model="sale_discounts">
-					{{ discount.name }} {{ discount.percentage }}%
+					{{ discount.name }} {{ porcentaje_es(discount.percentage) }}%
 				</b-form-checkbox>
 			</b-form-group>
 			<b-form-group
@@ -39,7 +39,7 @@
 				:key="discount.id"
 				:value="discount.id"
 				v-model="sale_discounts">
-					{{ discount.name }} {{ discount.percentage }}%
+					{{ discount.name }} {{ porcentaje_es(discount.percentage) }}%
 				</b-form-checkbox>
 			</b-form-group>
 		</div>

@@ -42,7 +42,7 @@
 					</b-button>
 				</div>
 				<span class="text-muted small">
-					{{ paginacion.total }} linea/s
+					{{ numero_es(paginacion.total) }} linea/s
 				</span>
 			</div>
 
@@ -127,7 +127,7 @@
 			class="paginacion-modulo m-t-15">
 				<div class="paginacion-modulo__barra">
 					<span class="paginacion-modulo__meta">
-						{{ paginacion.total }} resultados
+						{{ numero_es(paginacion.total) }} resultados
 					</span>
 					<template v-if="paginacion.total > paginacion.per_page">
 						<span
@@ -279,7 +279,9 @@ export default {
 			if (valor === null || typeof valor == 'undefined' || valor === '') {
 				return '—'
 			}
-			return Number(valor).toFixed(decimales)
+			// Los decimales los sigue fijando quien llama; lo unico que cambia es que el
+			// numero sale con los separadores de la interfaz (1.234,50 y no 1234.50).
+			return this.numero_es_con_decimales(valor, decimales)
 		},
 		/**
 		 * true solo ante un cambio REAL entre dos proveedores conocidos: el
@@ -332,7 +334,7 @@ export default {
 				let cantidad = res.data.provider_orders.length
 				let mensaje = cantidad === 1
 					? 'Se genero 1 orden de compra.'
-					: 'Se generaron ' + cantidad + ' ordenes de compra.'
+					: 'Se generaron ' + self.numero_es(cantidad) + ' ordenes de compra.'
 				self.$bvToast.toast(mensaje, {
 					title: 'Orden de compra creada',
 					variant: 'success',

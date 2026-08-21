@@ -42,7 +42,7 @@
 			<template v-else>
 				<!-- El numero grande, contando desde 0. -->
 				<div class="price-update-result-modal__numero">
-					<span class="price-update-result-modal__numero-valor">{{ numero_animado }}</span>
+					<span class="price-update-result-modal__numero-valor">{{ numero_es(numero_animado) }}</span>
 					<span class="price-update-result-modal__numero-label">
 						{{ articulos_actualizados === 1 ? 'artículo cambió de precio' : 'artículos cambiaron de precio' }}
 					</span>
@@ -217,7 +217,7 @@ export default {
 			if (this.proveedores_cantidad === 1) {
 				return 'Se actualizaron precios de 1 proveedor'
 			}
-			return 'Se actualizaron precios de ' + this.proveedores_cantidad + ' proveedores'
+			return 'Se actualizaron precios de ' + this.numero_es(this.proveedores_cantidad) + ' proveedores'
 		},
 	},
 	methods: {

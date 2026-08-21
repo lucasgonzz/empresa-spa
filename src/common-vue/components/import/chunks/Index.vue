@@ -25,14 +25,14 @@
 				<template #cell(creados)="data">
 					<b-button
 					@click="modelos_creados(chunks[data.index])">
-					 	{{ chunks[data.index].created_count }}
+					 	{{ numero_es(chunks[data.index].created_count) }}
 					</b-button>
 				</template>
 				
 				<template #cell(actualizados)="data">
 					<b-button
 					@click="modelos_actualizados(chunks[data.index])">
-					 	{{ chunks[data.index].updated_count }}
+					 	{{ numero_es(chunks[data.index].updated_count) }}
 					</b-button>
 				</template>
 				

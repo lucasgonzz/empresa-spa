@@ -1,6 +1,7 @@
 import moment from 'moment'
 moment.locale('es')
 import numeral from 'numeral'
+import { separadores_es, separadores_es_desde_dato, numero_es as numero_es_helper } from '@/common-vue/helpers/formato_numero'
 
 // numeral.register('locale', 'es_custom', {
 //     delimiters: {
@@ -67,10 +68,12 @@ export default {
 			if (typeof p == 'undefined') {
 				return '-'
 			}
-			let price = numeral(p).format('$0,0.00')	
-			price = price.replaceAll(',', '_')
-			price = price.replace('.', ',')
-			price = price.replaceAll('_', '.')		
+			// numeral formatea SIEMPRE en locale ingles ($1,234.56) y el swap se hace despues,
+			// sobre el texto. El motivo esta explicado en common-vue/helpers/formato_numero.js:
+			// registrarle el locale español a numeral le cambia tambien el PARSEO y multiplica
+			// por cien los precios que Laravel manda como string. Es lo que intentaba el bloque
+			// comentado del principio de este archivo, y por eso nunca se activo.
+			let price = separadores_es(numeral(p).format('$0,0.00'))
 			if (with_decimals) {
 				return price
 			} else {
@@ -83,6 +86,60 @@ export default {
 					return price 
 				}
 			}
+		},
+		/*
+			Los tres metodos de abajo llevan el sufijo `_es` por SEGURIDAD y no por estetica. Este
+			mixin es GLOBAL (ver el comentario grande de arriba): un metodo de aca pisa en silencio
+			cualquier prop que se llame igual.
+
+			`porcentaje` a secas NO se puede usar: ya es una prop declarada en
+			common-vue/components/download-resources/RingProgress.vue,
+			components/listado/modals/inventory-performance/CircleProgress.vue y
+			components/listado/modals/inventory-performance/GraficoDona.vue. Los tres se romperian
+			igual que se rompio WhatsappBtn con phone() en el grupo 373.
+
+			Chequeado el 21/8/2026 contra las 460 props declaradas del repo: los TRES
+			—`numero_es`, `numero_es_con_decimales` y `porcentaje_es`— estan libres. Si agregas
+			otro metodo aca, volve a chequear, y actualiza esta linea con el nombre nuevo: un
+			comentario que nombra menos metodos de los que hay se lee como si estuvieran todos
+			cubiertos.
+
+			Mision del 21/8/2026 — separadores de numeros.
+		*/
+
+		/**
+		 * Una cantidad para mostrar: unidades, stock, kilos, cantidad de registros.
+		 *
+		 * Conserva los decimales que ya traia el valor en vez de imponer una cantidad fija, porque
+		 * lo que se pidio fue cambiar los SEPARADORES, no cuantos decimales se ven.
+		 *
+		 * @param {*} valor valor crudo (numero o string con punto decimal, como lo manda Laravel).
+		 * @returns {string} '1.500' · '1.500,0000' · '12,5' · '' si no hay valor.
+		 */
+		numero_es(valor) {
+			return separadores_es_desde_dato(valor)
+		},
+		/**
+		 * Una cantidad con una cantidad FIJA de decimales.
+		 *
+		 * @param {*} valor valor crudo.
+		 * @param {number} decimales cuantos decimales mostrar.
+		 * @returns {string} ej: numero_es_con_decimales(1234.5, 2) -> '1.234,50'.
+		 */
+		numero_es_con_decimales(valor, decimales) {
+			return numero_es_helper(valor, decimales)
+		},
+		/**
+		 * Un porcentaje para mostrar, SIN el simbolo % (lo pone quien llama, que es como esta
+		 * escrito hoy en todos los templates: `{{ porcentaje_es(x) }}%`).
+		 *
+		 * Conserva los decimales del valor: Laravel manda '10.50' y se muestra '10,50'.
+		 *
+		 * @param {*} valor valor crudo.
+		 * @returns {string} '10,50' · '12,5' · '25' · '' si no hay valor.
+		 */
+		porcentaje_es(valor) {
+			return separadores_es_desde_dato(valor)
 		},
 		getMonth(d) {
 			return moment(d).format('MMM')

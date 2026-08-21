@@ -33,7 +33,7 @@
 		v-model="article.apply_provider_percentage_gain"
         :value="1"
         :unchecked-value="0">
-			Aplicar porcentaje de ganancia ({{ percentage_gain }}%)
+			Aplicar porcentaje de ganancia ({{ porcentaje_es(percentage_gain) }}%)
 		</b-form-checkbox>
 	</b-col>
 </template>
@@ -92,7 +92,8 @@ export default {
 				value: 0, text: 'Seleccione Lista de precios'
 			})
 			this.provider_price_lists.forEach(item => {
-				options.push({value: item.id, text: item.name+' '+item.percentage+'%'})
+				// Solo el `text` se formatea: el `value` (el id) es lo que viaja en el v-model.
+				options.push({value: item.id, text: item.name+' '+this.porcentaje_es(item.percentage)+'%'})
 			})
 			return options
 		},

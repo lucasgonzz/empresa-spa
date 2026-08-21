@@ -237,6 +237,14 @@ export default {
 		descuento: null,
 
 		client: null,
+
+		/*
+			Datos del último rechazo por límite de crédito (misión 160). Lo escriben las DOS puntas:
+			el chequeo local de chequeos/limite_credito.js y el 422 del backend. El modal lee de acá y
+			no le importa cuál de las dos lo llenó.
+		*/
+		limite_credito_excedido: null,
+
 		discounts_id: [],
 		surchages_id: [],
 		to_check: 0,
@@ -761,6 +769,9 @@ export default {
 					after_id: value ? value.id : null,
 				},
 			})
+		},
+		set_limite_credito_excedido(state, value) {
+			state.limite_credito_excedido = value
 		},
 		setSale(state, value) {
 			state.sale = value

@@ -9,7 +9,7 @@
 
 			<span
 			class="pagination-bar-meta">
-				{{ total_results }} resultados
+				{{ numero_es(total_results) }} resultados
 			</span>
 
 			<span
