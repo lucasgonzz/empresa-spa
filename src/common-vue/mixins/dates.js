@@ -88,9 +88,9 @@ export default {
 			}
 		},
 		/*
-			Los dos metodos de abajo se llaman `numero_es` y `porcentaje_es`, con sufijo, por
-			SEGURIDAD y no por estetica. Este mixin es GLOBAL (ver el comentario grande de arriba):
-			un metodo de aca pisa en silencio cualquier prop que se llame igual.
+			Los tres metodos de abajo llevan el sufijo `_es` por SEGURIDAD y no por estetica. Este
+			mixin es GLOBAL (ver el comentario grande de arriba): un metodo de aca pisa en silencio
+			cualquier prop que se llame igual.
 
 			`porcentaje` a secas NO se puede usar: ya es una prop declarada en
 			common-vue/components/download-resources/RingProgress.vue,
@@ -98,8 +98,11 @@ export default {
 			components/listado/modals/inventory-performance/GraficoDona.vue. Los tres se romperian
 			igual que se rompio WhatsappBtn con phone() en el grupo 373.
 
-			Chequeado el 21/8/2026 contra las 460 props declaradas del repo: `numero_es` y
-			`porcentaje_es` estan libres. Si agregas otro metodo aca, volve a chequear.
+			Chequeado el 21/8/2026 contra las 460 props declaradas del repo: los TRES
+			—`numero_es`, `numero_es_con_decimales` y `porcentaje_es`— estan libres. Si agregas
+			otro metodo aca, volve a chequear, y actualiza esta linea con el nombre nuevo: un
+			comentario que nombra menos metodos de los que hay se lee como si estuvieran todos
+			cubiertos.
 
 			Mision del 21/8/2026 — separadores de numeros.
 		*/
