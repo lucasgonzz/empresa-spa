@@ -499,6 +499,7 @@ import PaymentMethodsTable from '@/components/expenses/components/PaymentMethods
 import model_functions from '@/common-vue/mixins/model_functions'
 import {
 	belongs_to_many_columns_modal_id,
+	belongs_to_many_preference_type,
 	form_has_many_cols_from_store,
 	save_form_has_many_cols,
 	default_has_many_form_cols,
@@ -1581,31 +1582,104 @@ export default {
 		 *
 		 * No se toma properties_to_set[0] a ciegas: desde que las columnas de una relacion se
 		 * pueden configurar por usuario (form/BelongsToManyTable.vue), la primera columna declarada
-		 * en el modelo puede estar oculta para quien esta cargando. El foco tiene que ir al primer
-		 * campo que esa persona realmente ve, no a uno que no se dibujo.
+		 * en el modelo puede estar oculta para quien esta cargando (por eso se chequea que exista en
+		 * el DOM) y ademas puede estar reordenada (por eso se recorre en propertiesToSetEnOrdenConfigurado,
+		 * no en el orden estatico del modelo). El foco tiene que ir al primer campo que esa persona
+		 * realmente ve, en la posicion en la que lo ve.
 		 *
-		 * El nombre de la clase es el mismo que arma PivotProp.vue con inputId(prop). Se toma el
-		 * ultimo elemento, no el primero, por el mismo motivo que la version anterior de este
-		 * metodo: si la misma fila esta dibujada por dos tablas a la vez, la de mas abajo en el DOM
-		 * es la que el usuario esta usando.
+		 * El nombre de la clase es el mismo que arma PivotProp.vue con inputId(prop): usa el model_name
+		 * que le llega, que BelongsToManyTable arma con prop.store (no con belongs_to_many.model_name,
+		 * que algunos modelos no declaran -- ej. order.js, commission.js -- y ahi el foco no encontraba
+		 * nada). Se toma el ultimo elemento, no el primero, por el mismo motivo que la version anterior
+		 * de este metodo: si la misma fila esta dibujada por dos tablas a la vez, la de mas abajo en el
+		 * DOM es la que el usuario esta usando.
 		 *
 		 * @param {Object} prop propiedad belongs_to_many.
 		 * @param {Object} model_to_add modelo recien agregado.
+		 * Si la columna configurada primero es un checkbox, la clase no queda en el <input> sino
+		 * en el <div> contenedor que arma BootstrapVue (custom-control custom-checkbox) -- ahi
+		 * .focus() no hace nada porque un div sin tabindex no es enfocable. Por eso el elemento
+		 * encontrado se resuelve con controlEnfocableDentroDe antes de aceptarlo: si no hay ningun
+		 * control real adentro, se sigue buscando en la siguiente columna en vez de quedar
+		 * enganchado en un elemento que nunca va a recibir el foco.
+		 *
 		 * @returns {HTMLElement|null} el input, o null si todavia no se dibujo ninguno.
 		 */
 		primerInputDelPivote(prop, model_to_add) {
+			let table_model_name = prop.store || prop.belongs_to_many.model_name
 			let encontrado = null
-			prop.belongs_to_many.properties_to_set.forEach(prop_to_set => {
+			this.propertiesToSetEnOrdenConfigurado(prop).forEach(prop_to_set => {
 				if (encontrado) {
 					return
 				}
-				let class_name = prop.belongs_to_many.model_name+'-'+prop_to_set.key+'-'+model_to_add.id
+				let class_name = table_model_name+'-'+prop_to_set.key+'-'+model_to_add.id
 				let elements = document.getElementsByClassName(class_name)
 				if (elements.length) {
-					encontrado = elements[elements.length-1]
+					encontrado = this.controlEnfocableDentroDe(elements[elements.length-1])
 				}
 			})
 			return encontrado
+		},
+		/**
+		 * Control nativo enfocable dentro de la celda del pivote que coincidio por clase.
+		 *
+		 * La mayoria de los tipos de pivote (text, number, textarea, select) ponen la clase
+		 * directo en el elemento nativo, asi que ese elemento ya es el control. b-form-checkbox
+		 * es la excepcion: BootstrapVue pone la clase en el <div class="custom-control
+		 * custom-checkbox"> que arma como raiz, no en el <input type="checkbox"> real que dibuja
+		 * adentro -- hay que bajar un nivel para encontrar algo enfocable.
+		 *
+		 * @param {HTMLElement} element elemento encontrado por su clase (inputId de PivotProp.vue).
+		 * @returns {HTMLElement|null} el control enfocable, o null si no hay ninguno adentro.
+		 */
+		controlEnfocableDentroDe(element) {
+			let tags_enfocables = ['INPUT', 'SELECT', 'TEXTAREA']
+			if (tags_enfocables.indexOf(element.tagName) != -1) {
+				return element
+			}
+			return element.querySelector('input, select, textarea')
+		},
+		/**
+		 * properties_to_set del modelo, reordenadas segun la preferencia de columnas que el usuario
+		 * guardo para esta tabla (mismo preference_type que arma BelongsToManyTable/ColumnsPreferencesConfigModal).
+		 * Sin preferencia guardada, o sin prop.store para leerla, devuelve el orden estatico declarado
+		 * en el modelo (comportamiento de siempre). Las properties_to_set que se agregaron al modelo
+		 * despues de que el usuario guardo su configuracion (sin fila en la preferencia) van al final,
+		 * en el orden en que estan declaradas.
+		 *
+		 * @param {Object} prop propiedad belongs_to_many.
+		 * @returns {Array} copia de properties_to_set en el orden a recorrer para buscar el foco.
+		 */
+		propertiesToSetEnOrdenConfigurado(prop) {
+			let properties_to_set = prop.belongs_to_many.properties_to_set
+
+			if (!prop.store) {
+				return properties_to_set
+			}
+
+			let preference_columns = this.tableColumnPreferenceColumnsFromStore(
+				prop.store,
+				belongs_to_many_preference_type(this.model_name, prop.key)
+			)
+			if (!preference_columns || !preference_columns.length) {
+				return properties_to_set
+			}
+
+			let order_by_key = {}
+			preference_columns.forEach(column => {
+				if ((column.source || 'model_prop') == 'pivot_set') {
+					order_by_key[column.key] = Number(column.order)
+				}
+			})
+
+			return properties_to_set.slice().sort((a, b) => {
+				let order_a = typeof order_by_key[a.key] == 'undefined' ? Infinity : order_by_key[a.key]
+				let order_b = typeof order_by_key[b.key] == 'undefined' ? Infinity : order_by_key[b.key]
+				if (order_a == order_b) {
+					return 0
+				}
+				return order_a - order_b
+			})
 		},
 		clickEnter(prop) {
 			/*

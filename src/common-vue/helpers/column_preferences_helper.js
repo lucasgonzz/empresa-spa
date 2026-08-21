@@ -211,6 +211,21 @@ export function belongs_to_many_columns_modal_id(parent_model_name, prop_key) {
 }
 
 /**
+ * preference_type de la configuracion de columnas de una relación belongs_to_many.
+ *
+ * Vive acá por el mismo motivo que belongs_to_many_columns_modal_id: lo arma BelongsToManyTable
+ * para guardar/leer la preferencia, y también lo necesita ModelForm para resolver el primer campo
+ * del pivote a enfocar en el orden que el usuario configuró (ver setTableFocus).
+ *
+ * @param {string} parent_model_name Modelo padre (ej: 'provider_order').
+ * @param {string} prop_key Clave de la relación (ej: 'articles').
+ * @returns {string}
+ */
+export function belongs_to_many_preference_type(parent_model_name, prop_key) {
+	return `btm_${parent_model_name}_${prop_key}`
+}
+
+/**
  * Propiedades base del modelo aptas para preferencias de tabla.
  *
  * @param {Object} store
