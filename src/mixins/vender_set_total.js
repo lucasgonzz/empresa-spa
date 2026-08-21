@@ -67,7 +67,15 @@ export default {
 			return this.$store.state.vender.selected_payment_methods 
 		},
 		descuento() {
-			return this.$store.state.vender.descuento 
+			return this.$store.state.vender.descuento
+		},
+		/* Puntos que el cliente gasta en esta venta (extension puntos_clientes) */
+		puntos_canjeados() {
+			return this.$store.state.vender.puntos_canjeados
+		},
+		/* Los pesos que esos puntos descuentan, ya calculados con el valor_punto del programa */
+		descuento_puntos() {
+			return this.$store.state.vender.descuento_puntos
 		},
 		// moneda_id() {
 		// 	return this.$store.state.vender.moneda_id 
@@ -161,7 +169,9 @@ export default {
 				
 				// sub_total = this.total_articles + this.total_services + this.total_combos + this.total_promocion_vinoteca
 				total = this.total_articles + this.total_services + this.total_combos + this.total_promocion_vinoteca
-				
+
+				total = this.aplicar_canje_de_puntos(total)
+
 				this.des.push('Total venta: '+this.price(total))
 
 				total = this.aplicar_payment_method_discounts_a_total_repartido_del_modal(total)
@@ -383,6 +393,65 @@ export default {
 			}
 			return false
 
+		},
+		/**
+		 * Resta del total el canje de puntos del cliente (extension puntos_clientes).
+		 *
+		 * 🔴 DONDE ENTRA EN LA CUENTA, Y POR QUE JUSTO AHI.
+		 *
+		 * Se llama en setTotal() despues de que aplicar_descuento(), aplicar_discounts() y
+		 * aplicar_surchages() ya movieron total_articles/combos/servicios, y ANTES de
+		 * aplicar_payment_method_discounts_a_total_repartido_del_modal(). O sea:
+		 *
+		 *     bruto = (articulos + servicios + combos + promos), ya con descuentos y recargos de venta
+		 *     total = bruto - descuento_puntos - (descuentos/recargos del reparto por medio de pago)
+		 *
+		 * Y el servidor, en PuntosCanjeHelper::validar(), reconstruye el bruto que mide contra
+		 * el tope como `total + descuento_puntos`. Esa igualdad se cumple exactamente con este
+		 * orden porque los montos del reparto por medio de pago son importes fijos, no
+		 * porcentajes: restarlos antes o despues del canje da el mismo numero.
+		 *
+		 * Si el canje se aplicara ANTES de los descuentos y recargos de venta, en cambio, el
+		 * porcentaje de esos descuentos caeria tambien sobre el canje, el bruto que reconstruye
+		 * el servidor dejaria de coincidir y TODA venta con canje rebotaria con 422.
+		 *
+		 * 🔴 EL MONTO NO SE RECALCULA ACA. Se usa el descuento_puntos que ya dejo el panel de
+		 * canje (stage-3/Puntos.vue), que salio del valor_punto que devolvio
+		 * /api/puntos/disponible. El servidor lo recalcula con round(puntos * valor_punto, 2) y
+		 * lo compara con tolerancia de un centavo: un redondeo propio distinto del suyo es un
+		 * 422, no una diferencia que se corrija sola.
+		 *
+		 * @param {Number} total Total de la venta antes del canje.
+		 * @returns {Number} Total ya neteado.
+		 */
+		aplicar_canje_de_puntos(total) {
+
+			let descuento_puntos = Number(this.descuento_puntos)
+
+			if (!descuento_puntos || descuento_puntos <= 0) {
+				return total
+			}
+
+			this.des.push('APLICANDO CANJE DE PUNTOS')
+			this.des.push('Canje de '+this.puntos_canjeados+' puntos: -'+this.price(descuento_puntos))
+
+			total -= descuento_puntos
+
+			/*
+				Piso en cero. Con el tope del programa (20% por defecto) no se llega nunca, pero
+				un comercio puede configurarlo en 100 y, con descuentos de venta encima, el total
+				daria negativo: una venta con total negativo se imputa al reves en la cuenta
+				corriente y en la caja. Se prefiere que el servidor rechace el canje por exceder
+				el tope --con su mensaje, que el vendedor entiende-- antes que guardar plata en
+				contra.
+			*/
+			if (total < 0) {
+				total = 0
+			}
+
+			this.des.push('Total con canje de puntos: '+this.price(total))
+
+			return total
 		},
 		aplicar_descuento() {
 			if (this.descuento) {

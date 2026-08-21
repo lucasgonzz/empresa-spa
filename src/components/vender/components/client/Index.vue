@@ -30,6 +30,13 @@
 				<surchages></surchages>
 			</div>
 
+			<!--
+				Canje de puntos, el mismo componente que monta stage-3/Index.vue. Va también acá
+				para que el layout viejo no se quede sin el canje si alguien vuelve a usarlo:
+				hoy este archivo no lo importa ninguna vista.
+			-->
+			<puntos></puntos>
+
 			<nota-credito></nota-credito>
 		</b-col>
 	</b-row>
@@ -44,6 +51,7 @@ import GuardarComoPresupuesto from '@/components/vender/components/stage-1/Guard
 import Discounts from '@/components/vender/components/stage-3/Discounts'
 import Surchages from '@/components/vender/components/stage-3/Surchages'
 import NotaCredito from '@/components/vender/components/stage-3/NotaCredito'
+import Puntos from '@/components/vender/components/stage-3/Puntos'
 export default {
 	components: {
 		TotalPreviusSales,
@@ -53,6 +61,7 @@ export default {
 		GuardarComoPresupuesto,
 		Discounts,
 		Surchages,
+		Puntos,
 		NotaCredito,
 	},
 }
