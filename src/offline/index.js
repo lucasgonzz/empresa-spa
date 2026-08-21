@@ -29,6 +29,11 @@ export default {
              * Evita limpiar la memoria offline repetidamente en el mismo ciclo.
              */
             offline_memory_cleared_for_disabled_mode: false,
+            /**
+             * Evita que dos disparadores lancen la sincronizacion a la vez. Ver el comentario
+             * de `sincronizar_offline()`.
+             */
+            sincronizacion_offline_en_curso: false,
         }
     },
     methods: {
@@ -167,7 +172,32 @@ export default {
         },
         async sincronizar_offline() {
             console.log('sincronizar_offline')
-            if (navigator.onLine) {
+
+            /*
+                Esto se dispara desde DOS lados: el listener `online` de este mismo mixin y el
+                watcher `authenticated` de App.vue. Al volver la conexion en una sesion recien
+                abierta llegan los dos casi juntos, y dos corridas simultaneas postearian la misma
+                venta dos veces -- la ventana de deduplicacion del backend es de 5 segundos y no
+                cubre una venta que tarde mas que eso -- y abririan dos veces el modal de
+                facturacion.
+
+                Alcanza con un booleano en data() y no hace falta un lock en IndexedDB porque este
+                mixin se mezcla en App.vue, que es UNA sola instancia: los dos disparadores
+                comparten el mismo `data`.
+            */
+            if (this.sincronizacion_offline_en_curso) {
+                console.log('Ya hay una sincronizacion offline en curso, no se lanza otra')
+                return
+            }
+
+            this.sincronizacion_offline_en_curso = true
+
+            try {
+
+                if (!navigator.onLine) {
+                    return
+                }
+
                 console.log('🟢 Está online')
 
                 /**
@@ -196,7 +226,29 @@ export default {
                 } else {
                     console.log('No se descargaron articulos offline')
                 }
-                this.sync_pending_sales()
+
+                const ventas_sincronizadas = await this.sync_pending_sales()
+
+                /*
+                    Solo las que se guardaron con punto de venta: son las que, con internet,
+                    habrian salido a facturar solas. Las demas se sincronizaron y ahi termina su
+                    historia, igual que hoy.
+                */
+                const ventas_para_facturar = ventas_sincronizadas.filter(venta => venta.afip.ventas_afip_information_id)
+
+                console.log('ventas offline para facturar:')
+                console.log(ventas_para_facturar)
+
+            } finally {
+                /*
+                    🔴 El finally tiene que cubrir TAMBIEN los return tempranos de arriba (sin
+                    conexion, login maestro, modo offline desactivado). Si la bandera quedara
+                    prendida en uno de esos caminos, la sincronizacion no volveria a correr en toda
+                    la sesion y las ventas offline se quedarian en IndexedDB sin que nada lo
+                    denuncie -- que es exactamente el modo de falla silencioso que esta mision vino
+                    a cerrar.
+                */
+                this.sincronizacion_offline_en_curso = false
             }
         },
         online() {
