@@ -276,6 +276,21 @@ export default {
             })
         },
         /**
+         * ⚠️ Efecto aceptado a conciencia, no un descuido: esto tambien corre cuando la cadena la
+         * arranco el modal de ventas offline, que se abre SOLO al volver la conexion y desde
+         * cualquier pantalla. O sea que dos segundos despues de terminar de facturar se le limpia
+         * la seleccion de Ventas al usuario y se le cierran los modales `sale` y
+         * `afip-reenviar-facturas`, sin que el haya pedido nada.
+         *
+         * Antes esto solo pasaba cuando el usuario mismo habia arrancado la emision desde Ventas
+         * o desde Reenviar facturas, donde limpiar era justamente lo que esperaba.
+         *
+         * Se dejo asi y no se acoto porque no pierde datos ni facturas -- lo unico que se pierde
+         * es una seleccion de pantalla -- y separar los dos casos significaria partir el bloque de
+         * cierre en dos, que es la clase de duplicacion que este refactor vino a evitar. Si algun
+         * dia molesta de verdad, la salida es un parametro en iniciar_emision, no copiar el
+         * bloque.
+         *
          * Limpieza y cierre despues de emitir todas las facturas. Los 2 segundos de espera son
          * los de siempre: dan tiempo a leer el resultado de la ultima venta antes de que el
          * modal se cierre solo.
