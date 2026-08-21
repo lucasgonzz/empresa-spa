@@ -33,11 +33,22 @@
 								{{ data.item.credit_card_payment_plan.installments }}
 							</strong>
 						</p>
+						<!--
+							`surchage` del plan de pago es un PORCENTAJE, no un monto. Se verifico en los
+							dos unicos lugares donde se usa para algo:
+							  - current-acounts/pago/CreditCard.vue lo aplica como
+							    `amount + amount * surchage / 100`, y esa division por 100 solo tiene
+							    sentido con un porcentaje;
+							  - ahi mismo, y en payment-methods/Cuotas.vue, el texto de la opcion es
+							    "<n> cuotas con <surchage>% recargo".
+							Se le agrega el % que faltaba: sin el, bajo el label "Recargo" un 10,50 se
+							lee como diez pesos con cincuenta.
+						-->
 						<p
 							class="j-between">
 							Recargo
 							<strong>
-								{{ data.item.credit_card_payment_plan.surchage }}
+								{{ porcentaje_es(data.item.credit_card_payment_plan.surchage) }}%
 							</strong>
 						</p>
 					</div>

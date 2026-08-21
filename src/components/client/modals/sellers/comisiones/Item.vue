@@ -42,7 +42,7 @@
 			<div
 			v-if="item.percentage"
 			class="comision-item__meta">
-				{{ item.percentage }}%
+				{{ porcentaje_es(item.percentage) }}%
 			</div>
 			<div
 			v-if="item.debe"

@@ -30,7 +30,7 @@ hide-footer>
 		:tbody-tr-class="rowClass">
 			<template #cell(diff)="data">
 				<span :class="diffClass(data.item)">
-					{{ data.item.diff > 0 ? '+' : '' }}{{ data.item.diff }}
+					{{ data.item.diff > 0 ? '+' : '' }}{{ numero_es(data.item.diff) }}
 				</span>
 			</template>
 			<template #cell(status)="data">
@@ -50,10 +50,16 @@ export default {
 			return this.$store.state.provider_order.import_diff || []
 		},
 		fields() {
+			/*
+			 * Las dos cantidades pasan por numero_es para que se vean con punto de miles y coma
+			 * decimal, igual que el resto del sistema. El formatter solo toca lo que se MUESTRA:
+			 * el valor crudo del item queda intacto (la tabla no ordena ni filtra por estas
+			 * columnas, y `diff` se calcula sobre el item, no sobre el texto).
+			 */
 			return [
 				{ key: 'name',     label: 'Artículo' },
-				{ key: 'pedida',   label: 'Pedida' },
-				{ key: 'recibida', label: 'Recibida' },
+				{ key: 'pedida',   label: 'Pedida',   formatter: (valor) => this.numero_es(valor) },
+				{ key: 'recibida', label: 'Recibida', formatter: (valor) => this.numero_es(valor) },
 				{ key: 'diff',     label: 'Diferencia' },
 				{ key: 'status',   label: 'Estado' },
 			]

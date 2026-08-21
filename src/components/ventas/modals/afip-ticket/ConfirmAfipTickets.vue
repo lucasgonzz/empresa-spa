@@ -214,7 +214,6 @@
 </div>
 </template>
 <script>
-import numeral from 'numeral'
 import afip_ticket from '@/mixins/sale/afip_ticket'
 import set_afip_tipo_comprobante from '@/mixins/vender/set_afip_tipo_comprobante'
 export default {
@@ -541,16 +540,24 @@ export default {
 			})
 		},
 		/**
-		 * 🔴 price() del sistema devuelve '-' cuando el valor es falsy, y el 0 es falsy. Acá el
-		 * 0 es un valor legitimo y frecuentisimo -las seis filas del reparto arrancan vacias-,
-		 * asi que se formatea con el mismo numeral y el mismo formato que usa price(), pero sin
-		 * ese early return.
+		 * 🔴 price() del sistema devuelve '-' cuando el valor es null o undefined. Aca el 0 es un
+		 * valor legitimo y frecuentisimo -las seis filas del reparto arrancan vacias-, asi que
+		 * primero se normaliza a numero y recien despues se formatea.
+		 *
+		 * Hasta el 21/8/2026 esto llamaba a numeral directo y salia en formato ingles
+		 * ($1,234.56), distinto de todo el resto del sistema. Ahora delega en price(), que es el
+		 * unico lugar donde se decide como se ve la plata: punto para los miles, coma para los
+		 * decimales.
+		 *
+		 * El segundo argumento (with_decimals = true) NO es opcional para este caso: sin el,
+		 * price() le come los ',00' a los importes redondos y la columna de alicuotas queda
+		 * despareja. Acá los dos decimales se muestran siempre, como venia siendo.
 		 *
 		 * @param {Number} valor
 		 * @returns {String}
 		 */
 		plata(valor) {
-			return numeral(Number(valor) || 0).format('$0,0.00')
+			return this.price(Number(valor) || 0, true)
 		},
 		redondear_plata(numero) {
 			return Math.round((Number(numero) || 0) * 100) / 100

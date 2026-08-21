@@ -11,7 +11,7 @@
 		:key="surchage.id"
 		:value="surchage.id"
 		v-model="devolucion_surchages">
-			{{ surchage.name }} ({{ surchage.percentage }}%)
+			{{ surchage.name }} ({{ porcentaje_es(surchage.percentage) }}%)
 			
 			<span
 			v-if="surchage.deleted_at">
@@ -20,13 +20,13 @@
 
 			<span
 			v-else-if="surchage.updated_percentage">
-				({{ surchage.updated_percentage }}% en este momento)
+				({{ porcentaje_es(surchage.updated_percentage) }}% en este momento)
 			</span>
 
 			<p
 			class="text-muted"
 			v-if="!surchage.deleted_at && surchage.updated_percentage">
-				En caso de querer usar el valor actual del recargo ({{ surchage.updated_percentage }}%), actualice la venta, quite el recargo y guarde la venta sin el recargo. Luego vuelva a generar una devolucion para esta venta y agregue el recargo con el valor actual.
+				En caso de querer usar el valor actual del recargo ({{ porcentaje_es(surchage.updated_percentage) }}%), actualice la venta, quite el recargo y guarde la venta sin el recargo. Luego vuelva a generar una devolucion para esta venta y agregue el recargo con el valor actual.
 			</p>
 			
 		</b-form-checkbox>

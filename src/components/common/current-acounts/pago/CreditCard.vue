@@ -59,7 +59,9 @@ export default {
 			if (typeof credit_card != 'undefined') {
 				credit_card.credit_card_payment_plans.forEach(payment_plan => {
 					options.push({
-						text: payment_plan.installments+' cuotas con '+payment_plan.surchage+'% recargo',
+						// Las cuotas son un identificador y quedan crudas; el recargo es un porcentaje.
+						// Solo se formatea el `text`: el `value` (el id del plan) es lo que viaja en el v-model.
+						text: payment_plan.installments+' cuotas con '+this.porcentaje_es(payment_plan.surchage)+'% recargo',
 						value: payment_plan.id 
 					})
 				})
