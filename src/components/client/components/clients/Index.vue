@@ -58,6 +58,33 @@
 				<btn-actividad-cliente
 				:client_id="slotProps.model.id"
 				:nombre="slotProps.model.name"></btn-actividad-cliente>
+
+				<!--
+					Cuarto de la fila, HERMANO y no anidado, por el mismo motivo que los dos de
+					arriba.
+
+					🔴 `@click.stop` NO ES DECORATIVO: el <tr> entero tiene su propio @click que
+					abre el modal de edición del cliente (`common-vue/components/display/table/Tr.vue`).
+					Sin `.stop` el operador termina con el modal de puntos Y el de edición
+					encima. Es la misma razón por la que lo llevan sus tres vecinos.
+
+					🔴 El gate es `hasExtencion('puntos_clientes')`, la MISMA extensión con la
+					que el backend gatea las rutas del módulo: sin ella los endpoints contestan
+					403 y el botón sería un click muerto.
+
+					El botón va escrito acá y no en un componente propio de `common/` porque esa
+					carpeta no es de esta unidad de trabajo. Si mañana el mismo acceso hace falta
+					en otra pantalla, ahí sí conviene sacarlo a un `BtnPuntosCliente.vue`.
+				-->
+				<b-button
+				v-if="hasExtencion('puntos_clientes')"
+				class="m-l-15"
+				variant="outline-warning"
+				title="Ver los puntos de este cliente"
+				@click.stop="abrir_puntos(slotProps.model)">
+					<i class="bi bi-star m-r-5"></i>
+					Puntos
+				</b-button>
 			</template>
 		</view-component>
 
@@ -83,6 +110,27 @@ export default {
 		SaldosClientesFiltrados: () => import('@/components/client/components/clients/SaldosClientesFiltrados'),
 		Import: () => import('@/components/client/components/clients/Import'),
 		BtnPdf: () => import('@/components/client/components/clients/BtnPdf'),
-	}
+	},
+	methods: {
+		/**
+		 * Abre el modal de puntos del cliente de la fila.
+		 *
+		 * 🔴 Va por el bus de $root y no por una prop: el modal se monta en `views/Client.vue`,
+		 * como hermano de este componente, o sea en otro subárbol. Es el mismo mecanismo que ya
+		 * usa el repo para cruzar subárboles (`vender:expand-stage1`,
+		 * `open-change-provider-modal`).
+		 *
+		 * El pedido de datos NO se dispara acá: lo hace el propio modal, que es el único que
+		 * sabe cómo se carga esa pantalla. Igual que `common/BtnActividadCliente.vue`.
+		 *
+		 * @param {Object} model - el cliente de la fila
+		 */
+		abrir_puntos(model) {
+			this.$root.$emit('puntos-cliente:abrir', {
+				client_id: model.id,
+				nombre: model.name,
+			})
+		},
+	},
 }
 </script>
