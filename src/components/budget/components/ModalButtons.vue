@@ -87,8 +87,11 @@ export default {
 <style lang="sass">
 .budget-modal-buttons
 	display: flex
-	flex-flow: row nowrap
+	// Envuelve en vez de desbordar: con el boton de Confirmar/Anular son cuatro grupos en una
+	// sola fila, y en telefono (360-390px) `nowrap` los empujaba fuera del header del modal.
+	flex-flow: row wrap
 	align-items: center
+	gap: 6px 0
 	width: 100%
 	overflow: visible
 	padding: 6px 0

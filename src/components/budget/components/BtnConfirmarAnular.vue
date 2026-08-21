@@ -43,11 +43,40 @@ export default {
 			 * Ya estaban hardcodeados en `Budget.vue` y en `BtnActualizarEnVender`.
 			 */
 			ESTADO_CONFIRMADO: 2,
+			/**
+			 * 🔴 Estado tal como está GUARDADO, no el que muestra el formulario.
+			 *
+			 * En el modal, `model` es `$store.state.budget.model`, que es el mismo objeto que el
+			 * formulario escribe en vivo: `ModelForm.vue` hace `$set(model, prop.key, $event)` en
+			 * cada `@input`, y `models/budget.js` sigue exponiendo el select "Estado del
+			 * presupuesto". Si el botón leyera `model.budget_status_id`, cambiar ese select SIN
+			 * guardar lo daba vuelta a "Anular", y al apretarlo salía un 422 "El presupuesto no
+			 * esta confirmado" sobre algo que en la base seguía sin confirmar.
+			 *
+			 * En el listado el problema no existe (ahí `props.model` es la fila persistida), pero la
+			 * foto sirve igual y deja el componente andando igual en los dos lugares.
+			 */
+			estado_persistido: null,
 		}
 	},
 	computed: {
 		esta_confirmado() {
-			return this.model && this.model.budget_status_id == this.ESTADO_CONFIRMADO
+			return this.estado_persistido == this.ESTADO_CONFIRMADO
+		},
+	},
+	watch: {
+		/**
+		 * Se re-saca la foto cuando el botón pasa a representar OTRO presupuesto. No alcanza con
+		 * hacerlo en `created`: en el modal el componente se reusa entre presupuestos distintos.
+		 *
+		 * Se mira el id y no el estado, justamente para que la mutación del select —que no cambia el
+		 * id— no vuelva a disparar esto.
+		 */
+		'model.id': {
+			immediate: true,
+			handler() {
+				this.estado_persistido = this.model ? this.model.budget_status_id : null
+			},
 		},
 	},
 	methods: {
@@ -101,6 +130,9 @@ export default {
 					this.$toast.success(mensaje_ok)
 
 					let budget = res.data.model
+
+					/** La foto se actualiza con lo que devolvió el servidor, no con lo que se supuso. */
+					this.estado_persistido = budget.budget_status_id
 
 					this.$store.commit('budget/add', budget)
 
