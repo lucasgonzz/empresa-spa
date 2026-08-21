@@ -119,6 +119,20 @@ export default {
 			],
 		},
 		/*
+		 * Mision costo-bruto-por-condicion-fiscal, plan v2 (20/8/2026): ACA HABIA un switch de
+		 * cuenta, "Los costos se cargan con IVA incluido" (users.costos_cargados_con_iva), que era
+		 * el default de como interpretar el costo que alguien tipeaba. Se saco junto con la columna,
+		 * que se elimina de la base.
+		 *
+		 * Por que ya no existe: un default de cuenta se colaba como declaracion. El que carga el
+		 * costo es el que dice si es neto o bruto, y lo dice en el momento y en el lugar de la
+		 * carga -- en el listado, eligiendo en cual de los dos inputs escribe (CostInput.vue); en
+		 * la compra, con provider_orders.precios_incluyen_iva; en el import de Excel, con un control
+		 * propio por planilla. Con eso no queda nada que adivinar a nivel cuenta, y de paso se evita
+		 * que un guardado que ni toca el costo lo descomponga porque la cuenta tenia el switch
+		 * prendido.
+		 */
+		/*
 		 * Prompt 266 (Fase 2, Capa 3): modo "precio de etiqueta incluye la tarjeta mas cara".
 		 * Si esta activo, el precio final del articulo (el que se muestra en LISTADO y VENDER) ya
 		 * tiene incorporado el recargo del metodo de pago mas caro configurado. Al elegir un metodo

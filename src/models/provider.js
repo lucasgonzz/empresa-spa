@@ -59,11 +59,14 @@ export default {
 			// este proveedor en una compra (provider_order), se precarga este valor en el check de la
 			// compra (ver "prefill_prop_on_select" en provider_order.js), pero el usuario puede
 			// sobreescribirlo en cada compra puntual.
-			text: 'Los precios de este proveedor ya incluyen IVA',
+			// Mision costo-bruto-por-condicion-fiscal (20/8/2026): el texto habla de COSTOS y no de
+			// "precios" porque lo que este default decide es como se lee el costo tipeado en la
+			// compra (bruto = con IVA adentro, o neto). El precio de venta del articulo no entra.
+			text: 'Los costos de este proveedor son BRUTOS (ya tienen el IVA adentro)',
 			key: 'precios_incluyen_iva',
 			type: 'checkbox',
 			value: 0,
-			description: 'Valor por defecto para tus compras a este proveedor: si sus listas de precios ya incluyen IVA. Al cargar una compra de este proveedor, el check "Los precios ya incluyen IVA" viene pre-tildado según esto (podés cambiarlo en cada compra).',
+			description: 'Valor por defecto para tus compras a este proveedor: activalo si sus listas ya vienen con el IVA sumado al costo. Al cargar una compra de este proveedor, el check "Los costos que cargo en esta compra son BRUTOS (ya tienen el IVA adentro)" viene pre-tildado según esto, y lo podés cambiar en cada compra. Ojo: esto no modifica el costo de ningún artículo ya cargado, solo define cómo se va a interpretar el número que tipees en la próxima compra.',
 		},
 		{
 			text: 'Margen de ganancia',

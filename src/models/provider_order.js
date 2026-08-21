@@ -109,11 +109,29 @@ export default {
 			// una descripcion SIEMPRE VISIBLE (no popover) que cambia segun el estado del toggle -
 			// por eso ya no se usa "descriptions" aca (quedaba como popover solo al hacer click,
 			// que era justamente la confusion que este prompt vino a resolver).
-			text: 'Los precios ya incluyen IVA',
+			// Mision costo-bruto-por-condicion-fiscal (20/8/2026): el titulo dice "costos" y no
+			// "precios" porque lo unico que este flag decide es COMO SE INTERPRETA EL COSTO que el
+			// usuario tipea por articulo: bruto (con IVA adentro, el sistema se lo saca y guarda el
+			// neto) o neto (se guarda tal cual). Decir "precios" mandaba a pensar en el precio de
+			// venta, que este flag no toca.
+			text: 'Los costos que cargo en esta compra son BRUTOS (ya tienen el IVA adentro)',
 			key: 'precios_incluyen_iva',
 			type: 'checkbox',
 			value: 0,
 			not_show: true,
+			/*
+			 * Mision costo-bruto-por-condicion-fiscal (20/8/2026): el control NO se le muestra al
+			 * Monotributista, y eso es correcto justamente porque para el no hay nada que elegir.
+			 *
+			 * Todo lo que carga un MT es bruto por definicion (recibe Factura B), asi que
+			 * ArticlePricesHelper::el_costo_cargado_es_bruto() le devuelve true sin mirar este flag.
+			 * Mostrarselo seria ofrecerle una decision que el sistema despues ignora.
+			 *
+			 * 🔴 Este ocultamiento y el branching por condicion fiscal del backend van SIEMPRE juntos.
+			 * Durante un rato de esta misma mision se saco el branching y quedo el control oculto: un
+			 * MT no tenia ninguna forma de declarar bruto y cada compra suya se guardaba 21% abajo,
+			 * sin salida. Si alguna vez se vuelve a tocar uno, hay que tocar el otro.
+			 */
 			v_if_function: 'es_responsable_inscripto_v_if_function',
 		},
 		{
@@ -547,8 +565,8 @@ export default {
 
 		El computed model() de common-vue/components/model/Index.vue devuelve una COPIA nueva del
 		modelo del store (`{...model}`) para todo modelo que no declare esto. ModelForm escribe en
-		esa copia, pero varios controles propios de este modulo --el toggle "Los precios ya incluyen
-		IVA" (PreciosIncluyenIva.vue), y Total.vue / IvaBreakdown / PriceDescription para leer--
+		esa copia, pero varios controles propios de este modulo --el toggle de costos brutos/netos
+		(PreciosIncluyenIva.vue), y Total.vue / IvaBreakdown / PriceDescription para leer--
 		hablan directo con el modelo del STORE, porque el slot de ModelForm no les pasa el modelo del
 		formulario. Entonces, apenas el toggle escribia en el store, el computed se recalculaba,
 		devolvia una copia recien sacada de ahi y se borraba todo lo editado hasta ese momento.
