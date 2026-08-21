@@ -233,6 +233,19 @@ export default {
 				monto_credito_real: this.$store.state.vender.monto_credito_real,
 				caja_id: this.$store.state.vender.caja_id,
 				afip_tipo_comprobante_id: this.$store.state.vender.afip_tipo_comprobante_id,
+				/*
+					Estos tres no son para POST /sale -- de los tres, el backend solo consume
+					`incoterms`. Se guardan igual en IndexedDB porque cuando vuelva la conexion hay
+					que emitir la factura de esta venta con EXACTAMENTE los mismos datos que habria
+					usado el camino online, y `forma_de_pago` y `permiso_existente` viajan unicamente
+					en el POST a afip-ticket: no se persisten en la tabla `sales`, asi que si no
+					quedan aca no hay de donde recuperarlos despues. Solo los mira el comprobante
+					tipo 8 (exportacion), pero se guardan siempre para que el camino offline y el
+					online guarden lo mismo y nadie tenga que acordarse de esta excepcion.
+				*/
+				incoterms: this.$store.state.vender.incoterms,
+				forma_de_pago: this.$store.state.vender.forma_de_pago,
+				permiso_existente: this.$store.state.vender.permiso_existente,
 				descuento: this.$store.state.vender.descuento,
 				fecha_entrega: this.$store.state.vender.fecha_entrega,
 				observations_ocultas: this.$store.state.vender.observations_ocultas,
