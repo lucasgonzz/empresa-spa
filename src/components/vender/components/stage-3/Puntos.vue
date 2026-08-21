@@ -59,22 +59,40 @@
 					<span class="vender-rate-panel__section-hint vender-puntos__hint-total">
 						Total de la venta con el canje: {{ price(total_vender) }}
 					</span>
+					<!--
+						Editando: el canje viene cargado desde la venta guardada, asi que hay que
+						decir de entrada que guardar sin tocar nada lo deja igual --antes no era
+						asi y por eso hace falta decirlo-- y que Quitar cobra la venta entera.
+					-->
+					<span
+					v-if="en_edicion"
+					class="vender-rate-panel__section-hint">
+						Si guardás la edición sin tocar el canje, queda tal cual está. Si tocás
+						Quitar, al guardar los {{ puntos_es(canje_aplicado) }} puntos vuelven al
+						cliente y la venta pasa a cobrarse entera, por {{ price(total_bruto) }}.
+					</span>
 				</div>
 
-				<!-- Editando una venta guardada: el canje no se puede tocar desde aca -->
+				<!--
+					Editando una venta guardada y sin canje en la venta: o se guardó sin canje, o
+					el vendedor acaba de tocar Quitar. En los dos casos el canje no se vuelve a
+					armar desde acá: se arma al crear la venta.
+				-->
 				<div
 				v-else-if="en_edicion"
 				class="vender-rate-panel__section">
-					<span class="vender-rate-panel__section-hint">
-						El canje de puntos se hace al crear la venta. Editando un comprobante ya
-						guardado no se puede canjear desde acá.
-					</span>
 					<span
 					v-if="canje_de_la_venta_editada"
 					class="vender-rate-panel__section-hint vender-puntos__alerta">
-						Ojo: esta venta se guardó con un canje de
-						{{ puntos_es(canje_de_la_venta_editada) }} puntos. Al guardar la edición el
-						canje se deshace y esos puntos vuelven al cliente.
+						Quitaste el canje de {{ puntos_es(canje_de_la_venta_editada) }} puntos con
+						el que se había guardado esta venta. Al guardar la edición esos puntos
+						vuelven al cliente y la venta se cobra entera, por {{ price(total_vender) }}.
+					</span>
+					<span
+					v-else
+					class="vender-rate-panel__section-hint">
+						El canje de puntos se hace al crear la venta. Editando un comprobante ya
+						guardado no se puede canjear desde acá.
 					</span>
 				</div>
 
@@ -270,12 +288,31 @@ export default {
 			return Math.floor(this.tope_en_pesos / this.valor_punto)
 		},
 		/*
+			🔴 EL SALDO CONTRA EL QUE SE MIDE EL CANJE DE ESTA VENTA. NO ES `saldo` A SECAS.
+
+			Editando una venta que ya tiene canje, el saldo que devolvio /api/puntos/disponible
+			YA TIENE ESOS PUNTOS DESCONTADOS: el canje dejo su movimiento negativo cuando la
+			venta se guardo. Medir contra ese saldo hace que la venta se rechace a si misma
+			--"el cliente tiene 0 puntos disponibles"-- por los puntos que ella misma gasto.
+
+			Sumarle el canje propio es el ESPEJO EXACTO del servidor: SaleController@update
+			corre PuntosCanjeHelper::deshacer($model) ANTES de validar_venta_actualizada(), asi
+			que cuando el servidor valida, esos puntos ya volvieron al cliente. Es el mismo
+			razonamiento por el que LimiteCreditoHelper resta el movimiento actual de la cuenta
+			corriente antes de comparar contra el limite.
+
+			Fuera de edicion canje_de_la_venta_editada da 0 y esto es `saldo` a secas.
+		*/
+		saldo_disponible() {
+			return this.saldo + this.canje_de_la_venta_editada
+		},
+		/*
 			Puntos enteros a proposito. El saldo es decimal(20,2) del lado de la base, pero
 			ofrecer medio punto en el mostrador no le sirve a nadie y abre la puerta a que el
 			redondeo del front y el del servidor no den lo mismo.
 		*/
 		max_canjeable() {
-			let por_saldo = Math.floor(this.saldo)
+			let por_saldo = Math.floor(this.saldo_disponible)
 			if (por_saldo < this.max_por_tope) {
 				return por_saldo
 			}
@@ -405,8 +442,13 @@ export default {
 				return
 			}
 
-			if (puntos > this.saldo) {
-				this.error_local = 'El cliente tiene '+this.puntos_es(this.saldo)+' puntos disponibles.'
+			/*
+				Contra saldo_disponible, no contra saldo: en edicion el saldo del cliente todavia
+				tiene descontado el canje de esta misma venta, y el servidor lo deshace antes de
+				validar. Ver el comentario de saldo_disponible.
+			*/
+			if (puntos > this.saldo_disponible) {
+				this.error_local = 'El cliente tiene '+this.puntos_es(this.saldo_disponible)+' puntos disponibles.'
 				return
 			}
 
@@ -459,6 +501,26 @@ export default {
 		 * vuelve a disparar el watcher que llama a este metodo.
 		 */
 		revisar_canje_contra_el_total() {
+
+			/*
+				🔴 LA CONFIGURACION DEL PROGRAMA TODAVIA NO LLEGO. NO SE RECORTA NADA.
+
+				valor_punto, minimo_canje y tope_porcentaje salen de /api/puntos/disponible, que
+				es un pedido asincronico, y arrancan en CERO. Con valor_punto en 0, max_por_tope
+				devuelve 0 por su propio guard y max_canjeable da 0; con minimo_canje en 0, la
+				condicion `max_canjeable >= minimo_canje` de mas abajo se cumple como `0 >= 0` y
+				se llama a aplicar_canje(0): EL CANJE SE BORRA SOLO al abrir la venta, con un
+				aviso de "se recortó a 0 puntos" que no explica nada. La rama del else --la que
+				quita el canje-- queda muerta, porque esa condicion nunca es falsa mientras la
+				configuracion no haya llegado.
+
+				No se puede recortar un canje contra un tope que todavia no existe. Cuando la
+				configuracion llega, cualquier cambio posterior en la venta vuelve a disparar el
+				watcher de total_bruto y ahi si se revisa con numeros reales.
+			*/
+			if (!this.programa_activo) {
+				return
+			}
 
 			if (!this.canje_aplicado) {
 				return

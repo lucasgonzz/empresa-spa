@@ -145,6 +145,28 @@ export default {
 			send_mail: info.send_mail,
 			// Días opcionales para alerta de cobro (null = reglas globales en backend).
 			dias_alerta_venta_no_cobrada_personalizado: info.dias_alerta_venta_no_cobrada_personalizado,
+			/*
+				🔴 EL CANJE DE PUNTOS TIENE QUE VIAJAR EN EL PUT. NO SACAR ESTOS DOS CAMPOS.
+
+				SaleController@update llama a PuntosCanjeHelper::deshacer($model) SIEMPRE, antes
+				de validar y de aplicar. Deshacer devuelve los puntos al cliente y pone las dos
+				columnas de la venta en null; despues, aplicar() reescribe el canje leyendolo del
+				REQUEST. Si estos campos no llegan, aplicar() no reescribe nada y la venta queda
+				sin canje: editar y guardar una venta con canje lo deshacia entero y el total
+				subia solo --de $58.600 a $73.000-- contra el comprobante ya impreso.
+
+				🔴 Y VIAJAN CON `total` YA NETEADO, que es como lo deja setTotal() en el store.
+				Mandar estos dos campos con el total BRUTO es peor que el bug: se guardaria
+				total = $73.000 CON el canje de $14.400 aplicado igual, o sea el cliente paga la
+				venta entera y ademas pierde los puntos. El servidor recompone el bruto como
+				`total + descuento_puntos` para medir el tope, asi que el total neteado no es un
+				detalle de presentacion: es parte del contrato.
+
+				Van tambien en null cuando no hay canje --no es un campo opcional que se pueda
+				omitir--: es lo que le dice al servidor que la venta se edito sacando el canje.
+			*/
+			puntos_canjeados: info.puntos_canjeados,
+			descuento_puntos: info.descuento_puntos,
 			// Auditoría de acciones realizadas en vender durante la edición de la venta.
 			log: rootState.vender.sale_log,
 		})
