@@ -82,6 +82,10 @@ export default {
 			}
 			this.loading = true
 			let self = this
+
+			// Se limpian los numeros del intento anterior: si este PUT falla por otra causa, el
+			// modal no puede quedar con los del rechazo viejo.
+			this.limite_credito_info = {}
 			/*
 				Pega contra el update() del recurso, no contra /order/update-status.
 				Esa ruta apuntaba a OrderController@updateStatus, que quedo comentado entero el
