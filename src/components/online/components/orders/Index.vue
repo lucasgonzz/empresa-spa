@@ -11,7 +11,16 @@
 		:show_btn_create="false"
 		order_list_by="order_status"
 		model_name="order">
-			<template v-slot:modal_header="slotProps">
+			<!--
+				El slot se llama `model_modal_header`, no `modal_header`.
+				`common-vue/components/view/Index.vue` declara `model_modal_header` y lo baja al
+				modal generico; `modal_header` no existe en ningun componente. Un v-slot que no
+				matchea ningun <slot> en Vue 2 no se renderiza y no avisa: desde el 14/5/2026
+				(commit 02cc2941, el mismo dia que se comento OrderController@updateStatus) estos
+				dos botones no se dibujaban. Era la otra mitad del mismo destrozo, y estaba igual
+				en master. Los otros cinco consumidores del repo escriben `model_modal_header`.
+			-->
+			<template v-slot:model_modal_header>
 				<btn-status />
 				<btn-cancel />
 			</template>
