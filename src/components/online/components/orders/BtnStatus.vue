@@ -64,18 +64,36 @@ export default {
 				return
 			}
 			this.loading = true
-			this.$api.put(`/order/update-status/${this.model.id}`, {
+			let self = this
+			/*
+				Pega contra el update() del recurso, no contra /order/update-status.
+				Esa ruta apuntaba a OrderController@updateStatus, que quedo comentado entero el
+				14/5/2026 cuando la logica de confirmar (crear la venta, descontar stock, generar
+				el movimiento de cuenta corriente) se mudo a update() sin tocar esta SPA. La
+				llamada caia en el __call de Laravel y volvia 500: el pedido nunca se confirmaba.
+				La ruta muerta se borro de routes/api.php en el mismo cambio.
+
+				Se manda SOLO order_status_id a proposito: update() ya toma los renglones y el
+				deposito unicamente si vienen en la request, justamente para que este boton no los
+				pise.
+			*/
+			this.$api.put(`/order/${this.model.id}`, {
 				order_status_id: this.getStatusId()
 			})
 			.then(res => {
-				this.loading = false
-				// this.$store.dispatch('online/messages/getMessages', this.model.buyer_id)
-				this.$store.commit('order/add', res.data.model)
-				// this.$store.commit('order/setToShow')
-				this.$bvModal.hide('order')
+				self.loading = false
+				// self.$store.dispatch('online/messages/getMessages', self.model.buyer_id)
+				self.$store.commit('order/add', res.data.model)
+				// self.$store.commit('order/setToShow')
+				/*
+					El id del modal del pedido es 'order': el modal generico de
+					common-vue/components/model/Index.vue se declara con :id="model_name".
+				*/
+				self.$bvModal.hide('order')
 			})
 			.catch(err => {
-				this.loading = false
+				self.loading = false
+				self.$toast.error('No se pudo actualizar el estado del pedido')
 				console.log(err)
 			})
 		},
