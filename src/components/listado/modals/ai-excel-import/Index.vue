@@ -37,6 +37,34 @@
 				</b-form-file>
 			</b-form-group>
 
+			<!--
+				Selector de hoja. Aparece SOLO cuando el libro tiene más de una: con una
+				sola hoja no se dibuja absolutamente nada acá y el flujo queda igual que
+				siempre, sin un click de más.
+			-->
+			<b-form-group
+			v-if="hay_varias_hojas && !file_processing"
+			class="ai-import-hojas m-t-10 m-b-10"
+			label="El archivo tiene varias hojas. ¿Cuál querés importar?">
+				<b-form-select
+				v-model="hoja_seleccionada"
+				:options="opciones_de_hoja"
+				size="sm">
+					<template #first>
+						<b-form-select-option
+						:value="null"
+						disabled>
+							Elegí una hoja...
+						</b-form-select-option>
+					</template>
+				</b-form-select>
+				<small
+				v-if="falta_elegir_hoja"
+				class="text-muted d-block m-t-3">
+					No se analiza ni se importa nada hasta que elijas una hoja.
+				</small>
+			</b-form-group>
+
 			<!-- Resumen del rango detectado y detección de cabecera al elegir el archivo -->
 			<div v-if="finish_row && !file_processing" class="ai-import-file-info m-t-10 m-b-10">
 
@@ -64,11 +92,46 @@
 					<small v-if="!has_header_row" class="text-warning d-block m-t-3">
 						Sin cabecera: Claude recibirá solo los datos para inferir el mapeo. La detección puede ser menos precisa.
 					</small>
-					<!-- Aviso cuando la cabecera no está en la fila 1 (filas vacías al inicio del Excel) -->
+					<!--
+						Fila de encabezado detectada, visible y corregible. Antes esto era un
+						<small> que sólo aparecía cuando la cabecera no estaba en la fila 1 y
+						no se podía tocar: si la detección erraba, el usuario se enteraba
+						cuando ya había importado. Ahora se muestra siempre y se corrige acá,
+						antes de gastar un peso en el análisis.
+					-->
+					<div
+					v-if="has_header_row"
+					class="ai-import-encabezado"
+					:class="{ 'ai-import-encabezado--dudoso': encabezado_confianza === 'baja' }">
+						<label
+						:for="'ai-import-encabezado-fila-' + model"
+						class="ai-import-encabezado-label m-b-0">
+							Encabezado detectado en la fila
+						</label>
+						<b-form-input
+						:id="'ai-import-encabezado-fila-' + model"
+						v-model="encabezado_fila"
+						type="number"
+						size="sm"
+						min="1"
+						class="ai-import-encabezado-input"
+						@change="corregir_fila_de_encabezado">
+						</b-form-input>
+						<span class="ai-import-encabezado-datos text-muted">
+							Los datos empiezan en la fila {{ start_row }}.
+						</span>
+					</div>
+
+					<!-- Detección poco confiable: se lo decimos en vez de dejarlo pasar. -->
 					<small
-					v-if="has_header_row && !header_row_manually_overridden && Number(start_row) > 2"
+					v-if="has_header_row && encabezado_confianza === 'baja'"
+					class="text-warning d-block m-t-3">
+						No pudimos identificar el encabezado con seguridad. Revisá que la fila sea la correcta.
+					</small>
+					<small
+					v-else-if="has_header_row && encabezado_motivo === 'encabezado_corrido'"
 					class="text-muted d-block m-t-3">
-						Cabecera detectada en fila {{ Number(start_row) - 1 }}. Los datos empiezan en la fila {{ start_row }}.
+						Es la fila con más celdas llenas, todas de texto corto y ninguna repetida.
 					</small>
 				</div>
 
@@ -95,10 +158,14 @@
 				{{ error_message }}
 			</b-alert>
 
+			<!--
+				falta_elegir_hoja es literalmente el "no se importa nada hasta que se elige":
+				con varias hojas el botón no se puede tocar hasta que haya una elegida.
+			-->
 			<b-button
 			variant="primary"
 			block
-			:disabled="!file || loading || file_processing"
+			:disabled="!file || loading || file_processing || falta_elegir_hoja"
 			@click="analyze">
 				<b-spinner
 				v-if="loading"
@@ -158,6 +225,37 @@
 		<!-- PASO 2: Confirmar proveedor y mapeo de columnas             -->
 		<!-- ========================================================== -->
 		<div v-if="step === 2">
+
+			<!--
+				De qué hoja y con qué fila de encabezado salió el mapeo que el usuario está
+				por confirmar. Es un renglón fijo a propósito: sin esto, una hoja mal elegida
+				o un encabezado mal detectado sólo se descubren cuando la importación ya pasó.
+			-->
+			<p
+			v-if="resumen_de_hoja_y_encabezado"
+			class="ai-import-resumen-hoja text-muted small m-b-15">
+				{{ resumen_de_hoja_y_encabezado }}
+			</p>
+
+			<!--
+				Columnas cuyo nombre no se pudo recuperar del encabezado ni siquiera después
+				de propagar las celdas fusionadas. Se muestran con la LETRA de Excel, que es
+				lo que el usuario ve en su planilla; el backend las manda como índices.
+			-->
+			<b-alert
+			v-if="letras_de_columnas_sin_nombre.length > 0"
+			show
+			variant="warning"
+			class="m-b-15">
+				<i class="icon-alert-triangle m-r-5"></i>
+				<span v-if="letras_de_columnas_sin_nombre.length === 1">
+					La columna <strong>{{ letras_de_columnas_sin_nombre[0] }}</strong> no tiene nombre en el encabezado.
+				</span>
+				<span v-else>
+					Las columnas <strong>{{ letras_de_columnas_sin_nombre.join(', ') }}</strong> no tienen nombre en el encabezado.
+				</span>
+				Revisá el mapeo antes de importar.
+			</b-alert>
 
 		<!-- Sección de proveedor inferido (solo para artículos) -->
 		<div
@@ -1119,6 +1217,70 @@ export default {
 			/* True si el usuario corrigió manualmente la detección automática de cabecera. */
 			header_row_manually_overridden: false,
 
+			/*
+			 * Defecto 1 (hoja elegida): hojas del libro tal como las lee SheetJS acá en el
+			 * navegador, con la forma { indice, nombre, filas }. Con UNA sola hoja no se
+			 * dibuja nada nuevo y el flujo queda idéntico al de siempre; con dos o más
+			 * aparece el selector y no se analiza nada hasta que el usuario elija.
+			 */
+			hojas: [],
+
+			/*
+			 * Índice 0-based de la hoja elegida. Con una sola hoja se autoselecciona en 0;
+			 * con varias arranca en null a propósito, que es lo que mantiene deshabilitado
+			 * el botón "Analizar con IA".
+			 */
+			hoja_seleccionada: null,
+
+			/*
+			 * Índice de la hoja cuya lectura ya está reflejada en finish_row / start_row.
+			 * Existe para que el watcher de hoja_seleccionada no rehaga el trabajo que
+			 * detect_last_excel_row_from_buffer() acaba de hacer (caso de una sola hoja),
+			 * y así ese caso quede byte por byte como antes de esta misión.
+			 */
+			hoja_leida: null,
+
+			/*
+			 * Libro ya parseado por SheetJS, guardado para poder recalcular finish_row y
+			 * volver a detectar el encabezado cuando el usuario cambia de hoja, sin tener
+			 * que releer el archivo entero. Va congelado con Object.freeze porque Vue 2 no
+			 * observa objetos no extensibles: hacerlo reactivo sería recorrer cada celda
+			 * del Excel para nada.
+			 */
+			workbook_cache: null,
+
+			/*
+			 * Defecto 3 (encabezado corrido): fila 1-based donde está el encabezado, según
+			 * la regla mecánica de detect_header_row(). null cuando la planilla no tiene
+			 * encabezado.
+			 */
+			encabezado_fila: null,
+
+			/* Motivo de la detección: 'primera_fila_con_contenido' | 'encabezado_corrido' | 'sin_candidata_clara'. */
+			encabezado_motivo: null,
+
+			/* Confianza de la detección: 'alta' | 'baja'. Con 'baja' el campo se muestra resaltado. */
+			encabezado_confianza: 'alta',
+
+			/*
+			 * True cuando el usuario corrigió a mano la fila de encabezado. A partir de ahí
+			 * la detección automática deja de pisarlo.
+			 */
+			encabezado_manualmente_corregido: false,
+
+			/*
+			 * Defecto 2 (celdas fusionadas): índices 0-based de las columnas que quedaron sin
+			 * nombre en el encabezado, tal como los devuelve el backend. Se muestran como
+			 * letras de Excel (A, B, C…), que es lo que el usuario ve en su planilla.
+			 */
+			columnas_sin_nombre: [],
+
+			/* Hoja que efectivamente usó el backend: { indice, nombre }. Se muestra en el paso 2. */
+			hoja_elegida_del_backend: null,
+
+			/* Encabezado que efectivamente usó el backend: { fila, origen, motivo, confianza, columnas }. */
+			encabezado_del_backend: null,
+
 			/* Estadísticas de duplicados devueltas por el análisis IA (preanálisis del Excel). */
 			duplicate_stats: null,
 
@@ -1251,6 +1413,104 @@ export default {
 		modal_id() {
 			if (this.model === 'article') return 'ai-excel-import-modal'
 			return 'ai-' + this.model + '-excel-import-modal'
+		},
+
+		/*
+		 * Constantes de la detección de encabezado. Tienen que valer EXACTAMENTE lo mismo
+		 * que las de ExcelHeaderDetector del backend (VENTANA y LARGO_MAXIMO_DE_CELDA);
+		 * ver el comentario cruzado de detect_header_row().
+		 */
+		VENTANA_DE_ENCABEZADO() {
+			return 20
+		},
+
+		LARGO_MAXIMO_DE_CELDA() {
+			return 40
+		},
+
+		/*
+		 * Marca interna para distinguir una fecha de un texto cualquiera al recorrer la
+		 * ventana. No se muestra nunca: sólo la lee valor_es_numerico_o_fecha().
+		 *
+		 * En la práctica casi nunca se usa: XLSX.read() sin cellDates devuelve las fechas
+		 * como número de serie, y ahí ya cuentan como numéricas. Está para el caso en que
+		 * SheetJS entregue un Date de verdad. Un encabezado que empezara con este texto
+		 * quedaría descartado como candidato, que es tolerable: no hay nombres de columna así.
+		 */
+		PREFIJO_FECHA() {
+			return '__fecha__:'
+		},
+
+		/*
+		 * Opciones del selector de hoja: nombre y cantidad de filas de cada una, que es lo
+		 * que le permite al usuario reconocer cuál es su lista de precios.
+		 */
+		opciones_de_hoja() {
+			let opciones = []
+
+			for (let i = 0; i < this.hojas.length; i++) {
+				let hoja = this.hojas[i]
+
+				opciones.push({
+					value: hoja.indice,
+					text:  hoja.nombre + ' (' + this.numero_es(hoja.filas) + ' filas)',
+				})
+			}
+
+			return opciones
+		},
+
+		/*
+		 * True cuando el libro tiene más de una hoja: es la única condición que dibuja
+		 * algo nuevo en pantalla. Con una sola hoja el modal queda idéntico al de antes.
+		 */
+		hay_varias_hojas() {
+			return this.hojas.length > 1
+		},
+
+		/*
+		 * True mientras el libro tenga varias hojas y el usuario no haya elegido ninguna.
+		 * Es lo que mantiene deshabilitado el botón "Analizar con IA": no se analiza —ni
+		 * se importa— nada hasta que se elige.
+		 */
+		falta_elegir_hoja() {
+			return this.hay_varias_hojas && this.hoja_seleccionada === null
+		},
+
+		/*
+		 * Letras de Excel (A, B, C…) de las columnas que quedaron sin nombre en el
+		 * encabezado. El backend manda índices 0-based, pero el usuario ve letras.
+		 */
+		letras_de_columnas_sin_nombre() {
+			let letras = []
+
+			for (let i = 0; i < this.columnas_sin_nombre.length; i++) {
+				letras.push(this.number_to_excel_column(Number(this.columnas_sin_nombre[i]) + 1))
+			}
+
+			return letras
+		},
+
+		/*
+		 * Renglón fijo del paso 2: de qué hoja y con qué fila de encabezado se armó el
+		 * mapeo que el usuario está por confirmar. Vacío si el backend no lo informó.
+		 */
+		resumen_de_hoja_y_encabezado() {
+			if (!this.hoja_elegida_del_backend && !this.encabezado_del_backend) {
+				return ''
+			}
+
+			let partes = []
+
+			if (this.hoja_elegida_del_backend && this.hoja_elegida_del_backend.nombre) {
+				partes.push('Hoja: «' + this.hoja_elegida_del_backend.nombre + '»')
+			}
+
+			if (this.encabezado_del_backend && this.encabezado_del_backend.fila) {
+				partes.push('encabezado en la fila ' + this.encabezado_del_backend.fila)
+			}
+
+			return partes.join(' — ')
 		},
 
 		/*
@@ -1881,6 +2141,57 @@ export default {
 		},
 
 		/*
+		 * 🔴 T5 — la interacción más fácil de olvidar y la que más caro sale.
+		 *
+		 * El backend arma el CSV de la importación 1:1 con las filas de la hoja elegida y
+		 * después navega por número de línea. Si la SPA calculó finish_row mirando la hoja 0
+		 * y manda hoja=1, se importan filas que no existen o se corta de más, EN SILENCIO
+		 * (ajustar_finish_row_segun_excel_real() del backend protege por arriba, pero no
+		 * cubre un finish_row que quedó demasiado chico).
+		 *
+		 * Por eso al cambiar de hoja hay que recalcular finish_row, finish_row_original y
+		 * volver a correr la detección de encabezado SOBRE LA HOJA NUEVA.
+		 *
+		 * @param {Number|null} nuevo_indice - Índice 0-based de la hoja elegida
+		 */
+		hoja_seleccionada(nuevo_indice) {
+			/* Todavía no eligió, o la hoja que ya está leída: no hay nada que rehacer. */
+			if (nuevo_indice === null || nuevo_indice === undefined || nuevo_indice === this.hoja_leida) {
+				return
+			}
+
+			/*
+			 * Sin el libro en memoria no se puede recalcular nada. Pasa al rehidratar el
+			 * modal después de un F5: ahí la hoja y el rango vienen del backend, que es la
+			 * fuente correcta, y pisarlos con un cálculo imposible sería peor.
+			 */
+			if (!this.workbook_cache) {
+				return
+			}
+
+			/*
+			 * La hoja nueva es otro archivo a todos los efectos: la detección automática
+			 * vuelve a valer, porque las correcciones que el usuario hizo eran sobre la
+			 * hoja anterior.
+			 */
+			this.header_row_manually_overridden   = false
+			this.encabezado_manualmente_corregido = false
+			this.excel_rows_read_error            = ''
+
+			try {
+				let ultima_fila_con_contenido = this.leer_hoja_y_detectar(Number(nuevo_indice))
+
+				this.finish_row          = ultima_fila_con_contenido
+				this.finish_row_original = ultima_fila_con_contenido
+			} catch (err) {
+				console.error('Error al leer la hoja elegida del Excel:', err)
+				this.finish_row            = ''
+				this.finish_row_original   = ''
+				this.excel_rows_read_error = 'No se pudo leer esa hoja para detectar filas. Probá con otra hoja.'
+			}
+		},
+
+		/*
 		 * Cuando se desactiva permitir_provider_code_repetido, limpiamos
 		 * la opción dependiente para mantener consistencia.
 		 */
@@ -1994,7 +2305,8 @@ export default {
 			self.excel_rows_read_error = ''
 
 			/* Al cambiar el archivo, se vuelve a detectar la cabecera automáticamente. */
-			self.header_row_manually_overridden = false
+			self.header_row_manually_overridden   = false
+			self.encabezado_manualmente_corregido = false
 
 			return new Promise(function(resolve, reject) {
 				let reader = new FileReader()
@@ -2033,12 +2345,83 @@ export default {
 		detect_last_excel_row_from_buffer(array_buffer) {
 			let data = new Uint8Array(array_buffer)
 			let workbook = XLSX.read(data, { type: 'array' })
-			let sheet_name = workbook.SheetNames[0]
-			let worksheet = workbook.Sheets[sheet_name]
+
+			/*
+			 * Defecto 1: hasta acá se leía SheetNames[0] y las demás hojas del libro
+			 * ni existían. Ahora se arma la lista entera; con una sola hoja el
+			 * comportamiento no cambia en nada (se autoselecciona la 0 y no se dibuja
+			 * ningún control nuevo), y con varias el usuario tiene que elegir.
+			 */
+			this.armar_hojas_del_libro(workbook)
+
+			if (this.hojas.length === 0) {
+				throw new Error('Hoja vacía')
+			}
+
+			/*
+			 * La primera lectura siempre es sobre la hoja 0: es la que ya se mostraba
+			 * antes de esta misión, y con varias hojas el botón de analizar queda
+			 * deshabilitado igual hasta que el usuario elija (y ahí el watcher
+			 * recalcula todo sobre la hoja nueva).
+			 */
+			return this.leer_hoja_y_detectar(0)
+		},
+
+		/*
+		 * Arma this.hojas ({ indice, nombre, filas }) a partir del libro parseado y deja
+		 * el libro guardado para poder recalcular al cambiar de hoja.
+		 *
+		 * Con UNA sola hoja, hoja_seleccionada queda en 0: no se dibuja ningún control
+		 * nuevo y el request al backend sale sin las claves de hoja, exactamente igual
+		 * que antes. Con dos o más queda en null, que es lo que deshabilita el botón
+		 * "Analizar con IA" — el requisito de "no se importa nada hasta que se elige".
+		 *
+		 * @param {Object} workbook - Libro devuelto por XLSX.read
+		 */
+		armar_hojas_del_libro(workbook) {
+			let hojas = []
+
+			for (let i = 0; i < workbook.SheetNames.length; i++) {
+				let nombre = workbook.SheetNames[i]
+				let worksheet = workbook.Sheets[nombre]
+				let filas = 0
+
+				if (worksheet && worksheet['!ref']) {
+					filas = XLSX.utils.decode_range(worksheet['!ref']).e.r + 1
+				}
+
+				hojas.push({
+					indice: i,
+					nombre: nombre,
+					filas:  filas,
+				})
+			}
+
+			/*
+			 * Object.freeze: Vue 2 no observa objetos no extensibles, así que el libro
+			 * queda accesible sin que la reactividad recorra celda por celda.
+			 */
+			this.workbook_cache    = Object.freeze(workbook)
+			this.hojas             = hojas
+			this.hoja_leida        = null
+			this.hoja_seleccionada = hojas.length === 1 ? 0 : null
+		},
+
+		/*
+		 * Lee la hoja del índice indicado: devuelve su última fila con contenido y corre
+		 * la detección de encabezado sobre ESA hoja.
+		 *
+		 * @param {Number} indice - Índice 0-based de la hoja dentro del libro
+		 * @returns {Number} Última fila (1-based) con contenido
+		 */
+		leer_hoja_y_detectar(indice) {
+			let worksheet = this.worksheet_de(indice)
 
 			if (!worksheet) {
 				throw new Error('Hoja vacía')
 			}
+
+			this.hoja_leida = indice
 
 			/* Método principal: mismo criterio que import/Index.vue cuando hay !ref. */
 			if (worksheet['!ref']) {
@@ -2057,7 +2440,7 @@ export default {
 					}
 				}
 
-				/* Detectar si la fila 1 es cabecera antes de retornar. */
+				/* Detectar la fila de encabezado antes de retornar. */
 				this.detect_header_row(worksheet)
 
 				return ultima_fila_con_contenido
@@ -2086,98 +2469,381 @@ export default {
 				}
 			}
 
-			/* Detectar si la fila 1 es cabecera antes de retornar. */
+			/* Detectar la fila de encabezado antes de retornar. */
 			this.detect_header_row(worksheet)
 
 			return ultima
 		},
 
 		/*
-		 * Determina automáticamente la fila de cabecera y start_row, tolerando filas vacías al inicio.
-		 * Busca la primera fila no vacía; si todas sus celdas no vacías son texto, es cabecera.
-		 * Solo actúa si el usuario no sobreescribió la detección manualmente.
+		 * Worksheet de SheetJS correspondiente a un índice de this.hojas, o null si el
+		 * libro ya no está en memoria (por ejemplo tras un F5, cuando el modal se
+		 * rehidrata desde el backend y el archivo local no existe más).
+		 *
+		 * @param {Number} indice - Índice 0-based
+		 * @returns {Object|null}
+		 */
+		worksheet_de(indice) {
+			if (!this.workbook_cache || !this.hojas.length) {
+				return null
+			}
+
+			let hoja = this.hojas[indice]
+
+			if (!hoja) {
+				return null
+			}
+
+			return this.workbook_cache.Sheets[hoja.nombre] || null
+		},
+
+		/*
+		 * Determina automáticamente la fila de encabezado y start_row.
+		 *
+		 * 🔴 ESTA REGLA ESTÁ DECIDIDA DOS VECES, EN DOS LENGUAJES. Si cambiás esta regla,
+		 * cambiá también la de
+		 * `empresa-api/app/Http/Controllers/Helpers/import/excel/ExcelHeaderDetector.php`
+		 * — es el mismo invariante decidido en dos lenguajes. Si divergen, el mapeo de
+		 * columnas se arma con una fila y la importación arranca en otra, y no lo denuncia
+		 * nadie: faltan artículos, o se importan el título y la razón social como si fueran
+		 * datos. Es exactamente la clase de error "el mismo invariante decidido con dos
+		 * criterios distintos en front y back" de contexto/APRENDER_NO_PARCHEAR.md.
+		 *
+		 * La regla, textual:
+		 * 1. Se miran las primeras 20 filas FÍSICAS de la hoja, con las fusiones ya propagadas.
+		 * 2. Se frena (sin incluirla) en la primera fila con >= 2 celdas no vacías y al menos
+		 *    una numérica o fecha: esa fila ya son datos, y el encabezado no puede estar
+		 *    debajo de los datos.
+		 * 3. De las filas anteriores al corte es candidata la que cumple las cuatro:
+		 *    >= 2 celdas no vacías; ninguna no vacía numérica ni fecha; toda no vacía de
+		 *    hasta 40 caracteres; y todas distintas entre sí en minúsculas.
+		 * 4. Gana la candidata con más celdas no vacías. Empate => la de más arriba.
+		 * 5. Sin candidata se cae a la regla vieja (primera fila con algún contenido), con
+		 *    motivo 'sin_candidata_clara' y confianza 'baja'.
 		 *
 		 * @param {Object} worksheet - Hoja de trabajo de XLSX
 		 */
 		detect_header_row(worksheet) {
-			/* Respetar corrección manual del usuario. */
-			if (this.header_row_manually_overridden) {
+			/* Respetar corrección manual del usuario, tanto del toggle como de la fila. */
+			if (this.header_row_manually_overridden || this.encabezado_manualmente_corregido) {
 				return
 			}
-
-			/*
-			 * IMPORTANTE: sheet_to_json omite filas vacías del inicio, por lo que
-			 * rows[0] siempre es la primera fila con contenido sin importar en qué
-			 * fila física del Excel esté. Para calcular el número de fila real usamos
-			 * el rango !ref del worksheet, que sí preserva la posición física.
-			 *
-			 * Estrategia:
-			 * 1. Recorrer el worksheet celda por celda usando !ref (igual que detect_last_excel_row_from_buffer)
-			 *    para encontrar la primera fila física con al menos una celda no vacía.
-			 * 2. Analizar esa fila para determinar si es cabecera o datos.
-			 * 3. Asignar start_row con el número de fila real del Excel.
-			 */
 
 			if (!worksheet || !worksheet['!ref']) {
 				/* Sin referencia de rango: fallback a sheet_to_json para no romper el flujo. */
 				let rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' })
-				this.has_header_row = true
-				this.start_row = rows.length > 0 ? 2 : 1
+				let start_row_sin_ref = rows.length > 0 ? 2 : 1
+
+				/* start_row ANTES de has_header_row: ver el comentario del watcher (T16). */
+				this.start_row                = start_row_sin_ref
+				this.encabezado_fila          = rows.length > 0 ? 1 : null
+				this.encabezado_motivo        = 'primera_fila_con_contenido'
+				this.encabezado_confianza     = 'baja'
+				this.has_header_row           = true
 				return
 			}
 
+			let ventana = this.leer_ventana_de_encabezado(worksheet)
+			let deteccion = this.detectar_fila_de_encabezado(ventana)
+
+			/*
+			 * 🔴 T16: start_row se calcula y se asigna ANTES de has_header_row. El watcher
+			 * de has_header_row ajusta start_row en ±1 cuando el cambio es manual; si se
+			 * invierte el orden, start_row queda corrido en uno y el síntoma es invisible
+			 * hasta que faltan artículos al final de la importación.
+			 */
+			let calculated_start_row = deteccion.es_encabezado
+				? deteccion.fila + 1
+				: deteccion.fila
+
+			this.start_row            = Math.max(1, calculated_start_row)
+			this.encabezado_fila      = deteccion.es_encabezado ? deteccion.fila : null
+			this.encabezado_motivo    = deteccion.motivo
+			this.encabezado_confianza = deteccion.confianza
+			this.has_header_row       = deteccion.es_encabezado
+		},
+
+		/*
+		 * Lee las primeras 20 filas físicas de la hoja y les propaga las fusiones.
+		 *
+		 * SheetJS expone los rangos fusionados en worksheet['!merges'] (OpenSpout no, por eso
+		 * del lado del backend hay que ir a buscarlos al XML de la hoja). El valor de la celda
+		 * ancla — la esquina superior izquierda del rango — se copia a todas las celdas
+		 * cubiertas cuyo valor leído esté vacío. Vale para fusiones horizontales (E1:F1) y
+		 * verticales (A1:A3), y sólo dentro de esta ventana: las fusiones de las filas de
+		 * datos no se tocan, por decisión explícita del plan.
+		 *
+		 * @param {Object} worksheet - Hoja de trabajo de XLSX
+		 * @returns {Array} Filas de la ventana: [{ fila: 1, valores: ['A', 'B', ...] }, ...]
+		 */
+		leer_ventana_de_encabezado(worksheet) {
 			let range = XLSX.utils.decode_range(worksheet['!ref'])
+			let ultima_columna = range.e.c
+			let ultima_fila_ventana = Math.min(range.e.r, this.VENTANA_DE_ENCABEZADO - 1)
+			let ventana = []
 
-			/* Encontrar la primera fila física (0-based) que tenga al menos una celda no vacía. */
-			let first_non_empty_r = -1
+			/*
+			 * Arranca en la fila física 0 (fila 1 del Excel) y no en range.s.r, para que el
+			 * número de fila sea siempre el real del Excel, igual que hace el backend al leer
+			 * preservando las filas vacías.
+			 */
+			for (let r = 0; r <= ultima_fila_ventana; r++) {
+				let valores = []
 
-			outer:
-			for (let r = range.s.r; r <= range.e.r; r++) {
-				for (let c = range.s.c; c <= range.e.c; c++) {
-					let cell_ref = XLSX.utils.encode_cell({ c: c, r: r })
-					let cell = worksheet[cell_ref]
-					if (cell && cell.v !== null && cell.v !== undefined && String(cell.v).trim() !== '') {
-						first_non_empty_r = r
-						break outer
+				for (let c = 0; c <= ultima_columna; c++) {
+					let cell = worksheet[XLSX.utils.encode_cell({ c: c, r: r })]
+					valores.push(this.valor_de_celda(cell))
+				}
+
+				ventana.push({ fila: r + 1, valores: valores })
+			}
+
+			this.propagar_fusiones_en_ventana(worksheet, ventana, ultima_columna)
+
+			return ventana
+		},
+
+		/*
+		 * Copia el valor de la celda ancla de cada rango fusionado sobre las celdas vacías
+		 * que ese rango cubre, dentro de la ventana.
+		 *
+		 * @param {Object} worksheet      - Hoja de trabajo de XLSX
+		 * @param {Array}  ventana        - Filas devueltas por leer_ventana_de_encabezado
+		 * @param {Number} ultima_columna - Índice 0-based de la última columna leída
+		 */
+		propagar_fusiones_en_ventana(worksheet, ventana, ultima_columna) {
+			let merges = worksheet['!merges']
+
+			if (!Array.isArray(merges) || merges.length === 0) {
+				return
+			}
+
+			for (let i = 0; i < merges.length; i++) {
+				let merge = merges[i]
+
+				if (!merge || !merge.s || !merge.e) {
+					continue
+				}
+
+				/* El rango arranca fuera de la ventana: no aporta nada al encabezado. */
+				if (merge.s.r > ventana.length - 1) {
+					continue
+				}
+
+				let ancla = ventana[merge.s.r]
+
+				if (!ancla) {
+					continue
+				}
+
+				let valor_ancla = ancla.valores[merge.s.c]
+
+				/* Ancla vacía, o fuera de las columnas leídas: no hay nada que propagar. */
+				if (valor_ancla === '' || valor_ancla === undefined) {
+					continue
+				}
+
+				for (let r = merge.s.r; r <= merge.e.r && r <= ventana.length - 1; r++) {
+					for (let c = merge.s.c; c <= merge.e.c && c <= ultima_columna; c++) {
+						if (ventana[r].valores[c] === '') {
+							ventana[r].valores[c] = valor_ancla
+						}
+					}
+				}
+			}
+		},
+
+		/*
+		 * Aplica la regla de detección sobre la ventana ya leída y con fusiones propagadas.
+		 * Ver el comentario cruzado de detect_header_row(): esto es el gemelo en JavaScript
+		 * de ExcelHeaderDetector::detectar() del backend.
+		 *
+		 * @param {Array} ventana - Filas devueltas por leer_ventana_de_encabezado
+		 * @returns {Object} { fila, es_encabezado, motivo, confianza }
+		 */
+		detectar_fila_de_encabezado(ventana) {
+			let primera_con_contenido = 0
+			let mejor_fila            = 0
+			let mejor_cantidad        = 0
+
+			for (let i = 0; i < ventana.length; i++) {
+				let valores   = ventana[i].valores
+				let fila      = ventana[i].fila
+				let no_vacias = []
+				let hay_numero_o_fecha = false
+
+				for (let j = 0; j < valores.length; j++) {
+					if (valores[j] === '') {
+						continue
+					}
+
+					no_vacias.push(valores[j])
+
+					if (this.valor_es_numerico_o_fecha(valores[j])) {
+						hay_numero_o_fecha = true
+					}
+				}
+
+				if (no_vacias.length === 0) {
+					continue
+				}
+
+				if (primera_con_contenido === 0) {
+					primera_con_contenido = fila
+				}
+
+				/* Corte: esta fila ya son datos, y el encabezado no puede estar debajo. */
+				if (no_vacias.length >= 2 && hay_numero_o_fecha) {
+					break
+				}
+
+				if (this.fila_es_candidata_a_encabezado(no_vacias) && no_vacias.length > mejor_cantidad) {
+					/* Estrictamente mayor: ante un empate gana la de más arriba. */
+					mejor_fila     = fila
+					mejor_cantidad = no_vacias.length
+				}
+			}
+
+			if (mejor_fila > 0) {
+				return {
+					fila:          mejor_fila,
+					es_encabezado: true,
+					motivo:        mejor_fila === primera_con_contenido ? 'primera_fila_con_contenido' : 'encabezado_corrido',
+					confianza:     'alta',
+				}
+			}
+
+			/*
+			 * Sin candidata clara: se cae a la regla vieja — la primera fila con algún
+			 * contenido, y es encabezado sólo si ninguna de sus celdas no vacías es
+			 * numérica, que es exactamente lo que decidía este método antes de la misión.
+			 * La confianza baja hace que el campo de la fila se muestre resaltado.
+			 */
+			let fila_vieja = primera_con_contenido > 0 ? primera_con_contenido : 1
+			let es_encabezado = true
+
+			if (primera_con_contenido > 0) {
+				let valores = ventana[primera_con_contenido - 1].valores
+
+				for (let j = 0; j < valores.length; j++) {
+					if (valores[j] !== '' && this.valor_es_numerico_o_fecha(valores[j])) {
+						es_encabezado = false
+						break
 					}
 				}
 			}
 
-			/* Sin filas con contenido: fallback al default. */
-			if (first_non_empty_r < 0) {
-				this.start_row = 2
-				this.has_header_row = true
+			return {
+				fila:          fila_vieja,
+				es_encabezado: es_encabezado,
+				motivo:        'sin_candidata_clara',
+				confianza:     'baja',
+			}
+		},
+
+		/*
+		 * Las cuatro condiciones del punto 3 de la regla, sobre las celdas no vacías de una fila.
+		 *
+		 * @param {Array} no_vacias - Valores no vacíos de la fila, ya como string
+		 * @returns {Boolean}
+		 */
+		fila_es_candidata_a_encabezado(no_vacias) {
+			if (no_vacias.length < 2) {
+				return false
+			}
+
+			let vistos = {}
+
+			for (let i = 0; i < no_vacias.length; i++) {
+				let valor = no_vacias[i]
+
+				/* Ninguna celda no vacía puede ser numérica ni fecha. */
+				if (this.valor_es_numerico_o_fecha(valor)) {
+					return false
+				}
+
+				/* Toda celda no vacía tiene que medir 40 caracteres o menos. */
+				if (valor.length > this.LARGO_MAXIMO_DE_CELDA) {
+					return false
+				}
+
+				/* Todas distintas entre sí, comparando en minúsculas. */
+				let clave = valor.toLowerCase()
+
+				if (vistos[clave] === true) {
+					return false
+				}
+
+				vistos[clave] = true
+			}
+
+			return true
+		},
+
+		/*
+		 * Valor de una celda como string ya trimado. Las celdas vacías, nulas o inexistentes
+		 * dan cadena vacía. Las fechas se marcan con un prefijo interno para que
+		 * valor_es_numerico_o_fecha() las reconozca sin perder el texto.
+		 *
+		 * @param {Object} cell - Celda de SheetJS
+		 * @returns {String}
+		 */
+		valor_de_celda(cell) {
+			if (!cell || cell.v === null || cell.v === undefined) {
+				return ''
+			}
+
+			if (cell.v instanceof Date) {
+				return this.PREFIJO_FECHA + cell.v.toISOString()
+			}
+
+			return String(cell.v).trim()
+		},
+
+		/*
+		 * True si el valor es numérico o una fecha. El criterio numérico replica el
+		 * is_numeric() de PHP que usa el backend: hay que dar lo mismo con un código de
+		 * barras guardado como texto ('7790101'), porque de eso depende que la fila de
+		 * datos corte la búsqueda y el encabezado quede en la fila 1 como siempre.
+		 *
+		 * @param {String} valor - Valor no vacío ya trimado
+		 * @returns {Boolean}
+		 */
+		valor_es_numerico_o_fecha(valor) {
+			if (valor.indexOf(this.PREFIJO_FECHA) === 0) {
+				return true
+			}
+
+			/*
+			 * isFinite descarta 'Infinity' y 'NaN', que en JS parsean y en PHP no son
+			 * numéricos. El hexadecimal ('0x1A') sí difiere, pero PHP tampoco lo acepta
+			 * desde la 7.0 y no aparece en planillas reales.
+			 */
+			let numero = Number(valor)
+
+			return valor !== '' && !isNaN(numero) && isFinite(numero)
+		},
+
+		/*
+		 * El usuario corrigió a mano la fila de encabezado en el paso 1. A partir de acá
+		 * la detección automática no la pisa más.
+		 *
+		 * 🔴 T16: se calcula start_row en una variable y se asigna sin tocar has_header_row.
+		 * El bloque sólo se muestra con has_header_row en true, así que el watcher que
+		 * ajusta start_row en ±1 no tiene por qué dispararse acá.
+		 */
+		corregir_fila_de_encabezado() {
+			let fila = Number(this.encabezado_fila)
+
+			if (!fila || fila < 1) {
 				return
 			}
 
-			/* Número de fila Excel (1-based). */
-			let first_non_empty_row = first_non_empty_r + 1
+			this.encabezado_manualmente_corregido = true
 
-			/* Leer las celdas de esa fila para determinar si es cabecera. */
-			let detected_as_header = true
-
-			for (let c = range.s.c; c <= range.e.c; c++) {
-				let cell_ref = XLSX.utils.encode_cell({ c: c, r: first_non_empty_r })
-				let cell = worksheet[cell_ref]
-
-				if (!cell || cell.v === null || cell.v === undefined || String(cell.v).trim() === '') {
-					continue
-				}
-
-				/* Si alguna celda no vacía es numérica, no es cabecera. */
-				if (typeof cell.v === 'number' || !isNaN(Number(cell.v))) {
-					detected_as_header = false
-					break
-				}
-			}
-
-			/* Calcular start_row antes de asignar has_header_row (evita que el watcher lo pise). */
-			let calculated_start_row = detected_as_header
-				? first_non_empty_row + 1
-				: first_non_empty_row
+			let calculated_start_row = fila + 1
 
 			this.start_row = Math.max(1, calculated_start_row)
-			this.has_header_row = detected_as_header
 		},
 
 		/*
@@ -2448,6 +3114,39 @@ export default {
 			form_data.append('finish_row', self.finish_row)
 			form_data.append('has_header_row', self.has_header_row ? 1 : 0)
 
+			/*
+			 * Fila de encabezado, que viaja SIEMPRE — también en los libros de una sola
+			 * hoja, porque el defecto del encabezado corrido no tiene nada que ver con la
+			 * cantidad de hojas. Con el encabezado en la fila 1 vale 1, que es justo lo que
+			 * el backend detectaría por su cuenta.
+			 *
+			 * Única excepción: cuando la planilla no tiene encabezado (has_header_row en
+			 * false) no hay fila que mandar, y la clave se omite para que el backend use su
+			 * default en vez de recibir basura.
+			 */
+			if (self.encabezado_fila) {
+				form_data.append('header_row', Number(self.encabezado_fila))
+			}
+
+			/*
+			 * Hoja elegida: SÓLO si el libro tiene más de una. Así el request de un libro
+			 * normal —que es la enorme mayoría— queda byte por byte igual al de antes de
+			 * esta misión, y el backend cae en su default de hoja 0.
+			 *
+			 * Viajan el índice y el nombre porque el índice de SheetJS (acá) y el de
+			 * OpenSpout (el backend) podrían no coincidir ante un libro con chartsheets;
+			 * el backend resuelve por nombre primero y usa el índice como respaldo.
+			 */
+			if (self.hay_varias_hojas) {
+				let hoja_elegida = self.hojas[Number(self.hoja_seleccionada)]
+
+				form_data.append('hoja', Number(self.hoja_seleccionada))
+
+				if (hoja_elegida) {
+					form_data.append('hoja_nombre', hoja_elegida.nombre)
+				}
+			}
+
 			/* Solo sube el archivo y lo encola: si tarda más de 2 minutos, es la subida, no el análisis. */
 			let config = {
 				headers: { 'content-type': 'multipart/form-data' },
@@ -2545,6 +3244,33 @@ export default {
 		 * @param {Object} resultado  "resultado" tal como lo devuelve la API
 		 * @return {void}
 		 */
+		/*
+		 * Índice 0-based de hoja para los endpoints que reciben JSON (get-recomendacion,
+		 * refresh-provider-stats e import). A diferencia del multipart de /analyze, acá la
+		 * clave viaja siempre: el default del backend es 0 y mandar 0 explícitamente es
+		 * inocuo, mientras que omitirla en un flujo rehidratado dejaría al backend leyendo
+		 * la hoja 0 de un libro donde el usuario eligió la 2.
+		 *
+		 * @returns {Number}
+		 */
+		hoja_para_el_backend() {
+			return Number(this.hoja_seleccionada || 0)
+		},
+
+		/*
+		 * Fila 1-based del encabezado para los endpoints JSON, o null cuando la planilla
+		 * no tiene encabezado (ahí el backend usa su detección automática, como siempre).
+		 *
+		 * @returns {Number|null}
+		 */
+		header_row_para_el_backend() {
+			if (!this.encabezado_fila) {
+				return null
+			}
+
+			return Number(this.encabezado_fila)
+		},
+
 		aplicar_resultado_analisis(resultado) {
 			this.excel_path           = resultado.excel_path
 			this.column_mapping       = this.normalize_column_mapping(resultado.column_mapping)
@@ -2571,6 +3297,45 @@ export default {
 			this.placeholders           = resultado.placeholders || []
 			this.cadena_identificacion  = resultado.cadena_identificacion || null
 			this.nombres_duplicados     = resultado.nombres_duplicados || null
+
+			/*
+			 * Hoja y encabezado que el backend efectivamente usó. Se muestran en el paso 2
+			 * como un renglón fijo: el usuario tiene que poder ver de qué hoja y con qué
+			 * fila de encabezado salió el mapeo que está por confirmar, ANTES de importar.
+			 *
+			 * Las hojas vienen siempre, aunque el libro tenga una sola. Es lo que permite
+			 * rearmar el selector después de un F5, cuando el archivo local ya no existe.
+			 */
+			if (Array.isArray(resultado.hojas) && resultado.hojas.length > 0) {
+				this.hojas = resultado.hojas
+			}
+
+			this.hoja_elegida_del_backend = resultado.hoja_elegida || null
+			this.encabezado_del_backend   = resultado.encabezado_detectado || null
+
+			if (this.hoja_elegida_del_backend && this.hoja_elegida_del_backend.indice !== null && this.hoja_elegida_del_backend.indice !== undefined) {
+				/*
+				 * El watcher de hoja_seleccionada no rehace nada acá: o el índice ya es el
+				 * que estaba leído, o el libro no está en memoria porque esto es una
+				 * rehidratación. En los dos casos manda lo que dice el backend.
+				 */
+				this.hoja_seleccionada = Number(this.hoja_elegida_del_backend.indice)
+			}
+
+			if (this.encabezado_del_backend && this.encabezado_del_backend.fila) {
+				this.encabezado_fila      = Number(this.encabezado_del_backend.fila)
+				this.encabezado_motivo    = this.encabezado_del_backend.motivo || null
+				this.encabezado_confianza = this.encabezado_del_backend.confianza || 'alta'
+			}
+
+			/*
+			 * Columnas que quedaron sin nombre en el encabezado, aun después de propagar las
+			 * fusiones. Se muestran como alerta amarilla en el paso 2: si no se pudo
+			 * recuperar el nombre, al menos se avisa cuál revisar antes de importar.
+			 */
+			this.columnas_sin_nombre = Array.isArray(resultado.columnas_sin_nombre)
+				? resultado.columnas_sin_nombre
+				: []
 		},
 
 		/*
@@ -2602,6 +3367,15 @@ export default {
 				 * duplicados, placeholders y cadena de identificación, que son del análisis.
 				 */
 				analysis_uuid:              self.analysis_uuid,
+				/*
+				 * La recomendación recorre el Excel de nuevo, así que tiene que leer la
+				 * MISMA hoja y con la MISMA fila de encabezado que el análisis. Si acá se
+				 * volviera al default (hoja 0, encabezado automático), las estadísticas de
+				 * duplicados y de formatos numéricos saldrían de otra planilla que la que
+				 * el usuario está mirando.
+				 */
+				hoja:                       self.hoja_para_el_backend(),
+				header_row:                 self.header_row_para_el_backend(),
 			}, { timeout: 120000 })
 			.then(function(res) {
 
@@ -2725,6 +3499,9 @@ export default {
 				excel_path:                 self.excel_path,
 				provider_code_column_index: self.provider_code_column_index,
 				provider_id:                self.selected_provider_id,
+				/* Mismo motivo que en get-recomendacion: se recuentan códigos de LA hoja elegida. */
+				hoja:                       self.hoja_para_el_backend(),
+				header_row:                 self.header_row_para_el_backend(),
 			})
 			.then(function(res) {
 				self.duplicate_stats = {
@@ -2886,6 +3663,17 @@ export default {
 				create_and_edit: this.create_and_edit,
 				start_row:       Number(this.start_row),
 				finish_row:      Number(this.finish_row),
+				/*
+				 * Hoja a importar. Se manda siempre (el default del backend es 0, así que
+				 * es inocuo para un libro de una sola hoja) porque acá no importa el
+				 * tamaño del request: importa que la hoja que se vuelca al CSV sea la misma
+				 * sobre la que se calcularon start_row y finish_row.
+				 *
+				 * /import NO recibe header_row a propósito: la importación real se rige por
+				 * start_row, que el usuario ve y controla en pantalla. Dos fuentes de verdad
+				 * ahí serían el próximo bug.
+				 */
+				hoja:            this.hoja_para_el_backend(),
 				/* Campos específicos de artículos (ignorados por el backend para client/provider). */
 				registrar_art_cre: true,
 				registrar_art_act: true,
@@ -3581,6 +4369,36 @@ export default {
 				/* Viaja como 1/0 en el multipart del análisis. */
 				this.has_header_row = contexto.has_header_row == 1
 			}
+
+			/*
+			 * Hoja y fila de encabezado con las que se encoló la corrida. Sin esto, un modal
+			 * reabierto después de un F5 volvería a la hoja 0 y a la detección automática,
+			 * y las llamadas siguientes (get-recomendacion, refresh-provider-stats, import)
+			 * leerían una planilla distinta de la que el usuario ve en pantalla.
+			 */
+			if (contexto.hoja !== null && contexto.hoja !== undefined) {
+				this.hoja_seleccionada = Number(contexto.hoja)
+			}
+
+			if (contexto.hoja_nombre) {
+				/*
+				 * Sin el libro en memoria las hojas no se pueden listar, pero el nombre
+				 * alcanza para que el paso 2 diga de qué hoja salió el mapeo.
+				 */
+				this.hoja_elegida_del_backend = {
+					indice: contexto.hoja !== null && contexto.hoja !== undefined ? Number(contexto.hoja) : 0,
+					nombre: contexto.hoja_nombre,
+				}
+			}
+
+			if (contexto.header_row) {
+				this.encabezado_fila = Number(contexto.header_row)
+				/*
+				 * Viene de una corrida ya encolada: es una decisión tomada, no una
+				 * detección para volver a pisar.
+				 */
+				this.encabezado_manualmente_corregido = true
+			}
 		},
 
 		/*
@@ -3751,6 +4569,18 @@ export default {
 			this.actualizar_proveedor = 0
 			this.has_header_row = true
 			this.header_row_manually_overridden = false
+			/* Hoja elegida y encabezado detectado: todo lo nuevo vuelve a cero. */
+			this.hojas                       = []
+			this.hoja_seleccionada           = null
+			this.hoja_leida                  = null
+			this.workbook_cache              = null
+			this.encabezado_fila             = null
+			this.encabezado_motivo           = null
+			this.encabezado_confianza        = 'alta'
+			this.encabezado_manualmente_corregido = false
+			this.columnas_sin_nombre         = []
+			this.hoja_elegida_del_backend    = null
+			this.encabezado_del_backend      = null
 			this.duplicate_stats             = null
 			this.provider_code_column_index  = null
 			this.recomendacion_configuracion = null
@@ -3965,9 +4795,44 @@ export default {
 	padding: 10px 14px
 	border-radius: 4px
 
+/* Selector de hoja del paso 1: solo aparece cuando el libro tiene más de una */
+.ai-import-hojas
+	margin-bottom: 10px
+
+	label
+		font-size: 13px
+		font-weight: 600
+
 /* Contenedor del toggle de cabecera */
 .ai-import-header-detection
 	margin-top: 6px
+
+/* Fila de encabezado detectada y corregible, en una sola línea */
+.ai-import-encabezado
+	display: flex
+	align-items: center
+	flex-wrap: wrap
+	gap: 8px
+	margin-top: 8px
+	font-size: 13px
+
+	&--dudoso .ai-import-encabezado-input
+		border-color: #ffc107
+
+.ai-import-encabezado-label
+	font-size: 13px
+
+/* Ancho justo para dos o tres dígitos: no tiene por qué ocupar la fila entera */
+.ai-import-encabezado-input
+	width: 80px
+	flex: 0 0 auto
+
+.ai-import-encabezado-datos
+	font-size: 12px
+
+/* Renglón fijo del paso 2 con la hoja y la fila de encabezado que usó el backend */
+.ai-import-resumen-hoja
+	font-style: italic
 
 /* Etiqueta de detección automática junto al checkbox */
 .ai-import-header-auto-label
