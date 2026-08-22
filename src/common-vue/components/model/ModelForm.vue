@@ -414,10 +414,27 @@
 									(prompt 609), que avisa cuando el costo extra elegido NO se prorratea entre los
 									articulos de la compra.
 								-->
+								<!--
+									Las clases son EXACTAMENTE las del aviso hermano de arriba (getWarningText):
+									"form-text" ya trae display block y margin-top de Bootstrap. No agregar "m-t-5":
+									esa utilidad se usa por costumbre en varios componentes del repo pero NO esta
+									definida en ninguna hoja de estilo, asi que no aporta margen ninguno.
+								-->
+								<!--
+									🔴 El discriminante va ADELANTE ("nota-article-cost"), no atras. Es la regla que
+									dejo el incidente del 19/8/2026, escrita en e2e/chequear-prefijos-de-testid.js:
+									un data-testid nuevo no puede compartir el COMIENZO con uno existente, porque los
+									selectores de prefijo (`[data-testid^="article-amount-"]`) son la forma estandar
+									de este harness de encontrar una fila sin saber su id. Con el sufijo atras, este
+									testid caeria adentro del prefijo del propio input del campo y lo haria contar de
+									mas, con un mensaje de fallo que no apunta ni de casualidad para aca.
+									Y el checker automatico no lo puede ver: solo lee testids literales, no
+									concatenados (limitacion documentada en ese mismo archivo).
+								-->
 								<small
 								v-if="getNotaPermanente(prop)"
-								class="form-text text-warning m-t-5"
-								:data-testid="model_name+'-'+prop.key+'-nota'">
+								class="form-text text-warning"
+								:data-testid="'nota-'+model_name+'-'+prop.key">
 									{{ getNotaPermanente(prop) }}
 								</small>
 							</div>
