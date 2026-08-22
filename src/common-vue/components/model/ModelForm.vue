@@ -398,6 +398,28 @@
 										{{ propInfo(prop) }}
 									</p>
 								</slot>
+
+								<!--
+									Nota PERMANENTE debajo del campo (no popover, no tooltip). A diferencia de
+									"description"/"descriptions" -que solo se ven al pasar el mouse por el label- esta
+									queda siempre a la vista; y a diferencia del aviso de arriba (getWarningText) no
+									exige que el campo este deshabilitado.
+									Hook aditivo: se activa solo si el prop declara "nota_function". Si no la declara,
+									getNotaPermanente() devuelve '' y no se renderiza nada, asi que ningun otro modelo
+									ni ninguna otra pantalla cambia de aspecto ni de comportamiento.
+									Va AFUERA del <slot> de arriba a proposito, para que la nota sobreviva aunque una
+									vista reemplace el campo por un componente propio via slot (lo que hace, por
+									ejemplo, PreciosIncluyenIva.vue en empresa-spa).
+									Primer consumidor: el prop "tipo" de src/models/provider_order_extra_cost.js
+									(prompt 609), que avisa cuando el costo extra elegido NO se prorratea entre los
+									articulos de la compra.
+								-->
+								<small
+								v-if="getNotaPermanente(prop)"
+								class="form-text text-warning m-t-5"
+								:data-testid="model_name+'-'+prop.key+'-nota'">
+									{{ getNotaPermanente(prop) }}
+								</small>
 							</div>
 
 							<!-- <hr> -->
@@ -1072,6 +1094,31 @@ export default {
 		getWarningText(prop) {
 			if (prop.warning_function && this.isDisabled(prop)) {
 				return this[prop.warning_function](this.model)
+			}
+			return ''
+		},
+		/**
+		 * Texto de la nota PERMANENTE que va debajo de un campo del formulario, resuelto por el
+		 * metodo global que el prop declare en "nota_function" (mismo patron que
+		 * "warning_function", "v_if_function" y "dynamic_options_function": el nombre del metodo
+		 * viaja en el meta del modelo y se resuelve contra los mixins globales registrados en
+		 * main.js).
+		 *
+		 * 🔴 Por que existe, y por que NO alcanzaba con lo que ya habia (prompt 609): el unico
+		 * mecanismo declarativo de texto por campo eran "description"/"descriptions", que se
+		 * muestran como popover al pasar el mouse por el label -o sea, invisibles para quien no
+		 * sabe que tiene que buscar ahi-. El otro, getWarningText(), solo se evalua si el campo
+		 * esta DESHABILITADO. Esta nota cubre el caso del medio: un campo habilitado, editable,
+		 * cuyo valor actual tiene una consecuencia que el usuario no puede deducir mirando la
+		 * pantalla.
+		 *
+		 * @param {Object} prop - Definicion declarativa del campo.
+		 * @returns {string} Texto a mostrar, o cadena vacia si el prop no declara nota_function o
+		 *                   la funcion decide que en este estado no hay nada que avisar.
+		 */
+		getNotaPermanente(prop) {
+			if (prop.nota_function) {
+				return this[prop.nota_function](this.model, prop)
 			}
 			return ''
 		},
