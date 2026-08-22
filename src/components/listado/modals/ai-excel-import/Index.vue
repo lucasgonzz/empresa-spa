@@ -1429,16 +1429,42 @@ export default {
 		},
 
 		/*
-		 * Marca interna para distinguir una fecha de un texto cualquiera al recorrer la
-		 * ventana. No se muestra nunca: sólo la lee valor_es_numerico_o_fecha().
-		 *
-		 * En la práctica casi nunca se usa: XLSX.read() sin cellDates devuelve las fechas
-		 * como número de serie, y ahí ya cuentan como numéricas. Está para el caso en que
-		 * SheetJS entregue un Date de verdad. Un encabezado que empezara con este texto
-		 * quedaría descartado como candidato, que es tolerable: no hay nombres de columna así.
+		 * Piso del umbral de corte, espejo de
+		 * ExcelHeaderDetector::MINIMO_DE_CELDAS_PARA_CORTAR.
 		 */
-		PREFIJO_FECHA() {
-			return '__fecha__:'
+		MINIMO_DE_CELDAS_PARA_CORTAR() {
+			return 3
+		},
+
+		/*
+		 * Fecha escrita en texto, formato ISO (AAAA-MM-DD). Es el MISMO preg_match que
+		 * usa ExcelHeaderDetector::es_numerica_o_fecha() del backend, y es también el
+		 * formato con el que valor_de_celda() deja las fechas reales del Excel, igual que
+		 * hace el backend con $valor->format('Y-m-d').
+		 *
+		 * Antes acá había un prefijo interno ('__fecha__:') que sólo marcaba los Date que
+		 * entregara SheetJS, y una fecha escrita como texto —que es la forma en que llega
+		 * la enorme mayoría— no la reconocía nadie. El backend sí, y de ahí salía el
+		 * defecto B6: la SPA elegía como encabezado la primera fila de DATOS.
+		 */
+		EXPRESION_FECHA_ISO() {
+			return /^\d{4}-\d{2}-\d{2}$/
+		},
+
+		/*
+		 * Réplica exacta de is_numeric() de PHP 7.4 sobre un string, que es lo que decide
+		 * del lado del backend. La gramática de PHP es, textual:
+		 *
+		 *     espacios? [+-]? ( digitos ('.' digitos?)? | '.' digitos ) ( [eE] [+-]? digitos )?
+		 *
+		 * Y NO es lo mismo que Number(valor): Number() acepta los literales de JavaScript
+		 * ('0x1A', '0b101', '0o17') que PHP rechaza desde la 7.0, y rechaza por infinito
+		 * los exponentes desbordados ('1e400') que para PHP son numéricos igual. Las dos
+		 * diferencias hacen que una misma celda corte la búsqueda del encabezado de un
+		 * lado y no del otro.
+		 */
+		EXPRESION_NUMERICA_PHP() {
+			return /^[ \t\n\r\v\f]*[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?$/
 		},
 
 		/*
@@ -2308,6 +2334,35 @@ export default {
 			self.header_row_manually_overridden   = false
 			self.encabezado_manualmente_corregido = false
 
+			/*
+			 * 🔴 B7: TODO lo que describe al archivo anterior se limpia ACÁ, antes de leer,
+			 * y no dentro de armar_hojas_del_libro() — que corre después de XLSX.read() y
+			 * por lo tanto no corre nunca si XLSX.read() tira.
+			 *
+			 * El caso medido: el usuario sube el libro A (3 hojas), elige "Notas", y después
+			 * sube un libro B que SheetJS no puede parsear (xlsx con contraseña, archivo
+			 * cortado). Sin esta limpieza el selector seguía mostrando las hojas del libro A,
+			 * falta_elegir_hoja quedaba en false, el botón "Analizar con IA" habilitado, y se
+			 * mandaba hoja=1 / hoja_nombre='Notas' JUNTO CON EL ARCHIVO B.
+			 *
+			 * Con la limpieza, si el parseo falla queda hojas=[] => hay_varias_hojas false =>
+			 * no viaja ninguna clave de hoja, y encabezado_fila en null => tampoco viaja
+			 * header_row. El backend cae en sus defaults y detecta él, que es el principio de
+			 * toda la misión: antes que mandar un dato de un archivo que ya no está, no
+			 * mandar nada.
+			 *
+			 * Si el parseo sale bien, armar_hojas_del_libro() y detect_header_row() vuelven a
+			 * escribir estos siete valores unas líneas más abajo: no cambia nada del camino
+			 * feliz.
+			 */
+			self.workbook_cache       = null
+			self.hojas                = []
+			self.hoja_seleccionada    = null
+			self.hoja_leida           = null
+			self.encabezado_fila      = null
+			self.encabezado_motivo    = null
+			self.encabezado_confianza = 'alta'
+
 			return new Promise(function(resolve, reject) {
 				let reader = new FileReader()
 
@@ -2510,16 +2565,25 @@ export default {
 		 * criterios distintos en front y back" de contexto/APRENDER_NO_PARCHEAR.md.
 		 *
 		 * La regla, textual:
-		 * 1. Se miran las primeras 20 filas FÍSICAS de la hoja, con las fusiones ya propagadas.
-		 * 2. Se frena (sin incluirla) en la primera fila con >= 2 celdas no vacías y al menos
-		 *    una numérica o fecha: esa fila ya son datos, y el encabezado no puede estar
-		 *    debajo de los datos.
+		 * 1. Se miran las primeras 20 filas FÍSICAS de la hoja, con las fusiones ya propagadas,
+		 *    anotando qué celdas se llenaron propagando.
+		 * 2. Se frena (sin incluirla) en la primera fila con al menos UMBRAL celdas no vacías
+		 *    de las que trae el archivo y alguna numérica o fecha: esa fila ya son datos, y el
+		 *    encabezado no puede estar debajo de los datos. UMBRAL es la mitad del ancho de la
+		 *    fila más ancha de la ventana (contando sólo celdas del archivo), con un piso de 3.
 		 * 3. De las filas anteriores al corte es candidata la que cumple las cuatro:
-		 *    >= 2 celdas no vacías; ninguna no vacía numérica ni fecha; toda no vacía de
-		 *    hasta 40 caracteres; y todas distintas entre sí en minúsculas.
+		 *    >= 2 celdas no vacías DEL ARCHIVO; ninguna no vacía numérica ni fecha; toda no
+		 *    vacía de hasta 40 caracteres; y todas distintas entre sí en minúsculas,
+		 *    comparando SÓLO las celdas del archivo y no las propagadas.
 		 * 4. Gana la candidata con más celdas no vacías. Empate => la de más arriba.
 		 * 5. Sin candidata se cae a la regla vieja (primera fila con algún contenido), con
 		 *    motivo 'sin_candidata_clara' y confianza 'baja'.
+		 *
+		 * El "numérica o fecha" de los puntos 2 y 3 no es el de JavaScript: está en
+		 * valor_es_numerico_o_fecha(), que replica is_numeric() de PHP 7.4 y el preg_match
+		 * de fecha ISO del backend. Ahí es donde las dos implementaciones se habían
+		 * separado (defecto B6), y ahí es donde hay que mirar primero si vuelven a
+		 * separarse.
 		 *
 		 * @param {Object} worksheet - Hoja de trabajo de XLSX
 		 */
@@ -2595,10 +2659,16 @@ export default {
 					valores.push(this.valor_de_celda(cell))
 				}
 
-				ventana.push({ fila: r + 1, valores: valores })
+				/*
+				 * `propagadas` anota QUÉ celdas se llenaron copiando una fusión, no sólo
+				 * cuántas. Sin esa marca no hay forma de que fila_es_candidata_a_encabezado()
+				 * distinga un duplicado que trae el archivo de uno que generamos nosotros al
+				 * propagar. Es la clave `propagadas` de ExcelHeaderDetector.
+				 */
+				ventana.push({ fila: r + 1, valores: valores, propagadas: Object.create(null) })
 			}
 
-			this.propagar_fusiones_en_ventana(worksheet, ventana, ultima_columna)
+			this.propagar_fusiones_en_ventana(worksheet, ventana)
 
 			return ventana
 		},
@@ -2607,11 +2677,10 @@ export default {
 		 * Copia el valor de la celda ancla de cada rango fusionado sobre las celdas vacías
 		 * que ese rango cubre, dentro de la ventana.
 		 *
-		 * @param {Object} worksheet      - Hoja de trabajo de XLSX
-		 * @param {Array}  ventana        - Filas devueltas por leer_ventana_de_encabezado
-		 * @param {Number} ultima_columna - Índice 0-based de la última columna leída
+		 * @param {Object} worksheet - Hoja de trabajo de XLSX
+		 * @param {Array}  ventana   - Filas devueltas por leer_ventana_de_encabezado
 		 */
-		propagar_fusiones_en_ventana(worksheet, ventana, ultima_columna) {
+		propagar_fusiones_en_ventana(worksheet, ventana) {
 			let merges = worksheet['!merges']
 
 			if (!Array.isArray(merges) || merges.length === 0) {
@@ -2644,10 +2713,28 @@ export default {
 				}
 
 				for (let r = merge.s.r; r <= merge.e.r && r <= ventana.length - 1; r++) {
-					for (let c = merge.s.c; c <= merge.e.c && c <= ultima_columna; c++) {
-						if (ventana[r].valores[c] === '') {
-							ventana[r].valores[c] = valor_ancla
+					for (let c = merge.s.c; c <= merge.e.c; c++) {
+						/* La celda ancla no se propaga a sí misma. */
+						if (r === merge.s.r && c === merge.s.c) {
+							continue
 						}
+
+						/*
+						 * La celda cubierta suele no existir (ni en el XML del backend ni en
+						 * el rango !ref de SheetJS), así que hay que estirar la fila hasta
+						 * ella. Sin esto, una cabecera fusionada E1:F1 deja la columna F sin
+						 * nombre. Es el mismo `while (count(...) <= $col)` del backend.
+						 */
+						while (ventana[r].valores.length <= c) {
+							ventana[r].valores.push('')
+						}
+
+						if (ventana[r].valores[c] !== '') {
+							continue
+						}
+
+						ventana[r].valores[c] = valor_ancla
+						ventana[r].propagadas[c] = true
 					}
 				}
 			}
@@ -2662,27 +2749,15 @@ export default {
 		 * @returns {Object} { fila, es_encabezado, motivo, confianza }
 		 */
 		detectar_fila_de_encabezado(ventana) {
+			let umbral_de_corte       = this.umbral_de_corte(ventana)
 			let primera_con_contenido = 0
 			let mejor_fila            = 0
 			let mejor_cantidad        = 0
 
 			for (let i = 0; i < ventana.length; i++) {
-				let valores   = ventana[i].valores
-				let fila      = ventana[i].fila
-				let no_vacias = []
-				let hay_numero_o_fecha = false
-
-				for (let j = 0; j < valores.length; j++) {
-					if (valores[j] === '') {
-						continue
-					}
-
-					no_vacias.push(valores[j])
-
-					if (this.valor_es_numerico_o_fecha(valores[j])) {
-						hay_numero_o_fecha = true
-					}
-				}
+				let fila       = ventana[i].fila
+				let no_vacias  = this.celdas_no_vacias(ventana[i], false)
+				let originales = this.celdas_no_vacias(ventana[i], true)
 
 				if (no_vacias.length === 0) {
 					continue
@@ -2692,12 +2767,22 @@ export default {
 					primera_con_contenido = fila
 				}
 
-				/* Corte: esta fila ya son datos, y el encabezado no puede estar debajo. */
-				if (no_vacias.length >= 2 && hay_numero_o_fecha) {
+				/*
+				 * Corte: esta fila ya son datos, y el encabezado no puede estar debajo.
+				 *
+				 * 🔴 EL UMBRAL ES RELATIVO AL ANCHO DE LA TABLA, NO ">= 2 CELDAS". Con ">= 2"
+				 * cortaba cualquier renglón de membrete de una lista de proveedor:
+				 * "Distribuidora Bianchi S.A. | 30712345679" son dos celdas y una es numérica
+				 * (el CUIT), y "Vigencia desde: | 2026-08-01" lo mismo con la fecha. Los dos
+				 * mataban la búsqueda en la fila 2 y el encabezado real de la fila 4 no se
+				 * miraba nunca. Una fila de datos de verdad llena media tabla; un membrete,
+				 * dos o tres celdas sueltas.
+				 */
+				if (originales.length >= umbral_de_corte && this.alguna_es_numerica_o_fecha(originales)) {
 					break
 				}
 
-				if (this.fila_es_candidata_a_encabezado(no_vacias) && no_vacias.length > mejor_cantidad) {
+				if (this.fila_es_candidata_a_encabezado(no_vacias, originales) && no_vacias.length > mejor_cantidad) {
 					/* Estrictamente mayor: ante un empate gana la de más arriba. */
 					mejor_fila     = fila
 					mejor_cantidad = no_vacias.length
@@ -2742,33 +2827,121 @@ export default {
 		},
 
 		/*
-		 * Las cuatro condiciones del punto 3 de la regla, sobre las celdas no vacías de una fila.
+		 * Celdas llenas de una fila de la ventana. Espejo de
+		 * ExcelHeaderDetector::celdas_no_vacias().
 		 *
-		 * @param {Array} no_vacias - Valores no vacíos de la fila, ya como string
+		 * @param {Object}  fila                - Fila de la ventana { fila, valores, propagadas }
+		 * @param {Boolean} excluir_propagadas  - True para contar sólo las que trae el archivo
+		 * @returns {Array}
+		 */
+		celdas_no_vacias(fila, excluir_propagadas) {
+			let no_vacias = []
+
+			for (let c = 0; c < fila.valores.length; c++) {
+				if (excluir_propagadas && fila.propagadas[c] === true) {
+					continue
+				}
+
+				if (fila.valores[c] === '') {
+					continue
+				}
+
+				no_vacias.push(fila.valores[c])
+			}
+
+			return no_vacias
+		},
+
+		/*
+		 * @param {Array} valores
+		 * @returns {Boolean} True si alguno es numérico o fecha
+		 */
+		alguna_es_numerica_o_fecha(valores) {
+			for (let i = 0; i < valores.length; i++) {
+				if (this.valor_es_numerico_o_fecha(valores[i])) {
+					return true
+				}
+			}
+
+			return false
+		},
+
+		/*
+		 * Cantidad de celdas llenas de la fila más ancha de la ventana, contando SÓLO las
+		 * que trae el archivo, y de ahí el umbral que dispara el corte por fila de datos:
+		 * la mitad del ancho, con un piso de MINIMO_DE_CELDAS_PARA_CORTAR.
+		 *
+		 * Las propagadas se excluyen a propósito: un título fusionado sobre A1:T1 propaga
+		 * 20 celdas y, si contaran, el umbral se iría a 10 en una tabla de 5 columnas y
+		 * ninguna fila de datos alcanzaría para cortar. El ancho que interesa es el de la
+		 * tabla, no el del membrete. Espejo de ExcelHeaderDetector::umbral_de_corte().
+		 *
+		 * @param {Array} ventana
+		 * @returns {Number}
+		 */
+		umbral_de_corte(ventana) {
+			let ancho = 0
+
+			for (let i = 0; i < ventana.length; i++) {
+				let cantidad = this.celdas_no_vacias(ventana[i], true).length
+
+				if (cantidad > ancho) {
+					ancho = cantidad
+				}
+			}
+
+			let mitad = Math.ceil(ancho / 2)
+
+			return mitad > this.MINIMO_DE_CELDAS_PARA_CORTAR ? mitad : this.MINIMO_DE_CELDAS_PARA_CORTAR
+		},
+
+		/*
+		 * Las condiciones de candidata del punto 3 de la regla. Espejo de
+		 * ExcelHeaderDetector::es_candidata().
+		 *
+		 * @param {Array} no_vacias  - Celdas llenas, propagadas incluidas
+		 * @param {Array} originales - Celdas llenas que trae el archivo, sin las propagadas
 		 * @returns {Boolean}
 		 */
-		fila_es_candidata_a_encabezado(no_vacias) {
-			if (no_vacias.length < 2) {
+		fila_es_candidata_a_encabezado(no_vacias, originales) {
+			if (originales.length < 2) {
 				return false
 			}
 
-			let vistos = {}
-
 			for (let i = 0; i < no_vacias.length; i++) {
-				let valor = no_vacias[i]
-
 				/* Ninguna celda no vacía puede ser numérica ni fecha. */
-				if (this.valor_es_numerico_o_fecha(valor)) {
+				if (this.valor_es_numerico_o_fecha(no_vacias[i])) {
 					return false
 				}
 
 				/* Toda celda no vacía tiene que medir 40 caracteres o menos. */
-				if (valor.length > this.LARGO_MAXIMO_DE_CELDA) {
+				if (this.largo_estilo_mb(no_vacias[i]) > this.LARGO_MAXIMO_DE_CELDA) {
 					return false
 				}
+			}
 
-				/* Todas distintas entre sí, comparando en minúsculas. */
-				let clave = valor.toLowerCase()
+			/*
+			 * 🔴 "TODAS DISTINTAS" SE EVALÚA SOBRE LAS CELDAS ORIGINALES, NO SOBRE LAS
+			 * PROPAGADAS. Parece una excepción caprichosa y es lo que hace que los dos
+			 * arreglos convivan: una cabecera fusionada "PRECIOS" sobre E1:F1 se propaga a
+			 * las dos columnas —que es justamente el arreglo de las fusionadas— y deja el
+			 * encabezado con un duplicado que lo sacaba de candidato. Ese duplicado lo
+			 * generamos nosotros al propagar: no viene del archivo, así que no puede ser
+			 * evidencia de nada.
+			 *
+			 * La otra mitad de la regla es el `originales.length < 2` de arriba, y tampoco
+			 * se puede sacar: un título fusionado sobre A1:F1 propaga seis celdas iguales y,
+			 * sin ese piso, quedaría como candidato con seis celdas llenas y le ganaría por
+			 * cantidad al encabezado de verdad.
+			 *
+			 * Object.create(null) y no {}: con un objeto común, una celda que se llamara
+			 * '__proto__' no se guardaría como clave propia y dos celdas iguales pasarían el
+			 * control que del lado de PHP (array_unique) sí las frena.
+			 */
+			let vistos = Object.create(null)
+
+			for (let i = 0; i < originales.length; i++) {
+				let clave = originales[i].toLowerCase()
 
 				if (vistos[clave] === true) {
 					return false
@@ -2781,9 +2954,10 @@ export default {
 		},
 
 		/*
-		 * Valor de una celda como string ya trimado. Las celdas vacías, nulas o inexistentes
-		 * dan cadena vacía. Las fechas se marcan con un prefijo interno para que
-		 * valor_es_numerico_o_fecha() las reconozca sin perder el texto.
+		 * Valor de una celda como string, dejado EXACTAMENTE como lo deja el backend en su
+		 * ventana (ExcelHeaderDetector::leer_ventana_con_detalle): mismo trim, mismo
+		 * formato de fecha y mismo casteo de booleano. Las celdas vacías, nulas o
+		 * inexistentes dan cadena vacía.
 		 *
 		 * @param {Object} cell - Celda de SheetJS
 		 * @returns {String}
@@ -2793,35 +2967,110 @@ export default {
 				return ''
 			}
 
+			/*
+			 * Fecha real del Excel. El backend la guarda como $valor->format('Y-m-d'), así
+			 * que acá se arma el mismo 'Y-m-d' — y con los componentes LOCALES del Date, no
+			 * con toISOString(), que convierte a UTC y en un huso positivo devolvería el día
+			 * anterior. La reconoce después EXPRESION_FECHA_ISO, igual que del otro lado.
+			 */
 			if (cell.v instanceof Date) {
-				return this.PREFIJO_FECHA + cell.v.toISOString()
-			}
-
-			return String(cell.v).trim()
-		},
-
-		/*
-		 * True si el valor es numérico o una fecha. El criterio numérico replica el
-		 * is_numeric() de PHP que usa el backend: hay que dar lo mismo con un código de
-		 * barras guardado como texto ('7790101'), porque de eso depende que la fila de
-		 * datos corte la búsqueda y el encabezado quede en la fila 1 como siempre.
-		 *
-		 * @param {String} valor - Valor no vacío ya trimado
-		 * @returns {Boolean}
-		 */
-		valor_es_numerico_o_fecha(valor) {
-			if (valor.indexOf(this.PREFIJO_FECHA) === 0) {
-				return true
+				return this.fecha_como_ymd(cell.v)
 			}
 
 			/*
-			 * isFinite descarta 'Infinity' y 'NaN', que en JS parsean y en PHP no son
-			 * numéricos. El hexadecimal ('0x1A') sí difiere, pero PHP tampoco lo acepta
-			 * desde la 7.0 y no aparece en planillas reales.
+			 * Booleano. OpenSpout se lo entrega al backend como bool y ahí se castea a
+			 * string, o sea '1' y ''. String(true) daría 'true', que no es numérico: la
+			 * fila seguiría siendo candidata a encabezado acá y no del otro lado.
 			 */
-			let numero = Number(valor)
+			if (typeof cell.v === 'boolean') {
+				return cell.v ? '1' : ''
+			}
 
-			return valor !== '' && !isNaN(numero) && isFinite(numero)
+			return this.trim_estilo_php(String(cell.v))
+		},
+
+		/*
+		 * Fecha como 'AAAA-MM-DD' tomando los componentes locales, que son los que Excel
+		 * quiso decir. Espejo de \DateTime::format('Y-m-d') del backend.
+		 *
+		 * @param {Date} fecha
+		 * @returns {String}
+		 */
+		fecha_como_ymd(fecha) {
+			let mes = fecha.getMonth() + 1
+			let dia = fecha.getDate()
+
+			return fecha.getFullYear()
+				+ '-' + (mes < 10 ? '0' + mes : String(mes))
+				+ '-' + (dia < 10 ? '0' + dia : String(dia))
+		},
+
+		/*
+		 * trim() de PHP, que es el que el backend aplica a cada valor de la ventana.
+		 *
+		 * NO es lo mismo que String.prototype.trim(): el de JavaScript saca además
+		 * cualquier espacio Unicode, y el primero de todos es el espacio duro
+		 * (NBSP, U+00A0), que aparece a montones en los Excel exportados por sistemas
+		 * viejos. Con el trim de JS, un ' 123' quedaba '123' y la SPA lo veía
+		 * numérico mientras el backend lo veía texto: la misma celda cortaba la búsqueda
+		 * del encabezado de un lado y no del otro. PHP saca sólo " \t\n\r\0\x0B".
+		 *
+		 * @param {String} texto
+		 * @returns {String}
+		 */
+		trim_estilo_php(texto) {
+			return texto.replace(/^[ \t\n\r\0\x0B]+/, '').replace(/[ \t\n\r\0\x0B]+$/, '')
+		},
+
+		/*
+		 * Largo en CARACTERES, como mb_strlen() del backend, y no en unidades UTF-16 como
+		 * String.length. Un par sustituto (un emoji, un ideograma raro) cuenta 2 en
+		 * String.length y 1 en mb_strlen: en una celda pegada al límite de 40 eso alcanza
+		 * para que la fila sea candidata a encabezado de un lado y no del otro.
+		 *
+		 * @param {String} texto
+		 * @returns {Number}
+		 */
+		largo_estilo_mb(texto) {
+			return texto.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, '_').length
+		},
+
+		/*
+		 * True si el valor es numérico o una fecha, con EL MISMO criterio que
+		 * ExcelHeaderDetector::es_numerica_o_fecha() del backend. De esto depende dónde
+		 * corta la búsqueda del encabezado, y como la SPA manda header_row y el backend le
+		 * da prioridad absoluta, la regla que decide en la práctica es ésta: si diverge,
+		 * decide la equivocada.
+		 *
+		 * Los tres criterios, en orden:
+		 * 1. trim de PHP (no el de JS: ver trim_estilo_php).
+		 * 2. is_numeric() de PHP replicado con EXPRESION_NUMERICA_PHP. No se usa Number():
+		 *    Number() acepta '0x1A', '0b101' y '0o17', que PHP rechaza desde la 7.0, y
+		 *    rechaza '1e400' por infinito, que para PHP es numérico. Ésos son los tres
+		 *    bordes que divergían (el comentario que estaba acá decía justo lo contrario:
+		 *    que el hexadecimal coincidía "porque PHP tampoco lo acepta" — es al revés,
+		 *    PHP decía que no y JS decía que sí, y POR ESO divergían).
+		 * 3. Fecha ISO en texto ('2026-08-22') con el mismo preg_match del backend, que es
+		 *    también la forma en que valor_de_celda() entrega las fechas reales.
+		 *
+		 * Un código de barras guardado como texto ('7790101') sigue contando como numérico
+		 * en los dos lados, que es lo que mantiene el encabezado en la fila 1 de siempre.
+		 *
+		 * @param {String} valor - Valor de una celda tal como lo dejó valor_de_celda()
+		 * @returns {Boolean}
+		 */
+		valor_es_numerico_o_fecha(valor) {
+			let texto = this.trim_estilo_php(String(valor))
+
+			if (texto === '') {
+				return false
+			}
+
+			if (this.EXPRESION_FECHA_ISO.test(texto)) {
+				return true
+			}
+
+			return this.EXPRESION_NUMERICA_PHP.test(texto)
 		},
 
 		/*
@@ -3136,15 +3385,20 @@ export default {
 			 * Viajan el índice y el nombre porque el índice de SheetJS (acá) y el de
 			 * OpenSpout (el backend) podrían no coincidir ante un libro con chartsheets;
 			 * el backend resuelve por nombre primero y usa el índice como respaldo.
+			 *
+			 * 🔴 B7: y sólo si hay una hoja elegida DE VERDAD. Sin esta segunda condición,
+			 * un libro de varias hojas con hoja_seleccionada en null (el usuario todavía no
+			 * eligió, o el parseo del archivo falló y la selección se limpió) mandaba
+			 * Number(null) => hoja=0 sin nombre, o sea un índice inventado. Si no sabemos
+			 * qué hoja es, no se manda nada y el backend usa su default.
 			 */
-			if (self.hay_varias_hojas) {
-				let hoja_elegida = self.hojas[Number(self.hoja_seleccionada)]
+			let hoja_elegida = self.hay_varias_hojas && self.hoja_seleccionada !== null && self.hoja_seleccionada !== undefined
+				? self.hojas[Number(self.hoja_seleccionada)]
+				: null
 
+			if (hoja_elegida) {
 				form_data.append('hoja', Number(self.hoja_seleccionada))
-
-				if (hoja_elegida) {
-					form_data.append('hoja_nombre', hoja_elegida.nombre)
-				}
+				form_data.append('hoja_nombre', hoja_elegida.nombre)
 			}
 
 			/* Solo sube el archivo y lo encola: si tarda más de 2 minutos, es la subida, no el análisis. */

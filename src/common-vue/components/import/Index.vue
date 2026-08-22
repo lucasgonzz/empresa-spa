@@ -1190,6 +1190,26 @@ export default {
 		        });
 		},
 		async processFile(file) {
+		    /*
+		     * 🔴 B7: el estado del archivo ANTERIOR se limpia acá, antes de leer, y no
+		     * dentro de armar_hojas_del_libro() — que corre después de XLSX.read() y por
+		     * lo tanto no corre nunca si XLSX.read() tira (xlsx con contraseña, archivo
+		     * cortado, formato que SheetJS no parsea).
+		     *
+		     * Sin esto, quien subía el libro A de 3 hojas, elegía la tercera y después
+		     * subía un libro B ilegible, seguía viendo el selector con las hojas del libro
+		     * A y mandaba hoja=2 junto con el archivo B, sin ningún aviso. Acá no hay
+		     * siquiera un botón deshabilitado que lo frene, como sí lo hay en el modal de
+		     * importación con IA.
+		     *
+		     * workbook_cache va PRIMERO: el watcher de hoja_seleccionada corta apenas ve
+		     * el libro en null, así que limpiar el índice no dispara ningún recálculo
+		     * sobre un libro que ya no está.
+		     */
+		    this.workbook_cache = null;
+		    this.hojas = [];
+		    this.hoja_seleccionada = 0;
+
 		    return new Promise((resolve, reject) => {
 		        const reader = new FileReader();
 		        reader.onload = (e) => {
@@ -1523,8 +1543,17 @@ export default {
 				/*
 				 * Hoja a importar. Con un libro de una sola hoja vale 0, que es el default
 				 * del backend: el request queda equivalente al de siempre.
+				 *
+				 * 🔴 B7: sólo viaja si el libro que está en pantalla se llegó a parsear. Si
+				 * el parseo falló, this.hojas quedó vacío (ver processFile) y no se manda
+				 * ningún índice: antes que mandar la hoja de un archivo que ya no está, que
+				 * el backend use su default. La clave ausente y hoja=0 valen lo mismo para
+				 * el backend, pero mandar un índice que no medimos es exactamente el
+				 * degradado silencioso que la misión vino a sacar.
 				 */
-				form_data.append('hoja', this.hoja_seleccionada || 0)
+				if (this.hojas.length > 0) {
+					form_data.append('hoja', Number(this.hoja_seleccionada) || 0)
+				}
 				form_data.append('create_and_edit', this.create_and_edit)
 				form_data.append('registrar_art_cre', this.registrar_art_cre)
 				form_data.append('registrar_art_act', this.registrar_art_act)
