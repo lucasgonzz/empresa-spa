@@ -238,6 +238,45 @@
 			</p>
 
 			<!--
+				Un mismo nombre de encabezado cubriendo dos columnas (típico de una cabecera
+				fusionada: «PRECIOS» sobre E y F). El sistema repartió las propiedades en
+				orden porque no tiene forma de saber cuál es cuál, y si se equivocó quedan
+				costo y precio invertidos en todo el catálogo — que es peor que el error que
+				esto vino a arreglar, porque invertido no se ve nunca.
+
+				Va ANTES de la alerta de columnas sin nombre a propósito: de los dos avisos
+				amarillos del paso 2, éste es el que tiene la consecuencia cara.
+
+				El texto sale armado del backend, en `mensaje`. No se rearma acá: el backend
+				es el único que sabe a qué columna fue a parar cada propiedad, y este modal
+				lo comparten artículos, clientes y proveedores.
+			-->
+			<b-alert
+			v-if="columnas_ambiguas.length > 0"
+			show
+			variant="warning"
+			class="m-b-15">
+				<p class="font-weight-bold m-b-5 m-t-0">
+					<i class="icon-alert-triangle m-r-5"></i>
+					<span v-if="columnas_ambiguas.length === 1">
+						Un nombre de encabezado cubre más de una columna
+					</span>
+					<span v-else>
+						Hay nombres de encabezado que cubren más de una columna
+					</span>
+				</p>
+				<p
+				v-for="(aviso, aviso_index) in columnas_ambiguas"
+				:key="'columna-ambigua-' + aviso_index"
+				class="small m-b-5 m-t-0">
+					{{ aviso.mensaje }}
+				</p>
+				<p class="small m-b-0 m-t-0">
+					Las columnas afectadas están marcadas en el mapeo de acá abajo.
+				</p>
+			</b-alert>
+
+			<!--
 				Columnas cuyo nombre no se pudo recuperar del encabezado ni siquiera después
 				de propagar las celdas fusionadas. Se muestran con la LETRA de Excel, que es
 				lo que el usuario ve en su planilla; el backend las manda como índices.
@@ -366,6 +405,19 @@
 							<span class="ai-import-mapping-excel-header">
 								{{ item.excel_column }}
 							</span>
+
+							<!--
+								Marca de columna ambigua: este encabezado cubre más de una columna
+								y la propiedad se repartió por orden. Se marca acá, y no con un
+								color de fila más, porque la leyenda de arriba ya tiene tres
+								colores y un cuarto no se lee: a la tercera alerta sin motivo, el
+								usuario deja de leerlas todas. El icono se explica solo al pasar
+								el mouse y no compite con el resaltado de confianza baja.
+							-->
+							<i
+							v-if="columna_es_ambigua(item, index)"
+							class="icon-alert-triangle ai-import-mapping-ambiguous-flag"
+							title="Este nombre de encabezado cubre más de una columna. Revisá que la propiedad asignada sea la correcta."></i>
 						</span>
 
 						<!-- Select de propiedad del sistema -->
@@ -1275,6 +1327,21 @@ export default {
 			 */
 			columnas_sin_nombre: [],
 
+			/*
+			 * Defecto 2 (celdas fusionadas), la otra mitad: encabezados que cubren MÁS DE UNA
+			 * columna. No es lo mismo que columnas_sin_nombre —acá la columna sí tiene nombre,
+			 * lo que no se sabe es cuál de las dos es cuál—, así que se avisa aparte.
+			 *
+			 * Forma de cada elemento, tal cual la manda el backend (artículos, clientes y
+			 * proveedores devuelven lo mismo):
+			 *   { nombre, columnas: [0-based], letras: ['E','F'],
+			 *     asignaciones: [{ system_property, excel_column_index, excel_column_letter }],
+			 *     mensaje }
+			 *
+			 * `mensaje` viene armado del backend y se dibuja tal cual.
+			 */
+			columnas_ambiguas: [],
+
 			/* Hoja que efectivamente usó el backend: { indice, nombre }. Se muestra en el paso 2. */
 			hoja_elegida_del_backend: null,
 
@@ -1512,6 +1579,36 @@ export default {
 
 			for (let i = 0; i < this.columnas_sin_nombre.length; i++) {
 				letras.push(this.number_to_excel_column(Number(this.columnas_sin_nombre[i]) + 1))
+			}
+
+			return letras
+		},
+
+		/*
+		 * Letras de Excel de las columnas que se llevaron una propiedad dentro de un
+		 * encabezado ambiguo. Es lo que usa la tabla de mapeo para marcarlas.
+		 *
+		 * Se junta por LETRA y no por índice porque la tabla también resuelve la letra
+		 * (excel_column_letter_label) y así las dos puntas comparan lo mismo, tenga o no
+		 * el item su excel_column_index.
+		 */
+		letras_de_columnas_ambiguas() {
+			let letras = []
+
+			for (let i = 0; i < this.columnas_ambiguas.length; i++) {
+				let asignaciones = this.columnas_ambiguas[i].asignaciones
+
+				if (!Array.isArray(asignaciones)) {
+					continue
+				}
+
+				for (let j = 0; j < asignaciones.length; j++) {
+					let letra = asignaciones[j].excel_column_letter
+
+					if (letra && letras.indexOf(letra) === -1) {
+						letras.push(letra)
+					}
+				}
 			}
 
 			return letras
@@ -3590,6 +3687,15 @@ export default {
 			this.columnas_sin_nombre = Array.isArray(resultado.columnas_sin_nombre)
 				? resultado.columnas_sin_nombre
 				: []
+
+			/*
+			 * Encabezados que cubren más de una columna. Default [] a propósito: una corrida
+			 * vieja rehidratada, o un modelo que todavía no mande la clave, no puede romper
+			 * el paso 2 — simplemente no muestra el aviso.
+			 */
+			this.columnas_ambiguas = Array.isArray(resultado.columnas_ambiguas)
+				? resultado.columnas_ambiguas
+				: []
 		},
 
 		/*
@@ -4239,6 +4345,18 @@ export default {
 		},
 
 		/*
+		 * True si esta fila del mapeo cae en un encabezado que cubre más de una columna.
+		 * Sirve para marcarla con el icono de aviso al lado de la letra.
+		 */
+		columna_es_ambigua(item, index) {
+			if (this.letras_de_columnas_ambiguas.length === 0) {
+				return false
+			}
+
+			return this.letras_de_columnas_ambiguas.indexOf(this.excel_column_letter_label(item, index)) !== -1
+		},
+
+		/*
 		 * Texto completo para el tooltip: "A — CODIGO".
 		 */
 		excel_column_full_label(item, index) {
@@ -4833,6 +4951,7 @@ export default {
 			this.encabezado_confianza        = 'alta'
 			this.encabezado_manualmente_corregido = false
 			this.columnas_sin_nombre         = []
+			this.columnas_ambiguas           = []
 			this.hoja_elegida_del_backend    = null
 			this.encabezado_del_backend      = null
 			this.duplicate_stats             = null
@@ -5026,6 +5145,16 @@ export default {
 	white-space: nowrap
 	overflow: hidden
 	text-overflow: ellipsis
+
+/* Marca de columna ambigua al lado de la letra: chica, ámbar, sin fondo ni borde. */
+/* No tiene que competir con el resaltado de fila; sólo indicar cuál revisar. */
+.ai-import-mapping-ambiguous-flag
+	flex-shrink: 0
+	align-self: center
+	font-size: 12px
+	line-height: 1
+	color: #b28704
+	cursor: help
 
 .ai-import-mapping-confidence
 	display: flex
