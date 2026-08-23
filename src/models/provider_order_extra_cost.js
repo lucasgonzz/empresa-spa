@@ -19,13 +19,36 @@ export default {
 			text: 'Tipo',
 			key: 'tipo',
 			type: 'select',
-			value: 'otro',
+			/*
+			 * Prompt 609 (camino A): el default pasa de 'otro' a 'transporte'. 'otro' era el default
+			 * Y es el unico de los cuatro tipos que NO prorratea: el usuario cargaba el flete, hacia
+			 * todo bien, y el costo de sus articulos quedaba igual de mal que antes, sin ningun
+			 * aviso. El caso mayoritario de un costo extra de compra es el transporte, asi que ese
+			 * es el default correcto. Quien cargue un costo que NO quiere prorratear (una comision
+			 * bancaria, por ejemplo) sigue teniendo 'Otro' disponible, y ahora ademas ve por que
+			 * (nota_function, abajo).
+			 * Este "value" es lo que se usa al crear un costo extra NUEVO; los ya guardados
+			 * conservan el tipo que tengan.
+			 */
+			value: 'transporte',
+			/*
+			 * "prorratea" no lo lee ModelForm (getOptions() solo mapea value/text/label y descarta
+			 * el resto): es el meta que consume costo_extra_tipo_nota() en src/mixins/generals.js,
+			 * para no tener la lista de tipos que prorratean duplicada en dos archivos.
+			 * 🔴 Tiene que quedar en espejo con $tipos_materializables de
+			 * NewProviderOrderHelper::aplicar_costos_extra_a_recargos_articulos() en empresa-api:
+			 * son dos listas que se mantienen a mano, no hay endpoint que las una.
+			 */
 			options: [
-				{ value: 'transporte', text: 'Transporte' },
-				{ value: 'seguro', text: 'Seguro' },
-				{ value: 'arancel_importacion', text: 'Arancel/Importación' },
-				{ value: 'otro', text: 'Otro' },
+				{ value: 'transporte', text: 'Transporte', prorratea: true },
+				{ value: 'seguro', text: 'Seguro', prorratea: true },
+				{ value: 'arancel_importacion', text: 'Arancel/Importación', prorratea: true },
+				{ value: 'otro', text: 'Otro', prorratea: false },
 			],
+			// Prompt 609 (camino C): aviso PERMANENTE debajo del select cuando el tipo elegido no se
+			// prorratea. No alcanzaba con las "descriptions" de abajo: son un popover que solo
+			// aparece al pasar el mouse por el label, o sea invisible para quien no sabe buscarlo.
+			nota_function: 'costo_extra_tipo_nota',
 			descriptions: [
 				'Clasifica el costo extra de la compra.',
 				'"Transporte", "Seguro" y "Arancel/Importación": el costo se prorratea automaticamente entre los articulos de la compra y se refleja como un recargo del mismo tipo en cada articulo.',
