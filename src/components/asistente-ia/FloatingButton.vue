@@ -18,8 +18,12 @@
 			<i
 			v-else
 			class="bi bi-robot"></i>
+			<!-- Al hover, el distintivo se agranda y tiembla, y el ícono
+			pasa de estrellas a flechas de mover: señal de que ESE es el
+			lugar donde agarrar el botón para arrastrarlo. -->
 			<span class="asistente-ia-fab__distintivo">
-				<i class="bi bi-stars"></i>
+				<i class="bi bi-stars asistente-ia-fab__distintivo-icono asistente-ia-fab__distintivo-icono--reposo"></i>
+				<i class="bi bi-arrows-move asistente-ia-fab__distintivo-icono asistente-ia-fab__distintivo-icono--arrastre"></i>
 			</span>
 		</button>
 		<!-- El panel vive en el store (panel_abierto) para que abrir_chat_ia()
@@ -593,6 +597,8 @@ export default {
 
 	// Distintivo de IA: chispitas sobre color de marca, abajo a la derecha,
 	// con un aro del color del fondo para despegarse del logo (D37).
+	// Al hover se agranda al doble y tiembla, para marcar que ahí se agarra
+	// el botón para arrastrarlo (el ícono de abajo cambia a flechas de mover).
 	&__distintivo
 		position: absolute
 		right: -3px
@@ -609,10 +615,53 @@ export default {
 		align-items: center
 		justify-content: center
 
+		&:hover
+			animation: asistente-ia-fab-distintivo-tiemble .5s ease-in-out infinite
+
+	&__distintivo-icono
+		position: absolute
+		top: 0
+		left: 0
+		width: 100%
+		height: 100%
+		display: flex
+		align-items: center
+		justify-content: center
+		transition: opacity .1s ease
+
+		&--reposo
+			opacity: 1
+
+		&--arrastre
+			opacity: 0
+
+	&__distintivo:hover &__distintivo-icono--reposo
+		opacity: 0
+
+	&__distintivo:hover &__distintivo-icono--arrastre
+		opacity: 1
+
+@keyframes asistente-ia-fab-distintivo-tiemble
+	0%
+		transform: scale(2) rotate(0deg)
+	20%
+		transform: scale(2) rotate(-10deg)
+	40%
+		transform: scale(2) rotate(8deg)
+	60%
+		transform: scale(2) rotate(-6deg)
+	80%
+		transform: scale(2) rotate(4deg)
+	100%
+		transform: scale(2) rotate(0deg)
+
 @media (prefers-reduced-motion: reduce)
 	.asistente-ia-fab
 		transition: none
 
 		&:hover
 			transform: none
+
+	.asistente-ia-fab__distintivo:hover
+		animation: none
 </style>
