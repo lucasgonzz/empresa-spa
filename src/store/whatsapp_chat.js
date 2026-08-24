@@ -705,13 +705,36 @@ export default {
 		 * agente conteste NO sale hacia WhatsApp. La respuesta 201 trae el chat completo, así
 		 * que se hace upsert en la bandeja: viene con `last_inbound_simulated` ya en true.
 		 *
+		 * 🔴 Y trae también el MENSAJE, que se agrega a la conversación si es la que está
+		 * abierta. Hasta el 24/8/2026 esto no existía: la action hacía solo el `upsertChat`, así
+		 * que el globo del entrante simulado aparecía por UN SOLO camino, el broadcast
+		 * `WhatsappChatUpdated`. Ese broadcast se emite del lado del backend adentro de un
+		 * `try/catch` que se traga cualquier fallo y solo deja un warning en el log, así que con
+		 * Echo caído o mal configurado el dueño simulaba, veía el toast de éxito, y en la
+		 * conversación no aparecía nada hasta recargar la pantalla.
+		 *
+		 * 🔴 La condición de "el chat está abierto" es la MISMA que usa
+		 * `SidebarHost.on_whatsapp_chat_updated`, y las dos mitades hacen falta: `sidebar_abierto`
+		 * **y** `selected_chat_id`. La selección sobrevive al cierre del sidebar (es el chat en el
+		 * que quedó parado el operador), así que sin la primera se estaría agregando un mensaje a
+		 * un array que no se está mostrando, y marcando leído un chat que nadie miró.
+		 *
+		 * Y por el mismo motivo va el `markRead`: `store_inbound_message()` del backend incrementa
+		 * `unread_count`, y `upsertChat` de acá arriba mete ese contador en la bandeja. Con Echo
+		 * andando el broadcast lo limpia solo; **sin Echo —que es justamente el escenario que este
+		 * arreglo viene a cubrir— la fila quedaba con el badge de no leído sobre una conversación
+		 * abierta en pantalla**.
+		 *
+		 * La dedup por id es la misma que hace el broadcast: con Echo andando los dos caminos
+		 * entregan el mismo mensaje y el que llegue segundo no duplica nada.
+		 *
 		 * Sin `.catch()` a propósito: el 429 del throttle (10 por minuto) y el 403 los tiene
 		 * que poder distinguir el componente para decir algo distinto en cada caso.
 		 *
 		 * @param {Object} payload { phone, body }
 		 * @returns {Promise} resuelve con el chat (o null si el backend no lo pudo recuperar).
 		 */
-		simulateInbound({ commit }, payload) {
+		simulateInbound({ commit, dispatch, state }, payload) {
 			return axios.post('/api/whatsapp-bot/simulate-inbound', {
 				phone: payload.phone,
 				body: payload.body,
@@ -719,6 +742,17 @@ export default {
 				.then(res => {
 					if (res.data.model) {
 						commit('upsertChat', res.data.model)
+					}
+					let message = res.data.message
+					let es_el_chat_abierto = state.sidebar_abierto
+						&& state.selected_chat_id
+						&& state.selected_chat_id == (message && message.whatsapp_chat_id)
+					if (message && es_el_chat_abierto) {
+						let ya_esta = state.messages.some(m => m.id == message.id)
+						if (!ya_esta) {
+							commit('appendMessage', message)
+						}
+						dispatch('markRead', message.whatsapp_chat_id)
 					}
 					return res.data.model
 				})
