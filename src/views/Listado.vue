@@ -17,7 +17,6 @@
 
 	<current-acounts></current-acounts>
 	
-	<import></import>
 	<charts></charts>
 	<article-sales></article-sales>
 	<article-used-in-recipes></article-used-in-recipes>
@@ -177,7 +176,6 @@ export default {
 	name: 'Lisado',
 	components: {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
-		Import: () => import('@/components/listado/modals/import/Index'),
 
 
 		ExcelDropdownOptions: () => import('@/components/listado/components/excel-dropdown-options/Index'),

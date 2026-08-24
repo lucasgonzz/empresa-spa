@@ -2,7 +2,6 @@
 	<div
 	v-if="view == 'proveedores'">
     	<current-acounts></current-acounts>
-    	<import></import>
 
 		<!-- <update-prices></update-prices> -->
 		
@@ -32,7 +31,6 @@
 export default {
 	components: {
 		CurrentAcounts: () => import('@/components/common/current-acounts/Index'),
-		Import: () => import('@/components/provider/modals/providers/Import'),
 		// UpdatePrices: () => import('@/components/ventas/modals/update-prices/Index'),
 
 		ViewComponent: () => import('@/common-vue/components/view/Index'),

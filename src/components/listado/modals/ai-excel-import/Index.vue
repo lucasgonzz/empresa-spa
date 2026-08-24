@@ -1244,10 +1244,10 @@ export default {
 			/*
 			 * Misión costo-bruto-por-condicion-fiscal (20/8/2026): declaración de si los costos de
 			 * ESTA planilla vienen brutos (con IVA adentro) o netos. Equivale al flag
-			 * "precios_incluyen_iva" de la compra a proveedor y al check del import clásico
-			 * (src/components/listado/modals/import/Index.vue).
+			 * "precios_incluyen_iva" de la compra a proveedor. El check equivalente vivía además en
+			 * el import clásico de artículos, que se sacó al pasar todas las importaciones a IA.
 			 *
-			 * Hace falta acá y no alcanza con tenerlo en el import clásico porque este flujo NO
+			 * Hace falta acá porque este flujo NO
 			 * pasa por ArticleController@import: postea a /ai-excel-import/import, que arma su
 			 * propio array para InitExcelImport. Toda clave que no se mande explícitamente acá
 			 * llega al backend con el default, y el default es "neto".
@@ -2147,6 +2147,23 @@ export default {
 					{ value: 'numero',                   text: 'Número de proveedor' },
 					{ value: 'condicion_frente_al_iva',  text: 'Condición frente al IVA' },
 					{ value: 'observaciones',            text: 'Observaciones' },
+					/*
+					 * 🔴 Saldo actual de la cuenta corriente del proveedor. Existía sólo en el
+					 * import clásico de proveedores; al sacarlo, quien migra proveedores con su
+					 * saldo se quedaba sin forma de traerlo.
+					 *
+					 * La clave es 'saldo_actual' y NO es arbitraria: build_columns() la manda tal
+					 * cual dentro de `columns`, y del otro lado ProviderImport::saveModel() cierra
+					 * llamando a LocalImportHelper::setSaldoInicial(), que lee
+					 * getColumnValueByAliases($row, ['saldo_actual', 'saldo actual'], $columns).
+					 * Es la misma clave con la que ya viaja el saldo de los clientes.
+					 *
+					 * ⚠️ El analizador de proveedores del backend (AiProviderAnalyzer,
+					 * SYSTEM_PROPERTIES) todavía no la conoce, así que la IA no la va a sugerir
+					 * sola: el usuario la elige a mano en la tabla de mapeo. Es exactamente lo que
+					 * pedía el import clásico, donde la columna también se mapeaba a mano.
+					 */
+					{ value: 'saldo_actual',             text: 'Saldo actual' },
 				]
 			}
 

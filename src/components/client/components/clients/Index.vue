@@ -1,8 +1,6 @@
 <template> 
 	<div
 	v-if="view == 'clientes'">
-		<import></import>
-
 		<view-component
 		show_filter_modal
 		show_excel_drop_down
@@ -108,7 +106,6 @@ export default {
 		CreateBuyer: () => import('@/components/client/components/clients/CreateBuyer'),
 		LimitesDeCredito: () => import('@/components/client/components/clients/LimitesDeCredito'),
 		SaldosClientesFiltrados: () => import('@/components/client/components/clients/SaldosClientesFiltrados'),
-		Import: () => import('@/components/client/components/clients/Import'),
 		BtnPdf: () => import('@/components/client/components/clients/BtnPdf'),
 	},
 	methods: {
