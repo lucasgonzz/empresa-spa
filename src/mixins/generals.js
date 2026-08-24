@@ -6,10 +6,29 @@ export default {
         },
         user_configuration() {
             if (this.is_owner) {
-                return this.user.configuration 
+                return this.user.configuration
             } else {
-                return this.user.owner_configuration 
+                return this.user.owner_configuration
             }
+        },
+        /**
+         * Indica si la cuenta opera bajo la condicion de IVA "Monotributista" (vs. Responsable
+         * Inscripto), en base a "user.condicion_iva_precios" (columna agregada en "users" por el
+         * grupo 231, prompt 01 en empresa-api; reemplaza a la columna vieja de
+         * UserConfiguration del Prompt 608, que quedo obsoleta).
+         *
+         * Reusable en cualquier vista/modelo que necesite branchear por esta condicion (ver
+         * "es_responsable_inscripto_v_if_function" mas abajo para usarla como v_if_function en
+         * props declarativas de src/models).
+         *
+         * Nota: si "condicion_iva_precios" llega undefined/null desde la API, esta computed
+         * devuelve false (fallback seguro a Responsable Inscripto, mismo comportamiento actual
+         * del sistema), consistente con el fallback que ya usa el backend.
+         *
+         * @returns {Boolean}
+         */
+        es_monotributista() {
+            return !!(this.user && this.user.condicion_iva_precios == 'MT')
         },
         owner_extencions() {
             if (this.is_owner) {
@@ -84,6 +103,107 @@ export default {
          */
         is_owner_v_if_function() {
             return this.is_owner
+        },
+
+        /**
+         * v_if_function para propiedades de formulario que solo deben verse cuando la cuenta es
+         * Responsable Inscripto (Prompt 611). Se usa, por ejemplo, en el checkbox
+         * "precios_incluyen_iva" del modelo de compra a proveedor (src/models/provider_order.js):
+         * en Monotributista ese control se oculta por completo porque el proveedor nunca le
+         * discrimina el IVA al monotributista, siempre se asume que el precio ya lo incluye.
+         *
+         * @returns {Boolean}
+         */
+        es_responsable_inscripto_v_if_function() {
+            return !this.es_monotributista
+        },
+
+        /**
+         * nota_function del prop "tipo" de src/models/provider_order_extra_cost.js (prompt 609).
+         *
+         * 🔴 El problema que resuelve, y no es cosmetico: el backend solo prorratea el costo extra
+         * entre los articulos de la compra si el tipo es Transporte, Seguro o Arancel/Importacion
+         * (ver $tipos_materializables en
+         * NewProviderOrderHelper::aplicar_costos_extra_a_recargos_articulos(), empresa-api). Con
+         * "Otro" -o sin tipo elegido- el costo suma al total de la compra y nada mas: el costo de
+         * los articulos queda igual que si el flete se hubiera cargado como un gasto suelto, y el
+         * margen que el dueño cree tener es ficticio. El usuario hace todo bien -carga la compra,
+         * carga el flete- y no tiene NINGUNA forma de darse cuenta de que le falto un paso.
+         * Hasta este prompt la unica mencion estaba en el popover de "descriptions", que solo
+         * aparece al pasar el mouse por el label. Esta nota lo pone a la vista, permanente, en el
+         * mismo lugar donde se elige el tipo.
+         *
+         * El caso "sin tipo" es alcanzable de verdad, no es defensivo: getOptions()
+         * (src/common-vue/mixins/generals.js) antepone siempre la opcion
+         * { value: 0, text: 'Seleccione Tipo' }, y 0 tampoco esta entre los tipos que prorratean.
+         *
+         * Se lee "prorratea" de las propias options del prop (que ModelForm pasa como segundo
+         * argumento) en vez de tener la lista de tipos duplicada aca: el meta del modelo es el
+         * unico lugar donde vive.
+         *
+         * @param {Object} model - El costo extra (provider_order_extra_cost) que se esta editando.
+         * @param {Object} prop - Definicion declarativa del campo "tipo", con sus options.
+         * @returns {string} El aviso, o cadena vacia si el tipo elegido SI se prorratea.
+         */
+        costo_extra_tipo_nota(model, prop) {
+
+            if (!model || !prop || !prop.options) {
+                return ''
+            }
+
+            let opcion_elegida = prop.options.find(option => option.value == model.tipo)
+
+            if (opcion_elegida && opcion_elegida.prorratea) {
+                return ''
+            }
+
+            if (!model.tipo || model.tipo == 0) {
+                return 'Todavía no elegiste el tipo. Si lo dejás sin elegir, este costo NO se va a repartir entre los artículos: suma al total de la compra y nada más. Elegí Transporte, Seguro o Arancel/Importación para que el sistema lo prorratee.'
+            }
+
+            return 'Este tipo NO se prorratea: el costo suma al total de la compra, pero no llega al costo de ningún artículo. Si es un flete, un seguro o un arancel de importación, elegí ese tipo para que el sistema lo reparta entre los artículos.'
+        },
+
+        /**
+         * v_if_function para el checkbox historico "aplicar_iva_al_costo" (grupo 231, prompt 06).
+         * Con la dinamica nueva de costeo por condicion fiscal activa
+         * (usar_condicion_fiscal_en_costeo, grupo 231 prompt 02) esa tilde ya no tiene ningun
+         * efecto en el calculo de costos, asi que se oculta del formulario para evitar que el
+         * cliente la toque creyendo que hace algo.
+         *
+         * Se lee directamente de "model" (el usuario que se esta editando en la configuracion
+         * general, ver src/common-vue/components/configuration/general/Index.vue) y no de una
+         * computed sobre "this.user", porque el formulario debe reaccionar al toggle del
+         * checkbox nuevo antes de guardar.
+         *
+         * @param {Object} prop propiedad del modelo que declara este v_if_function.
+         * @param {Object} model el usuario (users) que se esta editando.
+         * @returns {Boolean}
+         */
+        ocultar_aplicar_iva_al_costo_si_usa_condicion_fiscal_v_if_function(prop, model) {
+            return !(model && model.usar_condicion_fiscal_en_costeo)
+        },
+        /**
+         * Lo simetrico de la funcion de arriba: muestra el select de condicion de IVA SOLO cuando
+         * la dinamica de costeo por condicion fiscal esta activada.
+         *
+         * Con el checkbox apagado, iva_va_al_costo() resuelve por la tilde historica
+         * aplicar_iva_al_costo y la condicion fiscal se ignora por completo: elegir Responsable
+         * Inscripto o Monotributista no cambia absolutamente nada. Dejarlo a la vista invita a
+         * tocarlo creyendo que hace algo, que es el mismo motivo por el que se oculta la tilde
+         * historica en el caso contrario.
+         *
+         * No es un caso de borde: la migracion 2026_07_27_120000 deja el checkbox en 0 para TODAS
+         * las cuentas existentes a proposito (solo las nuevas nacen en 1, desde
+         * HelperController::store_user), asi que hoy es el estado por defecto de la base instalada.
+         * Hallazgo 20260805-condicion-de-iva-visible-aunque-no-tenga-efecto.
+         *
+         * @param {Object} prop propiedad del modelo que declara este v_if_function.
+         * @param {Object} model el usuario (users) que se esta editando.
+         * @returns {Boolean}
+         */
+        mostrar_condicion_iva_si_usa_condicion_fiscal_v_if_function(prop, model) {
+            return !!(model && model.usar_condicion_fiscal_en_costeo)
         },
 
         set_expense_caja_id(prop_payment_method, model) {
@@ -561,6 +681,20 @@ export default {
 
             let price
 
+            /*
+                Marca si el precio salio LITERALMENTE de item.pivot.price. Es lo unico que dice
+                en que moneda esta ese numero: el pivot se guarda en la moneda de la venta que lo
+                creo, asi que ese precio NO se vuelve a cotizar.
+
+                Ojo: NO alcanza con mirar si el item tiene pivot. De las cinco ramas de abajo,
+                una sola toma el precio del pivot; las otras cuatro lo toman del CATALOGO, que
+                esta en la moneda del ARTICULO y no en la de la venta, asi que hay que pasarlo a
+                la moneda de la venta aunque el item tenga pivot. Ese era el bug: editando una
+                venta en dolares, cualquier item que cayera en una rama de catalogo teniendo
+                pivot se mostraba sin convertir.
+            */
+            let price_desde_pivot = false
+
             // Array de descripción del proceso de cálculo del precio para este item
             let item_des = []
 
@@ -581,9 +715,26 @@ export default {
                     Si es golonorte, no se usa el precio del articulo al momento de crear la venta.
                     Se omite este if y se aplica el precio actual de la lista de precio seleccionada
                 */
-                from_pivot 
-                && item.pivot 
-                && item.pivot.price
+                from_pivot
+                && item.pivot
+                /*
+                    Comparacion explicita en vez de `&& item.pivot.price` a secas, para que un
+                    precio guardado en 0 no se caiga al camino del precio actual del articulo.
+
+                    Con la salvedad de que hoy ese caso NO era alcanzable y conviene saberlo: la
+                    columna es decimal y PDO la devuelve como STRING, asi que lo que llega es
+                    "0.00", que en javascript es truthy. La condicion vieja ya tomaba la rama
+                    correcta. Esto lo blinda contra el dia en que el precio llegue como numero
+                    —un cast en el modelo, un endpoint nuevo, un item armado en el front— sin
+                    cambiar ningun comportamiento de hoy.
+
+                    El string vacio se excluye a proposito: Number('') es 0, asi que sin esa
+                    guarda una linea con precio vacio pasaria a mostrarse en $0 en vez de tomar
+                    el precio actual del articulo, que es lo que hace hoy.
+                */
+                && item.pivot.price !== null
+                && item.pivot.price !== ''
+                && typeof item.pivot.price != 'undefined'
                 && (
                     !this.hasExtencion('lista_de_precios_por_rango_de_cantidad_vendida')
                     || item.is_combo
@@ -595,6 +746,8 @@ export default {
             ) {
 
                 price = item.pivot.price
+                // Unica rama donde el precio viene del pivot: ya esta en la moneda de la venta.
+                price_desde_pivot = true
                 item_des.push('Precio del pivot (venta anterior): ' + this.price(price))
 
                 // Ajuste IVA sobre el precio del pivot
@@ -677,7 +830,7 @@ export default {
 
             // Cotización de moneda (se aplica al final, fuera de todas las ramas)
             let price_before_moneda = price
-            price = this.check_moneda(item, price, from_pivot)
+            price = this.check_moneda(item, price, from_pivot, price_desde_pivot)
             if (Number(price) !== Number(price_before_moneda)) {
                 item_des.push('Cotizacion moneda: ' + this.price(price_before_moneda) + ' -> ' + this.price(price))
             }
@@ -690,54 +843,106 @@ export default {
 
             return price
         },
-        check_moneda(item, price, from_pivot) {
+        /**
+         * Decide si el precio que viene de getPriceVender hay que llevarlo a la moneda de la
+         * venta en curso.
+         *
+         * El guard historico era `typeof item.pivot == 'undefined'`, o sea "si el item tiene
+         * pivot no cotices". Estaba mal: lo que importa no es que el item TENGA pivot, sino que
+         * el precio HAYA SALIDO del pivot. Cuatro de las cinco ramas de getPriceVender toman el
+         * precio del catalogo -que esta en la moneda del ARTICULO, no en la de la venta- y esas
+         * hay que convertirlas igual, tenga pivot o no.
+         *
+         * @param {Object} item
+         * @param {Number} price
+         * @param {Boolean} from_pivot          Si se esta editando una venta previa. El cuerpo NO
+         *                                      lo lee: queda en la firma por compatibilidad con la
+         *                                      llamada de getPriceVender, que lo sigue pasando. La
+         *                                      decision de convertir la toma price_desde_pivot.
+         * @param {Boolean} price_desde_pivot   Si el precio salio literalmente de item.pivot.price.
+         */
+        check_moneda(item, price, from_pivot, price_desde_pivot = false) {
 
+            // Los items con price_type_monedas traen su propia moneda: no se tocan. Igual que hoy.
             if (
-                typeof item.price_type_monedas == 'undefined'
-                || !item.price_type_monedas.length
+                typeof item.price_type_monedas != 'undefined'
+                && item.price_type_monedas.length
             ) {
-
-                if (typeof item.pivot == 'undefined') {
-
-                    if (this.$store.state.vender.moneda_id == 2) {
-                        // La venta es en dolares
-
-
-                        if (!item.cost_in_dollars) {
-                            price = this.cotizar_a_dolar(price)
-                            // console.log('luego de cotizar_a_dolar: ')
-                            // console.log(price)
-                        } else {
-                            if (this.owner.cotizar_precios_en_dolares) {
-                                price = this.cotizar_a_dolar(price)
-                                // console.log('luego de cotizar_a_dolar: ')
-                                // console.log(price)
-                            } else {
-                                // console.log('no se cotizo a dolar')
-                            }
-                        } 
-
-                    } else if (this.$store.state.vender.moneda_id == 1) {
-
-                        // La venta es en pesos
-                        
-                        if (
-                            item.cost_in_dollars
-                            && !this.owner.cotizar_precios_en_dolares
-                        ) {
-                            price = this.cotizar_a_peso(price)
-                            // console.log('luego de cotizar_a_peso: ')
-                            // console.log(price)
-                        } else {
-                            // console.log('no se cotizo a peso')
-                        }
-
-                    }
-                } else {
-                    // console.log('no entro porque tiene pivot')
-                }
+                return price
             }
-            
+
+            /*
+                Si el precio salio del pivot ya esta en la moneda de la venta que se cargo, y esa
+                venta es la que definio vender.moneda_id. Convertirlo seria cotizar dos veces.
+            */
+            if (price_desde_pivot) {
+                return price
+            }
+
+            return this.convertir_precio_a_moneda_de_la_venta(item, price)
+        },
+        /**
+         * Lleva un precio de CATALOGO a la moneda de la venta en curso.
+         *
+         * Ojo con la direccion: el precio de catalogo esta en la moneda del ARTICULO, que no es
+         * necesariamente pesos. Para un articulo con cost_in_dollars y
+         * owner.cotizar_precios_en_dolares apagado, el final_price esta EN DOLARES -por eso
+         * existe cotizar_a_peso()-. O sea que esto no es 'pasar de pesos a la moneda de la
+         * venta': es pasar de la moneda del articulo a la moneda de la venta.
+         *
+         * Es el cuerpo que antes vivia adentro del if de check_moneda; no cambia ninguna regla.
+         *
+         * @param {Object} item
+         * @param {Number} price
+         * @returns {Number}
+         */
+        convertir_precio_a_moneda_de_la_venta(item, price) {
+
+            if (this.$store.state.vender.moneda_id == 2) {
+                // La venta es en dolares
+
+                /*
+                    Sin cotizacion no se puede pasar a dolares: cotizar_a_dolar DIVIDE por
+                    valor_dolar, y un 0 deja el precio en Infinity.
+
+                    El guard va ADENTRO de esta rama y no al principio de la funcion, y es
+                    deliberado: la rama de pesos MULTIPLICA, asi que con valor_dolar en 0
+                    muestra $0 -roto, pero a la vista-. Si se cortara antes, ese mismo item se
+                    mostraria con su precio en dolares como si fueran pesos: roto y creible,
+                    que es peor. Un $0 se ve y se corrige; un precio plausible que esta mal se
+                    cobra. Preservar el comportamiento visible del camino de pesos es la
+                    decision, no un olvido.
+
+                    Y el 0 llega por un camino normal: en total-previus-sales/Moneda.vue, si el
+                    operador vacia el input, Number('') es 0 y eso se commitea al store.
+                */
+                if (!Number(this.$store.state.vender.valor_dolar)) {
+                    return price
+                }
+
+                if (!item.cost_in_dollars) {
+                    price = this.cotizar_a_dolar(price)
+                } else {
+                    if (this.owner.cotizar_precios_en_dolares) {
+                        price = this.cotizar_a_dolar(price)
+                    }
+                }
+
+            } else if (this.$store.state.vender.moneda_id == 1) {
+
+                // La venta es en pesos
+
+                if (
+                    item.cost_in_dollars
+                    && !this.owner.cotizar_precios_en_dolares
+                ) {
+                    price = this.cotizar_a_peso(price)
+                }
+
+            }
+
+            // moneda_id null (presupuesto sin moneda): no matchea ninguna rama y el precio
+            // vuelve tal cual. Comportamiento de hoy, se conserva.
             return price
         },
         cotizar_a_peso(price) {
@@ -750,14 +955,83 @@ export default {
             // console.log(price)
             return price = Number(price) / Number(this.$store.state.vender.valor_dolar) 
         },
+        /**
+         * Redondeo de DISPLAY: replica exactamente lo que hace ArticleHelper::redondear() en el
+         * backend, que es la unica fuente de verdad del precio guardado.
+         *
+         * 🔴 HOY NO LA LLAMA NADIE, Y ESO ES DELIBERADO. No es codigo olvidado: las tres llamadas
+         * que tenia se sacaron el 11/8/2026 por decision de Lucas, con la regla "la SPA no
+         * redondea: muestra el numero que el backend calculo y que la venta va a cobrar". Se
+         * conserva la funcion —no la llamada— porque es el espejo en JS de la cadena del backend y
+         * la referencia correcta el dia que haga falta.
+         *
+         * Las tres llamadas estaban mal por el mismo motivo: le pasaban un precio que el backend
+         * NO redondea. Dos le pasaban un precio con el descuento por forma de pago ya aplicado
+         * (el buscador de Vender y la consultora de precios), y la tercera le pasaba el PRECIO
+         * MANUAL, `article.price` (la columna del Listado) -- que no es el precio final ni el
+         * costo, sino el override que el backend usa como BASE para calcular el final. El backend
+         * aplica redondear() una sola vez, sobre el precio final de catalogo. El sintoma medido:
+         * un cliente con "de a 50" y 12% de descuento veia $900 donde el sistema cobraba $880.
+         *
+         * ⚠️ Si alguna vez volves a llamarla, la unica invocacion legitima es sobre un precio de
+         * CATALOGO que el backend ya redondeo, para que el redondeo sea idempotente. Nunca sobre un
+         * precio con un descuento aplicado, nunca sobre un costo.
+         *
+         * Tarea 4 — antes esta funcion conocia una sola de las cinco opciones
+         * (redondear_centenas_en_vender) y ademas la implementaba distinto del backend: usaba
+         * Math.ceil y no tenia el guard de > 100. O sea que un articulo de $80 con esa opcion
+         * activa se MOSTRABA en $100 aunque el precio real fuera $80: el display inventaba plata
+         * que no estaba en la base.
+         *
+         * La invariante que hay que sostener: este redondeo tiene que ser idempotente sobre un
+         * precio que el backend ya redondeo, y no puede redondear un precio que el backend no
+         * habria redondeado. Se cumple replicando la cadena tal cual, incluidas dos cosas que
+         * parecen detalles y no lo son: los cinco flags se ENCADENAN (no hay early return, cada uno
+         * pisa el precio del anterior) y el de a 50 va DESPUES del de a 10.
+         *
+         * @param {number} price - Precio a redondear para mostrar.
+         * @returns {number}
+         */
         redondear(price) {
-            if (this.owner.redondear_centenas_en_vender) {
-                price = this.redondear_centenas(price)
+            let num = Number(price)
+
+            if (this.owner.redondear_miles_en_vender) {
+                num = Math.round(num / 1000) * 1000
             }
-            return price
+
+            if (this.owner.redondear_centenas_en_vender) {
+                // El guard de > 100 es del backend y hay que respetarlo: sin el, un precio de $80
+                // se mostraria en $100.
+                if (num > 100) {
+                    num = this.redondear_centenas(num)
+                }
+            }
+
+            if (this.owner.redondear_precios_en_decenas) {
+                num = Math.round(num / 10) * 10
+            }
+
+            if (this.owner.redondear_de_a_50) {
+                // Esta es la unica que va siempre hacia arriba, igual que el ceil del backend.
+                num = Math.ceil(num / 50) * 50
+            }
+
+            if (this.owner.redondear_precios_en_centavos) {
+                num = Math.round(num)
+            }
+
+            return num
         },
+        /**
+         * Redondeo a la centena mas cercana. Math.round y no Math.ceil: el backend usa
+         * round($price, -2). Para precios positivos, Math.round de JS y round de PHP coinciden
+         * (los dos mandan el .5 hacia arriba).
+         *
+         * @param {number} num
+         * @returns {number}
+         */
         redondear_centenas(num) {
-            return Math.ceil(num / 100) * 100;
+            return Math.round(num / 100) * 100;
         },
         aplicar_tipos_de_precio(item, price) {
 
@@ -910,6 +1184,16 @@ export default {
             }
             return '-'
         },
+        /**
+         * 🔴 ESTA FUNCION NO ESTA EN EL CAMINO DE VENDER. NO LA "ARREGLES" JUNTO CON check_moneda.
+         *
+         * Su unico consumidor en toda la SPA es src/mixins/online.js. Su rama de pivot hace
+         * `price * article.pivot.with_dolar`, tratando with_dolar como COTIZACION y no como
+         * booleano —coherente con que la columna es decimal—. Ademas SaleHelper::attachArticle()
+         * nunca escribe pivot.with_dolar, asi que para toda venta creada desde Vender ese campo
+         * es null y la multiplicacion nunca corre. Meterle una division para "corregir la moneda"
+         * romperia online.js sin arreglar nada de Vender.
+         */
         articlePrice(article, from_pivot = false, formated = true, in_dolars = false) {
             let price
             if (from_pivot) {

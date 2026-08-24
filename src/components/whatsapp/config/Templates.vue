@@ -1,6 +1,8 @@
 <template>
 	<div class="whatsapp-templates-abm">
-		<div class="whatsapp-templates-abm__header">
+		<div
+		v-if="templates.length"
+		class="whatsapp-templates-abm__header">
 			<b-button
 			size="sm"
 			variant="success"
@@ -10,11 +12,14 @@
 			</b-button>
 		</div>
 
-		<small class="text-muted whatsapp-templates-abm__reminder">
+		<small
+		v-if="templates.length"
+		class="text-muted whatsapp-templates-abm__reminder">
 			Las plantillas no pueden empezar ni terminar con una variable (<code>{{ placeholder_syntax_example }}</code>).
 		</small>
 
 		<b-table
+		v-if="templates.length"
 		:items="templates"
 		:fields="fields"
 		small
@@ -72,6 +77,19 @@
 				</div>
 			</template>
 		</b-table>
+		<empty-state
+		v-else-if="!$store.state.whatsapp_template.loading"
+		icon_class="bi bi-chat-square-text"
+		title="Todavía no creaste ninguna plantilla"
+		hint="Las plantillas son mensajes aprobados por Meta para escribirle a un cliente después de las 24 horas. Creá la primera y el equipo de ComercioCity la carga en Meta.">
+			<b-button
+			size="sm"
+			variant="success"
+			@click="openCreate">
+				<i class="bi bi-plus-lg"></i>
+				Nueva plantilla
+			</b-button>
+		</empty-state>
 
 		<template-form-modal
 		:template="editing_template"></template-form-modal>
@@ -82,6 +100,7 @@ import TemplateFormModal from '@/components/whatsapp/config/TemplateFormModal'
 export default {
 	components: {
 		TemplateFormModal,
+		EmptyState: () => import('@/common-vue/components/display/EmptyState'),
 	},
 	data() {
 		return {
@@ -209,7 +228,7 @@ export default {
 		margin-bottom: 10px
 	&__lock
 		margin-right: 4px
-		color: rgba(0, 0, 0, .45)
+		color: var(--color-text-secondary)
 	&__preview
 		display: -webkit-box
 		-webkit-line-clamp: 2

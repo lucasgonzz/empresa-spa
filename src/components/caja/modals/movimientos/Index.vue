@@ -4,6 +4,14 @@
 	:title="title"
 	hide-footer
 	id="movimientos-caja">
+		<!--
+			listado_paginado_por_defecto en false: este modal ya carga los movimientos
+			scopeados por la apertura elegida (route_prefix = apertura_caja.id +
+			movimiento_caja/getModels, ver clicked() en aperturas/Index.vue) antes de
+			abrirse. Mismo problema que en aperturas/Index.vue: movimiento_cajas tampoco
+			tiene columna user_id, asi que el runListadoPorDefecto del grupo 221 rompe con
+			500 apenas monta. Ver hallazgo 20260810-buscador-general-modelos-sin-user-id.
+		-->
 		<view-component
 		@modelSaved="actualizar_info"
 		@modelDeleted="actualizar_info"
@@ -11,6 +19,7 @@
 		@clicked="clicked"
 		:show_btn_save="show_btn_save"
 		:props_to_send_on_save="props_to_send_on_save"
+		:listado_paginado_por_defecto="false"
 		model_name="movimiento_caja">
 			<template #header>
 				<info-apertura-caja></info-apertura-caja>
@@ -19,6 +28,32 @@
 			<template #table-prop-concepto_movimiento_caja_id="props">
 				<btn-concepto
 				:movimiento_caja="props.model"></btn-concepto>
+			</template>
+
+			<!--
+				Los montos de ingreso y egreso salian los dos en negro y una celda vacia no se
+				distinguia de un cero. El guion largo marca "no hay monto".
+			-->
+			<template #table-prop-ingreso="props">
+				<span
+				v-if="props.model.ingreso"
+				class="movimiento-monto movimiento-monto--ingreso">
+					{{ price(props.model.ingreso) }}
+				</span>
+				<span
+				v-else
+				class="movimiento-monto--vacio">—</span>
+			</template>
+
+			<template #table-prop-egreso="props">
+				<span
+				v-if="props.model.egreso"
+				class="movimiento-monto movimiento-monto--egreso">
+					{{ price(props.model.egreso) }}
+				</span>
+				<span
+				v-else
+				class="movimiento-monto--vacio">—</span>
 			</template>
 		</view-component>
 	</b-modal>
@@ -120,3 +155,19 @@ export default {
 	}
 }
 </script>
+<style scoped lang="sass">
+// Funciona con scoped aunque las clases se usen dentro de la tabla: en Vue 2 el contenido de
+// un slot se compila en el scope del componente que lo escribe, o sea este, asi que recibe
+// este scope id y no el de common-vue.
+.movimiento-monto
+	font-weight: 600
+
+	&--ingreso
+		color: var(--caja-abierta-texto)
+
+	&--egreso
+		color: var(--caja-cerrar-texto)
+
+	&--vacio
+		color: var(--color-text-secondary)
+</style>

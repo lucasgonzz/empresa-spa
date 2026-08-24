@@ -13,6 +13,7 @@
 				v-for="(item, i) in items"
 				:key="i"
 				:dusk="value(item)"
+				:data-testid="testid(item)"
 				@click="select(item)"
 				:class="isActive(item)">
 					{{ itemName(item) }}
@@ -39,7 +40,7 @@
 						<i class="icon-search"></i>
 					</b-button>
 					<b-button
-					v-if="is_filtered"
+					v-if="is_filtered && !listado_por_defecto"
 					@click="restartSearch"
 					variant="outline-success">
 						<i class="icon-history"></i>
@@ -107,9 +108,11 @@ import BtnCreate from '@/common-vue/components/BtnCreate'
 import FilterModal from '@/common-vue/components/horizontal-nav/FilterModal'
 import ExcelDropDown from '@/common-vue/components/horizontal-nav/ExcelDropDown'
 import DisplayNav from '@/common-vue/components/horizontal-nav/DisplayNav'
+import horizontal_nav_scroll from '@/common-vue/mixins/horizontal_nav_scroll'
 
 export default {
 	name: 'HorizontalNav',
+	mixins: [horizontal_nav_scroll],
 	components: {
 		BtnCreate,
 		FilterModal,
@@ -206,8 +209,6 @@ export default {
 	data() {
 		return {
 			selected_item: null,
-			/* true cuando el ancho de los ítems supera el contenedor y hace falta scroll horizontal */
-			has_horizontal_scroll: false,
 		}
 	},
 	computed: {
@@ -256,6 +257,19 @@ export default {
 			return this.$store.state[this.model_name].is_filtered
 		},
 		/**
+		 * True cuando lo que hay en pantalla es el listado por defecto (prompts 02/03 del grupo
+		 * 221), no un filtro puesto por el usuario. El store de papelera no tiene este flag (la
+		 * papelera nunca arma listado por defecto), por eso solo se lee del lado normal.
+		 *
+		 * @returns {Boolean}
+		 */
+		listado_por_defecto() {
+			if (this.papelera) {
+				return false
+			}
+			return !!this.$store.state[this.model_name].listado_por_defecto
+		},
+		/**
 		 * Cantidad de registros cargados en el resultado del filtro de la papelera (páginas acumuladas con “ver más”).
 		 */
 		cantidad_filtrados_papelera() {
@@ -286,65 +300,20 @@ export default {
 				}
 			},
 		},
-		/**
-		 * Recalcula si hace falta scroll cuando cambia la cantidad o el texto de los ítems.
-		 */
-		items: {
-			handler() {
-				this.schedule_horizontal_scroll_check()
-			},
-			deep: true,
-		},
-	},
-	mounted() {
-		this.schedule_horizontal_scroll_check()
-		window.addEventListener('resize', this.on_window_resize_for_horizontal_nav)
-	},
-	beforeDestroy() {
-		window.removeEventListener('resize', this.on_window_resize_for_horizontal_nav)
-		if (this.horizontal_scroll_check_timeout) {
-			clearTimeout(this.horizontal_scroll_check_timeout)
-		}
 	},
 	methods: {
-		/**
-		 * Programa la verificación de overflow tras el próximo render del DOM.
-		 */
-		schedule_horizontal_scroll_check() {
-			this.$nextTick(() => {
-				this.update_horizontal_scroll_state()
-			})
-		},
-		/**
-		 * Revalida el overflow cuando cambia el tamaño de la ventana.
-		 */
-		on_window_resize_for_horizontal_nav() {
-			if (this.horizontal_scroll_check_timeout) {
-				clearTimeout(this.horizontal_scroll_check_timeout)
-			}
-			/* Evita recalcular en cada pixel del resize */
-			this.horizontal_scroll_check_timeout = setTimeout(() => {
-				this.update_horizontal_scroll_state()
-			}, 100)
-		},
-		/**
-		 * Detecta si los ítems desbordan el contenedor y activa espacio para la barra de scroll.
-		 */
-		update_horizontal_scroll_state() {
-			let horizontal_nav = this.$refs.horizontal_nav
-			if (!horizontal_nav) {
-				this.has_horizontal_scroll = false
-				return
-			}
-			/* Tolerancia de 1px por redondeos de subpíxeles en distintos navegadores */
-			this.has_horizontal_scroll = horizontal_nav.scrollWidth > (horizontal_nav.clientWidth + 1)
-		},
 		filterModal() {
 			this.$bvModal.show('filter-modal')
 			setTimeout(() => {
 				document.getElementById('search-modal-'+this.propsToFilterInModal(this.model_name)[0].key).focus()
 			}, 300)
 		},
+		/**
+		 * Reinicia el estado de filtrado en el store. Fuera de papelera, dispatchea
+		 * runListadoPorDefecto al final (prompt 04 del grupo 221) para volver al listado completo
+		 * paginado en vez de dejar la tabla con lo que haya quedado en memoria; el store de
+		 * papelera no tiene esa action, por eso queda igual que antes en ese caso.
+		 */
 		restartSearch() {
 			let prefix = this.papelera ? ('papelera/' + this.model_name + '/') : (this.model_name + '/')
 			this.$store.commit(prefix + 'setIsFiltered', false)
@@ -352,6 +321,10 @@ export default {
 			this.$store.commit(prefix + 'setFilterPage', 1)
 			this.$store.commit(prefix + 'setTotalFilterPages', null)
 			this.$store.commit(prefix + 'setTotalFilterResults', 0)
+
+			if (!this.papelera) {
+				this.$store.dispatch(this.model_name + '/runListadoPorDefecto')
+			}
 		},
 		setDisplay(display) {
 			this.$emit('setDisplay', display)
@@ -434,6 +407,28 @@ export default {
 		value(item) {
 			return item[this._prop_name]
 		},
+		/**
+		 * data-testid de una pestaña de esta nav, con la convencion de e2e/README.md.
+		 *
+		 * Hace falta porque desde el prompt de grupos de props el formulario generico (ModelForm)
+		 * reparte sus campos en PESTAÑAS: solo se renderizan los del grupo activo. Los tests e2e de
+		 * compras se escribieron cuando el formulario era uno solo, asi que buscaban campos como
+		 * provider_order-modo_facturacion (grupo "Facturacion") o provider_order-articles (grupo
+		 * "Articulos") sin cambiar de pestaña, y morian esperando un elemento que todavia no existe
+		 * en el DOM. Con esto un test puede hacer lo mismo que un humano: clickear la pestaña.
+		 *
+		 * Solo agrega un atributo, al lado del `dusk` que ya estaba: no cambia nada del render.
+		 *
+		 * @param {object} item Item de la nav.
+		 * @returns {string|null} 'nav-item-<valor>' o null si el item no tiene un valor usable.
+		 */
+		testid(item) {
+			let valor = this.value(item)
+			if (typeof valor != 'string' || !valor.length) {
+				return null
+			}
+			return 'nav-item-' + valor
+		},
 		routeValue(item) {
 			if (item.route_value) {
 				return item.route_value
@@ -459,6 +454,7 @@ export default {
 	// padding: 1em 0 0
 	justify-content: space-between
 	width: 100%
+	min-width: 0
 
 	.cont-left
 		display: flex
@@ -466,6 +462,7 @@ export default {
 		justify-content: flex-start
 		align-items: center
 		flex-wrap: wrap
+		min-width: 0
 		max-width: 100%
 		.cont-buttons
 			display: flex 
@@ -475,21 +472,23 @@ export default {
 		& > div 
 			margin-top: 15px
 /* Pista gris segmentada (mismo estilo que impl-detail-tab-bar en admin Implementations) */
+/* Los colores van como token con el literal viejo de fallback, y NO como una regla en */
+/* _dark_theme.sass: este bloque es `scoped`, asi que Vue le pega un [data-v-...] a cada selector y */
+/* una regla del tema tendria que pelear contra esa especificidad. Las custom properties, en cambio, */
+/* se declaran en html y viajan por herencia: atraviesan el scope sin pelear con nadie. */
+/* El fondo usa su propio token (--bg-nav) y no --bg-section: en modo claro --bg-section es #f8f9fa y */
+/* la barra quedaria mas clara de lo que es hoy, y nadie pidio tocar el modo claro. */
 .horizontal-nav
-	width: 100%
-	display: flex
+	display: inline-flex
+	width: fit-content
+	max-width: 100%
+	min-width: 0
 	gap: 6px
 	padding: 4px
 	overflow-x: auto
 	overflow-y: hidden
-	background-color: #E3E3E3
-	border-radius: 8px
-	transition: padding-bottom 0.12s ease
-
-	/* Solo cuando hay overflow: reserva espacio al interactuar para que la barra no tape los ítems */
-	&.has_horizontal_scroll:hover,
-	&.has_horizontal_scroll:focus-within
-		padding-bottom: 14px
+	background-color: var(--bg-nav, #E3E3E3)
+	border-radius: 10px
 
 	@media screen and (max-width: 576px)
 		-webkit-scrollbar 
@@ -506,20 +505,22 @@ export default {
 	/* Pestaña inactiva: texto secundario sobre fondo transparente */
 	.item
 		border: none
-		border-radius: 6px
+		border-radius: 8px
 		padding: 8px 12px
 		cursor: pointer
 		font-size: 0.875rem
 		font-weight: 500
 		line-height: 1.25
-		color: #6c757d
+		color: var(--color-text-secondary, #6c757d)
 		background-color: transparent
 		white-space: nowrap
 		transition: color 0.12s ease, background-color 0.12s ease, box-shadow 0.12s ease
 
 		&:hover:not(.active)
-			color: #0d6efd
-			background-color: #e7f1ff
+			color: var(--color-primary, #0d6efd)
+			/* Token propio y no --bg-hover: este celeste es un hover AZULADO a proposito, y */
+			/* --bg-hover en claro es un gris (#f1f3f5) que le sacaria el matiz. */
+			background-color: var(--bg-nav-hover, #e7f1ff)
 
 		&:focus,
 		&:focus-visible
@@ -527,17 +528,22 @@ export default {
 			outline: none
 
 		&:focus-visible
-			outline: 2px solid #0d6efd
+			outline: 2px solid var(--color-primary, #0d6efd)
 			outline-offset: 2px
 
 		/* Pestaña activa: relleno azul sólido como btn-primary */
+		/* El azul del componente es UNO SOLO, por token: #0d6efd y el #007bff de :root son el mismo */
+		/* azul primario con dos versiones de Bootstrap de diferencia, y dejar la pestaña activa con el */
+		/* literal congelaba dos azules distintos conviviendo en el mismo componente. */
 		&.active
 			color: #fff
-			background-color: #0d6efd
+			background-color: var(--color-primary, #0d6efd)
 			font-weight: 600
 			box-shadow: 0 1px 2px rgba(13, 110, 253, 0.28)
 
 			&:hover
 				color: #fff
+				/* Queda literal: es el primario OSCURECIDO para el hover, no el primario. No hay */
+				/* token para esa variante y el tema no lo necesita: funciona igual en los dos modos. */
 				background-color: #0b5ed7
 </style>

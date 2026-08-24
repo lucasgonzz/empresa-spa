@@ -2,6 +2,12 @@
 	<div class="whatsapp-agent-config">
 		<b-form-group
 		label="Personalidad del agente">
+			<agent-template-picker
+			:templates="personality_templates"
+			:selected_key="selected_personality_key"
+			variant="card"
+			class="whatsapp-agent-config__picker"
+			@selected="onPersonalitySelected"></agent-template-picker>
 			<b-form-textarea
 			v-model="form.agent_personality"
 			rows="5"
@@ -11,6 +17,25 @@
 				Esto define el tono y la forma de hablar del agente. No puede pisar las reglas
 				fijas del sistema: el agente nunca inventa precios ni stock, y nunca confirma
 				pagos por su cuenta.
+			</small>
+		</b-form-group>
+
+		<b-form-group
+		label="Habilidades del agente">
+			<agent-template-picker
+			:templates="skill_templates"
+			:selected_key="selected_skills_key"
+			variant="chip"
+			class="whatsapp-agent-config__picker"
+			@selected="onSkillsSelected"></agent-template-picker>
+			<b-form-textarea
+			v-model="form.agent_skills"
+			rows="5"
+			max-rows="10"
+			placeholder="Sos experto en ferretería..."></b-form-textarea>
+			<small class="text-muted whatsapp-agent-config__hint">
+				Definí de qué sabe el agente: el rubro, el vocabulario y qué preguntar. La
+				personalidad es cómo habla; esto es qué sabe.
 			</small>
 		</b-form-group>
 
@@ -32,6 +57,62 @@
 			</small>
 		</div>
 
+		<!-- Va en esta solapa y no en "Conexión" porque es comportamiento del agente, no una
+		credencial. Nace apagado: prendido, cada foto que el agente mira se paga aparte. -->
+		<div class="whatsapp-agent-config__toggle-group">
+			<b-form-checkbox
+			v-model="form.ai_vision_enabled"
+			switch>
+				Que la IA mire las fotos que manda el cliente
+			</b-form-checkbox>
+			<small class="text-muted">
+				Apagado, el agente sabe que llegó una imagen pero no la interpreta. Prendido,
+				cada foto que analiza tiene un costo extra.
+			</small>
+		</div>
+
+		<!-- Gatea el botón de "Simular mensaje del cliente" tanto en la conversación como en el
+		header de la bandeja (chats-list/Index.vue). Nace apagado: sin esto, a los clientes ya
+		activos les aparecería un botón nuevo sin haberlo pedido. -->
+		<div class="whatsapp-agent-config__toggle-group">
+			<b-form-checkbox
+			v-model="form.chat_simulation_enabled"
+			switch>
+				Permitir simular mensajes del cliente en la conversación
+			</b-form-checkbox>
+			<small class="text-muted">
+				Habilita un botón en cada conversación para probar cómo responde el agente. No
+				le llega nada a nadie.
+			</small>
+		</div>
+
+		<b-form-group
+		label="Espera antes de responder (segundos)">
+			<b-form-input
+			v-model="form.ai_reply_delay_seconds"
+			type="number"
+			min="0"
+			max="600"></b-form-input>
+			<small class="text-muted whatsapp-agent-config__hint">
+				Segundos que espera el agente antes de responder. Si el cliente manda varios
+				mensajes seguidos, el agente espera a que termine y responde una sola vez a todos.
+				En 0 responde al instante.
+			</small>
+		</b-form-group>
+
+		<b-form-group
+		label="Espera para confirmar antes de enviar (segundos)">
+			<b-form-input
+			v-model="form.ai_confirm_delay_seconds"
+			type="number"
+			min="0"
+			max="3600"></b-form-input>
+			<small class="text-muted whatsapp-agent-config__hint">
+				Segundos que el mensaje generado espera tu confirmación antes de enviarse solo.
+				En 0 se envía automáticamente, sin esperar.
+			</small>
+		</b-form-group>
+
 		<div class="whatsapp-agent-config__actions">
 			<btn-loader
 			text="Guardar"
@@ -42,17 +123,36 @@
 	</div>
 </template>
 <script>
+import { WHATSAPP_PERSONALITY_TEMPLATES, WHATSAPP_SKILL_TEMPLATES } from '@/constants/whatsapp_agent_templates'
+import AgentTemplatePicker from '@/components/whatsapp/config/AgentTemplatePicker'
+
 export default {
 	components: {
 		BtnLoader: () => import('@/common-vue/components/BtnLoader'),
+		AgentTemplatePicker,
 	},
 	data() {
 		return {
+			// Listas cerradas de plantillas precargadas (no son reactivas: son constantes de módulo).
+			personality_templates: WHATSAPP_PERSONALITY_TEMPLATES,
+			skill_templates: WHATSAPP_SKILL_TEMPLATES,
 			// Copia local editable de la configuración (se sincroniza con el store al cargar/guardar).
+			// Los dos delays arrancan en 0 = comportamiento de siempre (responde y envía al toque):
+			// así, si el backend todavía no tiene la columna cargada, nada cambia de golpe.
 			form: {
 				agent_personality: '',
+				// Es texto libre, igual que la personalidad: el rubro/vocabulario del negocio.
+				agent_skills: '',
 				ai_enabled_default: true,
 				auto_send_sale_pdf: false,
+				ai_reply_delay_seconds: 0,
+				ai_confirm_delay_seconds: 0,
+				// Arranca apagado, igual que el default de la columna en la base: prender la
+				// visión sin que el dueño lo pida le sumaría un costo por cada foto que llegue.
+				ai_vision_enabled: false,
+				// Arranca apagado por el mismo motivo: sin esto, a los clientes ya activos les
+				// aparecería de golpe un botón nuevo que nadie pidió.
+				chat_simulation_enabled: false,
 			},
 			loading: false,
 		}
@@ -64,6 +164,27 @@ export default {
 		config() {
 			return this.$store.state.whatsapp_bot_config.models[0] || null
 		},
+		/**
+		 * Clave de la plantilla de personalidad cuyo texto coincide EXACTO con lo que hay en el
+		 * textarea, o null si no coincide con ninguna (porque está vacío o el dueño lo editó a
+		 * mano). Alimenta el picker para que la marca de "seleccionada" se apague sola apenas se
+		 * toca una letra.
+		 *
+		 * @returns {string|null}
+		 */
+		selected_personality_key() {
+			let found = this.personality_templates.find(item => item.text === this.form.agent_personality)
+			return found ? found.key : null
+		},
+		/**
+		 * Igual que `selected_personality_key`, pero contra las plantillas de habilidades.
+		 *
+		 * @returns {string|null}
+		 */
+		selected_skills_key() {
+			let found = this.skill_templates.find(item => item.text === this.form.agent_skills)
+			return found ? found.key : null
+		},
 	},
 	watch: {
 		config: {
@@ -73,18 +194,74 @@ export default {
 					return
 				}
 				this.form.agent_personality = value.agent_personality || ''
+				this.form.agent_skills = value.agent_skills || ''
 				// Si todavía no está seteado en backend (registro viejo), se respeta el default true/false.
 				this.form.ai_enabled_default = value.ai_enabled_default === undefined || value.ai_enabled_default === null
 					? true
 					: !!value.ai_enabled_default
 				this.form.auto_send_sale_pdf = !!value.auto_send_sale_pdf
+				// `Number(...) || 0` de una: la API los manda como número, pero un registro viejo
+				// (anterior a la migración) los trae null/undefined y el input numérico devuelve
+				// string. En los dos casos el fallback correcto es 0 = sin espera.
+				this.form.ai_reply_delay_seconds = Number(value.ai_reply_delay_seconds) || 0
+				this.form.ai_confirm_delay_seconds = Number(value.ai_confirm_delay_seconds) || 0
+				// `!!` de una: un registro anterior a la migración lo trae null/undefined, y en
+				// los dos casos el default correcto es apagado. Además la API lo puede mandar
+				// como 0/1 si algún día se le cae el cast del modelo.
+				this.form.ai_vision_enabled = !!value.ai_vision_enabled
+				this.form.chat_simulation_enabled = !!value.chat_simulation_enabled
 			},
 		},
 	},
 	methods: {
 		/**
-		 * Guarda la personalidad y los dos toggles. Usa el indicador global de carga (además
-		 * del loading local del botón) según la convención del proyecto.
+		 * Aplica la plantilla de personalidad elegida en el picker. Si el textarea está vacío o
+		 * ya tiene el texto de OTRA plantilla conocida, reemplaza directo (no hay nada propio del
+		 * dueño que perder). Si tiene contenido propio, confirma antes de pisarlo.
+		 *
+		 * @param {Object} template Plantilla completa emitida por el picker ({ key, name, text, ... }).
+		 * @returns {void}
+		 */
+		onPersonalitySelected(template) {
+			let self = this
+			if (!this.form.agent_personality.trim() || this.selected_personality_key) {
+				this.form.agent_personality = template.text
+				return
+			}
+			this.$bvModal.msgBoxConfirm('Ya escribiste algo acá. ¿Lo reemplazo por la plantilla "' + template.name + '"?', {
+				okTitle: 'Reemplazar',
+				cancelTitle: 'Cancelar',
+			}).then(function (confirmed) {
+				if (confirmed) {
+					self.form.agent_personality = template.text
+				}
+			})
+		},
+		/**
+		 * Igual que `onPersonalitySelected`, para el textarea de habilidades.
+		 *
+		 * @param {Object} template Plantilla completa emitida por el picker ({ key, name, text, ... }).
+		 * @returns {void}
+		 */
+		onSkillsSelected(template) {
+			let self = this
+			if (!this.form.agent_skills.trim() || this.selected_skills_key) {
+				this.form.agent_skills = template.text
+				return
+			}
+			this.$bvModal.msgBoxConfirm('Ya escribiste algo acá. ¿Lo reemplazo por la plantilla "' + template.name + '"?', {
+				okTitle: 'Reemplazar',
+				cancelTitle: 'Cancelar',
+			}).then(function (confirmed) {
+				if (confirmed) {
+					self.form.agent_skills = template.text
+				}
+			})
+		},
+		/**
+		 * Guarda la personalidad, las habilidades, los toggles y los dos tiempos de espera. Usa
+		 * el indicador global de carga (además del loading local del botón) según la convención
+		 * del proyecto.
 		 */
 		save() {
 			this.loading = true
@@ -111,6 +288,8 @@ export default {
 </script>
 <style lang="sass">
 .whatsapp-agent-config
+	&__picker
+		margin-bottom: 10px
 	&__hint
 		display: block
 		margin-top: 6px

@@ -1,23 +1,90 @@
 <template>
-	<b-row>
-		<b-col
-		xl="6"
-		cols="12">
-			<address-nav></address-nav>
-		</b-col>
-		<b-col
-		class="m-t-10 m-xl-t-0"
-		xl="6"
-		cols="12">
-			<afip-ticket-nav></afip-ticket-nav>
-		</b-col>
-	</b-row>
+	<div class="ventas-cabecera">
+		<!-- Sucursales: sigue arriba, a todo el ancho, como estaba. -->
+		<address-nav></address-nav>
+
+		<!--
+			Empleados y filtros COMPARTEN FILA (misión 32, 11/8/2026). Antes eran dos filas apiladas
+			—los filtros arriba a la derecha y los empleados abajo—, y entre las dos se comían el alto
+			de la cabecera sin necesidad.
+
+			🔴 El `min-width: 0` del nav de empleados es lo que sostiene esta fila y no es decorativo:
+			un ítem flex nunca baja de su ancho de contenido a menos que se lo declare. Sin eso, con
+			seis o siete empleados cargados el nav se lleva la fila entera y los filtros vuelven a
+			caer abajo, que es exactamente el estado del que venimos. El que se encoge es el nav
+			—tiene su propio scroll horizontal para eso—, nunca los filtros.
+		-->
+		<div class="ventas-cabecera__fila">
+			<employee-nav class="ventas-cabecera__nav"></employee-nav>
+			<afip-ticket-nav class="ventas-cabecera__filtros"></afip-ticket-nav>
+		</div>
+	</div>
 </template>
 <script>
 export default {
 	components: {
 		AddressNav: () =>import('@/components/ventas/components/address-afip-ticket-ventas-cobradas-nav/AddressNav'),
 		AfipTicketNav: () =>import('@/components/ventas/components/address-afip-ticket-ventas-cobradas-nav/AfipTicketNav'),
+		EmployeeNav: () =>import('@/components/ventas/components/EmployeeNav'),
 	},
 }
 </script>
+<style lang="sass">
+.ventas-cabecera
+
+	&__fila
+		display: flex
+		flex-direction: row
+		flex-wrap: nowrap
+		align-items: center
+		gap: var(--toolbar-group-gap)
+		// El aire con el nav de sucursales de arriba lo pone ESTA fila y nadie mas (mision 40,
+		// 12/8/2026). Medido antes: 0px entre sucursales y esta fila, contra los 15px que ya habia
+		// entre esta fila y la de totales --que salen del margin-bottom de aca abajo--. Las dos
+		// primeras filas quedaban pegadas y la tercera no.
+		//
+		// Medido tambien CON empleados cargados, porque ahi es donde el neutralizador de mas abajo
+		// podria no ganar y el aire real seria otro: la pista de empleados computa `margin-top: 0`,
+		// el aire hasta lo primero que se ve sigue dando 15px, y las pestañas quedan a 1,25px de los
+		// filtros. O sea que el numero no depende de cuantos empleados tenga cargados el cliente.
+		//
+		// 🔴 Va como `margin-top` de la fila de abajo y NO como `margin-bottom` del nav de
+		// sucursales, a proposito: ese nav es un `horizontal-nav` compartido, y tocarlo cambiaria
+		// todos los modulos que lo montan. Ademas su pista ya trae un `margin-top: 15px` propio
+		// (`.cont-navs .cont-left > div`), asi que un margen del lado de arriba se sumaria al de
+		// abajo en cuanto alguien reordene algo: el hueco tiene que salir de una sola declaracion.
+		margin-top: 15px
+		margin-bottom: 15px
+
+	// El nav es el que cede espacio. Ver la nota del template sobre el min-width.
+	&__nav
+		flex: 1 1 auto
+		min-width: 0
+
+		// 🔴 Y hay que neutralizar el margen de arriba de la pista, que viene de
+		// `horizontal-nav/Index.vue` (`.cont-navs .cont-left > div { margin-top: 15px }`). Ese margen
+		// tenia sentido cuando el nav era una fila propia; adentro de esta fila, como el
+		// `align-items: center` centra la caja del nav CON el margen incluido, las pestañas quedaban
+		// 7,45px mas abajo que los filtros. Y peor: el corrimiento dependia de cuantos empleados
+		// tuviera cargados el cliente --con siete, la barra de scroll del nav le sube el alto a la
+		// pista y compensaba de casualidad--, o sea que se veia distinto en cada instalacion.
+		.cont-navs .cont-left > div
+			margin-top: 0
+
+	// Los filtros conservan su ancho: son cuatro controles de medida fija y encogerlos los vuelve
+	// ilegibles antes que util.
+	&__filtros
+		flex: 0 0 auto
+
+	// En telefono la fila se parte: los filtros bajan y ocupan el ancho, pero SIGUEN VISIBLES.
+	// Lucas pidio "que se colapsen y se muestren debajo", no que se escondan.
+	@media screen and (max-width: 800px)
+		&__fila
+			flex-wrap: wrap
+
+		&__nav
+			flex: 1 1 100%
+
+		&__filtros
+			flex: 1 1 100%
+</style>

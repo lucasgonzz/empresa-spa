@@ -49,8 +49,13 @@ export default {
 			}
 			return false
 		},
-		cuotas() {
-			return this.$store.state.cuota.models 
+		/*
+		 * Prompt 266 (Fase 2, Capa 3): metodo de pago de esta fila del reparto multiple. Habilita
+		 * el filtro por `cuota.payment_method_id` definido en mixins/cuotas (reemplaza el `cuotas`
+		 * local que antes devolvia siempre la lista completa sin filtrar).
+		 */
+		payment_method_id_for_cuotas() {
+			return this.payment_method.current_acount_payment_method_id
 		},
 		total_con_cuotas() {
 			if (typeof this.selected_cuota != 'undefined') {
@@ -84,7 +89,7 @@ export default {
 			if (typeof credit_card != 'undefined') {
 				credit_card.credit_card_payment_plans.forEach(payment_plan => {
 					options.push({
-						text: payment_plan.installments+' cuotas con '+payment_plan.surchage+'% recargo',
+						text: payment_plan.installments+' cuotas con '+this.porcentaje_es(payment_plan.surchage)+'% recargo',
 						value: payment_plan.id 
 					})
 				})

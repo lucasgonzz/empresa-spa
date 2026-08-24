@@ -31,8 +31,12 @@
     mostrar_models_que_vinienen_por_prop_siempre
 	model_name="sale">
 		<template v-slot:display_top>
+			<!--
+				El nav de empleados ya no se monta suelto acá: desde la misión 32 vive adentro de
+				address-afip-ticket-ventas-cobradas-nav, compartiendo fila con los filtros de
+				facturación, cobro y método de pago.
+			-->
 			<address-afip-ticket-ventas-cobradas-nav></address-afip-ticket-ventas-cobradas-nav>
-			<employee-nav></employee-nav>
 			<total></total>
 
 			<!-- Mostrar u ocultar ventas contenedoras de facturación en el listado. -->
@@ -50,14 +54,16 @@
 				class="m-l-5"
 				variant="danger"
 				v-if="props.model.en_acopio">
+					<i class="bi bi-archive"></i>
 					Acopio
 				</b-badge>
 
 				<b-badge
 				class="m-l-5"
 				variant="success"
+				title="Correo enviado al cliente"
 				v-if="props.model.send_mail">
-					<i class="icon-message"></i>
+					<i class="bi bi-envelope"></i>
 				</b-badge>
 
 				<!-- Distintivo visual para ventas contenedoras de facturación -->
@@ -65,7 +71,7 @@
 				class="m-l-5"
 				variant="warning"
 				v-if="props.model.is_consolidacion_facturacion">
-					<i class="icon-layers"></i>
+					<i class="bi bi-layers"></i>
 					Consolidada
 				</b-badge>
 
@@ -74,7 +80,7 @@
 				class="m-l-5"
 				variant="info"
 				v-if="props.model.consolidacion_facturacion_id">
-					<i class="icon-clipboard"></i>
+					<i class="bi bi-clipboard-check"></i>
 					Facturada en consolidación
 				</b-badge>
 			</div>
@@ -105,7 +111,6 @@ export default {
 		AddressAfipTicketVentasCobradasNav: () => import('@/components/ventas/components/address-afip-ticket-ventas-cobradas-nav/Index'),
 		SaleModifications: () => import('@/components/ventas/modals/sale-modifications/Index'),
 		BtnSaleModifications: () => import('@/components/ventas/components/BtnSaleModifications'),
-		EmployeeNav: () => import('@/components/ventas/components/EmployeeNav'),
 		Total: () => import('@/components/ventas/components/Total'),
 		TableButtons: () => import('@/components/ventas/components/table-buttons/Index'),
 		// UpdatePrices: () => import('@/components/ventas/modals/update-prices/Index'),

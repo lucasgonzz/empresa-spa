@@ -1,7 +1,7 @@
 <template>
 	<b-row
 	class="m-b-15 m-t-15"
-	v-if="index > 0">
+	v-if="editando_venta_previa">
 		<b-col
 		cols="12"
 		class="j-end">
@@ -25,7 +25,7 @@
 				</button>
 
 				<btn-loader
-				v-if="index_previus_sales > 0 || budget"
+				v-if="editando_venta_previa || budget"
 				text="Cancelar"
 				:block="false"
 				:loader="false"
@@ -44,8 +44,8 @@ export default {
 		BtnLoader: () => import('@/common-vue/components/BtnLoader'),
 	},
 	computed: {
-		index() {
-			return this.$store.state.vender.previus_sales.index
+		editando_venta_previa() {
+			return this.$store.getters['vender/previus_sales/editando_venta_previa']
 		},
 		previus_sale() {
 			return this.$store.state.vender.previus_sales.previus_sale

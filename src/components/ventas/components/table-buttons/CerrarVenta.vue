@@ -8,8 +8,9 @@
 			size="sm"
 			class="m-l-5"
 			variant="outline-success"
+			title="Cerrar venta"
 			@click.stop="cerrar">
-				<i class="icon-check"></i>
+				<i class="bi bi-check-circle"></i>
 				Cerrar
 			</b-button>
 

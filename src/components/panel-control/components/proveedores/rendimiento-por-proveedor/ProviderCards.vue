@@ -23,7 +23,7 @@
 						Rendimiento: {{ price(provider.total_prices - provider.total_costs) }}
 					</p>
 					<p>
-						Unidades vendidas: {{ Math.round(provider.unidades_vendidas) }}
+						Unidades vendidas: {{ numero_es(Math.round(provider.unidades_vendidas)) }}
 					</p>
 				</div>
 			</div>

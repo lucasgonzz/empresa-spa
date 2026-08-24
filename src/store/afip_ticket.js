@@ -9,12 +9,32 @@ export default {
 	state: {
 		problemas_al_facturar: [],
 		afip_tickets_for_make: [],
+		/*
+			Ventas que se guardaron sin conexion CON punto de venta y que al volver la conexion se
+			persistieron en el servidor sin factura. Cada elemento es
+			{ sale, afip: {...}, fecha_original } -- el contrato que devuelve sync_pending_sales().
+
+			Vive en el store y no en un evento porque el que produce la lista (el mixin offline,
+			mezclado en App.vue) y el que la consume (el modal, un chunk async) no arrancan al mismo
+			tiempo: el modal puede terminar de bajar despues de que la sincronizacion ya termino, y
+			un evento emitido antes de que exista el que escucha no lo escucha nadie.
+		*/
+		ventas_offline_para_facturar: [],
 		forma_de_pago: '',
 		permiso_existente: '',
 		incoterms: 'FOB',
 		afip_information_id: 0,
 		afip_tipo_comprobante_id: 0,
 		monto_a_facturar: '',
+		/*
+			Reparto del importe personalizado por alicuota. Cada fila es
+			{ key: '21', importe: 12100 }, donde `key` es la CLAVE INTERNA de AFIP y no el
+			porcentaje: '10' es 10,5 % y '2' es 2,5 %. Y `importe` es el total de esa alicuota
+			CON IVA incluido, no la base imponible.
+
+			Vacio significa "no repartir": el backend liquida todo al 21 %, que es lo que hace hoy.
+		*/
+		importe_personalizado_ivas: [],
     	afip_fecha_emision: moment().format('YYYY-MM-DD'),
 		loading: false,
 		props_to_show: [],
@@ -48,6 +68,9 @@ export default {
 		add_afip_tickets_for_make(state, value) {
 			state.afip_tickets_for_make.push(value)
 		},
+		set_ventas_offline_para_facturar(state, value) {
+			state.ventas_offline_para_facturar = value
+		},
 		setLoading(state, value) {
 			state.loading = value
 		},
@@ -79,6 +102,9 @@ export default {
 		},
 		set_monto_a_facturar(state, value) {
 			state.monto_a_facturar = value
+		},
+		set_importe_personalizado_ivas(state, value) {
+			state.importe_personalizado_ivas = value
 		},
     
 	},

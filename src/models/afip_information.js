@@ -56,6 +56,12 @@ export default {
 			type: 'checkbox',
 		},
 	],
+	abm_descripcion: {
+		para_que_sirve: 'Guarda los datos fiscales y puntos de venta de ARCA con los que el negocio emite facturas electrónicas.',
+		implicancias: 'Cada registro define razón social, CUIT, condición frente al IVA, punto de venta y si opera en modo producción. Al facturar, se elige con qué punto de venta se emite el comprobante; los datos de la cabecera de la factura salen de acá. También puede vincularse a una sucursal como facturación por defecto.',
+		como_se_utiliza: 'Creá el registro con todos los datos fiscales y el número de punto de venta habilitado en ARCA. Activá el modo producción recién cuando los certificados estén configurados en el servidor.',
+		palabras_clave: ['arca', 'afip', 'factura electronica', 'punto de venta', 'cuit', 'fiscal'],
+	},
 	singular_model_name_spanish: 'Punto de venta AFIP',
 	plural_model_name_spanish: 'Puntos de venta AFIP',
 	create_model_name_spanish: 'Nuevo',

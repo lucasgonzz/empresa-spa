@@ -2,11 +2,12 @@
 	<!-- Botón visible solo si la venta tiene price_description guardado -->
 	<b-button
 	v-if="sale.price_description"
-	class="m-l-5"
+	class="btn-explicacion m-l-5"
 	@click.stop="show"
-	variant="outline-info"
+	variant="outline-secondary"
+	title="Ver cómo se calculó este precio"
 	size="sm">
-		?
+		<i class="bi bi-question-lg"></i>
 	</b-button>
 </template>
 <script>

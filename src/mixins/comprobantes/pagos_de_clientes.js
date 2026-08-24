@@ -25,7 +25,16 @@ export default {
 
 				if (typeof client != 'undefined') {
 
-					return client.address_id == this.address_route.id 
+					// Un cliente sin sucursal asignada aparece en TODAS las sucursales (regla
+					// unica del sistema, decision de Lucas 11/8/2026 — la misma que aplica el
+					// buscador de clientes de VENDER). En la base conviven null y 0 para "sin
+					// sucursal" porque el select del formulario del cliente arranca en 0, y el
+					// ! de abajo cubre los dos casos.
+					if (!client.address_id) {
+						return true
+					}
+
+					return client.address_id == this.address_route.id
 				}
 				return false
 			})

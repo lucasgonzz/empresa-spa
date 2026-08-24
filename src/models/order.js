@@ -12,7 +12,13 @@ export default {
 			text: 'Cliente',
 			key: 'buyer_id',
 			store: 'buyer',
-			type: '',
+			// type 'search' (antes venia vacio) para que el buscador general la reconozca como
+			// relacion: relation_props exige type 'search' o 'select' y key terminada en "_id", y
+			// por eso "Cliente" no aparecia entre las propiedades del buscador de Pedidos online.
+			// Mismo par exacto que sale.js declara para client_id, que es el precedente por el que
+			// el cliente si aparece en el buscador de Ventas. Order::buyer() ya existe en la API.
+			type: 'search',
+			search_from_api: true,
 			only_show: true,
 			value: '',
 			is_title: true,
@@ -28,6 +34,14 @@ export default {
 			text: 'Estado',
 			key: 'order_status_id',
 			type: 'select',
+			// Desde el 22/8/2026 este select es la UNICA forma de manejar el estado del pedido:
+			// se sacaron del modal los botones "Confirmar pedido" y "Cancelar pedido".
+			//
+			// Las opciones se calculan en vivo y no salen del store completo: un pedido solo puede
+			// avanzar o cancelarse, nunca volver para atras. La regla la impone el backend
+			// (OrderStatusHelper, 422 si no vale), esto es para que el usuario no llegue a elegir
+			// algo que va a ser rechazado.
+			dynamic_options_function: 'get_order_status_options',
 			not_show: true,
 		},
 		{

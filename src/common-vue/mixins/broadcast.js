@@ -115,6 +115,15 @@ export default {
                 if (!notification.is_only_for_auth_user || notification.is_only_for_auth_user == this.user.id) {
 
                     this.$store.commit('global_notification/set_from_broadcast', notification)
+
+                    // El aviso de que termino un analisis de Excel no se muestra si el usuario
+                    // esta justamente mirando esa corrida en el modal de importacion: ahi el
+                    // resultado aparece solo, en la pantalla en la que lo esta esperando, y el
+                    // modal de aviso encima seria decirle lo que acaba de ver.
+                    if (this.esta_mirando_este_analisis(notification)) {
+                        return
+                    }
+
                     this.show_global_notification_modal(notification.notification_modal)
 
                 }
@@ -134,6 +143,31 @@ export default {
 		},
 
 		/*
+		 * True si la notificacion avisa el fin de un analisis de Excel que el usuario
+		 * ya esta siguiendo en vivo, con el modal de importacion abierto.
+		 *
+		 * El store excel_analysis es del SPA de empresa; este mixin lo comparten otros
+		 * proyectos, asi que se chequea que exista antes de leerlo.
+		 *
+		 * @param {Object} notification  payload de la GlobalNotification recibida
+		 * @return {boolean}
+		 */
+		esta_mirando_este_analisis(notification) {
+			if (notification.notification_modal !== 'excel_analysis_ready') {
+				return false
+			}
+
+			if (!this.$store.state.excel_analysis) {
+				return false
+			}
+
+			const siguiendo_uuid = this.$store.state.excel_analysis.siguiendo_uuid
+			const excel_analysis = notification.excel_analysis || {}
+
+			return !!siguiendo_uuid && siguiendo_uuid === excel_analysis.uuid
+		},
+
+		/*
 		 * Abre el modal indicado en notification_modal (default: global-notification).
 		 */
 		show_global_notification_modal(notification_modal) {
@@ -141,6 +175,23 @@ export default {
 
 			if (notification_modal === 'article_import_result') {
 				modal_id = 'article-import-result-notification'
+			}
+
+			if (notification_modal === 'price_update_result') {
+				modal_id = 'price-update-result-notification'
+			}
+
+			if (notification_modal === 'excel_analysis_ready') {
+				modal_id = 'excel-analysis-ready-notification'
+			}
+
+			/*
+			 * Escaneo de facturas de compra con IA (SPA de empresa). Es aditivo: un
+			 * proyecto que no tenga esa funcionalidad nunca recibe esta cadena en
+			 * notification_modal, asi que este if no le cambia nada.
+			 */
+			if (notification_modal === 'provider_order_scan_ready') {
+				modal_id = 'provider-order-scan-ready-notification'
 			}
 
 			this.$bvModal.show(modal_id)

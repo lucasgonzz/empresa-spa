@@ -2,8 +2,16 @@ import start_methods from '@/mixins/start_methods'
 import vender_set_total from '@/mixins/vender_set_total'
 import set_price_type from '@/mixins/vender/price_types'
 import set_employee_vender from '@/mixins/set_employee_vender'
+/*
+	Los dos defaults que limpiar_vender tiene que volver a aplicar por su cuenta. Se
+	importan aca, y no se asume que los tenga el componente que llama, justamente porque
+	limpiar_vender lo llaman lugares muy distintos: el boton Limpiar, guardar una venta,
+	cancelar la edicion de una venta previa y guardar un presupuesto.
+*/
+import omitir_en_cuenta_corriente from '@/mixins/vender/omitir_en_cuenta_corriente'
+import default_articles from '@/mixins/vender/default_articles'
 export default {
-	mixins: [start_methods, vender_set_total, set_price_type, set_employee_vender],
+	mixins: [start_methods, vender_set_total, set_price_type, set_employee_vender, omitir_en_cuenta_corriente, default_articles],
 	computed: {
 		discounts() {
 			return this.$store.state.discount.models
@@ -22,7 +30,11 @@ export default {
 		limpiar_vender() {
 			console.log('limpiar_vender')
 			
-			this.$store.commit('vender/previus_sales/setIndex', 0)
+			/*
+				Estas dos son ahora la unica senal de que se dejo de editar una venta previa: el
+				indice posicional que habia aca era codigo muerto de la navegacion anterior/siguiente.
+			*/
+			this.$store.commit('vender/previus_sales/set_abriendo_venta_previa', false)
 			this.$store.commit('vender/previus_sales/setPreviusSale', {})
 			this.$store.commit('vender/setToCheck', 0)
 			this.$store.commit('vender/setChecked', 0)
@@ -90,6 +102,38 @@ export default {
 			this.setEmployeeVender()
 
 			this.setPriceType()
+
+			/*
+				Los defaults se aplican ACA y no solo en el created() de la vista.
+
+				Los commits de arriba dejaron la venta nueva con omitir_en_cuenta_corriente
+				en 0 y sin los articulos por defecto. Antes eso se curaba solo: el operador
+				salia del modulo, volvia, y el created() re-aplicaba todo. Con la bandera ya
+				no: en cuanto el operador toca cualquier cosa (escanear un articulo, elegir
+				un cliente) la bandera se prende y el created() no vuelve a aplicar nada.
+
+				El caso que hace que esto importe: un comercio con siempre_omitir_en_cuenta_
+				corriente terminaria registrando la venta en la cuenta corriente del cliente
+				contra su propia configuracion, sin que nada avise.
+
+				Los dos metodos son idempotentes — set_default_articles chequea
+				ya_esta_en_los_articulos_para_vender antes de agregar — asi que no molesta
+				que los llamadores que ya los invocan (guardar_venta) los repitan.
+
+				NO se re-aplica la caja por defecto: limpiar_vender nunca la toco (su
+				set_caja_id esta comentado mas arriba) y set_caja_por_defecto depende de
+				computeds que no todos los llamadores tienen.
+			*/
+			this.set_omitir_en_cuenta_corriente()
+			this.set_default_articles()
+
+			/*
+				Va ultima a proposito: setPriceType() y el resto de los commits de arriba
+				prenden la bandera. Si el apagado no fuera lo ultimo, la venta nueva quedaria
+				marcada como ya inicializada y no recibiria sus valores por defecto al volver
+				a entrar al modulo.
+			*/
+			this.$store.commit('vender/set_venta_en_curso_inicializada', false)
 		},
 		limpiar_descuentos() {
 

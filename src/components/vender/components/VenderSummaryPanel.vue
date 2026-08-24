@@ -94,6 +94,10 @@
 </template>
 
 <script>
+// Se importa con alias: el mixin global ya expone un `numero_es(valor)` de un solo
+// argumento, y este de aca lleva la cantidad de decimales. Dos firmas con el mismo
+// nombre en el mismo archivo es una trampa para el que lo lea en seis meses.
+import { numero_es as numero_es_con_decimales } from '@/common-vue/helpers/formato_numero'
 /* Key de localStorage para persistir el estado colapsado/expandido del widget */
 const STORAGE_KEY_COLLAPSED = 'vender_summary_collapsed'
 
@@ -108,7 +112,7 @@ export default {
 		 */
 		currency(value) {
 			if (typeof value !== 'number') return '$ 0,00'
-			return '$ ' + value.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+			return '$ ' + numero_es_con_decimales(value, 2)
 		},
 	},
 	data() {
@@ -203,7 +207,7 @@ export default {
 			if (!pm) return null
 			/* El modelo payment_method puede tener un campo discount o porcentaje */
 			if (pm.discount && pm.discount > 0) {
-				return pm.name + ' — ' + pm.discount + '% desc.'
+				return pm.name + ' — ' + this.porcentaje_es(pm.discount) + '% desc.'
 			}
 			return null
 		},

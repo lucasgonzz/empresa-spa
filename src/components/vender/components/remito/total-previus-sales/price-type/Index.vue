@@ -50,7 +50,7 @@ export default {
 			return false
 		},
 		is_disabled() {
-			if (this.index_previus_sales != 0) {
+			if (this.editando_venta_previa) {
 				return true 
 			}
 

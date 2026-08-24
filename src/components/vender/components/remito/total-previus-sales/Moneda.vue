@@ -54,15 +54,15 @@ export default {
 		},
 		disabled() {
 			if (
-				this.index_previus_sales > 0
+				this.editando_venta_previa
 				|| this.budget
 			) {
 				return true
 			}
 			return false
 		},
-		index_previus_sales() {
-			return this.$store.state.vender.previus_sales.index
+		editando_venta_previa() {
+			return this.$store.getters['vender/previus_sales/editando_venta_previa']
 		},
 		budget() {
 			return this.$store.state.vender.budget

@@ -316,7 +316,7 @@ export default {
 			// 		{ key: 'unidades_individuales', label: 'U. Individuales' },
 			// 	)
 			// }
-			if (this.index_previus_sales > 0) {
+			if (this.editando_venta_previa) {
 				if (this.hasExtencion('check_sales') && !this.previus_sale.confirmed && (this.previus_sale.to_check || this.previus_sale.checked)) {
 					fields.push(
 						{ key: 'checked_amount', label: 'U. chequeadas' },
@@ -447,13 +447,21 @@ export default {
 			return 'cell(' + key + ')'
 		},
 		/**
-		 * Indica si el ítem permite editar el nombre en el remito según permiso del usuario.
+		 * Indica si el ítem permite editar el nombre en el remito: la empresa tiene que tener la
+		 * extensión Y el usuario tiene que tener el permiso.
+		 *
+		 * Son dos capas distintas y por eso no se puede sacar ninguna de las dos: la extensión es
+		 * POR EMPRESA (qué comercios contrataron la funcionalidad, la asigna Lucas a mano desde el
+		 * admin) y el permiso es POR USUARIO (quién adentro de ese comercio la puede usar).
+		 * La extensión va primero para que corte antes.
 		 *
 		 * @param {Object} item
 		 * @return {boolean}
 		 */
 		can_edit_item_name(item) {
-			return this.can('article.vender.change_name')
+			// !! porque hasExtencion() devuelve undefined si el usuario no está autenticado.
+			return !!this.hasExtencion('personalizar_nombre_en_vender')
+				&& this.can('article.vender.change_name')
 		},
 		/**
 		 * Placeholder del input de nombre: nombre por defecto del artículo en catálogo.

@@ -43,7 +43,7 @@
 			</template>
 
 			<template #cell(created_models)="data">
-				{{ models[data.index].created_models }}
+				{{ numero_es(models[data.index].created_models) }}
 				<!-- <b-button
 				@click="modelos_creados(models[data.index])">
 					{{ models[data.index].created_models }}
@@ -51,7 +51,7 @@
 			</template>
 		
 			<template #cell(updated_models)="data">
-				{{ models[data.index].updated_models }}
+				{{ numero_es(models[data.index].updated_models) }}
 				<!-- <b-button
 				@click="modelos_actualizados(models[data.index])">
 					{{ models[data.index].updated_models }}
@@ -65,7 +65,7 @@
 				size="sm"
 				variant="warning"
 				@click="ver_conflictos(models[data.index])">
-					{{ models[data.index].conflicts_count }}
+					{{ numero_es(models[data.index].conflicts_count) }}
 				</b-button>
 				<span v-else class="text-muted">-</span>
 			</template>
@@ -205,7 +205,7 @@
 			<!-- Encabezado: fecha de la importacion y total de problemas detectados -->
 			<p class="mb-3">
 				<strong>Importación del {{ date((import_history_conflictos || {}).created_at, true) }}</strong>
-				— {{ total_conflictos }} problema<span v-if="total_conflictos != 1">s</span> detectado<span v-if="total_conflictos != 1">s</span>
+				— {{ numero_es(total_conflictos) }} problema<span v-if="total_conflictos != 1">s</span> detectado<span v-if="total_conflictos != 1">s</span>
 			</p>
 
 			<!-- Resumen por tipo de problema, como chips -->
@@ -216,7 +216,7 @@
 				v-for="(item, index) in resumen_conflictos"
 				:key="'resumen-'+index"
 				class="badge badge-warning conflictos-resumen__chip">
-					{{ tipo_conflicto_label(item.tipo) }} ({{ campo_conflicto_label(item.campo) }}): {{ item.total }}
+					{{ tipo_conflicto_label(item.tipo) }} ({{ campo_conflicto_label(item.campo) }}): {{ numero_es(item.total) }}
 				</span>
 			</div>
 
@@ -239,13 +239,13 @@
 					<template #cell(tipo)="data">
 						{{ tipo_conflicto_label(data.item.tipo) }}
 						<span v-if="data.item.tipo === 'ambiguo' && data.item.article_ids">
-							({{ data.item.article_ids.length }} artículos)
+							({{ numero_es(data.item.article_ids.length) }} artículos)
 						</span>
 						<span v-if="data.item.tipo === 'fila_sobrescrita' && data.item.fila_ganadora">
 							(sobrescrita por la fila {{ data.item.fila_ganadora }})
 						</span>
 						<span v-if="data.item.tipo === 'identificador_sin_asignar' && data.item.article_ids">
-							({{ data.item.article_ids.length }} artículos)
+							({{ numero_es(data.item.article_ids.length) }} artículos)
 						</span>
 					</template>
 
@@ -260,15 +260,32 @@
 				<p
 				v-if="hay_mas_conflictos"
 				class="text-muted small">
-					Se muestran las primeras 200 filas de {{ conflictos_ordenados.length }}. Corregí estas y volvé a importar para ver el resto.
+					Se muestran las primeras {{ numero_es(conflictos_a_mostrar.length) }} filas de {{ numero_es(total_conflictos) }}. Corregí estas y volvé a importar para ver el resto.
 				</p>
 
 			</div>
 
-			<p class="text-muted small m-t-15">
+			<!--
+				Mision 44: el aviso de abajo NO vale para todos los tipos. 'fila_sobrescrita' y
+				'columna_de_precio_ignorada' son filas que SI se procesaron (se resolvieron
+				bien, o se aplico todo menos una columna de precio), asi que decirles al
+				usuario que corrija codigos en el Excel lo manda a arreglar algo que no esta
+				roto. Se muestra solo si hay algun tipo que de verdad no se pudo procesar.
+			-->
+			<p
+			v-if="hay_filas_no_procesadas"
+			class="text-muted small m-t-15">
 				Estas filas no se procesaron para no sobrescribir articulos existentes con
 				datos equivocados. Corregi los codigos en el Excel y volve a importar solo
 				esas filas.
+			</p>
+
+			<p
+			v-if="hay_columnas_de_precio_ignoradas"
+			class="text-muted small m-t-15">
+				Las filas marcadas como "Columna de precio no aplicada" si se importaron: se
+				aplico todo menos esa columna, porque el articulo se maneja por la otra. Para
+				cambiarle el criterio hay que hacerlo desde la ficha del articulo.
 			</p>
 
 		</div>
@@ -342,13 +359,13 @@ export default {
 				items.push({
 					created_at: this.date(model.created_at, true),
 					status: model.status,
-					created_models: model.created_models,
-					updated_models: model.updated_models,
-					articulos_creados: model.articulos_creados,
-					articulos_actualizados: model.articulos_actualizados,
-					articles_match: model.articles_match,
-					filas_procesadas: model.filas_procesadas,
-					articles_repetidos: model.articles_repetidos,
+					created_models: this.numero_es(model.created_models),
+					updated_models: this.numero_es(model.updated_models),
+					articulos_creados: this.numero_es(model.articulos_creados),
+					articulos_actualizados: this.numero_es(model.articulos_actualizados),
+					articles_match: this.numero_es(model.articles_match),
+					filas_procesadas: this.numero_es(model.filas_procesadas),
+					articles_repetidos: this.numero_es(model.articles_repetidos),
 					error_message: model.error_message,
 					error_trace: model.error_trace,
 					operacion: model.operacion_a_realizar,
@@ -507,11 +524,46 @@ export default {
 			return this.conflictos_ordenados.slice(0, 200)
 		},
 		/**
-		 * True cuando hay mas de 200 filas de problemas, para mostrar el aviso de recorte.
+		 * True cuando la importacion tiene mas filas de problemas que las que se trajeron,
+		 * para mostrar el aviso de recorte.
+		 *
+		 * Mision 44: se compara contra el total REAL que devuelve el endpoint (agregado SQL)
+		 * y no contra la longitud del array traido, que ya viene cortado por el limit y por
+		 * lo tanto nunca podia superar el umbral. Asi el recorte deja de ser silencioso.
+		 *
 		 * @returns {Boolean}
 		 */
 		hay_mas_conflictos() {
-			return this.conflictos_ordenados.length > 200
+			return this.total_conflictos > this.conflictos_a_mostrar.length
+		},
+		/**
+		 * Tipos que NO representan una fila que no se pudo procesar (mision 44). Es el mismo
+		 * criterio con el que ActualizarBBDD::persistir_conflictos() los excluye de
+		 * conflicts_count del lado del back: si se agrega un tipo alla, va tambien aca.
+		 * @returns {Array}
+		 */
+		tipos_informativos() {
+			return ['fila_sobrescrita', 'columna_de_precio_ignorada']
+		},
+		/**
+		 * True si entre los conflictos traidos hay alguno que de verdad no se pudo procesar.
+		 * @returns {Boolean}
+		 */
+		hay_filas_no_procesadas() {
+			let informativos = this.tipos_informativos
+
+			return this.conflictos.some(function(conflicto) {
+				return informativos.indexOf(conflicto.tipo) === -1
+			})
+		},
+		/**
+		 * True si hay filas donde se ignoro una columna de precio (mision 44).
+		 * @returns {Boolean}
+		 */
+		hay_columnas_de_precio_ignoradas() {
+			return this.conflictos.some(function(conflicto) {
+				return conflicto.tipo === 'columna_de_precio_ignorada'
+			})
 		},
 		/**
 		 * Texto del modal de confirmacion antes de revertir, con la fecha y las
@@ -528,8 +580,8 @@ export default {
 			let fecha = this.date(model.created_at, true)
 			let creados = model.created_models || 0
 			let actualizados = model.updated_models || 0
-			return 'Vas a revertir la importación del ' + fecha + '. Se van a eliminar los ' + creados +
-				' artículos que creó y los ' + actualizados + ' que actualizó van a volver a los valores ' +
+			return 'Vas a revertir la importación del ' + fecha + '. Se van a eliminar los ' + this.numero_es(creados) +
+				' artículos que creó y los ' + this.numero_es(actualizados) + ' que actualizó van a volver a los valores ' +
 				'que tenían antes. Esta acción no se puede deshacer.'
 		},
 	},
@@ -614,7 +666,16 @@ export default {
 
 			this.$bvModal.show('modal-conflictos-importacion')
 
-			this.$api.get('import-history/' + import_history.id + '/conflicts')
+			/*
+			 * Mision 44: se pide el tope que admite el endpoint (200) en vez de dejar el
+			 * default de 50. La tabla ya recortaba a 200 y el aviso de recorte comparaba
+			 * contra 200, asi que con el default de 50 ese aviso NO SE MOSTRABA NUNCA: el
+			 * usuario veia 50 de N sin que nada se lo dijera. Y con el tipo nuevo
+			 * 'columna_de_precio_ignorada', que se registra una vez por fila salteada, las
+			 * primeras 50 filas pueden ser todas de ese tipo y tapar los conflictos que si
+			 * son problemas de verdad.
+			 */
+			this.$api.get('import-history/' + import_history.id + '/conflicts?limit=200')
 			.then(res => {
 				this.conflictos = res.data.conflicts
 				this.resumen_conflictos = res.data.resumen
@@ -643,6 +704,12 @@ export default {
 				fila_sobrescrita: 'Fila sobrescrita',
 				// Nuevo (grupo 265, prompt 08): identificador unico que no se pudo asignar por match multiple.
 				identificador_sin_asignar: 'No se pudo asignar un codigo unico: coincidian varios articulos',
+				// Nuevo (mision 44): el articulo se maneja por la otra columna de precio, asi
+				// que la del Excel no se aplico. La fila se proceso bien: no es un error.
+				// La etiqueta es corta a proposito: el detalle esta en el pie del modal, y en
+				// un telefono de 360px una etiqueta larga se sale de la pantalla (los chips
+				// del resumen son nowrap). Medido en la aplicacion, no supuesto.
+				columna_de_precio_ignorada: 'Columna de precio no aplicada',
 			}
 			return labels[tipo] || tipo
 		},
@@ -742,15 +809,39 @@ export default {
 		// 		this.$bvModal.show('articulos-creados')
 		// 	})
 		// },
+		/**
+		 * Nombre del proveedor de una importacion.
+		 *
+		 * 🔴 Busca primero en el catalogo liviano (`options`) y despues en `models`, y ese orden
+		 * importa: desde la mision 43 (12/8/2026) el catalogo de proveedores ya no se descarga al
+		 * iniciar sesion, asi que `models` esta vacio salvo que la pantalla que abrio este historial
+		 * lo haya pedido. Antes esta columna se veia por el arranque; sin este cambio quedaba en
+		 * blanco, sin ningun error, para cualquiera que entrara desde el Listado.
+		 *
+		 * `options` (id + name, grupo 332) es exactamente lo que hace falta aca: un nombre.
+		 *
+		 * @param {object} model
+		 * @returns {string|null}
+		 */
 		getProvider(model) {
-			let provider = this.getModelFromId('provider', model.provider_id)
+			let provider = this.$store.state.provider.options.find(item => {
+				return item.id == model.provider_id
+			})
+			if (typeof provider == 'undefined') {
+				provider = this.getModelFromId('provider', model.provider_id)
+			}
 			if (typeof provider != 'undefined' && provider !== null && provider.name) {
 				return provider.name
-			} 
+			}
 			return null
 		},
 		getModels() {
-			this.loading = true 
+			// El catalogo liviano de proveedores, que es lo que resuelve la columna Proveedor de la
+			// tabla (ver getProvider). getOptions tiene su propia guarda: si ya se pidio en esta
+			// sesion no repite la descarga.
+			this.$store.dispatch('provider/getOptions')
+
+			this.loading = true
 			this.$api.get('import-history/'+this.model_name)
 			.then(res => {
 				console.log(res)
@@ -788,10 +879,16 @@ export default {
 	flex-wrap: wrap
 	gap: 8px
 
-	&__chip
+	// El selector va doblado (.badge.conflictos-resumen__chip) a proposito: con una sola
+	// clase empata en especificidad con .badge de bootstrap, que define white-space: nowrap
+	// y se carga despues, asi que ganaba bootstrap y el chip NO envolvia. Medido en la
+	// aplicacion a 360px (mision 44): los chips se salian de la pantalla, con el texto
+	// cortado y sin scroll que permitiera llegar a el.
+	&__chip.badge
 		font-size: 12px
 		font-weight: 500
 		padding: 6px 10px
 		white-space: normal
 		text-align: left
+		max-width: 100%
 </style>

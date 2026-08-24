@@ -122,53 +122,55 @@
 						v-if="save_check_alert_message"
 						show
 						:variant="save_check_alert_variant"
-						class="m-b-10">
+						class="model-modal-footer__alerta">
 							{{ save_check_alert_message }}
 						</b-alert>
 
-						<b-btn-group
-						class="w-100"
-						:class="{'m-t-10': save_check_alert_message}">
+						<!--
+							Footer en flex y no en b-btn-group: el group pegaba los botones borde con
+							borde y les comia los radios internos, asi que la fila se leia como una
+							barra de bloques soldados. Y sobre todo dejaba pegadas dos acciones de
+							sentido opuesto -una destructiva y una confirmatoria-, que es justo la
+							geometria que hace facil errarle al clic. Ahora Eliminar queda a la
+							izquierda y Guardar y cerrar se va a la derecha con margin-left: auto.
+						-->
+						<div class="model-modal-footer">
 						<btn-delete
 						v-if="!papelera && _show_btn_delete"
+						class="model-modal-footer__eliminar"
 						:solo_emitir_delete="solo_emitir_delete"
 						@press_delete_btn="press_delete_btn"
 						:has_many_prop="has_many_prop"
 						:has_many_parent_model_name="has_many_parent_model_name"
-						:model_name="model_name" 
+						:model_name="model_name"
 						:model="model"
 						:dusk="'btn_eliminar_'+model_name"
 						:modal="'delete-'+model_name"></btn-delete>
 
 						<btn-loader
-						class="m-l-10"
 						:block="false"
-						v-if="!papelera && can_save && show_only_guardar"
-						@clicked="save"
-						:prop_to_send_on_emit="{close: false}"
-						:loader="loading"
-						variant="outline-primary"
-						text="Guardar"></btn-loader>
-
-						<btn-loader
-						:block="false"
+						class="model-modal-footer__guardar"
 						v-if="!papelera && can_save"
 						@clicked="save"
 						:dusk="'btn_guardar_'+model_name"
+						:data-testid="'btn-guardar-'+model_name"
 						:data-tour="model_name === 'article' ? 'listado.boton_guardar_articulo' : null"
 						:prop_to_send_on_emit="{close: true}"
 						:loader="loading"
 						text="Guardar y cerrar"></btn-loader>
 
+						<!-- Restaurar usa el mismo chasis del footer pero conserva su verde: no lleva
+						     la clase __guardar, que es la que fuerza el azul de la accion primaria. -->
 						<btn-loader
 						:block="false"
+						class="model-modal-footer__restaurar"
 						v-if="papelera && show_btn_restaurar"
 						variant="success"
 						@clicked="restaurar"
 						:prop_to_send_on_emit="{close: true}"
 						:loader="restaurando"
 						text="Restaurar"></btn-loader>
-						</b-btn-group>
+						</div>
 					</div>
 				</slot>
 			</template>
@@ -231,6 +233,20 @@ export default {
 			type: Boolean,
 			default: true,
 		},
+		/**
+			Cuando esta en true, el guardado le pide al interceptor global de main.js que NO
+			despache `errorEvent` por los errores de este formulario.
+
+			Lo necesita un formulario cuyo backend puede devolver un 422 "de negocio" sin la clave
+			`errors` de Laravel: el interceptor lo toma por error generico y saca un toast, y si
+			ese caso ya se resuelve con un modal propio el usuario termina viendo el mismo texto
+			dos veces. El alert del propio modal (`setSaveErrorFromApi`) sigue funcionando igual,
+			asi que no se pierde ningun aviso.
+		*/
+		skip_global_error_event: {
+			type: Boolean,
+			default: false,
+		},
 		check_can_delete: Boolean,
 		check_permissions: {
 			type: Boolean,
@@ -267,10 +283,6 @@ export default {
 		save_check_function: {
 			type: String,
 			default: null,
-		},
-		show_only_guardar: {
-			type: Boolean,
-			default: true,
 		},
 		properties_to_show: {
 			type: Array,
@@ -312,6 +324,16 @@ export default {
 			save_check_alert_message: '',
 			/* Variante Bootstrap del alert (danger, warning, etc.). */
 			save_check_alert_variant: 'danger',
+			/**
+				Props extra para el PROXIMO envio y nada mas. Las setea `guardar_de_nuevo_con()`
+				y se limpian apenas vuelve la respuesta, sea buena o mala.
+
+				🔴 Van en un data del componente y NO pegadas al modelo del store a proposito: el
+				modelo del store lo comparten el listado, el buscador y cualquier otra vista, y una
+				bandera de un reintento puntual que quede ahi viaja en todos los guardados
+				siguientes sin que nadie se entere.
+			*/
+			extra_props_del_proximo_guardado: {},
 		}
 	},
 	computed: {
@@ -395,7 +417,48 @@ export default {
 			})
 		}
 	},
+	mounted() {
+		/*
+			Contraparte de `<model_name>:save-error`: la pantalla que se quedo con un error puede
+			pedir que se vuelva a guardar con props extra. Ver `guardar_de_nuevo_con`.
+		*/
+		this.$root.$on(this.model_name + ':save-retry', this.guardar_de_nuevo_con)
+	},
+	beforeDestroy() {
+		/*
+			🔴 El $off es obligatorio, no higiene. `$root` vive toda la sesion: sin esto, cada vez
+			que se monta un formulario queda otro listener pegado y un solo evento dispara N
+			guardados.
+		*/
+		this.$root.$off(this.model_name + ':save-retry', this.guardar_de_nuevo_con)
+	},
 	methods: {
+		/**
+		 * Vuelve a guardar el modelo agregandole props que no salen del formulario.
+		 *
+		 * Es el segundo tiempo del hook de `<model_name>:save-error`: una pantalla se queda con un
+		 * 422, le muestra al usuario una decision, y si el usuario elige seguir, pide el reintento
+		 * con la bandera que corresponda (ej: `{ ignorar_limite_credito: true }`).
+		 *
+		 * Las props valen SOLO para ese envio: se limpian apenas vuelve la respuesta.
+		 *
+		 * @param {Object} extra_props Claves a mezclar en el payload de este unico guardado.
+		 * @returns {void}
+		 */
+		guardar_de_nuevo_con(extra_props) {
+			this.extra_props_del_proximo_guardado = extra_props || {}
+
+			/*
+				🔴 El `{close: true}` NO es opcional. `save(info)` no tiene default y su `.then()`
+				llama a `closeModal(info, ...)`, que arranca con `if (info.close)`: con `info` en
+				undefined tira un TypeError DESPUES de que el guardado salio bien, el error cae en
+				el `.catch()` encadenado del mismo PUT y el usuario termina viendo "No se pudo
+				guardar" con el modal trabado sobre una operacion que funciono.
+
+				Es el mismo objeto que manda el unico otro llamador (`@save` de ModelForm).
+			*/
+			this.save({ close: true })
+		},
 		has_many_deleted() {
 			this.$emit('has_many_deleted')
 		},
@@ -481,6 +544,15 @@ export default {
 			console.log('llego esto de check:')
 			console.log(isValid)
 
+			if (!isValid) {
+				/*
+					El guardado no llega a salir, asi que las props extra de un reintento no se
+					consumen. Si quedaran, viajarian en el proximo guardado de esta instancia sin
+					que nadie lo haya pedido.
+				*/
+				this.extra_props_del_proximo_guardado = {}
+			}
+
 			if (isValid && !this.loading) {
 				/* Validación OK: se oculta el aviso hasta que falle un chequeo posterior. */
 				this.clearSaveCheckAlert()
@@ -490,12 +562,30 @@ export default {
 				let route = this.route_model_name()
 				// let model_to_send = this.model 
 				let model_to_send = this.getModelToSend()
-				
+
+				/*
+					Props extra de un reintento puntual (ver `guardar_de_nuevo_con`). Se mezclan
+					recien aca, en el payload, y no en el modelo: ver el comentario de
+					`extra_props_del_proximo_guardado`.
+				*/
+				if (Object.keys(this.extra_props_del_proximo_guardado).length) {
+					model_to_send = {
+						...model_to_send,
+						...this.extra_props_del_proximo_guardado,
+					}
+				}
+
+				/* Config de axios de este envio. Ver la prop `skip_global_error_event`. */
+				let config_del_envio = {
+					skip_global_error_event: this.skip_global_error_event,
+				}
+
 				// console.log('model_to_send:')
 				// console.log(model_to_send)
 				if (this.model.id) {
-					this.$api.put(route+'/'+this.model.id, model_to_send)
+					this.$api.put(route+'/'+this.model.id, model_to_send, config_del_envio)
 					.then(res => {
+						this.extra_props_del_proximo_guardado = {}
 						this.loading = false
 						this.clearSaveCheckAlert()
 						this.$toast.success('Actualizado')
@@ -525,14 +615,33 @@ export default {
 						this.callActions(res.data.model)
 					})
 					.catch(err => {
+						this.extra_props_del_proximo_guardado = {}
 						console.log(err)
 						this.loading = false
 						this.$store.commit('auth/setMessage', '')
-						this.setSaveErrorFromApi(err)
+
+						/*
+							Hook para que una pantalla puntual se quede con un error de guardado y
+							lo resuelva a su manera (por ejemplo, un modal de decision en vez de un
+							alert). `$root.$emit` es sincronico en Vue 2, asi que el que escucha
+							alcanza a marcar `manejado.valor` antes de que siga esta linea.
+
+							🔴 Es ADITIVO: sin nadie escuchando el evento, `manejado.valor` queda
+							en false y el comportamiento es exactamente el de siempre. No cambia
+							nada para los demas formularios.
+						*/
+						let manejado = { valor: false }
+
+						this.$root.$emit(this.model_name + ':save-error', err, manejado)
+
+						if (!manejado.valor) {
+							this.setSaveErrorFromApi(err)
+						}
 					})
 				} else {
-					this.$api.post(route, model_to_send)
+					this.$api.post(route, model_to_send, config_del_envio)
 					.then(res => {
+						this.extra_props_del_proximo_guardado = {}
 						this.loading = false
 						this.clearSaveCheckAlert()
 						this.$toast.success('Guardado')
@@ -575,11 +684,25 @@ export default {
 						this.clearModel(info)
 					})
 					.catch(err => {
+						this.extra_props_del_proximo_guardado = {}
 						console.log('Error catch')
 						console.log(err)
 						this.loading = false
 						this.$store.commit('auth/setMessage', '')
-						this.setSaveErrorFromApi(err)
+
+						/*
+							Mismo hook que en el PUT. Va en las dos ramas a proposito: la prop y el
+							evento estan documentados como del FORMULARIO, no del metodo HTTP. Una
+							pantalla que use el gancho al crear y no al actualizar se caeria sin
+							ruido.
+						*/
+						let manejado = { valor: false }
+
+						this.$root.$emit(this.model_name + ':save-error', err, manejado)
+
+						if (!manejado.valor) {
+							this.setSaveErrorFromApi(err)
+						}
 					})
 				}
 			}
@@ -594,6 +717,15 @@ export default {
 
 			return this.routeString(this.model_name)
 		},
+		/**
+		 * Desde el 10/8/2026 el footer de este modal tiene un solo boton de guardar ("Guardar y
+		 * cerrar"), que manda close: true. O sea que la rama de info.close === false ya no la
+		 * alcanza NINGUN llamador del footer, y lo mismo vale para el clearModel() que cuelga de
+		 * ella. No se borran: save() tambien se invoca desde el @save de ModelForm y este es un
+		 * componente generico que usa todo el sistema, asi que sacar esa rama es una limpieza
+		 * estructural con su propia decision detras. Queda escrito para que nadie la de por viva
+		 * ni la "limpie" sin entender por que quedo.
+		 */
 		closeModal(info, model) {
 			if (info.close) {
 				setTimeout(() => {
@@ -662,6 +794,20 @@ export default {
 			if (this.props_to_send_on_save_function) {
 				model_to_send = this[this.props_to_send_on_save_function](model_to_send)
 			}
+
+			// Algunos endpoints (ej: sale-tax) esperan la relacion belongs_to_many como un array plano de ids
+			// (ej: "article_ids") en lugar del array de objetos completos que usa la convencion generica de
+			// belongs_to_many (GeneralHelper::attachModels en el backend). El modelo declara esto con la
+			// propiedad `send_belongs_to_many_ids_as` en la definicion del belongs_to_many.
+			this.properties.forEach(prop => {
+				if (prop.belongs_to_many && prop.send_belongs_to_many_ids_as && Array.isArray(this.model[prop.key])) {
+					let related_ids = []
+					this.model[prop.key].forEach(related_model => {
+						related_ids.push(related_model.id)
+					})
+					model_to_send[prop.send_belongs_to_many_ids_as] = related_ids
+				}
+			})
 
 			// if (this.model_name == 'expense') {
 			// 	model_to_send.payment_methods = this.$store.state.expense.selected_payment_methods.map(payment_method => {
@@ -909,7 +1055,97 @@ export default {
 	.modal-content
 		color: rgba(0, 0, 0, .6) !important
 .modal-body
-	.b-form-datepicker 
+	.b-form-datepicker
 		// margin-bottom: 250px
 	// min-height: 500px
+
+// Footer del modal generico de formulario (10/8/2026).
+//
+// Todas las reglas van anidadas bajo .model-modal-footer a proposito: este <style> es global
+// (tiene que alcanzar el interior de btn-loader y btn-delete, que son componentes hijos), y sin
+// ese anidado el chasis se le filtraria a los 147 usos de btn-loader del sistema. Por el mismo
+// motivo el estilo entra por la clase contenedora y NO se toca BtnLoader.vue ni BtnDelete.vue.
+//
+// Los colores salen todos de custom properties de _dark_theme.sass, sin fallbacks del tipo
+// var(--x, #hex): un fallback tapa una variable faltante y deja el modo oscuro roto sin que
+// nadie se entere.
+.model-modal-footer
+	display: flex
+	align-items: center
+	gap: 10px
+	width: 100%
+
+	.btn
+		height: 38px
+		padding: 0 18px
+		border-radius: 10px
+		font-size: 0.875rem
+		font-weight: 600
+		line-height: 1
+		display: inline-flex
+		align-items: center
+		justify-content: center
+		gap: 8px
+		border: 1px solid transparent
+		transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease
+
+		&:focus-visible
+			outline: none
+			// Mismo anillo de foco que BtnAccion.vue del modulo de Cajas.
+			box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25)
+
+		&:disabled
+			opacity: 0.6
+			cursor: default
+
+	// Eliminar: fantasma con acento rojo, no rojo lleno. Dos acciones de igual peso visual
+	// hacen que no se destaque ninguna, que es lo que el grupo 371 ya corrigio en Cajas.
+	//
+	// Se pisan tambien :hover, :focus y :active porque Bootstrap pinta .btn-danger en cada uno
+	// por separado: cubriendo solo el estado normal, el boton volvia a ponerse rojo lleno al
+	// apretarlo. Alcanza con la especificidad de dos clases (.model-modal-footer__eliminar.btn)
+	// contra la de una (.btn-danger): no hace falta ningun !important.
+	.model-modal-footer__eliminar.btn,
+	.model-modal-footer__eliminar.btn:focus,
+	.model-modal-footer__eliminar.btn:not(:disabled):not(.disabled):active
+		background: transparent
+		border-color: var(--color-border)
+		color: var(--btn-peligro-texto)
+
+	.model-modal-footer__eliminar.btn:hover
+		background: var(--btn-peligro-fondo)
+		border-color: var(--btn-peligro-borde)
+		color: var(--btn-peligro-texto)
+
+	// Guardar y cerrar: la unica accion con peso visual, y empujada a la derecha para que no
+	// quede pegada a la destructiva.
+	.model-modal-footer__guardar
+		margin-left: auto
+
+	.model-modal-footer__guardar.btn,
+	.model-modal-footer__guardar.btn:focus,
+	.model-modal-footer__guardar.btn:not(:disabled):not(.disabled):active
+		background: var(--color-primary)
+		border-color: var(--color-primary)
+		color: #fff
+
+	.model-modal-footer__guardar.btn:hover
+		// brightness en vez de un token de azul oscuro: --color-primary vale distinto en claro
+		// y en oscuro, y un hex de hover fijo se pelearia con uno de los dos.
+		filter: brightness(0.94)
+		background: var(--color-primary)
+		border-color: var(--color-primary)
+		color: #fff
+
+	// Restaurar (papelera): mismo chasis, conserva su verde de Bootstrap.
+	.model-modal-footer__restaurar
+		margin-left: auto
+
+// El alert de validacion vive arriba de los botones, fuera del flex.
+.model-modal-footer__alerta
+	border-radius: 10px
+	border: none
+	font-size: 0.875rem
+	padding: 0.6rem 0.9rem
+	margin-bottom: 12px
 </style>

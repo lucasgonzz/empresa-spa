@@ -20,10 +20,12 @@
 	</div>
 </template>
 <script>
+import { usa_margen_del_articulo, usa_margen_del_proveedor } from '@/utils/criterio_de_precio'
+
 export default {
 	computed: {
 		article() {
-			return this.$store.state.article.model 
+			return this.$store.state.article.model
 		},
 		disabled() {
 			if (
@@ -40,16 +42,24 @@ export default {
 			// trae la relacion embebida via scopeWithAll(), asi que no hace falta el store.
 			return this.article.provider || null
 		},
+		/*
+		 * Mision 44: el criterio vive en un solo lugar (utils/criterio_de_precio.js, espejo
+		 * de CriterioDePrecioHelper.php del back). Antes este computed alcanzaba con que el
+		 * proveedor tuviera margen, sin mirar el costo: un articulo con proveedor con margen
+		 * y SIN costo quedaba con el precio manual bloqueado y con un margen que no podia
+		 * producir ningun precio, o sea sin ninguna forma de ponerle un precio.
+		 */
 		margen_del_proveedor() {
-			return this.article.provider_id && this.article.apply_provider_percentage_gain && (this.article_provider && this.article_provider.percentage_gain)
+			return usa_margen_del_proveedor(this.article, this.article_provider)
 		},
+		/*
+		 * Mision 44: exige margen > 0. Antes alcanzaba con que percentage_gain no fuera null
+		 * ni cadena vacia, y en JS "0.00" != '' es verdadero: un margen de 0 bloqueaba este
+		 * input mientras el back (que pide > 0) no limpiaba el precio, y el articulo quedaba
+		 * con los dos campos deshabilitados.
+		 */
 		margen_del_articulo() {
-			return (
-					this.article 
-					&& typeof this.article.percentage_gain != 'undefined' 
-					&& this.article.percentage_gain !== null 
-					&& this.article.percentage_gain != ''
-				)
+			return usa_margen_del_articulo(this.article)
 		},
 	},
 }

@@ -236,7 +236,35 @@ export default {
 
 		descuento: null,
 
+		/*
+			Canje de puntos de esta venta (extension puntos_clientes).
+
+			puntos_canjeados: los puntos que el cliente gasta en esta venta.
+			descuento_puntos: los pesos que eso descuenta = puntos_canjeados * valor_punto.
+
+			🔴 Los dos viajan en el POST/PUT de la venta y `total` viaja YA NETEADO, o sea con
+			el descuento_puntos restado: el servidor recompone el bruto como
+			`total + descuento_puntos` para medir el tope del 20%.
+
+			🔴 Y el servidor RECALCULA descuento_puntos con el valor_punto del programa y lo
+			compara con este, con tolerancia de un centavo (PuntosCanjeHelper::validar()). Si no
+			coincide rechaza la venta ENTERA con 422; no lo corrige en silencio. Por eso el
+			numero tiene que salir siempre del valor_punto que devolvio /api/puntos/disponible
+			--que es lo que hace stage-3/Puntos.vue-- y nunca de una constante ni de un redondeo
+			propio.
+		*/
+		puntos_canjeados: null,
+		descuento_puntos: null,
+
 		client: null,
+
+		/*
+			Datos del último rechazo por límite de crédito (misión 160). Lo escriben las DOS puntas:
+			el chequeo local de chequeos/limite_credito.js y el 422 del backend. El modal lee de acá y
+			no le importa cuál de las dos lo llenó.
+		*/
+		limite_credito_excedido: null,
+
 		discounts_id: [],
 		surchages_id: [],
 		to_check: 0,
@@ -283,6 +311,26 @@ export default {
 			No persistir en localStorage ni sessionStorage.
 		*/
 		ultima_venta_sesion: null,
+
+		/*
+			Marca que la venta en curso YA recibio sus valores por defecto.
+
+			Existe porque los defaults se aplican una vez por VENTA y no una vez por VISITA
+			al modulo: views/Vender.vue los aplica en su created(), y ese created() corre
+			cada vez que se entra a Vender, porque el router-view no tiene keep-alive y la
+			vista se destruye al salir. Sin esta bandera, salir un momento a otro modulo y
+			volver pisaba lo que el operador ya habia elegido (omitir en cuenta corriente,
+			lista de precios, caja, los articulos por defecto que habia quitado) y ademas
+			vaciaba el log de auditoria de la venta en curso.
+
+			La apaga limpiar_vender(), en su ultima linea: ahi empieza una venta nueva y
+			los defaults tienen que volver.
+
+			Vive solo en memoria a proposito, igual que ultima_venta_sesion: refrescar la
+			pagina vuelve a arrancar con los defaults. No persistir en localStorage ni
+			sessionStorage.
+		*/
+		venta_en_curso_inicializada: false,
 
 		afip_results: null,
 
@@ -339,6 +387,14 @@ export default {
 		props_to_show: [],
 	},
 	mutations: {
+		/*
+			Marca la venta en curso como ya inicializada (ver el comentario de la propiedad
+			en el state). La prenden ademas, por su cuenta, las mutaciones que significan que
+			esta venta ya tiene contenido o configuracion decidida, y la apaga limpiar_vender().
+		*/
+		set_venta_en_curso_inicializada(state, value) {
+			state.venta_en_curso_inicializada = !!value
+		},
 		/**
 		 * Activa o desactiva el registro de auditoría (p. ej. durante hidratación al editar).
 		 */
@@ -473,9 +529,13 @@ export default {
 			// console.log('vender/setItems')
 			state.items = value
 			// console.log(state.items)
+			/* Esta venta ya tiene contenido: no le corresponden mas los defaults */
+			state.venta_en_curso_inicializada = true
 		},
 		addItem(state, value) {
 			state.items.unshift(value)
+			/* Esta venta ya tiene contenido: no le corresponden mas los defaults */
+			state.venta_en_curso_inicializada = true
 		},
 		replceItem(state, value) {
 			// Guardamos estado anterior para registrar cambios de item editado.
@@ -541,6 +601,8 @@ export default {
 		},
 		addCombo(state, value) {
 			state.items.unshift(value)
+			/* Esta venta ya tiene contenido: no le corresponden mas los defaults */
+			state.venta_en_curso_inicializada = true
 		},
 		setNewArticle(state, value) {
 			state.new_article = value
@@ -549,6 +611,8 @@ export default {
 			console.log('addItem:')
 			console.log(item)
 			state.items.unshift(item)
+			/* Esta venta ya tiene contenido: no le corresponden mas los defaults */
+			state.venta_en_curso_inicializada = true
 			append_sale_log_entry(state, {
 				event_key: 'item_added',
 				source_component: 'vender/addItem',
@@ -567,6 +631,12 @@ export default {
 		},
 		set_descuento(state, value) {
 			state.descuento = value
+		},
+		set_puntos_canjeados(state, value) {
+			state.puntos_canjeados = value
+		},
+		set_descuento_puntos(state, value) {
+			state.descuento_puntos = value
 		},
 		setDiscountsId(state, value) {
 			const previous_discounts = get_safe_clone(state.discounts_id)
@@ -614,6 +684,8 @@ export default {
 		setPriceType(state, value) {
 			const previous_price_type = get_safe_clone(state.price_type)
 			state.price_type = value
+			/* Configuracion decidida para esta venta: no le corresponden mas los defaults */
+			state.venta_en_curso_inicializada = true
 			append_sale_log_entry(state, {
 				event_key: 'price_list_changed',
 				source_component: 'vender/setPriceType',
@@ -629,7 +701,13 @@ export default {
 			state.save_current_acount = value
 		},
 		set_omitir_en_cuenta_corriente(state, value) {
-			state.omitir_en_cuenta_corriente = value 
+			state.omitir_en_cuenta_corriente = value
+			/*
+				Sin condicion de valor a proposito: destildarlo (0) es una decision del
+				operador tanto como tildarlo, y es justamente la que se perdia al volver
+				al modulo cuando el dueno tiene siempre_omitir_en_cuenta_corriente.
+			*/
+			state.venta_en_curso_inicializada = true
 		},
 		setMakeCurrentAcountPago(state, value) {
 			state.make_current_acount_pago = value
@@ -652,6 +730,8 @@ export default {
 		setCurrentAcountPaymentMethodId(state, value) {
 			const previous_payment_method_id = state.current_acount_payment_method_id
 			state.current_acount_payment_method_id = value
+			/* Configuracion decidida para esta venta: no le corresponden mas los defaults */
+			state.venta_en_curso_inicializada = true
 			append_sale_log_entry(state, {
 				event_key: 'payment_method_changed',
 				source_component: 'vender/setCurrentAcountPaymentMethodId',
@@ -700,6 +780,37 @@ export default {
 		setClient(state, value) {
 			const previous_client = get_safe_clone(state.client)
 			state.client = value
+
+			/*
+				El canje de puntos es del cliente que estaba elegido: al cambiarlo, o al sacarlo,
+				se cae solo.
+
+				POR QUE VA ACA Y NO EN EL PANEL DE CANJE: setClient es el unico embudo por el que
+				pasan TODOS los caminos. stage-1/SelectClient.vue lo commitea en tres lugares
+				distintos (las dos ramas de elegir un cliente y el clearSelected del boton de
+				quitar) y mixins/vender/limpiar_vender.js en un cuarto. Un canje que le sobrevive
+				al cambio de cliente manda un descuento_puntos que el servidor no puede
+				reconstruir con el saldo del cliente nuevo, y la venta entera rebota con 422 en
+				el mostrador.
+
+				Lo que NO se puede hacer desde aca es pedir el saldo del cliente nuevo: una
+				mutation de Vuex recibe (state, value) y no tiene dispatch. De eso se encarga el
+				watcher de components/vender/components/stage-3/Puntos.vue, que mira este mismo
+				state.client y por lo tanto ve los cuatro caminos igual de bien.
+
+				Ojo: el total de la venta queda con el canje viejo restado hasta que alguien
+				llame a setTotal(). limpiar_vender() ya lo hace; en los caminos de SelectClient
+				lo dispara el watcher `canje_aplicado` de stage-3/Puntos.vue, que existe
+				justamente para cubrir este borrado hecho desde afuera del componente.
+			*/
+			state.puntos_canjeados = null
+			state.descuento_puntos = null
+
+			/*
+				Sin condicion de valor: quitar el cliente (null) tambien es una decision del
+				operador sobre esta venta.
+			*/
+			state.venta_en_curso_inicializada = true
 			append_sale_log_entry(state, {
 				event_key: 'client_changed',
 				source_component: 'vender/setClient',
@@ -710,6 +821,9 @@ export default {
 					after_id: value ? value.id : null,
 				},
 			})
+		},
+		set_limite_credito_excedido(state, value) {
+			state.limite_credito_excedido = value
 		},
 		setSale(state, value) {
 			state.sale = value
@@ -745,7 +859,9 @@ export default {
 		},
 		set_caja_id(state, value) {
 			const previous_caja_id = state.caja_id
-			state.caja_id = value 
+			state.caja_id = value
+			/* Configuracion decidida para esta venta: no le corresponden mas los defaults */
+			state.venta_en_curso_inicializada = true
 			append_sale_log_entry(state, {
 				event_key: 'caja_changed',
 				source_component: 'vender/set_caja_id',
@@ -1024,6 +1140,14 @@ export default {
 				valor_dolar: state.valor_dolar,
 				afip_tipo_comprobante_id: state.afip_tipo_comprobante_id,
 				descuento: state.descuento,
+				/*
+					Canje de puntos. `total` (mas arriba en este mismo payload) ya viaja neteado
+					con descuento_puntos restado: lo aplica mixins/vender_set_total.js dentro de
+					setTotal(). El servidor recompone el bruto sumandole descuento_puntos y con
+					eso mide el tope; si se mandara el total sin netear, el tope se mediria mal.
+				*/
+				puntos_canjeados: state.puntos_canjeados,
+				descuento_puntos: state.descuento_puntos,
 				fecha_entrega: state.fecha_entrega,
 				incoterms: state.incoterms,
 				observations_ocultas: state.observations_ocultas,

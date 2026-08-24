@@ -30,8 +30,8 @@ export default {
 		sub_total_vender() {
 			return this.$store.state.vender.sub_total
 		},
-		index_previus_sale() {
-			return this.$store.state.vender.previus_sales.index
+		editando_venta_previa() {
+			return this.$store.getters['vender/previus_sales/editando_venta_previa']
 		},
 		watch_activado() {
 			return this.$store.state.vender.current_acount_payment_methods.watch_activado
@@ -44,7 +44,7 @@ export default {
         		this.$store.commit('vender/setSelectedPaymentMethods', []) 
 	        	this.total_a_repartir = this.sub_total_vender
 	        	
-	        	if (this.index_previus_sale == 0) {
+	        	if (!this.editando_venta_previa) {
 
 	        		this.total_repartido = 0
 	        	} else {

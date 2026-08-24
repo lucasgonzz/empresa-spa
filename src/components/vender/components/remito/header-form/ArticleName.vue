@@ -213,7 +213,7 @@ export default {
 			if (this.owner.ask_amount_in_vender) {
 				const input = document.getElementById('search-article')
 				if (input) {
-					input.value = article.name
+					this.setInputValueSync(input, article.name)
 				}
 			}
 		},

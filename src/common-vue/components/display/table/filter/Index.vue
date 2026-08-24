@@ -328,7 +328,41 @@ export default {
 
 
 
-	input  
+	// Este margen nació para separar los inputs sueltos del filtro, que van uno abajo del
+
+	// otro. La exclusión es por el input del buscador de relaciones, que NO es uno de esos:
+
+	// vive adentro de .search-field, un contenedor flex con align-items:center, así que el
+
+	// cross-size de la línea sale del MARGIN BOX del hijo y los 15px se convertían en
+
+	// ALTURA del campo. El buscador se dibujaba de 53px contra los 38px de un filtro de
+
+	// texto: el "alto de área de texto" que se veía en el modal de filtro por columna.
+
+	// Medido el 11/8/2026 sobre el CSS compilado: sacando el margen, 53 -> 38.
+
+	// El :last-child de abajo no lo salvaba, y por eso hay que excluirlo a mano: ese input
+
+	// tiene el ícono de la lupa como hermano posterior, así que nunca es el último hijo.
+
+	//
+
+	// Ojo si venís a tocar esto: la regla se recortó, no se borró, porque borrarla cambia
+
+	// también el dropdown legacy de filtros (el de `in_modal = false`) y eso excede a la
+
+	// misión que la encontró. Pero hoy NINGÚN input la usa para lo que dice el párrafo de
+
+	// arriba —en texto y número el :last-child ya la anulaba— y en Date.vue produce el
+
+	// mismo alto fantasma que acá, porque .date-filter-criterion también es flex con
+
+	// align-items:center y su input de fecha tampoco es el último hijo. Está registrado en
+
+	// prompts/hallazgos/20260811-el-margen-de-filter-component-se-vuelve-alto-en-los-flex.json
+
+	input:not(.search-field__input)
 
 		margin-bottom: 15px
 

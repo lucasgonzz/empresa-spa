@@ -1,8 +1,22 @@
 <template>
 	<div>
 
+		<!--
+			`m-b-15` en vez del `m-b-40` que tenía: 40px dejaban el contenido flotando lejos de las
+			pestañas, sobre todo en movimientos de depósitos, que arranca directo con su barra.
+
+			🔴 Y NO va sin clase, aunque Comprobantes y Listado monten este mismo nav sin ninguna:
+			ahí lo que sigue es un `view-component`, cuyo header trae `p-t-15` propio. Acá varias
+			secciones arrancan con un `<b-table>` desnudo, que no tiene margen de arriba, así que sin
+			clase quedan PEGADAS al nav. Medido: `.cont-navs` no tiene margin-bottom ni padding-bottom
+			propio, y el `margin-top: 15px` de adentro del nav es del pill, no aire debajo. Vacías no
+			se nota —el estado vacío trae 48px de padding—, y con datos sí: es justo el defecto que
+			se ve solo cuando el módulo tiene información.
+
+			15px es el mismo aire que el `p-t-15` de esos otros módulos, así que no estrena un valor.
+		-->
 		<horizontal-nav
-		class="m-b-40"
+		class="m-b-15"
 		@setSelected="setSelectedView"
 		set_view
 		emitir_setSelected_al_inicio

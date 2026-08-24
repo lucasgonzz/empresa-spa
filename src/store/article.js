@@ -27,9 +27,6 @@ export default __base_store({
 		edit_variants_stock,
 	},
 	state: {
-		/** Flag usado por el buscador de artículos para selección. */
-		add_buscador_to_selected: false,
-
 		model_name: 'article',
 		route_prefix: 'index/from-status',
 		from_dates: false,
@@ -46,6 +43,31 @@ export default __base_store({
 		final_price_description: [],
 
 		/**
+		 * Desglose ESTRUCTURADO del cálculo del precio (clave `detalle` de la respuesta de
+		 * empresa-api): cada entrada es { tipo, clave, etiqueta, detalle, valor, texto }. Convive
+		 * con `final_price_description` de arriba, que es el mismo desglose en texto plano y sigue
+		 * siendo el fallback: ventas, compras y Vender solo tienen esa versión.
+		 */
+		final_price_detalle: [],
+
+		/** Prendido mientras el servidor calcula el desglose. El modal se abre antes de pedirlo. */
+		final_price_description_cargando: false,
+
+		/** Mensaje de error si el pedido del desglose falló. Null cuando no hubo error. */
+		final_price_description_error: null,
+
+		/**
+		 * Contador del pedido de desglose en vuelo.
+		 *
+		 * Existe porque el modal del artículo tiene un "?" por cada lista de precios y el endpoint
+		 * tarda (recalcula, guarda y encola sincronizaciones): tocar dos seguidos es lo normal. Sin
+		 * esto, la respuesta del primero llega después y pisa el desglose del segundo, o le apaga el
+		 * spinner. Cada llamada se queda con su número y descarta su propia respuesta si el
+		 * contador ya avanzó.
+		 */
+		final_price_description_pedido: 0,
+
+		/**
 		 * Feature localStorage: flags de control.
 		 * `use_local_storage` se activa manualmente desde UI/acción correspondiente.
 		 */
@@ -57,8 +79,69 @@ export default __base_store({
 		 * (p. ej. buscador-articulos). Oculta actualizar/eliminar masivos por filtro en UI.
 		 */
 		filtered_without_filter_form: false,
+
+		/**
+		 * Sucursal elegida en el select de la barra del Listado. 0 = todas las sucursales, que es
+		 * el estado por defecto: entrar al Listado no filtra por sucursal.
+		 *
+		 * Convive con `extra_filters_de_barra` (state del factory) y no lo reemplaza: el select
+		 * necesita un escalar para su v-model, y el request necesita el array con la forma
+		 * { key, operator, value }. Los dos los escribe la MISMA mutation, de una sola vez, para
+		 * que no puedan quedar diciendo cosas distintas.
+		 */
+		address_id_filtro: 0,
 	},
 	mutations: {
+		/**
+		 * Elige la sucursal por la que se filtra el Listado, y deja armado el filtro extra que
+		 * `runGlobalSearch` le manda al backend en cada request.
+		 *
+		 * El operador `address_stock_seteado` lo entiende ExtraFiltersHelper de la API: deja pasar
+		 * los artículos que tienen seteada la relación con esa sucursal, con stock 0, negativo o
+		 * positivo. Con 0 no se manda ningún filtro (todas las sucursales).
+		 *
+		 * La `key` va en 'address_id' aunque el backend no la use para nada en este operador: el
+		 * helper descarta los filtros sin `key` antes de mirar el operador, así que omitirla haría
+		 * que el filtro se ignorara en silencio.
+		 *
+		 * @param {Object} state Estado del módulo.
+		 * @param {Number} value id de la sucursal, o 0 para todas.
+		 */
+		set_address_id_filtro(state, value) {
+			state.address_id_filtro = value
+
+			if (!value) {
+				state.extra_filters_de_barra = []
+				return
+			}
+
+			state.extra_filters_de_barra = [
+				{
+					key: 'address_id',
+					operator: 'address_stock_seteado',
+					value: value,
+				}
+			]
+		},
+		/**
+		 * Override de la mutation del factory, para que el select de sucursal no se desincronice
+		 * del filtro que efectivamente se manda.
+		 *
+		 * Quien la llama es el boton "Quitar filtros" (BtnRestartFilter), que es generico y no sabe
+		 * que existe `address_id_filtro`. Sin este override, ese boton dejaba el array vacio —o sea
+		 * el listado sin filtrar— pero el select seguia mostrando una sucursal elegida: la pantalla
+		 * diciendo una cosa y la consulta haciendo otra, que es peor que cualquiera de las dos.
+		 *
+		 * @param {Object} state Estado del módulo.
+		 * @param {Array} value Filtros de barra. Vacío = se limpiaron.
+		 */
+		set_extra_filters_de_barra(state, value) {
+			state.extra_filters_de_barra = value
+
+			if (!value.length) {
+				state.address_id_filtro = 0
+			}
+		},
 		/**
 		 * Guarda explicación/steps del precio final (usado en UI).
 		 */
@@ -66,10 +149,28 @@ export default __base_store({
 			state.final_price_description = value
 		},
 		/**
-		 * Controla si el buscador agrega artículos a seleccionados.
+		 * Guarda el desglose estructurado del precio (ver `final_price_detalle` en el state).
 		 */
-		set_add_buscador_to_selected(state, value) {
-			state.add_buscador_to_selected = value
+		set_final_price_detalle(state, value) {
+			state.final_price_detalle = value
+		},
+		/**
+		 * Prende/apaga el indicador de carga del desglose del precio.
+		 */
+		set_final_price_description_cargando(state, value) {
+			state.final_price_description_cargando = value
+		},
+		/**
+		 * Guarda el mensaje de error del desglose del precio (null para limpiarlo).
+		 */
+		set_final_price_description_error(state, value) {
+			state.final_price_description_error = value
+		},
+		/**
+		 * Número del pedido de desglose en vuelo (ver el comentario del state).
+		 */
+		set_final_price_description_pedido(state, value) {
+			state.final_price_description_pedido = value
 		},
 		/**
 		 * Marca filtrado sin criterios en store (búsqueda rápida vs modal de filtros).

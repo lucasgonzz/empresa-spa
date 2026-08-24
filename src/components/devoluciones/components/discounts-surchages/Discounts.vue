@@ -11,7 +11,7 @@
 		:key="discount.id"
 		:value="discount.id"
 		v-model="devolucion_discounts">
-			{{ discount.name }} ({{ discount.percentage }}%)
+			{{ discount.name }} ({{ porcentaje_es(discount.percentage) }}%)
 			
 			<span
 			v-if="discount.deleted_at">
@@ -20,13 +20,13 @@
 
 			<span
 			v-else-if="discount.updated_percentage">
-				({{ discount.updated_percentage }}% en este momento)
+				({{ porcentaje_es(discount.updated_percentage) }}% en este momento)
 			</span>
 
 			<p
 			class="text-muted"
 			v-if="!discount.deleted_at && discount.updated_percentage">
-				En caso de querer usar el valor actual del descuento ({{ discount.updated_percentage }}%), actualice la venta, quite el descuento y guarde la venta sin el descuento. Luego vuelva a generar una devolucion para esta venta y agregue el descuento con el valor actual.
+				En caso de querer usar el valor actual del descuento ({{ porcentaje_es(discount.updated_percentage) }}%), actualice la venta, quite el descuento y guarde la venta sin el descuento. Luego vuelva a generar una devolucion para esta venta y agregue el descuento con el valor actual.
 			</p>
 			
 		</b-form-checkbox>

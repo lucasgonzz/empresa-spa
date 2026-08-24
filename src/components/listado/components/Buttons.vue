@@ -53,9 +53,16 @@ class="buttons-listado">
 		</b-button>
 
 		<!-- Movimientos de stock -->
+		<!--
+			El data-testid lleva el id del articulo porque este bloque de botones se repite en CADA
+			fila del listado: sin el id, un [data-testid="btn-stock-movements"] devuelve tantos
+			elementos como articulos haya en pantalla. Mismo criterio que el resto de la tabla
+			(<model>-<key>-<id>), y en paralelo al `dusk` que ya estaba.
+		-->
 		<b-button 
 		variant="secondary"
 		dusk="btn-stock-movements"
+		:data-testid="'btn-stock-movements-'+model.id"
 		@click.stop="stockMovements()"
 		class="btn-stock-movement"
 		title="Movimientos de stock">

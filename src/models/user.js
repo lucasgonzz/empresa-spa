@@ -82,6 +82,76 @@ export default {
 			[
 			 	'Si se desactiva, el iva del articulo se sumara luego del margen de ganancia',
 			],
+			// Grupo 231, prompt 06: con la dinamica nueva de costeo por condicion fiscal activa
+			// (usar_condicion_fiscal_en_costeo) esta tilde ya no tiene ningun efecto (ver grupo 231,
+			// prompt 02), asi que se oculta del formulario para que el cliente no la toque creyendo
+			// que hace algo.
+			v_if_function: 'ocultar_aplicar_iva_al_costo_si_usa_condicion_fiscal_v_if_function',
+		},
+		// Grupo 231, prompt 06: condicion de IVA de la cuenta. Determina como se calculan los
+		// costos cuando la dinamica nueva (ver siguiente propiedad) esta activa.
+		{
+			text: 'Condicion de IVA',
+			key: 'condicion_iva_precios',
+			type: 'select',
+			options: [
+				{text: 'Responsable Inscripto', value: 'RRII'},
+				{text: 'Monotributista', value: 'MT'},
+			],
+			descriptions: [
+				'Determina como se calculan los costos. Un Monotributista no recupera el IVA de sus compras, asi que el IVA forma parte del costo. Un Responsable Inscripto lo recupera, asi que el IVA se suma al momento de vender.',
+			],
+			// Simetrico de la tilde historica de arriba: con el checkbox de abajo apagado, este
+			// select no gobierna nada (iva_va_al_costo() resuelve por aplicar_iva_al_costo y la
+			// condicion fiscal se ignora), asi que se oculta en vez de dejarlo a la vista invitando
+			// a tocarlo. Mismo mecanismo de v_if_function, no uno nuevo.
+			v_if_function: 'mostrar_condicion_iva_si_usa_condicion_fiscal_v_if_function',
+		},
+		// Grupo 231, prompt 06: activa la dinamica de costeo por condicion fiscal (grupo 231,
+		// prompt 02) en reemplazo de la tilde historica "aplicar_iva_al_costo".
+		{
+			text: 'Calcular costos segun la condicion de IVA',
+			key: 'usar_condicion_fiscal_en_costeo',
+			type: 'checkbox',
+			descriptions: [
+				'Si se activa, el sistema calcula los costos y los precios segun la condicion de IVA indicada arriba, en lugar de la configuracion historica de esta cuenta.',
+				'Al cambiar esta opcion se recalculan los precios de todos los articulos. El costo real de los articulos va a cambiar y los precios finales pueden moverse. No la actives sin haber hablado antes con el equipo de ComercioCity.',
+			],
+		},
+		/*
+		 * Mision costo-bruto-por-condicion-fiscal, plan v2 (20/8/2026): ACA HABIA un switch de
+		 * cuenta, "Los costos se cargan con IVA incluido" (users.costos_cargados_con_iva), que era
+		 * el default de como interpretar el costo que alguien tipeaba. Se saco junto con la columna,
+		 * que se elimina de la base.
+		 *
+		 * Por que ya no existe: un default de cuenta se colaba como declaracion. El que carga el
+		 * costo es el que dice si es neto o bruto, y lo dice en el momento y en el lugar de la
+		 * carga -- en el listado, eligiendo en cual de los dos inputs escribe (CostInput.vue); en
+		 * la compra, con provider_orders.precios_incluyen_iva; en el import de Excel, con un control
+		 * propio por planilla. Con eso no queda nada que adivinar a nivel cuenta, y de paso se evita
+		 * que un guardado que ni toca el costo lo descomponga porque la cuenta tenia el switch
+		 * prendido.
+		 */
+		/*
+		 * Prompt 266 (Fase 2, Capa 3): modo "precio de etiqueta incluye la tarjeta mas cara".
+		 * Si esta activo, el precio final del articulo (el que se muestra en LISTADO y VENDER) ya
+		 * tiene incorporado el recargo del metodo de pago mas caro configurado. Al elegir un metodo
+		 * de pago en VENDER, se muestra el precio ajustado para ese metodo y su descuento respecto
+		 * del precio de etiqueta (por ejemplo, elegir "Efectivo" muestra un precio menor con su
+		 * porcentaje de descuento). Si esta desactivado, el comportamiento es el de siempre: precio
+		 * base + recargo del metodo de pago elegido.
+		 */
+		{
+			text: 'El precio de etiqueta ya incluye el recargo de la tarjeta mas cara',
+			key: 'precio_base_incluye_tarjeta',
+			type: 'checkbox',
+			value: 0,
+			descriptions:
+			[
+				'Si se activa, el precio final del articulo ya incluye el recargo del metodo de pago mas caro configurado.',
+				'En VENDER, al elegir un metodo de pago se muestra el precio ajustado y el descuento respecto del precio de etiqueta.',
+				'Si se desactiva, el precio final es el base y el recargo del metodo de pago elegido se suma aparte (comportamiento actual).',
+			],
 		},
 		/*
 		 * Si está activo, al calcular costos en ventas se aplican descuentos y recargos del pedido (SaleHelper).
@@ -106,28 +176,32 @@ export default {
 			 	'Si se activa, cada articulo un precio final para cada lista de precio que haya creada.',
 			],
 		},
-		{
-			text: 'Redondear precios de a centenas',
-			key: 'redondear_centenas_en_vender',
-			type: 'checkbox',
-		},
 		/*
-		 * Configuraciones de redondeo adicionales usadas por el backend al calcular precios finales.
+		 * Tarea 4 — las cuatro tildes de redondeo (centenas, decenas, de a 50 y centavos) se
+		 * reemplazaron por este unico select. Las cinco columnas booleanas siguen existiendo en la
+		 * base y siguen siendo lo que lee ArticleHelper::redondear(): el select es una fachada que
+		 * las lee (accessor modo_redondeo del modelo User) y las escribe (UserController@update).
+		 *
+		 * No se colapsaron a una columna nueva a proposito: hay clientes con dos flags prendidos, y
+		 * como el backend los encadena, esa combinacion da un resultado que ningun valor unico
+		 * representa. A esos se les muestra "Combinacion personalizada" y no se les toca nada hasta
+		 * que elijan otra opcion.
 		 */
 		{
-			text: 'Redondear precios en decenas',
-			key: 'redondear_precios_en_decenas',
-			type: 'checkbox',
-		},
-		{
-			text: 'Redondear precios de a 50',
-			key: 'redondear_de_a_50',
-			type: 'checkbox',
-		},
-		{
-			text: 'Redondear precios en centavos',
-			key: 'redondear_precios_en_centavos',
-			type: 'checkbox',
+			text: 'Opciones de redondeo',
+			key: 'modo_redondeo',
+			type: 'select',
+			// options: [] intencional (mismo patron que sale_factura_print_option en este archivo y
+			// que address.default_afip_information_id): FieldSelectInput monta el componente
+			// generico de relacion cuando typeof prop.options == 'undefined', y esta key no es un
+			// "*_id". Las opciones reales las calcula dynamic_options_function en tiempo real.
+			options: [],
+			dynamic_options_function: 'get_modo_redondeo_options',
+			descriptions:
+			[
+				'Define como se redondean los precios finales de venta.',
+				'Se aplica al recalcular los precios: al elegir una opcion distinta se vuelven a calcular los precios de todos los articulos.',
+			],
 		},
 		{
 			text: 'Aplicar los descuentos y recargos en los articulos antes del margen de ganancia',
@@ -295,18 +369,6 @@ export default {
 				'Valor recomendado: 10. Se ajusta entre 8 y 14.',
 			],
 		},
-		// Controla si el logo ocupa todo el ancho del ticket o aparece en un lado.
-		// Cuando está activado, el logo ocupa todo el ancho y los datos de la empresa van debajo.
-		// Cuando está desactivado, el logo va a la izquierda y los datos a la derecha.
-		{
-			text: 'El logo ocupa todo el ancho del ticket',
-			key: 'sale_ticket_logo_full_width',
-			type: 'checkbox',
-			descriptions: [
-				'Activado: el logo se muestra a todo el ancho y los datos de la empresa quedan debajo.',
-				'Desactivado: el logo va a la izquierda y los datos a la derecha (como hasta ahora).',
-			],
-		},
 
 
 
@@ -425,6 +487,151 @@ export default {
 
 
 
+
+
+		{
+			group_title: 'Sugerencias inteligentes de stock',
+		},
+		/*
+		 * Configuracion de la extension 'sugerencias_inteligentes': periodicidad de la
+		 * generacion automatica y valores por defecto de cada sugerencia (los usa la
+		 * corrida automatica y precargan el form de "Nueva sugerencia" de la vista
+		 * propia). Persisten en columnas sugerencias_* de users via UserController@update,
+		 * el mismo camino que usar_condicion_fiscal_en_costeo. Sin la extension, el
+		 * grupo entero desaparece de Configuracion general.
+		 */
+		{
+			text: 'Generar sugerencias automaticamente',
+			key: 'sugerencias_periodicidad',
+			type: 'select',
+			options: [
+				{text: 'Nunca', value: 'nunca'},
+				{text: 'Todos los dias', value: 'diaria'},
+				{text: 'Una vez por semana', value: 'semanal'},
+				{text: 'Cada quince dias', value: 'quincenal'},
+				{text: 'Una vez por mes', value: 'mensual'},
+			],
+			if_has_extencion: 'sugerencias_inteligentes',
+			descriptions: [
+				'El sistema genera solo una sugerencia de movimientos de stock con la frecuencia que elijas, a la madrugada, usando los valores por defecto de abajo.',
+				'Cuando la sugerencia queda lista te llega una notificacion para abrirla con un click.',
+				'Con "Nunca", las sugerencias se generan unicamente a mano desde la pantalla de sugerencias.',
+			],
+		},
+		{
+			text: 'Objetivo por defecto',
+			key: 'sugerencias_modo',
+			type: 'select',
+			options: [
+				{text: 'Minimo', value: 'minimo'},
+				{text: 'Ideal', value: 'ideal'},
+				{text: 'Maximo', value: 'maximo'},
+			],
+			if_has_extencion: 'sugerencias_inteligentes',
+			descriptions: [
+				'Hasta donde completar el stock de cada deposito en las sugerencias generadas automaticamente (y como valor inicial al crear una a mano).',
+				'MINIMO: sugiere stock solo para los depositos que estan por debajo de su stock minimo.',
+				'IDEAL: lleva cada deposito a su valor ideal, calculado como (minimo + maximo) / 2.',
+				'MAXIMO: lleva cada deposito hasta su stock maximo definido.',
+			],
+		},
+		{
+			text: 'Eleccion del origen por defecto',
+			key: 'sugerencias_origen',
+			type: 'select',
+			options: [
+				{text: 'Absoluto', value: 'absoluto'},
+				{text: 'Relativo', value: 'relativo'},
+			],
+			if_has_extencion: 'sugerencias_inteligentes',
+			descriptions: [
+				'Como elegir el deposito desde el cual mover stock cuando no hay depositos de origen designados (o para desempatar entre ellos).',
+				'ABSOLUTO: el deposito con mayor cantidad de stock en total.',
+				'RELATIVO: el deposito mas lleno respecto de su propio stock maximo.',
+			],
+		},
+		{
+			text: 'Limite del origen por defecto',
+			key: 'sugerencias_limite_origen',
+			type: 'select',
+			options: [
+				{text: 'Minimo', value: 'minimo'},
+				{text: 'Ideal', value: 'ideal'},
+				{text: 'Sin limite', value: 'sin_limite'},
+			],
+			if_has_extencion: 'sugerencias_inteligentes',
+			descriptions: [
+				'Hasta donde permitir vaciar el deposito origen al sugerir movimientos.',
+				'MINIMO: no se mueve stock si eso deja al origen por debajo de su stock minimo.',
+				'IDEAL: se puede vaciar el origen hasta su nivel ideal.',
+				'SIN LIMITE: se puede mover todo el stock necesario, aunque el origen quede vacio.',
+			],
+		},
+
+
+		{
+			group_title: 'Sugerencias inteligentes de compra',
+		},
+		/*
+		 * Configuracion de la extension 'sugerencias_compras': periodicidad de la
+		 * generacion automatica de la sugerencia de compra a proveedores (comando
+		 * compras:generar). Persiste en sugerencias_compras_periodicidad de users
+		 * via UserController@update, mismo camino que sugerencias_periodicidad de
+		 * arriba (stock). A diferencia de stock, aca no hay modo/origen/limite_origen
+		 * por defecto: los cuatro parametros del motor de compras se cargan en el
+		 * form de "Nueva sugerencia" de la vista propia, no en Configuracion general.
+		 * Sin la extension, el grupo entero desaparece de Configuracion general.
+		 */
+		{
+			text: 'Generar sugerencias de compra automaticamente',
+			key: 'sugerencias_compras_periodicidad',
+			type: 'select',
+			options: [
+				{text: 'Nunca', value: 'nunca'},
+				{text: 'Todos los dias', value: 'diaria'},
+				{text: 'Una vez por semana', value: 'semanal'},
+				{text: 'Cada quince dias', value: 'quincenal'},
+				{text: 'Una vez por mes', value: 'mensual'},
+			],
+			if_has_extencion: 'sugerencias_compras',
+			descriptions: [
+				'El sistema genera una sugerencia de compra a proveedores con la frecuencia que elijas, a la madrugada, usando los defaults del motor.',
+				'Cuando la sugerencia queda lista te llega una notificacion para abrirla con un click.',
+				'Con "Nunca", las sugerencias se generan unicamente a mano desde la pantalla de Sugerencias de compra.',
+			],
+		},
+
+
+		{
+			group_title: 'Motor de ofertas por cliente',
+		},
+		/*
+		 * Configuracion de la extension 'motor_de_ofertas': periodicidad de la
+		 * generacion automatica de la corrida de ofertas personalizadas por cliente
+		 * (comando ofertas:generar). Persiste en ofertas_periodicidad de users via
+		 * UserController@update, mismo camino que las dos periodicidades de arriba
+		 * (stock y compras). Los parametros del motor se cargan en el form de
+		 * "Nueva corrida" de la vista propia, no aca. Sin la extension, el grupo
+		 * entero desaparece de Configuracion general.
+		 */
+		{
+			text: 'Generar ofertas para clientes automaticamente',
+			key: 'ofertas_periodicidad',
+			type: 'select',
+			options: [
+				{text: 'Nunca', value: 'nunca'},
+				{text: 'Todos los dias', value: 'diaria'},
+				{text: 'Una vez por semana', value: 'semanal'},
+				{text: 'Cada quince dias', value: 'quincenal'},
+				{text: 'Una vez por mes', value: 'mensual'},
+			],
+			if_has_extencion: 'motor_de_ofertas',
+			descriptions: [
+				'El sistema arma ofertas personalizadas para tus clientes con la frecuencia que elijas, a la madrugada.',
+				'Cada oferta nace como sugerencia: vos revisas el descuento y la fecha de vencimiento antes de activarla.',
+				'Con "Nunca", las ofertas se generan unicamente a mano desde la pantalla de Ofertas.',
+			],
+		},
 
 
 		{

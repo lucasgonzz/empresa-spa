@@ -84,7 +84,23 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Asigna la caja por defecto del metodo de pago y la sucursal.
+		 *
+		 * 🔴 Este metodo PISA al del mixin `cajas`: en Vue los methods del componente ganan sobre
+		 * los del mixin, asi que adentro de este componente el guard del mixin no corre nunca y
+		 * hay que repetirlo aca. Sin esto, los watchers de arriba —que miran justo los valores que
+		 * la venta guardada commitea al cargarse— le cambiarian la caja a una venta que ya tiene
+		 * la suya.
+		 */
 		set_caja_por_defecto() {
+
+			if (
+				this.$store.getters['vender/previus_sales/editando_venta_previa']
+				|| this.$store.state.vender.budget
+			) {
+				return
+			}
 
 			console.log('set_caja_por_defecto')
 

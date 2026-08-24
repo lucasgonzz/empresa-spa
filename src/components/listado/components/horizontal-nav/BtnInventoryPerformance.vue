@@ -1,11 +1,12 @@
 <template>
 	<b-button
 	v-if="is_admin"
-	class="m-l-15"
+	v-b-tooltip.hover
+	title="Rendimiento del inventario"
+	aria-label="Rendimiento del inventario"
+	class="toolbar-btn--icono toolbar-btn--tinte-verde"
 	v-b-modal="'inventory-performance'"
-	size="sm"
-	variant="success">
-		<i class="bi bi-box-seam m-r-5"></i>
-		Inventario
+	size="sm">
+		<i class="bi bi-box-seam"></i>
 	</b-button>
 </template>

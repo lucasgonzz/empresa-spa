@@ -1,6 +1,31 @@
+/*
+	Catalogos que se descargan al iniciar sesion (los pide
+	common-vue/components/download-resources/Index.vue).
+
+	🔴 ESTA LISTA NO ES "todo lo que el sistema necesita": es lo que hace falta tener en memoria
+	DESDE EL ARRANQUE. Lo que solo usa un modulo se pide al entrar a ese modulo. Sacar algo de
+	aca no es gratis -- hay que dejar a alguien pidiendolo -- pero agregar algo tampoco: cada
+	entrada es peso en la respuesta del arranque de los ~40 clientes.
+
+	Salieron cinco en la mision 43 (12/8/2026), cada uno por un motivo distinto:
+
+	- 'provider': ya estaba decidido en el grupo 332 (4/8/2026) y la entrada quedo colgada. El
+	  buscador va contra la API y la tabla lee la relacion embebida; los lugares que necesitan el
+	  catalogo entero lo piden ellos (panel-control/proveedores/Index.vue, los dos modales de
+	  importacion, y mixins/global_notification_functions.js despues de importar).
+	- 'sale': lo pide el modulo de Ventas en su created() (views/Ventas.vue), igual que
+	  DepositoParaCheckear y DepositoCheckeadas. Ademas su index() del backend exige $modulo.
+	- 'order': lo pide el modulo de pedidos online (components/online/components/orders/Index.vue).
+	  No es un catalogo: es una tabla transaccional que crece con el uso. Bajarla al arrancar
+	  ademas duplicaba la alerta de pedidos sin confirmar (ver mixins/alert_infos.js).
+	- 'recipe': lo piden las vistas de produccion (views/Produccion.vue y views/ProduccionV2.vue).
+	- 'permission': lo pide el modulo de empleados (common-vue/views/Employee.vue). Es la lista
+	  de checkboxes del formulario de empleado, NO el can() del usuario logueado -- esos permisos
+	  viajan adentro del usuario cuando resuelve la sesion y no tocan este store.
+*/
 export default [
     // 'extencion',
-    
+
     {
         model_name: 'bodega',
         if_has_extencion: 'vinoteca',
@@ -44,7 +69,7 @@ export default [
     'pais_exportacion',
     'moneda',
     // 'client',
-    'provider',
+    // 'provider',  -> lo pide cada pantalla que lo necesita (ver la nota de arriba)
     'column_position',
     'c_a_payment_method_type',
     'current_acount_payment_method',
@@ -76,13 +101,13 @@ export default [
     'article_property_type',
     'article_property_value',
     // 'task',
-    'permission',
+    // 'permission',  -> lo pide common-vue/views/Employee.vue (ver la nota de arriba)
     'sale_type',
     'discount',
     'surchage',
     'brand',
     'condition',
-    'recipe',
+    // 'recipe',  -> lo piden las vistas de produccion (ver la nota de arriba)
     'iva',
     'iva_condition',
     'sub_category',
@@ -95,11 +120,11 @@ export default [
     'commission',
     'delivery_day',
     'delivery_zone',
-    'sale',
+    // 'sale',  -> lo pide views/Ventas.vue en su created() (ver la nota de arriba)
     'sale_sender_info',
     // 'credit_card',
     // 'credit_card_payment_plan',
-    'order',
+    // 'order',  -> lo pide el modulo de pedidos online (ver la nota de arriba)
     'online_price_type',
     // 'buyer',
     'inventory_linkage_scope',

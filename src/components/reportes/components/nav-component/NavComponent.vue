@@ -17,17 +17,40 @@ export default {
 		items() {
 			let items = []
 
+			/* La seccion "Generales" (tarjetas sueltas) se elimina (decision de Lucas, 4/7/2026):
+			   queda reemplazada por estas 3 secciones contables nuevas del grupo 227. Se reutiliza
+			   el mismo permiso 'reportes.cards' que ya gateaba Generales, para no depender de
+			   abilities nuevas que este prompt (UI-only) no crea en el backend. `route_value` evita
+			   que el acento de "Posición" termine en el parametro de ruta (routeString no le quita
+			   tildes al texto). */
 			if (this.can('reportes.cards')) {
 
 				items.push({
-					name: 'Generales',
+					name: 'Estado de Resultados',
+					route_value: 'estado-de-resultados',
+				})
+
+				items.push({
+					name: 'Flujo de Caja',
+					route_value: 'flujo-de-caja',
+				})
+
+				items.push({
+					name: 'Posición Fiscal',
+					route_value: 'posicion-fiscal',
 				})
 			}
 
-			if (this.can('reportes.graficos')) {
+			/* Reporte del pasivo del programa de puntos. Va detrás de la extensión
+			   `puntos_clientes` (los endpoints del módulo responden 403 sin ella, así que una
+			   pestaña visible sería una pestaña que no puede cargar nada) y reutiliza el mismo
+			   permiso 'reportes.cards' que los tres reportes contables de arriba: esta misión no
+			   crea abilities nuevas en el backend. */
+			if (this.hasExtencion('puntos_clientes') && this.can('reportes.cards')) {
 
 				items.push({
-					name: 'graficos',
+					name: 'Puntos',
+					route_value: 'puntos',
 				})
 			}
 
@@ -38,14 +61,21 @@ export default {
 				})
 			}
 
+			if (this.can('reportes.graficos')) {
+
+				items.push({
+					name: 'graficos',
+				})
+			}
+
 			if (this.can('reportes.cheques')) {
 
 				items.push({
 					name: 'cheques',
 				})
 			}
-			
-			return items 
+
+			return items
 		},
 		loading() {
 			return this.$store.state.panel_control.loading

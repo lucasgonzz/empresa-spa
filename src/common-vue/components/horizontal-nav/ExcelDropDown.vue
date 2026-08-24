@@ -18,17 +18,23 @@
 		:model="model_name">
 		</ai-excel-import-modal>
 
+		<!--
+			Sin `right` a proposito: ese atributo alinea el menu por su borde DERECHO contra el
+			boton (placement bottom-end + .dropdown-menu-right), y "Crear" vive en la zona izquierda
+			del view-header. Un menu de min-width 300px anclado por su derecha a un boton que esta a
+			~120px del borde se extendia hacia afuera de la pantalla y quedaba clavado contra el
+			margen izquierdo. Alineado por la izquierda (bottom-start) cae debajo del boton y crece
+			hacia la derecha, que es donde hay lugar.
+		-->
 		<b-dropdown
 
-		right
-
-		split 
+		split
 
 		:id="'dropdown_'+model_name"
 
 		size="sm"
 
-		variant="primary"
+		class="toolbar-btn--acento"
 
 		boundary="viewport"
 
@@ -46,9 +52,11 @@
 
 				<span
 
-				:dusk="'btn_create_'+model_name">
+				:dusk="'btn_create_'+model_name"
 
-					<i class="icon-plus"></i>
+				:data-testid="'btn-crear-'+model_name">
+
+					<i class="bi bi-plus-lg"></i>
 
 					Crear
 
@@ -58,22 +66,22 @@
 
 			<excel-dropdown-option-item
 			v-if="can_create"
-			icon="icon-plus"
+			icon="bi bi-plus-lg"
 			@click="setModel(null, model_name)">
 				{{ create_spanish(model_name) }}
 			</excel-dropdown-option-item>
 
 			<excel-dropdown-submenu
 			v-if="show_export_submenu"
-			icon="icon-upload"
+			icon="bi bi-box-arrow-up"
 			label="Exportación">
 				<excel-dropdown-option-item
-				icon="icon-upload"
+				icon="bi bi-box-arrow-up"
 				@click="exportModels">
 					Nueva exportación
 				</excel-dropdown-option-item>
 				<excel-dropdown-option-item
-				icon="icon-list"
+				icon="bi bi-clock-history"
 				@click="open_export_history">
 					Historial de exportaciones
 				</excel-dropdown-option-item>
@@ -81,7 +89,7 @@
 
 			<excel-dropdown-submenu
 			v-if="show_import_submenu"
-			icon="icon-download"
+			icon="bi bi-box-arrow-in-down"
 			label="Importación">
 				<excel-dropdown-option-item
 				v-if="can_import_ai"
@@ -91,7 +99,7 @@
 				</excel-dropdown-option-item>
 				<excel-dropdown-option-item
 				v-if="can_import"
-				icon="icon-list"
+				icon="bi bi-clock-history"
 				:data_tour="model_name === 'article' ? 'listado.boton_importar_excel' : null"
 				@click="open_import_history">
 					Historial de importaciones
@@ -100,7 +108,7 @@
 
 			<excel-dropdown-option-item
 			v-if="show_masive_update_history"
-			icon="icon-history"
+			icon="bi bi-arrow-repeat"
 			@click="open_masive_update_history">
 				Historial de actualizaciones masivas
 			</excel-dropdown-option-item>
@@ -120,6 +128,8 @@
 </template>
 
 <script>
+import ExcelDropdownSubmenu from '@/common-vue/components/horizontal-nav/ExcelDropdownSubmenu'
+import ExcelDropdownOptionItem from '@/common-vue/components/horizontal-nav/ExcelDropdownOptionItem'
 
 export default {
 
@@ -128,8 +138,24 @@ export default {
 		MasiveUpdateHistory: () => import('@/common-vue/components/horizontal-nav/MasiveUpdateHistory'),
 		SmartImagesHistoryModal: () => import('@/components/listado/components/selected-filtered-options/SmartImagesHistoryModal'),
 		AiExcelImportModal: () => import('@/components/listado/modals/ai-excel-import/Index'),
-		ExcelDropdownSubmenu: () => import('@/common-vue/components/horizontal-nav/ExcelDropdownSubmenu'),
-		ExcelDropdownOptionItem: () => import('@/common-vue/components/horizontal-nav/ExcelDropdownOptionItem'),
+		// Estos dos van SINCRONOS y los modales de arriba siguen asincronos.
+		//
+		// Son el CONTENIDO del menu: si llegan por un chunk aparte, hay una ventana en la que el
+		// menu se puede desplegar todavia vacio y Popper mide contra eso. Los modifiers `flip` y
+		// `preventOverflow` si dependen del tamano del menu, asi que en esa ventana la posicion
+		// puede salir mal, y del segundo clic en adelante el chunk ya esta en cache -- lo que
+		// encaja con el "se acomoda despues de varios clics" que se reporto.
+		//
+		// 🔴 Honestidad sobre esto: la hipotesis NO quedo confirmada. Con `lazy` en false el slot se
+		// renderiza en el mount de la barra, no en el clic, asi que la ventana es "el usuario abre
+		// antes de que baje el chunk" y no "el primer clic siempre"; y con el placement bottom-start
+		// que quedo, `top` y `left` los calcula Popper contra el boton, sin mirar el tamano del
+		// menu. La causa medida del menu mal ubicado es la alineacion `right` que se saco mas
+		// arriba. Esto se deja igual porque es barato, cierra una ventana real y estos dos
+		// componentes son chicos y sin dependencias propias -- no porque este demostrado que era el
+		// bug. Los modales SI se quedan asincronos: son pesados y no participan del despliegue.
+		ExcelDropdownSubmenu,
+		ExcelDropdownOptionItem,
 	},
 	props: {
 
@@ -146,8 +172,33 @@ export default {
 	data() {
 		return {
 			// Popper en fixed para que el menú no quede limitado por el ancho del botón split.
+			//
+			// 🔴 gpuAcceleration: false NO es una micro-optimizacion al reves: es lo que permite que
+			// el submenu de Importacion/Exportacion viva adentro del menu. Popper 1.16 posiciona por
+			// defecto con `transform: translate3d(...)`, y un elemento transformado se vuelve el
+			// bloque contenedor de sus descendientes `position: fixed` -- o sea que el submenu,
+			// aunque sea fixed, quedaba anclado al menu y recortado por su overflow. Esa es la razon
+			// por la que alguien termino moviendo el <ul> del submenu a document.body con
+			// appendChild, y de ahi salia el bug de que el menu se rompiera entero al pasar el
+			// mouse: un nodo movido por afuera deja al patching de Vue 2 comparando contra hermanos
+			// que ya no estan donde cree. Con esto Popper posiciona con top/left, no hay transform,
+			// el fixed vuelve a anclarse al viewport y el submenu no necesita escaparse de ningun
+			// lado. Un menu que no se anima no pierde nada por no ir por GPU.
+			//
+			// 🔴 Y va adentro de `modifiers.computeStyle`, NO en el nivel superior. Popper 1.16 lee
+			// esa opcion del objeto del MODIFIER (`runModifiers` invoca `fn(data, modifier)`), asi
+			// que un `gpuAcceleration: false` suelto arriba queda en `this.options` y no lo mira
+			// nadie: el menu conserva el transform y todo esto no hace nada. `positionFixed` si es
+			// opcion de nivel superior, por eso conviven en niveles distintos. BootstrapVue mergea
+			// popper-opts con mergeDeep, asi que declarar solo computeStyle no pisa el resto de los
+			// modifiers por defecto.
 			dropdown_popper_opts: {
 				positionFixed: true,
+				modifiers: {
+					computeStyle: {
+						gpuAcceleration: false,
+					},
+				},
 			},
 		}
 	},
@@ -209,7 +260,16 @@ export default {
 		 * @return {void}
 		 */
 		open_ai_import() {
-			// nextTick: el submenú teleportado puede cerrar el dropdown en el mismo tick del click.
+			// nextTick heredado, y NO SE POR QUE HACE FALTA. Lo dejo porque sacarlo es un cambio de
+			// comportamiento que esta mision no pidio, pero que quede claro que es lo unico que lo
+			// sostiene:
+			//   - el comentario original decia "el submenu teleportado puede cerrar el dropdown en
+			//     el mismo tick del click". Ese teleport ya no existe.
+			//   - la explicacion obvia de reemplazo tampoco es cierta: BDropdownItem.closeDropdown()
+			//     difiere el hide con requestAnimationFrame, o sea DESPUES de cualquier microtarea
+			//     de $nextTick; y el modal es HERMANO del b-dropdown, no descendiente, asi que
+			//     cerrar el dropdown no puede desmontarlo.
+			// Si alguien lo saca y nada se rompe, era esto.
 			let modal_id = this.ai_import_modal_id
 			let self = this
 			this.$nextTick(function () {
@@ -345,22 +405,9 @@ export default {
 }
 </script>
 
-<style lang="sass">
-.excel-create-dropdown-menu
-	min-width: 300px !important
-	max-width: calc(100vw - 24px)
-	max-height: 70vh
-	overflow-y: auto
-	overflow-x: hidden
-	padding-top: 0.35rem
-	padding-bottom: 0.35rem
-	text-align: left
-
-	> li
-		width: 100%
-
-	.dropdown-item
-		text-align: left
-		border: none
-		box-shadow: none
-</style>
+<!--
+	Sin <style> propio: el tratamiento de .excel-create-dropdown-menu (ancho, alto maximo, overflow
+	y padding) es el mismo de los otros dos menus del listado y vive en
+	src/sass/_menus_desplegables.sass desde la mision 28. Tenerlo aca era la mitad del bug del scroll
+	horizontal: el de Crear declaraba overflow-x y max-width, y los otros dos no.
+-->

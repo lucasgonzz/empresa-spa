@@ -31,21 +31,26 @@
 			<p
 			class="m-0"
 			v-for="discount in sale_discounts">
-				<strong>-</strong> {{ discount.name }} {{ discount.percentage }}%
+				<strong>-</strong> {{ discount.name }} {{ porcentaje_es(discount.percentage) }}%
 			</p>
 			<p
 			class="m-0"
 			v-for="surchage in sale_surchages">
-				<strong>+</strong> {{ surchage.name }} {{ surchage.percentage }}%
+				<strong>+</strong> {{ surchage.name }} {{ porcentaje_es(surchage.percentage) }}%
 			</p>
 		</div>
 
 		
+		<!-- Este no pide nada al servidor: el desglose lo arma el front (mixins/vender_set_total.js)
+		     y ya esta en el store, asi que el v-b-modal directo abre al instante y esta bien. Lo
+		     unico que cambia es la forma del boton, para que sea el mismo en los cinco lugares que
+		     abren este modal. -->
 		<b-button
-		class="m-l-10"
-		variant="success"
+		class="btn-explicacion m-l-10"
+		variant="outline-secondary"
+		title="Ver cómo se calculó este total"
 		v-b-modal="'final-price-description'">
-			?
+			<i class="bi bi-question-lg"></i>
 		</b-button>
 
 		<div
@@ -98,8 +103,10 @@ export default {
 					cant -= Number(item.returned_amount)
 				}
 			})
-			cant = cant.toFixed(2)
-			return cant
+			// Este computed no lo usa nadie mas que la linea "X productos, Y unidades" del template
+			// (chequeado en todo src el 21/8/2026), asi que devuelve texto de pantalla directo:
+			// 1.234,50 en vez de 1234.50.
+			return this.numero_es_con_decimales(cant, 2)
 		},
 		sale_discounts() {
 			// if (this.previus_sale.id) {

@@ -11,7 +11,6 @@
 			v-else>
 				<b-form-textarea
 				@keyup.enter="changeFocus()"
-				@keyup.tab="changeFocus()"
 				:class="getInputSize(prop) && inputId(prop)"
 				v-if="showProp(prop) && prop.type == 'textarea'"
 				:type="prop.type"
@@ -20,8 +19,8 @@
 
 				<b-form-select
 				:id="inputId(prop)"
+				:data-testid="inputId(prop)"
 				@keyup.enter="changeFocus()"
-				@keyup.tab="changeFocus()"
 				v-else-if="showProp(prop) && prop.type == 'select'"
 				v-model="model.pivot[prop.key]"
 				:class="getInputSize(prop) && inputId(prop)"
@@ -30,7 +29,6 @@
 				<b-form-checkbox
 				:class="inputId(prop)"
 				@keyup.enter="changeFocus()"
-				@keyup.tab="changeFocus()"
 				v-else-if="showProp(prop) && prop.type == 'checkbox'"
 				:value="1"
 				:unchecked-value="0"
@@ -39,8 +37,8 @@
 
 				<b-form-input
 				:id="inputId(prop)"
+				:data-testid="inputId(prop)"
 				@keyup.enter="changeFocus()"
-				@keyup.tab="changeFocus()"
 				@blur="normalize_pivot_variable_decimal_on_blur(prop)"
 				v-else-if="showProp(prop)"
 				:type="prop.type"
@@ -125,61 +123,25 @@ export default {
 		inputId(prop) {
 			return this.model_name+'-'+prop.key+'-'+this.model.id
 		},
-		changeFocus(prop) {
+		/*
+			Vuelve el foco al input del search component cuando el usuario presiona Enter
+			en una celda del pivot, para poder seguir buscando y agregando sin usar el mouse.
+			El Tab no pasa por aca: lo maneja el navegador y avanza al siguiente input de la
+			fila, respetando el orden de columnas configurado por el usuario.
+		*/
+		changeFocus() {
+			const matching_inputs = document.querySelectorAll('input[id*="'+this.model_name+'"][class*="input-search"]')
 
-			const matching_inputs = document.querySelectorAll('input[id*="'+this.model_name+'"][class*="input-search"]');
+			if (!matching_inputs.length) {
+				console.warn('No se encontró ningún input de búsqueda para devolver el foco')
+				return
+			}
 
-            if (matching_inputs.length > 0) {
-                const target_input = matching_inputs[0]; // Si hay más de uno, tomamos el primero
-                console.log("Input encontrado:", target_input);
-                
-                // Ejemplo: enfocar ese input
-                setTimeout(() => {
-                	target_input.focus()
-                }, 200)
-            } else {
-                console.warn('No se encontró ningún input que coincida con los criterios.');
-            }
-
-			// let props = Object.keys(this.model.pivot)
-
-			// console.log('this.model.pivot:')
-			// console.log(this.model)
-
-			// console.log('this.prop:')
-			// console.log(this.prop)
-
-			// console.log('this.model_name:')
-			// console.log(this.model_name)
-
-			// console.log('prop enter:')
-			// console.log(props)
-
-			// let index = props.findIndex(prop => {
-			// 	return prop == this.prop.key
-			// })
-
-			// let id = props[index + 1]
-			// let elements = document.getElementsByClassName(this.model_name+'-'+id)
-
-			// if (elements.length) {
-
-			// 	elements[elements.length-1].focus()
-	
-			// 	this.updateTableScroll(elements[elements.length-1])
-			// }
-
-
+			const target_input = matching_inputs[0] // Si hay más de uno, tomamos el primero
+			setTimeout(() => {
+				target_input.focus()
+			}, 200)
 		},
-		updateTableScroll(element) {
-			let table = document.getElementById(this.cont_table_id)
-			console.log('table: ')
-			console.log(table)
-
-			console.log('scroll: '+table.scrollLeft)
-			table.scrollLeft += element.offsetWidth
-			console.log('scroll: '+table.scrollLeft)
-		}
 	}
 }
 </script>

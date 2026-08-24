@@ -18,8 +18,8 @@
 
 	/* Etapa abierta: header con mayor contraste respecto al body */
 	&--open > .vender-stage__header
-		background: #e2e6ea
-		border-bottom-color: #adb5bd
+		background: var(--bg-hover, #e2e6ea)
+		border-bottom-color: var(--color-border, #adb5bd)
 
 /* Acentos por número de etapa (orden en .vender-stages) */
 .vender-stages .vender-stage:nth-child(1) .vender-stage__header
@@ -41,6 +41,11 @@
 	background: #e67700
 
 /* Header de etapa: número + textos + chevron */
+/* Las tres superficies son distintas A PROPOSITO y no hay que unificarlas: el body de la etapa va */
+/* en --bg-card, el header cerrado en --bg-section y el header abierto (y el no colapsable) en */
+/* --bg-hover. Esa diferencia es la señal de que etapa esta abierta; con un solo fondo para los tres */
+/* se pierde. Los colores van por token con el literal viejo de fallback, adentro de este archivo, */
+/* porque el estilo del modulo le gana por especificidad a las reglas del tema global. */
 .vender-stage__header
 	display: flex
 	align-items: center
@@ -48,21 +53,21 @@
 	padding: 11px 14px 11px 12px
 	cursor: pointer
 	user-select: none
-	background: #e9ecef
-	border-bottom: 2px solid #ced4da
+	background: var(--bg-section, #e9ecef)
+	border-bottom: 2px solid var(--color-border, #ced4da)
 	transition: background 0.15s, border-color 0.15s
 
 	&:hover
-		background: #dee2e6
+		background: var(--bg-hover, #dee2e6)
 
 	/* Header de etapa 2 (no colapsable): sin pointer, mantiene contraste */
 	&--no-collapse
 		cursor: default
-		background: #e2e6ea
-		border-bottom-color: #adb5bd
+		background: var(--bg-hover, #e2e6ea)
+		border-bottom-color: var(--color-border, #adb5bd)
 
 		&:hover
-			background: #e2e6ea
+			background: var(--bg-hover, #e2e6ea)
 
 /* Número de etapa en círculo */
 .vender-stage__number
@@ -95,12 +100,12 @@
 /* Subtítulo descriptivo de la etapa */
 .vender-stage__sublabel
 	font-size: 0.75rem
-	color: #495057
+	color: var(--color-text-secondary, #495057)
 	margin-top: 2px
 
 /* Ícono de chevron para indicar estado abierto/cerrado */
 .vender-stage__chevron
-	color: #495057
+	color: var(--color-text-secondary, #495057)
 	font-size: 0.85rem
 	flex-shrink: 0
 
@@ -155,31 +160,18 @@
 		border: none !important
 		border-radius: 0
 
-	/* Buscador de cliente en etapa 1: ícono discreto a la izquierda */
+	/* Buscador de cliente en etapa 1 */
 	.vender-stage__client-search
 		width: 100%
 
-		.search-component .cont-search
-			box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important
-			border: 1px solid var(--color-border-tertiary, #ced4da) !important
-			border-radius: 0.25rem
-			overflow: hidden
-
-		.search-component .cont-search > .icon
-			background: var(--bg-section, #f8f9fa) !important
-			width: 44px
-			justify-content: center
-			border-right: 1px solid var(--color-border-tertiary, #dee2e6)
-			border-radius: 0
-
-			i
-				color: #495057
-				font-size: 1rem
-				opacity: 0.72
-
+		// El borde, la sombra y el radio los dibuja ahora .search-field adentro del componente
+		// (5/8/2026, grupo 351): repetirlos aca daba un rectangulo extra alrededor del campo.
+		// Tampoco queda el bloque del div .icon que habia debajo: el search-component dejo de
+		// renderizar ese elemento desde el grupo 273, era codigo muerto.
+		// Lo unico que se sigue imponiendo aca es la altura: esta barra alinea con controles de
+		// 36px, y ahi el campo compacto es lo correcto. Lo que se unifica es el look, no la altura.
 		.search-component .input-search
 			height: 36px
-			border-radius: 0
 
 	/* Body de etapa 2: sin padding extra */
 	&--always-open

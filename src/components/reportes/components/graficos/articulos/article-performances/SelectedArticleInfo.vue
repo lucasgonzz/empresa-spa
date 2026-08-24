@@ -6,10 +6,10 @@
 			Articulo: <strong>{{ selected_article.name }}</strong>
 		</p>
 		<p>
-			Stock actual: <strong>{{ selected_article.stock }}</strong>
+			Stock actual: <strong>{{ numero_es(selected_article.stock) }}</strong>
 		</p>
 		<p>
-			<strong>{{ unidades_vendidas }}</strong> unidades vendidas
+			<strong>{{ numero_es(unidades_vendidas) }}</strong> unidades vendidas
 		</p>
 	</div>
 </template>

@@ -5,24 +5,35 @@ import previus_sales from '@/store/vender/previus_sales'
 import mixin_vender from '@/mixins/vender'
 export default {
 	namespaced: true,
-	state: { 
+	state: {
 		previus_sale: {},
 		previus_returned_articles: [],
 		previus_returned_services: [],
-		index: 0,
-		loading_previus: false,
-		loading_next: false,
+		/*
+			Se esta abriendo una venta guardada para editarla, pero la venta todavia no llego.
+			Hace falta porque la intencion se conoce ANTES que el modelo: setPreviusSale() lo
+			commitea de forma sincrona y despues navega a VENDER, y el created() de Vender.vue
+			corre con previus_sale todavia en {}. Sin este flag, set_default_articles() no sabria
+			que hay una venta en camino y le agregaria a esa venta los articulos por defecto del
+			comercio. Lo apaga limpiar_vender(), junto con previus_sale.
+		*/
+		abriendo_venta_previa: false,
 		updating: false,
 	},
+	getters: {
+		/*
+			Reemplaza al indice posicional de previus_sales, que era lo que sostenia el modo
+			"estoy editando una venta previa". Ese indice no era un id sino la posicion de la
+			venta en el listado ordenado por id DESC, y quedo de la navegacion anterior/siguiente
+			por ventas dentro de VENDER que ya no existe.
+		*/
+		editando_venta_previa(state) {
+			return !!(state.previus_sale && state.previus_sale.id) || state.abriendo_venta_previa
+		},
+	},
 	mutations: {
-		incrementIndex(state) {
-			state.index++
-		},
-		decrementIndex(state) {
-			state.index--
-		},
-		setIndex(state, value) {
-			state.index = value
+		set_abriendo_venta_previa(state, value) {
+			state.abriendo_venta_previa = value
 		},
 		setPreviusSale(state, value) {
 			state.previus_sale = value
@@ -34,12 +45,6 @@ export default {
 		},
 		setPreviusReturnedServices(state, value) {
 			state.previus_returned_services = value
-		},
-		setLoadingPrevius(state, value) {
-			state.loading_previus = value
-		},
-		setLoadingNext(state, value) {
-			state.loading_next = value
 		},
 		setUpdating(state, value) {
 			state.updating = value
@@ -64,20 +69,23 @@ export default {
 		},
 	},
 	actions: {
-		getSale({ commit, state }) {
-			return axios.get('/api/previus-next/sale/'+state.index)
+		/*
+			Trae la venta por id, en una sola request. Antes eran dos y ninguna usaba el id: se
+			pedia la posicion de la venta en el listado y despues la venta en esa posicion, con un
+			take($index)->get() que con 35 mil ventas hidrataba miles de ventas completas para
+			llegar a una que ya se conocia.
+
+			Y rechaza la promesa cuando falla o cuando no hay modelo. Antes se tragaba el error con
+			un console.log y previus_sale quedaba en {}: VENDER se abria sin items y sin barra de
+			datos, sin un solo aviso. Ese es el "a veces tampoco aparece la barra" del reporte.
+		*/
+		getSaleById({ commit }, sale_id) {
+			return axios.get('/api/previus-next-by-id/sale/'+sale_id)
 			.then(res => {
-				console.log(res.data.model)
-				commit('setLoadingPrevius', false)
-				commit('setLoadingNext', false)
-				if (res.data.model) {
-					commit('setPreviusSale', res.data.model)
+				if (!res.data.model) {
+					return Promise.reject(new Error('La venta '+sale_id+' no existe o no es de este comercio'))
 				}
-			})
-			.catch(err => {
-				commit('setLoadingPrevius', false)
-				commit('setLoadingNext', false)
-				console.log(err)
+				commit('setPreviusSale', res.data.model)
 			})
 		},
 		updateSale({ commit, state, rootState }, info) {
@@ -137,6 +145,28 @@ export default {
 			send_mail: info.send_mail,
 			// Días opcionales para alerta de cobro (null = reglas globales en backend).
 			dias_alerta_venta_no_cobrada_personalizado: info.dias_alerta_venta_no_cobrada_personalizado,
+			/*
+				🔴 EL CANJE DE PUNTOS TIENE QUE VIAJAR EN EL PUT. NO SACAR ESTOS DOS CAMPOS.
+
+				SaleController@update llama a PuntosCanjeHelper::deshacer($model) SIEMPRE, antes
+				de validar y de aplicar. Deshacer devuelve los puntos al cliente y pone las dos
+				columnas de la venta en null; despues, aplicar() reescribe el canje leyendolo del
+				REQUEST. Si estos campos no llegan, aplicar() no reescribe nada y la venta queda
+				sin canje: editar y guardar una venta con canje lo deshacia entero y el total
+				subia solo --de $58.600 a $73.000-- contra el comprobante ya impreso.
+
+				🔴 Y VIAJAN CON `total` YA NETEADO, que es como lo deja setTotal() en el store.
+				Mandar estos dos campos con el total BRUTO es peor que el bug: se guardaria
+				total = $73.000 CON el canje de $14.400 aplicado igual, o sea el cliente paga la
+				venta entera y ademas pierde los puntos. El servidor recompone el bruto como
+				`total + descuento_puntos` para medir el tope, asi que el total neteado no es un
+				detalle de presentacion: es parte del contrato.
+
+				Van tambien en null cuando no hay canje --no es un campo opcional que se pueda
+				omitir--: es lo que le dice al servidor que la venta se edito sacando el canje.
+			*/
+			puntos_canjeados: info.puntos_canjeados,
+			descuento_puntos: info.descuento_puntos,
 			// Auditoría de acciones realizadas en vender durante la edición de la venta.
 			log: rootState.vender.sale_log,
 		})

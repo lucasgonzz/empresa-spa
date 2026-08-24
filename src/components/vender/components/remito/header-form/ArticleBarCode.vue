@@ -190,9 +190,9 @@ export default {
 		},
 		set_nombre_en_input() {
 			let input = document.getElementById('search-article')
-			if (typeof input != 'undefined') {
-				input.value = this.finded_article.name
-			}
+			// El chequeo que habia aca era `typeof input != 'undefined'`, que nunca es falso:
+			// getElementById devuelve null, no undefined. El guard vive adentro del helper.
+			this.setInputValueSync(input, this.finded_article.name)
 		},
 		getArticleFromApi(bar_code) {
 			this.$store.commit('auth/setMessage', 'Buscando articulo')

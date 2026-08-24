@@ -14,9 +14,9 @@
 			<b-col
 			v-for="(prop, index) in properties"
 			v-if="show_property_in_form(prop)"
-			:md="getCol(prop, 6, input_full_width)"
-			:lg="getCol(prop, 4, input_full_width)"
-			:xl="getCol(prop, 3, input_full_width)"
+			:md="form_col_for(prop, 6)"
+			:lg="form_col_for(prop, 4)"
+			:xl="form_col_for(prop, 3)"
 			:key="'model-prop-'+index">
 				<div>
 					
@@ -95,7 +95,7 @@
 									:class="colorLabel(prop)"
 									class="model-form__only-show-value"
 									v-html="propertyText(model, prop, false, !prop.from_pre_view)"
-									v-if="propertyText(model, prop) != '' || propertyText(model, prop) == 0">
+									v-if="propertyText(model, prop) != '' || propertyText(model, prop) === 0">
 									</span>
 									<!-- Sin valor: indicador visual sutil en gris itálica -->
 									<span
@@ -124,7 +124,26 @@
 									:props_to_send_to_api="prop.props_to_send_to_api"
 									:limpiar_resultados_de_busqueda="prop.limpiar_resultados_de_busqueda"
 									:function_props_to_send_to_api="prop.function_props_to_send_to_api"
-									@set-selected="setSelected"></field-search-input>
+									:preference_scope="search_preference_scope(prop)"
+									@set-selected="setSelected">
+
+										<!--
+											A la derecha del buscador de la relacion: el boton que elige que
+											columnas se ven en la tabla de esa relacion. El modal lo monta
+											BelongsToManyTable (es el dueno de la configuracion); aca solo se
+											lo abre por id, que sale del mismo helper que usa ese componente.
+										-->
+										<template #input_right>
+											<b-button
+											v-if="show_belongs_to_many_columns_btn(prop)"
+											class="btm-columnas-btn"
+											title="Elegir que columnas se ven"
+											@click="open_belongs_to_many_columns_modal(prop)">
+												<i class="bi bi-layout-three-columns"></i>
+											</b-button>
+										</template>
+
+									</field-search-input>
 
 									<belongs-to-many-checkbox
 									v-else-if="prop.belongs_to_many && prop.type == 'checkbox'"
@@ -186,6 +205,7 @@
 									:placeholder="passwordPlaceholder(prop)"
 									@input="$set(model, prop.key, $event)"
 									@search-cuit="searchCUIT"
+									@chequear-cotizacion-dolar="$bvModal.show('cotizacion-dolar')"
 									@set-bar-code="setBarCode"
 									@blur="on_field_blur(prop)"
 									@enter="prop.key == 'cuit' ? searchCUIT() : clickEnter(prop)"></field-text-input>
@@ -235,13 +255,22 @@
 									:class="Number(model[prop.key]) === 1 ? 'model-form__boolean-badge--yes' : 'model-form__boolean-badge--no'">
 										{{ Number(model[prop.key]) === 1 ? 'Sí' : 'No' }}
 									</span>
+									<!-- El data-testid del label NO es un duplicado del que lleva el input: el input
+									     de un toggle esta oculto por CSS (el control visible es este label con su
+									     track y su thumb), asi que un test no lo puede clickear ni marcar con
+									     check() —Playwright exige que el elemento sea visible— y la unica salida
+									     seria forzar el click salteando esa verificacion. Con este testid el test
+									     clickea lo mismo que clickea una persona, y sigue leyendo el estado del
+									     input por su propio testid. -->
 									<label
 									:for="model_name+'-'+prop.key"
+									:data-testid="model_name+'-'+prop.key+'-toggle'"
 									class="model-form__toggle"
 									:class="{ 'model-form__toggle--disabled': isDisabled(prop, form_to_filter) }">
 										<input
 										type="checkbox"
 										:id="model_name+'-'+prop.key"
+										:data-testid="model_name+'-'+prop.key"
 										:disabled="isDisabled(prop, form_to_filter)"
 										:checked="Number(model[prop.key]) === 1"
 										@change="$set(model, prop.key, $event.target.checked ? 1 : 0)">
@@ -328,6 +357,7 @@
 								:prop="prop"
 								:model="model"
 								:parent_model_name="model_name"
+								:show_columns_config_btn="!show_belongs_to_many_columns_btn(prop)"
 								:show_btn_remove_belongs_to_many="show_btn_remove_belongs_to_many"
 								@remove-model="removeModel(prop, $event)">
 										<template #belongs="slotProps">
@@ -339,6 +369,9 @@
 									v-else-if="prop.has_many"
 									@modelDeleted="has_many_deleted"
 									@modelSaved="has_many_saved"
+									@resizing="on_has_many_resizing"
+									@resized="on_has_many_resized"
+									:form_cols="form_col_for(prop, 4)"
 									:parent_model="model"
 									:parent_model_name="model_name"
 									:prop="prop">
@@ -365,6 +398,45 @@
 										{{ propInfo(prop) }}
 									</p>
 								</slot>
+
+								<!--
+									Nota PERMANENTE debajo del campo (no popover, no tooltip). A diferencia de
+									"description"/"descriptions" -que solo se ven al pasar el mouse por el label- esta
+									queda siempre a la vista; y a diferencia del aviso de arriba (getWarningText) no
+									exige que el campo este deshabilitado.
+									Hook aditivo: se activa solo si el prop declara "nota_function". Si no la declara,
+									getNotaPermanente() devuelve '' y no se renderiza nada, asi que ningun otro modelo
+									ni ninguna otra pantalla cambia de aspecto ni de comportamiento.
+									Va AFUERA del <slot> de arriba a proposito, para que la nota sobreviva aunque una
+									vista reemplace el campo por un componente propio via slot (lo que hace, por
+									ejemplo, PreciosIncluyenIva.vue en empresa-spa).
+									Primer consumidor: el prop "tipo" de src/models/provider_order_extra_cost.js
+									(prompt 609), que avisa cuando el costo extra elegido NO se prorratea entre los
+									articulos de la compra.
+								-->
+								<!--
+									Las clases son EXACTAMENTE las del aviso hermano de arriba (getWarningText):
+									"form-text" ya trae display block y margin-top de Bootstrap. No agregar "m-t-5":
+									esa utilidad se usa por costumbre en varios componentes del repo pero NO esta
+									definida en ninguna hoja de estilo, asi que no aporta margen ninguno.
+								-->
+								<!--
+									🔴 El discriminante va ADELANTE ("nota-article-cost"), no atras. Es la regla que
+									dejo el incidente del 19/8/2026, escrita en e2e/chequear-prefijos-de-testid.js:
+									un data-testid nuevo no puede compartir el COMIENZO con uno existente, porque los
+									selectores de prefijo (`[data-testid^="article-amount-"]`) son la forma estandar
+									de este harness de encontrar una fila sin saber su id. Con el sufijo atras, este
+									testid caeria adentro del prefijo del propio input del campo y lo haria contar de
+									mas, con un mensaje de fallo que no apunta ni de casualidad para aca.
+									Y el checker automatico no lo puede ver: solo lee testids literales, no
+									concatenados (limitacion documentada en ese mismo archivo).
+								-->
+								<small
+								v-if="getNotaPermanente(prop)"
+								class="form-text text-warning"
+								:data-testid="'nota-'+model_name+'-'+prop.key">
+									{{ getNotaPermanente(prop) }}
+								</small>
 							</div>
 
 							<!-- <hr> -->
@@ -464,6 +536,13 @@ import PaymentMethodsTable from '@/components/expenses/components/PaymentMethods
 // import Model from '@/common-vue/components/model/Index'
 
 import model_functions from '@/common-vue/mixins/model_functions'
+import {
+	belongs_to_many_columns_modal_id,
+	belongs_to_many_preference_type,
+	form_has_many_cols_from_store,
+	save_form_has_many_cols,
+	default_has_many_form_cols,
+} from '@/common-vue/helpers/column_preferences_helper'
 
 export default {
 	components: {
@@ -536,6 +615,8 @@ export default {
 	mounted() {
 		this.ensure_selected_group_title()
 		this.setFocus()
+		/* Carga el mapa de anchos has_many de este modelo desde el cache global (fallback dueño→empleado ya resuelto). */
+		this.has_many_form_cols = form_has_many_cols_from_store(this.$store, this.model_name)
 	},
 	beforeDestroy() {
 		/* Limpia cualquier timer de hover-intent pendiente al destruir el formulario,
@@ -556,6 +637,8 @@ export default {
 			*/
 			last_repeat_check_by_prop_key: {},
 
+			/* Mapa { prop_key: cols } de anchos de has_many de este modelo (override del usuario). */
+			has_many_form_cols: {},
 			/*
 				Controla, por `prop.key`, si el popover de instrucciones está visible.
 				Se actualiza solo desde onHelpEnter/onHelpLeave (hover-intent), nunca directo.
@@ -953,6 +1036,24 @@ export default {
 			}
 			return null
 		},
+		/**
+		 * Ambito de la preferencia de columnas de los resultados de busqueda de esta relacion.
+		 *
+		 * Devuelve un ambito propio SOLO cuando la relacion declara sus propias `props_to_show`, o
+		 * sea cuando su conjunto de columnas no es el del modelo. Sin esto, los articulos de una
+		 * compra y los articulos de Vender comparten la misma preferencia guardada
+		 * (`table-column-preference/article/search`) y las columnas que uno elige le aparecen al
+		 * otro. Ver la explicacion completa en la prop preference_scope de search/Modal.vue.
+		 *
+		 * @param {Object} prop
+		 * @returns {String|null}
+		 */
+		search_preference_scope(prop) {
+			if (prop.belongs_to_many && prop.belongs_to_many.props_to_show) {
+				return this.model_name + '_' + prop.key
+			}
+			return null
+		},
 		props_to_filter(prop) {
 			if (
 				prop.belongs_to_many
@@ -1013,6 +1114,31 @@ export default {
 			}
 			return ''
 		},
+		/**
+		 * Texto de la nota PERMANENTE que va debajo de un campo del formulario, resuelto por el
+		 * metodo global que el prop declare en "nota_function" (mismo patron que
+		 * "warning_function", "v_if_function" y "dynamic_options_function": el nombre del metodo
+		 * viaja en el meta del modelo y se resuelve contra los mixins globales registrados en
+		 * main.js).
+		 *
+		 * 🔴 Por que existe, y por que NO alcanzaba con lo que ya habia (prompt 609): el unico
+		 * mecanismo declarativo de texto por campo eran "description"/"descriptions", que se
+		 * muestran como popover al pasar el mouse por el label -o sea, invisibles para quien no
+		 * sabe que tiene que buscar ahi-. El otro, getWarningText(), solo se evalua si el campo
+		 * esta DESHABILITADO. Esta nota cubre el caso del medio: un campo habilitado, editable,
+		 * cuyo valor actual tiene una consecuencia que el usuario no puede deducir mirando la
+		 * pantalla.
+		 *
+		 * @param {Object} prop - Definicion declarativa del campo.
+		 * @returns {string} Texto a mostrar, o cadena vacia si el prop no declara nota_function o
+		 *                   la funcion decide que en este estado no hay nada que avisar.
+		 */
+		getNotaPermanente(prop) {
+			if (prop.nota_function) {
+				return this[prop.nota_function](this.model, prop)
+			}
+			return ''
+		},
 		is_disabled_button(prop) {
 			if (prop.button && prop.button.disabled_if_model_is_created) {
 				if (this.model.id) {
@@ -1055,10 +1181,55 @@ export default {
 		useSearch(prop) {
 			if (prop.no_editar_una_vez_creado_el_modelo) {
 				if (this.model.id) {
-					return false 
+					return false
 				}
-			} 
+			}
 			return prop.type == 'search'
+		},
+		/**
+		 * Si el boton de "elegir columnas" de una relacion se dibuja al lado de su buscador.
+		 *
+		 * Solo cuando esta prop dibuja las dos cosas: el buscador (field-search-input) y la tabla de
+		 * la relacion (belongs-to-many-table). Si no hay buscador, el boton lo sigue dibujando
+		 * BelongsToManyTable arriba de su tabla. Las condiciones son las mismas que los v-if del
+		 * template, a proposito: si una cambia, tienen que cambiar las dos.
+		 *
+		 * @param {Object} prop
+		 * @returns {Boolean}
+		 */
+		show_belongs_to_many_columns_btn(prop) {
+			/*
+			 * only_show / from_pre_view abren la PRIMERA rama del v-if del template, antes que el
+			 * buscador: en esas props no hay field-search-input y por lo tanto no hay donde poner el
+			 * boton. Sin este corte, la relacion se quedaba sin boton en ningun lado (el de
+			 * BelongsToManyTable tambien se apagaba). Pasa en presupuestos, ventas y notas de credito.
+			 */
+			if (prop.only_show || prop.from_pre_view) {
+				return false
+			}
+			if (!this.useSearch(prop)) {
+				return false
+			}
+			if (!prop.belongs_to_many || prop.belongs_to_many.related_with_all) {
+				return false
+			}
+			if (prop.type == 'checkbox') {
+				return false
+			}
+			if (this.model_name === 'pdf_column_profile' && prop.key === 'pdf_column_options') {
+				return false
+			}
+			/* Misma condicion que show_btn_columns_config en BelongsToManyTable. */
+			return !!(this.model_name && prop.store)
+		},
+		/**
+		 * Abre el modal de columnas de la relacion. El modal lo monta BelongsToManyTable.
+		 *
+		 * @param {Object} prop
+		 * @returns {void}
+		 */
+		open_belongs_to_many_columns_modal(prop) {
+			this.$bvModal.show(belongs_to_many_columns_modal_id(this.model_name, prop.key))
 		},
 		removeModel(prop, model) {
 			let index = this.model[prop.key].findIndex(_model => {
@@ -1164,6 +1335,15 @@ export default {
 
 			let prop = result.prop
 
+			// Prompt 309: si la propiedad tiene declarada una funcion de confirmacion previa
+			// (ej: "provider_id" de "article", ver src/models/article.js), se delega el manejo
+			// a esa funcion en vez de aplicar el cambio directo. Si la funcion devuelve true
+			// significa que ya se encargo del flujo (por ejemplo abriendo un modal de
+			// confirmacion) y no hay que continuar con la logica generica de mas abajo.
+			if (prop.confirm_change_function && this[prop.confirm_change_function](prop, result)) {
+				return
+			}
+
 			if (prop.toast_function) {
 				this[prop.toast_function](result)
 			}
@@ -1189,8 +1369,161 @@ export default {
 				this.$set(this.model, result.prop.key, result.model.id)
 				this.$set(this.model, this.modelNameFromRelationKey(result.prop), result.model)
 
+				// Si la propiedad tiene configurado "prefill_has_many_on_select" (ej: provider_id en provider_order),
+				// precarga en un has_many hermano los datos relacionados que vinieron con el modelo elegido (ej: bonificaciones del proveedor)
+				if (prop.prefill_has_many_on_select) {
+					this.prefillHasManyOnSelect(prop, result.model)
+				}
+
+				// Prompt 517: si la propiedad tiene configurado "prefill_prop_on_select" (ej: provider_id en
+				// provider_order), precarga un campo escalar del propio modelo con el valor que trae el modelo
+				// elegido (ej: "precios_incluyen_iva" del proveedor como default de la compra). El usuario puede
+				// sobreescribirlo despues sin problema, ya que el prefill solo corre al seleccionar el modelo.
+				if (prop.prefill_prop_on_select) {
+					this.prefillPropOnSelect(prop, result.model)
+				}
+
 				this.setModel(this.model, this.model_name, [], false)
 			}
+		},
+		/**
+		 * Prompt 309: hook declarado en src/models/article.js sobre la propiedad "provider_id"
+		 * (`confirm_change_function: 'confirmProviderChange'`). En vez de aplicar el cambio de
+		 * proveedor directo (como hace el resto de los campos "search"), cuando corresponde
+		 * abre el modal de confirmacion con los dos flags independientes del prompt 308
+		 * (eliminar descuentos del proveedor anterior / crear los del proveedor nuevo). El
+		 * modal (src/components/listado/modals/ChangeProvider.vue) es quien efectivamente
+		 * llama al endpoint dedicado `PUT article/change-provider`.
+		 *
+		 * @param {Object} prop propiedad "provider_id" del modelo article.js
+		 * @param {Object} result resultado del buscador: { prop, model, query }
+		 * @returns {Boolean} true si se abrio el modal (corta el flujo generico de seleccion),
+		 *                    false si hay que continuar con la asignacion directa de siempre
+		 *                    (articulo nuevo sin id todavia, o articulo sin proveedor previo:
+		 *                    no hay nada que decidir, se asigna directo).
+		 */
+		confirmProviderChange(prop, result) {
+			let is_editing_existing_article = this.model && this.model.id
+			let had_previous_provider = this.model && this.model.provider_id
+			let is_actual_change = !this.model.provider_id || this.model.provider_id != result.model.id
+
+			if (!is_editing_existing_article || !had_previous_provider || !is_actual_change) {
+				return false
+			}
+
+			// El modal vive fuera del arbol de ModelForm (montado una unica vez en la vista de
+			// Listado, ver src/components/listado/modals/ChangeProvider.vue), por eso se le
+			// pasan los datos por evento global en vez de props.
+			this.$root.$emit('open-change-provider-modal', {
+				article_id: this.model.id,
+				old_provider_id: this.model.provider_id,
+				old_provider_name: this.model.provider ? this.model.provider.name : '',
+				new_provider_id: result.model.id,
+				new_provider_name: result.model.name,
+			})
+			this.$bvModal.show('change-provider-confirm')
+
+			return true
+		},
+		/**
+		 * Precarga filas editables en un has_many del modelo a partir de datos relacionados que vinieron
+		 * junto con el modelo elegido en un campo "search" (ej: al elegir un proveedor, precargar sus
+		 * bonificaciones como descuentos de la orden de compra).
+		 *
+		 * @param {Object} prop propiedad "search" que tiene la config `prefill_has_many_on_select`.
+		 * @param {Object} selected_model modelo elegido en el buscador (ej: el proveedor completo).
+		 * @returns {void}
+		 */
+		prefillHasManyOnSelect(prop, selected_model) {
+			// Config declarada en el model (src/models/provider_order.js): de donde sale la data, a donde se precarga
+			// y el model_name del has_many destino (necesario para pegarle a su propio endpoint)
+			let config = prop.prefill_has_many_on_select
+			let source_items = selected_model[config.source_prop]
+
+			if (!source_items || !source_items.length) {
+				return
+			}
+
+			// Si ya hay filas cargadas (manualmente o de una seleccion previa) y el flag pide no pisarlas, no hace nada
+			let current_items = this.model[config.target_key]
+			if (config.only_if_empty && current_items && current_items.length) {
+				return
+			}
+
+			// Solo se precargan los items con porcentaje cargado, mismo criterio que usa el backend
+			// (NewProviderOrderHelper::precargar_bonificaciones_proveedor) para no arrastrar filas vacias
+			let items_to_prefill = []
+			source_items.forEach(source_item => {
+				if (source_item.percentage) {
+					items_to_prefill.push(source_item)
+				}
+			})
+
+			if (!items_to_prefill.length) {
+				return
+			}
+
+			// Vacia el array destino antes de precargar (por si quedo alguna referencia de una seleccion previa)
+			this.$set(this.model, config.target_key, [])
+
+			this.$store.commit('auth/setMessage', 'Cargando bonificaciones del proveedor')
+			this.$store.commit('auth/setLoading', true)
+
+			// Igual que el boton "Agregar" del has_many generico cuando el padre todavia no tiene id: cada fila se
+			// persiste de inmediato en su propio endpoint y se trackea via "childrens"/temporal_id (ver save() en
+			// src/common-vue/components/model/Index.vue) para que el backend la vincule al guardar la orden.
+			items_to_prefill.forEach(source_item => {
+				let payload = {
+					description: config.description_text,
+					percentage: source_item.percentage,
+					monto: null,
+				}
+				this.$api.post(this.routeString(config.target_model_name), payload)
+				.then(res => {
+					this.$store.commit('auth/setLoading', false)
+					this.$store.commit('auth/setMessage', '')
+
+					let created_model = res.data.model
+					this.$set(this.model, config.target_key, this.model[config.target_key].concat([created_model]))
+
+					if (!this.model.id) {
+						if (!this.model.childrens) {
+							this.model.childrens = []
+						}
+						this.model.childrens.push({
+							model_name: config.target_model_name,
+							temporal_id: created_model.temporal_id,
+						})
+					}
+				})
+				.catch(err => {
+					this.$store.commit('auth/setLoading', false)
+					this.$store.commit('auth/setMessage', '')
+					console.log(err)
+				})
+			})
+		},
+		/**
+		 * Prompt 517: precarga un campo escalar del modelo actual con el valor de una propiedad del modelo
+		 * elegido en un campo "search" (ej: al elegir un proveedor en la compra, precargar "precios_incluyen_iva"
+		 * de la compra con el valor por defecto configurado en el proveedor). Es el equivalente escalar de
+		 * "prefillHasManyOnSelect", pero para un solo valor en vez de un array de filas relacionadas.
+		 *
+		 * @param {Object} prop propiedad "search" que tiene la config `prefill_prop_on_select`.
+		 * @param {Object} selected_model modelo elegido en el buscador (ej: el proveedor completo).
+		 * @returns {void}
+		 */
+		prefillPropOnSelect(prop, selected_model) {
+			// Config declarada en el model (src/models/provider_order.js): de que propiedad del modelo
+			// elegido sale el valor por defecto, y en que propiedad del modelo actual se precarga
+			let config = prop.prefill_prop_on_select
+
+			// Si el modelo elegido no trae la propiedad de origen cargada, no hay nada que precargar
+			if (typeof selected_model[config.source_prop] == 'undefined' || selected_model[config.source_prop] === null) {
+				return
+			}
+
+			this.$set(this.model, config.target_key, selected_model[config.source_prop])
 		},
 		checkBelongsToManyExist(prop, model_to_add) {
 			console.log('checkBelongsToManyExist')
@@ -1253,23 +1586,174 @@ export default {
 			console.log('*********************')
 
 		},
+		/**
+		 * Deja el foco en el primer campo editable del pivote de la fila recien agregada (en una
+		 * compra, "Cantidad"), para poder tipear la cantidad sin tocar el mouse.
+		 *
+		 * 🔴 El fallo MEDIDO que esto arregla (17/8/2026) esta en primerInputDelPivote, no aca:
+		 * la version anterior apuntaba siempre a properties_to_set[0] del modelo y, con una
+		 * preferencia de columnas que oculte esa primera columna, buscaba un elemento que no existe
+		 * y no enfocaba nada. Reproducido en el slot con "Cantidad" oculta: el foco quedaba en el
+		 * buscador (provider_order-articles) en vez de ir a la fila nueva.
+		 *
+		 * Lo de reintentar es lo segundo, y es endurecimiento, no un fallo medido: el modelo se
+		 * agrega desde el modal del buscador (common-vue/components/search/Modal.vue), que emite
+		 * setSelected y CIERRA el modal en la misma vuelta. Mientras el modal se cierra --~300 ms de
+		 * transicion-- b-modal tiene su trampa de foco puesta (enforce-focus devuelve adentro
+		 * cualquier focusin de afuera) y al terminar le devuelve el foco al elemento que lo abrio,
+		 * que es el buscador. Un unico focus() a los 300 ms cae justo en esa ventana y depende de
+		 * ganar una carrera. Medido en el slot, hoy la gana; no hay motivo para dejarlo atado a eso.
+		 *
+		 * Se reintenta hasta que el foco QUEDA --document.activeElement es el input-- y no una
+		 * cantidad fija de veces: esa es la condicion real, no una espera a ojo. En cuanto queda, el
+		 * ciclo corta, asi que no le pelea el foco al usuario si el usuario ya eligio otro campo.
+		 *
+		 * @param {Object} prop propiedad belongs_to_many a la que se agrego el modelo.
+		 * @param {Object} model_to_add modelo recien agregado; su id arma el nombre de la clase.
+		 * @returns {void}
+		 */
 		setTableFocus(prop, model_to_add) {
-			if (prop.belongs_to_many.properties_to_set && prop.belongs_to_many.properties_to_set.length) {
-				setTimeout(() => {
-					let class_name = prop.belongs_to_many.model_name+'-'+prop.belongs_to_many.properties_to_set[0].key+'-'+model_to_add.id
-					let elements = document.getElementsByClassName(class_name) 
-					if (elements.length) {
-						elements[elements.length-1].focus()
-					}
-				}, 300)
+			if (!prop.belongs_to_many.properties_to_set || !prop.belongs_to_many.properties_to_set.length) {
+				return
 			}
+
+			let self = this
+			let intentos = 0
+			// 24 x 50 ms = 1,2 s: mas que la transicion de cierre del modal y que el devolver-foco
+			// que dispara al terminar, con margen para una maquina cargada (seis slots a la vez).
+			let maximo_de_intentos = 24
+
+			let intentar = function() {
+				let input = self.primerInputDelPivote(prop, model_to_add)
+
+				if (input) {
+					if (document.activeElement === input) {
+						return
+					}
+					input.focus()
+				}
+
+				intentos++
+				if (intentos < maximo_de_intentos) {
+					setTimeout(intentar, 50)
+				}
+			}
+
+			setTimeout(intentar, 50)
+		},
+		/**
+		 * Primer campo editable del pivote que EXISTE en el DOM para la fila recien agregada.
+		 *
+		 * No se toma properties_to_set[0] a ciegas: desde que las columnas de una relacion se
+		 * pueden configurar por usuario (form/BelongsToManyTable.vue), la primera columna declarada
+		 * en el modelo puede estar oculta para quien esta cargando (por eso se chequea que exista en
+		 * el DOM) y ademas puede estar reordenada (por eso se recorre en propertiesToSetEnOrdenConfigurado,
+		 * no en el orden estatico del modelo). El foco tiene que ir al primer campo que esa persona
+		 * realmente ve, en la posicion en la que lo ve.
+		 *
+		 * El nombre de la clase es el mismo que arma PivotProp.vue con inputId(prop): usa el model_name
+		 * que le llega, que BelongsToManyTable arma con prop.store (no con belongs_to_many.model_name,
+		 * que algunos modelos no declaran -- ej. order.js, commission.js -- y ahi el foco no encontraba
+		 * nada). Se toma el ultimo elemento, no el primero, por el mismo motivo que la version anterior
+		 * de este metodo: si la misma fila esta dibujada por dos tablas a la vez, la de mas abajo en el
+		 * DOM es la que el usuario esta usando.
+		 *
+		 * @param {Object} prop propiedad belongs_to_many.
+		 * @param {Object} model_to_add modelo recien agregado.
+		 * Si la columna configurada primero es un checkbox, la clase no queda en el <input> sino
+		 * en el <div> contenedor que arma BootstrapVue (custom-control custom-checkbox) -- ahi
+		 * .focus() no hace nada porque un div sin tabindex no es enfocable. Por eso el elemento
+		 * encontrado se resuelve con controlEnfocableDentroDe antes de aceptarlo: si no hay ningun
+		 * control real adentro, se sigue buscando en la siguiente columna en vez de quedar
+		 * enganchado en un elemento que nunca va a recibir el foco.
+		 *
+		 * @returns {HTMLElement|null} el input, o null si todavia no se dibujo ninguno.
+		 */
+		primerInputDelPivote(prop, model_to_add) {
+			let table_model_name = prop.store || prop.belongs_to_many.model_name
+			let encontrado = null
+			this.propertiesToSetEnOrdenConfigurado(prop).forEach(prop_to_set => {
+				if (encontrado) {
+					return
+				}
+				let class_name = table_model_name+'-'+prop_to_set.key+'-'+model_to_add.id
+				let elements = document.getElementsByClassName(class_name)
+				if (elements.length) {
+					encontrado = this.controlEnfocableDentroDe(elements[elements.length-1])
+				}
+			})
+			return encontrado
+		},
+		/**
+		 * Control nativo enfocable dentro de la celda del pivote que coincidio por clase.
+		 *
+		 * La mayoria de los tipos de pivote (text, number, textarea, select) ponen la clase
+		 * directo en el elemento nativo, asi que ese elemento ya es el control. b-form-checkbox
+		 * es la excepcion: BootstrapVue pone la clase en el <div class="custom-control
+		 * custom-checkbox"> que arma como raiz, no en el <input type="checkbox"> real que dibuja
+		 * adentro -- hay que bajar un nivel para encontrar algo enfocable.
+		 *
+		 * @param {HTMLElement} element elemento encontrado por su clase (inputId de PivotProp.vue).
+		 * @returns {HTMLElement|null} el control enfocable, o null si no hay ninguno adentro.
+		 */
+		controlEnfocableDentroDe(element) {
+			let tags_enfocables = ['INPUT', 'SELECT', 'TEXTAREA']
+			if (tags_enfocables.indexOf(element.tagName) != -1) {
+				return element
+			}
+			return element.querySelector('input, select, textarea')
+		},
+		/**
+		 * properties_to_set del modelo, reordenadas segun la preferencia de columnas que el usuario
+		 * guardo para esta tabla (mismo preference_type que arma BelongsToManyTable/ColumnsPreferencesConfigModal).
+		 * Sin preferencia guardada, o sin prop.store para leerla, devuelve el orden estatico declarado
+		 * en el modelo (comportamiento de siempre). Las properties_to_set que se agregaron al modelo
+		 * despues de que el usuario guardo su configuracion (sin fila en la preferencia) van al final,
+		 * en el orden en que estan declaradas.
+		 *
+		 * @param {Object} prop propiedad belongs_to_many.
+		 * @returns {Array} copia de properties_to_set en el orden a recorrer para buscar el foco.
+		 */
+		propertiesToSetEnOrdenConfigurado(prop) {
+			let properties_to_set = prop.belongs_to_many.properties_to_set
+
+			if (!prop.store) {
+				return properties_to_set
+			}
+
+			let preference_columns = this.tableColumnPreferenceColumnsFromStore(
+				prop.store,
+				belongs_to_many_preference_type(this.model_name, prop.key)
+			)
+			if (!preference_columns || !preference_columns.length) {
+				return properties_to_set
+			}
+
+			let order_by_key = {}
+			preference_columns.forEach(column => {
+				if ((column.source || 'model_prop') == 'pivot_set') {
+					order_by_key[column.key] = Number(column.order)
+				}
+			})
+
+			return properties_to_set.slice().sort((a, b) => {
+				let order_a = typeof order_by_key[a.key] == 'undefined' ? Infinity : order_by_key[a.key]
+				let order_b = typeof order_by_key[b.key] == 'undefined' ? Infinity : order_by_key[b.key]
+				if (order_a == order_b) {
+					return 0
+				}
+				return order_a - order_b
+			})
 		},
 		clickEnter(prop) {
 			/*
 				Si el campo está configurado para chequeo de repetidos y la configuración del usuario lo permite,
 				se ejecuta el chequeo. Caso especial: algunos usuarios permiten `provider_code` repetidos en artículos.
+				Solo al CREAR: editando, Enter guarda como siempre — el aviso de repetido en edición
+				sale por blur (on_field_blur) y nunca frena el guardado (ítem 8, tanda-correctivos-2408).
 			*/
-			if (prop.use_to_check_if_is_repeat && this.can_check_is_repeat(prop)) {
+			let es_alta = !(this.model && this.model.id)
+			if (es_alta && prop.use_to_check_if_is_repeat && this.can_check_is_repeat(prop)) {
 				/*
 					Se registra el valor antes de chequear para evitar que el blur posterior al Enter
 					dispare el mismo chequeo nuevamente.
@@ -1340,15 +1824,12 @@ export default {
 		/*
 			Define si corresponde ejecutar el chequeo de repetidos para el `prop` actual.
 			Se usa para poder omitir `provider_code` en artículos cuando el usuario lo permite.
+			Aplica al crear Y al editar (ítem 8, tanda-correctivos-2408): editando, el chequeo
+			solo avisa — checkIsRepeat nunca pisa el modelo ni frena el guardado en ese caso.
 		*/
 		can_check_is_repeat(prop) {
 			/* Validación defensiva por compatibilidad con props dinámicas del form. */
 			if (!prop || !prop.key) {
-				return false
-			}
-
-			/* El chequeo de repetidos solo aplica al alta (create), no al editar. */
-			if (this.model && this.model.id) {
 				return false
 			}
 
@@ -1391,11 +1872,12 @@ export default {
 		        let finded = undefined;
 
 		        if (prop.chequear_buscando_desde_api) {
-		            // Construir los filtros
+					// Construir los filtros. String() defensivo: editando, el valor puede venir
+					// numérico desde la API y .toLowerCase() directo rompería.
 		            let filters = [
 		                {
 		                    type: 'text',
-		                    igual_que: this.model[prop.key].toLowerCase(),
+							igual_que: String(this.model[prop.key]).toLowerCase(),
 		                    key: prop.key
 		                }
 		            ];
@@ -1424,22 +1906,39 @@ export default {
 		                console.log(err);
 		            }
 		        } else {
-		            // Buscar localmente
+					// Buscar localmente. String() defensivo por el mismo motivo que arriba.
 		            finded = this.modelsStoreFromName(this.model_name).find(model => {
-		                return model[prop.key] && model[prop.key].toLowerCase() == this.model[prop.key].toLowerCase();
+						return model[prop.key] && String(model[prop.key]).toLowerCase() == String(this.model[prop.key]).toLowerCase();
 		            });
 		        }
 
 		        console.log('finded:');
 		        console.log(finded);
 
-		        // Validar si se encontró un modelo repetido
-		        if (typeof finded != 'undefined' && (!this.model.id || this.model.id != finded.id)) {
-		            this.$toast.warning('Ya hay un ' + this.singular(this.model_name) + ' con este ' + this.propText(prop));
-		            this.setModel(finded, this.model_name, [], false);
-		        } else {
-		        	this.foco_input_siguiente(prop)
-		        }
+				// Validar si se encontró un modelo repetido. Si el encontrado es el mismo que se
+				// está editando (mismo id), no es un repetido: es el propio código del modelo.
+				let es_alta = !this.model.id
+				if (typeof finded != 'undefined' && (es_alta || this.model.id != finded.id)) {
+					if (es_alta) {
+						// Al crear: aviso + se carga el existente para editarlo (comportamiento original).
+						this.$toast.warning('Ya hay un ' + this.singular(this.model_name) + ' con este ' + this.propText(prop));
+						this.setModel(finded, this.model_name, [], false);
+					} else {
+						/*
+							Editando (ítem 8, tanda-correctivos-2408): el aviso es SOLO un aviso.
+							No se pisa el modelo en edición ni se frena el guardado — la unicidad
+							no se valida en backend y el usuario puede decidir guardar igual.
+						*/
+						let aviso = 'Este ' + this.propText(prop) + ' ya lo usa otro ' + this.singular(this.model_name)
+						if (finded.name) {
+							aviso += ' (' + finded.name + ')'
+						}
+						this.$toast.warning(aviso);
+					}
+				} else if (es_alta) {
+					/* El salto de foco al siguiente input es parte del flujo de alta rápida, no del de edición. */
+					this.foco_input_siguiente(prop)
+				}
 		    }
 		},
 		foco_input_siguiente(prop) {
@@ -1459,12 +1958,63 @@ export default {
 					setTimeout(() => {
 						input.focus()
 					}, 200)
-				} 
+				}
 			}
-		}
+		},
+		/**
+		 * Ancho (unidades de grilla 1..12) para una prop en el formulario.
+		 * has_many: override del usuario si existe; si no, default automático según la tabla hija
+		 * (respetando full width explícito del modelo). Resto de props: comportamiento original.
+		 */
+		form_col_for(prop, size) {
+			if (prop && prop.has_many) {
+				if (this.has_many_form_cols[prop.key]) {
+					return this.has_many_form_cols[prop.key]
+				}
+				if (prop.full_cols || prop.input_full_width || this.input_full_width || this.inputs_full_size) {
+					return 12
+				}
+				return default_has_many_form_cols(this.child_columns_count(prop))
+			}
+			return this.getCol(prop, size, this.input_full_width)
+		},
+		/**
+		 * Cantidad de columnas visibles de la tabla hija de una prop has_many.
+		 * Mismo criterio que usa la tabla (display/table/Index.vue).
+		 */
+		child_columns_count(prop) {
+			let child_props = this.propertiesToShow(this.modelPropertiesFromName(prop.has_many.model_name), true)
+			return child_props.length
+		},
+		/**
+		 * Feedback en vivo mientras se arrastra la barra de resize.
+		 */
+		on_has_many_resizing(payload) {
+			this.$set(this.has_many_form_cols, payload.key, payload.cols)
+		},
+		/**
+		 * Al soltar: fija el ancho y lo persiste.
+		 */
+		on_has_many_resized(payload) {
+			this.$set(this.has_many_form_cols, payload.key, payload.cols)
+			this.save_has_many_form_cols()
+		},
+		/**
+		 * Persiste el mapa completo de anchos de has_many de este modelo y refresca el cache local.
+		 */
+		save_has_many_form_cols() {
+			let self = this
+			save_form_has_many_cols(this, this.model_name, this.has_many_form_cols)
+			.then(function () {
+				self.has_many_form_cols = form_has_many_cols_from_store(self.$store, self.model_name)
+			})
+			.catch(function () {
+				self.$toast.error('No se pudo guardar el ancho de la tabla')
+			})
+		},
 
 	},
-	
+
 }
 </script>
 <style lang="sass">
@@ -1501,19 +2051,73 @@ export default {
 
 	// ─── Label moderno: compacto, peso alto, tipografía uppercase sutil ───────
 	// Similar a LoginForm: pequeño, oscuro, con letra-espaciado para legibilidad
+	// Los colores van por token con el literal viejo de fallback, y NO por una regla en
+	// _dark_theme.sass: el <style> del componente le gana por especificidad al tema global, asi que
+	// el arreglo tiene que vivir aca adentro. Vale para todos los bloques de abajo.
 	.form-label
 		font-size: 0.78rem
 		font-weight: 700
-		color: #374151
+		color: var(--color-text-secondary, #374151)
 		text-transform: uppercase
 		letter-spacing: 0.045em
-		margin-bottom: 0.38rem
+		// Sube de 0.38rem: el label quedaba pegado al input y al valor de solo lectura. Aplica a
+		// los DOS modos, no es un ajuste del tema oscuro.
+		// Sube de 0.6rem (13/8/2026, pedido de Lucas): con los campos mas bajos, el label quedaba
+		// otra vez pegado al input. Es el aire entre el label y su campo, en los dos modos.
+		margin-bottom: 0.85rem
 		display: block
 		transition: color 0.15s ease
 
 	// Sin margen extra; el col maneja el espacio vertical entre campos
 	.form-group
 		margin-bottom: 0 !important
+
+	// ─── Campos del formulario ───────────────────────────────────────────────
+	// Mismo lenguaje visual que el resto del sistema nuevo (el pill del buscador general y el
+	// modal de filtros): borde de 1px, esquinas de 10px, la altura de los controles del sistema
+	// (--toolbar-control-h) y un anillo suave al enfocar.
+	//
+	// src/sass/_inputs.sass le pone a TODO input del sistema un borde de 2px que pasa a 3px al
+	// enfocar (la fila se movia 1px), un halo azul de 8px y una tipografia de 1.4rem, que es lo
+	// que hacia que estos campos se vieran altos y anticuados. common-vue/sass/_inputs.sass suma
+	// una sombra gris asimetrica. Nada de eso se toca a nivel global --lo usan pantallas viejas
+	// de todo el sistema--: se lo pisa aca adentro, que es el formulario del modal de un modelo.
+	//
+	// min-height y no height: si la tipografia es mas grande que lo previsto, el campo tiene que
+	// poder crecer en vez de recortar el texto.
+	//
+	// La preferencia de tamano chico sigue mandando por dos vias distintas, las dos a proposito:
+	// `.ui-small input.form-control` (src/sass/_ui_sizes.sass) le gana a esta regla por
+	// especificidad en font-size y padding, y --toolbar-control-h vale 32px bajo .ui-small
+	// (src/sass/_toolbar_botones.sass), asi que el min-height baja solo. El campo queda mas
+	// compacto, que es lo que la preferencia pide.
+	.form-control,
+	.custom-select,
+	.b-form-datepicker .form-control
+		min-height: var(--toolbar-control-h, 36px)
+		height: auto
+		padding: 0.25rem 0.7rem
+		font-size: 0.95rem
+		line-height: 1.45
+		border: 1px solid var(--color-border, #ced4da)
+		border-radius: 10px
+		box-shadow: none
+		transition: border-color 0.15s ease, box-shadow 0.15s ease
+
+		&:focus
+			border: 1px solid var(--color-primary, #007bff)
+			box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15)
+			outline: none
+
+	// El select nativo necesita lugar para su flecha, y .ui-small ya lo resuelve con height: auto.
+	.custom-select
+		padding-right: 1.75rem
+
+	// El textarea crece con el contenido: no le corresponde la altura de un control de una linea.
+	textarea.form-control
+		min-height: 0
+		padding: 0.45rem 0.7rem
+		line-height: 1.5
 
 	hr
 		width: 100%
@@ -1527,38 +2131,43 @@ export default {
 		align-items: center
 		min-height: 34px
 		padding: 0.28rem 0.75rem
-		background: #f3f4f6
+		background: var(--bg-section, #f3f4f6)
 		border-radius: 8px
 		font-size: 0.9rem
 		font-weight: 600
-		color: #111827
+		color: var(--color-text-primary, #111827)
 		margin-left: 0
 
 	// ─── Valor de solo lectura (only_show / from_pre_view) ────────────────────
-	// Contenedor tipo "input deshabilitado" con fondo #f3f4f6 (igual que LoginForm)
+	// Contenedor tipo "input deshabilitado" con el fondo de seccion del tema (igual que LoginForm)
 	.model-form__only-show
 		display: inline-flex
 		align-items: center
 		min-height: 34px
 		padding: 0.28rem 0.75rem
-		background: #f3f4f6
+		background: var(--bg-section, #f3f4f6)
 		border-radius: 8px
-		border: 1px solid transparent
+		// El borde era transparent a proposito (reservaba el espacio sin dibujarlo). Con el token
+		// pasa a verse en modo oscuro, que es lo que hace falta para que la pildora se recorte
+		// contra el fondo del modal; en claro es un gris muy suave que casi no se nota.
+		border: 1px solid var(--color-border-secondary, transparent)
 		line-height: 1.45
 		max-width: 100%
+		// Un respiro extra respecto del label, para cuando el label ocupa dos renglones.
+		margin-top: 0.1rem
 
 	// Texto del valor presente: legible, peso medio, oscuro
 	.model-form__only-show-value
 		font-size: 0.9rem
 		font-weight: 500
-		color: #111827
+		color: var(--color-text-primary, #111827)
 		word-break: break-word
 
 	// Campo vacío: indicador visual en gris claro itálica
 	.model-form__no-data
 		font-size: 0.8rem
 		font-style: italic
-		color: #9ca3af
+		color: var(--color-text-secondary, #9ca3af)
 
 	// ─── Badge boolean (Sí / No) ──────────────────────────────────────────────
 	.model-form__boolean-badge
@@ -1609,7 +2218,9 @@ export default {
 		.model-form__toggle-track
 			position: absolute
 			inset: 0
-			background: #d1d5db
+			// El gris del apagado necesita su propio token: sobre fondo oscuro este #d1d5db es una
+			// pastilla clara que se lee como encendida.
+			background: var(--toggle-track-off, #d1d5db)
 			border-radius: 9999px
 			transition: background 0.2s ease
 
@@ -1643,7 +2254,7 @@ export default {
 	.model-form__meta-row
 		margin-top: 0.25rem
 		padding-top: 1.25rem
-		border-top: 1px solid #e5e7eb
+		border-top: 1px solid var(--color-border, #e5e7eb)
 		width: 100%
 
 	// Anula el margin-bottom grande de las columnas del grid principal
@@ -1660,7 +2271,7 @@ export default {
 		align-items: center
 		min-height: 34px
 		padding: 0.28rem 0.75rem
-		background: #f3f4f6
+		background: var(--bg-section, #f3f4f6)
 		border-radius: 8px
 		border: 1px solid transparent
 		line-height: 1.45
@@ -1670,7 +2281,7 @@ export default {
 	.model-form__meta-value
 		font-size: 0.875rem
 		font-weight: 500
-		color: #4b5563
+		color: var(--color-text-secondary, #4b5563)
 		word-break: break-word
 
 // ─── Popover de instrucciones: rediseño ancho + estilo Apple ──────────────────

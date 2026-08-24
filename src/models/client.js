@@ -77,6 +77,14 @@ export default {
 			if_has_extencion: 'articulo_margen_de_ganancia_segun_lista_de_precios',
 		},
 		{
+			text: 'Límite de crédito',
+			key: 'limites_credito',
+			type: 'display',
+			only_show: true,
+			show_only_if_is_created: true,
+			not_show: true,
+		},
+		{
 			text: 'Pasar las ventas a la C/C sin esperar a facturar',
 			key: 'pasar_ventas_a_la_cuenta_corriente_sin_esperar_a_facturar',
 			if_has_extencion: 'guardad_cuenta_corriente_despues_de_facturar',

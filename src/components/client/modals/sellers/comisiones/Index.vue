@@ -11,7 +11,7 @@ id="Comisiones de vendedor">
 	class="comision-modal__header">
 		<div class="comision-modal__nombre">{{ seller.name }}</div>
 		<div class="comision-modal__config">
-			{{ seller.percentage_commission }}% · {{ modo_liquidacion_label }}
+			{{ porcentaje_es(seller.percentage_commission) }}% · {{ modo_liquidacion_label }}
 		</div>
 	</div>
 

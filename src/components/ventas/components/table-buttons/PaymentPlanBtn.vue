@@ -4,8 +4,9 @@
 		size="sm"
 		class="m-l-5"
 		variant="outline-primary"
+		title="Plan de pago"
 		@click.stop="ver">
-			<i class="icon-dolar"></i>
+			<i class="bi bi-credit-card"></i>
 		</b-button>
 	</div>
 </template>

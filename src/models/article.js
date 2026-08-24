@@ -84,16 +84,26 @@ export default {
 			text: 'proveedor',
 			key: 'provider_id',
 			type: 'search',
+			// Sin prop "store" el buscador resuelve el store por la key (provider_id -> provider).
+			// La busqueda va siempre contra la API (global-search/provider), nunca contra el store:
+			// hay cuentas con miles de proveedores y el resultado no puede depender de que la
+			// descarga del store haya terminado (el catalogo dejo de bajarse entero al iniciar
+			// sesion, grupo 332, 4/8/2026; la tabla resuelve el nombre por la relacion embebida). No sacar.
+			search_from_api: true,
 			use_to_show_in_search_modal: true,
 			use_to_update: true,
-			// El catalogo de proveedores no se descarga entero al iniciar sesion (grupo 332,
-			// 4/8/2026): el buscador va contra la API y la tabla lee la relacion embebida.
-			search_from_api: true,
 			filter_modal_position: 4,
 			keep_after_create: true,
 			can: 'article.provider',
+			// Prompt 309: al elegir un proveedor nuevo para un articulo que ya existe y ya
+			// tenia otro proveedor, no se asigna directo: ModelForm.vue llama a esta funcion
+			// (definida ahi mismo) que abre el modal de confirmacion con los dos flags
+			// independientes del prompt 308 (eliminar descuentos del proveedor anterior /
+			// crear los del proveedor nuevo) y recien ahi, si se confirma, pega contra el
+			// endpoint dedicado "PUT article/change-provider".
+			confirm_change_function: 'confirmProviderChange',
 			data_tour: 'listado.campo_proveedor',
-			description: 'Proveedor al que pertenece ahora este articulo. Ultimo proveedor del cual adquiriste este articulo',
+			description: 'Proveedor al que pertenece ahora este articulo. Ultimo proveedor del cual adquiriste este articulo. Al cambiarlo en un articulo existente se abre un modal para elegir si se eliminan los descuentos del proveedor anterior y/o se crean los del proveedor nuevo.',
 			// table_position: 6,
 		},
 		{
@@ -134,7 +144,12 @@ export default {
 			group_title: 'Precio',
 		},
 		{
-			text: 'costo',
+			// Prompt 612: se renombro de "Costo" a "Costo base" (mismo campo/mismo valor guardado,
+			// sin IVA) para aclarar, sobre todo al Monotributista, que este valor no es el que
+			// figura en la factura de su proveedor. La aclaracion ahora es SIEMPRE VISIBLE (ya no
+			// popover de "description") y cambia segun la condicion de IVA de la cuenta: ver el slot
+			// "#cost" en src/views/Listado.vue -> CostInput.vue.
+			text: 'Costo base',
 			key: 'cost',
 			type_to_update: 'number',
 			type: 'text',
@@ -150,7 +165,6 @@ export default {
 				key: 'cost_in_dollars',
 				equal_to: 1
 			},
-			description: 'Costo que pago a su proveedor al comprar este articulo. Coloque el valor literal, sin descuentos ni IVA, esos datos se colocan por fuera del costo para tener mejor articulado el calculo del "Precio Final"',
 			// table_position: 8,
 		},
 		
@@ -169,13 +183,19 @@ export default {
 			description: 'Alicuota de IVA que tiene este articulo, coloque el VALOR REAL ya que este dato sera usado en caso de hacer una FACTURA por la venta de este articulo',
 		},
 		{
+			// Prompt 612: solo se muestra (y se puede ver) para cuentas Responsable Inscripto, donde
+			// queda siempre activado y bloqueado (el usuario no lo puede apagar; los articulos
+			// exentos se resuelven por la alicuota de IVA, no apagando este control). En
+			// Monotributista se oculta por completo. El render se reemplaza por un componente propio
+			// (slot "#aplicar_iva" en src/views/Listado.vue -> AplicarIvaInput.vue), que fuerza el
+			// valor a 1 y agrega la aclaracion siempre visible.
 			text: 'Aplicar iva',
-			key: 'aplicar_iva', 
+			key: 'aplicar_iva',
 			type: 'checkbox',
 			not_show: true,
 			value: 1,
 			use_to_update: true,
-			description: 'Indique si quiere el el IVA del articulo se sume a su costo para obtener el "Costo Real". Valores posibles: "Si" y "No". Valor por defecto: "Si"',
+			v_if_function: 'es_responsable_inscripto_v_if_function',
 		},
 		{
 			text: 'costo en dolares',
@@ -204,6 +224,9 @@ export default {
 			simbolo_moneda_function: 'article_simbolo_moneda',
 			description: 'Este dato es calculado por el sistema, es igual a: "Costo" + "Descuentos" y "Recargos" + "IVA". Seria el costo real que tiene ese producto en su negocio luego de tener en cuenta los descuetos de su proveedor, costos por transporte, impuestos, etc',
 			// if_has_extencion: 'article.costo_real',
+			// No es una columna real: es un accessor del backend (getCostoRealAttribute en
+			// app/Models/Article.php), asi que no se puede buscar por el en el buscador general.
+			not_use_in_global_search: true,
 		},
 
 		{

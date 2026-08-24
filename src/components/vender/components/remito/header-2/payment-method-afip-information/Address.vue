@@ -52,7 +52,7 @@ export default {
 			return this.$store.state.address.models
 		},
 		disabled() {
-			if (this.index_previus_sales > 0) {
+			if (this.editando_venta_previa) {
 				return true
 			}
 

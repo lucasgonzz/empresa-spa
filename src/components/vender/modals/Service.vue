@@ -46,7 +46,7 @@ export default {
 						amount: 1,
 					}
 					this.$store.commit('vender/addItem', service)
-					if (this.index_previus_sales > 0) {
+					if (this.editando_venta_previa) {
 						this.setItemsPrices(true, false)
 					} else {
 						this.setItemsPrices(true)

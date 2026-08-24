@@ -87,11 +87,11 @@
 				class="m-b-0 m-t-15">
 					<span
 					v-if="sale_details.order.cupon.percetage">
-						Cupon del {{ sale_details.order.cupon.percetage }}%
+						Cupon del {{ porcentaje_es(sale_details.order.cupon.percetage) }}%
 					</span>
 					<span
 					v-else>
-						Cupon de ${{ sale_details.order.cupon.amount }}
+						Cupon de {{ price(sale_details.order.cupon.amount) }}
 					</span>
 				</p>
 			</div>
@@ -102,7 +102,7 @@
 				class="m-b-0"
 				v-for="discount in sale_details.discounts"
 				:key="'dis-'+discount.id">
-					- {{ discount.pivot.percentage }}% {{ discount.name }}
+					- {{ porcentaje_es(discount.pivot.percentage) }}% {{ discount.name }}
 				</p>
 				<p
 				v-if="sale_details.services.length && sale_details.discounts_in_services">
@@ -120,7 +120,7 @@
 				class="m-b-0"
 				v-for="surchage in sale_details.surchages"
 				:key="'sur-'+surchage.id">
-					+ {{ surchage.pivot.percentage }}% {{ surchage.name }}
+					+ {{ porcentaje_es(surchage.pivot.percentage) }}% {{ surchage.name }}
 				</p>
 				<p
 				v-if="sale_details.services.length && sale_details.surchages_in_services">

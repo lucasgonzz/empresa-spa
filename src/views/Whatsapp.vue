@@ -3,25 +3,33 @@
 	class="whatsapp-module">
 		<b-col
 		class="whatsapp-module__chats"
-		lg="4"
-		xl="3">
+		cols="12">
 			<chats-list></chats-list>
-		</b-col>
-		<b-col
-		class="whatsapp-module__conversation"
-		lg="8"
-		xl="9">
-			<conversation></conversation>
 		</b-col>
 	</b-row>
 </template>
 <script>
 import ChatsList from '@/components/whatsapp/chats-list/Index'
-import Conversation from '@/components/whatsapp/conversation/Index'
+
+/**
+ * Módulo de WhatsApp: la bandeja de chats, y nada más.
+ *
+ * 🔴 **Acá ya no se dibuja la conversación.** Vive en un único lugar de toda la aplicación:
+ * el sidebar (`components/whatsapp/sidebar/Index.vue`), que monta `SidebarHost.vue` desde
+ * `App.vue`. Es lo que hace que "reutilizable" signifique algo: si la conversación se dibujara
+ * también acá, habría dos copias de lo mismo para mantener.
+ *
+ * 🔴 **Y acá ya no vive la suscripción a Echo.** También se mudó a `SidebarHost.vue`. No puede
+ * volver: con las dos escuchas activas, cada mensaje entrante sonaría dos veces y dispararía
+ * dos `markRead`.
+ *
+ * Queda como `b-row` con una sola columna (y no como un div suelto) para conservar los
+ * márgenes negativos de Bootstrap que compensan el padding del `b-container` de App.vue: sin
+ * eso la bandeja dejaría de llegar hasta el borde de la pantalla.
+ */
 export default {
 	components: {
 		ChatsList,
-		Conversation,
 	},
 	created() {
 		/*
@@ -32,92 +40,20 @@ export default {
 		this.$store.dispatch('whatsapp_chat/getChats')
 		this.$store.dispatch('whatsapp_template/getModels')
 
-		// Si se llega con un chat_id en la URL (ej: link directo desde otra parte del sistema).
+		/*
+			Link directo a /whatsapp/{id} (ej: desde otra parte del sistema). Antes esto solo
+			commiteaba `setSelectedChatId` y nunca pedía los mensajes: la conversación se abría
+			vacía. Ahora abre el sidebar y la carga la dispara el watch de conversation/Index.vue,
+			que es el mismo camino que recorren los otros tres modos de abrir un chat.
+		*/
 		if (this.$route.params.chat_id) {
-			this.$store.commit('whatsapp_chat/setSelectedChatId', parseInt(this.$route.params.chat_id, 10))
+			let chat_id = parseInt(this.$route.params.chat_id, 10)
+			// Con un id que no es un número no se intenta nada: sin esta guarda el payload
+			// saldría con chat_id NaN y el store creería que le pidieron abrir por teléfono.
+			if (!isNaN(chat_id)) {
+				this.abrir_chat_whatsapp({chat_id: chat_id})
+			}
 		}
-
-		this.listenWhatsappChannel()
-	},
-	beforeDestroy() {
-		this.leaveWhatsappChannel()
-	},
-	methods: {
-		/**
-		 * Se suscribe al canal privado `whatsapp.{owner_id}` (evento `WhatsappChatUpdated`) para
-		 * reflejar en vivo: nuevos mensajes entrantes, respuestas de IA/manuales de otro empleado,
-		 * y cambios de estado de entrega (checks). Actualiza la bandeja siempre, y si el chat
-		 * afectado es el que está abierto, agrega/actualiza la burbuja sin recargar.
-		 */
-		listenWhatsappChannel() {
-			if (!this.Echo || !this.owner_id) {
-				return
-			}
-			this.Echo.private('whatsapp.' + this.owner_id)
-			.listen('.WhatsappChatUpdated', (payload) => {
-				if (!payload || !payload.chat) {
-					return
-				}
-
-				// Actualiza (sin pisar props que este payload liviano no trae) la fila de la bandeja.
-				this.$store.commit('whatsapp_chat/patchChatFromBroadcast', payload.chat)
-
-				let selected_chat_id = this.$store.state.whatsapp_chat.selected_chat_id
-				let is_open_chat = selected_chat_id && selected_chat_id == payload.chat_id
-
-				if (payload.message) {
-					if (is_open_chat) {
-						// Si el mensaje ya está en la conversación (ej: lo mandó este mismo operador
-						// y ya se agregó en el .then() del envío), se actualiza en vez de duplicar.
-						let already_loaded = this.$store.state.whatsapp_chat.messages.some(m => m.id == payload.message.id)
-						if (already_loaded) {
-							this.$store.commit('whatsapp_chat/patchMessage', payload.message)
-						} else {
-							this.$store.commit('whatsapp_chat/appendMessage', payload.message)
-							// Sonido corto solo para mensajes entrantes del cliente.
-							if (payload.message.direction == 'in') {
-								this.playIncomingSound()
-							}
-						}
-						this.$store.dispatch('whatsapp_chat/markRead', payload.chat_id)
-					} else if (payload.message.direction == 'in') {
-						this.playIncomingSound()
-					}
-				}
-			})
-		},
-		leaveWhatsappChannel() {
-			if (this.Echo && this.owner_id) {
-				this.Echo.leave('whatsapp.' + this.owner_id)
-			}
-		},
-		/**
-		 * Sonido corto (opcional) para avisar de un mensaje entrante nuevo. Se sintetiza con
-		 * Web Audio API (un "beep" corto) en vez de cargar un archivo de audio propio, para no
-		 * depender de un asset nuevo. Si el navegador no soporta AudioContext o bloquea el
-		 * autoplay, falla en silencio: no es una funcionalidad crítica del módulo.
-		 */
-		playIncomingSound() {
-			try {
-				let AudioContextClass = window.AudioContext || window.webkitAudioContext
-				if (!AudioContextClass) {
-					return
-				}
-				let audio_context = new AudioContextClass()
-				let oscillator = audio_context.createOscillator()
-				let gain = audio_context.createGain()
-				oscillator.type = 'sine'
-				oscillator.frequency.value = 880
-				gain.gain.setValueAtTime(0.15, audio_context.currentTime)
-				gain.gain.exponentialRampToValueAtTime(0.0001, audio_context.currentTime + 0.25)
-				oscillator.connect(gain)
-				gain.connect(audio_context.destination)
-				oscillator.start()
-				oscillator.stop(audio_context.currentTime + 0.25)
-			} catch (e) {
-				// Sin sonido disponible: no es bloqueante para el módulo.
-			}
-		},
 	},
 }
 </script>
@@ -125,16 +61,9 @@ export default {
 .whatsapp-module
 	height: calc(100vh - 50px)
 	margin-bottom: 0 !important
+	// La bandeja ocupa el ancho completo. El sidebar la tapa parcialmente cuando está abierto,
+	// a propósito: sigue estando a la vista y se puede saltar de un chat a otro sin cerrarlo.
 	&__chats
 		height: 100%
-		border-right: 1px solid rgba(0, 0, 0, .1)
 		padding: 0
-		@media screen and (max-width: 992px)
-			height: auto
-			border-right: none
-			border-bottom: 1px solid rgba(0, 0, 0, .1)
-	&__conversation
-		height: 100%
-		padding: 0
-		background: #f7f9fb
 </style>

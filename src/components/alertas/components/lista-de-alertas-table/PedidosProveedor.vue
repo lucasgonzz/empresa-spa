@@ -22,12 +22,12 @@
 
 			</b-table>
 
-			<div 
+			<!-- Estado vacío del sistema (display/EmptyState), en vez del cartel azul viejo. -->
+			<empty-state
 			v-else
-			class="text-with-icon">
-				No hay pedidos sin llegar
-				<i class="icon-eye-slash"></i>
-			</div>
+			icon_class="bi bi-truck"
+			title="No hay pedidos sin llegar"
+			hint="Ningún pedido a proveedor pasó los días de aviso que tenés configurados."></empty-state>
 
 		</div>
 	</div>
@@ -36,6 +36,7 @@
 <script>
 export default {
 	components: {
+		EmptyState: () => import('@/common-vue/components/display/EmptyState'),
 		CurrentAcounts: () => import('@/components/common/current-acounts/Index'),
 	},
 	computed: {

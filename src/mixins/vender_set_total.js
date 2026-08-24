@@ -48,7 +48,8 @@ export default {
 			return this.$store.state.surchage.models 
 		},
 		from_pivot() {
-			return this.index_previus_sales != 0 || this.budget
+			/* El || budget no sobra: actualizar un presupuesto en VENDER entra por aca. */
+			return this.$store.getters['vender/previus_sales/editando_venta_previa'] || !!this.budget
 		},
 		cuota_descuento() {
 			return this.$store.state.vender.cuota_descuento 
@@ -66,7 +67,15 @@ export default {
 			return this.$store.state.vender.selected_payment_methods 
 		},
 		descuento() {
-			return this.$store.state.vender.descuento 
+			return this.$store.state.vender.descuento
+		},
+		/* Puntos que el cliente gasta en esta venta (extension puntos_clientes) */
+		puntos_canjeados() {
+			return this.$store.state.vender.puntos_canjeados
+		},
+		/* Los pesos que esos puntos descuentan, ya calculados con el valor_punto del programa */
+		descuento_puntos() {
+			return this.$store.state.vender.descuento_puntos
 		},
 		// moneda_id() {
 		// 	return this.$store.state.vender.moneda_id 
@@ -160,7 +169,9 @@ export default {
 				
 				// sub_total = this.total_articles + this.total_services + this.total_combos + this.total_promocion_vinoteca
 				total = this.total_articles + this.total_services + this.total_combos + this.total_promocion_vinoteca
-				
+
+				total = this.aplicar_canje_de_puntos(total)
+
 				this.des.push('Total venta: '+this.price(total))
 
 				total = this.aplicar_payment_method_discounts_a_total_repartido_del_modal(total)
@@ -208,9 +219,9 @@ export default {
 					if (typeof descuento != 'undefined') {
 						let percentage = Number(descuento.discount_percentage)
 						if (percentage > 0) {
-							this.des.push('Se aplico descuento del '+percentage+'% del metodo de pago '+descuento.current_acount_payment_method.name)
+							this.des.push('Se aplico descuento del '+this.porcentaje_es(percentage)+'% del metodo de pago '+descuento.current_acount_payment_method.name)
 						} else {
-							this.des.push('Se aplico recargo del '+percentage*-1+'% del metodo de pago '+descuento.current_acount_payment_method.name)
+							this.des.push('Se aplico recargo del '+this.porcentaje_es(percentage*-1)+'% del metodo de pago '+descuento.current_acount_payment_method.name)
 						}
 					}
 				}
@@ -308,7 +319,7 @@ export default {
 
 				if (this.cuota_descuento) {
 
-					this.des.push('Aplicando descuento de '+this.cuota_descuento+'% por pago en '+this.cantidad_cuotas+' cuotas')
+					this.des.push('Aplicando descuento de '+this.porcentaje_es(this.cuota_descuento)+'% por pago en '+this.cantidad_cuotas+' cuotas')
 
 					let monto_descuento = this.monto_credito * Number(this.cuota_descuento) / 100
 					this.des.push('Monto descuento: '+this.price(monto_descuento))
@@ -322,7 +333,7 @@ export default {
 				
 				} else if (this.cuota_recargo) {
 
-					this.des.push('Aplicando recargo de '+this.cuota_recargo+'% por pago en '+this.cantidad_cuotas+' cuotas')
+					this.des.push('Aplicando recargo de '+this.porcentaje_es(this.cuota_recargo)+'% por pago en '+this.cantidad_cuotas+' cuotas')
 
 					let monto_recargo = this.monto_credito * Number(this.cuota_recargo) / 100
 					this.des.push('Monto recargo: '+this.price(monto_recargo))
@@ -383,10 +394,69 @@ export default {
 			return false
 
 		},
+		/**
+		 * Resta del total el canje de puntos del cliente (extension puntos_clientes).
+		 *
+		 * 🔴 DONDE ENTRA EN LA CUENTA, Y POR QUE JUSTO AHI.
+		 *
+		 * Se llama en setTotal() despues de que aplicar_descuento(), aplicar_discounts() y
+		 * aplicar_surchages() ya movieron total_articles/combos/servicios, y ANTES de
+		 * aplicar_payment_method_discounts_a_total_repartido_del_modal(). O sea:
+		 *
+		 *     bruto = (articulos + servicios + combos + promos), ya con descuentos y recargos de venta
+		 *     total = bruto - descuento_puntos - (descuentos/recargos del reparto por medio de pago)
+		 *
+		 * Y el servidor, en PuntosCanjeHelper::validar(), reconstruye el bruto que mide contra
+		 * el tope como `total + descuento_puntos`. Esa igualdad se cumple exactamente con este
+		 * orden porque los montos del reparto por medio de pago son importes fijos, no
+		 * porcentajes: restarlos antes o despues del canje da el mismo numero.
+		 *
+		 * Si el canje se aplicara ANTES de los descuentos y recargos de venta, en cambio, el
+		 * porcentaje de esos descuentos caeria tambien sobre el canje, el bruto que reconstruye
+		 * el servidor dejaria de coincidir y TODA venta con canje rebotaria con 422.
+		 *
+		 * 🔴 EL MONTO NO SE RECALCULA ACA. Se usa el descuento_puntos que ya dejo el panel de
+		 * canje (stage-3/Puntos.vue), que salio del valor_punto que devolvio
+		 * /api/puntos/disponible. El servidor lo recalcula con round(puntos * valor_punto, 2) y
+		 * lo compara con tolerancia de un centavo: un redondeo propio distinto del suyo es un
+		 * 422, no una diferencia que se corrija sola.
+		 *
+		 * @param {Number} total Total de la venta antes del canje.
+		 * @returns {Number} Total ya neteado.
+		 */
+		aplicar_canje_de_puntos(total) {
+
+			let descuento_puntos = Number(this.descuento_puntos)
+
+			if (!descuento_puntos || descuento_puntos <= 0) {
+				return total
+			}
+
+			this.des.push('APLICANDO CANJE DE PUNTOS')
+			this.des.push('Canje de '+this.puntos_canjeados+' puntos: -'+this.price(descuento_puntos))
+
+			total -= descuento_puntos
+
+			/*
+				Piso en cero. Con el tope del programa (20% por defecto) no se llega nunca, pero
+				un comercio puede configurarlo en 100 y, con descuentos de venta encima, el total
+				daria negativo: una venta con total negativo se imputa al reves en la cuenta
+				corriente y en la caja. Se prefiere que el servidor rechace el canje por exceder
+				el tope --con su mensaje, que el vendedor entiende-- antes que guardar plata en
+				contra.
+			*/
+			if (total < 0) {
+				total = 0
+			}
+
+			this.des.push('Total con canje de puntos: '+this.price(total))
+
+			return total
+		},
 		aplicar_descuento() {
 			if (this.descuento) {
 
-				this.des.push('Aplicando descuento del '+this.descuento+'% solo al total de los articulos de '+this.price(this.total_articles))
+				this.des.push('Aplicando descuento del '+this.porcentaje_es(this.descuento)+'% solo al total de los articulos de '+this.price(this.total_articles))
 				this.total_articles -= this.total_articles * Number(this.descuento) / 100 
 				this.des.push('Total articulos queda en '+this.price(this.total_articles))
 
@@ -415,7 +485,7 @@ export default {
 
 				sale_discounts.forEach(discount => {
 
-					this.des.push('Aplicando descuento del '+discount.percentage+'%')
+					this.des.push('Aplicando descuento del '+this.porcentaje_es(discount.percentage)+'%')
 
 					let monto_descuento = this.total_articles * Number(discount.percentage) / 100 
 					this.total_articles -= monto_descuento
@@ -457,7 +527,7 @@ export default {
 
 				this.surcahges_models_vender.forEach(_surchage => {
 					
-					this.des.push('Aplicando recargo del '+_surchage.percentage+'%')
+					this.des.push('Aplicando recargo del '+this.porcentaje_es(_surchage.percentage)+'%')
 					
 					let monto_recargo = this.total_articles * Number(_surchage.percentage) / 100 
 					this.total_articles += monto_recargo

@@ -43,7 +43,7 @@ export default {
 
 			if (search_name) {
 
-				search_name.value = ''
+				this.setInputValueSync(search_name, '')
 
 
 				if (this.hasExtencion('no_usar_codigos_de_barra')) {

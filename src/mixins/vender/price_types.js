@@ -2,7 +2,22 @@ import computed from '@/mixins/vender/computed'
 export default {
 	mixins: [computed],
 	methods: {
-		setPriceType() {
+		/**
+         * Aplica la lista de precios por defecto (la del presupuesto, la del cliente, o la de
+         * mayor posicion) a una venta NUEVA.
+         *
+         * @param {boolean} force_reset true: es una accion explicita del usuario —sacar el
+         *                              cliente a mano en SelectClient— y aplica igual en edicion.
+         */
+		setPriceType(force_reset = false) {
+            /*
+                Editando un comprobante guardado, la lista de precios es la que quedo guardada en
+                el, aunque el cliente tenga otra asignada. Cambiarsela por atras cambia los precios
+                de todas las lineas.
+            */
+            if (!force_reset && (this.$store.getters['vender/previus_sales/editando_venta_previa'] || !!this.$store.state.vender.budget)) {
+                return
+            }
             console.log('setPriceType')
             console.log('client:')
             console.log(this.client)

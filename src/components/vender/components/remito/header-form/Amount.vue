@@ -28,12 +28,12 @@
 	class="amount-stock">
 		<span class="amount-stock__global">
 			<i class="icon-box amount-stock__icon"></i>
-			Stock: <strong>{{ global_stock }}</strong>
+			Stock: <strong>{{ numero_es(global_stock) }}</strong>
 		</span>
 		<span
 		v-if="local_stock !== null"
 		class="amount-stock__local">
-			Sucursal: <strong>{{ local_stock }}</strong>
+			Sucursal: <strong>{{ numero_es(local_stock) }}</strong>
 		</span>
 	</div>
 	</b-col>
@@ -80,9 +80,6 @@ export default {
 		},
 		item() {
 			return this.$store.state.vender.item
-		},
-		index_previus_sale() {
-			return this.$store.state.vender.previus_sales.index
 		},
         previus_sale() {
             return this.$store.state.vender.previus_sales.previus_sale

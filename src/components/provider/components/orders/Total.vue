@@ -3,13 +3,14 @@
 	class="j-start"
 	v-if="provider_order">
 		<b-button
-		class="m-r-10"
+		class="btn-explicacion m-r-10"
 		@click="show"
-		variant="outline-success"
+		variant="outline-secondary"
+		title="Ver cómo se calculó este total"
 		size="sm">
-			?
+			<i class="bi bi-question-lg"></i>
 		</b-button>
-		<h4>
+		<h4 data-testid="compra-total">
 			{{ price(provider_order.total) }}
 		</h4>
 	</div>

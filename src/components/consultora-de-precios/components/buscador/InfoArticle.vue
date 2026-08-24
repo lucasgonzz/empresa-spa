@@ -51,7 +51,11 @@ export default {
 
 			let price = this.aplicar_monto_descuento(this.article.final_price, payment_discount.current_acount_payment_method.id)
 
-			return this.price(this.redondear(price))
+			// 🔴 Sin redondear, y es a proposito: mismo caso que get_price_with_discount_in_vender()
+			// de src/mixins/model_functions.js. El precio ya tiene el descuento por forma de pago
+			// aplicado, y el backend no redondea despues de un descuento. La consultora de precios
+			// tiene que cotizar el mismo numero que la venta va a cobrar.
+			return this.price(price)
 		}
 	}
 }

@@ -8,6 +8,7 @@
 			<b-form-input
 			autocomplete="off"
 			:id="model_name + '-' + prop.key"
+			:data-testid="model_name + '-' + prop.key"
 			:disabled="disabled"
 			:type="prop.type"
 			:step="get_number_input_step(prop)"
@@ -21,6 +22,16 @@
 			@click="$emit('search-cuit')"
 			class="m-l-5"
 			variant="primary">
+				<i class="icon-search"></i>
+			</b-button>
+
+			<!-- Cotizacion del dolar de hoy. Aditivo como el boton de CUIT de arriba; la guarda es larga porque common-vue es codigo compartido con otros proyectos, y lleva is_admin para no ofrecerle a un empleado sin acceso un boton que no le va a hacer nada (el modal exige lo mismo para montarse). -->
+			<b-button
+			v-if="prop.key == 'dollar' && model_name == 'user' && is_admin && hasExtencion('costo_en_dolares')"
+			@click="$emit('chequear-cotizacion-dolar')"
+			class="m-l-5"
+			variant="outline-primary"
+			title="Ver la cotizacion de hoy">
 				<i class="icon-search"></i>
 			</b-button>
 

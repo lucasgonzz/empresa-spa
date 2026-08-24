@@ -42,6 +42,15 @@ export default {
 			set(value) {
 				this.$store.commit('vender/set_omitir_en_cuenta_corriente', value)
 				if (value == 1) {
+					/*
+						Sin force_reset, a proposito. La mision 56 pedia pasarlo en true para que
+						el checkbox siguiera funcionando en edicion, pero el propio control esta
+						deshabilitado cuando se edita una venta guardada (ver `disabled` mas
+						abajo): ese caso no existe. Y con force_reset en true se saltearia tambien
+						el guard viejo, el que conserva el metodo que el usuario ya habia elegido
+						en una venta NUEVA — o sea que el unico efecto real seria pisar una
+						seleccion del usuario.
+					*/
 					this.setDefaultPaymentMethod()
 				} else {
 
@@ -66,15 +75,15 @@ export default {
 		client() {
 			return this.$store.state.vender.client
 		},
-		index_previus_sales() {
-			return this.$store.state.vender.previus_sales.index
+		editando_venta_previa() {
+			return this.$store.getters['vender/previus_sales/editando_venta_previa']
 		},
 		disabled() {
 			// if (this.budget !== null) {
 			// // if (this.previus_sale.id || this.budget !== null) {
 			// 	return true
 			// }
-			if (this.index_previus_sales > 0) {
+			if (this.editando_venta_previa) {
 			// if (this.previus_sale.id || this.budget !== null) {
 				return true
 			}

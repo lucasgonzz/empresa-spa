@@ -7,7 +7,7 @@
       <circle class="progress" :cx="size / 2" :cy="size / 2" :r="radius" :style="progressStyle"></circle>
     </svg>
     <!-- Texto con el porcentaje -->
-    <div class="percentage-text" :style="textStyle">{{ porcentaje }}%</div>
+    <div class="percentage-text" :style="textStyle">{{ porcentaje_es(porcentaje) }}%</div>
   </div>
 </template>
 

@@ -143,6 +143,24 @@
 							</div>
 						</div>
 
+						<!--
+							Prompt 310: flag "permitir valores en blanco" por columna mapeada.
+							Solo se muestra si la columna ya tiene una posición asignada (mapeada),
+							para no ensuciar la pantalla con columnas que ni siquiera se van a importar.
+						-->
+						<div
+						v-if="column.position !== ''"
+						class="import-column-blank-flag">
+							<b-form-checkbox
+							:id="'blank-flag-'+index"
+							size="sm"
+							v-model="column.allow_blank">
+								<span class="import-column-blank-flag-text">
+									Permitir valores en blanco
+								</span>
+							</b-form-checkbox>
+						</div>
+
 						<transition name="import-description-slide">
 							<div
 							v-if="has_column_help(column) && column.show_description"
@@ -581,6 +599,20 @@
 			></b-form-file>
 		</b-form-group>
 
+		<!--
+			Selector de hoja. Aparece SOLO cuando el libro tiene más de una: con una sola
+			hoja no se dibuja nada acá y el modal queda igual que siempre.
+		-->
+		<b-form-group
+		v-if="hay_varias_hojas"
+		class="import-hojas"
+		label="El archivo tiene varias hojas. ¿Cuál querés importar?">
+			<b-form-select
+			v-model="hoja_seleccionada"
+			:options="opciones_de_hoja"
+			size="sm"></b-form-select>
+		</b-form-group>
+
 		<hr>
 		<btn-loader
 		id="btn_importar"
@@ -690,6 +722,33 @@ export default {
 		selected_column_position_id() {
 			return this.$store.state.column_position.selected_column_position_id
 		},
+
+		/*
+		 * True cuando el libro tiene más de una hoja: es la única condición que dibuja
+		 * algo nuevo en pantalla.
+		 */
+		hay_varias_hojas() {
+			return this.hojas.length > 1
+		},
+
+		/*
+		 * Opciones del selector: nombre y cantidad de filas de cada hoja, que es lo que le
+		 * permite al usuario reconocer cuál es su lista de precios.
+		 */
+		opciones_de_hoja() {
+			let opciones = []
+
+			for (let i = 0; i < this.hojas.length; i++) {
+				let hoja = this.hojas[i]
+
+				opciones.push({
+					value: hoja.indice,
+					text:  hoja.nombre + ' (' + this.numero_es(hoja.filas) + ' filas)',
+				})
+			}
+
+			return opciones
+		},
 	},
 	data() {
 		return {
@@ -699,6 +758,18 @@ export default {
 			finish_row: '',
 			finish_row_original: '',
 			percentage: '',
+
+			/*
+			 * Hojas del libro elegido, con la forma { indice, nombre, filas }. El selector
+			 * aparece únicamente cuando hay más de una; con una sola, nada cambia.
+			 */
+			hojas: [],
+
+			/* Índice 0-based de la hoja a importar. Arranca en 0: la primera, como siempre. */
+			hoja_seleccionada: 0,
+
+			/* Libro ya parseado, congelado para que Vue no lo haga reactivo celda por celda. */
+			workbook_cache: null,
 			columns_: [], 
 			positions_seted: false,
 			create_and_edit: null,
@@ -741,6 +812,25 @@ export default {
 	    })
 	},
 	watch: {
+		/*
+		 * Al cambiar de hoja hay que recalcular finish_row sobre la hoja nueva. El backend
+		 * vuelca la hoja elegida al CSV 1:1 y después navega por número de línea: si acá
+		 * quedara el finish_row de la hoja anterior, se importarían filas que no existen o
+		 * se cortaría de más, sin ningún error a la vista.
+		 *
+		 * start_row no se toca a propósito: en este modal el usuario lo elige a mano, y
+		 * pisárselo sería quitarle una decisión que ya tomó.
+		 *
+		 * @param {Number} nuevo_indice Índice 0-based de la hoja elegida.
+		 */
+		hoja_seleccionada(nuevo_indice) {
+			if (!this.workbook_cache) {
+				return
+			}
+
+			this.finish_row = this.ultima_fila_con_contenido_de(Number(nuevo_indice))
+			this.finish_row_original = this.finish_row
+		},
 		actualizar_articulos_de_otro_proveedor() {
 			if (!this.actualizar_articulos_de_otro_proveedor) {
 				this.actualizar_proveedor = 0				
@@ -1100,37 +1190,46 @@ export default {
 		        });
 		},
 		async processFile(file) {
+		    /*
+		     * 🔴 B7: el estado del archivo ANTERIOR se limpia acá, antes de leer, y no
+		     * dentro de armar_hojas_del_libro() — que corre después de XLSX.read() y por
+		     * lo tanto no corre nunca si XLSX.read() tira (xlsx con contraseña, archivo
+		     * cortado, formato que SheetJS no parsea).
+		     *
+		     * Sin esto, quien subía el libro A de 3 hojas, elegía la tercera y después
+		     * subía un libro B ilegible, seguía viendo el selector con las hojas del libro
+		     * A y mandaba hoja=2 junto con el archivo B, sin ningún aviso. Acá no hay
+		     * siquiera un botón deshabilitado que lo frene, como sí lo hay en el modal de
+		     * importación con IA.
+		     *
+		     * workbook_cache va PRIMERO: el watcher de hoja_seleccionada corta apenas ve
+		     * el libro en null, así que limpiar el índice no dispara ningún recálculo
+		     * sobre un libro que ya no está.
+		     */
+		    this.workbook_cache = null;
+		    this.hojas = [];
+		    this.hoja_seleccionada = 0;
+
 		    return new Promise((resolve, reject) => {
 		        const reader = new FileReader();
 		        reader.onload = (e) => {
 		            try {
 		                const data = new Uint8Array(e.target.result);
 		                const workbook = XLSX.read(data, { type: 'array' });
-		                const sheetName = workbook.SheetNames[0];
-		                const worksheet = workbook.Sheets[sheetName];
-		                const range = XLSX.utils.decode_range(worksheet['!ref']);
-		                let rowCount = 0;
 
-		                console.log('Range:', range);
+		                /*
+		                 * Antes acá se leía SheetNames[0] y las demás hojas del libro no
+		                 * existían para el sistema: quien tuviera la lista de precios en la
+		                 * segunda hoja importaba la primera, sin ningún aviso. Ahora se arma
+		                 * la lista entera y el usuario puede elegir.
+		                 *
+		                 * Con UNA sola hoja no cambia nada: se autoselecciona la 0, no se
+		                 * dibuja ningún control nuevo y el FormData manda hoja=0, que es el
+		                 * default del backend.
+		                 */
+		                this.armar_hojas_del_libro(workbook);
 
-		                let ultima_fila_con_contenido = 1;
-		                for (let fila = range.s.r; fila <= range.e.r; ++fila) {
-		                    for (let C = range.s.c; C <= range.e.c; ++C) {
-		                        const cellAddress = { c: C, r: fila };
-		                        const cellRef = XLSX.utils.encode_cell(cellAddress);
-		                        const cell = worksheet[cellRef];
-		                        if (cell && cell.v !== null && cell.v !== '') {
-		                            ultima_fila_con_contenido = fila + 1;
-		                            break;
-		                        }
-		                    }
-		                    rowCount++;
-		                }
-
-		                console.log('Cantidad de filas:', rowCount);
-		                console.log('Última fila con contenido:', ultima_fila_con_contenido);
-
-		                this.finish_row = ultima_fila_con_contenido;
+		                this.finish_row = this.ultima_fila_con_contenido_de(this.hoja_seleccionada);
 		                console.log('Finish_row:', this.finish_row);
 
 		                resolve();
@@ -1140,6 +1239,76 @@ export default {
 		        };
 		        reader.readAsArrayBuffer(file);
 		    });
+		},
+
+		/**
+		 * Arma this.hojas ({ indice, nombre, filas }) con las hojas del libro y guarda el
+		 * libro parseado para poder recalcular finish_row cuando el usuario cambie de hoja.
+		 *
+		 * El libro va congelado con Object.freeze porque Vue 2 no observa objetos no
+		 * extensibles: hacerlo reactivo sería recorrer cada celda del Excel para nada.
+		 *
+		 * @param {Object} workbook Libro devuelto por XLSX.read.
+		 * @return {void}
+		 */
+		armar_hojas_del_libro(workbook) {
+			let hojas = []
+
+			for (let i = 0; i < workbook.SheetNames.length; i++) {
+				let nombre = workbook.SheetNames[i]
+				let worksheet = workbook.Sheets[nombre]
+				let filas = 0
+
+				if (worksheet && worksheet['!ref']) {
+					filas = XLSX.utils.decode_range(worksheet['!ref']).e.r + 1
+				}
+
+				hojas.push({
+					indice: i,
+					nombre: nombre,
+					filas:  filas,
+				})
+			}
+
+			this.workbook_cache    = Object.freeze(workbook)
+			this.hojas             = hojas
+			this.hoja_seleccionada = 0
+		},
+
+		/**
+		 * Última fila con contenido de una hoja, con el mismo criterio de siempre: se
+		 * recorre el rango !ref celda por celda.
+		 *
+		 * @param {Number} indice Índice 0-based de la hoja dentro del libro.
+		 * @return {Number} Número de fila 1-based.
+		 */
+		ultima_fila_con_contenido_de(indice) {
+			if (!this.workbook_cache || !this.hojas[indice]) {
+				return 1
+			}
+
+			const worksheet = this.workbook_cache.Sheets[this.hojas[indice].nombre]
+
+			if (!worksheet || !worksheet['!ref']) {
+				return 1
+			}
+
+			const range = XLSX.utils.decode_range(worksheet['!ref'])
+			let ultima_fila_con_contenido = 1
+
+			for (let fila = range.s.r; fila <= range.e.r; ++fila) {
+				for (let C = range.s.c; C <= range.e.c; ++C) {
+					const cellRef = XLSX.utils.encode_cell({ c: C, r: fila })
+					const cell = worksheet[cellRef]
+
+					if (cell && cell.v !== null && cell.v !== '') {
+						ultima_fila_con_contenido = fila + 1
+						break
+					}
+				}
+			}
+
+			return ultima_fila_con_contenido
 		},
 		canIgnore(column) {
 			return typeof column.can_not_ignore == 'undefined'
@@ -1216,6 +1385,8 @@ export default {
 		                position: item.position || (item.letra ? this.excel_column_to_number(item.letra) : ''),
 		                description: item.description,
 		                can_not_ignore: typeof item.can_not_ignore !== 'undefined' ? true : undefined,
+		                // Prompt 310: flag "permitir valores en blanco" guardado en el preset (default false para presets viejos).
+		                allow_blank: Boolean(item.allow_blank),
 		            }
 		        }
 		    })
@@ -1252,6 +1423,8 @@ export default {
 		            position: saved ? (saved.position || '') : '',
 		            ignored: 0,
 		            can_not_ignore: typeof def.can_not_ignore != 'undefined' ? true : undefined,
+		            // Prompt 310: flag "permitir valores en blanco" por columna, restaurado desde el preset guardado (default false).
+		            allow_blank: saved ? Boolean(saved.allow_blank) : false,
 		        })
 		    })
 
@@ -1329,6 +1502,8 @@ export default {
 					position: position,
 					ignored: 0,
 					can_not_ignore: typeof column.can_not_ignore != 'undefined' ? true : undefined,
+					// Prompt 310: flag "permitir valores en blanco" por columna, default false (omitir celdas vacías).
+					allow_blank: false,
 				})
 
 				if (typeof column.group_title == 'undefined') {
@@ -1349,10 +1524,12 @@ export default {
 				column.position = ''
 				column.letra = ''
 				column.ignored = 0
+				// Prompt 310: al limpiar posiciones, se resetea también el flag de valores en blanco.
+				column.allow_blank = false
 			})
 			this.positions_seted = false
 			console.log('Limpiando posiciones')
-		},	
+		},
 		async upload() {
 			if (this.check()) {
 
@@ -1363,6 +1540,20 @@ export default {
 				form_data.append('models', this.file)
 				form_data.append('start_row', this.start_row)
 				form_data.append('finish_row', this.finish_row)
+				/*
+				 * Hoja a importar. Con un libro de una sola hoja vale 0, que es el default
+				 * del backend: el request queda equivalente al de siempre.
+				 *
+				 * 🔴 B7: sólo viaja si el libro que está en pantalla se llegó a parsear. Si
+				 * el parseo falló, this.hojas quedó vacío (ver processFile) y no se manda
+				 * ningún índice: antes que mandar la hoja de un archivo que ya no está, que
+				 * el backend use su default. La clave ausente y hoja=0 valen lo mismo para
+				 * el backend, pero mandar un índice que no medimos es exactamente el
+				 * degradado silencioso que la misión vino a sacar.
+				 */
+				if (this.hojas.length > 0) {
+					form_data.append('hoja', Number(this.hoja_seleccionada) || 0)
+				}
 				form_data.append('create_and_edit', this.create_and_edit)
 				form_data.append('registrar_art_cre', this.registrar_art_cre)
 				form_data.append('registrar_art_act', this.registrar_art_act)
@@ -1382,11 +1573,15 @@ export default {
 
 						if (!column.ignored) {
 							form_data.append('prop_'+this.get_column_prop_key(column), column.position)
+
+							// Prompt 310: flag "permitir valores en blanco" de esta columna mapeada.
+							// Mismo esquema que "prop_<key>": el backend lo lee como "blank_<key>".
+							form_data.append('blank_'+this.get_column_prop_key(column), column.allow_blank ? 1 : 0)
 						} else {
 							// form_data.append('prop_ignore_'+column.text, column.position)
 							console.log('Se ignoro '+column.text)
 						}
-				    } 
+				    }
 
 				})
 				if (this.props_to_send) {
@@ -1409,6 +1604,10 @@ export default {
 				this.finish_row = ''
 				this.finish_row_original = ''
 				this.percentage = ''
+				/* El libro se fue con la importación: el selector vuelve a esconderse. */
+				this.hojas = []
+				this.hoja_seleccionada = 0
+				this.workbook_cache = null
 				if (this.props_to_send) {
 					this.props_to_send.provider_id = 0
 				}
@@ -1447,6 +1646,8 @@ export default {
 		                letra: item.letra,
 		                position: item.position,
 		                can_not_ignore: item.can_not_ignore,
+		                // Prompt 310: se persiste el flag junto con la posición de la columna.
+		                allow_blank: Boolean(item.allow_blank),
 		            })
 		        }
 		    })
@@ -1626,6 +1827,14 @@ export default {
 }
 </script>
 <style lang="sass">
+/* Selector de hoja: solo aparece cuando el libro tiene más de una */
+.import-hojas
+	margin-bottom: 10px
+
+	label
+		font-size: 13px
+		font-weight: 600
+
 .import-column-card
 	border: 1px solid rgba(0, 0, 0, .08)
 	padding: 10px 12px
@@ -1747,6 +1956,18 @@ export default {
 		font-size: 12px
 		line-height: 1.45
 		color: #334155
+
+// Prompt 310: flag "permitir valores en blanco" por columna mapeada, estilo sutil (no compite con el resto de la card).
+.import-column-blank-flag
+	margin-top: 6px
+	padding-left: 2px
+
+	.custom-control-label
+		font-size: 11px
+		color: #64748b
+
+.import-column-blank-flag-text
+	font-size: 11px
 
 .import-description-slide-enter-active,
 .import-description-slide-leave-active

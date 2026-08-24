@@ -77,7 +77,7 @@ export default {
 					articulo: article.name,
 					costo_actual: this.price(article.pivot.costo_actual),
 					costo_nuevo: this.price(article.pivot.costo_nuevo),
-					porcentaje: this.get_procentaje_de_aumento(article),
+					porcentaje: this.porcentaje_es(this.get_procentaje_de_aumento(article)),
 					_cellVariants: {porcentaje: this.color_del_rango(article)},
 				})
 			})

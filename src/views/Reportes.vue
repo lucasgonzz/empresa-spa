@@ -1,16 +1,46 @@
 <template>
 	<div>
-		<seleccionar-fecha></seleccionar-fecha>	
-		
+		<seleccionar-fecha></seleccionar-fecha>
+
 		<nav-component></nav-component>
 
-		<general></general>	
+		<!-- Selector unico de moneda (grupo 227): aplica a Estado de Resultados, Flujo de Caja y Posicion Fiscal. Solo se muestra en esas 3 secciones. -->
+		<selector-moneda v-if="muestra_selector_moneda"></selector-moneda>
 
-		<graficos></graficos>	
+		<estado-resultados></estado-resultados>
 
-		<articulos></articulos>	
+		<flujo-caja></flujo-caja>
 
-		<cheques></cheques>	
+		<posicion-fiscal></posicion-fiscal>
+
+		<graficos></graficos>
+
+		<articulos></articulos>
+
+		<cheques></cheques>
+
+		<!-- Reporte del pasivo del programa de puntos. Se monta siempre, como el resto: el
+		componente se autooculta si el comercio no tiene la extensión `puntos_clientes` o si la
+		sección activa es otra, y con eso no pide nada a la API. -->
+		<puntos></puntos>
+
+		<!-- Modal de drill-down por concepto, compartido por las 3 secciones contables nuevas -->
+		<detalle-modal></detalle-modal>
+
+		<!-- Modales de comprobante que "Ver comprobante" del detalle abre por id via show_model.
+		No se referencian desde el template: si parecen sin uso, no borrar. -->
+		<sale-modal></sale-modal>
+		<model-index model_name="provider_order"></model-index>
+		<!-- Los otros cuatro tipos que el backend devuelve en el drill-down. El grupo 319 monto solo
+		los dos de arriba y escondio el boton para estos, que era lo correcto entonces: mejor sin
+		boton que con un boton muerto. Ahora se montan, asi que el boton vuelve a aparecer y abre.
+		expense es el drill-down de Gastos operativos (de los mas usados del Estado de Resultados),
+		current_acount son cobranzas y pagos a proveedores, y movimiento_caja y cheque son los dos de
+		Flujo de Caja. Hallazgo 20260803-reportes-comprobantes-sin-modal. -->
+		<model-index model_name="expense"></model-index>
+		<model-index model_name="current_acount"></model-index>
+		<model-index model_name="movimiento_caja"></model-index>
+		<model-index model_name="cheque"></model-index>
 	</div>
 </template>
 <script>
@@ -18,10 +48,27 @@ export default {
 	components: {
 		SeleccionarFecha: () => import('@/components/reportes/components/seleccionar-fecha/Index'),
 		NavComponent: () => import('@/components/reportes/components/nav-component/Index'),
-		General: () => import('@/components/reportes/components/general/Index'),
+		SelectorMoneda: () => import('@/components/reportes/components/SelectorMoneda'),
+		EstadoResultados: () => import('@/components/reportes/components/estado-resultados/Index'),
+		FlujoCaja: () => import('@/components/reportes/components/flujo-caja/Index'),
+		PosicionFiscal: () => import('@/components/reportes/components/posicion-fiscal/Index'),
+		DetalleModal: () => import('@/components/reportes/components/detalle-modal/Index'),
 		Graficos: () => import('@/components/reportes/components/graficos/Index'),
 		Articulos: () => import('@/components/reportes/components/articulos/Index'),
 		Cheques: () => import('@/components/reportes/components/cheques/Index'),
+		Puntos: () => import('@/components/reportes/components/puntos/Index'),
+		SaleModal: () => import('@/components/common/SaleModal'),
+		ModelIndex: () => import('@/common-vue/components/model/Index'),
+	},
+	computed: {
+		/* El selector de moneda unico solo tiene sentido en las 3 secciones contables nuevas */
+		muestra_selector_moneda() {
+			return ['estado-de-resultados', 'flujo-de-caja', 'posicion-fiscal'].indexOf(this.view) !== -1
+		},
+	},
+	created() {
+		/* Se traslada aca desde el ya eliminado components/general/Index.vue: Articulos y Graficos siguen leyendo state.reportes.model (poblado por esta action, que pega contra api/company-performance) para varios de sus graficos, asi que el fetch tiene que seguir disparandose siempre al entrar a Reportes, sin importar la seccion activa. */
+		this.$store.dispatch('reportes/getReportes')
 	},
 }
 </script>

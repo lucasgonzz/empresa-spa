@@ -12,10 +12,10 @@
 					Unidades vendidas
 				</p>
 				<p class="article-sales-stats__hero-value">
-					{{ cantidad_total }}
+					{{ numero_es(cantidad_total) }}
 				</p>
 				<p class="article-sales-stats__hero-meta">
-					{{ total_ventas }} {{ total_ventas === 1 ? 'venta' : 'ventas' }} en el período
+					{{ numero_es(total_ventas) }} {{ total_ventas === 1 ? 'venta' : 'ventas' }} en el período
 				</p>
 			</div>
 		</div>
@@ -41,7 +41,7 @@
 							{{ sucursal.street }}
 						</span>
 						<span class="article-sales-stats__item-value">
-							{{ sucursal.cantidad_ventas }}
+							{{ numero_es(sucursal.cantidad_ventas) }}
 						</span>
 					</div>
 				</div>
@@ -63,7 +63,7 @@
 							{{ empleado.name }}
 						</span>
 						<span class="article-sales-stats__item-value">
-							{{ empleado.cantidad_ventas }}
+							{{ numero_es(empleado.cantidad_ventas) }}
 						</span>
 					</div>
 				</div>

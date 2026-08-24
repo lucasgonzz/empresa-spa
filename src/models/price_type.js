@@ -152,6 +152,12 @@ export default {
 			}
 		},
 	],
+	abm_descripcion: {
+		para_que_sirve: 'Define las listas de precios del negocio (minorista, mayorista, distribuidores, etc.) y cómo se calcula cada una.',
+		implicancias: 'Cada lista aplica un margen por defecto sobre el costo de los artículos que no tengan margen o precio final propio. Al cambiar el margen por defecto podés elegir si se actualizan los artículos ya creados. Las listas se asignan a los clientes, definen qué precio ven en Vender y en la tienda, y pueden ocultarse al público o usarse en Tienda Nube y Mercado Libre.',
+		como_se_utiliza: 'Creá la lista con nombre, posición y margen por defecto. Opcionalmente definí recargos propios de la lista y márgenes específicos por categoría o subcategoría. Después asignásela a los clientes que corresponda.',
+		palabras_clave: ['listas de precios', 'margen', 'ganancia', 'mayorista', 'minorista', 'porcentaje'],
+	},
 	singular_model_name_spanish: 'Tipo de precio',
 	plural_model_name_spanish: 'Tipos de precio',
 	create_model_name_spanish: 'Nuevo tipo de precio',

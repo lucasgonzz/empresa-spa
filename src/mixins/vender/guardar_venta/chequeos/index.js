@@ -6,17 +6,19 @@ import asignar_venta_a_cliente from '@/mixins/vender/guardar_venta/chequeos/asig
 import sale_type from '@/mixins/vender/guardar_venta/chequeos/sale_type'
 import sucursal from '@/mixins/vender/guardar_venta/chequeos/sucursal'
 import afip from '@/mixins/vender/guardar_venta/chequeos/afip'
+import limite_credito from '@/mixins/vender/guardar_venta/chequeos/limite_credito'
 import articulo_pendiente_de_agregar from '@/mixins/vender/articulo_pendiente_de_agregar'
 export default {
 	mixins: [
-		cajas, 
-		article_variants, 
-		payment_methods, 
-		default_articles, 
+		cajas,
+		article_variants,
+		payment_methods,
+		default_articles,
 		asignar_venta_a_cliente,
-		sale_type, 
-		sucursal, 
+		sale_type,
+		sucursal,
 		afip,
+		limite_credito,
 		articulo_pendiente_de_agregar,
 	],
 	methods: {
@@ -62,7 +64,12 @@ export default {
 				return false
 			}
 
-			return true 
+			// Va último porque es el único que depende del total final de la venta.
+			if (!this.check_limite_credito()) {
+				return false
+			}
+
+			return true
 		},
 	}
 }

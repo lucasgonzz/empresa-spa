@@ -4,6 +4,14 @@
 	<div
 	v-if="!loading">
 		
+		<!--
+			tbody-tr-attr le pone a cada fila data-testid="stock-movement-row" mas los datos del
+			movimiento como atributos (data-concepto, data-cantidad, data-stock-resultante,
+			data-deposito-destino). Es la unica forma de verificar por testid que una compra genero
+			su movimiento de stock y que el stock entro al deposito correcto: esta es una b-table
+			armada a mano (no pasa por display/table/Tr.vue), asi que no hereda ninguno de los
+			data-testid genericos de la tabla del sistema.
+		-->
 		<b-table
 		v-if="stock_movements.length"
 		class="s-2 b-r-1 animate__animated animate__fadeIn"
@@ -11,6 +19,7 @@
 		responsive
 		striped
 		id="stock-movement-table"
+		:tbody-tr-attr="row_attrs"
 		:fields="fields"
 		:items="items">
 			
@@ -107,9 +116,12 @@ export default {
 				concepto = this.get_store_model('concepto_stock_movement', model.concepto_stock_movement_id)
 				items.push({
 					concepto: typeof concepto != 'undefined' && concepto !== null ? concepto.name : null,
-					amount: model.amount,
+					// La celda visible va con separadores; los data-* de mas abajo siguen llevando
+					// el valor CRUDO, que es lo que lee la suite e2e (y cualquier cosa que tenga
+					// que hacer una cuenta con esto).
+					amount: this.numero_es(model.amount),
 					article_variant: model.article_variant ? model.article_variant.variant_description : null,
-					stock_resultante: model.stock_resultante,
+					stock_resultante: this.numero_es(model.stock_resultante),
 					provider: this.getRelation('provider', 'provider_id', 'name', model),
 					from_address: this.getRelation('address', 'from_address_id', 'street', model),
 					to_address: this.getRelation('address', 'to_address_id', 'street', model),
@@ -125,6 +137,25 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Atributos de cada <tr> de la tabla de movimientos. Los valores salen del mismo objeto
+		 * `item` que ya arma el computed items(), asi que no pueden divergir de lo que se ve.
+		 *
+		 * @param {Object} item Fila ya armada por items().
+		 * @returns {Object} atributos a poner en el <tr>.
+		 */
+		row_attrs(item) {
+			if (!item) {
+				return {}
+			}
+			return {
+				'data-testid': 'stock-movement-row',
+				'data-concepto': item.concepto,
+				'data-cantidad': item.amount,
+				'data-stock-resultante': item.stock_resultante,
+				'data-deposito-destino': item.to_address,
+			}
+		},
 		btn_text(stock_movement) {
 			if (stock_movement.sale_id && stock_movement.sale) {
 				return 'Venta N° '+stock_movement.sale.num

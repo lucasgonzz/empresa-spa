@@ -67,9 +67,9 @@ export default {
 			.then(chat => {
 				this.$store.commit('auth/setLoading', false)
 				this.$store.commit('auth/setMessage', '')
-				this.$store.commit('whatsapp_chat/setSelectedChatId', chat.id)
-				this.$store.commit('whatsapp_chat/setMessages', [])
-				this.$store.dispatch('whatsapp_chat/getMessages', {chat_id: chat.id, page: 1})
+				// Antes acá se repetía el trío setSelectedChatId + setMessages + getMessages:
+				// ahora la carga la dispara el watch de conversation/Index.vue.
+				this.abrir_chat_whatsapp({chat_id: chat.id})
 				this.$bvModal.hide('whatsapp-new-chat')
 			})
 			.catch(err => {

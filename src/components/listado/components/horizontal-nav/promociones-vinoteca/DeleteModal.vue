@@ -48,7 +48,7 @@ export default {
 	},
 	computed: {
 		label() {
-			return 'Stock para eliminar ('+this.model.stock+' en stock)'
+			return 'Stock para eliminar ('+this.numero_es(this.model.stock)+' en stock)'
 		},
 		fields() {
 			return [

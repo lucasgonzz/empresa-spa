@@ -266,7 +266,17 @@ export default {
                 moneda_id: fresh.moneda_id,
                 cotizacion: fresh.cotizacion,
             }
-            if (Object.prototype.hasOwnProperty.call(fresh, '__row_id')) {
+            /*
+             * El __row_id de una fila que YA existe no se pisa: es su identidad para el :key del
+             * v-for, y cambiarlo hace que Vue destruya y vuelva a crear la fila entera. Este merge
+             * corre tambien cuando el owner cambia la cotizacion del dolar mientras alguien esta
+             * cargando el pago (watcher de owner_dollar_reference), asi que remontar seria sacarle
+             * el foco del input que esta tipeando.
+             *
+             * Solo se toma el del factory cuando la fila no tenia ninguno, para que las filas
+             * viejas tambien terminen con identidad propia.
+             */
+            if (!old_row.__row_id && Object.prototype.hasOwnProperty.call(fresh, '__row_id')) {
                 patch.__row_id = fresh.__row_id
             }
             return Object.assign({}, old_row, patch)

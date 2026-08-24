@@ -7,6 +7,24 @@ export default {
 			is_title: true,
 		},
 		{
+			// Clasifica el origen/motivo del recargo. Los recargos creados automaticamente por el prorrateo de flete de una compra (prompt 264) llegan con este tipo ya asignado
+			text: 'Tipo',
+			key: 'tipo',
+			type: 'select',
+			value: 'otro',
+			options: [
+				{ value: 'transporte', text: 'Transporte' },
+				{ value: 'seguro', text: 'Seguro' },
+				{ value: 'arancel_importacion', text: 'Arancel/Importación' },
+				{ value: 'otro', text: 'Otro' },
+			],
+			descriptions: [
+				'Clasifica el motivo del recargo.',
+				'"Transporte", "Seguro" y "Arancel/Importación" son los tipos que tambien se pueden cargar como costo extra en una orden de compra; si la compra tiene flete, el prorrateo (prompt 264) crea o actualiza automaticamente el recargo del articulo con ese mismo tipo.',
+				'"Otro": cualquier otro recargo cargado manualmente, no se prorratea automaticamente.',
+			],
+		},
+		{
 			text: 'Monto',
 			key: 'amount',
 			type: 'number',

@@ -1,7 +1,8 @@
 import set_employee_vender from '@/mixins/set_employee_vender'
 import inventory_performance from '@/mixins/inventory_performance'
+import cotizacion_dolar from '@/mixins/cotizacion_dolar'
 export default {
-	mixins: [set_employee_vender, inventory_performance],
+	mixins: [set_employee_vender, inventory_performance, cotizacion_dolar],
 	methods: {
 		startMethods() {
 			console.log('llamando startMethods')
@@ -30,7 +31,7 @@ export default {
 
 			// this.get_ultimos_articulos_actualizados()
 
-			// Llamo cada 20 segundos a peidos online
+			// Red de seguridad de los pedidos online + polling de mensajes de compradores
 			this.escuchar_orders_y_messages()
 
 		this.get_inventory_performance()
@@ -39,6 +40,116 @@ export default {
 
 		this.check_synced_version_notifications()
 
+		this.check_excel_analysis_en_curso()
+
+		this.check_escaneo_factura_en_curso()
+
+		// Va ultimo a proposito: es el chequeo que menos urge y el que mas puede tardar,
+		// porque por detras del backend sale a una API de terceros.
+		this.check_cotizacion_dolar()
+
+		},
+		/**
+		 * Recupera el análisis de Excel con IA que el usuario haya dejado corriendo.
+		 *
+		 * El aviso de "terminó" viaja por broadcast, y un broadcast solo le llega a
+		 * quien está conectado en ese momento: si encoló el análisis y cerró la
+		 * pestaña, el evento pasó sin nadie que lo escuche. Esto es lo que cierra ese
+		 * agujero, y es la misma red de seguridad que ya tienen los pedidos online
+		 * frente a una reconexión de Echo.
+		 *
+		 * Tres casos:
+		 *  - terminada y sin ver: se muestra el aviso, igual que si hubiera llegado en vivo.
+		 *  - todavía corriendo: queda en el store, y el aviso llega por broadcast cuando
+		 *    termine. El modal de importación también la usa para retomarla si lo abren.
+		 *  - no hay nada: no pasa nada.
+		 *
+		 * @return {void}
+		 */
+		check_excel_analysis_en_curso() {
+			this.$store.dispatch('excel_analysis/get_en_curso')
+			.then(run => {
+				if (!run) {
+					return
+				}
+
+				if (run.estado !== 'listo' && run.estado !== 'error') {
+					return
+				}
+
+				const contexto = run.contexto || {}
+
+				/*
+				 * Se arma el mismo payload que manda el broadcast, para que el modal de
+				 * aviso no tenga que saber por cuál de los dos caminos llegó.
+				 */
+				this.$store.commit('global_notification/set_excel_analysis', {
+					uuid:              run.uuid,
+					tipo:              run.tipo,
+					estado:            run.estado,
+					error:             run.error,
+					model:             contexto.model,
+					original_filename: contexto.original_filename,
+				})
+
+				this.$bvModal.show('excel-analysis-ready-notification')
+			})
+		},
+		/**
+		 * Deja el escaneo de facturas de compra en condiciones apenas arranca la SPA.
+		 *
+		 * Hace DOS cosas, y la primera es la que importa:
+		 *
+		 *  1. Carga los escaneos pendientes (listos y sin gestionar). 🔴 Es lo que
+		 *     enciende los botones rojos del listado de compras. Sin esto, un escaneo
+		 *     que terminó mientras el usuario no estaba conectado no se ve por ningún
+		 *     lado hasta que llegue otro broadcast — o sea, nunca.
+		 *  2. Recupera el aviso de "terminó" que se haya perdido, igual que
+		 *     check_excel_analysis_en_curso: un broadcast solo le llega a quien está
+		 *     conectado en ese momento, y si mandó el escaneo y cerró la pestaña, el
+		 *     evento pasó sin nadie que lo escuche.
+		 *
+		 * Todo gateado por la extensión: sin ella los endpoints devuelven 403 y no hay
+		 * nada que mostrar.
+		 *
+		 * @return {void}
+		 */
+		check_escaneo_factura_en_curso() {
+			if (!this.hasExtencion('escaneo_factura_compra')) {
+				return
+			}
+
+			this.$store.dispatch('provider_order_scan/get_pendientes')
+
+			this.$store.dispatch('provider_order_scan/get_en_curso')
+			.then(run => {
+				if (!run) {
+					return
+				}
+
+				if (run.estado !== 'listo' && run.estado !== 'error') {
+					return
+				}
+
+				const contexto = run.contexto || {}
+
+				/*
+				 * Se arma el mismo payload que manda el broadcast, para que el modal de
+				 * aviso no tenga que saber por cuál de los dos caminos llegó. Los datos
+				 * de la compra se leen del contexto o de la raíz de la corrida, lo que
+				 * venga: el aviso no se pierde por una clave de más o de menos.
+				 */
+				this.$store.commit('global_notification/set_provider_order_scan', {
+					uuid:               run.uuid,
+					provider_order_id:  run.provider_order_id || contexto.provider_order_id,
+					estado:             run.estado,
+					error:              run.error,
+					cantidad_articulos: contexto.cantidad_articulos,
+					provider_nombre:    contexto.provider_nombre,
+				})
+
+				this.$bvModal.show('provider-order-scan-ready-notification')
+			})
 		},
 		check_synced_version_notifications() {
 			this.$store.dispatch('synced_version_notification/get_pending')
@@ -95,13 +206,28 @@ export default {
 		escuchar_orders_y_messages() {
 			if (this.owner.online) {
 
+				/*
+					🔴 ESTE INTERVALO NO SE BORRA, aunque el aviso de pedido nuevo ya llegue por
+					broadcast (mision 43, 12/8/2026; el canal se escucha en mixins/broadcast.js).
+
+					Bajo de 20 segundos a 5 minutos porque el broadcast hace el trabajo en tiempo
+					real. Sigue existiendo porque es la red de seguridad: si Pusher se cae, si las
+					credenciales de tienda-api y empresa-spa dejan de apuntar a la misma app, o si
+					la pestana pierde la conexion y el navegador no la recupera, el comercio deja
+					de ver los pedidos nuevos y NO SE ENTERA -- no hay error en ningun lado. Un
+					pedido de la tienda que nadie mira es plata perdida.
+
+					Cinco minutos es el peor caso de demora si el broadcast no llega; con el
+					broadcast andando, el aviso es inmediato.
+				*/
 				setInterval(() => {
 					if (this.$route.name != 'online') {
-						
+
 						this.$store.dispatch('order/getUnconfirmedModels')
 					}
-				}, 20000)
+				}, 300000)
 
+				// El polling de mensajes de compradores es otro asunto y queda como estaba.
 				setInterval(() => {
 					if (this.$route.name != 'online') {
 						

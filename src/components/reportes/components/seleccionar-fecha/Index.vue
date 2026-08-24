@@ -3,20 +3,34 @@
 		<b-col cols="12">
 			<div class="date-selector">
 
-				<!-- Control segmentado: mismo patrón visual que horizontal-nav -->
-				<div class="horizontal-nav date-mode-selector">
+				<!--
+					Fila superior: el segmentado a la izquierda y la última actualización a la
+					derecha (misión 33). Antes la info era una segunda b-col de ancho completo
+					colgando abajo de todo, que es lo que hacía que la cabecera de Reportes gastara
+					dos filas para dos datos cortos.
+				-->
+				<div class="date-selector__fila">
+
+					<!-- Control segmentado: mismo patrón visual que horizontal-nav -->
 					<div
-					class="item apretable"
-					:class="{ active: rango_temporal == 'dia-actual' }"
-					@click="set_mode('dia-actual')">
-						Hoy
+					ref="horizontal_nav"
+					class="horizontal-nav date-mode-selector"
+					:class="{ 'has_horizontal_scroll': has_horizontal_scroll }">
+						<div
+						class="item apretable"
+						:class="{ active: rango_temporal == 'dia-actual' }"
+						@click="set_mode('dia-actual')">
+							Hoy
+						</div>
+						<div
+						class="item apretable"
+						:class="{ active: rango_temporal == 'rango-de-fechas' }"
+						@click="set_mode('rango-de-fechas')">
+							Rango de fechas
+						</div>
 					</div>
-					<div
-					class="item apretable"
-					:class="{ active: rango_temporal == 'rango-de-fechas' }"
-					@click="set_mode('rango-de-fechas')">
-						Rango de fechas
-					</div>
+
+					<info-time></info-time>
 				</div>
 
 				<!-- Campos de fecha: solo visibles en modo rango -->
@@ -63,15 +77,18 @@
 
 			</div>
 		</b-col>
-
-		<!-- Información de la última actualización (solo para 'Hoy') -->
-		<info-time></info-time>
 	</b-row>
 </template>
 <script>
+import horizontal_nav_scroll from '@/common-vue/mixins/horizontal_nav_scroll'
+
 export default {
+	mixins: [horizontal_nav_scroll],
 	components: {
-		InfoTime: () => import('@/components/reportes/components/general/select-date/InfoTime'),
+		/* Antes apuntaba a components/general/select-date/InfoTime (duplicado identico, resto de una
+		   migracion anterior). Se corrige para usar el propio sibling de esta carpeta, ya que
+		   components/general/ se elimina por completo en este prompt (grupo 227). */
+		InfoTime: () => import('@/components/reportes/components/seleccionar-fecha/InfoTime'),
 	},
 	computed: {
 		/* El botón Buscar se deshabilita si faltan fechas o el rango es inválido */
@@ -130,9 +147,15 @@ export default {
 
 		/**
 		 * Dispara la búsqueda de reportes con el rango de fechas seleccionado.
+		 * Se piden tanto el reporte legacy (Articulos/Graficos) como los 3 reportes contables
+		 * nuevos del grupo 227 (Estado de Resultados, Flujo de Caja, Posicion Fiscal), ya que las
+		 * 3 secciones nuevas tambien dependen de este mismo selector de rango.
 		 */
 		buscar() {
 			this.$store.dispatch('reportes/getReportes')
+			this.$store.dispatch('reportes/getEstadoResultados')
+			this.$store.dispatch('reportes/getPosicionFiscal')
+			this.$store.dispatch('reportes/getFlujoCaja')
 		},
 	},
 }
@@ -150,10 +173,27 @@ export default {
 	align-items: flex-start
 	gap: 14px
 
+/* Fila superior: segmentado a la izquierda, última actualización a la derecha */
+.date-selector__fila
+	display: flex
+	flex-direction: row
+	align-items: center
+	justify-content: space-between
+	gap: 16px
+	width: 100%
+
+	// En teléfono la info cae debajo del segmentado --ahí sí apilado está bien-- y se alinea a la
+	// izquierda con él.
+	@media screen and (max-width: 768px)
+		flex-direction: column
+		align-items: flex-start
+		gap: 8px
+
 /* Pista gris segmentada — mismos estilos que horizontal-nav, ancho al contenido */
 .date-mode-selector.horizontal-nav
 	display: inline-flex
 	width: fit-content
+	min-width: 0
 	max-width: 100%
 	flex-shrink: 0
 	gap: 6px

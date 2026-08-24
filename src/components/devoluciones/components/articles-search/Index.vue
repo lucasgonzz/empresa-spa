@@ -41,7 +41,7 @@ export default {
 		limpiar_input() {
 			let input = document.getElementById('article')
 			if (input) {
-				input.value = ''
+				this.setInputValueSync(input, '')
 			}
 		},
 	}

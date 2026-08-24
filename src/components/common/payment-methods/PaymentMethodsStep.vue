@@ -3,7 +3,7 @@
         <hr>
         <div
             v-for="(payment_method, index) in payment_methods"
-            :key="payment_method.__row_id"
+            :key="payment_method.__row_id || index"
             class="m-b-20 s-2 payment-method-card"
         >
 
@@ -19,7 +19,14 @@
                 <b-form-group 
                 label="Metodo de pago">
                         
+                    <!--
+                        Los tres controles de una fila de pago (metodo, monto, caja) llevan el
+                        indice en el data-testid porque este bloque se repite: un pago puede
+                        repartirse entre varios metodos ("Agregar metodo de pago"). El primero es
+                        siempre el 0.
+                    -->
                     <b-form-select
+                        :data-testid="'pago-metodo-'+index"
                         :value="payment_method.current_acount_payment_method_id"
                         :options="payment_method_select_options"
                         @change="set_payment_method_id(payment_method, index, $event)"
@@ -77,6 +84,7 @@
                 <div class="cont-pm">
                     <b-form-input
                         class="payment-method-amount"
+                        :data-testid="'pago-monto-'+index"
                         :value="payment_method.amount"
                         placeholder="Monto"
                         inputmode="decimal"
@@ -118,6 +126,7 @@
                 label="Caja"
             >
                 <b-form-select
+                    :data-testid="'pago-caja-'+index"
                     :value="payment_method.caja_id"
                     :options="get_caja_options(payment_method.current_acount_payment_method_id, address_id, resolve_payment_method_moneda_id(payment_method))"
                     @change="update_caja_id(index, $event, payment_method)"

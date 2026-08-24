@@ -182,6 +182,34 @@ const routes = [
         name: 'devoluciones',
         component: () => import('@/views/Devoluciones')
     },
+    {
+        // Vista propia de sugerencias inteligentes de stock (extension
+        // 'sugerencias_inteligentes'). Sin :id muestra el listado; con :id, el
+        // detalle. El gate por extension vive en el menu (routes.js), en el
+        // componente (aviso si no la tiene) y en el backend (403).
+        path: '/sugerencias-de-stock/:id?',
+        name: 'sugerencias_stock',
+        component: () => import('@/views/SugerenciasDeStock')
+    },
+    {
+        // Vista propia de sugerencias de compra a proveedores (extension
+        // 'sugerencias_compras'). Mismo patron que sugerencias-de-stock de arriba:
+        // sin :id muestra el listado; con :id, el detalle. El router no procesa
+        // extensiones: el gate vive en el menu (routes.js), en el componente
+        // (aviso si no la tiene) y en el backend (403).
+        path: '/sugerencias-de-compra/:id?',
+        name: 'sugerencias_compra',
+        component: () => import('@/views/SugerenciasDeCompra')
+    },
+    {
+        // Motor de ofertas por cliente (extension 'motor_de_ofertas'). Sin :id
+        // muestra el listado; con :id, el detalle de esa corrida. El MISMO
+        // componente se monta ademas en /online/promociones (Tienda Online ->
+        // Promociones), que no necesita ruta propia: entra por la de /online.
+        path: '/ofertas/:id?',
+        name: 'ofertas',
+        component: () => import('@/views/Ofertas')
+    },
     // {
     //     path: '/ventas',
     //     name: 'ventas',

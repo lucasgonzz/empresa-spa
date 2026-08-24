@@ -16,7 +16,7 @@ export default [
 		name: 'reportes',
 		can: 'reportes.index',
 		params: {
-			view: 'generales',
+			view: 'estado-de-resultados',
 		},
 	},
 	{
@@ -290,11 +290,56 @@ export default [
 			'order.index',
 			'buyer.index',
 		],
-		/* Badge: pedidos sin confirmar + mensajes de chat sin leer (ver online_menu_alert_count) */
+		/* Badge: pedidos sin confirmar (Mensajes quedó oculto; ver online_menu_alert_count) */
 		budget_function: 'online_menu_alert_count',
 		image_url: 'nuevos-nav-icons/online.png',
 		icon: 'shop',
 		// image_url: 'nav-icons/tienda.png',
+		/*
+			Las secciones se navegan desde acá porque Online.vue ya no monta su nav
+			horizontal (misión "chat IA", 15/8/2026). Los hijos van con `function:` y
+			NO con name 'online' + params: toRoute() (common-vue/mixins/nav.js:141-146)
+			corta con `if (route_name == this.route_name) return`, así que un hijo
+			llamado 'online' no navegaría nunca estando ya adentro de /online — que es
+			justo el caso de uso. Costo conocido y cosmético: los hijos no se pintan
+			"activos" (isActiveRoute compara contra route_name).
+		*/
+		childrens: [
+			{
+				text: 'Clientes',
+				name: 'online_clientes',
+				function: 'ir_a_online_clientes',
+				can: 'buyer.index',
+				icon: 'people',
+			},
+			{
+				text: 'Cupones',
+				name: 'online_cupones',
+				function: 'ir_a_online_cupones',
+				can: 'cupon.index',
+				icon: 'ticket-perforated',
+			},
+			{
+				/*
+					Promociones (motor de ofertas, 15/8/2026): va con `function:` como
+					sus hermanos, por el motivo del comentario de arriba. Es EXACTAMENTE
+					la misma pantalla que IA -> Ofertas, un componente en dos entradas.
+				*/
+				text: 'Promociones',
+				name: 'online_promociones',
+				function: 'ir_a_online_promociones',
+				can: 'buyer.index',
+				/*
+					Sin este gate, un comercio con la extension `online` pero SIN el motor
+					de ofertas ve la entrada en el menu, entra, y se come el cartel de
+					"este modulo requiere la extension" — o sea que le estamos mostrando
+					una funcion que no compro. Su gemela de IA -> Ofertas ya lo tiene, y
+					por eso ahi no pasaba. Lo detecto el chequeo independiente del 15/8/2026.
+				*/
+				if_has_extencion: 'motor_de_ofertas',
+				icon: 'tag',
+			},
+		],
 	},
 	{
 		text: 'WhatsApp',
@@ -399,7 +444,7 @@ export default [
 		text: 'ABM',
 		name: 'abm',
 		params: {
-			view: 'listado',
+			view: 'articulos',
 			sub_view: 'categorias',
 			model_name: 'category',
 		},
@@ -454,5 +499,59 @@ export default [
 		if_has_extencion: 'consultora_de_precios',
 		image_url: 'nav-icons/consulta_precios.png',
 		icon: 'graph-up-arrow',
+	},
+	{
+		/*
+			Módulo padre "IA" (misión "chat IA", 15/8/2026). El `name: 'ia'` es
+			EXPLÍCITO y propio: openItem del NavVertical compara contra route.name y
+			un padre sin name colisionaría. Va con `function:` y no con `path:`
+			porque setRoute() (common-vue/mixins/nav.js:106-140) ejecuta la función
+			antes que cualquier otra rama, y así el padre no necesita una ruta
+			propia en router/index.js.
+
+			Gate (misión "sugerencias de compra", 15/8/2026): ahora hay DOS hijos con
+			extensiones distintas, así que el padre ya NO lleva if_has_extencion
+			(showRoute trataría el array como AND, no OR, y dejaría sin ver "IA" a
+			quien solo tiene una de las dos). En su lugar lleva
+			if_has_alguna_extencion (bloque aditivo de nav.js:showRoute, OR entre
+			extensiones) y cada hijo se gatea solo con su propio if_has_extencion.
+		*/
+		text: 'IA',
+		name: 'ia',
+		function: 'ir_a_modulo_ia',
+		icon: 'stars',
+		if_has_alguna_extencion: ['sugerencias_inteligentes', 'sugerencias_compras', 'motor_de_ofertas'],
+		childrens: [
+			{
+				text: 'Sugerencias',
+				path: '/sugerencias-de-stock',
+				name: 'sugerencias_stock',
+				component: '@/views/SugerenciasDeStock',
+				// Mismo gateo que usa el backend en check_extencion_empresa: sin la
+				// extension, el modulo no aparece en el menu y el flujo viejo de modales
+				// del Listado sigue siendo el unico camino.
+				if_has_extencion: 'sugerencias_inteligentes',
+				icon: 'lightbulb',
+			},
+			{
+				text: 'Compras',
+				path: '/sugerencias-de-compra',
+				name: 'sugerencias_compra',
+				component: '@/views/SugerenciasDeCompra',
+				// Extension propia: es funcionalidad vendible aparte, mismo criterio
+				// que asistente_ia (PLAN §0-bis R8 / INSUMOS-MEDIDOS.md §12).
+				if_has_extencion: 'sugerencias_compras',
+				icon: 'cart-plus',
+			},
+			{
+				// La MISMA pantalla que Tienda Online -> Promociones, no dos vistas.
+				text: 'Ofertas',
+				path: '/ofertas',
+				name: 'ofertas',
+				component: '@/views/Ofertas',
+				if_has_extencion: 'motor_de_ofertas',
+				icon: 'tag',
+			},
+		],
 	},
 ]

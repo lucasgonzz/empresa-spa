@@ -36,35 +36,30 @@ export default {
 		},
 	},
 	methods: {
-		setPreviusSale(sale) {
-			this.loading_index = true 
-			this.$api.get('previus-next-index/sale/'+sale.id)
-			.then(res => {
-				this.loading_index = false
-				
-				if (
-					res.data.actualizandose_por
-					&& res.data.actualizandose_por.id != this.user.id
-				) {
-					this.$toast.error('Se esta actualizando por '+res.data.actualizandose_por.name)
-				} else {
+		/*
+			Abre una venta guardada para actualizarla.
 
-					this.$store.commit('vender/previus_sales/setIndex', res.data.index)
-					this.callGetSale()
-					console.log('redirigiendo a vender')
-					this.$router.push({name: 'vender', params: {view: 'remito'}})
-				}
-			})
-			.catch(err => {
-				this.loading_index = false
-				console.log(err)
-			})
-		},	
-		callGetSale() {
+			Ya no hay round-trip por la posicion de la venta: se llama derecho a la carga por id.
+			El chequeo de `actualizandose_por` que habia aca estaba inerte —el endpoint nunca
+			devolvio ese campo, el codigo que lo devolvia esta comentado en el controlador— y se
+			deja inerte a proposito: hay valores viejos de actualizandose_por_id en produccion y
+			activarlo empezaria a bloquear ventas que no esta editando nadie.
+
+			El flag va ANTES de navegar y de forma sincrona: es lo que le dice a
+			set_default_articles() que hay una venta en camino, y ese guard corre en el created()
+			de Vender.vue, medio segundo antes de que la venta llegue.
+		*/
+		setPreviusSale(sale) {
+			this.$store.commit('vender/previus_sales/set_abriendo_venta_previa', true)
+			this.callGetSale(sale.id)
+			console.log('redirigiendo a vender')
+			this.$router.push({name: 'vender', params: {view: 'remito'}})
+		},
+		callGetSale(sale_id) {
 
 			this.$store.commit('auth/setMessage', 'Cargando venta')
 			this.$store.commit('auth/setLoading', true)
-			this.$store.dispatch('vender/previus_sales/getSale')
+			this.$store.dispatch('vender/previus_sales/getSaleById', sale_id)
 			.then(() => {
 
 				setTimeout(() => {
@@ -88,9 +83,30 @@ export default {
 				}, 500)
 			})
 			.catch(err => {
-				this.$toast.error('Error')
+				/*
+					Antes esto era un console.log y nada mas: la venta no cargaba, VENDER quedaba
+					vacio y el usuario no se enteraba de que habia fallado algo.
+				*/
 				console.log(err)
+				this.$toast.error('No se pudo cargar la venta')
 				this.$store.commit('auth/setLoading', false)
+
+				/*
+					🔴 limpiar_vender() y no solo apagar el flag: al llegar aca el created() de
+					Vender.vue YA corrio y ya se salteo los cinco defaults del comercio -porque
+					para el se estaba abriendo una venta guardada- y ya dejo marcada la venta como
+					inicializada. Si solo se apagara el flag, el operador quedaria en una venta
+					nueva sin lista de precios, sin metodo de pago, sin caja, sin articulos por
+					defecto y sin siempre_omitir_en_cuenta_corriente, y salir del modulo y volver
+					no lo arreglaria: la marca de inicializada ya esta puesta. El caso mas caro es
+					justo el ultimo, porque el comercio terminaria registrando la venta en la
+					cuenta corriente del cliente contra su propia configuracion.
+
+					limpiar_vender() apaga el flag, apaga esa marca y vuelve a aplicar los
+					defaults, que es exactamente el estado al que hay que volver cuando la venta
+					que se pidio abrir no se pudo abrir.
+				*/
+				this.limpiar_vender()
 			})
 		},
 		load_previus_sale_attachments(sale_id) {
@@ -297,6 +313,33 @@ export default {
 
 			// this.setItemsPrices(false, true)
 
+			/*
+				🔴 EL CANJE DE PUNTOS DE LA VENTA QUE SE ESTA EDITANDO. VA ANTES DEL setTotal()
+				DE ABAJO, NO DESPUES.
+
+				setTotal() sin argumento recalcula el total desde los items, y adentro de esa
+				cuenta aplicar_canje_de_puntos() (mixins/vender_set_total.js) lee
+				`vender.descuento_puntos` del store. Si el canje no esta commiteado todavia, ese
+				metodo sale por su early return y EL TOTAL QUEDA BRUTO: abrir una venta con canje
+				para editarla la subia sola --de $58.600 a $73.000-- sin que nadie tocara nada, y
+				el comprobante ya impreso dejaba de coincidir con lo guardado.
+
+				Se commitea siempre, tambien la rama sin canje: limpiar_vender() deja estos dos
+				campos en null, pero cargar una venta sin canje despues de una con canje tiene que
+				limpiarlos igual, y depender de que alguien mas lo haya hecho es como aparecio
+				este bug.
+
+				Number() y no la verdad del valor a secas: son decimal(20,2) de la base y Laravel
+				los serializa como string, asi que un "0.00" seria truthy.
+			*/
+			if (Number(model.puntos_canjeados) > 0) {
+				this.$store.commit('vender/set_puntos_canjeados', Number(model.puntos_canjeados))
+				this.$store.commit('vender/set_descuento_puntos', Number(model.descuento_puntos))
+			} else {
+				this.$store.commit('vender/set_puntos_canjeados', null)
+				this.$store.commit('vender/set_descuento_puntos', null)
+			}
+
 			// this.$store.commit('vender/setTotal')
 			this.setTotal()
 			// Log limpio solo para cambios posteriores a la carga de la venta a editar.
@@ -398,6 +441,13 @@ export default {
 				// Indica si se debe enviar correo al cliente
 				send_mail: this.$store.state.vender.send_mail,
 				dias_alerta_venta_no_cobrada_personalizado: this.$store.state.vender.dias_alerta_venta_no_cobrada_personalizado,
+				/*
+					Canje de puntos. Tienen que viajar SIEMPRE, con valor o en null: el motivo
+					completo esta en el PUT de store/vender/previus_sales.js, que es donde alguien
+					los va a querer sacar por "limpieza".
+				*/
+				puntos_canjeados: this.$store.state.vender.puntos_canjeados,
+				descuento_puntos: this.$store.state.vender.descuento_puntos,
 			})
 			.then(res => {
 				if (sale_id && pending.length) {
@@ -467,6 +517,11 @@ export default {
 				item.pivot = article.pivot
 				item.cost = Number(article.pivot.cost)
 				item.price = Number(article.price)
+				// getPriceVender usa final_price cuando corresponde el precio actual del articulo en vez del
+				// guardado (extension lista_de_precios_por_rango_de_cantidad_vendida). Si no se copia aca queda
+				// undefined y la linea se pinta en $0. Es la causa del bug de precios en 0 de San Cayetano.
+				item.final_price = article.final_price
+				item.final_price_blanco = article.final_price_blanco
 				item.amount = Number(article.pivot.amount)
 				item.article_variant_id = Number(article.pivot.article_variant_id)
 				// Se conserva iva_id para recalcular precio segun iva_aplicado al editar.

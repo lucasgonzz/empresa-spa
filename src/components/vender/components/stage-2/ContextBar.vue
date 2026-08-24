@@ -10,7 +10,8 @@
 		<div class="vender-context-bar__block vender-context-bar__block--total">
 			<span class="vender-context-bar__total-value">{{ total | currency }}</span>
 			<span class="vender-context-bar__sub-value">
-				{{ items.length }} {{ items.length === 1 ? 'producto' : 'productos' }} · {{ total_unidades }} {{ total_unidades === 1 ? 'unidad' : 'unidades' }}
+				<!-- El singular/plural se sigue decidiendo con el valor crudo (total_unidades === 1): el formateo va solo donde se muestra. -->
+				{{ items.length }} {{ items.length === 1 ? 'producto' : 'productos' }} · {{ numero_es(total_unidades) }} {{ total_unidades === 1 ? 'unidad' : 'unidades' }}
 			</span>
 		</div>
 
@@ -93,6 +94,10 @@
 </template>
 
 <script>
+// Se importa con alias: el mixin global ya expone un `numero_es(valor)` de un solo
+// argumento, y este de aca lleva la cantidad de decimales. Dos firmas con el mismo
+// nombre en el mismo archivo es una trampa para el que lo lea en seis meses.
+import { numero_es as numero_es_con_decimales } from '@/common-vue/helpers/formato_numero'
 export default {
 	name: 'ContextBar',
 	filters: {
@@ -104,7 +109,7 @@ export default {
 		 */
 		currency(value) {
 			if (typeof value !== 'number') return '$ 0,00'
-			return '$ ' + value.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+			return '$ ' + numero_es_con_decimales(value, 2)
 		},
 	},
 	data() {
@@ -310,7 +315,7 @@ export default {
 		 */
 		format_price(value) {
 			if (typeof value !== 'number') return '$ 0,00'
-			return '$ ' + value.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+			return '$ ' + numero_es_con_decimales(value, 2)
 		},
 
 		/**

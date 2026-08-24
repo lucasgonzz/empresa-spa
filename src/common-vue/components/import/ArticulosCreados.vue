@@ -94,7 +94,7 @@ export default {
 
 		    // Caso 1: dif directo (ej: cost)
 		    if (diff && typeof diff === 'object') {
-		      lines.push(`<b>${this.prettyName(key)}:</b> ${diff.old} → <span class="text-success">${diff.new}</span>`)
+		      lines.push(`<b>${this.prettyName(key)}:</b> ${this.formatearNumero(diff.old)} → <span class="text-success">${this.formatearNumero(diff.new)}</span>`)
 		      return
 		    }
 
@@ -122,13 +122,13 @@ export default {
 			    const diffMax = addr.__diff__max
 
 			    if (diffAmount) {
-			      subLines.push(`Stock: ${diffAmount.old} → <span class="text-success">${diffAmount.new}</span>`)
+			      subLines.push(`Stock: ${this.formatearNumero(diffAmount.old)} → <span class="text-success">${this.formatearNumero(diffAmount.new)}</span>`)
 			    }
 			    if (diffMin) {
-			      subLines.push(`Mínimo: ${diffMin.old} → <span class="text-success">${diffMin.new}</span>`)
+			      subLines.push(`Mínimo: ${this.formatearNumero(diffMin.old)} → <span class="text-success">${this.formatearNumero(diffMin.new)}</span>`)
 			    }
 			    if (diffMax) {
-			      subLines.push(`Máximo: ${diffMax.old} → <span class="text-success">${diffMax.new}</span>`)
+			      subLines.push(`Máximo: ${this.formatearNumero(diffMax.old)} → <span class="text-success">${this.formatearNumero(diffMax.new)}</span>`)
 			    }
 
 			    // Si hay algo para mostrar, agregamos el bloque HTML
@@ -154,7 +154,7 @@ export default {
 		            const field = k.replace('__diff__', '')
 		            const diff = pt[k]
 		            const label = this.prettyPriceField(field)
-		            return `&nbsp;&nbsp;${label}: ${diff.old ?? '—'} → <span class="text-success">${diff.new ?? '(S/A)'}</span>`
+		            return `&nbsp;&nbsp;${label}: ${this.formatearNumero(diff.old) ?? '—'} → <span class="text-success">${this.formatearNumero(diff.new) ?? '(S/A)'}</span>`
 		          })
 
 		        if (diffs.length) {
@@ -166,7 +166,7 @@ export default {
 
 		    // Caso 5: valor plano (por compatibilidad)
 		    if (typeof value !== 'object') {
-		      lines.push(`<b>${this.prettyName(key)}:</b> ${value}`)
+		      lines.push(`<b>${this.prettyName(key)}:</b> ${this.formatearNumero(value)}`)
 		    }
 
 			// Caso 6: descuentos y recargos
@@ -185,20 +185,20 @@ export default {
 			        const oldVals = (diff.old || [])
 			          .map(v => {
 			            if (v && typeof v === 'object') {
-			              const val = v.value ?? v
+			              const val = this.formatearNumero(v.value ?? v)
 			              return v.final ? `${val}F` : val
 			            }
-			            return v
+			            return this.formatearNumero(v)
 			          })
 			          .join('-') || '—'
 
 			        const newVals = (diff.new || [])
 			          .map(v => {
 			            if (v && typeof v === 'object') {
-			              const val = v.value ?? v
+			              const val = this.formatearNumero(v.value ?? v)
 			              return v.final ? `${val}F` : val
 			            }
-			            return v
+			            return this.formatearNumero(v)
 			          })
 			          .join('-') || '—'
 
@@ -247,11 +247,28 @@ export default {
 		 * decimales innecesarios (ej: "1.00" -> "1").
 		 */
 		formatearNumero(valor) {
+		  // 🔴 Por aca pasa CUALQUIER prop del articulo: un costo, un stock, un porcentaje y
+		  // tambien texto (nombres, codigos de barras, categorias). Lo que no es un numero se
+		  // devuelve tal cual: darle vuelta los puntos y las comas a una palabra la rompe.
+		  if (valor === null || valor === '' || typeof valor == 'undefined' || typeof valor == 'boolean') {
+		    return valor
+		  }
 		  const numero = Number(valor)
 		  if (isNaN(numero)) return valor
+		  /*
+		    🔴 No alcanza con "es un numero": un codigo de barras (7791234567890) y un codigo de
+		    proveedor tambien lo son, y saldrian 7.791.234.567.890. Es el mismo problema del CUIT
+		    que propertyText() evita en common-vue/mixins/generals.js, y se resuelve igual: solo
+		    es una MEDIDA lo que trae punto decimal. Las columnas decimal de la base (costo, stock,
+		    porcentaje) llegan como "1500.0000"; los codigos e identificadores llegan sin punto.
+		  */
+		  if (String(valor).indexOf('.') < 0) {
+		    return valor
+		  }
 		  // Number(-1.00).toString() ya devuelve "-1": alcanza para quitar
 		  // los ceros/decimales sobrantes que trae el valor crudo del backend.
-		  return numero.toString()
+		  // Encima van los separadores de la interfaz: 1234.5 -> 1.234,5
+		  return this.numero_es(numero.toString())
 		},
 
 		prettyPriceField(field) {

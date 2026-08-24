@@ -99,6 +99,21 @@ export default {
         payment_method_factory() {
             // Este objeto es el mismo “default” que vos ya usabas (incluye cheque/tarjeta)
             return {
+                /*
+                 * Identificador propio de la fila, para el :key del v-for de PaymentMethodsStep.
+                 *
+                 * 🔴 Sin esto, TODAS las filas se renderizan con :key undefined. Con un solo metodo
+                 * de pago no se nota, pero al agregar el segundo Vue 2 reutiliza los nodos entre
+                 * filas y los selects (metodo, moneda y sobre todo CAJA) se mezclan: el usuario
+                 * elegia la caja en pesos del segundo metodo y terminaba sin impactar. Reportado el
+                 * 21/8/2026 sobre una cuenta corriente en dolares pagada con efectivo en dolares +
+                 * efectivo en pesos.
+                 *
+                 * El factory de vender (components/vender/modals/payment-methods/Index.vue) ya lo
+                 * definia; este se habia quedado sin el.
+                 */
+                __row_id: Date.now() + '_' + Math.random().toString(16).slice(2),
+
                 current_acount_payment_method_id: 3,
                 amount: '',
                 bank: '',

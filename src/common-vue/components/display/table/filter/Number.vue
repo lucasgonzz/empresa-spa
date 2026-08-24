@@ -1,31 +1,32 @@
 <template>
-	<div 
+	<div
 	v-if="field.type == 'number'"
 	class="numbers">
-		<b-form-group>
+		<b-form-group label="Menor que">
 			<b-form-input
 			@keyup="setFilters"
 			@keyup.enter="filtrar"
 			v-model="filter.menor_que"
 			:id="filter.key+'_menor_que'"
-			type="number"
-			placeholder="Menor que"></b-form-input>
-			
+			type="number"></b-form-input>
+		</b-form-group>
+
+		<b-form-group label="Igual que">
 			<b-form-input
 			@keyup.enter="filtrar"
 			@keyup="setFilters"
 			v-model="filter.igual_que"
 			:id="filter.key+'_igual_que'"
-			type="number"
-			placeholder="Igual que"></b-form-input>
-			
+			type="number"></b-form-input>
+		</b-form-group>
+
+		<b-form-group label="Mayor que">
 			<b-form-input
 			@keyup.enter="filtrar"
 			@keyup="setFilters"
 			v-model="filter.mayor_que"
 			type="number"
-			:id="filter.key+'_mayor_que'"
-			placeholder="Mayor que"></b-form-input>
+			:id="filter.key+'_mayor_que'"></b-form-input>
 		</b-form-group>
 	</div>
 </template>

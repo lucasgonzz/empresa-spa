@@ -43,7 +43,30 @@ export default {
 		},
 	},
 	methods: {
-		set_caja_por_defecto() {
+		/**
+		 * Asigna la caja por defecto del metodo de pago y la sucursal a una venta NUEVA.
+		 *
+		 * @param {boolean} force_reset true: accion explicita, aplica igual en edicion.
+		 */
+		set_caja_por_defecto(force_reset = false) {
+
+			/*
+				Una venta guardada trae su caja y no se le cambia por atras.
+
+				Se lee el getter del store y no un computed: este mixin no incluye
+				mixins/vender/computed, asi que `this.editando_venta_previa` seria undefined y el
+				guard no cortaria nunca — que es exactamente el modo de falla silencioso que esta
+				mision viene a cerrar.
+
+				Ojo con los watchers de arriba: hoy no disparan nunca, porque la clave del objeto
+				que define esos computed esta escrita `comptued` (linea 34) y las tres propiedades
+				que observan no existen. Es un typo previo a esta mision y no se toca aca:
+				arreglarlo activaria tres watchers que llevan tiempo muertos, que es un cambio de
+				comportamiento y no una correccion de una linea.
+			*/
+			if (!force_reset && (this.$store.getters['vender/previus_sales/editando_venta_previa'] || !!this.$store.state.vender.budget)) {
+				return
+			}
 
 			console.log('---------------------')
 			console.log('set_caja_por_defecto')

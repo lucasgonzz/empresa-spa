@@ -3,6 +3,12 @@
 		<!-- <edit-article></edit-article> -->
 		<import></import>
 
+		<!-- Escaneo de facturas de compra con IA (mision escaneo-factura-compra):
+		el modal de subida y el de revision viven aca, al lado del de importacion,
+		porque los dos trabajan sobre la compra que dejo seleccionada la fila. -->
+		<scan-invoice></scan-invoice>
+		<scan-invoice-review></scan-invoice-review>
+
 		<price-description></price-description>
 
 		<view-component 
@@ -25,6 +31,7 @@
 		<template v-slot:table_left_options="props">
 			<btn-export :model="props.model" />	
 			<btn-import :model="props.model" />
+			<btn-scan-invoice :model="props.model" />
 			<btn-view-received-diff :model="props.model" />
 		</template>
 
@@ -35,7 +42,13 @@
 			<template #iva_breakdown="props">
 				<iva-breakdown></iva-breakdown>
 			</template>
-			
+
+			<!-- Prompt 611: reemplaza el checkbox generico de "precios_incluyen_iva" por un control
+			con descripcion permanente debajo (ver PreciosIncluyenIva.vue) -->
+			<template #precios_incluyen_iva="props">
+				<precios-incluyen-iva></precios-incluyen-iva>
+			</template>
+
 		</view-component>
 	</div>
 </template>
@@ -49,10 +62,17 @@ export default {
 		BtnExport: () => import('@/components/provider/components/orders/BtnExport'),
 		BtnImport: () => import('@/components/provider/components/orders/BtnImport'),
 		BtnViewReceivedDiff: () => import('@/components/provider/components/orders/BtnViewReceivedDiff'),
+		// Escaneo de facturas de compra con IA (mision escaneo-factura-compra)
+		BtnScanInvoice: () => import('@/components/provider/components/orders/BtnScanInvoice'),
+		ScanInvoice: () => import('@/components/provider/modals/orders/ScanInvoice'),
+		ScanInvoiceReview: () => import('@/components/provider/modals/orders/ScanInvoiceReview'),
 		IvaBreakdown: () => import('@/components/provider/components/orders/IvaBreakdown'),
 		NavComponent: () => import('@/components/provider/components/orders/nav/Index'),
 		Total: () => import('@/components/provider/components/orders/Total'),
 		PriceDescription: () => import('@/components/provider/modals/orders/PriceDescription'),
+		// Prompt 611: control de costos brutos/netos de la compra ("precios_incluyen_iva"), con
+		// descripcion permanente
+		PreciosIncluyenIva: () => import('@/components/provider/components/orders/PreciosIncluyenIva'),
 	},
 	computed: {
 		show_previus_days() {

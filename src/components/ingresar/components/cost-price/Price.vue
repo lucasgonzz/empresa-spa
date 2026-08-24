@@ -42,26 +42,24 @@
 	</b-col>
 </template>
 <script>
+import { usa_margen_del_articulo, usa_precio_manual } from '@/utils/criterio_de_precio'
+
 export default {
 	props: ['article'],
 	computed: {
+		/*
+		 * Mision 44: mismo criterio que el back (utils/criterio_de_precio.js). Antes
+		 * alcanzaba con que el campo no fuera null ni cadena vacia, asi que un 0 guardado
+		 * bloqueaba el otro input y el articulo quedaba sin forma de cambiarle el precio.
+		 * Estos dos computed no los nombraba la mision, pero bloquean los mismos dos
+		 * inputs con el mismo criterio equivocado.
+		 */
 		disabled_percetange_gain() {
-			if (this.article.price == null) {
-				return false
-			}
-			if (this.article.price == '') {
-				return false
-			}
-			return true
+			return usa_precio_manual(this.article)
 		},
 		price_disabled() {
 			if (this.hasExtencion('articles.percentage_gain')) {
-				if (this.article.percentage_gain == null && this.article.percentage_gain == '') {
-					return false
-				} else if (this.article.percentage_gain == '' || this.article.percentage_gain == null) {
-					return false
-				}
-				return true
+				return usa_margen_del_articulo(this.article)
 			}
 			return false
 		},

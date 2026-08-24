@@ -47,6 +47,22 @@ export default {
 		},
 		{
 			/**
+			 * Origen preferente de reposicion para las sugerencias inteligentes de
+			 * stock (columna addresses.es_deposito_origen). Es un concepto distinto
+			 * de default_address (que solo preselecciona el destino en algunos
+			 * formularios): aca se marca desde donde conviene sacar mercaderia
+			 * cuando el sistema sugiere movimientos entre sucursales. Puede haber
+			 * varias sucursales marcadas, o ninguna (y todo funciona como siempre).
+			 */
+			text: 'Deposito de origen para sugerencias',
+			key: 'es_deposito_origen',
+			type: 'checkbox',
+			value: 0,
+			if_has_extencion: 'sugerencias_inteligentes',
+			description: 'Si se marca, las sugerencias inteligentes de stock van a preferir esta sucursal como origen de los movimientos. Si ninguna sucursal esta marcada, el origen se elige por stock como siempre.',
+		},
+		{
+			/**
 			 * Vincula la sucursal con el afip_information que se usa por defecto al facturar
 			 * ventas en negro desde acá (prompt 440, columna default_afip_information_id
 			 * agregada en el prompt 438). Las opciones son SOLO los afip_information que
@@ -69,7 +85,28 @@ export default {
 				'Cuando se hace una venta en negro desde esta sucursal y no se especifica la información de facturación, los datos fiscales del comprobante (razón social, domicilio, CUIT, ingresos brutos, etc.) se toman del afip_information que elijas acá. Si lo dejás vacío, se usa la facturación por defecto del negocio.',
 			],
 		},
+		{
+			/**
+			 * Logo propio de la sucursal (columna addresses.image_url, tarea 17).
+			 * La subida la resuelve el endpoint generico set-image/{prop}, el mismo que
+			 * usa la imagen de una marca (src/models/brand.js): por eso alcanza con
+			 * declarar type: 'image' y no hay nada de carga de archivos aca.
+			 */
+			text: 'Logo',
+			key: 'image_url',
+			type: 'image',
+			value: '',
+			descriptions: [
+				'Si cargás un logo acá, se usa en los comprobantes de esta sucursal en lugar del logo del negocio. Si lo dejás vacío, se sigue usando el logo del negocio.',
+			],
+		},
 	],
+	abm_descripcion: {
+		para_que_sirve: 'Registra las sucursales y depósitos del negocio con sus datos de contacto.',
+		implicancias: 'Las sucursales estructuran gran parte del sistema: el stock se maneja por sucursal, las ubicaciones de artículos pertenecen a una sucursal, las cajas por defecto pueden diferenciarse por sucursal y cada una puede tener su facturación ARCA por defecto. El depósito por defecto es el que se ofrece al cargar artículos.',
+		como_se_utiliza: 'Creá cada sucursal con nombre, domicilio y contacto. Marcá una como depósito por defecto y, si corresponde, asignale su punto de venta ARCA por defecto.',
+		palabras_clave: ['deposito', 'locales', 'domicilio', 'puntos de venta'],
+	},
 	singular_model_name_spanish: 'Sucursal',
 	plural_model_name_spanish: 'Sucursales',
 	create_model_name_spanish: 'Nueva',

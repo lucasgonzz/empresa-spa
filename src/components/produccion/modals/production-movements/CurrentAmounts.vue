@@ -30,7 +30,7 @@ id="current-amounts">
 					class="result">
 						{{ result.order_production_status.name }}
 						<span>
-							{{ result.current_amount }}
+							{{ numero_es(result.current_amount) }}
 						</span>	
 					</p>
 					<hr>
@@ -41,7 +41,7 @@ id="current-amounts">
 						Total
 					</strong>
 					<span>
-						{{ total }}
+						{{ numero_es(total) }}
 					</span>
 				</p>
 			</div>

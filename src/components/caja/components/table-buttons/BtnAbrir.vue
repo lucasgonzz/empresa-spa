@@ -1,20 +1,24 @@
 <template>
-	<div
-	class="m-l-10">
-		<btn-loader
-		v-if="caja.abierta"
-		:loader="loading"
-		variant="danger"
-		@clicked="cerrar"
-		text="Cerrar"></btn-loader>
+	<!--
+		v-if/v-else en la raiz: para Vue 2 sigue siendo un unico nodo raiz. El <div class="m-l-10">
+		que los envolvia se saco a proposito (grupo 371): el espaciado entre botones ahora lo pone
+		el `gap` del contenedor table-buttons/Index.vue.
+	-->
+	<btn-accion
+	v-if="caja.abierta"
+	icono="bi bi-lock"
+	texto="Cerrar"
+	tono="cerrar"
+	:loader="loading"
+	@clicked="cerrar"></btn-accion>
 
-		<btn-loader
-		v-else
-		:loader="loading"
-		variant="success"
-		@clicked="abrir"
-		text="Abrir"></btn-loader>
-	</div>
+	<btn-accion
+	v-else
+	icono="bi bi-unlock"
+	texto="Abrir"
+	tono="abrir"
+	:loader="loading"
+	@clicked="abrir"></btn-accion>
 </template>
 <script>
 export default {
@@ -22,7 +26,7 @@ export default {
 		caja: Object,
 	},
 	components: {
-		BtnLoader: () => import('@/common-vue/components/BtnLoader'),
+		BtnAccion: () => import('@/components/caja/components/table-buttons/BtnAccion'),
 	},
 	data() {
 		return {

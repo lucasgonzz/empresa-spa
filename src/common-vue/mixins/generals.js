@@ -4,6 +4,7 @@ import numeral from 'numeral'
 import VueScreenSize from 'vue-screen-size'
 import generals_computed from '@/common-vue/mixins/generals/computed'
 import generals_formatting from '@/common-vue/mixins/generals/formatting'
+import { separadores_es, separadores_es_desde_dato } from '@/common-vue/helpers/formato_numero'
 import generals_model_meta from '@/common-vue/mixins/generals/model-meta'
 // Función reusada para armar las opciones del selector de PDF a imprimir en la factura
 // (mismo vocabulario que el atajo de impresión de Vender).
@@ -143,6 +144,29 @@ export default {
 		},  
 	},
 	methods: {
+		/**
+		 * Escribe un valor en un input del DOM avisandole a Vue.
+		 *
+		 * Existe porque asignar `input.value` a mano NO dispara ningun evento: un input con v-model
+		 * sigue teniendo su valor viejo en el estado del componente, y el proximo re-render lo vuelve a
+		 * pintar en pantalla, deshaciendo el cambio. El evento 'input' es exactamente lo que v-model
+		 * escucha, asi que despacharlo deja las dos puntas sincronizadas.
+		 *
+		 * Caso real que lo origino (5/8/2026): en Vender, despues de agregar un articulo, el criterio de
+		 * busqueda volvia a aparecer solo en el buscador por nombre.
+		 *
+		 * @param {HTMLElement|null} input - El input a escribir. Si es null no hace nada.
+		 * @param {String} value - Valor a dejar en el input.
+		 */
+		setInputValueSync(input, value) {
+			if (!input) {
+				return
+			}
+
+			input.value = value
+
+			input.dispatchEvent(new Event('input', { bubbles: true }))
+		},
 		html_text(text) {
 			return text.replace(/\n/g, '<br>');
 		},
@@ -835,6 +859,12 @@ export default {
 					} else {
 						value = this.price(value)
 					}
+				} else if (prop.is_stock && value !== null && value !== '' && typeof value != 'undefined' && !isNaN(Number(value))) {
+					// Las columnas de stock por deposito se declaran con `function` y una key que no
+					// existe en el model (`address_5`). La funcion devuelve el valor crudo a
+					// proposito —TableComponent lo necesita numerico para decidir el color de la
+					// celda—, asi que los separadores se los ponemos aca, que es el borde de display.
+					value = separadores_es_desde_dato(value)
 				}
 				value = this._check_moneda(value, prop, model, from_pivot, pivot_parent_model)
 
@@ -888,7 +918,34 @@ export default {
 
 					return null
 				} else {
-					return 'S/A'
+					// Celda vacia y no 'S/A' (mision 33, pedido de Lucas): una relacion sin valor no
+					// es informacion, y "S/A" ensuciaba la columna Proveedor de cualquier listado con
+					// articulos sueltos.
+					//
+					// Se reviso ANTES quien llama a propertyText(), porque un cambio de valor de
+					// retorno aca se ve lejos: son diez llamadores y los diez son de presentacion en
+					// pantalla --las tablas (Tr.vue, TableComponent.vue, PivotProp.vue,
+					// TablePivotPropsToSet.vue), las tarjetas (CardComponent.vue), el ModelForm y el
+					// modal de precio final--. Los tres que arman objetos en vez de imprimir texto
+					// (TableComponent items(), remito/ArticlesTable table_items() y
+					// alertas/.../ListArticles table_items()) alimentan un `:items` de b-table, o sea
+					// tambien pantalla. Ningun Excel ni PDF pasa por aca: esos los arma el backend y
+					// el SPA solo descarga el blob.
+					//
+					// 🔴 Y hubo que tocar UNA cosa mas por este cambio, que la verificacion encontro:
+					// ModelForm.vue decidia con `v-if="propertyText(...) != '' || propertyText(...)
+					// == 0"`, y en JS `'' == 0` es TRUE --el string vacio coerciona a 0--, asi que la
+					// cadena vacia seguia entrando por el `v-if` y renderizaba un <span> vacio adentro
+					// de la pildora gris de .model-form__only-show: un recuadro de 34px sin nada,
+					// justo cuando ese componente ya tenia un "Sin datos" preparado para el caso. Se
+					// cambio a `=== 0`, que sigue cubriendo el valor numerico cero (el motivo por el
+					// que esa condicion existe) y deja caer la cadena vacia al else.
+					//
+					// Otros dos efectos, estos si buscados: en las tarjetas
+					// (display/cards/CardComponent.vue) el segundo renglon del titulo desaparece
+					// cuando esa relacion esta vacia --antes decia "S/A"--, y el placeholder de las
+					// celdas editables de TableComponent queda vacio.
+					return ''
 				}
 			}
 			if (from_pivot) {
@@ -997,10 +1054,45 @@ export default {
 				return this.strip_html(model[prop.key])
 			}
 			// Números con decimales variables (ej. costo en compras: 2 o 4 según uso real).
+			// Va la version _display, que es la que lleva separadores argentinos. La otra devuelve
+			// valor de dato y alimenta el guardado del pivot: no se usa para mostrar.
 			if (prop.type == 'number' && prop.variable_decimals) {
 				const min_decimals = prop.variable_decimals.min != null ? prop.variable_decimals.min : 2
 				const max_decimals = prop.variable_decimals.max != null ? prop.variable_decimals.max : 4
-				return this.format_number_variable_decimals(model[prop.key], min_decimals, max_decimals)
+				return this.format_number_variable_decimals_display(model[prop.key], min_decimals, max_decimals)
+			}
+			/*
+				Numeros sin `is_price` ni `variable_decimals`: stock, cantidades, porcentajes.
+				Hasta el 21/8/2026 caian en el `return model[prop.key]` de mas abajo y se veian
+				crudos, con el punto decimal con el que los manda Laravel ("1500.00", "25.00").
+
+				🔴 EL `if` DEL PUNTO NO ES UNA OPTIMIZACION, ES LO QUE EVITA ROMPER LOS
+				IDENTIFICADORES. En los models `type: 'number'` esta usado para dos cosas que no
+				tienen nada que ver: cantidades medibles y numeros que IDENTIFICAN algo (cuit, cuil,
+				dni, sale.num, punto de venta de AFIP, ids, posiciones, dias, milimetros). Formatear
+				todo `type: 'number'` en bloque haria que un CUIT se muestre 20.123.456.789.
+
+				El discriminador sale de los tipos reales de la base (medidos el 21/8/2026 sobre
+				empresa_testing_s8):
+				  - cantidades y porcentajes son columnas `decimal` -> Laravel las serializa como
+				    string CON punto decimal ("1500.00", "25.00")
+				  - los identificadores son `int` o `varchar` -> nunca traen punto
+
+				O sea: si tiene punto decimal, es una medida y se formatea. Si no, se deja como
+				esta. Es conservador a proposito — prefiere no formatear una cantidad guardada como
+				entero antes que arruinar un CUIT. Esos casos sueltos se arreglan en su componente.
+
+				No cambia CUANTOS decimales se ven: se pidio cambiar los separadores, no la
+				precision.
+			*/
+			if (prop.type == 'number') {
+				const valor_numerico = model[prop.key]
+				const es_medida = (typeof valor_numerico == 'string')
+					&& valor_numerico.indexOf('.') >= 0
+					&& !isNaN(Number(valor_numerico))
+				if (es_medida) {
+					return separadores_es_desde_dato(valor_numerico)
+				}
 			}
 			// Select con options declaradas en el model: muestra texto amigable en tablas/listados.
 			if (prop.type == 'select') {
@@ -1312,6 +1404,137 @@ export default {
 			return build_vender_facturado_print_select_options(profiles)
 		},
 		/**
+		 * Chequeo previo al guardado del formulario de un pedido online: no se avanza el estado
+		 * sin haber indicado el deposito.
+		 *
+		 * 🔴 Es el reemplazo del `disabled()` que tenia `BtnStatus.vue` ("Indique el deposito para
+		 * poder continuar"), que se fue con el boton el 22/8/2026. Sin esto, confirmar un pedido
+		 * sin `address_id` crea la venta con el deposito en null y los movimientos de stock salen
+		 * contra un deposito inexistente: el stock por deposito queda mal y nadie avisa.
+		 *
+		 * Se mantiene la MISMA fuerza que tenia el boton —bloquear solo cuando el estado avanza, y
+		 * solo si el comercio tiene depositos cargados— y no mas. Bloquear cualquier guardado
+		 * dejaria imposible de editar un pedido viejo sin deposito, y llevarlo al backend como 422
+		 * seria una regla nueva que Lucas no pidio (se probo: rechaza pedidos que hoy el sistema
+		 * acepta).
+		 *
+		 * Se engancha con la prop `save_check_function` del modal del modelo, que es el mecanismo
+		 * que el propio formulario generico ya tiene para esto.
+		 *
+		 * @returns {Boolean} false corta el guardado y deja el aviso en el alert del modal.
+		 */
+		check_pedido_puede_avanzar_de_estado() {
+			/** Depositos cargados en el comercio. Sin ninguno, el campo no aplica. */
+			let hay_depositos = this.$store.state.address.models.length
+
+			if (!hay_depositos || this.model.address_id) {
+				return true
+			}
+
+			/** Estado en el que el pedido estaba cuando se abrio el formulario. */
+			let estado_previo = this.model.order_status ? this.model.order_status : null
+
+			// Sin saber de donde viene no se bloquea: el backend valida igual la transicion.
+			if (!estado_previo) {
+				return true
+			}
+
+			/** El usuario no toco el estado: es un guardado de otro campo, se deja pasar. */
+			if (estado_previo.id == this.model.order_status_id) {
+				return true
+			}
+
+			/** Nombre del estado nuevo, resuelto contra el store. */
+			let estado_nuevo = (this.$store.state.order_status.models || []).find(estado => {
+				return estado.id == this.model.order_status_id
+			})
+
+			// Cancelar no necesita deposito: no nace ninguna venta ni se mueve stock.
+			if (estado_nuevo && estado_nuevo.name == 'Cancelado') {
+				return true
+			}
+
+			this.setSaveCheckAlert('Indique el deposito para poder continuar')
+
+			return false
+		},
+		/**
+		 * Opciones del select "Estado" de un pedido online: solo las transiciones que el backend
+		 * va a aceptar.
+		 *
+		 * 🔴 Espeja la maquina de estados de `OrderStatusHelper` en empresa-api, que es la fuente
+		 * de verdad: el backend devuelve 422 igual si le llega algo invalido. Esto es para que el
+		 * usuario no llegue a elegir una opcion que va a ser rechazada, no para reemplazar la
+		 * validacion. Si las dos se separan, manda el backend.
+		 *
+		 * La regla: se puede avanzar (salteando si hace falta) o cancelar. Nunca volver para
+		 * atras. "Entregado" y "Cancelado" son terminales. El estado ACTUAL siempre esta en la
+		 * lista, porque el formulario reenvia el modelo entero al guardar cualquier otro campo y
+		 * un select sin su propio valor se ve vacio.
+		 *
+		 * ⚠️ Todo se resuelve por NOMBRE: `order_statuses` no tiene ids garantizados entre
+		 * instalaciones.
+		 *
+		 * @param {Object} prop - Definicion del campo (no se usa, va por la firma comun).
+		 * @param {Object} model - El pedido que se esta editando.
+		 * @returns {Array<{value: number, text: string}>}
+		 */
+		get_order_status_options(prop, model) {
+			/** Los estados de avance, en orden. La posicion define que es "avanzar". */
+			let avance = ['Sin confirmar', 'Confirmado', 'Terminado', 'Entregado']
+			/** Los dos estados desde los que ya no se sale. */
+			let terminales = ['Entregado', 'Cancelado']
+
+			/** Todas las filas de order_statuses que tiene el store. */
+			let estados = this.$store.state.order_status.models || []
+
+			/** Nombre del estado en el que esta el pedido ahora. */
+			let actual = null
+			if (model && model.order_status && model.order_status.name) {
+				actual = model.order_status.name
+			} else if (model && model.order_status_id) {
+				let encontrado = estados.find(estado => estado.id == model.order_status_id)
+				actual = encontrado ? encontrado.name : null
+			}
+
+			// Sin saber donde esta parado no se puede filtrar nada sin riesgo de dejarlo sin
+			// opciones: se devuelven todas y que decida el backend.
+			if (!actual) {
+				return estados.map(estado => {
+					return { value: estado.id, text: estado.name }
+				})
+			}
+
+			/** Posicion del estado actual en la cadena de avance (-1 si es Cancelado). */
+			let pos_actual = avance.indexOf(actual)
+
+			let options = []
+
+			estados.forEach(estado => {
+				/** Si esta opcion se puede elegir desde el estado actual. */
+				let vale = false
+
+				if (estado.name == actual) {
+					// El estado actual siempre entra: es el valor que el select ya tiene puesto.
+					vale = true
+				} else if (terminales.indexOf(actual) != -1) {
+					// Desde un terminal no se sale a ningun lado.
+					vale = false
+				} else if (estado.name == 'Cancelado') {
+					vale = true
+				} else {
+					let pos_estado = avance.indexOf(estado.name)
+					vale = pos_estado != -1 && pos_actual != -1 && pos_estado > pos_actual
+				}
+
+				if (vale) {
+					options.push({ value: estado.id, text: estado.name })
+				}
+			})
+
+			return options
+		},
+		/**
 		 * Opciones del selector "Facturación por defecto (ventas en negro)" del formulario
 		 * de sucursal (address.default_afip_information_id, prompt 440). A diferencia de un
 		 * select genérico por store, acá SOLO se listan los afip_information que pertenecen a
@@ -1346,6 +1569,48 @@ export default {
 					text,
 				})
 			})
+
+			return options
+		},
+		/**
+		 * Tarea 4 — opciones del select "Opciones de redondeo" de la configuración de la cuenta
+		 * (user.modo_redondeo). Reemplaza a las cuatro tildes sueltas de redondeo.
+		 *
+		 * El orden es de paso más grande a más chico, que es como lo lee el cliente. NO es el orden
+		 * en que están los `if` de ArticleHelper::redondear(), que aplica el de a 50 después del de
+		 * a 10.
+		 *
+		 * Los textos dicen "al más cercano" contra "siempre hacia arriba", y aclaran el mínimo de
+		 * $100 de la opción de centenas, porque son diferencias reales de comportamiento entre
+		 * opciones que ahora conviven en la misma lista: viéndolas juntas cualquiera asume que
+		 * funcionan igual, y no funcionan igual.
+		 *
+		 * @param {Object} prop - Definición declarativa del campo (no se usa; va por firma común de dynamic_options_function).
+		 * @param {Object} model - Instancia de user que se está editando.
+		 * @returns {Array<{value: string, text: string, disabled: boolean|undefined}>}
+		 */
+		get_modo_redondeo_options(prop, model) {
+			let options = [
+				{ value: 'sin_redondeo', text: 'Sin redondeo' },
+				{ value: 'miles', text: 'Redondear de a 1000 (al mas cercano)' },
+				{ value: 'centenas', text: 'Redondear de a 100 (al mas cercano, solo en precios mayores a $100)' },
+				{ value: 'cincuenta', text: 'Redondear de a 50 (siempre hacia arriba)' },
+				{ value: 'decenas', text: 'Redondear de a 10 (al mas cercano)' },
+				{ value: 'centavos', text: 'Redondear a peso entero (sin centavos)' },
+			]
+
+			// "Combinacion personalizada" solo aparece si el usuario efectivamente está en ese
+			// estado (dos o más columnas de redondeo prendidas, que es lo que devuelve el accessor
+			// del backend). Va deshabilitada: sirve para que vea en qué configuración está, pero no
+			// para volver a elegirla una vez que se movió a otra — el backend no sabría a qué
+			// combinación volver.
+			if (model && model.modo_redondeo == 'personalizado') {
+				options.push({
+					value: 'personalizado',
+					text: 'Combinacion personalizada (configuracion actual)',
+					disabled: true,
+				})
+			}
 
 			return options
 		},
@@ -1423,9 +1688,20 @@ export default {
 		hour_from_time(d) {
 			return moment(d, 'HH:mm:ss').format('HH:mm')
 		},
+		/*
+			OJO: este price() NO es el que se usa casi en ningun lado. El que gana en un componente
+			normal es el de common-vue/mixins/dates.js, porque en la cadena de app.js `dates` se
+			mergea despues que `generals`. Este solo gana en los componentes que declaran
+			`mixins: [generals]` a nivel componente (hoy: expenses/PaymentMethodsTable.vue y
+			ventas/modals/consolidar-facturacion/Index.vue).
+
+			Hasta el 21/8/2026 este devolvia el formato ingles ($1,234.56) mientras el resto de la
+			app mostraba $1.234,56, y por eso esas dos pantallas se veian distintas de todas las
+			demas. El separadores_es() de abajo es lo que las alinea.
+		*/
 		price(p, with_decimals = true, quitar_decimales_solo_si_no_es_00 = true) {
 			if (p) {
-				let price = numeral(p).format('$0,0.00')
+				let price = separadores_es(numeral(p).format('$0,0.00'))
 				if (with_decimals) {
 					return price
 				} else {

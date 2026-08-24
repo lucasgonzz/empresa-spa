@@ -3,8 +3,13 @@ export default {
 		previus_sale() {
 			return this.$store.state.vender.previus_sales.previus_sale
 		},
-		index_previus_sales() {
-			return this.$store.state.vender.previus_sales.index
+		/*
+			Reemplaza al indice posicional del store, que era la posicion de la venta en el
+			listado y no un id. Ver el getter: es true mientras se este editando una venta
+			guardada, y tambien en el instante en que se la esta abriendo y todavia no llego.
+		*/
+		editando_venta_previa() {
+			return this.$store.getters['vender/previus_sales/editando_venta_previa']
 		},
 		items() {
 			return this.$store.state.vender.items

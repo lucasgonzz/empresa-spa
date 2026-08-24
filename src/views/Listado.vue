@@ -24,6 +24,7 @@
 	<article-variants></article-variants>
 	<providers-history></providers-history>
 	<article-providers></article-providers>
+	<change-provider></change-provider>
 	<stock-movement></stock-movement>
 	<address-movement></address-movement>
 	<stock-movement-modal-info></stock-movement-modal-info>
@@ -57,6 +58,7 @@
 	:extra_properties_for_modal="price_type_modal_extra_properties"
 	@addressMovement="addressMovement"
 	:show_empty_text="show_empty_text"
+	:filtros_fijos_por_defecto="filtros_fijos_por_defecto"
 	model_name="article">
 
 		<template #excel_drop_down_options>
@@ -68,7 +70,7 @@
 			<horizontal-nav></horizontal-nav>
 
 		</template>
-		
+
 		<template #options_drop_down_seleccion>
 
 			<drop-down-options></drop-down-options>
@@ -79,10 +81,6 @@
 
 			<drop-down-options></drop-down-options>
 
-		</template>
-
-		<template #body>
-			<buscador-articulos></buscador-articulos>
 		</template>
 
 		<template v-slot:table_left_options="props">
@@ -103,6 +101,16 @@
 		</template>
 		<template #price>
 			<price-input></price-input>
+		</template>
+
+		<!-- Prompt 612: "Costo base" con descripcion permanente que cambia segun RRII/Monotributista -->
+		<template #cost>
+			<cost-input></cost-input>
+		</template>
+
+		<!-- Prompt 612: "Aplicar iva" forzado y bloqueado para RRII; oculto por completo en Monotributista via v_if_function -->
+		<template #aplicar_iva>
+			<aplicar-iva-input></aplicar-iva-input>
 		</template>
 
 		<template #final_price>
@@ -183,6 +191,7 @@ export default {
 		ArticleVariants: () => import('@/components/listado/modals/article-variants/Index'),
 		ProvidersHistory: () => import('@/components/listado/modals/providers-history/Index'),
 		ArticleProviders: () => import('@/components/listado/modals/article-providers/Index'),
+		ChangeProvider: () => import('@/components/listado/modals/ChangeProvider'),
 		StockMovement: () => import('@/components/listado/modals/stock-movement/Index'),
 		AddressMovement: () => import('@/components/listado/modals/address-movement/Index'),
 		StockMovementModalInfo: () => import('@/components/listado/modals/stock-movement-modal-info/Index'),
@@ -196,6 +205,9 @@ export default {
 		PriceInput: () => import('@/components/listado/components/modal-props/PriceInput'),
 		PercentageGainInput: () => import('@/components/listado/components/modal-props/PercentageGainInput'),
 		FinalPrice: () => import('@/components/listado/components/modal-props/FinalPrice'),
+		// Prompt 612: "Costo base" (descripcion permanente) y "Aplicar iva" (forzado/bloqueado en RRII, oculto en MT)
+		CostInput: () => import('@/components/listado/components/modal-props/CostInput'),
+		AplicarIvaInput: () => import('@/components/listado/components/modal-props/AplicarIvaInput'),
 
 		// Dropdown options
 		DropDownOptions: () => import('@/components/listado/components/selected-filtered-options/Index'),
@@ -222,9 +234,7 @@ export default {
 		FinalPriceDescription: () => import('@/components/listado/modals/FinalPriceDescription'),
 
 		FilterHistoryModal: () => import('@/components/listado/modals/filter-history/Index'),
-
-		BuscadorArticulos: () => import('@/components/listado/components/BuscadorArticulos'),
-	}, 
+	},
 	beforeRouteLeave(to, from, next) {
 		this.$store.commit('article/setSelected', [])
 		next()
@@ -233,8 +243,44 @@ export default {
 		has_permission_create_dropdown() {
 			return this.authenticated && this.can('article.export_excel_clients')
 		},
+		/**
+		 * Si el listado no tiene nada para mostrar, hay que decirlo. Siempre.
+		 *
+		 * Antes esto devolvía `is_filtered`, y ese flag no habla de si hay resultados: habla de por
+		 * qué camino se cargaron. Cualquier cosa que lo apague deja la tabla en blanco Y MUDA — sin
+		 * filas y sin el cartel que explica que no hay nada—, que es peor que decir "no hay
+		 * artículos". Pasó de verdad el 11/8/2026: al guardar el modal de propiedades para mostrar,
+		 * la limpieza de filtros apagaba el flag y la tabla quedaba en blanco sin ninguna
+		 * explicación (ver el comentario largo de `props-to-show/Modal.vue`, método `save`).
+		 *
+		 * No hay riesgo de que el cartel aparezca mientras carga: en `display/table/Index.vue` el
+		 * `v-else-if="show_empty_text"` va después del tbody de skeleton, que gana con `loading`.
+		 * Y el texto ya distingue solo los dos casos, mirando los filtros activos: "No hay
+		 * artículos" cuando no hay ninguno, "No se encontraron resultados" cuando la búsqueda no
+		 * trajo nada.
+		 *
+		 * @returns {boolean}
+		 */
 		show_empty_text() {
-			return this.$store.state.article.is_filtered
+			return true
+		},
+		/**
+		 * Filtros fijos por defecto del buscador general (prompt 09 del grupo 179): solo para
+		 * clientes con la extensión buscar_por_categoria_en_vender, para que sigan teniendo
+		 * categoría y stock ya agregados como filtro fijo la primera vez que usan el buscador
+		 * (antes eran selects hardcodeados). Se siembran una sola vez; después el usuario puede
+		 * sacarlos o agregar otros sin que se vuelvan a sembrar (ver buscador-general/Index.vue).
+		 *
+		 * @returns {Array} [{ key, filter_kind, operator, default_value }]
+		 */
+		filtros_fijos_por_defecto() {
+			if (!this.hasExtencion('buscar_por_categoria_en_vender')) {
+				return []
+			}
+			return [
+				{ key: 'category_id', filter_kind: 'relation', operator: '=', default_value: null },
+				{ key: 'stock', filter_kind: 'numeric_presence', operator: null, default_value: 'todos' },
+			]
 		},
 	},
 	methods: {

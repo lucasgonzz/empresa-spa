@@ -19,7 +19,7 @@
 		</p>
 
 		<p>
-			{{ total_productos(road_map.sales) }} productos
+			{{ numero_es(total_productos(road_map.sales)) }} productos
 		</p>
 
 		<p>

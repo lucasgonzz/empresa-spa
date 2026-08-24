@@ -1,15 +1,19 @@
 <template>
-	<div 
+	<div
 	v-if="show"
 	class="ordenar">
-		<i 
+		<span
+		class="ordenar__btn"
 		:class="active_desc ? 'active' : ''"
-		@click="ordenar('DESC')"
-		class="icon-up"></i>
-		<i 
+		@click="ordenar('DESC')">
+			<i class="icon-up"></i>
+		</span>
+		<span
+		class="ordenar__btn"
 		:class="active_asc ? 'active' : ''"
-		@click="ordenar('ASC')"
-		class="icon-down"></i>
+		@click="ordenar('ASC')">
+			<i class="icon-down"></i>
+		</span>
 	</div>
 </template>
 <script>
@@ -109,10 +113,21 @@ export default {
 <style lang="sass">
 @import '@/sass/_custom'
 .ordenar
-	display: flex   
-	flex-direction: row  
+	display: flex
+	flex-direction: row
 	align-items: center
 	justify-content: center
-	.active  
+
+	// Misma area de click (24x24, centrada) que los botones de BtnFilter.vue,
+	// para que la fila de controles del header quede pareja (Prompt 07, Grupo 273).
+	.ordenar__btn
+		display: flex
+		align-items: center
+		justify-content: center
+		width: 24px
+		height: 24px
+		cursor: pointer
+
+	.active
 		color: $blue
 </style>

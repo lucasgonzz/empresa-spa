@@ -130,8 +130,8 @@ export default {
 					bar_code: item.bar_code,
 					name: item.name,
 					price_vender: this.price(item.price_vender),
-					discount: item.discount,
-					amount: item.amount,
+					discount: this.porcentaje_es(item.discount),
+					amount: this.numero_es(item.amount),
 					article_variant_id: item.article_variant_id,
 				})
 			})

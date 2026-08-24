@@ -13,7 +13,7 @@
 			class="spinner-border spinner-border-sm"></span>
 			<i
 			v-show="!enviando"
-			class="icon-message"></i>
+			class="bi bi-envelope"></i>
 		</b-button>
 	</div>
 </template>

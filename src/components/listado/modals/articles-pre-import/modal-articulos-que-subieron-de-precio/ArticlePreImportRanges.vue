@@ -6,10 +6,10 @@
 			<div 
 			:class="range.color"
 			class="color">
-				{{ cantidad_de_articulos_en_este_rango(range) }}
+				{{ numero_es(cantidad_de_articulos_en_este_rango(range)) }}
 			</div>
 			<span>
-				Desde {{ range.min }}% a {{ range.max }}%
+				Desde {{ porcentaje_es(range.min) }}% a {{ porcentaje_es(range.max) }}%
 			</span>
 
 			<div 

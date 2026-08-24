@@ -1,14 +1,160 @@
 @import '@/sass/_custom.scss'
-.modal 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CHASIS DE TODOS LOS MODALES DEL SISTEMA (misión 29, 11/8/2026)
+//
+// Hasta hoy este archivo tenía 15 líneas y no declaraba ningún lenguaje de modal:
+// cada modal resolvía su header y su footer como podía, y por eso convivían tres
+// radios distintos escritos a mano (16px en ArticleImportResultModal, 18px en
+// article-variants) sobre el 0.3rem que trae Bootstrap por defecto.
+//
+// Lo que se declara acá vale para TODOS los modales, así que las reglas tienen que
+// quedar en la especificidad más baja que igual funcione. Ese piso son DOS clases
+// (`.modal-dialog > .modal-content`, `.modal-content > .modal-header`), y no una,
+// y no es una preferencia: está medido. Con una sola clase, `padding` y
+// `border-radius` los seguía ganando Bootstrap, porque cada archivo `.sass` del
+// proyecto hace `@import '_custom.scss'` y ese import arrastra bootstrap entero, así
+// que la última copia de bootstrap termina DESPUÉS de este archivo en la hoja final.
+// Medido el 11/8/2026 con el CSS compilado: `min-height` (que bootstrap no declara)
+// entraba, y `padding: 1rem` y el radio de `calc(.3rem - 1px)` no.
+//
+// Dos clases es además exactamente lo que hace falta para que un modal con estilo
+// propio SIGA GANANDO sin sumar !important: `.article-variants-modal .modal-header`
+// también son dos, y al vivir en el chunk de su componente se carga después que este
+// archivo, así que el empate lo define el orden y lo gana él. Subir un escalón más
+// (tres clases o un id) rompería justamente eso.
+//
+// Si algún modal queda peor, lo que está mal calibrado es esta regla, no ese modal.
+//
+// Los colores salen SIEMPRE de tokens de _dark_theme.sass, nunca de hexadecimales:
+// los modales de bootstrap-vue se montan colgando de <body>, FUERA de #app (está
+// explicado en el encabezado de _dark_theme.sass, y es la razón por la que los
+// tokens viven en :root y no en #app). Un hex acá deja el modal blanco en oscuro.
+// ══════════════════════════════════════════════════════════════════════════════
+
+:root
+	// Radio del modal. Más generoso que los 10px de un botón porque es una
+	// superficie grande; alineado con los 16px que ArticleImportResultModal ya
+	// había elegido a mano, que ahora salen de acá.
+	--modal-radius: 16px
+	// Franja del header y del footer. Los dos comparten min-height para que se
+	// lean parejos: es la única forma de que queden iguales, porque el header lo
+	// llena un título de una línea y el footer botones de 38px.
+	//
+	// Son 60 y no 58 porque 58 los dejaba desparejos por 1px, y la razón importa:
+	// con `min-height` mandando, el alto total ES el min-height (box-sizing es
+	// border-box); pero si el CONTENIDO lo supera, el borde se suma aparte. Un
+	// footer con un botón de 38px mide 38 + 20 de padding + 1 de borde = 59, así
+	// que con 58 el header quedaba en 58 y el footer en 59. Con 60 mandan los dos
+	// min-height y quedan exactamente iguales. Medido el 11/8/2026.
+	--modal-chrome-min-h: 60px
+	--modal-chrome-padding-y: 10px
+	--modal-chrome-padding-x: 20px
+
+.modal
 	padding-left: 0 !important
 
-.modal-dialog.modal-lg, .modal-dialog.modal-xl 
+.modal-dialog > .modal-content
+	border-radius: var(--modal-radius)
+
+// ─── Acá NO va `overflow: hidden`, y está medido ─────────────────────────────
+//
+// Es la forma corta de que ninguna franja asome por fuera de la curva, y es lo
+// primero que uno escribe. Se probó, y en los ocho modales de más tránsito el
+// resultado es EXACTAMENTE EL MISMO con él y sin él: alcanza con que cada franja
+// redondee su propio borde (las reglas de abajo), porque un border-radius ya
+// recorta el fondo del elemento que lo lleva.
+//
+// Medición del 11/8/2026, barriendo la diagonal desde el vértice del modal de
+// Cuenta corriente —entonces el peor caso, porque iba con `hide-footer` +
+// `body-class="p-0"` y su tabla llegaba hasta el borde—: hasta 4px del vértice se
+// ve el fondo de atrás y desde 5px el cuerpo del modal, idéntico en las dos
+// variantes.
+//
+// ⚠️ Ese modal dejó de ser el peor caso el 21/8/2026: su rediseño lo pasó al slot
+// `#modal-footer`, así que ya no va con `hide-footer` y su esquina de abajo la
+// redondea el footer, no el body. La medición y la conclusión siguen valiendo —lo
+// que cambió es el ejemplo—. Si hace falta volver a medirla, el peor caso hoy es
+// un modal con `hide-header`/`hide-footer` cuyo cuerpo pinte fondo pegado al borde.
+//
+// Y no es gratis: recorta también lo que se abra adentro del modal y salga de su
+// caja (el calendario de b-form-datepicker, un .dropdown-menu al final del
+// cuerpo). Hoy eso sólo pasa en los modales `scrollable`, donde el propio
+// bootstrap ya declara `overflow: hidden` en `.modal-dialog-scrollable
+// .modal-content` — y ya costó trabajo: hay dos componentes que le pasan boundary
+// a Popper por eso mismo (sale-print-buttons/Index.vue, budget/ModalButtons.vue).
+// Ponerlo acá extendería ese recorte a TODOS los modales sin ganar nada medible.
+//
+// Cuándo sí habría que ponerlo: si aparece un modal cuyo contenido pinta fondo
+// PEGADO al borde y lo hace en la esquina misma. La señal es esa, no la intuición.
+// ─────────────────────────────────────────────────────────────────────────────
+
+.modal-content > .modal-header
+	min-height: var(--modal-chrome-min-h)
+	// Bootstrap lo deja en flex-start para que la ✕ quede arriba del todo. Con una
+	// franja de altura fija, centrado es lo que la deja pareja con el footer.
+	align-items: center
+	padding: var(--modal-chrome-padding-y) var(--modal-chrome-padding-x)
+	// El radio de Bootstrap es calc(.3rem - 1px): con el contenedor en 16px, el
+	// header quedaba de rectángulo pintado encima de la curva.
+	border-top-left-radius: var(--modal-radius)
+	border-top-right-radius: var(--modal-radius)
+	border-bottom-color: var(--color-border)
+
+.modal-content > .modal-footer
+	min-height: var(--modal-chrome-min-h)
+	padding: var(--modal-chrome-padding-y) var(--modal-chrome-padding-x)
+	border-bottom-left-radius: var(--modal-radius)
+	border-bottom-right-radius: var(--modal-radius)
+	border-top-color: var(--color-border)
+	// Bootstrap separa los botones del footer con `margin: .25rem` en cada hijo.
+	// Se reemplaza por gap del contenedor: con el margen propio de cada hijo, la
+	// franja medía 8px más que el header y las dos no podían quedar parejas.
+	gap: var(--modal-chrome-padding-y)
+
+	> *
+		margin: 0
+
+.modal-content .modal-title
+	// El h5 por defecto de Bootstrap (1.25rem) compite con el contenido del modal.
+	font-size: 1rem
+	font-weight: 600
+	line-height: 1.3
+	color: var(--color-text-primary)
+
+// Un modal con `hide-header` o `hide-footer` deja al body como primer o último
+// hijo, y ahí el que tiene que redondear es él. Sin overflow en el contenedor,
+// esta es la esquina que faltaría.
+.modal-content > .modal-body
+	&:first-child
+		border-top-left-radius: var(--modal-radius)
+		border-top-right-radius: var(--modal-radius)
+
+	&:last-child
+		border-bottom-left-radius: var(--modal-radius)
+		border-bottom-right-radius: var(--modal-radius)
+
+	// Cuando el body es el ÚNICO hijo (`hide-header` + `hide-footer`), el body ES
+	// el modal, y ahí sí hace falta recortar: es el caso que la nota de más arriba
+	// deja como señal. Concreto y medido: el lightbox del chat de soporte
+	// (support-chat/ImageLightbox.vue) monta una `<img>` con `p-0` que llega al
+	// borde, así que sus cuatro esquinas cuadradas asomaban ~4,7px por fuera de la
+	// curva de 16px. Antes no se notaba porque el radio eran 4,8px.
+	//
+	// El recorte se acota a este caso a propósito, y no se sube a `.modal-content`:
+	// un modal sin header ni footer es una superficie de contenido —una imagen, un
+	// visor—, no un formulario con datepickers y dropdowns que necesiten salirse de
+	// la caja. Los que sí los tienen conservan siempre su header, así que no entran
+	// por acá.
+	&:first-child:last-child
+		overflow: hidden
+
+.modal-dialog.modal-lg, .modal-dialog.modal-xl
 	@media screen and (max-width: 576px)
-		max-width: 96% !important 
+		max-width: 96% !important
 	@media screen and (min-width: 576px)
-		max-width: 90% !important 
+		max-width: 90% !important
 
 	.modal-content
 		@if ($theme == 'dark')
 			border: 1px solid #1d1d1d
-

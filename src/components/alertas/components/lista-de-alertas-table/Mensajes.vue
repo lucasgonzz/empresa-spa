@@ -11,12 +11,12 @@
 			:items="items">
 			</b-table>
 
-			<div 
+			<!-- Estado vacío del sistema (display/EmptyState), en vez del cartel azul viejo. -->
+			<empty-state
 			v-else
-			class="text-with-icon">
-				No hay mensajes sin leer
-				<i class="icon-eye-slash"></i>
-			</div>
+			icon_class="bi bi-chat-dots"
+			title="No hay mensajes sin leer"
+			hint="Cuando un cliente escriba desde la tienda, el mensaje aparece acá."></empty-state>
 
 		</div>
 	</div>
@@ -26,6 +26,9 @@
 import online from '@/mixins/online'
 export default {
 	mixins: [online],
+	components: {
+		EmptyState: () => import('@/common-vue/components/display/EmptyState'),
+	},
 	computed: {
 		fields() {
 			return [

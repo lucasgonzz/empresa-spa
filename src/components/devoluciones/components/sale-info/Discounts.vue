@@ -12,7 +12,7 @@
 			Descuentos
 			<p
 			v-for="discount in sale.discounts">
-				- {{ discount.pivot.percentage }}% ({{ discount.name }})
+				- {{ porcentaje_es(discount.pivot.percentage) }}% ({{ discount.name }})
 			</p>
 		</div>
 
@@ -21,7 +21,7 @@
 			Recargos
 			<p
 			v-for="surchage in sale.surchages">
-				- {{ surchage.pivot.percentage }}% ({{ surchage.name }})
+				- {{ porcentaje_es(surchage.pivot.percentage) }}% ({{ surchage.name }})
 			</p>
 		</div>
 	</div>

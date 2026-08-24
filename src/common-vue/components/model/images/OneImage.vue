@@ -1,5 +1,11 @@
 <template>
-<div>
+<!--
+	Campo de imagen unica (prop.type == 'image'), rediseñado el 13/8/2026 junto con el de imagenes
+	multiples (Carrousel.vue): mismo visor, mismo estado vacio y misma zona de arrastre, para que
+	las dos props se vean como el mismo componente. El boton de eliminar dejo de ser una franja roja
+	de ancho completo debajo de la foto: es un circulo en la esquina de la imagen, como en el carrusel.
+-->
+<div class="images-field">
     <confirm
     text="la imagen"
     :actions="actions"
@@ -8,88 +14,73 @@
     emit="deleteFromHasMany"
     @deleteFromHasMany="deleteFromHasMany"
     toast="Imagen eliminada"></confirm>
-	<div>
-		<div
-		v-if="model[prop.key]">
-			<div
-			class="j-center">
-				<vue-load-image>
-					<img
-					slot="image"
-					class="slide-img b-r-1 shadow m-b-10" 
-					:src="model[prop.key]">
 
-			        <b-spinner
-					slot="preloader"
-			        variant="success"></b-spinner>
+	<div
+	v-if="model[prop.key]"
+	class="images-field__visor">
+		<div class="images-field__slide">
+			<vue-load-image>
+				<img
+				slot="image"
+				class="images-field__img"
+				:src="model[prop.key]">
 
-					<div slot="error">
-						<p
-						class="m-b-0">
-							Imagen no encontrada
-						</p>
-					</div>
-				</vue-load-image>
-			</div>
+		        <b-spinner
+				slot="preloader"
+		        variant="primary"></b-spinner>
 
-			<b-button
-			size="sm"
-			block
-			class="m-b-10"
-			@click="setDelete"
-			variant="outline-danger">
-				Eliminar imagen
-			</b-button>
+				<div
+				slot="error"
+				class="images-field__error">
+					<i class="bi bi-image-alt"></i>
+					Imagen no encontrada
+				</div>
+			</vue-load-image>
 
-			<b-form-file
-			class="file-reader-input"
-			:id="input_file_name"
-			browse-text="Buscar"
-			v-model="file"
-			variant="primary"
-			:state="Boolean(file)"
-			@change="upload"
-			placeholder="Seleccione la imagen o arrastrala hasta aquí"
-			drop-placeholder="Solta la imagen aqui..."
-			></b-form-file>
+			<button
+			type="button"
+			class="images-field__eliminar"
+			title="Eliminar la imagen"
+			@click="setDelete">
+				<i class="bi bi-trash"></i>
+			</button>
 		</div>
-		<div
-		v-else>
-			<p 
-			class="text-with-icon">
-				<i class="icon-eye-slash"></i>
-				No hay imagen
-			</p>
-
-			<b-form-file
-			class="file-reader-input"
-			:id="input_file_name"
-			browse-text="Buscar"
-			v-model="file"
-			variant="primary"
-			:state="Boolean(file)"
-			@change="upload"
-			placeholder="Seleccione la imagen o arrastrala hasta aquí"
-			drop-placeholder="Solta la imagen aqui..."
-			></b-form-file>
-		</div>
-
 	</div>
+
+	<div
+	v-else
+	class="images-field__vacio">
+		<div class="images-field__vacio-icono">
+			<i class="bi bi-image"></i>
+		</div>
+		<p class="images-field__vacio-titulo">
+			Sin imagen
+		</p>
+		<p class="images-field__vacio-detalle">
+			Subila desde tu equipo.
+		</p>
+	</div>
+
+	<!-- Sin :state, por el mismo motivo que en Carrousel.vue: dejaba el campo siempre en rojo. -->
+	<b-form-file
+	class="images-field__file"
+	:id="input_file_name"
+	browse-text="Buscar en mi equipo"
+	v-model="file"
+	@change="upload"
+	placeholder="Arrastra una imagen hasta aca"
+	drop-placeholder="Solta la imagen aca"
+	></b-form-file>
 </div>
 </template>
 <script>
 import Confirm from '@/common-vue/components/Confirm'
 import VueLoadImage from 'vue-load-image'
-import { Carousel, Slide } from 'vue-carousel'
 export default {
 	props: ['model', 'prop', 'model_name', 'has_many_parent_model', 'has_many_prop'],
 	components: {
 		Confirm,
 		VueLoadImage,
-	    Carousel,
-	    Slide,
-
-	    BtnLoader: () => import('@/common-vue/components/BtnLoader')
 	},
 	computed: {
 		actions() {
@@ -148,9 +139,4 @@ export default {
 	}
 }
 </script>
-<style scoped lang="sass">
-.images
-	img 
-		max-width: 100%
-		max-height: 500px 
-</style>
+<!-- Los estilos de .images-field viven en el orquestador (images/Index.vue), compartidos con Carrousel.vue. -->

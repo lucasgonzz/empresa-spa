@@ -21,6 +21,7 @@
 				ref="tableComponent"
 				:select-mode="_select_mode"
 				:tbody-tr-class="rowClass"
+				:tbody-tr-attr="rowAttrs"
 				@row-selected="onRowSelected">
 					<template v-slot:table_left_options>
 						<slot name="table_left_options" :model="model"></slot>
@@ -89,9 +90,9 @@
 								<span
 								v-else-if="prop.is_stock"
 	                :class="{
-	                  'text-danger font-weight-bold': parseFloat(propertyText(models[data.index], prop)) <= 0,
-	                  'font-weight-bold': parseFloat(propertyText(models[data.index], prop)) > 0,
-	                  
+	                  'text-danger font-weight-bold': valor_numerico_crudo(models[data.index], prop) <= 0,
+	                  'font-weight-bold': valor_numerico_crudo(models[data.index], prop) > 0,
+
 	                }"
 	              >
 									{{ propertyText(models[data.index], prop) }}
@@ -219,12 +220,32 @@
 				<!-- <btn-add-to-show
 				:model_name="model_name"></btn-add-to-show> -->
 			</div>
-			<p
-			v-else-if="!models.length && model_name && (!is_mobile || downloadOnMobile(model_name))"
-			class="text-with-icon">
-				<i class="icon-eye-slash"></i>
-				No hay {{ plural(model_name) }}
-			</p>
+			<!--
+				Estado vacio de la tabla, ahora reemplazable por quien la usa.
+
+				🔴 El contenido por defecto del slot es EXACTAMENTE el que habia hasta el
+				21/8/2026 (el `.text-with-icon` con el ojo tachado), asi que ninguna de las
+				pantallas que montan esta tabla cambia si no llena el slot. Vue 2 usa el
+				contenido del <slot> como fallback cuando el padre no lo provee: no hace falta
+				ningun v-if adicional.
+
+				El unico envoltorio nuevo es este <div>, que existe para poder colgarle el
+				v-else-if de la cadena --el <p> lo llevaba puesto y un <slot> no puede llevarlo--.
+				El <p> de adentro conserva su clase, asi que su centrado y su margen no cambian.
+
+				Lo llena hoy el modal de cuenta corriente
+				(components/common/current-acounts/List.vue).
+			-->
+			<div
+			v-else-if="!models.length && model_name && (!is_mobile || downloadOnMobile(model_name))">
+				<slot name="estado_vacio">
+					<p
+					class="text-with-icon">
+						<i class="icon-eye-slash"></i>
+						No hay {{ plural(model_name) }}
+					</p>
+				</slot>
+			</div>
 			<div
 			v-else>
 				<p
@@ -255,6 +276,7 @@
 <script>
 import BtnAddToShow from '@/common-vue/components/BtnAddToShow'
 import { fallback_column_width_px } from '@/common-vue/config/column_preference_defaults'
+import { bind_edge_auto_scroll, unbind_edge_auto_scroll } from '@/common-vue/helpers/edge_auto_scroll'
 
 export default {
 	components: {
@@ -340,6 +362,11 @@ export default {
 			type: Boolean,
 			default: false
 		},
+		// Permite a un consumidor apagar el auto-scroll horizontal por bordes (misma semantica que en los listados).
+		disable_scroll: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	data() {
 		return {
@@ -349,41 +376,90 @@ export default {
 			preview_image_url: '',
 			// Altura disponible calculada dinámicamente desde el top del contenedor hasta el borde inferior de la ventana
 			available_height: null,
+			// Handle de los listeners de auto-scroll por bordes. Se guarda para poder desengancharlos
+			// cuando el contenedor se recrea (v-if) o cuando se destruye el componente.
+			edge_scroll_handle: null,
 		}
 	},
 	mounted() {
 		window.addEventListener('keydown', this.handlePreviewKeydown)
 		this.recalcular_altura()
 		window.addEventListener('resize', this.recalcular_altura)
+		this.enganchar_scroll_margenes()
 	},
 	beforeDestroy() {
 		window.removeEventListener('keydown', this.handlePreviewKeydown)
 		window.removeEventListener('resize', this.recalcular_altura)
+		this.desenganchar_scroll_margenes()
 	},
 	watch: {
+		/**
+		 * Selecciona la fila que indica selected_index (navegacion por teclado y autoseleccion de
+		 * la primera fila del modal de busqueda).
+		 *
+		 * 🔴 is_from_keydown se baja en el $nextTick y NO con un setTimeout de 500 ms, y ese cambio
+		 * es el arreglo del hallazgo 20260810-modal-de-busqueda-ignora-el-click-los-primeros-500ms.
+		 *
+		 * Que hace la guarda: selectRow() de b-table dispara su propio evento row-selected, que
+		 * llega a onRowSelected() igual que si el usuario hubiera clickeado. Sin la guarda, mover
+		 * la seleccion con las flechas equivaldria a elegir el resultado, y el modal se cerraria
+		 * solo apenas apretas una flecha. La guarda existe para tapar ESA emision, la que provoca
+		 * la linea de arriba, y nada mas.
+		 *
+		 * Por que 500 ms estaba mal: la emision de selectRow() sale en el mismo ciclo de flush de
+		 * watchers que esta linea, o sea muchisimo antes de esos 500 ms. Lo que quedaba tapado el
+		 * resto del tiempo eran los clicks REALES del usuario: onRowSelected() descarta el evento
+		 * entero, asi que clickear el resultado apenas aparece no seleccionaba nada y el modal
+		 * quedaba abierto tapando el formulario. Le pasa a cualquiera que clickee rapido, que es lo
+		 * normal cuando ya sabe lo que estaba buscando.
+		 *
+		 * Por que $nextTick alcanza y no se pasa de corto: el callback de $nextTick corre despues
+		 * de que termina el flush de watchers en curso, y el watcher de selectedRows de b-table
+		 * --el que emite row-selected-- se encola en ese mismo flush. O sea que la emision
+		 * programatica ya paso cuando la guarda se baja. Un click del usuario, en cambio, llega en
+		 * una tarea posterior, con la guarda ya abajo.
+		 */
 		selected_index() {
-			console.log('watch selected_index')
 			if (this.selected_index != -1 && this.selected_index <= (this.items.length - 1)) {
 				this.is_from_keydown = true
 				this.$refs.tableComponent.selectRow(this.selected_index)
-				setTimeout(() => {
+				this.$nextTick(() => {
 					this.is_from_keydown = false
-				}, 500)
-				console.log('se selecciono la fila '+this.selected_index)
+				})
 
 				this.scroll_to_selected()
 			}
 		},
+		models() {
+			// El alto disponible depende de donde arranca la tabla, y eso se mueve cuando cambia el
+			// contenido de arriba (titulo de resultados, paginacion) o cuando el contenedor se
+			// recrea por el v-if. Sin esto, el modal conserva el tope de la busqueda anterior.
+			this.recalcular_altura()
+			// El contenedor .table-component-scroll tambien se recrea (v-if="models.length"), asi
+			// que hay que re-enganchar el auto-scroll de margenes despues de cada busqueda/pagina.
+			this.enganchar_scroll_margenes()
+		},
 	},
 	computed: {
 		/**
-		 * Estilos inline del wrapper scroll: altura dinámica hasta el borde inferior de la ventana.
-		 * Fallback a 70vh hasta que mounted() calcule available_height.
+		 * Estilos inline del wrapper scroll.
+		 * En un listado la tabla ocupa un alto fijo hasta el borde inferior de la ventana.
+		 * En el modal de busqueda (is_from_search_modal) NO se fija height: solo un maxHeight, para
+		 * que la tabla mida lo que miden sus filas — con 6 resultados no puede quedar un hueco de
+		 * media pantalla — y recien scrollee cuando los resultados pasan el alto disponible.
+		 * Fallback a 70vh hasta que recalcular_altura() calcule available_height.
 		 */
 		container_style() {
 			var height = this.available_height
 				? Math.max(200, this.available_height) + 'px'
 				: '70vh'
+			if (this.is_from_search_modal) {
+				return {
+					maxHeight: height,
+					overflowY: 'auto',
+					overflowX: 'auto',
+				}
+			}
 			return {
 				height: height,
 				maxHeight: height,
@@ -449,6 +525,17 @@ export default {
 					sortable: prop.sortable,
 					thStyle: this.column_style(prop),
 					tdStyle: this.column_style(prop),
+					// data-testid de la celda, MISMA convencion que display/table/Tr.vue:
+					// "celda-<model_name>-<key>-<id>".
+					//
+					// 🔴 El sistema tiene DOS tablas: esta (b-table) y display/table/Index.vue +
+					// Tr.vue. Cual se usa depende del modulo --el listado de articulos usa la
+					// segunda, la cuenta corriente usa esta-- y desde afuera no se distinguen.
+					// Un data-testid que exista en una sola de las dos es peor que no tenerlo: el
+					// test funciona en un modulo y en el de al lado se va en timeout buscando una
+					// celda que en ese camino de render nunca existio (medido el 19/8/2026:
+					// celda-current_acount-debe-4). Si se toca uno de los dos, se toca el otro.
+					tdAttr: this.cellAttrs(prop.key),
 				})
 			})
 
@@ -493,8 +580,42 @@ export default {
 	},
 	methods: {
 		/**
+		 * Valor numerico CRUDO de una prop, para decidir estilo (no para mostrar).
+		 *
+		 * 🔴 Existe para no leer nunca el texto que devuelve propertyText(). Antes la clase de la
+		 * celda de stock se decidia con `parseFloat(propertyText(model, prop))`, y eso se rompe en
+		 * cuanto el texto lleva separadores argentinos: `parseFloat('1.234,56')` devuelve **1.234**,
+		 * porque corta en la coma. Un stock de `0,5` daria 0 y la celda se pintaria de rojo como si
+		 * no hubiera stock.
+		 *
+		 * La regla general: el texto formateado es para el ojo, nunca para una cuenta ni para una
+		 * condicion. Si hay que decidir algo con el numero, se lee del model.
+		 *
+		 * Mision del 21/8/2026 — separadores de numeros.
+		 *
+		 * @param {Object} model fila de la tabla.
+		 * @param {Object} prop definicion de la columna.
+		 * @returns {number} el valor como numero, o 0 si no se puede leer.
+		 */
+		valor_numerico_crudo(model, prop) {
+			if (!model || !prop || !prop.key) {
+				return 0
+			}
+			/*
+				Las columnas de stock por deposito se declaran con `function` y una key que NO
+				existe en el model (`address_5`): el valor lo calcula la funcion recorriendo
+				article.addresses. Leer model['address_5'] daria undefined -> NaN -> 0, y la
+				columna entera quedaria pintada de rojo como si no hubiera stock.
+			*/
+			const valor = Number(prop.function ? this.getFunctionValue(prop, model) : model[prop.key])
+			if (isNaN(valor)) {
+				return 0
+			}
+			return valor
+		},
+		/**
 		 * Recalcula la altura disponible del contenedor de tabla según su posición en viewport.
-		 * Resta 8px de margen inferior para evitar scroll residual en la página.
+		 * Resta un margen inferior para evitar scroll residual en la página.
 		 */
 		recalcular_altura: function() {
 			var self = this
@@ -502,7 +623,11 @@ export default {
 				var el = self.$refs.tabla_contenedor
 				if (el) {
 					var top = el.getBoundingClientRect().top
-					var height = window.innerHeight - top - 8
+					// Margen inferior: 8px alcanza en un listado (la tabla llega hasta abajo de
+					// todo). Dentro del modal se deja mas aire para que el modal respire y no
+					// quede pegado al borde de la ventana.
+					var margen = self.is_from_search_modal ? 40 : 8
+					var height = window.innerHeight - top - margen
 					self.available_height = height
 				}
 			})
@@ -523,6 +648,42 @@ export default {
 				this.closeImagePreview()
 			}
 		},
+		/**
+		 * Engancha el auto-scroll horizontal de margenes sobre el contenedor de la tabla.
+		 * Idempotente: si ya esta enganchado al mismo elemento no vuelve a enganchar; si el
+		 * contenedor se recreo (el v-if de models/loading lo destruye y lo vuelve a crear), limpia
+		 * los listeners viejos antes de re-enganchar.
+		 */
+		enganchar_scroll_margenes() {
+			if (
+				this.is_mobile
+				|| !this.owner
+				|| !this.owner.scroll_en_tablas
+				|| this.disable_scroll
+			) {
+				return
+			}
+			var self = this
+			self.$nextTick(function() {
+				var el = self.$refs.tabla_contenedor
+				if (!el) {
+					self.desenganchar_scroll_margenes()
+					return
+				}
+				if (self.edge_scroll_handle && self.edge_scroll_handle.el === el) {
+					return
+				}
+				self.desenganchar_scroll_margenes()
+				self.edge_scroll_handle = bind_edge_auto_scroll(el)
+			})
+		},
+		/**
+		 * Remueve los listeners de auto-scroll de margenes del elemento al que esten enganchados.
+		 */
+		desenganchar_scroll_margenes() {
+			unbind_edge_auto_scroll(this.edge_scroll_handle)
+			this.edge_scroll_handle = null
+		},
 		scroll_to_selected() {
 			const filas = this.$refs.tabla_contenedor.querySelectorAll('tbody tr')
       const fila = filas[this.selected_index]
@@ -533,6 +694,58 @@ export default {
 		rowClass(item, type) {
 			if (this.model_name && this.hasColor(this.model_name)) {
 				return this[this.model_name+'GetColor'](this.models.find(model => model.id == item.id))
+			}
+		},
+		/**
+		 * data-testid de cada fila, con la MISMA convencion que documenta e2e/README.md y que ya
+		 * aplica display/table/Tr.vue: "search-result-row" para una fila del modal de busqueda,
+		 * "<model_name>-row-<id>" para una fila de listado.
+		 *
+		 * Por que hace falta aca tambien, y por que no alcanzaba con Tr.vue: son dos tablas
+		 * distintas. Tr.vue es la tabla propia de display/table/Index.vue; ESTE componente renderiza
+		 * con <b-table> de bootstrap-vue, que arma sus <tr> por su cuenta y nunca pasa por Tr.vue.
+		 * El modal de busqueda usa este camino, asi que la fila de resultado salia SIN ningun
+		 * data-testid: la busqueda encontraba al proveedor, la fila se veia en pantalla, y el test
+		 * igual moria esperando [data-testid="search-result-row"]. Medido el 10/8/2026 volcando el
+		 * DOM real de la fila: clases "b-table-row-selected table-active", atributo data-testid
+		 * ausente. Es tambien el motivo por el que faltaba "provider_order-row-<id>" en el listado.
+		 *
+		 * El discriminante es is_from_search_modal (lo pasa search/Modal.vue) y NO _select_mode:
+		 * _select_mode vale 'single' en los dos casos cuando el store no es seleccionable, asi que
+		 * usarlo dejaria las filas de un listado comun llamandose "search-result-row".
+		 *
+		 * Solo agrega un atributo: no cambia el render ni el comportamiento de la tabla.
+		 *
+		 * @param {object} item Fila tal como la arma el computed items() (siempre trae id).
+		 * @param {string} type Tipo de fila de b-table ('row' | 'row-details').
+		 * @returns {object} Atributos extra para el <tr>.
+		 */
+		rowAttrs(item, type) {
+			if (type != 'row' || !item) {
+				return {}
+			}
+			if (this.is_from_search_modal) {
+				return { 'data-testid': 'search-result-row' }
+			}
+			if (this.model_name && typeof item.id != 'undefined') {
+				return { 'data-testid': this.model_name + '-row-' + item.id }
+			}
+			return {}
+		},
+		/**
+		 * Devuelve la funcion `tdAttr` de una columna: le pone a cada <td> el data-testid de celda
+		 * con la convencion "celda-<model_name>-<key>-<id>" (ver el comentario en fields()).
+		 *
+		 * @param {string} key Key de la propiedad/columna.
+		 * @returns {Function} (value, key, item) => atributos del <td>, como los pide b-table.
+		 */
+		cellAttrs(key) {
+			let model_name = this.model_name
+			return function (value, cell_key, item) {
+				if (!item || typeof item.id == 'undefined') {
+					return {}
+				}
+				return { 'data-testid': 'celda-' + model_name + '-' + key + '-' + item.id }
 			}
 		},
 		download() {

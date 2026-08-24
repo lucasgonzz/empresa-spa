@@ -33,15 +33,30 @@
 								{{ data.item.credit_card_payment_plan.installments }}
 							</strong>
 						</p>
+						<!--
+							`surchage` del plan de pago es un PORCENTAJE, no un monto. Se verifico en los
+							dos unicos lugares donde se usa para algo:
+							  - current-acounts/pago/CreditCard.vue lo aplica como
+							    `amount + amount * surchage / 100`, y esa division por 100 solo tiene
+							    sentido con un porcentaje;
+							  - ahi mismo, y en payment-methods/Cuotas.vue, el texto de la opcion es
+							    "<n> cuotas con <surchage>% recargo".
+							Se le agrega el % que faltaba: sin el, bajo el label "Recargo" un 10,50 se
+							lee como diez pesos con cincuenta.
+						-->
 						<p
 							class="j-between">
 							Recargo
 							<strong>
-								{{ data.item.credit_card_payment_plan.surchage }}
+								{{ porcentaje_es(data.item.credit_card_payment_plan.surchage) }}%
 							</strong>
 						</p>
 					</div>
 				</div>
+			</template>
+
+			<template #cell(_moneda)="data">
+				{{ moneda_label(data.item) }}
 			</template>
 
 			<template #cell(_monto)="data">
@@ -81,11 +96,23 @@ export default {
 		 * @returns {Array<Object>}
 		 */
 		table_fields() {
-			return [
+			let fields = [
 				{
 					key: 'name',
 					label: 'Método de pago',
 				},
+			]
+
+			// La moneda solo tiene sentido para quien puede cobrar en mas de una: sin la extension
+			// de ventas en dolares todos los metodos son en pesos y la columna seria ruido.
+			if (this.hasExtencion('ventas_en_dolares')) {
+				fields.push({
+					key: '_moneda',
+					label: 'Moneda',
+				})
+			}
+
+			fields = fields.concat([
 				{
 					key: '_monto',
 					label: 'Monto',
@@ -102,7 +129,9 @@ export default {
 					key: '_caja',
 					label: 'Caja destino',
 				},
-			]
+			])
+
+			return fields
 		},
 	},
 	methods: {
@@ -149,6 +178,27 @@ export default {
 				}
 			}
 			return text
+		},
+		/**
+		 * Nombre de la moneda con la que se cargo ese metodo de pago, leyendo `pivot.moneda_id`.
+		 *
+		 * Un pago viejo (anterior a que se guardara la moneda por metodo) no tiene `moneda_id` en
+		 * el pivot: en ese caso se muestra un guion en vez de asumir pesos, porque asumir seria
+		 * inventar un dato que nadie cargo.
+		 *
+		 * @param {Object} payment_method
+		 * @returns {string}
+		 */
+		moneda_label(payment_method) {
+			const moneda_id = (payment_method.pivot || {}).moneda_id
+			if (!moneda_id) {
+				return '—'
+			}
+			const moneda = this.$store.state.moneda.models.find(m => m.id == moneda_id)
+			if (typeof moneda === 'undefined') {
+				return '—'
+			}
+			return moneda.name
 		},
 		/**
 		 * Texto del monto cotizado (`pivot.amount_cotizado`) o guión si no aplica.

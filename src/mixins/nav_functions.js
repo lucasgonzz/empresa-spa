@@ -12,8 +12,8 @@ export default {
 			return this.tn_sync_failed_count
 		},
 		/**
-		 * Total para el badge del ítem "Tienda Online": pedidos sin confirmar más mensajes sin leer.
-		 * Usa las mismas fuentes y permisos que las alertas globales para esos dos rubros.
+		 * Total para el badge del ítem "Tienda Online": pedidos sin confirmar.
+		 * Usa las mismas fuentes y permisos que las alertas globales para ese rubro.
 		 *
 		 * @returns {number}
 		 */
@@ -25,9 +25,16 @@ export default {
 			if (this.can('alerts.orders')) {
 				total += Number(this.unconfirmed_orders.length)
 			}
+			/*
+				Mensajes quedó OCULTO en la misión "chat IA" (15/8/2026): Online.vue ya
+				no monta el módulo, así que su contador no puede sumar a un badge que
+				invita a entrar a una solapa que no existe en pantalla. El término
+				queda comentado, no borrado, por si el módulo vuelve.
+
 			if (this.can('alerts.messages')) {
 				total += Number(this.messages_not_read)
 			}
+			*/
 			return total
 		},
 		alerts_count() {
