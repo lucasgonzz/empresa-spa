@@ -1749,8 +1749,11 @@ export default {
 			/*
 				Si el campo está configurado para chequeo de repetidos y la configuración del usuario lo permite,
 				se ejecuta el chequeo. Caso especial: algunos usuarios permiten `provider_code` repetidos en artículos.
+				Solo al CREAR: editando, Enter guarda como siempre — el aviso de repetido en edición
+				sale por blur (on_field_blur) y nunca frena el guardado (ítem 8, tanda-correctivos-2408).
 			*/
-			if (prop.use_to_check_if_is_repeat && this.can_check_is_repeat(prop)) {
+			let es_alta = !(this.model && this.model.id)
+			if (es_alta && prop.use_to_check_if_is_repeat && this.can_check_is_repeat(prop)) {
 				/*
 					Se registra el valor antes de chequear para evitar que el blur posterior al Enter
 					dispare el mismo chequeo nuevamente.
@@ -1821,15 +1824,12 @@ export default {
 		/*
 			Define si corresponde ejecutar el chequeo de repetidos para el `prop` actual.
 			Se usa para poder omitir `provider_code` en artículos cuando el usuario lo permite.
+			Aplica al crear Y al editar (ítem 8, tanda-correctivos-2408): editando, el chequeo
+			solo avisa — checkIsRepeat nunca pisa el modelo ni frena el guardado en ese caso.
 		*/
 		can_check_is_repeat(prop) {
 			/* Validación defensiva por compatibilidad con props dinámicas del form. */
 			if (!prop || !prop.key) {
-				return false
-			}
-
-			/* El chequeo de repetidos solo aplica al alta (create), no al editar. */
-			if (this.model && this.model.id) {
 				return false
 			}
 
@@ -1872,11 +1872,12 @@ export default {
 		        let finded = undefined;
 
 		        if (prop.chequear_buscando_desde_api) {
-		            // Construir los filtros
+					// Construir los filtros. String() defensivo: editando, el valor puede venir
+					// numérico desde la API y .toLowerCase() directo rompería.
 		            let filters = [
 		                {
 		                    type: 'text',
-		                    igual_que: this.model[prop.key].toLowerCase(),
+							igual_que: String(this.model[prop.key]).toLowerCase(),
 		                    key: prop.key
 		                }
 		            ];
@@ -1905,22 +1906,39 @@ export default {
 		                console.log(err);
 		            }
 		        } else {
-		            // Buscar localmente
+					// Buscar localmente. String() defensivo por el mismo motivo que arriba.
 		            finded = this.modelsStoreFromName(this.model_name).find(model => {
-		                return model[prop.key] && model[prop.key].toLowerCase() == this.model[prop.key].toLowerCase();
+						return model[prop.key] && String(model[prop.key]).toLowerCase() == String(this.model[prop.key]).toLowerCase();
 		            });
 		        }
 
 		        console.log('finded:');
 		        console.log(finded);
 
-		        // Validar si se encontró un modelo repetido
-		        if (typeof finded != 'undefined' && (!this.model.id || this.model.id != finded.id)) {
-		            this.$toast.warning('Ya hay un ' + this.singular(this.model_name) + ' con este ' + this.propText(prop));
-		            this.setModel(finded, this.model_name, [], false);
-		        } else {
-		        	this.foco_input_siguiente(prop)
-		        }
+				// Validar si se encontró un modelo repetido. Si el encontrado es el mismo que se
+				// está editando (mismo id), no es un repetido: es el propio código del modelo.
+				let es_alta = !this.model.id
+				if (typeof finded != 'undefined' && (es_alta || this.model.id != finded.id)) {
+					if (es_alta) {
+						// Al crear: aviso + se carga el existente para editarlo (comportamiento original).
+						this.$toast.warning('Ya hay un ' + this.singular(this.model_name) + ' con este ' + this.propText(prop));
+						this.setModel(finded, this.model_name, [], false);
+					} else {
+						/*
+							Editando (ítem 8, tanda-correctivos-2408): el aviso es SOLO un aviso.
+							No se pisa el modelo en edición ni se frena el guardado — la unicidad
+							no se valida en backend y el usuario puede decidir guardar igual.
+						*/
+						let aviso = 'Este ' + this.propText(prop) + ' ya lo usa otro ' + this.singular(this.model_name)
+						if (finded.name) {
+							aviso += ' (' + finded.name + ')'
+						}
+						this.$toast.warning(aviso);
+					}
+				} else if (es_alta) {
+					/* El salto de foco al siguiente input es parte del flujo de alta rápida, no del de edición. */
+					this.foco_input_siguiente(prop)
+				}
 		    }
 		},
 		foco_input_siguiente(prop) {
