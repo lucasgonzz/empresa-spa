@@ -233,6 +233,20 @@ export default {
 			type: Boolean,
 			default: true,
 		},
+		/**
+			Cuando esta en true, el guardado le pide al interceptor global de main.js que NO
+			despache `errorEvent` por los errores de este formulario.
+
+			Lo necesita un formulario cuyo backend puede devolver un 422 "de negocio" sin la clave
+			`errors` de Laravel: el interceptor lo toma por error generico y saca un toast, y si
+			ese caso ya se resuelve con un modal propio el usuario termina viendo el mismo texto
+			dos veces. El alert del propio modal (`setSaveErrorFromApi`) sigue funcionando igual,
+			asi que no se pierde ningun aviso.
+		*/
+		skip_global_error_event: {
+			type: Boolean,
+			default: false,
+		},
 		check_can_delete: Boolean,
 		check_permissions: {
 			type: Boolean,
@@ -310,6 +324,16 @@ export default {
 			save_check_alert_message: '',
 			/* Variante Bootstrap del alert (danger, warning, etc.). */
 			save_check_alert_variant: 'danger',
+			/**
+				Props extra para el PROXIMO envio y nada mas. Las setea `guardar_de_nuevo_con()`
+				y se limpian apenas vuelve la respuesta, sea buena o mala.
+
+				🔴 Van en un data del componente y NO pegadas al modelo del store a proposito: el
+				modelo del store lo comparten el listado, el buscador y cualquier otra vista, y una
+				bandera de un reintento puntual que quede ahi viaja en todos los guardados
+				siguientes sin que nadie se entere.
+			*/
+			extra_props_del_proximo_guardado: {},
 		}
 	},
 	computed: {
@@ -393,7 +417,38 @@ export default {
 			})
 		}
 	},
+	mounted() {
+		/*
+			Contraparte de `<model_name>:save-error`: la pantalla que se quedo con un error puede
+			pedir que se vuelva a guardar con props extra. Ver `guardar_de_nuevo_con`.
+		*/
+		this.$root.$on(this.model_name + ':save-retry', this.guardar_de_nuevo_con)
+	},
+	beforeDestroy() {
+		/*
+			🔴 El $off es obligatorio, no higiene. `$root` vive toda la sesion: sin esto, cada vez
+			que se monta un formulario queda otro listener pegado y un solo evento dispara N
+			guardados.
+		*/
+		this.$root.$off(this.model_name + ':save-retry', this.guardar_de_nuevo_con)
+	},
 	methods: {
+		/**
+		 * Vuelve a guardar el modelo agregandole props que no salen del formulario.
+		 *
+		 * Es el segundo tiempo del hook de `<model_name>:save-error`: una pantalla se queda con un
+		 * 422, le muestra al usuario una decision, y si el usuario elige seguir, pide el reintento
+		 * con la bandera que corresponda (ej: `{ ignorar_limite_credito: true }`).
+		 *
+		 * Las props valen SOLO para ese envio: se limpian apenas vuelve la respuesta.
+		 *
+		 * @param {Object} extra_props Claves a mezclar en el payload de este unico guardado.
+		 * @returns {void}
+		 */
+		guardar_de_nuevo_con(extra_props) {
+			this.extra_props_del_proximo_guardado = extra_props || {}
+			this.save()
+		},
 		has_many_deleted() {
 			this.$emit('has_many_deleted')
 		},
@@ -488,12 +543,30 @@ export default {
 				let route = this.route_model_name()
 				// let model_to_send = this.model 
 				let model_to_send = this.getModelToSend()
-				
+
+				/*
+					Props extra de un reintento puntual (ver `guardar_de_nuevo_con`). Se mezclan
+					recien aca, en el payload, y no en el modelo: ver el comentario de
+					`extra_props_del_proximo_guardado`.
+				*/
+				if (Object.keys(this.extra_props_del_proximo_guardado).length) {
+					model_to_send = {
+						...model_to_send,
+						...this.extra_props_del_proximo_guardado,
+					}
+				}
+
+				/* Config de axios de este envio. Ver la prop `skip_global_error_event`. */
+				let config_del_envio = {
+					skip_global_error_event: this.skip_global_error_event,
+				}
+
 				// console.log('model_to_send:')
 				// console.log(model_to_send)
 				if (this.model.id) {
-					this.$api.put(route+'/'+this.model.id, model_to_send)
+					this.$api.put(route+'/'+this.model.id, model_to_send, config_del_envio)
 					.then(res => {
+						this.extra_props_del_proximo_guardado = {}
 						this.loading = false
 						this.clearSaveCheckAlert()
 						this.$toast.success('Actualizado')
@@ -523,10 +596,28 @@ export default {
 						this.callActions(res.data.model)
 					})
 					.catch(err => {
+						this.extra_props_del_proximo_guardado = {}
 						console.log(err)
 						this.loading = false
 						this.$store.commit('auth/setMessage', '')
-						this.setSaveErrorFromApi(err)
+
+						/*
+							Hook para que una pantalla puntual se quede con un error de guardado y
+							lo resuelva a su manera (por ejemplo, un modal de decision en vez de un
+							alert). `$root.$emit` es sincronico en Vue 2, asi que el que escucha
+							alcanza a marcar `manejado.valor` antes de que siga esta linea.
+
+							🔴 Es ADITIVO: sin nadie escuchando el evento, `manejado.valor` queda
+							en false y el comportamiento es exactamente el de siempre. No cambia
+							nada para los demas formularios.
+						*/
+						let manejado = { valor: false }
+
+						this.$root.$emit(this.model_name + ':save-error', err, manejado)
+
+						if (!manejado.valor) {
+							this.setSaveErrorFromApi(err)
+						}
 					})
 				} else {
 					this.$api.post(route, model_to_send)

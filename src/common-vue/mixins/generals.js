@@ -1417,6 +1417,82 @@ export default {
 		 * @param {Object} model - Instancia de address que se está editando/creando.
 		 * @returns {Array<{value: number|null, text: string}>}
 		 */
+		/**
+		 * Opciones del select "Estado" de un pedido online: solo las transiciones que el backend
+		 * va a aceptar.
+		 *
+		 * 🔴 Espeja la maquina de estados de `OrderStatusHelper` en empresa-api, que es la fuente
+		 * de verdad: el backend devuelve 422 igual si le llega algo invalido. Esto es para que el
+		 * usuario no llegue a elegir una opcion que va a ser rechazada, no para reemplazar la
+		 * validacion. Si las dos se separan, manda el backend.
+		 *
+		 * La regla: se puede avanzar (salteando si hace falta) o cancelar. Nunca volver para
+		 * atras. "Entregado" y "Cancelado" son terminales. El estado ACTUAL siempre esta en la
+		 * lista, porque el formulario reenvia el modelo entero al guardar cualquier otro campo y
+		 * un select sin su propio valor se ve vacio.
+		 *
+		 * ⚠️ Todo se resuelve por NOMBRE: `order_statuses` no tiene ids garantizados entre
+		 * instalaciones.
+		 *
+		 * @param {Object} prop - Definicion del campo (no se usa, va por la firma comun).
+		 * @param {Object} model - El pedido que se esta editando.
+		 * @returns {Array<{value: number, text: string}>}
+		 */
+		get_order_status_options(prop, model) {
+			/** Los estados de avance, en orden. La posicion define que es "avanzar". */
+			let avance = ['Sin confirmar', 'Confirmado', 'Terminado', 'Entregado']
+			/** Los dos estados desde los que ya no se sale. */
+			let terminales = ['Entregado', 'Cancelado']
+
+			/** Todas las filas de order_statuses que tiene el store. */
+			let estados = this.$store.state.order_status.models || []
+
+			/** Nombre del estado en el que esta el pedido ahora. */
+			let actual = null
+			if (model && model.order_status && model.order_status.name) {
+				actual = model.order_status.name
+			} else if (model && model.order_status_id) {
+				let encontrado = estados.find(estado => estado.id == model.order_status_id)
+				actual = encontrado ? encontrado.name : null
+			}
+
+			// Sin saber donde esta parado no se puede filtrar nada sin riesgo de dejarlo sin
+			// opciones: se devuelven todas y que decida el backend.
+			if (!actual) {
+				return estados.map(estado => {
+					return { value: estado.id, text: estado.name }
+				})
+			}
+
+			/** Posicion del estado actual en la cadena de avance (-1 si es Cancelado). */
+			let pos_actual = avance.indexOf(actual)
+
+			let options = []
+
+			estados.forEach(estado => {
+				/** Si esta opcion se puede elegir desde el estado actual. */
+				let vale = false
+
+				if (estado.name == actual) {
+					// El estado actual siempre entra: es el valor que el select ya tiene puesto.
+					vale = true
+				} else if (terminales.indexOf(actual) != -1) {
+					// Desde un terminal no se sale a ningun lado.
+					vale = false
+				} else if (estado.name == 'Cancelado') {
+					vale = true
+				} else {
+					let pos_estado = avance.indexOf(estado.name)
+					vale = pos_estado != -1 && pos_actual != -1 && pos_estado > pos_actual
+				}
+
+				if (vale) {
+					options.push({ value: estado.id, text: estado.name })
+				}
+			})
+
+			return options
+		},
 		get_address_default_afip_information_options(prop, model) {
 			// Opción para dejar la sucursal sin facturación por defecto propia.
 			let options = [
