@@ -1145,6 +1145,40 @@
 				</small>
 			</b-form-group>
 
+			<!--
+				Qué hacer con las celdas vacías del Excel. Reemplaza al control "Permitir valores
+				en blanco" que tenía el import clásico, que era UNO POR COLUMNA. Decisión de Lucas
+				(24/8/2026): uno solo por importación, para los tres modelos.
+
+				🔴 El default (desmarcado) es el comportamiento de siempre y es el seguro. Marcarlo
+				puede vaciar una propiedad en miles de registros de una sola importación, así que el
+				texto dice lo que PASA y no cómo se llama la opción, y la explicación de abajo
+				cambia según el estado: hay que poder darse cuenta de cuál de las dos es la
+				peligrosa sin pensarlo.
+			-->
+			<b-form-group>
+				<b-form-checkbox
+				id="ai-import-vaciar_valores_en_blanco"
+				data-testid="ai-import-vaciar_valores_en_blanco"
+				v-model="vaciar_valores_en_blanco"
+				:value="1"
+				:unchecked-value="0">
+					Las celdas vacías del Excel borran el dato que ya está cargado
+				</b-form-checkbox>
+				<small class="d-block m-t-5" :class="celdas_vacias_borran ? 'text-danger' : 'text-muted'">
+					<span v-if="celdas_vacias_borran">
+						⚠️ Como está activada, cada celda vacía del Excel VACÍA esa propiedad en el sistema.
+						Si al archivo le falta una columna que hoy sí tenés cargada, la vas a perder en
+						{{ model_label_plural }} que importes, y no hay forma de deshacerlo desde acá.
+					</span>
+					<span v-else>
+						Como está desactivada, una celda vacía se ignora y {{ model_label_plural }} conservan
+						lo que ya tenían. Solo se actualiza lo que el Excel trae escrito. Es como viene
+						funcionando la importación hasta ahora.
+					</span>
+				</small>
+			</b-form-group>
+
 			<!-- Error al importar -->
 			<b-alert
 			v-if="error_message"
@@ -1255,6 +1289,22 @@ export default {
 			 * Arranca en 0 (= costos netos), que es como venía importando este flujo hasta hoy.
 			 */
 			precios_incluyen_iva: 0,
+
+			/*
+			 * Qué hacer con las celdas vacías del Excel (decisión de Lucas, 24/8/2026). Reemplaza
+			 * al "Permitir valores en blanco" por columna del import clásico con UN SOLO control
+			 * por importación, común a los tres modelos.
+			 *
+			 * Viaja como el booleano `vaciar_valores_en_blanco` de /ai-excel-import/import. Es UN
+			 * booleano y nada más: el backend lo expande solo (para artículos, al mapa por columna
+			 * que ya usa el motor; para clientes y proveedores, a sus clases de importación). Acá
+			 * NO se arma ningún mapa por columna — dos criterios para lo mismo en dos lados es
+			 * exactamente el error que este módulo ya se comió dos veces.
+			 *
+			 * Arranca en 0 = las celdas vacías se ignoran, que es el comportamiento de siempre y el
+			 * seguro.
+			 */
+			vaciar_valores_en_blanco: 0,
 
 			/* Opciones avanzadas de importación, con los mismos defaults que el modal existente. */
 			actualizar_articulos_de_otro_proveedor: 1,
@@ -1642,6 +1692,16 @@ export default {
 		 */
 		costos_de_la_planilla_son_brutos() {
 			return Number(this.precios_incluyen_iva) === 1
+		},
+
+		/*
+		 * Estado del control "Las celdas vacías del Excel borran el dato que ya está cargado",
+		 * normalizado a booleano. Solo elige cuál de los dos textos de ayuda se muestra.
+		 *
+		 * @return {Boolean}
+		 */
+		celdas_vacias_borran() {
+			return Number(this.vaciar_valores_en_blanco) === 1
 		},
 
 		/*
@@ -4065,6 +4125,14 @@ export default {
 				 * a string y `(bool) 'false'` en PHP da TRUE).
 				 */
 				precios_incluyen_iva: this.model === 'article' && Number(this.precios_incluyen_iva) === 1,
+				/*
+				 * Qué hacer con las celdas vacías del Excel. Va para los TRES modelos con el mismo
+				 * nombre y el mismo tipo (booleano real: este endpoint recibe JSON), y se manda
+				 * siempre, también apagado, por lo mismo que precios_incluyen_iva: si la clave no
+				 * viaja, el backend cae en su default y un cambio de default del otro lado le
+				 * cambia el comportamiento a este flujo sin que nadie lo haya declarado acá.
+				 */
+				vaciar_valores_en_blanco: Number(this.vaciar_valores_en_blanco) === 1,
 				permitir_provider_code_repetido:                    derived_flags.permitir_provider_code_repetido,
 				permitir_provider_code_repetido_en_multi_providers: derived_flags.permitir_provider_code_repetido_en_multi_providers,
 				actualizar_articulos_de_otro_proveedor:             derived_flags.actualizar_articulos_de_otro_proveedor,
@@ -4951,6 +5019,8 @@ export default {
 			this.provider_confidence  = 'bajo'
 			this.create_and_edit      = null
 			this.precios_incluyen_iva = 0
+			/* 🔴 Vuelve al seguro: una importación no hereda "vaciar" de la anterior. */
+			this.vaciar_valores_en_blanco = 0
 			this.actualizar_articulos_de_otro_proveedor = 1
 			this.permitir_provider_code_repetido = 0
 			this.permitir_provider_code_repetido_en_multi_providers = 0
