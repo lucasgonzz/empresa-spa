@@ -424,7 +424,7 @@ export default {
 		/**
 		 * Ícono de la franja del carrusel. Por título y no por id: el catálogo no trae un
 		 * campo `icono` (agregarlo es cambio de `empresa-api`, fuera de esta misión), pero los
-		 * seis títulos de sección son fijos y conocidos.
+		 * siete títulos de sección son fijos y conocidos.
 		 *
 		 * @param {Object} seccion
 		 * @returns {String} Clase de Bootstrap Icons, ya instalado en el proyecto.
@@ -436,6 +436,11 @@ export default {
 
 			const titulo = seccion.titulo.toLowerCase()
 
+			// Cortado antes de la tilde a propósito, como 'tesorer': `toLowerCase()` no saca
+			// los acentos, y así matchea "Introducción" e "Introduccion" por igual.
+			if (titulo.indexOf('introducci') !== -1) {
+				return 'bi-compass'
+			}
 			if (titulo.indexOf('listado') !== -1) {
 				return 'bi-boxes'
 			}
