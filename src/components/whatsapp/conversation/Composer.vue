@@ -100,22 +100,33 @@
 			</button>
 
 			<!--
-			🔴 `rows="1"` + `max-rows="5"`: arranca en un solo renglón y crece solo hasta cinco, que
-			es lo que pidió Lucas. El auto-crecimiento lo hace bootstrap-vue por su cuenta cuando
-			`max-rows` es mayor que `rows` — no hace falta ningún watch que mida el scrollHeight a
-			mano. `no-resize` saca la manija de la esquina: con el alto automático, arrastrarla
-			pelea contra el cálculo del componente.
+			🔴 `<textarea>` NATIVO y no `<b-form-textarea>`, y no es una preferencia de estilo.
+
+			El pedido es que el input arranque en UN renglón y crezca hasta CINCO. El auto-alto de
+			bootstrap-vue no puede hacer lo primero: su `computedMinRows` es
+			`mathMax(toInteger(rows, 2), 2)` (verificado en
+			`node_modules/bootstrap-vue/src/components/form-textarea/form-textarea.js:89-93`), o
+			sea que **fuerza un piso de 2 renglones** con el comentario de que "un valor de 1 da
+			problemas en algunos navegadores". Su `computeHeight()` repite el piso en el cálculo
+			del contenido. Con `rows="1" max-rows="5"` el campo arrancaría igual en dos renglones,
+			sin ningún error a la vista: se veía bien y no era lo que se pidió.
+
+			De paso, ese mismo modo automático le pone `overflow-y: scroll` FIJO al elemento (línea
+			84 del mismo archivo), así que la cápsula mostraría la barra de scroll siempre, incluso
+			vacía.
+
+			El alto lo maneja `ajustar_alto()`, que mide el `scrollHeight` real y lo acota a cinco
+			renglones. Son veinte líneas y hacen exactamente lo que Lucas pidió.
 			-->
-			<b-form-textarea
+			<textarea
 			v-if="!audio_recording"
+			ref="textarea"
 			v-model="text"
 			id="whatsapp-composer-text"
-			class="whatsapp-composer__texto"
-			:placeholder="placeholder"
+			class="form-control whatsapp-composer__texto"
 			rows="1"
-			max-rows="5"
-			no-resize
-			@keydown.enter="onKeydownEnter"></b-form-textarea>
+			:placeholder="placeholder"
+			@keydown.enter="onKeydownEnter"></textarea>
 
 			<!-- Mientras graba, esta franja REEMPLAZA al textarea (no se agrega al lado): en un
 			teléfono de 360px las dos cosas juntas no entran, y escribir mientras se graba no es
@@ -194,6 +205,13 @@ import audio_recorder_button from '@/mixins/audio_recorder_button'
  * backend, porque este se puede saltear. Es el límite real de la Cloud API de Meta.
  */
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+
+/**
+ * Tope de alto del input, en renglones. Lo pidió Lucas así: el campo arranca en uno y crece
+ * hasta cinco; a partir de ahí el texto scrollea adentro en vez de seguir comiéndose la
+ * conversación. Es el mismo tope que usa la aplicación de WhatsApp.
+ */
+const MAX_RENGLONES = 5
 
 export default {
 	components: {
@@ -378,7 +396,22 @@ export default {
 		audio_recording(esta_grabando) {
 			if (esta_grabando) {
 				this._chat_de_la_grabacion = this.chat_id
+			} else {
+				// La franja de grabación REEMPLAZA al textarea (`v-if`/`v-else`), así que al
+				// soltar el micrófono el campo se vuelve a crear desde cero, con el alto de un
+				// renglón y el texto que hubiera quedado escrito. Sin esto, un borrador de tres
+				// líneas reaparecía recortado a una.
+				this.$nextTick(this.ajustar_alto)
 			}
+		},
+		/**
+		 * El alto del input sigue al contenido. Va como watch de `text` y no como `@input` del
+		 * elemento porque el texto también cambia POR CÓDIGO —la sugerencia de la IA, el borrador
+		 * de una oferta, el reset después de enviar— y por esos caminos no hay ningún `input` que
+		 * escuchar: el campo se quedaba con el alto viejo.
+		 */
+		text() {
+			this.$nextTick(this.ajustar_alto)
 		},
 	},
 	created() {
@@ -388,6 +421,11 @@ export default {
 		*/
 		this._chat_de_la_grabacion = null
 		this.tomar_borrador()
+	},
+	mounted() {
+		// El composer puede nacer con texto adentro (el borrador que tomó `created()`), así que
+		// el alto se ajusta ya en el primer dibujo y no recién a la primera tecla.
+		this.ajustar_alto()
 	},
 	beforeDestroy() {
 		// El sidebar destruye este componente cada vez que se cierra: si la previsualización
@@ -400,6 +438,46 @@ export default {
 		 *
 		 * @param {KeyboardEvent} event
 		 */
+		/**
+		 * Ajusta el alto del input al contenido: arranca en un renglón y crece hasta cinco, y a
+		 * partir de ahí el texto scrollea adentro.
+		 *
+		 * 🔴 El `height = 'auto'` de antes de medir no se puede sacar. `scrollHeight` nunca es
+		 * menor que el alto que el elemento ya tiene puesto, así que midiendo sin resetear el
+		 * campo crece y **no se vuelve a achicar nunca**: borrar cuatro líneas dejaba el input
+		 * igual de alto, comiéndose la conversación hasta recargar la página.
+		 *
+		 * El `line-height` se lee computado y no del SASS para que siga valiendo si mañana alguien
+		 * cambia la tipografía del composer; el fallback cubre el `normal` que devuelven algunos
+		 * navegadores cuando el valor es relativo y el elemento todavía no se dibujó.
+		 *
+		 * @returns {void}
+		 */
+		ajustar_alto() {
+			let el = this.$refs.textarea
+			// Mientras el micrófono está abierto el textarea no existe (lo reemplaza la franja de
+			// grabación), y el watch de `text` puede correr igual.
+			if (!el) {
+				return
+			}
+			let estilo = window.getComputedStyle(el)
+			let borde = parseFloat(estilo.borderTopWidth) + parseFloat(estilo.borderBottomWidth)
+			let relleno = parseFloat(estilo.paddingTop) + parseFloat(estilo.paddingBottom)
+			let alto_renglon = parseFloat(estilo.lineHeight)
+			if (isNaN(alto_renglon)) {
+				alto_renglon = parseFloat(estilo.fontSize) * 1.4
+			}
+			let maximo = (alto_renglon * MAX_RENGLONES) + relleno + borde
+			el.style.height = 'auto'
+			// `scrollHeight` trae el relleno pero no el borde, y el elemento es `border-box`
+			// (Bootstrap lo aplica a todo): sin sumarlo, el campo queda dos píxeles corto y
+			// aparece un scroll de una línea con el texto justo.
+			let alto = el.scrollHeight + borde
+			el.style.height = Math.min(alto, maximo) + 'px'
+			// La barra solo cuando de verdad hay algo que scrollear: en la cápsula, una barra
+			// permanente se ve siempre y desentona con el resto.
+			el.style.overflowY = alto > maximo ? 'auto' : 'hidden'
+		},
 		onKeydownEnter(event) {
 			if (!event.shiftKey) {
 				event.preventDefault()
@@ -789,10 +867,13 @@ export default {
 	// padding vertical chico es lo que deja que una sola linea entre en los 42px de la fila sin
 	// que el input quede mas alto que los botones de al lado.
 	//
-	// 🔴 El alto lo maneja bootstrap-vue (rows=1 / max-rows=5): NO se le puede poner `height` ni
-	// `min-height` aca, porque el componente escribe `height` en el estilo inline del elemento en
-	// cada tecla y una regla de altura propia pelearia contra ese calculo. Lo unico que se toca es
-	// el padding, el radio y los colores.
+	// 🔴 NADA de `height`, `min-height` ni `max-height` aca. El alto lo escribe `ajustar_alto()`
+	// en el estilo inline del elemento en cada cambio del texto, y una regla de altura propia
+	// pelearia contra ese calculo. El tope de cinco renglones tambien sale de ahi, calculado
+	// contra el `line-height` computado: si se lo pusiera aca como `max-height` fijo, cambiar la
+	// tipografia del composer lo dejaria desfasado sin que nadie se entere.
+	//
+	// Lo que SI se toca aca: el padding, el radio de la capsula, los colores y el `resize`.
 	&__texto.form-control
 		flex: 1
 		min-width: 0
@@ -804,6 +885,12 @@ export default {
 		font-size: .9rem
 		line-height: 1.4
 		box-shadow: none
+		// La manija de la esquina pelea contra el alto automatico: el usuario la arrastra y la
+		// primera tecla que toque le devuelve el alto calculado.
+		resize: none
+		// Arranca oculto y `ajustar_alto()` lo prende recien cuando el texto pasa los cinco
+		// renglones. Sin esto, el campo vacio ya mostraba la barra en algunos navegadores.
+		overflow-y: hidden
 		&:focus
 			border-color: var(--wa-verde)
 			box-shadow: none
