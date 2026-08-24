@@ -568,6 +568,15 @@ export default {
 	&:hover
 		transform: scale(1.06)
 
+		.asistente-ia-fab__distintivo
+			animation: asistente-ia-fab-distintivo-tiemble .5s ease-in-out infinite
+
+		.asistente-ia-fab__distintivo-icono--reposo
+			opacity: 0
+
+		.asistente-ia-fab__distintivo-icono--arrastre
+			opacity: 1
+
 	&:active
 		cursor: grabbing
 
@@ -615,9 +624,6 @@ export default {
 		align-items: center
 		justify-content: center
 
-		&:hover
-			animation: asistente-ia-fab-distintivo-tiemble .5s ease-in-out infinite
-
 	&__distintivo-icono
 		position: absolute
 		top: 0
@@ -634,12 +640,6 @@ export default {
 
 		&--arrastre
 			opacity: 0
-
-	&__distintivo:hover &__distintivo-icono--reposo
-		opacity: 0
-
-	&__distintivo:hover &__distintivo-icono--arrastre
-		opacity: 1
 
 @keyframes asistente-ia-fab-distintivo-tiemble
 	0%
@@ -662,6 +662,6 @@ export default {
 		&:hover
 			transform: none
 
-	.asistente-ia-fab__distintivo:hover
+	.asistente-ia-fab:hover .asistente-ia-fab__distintivo
 		animation: none
 </style>
