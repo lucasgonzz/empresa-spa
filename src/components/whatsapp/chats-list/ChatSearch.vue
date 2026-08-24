@@ -66,14 +66,18 @@ export default {
 		padding: 0 14px 0 36px
 		border-radius: 999px
 		border: 1px solid var(--wa-borde)
-		background: var(--wa-panel)
+		// --wa-input-bg y no --wa-panel: el header de la bandeja YA es --wa-panel, asi que el
+		// campo quedaba del mismo color que la superficie sobre la que se apoya, a un borde de
+		// 1px de ser invisible. Es el mismo token que usa la capsula del composer, y con eso los
+		// dos campos de texto del modulo se leen igual.
+		background: var(--wa-input-bg)
 		color: var(--wa-texto)
 		font-size: .875rem
 		box-shadow: var(--toolbar-btn-shadow)
 		&:focus
 			border-color: var(--wa-verde)
 			box-shadow: var(--toolbar-btn-shadow)
-			background: var(--wa-panel)
+			background: var(--wa-input-bg)
 			color: var(--wa-texto)
 		&::placeholder
 			color: var(--wa-texto)

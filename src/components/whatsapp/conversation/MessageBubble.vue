@@ -626,7 +626,10 @@ export default {
 	&__sender
 		font-size: .7rem
 		font-weight: 700
-		color: var(--wa-verde)
+		// 🔴 --wa-sender y NO --wa-verde. Este rotulo se dibuja SIEMPRE sobre la burbuja saliente
+		// (`v-if="is_out"`), que en claro es verde palido: el verde de marca encima da 1,8:1 y se
+		// lee como una mancha. El token propio es el verde oscuro de WhatsApp, 6,9:1.
+		color: var(--wa-sender)
 	&__sim
 		display: inline-flex
 		align-items: center
@@ -713,7 +716,7 @@ export default {
 			align-items: flex-start
 			gap: 5px
 			font-size: .7rem
-			color: #dc3545
+			color: var(--wa-error)
 		&-actions
 			display: flex
 			flex-direction: row
@@ -750,8 +753,11 @@ export default {
 		color: var(--color-text-secondary)
 		&--read
 			color: #34b7f1
+		// Token y no el #dc3545 de Bootstrap: este check vive adentro de la burbuja saliente, y
+		// ese fondo ahora cambia entre modos. Sobre el verde petroleo del oscuro daba 1,8:1, o
+		// sea que desaparecia el unico aviso de que el mensaje NO salio.
 		&--failed
-			color: #dc3545
+			color: var(--wa-error)
 		&--blocked
 			display: inline-flex
 			align-items: center

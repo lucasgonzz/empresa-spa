@@ -164,16 +164,25 @@ export default {
 		padding: 0
 	// El verde de la marca en vez del `success` de Bootstrap (#28a745), que no es el de WhatsApp
 	// y no cambia en modo oscuro.
+	//
+	// 🔴 Los selectores de estado llevan `.btn-success:not(:disabled):not(.disabled)` encima, y no
+	// es palabrerio defensivo: Bootstrap 4 declara
+	// `.btn-success:not(:disabled):not(.disabled):active` en (0,4,0), que le gana a un
+	// `&__new-btn.btn:active` de (0,3,0). Sin esto, mientras se mantiene apretado el boton, el
+	// verde salta al de Bootstrap: justo el color que esta regla existe para evitar. Estos quedan
+	// en (0,5,0) y ganan siempre, sin depender del orden del bundle.
 	&__new-btn.btn
 		background: var(--wa-verde)
 		border-color: var(--wa-verde)
 		color: var(--wa-verde-texto)
-		&:hover,
-		&:focus,
-		&:active
+		&.btn-success:not(:disabled):not(.disabled):hover,
+		&.btn-success:not(:disabled):not(.disabled):focus,
+		&.btn-success:not(:disabled):not(.disabled):active,
+		&.btn-success:not(:disabled):not(.disabled):active:focus
 			background: var(--wa-verde-hover)
 			border-color: var(--wa-verde-hover)
 			color: var(--wa-verde-texto)
+			box-shadow: none
 	&__body
 		flex: 1
 		overflow-y: auto

@@ -427,6 +427,9 @@ export default {
 		*/
 		this._observador_de_ancho = null
 		this._ancho_observado = 0
+		// Marca de "este componente ya no existe", para los callbacks diferidos con `$nextTick`
+		// que Vue no cancela al destruir. Ver `tomar_borrador()`.
+		this._destruido = false
 		this.tomar_borrador()
 	},
 	mounted() {
@@ -438,6 +441,7 @@ export default {
 	beforeDestroy() {
 		// El sidebar destruye este componente cada vez que se cierra: si la previsualización
 		// quedaba armada, su objectURL se filtraba con el blob de la foto adentro.
+		this._destruido = true
 		this.soltar_adjunto()
 		this.dejar_de_observar_ancho()
 	},
@@ -465,7 +469,15 @@ export default {
 		 */
 		observar_ancho() {
 			let self = this
-			if (typeof ResizeObserver === 'undefined' || !this.$el) {
+			/*
+				🔴 `nodeType === 1` y no un `!this.$el` pelado. La raíz del template es un
+				`<div v-if="chat">`: con `chat` en falsy, Vue 2 deja un NODO COMENTARIO como
+				`$el`, que es truthy y pasaría la guarda, y `observe()` tira
+				"parameter 1 is not of type 'Element'" matando el resto de `mounted()`. Hoy no
+				pasa porque `conversation/Index.vue` recién instancia este componente con el chat
+				cargado, pero eso lo garantiza OTRO archivo: acá no se puede depender de eso.
+			*/
+			if (typeof ResizeObserver === 'undefined' || !this.$el || this.$el.nodeType !== 1) {
 				return
 			}
 			this._ancho_observado = this.$el.offsetWidth
@@ -788,6 +800,17 @@ export default {
 		 * @returns {void}
 		 */
 		tomar_borrador() {
+			/*
+				🔴 El corte por componente destruido no es de más. Este método se llama diferido
+				con `$nextTick` desde el watch de `borrador`, y Vue 2 NO cancela los callbacks
+				pendientes al destruir un componente. Sin esta guarda, si el sidebar se cierra en
+				esa misma vuelta, el `this.text = ...` se pierde pero el `setBorrador(null)` de
+				abajo se ejecuta igual: el borrador queda consumido y tirado, y quien lo dejó
+				—el botón de una oferta, o "Sugerir respuesta"— nunca se entera.
+			*/
+			if (this._destruido) {
+				return
+			}
 			let borrador = this.borrador
 			if (!borrador || borrador.chat_id != this.chat_id) {
 				return
@@ -991,17 +1014,29 @@ export default {
 				background: #c9302c
 				color: #ffffff
 
-	// Verde de la marca, texto blanco. Se pisa el `variant="success"` de bootstrap a proposito:
-	// el verde de Bootstrap (#28a745) no es el de WhatsApp y en modo oscuro no cambia.
+	// Verde de la marca. Se pisa el `variant="success"` de bootstrap a proposito: el verde de
+	// Bootstrap (#28a745) no es el de WhatsApp y en modo oscuro no cambia.
+	//
+	// 🔴 Los selectores de estado llevan `.btn-success:not(:disabled):not(.disabled)` encima. NO
+	// es palabreria defensiva: Bootstrap 4 declara
+	// `.btn-success:not(:disabled):not(.disabled):active` en (0,4,0), que le gana a un
+	// `.whatsapp-composer__send.btn:active` de (0,3,0). Sin esto, mientras el operador mantiene
+	// apretado el boton, el circulo salta al verde de Bootstrap --justo el color que esta regla
+	// existe para evitar-- y le aparece el anillo de foco rectangular sobre un boton redondo.
+	// Estos quedan en (0,5,0) y ganan siempre, sin depender del orden del bundle.
+	//
+	// El `variant` no se puede sacar para esquivar la pelea: bootstrap-vue cae a
+	// `btn-${variant || 'secondary'}`, asi que siempre hay una clase de color contra la que competir.
 	&__send.btn
 		background: var(--wa-verde)
 		color: var(--wa-verde-texto)
-		&:hover:not(:disabled),
-		&:focus:not(:disabled),
-		&:active
+		&.btn-success:not(:disabled):not(.disabled):hover,
+		&.btn-success:not(:disabled):not(.disabled):focus,
+		&.btn-success:not(:disabled):not(.disabled):active,
+		&.btn-success:not(:disabled):not(.disabled):active:focus
 			background: var(--wa-verde-hover)
+			border-color: var(--wa-verde-hover)
 			color: var(--wa-verde-texto)
-			border: none
 			box-shadow: none
 		&:disabled
 			background: var(--wa-verde)
@@ -1027,21 +1062,24 @@ export default {
 		// `min-width: 0` para que el texto de ayuda se pueda recortar en pantallas angostas en
 		// vez de estirar la fila y empujar el microfono fuera del composer.
 		min-width: 0
-		background: var(--wa-sim-bg)
-		border: 1px solid var(--wa-sim-borde)
+		// Tokens PROPIOS de grabacion y no los de simulacion, aunque el color de partida se
+		// parezca: son dos estados sin relacion --uno dice "esto no es real", el otro "te estoy
+		// escuchando"-- y el rojo del reloj sobre el velo ambar del modo oscuro daba 2,5:1.
+		background: var(--wa-grabando-bg)
+		border: 1px solid var(--wa-grabando-borde)
 		border-radius: var(--wa-input-radius)
 		padding: 8px 14px
 		&-punto
 			width: 10px
 			height: 10px
 			border-radius: 50%
-			background: #d9534f
+			background: var(--wa-grabando-acento)
 			flex-shrink: 0
 			animation: whatsapp-composer-latido 1.2s ease-in-out infinite
 		&-reloj
 			font-variant-numeric: tabular-nums
 			font-size: .9rem
-			color: #d9534f
+			color: var(--wa-grabando-acento)
 			flex-shrink: 0
 		&-ayuda
 			font-size: .78rem
@@ -1049,11 +1087,21 @@ export default {
 			overflow: hidden
 			text-overflow: ellipsis
 			white-space: nowrap
-		&-cancelar
+		// 🔴 El `.btn` del selector es lo que hace que la regla valga. El elemento es
+		// `btn btn-sm btn-link`, y `.btn-link:hover` de Bootstrap --(0,2,0)-- le gana a una
+		// regla de una sola clase: al pasar el mouse, el Cancelar se ponia azul de Bootstrap y
+		// subrayado, en los dos temas. Con `.btn` empatamos en (0,2,0) y el `:hover` propio de
+		// abajo queda en (0,3,0), que gana.
+		&-cancelar.btn
 			margin-left: auto
 			flex-shrink: 0
 			color: var(--wa-texto)
 			opacity: var(--wa-texto-tenue-op)
+			&:hover,
+			&:focus
+				color: var(--wa-texto)
+				opacity: 1
+				text-decoration: none
 
 // El latido es la unica señal de que el microfono esta abierto de verdad; el cronometro corre
 // aunque la grabacion haya fallado. Se apaga con `prefers-reduced-motion`, igual que hace el

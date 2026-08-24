@@ -39,14 +39,31 @@
 	// --wa-texto.
 	--wa-burbuja-out-texto: #111b21
 	--wa-burbuja-sombra: rgba(11, 20, 26, .13)
+	// 🔴 Rotulo de quien mando el mensaje. Va SIEMPRE sobre la burbuja saliente (el rotulo solo
+	// se dibuja en los salientes), asi que NO puede ser --wa-verde: verde de marca sobre verde
+	// claro da 1,8:1, ilegible. Este es el verde oscuro de WhatsApp, que sobre #d9fdd3 da 6,9:1;
+	// en oscuro se invierte a un verde claro sobre el petroleo de la burbuja.
+	--wa-sender: #075e54
+	// 🔴 Rojo de error. Vive DENTRO de la burbuja saliente (el check de "fallo el envio" y el
+	// motivo del fallo), o sea sobre un fondo que ahora cambia entre modos: el #dc3545 de
+	// Bootstrap sobre el verde petroleo da 1,8:1 y desaparece justo el unico aviso de que un
+	// mensaje NO salio. En oscuro se aclara.
+	--wa-error: #dc3545
 
 	// --- Acento -------------------------------------------------------------------------------
 	// El verde de la marca: boton de enviar, "Nuevo chat", badge de no leidos, fila activa.
 	--wa-verde: #25d366
 	--wa-verde-hover: #1eb955
-	// Texto que va ENCIMA del verde. Fijo en los dos modos a proposito: el verde tambien cambia
-	// entre modos, pero los dos son lo bastante saturados como para pedir texto claro.
-	--wa-verde-texto: #ffffff
+	// 🔴 Texto e iconos que van ENCIMA del verde, en verde MUY oscuro y no en blanco.
+	//
+	// El blanco es lo primero que uno escribe y es medible que no sirve: sobre #25d366 da 1,98:1,
+	// peor todavia que el 3,17:1 del `success` de Bootstrap que este token vino a reemplazar. El
+	// verde de WhatsApp es claro --luminancia alta--, asi que lo que contrasta contra el es un
+	// tono oscuro, no uno claro. Contra #25d366 este da ~10:1 y contra el #00a884 del modo
+	// oscuro, ~6,9:1: pasa comodo en los dos.
+	//
+	// Vale para el label de "Nuevo chat" y para la flecha del boton de enviar.
+	--wa-verde-texto: #04352a
 
 	// --- Texto secundario ---------------------------------------------------------------------
 	// Se resuelve con opacidad sobre --wa-texto y no con un gris fijo (rgba(0,0,0,.5) era lo que
@@ -60,6 +77,15 @@
 	--wa-sim-bg: #fff6e5
 	--wa-sim-borde: #d39e00
 	--wa-sim-texto: #8a5b00
+
+	// --- Grabacion ----------------------------------------------------------------------------
+	// La franja del microfono abierto tiene tokens PROPIOS y no reusa los de simulacion, aunque
+	// el color de partida sea parecido: son dos estados que no tienen nada que ver --uno dice
+	// "esto no es real", el otro "te estoy escuchando"-- y el resto del modulo los separa con
+	// cuidado. De paso, el rojo del reloj sobre el velo ambar del modo oscuro daba 2,5:1.
+	--wa-grabando-bg: #fff1f0
+	--wa-grabando-borde: rgba(217, 83, 79, .45)
+	--wa-grabando-acento: #d9534f
 
 	// --- Composer -----------------------------------------------------------------------------
 	// Fondo de la capsula donde se escribe. En claro es blanco sobre el panel gris del composer.
@@ -78,6 +104,11 @@ html.dark-mode
 	--wa-burbuja-out: #005c4b
 	--wa-burbuja-out-texto: #e9edef
 	--wa-burbuja-sombra: rgba(0, 0, 0, .35)
+	// Verde claro sobre el petroleo de la burbuja saliente: el #075e54 del modo claro seria
+	// verde oscuro sobre verde oscuro.
+	--wa-sender: #8fd8c4
+	// Rojo claro: el #dc3545 sobre el petroleo de la burbuja da 1,8:1.
+	--wa-error: #ff8a80
 	--wa-verde: #00a884
 	--wa-verde-hover: #06cf9c
 	--wa-texto-tenue-op: .68
@@ -87,4 +118,7 @@ html.dark-mode
 	--wa-sim-bg: rgba(217, 158, 0, .16)
 	--wa-sim-borde: rgba(217, 158, 0, .55)
 	--wa-sim-texto: #e0b64a
+	--wa-grabando-bg: rgba(217, 83, 79, .18)
+	--wa-grabando-borde: rgba(217, 83, 79, .5)
+	--wa-grabando-acento: #ff8a80
 	--wa-input-bg: #2a3942

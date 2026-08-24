@@ -10,7 +10,11 @@
 				v-if="!chat.ai_enabled"
 				title="Respuesta automática (IA) apagada"
 				class="whatsapp-chat-row__ai-off-dot"></i>
-				{{ chat_name }}
+				<!-- El nombre en un <span> propio: el contenedor es flex (por el puntito de la
+				IA) y ahí `text-overflow: ellipsis` no dibuja los puntos, corta a filo. -->
+				<span class="whatsapp-chat-row__name-texto">
+					{{ chat_name }}
+				</span>
 			</span>
 			<span
 			v-if="chat.last_message_at"
@@ -99,8 +103,17 @@ export default {
 		background: var(--wa-hover)
 	// La fila abierta se marca con el verde de la marca en velo, no con un gris: es la unica
 	// pista de en que conversacion esta parado el operador cuando el sidebar tapa media pantalla.
-	&--active
+	//
+	// 🔴 Dos cosas que parecen de mas y no lo son. Una: el velo sale de --wa-verde y no de un
+	// rgba fijo, para que siga al verde del tema (en oscuro el verde es #00a884, no #25d366); el
+	// rgba de arriba queda como respaldo para el navegador que no tenga color-mix. Dos: la clase
+	// repetida --(0,2,0)-- para ganarle al `:hover` de arriba, que empata en dos clases; sin eso,
+	// pasar el mouse por la fila abierta la pintaba de gris y borraba la unica pista de en que
+	// conversacion esta parado el operador.
+	&--active,
+	&--active:hover
 		background: rgba(37, 211, 102, .12)
+		background: color-mix(in srgb, var(--wa-verde) 14%, transparent)
 	&__main
 		display: flex
 		flex-direction: row
@@ -112,7 +125,12 @@ export default {
 		font-size: .95rem
 		display: flex
 		align-items: center
-		// `min-width: 0` + recorte: un nombre largo empujaba la hora fuera de la fila.
+		// `min-width: 0` es lo que deja que el item flex se achique debajo de su contenido: sin
+		// esto un nombre largo empujaba la hora fuera de la fila. El recorte con puntos lo hace el
+		// <span> de adentro, porque este contenedor es flex y ahi `text-overflow` corta a filo.
+		min-width: 0
+		overflow: hidden
+	&__name-texto
 		min-width: 0
 		overflow: hidden
 		text-overflow: ellipsis

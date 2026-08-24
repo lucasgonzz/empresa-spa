@@ -42,7 +42,16 @@
 				class="whatsapp-header__btn"
 				@click="$bvModal.show('whatsapp-link-client')">
 					<i class="bi bi-person"></i>
-					{{ chat.client ? chat.client.name : 'Vincular cliente' }}
+					<!-- 🔴 El nombre va en un <span> propio y el recorte se le aplica a ÉL, no al
+					botón. `text-overflow: ellipsis` solo actúa sobre el contenido inline de un
+					contenedor de bloque: puesto sobre el botón —que es `inline-flex`— el texto es
+					un ítem flex anónimo y se corta a filo, sin los puntos. Y como el botón centra
+					su contenido, el desborde salía por los DOS lados: con un cliente de nombre
+					largo se perdían el ícono de la izquierda y el principio del nombre, y quedaba
+					un pedazo del medio. -->
+					<span class="whatsapp-header__btn-texto">
+						{{ chat.client ? chat.client.name : 'Vincular cliente' }}
+					</span>
 				</b-button>
 
 				<b-dropdown
@@ -157,6 +166,24 @@ export default {
 				return this.chat.client.name
 			}
 			return this.chat.display_name || this.chat.phone
+		},
+	},
+	watch: {
+		/**
+		 * 🔴 El indicador de "pidiendo sugerencia" se limpia al saltar de conversación.
+		 *
+		 * Este componente NO se recrea al cambiar de chat (no hay `:key` en
+		 * `conversation/Index.vue`), así que sin esto el flag se arrastraba: pedir una sugerencia
+		 * para el cliente A y saltar al B dejaba el botón de B diciendo "Sugiriendo..." sin que
+		 * nadie hubiera pedido nada para B, y —peor— el corte por `this.suggesting` de
+		 * `suggest()` se comía el click de B hasta que volviera la respuesta de A.
+		 *
+		 * Limpiar el flag no habilita que la respuesta de A caiga en B: de eso se encargan las
+		 * dos guardas de `suggest()` y de `tomar_borrador()`, que comparan contra el chat que
+		 * está abierto en el momento de la respuesta.
+		 */
+		chat_id() {
+			this.suggesting = false
 		},
 	},
 	methods: {
@@ -361,10 +388,16 @@ export default {
 		border-radius: var(--toolbar-btn-radius)
 		white-space: nowrap
 		// El nombre de un cliente largo no puede estirar el botón hasta empujar la × fuera del
-		// panel: se recorta con puntos suspensivos.
+		// panel. El botón acota el ancho; el recorte con puntos lo hace el <span> de adentro (ver
+		// el comentario del template: sobre un contenedor flex, `text-overflow` no dibuja puntos).
 		max-width: 190px
 		overflow: hidden
+	&__btn-texto
+		display: block
+		min-width: 0
+		overflow: hidden
 		text-overflow: ellipsis
+		white-space: nowrap
 	&__cerrar
 		flex-shrink: 0
 		width: 32px
