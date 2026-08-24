@@ -92,31 +92,42 @@ export default {
 .whatsapp-chat-row
 	padding: 10px 14px
 	cursor: pointer
-	border-bottom: 1px solid rgba(0, 0, 0, .05)
+	border-bottom: 1px solid var(--wa-borde)
+	color: var(--wa-texto)
+	transition: background .12s ease
 	&:hover
-		background: rgba(0, 0, 0, .03)
+		background: var(--wa-hover)
+	// La fila abierta se marca con el verde de la marca en velo, no con un gris: es la unica
+	// pista de en que conversacion esta parado el operador cuando el sidebar tapa media pantalla.
 	&--active
-		background: rgba(37, 211, 102, .1)
+		background: rgba(37, 211, 102, .12)
 	&__main
 		display: flex
 		flex-direction: row
 		justify-content: space-between
 		align-items: center
+		gap: 8px
 	&__name
 		font-weight: 600
 		font-size: .95rem
 		display: flex
 		align-items: center
+		// `min-width: 0` + recorte: un nombre largo empujaba la hora fuera de la fila.
+		min-width: 0
+		overflow: hidden
+		text-overflow: ellipsis
+		white-space: nowrap
 	&__ai-off-dot
 		display: inline-block
 		width: 7px
 		height: 7px
 		border-radius: 50%
-		background: #adb5bd
+		background: var(--color-text-secondary)
 		margin-right: 6px
+		flex-shrink: 0
 	&__time
 		font-size: .75rem
-		color: rgba(0, 0, 0, .5)
+		opacity: var(--wa-texto-muy-tenue-op)
 		flex-shrink: 0
 	&__sub
 		display: flex
@@ -124,9 +135,15 @@ export default {
 		justify-content: space-between
 		align-items: center
 		margin-top: 2px
+		gap: 8px
+	// 🔴 El teléfono se destiñe con `color` y NO con `opacity`, aunque el resto del módulo use
+	// opacidad para el texto secundario: la marca SIM cuelga ADENTRO de este span (ver el
+	// template), y `opacity` crea un contexto de composición que se aplica al subárbol entero. Un
+	// `opacity: 1` en el hijo no lo deshace —el hijo se compone dentro del padre ya translúcido—,
+	// así que la marca quedaba desteñida también, y en modo oscuro casi invisible.
 	&__phone
 		font-size: .8rem
-		color: rgba(0, 0, 0, .5)
+		color: var(--color-text-secondary)
 	&__sim
 		display: inline-flex
 		align-items: center
@@ -134,8 +151,8 @@ export default {
 		font-size: .62rem
 		font-weight: 700
 		letter-spacing: .03em
-		color: #8a6d3b
-		background: rgba(255, 193, 7, .22)
+		color: var(--wa-sim-texto)
+		background: var(--wa-sim-bg)
 		border-radius: 4px
 		padding: 0 4px
 		margin-left: 5px
