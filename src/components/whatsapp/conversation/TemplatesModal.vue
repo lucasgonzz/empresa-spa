@@ -141,7 +141,12 @@ export default {
 </script>
 <style lang="sass">
 .whatsapp-templates__preview
-	background: #f7f9fb
+	// Tokens y no un gris claro fijo: el texto de la vista previa lo pinta el tema, asi que en
+	// modo oscuro quedaba texto claro sobre un bloque casi blanco. Este modal es el que abre el
+	// boton "Plantillas" del header de la conversacion.
+	background: var(--bg-section)
+	border: 1px solid var(--color-border)
+	color: var(--color-text-primary)
 	border-radius: 8px
 	padding: 10px
 	margin-top: 10px

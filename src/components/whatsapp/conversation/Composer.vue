@@ -420,19 +420,74 @@ export default {
 			—misma razón por la que el mixin deja afuera las marcas del gesto.
 		*/
 		this._chat_de_la_grabacion = null
+		/*
+			Observador del ancho del composer y último ancho visto. Tampoco van en `data()`: no
+			los lee ningún template, y un ResizeObserver metido en el sistema de reactividad de
+			Vue 2 se convertiría en un objeto observado sin ninguna necesidad.
+		*/
+		this._observador_de_ancho = null
+		this._ancho_observado = 0
 		this.tomar_borrador()
 	},
 	mounted() {
 		// El composer puede nacer con texto adentro (el borrador que tomó `created()`), así que
 		// el alto se ajusta ya en el primer dibujo y no recién a la primera tecla.
 		this.ajustar_alto()
+		this.observar_ancho()
 	},
 	beforeDestroy() {
 		// El sidebar destruye este componente cada vez que se cierra: si la previsualización
 		// quedaba armada, su objectURL se filtraba con el blob de la foto adentro.
 		this.soltar_adjunto()
+		this.dejar_de_observar_ancho()
 	},
 	methods: {
+		/**
+		 * Vigila el ANCHO del composer para recalcular el alto del input.
+		 *
+		 * 🔴 No alcanza con el watch de `text`. El panel del sidebar es redimensionable
+		 * arrastrando su borde izquierdo (`sidebar/Index.vue`, `on_resize`), y ese arrastre no
+		 * dispara ningún evento del textarea ni `resize` de la ventana: cambia el ancho del
+		 * panel por estilo inline. Con tres renglones escritos y el panel angostándose, el texto
+		 * se reacomoda a cinco pero el campo se queda con el alto de tres y recorta lo que el
+		 * operador está escribiendo, hasta la próxima tecla.
+		 *
+		 * 🔴 Se compara el ancho contra el anterior y se sale si no cambió. El observer también
+		 * se dispara cuando `ajustar_alto()` cambia el ALTO —que es lo que este mismo callback
+		 * acaba de hacer—, y sin ese corte cada ajuste agenda otro: no es un bucle infinito
+		 * (converge cuando el alto se estabiliza), pero le hace ruido a la consola con el
+		 * "ResizeObserver loop completed with undelivered notifications" de Chrome.
+		 *
+		 * `ResizeObserver` se chequea antes de usarlo: si el navegador no lo tiene, se pierde
+		 * solo este recálculo y todo lo demás sigue andando.
+		 *
+		 * @returns {void}
+		 */
+		observar_ancho() {
+			let self = this
+			if (typeof ResizeObserver === 'undefined' || !this.$el) {
+				return
+			}
+			this._ancho_observado = this.$el.offsetWidth
+			this._observador_de_ancho = new ResizeObserver(function () {
+				let ancho = self.$el ? self.$el.offsetWidth : 0
+				if (ancho === self._ancho_observado) {
+					return
+				}
+				self._ancho_observado = ancho
+				self.ajustar_alto()
+			})
+			this._observador_de_ancho.observe(this.$el)
+		},
+		/**
+		 * @returns {void}
+		 */
+		dejar_de_observar_ancho() {
+			if (this._observador_de_ancho) {
+				this._observador_de_ancho.disconnect()
+				this._observador_de_ancho = null
+			}
+		},
 		/**
 		 * Enter solo (sin Shift) envía el mensaje; Shift+Enter deja pasar el salto de línea normal.
 		 *
