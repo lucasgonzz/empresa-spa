@@ -60,7 +60,7 @@
 					v-for="(fila, i) in model.ingresos_por_caja_metodo"
 					:key="'ingreso-'+i"
 					class="cascada-desglose__item">
-						<span>Caja #{{ fila.caja_id }} · método #{{ fila.current_acount_payment_method_id }}</span>
+						<span>{{ etiqueta_caja(fila.caja_id) }} · {{ etiqueta_metodo(fila.current_acount_payment_method_id) }}</span>
 						<span>{{ formatear(fila.total) }}</span>
 					</div>
 				</div>
@@ -122,7 +122,7 @@
 					v-for="(fila, i) in model.egresos_por_caja_metodo"
 					:key="'egreso-'+i"
 					class="cascada-desglose__item">
-						<span>Caja #{{ fila.caja_id }} · método #{{ fila.current_acount_payment_method_id }}</span>
+						<span>{{ etiqueta_caja(fila.caja_id) }} · {{ etiqueta_metodo(fila.current_acount_payment_method_id) }}</span>
 						<span>{{ formatear(fila.total) }}</span>
 					</div>
 				</div>
@@ -228,6 +228,37 @@ export default {
 	methods: {
 		formatear(valor) {
 			return this.price(valor, false, false)
+		},
+		/*
+			Ítem 9 (tanda-correctivos-2408): el desglose muestra nombres reales, no ids.
+			Los catálogos de cajas y métodos de pago se descargan al iniciar sesión
+			(mixins/call_methods.js), así que se resuelven acá contra el store. Fallback
+			al "#id" si el catálogo todavía no llegó o el id ya no existe (caja borrada).
+			Al ser métodos llamados desde el render, Vue trackea state.caja.models /
+			state.current_acount_payment_method.models: cuando el catálogo termina de
+			bajar, el desglose se re-renderiza solo con los nombres.
+		*/
+		etiqueta_caja(caja_id) {
+			/* Sin caja (null o 0): rótulo claro en vez de "Caja #null". */
+			if (!caja_id) {
+				return 'Sin caja asignada'
+			}
+			let caja = this.$store.state.caja.models.find(caja => caja.id == caja_id)
+			if (caja && caja.name) {
+				return caja.name
+			}
+			return 'Caja #' + caja_id
+		},
+		etiqueta_metodo(metodo_id) {
+			/* Sin método (null o 0): mismo criterio que etiqueta_caja. */
+			if (!metodo_id) {
+				return 'Sin método'
+			}
+			let metodo = this.$store.state.current_acount_payment_method.models.find(metodo => metodo.id == metodo_id)
+			if (metodo && metodo.name) {
+				return metodo.name
+			}
+			return 'Método #' + metodo_id
 		},
 	},
 }
