@@ -4,55 +4,34 @@
 	class="whatsapp-composer">
 		<!-- Chat en simulación: el backend FRENA todo envío de texto hacia WhatsApp mientras el
 		último entrante sea simulado. Sin este aviso el operador escribía, apretaba enviar, la
-		fila se guardaba y no salía nada: fallaba en silencio. -->
+		fila se guardaba y no salía nada: fallaba en silencio.
+
+		🔴 Solo el título. El párrafo de detalle que estaba acá abajo (cinco renglones
+		explicando la ventana de 24 h forzada) se sacó por pedido de Lucas el 24/8/2026: comía
+		alto de la conversación en un panel que ya es angosto. Lo que hacía falta saber para no
+		mandar un mensaje creyendo que sale está en esta línea, en el `title` de abajo, en el
+		placeholder del input y en el badge del header. -->
 		<div
 		v-if="en_simulacion"
-		class="whatsapp-composer__simulacion">
-			<strong class="whatsapp-composer__simulacion-titulo">
-				<i class="bi bi-cone-striped"></i>
-				Chat en simulación: los envíos a WhatsApp están frenados
-			</strong>
-			<span class="whatsapp-composer__simulacion-detalle">
-				El último mensaje entrante lo inyectaste vos desde "Simular mensaje", así que la
-				ventana de 24 h está forzada y no hay una conversación real abierta con este
-				número. Lo que mandes se va a guardar acá y lo vas a ver en la conversación,
-				pero <strong>al cliente no le llega</strong>. Se destraba solo en cuanto el
-				cliente escriba de verdad.
-			</span>
+		class="whatsapp-composer__simulacion"
+		title="El último mensaje entrante lo inyectaste vos desde &quot;Simular mensaje&quot;, así que la ventana de 24 h está forzada. Lo que mandes se guarda y se ve acá, pero al cliente no le llega. Se destraba solo en cuanto el cliente escriba de verdad.">
+			<i class="bi bi-cone-striped"></i>
+			Chat en simulación: los envíos a WhatsApp están frenados
 		</div>
 
-		<div class="whatsapp-composer__toolbar">
+		<!-- Arriba del input y en su propia fila, que es donde Lucas lo quiere. Gateado por el
+		toggle chat_simulation_enabled: apagado por default, así los clientes ya activos no ven un
+		botón nuevo que no pidieron. -->
+		<div
+		v-if="is_owner && config && config.chat_simulation_enabled"
+		class="whatsapp-composer__toolbar">
 			<b-button
 			size="sm"
-			variant="outline-secondary"
-			:disabled="suggesting"
-			@click="suggest">
-				<i class="bi bi-magic"></i>
-				{{ suggesting ? 'Sugiriendo...' : 'Sugerir respuesta' }}
-			</b-button>
-			<b-button
-			size="sm"
-			variant="outline-secondary"
-			@click="$bvModal.show('whatsapp-templates')">
-				<i class="bi bi-file-earmark-text"></i>
-				Plantillas
-			</b-button>
-			<b-button
-			size="sm"
-			variant="outline-secondary"
-			:disabled="enviando_adjunto"
-			@click="abrir_selector_de_imagen">
-				<i class="bi bi-paperclip"></i>
-				Foto
-			</b-button>
-			<!-- Gateado por el toggle chat_simulation_enabled: apagado por default, así los
-			clientes ya activos no ven un botón nuevo que no pidieron. -->
-			<b-button
-			v-if="is_owner && config && config.chat_simulation_enabled"
-			size="sm"
-			variant="outline-secondary"
+			variant="outline-warning"
+			class="whatsapp-composer__simular-btn"
+			title="Inyecta un mensaje como si lo hubiera escrito el cliente. No le llega nada a nadie."
 			@click="$bvModal.show('whatsapp-simulate-in-chat')">
-				<i class="bi bi-play-fill"></i>
+				<i class="bi bi-cone-striped"></i>
 				Simular mensaje del cliente
 			</b-button>
 		</div>
@@ -107,13 +86,35 @@
 		</div>
 
 		<div class="whatsapp-composer__input-row">
+			<!-- El clip vive ACÁ, en la misma fila que el input y los dos botones, y no arriba en
+			una barra aparte: es el orden de la aplicación de WhatsApp y es lo que Lucas pidió. Va
+			pelado (sin borde ni fondo de botón) por la misma razón. Abre el mismo
+			`$refs.file_input` de siempre; el flujo de previsualización con epígrafe no cambió. -->
+			<button
+			type="button"
+			class="whatsapp-composer__clip"
+			:disabled="enviando_adjunto"
+			title="Adjuntar una foto"
+			@click="abrir_selector_de_imagen">
+				<i class="bi bi-paperclip"></i>
+			</button>
+
+			<!--
+			🔴 `rows="1"` + `max-rows="5"`: arranca en un solo renglón y crece solo hasta cinco, que
+			es lo que pidió Lucas. El auto-crecimiento lo hace bootstrap-vue por su cuenta cuando
+			`max-rows` es mayor que `rows` — no hace falta ningún watch que mida el scrollHeight a
+			mano. `no-resize` saca la manija de la esquina: con el alto automático, arrastrarla
+			pelea contra el cálculo del componente.
+			-->
 			<b-form-textarea
 			v-if="!audio_recording"
 			v-model="text"
 			id="whatsapp-composer-text"
+			class="whatsapp-composer__texto"
 			:placeholder="placeholder"
-			rows="2"
-			max-rows="6"
+			rows="1"
+			max-rows="5"
+			no-resize
 			@keydown.enter="onKeydownEnter"></b-form-textarea>
 
 			<!-- Mientras graba, esta franja REEMPLAZA al textarea (no se agrega al lado): en un
@@ -147,8 +148,8 @@
 			-->
 			<button
 			type="button"
-			class="btn btn-sm whatsapp-composer__mic"
-			:class="audio_recording ? 'btn-danger' : 'btn-outline-secondary'"
+			class="whatsapp-composer__mic"
+			:class="{'whatsapp-composer__mic--grabando': audio_recording}"
 			:disabled="enviando_adjunto"
 			:title="titulo_microfono"
 			@click="on_audio_click"
@@ -163,11 +164,16 @@
 				:class="audio_recording ? 'bi-stop-circle-fill' : 'bi-mic'"></i>
 			</button>
 
+			<!-- Círculo verde con la flecha, como el de WhatsApp. La clase cae en la raíz del
+			componente (en Vue 2 el `class` del padre se hereda al elemento raíz del hijo), que es
+			el propio <button> de bootstrap-vue. -->
 			<btn-loader
 			v-if="!audio_recording"
+			class="whatsapp-composer__send"
 			:loader="sending"
 			:block="false"
-			icon="send"
+			icon_class="bi bi-send-fill"
+			variant="success"
 			@clicked="send"></btn-loader>
 		</div>
 
@@ -210,7 +216,6 @@ export default {
 		return {
 			text: '',
 			sending: false,
-			suggesting: false,
 
 			// Foto elegida con el clip y todavía no enviada (null = no hay ninguna armada).
 			adjunto: null,
@@ -242,7 +247,8 @@ export default {
 			return this.$store.state.whatsapp_chat.selected_chat_id
 		},
 		/**
-		 * El borrador que dejó quien abrió la conversación (`{chat_id, texto}` o null).
+		 * El borrador que le dejaron a esta conversación (`{chat_id, texto}` o null): lo escriben
+		 * el botón de una oferta y "Sugerir respuesta" del header. Ver `tomar_borrador()`.
 		 *
 		 * Se expone como computed —y no se lee solo adentro del método— porque hace falta que
 		 * sea REACTIVO: hay un caso en el que este componente ya existe y el chat abierto no
@@ -615,43 +621,17 @@ export default {
 			this.$toast.error(message)
 		},
 		/**
-		 * Pide una sugerencia de la IA y la carga en el input, editable antes de enviar
-		 * (nunca se envía sola).
-		 */
-		suggest() {
-			if (!this.chat) {
-				return
-			}
-			/*
-				La sugerencia se pide para ESTE chat y solo sirve para este chat: si mientras viaja
-				el operador salta a otra conversación, se descarta. Si no, la respuesta que la IA
-				escribió leyendo la conversación del cliente A —con los datos de A adentro—
-				aparecía escrita en el input con el cliente B abierto, lista para mandarse de un
-				Enter. Es el mismo problema que resuelve el watch de `chat_id`, por el otro lado.
-			*/
-			let chat_pedido = this.chat.id
-			this.suggesting = true
-			this.$store.dispatch('whatsapp_chat/suggest', chat_pedido)
-			.then(suggestion => {
-				this.suggesting = false
-				if (chat_pedido != this.chat_id) {
-					return
-				}
-				this.text = suggestion || ''
-			})
-			.catch(err => {
-				this.suggesting = false
-				console.log(err)
-				this.$toast.error('No se pudo generar la sugerencia')
-			})
-		},
-		/**
-		 * Toma el borrador que dejó quien abrió esta conversación (hoy, el botón de una
-		 * oferta) y lo carga en el input. Es de UN SOLO USO: se consume del store apenas se
-		 * lee, así que no puede reaparecer al volver a este chat ni filtrarse a otro. Y sólo
-		 * se toma si el `chat_id` del borrador es el que está abierto — la misma guarda que
-		 * ya usa `suggest()` para que una respuesta pedida para el cliente A no aparezca
-		 * escrita con el cliente B abierto.
+		 * Toma el borrador que le dejaron a esta conversación y lo carga en el input. Es de UN
+		 * SOLO USO: se consume del store apenas se lee, así que no puede reaparecer al volver a
+		 * este chat ni filtrarse a otro. Y sólo se toma si el `chat_id` del borrador es el que
+		 * está abierto, para que un texto escrito para el cliente A no aparezca con el B abierto.
+		 *
+		 * 🔴 HOY LO ESCRIBEN DOS: el botón de una oferta (que abre el chat con el mensaje ya
+		 * redactado) y, desde el 24/8/2026, **"Sugerir respuesta" del header de la conversación**.
+		 * Ese botón vivía acá adentro y escribía `this.text` derecho; al mudarse a `Header.vue`
+		 * dejó de poder tocar el `data()` de este componente, así que usa este mismo canal. Si
+		 * mañana aparece un tercero, no hay nada que cambiar acá: el contrato es
+		 * `setBorrador({chat_id, texto})` y este método lo levanta.
 		 *
 		 * 🔴 SE LLAMA DESDE TRES LUGARES, UNO POR CADA ESTADO EN EL QUE PUEDE ESTAR EL SIDEBAR
 		 * CUANDO ALGUIEN APRIETA UN BOTÓN QUE DEJA BORRADOR. Los tres hacen falta y ninguno
@@ -687,69 +667,83 @@ export default {
 </script>
 <style lang="sass">
 .whatsapp-composer
-	padding: 8px 14px 14px 14px
-	background: #ffffff
-	border-top: 1px solid rgba(0, 0, 0, .08)
+	padding: 8px 10px 10px 10px
+	background: var(--wa-panel)
+	border-top: 1px solid var(--wa-borde)
+	color: var(--wa-texto)
+
+	// --- Aviso de simulacion ------------------------------------------------------------------
+	// Una sola linea. El parrafo de detalle se saco el 24/8/2026 (pedido de Lucas): en un panel de
+	// 320px de ancho minimo comia cinco renglones de conversacion cada vez que se probaba el
+	// agente. El texto largo quedo en el `title`, a un hover de distancia.
 	&__simulacion
 		display: flex
-		flex-direction: column
-		gap: 2px
-		background: #fff6e5
-		border: 1px dashed #d39e00
+		flex-direction: row
+		align-items: center
+		gap: 6px
+		background: var(--wa-sim-bg)
+		border: 1px dashed var(--wa-sim-borde)
 		border-radius: 8px
-		padding: 8px 10px
-		margin-bottom: 8px
+		padding: 5px 10px
+		margin-bottom: 6px
+		font-size: .78rem
+		font-weight: 600
+		color: var(--wa-sim-texto)
 		text-align: left
-		&-titulo
-			display: flex
-			flex-direction: row
-			align-items: center
-			gap: 6px
-			font-size: .8rem
-			color: #8a5b00
-		&-detalle
-			font-size: .74rem
-			line-height: 1.35
-			color: rgba(0, 0, 0, .65)
-			// En teléfono el detalle come media pantalla. Se recorta a tres líneas y el resto
-			// queda accesible al tocarlo (el título ya dice lo que hay que saber para no
-			// mandar un mensaje creyendo que sale).
-			@media screen and (max-width: 575px)
-				max-height: 3.5em
-				overflow-y: auto
+		i
+			flex-shrink: 0
+
+	// --- Fila del boton de simular ------------------------------------------------------------
+	// Queda ARRIBA del input, que es donde estaba y donde Lucas lo quiere. Ya no comparte fila con
+	// Sugerir, Plantillas y Foto: los dos primeros se mudaron al header y el clip bajo a la fila
+	// del input.
 	&__toolbar
 		display: flex
 		flex-direction: row
-		flex-wrap: wrap
-		gap: 8px
 		margin-bottom: 6px
+	// Misma geometria que los botones del header (32px, radio del token), para que las dos filas
+	// de controles del sidebar se lean como el mismo sistema. El `.btn` del selector le gana a
+	// `.btn-sm` por especificidad (0,2,0) contra (0,1,0).
+	&__simular-btn.btn
+		height: 32px
+		display: inline-flex
+		align-items: center
+		justify-content: center
+		gap: 5px
+		padding: 0 10px
+		font-size: .8125rem
+		line-height: 1
+		border-radius: var(--toolbar-btn-radius)
+		white-space: nowrap
+
+	// --- Previsualizacion del adjunto ---------------------------------------------------------
 	&__adjunto
 		display: flex
 		flex-direction: row
 		align-items: flex-start
 		gap: 10px
-		background: #f7f9fb
-		border: 1px solid rgba(0, 0, 0, .08)
-		border-radius: 8px
+		background: var(--bg-section)
+		border: 1px solid var(--wa-borde)
+		border-radius: 12px
 		padding: 8px 10px
 		margin-bottom: 8px
 		&-preview
 			width: 72px
 			height: 72px
 			object-fit: cover
-			border-radius: 6px
+			border-radius: 8px
 			flex-shrink: 0
 		&-datos
 			display: flex
 			flex-direction: column
 			gap: 6px
-			// `min-width: 0` para que el nombre largo pueda recortarse: sin esto el ítem flex
+			// `min-width: 0` para que el nombre largo pueda recortarse: sin esto el item flex
 			// se niega a achicarse debajo de su contenido y el bloque desborda el composer.
 			min-width: 0
 			flex: 1
 		&-nombre
 			font-size: .78rem
-			color: rgba(0, 0, 0, .6)
+			opacity: var(--wa-texto-tenue-op)
 			overflow: hidden
 			text-overflow: ellipsis
 			white-space: nowrap
@@ -757,18 +751,131 @@ export default {
 			display: flex
 			flex-direction: row
 			gap: 8px
+
+	// --- La fila del composer -----------------------------------------------------------------
+	// Clip, input, microfono y enviar, en ese orden y en una sola fila: es la anatomia de la
+	// aplicacion de WhatsApp y es lo que pidio Lucas. `align-items: flex-end` es lo que mantiene
+	// los tres controles pegados al piso mientras el input crece hacia arriba.
 	&__input-row
 		display: flex
 		flex-direction: row
 		align-items: flex-end
-		gap: 8px
-		textarea
-			flex: 1
-	&__mic
-		// No se achica: en teléfono el textarea se lleva todo el ancho sobrante y sin esto el
-		// botón quedaba de 20px, imposible de apretar con el dedo.
+		gap: 6px
+
+	// El clip va pelado --sin borde ni fondo--, como en WhatsApp. Es un <button> y no un <i>
+	// clickeable para que se pueda enfocar con el teclado y activar con Enter.
+	&__clip
 		flex-shrink: 0
-		align-self: flex-end
+		width: var(--wa-control-h)
+		height: var(--wa-control-h)
+		border: none
+		background: transparent
+		border-radius: 50%
+		color: var(--wa-texto)
+		opacity: var(--wa-texto-tenue-op)
+		display: flex
+		align-items: center
+		justify-content: center
+		font-size: 1.2rem
+		transition: background .15s ease, opacity .15s ease
+		&:hover:not(:disabled)
+			background: var(--wa-hover)
+			opacity: 1
+		&:disabled
+			opacity: .35
+			cursor: not-allowed
+
+	// La capsula donde se escribe. El radio grande es lo que la hace leer como WhatsApp; el
+	// padding vertical chico es lo que deja que una sola linea entre en los 42px de la fila sin
+	// que el input quede mas alto que los botones de al lado.
+	//
+	// 🔴 El alto lo maneja bootstrap-vue (rows=1 / max-rows=5): NO se le puede poner `height` ni
+	// `min-height` aca, porque el componente escribe `height` en el estilo inline del elemento en
+	// cada tecla y una regla de altura propia pelearia contra ese calculo. Lo unico que se toca es
+	// el padding, el radio y los colores.
+	&__texto.form-control
+		flex: 1
+		min-width: 0
+		padding: 9px 14px
+		border-radius: var(--wa-input-radius)
+		border: 1px solid var(--wa-borde)
+		background: var(--wa-input-bg)
+		color: var(--wa-texto)
+		font-size: .9rem
+		line-height: 1.4
+		box-shadow: none
+		&:focus
+			border-color: var(--wa-verde)
+			box-shadow: none
+			background: var(--wa-input-bg)
+			color: var(--wa-texto)
+		&::placeholder
+			color: var(--wa-texto)
+			opacity: var(--wa-texto-muy-tenue-op)
+
+	// Microfono y enviar: los dos circulos del mismo diametro, alineados al piso de la fila.
+	&__mic,
+	&__send.btn
+		flex-shrink: 0
+		width: var(--wa-control-h)
+		height: var(--wa-control-h)
+		border-radius: 50%
+		display: inline-flex
+		align-items: center
+		justify-content: center
+		padding: 0
+		border: none
+		font-size: 1.05rem
+		line-height: 1
+
+	// Tenue mientras no graba (es una accion secundaria al lado de Enviar) y rojo lleno mientras
+	// graba, que es el unico momento en que tiene que gritar.
+	&__mic
+		background: transparent
+		color: var(--wa-texto)
+		opacity: var(--wa-texto-tenue-op)
+		transition: background .15s ease, color .15s ease, opacity .15s ease
+		&:hover:not(:disabled)
+			background: var(--wa-hover)
+			opacity: 1
+		&:disabled
+			opacity: .35
+			cursor: not-allowed
+		&--grabando
+			background: #d9534f
+			color: #ffffff
+			opacity: 1
+			&:hover:not(:disabled)
+				background: #c9302c
+				color: #ffffff
+
+	// Verde de la marca, texto blanco. Se pisa el `variant="success"` de bootstrap a proposito:
+	// el verde de Bootstrap (#28a745) no es el de WhatsApp y en modo oscuro no cambia.
+	&__send.btn
+		background: var(--wa-verde)
+		color: var(--wa-verde-texto)
+		&:hover:not(:disabled),
+		&:focus:not(:disabled),
+		&:active
+			background: var(--wa-verde-hover)
+			color: var(--wa-verde-texto)
+			border: none
+			box-shadow: none
+		&:disabled
+			background: var(--wa-verde)
+			color: var(--wa-verde-texto)
+			opacity: .5
+		// El spinner y el icono son hermanos en BtnLoader y el que no corresponde se oculta con
+		// v-show; sin esto el <span> vacio le mete un margen al circulo y descentra el icono.
+		span
+			display: inline-flex
+			align-items: center
+			justify-content: center
+			margin: 0
+
+	// --- Franja de grabacion ------------------------------------------------------------------
+	// Reemplaza al textarea mientras el microfono esta abierto (decision previa: en un telefono de
+	// 360px las dos cosas no entran). Toma el radio de la capsula para no desentonar con la fila.
 	&__grabando
 		display: flex
 		flex-direction: row
@@ -776,12 +883,12 @@ export default {
 		gap: 8px
 		flex: 1
 		// `min-width: 0` para que el texto de ayuda se pueda recortar en pantallas angostas en
-		// vez de estirar la fila y empujar el micrófono fuera del composer.
+		// vez de estirar la fila y empujar el microfono fuera del composer.
 		min-width: 0
-		background: #fff6e5
-		border: 1px solid rgba(0, 0, 0, .08)
-		border-radius: 8px
-		padding: 8px 10px
+		background: var(--wa-sim-bg)
+		border: 1px solid var(--wa-sim-borde)
+		border-radius: var(--wa-input-radius)
+		padding: 8px 14px
 		&-punto
 			width: 10px
 			height: 10px
@@ -796,17 +903,18 @@ export default {
 			flex-shrink: 0
 		&-ayuda
 			font-size: .78rem
-			color: rgba(0, 0, 0, .6)
+			opacity: var(--wa-texto-tenue-op)
 			overflow: hidden
 			text-overflow: ellipsis
 			white-space: nowrap
 		&-cancelar
 			margin-left: auto
 			flex-shrink: 0
-			color: rgba(0, 0, 0, .6)
+			color: var(--wa-texto)
+			opacity: var(--wa-texto-tenue-op)
 
-// El latido es la única señal de que el micrófono está abierto de verdad; el cronómetro corre
-// aunque la grabación haya fallado. Se apaga con `prefers-reduced-motion`, igual que hace el
+// El latido es la unica señal de que el microfono esta abierto de verdad; el cronometro corre
+// aunque la grabacion haya fallado. Se apaga con `prefers-reduced-motion`, igual que hace el
 // panel del asistente IA.
 @keyframes whatsapp-composer-latido
 	0%
