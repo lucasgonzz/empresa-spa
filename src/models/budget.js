@@ -55,6 +55,26 @@ export default {
 			show: true,
 			filterable: true,
 			use_to_filter_in_modal: true,
+			/*
+				🔴 De solo lectura a proposito (pedido de Lucas, 24/8/2026): el estado se cambia
+				UNICAMENTE con el boton Confirmar/Anular, que esta en la fila del listado
+				(views/Budget.vue, slot table_left_options) y en el header del modal
+				(budget/components/ModalButtons.vue).
+
+				Confirmar no es editar un campo: crea la venta, descuenta stock y mueve la cuenta
+				corriente del cliente. Con el select, ese efecto viajaba escondido adentro de un
+				guardado completo del presupuesto, y desconfirmar directamente no se podia --el
+				boton de guardar esta escondido cuando el presupuesto ya esta confirmado--.
+
+				Se sigue VIENDO: `only_show` no lo saca del formulario, lo dibuja como valor. Y se
+				sigue pudiendo FILTRAR por estado, porque `build_table_filters_from_props()` de
+				generals.js no mira `only_show`.
+
+				⚠️ `filterable` y `use_to_filter_in_modal`, que estaban de antes, no las lee ningun
+				componente del repo (aparecen solo en archivos de models/). Se dejan porque no
+				molestan, pero no son lo que sostiene el filtro.
+			*/
+			only_show: true,
 		},
 		{
 			text: 'Empleado',
@@ -77,7 +97,31 @@ export default {
 			use_store_models: true,
 			value: null,
 			show: true,
-			v_if_function: 'show_budget_sale_status_id'
+			v_if_function: 'show_budget_sale_status_id',
+			/*
+				🔴 Esta clave es lo que mantiene "Estado del presupuesto" FUERA de la actualizacion
+				masiva, y es la otra mitad del pedido de Lucas del 24/8/2026.
+
+				`propertiesToUpdate()` (generals.js) es una LISTA BLANCA con default invertido: si
+				ninguna prop del modelo tiene `use_to_update`, devuelve TODAS. Como budget.js no
+				tenia ni una, el modal "Actualizar" ofrecia todos los campos --incluido el estado--
+				y `only_show` no lo salvaba: `set_form()` de
+				view/header/opciones-filtrados-seleccion/Update.vue arma la tarjeta mirando solo
+				`showProperty(prop)`, que no consulta `only_show`.
+
+				Y ese camino es el peor de todos: pega a `PUT update/{model_name}`
+				(CommonLaravel\UpdateController), no a BudgetController::update(). O sea que se
+				podian marcar N presupuestos como "Confirmado" sin que se creara ninguna venta, sin
+				descontar stock y sin mover la cuenta corriente, salteandose ademas el 422 de
+				"El presupuesto esta confirmado".
+
+				Marcando aca, la lista blanca se activa y el masivo queda con este campo solamente.
+				Es el unico del modelo que es a la vez editable en el formulario y de un tipo que
+				`set_form()` sabe dibujar (number, select, search o checkbox: `observations` es
+				textarea y nunca genero tarjeta). Si alguna vez hace falta otro campo en el masivo,
+				se le agrega `use_to_update: true` y listo -- pero NO al estado del presupuesto.
+			*/
+			use_to_update: true,
 		},
 		{
 			group_title: 'Productos y servicios',
