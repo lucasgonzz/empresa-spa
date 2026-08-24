@@ -25,6 +25,7 @@
 		:show_btn_delete="false"
 		:show_btn_create="false"
 		skip_global_error_event
+		save_check_function="check_pedido_puede_avanzar_de_estado"
 		order_list_by="order_status"
 		model_name="order">
 			<!--

@@ -447,7 +447,17 @@ export default {
 		 */
 		guardar_de_nuevo_con(extra_props) {
 			this.extra_props_del_proximo_guardado = extra_props || {}
-			this.save()
+
+			/*
+				🔴 El `{close: true}` NO es opcional. `save(info)` no tiene default y su `.then()`
+				llama a `closeModal(info, ...)`, que arranca con `if (info.close)`: con `info` en
+				undefined tira un TypeError DESPUES de que el guardado salio bien, el error cae en
+				el `.catch()` encadenado del mismo PUT y el usuario termina viendo "No se pudo
+				guardar" con el modal trabado sobre una operacion que funciono.
+
+				Es el mismo objeto que manda el unico otro llamador (`@save` de ModelForm).
+			*/
+			this.save({ close: true })
 		},
 		has_many_deleted() {
 			this.$emit('has_many_deleted')
@@ -533,6 +543,15 @@ export default {
 			const isValid = await this.check();
 			console.log('llego esto de check:')
 			console.log(isValid)
+
+			if (!isValid) {
+				/*
+					El guardado no llega a salir, asi que las props extra de un reintento no se
+					consumen. Si quedaran, viajarian en el proximo guardado de esta instancia sin
+					que nadie lo haya pedido.
+				*/
+				this.extra_props_del_proximo_guardado = {}
+			}
 
 			if (isValid && !this.loading) {
 				/* Validación OK: se oculta el aviso hasta que falle un chequeo posterior. */
@@ -620,8 +639,9 @@ export default {
 						}
 					})
 				} else {
-					this.$api.post(route, model_to_send)
+					this.$api.post(route, model_to_send, config_del_envio)
 					.then(res => {
+						this.extra_props_del_proximo_guardado = {}
 						this.loading = false
 						this.clearSaveCheckAlert()
 						this.$toast.success('Guardado')
@@ -664,11 +684,25 @@ export default {
 						this.clearModel(info)
 					})
 					.catch(err => {
+						this.extra_props_del_proximo_guardado = {}
 						console.log('Error catch')
 						console.log(err)
 						this.loading = false
 						this.$store.commit('auth/setMessage', '')
-						this.setSaveErrorFromApi(err)
+
+						/*
+							Mismo hook que en el PUT. Va en las dos ramas a proposito: la prop y el
+							evento estan documentados como del FORMULARIO, no del metodo HTTP. Una
+							pantalla que use el gancho al crear y no al actualizar se caeria sin
+							ruido.
+						*/
+						let manejado = { valor: false }
+
+						this.$root.$emit(this.model_name + ':save-error', err, manejado)
+
+						if (!manejado.valor) {
+							this.setSaveErrorFromApi(err)
+						}
 					})
 				}
 			}

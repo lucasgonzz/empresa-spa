@@ -1404,19 +1404,60 @@ export default {
 			return build_vender_facturado_print_select_options(profiles)
 		},
 		/**
-		 * Opciones del selector "Facturación por defecto (ventas en negro)" del formulario
-		 * de sucursal (address.default_afip_information_id, prompt 440). A diferencia de un
-		 * select genérico por store, acá SOLO se listan los afip_information que pertenecen a
-		 * ESA sucursal en particular (address.afip_informations, cargados por el backend en
-		 * Address::scopeWithAll — prompt 438), no todos los afip_information del negocio.
+		 * Chequeo previo al guardado del formulario de un pedido online: no se avanza el estado
+		 * sin haber indicado el deposito.
 		 *
-		 * Siempre incluye la opción "Sin especificar" (value null): si el campo queda vacío,
-		 * el backend resuelve la identidad fiscal cayendo al afip_information del dueño.
+		 * 🔴 Es el reemplazo del `disabled()` que tenia `BtnStatus.vue` ("Indique el deposito para
+		 * poder continuar"), que se fue con el boton el 22/8/2026. Sin esto, confirmar un pedido
+		 * sin `address_id` crea la venta con el deposito en null y los movimientos de stock salen
+		 * contra un deposito inexistente: el stock por deposito queda mal y nadie avisa.
 		 *
-		 * @param {Object} prop - Definición declarativa del campo (no usada, se mantiene por firma común de dynamic_options_function).
-		 * @param {Object} model - Instancia de address que se está editando/creando.
-		 * @returns {Array<{value: number|null, text: string}>}
+		 * Se mantiene la MISMA fuerza que tenia el boton —bloquear solo cuando el estado avanza, y
+		 * solo si el comercio tiene depositos cargados— y no mas. Bloquear cualquier guardado
+		 * dejaria imposible de editar un pedido viejo sin deposito, y llevarlo al backend como 422
+		 * seria una regla nueva que Lucas no pidio (se probo: rechaza pedidos que hoy el sistema
+		 * acepta).
+		 *
+		 * Se engancha con la prop `save_check_function` del modal del modelo, que es el mecanismo
+		 * que el propio formulario generico ya tiene para esto.
+		 *
+		 * @returns {Boolean} false corta el guardado y deja el aviso en el alert del modal.
 		 */
+		check_pedido_puede_avanzar_de_estado() {
+			/** Depositos cargados en el comercio. Sin ninguno, el campo no aplica. */
+			let hay_depositos = this.$store.state.address.models.length
+
+			if (!hay_depositos || this.model.address_id) {
+				return true
+			}
+
+			/** Estado en el que el pedido estaba cuando se abrio el formulario. */
+			let estado_previo = this.model.order_status ? this.model.order_status : null
+
+			// Sin saber de donde viene no se bloquea: el backend valida igual la transicion.
+			if (!estado_previo) {
+				return true
+			}
+
+			/** El usuario no toco el estado: es un guardado de otro campo, se deja pasar. */
+			if (estado_previo.id == this.model.order_status_id) {
+				return true
+			}
+
+			/** Nombre del estado nuevo, resuelto contra el store. */
+			let estado_nuevo = (this.$store.state.order_status.models || []).find(estado => {
+				return estado.id == this.model.order_status_id
+			})
+
+			// Cancelar no necesita deposito: no nace ninguna venta ni se mueve stock.
+			if (estado_nuevo && estado_nuevo.name == 'Cancelado') {
+				return true
+			}
+
+			this.setSaveCheckAlert('Indique el deposito para poder continuar')
+
+			return false
+		},
 		/**
 		 * Opciones del select "Estado" de un pedido online: solo las transiciones que el backend
 		 * va a aceptar.
@@ -1493,6 +1534,20 @@ export default {
 
 			return options
 		},
+		/**
+		 * Opciones del selector "Facturación por defecto (ventas en negro)" del formulario
+		 * de sucursal (address.default_afip_information_id, prompt 440). A diferencia de un
+		 * select genérico por store, acá SOLO se listan los afip_information que pertenecen a
+		 * ESA sucursal en particular (address.afip_informations, cargados por el backend en
+		 * Address::scopeWithAll — prompt 438), no todos los afip_information del negocio.
+		 *
+		 * Siempre incluye la opción "Sin especificar" (value null): si el campo queda vacío,
+		 * el backend resuelve la identidad fiscal cayendo al afip_information del dueño.
+		 *
+		 * @param {Object} prop - Definición declarativa del campo (no usada, se mantiene por firma común de dynamic_options_function).
+		 * @param {Object} model - Instancia de address que se está editando/creando.
+		 * @returns {Array<{value: number|null, text: string}>}
+		 */
 		get_address_default_afip_information_options(prop, model) {
 			// Opción para dejar la sucursal sin facturación por defecto propia.
 			let options = [
