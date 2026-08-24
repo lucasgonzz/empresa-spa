@@ -499,11 +499,28 @@
 
 			</div>
 
+			<!--
+				🔴 Error del paso 2, persistente. Hasta acá los dos .catch de confirmar_paso_2
+				mandaban el mensaje a $toast.error: el toast se va solo a los pocos segundos y el
+				paso 2 queda EXACTAMENTE igual que antes de apretar el botón, así que el usuario
+				que miró para otro lado no sabe si el botón hizo algo. Los pasos 1 y 4 ya usaban
+				un b-alert que se queda; este ahora también.
+			-->
+			<b-alert
+			v-if="error_message"
+			show
+			variant="danger"
+			class="m-t-15 m-b-0">
+				{{ error_message }}
+			</b-alert>
+
 			<div class="m-t-20 j-end">
+				<!-- Se limpia el error al volver: el paso 1 dibuja el MISMO `error_message` y no
+				tiene por qué heredar el fracaso de la recomendación. -->
 				<b-button
 				variant="outline-secondary"
 				class="m-r-10"
-				@click="step = 1">
+				@click="error_message = ''; step = 1">
 					Volver
 				</b-button>
 				<b-button
@@ -666,18 +683,36 @@
 				<!-- Colisiones en BD (mismo proveedor) -->
 				<span
 				v-if="duplicate_stats.provider_codes_existentes_mismo_proveedor > 0"
-				class="ai-import-summary-chip ai-import-summary-chip--info">
-					🔁 {{ numero_es(duplicate_stats.provider_codes_existentes_mismo_proveedor) }} ya en BD (mismo proveedor)
+				class="ai-import-summary-chip"
+				:class="provider_stats_desactualizados ? 'ai-import-summary-chip--warning' : 'ai-import-summary-chip--info'">
+					🔁 {{ numero_es(duplicate_stats.provider_codes_existentes_mismo_proveedor) }} ya en BD (mismo proveedor)<span v-if="provider_stats_desactualizados"> — sin actualizar</span>
 				</span>
 
 				<!-- Colisiones en BD (otros proveedores) -->
 				<span
 				v-if="duplicate_stats.provider_codes_existentes_otros_proveedores > 0"
-				class="ai-import-summary-chip ai-import-summary-chip--info">
-					🔁 {{ numero_es(duplicate_stats.provider_codes_existentes_otros_proveedores) }} ya en BD (otro proveedor)
+				class="ai-import-summary-chip"
+				:class="provider_stats_desactualizados ? 'ai-import-summary-chip--warning' : 'ai-import-summary-chip--info'">
+					🔁 {{ numero_es(duplicate_stats.provider_codes_existentes_otros_proveedores) }} ya en BD (otro proveedor)<span v-if="provider_stats_desactualizados"> — sin actualizar</span>
 				</span>
 
 			</div>
+
+			<!--
+				🔴 Los dos conteos de "ya en BD" son del proveedor ANTERIOR: el recálculo para el
+				proveedor que se eligió en el paso 2 falló. Se dice acá y no solo en el toast que
+				ya se mostró, porque las preguntas de más abajo se contestan mirando justamente
+				esos números y el toast para entonces ya se fue.
+			-->
+			<b-alert
+			v-if="provider_stats_desactualizados"
+			show
+			variant="warning"
+			class="m-b-15">
+				No pudimos recalcular cuántos códigos de este archivo ya existen para el proveedor que
+				elegiste. Los dos conteos de "ya en BD" son del proveedor anterior: volvé al paso
+				anterior y elegí el proveedor de nuevo antes de decidir qué hacer con las coincidencias.
+			</b-alert>
 
 			<!-- Tabla de códigos de proveedor repetidos -->
 			<div v-if="provider_codes_detail.length > 0" class="m-b-15">
@@ -1400,6 +1435,13 @@ export default {
 
 			/* Estadísticas de duplicados devueltas por el análisis IA (preanálisis del Excel). */
 			duplicate_stats: null,
+
+			/*
+			 * True cuando el recálculo de "códigos ya existentes" para el proveedor elegido falló.
+			 * Mientras esté en true, los dos conteos de colisiones en BD que se muestran son los
+			 * del proveedor ANTERIOR y no se puede decidir la política de colisión con ellos.
+			 */
+			provider_stats_desactualizados: false,
 
 			/*
 			 * Prompt 03 (grupo 239 - alerta-formatos-numericos-import): estadisticas de
@@ -3476,7 +3518,15 @@ export default {
 
 						if (fallos_consecutivos >= 5) {
 							limpiar_timer_de_aviso()
-							reject('No se pudo consultar el estado del análisis. Probá de nuevo.')
+							/*
+							 * 🔴 El texto anterior ("No se pudo consultar el estado del análisis.
+							 * Probá de nuevo.") mentía por omisión y además empujaba al usuario a
+							 * hacer lo peor. Lo que se perdió es EL POLLING, no el análisis: del
+							 * lado del servidor puede estar corriendo perfecto. Decirle "probá de
+							 * nuevo" lo invita a encolar otro análisis pesado del mismo archivo al
+							 * pedo, y a creer que el primero se perdió.
+							 */
+							reject('Perdimos la conexión con el servidor. El análisis puede seguir corriendo: cuando vuelvas, te avisamos si terminó.')
 							return
 						}
 
@@ -3493,7 +3543,14 @@ export default {
 
 					if (transcurrido >= 900000) {
 						limpiar_timer_de_aviso()
-						reject('El análisis está tardando más de lo normal. Probá de nuevo o avisanos.')
+						/*
+						 * 🔴 Mismo problema que la salida por fallos de red: dejar de esperar acá
+						 * no cancela nada del lado del servidor. "Probá de nuevo" invitaba a
+						 * encolar un segundo análisis del mismo archivo mientras el primero sigue
+						 * trabajando, que es exactamente lo que no hay que hacer con un archivo
+						 * que ya demostró ser grande. Por eso el texto nuevo NO la ofrece.
+						 */
+						reject('El análisis está tardando más de 15 minutos. Dejamos de esperarte acá: si termina, te avisamos.')
 						return
 					}
 
@@ -3657,6 +3714,15 @@ export default {
 
 				if (err.response && err.response.data && err.response.data.message) {
 					message = err.response.data.message
+				} else if (!err.response) {
+					/*
+					 * 🔴 Sin `response` no hubo servidor del otro lado: se cortó internet, se cayó
+					 * la API o la subida se pasó del timeout de 2 minutos. El genérico "Error al
+					 * analizar el archivo" no distinguía eso de un rechazo del servidor, y son dos
+					 * cosas distintas para el usuario: en un caso revisa su conexión, en el otro
+					 * el archivo. El archivo ni siquiera llegó a subirse.
+					 */
+					message = 'No pudimos subir el archivo. Revisá tu conexión y volvé a intentar.'
 				}
 
 				self.error_message = message
@@ -3713,6 +3779,8 @@ export default {
 
 			/* Datos del preanálisis de duplicados (la recomendación se genera al confirmar el paso 2). */
 			this.duplicate_stats = resultado.duplicate_stats || null
+			/* Stats frescas del analisis: dejan de estar marcadas como del proveedor anterior. */
+			this.provider_stats_desactualizados = false
 			this.preview_rows    = resultado.preview_rows || []
 
 			/* Prompt 03 (grupo 239): estadísticas de números con punto ambiguos por columna. */
@@ -3784,6 +3852,8 @@ export default {
 
 			self.loading_recomendacion = true
 			self.recomendacion_configuracion = null
+			/* El error del intento anterior no puede quedar colgado sobre el intento nuevo. */
+			self.error_message = ''
 
 			/* Mismo motivo y mismo criterio que run_analyze_request(): ver ese comentario. */
 			let token_corrida = ++self.analysis_polling_token
@@ -3843,7 +3913,8 @@ export default {
 					if (token_corrida !== self.analysis_polling_token) return
 
 					self.terminar_seguimiento()
-					self.$toast.error(mensaje)
+					/* b-alert persistente en vez de toast: ver el comentario en el template. */
+					self.error_message = mensaje
 				})
 			})
 			.catch(function(err) {
@@ -3856,9 +3927,12 @@ export default {
 				let message = 'Error al generar la recomendación.'
 				if (err.response && err.response.data && err.response.data.message) {
 					message = err.response.data.message
+				} else if (!err.response) {
+					/* Mismo criterio que run_analyze_request(): sin `response` no hubo servidor. */
+					message = 'No pudimos pedirle la recomendación al servidor. Revisá tu conexión y volvé a intentar.'
 				}
 
-				self.$toast.error(message)
+				self.error_message = message
 			})
 		},
 
@@ -3946,9 +4020,27 @@ export default {
 					provider_codes_existentes_mismo_proveedor:   res.data.provider_codes_existentes_mismo_proveedor,
 					provider_codes_existentes_otros_proveedores: res.data.provider_codes_existentes_otros_proveedores,
 				}
+				/* Recálculo exitoso: los conteos vuelven a ser de este proveedor. */
+				self.provider_stats_desactualizados = false
 			})
 			.catch(function(err) {
 				console.warn('refresh_provider_stats: error al recalcular stats', err)
+
+				/*
+				 * 🔴 Esto fallaba EN SILENCIO (solo el console.warn de arriba). Los conteos de
+				 * "códigos ya existentes en BD" que quedaban en pantalla eran los del proveedor
+				 * ANTERIOR, sin ninguna marca — y el paso 3 le pide al usuario que elija qué hacer
+				 * con las colisiones MIRANDO ESOS NÚMEROS. O sea que decidía sobre datos de otro
+				 * proveedor creyendo que eran de este.
+				 *
+				 * Se marcan como no confiables (lo dibuja el paso 3) y se avisa.
+				 */
+				self.provider_stats_desactualizados = true
+
+				self.$toast.warning(
+					'No pudimos recalcular cuántos códigos ya existen para este proveedor. Los números que ves son del proveedor anterior: no decidas con ellos.',
+					{ duration: 10000 }
+				)
 			})
 		},
 
@@ -5042,6 +5134,7 @@ export default {
 			this.hoja_elegida_del_backend    = null
 			this.encabezado_del_backend      = null
 			this.duplicate_stats             = null
+			this.provider_stats_desactualizados = false
 			this.provider_code_column_index  = null
 			this.recomendacion_configuracion = null
 			this.loading_recomendacion       = false
