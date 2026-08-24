@@ -25,6 +25,10 @@
 // icono-- y sobre todo de ui_sizes: el boton .btn-explicacion empata en especificidad (0,2,0) con
 // el `.ui-small .btn` de aquel archivo, y ese empate se gana por orden de declaracion.
 @import 'desglose_precio.sass'
+// Tokens del modulo de WhatsApp. Va DESPUES de dark_theme porque varios de sus tokens se delegan a
+// los de aquel (--bg-card, --color-border, --color-text-primary, --bg-hover): si se importara
+// antes, `var(--bg-card)` se resolveria contra un token que todavia no existe.
+@import 'whatsapp_modulo.sass'
 // Va ULTIMO: su regla de tema oscuro empata en especificidad con el `#app` de dark_theme.sass y
 // tiene que ganarle por orden de declaracion. Ver la nota larga en el propio archivo.
 @import 'fondo_app.sass'
