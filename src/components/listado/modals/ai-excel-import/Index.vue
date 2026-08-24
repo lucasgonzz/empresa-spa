@@ -1202,14 +1202,14 @@
 				</b-form-checkbox>
 				<small class="d-block m-t-5" :class="celdas_vacias_borran ? 'text-danger' : 'text-muted'">
 					<span v-if="celdas_vacias_borran">
-						⚠️ Como está activada, cada celda vacía del Excel VACÍA esa propiedad en el sistema.
-						Si al archivo le falta una columna que hoy sí tenés cargada, la vas a perder en
-						{{ model_label_plural }} que importes, y no hay forma de deshacerlo desde acá.
+						⚠️ Como está activada, una celda vacía VACÍA esa propiedad en el sistema, y no hay
+						forma de deshacerlo desde acá. Solo pasa con las columnas que mapeaste: las que no
+						están en el archivo no se tocan.
 					</span>
 					<span v-else>
-						Como está desactivada, una celda vacía se ignora y {{ model_label_plural }} conservan
-						lo que ya tenían. Solo se actualiza lo que el Excel trae escrito. Es como viene
-						funcionando la importación hasta ahora.
+						Como está desactivada, una celda vacía se ignora y los {{ model_label_plural }}
+						conservan lo que ya tenían. Solo se actualiza lo que el Excel trae escrito. Es como
+						viene funcionando la importación hasta ahora.
 					</span>
 				</small>
 			</b-form-group>
