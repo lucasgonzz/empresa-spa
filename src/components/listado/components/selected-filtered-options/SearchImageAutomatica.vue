@@ -158,13 +158,79 @@ export default {
 
 			.listen('.ArticleBatchImagesProcessed', (payload) => {
 
-				this.batch_result = payload
-
-				this.batch_summary_visible = true
-
 				this.Echo.leaveChannel(channel_name)
 
+				this.load_full_summary(payload)
+
 			})
+
+		},
+
+		/**
+
+		* El payload de Pusher solo trae contadores y el batch_uuid (no el detalle por artículo,
+
+		* que puede superar el límite de Pusher con lotes grandes). Antes de abrir el modal se
+
+		* pide el resumen completo por HTTP, mismo endpoint que ya usa el modal de historial.
+
+		*
+
+		* @param {Object} payload Payload liviano recibido por Pusher.
+
+		* @return {void}
+
+		*/
+
+		load_full_summary(payload) {
+
+			if (!payload || !payload.batch_uuid) {
+
+				this.open_summary(payload)
+
+				return
+
+			}
+
+
+
+			this.$api.get('article-image-search-attempts/summary/' + payload.batch_uuid)
+
+			.then((res) => {
+
+				this.open_summary(res.data)
+
+			})
+
+			.catch(() => {
+
+				this.$toast.error('No se pudo cargar el detalle del resumen de imágenes')
+
+				this.open_summary(payload)
+
+			})
+
+		},
+
+		/**
+
+		* Setea el resultado del batch y recién entonces muestra el modal, para que se monte ya
+
+		* con los datos definitivos.
+
+		*
+
+		* @param {Object} batch_result Resumen completo (o el payload liviano, si el detalle no se pudo cargar).
+
+		* @return {void}
+
+		*/
+
+		open_summary(batch_result) {
+
+			this.batch_result = batch_result
+
+			this.batch_summary_visible = true
 
 		},
 
