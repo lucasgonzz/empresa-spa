@@ -359,7 +359,11 @@ export default {
 	mounted() {
 		// Única llamada del panel, y solo ocurre dentro de una demo. Entrando por el link el
 		// ingreso ya la despachó y el store memorizó la promesa, así que acá no se paga un
-		// segundo GET: se reusa el mismo. Después de un F5 este es el que la dispara.
+		// segundo GET: se reusa el mismo.
+		//
+		// 🔴 Acá decía además "después de un F5 este es el que la dispara". Desde el 25/8/2026 es
+		// falso: tras una recarga sin token este componente no se monta, así que ese despacho no
+		// existe más y el plan no se vuelve a pedir. Es la consecuencia asumida del gate nuevo.
 		this.$store.dispatch('demo/cargar_plan')
 	},
 	beforeDestroy() {

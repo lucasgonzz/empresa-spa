@@ -113,16 +113,28 @@ export default {
 		/**
 		 * ¿Esta sesión es una demo?
 		 *
-		 * Dos fuentes, y la segunda es la que hace que el panel sobreviva al F5 (misión 52):
+		 * 🔴 Esto NO decide si el panel se dibuja. Para eso está `panel_visible`, que es el que
+		 * mira `App.vue` desde el 25/8/2026. Hasta esa fecha acá decía que la segunda fuente era
+		 * "la que hace que el panel sobreviva al F5 (misión 52)", y eso ya no es cierto: el panel
+		 * sale solo si se entró con el token en la URL.
+		 *
+		 * Dos fuentes:
 		 *
 		 * 1. `es_demo` en memoria, que prende `DemoIngreso.vue` al canjear el token. Cubre el
 		 *    primer montaje, cuando `auth/me` todavía no volvió.
 		 * 2. `user.es_sesion_demo`, que viaja en la respuesta de `GET /api/user` — la llamada
 		 *    que el arranque **ya paga** para todos los usuarios. Después de recargar, la
-		 *    memoria está vacía pero la cookie de sesión sigue, así que esta es la que manda.
+		 *    memoria está vacía pero la cookie de sesión sigue.
 		 *
-		 * Para un cliente real las dos dan false, así que el panel no se monta y no se pide
-		 * ningún plan: cero requests y cero queries agregadas al arranque.
+		 * ⚠️ Y hay que decirlo, porque si no alguien lo "descubre" dentro de seis meses y lo lee
+		 * como un bug: **hoy la fuente 2 no la alcanza nadie**. Los dos únicos guardas que
+		 * consultan este getter —`cargar_plan` y `reportar`— se despachan siempre desde código
+		 * que ya requiere el panel montado, o sea `es_demo === true`. Queda igual, y a propósito:
+		 * la respuesta a "¿esta sesión es una demo?" no depende de si el panel está a la vista, y
+		 * el día que algo fuera del panel necesite preguntarlo va a querer las dos fuentes.
+		 *
+		 * Para un cliente real las dos dan false, así que no se pide ningún plan: cero requests y
+		 * cero queries agregadas al arranque.
 		 *
 		 * @param {Object} state
 		 * @param {Object} getters
