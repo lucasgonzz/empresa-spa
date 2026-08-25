@@ -53,8 +53,10 @@
             DemoIngreso.vue al canjear el token, así que el panel aparece únicamente cuando se
             entró con el `?t=` en la URL. Entrar a la demo sin el parámetro con la sesión todavía
             viva deja pasar al lead —la sesión se respeta— pero sin panel. `demo/activa` sigue
-            existiendo y mirando las dos fuentes: es el que gatea el plan y los eventos, que tienen
-            que seguir andando aunque el panel no esté a la vista. El detalle está en store/demo.js.
+            existiendo y mirando las dos fuentes: responde "¿esta sesión es una demo?", que es otra
+            pregunta y es la que gatea las llamadas a la API. Ojo con la explicación fácil de por
+            qué se dejó: NO es que salve la telemetría después de un F5 —los eventos los emite este
+            mismo panel, así que sin panel no hay eventos—. Está en store/demo.js, escrito bien.
         -->
         <panel-demo v-if="$store.getters['demo/panel_visible']"></panel-demo>
 

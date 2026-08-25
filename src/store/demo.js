@@ -150,15 +150,26 @@ export default {
 		 * demo sin el `?t=` dejaba al lead adentro y con el panel a la vista. Ahora entra igual
 		 * —la sesión que ya tiene se respeta, nadie lo desloguea— pero sin el panel.
 		 *
-		 * 🔴 Y por eso `activa` NO se tocó, aunque tenga toda la pinta de sobrar: sigue gateando
-		 * `cargar_plan` y `reportar`, o sea los eventos que alimentan el recorrido del lead en el
-		 * admin. Si el panel y los eventos colgaran del mismo getter, una recarga de página
-		 * apagaría también la telemetría, que es información que Lucas mira después de la demo.
+		 * `activa` NO se tocó, y conviene ser preciso con el motivo, porque la razón obvia es
+		 * falsa. Lo obvio sería decir "sigue gateando `cargar_plan` y `reportar`, así que la
+		 * telemetría se salva". **No se salva**: los seis despachos de esas dos acciones viven
+		 * todos adentro de `PanelDemo.vue`, así que sin panel montado no se reporta nada igual,
+		 * y la segunda fuente de `activa` (`user.es_sesion_demo`) queda hoy sin alcanzar.
 		 *
-		 * Consecuencia asumida: si el lead recarga la página estando adentro de la demo, pierde
-		 * el panel hasta que vuelva a abrir el link con el token. Es exactamente el
-		 * comportamiento pedido — la contracara de la misión 52, que había hecho justo lo
-		 * contrario (que el panel sobreviviera al F5).
+		 * El motivo real es más chico y es el correcto: `activa` responde "¿esta sesión es una
+		 * demo?", que es una pregunta distinta de "¿se dibuja el panel?" y que hoy sigue siendo
+		 * true después de un F5, porque la cookie sigue. Tocarla habría cambiado el gate de las
+		 * llamadas a la API por un pedido que es de interfaz. Se separaron las dos preguntas en
+		 * dos getters en vez de mezclarlas en uno.
+		 *
+		 * Consecuencia asumida, y esta sí es real: si el lead recarga la página estando adentro
+		 * de la demo, pierde el panel hasta que vuelva a abrir el link con el token, y con el
+		 * panel se van los cuatro eventos de UX que solo él emite (`clip.abierto`,
+		 * `clip.terminado`, `seccion.completada`, `nota.escrita`). No se pierde información de
+		 * verdad —sin panel el lead no puede abrir un clip ni escribir una nota, así que
+		 * desaparecen la acción y su evento juntos— y los seis eventos de negocio los emite el
+		 * servidor contra el marcador de la sesión, no contra el panel. Es la contracara de la
+		 * misión 52, que había hecho justo lo contrario (que el panel sobreviviera al F5).
 		 *
 		 * @param {Object} state
 		 * @returns {Boolean}
