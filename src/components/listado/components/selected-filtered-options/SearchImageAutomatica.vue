@@ -70,9 +70,22 @@ export default {
 
 			batch_summary_visible: false,
 
-			/* Payload recibido desde Pusher con el resumen del procesamiento. */
+			/*
+			Resumen del procesamiento que termina mostrando el modal. El evento de Pusher solo
+			trae contadores + batch_uuid (el detalle no cabe en el límite de Pusher con lotes
+			grandes); esto se llena con la respuesta de article-image-search-attempts/summary,
+			o con el payload liviano de Pusher tal cual si ese pedido falla.
+			*/
 
 			batch_result: null,
+
+			/*
+			batch_uuid de la corrida cuyo fetch a /summary está en vuelo. Sirve para descartar
+			la respuesta si mientras tanto se disparó otra corrida (dos clics en "Asignar
+			imágenes automáticamente" antes de que la primera termine).
+			*/
+
+			pending_batch_uuid: null,
 
 		}
 
@@ -194,15 +207,33 @@ export default {
 
 
 
+			this.pending_batch_uuid = payload.batch_uuid
+
+
+
 			this.$api.get('article-image-search-attempts/summary/' + payload.batch_uuid)
 
 			.then((res) => {
+
+				// Si mientras tanto se disparó otra corrida, esta respuesta ya no es la vigente:
+				// no pisar lo que esté mostrando (o por mostrarse) la corrida más nueva.
+				if (this.pending_batch_uuid !== payload.batch_uuid) {
+
+					return
+
+				}
 
 				this.open_summary(res.data)
 
 			})
 
 			.catch(() => {
+
+				if (this.pending_batch_uuid !== payload.batch_uuid) {
+
+					return
+
+				}
 
 				this.$toast.error('No se pudo cargar el detalle del resumen de imágenes')
 
