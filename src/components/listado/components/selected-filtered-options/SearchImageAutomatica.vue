@@ -70,9 +70,22 @@ export default {
 
 			batch_summary_visible: false,
 
-			/* Payload recibido desde Pusher con el resumen del procesamiento. */
+			/*
+			Resumen del procesamiento que termina mostrando el modal. El evento de Pusher solo
+			trae contadores + batch_uuid (el detalle no cabe en el límite de Pusher con lotes
+			grandes); esto se llena con la respuesta de article-image-search-attempts/summary,
+			o con el payload liviano de Pusher tal cual si ese pedido falla.
+			*/
 
 			batch_result: null,
+
+			/*
+			batch_uuid de la corrida cuyo fetch a /summary está en vuelo. Sirve para descartar
+			la respuesta si mientras tanto se disparó otra corrida (dos clics en "Asignar
+			imágenes automáticamente" antes de que la primera termine).
+			*/
+
+			pending_batch_uuid: null,
 
 		}
 
@@ -158,13 +171,97 @@ export default {
 
 			.listen('.ArticleBatchImagesProcessed', (payload) => {
 
-				this.batch_result = payload
-
-				this.batch_summary_visible = true
-
 				this.Echo.leaveChannel(channel_name)
 
+				this.load_full_summary(payload)
+
 			})
+
+		},
+
+		/**
+
+		* El payload de Pusher solo trae contadores y el batch_uuid (no el detalle por artículo,
+
+		* que puede superar el límite de Pusher con lotes grandes). Antes de abrir el modal se
+
+		* pide el resumen completo por HTTP, mismo endpoint que ya usa el modal de historial.
+
+		*
+
+		* @param {Object} payload Payload liviano recibido por Pusher.
+
+		* @return {void}
+
+		*/
+
+		load_full_summary(payload) {
+
+			if (!payload || !payload.batch_uuid) {
+
+				this.open_summary(payload)
+
+				return
+
+			}
+
+
+
+			this.pending_batch_uuid = payload.batch_uuid
+
+
+
+			this.$api.get('article-image-search-attempts/summary/' + payload.batch_uuid)
+
+			.then((res) => {
+
+				// Si mientras tanto se disparó otra corrida, esta respuesta ya no es la vigente:
+				// no pisar lo que esté mostrando (o por mostrarse) la corrida más nueva.
+				if (this.pending_batch_uuid !== payload.batch_uuid) {
+
+					return
+
+				}
+
+				this.open_summary(res.data)
+
+			})
+
+			.catch(() => {
+
+				if (this.pending_batch_uuid !== payload.batch_uuid) {
+
+					return
+
+				}
+
+				this.$toast.error('No se pudo cargar el detalle del resumen de imágenes')
+
+				this.open_summary(payload)
+
+			})
+
+		},
+
+		/**
+
+		* Setea el resultado del batch y recién entonces muestra el modal, para que se monte ya
+
+		* con los datos definitivos.
+
+		*
+
+		* @param {Object} batch_result Resumen completo (o el payload liviano, si el detalle no se pudo cargar).
+
+		* @return {void}
+
+		*/
+
+		open_summary(batch_result) {
+
+			this.batch_result = batch_result
+
+			this.batch_summary_visible = true
 
 		},
 
