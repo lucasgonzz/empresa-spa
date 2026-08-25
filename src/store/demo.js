@@ -57,17 +57,25 @@ function secciones_completas(secciones) {
  *
  * 🔴 La razón de ser de este store es que un cliente real no pague NADA por la demo.
  *
- * El panel se monta si el getter `activa` da true, y ese getter mira dos fuentes: el marcador
- * `es_demo` que prende `DemoIngreso.vue` al canjear el token, y `user.es_sesion_demo`, que viaja
- * en la respuesta de `GET /api/user` — la llamada que el arranque **ya paga** para todos los
- * usuarios. Mientras las dos den false, `App.vue` no monta el panel (`v-if`, no `v-show`: el
- * componente no se crea) y nadie llama a `GET /api/demo/plan`. El arranque de un cliente real
- * agrega **cero** llamadas y cero queries.
+ * Hay DOS getters y no son intercambiables:
  *
- * La segunda fuente es la que hace que el panel sobreviva al F5 (misión 52): después de recargar
- * la memoria está vacía pero la cookie de sesión sigue. No se usa `localStorage` —está prohibido
- * en este repo— ni `sessionStorage`. La misión 51 había resuelto esto sólo con memoria y declaró
- * la limitación; la 52 la corrigió sin pagar una llamada nueva.
+ * - `activa` mira dos fuentes: el marcador `es_demo` que prende `DemoIngreso.vue` al canjear el
+ *   token, y `user.es_sesion_demo`, que viaja en la respuesta de `GET /api/user` — la llamada que
+ *   el arranque **ya paga** para todos los usuarios. Es el que gatea el plan y los eventos.
+ * - `panel_visible` mira solo `es_demo`, y es el que decide si el panel se dibuja.
+ *
+ * Mientras los dos den false, `App.vue` no monta el panel (`v-if`, no `v-show`: el componente no
+ * se crea) y nadie llama a `GET /api/demo/plan`. El arranque de un cliente real agrega **cero**
+ * llamadas y cero queries.
+ *
+ * La segunda fuente de `activa` es la que sobrevive al F5 (misión 52): después de recargar la
+ * memoria está vacía pero la cookie de sesión sigue. No se usa `localStorage` —está prohibido en
+ * este repo— ni `sessionStorage`.
+ *
+ * 🔴 Lo que la misión 52 hacía sobrevivir al F5 era el PANEL, y eso se revirtió el 25/8/2026 por
+ * pedido de Lucas: el panel sale solo si se entró con el token en la URL. Lo que sí sigue
+ * sobreviviendo a la recarga es la sesión de demo para el plan y los eventos, que es de lo que se
+ * ocupa `activa`. Ver el docblock de `panel_visible`.
  */
 export default {
 	namespaced: true,
@@ -129,6 +137,34 @@ export default {
 			const user = rootState.auth ? rootState.auth.user : null
 
 			return Boolean(user && user.es_sesion_demo)
+		},
+		/**
+		 * ¿Se muestra el panel de tutoriales?
+		 *
+		 * Mira UNA sola fuente —`es_demo`, el marcador en memoria que prende `DemoIngreso.vue`
+		 * al canjear el token—, y por eso no es lo mismo que `activa`.
+		 *
+		 * 🔴 La diferencia entre los dos getters es el pedido de Lucas del 25/8/2026, y no una
+		 * duplicación: **el panel sale solo si se entró con el token en la URL, en esta carga de
+		 * la página**. La sesión de la demo dura ~2 h en la cookie, así que volver a abrir la
+		 * demo sin el `?t=` dejaba al lead adentro y con el panel a la vista. Ahora entra igual
+		 * —la sesión que ya tiene se respeta, nadie lo desloguea— pero sin el panel.
+		 *
+		 * 🔴 Y por eso `activa` NO se tocó, aunque tenga toda la pinta de sobrar: sigue gateando
+		 * `cargar_plan` y `reportar`, o sea los eventos que alimentan el recorrido del lead en el
+		 * admin. Si el panel y los eventos colgaran del mismo getter, una recarga de página
+		 * apagaría también la telemetría, que es información que Lucas mira después de la demo.
+		 *
+		 * Consecuencia asumida: si el lead recarga la página estando adentro de la demo, pierde
+		 * el panel hasta que vuelva a abrir el link con el token. Es exactamente el
+		 * comportamiento pedido — la contracara de la misión 52, que había hecho justo lo
+		 * contrario (que el panel sobreviviera al F5).
+		 *
+		 * @param {Object} state
+		 * @returns {Boolean}
+		 */
+		panel_visible(state) {
+			return Boolean(state.es_demo)
 		},
 	},
 	mutations: {

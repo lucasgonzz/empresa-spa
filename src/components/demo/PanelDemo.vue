@@ -27,17 +27,20 @@
 				<!--
 					Esqueleto de carga: el panel esta montado y el plan todavia no volvio.
 
-					Se ve en tres casos, no solo despues de un F5 como decia antes este
-					comentario:
+					Se ve en dos casos:
 
-					1. F5 con la sesion viva: el panel se monta y es el que dispara el plan.
-					2. Durante el propio ingreso por el link. `DemoIngreso.vue` prende
-					   `demo/setEsDemo` ANTES de esperar el plan, y ese commit ya hace true al
-					   getter `demo/activa`, asi que App.vue monta el panel enseguida. Queda
-					   detras del overlay del ingreso, pero montado y con el esqueleto puesto.
-					3. Si en ese ingreso salta el techo de espera (TECHO_ESPERA_PLAN): el lead
-					   entra al sistema con el plan todavia en vuelo y ve el esqueleto de verdad.
-					   Es el caso que este esqueleto existe para cubrir.
+					1. Durante el propio ingreso por el link. `DemoIngreso.vue` prende
+					`demo/setEsDemo` ANTES de esperar el plan, y ese commit ya hace true al
+					getter `demo/panel_visible`, asi que App.vue monta el panel enseguida. Queda
+					detras del overlay del ingreso, pero montado y con el esqueleto puesto.
+
+					2. Si en ese ingreso salta el techo de espera (TECHO_ESPERA_PLAN): el lead
+					entra al sistema con el plan todavia en vuelo y ve el esqueleto de verdad. Es
+					el caso que este esqueleto existe para cubrir.
+
+					El caso "F5 con la sesion viva" ya no esta en la lista, y no por olvido: desde
+					el 25/8/2026 el panel sale unicamente si se entro con el token en la URL, asi
+					que despues de una recarga no se monta (ver el getter en store/demo.js).
 				-->
 				<div
 				v-if="cargando"
@@ -250,9 +253,11 @@ const AVISO_TOPE_NOTAS = 1200
 /**
  * Panel lateral de tutoriales de la demo (misión 51).
  *
- * Este componente solo se monta dentro de una sesión de demo: `App.vue` lo condiciona al getter
- * `demo/activa`, que mira el marcador del ingreso y `user.es_sesion_demo`. Un cliente real nunca
- * lo crea ni ejecuta.
+ * Este componente solo se monta cuando se entró a la demo con el token en la URL: `App.vue` lo
+ * condiciona al getter `demo/panel_visible`, que mira únicamente el marcador que prende el
+ * ingreso. Un cliente real nunca lo crea ni ejecuta, y un lead que vuelve a abrir la demo sin el
+ * `?t=` entra sin panel (pedido de Lucas, 25/8/2026). No confundirlo con `demo/activa`, que sigue
+ * mirando las dos fuentes y es el que gatea el plan y los eventos.
  *
  * 🔴 El panel NO marca nada como `completo`. `clip.terminado` lleva el hito del roadmap a
  * `parcial` del lado del admin; a `completo` lo lleva el evento de negocio que dispara el lead
