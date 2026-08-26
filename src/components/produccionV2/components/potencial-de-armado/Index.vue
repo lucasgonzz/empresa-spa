@@ -82,6 +82,11 @@
 					El insumo limitante es el dato que dispara la accion: es lo que hay que
 					comprar. Por eso va el nombre y, abajo, cuanto stock hay contra cuanto
 					lleva cada unidad.
+
+					Y van TODOS los que empatan en el minimo, no el primero. Con los numeros
+					reales el empate es lo normal: si estructura y regatones dan 10 los dos y la
+					pantalla nombra solo la estructura, el operario fabrica estructuras, el
+					numero no se mueve y no entiende por que.
 				-->
 				<template #cell(insumo_limitante)="data">
 					<span
@@ -95,21 +100,31 @@
 						La ruta no tiene insumos cargados
 					</span>
 					<div
-					v-else-if="data.item.insumo_limitante">
-						{{ data.item.insumo_limitante.article_name }}
-						<span class="potencial-de-armado__detalle d-block">
-							Stock {{ mostrar_numero(data.item.insumo_limitante.stock) }}
-							/ {{ mostrar_numero(data.item.insumo_limitante.cantidad_por_unidad) }} por unidad
-						</span>
-						<!--
-							El deposito con el que se midio ESTE insumo. Sin esto, un stock que sale
-							de un solo deposito se lee como si fuera el total del insumo, y el
-							numero no cierra contra lo que el usuario ve en el listado de articulos.
-						-->
+					v-else-if="limitantes_de(data.item).length">
+						<div
+						v-for="(limitante, index) in limitantes_de(data.item)"
+						:key="limitante.article_id + '-' + index"
+						class="potencial-de-armado__limitante">
+							{{ limitante.article_name }}
+							<span class="potencial-de-armado__detalle d-block">
+								Stock {{ mostrar_numero(limitante.stock) }}
+								/ {{ mostrar_numero(limitante.cantidad_por_unidad) }} por unidad
+							</span>
+							<!--
+								El deposito con el que se midio ESTE insumo. Sin esto, un stock que
+								sale de un solo deposito se lee como si fuera el total del insumo, y
+								el numero no cierra contra lo que el usuario ve en articulos.
+							-->
+							<span
+							v-if="texto_de_deposito(limitante.address_id)"
+							class="potencial-de-armado__detalle d-block">
+								{{ texto_de_deposito(limitante.address_id) }}
+							</span>
+						</div>
 						<span
-						v-if="texto_de_deposito(data.item.insumo_limitante.address_id)"
-						class="potencial-de-armado__detalle d-block">
-							{{ texto_de_deposito(data.item.insumo_limitante.address_id) }}
+						v-if="limitantes_de(data.item).length > 1"
+						class="potencial-de-armado__detalle d-block m-t-5">
+							Limitan por igual: comprando uno solo el numero no se mueve.
 						</span>
 					</div>
 					<span
@@ -213,6 +228,26 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Los insumos que limitan el potencial de esta fila.
+		 *
+		 * El back manda `limitantes` con TODOS los empatados en el minimo, ordenados igual que
+		 * el desempate de `insumo_limitante`, asi que con un solo limitante esto se ve igual que
+		 * antes. Si el payload viene de una version anterior y no trae el array, se cae al
+		 * `insumo_limitante` de siempre.
+		 *
+		 * @param {Object} item Fila del payload.
+		 * @returns {Array}
+		 */
+		limitantes_de(item) {
+			if (item.limitantes && item.limitantes.length) {
+				return item.limitantes
+			}
+			if (item.insumo_limitante) {
+				return [item.insumo_limitante]
+			}
+			return []
+		},
 		/**
 		 * Si un address_id del payload apunta a un deposito de verdad.
 		 *
@@ -360,6 +395,10 @@ export default {
 	&__potencial
 		font-weight: 600
 		font-size: 1.05rem
+	&__limitante:not(:first-child)
+		// Aire entre un insumo limitante y el siguiente cuando empatan: pegados se leen como
+		// un solo renglon con el nombre partido.
+		margin-top: 8px
 	&__detalle
 		font-size: .8rem
 		opacity: .75
