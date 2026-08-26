@@ -413,9 +413,32 @@ async function main() {
 
 	const mudo = path.join(OUT_DIR, 'video-mudo.mp4')
 	console.log('\nEncodeando a ' + FPS_SALIDA + ' fps CFR (crf 14)...')
+	// 🔴 LA CONVERSION DE RANGO Y MATRIZ NO ES DECORATIVA: sin ella el video se ve LAVADO en
+	// el navegador, con los blancos reventados, aunque en el reproductor local se vea perfecto.
+	//
+	// Los frames del screencast son JPEG: rango completo (0-255) y matriz BT.601. Poner solo
+	// `-pix_fmt yuv420p` no alcanza —la salida igual queda `yuvj420p` con `color_range=pc` y
+	// `color_space=bt470bg`—, y el navegador ignora esa etiqueta y lo interpreta como rango
+	// limitado BT.709, que es lo que asume por defecto. Los niveles se estiran y los blancos se
+	// van al tope.
+	//
+	// Medido el 26/8/2026 en un navegador real, contra la foto 4K del mismo instante como
+	// referencia (mismo render, sin pasar por compresion de video):
+	//
+	//     referencia (navegador)  luminancia media 236,7   blanco puro 38,3%
+	//     sin convertir           luminancia media 244,1   blanco puro 73,0%   <- el doble
+	//     convertido              luminancia media 235,4   blanco puro 36,2%
+	//
+	// Ojo al diagnosticarlo: ffmpeg SI respeta la etiqueta `pc`, asi que comparando frames con
+	// ffmpeg el archivo malo parece el correcto. Hay que medirlo en un navegador.
 	execFileSync('ffmpeg', ['-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', lista,
-		'-vf', 'fps=' + FPS_SALIDA, '-c:v', 'libx264', '-crf', '14', '-preset', 'slow',
-		'-pix_fmt', 'yuv420p', mudo], { stdio: 'inherit' })
+		'-vf', 'fps=' + FPS_SALIDA +
+			',scale=in_range=full:out_range=limited:in_color_matrix=bt470bg:out_color_matrix=bt709' +
+			',format=yuv420p',
+		'-c:v', 'libx264', '-crf', '14', '-preset', 'slow', '-pix_fmt', 'yuv420p',
+		'-color_range', 'tv', '-colorspace', 'bt709',
+		'-color_primaries', 'bt709', '-color_trc', 'bt709',
+		mudo], { stdio: 'inherit' })
 	console.log('Video mudo: ' + mudo)
 }
 
