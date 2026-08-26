@@ -46,11 +46,11 @@
 		v-else>
 
 			<p
-			v-if="hay_deposito_por_ruta"
+			v-if="hay_deposito_configurado"
 			class="text-with-icon potencial-de-armado__aclaracion">
 				<i class="icon-info"></i>
-				Hay rutas con deposito de insumos configurado: en esas, el potencial se calculo con
-				el stock de ESE deposito y no con el total del insumo.
+				Hay insumos con deposito configurado, sea en la ruta o en el renglon del insumo: en
+				esos, el potencial se calculo con el stock de ESE deposito y no con el total.
 			</p>
 
 			<!--
@@ -100,6 +100,16 @@
 						<span class="potencial-de-armado__detalle d-block">
 							Stock {{ mostrar_numero(data.item.insumo_limitante.stock) }}
 							/ {{ mostrar_numero(data.item.insumo_limitante.cantidad_por_unidad) }} por unidad
+						</span>
+						<!--
+							El deposito con el que se midio ESTE insumo. Sin esto, un stock que sale
+							de un solo deposito se lee como si fuera el total del insumo, y el
+							numero no cierra contra lo que el usuario ve en el listado de articulos.
+						-->
+						<span
+						v-if="texto_de_deposito(data.item.insumo_limitante.address_id)"
+						class="potencial-de-armado__detalle d-block">
+							{{ texto_de_deposito(data.item.insumo_limitante.address_id) }}
 						</span>
 					</div>
 					<span
@@ -178,20 +188,74 @@ export default {
 			]
 		},
 		/*
-			Hay al menos una receta cuyo potencial salio del stock de un deposito y no del
-			total. Se compara contra null y contra 0 explicitamente: address_id puede venir
-			como 0 desde un select, y 0 no es un deposito.
+			Hay al menos un insumo cuyo stock salio de un deposito y no del total.
+
+			Mira los DOS niveles: el address_id de nivel producto (que es el de la ruta) y el de
+			cada renglon de insumos[], porque el deposito se resuelve por insumo. Con una ruta sin
+			"Deposito insumos" pero con renglones que si lo tienen, el de nivel producto viene en
+			null y este aviso no se mostraba: el usuario leia el numero como si saliera del stock
+			total del insumo.
 		*/
-		hay_deposito_por_ruta() {
+		hay_deposito_configurado() {
+			let self = this
+
 			return this.models.some(function(model) {
-				if (model.address_id === null || typeof model.address_id == 'undefined') {
+				if (self.tiene_deposito(model.address_id)) {
+					return true
+				}
+				if (!model.insumos || !model.insumos.length) {
 					return false
 				}
-				return Number(model.address_id) !== 0
+				return model.insumos.some(function(insumo) {
+					return self.tiene_deposito(insumo.address_id)
+				})
 			})
 		},
 	},
 	methods: {
+		/**
+		 * Si un address_id del payload apunta a un deposito de verdad.
+		 *
+		 * Se compara contra null y contra 0 explicitamente: address_id puede venir como 0 desde
+		 * un select, y 0 no es un deposito.
+		 *
+		 * @param {Number|null} address_id Id que vino en el payload.
+		 * @returns {Boolean}
+		 */
+		tiene_deposito(address_id) {
+			if (address_id === null || typeof address_id == 'undefined') {
+				return false
+			}
+			return Number(address_id) !== 0
+		},
+		/**
+		 * El texto que se muestra abajo del insumo limitante para decir de que deposito salio su
+		 * stock. Cadena vacia si ese insumo se midio contra el stock total.
+		 *
+		 * Si el store de depositos todavia no cargo, igual se avisa que el stock es de un solo
+		 * deposito: callarlo seria peor que no poder nombrarlo.
+		 *
+		 * @param {Number|null} address_id Id que vino en el renglon del insumo.
+		 * @returns {String}
+		 */
+		texto_de_deposito(address_id) {
+			if (!this.tiene_deposito(address_id)) {
+				return ''
+			}
+
+			let addresses = this.$store.state.address.models
+
+			if (addresses && addresses.length) {
+				let address = addresses.find(function(_address) {
+					return _address.id == address_id
+				})
+				if (address && address.street) {
+					return 'Stock del deposito ' + address.street
+				}
+			}
+
+			return 'Stock de un solo deposito'
+		},
 		/**
 		 * Pide el calculo una sola vez por sesion de pantalla.
 		 *
