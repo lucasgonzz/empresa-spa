@@ -1635,6 +1635,27 @@ export default {
 		address_default_afip_information_warning_text() {
 			return 'Esta sucursal no tiene datos de facturación cargados'
 		},
+		/**
+		 * true cuando el movimiento de caja ya tiene un Egreso cargado: el campo Ingreso se
+		 * deshabilita, porque el monto va en uno de los dos, nunca en los dos (ver
+		 * `egreso_bloqueado_por_ingreso`, la misma regla en la otra dirección).
+		 *
+		 * @param {Object} model - Instancia de movimiento_caja.
+		 * @returns {boolean}
+		 */
+		ingreso_bloqueado_por_egreso(model) {
+			return !!(model && model.egreso !== null && model.egreso !== '' && Number(model.egreso) > 0)
+		},
+		/**
+		 * true cuando el movimiento de caja ya tiene un Ingreso cargado: el campo Egreso se
+		 * deshabilita, misma regla que `ingreso_bloqueado_por_egreso` en la otra dirección.
+		 *
+		 * @param {Object} model - Instancia de movimiento_caja.
+		 * @returns {boolean}
+		 */
+		egreso_bloqueado_por_ingreso(model) {
+			return !!(model && model.ingreso !== null && model.ingreso !== '' && Number(model.ingreso) > 0)
+		},
 		booleanOptions(prop, model = null) {
 			let options = []
 			options.push({
