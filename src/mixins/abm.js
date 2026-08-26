@@ -99,6 +99,7 @@ export default {
 				{
 					view: 'produccion',
 					models: [
+						'order_production_status_group',
 						'order_production_status',
 						'recipe_route_type',
 					],
