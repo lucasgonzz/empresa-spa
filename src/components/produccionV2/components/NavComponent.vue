@@ -30,6 +30,10 @@ export default {
 				{
 					name: 'Insumos',
 				},
+				{
+					// Los datos los pide el propio componente, por eso no lleva call_models.
+					name: 'Potencial de armado',
+				},
 			]
 			return items
 		}

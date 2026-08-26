@@ -6,6 +6,7 @@
 		<production-batches></production-batches>
 		<recipes></recipes>
 		<insumos></insumos>
+		<potencial-de-armado></potencial-de-armado>
 	</div>
 </template>
 <script>
@@ -17,6 +18,7 @@ export default {
 		ProductionBatches: () => import('@/components/produccionV2/components/production-batches/Index'),
 		Recipes: () => import('@/components/produccionV2/components/recipes/Index'),
 		Insumos: () => import('@/components/produccionV2/components/insumos/Index'),
+		PotencialDeArmado: () => import('@/components/produccionV2/components/potencial-de-armado/Index'),
 	},
 	created() {
 		/*
