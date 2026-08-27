@@ -62,6 +62,7 @@ import afip_information from '@/store/afip_information'
 import production_movement from '@/store/production_movement'
 import order_production from '@/store/order_production'
 import order_production_status from '@/store/order_production_status'
+import order_production_status_group from '@/store/order_production_status_group'
 import recipe from '@/store/recipe'
 import address from '@/store/address'
 import title from '@/store/title'
@@ -342,6 +343,7 @@ export default new Vuex.Store({
         production_movement,
         order_production,
         order_production_status,
+        order_production_status_group,
         recipe,
         address,
         title,

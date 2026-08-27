@@ -99,7 +99,11 @@ export default {
 				{
 					view: 'produccion',
 					models: [
+						// El primero de esta lista es la solapa que abre por defecto. Los grupos van
+						// segundos a proposito: la mayoria de los clientes no usa grupos, y ponerlos
+						// primero les cambiaria la pantalla de entrada de ABM > Produccion sin motivo.
 						'order_production_status',
+						'order_production_status_group',
 						'recipe_route_type',
 					],
 				},

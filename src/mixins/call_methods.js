@@ -35,6 +35,10 @@ export default [
         if_has_extencion: 'vinoteca',
     },
     {
+        model_name: 'order_production_status_group',
+        if_has_extencion: 'productionV2',
+    },
+    {
         model_name: 'recipe_route_type',
         if_has_extencion: 'productionV2',
     },

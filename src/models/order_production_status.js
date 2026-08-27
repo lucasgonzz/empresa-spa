@@ -15,6 +15,19 @@ export default {
 			value: '',
 			show: true,
 		},
+		{
+			text: 'Grupo',
+			key: 'order_production_status_group_id',
+			type: 'select',
+			store: 'order_production_status_group',
+			use_store_models: true,
+			value: 0,
+			show: true,
+			descriptions: [
+				'Agrupa este estado con los demas estados de la misma etapa del proceso. Por ejemplo: todos los estados por los que pasa una pata de silla.',
+				'Si lo dejas sin grupo, el estado se comporta como siempre: aparece en todas las rutas.',
+			],
+		},
 	],
 	abm_descripcion: {
 		para_que_sirve: 'Define los estados por los que pasan las órdenes de producción (por ejemplo: planificada, en proceso, terminada).',

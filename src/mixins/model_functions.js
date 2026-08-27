@@ -310,6 +310,37 @@ export default {
 
             return options
         },
+        /**
+         * Opciones del select "Estado" de cada insumo de una ruta de receta.
+         *
+         * Filtra los estados por el grupo de la ruta que se esta editando. Si la ruta no tiene
+         * grupo, devuelve todos los estados de la cuenta, que es como funcionaba hasta ahora.
+         *
+         * El segundo argumento es el ARTICULO de la fila (asi lo llama PivotProp.vue), no la
+         * ruta: la ruta se lee del store, que es donde el formulario deja el modelo que se esta
+         * editando (display.js -> setModel -> commit('recipe_route/setModel')).
+         *
+         * Si no se puede resolver la ruta, devuelve TODOS los estados. Nunca una lista vacia:
+         * dejaria al usuario sin poder cargar el insumo.
+         *
+         * @param {Object} prop Definicion declarativa del campo (va por firma comun, no se usa).
+         * @param {Object} article Articulo insumo de la fila (va por firma comun, no se usa).
+         * @returns {Array<{value: number, text: string}>}
+         */
+        opciones_de_estados_del_grupo_de_la_ruta(prop, article) {
+            let options = [{ value: 0, text: 'Seleccione Estado' }]
+            let route = this.$store.state.recipe_route.model
+            let group_id = route && route.order_production_status_group_id ? route.order_production_status_group_id : null
+
+            this.$store.state.order_production_status.models.forEach(status => {
+                if (group_id && status.order_production_status_group_id != group_id) {
+                    return
+                }
+                options.push({ value: status.id, text: status.name })
+            })
+
+            return options
+        },
         disabled_edit_pending(pending) {
             if (pending.es_recurrente) {
                 console.log('no se puede editar el pending '+pending.detalle)

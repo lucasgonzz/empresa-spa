@@ -1792,9 +1792,13 @@ export default {
 				return
 			}
 
-			/* Se registra el valor y se ejecuta el mismo chequeo que en Enter. */
+			/*
+				Se registra el valor y se ejecuta el mismo chequeo que en Enter, pero SIN overlay:
+				el blur lo dispara el usuario yendose a otro lado (otro input, Eliminar, cerrar el
+				modal) y un overlay full-screen montado en ese momento se come ese mismo click.
+			*/
 			this.last_repeat_check_by_prop_key[prop.key] = normalized_value
-			this.checkIsRepeat(prop)
+			this.checkIsRepeat(prop, {mostrar_overlay: false})
 		},
 		/**
 		 * Placeholder para campos type="password" (write-only: el backend nunca devuelve
@@ -1851,7 +1855,7 @@ export default {
 		},
 		/*
 			Registra el último valor chequeado para un `prop` específico.
-			Se usa principalmente para el flujo de Enter → foco al siguiente input.
+			Sirve para que el blur posterior a un Enter no repita la misma request.
 		*/
 		set_last_repeat_check_value(prop) {
 			/* Validación defensiva para no romper si llega un `prop` inesperado. */
@@ -1863,103 +1867,144 @@ export default {
 			let current_value = this.model && this.model[prop.key] != null ? String(this.model[prop.key]) : ''
 			this.last_repeat_check_by_prop_key[prop.key] = current_value.trim().toLowerCase()
 		},
-		async checkIsRepeat(prop) {
-		    /* Respeta configuración por usuario para omitir chequeos puntuales. */
-		    if (!this.can_check_is_repeat(prop)) {
-		    	return
-		    }
-		    if (prop.use_to_check_if_is_repeat) {
-		        let finded = undefined;
+		/*
+			Chequea si el valor cargado en `prop` ya lo usa otro modelo.
 
-		        if (prop.chequear_buscando_desde_api) {
-					// Construir los filtros. String() defensivo: editando, el valor puede venir
-					// numérico desde la API y .toLowerCase() directo rompería.
-		            let filters = [
-		                {
-		                    type: 'text',
-							igual_que: String(this.model[prop.key]).toLowerCase(),
-		                    key: prop.key
-		                }
-		            ];
+			`opciones.mostrar_overlay` decide si se levanta el overlay global de carga
+			(auth/setLoading + auth/setMessage, que es lo que dibuja LogoLoading.vue).
 
-		            // Mostrar mensaje y activar loading
-		            this.$store.commit('auth/setMessage', 'Chequeando ' + prop.text);
-		            this.$store.commit('auth/setLoading', true);
-
-		            try {
-		                // Llamada a la API y esperar la respuesta
-		                const res = await this.$api.post('search/' + this.model_name, {
-		                    filters
-		                });
-
-		                this.$store.commit('auth/setLoading', false);
-
-		                let models = res.data.models;
-		                if (models.length) {
-		                    console.log('Hay finded:');
-		                    finded = models[0];
-		                    console.log(models[0]);
-		                }
-		            } catch (err) {
-		                this.$store.commit('auth/setLoading', false);
-		                this.$toast.error('Error al chequear ' + prop.text);
-		                console.log(err);
-		            }
-		        } else {
-					// Buscar localmente. String() defensivo por el mismo motivo que arriba.
-		            finded = this.modelsStoreFromName(this.model_name).find(model => {
-						return model[prop.key] && String(model[prop.key]).toLowerCase() == String(this.model[prop.key]).toLowerCase();
-		            });
-		        }
-
-		        console.log('finded:');
-		        console.log(finded);
-
-				// Validar si se encontró un modelo repetido. Si el encontrado es el mismo que se
-				// está editando (mismo id), no es un repetido: es el propio código del modelo.
-				let es_alta = !this.model.id
-				if (typeof finded != 'undefined' && (es_alta || this.model.id != finded.id)) {
-					if (es_alta) {
-						// Al crear: aviso + se carga el existente para editarlo (comportamiento original).
-						this.$toast.warning('Ya hay un ' + this.singular(this.model_name) + ' con este ' + this.propText(prop));
-						this.setModel(finded, this.model_name, [], false);
-					} else {
-						/*
-							Editando (ítem 8, tanda-correctivos-2408): el aviso es SOLO un aviso.
-							No se pisa el modelo en edición ni se frena el guardado — la unicidad
-							no se valida en backend y el usuario puede decidir guardar igual.
-						*/
-						let aviso = 'Este ' + this.propText(prop) + ' ya lo usa otro ' + this.singular(this.model_name)
-						if (finded.name) {
-							aviso += ' (' + finded.name + ')'
-						}
-						this.$toast.warning(aviso);
-					}
-				} else if (es_alta) {
-					/* El salto de foco al siguiente input es parte del flujo de alta rápida, no del de edición. */
-					this.foco_input_siguiente(prop)
-				}
-		    }
-		},
-		foco_input_siguiente(prop) {
-			console.log('foco_input_siguiente')
-			let index = this.properties.findIndex(_prop => {
-				return _prop.key == prop.key
-			})
-			console.log('index: '+index)
-			if (index != -1) {
-
-				let prop_siguiente = this.properties[index+1]
-				console.log('prop_siguiente: '+prop_siguiente.key)
-				let input = document.getElementById(this.model_name+'-'+prop_siguiente.key)
-				console.log('input: ')
-				console.log(input)
-				if (input) {
-					setTimeout(() => {
-						input.focus()
-					}, 200)
-				}
+			Cuando el chequeo lo dispara un `blur` va SIEMPRE en false, y el motivo no es estético:
+			LogoLoading es un overlay `position: fixed; inset: 0; z-index: 10000`. Si se levanta desde
+			el handler de blur, Vue lo inserta en el DOM antes del `mouseup`, el `click` se resuelve
+			contra el overlay en vez del botón, y el usuario ve que Eliminar, la X del modal o el
+			backdrop no hacen nada (había que apretar dos veces: la segunda ya encontraba el valor
+			cacheado en last_repeat_check_by_prop_key y no chequeaba). La regla que queda: un handler
+			de blur nunca levanta un overlay que tape la pantalla, porque se come el click que causó
+			ese mismo blur.
+		*/
+		checkIsRepeat(prop, opciones) {
+			/* Respeta configuración por usuario para omitir chequeos puntuales. */
+			if (!this.can_check_is_repeat(prop)) {
+				return
 			}
+
+			if (!prop.use_to_check_if_is_repeat) {
+				return
+			}
+
+			let self = this
+			let config = opciones || {}
+			/* Por defecto se muestra, para no cambiarle el flujo a ningún llamador que no lo pida. */
+			let mostrar_overlay = config.mostrar_overlay !== false
+
+			/*
+				Valor con el que se dispara este chequeo. String() defensivo: editando, el valor puede
+				venir numérico desde la API y .toLowerCase() directo rompería. Se guarda además para
+				poder descartar la respuesta si llega tarde (ver avisar_si_esta_repetido).
+			*/
+			let valor_chequeado = String(this.model[prop.key]).toLowerCase()
+
+			if (prop.chequear_buscando_desde_api) {
+				let filters = [
+					{
+						type: 'text',
+						igual_que: valor_chequeado,
+						key: prop.key
+					}
+				]
+
+				if (mostrar_overlay) {
+					this.$store.commit('auth/setMessage', 'Chequeando ' + prop.text)
+					this.$store.commit('auth/setLoading', true)
+				}
+
+				this.$api.post('search/' + this.model_name, {filters})
+				.then(function(res) {
+					if (mostrar_overlay) {
+						self.$store.commit('auth/setLoading', false)
+					}
+
+					let models = res && res.data ? res.data.models : null
+
+					/*
+						Respuesta con una forma que no esperamos. Se avisa igual que un error de red:
+						darla por "no hay repetido" haría pasar en silencio un problema del backend.
+					*/
+					if (!Array.isArray(models)) {
+						self.$toast.error('Error al chequear ' + prop.text)
+						console.log(res)
+						return
+					}
+
+					self.avisar_si_esta_repetido(prop, models.length ? models[0] : undefined, valor_chequeado)
+				})
+				.catch(function(err) {
+					if (mostrar_overlay) {
+						self.$store.commit('auth/setLoading', false)
+					}
+					self.$toast.error('Error al chequear ' + prop.text)
+					console.log(err)
+				})
+
+				return
+			}
+
+			/* Buscar localmente, contra los modelos que ya estén en el store. */
+			let finded = this.modelsStoreFromName(this.model_name).find(function(model) {
+				return model[prop.key] && String(model[prop.key]).toLowerCase() == valor_chequeado
+			})
+
+			this.avisar_si_esta_repetido(prop, finded, valor_chequeado)
+		},
+		/*
+			Avisa cuando el valor de `prop` ya lo usa otro modelo.
+
+			Al CREAR: aviso + se carga el existente en el formulario para editarlo (comportamiento
+			original).
+			Al EDITAR (ítem 8, tanda-correctivos-2408): el aviso es SOLO un aviso. No se pisa el modelo
+			en edición ni se frena el guardado, porque la unicidad no se valida en backend y el usuario
+			puede decidir guardar igual.
+
+			Si el encontrado es el mismo que se está editando (mismo id) no es un repetido: es el
+			propio código del modelo.
+
+			Acá ya no se mueve el foco al input siguiente (pedido de Lucas, 27/8/2026): el foco queda
+			donde lo dejó el usuario, tanto si el chequeo salió de un blur como de un Enter.
+		*/
+		avisar_si_esta_repetido(prop, finded, valor_chequeado) {
+			/*
+				La respuesta puede llegar con el formulario mostrando otra cosa: sin overlay de por medio
+				el usuario puede cerrar el modal o abrir otro modelo mientras la request está en vuelo.
+				Si el modelo ya no está, o el valor que se chequeó ya no es el que hay cargado, esta
+				respuesta no aplica y se descarta.
+			*/
+			if (!this.model) {
+				return
+			}
+			if (String(this.model[prop.key]).toLowerCase() != valor_chequeado) {
+				return
+			}
+
+			if (typeof finded == 'undefined') {
+				return
+			}
+
+			let es_alta = !this.model.id
+			if (!es_alta && this.model.id == finded.id) {
+				return
+			}
+
+			if (es_alta) {
+				this.$toast.warning('Ya hay un ' + this.singular(this.model_name) + ' con este ' + this.propText(prop))
+				this.setModel(finded, this.model_name, [], false)
+				return
+			}
+
+			let aviso = 'Este ' + this.propText(prop) + ' ya lo usa otro ' + this.singular(this.model_name)
+			if (finded.name) {
+				aviso += ' (' + finded.name + ')'
+			}
+			this.$toast.warning(aviso)
 		},
 		/**
 		 * Ancho (unidades de grilla 1..12) para una prop en el formulario.
