@@ -890,8 +890,22 @@ export default function __base_store(options = {}) {
 					commit('setIsFiltered', true)
 					commit('setTotalFilterPages', res.data.models ? res.data.models.last_page : null)
 					commit('setTotalFilterResults', res.data.models ? res.data.models.total : 0)
-					// Marcar que el filtered fue cargado por el buscador general (no por el form de filtros).
-					commit('set_filtered_without_filter_form', true)
+					// Marca que lo que se ve salio del buscador general de texto libre y NO de un filtro
+					// estructurado. El dropdown del embudo lo lee para deshabilitar Actualizar/Eliminar masivos
+					// (OptionsDropdown.vue, ocultar_actualizar_eliminar_por_filtro).
+					//
+					// Va condicionado y no fijo en true porque por aca pasan los DOS caminos: filtrar() de
+					// display/table/Index.vue dispatchea runGlobalSearch({ page: 1 }) tanto si el usuario escribio
+					// en el buscador general como si uso la lupa de una columna. Con el true fijo, filtrar la
+					// columna "N°" y despues pedir una actualizacion masiva por filtro devolvia "No disponible
+					// para resultados del buscador general" con un filtro de columna puesto (Lucas, 28/8/2026).
+					//
+					// El corte es filtros_con_valor y no otra cosa porque es EXACTAMENTE lo que viaja en la masiva:
+					// opciones-filtrados-seleccion/Index.vue arma el request con `filter_form: state.filters`, sin
+					// el texto del buscador ni extra_filters_de_barra. Con filtros_con_valor > 0 el backend
+					// reconstruye el mismo recorte que filtro la tabla; con 0 recibiria un filter_form vacio y
+					// tocaria el listado ENTERO, asi que ahi el flag tiene que seguir en true.
+					commit('set_filtered_without_filter_form', filtros_con_valor == 0)
 
 					commit('setGlobalSearchMatches', {
 						matches: res.data.matches ? res.data.matches : null,

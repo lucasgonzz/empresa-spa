@@ -46,7 +46,7 @@ export default {
 		/**
 		 * Si es true, el ítem se muestra deshabilitado (no clickeable) y atenuado visualmente.
 		 * Se usa, por ejemplo, cuando la acción no está disponible por venir de un buscador
-		 * general en vez del buscador de filtros estructurado.
+		 * general en vez del filtro de columnas.
 		 */
 		disabled: {
 			type: Boolean,
