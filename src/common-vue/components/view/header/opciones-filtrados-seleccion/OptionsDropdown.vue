@@ -153,8 +153,10 @@ export default {
 			return this.$store.state[this.model_name].selected.length
 		},
 		/**
-		 * Oculta actualizar/eliminar masivos por filtro cuando solo hay `filtered`
-		 * sin `filters` (búsqueda rápida en listado de artículos).
+		 * Deshabilita actualizar/eliminar masivos por filtro cuando el listado se armo con el buscador
+		 * general y NO hay ningun filtro de columna con criterio de valor. El motivo esta en el store
+		 * (__base_store.js, runGlobalSearch): la masiva manda `filter_form: state.filters`, asi que sin
+		 * filtros de columna el backend recibiria un filtro vacio y tocaria el listado entero.
 		 */
 		ocultar_actualizar_eliminar_por_filtro() {
 			if (!this.from_filter) {
@@ -173,7 +175,7 @@ export default {
 		 * @returns {String}
 		 */
 		texto_disabled_buscador_general() {
-			return 'No disponible para resultados del buscador general. Para actualizar o eliminar varios registros a la vez, usá el buscador de filtros.'
+			return 'No disponible para resultados del buscador general. Para actualizar o eliminar varios registros a la vez, usá el filtro de columnas.'
 		},
 	},
 	methods: {
