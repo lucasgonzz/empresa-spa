@@ -238,13 +238,21 @@
 			</div>
 
 		</div>
-		<!-- Modal de filtros por columna (un solo modal por tabla) -->
+		<!--
+			Modal de filtros por columna (un solo modal por tabla).
+
+			🔴 Este @filtrar va a on_filtrar_desde_columna y NO a filtrar() a secas, que es lo que
+			usan el <pagination> y el <ordenar> de mas arriba. Es el unico punto del componente por
+			donde el USUARIO confirma un criterio de columna, y por eso es el unico que puede apagar
+			la busqueda del buscador general (exclusion mutua, Lucas 28/8/2026). Si el apagado
+			viviera adentro de filtrar(), paginar u ordenar borrarian la busqueda general.
+		-->
 		<filter-modal
 		v-if="!pivot && usar_filtros"
 		:field="filter_modal_field"
 		:model_name="model_name"
 		:modal_id="filter_modal_id"
-		@filtrar="filtrar"
+		@filtrar="on_filtrar_desde_columna"
 		@agregar_filtro="on_agregar_filtro"
 		@closed="close_filter_modal"></filter-modal>
 	</div>
@@ -905,6 +913,43 @@ export default {
 			return this.$store.dispatch(this.model_name + '/runGlobalSearch', { page: 1 })
 		},
 		/**
+		 * Apaga la busqueda del buscador general que estuviera puesta, porque el usuario acaba de
+		 * elegir el otro criterio: los filtros de columna.
+		 *
+		 * Es la mitad "columnas" de la exclusion mutua que pidio Lucas el 28/8/2026 ("o busca por
+		 * el buscador general o busca por las columnas... no se deben de poder combinar"). La otra
+		 * mitad la hace el buscador general al buscar.
+		 *
+		 * 🔴 En papelera la regla NO aplica y se sale antes de tocar nada: el store de papelera es
+		 * otro (src/store/papelera/*.js, escritos a mano y NO por el factory de __base_store.js),
+		 * no tiene ni global_search_payload ni estas actions, asi que el dispatch reventaria con
+		 * "unknown action type". La papelera se filtra por su propio camino
+		 * (run_papelera_search_from_store) y no tiene buscador general con el que competir.
+		 *
+		 * @return {void}
+		 */
+		apagar_busqueda_general_por_filtro_de_columna() {
+			if (this.papelera) {
+				return
+			}
+			this.$store.dispatch(this.model_name + '/aplicar_filtros_de_columna_exclusivos')
+		},
+		/**
+		 * Handler del boton "Filtrar" del modal de columna: apaga la busqueda general y despues
+		 * filtra.
+		 *
+		 * 🔴 Vive separado de filtrar() a proposito. filtrar() lo emiten tambien <pagination> y
+		 * <ordenar>: si el apagado estuviera adentro, pasar a la pagina 2 o cambiar el orden de una
+		 * columna borraria la busqueda del buscador general, que es un efecto que nadie pidio y que
+		 * el usuario leeria como un bug.
+		 *
+		 * @return {Promise}
+		 */
+		on_filtrar_desde_columna() {
+			this.apagar_busqueda_general_por_filtro_de_columna()
+			return this.filtrar()
+		},
+		/**
 		 * Abre el modal de filtro para la columna indicada por la lupa.
 		 *
 		 * @param {string} field_key
@@ -919,8 +964,15 @@ export default {
 		},
 		/**
 		 * Cierra el modal sin ejecutar búsqueda; el filtro queda guardado en store.
+		 *
+		 * 🔴 Aunque no dispare la busqueda, tambien apaga el buscador general: "Agregar filtro" deja
+		 * el criterio de columna cargado y el usuario lo va a ejecutar despues (con otro filtro, o
+		 * paginando). Si el apagado no pasara por aca, ese camino combinaria los dos criterios y la
+		 * masiva volveria a tocar mas registros de los que se ven, que es justo lo que la exclusion
+		 * mutua vino a cortar.
 		 */
 		on_agregar_filtro() {
+			this.apagar_busqueda_general_por_filtro_de_columna()
 			this.close_filter_modal()
 		},
 		/**
