@@ -26,8 +26,17 @@
 			de este mismo menu apuntando a un id que ya no existe — y BootstrapVue NO tira error
 			cuando le pedis mostrar un modal inexistente: el click simplemente no hace nada.
 
-			Va con el MISMO `v-if` que el item del menu (`can_import`), asi el item y el modal no
-			pueden quedar en desacuerdo.
+			Va con `can_import || can_import_ai`, y no solo con `can_import`, por dos razones:
+
+			1. El item del menu "Historial de importaciones" usa `can_import`, pero la tarjeta de
+			   progreso (`import-status`, abajo) se monta SIN condicion y su boton "Ver detalle"
+			   tambien hace `$bvModal.show('import-history')`. Con solo `can_import`, un usuario que
+			   puede importar con IA pero no tiene el permiso clasico veia la tarjeta de fallo y ese
+			   boton no hacia nada — el mismo click mudo que este bloque vino a evitar, reintroducido
+			   por la puerta de al lado.
+			2. Desde que la importacion clasica salio de estas pantallas, quien importa lo hace con
+			   IA: atar el historial al permiso del flujo que ya no existe deja gente sin poder ver
+			   sus propias importaciones.
 
 			El unico otro lugar que todavia monta `common-vue/components/import/Index.vue` es la
 			importacion de articulos a una compra a proveedor (`provider/modals/orders/Import.vue`),
@@ -35,7 +44,7 @@
 			forma de que los dos ids convivan en la misma pantalla.
 		-->
 		<import-history
-		v-if="can_import"
+		v-if="can_import || can_import_ai"
 		:model_name="model_name"></import-history>
 
 		<!--
