@@ -35,6 +35,17 @@
             ejecute para todos.
         -->
         <cotizacion-dolar-modal></cotizacion-dolar-modal>
+        <!--
+            Aviso de "Asignar imágenes automáticamente". Va acá arriba, y no adentro del módulo
+            de artículos, porque el que dispara el lote es `SearchImageAutomatica.vue`, que vive
+            adentro del dropdown de opciones del listado: ese dropdown se desmonta apenas la
+            selección queda vacía, así que si la suscripción a Echo viviera ahí, el callback
+            quedaría corriendo sobre una instancia destruida y el modal de resumen no aparecería
+            nunca (sin error y sin log). Acá el anfitrión está siempre montado.
+            No se suscribe a nada por su cuenta: solo cuando alguien largó un lote en ESTA
+            pestaña. El porqué está en el docblock del componente.
+        -->
+        <aviso-imagenes-automaticas></aviso-imagenes-automaticas>
 
         <!--
             Panel de tutoriales de la demo (misión 51, corregido por la 52). El v-if es la guarda
@@ -107,6 +118,7 @@ export default {
         ArticlesStockMinimo: () => import('@/components/common/ArticlesStockMinimo'),
         SyncedVersionNotifications: () => import('@/components/common/SyncedVersionNotifications'),
         CotizacionDolarModal: () => import('@/components/common/cotizacion-dolar/Modal'),
+        AvisoImagenesAutomaticas: () => import('@/components/common/AvisoImagenesAutomaticas'),
         // Carga diferida: sin demo, este chunk no se descarga nunca (misión 51).
         PanelDemo: () => import('@/components/demo/PanelDemo'),
     },
