@@ -86,7 +86,10 @@ export default {
 		flex-direction: column
 		align-items: center
 		justify-content: center
-		color: rgba(0, 0, 0, .45)
+		// Token y no un negro con alfa: este cartel vive DENTRO del panel del sidebar, que en
+		// modo oscuro es una superficie oscura. Escrito en negro quedaba invisible justo en el
+		// unico momento en que se dibuja --mientras la conversacion carga--.
+		color: var(--color-text-secondary)
 		i
 			font-size: 2.5rem
 			margin-bottom: 10px

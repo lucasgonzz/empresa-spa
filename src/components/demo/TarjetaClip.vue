@@ -59,7 +59,13 @@
 		-->
 		<p v-else class="tarjeta-clip__sin-video">Este video todavía no está disponible.</p>
 
+		<!--
+			Un clip sin práctica (`practica: false`) es solo para mirar: no hay nada que ir a
+			hacer al sistema, así que "Probar" no se dibuja. El clip se completa igual, con el
+			video llegando al final.
+		-->
 		<button
+		v-if="con_practica"
 		type="button"
 		class="tarjeta-clip__probar"
 		:disabled="!habilitar_probar"
@@ -107,6 +113,19 @@ export default {
 		}
 	},
 	computed: {
+		/**
+		 * El clip tiene una práctica para hacer en el sistema, así que "Probar" se dibuja.
+		 *
+		 * 🔴 SOLO `practica: false` explícito oculta el botón. Ausente / undefined / true lo
+		 * dejan como estuvo siempre: los planes congelados antes de que el catálogo trajera el
+		 * campo pueden no traerlo, y un default estricto les sacaría "Probar" a todos los clips
+		 * de esos leads. Compatible hacia atrás a propósito, no por prolijidad.
+		 *
+		 * @returns {Boolean}
+		 */
+		con_practica() {
+			return this.clip.practica !== false
+		},
 		/**
 		 * 🔴 Un video roto tambien desbloquea "Probar".
 		 *

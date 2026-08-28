@@ -43,40 +43,30 @@ export default {
 			 * Ya estaban hardcodeados en `Budget.vue` y en `BtnActualizarEnVender`.
 			 */
 			ESTADO_CONFIRMADO: 2,
-			/**
-			 * 🔴 Estado tal como está GUARDADO, no el que muestra el formulario.
-			 *
-			 * En el modal, `model` es `$store.state.budget.model`, que es el mismo objeto que el
-			 * formulario escribe en vivo: `ModelForm.vue` hace `$set(model, prop.key, $event)` en
-			 * cada `@input`, y `models/budget.js` sigue exponiendo el select "Estado del
-			 * presupuesto". Si el botón leyera `model.budget_status_id`, cambiar ese select SIN
-			 * guardar lo daba vuelta a "Anular", y al apretarlo salía un 422 "El presupuesto no
-			 * esta confirmado" sobre algo que en la base seguía sin confirmar.
-			 *
-			 * En el listado el problema no existe (ahí `props.model` es la fila persistida), pero la
-			 * foto sirve igual y deja el componente andando igual en los dos lugares.
-			 */
-			estado_persistido: null,
 		}
 	},
 	computed: {
-		esta_confirmado() {
-			return this.estado_persistido == this.ESTADO_CONFIRMADO
-		},
-	},
-	watch: {
 		/**
-		 * Se re-saca la foto cuando el botón pasa a representar OTRO presupuesto. No alcanza con
-		 * hacerlo en `created`: en el modal el componente se reusa entre presupuestos distintos.
+		 * 🔴 Se lee `model.budget_status_id` DIRECTO, y eso recién ahora es correcto.
 		 *
-		 * Se mira el id y no el estado, justamente para que la mutación del select —que no cambia el
-		 * id— no vuelva a disparar esto.
+		 * Hasta el 24/8/2026 acá había una foto (`estado_persistido`) tomada en un watcher de
+		 * `model.id`, porque el formulario exponía el select "Estado del presupuesto" y
+		 * `ModelForm.vue` escribe `$set(model, prop.key, $event)` en vivo sobre el mismo objeto
+		 * del store: tocar el select sin guardar daba vuelta el botón a "Anular" y al apretarlo
+		 * salía un 422 sobre un presupuesto que en la base seguía sin confirmar.
+		 *
+		 * Con el select en `only_show` esa mutación ya no existe, y la foto pasó de seguro a
+		 * defecto: el watcher mira el id, así que NO se re-dispara cuando el store reemplaza el
+		 * objeto conservando el id — que es justo lo que hacen `budget/add` y `budget/setModel`
+		 * después de confirmar o anular. Como el `b-modal` de `model/Index.vue` no es `lazy`, la
+		 * instancia sobrevive al cierre: anular desde la fila y reabrir el modal dejaba el botón
+		 * diciendo "Anular" con el presupuesto ya sin confirmar.
+		 *
+		 * Leyendo la prop se resuelve solo: es reactiva en los dos usos (en el listado la fila es
+		 * `props.model`; en el modal es el computed sobre `$store.state.budget.model`).
 		 */
-		'model.id': {
-			immediate: true,
-			handler() {
-				this.estado_persistido = this.model ? this.model.budget_status_id : null
-			},
+		esta_confirmado() {
+			return this.model && this.model.budget_status_id == this.ESTADO_CONFIRMADO
 		},
 	},
 	methods: {
@@ -131,9 +121,12 @@ export default {
 
 					let budget = res.data.model
 
-					/** La foto se actualiza con lo que devolvió el servidor, no con lo que se supuso. */
-					this.estado_persistido = budget.budget_status_id
-
+					/**
+					 * El botón se redibuja solo: `add` reemplaza la fila del listado y `setModel`
+					 * el modelo del modal, y `esta_confirmado` lee la prop. Por eso acá no hay que
+					 * sincronizar ningún estado local — el que había (`estado_persistido`) es
+					 * justamente el que se quedaba viejo.
+					 */
 					this.$store.commit('budget/add', budget)
 
 					/** Si el modal está abierto sobre este mismo presupuesto, que no quede viejo. */

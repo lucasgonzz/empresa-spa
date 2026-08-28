@@ -2,22 +2,31 @@
 	<div
 	class="whatsapp-bubble"
 	:class="bubble_class">
-		<span
-		v-if="is_out"
-		class="whatsapp-bubble__sender">
-			{{ sender_label }}
-		</span>
+		<!-- Quién mandó el mensaje y si fue simulado, en una fila propia arriba del contenido.
+		Van juntos y ALINEADOS AL LADO DE LA BURBUJA (pedido de Lucas, 24/8/2026): pegados a la
+		izquierda en los mensajes del cliente, a la derecha en los del negocio. Antes los dos
+		arrancaban siempre contra el borde izquierdo, así que en una burbuja saliente —que está
+		pegada a la derecha— el rótulo quedaba desalineado del resto del globo.
 
-		<!-- Marca de simulación. `direction` y `source` de un mensaje simulado son idénticos a
-		los de uno real a propósito (tiene que recorrer el mismo camino), así que sin esta marca
-		el operador leía mañana un mensaje que el cliente nunca escribió ni recibió. -->
-		<span
-		v-if="es_simulado"
-		class="whatsapp-bubble__sim"
-		:title="sim_title">
-			<i class="bi bi-cone-striped"></i>
-			Simulado
-		</span>
+		La marca de simulado existe porque `direction` y `source` de un mensaje simulado son
+		idénticos a los de uno real a propósito (tiene que recorrer el mismo camino): sin ella el
+		operador leía mañana un mensaje que el cliente nunca escribió ni recibió. -->
+		<div
+		v-if="is_out || es_simulado"
+		class="whatsapp-bubble__meta">
+			<span
+			v-if="is_out"
+			class="whatsapp-bubble__sender">
+				{{ sender_label }}
+			</span>
+			<span
+			v-if="es_simulado"
+			class="whatsapp-bubble__sim"
+			:title="sim_title">
+				<i class="bi bi-cone-striped"></i>
+				Simulado
+			</span>
+		</div>
 
 		<!-- Medio adjunto. Va ARRIBA del texto porque así lo dibuja WhatsApp: el epígrafe de una
 		foto va abajo de la foto, y la transcripción de una nota de voz abajo del reproductor.
@@ -572,28 +581,55 @@ export default {
 	padding: 6px 10px
 	border-radius: 10px
 	margin-bottom: 4px
-	box-shadow: 0 1px 1px rgba(0, 0, 0, .08)
+	box-shadow: 0 1px 1px var(--wa-burbuja-sombra)
 	&--in
 		align-self: flex-start
-		background: #ffffff
+		background: var(--wa-burbuja-in)
+		color: var(--wa-burbuja-in-texto)
 	&--out
 		align-self: flex-end
-		background: #dcf8c6
+		background: var(--wa-burbuja-out)
+		// 🔴 El texto de la saliente NO hereda: en modo oscuro esa burbuja es verde petroleo y el
+		// gris del tema claro queda ilegible encima. Sale del token propio.
+		color: var(--wa-burbuja-out-texto)
 	// Simulado: borde punteado, para que se lea de un vistazo que ese globo no es real.
 	&--sim
-		border: 1px dashed rgba(0, 0, 0, .3)
-	// Esperando aprobación: fondo distinto del saliente normal (no es un mensaje enviado) y
-	// más ancho, porque adentro entran el aviso, el contador y los dos botones.
+		border: 1px dashed var(--wa-sim-borde)
+	// Esperando aprobacion: fondo distinto del saliente normal (no es un mensaje enviado) y
+	// mas ancho, porque adentro entran el aviso, el contador y los dos botones.
 	&--a-confirmar
-		background: #fff6e5
-		border: 1px dashed #d39e00
+		background: var(--wa-sim-bg)
+		border: 1px dashed var(--wa-sim-borde)
+		color: var(--wa-texto)
 		max-width: 85%
+
+	// --- Fila del emisor y la marca de simulado ---------------------------------------------
+	// El lado lo decide la direccion del mensaje, no un valor fijo: entrantes a la izquierda,
+	// salientes a la derecha, para que el rotulo quede alineado con el borde de la burbuja que
+	// mira al centro de la conversacion. Es lo que pidio Lucas el 24/8/2026.
+	//
+	// 🔴 No se agrego un rotulo "Cliente" inventado en los entrantes: en un mensaje del cliente
+	// esta fila lleva SOLO la marca de simulado cuando corresponde, y por eso el v-if de arriba
+	// pide `is_out || es_simulado` --si no, quedaria un div vacio con margen en cada entrante--.
+	&__meta
+		display: flex
+		flex-direction: row
+		align-items: center
+		flex-wrap: wrap
+		gap: 6px
+		margin-bottom: 3px
+	&--in &__meta
+		justify-content: flex-start
+	&--out &__meta
+		justify-content: flex-end
+
 	&__sender
-		display: block
 		font-size: .7rem
 		font-weight: 700
-		color: #075e54
-		margin-bottom: 2px
+		// 🔴 --wa-sender y NO --wa-verde. Este rotulo se dibuja SIEMPRE sobre la burbuja saliente
+		// (`v-if="is_out"`), que en claro es verde palido: el verde de marca encima da 1,8:1 y se
+		// lee como una mancha. El token propio es el verde oscuro de WhatsApp, 6,9:1.
+		color: var(--wa-sender)
 	&__sim
 		display: inline-flex
 		align-items: center
@@ -602,14 +638,14 @@ export default {
 		font-weight: 700
 		text-transform: uppercase
 		letter-spacing: .03em
-		color: #8a6d3b
-		background: rgba(255, 193, 7, .22)
+		color: var(--wa-sim-texto)
+		background: var(--wa-sim-bg)
 		border-radius: 4px
 		padding: 1px 5px
-		margin-bottom: 3px
+
 	// La miniatura es un <button> y no un <img> suelto para que se pueda abrir con Enter y con
-	// el lector de pantalla, no solo con el mouse. De ahí que haya que sacarle todo el aspecto
-	// de botón que le pone el navegador.
+	// el lector de pantalla, no solo con el mouse. De ahi que haya que sacarle todo el aspecto
+	// de boton que le pone el navegador.
 	&__image-btn
 		display: block
 		max-width: 100%
@@ -620,22 +656,22 @@ export default {
 		cursor: zoom-in
 	&__image
 		display: block
-		// El 100% es lo que la mantiene adentro de la burbuja en teléfono; los 280px son para
-		// que en escritorio no ocupe media conversación.
+		// El 100% es lo que la mantiene adentro de la burbuja en telefono; los 280px son para
+		// que en escritorio no ocupe media conversacion.
 		max-width: min(100%, 280px)
 		max-height: 180px
 		width: auto
 		object-fit: cover
 		border-radius: 6px
 	// El reproductor viene del molde con `min-width: 200px`, que sumado al padding de la burbuja
-	// no entra en el 70% de un sidebar puesto en su ancho mínimo (320px) y se desbordaba. Acá se
+	// no entra en el 70% de un sidebar puesto en su ancho minimo (320px) y se desbordaba. Aca se
 	// lo deja encoger: el waveform es flexible y aguanta perfecto un poco menos de ancho.
 	.wa-audio-player
 		min-width: 0
 		max-width: 100%
-	// Aviso de medio sin archivo. Va como bloque punteado y tenue, y no como una línea de texto
-	// más, para que se lea de un vistazo que eso NO lo escribió el cliente: es el sistema
-	// avisando que llegó algo que no puede mostrar.
+	// Aviso de medio sin archivo. Va como bloque punteado y tenue, y no como una linea de texto
+	// mas, para que se lea de un vistazo que eso NO lo escribio el cliente: es el sistema
+	// avisando que llego algo que no puede mostrar.
 	&__medio-faltante
 		display: flex
 		flex-direction: row
@@ -643,10 +679,10 @@ export default {
 		gap: 6px
 		margin-bottom: 4px
 		padding: 5px 8px
-		border: 1px dashed rgba(0, 0, 0, .18)
+		border: 1px dashed var(--wa-borde)
 		border-radius: 6px
 		font-size: .74rem
-		color: rgba(0, 0, 0, .55)
+		opacity: var(--wa-texto-tenue-op)
 		text-align: left
 		i
 			font-size: .95rem
@@ -663,7 +699,7 @@ export default {
 		gap: 4px
 		margin-top: 6px
 		padding-top: 6px
-		border-top: 1px dashed rgba(0, 0, 0, .18)
+		border-top: 1px dashed var(--wa-borde)
 		text-align: left
 		&-label
 			display: inline-flex
@@ -671,20 +707,20 @@ export default {
 			gap: 5px
 			font-size: .72rem
 			font-weight: 700
-			color: #8a5b00
+			color: var(--wa-sim-texto)
 		&-timer
 			font-size: .72rem
-			color: rgba(0, 0, 0, .6)
+			opacity: var(--wa-texto-tenue-op)
 		&-error
 			display: inline-flex
 			align-items: flex-start
 			gap: 5px
 			font-size: .7rem
-			color: #dc3545
+			color: var(--wa-error)
 		&-actions
 			display: flex
 			flex-direction: row
-			// En teléfono el globo mide poco más de 300px y los dos botones no entran en una
+			// En telefono el globo mide poco mas de 300px y los dos botones no entran en una
 			// fila: se permite el salto en vez de que se desborden.
 			flex-wrap: wrap
 			gap: 6px
@@ -695,7 +731,7 @@ export default {
 		gap: 5px
 		margin-top: 4px
 		font-size: .72rem
-		color: rgba(0, 0, 0, .55)
+		opacity: var(--wa-texto-tenue-op)
 	&__footer
 		display: flex
 		flex-direction: row
@@ -704,20 +740,29 @@ export default {
 		margin-top: 2px
 	&__time
 		font-size: .68rem
-		color: rgba(0, 0, 0, .45)
+		opacity: var(--wa-texto-muy-tenue-op)
+	// 🔴 Los checks se destiñen con `color` y NO con `opacity`, a diferencia del resto del texto
+	// secundario de este archivo: los íconos de estado son HIJOS de este span, y dos de ellos
+	// (`--read` celeste, `--failed` rojo) traen color propio. `opacity` crea un contexto de
+	// composición que se aplica al subárbol entero, así que un `opacity: 1` en el hijo no lo
+	// deshace —se compone dentro del padre ya translúcido— y el doble check azul de "leído"
+	// quedaba lavado justo cuando es la información que el operador está buscando.
 	&__status
 		margin-left: 4px
 		font-size: .8rem
-		color: rgba(0, 0, 0, .45)
+		color: var(--color-text-secondary)
 		&--read
 			color: #34b7f1
+		// Token y no el #dc3545 de Bootstrap: este check vive adentro de la burbuja saliente, y
+		// ese fondo ahora cambia entre modos. Sobre el verde petroleo del oscuro daba 1,8:1, o
+		// sea que desaparecia el unico aviso de que el mensaje NO salio.
 		&--failed
-			color: #dc3545
+			color: var(--wa-error)
 		&--blocked
 			display: inline-flex
 			align-items: center
 			gap: 4px
 			font-size: .68rem
 			font-weight: 600
-			color: #b5651d
+			color: var(--wa-sim-texto)
 </style>

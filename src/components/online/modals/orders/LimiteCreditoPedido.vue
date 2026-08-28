@@ -78,8 +78,12 @@ export default {
 	},
 	methods: {
 		/**
-		 * Le avisa al padre que el dueño decidió confirmar igual. El PUT lo repite `BtnStatus`,
-		 * que es el que tiene el estado al que se está pasando.
+		 * Le avisa al padre que el dueño decidió confirmar igual. El que repite el guardado es
+		 * `online/components/orders/Index.vue`, que emite `order:save-retry` con la bandera
+		 * `ignorar_limite_credito` para que el formulario genérico vuelva a mandar el pedido.
+		 *
+		 * (Hasta el 22/8/2026 lo repetía `BtnStatus`, el botón "Confirmar pedido" del modal. Ese
+		 * botón se sacó: el estado ahora se maneja solo desde el select del formulario.)
 		 *
 		 * @returns {void}
 		 */

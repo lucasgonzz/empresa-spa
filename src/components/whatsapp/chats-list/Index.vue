@@ -6,7 +6,7 @@
 			<b-button
 			size="sm"
 			variant="success"
-			class="whatsapp-chats-list__new-btn"
+			class="whatsapp-chats-list__btn whatsapp-chats-list__new-btn"
 			v-b-modal="'whatsapp-new-chat'">
 				<i class="bi bi-plus-lg"></i>
 				Nuevo chat
@@ -20,7 +20,7 @@
 			v-if="is_owner && config && config.chat_simulation_enabled"
 			size="sm"
 			variant="outline-warning"
-			class="whatsapp-chats-list__simulate-btn"
+			class="whatsapp-chats-list__btn whatsapp-chats-list__btn--icono"
 			title="Simular un mensaje del cliente (no le llega nada a nadie)"
 			v-b-modal="'whatsapp-simulate-inbound'">
 				<i class="bi bi-cone-striped"></i>
@@ -31,7 +31,7 @@
 			v-if="is_owner"
 			size="sm"
 			variant="outline-secondary"
-			class="whatsapp-chats-list__config-btn"
+			class="whatsapp-chats-list__btn whatsapp-chats-list__btn--icono"
 			title="Configuración de WhatsApp"
 			v-b-modal="'whatsapp-config'">
 				<i class="bi bi-gear"></i>
@@ -119,25 +119,70 @@ export default {
 	height: 100%
 	display: flex
 	flex-direction: column
+	background: var(--wa-panel)
+	color: var(--wa-texto)
 	&__header
 		display: flex
 		flex-direction: row
 		align-items: center
-		padding: 8px 8px 4px 0
+		padding: 10px 12px
+		border-bottom: 1px solid var(--wa-borde)
 		// Con el botón de simular ya son cuatro cosas en la fila. En la franja de tablet
 		// (992-1024px) la columna de chats mide unos 330px y sin permitir el salto de línea el
 		// buscador quedaba aplastado a nada.
 		flex-wrap: wrap
-		row-gap: 4px
-	&__new-btn
+		// El espaciado de la fila lo da el gap y NO el margin-right de cada botón: con los dos,
+		// el hueco entre un par de controles y el siguiente quedaba desparejo. Es la misma
+		// correccion que ya hizo _toolbar_botones.sass en la barra de encabezado.
+		gap: var(--toolbar-btn-gap)
+		row-gap: 6px
+	// Geometría compartida de los tres botones del header, copiada de .btn-modulo
+	// (_controles_modulo.sass): alto, radio, tipografía y sombra de los mismos tokens que usa la
+	// barra de encabezado del resto del sistema, para que la bandeja deje de tener su propio
+	// dialecto visual.
+	//
+	// 🔴 A propósito NO se tocan los `variant`: el color acá es información. "Nuevo chat" es la
+	// acción principal (verde), simular es una herramienta del dueño (ámbar) y configuración es
+	// neutra. El `.btn` del selector le gana a `.btn-sm` por especificidad (0,2,0) contra (0,1,0).
+	&__btn.btn
 		flex-shrink: 0
+		height: var(--toolbar-control-h)
+		display: inline-flex
+		align-items: center
+		justify-content: center
+		gap: 6px
+		padding: 0 12px
+		font-size: .875rem
+		line-height: 1
+		border-radius: var(--toolbar-btn-radius)
+		box-shadow: var(--toolbar-btn-shadow)
 		white-space: nowrap
-		margin-right: 8px
-	&__simulate-btn
-		flex-shrink: 0
-		margin-right: 8px
-	&__config-btn
-		flex-shrink: 0
+	// Los dos que son solo ícono van cuadrados, del mismo alto: un botón de ícono con el padding
+	// horizontal del de texto queda oblongo y desalineado con el resto.
+	&__btn--icono.btn
+		width: var(--toolbar-control-h)
+		padding: 0
+	// El verde de la marca en vez del `success` de Bootstrap (#28a745), que no es el de WhatsApp
+	// y no cambia en modo oscuro.
+	//
+	// 🔴 Los selectores de estado llevan `.btn-success:not(:disabled):not(.disabled)` encima, y no
+	// es palabrerio defensivo: Bootstrap 4 declara
+	// `.btn-success:not(:disabled):not(.disabled):active` en (0,4,0), que le gana a un
+	// `&__new-btn.btn:active` de (0,3,0). Sin esto, mientras se mantiene apretado el boton, el
+	// verde salta al de Bootstrap: justo el color que esta regla existe para evitar. Estos quedan
+	// en (0,5,0) y ganan siempre, sin depender del orden del bundle.
+	&__new-btn.btn
+		background: var(--wa-verde)
+		border-color: var(--wa-verde)
+		color: var(--wa-verde-texto)
+		&.btn-success:not(:disabled):not(.disabled):hover,
+		&.btn-success:not(:disabled):not(.disabled):focus,
+		&.btn-success:not(:disabled):not(.disabled):active,
+		&.btn-success:not(:disabled):not(.disabled):active:focus
+			background: var(--wa-verde-hover)
+			border-color: var(--wa-verde-hover)
+			color: var(--wa-verde-texto)
+			box-shadow: none
 	&__body
 		flex: 1
 		overflow-y: auto

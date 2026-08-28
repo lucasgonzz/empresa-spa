@@ -34,6 +34,14 @@ export default {
 			text: 'Estado',
 			key: 'order_status_id',
 			type: 'select',
+			// Desde el 22/8/2026 este select es la UNICA forma de manejar el estado del pedido:
+			// se sacaron del modal los botones "Confirmar pedido" y "Cancelar pedido".
+			//
+			// Las opciones se calculan en vivo y no salen del store completo: un pedido solo puede
+			// avanzar o cancelarse, nunca volver para atras. La regla la impone el backend
+			// (OrderStatusHelper, 422 si no vale), esto es para que el usuario no llegue a elegir
+			// algo que va a ser rechazado.
+			dynamic_options_function: 'get_order_status_options',
 			not_show: true,
 		},
 		{

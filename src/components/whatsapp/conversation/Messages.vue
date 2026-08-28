@@ -160,6 +160,11 @@ export default {
 	min-height: 0
 	overflow-y: auto
 	padding: 14px
+	// El fondo del panel de mensajes es el unico color del modulo sin equivalente en el sistema:
+	// WhatsApp usa un beige propio en claro y un azul casi negro en oscuro, y es la mitad de lo
+	// que hace que la conversacion se lea como una conversacion. Sale del token, no de un hex.
+	background: var(--wa-fondo-chat)
+	color: var(--wa-texto)
 .whatsapp-messages
 	display: flex
 	flex-direction: column
