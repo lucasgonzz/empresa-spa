@@ -21,6 +21,30 @@
 			variant="primary"></b-spinner>
 		</div>
 
+		<!--
+			🔴 Estado de error PROPIO, y va ANTES del estado vacío. Hasta acá el .catch de
+			getModels apagaba el loading y no hacía nada más, así que con `models` vacío la
+			pantalla caía en el "Aún no hay importaciones" de abajo: la pantalla MENTÍA. El
+			usuario que acababa de importar leía que no había importado nada.
+		-->
+		<div
+		v-else-if="error_al_cargar && !models.length"
+		class="import-history-error">
+			<b-alert
+			show
+			variant="danger"
+			class="m-b-15">
+				{{ error_al_cargar }}
+			</b-alert>
+			<b-button
+			variant="primary"
+			:disabled="loading"
+			@click="getModels">
+				<i class="bi bi-arrow-repeat m-r-5"></i>
+				Reintentar
+			</b-button>
+		</div>
+
 		<history-empty-state
 		v-else-if="!models.length"
 		icon_class="icon-download"
@@ -323,6 +347,8 @@ export default {
 	data() {
 		return {
 			loading: false,
+			// Texto del error de carga del historial. Vacio = no hubo error (ver el template).
+			error_al_cargar: '',
 			models: [],
 			articulos_creados: [],
 			import_history_show_lotes: null,
@@ -767,17 +793,29 @@ export default {
 			this.import_history_a_revertir = null
 
 			let self = this
-			this.$store.commit('auth/setMessage', 'Cargando')
-			this.$store.commit('auth/setMessage', true)
+			/*
+			 * 🔴 Bug de tipeo, arreglado. Las tres lineas de abajo decian `setMessage`: la
+			 * segunda tenia que ser `setLoading`. Costaba dos cosas a la vez:
+			 *   1. el overlay NUNCA se prendia, asi que apretar "Revertir" no daba ninguna senal
+			 *      y se podia apretar de nuevo mientras el POST estaba en vuelo;
+			 *   2. `auth.message` quedaba en el booleano `true` (y despues en `false`), que es el
+			 *      texto que se dibuja DEBAJO del spinner del loading global. La proxima vez que
+			 *      cualquier otra cosa prendia el overlay, el usuario leia "false" ahi abajo.
+			 * Las dos salidas limpian el mensaje con '' y no con un booleano.
+			 */
+			this.$store.commit('auth/setMessage', 'Revirtiendo la importación...')
+			this.$store.commit('auth/setLoading', true)
 			this.$api.post('import-history/rollback/'+model.id)
 			.then(function(res) {
-				self.$store.commit('auth/setMessage', false)
+				self.$store.commit('auth/setLoading', false)
+				self.$store.commit('auth/setMessage', '')
 				self.$toast.success('Enviado, te avisaremos cuando termine')
 				self.$set(model, 'rollback_status', 'encolado')
 				self.$set(model, 'can_revert', false)
 			})
 			.catch(function(err) {
-				self.$store.commit('auth/setMessage', false)
+				self.$store.commit('auth/setLoading', false)
+				self.$store.commit('auth/setMessage', '')
 				let mensaje = 'No se pudo revertir la importacion'
 				if (err.response && err.response.data && err.response.data.message) {
 					mensaje = err.response.data.message
@@ -842,21 +880,58 @@ export default {
 			this.$store.dispatch('provider/getOptions')
 
 			this.loading = true
+			this.error_al_cargar = ''
 			this.$api.get('import-history/'+this.model_name)
 			.then(res => {
 				console.log(res)
 				this.loading = false
-				this.models = res.data.models 
+				this.error_al_cargar = ''
+				this.models = res.data.models
 			})
 			.catch(err => {
 				this.loading = false
 				console.log(err)
+				/*
+				 * 🔴 Sin esto la pantalla mentía: el .catch apagaba el loading y se callaba, y
+				 * como `models` quedaba vacío se dibujaba "Aún no hay importaciones". El usuario
+				 * que acababa de importar leía que no había importado nada.
+				 *
+				 * Los `models` viejos NO se limpian a propósito: si esta es una recarga y ya
+				 * había un historial en pantalla, sigue siendo información buena. El estado de
+				 * error solo se dibuja cuando además la lista está vacía.
+				 */
+				this.error_al_cargar = 'No pudimos cargar el historial. Volvé a abrir esta ventana o tocá Reintentar.'
+
+				/*
+				 * Si ya había un historial dibujado (esto es una recarga), la tabla se queda: sigue
+				 * siendo información buena y borrarla sería peor. Pero el fallo tiene que decirse
+				 * igual, porque si no el usuario cree que está mirando lo último.
+				 */
+				if (this.models.length) {
+					this.$toast.error('No pudimos actualizar el historial. Lo que ves puede no estar al día.', {
+						duration: 8000
+					})
+				}
 			})
 		}
 	}
 }
 </script>
 <style lang="sass">
+// Estado de error del historial: alerta + boton de reintento, centrados.
+// Mismo aire que el estado vacio (HistoryEmptyState) para que no se sienta otra pantalla.
+.import-history-error
+	display: flex
+	flex-direction: column
+	align-items: center
+	justify-content: center
+	padding: 2rem 1.5rem
+	text-align: center
+
+	.alert
+		max-width: 420px
+		margin-bottom: 15px
+
 .cont-columns
 	max-height: 100px
 	overflow-y: scroll

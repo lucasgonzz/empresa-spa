@@ -499,11 +499,28 @@
 
 			</div>
 
+			<!--
+				🔴 Error del paso 2, persistente. Hasta acá los dos .catch de confirmar_paso_2
+				mandaban el mensaje a $toast.error: el toast se va solo a los pocos segundos y el
+				paso 2 queda EXACTAMENTE igual que antes de apretar el botón, así que el usuario
+				que miró para otro lado no sabe si el botón hizo algo. Los pasos 1 y 4 ya usaban
+				un b-alert que se queda; este ahora también.
+			-->
+			<b-alert
+			v-if="error_message"
+			show
+			variant="danger"
+			class="m-t-15 m-b-0">
+				{{ error_message }}
+			</b-alert>
+
 			<div class="m-t-20 j-end">
+				<!-- Se limpia el error al volver: el paso 1 dibuja el MISMO `error_message` y no
+				tiene por qué heredar el fracaso de la recomendación. -->
 				<b-button
 				variant="outline-secondary"
 				class="m-r-10"
-				@click="step = 1">
+				@click="error_message = ''; step = 1">
 					Volver
 				</b-button>
 				<b-button
@@ -666,18 +683,36 @@
 				<!-- Colisiones en BD (mismo proveedor) -->
 				<span
 				v-if="duplicate_stats.provider_codes_existentes_mismo_proveedor > 0"
-				class="ai-import-summary-chip ai-import-summary-chip--info">
-					🔁 {{ numero_es(duplicate_stats.provider_codes_existentes_mismo_proveedor) }} ya en BD (mismo proveedor)
+				class="ai-import-summary-chip"
+				:class="provider_stats_desactualizados ? 'ai-import-summary-chip--warning' : 'ai-import-summary-chip--info'">
+					🔁 {{ numero_es(duplicate_stats.provider_codes_existentes_mismo_proveedor) }} ya en BD (mismo proveedor)<span v-if="provider_stats_desactualizados"> — sin actualizar</span>
 				</span>
 
 				<!-- Colisiones en BD (otros proveedores) -->
 				<span
 				v-if="duplicate_stats.provider_codes_existentes_otros_proveedores > 0"
-				class="ai-import-summary-chip ai-import-summary-chip--info">
-					🔁 {{ numero_es(duplicate_stats.provider_codes_existentes_otros_proveedores) }} ya en BD (otro proveedor)
+				class="ai-import-summary-chip"
+				:class="provider_stats_desactualizados ? 'ai-import-summary-chip--warning' : 'ai-import-summary-chip--info'">
+					🔁 {{ numero_es(duplicate_stats.provider_codes_existentes_otros_proveedores) }} ya en BD (otro proveedor)<span v-if="provider_stats_desactualizados"> — sin actualizar</span>
 				</span>
 
 			</div>
+
+			<!--
+				🔴 Los dos conteos de "ya en BD" son del proveedor ANTERIOR: el recálculo para el
+				proveedor que se eligió en el paso 2 falló. Se dice acá y no solo en el toast que
+				ya se mostró, porque las preguntas de más abajo se contestan mirando justamente
+				esos números y el toast para entonces ya se fue.
+			-->
+			<b-alert
+			v-if="provider_stats_desactualizados"
+			show
+			variant="warning"
+			class="m-b-15">
+				No pudimos recalcular cuántos códigos de este archivo ya existen para el proveedor que
+				elegiste. Los dos conteos de "ya en BD" son del proveedor anterior: volvé al paso
+				anterior y elegí el proveedor de nuevo antes de decidir qué hacer con las coincidencias.
+			</b-alert>
 
 			<!-- Tabla de códigos de proveedor repetidos -->
 			<div v-if="provider_codes_detail.length > 0" class="m-b-15">
@@ -1145,6 +1180,40 @@
 				</small>
 			</b-form-group>
 
+			<!--
+				Qué hacer con las celdas vacías del Excel. Reemplaza al control "Permitir valores
+				en blanco" que tenía el import clásico, que era UNO POR COLUMNA. Decisión de Lucas
+				(24/8/2026): uno solo por importación, para los tres modelos.
+
+				🔴 El default (desmarcado) es el comportamiento de siempre y es el seguro. Marcarlo
+				puede vaciar una propiedad en miles de registros de una sola importación, así que el
+				texto dice lo que PASA y no cómo se llama la opción, y la explicación de abajo
+				cambia según el estado: hay que poder darse cuenta de cuál de las dos es la
+				peligrosa sin pensarlo.
+			-->
+			<b-form-group>
+				<b-form-checkbox
+				id="ai-import-vaciar_valores_en_blanco"
+				data-testid="ai-import-vaciar_valores_en_blanco"
+				v-model="vaciar_valores_en_blanco"
+				:value="1"
+				:unchecked-value="0">
+					Las celdas vacías del Excel borran el dato que ya está cargado
+				</b-form-checkbox>
+				<small class="d-block m-t-5" :class="celdas_vacias_borran ? 'text-danger' : 'text-muted'">
+					<span v-if="celdas_vacias_borran">
+						⚠️ Como está activada, una celda vacía VACÍA esa propiedad en el sistema, y no hay
+						forma de deshacerlo desde acá. Solo pasa con las columnas que mapeaste: las que no
+						están en el archivo no se tocan.
+					</span>
+					<span v-else>
+						Como está desactivada, una celda vacía se ignora y los {{ model_label_plural }}
+						conservan lo que ya tenían. Solo se actualiza lo que el Excel trae escrito. Es como
+						viene funcionando la importación hasta ahora.
+					</span>
+				</small>
+			</b-form-group>
+
 			<!-- Error al importar -->
 			<b-alert
 			v-if="error_message"
@@ -1244,10 +1313,10 @@ export default {
 			/*
 			 * Misión costo-bruto-por-condicion-fiscal (20/8/2026): declaración de si los costos de
 			 * ESTA planilla vienen brutos (con IVA adentro) o netos. Equivale al flag
-			 * "precios_incluyen_iva" de la compra a proveedor y al check del import clásico
-			 * (src/components/listado/modals/import/Index.vue).
+			 * "precios_incluyen_iva" de la compra a proveedor. El check equivalente vivía además en
+			 * el import clásico de artículos, que se sacó al pasar todas las importaciones a IA.
 			 *
-			 * Hace falta acá y no alcanza con tenerlo en el import clásico porque este flujo NO
+			 * Hace falta acá porque este flujo NO
 			 * pasa por ArticleController@import: postea a /ai-excel-import/import, que arma su
 			 * propio array para InitExcelImport. Toda clave que no se mande explícitamente acá
 			 * llega al backend con el default, y el default es "neto".
@@ -1255,6 +1324,22 @@ export default {
 			 * Arranca en 0 (= costos netos), que es como venía importando este flujo hasta hoy.
 			 */
 			precios_incluyen_iva: 0,
+
+			/*
+			 * Qué hacer con las celdas vacías del Excel (decisión de Lucas, 24/8/2026). Reemplaza
+			 * al "Permitir valores en blanco" por columna del import clásico con UN SOLO control
+			 * por importación, común a los tres modelos.
+			 *
+			 * Viaja como el booleano `vaciar_valores_en_blanco` de /ai-excel-import/import. Es UN
+			 * booleano y nada más: el backend lo expande solo (para artículos, al mapa por columna
+			 * que ya usa el motor; para clientes y proveedores, a sus clases de importación). Acá
+			 * NO se arma ningún mapa por columna — dos criterios para lo mismo en dos lados es
+			 * exactamente el error que este módulo ya se comió dos veces.
+			 *
+			 * Arranca en 0 = las celdas vacías se ignoran, que es el comportamiento de siempre y el
+			 * seguro.
+			 */
+			vaciar_valores_en_blanco: 0,
 
 			/* Opciones avanzadas de importación, con los mismos defaults que el modal existente. */
 			actualizar_articulos_de_otro_proveedor: 1,
@@ -1350,6 +1435,13 @@ export default {
 
 			/* Estadísticas de duplicados devueltas por el análisis IA (preanálisis del Excel). */
 			duplicate_stats: null,
+
+			/*
+			 * True cuando el recálculo de "códigos ya existentes" para el proveedor elegido falló.
+			 * Mientras esté en true, los dos conteos de colisiones en BD que se muestran son los
+			 * del proveedor ANTERIOR y no se puede decidir la política de colisión con ellos.
+			 */
+			provider_stats_desactualizados: false,
 
 			/*
 			 * Prompt 03 (grupo 239 - alerta-formatos-numericos-import): estadisticas de
@@ -1642,6 +1734,16 @@ export default {
 		 */
 		costos_de_la_planilla_son_brutos() {
 			return Number(this.precios_incluyen_iva) === 1
+		},
+
+		/*
+		 * Estado del control "Las celdas vacías del Excel borran el dato que ya está cargado",
+		 * normalizado a booleano. Solo elige cuál de los dos textos de ayuda se muestra.
+		 *
+		 * @return {Boolean}
+		 */
+		celdas_vacias_borran() {
+			return Number(this.vaciar_valores_en_blanco) === 1
 		},
 
 		/*
@@ -2147,6 +2249,27 @@ export default {
 					{ value: 'numero',                   text: 'Número de proveedor' },
 					{ value: 'condicion_frente_al_iva',  text: 'Condición frente al IVA' },
 					{ value: 'observaciones',            text: 'Observaciones' },
+					/*
+					 * 🔴 Saldo actual de la cuenta corriente del proveedor. Existía sólo en el
+					 * import clásico de proveedores; al sacarlo, quien migra proveedores con su
+					 * saldo se quedaba sin forma de traerlo.
+					 *
+					 * La clave es 'saldo_actual' y NO es arbitraria: build_columns() la manda tal
+					 * cual dentro de `columns`, y del otro lado ProviderImport::saveModel() cierra
+					 * llamando a LocalImportHelper::setSaldoInicial(), que lee
+					 * getColumnValueByAliases($row, ['saldo_actual', 'saldo actual'], $columns).
+					 * Es la misma clave con la que ya viaja el saldo de los clientes.
+					 *
+					 * El analizador de proveedores del backend (AiProviderAnalyzer) la conoce desde
+					 * el 24/8/2026: está en su SYSTEM_PROPERTIES y tiene regla propia en el prompt,
+					 * así que la IA la sugiere sola. El usuario igual puede corregirla a mano.
+					 *
+					 * ⚠️ Lo que NO hace: si el proveedor ya tiene movimientos en su cuenta corriente,
+					 * LocalImportHelper::crearSaldoInicialPorImportacion() corta con un return y el
+					 * saldo no se aplica, sin avisar. O sea que esto es un saldo INICIAL, no un
+					 * "saldo actual" que pise lo que haya. Viene de antes de esta misión.
+					 */
+					{ value: 'saldo_actual',             text: 'Saldo actual' },
 				]
 			}
 
@@ -3399,7 +3522,15 @@ export default {
 
 						if (fallos_consecutivos >= 5) {
 							limpiar_timer_de_aviso()
-							reject('No se pudo consultar el estado del análisis. Probá de nuevo.')
+							/*
+							 * 🔴 El texto anterior ("No se pudo consultar el estado del análisis.
+							 * Probá de nuevo.") mentía por omisión y además empujaba al usuario a
+							 * hacer lo peor. Lo que se perdió es EL POLLING, no el análisis: del
+							 * lado del servidor puede estar corriendo perfecto. Decirle "probá de
+							 * nuevo" lo invita a encolar otro análisis pesado del mismo archivo al
+							 * pedo, y a creer que el primero se perdió.
+							 */
+							reject('Perdimos la conexión con el servidor. El análisis puede seguir corriendo: cuando vuelvas, te avisamos si terminó.')
 							return
 						}
 
@@ -3416,7 +3547,14 @@ export default {
 
 					if (transcurrido >= 900000) {
 						limpiar_timer_de_aviso()
-						reject('El análisis está tardando más de lo normal. Probá de nuevo o avisanos.')
+						/*
+						 * 🔴 Mismo problema que la salida por fallos de red: dejar de esperar acá
+						 * no cancela nada del lado del servidor. "Probá de nuevo" invitaba a
+						 * encolar un segundo análisis del mismo archivo mientras el primero sigue
+						 * trabajando, que es exactamente lo que no hay que hacer con un archivo
+						 * que ya demostró ser grande. Por eso el texto nuevo NO la ofrece.
+						 */
+						reject('El análisis está tardando más de 15 minutos. Dejamos de esperarte acá: si termina, te avisamos.')
 						return
 					}
 
@@ -3580,6 +3718,15 @@ export default {
 
 				if (err.response && err.response.data && err.response.data.message) {
 					message = err.response.data.message
+				} else if (!err.response) {
+					/*
+					 * 🔴 Sin `response` no hubo servidor del otro lado: se cortó internet, se cayó
+					 * la API o la subida se pasó del timeout de 2 minutos. El genérico "Error al
+					 * analizar el archivo" no distinguía eso de un rechazo del servidor, y son dos
+					 * cosas distintas para el usuario: en un caso revisa su conexión, en el otro
+					 * el archivo. El archivo ni siquiera llegó a subirse.
+					 */
+					message = 'No pudimos subir el archivo. Revisá tu conexión y volvé a intentar.'
 				}
 
 				self.error_message = message
@@ -3636,6 +3783,8 @@ export default {
 
 			/* Datos del preanálisis de duplicados (la recomendación se genera al confirmar el paso 2). */
 			this.duplicate_stats = resultado.duplicate_stats || null
+			/* Stats frescas del analisis: dejan de estar marcadas como del proveedor anterior. */
+			this.provider_stats_desactualizados = false
 			this.preview_rows    = resultado.preview_rows || []
 
 			/* Prompt 03 (grupo 239): estadísticas de números con punto ambiguos por columna. */
@@ -3707,6 +3856,8 @@ export default {
 
 			self.loading_recomendacion = true
 			self.recomendacion_configuracion = null
+			/* El error del intento anterior no puede quedar colgado sobre el intento nuevo. */
+			self.error_message = ''
 
 			/* Mismo motivo y mismo criterio que run_analyze_request(): ver ese comentario. */
 			let token_corrida = ++self.analysis_polling_token
@@ -3766,7 +3917,8 @@ export default {
 					if (token_corrida !== self.analysis_polling_token) return
 
 					self.terminar_seguimiento()
-					self.$toast.error(mensaje)
+					/* b-alert persistente en vez de toast: ver el comentario en el template. */
+					self.error_message = mensaje
 				})
 			})
 			.catch(function(err) {
@@ -3779,9 +3931,12 @@ export default {
 				let message = 'Error al generar la recomendación.'
 				if (err.response && err.response.data && err.response.data.message) {
 					message = err.response.data.message
+				} else if (!err.response) {
+					/* Mismo criterio que run_analyze_request(): sin `response` no hubo servidor. */
+					message = 'No pudimos pedirle la recomendación al servidor. Revisá tu conexión y volvé a intentar.'
 				}
 
-				self.$toast.error(message)
+				self.error_message = message
 			})
 		},
 
@@ -3869,9 +4024,27 @@ export default {
 					provider_codes_existentes_mismo_proveedor:   res.data.provider_codes_existentes_mismo_proveedor,
 					provider_codes_existentes_otros_proveedores: res.data.provider_codes_existentes_otros_proveedores,
 				}
+				/* Recálculo exitoso: los conteos vuelven a ser de este proveedor. */
+				self.provider_stats_desactualizados = false
 			})
 			.catch(function(err) {
 				console.warn('refresh_provider_stats: error al recalcular stats', err)
+
+				/*
+				 * 🔴 Esto fallaba EN SILENCIO (solo el console.warn de arriba). Los conteos de
+				 * "códigos ya existentes en BD" que quedaban en pantalla eran los del proveedor
+				 * ANTERIOR, sin ninguna marca — y el paso 3 le pide al usuario que elija qué hacer
+				 * con las colisiones MIRANDO ESOS NÚMEROS. O sea que decidía sobre datos de otro
+				 * proveedor creyendo que eran de este.
+				 *
+				 * Se marcan como no confiables (lo dibuja el paso 3) y se avisa.
+				 */
+				self.provider_stats_desactualizados = true
+
+				self.$toast.warning(
+					'No pudimos recalcular cuántos códigos ya existen para este proveedor. Los números que ves son del proveedor anterior: no decidas con ellos.',
+					{ duration: 10000 }
+				)
 			})
 		},
 
@@ -4048,6 +4221,14 @@ export default {
 				 * a string y `(bool) 'false'` en PHP da TRUE).
 				 */
 				precios_incluyen_iva: this.model === 'article' && Number(this.precios_incluyen_iva) === 1,
+				/*
+				 * Qué hacer con las celdas vacías del Excel. Va para los TRES modelos con el mismo
+				 * nombre y el mismo tipo (booleano real: este endpoint recibe JSON), y se manda
+				 * siempre, también apagado, por lo mismo que precios_incluyen_iva: si la clave no
+				 * viaja, el backend cae en su default y un cambio de default del otro lado le
+				 * cambia el comportamiento a este flujo sin que nadie lo haya declarado acá.
+				 */
+				vaciar_valores_en_blanco: Number(this.vaciar_valores_en_blanco) === 1,
 				permitir_provider_code_repetido:                    derived_flags.permitir_provider_code_repetido,
 				permitir_provider_code_repetido_en_multi_providers: derived_flags.permitir_provider_code_repetido_en_multi_providers,
 				actualizar_articulos_de_otro_proveedor:             derived_flags.actualizar_articulos_de_otro_proveedor,
@@ -4934,6 +5115,8 @@ export default {
 			this.provider_confidence  = 'bajo'
 			this.create_and_edit      = null
 			this.precios_incluyen_iva = 0
+			/* 🔴 Vuelve al seguro: una importación no hereda "vaciar" de la anterior. */
+			this.vaciar_valores_en_blanco = 0
 			this.actualizar_articulos_de_otro_proveedor = 1
 			this.permitir_provider_code_repetido = 0
 			this.permitir_provider_code_repetido_en_multi_providers = 0
@@ -4955,6 +5138,7 @@ export default {
 			this.hoja_elegida_del_backend    = null
 			this.encabezado_del_backend      = null
 			this.duplicate_stats             = null
+			this.provider_stats_desactualizados = false
 			this.provider_code_column_index  = null
 			this.recomendacion_configuracion = null
 			this.loading_recomendacion       = false
