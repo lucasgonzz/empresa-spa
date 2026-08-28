@@ -965,14 +965,18 @@ export default {
 		/**
 		 * Cierra el modal sin ejecutar búsqueda; el filtro queda guardado en store.
 		 *
-		 * 🔴 Aunque no dispare la busqueda, tambien apaga el buscador general: "Agregar filtro" deja
-		 * el criterio de columna cargado y el usuario lo va a ejecutar despues (con otro filtro, o
-		 * paginando). Si el apagado no pasara por aca, ese camino combinaria los dos criterios y la
-		 * masiva volveria a tocar mas registros de los que se ven, que es justo lo que la exclusion
-		 * mutua vino a cortar.
+		 * 🔴 NO apaga el buscador general, y eso es a proposito: la exclusion mutua se aplica cuando
+		 * la busqueda se EJECUTA, no cuando se guarda un criterio. Este boton guarda y cierra sin
+		 * buscar, asi que apagarlo aca dejaba la pantalla mintiendo: el input y los chips se vaciaban
+		 * mientras la tabla seguia mostrando las filas de la busqueda de texto. Y si el usuario
+		 * despues paginaba, la pagina 1 era el resultado de "coca" y la 2 salia de un payload vacio:
+		 * dos paginas de consultas distintas.
+		 *
+		 * Que los dos criterios convivan hasta la proxima ejecucion NO reabre el agujero de la
+		 * masiva: `runGlobalSearch` apaga `set_filtered_without_filter_form` tambien cuando el
+		 * payload trae criterio de texto (ver su `.then()` en src/store/__base_store.js).
 		 */
 		on_agregar_filtro() {
-			this.apagar_busqueda_general_por_filtro_de_columna()
 			this.close_filter_modal()
 		},
 		/**

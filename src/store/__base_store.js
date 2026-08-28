@@ -126,6 +126,18 @@ export default function __base_store(options = {}) {
 			// insistencia que hace que un cartel util se vuelva molesto.
 			global_search_matches_nonce: 0,
 
+			// Contador que se incrementa cada vez que un filtro de columna apaga la busqueda del
+			// buscador general (la exclusion mutua que pidio Lucas el 28/8/2026). El buscador lo
+			// observa para vaciar lo que muestra: el texto tipeado y los valores de los filtros fijos.
+			//
+			// 🔴 Hace falta un aviso explicito porque mirar global_search_payload NO alcanza: ese
+			// apagado deja el payload SIN criterios pero CON el orden (ver
+			// aplicar_filtros_de_columna_exclusivos), o sea exactamente igual al que deja
+			// runListadoPorDefecto al entrar al modulo. Y esos dos casos piden cosas opuestas: el
+			// primero tiene que resetear los filtros fijos, el segundo NO (pisaria los default_value
+			// que el usuario configuro, que se cargan en paralelo).
+			buscador_general_apagado_nonce: 0,
+
 			// Flag que distingue "listado por defecto" (filtered poblado por la carga automática al
 			// entrar al módulo, con todos los registros paginados) de una búsqueda real escrita por el
 			// usuario. La UI lo usa para no mostrar carteles de "filtro activo" (título "con filtro",
@@ -488,6 +500,19 @@ export default function __base_store(options = {}) {
 			if (payload && payload.es_busqueda_nueva) {
 				state.global_search_matches_nonce++
 			}
+		},
+		/**
+		 * Avisa al buscador general que un filtro de columna acaba de apagar su busqueda, para que
+		 * limpie lo que muestra en pantalla (el texto tipeado y los valores de los filtros fijos).
+		 *
+		 * Es un contador y no un boolean porque lo que se notifica es un EVENTO, no un estado: dos
+		 * apagados seguidos tienen que disparar dos limpiezas, y un boolean quedaria en true despues
+		 * del primero sin volver a avisar nunca.
+		 *
+		 * @param {Object} state Estado del modulo.
+		 */
+		marcar_buscador_general_apagado(state) {
+			state.buscador_general_apagado_nonce++
 		},
 		/**
 		 * Activa o desactiva el flag que indica que `filtered` viene de la carga automática
@@ -967,7 +992,18 @@ export default function __base_store(options = {}) {
 					// filtros de columna (decision de Lucas, 28/8/2026): en vez de limpiarla, se
 					// deshabilita la masiva mientras este puesta. Cualquier criterio nuevo que recorte
 					// la tabla sin viajar en `filter_form` tiene que sumarse a esta condicion.
-					commit('set_filtered_without_filter_form', filtros_con_valor == 0 || state.extra_filters_de_barra.length > 0)
+					//
+					// 🔴 El criterio del buscador general (el texto y sus filtros fijos) entra en la
+					// misma bolsa, y por identico motivo: tampoco viaja en `filter_form`. Que puedan
+					// convivir con un filtro de columna no es teorico -- "Agregar filtro" guarda el
+					// criterio de columna y cierra SIN buscar, a proposito, asi que hasta la proxima
+					// ejecucion los dos criterios estan puestos. Sin este termino, esa combinacion
+					// dejaba la masiva habilitada y el backend reconstruia SOLO el recorte del filtro
+					// de columna: tocaba articulos que el texto habia dejado afuera de la tabla que el
+					// usuario estaba mirando.
+					let hay_texto_del_buscador = !!(search_payload && search_payload.query_value && String(search_payload.query_value).trim() !== '')
+					let hay_criterio_fuera_del_filter_form = hay_texto_del_buscador || extra_filters_del_payload.length > 0
+					commit('set_filtered_without_filter_form', filtros_con_valor == 0 || state.extra_filters_de_barra.length > 0 || hay_criterio_fuera_del_filter_form)
 
 					commit('setGlobalSearchMatches', {
 						matches: res.data.matches ? res.data.matches : null,
@@ -1032,6 +1068,20 @@ export default function __base_store(options = {}) {
 		 * 🔴 NO toca `extra_filters_de_barra`, por la misma decisión de Lucas que en la action de
 		 * arriba: la sucursal no entra en la exclusión mutua.
 		 *
+		 * 🔴 Y NO nulea el payload: lo deja SIN criterios pero CON el orden. Nulearlo (que es como
+		 * se escribió primero) le comía el `order_by` a todo lo que viniera después, porque el
+		 * payload persistido es también el que deja `runListadoPorDefecto` al entrar al módulo, con
+		 * `order_by: 'id'` adentro. Sin él, `runGlobalSearch` cae al `state.global_search_payload
+		 * || {}` y manda el request sin orden; el backend (SearchController) resuelve entonces
+		 * ordenar por `created_at`, que NO es único —un catálogo importado en lote comparte el
+		 * mismo timestamp en cientos de artículos— y con LIMIT/OFFSET sobre una clave de orden no
+		 * única MySQL puede repetir o saltear filas entre páginas. O sea: filtrar por columna y
+		 * pasar a la página 2 devolvía filas repetidas o faltantes, sin ningún error a la vista.
+		 *
+		 * Como el payload deja de ser null, el apagado se avisa aparte con
+		 * `marcar_buscador_general_apagado`: el buscador ya no puede deducirlo mirando si el payload
+		 * existe (ver la doc de ese contador en el state).
+		 *
 		 * @param {Object} context commit, state
 		 * @returns {void}
 		 */
@@ -1048,8 +1098,22 @@ export default function __base_store(options = {}) {
 				return
 			}
 
-			commit('setGlobalSearchPayload', null)
+			/** Payload vigente, para heredarle el orden que ya estaba puesto. */
+			let payload_vigente = state.global_search_payload || {}
+
+			commit('setGlobalSearchPayload', {
+				query_value: '',
+				props: [],
+				relation_props: [],
+				extra_filters: [],
+				// Se hereda el orden que ya estaba puesto; si no había ninguno, el mismo que usa
+				// `runListadoPorDefecto` (id DESC), que es una clave única y por eso estable para
+				// paginar. Lo que importa es que el request nunca salga sin `order_by`.
+				order_by: payload_vigente.order_by ? payload_vigente.order_by : 'id',
+				order_direction: payload_vigente.order_direction ? payload_vigente.order_direction : 'DESC',
+			})
 			commit('setGlobalSearchMatches', {matches: null, es_busqueda_nueva: false})
+			commit('marcar_buscador_general_apagado')
 		},
 
 		/**
