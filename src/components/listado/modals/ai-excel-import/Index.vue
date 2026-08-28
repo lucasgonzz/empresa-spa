@@ -2260,10 +2260,14 @@ export default {
 					 * getColumnValueByAliases($row, ['saldo_actual', 'saldo actual'], $columns).
 					 * Es la misma clave con la que ya viaja el saldo de los clientes.
 					 *
-					 * ⚠️ El analizador de proveedores del backend (AiProviderAnalyzer,
-					 * SYSTEM_PROPERTIES) todavía no la conoce, así que la IA no la va a sugerir
-					 * sola: el usuario la elige a mano en la tabla de mapeo. Es exactamente lo que
-					 * pedía el import clásico, donde la columna también se mapeaba a mano.
+					 * El analizador de proveedores del backend (AiProviderAnalyzer) la conoce desde
+					 * el 24/8/2026: está en su SYSTEM_PROPERTIES y tiene regla propia en el prompt,
+					 * así que la IA la sugiere sola. El usuario igual puede corregirla a mano.
+					 *
+					 * ⚠️ Lo que NO hace: si el proveedor ya tiene movimientos en su cuenta corriente,
+					 * LocalImportHelper::crearSaldoInicialPorImportacion() corta con un return y el
+					 * saldo no se aplica, sin avisar. O sea que esto es un saldo INICIAL, no un
+					 * "saldo actual" que pise lo que haya. Viene de antes de esta misión.
 					 */
 					{ value: 'saldo_actual',             text: 'Saldo actual' },
 				]

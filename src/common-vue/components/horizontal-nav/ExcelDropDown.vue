@@ -139,8 +139,19 @@
 				@click="open_ai_import">
 					Importar con IA
 				</excel-dropdown-option-item>
+				<!--
+					Misma condicion que el montaje del modal (`can_import || can_import_ai`, mas
+					arriba). Iban distintas: el modal se monta para quien puede importar con IA y el
+					item quedaba solo para `can_import`, asi que un empleado con permisos restringidos
+					podia importar con IA pero no llegaba a ver sus propias importaciones — salvo por
+					el boton "Ver detalle" de la tarjeta de progreso, que existe solo mientras la
+					importacion corre.
+
+					Desde que la importacion clasica salio de estas pantallas, atar el historial al
+					permiso de ese flujo deja gente afuera de su propio historial.
+				-->
 				<excel-dropdown-option-item
-				v-if="can_import"
+				v-if="can_import || can_import_ai"
 				icon="bi bi-clock-history"
 				:data_tour="model_name === 'article' ? 'listado.boton_importar_excel' : null"
 				@click="open_import_history">
