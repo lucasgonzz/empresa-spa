@@ -73,6 +73,11 @@
 						{{ article_name }}
 					</li>
 				</ul>
+				<p
+				v-if="skipped_existing_names_ocultos"
+				class="batch-summary-truncado">
+					y {{ skipped_existing_names_ocultos }} artículo(s) más.
+				</p>
 			</div>
 
 			<!-- 5. Sin información suficiente: comportamiento correcto, no es un error -->
@@ -94,6 +99,11 @@
 						{{ article_name }}
 					</li>
 				</ul>
+				<p
+				v-if="skipped_names_ocultos"
+				class="batch-summary-truncado">
+					y {{ skipped_names_ocultos }} artículo(s) más.
+				</p>
 			</div>
 		</div>
 	</b-modal>
@@ -128,8 +138,58 @@ export default {
 				this.$emit('update:visible', value)
 			},
 		},
+		/**
+		 * Cuántos nombres de "sin información suficiente" quedaron afuera de la lista.
+		 *
+		 * 🔴 Existe porque el payload de Pusher ya NO manda la lista entera: Pusher corta el
+		 * evento en 10240 bytes y con un lote grande el job moría en BroadcastException al
+		 * final de todo, con la cuota de Google ya gastada. Ahora el backend manda los primeros
+		 * nombres que entran en un presupuesto de bytes y el total al lado
+		 * (`skipped_names_total`, ver `broadcastWith()` de ArticleBatchDescriptionsProcessed).
+		 * Mostrar una lista más corta sin decirlo sería mentirle al usuario sobre cuántos
+		 * artículos quedaron sin descripción.
+		 *
+		 * @return {Number} 0 si no falta ninguno o si el backend todavía no manda el total.
+		 */
+		skipped_names_ocultos() {
+			return this.nombres_ocultos('skipped_names', 'skipped_names_total')
+		},
+		/**
+		 * Lo mismo que skipped_names_ocultos, para los salteados por descripción ya existente.
+		 *
+		 * @return {Number}
+		 */
+		skipped_existing_names_ocultos() {
+			return this.nombres_ocultos('skipped_existing_names', 'skipped_existing_names_total')
+		},
 	},
 	methods: {
+		/**
+		 * Diferencia entre el total que informa el backend y los nombres que efectivamente
+		 * llegaron en el payload.
+		 *
+		 * Devuelve 0 si el backend no mandó el total: contra una API vieja, que manda la lista
+		 * completa y ningún `*_total`, no falta ningún nombre y no hay nada que aclarar.
+		 *
+		 * @param {String} clave_lista  Nombre del campo con los nombres que sí llegaron.
+		 * @param {String} clave_total  Nombre del campo con el total real.
+		 * @return {Number}
+		 */
+		nombres_ocultos(clave_lista, clave_total) {
+			if (!this.batch_result) {
+				return 0
+			}
+
+			let total = this.batch_result[clave_total]
+			if (typeof total !== 'number') {
+				return 0
+			}
+
+			let mostrados = this.batch_result[clave_lista] ? this.batch_result[clave_lista].length : 0
+			let ocultos = total - mostrados
+
+			return ocultos > 0 ? ocultos : 0
+		},
 		/**
 		 * Emite confirmación al presionar Entendido para que el padre refresque el listado.
 		 *
@@ -139,8 +199,13 @@ export default {
 			this.$emit('confirmed')
 		},
 		/**
-		 * Cierra este modal y le pide al padre que abra la bandeja de revisión con los
-		 * items de baja confianza que vinieron en el payload del batch.
+		 * Cierra este modal y le pide al padre que abra la bandeja de revisión.
+		 *
+		 * Hoy `needs_review_items` viene `undefined`: se sacó del payload de Pusher porque el
+		 * detalle por artículo no entra en el límite de 10240 bytes con lotes grandes. No se
+		 * pierde nada visible — `AiDescriptionsReviewModal` nunca leyó esos items: al abrirse
+		 * pide la bandeja completa a `GET article-description-ai/pending-review`, que es la
+		 * única fuente que tiene el título, el contenido y las fuentes editables.
 		 *
 		 * @return {void}
 		 */
@@ -225,6 +290,13 @@ export default {
 		li
 			margin-bottom: 4px
 
+	/* Aclaración de "y N más" cuando la lista de nombres viajó recortada por el límite de Pusher */
+	.batch-summary-truncado
+		margin: 8px 0 0 0
+		font-size: 0.85rem
+		font-style: italic
+		color: #856404
+
 .batch-summary-skipped-existing-list
 	background-color: rgba(108, 117, 125, 0.08)
 
@@ -232,5 +304,9 @@ export default {
 		color: #41464b
 
 	.batch-summary-skipped-existing-names
+		color: #41464b
+
+	// Este bloque es gris, no ámbar: el "y N más" tiene que acompañar a su lista
+	.batch-summary-truncado
 		color: #41464b
 </style>

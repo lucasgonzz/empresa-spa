@@ -46,6 +46,13 @@
             pestaña. El porqué está en el docblock del componente.
         -->
         <aviso-imagenes-automaticas></aviso-imagenes-automaticas>
+        <!--
+            Aviso de "Descripciones inteligentes". Está acá por lo mismo, exactamente, que el de
+            imágenes de arriba: su disparador (`SearchDescriptionAutomatica.vue`) también vive
+            adentro del dropdown de opciones del listado y también se desmontaba con la selección,
+            llevándose el listener puesto. Tampoco se suscribe por su cuenta.
+        -->
+        <aviso-descripciones-automaticas></aviso-descripciones-automaticas>
 
         <!--
             Panel de tutoriales de la demo (misión 51, corregido por la 52). El v-if es la guarda
@@ -119,6 +126,7 @@ export default {
         SyncedVersionNotifications: () => import('@/components/common/SyncedVersionNotifications'),
         CotizacionDolarModal: () => import('@/components/common/cotizacion-dolar/Modal'),
         AvisoImagenesAutomaticas: () => import('@/components/common/AvisoImagenesAutomaticas'),
+        AvisoDescripcionesAutomaticas: () => import('@/components/common/AvisoDescripcionesAutomaticas'),
         // Carga diferida: sin demo, este chunk no se descarga nunca (misión 51).
         PanelDemo: () => import('@/components/demo/PanelDemo'),
     },
