@@ -19,6 +19,48 @@
 		</ai-excel-import-modal>
 
 		<!--
+			🔴 Historial de importaciones. Vive ACA desde que se saco la importacion clasica de
+			Listado, Clientes y Proveedores: hasta entonces el unico lugar donde se montaba el modal
+			`import-history` era `common-vue/components/import/Index.vue`, o sea adentro del modal
+			clasico. Sacar ese modal sin remontar este dejaba el item "Historial de importaciones"
+			de este mismo menu apuntando a un id que ya no existe — y BootstrapVue NO tira error
+			cuando le pedis mostrar un modal inexistente: el click simplemente no hace nada.
+
+			Va con `can_import || can_import_ai`, y no solo con `can_import`, por dos razones:
+
+			1. El item del menu "Historial de importaciones" usa `can_import`, pero la tarjeta de
+			   progreso (`import-status`, abajo) se monta SIN condicion y su boton "Ver detalle"
+			   tambien hace `$bvModal.show('import-history')`. Con solo `can_import`, un usuario que
+			   puede importar con IA pero no tiene el permiso clasico veia la tarjeta de fallo y ese
+			   boton no hacia nada — el mismo click mudo que este bloque vino a evitar, reintroducido
+			   por la puerta de al lado.
+			2. Desde que la importacion clasica salio de estas pantallas, quien importa lo hace con
+			   IA: atar el historial al permiso del flujo que ya no existe deja gente sin poder ver
+			   sus propias importaciones.
+
+			El unico otro lugar que todavia monta `common-vue/components/import/Index.vue` es la
+			importacion de articulos a una compra a proveedor (`provider/modals/orders/Import.vue`),
+			y esa pantalla NO dibuja este menu (no pasa `show_excel_drop_down`), asi que no hay
+			forma de que los dos ids convivan en la misma pantalla.
+		-->
+		<import-history
+		v-if="can_import || can_import_ai"
+		:model_name="model_name"></import-history>
+
+		<!--
+			🔴 Tarjeta flotante de progreso de la importacion ("Procesandoce / X de Y lotes"). Se
+			remonta por lo mismo que el historial: la dibujaba el modal clasico. El store se llena
+			por broadcast (`common-vue/mixins/broadcast.js`, evento `.ImportStatusUpdated`) desde
+			cualquier pantalla, pero el componente que lo DIBUJA solo existia donde estuviera montado
+			ese modal — asi que sin esto la importacion con IA se quedaba sin tarjeta de progreso.
+
+			Sin `v-if`: es exactamente el alcance que tenia antes (las tres pantallas que montaban el
+			modal clasico son las tres que dibujan este menu), y el componente no muestra nada
+			mientras el store este vacio.
+		-->
+		<import-status></import-status>
+
+		<!--
 			Sin `right` a proposito: ese atributo alinea el menu por su borde DERECHO contra el
 			boton (placement bottom-end + .dropdown-menu-right), y "Crear" vive en la zona izquierda
 			del view-header. Un menu de min-width 300px anclado por su derecha a un boton que esta a
@@ -97,8 +139,19 @@
 				@click="open_ai_import">
 					Importar con IA
 				</excel-dropdown-option-item>
+				<!--
+					Misma condicion que el montaje del modal (`can_import || can_import_ai`, mas
+					arriba). Iban distintas: el modal se monta para quien puede importar con IA y el
+					item quedaba solo para `can_import`, asi que un empleado con permisos restringidos
+					podia importar con IA pero no llegaba a ver sus propias importaciones — salvo por
+					el boton "Ver detalle" de la tarjeta de progreso, que existe solo mientras la
+					importacion corre.
+
+					Desde que la importacion clasica salio de estas pantallas, atar el historial al
+					permiso de ese flujo deja gente afuera de su propio historial.
+				-->
 				<excel-dropdown-option-item
-				v-if="can_import"
+				v-if="can_import || can_import_ai"
 				icon="bi bi-clock-history"
 				:data_tour="model_name === 'article' ? 'listado.boton_importar_excel' : null"
 				@click="open_import_history">
@@ -138,6 +191,9 @@ export default {
 		MasiveUpdateHistory: () => import('@/common-vue/components/horizontal-nav/MasiveUpdateHistory'),
 		SmartImagesHistoryModal: () => import('@/components/listado/components/selected-filtered-options/SmartImagesHistoryModal'),
 		AiExcelImportModal: () => import('@/components/listado/modals/ai-excel-import/Index'),
+		// Los dos que se remontaron acá al sacar la importación clásica (ver el template).
+		ImportHistory: () => import('@/common-vue/components/import/ImportHistory'),
+		ImportStatus: () => import('@/common-vue/components/import/import-status/Index'),
 		// Estos dos van SINCRONOS y los modales de arriba siguen asincronos.
 		//
 		// Son el CONTENIDO del menu: si llegan por un chunk aparte, hay una ventana en la que el
@@ -331,7 +387,8 @@ export default {
 		},
 
 		/**
-		 * Permiso de importación clásica (historial y flujo legacy en modal import).
+		 * Permiso de importación: hoy gobierna el ítem "Historial de importaciones" y el montaje
+		 * del modal `import-history`. El flujo clásico ya no existe en estas pantallas.
 		 *
 		 * @return {boolean}
 		 */

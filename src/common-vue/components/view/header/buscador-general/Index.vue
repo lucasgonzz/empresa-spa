@@ -409,18 +409,46 @@ export default {
 		},
 
 		/**
-		 * Indica si hay una busqueda del buscador general activa (payload persistido en el store).
-		 * Controla la visibilidad del boton limpiar. El listado por defecto (prompts 02/03 del
-		 * grupo 221) tambien persiste un global_search_payload (asi obtiene paginacion/contador
-		 * sin escribir nada nuevo), pero no fue una busqueda del usuario: por eso se exige ademas
-		 * que listado_por_defecto sea false, siguiendo la misma regla que el resto de los
-		 * indicadores de "filtro activo" del sistema (ver Title.vue, BtnRestartFilter.vue, etc).
+		 * Indica si hay una busqueda del buscador general REALMENTE activa, o sea con criterio
+		 * propio puesto: texto tipeado o algun filtro fijo con valor. Controla la visibilidad del
+		 * boton limpiar.
+		 *
+		 * 🔴 Mira el CONTENIDO del payload y no su mera existencia, y esa diferencia es lo que
+		 * sostiene la exclusion mutua con los filtros de columna (Lucas, 28/8/2026): al filtrar por
+		 * una columna, `aplicar_filtros_de_columna_exclusivos` deja el payload SIN criterios pero
+		 * CON el orden, porque nulearlo mandaba el request sin `order_by` y el backend caia a
+		 * `created_at`, que no es unico y con LIMIT/OFFSET repite o saltea filas entre paginas. Con
+		 * la regla vieja (la simple existencia del payload), ese payload ya sin criterios seguia
+		 * contando como busqueda activa: el input no se limpiaba y el boton de limpiar quedaba
+		 * prendido sobre una tabla filtrada por otra cosa.
+		 *
+		 * Sigue exigiendo ademas que listado_por_defecto sea false, siguiendo la misma regla que el
+		 * resto de los indicadores de "filtro activo" del sistema (ver Title.vue,
+		 * BtnRestartFilter.vue, etc): el listado por defecto (prompts 02/03 del grupo 221) tambien
+		 * persiste un global_search_payload -- asi obtiene paginacion y contador sin escribir nada
+		 * nuevo -- pero no fue una busqueda del usuario.
 		 *
 		 * @returns {Boolean}
 		 */
 		is_filtered_by_buscador() {
-			return !!this.$store.state[this.model_name].global_search_payload
-				&& !this.$store.state[this.model_name].listado_por_defecto
+			let payload = this.$store.state[this.model_name].global_search_payload
+			if (!payload || this.$store.state[this.model_name].listado_por_defecto) {
+				return false
+			}
+			let hay_texto = !!payload.query_value && String(payload.query_value).trim() !== ''
+			let hay_filtros_fijos = !!(payload.extra_filters && payload.extra_filters.length)
+			return hay_texto || hay_filtros_fijos
+		},
+
+		/**
+		 * Contador que el store incrementa cuando un filtro de columna apaga la busqueda general
+		 * (ver la doc de buscador_general_apagado_nonce en src/store/__base_store.js). El watcher de
+		 * mas abajo lo observa para limpiar lo que este componente muestra.
+		 *
+		 * @returns {Number}
+		 */
+		buscador_apagado_nonce_del_store() {
+			return this.$store.state[this.model_name].buscador_general_apagado_nonce
 		},
 
 		/**
@@ -603,11 +631,53 @@ export default {
 		 * representa lo que hay en pantalla. No rompe el propio botón "Limpiar búsqueda" del
 		 * buscador general (que ya vacía query_value a mano en su método limpiar()): este watcher
 		 * simplemente vuelve a hacer lo mismo, sin efecto extra.
+		 *
+		 * 🔴 Ademas de vaciar el texto resetea los VALORES de los filtros fijos (categoria, con/sin
+		 * stock, etc): si no, los chips siguen mostrando "Categoria: Bebidas" arriba de una tabla
+		 * que ya no esta filtrada por categoria. Es el mismo reseteo que hace limpiar().
+		 *
+		 * 🔴 El apagado por filtro de columna NO entra por aca: ese conserva el payload (con el
+		 * orden adentro, ver aplicar_filtros_de_columna_exclusivos) y lo avisa con su propio
+		 * contador, que se observa mas abajo. La guarda del medio --que corta cuando el payload
+		 * sigue existiendo-- lo dejaria a mitad de camino, con el texto limpio y los chips puestos.
 		 */
 		is_filtered_by_buscador(nuevo_valor) {
-			if (!nuevo_valor) {
-				this.query_value = ''
+			if (nuevo_valor) {
+				return
 			}
+
+			this.query_value = ''
+
+			// 🔴 Los filtros fijos se resetean SOLO cuando el que se apago fue el payload, y no
+			// cuando el computed cayo por listado_por_defecto. La diferencia no es teorica: al
+			// entrar a un modulo, runListadoPorDefecto setea el payload, deja listado_por_defecto
+			// en false y recien en su .then() lo vuelve a poner en true, asi que este watcher
+			// dispara UNA VEZ en cada entrada al modulo con el payload todavia puesto. Sin esta
+			// guarda, si loadFiltrosFijos ya habia resuelto (es una carrera entre dos requests),
+			// esa pasada le borraria al usuario el default_value que dejo configurado en sus
+			// filtros fijos, y el modulo abriria con los controles en neutro sin que nadie lo pida.
+			if (this.$store.state[this.model_name].global_search_payload) {
+				return
+			}
+
+			this.resetear_valores_de_filtros_fijos()
+		},
+
+		/**
+		 * El store aviso que un filtro de columna apago la busqueda general (exclusion mutua, Lucas
+		 * 28/8/2026): se limpia lo que el buscador muestra --texto y valores de los filtros fijos--
+		 * porque ya no representa nada de lo que hay en la tabla.
+		 *
+		 * 🔴 Va por un aviso propio del store y no por el watcher de is_filtered_by_buscador de
+		 * arriba porque ese tiene una guarda que corta cuando el payload sigue existiendo -- y desde
+		 * que la exclusion conserva el orden, el payload SIGUE existiendo. Sin este watcher los
+		 * chips quedarian mostrando "Categoria: Bebidas" arriba de una tabla filtrada por columna.
+		 *
+		 * No hace falta guarda por el valor: el contador solo se mueve en ese apagado.
+		 */
+		buscador_apagado_nonce_del_store() {
+			this.query_value = ''
+			this.resetear_valores_de_filtros_fijos()
 		},
 	},
 	created() {
@@ -1367,7 +1437,17 @@ export default {
 				}))
 			} else {
 				payload.page = 1
-				this.$store.dispatch(this.model_name + '/runGlobalSearch', payload)
+				// Exclusion mutua con los filtros de columna (Lucas, 28/8/2026): "o busca por el
+				// buscador general o busca por las columnas... no se deben de poder combinar". La
+				// action limpia los criterios de las columnas y RECIEN AHI dispara runGlobalSearch;
+				// el orden importa porque runGlobalSearch lee state.filters en vivo al armar el
+				// request (ver la doc de la action en src/store/__base_store.js).
+				//
+				// 🔴 Va ADENTRO de este else y no arriba del `if`: la rama `modo === 'modal'` sale sin
+				// tocar el store a proposito. Si el limpiado quedara afuera, elegir un proveedor desde
+				// el modal de busqueda de una compra le borraria los filtros de columna al Listado de
+				// articulos, que no tiene nada que ver con lo que el usuario esta haciendo.
+				this.$store.dispatch(this.model_name + '/aplicar_busqueda_general_exclusiva', payload)
 			}
 
 			// Guarda la seleccion actual como preferencia del usuario para este modelo (identico en
@@ -1537,13 +1617,7 @@ export default {
 		 */
 		limpiar() {
 			this.query_value = ''
-
-			let values = {}
-			let self = this
-			this.filtros_fijos.forEach(function (filtro) {
-				values[filtro.key] = self.valorNeutroFiltro(filtro)
-			})
-			this.filtros_values = values
+			this.resetear_valores_de_filtros_fijos()
 
 			if (this.modo === 'modal') {
 				// Modo embebido (prompt 08 del grupo 179): solo resetea el estado interno (ya hecho
@@ -1566,6 +1640,25 @@ export default {
 			// Vuelve al listado completo paginado (orden id DESC) en vez de dejar la tabla con lo
 			// que haya quedado en memoria de la busqueda que se acaba de limpiar.
 			this.$store.dispatch(this.model_name + '/runListadoPorDefecto')
+		},
+
+		/**
+		 * Deja los filtros fijos en su valor neutro: los controles siguen ahi, vacios (se limpia lo
+		 * elegido, no la configuracion que el usuario guardo).
+		 *
+		 * Se reconstruye el objeto completo en vez de tocar clave por clave: en Vue 2 agregar o
+		 * borrar claves sueltas de un objeto no es reactivo, y reasignar filtros_values evita tener
+		 * que ir con $set/$delete uno por uno.
+		 *
+		 * @return {void}
+		 */
+		resetear_valores_de_filtros_fijos() {
+			let values = {}
+			let self = this
+			this.filtros_fijos.forEach(function (filtro) {
+				values[filtro.key] = self.valorNeutroFiltro(filtro)
+			})
+			this.filtros_values = values
 		},
 
 		/**

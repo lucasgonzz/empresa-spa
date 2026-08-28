@@ -126,6 +126,18 @@ export default function __base_store(options = {}) {
 			// insistencia que hace que un cartel util se vuelva molesto.
 			global_search_matches_nonce: 0,
 
+			// Contador que se incrementa cada vez que un filtro de columna apaga la busqueda del
+			// buscador general (la exclusion mutua que pidio Lucas el 28/8/2026). El buscador lo
+			// observa para vaciar lo que muestra: el texto tipeado y los valores de los filtros fijos.
+			//
+			// 🔴 Hace falta un aviso explicito porque mirar global_search_payload NO alcanza: ese
+			// apagado deja el payload SIN criterios pero CON el orden (ver
+			// aplicar_filtros_de_columna_exclusivos), o sea exactamente igual al que deja
+			// runListadoPorDefecto al entrar al modulo. Y esos dos casos piden cosas opuestas: el
+			// primero tiene que resetear los filtros fijos, el segundo NO (pisaria los default_value
+			// que el usuario configuro, que se cargan en paralelo).
+			buscador_general_apagado_nonce: 0,
+
 			// Flag que distingue "listado por defecto" (filtered poblado por la carga automática al
 			// entrar al módulo, con todos los registros paginados) de una búsqueda real escrita por el
 			// usuario. La UI lo usa para no mostrar carteles de "filtro activo" (título "con filtro",
@@ -257,6 +269,54 @@ export default function __base_store(options = {}) {
 			} else {
 				state.filters.splice(index, 1, filter_to_add)
 			}
+		},
+		/**
+		 * Borra los criterios de VALOR de todos los filtros de columna, dejando los filtros en pie.
+		 *
+		 * La usa la exclusión mutua entre el buscador general y los filtros de columna (Lucas,
+		 * 28/8/2026): "o busca por el buscador general o busca por las columnas, no se deben de
+		 * poder combinar". El motivo de fondo es que los dos criterios NO viajan por el mismo
+		 * camino: runGlobalSearch manda texto + filtros de columna + extra_filters juntos, pero la
+		 * actualización/eliminación masiva manda SOLO `filter_form: state.filters`. Con los dos
+		 * puestos, la tabla muestra la intersección y la masiva toca MÁS registros de los que se
+		 * ven, en silencio.
+		 *
+		 * 🔴 Limpia EN EL LUGAR, mutando las propiedades que ya existen en cada filtro (que en Vue 2
+		 * es reactivo porque fueron declaradas al construir el filtro). Es lo mismo que hace
+		 * limpiar_filtros() de BtnRestartFilter.vue, y NO es un capricho:
+		 * - `setFilters([])` vaciaría el array y con eso se cae el resaltado de la lupa
+		 *   (filter_is_used() de display/table/Index.vue recorre state.filters), y las plantillas de
+		 *   filtros se reconstruirían de cero en el próximo build_table_filters_from_props.
+		 * - Reemplazar cada filtro por un objeto nuevo perdería las claves propias que le agrega
+		 *   cada módulo.
+		 *
+		 * 🔴 `ordenar_de` NO se toca: ordenar no es filtrar. Es la misma doctrina que separa
+		 * filter_has_active_values() de filter_has_value_criteria() en common-vue/mixins/filters.js:
+		 * si acá se limpiara el orden, elegir una búsqueda en el buscador general dejaría la tabla
+		 * sin la flecha de orden que el usuario había puesto (y sin el orden en sí).
+		 *
+		 * @param {Object} state Estado del módulo.
+		 */
+		limpiar_criterios_de_columna(state) {
+			state.filters.forEach(filter => {
+				// select y search guardan el "sin elección" como 0, no como '': con '' el control
+				// del modal no vuelve a la opción neutra y filter_has_value_criteria lo seguiría
+				// contando como criterio puesto.
+				filter.igual_que = (filter.type == 'select' || filter.type == 'search') ? 0 : ''
+				filter.mayor_que = ''
+				filter.menor_que = ''
+				filter.que_contenga = ''
+				filter.checkbox = -1
+				filter.en_blanco = false
+				filter.no_en_blanco = false
+
+				// `value` solo existe en algunos tipos de filtro; se limpia únicamente si ya estaba
+				// declarada, porque agregarla acá con asignación directa no sería reactiva en Vue 2
+				// y encima le inventaría una propiedad a filtros que no la usan.
+				if (typeof filter.value !== 'undefined') {
+					filter.value = (filter.type == 'select' || filter.type == 'search') ? 0 : ''
+				}
+			})
 		},
 		setIsFiltered(state, value) {
 			state.is_filtered = value
@@ -440,6 +500,19 @@ export default function __base_store(options = {}) {
 			if (payload && payload.es_busqueda_nueva) {
 				state.global_search_matches_nonce++
 			}
+		},
+		/**
+		 * Avisa al buscador general que un filtro de columna acaba de apagar su busqueda, para que
+		 * limpie lo que muestra en pantalla (el texto tipeado y los valores de los filtros fijos).
+		 *
+		 * Es un contador y no un boolean porque lo que se notifica es un EVENTO, no un estado: dos
+		 * apagados seguidos tienen que disparar dos limpiezas, y un boolean quedaria en true despues
+		 * del primero sin volver a avisar nunca.
+		 *
+		 * @param {Object} state Estado del modulo.
+		 */
+		marcar_buscador_general_apagado(state) {
+			state.buscador_general_apagado_nonce++
 		},
 		/**
 		 * Activa o desactiva el flag que indica que `filtered` viene de la carga automática
@@ -890,8 +963,47 @@ export default function __base_store(options = {}) {
 					commit('setIsFiltered', true)
 					commit('setTotalFilterPages', res.data.models ? res.data.models.last_page : null)
 					commit('setTotalFilterResults', res.data.models ? res.data.models.total : 0)
-					// Marcar que el filtered fue cargado por el buscador general (no por el form de filtros).
-					commit('set_filtered_without_filter_form', true)
+					// Marca que lo que se ve salio del buscador general de texto libre y NO de un filtro
+					// estructurado. El dropdown del embudo lo lee para deshabilitar Actualizar/Eliminar masivos
+					// (OptionsDropdown.vue, ocultar_actualizar_eliminar_por_filtro).
+					//
+					// Va condicionado y no fijo en true porque por aca pasan los DOS caminos: filtrar() de
+					// display/table/Index.vue dispatchea runGlobalSearch({ page: 1 }) tanto si el usuario escribio
+					// en el buscador general como si uso la lupa de una columna. Con el true fijo, filtrar la
+					// columna "N°" y despues pedir una actualizacion masiva por filtro devolvia "No disponible
+					// para resultados del buscador general" con un filtro de columna puesto (Lucas, 28/8/2026).
+					//
+					// El corte es filtros_con_valor y no otra cosa porque es EXACTAMENTE lo que viaja en la masiva:
+					// opciones-filtrados-seleccion/Index.vue arma el request con `filter_form: state.filters`, sin
+					// el texto del buscador ni extra_filters_de_barra. Con filtros_con_valor > 0 el backend
+					// reconstruye el mismo recorte que filtro la tabla; con 0 recibiria un filter_form vacio y
+					// tocaria el listado ENTERO, asi que ahi el flag tiene que seguir en true.
+					//
+					// 🔴 Y los extra_filters_de_barra (hoy: el select de sucursal del Listado) fuerzan el
+					// flag en true aunque haya filtros de columna puestos. No es una precaucion de mas:
+					// la sucursal recorta con un whereHas del lado del backend (ExtraFiltersHelper), pero
+					// el endpoint de la masiva solo aplica ColumnFiltersHelper sobre el `filter_form` que
+					// recibe, y ese filter_form NO lleva la sucursal. O sea que con una sucursal elegida
+					// la masiva tocaria articulos de OTRAS sucursales, que no estan en la tabla que el
+					// usuario esta mirando. Es exactamente la mentira silenciosa que este flag existe
+					// para evitar.
+					//
+					// Por eso la sucursal quedo afuera de la exclusion mutua entre buscador general y
+					// filtros de columna (decision de Lucas, 28/8/2026): en vez de limpiarla, se
+					// deshabilita la masiva mientras este puesta. Cualquier criterio nuevo que recorte
+					// la tabla sin viajar en `filter_form` tiene que sumarse a esta condicion.
+					//
+					// 🔴 El criterio del buscador general (el texto y sus filtros fijos) entra en la
+					// misma bolsa, y por identico motivo: tampoco viaja en `filter_form`. Que puedan
+					// convivir con un filtro de columna no es teorico -- "Agregar filtro" guarda el
+					// criterio de columna y cierra SIN buscar, a proposito, asi que hasta la proxima
+					// ejecucion los dos criterios estan puestos. Sin este termino, esa combinacion
+					// dejaba la masiva habilitada y el backend reconstruia SOLO el recorte del filtro
+					// de columna: tocaba articulos que el texto habia dejado afuera de la tabla que el
+					// usuario estaba mirando.
+					let hay_texto_del_buscador = !!(search_payload && search_payload.query_value && String(search_payload.query_value).trim() !== '')
+					let hay_criterio_fuera_del_filter_form = hay_texto_del_buscador || extra_filters_del_payload.length > 0
+					commit('set_filtered_without_filter_form', filtros_con_valor == 0 || state.extra_filters_de_barra.length > 0 || hay_criterio_fuera_del_filter_form)
 
 					commit('setGlobalSearchMatches', {
 						matches: res.data.matches ? res.data.matches : null,
@@ -905,6 +1017,103 @@ export default function __base_store(options = {}) {
 					}
 					console.log(err)
 				})
+		},
+
+		/**
+		 * Búsqueda del buscador general con exclusión mutua: primero borra los criterios de las
+		 * columnas y recién después dispara la búsqueda.
+		 *
+		 * Es una de las dos mitades de la regla que dictó Lucas el 28/8/2026: "El usuario o busca
+		 * por el buscador general o busca por las columnas. Si busca por el buscador general, se
+		 * limpian los filtros de las columnas. Y si va a buscar por las columnas, se limpia el
+		 * buscador general. No se deben de poder combinar." La otra mitad es
+		 * `aplicar_filtros_de_columna_exclusivos`.
+		 *
+		 * 🔴 El ORDEN de las dos líneas de abajo es lo único que hace que esto funcione:
+		 * runGlobalSearch NO recibe los filtros de columna por payload, los lee de `state.filters`
+		 * en vivo mientras arma el request. Limpiar DESPUÉS del dispatch mandaría el request con
+		 * los filtros viejos adentro y la pantalla mostraría la intersección igual, con la
+		 * agravante de que los controles ya se verían vacíos.
+		 *
+		 * 🔴 Acá NO se toca `extra_filters_de_barra` (el select de sucursal): por decisión de Lucas
+		 * ese criterio queda fuera de la exclusión mutua y convive con las dos búsquedas. Lo que
+		 * lo cubre es el flag `set_filtered_without_filter_form`, que con sucursal puesta deshabilita
+		 * la masiva (ver el comentario en el `.then()` de runGlobalSearch).
+		 *
+		 * @param {Object} context commit, dispatch
+		 * @param {Object} payload Mismo payload que espera runGlobalSearch.
+		 * @returns {Promise}
+		 */
+		aplicar_busqueda_general_exclusiva({commit, dispatch}, payload = {}) {
+			commit('limpiar_criterios_de_columna')
+			return dispatch('runGlobalSearch', payload)
+		},
+
+		/**
+		 * Otra mitad de la exclusión mutua: al confirmar un filtro de columna, apaga la búsqueda
+		 * del buscador general (texto + filtros fijos) que hubiera quedado puesta.
+		 *
+		 * 🔴 Está CONDICIONADA a que haya al menos un filtro de columna con criterio de VALOR. Sin
+		 * esa guarda, abrir la lupa de una columna y apretar "Filtrar" sin tipear nada borraría la
+		 * búsqueda general que el usuario acababa de hacer, que es justo lo contrario de lo que
+		 * espera. Se mira `filter_has_value_criteria` y no `filter_has_active_values` porque la
+		 * segunda cuenta el orden, y ordenar no es filtrar (el mismo criterio que usa el flag de
+		 * más arriba).
+		 *
+		 * 🔴 NO commitea `set_filtered_without_filter_form`: de ese flag se encarga runGlobalSearch
+		 * en su `.then()`, que es el único lugar que sabe cuántos filtros con valor terminaron
+		 * viajando. Dos escritores del mismo flag se pisan y el resultado depende del orden en que
+		 * resuelva la promesa.
+		 *
+		 * 🔴 NO toca `extra_filters_de_barra`, por la misma decisión de Lucas que en la action de
+		 * arriba: la sucursal no entra en la exclusión mutua.
+		 *
+		 * 🔴 Y NO nulea el payload: lo deja SIN criterios pero CON el orden. Nulearlo (que es como
+		 * se escribió primero) le comía el `order_by` a todo lo que viniera después, porque el
+		 * payload persistido es también el que deja `runListadoPorDefecto` al entrar al módulo, con
+		 * `order_by: 'id'` adentro. Sin él, `runGlobalSearch` cae al `state.global_search_payload
+		 * || {}` y manda el request sin orden; el backend (SearchController) resuelve entonces
+		 * ordenar por `created_at`, que NO es único —un catálogo importado en lote comparte el
+		 * mismo timestamp en cientos de artículos— y con LIMIT/OFFSET sobre una clave de orden no
+		 * única MySQL puede repetir o saltear filas entre páginas. O sea: filtrar por columna y
+		 * pasar a la página 2 devolvía filas repetidas o faltantes, sin ningún error a la vista.
+		 *
+		 * Como el payload deja de ser null, el apagado se avisa aparte con
+		 * `marcar_buscador_general_apagado`: el buscador ya no puede deducirlo mirando si el payload
+		 * existe (ver la doc de ese contador en el state).
+		 *
+		 * @param {Object} context commit, state
+		 * @returns {void}
+		 */
+		aplicar_filtros_de_columna_exclusivos({commit, state}) {
+			let hay_criterio_de_valor = false
+
+			state.filters.forEach(filter => {
+				if (filters_mixin.methods.filter_has_value_criteria(filter)) {
+					hay_criterio_de_valor = true
+				}
+			})
+
+			if (!hay_criterio_de_valor) {
+				return
+			}
+
+			/** Payload vigente, para heredarle el orden que ya estaba puesto. */
+			let payload_vigente = state.global_search_payload || {}
+
+			commit('setGlobalSearchPayload', {
+				query_value: '',
+				props: [],
+				relation_props: [],
+				extra_filters: [],
+				// Se hereda el orden que ya estaba puesto; si no había ninguno, el mismo que usa
+				// `runListadoPorDefecto` (id DESC), que es una clave única y por eso estable para
+				// paginar. Lo que importa es que el request nunca salga sin `order_by`.
+				order_by: payload_vigente.order_by ? payload_vigente.order_by : 'id',
+				order_direction: payload_vigente.order_direction ? payload_vigente.order_direction : 'DESC',
+			})
+			commit('setGlobalSearchMatches', {matches: null, es_busqueda_nueva: false})
+			commit('marcar_buscador_general_apagado')
 		},
 
 		/**

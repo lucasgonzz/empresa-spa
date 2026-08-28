@@ -61,6 +61,34 @@ id="import-status">
 		</div>
 
 
+		<!--
+			🔴 Pie del estado 'fallo'. Antes la tarjeta de una importación fallida se auto-ocultaba
+			a los 5 segundos, igual que la de una que terminó bien, y se llevaba el ÚNICO rastro
+			de que algo salió mal: el usuario podía estar mirando para otro lado y no enterarse
+			nunca. Ahora la tarjeta se queda hasta que él la cierre, y le da a dónde ir a ver qué
+			pasó (el historial guarda el mensaje de error de cada importación).
+		-->
+		<div v-if="import_status && import_status.status == 'fallo'">
+			<hr>
+			<p class="text-left m-b-10">
+				La importación no se pudo terminar. En el historial está el detalle del error.
+			</p>
+			<b-button
+			size="sm"
+			variant="outline-danger"
+			class="m-r-10"
+			@click="ver_detalle">
+				Ver detalle
+			</b-button>
+			<b-button
+			size="sm"
+			variant="outline-secondary"
+			@click="cerrar_tarjeta">
+				Cerrar
+			</b-button>
+		</div>
+
+
 		<div class="toggle"
 		@click="toggle">
 			<i 
@@ -123,28 +151,37 @@ export default {
 			console.log('watch de import_status:')
 			console.log(this.import_status)
 
-			if (this.import_status && !this.tarjeta_mostrandose) {
-				
+			if (!this.import_status) {
+				return
+			}
+
+			/*
+			 * 🔴 El estado 'fallo' NO se auto-oculta. Se mostraba y se iba sola a los 5 segundos,
+			 * igual que una importación terminada bien, llevándose el único rastro de que algo
+			 * falló. Ahora la tarjeta se queda hasta que el usuario la cierre a mano, con un
+			 * "Ver detalle" que abre el historial (que sí guarda el mensaje del error).
+			 *
+			 * Va primero y con `return` porque una importación fallida puede tener
+			 * processed_chunks == total_chunks, y entonces caía en la rama de "terminó" y se
+			 * auto-ocultaba igual.
+			 */
+			if (this.import_status.status == 'fallo') {
+
+				if (!this.tarjeta_mostrandose) {
+					this.mostrar_tarjeta()
+				}
+
+				return
+			}
+
+			if (!this.tarjeta_mostrandose) {
+
 				this.mostrar_tarjeta()
 
 			} else if (
-				this.import_status 
-				&& this.import_status.processed_chunks == this.import_status.total_chunks
-				&& this.tarjeta_mostrandose
+				this.import_status.processed_chunks == this.import_status.total_chunks
 			) {
-				
-				setTimeout(() => {
 
-					this.ocultar_tarjeta()
-
-					this.$store.commit('import_status/setModel', null)
-				}, 5000)
-			
-			} else if (
-				this.import_status
-				&& this.import_status.status == 'fallo'
-			) {
-				
 				setTimeout(() => {
 
 					this.ocultar_tarjeta()
@@ -155,6 +192,26 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Abre el historial de importaciones, que es donde está el mensaje de error de la
+		 * importación que falló. El modal `import-history` está montado en las mismas pantallas
+		 * que esta tarjeta (lo monta ExcelDropDown, y en compras el modal de importación).
+		 *
+		 * @return {void}
+		 */
+		ver_detalle() {
+			this.$bvModal.show('import-history')
+		},
+		/**
+		 * Cierra la tarjeta de una importación fallida y limpia el estado del store, que es lo
+		 * que antes hacía solo el setTimeout de 5 segundos.
+		 *
+		 * @return {void}
+		 */
+		cerrar_tarjeta() {
+			this.ocultar_tarjeta()
+			this.$store.commit('import_status/setModel', null)
+		},
 		toggle() {
 			let el = document.getElementById('import-status')
 

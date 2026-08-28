@@ -1,311 +1,91 @@
 <template>
-
 	<div>
-
 		<b-dropdown-divider></b-dropdown-divider>
 
-
-
 		<dropdown-section-title
-
 		title="Imágenes inteligentes"
-
 		icon="icon-camera"></dropdown-section-title>
 
-
-
 		<dropdown-option-item
-
 		icon="bi bi-images"
-
 		@click="start_batch_flow()">
-
 			Asignar imágenes automáticamente
-
 		</dropdown-option-item>
 
-
-
-		<batch-images-summary-modal
-
-		:visible.sync="batch_summary_visible"
-
-		:batch_result="batch_result"
-
-		@confirmed="on_batch_summary_confirmed"></batch-images-summary-modal>
-
-
-
 	</div>
-
 </template>
-
 <script>
-
-import actualizar_lista_de_articulos from '@/mixins/listado/actualizar_lista_de_articulos'
-
 import listado_articles_source from '@/mixins/listado/listado_articles_source'
 
-
-
+/**
+ * Disparador de la asignación automática de imágenes, y NADA MÁS que el disparador.
+ *
+ * 🔴 La escucha de Pusher, el pedido del resumen y el modal NO viven acá, y no es una decisión
+ * de prolijidad: este componente se renderiza adentro del dropdown de opciones del listado
+ * (`OptionsDropdown.vue`, `v-if="show"` sobre la cantidad de seleccionados), así que se DESMONTA
+ * apenas la selección queda vacía —que es justo lo que hace el usuario después de largar el
+ * lote—. El callback de Echo sobrevivía al desmontaje (lo guarda `Vue.prototype.Echo`) pero
+ * corría sobre una instancia destruida: el modal de resumen no aparecía nunca, sin error, sin
+ * log y sin nada en la consola. Todo eso se mudó a `components/common/AvisoImagenesAutomaticas`,
+ * que se monta en `App.vue` y está siempre vivo.
+ *
+ * 🔴 Y por eso mismo este componente SE QUEDA donde está: `resolve_articles()` distingue
+ * "seleccionados" de "filtrados" leyendo el `inject` de `options_from_filter`, que lo provee
+ * `OptionsDropdown.vue` (ver `common-vue/mixins/selected_filtered_source.js`). Sacarlo del
+ * dropdown para "unificarlo" con el anfitrión rompería esa distinción en silencio: siempre
+ * procesaría los seleccionados.
+ */
 export default {
-
-	mixins: [actualizar_lista_de_articulos, listado_articles_source],
-
+	mixins: [listado_articles_source],
 	components: {
-
 		DropdownSectionTitle: () => import('@/components/listado/components/selected-filtered-options/DropdownSectionTitle'),
-
 		DropdownOptionItem: () => import('@/components/listado/components/selected-filtered-options/DropdownOptionItem'),
-
-		BatchImagesSummaryModal: () => import('@/components/listado/components/selected-filtered-options/BatchImagesSummaryModal'),
-
 	},
-
-	data() {
-
-		return {
-
-			/* Controla visibilidad del modal resumen al recibir el evento Pusher. */
-
-			batch_summary_visible: false,
-
-			/*
-			Resumen del procesamiento que termina mostrando el modal. El evento de Pusher solo
-			trae contadores + batch_uuid (el detalle no cabe en el límite de Pusher con lotes
-			grandes); esto se llena con la respuesta de article-image-search-attempts/summary,
-			o con el payload liviano de Pusher tal cual si ese pedido falla.
-			*/
-
-			batch_result: null,
-
-			/*
-			batch_uuid de la corrida cuyo fetch a /summary está en vuelo. Sirve para descartar
-			la respuesta si mientras tanto se disparó otra corrida (dos clics en "Asignar
-			imágenes automáticamente" antes de que la primera termine).
-			*/
-
-			pending_batch_uuid: null,
-
-		}
-
-	},
-
 	methods: {
-
 		/**
-
-		* Determina la fuente según el dropdown activo, encola el batch y escucha Pusher.
-
+		* Determina la fuente según el dropdown activo, encola el batch y avisa por el bus de
+		* `$root` para que el anfitrión se ponga a escuchar el fin del lote.
 		*
-
 		* @return {void}
-
 		*/
-
 		start_batch_flow() {
-
 			let articles_source = this.resolve_articles()
 
-
-
 			if (!articles_source || !articles_source.length) {
-
 				this.$toast.error('No hay artículos para procesar')
-
 				return
-
 			}
-
-
 
 			let article_ids = []
-
 			articles_source.forEach(function (article) {
-
 				article_ids.push(article.id)
-
 			})
-
-
 
 			this.$api.post('google/batch-assign-images', {
-
 				article_ids: article_ids,
-
 			})
-
-			.then(() => {
-
+			.then(res => {
 				this.$toast.success('Procesando imágenes en segundo plano...')
+				/*
+					Único vínculo con el anfitrión: se avisa por el bus y este componente se
+					desentiende, porque puede estar desmontado mucho antes de que el lote termine.
 
-				this.start_pusher_listener()
+					🔴 Va el `batch_uuid` que devolvió el POST, y es lo que le permite al anfitrión
+					reconocer SU corrida. El canal de Pusher es público y se llama por el id del
+					owner, así que dos instalaciones con el mismo owner sobre la misma app de
+					Pusher están en el mismo canal; sin el uuid, la pestaña acepta el primer evento
+					que pase, se da de baja y se queda sin el suyo. Lo mismo con dos lotes seguidos.
 
+					Puede venir `undefined` contra una API todavía sin desplegar: el anfitrión lo
+					contempla y en ese caso vuelve al comportamiento viejo.
+				*/
+				this.$root.$emit('imagenes-automaticas:lote-iniciado',
+					res && res.data ? res.data.batch_uuid : null)
 			})
-
 			.catch(() => {
-
 				this.$toast.error('No se pudo iniciar el procesamiento de imágenes')
-
 			})
-
 		},
-
-		/**
-
-		* Suscribe el canal Pusher del owner para recibir el evento de finalización del batch.
-
-		*
-
-		* @return {void}
-
-		*/
-
-		start_pusher_listener() {
-
-			const channel_name = 'article_batch_images.' + this.owner.id
-
-
-
-			this.Echo.channel(channel_name)
-
-			.listen('.ArticleBatchImagesProcessed', (payload) => {
-
-				this.Echo.leaveChannel(channel_name)
-
-				this.load_full_summary(payload)
-
-			})
-
-		},
-
-		/**
-
-		* El payload de Pusher solo trae contadores y el batch_uuid (no el detalle por artículo,
-
-		* que puede superar el límite de Pusher con lotes grandes). Antes de abrir el modal se
-
-		* pide el resumen completo por HTTP, mismo endpoint que ya usa el modal de historial.
-
-		*
-
-		* @param {Object} payload Payload liviano recibido por Pusher.
-
-		* @return {void}
-
-		*/
-
-		load_full_summary(payload) {
-
-			if (!payload || !payload.batch_uuid) {
-
-				this.open_summary(payload)
-
-				return
-
-			}
-
-
-
-			this.pending_batch_uuid = payload.batch_uuid
-
-
-
-			this.$api.get('article-image-search-attempts/summary/' + payload.batch_uuid)
-
-			.then((res) => {
-
-				// Si mientras tanto se disparó otra corrida, esta respuesta ya no es la vigente:
-				// no pisar lo que esté mostrando (o por mostrarse) la corrida más nueva.
-				if (this.pending_batch_uuid !== payload.batch_uuid) {
-
-					return
-
-				}
-
-				this.open_summary(res.data)
-
-			})
-
-			.catch(() => {
-
-				if (this.pending_batch_uuid !== payload.batch_uuid) {
-
-					return
-
-				}
-
-				this.$toast.error('No se pudo cargar el detalle del resumen de imágenes')
-
-				this.open_summary(payload)
-
-			})
-
-		},
-
-		/**
-
-		* Setea el resultado del batch y recién entonces muestra el modal, para que se monte ya
-
-		* con los datos definitivos.
-
-		*
-
-		* @param {Object} batch_result Resumen completo (o el payload liviano, si el detalle no se pudo cargar).
-
-		* @return {void}
-
-		*/
-
-		open_summary(batch_result) {
-
-			this.batch_result = batch_result
-
-			this.batch_summary_visible = true
-
-		},
-
-		/**
-
-		* Al confirmar el modal resumen, actualiza el listado si la ruta activa es article.
-
-		*
-
-		* @return {void}
-
-		*/
-
-		on_batch_summary_confirmed() {
-
-			if (!this.is_on_article_list_view()) {
-
-				return
-
-			}
-
-			this.get_ultimos_articulos_actualizados()
-
-		},
-
-		/**
-
-		* Indica si la ruta activa es el listado de artículos.
-
-		*
-
-		* @return {Boolean}
-
-		*/
-
-		is_on_article_list_view() {
-
-			return this.$route && this.$route.name === 'article'
-
-		},
-
 	},
-
 }
-
 </script>
-

@@ -143,6 +143,25 @@ function global_api_notifications_interceptor(response) {
 }
 
 /**
+ * Muestra un toast desde afuera de un componente (los interceptores no tienen `this`).
+ *
+ * @param {string} tipo    'error' | 'warning' | 'info' | 'success'
+ * @param {string} mensaje Texto a mostrar.
+ * @returns {void}
+ */
+function mostrar_toast_global(tipo, mensaje) {
+    if (!mensaje) {
+        return
+    }
+
+    if (Vue && Vue.$toast && typeof Vue.$toast.open === 'function') {
+        Vue.$toast.open({ message: mensaje, type: tipo, duration: 8000 })
+    } else if (Vue && Vue.$toast && typeof Vue.$toast[tipo] === 'function') {
+        Vue.$toast[tipo](mensaje, { duration: 8000 })
+    }
+}
+
+/**
  * Interceptor de respuesta: errores de validación Laravel (422) → toast detallado;
  * el resto mantiene el evento global `errorEvent` (logo loading, modal legacy, etc.).
  *
@@ -152,6 +171,54 @@ function global_api_notifications_interceptor(response) {
 function global_api_error_interceptor(error) {
     const response = error.response
     if (!response) {
+        /*
+         * 🔴 Esta es la grieta de fondo de casi todos los "spinner infinito" del sistema.
+         *
+         * Un error de red (wifi cortado, servidor caído, DNS, CORS) y un timeout de axios NO
+         * TIENEN `response`. Hasta acá este `if` devolvía el reject pelado: no disparaba
+         * `errorEvent`, o sea que no se mostraba ningún toast Y —lo que de verdad duele— nadie
+         * apagaba el loading global, porque el único lugar que hace `auth/setLoading = false`
+         * ante un error es el handler de `errorEvent` (common-vue/components/error/Index.vue).
+         * Resultado: el overlay tapando la aplicación entera hasta un F5.
+         *
+         * No se puede resolver despachando `errorEvent`: ese handler arranca con
+         * `error.response.status`, así que con un error sin `response` tira TypeError adentro
+         * del handler de errores y el problema queda igual. Por eso se atiende acá.
+         *
+         * El loading se apaga SIEMPRE (es el arreglo), y el mensaje se puede saltear con la
+         * misma bandera `skip_global_error_event` que ya usa el resto del interceptor, para las
+         * llamadas que manejan su propio error.
+         */
+        store.commit('auth/setLoading', false)
+        store.commit('auth/setMessage', '')
+
+        /* Un request cancelado a propósito no es un error que el usuario tenga que ver. */
+        const fue_cancelado = typeof axios.isCancel === 'function' && axios.isCancel(error)
+
+        const silenciar = Boolean(
+            error.config && error.config.skip_global_error_event
+        )
+
+        if (!fue_cancelado && !silenciar) {
+            /*
+             * axios marca el timeout con code ECONNABORTED. Se distingue del corte de red
+             * porque la acción del usuario es distinta: ante un timeout el pedido puede haber
+             * llegado igual y conviene esperar, ante un corte de red hay que revisar la
+             * conexión.
+             */
+            const es_timeout = Boolean(
+                error.code === 'ECONNABORTED'
+                || (error.message && String(error.message).indexOf('timeout') !== -1)
+            )
+
+            mostrar_toast_global(
+                'error',
+                es_timeout
+                    ? 'El servidor tardó demasiado en responder. Lo que pediste puede haber quedado en curso: esperá un minuto antes de volver a intentar.'
+                    : 'No pudimos conectarnos con el servidor. Revisá tu conexión a internet y volvé a intentar.'
+            )
+        }
+
         return Promise.reject(error)
     }
     /**

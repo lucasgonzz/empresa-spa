@@ -88,8 +88,8 @@ export default {
                 .notification() sobre este canal no recibiria NADA NUNCA, sin ningun error a la
                 vista ni en el navegador ni en el servidor.
 
-                El precedente exacto es SearchDescriptionAutomatica.vue, que escucha
-                .ArticleBatchDescriptionsProcessed del mismo modo.
+                El precedente exacto es components/common/AvisoDescripcionesAutomaticas.vue, que
+                escucha .ArticleBatchDescriptionsProcessed del mismo modo.
             */
             this.Echo.channel(embeddings_channel)
             .listen('.ArticleEmbeddingsBatchGenerated', (payload) => {
@@ -102,8 +102,9 @@ export default {
                 this.$toast.success(this.texto_de_embeddings_generados(payload.generados))
             })
 
-            // 🔴 A diferencia de inventory_performance y SearchDescriptionAutomatica, que escuchan un
-            // evento puntual que ellos mismos dispararon y despues hacen leaveChannel(), esta
+            // 🔴 A diferencia de inventory_performance y de los anfitriones de imagenes y
+            // descripciones automaticas, que escuchan un evento puntual que ellos mismos
+            // dispararon y despues hacen leaveChannel(), esta
             // suscripcion es permanente por sesion: el scheduler emite cada 30 minutos sin que el
             // usuario haya pedido nada. Si se abandonara el canal despues del primer aviso, el
             // segundo no llegaria nunca.
