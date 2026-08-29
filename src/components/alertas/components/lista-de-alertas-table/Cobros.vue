@@ -13,8 +13,13 @@
 			-->
 			<ventas-sin-cobrar></ventas-sin-cobrar>
 
+			<!--
+				🔴 La prop se llama `cliente`, no `client`: un mixin global define un
+				`computed.client` que en Vue 2 pisa el prop del mismo nombre. Está explicado en
+				el `props` de RecordatorioCobro.vue.
+			-->
 			<recordatorio-cobro
-			:client="client_seleccionado"></recordatorio-cobro>
+			:cliente="client_seleccionado"></recordatorio-cobro>
 
 			<!--
 				🔴 El conteo del masivo NO es la cantidad de filas: es la cantidad de filas CON
