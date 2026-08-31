@@ -116,15 +116,29 @@ async function filtrar_por_proveedor(page, proveedor) {
 		'el modal de filtros quedo abierto y va a tapar todo lo que siga'
 	).toHaveCount(0)
 
-	// La señal de que el filtro corrio: el boton de LIMPIAR ese filtro solo se dibuja cuando el
-	// filtro esta en uso (`filtro_usado` en BtnFilter.vue). Es la condicion observable correcta, y
-	// mucho mas estable que contar filas.
+	// 🔴 La condicion de "el listado esta filtrado" es que TODAS las filas sean de ese proveedor, y
+	//    no que aparezca el boton de limpiar el filtro. Ese boton mira si el filtro tiene VALOR, no
+	//    si llego a correr, asi que se dibuja igual con la grilla sin filtrar -- y entonces una
+	//    lectura de la linea de base se lleva articulos de otros proveedores sin que nada lo avise.
+	//    Costo una corrida: el spec fallaba sobre "Pata de cama", que es de Rosario y nunca tuvo que
+	//    haber estado ahi.
 	//
-	// Ademas se ve sin hover: con el filtro puesto, el contenedor lleva la clase `force-show`.
-	await expect(
-		page.locator('[data-testid="btn-limpiar-filtro-provider_id"]'),
-		'el filtro por proveedor no llego a aplicarse'
-	).toBeVisible()
+	//    Se reintenta porque la grilla se recarga por su cuenta despues del filtro: lo que se espera
+	//    es que TERMINE de recargarse, no que el filtro exista.
+	await expect(async () => {
+		const proveedores = await page.evaluate(() => {
+			return [...document.querySelectorAll('[data-testid^="celda-article-provider_id-"]')]
+				.map(celda => celda.innerText.trim())
+		})
+
+		expect(proveedores.length, 'el listado quedo sin filas').toBeGreaterThan(0)
+
+		const ajenas = [...new Set(proveedores.filter(nombre => nombre !== proveedor))]
+		expect(
+			ajenas,
+			`el listado todavia muestra articulos de otros proveedores (${ajenas.join(', ')}): el filtro no llego a aplicarse`
+		).toEqual([])
+	}).toPass({ timeout: 30000 })
 }
 
 /**

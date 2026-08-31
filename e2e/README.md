@@ -783,8 +783,15 @@ opción **"Actualizar" de la masiva sigue deshabilitada**, porque el store todav
 verdad. Costó una corrida entera perseguir eso creyendo que el problema estaba en el dropdown.
 
 **Regla:** la condición observable de "el listado está filtrado" NO es que aparezca el botón de
-limpiar. Es que la masiva por filtro quede habilitada, o directamente que la cantidad de filas haya
-cambiado.
+limpiar. Lo más directo es mirar **los datos**: que todas las filas visibles sean del valor
+filtrado. Y hay que reintentarlo, porque la grilla se recarga por su cuenta después del filtro y lo
+que se espera es que TERMINE de recargarse.
+
+Esto costó una corrida entera: el spec leía la línea de base con el botón de limpiar ya visible pero
+la grilla todavía sin refrescar, se llevaba artículos de otros proveedores, y fallaba varios pasos
+después sobre *"Pata de cama"* — un artículo de Rosario que nunca tuvo que haber estado ahí. El
+mensaje acusaba a la actualización masiva de no haber aplicado el aumento, cuando la masiva había
+hecho exactamente lo correcto sobre el conjunto correcto.
 
 ### El modal de la actualización masiva también tiene grupos, y abre en el primero
 
