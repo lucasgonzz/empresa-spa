@@ -109,7 +109,7 @@
 					<div class="panel-demo__carrusel-viewport">
 						<div
 						class="panel-demo__carrusel-riel"
-						:style="{ transform: 'translateX(-' + (seccion_actual_index * 100) + '%)' }">
+						:style="{ left: '-' + (seccion_actual_index * 100) + '%' }">
 
 							<section
 							v-for="seccion in secciones"
@@ -894,8 +894,17 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 
 // ---------------------------------------------------------------------------------------
 // Carrusel horizontal de secciones (punto 1-2 de la mision del 18/8). El viewport recorta
-// lo que no es la seccion activa; el riel es el que se desplaza, con `transform` (mismo
-// motivo que el halo del borde: lo resuelve el compositor, no repinta el resto del panel).
+// lo que no es la seccion activa; el riel es el que se desplaza.
+//
+// 🔴 El desplazamiento va por `left`, NO por `transform` (cambiado el 31/8/2026, ver el
+// comentario completo sobre `.panel-demo__carrusel-riel` mas abajo): con `transform` el riel
+// se movia por compositor sin repintar nada, pero cualquier `transform` distinto de `none`
+// -incluido `translateX(-0%)` en la primera seccion- convierte al riel en el bloque
+// contenedor de sus descendientes `position: fixed`, y el video agrandado
+// (`.tarjeta-clip__marco--grande`) vive justo adentro. Resultado medido: el video dejaba de
+// centrarse contra la pantalla y quedaba ademas recortado por el `overflow` del viewport y
+// del cuerpo. Con `left` el riel vuelve a moverse igual mismo pero sin crear ese bloque
+// contenedor.
 // ---------------------------------------------------------------------------------------
 .panel-demo__carrusel-nav
 	display: flex
@@ -1002,9 +1011,29 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 .panel-demo__carrusel-viewport
 	overflow: hidden
 
+// 🔴 El desplazamiento del riel va por `left` y NO por `transform`, y eso NO es una preferencia
+// de estilo: es lo que hace que el video agrandado se pueda centrar contra la pantalla.
+//
+// Cualquier `transform` distinto de `none` convierte al elemento en el bloque contenedor de
+// sus descendientes `position: fixed`. `.tarjeta-clip__marco--grande` es justamente un `fixed`
+// que vive adentro de este riel: con el transform puesto dejaba de centrarse contra la
+// pantalla y pasaba a centrarse contra la caja del riel, ADEMAS de quedar recortado por el
+// `overflow: hidden` del viewport y por el scroll del cuerpo. Ese era el rectangulo chico y
+// descolocado que se veia al reproducir (medido el 31/8/2026).
+//
+// Y pasaba SIEMPRE, incluso en la primera seccion: `translateX(-0%)` no es la palabra clave
+// `none`. El modal andaba bien el 17/8 y lo rompio el carrusel del 18/8, sin que nada avisara.
+//
+// `left` sobre un `position: relative` corre el riel exactamente lo mismo (el porcentaje se
+// resuelve contra el ancho del viewport del carrusel, que es el mismo ancho que usaba el
+// `translateX`) y no crea bloque contenedor.
+//
+// 🔴 No le pongas `z-index` a este riel ni le devuelvas un `transform`: cualquiera de las dos
+// cosas vuelve a encerrar el video agrandado. Mismo cuidado que el del `.panel-demo__hoja`.
 .panel-demo__carrusel-riel
+	position: relative
 	display: flex
-	transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1)
+	transition: left 0.4s cubic-bezier(0.32, 0.72, 0, 1)
 
 @media (prefers-reduced-motion: reduce)
 	.panel-demo__carrusel-riel
@@ -1064,9 +1093,11 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 .panel-demo__item:last-child
 	margin-bottom: 0
 
+// Mas marcado que antes (pedido de Lucas, 31/8/2026: "que este un poco mas fuerte"). Era
+// border 0.35 y el lavado 0.05 -> 0.02, que contra el blanco de la tarjeta casi no se leia.
 .panel-demo__item--abierto
-	border-color: rgba(11, 132, 248, 0.35)
-	background: linear-gradient(180deg, rgba(11, 132, 248, 0.05), rgba(58, 49, 252, 0.02))
+	border-color: rgba(11, 132, 248, 0.55)
+	background: linear-gradient(180deg, rgba(11, 132, 248, 0.12), rgba(58, 49, 252, 0.05))
 
 .panel-demo__item-boton
 	display: flex
