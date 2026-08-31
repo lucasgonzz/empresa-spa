@@ -544,10 +544,10 @@ carga **despues** de guardar, reabriendo el modelo desde su fila.
 
 ### 🔴 La lupa del filtro de una columna no se puede clickear sin pasar el mouse por el encabezado
 
-Esta es la causa real del rojo de `limpiar-filtros-desde-columna.spec.js`, que arrastra desde el
-15/8/2026. **La nota anterior de este README apuntaba al lado equivocado**: decia que el spec
-clickeaba "sin esperar a que la pantalla se asiente" y que lo tapaba el cartel de progreso
-`#offline-articles-progress`. No es eso.
+Esta era la causa real del rojo de `limpiar-filtros-desde-columna.spec.js`, que arrastraba desde el
+15/8/2026 y **quedo arreglado el 31/8/2026**. La nota anterior de este README apuntaba al lado
+equivocado: decia que el spec clickeaba "sin esperar a que la pantalla se asiente" y que lo tapaba
+el cartel de progreso `#offline-articles-progress`. No era eso.
 
 Medido el 31/8/2026 sobre el `<th>` de la columna Proveedor del listado, con la pantalla quieta y
 los recursos ya descargados:
@@ -832,3 +832,33 @@ cd <slot>\empresa-api; $env:APP_ENV='testing'; php artisan queue:work --tries=1
 verificación va adentro de un `expect(...).toPass()` que vuelve a leer hasta que el job terminó.
 Esos tests llevan su propio `test.setTimeout()` más alto, y eso está justificado por una causa
 entendida — no es tapar lentitud de la interfaz.
+
+### 🔴 Un spec que carga FLETE contamina para siempre los articulos de esa compra
+
+Un costo extra prorrateado deja un `article_surchage` de transporte **grabado en el articulo**, que
+sobrevive a la compra — lo dice el manual: *borrar el costo extra no borra el recargo que ya quedo
+grabado en el articulo*. O sea que el articulo queda con un costo real distinto para siempre.
+
+Consecuencia entre specs: **un spec que carga flete no puede compartir articulos con uno que afirme
+costos absolutos**. Paso el 31/8/2026 en la primera corrida de la suite completa:
+`circuito-compra.spec.js` usaba "Pinza", y `compra-costeo-facturacion.spec.js` --que afirma que el
+costo real de "Pinza" es 855-- lo veia en 1141,98. El mensaje ("costo real del articulo 2") no
+apuntaba a ningun lado, y el spec acusado no tenia nada mal.
+
+Se resolvio sacando "Pinza" del circuito con flete. Vale la pena tenerlo presente al agregar specs:
+de los articulos del proveedor "Buenos Aires", **"Pinza" es el unico con expectativas absolutas de
+otro spec**.
+
+### 🔴 Un importe deterministico se repite entre corridas: buscar por valor agarra el registro viejo
+
+`circuito-compra.spec.js` carga siempre la misma compra, asi que su total es **identico en todas las
+corridas**. Cuando el spec del pago buscaba el movimiento de cuenta corriente "cuyo haber es el
+total", a partir de la segunda corrida habia varios candidatos y se quedaba con el primero — el de
+una corrida vieja, cuyo saldo acumulado es otro.
+
+El rojo dice *"el pago tenia que bajar el saldo acumulado"* con dos numeros que no se parecen en
+nada, y manda a revisar la cuenta corriente. Está perfecta: lo que estaba mal era la busqueda.
+
+**Regla:** cuando se busca un registro por un valor que puede repetirse entre corridas, hay que
+desempatar por el id mas alto (o guardarse el id de la respuesta del POST). Vale para pagos, ventas,
+comprobantes: todo lo que este harness crea con datos fijos.

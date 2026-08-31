@@ -66,8 +66,8 @@ const FLETE = 10000
  */
 const ARTICULO_A_AGREGAR = 'Cuchilla'
 
-/** Cantidad y costo con los que el Excel PISA el renglon de Pinza que ya estaba cargado. */
-const PINZA_IMPORTADA = { cantidad: 12, costo: 1300 }
+/** Cantidad y costo con los que el Excel PISA el renglon de "Cuchara" que ya estaba cargado. */
+const CUCHARA_IMPORTADA = { cantidad: 12, costo: 1300 }
 
 /** Metodo de pago y caja con los que se paga la compra. Los dos existen en el fixture. */
 const PAGO_METODO = 'Efectivo'
@@ -78,7 +78,7 @@ const CAJA = 'Caja Efectivo'
  *
  * | renglon   | que prueba                                                              |
  * |-----------|-------------------------------------------------------------------------|
- * | Pinza     | articulo que YA existe, sin cantidad recibida -> el stock usa la PEDIDA  |
+ * | Cuchara   | articulo que YA existe, sin cantidad recibida -> el stock usa la PEDIDA  |
  * | Martillo  | cantidad recibida MENOR que la pedida -> el stock usa la RECIBIDA        |
  * | Alicate   | cantidad recibida en CERO EXPLICITO -> el stock no se mueve              |
  * | (nuevo)   | articulo creado al vuelo desde el buscador, con costo asignado ahi mismo |
@@ -88,8 +88,22 @@ const CAJA = 'Caja Efectivo'
  * INCLUIDO el 0, y cae a `amount` solo si es null o ''. Un `if ($received)` en vez de un
  * `is_null($received)` haria que el cero se comporte como "no indicado" y sume la cantidad pedida.
  */
+/*
+ * 🔴 Ninguno de estos renglones puede ser "Pinza", y no es una preferencia: este circuito carga un
+ * FLETE, y un flete prorrateado deja un `article_surchage` de transporte GRABADO EN EL ARTICULO,
+ * que sobrevive a la compra (lo dice el manual: borrar el costo extra no borra el recargo del
+ * articulo). "Pinza" es el unico articulo del fixture sobre el que otro spec
+ * --compra-costeo-facturacion.spec.js-- afirma un costo real ABSOLUTO (855), y con el recargo
+ * encima pasa a 1141,98.
+ *
+ * Medido el 31/8/2026 en la corrida de la suite completa: ese spec daba rojo por culpa de este
+ * archivo, y el mensaje ("costo real del articulo 2") no apuntaba a ningun lado.
+ *
+ * Regla que queda: un spec que carga flete contamina para siempre los articulos de esa compra. No
+ * puede compartir articulos con un spec que afirme costos absolutos.
+ */
 const RENGLONES = [
-	{ alias: 'pinza',    articulo: 'Pinza',          costo: 1200, pedida: 10, recibida: null },
+	{ alias: 'cuchara',  articulo: 'Cuchara',        costo: 1200, pedida: 10, recibida: null },
 	{ alias: 'martillo', articulo: 'Martillo acero', costo: 2500, pedida: 8,  recibida: 5 },
 	{ alias: 'alicate',  articulo: 'Alicate',        costo: 300,  pedida: 6,  recibida: 0 },
 	{ alias: 'nuevo',    articulo: null,             costo: 700,  pedida: 4,  recibida: null },
@@ -618,7 +632,7 @@ test.describe.serial('Compra: alta, cantidad recibida, flete, cuenta corriente y
 
 			// 🔴 Se redondean LOS DOS lados. La columna "Costo Real" del listado imprime hasta 6
 			//    decimales (`variable_decimals` en src/models/article.js), y el prorrateo de un
-			//    flete casi nunca da un numero redondo: el reparto de Pinza da 1465,56044. Comparar
+			//    flete casi nunca da un numero redondo: el reparto del primer renglon da 1465,56044. Comparar
 			//    contra un esperado ya redondeado y un leido sin redondear falla por el quinto
 			//    decimal sin que haya nada mal.
 			expect(
@@ -677,14 +691,14 @@ test.describe.serial('Compra: alta, cantidad recibida, flete, cuenta corriente y
 		// matcheo de `ProviderOrderArticleImport` (bar_code -> provider_code -> name, y si no
 		// encuentra nada, ALTA):
 		//
-		//   - "Pinza"    ya existe Y ya esta en la compra  -> ACTUALIZA su renglon
+		//   - "Cuchara"  ya existe Y ya esta en la compra  -> ACTUALIZA su renglon
 		//   - "Cuchilla" ya existe pero NO esta en la compra -> la AGREGA a la compra
 		//   - el tercero no existe en el sistema           -> lo CREA y lo agrega
 		//
 		// Las tres traen solo el nombre (sin codigo de barras ni codigo de proveedor), que es el
 		// ultimo criterio de matcheo y el unico que un Excel de proveedor real siempre tiene.
 		const ruta = escribir_excel_de_compra([
-			{ name: 'Pinza', cantidad: PINZA_IMPORTADA.cantidad, costo: PINZA_IMPORTADA.costo },
+			{ name: 'Cuchara', cantidad: CUCHARA_IMPORTADA.cantidad, costo: CUCHARA_IMPORTADA.costo },
 			{ name: ARTICULO_A_AGREGAR, cantidad: 7, costo: 600 },
 			{ name: contexto.articulo_importado, cantidad: 3, costo: 900 },
 		], 'compra-e2e.xlsx')
@@ -713,7 +727,7 @@ test.describe.serial('Compra: alta, cantidad recibida, flete, cuenta corriente y
 		])
 		expect(respuesta.ok(), 'el POST de la importacion no salio bien').toBeTruthy()
 
-		// La compra tiene que haber pasado de 4 renglones a 6: uno actualizado (Pinza) y dos nuevos.
+		// La compra tiene que haber pasado de 4 renglones a 6: uno actualizado y dos nuevos.
 		await abrir_compras_del_dia(page)
 		await page.locator(`[data-testid="provider_order-row-${contexto.compra.id}"]`).click()
 		await abrir_pestania(page, 'provider_order', 'Articulos')
@@ -726,16 +740,16 @@ test.describe.serial('Compra: alta, cantidad recibida, flete, cuenta corriente y
 
 		// El renglon actualizado: mismo articulo, cantidad y costo nuevos. Se lee con
 		// numero_de_dato porque es el value de un input, no el texto de una celda.
-		const id_pinza = contexto.ids.pinza
-		expect(numero_de_dato(await page.locator(`[data-testid="article-amount-${id_pinza}"]`).inputValue()))
-			.toBe(PINZA_IMPORTADA.cantidad)
-		expect(numero_de_dato(await page.locator(`[data-testid="article-cost-${id_pinza}"]`).inputValue()))
-			.toBe(PINZA_IMPORTADA.costo)
+		const id_cuchara = contexto.ids.cuchara
+		expect(numero_de_dato(await page.locator(`[data-testid="article-amount-${id_cuchara}"]`).inputValue()))
+			.toBe(CUCHARA_IMPORTADA.cantidad)
+		expect(numero_de_dato(await page.locator(`[data-testid="article-cost-${id_cuchara}"]`).inputValue()))
+			.toBe(CUCHARA_IMPORTADA.costo)
 
-		// 🔴 Y lo que el Excel NO tenia que tocar: la cantidad recibida de Pinza. El archivo trae la
+		// 🔴 Y lo que el Excel NO tenia que tocar: la cantidad recibida de ese renglon. El archivo trae la
 		//    columna de cantidad PEDIDA (tipo "pedido"), asi que la recibida tiene que seguir vacia.
 		//    Si el importador la pisara, el stock de esta compra se recalcularia solo y sin aviso.
-		expect(await page.locator(`[data-testid="article-received-${id_pinza}"]`).inputValue())
+		expect(await page.locator(`[data-testid="article-received-${id_cuchara}"]`).inputValue())
 			.toBe('')
 	})
 
@@ -864,12 +878,19 @@ test.describe.serial('Compra: alta, cantidad recibida, flete, cuenta corriente y
 		await expect(async () => {
 			const cantidad = await filas.count()
 
+			// 🔴 Se busca el pago con el id MAS ALTO, no el primero que aparezca con ese haber.
+			//    Este circuito carga siempre la misma compra, asi que su total es identico en todas las
+			//    corridas: a partir de la segunda hay varios pagos con el MISMO haber y quedarse con el
+			//    primero agarra el de una corrida vieja, cuyo saldo acumulado es otro. El rojo dice
+			//    "el pago tenia que bajar el saldo" con dos numeros que no se parecen en nada, y manda a
+			//    revisar la cuenta corriente en vez de la busqueda. Medido el 31/8/2026.
 			let fila_del_pago = null
 			for (let i = 0; i < cantidad; i++) {
 				const id = (await filas.nth(i).getAttribute('data-testid')).replace('current_acount-row-', '')
 				if (await celda_numerica(page, 'current_acount', 'haber', id) === total) {
-					fila_del_pago = id
-					break
+					if (fila_del_pago === null || Number(id) > Number(fila_del_pago)) {
+						fila_del_pago = id
+					}
 				}
 			}
 
