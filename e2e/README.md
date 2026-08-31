@@ -704,3 +704,36 @@ devuelve `true`, y no hay ni un solo `data-testid` en pantalla. Lo único que lo
 
 Vale para cualquier spec: si un módulo aparece completamente vacío y sin errores, lo primero a mirar
 es si la URL matchea una ruta, no el componente.
+
+### 🔴 Un selector de caja vacío no significa que falte la caja: significa que está CERRADA
+
+El select de caja de un cobro y el de un pago ofrecen **solo las cajas abiertas** (`cajas_abiertas`
+en `src/mixins/vender/cajas.js`). Con las cajas cerradas el select existe, se dibuja habilitado, y
+no tiene ni una opción.
+
+Playwright lo reporta como **`did not find some options`**, que manda a revisar el nombre de la caja
+o el vínculo caja ↔ método de pago. No es ninguno de los dos.
+
+El fixture deja `Caja Efectivo` abierta desde el 31/8/2026
+(`TestingFerreteriaSeeder::abrir_caja_efectivo()`), con el helper de producción y no tocando
+columnas a mano: abrir una caja es crear su `apertura_caja` **y** marcarla, y una caja marcada
+abierta sin apertura es un estado que en una cuenta real no existe. Las otras dos siguen cerradas a
+propósito, de contraste.
+
+### El filtro de una columna cambia de forma según el tipo de la columna
+
+`display/table/filter/Index.vue` reparte entre varios sub-filtros según `field.type`, y los dos que
+importan para una relación no se parecen:
+
+| Tipo de la columna | Qué dibuja | testid | ¿Botón "Filtrar"? |
+|---|---|---|---|
+| `select` | un `<select>` | `filtro-select-<key>` | sí (`btn-aplicar-filtro-<key>`) |
+| `search` | un **buscador** con su modal | `filtro-search-<key>` | **no**: elegir ya aplica el filtro |
+
+La columna "Proveedor" del listado de artículos es `type: 'search'` (ver `src/models/article.js`),
+así que va por la segunda fila: `search_and_select(page, 'filtro-search-provider_id', ...)` y nada
+de botón.
+
+🔴 Ese buscador **tampoco tenía `id`**, así que publicaba `data-testid="provider"` — el nombre del
+*modelo relacionado*. Es la tercera vez que aparece la misma caída al `model_name`, y por eso la
+regla del `id` explícito en cada `search-component` está escrita más arriba.
