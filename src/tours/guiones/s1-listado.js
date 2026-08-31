@@ -79,6 +79,20 @@ const MODAL_CALCULO_PRECIO = '#final-price-description .modal-content'
 const PESTANA_PRECIO = '[data-testid="nav-item-Precio"]'
 
 /**
+ * La primera fila de la tabla de artículos.
+ *
+ * `Tr.vue` le pone a cada fila `data-testid="<modelo>-row-<id>"`, así que el prefijo alcanza para
+ * agarrarla sin saber el id, y `buscar_visible()` del motor devuelve la primera que se pueda
+ * señalar — o sea, la primera a la vista.
+ *
+ * 🔴 Sirve para los pasos que dicen "abrí un artículo". Anclarlos a `listado.tabla`, como estaban
+ * hasta el 31/8/2026, dibujaba un recuadro del tamaño de la pantalla que no señalaba nada: Lucas
+ * lo reportó sobre el paso 2 del clip 1.4 —"me dice 'abrí uno' y no se entiende qué es lo que me
+ * señala para abrir"—, pero el mismo paso está en cinco tours más.
+ */
+const PRIMERA_FILA = '[data-testid^="article-row-"]'
+
+/**
  * Cuánto se le da a la IA para contestar, en los pasos del clip 1.8.
  *
  * El análisis del Excel recorre el archivo entero y llama a Claude: con un archivo chico —que es
@@ -111,9 +125,27 @@ export default {
 				avanza: 'siguiente',
 			},
 			{
+				/**
+				 * 🔴 Le pide el camino corto —apretar "Crear"— y no abrir el menú, y es un arreglo,
+				 * no una simplificación.
+				 *
+				 * El botón es un `<b-dropdown split>`: la mitad izquierda llama derecho a
+				 * `call_set_model()` y abre el formulario sin desplegar nada. La versión anterior de
+				 * este paso mandaba al lead a abrir el menú y elegir "Nuevo artículo", y ahí el
+				 * cartel del tour —que va con `z-index: 1000000000`, más que cualquier
+				 * `.dropdown-menu` de Bootstrap— le caía justo encima de esa opción. Lo reportó
+				 * Lucas el 31/8/2026: "el desplegable aparece debajo de la tarjeta del tour y no
+				 * puedo presionar".
+				 *
+				 * El `lado: 'right'` es la otra mitad del arreglo, también sugerida por él: aunque
+				 * el lead abra el menú igual (el gesto vale, el paso avanza cuando aparece el
+				 * formulario), el cartel ya no lo tapa. El motor lo elige solo para cualquier
+				 * desplegable, pero acá queda declarado porque es el paso donde se midió.
+				 */
 				ancla: 'listado.boton_crear_articulo',
-				texto: 'Abrí el menú Crear y elegí "Nuevo artículo".',
+				texto: 'Tocá el botón "Crear". Se abre el formulario de un artículo nuevo.',
 				avanza: 'aparece',
+				lado: 'right',
 			},
 			{
 				selector: MODAL_ARTICULO,
@@ -175,7 +207,7 @@ export default {
 				avanza: 'clic',
 			},
 			{
-				ancla: 'listado.tabla',
+				selector: PRIMERA_FILA,
 				texto: 'Ahí está, arriba de todo, con el precio ya calculado.',
 				avanza: 'siguiente',
 				espera_ms: 600,
@@ -198,13 +230,14 @@ export default {
 		ruta: RUTA_LISTADO,
 		pasos: [
 			{
-				ancla: 'listado.tabla',
-				texto: 'Mirá estas dos columnas: el costo base y el precio final. Entre una y la otra pasan varias cosas.',
+				selector: '#btn_filter_cost',
+				ancestro: 'th',
+				texto: 'Esta es la columna de costo base. Unas columnas más a la derecha está el precio final: entre una y la otra pasan varias cosas.',
 				avanza: 'siguiente',
 			},
 			{
-				ancla: 'listado.tabla',
-				texto: 'Abrí un artículo cualquiera.',
+				selector: PRIMERA_FILA,
+				texto: 'Abrí un artículo cualquiera: un clic en la fila.',
 				avanza: 'aparece',
 			},
 			{
@@ -263,8 +296,8 @@ export default {
 		ruta: RUTA_LISTADO,
 		pasos: [
 			{
-				ancla: 'listado.tabla',
-				texto: 'Abrí un artículo.',
+				selector: PRIMERA_FILA,
+				texto: 'Abrí un artículo: un clic en la fila.',
 				avanza: 'aparece',
 			},
 			{
@@ -314,8 +347,8 @@ export default {
 		ruta: RUTA_LISTADO,
 		pasos: [
 			{
-				ancla: 'listado.tabla',
-				texto: 'Abrí un artículo: tiene un precio por cada lista.',
+				selector: PRIMERA_FILA,
+				texto: 'Abrí un artículo con un clic en la fila: tiene un precio por cada lista.',
 				avanza: 'aparece',
 			},
 			{
@@ -375,27 +408,38 @@ export default {
 	 * Precondición: extensión `costo_en_dolares`, `cotizar_precios_en_dolares = 1`, y un proveedor
 	 * con dólar propio distinto del general (si no, no hay nada que contar en el desglose).
 	 *
-	 * Las columnas de la tabla dependen de "Propiedades para mostrar", así que el paso 1 ancla la
-	 * tabla entera y la narración hace el resto: anclar una columna sería anclar algo que en la
-	 * cuenta del lead puede no estar.
+	 * ⚠️ Las columnas de la tabla dependen de "Propiedades para mostrar", así que el paso 1 puede no
+	 * encontrar la de costo. Eso está bien y es lo que el motor sabe hacer: si la columna no está,
+	 * saltea el paso. Hasta el 31/8/2026 el paso anclaba la tabla ENTERA para no correr ese riesgo,
+	 * y el resultado era peor —"me dice que mire la columna de costo, columna que ni siquiera
+	 * aparece", reportó Lucas—: el recuadro abarcaba todo, no señalaba nada, y si la columna estaba
+	 * corrida a la derecha el lead no la veía igual.
 	 */
 	'1.4': {
 		ruta: RUTA_LISTADO,
 		pasos: [
 			{
-				ancla: 'listado.tabla',
-				texto: 'Mirá la columna de costo: estos artículos están cargados en dólares.',
+				/* El `th` no tiene identificador propio, pero adentro tiene el botón de filtro de
+				 * esa columna, que sí (`BtnFilter.vue`, `#btn_filter_<key>`). Con `ancestro` el
+				 * motor sube del botón a la columna entera y la trae a la vista si la tabla estaba
+				 * corrida. */
+				selector: '#btn_filter_cost',
+				ancestro: 'th',
+				texto: 'Esta es la columna de costo. Estos artículos están cargados en dólares.',
 				avanza: 'siguiente',
 			},
 			{
-				ancla: 'listado.tabla',
-				texto: 'Abrí uno.',
+				selector: PRIMERA_FILA,
+				texto: 'Abrí un artículo: un clic en la fila.',
 				avanza: 'aparece',
 			},
 			{
+				/* `lado: 'top'`: la fila de pestañas está arriba de todo el modal y el cartel por
+				 * abajo le tapaba las solapas que le siguen a "Precio". */
 				selector: PESTANA_PRECIO,
-				texto: 'Andá a la pestaña Precio.',
+				texto: 'Andá a la pestaña "Precio".',
 				avanza: 'clic',
+				lado: 'top',
 			},
 			{
 				selector: '#form-group-cost_in_dollars',
@@ -445,8 +489,8 @@ export default {
 		ruta: RUTA_LISTADO,
 		pasos: [
 			{
-				ancla: 'listado.tabla',
-				texto: 'Abrí un artículo: cada lista tiene su precio en las dos monedas.',
+				selector: PRIMERA_FILA,
+				texto: 'Abrí un artículo con un clic en la fila: cada lista tiene su precio en las dos monedas.',
 				avanza: 'aparece',
 			},
 			{
@@ -512,11 +556,19 @@ export default {
 	 * general, la opción "Actualizar" queda deshabilitada y el tour se queda sin camino: por eso
 	 * los pasos 2 a 6 fuerzan el recorrido por las lupas y no por el buscador de arriba.
 	 *
-	 * ⚠️ La lupa de cada columna vive en un contenedor con `max-width: 0; overflow: hidden` que se
-	 * abre recién con el hover del encabezado. El motor la encuentra igual (el botón conserva su
-	 * caja), pero el recuadro que dibuja driver.js es chico: en cuanto el lead lleva el mouse ahí,
-	 * el encabezado entra en hover y la lupa aparece. Por eso los dos pasos de lupa avanzan por
-	 * APARICIÓN del modal y no por clic, que es lo que perdona un clic que no cayó justo.
+	 * 🔴 La lupa de cada columna vive en un contenedor con `max-width: 0; opacity: 0;
+	 * pointer-events: none` que se abre recién con el hover del encabezado — y con un tour corriendo
+	 * ese hover **no se puede disparar**: `driver.css` pone `.driver-active * { pointer-events: none }`
+	 * sobre todo lo que no sea el elemento resaltado, y un elemento sin `pointer-events` nunca
+	 * matchea `:hover`. O sea que hasta el 31/8/2026 estos pasos le resaltaban al lead un botón
+	 * invisible que no había forma de hacer aparecer. Lo reportó Lucas ese día.
+	 *
+	 * Ahora el motor le prende `force-show` —la clase que el propio componente ya usa cuando el
+	 * filtro está en uso— mientras el paso está a la vista, y los pasos anclan el `th` entero con
+	 * `ancestro`, que además lo trae a la vista si la tabla estaba corrida a la derecha.
+	 *
+	 * Los dos pasos de lupa avanzan por APARICIÓN del modal y no por clic, que es lo que perdona un
+	 * clic que no cayó justo.
 	 *
 	 * 🔴 Este clip escribe datos de verdad —aumenta el costo de TODOS los artículos del filtro— y
 	 * por eso el tour hace dos cosas que hasta el 31/8/2026 no hacía: se lo AVISA al lead en el
@@ -528,12 +580,19 @@ export default {
 		pasos: [
 			{
 				ancla: 'listado.tabla',
-				texto: 'Arriba de cada columna hay una lupa. Esa lupa es el filtro de esa columna.',
+				texto: 'Cada columna tiene su propio filtro. Se llega pasando el mouse por el encabezado: ahí aparece una lupa.',
 				avanza: 'siguiente',
 			},
 			{
+				/* Se ancla el `th` entero, no el botón: la lupa mide 24 px y el recuadro alrededor
+				 * no le decía al lead de qué columna le estaban hablando. El motor sube del botón
+				 * a la columna, la trae a la vista si la tabla estaba corrida, y le prende la clase
+				 * `force-show` para que la lupa se VEA — que con el tour corriendo es la única
+				 * forma, porque `driver.css` deja el `th` sin `pointer-events` y entonces el hover
+				 * que la muestra no puede dispararse nunca. */
 				selector: '#btn_filter_provider_id',
-				texto: 'Pasá el mouse por el encabezado "Proveedor" y tocá la lupa.',
+				ancestro: 'th',
+				texto: 'Tocá la lupa del encabezado "Proveedor".',
 				avanza: 'aparece',
 			},
 			{
@@ -548,6 +607,7 @@ export default {
 			},
 			{
 				selector: '#btn_filter_category_id',
+				ancestro: 'th',
 				texto: 'Ahora la lupa de "Categoria", y elegí la categoría que aumentó.',
 				avanza: 'aparece',
 				espera_ms: 400,

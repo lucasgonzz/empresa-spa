@@ -58,6 +58,23 @@
 const RUTA_VENTAS = { name: 'sale', params: { view: 'todas', sub_view: 'todos' } }
 
 /**
+ * La primera fila de la tabla de ventas, y la de compras.
+ *
+ * `Tr.vue` le pone a cada fila `data-testid="<modelo>-row-<id>"`, así que el prefijo alcanza para
+ * agarrarla sin saber el id, y `buscar_visible()` del motor devuelve la primera que se pueda
+ * señalar.
+ *
+ * 🔴 Reemplazan al anclaje de la TABLA ENTERA que tenían los pasos de "abrí una venta / abrí la
+ * compra". El comentario que lo justificaba decía que no se podía anclar la fila porque `Tr.vue` no
+ * recibe el índice del `v-for` — y es cierto que no lo recibe, pero no hace falta: el `data-testid`
+ * ya está y el motor se queda con la primera visible. Mientras tanto el recuadro abarcaba la
+ * pantalla entera y no señalaba nada, que es lo que Lucas reportó el 31/8/2026 sobre el mismo paso
+ * del clip 1.4.
+ */
+const PRIMERA_FILA_VENTA = '[data-testid^="sale-row-"]'
+const PRIMERA_FILA_COMPRA = '[data-testid^="provider_order-row-"]'
+
+/**
  * 🔴 Compras NO tiene ruta propia: vive adentro de Proveedores. `router/index.js` declara una
  * sola ruta `/proveedores/:view?/:sub_view?`, y el `:view` decide si se dibuja el listado de
  * proveedores o el de compras. Los dos `v-if` son mutuamente excluyentes.
@@ -154,11 +171,11 @@ export default {
 				avanza: 'siguiente',
 			},
 			{
-				/* No se ancla la fila: la tabla se dibuja con dos ramas de `v-for` y ninguna le pasa
-				 * el índice a `Tr.vue`. Se señala la tabla y se avanza cuando aparece el modal, que
-				 * sobrevive a listas vacías, paginado, `order_list_by` y filtros. */
+				/* Se señala la primera fila y se avanza cuando aparece el modal: así el paso
+				 * sobrevive a listas vacías, paginado, `order_list_by` y filtros, y el lead ve qué
+				 * tiene que tocar. */
 				ruta: RUTA_VENTAS,
-				ancla: 'ventas.tabla',
+				selector: PRIMERA_FILA_VENTA,
 				texto: 'Abrí una venta tuya: un clic en la fila.',
 				avanza: 'aparece',
 			},
@@ -379,7 +396,7 @@ export default {
 				avanza: 'siguiente',
 			},
 			{
-				ancla: 'compras.tabla',
+				selector: PRIMERA_FILA_COMPRA,
 				texto: 'Volvé a abrir la compra con un clic en su fila.',
 				avanza: 'aparece',
 			},
@@ -416,7 +433,7 @@ export default {
 				/* "Guardar y cerrar" CIERRA el modal (`prop_to_send_on_emit="{close: true}"`), así
 				 * que la compra hay que volver a abrirla para seguir. Es la misma convención que
 				 * usa el 4.2 después de su guardado. */
-				ancla: 'compras.tabla',
+				selector: PRIMERA_FILA_COMPRA,
 				texto: 'El guardado cerró la compra. Volvé a abrirla con un clic en su fila.',
 				avanza: 'aparece',
 			},

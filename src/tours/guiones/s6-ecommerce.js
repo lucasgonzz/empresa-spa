@@ -11,6 +11,18 @@
  * atributos a componentes de `common-vue`, que se despliegan a los ~40 clientes reales para que
  * los use únicamente la demo.
  */
+
+/**
+ * La primera fila de la tabla de artículos, y la de pedidos de la tienda.
+ *
+ * `Tr.vue` le pone a cada fila `data-testid="<modelo>-row-<id>"` y `buscar_visible()` del motor se
+ * queda con la primera que se pueda señalar. Reemplaza al anclaje de la TABLA ENTERA, que dibujaba
+ * un recuadro del tamaño de la pantalla cuando el paso decía "abrí uno" — el defecto que Lucas
+ * reportó el 31/8/2026 sobre el clip 1.4 y que estaba repetido en varios tours.
+ */
+const PRIMERA_FILA_ARTICULO = '[data-testid^="article-row-"]'
+const PRIMERA_FILA_PEDIDO = '[data-testid^="order-row-"]'
+
 export default {
 	/**
 	 * 6.1 — Tu artículo del sistema, publicado en tu tienda.
@@ -24,7 +36,7 @@ export default {
 		ruta: { name: 'article' },
 		pasos: [
 			{
-				ancla: 'listado.tabla',
+				selector: PRIMERA_FILA_ARTICULO,
 				texto: 'Este es tu listado. Abrí cualquier artículo tuyo tocando la fila.',
 				avanza: 'aparece',
 			},
@@ -71,8 +83,8 @@ export default {
 		ruta: { name: 'online', params: { view: 'pedidos' } },
 		pasos: [
 			{
-				ancla: 'ecommerce.tabla_pedidos',
-				texto: 'Este es un pedido que entró de tu tienda. Abrilo.',
+				selector: PRIMERA_FILA_PEDIDO,
+				texto: 'Este es un pedido que entró de tu tienda. Abrilo con un clic en la fila.',
 				avanza: 'aparece',
 			},
 			{
