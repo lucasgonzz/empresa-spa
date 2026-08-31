@@ -581,10 +581,23 @@ await th.hover()
 await page.locator('[data-testid="btn-abrir-filtro-provider_id"]').click()
 ```
 
-⚠️ Ojo con el chequeo de "estable" de Playwright: el contenedor abre con una transicion de 0,2 s
-(`transition: max-width 0.2s`), y Playwright puede considerarlo estable antes de que termine de
-abrirse. Si aparece un rojo intermitente aca, la condicion observable es que el contenedor tenga
-ancho, no un timeout mas largo.
+⚠️ Y hay que esperar a que TERMINE de abrirse. El contenedor abre con una transicion de 0,2 s
+(`transition: max-width 0.2s`) y mientras corre el boton se mueve, asi que Playwright lo rechaza con
+**`element is not stable`** hasta agotar el timeout — un rojo que no menciona ni el hover ni la
+transicion. La condicion observable es el contenedor con `pointer-events: auto` y ancho > 0:
+
+```js
+await page.waitForFunction(() => {
+    const boton = document.querySelector('[data-testid="btn-abrir-filtro-provider_id"]')
+    const contenedor = boton && boton.closest('.cont-filter-buttons')
+    return contenedor
+        && getComputedStyle(contenedor).pointerEvents === 'auto'
+        && boton.getBoundingClientRect().width > 0
+}, null, { timeout: 5000 })
+```
+
+Y conviene reintentar el par hover+click entero: si el ancho de la columna cambia al abrirse, el
+puntero puede quedar afuera y el contenedor se vuelve a cerrar.
 
 Nota aparte: el boton tambien se muestra sin hover cuando el filtro YA esta en uso, por la clase
 `force-show` (`:class="{ 'force-show': filter_is_used(field.key) }"`). O sea que el segundo click

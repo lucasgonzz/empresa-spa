@@ -89,9 +89,35 @@ async function abrir_listado(page) {
 async function filtrar_por_proveedor(page, proveedor) {
 	const lupa = page.locator('[data-testid="btn-abrir-filtro-provider_id"]')
 	const encabezado = page.locator('th').filter({ has: lupa })
+	const modal = page.locator('#filter-modal-article___BV_modal_outer_')
 
-	await encabezado.hover()
-	await lupa.click()
+	// 🔴 Hover + click, pero con dos cuidados que costaron una corrida de la suite completa:
+	//
+	//    1. Entre el hover y el click hay una TRANSICION (`max-width: 0 -> 220px`, 0,2 s). Mientras
+	//       corre, el boton se mueve y Playwright lo rechaza con "element is not stable" hasta
+	//       agotar el timeout. Por eso se espera a que el contenedor este abierto de verdad
+	//       (`pointer-events: auto` y ancho > 0) antes de clickear.
+	//    2. El hover puede perderse si el ancho de la columna cambia y el puntero queda afuera, asi
+	//       que el par entero se reintenta hasta que el modal aparece.
+	await expect(async () => {
+		await encabezado.hover()
+
+		await page.waitForFunction(() => {
+			const boton = document.querySelector('[data-testid="btn-abrir-filtro-provider_id"]')
+			if (!boton) {
+				return false
+			}
+			const contenedor = boton.closest('.cont-filter-buttons')
+			if (!contenedor) {
+				return false
+			}
+			return getComputedStyle(contenedor).pointerEvents === 'auto'
+				&& boton.getBoundingClientRect().width > 0
+		}, null, { timeout: 5000 })
+
+		await lupa.click({ timeout: 5000 })
+		await expect(modal).toBeAttached({ timeout: 3000 })
+	}).toPass({ timeout: 60000 })
 
 	// 🔴 El filtro de "Proveedor" es un BUSCADOR, no un select, porque la columna es `type: 'search'`
 	//    en src/models/article.js (`display/table/filter/Search.vue`, no `Select.vue`). Por eso no
