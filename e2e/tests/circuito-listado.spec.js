@@ -177,6 +177,29 @@ async function abrir_modal_con(page, testid, model_name) {
 }
 
 /**
+ * Cambia de grupo dentro del modal de la actualizacion masiva.
+ *
+ * 🔴 No sirve `abrir_pestania()` de helpers/formulario.js: ese helper se acota a
+ * `#<model_name>___BV_modal_outer_`, y el modal de la masiva NO se llama como el modelo --se llama
+ * `article-update-models`--. Acotarlo importa: la nav del modulo que quedo detras usa el mismo
+ * componente y los mismos `nav-item-<nombre>`.
+ *
+ * 🔴 Y hay que cambiar de grupo: el modal abre en "Datos generales" y **solo renderiza los campos
+ * del grupo activo**, igual que ModelForm. El costo vive en "Precio" y la disponibilidad en la
+ * tienda en "Tienda online"; buscarlos sin cambiar de grupo se va en timeout apuntando a un campo
+ * que existe en el modelo y no en la pantalla.
+ *
+ * @param {import('@playwright/test').Page} page
+ * @param {string} nombre Titulo del grupo, tal cual lo declara src/models/article.js.
+ * @returns {Promise<void>}
+ */
+async function abrir_grupo_de_masiva(page, nombre) {
+	await page.locator('#article-update-models___BV_modal_outer_')
+		.locator(`[data-testid="nav-item-${nombre}"]`)
+		.click()
+}
+
+/**
  * Abre la actualizacion masiva del conjunto FILTRADO.
  *
  * @param {import('@playwright/test').Page} page
@@ -258,6 +281,8 @@ test.describe.serial('Listado: alta de articulo y actualizacion masiva', () => {
 		await filtrar_por_proveedor(page, PROVEEDOR)
 		await abrir_masiva_de_filtrados(page)
 
+		await abrir_grupo_de_masiva(page, 'Precio')
+
 		// El campo Costo se opera en modo "aumentar %": son tres modos excluyentes (bajar %,
 		// aumentar % y fijar valor) y solo se renderiza el input del modo activo.
 		await page.locator('[data-testid="masiva-modo-cost-increment"]').click()
@@ -322,6 +347,7 @@ async function masiva_de_ecommerce(page, accion) {
 	await abrir_listado(page)
 	await filtrar_por_proveedor(page, PROVEEDOR)
 	await abrir_masiva_de_filtrados(page)
+	await abrir_grupo_de_masiva(page, 'Tienda online')
 
 	// 🔴 Este campo solo existe si la cuenta tiene la extension `online`. Si no aparece, no es que
 	//    la masiva no lo soporte: es que la extension no esta habilitada y `if_has_extencion` lo

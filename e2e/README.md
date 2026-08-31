@@ -785,3 +785,18 @@ verdad. Costó una corrida entera perseguir eso creyendo que el problema estaba 
 **Regla:** la condición observable de "el listado está filtrado" NO es que aparezca el botón de
 limpiar. Es que la masiva por filtro quede habilitada, o directamente que la cantidad de filas haya
 cambiado.
+
+### El modal de la actualización masiva también tiene grupos, y abre en el primero
+
+`opciones-filtrados-seleccion/Update.vue` reparte los campos en los mismos grupos que el formulario
+del modelo (Datos generales · Precio · Stock · Categoría · Tienda online) y **sólo renderiza los del
+grupo activo**, igual que `ModelForm`. Abre siempre en el primero.
+
+O sea que buscar `masiva-campo-cost` o `masiva-campo-online` recién abierto el modal se va en
+timeout apuntando a un campo que existe en el modelo y no en la pantalla. Hay que cambiar de grupo
+primero.
+
+⚠️ Y no sirve `abrir_pestania()` de `helpers/formulario.js`: ese helper se acota a
+`#<model_name>___BV_modal_outer_`, y este modal **no se llama como el modelo** — se llama
+`article-update-models`. Acotarlo importa igual, porque la nav del módulo que quedó detrás usa el
+mismo componente y los mismos `nav-item-<nombre>`.
