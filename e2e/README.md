@@ -639,3 +639,54 @@ asi que no habia forma de verificar por interfaz que la masiva prenda y apague l
 el ecommerce. Lo tapa `TestingFerreteriaSeeder::seed_extencion_online()`, que habilita **solo** esa
 extension: cada extension cambia lo que la SPA dibuja, y prender de mas mueve pantallas que ningun
 test pidio.
+
+### 🔴 Un `search-component` sin `id` publica el NOMBRE DEL MODELO como testid
+
+`common-vue/components/search/Index.vue` arma su `_id` con el `id` que le pasen y, si no le pasan
+ninguno, **cae al `model_name`**. Así que un buscador declarado sin `id` publica
+`data-testid="article"` a secas: el campo más usado del formulario de artículo se llamaba igual que
+el modelo entero.
+
+Es confuso y además rompe cualquier selector de prefijo: `[data-testid^="article-"]` **no lo
+encuentra**, porque no tiene guion.
+
+Se arregló donde estaba (`listado/components/NameInput.vue` pasa `id="article-name"`), pero la
+regla vale para todos: **un `search-component` nuevo lleva siempre `id` explícito**, con la
+convención `<model_name>-<key>`. `model/form/FieldSearchInput.vue` --el camino genérico de
+ModelForm-- ya lo hace bien; los buscadores hardcodeados de un módulo son los que hay que mirar.
+
+### 🔴 El nombre de un artículo nuevo es un BUSCADOR, no un campo de texto
+
+`listado/components/NameInput.vue` dibuja dos cosas distintas según el estado del modelo:
+
+| Cuándo | Qué dibuja |
+|---|---|
+| Sin código de barras **y** sin código de proveedor | Un **buscador de artículos**, para que no des de alta uno que ya existe. La pantalla dice *"Preciona ENTER para usar este nombre"* |
+| Con alguno de los dos | Un `<textarea>` común |
+
+Los dos publican `article-name`, así que el selector es el mismo; lo que cambia es **cómo se
+completa**. En el caso del buscador hay que teclear de verdad y confirmar con **dos Enter**: el
+primero busca y despliega las coincidencias, el segundo confirma que ese nombre se use para un
+artículo nuevo. Es el mismo flujo que `crear_desde_buscador`, pero acá el buscador es **inline** y
+no abre modal, así que ese helper no se puede reusar tal cual.
+
+El nombre viaja como la *query* del buscador y el modelo lo toma recién al guardar
+(`set_model_on_click_or_prop_with_query_if_null`), así que un `fill()` sin los Enter deja el modelo
+sin nombre. Y el tecleo tiene que ser real (`pressSequentially`): el buscador sólo baja su guarda
+`ya_se_busco` con un `keydown`, y `fill()` no emite ninguno.
+
+Está documentado desde el lado del usuario en `manual_sistema/listado/identificacion.md`, sección
+"Campo Nombre — comportamiento dual".
+
+### 🔴 Después de cada guardado, refrescá el contexto con lo que devolvió el servidor
+
+Regla de escritura de specs, no de la aplicación, y cuesta una corrida cuando se olvida.
+
+`circuito-compra.spec.js` guardaba la compra (POST), guardaba el flete después (PUT) y seguía
+midiendo deltas contra el total del POST — que no tenía el flete adentro — mientras la cuenta
+corriente sí lo tenía contado. Dos pasos más abajo el test daba **25.390 esperado contra 15.390
+recibido**: exactamente los 10.000 del flete, contados dos veces.
+
+El síntoma manda a buscar el error en la cuenta corriente, que estaba perfecta. Cada vez que un test
+guarda, el objeto `contexto` se pisa con el modelo de la respuesta; recalcular el total a mano en el
+test es justamente lo que hace que dos pasos dejen de hablar del mismo número.

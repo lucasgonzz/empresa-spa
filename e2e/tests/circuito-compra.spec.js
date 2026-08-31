@@ -618,6 +618,22 @@ test.describe.serial('Compra: alta, cantidad recibida, flete, cuenta corriente y
 		])
 		expect(respuesta.ok(), 'el PUT de la compra con el flete no salio bien').toBeTruthy()
 
+		/*
+		 * 🔴 Se pisa `contexto.compra` con el modelo que devolvio el PUT, y esto no es cosmetico.
+		 * Hasta que se hizo, el contexto seguia teniendo el modelo del POST --sin el flete-- mientras
+		 * la cuenta corriente ya lo tenia contado. Los dos tests de mas abajo miden DELTAS contra este
+		 * total, asi que el flete terminaba contado dos veces y el ultimo daba 25.390 esperado contra
+		 * 15.390 recibido: exactamente los 10.000 del flete de diferencia.
+		 *
+		 * La regla que queda: cada vez que un test guarda la compra, el contexto se actualiza con lo
+		 * que devolvio el servidor. Recalcular el total a mano en el test es justamente lo que hace
+		 * que dos pasos dejen de hablar del mismo numero.
+		 */
+		const cuerpo = await respuesta.json()
+		if (cuerpo && cuerpo.model) {
+			contexto.compra = cuerpo.model
+		}
+
 		// El costo real de cada articulo tiene que ser el costo bonificado MAS el recargo unitario
 		// que le toco del flete.
 		await page.goto('/listado-de-articulos')
@@ -668,12 +684,18 @@ test.describe.serial('Compra: alta, cantidad recibida, flete, cuenta corriente y
 		const id_movimiento = (await fila_compra.getAttribute('data-testid')).replace('current_acount-row-', '')
 		contexto.proveedor.movimiento_compra = id_movimiento
 
-		// El debe del movimiento es el total de la compra CON el flete: el costo extra suma siempre
-		// al total, prorratee o no.
-		const total_con_flete = redondear(Number(contexto.compra.total) + FLETE)
+		// El debe del movimiento es el total de la compra tal cual lo devolvio el servidor, que YA
+		// incluye el costo extra: un costo extra suma siempre al total, prorratee o no. No se le suma
+		// el flete a mano aca --el contexto se actualizo con el PUT del test anterior-- justamente
+		// para que este numero y el de la compra sean el mismo y no dos cuentas paralelas.
+		const total_con_flete = redondear(Number(contexto.compra.total))
+		expect(
+			total_con_flete,
+			'el total de la compra tenia que crecer con el costo extra'
+		).toBeGreaterThan(FLETE)
 		expect(
 			await celda_numerica(page, 'current_acount', 'debe', id_movimiento),
-			'el debe de la compra tiene que incluir el costo extra'
+			'el debe de la compra tiene que ser el total de la compra, costo extra incluido'
 		).toBe(total_con_flete)
 
 		contexto.proveedor.total_adeudado = total_con_flete

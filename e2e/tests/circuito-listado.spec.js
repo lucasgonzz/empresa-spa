@@ -183,17 +183,42 @@ test.describe.serial('Listado: alta de articulo y actualizacion masiva', () => {
 
 		await abrir_modal_con(page, 'btn-crear-article', 'article')
 
-		// 🔴 Nombre y proveedor viven en "Datos generales" y el costo en "Precio": son pestañas
-		//    distintas, y ModelForm solo renderiza los campos del grupo activo --los demas NO estan
-		//    en el DOM--. Sin abrir la pestaña, el fill del costo se va en timeout apuntando a un
-		//    campo que existe en el modelo y no en la pantalla.
-		await completar_campo(page, 'article-name', contexto.articulo)
+		// 🔴 El nombre de un articulo NUEVO no es un campo de texto: es un BUSCADOR. Mientras no haya
+		//    codigo de barras ni codigo de proveedor, `listado/components/NameInput.vue` dibuja un
+		//    search-component sobre articulos --para que no des de alta uno que ya existe-- y la propia
+		//    pantalla lo dice: "Preciona ENTER para usar este nombre". Por eso se teclea de verdad y se
+		//    confirma con Enter, en vez de un fill: el nombre viaja como la QUERY del buscador y el
+		//    modelo lo toma al guardar (`set_model_on_click_or_prop_with_query_if_null`).
+		//    Y son DOS Enter, no uno, tal cual lo documenta manual_sistema/listado/identificacion.md:
+		//    el primero busca y despliega las coincidencias, el segundo confirma que el nombre se use
+		//    para un articulo nuevo. Es el mismo flujo del alta al vuelo desde el buscador de una
+		//    compra (`crear_desde_buscador`), pero ACA el buscador es INLINE y no abre modal, asi que
+		//    no se puede reusar aquel helper.
+		const nombre = page.locator('[data-testid="article-name"]')
+		await nombre.click()
+		await nombre.fill('')
+		// Tecleo real: el buscador solo baja su guarda `ya_se_busco` con un keydown, y un fill() no
+		// emite ninguno. Con fill, el primer Enter caeria en "seleccionar resultado" en vez de buscar.
+		await nombre.pressSequentially(contexto.articulo)
+
+		await nombre.press('Enter')
+		// La señal de que la busqueda CORRIO y no encontro nada. Distingue "termino sin resultados" de
+		// "todavia no busque": sin esto, el segundo Enter podria estar confirmando por el motivo
+		// equivocado y el test pasaria igual.
+		await expect(
+			page.locator('[data-testid="search-no-results"]'),
+			'el buscador del nombre tenia que decir que no existe un articulo asi'
+		).toBeVisible()
+
+		await nombre.press('Enter')
 
 		// El mismo proveedor de la masiva: asi el articulo recien creado tambien tiene que recibir
 		// el aumento, que es la unica forma de probar que la masiva alcanza a TODO el conjunto
 		// filtrado y no solo a lo que ya estaba.
 		await search_and_select(page, 'article-provider_id', PROVEEDOR)
 
+		// 🔴 El costo vive en la pestaña "Precio" y el nombre y el proveedor en "Datos generales":
+		//    ModelForm solo renderiza los campos del grupo activo, los demas NO estan en el DOM.
 		await abrir_pestania(page, 'article', 'Precio')
 		await completar_campo(page, 'article-cost', COSTO_INICIAL)
 
@@ -311,7 +336,11 @@ async function masiva_de_ecommerce(page, accion) {
 	])
 	expect(respuesta.ok(), `el PUT de la masiva de ecommerce (${accion}) no salio bien`).toBeTruthy()
 
+	// Se vuelve a filtrar antes de buscar la fila: sin filtro, el listado trae TODOS los articulos
+	// y el que creo este circuito --que tiene el id mas alto-- puede quedar fuera de la primera
+	// pagina. Filtrado por su proveedor, el conjunto es chico y estable.
 	await abrir_listado(page)
+	await filtrar_por_proveedor(page, PROVEEDOR)
 	await abrir_modal_con(page, `celda-article-name-${contexto.id_creado}`, 'article')
 	await abrir_pestania(page, 'article', 'Tienda online')
 
