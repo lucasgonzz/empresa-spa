@@ -83,7 +83,7 @@ async function abrir_listado(page) {
  * en el medio, el contenedor se vuelve a cerrar.
  *
  * @param {import('@playwright/test').Page} page
- * @param {string} proveedor Nombre del proveedor, tal cual lo muestra el select.
+ * @param {string} proveedor Nombre del proveedor, tal cual lo muestra el buscador.
  * @returns {Promise<void>}
  */
 async function filtrar_por_proveedor(page, proveedor) {
@@ -93,12 +93,16 @@ async function filtrar_por_proveedor(page, proveedor) {
 	await encabezado.hover()
 	await lupa.click()
 
-	await page.locator('[data-testid="filtro-select-provider_id"]').selectOption({ label: proveedor })
-	await page.locator('[data-testid="btn-aplicar-filtro-provider_id"]').click()
+	// 🔴 El filtro de "Proveedor" es un BUSCADOR, no un select, porque la columna es `type: 'search'`
+	//    en src/models/article.js (`display/table/filter/Search.vue`, no `Select.vue`). Por eso no
+	//    hay boton "Filtrar" que apretar: elegir el proveedor en el buscador YA aplica el filtro.
+	await search_and_select(page, 'filtro-search-provider_id', proveedor)
 
-	// La señal de que el filtro corrio: el boton de limpiar ese filtro solo se dibuja cuando el
-	// filtro esta EN USO (`filtro_usado` en BtnFilter.vue). Es la condicion observable correcta,
+	// La señal de que el filtro corrio: el boton de LIMPIAR ese filtro solo se dibuja cuando el
+	// filtro esta en uso (`filtro_usado` en BtnFilter.vue). Es la condicion observable correcta, y
 	// mucho mas estable que contar filas.
+	//
+	// Ademas se ve sin hover: con el filtro puesto, el contenedor lleva la clase `force-show`.
 	await expect(
 		page.locator('[data-testid="btn-limpiar-filtro-provider_id"]'),
 		'el filtro por proveedor no llego a aplicarse'
