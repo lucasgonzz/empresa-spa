@@ -277,6 +277,11 @@ test.describe.serial('Listado: alta de articulo y actualizacion masiva', () => {
 	})
 
 	test(`la actualizacion masiva sube ${AUMENTO}% los costos de todos los articulos del proveedor`, async ({ page }) => {
+		// Presupuesto propio, mas alto que el del resto: este paso no es lento por la interfaz sino
+		// porque ESPERA UN JOB en segundo plano, y cada reintento vuelve a entrar al listado y a
+		// filtrar. Subir el timeout aca esta justificado por una causa entendida; no es tapar lentitud.
+		test.setTimeout(420000)
+
 		await abrir_listado(page)
 		await filtrar_por_proveedor(page, PROVEEDOR)
 		await abrir_masiva_de_filtrados(page)
@@ -294,20 +299,35 @@ test.describe.serial('Listado: alta de articulo y actualizacion masiva', () => {
 		])
 		expect(respuesta.ok(), 'el PUT de la actualizacion masiva no salio bien').toBeTruthy()
 
-		// Se vuelve a entrar en vez de confiar en que la grilla se refresque sola: lo que interesa
-		// es lo que quedo GUARDADO, no lo que la pantalla alcanzo a redibujar.
-		await abrir_listado(page)
-		await filtrar_por_proveedor(page, PROVEEDOR)
+		// 🔴 La masiva es ASINCRONICA: el PUT no aplica nada, ENCOLA un `ProcessMasiveUpdateJob` y
+		//    responde 200 al toque (el log de la API lo dice con todas las letras: "actualizacion
+		//    masiva encolada"). Sin un worker corriendo, el job queda en `pending` para siempre y los
+		//    costos no se mueven -- con la peticion en 200 y sin un solo error en pantalla.
+		//
+		//    El entorno e2e necesita `php artisan queue:work` corriendo al lado de la API. Ver
+		//    e2e/README.md.
+		//
+		//    Por eso la verificacion se REINTENTA: se vuelve a entrar al listado hasta que el job haya
+		//    terminado. No se confia en que la grilla se refresque sola, que ademas no lo hace: lo que
+		//    interesa es lo que quedo GUARDADO.
+		await expect(async () => {
+			await abrir_listado(page)
+			await filtrar_por_proveedor(page, PROVEEDOR)
 
-		const ahora = await leer_columna(page, 'cost')
+			const ahora = await leer_columna(page, 'cost')
 
-		for (const id of Object.keys(contexto.costos_previos)) {
-			const esperado = redondear(contexto.costos_previos[id] * (1 + AUMENTO / 100))
-			expect(
-				redondear(ahora[id]),
-				`el costo del articulo ${id} tenia que subir ${AUMENTO}%`
-			).toBe(esperado)
-		}
+			for (const id of Object.keys(contexto.costos_previos)) {
+				const esperado = redondear(contexto.costos_previos[id] * (1 + AUMENTO / 100))
+				expect(
+					redondear(ahora[id]),
+					`el costo del articulo ${id} tenia que subir ${AUMENTO}% (¿esta corriendo el worker de la cola?)`
+				).toBe(esperado)
+			}
+
+			contexto.costos_ahora = ahora
+		}).toPass({ timeout: 180000 })
+
+		const ahora = contexto.costos_ahora
 
 		// Y que efectivamente haya cambiado algo: si todos los costos fueran 0, la asercion de
 		// arriba pasaria sin probar nada.
@@ -327,10 +347,16 @@ test.describe.serial('Listado: alta de articulo y actualizacion masiva', () => {
 	 * dejarlo apagado le cambiaria el punto de partida a cualquier otro circuito que corra despues.
 	 */
 	test('la actualizacion masiva saca los articulos del ecommerce', async ({ page }) => {
+		// Espera un job en segundo plano, igual que la masiva de costos.
+		test.setTimeout(420000)
+
 		await masiva_de_ecommerce(page, 'desactivar')
 	})
 
 	test('y la actualizacion masiva los vuelve a poner en el ecommerce', async ({ page }) => {
+		// Espera un job en segundo plano, igual que la masiva de costos.
+		test.setTimeout(420000)
+
 		await masiva_de_ecommerce(page, 'activar')
 	})
 })
@@ -369,16 +395,27 @@ async function masiva_de_ecommerce(page, accion) {
 	// Se vuelve a filtrar antes de buscar la fila: sin filtro, el listado trae TODOS los articulos
 	// y el que creo este circuito --que tiene el id mas alto-- puede quedar fuera de la primera
 	// pagina. Filtrado por su proveedor, el conjunto es chico y estable.
-	await abrir_listado(page)
-	await filtrar_por_proveedor(page, PROVEEDOR)
-	await abrir_modal_con(page, `celda-article-name-${contexto.id_creado}`, 'article')
-	await abrir_pestania(page, 'article', 'Tienda online')
+	// 🔴 Igual que la masiva de costos: el PUT solo ENCOLA el trabajo. Se reintenta la lectura hasta
+	//    que el job haya corrido. Sin worker de cola levantado, esto no termina nunca -- y el mensaje
+	//    de la asercion lo dice, para no mandar a nadie a buscar el problema en la interfaz.
+	await expect(async () => {
+		await abrir_listado(page)
+		await filtrar_por_proveedor(page, PROVEEDOR)
+		await abrir_modal_con(page, `celda-article-name-${contexto.id_creado}`, 'article')
+		await abrir_pestania(page, 'article', 'Tienda online')
 
-	const disponible = page.locator('[data-testid="article-online"]')
+		const disponible = page.locator('[data-testid="article-online"]')
 
-	if (accion === 'desactivar') {
-		await expect(disponible, 'la masiva tenia que dejar el articulo FUERA de la tienda').not.toBeChecked()
-	} else {
-		await expect(disponible, 'la masiva tenia que devolver el articulo a la tienda').toBeChecked()
-	}
+		if (accion === 'desactivar') {
+			await expect(
+				disponible,
+				'la masiva tenia que dejar el articulo FUERA de la tienda (¿esta corriendo el worker de la cola?)'
+			).not.toBeChecked({ timeout: 5000 })
+		} else {
+			await expect(
+				disponible,
+				'la masiva tenia que devolver el articulo a la tienda (¿esta corriendo el worker de la cola?)'
+			).toBeChecked({ timeout: 5000 })
+		}
+	}).toPass({ timeout: 180000 })
 }

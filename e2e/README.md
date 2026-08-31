@@ -800,3 +800,28 @@ primero.
 `#<model_name>___BV_modal_outer_`, y este modal **no se llama como el modelo** — se llama
 `article-update-models`. Acotarlo importa igual, porque la nav del módulo que quedó detrás usa el
 mismo componente y los mismos `nav-item-<nombre>`.
+
+### 🔴 El entorno e2e necesita un WORKER DE COLA, y sin él nada avisa
+
+Varias acciones del sistema **no se ejecutan en el request**: lo encolan y responden 200 al toque.
+La más visible es la **actualización masiva del listado**, que dispara un `ProcessMasiveUpdateJob`
+(el log de la API lo dice con todas las letras: *"actualizacion masiva encolada"*).
+
+Sin un worker corriendo, el job queda en `pending` **para siempre**: la petición vuelve 200, la
+pantalla no muestra ni un error, y los costos simplemente no cambian. Un spec que verifique el
+resultado falla acusando a la masiva de no aplicar nada, y lo primero que uno revisa es el
+formulario — que está perfecto. Lo que lo delata es mirar la fila de `masive_updates` en la base y
+verla en `pending`, o la tabla `jobs` con el trabajo esperando.
+
+Además de los dos servidores, entonces:
+
+```
+cd <slot>\empresa-api; $env:APP_ENV='testing'; php artisan queue:work --tries=1
+```
+
+`e2e/setup-slot.ps1` lo imprime junto con los otros dos desde el 31/8/2026.
+
+**Y los specs que disparan una acción encolada tienen que ESPERARLA**, no verificar de una: la
+verificación va adentro de un `expect(...).toPass()` que vuelve a leer hasta que el job terminó.
+Esos tests llevan su propio `test.setTimeout()` más alto, y eso está justificado por una causa
+entendida — no es tapar lentitud de la interfaz.
