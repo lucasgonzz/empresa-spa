@@ -14,6 +14,7 @@ class="control-fecha">
 	-->
 	<div
 	class="control-fecha__pastilla"
+	:data-tour="model_name === 'sale' ? 'ventas.control_fecha' : model_name === 'provider_order' ? 'compras.control_fecha' : null"
 	:class="{ 'control-fecha__pastilla--sin-modo': !change_from_dates_option }">
 
 		<!-- Fila 1 en telefono; en desktop es parte de la unica fila. Lleva el segmento de modo y

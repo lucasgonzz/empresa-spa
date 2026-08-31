@@ -1,6 +1,7 @@
 <template>
 	<b-modal
 	id="whatsapp-simulate-inbound"
+	data-tour="whatsapp.modal_simular"
 	title="Simular mensaje del cliente"
 	hide-footer
 	size="lg"
@@ -43,6 +44,7 @@
 		label="Teléfono">
 			<b-form-input
 			v-model="phone"
+			data-tour="whatsapp.campo_telefono_simulado"
 			placeholder="Ej: 5493511234567"></b-form-input>
 			<small class="text-muted whatsapp-simulate__hint">
 				Si ya hay un chat con ese número, el mensaje entra en ese chat. Si no, se crea uno.
@@ -55,6 +57,7 @@
 			v-model="body"
 			rows="3"
 			max-rows="8"
+			data-tour="whatsapp.campo_mensaje_simulado"
 			placeholder="Hola! Tenés stock de..."></b-form-textarea>
 			<small class="text-muted whatsapp-simulate__hint">
 				Hasta 2000 caracteres. Se pueden simular 10 mensajes por minuto: cada uno gasta
@@ -68,6 +71,7 @@
 			icon_class="bi bi-play-fill"
 			:loader="loading"
 			:block="false"
+			data-tour="whatsapp.boton_enviar_simulacion"
 			:disabled="!puede_simular"
 			@clicked="simulate"></btn-loader>
 		</div>

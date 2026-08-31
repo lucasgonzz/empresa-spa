@@ -1,7 +1,15 @@
 <template>
+	<!--
+		Dos anclas distintas y a proposito: el contenedor es el precio que el clip 1.4 senala ("el
+		precio final sale en pesos"), y el boton del "?" es lo que el lead toca en los clips 1.2,
+		1.2-mt y 1.4. El `<p>` del medio NO se ancla: se re-renderiza con cada recalculo y el tour
+		mediria una caja que ya no existe.
+	-->
 	<div
+	data-tour="listado.campo_precio_final"
 	class="cont-final-price">
 		<b-button
+		data-tour="listado.boton_explicacion_precio"
 		class="btn-explicacion m-r-10"
 		@click="info"
 		variant="outline-secondary"

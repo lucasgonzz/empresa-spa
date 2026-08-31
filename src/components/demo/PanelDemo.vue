@@ -160,7 +160,7 @@
 										@reproducir="al_reproducir"
 										@pausar="al_pausar"
 										@terminado="al_terminar(clip)"
-										@probar="probar"></tarjeta-clip>
+										@probar="probar(clip)"></tarjeta-clip>
 									</li>
 								</ul>
 
@@ -192,7 +192,7 @@
 											@reproducir="al_reproducir"
 											@pausar="al_pausar"
 											@terminado="al_terminar(clip)"
-											@probar="probar"></tarjeta-clip>
+											@probar="probar(clip)"></tarjeta-clip>
 										</li>
 									</ul>
 								</div>
@@ -239,6 +239,7 @@
 </template>
 <script>
 import TarjetaClip from '@/components/demo/TarjetaClip'
+import motor from '@/tours/motor'
 
 /**
  * Espeja el `maxlength="1500"` del template, que NO es cosmetico: el emisor descarta `datos`
@@ -371,6 +372,11 @@ export default {
 		if (this.temporizador_nota) {
 			clearTimeout(this.temporizador_nota)
 		}
+
+		// El motor deja escuchando clics en `document` mientras el tour corre. Si el panel se
+		// destruye con un tour activo, esos listeners sobreviven al componente y siguen tratando
+		// de avanzar un recorrido que ya no existe.
+		motor.cortar_tour()
 	},
 	methods: {
 		/**
@@ -612,21 +618,53 @@ export default {
 			})
 		},
 		/**
-		 * "Probar": colapsa el panel y le deja el sistema libre al lead. No arranca ningún
-		 * recorrido guiado — el motor de tour es otra misión.
+		 * "Probar": colapsa el panel, le deja el sistema libre al lead y arranca el tour guiado
+		 * del clip.
 		 *
+		 * El panel se colapsa ANTES de arrancar el tour y no después: ocupa 500px del borde
+		 * derecho, y varios pasos señalan cosas que quedan justo abajo. El tirador queda latiendo
+		 * para que el lead sepa cómo volver.
+		 *
+		 * 🔴 Si el clip no tiene tour escrito, el panel se colapsa igual y el lead prueba por su
+		 * cuenta — que es exactamente lo que hacía este método antes de que existiera el motor.
+		 * Esa es la degradación buscada: un clip sin guion de tour no puede dejar al lead sin
+		 * poder salir del panel.
+		 *
+		 * @param {Object} clip
 		 * @returns {void}
 		 */
-		probar() {
+		probar(clip) {
 			this.pausar_video()
 			this.colapsado = true
 			this.llamando_la_atencion = true
+
+			if (!clip) {
+				return
+			}
+
+			motor.iniciar_tour(clip, {
+				router: this.$router,
+				store: this.$store,
+				root: this.$root,
+			})
 		},
+		/**
+		 * Abre o cierra el panel desde el tirador.
+		 *
+		 * 🔴 Reabrir el panel corta el tour que estuviera corriendo. Es deliberado: el panel tapa
+		 * 500px del borde derecho y el overlay de driver.js deja el resto de la pantalla inerte
+		 * (`.driver-active * { pointer-events: none }`), así que las dos cosas juntas dejan al
+		 * lead sin poder tocar ni el sistema ni el panel. Volver al panel es la forma natural de
+		 * decir "ya está, quiero otra cosa".
+		 *
+		 * @returns {void}
+		 */
 		alternar_colapso() {
 			this.colapsado = !this.colapsado
 
 			if (!this.colapsado) {
 				this.llamando_la_atencion = false
+				motor.cortar_tour()
 				return
 			}
 

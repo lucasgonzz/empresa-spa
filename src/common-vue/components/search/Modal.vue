@@ -4,6 +4,7 @@
 size="xl"
 hide-footer
 :id="modal_id"
+:data-tour="ancla_tour"
 @show="onModalShow"
 @hidden="onModalHidden">
 	<div
@@ -360,6 +361,31 @@ export default {
 		},
 		modal_id() {
 			return this._id+'-search-modal'
+		},
+		/**
+		 * Ancla `data-tour` del modal, para el tour guiado de la demo.
+		 *
+		 * 🔴 Condicionada a proposito, y con DOS gates. Este componente es el modal de busqueda de
+		 * TODO el sistema —clientes, proveedores, articulos en compras, en recetas, en reportes—,
+		 * asi que un valor fijo aca pondria el mismo `data-tour` en una docena de buscadores
+		 * distintos y el tour terminaria senalando el primero que encuentre en el DOM.
+		 *
+		 * - `_id === 'search-article'` deja afuera a todos los buscadores que no son de articulos.
+		 * - `contexto === 'vender'` deja afuera a los que SI son de articulos pero viven en otro
+		 *   modulo: `buscador-articulos/Index.vue` manda 'provider_order' fuera de Vender, y el
+		 *   buscador de rendimiento de Reportes no manda contexto ninguno.
+		 *
+		 * Devuelve null y no '' porque Vue omite el atributo con null, y un `data-tour=""` el
+		 * validador lo cuenta como anclaje presente.
+		 *
+		 * @returns {String|null}
+		 */
+		ancla_tour() {
+			if (this._id === 'search-article' && this.contexto === 'vender') {
+				return 'vender.modal_buscador_articulos'
+			}
+
+			return null
 		},
 		/**
 		 * Tipo de preferencia con el que se guardan y leen las columnas de los resultados.

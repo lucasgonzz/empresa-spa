@@ -13,6 +13,7 @@
 		class="m-l-15"
 		size="sm"
 		variant="success"
+		data-tour="compras.boton_escanear"
 		title="Escanear factura o remito del proveedor"
 		@click.stop="abrir_escaneo">
 			<i class="icon-camera"></i>
@@ -31,6 +32,7 @@
 			servidor es quien lo tiene que decir.
 		-->
 		<b-button
+		data-tour="compras.boton_revisar_escaneo"
 		v-if="escaneo_pendiente"
 		class="m-l-15"
 		size="sm"

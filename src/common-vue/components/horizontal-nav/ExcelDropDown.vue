@@ -73,6 +73,7 @@
 		split
 
 		:id="'dropdown_'+model_name"
+		:data-tour="model_name === 'article' ? 'listado.boton_crear_articulo' : null"
 
 		size="sm"
 
@@ -132,10 +133,12 @@
 			<excel-dropdown-submenu
 			v-if="show_import_submenu"
 			icon="bi bi-box-arrow-in-down"
+			:data_tour="model_name === 'article' ? 'listado.submenu_importacion' : null"
 			label="Importación">
 				<excel-dropdown-option-item
 				v-if="can_import_ai"
 				icon="bi bi-stars"
+				:data_tour="model_name === 'article' ? 'listado.boton_importar_excel' : null"
 				@click="open_ai_import">
 					Importar con IA
 				</excel-dropdown-option-item>
@@ -153,7 +156,7 @@
 				<excel-dropdown-option-item
 				v-if="can_import || can_import_ai"
 				icon="bi bi-clock-history"
-				:data_tour="model_name === 'article' ? 'listado.boton_importar_excel' : null"
+				:data_tour="model_name === 'article' ? 'listado.opcion_historial_importaciones' : null"
 				@click="open_import_history">
 					Historial de importaciones
 				</excel-dropdown-option-item>

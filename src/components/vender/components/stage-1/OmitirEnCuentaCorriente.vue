@@ -1,6 +1,9 @@
 <template>
+	<!-- El `v-if` sobre `client` es el que manda: sin cliente elegido este toggle no existe, asi
+	que el paso del tour que lo senala va SIEMPRE despues del paso del cliente. -->
 	<div
 	v-if="client && !guardar_como_presupuesto"
+	data-tour="vender.toggle_omitir_cuenta_corriente"
 	class="vender-toggle-row">
 
 		<!-- Toggle estilo iPhone enlazado al computed con setter -->

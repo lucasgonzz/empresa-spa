@@ -44,6 +44,7 @@
 			-->
 			<b-form-group
 			v-if="hay_varias_hojas && !file_processing"
+			data-tour="listado.selector_hoja_excel"
 			class="ai-import-hojas m-t-10 m-b-10"
 			label="El archivo tiene varias hojas. ¿Cuál querés importar?">
 				<b-form-select
@@ -65,8 +66,17 @@
 				</small>
 			</b-form-group>
 
-			<!-- Resumen del rango detectado y detección de cabecera al elegir el archivo -->
-			<div v-if="finish_row && !file_processing" class="ai-import-file-info m-t-10 m-b-10">
+			<!--
+				Resumen del rango detectado y detección de cabecera al elegir el archivo.
+
+				Los dos bloques de arriba (hoja y encabezado) son CONDICIONALES de datos: con un
+				archivo de una sola hoja el primero no existe. El motor del tour saltea solo los
+				pasos cuyo elemento no aparece, así que el clip 1.8 no necesita ramas.
+			-->
+			<div
+			v-if="finish_row && !file_processing"
+			data-tour="listado.deteccion_encabezado"
+			class="ai-import-file-info m-t-10 m-b-10">
 
 				<!-- Resumen de filas -->
 				<p class="text-muted small m-b-5">
@@ -165,6 +175,7 @@
 			<b-button
 			variant="primary"
 			block
+			data-tour="listado.boton_analizar_con_ia"
 			:disabled="!file || loading || file_processing || falta_elegir_hoja"
 			@click="analyze">
 				<b-spinner
@@ -224,7 +235,14 @@
 		<!-- ========================================================== -->
 		<!-- PASO 2: Confirmar proveedor y mapeo de columnas             -->
 		<!-- ========================================================== -->
-		<div v-if="step === 2">
+		<!--
+			El ancla del clip 1.8 va en el contenedor del paso entero y no en la tabla de mapeo:
+			el detalle de adentro se re-arma cada vez que la IA vuelve con otra respuesta, y el
+			tour mediría una caja que ya no está.
+		-->
+		<div
+		v-if="step === 2"
+		data-tour="listado.tabla_mapeo_columnas">
 
 			<!--
 				De qué hoja y con qué fila de encabezado salió el mapeo que el usuario está
@@ -525,6 +543,7 @@
 				</b-button>
 				<b-button
 				variant="primary"
+				data-tour="listado.boton_confirmar_mapeo"
 				:disabled="loading_recomendacion"
 				@click="confirmar_paso_2">
 					<b-spinner
@@ -579,7 +598,15 @@
 		<!-- ========================================================== -->
 		<!-- PASO 3: Recomendación de configuración basada en preanálisis -->
 		<!-- ========================================================== -->
-		<div v-if="step === 3">
+		<!--
+			Contenedor del paso 3 completo: es lo que el clip 1.8 llama "cómo lee los precios y qué
+			códigos están repetidos". Va acá y no en cada tablita porque las de duplicados son
+			condicionales (solo salen si el archivo trae repetidos) y el resaltado quedaría vacío
+			en un archivo limpio.
+		-->
+		<div
+		v-if="step === 3"
+		data-tour="listado.tabla_interpretacion_numeros">
 
 			<!-- ====================================================================== -->
 			<!-- Bloque explicativo: cadena de identificación efectiva (prompt 06, grupo 229) -->
@@ -1024,8 +1051,14 @@
 		por código de proveedor (grupo 284, prompt 04: antes dependía de "clave_identidad", que ya
 		no existe como pregunta; la jerarquía es fija y este es el único escalón donde la decisión
 		tiene efecto real). -->
+		<!--
+			🔴 Este bloque es un PASO del clip 1.8 y no un detalle: el botón "Continuar" de abajo
+			está `:disabled` hasta que se elige una de estas opciones, así que un tour que salte de
+			la tabla de duplicados al botón deja al lead frente a un botón muerto y sin explicación.
+		-->
 		<b-form-group
 		v-if="filas_identificadas_por_provider_code > 0"
+		data-tour="listado.politica_codigos_repetidos"
 		label="Si el código de proveedor coincide con artículos que ya existen en el sistema, ¿qué hacer?"
 		label-class="ai-import-decision-title">
 			<b-form-radio v-model="politica_colision" value="actualizar_todos" class="m-b-5">
@@ -1084,6 +1117,7 @@
 				</b-button>
 				<b-button
 				variant="primary"
+				data-tour="listado.boton_continuar_importacion"
 				:disabled="(filas_identificadas_por_provider_code > 0 && !politica_colision)
 					|| (duplicate_stats && duplicate_stats.provider_codes_existentes_otros_proveedores > 0 && !politica_otro_proveedor)"
 				@click="step = 4">
@@ -1232,6 +1266,7 @@
 				</b-button>
 				<b-button
 				variant="success"
+				data-tour="listado.boton_confirmar_importacion"
 				:disabled="loading || create_and_edit === null || !can_start_import"
 				@click="importar">
 					<b-spinner

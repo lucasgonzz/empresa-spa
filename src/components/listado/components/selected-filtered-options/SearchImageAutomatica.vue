@@ -6,8 +6,13 @@
 		title="Imágenes inteligentes"
 		icon="icon-camera"></dropdown-section-title>
 
+		<!--
+			Literal, sin condicional por modelo: este componente vive solo en el dropdown de
+			opciones del LISTADO, o sea que ya es exclusivo de articulos.
+		-->
 		<dropdown-option-item
 		icon="bi bi-images"
+		data_tour="listado.opcion_imagenes_automaticas"
 		@click="start_batch_flow()">
 			Asignar imágenes automáticamente
 		</dropdown-option-item>

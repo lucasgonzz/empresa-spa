@@ -24,16 +24,27 @@
 			@filtrar="filtrar"></filter-component>
 		</div>
 
+		<!--
+			Los dos anclajes van condicionados por `model_name`: este modal es el filtro por columna
+			de TODAS las tablas del sistema (ventas, compras, clientes, proveedores...), y sin la
+			condicion el valor `listado.*` aparecería en todos los modulos y el contrato dejaría de
+			ser unico.
+
+			El clip 1.6 muestra justo la diferencia entre los dos botones: "Agregar filtro" guarda
+			el criterio y NO busca, "Filtrar" sale a buscar con todo lo acumulado.
+		-->
 		<template #modal-footer>
 			<button
 			type="button"
 			class="filter-modal-btn filter-modal-btn--secondary"
+			:data-tour="model_name === 'article' ? 'listado.boton_agregar_filtro' : null"
 			@click="agregar_filtro">
 				Agregar filtro
 			</button>
 			<button
 			type="button"
 			class="filter-modal-btn filter-modal-btn--primary"
+			:data-tour="model_name === 'article' ? 'listado.boton_filtrar' : null"
 			@click="filtrar">
 				Filtrar
 			</button>

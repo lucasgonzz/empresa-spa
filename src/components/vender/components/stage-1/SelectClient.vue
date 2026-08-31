@@ -34,8 +34,11 @@
 				Cliente seleccionado: {{ client.name }}
 			</p>
 		</div>
+		<!-- `v-if` triple: extension + cliente elegido + cliente CON mail. En la demo esto pide un
+		cliente de prueba con email cargado; si no lo tiene, el tour saltea el paso. -->
 		<div
 		v-if="hasExtencion('enviar_mail_a_clientes') && client && client.email"
+		data-tour="vender.checkbox_enviar_mail"
 		class="send-mail-check j-end m-b-15">
 			<b-form-checkbox
 			:value="1"

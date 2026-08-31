@@ -9,7 +9,20 @@
 	scrollable
 	body-class="batch-summary-modal-body"
 	@ok="on_confirm">
-		<batch-images-summary-content :batch_result="batch_result"></batch-images-summary-content>
+		<!--
+			🔴 El `data-tour` va en el CONTENIDO y no en el `b-modal`, y esto se midio contra
+			bootstrap-vue: `BModal` tiene `inheritAttrs: false` y baja los atributos sueltos al div
+			EXTERIOR del portal, que es `position: absolute` y mide 0x0 (adentro solo tiene cosas
+			`fixed`). El motor del tour descarta cualquier elemento de menos de 2px de lado, asi que
+			un `data-tour` en el `b-modal` no lo ve nunca.
+
+			Puesto aca cae en el `<div class="batch-summary-content">` de
+			`BatchImagesSummaryContent`, que es una caja real. Y no duplica: el mismo componente lo
+			reusa `SmartImagesHistoryModal.vue`, pero el atributo esta en ESTE uso.
+		-->
+		<batch-images-summary-content
+		data-tour="listado.modal_resumen_imagenes"
+		:batch_result="batch_result"></batch-images-summary-content>
 	</b-modal>
 </template>
 <script>

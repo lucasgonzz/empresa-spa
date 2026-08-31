@@ -31,6 +31,7 @@
 				switch
 				:checked="chat.ai_enabled"
 				@change="toggleAi"
+				data-tour="whatsapp.toggle_ia"
 				class="whatsapp-header__ai-toggle">
 					IA
 				</b-form-checkbox>
@@ -94,6 +95,7 @@
 			variant="outline-secondary"
 			class="whatsapp-header__btn"
 			:disabled="suggesting"
+			data-tour="whatsapp.boton_sugerir_respuesta"
 			title="La IA lee la conversación y escribe un borrador en el input. Nunca se envía solo."
 			@click="suggest">
 				<i class="bi bi-magic"></i>

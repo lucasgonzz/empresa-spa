@@ -2,6 +2,7 @@
 <b-modal 
 v-if="from_model" 
 id="current-acounts-pago" 
+data-tour="cuentas_corrientes.modal_pago" 
 title="Pago" 
 hide-footer>
     <b-form-group
@@ -81,6 +82,7 @@ hide-footer>
     @clicked="hacerPago"
 	:loader="loading"
 	data-testid="btn-confirmar-pago"
+	data-tour="cuentas_corrientes.boton_confirmar_pago"
 	text="Registrar pago"></btn-loader>
 </b-modal>
 </template>

@@ -22,6 +22,7 @@
 					
 					<b-form-group
 					:class="colorLabel(prop)"
+					:data-tour="prop.data_tour_grupo || null"
 					:id="'form-group-'+prop.key">
 
 						<!-- Titulo label; cursor help (icono "?" nativo) + hover-intent para mostrar el popover -->

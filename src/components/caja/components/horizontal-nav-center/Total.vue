@@ -90,7 +90,11 @@
 export default {
 	computed: {
 		/**
-		 * Cajas cargadas en el store del módulo caja.
+		 * Cajas que entran en el resumen: manda `filtered` cuando hay algo filtrado, para que el
+		 * chip acompañe lo que el usuario está viendo.
+		 *
+		 * 🔴 OJO: esta lista decide CUÁLES cajas suman, NO de dónde salen sus saldos. Los saldos
+		 * se buscan en `models` (ver `saldos_de()`), porque `filtered` puede no traerlos.
 		 *
 		 * @returns {Array}
 		 */
@@ -190,12 +194,57 @@ export default {
 				if (!filtro_moneda(caja)) {
 					return
 				}
-				contable += Number(typeof caja.saldo_contable != 'undefined' ? caja.saldo_contable : caja.saldo)
-				disponible += Number(typeof caja.saldo_disponible != 'undefined' ? caja.saldo_disponible : caja.saldo)
-				a_liquidar += Number(caja.saldo_a_liquidar || 0)
+				let saldos = this.saldos_de(caja)
+				contable += Number(typeof saldos.saldo_contable != 'undefined' ? saldos.saldo_contable : saldos.saldo)
+				disponible += Number(typeof saldos.saldo_disponible != 'undefined' ? saldos.saldo_disponible : saldos.saldo)
+				a_liquidar += Number(saldos.saldo_a_liquidar || 0)
 			})
 
 			return { contable, disponible, a_liquidar }
+		},
+
+		/**
+		 * De dónde salen los tres saldos de una caja.
+		 *
+		 * 🔴 POR QUÉ EXISTE ESTE RODEO. Los tres saldos los calcula el backend en
+		 * `CajaController::index()`, o sea que viajan por `GET /api/caja` y quedan en
+		 * `state.caja.models`. `state.caja.filtered`, en cambio, lo puebla
+		 * `POST /api/global-search/caja` (`SearchController@globalSearch`), que es genérico y
+		 * **no los calcula**.
+		 *
+		 * Al entrar a Tesorería el listado paginado puebla `filtered` con todas las cajas, así que
+		 * ganaba la lista SIN los campos y se disparaba el fallback de abajo: `contable = saldo`,
+		 * `disponible = saldo`, `a_liquidar = 0`. El chip mostraba "A liquidar: $0" y
+		 * "Disponible = Contable" **siempre**, aunque la caja tuviera liquidación configurada.
+		 *
+		 * Medido el 30/8/2026 sobre `demo2`, con las dos respuestas capturadas en la misma carga:
+		 * `GET /api/caja` traía para Mercado Pago disponible $6.127.485,66 y a liquidar
+		 * $3.214.544,66, y el chip de esa misma pantalla decía "$23.028.092,23 | Contable:
+		 * $23.028.092,23 | A liquidar: $0".
+		 *
+		 * ⚠️ No se cambió de dónde sale la LISTA (sigue mandando `filtered`) a propósito: si el
+		 * usuario filtra, el chip tiene que acompañar lo que ve. Lo que se corrige es de dónde
+		 * salen los NÚMEROS de cada caja, que es cosa distinta.
+		 *
+		 * @param {Object} caja Caja de la lista que se está sumando.
+		 * @returns {Object} La misma caja, o su gemela de `models` si esa trae los saldos.
+		 */
+		saldos_de(caja) {
+			// Si la caja ya trae los saldos calculados, no hay nada que buscar.
+			if (typeof caja.saldo_contable != 'undefined') {
+				return caja
+			}
+
+			let models = this.$store.state.caja.models
+			if (!models || !models.length) {
+				return caja
+			}
+
+			let encontrada = models.find(m => m.id == caja.id)
+
+			// Si no está en `models` se devuelve la original y el fallback de arriba hace su
+			// trabajo: es preferible un total sin liquidación a un total incompleto.
+			return encontrada ? encontrada : caja
 		},
 
 		/**
@@ -209,8 +258,12 @@ export default {
 				return
 			}
 
+			/*
+				Va la caja CON los saldos, por el mismo motivo que `sumar_saldos()`: la que sale de
+				`filtered` puede no traerlos, y la línea de tiempo se abre sobre este modelo.
+			*/
 			this.$store.commit('caja/setModel', {
-				model: this.cajas[0],
+				model: this.saldos_de(this.cajas[0]),
 				properties: [],
 			})
 

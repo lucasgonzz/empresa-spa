@@ -2,6 +2,7 @@
 <b-modal 
 v-if="from_model" 
 id="current-acounts-nota-credito" 
+data-tour="cuentas_corrientes.modal_nota_credito" 
 title="Nota Credito" 
 hide-footer>
     <b-form-group>
