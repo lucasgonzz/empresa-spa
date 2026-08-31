@@ -3,12 +3,14 @@
 	v-if="items.length">
 
 		<b-form-checkbox
+		data-testid="devolucion-regresar-stock"
 		:value="1"
 		:unchecked-value="0"
 		v-model="regresar_stock">
 			Regresar Stock
 		</b-form-checkbox>
 		<b-form-select
+		data-testid="devolucion-deposito"
 		class="m-t-10"
 		v-if="regresar_stock && addresses.length"
 		v-model="address_id"

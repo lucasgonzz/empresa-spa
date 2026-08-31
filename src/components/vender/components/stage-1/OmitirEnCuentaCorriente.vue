@@ -13,6 +13,7 @@
 		for="toggle-omitir-cc">
 			<input
 			type="checkbox"
+			data-testid="venta-omitir-cuenta-corriente"
 			id="toggle-omitir-cc"
 			:disabled="disabled"
 			:checked="omitir_en_cuenta_corriente == 1"

@@ -1,12 +1,19 @@
 <template>
 	<div
 	class="m-t-15">
+		<!--
+			🔴 Con descuentos por metodo de pago el reparto es de DOS PASOS: primero "Calcular" --que
+			aplica el descuento de cada metodo sobre lo que se cobra con el-- y recien despues aparece
+			"Listo". Sin descuentos configurados hay un solo "Listo" (la rama de mas abajo). Los dos
+			llevan el mismo testid porque nunca se dibujan a la vez.
+		-->
 		<div
 		v-if="payment_method_discounts.length">
 
 			<b-button
 			block
 			variant="primary"
+			data-testid="venta-multipago-calcular"
 			v-if="!calculado"
 			@click="calcular">
 				Calcular
@@ -14,6 +21,7 @@
 			<b-button
 			block
 			variant="primary"
+			data-testid="venta-multipago-listo"
 			v-else
 			data-tour="vender.boton_confirmar_venta"
 			@click="terminar">
@@ -23,6 +31,7 @@
 		<b-button
 		block
 		variant="primary"
+		data-testid="venta-multipago-listo"
 		data-tour="vender.boton_confirmar_venta"
 		@click="terminar"
 		v-else>
@@ -33,6 +42,7 @@
 		class="m-t-10"
 		block
 		variant="danger"
+		data-testid="venta-multipago-cancelar"
 		@click="cancelar">
 			Cancelar
 		</b-button>

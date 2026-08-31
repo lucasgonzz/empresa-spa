@@ -2,6 +2,7 @@
 	<b-input-group
 	prepend="N° venta">
 		<b-form-input
+		data-testid="devolucion-num-venta"
 		id="sale-num"
 		:disabled="venta_seleccionada"
 		placeholder="N° de Venta"

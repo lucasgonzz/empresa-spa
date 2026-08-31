@@ -28,6 +28,7 @@
 			Actualizar
 		</dropdown-option-item>
 		<dropdown-option-item
+		:testid="'masiva-opcion-eliminar-'+sufijo_testid"
 		id="btn_eliminar"
 		v-if="puede_eliminar"
 		icon="icon-trash"
