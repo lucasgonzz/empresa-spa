@@ -66,8 +66,20 @@ export default {
 		 * @returns {void}
 		 */
 		abrir_duplicar(model) {
+			// 🔴 El show() va adentro de un $nextTick, por la misma razón que en
+			// `Cobros.vue -> abrir_recordatorio()`: `$bvModal.show()` emite `show` de forma
+			// SINCRÓNICA, así que `al_abrir()` del hijo corría antes de que Vue bajara
+			// `receta_a_duplicar` al prop `receta`. El input "Nombre del artículo nuevo"
+			// quedaba vacío en la primera apertura, y de la segunda en adelante traía
+			// "<receta anterior> copia" mientras el párrafo de arriba ya nombraba la receta
+			// nueva. El POST iba a la receta correcta, así que salía un artículo bien
+			// duplicado con el nombre del modelo equivocado.
+			// Encontrado el 31/8/2026 barriendo la familia del bug del recordatorio de cobro.
+			let self = this
 			this.receta_a_duplicar = model
-			this.$bvModal.show('duplicar-receta')
+			this.$nextTick(function() {
+				self.$bvModal.show('duplicar-receta')
+			})
 		},
 	},
 }

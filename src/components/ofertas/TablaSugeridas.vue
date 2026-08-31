@@ -209,9 +209,32 @@ export default {
 			}
 			return criterio
 		},
+		/**
+		 * Abre el modal para activar la oferta sugerida de esta fila.
+		 *
+		 * 🔴 El `show()` va adentro de un `$nextTick`, por la misma razón que en
+		 * `Cobros.vue -> abrir_recordatorio()`: `$bvModal.show()` emite `show` de forma
+		 * SINCRÓNICA, así que `cargar_desde_la_linea()` del hijo corría antes de que Vue
+		 * bajara `linea_elegida` al prop `linea`.
+		 *
+		 * Acá el síntoma era peor que un cartel: como `linea_elegida` no se resetea nunca,
+		 * la PRIMERA apertura salía por la guarda `if (!this.linea) return` y el formulario
+		 * quedaba con los valores de `data()`, y de la SEGUNDA en adelante precargaba el
+		 * porcentaje, los tramos y la fecha de la fila ANTERIOR mientras el encabezado ya
+		 * mostraba el cliente y el artículo de la fila nueva. Y `activar()` manda el
+		 * `offer_suggestion_line_id` de la fila nueva —que es reactivo— con el porcentaje de
+		 * la vieja: un descuento equivocado que el backend acepta si entra bajo el techo.
+		 * Encontrado el 31/8/2026 barriendo la familia del bug del recordatorio de cobro.
+		 *
+		 * @param {Object} linea Línea sugerida de la fila.
+		 * @returns {void}
+		 */
 		abrir_activar(linea) {
+			let self = this
 			this.linea_elegida = linea
-			this.$bvModal.show('oferta-modal-activar')
+			this.$nextTick(function() {
+				self.$bvModal.show('oferta-modal-activar')
+			})
 		},
 		/**
 		 * Despues de activar se recarga la pagina actual (la fila pasa a "Activada"
