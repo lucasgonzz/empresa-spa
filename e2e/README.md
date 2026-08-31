@@ -46,22 +46,25 @@ ella `src/main.js` tira `You must pass your app key when you instantiate Pusher`
 app: la página queda en blanco, sin un solo `data-testid`, y desde el test se ve como "no encuentro
 el input de login".
 
-> ⚠️ **Estado de la suite (19/8/2026): 18 pasan, 1 falla.** Reemplaza al estado del 17/8. Medido en
-> el slot s8 sobre base recién sembrada: **10,9 minutos** la corrida completa, con la descarga de
-> recursos en 15-20 s por spec (los 35-45 s que decía la nota anterior eran con la máquina cargada).
+> ✅ **Estado de la suite (31/8/2026): 33 pasan, 0 fallan.** Medido en el slot s8: **31,4 minutos**
+> la corrida completa, con la base ya con historia de varias corridas encima (no recién sembrada).
 >
-> El único rojo es **`limpiar-filtros-desde-columna`**, que sigue igual que el 15/8: el clic sobre la
-> lupa de la columna "Nombre" lo intercepta un elemento que queda encima. Hoy el que intercepta es el
-> cartel de progreso `#offline-articles-progress` ("Actualizados: 0 | Eliminados: 0"), no `.cont-th`
-> como decía la nota vieja — o sea que el problema no es *qué* tapa el botón sino que el spec clickea
-> sin esperar a que la pantalla se asiente. Ojo además que ubica la columna por texto visible
-> (`hasText: 'Nombre'`), que es justo lo que la convención de más abajo prohíbe.
+> Reemplaza al estado del 19/8 ("18 pasan, 1 falla"). El rojo que arrastraba desde el 15/8 —
+> **`limpiar-filtros-desde-columna`** — quedó arreglado: la causa no era la que decía la nota vieja
+> (el cartel de progreso tapando el botón) sino que la lupa del filtro vive con
+> `pointer-events: none` hasta que el mouse pasa por el encabezado. El hallazgo
+> `20260815-dos-specs-e2e-que-nacieron-en-rojo` queda **cerrado** para ese spec.
 >
-> El hallazgo `20260815-dos-specs-e2e-que-nacieron-en-rojo` queda válido para ese spec.
+> 🔴 **La corrida necesita TRES procesos, no dos**: la API, la SPA y el **worker de cola**
+> (`php artisan queue:work`). Sin el worker, todo lo que el sistema encola —la actualización masiva
+> del listado, entre otras cosas— queda en `pending` para siempre, con la petición en 200 y sin un
+> solo error en pantalla. Ver más abajo.
 >
-> `compra-costeo-facturacion` (8 tests) entró en verde el 19/8/2026, y se verificó además que pasa
-> **dos veces seguidas sobre la misma base** sin volver a sembrar — ver "Posicion Fiscal se verifica
-> por DIFERENCIA" más abajo.
+> ⚠️ Y la máquina tiene que tener aire: con la API, la SPA, el worker y encima un navegador del MCP
+> de Playwright abierto, el worker de Playwright se murió tres veces
+> (`worker process exited unexpectedly (code=4294967295)`) y se llevó puestos 14 tests que ni
+> corrieron. No es un problema de los specs; conviene cerrar lo que no se esté usando antes de una
+> corrida completa.
 
 ---
 
