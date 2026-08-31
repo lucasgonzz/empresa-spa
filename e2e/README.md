@@ -665,15 +665,15 @@ ModelForm-- ya lo hace bien; los buscadores hardcodeados de un módulo son los q
 | Con alguno de los dos | Un `<textarea>` común |
 
 Los dos publican `article-name`, así que el selector es el mismo; lo que cambia es **cómo se
-completa**. En el caso del buscador hay que teclear de verdad y confirmar con **dos Enter**: el
-primero busca y despliega las coincidencias, el segundo confirma que ese nombre se use para un
-artículo nuevo. Es el mismo flujo que `crear_desde_buscador`, pero acá el buscador es **inline** y
-no abre modal, así que ese helper no se puede reusar tal cual.
+completa**. En el caso del buscador son **dos Enter**: el primero busca y despliega las
+coincidencias, el segundo confirma que ese nombre se use para un artículo nuevo. Es exactamente el
+flujo de **`crear_desde_buscador(page, 'article-name', nombre)`**, que se puede reusar tal cual: el
+campo se ve inline en el formulario, pero al clickearlo abre el modal de búsqueda de siempre
+(`#article-name-search-modal`), igual que cualquier otro campo `search`.
 
 El nombre viaja como la *query* del buscador y el modelo lo toma recién al guardar
-(`set_model_on_click_or_prop_with_query_if_null`), así que un `fill()` sin los Enter deja el modelo
-sin nombre. Y el tecleo tiene que ser real (`pressSequentially`): el buscador sólo baja su guarda
-`ya_se_busco` con un `keydown`, y `fill()` no emite ninguno.
+(`set_model_on_click_or_prop_with_query_if_null`), así que un `fill()` sobre el input inline deja el
+modelo sin nombre.
 
 Está documentado desde el lado del usuario en `manual_sistema/listado/identificacion.md`, sección
 "Campo Nombre — comportamiento dual".
@@ -690,3 +690,17 @@ recibido**: exactamente los 10.000 del flete, contados dos veces.
 El síntoma manda a buscar el error en la cuenta corriente, que estaba perfecta. Cada vez que un test
 guarda, el objeto `contexto` se pisa con el modelo de la respuesta; recalcular el total a mano en el
 test es justamente lo que hace que dos pasos dejen de hablar del mismo número.
+
+### 🔴 La ruta del módulo de cajas es `/caja`, en SINGULAR — y `/cajas` deja la página en blanco
+
+`router/routes.js` declara el ítem del menú con `path: '/cajas'`, pero la ruta que el router
+**registra** es `/caja/:view?/:sub_view?`.
+
+Entrar a `/cajas` no matchea ninguna ruta, y el resultado no se parece a un error: la página queda
+**en blanco**, con la nav dibujada y el `<router-view/>` vacío. Sin error de consola, sin 404, sin
+redirección. Desde afuera se ve como un módulo que no carga: el store tiene las cajas, `can('caja.index')`
+devuelve `true`, y no hay ni un solo `data-testid` en pantalla. Lo único que lo delata es que
+`$route.matched` queda **vacío**.
+
+Vale para cualquier spec: si un módulo aparece completamente vacío y sin errores, lo primero a mirar
+es si la URL matchea una ruta, no el componente.

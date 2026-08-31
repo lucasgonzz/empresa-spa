@@ -319,7 +319,12 @@ async function stock_de(page, id) {
  * @returns {Promise<number>}
  */
 async function saldo_de_caja(page, nombre) {
-	await page.goto('/cajas')
+	// 🔴 La ruta es `/caja`, en SINGULAR. `router/routes.js` declara `path: '/cajas'` --eso es
+	//    lo que ve el menu-- pero la que el router registra es `/caja/:view?/:sub_view?`.
+	//    Entrar a `/cajas` no matchea NINGUNA ruta y deja la pagina en blanco: sin error de
+	//    consola, sin 404, sin nada. `$route.matched` queda vacio y el `<router-view/>` no
+	//    dibuja un solo elemento.
+	await page.goto('/caja')
 	await esperar_recursos_descargados(page, { abrir_panel: false })
 
 	const id = await page.evaluate(texto => {

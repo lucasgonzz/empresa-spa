@@ -31,7 +31,7 @@
 //    y este archivo lo verifica antes de seguir.
 const { test, expect } = require('../fixtures')
 const { esperar_recursos_descargados } = require('../helpers/recursos')
-const { abrir_pestania, completar_campo, search_and_select } = require('../helpers/formulario')
+const { abrir_pestania, completar_campo, search_and_select, crear_desde_buscador } = require('../helpers/formulario')
 const { numero_de_pantalla, numero_de_dato, redondear } = require('../helpers/numeros')
 
 // ── Datos de entrada ─────────────────────────────────────────────────────────────────────────
@@ -185,32 +185,14 @@ test.describe.serial('Listado: alta de articulo y actualizacion masiva', () => {
 
 		// 🔴 El nombre de un articulo NUEVO no es un campo de texto: es un BUSCADOR. Mientras no haya
 		//    codigo de barras ni codigo de proveedor, `listado/components/NameInput.vue` dibuja un
-		//    search-component sobre articulos --para que no des de alta uno que ya existe-- y la propia
-		//    pantalla lo dice: "Preciona ENTER para usar este nombre". Por eso se teclea de verdad y se
-		//    confirma con Enter, en vez de un fill: el nombre viaja como la QUERY del buscador y el
-		//    modelo lo toma al guardar (`set_model_on_click_or_prop_with_query_if_null`).
-		//    Y son DOS Enter, no uno, tal cual lo documenta manual_sistema/listado/identificacion.md:
-		//    el primero busca y despliega las coincidencias, el segundo confirma que el nombre se use
-		//    para un articulo nuevo. Es el mismo flujo del alta al vuelo desde el buscador de una
-		//    compra (`crear_desde_buscador`), pero ACA el buscador es INLINE y no abre modal, asi que
-		//    no se puede reusar aquel helper.
-		const nombre = page.locator('[data-testid="article-name"]')
-		await nombre.click()
-		await nombre.fill('')
-		// Tecleo real: el buscador solo baja su guarda `ya_se_busco` con un keydown, y un fill() no
-		// emite ninguno. Con fill, el primer Enter caeria en "seleccionar resultado" en vez de buscar.
-		await nombre.pressSequentially(contexto.articulo)
-
-		await nombre.press('Enter')
-		// La señal de que la busqueda CORRIO y no encontro nada. Distingue "termino sin resultados" de
-		// "todavia no busque": sin esto, el segundo Enter podria estar confirmando por el motivo
-		// equivocado y el test pasaria igual.
-		await expect(
-			page.locator('[data-testid="search-no-results"]'),
-			'el buscador del nombre tenia que decir que no existe un articulo asi'
-		).toBeVisible()
-
-		await nombre.press('Enter')
+		//    search-component sobre articulos --para que no des de alta uno que ya existe-- y son DOS
+		//    Enter: el primero busca, el segundo confirma que el nombre se use para uno nuevo. Es
+		//    exactamente el flujo de `crear_desde_buscador`, que ya lo tiene resuelto con sus trampas
+		//    (tecleo real para que el primer Enter busque en vez de seleccionar, y la asercion del
+		//    medio que distingue "busque y no hay" de "todavia no busque").
+		//
+		//    Documentado del lado del usuario en manual_sistema/listado/identificacion.md.
+		await crear_desde_buscador(page, 'article-name', contexto.articulo)
 
 		// El mismo proveedor de la masiva: asi el articulo recien creado tambien tiene que recibir
 		// el aumento, que es la unica forma de probar que la masiva alcanza a TODO el conjunto
