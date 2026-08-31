@@ -665,12 +665,21 @@ test.describe.serial('Compra: costeo, facturacion, stock, cuenta corriente y pos
 		await expect(async () => {
 			const cantidad = await filas.count()
 
+			// 🔴 Se busca el pago con el id MAS ALTO, no el primero que aparezca con ese haber.
+			//    Este archivo carga siempre la misma compra, asi que su total es identico en todas
+			//    las corridas: despues de unas cuantas hay VARIOS pagos con el mismo haber, y
+			//    quedarse con el primero agarra el de una corrida vieja, cuyo saldo acumulado es
+			//    otro. El rojo dice "el pago tenia que bajar el saldo" con dos numeros que no se
+			//    parecen en nada, y manda a revisar la cuenta corriente en vez de la busqueda.
+			//    Medido el 31/8/2026, en la primera corrida de la suite completa que llego hasta
+			//    aca con historia suficiente.
 			let fila_del_pago = null
 			for (let i = 0; i < cantidad; i++) {
 				const id = (await filas.nth(i).getAttribute('data-testid')).replace('current_acount-row-', '')
 				if (await celda_numerica(page, 'current_acount', 'haber', id) === total) {
-					fila_del_pago = id
-					break
+					if (fila_del_pago === null || Number(id) > Number(fila_del_pago)) {
+						fila_del_pago = id
+					}
 				}
 			}
 
