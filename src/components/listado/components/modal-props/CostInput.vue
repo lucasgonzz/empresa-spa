@@ -1,5 +1,14 @@
 <template>
-	<div>
+	<!--
+		El `data-tour` va en el CONTENEDOR y no en un input, y eso es lo que hace que un solo valor
+		sirva para las dos condiciones fiscales: al Responsable Inscripto se le dibujan dos campos
+		(neto y bruto) y al Monotributista uno solo. Los clips 1.1, 1.2, 1.2-mt y 1.4 senalan el
+		mismo `listado.campo_costo` y cada uno resalta lo que esa cuenta efectivamente ve.
+
+		Literal, sin condicional: este componente se monta unicamente desde el slot #cost de
+		`views/Listado.vue`, o sea que solo existe para el modelo `article`.
+	-->
+	<div data-tour="listado.campo_costo">
 
 		<!--
 			Prompt 612: reemplaza el input generico de ModelForm (slot #cost en Listado.vue) para

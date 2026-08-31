@@ -5,7 +5,7 @@
 	:dusk="'btn_create_'+model_name"
 	:data-testid="'btn-crear-'+model_name"
 	:class="[with_margin ? 'm-b-15' : '', 'toolbar-btn--acento']"
-	:data-tour="model_name === 'article' ? 'listado.boton_crear_articulo' : null"
+	:data-tour="ancla_tour"
 	@click="create"
 	:block="block ? true : false"
 	:size="button_size"
@@ -15,6 +15,8 @@
 	</b-button>
 </template>
 <script>
+import { ANCLA_BOTON_CREAR, ancla_de } from '@/common-vue/tours/anclas-por-modelo'
+
 export default {
 	props: {
 		model_name: String,
@@ -31,6 +33,23 @@ export default {
 		button_size: {
 			type: String,
 			default: null,
+		},
+	},
+	computed: {
+		/**
+		 * Ancla `data-tour` del boton, segun el modelo.
+		 *
+		 * ⚠️ `article` NO esta en el mapa a proposito. En el Listado este boton **no se dibuja
+		 * nunca**: `views/Listado.vue` pasa `show_excel_drop_down`, y
+		 * `common-vue/components/view/header/Index.vue` elige entre `<excel-drop-down>` y
+		 * `<btn-create>` con un `v-if`/`v-else-if` excluyente. El ancla de articulo vivio aca
+		 * hasta el 30/8/2026 apuntando a un elemento que no existia, y se mudo a
+		 * `ExcelDropDown.vue`, que es el que el lead ve.
+		 *
+		 * @returns {String|null}
+		 */
+		ancla_tour() {
+			return ancla_de(ANCLA_BOTON_CREAR, this.model_name)
 		},
 	},
 	methods: {

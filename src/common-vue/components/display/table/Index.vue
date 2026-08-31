@@ -26,7 +26,7 @@
 				<table
 				:id="'table-'+model_name"
 				class="common-table"
-				:data-tour="model_name === 'article' ? 'listado.tabla' : null">
+				:data-tour="ancla_tour">
 					<thead>
 						<tr>
 							<th
@@ -260,6 +260,7 @@
 <script>
 import infiniteScroll from 'vue-infinite-scroll'
 import filters from '@/common-vue/mixins/filters'
+import { ANCLA_TABLA, ancla_de } from '@/common-vue/tours/anclas-por-modelo'
 
 export default {
 	mixins: [filters],
@@ -416,6 +417,18 @@ export default {
 		}
 	},
 	computed: {
+		/**
+		 * Ancla `data-tour` de la tabla, segun el modelo que se este dibujando.
+		 *
+		 * Sale del mapa de `@/common-vue/tours/anclas-por-modelo` en vez de un ternario encadenado: esta
+		 * misma tabla la usan articulos, ventas, compras, pedidos y presupuestos, y con una rama
+		 * por modelo el template dejaba de leerse.
+		 *
+		 * @returns {String|null}
+		 */
+		ancla_tour() {
+			return ancla_de(ANCLA_TABLA, this.model_name)
+		},
 		/**
 		 * Ancho del envoltorio sticky del estado vacío: el del área visible, para que el mensaje
 		 * quede centrado en la pantalla y no a mitad del scroll horizontal de la tabla.

@@ -1,6 +1,9 @@
 <template>
+	<!-- Igual que el de omitir cuenta corriente: sin extension `budgets` y sin cliente elegido
+	este toggle no se dibuja, y el tour saltea el paso solo. -->
 	<div
 	v-if="hasExtencion('budgets') && client"
+	data-tour="vender.toggle_presupuesto"
 	class="vender-toggle-row">
 
 		<!-- Toggle estilo iPhone enlazado al computed con setter -->

@@ -48,6 +48,7 @@
 				size="sm"
 				class="sale-details-buttons__group">
 					<btn-loader
+					data-tour="ventas.boton_editar_venta"
 					dusk="btn_actualizar_venta"
 					text="Actualizar venta"
 					icon_class="bi bi-pencil-square"

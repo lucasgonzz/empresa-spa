@@ -10,7 +10,9 @@
 	@show="al_abrir"
 	@hidden="quitar_seleccionable">
 
-		<div class="confirm-afip">
+		<div
+		class="confirm-afip"
+		data-tour="ventas.modal_facturacion">
 
 			<!-- Cabecera: cuantas facturas se van a emitir. -->
 			<p class="confirm-afip__encabezado">
@@ -18,6 +20,7 @@
 			</p>
 
 			<b-form-group
+			data-tour="ventas.selector_punto_de_venta"
 			label="Punto de venta">
 				<b-form-select
 				:disabled="disabled"
@@ -28,6 +31,7 @@
 			</b-form-group>
 
 			<b-form-group
+			data-tour="ventas.selector_tipo_comprobante"
 			label="Tipo de comprobante">
 				<b-form-select
 				id="select_tipo_comprobante"
@@ -62,6 +66,7 @@
 			</div>
 
 			<b-form-group
+			data-tour="ventas.campo_fecha_comprobante"
 			v-if="afip_tipo_comprobante_id != 8"
 			label="Fecha del comprobante"
 			description="Dejar en blanco para la fecha de hoy">
@@ -93,6 +98,7 @@
 				</p>
 
 				<b-form-group
+				data-tour="ventas.campo_importe_a_facturar"
 				class="confirm-afip__campo-monto"
 				label="Facturar otro importe (opcional)"
 				:description="description_importe_a_facturar">
@@ -120,6 +126,7 @@
 
 				<!-- Reparto por alicuota: aparece recien cuando hay un importe personalizado. -->
 				<div
+				data-tour="ventas.grilla_alicuotas"
 				v-if="mostrar_alicuotas"
 				class="confirm-afip__alicuotas">
 
@@ -199,6 +206,7 @@
 					Cancelar
 				</b-button>
 				<b-button
+				data-tour="ventas.boton_emitir_factura"
 				class="confirm-afip-footer__emitir"
 				variant="primary"
 				id="btn_enviar_a_facturar"

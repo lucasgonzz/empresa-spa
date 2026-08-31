@@ -7,7 +7,9 @@
 	<div class="vender-context-bar">
 
 		<!-- ── Bloque 1: Total ── -->
-		<div class="vender-context-bar__block vender-context-bar__block--total">
+		<div
+		class="vender-context-bar__block vender-context-bar__block--total"
+		data-tour="vender.total">
 			<span class="vender-context-bar__total-value">{{ total | currency }}</span>
 			<span class="vender-context-bar__sub-value">
 				<!-- El singular/plural se sigue decidiendo con el valor crudo (total_unidades === 1): el formateo va solo donde se muestra. -->

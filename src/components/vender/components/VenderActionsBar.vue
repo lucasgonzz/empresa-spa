@@ -45,8 +45,16 @@
 		</div>
 
 		<!-- Botón principal guardar / actualizar con atajo configurable -->
+		<!--
+			🔴 El ancla del tour va sobre ESTE wrapper y no sobre <btn-guardar>: el componente de
+			adentro tiene dos layouts (b-col ancho completo / inline) y ademas se dibuja en otros
+			lugares del modulo. El wrapper es el que el lead ve como "el boton de guardar" en la
+			barra de acciones, y su `v-if="items.length"` es justamente la condicion que el mapa
+			documenta (con la venta vacia el boton no existe y el tour saltea el paso).
+		-->
 		<div
 		v-if="items.length"
+		data-tour="vender.boton_guardar_venta"
 		class="vender-actions-bar__item vender-actions-bar__item--primary vender-actions-bar__guardar-wrap">
 			<span class="vender-actions-bar__kbd">{{ save_shortcut_key }}</span>
 			<!-- inline_layout evita que b-col cols="12" ocupe todo el ancho de la barra -->

@@ -16,7 +16,7 @@
 		:size="size"
 		scrollable
 		:id="model_name"
-		:data-tour="model_name === 'article' ? 'listado.modal_articulo' : null">
+		:data-tour="ancla_tour_modal">
 
 			<template #modal-title>
 				<slot name="model_modal_title">
@@ -154,7 +154,7 @@
 						@clicked="save"
 						:dusk="'btn_guardar_'+model_name"
 						:data-testid="'btn-guardar-'+model_name"
-						:data-tour="model_name === 'article' ? 'listado.boton_guardar_articulo' : null"
+						:data-tour="ancla_tour_guardar"
 						:prop_to_send_on_emit="{close: true}"
 						:loader="loading"
 						text="Guardar y cerrar"></btn-loader>
@@ -186,6 +186,7 @@ import BtnPdf from '@/common-vue/components/BtnPdf'
 
 import ModelForm from '@/common-vue/components/model/ModelForm'
 import { collect_laravel_validation_messages } from '@/utils/laravel_validation_toast'
+import { ANCLA_MODAL, ANCLA_BOTON_GUARDAR, ancla_de } from '@/common-vue/tours/anclas-por-modelo'
 
 export default {
 	name: 'ModelIndex',
@@ -337,7 +338,28 @@ export default {
 		}
 	},
 	computed: {
-
+		/**
+		 * Ancla `data-tour` del modal de formulario, segun el modelo.
+		 *
+		 * @returns {String|null}
+		 */
+		ancla_tour_modal() {
+			return ancla_de(ANCLA_MODAL, this.model_name)
+		},
+		/**
+		 * Ancla `data-tour` del boton "Guardar y cerrar".
+		 *
+		 * 🔴 Tiene valor propio por modelo y no uno solo compartido: el tour del clip 4.2 hace dos
+		 * guardados seguidos —el costo extra y despues la compra— y el segundo es el que reparte
+		 * el flete. Los dos salen de este mismo boton, asi que con un valor unico el paso que
+		 * espera el guardado de la compra se resolveria contra el del modal hijo, que todavia
+		 * esta en el DOM.
+		 *
+		 * @returns {String|null}
+		 */
+		ancla_tour_guardar() {
+			return ancla_de(ANCLA_BOTON_GUARDAR, this.model_name)
+		},
 
 		show_limpiar_formulario() {
 			return this.props_to_keep_after_create.length

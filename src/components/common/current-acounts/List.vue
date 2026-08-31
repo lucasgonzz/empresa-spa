@@ -8,6 +8,7 @@ class="cc-lista">
         tiene que comunicar.
     -->
     <div
+    data-tour="cuentas_corrientes.lista_movimientos"
     :class="['cc-tabla-wrapper', {'cc-tabla-wrapper--con-datos': models.length}]">
         <table-component
         :loading="loading"

@@ -58,7 +58,15 @@
 			</div>
 		</div>
 	    
+		<!--
+			Ancla del tour de la demo (clip 4.2). El discriminador es `prop.key` y NO el modelo: la
+			solapa "Descuentos y recargos" de una compra tiene DOS has_many —los descuentos y los
+			costos extra—, o sea DOS botones "Agregar". Con un ternario por modelo el ancla se
+			duplicaria y el tour podria resolver contra el boton equivocado.
+			Va solo en la vista compacta: el gemelo de adentro de "Ampliar" no participa del tour.
+		-->
 		<b-button
+		:data-tour="prop.key === 'provider_order_extra_costs' ? 'compras.boton_agregar_costo_extra' : null"
 		v-if="!prop.has_many.models_from_parent_prop && (typeof prop.has_many.show_btn_create == 'undefined' || prop.has_many.show_btn_create)"
 		class="m-t-15"  
 		@click="create(prop.has_many.model_name, parent_model)"

@@ -218,6 +218,14 @@ export default {
 			type: 'text',
 			is_price: true,
 			only_show: true,
+			/**
+			 * Ancla del tour guiado. Va como `data_tour_grupo` y no como `data_tour`: el campo es
+			 * `only_show`, asi que no lo dibuja `FieldSearchInput` --el unico que lee `data_tour`--
+			 * sino el bloque de solo lectura de `ModelForm`, que esta adentro del `<b-form-group>`
+			 * que lleva `data_tour_grupo`. Es el corazon del clip 1.2: el costo real es el numero
+			 * sobre el que se calcula el precio.
+			 */
+			data_tour_grupo: 'listado.campo_costo_real',
 			// Hasta 6 decimales en BD (grupo 282); en UI solo se muestran del 3.º al 6.º si el usuario los usa.
 			variable_decimals: { min: 2, max: 6 },
 			can: 'article.cost',

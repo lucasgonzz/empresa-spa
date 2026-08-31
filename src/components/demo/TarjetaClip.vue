@@ -69,7 +69,7 @@
 		type="button"
 		class="tarjeta-clip__probar"
 		:disabled="!habilitar_probar"
-		@click="$emit('probar')">
+		@click="$emit('probar', clip)">
 			Probar
 		</button>
 	</div>

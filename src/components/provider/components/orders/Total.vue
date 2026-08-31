@@ -3,6 +3,7 @@
 	class="j-start"
 	v-if="provider_order">
 		<b-button
+		data-tour="compras.boton_explicar_total"
 		class="btn-explicacion m-r-10"
 		@click="show"
 		variant="outline-secondary"
@@ -10,7 +11,9 @@
 		size="sm">
 			<i class="bi bi-question-lg"></i>
 		</b-button>
-		<h4 data-testid="compra-total">
+		<h4
+		data-testid="compra-total"
+		data-tour="compras.total_final">
 			{{ price(provider_order.total) }}
 		</h4>
 	</div>

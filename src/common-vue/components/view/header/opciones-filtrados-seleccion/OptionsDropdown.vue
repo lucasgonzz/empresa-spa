@@ -3,6 +3,7 @@
 	v-if="show"
 	right
 	:id="id"
+	:data-tour="ancla_tour"
 	size="sm"
 	:variant="variant"
 	:toggle-attrs="{ title: tooltip_text, 'aria-label': tooltip_text }">
@@ -59,6 +60,29 @@ export default {
 		}
 	},
 	computed: {
+		/**
+		 * Ancla `data-tour` del desplegable de acciones.
+		 *
+		 * 🔴 `from_filter` no es un detalle: este componente **se monta dos veces en la misma
+		 * vista** —una para los seleccionados y otra para los filtrados
+		 * (`opciones-filtrados-seleccion/Index.vue`)—, así que sin discriminar por esa prop el
+		 * mismo valor aparecería duplicado en pantalla y el tour agarraría el que le tocara
+		 * primero. El clip 1.6 (actualización masiva) entra por el de filtrados y el 1.7
+		 * (imágenes inteligentes) por el de seleccionados.
+		 *
+		 * @returns {String|null}
+		 */
+		ancla_tour() {
+			if (this.model_name === 'article') {
+				return this.from_filter ? 'listado.dropdown_filtrados' : 'listado.dropdown_seleccionados'
+			}
+
+			if (this.model_name === 'sale' && !this.from_filter) {
+				return 'ventas.dropdown_seleccion'
+			}
+
+			return null
+		},
 		id() {
 			if (this.from_filter) {
 				return 'btn_filtrados_dropdown'

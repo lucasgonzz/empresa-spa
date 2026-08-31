@@ -14,6 +14,7 @@
 				:key="i"
 				:dusk="value(item)"
 				:data-testid="testid(item)"
+				:data-tour="item.data_tour || null"
 				@click="select(item)"
 				:class="isActive(item)">
 					{{ itemName(item) }}

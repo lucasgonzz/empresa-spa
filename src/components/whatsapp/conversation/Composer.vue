@@ -125,6 +125,7 @@
 			id="whatsapp-composer-text"
 			class="form-control whatsapp-composer__texto"
 			rows="1"
+			data-tour="whatsapp.campo_respuesta"
 			:placeholder="placeholder"
 			@keydown.enter="onKeydownEnter"></textarea>
 
@@ -185,6 +186,7 @@
 			:block="false"
 			icon_class="bi bi-send-fill"
 			variant="success"
+			data-tour="whatsapp.boton_enviar"
 			@clicked="send"></btn-loader>
 		</div>
 

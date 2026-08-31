@@ -1,7 +1,13 @@
 <template>
 <div>
+	<!--
+		🔴 El ancla del grupo entero (select + boton verde) es `vender.selector_metodo_pago`. El
+		boton verde del append tiene la suya, `vender.boton_cobrar`, que NO cobra: abre el reparto
+		en multiples metodos de pago.
+	-->
 	<b-input-group
 	class="cont-payment-methods"
+	data-tour="vender.selector_metodo_pago"
 	prepend="Mét. pago">
 		
 		<b-form-select

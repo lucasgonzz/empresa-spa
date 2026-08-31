@@ -1,6 +1,7 @@
 <template>
 <b-modal
 id="limite-credito-excedido"
+data-tour="vender.modal_limite_credito"
 title="No se puede guardar la venta"
 :no-close-on-backdrop="true"
 :no-close-on-esc="true"

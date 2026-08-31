@@ -23,6 +23,7 @@
 		class="m-l-15 btn-cuenta-corriente"
 		v-if="show(credit_account)"
 		:id="'btn-current-acount-'+model.id"
+		:data-tour="ancla_tour(credit_account)"
 		:data-testid="'btn-current-acount-'+model.id+'-'+credit_account.moneda_id"
 		:title="'Abrir la cuenta corriente en '+credit_account.moneda.name"
 		@click.stop="showCurrentAcounts(credit_account)"
@@ -38,7 +39,38 @@ export default {
 		model_name: String,
 		model: Object,
 	},
-	methods: { 
+	methods: {
+		/**
+		 * Ancla `data-tour` del boton que abre la cuenta corriente.
+		 *
+		 * 🔴 Solo se ancla la cuenta en PESOS (`moneda_id == 1`), y no por preferencia: con la
+		 * extension `ventas_en_dolares` prendida, el `v-for` de arriba dibuja **un boton por
+		 * moneda**, asi que un valor fijo quedaria repetido dos veces en la misma fila. El mismo
+		 * archivo ya documenta ese problema para el atributo `id`.
+		 *
+		 * ⚠️ Y ademas este boton se dibuja **una vez por fila** de la tabla. El tour no puede
+		 * distinguir de que fila es —la fila no llega hasta aca—, asi que agarra la primera del
+		 * listado: los tours 2.5 y 4.3 tienen que dejar arriba al cliente o al proveedor que
+		 * corresponde, o el paso senala a otro.
+		 *
+		 * @param {Object} credit_account
+		 * @returns {String|null}
+		 */
+		ancla_tour(credit_account) {
+			if (credit_account.moneda_id != 1) {
+				return null
+			}
+
+			if (this.model_name === 'provider') {
+				return 'cuentas_corrientes.boton_abrir_cuenta_proveedor'
+			}
+
+			if (this.model_name === 'client') {
+				return 'cuentas_corrientes.boton_abrir_cuenta_cliente'
+			}
+
+			return null
+		},
 		show(credit_account) {
 			return credit_account.moneda_id == 1 || this.hasExtencion('ventas_en_dolares')
 		},

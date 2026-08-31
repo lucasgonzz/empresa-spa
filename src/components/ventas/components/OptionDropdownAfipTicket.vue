@@ -1,5 +1,6 @@
 <template>
 	<b-dropdown-item
+	data-tour="ventas.boton_facturar"
 	v-if="!has_afip_ticket"
 	@click="makeAfipTicket">
 		<i class="icon-tag"></i>
