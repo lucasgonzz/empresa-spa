@@ -20,7 +20,7 @@
 					patron que los renglones de Posicion Fiscal.
 				-->
 				<strong 
-				data-testid="venta-total"
+				data-testid="venta-total-remito"
 				:data-monto="total"
 				dusk="total">
 					Total: {{ price(total) }}

@@ -47,6 +47,8 @@ const METODO_PAGO = 'Efectivo'
 const DESCUENTO_METODO = 10
 /** Caja del fixture, la unica que nace ABIERTA. */
 const CAJA = 'Caja Efectivo'
+/** Sucursal del fixture. Sin sucursal elegida la venta no se guarda. */
+const DEPOSITO = 'Principal'
 
 /**
  * Los renglones de la venta. Se eligen articulos del fixture que no toca ningun otro circuito con
@@ -279,6 +281,15 @@ async function abrir_ventas_del_dia(page) {
 	const hoy = page.locator(`[data-testid="control-fecha-dia"][data-fecha="${fecha_de_hoy()}"]`)
 	await expect(hoy, 'el control de fechas tenia que ofrecer el dia de hoy').toBeVisible()
 	await hoy.click()
+
+	// 🔴 El listado de ventas se parte por SUCURSAL, en una nav de solapas arriba de la tabla
+	//    ("Todas" | "Principal (1)"). Una venta hecha con la sucursal Principal no se ve desde la
+	//    solapa que este activa por defecto: la tabla dice "No hay Ventas" con la venta en la base
+	//    y con el contador de la otra solapa marcando (1). Es el mismo genero de trampa que el
+	//    click en el dia.
+	const solapa = page.locator(`[data-testid="nav-item-${DEPOSITO}"]`)
+	await expect(solapa, `el listado tenia que ofrecer la solapa de la sucursal "${DEPOSITO}"`).toBeVisible()
+	await solapa.click()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -310,6 +321,13 @@ test.describe.serial('Venta de mostrador: cobro con descuento, caja, y su revers
 
 		const total_en_pantalla = await total_de_la_venta(page)
 		expect(total_en_pantalla, 'la venta tenia que tener un total mayor a cero').toBeGreaterThan(0)
+
+		// 🔴 La SUCURSAL frena el guardado si no se elige, y no lo dice con un error: el boton de
+		//    guardar simplemente no dispara ningun pedido y el test se va en timeout esperando un
+		//    POST que nunca sale. El checklist de la derecha de la pantalla lo muestra --"Sucursal"
+		//    queda en gris mientras "Pago" y "Articulos" ya tienen tilde-- pero hay que saber
+		//    mirarlo. Es uno de los controles que lista manual_sistema/vender/armar-una-venta.md.
+		await elegir_opcion_que_contenga(page, 'venta-sucursal', DEPOSITO)
 
 		await elegir_opcion_que_contenga(page, 'venta-metodo-pago', METODO_PAGO)
 		// 🔴 Si el select de caja no ofrece ninguna opcion, la caja esta CERRADA: solo ofrece las

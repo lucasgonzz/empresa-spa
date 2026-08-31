@@ -7,8 +7,15 @@
 	<div class="vender-context-bar">
 
 		<!-- ── Bloque 1: Total ── -->
+		<!--
+			🔴 Este es el total que el operador VE mientras arma la venta. El `data-monto` lleva
+			el valor crudo porque el filtro `currency` lo imprime formateado y del texto no
+			siempre se puede sacar el numero. Mismo patron que Posicion Fiscal.
+		-->
 		<div
 		class="vender-context-bar__block vender-context-bar__block--total"
+		data-testid="venta-total"
+		:data-monto="total"
 		data-tour="vender.total">
 			<span class="vender-context-bar__total-value">{{ total | currency }}</span>
 			<span class="vender-context-bar__sub-value">
