@@ -737,3 +737,28 @@ de botón.
 🔴 Ese buscador **tampoco tenía `id`**, así que publicaba `data-testid="provider"` — el nombre del
 *modelo relacionado*. Es la tercera vez que aparece la misma caída al `model_name`, y por eso la
 regla del `id` explícito en cada `search-component` está escrita más arriba.
+
+### 🔴 La tabla de movimientos de stock trae solo los ÚLTIMOS 10
+
+`store/article/stock_movement.js` arranca con `ultimos_movimientos: 10`, y ese número viaja en la
+propia URL del endpoint (`stock-movement/{article_id}/{ultimos_movimientos}/{concepto_id}`). O sea
+que la lista está **capada**, y el usuario puede cambiar el número desde la nav del modal.
+
+Consecuencia para un spec: **contar movimientos no es una señal estable**. Un artículo del fixture
+pasa los 10 después de unas pocas corridas y desde ahí el conteo deja de crecer: un test que mida
+"cuántos movimientos agregó esta compra" empieza a dar 0 y acusa a la compra de no haber movido
+nada. Pasó el 31/8/2026 con "Pinza", que ya llevaba 13.
+
+Lo que sí es estable es mirar el **primer** movimiento, que es el más nuevo. Y para afirmar que algo
+**no** movió stock, la señal correcta es el delta del stock del artículo, no la ausencia de una fila.
+
+### 🔴 En el listado los filtros se abren en un MODAL, y elegir el valor no lo cierra
+
+La vista del listado pasa `show_filter_modal`, así que el panel de filtros de una columna es
+`#filter-modal-article`. Elegir el proveedor **aplica el filtro pero deja el modal abierto**, y
+desde ahí todo lo que se clickee falla con *"subtree intercepts pointer events"* nombrando a ese
+modal.
+
+Lo cruel es cuándo aparece: no al filtrar —eso anda— sino varios pasos después, al tocar otra cosa
+(el dropdown de la masiva, en este caso), así que el error manda a mirar el elemento equivocado. Hay
+que cerrarlo explícitamente y esperar a que se vaya.

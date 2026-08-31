@@ -98,6 +98,17 @@ async function filtrar_por_proveedor(page, proveedor) {
 	//    hay boton "Filtrar" que apretar: elegir el proveedor en el buscador YA aplica el filtro.
 	await search_and_select(page, 'filtro-search-provider_id', proveedor)
 
+	// 🔴 En el listado los filtros se abren en un MODAL (`#filter-modal-article`, por el prop
+	//    `show_filter_modal` de la vista), y elegir el proveedor lo aplica pero NO lo cierra. Si
+	//    queda abierto, todo lo que venga despues falla con "subtree intercepts pointer events"
+	//    nombrando a ese modal: el sintoma aparece recien al clickear otra cosa --el dropdown de la
+	//    masiva, por ejemplo-- y manda a buscar el problema en el elemento equivocado.
+	await page.keyboard.press('Escape')
+	await expect(
+		page.locator('#filter-modal-article___BV_modal_outer_'),
+		'el modal de filtros quedo abierto y va a tapar todo lo que siga'
+	).toHaveCount(0)
+
 	// La señal de que el filtro corrio: el boton de LIMPIAR ese filtro solo se dibuja cuando el
 	// filtro esta en uso (`filtro_usado` en BtnFilter.vue). Es la condicion observable correcta, y
 	// mucho mas estable que contar filas.

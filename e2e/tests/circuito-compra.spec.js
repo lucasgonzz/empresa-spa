@@ -112,8 +112,6 @@ const contexto = {
 	ids: {},
 	/** alias -> stock del articulo ANTES de la compra. */
 	stock_previo: {},
-	/** alias -> cuantos movimientos de stock tenia el articulo ANTES de la compra. */
-	movimientos_previos: {},
 	/** Saldo de la cuenta corriente del proveedor antes de la compra, y su id de credit_account. */
 	proveedor: {},
 	/** Cuanto subio el total de la compra al recibir mas mercaderia. */
@@ -339,37 +337,6 @@ async function saldo_de_caja(page, nombre) {
 }
 
 /**
- * Cuenta los movimientos de stock con concepto "Compra a proveedor" que tiene un articulo, abriendo
- * y cerrando su modal de movimientos.
- *
- * Se cuenta por CONCEPTO y se compara contra una linea de base, en vez de afirmar "no hay ningun
- * movimiento": el articulo puede traer movimientos de corridas anteriores, y una asercion absoluta
- * daria rojo en la segunda corrida sin que haya nada roto.
- *
- * @param {import('@playwright/test').Page} page
- * @param {number|string} id
- * @returns {Promise<number>}
- */
-async function contar_movimientos_de_compra(page, id) {
-	await page.locator(`[data-testid="btn-stock-movements-${id}"]`).click()
-
-	const estado = page.locator('[data-testid="estado-movimientos-stock"]')
-	const de_compra = page.locator('[data-testid="stock-movement-row"][data-concepto="Compra a proveedor"]')
-
-	// 🔴 No se puede contar apenas se abre el modal: mientras carga se dibuja un esqueleto y no hay
-	// ninguna fila, o sea que "todavia no llegaron" y "no hay ninguno" se ven igual. La condicion
-	// estable es data-estado="listo", que es lo que publica el propio componente.
-	await expect(estado).toHaveAttribute('data-estado', 'listo')
-
-	const total = await de_compra.count()
-
-	await page.keyboard.press('Escape')
-	await expect(estado).toHaveCount(0)
-
-	return total
-}
-
-/**
  * Busca un articulo en el listado por nombre y devuelve su id, leyendolo del testid de una celda
  * de su fila.
  *
@@ -412,11 +379,9 @@ test.describe.serial('Compra: alta, cantidad recibida, flete, cuenta corriente y
 			const id = await id_de_articulo(page, renglon.articulo)
 			contexto.ids[renglon.alias] = id
 			contexto.stock_previo[renglon.alias] = await stock_de(page, id)
-			contexto.movimientos_previos[renglon.alias] = await contar_movimientos_de_compra(page, id)
 		}
 
 		console.log('[base] stock previo: ' + JSON.stringify(contexto.stock_previo))
-		console.log('[base] movimientos de compra previos: ' + JSON.stringify(contexto.movimientos_previos))
 	})
 
 	test('carga la compra con articulos existentes, uno creado al vuelo y las tres opciones irreversibles', async ({ page }) => {
@@ -557,40 +522,40 @@ test.describe.serial('Compra: alta, cantidad recibida, flete, cuenta corriente y
 			}
 		}
 
-		// Y el movimiento que dejo cada uno. El del cero explicito es el caso interesante: NO tiene
-		// que haber movimiento de esta compra, porque no entro nada.
+		// Y el movimiento que dejo cada renglon que efectivamente movio stock.
+		//
+		// 🔴 Aca NO se cuentan movimientos, y el intento anterior de hacerlo costo una corrida: la
+		//    tabla trae solo los **ultimos 10** (`ultimos_movimientos: 10` en
+		//    `store/article/stock_movement.js`, que viaja en la propia URL del endpoint). Un articulo
+		//    del fixture pasa los 10 despues de unas pocas corridas, y desde ahi el conteo deja de
+		//    crecer: el delta da 0 y el test acusa a la compra de no haber movido nada.
+		//
+		//    Lo que si es estable es mirar el PRIMER movimiento, que es el mas nuevo.
+		//
+		//    Y para el renglon con cantidad recibida 0 no hay movimiento que mirar: lo que prueba que
+		//    no entro nada es el delta de stock del loop de arriba, que dio exactamente 0.
 		for (const renglon of RENGLONES) {
+			if (cantidad_efectiva(renglon) === 0) {
+				continue
+			}
+
 			const id = contexto.ids[renglon.alias]
-			const esperado = cantidad_efectiva(renglon)
 			await page.locator(`[data-testid="btn-stock-movements-${id}"]`).click()
 
 			const estado = page.locator('[data-testid="estado-movimientos-stock"]')
 			await expect(estado).toHaveAttribute('data-estado', 'listo')
 
-			const de_compra = page.locator('[data-testid="stock-movement-row"][data-concepto="Compra a proveedor"]')
-			const previos = contexto.movimientos_previos[renglon.alias] || 0
-
-			// 🔴 Cuantos movimientos de compra AGREGO esta compra, no cuantos hay. Un articulo del
-			//    fixture llega con los que dejo la corrida anterior, asi que el numero absoluto solo
-			//    seria correcto la primera vez.
-			expect(
-				await de_compra.count() - previos,
-				esperado > 0
-					? `"${renglon.articulo || contexto.articulo_nuevo}" tenia que dejar UN movimiento de compra`
-					: 'un renglon con cantidad recibida 0 no tiene que dejar movimiento de stock'
-			).toBe(esperado > 0 ? 1 : 0)
-
-			if (esperado > 0) {
-				// La tabla trae los movimientos del mas nuevo al mas viejo, asi que el de esta
-				// compra es el primero.
-				const movimiento = de_compra.first()
-				await expect(movimiento).toHaveAttribute('data-deposito-destino', DEPOSITO)
-				// 🔴 data-cantidad y data-stock-resultante llevan el valor CRUDO del modelo
-				//    ("10.00"): el punto es DECIMAL, no separador de miles, y por eso se leen con
-				//    numero_de_dato y no con numero_de_pantalla. Hasta el 31/8/2026 el componente
-				//    los publicaba ya formateados en es-AR ("10,00") y esta misma linea leia MIL.
-				expect(numero_de_dato(await movimiento.getAttribute('data-cantidad'))).toBe(esperado)
-			}
+			// La tabla trae los movimientos del mas nuevo al mas viejo, asi que el de esta compra es
+			// el primero.
+			const movimiento = page.locator('[data-testid="stock-movement-row"]').first()
+			await expect(movimiento).toHaveAttribute('data-concepto', 'Compra a proveedor')
+			await expect(movimiento).toHaveAttribute('data-deposito-destino', DEPOSITO)
+			// 🔴 data-cantidad y data-stock-resultante llevan el valor CRUDO del modelo ("10.00"): el
+			//    punto es DECIMAL, no separador de miles, y por eso se leen con numero_de_dato. Hasta
+			//    el 31/8/2026 el componente los publicaba ya formateados en es-AR ("10,00") y esta
+			//    misma linea leia MIL.
+			expect(numero_de_dato(await movimiento.getAttribute('data-cantidad')))
+				.toBe(cantidad_efectiva(renglon))
 
 			await page.keyboard.press('Escape')
 			await expect(estado).toHaveCount(0)
