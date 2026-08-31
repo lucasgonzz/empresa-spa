@@ -98,12 +98,19 @@ async function filtrar_por_proveedor(page, proveedor) {
 	//    hay boton "Filtrar" que apretar: elegir el proveedor en el buscador YA aplica el filtro.
 	await search_and_select(page, 'filtro-search-provider_id', proveedor)
 
-	// 🔴 En el listado los filtros se abren en un MODAL (`#filter-modal-article`, por el prop
-	//    `show_filter_modal` de la vista), y elegir el proveedor lo aplica pero NO lo cierra. Si
-	//    queda abierto, todo lo que venga despues falla con "subtree intercepts pointer events"
-	//    nombrando a ese modal: el sintoma aparece recien al clickear otra cosa --el dropdown de la
-	//    masiva, por ejemplo-- y manda a buscar el problema en el elemento equivocado.
-	await page.keyboard.press('Escape')
+	// 🔴 Elegir el proveedor en el buscador NO filtra: solo deja el criterio cargado. Lo que sale a
+	//    buscar es el boton "Filtrar" del pie del modal (`btn-modal-filtrar`); el de al lado,
+	//    "Agregar filtro", guarda el criterio y tampoco busca.
+	//
+	//    Cerrar el modal con Escape --que es lo que hacia este helper-- deja el listado SIN filtrar
+	//    y el sintoma no se parece en nada a eso: el boton de limpiar el filtro de la columna igual
+	//    aparece (mira si el filtro tiene valor, no si corrio), asi que desde afuera se ve filtrado.
+	//    Lo que delata el enganio esta tres pasos mas adelante: la opcion "Actualizar" de la masiva
+	//    sigue deshabilitada, porque el store todavia tiene `filtered_without_filter_form` en true.
+	await page.locator('[data-testid="btn-modal-filtrar"]').click()
+
+	// Y el modal tiene que irse: mientras siga abierto intercepta cualquier click posterior, y el
+	// error nombra al modal en vez de al boton que se quiso tocar.
 	await expect(
 		page.locator('#filter-modal-article___BV_modal_outer_'),
 		'el modal de filtros quedo abierto y va a tapar todo lo que siga'

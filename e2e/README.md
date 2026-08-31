@@ -762,3 +762,26 @@ modal.
 Lo cruel es cuándo aparece: no al filtrar —eso anda— sino varios pasos después, al tocar otra cosa
 (el dropdown de la masiva, en este caso), así que el error manda a mirar el elemento equivocado. Hay
 que cerrarlo explícitamente y esperar a que se vaya.
+
+### 🔴 Elegir el valor de un filtro NO filtra: hay que apretar "Filtrar"
+
+El modal de filtros del listado tiene **dos botones** en el pie, y no son intercambiables — lo
+explica el propio componente (`display/table/filter/FilterModal.vue`):
+
+| Botón | testid | Qué hace |
+|---|---|---|
+| Agregar filtro | `btn-modal-agregar-filtro` | Guarda el criterio y **no** busca |
+| Filtrar | `btn-modal-filtrar` | Sale a buscar con **todo lo acumulado** |
+
+Cerrar el modal sin apretar ninguno deja el criterio cargado y **el listado sin filtrar**. Y el
+engaño es bueno: el botón de limpiar el filtro de esa columna (`btn-limpiar-filtro-<key>`) **igual
+aparece**, porque mira si el filtro tiene valor, no si llegó a correr. Desde afuera se ve filtrado.
+
+Lo que delata el problema aparece tres pasos más adelante y no se parece en nada a la causa: la
+opción **"Actualizar" de la masiva sigue deshabilitada**, porque el store todavía tiene
+`filtered_without_filter_form` en `true` — el flag que sólo se apaga cuando el filtrado corre de
+verdad. Costó una corrida entera perseguir eso creyendo que el problema estaba en el dropdown.
+
+**Regla:** la condición observable de "el listado está filtrado" NO es que aparezca el botón de
+limpiar. Es que la masiva por filtro quede habilitada, o directamente que la cantidad de filas haya
+cambiado.
