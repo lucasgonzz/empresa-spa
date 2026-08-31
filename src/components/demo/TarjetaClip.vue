@@ -17,8 +17,8 @@
 			@canplay="marcar_listo"
 			@playing="marcar_listo"
 			@error="marcar_fallo"
-			@play="$emit('reproducir')"
-			@pause="$emit('pausar')"
+			@play="al_reproducir"
+			@pause="al_pausar"
 			@ended="al_terminar"></video>
 
 			<!--
@@ -110,6 +110,10 @@ export default {
 			// indicador tiene que estar puesto antes del `loadstart` y no despues.
 			cargando: true,
 			fallo: false,
+			// El lead apreto play mientras el video todavia cargaba. Se le avisa al panel recien
+			// cuando hay datos (ver `marcar_listo`), para que el marco se agrande una sola vez y
+			// ya reproduciendo, en vez de agrandarse en el medio del buffering.
+			quiere_reproducir: false,
 		}
 	},
 	computed: {
@@ -145,13 +149,57 @@ export default {
 		marcar_cargando() {
 			this.cargando = true
 		},
+		/**
+		 * Hay datos: se apaga el indicador y, si el lead habia apretado play mientras cargaba,
+		 * ese es el momento de avisarle al panel. Recien aca el marco se agranda, con el video ya
+		 * en condiciones de reproducir de verdad.
+		 *
+		 * @returns {void}
+		 */
 		marcar_listo() {
 			this.cargando = false
 			this.fallo = false
+
+			if (this.quiere_reproducir) {
+				this.quiere_reproducir = false
+				this.$emit('reproducir')
+			}
 		},
 		marcar_fallo() {
 			this.cargando = false
+			// Si el video fallo no tiene ningun sentido seguir esperando para agrandarlo.
+			this.quiere_reproducir = false
 			this.fallo = true
+		},
+		/**
+		 * El navegador emite `play` apenas INTENTA arrancar, sin datos suficientes todavia. Si le
+		 * avisamos al panel en ese momento, el marco se agranda en el medio del buffering: el
+		 * video cambia de tamano mientras todavia no se reproduce nada (pedido de Lucas del
+		 * 31/8/2026).
+		 *
+		 * Mientras `cargando` este puesto, la intencion se guarda y no se emite nada: la tarjeta
+		 * queda chica con la capa de "Cargando el video" arriba, que es lo que ya existe para eso.
+		 *
+		 * @returns {void}
+		 */
+		al_reproducir() {
+			if (this.cargando) {
+				this.quiere_reproducir = true
+				return
+			}
+
+			this.$emit('reproducir')
+		},
+		/**
+		 * 🔴 Cancela la intencion guardada ademas de avisarle al panel. Sin esto, un lead que
+		 * aprieta play y se arrepiente antes de que termine de cargar veia el video arrancar
+		 * solo -y agrandarse- cuando los datos llegaban, aunque ya no lo quisiera.
+		 *
+		 * @returns {void}
+		 */
+		al_pausar() {
+			this.quiere_reproducir = false
+			this.$emit('pausar')
 		},
 		/**
 		 * El video llego al final.
@@ -214,7 +262,10 @@ $tarjeta-clip-violeta: #3A31FC
 	// tarjeta se veia bien de casualidad. Ahora que la hoja del panel declara `left` para que
 	// los titulos largos no salgan centrados, lo que acá SI se busca centrado se dice acá.
 	text-align: center
-	padding: 0.25rem 0.75rem 0.875rem
+	// El padding de arriba es el unico aire entre el titulo del clip (que vive en el boton del
+	// item, arriba de este componente) y el borde negro del marco del video. Con 0.25rem el
+	// titulo quedaba pegado al video (pedido de Lucas, 31/8/2026).
+	padding: 0.625rem 0.75rem 0.875rem
 
 .tarjeta-clip__marco
 	position: relative
@@ -237,12 +288,18 @@ $tarjeta-clip-violeta: #3A31FC
 	transform: translate(-50%, -50%)
 	// Sin min(): SASS lo toma como su propia funcion y con vw y px juntos tira
 	// "Incompatible units". El par width/max-width da lo mismo y no depende de eso.
-	width: 80vw
-	max-width: 960px
+	//
+	// 90% de la pantalla (pedido de Lucas, 31/8/2026: era 80vw con tope de 960px, y en un
+	// monitor de 1920px el tope mandaba y el video quedaba a la mitad de la pantalla, no al
+	// 80%). El tope nuevo son 1728px = 90% de 1920, pantalla de referencia: de ahi para arriba
+	// el video deja de crecer para que en un monitor ultrapanoramico la barra de controles
+	// nativa no se estire miles de pixeles.
+	width: 90vw
+	max-width: 1728px
 	z-index: 1060
 
 .tarjeta-clip__marco--grande .tarjeta-clip__video
-	max-height: 80vh
+	max-height: 90vh
 
 .tarjeta-clip__capa
 	position: absolute
