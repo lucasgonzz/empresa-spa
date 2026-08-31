@@ -54,6 +54,16 @@ const RUTA_PRESUPUESTOS = { name: 'budget' }
 const RUTA_WHATSAPP = { name: 'whatsapp' }
 
 /**
+ * La primera fila de la tabla de presupuestos.
+ *
+ * `Tr.vue` le pone a cada fila `data-testid="<modelo>-row-<id>"` y `buscar_visible()` del motor se
+ * queda con la primera que se pueda señalar. Reemplaza al anclaje de la TABLA ENTERA, que dibujaba
+ * un recuadro del tamaño de la pantalla cuando el paso decía "abrí uno" — el defecto que Lucas
+ * reportó el 31/8/2026 sobre el clip 1.4 y que estaba repetido en varios tours.
+ */
+const PRIMERA_FILA_PRESUPUESTO = '[data-testid^="budget-row-"]'
+
+/**
  * Espera larga para los pasos cuyo elemento depende de que el lead haga algo que lleva su tiempo:
  * abrir un presupuesto del listado, esperar la respuesta de la IA. El techo por defecto del motor
  * son 12 s y en esos casos se queda corto.
@@ -401,8 +411,8 @@ export default {
 				 * cuando el modal ya está abierto, así que la instrucción para abrirlo tiene que
 				 * estar en el último paso visible antes. */
 				ruta: RUTA_PRESUPUESTOS,
-				ancla: 'presupuestos.tabla',
-				texto: 'Acá ves cuáles siguen sin confirmar. Abrí uno.',
+				selector: PRIMERA_FILA_PRESUPUESTO,
+				texto: 'Acá están los que siguen sin confirmar. Abrí uno con un clic en la fila.',
 				avanza: 'siguiente',
 			},
 			{
