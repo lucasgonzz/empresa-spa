@@ -177,9 +177,59 @@ async function agregar_articulo(page, nombre, id, cantidad) {
 	// Enter que BUSCA, y click en el primer resultado.
 	await search_and_select(page, 'search-article', nombre)
 
-	// completar_campo y no fill(): el input de la cantidad es controlado y un fill que caiga
-	// mientras la fila se termina de dibujar se pisa solo, sin ningun error.
-	await completar_campo(page, `venta-item-cantidad-${id}`, cantidad)
+	// 🔴 Elegir el articulo NO lo agrega a la venta: queda PENDIENTE esperando la cantidad. El
+	//    buscador ya muestra su nombre y su stock, el cursor salta al campo "Cantidad", y la venta
+	//    sigue diciendo "0 productos" hasta que se confirma con Enter. Sin este paso, el renglon
+	//    nunca existe y el spec se va en timeout buscando una fila que el sistema no tiene por que
+	//    haber dibujado.
+	//
+	//    Depende de la configuracion de la cuenta (`users.ask_amount_in_vender`); el fixture lo
+	//    tiene prendido, que es el comportamiento por defecto.
+	const pendiente = page.locator('[data-testid="venta-cantidad-pendiente"]')
+	await expect(
+		pendiente,
+		`"${nombre}" tenia que quedar pendiente de cantidad despues de elegirlo en el buscador`
+	).toBeVisible()
+	await pendiente.fill(String(cantidad))
+	await pendiente.press('Enter')
+
+	// Recien ahora existe el renglon, y con la cantidad ya puesta.
+	await expect(
+		page.locator(`[data-testid="venta-item-cantidad-${id}"]`),
+		`"${nombre}" tenia que entrar a la venta`
+	).toHaveValue(String(cantidad))
+}
+
+/**
+ * Elige una opcion de un select buscandola por texto PARCIAL.
+ *
+ * 🔴 No sirve `selectOption({ label })`, que exige el texto exacto: las etiquetas de estos selects
+ * llevan datos adosados que cambian con la configuracion de la cuenta. El metodo de pago
+ * "Efectivo", con un descuento configurado, se muestra como **"3 - Efectivo (-10,00%)"** -- el
+ * numero del metodo adelante y el porcentaje atras. Un test que pida el texto exacto se rompe el
+ * dia que alguien cambia el descuento, y el rojo dice "did not find some options", que suena a que
+ * falta la opcion.
+ *
+ * @param {import('@playwright/test').Page} page
+ * @param {string} testid
+ * @param {string} texto Parte del texto de la opcion (ej. "Efectivo").
+ * @returns {Promise<void>}
+ */
+async function elegir_opcion_que_contenga(page, testid, texto) {
+	const select = page.locator(`[data-testid="${testid}"]`)
+	await expect(select).toBeVisible()
+
+	const valor = await select.evaluate((elemento, buscado) => {
+		const opcion = [...elemento.options].find(o => o.text.includes(buscado))
+		return opcion ? opcion.value : null
+	}, texto)
+
+	expect(
+		valor,
+		`el select "${testid}" no ofrece ninguna opcion que diga "${texto}" (¿esta cerrada la caja?)`
+	).not.toBeNull()
+
+	await select.selectOption(valor)
 }
 
 /**
@@ -261,10 +311,10 @@ test.describe.serial('Venta de mostrador: cobro con descuento, caja, y su revers
 		const total_en_pantalla = await total_de_la_venta(page)
 		expect(total_en_pantalla, 'la venta tenia que tener un total mayor a cero').toBeGreaterThan(0)
 
-		await page.locator('[data-testid="venta-metodo-pago"]').selectOption({ label: METODO_PAGO })
-		// 🔴 Si este selectOption falla con "did not find some options", la caja esta CERRADA: el
-		//    select solo ofrece las abiertas. No es que falte la caja.
-		await page.locator('[data-testid="venta-caja"]').selectOption({ label: CAJA })
+		await elegir_opcion_que_contenga(page, 'venta-metodo-pago', METODO_PAGO)
+		// 🔴 Si el select de caja no ofrece ninguna opcion, la caja esta CERRADA: solo ofrece las
+		//    abiertas. No es que falte la caja.
+		await elegir_opcion_que_contenga(page, 'venta-caja', CAJA)
 
 		const [respuesta] = await Promise.all([
 			page.waitForResponse(res => res.url().includes('/sale') && res.request().method() === 'POST'),
