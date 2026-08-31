@@ -72,7 +72,74 @@ el input de login".
 | `alta-compra.spec.js` | Alta de una compra con 10 articulos, costos actualizados y facturacion automatica. Verifica **coherencia** pantalla ↔ servidor, no numeros absolutos. |
 | `alta-articulo-desde-buscador.spec.js` | Crear un articulo que no existe desde el buscador de articulos, adentro de una compra. |
 | `compra-costeo-facturacion.spec.js` | **El circuito completo de una compra**, de punta a punta (ver abajo). |
+| `circuito-compra.spec.js` | **El circuito operativo de una compra** (ver abajo): cantidad pedida vs recibida, flete prorrateado, importacion de Excel, edicion de la compra ya confirmada y pago al proveedor. |
 | `buscador-filtros-invalidan-busqueda.spec.js` · `estado-vacio-centrado.spec.js` · `limpiar-filtros-desde-columna.spec.js` · `menu-crear-submenu-importacion.spec.js` | Comportamientos puntuales de la interfaz. |
+
+### Una prueba grande se parte en archivos seriales, no en un test gigante ni en tests sueltos
+
+Es la forma de todos los circuitos de este harness y conviene entender por que, porque las dos
+alternativas se ven razonables y las dos son peores.
+
+**Un solo test que haga todo el recorrido no sirve.** El timeout, el trace y la captura de
+Playwright son POR TEST. Un test de sesenta maniobras deja, cuando se rompe, una linea roja y un
+trace enorme, sin decir cual de las cincuenta aserciones anteriores es la regresion.
+
+**Tests totalmente independientes tampoco.** Cada uno tendria que reconstruir su precondicion POR LA
+INTERFAZ (crear la compra, confirmarla, facturarla), lo que multiplica la corrida por el camino mas
+lento. Y peor: la mitad de lo que hay que verificar ES estado acumulado --que la cuenta corriente
+tenga la compra, que al borrar la venta vuelva el stock, una nota de credito sobre una venta
+facturada--. Aislar eso obliga a falsear la precondicion, que es justo lo que ya hace la suite de
+PHPUnit de `empresa-api`, mucho mas rapido y sin navegador.
+
+**Lo que si funciona:** un archivo por circuito, cada uno un `test.describe.serial`, y cada paso un
+`test()` con nombre propio. Los pasos comparten estado por un objeto `contexto` a nivel de modulo,
+cada uno tiene su propio trace y su propio presupuesto de tiempo, y si uno falla los que siguen se
+saltean --que es lo correcto: reportarian fallas derivadas y taparian la causa--.
+
+Y la regla que hace que todo esto se pueda correr dos veces sobre la misma base: **todo lo
+acumulativo se verifica por DIFERENCIA**. El primer test de cada archivo no verifica nada, saca la
+foto previa (stock, saldos, cantidad de movimientos) y todas las aserciones son sobre el delta.
+
+### `circuito-compra.spec.js`
+
+Cubre lo que una compra mueve cuando se la carga como la carga una persona, y arranca donde
+`compra-costeo-facturacion.spec.js` no llega: no repite el costeo ni la facturacion, sino la
+operatoria.
+
+1. **El alta** — proveedor con bonificaciones, tres articulos que ya existen, uno creado al vuelo
+   desde el buscador con los dos Enter, costos cambiados a mano y las tres opciones irreversibles.
+2. **Cantidad pedida vs recibida**, en sus tres caminos, que es el corazon del archivo:
+
+   | renglon | pedida | recibida | que entra al stock |
+   |---|---|---|---|
+   | Pinza | 10 | (vacia) | 10 — cae a la pedida |
+   | Martillo acero | 8 | 5 | 5 — manda la recibida |
+   | Alicate | 6 | **0 explicito** | **0 — no se mueve nada** |
+
+   🔴 El cero explicito es el unico de los tres que puede romperse sin que los otros dos se enteren.
+   `NewProviderOrderHelper::interpretar_cantidad_real()` usa `received` **incluido el 0**, y cae a
+   `amount` solo si es `null` o `''`. Un `if ($received)` en vez de un `is_null($received)` haria
+   que el cero se comporte como "no indicado" y sume la cantidad pedida. El test lo verifica dos
+   veces: por el stock y por la AUSENCIA de movimiento.
+
+   La misma regla se verifica ademas a nivel de totales: el subtotal de la compra da **27.300** con
+   la cantidad efectiva y daria **36.600** con la pedida. Son dos numeros que no se pueden confundir.
+3. **El flete** — un costo extra de tipo `transporte`, y que el recargo unitario que le toca a cada
+   articulo sea `flete x (subtotal del renglon / subtotal de la compra) / cantidad efectiva`.
+
+   🔴 Dos consecuencias no obvias que el test fija: la base del reparto es el subtotal **bruto**
+   (antes de las bonificaciones), y **el renglon con cantidad efectiva 0 no participa del reparto**
+   (el backend lo saltea antes de tocarlo). Si algun dia participara, el flete de los demas bajaria
+   sin que nada lo avise.
+4. **La cuenta corriente del proveedor** — que la compra quede como deuda por el total CON el costo
+   extra, porque un costo extra suma siempre al total, prorratee o no.
+5. **La importacion de Excel** — tres filas que ejercitan los tres caminos del matcheo: un articulo
+   que ya esta en la compra (la actualiza), uno que existe en el sistema pero no en la compra (la
+   agrega) y uno que no existe (lo da de alta).
+6. **Editar la compra ya confirmada** subiendo la cantidad recibida: que el stock suba solo por la
+   DIFERENCIA (no por la cantidad entera de nuevo), y que la cuenta corriente se mueva exactamente
+   lo que subio el total.
+7. **El pago** — su imputacion en la cuenta corriente y la salida de la caja.
 
 ### `compra-costeo-facturacion.spec.js`
 
@@ -410,3 +477,165 @@ Al agregar tests nuevos: si el campo es parte de un `ModelForm` generico o una f
 `belongs_to_many`, ya tiene `data-testid` con esta convencion — no hace falta tocar nada. Si es
 un componente puntual de un modulo (como `Total.vue` de compras), agregar el `data-testid`
 directamente en ese componente, hardcodeado, describiendo que es (`modulo-elemento`).
+
+### Agregados el 31/8/2026 (mision del circuito e2e completo)
+
+Todos genericos y retrocompatibles, y todos con el discriminante AL PRINCIPIO por la regla de mas
+arriba (un testid nuevo no puede compartir el comienzo con uno que ya existe):
+
+- **Boton "Agregar X" de cualquier `has_many`**: `btn-agregar-has-many-<prop.key>`
+  (`common-vue/components/model/HasMany.vue`). Discriminado por `prop.key` y **no** por el nombre
+  del modelo, por la misma razon que el `data-tour` que ya vivia ahi: la solapa "Descuentos y
+  recargos" de una compra tiene DOS `has_many` --los descuentos y los costos extra-- y con el
+  modelo el testid se duplicaria.
+
+  🔴 Por que no se llama `btn-crear-<model_name>`: ya existe `btn-crear-provider_order`
+  (`BtnCreate.vue`) y `btn-crear-provider_order_extra_cost` **empieza igual**.
+- **Modal de importacion** (`common-vue/components/import/Index.vue`), que no tenia ninguno:
+  `import-fila-desde` (la fila a partir de la cual importar, que viene en 2),
+  `input-excel-<model_name>` y `btn-confirmar-importacion`.
+
+  🔴 `input-excel-` y no `input-file-`: el `id` de al lado es `input-file-<model_name>`, pero
+  `input-file-` es tambien el comienzo de los ids que BootstrapVue genera para otros `b-form-file`.
+  Y `btn-confirmar-importacion` y no `btn-importar-...` porque el boton de la FILA (el que ABRE
+  este modal) ya se llama `btn-importar-excel-<id>`.
+- **Boton "Importar excel" de la fila de una compra**: `btn-importar-excel-<provider_order_id>`
+  (`components/provider/components/orders/BtnImport.vue`). Lleva el id porque el bloque de botones
+  se repite en cada fila, mismo criterio que `btn-stock-movements-<id>`.
+- **Estado de la tabla de movimientos de stock**: `estado-movimientos-stock`, con
+  `data-estado="cargando|listo"` y `data-cantidad`
+  (`components/listado/modals/stock-movement-modal-info/TableComponent.vue`). Mismo patron que
+  `download-resources/Index.vue`.
+
+  🔴 Hace falta porque mientras la tabla carga se dibuja un `<b-skeleton-table>` y despues puede
+  quedar la tabla O el cartel "No hay movimientos": contar filas apenas se abre el modal da CERO y
+  no distingue *"todavia no llegaron"* de *"no hay ninguno"*. Esa es exactamente la diferencia que
+  hay que poder afirmar cuando se compra con cantidad recibida 0.
+
+### 🔴 Un boton "Crear" apretado antes de tiempo no hace NADA, y no avisa
+
+Sintoma: se clickea `[data-testid="btn-crear-<modelo>"]` apenas se entra al modulo y no se abre
+ningun modal. Sin error de consola, sin toast, sin nada tapando el boton --`elementFromPoint`
+devuelve el propio boton-- y `#<modelo>___BV_modal_outer_` nunca llega a existir en el DOM.
+
+`BtnCreate.create()` llama a `setModel()` (`common-vue/mixins/display.js`), que adentro de un
+`setTimeout(..., 30)` hace `$bvModal.show(model_name)`. Si el `<model>` --que es un componente
+async-- todavia no termino de cargar su chunk, ese `show()` es un **no-op silencioso** de
+BootstrapVue: pedirle mostrar un id que nadie registro no tira error.
+
+Lo dispara en la practica entrar al modulo y clickear mientras corre la descarga de recursos del
+arranque. La solucion es la de siempre --esperar `recursos-estado` en `listo`-- **mas** reintentar
+el click hasta que el modal exista, que es lo que hace `abrir_alta_de_compra()` en
+`circuito-compra.spec.js`.
+
+⚠️ Y una trampa de diagnostico: `elemento.offsetParent !== null` NO sirve para saber si un modal
+esta visible. Un `.modal` de Bootstrap tiene `position: fixed`, y para un elemento fijo
+`offsetParent` es **siempre** null. La condicion correcta es la existencia del outer.
+
+### 🔴 Un `has_many` cargado sobre un modelo SIN GUARDAR se descarta en silencio
+
+Con el formulario de compra nuevo (`model.id === null`), "Agregar Costo Extra" abre su modal
+anidado, deja completar todo, y al apretar "Guardar y cerrar" **no pasa nada**: el modal queda
+abierto, la tabla sigue diciendo "No hay Costos Extra", no hay error ni toast. Verificado en el
+store: `provider_order.model.provider_order_extra_costs.length === 0`.
+
+Consecuencia para cualquier spec: el flete (y cualquier `has_many` que no venga precargado) se
+carga **despues** de guardar, reabriendo el modelo desde su fila.
+
+### 🔴 La lupa del filtro de una columna no se puede clickear sin pasar el mouse por el encabezado
+
+Esta es la causa real del rojo de `limpiar-filtros-desde-columna.spec.js`, que arrastra desde el
+15/8/2026. **La nota anterior de este README apuntaba al lado equivocado**: decia que el spec
+clickeaba "sin esperar a que la pantalla se asiente" y que lo tapaba el cartel de progreso
+`#offline-articles-progress`. No es eso.
+
+Medido el 31/8/2026 sobre el `<th>` de la columna Proveedor del listado, con la pantalla quieta y
+los recursos ya descargados:
+
+```
+.cont-filter-buttons  ->  max-width: 0px   opacity: 0   pointer-events: none
+```
+
+O sea que **el boton existe en el DOM, esta "visible" para Playwright y es inclickeable**: vive
+dentro de un contenedor con `overflow: hidden` y ancho CERO. Por eso `elementFromPoint` sobre el
+centro del boton devuelve `.cont-th` --que es su propio ANCESTRO--, y Playwright lo reporta como
+*"`<div class="cont-th">` intercepts pointer events"*, un mensaje que hace pensar en un elemento
+encima cuando en realidad no hay nada encima.
+
+Lo que lo abre es una regla de CSS y nada mas (`display/table/Index.vue`):
+
+```sass
+th
+    &:hover
+        .cont-filter-buttons
+            opacity: 1
+            pointer-events: auto
+```
+
+Entonces el recorrido correcto es el de una persona: **pasar el mouse por el encabezado y recien
+ahi clickear la lupa**, las dos cosas seguidas y en el mismo test para que el puntero no se vaya:
+
+```js
+const th = page.locator('th').filter({ has: page.locator('[data-testid="btn-abrir-filtro-provider_id"]') })
+await th.hover()
+await page.locator('[data-testid="btn-abrir-filtro-provider_id"]').click()
+```
+
+⚠️ Ojo con el chequeo de "estable" de Playwright: el contenedor abre con una transicion de 0,2 s
+(`transition: max-width 0.2s`), y Playwright puede considerarlo estable antes de que termine de
+abrirse. Si aparece un rojo intermitente aca, la condicion observable es que el contenedor tenga
+ancho, no un timeout mas largo.
+
+Nota aparte: el boton tambien se muestra sin hover cuando el filtro YA esta en uso, por la clase
+`force-show` (`:class="{ 'force-show': filter_is_used(field.key) }"`). O sea que el segundo click
+sobre la misma columna no necesita hover, y el primero si.
+
+### Agregados el 31/8/2026, segunda tanda (circuito del listado)
+
+Ninguna de estas dos pantallas tenia un solo `data-testid`.
+
+**Filtro de una columna** (`display/table/BtnFilter.vue`, `display/table/filter/BtnBuscar.vue`,
+`display/table/filter/Select.vue`), todos con la key de la columna:
+
+- `btn-abrir-filtro-<key>` — la lupa del encabezado (ver la trampa del hover, arriba).
+- `btn-limpiar-filtro-<key>` — la flechita que borra ese filtro. Solo existe si el filtro esta en uso.
+- `filtro-select-<key>` — el select del panel, para las columnas de tipo relacion.
+- `btn-aplicar-filtro-<key>` — el boton "Filtrar" del panel.
+
+**Actualizacion masiva** (`opciones-filtrados-seleccion/`):
+
+- `masiva-dropdown-filtrados` / `masiva-dropdown-seleccion` y
+  `masiva-opcion-actualizar-filtrados` / `masiva-opcion-actualizar-seleccion`.
+
+  🔴 El sufijo no sobra: `OptionsDropdown.vue` se dibuja **dos veces** en la misma pantalla --una
+  para el conjunto filtrado y otra para la seleccion manual-- y los `id` de sus items
+  (`btn_actualizar`, `btn_eliminar`) quedan **duplicados en el documento**. El testid es lo unico
+  que distingue por cual de los dos se entro.
+
+  ⚠️ La opcion "Actualizar" viene **deshabilitada** (`aria-disabled="true"`) mientras no haya un
+  filtro aplicado. Un test que la clickee antes de filtrar no recibe ningun error: no pasa nada.
+- `masiva-campo-<prop_key>` — la tarjeta de cada propiedad dentro del modal.
+- `masiva-modo-<prop_key>-<modo>` — los botones de modo de un campo numerico
+  (`decrement` / `increment` / `set`).
+- `masiva-valor-<prop_key>` — el input del modo activo. Es UNO solo aunque haya tres inputs en el
+  codigo: solo se renderiza el del modo elegido.
+- `masiva-checkbox-<prop_key>-<sin-cambio|activar|desactivar>` — los tres botones de un campo
+  booleano. Los valores reales son `''`, `1` y `0`; se traducen a palabras para que el testid se
+  pueda leer (y para que el vacio no deje el nombre terminado en guion).
+- `masiva-select-<prop_key>` y `btn-confirmar-masiva`.
+
+🔴 Todos se arman con `field_card.prop_key` y **no** con `field_card.uid`, que es un identificador
+generado y cambia entre renders: un testid que cambia solo no sirve para nada.
+
+### 🔴 El campo "Disponible en la tienda" no existe si la cuenta no tiene la extension `online`
+
+`src/models/article.js` declara `online` con `if_has_extencion: 'online'`, y
+`common-vue/mixins/generals.js` filtra de plano las props cuya extension el usuario no tiene. Sin
+esa extension el campo **no aparece en ningun lado**: ni en el formulario del articulo ni en la
+actualizacion masiva. Y el dato igual existe en la base, con el default 1 de la migracion.
+
+El fixture no sembraba ninguna extension (`extencion_empresas` y `extencion_empresa_user` en cero),
+asi que no habia forma de verificar por interfaz que la masiva prenda y apague la disponibilidad en
+el ecommerce. Lo tapa `TestingFerreteriaSeeder::seed_extencion_online()`, que habilita **solo** esa
+extension: cada extension cambia lo que la SPA dibuja, y prender de mas mueve pantallas que ningun
+test pidio.

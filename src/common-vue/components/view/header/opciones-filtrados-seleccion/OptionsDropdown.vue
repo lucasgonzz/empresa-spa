@@ -6,13 +6,20 @@
 	:data-tour="ancla_tour"
 	size="sm"
 	:variant="variant"
-	:toggle-attrs="{ title: tooltip_text, 'aria-label': tooltip_text }">
+	:toggle-attrs="{ title: tooltip_text, 'aria-label': tooltip_text, 'data-testid': 'masiva-dropdown-'+sufijo_testid }">
 		<template #button-content>
 			<i :class="icon_class" aria-hidden="true"></i>
 			<b-badge :variant="badge_variant" class="m-l-5">{{ count }}</b-badge>
 		</template>
+		<!--
+			🔴 El sufijo (`filtrados` / `seleccion`) no sobra: este componente se dibuja DOS VECES en
+			la misma pantalla --una para el conjunto filtrado y otra para la seleccion manual-- y los
+			`id` de los items (`btn_actualizar`, `btn_eliminar`) quedan duplicados en el documento.
+			El testid es lo unico que distingue por cual de los dos dropdowns se entro.
+		-->
 		<dropdown-option-item
 		v-if="puede_actualizar && show_actualizar_option"
+		:testid="'masiva-opcion-actualizar-'+sufijo_testid"
 		id="btn_actualizar"
 		icon="icon-undo"
 		:disabled="ocultar_actualizar_eliminar_por_filtro"
@@ -88,6 +95,14 @@ export default {
 				return 'btn_filtrados_dropdown'
 			}
 			return 'btn_seleccionados_dropdown'
+		},
+		/**
+		 * Sufijo que distingue las dos instancias de este dropdown en los `data-testid`.
+		 *
+		 * @returns {String}
+		 */
+		sufijo_testid() {
+			return this.from_filter ? 'filtrados' : 'seleccion'
 		},
 		variant() {
 			if (this.from_filter) {
