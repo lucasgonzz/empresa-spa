@@ -875,3 +875,8 @@ nada, y manda a revisar la cuenta corriente. Está perfecta: lo que estaba mal e
 **Regla:** cuando se busca un registro por un valor que puede repetirse entre corridas, hay que
 desempatar por el id mas alto (o guardarse el id de la respuesta del POST). Vale para pagos, ventas,
 comprobantes: todo lo que este harness crea con datos fijos.
+
+⚠️ `compra-costeo-facturacion.spec.js` tenia el mismo bug LATENTE desde que se escribio, y recien
+aparecio el 31/8/2026 --en la primera corrida de la suite completa que llego hasta ahi con historia
+suficiente--. Es la clase de rojo que no se puede reproducir en una base recien sembrada: aparece
+solo, mucho despues, y culpa al sistema.
