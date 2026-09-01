@@ -615,6 +615,47 @@ function traer_a_la_vista(elemento) {
 
 		padre = padre.parentElement
 	}
+
+	acercar_en_la_pagina(elemento)
+}
+
+/**
+ * Scrollea LA PÁGINA si el elemento quedó fuera de la ventana.
+ *
+ * 🔴 El recorrido de los contenedores de arriba no alcanza: cubre lo que scrollea por su cuenta
+ * —la tabla, un modal— pero no el documento. Medido el 1/9/2026 en el paso 2 del clip 1.8: el menú
+ * de "Crear" se abre hacia abajo y con la tabla cargada su primera opción cae en `y: 1005` sobre
+ * una ventana de 900 px. El recuadro y el cartel se dibujaban **fuera de la pantalla**, y el lead
+ * veía el overlay oscuro sin nada señalado.
+ *
+ * driver.js tiene su propio `scrollIntoView`, pero sólo lo dispara al resaltar y **no** en el
+ * `refresh()` de `reubicar_cartel()` (verificado en el `dist`: `refreshActiveHighlight` no
+ * scrollea), así que un elemento que aparece o se mueve después de resaltar —justo el caso de un
+ * menú que se despliega— se queda afuera.
+ *
+ * Se usa `block: 'center'` y no `'nearest'` a propósito: el cartel de driver.js se planta al lado
+ * del elemento y con `'nearest'` el elemento queda pegado al borde, con el cartel medio afuera.
+ *
+ * @param {Element} elemento
+ * @returns {void}
+ */
+function acercar_en_la_pagina(elemento) {
+	if (typeof elemento.getBoundingClientRect !== 'function') {
+		return
+	}
+
+	const caja = elemento.getBoundingClientRect()
+	const alto = window.innerHeight || document.documentElement.clientHeight
+
+	/* Sólo si de verdad quedó afuera: scrollear cuando ya se ve mueve la pantalla debajo del lead
+	 * en cada refresco, que es peor que el problema que esto arregla. */
+	if (caja.height > 0 && caja.top >= 0 && caja.bottom <= alto) {
+		return
+	}
+
+	if (typeof elemento.scrollIntoView === 'function') {
+		elemento.scrollIntoView({ block: 'center', inline: 'nearest' })
+	}
 }
 
 /**
@@ -1408,6 +1449,7 @@ function enganchar_refresco(elemento) {
 	}
 
 	const custodio = custodiar_clase_activa(elemento)
+	const custodio_menu = custodiar_menu_abierto(elemento)
 
 	sueltas_de_refresco = function () {
 		document.removeEventListener('scroll', volver_a_medir, true)
@@ -1419,6 +1461,10 @@ function enganchar_refresco(elemento) {
 
 		if (custodio) {
 			custodio.disconnect()
+		}
+
+		if (custodio_menu) {
+			custodio_menu.disconnect()
 		}
 
 		/* Se la saca a mano porque el custodio pudo habérsela repuesto. Es seguro: esto corre
@@ -1456,6 +1502,72 @@ function enganchar_refresco(elemento) {
  * @param {Element} elemento
  * @returns {MutationObserver|null}
  */
+/**
+ * Mantiene abierto el menú desplegable dentro del cual vive el elemento resaltado.
+ *
+ * 🔴 Sin esto, el paso que señala una opción de un menú resalta un elemento de 0×0.
+ *
+ * Medido el 1/9/2026 recorriendo el clip 1.8 en vivo: el lead toca la flechita de "Crear",
+ * `esperar_menu_desplegado()` espera correctamente a que el menú abra, el motor prepara el paso
+ * siguiente y encuentra la opción "Importación" —o sea que hasta ahí todo funciona—, pero **el
+ * propio acto de mostrar el paso cierra el menú**: driver.js le pasa el foco al cartel al
+ * renderizarlo, y BootstrapVue cierra sus desplegables ante cualquier foco de afuera. Resultado
+ * medido: caja resaltada `[0,0,0,0]` y el cartel hablando de una opción que ya no está en pantalla.
+ *
+ * Es la misma clase de defecto que `custodiar_clase_activa()` —algo de afuera deshace lo que el
+ * tour necesita— y se resuelve igual: se observa y se repone. Reponer la clase `show` es lo que
+ * BootstrapVue mira para dibujar el menú, así que alcanza con devolvérsela al menú y a su
+ * contenedor.
+ *
+ * ⚠️ El custodio se suelta al cambiar de paso (`sueltas_de_refresco`), así que el lead puede
+ * cerrar el menú normalmente en cuanto el tour avanza. Mientras el paso está a la vista, en cambio,
+ * cerrarlo dejaría al tour señalando la nada — que es justamente lo que se está evitando.
+ *
+ * @param {Element} elemento Nodo resaltado.
+ * @returns {MutationObserver|null}
+ */
+function custodiar_menu_abierto(elemento) {
+	if (typeof MutationObserver !== 'function' || !elemento || typeof elemento.closest !== 'function') {
+		return null
+	}
+
+	const menu = elemento.closest('.dropdown-menu')
+
+	if (!menu) {
+		return null
+	}
+
+	const contenedor = menu.closest('.dropdown, .btn-group')
+
+	function reponer() {
+		if (!corrida || !recorrido) {
+			return
+		}
+
+		if (!menu.classList.contains('show')) {
+			menu.classList.add('show')
+		}
+
+		if (contenedor && !contenedor.classList.contains('show')) {
+			contenedor.classList.add('show')
+		}
+	}
+
+	const custodio = new MutationObserver(reponer)
+
+	custodio.observe(menu, { attributes: true, attributeFilter: ['class'] })
+
+	if (contenedor) {
+		custodio.observe(contenedor, { attributes: true, attributeFilter: ['class'] })
+	}
+
+	/* Una pasada de entrada: si el menú ya se cerró entre que se resolvió el elemento y que se
+	 * llegó acá, el observador no vería ningún cambio y el paso quedaría igual de roto. */
+	reponer()
+
+	return custodio
+}
+
 function custodiar_clase_activa(elemento) {
 	if (typeof MutationObserver !== 'function') {
 		return null

@@ -301,9 +301,13 @@ export default {
 				avanza: 'siguiente',
 			},
 			{
+				/* `desaparece` y no `clic`: ver el paso homólogo del clip 1.4. Guardar es una llamada
+				 * HTTP y con `clic` el motor avanzaba 80 ms después del clic, con el modal todavía
+				 * abierto tapando la fila que el paso siguiente resalta. La desaparición del botón
+				 * —que vive adentro del modal— es la señal exacta de "guardado y cerrado". */
 				ancla: 'listado.boton_guardar_articulo',
 				texto: 'Guardá y cerrá.',
-				avanza: 'clic',
+				avanza: 'desaparece',
 			},
 			{
 				selector: PRIMERA_FILA,
@@ -469,9 +473,11 @@ export default {
 				avanza: 'siguiente',
 			},
 			{
+				/* `desaparece`, misma familia que el 1.1 y el 1.4: el cartel siguiente no puede
+				 * dibujarse con el modal todavía en pantalla. */
 				ancla: 'listado.boton_guardar_articulo',
 				texto: 'Guardá: cambia solo el precio de esa lista, el resto queda como estaba.',
-				avanza: 'clic',
+				avanza: 'desaparece',
 			},
 			{
 				/* Paso puente: el paso siguiente cambia de ruta y el motor navega apenas se dibuja
@@ -560,9 +566,19 @@ export default {
 				avanza: 'clic',
 			},
 			{
+				/* 🔴 Avanza por DESAPARICIÓN y no por clic, y se midió el 1/9/2026 en el recorrido
+				 * en vivo: guardar es una llamada HTTP, y con `clic` el motor se iba al paso
+				 * siguiente 80 ms después del clic —o sea con el modal todavía abierto—. Medido:
+				 * a los 900 ms el tour ya estaba en el paso 6 resaltando la fila de la tabla,
+				 * mientras el modal del artículo seguía tapándola hasta pasados los 1500 ms. El
+				 * recuadro señalaba algo que el lead no podía ver ni tocar.
+				 *
+				 * El botón de guardar vive ADENTRO del modal, así que su desaparición es
+				 * exactamente la señal que hacía falta: "ya se guardó y ya se cerró". No hay que
+				 * adivinar ningún tiempo. */
 				ancla: 'listado.boton_guardar_articulo',
 				texto: 'El precio recién se cotiza cuando guardás: guardá y cerrá.',
-				avanza: 'clic',
+				avanza: 'desaparece',
 			},
 			{
 				/* `espera_ms` largo: el modal se cierra con el fade de 150 ms de Bootstrap y el paso
