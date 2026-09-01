@@ -3,10 +3,17 @@
 	v-if="filter"
 	class="th-filter-btns">
 
+		<!--
+			Los dos testid llevan la key de la columna porque este bloque se repite en CADA
+			encabezado de la tabla. Y son `btn-abrir-filtro-` / `btn-limpiar-filtro-`, que no
+			comparten comienzo entre si ni con `btn-aplicar-filtro-` (el de adentro del panel):
+			los specs ubican por prefijo y dos nombres anidados romperian esa busqueda.
+		-->
 		<button
 		type="button"
 		class="th-filter-btn"
 		:class="{ 'th-filter-btn--active': filtro_usado }"
+		:data-testid="'btn-abrir-filtro-'+field.key"
 		:id="'btn_filter_'+field.key"
 		@click="toggleFilter(field.key)">
 			<i class="icon-search"></i>
@@ -16,6 +23,7 @@
 		type="button"
 		v-if="filtro_usado"
 		class="th-filter-btn th-filter-btn--danger"
+		:data-testid="'btn-limpiar-filtro-'+field.key"
 		@click="call_limpiar_filtro(field.key)">
 			<i class="icon-undo"></i>
 		</button>

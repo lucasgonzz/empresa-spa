@@ -11,7 +11,7 @@
 
 		<vender-toggle
 		v-model="save_nota_credito"
-		input_id="save_nota_credito_toggle">
+		input_id="devolucion-guardar-nota-credito">
 			Guardar nota de credito por los siguientes items
 		</vender-toggle>
 

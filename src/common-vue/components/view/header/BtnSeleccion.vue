@@ -1,6 +1,14 @@
 <template>
 	<!-- Raíz = el propio b-button (sin div wrapper), para que Bootstrap pueda combinarlo dentro de un .btn-group -->
+	<!--
+		🔴 Este boton PRENDE el modo seleccion. Sin el, clickear una fila no la selecciona, y
+		sin filas seleccionadas el dropdown de acciones sobre la seleccion ni siquiera se
+		dibuja (`show()` de OptionsDropdown mira `selected.length`). Publica su estado en
+		`data-activo` para que se pueda saber si ya esta prendido sin adivinar por la clase.
+	-->
 	<b-button
+	data-testid="btn-modo-seleccion"
+	:data-activo="is_selecteable ? 'si' : 'no'"
 	id="btn_seleccion"
 	:data-tour="model_name === 'article' ? 'listado.boton_modo_seleccion' : model_name === 'sale' ? 'ventas.boton_seleccion' : null"
 	v-if="ask_selectable"

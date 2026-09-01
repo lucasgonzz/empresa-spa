@@ -1,12 +1,19 @@
 <template>
 	<div
 	class="m-t-15">
+		<!--
+			🔴 Con descuentos por metodo de pago el reparto es de DOS PASOS: primero "Calcular" --que
+			aplica el descuento de cada metodo sobre lo que se cobra con el-- y recien despues aparece
+			"Listo". Sin descuentos configurados hay un solo "Listo" (la rama de mas abajo). Los dos
+			llevan el mismo testid porque nunca se dibujan a la vez.
+		-->
 		<div
 		v-if="payment_method_discounts.length">
 
 			<b-button
 			block
 			variant="primary"
+			data-testid="venta-multipago-calcular"
 			v-if="!calculado"
 			@click="calcular">
 				Calcular
@@ -14,6 +21,7 @@
 			<b-button
 			block
 			variant="primary"
+			data-testid="venta-multipago-listo"
 			v-else
 			data-tour="vender.boton_confirmar_venta"
 			@click="terminar">
@@ -23,6 +31,7 @@
 		<b-button
 		block
 		variant="primary"
+		data-testid="venta-multipago-listo"
 		data-tour="vender.boton_confirmar_venta"
 		@click="terminar"
 		v-else>
@@ -33,6 +42,7 @@
 		class="m-t-10"
 		block
 		variant="danger"
+		data-testid="venta-multipago-cancelar"
 		@click="cancelar">
 			Cancelar
 		</b-button>
@@ -142,7 +152,24 @@ export default {
 			console.log(this.sobrante_a_repartir)
 			
 
-			if (Math.trunc(this.total_repartido * 100) / 100 != Math.trunc(this.total_a_repartir * 100) / 100) {
+			/*
+				🔴 Se REDONDEA a centavos, no se trunca.
+
+				Truncar convertia una diferencia invisible en un centavo entero. Repartir 27.851,22
+				en dos da 13.925,61 y 13.925,61, que en coma flotante no suman exactamente 27.851,22
+				sino una billonesima menos; esa billonesima cae del otro lado del truncado y los dos
+				totales pasan a diferir en un centavo PARA LA VALIDACION, mientras en pantalla
+				muestran el mismo numero.
+
+				El operador veia el peor sintoma posible: "Total a repartir" y "Total repartido" con
+				el mismo importe, el sobrante en `NaN` --el residuo de 1e-12 se le va a notacion
+				exponencial y `numeral` no lo sabe formatear-- y el boton sin responder ni explicar
+				por que. Medido el 31/8/2026 armando el circuito e2e de multipago.
+
+				Redondear es ademas lo que corresponde para plata: dos importes que redondean al
+				mismo centavo SON el mismo importe.
+			*/
+			if (Math.round(this.total_repartido * 100) / 100 != Math.round(this.total_a_repartir * 100) / 100) {
 				this.$toast.error('El total repartido esta mal')
 				return false
 			}

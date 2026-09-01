@@ -213,7 +213,14 @@
 		
 		<b-form-group
 		label="Fila a partir de la cual empezar a importar">
+			<!--
+				Los tres data-testid de esta pantalla (`import-fila-desde`, `input-excel-<modelo>` y
+				`btn-confirmar-importacion`) son los unicos que tiene el modal de importacion, que
+				hasta el 31/8/2026 no tenia ninguno. Son genericos: sirven para importar articulos,
+				clientes, proveedores o los renglones de una compra, que es el mismo componente.
+			-->
 			<b-form-input
+			data-testid="import-fila-desde"
 			type="number"
 			v-model="start_row"
 			placeholder="Fila a partir de la cual empezar a importar"></b-form-input>
@@ -587,8 +594,16 @@
 
 		<b-form-group
 		label="Archivo Excel para importar">
+			<!--
+				🔴 El testid dice `input-excel-` y no `input-file-` (que es lo que dice el `id` de
+				al lado) a proposito: `input-file-` es tambien el comienzo de los ids que
+				BootstrapVue genera para OTROS b-form-file de la aplicacion, y este harness ubica
+				elementos con selectores de prefijo. Un testid nuevo no puede compartir el comienzo
+				con algo que ya existe (ver e2e/README.md).
+			-->
 			<b-form-file
 			browse-text="Buscar"
+			:data-testid="'input-excel-'+model_name"
 			:id="'input-file-'+this.model_name"
 			v-model="file"
 			variant="primary"
@@ -614,7 +629,13 @@
 		</b-form-group>
 
 		<hr>
+		<!--
+			`btn-confirmar-importacion` y no `btn-importar-...`: ya existe
+			`btn-importar-excel-<id>` (el boton de la FILA de una compra, que ABRE este modal), y
+			los dos nombres compartirian el comienzo. Este es el que CONFIRMA.
+		-->
 		<btn-loader
+		data-testid="btn-confirmar-importacion"
 		id="btn_importar"
 		:disabled="!file"
 		@clicked="upload"

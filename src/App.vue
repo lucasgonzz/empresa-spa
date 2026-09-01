@@ -17,6 +17,14 @@
             solo (sesión + extensión `whatsapp`), igual que el botón del asistente IA.
         -->
         <whatsapp-sidebar-host></whatsapp-sidebar-host>
+        <!--
+            Descripciones de controles. Va acá, una sola vez para toda la aplicación, porque
+            escucha el mouse por delegación en `document` y busca el control por su
+            `data-testid` en el diccionario de `src/descripciones/`. Poner una descripción no
+            requiere tocar el componente dueño del botón: se agrega la entrada al diccionario
+            y aparece sola.
+        -->
+        <descripcion-de-control></descripcion-de-control>
         <offline-articles-progress
         :offline_articles_sync_progress="offline_articles_sync_progress"></offline-articles-progress>
         <afip-reenviar-facturas></afip-reenviar-facturas>
@@ -94,6 +102,7 @@ import BtnScrollTop from '@/common-vue/components/nav/BtnScrollTop'
 import SupportChatFloatingButton from '@/common-vue/components/support-chat/FloatingButton'
 import AsistenteIaFloatingButton from '@/components/asistente-ia/FloatingButton'
 import WhatsappSidebarHost from '@/components/whatsapp/SidebarHost'
+import DescripcionDeControl from '@/common-vue/components/ayuda/DescripcionDeControl'
 
 import app from '@/common-vue/mixins/app'
 import start_methods from '@/mixins/start_methods'
@@ -118,6 +127,7 @@ export default {
         SupportChatFloatingButton,
         AsistenteIaFloatingButton,
         WhatsappSidebarHost,
+        DescripcionDeControl,
         OfflineArticlesProgress: () => import('@/common-vue/components/offline-sync-articles/Progress'),
         PaymentExpire: () => import('@/components/nav/PaymentExpire'),
         AfipReenviarFacturas: () => import('@/components/common/afip-reenviar-facturas/Index'),

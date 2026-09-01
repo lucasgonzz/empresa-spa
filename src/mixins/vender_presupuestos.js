@@ -255,6 +255,10 @@ export default {
 					price : article.price_vender,
 					cost : article.cost,
 					costo_real : article.costo_real,
+					// Sin esto, SaleHelper::getCost() calcula el costo desde costo_real (el del
+					// bulto entero) y no tiene por cuanto dividirlo: la linea del presupuesto queda
+					// con el costo del bulto en vez del costo por unidad individual.
+					unidades_individuales : article.unidades_individuales,
 					presentacion : article.presentacion,
 					price_type_personalizado_id : article.price_type_personalizado_id,
 					bonus : typeof article.discount != 'undefined' ? article.discount : null,

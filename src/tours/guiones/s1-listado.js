@@ -79,6 +79,56 @@ const MODAL_CALCULO_PRECIO = '#final-price-description .modal-content'
 const PESTANA_PRECIO = '[data-testid="nav-item-Precio"]'
 
 /**
+ * El input del modal de búsqueda de PROVEEDOR del formulario de artículo.
+ *
+ * 🔴 El id no es un invento: se arma en cuatro saltos y los cuatro están verificados en el código.
+ *
+ * 1. `common-vue/components/model/ModelForm.vue:109-114` dibuja el buscador de la relación con
+ *    `<field-search-input :model_name="model_name">` — para el formulario de artículo, `'article'`.
+ * 2. `common-vue/components/model/form/FieldSearchInput.vue:5` le pasa al buscador
+ *    `:id="model_name + '-' + prop.key"`, y `models/article.js:85` declara `key: 'provider_id'`:
+ *    o sea `article-provider_id`.
+ * 3. `common-vue/components/search/Index.vue:296` resuelve `_id` como ese `id`.
+ * 4. `common-vue/components/search/Modal.vue:23` arma el input del modal con
+ *    `:input_id="_id + '-search-modal-input'"`, y `view/header/buscador-general/Index.vue:39` lo
+ *    baja al `<input :id="input_id">`.
+ *
+ * Se usa un `selector` y no un `data-tour` nuevo justamente por eso: el identificador ya existe, es
+ * estable, y ponerle un ancla obligaría a tocar `common-vue`, que se despliega a los ~40 clientes.
+ */
+const BUSCADOR_PROVEEDOR = '#article-provider_id-search-modal-input'
+
+/**
+ * El input del modal de búsqueda que abre el filtro por columna de PROVEEDOR de la tabla.
+ *
+ * ⚠️ **No es el mismo id que el del formulario, y copiarlo sería un paso muerto.** El buscador del
+ * filtro no recibe `id` (`common-vue/components/display/table/filter/Search.vue:6-11` monta el
+ * `<search-component>` solo con `:model_name="modelNameFromRelationKey(filter)"`), así que
+ * `search/Index.vue:296` cae a su respaldo y `_id` termina siendo el **nombre del modelo**:
+ * `modelNameFromRelationKey` (mixins/generals.js:809-819) le saca los tres caracteres de `_id` a
+ * `provider_id` y devuelve `provider`.
+ */
+const BUSCADOR_PROVEEDOR_EN_FILTRO = '#provider-search-modal-input'
+
+/**
+ * La FLECHITA del botón "Crear" del Listado, o sea el toggle del desplegable.
+ *
+ * 🔴 No es lo mismo que `listado.boton_crear_articulo`, y confundirlos le costaba un artículo de más
+ * al lead. Ese ancla está puesta sobre el `<b-dropdown split>` **entero**
+ * (`common-vue/components/horizontal-nav/ExcelDropDown.vue:75-76`), y la mitad izquierda de un
+ * `split` no despliega nada: llama derecho a `call_set_model()` y abre el formulario de un artículo
+ * nuevo. Un paso que resalta el botón completo y dice "abrí el menú" tiene el 50% de la superficie
+ * haciendo lo contrario. Lo reportó Lucas el 1/9/2026 sobre el clip 1.8.
+ *
+ * El toggle es un `<button>` aparte que BootstrapVue dibuja adentro del mismo div: en `split`,
+ * `dropdown.js` le agrega la clase `dropdown-toggle-split`
+ * (`node_modules/bootstrap-vue/src/components/dropdown/dropdown.js:88-96` y el `$toggle` del
+ * `render`). Y el div de afuera lleva `:id="'dropdown_'+model_name"`, o sea `#dropdown_article`.
+ * Se llega con un `selector` y **sin tocar `common-vue`**, que es la condición.
+ */
+const FLECHITA_CREAR = '#dropdown_article .dropdown-toggle-split'
+
+/**
  * La primera fila de la tabla de artículos.
  *
  * `Tr.vue` le pone a cada fila `data-testid="<modelo>-row-<id>"`, así que el prefijo alcanza para
@@ -157,22 +207,71 @@ export default {
 				 * lo arma ModelForm y sirve igual para el clic, que sobre el input suelto no
 				 * siempre se reconoce. */
 				selector: '#form-group-bar_code',
-				texto: 'Escaneá el código de barras. Al salir del campo, el sistema chequea solo que no lo tenga otro artículo.',
+				/* El "o tipealo" no es un adorno: la precondición del clip pide un lector, y el lead
+				 * que lo está probando desde su casa no tiene ninguno. Escribir el código y dar Enter
+				 * dispara el mismo `change` con el que el motor avanza, así que el camino existe: lo
+				 * único que faltaba era decírselo. */
+				texto: 'Escaneá el código de barras — o tipealo a mano y dale Enter. Al salir del campo, el sistema chequea solo que no lo tenga otro artículo.',
 				avanza: 'clic',
 			},
 			{
+				/* El texto ya no da a entender que el tour avanza solo al escribir: desde el
+				 * 1/9/2026 este paso dibuja "Siguiente" como todos (ver `botones_de()` del motor),
+				 * así que el lead decide cuándo terminó. Avanza igual con el `change` del campo. */
 				ancla: 'listado.campo_nombre',
-				texto: 'El nombre del artículo.',
+				texto: 'Poné el nombre del artículo. Cuando termines, salí del campo o seguí con el botón.',
 				avanza: 'clic',
 				espera_ms: 250,
 			},
 			{
-				/* Avanza por botón y no por aparición: al tocar el buscador se abre un SEGUNDO
-				 * modal arriba de este, y el elemento del paso siguiente ya está en el DOM detrás.
-				 * Con "aparece" el tour se adelantaría antes de que el lead elija el proveedor. */
+				/**
+				 * 🔴 El proveedor se parte en DOS pasos desde el 1/9/2026, y el que estaba antes
+				 * queda explicado acá porque su razón sigue siendo cierta.
+				 *
+				 * El paso viejo era uno solo y avanzaba con el botón ("Tocá acá, poné parte del
+				 * nombre y dale Enter. Cuando lo elijas, seguí"), porque al tocar el buscador se
+				 * abre un SEGUNDO modal encima del formulario y el elemento del paso siguiente ya
+				 * está en el DOM detrás: con `'aparece'` el tour se adelantaba antes de que el lead
+				 * eligiera el proveedor. Eso sigue siendo verdad y por eso el paso siguiente NO
+				 * avanza por aparición.
+				 *
+				 * Lo que cambió es que un solo cartel encadenaba cuatro acciones —abrir, escribir,
+				 * buscar, elegir— y el lead se quedaba pensando qué nombre poner. Ahora este paso
+				 * pide sólo el clic y el que sigue explica qué escribir, ya adentro del modal.
+				 */
 				ancla: 'listado.campo_proveedor',
-				texto: 'El proveedor no se escribe: se busca. Tocá acá, poné parte del nombre y dale Enter. Cuando lo elijas, seguí.',
-				avanza: 'siguiente',
+				texto: 'El proveedor no se escribe acá: se busca. Tocá el campo.',
+				avanza: 'aparece',
+			},
+			{
+				/**
+				 * `avanza: 'desaparece'`: el gesto que termina este paso es elegir de la lista de
+				 * resultados, y eso **cierra el modal** (`search/Modal.vue::emitSetSelected`, que
+				 * llama `$bvModal.hide`). No sirve `'clic'` —el clic cae en un renglón de resultados,
+				 * no en el input que el paso resalta— ni `'aparece'` —lo que viene después es un
+				 * campo del formulario que ya estaba en el DOM, tapado por este modal—.
+				 *
+				 * El "si no aparece, Enter de nuevo" es real y sale del código: el primer Enter
+				 * busca, y el segundo, sin resultado seleccionado, crea el modelo al vuelo
+				 * (`search/Modal.vue::seleccionar_resultado` → `saveIfNotExist`, que está prendido
+				 * porque `article.js` no declara `save_if_not_exist: false` para el proveedor).
+				 * Decirlo saca la duda de "qué escribo": cualquier nombre sirve.
+				 */
+				/* 🔴 "Puede existir o no" va primero y no al final, y eso es lo que Lucas pidió
+				 * textual el 1/9/2026: *"la idea es que el usuario sepa que tiene que escribir el
+				 * nombre de un proveedor que aún no exista, para que no se ponga nervioso y no
+				 * piense en qué debe escribir"*. La versión anterior decía "un proveedor tuyo", que
+				 * empuja justo para el otro lado: sugiere que hay que acertarle a uno que ya está
+				 * cargado, que es exactamente la duda que este texto tiene que sacar. */
+				selector: BUSCADOR_PROVEEDOR,
+				texto: 'Escribí el nombre de un proveedor —puede existir o no, cualquiera sirve— y dale Enter. Si aparece en la lista, elegilo. Si no aparece, dale Enter otra vez y se crea en el momento.',
+				avanza: 'desaparece',
+				/* `foco: true` porque el foco automático se limita a los pasos que avanzan por carga
+				 * y este avanza por desaparición: acá hay que escribir, así que se pide explícito.
+				 * El modal ya se enfoca solo a los 100 ms (`search/Index.vue::callSearchModal`); esto
+				 * lo vuelve a hacer cuando el cartel aparece, que es varios cientos de ms después. */
+				foco: true,
+				espera_ms: 200,
 			},
 			{
 				selector: '#form-group-apply_provider_percentage_gain',
@@ -202,9 +301,13 @@ export default {
 				avanza: 'siguiente',
 			},
 			{
+				/* `desaparece` y no `clic`: ver el paso homólogo del clip 1.4. Guardar es una llamada
+				 * HTTP y con `clic` el motor avanzaba 80 ms después del clic, con el modal todavía
+				 * abierto tapando la fila que el paso siguiente resalta. La desaparición del botón
+				 * —que vive adentro del modal— es la señal exacta de "guardado y cerrado". */
 				ancla: 'listado.boton_guardar_articulo',
 				texto: 'Guardá y cerrá.',
-				avanza: 'clic',
+				avanza: 'desaparece',
 			},
 			{
 				selector: PRIMERA_FILA,
@@ -370,9 +473,11 @@ export default {
 				avanza: 'siguiente',
 			},
 			{
+				/* `desaparece`, misma familia que el 1.1 y el 1.4: el cartel siguiente no puede
+				 * dibujarse con el modal todavía en pantalla. */
 				ancla: 'listado.boton_guardar_articulo',
 				texto: 'Guardá: cambia solo el precio de esa lista, el resto queda como estaba.',
-				avanza: 'clic',
+				avanza: 'desaparece',
 			},
 			{
 				/* Paso puente: el paso siguiente cambia de ruta y el motor navega apenas se dibuja
@@ -408,26 +513,34 @@ export default {
 	 * Precondición: extensión `costo_en_dolares`, `cotizar_precios_en_dolares = 1`, y un proveedor
 	 * con dólar propio distinto del general (si no, no hay nada que contar en el desglose).
 	 *
-	 * ⚠️ Las columnas de la tabla dependen de "Propiedades para mostrar", así que el paso 1 puede no
-	 * encontrar la de costo. Eso está bien y es lo que el motor sabe hacer: si la columna no está,
-	 * saltea el paso. Hasta el 31/8/2026 el paso anclaba la tabla ENTERA para no correr ese riesgo,
-	 * y el resultado era peor —"me dice que mire la columna de costo, columna que ni siquiera
-	 * aparece", reportó Lucas—: el recuadro abarcaba todo, no señalaba nada, y si la columna estaba
-	 * corrida a la derecha el lead no la veía igual.
+	 * 🔴 **El tour arranca en la fila, no en la columna de costo, y eso es un cambio del 1/9/2026.**
+	 *
+	 * Hasta ese día el paso 1 anclaba la columna de costo (`#btn_filter_cost` + `ancestro: 'th'`) y
+	 * decía *"estos artículos están cargados en dólares"*. Lucas lo sacó, textual: *"quiero que el
+	 * primer paso no me señale la columna de la tabla diciéndome que estos artículos están cargados
+	 * en dólares porque no es cierto"*. Y tenía razón por partida doble: la columna muestra el costo
+	 * en pesos venga de donde venga, y qué artículo está en dólares depende de cada artículo, no del
+	 * listado.
+	 *
+	 * ⚠️ Del anclaje viejo sobrevive esto, que sigue valiendo para el clip 1.2: las columnas de la
+	 * tabla dependen de "Propiedades para mostrar", así que un paso que ancle una columna puede no
+	 * encontrarla y el motor lo saltea. Anclar la tabla entera —como estaba hasta el 31/8/2026— es
+	 * peor: el recuadro abarca todo y no señala nada.
+	 *
+	 * 🔴 **La segunda mitad del tour vuelve a abrir el artículo, y no es un rodeo.** El precio en
+	 * pesos recién se cotiza al guardar, así que mirar el precio final sin haber guardado muestra el
+	 * número viejo. Guardar, cerrar y volver a entrar es lo que hace que el lead vea la cotización
+	 * aplicada de verdad.
+	 *
+	 * ⚠️ El paso que vuelve a abrir el artículo cuenta con que siga en la primera fila. Está apoyado
+	 * en el store, no en la suerte: `store/__base.js:141-149` (`add`) hace `splice(index, 1, value)`
+	 * cuando el modelo ya existe, o sea que un artículo EDITADO se reemplaza **en su lugar** y no se
+	 * va arriba de todo (eso último es sólo para los nuevos, que entran con `unshift`). Igual es lo
+	 * primero que hay que mirar si este tour se saltea el paso 6.
 	 */
 	'1.4': {
 		ruta: RUTA_LISTADO,
 		pasos: [
-			{
-				/* El `th` no tiene identificador propio, pero adentro tiene el botón de filtro de
-				 * esa columna, que sí (`BtnFilter.vue`, `#btn_filter_<key>`). Con `ancestro` el
-				 * motor sube del botón a la columna entera y la trae a la vista si la tabla estaba
-				 * corrida. */
-				selector: '#btn_filter_cost',
-				ancestro: 'th',
-				texto: 'Esta es la columna de costo. Estos artículos están cargados en dólares.',
-				avanza: 'siguiente',
-			},
 			{
 				selector: PRIMERA_FILA,
 				texto: 'Abrí un artículo: un clic en la fila.',
@@ -453,18 +566,56 @@ export default {
 				avanza: 'clic',
 			},
 			{
+				/* 🔴 Avanza por DESAPARICIÓN y no por clic, y se midió el 1/9/2026 en el recorrido
+				 * en vivo: guardar es una llamada HTTP, y con `clic` el motor se iba al paso
+				 * siguiente 80 ms después del clic —o sea con el modal todavía abierto—. Medido:
+				 * a los 900 ms el tour ya estaba en el paso 6 resaltando la fila de la tabla,
+				 * mientras el modal del artículo seguía tapándola hasta pasados los 1500 ms. El
+				 * recuadro señalaba algo que el lead no podía ver ni tocar.
+				 *
+				 * El botón de guardar vive ADENTRO del modal, así que su desaparición es
+				 * exactamente la señal que hacía falta: "ya se guardó y ya se cerró". No hay que
+				 * adivinar ningún tiempo. */
+				ancla: 'listado.boton_guardar_articulo',
+				texto: 'El precio recién se cotiza cuando guardás: guardá y cerrá.',
+				avanza: 'desaparece',
+			},
+			{
+				/* `espera_ms` largo: el modal se cierra con el fade de 150 ms de Bootstrap y el paso
+				 * avanza por la aparición de la pestaña "Precio", que es un elemento DE ESE MISMO
+				 * modal. Sin el respiro, el motor lo encuentra todavía visible y le devuelve el botón
+				 * al paso (ver `enganchar_avance_por_aparicion` del motor), con lo cual el lead
+				 * podría pasar de largo sin reabrir nada. */
+				selector: PRIMERA_FILA,
+				texto: 'Ahora abrilo de nuevo: mismo clic en la fila.',
+				avanza: 'aparece',
+				espera_ms: 600,
+			},
+			{
+				selector: PESTANA_PRECIO,
+				texto: 'Y otra vez a "Precio".',
+				avanza: 'clic',
+				lado: 'top',
+			},
+			{
 				ancla: 'listado.campo_precio_final',
-				texto: 'El precio final igual sale en pesos. La cotización entró acá.',
+				texto: 'Ahí lo tenés: el costo lo cargaste en dólares y el precio final salió en pesos, ya cotizado.',
 				avanza: 'siguiente',
+				espera_ms: 300,
 			},
 			{
 				ancla: 'listado.boton_explicacion_precio',
-				texto: 'Tocá el signo de pregunta: te dice qué dólar usó.',
+				texto: 'Tocá el signo de pregunta: te muestra el cálculo completo.',
 				avanza: 'clic',
 			},
 			{
+				/* 🔴 El texto NO puede decir "el dólar de tu proveedor, no el general", que es lo que
+				 * decía hasta el 1/9/2026: cuál de los dos se usó depende del artículo —del proveedor
+				 * que tenga cargado y de si ese proveedor tiene dólar propio—, así que afirmarlo es
+				 * mentir en la mitad de los casos. Lo que sí es cierto siempre, y es lo que el clip
+				 * quiere mostrar, es que la cotización aparece en el desglose. */
 				selector: MODAL_CALCULO_PRECIO,
-				texto: 'Ahí está: el dólar de tu proveedor, no el general.',
+				texto: 'Acá está el renglón de la cotización: el dólar que se usó para pasar tu costo a pesos.',
 				avanza: 'siguiente',
 				espera_ms: 300,
 				techo_ms: 20000,
@@ -567,8 +718,21 @@ export default {
 	 * filtro está en uso— mientras el paso está a la vista, y los pasos anclan el `th` entero con
 	 * `ancestro`, que además lo trae a la vista si la tabla estaba corrida a la derecha.
 	 *
-	 * Los dos pasos de lupa avanzan por APARICIÓN del modal y no por clic, que es lo que perdona un
-	 * clic que no cayó justo.
+	 * El paso de lupa avanza por APARICIÓN del modal y no por clic, que es lo que perdona un clic que
+	 * no cayó justo.
+	 *
+	 * 🔴 **La secuencia se enderezó el 1/9/2026 y es la que dictó Lucas:** elegir el proveedor →
+	 * "Filtrar" → recién ahí el menú de filtrados → "Actualizar". Se sacó el paso que explicaba que
+	 * "Agregar filtro" guarda el criterio y todavía no busca: era un paso que enseñaba la diferencia
+	 * entre dos botones en vez de acompañar la acción, y el lead lo leía como un manual.
+	 *
+	 * ⚠️ **Y por eso el paso de la lupa de "Categoria" dejó de pedir un clic.** Sacado "Agregar
+	 * filtro", no queda ninguna forma de cerrar el modal de filtro de una columna sin buscar, y el
+	 * modal abierto tapa los encabezados de la tabla: pedirle al lead un segundo filtro lo mandaría
+	 * a tocar una lupa que está detrás de un modal. El paso se queda —la lupa está en TODAS las
+	 * columnas y eso es parte de lo que el clip muestra—, pero como una viñeta que se lee y se sigue,
+	 * no como un gesto imposible. Encadenar dos filtros de verdad pide devolver "Agregar filtro" al
+	 * guion; queda anotado por si Lucas lo quiere.
 	 *
 	 * 🔴 Este clip escribe datos de verdad —aumenta el costo de TODOS los artículos del filtro— y
 	 * por eso el tour hace dos cosas que hasta el 31/8/2026 no hacía: se lo AVISA al lead en el
@@ -584,6 +748,16 @@ export default {
 				avanza: 'siguiente',
 			},
 			{
+				/* Ver el ⚠️ del docblock: este paso ya NO pide un clic. La lupa de cualquier otra
+				 * columna es inalcanzable mientras el modal de filtro está abierto, y sin "Agregar
+				 * filtro" no hay forma de cerrarlo sin buscar. Se muestra para que el lead sepa que
+				 * el filtro está en todas las columnas, y el recorrido sigue por Proveedor. */
+				selector: '#btn_filter_category_id',
+				ancestro: 'th',
+				texto: 'La misma lupa está en todas las columnas: en "Categoria", en "Marca", en la que quieras. Nosotros vamos a filtrar por proveedor.',
+				avanza: 'siguiente',
+			},
+			{
 				/* Se ancla el `th` entero, no el botón: la lupa mide 24 px y el recuadro alrededor
 				 * no le decía al lead de qué columna le estaban hablando. El motor sube del botón
 				 * a la columna, la trae a la vista si la tabla estaba corrida, y le prende la clase
@@ -596,25 +770,28 @@ export default {
 				avanza: 'aparece',
 			},
 			{
+				/* Este paso pedía "escribí el nombre del proveedor y elegilo de la lista" y avanzaba
+				 * con el botón, pero el campo del filtro no es un input común: es el mismo buscador
+				 * de relación que el formulario, y al tocarlo abre OTRO modal encima. El lead
+				 * escribía en el modal de arriba mientras el cartel seguía hablando del de abajo. Se
+				 * parte en dos: acá el clic, y en el paso que sigue qué escribir. */
 				selector: '#filter-modal-article .modal-content',
-				texto: 'Escribí el nombre del proveedor y elegilo de la lista.',
-				avanza: 'siguiente',
-			},
-			{
-				ancla: 'listado.boton_agregar_filtro',
-				texto: 'Acá va el botón que importa: "Agregar filtro". Guarda el criterio y todavía no busca.',
-				avanza: 'clic',
-			},
-			{
-				selector: '#btn_filter_category_id',
-				ancestro: 'th',
-				texto: 'Ahora la lupa de "Categoria", y elegí la categoría que aumentó.',
+				texto: 'El proveedor se busca, no se escribe suelto: tocá el campo de búsqueda.',
 				avanza: 'aparece',
-				espera_ms: 400,
+			},
+			{
+				/* Mismo patrón que el clip 1.1, con OTRO id: ver el comentario de
+				 * `BUSCADOR_PROVEEDOR_EN_FILTRO`, que explica por qué el buscador del filtro no se
+				 * llama igual que el del formulario. */
+				selector: BUSCADOR_PROVEEDOR_EN_FILTRO,
+				texto: 'Escribí parte del nombre del proveedor, dale Enter y elegilo de la lista.',
+				avanza: 'desaparece',
+				foco: true,
+				espera_ms: 200,
 			},
 			{
 				ancla: 'listado.boton_filtrar',
-				texto: 'Recién ahora, "Filtrar". Sale a buscar con los dos criterios juntos.',
+				texto: 'Ahora "Filtrar": sale a buscar todos los artículos de ese proveedor.',
 				avanza: 'clic',
 			},
 			{
@@ -654,8 +831,13 @@ export default {
 				avanza: 'clic',
 			},
 			{
-				ancla: 'listado.boton_crear_articulo',
-				texto: 'Abrí el menú Crear y entrá a "Historial de actualizaciones masivas".',
+				/* La flechita y no el botón entero, por lo mismo que el paso 1 del clip 1.8 (ver
+				 * `FLECHITA_CREAR`): `listado.boton_crear_articulo` resalta el `<b-dropdown split>`
+				 * completo, y la mitad izquierda de ese botón **crea un artículo**. En un tour que
+				 * acaba de hacer una actualización masiva y todavía tiene que revertirla, un
+				 * formulario de artículo abierto de más es lo último que hace falta. */
+				selector: FLECHITA_CREAR,
+				texto: 'Abrí el menú Crear con la flechita y entrá a "Historial de actualizaciones masivas".',
 				avanza: 'aparece',
 				espera_ms: 800,
 			},
@@ -713,20 +895,36 @@ export default {
 		ruta: RUTA_LISTADO,
 		pasos: [
 			{
+				/* 🔴 `scroll_tabla: 'inicio'` y no el centrado de siempre: la columna de imágenes es
+				 * la PRIMERA de la tabla, y este paso es el que le pide al lead que mire las filas
+				 * sin foto. Centrando —que es lo que hacen `traer_a_la_vista()` y, peor, el
+				 * `scrollIntoView({ inline: 'center' })` de driver.js— la tabla se corre al medio y
+				 * el lead termina mirando columnas de precios. Lo reportó Lucas el 1/9/2026:
+				 * "el scroll de la tabla se corre y vuela al centro, eso no debe de pasar". */
 				ancla: 'listado.tabla',
-				texto: 'Mirá estas filas: no tienen foto.',
+				texto: 'Mirá la primera columna: estas filas no tienen foto.',
 				avanza: 'siguiente',
+				scroll_tabla: 'inicio',
 			},
 			{
+				/* Mismo `scroll_tabla` aunque el botón viva en el encabezado y no en la tabla:
+				 * prender el modo selección agrega la columna de tildes y la tabla vuelve a
+				 * moverse. El motor resuelve la tabla por `.cont-table` cuando el elemento del paso
+				 * no está adentro de ningún contenedor con scroll. */
 				ancla: 'listado.boton_modo_seleccion',
 				texto: 'Prendé el modo selección.',
 				avanza: 'clic',
+				scroll_tabla: 'inicio',
 			},
 			{
+				/* Las dos formas, y la segunda es la que vende el clip: marcar diez filas a mano se
+				 * entiende solo, pero que la misma acción sirva para doscientos artículos filtrados
+				 * es lo que hace que valga la pena. El paso no lo decía. */
 				ancla: 'listado.tabla',
-				texto: 'Marcá los artículos a los que les falte la imagen.',
+				texto: 'Marcá los artículos sin imagen. Podés tildarlos uno por uno acá, o filtrar la tabla y mandar a asignarle imagen a los 200 de una sola vez.',
 				avanza: 'siguiente',
 				espera_ms: 300,
+				scroll_tabla: 'inicio',
 			},
 			{
 				ancla: 'listado.dropdown_seleccionados',
@@ -774,8 +972,16 @@ export default {
 		ruta: RUTA_LISTADO,
 		pasos: [
 			{
-				ancla: 'listado.boton_crear_articulo',
-				texto: 'Abrí el menú Crear con la flechita.',
+				/* Ver `FLECHITA_CREAR`: se ancla el toggle del desplegable y no el `<b-dropdown split>`
+				 * entero, porque la mitad izquierda de ese botón crea un artículo en vez de abrir el
+				 * menú. El texto es acorde: no hay forma de errarle.
+				 *
+				 * El avance por clic ya no se conforma con un respiro fijo: desde el 1/9/2026 el
+				 * motor detecta que el elemento despliega un menú y espera a que el `.dropdown-menu`
+				 * esté abierto de verdad (ver `esperar_menu_desplegado()`). Es lo que arregla que el
+				 * paso siguiente se salteara porque el submenú todavía no existía. */
+				selector: FLECHITA_CREAR,
+				texto: 'Tocá la flechita del botón "Crear" — la de la derecha, no el botón. Se abre el menú.',
 				avanza: 'clic',
 			},
 			{

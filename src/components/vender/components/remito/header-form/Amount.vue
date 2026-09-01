@@ -5,8 +5,15 @@
 	cols="12"
 	md="2">
 	<div class="d-flex w-100">
+		<!--
+			🔴 Este campo es el paso que falta entre elegir un articulo y que entre a la venta. Con
+			`ask_amount_in_vender` prendido, el articulo queda PENDIENTE hasta que se confirma la
+			cantidad con Enter (o con el boton de al lado en pantallas chicas): el buscador ya lo
+			encontro, se ve su stock, y sin embargo la venta sigue en "0 productos".
+		-->
 		<b-form-input
 		type="number"
+		data-testid="venta-cantidad-pendiente"
 		dusk="article_amount"
 		min="1"
 		:disabled="disabled"

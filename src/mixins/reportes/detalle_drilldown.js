@@ -10,10 +10,11 @@ export default {
 		 * (components/reportes/components/detalle-modal/Index.vue, montado una unica vez en
 		 * views/Reportes.vue).
 		 *
-		 * @param {String} concepto - uno de los 13 valores de la whitelist que acepta el backend
+		 * @param {String} concepto - uno de los 14 valores de la whitelist que acepta el backend
 		 * en api/reportes/detalle (ventas_brutas, devoluciones, costo_mercaderia_vendida, gastos,
-		 * iva_debito, iva_credito, percepciones_iva, percepciones_iibb, retenciones, cobranzas,
-		 * pagos_proveedores, liquidaciones_pendientes, cheques_en_cartera).
+		 * iva_debito, iva_notas_credito, iva_credito, percepciones_iva, percepciones_iibb,
+		 * retenciones, cobranzas, pagos_proveedores, liquidaciones_pendientes,
+		 * cheques_en_cartera).
 		 */
 		abrirDetalle(concepto) {
 			if (!concepto) {

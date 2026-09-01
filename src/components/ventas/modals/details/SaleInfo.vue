@@ -47,7 +47,13 @@
 				v-if="can_edit_sale"
 				size="sm"
 				class="sale-details-buttons__group">
+					<!--
+						Este boton no abre un formulario: CARGA la venta en Vender como
+						`previus_sale`, que es el unico camino para editarla. Ver
+						SaleHelper::motivo_por_el_que_no_se_puede_editar() para cuando se puede.
+					-->
 					<btn-loader
+					data-testid="btn-actualizar-venta"
 					data-tour="ventas.boton_editar_venta"
 					dusk="btn_actualizar_venta"
 					text="Actualizar venta"

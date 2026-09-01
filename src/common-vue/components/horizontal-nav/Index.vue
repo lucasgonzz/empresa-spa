@@ -424,6 +424,17 @@ export default {
 		 * @returns {string|null} 'nav-item-<valor>' o null si el item no tiene un valor usable.
 		 */
 		testid(item) {
+			/*
+			 * 🔴 Un item puede traer su propio `testid` y, cuando lo trae, MANDA sobre el valor
+			 * visible. Hace falta porque hay navs cuyo valor visible incluye datos que cambian: la
+			 * de sucursales del listado de ventas le agrega la cantidad de ventas al nombre
+			 * ("Principal (2)"), asi que sin esto el testid pasaba a ser `nav-item-Principal (2)` y
+			 * cambiaba en cada corrida. Un data-testid que cambia con los datos no sirve para nada.
+			 */
+			if (typeof item.testid == 'string' && item.testid.length) {
+				return 'nav-item-' + item.testid
+			}
+
 			let valor = this.value(item)
 			if (typeof valor != 'string' || !valor.length) {
 				return null

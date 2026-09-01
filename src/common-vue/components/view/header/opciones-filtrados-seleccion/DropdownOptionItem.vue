@@ -3,6 +3,7 @@
 	v-b-tooltip.hover
 	:title="tooltip"
 	:class="option_classes"
+	:data-testid="testid"
 	:id="id"
 	:disabled="disabled"
 	@click="on_click">
@@ -28,6 +29,16 @@ export default {
 		id: {
 			type: String,
 			default: '',
+		},
+		/**
+		 * `data-testid` del item. Va como prop y no como atributo suelto porque este componente se
+		 * dibuja mas de una vez por pantalla y quien lo usa necesita poder distinguir cada
+		 * instancia (ver OptionsDropdown.vue, que dibuja el mismo menu para "filtrados" y para
+		 * "seleccion").
+		 */
+		testid: {
+			type: String,
+			default: null,
 		},
 		/**
 		 * Clase del ícono a mostrar a la izquierda del texto.

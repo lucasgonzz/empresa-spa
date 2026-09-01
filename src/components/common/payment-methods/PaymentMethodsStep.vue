@@ -95,6 +95,7 @@
                     <b-button
                     size="sm"
                     class="m-l-10"
+                    :data-testid="'pago-completar-'+index"
                     v-if="total_a_repartir"
                     @click="completar(index)"
                     variant="outline-primary">
@@ -165,6 +166,7 @@
         <b-button
             v-if="show_add_remove"
             block
+            data-testid="btn-agregar-metodo-pago"
             size="sm"
             variant="outline-primary"
             @click="$emit('add')"
