@@ -1,7 +1,10 @@
 <template>
 	<div
 	class="total-a-repartir-wrapper">
-		<p class="total-a-repartir">
+		<p
+		class="total-a-repartir"
+		data-testid="multipago-total-a-repartir"
+		:data-monto="total_a_repartir">
 			Total a repartir: <strong>{{ price(total_a_repartir) }}</strong>
 		</p>
 

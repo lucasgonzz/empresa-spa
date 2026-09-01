@@ -47,6 +47,8 @@
 //    -> IVA.
 const { test, expect } = require('../fixtures')
 const { esperar_recursos_descargados } = require('../helpers/recursos')
+const { leer_posicion_fiscal } = require('../helpers/reportes')
+const { buscar_articulo } = require('../helpers/vender')
 const { abrir_pestania, completar_campo, search_and_select, crear_desde_buscador } = require('../helpers/formulario')
 const { numero_de_pantalla, numero_de_dato, redondear } = require('../helpers/numeros')
 
@@ -202,37 +204,6 @@ function fecha_de_hoy() {
 		String(hoy.getMonth() + 1).padStart(2, '0'),
 		String(hoy.getDate()).padStart(2, '0'),
 	].join('-')
-}
-
-/**
- * Lee los renglones de Posicion Fiscal por su data-monto (el valor crudo que devolvio la API).
- *
- * No se lee el texto del renglon: formatear() recorta los dos decimales, asi que una retencion de
- * 1795,50 se imprime "$1.795" y no habria forma de verificar el numero. Ver el comentario del
- * template de components/reportes/components/posicion-fiscal/Index.vue.
- *
- * @param {import('@playwright/test').Page} page
- * @returns {Promise<Object<string, number>>} renglon (sin el prefijo "posicion-fiscal-") -> monto.
- */
-async function leer_posicion_fiscal(page) {
-	// La aparicion del primer renglon es la señal de que el reporte ya respondio: hasta entonces
-	// el componente muestra el skeleton y ningun data-testid existe.
-	await expect(page.locator('[data-testid="posicion-fiscal-iva-credito"]')).toBeVisible()
-
-	return page.evaluate(() => {
-		const renglones = {}
-		document.querySelectorAll('[data-testid^="posicion-fiscal-"]').forEach(elemento => {
-			const nombre = elemento.dataset.testid.replace('posicion-fiscal-', '')
-			renglones[nombre] = Number(elemento.dataset.monto)
-			// Los renglones de saldo publican ademas si es a pagar o a favor. Se guarda con el
-			// sufijo "__tipo" para no perderlo: el monto viene siempre positivo (ver
-			// PosicionFiscalHelper::signo_y_monto) y sin el tipo no se pueden restar dos mediciones.
-			if (typeof elemento.dataset.tipo !== 'undefined') {
-				renglones[nombre + '__tipo'] = elemento.dataset.tipo
-			}
-		})
-		return renglones
-	})
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -502,6 +473,18 @@ test.describe.serial('Compra: costeo, facturacion, stock, cuenta corriente y pos
 		expect(Boolean(Number(guardado.apply_to_all))).toBe(true)
 	})
 
+	/**
+	 * Nombre del articulo, para poder buscarlo en el listado.
+	 *
+	 * @param {string} id
+	 * @returns {string}
+	 */
+	function nombre_de_articulo(id) {
+		return String(id) === String(contexto.articulos.nuevo)
+			? contexto.articulo_nuevo
+			: ARTICULO_EXISTENTE
+	}
+
 	test('el listado calcula costo real y precio final con descuentos, margen, IIBB e IVA', async ({ page }) => {
 		await page.goto('/listado-de-articulos')
 		await esperar_recursos_descargados(page, { abrir_panel: false })
@@ -510,6 +493,12 @@ test.describe.serial('Compra: costeo, facturacion, stock, cuenta corriente y pos
 		const precio_final = redondear(precio_final_esperado(costo_real, MARGEN, IIBB, IVA))
 
 		for (const id of [contexto.articulos.nuevo, contexto.articulos.existente]) {
+
+			// 🔴 Se BUSCA el articulo antes de leerle las celdas. El listado por defecto trae pagina
+			//    1 ordenada por id descendente, asi que "Pinza" --que es del fixture y tiene id 2--
+			//    se cae de la pantalla en cuanto la base acumula corridas. El rojo que produce es
+			//    `celda-article-cost-2 not found`, que manda a pensar que el testid esta mal.
+			await buscar_articulo(page, nombre_de_articulo(id))
 
 			// 1. El costo bruto de la compra quedo como costo del articulo (sin tocar), y las
 			//    bonificaciones de la compra se materializaron como descuentos del articulo, que es
@@ -570,9 +559,14 @@ test.describe.serial('Compra: costeo, facturacion, stock, cuenta corriente y pos
 		// El articulo nuevo arranca sin stock, asi que su stock es exactamente lo comprado. "Pinza"
 		// ya venia con stock del fixture, asi que lo unico que se puede afirmar de el es el DELTA,
 		// y ese delta es lo que dice el movimiento: stock_resultante.
+		await buscar_articulo(page, contexto.articulo_nuevo)
 		expect(await celda_numerica(page, 'article', 'stock', contexto.articulos.nuevo)).toBe(CANTIDAD)
 
 		for (const id of [contexto.articulos.nuevo, contexto.articulos.existente]) {
+			// Ver la nota del paso anterior: los articulos del fixture no entran en el listado por
+			// defecto, hay que buscarlos.
+			await buscar_articulo(page, nombre_de_articulo(id))
+
 			await page.locator(`[data-testid="btn-stock-movements-${id}"]`).click()
 
 			const movimientos = page.locator('[data-testid="stock-movement-row"]')
@@ -625,7 +619,11 @@ test.describe.serial('Compra: costeo, facturacion, stock, cuenta corriente y pos
 		// El saldo acumulado hasta la compra: es la referencia contra la que se mide el pago mas
 		// abajo. No se puede asumir que sea igual al total de la compra -- el proveedor puede tener
 		// movimientos anteriores, y los tiene en cuanto este archivo se corre dos veces.
-		const saldo_antes_del_pago = await celda_numerica(page, 'current_acount', 'saldo', id_movimiento)
+		// El saldo acumulado hasta la compra. Ya no se usa como referencia del pago --ver la nota de
+		// mas abajo-- pero se deja registrado en la consola: es lo que uno quiere ver cuando este
+		// paso se pone en rojo.
+		const saldo_hasta_la_compra = await celda_numerica(page, 'current_acount', 'saldo', id_movimiento)
+		console.log(`[costeo] saldo del proveedor hasta la compra: ${saldo_hasta_la_compra}`)
 
 		// Se selecciona el movimiento: con uno seleccionado, el boton de pago precarga el importe
 		// con el saldo de ESE movimiento (setToPay en BtnPagoNotaCredito.vue). Es la forma en que el
@@ -684,10 +682,34 @@ test.describe.serial('Compra: costeo, facturacion, stock, cuenta corriente y pos
 			}
 
 			expect(fila_del_pago, `ningun movimiento de la cuenta corriente con haber = ${total}`).not.toBeNull()
+
+			// 🔴 La referencia es el movimiento INMEDIATAMENTE ANTERIOR AL PAGO, no el de la compra.
+			//    Suena equivalente --el pago se hace justo despues de la compra-- y no lo es: el
+			//    proveedor "Buenos Aires" lo comparten dos circuitos, y `circuito-compra.spec.js` le
+			//    mete su propio movimiento en el medio. Con la compra como referencia, la cuenta da
+			//    de menos exactamente por lo que se colo, y el rojo --"el pago tenia que bajar el
+			//    saldo"-- manda a revisar el pago, que esta perfecto. Medido el 1/9/2026: entre la
+			//    compra de este archivo (20.691,00) y su pago se habia intercalado un pedido de
+			//    28.243,22 del otro circuito.
+			//
+			//    Lo que el paso afirma sigue siendo lo mismo: el pago corre el saldo acumulado
+			//    exactamente en el total de la compra.
+			let fila_anterior = null
+			for (let i = 0; i < cantidad; i++) {
+				const id = (await filas.nth(i).getAttribute('data-testid')).replace('current_acount-row-', '')
+				if (Number(id) < Number(fila_del_pago)) {
+					if (fila_anterior === null || Number(id) > Number(fila_anterior)) {
+						fila_anterior = id
+					}
+				}
+			}
+
+			expect(fila_anterior, 'el pago tenia que tener algun movimiento antes').not.toBeNull()
+
 			expect(
 				await celda_numerica(page, 'current_acount', 'saldo', fila_del_pago),
 				'el pago tenia que bajar el saldo acumulado exactamente en el total de la compra'
-			).toBe(redondear(saldo_antes_del_pago - total))
+			).toBe(redondear(await celda_numerica(page, 'current_acount', 'saldo', fila_anterior) - total))
 		}).toPass({ timeout: 20000 })
 	})
 

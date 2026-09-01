@@ -5,6 +5,8 @@
 		<div class="j-start">
 			
 			<b-button
+			data-testid="devolucion-total"
+			:data-monto="total_devolucion"
 			size="lg"
 			variant="success">
 				Total devolucion: <strong>{{ price(total_devolucion) }}</strong>

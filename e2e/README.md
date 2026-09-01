@@ -76,6 +76,11 @@ el input de login".
 | `alta-articulo-desde-buscador.spec.js` | Crear un articulo que no existe desde el buscador de articulos, adentro de una compra. |
 | `compra-costeo-facturacion.spec.js` | **El circuito completo de una compra**, de punta a punta (ver abajo). |
 | `circuito-compra.spec.js` | **El circuito operativo de una compra** (ver abajo): cantidad pedida vs recibida, flete prorrateado, importacion de Excel, edicion de la compra ya confirmada y pago al proveedor. |
+| `circuito-listado.spec.js` | **El circuito del listado de articulos**: alta de un articulo, filtro por proveedor, y las dos actualizaciones masivas (subir costos un 5%, prender y apagar la disponibilidad en el ecommerce). |
+| `circuito-venta-contado.spec.js` | **La venta de mostrador**: sin cliente, con descuento por metodo de pago y caja, y su reversion al borrarla. |
+| `circuito-presupuesto.spec.js` | **El presupuesto**: alta con cliente, actualizacion, confirmacion (ahi nace la venta), cuenta corriente, edicion de la venta, descuento y cobro. |
+| `circuito-multipago.spec.js` | **La venta cobrada con varios metodos de pago**, cada uno con SU caja. Verifica que la plata caiga partida y en las cajas correctas, y que borrarla las compense a las dos. |
+| `circuito-devolucion-afip.spec.js` | **Facturacion con ARCA y devolucion con nota de credito**, las dos en homologacion. Incluye el IVA debito en Posicion Fiscal. |
 | `buscador-filtros-invalidan-busqueda.spec.js` · `estado-vacio-centrado.spec.js` · `limpiar-filtros-desde-columna.spec.js` · `menu-crear-submenu-importacion.spec.js` | Comportamientos puntuales de la interfaz. |
 
 ### Una prueba grande se parte en archivos seriales, no en un test gigante ni en tests sueltos
@@ -334,6 +339,44 @@ npx playwright show-trace test-results/<carpeta>/trace.zip   # el trace navegabl
 ```
 
 El trace es lo que evita repetir los ~11 minutos: trae el DOM de cada paso, la red y la consola.
+
+### ⚠️ La suite no cruza la medianoche
+
+Los circuitos crean una venta o una compra y despues la buscan **en el listado del dia de hoy**. Si
+la corrida arranca antes de las 00:00 y ese paso cae despues, el registro quedo con la fecha de ayer
+y el listado ya pide la de hoy: no aparece, y el rojo dice "la venta N no vino en el listado del
+dia". Paso el 31/8/2026 a las 23:5x.
+
+No es un defecto del sistema ni del spec: es que el dia es un dato de entrada. Si se va a correr la
+suite completa (~40 min) conviene no arrancarla pegada a la medianoche.
+
+### 🔴 Antes de diagnosticar nada, chequea que los tres procesos sigan vivos
+
+Un corte de la API, de la SPA o del worker **a mitad de la corrida** no se reporta como lo que es.
+Lo que se ve es una corrida que termina antes de tiempo, con un puñado de `did not run` y una salida
+cortada — exactamente la forma de un spec que falla y arrastra a los que siguen. Paso el 31/8/2026:
+los tres procesos murieron juntos y el reporte parecia un rojo del circuito de multipago.
+
+```bash
+netstat -ano | grep -E ":8108|:8188" | grep LISTENING
+```
+
+⚠️ **Si la suite se corre desde una sesion de agente, los tres tienen que quedar DESPRENDIDOS.**
+Lanzados como tareas en segundo plano de la sesion, se los llevan puestos cuando la sesion abre
+tareas nuevas --paso dos veces el 31/8/2026, las dos a mitad de corrida--. En Windows:
+
+```powershell
+$env:APP_ENV='testing'
+Start-Process php -ArgumentList "artisan","serve","--host=empresa.local","--port=8108" -WorkingDirectory <api> -WindowStyle Hidden
+Start-Process php -ArgumentList "artisan","queue:work","--tries=1" -WorkingDirectory <api> -WindowStyle Hidden
+$env:NODE_OPTIONS='--openssl-legacy-provider'
+Start-Process cmd.exe -ArgumentList "/c","npx vue-cli-service serve --host empresa.local --port 8188" -WorkingDirectory <spa> -WindowStyle Hidden
+```
+
+Si los puertos no estan, no hay nada que diagnosticar en el spec: hay que levantarlos de nuevo
+(`e2e/setup-slot.ps1` imprime los tres comandos) y esperar a que webpack termine de compilar --el
+dev server acepta la conexion desde el arranque pero no contesta hasta que el build termina, asi que
+un `curl` que se queda colgado significa "compilando", no "caido"--.
 
 ## Esperar la descarga de recursos del arranque
 
@@ -865,6 +908,21 @@ Se resolvio sacando "Pinza" del circuito con flete. Vale la pena tenerlo present
 de los articulos del proveedor "Buenos Aires", **"Pinza" es el unico con expectativas absolutas de
 otro spec**.
 
+### 🔴 Dos circuitos que comparten un proveedor se meten movimientos en el medio
+
+`circuito-compra.spec.js` y `compra-costeo-facturacion.spec.js` le compran los dos al **mismo
+proveedor**. La consecuencia no es obvia: cuando uno afirma *"el pago bajo el saldo acumulado
+exactamente en el total de la compra"* usando el saldo de SU compra como referencia, la cuenta da
+mal en cuanto el otro circuito le intercala un movimiento entre la compra y el pago.
+
+Medido el 1/9/2026: entre la compra de `compra-costeo` (20.691,00) y su pago se habia colado un
+pedido de 28.243,22 del otro circuito, y el rojo --*"el pago tenia que bajar el saldo"*-- mandaba a
+revisar el pago, que estaba perfecto.
+
+**La referencia correcta es el movimiento inmediatamente ANTERIOR AL PAGO**, no el de la compra. La
+afirmacion sigue siendo la misma --el pago corre el saldo acumulado exactamente en el total-- y deja
+de depender de que nadie mas toque esa cuenta.
+
 ### 🔴 Un importe deterministico se repite entre corridas: buscar por valor agarra el registro viejo
 
 `circuito-compra.spec.js` carga siempre la misma compra, asi que su total es **identico en todas las
@@ -883,3 +941,315 @@ comprobantes: todo lo que este harness crea con datos fijos.
 aparecio el 31/8/2026 --en la primera corrida de la suite completa que llego hasta ahi con historia
 suficiente--. Es la clase de rojo que no se puede reproducir en una base recien sembrada: aparece
 solo, mucho despues, y culpa al sistema.
+
+---
+
+## El modulo Vender: los cuatro circuitos
+
+Los cuatro se escribieron el 31/8/2026 y comparten `helpers/vender.js`, que es donde viven las
+maniobras que los cuatro repiten (entrar a Vender, meter un articulo, elegir una opcion de un select
+con datos adosados, leer el total, leer stock y saldos de caja, prender un toggle, repartir un
+cobro). Lo que queda en cada archivo es lo que ese circuito **afirma**.
+
+| Archivo | Lo que afirma |
+|---|---|
+| `circuito-venta-contado.spec.js` | El descuento por metodo de pago queda guardado en el pivote, la plata entra a la caja, y borrar la venta devuelve el stock **y** saca la plata. |
+| `circuito-presupuesto.spec.js` | Un presupuesto NO toca nada hasta que se confirma; ahi nace la venta, baja el stock y aparece la deuda. Despues: editar la venta, aplicarle un descuento, y cobrarla. |
+| `circuito-multipago.spec.js` | Cada metodo de pago deja su plata en SU caja, no toda junta en la primera. Y el borrado compensa las dos. |
+| `circuito-devolucion-afip.spec.js` | Facturar contra ARCA en homologacion, devolver la mitad, emitir la nota de credito, y que el IVA debito de Posicion Fiscal suba con una y baje con la otra. |
+
+### 🔴 Elegir un articulo en el buscador NO lo agrega a la venta
+
+Queda **pendiente**, esperando la cantidad. El buscador ya muestra el nombre y el stock, el cursor
+salta al campo "Cantidad", y la venta sigue diciendo "0 productos" hasta que se confirma con Enter.
+
+Sin ese paso, el renglon nunca existe y el spec se va en timeout buscando una fila que el sistema no
+tenia por que haber dibujado. Depende de `users.ask_amount_in_vender`, que el fixture deja prendido
+porque es el comportamiento por defecto. Lo resuelve `agregar_articulo()` del helper.
+
+### 🔴 Sin SUCURSAL elegida, el boton de guardar no hace NADA y no dice por que
+
+No sale ningun pedido. El spec se va en timeout esperando un POST que nunca existio, y el rojo
+—"waiting for response"— manda a mirar la red o el backend.
+
+Lo unico que lo denuncia en pantalla es el checklist de la derecha, donde "Sucursal" queda en gris
+mientras "Pago" y "Articulos" ya tienen tilde. Es el mismo genero que el boton "Crear" apretado antes
+de tiempo: un control que se dibuja habilitado y no hace nada.
+
+### 🔴 La etiqueta de un metodo de pago lleva datos adosados: `selectOption({ label })` no sirve
+
+"Efectivo", con un descuento configurado, se muestra como **`3 - Efectivo (-10,00%)`**: el numero del
+metodo adelante y el porcentaje atras. Un test que pida el texto exacto se rompe el dia que alguien
+cambia el descuento, y el rojo dice `did not find some options`, que suena a que falta la opcion.
+
+Para eso esta `elegir_opcion_que_contenga()`: busca por texto **parcial** sobre las `options` del
+select. Vale para metodos de pago, cajas, sucursales y depositos.
+
+### 🔴 Los toggles de Vender son checkboxes OCULTOS detras de su label
+
+Son los "estilo iPhone" (`VenderToggle.vue`, `GuardarComoPresupuesto.vue`,
+`OmitirEnCuentaCorriente.vue`). El `<input type="checkbox">` que lleva el `data-testid` esta
+visualmente oculto; lo que se ve y se clickea es el `<label>` que lo envuelve.
+
+`check()` sobre el input falla con `Received: hidden` **aunque el elemento este perfectamente en el
+DOM**, y el rojo manda a buscar por que no se dibujo el toggle. Lo resuelve `poner_toggle()`, que
+clickea el label ancestro. Sirve para los dos casos: los de `VenderToggle` (donde el testid ES el id
+del input) y los sueltos, cuyo id es otro.
+
+### 🔴 El listado de ventas se parte por SUCURSAL, en una nav de solapas
+
+Una venta hecha con la sucursal "Principal" **no se ve** desde la solapa que este activa por defecto:
+la tabla dice "No hay Ventas" con la venta en la base y con el contador de la otra solapa marcando
+`(1)`. Hay que clickear la solapa. Es el mismo genero que el click en el dia de los modulos por
+fecha, y en la misma pantalla.
+
+⚠️ Esa nav ponia el contador **adentro del testid** (`nav-item-Principal (2)`), asi que el selector
+cambiaba con la cantidad de ventas del dia. Se arreglo haciendo que `horizontal-nav/Index.vue`
+prefiera un `item.testid` explicito sobre el valor visible, y que `AddressNav.vue` lo declare.
+
+### 🔴 Una venta se borra por DOS caminos, y no hacen lo mismo
+
+| Camino | Como se entra | Que hace |
+|---|---|---|
+| **Individual** | click en la fila → modal de la venta → "Eliminar" | Ofrece el checkbox "Compensar caja", **tildado por defecto**. Manda `DELETE /api/sale/{id}?compensar_caja=1`: devuelve el stock **y** saca la plata de cada caja. |
+| **Masivo** | listado → seleccion o filtro → "Eliminar" | Va por `PUT delete/sale`, encola un job, y termina en `DeleteModelsHelper`. `compensar_caja` queda en false: el stock vuelve, la plata se queda. El cartel solo promete lo primero ("Se repondran los articulos"). |
+
+🔴 **Y hasta el 31/8/2026 el masivo ni siquiera borraba.** `SaleController::destroy()` pide
+`(Request $request, $id)` y `DeleteModelsHelper::process_delete()` le pasaba solo el id: TypeError,
+500, y ni una venta borrada. Lo encontro este circuito. Arreglado pasandole un `Request` vacio en la
+rama de `sale`, igual que ya hacia la rama de `article` con su parametro extra.
+
+### 🔴 Una venta facturada ya no se puede borrar
+
+`SaleModal.show_btn_delete` esconde el boton en cuanto la venta tiene `afip_tickets`. Por eso la
+venta de `circuito-devolucion-afip.spec.js` queda en la base al terminar —como en produccion— y por
+eso el borrado se verifica en `circuito-multipago.spec.js`, sobre una venta sin factura.
+
+### 🔴 El modal de multipago es de DOS pasos, y "Calcular" borra los importes
+
+Aparece "Calcular" antes que "Listo" cuando la cuenta tiene **algun** descuento por metodo de pago
+configurado. La condicion mira los descuentos configurados en la CUENTA, no los metodos elegidos en
+esa venta: aunque se cobre con dos metodos sin descuento, el paso igual existe.
+
+Y `Buttons.calcular()` rearma las filas con `amount: ''`. O sea que hay que cargar los importes,
+apretar Calcular, y cargarlos **otra vez** antes de apretar Listo. Sin eso el reparto queda en cero y
+"Listo" no hace nada: `chequear_total_repartido()` corta en silencio y el modal se queda abierto.
+
+**Abrir el modal cambia el total de la venta, y esta bien que lo haga.** Al pasar a repartir entre
+varios metodos se saca el metodo que estaba elegido en el selector simple, y con el se va su
+descuento o recargo (`PaymentMethod.vue` limpia `current_acount_payment_methods_with_discounts` y
+`setTotal()` recalcula). Confirmado por Lucas el 1/9/2026: es el comportamiento correcto.
+
+Lo que importa para un spec es que **son dos numeros distintos**, no uno: medido el 31/8/2026, la
+pantalla decia **13.137,54** y el modal pedia repartir **14.597,27** --exactamente un 10% mas, el
+descuento de "Efectivo"--. Repartir el de antes deja un sobrante, y entonces **"Calcular" no hace
+nada**: `chequear_total_repartido()` corta en silencio y el modal se queda como estaba. El rojo
+aparece recien despues, esperando un "Listo" que nunca se dibuja.
+
+**Regla:** el importe a repartir se lee del propio modal (`multipago-total-a-repartir`, con su
+`data-monto`), nunca de `venta-total` antes de abrirlo. Y se relee en la segunda pasada, porque
+"Calcular" tambien puede cambiarlo.
+
+✅ **El reparto exigia exactitud de punto flotante — arreglado el 1/9/2026.**
+`chequear_total_repartido()` comparaba los dos totales con `Math.trunc(x * 100) / 100`, asi que
+repartir un total con decimales dejaba un residuo de coma flotante que el truncado convertia en un
+centavo de diferencia. La pantalla no ayudaba: redondea a dos decimales, y entonces "Total a
+repartir" y "Total repartido" mostraban el **mismo numero** mientras el sobrante salia como `NaN`
+--el residuo de 1e-12 se va a notacion exponencial y `numeral` no lo sabe formatear-- y "Calcular"
+no hacia nada ni decia por que.
+
+Ahora compara redondeando, y el sobrante tambien se redondea a centavos. `cargar_reparto()` **tipea
+todos los importes, incluido el de la ultima fila**, justamente para custodiar el arreglo: si
+alguien vuelve a truncar, `circuito-multipago.spec.js` se pone rojo. El boton "Completar"
+(`pago-completar-<i>`) sigue existiendo y es el atajo natural para una persona, pero ya no es una
+salida de emergencia.
+
+Dos detalles mas del mismo modal:
+
+- La **caja de una fila se elige DESPUES del importe**: el selector solo se dibuja cuando la fila ya
+  tiene monto. Con el orden al reves el select no existe.
+- Hay **dos carpetas de componentes de multipago que no se usan**
+  (`modals/payment-methods/select-payment-methods/` y `.../payment-methods-with-discounts/`): nadie
+  las importa desde afuera, solo se referencian entre ellas. El modal vivo es
+  `modals/payment-methods/Index.vue`, que arma la lista con
+  `common/payment-methods/PaymentMethodsStep.vue`. Buscar los testids en las otras es tiempo perdido.
+
+### 🔴 Antes de poder seleccionar una fila hay que PRENDER el modo seleccion
+
+Sin eso, el click sobre la fila no selecciona nada —`Tr.onRowSelected` solo agrega a la seleccion
+cuando el modo esta activo— y el dropdown de acciones ni siquiera se dibuja, porque su `show()` mira
+`selected.length`. El sintoma es un timeout esperando el dropdown, que manda a buscar el problema en
+el dropdown y no en el paso que falta.
+
+Y al reves: para **abrir** una venta hay que tener el modo seleccion **apagado**, o el click la
+selecciona en vez de abrirla.
+
+### 🔴 `/ventas` sin parametros rompia el render del listado
+
+La ruta es `/ventas/:view?/:sub_view?` y los dos parametros son opcionales, asi que `/ventas` a secas
+es una URL legal. Pero `mixins/sale.js` hacia `this.view.replaceAll(...)` sobre `undefined`: la tabla
+quedaba vacia con las ventas cargadas y sin ningun error visible. Arreglado con un default
+(`'todas'` / `'todos'`). La URL canonica sigue siendo `/ventas/todas`.
+
+### El presupuesto: tres verbos, tres endpoints
+
+`POST budget` lo crea, `PUT budget/{id}` lo actualiza, `POST budget/{id}/confirmar` lo confirma y
+genera la venta. Conviene esperarlos por separado.
+
+Confirmar devuelve el **presupuesto**, no la venta (`Budget::scopeWithAll` no carga la relacion
+`sale`), asi que la venta hay que ubicarla aparte. El spec lo hace mirando **que id aparecio** en el
+listado del dia entre antes y despues, no agarrando el ultimo: en una base con varias corridas
+encima, "el ultimo" es cualquier cosa.
+
+### 🔴 Dos agujeros del fixture que hacian fallar al presupuesto con un 500
+
+Los dos se arreglaron en `TestingFerreteriaSeeder`, y los dos tenian el mismo perfil: la pantalla se
+dibujaba entera, el flujo parecia disponible, y el POST moria.
+
+1. **`budget_statuses` no se sembraba nunca.** Es una tabla global de solo lectura, y su seeder usa
+   `create()` (no es idempotente), asi que va detras de un chequeo de existencia. Sin ella,
+   `BudgetHelper::checkStatus()` hace `$budget->budget_status->name` sobre una relacion vacia:
+   *"Trying to get property 'name' of non-object"*.
+2. **Los clientes no tenian `credit_accounts`.** Las crea
+   `CreditAccountHelper::crear_credit_accounts()`, que en produccion corre desde `ClientController`;
+   un `firstOrCreate` directo se la saltea. Sin ellas, confirmar el presupuesto reventaba en
+   `CurrentAcountFromSaleHelper` linea 54 **despues** de haber creado la venta y descontado el
+   stock — que es exactamente la falla que el comentario del `catch` de `BudgetController::confirmar()`
+   describe.
+
+### El fixture ahora deja DOS cajas abiertas
+
+`abrir_cajas()` abre "Caja Efectivo" y "Caja Mercado Pago" con el helper de produccion
+(`CajaAperturaHelper`). La segunda es lo que hace posible `circuito-multipago.spec.js`: con una sola
+caja abierta no hay forma de verificar que cada metodo de pago deje su plata donde corresponde.
+"Caja Sin Concepto" queda cerrada a proposito, de contraste.
+
+### AFIP: siempre homologacion, y el CUIT tiene que ser el del certificado
+
+El punto de venta del fixture nace con `afip_information.afip_ticket_production = 0`, que es lo que
+hace que `AfipWSAAHelper` apunte al WS de homologacion y firme con los certificados de
+`storage/app/afip/testing/`. El CUIT del fixture (`20423548984`) es el del certificado
+`CN=comerciocitytester`: si no coinciden, ARCA rechaza el ticket de acceso y el error **no dice** que
+el problema sea el CUIT.
+
+🔴 `circuito-devolucion-afip.spec.js` tiene como **primer test** una guarda que verifica que TODOS los
+puntos de venta esten en 0, leyendo el mismo catalogo que baja la SPA al arrancar. Va primero a
+proposito: con la propiedad en 1, ese archivo estaria emitiendo comprobantes de verdad.
+
+Es tambien el unico circuito que puede ponerse rojo por algo que no es el sistema —si el WS de
+homologacion no responde—, y los mensajes de sus aserciones lo dicen, para no mandar a nadie a buscar
+el problema en el codigo.
+
+### La devolucion carga la venta por su NUMERO
+
+El campo del nav manda `GET devoluciones/search-sale/{num}`, no por id. Y cada renglon publica su
+testid con el id del **articulo** (`devolucion-item-devueltas-<article_id>`), no con el del renglon.
+
+El POST de la devolucion contesta **201 pelado**, sin cuerpo. Pero eso ya es la afirmacion fuerte: la
+emision de la nota de credito pasa dentro de la misma transaccion, asi que un rechazo de ARCA termina
+en rollback y 500. Un 201 significa que la nota de credito se emitio.
+
+### Posicion Fiscal cierra el circuito, y no hace falta saber ninguna alicuota
+
+`compra-costeo-facturacion.spec.js` mide el **IVA credito** (el de la factura de compra) y
+`circuito-devolucion-afip.spec.js` el **IVA debito** (el de la factura de venta). Los dos leen el
+reporte con `helpers/reportes.js`.
+
+Del lado de ventas la asercion esta armada para no reimplementar el reporte: se devuelve **exactamente
+la mitad** de cada renglon, asi que la nota de credito tiene que revertir exactamente la mitad del IVA
+debito que sumo la factura. Cualquier mezcla de alicuotas se cancela sola — uno de los articulos del
+circuito es Exento justamente para que la mezcla exista y la propiedad se siga cumpliendo.
+
+## Testids agregados el 31/8/2026, tercera tanda (modulo Vender)
+
+| Testid | Donde | Para que |
+|---|---|---|
+| `venta-metodo-pago` · `venta-caja` · `venta-punto-venta` · `venta-sucursal` | `stage-1/` | Los selects de la etapa 1. |
+| `venta-btn-metodos-pago` | `PaymentMethod.vue` | Abre el modal de reparto en varios metodos. |
+| `venta-guardar-presupuesto` · `venta-omitir-cuenta-corriente` | `stage-1/` | Los dos toggles que cambian que es la venta. |
+| `venta-cantidad-pendiente` | Vender | La cantidad del articulo elegido y todavia no agregado. |
+| `venta-item-cantidad-<id>` · `venta-item-precio-<id>` | renglones | Cantidad y precio de cada renglon, por id de articulo. |
+| `venta-total` (con `data-monto`) | `stage-2/ContextBar.vue` | El total que muestra Vender. **No** es el de `total-previus-sales/Total.vue`, que es el layout viejo (`venta-total-remito`). |
+| `venta-descuento-<id>` | `stage-3/Discounts.vue` | Cada descuento de venta, por su id. |
+| `btn-guardar-venta` | los dos layouts | Guardar / ACTUALIZAR venta / Guardar Presupuesto: el mismo boton cambia de texto. |
+| `venta-multipago-calcular` · `venta-multipago-listo` · `venta-multipago-cancelar` | `modals/payment-methods/Buttons.vue` | Los dos pasos del reparto. Calcular y Listo **nunca se dibujan a la vez**. |
+| `pago-metodo-<i>` · `pago-monto-<i>` · `pago-caja-<i>` | `PaymentMethodsStep.vue` | Los tres controles de cada fila de pago, por INDICE. |
+| `btn-agregar-metodo-pago` | `PaymentMethodsStep.vue` | Agrega una fila al reparto. |
+| `btn-actualizar-venta` | `ventas/modals/details/SaleInfo.vue` | El unico camino para editar una venta guardada. |
+| `btn-facturar-venta` | `ventas/modals/details/BtnFacturar.vue` | Emitir factura desde el modal de la venta. |
+| `afip-punto-venta` · `afip-tipo-comprobante` · `btn-emitir-facturas` | `ConfirmAfipTickets.vue` | El modal de facturacion. |
+| `btn-eliminar-<model_name>` | `common-vue/components/BtnDelete.vue` | El borrado individual de cualquier modelo. |
+| `btn-confirmar-<id>` · `confirm-compensar-caja` | `common-vue/components/Confirm.vue` | El modal de confirmacion y su checkbox de compensar caja. |
+| `btn-modo-seleccion` (con `data-activo`) | `view/header/BtnSeleccion.vue` | Prender/apagar el modo seleccion, y saber en cual esta. |
+| `btn-presupuesto-accion-<id>` (con `data-accion`) | `budget/BtnConfirmarAnular.vue` | Confirmar o anular, y saber cual de las dos ofrece. |
+| `btn-actualizar-presupuesto` | `budget/BtnActualizarEnVender.vue` | Carga el presupuesto en Vender para editarlo. |
+| `devolucion-num-venta` · `devolucion-btn-marcar-todo` | `devoluciones/nav/` | Buscar la venta y marcar todo devuelto. |
+| `devolucion-item-devueltas-<article_id>` · `devolucion-item-precio-<article_id>` | `devoluciones/articles-table/` | Unidades devueltas y precio de cada renglon. |
+| `devolucion-regresar-stock` · `devolucion-deposito` · `devolucion-generar-cuenta-corriente` | `devoluciones/options/` | Las opciones de la devolucion. |
+| `devolucion-facturar-nota-credito-<afip_ticket_id>` | `devoluciones/options/Facturar.vue` | Emitir la nota de credito con ARCA sobre ESA factura. |
+| `devolucion-total` (con `data-monto`) | `devoluciones/sale-info/Total.vue` | El total de la devolucion. |
+| `btn-guardar-devolucion` | `devoluciones/BtnGuardar.vue` | Guardar. |
+
+### 🔴 El buscador general tambien se come un `fill()`, y falla de la peor manera
+
+Es el mismo `fill()` que ya documenta la seccion de mas arriba, pero acá el sintoma es peor que un
+timeout: `fill()` escribe el valor en el DOM y el componente **no se entera** --`query_value` sigue
+vacio--, asi que `buscar()` corta en su primera linea (`query_value.trim().length === 0`) y **no
+manda ningun pedido**.
+
+Lo que se ve: el input MUESTRA el texto buscado, la grilla sigue con el listado de antes, y no hay
+error, ni request, ni toast. Todo parece haber funcionado. Y peor: **a veces "anda"**, porque si el
+articulo buscado entra igual en esa primera pagina, la lectura lo encuentra.
+
+Se teclea con `pressSequentially()` y se espera la **respuesta** de `POST /api/global-search/<modelo>`,
+no la grilla: leer el DOM apenas se clickea la lupa devuelve el listado anterior.
+
+⚠️ **Y el nombre que se teclea no puede tener caracteres especiales.** `"Clavos N° 2"` llegaba al
+input como **`°` a secas** --el resto se perdia en el camino--, con lo cual la busqueda no encontraba
+nada y el rojo hablaba del articulo. Los specs eligen articulos con nombres simples a proposito.
+
+### 🔴 El listado de articulos NO se puede leer "mirando lo que muestra": hay que buscar
+
+Dos cosas se acumulan y las dos hacen desaparecer un articulo que esta perfectamente vivo en la base:
+
+1. **El listado por defecto trae pagina 1 ordenada por id descendente** (`runListadoPorDefecto`).
+   Con la base ya usada —y cada corrida de la suite crea artículos nuevos— los del fixture (ids 1 a
+   10) se caen de esa página y dejan de estar en pantalla.
+2. **El listado recuerda el ultimo filtro**, entre specs y entre corridas. No vive en la pagina: lo
+   restaura el sistema al entrar. Un spec que filtro por proveedor le esconde los articulos de otro
+   proveedor a todos los que vengan despues.
+
+En los dos casos el rojo dice `no encontre el articulo "Martillo acero" en el listado` y manda a
+dudar del nombre del articulo. Costaron dos corridas el 31/8/2026.
+
+**La forma correcta es buscar cada articulo con el buscador general** y limpiar al terminar, que es
+lo que hace `leer_articulos()` de `helpers/vender.js`. Para eso se le dio un `data-testid` de
+respaldo al buscador (`buscador-general`, cuando el modulo no le pasa un `input_id`) y se instrumento
+`btn-reiniciar-filtros`.
+
+### 🔴 "Lo que apareció en el listado después de la acción" no sirve para ubicar un registro nuevo
+
+Suena razonable —sacar la foto antes, sacarla después, y quedarse con la diferencia— y falla en
+cuanto las dos fotos salen de vistas distintas. El caso concreto: el listado de ventas se parte por
+sucursal, y **la solapa de una sucursal no existe mientras el día no tenga ninguna venta de esa
+sucursal**. La foto de antes sale de la vista por defecto, la de después de la solapa: la diferencia
+da cualquier cosa.
+
+**Lo que sí es exacto es un vínculo del propio modelo.** Una venta generada por un presupuesto guarda
+su `budget_id`, y el listado ya lo trae: se lee de la misma respuesta que usó la pantalla y no hay
+ambigüedad. Vale como regla general — buscar por una relación, no por diferencia de conjuntos.
+
+### 🔴 Editar una venta RECREA su movimiento de cuenta corriente, con otro id
+
+`SaleHelper::updateCurrentAcountsAndCommissions()` no actualiza el movimiento: **borra el anterior y
+crea uno nuevo** leyendo `sales.total`. O sea que el id que uno se guardo antes de editar apunta,
+despues, a una fila que ya no existe.
+
+El sintoma es un timeout esperando `celda-current_acount-debe-<id>`, y lo que sugiere es exactamente
+lo contrario de lo que pasa: parece que la cuenta corriente **no** se actualizo, cuando en realidad
+se actualizo tan a fondo que se rehizo entera. Costo una corrida el 31/8/2026.
+
+**Lo estable es el detalle**, que el backend escribe como `Venta N°<num>`
+(`CurrentAcountFromSaleHelper`). `circuito-presupuesto.spec.js` lo busca asi --con el id mas alto
+entre los que coincidan, por el mismo motivo de siempre-- y lo vuelve a buscar despues de cada
+edicion.

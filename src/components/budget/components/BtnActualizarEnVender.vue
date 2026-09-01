@@ -4,6 +4,7 @@
 	variant="outline-primary"
 	size="sm"
 	id="btn_actualizar_en_vender"
+	data-testid="btn-actualizar-presupuesto"
 	@click="update">
 		Actualizar en VENDER
 	</b-button>

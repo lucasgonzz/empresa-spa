@@ -11,6 +11,8 @@
 		<!-- Header de la etapa 3 -->
 		<div
 		class="vender-stage__header"
+		data-testid="venta-etapa-3"
+		:data-abierta="stage3_open ? 'si' : 'no'"
 		@click="toggleStage3">
 			<span class="vender-stage__number">3</span>
 			<div class="vender-stage__header-text">

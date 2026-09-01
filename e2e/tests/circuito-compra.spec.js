@@ -43,6 +43,7 @@
 //    con `.last()` sobre `[data-testid^="article-amount-"]` (las filas se agregan al final).
 const { test, expect } = require('../fixtures')
 const { esperar_recursos_descargados } = require('../helpers/recursos')
+const { buscar_articulo } = require('../helpers/vender')
 const { abrir_pestania, completar_campo, search_and_select, crear_desde_buscador } = require('../helpers/formulario')
 const { numero_de_pantalla, numero_de_dato, redondear } = require('../helpers/numeros')
 const { escribir_excel_de_compra } = require('../helpers/excel')
@@ -317,7 +318,29 @@ async function celda_numerica(page, model_name, key, id) {
  * @returns {Promise<number>}
  */
 async function stock_de(page, id) {
+	// 🔴 Se BUSCA el articulo antes de leerle la celda. El listado por defecto trae pagina 1
+	//    ordenada por id descendente, asi que los articulos del fixture --que tienen los ids mas
+	//    bajos-- se caen de la pantalla en cuanto la base acumula corridas. El rojo que produce es
+	//    `celda-article-stock-1 not found`, que manda a pensar que el testid esta mal.
+	await buscar_articulo(page, nombre_del_renglon(id))
+
 	return celda_numerica(page, 'article', 'stock', id)
+}
+
+/**
+ * Nombre del articulo de un renglon, a partir de su id. Hace falta para poder buscarlo.
+ *
+ * @param {number|string} id
+ * @returns {string}
+ */
+function nombre_del_renglon(id) {
+	const renglon = RENGLONES.find(r => String(contexto.ids[r.alias]) === String(id))
+
+	if (!renglon) {
+		return contexto.articulo_nuevo
+	}
+
+	return renglon.articulo || contexto.articulo_nuevo
 }
 
 /**
@@ -362,15 +385,14 @@ async function saldo_de_caja(page, nombre) {
  * @returns {Promise<string>}
  */
 async function id_de_articulo(page, nombre) {
-	const id = await page.evaluate(texto => {
-		const celdas = [...document.querySelectorAll('[data-testid^="celda-article-name-"]')]
-		const celda = celdas.find(c => c.innerText.trim() === texto)
-		return celda ? celda.dataset.testid.replace('celda-article-name-', '') : null
-	}, nombre)
-
-	expect(id, `no encontre el articulo "${nombre}" en el listado`).not.toBeNull()
-
-	return id
+	// 🔴 Se BUSCA con el buscador general en vez de mirar las filas que el listado tenga a la vista.
+	//    El listado por defecto trae pagina 1 ordenada por id descendente, asi que los articulos del
+	//    fixture --que son los de id mas bajo-- se caen de esa pagina en cuanto la base acumula
+	//    corridas. Esto andaba en agosto con 10 articulos y se rompio con 56, el 31/8/2026, con un
+	//    rojo que dice "no encontre el articulo" sobre un articulo perfectamente vivo.
+	//
+	//    El detalle de todas las trampas del buscador esta en `helpers/vender.js`.
+	return buscar_articulo(page, nombre)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -554,6 +576,11 @@ test.describe.serial('Compra: alta, cantidad recibida, flete, cuenta corriente y
 			}
 
 			const id = contexto.ids[renglon.alias]
+			// Igual que en `stock_de()`: hay que buscar el articulo para que su fila este en
+			// pantalla. Sin esto el click se va en timeout esperando un boton que existe pero no
+			// esta dibujado, porque el articulo se cayo de la primera pagina del listado.
+			await buscar_articulo(page, nombre_del_renglon(id))
+
 			await page.locator(`[data-testid="btn-stock-movements-${id}"]`).click()
 
 			const estado = page.locator('[data-testid="estado-movimientos-stock"]')
@@ -636,7 +663,10 @@ test.describe.serial('Compra: alta, cantidad recibida, flete, cuenta corriente y
 			//    contra un esperado ya redondeado y un leido sin redondear falla por el quinto
 			//    decimal sin que haya nada mal.
 			expect(
-				redondear(await celda_numerica(page, 'article', 'costo_real', contexto.ids[renglon.alias])),
+				redondear(await (async () => {
+					await buscar_articulo(page, renglon.articulo || contexto.articulo_nuevo)
+					return celda_numerica(page, 'article', 'costo_real', contexto.ids[renglon.alias])
+				})()),
 				`el costo real de "${renglon.articulo || contexto.articulo_nuevo}" con el flete prorrateado`
 			).toBe(esperado)
 		}

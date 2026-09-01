@@ -399,6 +399,32 @@ test.describe.serial('Listado: alta de articulo y actualizacion masiva', () => {
 
 		await masiva_de_ecommerce(page, 'activar')
 	})
+
+	test('deja el listado sin filtros, para no esconderle articulos a los demas specs', async ({ page }) => {
+		// 🔴 Esto no es prolijidad: el listado RECUERDA el ultimo filtro, y lo recuerda entre specs
+		//    y entre corridas --no vive en la pagina, lo restaura el sistema al entrar--. Este
+		//    archivo filtra por proveedor cuatro veces, asi que sin este paso deja el listado
+		//    mostrando SOLO los articulos de un proveedor.
+		//
+		//    Lo que rompe despues no dice nada de filtros: dice `no encontre el articulo "Martillo
+		//    acero" en el listado`, con el articulo perfectamente vivo en la base. Se comio una
+		//    corrida del circuito de multipago el 31/8/2026.
+		//
+		//    `helpers/vender.js` tambien se defiende solo por las dudas, pero el que ensucia tiene
+		//    que limpiar: los specs que leen el listado sin ese helper no tendrian como saberlo.
+		await abrir_listado(page)
+
+		const reiniciar = page.locator('[data-testid="btn-reiniciar-filtros"]')
+
+		if (await reiniciar.count() > 0) {
+			await reiniciar.click()
+		}
+
+		await expect(
+			reiniciar,
+			'el listado tenia que quedar sin filtros al terminar este archivo'
+		).toHaveCount(0)
+	})
 })
 
 /**

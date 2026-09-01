@@ -152,7 +152,24 @@ export default {
 			console.log(this.sobrante_a_repartir)
 			
 
-			if (Math.trunc(this.total_repartido * 100) / 100 != Math.trunc(this.total_a_repartir * 100) / 100) {
+			/*
+				🔴 Se REDONDEA a centavos, no se trunca.
+
+				Truncar convertia una diferencia invisible en un centavo entero. Repartir 27.851,22
+				en dos da 13.925,61 y 13.925,61, que en coma flotante no suman exactamente 27.851,22
+				sino una billonesima menos; esa billonesima cae del otro lado del truncado y los dos
+				totales pasan a diferir en un centavo PARA LA VALIDACION, mientras en pantalla
+				muestran el mismo numero.
+
+				El operador veia el peor sintoma posible: "Total a repartir" y "Total repartido" con
+				el mismo importe, el sobrante en `NaN` --el residuo de 1e-12 se le va a notacion
+				exponencial y `numeral` no lo sabe formatear-- y el boton sin responder ni explicar
+				por que. Medido el 31/8/2026 armando el circuito e2e de multipago.
+
+				Redondear es ademas lo que corresponde para plata: dos importes que redondean al
+				mismo centavo SON el mismo importe.
+			*/
+			if (Math.round(this.total_repartido * 100) / 100 != Math.round(this.total_a_repartir * 100) / 100) {
 				this.$toast.error('El total repartido esta mal')
 				return false
 			}
