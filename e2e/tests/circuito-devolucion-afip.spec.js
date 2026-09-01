@@ -479,7 +479,7 @@ test.describe.serial('Facturacion con ARCA y devolucion con nota de credito', ()
 		}
 	})
 
-	test('🔴 la nota de credito NO baja el IVA debito de Posicion Fiscal', async ({ page }) => {
+	test('la nota de credito no toca el IVA debito: la baja va en su propio renglon', async ({ page }) => {
 		await page.goto('/reportes/posicion-fiscal')
 		await esperar_recursos_descargados(page, { abrir_panel: false })
 
@@ -488,31 +488,37 @@ test.describe.serial('Facturacion con ARCA y devolucion con nota de credito', ()
 		const neto = redondear(ahora['iva-debito'] - contexto.base_fiscal['iva-debito'])
 
 		/*
-		 * 🔴 ESTE TEST FIJA UN COMPORTAMIENTO QUE PARECE MAL, y lo fija a proposito.
+		 * 🔴 QUE EL IVA DEBITO NO BAJE ES AHORA EL COMPORTAMIENTO CORRECTO, no un bug.
 		 *
-		 * Se devolvio exactamente la mitad de la venta y se emitio la nota de credito con ARCA, que
-		 * volvio autorizada y con CAE. Lo esperable seria que el IVA debito del periodo quedara en
-		 * la mitad. No baja **nada**: queda igual que antes de la devolucion.
+		 * ⚠️ Este comentario decia lo contrario hasta el 1/9/2026, y prescribia cambiar la asercion
+		 * por `expect(neto).toBe(redondear(contexto.iva_debito_factura / 2))`. **Ese seria el arreglo
+		 * equivocado**: dejaria el spec en rojo permanente. Se corrigio junto con la mision que
+		 * agrego el renglon (`informes/20260901-iva-notas-credito-posicion-fiscal.md`).
 		 *
-		 * Son dos cosas distintas, y las dos hacen falta para arreglarlo:
+		 * Como quedo: el IVA de la nota de credito NO se descuenta del renglon "IVA debito" --que
+		 * sigue siendo el bruto de los comprobantes de venta emitidos, como lo pide la DDJJ, que los
+		 * quiere discriminados y nunca pre-neteados--, sino que se informa en su propio renglon,
+		 * **"IVA de notas de credito emitidas"** (`data-testid="posicion-fiscal-iva-notas-credito"`),
+		 * y de ahi se resta del saldo, igual que lo hace el IVA credito.
 		 *
-		 *   1. `ContabilidadRepository::query_iva_debito()` arma la consulta con
-		 *      `join('sales', 'sales.id', '=', 'afip_tickets.sale_id')`, y una nota de credito tiene
-		 *      `sale_id` en NULL --su venta viaja en `sale_nota_credito_id`--. O sea que el join la
-		 *      deja afuera del reporte, sume o reste.
-		 *   2. El comprobante de la nota de credito se guarda con **`importe_iva` en NULL**, asi que
-		 *      aunque entrara a la consulta no tendria con que restar.
+		 * Por eso `query_iva_debito()` sigue joineando por `sale_id` y la nota de credito sigue
+		 * quedando afuera de ese renglon: es deliberado, y ademas es lo que evita el doble conteo.
+		 * Lo que si cambio es que `importe_iva` ya no se guarda en NULL
+		 * (`AfipNotaCreditoHelper::update_afip_ticket()`).
 		 *
-		 * Consecuencia: **Posicion Fiscal sobreestima el IVA debito** de cualquier periodo con
-		 * devoluciones facturadas.
+		 * 🔴 PENDIENTE, y es la parte que le falta a este spec: agregarle la asercion sobre el
+		 * renglon nuevo, que es la que verificaria el circuito de punta a punta.
 		 *
-		 * El dia que se arregle, este test se pone en rojo. Eso es lo correcto: hay que cambiarlo por
-		 * `expect(neto).toBe(redondear(contexto.iva_debito_factura / 2))`, que es la asercion que el
-		 * circuito queria hacer.
+		 *     const nc = redondear(ahora['iva-notas-credito'] - contexto.base_fiscal['iva-notas-credito'])
+		 *     expect(nc).toBe(redondear(contexto.iva_debito_factura / 2))
+		 *
+		 * No se agrego en esa mision porque ahi no se corre Playwright (lo corre Lucas) y una
+		 * asercion sin correr es una promesa, no una verificacion. Requiere que `contexto.base_fiscal`
+		 * capture tambien `iva-notas-credito` en la linea base del circuito.
 		 */
 		expect(
 			neto,
-			'hoy la nota de credito no toca el IVA debito (ver el comentario: si esto cambio, el reporte se arreglo)'
+			'el IVA debito no se pre-netea: la baja por la nota de credito vive en el renglon "IVA de notas de credito emitidas"'
 		).toBe(contexto.iva_debito_factura)
 
 		console.log(`[devolucion] IVA debito tras la nota de credito: ${neto} (la factura habia sumado ${contexto.iva_debito_factura})`)
