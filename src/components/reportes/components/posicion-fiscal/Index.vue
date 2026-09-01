@@ -74,7 +74,8 @@
 					Hay {{ iva.notas_credito_sin_medir }}
 					{{ iva.notas_credito_sin_medir == 1 ? 'nota de crédito emitida' : 'notas de crédito emitidas' }}
 					ante ARCA sin el IVA medido, así que este renglón puede estar incompleto y el saldo a
-					pagar salir más alto de lo que corresponde. Escribinos para que lo completemos.
+					pagar salir más alto de lo que corresponde. Escribinos y revisamos cuáles podemos
+					recuperar.
 				</div>
 
 				<div
