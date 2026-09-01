@@ -1335,8 +1335,27 @@ function menu_de(elemento) {
 		return propio
 	}
 
+	/**
+	 * 🔴 Sube por `.dropdown` y NO por `.btn-group`, y la diferencia cuesta 2,5 segundos.
+	 *
+	 * Con `.btn-group` en la lista, un botón que no despliega nada pero que comparte grupo con uno
+	 * que sí, encuentra el menú de su HERMANO y se hace pasar por desplegable. El caso real es
+	 * `listado.boton_modo_seleccion`: `opciones-filtrados-seleccion/Index.vue:15-33` mete el botón
+	 * de selección y el desplegable de seleccionados en un mismo
+	 * `<div class="btn-group opciones-grupos__group">` para que Bootstrap los pegue visualmente.
+	 *
+	 * Mientras esto solo alimentaba a `lado_sugerido()`, un falso positivo era cosmético: el cartel
+	 * se plantaba al costado en vez de abajo. Desde que además decide si hay que ESPERAR a que el
+	 * menú se abra (ver `esperar_menu_desplegado()`), el mismo falso positivo deja al lead mirando
+	 * un tour aparentemente colgado durante todo el techo —2,5 s— en el paso 2 del clip 1.7, que es
+	 * uno de los que Lucas reportó. Lo encontró el chequeo independiente del 1/9/2026.
+	 *
+	 * `.dropdown` alcanza para los dos casos que el contrato necesita: BootstrapVue le pone
+	 * `dropdown b-dropdown btn-group` a la raíz del `<b-dropdown>`, así que resuelve tanto con el
+	 * ancla sobre el desplegable entero como con el ancla sobre el botón que lo abre.
+	 */
 	const contenedor = typeof elemento.closest === 'function'
-		? elemento.closest('.dropdown, .btn-group')
+		? elemento.closest('.dropdown')
 		: null
 
 	return contenedor ? contenedor.querySelector('.dropdown-menu') : null
@@ -1844,16 +1863,6 @@ function enganchar_avance_por_desaparicion(paso, i) {
 }
 
 /**
- * Devuelve el campo de carga del elemento resaltado, si el paso es de cargar un dato.
- *
- * El elemento anclado suele ser el CONTENEDOR (un `#form-group-...`, un `div` de tarjeta), así que
- * el campo se busca adentro. Se excluyen los `checkbox` y `radio`, donde el clic **sí** es la
- * acción completa.
- *
- * @param {Element|null} elemento Nodo resaltado.
- * @returns {Element|null}
- */
-/**
  * El primer campo de carga que esté A LA VISTA adentro del elemento.
  *
  * Ver el porqué en `campo_de_carga()`, que es su único llamador.
@@ -1873,6 +1882,16 @@ function primer_campo_visible(elemento) {
 	return null
 }
 
+/**
+ * Devuelve el campo de carga del elemento resaltado, si el paso es de cargar un dato.
+ *
+ * El elemento anclado suele ser el CONTENEDOR (un `#form-group-...`, un `div` de tarjeta), así que
+ * el campo se busca adentro. Se excluyen los `checkbox` y `radio`, donde el clic **sí** es la
+ * acción completa.
+ *
+ * @param {Element|null} elemento Nodo resaltado.
+ * @returns {Element|null}
+ */
 function campo_de_carga(elemento) {
 	if (!elemento) {
 		return null
@@ -2287,6 +2306,23 @@ function pedir_confirmacion_de_cierre() {
 	let hubo_keydown = false
 
 	function al_teclear(evento) {
+		/**
+		 * 🔴 Tab se corta acá aunque no haga nada, y no es por prolijidad.
+		 *
+		 * driver.js registra un `keydown` propio sobre `window` que **atrapa el foco adentro del
+		 * cartel**: cualquier Tab lo devuelve ahí. Con el diálogo abierto eso significa que el lead
+		 * no puede llegar con el teclado al botón que le estamos pidiendo que elija, aunque el
+		 * diálogo se anuncie como `role="dialog"` / `aria-modal="true"`. Cortando la propagación,
+		 * el Tab vuelve a ser el del navegador y recorre los dos botones.
+		 *
+		 * No hace falta implementar el ciclo de foco a mano: el diálogo tiene exactamente dos
+		 * focusables y el navegador ya sabe ir de uno al otro.
+		 */
+		if (evento.key === 'Tab' || evento.keyCode === 9) {
+			evento.stopPropagation()
+			return
+		}
+
 		if (evento.key !== 'Escape' && evento.keyCode !== 27) {
 			return
 		}
@@ -2438,6 +2474,11 @@ export function iniciar_tour(clip, contexto) {
 		avanzando: false,
 		/* Indice del paso al que hubo que devolverle el boton porque no habia aparicion que esperar. */
 		forzar_boton: -1,
+		/* El tour llegó al final Y mostró más de la mitad de sus pasos. Lo escribe `mostrar_paso()`
+		 * al pasarse del último; hasta entonces vale `false`, que es lo correcto para un tour que
+		 * se corta a la mitad. Declarado acá y no dejado en `undefined` porque es el flag del que
+		 * cuelga que el lead vea el botón verde: se busca en este literal antes que en el archivo. */
+		completo: false,
 	}
 
 	recorrido = driver({
