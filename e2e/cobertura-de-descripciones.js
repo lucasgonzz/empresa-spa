@@ -57,12 +57,20 @@ const testids_declarados = new Map()
 archivos_de(RAIZ_SRC, ['.vue']).forEach(archivo => {
 	let contenido = fs.readFileSync(archivo, 'utf8')
 	/*
-		El lookbehind descarta `:data-testid` (el enlazado de Vue), que es una EXPRESION y no un
-		literal. Sin el, `:data-testid="inputId(prop)"` entraba a la lista como si el testid se
-		llamara `inputId(prop)` -- y despues aparecia como control sin documentar, cuando en
-		realidad es dinamico y lo cubre una clave con comodin.
+		Dos formas cuentan como literal, y las dos tienen que entrar o el total miente:
+
+		  data-testid="algo"        -- el atributo plano
+		  :data-testid="'algo'"     -- enlazado, pero con un literal adentro
+
+		La segunda es como estan escritos los renglones de Posicion Fiscal. Dejarla afuera hacia
+		que 12 controles no se contaran ni como cubiertos ni como faltantes: simplemente no
+		existian para la medicion, y el porcentaje salia mas bajo de lo real.
+
+		Lo que SI queda afuera es la expresion de verdad (`:data-testid="inputId(prop)"`,
+		`'btn-guardar-'+model_name`): no se puede enumerar sin ejecutar la aplicacion, y para esos
+		el diccionario tiene claves con comodin.
 	*/
-	let regex = /(?<![:\w-])data-testid="([^"'{}+]*)"/g
+	let regex = /(?<![\w-]):?data-testid="'?([^"'{}+]*)'?"/g
 	let match
 	while ((match = regex.exec(contenido)) !== null) {
 		let testid = match[1].trim()

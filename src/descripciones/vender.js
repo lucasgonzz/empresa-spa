@@ -176,7 +176,7 @@ export default {
 			'Si ARCA la rechaza NO se guarda nada: el stock no vuelve y el crédito no se genera. La devolución entera se cancela junto con el comprobante.',
 		],
 		requiere: 'La opción solo aparece si la venta tiene una factura con CAE. Sin factura autorizada no hay sobre qué emitir, y que no esté es correcto.',
-		nota_interna: 'Defecto abierto al 1/9/2026: la nota de credito NO baja el IVA debito de Posicion Fiscal. Dos causas y hacen falta las dos --el join de query_iva_debito va por afip_tickets.sale_id, que en una nota de credito es NULL, y el comprobante se guarda con importe_iva en NULL--. Medido: factura que sumo 4.833,68, devuelta la mitad con NC autorizada, el reporte siguio mostrando 4.833,68.',
+		nota_interna: 'El IVA de la nota de credito se persiste y baja el saldo de Posicion Fiscal desde el 1/9/2026, en un renglon propio debajo del IVA debito (no restandolo del debito). Las notas emitidas ANTES de esa fecha no tienen el dato: las recupera el comando SetIvaNotasCredito, y mientras falten el reporte lo avisa solo. Este era el defecto que reporto el circuito e2e y ya esta cerrado.',
 	},
 
 	/* --------------------------------------------------------- editar, cobrar, borrar */

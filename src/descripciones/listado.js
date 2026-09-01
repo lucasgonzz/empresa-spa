@@ -83,6 +83,26 @@ export default {
 	'posicion-fiscal-iva-debito': {
 		titulo: 'IVA débito del período',
 		que_hace: 'Suma el IVA de los comprobantes de venta emitidos en el período.',
-		nota_interna: 'Defecto abierto al 1/9/2026: las notas de credito NO lo bajan, asi que este numero queda sobreestimado cuando hubo devoluciones facturadas. Ver la nota de devolucion-facturar-nota-credito-*. El spec fija el comportamiento real, asi que el dia que se arregle se pone en rojo.',
+		repercute: [
+			'Es bruto: no descuenta las notas de crédito. Lo que se emitió por devoluciones va en el renglón de abajo, y ese es el que se resta del saldo.',
+		],
+	},
+
+	'posicion-fiscal-iva-notas-credito': {
+		titulo: 'IVA de notas de crédito emitidas',
+		que_hace: 'Suma el IVA de las notas de crédito que se emitieron ante ARCA en el período.',
+		repercute: [
+			'Se resta del saldo, igual que el IVA crédito. Por eso va pegado abajo del IVA débito: los dos renglones juntos son el débito real del período.',
+		],
+	},
+
+	'posicion-fiscal-aviso-sin-medir': {
+		titulo: 'Notas de crédito sin el IVA medido',
+		que_hace: 'Avisa que en el período hay notas de crédito emitidas de las que no se guardó el IVA.',
+		repercute: [
+			'Mientras el aviso esté, el renglón de notas de crédito puede estar incompleto y el saldo a pagar salir más alto del que corresponde.',
+		],
+		requiere: 'Aparece por los comprobantes emitidos antes del 1/9/2026, que es cuando el sistema empezó a guardar ese dato. Un cero sin este aviso significa que no hubo notas de crédito; con el aviso, significa que puede haberlas y no se midieron. No es lo mismo.',
+		nota_interna: 'Lo recupera el comando SetIvaNotasCredito (empresa-api). No recupera todo: cuando no puede saber la alicuota no escribe, a proposito.',
 	},
 }
