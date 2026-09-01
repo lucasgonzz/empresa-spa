@@ -172,9 +172,14 @@ E2E_PASSWORD=1234
 "@ | Set-Content (Join-Path $PSScriptRoot '.env.e2e') -Encoding UTF8
 
 Write-Host ""
-Write-Host "Listo. Levanta los dos servidores (cada uno en su consola) y despues corre la suite:"
+Write-Host "Listo. Levanta los TRES procesos (cada uno en su consola) y despues corre la suite:"
 Write-Host ""
 Write-Host "  cd $api_dir; `$env:APP_ENV='testing'; php artisan serve --host=$host_local --port=$puerto_api"
+# 🔴 El worker de la cola NO es opcional. Varias acciones del sistema no se ejecutan en el request:
+# lo encolan y responden 200 al toque (la actualizacion masiva del listado es el caso mas visible,
+# ver e2e/README.md). Sin worker, el job queda en `pending` para siempre, nada cambia, y no hay un
+# solo error en pantalla que lo delate.
+Write-Host "  cd $api_dir; `$env:APP_ENV='testing'; php artisan queue:work --tries=1"
 Write-Host "  cd $spa_dir; `$env:NODE_OPTIONS='--openssl-legacy-provider'; npx vue-cli-service serve --host $host_local --port $puerto_spa"
 Write-Host "  cd $spa_dir; npm run test:e2e"
 Write-Host ""

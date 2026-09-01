@@ -16,7 +16,23 @@ const { aislar_broadcasts } = require('../helpers/entorno')
  * Módulo que queda vacío con el fixture del harness y que tiene scroll horizontal de sobra.
  * Ventas no sirve para esto: el fixture le siembra 57 ventas.
  */
-const RUTA_VACIA = '/presupuestos'
+/*
+ * 🔴 El estado vacio se PROVOCA, no se busca.
+ *
+ * Hasta el 1/9/2026 este archivo entraba a un modulo que "estaba vacio" --`/presupuestos`-- y
+ * asumia que iba a seguir estandolo. Dejo de estarlo en cuanto `circuito-presupuesto.spec.js`
+ * empezo a cargar presupuestos, y el rojo no habla de datos: es un timeout de 240 s esperando
+ * `.display-empty-state`, que manda a pensar que la SPA no arranco. Buscar otro modulo vacio solo
+ * corre el problema unos meses.
+ *
+ * Lo estable es entrar al listado de articulos --que tiene tabla ancha, que es lo que este archivo
+ * mide-- y buscar algo que no existe. El resultado vacio es un hecho de la busqueda, no del estado
+ * de la base.
+ */
+const RUTA_VACIA = '/listado-de-articulos'
+
+/** Termino de busqueda que no puede matchear nada. */
+const BUSQUEDA_SIN_RESULTADOS = 'zzz-no-existe-este-articulo-zzz'
 
 /**
  * Página compartida por los tres tests.
@@ -73,14 +89,40 @@ test.describe('Estado vacío de las tablas', () => {
 			}
 		}, RUTA_VACIA)
 
+		// Se provoca el vacio: tecleo real (un `fill()` no lo registra el componente) y la LUPA, que
+		// es lo que dispara la busqueda. Ver `helpers/vender.js` para el detalle de las dos trampas.
+		const buscador = page.locator('[data-testid="buscador-general"]')
+		await buscador.waitFor({ state: 'visible', timeout: 120000 })
+		await buscador.click()
+		await buscador.fill('')
+		await buscador.pressSequentially(BUSQUEDA_SIN_RESULTADOS, { delay: 20 })
+		await page.locator('[data-testid="buscador-general-lupa"]').click()
+
 		await page.waitForSelector('.display-empty-state', { timeout: 240000 })
 		await page.waitForTimeout(1500)
 	})
 
 	test.afterAll(async () => {
-		if (page) {
-			await page.close()
+		if (!page) {
+			return
 		}
+
+		// 🔴 Se limpia la busqueda antes de cerrar. El listado la RECUERDA --no vive en la pagina,
+		//    la restaura el sistema al entrar-- y sobrevive a la corrida: sin esto, el proximo spec
+		//    que abra el listado de articulos se lo encuentra vacio y falla diciendo que no hay
+		//    filas. Le paso a circuito-listado el 1/9/2026, y es la misma regla que ya estaba
+		//    escrita en el README: el que ensucia limpia.
+		try {
+			const reiniciar = page.locator('[data-testid="btn-reiniciar-filtros"]')
+
+			if (await reiniciar.count() > 0) {
+				await reiniciar.click()
+			}
+		} catch (error) {
+			console.log('[estado-vacio] no se pudo limpiar la busqueda del listado: ' + error.message)
+		}
+
+		await page.close()
 	})
 
 	/**

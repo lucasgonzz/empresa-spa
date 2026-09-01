@@ -34,9 +34,21 @@
 			el criterio y NO busca, "Filtrar" sale a buscar con todo lo acumulado.
 		-->
 		<template #modal-footer>
+			<!--
+				Los dos data-testid llevan `modal` adelante y no comparten comienzo con los del
+				panel de una columna (`btn-abrir-filtro-`, `btn-limpiar-filtro-`,
+				`btn-aplicar-filtro-`): son de este footer, valen para todas las columnas juntas.
+
+				🔴 Y no son intercambiables, que es justo lo que este footer explica arriba:
+				"Agregar filtro" guarda el criterio y NO busca; "Filtrar" sale a buscar con todo lo
+				acumulado. Cerrar el modal sin apretar ninguno deja el criterio cargado y el listado
+				SIN filtrar -- y como el boton de limpiar el filtro de esa columna igual aparece
+				(mira si el filtro tiene valor, no si corrio), desde afuera parece filtrado.
+			-->
 			<button
 			type="button"
 			class="filter-modal-btn filter-modal-btn--secondary"
+			data-testid="btn-modal-agregar-filtro"
 			:data-tour="model_name === 'article' ? 'listado.boton_agregar_filtro' : null"
 			@click="agregar_filtro">
 				Agregar filtro
@@ -44,6 +56,7 @@
 			<button
 			type="button"
 			class="filter-modal-btn filter-modal-btn--primary"
+			data-testid="btn-modal-filtrar"
 			:data-tour="model_name === 'article' ? 'listado.boton_filtrar' : null"
 			@click="filtrar">
 				Filtrar

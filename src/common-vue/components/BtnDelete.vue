@@ -2,6 +2,7 @@
 	<b-button
 	v-if="model.id"
 	variant="danger"
+	:data-testid="'btn-eliminar-'+model_name"
 	@click="callDelete">
 		Eliminar
 	</b-button>

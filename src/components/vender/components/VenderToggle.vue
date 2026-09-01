@@ -7,8 +7,15 @@
 		class="vender-toggle"
 		:class="{ 'vender-toggle--disabled': disabled }"
 		:for="toggle_input_id">
+			<!--
+				El testid es el mismo id del input: quien usa este componente le pasa un `input_id`
+				con nombre propio (ej. `venta-descuento-3`) y con eso queda ubicable. Si no le pasan
+				ninguno cae al id autogenerado, que no sirve para un test -- por eso todo uso nuevo
+				que un spec necesite tocar tiene que declarar `input_id`.
+			-->
 			<input
 			type="checkbox"
+			:data-testid="toggle_input_id"
 			:id="toggle_input_id"
 			:disabled="disabled"
 			:checked="is_checked"

@@ -21,9 +21,15 @@
 			No hay propiedades disponibles para actualizar en este grupo.
 		</p>
 
+		<!--
+			Los `data-testid` de esta pantalla se arman con `field_card.prop_key`, que es la
+			identidad estable del campo. NO con `field_card.uid`, que es un identificador generado
+			y cambia entre renders: un testid que cambia solo no sirve para nada.
+		-->
 		<div
 		v-for="field_card in visible_form_field_cards"
 		:key="field_card.uid"
+		:data-testid="'masiva-campo-'+field_card.prop_key"
 		class="update-field-card m-b-15">
 
 			<p class="update-field-card__title m-b-10">
@@ -38,6 +44,7 @@
 					<b-button
 					v-for="mode_option in number_mode_options"
 					:key="field_card.uid + '-mode-' + mode_option.value"
+					:data-testid="'masiva-modo-'+field_card.prop_key+'-'+mode_option.value"
 					size="sm"
 					:variant="field_card.active_mode == mode_option.value ? 'primary' : 'outline-primary'"
 					@click="set_number_mode(field_card, mode_option.value)">
@@ -52,6 +59,7 @@
 				v-if="field_card.active_mode == 'decrement'"
 				class="update-field-card__input-block">
 					<b-form-input
+					:data-testid="'masiva-valor-'+field_card.prop_key"
 					:id="field_card.uid + '-decrement'"
 					type="number"
 					min="0"
@@ -71,6 +79,7 @@
 				v-else-if="field_card.active_mode == 'increment'"
 				class="update-field-card__input-block">
 					<b-form-input
+					:data-testid="'masiva-valor-'+field_card.prop_key"
 					:id="field_card.uid + '-increment'"
 					type="number"
 					min="0"
@@ -90,6 +99,7 @@
 				v-else-if="field_card.active_mode == 'set'"
 				class="update-field-card__input-block">
 					<b-form-input
+					:data-testid="'masiva-valor-'+field_card.prop_key"
 					:id="field_card.uid + '-set'"
 					type="number"
 					step="any"
@@ -112,6 +122,7 @@
 					<b-button
 					v-for="checkbox_option in checkbox_mode_options"
 					:key="field_card.uid + '-chk-' + checkbox_option.value"
+					:data-testid="testid_de_checkbox(field_card, checkbox_option)"
 					size="sm"
 					:variant="field_card.value === checkbox_option.value ? checkbox_option.variant : 'outline-secondary'"
 					@click="field_card.value = checkbox_option.value">
@@ -124,6 +135,7 @@
 			<div
 			v-else-if="field_card.kind == 'select'">
 				<b-form-select
+				:data-testid="'masiva-select-'+field_card.prop_key"
 				v-model="field_card.value"
 				:options="get_select_options(field_card)"></b-form-select>
 				<p class="update-field-card__hint text-muted m-t-8 m-b-0">
@@ -147,6 +159,7 @@
 
 		<btn-loader
 		class="m-t-10"
+		data-testid="btn-confirmar-masiva"
 		@clicked="update"
 		id="btn_send_actualizar"
 		text="Actualizar"
@@ -328,6 +341,27 @@ export default {
 		this.ensure_selected_group_title()
 	},
 	methods: {
+		/**
+		 * `data-testid` de uno de los tres botones del modo checkbox.
+		 *
+		 * Los valores reales son `''`, `1` y `0`, que como sufijo de un testid quedarian ilegibles
+		 * (y el vacio dejaria el nombre terminado en guion). Se traducen a palabras.
+		 *
+		 * @param {Object} field_card Tarjeta del campo, de donde sale `prop_key`.
+		 * @param {Object} checkbox_option Opcion del modo (No modificar / Activar / Desactivar).
+		 * @returns {String}
+		 */
+		testid_de_checkbox(field_card, checkbox_option) {
+			let sufijo = 'sin-cambio'
+
+			if (checkbox_option.value === 1) {
+				sufijo = 'activar'
+			} else if (checkbox_option.value === 0) {
+				sufijo = 'desactivar'
+			}
+
+			return 'masiva-checkbox-'+field_card.prop_key+'-'+sufijo
+		},
 		/**
 		 * Al abrir el modal, recalcula grupo y formulario por si cambió el modelo o permisos.
 		 *

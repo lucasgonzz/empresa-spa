@@ -31,13 +31,18 @@
 				@set-preset="onSetPreset"
 				@set-conector="onSetConector"></properties-dropdown>
 
+				<!--
+					Sin `input_id` el `data-testid` caia en null y el buscador general quedaba
+					inubicable desde un test. El fallback es el mismo criterio que ya tenia la lupa
+					de mas abajo (`buscador-general-lupa`).
+				-->
 				<input
 				class="buscador-general__input"
 				type="text"
 				autocomplete="off"
 				v-model="query_value"
 				:id="input_id"
-				:data-testid="input_id"
+				:data-testid="input_id ? input_id : 'buscador-general'"
 				:placeholder="placeholder"
 				@keyup.enter="buscar('enter')">
 

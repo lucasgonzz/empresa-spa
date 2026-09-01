@@ -13,6 +13,7 @@
 		for="toggle-presupuesto">
 			<input
 			type="checkbox"
+			data-testid="venta-guardar-presupuesto"
 			id="toggle-presupuesto"
 			:disabled="disabled"
 			:checked="guardar_como_presupuesto == 1"

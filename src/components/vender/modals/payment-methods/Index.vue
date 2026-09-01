@@ -86,8 +86,14 @@ export default {
 
             return total
         },
+        /*
+            🔴 Se redondea a centavos por el mismo motivo que `chequear_total_repartido()`: un
+            reparto exacto deja un residuo de coma flotante del orden de 1e-12, y ese numero se le
+            va a notacion exponencial. `price()` lo pasa por `numeral`, que no lo sabe formatear, y
+            el operador ve **"Sobrante para repartir: NaN"** con el reparto perfectamente cerrado.
+        */
         sobrante_a_repartir() {
-            return this.total_vender - this.total_repartido
+            return Math.round((this.total_vender - this.total_repartido) * 100) / 100
         },
 
         base_moneda() {

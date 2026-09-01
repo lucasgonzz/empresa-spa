@@ -6,13 +6,20 @@
 	:data-tour="ancla_tour"
 	size="sm"
 	:variant="variant"
-	:toggle-attrs="{ title: tooltip_text, 'aria-label': tooltip_text }">
+	:toggle-attrs="{ title: tooltip_text, 'aria-label': tooltip_text, 'data-testid': 'masiva-dropdown-'+sufijo_testid }">
 		<template #button-content>
 			<i :class="icon_class" aria-hidden="true"></i>
 			<b-badge :variant="badge_variant" class="m-l-5">{{ count }}</b-badge>
 		</template>
+		<!--
+			🔴 El sufijo (`filtrados` / `seleccion`) no sobra: este componente se dibuja DOS VECES en
+			la misma pantalla --una para el conjunto filtrado y otra para la seleccion manual-- y los
+			`id` de los items (`btn_actualizar`, `btn_eliminar`) quedan duplicados en el documento.
+			El testid es lo unico que distingue por cual de los dos dropdowns se entro.
+		-->
 		<dropdown-option-item
 		v-if="puede_actualizar && show_actualizar_option"
+		:testid="'masiva-opcion-actualizar-'+sufijo_testid"
 		id="btn_actualizar"
 		icon="icon-undo"
 		:disabled="ocultar_actualizar_eliminar_por_filtro"
@@ -21,12 +28,13 @@
 			Actualizar
 		</dropdown-option-item>
 		<dropdown-option-item
+		:testid="'masiva-opcion-eliminar-'+sufijo_testid"
 		id="btn_eliminar"
 		v-if="puede_eliminar"
 		icon="icon-trash"
 		variant="danger"
-		:disabled="ocultar_actualizar_eliminar_por_filtro"
-		:tooltip="ocultar_actualizar_eliminar_por_filtro ? texto_disabled_buscador_general : ''"
+		:disabled="eliminar_deshabilitado"
+		:tooltip="texto_eliminar_deshabilitado"
 		@click="setDelete">
 			Eliminar
 		</dropdown-option-item>
@@ -88,6 +96,14 @@ export default {
 				return 'btn_filtrados_dropdown'
 			}
 			return 'btn_seleccionados_dropdown'
+		},
+		/**
+		 * Sufijo que distingue las dos instancias de este dropdown en los `data-testid`.
+		 *
+		 * @returns {String}
+		 */
+		sufijo_testid() {
+			return this.from_filter ? 'filtrados' : 'seleccion'
 		},
 		variant() {
 			if (this.from_filter) {
@@ -190,6 +206,50 @@ export default {
 				? this.$store.state.papelera[this.model_name]
 				: this.$store.state[this.model_name]
 			return !!module_state.filtered_without_filter_form
+		},
+		/**
+		 * 🔴 El borrado masivo de VENTAS esta deshabilitado a proposito (decision de Lucas,
+		 * 1/9/2026).
+		 *
+		 * Este camino no compensa la caja: va por `PUT delete/<modelo>`, encola un job y termina en
+		 * `DeleteModelsHelper`, que llama al destroy() sin Request --o sea con `compensar_caja` en
+		 * false--. El stock volvia pero la plata se quedaba adentro, y el cartel de confirmacion
+		 * solo prometia lo primero ("Se repondran los articulos"), asi que el desfasaje no lo
+		 * denunciaba nadie.
+		 *
+		 * El borrado de UNA venta, en cambio, entra por el modal de la venta con el checkbox
+		 * "Compensar caja" tildado por defecto, y hace las dos cosas. Por eso se DESHABILITA en vez
+		 * de esconderse: el tooltip manda al camino que si esta bien.
+		 *
+		 * @returns {Boolean}
+		 */
+		eliminar_ventas_en_masa() {
+			return this.model_name === 'sale'
+		},
+		/**
+		 * Los dos motivos por los que Eliminar puede estar deshabilitado.
+		 *
+		 * @returns {Boolean}
+		 */
+		eliminar_deshabilitado() {
+			return this.ocultar_actualizar_eliminar_por_filtro || this.eliminar_ventas_en_masa
+		},
+		/**
+		 * El tooltip dice CUAL de los dos motivos aplica. Un boton deshabilitado sin explicacion es
+		 * la peor version de esto: el usuario prueba, no pasa nada, y no tiene con que seguir.
+		 *
+		 * @returns {String}
+		 */
+		texto_eliminar_deshabilitado() {
+			if (this.eliminar_ventas_en_masa) {
+				return 'Las ventas se eliminan de a una, desde la venta. Ese camino ofrece compensar la caja; este no lo hace.'
+			}
+
+			if (this.ocultar_actualizar_eliminar_por_filtro) {
+				return this.texto_disabled_buscador_general
+			}
+
+			return ''
 		},
 		/**
 		 * Texto del tooltip cuando Actualizar/Eliminar por filtro estan deshabilitados por venir
