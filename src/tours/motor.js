@@ -29,7 +29,15 @@ import GANCHOS from '@/tours/ganchos'
  *
  * Por eso el motor usa `highlight()` —un paso a la vez— y decide él cuándo avanzar, según el
  * `avanza` de cada paso: `'clic'` (el lead tocó el elemento), `'aparece'` (apareció el elemento
- * del paso siguiente) o `'siguiente'` (apretó el botón del cartel).
+ * del paso siguiente), `'desaparece'` (se fue el elemento de ESTE paso, para los que viven adentro
+ * de un modal que se cierra al elegir) o `'siguiente'` (apretó el botón del cartel).
+ *
+ * Un paso admite además dos opciones que cambian cómo se lo muestra:
+ *
+ * - `scroll_tabla: 'inicio'` — en vez de centrar el elemento en la tabla, deja la tabla en su
+ *   principio. Ver `acomodar_scroll()`.
+ * - `foco: true` / `foco: false` — fuerza o apaga el foco automático en el campo del paso. Ver
+ *   `enfocar_campo_del_paso()`.
  */
 
 /** Cuánto se espera, como mucho, a que aparezca un elemento antes de dar el paso por perdido. */
@@ -99,6 +107,31 @@ const TECHO_TRAS_SALTEO = 2500
  */
 const TOPE_SALTEOS_SEGUIDOS = 3
 
+/**
+ * Cuánto se espera, como mucho, a que un desplegable termine de abrirse antes de seguir igual.
+ *
+ * 🔴 Lo pidió Lucas el 1/9/2026 sobre los clips 1.6, 1.7 y 1.8: *"cuando hago clic en el botón que
+ * abre el drop down hay que esperar a que se abra el dropdown y recién ahí pasa al siguiente paso"*.
+ * Con el respiro fijo de 80 ms el tour se iba al paso siguiente mientras Popper todavía estaba
+ * colocando el menú, así que el paso que señala una opción de adentro no encontraba su elemento y
+ * se salteaba. Ver `esperar_menu_desplegado()`.
+ *
+ * Los 2,5 s son un tope de higiene: si el menu no abre, el tour avanza igual. Un desplegable que no
+ * abre no puede dejar al lead encerrado.
+ */
+const TECHO_MENU_ABIERTO = 2500
+
+/** Título del diálogo que pregunta si se termina el tour. Ver `pedir_confirmacion_de_cierre()`. */
+const TITULO_CONFIRMACION = '¿Terminamos el tour?'
+
+/**
+ * Capa del diálogo de confirmación.
+ *
+ * Uno más que el cartel de driver.js, que se dibuja con `z-index: 1000000000`. Es el número mínimo
+ * que lo deja arriba: subirlo más solo agranda la distancia con el resto de la aplicación.
+ */
+const Z_DIALOGO_CONFIRMACION = 1000000001
+
 /** Instancia viva de driver.js, o null. Una sola a la vez. */
 let recorrido = null
 
@@ -127,6 +160,23 @@ let revelados = []
  * @type {Function|null}
  */
 let sueltas_de_refresco = null
+
+/**
+ * El dialogo de "¿Terminamos el tour?" que se dibuja al intentar cerrar por afuera, o null.
+ *
+ * Ver `pedir_confirmacion_de_cierre()`. Vive suelto y no adentro de `limpiezas` porque también hay
+ * que poder bajarlo sin terminar la corrida (cuando el lead elige "Seguir en el tour").
+ *
+ * @type {Element|null}
+ */
+let dialogo_de_cierre = null
+
+/**
+ * Cómo soltar el listener de Escape del diálogo de cierre, o null.
+ *
+ * @type {Function|null}
+ */
+let soltar_teclado_del_dialogo = null
 
 /**
  * Traduce un paso al selector CSS con el que se lo busca en el DOM.
@@ -565,6 +615,47 @@ function traer_a_la_vista(elemento) {
 
 		padre = padre.parentElement
 	}
+
+	acercar_en_la_pagina(elemento)
+}
+
+/**
+ * Scrollea LA PÁGINA si el elemento quedó fuera de la ventana.
+ *
+ * 🔴 El recorrido de los contenedores de arriba no alcanza: cubre lo que scrollea por su cuenta
+ * —la tabla, un modal— pero no el documento. Medido el 1/9/2026 en el paso 2 del clip 1.8: el menú
+ * de "Crear" se abre hacia abajo y con la tabla cargada su primera opción cae en `y: 1005` sobre
+ * una ventana de 900 px. El recuadro y el cartel se dibujaban **fuera de la pantalla**, y el lead
+ * veía el overlay oscuro sin nada señalado.
+ *
+ * driver.js tiene su propio `scrollIntoView`, pero sólo lo dispara al resaltar y **no** en el
+ * `refresh()` de `reubicar_cartel()` (verificado en el `dist`: `refreshActiveHighlight` no
+ * scrollea), así que un elemento que aparece o se mueve después de resaltar —justo el caso de un
+ * menú que se despliega— se queda afuera.
+ *
+ * Se usa `block: 'center'` y no `'nearest'` a propósito: el cartel de driver.js se planta al lado
+ * del elemento y con `'nearest'` el elemento queda pegado al borde, con el cartel medio afuera.
+ *
+ * @param {Element} elemento
+ * @returns {void}
+ */
+function acercar_en_la_pagina(elemento) {
+	if (typeof elemento.getBoundingClientRect !== 'function') {
+		return
+	}
+
+	const caja = elemento.getBoundingClientRect()
+	const alto = window.innerHeight || document.documentElement.clientHeight
+
+	/* Sólo si de verdad quedó afuera: scrollear cuando ya se ve mueve la pantalla debajo del lead
+	 * en cada refresco, que es peor que el problema que esto arregla. */
+	if (caja.height > 0 && caja.top >= 0 && caja.bottom <= alto) {
+		return
+	}
+
+	if (typeof elemento.scrollIntoView === 'function') {
+		elemento.scrollIntoView({ block: 'center', inline: 'nearest' })
+	}
 }
 
 /**
@@ -625,6 +716,76 @@ function acercar_dentro_de(contenedor, elemento) {
 	if (caja.height < marco.height && (caja.top < marco.top || caja.bottom > marco.bottom)) {
 		contenedor.scrollTop += (caja.top + caja.height / 2) - (marco.top + marco.height / 2)
 	}
+}
+
+/**
+ * Deja la tabla mostrando su PRINCIPIO, que es donde está la columna de las imágenes.
+ *
+ * 🔴 Lo pidió Lucas el 1/9/2026 sobre el clip 1.7: *"quiero que primero haga un scroll horizontal al
+ * inicio de la tabla de los artículos donde se ve la columna de las imágenes"*, y enseguida
+ * *"el scroll de la tabla se corre y vuela al centro, eso no debe de pasar"*.
+ *
+ * `traer_a_la_vista()` no alcanza para eso: centra el elemento en su contenedor, que es lo correcto
+ * cuando el paso señala una columna del medio y exactamente lo contrario cuando señala la tabla
+ * entera. Por eso un paso puede declarar `scroll_tabla: 'inicio'` y ese scroll **manda sobre**
+ * `traer_a_la_vista()`.
+ *
+ * ⚠️ El recorrido de ancestros no siempre encuentra un contenedor que scrollee de costado: el paso 2
+ * del 1.7 ancla el botón de modo selección, que vive en el encabezado de la vista y no adentro de la
+ * tabla, y aun así lo que hay que dejar quieto es la tabla. De ahí el respaldo por `.cont-table`, que
+ * es el contenedor con `overflow-x: auto` que `display/table/Index.vue` le pone a toda tabla del
+ * sistema (`Index.vue:1635-1639`).
+ *
+ * 🔴 Y por eso lo que cuenta como "encontrado" es el desborde HORIZONTAL, no `tiene_scroll_propio()`
+ * a secas: media docena de contenedores de la vista scrollean solo en vertical, y darlos por buenos
+ * apagaría el respaldo sin haber movido nada. El síntoma sería el peor: la opción declarada en el
+ * paso y la tabla igual de corrida.
+ *
+ * @param {Element} elemento
+ * @returns {void}
+ */
+function llevar_scroll_al_inicio(elemento) {
+	let encontrado = false
+	let padre = elemento ? elemento.parentElement : null
+
+	while (padre && padre !== document.body && padre !== document.documentElement) {
+		if (padre.scrollWidth > padre.clientWidth + 1 && tiene_scroll_propio(padre)) {
+			padre.scrollLeft = 0
+			encontrado = true
+		}
+
+		padre = padre.parentElement
+	}
+
+	if (encontrado) {
+		return
+	}
+
+	const tabla = buscar_visible('.cont-table')
+
+	if (tabla) {
+		tabla.scrollLeft = 0
+	}
+}
+
+/**
+ * Acomoda el scroll para este paso: al principio si lo pide, centrado si no.
+ *
+ * Está en una función sola porque se llama DOS veces por paso —antes de resaltar y otra vez después
+ * de que driver.js hizo su propio scroll— y las dos tienen que decidir lo mismo. Ver
+ * `reubicar_cartel()`.
+ *
+ * @param {Object} paso
+ * @param {Element} elemento
+ * @returns {void}
+ */
+function acomodar_scroll(paso, elemento) {
+	if (paso && paso.scroll_tabla === 'inicio') {
+		llevar_scroll_al_inicio(elemento)
+		return
+	}
+
+	traer_a_la_vista(elemento)
 }
 
 /**
@@ -724,7 +885,7 @@ function preparar_paso(paso, contexto) {
 			 * movió algo más. */
 			return asentar_layout(elemento)
 				.then(function () {
-					traer_a_la_vista(elemento)
+					acomodar_scroll(paso, elemento)
 
 					return asentar_layout(elemento)
 				})
@@ -749,27 +910,42 @@ function limpiar() {
 
 	ocultar_revelados()
 	soltar_refresco()
+	cerrar_dialogo_de_confirmacion()
 }
 
 /**
- * Le avisa al lead que esta práctica no se puede hacer con los datos que tiene la demo.
+ * Le avisa al lead por qué el tour se cortó sin llegar a ningún lado.
  *
  * Va por el `$toast` de la aplicación, que es el mismo canal que usa el resto del sistema para
  * avisar cosas, y no por un cartel de driver.js: el tour ya terminó y montar un paso de más para
  * decir "no hay paso" es peor. Si por lo que sea no hay `$toast`, queda en la consola y listo.
  *
+ * 🔴 Son DOS mensajes, y el segundo nació el 1/9/2026 junto con el "Siguiente" en todos los pasos.
+ *
+ * Hasta ese día el aviso era uno solo —*"esta práctica necesita datos que tu demo todavía no tiene
+ * cargados"*— porque la única forma de llegar acá era que la pantalla que el tour da por hecha no
+ * existiera. Desde que el lead puede adelantarse con el botón en un paso que esperaba un gesto
+ * (ver `botones_de()`), hay una segunda forma: se salteó la acción, los pasos que dependían de ella
+ * no encuentran su elemento, y el tour se corta. Echarle la culpa a los datos en ese caso es
+ * mentirle: los datos estaban.
+ *
  * @returns {void}
  */
 function avisar_sin_pasos() {
 	const raiz = corrida && corrida.contexto ? corrida.contexto.root : null
+	const avanzo_a_mano = Boolean(corrida && corrida.avanzo_a_mano)
 
-	console.warn('Tour ' + (corrida ? corrida.clip_id : '') + ': se cortó porque la demo no tiene los datos que este recorrido necesita (mostrados: ' + (corrida ? corrida.mostrados : '?') + ', salteados: ' + (corrida ? corrida.salteados : '?') + ')')
+	console.warn('Tour ' + (corrida ? corrida.clip_id : '') + ': se cortó ' + (avanzo_a_mano ? 'después de que el lead se adelantó con el botón' : 'porque la demo no tiene los datos que este recorrido necesita') + ' (mostrados: ' + (corrida ? corrida.mostrados : '?') + ', salteados: ' + (corrida ? corrida.salteados : '?') + ')')
 
 	if (!raiz || !raiz.$toast || typeof raiz.$toast.info !== 'function') {
 		return
 	}
 
-	raiz.$toast.info('Esta práctica necesita datos que tu demo todavía no tiene cargados. Mirá el video y seguí con el que sigue.', {
+	const texto = avanzo_a_mano
+		? 'Te adelantaste algunos pasos y el tour se perdió. Podés volver a empezarlo desde el panel.'
+		: 'Esta práctica necesita datos que tu demo todavía no tiene cargados. Mirá el video y seguí con el que sigue.'
+
+	raiz.$toast.info(texto, {
 		duration: 6000,
 	})
 }
@@ -869,11 +1045,25 @@ function mostrar_paso(i) {
 		 *
 		 * El criterio es que se haya mostrado más de la mitad de los pasos. `salteados` viaja igual
 		 * en el evento, así que del lado del admin se puede afinar sin tocar esto.
+		 *
+		 * 🔴 Y desde el 1/9/2026 exige ADEMÁS no haberse cortado por salteos, que es lo que hace
+		 * que "probado" quiera decir lo mismo en los tres lugares donde se lee.
+		 *
+		 * Sin esa mitad, un tour que mostró 8 de 10 pasos y después se cortó por
+		 * `TOPE_SALTEOS_SEGUIDOS` salía con `completo: true` y `motivo: 'cortado'`: el lead veía el
+		 * aviso de que el tour se perdió y ningún check, el admin lo marcaba "Probado" al 100%, y
+		 * al primer F5 el botón se pintaba verde retroactivamente porque el plan lee `completo`.
+		 * Tres cuentas distintas sobre la misma corrida. No explota nunca —por eso hay que buscarlo
+		 * a propósito—, simplemente el lead ve una cosa y Tomás ve otra.
+		 *
+		 * Ahora `completo` implica `!corto_por_salteos`, que es justo lo que separa `'listo'` de
+		 * `'cortado'` unos renglones más abajo. Las dos cuentas quedan encajadas por construcción.
 		 */
-		corrida.completo = corrida.mostrados > corrida.pasos.length / 2
+		corrida.completo = !corrida.corto_por_salteos && corrida.mostrados > corrida.pasos.length / 2
 
 		/**
-		 * 🔴 Un tour que no llegó a mostrar UN SOLO paso no puede terminar en silencio.
+		 * 🔴 Un tour que no llegó a mostrar UN SOLO paso no puede terminar en silencio, y tampoco
+		 * puede contarse como terminado.
 		 *
 		 * Pasa cuando la demo no tiene los datos que el tour necesita: el 2.5 arranca en el botón
 		 * de cuenta corriente de un cliente, y si ningún cliente tiene cuenta ese botón no existe;
@@ -884,12 +1074,21 @@ function mostrar_paso(i) {
 		 *
 		 * El aviso no arregla la falta de datos —eso es de la demo, no del tour—, pero le cierra el
 		 * gesto al lead y lo devuelve al panel.
+		 *
+		 * Y desde el 1/9/2026 esa misma condición decide el motivo con el que se cierra. El panel se
+		 * reabre solo, pinta el botón de verde y abre el clip siguiente cuando el motor le avisa
+		 * `motivo: 'listo'` (ver `cerrar_corrida()`): un tour que llegó al final salteando todo —o
+		 * que se cortó por `TOPE_SALTEOS_SEGUIDOS`— no puede disparar eso, porque el lead vería el
+		 * check de "probado" sin haber tocado una pantalla. Es la misma trampa que ya cubre
+		 * `corrida.completo`, unos renglones más arriba, y por el mismo motivo.
 		 */
-		if (corrida.mostrados === 0 || corrida.corto_por_salteos) {
+		const se_corto = corrida.mostrados === 0 || corrida.corto_por_salteos
+
+		if (se_corto) {
 			avisar_sin_pasos()
 		}
 
-		cerrar_corrida()
+		cerrar_corrida(se_corto ? 'cortado' : 'listo')
 		destruir_recorrido()
 		return
 	}
@@ -975,8 +1174,82 @@ function mostrar_paso(i) {
 
 		enganchar_refresco(elemento)
 		reubicar_cartel(i, elemento)
+		enfocar_campo_del_paso(paso, elemento)
 		enganchar_avance(paso, i, elemento)
 	})
+}
+
+/**
+ * Le pone el foco al campo del paso, para que el lead pueda escribir sin buscar el mouse.
+ *
+ * Lo pidió Lucas el 1/9/2026: *"cuando voy en la etapa del tour en el que tengo que escribir algo en
+ * un input, quiero que, además de señalarme en el tour, ese input se haga foco"*.
+ *
+ * 🔴 `preventScroll: true` no es un adorno: sin él el navegador scrollea hasta el campo por su
+ * cuenta y pisa el trabajo de `traer_a_la_vista()` y de `reubicar_cartel()`, que es exactamente el
+ * defecto de los recuadros fuera de lugar que se arregló el 31/8/2026. Con la opción puesta, el
+ * foco no mueve nada.
+ *
+ * 🔴 **El buscador de una relación queda afuera, y la razón se midió en el código, no se supuso.**
+ * `common-vue/components/search/Index.vue:70-71` abre el modal de búsqueda con `@click` y con
+ * `@keyup`, NO con `@focus`: enfocarlo no abre nada, así que el foco no le ahorra un gesto al lead
+ * —el gesto que el paso le pide es el clic, que es lo que abre el modal—. Y deja una trampa: con ese
+ * input enfocado, CUALQUIER tecla (un Tab, un Escape) dispara `callSearchModal` y el modal se abre
+ * solo, a destiempo. Por eso los `.search-field__input` no se enfocan. El input de adentro del modal
+ * (`buscador-general__input`) sí, que es donde el lead tiene que escribir de verdad.
+ *
+ * 🔴 **Y solo en los pasos que piden cargar un dato**, no en cualquiera que tenga un input adentro.
+ * La marca de "acá hay que escribir" ya existía y es la que usa el avance: un paso `avanza: 'clic'`
+ * cuyo elemento contiene un campo de carga no espera el clic, espera el `change` con el valor
+ * puesto (ver `enganchar_avance_por_clic()`). Sin esa condición, un paso que solo describe una
+ * pantalla —"este es el formulario, son cuatro datos"— le robaría el foco al primer input que
+ * encuentre adentro, que es un campo del que el cartel ni habla, y el lead terminaría escribiendo en
+ * el lugar equivocado.
+ *
+ * Un paso puede forzarlo con `foco: true` y apagarlo con `foco: false`.
+ *
+ * @param {Object} paso
+ * @param {Element} elemento Nodo resaltado.
+ * @returns {void}
+ */
+function enfocar_campo_del_paso(paso, elemento) {
+	if (!paso || paso.foco === false) {
+		return
+	}
+
+	if (paso.foco !== true && paso.avanza !== 'clic') {
+		return
+	}
+
+	const campo = campo_de_carga(elemento)
+
+	if (!campo || typeof campo.focus !== 'function') {
+		return
+	}
+
+	if (campo.classList && campo.classList.contains('search-field__input')) {
+		return
+	}
+
+	/**
+	 * 🔴 Y no se enfoca un campo que no se ve.
+	 *
+	 * `campo_de_carga()` resuelve con `querySelector` y no mira visibilidad, así que sobre un
+	 * contenedor grande devuelve el primer input del árbol aunque esté escondido. El caso medido es
+	 * el modal de búsqueda: el desplegable de propiedades del buscador general trae un input
+	 * "Filtrar propiedades..." (`view/header/buscador-general/PropertiesDropdown.vue:60-65`) que vive
+	 * en un menú cerrado y aparece ANTES en el DOM que el buscador de verdad. Enfocarlo mandaría el
+	 * cursor a un campo que el lead no ve.
+	 */
+	if (!se_puede_senalar(campo)) {
+		return
+	}
+
+	try {
+		campo.focus({ preventScroll: true })
+	} catch (error) {
+		console.warn('Tour: no se pudo enfocar el campo del paso', error)
+	}
 }
 
 /**
@@ -1018,7 +1291,12 @@ function reubicar_cartel(i, elemento) {
 			return
 		}
 
-		traer_a_la_vista(elemento)
+		/* Se vuelve a decidir con el paso en la mano —y no con `traer_a_la_vista()` a secas— porque
+		 * un paso con `scroll_tabla: 'inicio'` quiere lo contrario de centrar: ver `acomodar_scroll()`.
+		 * Sin esta segunda pasada el arreglo no funciona, exactamente por lo que dice el párrafo de
+		 * arriba: driver.js re-centra cualquier elemento más ancho que la pantalla y pisa lo que le
+		 * dejemos. */
+		acomodar_scroll(corrida.pasos[i], elemento)
 		recorrido.refresh()
 	}
 
@@ -1070,19 +1348,58 @@ function lado_sugerido(elemento) {
  * @returns {Boolean}
  */
 function abre_menu_hacia_abajo(elemento) {
+	return Boolean(menu_de(elemento))
+}
+
+/**
+ * El `.dropdown-menu` que este elemento despliega, o null.
+ *
+ * Cubre las dos formas en que aparece el contrato: el ancla puesta sobre el `<b-dropdown>` entero
+ * (el menú es hijo) y el ancla puesta sobre el botón que lo abre (el menú es tío). La segunda es la
+ * del clip 1.8 desde el 1/9/2026, que ancla la flechita del `<b-dropdown split>` y no el botón
+ * entero.
+ *
+ * Se resuelve en vivo cada vez y no se guarda el nodo: BootstrapVue re-renderiza el desplegable al
+ * abrirlo (le agrega `show` y `position-static`) y un nodo guardado puede quedar viejo.
+ *
+ * @param {Element} elemento
+ * @returns {Element|null}
+ */
+function menu_de(elemento) {
 	if (!elemento || typeof elemento.querySelector !== 'function') {
-		return false
+		return null
 	}
 
-	if (elemento.querySelector('.dropdown-menu')) {
-		return true
+	const propio = elemento.querySelector('.dropdown-menu')
+
+	if (propio) {
+		return propio
 	}
 
+	/**
+	 * 🔴 Sube por `.dropdown` y NO por `.btn-group`, y la diferencia cuesta 2,5 segundos.
+	 *
+	 * Con `.btn-group` en la lista, un botón que no despliega nada pero que comparte grupo con uno
+	 * que sí, encuentra el menú de su HERMANO y se hace pasar por desplegable. El caso real es
+	 * `listado.boton_modo_seleccion`: `opciones-filtrados-seleccion/Index.vue:15-33` mete el botón
+	 * de selección y el desplegable de seleccionados en un mismo
+	 * `<div class="btn-group opciones-grupos__group">` para que Bootstrap los pegue visualmente.
+	 *
+	 * Mientras esto solo alimentaba a `lado_sugerido()`, un falso positivo era cosmético: el cartel
+	 * se plantaba al costado en vez de abajo. Desde que además decide si hay que ESPERAR a que el
+	 * menú se abra (ver `esperar_menu_desplegado()`), el mismo falso positivo deja al lead mirando
+	 * un tour aparentemente colgado durante todo el techo —2,5 s— en el paso 2 del clip 1.7, que es
+	 * uno de los que Lucas reportó. Lo encontró el chequeo independiente del 1/9/2026.
+	 *
+	 * `.dropdown` alcanza para los dos casos que el contrato necesita: BootstrapVue le pone
+	 * `dropdown b-dropdown btn-group` a la raíz del `<b-dropdown>`, así que resuelve tanto con el
+	 * ancla sobre el desplegable entero como con el ancla sobre el botón que lo abre.
+	 */
 	const contenedor = typeof elemento.closest === 'function'
-		? elemento.closest('.dropdown, .btn-group')
+		? elemento.closest('.dropdown')
 		: null
 
-	return Boolean(contenedor && contenedor.querySelector('.dropdown-menu'))
+	return contenedor ? contenedor.querySelector('.dropdown-menu') : null
 }
 
 /**
@@ -1132,6 +1449,7 @@ function enganchar_refresco(elemento) {
 	}
 
 	const custodio = custodiar_clase_activa(elemento)
+	const custodio_menu = custodiar_menu_abierto(elemento)
 
 	sueltas_de_refresco = function () {
 		document.removeEventListener('scroll', volver_a_medir, true)
@@ -1143,6 +1461,10 @@ function enganchar_refresco(elemento) {
 
 		if (custodio) {
 			custodio.disconnect()
+		}
+
+		if (custodio_menu) {
+			custodio_menu.disconnect()
 		}
 
 		/* Se la saca a mano porque el custodio pudo habérsela repuesto. Es seguro: esto corre
@@ -1180,6 +1502,106 @@ function enganchar_refresco(elemento) {
  * @param {Element} elemento
  * @returns {MutationObserver|null}
  */
+/**
+ * Mantiene abierto el menú desplegable dentro del cual vive el elemento resaltado.
+ *
+ * 🔴 Sin esto, el paso que señala una opción de un menú resalta un elemento de 0×0.
+ *
+ * Medido el 1/9/2026 recorriendo el clip 1.8 en vivo: el lead toca la flechita de "Crear",
+ * `esperar_menu_desplegado()` espera correctamente a que el menú abra, el motor prepara el paso
+ * siguiente y encuentra la opción "Importación" —o sea que hasta ahí todo funciona—, pero **el
+ * propio acto de mostrar el paso cierra el menú**: driver.js le pasa el foco al cartel al
+ * renderizarlo, y BootstrapVue cierra sus desplegables ante cualquier foco de afuera. Resultado
+ * medido: caja resaltada `[0,0,0,0]` y el cartel hablando de una opción que ya no está en pantalla.
+ *
+ * Es la misma clase de defecto que `custodiar_clase_activa()` —algo de afuera deshace lo que el
+ * tour necesita— y se resuelve igual: se observa y se repone. Reponer la clase `show` es lo que
+ * BootstrapVue mira para dibujar el menú, así que alcanza con devolvérsela al menú y a su
+ * contenedor.
+ *
+ * ⚠️ El custodio se suelta al cambiar de paso (`sueltas_de_refresco`), así que el lead puede
+ * cerrar el menú normalmente en cuanto el tour avanza. Mientras el paso está a la vista, en cambio,
+ * cerrarlo dejaría al tour señalando la nada — que es justamente lo que se está evitando.
+ *
+ * @param {Element} elemento Nodo resaltado.
+ * @returns {MutationObserver|null}
+ */
+function custodiar_menu_abierto(elemento) {
+	if (typeof MutationObserver !== 'function' || !elemento || typeof elemento.closest !== 'function') {
+		return null
+	}
+
+	const menu = elemento.closest('.dropdown-menu')
+
+	if (!menu) {
+		return null
+	}
+
+	const contenedor = menu.closest('.dropdown, .btn-group')
+
+	/* Si nunca hizo falta reponer nada, al soltar no hay que deshacer nada. Ver `disconnect()`. */
+	let repuso = false
+
+	function reponer() {
+		if (!corrida || !recorrido) {
+			return
+		}
+
+		if (!menu.classList.contains('show')) {
+			menu.classList.add('show')
+			repuso = true
+		}
+
+		if (contenedor && !contenedor.classList.contains('show')) {
+			contenedor.classList.add('show')
+			repuso = true
+		}
+	}
+
+	const custodio = new MutationObserver(reponer)
+
+	custodio.observe(menu, { attributes: true, attributeFilter: ['class'] })
+
+	if (contenedor) {
+		custodio.observe(contenedor, { attributes: true, attributeFilter: ['class'] })
+	}
+
+	/* Una pasada de entrada: si el menú ya se cerró entre que se resolvió el elemento y que se
+	 * llegó acá, el observador no vería ningún cambio y el paso quedaría igual de roto. */
+	reponer()
+
+	/**
+	 * 🔴 Al soltar hay que DESHACER lo repuesto, no sólo dejar de observar.
+	 *
+	 * BootstrapVue lleva su propio `visible` en el componente: cuando cierra el desplegable lo pone
+	 * en `false` y saca la clase. Si el custodio se la repuso y después soltamos sin sacarla, el
+	 * DOM dice "abierto" y el componente dice "cerrado" — y el primer clic del lead en el toggle no
+	 * hace nada visible, porque BootstrapVue cree que lo está abriendo cuando ya se ve abierto.
+	 * Se arregla solo en cuanto Vue re-renderiza, pero mientras tanto es un botón que no responde,
+	 * que es exactamente el síntoma que costó la misión del 31/8/2026.
+	 *
+	 * Lo encontró el revisor de merge del 1/9/2026.
+	 *
+	 * Se devuelve un objeto con la misma firma que un MutationObserver para que el llamador no
+	 * tenga que distinguir entre los dos custodios.
+	 */
+	return {
+		disconnect: function () {
+			custodio.disconnect()
+
+			if (!repuso) {
+				return
+			}
+
+			menu.classList.remove('show')
+
+			if (contenedor) {
+				contenedor.classList.remove('show')
+			}
+		},
+	}
+}
+
 function custodiar_clase_activa(elemento) {
 	if (typeof MutationObserver !== 'function') {
 		return null
@@ -1222,22 +1644,60 @@ function soltar_refresco() {
 }
 
 /**
- * Qué botones lleva el cartel de este paso.
+ * Qué botones lleva el cartel de este paso: SIEMPRE los tres.
  *
- * Un paso que avanza por clic o por aparición no muestra "Siguiente": si lo mostrara, el lead
- * saltearía la acción que el tour justamente le está pidiendo que haga. Sí queda siempre la cruz
- * de cerrar — §3.7-bis pide que el lead nunca quede atrapado.
+ * 🔴 Esto revierte a propósito la guarda del 30/8/2026, y la decisión vieja no se borra porque
+ * entenderla es lo único que evita que alguien la vuelva a poner dentro de un mes.
+ *
+ * **Lo que decía la regla vieja, y por qué era razonable:** un paso que avanza por clic o por
+ * aparición no mostraba "Siguiente", porque un lead que lo apretaba se salteaba justamente la acción
+ * que el tour le estaba pidiendo y llegaba al paso siguiente sin haber hecho lo que ese paso da por
+ * hecho. Se midió el 30/8/2026 con `highlight()`: `popover.showButtons` no se aplica en ese modo, así
+ * que la ocultación terminó viviendo en `onPopoverRender`.
+ *
+ * **Por qué se saca:** Lucas lo pidió al revés el 1/9/2026 —*"esos botones de siguiente y atrás,
+ * dentro de cada viñeta de cada paso, deben estar siempre, para que el usuario no se pierda"*—, y
+ * tiene razón sobre lo que pasa de verdad: un cartel sin ningún botón no le dice al lead que el tour
+ * está esperando un gesto suyo, le dice que el tour se colgó. Se queda mirando una tarjeta que no
+ * responde. El costo del botón (saltearse un paso) es reversible y visible; el costo de no tenerlo
+ * (creer que el sistema se rompió) no.
+ *
+ * **Cómo se compensa el costo:** cuando el lead avanza con el botón desde un paso que esperaba un
+ * gesto, la corrida se marca con `avanzo_a_mano` (ver `marcar_avance_a_mano()`), y si más adelante
+ * el tour se corta por `TOPE_SALTEOS_SEGUIDOS` el aviso dice otra cosa: no le echa la culpa a los
+ * datos de la demo, que estaban. Ver `avisar_sin_pasos()`.
+ *
+ * `previous` sigue sin dibujarse en el paso 0, que es lo que hace `onPopoverRender`: no hay atrás.
+ *
+ * ⚠️ Esta lista es informativa: con `highlight()` driver.js **no aplica** `popover.showButtons`
+ * (medido el 30/8/2026). Quien manda de verdad es `onPopoverRender`. Se deja igual para que el que
+ * lea el paso sepa qué se pretende dibujar.
  *
  * @param {Object} paso
  * @param {Number} i
  * @returns {Array}
  */
 function botones_de(paso, i) {
-	if (espera_un_gesto(paso, i)) {
-		return ['close']
+	return i === 0 ? ['next', 'close'] : ['next', 'previous', 'close']
+}
+
+/**
+ * Deja anotado que el lead se adelantó con el botón en un paso que esperaba un gesto.
+ *
+ * Es la compensación de que "Siguiente" esté siempre a la vista (ver `botones_de()`): lo único que
+ * cambia es el texto del aviso si el tour termina cortándose por salteos, para no decirle al lead
+ * que le faltan datos cuando lo que pasó es que se salteó la acción.
+ *
+ * @returns {void}
+ */
+function marcar_avance_a_mano() {
+	if (!corrida || corrida.indice < 0) {
+		return
 	}
 
-	return i === 0 ? ['next', 'close'] : ['next', 'previous', 'close']
+	if (espera_un_gesto(corrida.pasos[corrida.indice], corrida.indice)) {
+		corrida.avanzo_a_mano = true
+	}
 }
 
 /**
@@ -1250,16 +1710,27 @@ function botones_de(paso, i) {
  * `avanza: 'aparece'`, esperando el elemento del paso que viene. Pero ese elemento vive **en otra
  * ruta**, y el motor recién navega cuando prepara el paso siguiente: o sea que el elemento no
  * puede aparecer nunca, porque lo que lo haría aparecer es justamente el avance que está esperando.
- * Y como un paso que espera un gesto no dibuja "Siguiente", y `driver.css` deja el resto de la
- * pantalla inerte, el lead quedaba sin ninguna salida salvo cerrar el tour.
+ * Y como en ese entonces un paso que espera un gesto **no dibujaba "Siguiente"** —eso cambió el
+ * 1/9/2026, ver `botones_de()`—, y `driver.css` deja el resto de la pantalla inerte, el lead quedaba
+ * sin ninguna salida salvo cerrar el tour.
  *
- * Cuando el paso que viene declara otra ruta, entonces, el gesto no existe: lo dispara el botón.
+ * Cuando el paso que viene declara otra ruta, entonces, el gesto no existe: lo dispara el botón. La
+ * guarda sigue haciendo falta con el botón siempre a la vista: sin ella el motor dejaría un sondeo
+ * vivo cinco minutos esperando algo que no puede pasar, y el cartel diría "hacé el gesto" cuando lo
+ * único que hay para hacer es apretar Siguiente.
  *
  * @param {Object} paso
  * @param {Number} i
  * @returns {Boolean}
  */
 function espera_un_gesto(paso, i) {
+	/* Un paso que espera que su propio elemento SE VAYA no depende del paso siguiente ni de la ruta:
+	 * el gesto es el del lead cerrando el modal en el que está parado. Ver
+	 * `enganchar_avance_por_desaparicion()`. */
+	if (paso.avanza === 'desaparece') {
+		return true
+	}
+
 	if (paso.avanza !== 'clic' && paso.avanza !== 'aparece') {
 		return false
 	}
@@ -1324,6 +1795,11 @@ function enganchar_avance(paso, i, elemento) {
 
 	if (paso.avanza === 'clic') {
 		enganchar_avance_por_clic(paso, i, elemento)
+		return
+	}
+
+	if (paso.avanza === 'desaparece') {
+		enganchar_avance_por_desaparicion(paso, i)
 		return
 	}
 
@@ -1393,6 +1869,26 @@ function enganchar_avance_por_clic(paso, i, resaltado) {
 
 		document.removeEventListener('click', al_clickear, true)
 
+		/**
+		 * 🔴 Si lo que el clic abre es un desplegable, el respiro fijo no alcanza.
+		 *
+		 * Lo reportó Lucas el 1/9/2026 sobre los clips 1.6, 1.7 y 1.8: *"cuando hago clic en el
+		 * botón que abre el drop down, ya sea de los filtrados o de los seleccionados manualmente,
+		 * hay que esperar a que se abra el dropdown y recién ahí pasa al siguiente paso del tour"*.
+		 *
+		 * BootstrapVue abre el menú y Popper lo coloca en un tick posterior; a los 80 ms el `<ul>`
+		 * todavía puede no tener la clase `show` ni caja. El paso siguiente —que señala una opción de
+		 * adentro— no encuentra su elemento y **se saltea en silencio**, que es la forma en que un
+		 * tour roto se ve sano.
+		 *
+		 * Se sondea por la forma del elemento y no por una marca en el guion: así arregla los tres
+		 * clips a la vez y cualquier paso futuro que ancle un desplegable.
+		 */
+		if (abre_menu_hacia_abajo(resaltado) || abre_menu_hacia_abajo(buscar_visible(selector))) {
+			esperar_menu_desplegado(selector, resaltado, i)
+			return
+		}
+
 		/* Un respiro: el handler de la aplicación tiene que correr primero, si no el tour avanza
 		 * antes de que el clic haya hecho lo suyo y el paso siguiente mide un DOM viejo. */
 		setTimeout(function () {
@@ -1410,6 +1906,129 @@ function enganchar_avance_por_clic(paso, i, resaltado) {
 }
 
 /**
+ * Espera a que el desplegable que el lead acaba de tocar esté abierto de verdad, y recién ahí avanza.
+ *
+ * "Abierto de verdad" es el `.dropdown-menu` con la clase `show` **y con caja**: BootstrapVue le pone
+ * `show` al empezar y Popper lo posiciona después, así que la clase sola llega antes de que el menú
+ * se pueda tocar.
+ *
+ * 🔴 **Si el techo se agota, avanza igual.** Un desplegable que no abre es un problema de la
+ * pantalla, no del lead: dejarlo esperando para siempre lo encerraría en un paso que ya hizo. Se
+ * avisa por consola y se sigue; el paso que viene, si no encuentra su elemento, se saltea con las
+ * reglas de siempre.
+ *
+ * @param {String} selector Selector del paso, para volver a resolver el elemento si Vue lo re-renderizó.
+ * @param {Element|null} resaltado Nodo que se resaltó.
+ * @param {Number} i
+ * @returns {void}
+ */
+function esperar_menu_desplegado(selector, resaltado, i) {
+	let transcurrido = 0
+
+	function menu_abierto() {
+		const menu = menu_de(buscar_visible(selector)) || menu_de(resaltado)
+
+		return Boolean(menu && menu.classList.contains('show') && se_puede_senalar(menu))
+	}
+
+	const reloj = setInterval(function () {
+		if (!corrida || corrida.indice !== i) {
+			clearInterval(reloj)
+			return
+		}
+
+		if (menu_abierto()) {
+			clearInterval(reloj)
+			mostrar_paso(i + 1)
+			return
+		}
+
+		transcurrido += INTERVALO_SONDEO
+
+		if (transcurrido >= TECHO_MENU_ABIERTO) {
+			clearInterval(reloj)
+			console.warn('Tour ' + corrida.clip_id + ': el desplegable del paso ' + (i + 1) + ' no llegó a abrirse en ' + TECHO_MENU_ABIERTO + ' ms; se avanza igual')
+			mostrar_paso(i + 1)
+		}
+	}, INTERVALO_SONDEO)
+
+	limpiezas.push(function () {
+		clearInterval(reloj)
+	})
+}
+
+/**
+ * Avanza cuando el elemento del propio paso deja de estar a la vista.
+ *
+ * Lo necesitan los pasos que viven ADENTRO de algo que se cierra al usarlo: el modal de búsqueda del
+ * proveedor (clip 1.1) y el de artículos de Vender (clip 2.1). Ahí `'clic'` no sirve —el clic cae en
+ * un renglón de resultados, no en el input que el paso resalta— y `'aparece'` tampoco —lo que aparece
+ * después es un campo que ya estaba en el DOM, detrás del modal—.
+ *
+ * 🔴 Si el techo se agota **se queda en el paso**, igual que `'aparece'`: que el lead todavía no haya
+ * elegido no significa que no vaya a elegir. Y desde el 1/9/2026 además tiene "Siguiente" en el
+ * cartel, así que la salida no depende de que el motor adivine.
+ *
+ * @param {Object} paso
+ * @param {Number} i
+ * @returns {void}
+ */
+function enganchar_avance_por_desaparicion(paso, i) {
+	const selector = selector_de(paso)
+
+	if (!selector) {
+		return
+	}
+
+	const techo = paso.techo_gesto_ms || TECHO_ESPERA_GESTO
+	let transcurrido = 0
+
+	const reloj = setInterval(function () {
+		if (!corrida || corrida.indice !== i) {
+			clearInterval(reloj)
+			return
+		}
+
+		if (!buscar_visible(selector)) {
+			clearInterval(reloj)
+			mostrar_paso(i + 1)
+			return
+		}
+
+		transcurrido += INTERVALO_SONDEO
+
+		if (transcurrido >= techo) {
+			clearInterval(reloj)
+			console.warn('Tour ' + corrida.clip_id + ': sigo esperando que el lead cierre lo del paso ' + (i + 1) + '; puede seguir con el botón o cerrar el tour cuando quiera')
+		}
+	}, INTERVALO_SONDEO)
+
+	limpiezas.push(function () {
+		clearInterval(reloj)
+	})
+}
+
+/**
+ * El primer campo de carga que esté A LA VISTA adentro del elemento.
+ *
+ * Ver el porqué en `campo_de_carga()`, que es su único llamador.
+ *
+ * @param {Element} elemento
+ * @returns {Element|null}
+ */
+function primer_campo_visible(elemento) {
+	const candidatos = elemento.querySelectorAll('input:not([type=checkbox]):not([type=radio]), textarea, select')
+
+	for (let i = 0; i < candidatos.length; i++) {
+		if (se_puede_senalar(candidatos[i])) {
+			return candidatos[i]
+		}
+	}
+
+	return null
+}
+
+/**
  * Devuelve el campo de carga del elemento resaltado, si el paso es de cargar un dato.
  *
  * El elemento anclado suele ser el CONTENEDOR (un `#form-group-...`, un `div` de tarjeta), así que
@@ -1424,9 +2043,25 @@ function campo_de_carga(elemento) {
 		return null
 	}
 
+	/**
+	 * 🔴 Se recorren TODOS los campos y se descarta el que no se ve, en vez de quedarse con el
+	 * primero del árbol.
+	 *
+	 * Con `querySelector` a secas, un paso que ancla un modal se quedaba con el primer input del
+	 * DOM adentro de ese modal — y en el buscador de artículos ese primero es el campo OCULTO
+	 * "Filtrar propiedades…" de `buscador-general/PropertiesDropdown.vue`, que vive dentro de un
+	 * menú cerrado y aparece antes en el orden del documento. Dos consecuencias, las dos calladas:
+	 * el avance por carga se quedaba esperando un `change` que ese campo no iba a disparar nunca
+	 * (paso 4 del clip 2.1, colgado sin que nadie lo viera), y el foco automático del paso se lo
+	 * llevaba un campo que el lead no tiene delante.
+	 *
+	 * `se_puede_senalar()` es el mismo criterio que ya usa `buscar_visible()` para elegir entre
+	 * ramas `v-if`/`v-else` que conviven un instante: si sirve para decidir qué se resalta, sirve
+	 * para decidir dónde se escribe.
+	 */
 	const candidato = elemento.matches('input, textarea, select')
 		? elemento
-		: elemento.querySelector('input:not([type=checkbox]):not([type=radio]), textarea, select')
+		: primer_campo_visible(elemento)
 
 	if (!candidato) {
 		return null
@@ -1552,15 +2187,39 @@ function enganchar_avance_por_aparicion(i) {
 }
 
 /**
- * Cierra la corrida y reporta cómo terminó.
+ * Cierra la corrida, reporta cómo terminó y le avisa al panel.
  *
  * Es el ÚNICO lugar que emite los eventos de cierre, y por eso es idempotente: al cierre se llega
  * por tres caminos —el último paso, la cruz del cartel, y el panel cortando el tour desde afuera—
  * y los tres pasan por acá.
  *
+ * ## El aviso al panel (`contexto.al_terminar`)
+ *
+ * El llamador puede pasar una función en el contexto y el motor la llama con:
+ *
+ * ```js
+ * { clip_id: String, motivo: 'listo' | 'cortado', completo: Boolean,
+ *   mostrados: Number, pasos: Number }
+ * ```
+ *
+ * Con ella el panel se reabre solo, pinta el botón del clip de verde y abre el siguiente. Si no
+ * viene, o no es una función, el motor no hace nada: cualquier llamador viejo sigue andando igual.
+ *
+ * 🔴 **`motivo: 'listo'` solo cuando el guion llegó al final habiendo mostrado pasos.** La cruz, el
+ * clic afuera confirmado, el Escape, `cortar_tour()` desde el panel y el corte por
+ * `TOPE_SALTEOS_SEGUIDOS` dan `'cortado'`. Un tour abandonado no se marca como probado.
+ *
+ * 🔴 **El aviso sale FUERA del ciclo de cierre, con `setTimeout(..., 0)`.** Lo que hace el panel al
+ * recibirlo es reabrirse, y si se reabre mientras driver.js todavía está vivo el overlay le queda
+ * pegado encima: la pantalla entera queda inerte con el panel arriba. Como `destruir_recorrido()`
+ * corre sincrónicamente después de esta función en los tres caminos de cierre, un salto al próximo
+ * turno del event loop alcanza para que el aviso llegue con el overlay ya desarmado. Por lo mismo,
+ * el temporizador **no** se apila en `limpiezas`: `limpiar()` corre acá abajo y lo cancelaría.
+ *
+ * @param {String} [motivo] `'listo'` si el guion terminó; cualquier otra cosa se toma como cortado.
  * @returns {void}
  */
-function cerrar_corrida() {
+function cerrar_corrida(motivo) {
 	if (!corrida || corrida.terminada) {
 		return
 	}
@@ -1583,8 +2242,32 @@ function cerrar_corrida() {
 		salteados: corrida.salteados,
 	})
 
+	const avisar = corrida.contexto && typeof corrida.contexto.al_terminar === 'function'
+		? corrida.contexto.al_terminar
+		: null
+
+	const resultado = {
+		clip_id: corrida.clip_id || null,
+		motivo: motivo === 'listo' ? 'listo' : 'cortado',
+		completo: completo,
+		mostrados: corrida.mostrados,
+		pasos: corrida.pasos.length,
+	}
+
 	corrida = null
 	limpiar()
+
+	if (!avisar) {
+		return
+	}
+
+	setTimeout(function () {
+		try {
+			avisar(resultado)
+		} catch (error) {
+			console.warn('Tour: el aviso de cierre al panel falló', error)
+		}
+	}, 0)
 }
 
 /**
@@ -1596,6 +2279,10 @@ function cerrar_corrida() {
  * @returns {void}
  */
 function destruir_recorrido() {
+	/* El diálogo se baja SIEMPRE, aunque no haya recorrido: es lo único del tour que vive colgado de
+	 * `document.body` y sobrevivir a la corrida lo dejaría flotando sobre la aplicación. */
+	cerrar_dialogo_de_confirmacion()
+
 	if (!recorrido) {
 		return
 	}
@@ -1606,11 +2293,297 @@ function destruir_recorrido() {
 	instancia.destroy()
 }
 
+
+/**
+ * Le pregunta al lead si de verdad quiere terminar el tour, en vez de cerrarlo de una.
+ *
+ * Lo pidió Lucas el 1/9/2026: *"si estoy en medio del tour y presiono sin querer fuera de la viñeta
+ * del tour y fuera del foco, en lugar de que se cierre el tour, me pregunte si deseo terminar el
+ * tour"*. Cubre los dos cierres accidentales —el clic en el fondo oscuro y el Escape—, que son los
+ * que driver.js manda a `onDestroyStarted`.
+ *
+ * ⚠️ **La cruz del cartel NO pasa por acá y eso es a propósito.** Apretarla es un gesto explícito,
+ * el lead sabe exactamente lo que está haciendo, y hacerla funcionar a la primera costó la misión
+ * del 31/8/2026. Preguntarle ahí sería devolverle el problema que se le arregló. Ver `onCloseClick`.
+ *
+ * 🔴 **El diálogo se arma acá, a mano, y no con un `b-modal` ni con ningún componente de la app.**
+ * `driver.css` deja la pantalla entera en `pointer-events: none` mientras hay un tour
+ * (`.driver-active * { pointer-events: none }`), así que un modal de la aplicación se dibujaría
+ * perfecto y no aceptaría un solo clic: el lead vería una pregunta que no puede contestar, con el
+ * tour trabado atrás. Por eso el `pointer-events: auto` va **inline** (gana por especificidad contra
+ * la regla de driver) en el contenedor **y en cada botón** —la regla de driver le pone
+ * `pointer-events: none` a cada descendiente por separado, así que heredar del padre no alcanza—, y
+ * el `z-index` va por encima del cartel de driver.js, que usa 1000000000.
+ *
+ * @returns {void}
+ */
+function pedir_confirmacion_de_cierre() {
+	/* Ya está preguntando: un segundo clic en el fondo no apila otro diálogo. */
+	if (dialogo_de_cierre) {
+		return
+	}
+
+	/* Sin corrida no hay nada que preguntar, y no cerrar sería peor que preguntar de más: el overlay
+	 * de driver.js quedaría pegado sobre una aplicación que ya no tiene tour. */
+	if (!corrida) {
+		destruir_recorrido()
+		return
+	}
+
+	const fondo = document.createElement('div')
+
+	fondo.setAttribute('role', 'dialog')
+	fondo.setAttribute('aria-modal', 'true')
+	fondo.setAttribute('aria-label', TITULO_CONFIRMACION)
+
+	aplicar_estilos(fondo, {
+		position: 'fixed',
+		top: '0',
+		left: '0',
+		right: '0',
+		bottom: '0',
+		display: 'flex',
+		'align-items': 'center',
+		'justify-content': 'center',
+		padding: '16px',
+		background: 'rgba(0, 0, 0, .45)',
+		'z-index': String(Z_DIALOGO_CONFIRMACION),
+		'pointer-events': 'auto',
+	})
+
+	const caja = document.createElement('div')
+
+	aplicar_estilos(caja, {
+		width: '100%',
+		'max-width': '340px',
+		background: '#fff',
+		'border-radius': '10px',
+		padding: '20px',
+		'box-shadow': '0 10px 40px rgba(0, 0, 0, .35)',
+		'font-family': 'inherit',
+		'pointer-events': 'auto',
+	})
+
+	const titulo = document.createElement('p')
+
+	titulo.textContent = TITULO_CONFIRMACION
+
+	aplicar_estilos(titulo, {
+		margin: '0 0 6px',
+		'font-size': '17px',
+		'font-weight': '600',
+		color: '#222',
+	})
+
+	const bajada = document.createElement('p')
+
+	bajada.textContent = 'Si lo terminás, volvés a la pantalla como estaba. Podés arrancarlo de nuevo desde el panel.'
+
+	aplicar_estilos(bajada, {
+		margin: '0 0 18px',
+		'font-size': '14px',
+		'line-height': '1.4',
+		color: '#555',
+	})
+
+	const fila = document.createElement('div')
+
+	aplicar_estilos(fila, {
+		display: 'flex',
+		gap: '8px',
+		'justify-content': 'flex-end',
+		'flex-wrap': 'wrap',
+	})
+
+	const terminar = boton_del_dialogo('Sí, terminar', false)
+	const seguir = boton_del_dialogo('Seguir en el tour', true)
+
+	terminar.addEventListener('click', function () {
+		cerrar_corrida('cortado')
+		destruir_recorrido()
+	})
+
+	seguir.addEventListener('click', function () {
+		cerrar_dialogo_de_confirmacion()
+	})
+
+	/**
+	 * 🔴 Nada de lo que pase adentro del diálogo sale a `document`, y eso evita una vuelta perversa.
+	 *
+	 * driver.js escucha los clics en `document` para saber si cayeron "afuera" y disparar
+	 * `onDestroyStarted`. El diálogo ESTÁ afuera del elemento resaltado, así que un clic en "Seguir
+	 * en el tour" cerraría el diálogo... y en el mismo viaje del evento lo volvería a abrir. Se corta
+	 * en la burbuja del contenedor, que es después de que los botones ya hicieron lo suyo.
+	 */
+	;['pointerdown', 'mousedown', 'click'].forEach(function (tipo) {
+		fondo.addEventListener(tipo, function (evento) {
+			evento.stopPropagation()
+		})
+	})
+
+	fila.appendChild(terminar)
+	fila.appendChild(seguir)
+	caja.appendChild(titulo)
+	caja.appendChild(bajada)
+	caja.appendChild(fila)
+	fondo.appendChild(caja)
+	document.body.appendChild(fondo)
+
+	dialogo_de_cierre = fondo
+
+	/**
+	 * Escape sobre el diálogo = "Seguir en el tour".
+	 *
+	 * 🔴 Se escuchan los DOS eventos de la tecla y se cierra en el `keyup`, y las dos cosas son
+	 * necesarias para que un solo Escape no haga dos cosas contradictorias:
+	 *
+	 * - **Cerrar en el `keyup` y no en el `keydown`** deja el diálogo abierto durante todo el
+	 *   `keydown`. driver.js registra su propio manejador de Escape sobre `document` y no está dicho
+	 *   ni en qué evento ni en qué fase: mientras el diálogo siga abierto cuando ese manejador corra,
+	 *   su `onDestroyStarted` se va por la guarda del principio de esta función en vez de dibujar un
+	 *   segundo diálogo.
+	 * - **`hubo_keydown`** evita lo contrario: si a este diálogo lo abrió el Escape de driver.js, el
+	 *   `keyup` de ESE MISMO golpe de tecla lo cerraría al instante y el lead vería un parpadeo. Solo
+	 *   cierra el `keyup` cuya tecla se apretó con el diálogo ya en pantalla.
+	 *
+	 * Los listeners que se agregan durante el reparto de un evento no reciben ese evento (lo dice la
+	 * spec del DOM), así que registrarlos acá adentro no los expone al golpe que abrió el diálogo.
+	 */
+	let hubo_keydown = false
+
+	function al_teclear(evento) {
+		/**
+		 * 🔴 Tab se corta acá aunque no haga nada, y no es por prolijidad.
+		 *
+		 * driver.js registra un `keydown` propio sobre `window` que **atrapa el foco adentro del
+		 * cartel**: cualquier Tab lo devuelve ahí. Con el diálogo abierto eso significa que el lead
+		 * no puede llegar con el teclado al botón que le estamos pidiendo que elija, aunque el
+		 * diálogo se anuncie como `role="dialog"` / `aria-modal="true"`. Cortando la propagación,
+		 * el Tab vuelve a ser el del navegador y recorre los dos botones.
+		 *
+		 * No hace falta implementar el ciclo de foco a mano: el diálogo tiene exactamente dos
+		 * focusables y el navegador ya sabe ir de uno al otro.
+		 */
+		if (evento.key === 'Tab' || evento.keyCode === 9) {
+			evento.stopPropagation()
+			return
+		}
+
+		if (evento.key !== 'Escape' && evento.keyCode !== 27) {
+			return
+		}
+
+		evento.preventDefault()
+		evento.stopPropagation()
+
+		if (evento.type === 'keydown') {
+			hubo_keydown = true
+			return
+		}
+
+		if (hubo_keydown) {
+			cerrar_dialogo_de_confirmacion()
+		}
+	}
+
+	document.addEventListener('keydown', al_teclear, true)
+	document.addEventListener('keyup', al_teclear, true)
+
+	soltar_teclado_del_dialogo = function () {
+		document.removeEventListener('keydown', al_teclear, true)
+		document.removeEventListener('keyup', al_teclear, true)
+	}
+
+	/* El foco arranca en "Seguir en el tour": si el lead llegó acá sin querer, un Enter reflejo lo
+	 * devuelve al tour en vez de terminárselo. */
+	try {
+		seguir.focus({ preventScroll: true })
+	} catch (error) {
+		console.warn('Tour: no se pudo enfocar el diálogo de cierre', error)
+	}
+}
+
+/**
+ * Arma uno de los dos botones del diálogo de cierre.
+ *
+ * @param {String} texto
+ * @param {Boolean} secundario El de "seguir", que es el de menos peso visual.
+ * @returns {Element}
+ */
+function boton_del_dialogo(texto, secundario) {
+	const boton = document.createElement('button')
+
+	boton.type = 'button'
+	boton.textContent = texto
+
+	aplicar_estilos(boton, {
+		padding: '8px 14px',
+		border: secundario ? '1px solid #c8ccd2' : '1px solid transparent',
+		'border-radius': '6px',
+		background: secundario ? '#fff' : '#d9534f',
+		color: secundario ? '#333' : '#fff',
+		'font-size': '14px',
+		'font-family': 'inherit',
+		cursor: 'pointer',
+		/* 🔴 Inline y en CADA botón: `.driver-active *` de driver.css se los apaga uno por uno. */
+		'pointer-events': 'auto',
+	})
+
+	return boton
+}
+
+/**
+ * Escribe estilos inline sin depender de la sintaxis camelCase de `style`.
+ *
+ * `setProperty` acepta el nombre CSS tal cual se escribe en una hoja, que es como está escrito el
+ * diálogo de arriba, y así el que lo lea puede copiarlo a un `.sass` sin traducir nada.
+ *
+ * @param {Element} nodo
+ * @param {Object} estilos
+ * @returns {void}
+ */
+function aplicar_estilos(nodo, estilos) {
+	Object.keys(estilos).forEach(function (propiedad) {
+		nodo.style.setProperty(propiedad, estilos[propiedad])
+	})
+}
+
+/**
+ * Baja el diálogo de confirmación, si hay uno.
+ *
+ * Se llama desde `limpiar()` y desde `destruir_recorrido()` además de desde el botón "Seguir en el
+ * tour": es lo único del motor que vive colgado de `document.body`, y sobrevivir a la corrida lo
+ * dejaría flotando sobre la aplicación sin nada que lo cierre.
+ *
+ * @returns {void}
+ */
+function cerrar_dialogo_de_confirmacion() {
+	if (typeof soltar_teclado_del_dialogo === 'function') {
+		soltar_teclado_del_dialogo()
+		soltar_teclado_del_dialogo = null
+	}
+
+	if (!dialogo_de_cierre) {
+		return
+	}
+
+	const nodo = dialogo_de_cierre
+
+	dialogo_de_cierre = null
+
+	if (nodo.parentNode) {
+		nodo.parentNode.removeChild(nodo)
+	}
+}
+
 /**
  * Arranca el tour de un clip.
  *
  * @param {Object} clip Clip entero, tal como viaja en el plan.
- * @param {Object} contexto {router, store, root}
+ * @param {Object} contexto `{ router, store, root, al_terminar }`. `al_terminar` es opcional: si es
+ *                          una función, el motor la llama al cerrar con
+ *                          `{ clip_id, motivo, completo, mostrados, pasos }` —ver `cerrar_corrida()`—
+ *                          y con eso el panel se reabre y marca el clip como probado.
  * @returns {Boolean} true si el tour arrancó.
  */
 export function iniciar_tour(clip, contexto) {
@@ -1641,10 +2614,17 @@ export function iniciar_tour(clip, contexto) {
 		salteados_seguidos: 0,
 		/* El tour se cortó porque la pantalla que da por hecha no está. Ver `avisar_sin_pasos()`. */
 		corto_por_salteos: false,
+		/* El lead usó "Siguiente" en un paso que esperaba un gesto. Ver `marcar_avance_a_mano()`. */
+		avanzo_a_mano: false,
 		terminada: false,
 		avanzando: false,
 		/* Indice del paso al que hubo que devolverle el boton porque no habia aparicion que esperar. */
 		forzar_boton: -1,
+		/* El tour llegó al final Y mostró más de la mitad de sus pasos. Lo escribe `mostrar_paso()`
+		 * al pasarse del último; hasta entonces vale `false`, que es lo correcto para un tour que
+		 * se corta a la mitad. Declarado acá y no dejado en `undefined` porque es el flag del que
+		 * cuelga que el lead vea el botón verde: se busca en este literal antes que en el archivo. */
+		completo: false,
 	}
 
 	recorrido = driver({
@@ -1678,24 +2658,28 @@ export function iniciar_tour(clip, contexto) {
 		 * saca de las manos: sin él, driver.js avanzaría a un paso que todavía no está preparado.
 		 */
 		/**
-		 * Muestra u oculta los botones según cómo avanza el paso actual.
+		 * Deja los botones del cartel como corresponde. Es el único lugar donde eso se decide.
 		 *
 		 * 🔴 Se hace acá y no con `popover.showButtons` porque eso **no se aplica** al usar
 		 * `highlight()` en vez de `drive()`: medido el 30/8/2026, un paso declarado con
-		 * `avanza: 'clic'` seguía dibujando "Siguiente". Y un "Siguiente" en un paso que espera
-		 * un gesto es peor que inútil: el lead lo aprieta, se saltea la acción que el tour le está
-		 * pidiendo, y llega al paso que viene sin haber hecho lo que ese paso da por hecho.
+		 * `avanza: 'clic'` seguía dibujando "Siguiente".
+		 *
+		 * 🔴 **Hasta el 1/9/2026 acá se OCULTABA "Siguiente" en los pasos que esperan un gesto**, para
+		 * que el lead no se salteara la acción que el tour le estaba pidiendo. Lucas pidió lo
+		 * contrario ese día —*"esos botones de siguiente y atrás deben estar siempre, para que el
+		 * usuario no se pierda"*—: un cartel sin botones no se lee como "hacé el gesto", se lee como
+		 * "esto se colgó". El razonamiento completo, con lo que se hizo para compensar el costo, está
+		 * en `botones_de()`; no se borró porque una regla sin su historia se vuelve a poner sola.
+		 *
+		 * "Atrás" sigue sin dibujarse en el paso 0: no hay adónde volver.
 		 */
 		onPopoverRender: function (popover) {
 			if (!corrida) {
 				return
 			}
 
-			const paso = corrida.pasos[corrida.indice]
-			const espera_gesto = paso && (paso.avanza === 'clic' || paso.avanza === 'aparece')
-
 			if (popover.nextButton) {
-				popover.nextButton.style.display = espera_gesto ? 'none' : ''
+				popover.nextButton.style.display = ''
 			}
 
 			if (popover.previousButton) {
@@ -1719,10 +2703,13 @@ export function iniciar_tour(clip, contexto) {
 		 * en el mismo paso.
 		 */
 		onCloseClick: function () {
-			cerrar_corrida()
+			cerrar_corrida('cortado')
 			destruir_recorrido()
 		},
 		onNextClick: function () {
+			/* Antes de mover el índice: si este paso esperaba un gesto y el lead lo salteó con el
+			 * botón, queda anotado para que un corte posterior no le eche la culpa a los datos. */
+			marcar_avance_a_mano()
 			avanzar_a(corrida ? corrida.indice + 1 : 0)
 		},
 		onPrevClick: function () {
@@ -1731,19 +2718,24 @@ export function iniciar_tour(clip, contexto) {
 			}
 		},
 		/**
-		 * Lo dispara el lead al cerrar: la cruz del cartel, el clic afuera o la tecla Escape.
+		 * Lo disparan los dos cierres accidentales: el clic en el fondo oscuro y la tecla Escape.
 		 *
 		 * 🔴 Definir este hook hace que driver.js **no se destruya solo** — el cierre queda en
 		 * nuestras manos y hay que llamar `destroy()` a mano. Es el patrón que documenta la
-		 * librería, y acá se aprovecha para registrar el abandono antes de cerrar.
+		 * librería, y desde el 1/9/2026 es lo que permite **no cerrar**: se dibuja la pregunta y, si
+		 * el lead elige seguir, no se hace nada y el tour sigue exactamente donde estaba.
 		 *
-		 * Cortar el tour a mitad de camino es una salida legítima y prevista (§3.7-bis: "el tour
-		 * siempre ofrece saltar paso, para que el lead nunca quede atrapado"): se registra y no
-		 * se estorba.
+		 * Lo pidió Lucas ese día: *"si presiono sin querer fuera de la viñeta del tour, en lugar de
+		 * que se cierre, me pregunte si deseo terminar el tour"*. Hasta entonces este hook cerraba de
+		 * una, igual que la cruz — y un clic de más en el fondo tiraba el recorrido entero.
+		 *
+		 * ⚠️ La cruz del cartel NO pasa por acá: tiene su propio `onCloseClick` y sigue cerrando a la
+		 * primera, que es lo que se arregló el 31/8/2026. Cortar el tour a mitad de camino sigue
+		 * siendo una salida legítima y prevista (§3.7-bis); lo que se agrega es que no se dispare
+		 * sola.
 		 */
 		onDestroyStarted: function () {
-			cerrar_corrida()
-			destruir_recorrido()
+			pedir_confirmacion_de_cierre()
 		},
 	})
 
@@ -1764,8 +2756,12 @@ export function iniciar_tour(clip, contexto) {
  */
 export function cortar_tour() {
 	/* Se cierra la corrida ANTES de destruir, para que el abandono quede registrado: si el lead
-	 * reabre el panel a mitad de un tour, eso es información que el closer quiere tener. */
-	cerrar_corrida()
+	 * reabre el panel a mitad de un tour, eso es información que el closer quiere tener.
+	 *
+	 * El motivo es 'cortado' SIEMPRE, y no depende de dónde se haya quedado: acá se llega porque el
+	 * panel se está reabriendo o porque se está por arrancar otro tour, nunca porque el lead haya
+	 * terminado el recorrido. Marcar el clip como probado desde acá sería regalarle el check. */
+	cerrar_corrida('cortado')
 	destruir_recorrido()
 	limpiar()
 }

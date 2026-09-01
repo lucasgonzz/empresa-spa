@@ -7,12 +7,13 @@
  *
  * El formato de cada paso lo define `src/tours/motor.js`:
  *
- * - `ancla` — el valor del `data-tour`. Es la forma preferida y la única que se usa acá: los
- *   veintiocho anclajes de esta sección están puestos en el código, así que ningún paso necesita
- *   caer a un selector CSS crudo.
+ * - `ancla` — el valor del `data-tour`. Es la forma preferida y casi la única que se usa acá: los
+ *   veintiocho anclajes de esta sección están puestos en el código. La excepción es el buscador de
+ *   artículos de Vender, que se ancla por su `id` de siempre (ver `BUSCADOR_ARTICULOS`).
  * - `texto` — lo que lee el lead. Corto, imperativo y en la misma voz que el video del clip.
- * - `avanza` — `'siguiente'` (el botón del popover), `'clic'` (clic real sobre lo resaltado) o
- *   `'aparece'` (cuando aparece el elemento del paso que sigue).
+ * - `avanza` — `'siguiente'` (el botón del popover), `'clic'` (clic real sobre lo resaltado),
+ *   `'aparece'` (cuando aparece el elemento del paso que sigue) o `'desaparece'` (cuando se va el
+ *   del paso actual, que es lo que pasa al elegir adentro de un modal que se cierra solo).
  *   medidos contra el código, no elegidos de arriba; están en `.mision/mapa-S2-vender.md`.
  * - `antes` — nombre de un gancho de `src/tours/ganchos.js`.
  * - `ruta` — a dónde tiene que estar parado el tour para ese paso.
@@ -64,6 +65,22 @@ const RUTA_WHATSAPP = { name: 'whatsapp' }
 const PRIMERA_FILA_PRESUPUESTO = '[data-testid^="budget-row-"]'
 
 /**
+ * El input del buscador de artículos por nombre de Vender.
+ *
+ * 🔴 No se usa el ancla `vender.buscador_articulos` para el paso que dice "tocá acá", y el motivo es
+ * de tamaño: esa ancla está puesta sobre `<header-form>`
+ * (`components/vender/components/stage-2/Index.vue:25`), o sea sobre la **fila entera** —código de
+ * barras, nombre, combos, promociones, servicios y cantidad—. Un recuadro de ese ancho no señala
+ * nada, y encima **contiene** al campo de código de barras, que es justo el del paso anterior: el
+ * lead vería dos pasos seguidos señalando la misma zona.
+ *
+ * El `id` sale de `components/common/buscador-articulos/Index.vue:13` (`id="search-article"`), que
+ * `common-vue/components/search/Index.vue:67` baja al `<input :id="_id">`. Ya existe, es estable y
+ * no obliga a tocar `common-vue`.
+ */
+const BUSCADOR_ARTICULOS = '#search-article'
+
+/**
  * Espera larga para los pasos cuyo elemento depende de que el lead haga algo que lleva su tiempo:
  * abrir un presupuesto del listado, esperar la respuesta de la IA. El techo por defecto del motor
  * son 12 s y en esos casos se queda corto.
@@ -88,24 +105,61 @@ export default {
 				avanza: 'siguiente',
 			},
 			{
-				/* 700 ms: `ArticleBarCode.vue` se enfoca solo con un `setTimeout(500)` al montarse,
-				 * y medir antes de eso agarra el campo todavía sin foco. */
+				/**
+				 * 🔴 Ya no dice "viene enfocado desde que entrás", y no es un retoque de estilo: era
+				 * falso con el tour corriendo. `ArticleBarCode.vue:44-48` enfoca el campo con un
+				 * `setTimeout(500)` al montarse la vista, pero el tour arranca después —navega,
+				 * espera el elemento, deja asentar el layout— y para cuando el cartel aparece ese
+				 * foco ya se lo llevó otra cosa. Lucas lo pidió textual el 1/9/2026: *"me dice,
+				 * escaneá acá, viene enfocado desde que entras con el mouse. Eso quiero que deje de
+				 * aparecer"*. Y lo de fondo: *"es muy poco probable que el usuario tenga un lector de
+				 * código de barras"*, así que el paso ofrece las dos formas y manda al lead por la
+				 * que sí puede hacer.
+				 *
+				 * `avanza: 'siguiente'` explícito, y era lo que ya pasaba en la práctica: declarado
+				 * como `'aparece'`, el motor veía que el elemento del paso siguiente (el buscador,
+				 * que es su vecino en la misma fila) ya estaba a la vista y le devolvía el botón
+				 * igual —está medido en el informe del 30/8/2026—. Ahora lo que se declara es lo que
+				 * pasa. Lucas: *"ahí le dé a siguiente y pase al siguiente paso"*.
+				 *
+				 * 700 ms: el `setTimeout(500)` de arriba mueve el foco y con él el layout; medir
+				 * antes agarra la fila a mitad de camino.
+				 */
 				ancla: 'vender.campo_codigo_barras',
-				texto: 'Escaneá acá. Viene enfocado desde que entrás: no lo busques con el mouse.',
-				avanza: 'aparece',
+				texto: 'Si tenés lector, escaneá acá; si no, tipeá el código y dale Enter. Para este ejemplo vamos por otro lado: buscá el artículo por su nombre.',
+				avanza: 'siguiente',
 				espera_ms: 700,
 			},
 			{
-				ancla: 'vender.buscador_articulos',
-				texto: '¿No tiene código? Escribí parte del nombre acá al lado y dale Enter.',
-				avanza: 'clic',
+				/* Ver `BUSCADOR_ARTICULOS`: se ancla el input y no la fila entera. Avanza por
+				 * aparición del modal, que es lo que el clic abre. */
+				selector: BUSCADOR_ARTICULOS,
+				texto: 'Buscá el artículo por su nombre: tocá acá.',
+				avanza: 'aparece',
 			},
 			{
-				/* 700 ms: el modal del buscador reintenta el foco tres veces (400/650/700 ms). */
+				/**
+				 * `avanza: 'desaparece'`: el gesto que cierra este paso es elegir de la grilla, y eso
+				 * cierra el modal (`search/Modal.vue::emitSetSelected` → `$bvModal.hide`). Con
+				 * `'clic'` el paso avanzaba con cualquier clic adentro del modal —ordenar una
+				 * columna, pasar de página—, o sea antes de que el artículo estuviera elegido.
+				 *
+				 * ⚠️ Se sacó el gancho `esperar_modal`, y hay que dejarlo escrito para que nadie lo
+				 * devuelva: ese gancho espera el evento `bv::modal::shown`, y ahora el paso ANTERIOR
+				 * avanza recién cuando el modal ya está a la vista. O sea que el `shown` ya pasó
+				 * cuando este paso se prepara, y el gancho se quedaría esperando un evento que no va
+				 * a llegar hasta agotar su respaldo de 2,5 s. Los 700 ms de `espera_ms` cubren los
+				 * tres reintentos de foco del modal (400/650/700 ms), que es lo único que hacía falta.
+				 */
 				ancla: 'vender.modal_buscador_articulos',
-				texto: 'Antes de elegir, mirá la grilla: ahí tenés el stock y el precio de cada uno.',
-				avanza: 'clic',
-				antes: 'esperar_modal',
+				texto: 'Escribí parte del nombre y dale Enter. Mirá la grilla antes de elegir: ahí tenés el stock y el precio de cada uno.',
+				avanza: 'desaparece',
+				/* `foco: true` por lo mismo que su gemelo del clip 1.1: el foco automático se limita
+				 * a los pasos que avanzan por carga y este avanza por desaparición, así que hay que
+				 * pedirlo explícito. Acá pesa más todavía, porque los 700 ms de espera hacen que el
+				 * cartel aparezca bastante después de que el modal se enfocó solo, y driver.js se
+				 * lleva el foco al botón de la viñeta en cada render. */
+				foco: true,
 				espera_ms: 700,
 			},
 			{

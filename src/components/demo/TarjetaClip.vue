@@ -19,6 +19,7 @@
 			@error="marcar_fallo"
 			@play="al_reproducir"
 			@pause="al_pausar"
+			@timeupdate="al_avanzar_video"
 			@ended="al_terminar"></video>
 
 			<!--
@@ -63,14 +64,35 @@
 			Un clip sin práctica (`practica: false`) es solo para mirar: no hay nada que ir a
 			hacer al sistema, así que "Probar" no se dibuja. El clip se completa igual, con el
 			video llegando al final.
+
+			`con_tour` es el segundo gate y es del 1/9/2026: el corte de release de los tours
+			(`tours/habilitados.js`). Va OCULTO y no deshabilitado por pedido explícito de Lucas
+			—"el botón de probar no debe estar visible"—, y además es lo correcto: un botón
+			apagado promete algo que no va a poder hacer nunca, y el lead lo va a apretar igual.
 		-->
 		<button
-		v-if="con_practica"
+		v-if="con_practica && con_tour"
 		type="button"
 		class="tarjeta-clip__probar"
+		:class="{ 'tarjeta-clip__probar--probado': probado }"
 		:disabled="!habilitar_probar"
 		@click="$emit('probar', clip)">
 			Probar
+			<!--
+				El check aparece recién con el tour completado. Es `v-if` y no una clase que lo
+				esconda: la animación de entrada tiene que correr cuando el lead está mirando el
+				botón (ver `tarjeta-clip-aparecer-check`), y un elemento que ya estaba en el DOM
+				con opacidad 0 no vuelve a animarla.
+			-->
+			<i
+			v-if="probado"
+			class="bi bi-check-lg tarjeta-clip__check"
+			aria-hidden="true"></i>
+			<!--
+				El check es puramente visual (`aria-hidden`), así que el estado se dice aparte:
+				sin esto, para un lector de pantalla el botón verde y el celeste se llaman igual.
+			-->
+			<span v-if="probado" class="sr-only">(ya probado)</span>
 		</button>
 	</div>
 </template>
@@ -103,6 +125,27 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+		/**
+		 * El tour de este clip esta habilitado para salir (`tours/habilitados.js`).
+		 *
+		 * 🔴 Default `false`, al reves que `practica`, y la asimetria es a proposito. `practica`
+		 * defaultea a true porque protege a los planes ya congelados, que pueden no traer el
+		 * campo: ahi el default seguro es "el boton sigue como estaba". Esta prop protege otra
+		 * cosa --que no salga a produccion un tour que nadie recorrio--, y ahi el default seguro
+		 * es el contrario: si el panel se olvida de pasarla, el boton no se dibuja.
+		 */
+		con_tour: {
+			type: Boolean,
+			default: false,
+		},
+		/**
+		 * El lead ya completo el tour de este clip. Lo resuelve el panel contra el store, que lo
+		 * siembra del plan: por eso sobrevive al F5.
+		 */
+		probado: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	data() {
 		return {
@@ -114,6 +157,11 @@ export default {
 			// cuando hay datos (ver `marcar_listo`), para que el marco se agrande una sola vez y
 			// ya reproduciendo, en vez de agrandarse en el medio del buffering.
 			quiere_reproducir: false,
+			// Ultimo decimo del video que ya se reporto (0 = 0-9%, 1 = 10-19%...). Arranca en -1
+			// para que el primer cruce sea siempre uno nuevo.
+			ultimo_decimo: -1,
+			// Porcentaje mas alto ya reportado. Ver `reportar_progreso`.
+			maximo_reportado: 0,
 		}
 	},
 	computed: {
@@ -199,7 +247,102 @@ export default {
 		 */
 		al_pausar() {
 			this.quiere_reproducir = false
+
+			/**
+			 * Pausar es el otro momento en que el porcentaje importa, además de los décimos: el
+			 * lead que abandona un video lo abandona pausándolo, y ahí el dato es exacto en vez
+			 * de redondeado al décimo de más abajo.
+			 */
+			this.reportar_progreso(this.porcentaje_actual())
+
 			this.$emit('pausar')
+		},
+		/**
+		 * `timeupdate` lo dispara el navegador ~4 veces por segundo. Acá NO se reporta cada vez:
+		 * solo cuando el video cruza un décimo nuevo, o sea ~10 eventos por video mirado entero
+		 * (granularidad que pidió Lucas el 1/9/2026).
+		 *
+		 * Se reporta el borde del décimo (10, 20, 30...) y no el porcentaje exacto del momento:
+		 * son eventos distintos diciendo la misma cosa, y un número redondo es más fácil de leer
+		 * en el feed del admin que un 43 que salió de dónde cayó el `timeupdate`.
+		 *
+		 * @returns {void}
+		 */
+		al_avanzar_video() {
+			const porcentaje = this.porcentaje_actual()
+			const decimo = Math.floor(porcentaje / 10)
+
+			if (decimo === this.ultimo_decimo) {
+				return
+			}
+
+			this.ultimo_decimo = decimo
+
+			this.reportar_progreso(decimo * 10)
+		},
+		/**
+		 * Porcentaje del video ya reproducido, entero de 0 a 100.
+		 *
+		 * 🔴 Sin `duration` finita devuelve 0 y no se reporta nada. Mientras el navegador no
+		 * cargó los metadatos, `duration` es `NaN`, y con un stream sin fin puede ser `Infinity`:
+		 * en los dos casos la cuenta da `NaN`, que `JSON.stringify` serializa como `null`. O sea
+		 * que el admin recibiría `{"porcentaje": null}` y el dato quedaría sucio para siempre,
+		 * sin que nadie vea un error en ningún lado.
+		 *
+		 * @returns {Number}
+		 */
+		porcentaje_actual() {
+			const video = this.$refs.video
+
+			if (!video || !isFinite(video.duration) || video.duration <= 0) {
+				return 0
+			}
+
+			const porcentaje = Math.round((video.currentTime / video.duration) * 100)
+
+			if (porcentaje < 0) {
+				return 0
+			}
+
+			return porcentaje > 100 ? 100 : porcentaje
+		},
+		/**
+		 * Le avisa al panel cuánto del video vio el lead.
+		 *
+		 * Dos reglas, y las dos son sobre el dato que ve el admin, no sobre el rendimiento:
+		 *
+		 * 🔴 **Solo hacia arriba.** Si el lead retrocede el video no se reporta nada hasta superar
+		 * el máximo que ya se había reportado: alguien que mira el 80% y vuelve atrás a repasar el
+		 * minuto 2 no tiene por qué generar una fila que diga 20%.
+		 *
+		 * ⚠️ Es una regla de RUIDO, no de corrección, y conviene no confundirlas. Las dos puntas
+		 * que leen esto se quedan con el MÁXIMO, no con el último —`DemoPlanController::porcentaje_de()`
+		 * y `LeadController::detalle_de_recorrido_por_clip()`—, así que el dato que ve Tomás sale
+		 * bien igual. Lo que esta regla evita son las filas de más. (Una versión anterior de este
+		 * comentario decía que el admin se quedaba con el último: era falso, y lo encontró el
+		 * revisor de merge del 1/9/2026 yendo a leer los dos backends.)
+		 *
+		 * 🔴 **El 100% no se emite nunca.** Eso ya lo dice `clip.terminado`, que además es el que
+		 * mueve el hito del roadmap. Emitir los dos duplica la fila sin agregar información.
+		 *
+		 * El 0 tampoco: es el estado por default del lado del admin, así que reportarlo sería una
+		 * fila por cada video abierto para no decir nada.
+		 *
+		 * @param {Number} porcentaje
+		 * @returns {void}
+		 */
+		reportar_progreso(porcentaje) {
+			if (porcentaje <= 0 || porcentaje >= 100) {
+				return
+			}
+
+			if (porcentaje <= this.maximo_reportado) {
+				return
+			}
+
+			this.maximo_reportado = porcentaje
+
+			this.$emit('progreso', porcentaje)
 		},
 		/**
 		 * El video llego al final.
@@ -253,6 +396,10 @@ export default {
 // Paleta de marca de ComercioCity. Es la misma del logo y la de la pagina de experiencia.
 $tarjeta-clip-celeste: #0B84F8
 $tarjeta-clip-violeta: #3A31FC
+// Verde de "esto ya lo hiciste", del 1/9/2026. NO es el verde de Bootstrap (#28a745): con el
+// texto blanco de 0.875rem de este boton ese verde da 3.1:1 de contraste y no llega a AA. Este
+// da 5.0:1 (calculado sobre blanco puro), que si.
+$tarjeta-clip-verde: #15803D
 
 // El sangrado horizontal es el mismo que el del boton del item, para que el marco del video
 // quede alineado con el titulo del clip y no colgado del borde de la tarjeta.
@@ -390,6 +537,57 @@ $tarjeta-clip-violeta: #3A31FC
 	outline: 2px solid $tarjeta-clip-violeta
 	outline-offset: 2px
 
+// ---------------------------------------------------------------------------------------
+// "Ya lo probaste": el boton pasa a verde y le aparece el check (pedido de Lucas, 1/9/2026).
+//
+// 🔴 Los tiempos de acá son la mitad visible de una secuencia que arma `PanelDemo.vue`
+// (`celebrar_tour`): el panel se abre, ~450 ms despues se pinta esto, y ~900 ms despues se abre
+// el clip que sigue. Si estos valores cambian, mirar tambien esa secuencia: el punto del pedido
+// es que el lead VEA cada paso, y para eso cada animacion tiene que terminar antes de que
+// arranque la siguiente.
+//
+// La transicion del fondo es mas larga que la de los otros estados del boton (0.35s contra
+// 0.15s) justo por eso: el cambio de color es el mensaje, no un efecto de hover.
+// ---------------------------------------------------------------------------------------
+.tarjeta-clip__probar--probado
+	background: $tarjeta-clip-verde
+	transition: background 0.35s ease, transform 0.1s ease
+	animation: tarjeta-clip-marcar 0.45s cubic-bezier(0.32, 0.72, 0, 1)
+
+// Va aparte y con esta especificidad porque `.tarjeta-clip__probar:hover:not(:disabled)` pesa
+// mas que una clase sola: sin esto, pasar el mouse por encima devolvia el boton al celeste.
+.tarjeta-clip__probar--probado:hover:not(:disabled)
+	background: darken($tarjeta-clip-verde, 6%)
+
+.tarjeta-clip__check
+	// Sin esto el `transform` de la animacion no se aplica: el <i> es inline y los elementos
+	// inline no se transforman.
+	display: inline-block
+	margin-left: 0.375rem
+	// El glifo de Bootstrap Icons trae su propio interlineado y queda un pelo bajo respecto de
+	// la palabra "Probar".
+	vertical-align: -0.06em
+	// Entra despues de que el fondo ya empezo a ponerse verde (0.15s de demora), no junto: son
+	// dos cosas que decir y encimadas se leen como una sola. `backwards` mantiene el estado
+	// inicial durante esa demora, si no el check parpadea entero antes de achicarse.
+	animation: tarjeta-clip-aparecer-check 0.3s 0.15s backwards cubic-bezier(0.32, 0.72, 0, 1)
+
+@keyframes tarjeta-clip-marcar
+	0%
+		transform: scale(1)
+	45%
+		transform: scale(1.06)
+	100%
+		transform: scale(1)
+
+@keyframes tarjeta-clip-aparecer-check
+	from
+		opacity: 0
+		transform: scale(0.4)
+	to
+		opacity: 1
+		transform: scale(1)
+
 .tarjeta-clip__probar:disabled
 	background: #ececed
 	color: #a1a1aa
@@ -408,12 +606,20 @@ $tarjeta-clip-violeta: #3A31FC
 		border-top-color: $tarjeta-clip-celeste
 
 	.tarjeta-clip__probar,
+	.tarjeta-clip__probar--probado,
 	.tarjeta-clip__reintentar
 		transition: none
 
 	.tarjeta-clip__probar:active:not(:disabled),
 	.tarjeta-clip__reintentar:active
 		transform: none
+
+	// 🔴 El estado final se aplica IGUAL: el boton queda verde y el check queda puesto. Lo que
+	// se saca es el movimiento (el pulso y la entrada del check), no la informacion. Mismo
+	// criterio que el anillo de carga de mas arriba.
+	.tarjeta-clip__probar--probado,
+	.tarjeta-clip__check
+		animation: none
 
 // Telefono: el video agrandado usa casi todo el ancho, igual que antes del refactor.
 @media (max-width: 767px)
