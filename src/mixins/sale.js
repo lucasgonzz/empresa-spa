@@ -101,16 +101,33 @@ export default {
 			return this.$store.state.sale.payment_method_show_option
 		},
 		sales_to_show() {
+			/*
+			 * 🔴 `view` y `sub_view` salen de `$route.params`, y la ruta los declara OPCIONALES
+			 * (`/ventas/:view?/:sub_view?`). O sea que `/ventas` a secas es una URL legal y deja los
+			 * dos en `undefined`.
+			 *
+			 * Hasta el 31/8/2026 este computed los usaba sin chequear y `this.view.replaceAll(...)`
+			 * tiraba "Cannot read properties of undefined (reading 'replaceAll')" en pleno render:
+			 * el listado quedaba VACIO --"No hay Ventas"-- con las ventas cargadas en el store, y el
+			 * unico rastro era un Vue warn en la consola. Le pasa a cualquiera que entre por una URL
+			 * armada a mano o un favorito; desde el menu no se ve porque el item navega con
+			 * `params: { view: 'todas' }`.
+			 *
+			 * Los defaults de aca son justamente los que declara esa ruta.
+			 */
+			let view = this.view || 'todas'
+			let sub_view = this.sub_view || 'todos'
+
 			let sales = []
-			if (this.view == 'todas' && this.sub_view == 'todos') {
+			if (view == 'todas' && sub_view == 'todos') {
 				sales = this.sales 
 			} else {
 				// let sales = []
-				if (this.view == 'todas') {
+				if (view == 'todas') {
 					sales = this.sales 
 				} else {
 					let address = this.addresses.find(model => {
-						return model.street.toLowerCase() == this.view.replaceAll('-', ' ').toLowerCase()
+						return model.street.toLowerCase() == view.replaceAll('-', ' ').toLowerCase()
 					})
 					/** Incluye ventas contenedoras aunque address_id venga nulo (no se asigna al consolidar en API). */
 					sales = this.sales.filter(sale => {
@@ -121,10 +138,10 @@ export default {
 					})
 				}
 
-				if (this.sub_view != 'todos') {
+				if (sub_view != 'todos') {
 					let employee = this.employees.find(model => {
-						// console.log('comparando '+model.name.toLowerCase()+' con '+this.sub_view.replaceAll('-', ' ').toLowerCase())
-						return model.name.toLowerCase() == this.sub_view.replaceAll('-', ' ').toLowerCase()
+						// console.log('comparando '+model.name.toLowerCase()+' con '+sub_view.replaceAll('-', ' ').toLowerCase())
+						return model.name.toLowerCase() == sub_view.replaceAll('-', ' ').toLowerCase()
 					})
 					if (typeof employee == 'undefined') {
 						// console.log('dueño')

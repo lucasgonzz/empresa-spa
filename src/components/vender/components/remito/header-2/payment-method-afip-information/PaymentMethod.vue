@@ -13,6 +13,7 @@
 		<b-form-select
 		ref="payment_method_select"
 		:disabled="disabled"
+		data-testid="venta-metodo-pago"
 		id="vender_payment_method_id"
 		v-model="current_acount_payment_method_id"
 		:select-size="payment_method_select_expanded ? expanded_select_size : 0"
@@ -26,9 +27,15 @@
 		<template #append>
 
 			<!-- Boton para metodoS de pago -->
+			<!--
+				🔴 Este boton NO cobra: abre el reparto de la venta en VARIOS metodos de pago (lo
+				dice el comentario de arriba). Por eso el testid habla de "metodos", en plural, y no
+				de cobrar.
+			-->
 			<b-button
 			:disabled="disabled"
 			variant="success"
+			data-testid="venta-btn-metodos-pago"
 			id="btn_set_payment_methods"
 			data-tour="vender.boton_cobrar"
 			@click="set_payment_methods">

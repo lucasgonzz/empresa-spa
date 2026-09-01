@@ -11,9 +11,10 @@
 // BtnRestartFilter (is_filtered && !listado_por_defecto) daba false. Por eso este test entra por la
 // lupa y no por el buscador: el camino del buscador ya funcionaba y no habria detectado nada.
 //
-// Selectores: se usan los que ya existen en el DOM (.th-filter-btn de BtnFilter.vue, el id del
-// b-modal que arma table/Index.vue como 'filter-modal-' + model_name, y las clases del footer de
-// FilterModal.vue). No se agrego ningun data-testid nuevo para este test.
+// Selectores: desde el 31/8/2026 usa los `data-testid` de la lupa (`btn-abrir-filtro-<key>`) y del
+// footer del modal (`btn-modal-filtrar`), que antes no existian. La version original ubicaba la
+// columna por TEXTO VISIBLE (`hasText: 'Nombre'`), que es justo lo que la convencion del harness
+// prohibe, y clickeaba la lupa por clase de Bootstrap.
 const { test, expect } = require('../fixtures')
 const { esperar_recursos_descargados } = require('../helpers/recursos')
 
@@ -31,17 +32,29 @@ test.describe('Listado: limpiar filtros con un filtro de columna', () => {
 		const btn_limpiar = page.locator('#btn_restart_filter')
 		await expect(btn_limpiar).toBeHidden()
 
-		// Abrir el filtro de la columna Nombre desde su lupa. La lupa es el primer .th-filter-btn
-		// del th (el segundo, .th-filter-btn--danger, es el de limpiar esa columna).
-		await page.locator('th', { hasText: 'Nombre' }).first()
-			.locator('.th-filter-btn').first()
-			.click()
+		// Abrir el filtro de la columna Nombre desde su lupa.
+		//
+		// 🔴 El `hover` sobre el encabezado NO SOBRA, y su ausencia es lo que tuvo este test en rojo
+		//    desde el 15/8/2026. La lupa vive en un contenedor con `max-width: 0`, `opacity: 0` y
+		//    `pointer-events: none`, y la unica regla que lo abre es `th:hover` (ver
+		//    display/table/Index.vue). O sea que el boton esta en el DOM, Playwright lo ve
+		//    "visible", y es inclickeable.
+		//
+		//    El mensaje de error engaña: dice que `<div class="cont-th">` intercepta el puntero, y
+		//    `.cont-th` es el ANCESTRO del propio boton --no hay nada encima--. La nota vieja de
+		//    e2e/README.md culpaba al cartel de progreso `#offline-articles-progress`; no era eso.
+		const lupa = page.locator('[data-testid="btn-abrir-filtro-name"]')
+		await page.locator('th').filter({ has: lupa }).hover()
+		await lupa.click()
 
 		const modal_filtro = page.locator('#filter-modal-article')
 		await expect(modal_filtro).toBeVisible()
 
 		await modal_filtro.locator('input').first().fill('a')
-		await modal_filtro.locator('.filter-modal-btn--primary').click()
+
+		// 🔴 Y hay que apretar "Filtrar": elegir/escribir el criterio NO filtra. El otro boton del
+		//    footer, "Agregar filtro", guarda el criterio y tampoco busca.
+		await page.locator('[data-testid="btn-modal-filtrar"]').click()
 
 		// Ahora si: la vista esta filtrada y NO es el listado por defecto, asi que el boton se monta.
 		await expect(btn_limpiar).toBeVisible()

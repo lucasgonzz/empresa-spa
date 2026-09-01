@@ -6,6 +6,7 @@
 	:aria-label="tooltip_text"
 	@click="restartSearch"
 	class="btn-header-action toolbar-btn--icono"
+	data-testid="btn-reiniciar-filtros"
 	id="btn_restart_filter"
 	size="sm">
 		<i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>

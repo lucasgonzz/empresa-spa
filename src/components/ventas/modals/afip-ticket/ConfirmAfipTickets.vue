@@ -25,6 +25,7 @@
 				<b-form-select
 				:disabled="disabled"
 				id="select_punto_de_venta"
+				data-testid="afip-punto-venta"
 				v-model="ventas_afip_information_id"
 				@change="set_tipo_comprobante"
 				:options="options"></b-form-select>
@@ -35,6 +36,7 @@
 			label="Tipo de comprobante">
 				<b-form-select
 				id="select_tipo_comprobante"
+				data-testid="afip-tipo-comprobante"
 				v-model="afip_tipo_comprobante_id"
 				:options="getOptions({key: 'afip_tipo_comprobante_id', text: 'Tipo Comprobante'})"></b-form-select>
 			</b-form-group>
@@ -210,6 +212,7 @@
 				class="confirm-afip-footer__emitir"
 				variant="primary"
 				id="btn_enviar_a_facturar"
+				data-testid="btn-emitir-facturas"
 				:disabled="!puede_emitir"
 				@click="emitir_facturas">
 					Emitir Facturas
