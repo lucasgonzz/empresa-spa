@@ -502,8 +502,12 @@ Todos genericos y retrocompatibles, en la misma linea que los de arriba:
   componente propio, asi que no heredaba el testid generico de `ModelForm`.
 - **Posicion Fiscal**: un `data-testid` por renglon (`posicion-fiscal-iva-credito`,
   `-percepcion-iva`, `-retencion-iva`, `-iibb-determinado`, `-percepcion-iibb`, `-retencion-iibb`,
-  `-retencion-ganancias`, `-saldo-iva`, `-saldo-iibb`, `-iva-debito`) **con `data-monto`**, y
-  `data-tipo` en los saldos. 🔴 El `data-monto` no es redundante con el texto: el reporte formatea
+  `-retencion-ganancias`, `-saldo-iva`, `-saldo-iibb`, `-iva-debito`,
+  `-iva-notas-credito`) **con `data-monto`**, y `data-tipo` en los saldos. Aparte va
+  `posicion-fiscal-aviso-sin-medir`, que **no lleva `data-monto`** (no es un renglon: es el aviso de
+  que hay notas de credito con el IVA sin medir) y trae `data-cantidad` con cuantas son. Ojo con eso
+  al barrer `[data-testid^="posicion-fiscal-"]`: ese testid da `NaN` si se lo lee como monto.
+  🔴 El `data-monto` no es redundante con el texto: el reporte formatea
   con `price(valor, false, false)`, que SIEMPRE recorta los dos decimales, asi que una retencion de
   1795,50 se imprime `$1.795` y del texto no se puede sacar el numero. Mismo patron que
   `download-resources/Index.vue` (`data-estado`/`data-descargados`/`data-total`).
