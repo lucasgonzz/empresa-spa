@@ -60,6 +60,23 @@
 					</span>
 					<span class="cascada-renglon__monto">{{ formatear(iva.iva_notas_credito) }}</span>
 				</div>
+
+				<!-- Un cero de arriba tiene dos causas posibles y son muy distintas: no hubo notas de
+				credito, o las hubo pero su IVA todavia no se midio. Hasta el 1/9/2026 el sistema no
+				guardaba el IVA de las notas de credito, asi que todo lo emitido antes de esa fecha
+				necesita que se corra el backfill. Si no se dice, el contador lee el cero como un dato
+				y paga de mas. -->
+				<div
+				v-if="iva.notas_credito_sin_medir > 0"
+				class="posicion-fiscal__aviso-sin-medir"
+				:data-testid="'posicion-fiscal-aviso-sin-medir'"
+				:data-cantidad="iva.notas_credito_sin_medir">
+					Hay {{ iva.notas_credito_sin_medir }}
+					{{ iva.notas_credito_sin_medir == 1 ? 'nota de crédito emitida' : 'notas de crédito emitidas' }}
+					ante ARCA sin el IVA medido, así que este renglón puede estar incompleto y el saldo a
+					pagar salir más alto de lo que corresponde. Escribinos para que lo completemos.
+				</div>
+
 				<div
 				class="cascada-renglon apretable"
 				:data-testid="'posicion-fiscal-iva-credito'"
@@ -370,6 +387,19 @@ $acento-fiscal: #0891b2
 
 		p
 			margin-bottom: 10px
+
+	// Aviso de "todavia no lo medimos" del renglon de notas de credito. Va en el amarillo de
+	// $acento-deudas y no en el gris del aviso de IIBB a proposito: aquel explica una configuracion
+	// que falta, este avisa que un numero fiscal en pantalla puede estar incompleto.
+	&__aviso-sin-medir
+		margin: 4px 0 12px
+		padding: 12px 14px
+		border-left: 3px solid $acento-deudas
+		border-radius: 6px
+		background: rgba($acento-deudas, 0.08)
+		color: #7c5300
+		font-size: 0.85rem
+		line-height: 1.45
 
 	// Fundido corto al reemplazar el skeleton por el contenido real. Escrito a mano y no
 	// con animate.css: esa libreria no esta cargada en este repo
