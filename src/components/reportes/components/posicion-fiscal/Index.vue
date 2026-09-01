@@ -45,6 +45,21 @@
 					</span>
 					<span class="cascada-renglon__monto">{{ formatear(iva.iva_debito) }}</span>
 				</div>
+				<!-- El debito fiscal que cancelan las notas de credito ya facturadas ante ARCA.
+				Se resta del saldo igual que el IVA credito, por eso va pegado abajo del debito. -->
+				<div
+				class="cascada-renglon apretable"
+				:data-testid="'posicion-fiscal-iva-notas-credito'"
+				:data-monto="iva.iva_notas_credito"
+				@click="abrirDetalle('iva_notas_credito')">
+					<span class="cascada-renglon__label">
+						<span class="cascada-renglon__icono acento-fiscal">
+							<i class="bi bi-arrow-return-left" aria-hidden="true"></i>
+						</span>
+						IVA de notas de crédito emitidas
+					</span>
+					<span class="cascada-renglon__monto">{{ formatear(iva.iva_notas_credito) }}</span>
+				</div>
 				<div
 				class="cascada-renglon apretable"
 				:data-testid="'posicion-fiscal-iva-credito'"

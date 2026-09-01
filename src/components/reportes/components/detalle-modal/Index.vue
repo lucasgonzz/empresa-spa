@@ -83,7 +83,7 @@ export default {
 				{key: 'acciones', label: ''},
 			]
 		},
-		/* Nombres legibles de la whitelist de 13 conceptos que acepta api/reportes/detalle */
+		/* Nombres legibles de la whitelist de 14 conceptos que acepta api/reportes/detalle */
 		etiquetas_concepto() {
 			return {
 				ventas_brutas: 'Ventas brutas',
@@ -91,6 +91,7 @@ export default {
 				costo_mercaderia_vendida: 'Costo de mercadería vendida',
 				gastos: 'Gastos',
 				iva_debito: 'IVA débito',
+				iva_notas_credito: 'IVA de notas de crédito emitidas',
 				iva_credito: 'IVA crédito',
 				percepciones_iva: 'Percepciones de IVA',
 				percepciones_iibb: 'Percepciones de IIBB',
