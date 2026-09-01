@@ -103,9 +103,26 @@ test.describe('Estado vacío de las tablas', () => {
 	})
 
 	test.afterAll(async () => {
-		if (page) {
-			await page.close()
+		if (!page) {
+			return
 		}
+
+		// 🔴 Se limpia la busqueda antes de cerrar. El listado la RECUERDA --no vive en la pagina,
+		//    la restaura el sistema al entrar-- y sobrevive a la corrida: sin esto, el proximo spec
+		//    que abra el listado de articulos se lo encuentra vacio y falla diciendo que no hay
+		//    filas. Le paso a circuito-listado el 1/9/2026, y es la misma regla que ya estaba
+		//    escrita en el README: el que ensucia limpia.
+		try {
+			const reiniciar = page.locator('[data-testid="btn-reiniciar-filtros"]')
+
+			if (await reiniciar.count() > 0) {
+				await reiniciar.click()
+			}
+		} catch (error) {
+			console.log('[estado-vacio] no se pudo limpiar la busqueda del listado: ' + error.message)
+		}
+
+		await page.close()
 	})
 
 	/**

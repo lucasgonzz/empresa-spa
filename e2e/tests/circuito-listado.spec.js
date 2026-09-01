@@ -65,6 +65,17 @@ const contexto = {
 async function abrir_listado(page) {
 	await page.goto('/listado-de-articulos')
 	await esperar_recursos_descargados(page, { abrir_panel: false })
+
+	// 🔴 Se limpia lo que haya quedado de una corrida anterior. El listado recuerda el ultimo filtro
+	//    Y la ultima busqueda del buscador general, entre specs y entre corridas: si el anterior
+	//    dejo una busqueda sin resultados --estado-vacio-centrado la usa a proposito para provocar
+	//    el estado vacio-- este spec arranca con la grilla en cero y falla diciendo que no hay
+	//    filas, sin que haya nada roto.
+	const reiniciar = page.locator('[data-testid="btn-reiniciar-filtros"]')
+
+	if (await reiniciar.count() > 0) {
+		await reiniciar.click()
+	}
 	// La primera celda es la señal de que la grilla ya trajo datos: hasta entonces no hay ninguna
 	// fila y cualquier conteo daria cero.
 	await expect(page.locator('[data-testid^="celda-article-name-"]').first()).toBeVisible()
