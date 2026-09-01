@@ -522,6 +522,10 @@ export default {
 				// undefined y la linea se pinta en $0. Es la causa del bug de precios en 0 de San Cayetano.
 				item.final_price = article.final_price
 				item.final_price_blanco = article.final_price_blanco
+				// Sin esto, si el back tiene que recalcular el costo desde cero (pivot de origen sin
+				// costo guardado), no tiene por cuanto dividirlo y guarda el costo del bulto entero
+				// como si fuera el de la unidad individual (venta con ganancia negativa).
+				item.unidades_individuales = article.unidades_individuales
 				item.amount = Number(article.pivot.amount)
 				item.article_variant_id = Number(article.pivot.article_variant_id)
 				// Se conserva iva_id para recalcular precio segun iva_aplicado al editar.
