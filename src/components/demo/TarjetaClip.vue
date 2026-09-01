@@ -312,9 +312,15 @@ export default {
 		 * Dos reglas, y las dos son sobre el dato que ve el admin, no sobre el rendimiento:
 		 *
 		 * 🔴 **Solo hacia arriba.** Si el lead retrocede el video no se reporta nada hasta superar
-		 * el máximo que ya se había reportado. Sin esto, alguien que mira el 80% y vuelve atrás
-		 * para repasar el minuto 2 le manda al admin un 20% que se lee como "vio menos de lo que
-		 * vio" — y el admin se queda con el último, no con el mejor.
+		 * el máximo que ya se había reportado: alguien que mira el 80% y vuelve atrás a repasar el
+		 * minuto 2 no tiene por qué generar una fila que diga 20%.
+		 *
+		 * ⚠️ Es una regla de RUIDO, no de corrección, y conviene no confundirlas. Las dos puntas
+		 * que leen esto se quedan con el MÁXIMO, no con el último —`DemoPlanController::porcentaje_de()`
+		 * y `LeadController::detalle_de_recorrido_por_clip()`—, así que el dato que ve Tomás sale
+		 * bien igual. Lo que esta regla evita son las filas de más. (Una versión anterior de este
+		 * comentario decía que el admin se quedaba con el último: era falso, y lo encontró el
+		 * revisor de merge del 1/9/2026 yendo a leer los dos backends.)
 		 *
 		 * 🔴 **El 100% no se emite nunca.** Eso ya lo dice `clip.terminado`, que además es el que
 		 * mueve el hito del roadmap. Emitir los dos duplica la fila sin agregar información.

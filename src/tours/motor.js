@@ -1539,6 +1539,9 @@ function custodiar_menu_abierto(elemento) {
 
 	const contenedor = menu.closest('.dropdown, .btn-group')
 
+	/* Si nunca hizo falta reponer nada, al soltar no hay que deshacer nada. Ver `disconnect()`. */
+	let repuso = false
+
 	function reponer() {
 		if (!corrida || !recorrido) {
 			return
@@ -1546,10 +1549,12 @@ function custodiar_menu_abierto(elemento) {
 
 		if (!menu.classList.contains('show')) {
 			menu.classList.add('show')
+			repuso = true
 		}
 
 		if (contenedor && !contenedor.classList.contains('show')) {
 			contenedor.classList.add('show')
+			repuso = true
 		}
 	}
 
@@ -1565,7 +1570,36 @@ function custodiar_menu_abierto(elemento) {
 	 * llegó acá, el observador no vería ningún cambio y el paso quedaría igual de roto. */
 	reponer()
 
-	return custodio
+	/**
+	 * 🔴 Al soltar hay que DESHACER lo repuesto, no sólo dejar de observar.
+	 *
+	 * BootstrapVue lleva su propio `visible` en el componente: cuando cierra el desplegable lo pone
+	 * en `false` y saca la clase. Si el custodio se la repuso y después soltamos sin sacarla, el
+	 * DOM dice "abierto" y el componente dice "cerrado" — y el primer clic del lead en el toggle no
+	 * hace nada visible, porque BootstrapVue cree que lo está abriendo cuando ya se ve abierto.
+	 * Se arregla solo en cuanto Vue re-renderiza, pero mientras tanto es un botón que no responde,
+	 * que es exactamente el síntoma que costó la misión del 31/8/2026.
+	 *
+	 * Lo encontró el revisor de merge del 1/9/2026.
+	 *
+	 * Se devuelve un objeto con la misma firma que un MutationObserver para que el llamador no
+	 * tenga que distinguir entre los dos custodios.
+	 */
+	return {
+		disconnect: function () {
+			custodio.disconnect()
+
+			if (!repuso) {
+				return
+			}
+
+			menu.classList.remove('show')
+
+			if (contenedor) {
+				contenedor.classList.remove('show')
+			}
+		},
+	}
 }
 
 function custodiar_clase_activa(elemento) {
