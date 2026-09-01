@@ -785,6 +785,22 @@ export default {
 				return
 			}
 
+			/**
+			 * 🔴 Se exigen las DOS cosas, y no alcanza con `motivo`.
+			 *
+			 * "Probado" se lee en tres lugares: acá (el botón verde, en memoria), el plan de
+			 * `empresa-api` (que es lo que sobrevive al F5) y el panel del admin. Los tres tienen
+			 * que contestar lo mismo, y los otros dos leen `datos.completo` del evento
+			 * `tour.completado`. Mirando sólo el motivo, un tour de 12 pasos que mostró 4 salteando
+			 * de a dos —nunca llega al tope de salteos seguidos, así que cierra `'listo'`— pintaba
+			 * el botón verde acá, y el admin lo mostraba como "Tour 33%". Peor: al primer F5 el
+			 * plan devolvía `probado: false` y el verde desaparecía solo, sin que el lead hubiera
+			 * hecho nada.
+			 */
+			if (resultado.completo !== true) {
+				return
+			}
+
 			if (resultado.clip_id && resultado.clip_id !== clip.id) {
 				return
 			}

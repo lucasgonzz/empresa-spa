@@ -257,8 +257,14 @@ export default {
 				 * porque `article.js` no declara `save_if_not_exist: false` para el proveedor).
 				 * Decirlo saca la duda de "qué escribo": cualquier nombre sirve.
 				 */
+				/* 🔴 "Puede existir o no" va primero y no al final, y eso es lo que Lucas pidió
+				 * textual el 1/9/2026: *"la idea es que el usuario sepa que tiene que escribir el
+				 * nombre de un proveedor que aún no exista, para que no se ponga nervioso y no
+				 * piense en qué debe escribir"*. La versión anterior decía "un proveedor tuyo", que
+				 * empuja justo para el otro lado: sugiere que hay que acertarle a uno que ya está
+				 * cargado, que es exactamente la duda que este texto tiene que sacar. */
 				selector: BUSCADOR_PROVEEDOR,
-				texto: 'Escribí el nombre de un proveedor tuyo y dale Enter. Si no aparece en la lista, dale Enter otra vez y se crea en el momento. Después elegilo.',
+				texto: 'Escribí el nombre de un proveedor —puede existir o no, cualquiera sirve— y dale Enter. Si aparece en la lista, elegilo. Si no aparece, dale Enter otra vez y se crea en el momento.',
 				avanza: 'desaparece',
 				/* `foco: true` porque el foco automático se limita a los pasos que avanzan por carga
 				 * y este avanza por desaparición: acá hay que escribir, así que se pide explícito.

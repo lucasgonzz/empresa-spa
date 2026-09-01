@@ -1004,8 +1004,21 @@ function mostrar_paso(i) {
 		 *
 		 * El criterio es que se haya mostrado más de la mitad de los pasos. `salteados` viaja igual
 		 * en el evento, así que del lado del admin se puede afinar sin tocar esto.
+		 *
+		 * 🔴 Y desde el 1/9/2026 exige ADEMÁS no haberse cortado por salteos, que es lo que hace
+		 * que "probado" quiera decir lo mismo en los tres lugares donde se lee.
+		 *
+		 * Sin esa mitad, un tour que mostró 8 de 10 pasos y después se cortó por
+		 * `TOPE_SALTEOS_SEGUIDOS` salía con `completo: true` y `motivo: 'cortado'`: el lead veía el
+		 * aviso de que el tour se perdió y ningún check, el admin lo marcaba "Probado" al 100%, y
+		 * al primer F5 el botón se pintaba verde retroactivamente porque el plan lee `completo`.
+		 * Tres cuentas distintas sobre la misma corrida. No explota nunca —por eso hay que buscarlo
+		 * a propósito—, simplemente el lead ve una cosa y Tomás ve otra.
+		 *
+		 * Ahora `completo` implica `!corto_por_salteos`, que es justo lo que separa `'listo'` de
+		 * `'cortado'` unos renglones más abajo. Las dos cuentas quedan encajadas por construcción.
 		 */
-		corrida.completo = corrida.mostrados > corrida.pasos.length / 2
+		corrida.completo = !corrida.corto_por_salteos && corrida.mostrados > corrida.pasos.length / 2
 
 		/**
 		 * 🔴 Un tour que no llegó a mostrar UN SOLO paso no puede terminar en silencio, y tampoco
@@ -1840,14 +1853,50 @@ function enganchar_avance_por_desaparicion(paso, i) {
  * @param {Element|null} elemento Nodo resaltado.
  * @returns {Element|null}
  */
+/**
+ * El primer campo de carga que esté A LA VISTA adentro del elemento.
+ *
+ * Ver el porqué en `campo_de_carga()`, que es su único llamador.
+ *
+ * @param {Element} elemento
+ * @returns {Element|null}
+ */
+function primer_campo_visible(elemento) {
+	const candidatos = elemento.querySelectorAll('input:not([type=checkbox]):not([type=radio]), textarea, select')
+
+	for (let i = 0; i < candidatos.length; i++) {
+		if (se_puede_senalar(candidatos[i])) {
+			return candidatos[i]
+		}
+	}
+
+	return null
+}
+
 function campo_de_carga(elemento) {
 	if (!elemento) {
 		return null
 	}
 
+	/**
+	 * 🔴 Se recorren TODOS los campos y se descarta el que no se ve, en vez de quedarse con el
+	 * primero del árbol.
+	 *
+	 * Con `querySelector` a secas, un paso que ancla un modal se quedaba con el primer input del
+	 * DOM adentro de ese modal — y en el buscador de artículos ese primero es el campo OCULTO
+	 * "Filtrar propiedades…" de `buscador-general/PropertiesDropdown.vue`, que vive dentro de un
+	 * menú cerrado y aparece antes en el orden del documento. Dos consecuencias, las dos calladas:
+	 * el avance por carga se quedaba esperando un `change` que ese campo no iba a disparar nunca
+	 * (paso 4 del clip 2.1, colgado sin que nadie lo viera), y el foco automático del paso se lo
+	 * llevaba un campo que el lead no tiene delante.
+	 *
+	 * `se_puede_senalar()` es el mismo criterio que ya usa `buscar_visible()` para elegir entre
+	 * ramas `v-if`/`v-else` que conviven un instante: si sirve para decidir qué se resalta, sirve
+	 * para decidir dónde se escribe.
+	 */
 	const candidato = elemento.matches('input, textarea, select')
 		? elemento
-		: elemento.querySelector('input:not([type=checkbox]):not([type=radio]), textarea, select')
+		: primer_campo_visible(elemento)
 
 	if (!candidato) {
 		return null

@@ -154,6 +154,12 @@ export default {
 				ancla: 'vender.modal_buscador_articulos',
 				texto: 'Escribí parte del nombre y dale Enter. Mirá la grilla antes de elegir: ahí tenés el stock y el precio de cada uno.',
 				avanza: 'desaparece',
+				/* `foco: true` por lo mismo que su gemelo del clip 1.1: el foco automático se limita
+				 * a los pasos que avanzan por carga y este avanza por desaparición, así que hay que
+				 * pedirlo explícito. Acá pesa más todavía, porque los 700 ms de espera hacen que el
+				 * cartel aparezca bastante después de que el modal se enfocó solo, y driver.js se
+				 * lleva el foco al botón de la viñeta en cada render. */
+				foco: true,
 				espera_ms: 700,
 			},
 			{
