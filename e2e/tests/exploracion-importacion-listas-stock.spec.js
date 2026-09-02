@@ -166,6 +166,18 @@ async function mapear_columna(page, encabezado, label) {
 		.locator('.ai-import-mapping-block')
 		.filter({ has: page.locator('.ai-import-mapping-excel-header', { hasText: new RegExp('^\\s*' + encabezado.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*$') }) })
 
+	// 🔴 Si falla, decir QUÉ encabezados llegaron: el paso 2 lo arma Claude y no es determinista
+	// (ver el comentario completo en exploracion-importacion-codigos.spec.js — costó una corrida).
+	if (await bloque.count() === 0) {
+		const disponibles = await page.locator('.ai-import-mapping-excel-header').allInnerTexts()
+		expect(
+			false,
+			`no encontré la columna "${encabezado}" en el mapeo del paso 2. `
+			+ `Las que devolvió el análisis: ${JSON.stringify(disponibles.map(t => t.trim()))}. `
+			+ 'Si el Excel sí la tiene, es la variabilidad del análisis con IA: volvé a correr.'
+		).toBeTruthy()
+	}
+
 	await expect(bloque, `no encontré la columna "${encabezado}" en el mapeo del paso 2`).toHaveCount(1)
 	await bloque.locator('select').selectOption({ label })
 }

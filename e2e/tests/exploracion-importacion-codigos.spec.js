@@ -11,12 +11,11 @@
 //     artículo con los datos de la última aparición, y la sobrescritura queda reportada.
 //  2. Un bar_code que ya existe en DOS artículos de la base (data heredada sucia) hace que la
 //     fila se SALTEE con un conflicto ambiguo: no se toca ninguno de los dos.
-//  3. Las políticas de códigos de proveedor: 'productos_distintos' + 'crear_nuevo' crea uno POR
-//     FILA aunque el código exista; 'actualizar_todos' actualiza TODOS los que comparten el
-//     código; 'saltear_y_reportar' no toca nada y deja el conflicto. Y un DEFECTO ABIERTO que
-//     este archivo fija (test 4a): 'ultima_gana' + 'actualizar_todos' NO fusiona las filas
-//     repetidas del archivo — crea una por fila, contra la promesa textual de la UI (la causa
-//     y la línea están en el comentario del test).
+//  3. Las políticas de códigos de proveedor: 'ultima_gana' + 'actualizar_todos' fusiona las
+//     filas repetidas del archivo en un artículo (test 4a — nació fijando el defecto del 2/9/2026
+//     y se invirtió el mismo día, cuando se arregló); 'productos_distintos' + 'crear_nuevo' crea
+//     uno POR FILA aunque el código exista; 'actualizar_todos' actualiza TODOS los que comparten
+//     el código; 'saltear_y_reportar' no toca nada y deja el conflicto.
 //
 // ── De qué fixture depende ───────────────────────────────────────────────────────────────────
 //
@@ -101,6 +100,21 @@ async function mapear_columna(page, encabezado, label) {
 	const bloque = page
 		.locator('.ai-import-mapping-block')
 		.filter({ has: page.locator('.ai-import-mapping-excel-header', { hasText: new RegExp('^\\s*' + encabezado.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*$') }) })
+
+	// 🔴 Cuando esto falla, el mensaje tiene que decir QUÉ encabezados sí llegaron. El paso 2 lo
+	// arma Claude y no es determinista: una corrida puede devolver el mapeo sin una columna que
+	// la anterior sí trajo, y entonces el rojo dice "no encontré la columna Nombre" sobre un
+	// Excel que la tiene en la primera celda — manda a buscar el problema al fixture, que está
+	// perfecto. Pasó el 2/9/2026 y costó una corrida de 8 minutos diagnosticarlo.
+	if (await bloque.count() === 0) {
+		const disponibles = await page.locator('.ai-import-mapping-excel-header').allInnerTexts()
+		expect(
+			false,
+			`no encontré la columna "${encabezado}" en el mapeo del paso 2. `
+			+ `Las que devolvió el análisis: ${JSON.stringify(disponibles.map(t => t.trim()))}. `
+			+ 'Si el Excel sí la tiene, es la variabilidad del análisis con IA: volvé a correr.'
+		).toBeTruthy()
+	}
 
 	await expect(bloque, `no encontré la columna "${encabezado}" en el mapeo del paso 2`).toHaveCount(1)
 	await bloque.locator('select').selectOption({ label })
@@ -349,29 +363,24 @@ test.describe.serial('Exploración: importación de Excel — códigos repetidos
 		expect(costos_heredados[costos_heredados.length - 1], 'P15: Heredado Dos sigue en 222').toBeCloseTo(222, 2)
 	})
 
-	test('4a: DEFECTO ABIERTO — "última gana" + "actualizar todos" NO fusiona y crea DOS', async () => {
+	test('4a: "última gana" + "actualizar todos" fusiona en UN artículo, con los datos de la última', async () => {
 		test.setTimeout(600000)
 
-		// 🔴 Este test FIJA un defecto encontrado por la exploración del 2/9/2026, no el
-		// comportamiento deseado. La UI promete, al elegir "Es el mismo producto, cargado más de
-		// una vez": *"Se va a conservar la información de la última aparición de cada código"* —
-		// y acá las dos filas del mismo código crean DOS artículos igual.
+		// Este test nació el 2/9/2026 fijando un DEFECTO (dos filas del mismo código creaban dos
+		// artículos, contra la promesa textual de la pantalla) y se invirtió el mismo día, cuando
+		// la misión `fix-ultima-gana-con-actualizar-todos` lo arregló. Ahora afirma lo correcto.
 		//
-		// La causa, con línea: la política de colisión 'actualizar_todos' viaja como
+		// Qué pasaba: la política de colisión 'actualizar_todos' viaja como
 		// permitir_provider_code_repetido=1 (derive_flags_from_choice, ai-excel-import/Index.vue
-		// ~4195), y ProcessRow::esta_repetido() (empresa-api, línea ~2663) SALTEA el escalón
-		// provider_code de la detección intra-archivo cuando ese flag está prendido — quedó
-		// colgado del flag VIEJO en vez de mirar `filas_repetidas_del_archivo`, que es el que el
-		// paso 3 nuevo manda para exactamente esta decisión. Con nombres distintos, la cadena cae
-		// al escalón name, no matchea, y no hay merge: matching_counts_json del history queda con
-		// creado_nuevo=2 y merge_fila_repetida=0 (la detección nunca corrió).
+		// ~4195), y ProcessRow::esta_repetido() apagaba con ese flag su escalón provider_code —
+		// que decide sobre el ARCHIVO, no sobre la base. La detección intra-archivo nunca corría
+		// (matching_counts_json: creado_nuevo=2, merge_fila_repetida=0).
 		//
-		// La suite de la API (RepetidosEnElArchivoTest) prueba 'ultima_gana' SOLO con
-		// permitir_provider_code_repetido=0: esta combinación era inexpresable con los checkboxes
-		// viejos y el flujo nuevo la volvió elegible sin que el backend la soporte.
-		//
-		// EL DÍA QUE SE CORRIJA: este test se pone rojo; cambiar el 2 por 1 (un solo creado, con
-		// costo 120, el de la última fila) y actualizar la cadena 4b/4c/4d que arranca de acá.
+		// 🔴 Lo que este test custodia hoy es la INTERACCIÓN de las dos preguntas del paso 3, que
+		// es lo que ningún test de la API puede ver: que la SPA siga mandando las dos por separado.
+		// Si alguien vuelve a colapsarlas en un solo flag (o si derive_flags_from_choice deja de
+		// mandar `filas_repetidas_del_archivo`), acá vuelve a dar 2 y el rojo aparece del lado
+		// correcto. El backend lo custodia RepetidosConPermitirRepetidoTest (empresa-api).
 		await page.goto('/listado-de-articulos')
 		await esperar_recursos_descargados(page, { abrir_panel: false })
 
@@ -386,11 +395,8 @@ test.describe.serial('Exploración: importación de Excel — códigos repetidos
 		const history = await esperar_ultima_importacion(page, id_previo)
 		const modelos = await creados_de_la_importacion(page, history.id)
 
-		expect(modelos.length, 'comportamiento ACTUAL (defecto): dos filas del mismo código crean DOS artículos').toBe(2)
-
-		const costos = modelos.map(m => Number(m.cost)).sort((a, b) => a - b)
-		expect(costos[0], 'cada fila creó el suyo: la primera con 100').toBeCloseTo(100, 2)
-		expect(costos[1], 'y la segunda con 120').toBeCloseTo(120, 2)
+		expect(modelos.length, '"Es el mismo producto" tiene que fusionar las dos filas en UN artículo').toBe(1)
+		expect(Number(modelos[0].cost), 'y quedarse con los datos de la ÚLTIMA aparición').toBeCloseTo(120, 2)
 
 		contexto.pc_rep_ids = modelos.map(m => Number(m.id))
 	})
@@ -417,8 +423,8 @@ test.describe.serial('Exploración: importación de Excel — códigos repetidos
 		for (const m of modelos) {
 			contexto.pc_rep_ids.push(Number(m.id))
 		}
-		// 2 del defecto de 4a + 2 de esta corrida (cuando se corrija 4a, esto vuelve a 3).
-		expect(contexto.pc_rep_ids.length, 'a esta altura hay 4 artículos con el código repetido').toBe(4)
+		// 1 que fusionó 4a + 2 de esta corrida.
+		expect(contexto.pc_rep_ids.length, 'a esta altura hay 3 artículos con el código repetido').toBe(3)
 	})
 
 	test('4c: "actualizar todos" pisa el costo de TODOS los que comparten el código', async () => {

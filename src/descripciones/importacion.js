@@ -69,10 +69,11 @@ export default {
 		titulo: 'Filas repetidas dentro del archivo',
 		que_hace: 'Decide qué son las filas que comparten código de proveedor en este mismo Excel.',
 		repercute: [
-			'"El mismo producto": las filas repetidas se tratan como una sola y el detalle de qué fila pisó a cuál se reporta al final.',
+			'"El mismo producto": queda la información de la última aparición de cada código, y el detalle de qué fila pisó a cuál se reporta al terminar.',
 			'"Productos distintos": cada fila crea su propio artículo aunque compartan el código.',
+			'Es una decisión sobre ESTE archivo y es independiente de lo que se elija para los códigos que ya existen en el sistema: las dos preguntas se responden por separado.',
 		],
-		nota_interna: 'Viaja como filas_repetidas_del_archivo = ultima_gana | productos_distintos. Solo gobierna el escalón provider_code: un código de barras repetido en el archivo se mergea SIEMPRE con última-gana. 🔴 DEFECTO ABIERTO (2/9/2026, exploración de importación): con la política de colisión "Actualizar todos" (permitir_provider_code_repetido=1), ProcessRow::esta_repetido() (~línea 2663) saltea la detección intra-archivo por provider_code —quedó colgada del flag viejo— y "última gana" NO fusiona: cada fila crea su artículo. Fijado en exploracion-importacion-codigos.spec.js (test 4a); cuando se corrija, actualizar también este texto a la promesa completa ("queda la información de la última aparición").',
+		nota_interna: 'Viaja como filas_repetidas_del_archivo = ultima_gana | productos_distintos. Solo gobierna el escalón provider_code: un código de barras repetido en el archivo se mergea SIEMPRE con última-gana. Hasta el 2/9/2026 esta elección quedaba ANULADA si además se elegía "Actualizar todos" (permitir_provider_code_repetido=1): ProcessRow::esta_repetido() apagaba con ese flag su escalón provider_code, que decide sobre el archivo y no sobre la base, y no fusionaba nada. Arreglado ese día (misión fix-ultima-gana-con-actualizar-todos); lo custodian RepetidosConPermitirRepetidoTest en empresa-api y el test 4a de exploracion-importacion-codigos.spec.js.',
 	},
 
 	'ai-import-politica-colision-*': {
