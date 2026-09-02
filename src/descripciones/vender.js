@@ -199,17 +199,19 @@ export default {
 			'Cada renglón marca si su precio subió, bajó o quedó igual desde que se vendió.',
 			'El precio nuevo que propone es el precio actual del artículo, y se puede corregir a mano antes de confirmar.',
 		],
-		nota_interna: 'Defecto abierto (exploracion 1/9/2026, reportado): confirmar cambia el precio de los renglones pero NO recalcula sales.total ni la deuda de cuenta corriente, que quedan con el valor previo (updateItemsPrices no toca el total y updateCurrentAcountsAndCommissions recrea el movimiento leyendo ese total viejo). Lo fija tests/Feature/Sales/16_..._Test.php::actualizar_precios_de_la_venta_hoy_no_recalcula_el_total_ni_la_deuda. No contarselo al operador hasta que Lucas decida.',
+		nota_interna: 'Flujo de DOS pasos, aclarado por Lucas el 2/9/2026: confirmar el modal escribe los precios de los renglones y carga la venta en Vender; el total y la cuenta corriente se recalculan recien al guardar en Vender. Ventana reportada: el paso 1 PERSISTE, asi que abandonar en Vender sin guardar deja la venta con renglones nuevos y total/deuda viejos. Lo fija tests/Feature/Sales/16_..._Test.php::actualizar_precios_de_la_venta_persiste_renglones_sin_recalcular_total_ni_deuda.',
 	},
 
 	'btn-confirmar-actualizar-precios': {
 		titulo: 'Confirmar los precios nuevos',
-		que_hace: 'Aplica a la venta los precios que quedaron cargados en la tabla.',
+		que_hace: 'Escribe en la venta los precios cargados en la tabla y la abre en Vender para el guardado final.',
 		repercute: [
-			'Cada renglón queda con su precio nuevo, y ese pasa a ser el precio de la venta de ahí en adelante.',
+			'Cada renglón queda con su precio nuevo desde este momento.',
+			'El total de la venta y la cuenta corriente del cliente se actualizan recién al apretar Guardar en Vender: ese guardado es el que cierra el cambio.',
 			'El stock no se mueve: esto cambia precios, no cantidades.',
 		],
-		nota_interna: 'Ver la nota de btn-abrir-actualizar-precios: el total y la deuda hoy NO siguen a los precios nuevos. Medido el 1/9/2026.',
+		requiere: 'Completar el guardado en Vender. Si se cierra Vender sin guardar, los renglones ya quedaron con el precio nuevo pero el total y la deuda del cliente siguen siendo los de antes.',
+		nota_interna: 'Ver la nota de btn-abrir-actualizar-precios. El requiere describe la ventana medida el 1/9/2026 y confirmada como diseno de dos pasos por Lucas el 2/9.',
 	},
 
 	'btn-registrar-pago': {
@@ -228,6 +230,6 @@ export default {
 			'Tildado, la caja vuelve al saldo que tenía antes de la venta.',
 			'Sin tildar, el stock vuelve igual pero la plata QUEDA en la caja. Es la opción correcta solo si esa plata ya se justificó por otro lado.',
 		],
-		nota_interna: 'Defecto abierto (exploracion 1/9/2026, reportado): si un renglon de la venta es de un articulo con stock GLOBAL (sin depositos cargados, como los que nacen del alta rapida de Vender), borrar la venta le PISA el stock con solo lo repuesto -- de 19 unidades puede quedar 1. La reposicion entra por deposito (CheckToAddress attachea la sucursal de la venta) y el stock global se recalcula desde los depositos. Lo fija tests/Feature/Sales/16_..._Test.php::borrar_la_venta_de_un_articulo_con_stock_global_pisa_el_stock. NO contarselo al operador hasta que Lucas decida: mientras tanto, ese test se pone rojo el dia que se corrija.',
+		nota_interna: 'Defecto abierto (exploracion 1/9/2026, reportado): si un renglon de la venta es de un articulo con stock GLOBAL (sin depositos cargados), borrar la venta le PISA el stock con solo lo repuesto -- de 19 unidades puede quedar 1. La reposicion entra por deposito (CheckToAddress attachea la sucursal de la venta) y el stock global se recalcula desde los depositos. El estado se alcanza por interfaz (verificado 2/9/2026): alta rapida desde Vender + ingreso manual de stock sin elegir deposito en el modal del listado -- que ademas reconoce el estado y pide "dividir el stock global" cuando ya existe. Lo fija tests/Feature/Sales/16_..._Test.php::borrar_la_venta_de_un_articulo_con_stock_global_pisa_el_stock. NO contarselo al operador hasta que Lucas decida: ese test se pone rojo el dia que se corrija.',
 	},
 }
