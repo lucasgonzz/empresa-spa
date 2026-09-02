@@ -185,9 +185,31 @@ export default {
 		titulo: 'Actualizar la venta',
 		que_hace: 'Guarda los cambios de una venta ya confirmada.',
 		repercute: [
-			'Recalcula el total y ajusta el stock por la diferencia de cada renglón.',
+			'Recalcula el total y ajusta el stock por la diferencia de cada renglón: subir una cantidad descuenta solo lo que se agregó, bajarla devuelve la diferencia, y quitar un renglón devuelve todas sus unidades.',
+			'Los renglones que no se tocan conservan el precio con el que se vendieron, aunque el precio del artículo haya cambiado desde entonces: editar la venta no le cambia la plata a lo ya vendido.',
 			'Rehace el movimiento de cuenta corriente de esta venta: el movimiento viejo se reemplaza por uno nuevo.',
 		],
+		nota_interna: 'El ajuste por diferencia y el precio congelado estan medidos por tests/Feature/Sales/16_Actualizar_venta_stock_y_precio_congelado_Test.php (exploracion 1/9/2026).',
+	},
+
+	'btn-abrir-actualizar-precios': {
+		titulo: 'Actualizar precios de la venta',
+		que_hace: 'Abre la comparación entre el precio con el que se vendió cada renglón y el precio actual del artículo, para traer la venta a los precios de hoy.',
+		repercute: [
+			'Cada renglón marca si su precio subió, bajó o quedó igual desde que se vendió.',
+			'El precio nuevo que propone es el precio actual del artículo, y se puede corregir a mano antes de confirmar.',
+		],
+		nota_interna: 'Defecto abierto (exploracion 1/9/2026, reportado): confirmar cambia el precio de los renglones pero NO recalcula sales.total ni la deuda de cuenta corriente, que quedan con el valor previo (updateItemsPrices no toca el total y updateCurrentAcountsAndCommissions recrea el movimiento leyendo ese total viejo). Lo fija tests/Feature/Sales/16_..._Test.php::actualizar_precios_de_la_venta_hoy_no_recalcula_el_total_ni_la_deuda. No contarselo al operador hasta que Lucas decida.',
+	},
+
+	'btn-confirmar-actualizar-precios': {
+		titulo: 'Confirmar los precios nuevos',
+		que_hace: 'Aplica a la venta los precios que quedaron cargados en la tabla.',
+		repercute: [
+			'Cada renglón queda con su precio nuevo, y ese pasa a ser el precio de la venta de ahí en adelante.',
+			'El stock no se mueve: esto cambia precios, no cantidades.',
+		],
+		nota_interna: 'Ver la nota de btn-abrir-actualizar-precios: el total y la deuda hoy NO siguen a los precios nuevos. Medido el 1/9/2026.',
 	},
 
 	'btn-registrar-pago': {
@@ -206,5 +228,6 @@ export default {
 			'Tildado, la caja vuelve al saldo que tenía antes de la venta.',
 			'Sin tildar, el stock vuelve igual pero la plata QUEDA en la caja. Es la opción correcta solo si esa plata ya se justificó por otro lado.',
 		],
+		nota_interna: 'Defecto abierto (exploracion 1/9/2026, reportado): si un renglon de la venta es de un articulo con stock GLOBAL (sin depositos cargados, como los que nacen del alta rapida de Vender), borrar la venta le PISA el stock con solo lo repuesto -- de 19 unidades puede quedar 1. La reposicion entra por deposito (CheckToAddress attachea la sucursal de la venta) y el stock global se recalcula desde los depositos. Lo fija tests/Feature/Sales/16_..._Test.php::borrar_la_venta_de_un_articulo_con_stock_global_pisa_el_stock. NO contarselo al operador hasta que Lucas decida: mientras tanto, ese test se pone rojo el dia que se corrija.',
 	},
 }
