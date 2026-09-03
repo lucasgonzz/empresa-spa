@@ -137,14 +137,16 @@ export default {
 	},
 	methods: {
 		/**
-		 * Si el usuario vuelve de un OAuth de integraciones y NO cayo en la pantalla de
-		 * Integraciones, lo manda ahi con la query intacta. El aviso de exito o error, y la
+		 * Si el usuario vuelve de un OAuth de integraciones y NO cayo exactamente en la solapa
+		 * Tienda online, lo manda ahi con la query intacta. El aviso de exito o error, y la
 		 * limpieza del query param, los hace esa pantalla
 		 * (components/abm/integraciones/TiendaOnline.vue), que es la que muestra el estado.
 		 *
 		 * Hace falta porque la URL de retorno la decide el backend por .env
-		 * (MP_OAUTH_SPA_REDIRECT_URL / ZIPPIN_OAUTH_SPA_REDIRECT_URL) y puede quedar apuntando
-		 * a una URL vieja en un cliente que todavia no actualizo esa variable.
+		 * (MP_OAUTH_SPA_REDIRECT_URL / ZIPPIN_OAUTH_SPA_REDIRECT_URL) y en un cliente que no
+		 * actualizo esa variable puede quedar apuntando a cualquier lado. Sin ir mas lejos, el
+		 * .env de s1 todavia dice http://empresa.local:8080/integraciones, que no es ni una ruta
+		 * del router.
 		 *
 		 * @returns {void}
 		 */
@@ -157,20 +159,50 @@ export default {
 				return
 			}
 
-			// Ya esta parado en Integraciones: esa pantalla se encarga del resto.
-			if (this.$route.name == 'abm' && this.$route.params.view == 'integraciones') {
+			// Ya esta parado en la pantalla que atiende el retorno: se encarga ella.
+			if (this.estaEnIntegracionesTiendaOnline()) {
 				return
 			}
 
-			this.$router.push({
+			// La query viaja tal cual: el ?mp / ?zippin lo lee y lo limpia la pantalla destino.
+			this.$router.push(this.rutaIntegraciones(this.$route.query)).catch(() => {})
+		},
+		/**
+		 * True solo si la ruta actual ES la solapa de integraciones de tienda online, que es la
+		 * unica pantalla que atiende el retorno del OAuth.
+		 *
+		 * 🔴 Mira `sub_view` y no solo `view`, y eso NO esta de mas. Con /abm/integraciones a
+		 * secas --que es a donde apunta el redirect por defecto del backend-- Abm.vue abre la
+		 * PRIMERA solapa de la view, que es Sistema: TiendaOnline.vue no se monta, no sale ni el
+		 * aviso de exito ni el de error, y el ?mp=ok queda pegado en la URL para siempre. O sea
+		 * que el comercio conecta Mercado Pago y la pantalla no le dice nada.
+		 *
+		 * @returns {Boolean}
+		 */
+		estaEnIntegracionesTiendaOnline() {
+			return this.$route.name == 'abm'
+				&& this.$route.params.view == 'integraciones'
+				&& this.$route.params.sub_view == 'tienda-online'
+		},
+		/**
+		 * Destino de la pantalla de integraciones de tienda online.
+		 *
+		 * Sale de un solo lugar a proposito: la guarda de arriba y los dos caminos que llevan
+		 * ahi tienen que hablar de LA MISMA pantalla. Cuando cada uno se la escribia por su
+		 * cuenta, uno quedo corto --sin sub_view-- y ese fue justamente el defecto.
+		 *
+		 * @param {Object|undefined} query Query params a conservar en el destino.
+		 * @returns {Object} Location para $router.push.
+		 */
+		rutaIntegraciones(query) {
+			return {
 				name: 'abm',
 				params: {
 					view: 'integraciones',
 					sub_view: 'tienda-online',
 				},
-				// La query viaja tal cual: el ?mp / ?zippin lo lee y lo limpia la pantalla destino.
-				query: this.$route.query,
-			}).catch(() => {})
+				query: query ? query : {},
+			}
 		},
 		/**
 		 * Lleva al usuario a ABM -> Integraciones -> Tienda online, cerrando antes el modal de
@@ -180,13 +212,7 @@ export default {
 		 */
 		irAIntegraciones() {
 			this.$bvModal.hide('online_configuration')
-			this.$router.push({
-				name: 'abm',
-				params: {
-					view: 'integraciones',
-					sub_view: 'tienda-online',
-				},
-			}).catch(() => {})
+			this.$router.push(this.rutaIntegraciones()).catch(() => {})
 		},
 	},
 }
