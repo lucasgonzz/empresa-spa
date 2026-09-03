@@ -2,17 +2,27 @@ import online from '@/mixins/online'
 export default {
     mixins: [online],
 	computed: {
-        articles_stock_minimo() {
+        /**
+         * Cantidad de alertas de stock minimo para los badges (pestaña de Alertas y campana
+         * del menu).
+         *
+         * 🔴 Lee el CONTADOR del reporte (`stock_minimo`) y no la relacion
+         * `articles_stock_minimo`: el endpoint `inventory-performance` dejo de mandar esa
+         * relacion cuando se pagino aparte (hay cuentas con decenas de miles de articulos bajo
+         * el minimo y viajaban enteros en cada login). Este computed siguio apuntando al campo
+         * ausente y los dos badges quedaron clavados en 0 con la tabla llena — exploracion del
+         * modulo Alertas, 3/9/2026. El contador es el mismo numero que el chip "Bajo el minimo".
+         *
+         * @returns {Number}
+         */
+        stock_minimo_alert_count() {
             let models = this.$store.state.inventory_performance.models
 
-            if (
-                this.$store.state.inventory_performance.models[0]
-                && this.$store.state.inventory_performance.models[0].articles_stock_minimo
-            ) {
-                return this.$store.state.inventory_performance.models[0].articles_stock_minimo
+            if (models[0] && models[0].stock_minimo) {
+                return Number(models[0].stock_minimo)
             }
 
-            return []
+            return 0
         },
         problemas_al_facturar() {
             return this.$store.state.afip_ticket.problemas_al_facturar 

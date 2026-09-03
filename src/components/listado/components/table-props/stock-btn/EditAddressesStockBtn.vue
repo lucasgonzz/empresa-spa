@@ -17,6 +17,7 @@
 			size="sm"
 			class="m-l-10"
 			dusk="btn_guardar_depositos"
+			data-testid="btn-guardar-depositos"
 			@click.stop="actualizar"
 			variant="success">
 				<i class="icon-check"></i>
@@ -28,6 +29,7 @@
 		size="sm"
 		class="m-l-10"
 		dusk="btn_editar_depositos"
+		data-testid="btn-editar-depositos"
 		@click.stop="edit_addresses"
 		variant="outline-success">
 			<i class="icon-location"></i>

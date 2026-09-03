@@ -6,6 +6,7 @@
 			<current-acounts></current-acounts>
 			
 			<b-table
+			data-testid="alertas-pedidos-proveedor-tabla"
 			v-if="pedidos_sin_llegar.length"
 			head-variant="dark"
 			responsive
@@ -25,6 +26,7 @@
 			<!-- Estado vacío del sistema (display/EmptyState), en vez del cartel azul viejo. -->
 			<empty-state
 			v-else
+			data-testid="alertas-pedidos-proveedor-vacio"
 			icon_class="bi bi-truck"
 			title="No hay pedidos sin llegar"
 			hint="Ningún pedido a proveedor pasó los días de aviso que tenés configurados."></empty-state>

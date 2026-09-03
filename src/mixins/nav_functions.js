@@ -58,7 +58,7 @@ export default {
 				total += Number(this.problemas_al_facturar.length)
 			}
 			
-			total += Number(this.articles_stock_minimo.length)
+			total += this.stock_minimo_alert_count
 
 			total += Number(this.deposit_movements_en_curso.length)
 			

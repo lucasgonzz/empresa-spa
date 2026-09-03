@@ -9,6 +9,7 @@
 		<!-- <make-afip-tickets></make-afip-tickets> -->
 
 		<b-table
+		data-testid="alertas-facturacion-tabla"
 		v-if="problemas_al_facturar.length"
 		head-variant="dark"
 		responsive
@@ -17,6 +18,7 @@
 
 			<template #cell(venta)="data">
 				<b-button
+				:data-testid="'alertas-facturacion-venta-' + problemas_al_facturar[data.index].id"
 				@click="showSale(problemas_al_facturar[data.index])"
 				variant="primary">
 					N° {{ problemas_al_facturar[data.index].num }}
@@ -34,6 +36,7 @@
 		<!-- Estado vacío del sistema (display/EmptyState), en vez del cartel azul viejo. -->
 		<empty-state
 		v-else
+		data-testid="alertas-facturacion-vacio"
 		icon_class="bi bi-receipt"
 		title="No hay problemas al facturar"
 		hint="Todos los comprobantes se emitieron sin errores en ARCA."></empty-state>
@@ -90,8 +93,11 @@ export default {
 			this.problemas_al_facturar.forEach(sale => {
 				items.push({
 					venta: sale.num,
-					sucursal: sale.address ? sale.address.stree : null,
-					employee: sale.employee ? sale.employee.name : this.owner.name,
+					// `street`, no `stree`, y la key `empleado` igual que la columna: con el typo y
+					// con la key en ingles las dos celdas quedaban SIEMPRE vacias (b-table busca
+					// item[field.key] y no encontraba ninguna). Exploracion de Alertas, 3/9/2026.
+					sucursal: sale.address ? sale.address.street : null,
+					empleado: sale.employee ? sale.employee.name : this.owner.name,
 					punto_de_venta: this.get_afip_information(sale),
 					tipo_comprobante: this.get_afip_tipo_comprobante(sale),
 					total: this.price(sale.total),
