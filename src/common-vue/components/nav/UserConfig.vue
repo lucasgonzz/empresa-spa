@@ -25,12 +25,28 @@
 					v-if="slot_props.model && slot_props.model.id"></test-mail-button>
 
 					<!--
-						Seccion "Integraciones" (prompt 600): tarjetas de Mercado Pago y Zippin,
-						debajo del formulario declarativo generico, igual que TestMailButton arriba.
+						Las integraciones se mudaron a ABM -> Integraciones -> Tienda online, que es
+						donde conviven con las del sistema (Mercado Libre, Tienda Nube) y con el bot
+						de WhatsApp. Aca queda el puntero: el dueño del negocio ya venia entrando por
+						esta pantalla a conectar Mercado Pago y no tiene por que enterarse solo de
+						que se mudo.
 					-->
-					<integrations
+					<div
 					v-if="slot_props.model && slot_props.model.id"
-					:model="slot_props.model"></integrations>
+					class="integraciones-puntero">
+						<hr>
+						<h5 class="m-b-5">Integraciones</h5>
+						<p class="text-muted m-b-10">
+							Mercado Pago y los envíos de Zippin se conectan desde ABM → Integraciones →
+							Tienda online.
+						</p>
+						<b-button
+						variant="outline-primary"
+						size="sm"
+						@click="irAIntegraciones">
+							Ir a Integraciones
+						</b-button>
+					</div>
 				</template>
 
 				<!--
@@ -107,26 +123,28 @@ export default {
 	components: {
 		Model: () => import('@/common-vue/components/model/Index'),
 		TestMailButton: () => import('@/components/online/config/TestMailButton'),
-		Integrations: () => import('@/components/online/config/integrations/Index'),
 		ColorField: () => import('@/components/online/config/ColorField'),
 		AiPaletteGenerator: () => import('@/components/online/config/AiPaletteGenerator'),
 	},
 	created() {
 		/*
-		 * Al volver del OAuth de Mercado Pago o Zippin (prompt 600), la URL trae
-		 * ?mp=ok|error o ?zippin=ok|error (agregado por el backend en el redirect final
-		 * de los prompts 598/599). Este componente se monta siempre (parte del nav), por
-		 * lo que es el lugar correcto para detectarlo apenas carga la app, sin depender
-		 * de que el usuario haya abierto manualmente el modal de Configuracion online.
+		 * Al volver del OAuth de Mercado Pago o Zippin, la URL trae ?mp=ok|error o
+		 * ?zippin=ok|error (lo agrega el backend en el redirect final). Este componente se
+		 * monta siempre --es parte del nav--, asi que es el unico lugar que puede atajar ese
+		 * retorno caiga en la URL que caiga.
 		 */
 		this.checkIntegrationsOauthReturn()
 	},
 	methods: {
 		/**
-		 * Detecta el retorno del OAuth de Mercado Pago/Zippin por query param, refresca
-		 * el online_configuration, muestra el feedback (exito/error) al usuario, abre el
-		 * formulario de Configuracion online con el estado ya actualizado, y limpia el
-		 * query param de la URL sin recargar la pagina.
+		 * Si el usuario vuelve de un OAuth de integraciones y NO cayo en la pantalla de
+		 * Integraciones, lo manda ahi con la query intacta. El aviso de exito o error, y la
+		 * limpieza del query param, los hace esa pantalla
+		 * (components/abm/integraciones/TiendaOnline.vue), que es la que muestra el estado.
+		 *
+		 * Hace falta porque la URL de retorno la decide el backend por .env
+		 * (MP_OAUTH_SPA_REDIRECT_URL / ZIPPIN_OAUTH_SPA_REDIRECT_URL) y puede quedar apuntando
+		 * a una URL vieja en un cliente que todavia no actualizo esa variable.
 		 *
 		 * @returns {void}
 		 */
@@ -139,45 +157,36 @@ export default {
 				return
 			}
 
-			// Se vuelve a pedir el online_configuration para reflejar el estado real ya guardado en la base
-			this.$store.dispatch('online_configuration/getModels')
-			.then(() => {
-				let model = this.$store.state.online_configuration.models[0]
-				if (model) {
-					// Abre el formulario de Configuracion online mostrando el estado ya actualizado
-					this.setModel(model, 'online_configuration')
-				}
+			// Ya esta parado en Integraciones: esa pantalla se encarga del resto.
+			if (this.$route.name == 'abm' && this.$route.params.view == 'integraciones') {
+				return
+			}
 
-				if (mp_status == 'ok') {
-					this.$toast.success('Mercado Pago conectado correctamente')
-				} else if (mp_status == 'error') {
-					this.$toast.error('No se pudo conectar Mercado Pago. Intenta nuevamente')
-				}
-
-				if (zippin_status == 'ok') {
-					this.$toast.success('Zippin conectado correctamente')
-				} else if (zippin_status == 'error') {
-					this.$toast.error('No se pudo conectar Zippin. Intenta nuevamente')
-				}
-
-				this.clearIntegrationsQueryParams()
-			})
-			.catch(err => {
-				console.log(err)
-				this.clearIntegrationsQueryParams()
-			})
+			this.$router.push({
+				name: 'abm',
+				params: {
+					view: 'integraciones',
+					sub_view: 'tienda-online',
+				},
+				// La query viaja tal cual: el ?mp / ?zippin lo lee y lo limpia la pantalla destino.
+				query: this.$route.query,
+			}).catch(() => {})
 		},
 		/**
-		 * Limpia los query params ?mp / ?zippin de la URL actual sin recargar la pagina,
-		 * preservando cualquier otro query param que pudiera traer la ruta.
+		 * Lleva al usuario a ABM -> Integraciones -> Tienda online, cerrando antes el modal de
+		 * Configuracion online si estaba abierto (el modal usa el model_name como id).
 		 *
 		 * @returns {void}
 		 */
-		clearIntegrationsQueryParams() {
-			let query = Object.assign({}, this.$route.query)
-			delete query.mp
-			delete query.zippin
-			this.$router.replace({ query }).catch(() => {})
+		irAIntegraciones() {
+			this.$bvModal.hide('online_configuration')
+			this.$router.push({
+				name: 'abm',
+				params: {
+					view: 'integraciones',
+					sub_view: 'tienda-online',
+				},
+			}).catch(() => {})
 		},
 	},
 }
