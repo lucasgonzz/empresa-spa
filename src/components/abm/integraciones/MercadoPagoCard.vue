@@ -2,23 +2,23 @@
 	<b-card
 	no-body
 	class="integration-card">
-		<div class="p-3">
-			<div class="d-flex justify-content-between align-items-start flex-wrap">
-				<div class="m-r-10">
-					<h6 class="m-b-5">{{ integracion.name }}</h6>
-					<p class="text-muted m-b-0">
+		<div class="integration-card__body">
+			<div class="integration-card__header">
+				<div>
+					<h6 class="integration-card__title">{{ integracion.name }}</h6>
+					<p class="integration-card__description">
 						Cobrá con tarjeta y Mercado Pago en tu tienda.
 					</p>
 					<p
 					v-if="connected && integracion.platform_user_id"
-					class="text-muted m-b-0 m-t-5 integration-card__cuenta">
+					class="integration-card__cuenta">
 						Cuenta conectada: {{ integracion.platform_user_id }}
 					</p>
 				</div>
 				<b-badge :variant="status.variant">{{ status.text }}</b-badge>
 			</div>
 
-			<div class="m-t-15 integration-card__actions">
+			<div class="integration-card__actions">
 				<btn-loader
 				:block="false"
 				size="sm"
@@ -202,14 +202,14 @@ export default {
 	},
 }
 </script>
-<style lang="sass">
-// Estilos base de .integration-card compartidos con ZippinCard: ver TiendaOnline.vue
-.integration-card
-	.integration-card__advisor-toggle
-		font-size: 13px
-	.integration-card__advisor
-		font-size: 13px
-		background: rgba(0, 0, 0, .03)
-		border-radius: 6px
-		padding: 10px
-</style>
+<!--
+	Sin bloque <style> a proposito. TODOS los estilos de .integration-card (incluidos los del
+	asesor de comision, que antes vivian aca) estan en TiendaOnline.vue, que es el unico lugar
+	donde se definen.
+
+	🔴 No los devuelvas aca. Los dos archivos declaran estilos GLOBALES (no scoped) sobre la
+	misma clase, asi que tener las dos definiciones hacia que ganara la que webpack cargara
+	ultima -- y ademas la version que vivia aca pintaba el fondo del asesor con un
+	`rgba(0, 0, 0, .03)` literal, que en modo oscuro es negro sobre negro. La version de
+	TiendaOnline.vue usa `var(--bg-section)`, que esta definida para los dos temas.
+-->

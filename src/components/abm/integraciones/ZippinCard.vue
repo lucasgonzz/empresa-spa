@@ -2,23 +2,23 @@
 	<b-card
 	no-body
 	class="integration-card">
-		<div class="p-3">
-			<div class="d-flex justify-content-between align-items-start flex-wrap">
-				<div class="m-r-10">
-					<h6 class="m-b-5">Envíos ({{ integracion.name }})</h6>
-					<p class="text-muted m-b-0">
+		<div class="integration-card__body">
+			<div class="integration-card__header">
+				<div>
+					<h6 class="integration-card__title">Envíos ({{ integracion.name }})</h6>
+					<p class="integration-card__description">
 						Ofrecé envíos con Correo Argentino, Andreani y más, vía Zippin.
 					</p>
 					<p
 					v-if="connected && integracion.platform_user_id"
-					class="text-muted m-b-0 m-t-5 integration-card__cuenta">
+					class="integration-card__cuenta">
 						Cuenta conectada: {{ integracion.platform_user_id }}
 					</p>
 				</div>
 				<b-badge :variant="status.variant">{{ status.text }}</b-badge>
 			</div>
 
-			<div class="m-t-15 integration-card__actions">
+			<div class="integration-card__actions">
 				<btn-loader
 				:block="false"
 				size="sm"
