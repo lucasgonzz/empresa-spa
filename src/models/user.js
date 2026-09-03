@@ -329,6 +329,23 @@ export default {
 				'Sin elegir ninguno, se imprime el ticket común (comportamiento de siempre).',
 			],
 		},
+		/*
+		 * Preferencia del comercio sobre por que fecha se fechan las ventas en el listado, en los
+		 * Excel, en el grafico y en Rendimiento. Apagada (default) es lo de siempre: la fecha de
+		 * carga de la venta. Prendida, la fecha del pedido (Sale::scopeEnRangoDeFechas en la API).
+		 */
+		{
+			text: 'Fechar las ventas por fecha de pedido en vez de por fecha de carga',
+			key: 'fechar_ventas_por_fecha_de_entrega',
+			type: 'checkbox',
+			value: 0,
+			descriptions:
+			[
+				'Si se activa, el listado de ventas y los reportes ubican cada venta en la fecha de entrega del pedido, no en el dia en que se cargo.',
+				'Sirve para quien anota los pedidos y los carga en tandas dias despues: sin esto, los pedidos de un mes cargados al mes siguiente aparecen en el mes equivocado.',
+				'Las ventas que no tengan cargada la fecha de entrega siguen apareciendo por su fecha de carga.',
+			],
+		},
 
 
 
