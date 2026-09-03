@@ -201,28 +201,53 @@ test.describe.serial('Alertas · Pedidos Proveedor, Pedidos Online, Mensajes y F
 	test('Facturación: la fila del comprobante sin CAE, con sucursal y empleado a la vista', async ({ page }) => {
 		await abrir_pestania_de_alertas(page, 'facturacion', 'Facturacion')
 
-		const filas = await filas_de(page, 'alertas-facturacion-tabla')
+		// 🔴 Si el aviso del arranque ("Facturas no autorizadas") está abierto, se cierra —
+		// exactamente lo que haría el operador. Con comprobantes sin CAE en la base ese modal se
+		// le abre solo al dueño encima de CUALQUIER pantalla, monta su propio ListSales (misma
+		// tabla, mismos testids) y tapa los clicks; medido tres veces el 3/9/2026.
+		const aviso = page.locator('#afip-reenviar-facturas___BV_modal_outer_ .modal.show')
+		if (await aviso.count()) {
+			await page.keyboard.press('Escape')
+			await expect(aviso).toHaveCount(0, { timeout: 10000 })
+		}
+
+		// Y todo se mide en LA TABLA DE LA PESTAÑA (fuera de cualquier modal): el mismo
+		// componente vive adentro del aviso, así que un selector global cuenta doble. Las filas
+		// se cuentan por el BOTÓN de la venta y no por `tbody tr`, porque esta b-table dibuja
+		// una segunda <tr> de detalles (row-details con los botones de AFIP) por cada venta.
+		// Lo enseñaron tres rojos falsos seguidos el 3/9/2026.
+		const en_la_pestania = selector => page.evaluate(sel => {
+			const tablas = [...document.querySelectorAll('[data-testid="alertas-facturacion-tabla"]')]
+			const tabla = tablas.find(t => !t.closest('.modal'))
+			return tabla ? [...tabla.querySelectorAll(sel)].length : -1
+		}, selector)
+
+		const filas = await en_la_pestania('[data-testid^="alertas-facturacion-venta-"]')
 		const badge = await badge_de(page, 'Facturacion')
 
-		expect(badge, 'el badge de Facturación tiene que contar las filas de su tabla').toBe(filas)
-
-		if (filas === 0) {
+		if (filas <= 0) {
 			await expect(page.locator('[data-testid="alertas-facturacion-vacio"]')).toBeVisible()
+			expect(badge, 'sin comprobantes con problemas el badge tiene que ser 0').toBe(0)
 			return
 		}
 
-		// La primera fila: el botón de la venta abre el modal de la venta. Todo acotado a la
-		// tabla VISIBLE: el mismo ListSales vive también dentro del modal de reenviar facturas.
-		const tabla = page.locator('[data-testid="alertas-facturacion-tabla"]:visible')
-		const boton_venta = tabla.locator('[data-testid^="alertas-facturacion-venta-"]').first()
+		expect(badge, 'el badge de Facturación tiene que contar las ventas de su tabla').toBe(filas)
+
+		// La primera fila de la tabla de la pestaña: su botón abre el modal de la venta. Con el
+		// aviso ya cerrado, el único botón VISIBLE es el de la pestaña (el del modal no se ve).
+		const boton_venta = page.locator('[data-testid^="alertas-facturacion-venta-"]:visible').first()
 		await expect(boton_venta, 'cada fila tiene que traer el botón de su venta').toBeVisible()
 
 		// 🔴 Las celdas que fija esta exploración: sucursal y empleado CON contenido. Antes
 		// quedaban siempre vacías (typo stree, key employee vs columna empleado, y el endpoint
 		// sin cargar las relaciones). La venta sembrada tiene sucursal "Principal" y ningún
 		// empleado -> la celda de empleado cae al nombre del dueño.
-		const fila = tabla.locator('tbody tr:visible').first()
-		const celdas = await fila.evaluate(tr => [...tr.children].map(td => td.innerText.trim()))
+		const celdas = await page.evaluate(() => {
+			const tablas = [...document.querySelectorAll('[data-testid="alertas-facturacion-tabla"]')]
+			const tabla = tablas.find(t => !t.closest('.modal'))
+			const tr = tabla ? tabla.querySelector('tbody tr') : null
+			return tr ? [...tr.children].map(td => td.innerText.trim()) : []
+		})
 
 		// Columnas: venta · sucursal · punto_de_venta · tipo_comprobante · empleado · total · ...
 		expect(celdas[1], 'la celda de sucursal no puede quedar vacía con la venta teniendo sucursal').not.toBe('')

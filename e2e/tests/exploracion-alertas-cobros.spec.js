@@ -31,7 +31,7 @@
 
 const { test, expect } = require('../fixtures')
 const { esperar_recursos_descargados } = require('../helpers/recursos')
-const { search_and_select, completar_campo } = require('../helpers/formulario')
+const { search_and_select } = require('../helpers/formulario')
 const { redondear } = require('../helpers/numeros')
 const {
 	abrir_vender,
@@ -140,28 +140,71 @@ async function afirmar_coherencia(page, momento) {
 }
 
 /**
- * Registra un cobro parcial sobre la primera deuda pendiente del cliente.
+ * Registra un cobro parcial IMPUTADO a la venta del spec, seleccionando su movimiento.
  *
- * El pago sin fila seleccionada se imputa al débito más viejo (CurrentAcountPagoHelper carga los
- * pendientes por antigüedad), que acá es siempre la venta del spec: es la única deuda del
- * "Cliente Contado" que este archivo genera, y el monto nunca llega a saldarla.
+ * 🔴 La fila se selecciona a propósito, y esto lo enseñó un rojo (3/9/2026): sin fila, el pago
+ * va al débito MÁS VIEJO del cliente (CurrentAcountPagoHelper carga los pendientes por
+ * antigüedad), y este archivo DEJA una deuda viva en cada corrida — el test final saca la venta
+ * de la alerta con un resto de $250 sin saldarla. En la segunda corrida ese resto viejo era el
+ * débito más viejo, el cobro se repartía entre las dos ventas, y el resto de la venta nueva no
+ * daba lo esperado. Con la fila seleccionada el pago viaja con `to_pay_id` y se imputa entero a
+ * la venta de ESTA corrida. El movimiento se busca por su detalle ("Venta N°<num>") con el id
+ * más alto, el patrón de siempre para valores que se repiten entre corridas.
  *
  * @param {import('@playwright/test').Page} page
  * @param {number} cliente_id
+ * @param {string|number} venta_num Número de la venta del spec.
  * @param {number} monto
  * @returns {Promise<void>}
  */
-async function cobrar_parcial(page, cliente_id, monto) {
+async function cobrar_parcial(page, cliente_id, venta_num, monto) {
 	await page.goto('/clientes/clientes')
 	await esperar_recursos_descargados(page, { abrir_panel: false })
 	await abrir_cuenta_corriente(page, cliente_id)
 
+	// El movimiento de la venta del spec, por detalle y con el id más alto.
+	const filas = page.locator('[data-testid^="current_acount-row-"]')
+	let movimiento = null
+
+	await expect(async () => {
+		const cantidad = await filas.count()
+		movimiento = null
+
+		for (let i = 0; i < cantidad; i++) {
+			const id = (await filas.nth(i).getAttribute('data-testid')).replace('current_acount-row-', '')
+			const detalle = page.locator(`[data-testid="celda-current_acount-detalle-${id}"]`)
+
+			if (await detalle.count() === 0) {
+				continue
+			}
+
+			if ((await detalle.innerText()).includes(`Venta N°${venta_num}`)) {
+				if (movimiento === null || Number(id) > Number(movimiento)) {
+					movimiento = id
+				}
+			}
+		}
+
+		expect(movimiento, `la cuenta no tiene el movimiento de la venta N° ${venta_num}`).not.toBeNull()
+	}).toPass({ timeout: 30000 })
+
+	await page.locator(`[data-testid="current_acount-row-${movimiento}"]`).click()
+
 	const boton_pago = page.locator('[data-testid="btn-registrar-pago"]')
-	await expect(boton_pago).toBeVisible()
+	await expect(boton_pago).toHaveAttribute('data-precargado', 'si')
 	await boton_pago.click()
 
-	// Sin fila seleccionada el importe arranca vacío: se escribe el parcial a mano.
-	await completar_campo(page, 'pago-monto-0', String(monto))
+	// 🔴 El importe precargado se pisa con TIPEO REAL (Ctrl+A + teclas), no con fill():
+	// medido el 3/9/2026 — el fill dejaba el input MOSTRANDO el parcial, completar_campo lo
+	// daba por bueno leyendo inputValue, y el POST igual salía con el importe precargado
+	// (16.408,94 en vez de 16.008,94): el modelo interno del modal nunca se enteró de la
+	// edición y la venta quedó PAGADA entera. Es la variante inversa de la trampa "un fill()
+	// puede perderse" del README: acá lo que se pierde no es lo que se ve, sino lo que viaja.
+	const monto_input = page.locator('[data-testid="pago-monto-0"]')
+	await monto_input.click()
+	await monto_input.press('Control+a')
+	await monto_input.pressSequentially(String(monto), { delay: 25 })
+	await expect(monto_input).toHaveValue(String(monto))
 	await page.locator('[data-testid="pago-metodo-0"]').selectOption({ label: PAGO_METODO })
 	await page.locator('[data-testid="pago-caja-0"]').selectOption({ label: CAJA })
 
@@ -260,7 +303,7 @@ test.describe.serial('Alertas · Cobros: cascada de días, filtro y el umbral de
 
 		expect(cobro, `la venta (${total}) tiene que superar los ${RESTO_QUE_SIGUE} para poder cobrar de menos`).toBeGreaterThan(0)
 
-		await cobrar_parcial(page, contexto.cliente_id, cobro)
+		await cobrar_parcial(page, contexto.cliente_id, contexto.venta.num, cobro)
 
 		await abrir_cobros(page)
 		await aplicar_dias(page, '0')
@@ -285,7 +328,7 @@ test.describe.serial('Alertas · Cobros: cascada de días, filtro y el umbral de
 		// El operador no ve este recorte en ninguna pantalla — está documentado en el manual.
 		const cobro = RESTO_QUE_SIGUE - RESTO_QUE_DESAPARECE
 
-		await cobrar_parcial(page, contexto.cliente_id, cobro)
+		await cobrar_parcial(page, contexto.cliente_id, contexto.venta.num, cobro)
 
 		await abrir_cobros(page)
 		await aplicar_dias(page, '0')

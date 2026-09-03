@@ -165,27 +165,36 @@ async function leer_chips(page) {
 }
 
 /**
- * Busca un artículo en la TABLA de la pestaña (no en el listado) y dice cuántas filas devolvió.
+ * Cuántas alertas tiene el ÚLTIMO reporte para un artículo, preguntado directo al endpoint
+ * paginado (el mismo que consume la tabla), con la sesión de la página.
+ *
+ * 🔴 Por endpoint y no por el buscador de la pestaña, y la historia importa (3/9/2026): la
+ * versión por UI se COLGABA sin límite — `fill()` con el mismo valor que el input ya tenía no
+ * dispara ningún evento, el debounce no corre, no sale ningún fetch, y el waitForResponse queda
+ * esperando para siempre (le pasó al fill('') sobre un buscador ya vacío en cada reintento del
+ * ciclo de espera: tests de 4 minutos a 1,5 HORAS según el timeout). El endpoint es la misma
+ * fuente que la tabla; la representación visual se verifica aparte, UNA vez, en el test 2.
  *
  * @param {import('@playwright/test').Page} page
  * @param {string} nombre
- * @returns {Promise<number>}
+ * @returns {Promise<number>} El total que reporta el endpoint para esa búsqueda.
  */
-async function filas_en_la_tabla(page, nombre) {
-	const buscador = page.locator('[data-testid="stock-minimo-buscador"]')
-	await expect(buscador).toBeVisible()
+async function total_en_el_reporte(page, nombre) {
+	const resultado = await page.evaluate(async (buscado) => {
+		const api = window.location.origin.replace(/:(\d+)$/, (m, p) => ':' + (Number(p) - 80))
+		const res = await fetch(
+			api + '/api/inventory-performance/articles-stock-minimo?page=1&per_page=25&search=' + encodeURIComponent(buscado),
+			{ credentials: 'include', headers: { Accept: 'application/json' } }
+		)
+		if (!res.ok) {
+			return { ok: false, status: res.status }
+		}
+		const json = await res.json()
+		return { ok: true, total: Number(json.models.total) }
+	}, nombre)
 
-	const [respuesta] = await Promise.all([
-		page.waitForResponse(res => res.url().includes('articles-stock-minimo') && res.request().method() === 'GET'),
-		buscador.fill(nombre),
-	])
-	expect(respuesta.ok()).toBeTruthy()
-
-	const filas = await page.locator('[data-testid="stock-minimo-tabla"] tbody tr').filter({ hasText: nombre }).count()
-
-	await buscador.fill('')
-
-	return filas
+	expect(resultado.ok, `el endpoint de artículos bajo el mínimo devolvió ${resultado.status}`).toBeTruthy()
+	return resultado.total
 }
 
 /**
@@ -202,11 +211,26 @@ async function filas_en_la_tabla(page, nombre) {
  */
 async function esperar_reporte(page, condicion, descripcion) {
 	await expect(async () => {
+		// Auto-recuperación del ciclo: si la vista de Alertas se desmontó (pasó el 3/9/2026 —
+		// el snapshot del timeout mostraba solo la nav, sin pestañas, y el click nunca más
+		// encontraba a quién apuntar), se vuelve a entrar antes de reintentar.
+		const pestania = page.locator('[data-testid="nav-item-Stock minimo"]')
+		if (!(await pestania.isVisible().catch(() => false))) {
+			await page.goto('/alertas/stock-minimo')
+			await esperar_recursos_descargados(page, { abrir_panel: false })
+		}
+
 		const [respuesta] = await Promise.all([
 			page.waitForResponse(res => res.url().includes('inventory-performance') && !res.url().includes('articles-stock-minimo')),
-			page.locator('[data-testid="nav-item-Stock minimo"]').click(),
+			pestania.click(),
 		])
 		expect(respuesta.ok()).toBeTruthy()
+
+		// El created_at que el endpoint devolvió, para que un timeout diga QUÉ reporte estaba
+		// mirando cada intento (un toPass agotado se traga el expect interno que falló).
+		const cuerpo = await respuesta.json().catch(() => null)
+		const reporte = cuerpo && cuerpo.models && cuerpo.models[0] ? cuerpo.models[0] : null
+		console.log(`[stock-minimo] intento: reporte ${reporte ? reporte.id + ' (' + reporte.created_at + ') min=' + reporte.stock_minimo : 'ausente'} generating=${cuerpo ? cuerpo.generating : '?'}`)
 
 		await condicion()
 	}, descripcion).toPass({ timeout: 240000, intervals: [8000] })
@@ -231,10 +255,10 @@ test.describe.serial('Alertas · Stock mínimo: el mínimo por depósito llega a
 
 		await abrir_stock_minimo(page)
 
-		// El reporte limpio es el que NO lista a ninguno de los dos.
+		// El reporte limpio es el que NO lista a ninguno de los dos (medido por el endpoint).
 		await esperar_reporte(page, async () => {
-			expect(await filas_en_la_tabla(page, ARTICULO_CON_FALTANTE)).toBe(0)
-			expect(await filas_en_la_tabla(page, ARTICULO_EN_EL_LIMITE)).toBe(0)
+			expect(await total_en_el_reporte(page, ARTICULO_CON_FALTANTE)).toBe(0)
+			expect(await total_en_el_reporte(page, ARTICULO_EN_EL_LIMITE)).toBe(0)
 		}, 'el reporte tenía que quedar sin los dos artículos del spec')
 
 		contexto.base = await leer_chips(page)
@@ -283,9 +307,21 @@ test.describe.serial('Alertas · Stock mínimo: el mínimo por depósito llega a
 		expect(chips.sin_stock, '"Sin stock" no tenía que cambiar').toBe(contexto.base.sin_stock)
 		expect(chips.negativo, '"Con stock negativo" no tenía que cambiar').toBe(contexto.base.negativo)
 
-		// La tabla lista a los dos, cada uno por la rama del depósito.
-		expect(await filas_en_la_tabla(page, ARTICULO_CON_FALTANTE), `"${ARTICULO_CON_FALTANTE}" tenía que estar en la tabla`).toBeGreaterThan(0)
-		expect(await filas_en_la_tabla(page, ARTICULO_EN_EL_LIMITE), 'la IGUALDAD stock == mínimo también alerta').toBeGreaterThan(0)
+		// El reporte lista a los dos, cada uno por la rama del depósito (medido por el mismo
+		// endpoint que consume la tabla). La IGUALDAD stock == mínimo es la segunda línea.
+		expect(await total_en_el_reporte(page, ARTICULO_CON_FALTANTE), `"${ARTICULO_CON_FALTANTE}" tenía que estar en el reporte`).toBeGreaterThan(0)
+		expect(await total_en_el_reporte(page, ARTICULO_EN_EL_LIMITE), 'la IGUALDAD stock == mínimo también alerta').toBeGreaterThan(0)
+
+		// Y la representación visual, UNA vez: el buscador de la pestaña con el artículo del
+		// faltante. Tipeo real (no fill: un fill con el valor que el input ya tiene no dispara
+		// eventos y el fetch nunca sale) y la fila visible como aserción.
+		const buscador = page.locator('[data-testid="stock-minimo-buscador"]')
+		await buscador.click()
+		await buscador.pressSequentially(ARTICULO_CON_FALTANTE, { delay: 25 })
+		await expect(
+			page.locator('[data-testid="stock-minimo-tabla"] tbody tr').filter({ hasText: ARTICULO_CON_FALTANTE }).first(),
+			'la tabla de la pestaña tenía que listar al artículo bajo el mínimo'
+		).toBeVisible({ timeout: 15000 })
 
 		// 🔴 El badge de la pestaña dice lo mismo que el chip (el arreglo del 3/9/2026: antes
 		// leía una relación que el endpoint ya no manda y quedaba clavado en 0).
