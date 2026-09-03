@@ -300,6 +300,13 @@ export default {
 	justify-content: space-between
 	gap: 15px
 	width: 100%
+	// El margen de abajo ya eran 15px; el de arriba faltaba y por eso esta fila quedaba pegada al
+	// borde superior de la pantalla. 15px es el mismo aire que separa al segundo horizontal-nav (el
+	// de modelos) de los botones del header que arma el view-component de mas abajo: ese aire lo
+	// pone el `p-t-15` de `.view-header-toolbar`, que esta fila no hereda porque va ANTES del
+	// view-component. Mismo diagnostico y mismo arreglo que ya se aplico en
+	// payment-plan/Index.vue (mision 40).
+	margin-top: 15px
 	margin-bottom: 15px
 
 	// 🔴 `nowrap` y no `wrap` (mision 33). La intencion de esta fila ya estaba escrita --que el
