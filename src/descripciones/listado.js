@@ -139,4 +139,57 @@ export default {
 		requiere: 'Aparece por los comprobantes emitidos antes del 1/9/2026, que es cuando el sistema empezó a guardar ese dato. Un cero sin este aviso significa que no hubo notas de crédito; con el aviso, significa que puede haberlas y no se midieron. No es lo mismo.',
 		nota_interna: 'Lo recupera el comando SetIvaNotasCredito (empresa-api). No recupera todo: cuando no puede saber la alicuota no escribe, a proposito.',
 	},
+
+	/* ------------------------------------------------- stock y depósitos (exploración 3/9/2026) */
+
+	'menu-depositos': {
+		titulo: 'Depósitos',
+		que_hace: 'Abre el menú de depósitos: los movimientos entre depósitos y las sugerencias de reposición.',
+		nota_interna: 'DepositButtons.vue. El item Sugerencias navega a la vista propia solo con la extension sugerencias_inteligentes; sin ella abre los modales viejos.',
+	},
+
+	'menu-depositos-movimientos': {
+		titulo: 'Movimientos entre depósitos',
+		que_hace: 'Abre la lista de movimientos de mercadería entre depósitos, para ver los pendientes y cargar nuevos.',
+		repercute: [
+			'Crear un movimiento acá NO mueve el stock todavía: nace "En proceso" y el stock recién se traslada cuando el movimiento pasa a "Recibido". Medido: con el movimiento En proceso, ningún depósito cambia.',
+		],
+		requiere: 'La lista entra por día: al abrirla, elegí el día en el calendario o el modo Histórico para ver los movimientos.',
+	},
+
+	'menu-depositos-sugerencias': {
+		titulo: 'Sugerencias de reposición',
+		que_hace: 'Lleva a las sugerencias de qué mover de un depósito al otro antes de comprar.',
+	},
+
+	'btn-asignar-stock': {
+		titulo: 'Movimiento de stock',
+		que_hace: 'Abre el formulario para sumar o restar unidades de este artículo en un depósito (número negativo para restar).',
+		nota_interna: 'StockBtn.vue abre el modal #stock-movement. Muestra el stock global como texto del boton, o "Asignar Stock" si es null. El detalle del modal (proveedor automatico con cantidad positiva) quedo sin medir en la exploracion del 3/9/2026.',
+	},
+
+	'btn-editar-depositos': {
+		titulo: 'Stock por depósito',
+		que_hace: 'Despliega, en la misma fila, el stock y el mínimo y máximo de este artículo en cada depósito, para cargarlos de una.',
+		repercute: [
+			'El valor de Stock que se guarda SOBREESCRIBE al actual de ese depósito: el sistema no suma, pisa. Por adentro registra la diferencia como un movimiento de stock ("Creación de depósito" la primera vez, "Actualización de depósito" después), así que el historial del artículo queda completo.',
+			'El stock global del artículo se recalcula solo: es siempre la suma de todos los depósitos.',
+			'Los mínimos y máximos por depósito son los que después usan las sugerencias de reposición para decidir qué mover.',
+		],
+		requiere: 'Cargar Mínimo y Máximo de un depósito dejando el Stock vacío guarda los límites pero NO le crea stock: para las sugerencias ese depósito sigue sin existir hasta que reciba stock por primera vez.',
+		nota_interna: 'Defecto conocido (exploracion 3/9/2026): address_article.amount queda NULL y StockSuggestionService saltea pivots con amount NULL — un deposito con minimo definido y sin stock no genera deficit. Tambien: los inputs Min y Max comparten el mismo id HTML (EditAddressStock.vue, copy-paste). Y el boton entero solo existe si el usuario guardo alguna vez su configuracion de columnas (hallazgo de los puentes de slots con props_to_show vacio).',
+	},
+
+	'btn-guardar-depositos': {
+		titulo: 'Guardar stock por depósito',
+		que_hace: 'Guarda el stock y los mínimos y máximos cargados en la fila.',
+		repercute: [
+			'Cada depósito cuyo stock cambió deja su movimiento en el historial del artículo, con la diferencia exacta.',
+		],
+	},
+
+	'btn-cancelar-depositos': {
+		titulo: 'Descartar cambios de stock',
+		que_hace: 'Cierra la edición de stock por depósito sin guardar nada.',
+	},
 }

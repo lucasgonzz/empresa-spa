@@ -32,6 +32,7 @@
 					<b-button
 					class="btn-modulo"
 					variant="primary"
+					data-testid="sugerencias-btn-crear-movimientos"
 					:disabled="!selected_ids.length || loading_crear"
 					@click="crear_movimientos">
 						<b-spinner
@@ -47,14 +48,23 @@
 			</div>
 
 			<div class="tabla-modulo-wrapper">
+				<!--
+					tbody-tr-attr publica los numeros CRUDOS de cada linea en data-atributos
+					(data-cantidad, data-cobertura, data-velocidad, data-stock-destino,
+					data-prioridad): el texto de las celdas sale formateado es-AR y con decimales
+					recortados, asi que del texto no siempre se puede recuperar el numero. Mismo
+					patron que stock-movement-row y los renglones de Posicion Fiscal.
+				-->
 				<b-table
 				responsive
 				table-class="tabla-modulo tabla-priorizada__tabla"
 				:fields="fields"
-				:items="articles">
+				:items="articles"
+				:tbody-tr-attr="atributos_de_fila">
 
 					<template #cell(seleccionado)="data">
 						<b-form-checkbox
+						:data-testid="'sugerencia-check-linea-' + data.item.stock_suggestion_article_id"
 						:value="data.item.stock_suggestion_article_id"
 						v-model="selected_ids">
 						</b-form-checkbox>
@@ -218,6 +228,24 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Atributos de cada <tr> de la tabla: el testid de la linea y los numeros crudos en
+		 * data-*, para que un test (o quien inspeccione) lea los valores sin pelearse con el
+		 * formato es-AR de las celdas.
+		 */
+		atributos_de_fila(item, type) {
+			if (type !== 'row' || !item) {
+				return {}
+			}
+			return {
+				'data-testid': 'sugerencia-linea-' + item.stock_suggestion_article_id,
+				'data-cantidad': item.cantidad,
+				'data-cobertura': item.cobertura_dias === null ? '' : item.cobertura_dias,
+				'data-velocidad': item.velocidad_diaria === null ? '' : item.velocidad_diaria,
+				'data-stock-destino': item.stock_destino === null ? '' : item.stock_destino,
+				'data-prioridad': item.prioridad === null ? '' : item.prioridad,
+			}
+		},
 		/**
 		 * Formatea un numero que puede venir null (sugerencias viejas sin
 		 * backfill, articulos sin ventas) mostrando un guion en ese caso.

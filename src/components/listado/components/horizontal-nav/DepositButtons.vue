@@ -1,6 +1,7 @@
 <template>
 	<b-dropdown
 	right
+	data-testid="menu-depositos"
 	class="toolbar-btn--icono toolbar-btn--tinte-violeta"
 	size="sm"
 	:toggle-attrs="{ title: 'Depósitos', 'aria-label': 'Depósitos' }">
@@ -10,11 +11,13 @@
 		</template>
 		<b-dropdown-item
 		dusk="btn_deposit_movements"
+		data-testid="menu-depositos-movimientos"
 		@click="show_modal_movements">
 			<i class="bi bi-arrow-left-right m-r-5"></i>
 			Movimientos
 		</b-dropdown-item>
 		<b-dropdown-item
+		data-testid="menu-depositos-sugerencias"
 		@click="show_modal_sugerencias">
 			<i class="bi bi-lightbulb m-r-5"></i>
 			Sugerencias

@@ -45,7 +45,14 @@ setup('login', async ({ page }) => {
 	// El login exitoso redirige fuera de /login. Se espera a que la URL cambie en vez de
 	// usar waitForTimeout: si el login falla (credenciales invalidas) esto va a fallar por
 	// timeout con un mensaje claro, no en silencio.
-	await expect(page).not.toHaveURL(/\/login/, { timeout: 15000 })
+	//
+	// 🔴 60 segundos y no 15, y es del harness, no del producto: la redireccion la dispara
+	// setAuthenticated, pero el arranque post-login le pega a la API una rafaga de requests
+	// (get_user, recursos-iniciales, la sync de articulos offline) y `php artisan serve` es de
+	// UN solo hilo — con la maquina cargada (varios slots compilando a la vez) la cola se come
+	// los 15s y el setup daba rojo con el login PERFECTO: el POST ya habia vuelto 200 y la
+	// captura mostraba la sync offline arrancando. Paso tres corridas seguidas el 3/9/2026.
+	await expect(page).not.toHaveURL(/\/login/, { timeout: 60000 })
 
 	// Lo que se va a guardar es la cookie de sesion de Sanctum mas el localStorage, y de este
 	// ultimo lo que importa es user_id: lo escribe la mutacion auth/setUser (src/store/auth.js)
