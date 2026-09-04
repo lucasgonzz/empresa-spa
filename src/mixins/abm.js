@@ -1,3 +1,13 @@
+/*
+ * Componentes propios de solapas del ABM.
+ *
+ * 🔴 Se declaran ACA AFUERA, y no adentro del computed, a proposito: Vue cachea el
+ * componente asincrono sobre la funcion misma (factory.resolved). Si la fabrica se crea de
+ * nuevo en cada evaluacion del computed, cada render vuelve a arrancar el import y remonta
+ * el componente desde cero.
+ */
+const componente_integraciones_tienda_online = () => import('@/components/abm/integraciones/TiendaOnline')
+
 export default {
 	computed: {
 		// Grupos ("views") del modulo de ABM, reorganizados por dominio de negocio.
@@ -135,13 +145,34 @@ export default {
 						'payment_method',
 					],
 				},
-				// Integraciones externas
+				// Integraciones externas, en tres solapas: lo que conecta el SISTEMA con otra
+				// plataforma (Mercado Libre, Tienda Nube), lo que conecta la TIENDA ONLINE
+				// (Mercado Pago, Zippin) y el bot de WHATSAPP.
 				{
 					view: 'integraciones',
 					models: [
 						'platform_connector',
+						'integracion_tienda_online',
 						'whatsapp_bot_config',
 					],
+					// Etiqueta propia de la solapa, cuando el plural del modelo no es el nombre
+					// con el que el dueño del negocio piensa esa integracion ("Conectores de
+					// plataforma" no le dice nada; "Sistema" si).
+					//
+					// 🔴 El segmento de la URL NO cambia: Abm.vue le pone al item un `route_value`
+					// con el plural del modelo, asi que /abm/integraciones/conectores-de-plataforma
+					// sigue resolviendo igual que antes y el buscador de recursos del ABM --que
+					// arma sus enlaces con ese plural-- no se entera de nada.
+					nombres: {
+						platform_connector: 'Sistema',
+						whatsapp_bot_config: 'WhatsApp',
+					},
+					// Solapas que montan un componente propio en vez del ABM generico.
+					// 'integracion_tienda_online' no es un modelo: no tiene tabla, ni store, ni
+					// endpoint de ABM. Ver src/models/integracion_tienda_online.js.
+					componentes: {
+						integracion_tienda_online: componente_integraciones_tienda_online,
+					},
 				},
 				// Extension: vinoteca
 				{

@@ -485,11 +485,34 @@ export default {
 	methods: {
 		/**
 		 * Estado limpio cada vez que se abre el modal: todavia no se busco nada.
-		 * No toca this.results, que puede venir precargado por preview_results.
+		 *
+		 * 🔴 No toca this.results, y NO se puede agregar aca `this.results = this.preview_results`
+		 * aunque parezca el lugar obvio. $bvModal.show() emite el evento `show` de forma SINCRONICA
+		 * (bootstrap-vue 2.23.1: bv-modal.js:200-204 -> modal.js:697 -> modal.js:423), asi que este
+		 * handler corre ANTES de que Vue le baje al modal el preview_results que el padre acaba de
+		 * asignar en callSearchModal() de search/Index.vue: leeria el de la apertura anterior. Es
+		 * exactamente la familia del informe 20260831-modales-que-abren-antes-de-que-baje-el-prop.md.
+		 *
+		 * Los resultados precargados entran por el watch de preview_results (mas arriba en este
+		 * archivo), que es el mecanismo seguro para un dato que viaja por prop.
 		 */
 		onModalShow() {
 			this.modal_visible = true
 			this.busqueda_realizada = false
+
+			// 🔴 En esta apertura todavia no se busco nada, asi que el proximo Enter tiene que BUSCAR,
+			// no seleccionar. Sin esta linea, ya_se_busco quedaba en true desde la apertura anterior
+			// (arranca en true en data() y solo lo baja reset_ya_se_busco al tipear) y el primer Enter
+			// caia en seleccionar_resultado(): con la lista precargada eso elige el primer modelo del
+			// store, que no tiene nada que ver con el criterio que quedo escrito en el input del
+			// buscador general --que sobrevive al cierre, porque el b-modal no es lazy y no se
+			// destruye--. Pasa igual con filtros fijos guardados y el input vacio, donde buscar() del
+			// buscador general emite igual (ver su guarda de criterio vacio).
+			//
+			// No rompe el atajo del doble Enter: primer Enter busca, segundo selecciona, que es el
+			// diseño. Y con el input vacio y sin filtros fijos el buscador general ni siquiera emite.
+			this.ya_se_busco = false
+
 			this.total_results = 0
 			this.current_page = null
 			this.total_pages = null

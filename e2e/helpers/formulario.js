@@ -82,17 +82,19 @@ async function search_and_select(page, field_testid, query) {
 	await page.locator(`[data-testid="${field_testid}"]`).click()
 	const modal_input = page.locator(`[data-testid="${field_testid}-search-modal-input"]`)
 	// Tecleo real, caracter por caracter: fill() escribe el valor directo en el DOM y emite
-	// input, pero NINGUN keydown. El modal (src/common-vue/components/search/Modal.vue) arranca
-	// con ya_se_busco en true y solo lo pasa a false cuando reset_ya_se_busco recibe un keydown
-	// de una tecla que no sea Enter ni flecha. pressSequentially emite keydown/keypress/keyup por
-	// cada caracter, como un humano. El fill('') previo es necesario porque pressSequentially
-	// AGREGA al final de lo que ya haya en el input, no reemplaza.
+	// input, pero NINGUN keydown, que no es lo que hace un usuario. pressSequentially emite
+	// keydown/keypress/keyup por cada caracter, como un humano. El fill('') previo es necesario
+	// porque pressSequentially AGREGA al final de lo que ya haya en el input, no reemplaza.
+	//
+	// 🔴 Ojo si venis leyendo este helper de antes del 4/9/2026: el motivo escrito aca era otro.
+	// Decia que fill() dejaba ya_se_busco en true y que por eso el Enter de abajo creaba el modelo
+	// al vuelo en vez de buscar. Eso ya no pasa: desde la mision de la precarga de resultados,
+	// onModalShow() baja ya_se_busco en CADA apertura (src/common-vue/components/search/Modal.vue),
+	// asi que el primer Enter busca siempre, se haya tecleado o no. El tecleo real se mantiene
+	// porque es lo que hace el usuario, no porque sin el el test se rompa.
 	await modal_input.fill('')
 	await modal_input.pressSequentially(query)
-	// Este Enter BUSCA porque el tecleo de arriba dejo ya_se_busco en false. Con fill() este
-	// mismo Enter caeria en seleccionar_resultado() y, sin resultados, crearia el modelo al vuelo
-	// (el alta al vuelo del segundo Enter): el test terminaria creando un proveedor nuevo en vez
-	// de buscar el del fixture. Es la trampa principal de este modal.
+	// Primer Enter: busca. El segundo, si no hubo resultados, es el que crea el modelo al vuelo.
 	await modal_input.press('Enter')
 	// Auto-espera: el primer resultado tarda lo que tarde en filtrar/renderizar, sin waitForTimeout.
 	await elegir_primer_resultado(page, field_testid)

@@ -1,8 +1,8 @@
 import moment from 'moment'
 
 /**
- * Mixin compartido por las tarjetas de integraciones de ecommerce (Mercado Pago, Zippin)
- * de la sección "Integraciones" en Configuración online (prompt 600).
+ * Mixin compartido por la solapa "Tienda online" del ABM de Integraciones y por sus
+ * tarjetas (Mercado Pago, Zippin).
  *
  * Centraliza la lógica que se repetiría en cada tarjeta: el cálculo del estado visual
  * (Desconectado / Conectado / Conexión por vencer) y las llamadas a los endpoints OAuth
@@ -19,8 +19,8 @@ export default {
 		 * Calcula el estado visual de una integración a partir de si está conectada
 		 * y la fecha de expiración de su token.
 		 *
-		 * @param {Boolean|Number} connected Valor de `<provider>_connected` del online_configuration.
-		 * @param {String|null} expires_at Valor de `<provider>_token_expires_at` (fecha del backend).
+		 * @param {Boolean|Number} connected Valor de `connected` del item de GET /api/integraciones.
+		 * @param {String|null} expires_at Valor de `expires_at` de ese mismo item (fecha del backend).
 		 * @returns {{text: String, variant: String}} Texto a mostrar y variante de color (Bootstrap).
 		 */
 		integrationStatusInfo(connected, expires_at) {
@@ -69,21 +69,18 @@ export default {
 		},
 
 		/**
-		 * Vuelve a pedir el online_configuration al backend y refresca el formulario que
-		 * ya está abierto (sin volver a abrir el modal), para reflejar el nuevo estado de
-		 * conexión luego de conectar o desconectar una integración.
+		 * Pide el listado de integraciones del comercio, que es lo que pinta las tarjetas.
 		 *
-		 * @returns {Promise}
+		 * 🔴 Reemplaza al viejo `refreshOnlineConfigurationModel()`: el estado de conexión
+		 * dejó de vivir en el online_configuration (mp_connected, zippin_connected, ...) y
+		 * pasó a los conectores de plataforma. La respuesta trae, por integración, el slug,
+		 * el nombre, el grupo (`sistema` | `tienda_online`), si está conectada, cuándo vence
+		 * y el id de la cuenta en la plataforma. Nunca trae tokens.
+		 *
+		 * @returns {Promise} Promesa de axios; `res.data.integraciones` trae el listado.
 		 */
-		refreshOnlineConfigurationModel() {
-			return this.$store.dispatch('online_configuration/getModels')
-			.then(() => {
-				let model = this.$store.state.online_configuration.models[0]
-				if (model) {
-					// show_modal = false: solo actualiza el model en el store, el modal ya está abierto
-					this.setModel(model, 'online_configuration', [], false)
-				}
-			})
+		requestIntegraciones() {
+			return this.$api.get('integraciones')
 		},
 	},
 }
