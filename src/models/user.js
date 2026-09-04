@@ -109,6 +109,31 @@ export default {
 		},
 		// Grupo 231, prompt 06: activa la dinamica de costeo por condicion fiscal (grupo 231,
 		// prompt 02) en reemplazo de la tilde historica "aplicar_iva_al_costo".
+		/*
+		 * Preferencia del comercio sobre que pasa con los descuentos del proveedor al asignarle un
+		 * proveedor a un articulo. Apagada (default) es lo de develop: los descuentos del proveedor
+		 * entran recien al armar la compra. Prendida, es la dinamica anterior al merge de refractor
+		 * (ArticleProviderDiscountHelper::aplicar_al_asignar_proveedor en la API).
+		 */
+		{
+			text: 'Aplicar los descuentos del proveedor al asignarlo a un articulo',
+			key: 'aplicar_descuentos_proveedor_al_asignar',
+			type: 'checkbox',
+			value: 0,
+			// Solo lo ve el dueño, igual que fechar_ventas_por_fecha_de_entrega: es preferencia del
+			// comercio y vive en la fila del dueño. El empleado tiene su propia columna, que nadie
+			// escribe nunca, asi que el tilde le mostraria siempre 0 aunque el comercio lo tenga
+			// prendido. Ojo: esto es para que no vea un control que le miente, NO es la proteccion.
+			// ModelForm postea el modelo entero, props ocultas incluidas; quien impide que el
+			// empleado le pise la preferencia al dueño es el guard de UserController::update().
+			v_if_function: 'is_owner_v_if_function',
+			descriptions:
+			[
+				'Si se activa, al crear un articulo con proveedor —o al asignarle un proveedor a uno que no tenia— se le cargan automaticamente los descuentos de ese proveedor.',
+				'Los descuentos quedan cargados en el articulo, se ven en su ficha y se pueden editar o borrar como cualquier otro.',
+				'No afecta a los articulos que ya existen: rige de aca en adelante. Cambiar el proveedor de un articulo que ya tenia otro sigue preguntando con su ventana de confirmacion, este activada o no esta opcion.',
+			],
+		},
 		{
 			text: 'Calcular costos segun la condicion de IVA',
 			key: 'usar_condicion_fiscal_en_costeo',
