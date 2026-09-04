@@ -185,9 +185,33 @@ export default {
 		titulo: 'Actualizar la venta',
 		que_hace: 'Guarda los cambios de una venta ya confirmada.',
 		repercute: [
-			'Recalcula el total y ajusta el stock por la diferencia de cada renglón.',
+			'Recalcula el total y ajusta el stock por la diferencia de cada renglón: subir una cantidad descuenta solo lo que se agregó, bajarla devuelve la diferencia, y quitar un renglón devuelve todas sus unidades.',
+			'Los renglones que no se tocan conservan el precio con el que se vendieron, aunque el precio del artículo haya cambiado desde entonces: editar la venta no le cambia la plata a lo ya vendido.',
 			'Rehace el movimiento de cuenta corriente de esta venta: el movimiento viejo se reemplaza por uno nuevo.',
 		],
+		nota_interna: 'El ajuste por diferencia y el precio congelado estan medidos por tests/Feature/Sales/16_Actualizar_venta_stock_y_precio_congelado_Test.php (exploracion 1/9/2026).',
+	},
+
+	'btn-abrir-actualizar-precios': {
+		titulo: 'Actualizar precios de la venta',
+		que_hace: 'Abre la comparación entre el precio con el que se vendió cada renglón y el precio actual del artículo, para traer la venta a los precios de hoy.',
+		repercute: [
+			'Cada renglón marca si su precio subió, bajó o quedó igual desde que se vendió.',
+			'El precio nuevo que propone es el precio actual del artículo, y se puede corregir a mano antes de confirmar.',
+		],
+		nota_interna: 'Flujo de DOS pasos, aclarado por Lucas el 2/9/2026: confirmar el modal escribe los precios de los renglones y carga la venta en Vender; el total y la cuenta corriente se recalculan recien al guardar en Vender. Ventana reportada: el paso 1 PERSISTE, asi que abandonar en Vender sin guardar deja la venta con renglones nuevos y total/deuda viejos. Lo fija tests/Feature/Sales/16_..._Test.php::actualizar_precios_de_la_venta_persiste_renglones_sin_recalcular_total_ni_deuda.',
+	},
+
+	'btn-confirmar-actualizar-precios': {
+		titulo: 'Confirmar los precios nuevos',
+		que_hace: 'Escribe en la venta los precios cargados en la tabla y la abre en Vender para el guardado final.',
+		repercute: [
+			'Cada renglón queda con su precio nuevo desde este momento.',
+			'El total de la venta y la cuenta corriente del cliente se actualizan recién al apretar Guardar en Vender: ese guardado es el que cierra el cambio.',
+			'El stock no se mueve: esto cambia precios, no cantidades.',
+		],
+		requiere: 'Completar el guardado en Vender. Si se cierra Vender sin guardar, los renglones ya quedaron con el precio nuevo pero el total y la deuda del cliente siguen siendo los de antes.',
+		nota_interna: 'Ver la nota de btn-abrir-actualizar-precios. El requiere describe la ventana medida el 1/9/2026 y confirmada como diseno de dos pasos por Lucas el 2/9.',
 	},
 
 	'btn-registrar-pago': {
@@ -206,5 +230,6 @@ export default {
 			'Tildado, la caja vuelve al saldo que tenía antes de la venta.',
 			'Sin tildar, el stock vuelve igual pero la plata QUEDA en la caja. Es la opción correcta solo si esa plata ya se justificó por otro lado.',
 		],
+		nota_interna: 'Defecto abierto (exploracion 1/9/2026, reportado): si un renglon de la venta es de un articulo con stock GLOBAL (sin depositos cargados), borrar la venta le PISA el stock con solo lo repuesto -- de 19 unidades puede quedar 1. La reposicion entra por deposito (CheckToAddress attachea la sucursal de la venta) y el stock global se recalcula desde los depositos. Como se llega al estado (medido 2/9/2026): la ACTUALIZACION MASIVA del listado sobre el campo Stock escribe la columna sin tocar address_article. El modal de movimiento de stock NO sirve: exige deposito si la cuenta tiene alguno (Form.vue:223). Lo fija tests/Feature/Sales/16_..._Test.php::borrar_la_venta_de_un_articulo_con_stock_global_pisa_el_stock. NO contarselo al operador hasta que Lucas decida: ese test se pone rojo el dia que se corrija.',
 	},
 }

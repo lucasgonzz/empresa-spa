@@ -35,6 +35,9 @@
 			v-for="(stat, index) in stat_cards"
 			:key="index"
 			class="article-import-result-modal__stat-card"
+			data-testid="resultado-importacion-metrica"
+			:data-metrica="stat.slug"
+			:data-valor="stat.value"
 			:style="{ '--stat-color': stat.color }">
 				<div class="article-import-result-modal__stat-value">
 					{{ format_stat_value(stat.value) }}
@@ -503,21 +506,25 @@ export default {
 				let cards = [
 					{
 						label: 'Filas procesadas',
+						slug: 'filas_procesadas',
 						value: stats.filas_procesadas,
 						color: '#6f42c1',
 					},
 					{
 						label: 'Artículos creados',
+						slug: 'creados',
 						value: stats.articulos_creados,
 						color: '#28a745',
 					},
 					{
 						label: 'Artículos macheados',
+						slug: 'macheados',
 						value: stats.articulos_macheados,
 						color: '#17a2b8',
 					},
 					{
 						label: 'Artículos actualizados',
+						slug: 'actualizados',
 						value: stats.articulos_actualizados,
 						color: '#007bff',
 					},
@@ -527,6 +534,7 @@ export default {
 				if (this.repeated_code_count > 0) {
 					cards.push({
 						label: 'Creados con código repetido',
+						slug: 'codigo_repetido',
 						value: this.repeated_code_count,
 						color: '#dc3545',
 					})

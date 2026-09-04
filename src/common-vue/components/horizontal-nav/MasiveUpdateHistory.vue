@@ -51,6 +51,7 @@
 				v-if="models[data.index].can_revert"
 				size="sm"
 				variant="outline-danger"
+				:data-testid="'btn-revertir-masiva-' + models[data.index].id"
 				:disabled="revert_loading_id == models[data.index].id"
 				@click="confirm_revert(models[data.index])">
 					Revertir

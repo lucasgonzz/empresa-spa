@@ -32,6 +32,28 @@ export default {
 		],
 	},
 
+	/* ------------------------------------------------------------------ precio del articulo */
+
+	'article-cost': {
+		titulo: 'Costo del artículo',
+		que_hace: 'Lo que cuesta el artículo, sin impuestos: el punto de partida de todo el cálculo del precio.',
+		repercute: [
+			'Con margen de ganancia configurado, cambiar el costo recalcula el precio final en la misma proporción: costo al doble, precio final al doble.',
+			'Con precio fijado a mano (margen vacío), el precio final NO se mueve al cambiar el costo. El margen que ese precio implica sí cambia.',
+		],
+		nota_interna: 'Los dos repercute medidos por tests/Feature/Listado/3_Precio_final_sigue_al_costo_Test.php (exploracion 1/9/2026).',
+	},
+
+	'article-percentage_gain': {
+		titulo: 'Margen de ganancia',
+		que_hace: 'El porcentaje que se le suma al costo real para formar el precio final.',
+		repercute: [
+			'Mientras tenga un valor, el precio final queda atado al costo: cada cambio de costo lo recalcula solo.',
+			'Cargar un margen borra el precio fijado a mano, si lo había: las dos formas de fijar el precio no conviven.',
+		],
+		nota_interna: 'Que el margen borra el price manual esta en ArticleHelper::setFinalPrice (el bloque "Pongo el precio en blanco si corresponde"), verificado en la exploracion del 1/9/2026.',
+	},
+
 	/* ---------------------------------------------------------------------- masivas */
 
 	'btn-confirmar-masiva': {
@@ -40,8 +62,20 @@ export default {
 		repercute: [
 			'Alcanza a TODO lo filtrado, no solo a lo que se ve en la página actual. La cuenta de arriba dice a cuántos artículos va a llegar; conviene leerla antes de confirmar.',
 			'Tocar el costo o el margen de un artículo recalcula su precio final.',
+			'Un artículo con precio fijado a mano (sin margen) conserva su precio final aunque el costo cambie: su precio no depende del costo.',
 			'Un artículo publicado en la tienda comparte base con el ERP: el precio cambiado acá se ve en la tienda, sin sincronización de por medio.',
 		],
+	},
+
+	'btn-revertir-masiva-*': {
+		titulo: 'Revertir esta actualización masiva',
+		que_hace: 'Deshace esa actualización: cada artículo alcanzado vuelve a los valores que tenía antes.',
+		repercute: [
+			'Vuelven el costo Y el precio final: los precios recalculados por el cambio se recalculan de nuevo con los valores restaurados, exactos.',
+			'También restaura los campos que estaban vacíos: un artículo que no tenía categoría y la recibió en la masiva vuelve a quedar sin categoría.',
+		],
+		requiere: 'El botón aparece solo en las actualizaciones que todavía se pueden revertir.',
+		nota_interna: 'Los dos repercute estan medidos: el del costo/precio final por tests/Feature/Listado/4_Masiva_de_costo_recalcula_y_revierte_Test.php (exploracion 1/9/2026) y el de los vacios por 2_Revertir_masiva_restaura_null_Test.php.',
 	},
 
 	'masiva-modo-*': {

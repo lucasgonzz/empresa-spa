@@ -30,6 +30,7 @@
 			<b-form-group label="Archivo Excel (.xlsx, .xls)">
 				<b-form-file
 				v-model="file"
+				data-testid="ai-import-archivo"
 				accept=".xlsx,.xls"
 				placeholder="Seleccioná un archivo..."
 				browse-text="Explorar"
@@ -49,6 +50,7 @@
 			label="El archivo tiene varias hojas. ¿Cuál querés importar?">
 				<b-form-select
 				v-model="hoja_seleccionada"
+				data-testid="ai-import-hoja"
 				:options="opciones_de_hoja"
 				size="sm">
 					<template #first>
@@ -176,6 +178,7 @@
 			variant="primary"
 			block
 			data-tour="listado.boton_analizar_con_ia"
+			data-testid="ai-import-btn-analizar"
 			:disabled="!file || loading || file_processing || falta_elegir_hoja"
 			@click="analyze">
 				<b-spinner
@@ -335,6 +338,7 @@
 			:description="provider_confidence_label">
 				<b-form-select
 				v-model="selected_provider_id"
+				data-testid="ai-import-proveedor"
 				:options="provider_options">
 				</b-form-select>
 			</b-form-group>
@@ -441,6 +445,7 @@
 						<!-- Select de propiedad del sistema -->
 						<b-form-select
 						v-model="item.system_property"
+						:data-testid="'ai-import-mapeo-' + index"
 						:options="system_property_options"
 						size="sm">
 						</b-form-select>
@@ -544,6 +549,7 @@
 				<b-button
 				variant="primary"
 				data-tour="listado.boton_confirmar_mapeo"
+				data-testid="ai-import-btn-confirmar-mapeo"
 				:disabled="loading_recomendacion"
 				@click="confirmar_paso_2">
 					<b-spinner
@@ -1032,14 +1038,14 @@
 				</small>
 				<span class="d-block m-t-5">¿Qué representan esas filas repetidas?</span>
 			</template>
-			<b-form-radio v-model="politica_intra_archivo" value="ultima_gana" class="m-b-5">
+			<b-form-radio v-model="politica_intra_archivo" value="ultima_gana" data-testid="ai-import-politica-intra-ultima_gana" class="m-b-5">
 				Es el mismo producto, cargado más de una vez
 				<small class="d-block text-muted m-t-3">
 					Se va a conservar la información de la <strong>última</strong> aparición de cada código. Al terminar te
 					mostramos exactamente qué filas quedaron sobrescritas y por cuál.
 				</small>
 			</b-form-radio>
-			<b-form-radio v-model="politica_intra_archivo" value="productos_distintos" class="m-b-5">
+			<b-form-radio v-model="politica_intra_archivo" value="productos_distintos" data-testid="ai-import-politica-intra-productos_distintos" class="m-b-5">
 				Son productos distintos que comparten el código de proveedor
 				<small class="d-block text-muted m-t-3">
 					Se procesa cada fila por separado y se crea un artículo por cada una, aunque compartan el código.
@@ -1061,7 +1067,7 @@
 		data-tour="listado.politica_codigos_repetidos"
 		label="Si el código de proveedor coincide con artículos que ya existen en el sistema, ¿qué hacer?"
 		label-class="ai-import-decision-title">
-			<b-form-radio v-model="politica_colision" value="actualizar_todos" class="m-b-5">
+			<b-form-radio v-model="politica_colision" value="actualizar_todos" data-testid="ai-import-politica-colision-actualizar_todos" class="m-b-5">
 				Actualizar todos los artículos que tengan ese código
 				<small class="d-block text-muted m-t-3">
 					<template v-if="duplicate_stats && duplicate_stats.provider_codes_existentes_mismo_proveedor === 0">
@@ -1072,7 +1078,7 @@
 					</template>
 				</small>
 			</b-form-radio>
-			<b-form-radio v-model="politica_colision" value="saltear_y_reportar" class="m-b-5">
+			<b-form-radio v-model="politica_colision" value="saltear_y_reportar" data-testid="ai-import-politica-colision-saltear_y_reportar" class="m-b-5">
 				Saltear esas filas y avisarme
 				<small class="d-block text-muted m-t-3">
 					Si un código coincide con más de un artículo, esa fila no se crea ni se actualiza: queda
@@ -1080,7 +1086,7 @@
 					está seguro.
 				</small>
 			</b-form-radio>
-			<b-form-radio v-model="politica_colision" value="crear_nuevo" class="m-b-5">
+			<b-form-radio v-model="politica_colision" value="crear_nuevo" data-testid="ai-import-politica-colision-crear_nuevo" class="m-b-5">
 				No identificar por código de proveedor
 				<small class="d-block text-muted m-t-3">
 					Las filas que solo tienen código de proveedor van a crear artículos nuevos aunque el código
@@ -1094,13 +1100,13 @@
 		v-if="duplicate_stats && duplicate_stats.provider_codes_existentes_otros_proveedores > 0"
 		label="El código de proveedor ya existe en otros proveedores. ¿Qué hacer con esos artículos?"
 		label-class="ai-import-decision-title">
-			<b-form-radio v-model="politica_otro_proveedor" value="ignorar" class="m-b-5">
+			<b-form-radio v-model="politica_otro_proveedor" value="ignorar" data-testid="ai-import-politica-otro-ignorar" class="m-b-5">
 				Ignorar esos artículos y crear nuevos para este proveedor
 				<small class="d-block text-muted m-t-3">
 					El mismo código de proveedor puede pertenecer a distintos proveedores. Los artículos del otro proveedor no serán modificados. Se crearán artículos nuevos para el proveedor seleccionado en este paso, aunque compartan el código de proveedor con los existentes.
 				</small>
 			</b-form-radio>
-			<b-form-radio v-model="politica_otro_proveedor" value="actualizar" class="m-b-5">
+			<b-form-radio v-model="politica_otro_proveedor" value="actualizar" data-testid="ai-import-politica-otro-actualizar" class="m-b-5">
 				Actualizar los artículos del otro proveedor con los datos de este Excel
 				<small class="d-block text-muted m-t-3">
 					Usá esta opción si los artículos fueron importados antes con el proveedor equivocado. Los artículos que tengan ese código de proveedor, sin importar a qué proveedor están asignados actualmente, serán actualizados con los datos de este Excel.
@@ -1118,6 +1124,7 @@
 				<b-button
 				variant="primary"
 				data-tour="listado.boton_continuar_importacion"
+				data-testid="ai-import-btn-continuar"
 				:disabled="(filas_identificadas_por_provider_code > 0 && !politica_colision)
 					|| (duplicate_stats && duplicate_stats.provider_codes_existentes_otros_proveedores > 0 && !politica_otro_proveedor)"
 				@click="step = 4">
@@ -1139,6 +1146,7 @@
 			label="Fila a partir de la cual empezar a importar">
 				<b-form-input
 				type="number"
+				data-testid="ai-import-fila-desde"
 				v-model="start_row"
 				placeholder="Fila a partir de la cual empezar a importar">
 				</b-form-input>
@@ -1149,6 +1157,7 @@
 			label="Última fila hasta la cual importar">
 				<b-form-input
 				type="number"
+				data-testid="ai-import-fila-hasta"
 				v-model="finish_row"
 				placeholder="Última fila hasta la cual importar">
 				</b-form-input>
@@ -1174,6 +1183,7 @@
 			class="radio-option m-b-5"
 			:value="0"
 			size="lg"
+			data-testid="ai-import-operacion-solo-editar"
 			v-model="create_and_edit">
 				Solo editar {{ model_label_plural }} existentes
 			</b-form-radio>
@@ -1181,6 +1191,7 @@
 			class="radio-option"
 			:value="1"
 			size="lg"
+			data-testid="ai-import-operacion-crear-y-editar"
 			v-model="create_and_edit">
 				Cargar nuevos {{ model_label_plural }} y editar existentes
 			</b-form-radio>
@@ -1267,6 +1278,7 @@
 				<b-button
 				variant="success"
 				data-tour="listado.boton_confirmar_importacion"
+				data-testid="ai-import-btn-importar"
 				:disabled="loading || create_and_edit === null || !can_start_import"
 				@click="importar">
 					<b-spinner

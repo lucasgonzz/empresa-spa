@@ -38,6 +38,38 @@ function splice_props(props, new_props, insert_after_keys) {
 }
 
 /**
+ * Corre el armado de UNA familia de columnas dinamicas aislando su error del resto.
+ *
+ * 🔴 POR QUE EXISTE: las tres familias (listas de precio, descuentos por metodo de pago y
+ * sucursales) se arman una atras de otra en add_article_dynamic_columns(). Sin aislarlas, un dato
+ * inconsistente en la segunda deja al listado sin la tercera — y el usuario ve desaparecer las
+ * columnas de sucursal y el boton de editar stock por algo que no tiene ninguna relacion con eso.
+ *
+ * Paso de verdad en la produccion de masquito el 3/9/2026, con un descuento cuyo metodo de pago
+ * habia sido borrado. La causa puntual de ese dia ya tiene su guarda propia mas abajo; esto es para
+ * la proxima, que va a ser otro dato y otra familia.
+ *
+ * ⚠️ NO se traga el error en silencio: lo escribe en la consola con el nombre de la familia. Un
+ * catch mudo cambiaria un listado roto por un listado incompleto sin explicacion, que es peor de
+ * diagnosticar.
+ *
+ * @param {string} familia Nombre legible, para el mensaje de consola.
+ * @param {Function} armar Funcion que agrega las columnas de esa familia.
+ * @return {void}
+ */
+function agregar_familia(familia, armar) {
+	try {
+		armar()
+	} catch (error) {
+		console.error(
+			'No se pudieron armar las columnas dinamicas de articulo de "' + familia + '". '
+			+ 'Las demas columnas se arman igual. Detalle:',
+			error
+		)
+	}
+}
+
+/**
  * Unico lugar de la regla "el dueno usa listas de precio". Cualquier chequeo nuevo en JS
  * debe llamar a esta funcion en vez de repetir el OR de extensiones (la duplicacion de esta
  * regla en dos lugares fue la causa del bug del prompt 254).
@@ -94,49 +126,73 @@ export function add_article_dynamic_columns(props, context, collections) {
 			return prop.key != 'percentage_gain' && prop.key != 'price' && prop.key != 'final_price'
 		})
 
-		let price_type_props = (collections.price_types || []).map(function (price_type) {
-			return {
-				key: 'price_type_' + price_type.id,
-				text: price_type.name,
-				type: 'text',
-				no_usar_en_filtros: true,
-				not_show_on_form: true,
-				dynamic_article_column: true,
-			}
+		agregar_familia('listas de precio', function () {
+			let price_type_props = (collections.price_types || []).map(function (price_type) {
+				return {
+					key: 'price_type_' + price_type.id,
+					text: price_type.name,
+					type: 'text',
+					no_usar_en_filtros: true,
+					not_show_on_form: true,
+					dynamic_article_column: true,
+				}
+			})
+			splice_props(props, price_type_props, PRICE_TYPE_INSERT_AFTER)
 		})
-		splice_props(props, price_type_props, PRICE_TYPE_INSERT_AFTER)
 	}
 
 	// Sin sentido como columna del Listado si el dueno usa listas de precio (prompt 254):
 	// el descuento se calcula sobre final_price, que deja de ser la base de venta real.
 	if (!usa_listas && (collections.payment_method_discounts || []).length) {
 
-		let discount_props = collections.payment_method_discounts.map(function (discount) {
-			return {
-				key: 'payment_method_discount_' + discount.id,
-				text: discount.current_acount_payment_method.name,
-				type: 'text',
-				no_usar_en_filtros: true,
-				not_show_on_form: true,
-				dynamic_article_column: true,
-			}
+		/**
+		 * 🔴 SE FILTRAN LOS DESCUENTOS SIN METODO DE PAGO, Y ESTO NO ES DEFENSIVO PORQUE SI:
+		 * paso en la produccion de masquito el 3/9/2026 y dejo el listado de articulos inutilizable.
+		 *
+		 * Borrar un metodo de pago desde el ABM no borra sus current_acount_payment_method_discounts
+		 * (CurrentAcountPaymentMethodController::destroy no los toca y la tabla no tiene FK con
+		 * cascade), asi que el descuento queda apuntando a un metodo que ya no existe. Leerle `.name`
+		 * a esa relacion nula tiraba un TypeError, y como las columnas de sucursal se agregan MAS
+		 * ABAJO en esta misma funcion, la excepcion se las llevaba puestas junto con el boton de
+		 * editar stock. Tres sintomas que no se parecen en nada a "borre un metodo de pago".
+		 *
+		 * Un descuento sin metodo no puede ser una columna: no tiene nombre que mostrar ni regla que
+		 * aplicar. Se omite y listo.
+		 */
+		agregar_familia('descuentos por metodo de pago', function () {
+			let discounts_utilizables = collections.payment_method_discounts.filter(function (discount) {
+				return !!(discount && discount.current_acount_payment_method)
+			})
+
+			let discount_props = discounts_utilizables.map(function (discount) {
+				return {
+					key: 'payment_method_discount_' + discount.id,
+					text: discount.current_acount_payment_method.name,
+					type: 'text',
+					no_usar_en_filtros: true,
+					not_show_on_form: true,
+					dynamic_article_column: true,
+				}
+			})
+			splice_props(props, discount_props, PAYMENT_DISCOUNT_INSERT_AFTER)
 		})
-		splice_props(props, discount_props, PAYMENT_DISCOUNT_INSERT_AFTER)
 	}
 
-	let address_props = (collections.addresses || [])
-		.filter(function (address) { return puede_ver_address(context, address) })
-		.map(function (address) {
-			return {
-				key: 'address_' + address.id,
-				text: address.street,
-				type: 'text',
-				not_show_on_form: true,
-				no_usar_en_filtros: true,
-				dynamic_article_column: true,
-			}
-		})
-	splice_props(props, address_props, ADDRESS_INSERT_AFTER)
+	agregar_familia('sucursales', function () {
+		let address_props = (collections.addresses || [])
+			.filter(function (address) { return puede_ver_address(context, address) })
+			.map(function (address) {
+				return {
+					key: 'address_' + address.id,
+					text: address.street,
+					type: 'text',
+					not_show_on_form: true,
+					no_usar_en_filtros: true,
+					dynamic_article_column: true,
+				}
+			})
+		splice_props(props, address_props, ADDRESS_INSERT_AFTER)
+	})
 
 	return props
 }

@@ -84,6 +84,7 @@ class="update-prices-modal">
 
 		<div class="update-prices-modal__footer">
 			<btn-loader
+			data-testid="btn-confirmar-actualizar-precios"
 			@clicked="update"
 			:loader="loading"
 			text="Actualizar"></btn-loader>
