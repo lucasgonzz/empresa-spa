@@ -69,15 +69,29 @@
 		<impresora-config-modal
 		ref="impresora_config_modal"
 		:impresoras="impresoras_detectadas"
+		:agentes="agentes_de_impresion"
 		:qz_disponible="qz_disponible"
 		:cargando="cargando_impresoras"
 		:impresora_actual="impresora"
 		:ancho_actual="ancho_impresora"
 		:guardando="guardando_impresora"
 		:probando="probando_impresion"
+		:descargando="generando_codigo"
 		@refrescar="refrescar_impresoras"
 		@guardar="guardar_configuracion_impresora"
-		@probar="probar_impresion"></impresora-config-modal>
+		@probar="probar_impresion"
+		@descargar="descargar_agente"
+		@ver_instructivo="abrir_instructivo_del_agente"></impresora-config-modal>
+
+		<instalar-agente-modal
+		ref="instalar_agente_modal"
+		:codigo="codigo_de_vinculacion"
+		:generando_codigo="generando_codigo"
+		:copiado="codigo_copiado"
+		:minutos_de_vida="minutos_de_vida_del_codigo"
+		@copiar="copiar_codigo_de_vinculacion"
+		@regenerar="generar_codigo_de_vinculacion"
+		@cerrado="cargar_agentes_de_impresion"></instalar-agente-modal>
 	</div>
 </template>
 
@@ -89,7 +103,8 @@ import SectionTickets from './SectionTickets.vue'
 import SectionRemitosA4 from './SectionRemitosA4.vue'
 import SectionFacturasA4 from './SectionFacturasA4.vue'
 import ImpresoraConfigModal from './ImpresoraConfigModal.vue'
-import { guardar_preferencias_del_puesto } from '@/mixins/sale/print_ticket/preferencias_del_puesto'
+import InstalarAgenteModal from './InstalarAgenteModal.vue'
+import { guardar_preferencias_del_puesto, guardar_ancho_del_puesto } from '@/mixins/sale/print_ticket/preferencias_del_puesto'
 
 export default {
 	components: {
@@ -100,6 +115,7 @@ export default {
 		SectionRemitosA4,
 		SectionFacturasA4,
 		ImpresoraConfigModal,
+		InstalarAgenteModal,
 	},
 	mixins: [print_ticket],
 	props: {
@@ -149,6 +165,26 @@ export default {
 			 * Hay una impresion de prueba en curso.
 			 */
 			probando_impresion: false,
+			/**
+			 * Equipos con el agente de impresion instalado, con sus impresoras.
+			 */
+			agentes_de_impresion: [],
+			/**
+			 * Codigo que el operador pega en el agente recien instalado.
+			 */
+			codigo_de_vinculacion: null,
+			/**
+			 * Hay una generacion de codigo en curso.
+			 */
+			generando_codigo: false,
+			/**
+			 * El codigo se acaba de copiar, para confirmarselo al operador.
+			 */
+			codigo_copiado: false,
+			/**
+			 * Minutos que dura el codigo, tal como los informa el backend.
+			 */
+			minutos_de_vida_del_codigo: 30,
 			/**
 			 * Catálogo de opciones de columnas para el model_name activo.
 			 */
@@ -651,8 +687,166 @@ export default {
 			}
 		},
 		/**
-		 * Abre la configuracion de impresora del Ticket 2.0.
+		 * Descarga el agente y abre el instructivo.
+		 *
+		 * El instructivo se abre SOLO, sin que el operador lo pida: el momento en que acaba de
+		 * bajar un .exe es exactamente cuando necesita saber que va a pasar cuando lo ejecute
+		 * — sobre todo el cartel de SmartScreen, que es donde mas gente abandona. El codigo se
+		 * genera antes de disparar la descarga para que ya este visible en el paso 5.
 		 */
+		descargar_agente() {
+			let self = this
+
+			self.generar_codigo_de_vinculacion()
+			.then(function () {
+				self.disparar_descarga_del_agente()
+				self.$refs.instalar_agente_modal.open_modal()
+			})
+		},
+
+		/**
+		 * Abre el instructivo sin descargar nada, para quien ya lo bajó y quiere releer los pasos.
+		 */
+		abrir_instructivo_del_agente() {
+			let self = this
+
+			self.$refs.instalar_agente_modal.open_modal()
+
+			// Si todavia no hay codigo, se pide: el instructivo sin el codigo esta incompleto.
+			if (!self.codigo_de_vinculacion) {
+				self.generar_codigo_de_vinculacion()
+			}
+		},
+
+		/**
+		 * Baja el ejecutable desde el último release publicado.
+		 *
+		 * Se usa un <a> y no window.location porque el link es cross-origin: si por lo que fuera
+		 * no viniera como descarga, con location el operador se iria del sistema.
+		 */
+		disparar_descarga_del_agente() {
+			let link = document.createElement('a')
+
+			link.href = 'https://github.com/lucasgonzz/comerciocity-print-agent/releases/latest/download/ComercioCityPrint.exe'
+			link.setAttribute('download', '')
+			link.style.display = 'none'
+
+			document.body.appendChild(link)
+			link.click()
+			document.body.removeChild(link)
+		},
+
+		/**
+		 * Pide al backend un código de vinculación nuevo.
+		 *
+		 * @returns {Promise}
+		 */
+		generar_codigo_de_vinculacion() {
+			let self = this
+
+			self.generando_codigo = true
+			self.codigo_copiado = false
+
+			return self.$api.post('print-agents/codigo')
+			.then(function (res) {
+				self.codigo_de_vinculacion = res.data.codigo
+				self.minutos_de_vida_del_codigo = res.data.expira_en_minutos || 30
+				self.generando_codigo = false
+			})
+			.catch(function (error) {
+				console.error('No se pudo generar el codigo de vinculacion:', error)
+				self.codigo_de_vinculacion = null
+				self.generando_codigo = false
+				self.$toast.error('No se pudo generar el código. Revisá la conexión y volvé a intentar.')
+			})
+		},
+
+		/**
+		 * Copia el código al portapapeles.
+		 */
+		copiar_codigo_de_vinculacion() {
+			let self = this
+
+			if (!self.codigo_de_vinculacion) {
+				return
+			}
+
+			/*
+			 * navigator.clipboard no existe fuera de HTTPS y puede estar bloqueado por permisos,
+			 * asi que queda el camino viejo del textarea: acá no puede fallar en silencio, porque
+			 * si el operador no copia el codigo no puede instalar nada.
+			 */
+			if (navigator.clipboard && navigator.clipboard.writeText) {
+				navigator.clipboard.writeText(self.codigo_de_vinculacion)
+				.then(function () {
+					self.marcar_codigo_copiado()
+				})
+				.catch(function () {
+					self.copiar_con_textarea()
+				})
+
+				return
+			}
+
+			self.copiar_con_textarea()
+		},
+
+		/**
+		 * Copia con un textarea oculto, para los navegadores sin API de portapapeles.
+		 */
+		copiar_con_textarea() {
+			let self = this
+			let textarea = document.createElement('textarea')
+
+			textarea.value = self.codigo_de_vinculacion
+			textarea.setAttribute('readonly', '')
+			textarea.style.position = 'absolute'
+			textarea.style.left = '-9999px'
+
+			document.body.appendChild(textarea)
+			textarea.select()
+
+			try {
+				document.execCommand('copy')
+				self.marcar_codigo_copiado()
+			} catch (error) {
+				self.$toast.error('No se pudo copiar. Seleccioná el código a mano y copialo con Ctrl+C.')
+			}
+
+			document.body.removeChild(textarea)
+		},
+
+		/**
+		 * Confirma visualmente que el código se copió, y vuelve al texto normal solo.
+		 */
+		marcar_codigo_copiado() {
+			let self = this
+
+			self.codigo_copiado = true
+
+			setTimeout(function () {
+				self.codigo_copiado = false
+			}, 2500)
+		},
+
+		/**
+		 * Trae los equipos con agente de impresion vinculados al comercio.
+		 *
+		 * @returns {Promise}
+		 */
+		cargar_agentes_de_impresion() {
+			let self = this
+
+			return self.$api.get('print-agents')
+			.then(function (res) {
+				self.agentes_de_impresion = (res.data && res.data.models) || []
+			})
+			.catch(function (error) {
+				console.error('No se pudieron cargar los equipos de impresion:', error)
+				self.agentes_de_impresion = []
+			})
+		},
+
 		abrir_modal_impresora() {
 			/**
 			 * Se marca como cargando ANTES de abrir. El modal pide la lista en @shown, que
@@ -675,6 +869,10 @@ export default {
 			let self = this
 
 			self.cargando_impresoras = true
+
+			// Los equipos con agente se consultan siempre: son la lista que importa cuando el
+			// comercio ya migró, y no dependen de que QZ esté abierto.
+			self.cargar_agentes_de_impresion()
 
 			self.listar_impresoras_qz()
 			.then(function (resultado) {
@@ -705,13 +903,20 @@ export default {
 			let self = this
 			let ancho_mm = self.parse_valid_ticket_width_mm(datos.ancho_mm)
 
-			if (!datos.impresora) {
-				self.$toast.error('Elegí una impresora')
+			if (!ancho_mm) {
+				self.$toast.error('Ingresá un ancho valido en milimetros (numero mayor a 0)')
 				return
 			}
 
-			if (!ancho_mm) {
-				self.$toast.error('Ingresá un ancho valido en milimetros (numero mayor a 0)')
+			/*
+			 * Sin impresora elegida se guarda el ancho igual. Pasa cuando no hay ninguna
+			 * detectada -- QZ cerrado y sin agente todavia --, y antes en ese caso el ancho no se
+			 * podia dejar configurado aunque el campo estuviera habilitado.
+			 */
+			if (!datos.impresora) {
+				guardar_ancho_del_puesto(self.$cookies, ancho_mm)
+				self.$toast.success('Ancho de ' + ancho_mm + 'mm guardado')
+				self.$refs.impresora_config_modal.close_modal()
 				return
 			}
 
@@ -767,7 +972,9 @@ export default {
 				self.probando_impresion = false
 
 				if (impreso) {
-					self.$toast.success('Prueba enviada a ' + datos.impresora)
+					// El nombre pelado, no el valor guardado: "agente:3:XP-80" no le dice nada a nadie.
+					let destino = self.parse_destino_de_impresion(datos.impresora)
+					self.$toast.success('Prueba enviada a ' + (destino ? destino.nombre : datos.impresora))
 				}
 			})
 			.catch(function () {

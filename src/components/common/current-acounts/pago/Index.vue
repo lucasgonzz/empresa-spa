@@ -369,8 +369,45 @@ export default {
 // Colores por token de _dark_theme.sass, nunca hexadecimales: los modales de bootstrap-vue se
 // montan colgando de <body>, fuera de #app.
 
-// --- El total, arriba de todo ---------------------------------------------------------------
+// --- El header del modal y el total, pegados arriba -------------------------------------------
+//
+// Con muchos metodos de pago cargados el CONTENIDO no scrollea solo: scrollea `.modal` entero
+// --es quien tiene overflow-y:auto por defecto de bootstrap, porque este modal no lleva la prop
+// `scrollable`-- y el total (lo unico que dice cuanto se esta por pagar) se iba de la pantalla
+// junto con el titulo. Pedido de Lucas, 4/9/2026.
+//
+// 🔴 Se resuelve con `position: sticky` sobre el header nativo del modal y sobre el total, y
+// A PROPOSITO no agregando la prop `scrollable`. `scrollable` le pone overflow:hidden al
+// contenedor de `.modal-body` (bootstrap), y eso recorta lo que se abra adentro del modal y salga
+// de su caja: el calendario de `b-form-datepicker` de "Fecha del pago" es EXACTAMENTE el caso que
+// ya describe la nota grande de _modals.sass sobre por que `.modal-content` no lleva overflow
+// hidden --y ya costo trabajo en otros dos componentes, que tuvieron que pasarle boundary a
+// Popper por lo mismo--. Con sticky puro no se agrega ningun overflow:hidden en el camino.
+//
+// Los dos comparten el mismo contenedor con scroll (`.modal`, no hay ningun overflow:auto propio
+// en `.modal-body` ni en `.modal-content`), asi que apilan solos: el header pega a top:0 y el
+// total pega justo debajo, a `top: var(--modal-chrome-min-h)` (el alto fijo del header, mismo
+// token que usa _modals.sass para header y footer).
+// El id no es unico en el repo: ventas/modals/current-acounts/pago/Index.vue declara el mismo
+// id="current-acounts-pago" en un componente VIEJO --sin importadores en toda src/, inalcanzable
+// desde ninguna ruta hoy--. Si algun dia alguien lo reconecta, hereda este sticky en silencio.
+#current-acounts-pago .modal-header
+	position: sticky
+	top: 0
+	z-index: 3
+	// Sticky no "hereda" el fondo del contenedor al repintarse: sin esto, el contenido que
+	// scrollea por debajo se veria a traves del header. El token es el mismo que ya usa
+	// .modal-content en _dark_theme.sass (var(--bg-card)); en claro coincide con el blanco de
+	// bootstrap, asi que el estado sin scrollear queda identico a como estaba.
+	background: var(--bg-card)
+
 .pago-cc__total
+	position: sticky
+	top: var(--modal-chrome-min-h)
+	z-index: 2
+	// Sombra propia y permanente (no solo al pegarse): separa el total de los campos de abajo
+	// tanto pegado como sin pegar, mismo criterio de elevacion que .totales-chip.
+	box-shadow: 0 1px 3px var(--shadow-color)
 	display: flex
 	flex-wrap: wrap
 	align-items: center
@@ -437,6 +474,22 @@ export default {
 
 .pago-cc__campo--ancho
 	grid-column: 1 / -1
+
+// Mismo radio/borde/foco que el bloque de metodos de pago (src/sass/_metodos_de_pago.sass), y
+// mismos tokens: --metodo-pago-input-radius y --metodo-pago-focus-ring. No se duplican como
+// variables nuevas aca porque son custom properties de CSS, globales una vez que el stylesheet
+// carga -- no importa en que archivo .sass se declararon.
+.pago-cc__campos
+	input.form-control,
+	select.custom-select,
+	textarea.form-control
+		border-radius: var(--metodo-pago-input-radius)
+		border-width: 1px
+		transition: border-color .15s ease, box-shadow .15s ease
+
+		&:focus
+			border-color: var(--color-primary)
+			box-shadow: 0 0 0 3px var(--metodo-pago-focus-ring)
 
 // El boton confirmatorio del footer ocupa la franja a la derecha, como el resto de los modales.
 .pago-cc__confirmar
