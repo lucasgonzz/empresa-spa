@@ -43,9 +43,15 @@ export default {
         },
 
         /**
-         * Nombres de las impresoras que QZ Tray ve en este equipo.
+         * Impresoras que QZ Tray ve en este equipo.
          *
-         * @returns {Promise<Array<string>>} vacio si QZ no esta disponible.
+         * 🔴 Devuelve el estado de QZ SEPARADO de la lista, a proposito: no es lo mismo que
+         * QZ no este abierto que QZ este andando pero sin ninguna impresora instalada.
+         * Colapsar los dos casos en "lista vacia" hacia que el segundo mostrara el
+         * instructivo de "abri QZ Tray", que es un diagnostico falso y manda al operador a
+         * revisar donde no esta el problema.
+         *
+         * @returns {Promise<{qz_disponible: boolean, impresoras: Array<string>}>}
          */
         listar_impresoras_qz() {
             let self = this
@@ -53,26 +59,52 @@ export default {
             return self.conectar_qz()
             .then(function (conectado) {
                 if (!conectado) {
-                    return []
+                    return {
+                        qz_disponible: false,
+                        impresoras: [],
+                    }
                 }
 
                 return self.qz.printers.find()
-            })
-            .then(function (encontradas) {
-                // find() devuelve un array, pero con una sola impresora puede venir un string.
-                if (typeof encontradas === 'string') {
-                    return [encontradas]
-                }
+                .then(function (encontradas) {
+                    // find() devuelve un array, pero con una sola impresora puede venir un string.
+                    if (typeof encontradas === 'string') {
+                        return {
+                            qz_disponible: true,
+                            impresoras: [encontradas],
+                        }
+                    }
 
-                if (Array.isArray(encontradas)) {
-                    return encontradas
-                }
+                    if (Array.isArray(encontradas)) {
+                        return {
+                            qz_disponible: true,
+                            impresoras: encontradas,
+                        }
+                    }
 
-                return []
+                    return {
+                        qz_disponible: true,
+                        impresoras: [],
+                    }
+                })
+                .catch(function (error) {
+                    // QZ contesto la conexion y despues fallo la consulta (o no hay ninguna
+                    // impresora instalada, que es como QZ reporta ese caso): sigue disponible.
+                    console.error('No se pudieron listar las impresoras de QZ Tray:', error)
+
+                    return {
+                        qz_disponible: true,
+                        impresoras: [],
+                    }
+                })
             })
             .catch(function (error) {
-                console.error('No se pudieron listar las impresoras de QZ Tray:', error)
-                return []
+                console.error('No se pudo consultar QZ Tray:', error)
+
+                return {
+                    qz_disponible: false,
+                    impresoras: [],
+                }
             })
         },
 

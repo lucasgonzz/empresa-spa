@@ -4,6 +4,11 @@ import afip_qr_iva from '@/mixins/sale/print_ticket/afip_qr_iva'
 import conectar_impresora from '@/mixins/sale/print_ticket/conectar_impresora'
 import table_articles from '@/mixins/sale/print_ticket/table_articles'
 import info_cliente from '@/mixins/sale/print_ticket/info_cliente'
+import {
+    preferencias_del_puesto,
+    parse_ancho_de_ticket_mm,
+    hidratar_preferencias_del_puesto,
+} from '@/mixins/sale/print_ticket/preferencias_del_puesto'
 export default {
     mixins: [afip_information, afip_qr_iva, conectar_impresora, table_articles, info_cliente],
     data() {
@@ -11,7 +16,15 @@ export default {
             qz: null,
             content: [],
             sale_to_print: null,
+            /**
+             * Preferencias de impresion de este puesto. Se expone en data para que los
+             * computed que la leen queden atados a un objeto reactivo.
+             */
+            preferencias_del_puesto: preferencias_del_puesto,
         }
+    },
+    created() {
+        hidratar_preferencias_del_puesto(this.$cookies)
     },
     computed: {
         /**
@@ -25,10 +38,8 @@ export default {
          * @returns {string|null} null si todavia no se configuro ninguna.
          */
         impresora() {
-            let impresora_cookie = this.$cookies.get('impresora')
-
-            if (impresora_cookie) {
-                return impresora_cookie
+            if (this.preferencias_del_puesto.impresora) {
+                return this.preferencias_del_puesto.impresora
             }
 
             if (this.user && this.user.impresora) {
@@ -42,15 +53,16 @@ export default {
             return null
         },
         /**
-         * Ancho de la comandera en mm: cookie válida del navegador o perfil del owner.
+         * Ancho de la comandera en mm: lo configurado en este puesto, o el perfil del owner.
          *
          * @returns {number}
          */
         ancho_impresora() {
-            // Prioridad: cookie local configurada en Ticket 2.0
-            let ancho_cookie = this.parse_valid_ticket_width_mm(this.$cookies.get('ancho_impresora'))
-            if (ancho_cookie) {
-                return ancho_cookie
+            // Prioridad: el ancho configurado en ESTE puesto. Sale del estado reactivo y no
+            // de la cookie por lo que explica preferencias_del_puesto.js: leer la cookie acá
+            // dejaba al computed sin dependencias y congelado hasta el proximo F5.
+            if (this.preferencias_del_puesto.ancho_mm) {
+                return this.preferencias_del_puesto.ancho_mm
             }
 
             // Fallback: ancho del perfil del dueño (sale_ticket_width)
@@ -79,17 +91,7 @@ export default {
          * @returns {number|null} ancho en mm o null si no es válido.
          */
         parse_valid_ticket_width_mm(raw_value) {
-            if (raw_value == null || raw_value === '') {
-                return null
-            }
-
-            let ancho_mm = Number(raw_value)
-
-            if (isNaN(ancho_mm) || ancho_mm <= 0) {
-                return null
-            }
-
-            return ancho_mm
+            return parse_ancho_de_ticket_mm(raw_value)
         },
 
         /**
@@ -115,7 +117,9 @@ export default {
                 }
 
                 if (!self.impresora) {
-                    self.$toast.error('No hay ninguna impresora configurada. Elegila con el engranaje que esta al lado de Ticket 2.0.')
+                    // Sin nombrar donde esta el engranaje: este mixin tambien se usa desde el
+                    // boton de la factura ARCA del listado, donde no hay dropdown de impresion.
+                    self.$toast.error('No hay ninguna impresora configurada para el Ticket 2.0. Configurala desde el menu Imprimir de una venta.')
                     return false
                 }
 

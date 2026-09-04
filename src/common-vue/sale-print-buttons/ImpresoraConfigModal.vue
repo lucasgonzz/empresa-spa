@@ -7,8 +7,9 @@
 	@shown="on_modal_shown">
 
 		<!--
-		QZ Tray no responde. No hay lista que mostrar, asi que la pantalla entera pasa a
-		explicar como resolverlo: es el caso que mas soporte genera.
+		Los avisos de estado van ARRIBA del formulario y no en lugar de el: el ancho del
+		papel se configura igual aunque QZ Tray no responda, que es como se podia hacer con
+		el prompt() viejo y no habria que perder.
 		-->
 		<div
 		v-if="!qz_disponible && !cargando"
@@ -18,11 +19,8 @@
 			</p>
 			<p>
 				El Ticket 2.0 le habla a la impresora a traves de QZ Tray, un programa que tiene
-				que estar <strong>instalado y abierto</strong> en esta computadora.
-			</p>
-			<p>
-				Buscá su icono en la barra de tareas de Windows, al lado del reloj. Si esta,
-				abrilo y tocá Reintentar. Si no esta, hay que instalarlo.
+				que estar <strong>instalado y abierto</strong> en esta computadora. Buscá su icono
+				en la barra de tareas de Windows, al lado del reloj.
 			</p>
 			<b-button
 			variant="primary"
@@ -32,57 +30,76 @@
 			</b-button>
 		</div>
 
-		<template v-else>
-			<div class="impresora-config-modal__field">
-				<label class="impresora-config-modal__label">Impresora</label>
-				<b-form-select
-				size="sm"
-				v-model="impresora_elegida"
-				:options="opciones_impresoras"
-				:disabled="cargando || guardando">
-				</b-form-select>
-				<p class="impresora-config-modal__hint">
-					<template v-if="cargando">
-						Buscando impresoras...
-					</template>
-					<template v-else>
-						{{ texto_impresoras_detectadas }}
-						<a href="#" @click.prevent="$emit('refrescar')">Actualizar lista</a>
-					</template>
-				</p>
-			</div>
+		<!--
+		QZ responde pero el equipo no tiene ninguna impresora instalada. Es un problema
+		distinto del de arriba y se resuelve en otro lado -- en Windows, no aca --, asi que
+		mandar el instructivo de "abri QZ Tray" seria mandarlo a revisar donde no esta.
+		-->
+		<div
+		v-else-if="!impresoras.length && !cargando"
+		class="impresora-config-modal__aviso">
+			<p class="impresora-config-modal__aviso-titulo">
+				QZ Tray esta andando, pero no encuentra impresoras
+			</p>
+			<p>
+				No hay ninguna impresora instalada en esta computadora. Agregala desde Windows y
+				despues tocá Actualizar lista.
+			</p>
+			<b-button
+			variant="primary"
+			size="sm"
+			@click="$emit('refrescar')">
+				Actualizar lista
+			</b-button>
+		</div>
 
-			<div class="impresora-config-modal__field">
-				<label class="impresora-config-modal__label">Ancho del papel (mm)</label>
-				<b-form-input
-				size="sm"
-				type="number"
-				min="1"
-				v-model="ancho_mm"
-				:disabled="guardando"></b-form-input>
-				<p class="impresora-config-modal__hint">
-					Las comanderas mas comunes son de 80mm o de 58mm. El sistema lo usa para
-					calcular cuantos caracteres entran por linea.
-				</p>
-			</div>
+		<div class="impresora-config-modal__field">
+			<label class="impresora-config-modal__label">Impresora</label>
+			<b-form-select
+			size="sm"
+			v-model="impresora_elegida"
+			:options="opciones_impresoras"
+			:disabled="cargando || guardando || !impresoras.length">
+			</b-form-select>
+			<p class="impresora-config-modal__hint">
+				{{ cargando ? 'Buscando impresoras...' : texto_impresoras_detectadas }}
+				<a
+				v-if="!cargando"
+				href="#"
+				@click.prevent="$emit('refrescar')">Actualizar lista</a>
+			</p>
+		</div>
 
-			<div class="impresora-config-modal__actions">
-				<b-button
-				variant="outline-secondary"
-				size="sm"
-				:disabled="!impresora_elegida || probando || guardando"
-				@click="$emit('probar', datos_del_formulario())">
-					{{ probando ? 'Imprimiendo...' : 'Imprimir prueba' }}
-				</b-button>
-				<b-button
-				variant="primary"
-				size="sm"
-				:disabled="!impresora_elegida || guardando"
-				@click="$emit('guardar', datos_del_formulario())">
-					{{ guardando ? 'Guardando...' : 'Guardar' }}
-				</b-button>
-			</div>
-		</template>
+		<div class="impresora-config-modal__field">
+			<label class="impresora-config-modal__label">Ancho del papel (mm)</label>
+			<b-form-input
+			size="sm"
+			type="number"
+			min="1"
+			v-model="ancho_mm"
+			:disabled="guardando"></b-form-input>
+			<p class="impresora-config-modal__hint">
+				Las comanderas mas comunes son de 80mm o de 58mm. El sistema lo usa para
+				calcular cuantos caracteres entran por linea.
+			</p>
+		</div>
+
+		<div class="impresora-config-modal__actions">
+			<b-button
+			variant="outline-secondary"
+			size="sm"
+			:disabled="!impresora_elegida || probando || guardando"
+			@click="$emit('probar', datos_del_formulario())">
+				{{ probando ? 'Imprimiendo...' : 'Imprimir prueba' }}
+			</b-button>
+			<b-button
+			variant="primary"
+			size="sm"
+			:disabled="!impresora_elegida || guardando"
+			@click="$emit('guardar', datos_del_formulario())">
+				{{ guardando ? 'Guardando...' : 'Guardar' }}
+			</b-button>
+		</div>
 	</b-modal>
 </template>
 
@@ -101,7 +118,9 @@ export default {
 		},
 
 		/**
-		 * Si QZ Tray respondio. En false se muestra el instructivo en vez del formulario.
+		 * Si QZ Tray respondio. Va SEPARADO de la lista a proposito: QZ abierto sin
+		 * impresoras instaladas y QZ cerrado son dos problemas distintos, y se resuelven
+		 * en lugares distintos.
 		 */
 		qz_disponible: {
 			type: Boolean,
@@ -200,6 +219,10 @@ export default {
 		 * @returns {string}
 		 */
 		texto_impresoras_detectadas() {
+			if (!this.impresoras.length) {
+				return 'No se detectaron impresoras en este equipo.'
+			}
+
 			if (this.impresoras.length == 1) {
 				return '1 impresora detectada en este equipo.'
 			}
@@ -254,6 +277,9 @@ export default {
 .impresora-config-modal__aviso
 	font-size: 0.85rem
 	color: var(--color-text-secondary, #6c757d)
+	padding-bottom: 14px
+	margin-bottom: 14px
+	border-bottom: 1px solid var(--color-border-tertiary, #dee2e6)
 
 	p
 		margin-bottom: 10px

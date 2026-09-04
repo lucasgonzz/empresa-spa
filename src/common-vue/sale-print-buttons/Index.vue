@@ -89,6 +89,7 @@ import SectionTickets from './SectionTickets.vue'
 import SectionRemitosA4 from './SectionRemitosA4.vue'
 import SectionFacturasA4 from './SectionFacturasA4.vue'
 import ImpresoraConfigModal from './ImpresoraConfigModal.vue'
+import { guardar_preferencias_del_puesto } from '@/mixins/sale/print_ticket/preferencias_del_puesto'
 
 export default {
 	components: {
@@ -653,6 +654,13 @@ export default {
 		 * Abre la configuracion de impresora del Ticket 2.0.
 		 */
 		abrir_modal_impresora() {
+			/**
+			 * Se marca como cargando ANTES de abrir. El modal pide la lista en @shown, que
+			 * BootstrapVue emite recien cuando termina el fade: sin esto, durante esos ~300ms
+			 * el operador ve a pantalla completa el instructivo de "no se detecta QZ Tray"
+			 * aunque QZ este perfectamente abierto.
+			 */
+			this.cargando_impresoras = true
 			this.$refs.impresora_config_modal.open_modal()
 		},
 
@@ -669,9 +677,11 @@ export default {
 			self.cargando_impresoras = true
 
 			self.listar_impresoras_qz()
-			.then(function (impresoras) {
-				self.impresoras_detectadas = impresoras
-				self.qz_disponible = impresoras.length > 0
+			.then(function (resultado) {
+				// qz_disponible viene aparte de la lista: QZ abierto sin impresoras instaladas
+				// no es lo mismo que QZ cerrado, y el modal muestra cosas distintas.
+				self.impresoras_detectadas = resultado.impresoras
+				self.qz_disponible = resultado.qz_disponible
 				self.cargando_impresoras = false
 			})
 			.catch(function () {
@@ -705,8 +715,9 @@ export default {
 				return
 			}
 
-			self.$cookies.set('impresora', datos.impresora, -1)
-			self.$cookies.set('ancho_impresora', String(ancho_mm), -1)
+			// Cookies + estado reactivo de una sola vez: sin lo segundo, los computed que
+			// leen la impresora y el ancho quedan congelados hasta el proximo F5.
+			guardar_preferencias_del_puesto(self.$cookies, datos.impresora, ancho_mm)
 
 			self.guardando_impresora = true
 
@@ -722,8 +733,14 @@ export default {
 			.catch(function (error) {
 				console.error('No se pudo guardar la impresora en el servidor:', error)
 				self.guardando_impresora = false
-				self.$toast.success('Impresora configurada en este equipo')
-				self.$refs.impresora_config_modal.close_modal()
+				/**
+				 * La impresora ya quedo configurada en esta computadora y la proxima impresion
+				 * va a salir bien, pero el servidor no la guardo: desde otra computadora va a
+				 * seguir apareciendo la anterior. Va como ERROR y sin cerrar el modal -- un
+				 * cartel verde sobre una request que fallo es exactamente lo que este trabajo
+				 * vino a sacar del sistema.
+				 */
+				self.$toast.error('Quedó configurada en esta computadora, pero no se pudo guardar en el servidor. Revisá la conexión y volvé a intentar.')
 			})
 		},
 
