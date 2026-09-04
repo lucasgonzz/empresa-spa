@@ -499,6 +499,20 @@ export default {
 		onModalShow() {
 			this.modal_visible = true
 			this.busqueda_realizada = false
+
+			// 🔴 En esta apertura todavia no se busco nada, asi que el proximo Enter tiene que BUSCAR,
+			// no seleccionar. Sin esta linea, ya_se_busco quedaba en true desde la apertura anterior
+			// (arranca en true en data() y solo lo baja reset_ya_se_busco al tipear) y el primer Enter
+			// caia en seleccionar_resultado(): con la lista precargada eso elige el primer modelo del
+			// store, que no tiene nada que ver con el criterio que quedo escrito en el input del
+			// buscador general --que sobrevive al cierre, porque el b-modal no es lazy y no se
+			// destruye--. Pasa igual con filtros fijos guardados y el input vacio, donde buscar() del
+			// buscador general emite igual (ver su guarda de criterio vacio).
+			//
+			// No rompe el atajo del doble Enter: primer Enter busca, segundo selecciona, que es el
+			// diseño. Y con el input vacio y sin filtros fijos el buscador general ni siquiera emite.
+			this.ya_se_busco = false
+
 			this.total_results = 0
 			this.current_page = null
 			this.total_pages = null

@@ -400,15 +400,24 @@ export default {
 		 * Son dos preguntas distintas y estaban mezcladas en un if anidado: mientras la precarga
 		 * colgaba de "limpiar", los buscadores de los formularios (ModelForm -> FieldSearchInput) no
 		 * precargaban nunca, porque por ese camino la prop llegaba en null (ver FieldSearchInput.vue).
+		 * Aclaracion honesta: hoy ningun consumidor pasa show_preview_results, asi que esa rama no la
+		 * ejercita nadie todavia. Queda como la perilla para apagar la precarga en un buscador puntual
+		 * sin volver a mezclarla con "limpiar".
 		 *
 		 * limpiar_resultados_de_busqueda si decide lo otro: en false, el consumidor pidio conservar la
 		 * lista entre aperturas --Vender y Compras eligen un articulo atras del otro sobre los mismos
 		 * resultados-- y aca no se toca nada. Sacar ese primer if les rompe ese flujo.
 		 *
-		 * El `|| []` tapa un caso real, no es paranoia: setModelsToSearch() llama al search_function
-		 * SIN argumentos y search_articles_offline(query) devuelve undefined cuando no le pasan query
-		 * (src/mixins/model_functions.js). Sin el `|| []`, ahi hay un TypeError adentro de un .then(),
-		 * o sea sin rastro en pantalla. Lo mismo si la relacion de is_between / has_many no bajo.
+		 * El `|| []` esta porque models_to_search NO siempre es un array: las ramas is_between y
+		 * has_many de setModelsToSearch() lo sacan de una relacion embebida que puede no haber bajado,
+		 * y ahi queda undefined. Sin el `|| []` eso es un TypeError adentro de un .then(), o sea sin
+		 * rastro en pantalla.
+		 *
+		 * El otro caso que taparia --search_function que devuelve undefined, como
+		 * search_articles_offline(query) llamado sin query (src/mixins/model_functions.js)-- hoy NO se
+		 * puede reproducir: los dos consumidores de esa funcion pasan limpiar_resultados_de_busqueda
+		 * en false y salen por el return de arriba. Queda como defensa para el dia que un modelo
+		 * declare un search_function_for_model_form asincronico, que si pasaria por aca.
 		 */
 		setPreviewResults() {
 			if (!this.limpiar_resultados_de_busqueda) {
@@ -523,28 +532,41 @@ export default {
 
 				this.set_first_row_selected = !this.set_first_row_selected
 
-				// Corta YA con los resultados de la apertura anterior, en este mismo tick. No alcanza
-				// con hacerlo en el .then() de abajo: cuando los modelos llegan por promesa
-				// (search_function contra la base offline), el modal ya estaria abierto mostrando la
-				// lista de la busqueda pasada durante todo ese rato.
+				// Corta con los resultados de la apertura anterior en este mismo tick, sin esperar al
+				// .then() de abajo. Hoy no se nota: en el camino sincronico --que es el de todos los
+				// consumidores actuales-- las dos asignaciones caen en el mismo frame, porque el .then()
+				// de una promesa ya resuelta es un microtask y los microtasks se drenan antes de que el
+				// navegador pinte. Se deja igual para el dia que los modelos lleguen por una promesa
+				// que tarde de verdad: ahi el modal ya estaria abierto mostrando la lista pasada
+				// durante todo ese rato.
 				if (this.limpiar_resultados_de_busqueda) {
 					this.preview_results = []
 				}
 
 				// 🔴 Encadenado con .then() y no suelto. setModelsToSearch() esta declarada `async`
-				// (deuda vieja, no se agrega mas), asi que SIEMPRE devuelve una promesa: llamandola
-				// suelta, setPreviewResults() corria en el mismo tick y precargaba con los modelos de
-				// la apertura ANTERIOR. Sin await: en src/ se usa .then() con `let self = this`.
+				// (deuda vieja, no se agrega mas), asi que SIEMPRE devuelve una promesa. Hoy su cuerpo
+				// corre entero sincronico salvo en la rama del search_function que devuelve promesa
+				// --la unica que hace await--, asi que llamandola suelta funcionaria igual en todos los
+				// consumidores actuales. Se encadena porque esa rama existe: ahi setPreviewResults()
+				// correria en el mismo tick y precargaria con los modelos de la apertura ANTERIOR.
+				// Sin await: en src/ se usa .then() con `let self = this`.
 				this.setModelsToSearch()
 					.then(function() {
 						self.setPreviewResults()
 					})
 					.catch(function(error) {
 						// Mejor abrir sin precarga que con la lista vieja: si juntar los modelos fallo
-						// (un store que no existe, una relacion que no bajo), models_to_search puede
-						// haber quedado con lo de la vez pasada. Antes este error se perdia en una
-						// promesa sin catch.
-						console.log(error)
+						// (un store que no existe, una relacion que no bajo), la asignacion final de
+						// setModelsToSearch() no llego a correr y models_to_search sigue con lo de la
+						// apertura anterior. Se limpia tambien esa lista, no solo la precarga: la
+						// busqueda offline de search/Modal.vue filtra sobre models_to_search, y con la
+						// relacion vieja adentro devolveria resultados de otro modelo.
+						//
+						// console.error y no console.log: antes esto era una promesa sin catch y por lo
+						// menos pintaba rojo en la consola. Este archivo ya escupe varios console.log
+						// por apertura; un error mas ahi adentro no lo ve nadie.
+						console.error('search: no se pudieron juntar los modelos para la precarga', error)
+						self.models_to_search = []
 						if (self.limpiar_resultados_de_busqueda) {
 							self.preview_results = []
 						}
