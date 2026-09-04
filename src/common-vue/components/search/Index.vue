@@ -550,11 +550,14 @@ export default {
 				// consumidores actuales. Se encadena porque esa rama existe: ahi setPreviewResults()
 				// correria en el mismo tick y precargaria con los modelos de la apertura ANTERIOR.
 				// Sin await: en src/ se usa .then() con `let self = this`.
+				// El handler de error va como SEGUNDO argumento de .then() y no como un .catch()
+				// encadenado: un .catch() detras tambien atraparia lo que tirara setPreviewResults(),
+				// y entonces el mensaje de abajo mentiria y ademas se borraria models_to_search sin
+				// motivo. Asi, cada uno cubre lo suyo.
 				this.setModelsToSearch()
 					.then(function() {
 						self.setPreviewResults()
-					})
-					.catch(function(error) {
+					}, function(error) {
 						// Mejor abrir sin precarga que con la lista vieja: si juntar los modelos fallo
 						// (un store que no existe, una relacion que no bajo), la asignacion final de
 						// setModelsToSearch() no llego a correr y models_to_search sigue con lo de la
