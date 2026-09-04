@@ -281,19 +281,7 @@ export default {
 		 * @returns {Array}
 		 */
 		opciones_impresoras() {
-			let opciones = this.grupos_de_agentes.slice()
-
-			if (this.impresoras.length) {
-				opciones.push({
-					label: this.agentes.length ? 'QZ Tray (esta computadora)' : 'Impresoras de esta computadora',
-					options: this.impresoras.map(function (nombre) {
-						return {
-							value: 'qz:' + nombre,
-							text: nombre,
-						}
-					}),
-				})
-			}
+			let opciones = this.opciones_con_origen.slice()
 
 			/**
 			 * La impresora configurada puede no estar entre las detectadas: se renombro, se
@@ -303,7 +291,7 @@ export default {
 			 */
 			if (this.impresora_actual && !this.impresora_actual_esta_en_la_lista) {
 				opciones.unshift({
-					value: this.impresora_actual,
+					value: this.valor_preseleccionado,
 					text: this.nombre_de_la_impresora_actual + ' (no se detecta)',
 				})
 			}
@@ -321,27 +309,75 @@ export default {
 		},
 
 		/**
-		 * Si el valor configurado aparece entre las opciones que se van a mostrar.
+		 * El valor que hay que dejar seleccionado al abrir.
+		 *
+		 * 🔴 Normaliza el formato viejo. Los clientes de antes del agente tienen guardado el nombre
+		 * pelado ("EPSON TM-T20"), pero ahora las opciones valen "qz:EPSON TM-T20": sin traducirlo,
+		 * ninguna opcion matchea, Vue deja el select en blanco, y un comercio que viene imprimiendo
+		 * bien abre la pantalla y cree que perdio la configuracion. Peor: si "arregla" eligiendo de
+		 * la lista, es probable que agarre otra impresora.
+		 *
+		 * @returns {string|null}
+		 */
+		valor_preseleccionado() {
+			let actual = this.impresora_actual
+
+			if (!actual) {
+				return null
+			}
+
+			if (actual.indexOf('agente:') === 0 || actual.indexOf('qz:') === 0) {
+				return actual
+			}
+
+			if (this.impresoras.indexOf(actual) != -1) {
+				return 'qz:' + actual
+			}
+
+			return actual
+		},
+
+		/**
+		 * Si el valor preseleccionado aparece entre las opciones que se van a mostrar.
 		 *
 		 * @returns {boolean}
 		 */
 		impresora_actual_esta_en_la_lista() {
-			let actual = this.impresora_actual
+			let buscado = this.valor_preseleccionado
 			let encontrada = false
 
-			this.grupos_de_agentes.forEach(function (grupo) {
+			this.opciones_con_origen.forEach(function (grupo) {
 				grupo.options.forEach(function (opcion) {
-					if (opcion.value == actual) {
+					if (opcion.value == buscado) {
 						encontrada = true
 					}
 				})
 			})
 
-			if (encontrada) {
-				return true
+			return encontrada
+		},
+
+		/**
+		 * Los grupos reales (agentes + QZ), sin la opcion de rescate.
+		 *
+		 * @returns {Array}
+		 */
+		opciones_con_origen() {
+			let grupos = this.grupos_de_agentes.slice()
+
+			if (this.impresoras.length) {
+				grupos.push({
+					label: this.agentes.length ? 'QZ Tray (esta computadora)' : 'Impresoras de esta computadora',
+					options: this.impresoras.map(function (nombre) {
+						return {
+							value: 'qz:' + nombre,
+							text: nombre,
+						}
+					}),
+				})
 			}
 
-			return this.impresoras.indexOf(actual) != -1 || this.impresoras.indexOf(this.nombre_de_la_impresora_actual) != -1
+			return grupos
 		},
 
 		/**
@@ -380,14 +416,14 @@ export default {
 		 * @returns {boolean}
 		 */
 		mostrar_aviso_qz_cerrado() {
-			return !this.qz_disponible && !this.cargando && !this.grupos_de_agentes.length
+			return !this.qz_disponible && !this.cargando && !this.agentes.length
 		},
 
 		/**
 		 * @returns {boolean}
 		 */
 		mostrar_aviso_sin_impresoras() {
-			return this.qz_disponible && !this.cargando && !this.impresoras.length && !this.grupos_de_agentes.length
+			return !this.cargando && !this.hay_impresoras && (this.qz_disponible || this.agentes.length > 0)
 		},
 
 		/**
@@ -432,7 +468,7 @@ export default {
 		 * Al mostrarse, copia la configuracion vigente al borrador y pide la lista.
 		 */
 		on_modal_shown() {
-			this.impresora_elegida = this.impresora_actual
+			this.impresora_elegida = this.valor_preseleccionado
 			this.ancho_mm = this.ancho_actual
 
 			this.$emit('refrescar')

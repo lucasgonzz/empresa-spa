@@ -90,7 +90,8 @@
 		:copiado="codigo_copiado"
 		:minutos_de_vida="minutos_de_vida_del_codigo"
 		@copiar="copiar_codigo_de_vinculacion"
-		@regenerar="generar_codigo_de_vinculacion"></instalar-agente-modal>
+		@regenerar="generar_codigo_de_vinculacion"
+		@cerrado="cargar_agentes_de_impresion"></instalar-agente-modal>
 	</div>
 </template>
 
@@ -103,7 +104,7 @@ import SectionRemitosA4 from './SectionRemitosA4.vue'
 import SectionFacturasA4 from './SectionFacturasA4.vue'
 import ImpresoraConfigModal from './ImpresoraConfigModal.vue'
 import InstalarAgenteModal from './InstalarAgenteModal.vue'
-import { guardar_preferencias_del_puesto } from '@/mixins/sale/print_ticket/preferencias_del_puesto'
+import { guardar_preferencias_del_puesto, guardar_ancho_del_puesto } from '@/mixins/sale/print_ticket/preferencias_del_puesto'
 
 export default {
 	components: {
@@ -686,9 +687,6 @@ export default {
 			}
 		},
 		/**
-		 * Abre la configuracion de impresora del Ticket 2.0.
-		 */
-		/**
 		 * Descarga el agente y abre el instructivo.
 		 *
 		 * El instructivo se abre SOLO, sin que el operador lo pida: el momento en que acaba de
@@ -905,13 +903,20 @@ export default {
 			let self = this
 			let ancho_mm = self.parse_valid_ticket_width_mm(datos.ancho_mm)
 
-			if (!datos.impresora) {
-				self.$toast.error('Elegí una impresora')
+			if (!ancho_mm) {
+				self.$toast.error('Ingresá un ancho valido en milimetros (numero mayor a 0)')
 				return
 			}
 
-			if (!ancho_mm) {
-				self.$toast.error('Ingresá un ancho valido en milimetros (numero mayor a 0)')
+			/*
+			 * Sin impresora elegida se guarda el ancho igual. Pasa cuando no hay ninguna
+			 * detectada -- QZ cerrado y sin agente todavia --, y antes en ese caso el ancho no se
+			 * podia dejar configurado aunque el campo estuviera habilitado.
+			 */
+			if (!datos.impresora) {
+				guardar_ancho_del_puesto(self.$cookies, ancho_mm)
+				self.$toast.success('Ancho de ' + ancho_mm + 'mm guardado')
+				self.$refs.impresora_config_modal.close_modal()
 				return
 			}
 
@@ -967,7 +972,9 @@ export default {
 				self.probando_impresion = false
 
 				if (impreso) {
-					self.$toast.success('Prueba enviada a ' + datos.impresora)
+					// El nombre pelado, no el valor guardado: "agente:3:XP-80" no le dice nada a nadie.
+					let destino = self.parse_destino_de_impresion(datos.impresora)
+					self.$toast.success('Prueba enviada a ' + (destino ? destino.nombre : datos.impresora))
 				}
 			})
 			.catch(function () {

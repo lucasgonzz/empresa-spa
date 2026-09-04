@@ -42,11 +42,20 @@ export default {
                 return this.preferencias_del_puesto.impresora
             }
 
-            if (this.user && this.user.impresora) {
+            /*
+             * 🔴 El fallback del usuario y del owner NO puede devolver una impresora de agente.
+             *
+             * Ese valor es compartido por todo el comercio, y un destino "agente:<id>:..." apunta a
+             * una computadora FISICA concreta. Si la caja 1 migra al agente y despues alguien entra
+             * desde la caja 2 con un navegador sin cookie, heredaria ese valor y su ticket saldria
+             * por la comandera de la caja 1 -- sin ningun error, y sin que nadie lo note hasta que
+             * falte el ticket. El equipo se elige por puesto, siempre.
+             */
+            if (this.user && this.user.impresora && !this.es_destino_de_agente(this.user.impresora)) {
                 return this.user.impresora
             }
 
-            if (this.owner && this.owner.impresora) {
+            if (this.owner && this.owner.impresora && !this.es_destino_de_agente(this.owner.impresora)) {
                 return this.owner.impresora
             }
 
@@ -103,6 +112,16 @@ export default {
          */
         parse_valid_ticket_width_mm(raw_value) {
             return parse_ancho_de_ticket_mm(raw_value)
+        },
+
+        /**
+         * Si un valor guardado apunta a un equipo con agente.
+         *
+         * @param {*} valor
+         * @returns {boolean}
+         */
+        es_destino_de_agente(valor) {
+            return typeof valor === 'string' && valor.indexOf('agente:') === 0
         },
 
         /**
@@ -168,7 +187,20 @@ export default {
             let binario = ''
 
             for (let i = 0; i < texto.length; i++) {
-                binario += String.fromCharCode(texto.charCodeAt(i) & 0xFF)
+                let codigo = texto.charCodeAt(i)
+
+                /*
+                 * 🔴 Todo lo que no entra en ISO-8859-1 se reemplaza por "?" (0x3F), que es
+                 * exactamente lo que hace QZ. NO alcanza con enmascarar con & 0xFF: quedarse con
+                 * el byte de abajo convierte caracteres inocentes en COMANDOS ESC/POS.
+                 *
+                 * El caso real: las comillas tipograficas que llegan al pegar un nombre de
+                 * articulo desde Word o WhatsApp. U+201C y U+201D dan 0x1C y 0x1D, que son FS y
+                 * GS -- los dos introductores de comando del protocolo. El ticket sale corrido o
+                 * con basura de ahi en adelante, y solo por este camino: con QZ el mismo articulo
+                 * imprime con signos de pregunta y se ve feo, pero se lee.
+                 */
+                binario += String.fromCharCode(codigo > 0xFF ? 0x3F : codigo)
             }
 
             return btoa(binario)

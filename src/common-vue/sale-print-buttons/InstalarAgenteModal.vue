@@ -4,7 +4,8 @@
 	title="Cómo instalar la impresión directa"
 	size="lg"
 	hide-footer
-	scrollable>
+	scrollable
+	@hidden="$emit('cerrado')">
 
 		<p class="instalar-agente__intro">
 			Seguí estos pasos una sola vez. Después la impresión arranca sola cada vez que prendas
@@ -127,7 +128,11 @@
 				<p class="instalar-agente__titulo">Listo</p>
 				<p>
 					La ventana negra te va a decir <strong>"LISTO"</strong> y el nombre de esta
-					computadora. Cerrala y volvé acá: vas a ver la computadora en la lista, con sus
+					computadora. Apretá <strong>Enter</strong>: la ventana se esconde sola y el
+					programa se queda funcionando.
+				</p>
+				<p>
+					Volvé acá y cerrá esta ayuda: vas a ver la computadora en la lista, con sus
 					impresoras, y vas a poder elegir la comandera y hacer una impresión de prueba.
 				</p>
 			</div>
@@ -137,7 +142,12 @@
 			<p class="instalar-agente__titulo">De acá en adelante</p>
 			<p>
 				El programa arranca solo cada vez que prendas la computadora, sin que tengas que
-				abrir nada. Ya podés borrar el archivo que descargaste si querés.
+				abrir nada.
+			</p>
+			<p class="instalar-agente__nota">
+				El archivo que descargaste ya no hace falta, pero no lo vas a poder borrar hasta
+				que reinicies la computadora: mientras el programa está funcionando, Windows lo
+				tiene tomado. Podés dejarlo donde está.
 			</p>
 			<p>
 				Cuando imprimas una venta, el ticket va a salir directo por la comandera. No vas a
