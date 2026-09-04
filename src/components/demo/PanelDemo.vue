@@ -294,6 +294,22 @@ const ESPERA_MARCAR_PROBADO = 700
 const ESPERA_ABRIR_SIGUIENTE = 1600
 
 /**
+ * Cada cuánto se golpea `POST /api/demo/heartbeat` mientras el panel está montado (misión
+ * `demo-sesion-magic-link-no-expira`, 4/9/2026).
+ *
+ * El pedido de Lucas es que una sesión de demo ya abierta no se corte sola. La sesión general
+ * de Laravel (`config('session.lifetime')`, ~2h por default, sin override para la demo) no se
+ * refresca si el lead pasa un buen rato sin generar ningún request —por ejemplo, mirando un
+ * video largo del panel—, así que este heartbeat existe solo para que ESO no pase: pegarle a
+ * cualquier ruta del grupo autenticado alcanza para que Laravel actualice `last_activity` y
+ * renueve la cookie de sesión, sin que este componente tenga que saber nada de sesiones.
+ *
+ * 5 minutos dejan margen amplio contra el lifetime de sesión (default 120 min) sin generar
+ * tráfico innecesario.
+ */
+const INTERVALO_HEARTBEAT = 300000
+
+/**
  * Panel lateral de tutoriales de la demo (misión 51).
  *
  * Este componente solo se monta cuando se entró a la demo con el token en la URL: `App.vue` lo
@@ -328,6 +344,9 @@ export default {
 			// Se guardan para poder cancelarlos: un `setTimeout` en vuelo sobre un panel ya
 			// destruido despacha contra un componente que no existe.
 			temporizadores_cierre: [],
+			// Handle del heartbeat que mantiene viva la sesión general mientras el panel está
+			// montado. Mismo patrón de limpieza que `temporizador_techo` de DemoIngreso.vue.
+			temporizador_heartbeat: null,
 		}
 	},
 	computed: {
@@ -419,6 +438,12 @@ export default {
 		// falso: tras una recarga sin token este componente no se monta, así que ese despacho no
 		// existe más y el plan no se vuelve a pedir. Es la consecuencia asumida del gate nuevo.
 		this.$store.dispatch('demo/cargar_plan')
+
+		// El panel es el componente que vive exactamente mientras dura la demo (mision
+		// `demo-sesion-magic-link-no-expira`, 4/9/2026): arranca aca el heartbeat que mantiene
+		// viva la sesion general mientras el lead sigue adentro, aunque pase un buen rato sin
+		// tocar nada del sistema.
+		this.arrancar_heartbeat()
 	},
 	beforeDestroy() {
 		// Sin esto, un debounce en vuelo dispara sobre un componente que ya no existe.
@@ -434,6 +459,10 @@ export default {
 		// destruye con un tour activo, esos listeners sobreviven al componente y siguen tratando
 		// de avanzar un recorrido que ya no existe.
 		motor.cortar_tour()
+
+		// Y el heartbeat: sin esto, un `setInterval` en vuelo le sigue pegando a la API con el
+		// panel ya destruido.
+		this.limpiar_heartbeat()
 	},
 	methods: {
 		/**
@@ -1025,6 +1054,42 @@ export default {
 					datos: { texto: self.notas },
 				})
 			}, 3000)
+		},
+		/**
+		 * Arranca el heartbeat que mantiene viva la sesión general de Laravel mientras el
+		 * panel está montado (misión `demo-sesion-magic-link-no-expira`, 4/9/2026).
+		 *
+		 * Gateado con `demo/activa` por las dudas —el panel solo se monta con
+		 * `panel_visible`, así que no debería hacer falta—, mismo criterio defensivo que ya
+		 * usan `cargar_plan`/`reportar` en `store/demo.js`.
+		 *
+		 * @returns {void}
+		 */
+		arrancar_heartbeat() {
+			let self = this
+
+			this.temporizador_heartbeat = setInterval(function () {
+				if (!self.$store.getters['demo/activa']) {
+					return
+				}
+
+				self.$axios.post('/api/demo/heartbeat')
+					.catch(function (error) {
+						// Un heartbeat puntual que falla (red caída un segundo) no le tiene
+						// que mostrar nada al lead: mismo criterio que `reportar()` en
+						// store/demo.js.
+						console.warn('No se pudo mandar el heartbeat de la demo', error)
+					})
+			}, INTERVALO_HEARTBEAT)
+		},
+		/**
+		 * @returns {void}
+		 */
+		limpiar_heartbeat() {
+			if (this.temporizador_heartbeat) {
+				clearInterval(this.temporizador_heartbeat)
+				this.temporizador_heartbeat = null
+			}
 		},
 	},
 }
