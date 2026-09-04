@@ -1,33 +1,26 @@
 <template>
-<b-modal 
-v-if="from_model" 
-id="current-acounts-pago" 
-data-tour="cuentas_corrientes.modal_pago" 
-title="Pago" 
-hide-footer>
-    <b-form-group
-    label="Fecha del pago">
-        <b-form-checkbox
-        :value="true"
-        :unchecked-value="false"
-        v-model="pago.current_date">
-            Dia de hoy
-        </b-form-checkbox>
-        <b-form-datepicker
-        class="m-t-10"
-        placeholder="Ingrese la fecha en la que se hizo el pago"
-        v-if="!pago.current_date"
-        v-model="pago.created_at">
-        </b-form-datepicker>
-    </b-form-group>
-    <b-form-group>
-        <!--
-            Deshabilitado a proposito: el monto total del pago no se tipea, sale de la suma de los
-            metodos de pago de mas abajo (update_total). El data-testid es para LEERLO, que es lo
-            unico que se puede hacer con el: es donde se ve el total que se le va a imputar al
-            proveedor.
-        -->
+<b-modal
+v-if="from_model"
+id="current-acounts-pago"
+data-tour="cuentas_corrientes.modal_pago"
+title="Pago">
+
+    <!--
+        El total encabeza el modal en vez de ser un campo mas en el medio de la lista: es el numero
+        que se viene a mirar y no se tipea --sale de la suma de los metodos de pago de mas abajo
+        (update_total)--.
+
+        🔴 SIGUE SIENDO UN <input disabled>, y no un <span>, a proposito. La suite de e2e lo lee con
+        `.inputValue()` (e2e/tests/compra-costeo-facturacion.spec.js) y el valor tiene que ser el
+        numero crudo, no el formateado con price(). Cambiarlo por texto rompe ese spec sin que nada
+        lo avise hasta que Lucas corra la suite. Lo que cambia acá es como se ve, no que elemento es.
+    -->
+    <div class="pago-cc__total">
+        <label
+        class="pago-cc__total-label"
+        for="monto-pago">Total del pago</label>
         <b-form-input
+        class="pago-cc__total-valor"
         disabled
         type="number"
         min="0"
@@ -36,54 +29,89 @@ hide-footer>
         @keydown.enter="hacerPago"
         :placeholder="placeholder"
         v-model="pago.haber"></b-form-input>
+
         <b-button
         size="sm"
         variant="primary"
-        class="m-t-10"
+        class="pago-cc__total-btn"
         v-if="route_name == 'vender' && maked_sale"
         @click="setTotalSale">
             <i class="icon-check"></i>
             Pago el total
         </b-button>
-    </b-form-group>
-    <b-form-group>
-        <b-form-textarea
-        @keydown.enter="hacerPago"
-        placeholder="Ingrese una descripcion"
-        v-model="pago.description"></b-form-textarea>
-    </b-form-group>
+    </div>
 
-    <b-form-group>
-        <b-form-input
-        @keydown.enter="hacerPago"
-        placeholder="Numero orden de compra"
-        v-model="pago.numero_orden_de_compra"></b-form-input>
-    </b-form-group>
+    <div class="pago-cc__campos">
 
-    <b-form-group
-    description="Si se activa, solo quedara registrado en la cuenta corriente, pero no impactara en el saldo del cliente"
-    v-if="hasExtencion('pagos_provisorios')">
-        <b-form-checkbox
-        :value="1"
-        :unchecked-value="1"
-        v-model="pago.is_provisorio">
-            Pago Provisorio
-        </b-form-checkbox>
-    </b-form-group>
+        <b-form-group
+        label="Fecha del pago">
+            <b-form-checkbox
+            :value="true"
+            :unchecked-value="false"
+            v-model="pago.current_date">
+                Día de hoy
+            </b-form-checkbox>
+            <b-form-datepicker
+            class="m-t-10"
+            placeholder="Ingrese la fecha en la que se hizo el pago"
+            v-if="!pago.current_date"
+            v-model="pago.created_at">
+            </b-form-datepicker>
+        </b-form-group>
+
+        <b-form-group
+        label="Número de orden de compra">
+            <b-form-input
+            @keydown.enter="hacerPago"
+            placeholder="Opcional"
+            v-model="pago.numero_orden_de_compra"></b-form-input>
+        </b-form-group>
+
+        <b-form-group
+        class="pago-cc__campo--ancho"
+        label="Descripción">
+            <b-form-textarea
+            rows="2"
+            @keydown.enter="hacerPago"
+            placeholder="Ingrese una descripción"
+            v-model="pago.description"></b-form-textarea>
+        </b-form-group>
+
+        <b-form-group
+        class="pago-cc__campo--ancho"
+        description="Si se activa, solo quedara registrado en la cuenta corriente, pero no impactara en el saldo del cliente"
+        v-if="hasExtencion('pagos_provisorios')">
+            <b-form-checkbox
+            :value="1"
+            :unchecked-value="1"
+            v-model="pago.is_provisorio">
+                Pago Provisorio
+            </b-form-checkbox>
+        </b-form-group>
+
+    </div>
 
     <payment-methods
     ref="paymentMethodComponent"
     @hacerPago="hacerPago"
     :pago="pago"
     parent-modal-id="current-acounts-pago"></payment-methods>
-    
 
-	<btn-loader
-    @clicked="hacerPago"
-	:loader="loading"
-	data-testid="btn-confirmar-pago"
-	data-tour="cuentas_corrientes.boton_confirmar_pago"
-	text="Registrar pago"></btn-loader>
+    <!--
+        El boton pasa al slot #modal-footer para que la franja de 60px, el radio de abajo y el
+        separador se los de _modals.sass, igual que a cualquier otro modal del sistema. Antes iba
+        suelto en el cuerpo con el modal en `hide-footer`, que es justo lo que la mision del
+        21/8/2026 corrigio en el modal de cuentas corrientes que contiene a este.
+    -->
+    <template #modal-footer>
+        <btn-loader
+        class="pago-cc__confirmar"
+        @clicked="hacerPago"
+        :loader="loading"
+        data-testid="btn-confirmar-pago"
+        data-tour="cuentas_corrientes.boton_confirmar_pago"
+        text="Registrar pago"></btn-loader>
+    </template>
 </b-modal>
 </template>
 <script>
@@ -92,9 +120,10 @@ import BtnLoader from '@/common-vue/components/BtnLoader'
 
 import clients from '@/mixins/clients'
 import current_acounts from '@/mixins/current_acounts'
+import metodos_de_pago_validacion from '@/mixins/metodos_de_pago_validacion'
 export default {
 	name: 'CurrentAcountPago',
-    mixins: [clients, current_acounts],
+    mixins: [clients, current_acounts, metodos_de_pago_validacion],
     components: {
         PaymentMethods,
     	BtnLoader,
@@ -102,7 +131,6 @@ export default {
     mounted() {
         this.$root.$on('bv::modal::shown', (bvEvent, modalId) => {
             if (modalId === 'current-acounts-pago') {
-                console.log('pago creado')
 
                 setTimeout(() => {
                     this.focus_primer_payment_method()
@@ -211,6 +239,11 @@ export default {
             }
         },
         check() {
+            // Una fila con monto y sin metodo elegido la descarta el backend en silencio.
+            if (this.hay_metodo_de_pago_sin_elegir(this.pago.current_acount_payment_methods)) {
+                return false
+            }
+
             if (this.pago.haber == '') {
 
                 let input = document.getElementsByClassName('payment-method-amount')[0]                
@@ -329,4 +362,141 @@ export default {
 }
 </script>
 <style lang="sass">
+// Modal "Pago" de una cuenta corriente. Sin `scoped` a proposito: el prefijo `pago-cc__` ya es
+// unico y varias de estas reglas alcanzan a nodos que dibujan componentes hijos (el input de
+// b-form-input, el label de b-form-group), que con `scoped` habria que ir a buscar con ::v-deep.
+//
+// Colores por token de _dark_theme.sass, nunca hexadecimales: los modales de bootstrap-vue se
+// montan colgando de <body>, fuera de #app.
+
+// --- El header del modal y el total, pegados arriba -------------------------------------------
+//
+// Con muchos metodos de pago cargados el CONTENIDO no scrollea solo: scrollea `.modal` entero
+// --es quien tiene overflow-y:auto por defecto de bootstrap, porque este modal no lleva la prop
+// `scrollable`-- y el total (lo unico que dice cuanto se esta por pagar) se iba de la pantalla
+// junto con el titulo. Pedido de Lucas, 4/9/2026.
+//
+// 🔴 Se resuelve con `position: sticky` sobre el header nativo del modal y sobre el total, y
+// A PROPOSITO no agregando la prop `scrollable`. `scrollable` le pone overflow:hidden al
+// contenedor de `.modal-body` (bootstrap), y eso recorta lo que se abra adentro del modal y salga
+// de su caja: el calendario de `b-form-datepicker` de "Fecha del pago" es EXACTAMENTE el caso que
+// ya describe la nota grande de _modals.sass sobre por que `.modal-content` no lleva overflow
+// hidden --y ya costo trabajo en otros dos componentes, que tuvieron que pasarle boundary a
+// Popper por lo mismo--. Con sticky puro no se agrega ningun overflow:hidden en el camino.
+//
+// Los dos comparten el mismo contenedor con scroll (`.modal`, no hay ningun overflow:auto propio
+// en `.modal-body` ni en `.modal-content`), asi que apilan solos: el header pega a top:0 y el
+// total pega justo debajo, a `top: var(--modal-chrome-min-h)` (el alto fijo del header, mismo
+// token que usa _modals.sass para header y footer).
+// El id no es unico en el repo: ventas/modals/current-acounts/pago/Index.vue declara el mismo
+// id="current-acounts-pago" en un componente VIEJO --sin importadores en toda src/, inalcanzable
+// desde ninguna ruta hoy--. Si algun dia alguien lo reconecta, hereda este sticky en silencio.
+#current-acounts-pago .modal-header
+	position: sticky
+	top: 0
+	z-index: 3
+	// Sticky no "hereda" el fondo del contenedor al repintarse: sin esto, el contenido que
+	// scrollea por debajo se veria a traves del header. El token es el mismo que ya usa
+	// .modal-content en _dark_theme.sass (var(--bg-card)); en claro coincide con el blanco de
+	// bootstrap, asi que el estado sin scrollear queda identico a como estaba.
+	background: var(--bg-card)
+
+.pago-cc__total
+	position: sticky
+	top: var(--modal-chrome-min-h)
+	z-index: 2
+	// Sombra propia y permanente (no solo al pegarse): separa el total de los campos de abajo
+	// tanto pegado como sin pegar, mismo criterio de elevacion que .totales-chip.
+	box-shadow: 0 1px 3px var(--shadow-color)
+	display: flex
+	flex-wrap: wrap
+	align-items: center
+	gap: 10px
+	padding: 12px 14px
+	margin-bottom: 16px
+	border-radius: 12px
+	border: 1px solid var(--color-border)
+	background: var(--bg-section)
+
+	.pago-cc__total-label
+		flex: 1 1 100%
+		margin: 0
+		color: var(--color-text-secondary)
+		font-size: 0.78rem
+		font-weight: 600
+		text-transform: uppercase
+		letter-spacing: 0.02em
+
+	// El input deshabilitado deja de parecer un campo que alguien se olvido de completar y pasa a
+	// leerse como el numero grande que es. No lleva font-size fijo: lo manda _ui_sizes.sass.
+	input.pago-cc__total-valor
+		flex: 1 1 160px
+		min-width: 0
+		height: auto
+		padding: 0
+		border: none
+		background: transparent
+		color: var(--color-text-primary)
+		font-weight: 700
+
+		&:disabled
+			background: transparent
+			color: var(--color-text-primary)
+			opacity: 1
+
+	.pago-cc__total-btn
+		flex: 0 0 auto
+
+// --- Los campos del pago --------------------------------------------------------------------
+.pago-cc__campos
+	display: grid
+	grid-template-columns: repeat(2, minmax(0, 1fr))
+	gap: 12px
+	margin-bottom: 16px
+
+	.form-group
+		margin-bottom: 0
+		min-width: 0
+
+	// `legend` ademas de `label`: b-form-group sin la prop `label-for` dibuja un <fieldset> con
+	// <legend>, no un <label> (bootstrap-vue/src/components/form-group/form-group.js:240 y :247).
+	// Ninguno de estos campos pasa label-for, asi que una regla que apunte solo a `label` no
+	// matchearia ninguna de las tres etiquetas.
+	> .form-group > legend,
+	> .form-group > label
+		display: block
+		margin-bottom: 4px
+		color: var(--color-text-secondary)
+		font-size: 0.78rem
+		font-weight: 600
+		text-transform: uppercase
+		letter-spacing: 0.02em
+
+.pago-cc__campo--ancho
+	grid-column: 1 / -1
+
+// Mismo radio/borde/foco que el bloque de metodos de pago (src/sass/_metodos_de_pago.sass), y
+// mismos tokens: --metodo-pago-input-radius y --metodo-pago-focus-ring. No se duplican como
+// variables nuevas aca porque son custom properties de CSS, globales una vez que el stylesheet
+// carga -- no importa en que archivo .sass se declararon.
+.pago-cc__campos
+	input.form-control,
+	select.custom-select,
+	textarea.form-control
+		border-radius: var(--metodo-pago-input-radius)
+		border-width: 1px
+		transition: border-color .15s ease, box-shadow .15s ease
+
+		&:focus
+			border-color: var(--color-primary)
+			box-shadow: 0 0 0 3px var(--metodo-pago-focus-ring)
+
+// El boton confirmatorio del footer ocupa la franja a la derecha, como el resto de los modales.
+.pago-cc__confirmar
+	margin: 0
+
+// 576px es el breakpoint `sm` de bootstrap, el mismo que usa el resto del sistema.
+@media (max-width: 575.98px)
+	.pago-cc__campos
+		grid-template-columns: minmax(0, 1fr)
 </style>

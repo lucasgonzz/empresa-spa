@@ -86,3 +86,20 @@ export function guardar_preferencias_del_puesto(cookies, impresora, ancho_mm) {
     preferencias_del_puesto.ancho_mm = ancho_mm
     preferencias_del_puesto.hidratadas = true
 }
+
+/**
+ * Guarda solo el ancho del papel, sin tocar la impresora elegida.
+ *
+ * Hace falta para el caso en que todavia no hay ninguna impresora para elegir: sin esto, el campo
+ * de ancho estaba habilitado pero el boton de guardar no, y el operador podia tipear un valor que
+ * no se guardaba en ningun lado.
+ *
+ * @param {Object} cookies instancia de $cookies del componente.
+ * @param {number} ancho_mm
+ */
+export function guardar_ancho_del_puesto(cookies, ancho_mm) {
+    cookies.set('ancho_impresora', String(ancho_mm), -1)
+
+    preferencias_del_puesto.ancho_mm = ancho_mm
+    preferencias_del_puesto.hidratadas = true
+}

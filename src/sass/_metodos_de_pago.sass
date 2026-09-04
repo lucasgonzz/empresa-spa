@@ -1,0 +1,353 @@
+// Vocabulario visual del bloque de multiples metodos de pago (4/9/2026).
+//
+// El bloque es UNO SOLO --components/common/payment-methods/-- y lo montan cuatro pantallas: el
+// alta de un gasto, el pago de una cuenta corriente, el modal "Multiples metodos de pago" de
+// Vender y el pago de comisiones de un vendedor. Hasta hoy su unico estilo eran 12 lineas en el
+// <style> de PaymentMethodsStep.vue: un rgba(0,0,0,.1) fijo de fondo --que en modo oscuro se come
+// la tarjeta-- y un flex en fila sin wrap para el par metodo/moneda, que en telefono se salia de
+// la caja.
+//
+// Va en una hoja global y no en el <style> del componente por el mismo motivo que
+// _controles_modulo.sass: los componentes de este bloque se cargan de forma diferida y el estilo
+// tiene que estar cargado ANTES que cualquiera de ellos, o la tarjeta se ve un instante con el
+// default de bootstrap.
+//
+// 🔴 Los colores salen SIEMPRE de tokens de _dark_theme.sass, nunca de hexadecimales. Los modales
+// de bootstrap-vue se montan colgando de <body>, FUERA de #app --por eso los tokens viven en
+// :root--, y un hex aca deja la tarjeta blanca en modo oscuro.
+//
+// 🔴 Y aca NO se declara font-size de ningun input ni de ningun select. El tamaño de los controles
+// lo manda el par _inputs.sass (1.4rem por defecto) / _ui_sizes.sass (1rem con .ui-small, que es
+// una preferencia del usuario). Fijar un tamaño aca le romperia el modo compacto a quien lo tenga
+// puesto.
+
+:root
+	// Radio de la tarjeta de cada metodo de pago. Es el de las tablas del sistema (12px de
+	// .tabla-modulo-wrapper), no el de los botones (10px): una tarjeta es una superficie, no un
+	// control.
+	--metodo-pago-radius: 12px
+	// Separacion entre tarjetas y entre los campos de una misma tarjeta.
+	--metodo-pago-gap: 12px
+	// Radio de los INPUTS/SELECTS de adentro. Mas chico que el de la tarjeta que los contiene
+	// (mismo criterio que boton 10px / modal 16px: la superficie va mas redondeada que el control).
+	--metodo-pago-input-radius: 8px
+	// Anillo de foco. El default de _inputs.sass (borde de 3px solido + glow de 0.8 de opacidad,
+	// sin token) esta pensado para UN campo suelto; con ocho controles chicos uno al lado del otro
+	// en la misma tarjeta se ve como un aviso de error, no como una seleccion. Mismo idioma que ya
+	// usa el pill del buscador general (FiltrosFijos.vue): un anillo suave en vez de un halo grueso.
+	// No se puede derivar de --color-primary con una funcion CSS (el resto del sistema tampoco lo
+	// hace, ver --totales-acento-usd-bg junto a --totales-acento-usd): va como token propio, con su
+	// version oscura al lado.
+	--metodo-pago-focus-ring: rgba(0, 123, 255, 0.15)
+
+html.dark-mode
+	--metodo-pago-focus-ring: rgba(77, 163, 255, 0.25)
+
+// ============================ La barra de contexto ============================
+// Dice sobre que sucursal y sobre que moneda se estan ofreciendo las cajas, y deja cambiar la
+// sucursal. Es lo primero que se lee del bloque porque es lo que explica por que la lista de cajas
+// de mas abajo tiene las cajas que tiene.
+.metodos-de-pago__contexto
+	display: flex
+	flex-wrap: wrap
+	align-items: flex-end
+	gap: var(--metodo-pago-gap)
+	padding: 12px
+	margin-bottom: 16px
+	border-radius: var(--metodo-pago-radius)
+	border: 1px solid var(--color-border)
+	background: var(--bg-section)
+
+	// El select de sucursal se lleva el espacio sobrante; el chip de moneda mide lo que mide.
+	.metodos-de-pago__contexto-campo
+		flex: 1 1 200px
+		min-width: 0
+		margin-bottom: 0
+
+	// 🔴 `legend` ademas de `label`, y no es defensivo: b-form-group SIN la prop `label-for`
+	// dibuja un <fieldset> con <legend>, no un <label> (bootstrap-vue/src/components/form-group/
+	// form-group.js:240 y :247). Ninguna plantilla de este bloque pasa label-for, asi que una regla
+	// que apunte solo a `label` no matchea NADA: las etiquetas quedarian en el tamaño de bootstrap
+	// al lado del <label> escrito a mano del chip de moneda, que si matchea. Ese desparejo era el
+	// sintoma. `.col-form-label` es la clase que bootstrap-vue le pone al legend.
+	legend,
+	label
+		display: block
+		margin-bottom: 4px
+		color: var(--color-text-secondary)
+		font-size: 0.78rem
+		font-weight: 600
+		text-transform: uppercase
+		letter-spacing: 0.02em
+
+.metodos-de-pago__ayuda
+	flex: 1 1 100%
+	margin: 0
+	color: var(--color-text-secondary)
+	font-size: 0.8rem
+	line-height: 1.35
+
+// El chip de moneda. Misma anatomia que .totales-chip (icono en celda + etiqueta arriba + valor
+// abajo) pero sin sombra: vive DENTRO de una caja que ya tiene borde, y una sombra ahi adentro lo
+// haria flotar sobre su propio contenedor.
+.metodos-de-pago__moneda-chip
+	display: flex
+	align-items: center
+	gap: 10px
+	padding: 6px 12px
+	border-radius: 10px
+	border: 1px solid var(--color-border)
+	background: var(--bg-card)
+	min-width: 0
+
+	.metodos-de-pago__moneda-icono
+		display: flex
+		align-items: center
+		justify-content: center
+		width: 30px
+		height: 30px
+		flex: 0 0 30px
+		border-radius: 8px
+		background: var(--bg-hover)
+		color: var(--color-text-secondary)
+
+	.metodos-de-pago__moneda-valor
+		color: var(--color-text-primary)
+		font-weight: 600
+		line-height: 1.15
+		white-space: nowrap
+		overflow: hidden
+		text-overflow: ellipsis
+
+// El dolar tiene acento propio, y es el MISMO cian que ya usa el chip de totales en USD
+// (--totales-acento-usd, mision 34): que la moneda extranjera se distinga de un vistazo es
+// justamente lo que evita cargar un pago en dolares contra una caja en pesos.
+.metodos-de-pago__moneda-chip--usd
+	border-color: var(--totales-acento-usd)
+
+	.metodos-de-pago__moneda-icono
+		background: var(--totales-acento-usd-bg)
+		color: var(--totales-acento-usd)
+
+	.metodos-de-pago__moneda-valor
+		color: var(--totales-acento-usd)
+
+// ============================ Inputs del bloque ============================
+// Reemplaza el radio/borde/foco default de _inputs.sass (5px, 2px, glow sin token) SOLO adentro
+// de este bloque. El input global del resto del sistema no se toca.
+//
+// 🔴 En claro gana por especificidad sola: el global de _inputs.sass es `input, select` /
+// `input:focus, select:focus`, sin clase, especificidad mas baja que cualquier regla de aca. En
+// oscuro EMPATA con `html.dark-mode .form-control(:focus)` de _dark_theme.sass --las dos dan
+// (0,2,1) y (0,3,1)-- y se gana por orden de declaracion: este archivo se importa DESPUES de
+// dark_theme.sass en app.sass. Pedido de Lucas, 4/9/2026.
+.metodos-de-pago
+	input.form-control,
+	select.custom-select,
+	textarea.form-control
+		border-radius: var(--metodo-pago-input-radius)
+		// El ancho de borde tambien se pisa alcance: 1px, no los 2px del global. Con ocho campos
+		// chicos pegados uno al lado del otro, 2px de borde en cada uno suma un gris mas denso del
+		// que hace falta para separarlos --ya los separa el gap de la grilla.
+		border-width: 1px
+		transition: border-color .15s ease, box-shadow .15s ease
+
+		// El borde de foco YA no crece a 3px: ese ancho lo fija el `border-width: 1px` de arriba,
+		// que le gana al `border: 3px solid #007bff` global (shorthand) porque compara SOLO el
+		// ancho, y ahi el global no tiene clase (0,1,1) contra esto (0,2,1).
+		&:focus
+			border-color: var(--color-primary)
+			box-shadow: 0 0 0 3px var(--metodo-pago-focus-ring)
+
+// ============================ La tarjeta de cada metodo ============================
+.metodos-de-pago__lista
+	display: flex
+	flex-direction: column
+	gap: var(--metodo-pago-gap)
+
+.metodo-pago-card
+	padding: 14px
+	border-radius: var(--metodo-pago-radius)
+	border: 1px solid var(--color-border)
+	background: var(--bg-section)
+
+	&__header
+		display: flex
+		align-items: center
+		gap: 10px
+		margin-bottom: 12px
+
+	// El numero de la fila. Reemplaza al "Metodo de pago 1" en <h5>, que con tres metodos ocupaba
+	// tres renglones enteros para decir un numero.
+	&__badge
+		display: flex
+		align-items: center
+		justify-content: center
+		width: 26px
+		height: 26px
+		flex: 0 0 26px
+		border-radius: 8px
+		background: var(--bg-hover)
+		color: var(--color-text-secondary)
+		font-size: 0.82rem
+		font-weight: 700
+
+	&__titulo
+		flex: 1 1 auto
+		min-width: 0
+		margin: 0
+		color: var(--color-text-secondary)
+		font-size: 0.78rem
+		font-weight: 600
+		text-transform: uppercase
+		letter-spacing: 0.02em
+
+	// Los campos en dos columnas en escritorio y en una sola en telefono. El grid resuelve lo que
+	// el .cont-pm viejo no podia: aquel era un flex en fila SIN wrap, asi que en 360px el par
+	// metodo/moneda se comprimia hasta quedar ilegible en vez de apilarse.
+	&__grid
+		display: grid
+		grid-template-columns: repeat(2, minmax(0, 1fr))
+		gap: var(--metodo-pago-gap)
+
+	// Un campo que ocupa las dos columnas (el monto con su boton "Completar", los datos del cheque).
+	&__campo--ancho
+		grid-column: 1 / -1
+
+		// El contenedor de cuotas/cheque/slot se dibuja SIEMPRE, aunque sus tres hijos esten en
+		// `v-if` false: Vue deja un nodo comentario, y un comentario no impide que `:empty` matchee.
+		// Sin esto queda un item de grilla vacio llevandose su gap de 12px al pie de cada tarjeta.
+		&:empty
+			display: none
+
+	.form-group
+		margin-bottom: 0
+		min-width: 0
+
+	// 🔴 `legend` ademas de `label`, y no es defensivo: b-form-group SIN la prop `label-for`
+	// dibuja un <fieldset> con <legend>, no un <label> (bootstrap-vue/src/components/form-group/
+	// form-group.js:240 y :247). Ninguna plantilla de este bloque pasa label-for, asi que una regla
+	// que apunte solo a `label` no matchea NADA: las etiquetas quedarian en el tamaño de bootstrap
+	// al lado del <label> escrito a mano del chip de moneda, que si matchea. Ese desparejo era el
+	// sintoma.
+	//
+	// 🔴 Y va con `>`, no como descendiente: `.metodo-pago-card label` alcanza tambien al
+	// <label class="custom-control-label"> que dibuja el checkbox "Es un echeq" de CheckInfo.vue,
+	// y le gana por especificidad (0,1,1 contra 0,1,0). Ese texto quedaba en VERSALITAS, en negrita
+	// y con margen de mas. Estas versalitas son de las etiquetas de los campos de la tarjeta, no de
+	// cualquier texto que cuelgue de ella.
+	&__grid > .form-group > legend,
+	&__grid > .form-group > label
+		display: block
+		margin-bottom: 4px
+		color: var(--color-text-secondary)
+		font-size: 0.78rem
+		font-weight: 600
+		text-transform: uppercase
+		letter-spacing: 0.02em
+
+	// Fila del monto: el input se estira y el boton "Completar" mide lo suyo.
+	&__monto
+		display: flex
+		align-items: center
+		gap: 8px
+
+		.form-control
+			flex: 1 1 auto
+			min-width: 0
+
+		.btn
+			flex: 0 0 auto
+			white-space: nowrap
+
+	&__nota
+		margin: 8px 0 0 0
+		font-size: 0.85rem
+
+// Boton de quitar la fila. Toma los tokens de peligro del sistema (--btn-peligro-*, mision del
+// rediseño de cuentas corrientes) en vez del `outline-danger` macizo de bootstrap, y deja de ser
+// un boton block al pie de la tarjeta: al lado del numero de fila se entiende a que fila pertenece.
+.metodo-pago-card__quitar.btn
+	flex: 0 0 auto
+	display: inline-flex
+	align-items: center
+	justify-content: center
+	gap: 6px
+	height: 30px
+	padding: 0 10px
+	border-radius: 8px
+	background: var(--btn-peligro-fondo)
+	border: 1px solid var(--btn-peligro-borde)
+	color: var(--btn-peligro-texto)
+	font-size: 0.8rem
+	line-height: 1
+	box-shadow: none
+
+	// 🔴 `:active` con la misma pila de :not() que usa bootstrap, y no por prolijidad: su regla
+	// `.btn-secondary:not(:disabled):not(.disabled):active` es (0,4,0) y le gana a cualquier
+	// selector de dos clases por especificidad, no por orden. Sin esto, el boton --que va sin
+	// `variant`, o sea que bootstrap-vue le pone btn-secondary-- destella GRIS MACIZO en el clic,
+	// justo el estado que el usuario mira cuando lo aprieta.
+	&:hover,
+	&:focus,
+	&:not(:disabled):not(.disabled):active,
+	&:not(:disabled):not(.disabled):active:focus
+		background: var(--btn-peligro-fondo)
+		border-color: var(--btn-peligro-borde)
+		color: var(--btn-peligro-texto)
+		box-shadow: none
+		filter: brightness(0.97)
+
+// ============================ Agregar ============================
+// Borde punteado: es el idioma de "aca se suma algo mas", y lo distingue de la accion
+// confirmatoria del modal, que es la unica que tiene peso visual.
+.metodos-de-pago__agregar.btn
+	display: flex
+	align-items: center
+	justify-content: center
+	gap: 8px
+	width: 100%
+	margin-top: var(--metodo-pago-gap)
+	padding: 10px
+	border-radius: var(--metodo-pago-radius)
+	border: 1px dashed var(--color-border)
+	background: transparent
+	color: var(--color-primary)
+	font-weight: 600
+	box-shadow: none
+
+	// Mismo motivo que en el boton de quitar: sin la pila de :not(), el `:active` de btn-secondary
+	// (0,4,0) gana y el boton destella gris macizo al apretarlo.
+	&:hover,
+	&:focus,
+	&:not(:disabled):not(.disabled):active,
+	&:not(:disabled):not(.disabled):active:focus
+		background: var(--bg-hover)
+		border-color: var(--color-primary)
+		color: var(--color-primary)
+		box-shadow: none
+
+// ============================ Ayuda de decimales ============================
+.metodos-de-pago__decimales
+	margin-top: 14px
+	padding: 10px 12px
+	border-radius: 10px
+	background: var(--bg-section)
+	color: var(--color-text-secondary)
+	font-size: 0.8rem
+
+	p
+		margin-bottom: 0
+
+// ============================ Telefono ============================
+// 576px es el breakpoint `sm` de bootstrap, el mismo que usa el resto del sistema.
+@media (max-width: 575.98px)
+	.metodo-pago-card__grid
+		grid-template-columns: minmax(0, 1fr)
+
+	.metodos-de-pago__contexto
+		.metodos-de-pago__contexto-campo
+			flex: 1 1 100%
+
+	.metodos-de-pago__moneda-chip
+		width: 100%

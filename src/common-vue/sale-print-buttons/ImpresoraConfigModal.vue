@@ -7,46 +7,91 @@
 	@shown="on_modal_shown">
 
 		<!--
-		Los avisos de estado van ARRIBA del formulario y no en lugar de el: el ancho del
-		papel se configura igual aunque QZ Tray no responda, que es como se podia hacer con
-		el prompt() viejo y no habria que perder.
+		Impresion directa: el camino nuevo. Va arriba de todo porque es lo que queremos que el
+		comercio use, y porque cuando esta andando el resto de la pantalla casi no se toca.
+		-->
+		<div class="impresora-config-modal__directa">
+			<p class="impresora-config-modal__directa-titulo">
+				Impresión directa
+			</p>
+
+			<template v-if="agentes.length">
+				<div
+				v-for="agente in agentes"
+				:key="'agente-'+agente.id"
+				class="impresora-config-modal__equipo">
+					<span
+					class="impresora-config-modal__punto"
+					:class="agente.en_linea ? 'impresora-config-modal__punto--activo' : ''"></span>
+					<span class="impresora-config-modal__equipo-nombre">
+						{{ agente.nombre_equipo }}
+					</span>
+					<span class="impresora-config-modal__equipo-estado">
+						{{ agente.en_linea ? 'conectada' : 'desconectada' }}
+					</span>
+				</div>
+			</template>
+
+			<p
+			v-else
+			class="impresora-config-modal__hint">
+				Instalá el programa de impresión directa y el ticket sale sin ningún cartel de
+				permiso, sin tener que abrir nada cada mañana.
+			</p>
+
+			<div class="impresora-config-modal__directa-acciones">
+				<b-button
+				variant="primary"
+				size="sm"
+				:disabled="descargando"
+				@click="$emit('descargar')">
+					{{ agentes.length ? 'Agregar otra computadora' : 'Descargar programa' }}
+				</b-button>
+				<b-button
+				variant="outline-secondary"
+				size="sm"
+				@click="$emit('ver_instructivo')">
+					Ver paso a paso
+				</b-button>
+			</div>
+		</div>
+
+		<!--
+		Avisos de QZ Tray. Van ARRIBA del formulario y no en lugar de el: el ancho del papel se
+		configura igual aunque QZ no responda. Y no se muestran si el comercio ya tiene impresión
+		directa andando, porque ahi QZ dejo de importar.
 		-->
 		<div
-		v-if="!qz_disponible && !cargando"
+		v-if="mostrar_aviso_qz_cerrado"
 		class="impresora-config-modal__aviso">
 			<p class="impresora-config-modal__aviso-titulo">
 				No se detecta QZ Tray
 			</p>
 			<p>
-				El Ticket 2.0 le habla a la impresora a traves de QZ Tray, un programa que tiene
-				que estar <strong>instalado y abierto</strong> en esta computadora. Buscá su icono
-				en la barra de tareas de Windows, al lado del reloj.
+				Sin el programa de impresión directa, el Ticket 2.0 usa QZ Tray, que tiene que estar
+				<strong>instalado y abierto</strong> en esta computadora. Buscá su ícono en la barra
+				de tareas de Windows, al lado del reloj.
 			</p>
 			<b-button
-			variant="primary"
+			variant="outline-secondary"
 			size="sm"
 			@click="$emit('refrescar')">
 				Reintentar
 			</b-button>
 		</div>
 
-		<!--
-		QZ responde pero el equipo no tiene ninguna impresora instalada. Es un problema
-		distinto del de arriba y se resuelve en otro lado -- en Windows, no aca --, asi que
-		mandar el instructivo de "abri QZ Tray" seria mandarlo a revisar donde no esta.
-		-->
 		<div
-		v-else-if="!impresoras.length && !cargando"
+		v-else-if="mostrar_aviso_sin_impresoras"
 		class="impresora-config-modal__aviso">
 			<p class="impresora-config-modal__aviso-titulo">
-				QZ Tray esta andando, pero no encuentra impresoras
+				QZ Tray está andando, pero no encuentra impresoras
 			</p>
 			<p>
 				No hay ninguna impresora instalada en esta computadora. Agregala desde Windows y
-				despues tocá Actualizar lista.
+				después tocá Actualizar lista.
 			</p>
 			<b-button
-			variant="primary"
+			variant="outline-secondary"
 			size="sm"
 			@click="$emit('refrescar')">
 				Actualizar lista
@@ -59,7 +104,7 @@
 			size="sm"
 			v-model="impresora_elegida"
 			:options="opciones_impresoras"
-			:disabled="cargando || guardando || !impresoras.length">
+			:disabled="cargando || guardando || !hay_impresoras">
 			</b-form-select>
 			<p class="impresora-config-modal__hint">
 				{{ cargando ? 'Buscando impresoras...' : texto_impresoras_detectadas }}
@@ -118,6 +163,16 @@ export default {
 		},
 
 		/**
+		 * Equipos con el agente de impresion instalado, con sus impresoras.
+		 */
+		agentes: {
+			type: Array,
+			default() {
+				return []
+			},
+		},
+
+		/**
 		 * Si QZ Tray respondio. Va SEPARADO de la lista a proposito: QZ abierto sin
 		 * impresoras instaladas y QZ cerrado son dos problemas distintos, y se resuelven
 		 * en lugares distintos.
@@ -166,6 +221,14 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+
+		/**
+		 * Hay una descarga en preparacion (se esta pidiendo el codigo de vinculacion).
+		 */
+		descargando: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	data() {
 		return {
@@ -176,17 +239,49 @@ export default {
 	},
 	computed: {
 		/**
-		 * Opciones del selector de impresoras.
+		 * Impresoras de los equipos con agente, ya en formato de opciones agrupadas.
 		 *
-		 * @returns {Array<{value: string|null, text: string}>}
+		 * @returns {Array}
+		 */
+		grupos_de_agentes() {
+			let grupos = []
+
+			this.agentes.forEach(function (agente) {
+				if (!agente.impresoras || !agente.impresoras.length) {
+					return
+				}
+
+				let etiqueta = agente.nombre_equipo ? agente.nombre_equipo : 'Equipo'
+
+				if (!agente.en_linea) {
+					etiqueta += ' — desconectada'
+				}
+
+				grupos.push({
+					label: etiqueta,
+					options: agente.impresoras.map(function (nombre) {
+						return {
+							/*
+							 * El valor lleva el prefijo y el id del equipo: es lo que despues
+							 * usa el mixin para saber si el ticket va por el agente o por QZ.
+							 */
+							value: 'agente:' + agente.id + ':' + nombre,
+							text: nombre,
+						}
+					}),
+				})
+			})
+
+			return grupos
+		},
+
+		/**
+		 * Opciones del selector: primero los equipos con agente, después QZ Tray.
+		 *
+		 * @returns {Array}
 		 */
 		opciones_impresoras() {
-			let opciones = this.impresoras.map(function (nombre) {
-				return {
-					value: nombre,
-					text: nombre,
-				}
-			})
+			let opciones = this.opciones_con_origen.slice()
 
 			/**
 			 * La impresora configurada puede no estar entre las detectadas: se renombro, se
@@ -194,10 +289,10 @@ export default {
 			 * avisando, porque hacerla desaparecer del selector sin explicacion es justo lo
 			 * que deja al operador sin saber que mirar.
 			 */
-			if (this.impresora_actual && this.impresoras.indexOf(this.impresora_actual) == -1) {
+			if (this.impresora_actual && !this.impresora_actual_esta_en_la_lista) {
 				opciones.unshift({
-					value: this.impresora_actual,
-					text: this.impresora_actual + ' (no se detecta en este equipo)',
+					value: this.valor_preseleccionado,
+					text: this.nombre_de_la_impresora_actual + ' (no se detecta)',
 				})
 			}
 
@@ -214,20 +309,144 @@ export default {
 		},
 
 		/**
+		 * El valor que hay que dejar seleccionado al abrir.
+		 *
+		 * 🔴 Normaliza el formato viejo. Los clientes de antes del agente tienen guardado el nombre
+		 * pelado ("EPSON TM-T20"), pero ahora las opciones valen "qz:EPSON TM-T20": sin traducirlo,
+		 * ninguna opcion matchea, Vue deja el select en blanco, y un comercio que viene imprimiendo
+		 * bien abre la pantalla y cree que perdio la configuracion. Peor: si "arregla" eligiendo de
+		 * la lista, es probable que agarre otra impresora.
+		 *
+		 * @returns {string|null}
+		 */
+		valor_preseleccionado() {
+			let actual = this.impresora_actual
+
+			if (!actual) {
+				return null
+			}
+
+			if (actual.indexOf('agente:') === 0 || actual.indexOf('qz:') === 0) {
+				return actual
+			}
+
+			if (this.impresoras.indexOf(actual) != -1) {
+				return 'qz:' + actual
+			}
+
+			return actual
+		},
+
+		/**
+		 * Si el valor preseleccionado aparece entre las opciones que se van a mostrar.
+		 *
+		 * @returns {boolean}
+		 */
+		impresora_actual_esta_en_la_lista() {
+			let buscado = this.valor_preseleccionado
+			let encontrada = false
+
+			this.opciones_con_origen.forEach(function (grupo) {
+				grupo.options.forEach(function (opcion) {
+					if (opcion.value == buscado) {
+						encontrada = true
+					}
+				})
+			})
+
+			return encontrada
+		},
+
+		/**
+		 * Los grupos reales (agentes + QZ), sin la opcion de rescate.
+		 *
+		 * @returns {Array}
+		 */
+		opciones_con_origen() {
+			let grupos = this.grupos_de_agentes.slice()
+
+			if (this.impresoras.length) {
+				grupos.push({
+					label: this.agentes.length ? 'QZ Tray (esta computadora)' : 'Impresoras de esta computadora',
+					options: this.impresoras.map(function (nombre) {
+						return {
+							value: 'qz:' + nombre,
+							text: nombre,
+						}
+					}),
+				})
+			}
+
+			return grupos
+		},
+
+		/**
+		 * Nombre pelado de la impresora configurada, sin el prefijo del destino.
+		 *
+		 * @returns {string}
+		 */
+		nombre_de_la_impresora_actual() {
+			if (!this.impresora_actual) {
+				return ''
+			}
+
+			if (this.impresora_actual.indexOf('agente:') === 0) {
+				return this.impresora_actual.split(':').slice(2).join(':')
+			}
+
+			if (this.impresora_actual.indexOf('qz:') === 0) {
+				return this.impresora_actual.substring(3)
+			}
+
+			return this.impresora_actual
+		},
+
+		/**
+		 * Si hay alguna impresora para elegir, venga de donde venga.
+		 *
+		 * @returns {boolean}
+		 */
+		hay_impresoras() {
+			return this.impresoras.length > 0 || this.grupos_de_agentes.length > 0
+		},
+
+		/**
+		 * El aviso de QZ cerrado solo tiene sentido si el comercio todavía depende de QZ.
+		 *
+		 * @returns {boolean}
+		 */
+		mostrar_aviso_qz_cerrado() {
+			return !this.qz_disponible && !this.cargando && !this.agentes.length
+		},
+
+		/**
+		 * @returns {boolean}
+		 */
+		mostrar_aviso_sin_impresoras() {
+			return !this.cargando && !this.hay_impresoras && (this.qz_disponible || this.agentes.length > 0)
+		},
+
+		/**
 		 * Leyenda con la cantidad de impresoras detectadas.
 		 *
 		 * @returns {string}
 		 */
 		texto_impresoras_detectadas() {
-			if (!this.impresoras.length) {
-				return 'No se detectaron impresoras en este equipo.'
+			let total = this.impresoras.length
+
+			this.grupos_de_agentes.forEach(function (grupo) {
+				total += grupo.options.length
+			})
+
+			if (!total) {
+				return 'No se detectaron impresoras.'
 			}
 
-			if (this.impresoras.length == 1) {
-				return '1 impresora detectada en este equipo.'
+			if (total == 1) {
+				return '1 impresora detectada.'
 			}
 
-			return this.impresoras.length + ' impresoras detectadas en este equipo.'
+			return total + ' impresoras detectadas.'
 		},
 	},
 	methods: {
@@ -249,7 +468,7 @@ export default {
 		 * Al mostrarse, copia la configuracion vigente al borrador y pide la lista.
 		 */
 		on_modal_shown() {
-			this.impresora_elegida = this.impresora_actual
+			this.impresora_elegida = this.valor_preseleccionado
 			this.ancho_mm = this.ancho_actual
 
 			this.$emit('refrescar')
@@ -274,6 +493,49 @@ export default {
 </script>
 
 <style scoped lang="sass">
+.impresora-config-modal__directa
+	padding: 12px 14px
+	margin-bottom: 18px
+	background: var(--bg-card-secondary, #f1f3f5)
+	border-radius: 8px
+
+.impresora-config-modal__directa-titulo
+	font-weight: 600
+	font-size: 0.9rem
+	margin-bottom: 8px
+	color: var(--color-text-primary, #212529)
+
+.impresora-config-modal__directa-acciones
+	display: flex
+	gap: 8px
+	flex-wrap: wrap
+	margin-top: 10px
+
+.impresora-config-modal__equipo
+	display: flex
+	align-items: center
+	gap: 8px
+	font-size: 0.85rem
+	margin-bottom: 4px
+
+.impresora-config-modal__equipo-nombre
+	font-weight: 600
+	color: var(--color-text-primary, #212529)
+
+.impresora-config-modal__equipo-estado
+	font-size: 0.78rem
+	color: var(--color-text-secondary, #6c757d)
+
+.impresora-config-modal__punto
+	flex: 0 0 auto
+	width: 8px
+	height: 8px
+	border-radius: 50%
+	background: var(--color-border-tertiary, #adb5bd)
+
+.impresora-config-modal__punto--activo
+	background: #2ea44f
+
 .impresora-config-modal__aviso
 	font-size: 0.85rem
 	color: var(--color-text-secondary, #6c757d)

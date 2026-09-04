@@ -42,15 +42,35 @@ export default {
                 return this.preferencias_del_puesto.impresora
             }
 
-            if (this.user && this.user.impresora) {
+            /*
+             * 🔴 El fallback del usuario y del owner NO puede devolver una impresora de agente.
+             *
+             * Ese valor es compartido por todo el comercio, y un destino "agente:<id>:..." apunta a
+             * una computadora FISICA concreta. Si la caja 1 migra al agente y despues alguien entra
+             * desde la caja 2 con un navegador sin cookie, heredaria ese valor y su ticket saldria
+             * por la comandera de la caja 1 -- sin ningun error, y sin que nadie lo note hasta que
+             * falte el ticket. El equipo se elige por puesto, siempre.
+             */
+            if (this.user && this.user.impresora && !this.es_destino_de_agente(this.user.impresora)) {
                 return this.user.impresora
             }
 
-            if (this.owner && this.owner.impresora) {
+            if (this.owner && this.owner.impresora && !this.es_destino_de_agente(this.owner.impresora)) {
                 return this.owner.impresora
             }
 
             return null
+        },
+        /**
+         * Por dónde sale el ticket: por el agente de impresion o por QZ Tray.
+         *
+         * Es lo que permite migrar de QZ al agente cliente por cliente sin cortar a nadie: la
+         * decision se toma por impresora elegida, no por una bandera global.
+         *
+         * @returns {Object|null} {origen, print_agent_id, nombre}
+         */
+        destino_de_impresion() {
+            return this.parse_destino_de_impresion(this.impresora)
         },
         /**
          * Ancho de la comandera en mm: lo configurado en este puesto, o el perfil del owner.
@@ -95,6 +115,135 @@ export default {
         },
 
         /**
+         * Si un valor guardado apunta a un equipo con agente.
+         *
+         * @param {*} valor
+         * @returns {boolean}
+         */
+        es_destino_de_agente(valor) {
+            return typeof valor === 'string' && valor.indexOf('agente:') === 0
+        },
+
+        /**
+         * Interpreta la impresora guardada y dice por donde hay que mandar el ticket.
+         *
+         * El valor guardado viene con prefijo: "agente:<id>:<nombre>" o "qz:<nombre>".
+         *
+         * 🔴 Un valor SIN prefijo se lee como QZ, y no es un caso raro: es exactamente lo que
+         * tienen guardado todos los clientes de antes de esta version, en la cookie y en
+         * users.impresora. Si esto devolviera null, el Ticket 2.0 dejaria de imprimir en cada
+         * comercio que todavia no migro al agente.
+         *
+         * @param {string|null} valor
+         * @returns {Object|null} {origen, print_agent_id, nombre}
+         */
+        parse_destino_de_impresion(valor) {
+            if (!valor) {
+                return null
+            }
+
+            if (valor.indexOf('agente:') === 0) {
+                let partes = valor.split(':')
+
+                if (partes.length < 3) {
+                    return null
+                }
+
+                return {
+                    origen: 'agente',
+                    print_agent_id: Number(partes[1]),
+                    // El nombre puede tener ":" adentro, asi que se rearma con lo que sobra.
+                    nombre: partes.slice(2).join(':'),
+                }
+            }
+
+            if (valor.indexOf('qz:') === 0) {
+                return {
+                    origen: 'qz',
+                    print_agent_id: null,
+                    nombre: valor.substring(3),
+                }
+            }
+
+            return {
+                origen: 'qz',
+                print_agent_id: null,
+                nombre: valor,
+            }
+        },
+
+        /**
+         * Pasa el ticket armado a los bytes que espera la impresora, en base64.
+         *
+         * Cada caracter se baja a un byte quedandose con los 8 bits de abajo, que es exactamente
+         * lo que hace QZ con `encoding: ISO-8859-1`. Si se mandara el texto tal cual, los
+         * comandos ESC/POS (que son caracteres de control) no sobrevivirian al viaje por JSON.
+         *
+         * @param {Array<string>} partes
+         * @returns {string}
+         */
+        contenido_a_base64(partes) {
+            let texto = partes.join('')
+            let binario = ''
+
+            for (let i = 0; i < texto.length; i++) {
+                let codigo = texto.charCodeAt(i)
+
+                /*
+                 * 🔴 Todo lo que no entra en ISO-8859-1 se reemplaza por "?" (0x3F), que es
+                 * exactamente lo que hace QZ. NO alcanza con enmascarar con & 0xFF: quedarse con
+                 * el byte de abajo convierte caracteres inocentes en COMANDOS ESC/POS.
+                 *
+                 * El caso real: las comillas tipograficas que llegan al pegar un nombre de
+                 * articulo desde Word o WhatsApp. U+201C y U+201D dan 0x1C y 0x1D, que son FS y
+                 * GS -- los dos introductores de comando del protocolo. El ticket sale corrido o
+                 * con basura de ahi en adelante, y solo por este camino: con QZ el mismo articulo
+                 * imprime con signos de pregunta y se ve feo, pero se lee.
+                 */
+                binario += String.fromCharCode(codigo > 0xFF ? 0x3F : codigo)
+            }
+
+            return btoa(binario)
+        },
+
+        /**
+         * Encola el ticket en el agente de impresion del equipo elegido.
+         *
+         * @param {Object} destino {print_agent_id, nombre}
+         * @returns {Promise<boolean>}
+         */
+        imprimir_por_agente(destino) {
+            let self = this
+
+            return self.$api.post('print-jobs', {
+                print_agent_id: destino.print_agent_id,
+                printer_name: destino.nombre,
+                payload_base64: self.contenido_a_base64(self.content),
+            })
+            .then(function () {
+                return true
+            })
+            .catch(function (error) {
+                console.error('No se pudo mandar el ticket al agente de impresion:', error)
+
+                /*
+                 * El backend contesta 409 con el motivo cuando el equipo no esta conectado, que
+                 * es el caso frecuente: la PC de la caja apagada. Se muestra ese texto porque
+                 * dice cual equipo, y no un mensaje generico.
+                 */
+                let data = error && error.response && error.response.data
+
+                if (data && data.error) {
+                    self.$toast.error(data.error)
+                } else {
+                    self.$toast.error('No se pudo mandar el ticket a "' + destino.nombre + '".')
+                }
+
+                return false
+            })
+        },
+
+        /**
          * Imprime el Ticket 2.0 de una venta.
          *
          * Cada salida por error avisa al operador. Antes todas terminaban en un
@@ -109,6 +258,32 @@ export default {
 
             self.sale_to_print = sale_to_print
 
+            let destino = self.destino_de_impresion
+
+            if (!destino) {
+                // Sin nombrar donde esta el engranaje: este mixin tambien se usa desde el
+                // boton de la factura ARCA del listado, donde no hay dropdown de impresion.
+                self.$toast.error('No hay ninguna impresora configurada para el Ticket 2.0. Configurala desde el menu Imprimir de una venta.')
+                return Promise.resolve(false)
+            }
+
+            /*
+             * Camino nuevo: el ticket se encola y lo levanta el agente instalado en esa PC. No
+             * necesita QZ abierto, no muestra ningun cartel de permiso, y ni siquiera hace falta
+             * estar en la maquina que tiene la impresora.
+             */
+            if (destino.origen === 'agente') {
+                return self.set_ticket_content()
+                .then(function () {
+                    return self.imprimir_por_agente(destino)
+                })
+                .catch(function (error) {
+                    console.error('Error al armar el ticket:', error)
+                    self.$toast.error('No se pudo armar el ticket.')
+                    return false
+                })
+            }
+
             return self.conectar_qz()
             .then(function (conectado) {
                 if (!conectado) {
@@ -116,16 +291,11 @@ export default {
                     return false
                 }
 
-                if (!self.impresora) {
-                    // Sin nombrar donde esta el engranaje: este mixin tambien se usa desde el
-                    // boton de la factura ARCA del listado, donde no hay dropdown de impresion.
-                    self.$toast.error('No hay ninguna impresora configurada para el Ticket 2.0. Configurala desde el menu Imprimir de una venta.')
-                    return false
-                }
-
                 return self.set_ticket_content()
                 .then(function () {
-                    let config = self.qz.configs.create(self.impresora, {
+                    // destino.nombre y no self.impresora: el valor guardado puede venir con el
+                    // prefijo "qz:", y QZ necesita el nombre pelado de la impresora en Windows.
+                    let config = self.qz.configs.create(destino.nombre, {
                         encoding: "ISO-8859-1", // para imprimir qr
                         copies: 1,
                         forceRaw: true,
@@ -139,7 +309,7 @@ export default {
             })
             .catch(function (error) {
                 console.error('Error al imprimir el ticket:', error)
-                self.$toast.error('No se pudo imprimir en "' + self.impresora + '". Fijate que este encendida, con papel, y que siga siendo la impresora elegida.')
+                self.$toast.error('No se pudo imprimir en "' + destino.nombre + '". Fijate que este encendida, con papel, y que siga siendo la impresora elegida.')
                 return false
             })
         },
@@ -155,8 +325,33 @@ export default {
          * @param {number} ancho_mm
          * @returns {Promise<boolean>} true si el trabajo se envio a la impresora.
          */
-        imprimir_ticket_de_prueba(nombre_impresora, ancho_mm) {
+        imprimir_ticket_de_prueba(valor_impresora, ancho_mm) {
             let self = this
+            let destino = self.parse_destino_de_impresion(valor_impresora)
+
+            if (!destino) {
+                self.$toast.error('Elegí una impresora')
+                return Promise.resolve(false)
+            }
+
+            let contenido = self.armar_ticket_de_prueba(destino.nombre, ancho_mm)
+
+            // Por el agente el ticket de prueba viaja igual que uno real: se encola y lo levanta
+            // el equipo. Asi la prueba verifica el camino completo y no uno de mentira.
+            if (destino.origen === 'agente') {
+                let content_original = self.content
+                self.content = contenido
+
+                return self.imprimir_por_agente(destino)
+                .then(function (impreso) {
+                    self.content = content_original
+                    return impreso
+                })
+                .catch(function () {
+                    self.content = content_original
+                    return false
+                })
+            }
 
             return self.conectar_qz()
             .then(function (conectado) {
@@ -165,28 +360,7 @@ export default {
                     return false
                 }
 
-                // Misma cuenta que TICKET_WIDTH: 48 caracteres en 80mm de papel.
-                let caracteres = Math.floor((ancho_mm * 48) / 80)
-                let contenido = []
-
-                contenido.push("\x1B\x74\x02")
-                contenido.push("\n")
-                contenido.push("\x1B\x45\x01") // Negrita ON
-                contenido.push("PRUEBA DE IMPRESION\n")
-                contenido.push("\x1B\x45\x00") // Negrita OFF
-                // Sin "\n": la linea de guiones ocupa el ancho entero y la impresora
-                // salta sola, igual que en linea() del ticket real.
-                contenido.push("-".repeat(caracteres))
-                contenido.push("Impresora: " + nombre_impresora + "\n")
-                contenido.push("Ancho: " + ancho_mm + "mm (" + caracteres + " caracteres)\n")
-                contenido.push("-".repeat(caracteres))
-                contenido.push("Si los guiones entran justo en el\n")
-                contenido.push("papel, el ancho esta bien.\n")
-                contenido.push("\n\n\n\n")
-                contenido.push("\x1D\x56\x00") // Corte de papel
-                contenido.push("\n")
-
-                let config = self.qz.configs.create(nombre_impresora, {
+                let config = self.qz.configs.create(destino.nombre, {
                     encoding: "ISO-8859-1",
                     copies: 1,
                     forceRaw: true,
@@ -199,9 +373,41 @@ export default {
             })
             .catch(function (error) {
                 console.error('Error en la impresion de prueba:', error)
-                self.$toast.error('No se pudo imprimir en "' + nombre_impresora + '". Fijate que este encendida y con papel.')
+                self.$toast.error('No se pudo imprimir en "' + destino.nombre + '". Fijate que este encendida y con papel.')
                 return false
             })
+        },
+
+        /**
+         * Arma el contenido del ticket de prueba.
+         *
+         * @param {string} nombre_impresora
+         * @param {number} ancho_mm
+         * @returns {Array<string>}
+         */
+        armar_ticket_de_prueba(nombre_impresora, ancho_mm) {
+            // Misma cuenta que TICKET_WIDTH: 48 caracteres en 80mm de papel.
+            let caracteres = Math.floor((ancho_mm * 48) / 80)
+            let contenido = []
+
+            contenido.push("\x1B\x74\x02")
+            contenido.push("\n")
+            contenido.push("\x1B\x45\x01") // Negrita ON
+            contenido.push("PRUEBA DE IMPRESION\n")
+            contenido.push("\x1B\x45\x00") // Negrita OFF
+            // Sin salto de linea: la linea de guiones ocupa el ancho entero y la impresora
+            // salta sola, igual que en linea() del ticket real.
+            contenido.push("-".repeat(caracteres))
+            contenido.push("Impresora: " + nombre_impresora + "\n")
+            contenido.push("Ancho: " + ancho_mm + "mm (" + caracteres + " caracteres)\n")
+            contenido.push("-".repeat(caracteres))
+            contenido.push("Si los guiones entran justo en el\n")
+            contenido.push("papel, el ancho esta bien.\n")
+            contenido.push("\n\n\n\n")
+            contenido.push("\x1D\x56\x00") // Corte de papel
+            contenido.push("\n")
+
+            return contenido
         },
 
         async getQRBase64(url) {

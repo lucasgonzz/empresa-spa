@@ -1,17 +1,27 @@
 <template>
+	<!--
+		Geometria del footer del sistema: la secundaria a la izquierda, la confirmatoria a la
+		derecha, una sola accion con peso visual. Antes eran dos botones `block` apilados en el
+		cuerpo del modal, con "Cancelar" en rojo macizo del mismo tamaño que el de confirmar.
+	-->
 	<div
-	class="m-t-15">
+	class="vender-multipago-footer">
+		<b-button
+		class="vender-multipago-footer__cancelar"
+		variant="outline-secondary"
+		data-testid="venta-multipago-cancelar"
+		@click="cancelar">
+			Cancelar
+		</b-button>
+
 		<!--
 			🔴 Con descuentos por metodo de pago el reparto es de DOS PASOS: primero "Calcular" --que
 			aplica el descuento de cada metodo sobre lo que se cobra con el-- y recien despues aparece
 			"Listo". Sin descuentos configurados hay un solo "Listo" (la rama de mas abajo). Los dos
 			llevan el mismo testid porque nunca se dibujan a la vez.
 		-->
-		<div
-		v-if="payment_method_discounts.length">
-
+		<template v-if="payment_method_discounts.length">
 			<b-button
-			block
 			variant="primary"
 			data-testid="venta-multipago-calcular"
 			v-if="!calculado"
@@ -19,7 +29,6 @@
 				Calcular
 			</b-button>
 			<b-button
-			block
 			variant="primary"
 			data-testid="venta-multipago-listo"
 			v-else
@@ -27,9 +36,8 @@
 			@click="terminar">
 				Listo
 			</b-button>
-		</div>
+		</template>
 		<b-button
-		block
 		variant="primary"
 		data-testid="venta-multipago-listo"
 		data-tour="vender.boton_confirmar_venta"
@@ -37,19 +45,12 @@
 		v-else>
 			Listo
 		</b-button>
-
-		<b-button
-		class="m-t-10"
-		block
-		variant="danger"
-		data-testid="venta-multipago-cancelar"
-		@click="cancelar">
-			Cancelar
-		</b-button>
 	</div>
 </template>
 <script>
+import metodos_de_pago_validacion from '@/mixins/metodos_de_pago_validacion'
 export default {
+	mixins: [metodos_de_pago_validacion],
 	props: {
 		selected_payment_methods_: Array,
 		total_a_repartir: Number,
@@ -72,13 +73,35 @@ export default {
 	},
 	methods: {
 		terminar() {
+			// Una fila con monto y sin metodo elegido la descarta el backend en silencio.
+			if (this.hay_metodo_de_pago_sin_elegir(this.selected_payment_methods_)) return
+
 			if (!this.chequear_total_repartido()) return
 
-			this.$store.commit('vender/setSelectedPaymentMethods', this.selected_payment_methods_)
+			/*
+				Las filas sin metodo elegido no viajan con la venta. La guarda de arriba ya freno las
+				que tienen monto, asi que lo que queda es una fila en blanco y en cero --el usuario
+				apreto "Agregar metodo de pago" y no la uso--. Sin este filtro llega igual al POST y
+				PaymentMethodHelper::attach_payment_methods hace find(0) -> null -> continue con un
+				Log::warning: no se pierde plata, pero la venta se guarda con una fila basura.
+			*/
+			let metodos = this.selected_payment_methods_.filter(pay => {
+				return Number(pay.current_acount_payment_method_id)
+			})
+
+			this.$store.commit('vender/setSelectedPaymentMethods', metodos)
 
 			this.$bvModal.hide('payment-method-modal')
 		},
 		calcular() {
+		    /*
+		    	Tambien acá y no solo en terminar(): con descuentos por metodo de pago el reparto es
+		    	de dos pasos, y este es el PRIMERO. Sin la guarda, una fila sin metodo elegido entra
+		    	al forEach de abajo, `payment_method` queda undefined y el spread `...payment_method`
+		    	empuja una opcion vacia al select del segundo paso.
+		    */
+		    if (this.hay_metodo_de_pago_sin_elegir(this.selected_payment_methods_)) return
+
 		    if (!this.chequear_total_repartido()) return
 
 		    /* 
@@ -90,9 +113,19 @@ export default {
 
 		    this.selected_payment_methods_.forEach(pay => {
 
+		        /*
+		        	Una fila sin metodo elegido se saltea. La guarda de arriba ya freno las que
+		        	tienen monto, asi que lo que puede llegar acá es una fila en blanco y en cero:
+		        	sin esto, `payment_method` queda undefined y el spread de mas abajo empuja al
+		        	select del segundo paso una opcion con value y text en undefined.
+		        */
+		        if (!Number(pay.current_acount_payment_method_id)) {
+		            return
+		        }
+
 		        let discount_amount = null
 		        let surchage_amount = null
-		        
+
 		        let payment_method = this.payment_methods.find(p => p.id == pay.current_acount_payment_method_id)
 
 		        if (pay.cuota_id) {
@@ -127,6 +160,15 @@ export default {
 
 		        // 2) filas (source of truth del MultiPaymentMethods)
 		        next_selected.push({
+		            /*
+		            	El __row_id se arrastra. Este objeto literal REEMPLAZA a la fila del
+		            	MultiPaymentMethods, asi que sin el la fila vuelve a identificarse por indice
+		            	en el :key del v-for --el bug del 21/8/2026 por el que Vue 2 reutiliza nodos
+		            	entre filas y mezcla los selects de metodo, moneda y caja--. Y queda peor que
+		            	uniforme: si en el segundo paso se agrega una fila, esa SI trae __row_id y las
+		            	demas no, asi que conviven dos formas de key.
+		            */
+		            __row_id: pay.__row_id,
 		            current_acount_payment_method_id: pay.current_acount_payment_method_id,
 		            moneda_id: pay.moneda_id,
 		            caja_id: pay.caja_id,
@@ -185,3 +227,28 @@ export default {
 	}
 }
 </script>
+<style lang="sass">
+// Footer del modal de multiples metodos de pago de Vender. El componente es el unico hijo del
+// slot #modal-footer, asi que tiene que ocupar la franja entera para que la geometria del sistema
+// --secundaria a la izquierda, confirmatoria a la derecha-- se pueda ver.
+.vender-multipago-footer
+	display: flex
+	align-items: center
+	gap: 10px
+	width: 100%
+
+	.vender-multipago-footer__cancelar
+		margin-right: auto
+
+// 576px es el breakpoint `sm` de bootstrap, el mismo que usa el resto del sistema.
+@media (max-width: 575.98px)
+	.vender-multipago-footer
+		flex-direction: column-reverse
+		align-items: stretch
+
+		.btn
+			width: 100%
+
+		.vender-multipago-footer__cancelar
+			margin-right: 0
+</style>
