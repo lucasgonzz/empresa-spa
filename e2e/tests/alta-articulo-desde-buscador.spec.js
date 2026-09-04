@@ -26,8 +26,8 @@ test.describe('Compras: alta de articulo desde el buscador', () => {
 		await page.locator('[data-testid="provider_order-provider_id"]').click()
 		const provider_modal_input = page.locator('[data-testid="provider_order-provider_id-search-modal-input"]')
 		// Tecleo real, no fill(): ver el comentario largo de search_and_select en
-		// alta-compra.spec.js. fill() no emite keydown, ya_se_busco queda en true y el Enter de
-		// abajo crearia un proveedor "Rosario" nuevo en vez de buscar el del fixture.
+		// e2e/helpers/formulario.js. Se teclea porque es lo que hace el usuario; desde el 4/9/2026
+		// onModalShow() baja ya_se_busco en cada apertura, asi que el primer Enter busca igual.
 		await provider_modal_input.fill('')
 		await provider_modal_input.pressSequentially('Rosario')
 		await provider_modal_input.press('Enter')
@@ -51,10 +51,11 @@ test.describe('Compras: alta de articulo desde el buscador', () => {
 			.click()
 		await page.locator('[data-testid="provider_order-articles"]').click()
 		const articles_modal_input = page.locator('[data-testid="provider_order-articles-search-modal-input"]')
-		// Tecleo real: es lo que deja ya_se_busco en false y hace que el PRIMER Enter busque. Con
-		// fill() este test pasaba por el motivo equivocado — el primer Enter creaba el articulo
-		// directamente, sin haber verificado nunca que la busqueda no encontraba nada, que es la
-		// mitad de lo que dice probar.
+		// Tecleo real, como el usuario. El PRIMER Enter busca y el SEGUNDO crea el articulo al
+		// vuelo: esa secuencia es la mitad de lo que este test dice probar, asi que no la saltees
+		// mandando un solo Enter. (Hasta el 4/9/2026 lo que garantizaba que el primer Enter buscara
+		// era el keydown del tecleo; ahora lo garantiza onModalShow(), que baja ya_se_busco en cada
+		// apertura.)
 		await articles_modal_input.fill('')
 		await articles_modal_input.pressSequentially(unique_article_name)
 
