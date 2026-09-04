@@ -109,6 +109,15 @@ export default {
 		},
 		// Grupo 231, prompt 06: activa la dinamica de costeo por condicion fiscal (grupo 231,
 		// prompt 02) en reemplazo de la tilde historica "aplicar_iva_al_costo".
+		{
+			text: 'Calcular costos segun la condicion de IVA',
+			key: 'usar_condicion_fiscal_en_costeo',
+			type: 'checkbox',
+			descriptions: [
+				'Si se activa, el sistema calcula los costos y los precios segun la condicion de IVA indicada arriba, en lugar de la configuracion historica de esta cuenta.',
+				'Al cambiar esta opcion se recalculan los precios de todos los articulos. El costo real de los articulos va a cambiar y los precios finales pueden moverse. No la actives sin haber hablado antes con el equipo de ComercioCity.',
+			],
+		},
 		/*
 		 * Preferencia del comercio sobre que pasa con los descuentos del proveedor al asignarle un
 		 * proveedor a un articulo. Apagada (default) es lo de develop: los descuentos del proveedor
@@ -129,18 +138,10 @@ export default {
 			v_if_function: 'is_owner_v_if_function',
 			descriptions:
 			[
-				'Si se activa, al crear un articulo con proveedor —o al asignarle un proveedor a uno que no tenia— se le cargan automaticamente los descuentos de ese proveedor.',
+				'Si se activa, al crear un articulo con proveedor —o al asignarle un proveedor a uno que no tenia— se le cargan automaticamente los descuentos de ese proveedor. Tambien al cambiar el proveedor de varios articulos juntos con "Actualizar seleccionados".',
 				'Los descuentos quedan cargados en el articulo, se ven en su ficha y se pueden editar o borrar como cualquier otro.',
 				'No afecta a los articulos que ya existen: rige de aca en adelante. Cambiar el proveedor de un articulo que ya tenia otro sigue preguntando con su ventana de confirmacion, este activada o no esta opcion.',
-			],
-		},
-		{
-			text: 'Calcular costos segun la condicion de IVA',
-			key: 'usar_condicion_fiscal_en_costeo',
-			type: 'checkbox',
-			descriptions: [
-				'Si se activa, el sistema calcula los costos y los precios segun la condicion de IVA indicada arriba, en lugar de la configuracion historica de esta cuenta.',
-				'Al cambiar esta opcion se recalculan los precios de todos los articulos. El costo real de los articulos va a cambiar y los precios finales pueden moverse. No la actives sin haber hablado antes con el equipo de ComercioCity.',
+				'Quitarle el proveedor a un articulo no le borra los descuentos que ya tenia.',
 			],
 		},
 		/*
