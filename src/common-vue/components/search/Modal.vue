@@ -485,7 +485,16 @@ export default {
 	methods: {
 		/**
 		 * Estado limpio cada vez que se abre el modal: todavia no se busco nada.
-		 * No toca this.results, que puede venir precargado por preview_results.
+		 *
+		 * 🔴 No toca this.results, y NO se puede agregar aca `this.results = this.preview_results`
+		 * aunque parezca el lugar obvio. $bvModal.show() emite el evento `show` de forma SINCRONICA
+		 * (bootstrap-vue 2.23.1: bv-modal.js:200-204 -> modal.js:697 -> modal.js:423), asi que este
+		 * handler corre ANTES de que Vue le baje al modal el preview_results que el padre acaba de
+		 * asignar en callSearchModal() de search/Index.vue: leeria el de la apertura anterior. Es
+		 * exactamente la familia del informe 20260831-modales-que-abren-antes-de-que-baje-el-prop.md.
+		 *
+		 * Los resultados precargados entran por el watch de preview_results (mas arriba en este
+		 * archivo), que es el mecanismo seguro para un dato que viaja por prop.
 		 */
 		onModalShow() {
 			this.modal_visible = true

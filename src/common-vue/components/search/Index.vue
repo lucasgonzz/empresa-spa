@@ -384,13 +384,41 @@ export default {
 			this.query = ''
 			this.$emit('clearSelected')
 		},
+		/**
+		 * Deja establecidos los resultados con los que el modal ABRE, antes de que el usuario busque
+		 * nada: los primeros 10 modelos ya descargados en el store del modelo que se esta por elegir.
+		 * Si la prop depende de otra (subcategoria depende de categoria), setModelsToSearch() ya dejo
+		 * en models_to_search solo los que corresponden a lo elegido arriba.
+		 *
+		 * 🔴 Asigna SIEMPRE un array nuevo, incluso vacio, y eso es medio arreglo. El modal toma los
+		 * resultados en el watch de la prop preview_results (search/Modal.vue), y un watch solo corre
+		 * si cambia la REFERENCIA. Mientras este metodo podia volverse sin asignar --que era lo que
+		 * pasaba cada vez que la condicion daba falso-- el modal abria con los resultados de la
+		 * busqueda ANTERIOR. Un `if` que envuelva la asignacion vuelve a traer ese bug.
+		 *
+		 * Que haya precarga o no lo decide show_preview_results, NO limpiar_resultados_de_busqueda.
+		 * Son dos preguntas distintas y estaban mezcladas en un if anidado: mientras la precarga
+		 * colgaba de "limpiar", los buscadores de los formularios (ModelForm -> FieldSearchInput) no
+		 * precargaban nunca, porque por ese camino la prop llegaba en null (ver FieldSearchInput.vue).
+		 *
+		 * limpiar_resultados_de_busqueda si decide lo otro: en false, el consumidor pidio conservar la
+		 * lista entre aperturas --Vender y Compras eligen un articulo atras del otro sobre los mismos
+		 * resultados-- y aca no se toca nada. Sacar ese primer if les rompe ese flujo.
+		 *
+		 * El `|| []` tapa un caso real, no es paranoia: setModelsToSearch() llama al search_function
+		 * SIN argumentos y search_articles_offline(query) devuelve undefined cuando no le pasan query
+		 * (src/mixins/model_functions.js). Sin el `|| []`, ahi hay un TypeError adentro de un .then(),
+		 * o sea sin rastro en pantalla. Lo mismo si la relacion de is_between / has_many no bajo.
+		 */
 		setPreviewResults() {
-			if (this.show_preview_results) {
-				if (this.limpiar_resultados_de_busqueda) {
-
-					this.preview_results = this.models_to_search.slice(0, 20)
-				} 
+			if (!this.limpiar_resultados_de_busqueda) {
+				return
 			}
+			if (!this.show_preview_results) {
+				this.preview_results = []
+				return
+			}
+			this.preview_results = (this.models_to_search || []).slice(0, 10)
 		},
 		async setModelsToSearch() {
 			let models = []		
@@ -491,10 +519,37 @@ export default {
 		callSearchModal() {
 			if (!this.not_show_modal) {
 
+				let self = this
+
 				this.set_first_row_selected = !this.set_first_row_selected
 
+				// Corta YA con los resultados de la apertura anterior, en este mismo tick. No alcanza
+				// con hacerlo en el .then() de abajo: cuando los modelos llegan por promesa
+				// (search_function contra la base offline), el modal ya estaria abierto mostrando la
+				// lista de la busqueda pasada durante todo ese rato.
+				if (this.limpiar_resultados_de_busqueda) {
+					this.preview_results = []
+				}
+
+				// 🔴 Encadenado con .then() y no suelto. setModelsToSearch() esta declarada `async`
+				// (deuda vieja, no se agrega mas), asi que SIEMPRE devuelve una promesa: llamandola
+				// suelta, setPreviewResults() corria en el mismo tick y precargaba con los modelos de
+				// la apertura ANTERIOR. Sin await: en src/ se usa .then() con `let self = this`.
 				this.setModelsToSearch()
-				this.setPreviewResults()
+					.then(function() {
+						self.setPreviewResults()
+					})
+					.catch(function(error) {
+						// Mejor abrir sin precarga que con la lista vieja: si juntar los modelos fallo
+						// (un store que no existe, una relacion que no bajo), models_to_search puede
+						// haber quedado con lo de la vez pasada. Antes este error se perdia en una
+						// promesa sin catch.
+						console.log(error)
+						if (self.limpiar_resultados_de_busqueda) {
+							self.preview_results = []
+						}
+					})
+
 				this.$bvModal.show(this._id+'-search-modal')
 				setTimeout(() => {
 					document.getElementById(this._id+'-search-modal-input').focus()
