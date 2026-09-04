@@ -28,6 +28,20 @@
 	--metodo-pago-radius: 12px
 	// Separacion entre tarjetas y entre los campos de una misma tarjeta.
 	--metodo-pago-gap: 12px
+	// Radio de los INPUTS/SELECTS de adentro. Mas chico que el de la tarjeta que los contiene
+	// (mismo criterio que boton 10px / modal 16px: la superficie va mas redondeada que el control).
+	--metodo-pago-input-radius: 8px
+	// Anillo de foco. El default de _inputs.sass (borde de 3px solido + glow de 0.8 de opacidad,
+	// sin token) esta pensado para UN campo suelto; con ocho controles chicos uno al lado del otro
+	// en la misma tarjeta se ve como un aviso de error, no como una seleccion. Mismo idioma que ya
+	// usa el pill del buscador general (FiltrosFijos.vue): un anillo suave en vez de un halo grueso.
+	// No se puede derivar de --color-primary con una funcion CSS (el resto del sistema tampoco lo
+	// hace, ver --totales-acento-usd-bg junto a --totales-acento-usd): va como token propio, con su
+	// version oscura al lado.
+	--metodo-pago-focus-ring: rgba(0, 123, 255, 0.15)
+
+html.dark-mode
+	--metodo-pago-focus-ring: rgba(77, 163, 255, 0.25)
 
 // ============================ La barra de contexto ============================
 // Dice sobre que sucursal y sobre que moneda se estan ofreciendo las cajas, y deja cambiar la
@@ -117,6 +131,33 @@
 
 	.metodos-de-pago__moneda-valor
 		color: var(--totales-acento-usd)
+
+// ============================ Inputs del bloque ============================
+// Reemplaza el radio/borde/foco default de _inputs.sass (5px, 2px, glow sin token) SOLO adentro
+// de este bloque. El input global del resto del sistema no se toca.
+//
+// 🔴 En claro gana por especificidad sola: el global de _inputs.sass es `input, select` /
+// `input:focus, select:focus`, sin clase, especificidad mas baja que cualquier regla de aca. En
+// oscuro EMPATA con `html.dark-mode .form-control(:focus)` de _dark_theme.sass --las dos dan
+// (0,2,1) y (0,3,1)-- y se gana por orden de declaracion: este archivo se importa DESPUES de
+// dark_theme.sass en app.sass. Pedido de Lucas, 4/9/2026.
+.metodos-de-pago
+	input.form-control,
+	select.custom-select,
+	textarea.form-control
+		border-radius: var(--metodo-pago-input-radius)
+		// El ancho de borde tambien se pisa alcance: 1px, no los 2px del global. Con ocho campos
+		// chicos pegados uno al lado del otro, 2px de borde en cada uno suma un gris mas denso del
+		// que hace falta para separarlos --ya los separa el gap de la grilla.
+		border-width: 1px
+		transition: border-color .15s ease, box-shadow .15s ease
+
+		// El borde de foco YA no crece a 3px: ese ancho lo fija el `border-width: 1px` de arriba,
+		// que le gana al `border: 3px solid #007bff` global (shorthand) porque compara SOLO el
+		// ancho, y ahi el global no tiene clase (0,1,1) contra esto (0,2,1).
+		&:focus
+			border-color: var(--color-primary)
+			box-shadow: 0 0 0 3px var(--metodo-pago-focus-ring)
 
 // ============================ La tarjeta de cada metodo ============================
 .metodos-de-pago__lista
