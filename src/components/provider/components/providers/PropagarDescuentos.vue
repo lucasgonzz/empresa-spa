@@ -25,9 +25,15 @@ id="propagar-descuentos-proveedor"
 
 	<div v-else>
 
+		<!--
+			El texto NO afirma que el usuario acaba de cambiar los descuentos: la ventana se dispara
+			en cualquier guardado del proveedor (modelSaved), asi que decir "cambiaste los
+			descuentos" seria mentira cada vez que alguien guarda por otra razon. Se describe lo que
+			el sistema efectivamente ve: hay articulos cuyos descuentos no coinciden con la ficha.
+		-->
 		<p class="m-b-20">
-			Cambiaste los descuentos de <strong>{{ provider_name }}</strong>.
-			Los articulos que ya tenian sus descuentos cargados siguen con los valores anteriores.
+			Hay articulos de <strong>{{ provider_name }}</strong> cuyos descuentos no coinciden con
+			los que tiene cargados el proveedor.
 		</p>
 
 		<div class="propagar-resumen m-b-20">
@@ -165,6 +171,17 @@ export default {
 				self.$store.commit('auth/setLoading', false)
 				self.$store.commit('auth/setMessage', '')
 				console.log(err)
+
+				/*
+					El aviso de error no es cosmetico: sin el, el usuario ve desaparecer el loader y
+					nada mas, y lo natural es volver a apretar "Actualizar articulos". La operacion
+					recorre articulo por articulo, asi que en un catalogo grande puede cortarse por
+					tiempo — y ahi hace falta que quede claro que se corto y que puede haber quedado
+					a medias, no que parezca que no paso nada.
+				*/
+				self.$toast.error('No se pudieron actualizar los articulos. Si el proveedor tiene muchos, puede haber quedado a medias: volve a intentar y revisa el resultado.')
+
+				self.$bvModal.hide('propagar-descuentos-proveedor')
 			})
 		},
 		reset() {
