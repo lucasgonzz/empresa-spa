@@ -721,11 +721,8 @@ export default {
 
 			self.guardando_impresora = true
 
-			self.$api.put('user/set-impresora', {
-				impresora: datos.impresora,
-			})
+			self.$store.dispatch('auth/set_impresora', datos.impresora)
 			.then(function () {
-				self.$store.state.auth.user.impresora = datos.impresora
 				self.guardando_impresora = false
 				self.$toast.success('Impresora configurada')
 				self.$refs.impresora_config_modal.close_modal()
