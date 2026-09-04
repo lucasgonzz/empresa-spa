@@ -95,6 +95,16 @@ export default {
 		],
 	},
 
+	'metodos-de-pago-sucursal': {
+		titulo: 'Sucursal de las cajas',
+		que_hace: 'Elige de qué sucursal son las cajas que se ofrecen en cada fila del pago.',
+		repercute: [
+			'Solo cambia las cajas de ESTE modal. La sucursal de Vender —la que define el depósito de stock de la venta— queda como estaba.',
+			'Si la caja que ya habías elegido no existe en la sucursal nueva, se reemplaza por la caja por defecto de esa sucursal, o queda sin elegir.',
+		],
+		requiere: 'Vuelve sola a la sucursal de Vender cada vez que se abre el modal.',
+	},
+
 	'pago-monto-*': {
 		titulo: 'Monto de esta fila',
 		que_hace: 'Cuánto se cobra con este método de pago.',

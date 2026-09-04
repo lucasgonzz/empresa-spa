@@ -61,7 +61,9 @@ id="seller-commission-pago">
 </b-modal>
 </template>
 <script>
+import metodos_de_pago_validacion from '@/mixins/metodos_de_pago_validacion'
 export default {
+	mixins: [metodos_de_pago_validacion],
 	components: {
 		BtnLoader: () => import('@/common-vue/components/BtnLoader'),
 		PaymentMethods: () => import('@/components/client/modals/sellers/PaymentMethods'),
@@ -111,6 +113,11 @@ export default {
 			return payment_method ? payment_method.name : 'el método de pago'
 		},
 		check() {
+			// Una fila con monto y sin metodo elegido la descarta el backend en silencio.
+			if (this.hay_metodo_de_pago_sin_elegir(this.pago.current_acount_payment_methods)) {
+				return false
+			}
+
 			let metodos_con_monto = this.pago.current_acount_payment_methods.filter(payment_method => {
 				return Number(payment_method.amount) > 0
 			})
@@ -188,15 +195,18 @@ export default {
 		gap: 2px
 		margin-bottom: 8px
 
+	// Colores por token: este bloque vive dentro de un modal de bootstrap-vue, que se monta
+	// colgando de <body> y fuera de #app. Con los hexadecimales que habia hasta el 4/9/2026
+	// (#94a3b8 y #0f172a) el valor del total quedaba casi negro sobre negro en modo oscuro.
 	&__total-label
 		font-size: 0.68rem
 		font-weight: 600
-		color: #94a3b8
+		color: var(--color-text-secondary)
 		text-transform: uppercase
 		letter-spacing: 0.04em
 
 	&__total-valor
 		font-size: 1.9rem
 		font-weight: 700
-		color: #0f172a
+		color: var(--color-text-primary)
 </style>

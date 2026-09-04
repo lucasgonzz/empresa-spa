@@ -1,180 +1,183 @@
 <template>
     <div>
-        <hr>
-        <div
-            v-for="(payment_method, index) in payment_methods"
-            :key="payment_method.__row_id || index"
-            class="m-b-20 s-2 payment-method-card"
-        >
+        <div class="metodos-de-pago__lista">
+            <div
+                v-for="(payment_method, index) in payment_methods"
+                :key="payment_method.__row_id || index"
+                class="metodo-pago-card"
+            >
 
-            <h5>
-                <strong>
-                    Metodo de pago {{ index + 1}}
-                </strong>
-            </h5>
-
-            <div class="cont-pm cont-pm-payment-method-moneda">
-                
-                 <!-- METODO DE PAGO -->
-                <b-form-group 
-                label="Metodo de pago">
-                        
-                    <!--
-                        Los tres controles de una fila de pago (metodo, monto, caja) llevan el
-                        indice en el data-testid porque este bloque se repite: un pago puede
-                        repartirse entre varios metodos ("Agregar metodo de pago"). El primero es
-                        siempre el 0.
-                    -->
-                    <b-form-select
-                        :data-testid="'pago-metodo-'+index"
-                        :value="payment_method.current_acount_payment_method_id"
-                        :options="payment_method_select_options"
-                        @change="set_payment_method_id(payment_method, index, $event)"
-                    ></b-form-select>
-
-                </b-form-group>
-
-
-                 <!-- MONEDA -->
-                <b-form-group 
-                v-if="hasExtencion('ventas_en_dolares')"
-                class="m-l-10"
-                label="Moneda">
-                    <b-form-select
-                        :value="payment_method.moneda_id"
-                        :options="moneda_options"
-                        @change="set_moneda_id(payment_method, index, $event)"
-                    ></b-form-select>
-                </b-form-group>
-            </div>
-
-
-
-            <!-- COTIZACION -->
-            <div class="cont-pm"
-            v-if="payment_method.moneda_id && payment_method.moneda_id !== base_moneda">
-                
-                <b-form-group
-                    label="Cotización"
-                >
-                    <b-form-input
-                        :value="payment_method.cotizacion"
-                        placeholder="Cotización"
-                        inputmode="decimal"
-                        @input="set_cotizacion(payment_method, index, $event)"
-                    ></b-form-input>
-                    <small class="text-muted">
-                        Ingresá la cotización para convertir a {{ base_moneda }}.
-                    </small>
-                </b-form-group>
-
-                <p
-                class="">
-                    <strong>
-                        Cotizado: {{ price(payment_method.amount_cotizado) }}
-                    </strong>
-                </p>
-            </div>
-
-
-
-            <!-- MONTO -->
-            <b-form-group label="Monto">
-
-                <div class="cont-pm">
-                    <b-form-input
-                        class="payment-method-amount"
-                        :data-testid="'pago-monto-'+index"
-                        :value="payment_method.amount"
-                        placeholder="Monto"
-                        inputmode="decimal"
-                        @paste.prevent
-                        @input="set_amount(payment_method, index, $event)"
-                    ></b-form-input>
+                <div class="metodo-pago-card__header">
+                    <span class="metodo-pago-card__badge">{{ index + 1 }}</span>
+                    <h6 class="metodo-pago-card__titulo">Método de pago</h6>
 
                     <b-button
-                    size="sm"
-                    class="m-l-10"
-                    :data-testid="'pago-completar-'+index"
-                    v-if="total_a_repartir"
-                    @click="completar(index)"
-                    variant="outline-primary">
-                        Completar
+                        v-if="show_add_remove && index > 0"
+                        class="metodo-pago-card__quitar"
+                        :data-testid="'pago-quitar-'+index"
+                        title="Quitar este método de pago"
+                        @click="$emit('remove', index)"
+                    >
+                        <i class="icon-trash"></i>
+                        Quitar
                     </b-button>
                 </div>
 
-                <p
-                class="text-success m-t-10"
-                v-if="payment_method.discount_amount">
-                    Descuento: {{ price(payment_method.discount_amount) }}
-                </p>
-                <p
-                class="text-danger m-t-10"
-                v-if="payment_method.surchage_amount">
-                    Recargo: {{ price(payment_method.surchage_amount) }}
-                </p>
-            </b-form-group>
+                <div class="metodo-pago-card__grid">
+
+                    <!-- METODO DE PAGO -->
+                    <b-form-group
+                    :class="{ 'metodo-pago-card__campo--ancho': !hasExtencion('ventas_en_dolares') }"
+                    label="Metodo de pago">
+
+                        <!--
+                            Los tres controles de una fila de pago (metodo, monto, caja) llevan el
+                            indice en el data-testid porque este bloque se repite: un pago puede
+                            repartirse entre varios metodos ("Agregar metodo de pago"). El primero es
+                            siempre el 0.
+                        -->
+                        <b-form-select
+                            :data-testid="'pago-metodo-'+index"
+                            :value="payment_method.current_acount_payment_method_id"
+                            :options="payment_method_select_options"
+                            @change="set_payment_method_id(payment_method, index, $event)"
+                        ></b-form-select>
+
+                    </b-form-group>
 
 
-            <cuotas
-            @field_change="on_check_field_change(index, $event)"
-            :payment_method="payment_method"></cuotas>
-            
-
-            <!-- CAJA -->
-            <b-form-group
-                v-if="cajas.length && payment_method.current_acount_payment_method_id != 1"
-                label="Caja"
-            >
-                <b-form-select
-                    :data-testid="'pago-caja-'+index"
-                    :value="payment_method.caja_id"
-                    :options="get_caja_options(payment_method.current_acount_payment_method_id, address_id, resolve_payment_method_moneda_id(payment_method))"
-                    @change="update_caja_id(index, $event, payment_method)"
-                ></b-form-select>
-
-                <small
-                    v-if="cash_box_moneda_error(payment_method)"
-                    class="text-danger"
-                >
-                    La caja seleccionada no es compatible con la moneda elegida.
-                </small>
-            </b-form-group>
-
-            <check-info
-            @field_change="on_check_field_change(index, $event)"
-            :payment_method="payment_method"></check-info>
+                    <!-- MONEDA -->
+                    <b-form-group
+                    v-if="hasExtencion('ventas_en_dolares')"
+                    label="Moneda">
+                        <b-form-select
+                            :data-testid="'pago-moneda-'+index"
+                            :value="payment_method.moneda_id"
+                            :options="moneda_options"
+                            @change="set_moneda_id(payment_method, index, $event)"
+                        ></b-form-select>
+                    </b-form-group>
 
 
+                    <!--
+                        COTIZACION. Ocupa las dos columnas para que el par monto/caja de abajo
+                        quede junto en su propia fila: si midiera una columna, el monto subiria a
+                        su lado y la caja quedaria sola.
+                    -->
+                    <b-form-group
+                        v-if="payment_method.moneda_id && payment_method.moneda_id !== base_moneda"
+                        class="metodo-pago-card__campo--ancho"
+                        label="Cotización"
+                    >
+                        <b-form-input
+                            :value="payment_method.cotizacion"
+                            placeholder="Cotización"
+                            inputmode="decimal"
+                            @input="set_cotizacion(payment_method, index, $event)"
+                        ></b-form-input>
+                        <p class="metodo-pago-card__nota text-muted">
+                            Cotizado: <strong>{{ price(payment_method.amount_cotizado) }}</strong>
+                        </p>
+                    </b-form-group>
 
-            <slot name="details" :payment_method="payment_method"></slot>
 
-            <b-button
-                v-if="show_add_remove && index > 0"
-                class="m-t-15"
-                size="sm"
-                block
-                variant="outline-danger"
-                @click="$emit('remove', index)"
-            >
-                Quitar método de pago
-            </b-button>
+                    <!--
+                        MONTO y CAJA van a ancho completo, no en dos columnas.
 
-            <!-- <hr> -->
+                        El modal mide 500px (el ancho por defecto del sistema), asi que una columna
+                        queda en ~212px. El texto de una opcion de caja lo arma get_caja_options()
+                        concatenando nombre + (empleado) + (USD) + (sucursal): es el string mas largo
+                        del sistema, y truncado deja al usuario sin saber a que caja le esta mandando
+                        la plata. El monto comparte fila con el boton "Completar".
+
+                        Asi la tarjeta se lee en el mismo orden en que se llena: con que se paga, en
+                        que moneda, cuanto, y a que caja entra.
+                    -->
+                    <b-form-group
+                    class="metodo-pago-card__campo--ancho"
+                    label="Monto">
+
+                        <div class="metodo-pago-card__monto">
+                            <b-form-input
+                                class="payment-method-amount"
+                                :data-testid="'pago-monto-'+index"
+                                :value="payment_method.amount"
+                                placeholder="Monto"
+                                inputmode="decimal"
+                                @paste.prevent
+                                @input="set_amount(payment_method, index, $event)"
+                            ></b-form-input>
+
+                            <b-button
+                            size="sm"
+                            :data-testid="'pago-completar-'+index"
+                            v-if="total_a_repartir"
+                            @click="completar(index)"
+                            variant="outline-primary">
+                                Completar
+                            </b-button>
+                        </div>
+
+                        <p
+                        class="metodo-pago-card__nota text-success"
+                        v-if="payment_method.discount_amount">
+                            Descuento: {{ price(payment_method.discount_amount) }}
+                        </p>
+                        <p
+                        class="metodo-pago-card__nota text-danger"
+                        v-if="payment_method.surchage_amount">
+                            Recargo: {{ price(payment_method.surchage_amount) }}
+                        </p>
+                    </b-form-group>
+
+
+                    <!-- CAJA -->
+                    <b-form-group
+                        v-if="show_caja_select(payment_method)"
+                        class="metodo-pago-card__campo--ancho"
+                        label="Caja"
+                    >
+                        <b-form-select
+                            :data-testid="'pago-caja-'+index"
+                            :value="payment_method.caja_id"
+                            :options="get_caja_options(payment_method.current_acount_payment_method_id, address_id, resolve_payment_method_moneda_id(payment_method))"
+                            @change="update_caja_id(index, $event, payment_method)"
+                        ></b-form-select>
+
+                        <small
+                            v-if="cash_box_moneda_error(payment_method)"
+                            class="text-danger"
+                        >
+                            La caja seleccionada no es compatible con la moneda elegida.
+                        </small>
+                    </b-form-group>
+
+
+                    <div class="metodo-pago-card__campo--ancho">
+                        <cuotas
+                        @field_change="on_check_field_change(index, $event)"
+                        :payment_method="payment_method"></cuotas>
+
+                        <check-info
+                        @field_change="on_check_field_change(index, $event)"
+                        :payment_method="payment_method"></check-info>
+
+                        <slot name="details" :payment_method="payment_method"></slot>
+                    </div>
+
+                </div>
+            </div>
         </div>
 
         <b-button
             v-if="show_add_remove"
-            block
+            class="metodos-de-pago__agregar"
             data-testid="btn-agregar-metodo-pago"
-            size="sm"
-            variant="outline-primary"
             @click="$emit('add')"
         >
+            <i class="icon-plus"></i>
             Agregar método de pago
         </b-button>
-
-        <hr>
     </div>
 </template>
 
@@ -241,6 +244,20 @@ export default {
             return this.$store.state.caja.models
         },
     },
+    watch: {
+        /**
+         * La sucursal se puede cambiar desde el propio modal (select de MultiPaymentMethods), asi
+         * que las cajas ofrecidas cambian con el modal ya abierto y con filas cargadas. Una caja
+         * elegida para la sucursal anterior puede dejar de estar en la lista, y el select se
+         * quedaria en blanco con el `caja_id` viejo todavia en el modelo: el pago se mandaria
+         * contra una caja que el usuario ya no ve.
+         *
+         * @returns {void}
+         */
+        address_id() {
+            this.revalidar_cajas_por_sucursal()
+        },
+    },
     mounted() {
         this.$root.$on('bv::modal::shown', (bvEvent, modalId) => {
             if (
@@ -275,6 +292,73 @@ export default {
             return Number(this.base_moneda) || 0
         },
 
+        /**
+         * El select de caja se dibuja si hay cajas cargadas y el metodo no es el id 1 (cuenta
+         * corriente, que no mueve caja). Estaba escrito dos veces --en el v-if de la caja y de
+         * forma implicita en el ancho del monto--; acá es uno solo.
+         *
+         * @param {Object} payment_method Fila de método de pago del formulario.
+         * @returns {boolean}
+         */
+        show_caja_select(payment_method) {
+            if (!this.cajas.length) {
+                return false
+            }
+
+            let method_id = Number(payment_method.current_acount_payment_method_id) || 0
+
+            /*
+             * Sin metodo elegido no se dibuja la caja. La fila que se agrega nace en blanco desde
+             * el 4/9/2026, y ofrecerle un desplegable con TODAS las cajas antes de saber con que se
+             * paga es al reves del orden en que se llena la fila. Ojo con "arreglar" esto mirando
+             * get_caja_options: ese helper ignora por completo su primer argumento (el metodo), asi
+             * que no filtra nada por si solo.
+             */
+            if (!method_id) {
+                return false
+            }
+
+            // El metodo 1 es cuenta corriente: no mueve caja.
+            return method_id !== 1
+        },
+
+        /**
+         * Repasa las filas cargadas cuando cambia la sucursal del modal: si la caja elegida ya no
+         * figura entre las opciones de la sucursal nueva, se resuelve la caja por defecto de esa
+         * sucursal (y si no hay, queda en 0, que el select muestra como "Seleccione caja").
+         *
+         * La caja que el usuario eligio a mano y SIGUE siendo valida no se toca: una caja sin
+         * sucursal asignada es valida en todas, y pisarla seria deshacerle la eleccion.
+         *
+         * @returns {void}
+         */
+        revalidar_cajas_por_sucursal() {
+            if (!Array.isArray(this.payment_methods)) {
+                return
+            }
+
+            this.payment_methods.forEach((payment_method, index) => {
+                if (!payment_method) {
+                    return
+                }
+
+                let method_id = Number(payment_method.current_acount_payment_method_id) || 0
+                let moneda_id = this.resolve_payment_method_moneda_id(payment_method)
+                let caja_id = Number(payment_method.caja_id) || 0
+
+                if (caja_id) {
+                    let opciones = this.get_caja_options(method_id, this.address_id, moneda_id)
+                    let sigue_valida = opciones.some(opcion => Number(opcion.value) === caja_id)
+
+                    if (sigue_valida) {
+                        return
+                    }
+                }
+
+                this.set_caja_por_defecto(index, method_id, moneda_id)
+            })
+        },
+
         on_check_field_change(index, payload) {
             // payload = { key, value }
             this.$emit('update_payment_method_field', index, payload.key, payload.value)
@@ -296,7 +380,6 @@ export default {
         },
 
         set_moneda_id(row, index, new_value) {
-            console.log('set_moneda_id con '+new_value)
             let moneda_id = Number(new_value) || 0
 
             this.$emit('update_moneda_id', index, moneda_id)
@@ -319,7 +402,6 @@ export default {
         },
 
         set_amount(row, index, new_value) {
-            console.log('set_amount')
             let amount = Number(new_value) || 0
 
             this.$emit('update_amount', index, Number(amount))
@@ -330,7 +412,6 @@ export default {
         },
 
         set_cotizacion(row, index, new_value) {
-            console.log('set_cotizacion')
             let cotizacion = Number(new_value) || 0
 
             this.$emit('update_cotizacion', index, Number(cotizacion))
@@ -342,18 +423,14 @@ export default {
 
         check_moneda(payment_method, index, amount) {
 
-            console.log('check_moneda')
 
             if (payment_method.moneda_id != this.base_moneda) {
-                console.log('cotizando')
                 let amount_cotizado = 0
                 let cotizacion = Number(this.payment_methods[index].cotizacion)
 
                 if (payment_method.moneda_id == 1) {
-                    console.log('dividiendo por '+cotizacion)
                     amount_cotizado = amount / cotizacion
                 } else {
-                    console.log('multiplicando por '+cotizacion)
                     amount_cotizado = amount * cotizacion
                 }
                 this.$emit('update_amount_cotizado', index, amount_cotizado)
@@ -362,32 +439,45 @@ export default {
 
 
 
-        cajas_options() {
-            let options = [{
-                value: 0,
-                text: 'Seleccione Caja'
-            }]
-
-            let cajas = this.get_caja_options(payment_method.current_acount_payment_method_id, )
-            // this.cajas.filter(c => c.abierta).forEach(caja => {
-            //     options.push({
-            //         value: caja.id,
-            //         text: caja.name
-            //     })
-            // })
-            return options
-        },
+        /*
+         * Acá vivia un `cajas_options()` que nadie llamaba y que no podia funcionar: usaba una
+         * variable `payment_method` que no existe en su scope, asi que la primera llamada habria
+         * tirado un ReferenceError. Se borro el 4/9/2026 con el rediseño del bloque. Las opciones
+         * de caja las arma get_caja_options() del mixin global (mixins/generals.js), que es el que
+         * usa el template.
+         */
 
         set_caja_por_defecto(index, method_id, moneda_id) {
-            
-        
-            let caja_por_defecto = this.get_caja_por_defecto(method_id, this.address_id, moneda_id) 
 
-            if (caja_por_defecto) {
-                this.$emit('update_caja_id', index, Number(caja_por_defecto.id))
-            } else {
+            let caja_por_defecto = this.get_caja_por_defecto(method_id, this.address_id, moneda_id)
+
+            if (!caja_por_defecto) {
                 this.$emit('update_caja_id', index, 0)
+                return
             }
+
+            /*
+             * 🔴 La caja que propone el mixin NO siempre esta en el desplegable, y el propio mixin
+             * lo documenta (mixins/caja_por_defecto.js, nota de las lineas 82-98). Los dos criterios
+             * divergen: get_caja_options descarta las cajas CERRADAS, las de otra sucursal y las que
+             * el usuario no tiene permitidas; el mixin devuelve igual la primera candidata de la
+             * configuracion `default_payment_method_caja`, que solo mira metodo + sucursal de la
+             * CONFIGURACION, no de la caja.
+             *
+             * El sintoma es el peor posible: el select se ve VACIO y el modelo se lleva un caja_id
+             * que el usuario nunca vio, asi que el pago impacta en una caja que no eligio. Con el
+             * select de sucursal nuevo eso pasa a estar a un clic de distancia, asi que se corta acá
+             * --en el unico consumidor-- en vez de tocar el mixin, que tambien usa la VENTA.
+             */
+            let opciones = this.get_caja_options(method_id, this.address_id, moneda_id)
+            let esta_en_la_lista = opciones.some(opcion => Number(opcion.value) === Number(caja_por_defecto.id))
+
+            if (!esta_en_la_lista) {
+                this.$emit('update_caja_id', index, 0)
+                return
+            }
+
+            this.$emit('update_caja_id', index, Number(caja_por_defecto.id))
         },
 
         /**
@@ -494,21 +584,3 @@ export default {
     }
 }
 </script>
-<style lang="sass">
-.cont-pm
-    display: flex  
-    flex-direction: row
-    align-items: center
-    justify-content: space-between
-
-.payment-method-card
-    padding: 10px
-    border-radius: 7px
-    background: rgba(0,0,0,.1)
-
-
-.cont-pm-payment-method-moneda
-
-    // input 
-    //     width: 350px
-</style>
