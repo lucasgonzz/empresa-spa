@@ -160,6 +160,15 @@ export default {
 
 		        // 2) filas (source of truth del MultiPaymentMethods)
 		        next_selected.push({
+		            /*
+		            	El __row_id se arrastra. Este objeto literal REEMPLAZA a la fila del
+		            	MultiPaymentMethods, asi que sin el la fila vuelve a identificarse por indice
+		            	en el :key del v-for --el bug del 21/8/2026 por el que Vue 2 reutiliza nodos
+		            	entre filas y mezcla los selects de metodo, moneda y caja--. Y queda peor que
+		            	uniforme: si en el segundo paso se agrega una fila, esa SI trae __row_id y las
+		            	demas no, asi que conviven dos formas de key.
+		            */
+		            __row_id: pay.__row_id,
 		            current_acount_payment_method_id: pay.current_acount_payment_method_id,
 		            moneda_id: pay.moneda_id,
 		            caja_id: pay.caja_id,

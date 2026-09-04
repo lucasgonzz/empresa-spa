@@ -451,28 +451,53 @@ export default {
 
             let caja_por_defecto = this.get_caja_por_defecto(method_id, this.address_id, moneda_id)
 
+            /*
+             * 🔴 Sin sucursal elegida se prueban las DOS representaciones de "ninguna": null y 0.
+             *
+             * `get_caja_por_defecto` compara con `==` suelto (mixins/caja_por_defecto.js:13), y
+             * `0 == null` es FALSE. La columna `default_payment_method_cajas.address_id` es
+             * nullable, pero el select del ABM arranca en 0 cuando no se elige nada y el controlador
+             * guarda lo que llega: en el parque conviven configuraciones con NULL y con 0.
+             *
+             * Hasta esta rama cada pantalla mandaba una sola de las dos --Vender el 0
+             * (`Number(store.vender.address_id)`), el resto null (cookie ausente)--, asi que a cada
+             * una le funcionaba la mitad del parque sin que se notara. Probar las dos es lo unico
+             * que no le saca la caja por defecto a nadie; quedarse con una sola se la sacaria a la
+             * VENTA, que es el flujo mas caliente del sistema.
+             */
+            if (!caja_por_defecto && !this.address_id) {
+                let otra_representacion = this.address_id === 0 ? null : 0
+                caja_por_defecto = this.get_caja_por_defecto(method_id, otra_representacion, moneda_id)
+            }
+
             if (!caja_por_defecto) {
                 this.$emit('update_caja_id', index, 0)
                 return
             }
 
             /*
-             * 🔴 La caja que propone el mixin NO siempre esta en el desplegable, y el propio mixin
-             * lo documenta (mixins/caja_por_defecto.js, nota de las lineas 82-98). Los dos criterios
-             * divergen: get_caja_options descarta las cajas CERRADAS, las de otra sucursal y las que
-             * el usuario no tiene permitidas; el mixin devuelve igual la primera candidata de la
-             * configuracion `default_payment_method_caja`, que solo mira metodo + sucursal de la
-             * CONFIGURACION, no de la caja.
+             * La caja propuesta tiene que ser de la sucursal que se esta mirando.
              *
-             * El sintoma es el peor posible: el select se ve VACIO y el modelo se lleva un caja_id
-             * que el usuario nunca vio, asi que el pago impacta en una caja que no eligio. Con el
-             * select de sucursal nuevo eso pasa a estar a un clic de distancia, asi que se corta acá
-             * --en el unico consumidor-- en vez de tocar el mixin, que tambien usa la VENTA.
+             * `get_caja_por_defecto` filtra por la sucursal de la CONFIGURACION, no por la de la
+             * caja, asi que puede devolver una caja de otra sucursal: el desplegable
+             * --get_caja_options, que si mira `caja.address_id`-- no la muestra, y el select queda
+             * VACIO con el caja_id igual cargado en el modelo. El pago impacta en una caja que el
+             * usuario nunca vio. Con el select de sucursal nuevo eso queda a un clic de distancia.
+             *
+             * 🔴 Se compara SOLO la sucursal, y no la pertenencia a get_caja_options entera, a
+             * proposito. Aquel filtra tambien por caja ABIERTA, y la mision del 29/8/2026 decidio
+             * explicitamente que el default NO haga eso (ver la nota de caja_por_defecto.js:82-98):
+             * un filtro duro por apertura deja sin default al comercio que carga un gasto con la
+             * caja del dia ya cerrada. Ese criterio no se toca acá; lo unico que se corta es la
+             * divergencia que introduce esta misma funcionalidad.
              */
-            let opciones = this.get_caja_options(method_id, this.address_id, moneda_id)
-            let esta_en_la_lista = opciones.some(opcion => Number(opcion.value) === Number(caja_por_defecto.id))
+            let caja_de_otra_sucursal = (
+                this.address_id
+                && caja_por_defecto.address_id
+                && Number(caja_por_defecto.address_id) !== Number(this.address_id)
+            )
 
-            if (!esta_en_la_lista) {
+            if (caja_de_otra_sucursal) {
                 this.$emit('update_caja_id', index, 0)
                 return
             }

@@ -173,6 +173,12 @@
 	&__campo--ancho
 		grid-column: 1 / -1
 
+		// El contenedor de cuotas/cheque/slot se dibuja SIEMPRE, aunque sus tres hijos esten en
+		// `v-if` false: Vue deja un nodo comentario, y un comentario no impide que `:empty` matchee.
+		// Sin esto queda un item de grilla vacio llevandose su gap de 12px al pie de cada tarjeta.
+		&:empty
+			display: none
+
 	.form-group
 		margin-bottom: 0
 		min-width: 0
@@ -182,9 +188,15 @@
 	// form-group.js:240 y :247). Ninguna plantilla de este bloque pasa label-for, asi que una regla
 	// que apunte solo a `label` no matchea NADA: las etiquetas quedarian en el tamaño de bootstrap
 	// al lado del <label> escrito a mano del chip de moneda, que si matchea. Ese desparejo era el
-	// sintoma. `.col-form-label` es la clase que bootstrap-vue le pone al legend.
-	legend,
-	label
+	// sintoma.
+	//
+	// 🔴 Y va con `>`, no como descendiente: `.metodo-pago-card label` alcanza tambien al
+	// <label class="custom-control-label"> que dibuja el checkbox "Es un echeq" de CheckInfo.vue,
+	// y le gana por especificidad (0,1,1 contra 0,1,0). Ese texto quedaba en VERSALITAS, en negrita
+	// y con margen de mas. Estas versalitas son de las etiquetas de los campos de la tarjeta, no de
+	// cualquier texto que cuelgue de ella.
+	&__grid > .form-group > legend,
+	&__grid > .form-group > label
 		display: block
 		margin-bottom: 4px
 		color: var(--color-text-secondary)
