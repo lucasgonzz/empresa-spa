@@ -19,7 +19,7 @@
 				@ticket_pdf="ticketPdf(sale)"
 				@factura_ticket_pdf="facturaTicketPdf"
 				@ticket_2="nuevo_ticket(sale)"
-				@set_ancho_impresora="set_ancho_impresora"></section-tickets>
+				@configurar_impresora="abrir_modal_impresora"></section-tickets>
 
 				<section-remitos-a4
 				:remitos_a4_profiles="remitos_a4_profiles"
@@ -65,6 +65,19 @@
 		:sheet_type_options="sheet_type_options"
 		:remaining_width_mm="remaining_width_mm"
 		@save_profile="save_pdf_profile"></modal-pdf-columns-profile>
+
+		<impresora-config-modal
+		ref="impresora_config_modal"
+		:impresoras="impresoras_detectadas"
+		:qz_disponible="qz_disponible"
+		:cargando="cargando_impresoras"
+		:impresora_actual="impresora"
+		:ancho_actual="ancho_impresora"
+		:guardando="guardando_impresora"
+		:probando="probando_impresion"
+		@refrescar="refrescar_impresoras"
+		@guardar="guardar_configuracion_impresora"
+		@probar="probar_impresion"></impresora-config-modal>
 	</div>
 </template>
 
@@ -75,6 +88,8 @@ import ModalPdfColumnsProfile from './ModalPdfColumnsProfile.vue'
 import SectionTickets from './SectionTickets.vue'
 import SectionRemitosA4 from './SectionRemitosA4.vue'
 import SectionFacturasA4 from './SectionFacturasA4.vue'
+import ImpresoraConfigModal from './ImpresoraConfigModal.vue'
+import { guardar_preferencias_del_puesto } from '@/mixins/sale/print_ticket/preferencias_del_puesto'
 
 export default {
 	components: {
@@ -84,6 +99,7 @@ export default {
 		SectionTickets,
 		SectionRemitosA4,
 		SectionFacturasA4,
+		ImpresoraConfigModal,
 	},
 	mixins: [print_ticket],
 	props: {
@@ -113,6 +129,26 @@ export default {
 			dropdown_popper_opts: {
 				positionFixed: true,
 			},
+			/**
+			 * Impresoras que QZ Tray ve en este equipo, para el selector del modal.
+			 */
+			impresoras_detectadas: [],
+			/**
+			 * QZ Tray respondio la ultima vez que se lo consulto.
+			 */
+			qz_disponible: false,
+			/**
+			 * Hay una consulta de impresoras en curso.
+			 */
+			cargando_impresoras: false,
+			/**
+			 * Hay un guardado de configuracion de impresora en curso.
+			 */
+			guardando_impresora: false,
+			/**
+			 * Hay una impresion de prueba en curso.
+			 */
+			probando_impresion: false,
 			/**
 			 * Catálogo de opciones de columnas para el model_name activo.
 			 */
@@ -615,32 +651,128 @@ export default {
 			}
 		},
 		/**
-		 * Configura el ancho de impresora para ticket 2.0 (cookie local del navegador).
+		 * Abre la configuracion de impresora del Ticket 2.0.
 		 */
-		set_ancho_impresora() {
-			let ancho_cookie = this.$cookies.get('ancho_impresora')
-			let ancho_cookie_valido = this.parse_valid_ticket_width_mm(ancho_cookie)
-			let _prompt = 'Ingrese el ancho en milimetros de su impresora'
+		abrir_modal_impresora() {
+			/**
+			 * Se marca como cargando ANTES de abrir. El modal pide la lista en @shown, que
+			 * BootstrapVue emite recien cuando termina el fade: sin esto, durante esos ~300ms
+			 * el operador ve a pantalla completa el instructivo de "no se detecta QZ Tray"
+			 * aunque QZ este perfectamente abierto.
+			 */
+			this.cargando_impresoras = true
+			this.$refs.impresora_config_modal.open_modal()
+		},
 
-			if (ancho_cookie_valido) {
-				_prompt += '. Valor actual (cookie): ' + ancho_cookie_valido + 'mm'
-			} else {
-				_prompt += '. Valor actual (perfil): ' + this.ancho_impresora + 'mm'
+		/**
+		 * Pide a QZ Tray la lista de impresoras del equipo.
+		 *
+		 * Es lo que reemplaza a la convencion vieja de tener que renombrar la impresora
+		 * a 'comerciocity' en Windows: ahora el sistema muestra las que hay y el operador
+		 * elige una.
+		 */
+		refrescar_impresoras() {
+			let self = this
+
+			self.cargando_impresoras = true
+
+			self.listar_impresoras_qz()
+			.then(function (resultado) {
+				// qz_disponible viene aparte de la lista: QZ abierto sin impresoras instaladas
+				// no es lo mismo que QZ cerrado, y el modal muestra cosas distintas.
+				self.impresoras_detectadas = resultado.impresoras
+				self.qz_disponible = resultado.qz_disponible
+				self.cargando_impresoras = false
+			})
+			.catch(function () {
+				self.impresoras_detectadas = []
+				self.qz_disponible = false
+				self.cargando_impresoras = false
+			})
+		},
+
+		/**
+		 * Guarda la impresora elegida y el ancho del papel.
+		 *
+		 * La impresora se guarda en dos lados a proposito: la cookie es de ESTE puesto y
+		 * es la que manda, y el usuario queda como valor por defecto para cuando alguien
+		 * entra desde un navegador nuevo. Si el guardado en el servidor falla, la eleccion
+		 * local vale igual y se avisa, porque no poder imprimir seria peor.
+		 *
+		 * @param {{impresora: string, ancho_mm: *}} datos
+		 */
+		guardar_configuracion_impresora(datos) {
+			let self = this
+			let ancho_mm = self.parse_valid_ticket_width_mm(datos.ancho_mm)
+
+			if (!datos.impresora) {
+				self.$toast.error('Elegí una impresora')
+				return
 			}
 
-			let valor = prompt(_prompt)
+			if (!ancho_mm) {
+				self.$toast.error('Ingresá un ancho valido en milimetros (numero mayor a 0)')
+				return
+			}
 
-			if (valor) {
-				let ancho_mm = this.parse_valid_ticket_width_mm(valor.trim())
+			// Cookies + estado reactivo de una sola vez: sin lo segundo, los computed que
+			// leen la impresora y el ancho quedan congelados hasta el proximo F5.
+			guardar_preferencias_del_puesto(self.$cookies, datos.impresora, ancho_mm)
 
-				if (!ancho_mm) {
-					alert('Ingrese un ancho valido en milimetros (numero mayor a 0)')
-					return
+			self.guardando_impresora = true
+
+			self.$store.dispatch('auth/set_impresora', datos.impresora)
+			.then(function () {
+				self.guardando_impresora = false
+				self.$toast.success('Impresora configurada')
+				self.$refs.impresora_config_modal.close_modal()
+			})
+			.catch(function (error) {
+				console.error('No se pudo guardar la impresora en el servidor:', error)
+				self.guardando_impresora = false
+				/**
+				 * La impresora ya quedo configurada en esta computadora y la proxima impresion
+				 * va a salir bien, pero el servidor no la guardo: desde otra computadora va a
+				 * seguir apareciendo la anterior. Va como ERROR y sin cerrar el modal -- un
+				 * cartel verde sobre una request que fallo es exactamente lo que este trabajo
+				 * vino a sacar del sistema.
+				 */
+				self.$toast.error('Quedó configurada en esta computadora, pero no se pudo guardar en el servidor. Revisá la conexión y volvé a intentar.')
+			})
+		},
+
+		/**
+		 * Imprime un ticket de prueba con lo que hay cargado en el modal, sin guardarlo.
+		 *
+		 * @param {{impresora: string, ancho_mm: *}} datos
+		 */
+		probar_impresion(datos) {
+			let self = this
+			let ancho_mm = self.parse_valid_ticket_width_mm(datos.ancho_mm)
+
+			if (!datos.impresora) {
+				self.$toast.error('Elegí una impresora')
+				return
+			}
+
+			if (!ancho_mm) {
+				self.$toast.error('Ingresá un ancho valido en milimetros (numero mayor a 0)')
+				return
+			}
+
+			self.probando_impresion = true
+
+			self.imprimir_ticket_de_prueba(datos.impresora, ancho_mm)
+			.then(function (impreso) {
+				self.probando_impresion = false
+
+				if (impreso) {
+					self.$toast.success('Prueba enviada a ' + datos.impresora)
 				}
-
-				this.$cookies.set('ancho_impresora', String(ancho_mm), -1)
-				alert('Ancho de ' + ancho_mm + 'mm configurado correctamente')
-			}
+			})
+			.catch(function () {
+				self.probando_impresion = false
+			})
 		},
 		/**
 		 * Construye URL de impresión remito/factura A4 para venta.

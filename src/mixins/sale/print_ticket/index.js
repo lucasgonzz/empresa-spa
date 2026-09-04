@@ -4,6 +4,11 @@ import afip_qr_iva from '@/mixins/sale/print_ticket/afip_qr_iva'
 import conectar_impresora from '@/mixins/sale/print_ticket/conectar_impresora'
 import table_articles from '@/mixins/sale/print_ticket/table_articles'
 import info_cliente from '@/mixins/sale/print_ticket/info_cliente'
+import {
+    preferencias_del_puesto,
+    parse_ancho_de_ticket_mm,
+    hidratar_preferencias_del_puesto,
+} from '@/mixins/sale/print_ticket/preferencias_del_puesto'
 export default {
     mixins: [afip_information, afip_qr_iva, conectar_impresora, table_articles, info_cliente],
     data() {
@@ -11,25 +16,53 @@ export default {
             qz: null,
             content: [],
             sale_to_print: null,
+            /**
+             * Preferencias de impresion de este puesto. Se expone en data para que los
+             * computed que la leen queden atados a un objeto reactivo.
+             */
+            preferencias_del_puesto: preferencias_del_puesto,
         }
     },
+    created() {
+        hidratar_preferencias_del_puesto(this.$cookies)
+    },
     computed: {
+        /**
+         * Impresora que usa el Ticket 2.0, en orden de prioridad.
+         *
+         * La cookie es del PUESTO, no de la persona: un local con dos cajas comparte
+         * el mismo usuario, y si la eleccion viviera unicamente en el usuario, la caja 2
+         * le pisaria la impresora a la caja 1 cada vez que la cambia. Es el mismo
+         * criterio que ya usa ancho_impresora.
+         *
+         * @returns {string|null} null si todavia no se configuro ninguna.
+         */
         impresora() {
-            if (this.user.impresora) {
+            if (this.preferencias_del_puesto.impresora) {
+                return this.preferencias_del_puesto.impresora
+            }
+
+            if (this.user && this.user.impresora) {
                 return this.user.impresora
             }
-            return this.owner.impresora
+
+            if (this.owner && this.owner.impresora) {
+                return this.owner.impresora
+            }
+
+            return null
         },
         /**
-         * Ancho de la comandera en mm: cookie válida del navegador o perfil del owner.
+         * Ancho de la comandera en mm: lo configurado en este puesto, o el perfil del owner.
          *
          * @returns {number}
          */
         ancho_impresora() {
-            // Prioridad: cookie local configurada en Ticket 2.0
-            let ancho_cookie = this.parse_valid_ticket_width_mm(this.$cookies.get('ancho_impresora'))
-            if (ancho_cookie) {
-                return ancho_cookie
+            // Prioridad: el ancho configurado en ESTE puesto. Sale del estado reactivo y no
+            // de la cookie por lo que explica preferencias_del_puesto.js: leer la cookie acá
+            // dejaba al computed sin dependencias y congelado hasta el proximo F5.
+            if (this.preferencias_del_puesto.ancho_mm) {
+                return this.preferencias_del_puesto.ancho_mm
             }
 
             // Fallback: ancho del perfil del dueño (sale_ticket_width)
@@ -58,44 +91,117 @@ export default {
          * @returns {number|null} ancho en mm o null si no es válido.
          */
         parse_valid_ticket_width_mm(raw_value) {
-            if (raw_value == null || raw_value === '') {
-                return null
-            }
-
-            let ancho_mm = Number(raw_value)
-
-            if (isNaN(ancho_mm) || ancho_mm <= 0) {
-                return null
-            }
-
-            return ancho_mm
+            return parse_ancho_de_ticket_mm(raw_value)
         },
 
-        async printTicket(sale_to_print) {
-            try {
+        /**
+         * Imprime el Ticket 2.0 de una venta.
+         *
+         * Cada salida por error avisa al operador. Antes todas terminaban en un
+         * console.error que nadie mira: se apretaba imprimir y no pasaba nada, que es
+         * el sintoma que el manual documenta como el que mas confunde.
+         *
+         * @param {Object} sale_to_print
+         * @returns {Promise<boolean>} true si el trabajo se envio a la impresora.
+         */
+        printTicket(sale_to_print) {
+            let self = this
 
-                this.sale_to_print = sale_to_print  
+            self.sale_to_print = sale_to_print
 
-                await this.conectar_qz()
+            return self.conectar_qz()
+            .then(function (conectado) {
+                if (!conectado) {
+                    self.$toast.error(self.mensaje_qz_no_disponible())
+                    return false
+                }
 
-                console.log('ya se conecto')
+                if (!self.impresora) {
+                    // Sin nombrar donde esta el engranaje: este mixin tambien se usa desde el
+                    // boton de la factura ARCA del listado, donde no hay dropdown de impresion.
+                    self.$toast.error('No hay ninguna impresora configurada para el Ticket 2.0. Configurala desde el menu Imprimir de una venta.')
+                    return false
+                }
 
-                await this.set_ticket_content();
+                return self.set_ticket_content()
+                .then(function () {
+                    let config = self.qz.configs.create(self.impresora, {
+                        encoding: "ISO-8859-1", // para imprimir qr
+                        copies: 1,
+                        forceRaw: true,
+                    })
 
-                let config = this.qz.configs.create(this.impresora, {
-                // let config = this.qz.configs.create("XP-80", {
-                  encoding: "ISO-8859-1", // para imprimir qr
-                  // encoding: "CP437", 
-                  copies: 1,
-                  forceRaw: true,
-                });
+                    return self.qz.print(config, self.content)
+                })
+                .then(function () {
+                    return true
+                })
+            })
+            .catch(function (error) {
+                console.error('Error al imprimir el ticket:', error)
+                self.$toast.error('No se pudo imprimir en "' + self.impresora + '". Fijate que este encendida, con papel, y que siga siendo la impresora elegida.')
+                return false
+            })
+        },
 
-                await this.qz.print(config, this.content);
+        /**
+         * Imprime un ticket corto de prueba en la impresora indicada.
+         *
+         * Cierra el lazo en la misma pantalla de configuracion: el operador elige
+         * impresora y ancho, y confirma ahi mismo que sale bien, sin tener que cargar
+         * una venta de verdad para averiguarlo.
+         *
+         * @param {string} nombre_impresora
+         * @param {number} ancho_mm
+         * @returns {Promise<boolean>} true si el trabajo se envio a la impresora.
+         */
+        imprimir_ticket_de_prueba(nombre_impresora, ancho_mm) {
+            let self = this
 
-                console.log("Ticket enviado a la impresora");
-            } catch (error) {
-                console.error("Error al imprimir el ticket:", error);
-            }
+            return self.conectar_qz()
+            .then(function (conectado) {
+                if (!conectado) {
+                    self.$toast.error(self.mensaje_qz_no_disponible())
+                    return false
+                }
+
+                // Misma cuenta que TICKET_WIDTH: 48 caracteres en 80mm de papel.
+                let caracteres = Math.floor((ancho_mm * 48) / 80)
+                let contenido = []
+
+                contenido.push("\x1B\x74\x02")
+                contenido.push("\n")
+                contenido.push("\x1B\x45\x01") // Negrita ON
+                contenido.push("PRUEBA DE IMPRESION\n")
+                contenido.push("\x1B\x45\x00") // Negrita OFF
+                // Sin "\n": la linea de guiones ocupa el ancho entero y la impresora
+                // salta sola, igual que en linea() del ticket real.
+                contenido.push("-".repeat(caracteres))
+                contenido.push("Impresora: " + nombre_impresora + "\n")
+                contenido.push("Ancho: " + ancho_mm + "mm (" + caracteres + " caracteres)\n")
+                contenido.push("-".repeat(caracteres))
+                contenido.push("Si los guiones entran justo en el\n")
+                contenido.push("papel, el ancho esta bien.\n")
+                contenido.push("\n\n\n\n")
+                contenido.push("\x1D\x56\x00") // Corte de papel
+                contenido.push("\n")
+
+                let config = self.qz.configs.create(nombre_impresora, {
+                    encoding: "ISO-8859-1",
+                    copies: 1,
+                    forceRaw: true,
+                })
+
+                return self.qz.print(config, contenido)
+                .then(function () {
+                    return true
+                })
+            })
+            .catch(function (error) {
+                console.error('Error en la impresion de prueba:', error)
+                self.$toast.error('No se pudo imprimir en "' + nombre_impresora + '". Fijate que este encendida y con papel.')
+                return false
+            })
         },
 
         async getQRBase64(url) {
