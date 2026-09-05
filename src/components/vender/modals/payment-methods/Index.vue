@@ -1,9 +1,8 @@
 <template>
     <b-modal
-    title="Multiples metodos de pago"
-    no-close-on-backdrop
+    title="Múltiples métodos de pago"
+        no-close-on-backdrop
     hide-header-close
-    hide-footer
     @show="on_modal_show"
     id="payment-method-modal"
     data-tour="vender.modal_cobro">
@@ -33,14 +32,20 @@
         >
         </multi-payment-methods>
 
-        <buttons
-            :selected_payment_methods_="selected_payment_methods_"
-            :total_a_repartir="total_vender"
-            :total_repartido="total_repartido"
-            :sobrante_a_repartir="sobrante_a_repartir"
-            @set_modal_payment_methods="set_modal_payment_methods"
-            @set_selected_payment_methods="selected_payment_methods_ = $event"
-        ></buttons> 
+        <!--
+            Los botones pasan al slot #modal-footer para que la franja de 60px, el radio de abajo y
+            el separador se los de _modals.sass, igual que a cualquier otro modal del sistema.
+        -->
+        <template #modal-footer>
+            <buttons
+                :selected_payment_methods_="selected_payment_methods_"
+                :total_a_repartir="total_vender"
+                :total_repartido="total_repartido"
+                :sobrante_a_repartir="sobrante_a_repartir"
+                @set_modal_payment_methods="set_modal_payment_methods"
+                @set_selected_payment_methods="selected_payment_methods_ = $event"
+            ></buttons>
+        </template>
     </b-modal>
 </template>
 
@@ -86,8 +91,14 @@ export default {
 
             return total
         },
+        /*
+            🔴 Se redondea a centavos por el mismo motivo que `chequear_total_repartido()`: un
+            reparto exacto deja un residuo de coma flotante del orden de 1e-12, y ese numero se le
+            va a notacion exponencial. `price()` lo pasa por `numeral`, que no lo sabe formatear, y
+            el operador ve **"Sobrante para repartir: NaN"** con el reparto perfectamente cerrado.
+        */
         sobrante_a_repartir() {
-            return this.total_vender - this.total_repartido
+            return Math.round((this.total_vender - this.total_repartido) * 100) / 100
         },
 
         base_moneda() {

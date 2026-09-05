@@ -37,7 +37,7 @@
 			:value="1"
 			:unchecked-value="0"
 			v-model="confirmed">
-				Cofirmada
+				Confirmada
 			</b-form-checkbox>
 		</div>
 	</b-col>

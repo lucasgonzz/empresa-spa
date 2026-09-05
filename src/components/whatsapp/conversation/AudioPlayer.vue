@@ -454,4 +454,32 @@ export default {
 	text-align: center
 	&:hover
 		filter: brightness(1.04)
+
+// --- Modo oscuro ---------------------------------------------------------------------------
+// El reproductor vino del molde de admin-spa con las barras, el tiempo y la pastilla de velocidad
+// escritos como `rgba(17, 27, 33, ·)` —negro con alfa—, que funciona sobre las burbujas claras y
+// desaparece sobre las oscuras (#202c33 la entrante, #005c4b la saliente): el waveform quedaba
+// invisible y el tiempo ilegible.
+//
+// Se redefinen SOLO las custom properties, que es para lo que estaban: ninguna regla de geometria
+// se toca, y el render del reproductor sigue siendo el mismo que el del original.
+html.dark-mode
+	.wa-audio-player--outgoing
+		--wa-audio-pill-bg: rgba(255, 255, 255, .07)
+		--wa-audio-btn-bg: #e9edef
+		--wa-audio-btn-color: #005c4b
+		--wa-audio-bar-color: rgba(233, 237, 239, .35)
+		--wa-audio-bar-played: rgba(233, 237, 239, .85)
+		--wa-audio-time-color: rgba(233, 237, 239, .65)
+		--wa-audio-rate-bg: rgba(255, 255, 255, .14)
+		--wa-audio-rate-color: rgba(233, 237, 239, .8)
+	.wa-audio-player--incoming
+		--wa-audio-pill-bg: rgba(255, 255, 255, .06)
+		--wa-audio-btn-bg: #00a884
+		--wa-audio-btn-color: #ffffff
+		--wa-audio-bar-color: rgba(233, 237, 239, .28)
+		--wa-audio-bar-played: #00a884
+		--wa-audio-time-color: rgba(233, 237, 239, .6)
+		--wa-audio-rate-bg: rgba(255, 255, 255, .12)
+		--wa-audio-rate-color: rgba(233, 237, 239, .75)
 </style>

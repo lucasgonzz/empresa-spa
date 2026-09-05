@@ -10,7 +10,11 @@
 				v-if="!chat.ai_enabled"
 				title="Respuesta automática (IA) apagada"
 				class="whatsapp-chat-row__ai-off-dot"></i>
-				{{ chat_name }}
+				<!-- El nombre en un <span> propio: el contenedor es flex (por el puntito de la
+				IA) y ahí `text-overflow: ellipsis` no dibuja los puntos, corta a filo. -->
+				<span class="whatsapp-chat-row__name-texto">
+					{{ chat_name }}
+				</span>
 			</span>
 			<span
 			v-if="chat.last_message_at"
@@ -92,31 +96,56 @@ export default {
 .whatsapp-chat-row
 	padding: 10px 14px
 	cursor: pointer
-	border-bottom: 1px solid rgba(0, 0, 0, .05)
+	border-bottom: 1px solid var(--wa-borde)
+	color: var(--wa-texto)
+	transition: background .12s ease
 	&:hover
-		background: rgba(0, 0, 0, .03)
-	&--active
-		background: rgba(37, 211, 102, .1)
+		background: var(--wa-hover)
+	// La fila abierta se marca con el verde de la marca en velo, no con un gris: es la unica
+	// pista de en que conversacion esta parado el operador cuando el sidebar tapa media pantalla.
+	//
+	// 🔴 Dos cosas que parecen de mas y no lo son. Una: el velo sale de --wa-verde y no de un
+	// rgba fijo, para que siga al verde del tema (en oscuro el verde es #00a884, no #25d366); el
+	// rgba de arriba queda como respaldo para el navegador que no tenga color-mix. Dos: la clase
+	// repetida --(0,2,0)-- para ganarle al `:hover` de arriba, que empata en dos clases; sin eso,
+	// pasar el mouse por la fila abierta la pintaba de gris y borraba la unica pista de en que
+	// conversacion esta parado el operador.
+	&--active,
+	&--active:hover
+		background: rgba(37, 211, 102, .12)
+		background: color-mix(in srgb, var(--wa-verde) 14%, transparent)
 	&__main
 		display: flex
 		flex-direction: row
 		justify-content: space-between
 		align-items: center
+		gap: 8px
 	&__name
 		font-weight: 600
 		font-size: .95rem
 		display: flex
 		align-items: center
+		// `min-width: 0` es lo que deja que el item flex se achique debajo de su contenido: sin
+		// esto un nombre largo empujaba la hora fuera de la fila. El recorte con puntos lo hace el
+		// <span> de adentro, porque este contenedor es flex y ahi `text-overflow` corta a filo.
+		min-width: 0
+		overflow: hidden
+	&__name-texto
+		min-width: 0
+		overflow: hidden
+		text-overflow: ellipsis
+		white-space: nowrap
 	&__ai-off-dot
 		display: inline-block
 		width: 7px
 		height: 7px
 		border-radius: 50%
-		background: #adb5bd
+		background: var(--color-text-secondary)
 		margin-right: 6px
+		flex-shrink: 0
 	&__time
 		font-size: .75rem
-		color: rgba(0, 0, 0, .5)
+		opacity: var(--wa-texto-muy-tenue-op)
 		flex-shrink: 0
 	&__sub
 		display: flex
@@ -124,9 +153,15 @@ export default {
 		justify-content: space-between
 		align-items: center
 		margin-top: 2px
+		gap: 8px
+	// 🔴 El teléfono se destiñe con `color` y NO con `opacity`, aunque el resto del módulo use
+	// opacidad para el texto secundario: la marca SIM cuelga ADENTRO de este span (ver el
+	// template), y `opacity` crea un contexto de composición que se aplica al subárbol entero. Un
+	// `opacity: 1` en el hijo no lo deshace —el hijo se compone dentro del padre ya translúcido—,
+	// así que la marca quedaba desteñida también, y en modo oscuro casi invisible.
 	&__phone
 		font-size: .8rem
-		color: rgba(0, 0, 0, .5)
+		color: var(--color-text-secondary)
 	&__sim
 		display: inline-flex
 		align-items: center
@@ -134,8 +169,8 @@ export default {
 		font-size: .62rem
 		font-weight: 700
 		letter-spacing: .03em
-		color: #8a6d3b
-		background: rgba(255, 193, 7, .22)
+		color: var(--wa-sim-texto)
+		background: var(--wa-sim-bg)
 		border-radius: 4px
 		padding: 0 4px
 		margin-left: 5px

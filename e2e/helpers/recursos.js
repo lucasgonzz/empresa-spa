@@ -124,6 +124,42 @@ async function esperar_recursos_descargados(page, opciones = {}) {
 	if (panel_abierto && cerrar) {
 		await cerrar_panel_de_recursos(page)
 	}
+
+	await cerrar_modal_de_facturas_no_autorizadas(page)
+}
+
+/**
+ * Cierra el modal "Facturas no autorizadas" si esta abierto.
+ *
+ * 🔴 Ese modal (`afip-reenviar-facturas`, montado en App.vue) se abre SOLO, en cualquier pantalla,
+ * cuando la cuenta tiene algun comprobante de AFIP sin CAE --o sea, cualquier emision que fallo--.
+ * Y **tapa toda la interfaz**: el header queda debajo de su overlay, asi que el buscador general no
+ * se puede clickear y el foco del teclado se lo lleva el modal.
+ *
+ * Como sintoma es de los peores que hay: la pantalla de atras se ve entera y normal en una captura,
+ * los elementos estan visibles y habilitados, `fill()` hasta escribe en el input... y el click nunca
+ * llega. Playwright dice "Timeout exceeded" sobre un elemento perfectamente visible. Costo cuatro
+ * corridas el 31/8/2026, buscando el problema en el buscador.
+ *
+ * Se cierra con Escape, que es lo que haria cualquiera. No se verifica que estuviera abierto: la
+ * mayoria de las corridas no lo tienen.
+ *
+ * @param {import('@playwright/test').Page} page
+ * @returns {Promise<void>}
+ */
+async function cerrar_modal_de_facturas_no_autorizadas(page) {
+	const modal = page.locator('#afip-reenviar-facturas')
+
+	if (await modal.count() === 0) {
+		return
+	}
+
+	if (!(await modal.evaluate(el => el.classList.contains('show')).catch(() => false))) {
+		return
+	}
+
+	await page.keyboard.press('Escape')
+	await expect(modal, 'el modal de facturas no autorizadas tenia que cerrarse').not.toHaveClass(/show/)
 }
 
 module.exports = {
@@ -134,5 +170,6 @@ module.exports = {
 	PANEL_FILA,
 	abrir_panel_de_recursos,
 	cerrar_panel_de_recursos,
+	cerrar_modal_de_facturas_no_autorizadas,
 	esperar_recursos_descargados,
 }

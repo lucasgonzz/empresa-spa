@@ -1,6 +1,8 @@
 <template>
 	<!-- Barra superior del módulo Vender con atajos configurables por usuario -->
-	<div class="vender-topbar vender-full-bleed">
+	<div
+	class="vender-topbar vender-full-bleed"
+	data-tour="vender.barra_atajos">
 		<span class="vender-topbar__title">Vender</span>
 
 		<!-- Boton para elegir columnas visibles de la tabla de items (sistema props-to-show) -->

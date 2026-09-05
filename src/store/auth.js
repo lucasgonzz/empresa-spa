@@ -59,6 +59,19 @@ export default {
 			}
 			state.user = Object.assign({}, state.user, { dark_mode: value ? 1 : 0 })
 		},
+		/**
+		 * Impresora del Ticket 2.0 de la persona autenticada.
+		 *
+		 * Mismo patrón que setDarkMode, y por el mismo motivo: se reemplaza el objeto
+		 * entero en vez de asignar la propiedad suelta, para no depender de `Vue.set`
+		 * (este archivo no importa Vue).
+		 */
+		setImpresora(state, value) {
+			if (!state.user) {
+				return
+			}
+			state.user = Object.assign({}, state.user, { impresora: value })
+		},
 		addAddress(state, value) {
 			state.user.addresses.push(value)
 		},
@@ -190,6 +203,20 @@ export default {
 			.then(res => {
 				commit('setDarkMode', res.data.dark_mode)
 				return res.data.dark_mode
+			})
+		},
+		/**
+		 * Guarda la impresora del Ticket 2.0 de la persona autenticada.
+		 *
+		 * @param {object} context Contexto Vuex del módulo auth.
+		 * @param {string} value Nombre de la impresora elegida.
+		 * @returns {Promise<string>} El nombre persistido según respondió el backend.
+		 */
+		set_impresora({ commit }, value) {
+			return axios.put('/api/user/set-impresora', { impresora: value })
+			.then(res => {
+				commit('setImpresora', res.data.impresora)
+				return res.data.impresora
 			})
 		},
 		deleteImage({ commit, state }) {

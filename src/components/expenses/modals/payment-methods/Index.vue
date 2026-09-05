@@ -1,8 +1,7 @@
 <template>
-    <b-modal 
-    title="Indicar Metodos de Pago"
-    hide-footer
-    @show="on_modal_show"
+    <b-modal
+    title="Métodos de pago del gasto"
+        @show="on_modal_show"
     id="payment-method-modal">
 
         <multi-payment-methods
@@ -20,21 +19,28 @@
         >
         </multi-payment-methods>
 
-        <b-button
-        class="m-t-10"
-        block
-        variant="primary"
-        @click="terminar">
-            Listo
-        </b-button>
+        <!--
+            El boton pasa al slot #modal-footer para que la franja de 60px, el radio de abajo y el
+            separador se los de _modals.sass, igual que a cualquier otro modal del sistema.
+        -->
+        <template #modal-footer>
+            <b-button
+            variant="primary"
+            data-testid="gasto-metodos-de-pago-listo"
+            @click="terminar">
+                Listo
+            </b-button>
+        </template>
     </b-modal>
 </template>
 
 <script>
 import MultiPaymentMethods from '@/components/common/payment-methods/Index'
+import metodos_de_pago_validacion from '@/mixins/metodos_de_pago_validacion'
 
 export default {
     name: 'CurrentAcountexpensePaymentMethods',
+    mixins: [metodos_de_pago_validacion],
     components: {
         MultiPaymentMethods,
     },
@@ -42,11 +48,33 @@ export default {
         expense() {
             return this.$store.state.expense.model 
         },
+        /**
+         * Sucursal por defecto de las cajas del modal: la que esta puesta en Vender.
+         *
+         * 🔴 Sale del STORE y no de la cookie, y no es un detalle de estilo. Un computed cuya unica
+         * fuente es `this.$cookies.get(...)` NO TIENE NINGUNA DEPENDENCIA REACTIVA: Vue lo evalua la
+         * primera vez y se queda con ese valor mientras el componente viva. Si el usuario cambia la
+         * sucursal en Vender con esta pantalla ya montada, el modal seguia ofreciendo las cajas de
+         * la sucursal anterior. Medido el 4/9/2026 escribiendo la cookie con el modal montado: el
+         * select no se movio.
+         *
+         * `vender.address_id` es la misma sucursal --el setter de mixins/vender.js escribe el store
+         * y la cookie a la vez, y start_methods.js lo inicializa al entrar-- pero reactiva. La
+         * cookie queda de respaldo por si el store todavia no se inicializo.
+         *
+         * @returns {number|null}
+         */
         address_id() {
-            let address_id = this.$cookies.get('address_id')
-            if (address_id) {
-                return Number(address_id)
+            let del_store = Number(this.$store.state.vender.address_id) || 0
+            if (del_store) {
+                return del_store
             }
+
+            let de_la_cookie = Number(this.$cookies.get('address_id')) || 0
+            if (de_la_cookie) {
+                return de_la_cookie
+            }
+
             return null
         },
         /**
@@ -170,10 +198,13 @@ export default {
             })
         },
         terminar() {
+            // Una fila con monto y sin metodo elegido la descarta el backend en silencio.
+            if (this.hay_metodo_de_pago_sin_elegir(this.expense.payment_methods)) {
+                return
+            }
+
             this.sync_cotizacion_payment_methods()
             this.set_total_from_array()
-            console.log('quedaron asi:')
-            console.log(this.expense.payment_methods)
             this.$bvModal.hide('payment-method-modal')
         },
         payment_method_factory() {

@@ -145,10 +145,17 @@ export default {
 			.then(res => {
 				console.log(res.data.models)
 				this.$store.commit('auth/setLoading', false)
+				this.$store.commit('auth/setMessage', '')
 				this.chunks = res.data.models
 			})
-			.catch(err => {
+			.catch(() => {
 				this.$store.commit('auth/setLoading', false)
+				this.$store.commit('auth/setMessage', '')
+				// El .catch ya existia pero apagaba el overlay y se callaba: la tabla quedaba vacia
+				// sin ninguna explicacion.
+				this.$toast.error('No pudimos cargar los lotes de esta importación. Cerrá y volvé a abrir esta ventana.', {
+					duration: 8000
+				})
 			})
 		},
 
@@ -160,7 +167,20 @@ export default {
 				this.articulos_creados = res.data.model.articulos_creados
 				this.$bvModal.show('articulos-creados')
 			})
-			this.$bvModal.show('articulos-creados')
+			/*
+			 * 🔴 Faltaba el .catch: con setLoading(true) y un error sin `response` (red caida), el
+			 * overlay quedaba prendido para siempre.
+			 *
+			 * 🔴 Y abajo habia un segundo `$bvModal.show('articulos-creados')` suelto, fuera de la
+			 * promesa: abria el modal ANTES de que llegara la respuesta, con la lista del click
+			 * anterior adentro. Se saco: el modal lo abre el .then, cuando ya hay algo que mostrar.
+			 */
+			.catch(() => {
+				this.$store.commit('auth/setLoading', false)
+				this.$toast.error('No pudimos cargar los artículos creados en este lote. Volvé a intentar.', {
+					duration: 8000
+				})
+			})
 		},
 		modelos_actualizados(model) {
 			this.$store.commit('auth/setLoading', true)
@@ -169,6 +189,13 @@ export default {
 				this.$store.commit('auth/setLoading', false)
 				this.articulos_creados = res.data.model.articulos_actualizados
 				this.$bvModal.show('articulos-creados')
+			})
+			/* Mismo caso que modelos_creados: sin .catch el overlay se quedaba prendido. */
+			.catch(() => {
+				this.$store.commit('auth/setLoading', false)
+				this.$toast.error('No pudimos cargar los artículos actualizados en este lote. Volvé a intentar.', {
+					duration: 8000
+				})
 			})
 		},
 	}

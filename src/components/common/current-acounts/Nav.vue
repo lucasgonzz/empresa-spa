@@ -53,6 +53,7 @@
 			-->
 			<b-dropdown
 			class="cc-toolbar__dropdown"
+			data-tour="cuentas_corrientes.dropdown_imprimir"
 			variant="light"
 			right>
 				<template #button-content>

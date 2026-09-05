@@ -1,6 +1,7 @@
 <template>
 	<div
-	v-if="view == 'ventas'">
+	v-if="view == 'ventas'"
+	data-tour="ventas.por_entregar_contenedor">
 	    <confirm
 	    model_name="sale"
 	    show_compensar_caja_checkbox

@@ -29,9 +29,9 @@
 				variant="link"
 				size="sm"
 				class="sale-print-remito-profile-config p-0"
-				title="Configurar ancho de impresora"
-				aria-label="Configurar ancho de impresora"
-				@click.stop="$emit('set_ancho_impresora')">
+				title="Configurar impresora y ancho de papel"
+				aria-label="Configurar impresora y ancho de papel"
+				@click.stop="$emit('configurar_impresora')">
 					<i class="icon-configuration"></i>
 				</b-button>
 			</div>

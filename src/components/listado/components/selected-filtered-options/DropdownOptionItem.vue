@@ -1,6 +1,7 @@
 <template>
 	<b-dropdown-item
 	:class="option_classes"
+	:data-tour="data_tour"
 	@click="on_click">
 		<span class="article-dropdown-option__content">
 			<span class="article-dropdown-option__icon-wrap">
@@ -31,6 +32,20 @@ export default {
 		variant: {
 			type: String,
 			default: '',
+		},
+		/**
+		 * Ancla `data-tour` del contrato de la demo, cuando este ítem es un paso de un tour.
+		 *
+		 * Se declara como prop (y no se deja caer como atributo suelto) porque `b-dropdown-item`
+		 * tiene `inheritAttrs: false`: los atributos sueltos igual llegan, pero al `<a>` de
+		 * adentro y no al `<li>`. Pasandolo explicito queda claro donde termina.
+		 *
+		 * `null` por defecto a proposito: con `''` Vue dibuja el atributo vacio y el validador del
+		 * contrato lo cuenta como un anclaje puesto.
+		 */
+		data_tour: {
+			type: String,
+			default: null,
 		},
 	},
 	computed: {

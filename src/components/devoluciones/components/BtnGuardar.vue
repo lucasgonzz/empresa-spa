@@ -1,6 +1,7 @@
 <template>
 	<b-button
 	class="m-t-15 m-b-25"
+	data-testid="btn-guardar-devolucion"
 	v-if="items.length"
 	block
 	@click="guardar"

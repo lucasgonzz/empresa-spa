@@ -1,5 +1,10 @@
 <template>
-	<div>
+	<!--
+		`data-tour` en el contenedor y no en el `b-form-input`: cuando hay margen del articulo o del
+		proveedor el input queda `disabled`, y driver.js no toma clics sobre un elemento
+		deshabilitado. Anclado el div, el clic del lead se reconoce igual.
+	-->
+	<div data-tour="listado.campo_margen">
 		<!--
 			Este control reemplaza al input generico de ModelForm para percentage_gain (se monta por
 			slot), asi que el data-testid que la convencion generica hubiera puesto no existe: hay

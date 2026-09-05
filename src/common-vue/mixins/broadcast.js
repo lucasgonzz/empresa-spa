@@ -185,6 +185,15 @@ export default {
 				modal_id = 'excel-analysis-ready-notification'
 			}
 
+			/*
+			 * Escaneo de facturas de compra con IA (SPA de empresa). Es aditivo: un
+			 * proyecto que no tenga esa funcionalidad nunca recibe esta cadena en
+			 * notification_modal, asi que este if no le cambia nada.
+			 */
+			if (notification_modal === 'provider_order_scan_ready') {
+				modal_id = 'provider-order-scan-ready-notification'
+			}
+
 			this.$bvModal.show(modal_id)
 		},
 	}

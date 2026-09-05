@@ -17,6 +17,14 @@
             solo (sesión + extensión `whatsapp`), igual que el botón del asistente IA.
         -->
         <whatsapp-sidebar-host></whatsapp-sidebar-host>
+        <!--
+            Descripciones de controles. Va acá, una sola vez para toda la aplicación, porque
+            escucha el mouse por delegación en `document` y busca el control por su
+            `data-testid` en el diccionario de `src/descripciones/`. Poner una descripción no
+            requiere tocar el componente dueño del botón: se agrega la entrada al diccionario
+            y aparece sola.
+        -->
+        <descripcion-de-control></descripcion-de-control>
         <offline-articles-progress
         :offline_articles_sync_progress="offline_articles_sync_progress"></offline-articles-progress>
         <afip-reenviar-facturas></afip-reenviar-facturas>
@@ -35,6 +43,24 @@
             ejecute para todos.
         -->
         <cotizacion-dolar-modal></cotizacion-dolar-modal>
+        <!--
+            Aviso de "Asignar imágenes automáticamente". Va acá arriba, y no adentro del módulo
+            de artículos, porque el que dispara el lote es `SearchImageAutomatica.vue`, que vive
+            adentro del dropdown de opciones del listado: ese dropdown se desmonta apenas la
+            selección queda vacía, así que si la suscripción a Echo viviera ahí, el callback
+            quedaría corriendo sobre una instancia destruida y el modal de resumen no aparecería
+            nunca (sin error y sin log). Acá el anfitrión está siempre montado.
+            No se suscribe a nada por su cuenta: solo cuando alguien largó un lote en ESTA
+            pestaña. El porqué está en el docblock del componente.
+        -->
+        <aviso-imagenes-automaticas></aviso-imagenes-automaticas>
+        <!--
+            Aviso de "Descripciones inteligentes". Está acá por lo mismo, exactamente, que el de
+            imágenes de arriba: su disparador (`SearchDescriptionAutomatica.vue`) también vive
+            adentro del dropdown de opciones del listado y también se desmontaba con la selección,
+            llevándose el listener puesto. Tampoco se suscribe por su cuenta.
+        -->
+        <aviso-descripciones-automaticas></aviso-descripciones-automaticas>
 
         <!--
             Panel de tutoriales de la demo (misión 51, corregido por la 52). El v-if es la guarda
@@ -48,11 +74,17 @@
             prioridad después del load, no ejecución — pero no es cero, y decir que sí lo era fue
             una afirmación falsa en la misión 51.
 
-            El getter mira dos fuentes: el marcador en memoria que prende DemoIngreso.vue, y
-            `user.es_sesion_demo`, que viaja en la respuesta de `auth/me` que este arranque ya
-            paga. La segunda es la que hace que el panel vuelva después de un F5.
+            🔴 El getter es `panel_visible` y NO `demo/activa`, y la diferencia importa (pedido de
+            Lucas, 25/8/2026): `panel_visible` mira solo el marcador en memoria que prende
+            DemoIngreso.vue al canjear el token, así que el panel aparece únicamente cuando se
+            entró con el `?t=` en la URL. Entrar a la demo sin el parámetro con la sesión todavía
+            viva deja pasar al lead —la sesión se respeta— pero sin panel. `demo/activa` sigue
+            existiendo y mirando las dos fuentes: responde "¿esta sesión es una demo?", que es otra
+            pregunta y es la que gatea las llamadas a la API. Ojo con la explicación fácil de por
+            qué se dejó: NO es que salve la telemetría después de un F5 —los eventos los emite este
+            mismo panel, así que sin panel no hay eventos—. Está en store/demo.js, escrito bien.
         -->
-        <panel-demo v-if="$store.getters['demo/activa']"></panel-demo>
+        <panel-demo v-if="$store.getters['demo/panel_visible']"></panel-demo>
 
         <b-container
         fluid>
@@ -70,6 +102,7 @@ import BtnScrollTop from '@/common-vue/components/nav/BtnScrollTop'
 import SupportChatFloatingButton from '@/common-vue/components/support-chat/FloatingButton'
 import AsistenteIaFloatingButton from '@/components/asistente-ia/FloatingButton'
 import WhatsappSidebarHost from '@/components/whatsapp/SidebarHost'
+import DescripcionDeControl from '@/common-vue/components/ayuda/DescripcionDeControl'
 
 import app from '@/common-vue/mixins/app'
 import start_methods from '@/mixins/start_methods'
@@ -94,6 +127,7 @@ export default {
         SupportChatFloatingButton,
         AsistenteIaFloatingButton,
         WhatsappSidebarHost,
+        DescripcionDeControl,
         OfflineArticlesProgress: () => import('@/common-vue/components/offline-sync-articles/Progress'),
         PaymentExpire: () => import('@/components/nav/PaymentExpire'),
         AfipReenviarFacturas: () => import('@/components/common/afip-reenviar-facturas/Index'),
@@ -101,6 +135,8 @@ export default {
         ArticlesStockMinimo: () => import('@/components/common/ArticlesStockMinimo'),
         SyncedVersionNotifications: () => import('@/components/common/SyncedVersionNotifications'),
         CotizacionDolarModal: () => import('@/components/common/cotizacion-dolar/Modal'),
+        AvisoImagenesAutomaticas: () => import('@/components/common/AvisoImagenesAutomaticas'),
+        AvisoDescripcionesAutomaticas: () => import('@/components/common/AvisoDescripcionesAutomaticas'),
         // Carga diferida: sin demo, este chunk no se descarga nunca (misión 51).
         PanelDemo: () => import('@/components/demo/PanelDemo'),
     },

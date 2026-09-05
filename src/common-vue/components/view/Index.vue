@@ -28,6 +28,7 @@
     	:not_show_delete_text="not_show_delete_text"
     	:delete_text="delete_text"
     	:save_check_function="save_check_function"
+    	:skip_global_error_event="skip_global_error_event"
     	:props_to_send_on_save_function="props_to_send_on_save_function">
     		<template #model_modal_title>
     			<slot name="model_modal_title"></slot>
@@ -208,6 +209,16 @@ export default {
 	props: {
 		model_name: {
 			type: String,
+		},
+		/**
+			Se pasa tal cual al modal del modelo. Ver la prop del mismo nombre en
+			`common-vue/components/model/Index.vue`: apaga el `errorEvent` global para los
+			guardados de este formulario, para una pantalla que resuelve sus 422 con un modal
+			propio y no quiere el toast duplicado encima.
+		*/
+		skip_global_error_event: {
+			type: Boolean,
+			default: false,
 		},
 		modal_size: {
 			type: String,

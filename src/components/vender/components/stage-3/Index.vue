@@ -11,6 +11,8 @@
 		<!-- Header de la etapa 3 -->
 		<div
 		class="vender-stage__header"
+		data-testid="venta-etapa-3"
+		:data-abierta="stage3_open ? 'si' : 'no'"
 		@click="toggleStage3">
 			<span class="vender-stage__number">3</span>
 			<div class="vender-stage__header-text">
@@ -65,6 +67,16 @@
 					<surchages></surchages>
 				</div>
 
+				<!--
+					Canje de puntos del cliente — ocupa toda la fila.
+					Se monta siempre: el propio componente no dibuja nada si el comercio no
+					tiene la extensión puntos_clientes, si no hay cliente en la venta o si no
+					hay un programa de puntos activo.
+				-->
+				<div class="vender-stage__field vender-stage__field--full">
+					<puntos></puntos>
+				</div>
+
 				<!-- Nota de crédito — ocupa toda la fila -->
 				<div class="vender-stage__field vender-stage__field--full">
 					<nota-credito></nota-credito>
@@ -81,6 +93,7 @@ import IvaYStock from './IvaYStock'
 import Discounts from './Discounts'
 import Surchages from './Surchages'
 import NotaCredito from './NotaCredito'
+import Puntos from './Puntos'
 
 export default {
 	name: 'VenderStage3',
@@ -93,6 +106,7 @@ export default {
 		IvaYStock,
 		Discounts,
 		Surchages,
+		Puntos,
 		NotaCredito,
 	},
 	data() {

@@ -34,7 +34,24 @@ export default {
 			]
 		},
 		fila_procesos_parseados() {
-			if (!this.fila_procesos) {
+			/*
+				🔴 El guard mira el TIPO, no la veracidad, y ese es todo el arreglo.
+
+				Los dos consumidores (ChunkFila.vue y ArticleImportObservations.vue) inicializan
+				la prop en `[]` y recien despues le asignan `chunk.procesos`. Un array vacio es
+				TRUTHY, asi que el `if (!this.fila_procesos)` que habia aca lo dejaba pasar, y
+				JSON.parse([]) coacciona el array a la cadena vacia y tira SyntaxError. Resultado:
+				"Error parseando fila_procesos []" en consola en cada montaje del modulo de
+				importacion, sin que nada estuviera roto de verdad.
+
+				Ademas `chunk.procesos` puede llegar ya como array desde el backend: en ese caso
+				no hay nada que parsear y forzarlo por JSON.parse volveria a romper.
+			*/
+			if (Array.isArray(this.fila_procesos)) {
+				return this.fila_procesos
+			}
+
+			if (typeof this.fila_procesos !== 'string' || this.fila_procesos === '') {
 				return []
 			}
 

@@ -13,6 +13,7 @@
 			<template #cell(price_vender)="data">
 				
 				<b-form-input
+				:data-testid="'devolucion-item-precio-'+items[data.index].id"
 				@change="call_set_total_devolucion"
 				@keyup="call_set_total_devolucion"
 				type="number"
@@ -40,6 +41,13 @@
 
 			</template>
 			
+			<!--
+				🔴 El id del testid es `item.id`, que es el id del ARTICULO: `store/devoluciones.js`
+				arma cada item con `{...article}`, o sea el articulo entero mas los datos del pivote --no
+				hay ningun `article_id`--. Ojo que en la misma lista conviven servicios (`is_service`),
+				que traen su propio id de otra tabla: si algun dia un spec necesita distinguirlos, el
+				discriminante son esos flags, no el id.
+			-->
 			<template #cell(returned)="data">
 				
 				<div class="j-between">
@@ -48,6 +56,7 @@
 					@change="call_set_total_devolucion"
 					@keyup="call_set_total_devolucion"
 					type="number"
+					:data-testid="'devolucion-item-devueltas-'+items[data.index].id"
 					:min="minimo(items[data.index])"
 					:max="items[data.index].amount"
 					v-model="items[data.index].returned_amount"></b-form-input>

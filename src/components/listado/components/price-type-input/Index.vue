@@ -1,5 +1,13 @@
 <template>
+	<!--
+		🔴 El ancla sale SOLO en la primera lista de precios, y eso no es capricho: este componente
+		se dibuja una vez POR LISTA (`v-for="price_type in price_types"` en `views/Listado.vue`), y
+		una cuenta con cuatro listas dibujaria cuatro veces el mismo `data-tour`. El contrato exige
+		que cada valor aparezca una sola vez en pantalla; con el valor repetido el tour resalta la
+		tarjeta que le toque primero, que no tiene por que ser la que el guion nombra.
+	-->
 	<div
+	:data-tour="es_primera_lista ? 'listado.tarjeta_lista_precio' : null"
 	class="cont-inputs card p-10 j-start"
 	v-if="article_price_type">
 
@@ -31,8 +39,24 @@ export default {
 		OptionsPriceType: () => import('@/components/listado/components/price-type-input/OptionsPriceType'),
 	},
 	computed: {
+		/**
+		 * ¿Esta tarjeta es la de la PRIMERA lista de precios?
+		 *
+		 * Es lo unico que decide si esta instancia lleva el `data-tour` o no. `price_types` sale
+		 * del mixin global `mixins/generals.js` y es el mismo array que recorre el `v-for` de
+		 * `views/Listado.vue`, asi que "la primera" es exactamente la primera tarjeta dibujada.
+		 *
+		 * @returns {Boolean}
+		 */
+		es_primera_lista() {
+			if (!this.price_types.length) {
+				return false
+			}
+
+			return this.price_types[0].id == this.price_type.id
+		},
 		article() {
-			return this.$store.state.article.model 
+			return this.$store.state.article.model
 		},
 		article_price_type() {
 			return this.local_article_price_type

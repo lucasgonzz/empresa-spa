@@ -1,6 +1,23 @@
 <template>
-<div>
-	
+<!--
+	🔴 `estado-movimientos-stock` es la senal estable de que la tabla ya termino de cargar, y hace
+	falta porque mientras carga se dibuja un <b-skeleton-table> y despues puede quedar la tabla O el
+	cartel "No hay movimientos". Sin esto, un proceso que cuente filas apenas se abre el modal
+	cuenta CERO y no puede distinguir "todavia no llegaron" de "no hay ninguno" -- que es
+	exactamente la diferencia que hay que poder afirmar cuando se compra con cantidad recibida 0.
+
+	Mismo patron que download-resources/Index.vue (data-estado/data-descargados/data-total): el
+	elemento vive siempre y publica su estado en un atributo.
+
+	El nombre empieza por `estado-` y no por `stock-movement-` a proposito: ya existe
+	`stock-movement-row` y los selectores de prefijo son la forma estandar de este harness de
+	encontrar filas (ver e2e/README.md).
+-->
+<div
+data-testid="estado-movimientos-stock"
+:data-estado="loading ? 'cargando' : 'listo'"
+:data-cantidad="stock_movements.length">
+
 	<div
 	v-if="!loading">
 		
@@ -116,12 +133,27 @@ export default {
 				concepto = this.get_store_model('concepto_stock_movement', model.concepto_stock_movement_id)
 				items.push({
 					concepto: typeof concepto != 'undefined' && concepto !== null ? concepto.name : null,
-					// La celda visible va con separadores; los data-* de mas abajo siguen llevando
-					// el valor CRUDO, que es lo que lee la suite e2e (y cualquier cosa que tenga
-					// que hacer una cuenta con esto).
+					// La celda visible va con separadores es-AR...
 					amount: this.numero_es(model.amount),
 					article_variant: model.article_variant ? model.article_variant.variant_description : null,
 					stock_resultante: this.numero_es(model.stock_resultante),
+					/*
+					 * ...y los data-* llevan el valor CRUDO del modelo, con punto decimal y sin
+					 * separador de miles.
+					 *
+					 * 🔴 Estas dos claves no son una duplicacion por comodidad. Hasta el 31/8/2026
+					 * `row_attrs()` leia `item.amount`, que ya venia pasado por `numero_es()`: el
+					 * atributo terminaba diciendo "10,00" en vez de "10.00". Quien lo lee lo parsea
+					 * como dato (punto decimal), asi que la coma se interpretaba como separador de
+					 * miles y 10 unidades se leian como MIL. El comentario de arriba decia que los
+					 * data-* llevaban el crudo mientras el codigo hacia lo contrario.
+					 *
+					 * Es una regresion de la unificacion a es-AR del 21/8/2026, y rompe el contrato
+					 * que documenta e2e/README.md: lo que se MUESTRA va en es-AR, lo que es DATO va
+					 * con punto.
+					 */
+					amount_crudo: model.amount,
+					stock_resultante_crudo: model.stock_resultante,
 					provider: this.getRelation('provider', 'provider_id', 'name', model),
 					from_address: this.getRelation('address', 'from_address_id', 'street', model),
 					to_address: this.getRelation('address', 'to_address_id', 'street', model),
@@ -138,8 +170,13 @@ export default {
 	},
 	methods: {
 		/**
-		 * Atributos de cada <tr> de la tabla de movimientos. Los valores salen del mismo objeto
-		 * `item` que ya arma el computed items(), asi que no pueden divergir de lo que se ve.
+		 * Atributos de cada <tr> de la tabla de movimientos.
+		 *
+		 * 🔴 Los numericos salen de las claves `_crudo`, NO de las que se muestran. Un `data-*`
+		 * existe justamente para que otro proceso haga una cuenta con el, y para eso tiene que
+		 * traer el valor del modelo con punto decimal. Si sale de la clave visible, la coma de
+		 * es-AR se lee como separador de miles y una cantidad de 10 se convierte en 1000. Ver la
+		 * nota en items().
 		 *
 		 * @param {Object} item Fila ya armada por items().
 		 * @returns {Object} atributos a poner en el <tr>.
@@ -151,8 +188,8 @@ export default {
 			return {
 				'data-testid': 'stock-movement-row',
 				'data-concepto': item.concepto,
-				'data-cantidad': item.amount,
-				'data-stock-resultante': item.stock_resultante,
+				'data-cantidad': item.amount_crudo,
+				'data-stock-resultante': item.stock_resultante_crudo,
 				'data-deposito-destino': item.to_address,
 			}
 		},

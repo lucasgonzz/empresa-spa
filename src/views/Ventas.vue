@@ -1,5 +1,7 @@
 <template>
-<div id="ventas">	
+<div
+id="ventas"
+data-tour="ventas.contenedor">	
 	<current-acounts></current-acounts>
 
 	<!-- <update-prices></update-prices> -->

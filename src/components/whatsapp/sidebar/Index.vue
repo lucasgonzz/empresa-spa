@@ -280,9 +280,9 @@ export default {
 		height: 100vh
 		max-width: 100vw
 		z-index: 1036
-		background: #f7f9fb
-		border-left: 1px solid rgba(0, 0, 0, .1)
-		box-shadow: -4px 0 16px rgba(0, 0, 0, .1)
+		background: var(--wa-panel)
+		border-left: 1px solid var(--wa-borde)
+		box-shadow: -4px 0 16px var(--shadow-color)
 		display: flex
 		flex-direction: column
 		overflow: hidden
@@ -301,10 +301,13 @@ export default {
 		z-index: 3
 		width: 34px
 		height: 34px
-		border: none
 		border-radius: 8px
-		background: #ffffff
-		color: rgba(0, 0, 0, .55)
+		background: var(--wa-panel)
+		// Con borde y no pelado: en modo oscuro el panel y la superficie de atrás son casi del
+		// mismo tono, y sin el contorno el botón desaparecía.
+		border: 1px solid var(--wa-borde)
+		color: var(--wa-texto)
+		opacity: var(--wa-texto-tenue-op)
 		display: flex
 		align-items: center
 		justify-content: center

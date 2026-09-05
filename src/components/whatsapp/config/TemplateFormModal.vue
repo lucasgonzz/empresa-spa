@@ -212,7 +212,7 @@ export default {
 		margin-bottom: 8px
 		&-tag
 			font-family: monospace
-			color: rgba(0, 0, 0, .5)
+			color: var(--color-text-secondary)
 			flex-shrink: 0
 	&__actions
 		display: flex

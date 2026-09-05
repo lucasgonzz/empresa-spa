@@ -49,11 +49,33 @@ export default {
         cajas() {
             return this.$store.state.caja.models
         },
+        /**
+         * Sucursal por defecto de las cajas del modal: la que esta puesta en Vender.
+         *
+         * 🔴 Sale del STORE y no de la cookie, y no es un detalle de estilo. Un computed cuya unica
+         * fuente es `this.$cookies.get(...)` NO TIENE NINGUNA DEPENDENCIA REACTIVA: Vue lo evalua la
+         * primera vez y se queda con ese valor mientras el componente viva. Si el usuario cambia la
+         * sucursal en Vender con esta pantalla ya montada, el modal seguia ofreciendo las cajas de
+         * la sucursal anterior. Medido el 4/9/2026 escribiendo la cookie con el modal montado: el
+         * select no se movio.
+         *
+         * `vender.address_id` es la misma sucursal --el setter de mixins/vender.js escribe el store
+         * y la cookie a la vez, y start_methods.js lo inicializa al entrar-- pero reactiva. La
+         * cookie queda de respaldo por si el store todavia no se inicializo.
+         *
+         * @returns {number|null}
+         */
         address_id() {
-            let address_id = this.$cookies.get('address_id')
-            if (address_id) {
-                return Number(address_id)
+            let del_store = Number(this.$store.state.vender.address_id) || 0
+            if (del_store) {
+                return del_store
             }
+
+            let de_la_cookie = Number(this.$cookies.get('address_id')) || 0
+            if (de_la_cookie) {
+                return de_la_cookie
+            }
+
             return null
         },
         base_moneda() {
@@ -99,6 +121,21 @@ export default {
         payment_method_factory() {
             // Este objeto es el mismo “default” que vos ya usabas (incluye cheque/tarjeta)
             return {
+                /*
+                 * Identificador propio de la fila, para el :key del v-for de PaymentMethodsStep.
+                 *
+                 * 🔴 Sin esto, TODAS las filas se renderizan con :key undefined. Con un solo metodo
+                 * de pago no se nota, pero al agregar el segundo Vue 2 reutiliza los nodos entre
+                 * filas y los selects (metodo, moneda y sobre todo CAJA) se mezclan: el usuario
+                 * elegia la caja en pesos del segundo metodo y terminaba sin impactar. Reportado el
+                 * 21/8/2026 sobre una cuenta corriente en dolares pagada con efectivo en dolares +
+                 * efectivo en pesos.
+                 *
+                 * El factory de vender (components/vender/modals/payment-methods/Index.vue) ya lo
+                 * definia; este se habia quedado sin el.
+                 */
+                __row_id: Date.now() + '_' + Math.random().toString(16).slice(2),
+
                 current_acount_payment_method_id: 3,
                 amount: '',
                 bank: '',

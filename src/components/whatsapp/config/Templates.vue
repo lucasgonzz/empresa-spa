@@ -228,7 +228,7 @@ export default {
 		margin-bottom: 10px
 	&__lock
 		margin-right: 4px
-		color: rgba(0, 0, 0, .45)
+		color: var(--color-text-secondary)
 	&__preview
 		display: -webkit-box
 		-webkit-line-clamp: 2

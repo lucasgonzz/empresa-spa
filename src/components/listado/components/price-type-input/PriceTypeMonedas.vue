@@ -37,13 +37,27 @@
             v-model="local.ptm[moneda.id].setear_precio_final"
             size="sm">Setear precio final</b-form-checkbox>
 
-            <b-form-checkbox
+            <!--
+                🔴 El `data-tour` va en un div envolvente y NO en el `b-form-checkbox`, y esto se
+                midio: `b-form-checkbox` declara `inheritAttrs: false` y baja los atributos sueltos
+                al `<input>`, que en Bootstrap 4 es el control invisible (`opacity: 0`) escondido
+                detras del label. El lead clickea el LABEL, que no es descendiente del input, asi
+                que el avance por clic del tour nunca se disparaba.
+
+                🔴 Y sale una sola vez: este bloque se dibuja una vez por MONEDA dentro de cada
+                lista de precios, o sea NxM. Sin la condicion, el mismo valor aparece repetido y el
+                clip 1.5 termina resaltando la moneda que le toque.
+            -->
+            <div
             class="m-t-10"
-            :value="1"
-            :unchecked-value="0"
-            @change="on_change_cotizar_desde_otra(moneda.id)"
-            v-model="local.ptm[moneda.id].cotizar_desde_otra_moneda"
-            size="sm">Cotizar desde la otra moneda</b-form-checkbox>
+            :data-tour="es_primer_toggle_cotizacion(moneda) ? 'listado.toggle_cotizar_desde_otra_moneda' : null">
+                <b-form-checkbox
+                :value="1"
+                :unchecked-value="0"
+                @change="on_change_cotizar_desde_otra(moneda.id)"
+                v-model="local.ptm[moneda.id].cotizar_desde_otra_moneda"
+                size="sm">Cotizar desde la otra moneda</b-form-checkbox>
+            </div>
 
             <hr>
         </div>
@@ -122,6 +136,27 @@ export default {
         }
     },
     methods: {
+
+        /**
+         * ¿Este es el toggle de la PRIMERA moneda de la PRIMERA lista de precios?
+         *
+         * Es lo unico que decide si el bloque lleva el `data-tour`. Sin esta condicion el valor
+         * se repetiria tantas veces como listas por monedas tenga la cuenta.
+         *
+         * `price_types` viene del mixin global `mixins/generals.js`; `article_price_type.id` es el
+         * id de la lista de precios (lo arma `price-type-input/Index.vue`).
+         *
+         * @param {Object} moneda
+         * @returns {Boolean}
+         */
+        es_primer_toggle_cotizacion(moneda) {
+            if (!this.price_types.length || !this.monedas.length || !this.article_price_type) {
+                return false
+            }
+
+            return this.price_types[0].id == this.article_price_type.id
+                && this.monedas[0].id == moneda.id
+        },
 
         is_inputs_disabled(moneda_id, field) {
             const entry = this.local.ptm[moneda_id]

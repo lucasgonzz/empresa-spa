@@ -1,6 +1,12 @@
 <template>
+	<!--
+		⚠️ Esta conversacion NO vive en la vista: se monta adentro del sidebar de WhatsApp
+		(position fixed, montado desde App.vue), que se crea y se destruye al abrir y cerrar el
+		chat. Si el lead lo cierra, este ancla desaparece del DOM y el tour saltea sus pasos.
+	-->
 	<div
-	class="whatsapp-conversation">
+	class="whatsapp-conversation"
+	data-tour="whatsapp.conversacion">
 		<!-- El chat todavía no está en la bandeja: pasa al entrar por link directo, donde el
 		sidebar se abre antes de que vuelva `getChats`. Los mensajes ya se están pidiendo (los
 		dispara el watch de abajo, que mira el id y no el objeto). -->
@@ -86,7 +92,10 @@ export default {
 		flex-direction: column
 		align-items: center
 		justify-content: center
-		color: rgba(0, 0, 0, .45)
+		// Token y no un negro con alfa: este cartel vive DENTRO del panel del sidebar, que en
+		// modo oscuro es una superficie oscura. Escrito en negro quedaba invisible justo en el
+		// unico momento en que se dibuja --mientras la conversacion carga--.
+		color: var(--color-text-secondary)
 		i
 			font-size: 2.5rem
 			margin-bottom: 10px

@@ -10,11 +10,19 @@
 	<div
 	v-if="show_compensar_caja_checkbox"
 	class="m-b-10">
-		<b-form-checkbox v-model="compensar_caja">
+		<b-form-checkbox
+		data-testid="confirm-compensar-caja"
+		v-model="compensar_caja">
 			Compensar caja (movimiento inverso por cada método de pago con caja)
 		</b-form-checkbox>
 	</div>
+	<!--
+		El testid lleva el id del modal porque este componente se usa para confirmar cosas muy
+		distintas (borrar una venta, borrar registros de cualquier modelo) y puede haber mas de uno
+		montado a la vez.
+	-->
 	<btn-loader
+	:data-testid="'btn-confirmar-'+id"
 	:variant="variant"
 	@clicked="confirm"
 	:text="btn_text"

@@ -14,7 +14,14 @@
 				</strong>
 			</p> -->
 			<p class="m-0 venta-total-box">
+				<!--
+					🔴 El `data-monto` no es redundante con el texto: `price()` recorta los decimales
+					cuando son ",00", asi que del texto no siempre se puede sacar el numero. Mismo
+					patron que los renglones de Posicion Fiscal.
+				-->
 				<strong 
+				data-testid="venta-total-remito"
+				:data-monto="total"
 				dusk="total">
 					Total: {{ price(total) }}
 				</strong>

@@ -119,6 +119,52 @@ export default {
         },
 
         /**
+         * nota_function del prop "tipo" de src/models/provider_order_extra_cost.js (prompt 609).
+         *
+         * 🔴 El problema que resuelve, y no es cosmetico: el backend solo prorratea el costo extra
+         * entre los articulos de la compra si el tipo es Transporte, Seguro o Arancel/Importacion
+         * (ver $tipos_materializables en
+         * NewProviderOrderHelper::aplicar_costos_extra_a_recargos_articulos(), empresa-api). Con
+         * "Otro" -o sin tipo elegido- el costo suma al total de la compra y nada mas: el costo de
+         * los articulos queda igual que si el flete se hubiera cargado como un gasto suelto, y el
+         * margen que el dueño cree tener es ficticio. El usuario hace todo bien -carga la compra,
+         * carga el flete- y no tiene NINGUNA forma de darse cuenta de que le falto un paso.
+         * Hasta este prompt la unica mencion estaba en el popover de "descriptions", que solo
+         * aparece al pasar el mouse por el label. Esta nota lo pone a la vista, permanente, en el
+         * mismo lugar donde se elige el tipo.
+         *
+         * El caso "sin tipo" es alcanzable de verdad, no es defensivo: getOptions()
+         * (src/common-vue/mixins/generals.js) antepone siempre la opcion
+         * { value: 0, text: 'Seleccione Tipo' }, y 0 tampoco esta entre los tipos que prorratean.
+         *
+         * Se lee "prorratea" de las propias options del prop (que ModelForm pasa como segundo
+         * argumento) en vez de tener la lista de tipos duplicada aca: el meta del modelo es el
+         * unico lugar donde vive.
+         *
+         * @param {Object} model - El costo extra (provider_order_extra_cost) que se esta editando.
+         * @param {Object} prop - Definicion declarativa del campo "tipo", con sus options.
+         * @returns {string} El aviso, o cadena vacia si el tipo elegido SI se prorratea.
+         */
+        costo_extra_tipo_nota(model, prop) {
+
+            if (!model || !prop || !prop.options) {
+                return ''
+            }
+
+            let opcion_elegida = prop.options.find(option => option.value == model.tipo)
+
+            if (opcion_elegida && opcion_elegida.prorratea) {
+                return ''
+            }
+
+            if (!model.tipo || model.tipo == 0) {
+                return 'Todavía no elegiste el tipo. Si lo dejás sin elegir, este costo NO se va a repartir entre los artículos: suma al total de la compra y nada más. Elegí Transporte, Seguro o Arancel/Importación para que el sistema lo prorratee.'
+            }
+
+            return 'Este tipo NO se prorratea: el costo suma al total de la compra, pero no llega al costo de ningún artículo. Si es un flete, un seguro o un arancel de importación, elegí ese tipo para que el sistema lo reparta entre los artículos.'
+        },
+
+        /**
          * v_if_function para el checkbox historico "aplicar_iva_al_costo" (grupo 231, prompt 06).
          * Con la dinamica nueva de costeo por condicion fiscal activa
          * (usar_condicion_fiscal_en_costeo, grupo 231 prompt 02) esa tilde ya no tiene ningun

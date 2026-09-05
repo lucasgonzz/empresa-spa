@@ -3,6 +3,7 @@
 	v-b-tooltip.hover
 	:title="tooltip"
 	:class="option_classes"
+	:data-testid="testid"
 	:id="id"
 	:disabled="disabled"
 	@click="on_click">
@@ -30,6 +31,16 @@ export default {
 			default: '',
 		},
 		/**
+		 * `data-testid` del item. Va como prop y no como atributo suelto porque este componente se
+		 * dibuja mas de una vez por pantalla y quien lo usa necesita poder distinguir cada
+		 * instancia (ver OptionsDropdown.vue, que dibuja el mismo menu para "filtrados" y para
+		 * "seleccion").
+		 */
+		testid: {
+			type: String,
+			default: null,
+		},
+		/**
 		 * Clase del ícono a mostrar a la izquierda del texto.
 		 */
 		icon: {
@@ -46,7 +57,7 @@ export default {
 		/**
 		 * Si es true, el ítem se muestra deshabilitado (no clickeable) y atenuado visualmente.
 		 * Se usa, por ejemplo, cuando la acción no está disponible por venir de un buscador
-		 * general en vez del buscador de filtros estructurado.
+		 * general en vez del filtro de columnas.
 		 */
 		disabled: {
 			type: Boolean,

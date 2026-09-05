@@ -13,6 +13,7 @@
 	-->
 	<div
 	v-if="can('sale.index.total')"
+	data-tour="ventas.totales"
 	class="ventas-totales">
 
 		<template v-if="!loading">

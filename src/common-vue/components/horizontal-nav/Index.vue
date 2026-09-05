@@ -14,6 +14,7 @@
 				:key="i"
 				:dusk="value(item)"
 				:data-testid="testid(item)"
+				:data-tour="item.data_tour || null"
 				@click="select(item)"
 				:class="isActive(item)">
 					{{ itemName(item) }}
@@ -423,6 +424,17 @@ export default {
 		 * @returns {string|null} 'nav-item-<valor>' o null si el item no tiene un valor usable.
 		 */
 		testid(item) {
+			/*
+			 * 🔴 Un item puede traer su propio `testid` y, cuando lo trae, MANDA sobre el valor
+			 * visible. Hace falta porque hay navs cuyo valor visible incluye datos que cambian: la
+			 * de sucursales del listado de ventas le agrega la cantidad de ventas al nombre
+			 * ("Principal (2)"), asi que sin esto el testid pasaba a ser `nav-item-Principal (2)` y
+			 * cambiaba en cada corrida. Un data-testid que cambia con los datos no sirve para nada.
+			 */
+			if (typeof item.testid == 'string' && item.testid.length) {
+				return 'nav-item-' + item.testid
+			}
+
 			let valor = this.value(item)
 			if (typeof valor != 'string' || !valor.length) {
 				return null
@@ -488,7 +500,7 @@ export default {
 	overflow-x: auto
 	overflow-y: hidden
 	background-color: var(--bg-nav, #E3E3E3)
-	border-radius: 8px
+	border-radius: 10px
 
 	@media screen and (max-width: 576px)
 		-webkit-scrollbar 
@@ -505,7 +517,7 @@ export default {
 	/* Pestaña inactiva: texto secundario sobre fondo transparente */
 	.item
 		border: none
-		border-radius: 6px
+		border-radius: 8px
 		padding: 8px 12px
 		cursor: pointer
 		font-size: 0.875rem

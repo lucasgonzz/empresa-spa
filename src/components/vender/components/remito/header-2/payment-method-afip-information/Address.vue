@@ -3,7 +3,13 @@
 	v-if="addresses.length >= 1"
 	prepend="Sucursal">
 
+		<!--
+			🔴 La sucursal es uno de los controles que frenan el guardado de una venta (ver la
+			lista en manual_sistema/vender/armar-una-venta.md). Sin elegirla, el boton de
+			guardar no hace ningun pedido: la venta simplemente no sale.
+		-->
 		<b-form-select
+		data-testid="venta-sucursal"
 		:disabled="disabled"
 		v-model="address_id"
 		dusk="address_id"

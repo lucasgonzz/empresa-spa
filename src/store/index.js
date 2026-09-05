@@ -43,6 +43,8 @@ import sale from '@/store/sale/index'
 import provider_order from '@/store/provider_order'
 import provider_order_status from '@/store/provider_order_status'
 import provider_order_afip_ticket from '@/store/provider_order_afip_ticket'
+// Escaneo de facturas de compra con IA (mision escaneo-factura-compra)
+import provider_order_scan from '@/store/provider_order_scan'
 import order from '@/store/order'
 import order_status from '@/store/order_status'
 import buyer from '@/store/buyer'
@@ -60,6 +62,7 @@ import afip_information from '@/store/afip_information'
 import production_movement from '@/store/production_movement'
 import order_production from '@/store/order_production'
 import order_production_status from '@/store/order_production_status'
+import order_production_status_group from '@/store/order_production_status_group'
 import recipe from '@/store/recipe'
 import address from '@/store/address'
 import title from '@/store/title'
@@ -264,6 +267,12 @@ import sale_sender_info from '@/store/sale_sender_info'
 import inputs_size from '@/store/inputs_size'
 import actividad_cliente from '@/store/actividad_cliente'
 
+// Sistema de puntos para clientes (extension puntos_clientes). Son DOS stores distintos a
+// proposito: `sistema_de_puntos` es el ABM de la configuracion y sale del factory comun, y
+// `puntos` es el estado de lectura del modulo (saldo, movimientos, reporte), que no es un ABM.
+import sistema_de_puntos from '@/store/sistema_de_puntos'
+import puntos from '@/store/puntos'
+
 
 Vue.use(Vuex)
 
@@ -316,6 +325,7 @@ export default new Vuex.Store({
         provider_order,
         provider_order_status,
         provider_order_afip_ticket,
+        provider_order_scan,
         order,
         order_status,
         buyer,
@@ -333,6 +343,7 @@ export default new Vuex.Store({
         production_movement,
         order_production,
         order_production_status,
+        order_production_status_group,
         recipe,
         address,
         title,
@@ -527,5 +538,8 @@ export default new Vuex.Store({
         sale_sender_info,
         inputs_size,
         actividad_cliente,
+
+        sistema_de_puntos,
+        puntos,
     }
 })

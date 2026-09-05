@@ -1,0 +1,124 @@
+// Vocabulario visual del modulo de WhatsApp (mision whatsapp-diseno-conversacion, 24/8/2026).
+//
+// Hasta esta mision el modulo entero estaba escrito con hexadecimales fijos y rgba(0,0,0,·)
+// desparramados por el <style> de cada componente: #ffffff en el header, el composer y la burbuja
+// entrante, #dcf8c6 en la saliente, #f7f9fb en el panel del sidebar, #fff6e5 en los avisos de
+// simulacion. Eso significaba dos cosas: que el modulo quedaba blanco con el sistema en modo
+// oscuro --era el unico que no seguia el tema--, y que cambiar un color pedia editar seis archivos.
+//
+// Se declaran UNA SOLA VEZ aca, con contraparte en `html.dark-mode`, siguiendo la misma doctrina
+// que ya usan _toolbar_botones.sass y _controles_modulo.sass.
+//
+// 🔴 Los tokens van en `:root` y en `html.dark-mode`, NUNCA en #app ni en body: los modales de
+// bootstrap-vue se montan colgando de <body>, fuera de #app, y ahi adentro viven el de plantillas,
+// el de vincular cliente, el de simular y el de configuracion. Con los tokens en #app esos cuatro
+// se quedarian sin ellos. Es la misma nota que encabeza _dark_theme.sass y por el mismo motivo.
+//
+// De donde salen los colores: son los de WhatsApp Web, en sus dos temas. No se inventaron. Los que
+// tienen equivalente en el sistema (panel, borde, texto, hover) se delegan al token del sistema en
+// vez de repetir un hex, para que el modulo siga al tema cuando el tema cambie.
+
+:root
+	// --- Chasis -------------------------------------------------------------------------------
+	// Fondo del panel de mensajes. Es el unico color del modulo que NO tiene equivalente en el
+	// sistema: WhatsApp usa un beige propio y es la mitad de lo que hace que la conversacion se
+	// lea como una conversacion y no como una tabla.
+	--wa-fondo-chat: #efeae2
+	// Header, composer y bandeja: la misma superficie elevada que las tarjetas del sistema.
+	--wa-panel: var(--bg-card)
+	--wa-borde: var(--color-border)
+	--wa-texto: var(--color-text-primary)
+	--wa-hover: var(--bg-hover)
+
+	// --- Burbujas -----------------------------------------------------------------------------
+	--wa-burbuja-in: #ffffff
+	--wa-burbuja-in-texto: var(--color-text-primary)
+	--wa-burbuja-out: #d9fdd3
+	// 🔴 El texto de la burbuja saliente NO puede heredar: en oscuro esa burbuja es verde petroleo
+	// y el gris del tema claro queda ilegible encima. Por eso es un token propio y no
+	// --wa-texto.
+	--wa-burbuja-out-texto: #111b21
+	--wa-burbuja-sombra: rgba(11, 20, 26, .13)
+	// 🔴 Rotulo de quien mando el mensaje. Va SIEMPRE sobre la burbuja saliente (el rotulo solo
+	// se dibuja en los salientes), asi que NO puede ser --wa-verde: verde de marca sobre verde
+	// claro da 1,8:1, ilegible. Este es el verde oscuro de WhatsApp, que sobre #d9fdd3 da 6,9:1;
+	// en oscuro se invierte a un verde claro sobre el petroleo de la burbuja.
+	--wa-sender: #075e54
+	// 🔴 Rojo de error. Vive DENTRO de la burbuja saliente (el check de "fallo el envio" y el
+	// motivo del fallo), o sea sobre un fondo que ahora cambia entre modos: el #dc3545 de
+	// Bootstrap sobre el verde petroleo da 1,8:1 y desaparece justo el unico aviso de que un
+	// mensaje NO salio. En oscuro se aclara.
+	--wa-error: #dc3545
+
+	// --- Acento -------------------------------------------------------------------------------
+	// El verde de la marca: boton de enviar, "Nuevo chat", badge de no leidos, fila activa.
+	--wa-verde: #25d366
+	--wa-verde-hover: #1eb955
+	// 🔴 Texto e iconos que van ENCIMA del verde, en verde MUY oscuro y no en blanco.
+	//
+	// El blanco es lo primero que uno escribe y es medible que no sirve: sobre #25d366 da 1,98:1,
+	// peor todavia que el 3,17:1 del `success` de Bootstrap que este token vino a reemplazar. El
+	// verde de WhatsApp es claro --luminancia alta--, asi que lo que contrasta contra el es un
+	// tono oscuro, no uno claro. Contra #25d366 este da ~10:1 y contra el #00a884 del modo
+	// oscuro, ~6,9:1: pasa comodo en los dos.
+	//
+	// Vale para el label de "Nuevo chat" y para la flecha del boton de enviar.
+	--wa-verde-texto: #04352a
+
+	// --- Texto secundario ---------------------------------------------------------------------
+	// Se resuelve con opacidad sobre --wa-texto y no con un gris fijo (rgba(0,0,0,.5) era lo que
+	// habia): asi funciona en los dos modos sin agregar un token de gris por cada tono.
+	--wa-texto-tenue-op: .62
+	--wa-texto-muy-tenue-op: .45
+
+	// --- Simulacion ---------------------------------------------------------------------------
+	// El ambar de "esto no es real". Estaba escrito cuatro veces (#fff6e5 / #d39e00 / #8a5b00 /
+	// rgba(255,193,7,.22)) en el composer, la burbuja, el header y la fila de la bandeja.
+	--wa-sim-bg: #fff6e5
+	--wa-sim-borde: #d39e00
+	--wa-sim-texto: #8a5b00
+
+	// --- Grabacion ----------------------------------------------------------------------------
+	// La franja del microfono abierto tiene tokens PROPIOS y no reusa los de simulacion, aunque
+	// el color de partida sea parecido: son dos estados que no tienen nada que ver --uno dice
+	// "esto no es real", el otro "te estoy escuchando"-- y el resto del modulo los separa con
+	// cuidado. De paso, el rojo del reloj sobre el velo ambar del modo oscuro daba 2,5:1.
+	--wa-grabando-bg: #fff1f0
+	--wa-grabando-borde: rgba(217, 83, 79, .45)
+	--wa-grabando-acento: #d9534f
+
+	// --- Composer -----------------------------------------------------------------------------
+	// Fondo de la capsula donde se escribe. En claro es blanco sobre el panel gris del composer.
+	--wa-input-bg: #ffffff
+	// Radio de la capsula. Es la mitad del alto de una sola linea + su padding: con una linea se
+	// lee como pastilla y al crecer a cinco se queda en esquinas muy redondeadas, que es
+	// exactamente lo que hace WhatsApp.
+	--wa-input-radius: 21px
+	// Diametro del microfono y del enviar. Los dos circulos son del mismo tamaño y quedan
+	// alineados al fondo de la fila cuando el input crece.
+	--wa-control-h: 42px
+
+html.dark-mode
+	--wa-fondo-chat: #0b141a
+	--wa-burbuja-in: #202c33
+	--wa-burbuja-out: #005c4b
+	--wa-burbuja-out-texto: #e9edef
+	--wa-burbuja-sombra: rgba(0, 0, 0, .35)
+	// Verde claro sobre el petroleo de la burbuja saliente: el #075e54 del modo claro seria
+	// verde oscuro sobre verde oscuro.
+	--wa-sender: #8fd8c4
+	// Rojo claro: el #dc3545 sobre el petroleo de la burbuja da 1,8:1.
+	--wa-error: #ff8a80
+	--wa-verde: #00a884
+	--wa-verde-hover: #06cf9c
+	--wa-texto-tenue-op: .68
+	--wa-texto-muy-tenue-op: .5
+	// El ambar de simulacion en oscuro: mismo tono, aplicado como velo translucido sobre el fondo
+	// oscuro en vez de como crema opaco. Un #fff6e5 en modo oscuro es una mancha blanca.
+	--wa-sim-bg: rgba(217, 158, 0, .16)
+	--wa-sim-borde: rgba(217, 158, 0, .55)
+	--wa-sim-texto: #e0b64a
+	--wa-grabando-bg: rgba(217, 83, 79, .18)
+	--wa-grabando-borde: rgba(217, 83, 79, .5)
+	--wa-grabando-acento: #ff8a80
+	--wa-input-bg: #2a3942

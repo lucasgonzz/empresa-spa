@@ -3,7 +3,12 @@
 	<b-input-group
 	v-if="cajas.length && !selected_payment_methods.length"
 	prepend="Caja">
+		<!--
+			🔴 Este select ofrece SOLO las cajas abiertas (`cajas_abiertas` en mixins/vender/cajas.js).
+			Con todas cerradas se dibuja habilitado y vacio, sin decir por que.
+		-->
 		<b-form-select 
+		data-testid="venta-caja"
 		:disabled="disabled"
 		v-model="caja_id" 
 		:options="get_caja_options(vender_payment_method_id, address_id, moneda_id)"></b-form-select> 

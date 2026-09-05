@@ -1,7 +1,13 @@
 <template>
+	<!--
+		El ancla va sobre la columna entera y no sobre el input: `vender.buscador_articulos` ya
+		cubre TODA la fila del header-form (barra, nombre, combos, promo, servicios), asi que el
+		codigo de barras necesita la suya para que el tour pueda senalarlo aparte.
+	-->
 	<b-col
 	class="col-bar-code margin-bottom-since-lg"
 	cols="12"
+	data-tour="vender.campo_codigo_barras"
 	v-if="!hasExtencion('no_usar_codigos_de_barra')"
 	:md="3">
 

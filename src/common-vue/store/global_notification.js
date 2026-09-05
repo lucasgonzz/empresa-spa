@@ -21,6 +21,13 @@ export default {
 		 * trae el resumen del análisis — el aviso solo dice que terminó.
 		 */
 		excel_analysis: null,
+		/*
+		 * Escaneo de factura de compra terminado (modal provider_order_scan_ready):
+		 * { uuid, provider_order_id, estado, error, cantidad_articulos, provider_nombre }.
+		 * A propósito no trae el resultado del escaneo — el aviso solo dice que terminó;
+		 * la tabla se pide recién si el usuario aprieta el botón de revisar.
+		 */
+		provider_order_scan: null,
 	},
 	mutations: {
 		set_functions_to_execute(state, value) {
@@ -50,6 +57,9 @@ export default {
 		set_excel_analysis(state, value) {
 			state.excel_analysis = value
 		},
+		set_provider_order_scan(state, value) {
+			state.provider_order_scan = value
+		},
 		/*
 		 * Carga el payload completo de una GlobalNotification broadcast.
 		 */
@@ -63,6 +73,7 @@ export default {
 			state.import_options = notification.import_options || null
 			state.price_stats = notification.price_stats || null
 			state.excel_analysis = notification.excel_analysis || null
+			state.provider_order_scan = notification.provider_order_scan || null
 		},
 	},
 	actions: {

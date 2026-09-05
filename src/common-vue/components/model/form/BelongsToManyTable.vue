@@ -59,7 +59,14 @@
 		</b-modal>
 
 		<!-- Tabla de la relación: usa active_belongs_to_many si hay preferencia guardada, o prop.belongs_to_many por defecto -->
+		<!--
+			Ancla del tour de la demo (clip 4.1): la tabla de articulos de una compra, donde vive
+			la columna "Cant Recibida". Condicional por `parent_model_name` porque este componente
+			lo usa cualquier belongs_to_many del sistema. `provider_order` declara uno solo
+			(`articles`), asi que el valor no se duplica.
+		-->
 		<table-component
+		:data-tour="parent_model_name === 'provider_order' ? 'compras.tabla_articulos' : null"
 		:pivot_parent_model="model"
 		:loading="false"
 		:models="model[prop.key]"

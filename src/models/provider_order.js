@@ -10,6 +10,7 @@ export default {
 		{
 			text: 'Proveedor',
 			key: 'provider_id',
+			data_tour: 'compras.campo_proveedor',
 			store: 'provider',
 			type: 'search',
 			// La busqueda va siempre contra la API (global-search/provider), nunca contra el store:
@@ -206,6 +207,7 @@ export default {
 			search_on_models_by: 'name',
 			type: 'search',
 			key: 'articles',
+			data_tour: 'compras.buscador_articulos',
 			search_from_api_function: 'search_from_api_in_provider_order',
 			route_to_search: 'vender/buscar-articulo-por-nombre/1',
 			toast_function: 'toast_article_provider_order_unidades_individuales',

@@ -236,6 +236,26 @@ export default {
 
 		descuento: null,
 
+		/*
+			Canje de puntos de esta venta (extension puntos_clientes).
+
+			puntos_canjeados: los puntos que el cliente gasta en esta venta.
+			descuento_puntos: los pesos que eso descuenta = puntos_canjeados * valor_punto.
+
+			🔴 Los dos viajan en el POST/PUT de la venta y `total` viaja YA NETEADO, o sea con
+			el descuento_puntos restado: el servidor recompone el bruto como
+			`total + descuento_puntos` para medir el tope del 20%.
+
+			🔴 Y el servidor RECALCULA descuento_puntos con el valor_punto del programa y lo
+			compara con este, con tolerancia de un centavo (PuntosCanjeHelper::validar()). Si no
+			coincide rechaza la venta ENTERA con 422; no lo corrige en silencio. Por eso el
+			numero tiene que salir siempre del valor_punto que devolvio /api/puntos/disponible
+			--que es lo que hace stage-3/Puntos.vue-- y nunca de una constante ni de un redondeo
+			propio.
+		*/
+		puntos_canjeados: null,
+		descuento_puntos: null,
+
 		client: null,
 
 		/*
@@ -612,6 +632,12 @@ export default {
 		set_descuento(state, value) {
 			state.descuento = value
 		},
+		set_puntos_canjeados(state, value) {
+			state.puntos_canjeados = value
+		},
+		set_descuento_puntos(state, value) {
+			state.descuento_puntos = value
+		},
 		setDiscountsId(state, value) {
 			const previous_discounts = get_safe_clone(state.discounts_id)
 			state.discounts_id = value
@@ -754,6 +780,32 @@ export default {
 		setClient(state, value) {
 			const previous_client = get_safe_clone(state.client)
 			state.client = value
+
+			/*
+				El canje de puntos es del cliente que estaba elegido: al cambiarlo, o al sacarlo,
+				se cae solo.
+
+				POR QUE VA ACA Y NO EN EL PANEL DE CANJE: setClient es el unico embudo por el que
+				pasan TODOS los caminos. stage-1/SelectClient.vue lo commitea en tres lugares
+				distintos (las dos ramas de elegir un cliente y el clearSelected del boton de
+				quitar) y mixins/vender/limpiar_vender.js en un cuarto. Un canje que le sobrevive
+				al cambio de cliente manda un descuento_puntos que el servidor no puede
+				reconstruir con el saldo del cliente nuevo, y la venta entera rebota con 422 en
+				el mostrador.
+
+				Lo que NO se puede hacer desde aca es pedir el saldo del cliente nuevo: una
+				mutation de Vuex recibe (state, value) y no tiene dispatch. De eso se encarga el
+				watcher de components/vender/components/stage-3/Puntos.vue, que mira este mismo
+				state.client y por lo tanto ve los cuatro caminos igual de bien.
+
+				Ojo: el total de la venta queda con el canje viejo restado hasta que alguien
+				llame a setTotal(). limpiar_vender() ya lo hace; en los caminos de SelectClient
+				lo dispara el watcher `canje_aplicado` de stage-3/Puntos.vue, que existe
+				justamente para cubrir este borrado hecho desde afuera del componente.
+			*/
+			state.puntos_canjeados = null
+			state.descuento_puntos = null
+
 			/*
 				Sin condicion de valor: quitar el cliente (null) tambien es una decision del
 				operador sobre esta venta.
@@ -1088,6 +1140,14 @@ export default {
 				valor_dolar: state.valor_dolar,
 				afip_tipo_comprobante_id: state.afip_tipo_comprobante_id,
 				descuento: state.descuento,
+				/*
+					Canje de puntos. `total` (mas arriba en este mismo payload) ya viaja neteado
+					con descuento_puntos restado: lo aplica mixins/vender_set_total.js dentro de
+					setTotal(). El servidor recompone el bruto sumandole descuento_puntos y con
+					eso mide el tope; si se mandara el total sin netear, el tope se mediria mal.
+				*/
+				puntos_canjeados: state.puntos_canjeados,
+				descuento_puntos: state.descuento_puntos,
 				fecha_entrega: state.fecha_entrega,
 				incoterms: state.incoterms,
 				observations_ocultas: state.observations_ocultas,

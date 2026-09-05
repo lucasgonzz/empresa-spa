@@ -1,6 +1,15 @@
 <template>
 
+	<!--
+		Misma regla que la tarjeta que lo contiene: una instancia por lista de precios, asi que el
+		`data-tour` sale solo en la primera. Ver el comentario de `price-type-input/Index.vue`.
+
+		⚠️ Con la extension `ventas_en_dolares` prendida este componente NO se monta (`Index.vue`
+		dibuja `PriceTypeMonedas` en su lugar), asi que el paso del clip 1.3 que lo senala
+		desaparece en una cuenta con dolares. El motor lo saltea solo.
+	-->
 	<div
+	:data-tour="es_primera_lista ? 'listado.opciones_lista_precio' : null"
 	class="price-type-card__opciones m-t-10">
 
 		<!-- El interruptor que invierte cual de los dos campos manda. Va separado y con su
@@ -66,6 +75,22 @@ export default {
 		price_type_store: Object,
 	},
 	computed: {
+		/**
+		 * ¿Estas opciones son las de la PRIMERA lista de precios?
+		 *
+		 * `article_price_type.id` es el id del `price_type` (lo arma `price-type-input/Index.vue`,
+		 * tanto para un articulo nuevo como para uno existente), y `price_types` viene del mixin
+		 * global `mixins/generals.js`.
+		 *
+		 * @returns {Boolean}
+		 */
+		es_primera_lista() {
+			if (!this.price_types.length || !this.article_price_type) {
+				return false
+			}
+
+			return this.price_types[0].id == this.article_price_type.id
+		},
 		/**
 		 * En un articulo nuevo el pivot se arma en memoria (ver init_article_price_type en
 		 * Index.vue) y todavia no tiene monto_ganancia: ahi no hay nada que mostrar.

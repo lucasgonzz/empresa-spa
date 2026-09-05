@@ -48,6 +48,7 @@
 
     <b-modal 
     id="current-acounts" 
+    data-tour="cuentas_corrientes.modal_cuenta"
     ref="current_acounts"
     :title="title" 
     modal-class="cuenta-corriente-modal"

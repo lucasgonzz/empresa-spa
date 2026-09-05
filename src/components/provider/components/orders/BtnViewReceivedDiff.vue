@@ -1,5 +1,6 @@
 <template>
 	<b-button
+	data-tour="compras.boton_dif"
 	v-if="has_received"
 	class="m-l-15"
 	size="sm"

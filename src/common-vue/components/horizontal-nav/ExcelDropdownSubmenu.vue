@@ -1,7 +1,15 @@
 <template>
+	<!--
+		El `data-tour` va en el `<li>` entero y no en el `<button>` de adentro, y eso importa para
+		el clip 1.8: ese submenu se abre con `@mouseenter` y el `@click` del toggle lo vuelve a
+		CERRAR, asi que el tour tiene que pedirle al lead que pase el mouse por encima, no que
+		clickee. Anclado el `<li>`, el recuadro cubre el item completo y el paso avanza por
+		aparicion del item hijo, nunca por clic.
+	-->
 	<li
 	role="presentation"
 	class="excel-dropdown-submenu"
+	:data-tour="data_tour"
 	@mouseenter="open_submenu"
 	@mouseleave="schedule_close_submenu">
 		<button
@@ -65,6 +73,19 @@ export default {
 		icon: {
 			type: String,
 			default: '',
+		},
+		/**
+		 * Ancla `data-tour` del contrato de la demo, cuando este submenú es un paso de un tour.
+		 *
+		 * Se declara como prop —igual que en `ExcelDropdownOptionItem.vue`— en vez de dejarla caer
+		 * como atributo suelto, para que quede explícito que termina en el `<li>` y no adentro.
+		 *
+		 * `null` por defecto: con `''` Vue dibuja el atributo vacío y el validador del contrato lo
+		 * cuenta como un anclaje presente.
+		 */
+		data_tour: {
+			type: String,
+			default: null,
 		},
 	},
 	data() {

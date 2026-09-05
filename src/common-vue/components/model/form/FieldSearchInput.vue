@@ -112,9 +112,28 @@ export default {
 			type: [Array, Object, null],
 			default: null,
 		},
+		/**
+		 * 🔴 El tipo NO puede aceptar null y el default NO puede ser null. Vue 2 aplica el default de
+		 * una prop unicamente cuando el valor llega `undefined` (validateProp, vue 2.7.14, linea 5028
+		 * de vue.runtime.common.dev.js); un null EXPLICITO pasa derecho. Y encima no avisa nada,
+		 * porque assertProp corta en seco con `value == null` (linea 5081): cero warnings en consola.
+		 *
+		 * Que pasaba mientras aca valia null: este componente reenvia la prop a search/Index.vue, que
+		 * la declara con `default: true`. Al llegarle un null explicito, ese true no se aplicaba NUNCA
+		 * y quedaba en null (falsy). Consecuencia: TODOS los buscadores de los formularios --categoria,
+		 * subcategoria, proveedor, marca, los 69 campos `type: 'search'` de los 37 modelos-- abrian el
+		 * modal sin precargar nada del store y sin limpiar los resultados de la busqueda anterior.
+		 *
+		 * ModelForm.vue pasa `prop.limpiar_resultados_de_busqueda`, que es `undefined` cuando el modelo
+		 * no la declara: ESE si dispara el default de aca. Y cuando el modelo la declara
+		 * (provider_order.js la pone en false para conservar la lista entre aperturas) el false viaja
+		 * tal cual.
+		 *
+		 * Clase de error: "default de prop anulado por un null explicito del padre".
+		 */
 		limpiar_resultados_de_busqueda: {
-			type: [Boolean, null],
-			default: null,
+			type: Boolean,
+			default: true,
 		},
 		function_props_to_send_to_api: {
 			type: [String, null],

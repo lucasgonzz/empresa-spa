@@ -313,6 +313,33 @@ export default {
 
 			// this.setItemsPrices(false, true)
 
+			/*
+				🔴 EL CANJE DE PUNTOS DE LA VENTA QUE SE ESTA EDITANDO. VA ANTES DEL setTotal()
+				DE ABAJO, NO DESPUES.
+
+				setTotal() sin argumento recalcula el total desde los items, y adentro de esa
+				cuenta aplicar_canje_de_puntos() (mixins/vender_set_total.js) lee
+				`vender.descuento_puntos` del store. Si el canje no esta commiteado todavia, ese
+				metodo sale por su early return y EL TOTAL QUEDA BRUTO: abrir una venta con canje
+				para editarla la subia sola --de $58.600 a $73.000-- sin que nadie tocara nada, y
+				el comprobante ya impreso dejaba de coincidir con lo guardado.
+
+				Se commitea siempre, tambien la rama sin canje: limpiar_vender() deja estos dos
+				campos en null, pero cargar una venta sin canje despues de una con canje tiene que
+				limpiarlos igual, y depender de que alguien mas lo haya hecho es como aparecio
+				este bug.
+
+				Number() y no la verdad del valor a secas: son decimal(20,2) de la base y Laravel
+				los serializa como string, asi que un "0.00" seria truthy.
+			*/
+			if (Number(model.puntos_canjeados) > 0) {
+				this.$store.commit('vender/set_puntos_canjeados', Number(model.puntos_canjeados))
+				this.$store.commit('vender/set_descuento_puntos', Number(model.descuento_puntos))
+			} else {
+				this.$store.commit('vender/set_puntos_canjeados', null)
+				this.$store.commit('vender/set_descuento_puntos', null)
+			}
+
 			// this.$store.commit('vender/setTotal')
 			this.setTotal()
 			// Log limpio solo para cambios posteriores a la carga de la venta a editar.
@@ -414,6 +441,13 @@ export default {
 				// Indica si se debe enviar correo al cliente
 				send_mail: this.$store.state.vender.send_mail,
 				dias_alerta_venta_no_cobrada_personalizado: this.$store.state.vender.dias_alerta_venta_no_cobrada_personalizado,
+				/*
+					Canje de puntos. Tienen que viajar SIEMPRE, con valor o en null: el motivo
+					completo esta en el PUT de store/vender/previus_sales.js, que es donde alguien
+					los va a querer sacar por "limpieza".
+				*/
+				puntos_canjeados: this.$store.state.vender.puntos_canjeados,
+				descuento_puntos: this.$store.state.vender.descuento_puntos,
 			})
 			.then(res => {
 				if (sale_id && pending.length) {
@@ -488,6 +522,10 @@ export default {
 				// undefined y la linea se pinta en $0. Es la causa del bug de precios en 0 de San Cayetano.
 				item.final_price = article.final_price
 				item.final_price_blanco = article.final_price_blanco
+				// Sin esto, si el back tiene que recalcular el costo desde cero (pivot de origen sin
+				// costo guardado), no tiene por cuanto dividirlo y guarda el costo del bulto entero
+				// como si fuera el de la unidad individual (venta con ganancia negativa).
+				item.unidades_individuales = article.unidades_individuales
 				item.amount = Number(article.pivot.amount)
 				item.article_variant_id = Number(article.pivot.article_variant_id)
 				// Se conserva iva_id para recalcular precio segun iva_aplicado al editar.

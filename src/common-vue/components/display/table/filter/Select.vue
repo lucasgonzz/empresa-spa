@@ -4,6 +4,7 @@
 	class="text">
 		<b-form-group>
 			<b-form-select
+			:data-testid="'filtro-select-'+field.key"
 			@change="setFilters"
 			v-model="filter.igual_que"
 			:options="getOptions({key: filter.key, store: filter.store, text: 'Seleccione '+filter.text, options: filter.options})"></b-form-select>

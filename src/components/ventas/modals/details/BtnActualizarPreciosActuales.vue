@@ -2,6 +2,7 @@
 	<b-button
 	size="sm"
 	variant="outline-primary"
+	data-testid="btn-abrir-actualizar-precios"
 	v-b-modal="'update-prices'">
 		<i class="bi bi-arrow-repeat"></i>
 		Actualizar precios

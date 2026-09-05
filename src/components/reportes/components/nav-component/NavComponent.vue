@@ -41,6 +41,19 @@ export default {
 				})
 			}
 
+			/* Reporte del pasivo del programa de puntos. Va detrás de la extensión
+			   `puntos_clientes` (los endpoints del módulo responden 403 sin ella, así que una
+			   pestaña visible sería una pestaña que no puede cargar nada) y reutiliza el mismo
+			   permiso 'reportes.cards' que los tres reportes contables de arriba: esta misión no
+			   crea abilities nuevas en el backend. */
+			if (this.hasExtencion('puntos_clientes') && this.can('reportes.cards')) {
+
+				items.push({
+					name: 'Puntos',
+					route_value: 'puntos',
+				})
+			}
+
 			if (this.can('reportes.articulos')) {
 
 				items.push({

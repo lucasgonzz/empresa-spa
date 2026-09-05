@@ -1,6 +1,7 @@
 <template>
 	<b-form-checkbox
 	class="m-t-15"
+	data-testid="devolucion-generar-cuenta-corriente"
 	v-if="client"
 	:value="1"
 	:unchecked-value="0"

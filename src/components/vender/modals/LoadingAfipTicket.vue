@@ -1,6 +1,13 @@
 <template>
+<!--
+	⚠️ Esta tarjeta esta SIEMPRE en el DOM: entra y sale con `right: -500px` -> `right: 50px`
+	(clase `loading-afip-ticket-active`), no con un v-if. O sea que el ancla del tour se resuelve
+	aunque la tarjeta este afuera de la pantalla: el paso que la usa tiene que venir despues de un
+	paso que avance por el clic en Guardar, nunca por aparicion.
+-->
 <div
-id="loading-afip-ticket">
+id="loading-afip-ticket"
+data-tour="vender.tarjeta_afip">
 	<div
 	v-if="afip_results && afip_results.length">
 

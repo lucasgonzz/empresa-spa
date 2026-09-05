@@ -213,7 +213,14 @@
 		
 		<b-form-group
 		label="Fila a partir de la cual empezar a importar">
+			<!--
+				Los tres data-testid de esta pantalla (`import-fila-desde`, `input-excel-<modelo>` y
+				`btn-confirmar-importacion`) son los unicos que tiene el modal de importacion, que
+				hasta el 31/8/2026 no tenia ninguno. Son genericos: sirven para importar articulos,
+				clientes, proveedores o los renglones de una compra, que es el mismo componente.
+			-->
 			<b-form-input
+			data-testid="import-fila-desde"
 			type="number"
 			v-model="start_row"
 			placeholder="Fila a partir de la cual empezar a importar"></b-form-input>
@@ -587,8 +594,16 @@
 
 		<b-form-group
 		label="Archivo Excel para importar">
+			<!--
+				🔴 El testid dice `input-excel-` y no `input-file-` (que es lo que dice el `id` de
+				al lado) a proposito: `input-file-` es tambien el comienzo de los ids que
+				BootstrapVue genera para OTROS b-form-file de la aplicacion, y este harness ubica
+				elementos con selectores de prefijo. Un testid nuevo no puede compartir el comienzo
+				con algo que ya existe (ver e2e/README.md).
+			-->
 			<b-form-file
 			browse-text="Buscar"
+			:data-testid="'input-excel-'+model_name"
 			:id="'input-file-'+this.model_name"
 			v-model="file"
 			variant="primary"
@@ -599,8 +614,28 @@
 			></b-form-file>
 		</b-form-group>
 
+		<!--
+			Selector de hoja. Aparece SOLO cuando el libro tiene más de una: con una sola
+			hoja no se dibuja nada acá y el modal queda igual que siempre.
+		-->
+		<b-form-group
+		v-if="hay_varias_hojas"
+		class="import-hojas"
+		label="El archivo tiene varias hojas. ¿Cuál querés importar?">
+			<b-form-select
+			v-model="hoja_seleccionada"
+			:options="opciones_de_hoja"
+			size="sm"></b-form-select>
+		</b-form-group>
+
 		<hr>
+		<!--
+			`btn-confirmar-importacion` y no `btn-importar-...`: ya existe
+			`btn-importar-excel-<id>` (el boton de la FILA de una compra, que ABRE este modal), y
+			los dos nombres compartirian el comienzo. Este es el que CONFIRMA.
+		-->
 		<btn-loader
+		data-testid="btn-confirmar-importacion"
 		id="btn_importar"
 		:disabled="!file"
 		@clicked="upload"
@@ -708,6 +743,33 @@ export default {
 		selected_column_position_id() {
 			return this.$store.state.column_position.selected_column_position_id
 		},
+
+		/*
+		 * True cuando el libro tiene más de una hoja: es la única condición que dibuja
+		 * algo nuevo en pantalla.
+		 */
+		hay_varias_hojas() {
+			return this.hojas.length > 1
+		},
+
+		/*
+		 * Opciones del selector: nombre y cantidad de filas de cada hoja, que es lo que le
+		 * permite al usuario reconocer cuál es su lista de precios.
+		 */
+		opciones_de_hoja() {
+			let opciones = []
+
+			for (let i = 0; i < this.hojas.length; i++) {
+				let hoja = this.hojas[i]
+
+				opciones.push({
+					value: hoja.indice,
+					text:  hoja.nombre + ' (' + this.numero_es(hoja.filas) + ' filas)',
+				})
+			}
+
+			return opciones
+		},
 	},
 	data() {
 		return {
@@ -717,6 +779,18 @@ export default {
 			finish_row: '',
 			finish_row_original: '',
 			percentage: '',
+
+			/*
+			 * Hojas del libro elegido, con la forma { indice, nombre, filas }. El selector
+			 * aparece únicamente cuando hay más de una; con una sola, nada cambia.
+			 */
+			hojas: [],
+
+			/* Índice 0-based de la hoja a importar. Arranca en 0: la primera, como siempre. */
+			hoja_seleccionada: 0,
+
+			/* Libro ya parseado, congelado para que Vue no lo haga reactivo celda por celda. */
+			workbook_cache: null,
 			columns_: [], 
 			positions_seted: false,
 			create_and_edit: null,
@@ -759,6 +833,25 @@ export default {
 	    })
 	},
 	watch: {
+		/*
+		 * Al cambiar de hoja hay que recalcular finish_row sobre la hoja nueva. El backend
+		 * vuelca la hoja elegida al CSV 1:1 y después navega por número de línea: si acá
+		 * quedara el finish_row de la hoja anterior, se importarían filas que no existen o
+		 * se cortaría de más, sin ningún error a la vista.
+		 *
+		 * start_row no se toca a propósito: en este modal el usuario lo elige a mano, y
+		 * pisárselo sería quitarle una decisión que ya tomó.
+		 *
+		 * @param {Number} nuevo_indice Índice 0-based de la hoja elegida.
+		 */
+		hoja_seleccionada(nuevo_indice) {
+			if (!this.workbook_cache) {
+				return
+			}
+
+			this.finish_row = this.ultima_fila_con_contenido_de(Number(nuevo_indice))
+			this.finish_row_original = this.finish_row
+		},
 		actualizar_articulos_de_otro_proveedor() {
 			if (!this.actualizar_articulos_de_otro_proveedor) {
 				this.actualizar_proveedor = 0				
@@ -1111,44 +1204,68 @@ export default {
 		        })
 		        .catch((error) => {
 		            console.error('Error al procesar el archivo:', error);
-		            this.$store.commit('auth/setMessage', 'Ocurrió un error al procesar el archivo.');
+					/*
+					 * 🔴 Antes esto escribia en `auth/setMessage`, que es el texto que se muestra
+					 * DEBAJO del spinner del loading global — y el `.finally` de dos lineas mas
+					 * abajo apaga ese loading enseguida. O sea que el mensaje se escribia sobre un
+					 * overlay que ya se estaba yendo: NO SE VEIA NUNCA. El usuario subia un archivo
+					 * ilegible, el spinner giraba un instante y despues no pasaba nada, sin ninguna
+					 * explicacion.
+					 *
+					 * Va como toast, que sobrevive al apagado del overlay. Y se limpia el mensaje
+					 * del loading para no dejar texto viejo colgado para la proxima vez que algo lo
+					 * prenda.
+					 */
+					this.$store.commit('auth/setMessage', '');
+					this.$toast.error('No pudimos leer el archivo. Revisá que sea un Excel válido (.xlsx o .xls) y que no esté dañado ni protegido con contraseña.', {
+						duration: 10000
+					});
 		        })
 		        .finally(() => {
 		            this.$store.commit('auth/setLoading', false);
 		        });
 		},
 		async processFile(file) {
+		    /*
+		     * 🔴 B7: el estado del archivo ANTERIOR se limpia acá, antes de leer, y no
+		     * dentro de armar_hojas_del_libro() — que corre después de XLSX.read() y por
+		     * lo tanto no corre nunca si XLSX.read() tira (xlsx con contraseña, archivo
+		     * cortado, formato que SheetJS no parsea).
+		     *
+		     * Sin esto, quien subía el libro A de 3 hojas, elegía la tercera y después
+		     * subía un libro B ilegible, seguía viendo el selector con las hojas del libro
+		     * A y mandaba hoja=2 junto con el archivo B, sin ningún aviso. Acá no hay
+		     * siquiera un botón deshabilitado que lo frene, como sí lo hay en el modal de
+		     * importación con IA.
+		     *
+		     * workbook_cache va PRIMERO: el watcher de hoja_seleccionada corta apenas ve
+		     * el libro en null, así que limpiar el índice no dispara ningún recálculo
+		     * sobre un libro que ya no está.
+		     */
+		    this.workbook_cache = null;
+		    this.hojas = [];
+		    this.hoja_seleccionada = 0;
+
 		    return new Promise((resolve, reject) => {
 		        const reader = new FileReader();
 		        reader.onload = (e) => {
 		            try {
 		                const data = new Uint8Array(e.target.result);
 		                const workbook = XLSX.read(data, { type: 'array' });
-		                const sheetName = workbook.SheetNames[0];
-		                const worksheet = workbook.Sheets[sheetName];
-		                const range = XLSX.utils.decode_range(worksheet['!ref']);
-		                let rowCount = 0;
 
-		                console.log('Range:', range);
+		                /*
+		                 * Antes acá se leía SheetNames[0] y las demás hojas del libro no
+		                 * existían para el sistema: quien tuviera la lista de precios en la
+		                 * segunda hoja importaba la primera, sin ningún aviso. Ahora se arma
+		                 * la lista entera y el usuario puede elegir.
+		                 *
+		                 * Con UNA sola hoja no cambia nada: se autoselecciona la 0, no se
+		                 * dibuja ningún control nuevo y el FormData manda hoja=0, que es el
+		                 * default del backend.
+		                 */
+		                this.armar_hojas_del_libro(workbook);
 
-		                let ultima_fila_con_contenido = 1;
-		                for (let fila = range.s.r; fila <= range.e.r; ++fila) {
-		                    for (let C = range.s.c; C <= range.e.c; ++C) {
-		                        const cellAddress = { c: C, r: fila };
-		                        const cellRef = XLSX.utils.encode_cell(cellAddress);
-		                        const cell = worksheet[cellRef];
-		                        if (cell && cell.v !== null && cell.v !== '') {
-		                            ultima_fila_con_contenido = fila + 1;
-		                            break;
-		                        }
-		                    }
-		                    rowCount++;
-		                }
-
-		                console.log('Cantidad de filas:', rowCount);
-		                console.log('Última fila con contenido:', ultima_fila_con_contenido);
-
-		                this.finish_row = ultima_fila_con_contenido;
+		                this.finish_row = this.ultima_fila_con_contenido_de(this.hoja_seleccionada);
 		                console.log('Finish_row:', this.finish_row);
 
 		                resolve();
@@ -1156,8 +1273,102 @@ export default {
 		                reject(err);
 		            }
 		        };
+
+				/*
+				 * 🔴 Estos dos faltaban, y era el peor cuelgue de toda la aplicacion: si el
+				 * FileReader fallaba (archivo borrado del disco mientras se leia, permiso denegado,
+				 * unidad de red que se cae, archivo mas grande que la memoria del navegador) no se
+				 * llamaba ni `onload` ni nada, la promesa NUNCA se asentaba, el `.finally` de
+				 * onFileChange no corria y el overlay del loading global quedaba tapando la
+				 * aplicacion entera para siempre. Unico escape: F5.
+				 *
+				 * `onabort` va junto con `onerror` por lo mismo: un `reader.abort()` tampoco
+				 * dispara `onload`.
+				 *
+				 * Es el mismo patron que ya usa la lectura local del Excel del modal de
+				 * importacion con IA (listado/modals/ai-excel-import/Index.vue): onerror y
+				 * try/catch en onload, y los dos rechazan.
+				 */
+				reader.onerror = () => {
+					reject(new Error('FileReader error'));
+				};
+
+				reader.onabort = () => {
+					reject(new Error('FileReader abort'));
+				};
+
 		        reader.readAsArrayBuffer(file);
 		    });
+		},
+
+		/**
+		 * Arma this.hojas ({ indice, nombre, filas }) con las hojas del libro y guarda el
+		 * libro parseado para poder recalcular finish_row cuando el usuario cambie de hoja.
+		 *
+		 * El libro va congelado con Object.freeze porque Vue 2 no observa objetos no
+		 * extensibles: hacerlo reactivo sería recorrer cada celda del Excel para nada.
+		 *
+		 * @param {Object} workbook Libro devuelto por XLSX.read.
+		 * @return {void}
+		 */
+		armar_hojas_del_libro(workbook) {
+			let hojas = []
+
+			for (let i = 0; i < workbook.SheetNames.length; i++) {
+				let nombre = workbook.SheetNames[i]
+				let worksheet = workbook.Sheets[nombre]
+				let filas = 0
+
+				if (worksheet && worksheet['!ref']) {
+					filas = XLSX.utils.decode_range(worksheet['!ref']).e.r + 1
+				}
+
+				hojas.push({
+					indice: i,
+					nombre: nombre,
+					filas:  filas,
+				})
+			}
+
+			this.workbook_cache    = Object.freeze(workbook)
+			this.hojas             = hojas
+			this.hoja_seleccionada = 0
+		},
+
+		/**
+		 * Última fila con contenido de una hoja, con el mismo criterio de siempre: se
+		 * recorre el rango !ref celda por celda.
+		 *
+		 * @param {Number} indice Índice 0-based de la hoja dentro del libro.
+		 * @return {Number} Número de fila 1-based.
+		 */
+		ultima_fila_con_contenido_de(indice) {
+			if (!this.workbook_cache || !this.hojas[indice]) {
+				return 1
+			}
+
+			const worksheet = this.workbook_cache.Sheets[this.hojas[indice].nombre]
+
+			if (!worksheet || !worksheet['!ref']) {
+				return 1
+			}
+
+			const range = XLSX.utils.decode_range(worksheet['!ref'])
+			let ultima_fila_con_contenido = 1
+
+			for (let fila = range.s.r; fila <= range.e.r; ++fila) {
+				for (let C = range.s.c; C <= range.e.c; ++C) {
+					const cellRef = XLSX.utils.encode_cell({ c: C, r: fila })
+					const cell = worksheet[cellRef]
+
+					if (cell && cell.v !== null && cell.v !== '') {
+						ultima_fila_con_contenido = fila + 1
+						break
+					}
+				}
+			}
+
+			return ultima_fila_con_contenido
 		},
 		canIgnore(column) {
 			return typeof column.can_not_ignore == 'undefined'
@@ -1389,6 +1600,20 @@ export default {
 				form_data.append('models', this.file)
 				form_data.append('start_row', this.start_row)
 				form_data.append('finish_row', this.finish_row)
+				/*
+				 * Hoja a importar. Con un libro de una sola hoja vale 0, que es el default
+				 * del backend: el request queda equivalente al de siempre.
+				 *
+				 * 🔴 B7: sólo viaja si el libro que está en pantalla se llegó a parsear. Si
+				 * el parseo falló, this.hojas quedó vacío (ver processFile) y no se manda
+				 * ningún índice: antes que mandar la hoja de un archivo que ya no está, que
+				 * el backend use su default. La clave ausente y hoja=0 valen lo mismo para
+				 * el backend, pero mandar un índice que no medimos es exactamente el
+				 * degradado silencioso que la misión vino a sacar.
+				 */
+				if (this.hojas.length > 0) {
+					form_data.append('hoja', Number(this.hoja_seleccionada) || 0)
+				}
 				form_data.append('create_and_edit', this.create_and_edit)
 				form_data.append('registrar_art_cre', this.registrar_art_cre)
 				form_data.append('registrar_art_act', this.registrar_art_act)
@@ -1439,6 +1664,10 @@ export default {
 				this.finish_row = ''
 				this.finish_row_original = ''
 				this.percentage = ''
+				/* El libro se fue con la importación: el selector vuelve a esconderse. */
+				this.hojas = []
+				this.hoja_seleccionada = 0
+				this.workbook_cache = null
 				if (this.props_to_send) {
 					this.props_to_send.provider_id = 0
 				}
@@ -1658,6 +1887,14 @@ export default {
 }
 </script>
 <style lang="sass">
+/* Selector de hoja: solo aparece cuando el libro tiene más de una */
+.import-hojas
+	margin-bottom: 10px
+
+	label
+		font-size: 13px
+		font-weight: 600
+
 .import-column-card
 	border: 1px solid rgba(0, 0, 0, .08)
 	padding: 10px 12px
