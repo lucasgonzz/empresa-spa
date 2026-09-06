@@ -112,7 +112,10 @@ export default {
 			this.variable_values = (template.variables || []).map(() => '')
 		},
 		send() {
-			if (!this.selected_template || !this.chat) {
+			// 🔴 Misma guarda que Composer.vue::send(): sin `this.loading` acá, un doble click
+			// que le gane a la actualizacion del `disabled` del boton (Vue la aplica recien en
+			// el siguiente tick) dispara un segundo POST identico -> plantilla duplicada.
+			if (!this.selected_template || !this.chat || this.loading) {
 				return
 			}
 			this.loading = true
