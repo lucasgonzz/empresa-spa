@@ -91,6 +91,21 @@ $contenido = $contenido -replace 'SANCTUM_STATEFUL_DOMAINS=[^\r\n]+',    "SANCTU
 $contenido = $contenido -replace 'SANCTUM_STATEFUL_CORS=[^\r\n]+',       "SANCTUM_STATEFUL_CORS=$url_spa"
 Set-Content $env_testing $contenido -Encoding UTF8 -NoNewline
 
+# --- 2bis. Certificados de homologacion de AFIP ------------------------------------------------
+# storage/ esta gitignoreado, asi que el worktree del slot nace SIN los certificados de testing y
+# circuito-devolucion-afip.spec.js muere en la emision con "Falta el certificado de AFIP en ...".
+# El sintoma engaña: la asercion del spec culpa al WS de homologacion, y como ese spec es el unico
+# que legitimamente puede fallar por algo externo, el rojo se archiva como ambiental y nadie mira
+# el log de la API (paso el 3/9/2026 en s2: dos corridas con el mismo rojo hasta leer laravel.log).
+# Se copian de la carpeta fija, donde viven los del CUIT tester (20423548984, homologacion pura).
+$afip_origen  = 'C:\wamp64\www\empresa\empresa-api\storage\app\afip\testing'
+$afip_destino = Join-Path $api_dir 'storage\app\afip\testing'
+if ((Test-Path $afip_origen) -and -not (Test-Path (Join-Path $afip_destino 'afip_cert.pem'))) {
+    Write-Host "[2bis] certificados de homologacion de AFIP -> slot"
+    New-Item -ItemType Directory -Force $afip_destino | Out-Null
+    Copy-Item (Join-Path $afip_origen '*') $afip_destino
+}
+
 # --- 3. Base del slot: migrate:fresh + fixture determinista ------------------------------------
 if (-not $SinBase) {
     Write-Host "[3/5] migrate:fresh + TestingFerreteriaSeeder sobre $base"
