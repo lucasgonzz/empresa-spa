@@ -9,16 +9,26 @@
 	    id="delete-sale"></confirm>
 
 		<current-acounts></current-acounts>
-		
+
+		<!--
+			listado_paginado_por_defecto en false: esta vista ya trae sus propios modelos
+			scopeados (RangoFechas.vue pega directo a sale/por-entregar y este Index.vue arma
+			el modulo 'por_entregar' de sale/getModels). Sin la prop, runListadoPorDefecto
+			del grupo 221 corre igual apenas monta -antes de que la respuesta scopeada
+			llegue- y deja el store con el listado general de ventas terminadas en vez del
+			de pendientes. Mismo defecto que ya tenian los modales de caja (ver
+			caja/modals/movimientos/Index.vue), sin arreglar aca desde el 25/7/2026.
+		-->
 		<view-component
 		:show_view_header="false"
 		:models_to_show="sales_to_show"
 		:properties_to_show="properties_to_show"
 		show_models_if_empty
+		:listado_paginado_por_defecto="false"
 		:show_previus_days="show_previus_days"
 		:show_btn_create="false"
 		:show_modal="false"
-		model_name="sale"> 
+		model_name="sale">
 			<template #header>
 				<rango-fechas></rango-fechas>
 			</template>
