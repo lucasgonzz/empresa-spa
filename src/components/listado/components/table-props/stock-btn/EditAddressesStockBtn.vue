@@ -8,6 +8,7 @@
 			<b-button
 			size="sm"
 			class="m-l-10"
+			data-testid="btn-cancelar-depositos"
 			@click.stop="cancel"
 			variant="outline-danger">
 				<i class="icon-cancel"></i>
