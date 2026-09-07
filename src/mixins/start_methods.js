@@ -254,7 +254,9 @@ export default {
 
 				this.$api.get('articles-por-defecto')
 				.then(res => {
-					if (this.owner.download_articles) {
+					if (this.download_articles) {
+						// Computed global (mixins/generals.js), no this.owner.download_articles directo:
+						// asi coincide con la fuente que ya usan nav.js/setRoute y vender/default_articles.js.
 						// No usar addModels: pisaria el guard de nav.js/setRoute (!models.length), que
 						// decide si hace falta bajar el catalogo completo offline.
 						this.$store.commit('article/setDefaultModels', res.data.models)
