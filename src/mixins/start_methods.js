@@ -249,8 +249,8 @@ export default {
 		// 	}
 		// },
 		get_articles_por_defecto() {
-			if (this.hasExtencion('articles_default_in_vender') 
-				&& !this.owner.download_articles) {
+			// download_articles no dispara la descarga del catalogo completo al iniciar: eso solo pasa al entrar a LISTADO de articulos.
+			if (this.hasExtencion('articles_default_in_vender')) {
 
 				this.$api.get('articles-por-defecto')
 				.then(res => {
