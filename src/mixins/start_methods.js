@@ -254,9 +254,13 @@ export default {
 
 				this.$api.get('articles-por-defecto')
 				.then(res => {
-					console.log('articles-por-defecto:')
-					console.log(res.data.models)
-					this.$store.commit('article/addModels', res.data.models)
+					if (this.owner.download_articles) {
+						// No usar addModels: pisaria el guard de nav.js/setRoute (!models.length), que
+						// decide si hace falta bajar el catalogo completo offline.
+						this.$store.commit('article/setDefaultModels', res.data.models)
+					} else {
+						this.$store.commit('article/addModels', res.data.models)
+					}
 				})
 				.catch(err => {
 					this.$toast.error('error al cargar articulos por defecto')
