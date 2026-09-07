@@ -39,7 +39,7 @@ import marcar_como_terminada from '@/mixins/sale/marcar_como_terminada'
 export default {
 	mixins: [marcar_como_terminada],
 	created() {
-		this.$store.commit('sale/set_modeulo', 'por_entregar')
+		this.$store.commit('sale/set_modulo', 'por_entregar')
 		this.$store.commit('sale/setIsSelecteable', false)
 		this.$store.commit('sale/setSelected', [])
 		this.$store.commit('sale/setFromDates', false)
