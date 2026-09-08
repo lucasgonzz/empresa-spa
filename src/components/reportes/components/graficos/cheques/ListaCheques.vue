@@ -66,7 +66,11 @@ export default {
 	width: 250px
 	border-radius: 8px
 	border: 2px solid rgba(0, 0, 0, .3)
-	background: #FFF
+	// La tarjetita del cheque flota sobre el fondo de la pagina: con un blanco fijo, en oscuro
+	// queda encandilante. Los dos rgba(0, 0, 0, ...) de arriba y del .numero se quedan como estan
+	// a proposito: son veladuras relativas a la superficie de abajo, asi que ya funcionan en los
+	// dos modos sin tocarlas.
+	background: var(--bg-card, #FFF)
 
 	.numero 
 		font-weight: bold 

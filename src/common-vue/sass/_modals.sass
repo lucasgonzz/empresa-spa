@@ -155,6 +155,12 @@
 	@media screen and (min-width: 576px)
 		max-width: 90% !important
 
-	.modal-content
-		@if ($theme == 'dark')
-			border: 1px solid #1d1d1d
+// 7/9/2026 -- aca abajo habia un `.modal-content` con un `@if ($theme == 'dark')` que le ponia
+// `border: 1px solid #1d1d1d` a los modales grandes. Se BORRO entero.
+//
+// Nunca compilo: $theme es una variable de COMPILACION fijada en 'light' en _custom.scss, asi que
+// ese borde no existio nunca -- ni en claro ni en oscuro.
+//
+// No se convierte a token porque _dark_theme.sass ya declara `.modal-content { border-color:
+// var(--color-border) }` para TODOS los modales del sistema, no solo para los .modal-lg. Repetirlo
+// aca seria tener el mismo arreglo en dos lugares y que uno de los dos quede viejo.

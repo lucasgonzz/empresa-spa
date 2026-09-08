@@ -657,10 +657,10 @@ export default {
 	border-radius: 0.25rem 0 0 0.25rem
 	i
 		color: var(--color-text-secondary, rgba(0, 0, 0, .6))
-	@if ($theme == 'dark')
-		background: #333 !important
-		i
-			color: #FFF
+	// Aca abajo colgaba un `@if ($theme == 'dark')` que repetia estos dos colores a mano. Se
+	// borro el 7/9/2026: `$theme` es una variable de COMPILACION de Sass fijada en 'light' en
+	// _custom.scss, asi que esa rama no se compilaba nunca y solo daba la falsa impresion de que
+	// el recuadro viejo de la lupa tenia tema oscuro. Los dos var() de arriba ya lo resuelven.
 // Estado deshabilitado del buscador.
 .bg-gray
 	background: var(--bg-hover, #e9ecef) !important
@@ -740,6 +740,21 @@ export default {
 
 	// Deshabilitado: gris el campo entero, como cualquier .form-control:disabled. Antes el gris
 	// se le ponia solo al icono y quedaba un cuadradito gris adentro de un campo blanco.
+	//
+	// 🔴 7/9/2026: el valor claro va escrito TAL CUAL, y NO como var(--bg-section, #e9ecef). El
+	// fallback de un var() entra unicamente cuando la custom property NO esta definida, y
+	// --bg-section SI esta definida en :root (vale #f8f9fa): con el var() el modo claro tomaba el
+	// token y este gris se iba a un casi blanco. Y ese gris ES la senal de "este campo no se
+	// toca": contra la tarjeta blanca de atras, #f8f9fa no se despega y el buscador deshabilitado
+	// deja de leerse como deshabilitado. El valor que habia que salvar era #e9ecef.
+	//
+	// La contraparte oscura vive en el bloque html.dark-mode del final de esta hoja, y ahi si va
+	// --bg-section, por dos motivos: es el mismo token que _dark_theme.sass ya le da a
+	// `.form-control:disabled`, asi que un buscador deshabilitado y un input deshabilitado se ven
+	// igual; y queda un escalon POR DEBAJO de --bg-card (el fondo del modal y el del campo
+	// habilitado), que es la misma relacion que tiene el #e9ecef contra la tarjeta blanca en
+	// claro. Con --bg-hover pasaria a ser mas claro que el modal y el campo apagado se leeria
+	// como resaltado.
 	&.search-field--disabled
 		background: #e9ecef
 		cursor: not-allowed
@@ -747,4 +762,12 @@ export default {
 			background: transparent
 		.search-field__icon
 			cursor: default
+
+// Contraparte de modo oscuro que NO puede escribirse como var(--token, literal) adentro del
+// bloque anidado de arriba: ese token tambien existe en :root, asi que el fallback nunca entraria
+// y el que se moveria seria el MODO CLARO. Se agrupa aca al final para no romper el anidado de
+// .search-field.
+html.dark-mode
+	.search-field.search-field--disabled
+		background: var(--bg-section)
 </style>

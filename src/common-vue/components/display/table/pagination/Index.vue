@@ -173,7 +173,7 @@ export default {
 			this.syncPerPageInputDesdeStore()
 		},
 		current_page() {
-			this.$emit('filtrar')
+			this.$emit('filtrar', { resetear_pagina: false })
 			return
 		},
 		currentPage() {
@@ -220,12 +220,9 @@ export default {
 	padding: 0 0.85rem
 	border-radius: 999px
 	border: 1px solid transparent
-	// Estas tres líneas se convirtieron de `@if ($theme)` a tokens porque esta misión las tocaba
-	// igual por el cambio de altura. El resto del archivo sigue con `@if ($theme == 'dark')`, que
-	// es una variable de COMPILACIÓN de Sass y no la clase `html.dark-mode` en tiempo de ejecución
-	// que usa el resto del sistema: o sea que este componente no participa del tema oscuro
-	// dinámico. Arreglarlo entero estaba fuera del alcance de la misión y quedó como hallazgo, con
-	// la lista exacta de líneas.
+	// Estas tres líneas fueron las primeras que se convirtieron de `@if ($theme)` a tokens (misión
+	// 27), porque esa misión las tocaba igual por el cambio de altura. El 7/9/2026 se terminó de
+	// convertir el archivo entero: ya no queda ningún `@if ($theme)` acá -- ver la nota del final.
 	background-color: var(--bg-card)
 	border-color: var(--color-border)
 	box-shadow: 0 4px 16px var(--shadow-color)
@@ -236,10 +233,9 @@ export default {
 	font-weight: 500
 	line-height: 1.2
 	white-space: nowrap
-	@if ($theme == 'dark')
-		color: rgba(255, 255, 255, 0.72)
-	@else
-		color: rgba(33, 37, 41, 0.72)
+	// Token con el literal claro de hoy de fallback (7/9/2026): la rama oscura del `@if` que
+	// habia aca no compilaba nunca y el contador salia casi negro sobre la barra oscura.
+	color: var(--color-text-secondary, rgba(33, 37, 41, 0.72))
 
 // Separadores verticales entre bloques (solo escritorio).
 .pagination-bar-separator
@@ -247,10 +243,7 @@ export default {
 	width: 1px
 	height: 1.35rem
 	flex-shrink: 0
-	@if ($theme == 'dark')
-		background-color: rgba(255, 255, 255, 0.12)
-	@else
-		background-color: rgba(0, 0, 0, 0.08)
+	background-color: var(--color-border, rgba(0, 0, 0, 0.08))
 
 // Paginación bootstrap-vue: pills compactos y sin bordes duros.
 //
@@ -364,10 +357,7 @@ export default {
 		font-weight: 500
 		line-height: 1.2
 		white-space: nowrap
-		@if ($theme == 'dark')
-			color: rgba(255, 255, 255, 0.72)
-		@else
-			color: rgba(33, 37, 41, 0.62)
+		color: var(--color-text-secondary, rgba(33, 37, 41, 0.62))
 
 	// Input "por página" con especificidad aumentada para que el border-radius de pill (999px)
 	// gane sobre .form-control-sm de Bootstrap. Sin !important: especificidad de dos clases
@@ -434,29 +424,22 @@ export default {
 		justify-content: center
 		width: 100%
 		padding-top: 0.15rem
-		border-top: 1px solid rgba(0, 0, 0, 0.06)
+		border-top: 1px solid var(--color-border, rgba(0, 0, 0, 0.06))
 
-		@if ($theme == 'dark')
-			border-top-color: rgba(255, 255, 255, 0.1)
-
-// --- Lo que TODAVÍA decide colores con `@if ($theme == 'dark')` -------------------------------
+// --- Este archivo ya no tiene ramas muertas de tema ------------------------------------------
 // `$theme` es una variable de COMPILACIÓN de Sass, fijada en 'light' en `_custom.scss`, y no la
 // clase `html.dark-mode` de tiempo de ejecución que usa el resto del sistema: la rama oscura de
-// cada uno de estos `@if` no se compila nunca. Son ramas muertas que dan la falsa impresión de
-// que el componente tiene tema oscuro (hallazgo
+// un `@if ($theme == 'dark')` no se compila NUNCA. Son ramas muertas que dan la falsa impresión
+// de que el componente tiene tema oscuro (hallazgo
 // `20260811-dos-sistemas-de-tema-oscuro-y-uno-es-codigo-muerto`).
 //
-// La misión 27 convirtió las tres del chasis de la barra; la 35 convirtió las dos reglas que
-// tocaba igual --`.page-link` y `.input-per-page`--. Queda sin convertir, sobre este archivo:
+// La misión 27 convirtió las tres reglas del chasis de la barra; la 35, las dos que tocaba igual
+// --`.page-link` y `.input-per-page`--; y el 7/9/2026 se convirtieron las cuatro que faltaban,
+// que eran justo las que Lucas reportaba como "el texto de la cantidad de resultados aparece en
+// negro y todo el otro texto también": `.pagination-bar-meta`, `.pagination-bar-separator`,
+// `.lbl-per-page` y el `border-top` de `.pagination-bar-per-page` dentro del `@media`.
 //
-//   | regla                                        | propiedades       |
-//   |----------------------------------------------|-------------------|
-//   | .pagination-bar-meta                         | color             |
-//   | .pagination-bar-separator                    | background-color  |
-//   | .lbl-per-page                                | color             |
-//   | .pagination-bar-per-page (dentro del @media) | border-top-color  |
-//
-// Las cuatro son texto secundario y líneas divisorias, o sea lo de menor consecuencia del
-// componente. Convertirlas entra en el hallazgo, no en esta misión: `--color-text-secondary` y
-// `--color-border` son los tokens que les corresponden.
+// O sea que acá ya no queda nada por convertir. Si alguna vez vuelve a aparecer un
+// `@if ($theme)` en este archivo, está mal escrito de entrada: va token con el literal claro de
+// hoy como fallback del `var()`, y se convierte en el mismo momento.
 </style>

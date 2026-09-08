@@ -4,26 +4,45 @@ th
 .table-active
 	border: 3px solid $blue 
 
-tbody
-	border: 2px solid #DDDDDD
-	border-top: none
-	border-radius: 0 0 10px 10px
+// 7/9/2026 - Se SACO el borde del <tbody> (era `border: 2px solid #DDDDDD` + `border-top: none` +
+// `border-radius: 0 0 10px 10px`) y no se repone.
+//
+// Por que molestaba: es un selector de ELEMENTO, sin ninguna clase, asi que le pegaba a TODOS los
+// <tbody> del sistema. Adentro del contenedor que ya redondea y recorta la tabla
+// (`.table-component-scroll .table`, en display/TableComponent.vue: radio 10px + overflow hidden)
+// dibujaba un SEGUNDO contorno por dentro, y como el borde de abajo del tbody cae unos pixeles
+// antes del borde del contenedor se leia como una linea horizontal suelta justo antes del final de
+// la tabla. Es el defecto que reporto Lucas en las tablas has_many del formulario de articulo
+// ("Ofertas para vender", "Descuentos"). En modo oscuro, ademas, era una linea CLARA adentro de
+// una tabla oscura.
+//
+// Que se verifico ANTES de sacarlo: ningun <tbody> del sistema lo usaba como unico limite visual.
+// Las tablas de b-table viven adentro de `.table-component-scroll`, que ya pone radio y recorte, y
+// las cinco tablas con <tbody> escrito a mano traen su propio marco en su wrapper
+// (display/table/Index.vue -> radio 12px + sombra; props-to-show/ColumnsPreferencesConfigModal.vue
+// -> borde + radio 4px; listado/modals/ai-excel-import -> borde + radio 6px;
+// listado/modals/article-variants/variant-grid -> borde + radio 14px; bar-code-scanner/asd.vue no
+// lo importa nadie). Y dos hojas ya lo venian APAGANDO a mano por este mismo motivo, cada una con
+// su propio comentario: src/sass/_controles_modulo.sass (`.tabla-modulo tbody`) y
+// components/common/current-acounts/Index.vue. Esas dos anulaciones quedan como no-op inofensivo.
 
 table tbody tr
 	white-space: nowrap
 	@if ($theme == 'light')
 		background-color: #FFF !important
-	@if ($theme == 'dark') 
-		background-color: #333
-		font-weight: bold
-		color: rgba(255, 255, 255, .9) 
-		&:hover 
-			background-color: rgba(51,51,51,.8) !important
-			color: rgba(255, 255, 255, 1) !important
+	// Aca vivia una rama `@if ($theme == 'dark')` que era codigo muerto: $theme esta fijo en 'light'
+	// en _custom.scss y esa rama nunca compilo. NO se convierte a token en este archivo porque su
+	// contraparte viva ya existe, con la especificidad y el !important justos:
+	// `html.dark-mode table tbody tr` (fondo --bg-card) y `html.dark-mode .table-hover tbody
+	// tr:hover` (fondo --bg-hover), las dos en src/sass/_dark_theme.sass y explicadas ahi. Escribir
+	// el token aca, fuera del @if, pisaria el `#FFF !important` de la rama light y moveria el modo
+	// claro, que no se toca.
 
-table thead th
-	@if ($theme == 'dark') 
-		background-color: #333
+// `table thead th` tambien tenia una unica rama `@if ($theme == 'dark')` con `background-color:
+// #333`: codigo muerto, y en modo claro el selector no declaraba nada. Se borro entero en vez de
+// tokenizarlo, porque `--bg-table-header` vale #2C2C2C tambien en :root y declararlo sin @if
+// pintaria de oscuro headers que hoy en claro son grises. La contraparte viva del modo oscuro es
+// `html.dark-mode table thead th` en _dark_theme.sass.
 
 
 .modal-table-full-height

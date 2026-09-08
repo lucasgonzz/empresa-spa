@@ -7,18 +7,26 @@
 	    id="delete-sale"></confirm>
 
 		<current-acounts></current-acounts>
-		
+
+		<!--
+			listado_paginado_por_defecto en false: esta vista arma su propio listado scopeado
+			por sale_status_id (modulo 'por_estado' en created()). Mismo defecto que
+			por-entregar/ventas/Index.vue: sin la prop, runListadoPorDefecto del grupo 221
+			corre igual apenas monta y pisa el listado scopeado con el general de ventas
+			terminadas. Sin arreglar aca desde el 25/7/2026.
+		-->
 		<view-component
 		:show_view_header="false"
 		:models_to_show="sales_to_show"
 		:properties_to_show="properties_to_show"
 		show_models_if_empty
+		:listado_paginado_por_defecto="false"
 		:show_previus_days="show_previus_days"
 		change_from_dates_option
 		:show_btn_create="false"
 		:show_modal="false"
-		model_name="sale"> 
-			
+		model_name="sale">
+
 		</view-component>
 	</div>
 </template>

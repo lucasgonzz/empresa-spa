@@ -102,6 +102,18 @@ export default {
 			show_when_model_name: 'sale',
 		},
 		{
+			/**
+			 * Controla si las observaciones del cliente (campo "Observaciones" del cliente)
+			 * se imprimen en el PDF de venta. Default 1 = comportamiento legacy (se imprimían
+			 * siempre que el cliente tuviera observaciones cargadas).
+			 */
+			text: 'Mostrar observaciones del cliente',
+			key: 'show_client_description',
+			type: 'checkbox',
+			value: 1,
+			show_when_model_name: 'sale',
+		},
+		{
 			text: 'Opciones de columnas',
 			key: 'pdf_column_options',
 			store: 'pdf_column_option',

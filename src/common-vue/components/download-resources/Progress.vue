@@ -191,7 +191,9 @@ export default {
 .recursos-tarjeta__texto
 	font-size: 13px
 	font-weight: 500
-	color: #1d1d1f
+	// 7/9/2026: el color sale del token, con el literal de hoy de fallback. --color-text-primary
+	// vale #212529 en claro, indistinguible del #1d1d1f de antes, asi que el modo claro no se mueve.
+	color: var(--color-text-primary, #1d1d1f)
 	white-space: nowrap
 	overflow: hidden
 	max-width: 220px
@@ -214,12 +216,26 @@ export default {
 .recursos-tarjeta-enter-active, .recursos-tarjeta-leave-active
 	transition: opacity .34s ease, transform .38s cubic-bezier(.22, .61, .36, 1)
 
-@if ($theme == 'dark')
+// 7/9/2026: esto era un `@if ($theme == 'dark')` y nunca compilo -- $theme es una variable de
+// COMPILACION fijada en 'light' en _custom.scss. Por eso la tarjeta "Actualizando articulos
+// offline" salia BLANCA sobre el fondo oscuro (verificado en pantalla).
+//
+// Va como contraparte de tiempo de ejecucion y no como `var(--token, <literal>)` porque la pildora
+// es una superficie TRANSLUCIDA con backdrop-filter: su color claro es un blanco al 82% que se deja
+// atravesar por lo que hay atras, y ningun token de superficie --que son colores planos-- puede
+// expresar eso sin apagar el efecto. El literal oscuro es el --bg-card del tema (#2e333a) llevado
+// al mismo 82%: no se puede escribir `rgba(var(--bg-card), .82)` porque el token guarda un color
+// entero, no sus tres componentes.
+//
+// El color del texto ya no esta aca: subio al token, arriba en .recursos-tarjeta__texto.
+html.dark-mode
 	.recursos-tarjeta
-		background: rgba(38, 38, 40, .82)
+		background: rgba(46, 51, 58, .82)
 		border-color: rgba(255, 255, 255, .1)
 		box-shadow: 0 8px 30px rgba(0, 0, 0, .45)
 
-	.recursos-tarjeta__texto
-		color: rgba(255, 255, 255, .95)
+		// Contraparte del hover: en claro la sombra se cierra un poco mas oscura, y sin esta linea
+		// el hover en oscuro se quedaba con la sombra clara, que sobre negro no se ve.
+		&:hover
+			box-shadow: 0 10px 34px rgba(0, 0, 0, .6)
 </style>

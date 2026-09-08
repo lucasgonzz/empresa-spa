@@ -1068,14 +1068,30 @@ export default {
 </script>
 <style lang="sass">
 @import '@/sass/_custom.scss'
-@if ($theme == 'dark') 
-	.modal-content
-		background: #1d1d1d !important
-	.modal-header, .modal-header > .close
-		color: rgba(255, 255, 255, .9) !important
-@else 
-	.modal-content
-		color: rgba(0, 0, 0, .6) !important
+// 7/9/2026 -- aca habia un @if/@else sobre $theme, que es una variable de COMPILACION fijada en
+// 'light' en _custom.scss: la rama oscura NUNCA se emitio.
+//
+// La rama muerta (`.modal-content { background: #1d1d1d !important }` y `.modal-header,
+// .modal-header > .close { color: ... !important }`) se BORRO sin reemplazo: _dark_theme.sass ya
+// resuelve `.modal-content`, `.modal-header` y `.close` para todos los modales del sistema.
+//
+// 🔴 Lo que si estaba VIVO es la rama @else, y era el defecto mas caro del archivo: ese
+// `color: rgba(0, 0, 0, .6) !important` se aplica a TODOS los modales del sistema y, por ser
+// !important, le ganaba al `html.dark-mode .modal-content { color: var(--color-text-primary) }`
+// del tema -- un !important le gana a cualquier declaracion normal por mas especificidad que
+// tenga. O sea: en modo oscuro el texto de cada modal seguia saliendo negro sobre fondo oscuro.
+//
+// Se resuelve con contraparte de tiempo de ejecucion en vez de con `var(--token, <literal>)`:
+// --color-text-primary vale #212529 en claro y este literal da #666 sobre blanco, asi que el
+// fallback moveria de forma VISIBLE el gris de todos los modales en modo claro, que es lo unico
+// que no se puede tocar. Con el `html.dark-mode` de abajo --(0,2,1) contra (0,1,0), los dos con
+// !important-- el modo claro queda exactamente igual que hoy y el oscuro se arregla.
+.modal-content
+	color: rgba(0, 0, 0, .6) !important
+
+html.dark-mode .modal-content
+	color: var(--color-text-primary) !important
+
 .modal-body
 	.b-form-datepicker
 		// margin-bottom: 250px

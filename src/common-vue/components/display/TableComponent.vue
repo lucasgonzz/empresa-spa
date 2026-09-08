@@ -922,6 +922,22 @@ export default {
 		top: 0
 		z-index: 5
 
+	// 7/9/2026: el contorno de la tabla vive ACA.
+	//
+	// Hasta hoy lo dibujaba, sin querer, el `tbody { border: 2px solid #DDDDDD }` de
+	// common-vue/sass/_tables.sass -- un borde de 2px por DENTRO del radio, que es la linea suelta
+	// que Lucas reporto ("hay una linea que esta debajo, antes del final de la tabla"). Ese borde
+	// se saco, y su pedido fue explicito: "quiero que el unico borde de la tabla sea el que esta
+	// redondeado y que tiene sombra".
+	//
+	// El problema es que este contenedor tenia el radio pero NINGUNA sombra ni borde, asi que sin
+	// esto las tablas que pasan por aca --y no por display/table/Index.vue, que ya trae su
+	// .cont-table-wrapper con radio y sombra-- se quedaban sin contorno en los DOS modos. Se le da
+	// el mismo tratamiento que a ese wrapper, con el mismo token: en claro es el gris de siempre y
+	// en oscuro tiene que ser negro, porque un gris claro sobre fondo oscuro no se ve.
+	box-shadow: var(--shadow-color, rgba(99, 99, 99, 0.2)) 0px 2px 8px 0px
+	border-radius: 10px 10px 10px 0
+
 	.table.table-component-b-table,
 	table.table
 		// Redondeo global de 3 esquinas para todas las tablas basadas en b-table.
@@ -978,16 +994,14 @@ export default {
 		white-space: nowrap
 
 	tr
-		@if ($theme == 'dark')
-			color: rgb(189, 189, 189)
-			&:hover
-				border: 2px solid $blue !important
-				& > td
-					color: #FFF !important
-					background-color: rgba(0,0,0,.7) !important
-
-		@else
-			color: #000
+		// Antes esto era un `@if ($theme == 'dark') ... @else color: #000`. La rama dark NUNCA
+		// compilo --$theme esta fijo en 'light' en _custom.scss--, asi que lo unico que llegaba al
+		// navegador era el negro duro del @else, y le pegaba al texto de TODAS las tablas del
+		// sistema: en modo oscuro eso es negro sobre una fila oscura. Ahora sale del token, que en
+		// oscuro es #e8eaed. El fallback es el literal viejo, para el caso de que la custom property
+		// no llegue; en modo claro el token vale #212529 (el gris casi negro de bootstrap) en vez de
+		// #000, que es la unica diferencia visible y es del orden de lo imperceptible.
+		color: var(--color-text-primary, #000)
 
 	.b-table-row-selected
 		border: 2px solid $blue !important
@@ -1006,15 +1020,13 @@ export default {
 			font-size: 17px
 			position: sticky
 			top: 0px
-			@if ($theme == 'dark')
-				color: rgb(189, 189, 189)
-				background: #2C2C2C
-				border-right: 1px solid rgba(255,255,255,.2)
-				border-bottom: 1px solid rgba(255,255,255,.2)
-				&:last-child(2)
-					border-right: 0 !important
-			@else
-				background: rgb(189, 189, 189)
+			// Aca habia un `@if ($theme == 'dark')` (gris claro sobre #2C2C2C, con bordes blancos al
+			// 20%) que era codigo muerto. Se saca sin reemplazo: la contraparte viva del modo oscuro
+			// para el header ya la declara `html.dark-mode table thead th` en _dark_theme.sass.
+			// El gris de abajo, que era el @else, se deja TAL CUAL y no se cambia por
+			// --bg-table-header: ese token vale #2C2C2C tambien en :root, asi que tokenizarlo pintaria
+			// de casi negro en modo claro un header que hoy es gris.
+			background: rgb(189, 189, 189)
 
 
 		td
@@ -1026,11 +1038,12 @@ export default {
 
 
 
-			@if ($theme == 'dark')
-				background: #3E3E3E
-				border-bottom: 1px solid rgba(255,255,255,.2)
-			@else
-				background: rgb(189, 189, 189)
+			// Mismo caso que el th de arriba: la rama dark era codigo muerto y su contraparte viva es
+			// `html.dark-mode table tbody td` en _dark_theme.sass. El gris del @else queda igual para
+			// no mover el modo claro; en la practica no se ve, porque `.b-table-row-selected td` (unas
+			// lineas mas arriba) pinta la misma celda con `background-color: rgba(0,0,0,.7)
+			// !important`, que le gana a cualquier declaracion normal.
+			background: rgb(189, 189, 189)
 
 
 	.width-300
@@ -1071,7 +1084,10 @@ export default {
 
 .image-preview-modal
 	position: relative
-	background: #fff
+	// Token con el literal de hoy de fallback: la caja de la vista ampliada es una superficie del
+	// sistema, no un color propio. Con el #fff suelto, ampliar la foto de un articulo en modo oscuro
+	// abria un rectangulo blanco arriba del scrim negro.
+	background: var(--bg-card, #fff)
 	padding: .75rem
 	border-radius: .5rem
 	max-width: 100%

@@ -613,7 +613,12 @@ export default function __base_store(options = {}) {
 	/** Actions base (copiadas de `src/store/__base.js` y usadas por la mayoría de stores). */
 	let base_actions = {
 		getModels({commit, state, dispatch}) {
-			commit('setSelected', [])
+			// Con el modo selección manual activo, lo tildado a mano se acumula entre búsquedas: no
+			// se pisa acá. Se limpia al apagar el modo (BtnSeleccion.vue) o al salir del módulo
+			// (beforeRouteLeave de cada vista), nunca por pedir datos de vuelta.
+			if (!state.is_selecteable) {
+				commit('setSelected', [])
+			}
 			commit('setFiltered', [])
 			commit('setIsFiltered', false)
 			// Resetear el flag de buscador rápido al recargar modelos desde el servidor.
@@ -957,7 +962,11 @@ export default function __base_store(options = {}) {
 
 					/** Filas devueltas: el endpoint responde envuelto en `models` (paginador Laravel). */
 					let rows = (res.data.models && res.data.models.data) ? res.data.models.data : []
-					commit('setSelected', [])
+					// Con selección manual activa, cada búsqueda/filtro nuevo NO pisa lo ya tildado
+					// (ver el mismo guard en getModels de acá arriba).
+					if (!state.is_selecteable) {
+						commit('setSelected', [])
+					}
 					commit('setFilterPage', page)
 					commit('setFiltered', rows)
 					commit('setIsFiltered', true)
@@ -1183,7 +1192,11 @@ export default function __base_store(options = {}) {
 			 * Si usa paginación, opcionalmente precarga modelos desde localStorage.
 			 * Esto reduce el tiempo de primera renderización mientras llega el request al server.
 			 */
-			commit('setSelected', [])
+			// Mismo guard que en el getModels base: con selección manual activa, no se pisa lo
+			// tildado a mano.
+			if (!state.is_selecteable) {
+				commit('setSelected', [])
+			}
 			commit('setFiltered', [])
 			commit('setIsFiltered', false)
 			// Resetear el flag de buscador rápido al recargar modelos desde el servidor.

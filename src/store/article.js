@@ -90,6 +90,15 @@ export default __base_store({
 		 * que no puedan quedar diciendo cosas distintas.
 		 */
 		address_id_filtro: 0,
+
+		/**
+		 * Articulos "por defecto en VENDER" (extension articles_default_in_vender) para cuentas
+		 * download_articles. Separado de `models` a proposito: si se mezclaran, `models.length` dejaria
+		 * de ser 0 y el guard de nav.js (setRoute) pensaria que el catalogo completo ya se bajo, y nunca
+		 * dispararia la descarga real (medido con elkioscoverde, 7/9/2026: 81.755 articulos que dejarian
+		 * de bajarse).
+		 */
+		default_models: [],
 	},
 	mutations: {
 		/**
@@ -177,6 +186,13 @@ export default __base_store({
 		 */
 		set_filtered_without_filter_form(state, value) {
 			state.filtered_without_filter_form = value
+		},
+		/**
+		 * Guarda los articulos por defecto en un array aparte de `models` (ver comentario del state).
+		 * No usar `addModels` ac.
+		 */
+		setDefaultModels(state, value) {
+			state.default_models = value || []
 		},
 		/**
 		 * Al setear filtros del modal, el filtrado pasa a tener criterios persistidos.

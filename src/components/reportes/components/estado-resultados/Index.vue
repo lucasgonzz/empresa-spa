@@ -326,8 +326,9 @@ export default {
 <style lang="sass">
 // Paleta de acentos de los iconos de renglon. Misma familia que usaba IconCards.vue en
 // develop, para que Reportes se sienta el mismo modulo aunque el layout haya cambiado.
-// Si algun dia este modulo pasa a los tokens de --dark_theme, estas seis variables son
-// el unico punto a tocar por archivo.
+// Los fondos, textos y bordes de este archivo YA pasaron a los tokens del tema oscuro; estas
+// seis se quedan como literales a proposito: son colores de ACENTO, y los de accion y estado se
+// mantienen iguales en los dos modos.
 $acento-ventas: #2563eb
 $acento-dinero: #059669
 $acento-gastos: #dc2626
@@ -337,8 +338,10 @@ $acento-fiscal: #0891b2
 
 .cascada-resultados
 	.cascada-card
-		background: #fff
-		border: 1px solid #e2e8f0
+		// La tarjeta flota sobre --color-bg: con un blanco fijo, en modo oscuro queda un
+		// rectangulo encandilante en vez de una superficie elevada.
+		background: var(--bg-card, #fff)
+		border: 1px solid var(--color-border, #e2e8f0)
 		border-radius: 12px
 		box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06)
 		padding: 12px 28px
@@ -355,9 +358,16 @@ $acento-fiscal: #0891b2
 		// 14px -> 18px: la cascada es una lista larga de numeros y con 14 los
 		// renglones se leian pegados.
 		padding: 18px 0
-		border-bottom: 1px solid #f1f5f9
+		// 🔴 7/9/2026: el separador NO va como var(--color-border-secondary, #f1f5f9). El fallback
+		// de un var() entra unicamente cuando la custom property NO esta definida, y ese token SI
+		// esta definido en :root (vale #e9ecef): en claro ganaba el token y cada linea divisoria
+		// se marcaba mas. Suelta es sutil, pero esta lista es larga y el corrimiento se repite en
+		// cada renglon. --borde-renglon-cascada existe SOLO en html.dark-mode (ver
+		// _dark_theme.sass), asi que aca el fallback si entra y el claro se queda con el #f1f5f9
+		// de siempre.
+		border-bottom: 1px solid var(--borde-renglon-cascada, #f1f5f9)
 		font-size: 0.95rem
-		color: #0f172a
+		color: var(--color-text-primary, #0f172a)
 
 		&:last-child
 			border-bottom: none
@@ -408,16 +418,16 @@ $acento-fiscal: #0891b2
 		&--subtotal
 			font-weight: 700
 			font-size: 1.05rem
-			color: #0f172a
-			border-top: 2px solid #e2e8f0
-			border-bottom: 2px solid #e2e8f0
+			color: var(--color-text-primary, #0f172a)
+			border-top: 2px solid var(--color-border, #e2e8f0)
+			border-bottom: 2px solid var(--color-border, #e2e8f0)
 
 		&--negativo
 			color: #DC2626
 
 		&--final
 			font-size: 1.2rem
-			color: #0f172a
+			color: var(--color-text-primary, #0f172a)
 
 			&.cascada-renglon--positivo
 				color: #059669
@@ -428,7 +438,7 @@ $acento-fiscal: #0891b2
 		&__margen
 			font-weight: 500
 			font-size: 0.8rem
-			color: #64748b
+			color: var(--color-text-secondary, #64748b)
 			margin-left: 6px
 
 		&__porcentaje

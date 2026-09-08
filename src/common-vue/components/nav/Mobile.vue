@@ -56,8 +56,13 @@ export default {
 <style lang="sass">
 @import '@/sass/_custom.scss'
 #nav-mobile
-	@if ($theme == 'dark')
-		background: #333 !important
+	// 7/9/2026: aca habia un `@if ($theme == 'dark') { background: #333 !important }`. Se BORRO.
+	//
+	// Nunca compilo ($theme es una variable de COMPILACION fijada en 'light' en _custom.scss), y
+	// tampoco hace falta reponerlo: el menu de telefono es un b-sidebar, y _dark_theme.sass ya
+	// declara `.b-sidebar { background-color: var(--bg-card); color: var(--color-text-primary) }`.
+	// Al no quedar ningun background propio en este id, el tema es el que manda y no hay dos
+	// arreglos para lo mismo.
 	img 
 		width: 50px
 	button
