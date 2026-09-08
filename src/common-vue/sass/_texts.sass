@@ -29,10 +29,15 @@
 
 .title
 	// 7/9/2026: este gris era un literal de modo claro VIVO (no una rama muerta), asi que en
-	// oscuro el titulo quedaba casi negro sobre fondo negro. Va al token, con el valor de hoy
-	// como fallback: --color-text-secondary en claro es #6c757d y rgba(0,0,0,.6) sobre blanco
-	// da #666, o sea el modo claro no se mueve de forma visible.
-	color: var(--color-text-secondary, rgba(0, 0, 0, .6))
+	// oscuro el titulo quedaba casi negro sobre fondo negro.
+	//
+	// 🔴 Va LITERAL en claro y con regla html.dark-mode aparte, y NO como
+	// var(--color-text-secondary, rgba(0,0,0,.6)). El fallback de un var() entra solo si el token
+	// no esta definido, y --color-text-secondary SI existe en :root (#6c757d): escrito con var(),
+	// el modo claro pasaria de #666 (5,74:1 sobre blanco) a #6c757d (4,69:1) en los ~74 lugares
+	// que usan esta clase. Es la misma caida de contraste que se corrigio para los titulos de
+	// reportes en esta misma mision; no tiene sentido arreglarla alla y dejarla aca.
+	color: rgba(0, 0, 0, .6)
 	font-size: 1.3em 
 	margin: 1em 0
 	display: block
@@ -40,8 +45,8 @@
 	text-align: center !important
 
 .title-left
-	// Mismo caso que .title (ver arriba, 7/9/2026).
-	color: var(--color-text-secondary, rgba(0, 0, 0, .6))
+	// Mismo caso que .title, incluido el motivo de por que no va con var() (ver arriba, 7/9/2026).
+	color: rgba(0, 0, 0, .6)
 	font-size: 1.3em 
 	margin: 1em 0
 	display: block
@@ -64,3 +69,9 @@
 // alla. Y el !important se descarta a proposito: un color global sobre todos los parrafos y
 // titulos del sistema le ganaria al color propio de cada componente, que es exactamente lo que no
 // queremos.
+
+// Contraparte oscura de los dos titulos de arriba. Va como regla y no como fallback de un var()
+// por lo explicado alla: el token existe en :root y le ganaria al literal tambien en modo claro.
+html.dark-mode
+	.title, .title-left
+		color: var(--color-text-secondary)

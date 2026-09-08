@@ -922,6 +922,22 @@ export default {
 		top: 0
 		z-index: 5
 
+	// 7/9/2026: el contorno de la tabla vive ACA.
+	//
+	// Hasta hoy lo dibujaba, sin querer, el `tbody { border: 2px solid #DDDDDD }` de
+	// common-vue/sass/_tables.sass -- un borde de 2px por DENTRO del radio, que es la linea suelta
+	// que Lucas reporto ("hay una linea que esta debajo, antes del final de la tabla"). Ese borde
+	// se saco, y su pedido fue explicito: "quiero que el unico borde de la tabla sea el que esta
+	// redondeado y que tiene sombra".
+	//
+	// El problema es que este contenedor tenia el radio pero NINGUNA sombra ni borde, asi que sin
+	// esto las tablas que pasan por aca --y no por display/table/Index.vue, que ya trae su
+	// .cont-table-wrapper con radio y sombra-- se quedaban sin contorno en los DOS modos. Se le da
+	// el mismo tratamiento que a ese wrapper, con el mismo token: en claro es el gris de siempre y
+	// en oscuro tiene que ser negro, porque un gris claro sobre fondo oscuro no se ve.
+	box-shadow: var(--shadow-color, rgba(99, 99, 99, 0.2)) 0px 2px 8px 0px
+	border-radius: 10px 10px 10px 0
+
 	.table.table-component-b-table,
 	table.table
 		// Redondeo global de 3 esquinas para todas las tablas basadas en b-table.
