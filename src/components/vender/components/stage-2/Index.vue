@@ -6,23 +6,35 @@
 	-->
 	<div class="vender-stage vender-stage--open vender-stage--no-collapse">
 
-		<!-- Header informativo (sin toggle) -->
-		<div class="vender-stage__header vender-stage__header--no-collapse">
-			<span class="vender-stage__number">2</span>
-			<div class="vender-stage__header-text">
-				<span class="vender-stage__label">Artículos y servicios</span>
-				<span class="vender-stage__sublabel">Buscar artículos, servicios, combos y promociones</span>
+		<!--
+			Bloque pegado (sticky): header + total + buscador de artículos.
+			Se mantiene visible arriba al scrollear la tabla de abajo, respetando el mismo
+			margen que esta etapa tiene con la anterior (ver $vender_stage_gap en el sass).
+		-->
+		<div class="vender-stage__pinned">
+
+			<!-- Header informativo (sin toggle) -->
+			<div class="vender-stage__header vender-stage__header--no-collapse">
+				<span class="vender-stage__number">2</span>
+				<div class="vender-stage__header-text">
+					<span class="vender-stage__label">Artículos y servicios</span>
+					<span class="vender-stage__sublabel">Buscar artículos, servicios, combos y promociones</span>
+				</div>
+			</div>
+
+			<div class="vender-stage__body vender-stage__body--always-open vender-stage__body--pinned">
+
+				<!-- Barra de contexto horizontal: total, cliente, método de pago y checklist -->
+				<context-bar></context-bar>
+
+				<!-- Buscadores de artículos -->
+				<header-form data-tour="vender.buscador_articulos"></header-form>
+
 			</div>
 		</div>
 
-		<!-- Body siempre visible -->
-		<div class="vender-stage__body vender-stage__body--always-open">
-
-			<!-- Barra de contexto horizontal: total, cliente, método de pago y checklist -->
-			<context-bar></context-bar>
-
-			<!-- Buscadores de artículos -->
-			<header-form data-tour="vender.buscador_articulos"></header-form>
+		<!-- Body que sigue scrolleando debajo del bloque pegado -->
+		<div class="vender-stage__body vender-stage__body--always-open vender-stage__body--scroll">
 
 			<!-- Indicador de ventas anteriores vinculadas -->
 			<previus-sale-data></previus-sale-data>
