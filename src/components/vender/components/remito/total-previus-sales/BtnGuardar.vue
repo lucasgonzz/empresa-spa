@@ -13,6 +13,7 @@
 		:text="text_btn"
 		:loader="loader"
 		:block="false"
+		data-testid="btn-guardar-venta"
 		dusk="btn_vender"
 		@clicked="saveSale">
 		</btn-loader>
@@ -34,6 +35,7 @@
 		icon="check"
 		:text="text_btn"
 		:loader="loader"
+		data-testid="btn-guardar-venta"
 		dusk="btn_vender"
 		@clicked="saveSale">
 		</btn-loader>

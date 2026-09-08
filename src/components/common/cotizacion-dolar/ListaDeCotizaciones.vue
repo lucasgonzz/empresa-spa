@@ -1,5 +1,11 @@
 <template>
-	<div class="cotizacion-dolar-lista">
+	<!--
+		Ancla del clip 1.5: el lead recorre las tres casas y confirma una. Literal, porque este
+		componente se monta una sola vez, adentro del modal de cotizacion del dolar.
+	-->
+	<div
+	data-tour="configuracion.lista_de_cotizaciones"
+	class="cotizacion-dolar-lista">
 
 		<!--
 			Las tres casas con sus dos puntas.

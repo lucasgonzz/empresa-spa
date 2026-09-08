@@ -35,6 +35,7 @@
 					<div class="vender-client-block__checkbox-list">
 						<vender-toggle
 						v-for="discount in client_discounts"
+						:input_id="'venta-descuento-'+discount.id"
 						:key="discount.id"
 						mode="array"
 						:option_value="discount.id"
@@ -54,6 +55,7 @@
 					<div class="vender-client-block__checkbox-list">
 						<vender-toggle
 						v-for="discount in common_discounts"
+						:input_id="'venta-descuento-'+discount.id"
 						:key="discount.id"
 						mode="array"
 						:option_value="discount.id"

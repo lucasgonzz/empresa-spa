@@ -157,8 +157,20 @@
 <script>
 export default {
 	props: {
-		/** Cliente de la fila desde la que se abrió el modal. Puede ser null antes del primer click. */
-		client: {
+		/**
+		 * Cliente de la fila desde la que se abrió el modal. Puede ser null antes del primer click.
+		 *
+		 * 🔴 NO renombrar a `client`: un mixin global (main.js -> common-vue mixins/app.js ->
+		 * mixins/model_functions.js -> vender/select_payment_methods.js ->
+		 * vender/guardar_venta/chequeos/payment_methods.js) define un `computed.client` que
+		 * devuelve `store.state.vender.client`. En Vue 2 los computed se inicializan DESPUÉS que
+		 * los props (`initComputed` corre después de `initProps`), así que un computed con el
+		 * mismo nombre pisa la propiedad reactiva del prop: `this.client` quedaba siempre en lo
+		 * que tuviera `store.state.vender.client` (típicamente null fuera de Vender), nunca en lo
+		 * que mandaba este modal. Medido en vivo el 28/8/2026: `this.$props.client` traía el
+		 * cliente real y `this.client` daba null en el mismo instante.
+		 */
+		cliente: {
 			type: Object,
 			default: null,
 		},
@@ -292,12 +304,12 @@ export default {
 			let self = this
 			this.error = null
 			this.$store.commit('sale/recordatorio_cobro/reset')
-			if (!this.client) {
+			if (!this.cliente) {
 				this.error = 'No se pudo identificar el cliente.'
 				return
 			}
 			this.cargando = true
-			this.$store.dispatch('sale/recordatorio_cobro/getPreview', this.client.id)
+			this.$store.dispatch('sale/recordatorio_cobro/getPreview', this.cliente.id)
 			.then(preview => {
 				/*
 					🔴 `null` significa "este pedido quedó viejo": mientras estaba en vuelo se
@@ -342,11 +354,11 @@ export default {
 				dibujado en pantalla no es la preview de ESTE cliente. Se manda el mensaje que se
 				leyó o no se manda nada.
 			*/
-			if (!this.preview || this.preview.client_id != this.client.id) {
+			if (!this.preview || this.preview.client_id != this.cliente.id) {
 				this.$toast.error('La previsualización no corresponde a este cliente. Volvé a abrir el recordatorio.')
 				return
 			}
-			this.$store.dispatch('sale/recordatorio_cobro/enviar', this.client.id)
+			this.$store.dispatch('sale/recordatorio_cobro/enviar', this.cliente.id)
 			.then(data => {
 				/*
 					El endpoint individual devuelve la MISMA forma que el masivo, así que puede

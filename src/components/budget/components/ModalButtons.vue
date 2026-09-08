@@ -9,6 +9,7 @@
 				left
 				size="sm"
 				boundary="viewport"
+				data-tour="presupuestos.boton_imprimir"
 				:popper-opts="dropdown_popper_opts"
 				menu-class="budget-print-dropdown-menu">
 					<template #button-content>
@@ -34,7 +35,18 @@
 			<!-- Grupo: edicion del presupuesto (mismo lugar que 'Actualizar venta' en el modal de ventas) -->
 			<div class="budget-modal-buttons__group">
 				<btn-actualizar-en-vender></btn-actualizar-en-vender>
-				<btn-confirmar-anular :model="model"></btn-confirmar-anular>
+				<!--
+					🔴 El ancla del tour va aca, en la instancia del MODAL, y no adentro de
+					`BtnConfirmarAnular.vue`: ese mismo componente se dibuja tambien una vez por
+					fila del listado (`views/Budget.vue:19`), asi que un `data-tour` puesto en su
+					plantilla saldria repetido tantas veces como presupuestos haya en pantalla y
+					el tour terminaria senalando el boton de la primera fila.
+
+					En Vue 2 el atributo cae en el elemento raiz del hijo, que es el <b-button>.
+				-->
+				<btn-confirmar-anular
+				data-tour="presupuestos.boton_confirmar"
+				:model="model"></btn-confirmar-anular>
 			</div>
 		</div>
 		<hr>

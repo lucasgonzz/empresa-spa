@@ -259,9 +259,11 @@ export default {
 	.puntos-detalle
 		margin-top: 24px
 		padding: 18px
-		border: 1px solid #e2e8f0
+		border: 1px solid var(--color-border, #e2e8f0)
 		border-radius: 12px
-		background: #fff
+		// El detalle flota sobre --color-bg igual que las tarjetas de la cascada: con un blanco
+		// fijo, en oscuro queda un rectangulo encandilante en vez de una superficie elevada.
+		background: var(--bg-card, #fff)
 		box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06)
 
 		&__cabecera
@@ -275,7 +277,7 @@ export default {
 			margin: 0
 			font-size: 0.95rem
 			font-weight: 700
-			color: #0f172a
+			color: var(--color-text-primary, #0f172a)
 			min-width: 0
 
 		&__totales
@@ -301,7 +303,7 @@ export default {
 		&__total
 			font-size: 1.05rem
 			font-weight: 700
-			color: #0f172a
+			color: var(--color-text-primary, #0f172a)
 
 		&__puntos--suma
 			color: #059669

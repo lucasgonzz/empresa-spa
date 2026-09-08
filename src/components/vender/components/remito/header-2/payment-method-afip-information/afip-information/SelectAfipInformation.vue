@@ -1,6 +1,6 @@
 <template>
 
-	<div class="select-afip-information w-100">
+	<div class="select-afip-information w-100" data-tour="vender.selector_punto_venta">
 
 
 
@@ -15,6 +15,8 @@
 			:disabled="disabled"
 
 			:class="select_state_class"
+
+			data-testid="venta-punto-venta"
 
 			v-model="afip_information_id"
 

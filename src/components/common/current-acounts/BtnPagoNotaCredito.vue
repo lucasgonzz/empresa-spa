@@ -25,7 +25,8 @@
             <b-button
             class="cc-footer__btn"
             variant="light"
-            v-b-modal="'current-acounts-nota-credito'">
+            v-b-modal="'current-acounts-nota-credito'"
+            data-tour="cuentas_corrientes.boton_nota_credito">
                 <i class="bi bi-file-earmark-minus"></i>
                 Nota de credito
             </b-button>
@@ -43,6 +44,7 @@
         v-if="pago_para_esta"
         class="cc-footer__btn cc-footer__btn--acento"
         data-testid="btn-registrar-pago"
+        data-tour="cuentas_corrientes.boton_registrar_pago"
         data-precargado="si"
         @click="setToPay()"
         variant="primary">
@@ -55,6 +57,7 @@
         v-else
         class="cc-footer__btn cc-footer__btn--acento"
         data-testid="btn-registrar-pago"
+        data-tour="cuentas_corrientes.boton_registrar_pago"
         data-precargado="no"
         @click="pago"
         variant="primary">

@@ -41,7 +41,9 @@ export default {
 	},
 	methods: {
 		countSales(address) {
-			let address_result = {...address}
+			// El nombre visible se le agrega la cantidad de ventas mas abajo; el testid tiene que
+			// quedarse con el nombre PELADO, si no cambia en cada corrida (ver horizontal-nav).
+			let address_result = {...address, testid: address.street}
 			let sales
 			sales = this.sales.filter(sale => {
 				return sale.address_id && sale.address_id == address.id 

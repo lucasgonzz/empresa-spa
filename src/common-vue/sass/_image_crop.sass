@@ -15,8 +15,11 @@
 
 
 .VueCarousel-navigation-button  
-	@if ($theme == 'dark') 
-		color: #FFF !important	
-	@else
-		color: #333 !important	
+	// 7/9/2026: era un @if/@else sobre $theme, que es una variable de COMPILACION fijada en
+	// 'light' en _custom.scss, asi que la rama oscura nunca se emitio y las flechas del carrusel
+	// quedaban en #333 tambien sobre fondo oscuro. Queda el token con el literal claro de hoy como
+	// fallback: --color-text-primary vale #212529 en claro, indistinguible del #333 de antes.
+	// El !important se conserva porque ya estaba vivo -- es lo que le gana al estilo propio de
+	// vue-carousel.
+	color: var(--color-text-primary, #333) !important
 

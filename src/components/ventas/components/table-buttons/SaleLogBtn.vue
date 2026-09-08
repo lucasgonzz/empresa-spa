@@ -1,8 +1,10 @@
 <template>
 	<div>
+		<!-- Sin m-l-5: la separación con el resto de la fila la resuelve el `gap` del contenedor
+		     (table-buttons/Index.vue). Con el margen puesto, al envolver la fila este botón arrancaba
+		     corrido de la izquierda respecto de la línea de arriba. -->
 		<b-button
 		v-if="has_sale_log"
-		class="m-l-5"
 		@click.stop="show_sale_log"
 		variant="outline-secondary"
 		title="Ver auditoría de la venta"
@@ -118,8 +120,14 @@ export default {
 	overflow-y: auto;
 }
 
+/*
+ * Cada entrada del log de auditoría. Los dos literales claros que tenía (#e5e5e5 y #fafafa) salen
+ * ahora de los tokens del tema, con el valor de hoy de fallback: en modo oscuro esas tarjetas eran
+ * bloques blancos adentro de un modal oscuro. --bg-section y no --bg-card a propósito: la entrada
+ * se hunde respecto del modal, no flota sobre él.
+ */
 .sale-log-entry {
-	border: 1px solid #e5e5e5;
-	background: #fafafa;
+	border: 1px solid var(--color-border, #e5e5e5);
+	background: var(--bg-section, #fafafa);
 }
 </style>

@@ -1,5 +1,11 @@
 <template>
-	<div>
+	<!--
+		El ancla va en el contenedor: el clip 1.1 muestra este campo JUSTAMENTE cuando esta
+		bloqueado ("mientras haya margen, el precio lo calcula el sistema"), y driver.js no resalta
+		ni recibe clics sobre un input `disabled`. Anclando el div se resalta el campo y la
+		explicacion de por que esta bloqueado, que es lo que el lead tiene que leer.
+	-->
+	<div data-tour="listado.campo_precio_manual">
 		<b-form-input
 		:disabled="disabled"
 		v-model="article.price"

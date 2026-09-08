@@ -75,7 +75,9 @@ export default {
 	width: fit-content
 	gap: 6px
 	padding: 4px
-	background-color: #E3E3E3
+	// Misma pista segmentada que el nav de fechas: --bg-nav existe para esto. En claro es el mismo
+	// gris de siempre; en oscuro sube un escalon sobre el fondo en vez de bajarlo.
+	background-color: var(--bg-nav, #E3E3E3)
 	border-radius: 8px
 
 	.item
@@ -86,14 +88,17 @@ export default {
 		font-size: 0.875rem
 		font-weight: 500
 		line-height: 1.25
-		color: #6c757d
+		color: var(--color-text-secondary, #6c757d)
 		background-color: transparent
 		white-space: nowrap
 		transition: color 0.12s ease, background-color 0.12s ease
 
 		&:hover:not(.active)
-			color: #0d6efd
-			background-color: #e7f1ff
+			// El texto del hover viaja con su fondo: sobre --bg-nav-hover (azulado y oscuro en modo
+			// oscuro) el azul fijo se leeria azul sobre azul. El pill ACTIVO de abajo no se toca: ese si
+			// es un color de accion y se mantiene igual en los dos modos.
+			color: var(--color-primary, #0d6efd)
+			background-color: var(--bg-nav-hover, #e7f1ff)
 
 		&.active
 			color: #fff

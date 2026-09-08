@@ -1,6 +1,7 @@
 <template>
 	<div
-	class="whatsapp-chats-list">
+	class="whatsapp-chats-list"
+	data-tour="whatsapp.bandeja">
 		<div class="whatsapp-chats-list__header">
 			<chat-search></chat-search>
 			<b-button
@@ -21,6 +22,7 @@
 			size="sm"
 			variant="outline-warning"
 			class="whatsapp-chats-list__btn whatsapp-chats-list__btn--icono"
+			data-tour="whatsapp.boton_simular"
 			title="Simular un mensaje del cliente (no le llega nada a nadie)"
 			v-b-modal="'whatsapp-simulate-inbound'">
 				<i class="bi bi-cone-striped"></i>
@@ -32,6 +34,7 @@
 			size="sm"
 			variant="outline-secondary"
 			class="whatsapp-chats-list__btn whatsapp-chats-list__btn--icono"
+			data-tour="whatsapp.boton_configuracion"
 			title="Configuración de WhatsApp"
 			v-b-modal="'whatsapp-config'">
 				<i class="bi bi-gear"></i>

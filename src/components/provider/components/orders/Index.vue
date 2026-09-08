@@ -13,6 +13,7 @@
 
 		<view-component 
 		v-if="view == 'compras'"
+		data-tour="compras.contenedor"
 		model_name="provider_order"
 		show_btn_pdf
 		show_models_if_empty

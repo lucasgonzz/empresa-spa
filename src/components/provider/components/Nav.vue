@@ -23,7 +23,7 @@ export default {
 				items.push({name: 'proveedores', call_models: 'provider'})
 			}
 			if (this.can('provider_order.index') || this.can('provider_order.create')) {
-				items.push({name: 'compras', call_models: 'provider_order'})
+				items.push({name: 'compras', call_models: 'provider_order', data_tour: 'compras.solapa_compras'})
 			} 
 			return items
 		}

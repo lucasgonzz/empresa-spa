@@ -58,7 +58,27 @@
 			</div>
 		</div>
 	    
+		<!--
+			Ancla del tour de la demo (clip 4.2). El discriminador es `prop.key` y NO el modelo: la
+			solapa "Descuentos y recargos" de una compra tiene DOS has_many —los descuentos y los
+			costos extra—, o sea DOS botones "Agregar". Con un ternario por modelo el ancla se
+			duplicaria y el tour podria resolver contra el boton equivocado.
+			Va solo en la vista compacta: el gemelo de adentro de "Ampliar" no participa del tour.
+		-->
+		<!--
+			data-testid del harness e2e, generico para CUALQUIER has_many. Se discrimina por
+			`prop.key` por la misma razon que el data-tour de arriba: dos has_many pueden convivir
+			en la misma solapa y el nombre del modelo no alcanza para distinguirlos.
+
+			🔴 No se llama `btn-crear-<model_name>`: ese nombre ya existe (BtnCreate.vue) y
+			`btn-crear-provider_order_extra_cost` EMPIEZA IGUAL que `btn-crear-provider_order`. Los
+			specs ubican filas con selectores de prefijo (`[data-testid^="..."]`), asi que un testid
+			nuevo que comparta el comienzo con uno viejo rompe al viejo (ver e2e/README.md, la nota
+			de por que el discriminante va al principio y no al final).
+		-->
 		<b-button
+		:data-testid="'btn-agregar-has-many-' + prop.key"
+		:data-tour="prop.key === 'provider_order_extra_costs' ? 'compras.boton_agregar_costo_extra' : null"
 		v-if="!prop.has_many.models_from_parent_prop && (typeof prop.has_many.show_btn_create == 'undefined' || prop.has_many.show_btn_create)"
 		class="m-t-15"  
 		@click="create(prop.has_many.model_name, parent_model)"

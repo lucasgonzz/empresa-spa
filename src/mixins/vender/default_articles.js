@@ -29,17 +29,31 @@ export default {
 				return
 			}
 			if (
-				this.authenticated 
+				this.authenticated
 				&& this.hasExtencion('articles_default_in_vender')
 				) {
-				
-				let articles = this.$store.state.article.models
 
-				if (articles.length && !this.loading_articles) {
+				/*
+				 * En cuentas download_articles los articulos por defecto viajan aparte, en
+				 * article.default_models (ver start_methods.js y store/article.js): article.models ahi
+				 * puede tardar minutos en poblarse con el catalogo completo, y no hace falta esperarlo
+				 * para los pocos articulos marcados default_in_vender.
+				 */
+				let usa_catalogo_completo = !this.download_articles
 
-					let articles_por_defecto = this.$store.state.article.models.filter(article => {
-						return article.default_in_vender
-					})
+				let articles = usa_catalogo_completo
+					? this.$store.state.article.models
+					: this.$store.state.article.default_models
+
+				let disponible = usa_catalogo_completo
+					? (articles.length && !this.loading_articles)
+					: articles.length
+
+				if (disponible) {
+
+					let articles_por_defecto = usa_catalogo_completo
+						? articles.filter(article => article.default_in_vender)
+						: articles
 
 					articles_por_defecto.forEach(article => {
 						let article_to_add = {

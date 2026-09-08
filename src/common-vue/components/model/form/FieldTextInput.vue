@@ -26,8 +26,16 @@
 			</b-button>
 
 			<!-- Cotizacion del dolar de hoy. Aditivo como el boton de CUIT de arriba; la guarda es larga porque common-vue es codigo compartido con otros proyectos, y lleva is_admin para no ofrecerle a un empleado sin acceso un boton que no le va a hacer nada (el modal exige lo mismo para montarse). -->
+			<!--
+				El `data-tour` va literal y no condicionado: el propio `v-if` ya lo restringe a un
+				solo boton de todo el sistema (el campo `dollar` del modelo `user`, para un
+				administrador con la extension prendida), asi que no hay forma de que el valor
+				aparezca dos veces en pantalla. Es el paso del clip 1.5 donde el lead abre la
+				cotizacion del dia.
+			-->
 			<b-button
 			v-if="prop.key == 'dollar' && model_name == 'user' && is_admin && hasExtencion('costo_en_dolares')"
+			data-tour="configuracion.boton_cotizacion_dolar"
 			@click="$emit('chequear-cotizacion-dolar')"
 			class="m-l-5"
 			variant="outline-primary"

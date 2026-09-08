@@ -1,4 +1,18 @@
 <template>
+	<!--
+		🔴 Este `m-b-15` es SOLO el aire de ABAJO del buscador. El de arriba --el que separa el
+		buscador de su label-- no vive aca ni puede vivir aca: lo pone `.form-label` en el <style>
+		de ModelForm.vue, que es quien dibuja el label.
+
+		Vale la aclaracion porque el 7/9/2026 Lucas reporto que en la solapa "Categoria" el buscador
+		respiraba y en "Datos generales" el de "proveedor" quedaba pegado al label, con este mismo
+		componente en los dos casos. La diferencia no estaba aca: el prop `provider_id` de
+		src/models/article.js declara `description` y `category_id` no, y en ModelForm la regla
+		`label.form-label--has-help` --la que agranda el area de hover del label con ayuda-- se
+		comia el margin-bottom del label por especificidad. Se arreglo alla, en la regla que lo
+		causaba. Si vuelve a aparecer una diferencia de aire entre dos buscadores, el sospechoso es
+		el label, no este div.
+	-->
 	<div class="m-b-15">
 		<search-component
 		:disabled="disabled"
@@ -112,9 +126,28 @@ export default {
 			type: [Array, Object, null],
 			default: null,
 		},
+		/**
+		 * 🔴 El tipo NO puede aceptar null y el default NO puede ser null. Vue 2 aplica el default de
+		 * una prop unicamente cuando el valor llega `undefined` (validateProp, vue 2.7.14, linea 5028
+		 * de vue.runtime.common.dev.js); un null EXPLICITO pasa derecho. Y encima no avisa nada,
+		 * porque assertProp corta en seco con `value == null` (linea 5081): cero warnings en consola.
+		 *
+		 * Que pasaba mientras aca valia null: este componente reenvia la prop a search/Index.vue, que
+		 * la declara con `default: true`. Al llegarle un null explicito, ese true no se aplicaba NUNCA
+		 * y quedaba en null (falsy). Consecuencia: TODOS los buscadores de los formularios --categoria,
+		 * subcategoria, proveedor, marca, los 69 campos `type: 'search'` de los 37 modelos-- abrian el
+		 * modal sin precargar nada del store y sin limpiar los resultados de la busqueda anterior.
+		 *
+		 * ModelForm.vue pasa `prop.limpiar_resultados_de_busqueda`, que es `undefined` cuando el modelo
+		 * no la declara: ESE si dispara el default de aca. Y cuando el modelo la declara
+		 * (provider_order.js la pone en false para conservar la lista entre aperturas) el false viaja
+		 * tal cual.
+		 *
+		 * Clase de error: "default de prop anulado por un null explicito del padre".
+		 */
 		limpiar_resultados_de_busqueda: {
-			type: [Boolean, null],
-			default: null,
+			type: Boolean,
+			default: true,
 		},
 		function_props_to_send_to_api: {
 			type: [String, null],

@@ -2,18 +2,23 @@
 	<b-card
 	no-body
 	class="integration-card">
-		<div class="p-3">
-			<div class="d-flex justify-content-between align-items-start flex-wrap">
-				<div class="m-r-10">
-					<h6 class="m-b-5">Mercado Pago</h6>
-					<p class="text-muted m-b-0">
+		<div class="integration-card__body">
+			<div class="integration-card__header">
+				<div>
+					<h6 class="integration-card__title">{{ integracion.name }}</h6>
+					<p class="integration-card__description">
 						Cobrá con tarjeta y Mercado Pago en tu tienda.
+					</p>
+					<p
+					v-if="connected && integracion.platform_user_id"
+					class="integration-card__cuenta">
+						Cuenta conectada: {{ integracion.platform_user_id }}
 					</p>
 				</div>
 				<b-badge :variant="status.variant">{{ status.text }}</b-badge>
 			</div>
 
-			<div class="m-t-15 integration-card__actions">
+			<div class="integration-card__actions">
 				<btn-loader
 				:block="false"
 				size="sm"
@@ -82,13 +87,18 @@ import BtnLoader from '@/common-vue/components/BtnLoader'
 import IntegrationConnector from '@/mixins/integration_connector'
 
 /**
- * Tarjeta de estado y conexión de Mercado Pago, dentro de la sección "Integraciones"
- * de Configuración online (prompt 600).
+ * Tarjeta de estado y conexión de Mercado Pago, dentro de la solapa "Tienda online"
+ * del ABM de Integraciones.
  *
  * Permite conectar (OAuth) y desconectar la cuenta propia de Mercado Pago del comercio,
- * muestra el estado real leído del online_configuration (mp_connected / mp_token_expires_at)
- * y explica, solo a modo informativo, cómo bajar la comisión que el comercio le paga
- * directamente a Mercado Pago (ComercioCity no cobra comisión por transacción).
+ * muestra el estado real leído del conector (`GET /api/integraciones`) y explica, solo a
+ * modo informativo, cómo bajar la comisión que el comercio le paga directamente a Mercado
+ * Pago (ComercioCity no cobra comisión por transacción).
+ *
+ * 🔴 Antes vivía en components/online/config/integrations/ y leía el online_configuration
+ * (mp_connected / mp_token_expires_at). Ahora lee el conector de plataforma, que es donde
+ * el OAuth guarda los tokens cifrados. La tarjeta nunca ve una credencial: solo si está
+ * conectada, cuándo vence y qué cuenta quedó atada.
  */
 export default {
 	name: 'MercadoPagoCard',
@@ -97,8 +107,9 @@ export default {
 		BtnLoader,
 	},
 	props: {
-		// Modelo online_configuration ya cargado (con mp_enabled, mp_connected, mp_token_expires_at, etc.)
-		model: {
+		// Item del listado de GET /api/integraciones:
+		// { slug, name, grupo, connected, expires_at, platform_user_id }
+		integracion: {
 			type: Object,
 			required: true,
 		},
@@ -114,11 +125,11 @@ export default {
 	computed: {
 		// true si el comercio ya tiene conectada su cuenta de Mercado Pago
 		connected() {
-			return !!this.model.mp_connected
+			return !!this.integracion.connected
 		},
 		// Texto y variante de color a mostrar en el badge de estado
 		status() {
-			return this.integrationStatusInfo(this.model.mp_connected, this.model.mp_token_expires_at)
+			return this.integrationStatusInfo(this.integracion.connected, this.integracion.expires_at)
 		},
 	},
 	methods: {
@@ -129,34 +140,36 @@ export default {
 		 * @returns {void}
 		 */
 		connect() {
-			this.loading = true
+			let self = this
+			self.loading = true
 			this.$store.commit('auth/setMessage', 'Conectando con Mercado Pago')
 			this.$store.commit('auth/setLoading', true)
 
 			this.requestIntegrationConnectUrl('mercadopago')
 			.then(res => {
-				this.$store.commit('auth/setLoading', false)
-				this.$store.commit('auth/setMessage', '')
+				self.$store.commit('auth/setLoading', false)
+				self.$store.commit('auth/setMessage', '')
 
 				if (res.data && res.data.url) {
 					// Redirige la pestaña actual a la pantalla de autorización de Mercado Pago
 					window.location.href = res.data.url
 				} else {
-					this.loading = false
-					this.$toast.error('No se pudo iniciar la conexión con Mercado Pago')
+					self.loading = false
+					self.$toast.error('No se pudo iniciar la conexión con Mercado Pago')
 				}
 			})
 			.catch(err => {
-				this.loading = false
-				this.$store.commit('auth/setLoading', false)
-				this.$store.commit('auth/setMessage', '')
+				self.loading = false
+				self.$store.commit('auth/setLoading', false)
+				self.$store.commit('auth/setMessage', '')
 				console.log(err)
-				this.$toast.error('No se pudo iniciar la conexión con Mercado Pago')
+				self.$toast.error('No se pudo iniciar la conexión con Mercado Pago')
 			})
 		},
 		/**
 		 * Desconecta la cuenta de Mercado Pago ya conectada, previa confirmación del usuario,
-		 * y refresca el online_configuration para reflejar el nuevo estado en la tarjeta.
+		 * y le avisa al padre que vuelva a pedir el listado de integraciones para reflejar
+		 * el nuevo estado en la tarjeta.
 		 *
 		 * @returns {void}
 		 */
@@ -165,39 +178,38 @@ export default {
 				return
 			}
 
-			this.loading = true
+			let self = this
+			self.loading = true
 			this.$store.commit('auth/setMessage', 'Desconectando Mercado Pago')
 			this.$store.commit('auth/setLoading', true)
 
 			this.requestIntegrationDisconnect('mercadopago')
 			.then(() => {
-				return this.refreshOnlineConfigurationModel()
-			})
-			.then(() => {
-				this.loading = false
-				this.$store.commit('auth/setLoading', false)
-				this.$store.commit('auth/setMessage', '')
-				this.$toast.success('Mercado Pago desconectado')
+				self.loading = false
+				self.$store.commit('auth/setLoading', false)
+				self.$store.commit('auth/setMessage', '')
+				self.$toast.success('Mercado Pago desconectado')
+				self.$emit('actualizar')
 			})
 			.catch(err => {
-				this.loading = false
-				this.$store.commit('auth/setLoading', false)
-				this.$store.commit('auth/setMessage', '')
+				self.loading = false
+				self.$store.commit('auth/setLoading', false)
+				self.$store.commit('auth/setMessage', '')
 				console.log(err)
-				this.$toast.error('No se pudo desconectar Mercado Pago')
+				self.$toast.error('No se pudo desconectar Mercado Pago')
 			})
 		},
 	},
 }
 </script>
-<style lang="sass">
-// Estilos base de .integration-card compartidos con ZippinCard: ver Index.vue
-.integration-card
-	.integration-card__advisor-toggle
-		font-size: 13px
-	.integration-card__advisor
-		font-size: 13px
-		background: rgba(0, 0, 0, .03)
-		border-radius: 6px
-		padding: 10px
-</style>
+<!--
+	Sin bloque <style> a proposito. TODOS los estilos de .integration-card (incluidos los del
+	asesor de comision, que antes vivian aca) estan en TiendaOnline.vue, que es el unico lugar
+	donde se definen.
+
+	🔴 No los devuelvas aca. Los dos archivos declaran estilos GLOBALES (no scoped) sobre la
+	misma clase, asi que tener las dos definiciones hacia que ganara la que webpack cargara
+	ultima -- y ademas la version que vivia aca pintaba el fondo del asesor con un
+	`rgba(0, 0, 0, .03)` literal, que en modo oscuro es negro sobre negro. La version de
+	TiendaOnline.vue usa `var(--bg-section)`, que esta definida para los dos temas.
+-->

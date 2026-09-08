@@ -1,6 +1,12 @@
 <template>
+	<!--
+		⚠️ Esta conversacion NO vive en la vista: se monta adentro del sidebar de WhatsApp
+		(position fixed, montado desde App.vue), que se crea y se destruye al abrir y cerrar el
+		chat. Si el lead lo cierra, este ancla desaparece del DOM y el tour saltea sus pasos.
+	-->
 	<div
-	class="whatsapp-conversation">
+	class="whatsapp-conversation"
+	data-tour="whatsapp.conversacion">
 		<!-- El chat todavía no está en la bandeja: pasa al entrar por link directo, donde el
 		sidebar se abre antes de que vuelva `getChats`. Los mensajes ya se están pidiendo (los
 		dispara el watch de abajo, que mira el id y no el objeto). -->

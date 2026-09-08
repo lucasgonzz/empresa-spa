@@ -13,8 +13,13 @@
 			-->
 			<ventas-sin-cobrar></ventas-sin-cobrar>
 
+			<!--
+				🔴 La prop se llama `cliente`, no `client`: un mixin global define un
+				`computed.client` que en Vue 2 pisa el prop del mismo nombre. Está explicado en
+				el `props` de RecordatorioCobro.vue.
+			-->
 			<recordatorio-cobro
-			:client="client_seleccionado"></recordatorio-cobro>
+			:cliente="client_seleccionado"></recordatorio-cobro>
 
 			<!--
 				🔴 El conteo del masivo NO es la cantidad de filas: es la cantidad de filas CON
@@ -356,9 +361,38 @@ export default {
 		sale_pdf_url(sale) {
 			return process.env.VUE_APP_API_URL + '/sale/pdf/' + sale.id
 		},
+		/**
+		 * Abre el modal de recordatorio para el cliente de la fila.
+		 *
+		 * 🔴 El `show()` va adentro de un `$nextTick` y NO en la línea de abajo de la
+		 * asignación. `$bvModal.show()` emite el evento `show` de forma SINCRÓNICA (lo hace
+		 * `bv-modal.js` con un `$root.$emit`, y `modal.js` lo reemite en la misma vuelta),
+		 * así que `al_abrir()` del hijo corría ANTES de que Vue bajara `client_seleccionado`
+		 * al prop `cliente`. El handler lo veía en `null`, entraba por su guarda y el modal
+		 * abría con "No se pudo identificar el cliente" sin llegar a pedir la
+		 * previsualización.
+		 *
+		 * Y el segundo síntoma era peor que el cartel: como el prop llegaba tarde SIEMPRE,
+		 * al abrir el modal para un cliente DISTINTO se pedía la previsualización del
+		 * ANTERIOR, y eso no lo avisaba nada en pantalla — lo único que lo frenaba era la
+		 * guarda de `enviar()` en el hijo, ya con el operador apretando Enviar. Reabrir el
+		 * MISMO cliente sí andaba, y por eso el defecto parecía intermitente y se lo
+		 * confundió con otro bug del mixin que ya estaba arreglado.
+		 * Medido el 30 y el 31/8/2026 sobre la demo.
+		 *
+		 * NO se arregla pasando el hijo a `@shown`: ahí el handler correría después del
+		 * primer pintado, y el modal entraría un instante con el cuerpo vacío antes de que
+		 * aparezca el spinner. Este modal se filma, y ese salto se ve.
+		 *
+		 * @param {Object} client Cliente de la fila.
+		 * @returns {void}
+		 */
 		abrir_recordatorio(client) {
+			let self = this
 			this.client_seleccionado = client
-			this.$bvModal.show('recordatorio-cobro')
+			this.$nextTick(function() {
+				self.$bvModal.show('recordatorio-cobro')
+			})
 		},
 		abrir_masivo() {
 			this.$bvModal.show('recordatorio-cobro-masivo')

@@ -21,7 +21,17 @@
 			:set_sub_view="has_views ? true : false"
 			:items="items"></horizontal-nav>
 			
+			<!--
+				Una solapa del segundo nivel puede declarar un componente propio en vez del ABM
+				generico (ver `componentes` en src/mixins/abm.js). Es lo que permite que
+				Integraciones -> Tienda online sea una pantalla de tarjetas y no una tabla.
+			-->
+			<component
+			v-if="selected_component"
+			:is="selected_component"></component>
+
 			<view-component
+			v-else
 			show_filter_modal
 			:check_permissions="false"
 			:model_name="selected_model">
@@ -82,15 +92,7 @@ export default {
 					if (this.view == this.routeString(view.view)) {
 						view.models.forEach(model => {
 							if (this.checkModel(model)) {
-								let item = {
-									call_models: model,
-								}
-								if (this.idiom == 'es') {
-									item.nombre = this.plural(model)
-								} else {
-									item.name = this.plural(model)
-								}
-								items.push(item)
+								items.push(this.buildItem(model, view))
 							}
 						})
 					}
@@ -98,20 +100,23 @@ export default {
 			} else {
 				this.models.forEach(model => {
 					if (this.checkModel(model)) {
-						let item = {
-							call_models: model,
-						}
-						if (this.idiom == 'es') {
-							item.nombre = this.plural(model)
-						} else {
-							item.name = this.plural(model)
-						}
-						items.push(item)
+						items.push(this.buildItem(model, null))
 					}
 				})
 			}
 			return items
-		}
+		},
+		/**
+		 * Componente propio de la solapa activa, o null si esa solapa renderiza el ABM generico.
+		 *
+		 * @returns {Function|Object|null}
+		 */
+		selected_component() {
+			if (!this.selected_model) {
+				return null
+			}
+			return this.componentForModel(this.selected_model)
+		},
 	},
 	methods: {
 		setSelectedView(item) {
@@ -121,10 +126,67 @@ export default {
 			this.selected_model = model_name
 		},
 		checkModel(model, items) {
-			return (!model.check_permissions || typeof model.check_permissions == 'undefined' || this.can(model.replaceAll(' ', '_')+'.index')) 
+			return (!model.check_permissions || typeof model.check_permissions == 'undefined' || this.can(model.replaceAll(' ', '_')+'.index'))
+		},
+		/**
+		 * Arma un item del segundo nivel de nav para un modelo del ABM.
+		 *
+		 * Dos cosas que un item puede declarar y antes no podia, las dos opcionales y las dos
+		 * en la view (src/mixins/abm.js):
+		 *
+		 * - `nombres[model]`: una etiqueta propia para la solapa. El segmento de la URL NO
+		 *   cambia --sale del plural del modelo, via `route_value`--, asi que los enlaces
+		 *   viejos y los que arma el buscador de recursos del ABM siguen resolviendo igual, y
+		 *   la solapa se sigue marcando como activa.
+		 * - `componentes[model]`: la solapa monta ese componente en vez del ABM generico. Un
+		 *   item asi NO lleva `call_models` a proposito: no tiene store detras, y horizontal-nav
+		 *   dispatchearia `<model>/getModels` sobre un modulo que no existe.
+		 *
+		 * @param {string} model Nombre interno del modelo (o de la solapa, si es un componente).
+		 * @param {Object|null} view View del ABM que lo contiene, o null.
+		 * @returns {Object} Item para horizontal-nav.
+		 */
+		buildItem(model, view) {
+			var plural = this.plural(model)
+			var nombre_propio = (view && view.nombres && view.nombres[model]) ? view.nombres[model] : null
+			var item = {
+				model_name: model,
+			}
+			if (this.idiom == 'es') {
+				item.nombre = nombre_propio ? nombre_propio : plural
+			} else {
+				item.name = nombre_propio ? nombre_propio : plural
+			}
+			if (nombre_propio) {
+				item.route_value = plural
+			}
+			if (!this.componentForModel(model)) {
+				item.call_models = model
+			}
+			return item
+		},
+		/**
+		 * Componente propio declarado para un modelo del ABM, buscandolo en todas las views.
+		 * Los nombres de modelo no se repiten entre views, asi que con el nombre alcanza.
+		 *
+		 * @param {string} model Nombre interno del modelo.
+		 * @returns {Function|Object|null} Componente (o fabrica asincrona) declarado, o null.
+		 */
+		componentForModel(model) {
+			var self = this
+			var i
+			for (i = 0; i < self.abm_views.length; i++) {
+				var v = self.abm_views[i]
+				if (v.componentes && v.componentes[model]) {
+					return v.componentes[model]
+				}
+			}
+			return null
 		},
 		setSelected(item) {
-			this.selected_model = item.call_models
+			// `model_name` lo pone buildItem y esta siempre; `call_models` queda como respaldo
+			// para cualquier item armado a mano fuera de esta vista.
+			this.selected_model = item.model_name ? item.model_name : item.call_models
 		},
 		/**
 		 * Sincroniza `selected_model` con la URL (/abm/:view/:sub_view) o con el default del menú.
@@ -238,6 +300,13 @@ export default {
 	justify-content: space-between
 	gap: 15px
 	width: 100%
+	// El margen de abajo ya eran 15px; el de arriba faltaba y por eso esta fila quedaba pegada al
+	// borde superior de la pantalla. 15px es el mismo aire que separa al segundo horizontal-nav (el
+	// de modelos) de los botones del header que arma el view-component de mas abajo: ese aire lo
+	// pone el `p-t-15` de `.view-header-toolbar`, que esta fila no hereda porque va ANTES del
+	// view-component. Mismo diagnostico y mismo arreglo que ya se aplico en
+	// payment-plan/Index.vue (mision 40).
+	margin-top: 15px
 	margin-bottom: 15px
 
 	// 🔴 `nowrap` y no `wrap` (mision 33). La intencion de esta fila ya estaba escrita --que el

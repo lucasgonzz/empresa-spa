@@ -3,8 +3,19 @@
 	v-if="field.type == 'search'"
 	class="text">
 
+		<!--
+			🔴 El `id` no estaba, y sin el este buscador publicaba `data-testid="provider"` --el
+			nombre del MODELO RELACIONADO-- porque search/Index.vue cae al `model_name` cuando no le
+			pasan uno. O sea que el filtro de la columna "Proveedor" del listado de articulos y el
+			de cualquier otra columna que apunte al mismo modelo se llamaban igual entre si, y
+			ninguno de los dos decia que era un filtro.
+
+			Con el id explicito queda `filtro-search-<key>`, en espejo con el `filtro-select-<key>`
+			de Select.vue --que es la otra cara del mismo filtro, segun el tipo de la columna--.
+		-->
 		<search-component
 		ref="search_component"
+		:id="'filtro-search-'+field.key"
 		@setSelected="setFilters"
 		@clearSelected="clear_selected"
 		search_from_api

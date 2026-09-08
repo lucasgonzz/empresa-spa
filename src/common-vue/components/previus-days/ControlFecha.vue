@@ -14,6 +14,7 @@ class="control-fecha">
 	-->
 	<div
 	class="control-fecha__pastilla"
+	:data-tour="model_name === 'sale' ? 'ventas.control_fecha' : model_name === 'provider_order' ? 'compras.control_fecha' : null"
 	:class="{ 'control-fecha__pastilla--sin-modo': !change_from_dates_option }">
 
 		<!-- Fila 1 en telefono; en desktop es parte de la unica fila. Lleva el segmento de modo y
@@ -458,7 +459,7 @@ export default {
 // La pastilla usa los mismos valores que .display-nav en DisplayNav.vue: es el mismo objeto visual
 // del sistema, no uno nuevo. El modo y el dia seleccionado van los dos en azul (decision de Lucas
 // del 10/8/2026, se evaluo diferenciarlos y se eligio un solo color), asi que la jerarquia entre
-// los dos la da el TAMAÑO: el item de modo respira 8px 12px y la celda de dia 3px 6px. No es
+// los dos la da el TAMAÑO: el item de modo respira 8px 12px y la celda de dia 2px 7px. No es
 // cosmetico: es lo unico que evita que se lean como el mismo control.
 .control-fecha
 	display: inline-flex
@@ -473,8 +474,24 @@ export default {
 		min-width: 0
 		gap: 0
 		padding: 4px
-		background-color: #E3E3E3
+		// --bg-nav es el token de la PISTA del nav horizontal, y existe justamente para esto: en
+		// claro vale el mismo #E3E3E3 de siempre (un escalon por debajo del fondo de la pagina) y en
+		// oscuro #2b2f36 (un escalon por encima). No es --bg-section, que en claro es casi blanco.
+		background-color: var(--bg-nav, #E3E3E3)
 		border-radius: 8px
+		// 7/9/2026 - "pasa muy desapercibido alla arriba" (Lucas). La presencia se gana con
+		// ELEVACION y no con tamaño, porque el alto no se puede tocar: la pastilla tiene que seguir
+		// midiendo lo mismo que el buscador general (--toolbar-control-h, 36px) y ese alto sale de
+		// los 28px del boton de calendario mas los 4px de padding de arriba y abajo. Una sombra no
+		// ocupa layout: cuesta cero pixeles de alto y despega la pastilla del fondo, que es
+		// exactamente lo que le faltaba --era el unico control de esa barra apoyado en plano,
+		// mientras el pill del buscador y los botones ya venian con la suya
+		// (--toolbar-btn-shadow, _toolbar_botones.sass).
+		//
+		// El color va por --shadow-color y no por --toolbar-btn-shadow: ese ultimo es un valor de
+		// sombra completo y NO tiene contraparte en html.dark-mode, asi que en oscuro quedaria un
+		// gris que sobre #23262b no se ve. --shadow-color si la tiene (rgba(0,0,0,.45)).
+		box-shadow: var(--shadow-color, rgba(99, 99, 99, 0.2)) 0px 1px 3px 0px
 
 	.control-fecha__fila-principal
 		display: inline-flex
@@ -482,6 +499,15 @@ export default {
 		min-width: 0
 
 	// Separador de 1px: es lo que sostiene la lectura de "tres zonas, un objeto".
+	//
+	// 🔴 7/9/2026 - El color va LITERAL y NO como var(--color-border, #C7C7C7). El fallback de un
+	// var() entra solo si el token no esta definido, y --color-border SI esta definido en :root
+	// (#dee2e6): escrito asi, el modo claro no usaria nunca el #C7C7C7 y pasaria a #dee2e6. El
+	// separador vive ADENTRO de la pastilla, cuyo fondo es --bg-nav (#E3E3E3, lo pone esta misma
+	// hoja unas lineas mas arriba), y #dee2e6 sobre #E3E3E3 da ~1,03:1: la linea desaparece.
+	// --color-border no esta mal como token, esta calibrado contra otra cosa: contra --bg-card
+	// (#fff), que es la tarjeta, no contra una pista gris. El modo claro lo usan 40 clientes y
+	// queda exactamente como estaba.
 	.control-fecha__separador
 		display: inline-block
 		flex: 0 0 auto
@@ -503,15 +529,20 @@ export default {
 		font-size: 0.875rem
 		font-weight: 500
 		line-height: 1.25
-		color: #6c757d
+		color: var(--color-text-secondary, #6c757d)
 		background-color: transparent
 		white-space: nowrap
 		transition: color 0.12s ease, background-color 0.12s ease, box-shadow 0.12s ease
 
 		&:hover:not(.active)
+			// El azul del hover NO se tokeniza: es un color de accion y _dark_theme.sass documenta
+			// que los de accion se mantienen iguales en los dos modos. Lo que si cambia es el fondo:
+			// --bg-nav-hover conserva el matiz azulado tambien en oscuro (azul del tema al 16%), que
+			// es lo que --bg-hover, que es un gris, le sacaria.
 			color: #0d6efd
-			background-color: #e7f1ff
+			background-color: var(--bg-nav-hover, #e7f1ff)
 
+		// El activo queda literal a proposito: azul de accion, igual en los dos modos.
 		&.active
 			color: #fff
 			background-color: #0d6efd
@@ -556,16 +587,21 @@ export default {
 		border: none
 		background: transparent
 		border-radius: 6px
-		padding: 3px 6px
+		// 2px arriba y abajo en vez de 3px, y 7px a los costados en vez de 6px: es lo que devuelve
+		// el pixel que gana el nombre del dia al pasar de 9px a 10px (ver mas abajo). El alto total
+		// de la celda queda en ~29px, o sea por debajo de los 28px+padding del boton de calendario,
+		// que es el que fija el alto de la pastilla. Sin esto la pastilla creceria y se romperia la
+		// alineacion con el buscador general.
+		padding: 2px 7px
 		cursor: pointer
-		color: #6c757d
+		color: var(--color-text-secondary, #6c757d)
 		line-height: 1.1
 		scroll-snap-align: center
 		transition: color 0.12s ease, background-color 0.12s ease, box-shadow 0.12s ease
 
 		&:hover:not(.active)
 			color: #0d6efd
-			background-color: #e7f1ff
+			background-color: var(--bg-nav-hover, #e7f1ff)
 
 		&.active
 			color: #fff
@@ -580,14 +616,21 @@ export default {
 		text-decoration: line-through
 		cursor: not-allowed
 
+	// 9px era casi ilegible y es la mitad de lo que hacia que el control pasara desapercibido.
+	// 10px es el maximo que entra sin empujar el alto de la pastilla (ver el padding de la celda).
 	.control-fecha__dia-nombre
-		font-size: 9px
+		font-size: 10px
 		text-transform: uppercase
 		letter-spacing: 0.04em
 
+	// El numero del dia es EL dato del control, y era lo que menos peso tenia. Sube a 700 y toma el
+	// color de texto primario en vez del secundario que hereda de la celda: mas contraste sin un
+	// solo pixel mas de alto. El dia activo no se ve afectado, su regla (.control-fecha__dia.active
+	// .control-fecha__dia-numero) suma dos clases mas y le gana.
 	.control-fecha__dia-numero
 		font-size: 0.8125rem
-		font-weight: 600
+		font-weight: 700
+		color: var(--color-text-primary, #212529)
 
 	// El verde del mes se conserva del chip viejo, pero ahora aparece solo cuando el mes cambia.
 	.control-fecha__mes
@@ -609,21 +652,28 @@ export default {
 		flex: 0 0 auto
 		border: none
 		background: transparent
-		color: #6c757d
+		color: var(--color-text-secondary, #6c757d)
 		cursor: pointer
 		border-radius: 6px
+		// 🔴 Estos 28px no son decorativos: son los que, con los 4px de padding de la pastilla arriba
+		// y abajo, dan los 36px de --toolbar-control-h y hacen que el control quede a la misma altura
+		// que el buscador general. Si se tocan, se rompe una alineacion que Lucas pidio expresamente.
 		width: 28px
 		height: 28px
 		transition: color 0.12s ease, background-color 0.12s ease
 
 		&:hover
 			color: #0d6efd
-			background-color: #e7f1ff
+			background-color: var(--bg-nav-hover, #e7f1ff)
 
+	// El boton de calendario es la unica superficie del control que flota sobre la pista: va con el
+	// token de tarjeta y con el color de sombra del sistema, que en oscuro es negro. Con el #fff y
+	// el rgba(0,0,0,.10) literales quedaba un cuadradito blanco adentro de la pastilla oscura.
 	.control-fecha__calendario
-		background: #fff
-		box-shadow: 0 1px 2px rgba(0, 0, 0, .10)
+		background: var(--bg-card, #fff)
+		box-shadow: 0 1px 2px var(--shadow-color, rgba(0, 0, 0, .10))
 
+	// Azul de accion y blanco encima: igual en los dos modos, como el dia y el modo activos.
 	.control-fecha__rango
 		display: inline-flex
 		align-items: center
@@ -646,6 +696,16 @@ export default {
 		cursor: pointer
 		padding: 0
 		font-size: 0.7rem
+
+// Contraparte oscura del separador (7/9/2026). En oscuro la pastilla es --bg-nav #2b2f36 y el
+// #C7C7C7 de claro seria una linea casi blanca ahi adentro. Va con --color-border, que en
+// html.dark-mode es rgba(255, 255, 255, 0.14): compuesto sobre #2b2f36 da ~#484c52, o sea ~1,5:1
+// contra la pastilla -- el mismo peso de hairline que tiene el #C7C7C7 sobre #E3E3E3 (~1,3:1). Se
+// elige el token y no un literal justamente porque es un blanco TRANSLUCIDO: sigue leyendose igual
+// si la pastilla cambia de fondo, cosa que un gris fijo no hace. Este <style> no es scoped, asi que
+// la regla html.dark-mode funciona derecho.
+html.dark-mode .control-fecha .control-fecha__separador
+	background-color: var(--color-border)
 
 // Telefono: la pastilla ocupa el ancho y se parte en dos filas ADENTRO del mismo contenedor gris
 // (una sola pastilla, no dos). Nunca se oculta: el comentario del template de view/header/Index.vue

@@ -22,6 +22,7 @@
 					
 					<b-form-group
 					:class="colorLabel(prop)"
+					:data-tour="prop.data_tour_grupo || null"
 					:id="'form-group-'+prop.key">
 
 						<!-- Titulo label; cursor help (icono "?" nativo) + hover-intent para mostrar el popover -->
@@ -1792,9 +1793,13 @@ export default {
 				return
 			}
 
-			/* Se registra el valor y se ejecuta el mismo chequeo que en Enter. */
+			/*
+				Se registra el valor y se ejecuta el mismo chequeo que en Enter, pero SIN overlay:
+				el blur lo dispara el usuario yendose a otro lado (otro input, Eliminar, cerrar el
+				modal) y un overlay full-screen montado en ese momento se come ese mismo click.
+			*/
 			this.last_repeat_check_by_prop_key[prop.key] = normalized_value
-			this.checkIsRepeat(prop)
+			this.checkIsRepeat(prop, {mostrar_overlay: false})
 		},
 		/**
 		 * Placeholder para campos type="password" (write-only: el backend nunca devuelve
@@ -1851,7 +1856,7 @@ export default {
 		},
 		/*
 			Registra el último valor chequeado para un `prop` específico.
-			Se usa principalmente para el flujo de Enter → foco al siguiente input.
+			Sirve para que el blur posterior a un Enter no repita la misma request.
 		*/
 		set_last_repeat_check_value(prop) {
 			/* Validación defensiva para no romper si llega un `prop` inesperado. */
@@ -1863,103 +1868,144 @@ export default {
 			let current_value = this.model && this.model[prop.key] != null ? String(this.model[prop.key]) : ''
 			this.last_repeat_check_by_prop_key[prop.key] = current_value.trim().toLowerCase()
 		},
-		async checkIsRepeat(prop) {
-		    /* Respeta configuración por usuario para omitir chequeos puntuales. */
-		    if (!this.can_check_is_repeat(prop)) {
-		    	return
-		    }
-		    if (prop.use_to_check_if_is_repeat) {
-		        let finded = undefined;
+		/*
+			Chequea si el valor cargado en `prop` ya lo usa otro modelo.
 
-		        if (prop.chequear_buscando_desde_api) {
-					// Construir los filtros. String() defensivo: editando, el valor puede venir
-					// numérico desde la API y .toLowerCase() directo rompería.
-		            let filters = [
-		                {
-		                    type: 'text',
-							igual_que: String(this.model[prop.key]).toLowerCase(),
-		                    key: prop.key
-		                }
-		            ];
+			`opciones.mostrar_overlay` decide si se levanta el overlay global de carga
+			(auth/setLoading + auth/setMessage, que es lo que dibuja LogoLoading.vue).
 
-		            // Mostrar mensaje y activar loading
-		            this.$store.commit('auth/setMessage', 'Chequeando ' + prop.text);
-		            this.$store.commit('auth/setLoading', true);
-
-		            try {
-		                // Llamada a la API y esperar la respuesta
-		                const res = await this.$api.post('search/' + this.model_name, {
-		                    filters
-		                });
-
-		                this.$store.commit('auth/setLoading', false);
-
-		                let models = res.data.models;
-		                if (models.length) {
-		                    console.log('Hay finded:');
-		                    finded = models[0];
-		                    console.log(models[0]);
-		                }
-		            } catch (err) {
-		                this.$store.commit('auth/setLoading', false);
-		                this.$toast.error('Error al chequear ' + prop.text);
-		                console.log(err);
-		            }
-		        } else {
-					// Buscar localmente. String() defensivo por el mismo motivo que arriba.
-		            finded = this.modelsStoreFromName(this.model_name).find(model => {
-						return model[prop.key] && String(model[prop.key]).toLowerCase() == String(this.model[prop.key]).toLowerCase();
-		            });
-		        }
-
-		        console.log('finded:');
-		        console.log(finded);
-
-				// Validar si se encontró un modelo repetido. Si el encontrado es el mismo que se
-				// está editando (mismo id), no es un repetido: es el propio código del modelo.
-				let es_alta = !this.model.id
-				if (typeof finded != 'undefined' && (es_alta || this.model.id != finded.id)) {
-					if (es_alta) {
-						// Al crear: aviso + se carga el existente para editarlo (comportamiento original).
-						this.$toast.warning('Ya hay un ' + this.singular(this.model_name) + ' con este ' + this.propText(prop));
-						this.setModel(finded, this.model_name, [], false);
-					} else {
-						/*
-							Editando (ítem 8, tanda-correctivos-2408): el aviso es SOLO un aviso.
-							No se pisa el modelo en edición ni se frena el guardado — la unicidad
-							no se valida en backend y el usuario puede decidir guardar igual.
-						*/
-						let aviso = 'Este ' + this.propText(prop) + ' ya lo usa otro ' + this.singular(this.model_name)
-						if (finded.name) {
-							aviso += ' (' + finded.name + ')'
-						}
-						this.$toast.warning(aviso);
-					}
-				} else if (es_alta) {
-					/* El salto de foco al siguiente input es parte del flujo de alta rápida, no del de edición. */
-					this.foco_input_siguiente(prop)
-				}
-		    }
-		},
-		foco_input_siguiente(prop) {
-			console.log('foco_input_siguiente')
-			let index = this.properties.findIndex(_prop => {
-				return _prop.key == prop.key
-			})
-			console.log('index: '+index)
-			if (index != -1) {
-
-				let prop_siguiente = this.properties[index+1]
-				console.log('prop_siguiente: '+prop_siguiente.key)
-				let input = document.getElementById(this.model_name+'-'+prop_siguiente.key)
-				console.log('input: ')
-				console.log(input)
-				if (input) {
-					setTimeout(() => {
-						input.focus()
-					}, 200)
-				}
+			Cuando el chequeo lo dispara un `blur` va SIEMPRE en false, y el motivo no es estético:
+			LogoLoading es un overlay `position: fixed; inset: 0; z-index: 10000`. Si se levanta desde
+			el handler de blur, Vue lo inserta en el DOM antes del `mouseup`, el `click` se resuelve
+			contra el overlay en vez del botón, y el usuario ve que Eliminar, la X del modal o el
+			backdrop no hacen nada (había que apretar dos veces: la segunda ya encontraba el valor
+			cacheado en last_repeat_check_by_prop_key y no chequeaba). La regla que queda: un handler
+			de blur nunca levanta un overlay que tape la pantalla, porque se come el click que causó
+			ese mismo blur.
+		*/
+		checkIsRepeat(prop, opciones) {
+			/* Respeta configuración por usuario para omitir chequeos puntuales. */
+			if (!this.can_check_is_repeat(prop)) {
+				return
 			}
+
+			if (!prop.use_to_check_if_is_repeat) {
+				return
+			}
+
+			let self = this
+			let config = opciones || {}
+			/* Por defecto se muestra, para no cambiarle el flujo a ningún llamador que no lo pida. */
+			let mostrar_overlay = config.mostrar_overlay !== false
+
+			/*
+				Valor con el que se dispara este chequeo. String() defensivo: editando, el valor puede
+				venir numérico desde la API y .toLowerCase() directo rompería. Se guarda además para
+				poder descartar la respuesta si llega tarde (ver avisar_si_esta_repetido).
+			*/
+			let valor_chequeado = String(this.model[prop.key]).toLowerCase()
+
+			if (prop.chequear_buscando_desde_api) {
+				let filters = [
+					{
+						type: 'text',
+						igual_que: valor_chequeado,
+						key: prop.key
+					}
+				]
+
+				if (mostrar_overlay) {
+					this.$store.commit('auth/setMessage', 'Chequeando ' + prop.text)
+					this.$store.commit('auth/setLoading', true)
+				}
+
+				this.$api.post('search/' + this.model_name, {filters})
+				.then(function(res) {
+					if (mostrar_overlay) {
+						self.$store.commit('auth/setLoading', false)
+					}
+
+					let models = res && res.data ? res.data.models : null
+
+					/*
+						Respuesta con una forma que no esperamos. Se avisa igual que un error de red:
+						darla por "no hay repetido" haría pasar en silencio un problema del backend.
+					*/
+					if (!Array.isArray(models)) {
+						self.$toast.error('Error al chequear ' + prop.text)
+						console.log(res)
+						return
+					}
+
+					self.avisar_si_esta_repetido(prop, models.length ? models[0] : undefined, valor_chequeado)
+				})
+				.catch(function(err) {
+					if (mostrar_overlay) {
+						self.$store.commit('auth/setLoading', false)
+					}
+					self.$toast.error('Error al chequear ' + prop.text)
+					console.log(err)
+				})
+
+				return
+			}
+
+			/* Buscar localmente, contra los modelos que ya estén en el store. */
+			let finded = this.modelsStoreFromName(this.model_name).find(function(model) {
+				return model[prop.key] && String(model[prop.key]).toLowerCase() == valor_chequeado
+			})
+
+			this.avisar_si_esta_repetido(prop, finded, valor_chequeado)
+		},
+		/*
+			Avisa cuando el valor de `prop` ya lo usa otro modelo.
+
+			Al CREAR: aviso + se carga el existente en el formulario para editarlo (comportamiento
+			original).
+			Al EDITAR (ítem 8, tanda-correctivos-2408): el aviso es SOLO un aviso. No se pisa el modelo
+			en edición ni se frena el guardado, porque la unicidad no se valida en backend y el usuario
+			puede decidir guardar igual.
+
+			Si el encontrado es el mismo que se está editando (mismo id) no es un repetido: es el
+			propio código del modelo.
+
+			Acá ya no se mueve el foco al input siguiente (pedido de Lucas, 27/8/2026): el foco queda
+			donde lo dejó el usuario, tanto si el chequeo salió de un blur como de un Enter.
+		*/
+		avisar_si_esta_repetido(prop, finded, valor_chequeado) {
+			/*
+				La respuesta puede llegar con el formulario mostrando otra cosa: sin overlay de por medio
+				el usuario puede cerrar el modal o abrir otro modelo mientras la request está en vuelo.
+				Si el modelo ya no está, o el valor que se chequeó ya no es el que hay cargado, esta
+				respuesta no aplica y se descarta.
+			*/
+			if (!this.model) {
+				return
+			}
+			if (String(this.model[prop.key]).toLowerCase() != valor_chequeado) {
+				return
+			}
+
+			if (typeof finded == 'undefined') {
+				return
+			}
+
+			let es_alta = !this.model.id
+			if (!es_alta && this.model.id == finded.id) {
+				return
+			}
+
+			if (es_alta) {
+				this.$toast.warning('Ya hay un ' + this.singular(this.model_name) + ' con este ' + this.propText(prop))
+				this.setModel(finded, this.model_name, [], false)
+				return
+			}
+
+			let aviso = 'Este ' + this.propText(prop) + ' ya lo usa otro ' + this.singular(this.model_name)
+			if (finded.name) {
+				aviso += ' (' + finded.name + ')'
+			}
+			this.$toast.warning(aviso)
 		},
 		/**
 		 * Ancho (unidades de grilla 1..12) para una prop en el formulario.
@@ -2019,7 +2065,19 @@ export default {
 </script>
 <style lang="sass">
 @import '@/sass/_custom.scss'
-.model-form 
+
+// Aire entre el label y el campo que va debajo. Vive en una variable porque lo tienen que usar DOS
+// reglas que estan obligadas a moverse juntas: `.form-label` (el margen de verdad) y
+// `label.form-label--has-help`, que agranda el area de hover con un padding y por eso tiene que
+// descontar ese padding de su propio margen. Cuando estaban escritas por separado, la segunda le
+// comia el margen a la primera sin que nada lo denunciara.
+//
+// El valor sale de igualar el aire que hoy tiene el bloque `only_show`, que es el unico que a Lucas
+// le parece bien (13/8/2026: 0.85rem del label + 0.1rem propio de la pildora = 0.95rem). Con esto
+// TODOS los campos quedan con ese mismo aire y el `only_show` no se mueve ni un pixel.
+$label_gap: 0.95rem
+
+.model-form
 	[class^='col-']
 		padding-bottom: 7px
 		margin-bottom: 45px
@@ -2044,10 +2102,29 @@ export default {
 	// Indica ayuda al hover cuando el campo tiene popover de instrucciones (hover-intent).
 	// El padding + margen negativo (se cancelan visualmente, no mueven el layout) agranda
 	// el área donde el hover cuenta, para no depender de apuntar justo al texto.
+	//
+	// 🔴 El margen NO se vuelve a escribir con el atajo `margin: -6px 0`. Ese atajo tambien fija
+	// margin-bottom, y este selector (dos clases + un elemento) le gana por especificidad a
+	// `.form-label`, asi que se comia el aire del label en TODOS los campos que declaran
+	// `description` o `descriptions` --que en article.js son casi todos--: el hueco quedaba en cero
+	// (padding-bottom 6px menos margin-bottom 6px) mientras los que no declaran ninguna, como
+	// "Aplicar iva" o "categoria", se veian bien. De ahi salia la queja de Lucas de que "salvo
+	// algunos inputs, el label se ve muy pegado", y tambien la razon por la que las dos subidas
+	// anteriores del margen (0.38 -> 0.6 -> 0.85rem) no se notaron en pantalla: no llegaban a
+	// aplicarse. Ahora el negativo va SOLO arriba, y abajo se descuenta el padding del aire comun.
+	//
+	// El cursor es un SVG propio embebido: el `help` nativo dibuja en Windows el puntero con el
+	// interrogante viejo, que Lucas pidio sacar. El dibujo es la flecha estandar (blanca con
+	// contorno oscuro, que es como se ven los cursores del sistema y por eso se lee tanto sobre
+	// fondo claro como sobre fondo oscuro) con una insignia azul del tema y una "i" adentro. El
+	// cursor no puede cambiar de color con el tema, asi que tiene que funcionar en los dos.
+	// El "4 2" es el hotspot: la punta de la flecha. El `help` del final es el respaldo obligatorio
+	// por si el navegador rechaza el data URI, y el SVG va URL-encodeado (nada de `#` crudo).
 	label.form-label--has-help
-		cursor: help
+		cursor: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='32'%20height='32'%20viewBox='0%200%2032%2032'%3E%3Cpath%20d='M4%202%20L4%2020.5%20L9%2015.8%20L12%2022.6%20L14.9%2021.3%20L11.9%2014.8%20L18.3%2014.8%20Z'%20fill='%23ffffff'%20stroke='%231f2937'%20stroke-width='1.4'%20stroke-linejoin='round'/%3E%3Ccircle%20cx='22.5'%20cy='22.5'%20r='9'%20fill='%23ffffff'/%3E%3Ccircle%20cx='22.5'%20cy='22.5'%20r='7.6'%20fill='%23007bff'/%3E%3Ccircle%20cx='22.5'%20cy='18.7'%20r='1.35'%20fill='%23ffffff'/%3E%3Crect%20x='21.25'%20y='21.1'%20width='2.5'%20height='6.1'%20rx='1.25'%20fill='%23ffffff'/%3E%3C/svg%3E") 4 2, help
 		padding: 6px 0
-		margin: -6px 0
+		margin-top: -6px
+		margin-bottom: calc(#{$label_gap} - 6px)
 
 	// ─── Label moderno: compacto, peso alto, tipografía uppercase sutil ───────
 	// Similar a LoginForm: pequeño, oscuro, con letra-espaciado para legibilidad
@@ -2064,7 +2141,12 @@ export default {
 		// los DOS modos, no es un ajuste del tema oscuro.
 		// Sube de 0.6rem (13/8/2026, pedido de Lucas): con los campos mas bajos, el label quedaba
 		// otra vez pegado al input. Es el aire entre el label y su campo, en los dos modos.
-		margin-bottom: 0.85rem
+		// Sube de 0.85rem a 0.95rem = $label_gap (7/9/2026, pedido de Lucas): iguala el aire del
+		// bloque `only_show`, que era el unico que le gustaba. El salto en si es de un pixel y
+		// medio; lo que de verdad se ve es el arreglo del margen que se comia
+		// `label.form-label--has-help` (ver la nota de esa regla mas arriba), que era el motivo por
+		// el que las dos subidas anteriores no habian cambiado nada en la mayoria de los campos.
+		margin-bottom: $label_gap
 		display: block
 		transition: color 0.15s ease
 
@@ -2119,10 +2201,12 @@ export default {
 		padding: 0.45rem 0.7rem
 		line-height: 1.5
 
+	// Se saco de aca un `@if ($theme == 'dark') border-top: 1px solid red !important`: era una
+	// prueba que no se compilo nunca ($theme esta fijada en 'light' en _custom.scss) y que, de
+	// haberse compilado, pintaba la linea de rojo. El color del <hr> en oscuro ya lo resuelve
+	// _dark_theme.sass con --color-border.
 	hr
 		width: 100%
-		@if ($theme == 'dark')
-			border-top: 1px solid red !important
 
 	// ─── Valor calculado por función ─────────────────────────────────────────
 	// Mismo contenedor gris que only_show para coherencia visual
@@ -2153,8 +2237,11 @@ export default {
 		border: 1px solid var(--color-border-secondary, transparent)
 		line-height: 1.45
 		max-width: 100%
-		// Un respiro extra respecto del label, para cuando el label ocupa dos renglones.
-		margin-top: 0.1rem
+		// Ya no lleva el respiro extra de 0.1rem respecto del label. No es que se le haya sacado
+		// aire: ese 0.1rem se mudo al margen comun ($label_gap paso de 0.85 a 0.95rem), asi que la
+		// pildora conserva EXACTAMENTE la separacion que tenia --que es la que Lucas pidio no
+		// tocar-- y ahora el resto de los campos la iguala en vez de quedarse corto.
+		margin-top: 0
 
 	// Texto del valor presente: legible, peso medio, oscuro
 	.model-form__only-show-value
@@ -2298,7 +2385,24 @@ export default {
 		max-height: 55vh !important
 		overflow-y: auto
 		padding: 0
-		color: initial
+		// Era `initial`, que resuelve a `canvastext` (el negro del sistema) y NO sigue al tema: el
+		// contenedor .popover si lo pinta _dark_theme.sass con --bg-card, asi que en oscuro
+		// quedaba texto casi negro sobre fondo oscuro. Con el token acompaña al modo, y el
+		// fallback es el gris de bootstrap, que es lo que se ve hoy en claro.
+		color: var(--color-text-primary, #212529)
+
+	// La punta del popover la pinta bootstrap con blanco duro, asi que sobre el modal oscuro
+	// quedaba un triangulito blanco colgando del cuadro. Se pinta con el color de la tarjeta, que
+	// en claro ya vale #fff: el modo claro no se mueve. Van los dos placements posibles (el
+	// popover se pide "bottom" y se da vuelta solo si no entra) y las dos formas en que
+	// bootstrap-vue marca la posicion, la clase y el atributo de popper.
+	&.bs-popover-bottom .arrow::after,
+	&.bs-popover-auto[x-placement^="bottom"] .arrow::after
+		border-bottom-color: var(--bg-card, #fff)
+
+	&.bs-popover-top .arrow::after,
+	&.bs-popover-auto[x-placement^="top"] .arrow::after
+		border-top-color: var(--bg-card, #fff)
 
 	// Animación estilo Apple: fundido + escala sutil, rápida (180ms).
 	// BootstrapVue ya agrega/saca las clases fade/show al mostrar/ocultar
@@ -2320,14 +2424,19 @@ export default {
 	font-weight: 700
 	text-transform: uppercase
 	letter-spacing: 0.04em
-	color: #6b7280
+	// Literal fijo hasta ahora: sobre el popover oscuro este gris se apagaba contra el fondo. El
+	// fallback es el mismo #6b7280 de hoy, asi que en claro no cambia nada.
+	color: var(--color-text-secondary, #6b7280)
 	margin-bottom: 10px
 
 .model-form-help-popover__body
 	p
 		font-size: 0.925rem
 		line-height: 1.55
-		color: #1f2937
+		// El cuerpo de la instruccion es el texto que Lucas no podia leer en oscuro: era este
+		// #1f2937 casi negro sobre la tarjeta oscura. Con el token acompaña al tema; el fallback
+		// deja el modo claro igual que hoy.
+		color: var(--color-text-primary, #1f2937)
 		margin-bottom: 10px
 
 		&:last-child

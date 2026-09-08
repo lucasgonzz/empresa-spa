@@ -326,7 +326,36 @@ export default {
 }
 </script>
 <style lang="sass">
+// 7/9/2026 - "en el modal para seleccionar el filtro de cada columna tambien acomoda el texto para
+// el modo oscuro" (Lucas).
+//
+// Lo primero que se busco, y NO esta: el template de este modal no tiene ni un `text-dark`, ni un
+// `bg-light`/`bg-white`, ni un `variant="light"`, ni un `style="color: ..."`. No habia un literal
+// claro escrito a mano para sacar.
+//
+// Lo que si pasa: practicamente todo el texto del cuerpo --el <p><strong> del encabezado, el
+// <legend> que b-form-group dibuja como etiqueta de cada filtro, el label de los checkbox-- no
+// declara color propio y depende de HEREDARLO del .modal-content, que es el que el tema pinta. Con
+// <fieldset> y <legend> de por medio esa cadena es fragil, y alcanza con que un eslabon no herede
+// para que ese texto vuelva al casi negro por defecto sobre un modal oscuro. Fijarlo por token lo
+// corta de raiz.
+//
+// Y no mueve el modo claro ni un pelo, que es la condicion: --color-text-primary vale #212529 en
+// :root, que es exactamente el $body-color de bootstrap que hoy se hereda.
+//
+// Lo que NO se toca aca: .text-muted, .text-dark, .border y sus variantes. Son utilidades de
+// bootstrap declaradas con !important y se resuelven una sola vez, globalmente, en
+// _dark_theme.sass.
 #filter-modal
+	color: var(--color-text-primary, #212529)
+
 	.form-group
 		margin-bottom: 0 !important
+
+	p, strong, label, legend, .col-form-label
+		color: var(--color-text-primary, #212529)
+
+	// Los <hr> que separan un filtro del siguiente son chasis del modal, no texto.
+	hr
+		border-top-color: var(--color-border, #dee2e6)
 </style>

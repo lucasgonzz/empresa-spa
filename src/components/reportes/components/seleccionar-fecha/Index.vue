@@ -190,6 +190,12 @@ export default {
 		gap: 8px
 
 /* Pista gris segmentada — mismos estilos que horizontal-nav, ancho al contenido */
+// 🔴 Este bloque REDECLARA lo que el componente global ya resuelve bien, y por eso lo tapaba.
+// common-vue/components/horizontal-nav/Index.vue ya pinta la pista con `var(--bg-nav, #E3E3E3)`,
+// pero acá el selector suma DOS clases (.date-mode-selector.horizontal-nav) contra la sola del
+// global, así que este literal #E3E3E3 le ganaba siempre y el nav de "Hoy / Rango de fechas"
+// quedaba gris casi blanco en modo oscuro (7/9/2026, reportado por Lucas). Ahora usa los mismos
+// tokens que el global: mismo color en claro, y el que corresponde en oscuro.
 .date-mode-selector.horizontal-nav
 	display: inline-flex
 	width: fit-content
@@ -200,7 +206,7 @@ export default {
 	padding: 4px
 	overflow-x: auto
 	overflow-y: hidden
-	background-color: #E3E3E3
+	background-color: var(--bg-nav, #E3E3E3)
 	border-radius: 8px
 
 	.item
@@ -211,14 +217,16 @@ export default {
 		font-size: 0.875rem
 		font-weight: 500
 		line-height: 1.25
-		color: #6c757d
+		color: var(--color-text-secondary, #6c757d)
 		background-color: transparent
 		white-space: nowrap
 		transition: color 0.12s ease, background-color 0.12s ease, box-shadow 0.12s ease
 
+		// El azul queda literal: es color de acción y no cambia entre modos. El fondo sí va por
+		// token, que conserva el matiz azulado también en oscuro.
 		&:hover:not(.active):not(.is-disabled)
 			color: #0d6efd
-			background-color: #e7f1ff
+			background-color: var(--bg-nav-hover, #e7f1ff)
 
 		&:focus,
 		&:focus-visible
@@ -261,20 +269,32 @@ export default {
 	flex-direction: column
 	gap: 4px
 
+// "Desde" / "Hasta": texto secundario del sistema. El #64748B de antes era un gris de modo claro
+// escrito a mano, invisible sobre el fondo oscuro.
 .date-field-label
 	font-size: 0.78rem
 	font-weight: 500
-	color: #64748B
+	color: var(--color-text-secondary, #64748B)
 	margin-bottom: 0
 	text-transform: uppercase
 	letter-spacing: 0.04em
 
+// Los dos inputs de fecha eran una tarjeta blanca con borde y texto casi negro: en modo oscuro,
+// dos rectángulos blancos. El borde y el texto van con los mismos tokens que usa el tema para
+// .form-control, porque ahí el valor claro del token es indistinguible del literal que había
+// (#dee2e6 vs #E2E8F0, #212529 vs #1E293B).
+//
+// 🔴 7/9/2026: el FONDO no, y por eso queda escrito tal cual. El fallback de un var() entra
+// unicamente cuando la custom property NO esta definida, y --bg-section SI esta definida en
+// :root (vale #f8f9fa): con var(--bg-section, #FFFFFF) el modo claro tomaba el token y los dos
+// campos de fecha dejaban de ser blancos. Son campos de formulario, y en modo claro un input va
+// blanco. La contraparte oscura esta al final de esta hoja.
 .date-field-input
-	border: 1px solid #E2E8F0
+	border: 1px solid var(--color-border, #E2E8F0)
 	border-radius: 8px
 	padding: 7px 10px
 	font-size: 0.875rem
-	color: #1E293B
+	color: var(--color-text-primary, #1E293B)
 	background: #FFFFFF
 	cursor: pointer
 	transition: border-color 0.15s ease, box-shadow 0.15s ease
@@ -286,9 +306,9 @@ export default {
 		border-color: #3B82F6
 		box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12)
 
-/* Separador entre las dos fechas */
+/* Separador entre las dos fechas. Es un elemento de chasis, no texto: va con el color de borde. */
 .date-range-sep
-	color: #CBD5E1
+	color: var(--color-border, #CBD5E1)
 	font-size: 1rem
 	padding-bottom: 9px
 	user-select: none
@@ -307,4 +327,12 @@ export default {
 	color: #EF4444
 	margin: 0
 	padding: 0
+
+// Contraparte oscura del fondo de los campos de fecha. Vive afuera del bloque de
+// .date-field-input porque alla el blanco tiene que quedar literal (ver el comentario del
+// 7/9/2026). Aca va --bg-section, que es el mismo token que _dark_theme.sass le da a
+// .form-control: un campo de fecha y un input del sistema se ven igual en oscuro.
+html.dark-mode
+	.date-field-input
+		background: var(--bg-section)
 </style>

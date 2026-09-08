@@ -28,10 +28,16 @@
 	-moz-osx-font-smoothing: grayscale
 	text-align: center
 	// padding-bottom: 20px
-	@if ($theme == 'dark') 
-		background: #333
-	@else
-		background: linear-gradient(180deg, #F6F7F9 0%, #EBEDF0 100%)
+	// 7/9/2026: aca habia un `@if ($theme == 'dark') { background: #333 }`. Se BORRO la rama y
+	// quedo solo el degradado, que es lo unico que se emitia: $theme es una variable de
+	// COMPILACION fijada en 'light' en _custom.scss.
+	//
+	// No se convierte a token ni se le agrega contraparte oscura porque este background ya esta
+	// pisado en los DOS modos por _fondo_app.sass --`html #app` (1,0,1) en claro y
+	// `html.dark-mode #app` (1,1,1) en oscuro, contra el (1,0,0) de este selector--, que es quien
+	// pone hoy el color base + las dos manchas. La linea se conserva igual que hasta ahora, sin
+	// tocarla, para no cambiar nada del modo claro si alguna vista se armara sin esa hoja.
+	background: linear-gradient(180deg, #F6F7F9 0%, #EBEDF0 100%)
 	.container-fluid
 		min-height: 100vh
 		// padding-right: 0

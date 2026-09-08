@@ -1,6 +1,7 @@
 <template>
 <div
 v-if="from_credit_account"
+data-tour="cuentas_corrientes.saldo"
 class="saldo-y-limite">
 	<span class="saldo-y-limite__item">
 		Saldo actual: <b>{{ price(from_credit_account.saldo) }}</b>

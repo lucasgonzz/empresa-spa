@@ -100,6 +100,17 @@ export default {
 		 * sesión. Por eso sobrevive al F5 (misión 52).
 		 */
 		clips_vistos: [],
+		/**
+		 * Ids de los clips cuyo tour guiado el lead completó hasta el final. Es lo que pinta el
+		 * botón "Probar" de verde con el check (1/9/2026).
+		 *
+		 * Vive acá y no en `PanelDemo.vue` por el mismo motivo que `clips_vistos`, que es el único
+		 * motivo que importa: tiene que sobrevivir al F5. Se siembra desde el `probado` que
+		 * devuelve el plan —o sea desde los `tour.completado` ya persistidos— y después se le
+		 * suman los de esta sesión. Si viviera en memoria, el lead que recarga vería como no
+		 * probado un tour que terminó, y el panel le estaría pidiendo que lo repita.
+		 */
+		clips_probados: [],
 		/** Texto de las notas, restaurado del último `nota.escrita` (misión 52). */
 		notas: '',
 		/**
@@ -211,6 +222,16 @@ export default {
 				state.clips_vistos.push(clip_id)
 			}
 		},
+		/**
+		 * Marca el tour de un clip como completado. Idempotente: el lead puede volver a hacer el
+		 * mismo tour cuantas veces quiera, y la siembra del plan lo puede pisar en cualquier
+		 * momento.
+		 */
+		agregarClipProbado(state, clip_id) {
+			if (clip_id && state.clips_probados.indexOf(clip_id) === -1) {
+				state.clips_probados.push(clip_id)
+			}
+		},
 		setNotas(state, texto) {
 			state.notas = typeof texto === 'string' ? texto : ''
 		},
@@ -274,6 +295,16 @@ export default {
 						(seccion.clips || []).forEach(function (clip) {
 							if (clip.visto) {
 								commit('agregarClipVisto', clip.id)
+							}
+
+							/**
+							 * `probado` lo agregó `DemoPlanController` el 1/9/2026. Un plan
+							 * servido por una API vieja no lo trae, y ahí este `if` no entra
+							 * nunca: el lead arranca con todos los tours sin marcar y el panel
+							 * funciona igual. Es el mismo trato que ya tenía `visto`.
+							 */
+							if (clip.probado) {
+								commit('agregarClipProbado', clip.id)
 							}
 						})
 					})

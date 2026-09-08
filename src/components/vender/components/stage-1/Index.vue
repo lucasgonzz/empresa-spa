@@ -10,8 +10,14 @@
 	:class="{ 'vender-stage--open': stage1_open }">
 
 		<!-- Header de la etapa 1 -->
+		<!--
+			El ancla va en el header y no en el contenedor: es la franja clickeable que abre y
+			cierra la etapa, y es lo unico que se ve cuando la etapa esta colapsada (que es como
+			queda apenas la venta tiene items, cliente o esta en edicion).
+		-->
 		<div
 		class="vender-stage__header"
+		data-tour="vender.etapa_1"
 		ref="stage1_header"
 		@click="toggleStage1">
 			<span class="vender-stage__number">1</span>

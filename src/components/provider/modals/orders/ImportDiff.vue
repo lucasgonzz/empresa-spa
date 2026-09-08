@@ -4,7 +4,9 @@ id="import-diff-provider-order"
 title="Comparación pedido vs recibido"
 size="lg"
 hide-footer>
-	<div v-if="importDiff.length">
+	<div
+	v-if="importDiff.length"
+	data-tour="compras.modal_diferencias">
 
 		<div class="mb-3 d-flex flex-wrap" style="gap: 8px">
 			<b-badge variant="success" class="p-2">

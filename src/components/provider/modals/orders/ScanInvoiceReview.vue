@@ -6,7 +6,9 @@
 	hide-footer
 	no-close-on-backdrop
 	@show="construir">
-		<div class="scan-review">
+		<div
+		class="scan-review"
+		data-tour="compras.modal_revision_escaneo">
 
 			<div
 			v-if="cargando"
@@ -30,7 +32,9 @@
 					class="scan-review__vacio">
 						La IA no reconoció ninguna columna de la tabla.
 					</p>
-					<div class="scan-review__chips">
+					<div
+					class="scan-review__chips"
+					data-tour="compras.chips_columnas_detectadas">
 						<span
 						v-for="(columna, index) in columnas"
 						:key="'col-' + index"
@@ -244,7 +248,8 @@
 
 					<div
 					v-else
-					class="scan-review__tabla">
+					class="scan-review__tabla"
+					data-tour="compras.tabla_escaneo">
 
 						<div class="scan-review__fila scan-review__cabecera">
 							<div class="scan-review__celda scan-review__celda--check">&nbsp;</div>
@@ -503,6 +508,7 @@
 					resolver los cinco de una.
 				-->
 				<b-alert
+				data-tour="compras.aviso_descartes"
 				v-if="articulos_que_se_descartan.length"
 				show
 				variant="danger"
@@ -535,6 +541,7 @@
 					<b-button
 					variant="primary"
 					:disabled="confirmando || descartando || !hay_algo_para_cargar"
+					data-tour="compras.boton_confirmar_escaneo"
 					@click="confirmar">
 						{{ confirmando ? 'Cargando…' : 'Confirmar y cargar en la compra' }}
 					</b-button>

@@ -26,7 +26,7 @@
 				<table
 				:id="'table-'+model_name"
 				class="common-table"
-				:data-tour="model_name === 'article' ? 'listado.tabla' : null">
+				:data-tour="ancla_tour">
 					<thead>
 						<tr>
 							<th
@@ -238,13 +238,21 @@
 			</div>
 
 		</div>
-		<!-- Modal de filtros por columna (un solo modal por tabla) -->
+		<!--
+			Modal de filtros por columna (un solo modal por tabla).
+
+			🔴 Este @filtrar va a on_filtrar_desde_columna y NO a filtrar() a secas, que es lo que
+			usan el <pagination> y el <ordenar> de mas arriba. Es el unico punto del componente por
+			donde el USUARIO confirma un criterio de columna, y por eso es el unico que puede apagar
+			la busqueda del buscador general (exclusion mutua, Lucas 28/8/2026). Si el apagado
+			viviera adentro de filtrar(), paginar u ordenar borrarian la busqueda general.
+		-->
 		<filter-modal
 		v-if="!pivot && usar_filtros"
 		:field="filter_modal_field"
 		:model_name="model_name"
 		:modal_id="filter_modal_id"
-		@filtrar="filtrar"
+		@filtrar="on_filtrar_desde_columna"
 		@agregar_filtro="on_agregar_filtro"
 		@closed="close_filter_modal"></filter-modal>
 	</div>
@@ -252,6 +260,7 @@
 <script>
 import infiniteScroll from 'vue-infinite-scroll'
 import filters from '@/common-vue/mixins/filters'
+import { ANCLA_TABLA, ancla_de } from '@/common-vue/tours/anclas-por-modelo'
 
 export default {
 	mixins: [filters],
@@ -408,6 +417,18 @@ export default {
 		}
 	},
 	computed: {
+		/**
+		 * Ancla `data-tour` de la tabla, segun el modelo que se este dibujando.
+		 *
+		 * Sale del mapa de `@/common-vue/tours/anclas-por-modelo` en vez de un ternario encadenado: esta
+		 * misma tabla la usan articulos, ventas, compras, pedidos y presupuestos, y con una rama
+		 * por modelo el template dejaba de leerse.
+		 *
+		 * @returns {String|null}
+		 */
+		ancla_tour() {
+			return ancla_de(ANCLA_TABLA, this.model_name)
+		},
 		/**
 		 * Ancho del envoltorio sticky del estado vacío: el del área visible, para que el mensaje
 		 * quede centrado en la pantalla y no a mitad del scroll horizontal de la tabla.
@@ -905,6 +926,43 @@ export default {
 			return this.$store.dispatch(this.model_name + '/runGlobalSearch', { page: 1 })
 		},
 		/**
+		 * Apaga la busqueda del buscador general que estuviera puesta, porque el usuario acaba de
+		 * elegir el otro criterio: los filtros de columna.
+		 *
+		 * Es la mitad "columnas" de la exclusion mutua que pidio Lucas el 28/8/2026 ("o busca por
+		 * el buscador general o busca por las columnas... no se deben de poder combinar"). La otra
+		 * mitad la hace el buscador general al buscar.
+		 *
+		 * 🔴 En papelera la regla NO aplica y se sale antes de tocar nada: el store de papelera es
+		 * otro (src/store/papelera/*.js, escritos a mano y NO por el factory de __base_store.js),
+		 * no tiene ni global_search_payload ni estas actions, asi que el dispatch reventaria con
+		 * "unknown action type". La papelera se filtra por su propio camino
+		 * (run_papelera_search_from_store) y no tiene buscador general con el que competir.
+		 *
+		 * @return {void}
+		 */
+		apagar_busqueda_general_por_filtro_de_columna() {
+			if (this.papelera) {
+				return
+			}
+			this.$store.dispatch(this.model_name + '/aplicar_filtros_de_columna_exclusivos')
+		},
+		/**
+		 * Handler del boton "Filtrar" del modal de columna: apaga la busqueda general y despues
+		 * filtra.
+		 *
+		 * 🔴 Vive separado de filtrar() a proposito. filtrar() lo emiten tambien <pagination> y
+		 * <ordenar>: si el apagado estuviera adentro, pasar a la pagina 2 o cambiar el orden de una
+		 * columna borraria la busqueda del buscador general, que es un efecto que nadie pidio y que
+		 * el usuario leeria como un bug.
+		 *
+		 * @return {Promise}
+		 */
+		on_filtrar_desde_columna() {
+			this.apagar_busqueda_general_por_filtro_de_columna()
+			return this.filtrar()
+		},
+		/**
 		 * Abre el modal de filtro para la columna indicada por la lupa.
 		 *
 		 * @param {string} field_key
@@ -919,6 +977,17 @@ export default {
 		},
 		/**
 		 * Cierra el modal sin ejecutar búsqueda; el filtro queda guardado en store.
+		 *
+		 * 🔴 NO apaga el buscador general, y eso es a proposito: la exclusion mutua se aplica cuando
+		 * la busqueda se EJECUTA, no cuando se guarda un criterio. Este boton guarda y cierra sin
+		 * buscar, asi que apagarlo aca dejaba la pantalla mintiendo: el input y los chips se vaciaban
+		 * mientras la tabla seguia mostrando las filas de la busqueda de texto. Y si el usuario
+		 * despues paginaba, la pagina 1 era el resultado de "coca" y la 2 salia de un payload vacio:
+		 * dos paginas de consultas distintas.
+		 *
+		 * Que los dos criterios convivan hasta la proxima ejecucion NO reabre el agujero de la
+		 * masiva: `runGlobalSearch` apaga `set_filtered_without_filter_form` tambien cuando el
+		 * payload trae criterio de texto (ver su `.then()` en src/store/__base_store.js).
 		 */
 		on_agregar_filtro() {
 			this.close_filter_modal()
@@ -1627,11 +1696,11 @@ export default {
 	
 
 	.b-skeleton-table
-		@if ($theme == 'dark')
-			background: rgba(0,0,0,.8)
-		@else
-			/* Token con fallback para que el skeleton de carga no destelle blanco en modo oscuro. */
-			background: var(--bg-card, rgba(255,255,255,.8))
+		// 7/9/2026: el @if/@else se fue. $theme es una variable de COMPILACION fijada en 'light'
+		// (_custom.scss), asi que la rama oscura --background: rgba(0,0,0,.8)-- nunca se emitio y
+		// solo hacia ruido. Queda lo que ya estaba vivo y resuelto:
+		// Token con fallback para que el skeleton de carga no destelle blanco en modo oscuro.
+		background: var(--bg-card, rgba(255,255,255,.8))
 	
 	.common-table
 		// El redondeo (arriba y abajo) lo recorta .cont-table, que es el que scrollea de verdad.
@@ -1652,10 +1721,13 @@ export default {
 			min-width: 100%
 
 		tr 
-			@if ($theme == 'dark')
-				color: #f1f3f4
-			@else
-				color: #000
+			// 7/9/2026: era un @if/@else sobre $theme, variable de COMPILACION fijada en 'light'
+			// (_custom.scss). La rama oscura no se emitia nunca, asi que las filas de esta tabla
+			// --la que se dibuja adentro de una propiedad has_many del modal, tipo "Ofertas para
+			// vender" o "Descuentos"-- salian con letra negra sobre el fondo oscuro de la fila.
+			// El token resuelve los dos modos y el #000 de hoy queda de fallback, asi que el modo
+			// claro no se mueve.
+			color: var(--color-text-primary, #000)
 
 			&:hover
 				// font-weight: bold
@@ -1733,15 +1805,16 @@ export default {
 				/* asi que --color-text-primary no sirve aca (en claro es #212529 y no se leeria). */
 				color: #f1f3f4
 				
-				@if ($theme == 'dark')
-					border-left: 1px solid rgba(255,255,255,.2)
-					border-bottom: 1px solid rgba(255,255,255,.2)
-					&:first-child
-						border-left: 0 !important
-					&:last-child
-						border-left: 0 !important
-				@else 
-					border-bottom: 1px solid rgba(0,0,0,.6)
+				// 7/9/2026: habia un @if/@else sobre $theme (variable de COMPILACION fijada en
+				// 'light' en _custom.scss). La rama oscura --bordes en rgba(255,255,255,.2) y dos
+				// &:first-child/&:last-child con border-left: 0-- nunca se emitio y se BORRO.
+				//
+				// No se convierte a token: este borde va sobre --bg-table-header, que es OSCURO en
+				// los dos modos (decision de Lucas, 5/8/2026, igual que el color del texto de dos
+				// lineas mas arriba). Un --color-border aca resolveria a #dee2e6 en claro, o sea
+				// una linea casi blanca donde hoy hay uno negro: cambiaria el modo claro para
+				// todos los clientes. El literal se queda como esta.
+				border-bottom: 1px solid rgba(0,0,0,.6)
 
 
 				&.hovered .filter-component
@@ -1758,20 +1831,20 @@ export default {
 			&:last-child
 				white-space: nowrap
 				max-width: 2000px
-			@if ($theme == 'dark')
-				background: #1d1d1d
-				border-bottom: 1px solid rgba(255,255,255,.2)
-				font-weight: bold
-			@else
-				/* Token con el literal viejo de fallback, y NO una regla en _dark_theme.sass: este */
-				/* selector (.cont-table .common-table td) pesa (0,2,1) y el del tema */
-				/* (html.dark-mode table tbody tr) pesa (0,1,4) — dos clases le ganan a una clase por */
-				/* mas elementos que traiga, asi que el tema global no puede vencer al componente sin */
-				/* !important. El fallback deja el modo claro igual, porque :root define el mismo valor. */
-				/* Con el #FFF suelto la tabla quedaba blanca con letras casi blancas en modo oscuro. */
-				border-bottom: 1px solid var(--color-border, rgba(0,0,0,.2))
-				// background: #f1f3f4
-				background: var(--bg-card, #FFF)
+			// 7/9/2026: el @if/@else se fue. La rama oscura --background: #1d1d1d, border-bottom
+			// en rgba(255,255,255,.2) y un font-weight: bold-- nunca se emitio, porque $theme es
+			// una variable de COMPILACION fijada en 'light' (_custom.scss). El negrita tampoco se
+			// repone: no lo eligio nadie para el modo claro, y no hay motivo para que la misma
+			// tabla cambie de peso tipografico segun el tema. Queda lo que ya estaba vivo:
+			/* Token con el literal viejo de fallback, y NO una regla en _dark_theme.sass: este */
+			/* selector (.cont-table .common-table td) pesa (0,2,1) y el del tema */
+			/* (html.dark-mode table tbody tr) pesa (0,1,4) — dos clases le ganan a una clase por */
+			/* mas elementos que traiga, asi que el tema global no puede vencer al componente sin */
+			/* !important. El fallback deja el modo claro igual, porque :root define el mismo valor. */
+			/* Con el #FFF suelto la tabla quedaba blanca con letras casi blancas en modo oscuro. */
+			border-bottom: 1px solid var(--color-border, rgba(0,0,0,.2))
+			// background: #f1f3f4
+			background: var(--bg-card, #FFF)
 
 		tbody
 			tr:last-child

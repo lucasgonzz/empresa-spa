@@ -281,8 +281,13 @@ export default {
 		text-align: left
 		font-weight: bold
 		margin-top: 15px
-		@if ($theme == 'dark') 
-			color: rgba(255,255,255,.9)
+		// 7/9/2026: aca habia un `@if ($theme == 'dark') { color: rgba(255,255,255,.9) }`. Se BORRO.
+		//
+		// Nunca compilo ($theme es una variable de COMPILACION fijada en 'light' en _custom.scss),
+		// y no se repone: .list-title es un <tr> y el texto que se ve lo pinta su <td>, que ya sale
+		// de un token en display/table/Index.vue (`.list-title td { color: var(--color-text-primary,
+		// rgba(255,255,255,.9)) }`). Poner el color tambien aca seria el mismo arreglo en dos
+		// lugares, y el dia que cambie el token uno de los dos queda viejo.
 		@media screen and (max-width: 768px)
 			padding-left: 15px	
 </style>

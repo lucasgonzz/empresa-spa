@@ -53,6 +53,19 @@ export default {
         	let error = event.detail
         	console.log(error)
 
+			/*
+			 * 🔴 Guarda de entrada. Este handler es el UNICO lugar de la aplicacion que apaga el
+			 * loading global ante un error, asi que cualquier excepcion que se tire adentro deja el
+			 * overlay tapando toda la pantalla hasta un F5. Antes se entraba directo a
+			 * `error.response.status`: un error sin `response` (red caida, timeout) reventaba en esa
+			 * linea. Hoy main.js ya no despacha `errorEvent` en ese caso —lo atiende el propio
+			 * interceptor—, pero la guarda se queda igual: es una linea contra un cuelgue total.
+			 */
+			if (!error || !error.response) {
+				this.$store.commit('auth/setLoading', false)
+				return
+			}
+
         	let code = error.response.status
         	console.log('code')
         	console.log(code)
@@ -69,7 +82,9 @@ export default {
 				return
 			}
 
-			if (error.response.data.message) {
+			// `data` puede no ser un objeto (una pagina de error de nginx llega como string), asi
+			// que se pregunta por el antes de bajar a `.message`: es el mismo cuelgue de arriba.
+			if (error.response.data && error.response.data.message) {
 
 				if (code >= 500) {
 
@@ -89,8 +104,16 @@ export default {
 					})
 				}
 			} else {
-				this.$toast.error('Hubo un Error')
-				this.$toast.error(error.detail.message)
+				/*
+				 * 🔴 Acá abajo habia un segundo `this.$toast.error(error.detail.message)`. `error`
+				 * YA ES `event.detail`, asi que `error.detail` era siempre undefined y esa linea
+				 * tiraba un TypeError ADENTRO del handler de errores: cortaba la ejecucion antes
+				 * del `setLoading(false)` de mas abajo y dejaba el overlay global prendido sobre
+				 * toda la aplicacion. Era el peor caso del interceptor y se arregla borrandola.
+				 */
+				this.$toast.error('Hubo un error y no pudimos leer el detalle. Volvé a intentar; si sigue pasando, avisanos.', {
+					duration: 10000
+				})
 			}
 
         	// this.$toast.error(error.detail.message)

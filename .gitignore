@@ -35,3 +35,7 @@ e2e/.auth/
 /test-results/
 /playwright-report/
 /playwright/.cache/
+
+# Excel que los specs de exploracion de importacion generan POR CORRIDA (identificadores con
+# sufijo unico). Los de muestra, sin sufijo, viven versionados en e2e/fixtures/importacion/.
+e2e/.tmp-importacion/

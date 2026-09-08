@@ -219,6 +219,13 @@ export default {
 		* ignoraba el max-height del CSS: con una foto vertical el carrusel se estiraba cientos de
 		* pixeles de mas y quedaba un hueco blanco enorme debajo de la imagen.
 		*
+		* De paso fuerza a vue-carousel a recalcular su ancho. La libreria lo mide una sola vez al
+		* montarse (node_modules/vue-carousel/src/Carousel.vue), y este carrusel vive dentro de un
+		* modal que todavia esta oculto en ese momento: mide 0 y le queda visibility:hidden al
+		* .VueCarousel-inner para siempre, sin ninguna imagen visible aunque el modal ya se haya
+		* abierto. Para cuando la imagen termina de cargar el modal ya esta visible, asi que este es
+		* el primer momento seguro para volver a medir.
+		*
 		* @param {Event} event Evento load del <img>.
 		* @return {void}
 		*/
@@ -229,6 +236,8 @@ export default {
 		    this.$nextTick(() => {
 
 		        if (!this.$refs.carousel) return
+
+		        this.$refs.carousel.computeCarouselWidth()
 
 		        const carouselEl = this.$refs.carousel.$el
 		        const inner = carouselEl.querySelector('.VueCarousel-inner')

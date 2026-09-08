@@ -1,6 +1,7 @@
 <template>
 	<b-button
 	class="m-r-15"
+	data-testid="devolucion-btn-marcar-todo"
 	v-if="items.length"
 	@click="marcar_todo"
 	variant="success">

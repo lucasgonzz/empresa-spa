@@ -29,6 +29,7 @@
 							@keyup.enter="add_varios_precios(items[data.index], true)"
 							@keyup="callSetTotal(false)" 
 							type="number"
+							:data-testid="'venta-item-precio-'+items[data.index].id"
 							:id="'price-vender-'+items[data.index].id"
 							min="0"
 							v-model="items[data.index].price_vender_personalizado"></b-form-input>
@@ -123,6 +124,7 @@
 						@click="callSetTotal(true, items[data.index])"
 						type="number"
 						min="0"
+						:data-testid="'venta-item-cantidad-'+items[data.index].id"
 						:dusk="'amount_'+data.index"
 						v-model="items[data.index].amount"></b-form-input>
 					</b-input-group>

@@ -125,6 +125,7 @@
 			id="whatsapp-composer-text"
 			class="form-control whatsapp-composer__texto"
 			rows="1"
+			data-tour="whatsapp.campo_respuesta"
 			:placeholder="placeholder"
 			@keydown.enter="onKeydownEnter"></textarea>
 
@@ -185,6 +186,7 @@
 			:block="false"
 			icon_class="bi bi-send-fill"
 			variant="success"
+			data-tour="whatsapp.boton_enviar"
 			@clicked="send"></btn-loader>
 		</div>
 
@@ -553,7 +555,12 @@ export default {
 		},
 		send() {
 			let body = this.text.trim()
-			if (!body || !this.chat) {
+			// 🔴 Guarda de reentrada, igual que enviar_adjunto(): sin esto, Enter con
+			// autorepeat (o un doble click) dispara un segundo POST idéntico mientras
+			// el primero todavía está en vuelo, y quedan dos mensajes duplicados en el
+			// chat (en simulación no salen por WhatsApp, pero igual se persisten dos
+			// filas; fuera de simulación las dos SÍ le llegan al cliente real).
+			if (!body || !this.chat || this.sending) {
 				return
 			}
 			this.sending = true

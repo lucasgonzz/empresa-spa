@@ -1,5 +1,11 @@
 <template>
+	<!--
+		El testid lleva el id de la compra porque este bloque de botones se repite en CADA fila de
+		la tabla: sin el, un [data-testid="btn-importar-excel"] devolveria tantos elementos como
+		compras haya en pantalla. Mismo criterio que `btn-stock-movements-<id>` del listado.
+	-->
 	<b-button
+	:data-testid="'btn-importar-excel-'+model.id"
 	class="m-l-15"
 	size="sm"
 	variant="success"

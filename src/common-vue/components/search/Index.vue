@@ -384,13 +384,50 @@ export default {
 			this.query = ''
 			this.$emit('clearSelected')
 		},
+		/**
+		 * Deja establecidos los resultados con los que el modal ABRE, antes de que el usuario busque
+		 * nada: los primeros 10 modelos ya descargados en el store del modelo que se esta por elegir.
+		 * Si la prop depende de otra (subcategoria depende de categoria), setModelsToSearch() ya dejo
+		 * en models_to_search solo los que corresponden a lo elegido arriba.
+		 *
+		 * 🔴 Asigna SIEMPRE un array nuevo, incluso vacio, y eso es medio arreglo. El modal toma los
+		 * resultados en el watch de la prop preview_results (search/Modal.vue), y un watch solo corre
+		 * si cambia la REFERENCIA. Mientras este metodo podia volverse sin asignar --que era lo que
+		 * pasaba cada vez que la condicion daba falso-- el modal abria con los resultados de la
+		 * busqueda ANTERIOR. Un `if` que envuelva la asignacion vuelve a traer ese bug.
+		 *
+		 * Que haya precarga o no lo decide show_preview_results, NO limpiar_resultados_de_busqueda.
+		 * Son dos preguntas distintas y estaban mezcladas en un if anidado: mientras la precarga
+		 * colgaba de "limpiar", los buscadores de los formularios (ModelForm -> FieldSearchInput) no
+		 * precargaban nunca, porque por ese camino la prop llegaba en null (ver FieldSearchInput.vue).
+		 * Aclaracion honesta: hoy ningun consumidor pasa show_preview_results, asi que esa rama no la
+		 * ejercita nadie todavia. Queda como la perilla para apagar la precarga en un buscador puntual
+		 * sin volver a mezclarla con "limpiar".
+		 *
+		 * limpiar_resultados_de_busqueda si decide lo otro: en false, el consumidor pidio conservar la
+		 * lista entre aperturas --Vender y Compras eligen un articulo atras del otro sobre los mismos
+		 * resultados-- y aca no se toca nada. Sacar ese primer if les rompe ese flujo.
+		 *
+		 * El `|| []` esta porque models_to_search NO siempre es un array: las ramas is_between y
+		 * has_many de setModelsToSearch() lo sacan de una relacion embebida que puede no haber bajado,
+		 * y ahi queda undefined. Sin el `|| []` eso es un TypeError adentro de un .then(), o sea sin
+		 * rastro en pantalla.
+		 *
+		 * El otro caso que taparia --search_function que devuelve undefined, como
+		 * search_articles_offline(query) llamado sin query (src/mixins/model_functions.js)-- hoy NO se
+		 * puede reproducir: los dos consumidores de esa funcion pasan limpiar_resultados_de_busqueda
+		 * en false y salen por el return de arriba. Queda como defensa para el dia que un modelo
+		 * declare un search_function_for_model_form asincronico, que si pasaria por aca.
+		 */
 		setPreviewResults() {
-			if (this.show_preview_results) {
-				if (this.limpiar_resultados_de_busqueda) {
-
-					this.preview_results = this.models_to_search.slice(0, 20)
-				} 
+			if (!this.limpiar_resultados_de_busqueda) {
+				return
 			}
+			if (!this.show_preview_results) {
+				this.preview_results = []
+				return
+			}
+			this.preview_results = (this.models_to_search || []).slice(0, 10)
 		},
 		async setModelsToSearch() {
 			let models = []		
@@ -491,10 +528,53 @@ export default {
 		callSearchModal() {
 			if (!this.not_show_modal) {
 
+				let self = this
+
 				this.set_first_row_selected = !this.set_first_row_selected
 
+				// Corta con los resultados de la apertura anterior en este mismo tick, sin esperar al
+				// .then() de abajo. Hoy no se nota: en el camino sincronico --que es el de todos los
+				// consumidores actuales-- las dos asignaciones caen en el mismo frame, porque el .then()
+				// de una promesa ya resuelta es un microtask y los microtasks se drenan antes de que el
+				// navegador pinte. Se deja igual para el dia que los modelos lleguen por una promesa
+				// que tarde de verdad: ahi el modal ya estaria abierto mostrando la lista pasada
+				// durante todo ese rato.
+				if (this.limpiar_resultados_de_busqueda) {
+					this.preview_results = []
+				}
+
+				// 🔴 Encadenado con .then() y no suelto. setModelsToSearch() esta declarada `async`
+				// (deuda vieja, no se agrega mas), asi que SIEMPRE devuelve una promesa. Hoy su cuerpo
+				// corre entero sincronico salvo en la rama del search_function que devuelve promesa
+				// --la unica que hace await--, asi que llamandola suelta funcionaria igual en todos los
+				// consumidores actuales. Se encadena porque esa rama existe: ahi setPreviewResults()
+				// correria en el mismo tick y precargaria con los modelos de la apertura ANTERIOR.
+				// Sin await: en src/ se usa .then() con `let self = this`.
+				// El handler de error va como SEGUNDO argumento de .then() y no como un .catch()
+				// encadenado: un .catch() detras tambien atraparia lo que tirara setPreviewResults(),
+				// y entonces el mensaje de abajo mentiria y ademas se borraria models_to_search sin
+				// motivo. Asi, cada uno cubre lo suyo.
 				this.setModelsToSearch()
-				this.setPreviewResults()
+					.then(function() {
+						self.setPreviewResults()
+					}, function(error) {
+						// Mejor abrir sin precarga que con la lista vieja: si juntar los modelos fallo
+						// (un store que no existe, una relacion que no bajo), la asignacion final de
+						// setModelsToSearch() no llego a correr y models_to_search sigue con lo de la
+						// apertura anterior. Se limpia tambien esa lista, no solo la precarga: la
+						// busqueda offline de search/Modal.vue filtra sobre models_to_search, y con la
+						// relacion vieja adentro devolveria resultados de otro modelo.
+						//
+						// console.error y no console.log: antes esto era una promesa sin catch y por lo
+						// menos pintaba rojo en la consola. Este archivo ya escupe varios console.log
+						// por apertura; un error mas ahi adentro no lo ve nadie.
+						console.error('search: no se pudieron juntar los modelos para la precarga', error)
+						self.models_to_search = []
+						if (self.limpiar_resultados_de_busqueda) {
+							self.preview_results = []
+						}
+					})
+
 				this.$bvModal.show(this._id+'-search-modal')
 				setTimeout(() => {
 					document.getElementById(this._id+'-search-modal-input').focus()
@@ -577,10 +657,10 @@ export default {
 	border-radius: 0.25rem 0 0 0.25rem
 	i
 		color: var(--color-text-secondary, rgba(0, 0, 0, .6))
-	@if ($theme == 'dark')
-		background: #333 !important
-		i
-			color: #FFF
+	// Aca abajo colgaba un `@if ($theme == 'dark')` que repetia estos dos colores a mano. Se
+	// borro el 7/9/2026: `$theme` es una variable de COMPILACION de Sass fijada en 'light' en
+	// _custom.scss, asi que esa rama no se compilaba nunca y solo daba la falsa impresion de que
+	// el recuadro viejo de la lupa tenia tema oscuro. Los dos var() de arriba ya lo resuelven.
 // Estado deshabilitado del buscador.
 .bg-gray
 	background: var(--bg-hover, #e9ecef) !important
@@ -660,6 +740,21 @@ export default {
 
 	// Deshabilitado: gris el campo entero, como cualquier .form-control:disabled. Antes el gris
 	// se le ponia solo al icono y quedaba un cuadradito gris adentro de un campo blanco.
+	//
+	// 🔴 7/9/2026: el valor claro va escrito TAL CUAL, y NO como var(--bg-section, #e9ecef). El
+	// fallback de un var() entra unicamente cuando la custom property NO esta definida, y
+	// --bg-section SI esta definida en :root (vale #f8f9fa): con el var() el modo claro tomaba el
+	// token y este gris se iba a un casi blanco. Y ese gris ES la senal de "este campo no se
+	// toca": contra la tarjeta blanca de atras, #f8f9fa no se despega y el buscador deshabilitado
+	// deja de leerse como deshabilitado. El valor que habia que salvar era #e9ecef.
+	//
+	// La contraparte oscura vive en el bloque html.dark-mode del final de esta hoja, y ahi si va
+	// --bg-section, por dos motivos: es el mismo token que _dark_theme.sass ya le da a
+	// `.form-control:disabled`, asi que un buscador deshabilitado y un input deshabilitado se ven
+	// igual; y queda un escalon POR DEBAJO de --bg-card (el fondo del modal y el del campo
+	// habilitado), que es la misma relacion que tiene el #e9ecef contra la tarjeta blanca en
+	// claro. Con --bg-hover pasaria a ser mas claro que el modal y el campo apagado se leeria
+	// como resaltado.
 	&.search-field--disabled
 		background: #e9ecef
 		cursor: not-allowed
@@ -667,4 +762,12 @@ export default {
 			background: transparent
 		.search-field__icon
 			cursor: default
+
+// Contraparte de modo oscuro que NO puede escribirse como var(--token, literal) adentro del
+// bloque anidado de arriba: ese token tambien existe en :root, asi que el fallback nunca entraria
+// y el que se moveria seria el MODO CLARO. Se agrupa aca al final para no romper el anidado de
+// .search-field.
+html.dark-mode
+	.search-field.search-field--disabled
+		background: var(--bg-section)
 </style>

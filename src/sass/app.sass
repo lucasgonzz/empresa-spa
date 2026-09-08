@@ -25,6 +25,12 @@
 // icono-- y sobre todo de ui_sizes: el boton .btn-explicacion empata en especificidad (0,2,0) con
 // el `.ui-small .btn` de aquel archivo, y ese empate se gana por orden de declaracion.
 @import 'desglose_precio.sass'
+// Vocabulario del bloque de multiples metodos de pago (el modal que comparten gastos, cuenta
+// corriente, Vender y comisiones de vendedor). Va DESPUES de dark_theme --usa sus tokens--, de
+// chips_totales --de donde toma --totales-acento-usd para el chip de moneda-- y de ui_sizes: el
+// boton .metodos-de-pago__agregar empata en especificidad (0,2,0) con el `.ui-small .btn` de
+// aquel archivo, y ese empate se gana por orden de declaracion.
+@import 'metodos_de_pago.sass'
 // Tokens del modulo de WhatsApp. Va DESPUES de dark_theme porque varios de sus tokens se delegan a
 // los de aquel (--bg-card, --color-border, --color-text-primary, --bg-hover): si se importara
 // antes, `var(--bg-card)` se resolveria contra un token que todavia no existe.

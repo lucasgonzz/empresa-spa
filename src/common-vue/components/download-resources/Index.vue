@@ -544,8 +544,11 @@ export default {
 		display: flex
 		flex-direction: column
 		min-height: 100%
-		background: #FFF
-		color: #1d1d1f
+		// 7/9/2026: los dos salen de tokens con el literal de hoy de fallback. --bg-card vale #fff
+		// en claro (identico al de antes) y --color-text-primary vale #212529, indistinguible del
+		// #1d1d1f: el modo claro no se mueve.
+		background: var(--bg-card, #FFF)
+		color: var(--color-text-primary, #1d1d1f)
 		text-align: left
 
 		// La regla global de _inputs.sass le pone box-shadow a input, button, textarea y select.
@@ -574,7 +577,8 @@ export default {
 		font-size: 21px
 		font-weight: 600
 		letter-spacing: -0.02em
-		color: #1d1d1f
+		// Mismo criterio que .recursos-panel (7/9/2026).
+		color: var(--color-text-primary, #1d1d1f)
 
 	.recursos-panel__cerrar
 		border: 0
@@ -634,7 +638,8 @@ export default {
 		color: rgba(0, 0, 0, .38)
 
 	.recursos-panel__fila--descargando
-		color: #1d1d1f
+		// Mismo criterio que .recursos-panel (7/9/2026).
+		color: var(--color-text-primary, #1d1d1f)
 		font-weight: 500
 
 	.recursos-panel__fila--listo
@@ -701,29 +706,58 @@ export default {
 		opacity: 1
 		transform: scale(1)
 
-@if ($theme == 'dark')
+// 7/9/2026: esto era un `@if ($theme == 'dark')` y nunca compilo -- $theme es una variable de
+// COMPILACION fijada en 'light' en _custom.scss. Por eso el panel de recursos salia BLANCO sobre el
+// fondo oscuro, igual que la tarjeta que lo abre.
+//
+// Lo que se pudo pasar a token subio a las reglas de arriba (el fondo del panel a --bg-card y los
+// tres colores de texto solidos a --color-text-primary). Lo que queda aca es lo que un token NO
+// puede expresar sin mover el modo claro: negros y blancos TRANSLUCIDOS que se apoyan sobre la
+// superficie de atras --el header y el pie con backdrop-filter, la pista de la barra, el hover de
+// la fila, el puntito de pendiente-- y dos grises que en claro no coinciden con ningun token
+// (rgba(0,0,0,.45) y rgba(0,0,0,.38) son mas claros que el #6c757d de --color-text-secondary, asi
+// que usarlos de fallback oscureceria el panel para los 40 clientes que hoy usan modo claro).
+//
+// Por eso va como contraparte de tiempo de ejecucion: el modo claro queda intacto y el oscuro se
+// arregla. Adentro se usan tokens donde el valor SI es plano.
+html.dark-mode
 	#download-resources
-		.recursos-panel
-			background: #1d1d1d
-			color: rgba(255, 255, 255, .92)
-
+		// El blanco al 88% del header y del pie pasa al --bg-card del tema (#2e333a) al mismo 88%.
+		// No se puede escribir `rgba(var(--bg-card), .88)`: el token guarda un color entero, no sus
+		// tres componentes.
 		.recursos-panel__header, .recursos-panel__pie
-			background: rgba(29, 29, 29, .88)
+			background: rgba(46, 51, 58, .88)
+			box-shadow: inset 0 -1px 0 rgba(255, 255, 255, .08)
 
-		.recursos-panel__titulo
-			color: rgba(255, 255, 255, .95)
+		.recursos-panel__pie
+			box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08)
+
+		// El circulito de cerrar no estaba en la rama muerta y quedaba invisible: negro al 4% sobre
+		// negro, con el icono en negro al 50%.
+		.recursos-panel__cerrar
+			background: rgba(255, 255, 255, .08)
+			color: var(--color-text-secondary)
+
+			&:hover
+				background: rgba(255, 255, 255, .14)
+				color: var(--color-text-primary)
 
 		.recursos-panel__subtitulo
-			color: rgba(255, 255, 255, .5)
+			color: var(--color-text-secondary)
 
-		.recursos-panel__fila--pendiente
-			color: rgba(255, 255, 255, .4)
-
-		.recursos-panel__fila--descargando, .recursos-panel__fila--listo
-			color: rgba(255, 255, 255, .92)
+		.recursos-panel__barra
+			background: rgba(255, 255, 255, .12)
 
 		.recursos-panel__fila:hover
-			background: rgba(255, 255, 255, .06)
+			background: var(--bg-hover)
+
+		// La jerarquia de la lista se mantiene: el pendiente apagado, el que ya bajo en el color
+		// de texto normal. (El "descargando" ya sale del token en la regla de arriba.)
+		.recursos-panel__fila--pendiente
+			color: var(--color-text-secondary)
+
+		.recursos-panel__fila--listo
+			color: var(--color-text-primary)
 
 		.recursos-panel__punto
 			background: rgba(255, 255, 255, .22)

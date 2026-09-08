@@ -12,6 +12,13 @@ export default {
 			type: 'date',
 			only_show: true,
 			function: 'get_hora_from_created_at',
+			/*
+			 * El formulario (crear/editar) ya muestra el mismo dato en el bloque "Creado" del pie
+			 * (fecha + hora completa, ver ModelForm.vue), así que este campo apareciendo AL LADO
+			 * lo duplicaba en pantalla. Se saca solo del formulario: la tabla de movimientos sigue
+			 * usando esta misma propiedad como columna "Hora", que ahí sí es la única fuente.
+			 */
+			not_show_on_form: true,
 		},
 		{
 			text: 'Fecha',
@@ -25,6 +32,9 @@ export default {
 			key: 'ingreso',
 			type: 'number',
 			is_price: true,
+			// Bloqueo mutuo con Egreso (ver generals.js): si ya hay un Egreso cargado, este campo
+			// se deshabilita, para que el monto no pueda terminar cargado en los dos a la vez.
+			disabled_function: 'ingreso_bloqueado_por_egreso',
 			descriptions: [
 				'Plata que ENTRA a la caja. Cargá el monto acá o en Egreso, nunca en los dos.',
 			],
@@ -34,6 +44,7 @@ export default {
 			key: 'egreso',
 			type: 'number',
 			is_price: true,
+			disabled_function: 'egreso_bloqueado_por_ingreso',
 			descriptions: [
 				'Plata que SALE de la caja. Cargá el monto acá o en Ingreso, nunca en los dos.',
 			],

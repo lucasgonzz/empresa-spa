@@ -147,10 +147,18 @@ export default {
 	right: 20px
 	border-radius: 8px
 	padding: 12px
-	background: #FFF
-	border: 2px solid rgba(0, 0, 0, .1)
+	// Tokens del tema (7/9/2026). Estaban en literales de modo claro y esta tarjeta se monta
+	// sobre cualquier pantalla: en modo oscuro era un rectangulo blanco de 320px flotando
+	// arriba a la derecha, con los contadores en gris claro sobre blanco. El fallback deja el
+	// modo claro exactamente como estaba.
+	background: var(--bg-card, #FFF)
+	border: 2px solid var(--color-border, rgba(0, 0, 0, .1))
+	// El texto de los contadores no declara color propio: sin esto lo hereda del <body>, que
+	// en oscuro ya es claro, pero sobre la tarjeta blanca de antes quedaba ilegible. Se fija
+	// aca para que la tarjeta sea coherente sola, no por herencia.
+	color: var(--color-text-primary, inherit)
 	z-index: 1000
-	box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px
+	box-shadow: 0px 7px 29px 0px var(--shadow-color, rgba(100, 100, 111, 0.2))
 
 .offline-articles-progress-active
 	right: 20px !important

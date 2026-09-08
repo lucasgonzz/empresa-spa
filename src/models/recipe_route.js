@@ -59,7 +59,9 @@ export default {
 						text: 'Estado',
 						key: 'order_production_status_id',
 						value: 0,
-						type: 'select', 
+						type: 'select',
+						// Filtra los estados por el grupo de la ruta que se esta editando (mision produccion-v2-multinivel).
+						get_options_function: 'opciones_de_estados_del_grupo_de_la_ruta',
 					},
 					{
 						text: 'Cantidad',
@@ -99,6 +101,41 @@ export default {
 			select_prop_name: 'street',
 			use_store_models: true,
 			value: 0,
+		},
+		{
+			text: 'Grupo de estados',
+			key: 'order_production_status_group_id',
+			type: 'select',
+			store: 'order_production_status_group',
+			use_store_models: true,
+			value: 0,
+			descriptions: [
+				'Limita los estados que se pueden elegir en los insumos de esta ruta y en los movimientos del lote.',
+				'Va en la RUTA y no en la receta: una ruta tercerizada puede tener otro grupo de estados que la interna.',
+			],
+		},
+		{
+			text: 'Estado en el que la unidad queda terminada',
+			key: 'end_order_production_status_id',
+			type: 'select',
+			store: 'order_production_status',
+			use_store_models: true,
+			value: 0,
+			// 🔴 MISMO FILTRO POR GRUPO QUE EL SELECT "Estado" DE LOS INSUMOS, Y POR EL MISMO
+			// MOTIVO. Ofreciendo TODOS los estados de la cuenta, una ruta del grupo "Patas"
+			// (Corte/Doblado/Lijado) dejaba elegir "Terminado" -- que no pertenece a ningun grupo
+			// pero es el nombre que suena. La cascada del back resolvia Terminado, pero el select
+			// "Hacia estado" del movimiento del lote nunca lo ofrece porque tambien filtra por
+			// grupo: ningun movimiento llegaba ahi y el producto no se daba de alta nunca, sin
+			// error y sin log.
+			// La funcion falla abierto: si no puede resolver el grupo devuelve todos los estados,
+			// nunca una lista vacia.
+			get_options_function: 'opciones_de_estados_del_grupo_de_la_ruta',
+			descriptions: [
+				'Cuando un movimiento del lote llega a este estado, el producto entra a stock.',
+				'Solo se ofrecen los estados del grupo elegido arriba: son los unicos que el lote puede alcanzar.',
+				'Si lo dejas vacio, se usa el estado de mayor posicion del grupo; y si la ruta tampoco tiene grupo, el ultimo estado de toda la cuenta (que es como funcionaba hasta ahora).',
+			],
 		},
 		// {
 		// 	text: 'Costo de produccion MATERIALES',

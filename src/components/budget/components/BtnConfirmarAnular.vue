@@ -12,6 +12,8 @@
 	<b-button
 	class="m-l-5"
 	size="sm"
+	:data-testid="'btn-presupuesto-accion-'+model.id"
+	:data-accion="esta_confirmado ? 'anular' : 'confirmar'"
 	:variant="esta_confirmado ? 'outline-danger' : 'primary'"
 	:disabled="loading"
 	@click.stop="accionar"

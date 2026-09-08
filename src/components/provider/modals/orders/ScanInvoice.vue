@@ -5,7 +5,9 @@
 	title="Escanear factura o remito"
 	hide-footer
 	@hidden="al_cerrar">
-		<div class="scan-invoice">
+		<div
+		class="scan-invoice"
+		data-tour="compras.modal_escaneo">
 
 			<!--
 				Aviso de contexto inseguro. En http://empresa.local el navegador no
@@ -51,6 +53,7 @@
 					size="sm"
 					variant="outline-primary"
 					:disabled="enviando || no_entran_mas"
+					data-tour="compras.boton_tomar_foto"
 					@click="abrir_camara">
 						Tomar foto
 					</b-button>
@@ -150,6 +153,7 @@
 				variant="primary"
 				class="m-r-15"
 				:disabled="enviando || !paginas.length"
+				data-tour="compras.boton_enviar_escaneo"
 				@click="escanear">
 					{{ enviando ? 'Mandando…' : 'Escanear' }}
 				</b-button>

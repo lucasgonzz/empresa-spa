@@ -109,7 +109,7 @@
 					<div class="panel-demo__carrusel-viewport">
 						<div
 						class="panel-demo__carrusel-riel"
-						:style="{ transform: 'translateX(-' + (seccion_actual_index * 100) + '%)' }">
+						:style="{ left: '-' + (seccion_actual_index * 100) + '%' }">
 
 							<section
 							v-for="seccion in secciones"
@@ -157,10 +157,13 @@
 										:clip="clip"
 										:grande="video_grande"
 										:puede_probar="puede_probar(clip)"
+										:con_tour="con_tour(clip)"
+										:probado="fue_probado(clip)"
 										@reproducir="al_reproducir"
 										@pausar="al_pausar"
+										@progreso="al_progreso(clip, $event)"
 										@terminado="al_terminar(clip)"
-										@probar="probar"></tarjeta-clip>
+										@probar="probar(clip)"></tarjeta-clip>
 									</li>
 								</ul>
 
@@ -189,10 +192,13 @@
 											:clip="clip"
 											:grande="video_grande"
 											:puede_probar="puede_probar(clip)"
+											:con_tour="con_tour(clip)"
+											:probado="fue_probado(clip)"
 											@reproducir="al_reproducir"
 											@pausar="al_pausar"
+											@progreso="al_progreso(clip, $event)"
 											@terminado="al_terminar(clip)"
-											@probar="probar"></tarjeta-clip>
+											@probar="probar(clip)"></tarjeta-clip>
 										</li>
 									</ul>
 								</div>
@@ -239,6 +245,8 @@
 </template>
 <script>
 import TarjetaClip from '@/components/demo/TarjetaClip'
+import motor from '@/tours/motor'
+import { tour_habilitado } from '@/tours/habilitados'
 
 /**
  * Espeja el `maxlength="1500"` del template, que NO es cosmetico: el emisor descarta `datos`
@@ -249,6 +257,57 @@ const TOPE_NOTAS = 1500
 
 /** A partir de aca aparece el contador de caracteres restantes. */
 const AVISO_TOPE_NOTAS = 1200
+
+/**
+ * Secuencia de cierre de un tour terminado (pedido de Lucas, 1/9/2026):
+ *
+ * > *"debe desaparecer la animación del tour, después debe de abrirse el sidebar, debe de
+ * > colorearse el botón en verde y aparecer el check de que se probó, todo eso el usuario debe de
+ * > poder verlo a la animación ocurriendo, y una vez que se marca como probado, recién ahí se abre
+ * > el siguiente video"*
+ *
+ * Los milisegundos se cuentan desde que el motor avisa que el tour terminó, y **son de higiene, no
+ * de adorno**: el pedido es explícito en que el lead tiene que VER cada paso. Encadenar las tres
+ * cosas en el mismo tick las vuelve una sola, y entonces no hay nada que mirar.
+ *
+ * Los dos últimos huecos salen de lo que dura cada animación, que está en el CSS de este repo; el
+ * primero es el único elegido a mano:
+ *
+ * - 250 ms hasta abrir el panel. Es un respiro, no una espera medida: el motor ya destruyó el
+ *   recorrido antes de avisar, así que no hay nada que esperar técnicamente. Sin ese hueco, el
+ *   overlay desapareciendo y el panel entrando caen en el mismo cuadro y se leen como un solo
+ *   salto, en vez de "terminó el tour" y después "volvió el panel".
+ * - 450 ms más hasta pintar el botón: `.panel-demo` tarda 350 ms en deslizarse (su `transition`),
+ *   y el verde tiene que empezar con el panel ya quieto — si no, el lead está siguiendo el
+ *   movimiento del panel justo cuando aparece la marca.
+ * - 900 ms más hasta abrir el clip siguiente: la marca son 450 ms de pulso del botón más los 300
+ *   del check, que arranca 150 después. Recién cuando eso terminó se mueve algo más en pantalla.
+ *
+ * 🔴 Con `prefers-reduced-motion: reduce` estos tiempos NO cambian, y no es un olvido: lo que esa
+ * preferencia pide es que no haya movimiento, y las tres animaciones quedan apagadas por CSS (ver
+ * el bloque al pie de `TarjetaClip.vue`). La secuencia en sí no es movimiento: es que las cosas
+ * pasen de a una para que se entienda qué causó qué, y eso le sirve igual —o más— a quien pidió
+ * menos animación. Lo que sí se apaga es el desplazamiento suave hasta la tarjeta.
+ */
+const ESPERA_ABRIR_PANEL = 250
+const ESPERA_MARCAR_PROBADO = 700
+const ESPERA_ABRIR_SIGUIENTE = 1600
+
+/**
+ * Cada cuánto se golpea `POST /api/demo/heartbeat` mientras el panel está montado (misión
+ * `demo-sesion-magic-link-no-expira`, 4/9/2026).
+ *
+ * El pedido de Lucas es que una sesión de demo ya abierta no se corte sola. La sesión general
+ * de Laravel (`config('session.lifetime')`, ~2h por default, sin override para la demo) no se
+ * refresca si el lead pasa un buen rato sin generar ningún request —por ejemplo, mirando un
+ * video largo del panel—, así que este heartbeat existe solo para que ESO no pase: pegarle a
+ * cualquier ruta del grupo autenticado alcanza para que Laravel actualice `last_activity` y
+ * renueve la cookie de sesión, sin que este componente tenga que saber nada de sesiones.
+ *
+ * 5 minutos dejan margen amplio contra el lifetime de sesión (default 120 min) sin generar
+ * tráfico innecesario.
+ */
+const INTERVALO_HEARTBEAT = 300000
 
 /**
  * Panel lateral de tutoriales de la demo (misión 51).
@@ -281,6 +340,13 @@ export default {
 			temporizador_nota: null,
 			// Sección visible del carrusel horizontal. Un solo índice para todas las secciones.
 			indice_seccion: 0,
+			// Handles de los tres pasos de la secuencia de cierre de un tour (`celebrar_tour`).
+			// Se guardan para poder cancelarlos: un `setTimeout` en vuelo sobre un panel ya
+			// destruido despacha contra un componente que no existe.
+			temporizadores_cierre: [],
+			// Handle del heartbeat que mantiene viva la sesión general mientras el panel está
+			// montado. Mismo patrón de limpieza que `temporizador_techo` de DemoIngreso.vue.
+			temporizador_heartbeat: null,
 		}
 	},
 	computed: {
@@ -292,6 +358,13 @@ export default {
 		},
 		clips_vistos() {
 			return this.$store.state.demo.clips_vistos
+		},
+		/**
+		 * Clips cuyo tour el lead completó. Vive en el store por el mismo motivo que
+		 * `clips_vistos`: se siembra del plan y así el botón verde sobrevive al F5.
+		 */
+		clips_probados() {
+			return this.$store.state.demo.clips_probados
 		},
 		/**
 		 * Vive en el store, no en `data()`, para que sobreviva al F5 igual que `clips_vistos`
@@ -365,12 +438,31 @@ export default {
 		// falso: tras una recarga sin token este componente no se monta, así que ese despacho no
 		// existe más y el plan no se vuelve a pedir. Es la consecuencia asumida del gate nuevo.
 		this.$store.dispatch('demo/cargar_plan')
+
+		// El panel es el componente que vive exactamente mientras dura la demo (mision
+		// `demo-sesion-magic-link-no-expira`, 4/9/2026): arranca aca el heartbeat que mantiene
+		// viva la sesion general mientras el lead sigue adentro, aunque pase un buen rato sin
+		// tocar nada del sistema.
+		this.arrancar_heartbeat()
 	},
 	beforeDestroy() {
 		// Sin esto, un debounce en vuelo dispara sobre un componente que ya no existe.
 		if (this.temporizador_nota) {
 			clearTimeout(this.temporizador_nota)
 		}
+
+		// Y lo mismo con la secuencia de cierre del tour, que son tres timeouts encadenados a lo
+		// largo de 1,6 segundos: es tiempo de sobra para que el lead se vaya a otra ruta.
+		this.cancelar_celebracion()
+
+		// El motor deja escuchando clics en `document` mientras el tour corre. Si el panel se
+		// destruye con un tour activo, esos listeners sobreviven al componente y siguen tratando
+		// de avanzar un recorrido que ya no existe.
+		motor.cortar_tour()
+
+		// Y el heartbeat: sin esto, un `setInterval` en vuelo le sigue pegando a la API con el
+		// panel ya destruido.
+		this.limpiar_heartbeat()
 	},
 	methods: {
 		/**
@@ -397,6 +489,28 @@ export default {
 		 */
 		fue_visto(clip) {
 			return this.clips_vistos.indexOf(clip.id) !== -1
+		},
+		/**
+		 * @param {Object} clip
+		 * @returns {Boolean}
+		 */
+		fue_probado(clip) {
+			return this.clips_probados.indexOf(clip.id) !== -1
+		},
+		/**
+		 * ¿Este clip dibuja el botón "Probar"?
+		 *
+		 * 🔴 Se pregunta por la lista de habilitados y NO por `motor.hay_tour_para(clip)`, aunque
+		 * lo obvio sería exigir las dos cosas. El motivo: la lista es manual y el catálogo no. Si
+		 * un refactor rompiera el guion de un clip habilitado, exigir las dos haría desaparecer
+		 * el botón sin que nadie se entere; preguntando solo por la lista, el botón sigue ahí y
+		 * el motor avisa por consola que no encontró guion, que es un síntoma que se ve.
+		 *
+		 * @param {Object} clip
+		 * @returns {Boolean}
+		 */
+		con_tour(clip) {
+			return tour_habilitado(clip)
 		},
 		/**
 		 * @param {Object} clip
@@ -534,6 +648,31 @@ export default {
 			this.video_grande = false
 		},
 		/**
+		 * Cuánto del video vio el lead. Lo emite la tarjeta cada vez que el video cruza un décimo
+		 * nuevo y al pausar; acá solo se despacha.
+		 *
+		 * 🔴 Un clip ya visto no reporta nada. `clip.terminado` ya dijo el 100% —y es el que
+		 * mueve el hito del roadmap—, así que un lead que vuelve a abrir un video terminado para
+		 * repasar un pedazo mandaría diez filas diciendo "40%", "50%"... sobre algo que el admin
+		 * ya tiene en 100. El número no se rompe (el admin se queda con el máximo), pero el feed
+		 * se ensucia con un progreso que va para atrás.
+		 *
+		 * @param {Object} clip
+		 * @param {Number} porcentaje Entero de 1 a 99. La tarjeta no emite ni 0 ni 100.
+		 * @returns {void}
+		 */
+		al_progreso(clip, porcentaje) {
+			if (this.fue_visto(clip)) {
+				return
+			}
+
+			this.$store.dispatch('demo/reportar', {
+				nombre: 'clip.progreso',
+				clip_id: clip.id,
+				datos: { porcentaje: porcentaje },
+			})
+		},
+		/**
 		 * Pausa el video desde el fondo difuminado, que es la forma natural de "salir".
 		 *
 		 * La tarjeta abierta es una sola, pero el `ref` está adentro de un `v-for`, así que Vue
@@ -612,21 +751,285 @@ export default {
 			})
 		},
 		/**
-		 * "Probar": colapsa el panel y le deja el sistema libre al lead. No arranca ningún
-		 * recorrido guiado — el motor de tour es otra misión.
+		 * "Probar": colapsa el panel, le deja el sistema libre al lead y arranca el tour guiado
+		 * del clip.
 		 *
+		 * El panel se colapsa ANTES de arrancar el tour y no después: ocupa 500px del borde
+		 * derecho, y varios pasos señalan cosas que quedan justo abajo. El tirador queda latiendo
+		 * para que el lead sepa cómo volver.
+		 *
+		 * 🔴 Si el clip no tiene tour escrito, el panel se colapsa igual y el lead prueba por su
+		 * cuenta — que es exactamente lo que hacía este método antes de que existiera el motor.
+		 * Esa es la degradación buscada: un clip sin guion de tour no puede dejar al lead sin
+		 * poder salir del panel.
+		 *
+		 * @param {Object} clip
 		 * @returns {void}
 		 */
-		probar() {
+		probar(clip) {
+			let self = this
+
 			this.pausar_video()
 			this.colapsado = true
 			this.llamando_la_atencion = true
+
+			// Si quedaba una secuencia de cierre de un tour anterior a medio andar, se descarta:
+			// lo que el lead está mirando ahora es este tour, no el de recién.
+			this.cancelar_celebracion()
+
+			if (!clip) {
+				return
+			}
+
+			motor.iniciar_tour(clip, {
+				router: this.$router,
+				store: this.$store,
+				root: this.$root,
+				al_terminar: function (resultado) {
+					self.al_terminar_tour(clip, resultado)
+				},
+			})
 		},
+		/**
+		 * El motor avisa que la corrida cerró. Lo llama `cerrar_corrida()`, que es el único punto
+		 * de cierre del tour y es idempotente.
+		 *
+		 * 🔴 Todo lo de acá abajo pasa SOLO con `motivo: 'listo'`, o sea cuando el lead llegó al
+		 * final del guion por el botón "Listo" de la última tarjeta. La cruz, el Escape, el clic
+		 * afuera confirmado y reabrir el panel dan `'cortado'`, y un tour abandonado **no se marca
+		 * como probado**: sería mentirle al admin justo sobre el dato que existe para distinguir
+		 * al lead que hizo la acción del que la empezó.
+		 *
+		 * Programado a la defensiva a propósito, porque esto lo llama código de otro archivo: si
+		 * `resultado` llega vacío, sin `motivo`, o si `al_terminar` nunca se llama, acá no pasa
+		 * nada y el panel se queda como estaba. Y si el `clip_id` que viene no es el del tour que
+		 * este panel arrancó, se ignora: es una corrida vieja avisando tarde.
+		 *
+		 * @param {Object} clip Clip cuyo tour arrancó este panel.
+		 * @param {Object} resultado {clip_id, motivo, completo, mostrados, pasos}
+		 * @returns {void}
+		 */
+		al_terminar_tour(clip, resultado) {
+			if (!resultado || resultado.motivo !== 'listo') {
+				return
+			}
+
+			/**
+			 * 🔴 Se exigen las DOS cosas, y no alcanza con `motivo`.
+			 *
+			 * "Probado" se lee en tres lugares: acá (el botón verde, en memoria), el plan de
+			 * `empresa-api` (que es lo que sobrevive al F5) y el panel del admin. Los tres tienen
+			 * que contestar lo mismo, y los otros dos leen `datos.completo` del evento
+			 * `tour.completado`. Mirando sólo el motivo, un tour de 12 pasos que mostró 4 salteando
+			 * de a dos —nunca llega al tope de salteos seguidos, así que cierra `'listo'`— pintaba
+			 * el botón verde acá, y el admin lo mostraba como "Tour 33%". Peor: al primer F5 el
+			 * plan devolvía `probado: false` y el verde desaparecía solo, sin que el lead hubiera
+			 * hecho nada.
+			 */
+			if (resultado.completo !== true) {
+				return
+			}
+
+			if (resultado.clip_id && resultado.clip_id !== clip.id) {
+				return
+			}
+
+			this.celebrar_tour(clip)
+		},
+		/**
+		 * La secuencia de cierre: panel → botón verde → clip siguiente, separadas en el tiempo
+		 * para que el lead vea las tres (ver el bloque de constantes al principio del archivo,
+		 * que es donde está el porqué de cada número).
+		 *
+		 * @param {Object} clip
+		 * @returns {void}
+		 */
+		celebrar_tour(clip) {
+			let self = this
+
+			this.cancelar_celebracion()
+
+			this.temporizadores_cierre.push(setTimeout(function () {
+				self.abrir_panel_en(clip)
+			}, ESPERA_ABRIR_PANEL))
+
+			this.temporizadores_cierre.push(setTimeout(function () {
+				// El commit va al store y no a `data()` para que sobreviva al F5, igual que
+				// `clips_vistos`. Es idempotente: repetirlo no duplica nada.
+				self.$store.commit('demo/agregarClipProbado', clip.id)
+			}, ESPERA_MARCAR_PROBADO))
+
+			this.temporizadores_cierre.push(setTimeout(function () {
+				self.abrir_siguiente_sin_ver(clip)
+			}, ESPERA_ABRIR_SIGUIENTE))
+		},
+		/**
+		 * Paso 1: se abre el panel, con la tarjeta del clip que se acaba de probar a la vista.
+		 *
+		 * No se despacha `clip.abierto`: esta tarjeta ya estaba abierta —es de donde el lead
+		 * apretó "Probar"—, así que reportarla otra vez sería una apertura que nunca ocurrió. El
+		 * mismo criterio que usa el store al sembrar el progreso restaurado.
+		 *
+		 * La sección se recalcula por las dudas: el carrusel no se puede haber movido con el
+		 * panel colapsado, pero un índice viejo dejaría al lead mirando otra sección.
+		 *
+		 * @param {Object} clip
+		 * @returns {void}
+		 */
+		abrir_panel_en(clip) {
+			let self = this
+			const indice = this.indice_de_la_seccion_de(clip)
+
+			this.colapsado = false
+			this.llamando_la_atencion = false
+			this.video_grande = false
+
+			if (indice !== -1) {
+				this.indice_seccion = indice
+			}
+
+			this.clip_abierto_id = clip.id
+
+			this.$nextTick(function () {
+				self.desplazar_hasta_el_clip_abierto()
+			})
+		},
+		/**
+		 * Paso 3: se abre el primer clip de núcleo POSTERIOR al probado que el lead todavía no
+		 * vio, dentro de la misma sección.
+		 *
+		 * Si no queda ninguno, no hace nada: **no se salta de sección**. Cambiar de sección solo
+		 * porque un tour terminó le sacaría al lead el control del recorrido, y el carrusel ya
+		 * tiene sus flechas para eso.
+		 *
+		 * Acá SÍ se reporta `clip.abierto`, al revés que en el paso 1, porque acá la apertura es
+		 * real: el clip que se abre no estaba abierto y queda a la vista del lead con su video
+		 * listo. Verificado antes de decidirlo: el admin no mapea `clip.abierto` a ningún hito
+		 * (`DemoHitosService` solo mira `clip.terminado`), así que esto no puede adelantar el
+		 * estado de nada — solo mantiene el feed coherente, sin un `clip.terminado` que aparezca
+		 * de un clip que nunca se abrió.
+		 *
+		 * @param {Object} clip Clip que se acaba de probar.
+		 * @returns {void}
+		 */
+		abrir_siguiente_sin_ver(clip) {
+			let self = this
+			const indice = this.indice_de_la_seccion_de(clip)
+
+			if (indice === -1) {
+				return
+			}
+
+			const nucleo = this.nucleo_de(this.secciones[indice])
+
+			const posicion = nucleo.findIndex(function (un_clip) {
+				return un_clip.id === clip.id
+			})
+
+			// -1 significa que el clip probado es de biblioteca: no hay "siguiente" que abrir.
+			if (posicion === -1) {
+				return
+			}
+
+			const siguiente = nucleo.slice(posicion + 1).find(function (un_clip) {
+				return !self.fue_visto(un_clip)
+			})
+
+			if (!siguiente) {
+				return
+			}
+
+			this.clip_abierto_id = siguiente.id
+			this.video_grande = false
+
+			this.$store.dispatch('demo/reportar', { nombre: 'clip.abierto', clip_id: siguiente.id })
+
+			this.$nextTick(function () {
+				self.desplazar_hasta_el_clip_abierto()
+			})
+		},
+		/**
+		 * Trae la tarjeta abierta a la vista dentro del cuerpo del panel, que es el único
+		 * contenedor con scroll propio (`.panel-demo__cuerpo`).
+		 *
+		 * Se busca por clase en vez de por `ref` porque el `ref` de la tarjeta vive adentro de dos
+		 * `v-for` distintos (núcleo y biblioteca) y llega como arreglo, mientras que la clase
+		 * `--abierto` la lleva un solo `<li>` en todo el panel — y además es el `<li>`, o sea el
+		 * título del clip incluido, no solo el video.
+		 *
+		 * `block: 'nearest'` y no `'center'`: si la tarjeta ya se ve entera, no se mueve nada.
+		 * Scrollear igual sería movimiento gratis justo cuando el lead está mirando otra cosa.
+		 *
+		 * @returns {void}
+		 */
+		desplazar_hasta_el_clip_abierto() {
+			const item = this.$el ? this.$el.querySelector('.panel-demo__item--abierto') : null
+
+			if (!item || typeof item.scrollIntoView !== 'function') {
+				return
+			}
+
+			item.scrollIntoView({
+				behavior: this.animacion_reducida() ? 'auto' : 'smooth',
+				block: 'nearest',
+				inline: 'nearest',
+			})
+		},
+		/**
+		 * ¿El lead pidió menos animación en su sistema operativo?
+		 *
+		 * Es lo único de la secuencia de cierre que no se puede resolver por CSS: un
+		 * desplazamiento suave es movimiento igual que una transición, y lo dispara JavaScript.
+		 *
+		 * @returns {Boolean}
+		 */
+		animacion_reducida() {
+			if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+				return false
+			}
+
+			return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+		},
+		/**
+		 * @param {Object} clip
+		 * @returns {Number} Índice de la sección que contiene al clip, o -1.
+		 */
+		indice_de_la_seccion_de(clip) {
+			return this.secciones.findIndex(function (seccion) {
+				return (seccion.clips || []).some(function (un_clip) {
+					return un_clip.id === clip.id
+				})
+			})
+		},
+		/**
+		 * Descarta los pasos pendientes de la secuencia de cierre.
+		 *
+		 * @returns {void}
+		 */
+		cancelar_celebracion() {
+			this.temporizadores_cierre.forEach(function (handle) {
+				clearTimeout(handle)
+			})
+
+			this.temporizadores_cierre = []
+		},
+		/**
+		 * Abre o cierra el panel desde el tirador.
+		 *
+		 * 🔴 Reabrir el panel corta el tour que estuviera corriendo. Es deliberado: el panel tapa
+		 * 500px del borde derecho y el overlay de driver.js deja el resto de la pantalla inerte
+		 * (`.driver-active * { pointer-events: none }`), así que las dos cosas juntas dejan al
+		 * lead sin poder tocar ni el sistema ni el panel. Volver al panel es la forma natural de
+		 * decir "ya está, quiero otra cosa".
+		 *
+		 * @returns {void}
+		 */
 		alternar_colapso() {
 			this.colapsado = !this.colapsado
 
 			if (!this.colapsado) {
 				this.llamando_la_atencion = false
+				motor.cortar_tour()
 				return
 			}
 
@@ -651,6 +1054,42 @@ export default {
 					datos: { texto: self.notas },
 				})
 			}, 3000)
+		},
+		/**
+		 * Arranca el heartbeat que mantiene viva la sesión general de Laravel mientras el
+		 * panel está montado (misión `demo-sesion-magic-link-no-expira`, 4/9/2026).
+		 *
+		 * Gateado con `demo/activa` por las dudas —el panel solo se monta con
+		 * `panel_visible`, así que no debería hacer falta—, mismo criterio defensivo que ya
+		 * usan `cargar_plan`/`reportar` en `store/demo.js`.
+		 *
+		 * @returns {void}
+		 */
+		arrancar_heartbeat() {
+			let self = this
+
+			this.temporizador_heartbeat = setInterval(function () {
+				if (!self.$store.getters['demo/activa']) {
+					return
+				}
+
+				self.$axios.post('/api/demo/heartbeat')
+					.catch(function (error) {
+						// Un heartbeat puntual que falla (red caída un segundo) no le tiene
+						// que mostrar nada al lead: mismo criterio que `reportar()` en
+						// store/demo.js.
+						console.warn('No se pudo mandar el heartbeat de la demo', error)
+					})
+			}, INTERVALO_HEARTBEAT)
+		},
+		/**
+		 * @returns {void}
+		 */
+		limpiar_heartbeat() {
+			if (this.temporizador_heartbeat) {
+				clearInterval(this.temporizador_heartbeat)
+				this.temporizador_heartbeat = null
+			}
 		},
 	},
 }
@@ -856,8 +1295,17 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 
 // ---------------------------------------------------------------------------------------
 // Carrusel horizontal de secciones (punto 1-2 de la mision del 18/8). El viewport recorta
-// lo que no es la seccion activa; el riel es el que se desplaza, con `transform` (mismo
-// motivo que el halo del borde: lo resuelve el compositor, no repinta el resto del panel).
+// lo que no es la seccion activa; el riel es el que se desplaza.
+//
+// 🔴 El desplazamiento va por `left`, NO por `transform` (cambiado el 31/8/2026, ver el
+// comentario completo sobre `.panel-demo__carrusel-riel` mas abajo): con `transform` el riel
+// se movia por compositor sin repintar nada, pero cualquier `transform` distinto de `none`
+// -incluido `translateX(-0%)` en la primera seccion- convierte al riel en el bloque
+// contenedor de sus descendientes `position: fixed`, y el video agrandado
+// (`.tarjeta-clip__marco--grande`) vive justo adentro. Resultado medido: el video dejaba de
+// centrarse contra la pantalla y quedaba ademas recortado por el `overflow` del viewport y
+// del cuerpo. Con `left` el riel vuelve a moverse igual mismo pero sin crear ese bloque
+// contenedor.
 // ---------------------------------------------------------------------------------------
 .panel-demo__carrusel-nav
 	display: flex
@@ -964,9 +1412,29 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 .panel-demo__carrusel-viewport
 	overflow: hidden
 
+// 🔴 El desplazamiento del riel va por `left` y NO por `transform`, y eso NO es una preferencia
+// de estilo: es lo que hace que el video agrandado se pueda centrar contra la pantalla.
+//
+// Cualquier `transform` distinto de `none` convierte al elemento en el bloque contenedor de
+// sus descendientes `position: fixed`. `.tarjeta-clip__marco--grande` es justamente un `fixed`
+// que vive adentro de este riel: con el transform puesto dejaba de centrarse contra la
+// pantalla y pasaba a centrarse contra la caja del riel, ADEMAS de quedar recortado por el
+// `overflow: hidden` del viewport y por el scroll del cuerpo. Ese era el rectangulo chico y
+// descolocado que se veia al reproducir (medido el 31/8/2026).
+//
+// Y pasaba SIEMPRE, incluso en la primera seccion: `translateX(-0%)` no es la palabra clave
+// `none`. El modal andaba bien el 17/8 y lo rompio el carrusel del 18/8, sin que nada avisara.
+//
+// `left` sobre un `position: relative` corre el riel exactamente lo mismo (el porcentaje se
+// resuelve contra el ancho del viewport del carrusel, que es el mismo ancho que usaba el
+// `translateX`) y no crea bloque contenedor.
+//
+// 🔴 No le pongas `z-index` a este riel ni le devuelvas un `transform`: cualquiera de las dos
+// cosas vuelve a encerrar el video agrandado. Mismo cuidado que el del `.panel-demo__hoja`.
 .panel-demo__carrusel-riel
+	position: relative
 	display: flex
-	transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1)
+	transition: left 0.4s cubic-bezier(0.32, 0.72, 0, 1)
 
 @media (prefers-reduced-motion: reduce)
 	.panel-demo__carrusel-riel
@@ -1026,9 +1494,11 @@ $panel-demo-linea: rgba(17, 24, 39, 0.07)
 .panel-demo__item:last-child
 	margin-bottom: 0
 
+// Mas marcado que antes (pedido de Lucas, 31/8/2026: "que este un poco mas fuerte"). Era
+// border 0.35 y el lavado 0.05 -> 0.02, que contra el blanco de la tarjeta casi no se leia.
 .panel-demo__item--abierto
-	border-color: rgba(11, 132, 248, 0.35)
-	background: linear-gradient(180deg, rgba(11, 132, 248, 0.05), rgba(58, 49, 252, 0.02))
+	border-color: rgba(11, 132, 248, 0.55)
+	background: linear-gradient(180deg, rgba(11, 132, 248, 0.12), rgba(58, 49, 252, 0.05))
 
 .panel-demo__item-boton
 	display: flex

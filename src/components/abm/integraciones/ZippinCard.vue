@@ -2,18 +2,23 @@
 	<b-card
 	no-body
 	class="integration-card">
-		<div class="p-3">
-			<div class="d-flex justify-content-between align-items-start flex-wrap">
-				<div class="m-r-10">
-					<h6 class="m-b-5">Envíos (Zippin)</h6>
-					<p class="text-muted m-b-0">
+		<div class="integration-card__body">
+			<div class="integration-card__header">
+				<div>
+					<h6 class="integration-card__title">Envíos ({{ integracion.name }})</h6>
+					<p class="integration-card__description">
 						Ofrecé envíos con Correo Argentino, Andreani y más, vía Zippin.
+					</p>
+					<p
+					v-if="connected && integracion.platform_user_id"
+					class="integration-card__cuenta">
+						Cuenta conectada: {{ integracion.platform_user_id }}
 					</p>
 				</div>
 				<b-badge :variant="status.variant">{{ status.text }}</b-badge>
 			</div>
 
-			<div class="m-t-15 integration-card__actions">
+			<div class="integration-card__actions">
 				<btn-loader
 				:block="false"
 				size="sm"
@@ -39,12 +44,15 @@ import BtnLoader from '@/common-vue/components/BtnLoader'
 import IntegrationConnector from '@/mixins/integration_connector'
 
 /**
- * Tarjeta de estado y conexión de Zippin (envíos), dentro de la sección "Integraciones"
- * de Configuración online (prompt 600).
+ * Tarjeta de estado y conexión de Zippin (envíos), dentro de la solapa "Tienda online"
+ * del ABM de Integraciones.
  *
  * Permite conectar (OAuth) y desconectar la cuenta propia de Zippin del comercio, y
- * muestra el estado real leído del online_configuration (zippin_connected /
- * zippin_token_expires_at).
+ * muestra el estado real leído del listado de integraciones (`GET /api/integraciones`).
+ *
+ * 🔴 Antes vivía en components/online/config/integrations/ y leía el online_configuration
+ * (zippin_connected / zippin_token_expires_at). Ahora lee lo mismo que la tarjeta de
+ * Mercado Pago: el item que devuelve el endpoint, sin credenciales de por medio.
  */
 export default {
 	name: 'ZippinCard',
@@ -53,8 +61,9 @@ export default {
 		BtnLoader,
 	},
 	props: {
-		// Modelo online_configuration ya cargado (con zippin_enabled, zippin_connected, zippin_token_expires_at, etc.)
-		model: {
+		// Item del listado de GET /api/integraciones:
+		// { slug, name, grupo, connected, expires_at, platform_user_id }
+		integracion: {
 			type: Object,
 			required: true,
 		},
@@ -68,11 +77,11 @@ export default {
 	computed: {
 		// true si el comercio ya tiene conectada su cuenta de Zippin
 		connected() {
-			return !!this.model.zippin_connected
+			return !!this.integracion.connected
 		},
 		// Texto y variante de color a mostrar en el badge de estado
 		status() {
-			return this.integrationStatusInfo(this.model.zippin_connected, this.model.zippin_token_expires_at)
+			return this.integrationStatusInfo(this.integracion.connected, this.integracion.expires_at)
 		},
 	},
 	methods: {
@@ -83,34 +92,36 @@ export default {
 		 * @returns {void}
 		 */
 		connect() {
-			this.loading = true
+			let self = this
+			self.loading = true
 			this.$store.commit('auth/setMessage', 'Conectando con Zippin')
 			this.$store.commit('auth/setLoading', true)
 
 			this.requestIntegrationConnectUrl('zippin')
 			.then(res => {
-				this.$store.commit('auth/setLoading', false)
-				this.$store.commit('auth/setMessage', '')
+				self.$store.commit('auth/setLoading', false)
+				self.$store.commit('auth/setMessage', '')
 
 				if (res.data && res.data.url) {
 					// Redirige la pestaña actual a la pantalla de autorización de Zippin
 					window.location.href = res.data.url
 				} else {
-					this.loading = false
-					this.$toast.error('No se pudo iniciar la conexión con Zippin')
+					self.loading = false
+					self.$toast.error('No se pudo iniciar la conexión con Zippin')
 				}
 			})
 			.catch(err => {
-				this.loading = false
-				this.$store.commit('auth/setLoading', false)
-				this.$store.commit('auth/setMessage', '')
+				self.loading = false
+				self.$store.commit('auth/setLoading', false)
+				self.$store.commit('auth/setMessage', '')
 				console.log(err)
-				this.$toast.error('No se pudo iniciar la conexión con Zippin')
+				self.$toast.error('No se pudo iniciar la conexión con Zippin')
 			})
 		},
 		/**
-		 * Desconecta la cuenta de Zippin ya conectada, previa confirmación del usuario,
-		 * y refresca el online_configuration para reflejar el nuevo estado en la tarjeta.
+		 * Desconecta la cuenta de Zippin ya conectada, previa confirmación del usuario, y le
+		 * avisa al padre que vuelva a pedir el listado de integraciones para reflejar el
+		 * nuevo estado en la tarjeta.
 		 *
 		 * @returns {void}
 		 */
@@ -119,26 +130,25 @@ export default {
 				return
 			}
 
-			this.loading = true
+			let self = this
+			self.loading = true
 			this.$store.commit('auth/setMessage', 'Desconectando Zippin')
 			this.$store.commit('auth/setLoading', true)
 
 			this.requestIntegrationDisconnect('zippin')
 			.then(() => {
-				return this.refreshOnlineConfigurationModel()
-			})
-			.then(() => {
-				this.loading = false
-				this.$store.commit('auth/setLoading', false)
-				this.$store.commit('auth/setMessage', '')
-				this.$toast.success('Zippin desconectado')
+				self.loading = false
+				self.$store.commit('auth/setLoading', false)
+				self.$store.commit('auth/setMessage', '')
+				self.$toast.success('Zippin desconectado')
+				self.$emit('actualizar')
 			})
 			.catch(err => {
-				this.loading = false
-				this.$store.commit('auth/setLoading', false)
-				this.$store.commit('auth/setMessage', '')
+				self.loading = false
+				self.$store.commit('auth/setLoading', false)
+				self.$store.commit('auth/setMessage', '')
 				console.log(err)
-				this.$toast.error('No se pudo desconectar Zippin')
+				self.$toast.error('No se pudo desconectar Zippin')
 			})
 		},
 	},

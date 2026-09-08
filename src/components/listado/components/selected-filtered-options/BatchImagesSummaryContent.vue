@@ -37,8 +37,18 @@
 				</small>
 			</div>
 		</div>
+		<!--
+			El bloque de "no encontre foto para estos". El clip 1.7 lo senala para que el lead
+			despliegue uno y vea por que la IA descarto cada candidata.
+
+			El `v-if` ya lo hace condicional: si el lote no dejo ningun articulo sin imagen el
+			elemento no existe y el motor del tour saltea ese paso solo. No duplica con el modal de
+			historial, que reusa este mismo componente: los dos modales nunca estan abiertos a la
+			vez y bootstrap-vue desmonta el contenido del que esta cerrado.
+		-->
 		<div
 		v-if="skipped_display_items.length"
+		data-tour="listado.lista_articulos_sin_imagen"
 		class="batch-summary-skipped-list">
 			<p class="batch-summary-skipped-list-title">
 				Artículos sin imagen:

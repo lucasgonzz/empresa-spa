@@ -16,7 +16,7 @@
 		:size="size"
 		scrollable
 		:id="model_name"
-		:data-tour="model_name === 'article' ? 'listado.modal_articulo' : null">
+		:data-tour="ancla_tour_modal">
 
 			<template #modal-title>
 				<slot name="model_modal_title">
@@ -154,7 +154,7 @@
 						@clicked="save"
 						:dusk="'btn_guardar_'+model_name"
 						:data-testid="'btn-guardar-'+model_name"
-						:data-tour="model_name === 'article' ? 'listado.boton_guardar_articulo' : null"
+						:data-tour="ancla_tour_guardar"
 						:prop_to_send_on_emit="{close: true}"
 						:loader="loading"
 						text="Guardar y cerrar"></btn-loader>
@@ -186,6 +186,7 @@ import BtnPdf from '@/common-vue/components/BtnPdf'
 
 import ModelForm from '@/common-vue/components/model/ModelForm'
 import { collect_laravel_validation_messages } from '@/utils/laravel_validation_toast'
+import { ANCLA_MODAL, ANCLA_BOTON_GUARDAR, ancla_de } from '@/common-vue/tours/anclas-por-modelo'
 
 export default {
 	name: 'ModelIndex',
@@ -337,7 +338,28 @@ export default {
 		}
 	},
 	computed: {
-
+		/**
+		 * Ancla `data-tour` del modal de formulario, segun el modelo.
+		 *
+		 * @returns {String|null}
+		 */
+		ancla_tour_modal() {
+			return ancla_de(ANCLA_MODAL, this.model_name)
+		},
+		/**
+		 * Ancla `data-tour` del boton "Guardar y cerrar".
+		 *
+		 * 🔴 Tiene valor propio por modelo y no uno solo compartido: el tour del clip 4.2 hace dos
+		 * guardados seguidos —el costo extra y despues la compra— y el segundo es el que reparte
+		 * el flete. Los dos salen de este mismo boton, asi que con un valor unico el paso que
+		 * espera el guardado de la compra se resolveria contra el del modal hijo, que todavia
+		 * esta en el DOM.
+		 *
+		 * @returns {String|null}
+		 */
+		ancla_tour_guardar() {
+			return ancla_de(ANCLA_BOTON_GUARDAR, this.model_name)
+		},
 
 		show_limpiar_formulario() {
 			return this.props_to_keep_after_create.length
@@ -1046,14 +1068,30 @@ export default {
 </script>
 <style lang="sass">
 @import '@/sass/_custom.scss'
-@if ($theme == 'dark') 
-	.modal-content
-		background: #1d1d1d !important
-	.modal-header, .modal-header > .close
-		color: rgba(255, 255, 255, .9) !important
-@else 
-	.modal-content
-		color: rgba(0, 0, 0, .6) !important
+// 7/9/2026 -- aca habia un @if/@else sobre $theme, que es una variable de COMPILACION fijada en
+// 'light' en _custom.scss: la rama oscura NUNCA se emitio.
+//
+// La rama muerta (`.modal-content { background: #1d1d1d !important }` y `.modal-header,
+// .modal-header > .close { color: ... !important }`) se BORRO sin reemplazo: _dark_theme.sass ya
+// resuelve `.modal-content`, `.modal-header` y `.close` para todos los modales del sistema.
+//
+// 🔴 Lo que si estaba VIVO es la rama @else, y era el defecto mas caro del archivo: ese
+// `color: rgba(0, 0, 0, .6) !important` se aplica a TODOS los modales del sistema y, por ser
+// !important, le ganaba al `html.dark-mode .modal-content { color: var(--color-text-primary) }`
+// del tema -- un !important le gana a cualquier declaracion normal por mas especificidad que
+// tenga. O sea: en modo oscuro el texto de cada modal seguia saliendo negro sobre fondo oscuro.
+//
+// Se resuelve con contraparte de tiempo de ejecucion en vez de con `var(--token, <literal>)`:
+// --color-text-primary vale #212529 en claro y este literal da #666 sobre blanco, asi que el
+// fallback moveria de forma VISIBLE el gris de todos los modales en modo claro, que es lo unico
+// que no se puede tocar. Con el `html.dark-mode` de abajo --(0,2,1) contra (0,1,0), los dos con
+// !important-- el modo claro queda exactamente igual que hoy y el oscuro se arregla.
+.modal-content
+	color: rgba(0, 0, 0, .6) !important
+
+html.dark-mode .modal-content
+	color: var(--color-text-primary) !important
+
 .modal-body
 	.b-form-datepicker
 		// margin-bottom: 250px

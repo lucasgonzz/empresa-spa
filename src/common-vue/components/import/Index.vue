@@ -213,7 +213,14 @@
 		
 		<b-form-group
 		label="Fila a partir de la cual empezar a importar">
+			<!--
+				Los tres data-testid de esta pantalla (`import-fila-desde`, `input-excel-<modelo>` y
+				`btn-confirmar-importacion`) son los unicos que tiene el modal de importacion, que
+				hasta el 31/8/2026 no tenia ninguno. Son genericos: sirven para importar articulos,
+				clientes, proveedores o los renglones de una compra, que es el mismo componente.
+			-->
 			<b-form-input
+			data-testid="import-fila-desde"
 			type="number"
 			v-model="start_row"
 			placeholder="Fila a partir de la cual empezar a importar"></b-form-input>
@@ -587,8 +594,16 @@
 
 		<b-form-group
 		label="Archivo Excel para importar">
+			<!--
+				🔴 El testid dice `input-excel-` y no `input-file-` (que es lo que dice el `id` de
+				al lado) a proposito: `input-file-` es tambien el comienzo de los ids que
+				BootstrapVue genera para OTROS b-form-file de la aplicacion, y este harness ubica
+				elementos con selectores de prefijo. Un testid nuevo no puede compartir el comienzo
+				con algo que ya existe (ver e2e/README.md).
+			-->
 			<b-form-file
 			browse-text="Buscar"
+			:data-testid="'input-excel-'+model_name"
 			:id="'input-file-'+this.model_name"
 			v-model="file"
 			variant="primary"
@@ -614,7 +629,13 @@
 		</b-form-group>
 
 		<hr>
+		<!--
+			`btn-confirmar-importacion` y no `btn-importar-...`: ya existe
+			`btn-importar-excel-<id>` (el boton de la FILA de una compra, que ABRE este modal), y
+			los dos nombres compartirian el comienzo. Este es el que CONFIRMA.
+		-->
 		<btn-loader
+		data-testid="btn-confirmar-importacion"
 		id="btn_importar"
 		:disabled="!file"
 		@clicked="upload"
@@ -1183,7 +1204,22 @@ export default {
 		        })
 		        .catch((error) => {
 		            console.error('Error al procesar el archivo:', error);
-		            this.$store.commit('auth/setMessage', 'Ocurrió un error al procesar el archivo.');
+					/*
+					 * 🔴 Antes esto escribia en `auth/setMessage`, que es el texto que se muestra
+					 * DEBAJO del spinner del loading global — y el `.finally` de dos lineas mas
+					 * abajo apaga ese loading enseguida. O sea que el mensaje se escribia sobre un
+					 * overlay que ya se estaba yendo: NO SE VEIA NUNCA. El usuario subia un archivo
+					 * ilegible, el spinner giraba un instante y despues no pasaba nada, sin ninguna
+					 * explicacion.
+					 *
+					 * Va como toast, que sobrevive al apagado del overlay. Y se limpia el mensaje
+					 * del loading para no dejar texto viejo colgado para la proxima vez que algo lo
+					 * prenda.
+					 */
+					this.$store.commit('auth/setMessage', '');
+					this.$toast.error('No pudimos leer el archivo. Revisá que sea un Excel válido (.xlsx o .xls) y que no esté dañado ni protegido con contraseña.', {
+						duration: 10000
+					});
 		        })
 		        .finally(() => {
 		            this.$store.commit('auth/setLoading', false);
@@ -1237,6 +1273,30 @@ export default {
 		                reject(err);
 		            }
 		        };
+
+				/*
+				 * 🔴 Estos dos faltaban, y era el peor cuelgue de toda la aplicacion: si el
+				 * FileReader fallaba (archivo borrado del disco mientras se leia, permiso denegado,
+				 * unidad de red que se cae, archivo mas grande que la memoria del navegador) no se
+				 * llamaba ni `onload` ni nada, la promesa NUNCA se asentaba, el `.finally` de
+				 * onFileChange no corria y el overlay del loading global quedaba tapando la
+				 * aplicacion entera para siempre. Unico escape: F5.
+				 *
+				 * `onabort` va junto con `onerror` por lo mismo: un `reader.abort()` tampoco
+				 * dispara `onload`.
+				 *
+				 * Es el mismo patron que ya usa la lectura local del Excel del modal de
+				 * importacion con IA (listado/modals/ai-excel-import/Index.vue): onerror y
+				 * try/catch en onload, y los dos rechazan.
+				 */
+				reader.onerror = () => {
+					reject(new Error('FileReader error'));
+				};
+
+				reader.onabort = () => {
+					reject(new Error('FileReader abort'));
+				};
+
 		        reader.readAsArrayBuffer(file);
 		    });
 		},

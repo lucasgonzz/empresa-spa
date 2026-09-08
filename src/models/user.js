@@ -119,6 +119,32 @@ export default {
 			],
 		},
 		/*
+		 * Preferencia del comercio sobre que pasa con los descuentos del proveedor al asignarle un
+		 * proveedor a un articulo. Apagada (default) es lo de develop: los descuentos del proveedor
+		 * entran recien al armar la compra. Prendida, es la dinamica anterior al merge de refractor
+		 * (ArticleProviderDiscountHelper::aplicar_al_asignar_proveedor en la API).
+		 */
+		{
+			text: 'Aplicar los descuentos del proveedor al asignarlo a un articulo',
+			key: 'aplicar_descuentos_proveedor_al_asignar',
+			type: 'checkbox',
+			value: 0,
+			// Solo lo ve el dueño, igual que fechar_ventas_por_fecha_de_entrega: es preferencia del
+			// comercio y vive en la fila del dueño. El empleado tiene su propia columna, que nadie
+			// escribe nunca, asi que el tilde le mostraria siempre 0 aunque el comercio lo tenga
+			// prendido. Ojo: esto es para que no vea un control que le miente, NO es la proteccion.
+			// ModelForm postea el modelo entero, props ocultas incluidas; quien impide que el
+			// empleado le pise la preferencia al dueño es el guard de UserController::update().
+			v_if_function: 'is_owner_v_if_function',
+			descriptions:
+			[
+				'Si se activa, al crear un articulo con proveedor —o al asignarle un proveedor a uno que no tenia— se le cargan automaticamente los descuentos de ese proveedor. Tambien al cambiar el proveedor de varios articulos juntos con "Actualizar seleccionados".',
+				'Los descuentos quedan cargados en el articulo, se ven en su ficha y se pueden editar o borrar como cualquier otro.',
+				'No afecta a los articulos que ya existen: rige de aca en adelante. Cambiar el proveedor de un articulo que ya tenia otro sigue preguntando con su ventana de confirmacion, este activada o no esta opcion.',
+				'Quitarle el proveedor a un articulo no le borra los descuentos que ya tenia.',
+			],
+		},
+		/*
 		 * Mision costo-bruto-por-condicion-fiscal, plan v2 (20/8/2026): ACA HABIA un switch de
 		 * cuenta, "Los costos se cargan con IVA incluido" (users.costos_cargados_con_iva), que era
 		 * el default de como interpretar el costo que alguien tipeaba. Se saco junto con la columna,
@@ -327,6 +353,30 @@ export default {
 			descriptions: [
 				'Aplica a TODOS los usuarios del sistema, no solo al dueño.',
 				'Sin elegir ninguno, se imprime el ticket común (comportamiento de siempre).',
+			],
+		},
+		/*
+		 * Preferencia del comercio sobre por que fecha se fechan las ventas en el listado, en los
+		 * Excel, en el grafico y en Rendimiento. Apagada (default) es lo de siempre: la fecha de
+		 * carga de la venta. Prendida, la fecha del pedido (Sale::scopeEnRangoDeFechas en la API).
+		 */
+		{
+			text: 'Fechar las ventas por fecha de pedido en vez de por fecha de carga',
+			key: 'fechar_ventas_por_fecha_de_entrega',
+			type: 'checkbox',
+			value: 0,
+			// Solo lo ve el dueño, igual que sale_factura_print_option: es preferencia del comercio
+			// y vive en la fila del dueño. El empleado tiene su propia columna, que nadie escribe
+			// nunca, asi que el tilde le mostraria siempre 0 aunque el comercio lo tenga prendido.
+			// Ojo: esto es para que no vea un control que le miente, NO es la proteccion. ModelForm
+			// postea el modelo entero, props ocultas incluidas; quien impide que el empleado le pise
+			// la preferencia al dueño es el guard de UserController::update().
+			v_if_function: 'is_owner_v_if_function',
+			descriptions:
+			[
+				'Si se activa, el listado de ventas y los reportes ubican cada venta en la fecha de entrega del pedido, no en el dia en que se cargo.',
+				'Sirve para quien anota los pedidos y los carga en tandas dias despues: sin esto, los pedidos de un mes cargados al mes siguiente aparecen en el mes equivocado.',
+				'Las ventas que no tengan cargada la fecha de entrega siguen apareciendo por su fecha de carga.',
 			],
 		},
 

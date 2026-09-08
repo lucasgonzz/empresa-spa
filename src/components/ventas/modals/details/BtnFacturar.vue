@@ -2,6 +2,7 @@
 	<b-button
 	v-if="!sale_details.afip_ticket || tiene_error_de_factura"
 	id="btn_facturar"
+	data-testid="btn-facturar-venta"
 	size="sm"
 	@click="facturar"
 	variant="primary">

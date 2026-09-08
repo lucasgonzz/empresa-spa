@@ -6,6 +6,13 @@
 	    :actions="['sale/delete']"
 	    id="delete-sale"></confirm>
 		
+		<!--
+			listado_paginado_por_defecto en false: esta vista arma su propio listado scopeado
+			(modulo 'deposito' en created(), filtrado por checked en sales_to_show()). Mismo
+			defecto que por-entregar/ventas/Index.vue: sin la prop, runListadoPorDefecto del
+			grupo 221 corre igual apenas monta y pisa el listado scopeado con el general de
+			ventas terminadas. Sin arreglar aca desde el 25/7/2026.
+		-->
 		<view-component
 		:models_to_show="sales_to_show"
 		show_models_if_empty
@@ -13,11 +20,12 @@
 		:show_previus_days="show_previus_days"
 		:show_btn_create="false"
 		change_from_dates_option
+		:listado_paginado_por_defecto="false"
 		:show_modal="false"
 		@clicked="clicked"
 		:set_model_on_row_selected="false"
 		:check_permissions_previus_days="false"
-		model_name="sale"> 
+		model_name="sale">
 			<template #table_right_options="props">
 				<sale-buttons
 				:sale="props.model"></sale-buttons>
