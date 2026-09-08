@@ -358,7 +358,14 @@ $acento-fiscal: #0891b2
 		// 14px -> 18px: la cascada es una lista larga de numeros y con 14 los
 		// renglones se leian pegados.
 		padding: 18px 0
-		border-bottom: 1px solid var(--color-border-secondary, #f1f5f9)
+		// 🔴 7/9/2026: el separador NO va como var(--color-border-secondary, #f1f5f9). El fallback
+		// de un var() entra unicamente cuando la custom property NO esta definida, y ese token SI
+		// esta definido en :root (vale #e9ecef): en claro ganaba el token y cada linea divisoria
+		// se marcaba mas. Suelta es sutil, pero esta lista es larga y el corrimiento se repite en
+		// cada renglon. --borde-renglon-cascada existe SOLO en html.dark-mode (ver
+		// _dark_theme.sass), asi que aca el fallback si entra y el claro se queda con el #f1f5f9
+		// de siempre.
+		border-bottom: 1px solid var(--borde-renglon-cascada, #f1f5f9)
 		font-size: 0.95rem
 		color: var(--color-text-primary, #0f172a)
 

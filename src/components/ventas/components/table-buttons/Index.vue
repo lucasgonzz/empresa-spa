@@ -103,22 +103,43 @@ export default {
 	gap: 8px;
 }
 
-/* Los componentes hijos envuelven su botón en un <div> propio (PaymentPlanBtn, SendMail,
-   CerrarVenta, SaleLogBtn, TextInfo, AfipButtons). Se los pasa a flex para que sus botones también
-   respiren por gap y no por márgenes. */
-.table-buttons-ventas ::v-deep > div {
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	gap: 8px;
-}
+/* Los componentes hijos envuelven su botón en un <div> propio, y ese envoltorio no aporta nada
+   visual: sólo agrupa. Con `display: contents` deja de generar caja, así que el botón de adentro
+   pasa a ser ítem directo del flex y respira por el `gap` del contenedor, no por márgenes.
 
-/* Un `v-if` en falso deja un nodo comentario, y un <div> que sólo tiene comentarios SÍ matchea
-   :empty. Sin esto, cada control apagado por extensión o por permiso (SendMail, CerrarVenta,
-   TextInfo sin comprobante, AfipButtons sin facturas) seguiría contando como ítem del flex y
-   dejaría un hueco de 8px en el medio de la fila. */
-.table-buttons-ventas ::v-deep div:empty {
-	display: none;
+   🔴 Es el mismo arreglo que ya validó common/current-acounts/Index.vue (ver el comentario de
+   `.cont-edit` ahí), y va en lugar de `div:empty { display: none }`, que fue el primer intento y
+   cubre sólo la mitad de los casos. `:empty` tapa el envoltorio que quedó con un solo nodo
+   comentario adentro (lo que deja un `v-if` en falso; :empty ignora comentarios) — TextInfo sin
+   comprobante, SaleLogBtn sin auditoría —, pero NO el de CerrarVenta, que anida DOS divs: con la
+   extensión `cerrar_ventas` prendida y sin botón ni badge para mostrar, el div de afuera contiene
+   al de adentro, así que no está vacío, sigue siendo ítem del flex y se lleva su gap a cada lado.
+   Con `display: contents` un envoltorio sin contenido no ocupa ni se lleva gap, tenga adentro un
+   comentario, otro div, o nada.
+
+   El alcance va por hijo directo (`>`) y no por descendiente, que es lo que hacía `::v-deep
+   div:empty`: un selector descendiente le pega a CUALQUIER div anidado en la celda, incluidos los
+   que arma bootstrap-vue adentro de un modal (EtiquetaEnvio, SaleLogBtn) y las tarjetas
+   `.factura-card` de AfipButtons — divs con estilo propio que no son envoltorios de nadie.
+   Enumerando los tres niveles que existen de verdad se cubre lo mismo sin tocar nada de eso:
+
+     - nivel 1, hijos de la celda que no son grupo: TextInfo y AfipButtons (1 div cada uno);
+     - nivel 2, raíces de los hijos que van adentro de un grupo: PaymentPlanBtn, EtiquetaEnvio,
+       SendMail, SaleLogBtn y el div de afuera de CerrarVenta (1 div). PriceDescriptionBtn no
+       aparece porque su raíz es el propio <b-button>, sin envoltorio;
+     - nivel 3, sólo el div de adentro de CerrarVenta.
+
+   Los grupos quedan afuera a propósito: son la agrupación semántica (gestión / auditoría) y tienen
+   que seguir siendo ítems del flex para bajar juntos cuando la fila envuelve.
+
+   El `:not([class])` del nivel 3 tampoco es de más: ahí abajo, además del envoltorio pelado de
+   CerrarVenta, vive el <div class="btn-group"> que arma el `b-button-group` de EtiquetaEnvio.
+   Colapsarlo separaría sus dos botones con el gap del grupo y dejaría de leerse como un control
+   unido. Un envoltorio sin ninguna clase es, por definición, estructura sin estilo propio. */
+.table-buttons-ventas ::v-deep > div:not(.table-buttons-ventas__grupo),
+.table-buttons-ventas ::v-deep > .table-buttons-ventas__grupo > div,
+.table-buttons-ventas ::v-deep > .table-buttons-ventas__grupo > div > div:not([class]) {
+	display: contents;
 }
 
 /* Márgenes legacy de los hijos que no son de esta misión (PaymentPlanBtn, EtiquetaEnvio, SendMail,

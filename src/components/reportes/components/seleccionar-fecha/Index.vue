@@ -280,15 +280,22 @@ export default {
 	letter-spacing: 0.04em
 
 // Los dos inputs de fecha eran una tarjeta blanca con borde y texto casi negro: en modo oscuro,
-// dos rectángulos blancos. Van con los mismos tokens que usa el tema para .form-control
-// (--bg-section de fondo, --color-border de borde, --color-text-primary de texto).
+// dos rectángulos blancos. El borde y el texto van con los mismos tokens que usa el tema para
+// .form-control, porque ahí el valor claro del token es indistinguible del literal que había
+// (#dee2e6 vs #E2E8F0, #212529 vs #1E293B).
+//
+// 🔴 7/9/2026: el FONDO no, y por eso queda escrito tal cual. El fallback de un var() entra
+// unicamente cuando la custom property NO esta definida, y --bg-section SI esta definida en
+// :root (vale #f8f9fa): con var(--bg-section, #FFFFFF) el modo claro tomaba el token y los dos
+// campos de fecha dejaban de ser blancos. Son campos de formulario, y en modo claro un input va
+// blanco. La contraparte oscura esta al final de esta hoja.
 .date-field-input
 	border: 1px solid var(--color-border, #E2E8F0)
 	border-radius: 8px
 	padding: 7px 10px
 	font-size: 0.875rem
 	color: var(--color-text-primary, #1E293B)
-	background: var(--bg-section, #FFFFFF)
+	background: #FFFFFF
 	cursor: pointer
 	transition: border-color 0.15s ease, box-shadow 0.15s ease
 	height: 38px
@@ -320,4 +327,12 @@ export default {
 	color: #EF4444
 	margin: 0
 	padding: 0
+
+// Contraparte oscura del fondo de los campos de fecha. Vive afuera del bloque de
+// .date-field-input porque alla el blanco tiene que quedar literal (ver el comentario del
+// 7/9/2026). Aca va --bg-section, que es el mismo token que _dark_theme.sass le da a
+// .form-control: un campo de fecha y un input del sistema se ven igual en oscuro.
+html.dark-mode
+	.date-field-input
+		background: var(--bg-section)
 </style>

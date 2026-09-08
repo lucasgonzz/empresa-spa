@@ -107,6 +107,25 @@ html.dark-mode
 	// --shadow-color no alcanzaba: ese token si existe en claro y pasaria la sombra del panel de
 	// rgba(15,23,42,.08) a rgba(99,99,99,.2), o sea moveria el modo claro.
 	--shadow-panel-flotante: 0 8px 32px rgba(0, 0, 0, 0.35)
+	// Separador entre renglones de las cascadas de reportes (estado de resultados, flujo de caja,
+	// posicion fiscal). Mismo truco que --shadow-panel-flotante: se declara SOLO en el bloque
+	// oscuro, asi el componente lo escribe como var(--borde-renglon-cascada, #f1f5f9) y en claro
+	// el fallback deja la linea exactamente igual que antes. Con --color-border-secondary a secas
+	// no alcanzaba: ese token TAMBIEN existe en :root (#e9ecef), asi que el fallback no entraria
+	// nunca y cada renglon de esas listas --que son largas-- se marcaria mas fuerte para los 40
+	// clientes que hoy usan modo claro. Apunta al token de borde interno para no tener dos
+	// fuentes de verdad del mismo gris.
+	--borde-renglon-cascada: var(--color-border-secondary)
+	// Titulos de seccion y leyendas de los reportes. Mismo truco que el de arriba y que
+	// --shadow-panel-flotante: se declara SOLO aca, asi que en modo claro el token no existe y el
+	// componente se queda con su fallback #475569 exacto.
+	//
+	// Hace falta porque el #475569 de esos titulos NO se puede mandar a --color-text-secondary con
+	// un var() comun: en claro ese token vale #6c757d, y el contraste sobre blanco caeria de 8,6:1
+	// a 4,7:1 -- un aclarado visible en texto chico, en mayuscula y en negrita. Pero en OSCURO el
+	// #475569 sobre --bg-card da ~1,7:1, o sea que tampoco se podia dejar el literal. Los dos modos
+	// necesitan valores distintos y ninguno de los dos es negociable.
+	--texto-seccion-reportes: var(--color-text-secondary)
 
 	// Contraparte oscura de los estados de Cajas (grupo 371). Los fondos van en rgba sobre el
 	// acento en vez de un color plano: asi se apoyan sobre --bg-card sin pelearse con el.

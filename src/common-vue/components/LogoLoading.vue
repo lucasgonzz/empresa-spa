@@ -124,7 +124,13 @@ $logo_loading_spinner_size: 52px
 	// --shadow-color no servía: ese token también existe en claro y habría cambiado la sombra
 	// del panel para los 40 clientes que usan el modo claro.
 	box-shadow: var(--shadow-panel-flotante, 0 4px 24px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.06))
-	border: 1px solid var(--color-border, rgba(0, 123, 255, 0.08))
+	// 🔴 7/9/2026: el borde va con el valor claro TAL CUAL, y NO como
+	// var(--color-border, rgba(0, 123, 255, 0.08)). El fallback de un var() entra unicamente
+	// cuando la custom property NO esta definida, y --color-border SI esta definida en :root
+	// (vale #dee2e6): con el var(), en modo claro aparecia un borde gris SOLIDO donde hasta hoy
+	// habia un azul al 8%, o sea practicamente invisible. Ojo con el comentario de arriba: ese
+	// justifica la SOMBRA, no el borde. La contraparte oscura esta al final de esta hoja.
+	border: 1px solid rgba(0, 123, 255, 0.08)
 
 // Contenedor del doble anillo animado
 .logo-loading-spinner
@@ -204,4 +210,12 @@ $logo_loading_spinner_size: 52px
 	letter-spacing: 0.01em
 	color: var(--color-text-primary, #334155)
 	text-align: center
+
+// Contraparte oscura del borde del panel flotante. Vive afuera del bloque anidado porque alla el
+// valor claro tiene que quedar literal (ver el comentario del 7/9/2026 en .logo-loading-panel).
+// Aca si va --color-border, que es el borde de CAJA del tema: sobre el velo oscuro un azul al 8%
+// no dibuja nada, y el panel se quedaba sin contorno.
+html.dark-mode
+	.logo-loading-panel
+		border-color: var(--color-border)
 </style>

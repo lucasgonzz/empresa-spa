@@ -499,13 +499,22 @@ export default {
 		min-width: 0
 
 	// Separador de 1px: es lo que sostiene la lectura de "tres zonas, un objeto".
+	//
+	// 🔴 7/9/2026 - El color va LITERAL y NO como var(--color-border, #C7C7C7). El fallback de un
+	// var() entra solo si el token no esta definido, y --color-border SI esta definido en :root
+	// (#dee2e6): escrito asi, el modo claro no usaria nunca el #C7C7C7 y pasaria a #dee2e6. El
+	// separador vive ADENTRO de la pastilla, cuyo fondo es --bg-nav (#E3E3E3, lo pone esta misma
+	// hoja unas lineas mas arriba), y #dee2e6 sobre #E3E3E3 da ~1,03:1: la linea desaparece.
+	// --color-border no esta mal como token, esta calibrado contra otra cosa: contra --bg-card
+	// (#fff), que es la tarjeta, no contra una pista gris. El modo claro lo usan 40 clientes y
+	// queda exactamente como estaba.
 	.control-fecha__separador
 		display: inline-block
 		flex: 0 0 auto
 		width: 1px
 		height: 20px
 		margin: 0 6px
-		background-color: var(--color-border, #C7C7C7)
+		background-color: #C7C7C7
 
 	.control-fecha__modo
 		display: inline-flex
@@ -687,6 +696,16 @@ export default {
 		cursor: pointer
 		padding: 0
 		font-size: 0.7rem
+
+// Contraparte oscura del separador (7/9/2026). En oscuro la pastilla es --bg-nav #2b2f36 y el
+// #C7C7C7 de claro seria una linea casi blanca ahi adentro. Va con --color-border, que en
+// html.dark-mode es rgba(255, 255, 255, 0.14): compuesto sobre #2b2f36 da ~#484c52, o sea ~1,5:1
+// contra la pastilla -- el mismo peso de hairline que tiene el #C7C7C7 sobre #E3E3E3 (~1,3:1). Se
+// elige el token y no un literal justamente porque es un blanco TRANSLUCIDO: sigue leyendose igual
+// si la pastilla cambia de fondo, cosa que un gris fijo no hace. Este <style> no es scoped, asi que
+// la regla html.dark-mode funciona derecho.
+html.dark-mode .control-fecha .control-fecha__separador
+	background-color: var(--color-border)
 
 // Telefono: la pastilla ocupa el ancho y se parte en dos filas ADENTRO del mismo contenedor gris
 // (una sola pastilla, no dos). Nunca se oculta: el comentario del template de view/header/Index.vue

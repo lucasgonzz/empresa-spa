@@ -284,7 +284,11 @@ export default {
 		display: inline-flex
 		align-items: center
 		font-size: 0.8rem
-		color: var(--color-text-secondary, #475569)
+		// 7/9/2026: token solo-oscuro (declarado unicamente en html.dark-mode), NO
+		// var(--color-text-secondary, ...). El fallback de un var() entra solo si la custom
+		// property no existe: con --color-text-secondary, que si existe en :root, el modo claro
+		// pasaria de #475569 a #6c757d y el contraste sobre blanco caeria de 8,6:1 a 4,7:1.
+		color: var(--texto-seccion-reportes, #475569)
 
 	&__punto
 		display: inline-block

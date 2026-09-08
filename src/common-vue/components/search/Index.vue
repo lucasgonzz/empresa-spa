@@ -740,19 +740,34 @@ export default {
 
 	// Deshabilitado: gris el campo entero, como cualquier .form-control:disabled. Antes el gris
 	// se le ponia solo al icono y quedaba un cuadradito gris adentro de un campo blanco.
-	// Deshabilitado por token (7/9/2026). Este rectangulo era el pedazo de "fondo claro" que
-	// Lucas ve cuando el campo es only_show o disabled: un gris casi blanco adentro de un modal
-	// oscuro. Va a --bg-section y no a --bg-hover por dos motivos: es el mismo token que
-	// _dark_theme.sass ya le da a `.form-control:disabled`, asi que un buscador deshabilitado y
-	// un input deshabilitado se ven igual; y --bg-section queda un escalon POR DEBAJO de
-	// --bg-card (que es el fondo del modal y el del campo habilitado), que es la misma relacion
-	// que tiene hoy en claro el #e9ecef contra la tarjeta blanca. Con --bg-hover pasaria a ser
-	// mas claro que el modal y el campo apagado se leeria como resaltado.
+	//
+	// 🔴 7/9/2026: el valor claro va escrito TAL CUAL, y NO como var(--bg-section, #e9ecef). El
+	// fallback de un var() entra unicamente cuando la custom property NO esta definida, y
+	// --bg-section SI esta definida en :root (vale #f8f9fa): con el var() el modo claro tomaba el
+	// token y este gris se iba a un casi blanco. Y ese gris ES la senal de "este campo no se
+	// toca": contra la tarjeta blanca de atras, #f8f9fa no se despega y el buscador deshabilitado
+	// deja de leerse como deshabilitado. El valor que habia que salvar era #e9ecef.
+	//
+	// La contraparte oscura vive en el bloque html.dark-mode del final de esta hoja, y ahi si va
+	// --bg-section, por dos motivos: es el mismo token que _dark_theme.sass ya le da a
+	// `.form-control:disabled`, asi que un buscador deshabilitado y un input deshabilitado se ven
+	// igual; y queda un escalon POR DEBAJO de --bg-card (el fondo del modal y el del campo
+	// habilitado), que es la misma relacion que tiene el #e9ecef contra la tarjeta blanca en
+	// claro. Con --bg-hover pasaria a ser mas claro que el modal y el campo apagado se leeria
+	// como resaltado.
 	&.search-field--disabled
-		background: var(--bg-section, #e9ecef)
+		background: #e9ecef
 		cursor: not-allowed
 		.search-field__input
 			background: transparent
 		.search-field__icon
 			cursor: default
+
+// Contraparte de modo oscuro que NO puede escribirse como var(--token, literal) adentro del
+// bloque anidado de arriba: ese token tambien existe en :root, asi que el fallback nunca entraria
+// y el que se moveria seria el MODO CLARO. Se agrupa aca al final para no romper el anidado de
+// .search-field.
+html.dark-mode
+	.search-field.search-field--disabled
+		background: var(--bg-section)
 </style>

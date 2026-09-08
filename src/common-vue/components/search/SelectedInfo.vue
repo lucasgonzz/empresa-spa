@@ -128,10 +128,28 @@ export default {
 		border-radius: 50%
 		color: var(--color-text-secondary, #86868b)
 		font-size: 0.8rem
-		// El hover va a --bg-hover, que es el unico de los tres fondos que queda POR ENCIMA de
-		// --bg-section (el fondo del chip) en los dos temas: si tomara --bg-card, en oscuro el
-		// hover seria mas claro pero se confundiria con el fondo del modal.
+		// 🔴 7/9/2026: el fondo del hover va escrito TAL CUAL, y NO como var(--bg-hover, #e4e6e8).
+		// El fallback de un var() entra unicamente cuando la custom property NO esta definida, y
+		// --bg-hover SI esta definida en :root (vale #f1f3f5). Sumado a que el fondo del chip ya
+		// se corrio a --bg-section (#f8f9fa), con el token el hover quedaba #f1f3f5 sobre #f8f9fa:
+		// dos grises casi iguales, o sea la cruz dejaba de responder al mouse. Lo que hay que
+		// salvar no es el color suelto sino el CONTRASTE contra el fondo del chip, y ese contraste
+		// lo da el #e4e6e8 de siempre.
+		//
+		// La contraparte oscura esta al final de esta hoja, y ahi si va --bg-hover: es el unico de
+		// los tres fondos que queda POR ENCIMA de --bg-section (el fondo del chip) en los dos
+		// temas. Si tomara --bg-card, en oscuro el hover seria mas claro pero se confundiria con
+		// el fondo del modal.
 		&:hover
-			background: var(--bg-hover, #e4e6e8)
+			background: #e4e6e8
 			color: var(--color-text-primary, #1d1d1f)
+
+// Contraparte oscura del hover de la cruz. Vive afuera del bloque anidado porque alla el valor
+// claro tiene que quedar literal (ver el comentario del 7/9/2026 en &:hover). Que este <style>
+// sea scoped no molesta: el selector compila a
+// `html.dark-mode .selected-info .selected-info__clear:hover[data-v-xxx]`, que matchea igual y
+// ademas le gana por especificidad a la regla de arriba.
+html.dark-mode
+	.selected-info .selected-info__clear:hover
+		background: var(--bg-hover)
 </style>
