@@ -24,6 +24,10 @@
 	--bg-card: #fff
 	--bg-section: #f8f9fa
 	--bg-hover: #f1f3f5
+	// Velo del overlay de carga a pantalla completa (LogoLoading). Es un token propio y NO
+	// --color-bg porque tiene que seguir siendo TRANSLUCIDO: detras hay contenido y un
+	// backdrop-filter que lo desenfoca, y un color plano taparia ese efecto entero.
+	--bg-overlay: rgba(255, 255, 255, 0.72)
 	// Color de las sombras de elevacion (tablas, tarjetas). En claro es el gris de siempre; en
 	// oscuro tiene que ser negro, porque un gris claro sobre fondo oscuro directamente no se ve.
 	--shadow-color: rgba(99, 99, 99, 0.2)
@@ -93,6 +97,16 @@ html.dark-mode
 	--bg-nav: #2b2f36
 	--bg-nav-hover: rgba(77, 163, 255, 0.16)
 	--toggle-track-off: #5a626d
+	// Contraparte oscura del velo. Va un escalon POR DEBAJO de --color-bg (#23262b) a proposito:
+	// como es semitransparente, lo que termina viendose es mas claro que el color declarado, y
+	// con el propio --color-bg el velo quedaba MAS CLARO que la pagina que esta tapando.
+	--bg-overlay: rgba(24, 26, 30, 0.78)
+	// Sombra del panel flotante del overlay de carga. Se declara SOLO en el bloque oscuro a
+	// proposito: asi el componente la escribe como var(--shadow-panel-flotante, <sombra clara de
+	// hoy>) y en modo claro el fallback deja la sombra exactamente igual que antes. Con
+	// --shadow-color no alcanzaba: ese token si existe en claro y pasaria la sombra del panel de
+	// rgba(15,23,42,.08) a rgba(99,99,99,.2), o sea moveria el modo claro.
+	--shadow-panel-flotante: 0 8px 32px rgba(0, 0, 0, 0.35)
 
 	// Contraparte oscura de los estados de Cajas (grupo 371). Los fondos van en rgba sobre el
 	// acento en vez de un color plano: asi se apoyan sobre --bg-card sin pelearse con el.
@@ -265,15 +279,61 @@ html.dark-mode
 
 	// Tipografia y separadores.
 	//
-	// .text-muted, .text-dark, .border, .border-top y .border-bottom quedan afuera a
-	// proposito: son utilidades de bootstrap definidas con !important
-	// (utilities/_text.scss, utilities/_borders.scss). Un !important le gana a cualquier
-	// declaracion normal sin importar la especificidad, asi que una regla de este lado sin
-	// !important nunca las vence -- y sumarles !important rompe la convencion del archivo
-	// (los dos !important que ya tiene, el de table tbody tr y su consecuencia en el
-	// hover, son la excepcion puntual que el prompt permite, no una puerta abierta).
-	// Quedan con los valores de bootstrap, que sobre el fondo oscuro se siguen viendo
-	// aunque no sigan la paleta nueva.
+	// Las utilidades de bootstrap .text-muted, .text-dark y las .border* SE INCORPORAN desde el
+	// 7/9/2026, por pedido explicito de Lucas: "hay muchos textos que se siguen mostrando
+	// oscuros y no se alcanzan a distinguir". Hasta hoy quedaban afuera para no sumar
+	// !important, y el precio de esa pureza era que .text-muted seguia con el #6c757d de
+	// bootstrap: sobre --bg-card (#2e333a) eso da ~2.5:1 de contraste, o sea ilegible. No es un
+	// rincon: lo usan las aclaraciones de "Costo base / Costo con IVA", la descripcion de
+	// "Aplicar IVA", el badge de "Pre N°" de la tabla de ventas y decenas de <small> del sistema.
+	//
+	// El !important de este lado no es pereza ni falta de especificidad: bootstrap declara estas
+	// utilidades CON !important (utilities/_text.scss, utilities/_borders.scss), y mientras uno
+	// solo de los dos lados lo tenga la especificidad ni siquiera entra en la comparacion. La
+	// unica forma de vencerlas es igualarlas.
+	//
+	// La excepcion es acotada a estas cinco utilidades y NO abre la puerta al resto del archivo:
+	// se justifica porque el otro lado es !important ajeno. Cualquier regla propia de esta hoja
+	// se sigue escribiendo sin !important.
+	.text-muted
+		color: var(--color-text-secondary) !important
+
+	// Se usa junto con variant="light" en los badges de la tabla de ventas: sin esto queda texto
+	// casi negro sobre el badge.
+	//
+	// 🔴 Va de la mano con el bloque de superficies claras de aca abajo, y no se separan. Medido
+	// en pantalla el 7/9/2026: con .text-dark ya convertido pero .badge-light todavia en el
+	// #f8f9fa de bootstrap, el badge "Pre N°" de la tabla de ventas quedaba texto casi blanco
+	// (#e8eaed) sobre fondo casi blanco (#f8f9fa) -- 1,05:1, o sea INVISIBLE. Antes de tocar
+	// .text-dark por lo menos se leia, negro sobre blanco. Oscurecer el texto sin oscurecer la
+	// superficie que lo acompaña es peor que no tocar ninguno de los dos.
+	.text-dark
+		color: var(--color-text-primary) !important
+
+	// Superficies "claras" de bootstrap. Son la contraparte obligatoria de .text-dark: las tres
+	// declaran un casi-blanco pensado para el modo claro y, sobre el fondo oscuro, o encandilan
+	// (un rectangulo blanco en medio de la pantalla) o se comen al texto que llevan encima.
+	//
+	// .bg-light y .bg-white van con !important porque bootstrap las declara asi
+	// (utilities/_background.scss); .badge-light no lo lleva de origen, asi que aca tampoco.
+	//
+	// El escalon lo da --bg-section y no --bg-card a proposito: estas superficies se usan SOBRE
+	// una tarjeta o una fila de tabla (que ya son --bg-card), y con el mismo token se fundirian
+	// con lo que tienen debajo. El borde queda a cargo de la utilidad .border, que casi siempre
+	// las acompaña y ya esta convertida arriba.
+	.bg-light, .bg-white
+		background-color: var(--bg-section) !important
+
+	.badge-light
+		background-color: var(--bg-section)
+		color: var(--color-text-primary)
+
+	// Solo el COLOR del borde: ni el border-width ni el border-style se tocan. Estas utilidades
+	// son de LAYOUT ademas de color (son las que hacen aparecer el borde), asi que pisarles el
+	// ancho moveria cajas en todo el sistema.
+	.border, .border-top, .border-bottom, .border-left, .border-right
+		border-color: var(--color-border) !important
+
 	hr
 		border-color: var(--color-border)
 
@@ -347,6 +407,3 @@ html.dark-mode
 // - Los ~90 componentes con blancos escritos a mano en su propio <style>. Se barren por
 //   modulo en un grupo posterior, despues de que Lucas vea el tema andando y marque que
 //   pantallas molestan de verdad.
-// - .text-muted, .text-dark, .border, .border-top y .border-bottom (ver el comentario en
-//   la seccion de tipografia arriba: son utilidades de bootstrap con !important y vencerlas
-//   exigiria sumar !important de este lado, fuera de la convencion del archivo).

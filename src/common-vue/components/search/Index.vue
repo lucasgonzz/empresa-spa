@@ -657,10 +657,10 @@ export default {
 	border-radius: 0.25rem 0 0 0.25rem
 	i
 		color: var(--color-text-secondary, rgba(0, 0, 0, .6))
-	@if ($theme == 'dark')
-		background: #333 !important
-		i
-			color: #FFF
+	// Aca abajo colgaba un `@if ($theme == 'dark')` que repetia estos dos colores a mano. Se
+	// borro el 7/9/2026: `$theme` es una variable de COMPILACION de Sass fijada en 'light' en
+	// _custom.scss, asi que esa rama no se compilaba nunca y solo daba la falsa impresion de que
+	// el recuadro viejo de la lupa tenia tema oscuro. Los dos var() de arriba ya lo resuelven.
 // Estado deshabilitado del buscador.
 .bg-gray
 	background: var(--bg-hover, #e9ecef) !important
@@ -740,8 +740,16 @@ export default {
 
 	// Deshabilitado: gris el campo entero, como cualquier .form-control:disabled. Antes el gris
 	// se le ponia solo al icono y quedaba un cuadradito gris adentro de un campo blanco.
+	// Deshabilitado por token (7/9/2026). Este rectangulo era el pedazo de "fondo claro" que
+	// Lucas ve cuando el campo es only_show o disabled: un gris casi blanco adentro de un modal
+	// oscuro. Va a --bg-section y no a --bg-hover por dos motivos: es el mismo token que
+	// _dark_theme.sass ya le da a `.form-control:disabled`, asi que un buscador deshabilitado y
+	// un input deshabilitado se ven igual; y --bg-section queda un escalon POR DEBAJO de
+	// --bg-card (que es el fondo del modal y el del campo habilitado), que es la misma relacion
+	// que tiene hoy en claro el #e9ecef contra la tarjeta blanca. Con --bg-hover pasaria a ser
+	// mas claro que el modal y el campo apagado se leeria como resaltado.
 	&.search-field--disabled
-		background: #e9ecef
+		background: var(--bg-section, #e9ecef)
 		cursor: not-allowed
 		.search-field__input
 			background: transparent

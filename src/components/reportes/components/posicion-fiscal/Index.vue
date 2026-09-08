@@ -287,8 +287,9 @@ export default {
 <style lang="sass">
 // Paleta de acentos de los iconos de renglon. Misma familia que usaba IconCards.vue en
 // develop, para que Reportes se sienta el mismo modulo aunque el layout haya cambiado.
-// Si algun dia este modulo pasa a los tokens de --dark_theme, estas seis variables son
-// el unico punto a tocar por archivo.
+// Los fondos, textos y bordes de este archivo YA pasaron a los tokens del tema oscuro; estas
+// seis se quedan como literales a proposito: son colores de ACENTO, y los de accion y estado se
+// mantienen iguales en los dos modos.
 $acento-ventas: #2563eb
 $acento-dinero: #059669
 $acento-gastos: #dc2626
@@ -298,8 +299,10 @@ $acento-fiscal: #0891b2
 
 .posicion-fiscal
 	.cascada-card
-		background: #fff
-		border: 1px solid #e2e8f0
+		// La tarjeta flota sobre --color-bg: con un blanco fijo, en modo oscuro queda un
+		// rectangulo encandilante en vez de una superficie elevada.
+		background: var(--bg-card, #fff)
+		border: 1px solid var(--color-border, #e2e8f0)
 		border-radius: 12px
 		box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06)
 		padding: 12px 28px
@@ -309,7 +312,7 @@ $acento-fiscal: #0891b2
 		&__titulo
 			font-size: 0.95rem
 			font-weight: 700
-			color: #475569
+			color: var(--color-text-secondary, #475569)
 			text-transform: uppercase
 			letter-spacing: 0.04em
 			padding: 14px 0 4px
@@ -325,9 +328,9 @@ $acento-fiscal: #0891b2
 		// 14px -> 18px: la cascada es una lista larga de numeros y con 14 los
 		// renglones se leian pegados.
 		padding: 18px 0
-		border-bottom: 1px solid #f1f5f9
+		border-bottom: 1px solid var(--color-border-secondary, #f1f5f9)
 		font-size: 0.95rem
-		color: #0f172a
+		color: var(--color-text-primary, #0f172a)
 
 		&:last-child
 			border-bottom: none
@@ -374,8 +377,8 @@ $acento-fiscal: #0891b2
 		&--subtotal
 			font-weight: 700
 			font-size: 1.05rem
-			border-top: 2px solid #e2e8f0
-			border-bottom: 2px solid #e2e8f0
+			border-top: 2px solid var(--color-border, #e2e8f0)
+			border-bottom: 2px solid var(--color-border, #e2e8f0)
 			color: #dc2626
 
 		&--favor
@@ -383,7 +386,7 @@ $acento-fiscal: #0891b2
 
 	&__aviso-iibb
 		padding: 16px 0
-		color: #64748b
+		color: var(--color-text-secondary, #64748b)
 		font-size: 0.9rem
 
 		p

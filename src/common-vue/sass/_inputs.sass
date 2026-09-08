@@ -13,28 +13,24 @@ legend, .form-text, .custom-checkbox, label
 	text-align: left	
 
 
-@if ($theme == 'dark') 
-
-	// color: rgba(255,255,255,.9)
-	input, textarea, select, label, .b-form-datepicker, .custom-control-label
-		background: #1d1d1d !important
-		color: #FFF !important
-		&:disabled
-			background: #1d1d1d
-			color: rgba(255,255,255,1)
-		&:placeholder, &:-ms-input-placeholder
-			// color: rgba(255,255,255,1)
-			color: red
-			opacity: 1
-		&:focus
-			background: #1d1d1d
-
-	.col-form-label, .text-only-show
-		color: #FFF !important
-
-	.form-control
-		&::-webkit-input-placeholder
-			color: rgba(255,255,255,.7) !important
-
-	*::-webkit-input-placeholder
-		color: rgba(255,255,255,.7) !important
+// 7/9/2026 -- se BORRO un bloque `@if ($theme == 'dark')` entero (fondos #1d1d1d !important para
+// `input, textarea, select, label, .b-form-datepicker, .custom-control-label`, sus estados
+// :disabled y :focus, un `.col-form-label, .text-only-show` en blanco, y dos reglas de
+// placeholder).
+//
+// Nunca compilo: $theme es una variable de COMPILACION fijada en 'light' en _custom.scss.
+//
+// No se convirtio a tokens porque _dark_theme.sass YA cubre todo eso, y duplicar el arreglo en dos
+// archivos es peor que no tenerlo (el dia que cambie un token, uno de los dos queda viejo):
+//   - `.form-control, textarea.form-control, .custom-select, .input-group-text, .custom-file-label`
+//     resuelven fondo, borde y color de todos los inputs del sistema -- incluido b-form-datepicker,
+//     que renderiza un `.b-form-btn-label-control.form-control`.
+//   - `.form-control:disabled / :read-only / :focus` y `.custom-select:disabled / :focus` cubren los
+//     estados.
+//   - `.form-control::placeholder, .form-control::-webkit-input-placeholder` cubren el placeholder.
+//   - `.custom-control-label` tiene su propia regla; un `<label>` pelado y `.col-form-label` heredan
+//     el color del texto desde `html.dark-mode #app`.
+//   - `.text-only-show` no existe en ningun otro lado del repo: era un selector muerto.
+//
+// Aparte, el `color: red` del placeholder era una prueba que quedo olvidada, no una decision de
+// diseno: se descarta sin reemplazo.

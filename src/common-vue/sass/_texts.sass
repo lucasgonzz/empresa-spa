@@ -28,7 +28,11 @@
 
 
 .title
-	color: rgba(0, 0, 0, .6)
+	// 7/9/2026: este gris era un literal de modo claro VIVO (no una rama muerta), asi que en
+	// oscuro el titulo quedaba casi negro sobre fondo negro. Va al token, con el valor de hoy
+	// como fallback: --color-text-secondary en claro es #6c757d y rgba(0,0,0,.6) sobre blanco
+	// da #666, o sea el modo claro no se mueve de forma visible.
+	color: var(--color-text-secondary, rgba(0, 0, 0, .6))
 	font-size: 1.3em 
 	margin: 1em 0
 	display: block
@@ -36,7 +40,8 @@
 	text-align: center !important
 
 .title-left
-	color: rgba(0, 0, 0, .6)
+	// Mismo caso que .title (ver arriba, 7/9/2026).
+	color: var(--color-text-secondary, rgba(0, 0, 0, .6))
 	font-size: 1.3em 
 	margin: 1em 0
 	display: block
@@ -48,6 +53,14 @@
 	margin: 1em 0
 	display: block
 
-@if ($theme == 'dark') 
-	p, h1, h2, h3, h4, h5, h6, button.close
-		color: #FFF !important
+// 7/9/2026 -- se BORRO un `@if ($theme == 'dark')` que ponia
+// `p, h1, h2, h3, h4, h5, h6, button.close { color: #FFF !important }`.
+//
+// Nunca compilo: $theme es una variable de COMPILACION fijada en 'light' en _custom.scss, asi que
+// esa rama jamas se emitio y solo daba la falsa impresion de que la tipografia tenia tema oscuro.
+//
+// No se repone con tokens porque _dark_theme.sass ya lo resuelve: el color del texto baja por
+// herencia desde `html.dark-mode body` y `html.dark-mode #app`, y `.close` tiene su propia regla
+// alla. Y el !important se descarta a proposito: un color global sobre todos los parrafos y
+// titulos del sistema le ganaria al color propio de cada componente, que es exactamente lo que no
+// queremos.

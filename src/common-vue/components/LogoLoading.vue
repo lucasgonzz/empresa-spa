@@ -98,11 +98,14 @@ $logo_loading_spinner_size: 52px
 	align-items: center
 	justify-content: center
 	padding: 1.5rem
-	background: rgba(255, 255, 255, 0.72)
+	// Token propio --bg-overlay y no --color-bg (7/9/2026): el velo tiene que seguir siendo
+	// TRANSLÚCIDO. Detrás hay contenido y un backdrop-filter que lo desenfoca; con un color
+	// plano se perdería el efecto entero. El `@if ($theme == 'dark')` que estaba acá nunca
+	// compilaba (`$theme` es de compilación y vale siempre 'light'), así que la pantalla de
+	// carga salía blanca aunque el resto del sistema estuviera en oscuro.
+	background: var(--bg-overlay, rgba(255, 255, 255, 0.72))
 	backdrop-filter: blur(10px)
 	-webkit-backdrop-filter: blur(10px)
-	@if ($theme == 'dark')
-		background: rgba(30, 30, 30, 0.78)
 
 // Tarjeta flotante con sombra suave y borde sutil
 .logo-loading-panel
@@ -114,13 +117,14 @@ $logo_loading_spinner_size: 52px
 	max-width: min(92vw, 360px)
 	padding: 2rem 2.25rem 1.85rem
 	border-radius: 16px
-	background: #fff
-	box-shadow: 0 4px 24px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.06)
-	border: 1px solid rgba(0, 123, 255, 0.08)
-	@if ($theme == 'dark')
-		background: #2a2a2a
-		border-color: rgba(255, 255, 255, 0.06)
-		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35)
+	background: var(--bg-card, #fff)
+	// La sombra va por --shadow-panel-flotante, que se declara SOLO en el bloque oscuro de
+	// _dark_theme.sass. Así en modo claro se usa el fallback y la sombra queda idéntica a la de
+	// hoy, y en oscuro entra la sombra negra que necesita para despegarse del velo. Con
+	// --shadow-color no servía: ese token también existe en claro y habría cambiado la sombra
+	// del panel para los 40 clientes que usan el modo claro.
+	box-shadow: var(--shadow-panel-flotante, 0 4px 24px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.06))
+	border: 1px solid var(--color-border, rgba(0, 123, 255, 0.08))
 
 // Contenedor del doble anillo animado
 .logo-loading-spinner
@@ -185,10 +189,10 @@ $logo_loading_spinner_size: 52px
 	font-size: 0.8rem
 	font-weight: 500
 	letter-spacing: 0.04em
-	color: rgba($blue, 0.85)
+	// Azul del tema: en claro pasa de rgba($blue, .85) al #007bff plano del token (un pelín más
+	// saturado, mismo tono) y en oscuro toma el #4da3ff, que es el azul que ya usa todo el resto.
+	color: var(--color-primary, rgba($blue, 0.85))
 	text-align: right
-	@if ($theme == 'dark')
-		color: lighten($blue, 12%)
 
 // Mensaje de la operación (store auth/message)
 .logo-loading-message
@@ -198,8 +202,6 @@ $logo_loading_spinner_size: 52px
 	font-weight: 400
 	line-height: 1.45
 	letter-spacing: 0.01em
-	color: #334155
+	color: var(--color-text-primary, #334155)
 	text-align: center
-	@if ($theme == 'dark')
-		color: #e2e8f0
 </style>

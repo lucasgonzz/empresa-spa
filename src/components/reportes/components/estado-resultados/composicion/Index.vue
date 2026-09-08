@@ -244,6 +244,9 @@ export default {
 		bottom: calc(100% + 8px)
 		transform: translateX(-50%)
 		z-index: 5
+		// El #1e293b NO se toca: es un tooltip oscuro a proposito, con su texto claro encima, igual
+		// que el .tooltip-inner de bootstrap, que tambien es oscuro en modo claro. No es un blanco que
+		// se escapo, y en oscuro sigue leyendose porque queda por debajo de --bg-card.
 		background: #1e293b
 		color: #f8fafc
 		border-radius: 8px
@@ -281,7 +284,7 @@ export default {
 		display: inline-flex
 		align-items: center
 		font-size: 0.8rem
-		color: #475569
+		color: var(--color-text-secondary, #475569)
 
 	&__punto
 		display: inline-block

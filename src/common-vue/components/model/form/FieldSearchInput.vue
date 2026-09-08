@@ -1,4 +1,18 @@
 <template>
+	<!--
+		🔴 Este `m-b-15` es SOLO el aire de ABAJO del buscador. El de arriba --el que separa el
+		buscador de su label-- no vive aca ni puede vivir aca: lo pone `.form-label` en el <style>
+		de ModelForm.vue, que es quien dibuja el label.
+
+		Vale la aclaracion porque el 7/9/2026 Lucas reporto que en la solapa "Categoria" el buscador
+		respiraba y en "Datos generales" el de "proveedor" quedaba pegado al label, con este mismo
+		componente en los dos casos. La diferencia no estaba aca: el prop `provider_id` de
+		src/models/article.js declara `description` y `category_id` no, y en ModelForm la regla
+		`label.form-label--has-help` --la que agranda el area de hover del label con ayuda-- se
+		comia el margin-bottom del label por especificidad. Se arreglo alla, en la regla que lo
+		causaba. Si vuelve a aparecer una diferencia de aire entre dos buscadores, el sospechoso es
+		el label, no este div.
+	-->
 	<div class="m-b-15">
 		<search-component
 		:disabled="disabled"

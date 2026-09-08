@@ -45,48 +45,59 @@ data-tour="ventas.contenedor">
 			<btn-show-consolidadas></btn-show-consolidadas>
 		</template>
 		<template v-slot:table_left_options="props">
-			<div class="j-start align-center">
+			<!--
+				Ya no se usan acá las utilidades `j-start` y `align-center`: las dos declaran su
+				propiedad con !important (common-vue/sass/_displays.sass), así que no había forma de
+				ajustarles el envolvido ni la alineación desde el <style> de abajo sin pelearles.
+				Lo que hacían está declarado ahí, sin !important.
+			-->
+			<div class="table-left-options-ventas">
 				<table-buttons
 				:model="props.model" />
 
-				<btn-sale-modifications
-				:model="props.model"></btn-sale-modifications>
+				<!--
+					El botón de modificaciones y los distintivos van agrupados a propósito. Sueltos,
+					eran hermanos directos de <table-buttons>, que cuando su fila de botones se parte
+					en dos líneas crece de alto: con la alineación centrada de antes quedaban a media
+					altura, sin coincidir con ninguna de las dos líneas. Eso es lo que Lucas vio como
+					el botón de Modificaciones "flotando separado del resto".
+				-->
+				<div class="table-left-options-ventas__extras">
+					<btn-sale-modifications
+					:model="props.model"></btn-sale-modifications>
 
-				<b-badge
-				class="m-l-5"
-				variant="danger"
-				v-if="props.model.en_acopio">
-					<i class="bi bi-archive"></i>
-					Acopio
-				</b-badge>
+					<b-badge
+					variant="danger"
+					v-if="props.model.en_acopio">
+						<i class="bi bi-archive"></i>
+						Acopio
+					</b-badge>
 
-				<b-badge
-				class="m-l-5"
-				variant="success"
-				title="Correo enviado al cliente"
-				v-if="props.model.send_mail">
-					<i class="bi bi-envelope"></i>
-				</b-badge>
+					<b-badge
+					variant="success"
+					title="Correo enviado al cliente"
+					v-if="props.model.send_mail">
+						<i class="bi bi-envelope"></i>
+					</b-badge>
 
-				<!-- Distintivo visual para ventas contenedoras de facturación -->
-				<b-badge
-				class="m-l-5"
-				variant="warning"
-				v-if="props.model.is_consolidacion_facturacion">
-					<i class="bi bi-layers"></i>
-					Consolidada
-				</b-badge>
+					<!-- Distintivo visual para ventas contenedoras de facturación -->
+					<b-badge
+					variant="warning"
+					v-if="props.model.is_consolidacion_facturacion">
+						<i class="bi bi-layers"></i>
+						Consolidada
+					</b-badge>
 
-				<!-- Distintivo para ventas individuales ya incluidas en una consolidación -->
-				<b-badge
-				class="m-l-5"
-				variant="info"
-				v-if="props.model.consolidacion_facturacion_id">
-					<i class="bi bi-clipboard-check"></i>
-					Facturada en consolidación
-				</b-badge>
+					<!-- Distintivo para ventas individuales ya incluidas en una consolidación -->
+					<b-badge
+					variant="info"
+					v-if="props.model.consolidacion_facturacion_id">
+						<i class="bi bi-clipboard-check"></i>
+						Facturada en consolidación
+					</b-badge>
+				</div>
 			</div>
-		</template> 
+		</template>
 		<template #options_drop_down_seleccion>
 			<option-dropdown-afip-ticket></option-dropdown-afip-ticket>
 			<option-dropdown-consolidar-facturacion></option-dropdown-consolidar-facturacion>
@@ -173,6 +184,54 @@ export default {
 }
 </script>
 <style scoped>
+
+/*
+ * La celda de controles de cada venta del listado (7/9/2026, pedido de Lucas: "el botón de
+ * Modificaciones aparece desorganizado, el de los Log también").
+ *
+ * La fila de botones de adentro (table-buttons) ya se había arreglado: separa por `gap` y envuelve
+ * ordenada. Lo que seguía mal era este contenedor, que es el que la envuelve acá. No envolvía, y
+ * alineaba a sus hijos al centro: cuando la barra de botones se parte en dos líneas —en ventas pasa
+ * casi siempre, son seis o siete controles— este div crece de alto y el centro vertical cae en el
+ * medio de las dos líneas. Ahí quedaba el "Mod", a media altura y sin alinearse con ninguna.
+ *
+ * Se alinea al tope para que los extras acompañen a la PRIMERA línea de botones, que es donde el
+ * ojo los busca, y se envuelve con las mismas medidas que usa table-buttons por dentro para que las
+ * dos separaciones se lean como una sola.
+ */
+.table-left-options-ventas {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	justify-content: flex-start;
+	align-items: flex-start;
+	/* Las líneas se apilan desde arriba en vez de repartirse el sobrante de una celda más alta. */
+	align-content: flex-start;
+	/* 8px entre controles y 6px entre líneas: los mismos de table-buttons (--toolbar-btn-gap). */
+	gap: 6px 8px;
+}
+
+/*
+ * El "Mod" y los distintivos se centran ENTRE ELLOS —una pastilla es más baja que un botón— pero el
+ * grupo entero se apoya arriba por el align-items del contenedor. Así el botón queda a la altura de
+ * la primera línea de la barra y los distintivos a la altura del botón.
+ */
+.table-left-options-ventas__extras {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px 8px;
+}
+
+/*
+ * Un `v-if` en falso deja un nodo comentario, y un <div> que sólo tiene comentarios SÍ matchea
+ * :empty. Sin esto, una venta sin modificaciones y sin ningún distintivo —que son la mayoría—
+ * dejaría igual el hueco de 8px del gap después de la barra de botones.
+ */
+.table-left-options-ventas__extras:empty {
+	display: none;
+}
 
 .card-icon {
 	font-size: 1.5rem

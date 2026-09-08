@@ -2065,7 +2065,19 @@ export default {
 </script>
 <style lang="sass">
 @import '@/sass/_custom.scss'
-.model-form 
+
+// Aire entre el label y el campo que va debajo. Vive en una variable porque lo tienen que usar DOS
+// reglas que estan obligadas a moverse juntas: `.form-label` (el margen de verdad) y
+// `label.form-label--has-help`, que agranda el area de hover con un padding y por eso tiene que
+// descontar ese padding de su propio margen. Cuando estaban escritas por separado, la segunda le
+// comia el margen a la primera sin que nada lo denunciara.
+//
+// El valor sale de igualar el aire que hoy tiene el bloque `only_show`, que es el unico que a Lucas
+// le parece bien (13/8/2026: 0.85rem del label + 0.1rem propio de la pildora = 0.95rem). Con esto
+// TODOS los campos quedan con ese mismo aire y el `only_show` no se mueve ni un pixel.
+$label_gap: 0.95rem
+
+.model-form
 	[class^='col-']
 		padding-bottom: 7px
 		margin-bottom: 45px
@@ -2090,10 +2102,29 @@ export default {
 	// Indica ayuda al hover cuando el campo tiene popover de instrucciones (hover-intent).
 	// El padding + margen negativo (se cancelan visualmente, no mueven el layout) agranda
 	// el área donde el hover cuenta, para no depender de apuntar justo al texto.
+	//
+	// 🔴 El margen NO se vuelve a escribir con el atajo `margin: -6px 0`. Ese atajo tambien fija
+	// margin-bottom, y este selector (dos clases + un elemento) le gana por especificidad a
+	// `.form-label`, asi que se comia el aire del label en TODOS los campos que declaran
+	// `description` o `descriptions` --que en article.js son casi todos--: el hueco quedaba en cero
+	// (padding-bottom 6px menos margin-bottom 6px) mientras los que no declaran ninguna, como
+	// "Aplicar iva" o "categoria", se veian bien. De ahi salia la queja de Lucas de que "salvo
+	// algunos inputs, el label se ve muy pegado", y tambien la razon por la que las dos subidas
+	// anteriores del margen (0.38 -> 0.6 -> 0.85rem) no se notaron en pantalla: no llegaban a
+	// aplicarse. Ahora el negativo va SOLO arriba, y abajo se descuenta el padding del aire comun.
+	//
+	// El cursor es un SVG propio embebido: el `help` nativo dibuja en Windows el puntero con el
+	// interrogante viejo, que Lucas pidio sacar. El dibujo es la flecha estandar (blanca con
+	// contorno oscuro, que es como se ven los cursores del sistema y por eso se lee tanto sobre
+	// fondo claro como sobre fondo oscuro) con una insignia azul del tema y una "i" adentro. El
+	// cursor no puede cambiar de color con el tema, asi que tiene que funcionar en los dos.
+	// El "4 2" es el hotspot: la punta de la flecha. El `help` del final es el respaldo obligatorio
+	// por si el navegador rechaza el data URI, y el SVG va URL-encodeado (nada de `#` crudo).
 	label.form-label--has-help
-		cursor: help
+		cursor: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='32'%20height='32'%20viewBox='0%200%2032%2032'%3E%3Cpath%20d='M4%202%20L4%2020.5%20L9%2015.8%20L12%2022.6%20L14.9%2021.3%20L11.9%2014.8%20L18.3%2014.8%20Z'%20fill='%23ffffff'%20stroke='%231f2937'%20stroke-width='1.4'%20stroke-linejoin='round'/%3E%3Ccircle%20cx='22.5'%20cy='22.5'%20r='9'%20fill='%23ffffff'/%3E%3Ccircle%20cx='22.5'%20cy='22.5'%20r='7.6'%20fill='%23007bff'/%3E%3Ccircle%20cx='22.5'%20cy='18.7'%20r='1.35'%20fill='%23ffffff'/%3E%3Crect%20x='21.25'%20y='21.1'%20width='2.5'%20height='6.1'%20rx='1.25'%20fill='%23ffffff'/%3E%3C/svg%3E") 4 2, help
 		padding: 6px 0
-		margin: -6px 0
+		margin-top: -6px
+		margin-bottom: calc(#{$label_gap} - 6px)
 
 	// ─── Label moderno: compacto, peso alto, tipografía uppercase sutil ───────
 	// Similar a LoginForm: pequeño, oscuro, con letra-espaciado para legibilidad
@@ -2110,7 +2141,12 @@ export default {
 		// los DOS modos, no es un ajuste del tema oscuro.
 		// Sube de 0.6rem (13/8/2026, pedido de Lucas): con los campos mas bajos, el label quedaba
 		// otra vez pegado al input. Es el aire entre el label y su campo, en los dos modos.
-		margin-bottom: 0.85rem
+		// Sube de 0.85rem a 0.95rem = $label_gap (7/9/2026, pedido de Lucas): iguala el aire del
+		// bloque `only_show`, que era el unico que le gustaba. El salto en si es de un pixel y
+		// medio; lo que de verdad se ve es el arreglo del margen que se comia
+		// `label.form-label--has-help` (ver la nota de esa regla mas arriba), que era el motivo por
+		// el que las dos subidas anteriores no habian cambiado nada en la mayoria de los campos.
+		margin-bottom: $label_gap
 		display: block
 		transition: color 0.15s ease
 
@@ -2165,10 +2201,12 @@ export default {
 		padding: 0.45rem 0.7rem
 		line-height: 1.5
 
+	// Se saco de aca un `@if ($theme == 'dark') border-top: 1px solid red !important`: era una
+	// prueba que no se compilo nunca ($theme esta fijada en 'light' en _custom.scss) y que, de
+	// haberse compilado, pintaba la linea de rojo. El color del <hr> en oscuro ya lo resuelve
+	// _dark_theme.sass con --color-border.
 	hr
 		width: 100%
-		@if ($theme == 'dark')
-			border-top: 1px solid red !important
 
 	// ─── Valor calculado por función ─────────────────────────────────────────
 	// Mismo contenedor gris que only_show para coherencia visual
@@ -2199,8 +2237,11 @@ export default {
 		border: 1px solid var(--color-border-secondary, transparent)
 		line-height: 1.45
 		max-width: 100%
-		// Un respiro extra respecto del label, para cuando el label ocupa dos renglones.
-		margin-top: 0.1rem
+		// Ya no lleva el respiro extra de 0.1rem respecto del label. No es que se le haya sacado
+		// aire: ese 0.1rem se mudo al margen comun ($label_gap paso de 0.85 a 0.95rem), asi que la
+		// pildora conserva EXACTAMENTE la separacion que tenia --que es la que Lucas pidio no
+		// tocar-- y ahora el resto de los campos la iguala en vez de quedarse corto.
+		margin-top: 0
 
 	// Texto del valor presente: legible, peso medio, oscuro
 	.model-form__only-show-value
@@ -2344,7 +2385,24 @@ export default {
 		max-height: 55vh !important
 		overflow-y: auto
 		padding: 0
-		color: initial
+		// Era `initial`, que resuelve a `canvastext` (el negro del sistema) y NO sigue al tema: el
+		// contenedor .popover si lo pinta _dark_theme.sass con --bg-card, asi que en oscuro
+		// quedaba texto casi negro sobre fondo oscuro. Con el token acompaña al modo, y el
+		// fallback es el gris de bootstrap, que es lo que se ve hoy en claro.
+		color: var(--color-text-primary, #212529)
+
+	// La punta del popover la pinta bootstrap con blanco duro, asi que sobre el modal oscuro
+	// quedaba un triangulito blanco colgando del cuadro. Se pinta con el color de la tarjeta, que
+	// en claro ya vale #fff: el modo claro no se mueve. Van los dos placements posibles (el
+	// popover se pide "bottom" y se da vuelta solo si no entra) y las dos formas en que
+	// bootstrap-vue marca la posicion, la clase y el atributo de popper.
+	&.bs-popover-bottom .arrow::after,
+	&.bs-popover-auto[x-placement^="bottom"] .arrow::after
+		border-bottom-color: var(--bg-card, #fff)
+
+	&.bs-popover-top .arrow::after,
+	&.bs-popover-auto[x-placement^="top"] .arrow::after
+		border-top-color: var(--bg-card, #fff)
 
 	// Animación estilo Apple: fundido + escala sutil, rápida (180ms).
 	// BootstrapVue ya agrega/saca las clases fade/show al mostrar/ocultar
@@ -2366,14 +2424,19 @@ export default {
 	font-weight: 700
 	text-transform: uppercase
 	letter-spacing: 0.04em
-	color: #6b7280
+	// Literal fijo hasta ahora: sobre el popover oscuro este gris se apagaba contra el fondo. El
+	// fallback es el mismo #6b7280 de hoy, asi que en claro no cambia nada.
+	color: var(--color-text-secondary, #6b7280)
 	margin-bottom: 10px
 
 .model-form-help-popover__body
 	p
 		font-size: 0.925rem
 		line-height: 1.55
-		color: #1f2937
+		// El cuerpo de la instruccion es el texto que Lucas no podia leer en oscuro: era este
+		// #1f2937 casi negro sobre la tarjeta oscura. Con el token acompaña al tema; el fallback
+		// deja el modo claro igual que hoy.
+		color: var(--color-text-primary, #1f2937)
 		margin-bottom: 10px
 
 		&:last-child

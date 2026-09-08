@@ -251,7 +251,9 @@ $puntos-ajustes: #0891b2
 .reporte-puntos
 	// --- El pasivo: la tarjeta que manda ------------------------------------------------
 	.puntos-pasivo
-		background: #fff
+		// La tarjeta del pasivo flota sobre --color-bg: con un blanco fijo, en oscuro queda un
+		// rectangulo encandilante en vez de una superficie elevada.
+		background: var(--bg-card, #fff)
 		border: 1px solid rgba($puntos-pasivo, 0.35)
 		// Franja gruesa a la izquierda: es lo que separa de un vistazo el stock de los flujos,
 		// sin depender de que el usuario lea la aclaracion.
@@ -289,12 +291,12 @@ $puntos-ajustes: #0891b2
 			margin: 0
 			font-size: 0.95rem
 			font-weight: 700
-			color: #0f172a
+			color: var(--color-text-primary, #0f172a)
 
 		&__aclaracion
 			margin: 4px 0 0
 			font-size: 0.82rem
-			color: #64748b
+			color: var(--color-text-secondary, #64748b)
 
 		&__numeros
 			display: flex
@@ -317,7 +319,7 @@ $puntos-ajustes: #0891b2
 		&__pesos
 			font-size: 1.2rem
 			font-weight: 600
-			color: #0f172a
+			color: var(--color-text-primary, #0f172a)
 
 		&__acumulado
 			margin: 14px 0 0
@@ -326,7 +328,7 @@ $puntos-ajustes: #0891b2
 			background: rgba($puntos-pasivo, 0.07)
 			font-size: 0.8rem
 			line-height: 1.45
-			color: #475569
+			color: var(--color-text-secondary, #475569)
 
 			i
 				margin-right: 4px
@@ -344,7 +346,7 @@ $puntos-ajustes: #0891b2
 		font-weight: 600
 		text-transform: uppercase
 		letter-spacing: 0.04em
-		color: #64748b
+		color: var(--color-text-secondary, #64748b)
 
 	.puntos-grilla
 		display: grid
@@ -363,9 +365,10 @@ $puntos-ajustes: #0891b2
 		display: flex
 		flex-direction: column
 		padding: 14px
-		border: 1px solid #e2e8f0
+		border: 1px solid var(--color-border, #e2e8f0)
 		border-radius: 12px
-		background: #fff
+		// Mismo caso que el pasivo: superficie que flota sobre el fondo de la pagina.
+		background: var(--bg-card, #fff)
 		box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05)
 		transition: border-color 0.15s ease, box-shadow 0.15s ease
 
@@ -403,7 +406,7 @@ $puntos-ajustes: #0891b2
 			font-weight: 600
 			text-transform: uppercase
 			letter-spacing: 0.03em
-			color: #64748b
+			color: var(--color-text-secondary, #64748b)
 			// El titulo se corta con puntos suspensivos antes que ensanchar la columna
 			overflow: hidden
 			text-overflow: ellipsis
@@ -422,14 +425,14 @@ $puntos-ajustes: #0891b2
 			font-size: 1.4rem
 			font-weight: 700
 			line-height: 1.15
-			color: #0f172a
+			color: var(--color-text-primary, #0f172a)
 			// Los numeros largos rompen la columna antes que la grilla se decida a bajar de fila
 			overflow-wrap: anywhere
 
 		&__pesos
 			font-size: 0.9rem
 			font-weight: 600
-			color: #64748b
+			color: var(--color-text-secondary, #64748b)
 
 		&__ayuda
 			margin: 10px 0 0
