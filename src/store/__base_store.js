@@ -866,7 +866,21 @@ export default function __base_store(options = {}) {
 			/** true cuando esta llamada es una búsqueda nueva del usuario (trae `props`), false cuando es un cambio de página (solo `{ page }`, reusa el payload persistido). */
 			let es_busqueda_nueva = !!(payload && payload.props)
 			if (es_busqueda_nueva) {
-				commit('setGlobalSearchPayload', payload)
+				// 🔴 `page` NO se persiste NUNCA dentro de global_search_payload. Ese payload describe
+				// el CRITERIO de la búsqueda (qué texto, qué props, qué orden) y se reusa tal cual en
+				// cada cambio de página; la página en la que está parado el usuario es otra cosa y vive
+				// en state.filter_page.
+				//
+				// Guardarla acá adentro rompía la paginación entera (8/9/2026): runListadoPorDefecto y
+				// el buscador general dispatchean con `page: 1` adentro del payload, ese 1 quedaba
+				// persistido, y al paginar se copiaba al body del POST — donde le gana al `?page=N` de
+				// la URL, porque `$request->input()` de Laravel une body + query string con el body
+				// como operando izquierdo (medido: con ?page=3 y {"page":1}, resolveCurrentPage() da 1).
+				// O sea: la URL salía bien, la barra mostraba la página nueva, y el backend devolvía
+				// siempre la página 1.
+				let payload_a_persistir = Object.assign({}, payload)
+				delete payload_a_persistir.page
+				commit('setGlobalSearchPayload', payload_a_persistir)
 				// Es una búsqueda real del usuario: a partir de ahora deja de ser el listado por defecto.
 				commit('set_listado_por_defecto', false)
 			} else {
@@ -950,9 +964,20 @@ export default function __base_store(options = {}) {
 			let extra_filters_del_payload = (search_payload && search_payload.extra_filters) ? search_payload.extra_filters : []
 			let extra_filters_request = extra_filters_del_payload.concat(state.extra_filters_de_barra)
 
+			// Cuerpo del POST. La página viaja SOLO en el query string, nunca acá adentro.
+			//
+			// 🔴 El `delete` no es redundante con la limpieza de más arriba: es el cinturón del punto
+			// único por donde pasan TODAS las requests de este endpoint. `search_payload` puede venir
+			// del store (persistido por una versión anterior de la app, o por un camino nuevo que
+			// vuelva a meter `page` sin darse cuenta), y basta un `page` ahí adentro para que Laravel
+			// lo prefiera por sobre el de la URL y la paginación deje de funcionar entera, en silencio
+			// y sin ningún error. Se ataca la familia, no la instancia.
+			let cuerpo = Object.assign({}, search_payload, {per_page: per_page, filters: column_filters, extra_filters: extra_filters_request})
+			delete cuerpo.page
+
 			return axios.post(
 				'/api/global-search/' + generals.methods.routeString(state.model_name) + '?page=' + page,
-				Object.assign({}, search_payload, {per_page: per_page, filters: column_filters, extra_filters: extra_filters_request})
+				cuerpo
 			)
 				.then(res => {
 					if (!silencioso) {
