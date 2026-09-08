@@ -173,7 +173,7 @@ export default {
 			this.syncPerPageInputDesdeStore()
 		},
 		current_page() {
-			this.$emit('filtrar')
+			this.$emit('filtrar', { resetear_pagina: false })
 			return
 		},
 		currentPage() {

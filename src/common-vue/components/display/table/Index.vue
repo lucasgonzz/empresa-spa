@@ -905,7 +905,7 @@ export default {
 
 			return width
 		},
-		filtrar() {
+		filtrar(opciones) {
 			/**
 			 * Ejecuta (o re-ejecuta) el filtrado usando una única fuente de verdad (store).
 			 * Esto permite refrescar luego de operaciones masivas (ej: eliminar) sin duplicar requests en componentes.
@@ -923,7 +923,14 @@ export default {
 			// según si existía global_search_payload, y como el listado por defecto lo deja seteado
 			// siempre, la rama de runFilter quedaba inalcanzable y los filtros de columna no se
 			// aplicaban nunca (bug del 30/7/2026).
-			return this.$store.dispatch(this.model_name + '/runGlobalSearch', { page: 1 })
+			//
+			// Paginación real (resetear_pagina: false) NO vuelve a la página 1: la paginación ya escribió
+			// la página clickeada en el store antes de emitir este evento, y ese es justamente el valor
+			// que state.filter_page tiene en este momento. Ordenar y filtrar (y cualquier emisor que no
+			// mande opciones) sí resetean, porque cambian el conjunto de resultados.
+			let resetear_pagina = !(opciones && opciones.resetear_pagina === false)
+			let payload = resetear_pagina ? { page: 1 } : {}
+			return this.$store.dispatch(this.model_name + '/runGlobalSearch', payload)
 		},
 		/**
 		 * Apaga la busqueda del buscador general que estuviera puesta, porque el usuario acaba de
