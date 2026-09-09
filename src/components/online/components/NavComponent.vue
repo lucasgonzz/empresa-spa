@@ -36,7 +36,12 @@ export default {
 			if (this.can('buyer.messages')) {
 				items.push({
 					name: 'mensajes',
-					// call_models: 'buyer/getModels',
+					// Refresca compradores al entrar/reingresar a Mensajes (igual que 'clientes'
+					// arriba). Necesario desde que se saco el polling de 20s de
+					// start_methods.js (9/9/2026): addBuyerMessage() no agrega un comprador
+					// nuevo que todavia no este en buyer.models, asi que sin esto su primer
+					// mensaje podia quedar invisible toda la sesion.
+					call_models: 'buyer',
 				})
 			}
 			if (this.can('cupon.index')) {

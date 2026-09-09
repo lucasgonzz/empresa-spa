@@ -227,13 +227,17 @@ export default {
 					}
 				}, 300000)
 
-				// El polling de mensajes de compradores es otro asunto y queda como estaba.
-				setInterval(() => {
-					if (this.$route.name != 'online') {
-						
-						this.get_buyers_and_set_messages_not_read()
-					}
-				}, 20000)
+				/*
+					El polling de mensajes de compradores (cada 20s, refetch de TODOS los buyers
+					via buyer/getModels) se saco el 9/9/2026: era la causa principal de OOM-kills
+					de MySQL repetidos en el VPS (~1MB por respuesta, sin paginar, multiplicado por
+					cada pestana abierta cada 20 segundos). No hace falta reemplazo: el mensaje ya
+					llega en tiempo real por el canal message.from_buyer.{owner_id}
+					(mixins/broadcast.js), que hace addBuyerMessage() + setChatsToShow() en el
+					momento, sin refetch. A diferencia del intervalo de pedidos de arriba, este
+					nunca tuvo una justificacion de negocio escrita como red de seguridad -- si se
+					lo vuelve a agregar, que sea con un motivo nuevo, no por costumbre.
+				*/
 			}
 		},
 		// get_ultimos_articulos_actualizados() {

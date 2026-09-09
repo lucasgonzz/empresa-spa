@@ -518,7 +518,11 @@ Todos genericos y retrocompatibles, en la misma linea que los de arriba:
   `-retencion-ganancias`, `-saldo-iva`, `-saldo-iibb`, `-iva-debito`,
   `-iva-notas-credito`) **con `data-monto`**, y `data-tipo` en los saldos. Aparte va
   `posicion-fiscal-aviso-sin-medir`, que **no lleva `data-monto`** (no es un renglon: es el aviso de
-  que hay notas de credito con el IVA sin medir) y trae `data-cantidad` con cuantas son. Ojo con eso
+  que hay notas de credito con el IVA sin medir) y trae `data-cantidad` con cuantas son. Tambien sin
+  `data-monto`, por el mismo motivo (no son renglones de importe): `posicion-fiscal-exportar-
+  comprobantes-txt` y `posicion-fiscal-exportar-alicuotas-txt`, los dos botones de export .txt de
+  AFIP restaurados en la cabecera de la tarjeta IVA (venian de la vieja `general/IconCards.vue`,
+  borrada sin migrarlos el 27/7/2026 — el backend nunca dejo de existir). Ojo con eso
   al barrer `[data-testid^="posicion-fiscal-"]`: ese testid da `NaN` si se lo lee como monto.
   🔴 El `data-monto` no es redundante con el texto: el reporte formatea
   con `price(valor, false, false)`, que SIEMPRE recorta los dos decimales, asi que una retencion de

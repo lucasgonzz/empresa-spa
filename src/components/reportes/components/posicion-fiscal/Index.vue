@@ -30,7 +30,33 @@
 		class="cascada-fundido">
 			<!-- Posicion IVA -->
 			<div class="cascada-card">
-				<h6 class="cascada-card__titulo">IVA</h6>
+				<div class="cascada-card__header">
+					<h6 class="cascada-card__titulo">IVA</h6>
+
+					<!-- Restaura los dos exports .txt para AFIP que vivian en la tarjeta "Afip .TXT" de la
+					vieja general/IconCards.vue. El grupo 227 (27/7/2026) borro esa tarjeta entera al
+					reemplazar la seccion "General" por esta Posicion Fiscal y nunca migro estos dos
+					botones — el backend (AfipController::exportVentas/exportAlicuotasTxt y sus rutas
+					afip-txt*) nunca dejo de existir, asi que esto es restaurar, no construir de cero. -->
+					<div class="cascada-card__acciones">
+						<button
+						type="button"
+						class="cascada-card__accion-txt apretable"
+						:data-testid="'posicion-fiscal-exportar-comprobantes-txt'"
+						@click="exportarComprobantesTxt">
+							<i class="bi bi-filetype-txt" aria-hidden="true"></i>
+							Comprobantes .txt
+						</button>
+						<button
+						type="button"
+						class="cascada-card__accion-txt apretable"
+						:data-testid="'posicion-fiscal-exportar-alicuotas-txt'"
+						@click="exportarAlicuotasTxt">
+							<i class="bi bi-filetype-txt" aria-hidden="true"></i>
+							Alícuotas .txt
+						</button>
+					</div>
+				</div>
 
 				<div
 				class="cascada-renglon apretable"
@@ -281,6 +307,42 @@ export default {
 			}
 			return 'acento-gastos'
 		},
+		/**
+		 * Rango mensual (YYYY-MM) para los exports .txt de AFIP. Mismo criterio que
+		 * fecha_moneda_params() en store/reportes/index.js: en 'Hoy' declara el mes en curso, en
+		 * 'Rango de fechas' usa lo que el usuario eligio en el selector de arriba. Asi el .txt
+		 * exportado siempre coincide con el periodo que la pantalla esta mostrando en ese momento.
+		 *
+		 * @returns {{desde: String, hasta: String}}
+		 */
+		rango_afip() {
+			if (this.$store.state.reportes.rango_temporal == 'rango-de-fechas') {
+				return {
+					desde: this.$store.state.reportes.mes_inicio.substring(0, 7),
+					hasta: this.$store.state.reportes.mes_fin.substring(0, 7),
+				}
+			}
+			let mes_actual = this.today.substring(0, 7)
+			return { desde: mes_actual, hasta: mes_actual }
+		},
+		/**
+		 * Descarga el TXT de comprobantes de AFIP del periodo en pantalla (un renglon por
+		 * comprobante autorizado). Restaura export_afip_txt() de la vieja general/IconCards.vue.
+		 */
+		exportarComprobantesTxt() {
+			let rango = this.rango_afip()
+			let link = process.env.VUE_APP_API_URL + '/afip-txt/' + rango.desde + '/' + rango.hasta
+			window.open(link)
+		},
+		/**
+		 * Descarga el TXT de alicuotas de AFIP del periodo en pantalla (un renglon por alicuota de
+		 * IVA con importe > 0). Restaura export_afip_alicuotas_txt(), mismo caso que el de arriba.
+		 */
+		exportarAlicuotasTxt() {
+			let rango = this.rango_afip()
+			let link = process.env.VUE_APP_API_URL + '/afip-txt-alicuotas/' + rango.desde + '/' + rango.hasta
+			window.open(link)
+		},
 	},
 }
 </script>
@@ -321,6 +383,47 @@ $acento-fiscal: #0891b2
 			letter-spacing: 0.04em
 			padding: 14px 0 4px
 			margin: 0
+
+		// Cabecera de la tarjeta IVA: titulo a la izquierda, exports .txt de AFIP a la derecha.
+		// flex-wrap para que en telefono (360-390px) los botones bajen debajo del titulo en vez
+		// de comprimirse hasta desbordar la tarjeta.
+		&__header
+			display: flex
+			align-items: center
+			justify-content: space-between
+			flex-wrap: wrap
+			gap: 8px 12px
+
+			.cascada-card__titulo
+				padding-bottom: 0
+
+		&__acciones
+			display: flex
+			gap: 8px
+			flex-wrap: wrap
+			padding: 10px 0 4px
+
+		&__accion-txt
+			display: inline-flex
+			align-items: center
+			gap: 6px
+			border: none
+			background: rgba($acento-fiscal, 0.08)
+			color: $acento-fiscal
+			font-size: 0.78rem
+			font-weight: 600
+			padding: 6px 10px
+			border-radius: 8px
+			cursor: pointer
+			transition: background 120ms ease-out
+			white-space: nowrap
+
+			&:hover
+				background: rgba($acento-fiscal, 0.16)
+
+			i
+				font-size: 0.9rem
+				line-height: 1
 
 	.cascada-renglon
 		display: flex
