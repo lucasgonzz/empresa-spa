@@ -75,9 +75,13 @@ export default {
 			if (buyer) {
 				if (this.$route.params.sub_view != buyer.id) {
 					this.$router.push({name: 'online', params: {view: 'mensajes', sub_view: buyer.id}})
-				} else {
-					this.$store.dispatch('message/getModels')
 				}
+				// La conversación se pide siempre, cambie o no la ruta: desde el 9/9/2026 el
+				// listado de compradores (GET /api/buyer) no trae la historia de mensajes, y
+				// nadie más la carga al cambiar de chat (ni Online.vue ni esta vista miran
+				// sub_view). Antes alcanzaba con pedirla solo al re-clickear el mismo chat
+				// porque `buyer.messages` ya venía entero del listado.
+				this.$store.dispatch('message/getModels')
 				this.setMessagesRead(buyer)
 				this.$bvModal.hide('chats')
 				this.messagesScrollBottom()

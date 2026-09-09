@@ -51,13 +51,19 @@ export default {
 
 			this.chats_sin_leer.forEach(chat_sin_leer => {
 
-				let ultimo_mensaje_sin_leer = chat_sin_leer.messages[chat_sin_leer.messages.length - 1]
+				// Fecha del último mensaje: el agregado `last_message_at` del listado o, si no
+				// vino (payload viejo), la del último mensaje cargado. Sin ninguna, since() y
+				// date() devuelven '-'.
+				let fecha_ultimo_mensaje = chat_sin_leer.last_message_at
+				if (!fecha_ultimo_mensaje && chat_sin_leer.messages && chat_sin_leer.messages.length) {
+					fecha_ultimo_mensaje = chat_sin_leer.messages[chat_sin_leer.messages.length - 1].created_at
+				}
 
 				items.push({
 					cliente: chat_sin_leer.name,
 					mensajes: this.messagesNotRead(chat_sin_leer),
-					hace: this.since(ultimo_mensaje_sin_leer.created_at),
-					fecha: this.date(ultimo_mensaje_sin_leer.created_at),
+					hace: this.since(fecha_ultimo_mensaje),
+					fecha: this.date(fecha_ultimo_mensaje),
 				})
 			})
 

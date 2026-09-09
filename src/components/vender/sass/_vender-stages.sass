@@ -32,13 +32,19 @@ $vender_stages_padding: 8px
 		background: var(--bg-hover, #e2e6ea)
 		border-bottom-color: var(--color-border, #adb5bd)
 
-	/* Etapa 2 (no colapsable): sin overflow:hidden porque corta el "position: sticky" de */
-	/* .vender-stage__pinned -- un ancestro con overflow != visible pasa a ser el contenedor */
-	/* de referencia del sticky en lugar de .vender-stages (que es el que scrollea de verdad), */
-	/* y como este nunca scrollea, el sticky queda inerte. Exclusivo de esta etapa (confirmado */
-	/* que --no-collapse no lo usan stage-1 ni stage-3): las otras dos mantienen el clip. */
+	/* Etapa 2 (no colapsable): la caja de la tarjeta NO se genera. Es display: contents y no un */
+	/* simple overflow: visible porque un position: sticky se pega solo mientras su PADRE sigue en */
+	/* pantalla: con la tarjeta como padre, el bloque pegado se despegaba al llegar al fondo de la */
+	/* etapa 2 para irse con ella, justo cuando entra la etapa 3. Sin caja, el padre del bloque pasa */
+	/* a ser .vender-stages -- el que scrollea de verdad -- y queda fijo hasta el final del scroll, */
+	/* que es lo que pidio Lucas: el buscador de articulos siempre a la vista. */
+	/* El precio de sacar la caja es que el chasis (borde, radio, fondo y el margen inferior) ya no */
+	/* lo puede dibujar ella: lo dibujan sus dos hijos, .vender-stage__pinned (mitad de arriba) y */
+	/* .vender-stage__body--scroll (mitad de abajo). Los acentos por nth-child siguen andando: */
+	/* nth-child mira el arbol del documento, que display: contents no toca. */
+	/* Exclusivo de esta etapa (--no-collapse no lo usan stage-1 ni stage-3). */
 	&--no-collapse
-		overflow: visible
+		display: contents
 
 /* Acentos por número de etapa (orden en .vender-stages) */
 .vender-stages .vender-stage:nth-child(1) .vender-stage__header
@@ -95,11 +101,57 @@ $vender_stages_padding: 8px
 		&:hover
 			background: var(--bg-hover, #e2e6ea)
 
-/* Bloque pegado de la etapa 2: header + total + buscador de artículos */
+/* Bloque pegado de la etapa 2: header + total + buscador de artículos. */
+/* Dibuja la MITAD DE ARRIBA del chasis de la tarjeta (la de abajo la dibuja */
+/* .vender-stage__body--scroll), porque la tarjeta en si ya no genera caja -- ver el comentario */
+/* de .vender-stage--no-collapse. Sin borde inferior ni radio abajo: las dos mitades tienen que */
+/* leerse como una sola tarjeta mientras el bloque no esta pegado. */
 .vender-stage__pinned
 	position: sticky
 	top: $vender_stage_gap - $vender_stages_padding
 	z-index: 10
+	border: 1px solid var(--color-border-tertiary, #dee2e6)
+	border-bottom: none
+	border-radius: 6px 6px 0 0
+	background: var(--bg-card, #fff)
+
+	/* Sombra hacia abajo, SOLO cuando esta pegado: mientras esta en reposo partiria la tarjeta en */
+	/* dos con una linea que no existe. La clase la pone y la saca stage-2/Index.vue mirando el */
+	/* scroll -- no hay selector CSS que distinga un sticky pegado de uno en reposo. */
+	&--pegado
+		box-shadow: 0 6px 8px -6px var(--shadow-color, rgba(0, 0, 0, 0.15))
+
+	/* Tapa el aire que queda ENCIMA del bloque cuando esta pegado. Ese aire es transparente: el */
+	/* contenido que sigue scrolleando (las filas de la tabla, y despues la etapa 3) se veia pasar */
+	/* por ahi y el margen superior de la tarjeta se perdia. Se pinta con el fondo de la pagina */
+	/* --color-bg y no con el de la tarjeta, porque lo que tiene que leerse ahi es el mismo aire */
+	/* que hay entre dos etapas. */
+	/* El alto es $vender_stage_gap y no el `top` del sticky: medido en pantalla, el bloque se pega */
+	/* a 18px del borde del scrollport (top 10px + los 8px de padding del contenedor). */
+	/* Los -1px laterales cubren el ancho del borde: un absolute se posiciona contra el padding box */
+	/* del padre, o sea por dentro de sus bordes. */
+	&::before
+		content: ''
+		position: absolute
+		left: -1px
+		right: -1px
+		bottom: 100%
+		height: $vender_stage_gap
+		background: var(--color-bg, #eef0f4)
+
+	/* Sin pegar: en un area de scroll baja (un telefono, donde los cuatro buscadores se apilan) */
+	/* el bloque llega a ocupar el 70% de lo que se ve, y fijarlo deja la tabla en una rendija. */
+	/* La clase la pone stage-2/Index.vue midiendo la proporcion; aca solo vuelve al flujo. */
+	/* El chasis (borde, radio, fondo) se queda: la tarjeta se sigue viendo igual. */
+	&--suelto
+		position: static
+
+		/* Y sin el tapon de arriba: en static el bloque deja de ser el marco de referencia del */
+		/* absolute, que se iria a buscar otro ancestro y pintaria la franja en cualquier lado. */
+		/* Este bloque va DESPUES del &::before de arriba y no antes: los dos selectores tienen la */
+		/* misma especificidad (una clase + un pseudo-elemento), asi que el desempate es el orden. */
+		&::before
+			content: none
 
 /* Número de etapa en círculo */
 .vender-stage__number
@@ -210,16 +262,31 @@ $vender_stages_padding: 8px
 		padding: 8px 14px
 
 	/* Mitad pegada del body de etapa 2 (contextbar + buscador, adentro de .vender-stage__pinned): */
-	/* fondo opaco porque queda flotando sobre la tabla al scrollear, y sin padding inferior para */
-	/* no sumarle un espacio extra al que ya pone el buscador con su propio margen (m-b-15). */
+	/* fondo opaco porque queda flotando sobre la tabla al scrollear, y sin padding inferior porque */
+	/* el aire de abajo ya lo pone el buscador con su propio margen (m-b-15). */
+	/* display: flow-root es lo que hace que ese margen quede ADENTRO. Sin el, al no haber ni borde */
+	/* ni padding abajo, el margen del ultimo hijo se colapsa hacia afuera: el bloque terminaba al */
+	/* ras del buscador, el fondo opaco no llegaba a cubrir esos 15px y la primera fila de la tabla */
+	/* quedaba pegada a los inputs, asomando por debajo del bloque pegado. Es el mismo aire de */
+	/* siempre; lo unico que cambia es de que lado del borde del bloque cae. */
 	&--pinned
+		display: flow-root
 		background: var(--bg-card, #fff)
 		padding-bottom: 0
 
 	/* Mitad que sigue scrolleando (ventas anteriores + tabla): sin padding superior, por el mismo */
 	/* motivo que --pinned no lleva el inferior -- entre las dos, el espaciado da igual que antes. */
+	/* Dibuja la MITAD DE ABAJO del chasis de la tarjeta (sin borde arriba ni radio arriba, para */
+	/* empalmar con .vender-stage__pinned) y carga el margen inferior de la etapa, porque la */
+	/* tarjeta ya no genera caja -- ver .vender-stage--no-collapse. */
 	&--scroll
 		padding-top: 0
+		border: 1px solid var(--color-border-tertiary, #dee2e6)
+		border-top: none
+		border-radius: 0 0 6px 6px
+		background: var(--bg-card, #fff)
+		margin-bottom: $vender_stage_gap
+		overflow: hidden
 
 	/* Body con layout flexible para etapas 1 y 3: los selectores se alinean en fila y colapsan si no están visibles */
 	&--grid

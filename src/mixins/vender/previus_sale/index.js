@@ -180,6 +180,20 @@ export default {
 			this.$store.commit('vender/setDiscountsInServices', model.discounts_in_services)
 			this.$store.commit('vender/setSurchagesInServices', model.surchages_in_services)
 
+			/*
+				El flag de aplicar los recargos directo a los precios se restaura igual que los dos
+				de arriba. Sin esto quedaba siempre en 0 al abrir una venta o un presupuesto para
+				editarlo, y como from_pivot lee los precios del pivot --que ya vienen recargados,
+				porque getPriceVender() en esa rama no vuelve a llamar aplicar_recargos()--,
+				aplicar_surchages() volvia a sumar el recargo al total y el presupuesto se re-guardaba
+				inflado.
+
+				Number() y no la verdad del valor a secas: la columna es nullable, asi que un modelo
+				viejo lo trae en null --queda en 0, el default del store-- y un "0" serializado como
+				string seria truthy.
+			*/
+			this.$store.commit('vender/set_aplicar_recargos_directo_a_items', Number(model.aplicar_recargos_directo_a_items) ? 1 : 0)
+
 			if (model.discounts.length) {
 				
 				this.set_discounts_store_with_pivot_percetage(model.discounts)
@@ -541,6 +555,17 @@ export default {
 				item.price_types = article.price_types
 				item.category_id = article.category_id
 				item.sub_category_id = article.sub_category_id
+				// Relaciones has_many del articulo (usadas por columnas configurables de props-to-show).
+				// El backend hoy NO las manda embebidas en Sale.articles ni en Budget.articles (solo en
+				// la busqueda de articulos), asi que estas quedan undefined al reabrir una venta o
+				// presupuesto guardado. Se copian igual para cuando el backend las agregue, y porque
+				// propertyText() (generals.js) ya esta blindado para el caso undefined.
+				item.descriptions = article.descriptions
+				item.article_price_ranges = article.article_price_ranges
+				item.article_discounts = article.article_discounts
+				item.article_discounts_blanco = article.article_discounts_blanco
+				item.article_surchages = article.article_surchages
+				item.article_surchages_blanco = article.article_surchages_blanco
 				item_to_add = {
 					...item,
 					is_article: true,
