@@ -53,6 +53,7 @@
 	</div>
 </template>
 <script>
+import { env } from '@/runtime_config'
 export default {
 	components: {
 		WhatsappBtn: () => import('@/common-vue/sale-print-buttons/WhatsappBtn'),
@@ -80,17 +81,17 @@ export default {
 	methods: {
 		// Abre el PDF del presupuesto SIN precios
 		printWithoutPrices() {
-			var link = process.env.VUE_APP_API_URL+'/budget/pdf/'+this.model.id+'/0/0'
+			var link = env('VUE_APP_API_URL')+'/budget/pdf/'+this.model.id+'/0/0'
 			window.open(link)
 		},
 		// Abre el PDF del presupuesto CON precios
 		printWithPrices() {
-			var link = process.env.VUE_APP_API_URL+'/budget/pdf/'+this.model.id+'/1/0'
+			var link = env('VUE_APP_API_URL')+'/budget/pdf/'+this.model.id+'/1/0'
 			window.open(link)
 		},
 		// Abre el PDF del presupuesto CON precios e imagenes
 		printWithImages() {
-			var link = process.env.VUE_APP_API_URL+'/budget/pdf/'+this.model.id+'/1/1'
+			var link = env('VUE_APP_API_URL')+'/budget/pdf/'+this.model.id+'/1/1'
 			window.open(link)
 		},
 	}

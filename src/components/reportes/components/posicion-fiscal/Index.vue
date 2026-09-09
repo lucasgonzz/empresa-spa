@@ -264,6 +264,7 @@
 </template>
 <script>
 import detalle_drilldown from '@/mixins/reportes/detalle_drilldown'
+import { env } from '@/runtime_config'
 
 export default {
 	mixins: [detalle_drilldown],
@@ -331,7 +332,7 @@ export default {
 		 */
 		exportarComprobantesTxt() {
 			let rango = this.rango_afip()
-			let link = process.env.VUE_APP_API_URL + '/afip-txt/' + rango.desde + '/' + rango.hasta
+			let link = env('VUE_APP_API_URL') + '/afip-txt/' + rango.desde + '/' + rango.hasta
 			window.open(link)
 		},
 		/**
@@ -340,7 +341,7 @@ export default {
 		 */
 		exportarAlicuotasTxt() {
 			let rango = this.rango_afip()
-			let link = process.env.VUE_APP_API_URL + '/afip-txt-alicuotas/' + rango.desde + '/' + rango.hasta
+			let link = env('VUE_APP_API_URL') + '/afip-txt-alicuotas/' + rango.desde + '/' + rango.hasta
 			window.open(link)
 		},
 	},

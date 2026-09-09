@@ -173,6 +173,7 @@
 // cuando se invoca this.printTicket(sale) desde un método (ej. al click),
 // nunca automáticamente al crear/montar el componente.
 import print_ticket from '@/mixins/sale/print_ticket/index'
+import { env } from '@/runtime_config'
 
 export default {
 	mixins: [print_ticket],
@@ -347,7 +348,7 @@ export default {
 			}
 		},
 		print_nota_credito_afip_ticket(nota_credito_afip_ticket) {
-			let link = process.env.VUE_APP_API_URL+'/current-acount/pdf/'+nota_credito_afip_ticket.nota_credito_id
+			let link = env('VUE_APP_API_URL')+'/current-acount/pdf/'+nota_credito_afip_ticket.nota_credito_id
 			window.open(link)
 		},
 		/**
@@ -375,7 +376,7 @@ export default {
 				const profile_id = parseInt(option.replace('factura_a4:', ''), 10)
 
 				if (profile_id) {
-					let link = process.env.VUE_APP_API_URL + '/sale/pdf/' + this.sale.id
+					let link = env('VUE_APP_API_URL') + '/sale/pdf/' + this.sale.id
 						+ '?pdf_column_profile_id=' + profile_id
 						+ '&afip_ticket_id=' + this.afip_ticket.id
 					window.open(link)
@@ -385,7 +386,7 @@ export default {
 
 			// Default / fallback: ticket común (comportamiento de siempre, incluye el
 			// caso "sale" no vino, o el perfil A4 configurado ya no existe/no aplica).
-			let link = process.env.VUE_APP_API_URL+this.print_url
+			let link = env('VUE_APP_API_URL')+this.print_url
 			window.open(link)
 
 		},

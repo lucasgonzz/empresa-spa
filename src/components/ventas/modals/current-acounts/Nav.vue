@@ -43,6 +43,7 @@
 <script>
 import BtnLoader from '@/components/common/BtnLoader'
 import current_acounts from '@/mixins/current_acounts'
+import { env } from '@/runtime_config'
 export default {
 	name: 'CurrentAcountsNav',
 	mixins: [current_acounts],
@@ -87,9 +88,9 @@ export default {
 				this.selected_current_acounts.forEach(current_acount => {
 					ids.push(current_acount.id)
 				})
-            	link = process.env.VUE_APP_API_URL+'/current-acounts/pdf/'+ids.join('-')
+            	link = env('VUE_APP_API_URL')+'/current-acounts/pdf/'+ids.join('-')
 			} else {
-            	link = process.env.VUE_APP_API_URL+'/current-acounts/pdf/'+this.client.id+
+            	link = env('VUE_APP_API_URL')+'/current-acounts/pdf/'+this.client.id+
             	'/'+this.months_ago
 			}
             window.open(link)

@@ -10,6 +10,7 @@ import default_payment_method from '@/mixins/vender/default_payment_method'
 import price_ranges from '@/mixins/vender/price_ranges'
 import axios from 'axios'
 import payment_methods from '@/mixins/vender/guardar_venta/chequeos/payment_methods'
+import { env } from '@/runtime_config'
 export default {
 	mixins: [price_ranges, limpiar_vender, limpiar_actualizandose_por, price_types, vender_set_total, default_payment_method, payment_methods],
 	// mixins: [vender, set_employee_vender, vender_set_total],
@@ -110,7 +111,7 @@ export default {
 			})
 		},
 		load_previus_sale_attachments(sale_id) {
-			axios.get(process.env.VUE_APP_API_URL + '/api/sale-article-attachment/by-sale/' + sale_id)
+			axios.get(env('VUE_APP_API_URL') + '/api/sale-article-attachment/by-sale/' + sale_id)
 				.then(res => {
 					this.$store.commit('vender/setSaleAttachments', res.data.models)
 				})
@@ -393,7 +394,7 @@ export default {
 				form.append('observation', att.observation || '')
 				try {
 					await axios.post(
-						process.env.VUE_APP_API_URL + '/api/sale-article-attachment',
+						env('VUE_APP_API_URL') + '/api/sale-article-attachment',
 						form,
 						{ headers: { 'Content-Type': 'multipart/form-data' } }
 					)

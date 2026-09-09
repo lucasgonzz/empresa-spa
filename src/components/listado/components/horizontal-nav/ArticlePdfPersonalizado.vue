@@ -14,10 +14,11 @@
 	</b-button>
 </template>
 <script>
+import { env } from '@/runtime_config'
 export default {
 	methods: {
 		pdf() {
-            var link = process.env.VUE_APP_API_URL+'/article/pdf-personalizado'
+            var link = env('VUE_APP_API_URL')+'/article/pdf-personalizado'
             window.open(link)
 		}
 	}

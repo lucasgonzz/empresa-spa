@@ -53,6 +53,7 @@
 </template>
 <script>
 import inventory_performance from '@/mixins/inventory_performance'
+import { env } from '@/runtime_config'
 export default {
 	mixins: [inventory_performance],
 	components: {
@@ -69,7 +70,7 @@ export default {
 	},
 	methods: {
 		excel() {
-			let link = process.env.VUE_APP_API_URL+'/articles-stock-minimo/excel'
+			let link = env('VUE_APP_API_URL')+'/articles-stock-minimo/excel'
 			window.open(link)
 
 		}
