@@ -541,6 +541,17 @@ export default {
 				item.price_types = article.price_types
 				item.category_id = article.category_id
 				item.sub_category_id = article.sub_category_id
+				// Relaciones has_many del articulo (usadas por columnas configurables de props-to-show).
+				// El backend hoy NO las manda embebidas en Sale.articles ni en Budget.articles (solo en
+				// la busqueda de articulos), asi que estas quedan undefined al reabrir una venta o
+				// presupuesto guardado. Se copian igual para cuando el backend las agregue, y porque
+				// propertyText() (generals.js) ya esta blindado para el caso undefined.
+				item.descriptions = article.descriptions
+				item.article_price_ranges = article.article_price_ranges
+				item.article_discounts = article.article_discounts
+				item.article_discounts_blanco = article.article_discounts_blanco
+				item.article_surchages = article.article_surchages
+				item.article_surchages_blanco = article.article_surchages_blanco
 				item_to_add = {
 					...item,
 					is_article: true,

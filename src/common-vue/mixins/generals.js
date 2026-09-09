@@ -1040,8 +1040,8 @@ export default {
 				return model[prop.key].length
 			}
 			if (prop.has_many) {
-				return model[prop.key].length
-			} 
+				return (model[prop.key] && typeof model[prop.key] != 'undefined') ? model[prop.key].length : 0
+			}
 			if (prop.key && prop.key.includes('.')) {
 				let array = prop.key.split('.')
 				if (model[array[0]]) {
