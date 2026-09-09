@@ -1,6 +1,8 @@
 <template>
-	<div
-	class="p-l-5">
+	<!-- Sin p-l-5: los badges son el primer control de la fila y ese padding los dejaba corridos
+	     respecto del borde izquierdo de la celda. La separación con lo que sigue la pone el `gap`
+	     del contenedor (table-buttons/Index.vue). -->
+	<div>
 		<b-badge
 		variant="light"
 		class="text-dark border"

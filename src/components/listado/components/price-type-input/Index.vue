@@ -128,6 +128,24 @@ export default {
 // Tarjeta de una lista de precio dentro del modal del articulo. El nombre de la lista NO se dibuja
 // aca: lo pone el label del form-group de ModelForm, por fuera del slot (verificado el 5/8/2026,
 // build_price_type_modal_extra_properties le pasa price_type.name como text).
+//
+// 🔴 Toda esta hoja tenia su version oscura escrita adentro de `@if ($theme == 'dark')`, que es
+// codigo muerto: `$theme` es una variable de COMPILACION fijada en 'light' en _custom.scss, asi que
+// esa rama no se compilo nunca. El resultado era el que Lucas reporto el 7/9/2026: en la solapa de
+// Precios "todo el texto extra aparece oscuro", porque los rgba(0, 0, 0, ...) seguian ahi sobre la
+// tarjeta oscura. Se convierte a los tokens de _dark_theme.sass, que si cambian con la clase
+// `html.dark-mode`, dejando como fallback el literal claro de HOY: el modo claro no se mueve.
+
+// El verde del precio de la lista no tiene token global --los de _dark_theme.sass son de superficie
+// y de texto, no de acento-- asi que se declara aca con la misma mecanica que usa
+// _desglose_precio.sass para sus acentos. El valor claro es exactamente el de hoy y el oscuro es el
+// que ya estaba escrito en la rama muerta: no se elige nada nuevo, se rescata lo que habia.
+:root
+	--price-type-precio: #28a745
+
+html.dark-mode
+	--price-type-precio: #5dd879
+
 .cont-inputs
 	display: flex
 	flex-direction: column
@@ -162,18 +180,15 @@ export default {
 		font-size: 1.8em
 		font-weight: bold
 		line-height: 1.1
-		color: #28a745
+		color: var(--price-type-precio, #28a745)
 		word-break: break-word
-		@if ($theme == 'dark')
-			color: #5dd879
 
-	// De donde salio ese precio, en una linea.
+	// De donde salio ese precio, en una linea. Es parte del "texto extra" que quedaba negro sobre
+	// la tarjeta oscura.
 	.price-type-card__origen
 		font-size: 0.85em
-		color: rgba(0, 0, 0, .55)
+		color: var(--color-text-secondary, rgba(0, 0, 0, .55))
 		margin-bottom: 8px
-		@if ($theme == 'dark')
-			color: rgba(255, 255, 255, .6)
 
 	.price-type-card__campos
 		display: flex
@@ -184,6 +199,10 @@ export default {
 			margin-bottom: 8px
 
 		// El campo que manda: se lee como el editable de la tarjeta.
+		// El verde de este badge NO va por el token: es un color de ACCION (fondo pleno con texto
+		// blanco encima), y esos se mantienen iguales en los dos modos, igual que hace
+		// _dark_theme.sass con los .btn-primary/.btn-success. Con el verde claro del modo oscuro
+		// encima habria texto blanco sobre verde claro, que es justamente lo que no se lee.
 		.price-type-card__campo--manda
 			.input-group-text
 				background: #28a745
@@ -199,9 +218,7 @@ export default {
 			.input-group-text
 				background: transparent
 				border-style: dashed
-				color: rgba(0, 0, 0, .5)
-				@if ($theme == 'dark')
-					color: rgba(255, 255, 255, .5)
+				color: var(--color-text-secondary, rgba(0, 0, 0, .5))
 
 	.price-type-card__opciones
 		width: 100%
@@ -212,16 +229,17 @@ export default {
 	.price-type-card__interruptor
 		padding: 6px 8px
 		border-radius: 6px
-		background: rgba(0, 0, 0, .04)
-		@if ($theme == 'dark')
-			background: rgba(255, 255, 255, .06)
+		// Va con --bg-hover y NO con --bg-section, que seria el candidato obvio: la tarjeta es una
+		// .card, o sea --bg-card, y en oscuro --bg-section queda MAS oscuro que la tarjeta --el
+		// interruptor se hundiria en vez de despegarse--. --bg-hover es el unico de los tres que
+		// esta por encima de --bg-card en oscuro, que es lo que buscaba el rgba(255,255,255,.06)
+		// de la rama muerta. En claro vale #f1f3f5, practicamente el gris que se ve hoy.
+		background: var(--bg-hover, rgba(0, 0, 0, .04))
 
 		.price-type-card__interruptor-ayuda
 			font-size: 0.75em
-			color: rgba(0, 0, 0, .55)
+			color: var(--color-text-secondary, rgba(0, 0, 0, .55))
 			margin-top: 2px
-			@if ($theme == 'dark')
-				color: rgba(255, 255, 255, .6)
 
 	// Datos calculados: subordinados, en una fila que envuelve si no entra.
 	.price-type-card__datos
@@ -233,16 +251,12 @@ export default {
 		.price-type-card__dato
 			font-size: 0.85em
 			margin-right: 10px
-			color: rgba(0, 0, 0, .8)
-			@if ($theme == 'dark')
-				color: rgba(255, 255, 255, .8)
+			color: var(--color-text-primary, rgba(0, 0, 0, .8))
 
 			.price-type-card__dato-label
 				display: block
 				font-size: 0.85em
-				color: rgba(0, 0, 0, .5)
-				@if ($theme == 'dark')
-					color: rgba(255, 255, 255, .5)
+				color: var(--color-text-secondary, rgba(0, 0, 0, .5))
 
 		.price-type-card__dato--ganancia
 			font-weight: bold
@@ -250,8 +264,6 @@ export default {
 	.price-type-card__excel
 		margin-top: 8px
 		padding-top: 8px
-		border-top: 1px solid rgba(0, 0, 0, .08)
-		@if ($theme == 'dark')
-			border-top-color: rgba(255, 255, 255, .12)
+		border-top: 1px solid var(--color-border-secondary, rgba(0, 0, 0, .08))
 
 </style>

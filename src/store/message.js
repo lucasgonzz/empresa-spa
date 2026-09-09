@@ -1,8 +1,46 @@
 import axios from 'axios'
+import { env } from '@/runtime_config'
 axios.defaults.withCredentials = true
-axios.defaults.baseURL = process.env.VUE_APP_API_URL
+axios.defaults.baseURL = env('VUE_APP_API_URL')
 
 import generals from '@/common-vue/mixins/generals'
+
+/**
+ * Dice si un comprador tiene al menos un mensaje.
+ * Mira el agregado `messages_count` que manda el listado y, si no vino, el largo de `messages`.
+ *
+ * @param {Object} buyer Comprador tal como está en el store `buyer`.
+ * @returns {boolean}
+ */
+function buyer_has_messages(buyer) {
+	if (Number(buyer.messages_count || 0) > 0) {
+		return true
+	}
+	return Array.isArray(buyer.messages) && buyer.messages.length > 0
+}
+
+/**
+ * Fecha del último mensaje de un comprador en milisegundos, para ordenar la bandeja de chats.
+ * Prefiere el agregado `last_message_at` del listado y cae a `messages[último].created_at`.
+ * Sin ninguna de las dos devuelve 0: el comprador va al final sin romper el sort.
+ *
+ * @param {Object} buyer Comprador tal como está en el store `buyer`.
+ * @returns {number}
+ */
+function buyer_last_message_timestamp(buyer) {
+	// Fecha a convertir: el agregado, o la del último mensaje cargado si el agregado no vino.
+	let last_message_at = buyer.last_message_at
+	if (!last_message_at && Array.isArray(buyer.messages) && buyer.messages.length) {
+		last_message_at = buyer.messages[buyer.messages.length - 1].created_at
+	}
+	if (!last_message_at) {
+		return 0
+	}
+	// Milisegundos desde epoch; una fecha inválida se trata igual que ninguna.
+	let timestamp = new Date(last_message_at).getTime()
+	return isNaN(timestamp) ? 0 : timestamp
+}
+
 export default {
 	namespaced: true,
 	state: {
@@ -94,21 +132,27 @@ export default {
 		},
 		setChatsToShow(state, buyers_models) {
 			/*
-				* Busco los buyers ya descargados
-				y filtro los que tengan mensajes (leidos o sin leer)
-				y ordeno los buyers en base a la fecha del ultimo mensaje
+				Busco los buyers ya descargados, filtro los que tengan mensajes (leídos o sin
+				leer) y los ordeno por la fecha del último mensaje.
+
+				Se decide con los agregados del listado (`messages_count`, `last_message_at`) y
+				no con `messages`: desde el 9/9/2026 GET /api/buyer ya no trae la historia de
+				mensajes de cada comprador (en Fenix eran 88k mensajes por llamada y tumbó el
+				VPS), así que `messages` llega vacío y recién se llena al abrir la conversación
+				(message/getModels). Mirar `messages.length` acá dejaría la bandeja vacía.
+				El fallback a `messages` queda para un payload viejo, que trae la historia y
+				ningún agregado.
 			*/
 			// Listado de buyers a evaluar para la bandeja de chats.
 			// Se espera que venga desde `rootState.buyer.models` o un filtro manual (ej: buscador).
 			let buyers_to_evaluate = Array.isArray(buyers_models) ? buyers_models : []
 			let buyers = []
 			buyers_to_evaluate.forEach(buyer => {
-				// Solo muestro buyers que tengan mensajes ya cargados.
-				if (buyer && buyer.messages && buyer.messages.length) {
+				if (buyer && buyer_has_messages(buyer)) {
 					buyers.push(buyer)
 				}
 			})
-			let buyers_sort = buyers.sort((a, b) => (new Date(b.messages[b.messages.length - 1].created_at) - new Date(a.messages[a.messages.length - 1].created_at)))
+			let buyers_sort = buyers.sort((a, b) => buyer_last_message_timestamp(b) - buyer_last_message_timestamp(a))
 			state.chats_to_show = buyers_sort
 		},
 		setToShow(state, value) {

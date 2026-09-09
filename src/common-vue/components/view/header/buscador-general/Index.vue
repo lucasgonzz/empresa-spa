@@ -202,6 +202,27 @@ export default {
 		},
 
 		/**
+		 * Criterio con el que arranca el input. Pensada para el modo 'modal': el modal de busqueda
+		 * (search/Modal.vue) le pasa el valor que el campo ya tiene --el nombre del articulo que se
+		 * esta editando-- para que su input no abra vacio (Lucas, 8/9/2026).
+		 *
+		 * Se lee UNA sola vez, en created(), y despues manda el usuario: es un valor inicial, no un
+		 * v-model. Alcanza porque el b-modal destruye su contenido al cerrar (sin `static` su render
+		 * devuelve h() mientras isHidden este arriba, bootstrap-vue 2.23.1 modal.js:1015-1021), asi
+		 * que este componente se crea de nuevo en cada apertura y created() vuelve a correr.
+		 *
+		 * 🔴 Por eso es una prop y no un metodo publico llamado por $refs: este componente se carga
+		 * async desde el modal, y en la primera apertura de cada carga de pagina el chunk todavia no
+		 * resolvio -- un $refs ahi es undefined y la siembra se saltea sin que nada avise.
+		 *
+		 * En modo 'header' no la pasa nadie y el default deja el input vacio, como siempre.
+		 */
+		criterio_inicial: {
+			type: String,
+			default: null,
+		},
+
+		/**
 		 * Filtros fijos por defecto (prompt 09 del grupo 179): configuracion que el modulo quiere
 		 * que quede sembrada la PRIMERA vez que un usuario usa el buscador general de este modelo
 		 * (sin preferencia guardada todavia, ni en cache ni en el backend). Misma forma que las
@@ -686,6 +707,12 @@ export default {
 		},
 	},
 	created() {
+		// Criterio con el que abre el input (ver la prop). Va primero: applyDefaultSelection() y
+		// loadSelection() tocan las propiedades tildadas y no el texto, pero el orden deja claro que
+		// esto es el estado inicial del input y no una reaccion a nada de lo de abajo.
+		if (this.criterio_inicial) {
+			this.query_value = '' + this.criterio_inicial
+		}
 		// Default inmediato (nunca queda vacio mientras carga) y despues se pisa con lo guardado.
 		this.applyDefaultSelection()
 		this.loadSelection()
@@ -1382,6 +1409,20 @@ export default {
 			if (this.query_value.trim().length === 0 && !has_extra_filters) {
 				if (this.modo !== 'modal') {
 					this.$toast.info('Escribi un criterio de busqueda')
+					return
+				}
+
+				// 🔴 En modo modal el Enter sin criterio NO se puede tragar en silencio. El modal de
+				// busqueda abre con resultados precargados (los primeros 10 del store, ver
+				// setPreviewResults en search/Index.vue) y el usuario tiene que poder elegir uno con
+				// Enter sin haber tecleado nada. Como este componente es el unico que escucha el
+				// Enter del input, hasta este aviso ese Enter no llegaba a ningun lado.
+				//
+				// Solo para el Enter: la lupa dice "buscar" y con el criterio vacio no tiene nada que
+				// buscar ni nada que elegir por su cuenta -- que un boton que dice Buscar te
+				// seleccione un resultado es la misma confusion que Lucas reporto el 12/8/2026.
+				if (origen !== 'lupa') {
+					this.$emit('enter-sin-criterio')
 				}
 				return
 			}

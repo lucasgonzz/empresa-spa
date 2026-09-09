@@ -480,11 +480,37 @@ export default {
 			this.models_to_search = models 
 		},
 		setSelectedModelProp() {
-			if (this.show_selected) {
-				if (this.prop && this.prop.set_model_on_click_or_prop_with_query_if_null) {
-					this.query = this.model[this.prop.key]
-					this.selected_model = null
-				} else if (this.model && this.prop && this.model[this.prop.key]) {
+			/**
+			 * 🔴 Esta rama va AFUERA del gate de show_selected, y no es un detalle de estilo.
+			 *
+			 * show_selected decide una sola cosa: si abajo del campo se dibuja el chip con el modelo
+			 * elegido (search/SelectedInfo.vue). set_model_on_click_or_prop_with_query_if_null decide
+			 * otra: que en este campo el CRITERIO es el valor de la propiedad --el nombre del
+			 * articulo--, no un modelo relacionado. Son preguntas distintas y estaban en el mismo if.
+			 *
+			 * Que pasaba mientras estaba adentro: el unico consumidor que HOY llega hasta aca es
+			 * listado/components/NameInput.vue (el nombre del articulo cuando no tiene codigo), que
+			 * pasa show_selected en false a proposito. O sea que la rama no corria NUNCA y `query` se
+			 * llenaba una sola vez, en el created() de aca via init_query. Al pasar a otro articulo
+			 * sin recrear el componente, el campo seguia mostrando el nombre del anterior.
+			 *
+			 * La clave tambien esta declarada en models/article.js (prop `name`) y ModelForm.vue tiene
+			 * su propia rama para ella; ese camino no pasa por este archivo porque esa prop es
+			 * `type: 'textarea'` y useSearch() exige `type == 'search'`. Si alguien vuelve a prender
+			 * el type_if que esta comentado ahi, empieza a pasar: son dos lugares, no uno.
+			 *
+			 * El `|| ''` mantiene `query` como string siempre. Un articulo nuevo tiene name en null, y
+			 * este valor viaja como prop query_value al modal, donde estado_hint() hace `query.length`
+			 * y el watch de query hace `('' + valor).trim()` --que con null da "null", largo 4, y
+			 * dejaria el modal creyendo que hay criterio escrito.
+			 */
+			if (this.prop && this.prop.set_model_on_click_or_prop_with_query_if_null) {
+				if (this.model) {
+					this.query = this.model[this.prop.key] || ''
+				}
+				this.selected_model = null
+			} else if (this.show_selected) {
+				if (this.model && this.prop && this.model[this.prop.key]) {
 					let selected_model = null
 					if (this.prop.use_store_models) {
 						selected_model = this.$store.state[this.modelNameFromRelationKey(this.prop)].models.find(_model => {
@@ -657,10 +683,10 @@ export default {
 	border-radius: 0.25rem 0 0 0.25rem
 	i
 		color: var(--color-text-secondary, rgba(0, 0, 0, .6))
-	@if ($theme == 'dark')
-		background: #333 !important
-		i
-			color: #FFF
+	// Aca abajo colgaba un `@if ($theme == 'dark')` que repetia estos dos colores a mano. Se
+	// borro el 7/9/2026: `$theme` es una variable de COMPILACION de Sass fijada en 'light' en
+	// _custom.scss, asi que esa rama no se compilaba nunca y solo daba la falsa impresion de que
+	// el recuadro viejo de la lupa tenia tema oscuro. Los dos var() de arriba ya lo resuelven.
 // Estado deshabilitado del buscador.
 .bg-gray
 	background: var(--bg-hover, #e9ecef) !important
@@ -740,6 +766,21 @@ export default {
 
 	// Deshabilitado: gris el campo entero, como cualquier .form-control:disabled. Antes el gris
 	// se le ponia solo al icono y quedaba un cuadradito gris adentro de un campo blanco.
+	//
+	// 🔴 7/9/2026: el valor claro va escrito TAL CUAL, y NO como var(--bg-section, #e9ecef). El
+	// fallback de un var() entra unicamente cuando la custom property NO esta definida, y
+	// --bg-section SI esta definida en :root (vale #f8f9fa): con el var() el modo claro tomaba el
+	// token y este gris se iba a un casi blanco. Y ese gris ES la senal de "este campo no se
+	// toca": contra la tarjeta blanca de atras, #f8f9fa no se despega y el buscador deshabilitado
+	// deja de leerse como deshabilitado. El valor que habia que salvar era #e9ecef.
+	//
+	// La contraparte oscura vive en el bloque html.dark-mode del final de esta hoja, y ahi si va
+	// --bg-section, por dos motivos: es el mismo token que _dark_theme.sass ya le da a
+	// `.form-control:disabled`, asi que un buscador deshabilitado y un input deshabilitado se ven
+	// igual; y queda un escalon POR DEBAJO de --bg-card (el fondo del modal y el del campo
+	// habilitado), que es la misma relacion que tiene el #e9ecef contra la tarjeta blanca en
+	// claro. Con --bg-hover pasaria a ser mas claro que el modal y el campo apagado se leeria
+	// como resaltado.
 	&.search-field--disabled
 		background: #e9ecef
 		cursor: not-allowed
@@ -747,4 +788,12 @@ export default {
 			background: transparent
 		.search-field__icon
 			cursor: default
+
+// Contraparte de modo oscuro que NO puede escribirse como var(--token, literal) adentro del
+// bloque anidado de arriba: ese token tambien existe en :root, asi que el fallback nunca entraria
+// y el que se moveria seria el MODO CLARO. Se agrupa aca al final para no romper el anidado de
+// .search-field.
+html.dark-mode
+	.search-field.search-field--disabled
+		background: var(--bg-section)
 </style>

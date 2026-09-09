@@ -1,8 +1,9 @@
 <template>
 	<!-- Botón visible solo si la venta tiene price_description guardado -->
+	<!-- Sin m-l-5: la separación la pone el `gap` del contenedor (table-buttons/Index.vue). -->
 	<b-button
 	v-if="sale.price_description"
-	class="btn-explicacion m-l-5"
+	class="btn-explicacion"
 	@click.stop="show"
 	variant="outline-secondary"
 	title="Ver cómo se calculó este precio"

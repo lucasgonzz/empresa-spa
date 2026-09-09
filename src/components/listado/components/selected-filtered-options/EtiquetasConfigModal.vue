@@ -267,6 +267,7 @@
 <script>
 import axios from 'axios'
 import draggable from 'vuedraggable'
+import { env } from '@/runtime_config'
 
 /**
  * Propiedades que el usuario puede incluir en la etiqueta (clave API / PDF).
@@ -764,7 +765,7 @@ export default {
 				'codigo_barras_alto=' + encodeURIComponent(this.codigo_barras_alto),
 				'interlineado=' + encodeURIComponent(this.interlineado),
 			].join('&')
-			let link = process.env.VUE_APP_API_URL
+			let link = env('VUE_APP_API_URL')
 				+ '/article/bar-codes-etiquetas-pdf/'
 				+ ids.join('-')
 				+ '?'

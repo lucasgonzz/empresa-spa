@@ -292,7 +292,7 @@ export default {
 		.table-component-scroll table.table
 			border-radius: 0
 
-		// _tables.sass le pone a TODO tbody del sistema `border: 2px solid #DDDDDD` y un radio
+		// 🔴 VENCIDO al 7/9/2026: _tables.sass le PONIA a TODO tbody del sistema `border: 2px solid #DDDDDD` y un radio
 		// propio abajo (lineas 11-14). Adentro de la caja redondeada ese marco se ve como un
 		// rectangulo mal recortado, y en modo oscuro ademas queda gris claro sobre oscuro.
 		tbody

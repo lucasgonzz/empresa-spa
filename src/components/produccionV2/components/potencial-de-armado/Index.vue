@@ -56,9 +56,17 @@
 			<!--
 				responsive + min-width en el sass: en tablet y en telefono la tabla scrollea
 				adentro de su propio contenedor, sin empujar el scroll horizontal a la pagina.
+
+				🔴 El min-width va por `table-class` y NO por `class`. Con `responsive`, bootstrap-vue
+				pone lo que venga en `class` sobre el DIV `.table-responsive` --el contenedor del
+				scroll-- y no sobre la tabla. Puesto ahi, el min-width le prohibia al contenedor
+				achicarse: media 820px fijos adentro de un viewport de 375 y el que terminaba
+				scrolleando horizontal era la PAGINA, que es exactamente lo que este bloque queria
+				evitar. `table-class` baja la clase a la <table> de adentro, que es la que tiene que
+				ser ancha. Medido el 8/9/2026: a 820px la pagina daba scrollWidth 891 sobre 805.
 			-->
 			<b-table
-			class="potencial-de-armado__tabla"
+			table-class="potencial-de-armado__tabla"
 			head-variant="dark"
 			responsive
 			:fields="fields"
@@ -391,6 +399,10 @@ export default {
 		// telefono. Con esto la tabla scrollea horizontal adentro de su contenedor en vez de
 		// espichar "Producto" e "Insumo limitante" hasta una letra por linea. Mismo criterio
 		// que la tabla de actividad-cliente.
+		//
+		// La clase la baja `table-class` a la <table>, no `class`: sobre el contenedor
+		// `.table-responsive` este min-width le prohibe achicarse y el scroll horizontal se lo
+		// come la pagina entera. Ver el comentario del template.
 		min-width: 820px
 	&__potencial
 		font-weight: 600

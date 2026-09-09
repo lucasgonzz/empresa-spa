@@ -30,7 +30,33 @@
 		class="cascada-fundido">
 			<!-- Posicion IVA -->
 			<div class="cascada-card">
-				<h6 class="cascada-card__titulo">IVA</h6>
+				<div class="cascada-card__header">
+					<h6 class="cascada-card__titulo">IVA</h6>
+
+					<!-- Restaura los dos exports .txt para AFIP que vivian en la tarjeta "Afip .TXT" de la
+					vieja general/IconCards.vue. El grupo 227 (27/7/2026) borro esa tarjeta entera al
+					reemplazar la seccion "General" por esta Posicion Fiscal y nunca migro estos dos
+					botones — el backend (AfipController::exportVentas/exportAlicuotasTxt y sus rutas
+					afip-txt*) nunca dejo de existir, asi que esto es restaurar, no construir de cero. -->
+					<div class="cascada-card__acciones">
+						<button
+						type="button"
+						class="cascada-card__accion-txt apretable"
+						:data-testid="'posicion-fiscal-exportar-comprobantes-txt'"
+						@click="exportarComprobantesTxt">
+							<i class="bi bi-filetype-txt" aria-hidden="true"></i>
+							Comprobantes .txt
+						</button>
+						<button
+						type="button"
+						class="cascada-card__accion-txt apretable"
+						:data-testid="'posicion-fiscal-exportar-alicuotas-txt'"
+						@click="exportarAlicuotasTxt">
+							<i class="bi bi-filetype-txt" aria-hidden="true"></i>
+							Alícuotas .txt
+						</button>
+					</div>
+				</div>
 
 				<div
 				class="cascada-renglon apretable"
@@ -238,6 +264,7 @@
 </template>
 <script>
 import detalle_drilldown from '@/mixins/reportes/detalle_drilldown'
+import { env } from '@/runtime_config'
 
 export default {
 	mixins: [detalle_drilldown],
@@ -281,14 +308,51 @@ export default {
 			}
 			return 'acento-gastos'
 		},
+		/**
+		 * Rango mensual (YYYY-MM) para los exports .txt de AFIP. Mismo criterio que
+		 * fecha_moneda_params() en store/reportes/index.js: en 'Hoy' declara el mes en curso, en
+		 * 'Rango de fechas' usa lo que el usuario eligio en el selector de arriba. Asi el .txt
+		 * exportado siempre coincide con el periodo que la pantalla esta mostrando en ese momento.
+		 *
+		 * @returns {{desde: String, hasta: String}}
+		 */
+		rango_afip() {
+			if (this.$store.state.reportes.rango_temporal == 'rango-de-fechas') {
+				return {
+					desde: this.$store.state.reportes.mes_inicio.substring(0, 7),
+					hasta: this.$store.state.reportes.mes_fin.substring(0, 7),
+				}
+			}
+			let mes_actual = this.today.substring(0, 7)
+			return { desde: mes_actual, hasta: mes_actual }
+		},
+		/**
+		 * Descarga el TXT de comprobantes de AFIP del periodo en pantalla (un renglon por
+		 * comprobante autorizado). Restaura export_afip_txt() de la vieja general/IconCards.vue.
+		 */
+		exportarComprobantesTxt() {
+			let rango = this.rango_afip()
+			let link = env('VUE_APP_API_URL') + '/afip-txt/' + rango.desde + '/' + rango.hasta
+			window.open(link)
+		},
+		/**
+		 * Descarga el TXT de alicuotas de AFIP del periodo en pantalla (un renglon por alicuota de
+		 * IVA con importe > 0). Restaura export_afip_alicuotas_txt(), mismo caso que el de arriba.
+		 */
+		exportarAlicuotasTxt() {
+			let rango = this.rango_afip()
+			let link = env('VUE_APP_API_URL') + '/afip-txt-alicuotas/' + rango.desde + '/' + rango.hasta
+			window.open(link)
+		},
 	},
 }
 </script>
 <style lang="sass">
 // Paleta de acentos de los iconos de renglon. Misma familia que usaba IconCards.vue en
 // develop, para que Reportes se sienta el mismo modulo aunque el layout haya cambiado.
-// Si algun dia este modulo pasa a los tokens de --dark_theme, estas seis variables son
-// el unico punto a tocar por archivo.
+// Los fondos, textos y bordes de este archivo YA pasaron a los tokens del tema oscuro; estas
+// seis se quedan como literales a proposito: son colores de ACENTO, y los de accion y estado se
+// mantienen iguales en los dos modos.
 $acento-ventas: #2563eb
 $acento-dinero: #059669
 $acento-gastos: #dc2626
@@ -298,8 +362,10 @@ $acento-fiscal: #0891b2
 
 .posicion-fiscal
 	.cascada-card
-		background: #fff
-		border: 1px solid #e2e8f0
+		// La tarjeta flota sobre --color-bg: con un blanco fijo, en modo oscuro queda un
+		// rectangulo encandilante en vez de una superficie elevada.
+		background: var(--bg-card, #fff)
+		border: 1px solid var(--color-border, #e2e8f0)
 		border-radius: 12px
 		box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06)
 		padding: 12px 28px
@@ -309,11 +375,56 @@ $acento-fiscal: #0891b2
 		&__titulo
 			font-size: 0.95rem
 			font-weight: 700
-			color: #475569
+			// 7/9/2026: token solo-oscuro (declarado unicamente en html.dark-mode), NO
+			// var(--color-text-secondary, ...). El fallback de un var() entra solo si la custom
+			// property no existe: con --color-text-secondary, que si existe en :root, el modo claro
+			// pasaria de #475569 a #6c757d y el contraste sobre blanco caeria de 8,6:1 a 4,7:1.
+			color: var(--texto-seccion-reportes, #475569)
 			text-transform: uppercase
 			letter-spacing: 0.04em
 			padding: 14px 0 4px
 			margin: 0
+
+		// Cabecera de la tarjeta IVA: titulo a la izquierda, exports .txt de AFIP a la derecha.
+		// flex-wrap para que en telefono (360-390px) los botones bajen debajo del titulo en vez
+		// de comprimirse hasta desbordar la tarjeta.
+		&__header
+			display: flex
+			align-items: center
+			justify-content: space-between
+			flex-wrap: wrap
+			gap: 8px 12px
+
+			.cascada-card__titulo
+				padding-bottom: 0
+
+		&__acciones
+			display: flex
+			gap: 8px
+			flex-wrap: wrap
+			padding: 10px 0 4px
+
+		&__accion-txt
+			display: inline-flex
+			align-items: center
+			gap: 6px
+			border: none
+			background: rgba($acento-fiscal, 0.08)
+			color: $acento-fiscal
+			font-size: 0.78rem
+			font-weight: 600
+			padding: 6px 10px
+			border-radius: 8px
+			cursor: pointer
+			transition: background 120ms ease-out
+			white-space: nowrap
+
+			&:hover
+				background: rgba($acento-fiscal, 0.16)
+
+			i
+				font-size: 0.9rem
+				line-height: 1
 
 	.cascada-renglon
 		display: flex
@@ -325,9 +436,16 @@ $acento-fiscal: #0891b2
 		// 14px -> 18px: la cascada es una lista larga de numeros y con 14 los
 		// renglones se leian pegados.
 		padding: 18px 0
-		border-bottom: 1px solid #f1f5f9
+		// 🔴 7/9/2026: el separador NO va como var(--color-border-secondary, #f1f5f9). El fallback
+		// de un var() entra unicamente cuando la custom property NO esta definida, y ese token SI
+		// esta definido en :root (vale #e9ecef): en claro ganaba el token y cada linea divisoria
+		// se marcaba mas. Suelta es sutil, pero esta lista es larga y el corrimiento se repite en
+		// cada renglon. --borde-renglon-cascada existe SOLO en html.dark-mode (ver
+		// _dark_theme.sass), asi que aca el fallback si entra y el claro se queda con el #f1f5f9
+		// de siempre.
+		border-bottom: 1px solid var(--borde-renglon-cascada, #f1f5f9)
 		font-size: 0.95rem
-		color: #0f172a
+		color: var(--color-text-primary, #0f172a)
 
 		&:last-child
 			border-bottom: none
@@ -374,8 +492,8 @@ $acento-fiscal: #0891b2
 		&--subtotal
 			font-weight: 700
 			font-size: 1.05rem
-			border-top: 2px solid #e2e8f0
-			border-bottom: 2px solid #e2e8f0
+			border-top: 2px solid var(--color-border, #e2e8f0)
+			border-bottom: 2px solid var(--color-border, #e2e8f0)
 			color: #dc2626
 
 		&--favor
@@ -383,7 +501,7 @@ $acento-fiscal: #0891b2
 
 	&__aviso-iibb
 		padding: 16px 0
-		color: #64748b
+		color: var(--color-text-secondary, #64748b)
 		font-size: 0.9rem
 
 		p

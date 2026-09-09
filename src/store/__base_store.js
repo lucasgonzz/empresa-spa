@@ -1,6 +1,7 @@
 import axios from 'axios'
+import { env } from '@/runtime_config'
 axios.defaults.withCredentials = true
-axios.defaults.baseURL = process.env.VUE_APP_API_URL
+axios.defaults.baseURL = env('VUE_APP_API_URL')
 
 import moment from 'moment'
 import generals from '@/common-vue/mixins/generals'
@@ -624,7 +625,12 @@ export default function __base_store(options = {}) {
 	/** Actions base (copiadas de `src/store/__base.js` y usadas por la mayoría de stores). */
 	let base_actions = {
 		getModels({commit, state, dispatch}) {
-			commit('setSelected', [])
+			// Con el modo selección manual activo, lo tildado a mano se acumula entre búsquedas: no
+			// se pisa acá. Se limpia al apagar el modo (BtnSeleccion.vue) o al salir del módulo
+			// (beforeRouteLeave de cada vista), nunca por pedir datos de vuelta.
+			if (!state.is_selecteable) {
+				commit('setSelected', [])
+			}
 			commit('setFiltered', [])
 			commit('setIsFiltered', false)
 			// Resetear el flag de buscador rápido al recargar modelos desde el servidor.
@@ -874,7 +880,21 @@ export default function __base_store(options = {}) {
 			/** true cuando esta llamada es una búsqueda nueva del usuario (trae `props`), false cuando es un cambio de página (solo `{ page }`, reusa el payload persistido). */
 			let es_busqueda_nueva = !!(payload && payload.props)
 			if (es_busqueda_nueva) {
-				commit('setGlobalSearchPayload', payload)
+				// 🔴 `page` NO se persiste NUNCA dentro de global_search_payload. Ese payload describe
+				// el CRITERIO de la búsqueda (qué texto, qué props, qué orden) y se reusa tal cual en
+				// cada cambio de página; la página en la que está parado el usuario es otra cosa y vive
+				// en state.filter_page.
+				//
+				// Guardarla acá adentro rompía la paginación entera (8/9/2026): runListadoPorDefecto y
+				// el buscador general dispatchean con `page: 1` adentro del payload, ese 1 quedaba
+				// persistido, y al paginar se copiaba al body del POST — donde le gana al `?page=N` de
+				// la URL, porque `$request->input()` de Laravel une body + query string con el body
+				// como operando izquierdo (medido: con ?page=3 y {"page":1}, resolveCurrentPage() da 1).
+				// O sea: la URL salía bien, la barra mostraba la página nueva, y el backend devolvía
+				// siempre la página 1.
+				let payload_a_persistir = Object.assign({}, payload)
+				delete payload_a_persistir.page
+				commit('setGlobalSearchPayload', payload_a_persistir)
 				// Es una búsqueda real del usuario: a partir de ahora deja de ser el listado por defecto.
 				commit('set_listado_por_defecto', false)
 			} else {
@@ -958,9 +978,20 @@ export default function __base_store(options = {}) {
 			let extra_filters_del_payload = (search_payload && search_payload.extra_filters) ? search_payload.extra_filters : []
 			let extra_filters_request = extra_filters_del_payload.concat(state.extra_filters_de_barra)
 
+			// Cuerpo del POST. La página viaja SOLO en el query string, nunca acá adentro.
+			//
+			// 🔴 El `delete` no es redundante con la limpieza de más arriba: es el cinturón del punto
+			// único por donde pasan TODAS las requests de este endpoint. `search_payload` puede venir
+			// del store (persistido por una versión anterior de la app, o por un camino nuevo que
+			// vuelva a meter `page` sin darse cuenta), y basta un `page` ahí adentro para que Laravel
+			// lo prefiera por sobre el de la URL y la paginación deje de funcionar entera, en silencio
+			// y sin ningún error. Se ataca la familia, no la instancia.
+			let cuerpo = Object.assign({}, search_payload, {per_page: per_page, filters: column_filters, extra_filters: extra_filters_request})
+			delete cuerpo.page
+
 			return axios.post(
 				'/api/global-search/' + generals.methods.routeString(state.model_name) + '?page=' + page,
-				Object.assign({}, search_payload, {per_page: per_page, filters: column_filters, extra_filters: extra_filters_request})
+				cuerpo
 			)
 				.then(res => {
 					if (!silencioso) {
@@ -970,7 +1001,11 @@ export default function __base_store(options = {}) {
 
 					/** Filas devueltas: el endpoint responde envuelto en `models` (paginador Laravel). */
 					let rows = (res.data.models && res.data.models.data) ? res.data.models.data : []
-					commit('setSelected', [])
+					// Con selección manual activa, cada búsqueda/filtro nuevo NO pisa lo ya tildado
+					// (ver el mismo guard en getModels de acá arriba).
+					if (!state.is_selecteable) {
+						commit('setSelected', [])
+					}
 					commit('setFilterPage', page)
 					commit('setFiltered', rows)
 					commit('setIsFiltered', true)
@@ -1196,7 +1231,11 @@ export default function __base_store(options = {}) {
 			 * Si usa paginación, opcionalmente precarga modelos desde localStorage.
 			 * Esto reduce el tiempo de primera renderización mientras llega el request al server.
 			 */
-			commit('setSelected', [])
+			// Mismo guard que en el getModels base: con selección manual activa, no se pisa lo
+			// tildado a mano.
+			if (!state.is_selecteable) {
+				commit('setSelected', [])
+			}
 			commit('setFiltered', [])
 			commit('setIsFiltered', false)
 			// Resetear el flag de buscador rápido al recargar modelos desde el servidor.

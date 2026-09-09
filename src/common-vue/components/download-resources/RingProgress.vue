@@ -132,7 +132,16 @@ export default {
 		opacity: 1
 		transform: translate(-50%, -50%) scale(1)
 
-@if ($theme == 'dark')
+// 7/9/2026: esto era un `@if ($theme == 'dark')`. $theme es una variable de COMPILACION fijada en
+// 'light' en _custom.scss, asi que la rama nunca se emitio: el anillo de la tarjeta "Actualizando
+// articulos offline" dibujaba su pista en negro al 8% tambien sobre el fondo oscuro, donde
+// directamente no se ve.
+//
+// Se convierte a contraparte de tiempo de ejecucion y no a `var(--token, <literal>)` porque no hay
+// token que sirva: es el stroke de un <circle>, un negro TRANSLUCIDO que se apoya sobre el fondo de
+// la pildora, y cualquiera de los tokens de superficie es un color plano. Asi el modo claro queda
+// exactamente igual que hoy.
+html.dark-mode
 	.recursos-ring__track
 		stroke: rgba(255, 255, 255, .16)
 </style>

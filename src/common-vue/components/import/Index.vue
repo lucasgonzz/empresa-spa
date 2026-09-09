@@ -674,6 +674,7 @@
 import * as XLSX from 'xlsx/xlsx.mjs'
 import Advises from '@/common-vue/components/import/Advises'
 import BtnLoader from '@/common-vue/components/BtnLoader'
+import { env } from '@/runtime_config'
 export default { 
 	components: {
 		Advises,
@@ -1182,7 +1183,7 @@ export default {
 		    return number;
 		},
 		base_export() {
-			let url = process.env.VUE_APP_API_URL+'/'+this.model_name+'-base/excel/export'
+			let url = env('VUE_APP_API_URL')+'/'+this.model_name+'-base/excel/export'
 			window.open(url)		
 		},
 		onFileChange(event) {

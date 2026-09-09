@@ -17,7 +17,22 @@ hide-footer
 				input_id preserva el mismo id que usaban los document.getElementById repartidos por
 				este archivo y por search/Index.vue, asi ninguno se rompe.
 			-->
+			<!--
+				🔴 criterio_inicial: el input que se ve dentro del modal NO es el del campo, es el de
+				este buscador, que tiene su propio query_value en data. Sin esto abria vacio aunque el
+				campo de abajo mostrara el nombre del articulo que se esta editando (Lucas, 8/9/2026).
+
+				Va por PROP y no llamando a un metodo del buscador desde onModalShow(). El b-modal
+				destruye su contenido al cerrar --sin `static`, su render devuelve h() mientras
+				isHidden este arriba (bootstrap-vue 2.23.1, modal.js:1015-1021)--, asi que este
+				componente nace de nuevo en cada apertura y su created() lee la prop ya bajada.
+				Empujarlo por $refs desde el evento `show` no alcanzaba: `show` es SINCRONICO y este
+				componente es async (el import de abajo), asi que en la PRIMERA apertura de cada carga
+				de pagina el chunk todavia no resolvio, el ref no existe y la siembra se salteaba en
+				silencio -- justo la apertura que Lucas reporto.
+			-->
 			<buscador-general
+			:criterio_inicial="query"
 			:model_name="model_name"
 			modo="modal"
 			:input_id="_id+'-search-modal-input'"
@@ -26,6 +41,7 @@ hide-footer
 			@keydown.native.up="selectUp"
 			@keydown.native.down="selectDown"
 			@buscar="onBuscarDesdeBuscadorGeneral"
+			@enter-sin-criterio="onEnterSinCriterio"
 			@criterios-cambiaron="onCriteriosCambiaron"
 			@limpiar="onLimpiarDesdeBuscadorGeneral"></buscador-general>
 
@@ -52,17 +68,29 @@ hide-footer
 			<div
 			v-if="loading || results.length">
 
-				<div class="j-between align-center m-t-15">
+				<!--
+					Encabezado de la lista, entre el input y la tabla. Antes era un titulo en negrita
+					de 1.2em con el contador entre parentesis y detras de un v-if de total_results > 0
+					-- o sea que con la lista precargada (total_results vale 0 hasta que se busca) el
+					usuario veia "Resultados" pelado, sin saber cuantos hay ni de donde salieron.
+				-->
+				<div class="search-modal-resultados m-t-15">
 
-					<p
-					class="results-title m-0">
-						<i class="icon-down"></i>
-						Resultados 
-						<span
-						v-if="total_results > 0">
-							({{ total_results }})
+					<div class="search-modal-resultados__info">
+						<span class="search-modal-resultados__titulo">
+							{{ resultados_titulo }}
 						</span>
-					</p>
+						<span
+						v-if="!loading"
+						class="search-modal-resultados__contador">
+							{{ resultados_cantidad }}
+						</span>
+						<span
+						v-if="!loading && duracion_busqueda_texto"
+						class="search-modal-resultados__tiempo">
+							{{ duracion_busqueda_texto }}
+						</span>
+					</div>
 
 					<pagination
 					:total_pages="total_pages"
@@ -303,6 +331,23 @@ export default {
 			// es del flujo del doble Enter (pulso_enter / reset_ya_se_busco).
 			busqueda_realizada: false,
 
+			// El usuario movio la seleccion EL MISMO, con las flechas. Mientras este arriba, el Enter
+			// toma esa fila en vez de buscar (ver pulso_enter). Es lo que separa "esta fila esta
+			// resaltada porque la autoseleccion la puso ahi" de "esta fila esta resaltada porque el
+			// usuario la eligio", que es la distincion que le faltaba al modal para poder elegir un
+			// resultado precargado sin haber buscado antes.
+			//
+			// Solo las flechas: el clic sobre una fila no pasa por aca. onRowSelected() llama derecho
+			// a emitSetSelected() y cierra el modal, asi que no hay ningun Enter posterior que guiar.
+			seleccion_manual: false,
+
+			// Cronometro de la busqueda: se sella al arrancar search() y se cierra en finishSearch().
+			// Se mide con Date.now() y no con performance.now() a proposito -- lo que se muestra son
+			// decimas de segundo, no microbenchmarks, y Date.now() no depende de un origen de tiempo
+			// por documento.
+			busqueda_inicio_ms: null,
+			duracion_busqueda_ms: null,
+
 			search_config_rows: [],
 			search_preference_columns: [],
 
@@ -444,6 +489,59 @@ export default {
 			return this.propToFilter(this.model_name)
 		},
 		/**
+		 * Titulo del encabezado de la lista. Distingue las listas que el modal muestra en el mismo
+		 * lugar y que hasta ahora se llamaban todas igual:
+		 *
+		 * - "Buscando" mientras la consulta esta en vuelo. Sin esto el titulo decia "Sugerencias"
+		 *   durante toda la primera busqueda, porque busqueda_realizada recien sube al terminar.
+		 * - "Resultados" para lo que devolvio una busqueda.
+		 * - "Sugerencias" para los modelos que ya estaban descargados en el store y se precargan al
+		 *   abrir (setPreviewResults en search/Index.vue). Es un atajo, no un resultado.
+		 *
+		 * 🔴 Con limpiar_resultados_de_busqueda en false --Vender y Compras, que eligen articulos uno
+		 * atras del otro sobre los mismos resultados-- la lista que sobrevive a la reapertura es la
+		 * de la busqueda anterior, no una precarga: setPreviewResults() sale sin tocar nada y
+		 * onModalShow() baja busqueda_realizada pero no toca results. Llamarla "Sugerencias" ahi
+		 * seria mentir en los dos modales mas usados del sistema.
+		 */
+		resultados_titulo() {
+			if (this.loading) {
+				return 'Buscando'
+			}
+			if (this.busqueda_realizada || !this.limpiar_resultados_de_busqueda) {
+				return 'Resultados'
+			}
+			return 'Sugerencias'
+		},
+		/**
+		 * Cantidad, siempre visible. Con una busqueda hecha manda total_results, que es el total de
+		 * la consulta (puede ser mayor que lo que entra en la pagina). Sin buscar todavia, el total
+		 * de la API no existe --vale 0-- y lo que corresponde contar es lo que hay en pantalla.
+		 *
+		 * Va sin la palabra "resultados" porque el titulo de al lado ya la dice: repetirla daria
+		 * "Resultados / 12 resultados".
+		 *
+		 * El fallback a results.length no es cosmetico: total_results sale de `response.total`, y un
+		 * consumidor con route_to_search propio que no devuelva esa clave imprimiria "undefined".
+		 */
+		resultados_cantidad() {
+			if (this.busqueda_realizada && typeof this.total_results === 'number') {
+				return this.total_results
+			}
+			return this.results.length
+		},
+		/**
+		 * Cuanto tardo la ultima busqueda, en segundos con dos decimales y coma decimal (es el
+		 * separador de todo el sistema). Null cuando todavia no se busco nada: la lista precargada
+		 * sale del store y no tiene tiempo de busqueda que mostrar.
+		 */
+		duracion_busqueda_texto() {
+			if (!this.busqueda_realizada || this.duracion_busqueda_ms === null) {
+				return null
+			}
+			return (this.duracion_busqueda_ms / 1000).toFixed(2).replace('.', ',') + ' s'
+		},
+		/**
 		 * Icono del estado vacio segun el momento: lupa antes de buscar, informacion despues de una
 		 * busqueda sin resultados.
 		 */
@@ -504,21 +602,42 @@ export default {
 			// no seleccionar. Sin esta linea, ya_se_busco quedaba en true desde la apertura anterior
 			// (arranca en true en data() y solo lo baja reset_ya_se_busco al tipear) y el primer Enter
 			// caia en seleccionar_resultado(): con la lista precargada eso elige el primer modelo del
-			// store, que no tiene nada que ver con el criterio que quedo escrito en el input del
-			// buscador general --que sobrevive al cierre, porque el b-modal no es lazy y no se
-			// destruye--. Pasa igual con filtros fijos guardados y el input vacio, donde buscar() del
-			// buscador general emite igual (ver su guarda de criterio vacio).
+			// store, que no tiene nada que ver con lo que el usuario ve escrito en el input. Pasa
+			// igual con filtros fijos guardados y el input vacio, donde buscar() del buscador general
+			// emite igual (ver su guarda de criterio vacio).
+			//
+			// Hasta el 8/9/2026 esta explicacion agregaba que el criterio "sobrevive al cierre porque
+			// el b-modal no es lazy y no se destruye". Eso es FALSO --ver el bloque de mas abajo, en
+			// este mismo metodo--: el contenido se destruye en cada cierre. El input arranca con lo
+			// que corresponda porque el modal se lo pasa en la prop criterio_inicial, no porque haya
+			// sobrevivido.
 			//
 			// No rompe el atajo del doble Enter: primer Enter busca, segundo selecciona, que es el
 			// diseño. Y con el input vacio y sin filtros fijos el buscador general ni siquiera emite.
 			this.ya_se_busco = false
 
+			// Nadie eligio nada todavia en esta apertura: si hay una fila resaltada es la que puso la
+			// autoseleccion, no el usuario.
+			this.seleccion_manual = false
+
 			this.total_results = 0
 			this.current_page = null
 			this.total_pages = null
+			this.duracion_busqueda_ms = null
+			this.busqueda_inicio_ms = null
 			// Un criterio tipeado en una apertura anterior no debe ganarle a lo que traiga el padre
 			// en esta apertura nueva (ver query_local en data()).
 			this.query_local = null
+
+			// El criterio con el que abre el input del modal NO se empuja desde aca: viaja como prop
+			// criterio_inicial al buscador general, que nace de nuevo en cada apertura (ver el
+			// comentario del template). Empujarlo aca seria imposible igual: `show` es sincronico y
+			// en este punto el contenido del modal todavia no se renderizo.
+			//
+			//   ⚠️ Ojo con el informe 20260904-precarga-resultados-search-modal.md: afirma que "el
+			//   b-modal no es lazy" y que por eso su contenido sobrevive al cierre. Es falso --lazy
+			//   solo se consulta en la rama `static`, que este modal no usa-- y se dedujo sin abrir
+			//   el archivo de bootstrap-vue. Verificado el 8/9/2026 contra el paquete instalado.
 		},
 		/**
 		 * El modal termino de cerrarse: se libera la guarda que impide reabrirlo.
@@ -542,6 +661,9 @@ export default {
 			this.total_pages = null
 			this.selected_index = -1
 			this.busqueda_realizada = false
+			this.seleccion_manual = false
+			this.duracion_busqueda_ms = null
+			this.busqueda_inicio_ms = null
 			this.ultima_busqueda_buscador_general = null
 			this.foco_en_input()
 		},
@@ -925,6 +1047,11 @@ export default {
 				let _results = []
 				this.searching = true
 
+				// Arranca el cronometro que cierra finishSearch(). Va aca adentro y no arriba del if
+				// para que una llamada que no llega a buscar nada no deje sellado un inicio que
+				// despues se leeria como la duracion de la busqueda siguiente.
+				this.busqueda_inicio_ms = Date.now()
+
 				this.foco_en_input()
 
 				if (this.searchFromApi()) {
@@ -1185,10 +1312,25 @@ export default {
 			this.orderAlpabethic()
 			this.searching = false
 			this.interval = null
-			this.loading = false 
+			this.loading = false
 			this.setFirstSelectedRow()
 			this.ya_se_busco = true
 			this.busqueda_realizada = true
+
+			// La busqueda trajo una lista nueva y setFirstSelectedRow() vuelve a poner el indice en la
+			// primera fila: esa fila la puso la autoseleccion, no el usuario. Si esto quedara en true,
+			// el Enter del atajo de doble Enter seguiria seleccionando igual (ya_se_busco tambien esta
+			// en true), pero por el motivo equivocado.
+			this.seleccion_manual = false
+
+			// Cierra el cronometro que abrio search(). El null es para el caso en que finishSearch()
+			// se llame sin haber pasado por search() -- hoy no pasa, pero el texto de la duracion se
+			// esconde solo en vez de mostrar un numero inventado.
+			if (this.busqueda_inicio_ms === null) {
+				this.duracion_busqueda_ms = null
+				return
+			}
+			this.duracion_busqueda_ms = Date.now() - this.busqueda_inicio_ms
 		},
 		/**
 		 * Ordena los resultados alfabeticamente por la propiedad de filtro.
@@ -1249,14 +1391,73 @@ export default {
 			const keys = ["Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"];
 			if (!keys.includes(event.key)) {
 				this.ya_se_busco = false
+				// Cambio el criterio: la fila que el usuario habia elegido con las flechas ya no
+				// corresponde a lo que dice el input, asi que el proximo Enter vuelve a buscar.
+				this.seleccion_manual = false
 			}
 		},
+		/**
+		 * Enter en el input del modal.
+		 *
+		 * 🔴 La rama de seleccion_manual va PRIMERO y le gana a ya_se_busco. Si el usuario bajo con
+		 * las flechas hasta una fila, eligio esa fila a conciencia: buscar en ese momento le tira
+		 * abajo la eleccion y le cambia la lista. Es lo que faltaba para poder tomar un resultado
+		 * precargado sin haber buscado antes (pedido de Lucas, 8/9/2026).
+		 *
+		 * Lo de abajo NO se toca y sigue siendo el diseño: con criterio tecleado y sin buscar, el
+		 * primer Enter BUSCA y el segundo selecciona. Esa linea es de la mision del 4/9/2026 y
+		 * existe porque, sin ella, el primer Enter de cada apertura elegia el primer modelo
+		 * precargado del store -- que no tiene nada que ver con lo que el usuario escribio.
+		 */
 		pulso_enter() {
+			// La misma guarda que onEnterSinCriterio(): seleccion_manual puede seguir arriba con la
+			// lista ya vacia --el usuario baja con las flechas, toca la lupa (search() vacia results)
+			// y la busqueda falla por el .catch, que no pasa por finishSearch() y no la baja--. Sin
+			// esto, ese Enter cae en seleccionar_resultado() con results vacio y termina creando el
+			// modelo al vuelo (saveIfNotExist) sin haber buscado nunca.
+			if (this.seleccion_manual && this.selected_index !== -1 && this.results.length) {
+				this.seleccionar_resultado()
+				return
+			}
 			if (!this.ya_se_busco) {
 				this.search()
 			} else {
 				this.seleccionar_resultado()
 			}
+		},
+		/**
+		 * Enter con el input vacio y sin filtros fijos. El buscador general no tiene nada que buscar
+		 * y avisa con este evento en vez de tragarse la tecla (ver su metodo buscar()): el modal si
+		 * puede tener algo que elegir, porque abre con los primeros 10 modelos del store precargados.
+		 *
+		 * 🔴 Sin fila resaltada no hace NADA, y por eso no delega derecho en seleccionar_resultado():
+		 * ese metodo, con selected_index en -1 y save_if_not_exist activo, cae en saveIfNotExist() y
+		 * crearia un modelo con el nombre vacio contra la API. Antes de este cambio ese camino era
+		 * inalcanzable --el Enter sin criterio no llegaba hasta aca-- y no puede volverse alcanzable
+		 * de rebote.
+		 *
+		 * @return {void}
+		 */
+		onEnterSinCriterio() {
+			if (this.selected_index === -1 || !this.results.length) {
+				return
+			}
+
+			// 🔴 Con limpiar_resultados_de_busqueda en false (Vender y Compras) la lista que hay en
+			// pantalla al abrir NO es una precarga del store: son los resultados de la busqueda
+			// ANTERIOR, que esos dos flujos conservan a proposito para elegir articulos uno atras del
+			// otro. Sumado a que setFirstSelectedRow() resalta la primera fila en cada apertura, un
+			// Enter pelado --sin tipear ni mover nada-- agregaria a la venta el primer articulo de la
+			// busqueda pasada. Antes de este cambio ese Enter no hacia nada, y volverlo dos teclas
+			// para cargar una venta equivocada no es lo que se pidio.
+			//
+			// Ahi el Enter directo sigue sin hacer nada; con las flechas se elige igual, porque eso ya
+			// es una eleccion explicita del usuario sobre una fila que esta mirando.
+			if (!this.limpiar_resultados_de_busqueda && !this.seleccion_manual) {
+				return
+			}
+
+			this.seleccionar_resultado()
 		},
 		/**
 		 * Handler del evento 'buscar' del buscador general embebido (tarea 2, prompt 08 del grupo
@@ -1300,6 +1501,10 @@ export default {
 		 */
 		onCriteriosCambiaron() {
 			this.ya_se_busco = false
+			// Tambien la fila elegida con las flechas: se calculo sin este criterio nuevo, asi que el
+			// proximo Enter tiene que volver a buscar. Sin esta linea el docblock de arriba --"es el
+			// mismo efecto que reset_ya_se_busco produce al tipear"-- dejaba de ser cierto.
+			this.seleccion_manual = false
 		},
 		seleccionar_resultado() { 
 			if (!this.loading) {
@@ -1373,22 +1578,43 @@ export default {
 				this.$toast.error('Error al guardar '+this.singular(this.model_name))
 			})
 		},
+		/**
+		 * 🔴 La guarda de lista vacia no es defensiva: sin ella, una flecha sobre una lista vacia
+		 * convertia el Enter siguiente de "buscar" en "crear el modelo al vuelo". selectDown dejaba
+		 * selected_index en 0 con results en [], seleccion_manual quedaba arriba, y pulso_enter caia
+		 * en seleccionar_resultado() -> saveIfNotExist(). Es alcanzable en la PRIMERA apertura de
+		 * Vender y de Compras, que pasan limpiar_resultados_de_busqueda en false y por eso abren sin
+		 * precarga; y en cualquier modal cuyo store todavia este vacio.
+		 *
+		 * Ademas los @keydown.native.up/.down estan sobre el buscador general entero, asi que las
+		 * flechas de un filtro fijo o del desplegable de propiedades tambien pasan por aca.
+		 *
+		 * Es la misma guarda que onEnterSinCriterio(), y por el mismo motivo.
+		 */
 		selectUp() {
+			if (!this.results.length) {
+				return
+			}
 			this.scroll_up()
+			this.seleccion_manual = true
 			if (this.selected_index > 0) {
 				this.selected_index--
 			} else {
 				this.selected_index = this.results.length-1
 			}
-		},	
+		},
 		selectDown() {
+			if (!this.results.length) {
+				return
+			}
 			this.scroll_down()
+			this.seleccion_manual = true
 			if (this.selected_index < this.results.length-1) {
 				this.selected_index++
 			} else {
 				this.selected_index = 0
 			}
-		},	
+		},
 		scroll_down() {
 			let modal = document.getElementById(this.modal_id)
 			modal.scrollTop += 200
@@ -1493,10 +1719,57 @@ export default {
 
 			i
 				font-size: 0.95rem
-	.results-title
-		font-size: 1.2em
-		font-weight: bold
-		margin: 1em 0
+	// Encabezado de la lista de resultados, entre el input y la tabla.
+	//
+	// Reemplaza al viejo .results-title (1.2em en negrita con el contador entre parentesis), que era
+	// lo unico del modal escrito en ese tono: el resto --el pill del buscador general, el boton de
+	// columnas, el estado vacio-- ya trabaja con 0.85rem y grises. Lo que tiene que resaltar en esta
+	// pantalla es la tabla, no su etiqueta.
+	//
+	// 🔴 Los colores salen de los tokens (_dark_theme.sass) y NO de hex fijos como el resto de este
+	// archivo: los tokens estan definidos en :root y en html.dark-mode, asi que esto queda bien en
+	// los dos modos sin una regla aparte. El bloque .search-modal-estado de mas abajo sigue con hex
+	// fijos y queda blanco sobre blanco en oscuro -- deuda vieja, no se toca en esta mision.
+	.search-modal-resultados
+		display: flex
+		flex-wrap: wrap
+		align-items: center
+		justify-content: space-between
+		gap: 10px
+		margin-bottom: 10px
+
+		.search-modal-resultados__info
+			display: flex
+			align-items: baseline
+			flex-wrap: wrap
+			gap: 8px
+			min-width: 0
+
+		.search-modal-resultados__titulo
+			font-size: 0.95rem
+			font-weight: 500
+			color: var(--color-text-primary)
+
+		// Pastilla con la cantidad. Reemplaza al "(12)" pegado al titulo, que ademas no se veia
+		// nunca con la lista precargada porque su v-if colgaba de total_results.
+		.search-modal-resultados__contador
+			flex: 0 0 auto
+			padding: 2px 10px
+			border: 1px solid var(--color-border)
+			border-radius: 12px
+			background: var(--bg-section)
+			font-size: 0.75rem
+			color: var(--color-text-secondary)
+			white-space: nowrap
+
+		// Cuanto tardo la busqueda. Es un dato de apoyo: va mas chico que todo lo demas y sin caja,
+		// para que no compita con la cantidad.
+		.search-modal-resultados__tiempo
+			flex: 0 0 auto
+			font-size: 0.7rem
+			color: var(--color-text-secondary)
+			opacity: 0.85
+			white-space: nowrap
 
 	// Estado vacio del modal (antes de buscar, o busqueda sin resultados). No usa la clase
 	// global .text-with-icon a proposito: esa clase pone el icono en 4em y la usan ~30

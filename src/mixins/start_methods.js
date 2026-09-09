@@ -227,13 +227,17 @@ export default {
 					}
 				}, 300000)
 
-				// El polling de mensajes de compradores es otro asunto y queda como estaba.
-				setInterval(() => {
-					if (this.$route.name != 'online') {
-						
-						this.get_buyers_and_set_messages_not_read()
-					}
-				}, 20000)
+				/*
+					El polling de mensajes de compradores (cada 20s, refetch de TODOS los buyers
+					via buyer/getModels) se saco el 9/9/2026: era la causa principal de OOM-kills
+					de MySQL repetidos en el VPS (~1MB por respuesta, sin paginar, multiplicado por
+					cada pestana abierta cada 20 segundos). No hace falta reemplazo: el mensaje ya
+					llega en tiempo real por el canal message.from_buyer.{owner_id}
+					(mixins/broadcast.js), que hace addBuyerMessage() + setChatsToShow() en el
+					momento, sin refetch. A diferencia del intervalo de pedidos de arriba, este
+					nunca tuvo una justificacion de negocio escrita como red de seguridad -- si se
+					lo vuelve a agregar, que sea con un motivo nuevo, no por costumbre.
+				*/
 			}
 		},
 		// get_ultimos_articulos_actualizados() {
@@ -249,14 +253,20 @@ export default {
 		// 	}
 		// },
 		get_articles_por_defecto() {
-			if (this.hasExtencion('articles_default_in_vender') 
-				&& !this.owner.download_articles) {
+			// download_articles no dispara la descarga del catalogo completo al iniciar: eso solo pasa al entrar a LISTADO de articulos.
+			if (this.hasExtencion('articles_default_in_vender')) {
 
 				this.$api.get('articles-por-defecto')
 				.then(res => {
-					console.log('articles-por-defecto:')
-					console.log(res.data.models)
-					this.$store.commit('article/addModels', res.data.models)
+					if (this.download_articles) {
+						// Computed global (mixins/generals.js), no this.owner.download_articles directo:
+						// asi coincide con la fuente que ya usan nav.js/setRoute y vender/default_articles.js.
+						// No usar addModels: pisaria el guard de nav.js/setRoute (!models.length), que
+						// decide si hace falta bajar el catalogo completo offline.
+						this.$store.commit('article/setDefaultModels', res.data.models)
+					} else {
+						this.$store.commit('article/addModels', res.data.models)
+					}
 				})
 				.catch(err => {
 					this.$toast.error('error al cargar articulos por defecto')

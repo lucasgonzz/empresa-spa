@@ -19,6 +19,7 @@
 	</b-modal>
 </template>
 <script>
+import { env } from '@/runtime_config'
 export default {
 	components: {
 		// TableComponent: () => import('@/common-vue/components/display/TableComponent'),
@@ -87,7 +88,7 @@ export default {
 		},
 		print(model) {
 			console.log(model)
-			let link = process.env.VUE_APP_API_URL+'/acopio-article-delivery/'+model.id
+			let link = env('VUE_APP_API_URL')+'/acopio-article-delivery/'+model.id
 			window.open(link)
 		}
 	}

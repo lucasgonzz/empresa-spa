@@ -211,6 +211,19 @@ node e2e/chequear-prefijos-de-testid.js
 Lista los testids que caen adentro de algun prefijo que los specs usan con `^=`. Ver el porque en
 el propio archivo y en la nota sobre `celda-` de mas abajo.
 
+Y otro, este si con codigo de salida (0 limpio / 1 con hallazgos), para correr al tocar el ancho de
+una tabla:
+
+```
+node e2e/chequear-min-width-en-tablas-responsive.js
+```
+
+🔴 **Con `responsive`, bootstrap-vue pone lo que venga en `class` sobre el div `.table-responsive`
+--el contenedor del scroll-- y no sobre la `<table>`.** Un `min-width` ahi le prohibe al contenedor
+achicarse, y el scroll horizontal se lo termina comiendo la pagina entera: justo lo contrario de lo
+que ese min-width buscaba. Va por `table-class`. El chequeo lista las tablas que caen en el patron;
+el 8/9/2026 encontro dos (Potencial de armado y Actividad de clientes), las dos arregladas.
+
 ⚠️ **`alta-articulo-desde-buscador.spec.js` todavia tiene su propia copia inline** del click con
 reintento sobre el resultado de busqueda. Si lo tocas, hacelo apuntar a `helpers/formulario.js`.
 
@@ -505,7 +518,11 @@ Todos genericos y retrocompatibles, en la misma linea que los de arriba:
   `-retencion-ganancias`, `-saldo-iva`, `-saldo-iibb`, `-iva-debito`,
   `-iva-notas-credito`) **con `data-monto`**, y `data-tipo` en los saldos. Aparte va
   `posicion-fiscal-aviso-sin-medir`, que **no lleva `data-monto`** (no es un renglon: es el aviso de
-  que hay notas de credito con el IVA sin medir) y trae `data-cantidad` con cuantas son. Ojo con eso
+  que hay notas de credito con el IVA sin medir) y trae `data-cantidad` con cuantas son. Tambien sin
+  `data-monto`, por el mismo motivo (no son renglones de importe): `posicion-fiscal-exportar-
+  comprobantes-txt` y `posicion-fiscal-exportar-alicuotas-txt`, los dos botones de export .txt de
+  AFIP restaurados en la cabecera de la tarjeta IVA (venian de la vieja `general/IconCards.vue`,
+  borrada sin migrarlos el 27/7/2026 — el backend nunca dejo de existir). Ojo con eso
   al barrer `[data-testid^="posicion-fiscal-"]`: ese testid da `NaN` si se lo lee como monto.
   🔴 El `data-monto` no es redundante con el texto: el reporte formatea
   con `price(valor, false, false)`, que SIEMPRE recorta los dos decimales, asi que una retencion de
