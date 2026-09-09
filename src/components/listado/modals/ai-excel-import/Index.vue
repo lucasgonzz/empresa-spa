@@ -2425,23 +2425,36 @@ export default {
 			}
 
 			/*
+			 * 🔴 La salvedad NO es un adorno y no se saca "porque alarga el texto". Este resumen
+			 * mide las repeticiones DENTRO del archivo —o sea, si las filas de un mismo código se
+			 * llaman distinto entre sí—, pero el desempate real, al reimportar, compara el nombre
+			 * de la fila contra el nombre de los ARTÍCULOS YA CARGADOS. Son dos cosas distintas:
+			 * un archivo donde los seis códigos tienen nombres perfectamente distintos entre sí
+			 * puede no desempatar ni uno si el proveedor le cambió la redacción a los nombres
+			 * entre una lista y la siguiente. Decir "se pueden separar por nombre" a secas es
+			 * prometer una certeza que este dato no afirma.
+			 */
+			let salvedad = ' Para que separe de verdad, el nombre del Excel tiene que coincidir con'
+				+ ' el del artículo ya cargado: si el proveedor le cambió la redacción, esa fila se'
+				+ ' resuelve como hasta ahora y queda reportada al terminar.'
+
+			/*
 			 * 'sirve' lo decide el backend y es estricto a propósito: sólo es true si NINGÚN
 			 * código repetido queda sin desempatar. Se lee de ahí en vez de recalcularlo acá para
 			 * que las dos puntas no puedan discrepar sobre qué es "alcanza".
 			 */
 			if (stats.sirve) {
-				return el_total + (plural ? ' tienen' : ' tiene') + ' nombres distintos: se '
-					+ (plural ? 'pueden' : 'puede') + ' separar por nombre.'
+				return el_total + (plural ? ' tienen' : ' tiene')
+					+ ' nombres distintos entre sí en este archivo.' + salvedad
 			}
 
 			let sin_separar = Number(stats.codigos_que_no_desempata) || (total - separables)
 
 			return 'De los ' + this.numero_es(total) + ' códigos repetidos, ' + this.numero_es(separables)
-				+ (separables > 1 ? ' tienen' : ' tiene') + ' nombres distintos y se '
-				+ (separables > 1 ? 'pueden' : 'puede') + ' separar por nombre; '
+				+ (separables > 1 ? ' tienen' : ' tiene') + ' nombres distintos entre sí; '
 				+ (sin_separar > 1 ? 'los otros ' + this.numero_es(sin_separar) + ' repiten' : 'el otro repite')
 				+ ' también el nombre y se '
-				+ (sin_separar > 1 ? 'van' : 'va') + ' a resolver como hasta ahora.'
+				+ (sin_separar > 1 ? 'van' : 'va') + ' a resolver como hasta ahora.' + salvedad
 		},
 
 		/*
