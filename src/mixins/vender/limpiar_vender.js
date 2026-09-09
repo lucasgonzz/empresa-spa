@@ -67,6 +67,22 @@ export default {
 			this.$store.commit('vender/setDiscountsInServices', 0)
 			this.$store.commit('vender/setSurchagesInServices', 0)
 
+			/*
+				🔴 Va JUNTO a los dos de arriba, y no es opcional desde que
+				set_datos_para_actualizar_en_vender() lo restaura al abrir una venta o un
+				presupuesto: hasta entonces el flag solo llegaba a 1 si el operador tildaba el
+				toggle a mano, asi que no limpiarlo no se notaba.
+
+				Ahora se prende con solo ABRIR una venta guardada con la opcion activa. Si de ahi
+				se sale --cancelando o guardando, las dos pasan por aca-- el flag quedaba en 1
+				para la venta SIGUIENTE, que es de otro cliente y nadie pidio nada: sus recargos
+				se meterian adentro del precio de cada articulo y no saldrian discriminados ni en
+				el comprobante ni en la factura de AFIP. El auto-apagado de Surchages.vue no
+				alcanza para taparlo, porque limpiar_vender commitea setSurchagesId derecho al
+				store y no por el setter del componente.
+			*/
+			this.$store.commit('vender/set_aplicar_recargos_directo_a_items', 0)
+
 			this.$store.commit('vender/set_omitir_en_cuenta_corriente', 0)
 			
 			this.$store.commit('vender/setSellerId', 0)

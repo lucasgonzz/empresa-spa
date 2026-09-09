@@ -144,6 +144,19 @@ export default {
 			) {
 				return true
 			}
+			/*
+				Un PRESUPUESTO guardado con la opcion activa se congela igual que una venta: sus
+				renglones ya tienen el recargo adentro del precio.
+
+				No entra por la rama de arriba porque `editando_venta_previa` mira `previus_sale`, y
+				BtnActualizarEnVender.vue abre el presupuesto con `vender/setBudget` — nunca setea
+				`previus_sale`. O sea que para un presupuesto ese getter es SIEMPRE false.
+			*/
+			if (
+				this.budget && this.budget.aplicar_recargos_directo_a_items
+			) {
+				return true
+			}
 			return false
 		},
 		/**
@@ -159,15 +172,32 @@ export default {
 		/**
 		 * Indica si la opción de aplicar los recargos directo a los precios debe estar bloqueada.
 		 *
-		 * Dos motivos, en este orden:
+		 * Tres motivos, en este orden:
 		 * 1. La venta ya fue creada: la opción queda congelada como se guardó, porque los precios
 		 *    de los items ya se calcularon con ese criterio.
-		 * 2. La venta no tiene ningún recargo de venta seleccionado: no hay nada que aplicar.
+		 * 2. 🔴 El PRESUPUESTO ya fue creado, por el mismo motivo. No alcanza con el punto 1:
+		 *    `editando_venta_previa` mira `previus_sale`, y un presupuesto se abre con
+		 *    `vender/setBudget` (BtnActualizarEnVender.vue), así que ahí ese getter es false.
+		 *
+		 *    Sin esta rama el toggle quedaba habilitado editando un presupuesto, y moverlo NO
+		 *    recalculaba el precio del renglón: `from_pivot` (vender_set_total.js) es true, así que
+		 *    getPriceVender() lee el precio del pivot —que ya viene recargado— y esa rama nunca
+		 *    llama a aplicar_recargos(). Lo único que cambiaba era si aplicar_surchages() corría
+		 *    sobre el total. Medido sobre un presupuesto de 2 × $110 (recargo del 10% adentro,
+		 *    total 220): apagar el toggle lo guardaba en 242 —el recargo cobrado dos veces, y 242
+		 *    también en la venta y en la cuenta corriente al confirmarlo—, y prenderlo sobre uno
+		 *    sin recargo aplicado lo bajaba a 200, perdiendo los $20 con el recargo igual de
+		 *    adjunto. Las dos cosas con HTTP 200: `BudgetController::update()` no valida el total
+		 *    como `store()`, así que no hay ninguna red más abajo.
+		 * 3. La venta no tiene ningún recargo de venta seleccionado: no hay nada que aplicar.
 		 *
 		 * @returns {boolean}
 		 */
 		desactivar_recargos_a_precios_de_articulos() {
 			if (this.editando_venta_previa) {
+				return true
+			}
+			if (this.budget) {
 				return true
 			}
 			return this.sin_recargos_seleccionados
