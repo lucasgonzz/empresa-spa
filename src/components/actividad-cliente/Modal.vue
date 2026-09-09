@@ -95,7 +95,8 @@
 					</h6>
 					<!-- responsive + min-width en el sass: scroll horizontal en vez de celdas apretadas -->
 					<b-table
-					class="actividad-cliente__tabla m-b-20"
+					class="m-b-20"
+					table-class="actividad-cliente__tabla"
 					head-variant="dark"
 					responsive
 					:fields="fields_articulos"
@@ -136,7 +137,8 @@
 						Qué buscó
 					</h6>
 					<b-table
-					class="actividad-cliente__tabla m-b-20"
+					class="m-b-20"
+					table-class="actividad-cliente__tabla"
 					head-variant="dark"
 					responsive
 					:fields="fields_busquedas"
@@ -511,6 +513,11 @@ export default {
 		// espichar las celdas hasta que el nombre del articulo quede en una letra por linea.
 		// 700 y no 620 desde que la tabla de articulos tiene la columna "Compro": con el ancho
 		// viejo la columna nueva entraba a costa de espichar el nombre del articulo.
+		//
+		// La clase la baja `table-class` a la <table>, NO `class`: con `responsive`,
+		// bootstrap-vue pone lo que venga en `class` sobre el div .table-responsive --el
+		// contenedor del scroll--, y ahi el min-width le prohibe achicarse. Lo detecta
+		// `e2e/chequear-min-width-en-tablas-responsive.js`.
 		min-width: 700px
 	&__linea
 		list-style: none

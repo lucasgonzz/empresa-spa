@@ -480,11 +480,37 @@ export default {
 			this.models_to_search = models 
 		},
 		setSelectedModelProp() {
-			if (this.show_selected) {
-				if (this.prop && this.prop.set_model_on_click_or_prop_with_query_if_null) {
-					this.query = this.model[this.prop.key]
-					this.selected_model = null
-				} else if (this.model && this.prop && this.model[this.prop.key]) {
+			/**
+			 * 🔴 Esta rama va AFUERA del gate de show_selected, y no es un detalle de estilo.
+			 *
+			 * show_selected decide una sola cosa: si abajo del campo se dibuja el chip con el modelo
+			 * elegido (search/SelectedInfo.vue). set_model_on_click_or_prop_with_query_if_null decide
+			 * otra: que en este campo el CRITERIO es el valor de la propiedad --el nombre del
+			 * articulo--, no un modelo relacionado. Son preguntas distintas y estaban en el mismo if.
+			 *
+			 * Que pasaba mientras estaba adentro: el unico consumidor que HOY llega hasta aca es
+			 * listado/components/NameInput.vue (el nombre del articulo cuando no tiene codigo), que
+			 * pasa show_selected en false a proposito. O sea que la rama no corria NUNCA y `query` se
+			 * llenaba una sola vez, en el created() de aca via init_query. Al pasar a otro articulo
+			 * sin recrear el componente, el campo seguia mostrando el nombre del anterior.
+			 *
+			 * La clave tambien esta declarada en models/article.js (prop `name`) y ModelForm.vue tiene
+			 * su propia rama para ella; ese camino no pasa por este archivo porque esa prop es
+			 * `type: 'textarea'` y useSearch() exige `type == 'search'`. Si alguien vuelve a prender
+			 * el type_if que esta comentado ahi, empieza a pasar: son dos lugares, no uno.
+			 *
+			 * El `|| ''` mantiene `query` como string siempre. Un articulo nuevo tiene name en null, y
+			 * este valor viaja como prop query_value al modal, donde estado_hint() hace `query.length`
+			 * y el watch de query hace `('' + valor).trim()` --que con null da "null", largo 4, y
+			 * dejaria el modal creyendo que hay criterio escrito.
+			 */
+			if (this.prop && this.prop.set_model_on_click_or_prop_with_query_if_null) {
+				if (this.model) {
+					this.query = this.model[this.prop.key] || ''
+				}
+				this.selected_model = null
+			} else if (this.show_selected) {
+				if (this.model && this.prop && this.model[this.prop.key]) {
 					let selected_model = null
 					if (this.prop.use_store_models) {
 						selected_model = this.$store.state[this.modelNameFromRelationKey(this.prop)].models.find(_model => {
