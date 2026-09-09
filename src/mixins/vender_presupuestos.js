@@ -78,6 +78,17 @@ export default {
 				'address_id'              	: this.address_id,
 				'surchages_in_services'		: this.surchages_in_services,
 				'discounts_in_services'		: this.discounts_in_services,
+
+				/*
+					El flag tiene que viajar. Con el prendido, generals.js::aplicar_recargos() ya dejo
+					el recargo adentro de cada price_vender y vender_set_total.js::aplicar_surchages()
+					se salteo sumarlo al total: los precios y el total que mandamos ya lo contemplan.
+					Si el campo no llega, BudgetHelper::getTotal() vuelve a sumar el recargo sobre
+					precios que ya lo traen, no le cierra con el total del request y rechaza el guardado
+					con "El total del presupuesto no corresponde con los productos ingresados".
+				*/
+				'aplicar_recargos_directo_a_items'	: this.aplicar_recargos_directo_a_items,
+
 				'moneda_id'              	: this.moneda_id,
 				'omitir_en_cuenta_corriente'              	: this.omitir_en_cuenta_corriente,
 
@@ -145,6 +156,12 @@ export default {
 				'moneda_id'              	: this.moneda_id,
 				'surchages_in_services'		: this.surchages_in_services,
 				'discounts_in_services'		: this.discounts_in_services,
+
+				// Viaja por el mismo motivo que en actualizar(): con el flag prendido los price_vender
+				// ya traen el recargo adentro, y sin este campo el back se lo vuelve a sumar y rechaza
+				// el total.
+				'aplicar_recargos_directo_a_items'	: this.aplicar_recargos_directo_a_items,
+
 				'valor_dolar'				: this.valor_dolar,
 				'omitir_en_cuenta_corriente'              	: this.omitir_en_cuenta_corriente,
 

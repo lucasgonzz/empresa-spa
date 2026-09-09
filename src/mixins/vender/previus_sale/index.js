@@ -180,6 +180,20 @@ export default {
 			this.$store.commit('vender/setDiscountsInServices', model.discounts_in_services)
 			this.$store.commit('vender/setSurchagesInServices', model.surchages_in_services)
 
+			/*
+				El flag de aplicar los recargos directo a los precios se restaura igual que los dos
+				de arriba. Sin esto quedaba siempre en 0 al abrir una venta o un presupuesto para
+				editarlo, y como from_pivot lee los precios del pivot --que ya vienen recargados,
+				porque getPriceVender() en esa rama no vuelve a llamar aplicar_recargos()--,
+				aplicar_surchages() volvia a sumar el recargo al total y el presupuesto se re-guardaba
+				inflado.
+
+				Number() y no la verdad del valor a secas: la columna es nullable, asi que un modelo
+				viejo lo trae en null --queda en 0, el default del store-- y un "0" serializado como
+				string seria truthy.
+			*/
+			this.$store.commit('vender/set_aplicar_recargos_directo_a_items', Number(model.aplicar_recargos_directo_a_items) ? 1 : 0)
+
 			if (model.discounts.length) {
 				
 				this.set_discounts_store_with_pivot_percetage(model.discounts)
