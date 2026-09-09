@@ -331,11 +331,14 @@ export default {
 			// es del flujo del doble Enter (pulso_enter / reset_ya_se_busco).
 			busqueda_realizada: false,
 
-			// El usuario movio la seleccion EL MISMO: con las flechas o clickeando una fila. Mientras
-			// este arriba, el Enter toma esa fila en vez de buscar (ver pulso_enter). Es lo que separa
-			// "esta fila esta resaltada porque la autoseleccion la puso ahi" de "esta fila esta
-			// resaltada porque el usuario la eligio", que es la distincion que le faltaba al modal
-			// para poder elegir un resultado precargado sin haber buscado antes.
+			// El usuario movio la seleccion EL MISMO, con las flechas. Mientras este arriba, el Enter
+			// toma esa fila en vez de buscar (ver pulso_enter). Es lo que separa "esta fila esta
+			// resaltada porque la autoseleccion la puso ahi" de "esta fila esta resaltada porque el
+			// usuario la eligio", que es la distincion que le faltaba al modal para poder elegir un
+			// resultado precargado sin haber buscado antes.
+			//
+			// Solo las flechas: el clic sobre una fila no pasa por aca. onRowSelected() llama derecho
+			// a emitSetSelected() y cierra el modal, asi que no hay ningun Enter posterior que guiar.
 			seleccion_manual: false,
 
 			// Cronometro de la busqueda: se sella al arrancar search() y se cierra en finishSearch().
@@ -599,10 +602,15 @@ export default {
 			// no seleccionar. Sin esta linea, ya_se_busco quedaba en true desde la apertura anterior
 			// (arranca en true en data() y solo lo baja reset_ya_se_busco al tipear) y el primer Enter
 			// caia en seleccionar_resultado(): con la lista precargada eso elige el primer modelo del
-			// store, que no tiene nada que ver con el criterio que quedo escrito en el input del
-			// buscador general --que sobrevive al cierre, porque el b-modal no es lazy y no se
-			// destruye--. Pasa igual con filtros fijos guardados y el input vacio, donde buscar() del
-			// buscador general emite igual (ver su guarda de criterio vacio).
+			// store, que no tiene nada que ver con lo que el usuario ve escrito en el input. Pasa
+			// igual con filtros fijos guardados y el input vacio, donde buscar() del buscador general
+			// emite igual (ver su guarda de criterio vacio).
+			//
+			// Hasta el 8/9/2026 esta explicacion agregaba que el criterio "sobrevive al cierre porque
+			// el b-modal no es lazy y no se destruye". Eso es FALSO --ver el bloque de mas abajo, en
+			// este mismo metodo--: el contenido se destruye en cada cierre. El input arranca con lo
+			// que corresponda porque el modal se lo pasa en la prop criterio_inicial, no porque haya
+			// sobrevivido.
 			//
 			// No rompe el atajo del doble Enter: primer Enter busca, segundo selecciona, que es el
 			// diseño. Y con el input vacio y sin filtros fijos el buscador general ni siquiera emite.
