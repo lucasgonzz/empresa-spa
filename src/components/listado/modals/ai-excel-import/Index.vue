@@ -1058,18 +1058,20 @@
 			proveedor, quedarse con el que además coincide en el nombre (misión
 			desempate-por-nombre-codigo-repetido, 9/9/2026).
 
-			Va pegada a politica_intra_archivo porque comparte exactamente la misma condición de
-			visibilidad: sólo tiene sentido preguntarla cuando el archivo trae códigos de proveedor
-			repetidos. El caso real es el proveedor que codifica igual el producto suelto y su pack
-			(FA-NN "SILICONA NEUTRA 280 ML NEGRO" y FA-NN "... X 15 BULTOS COMBINABLES"): el código
-			no desempata, el nombre sí.
+			Va pegada a politica_intra_archivo porque la pregunta nace del mismo problema —un
+			código de proveedor que no alcanza para saber de qué artículo se está hablando—, pero
+			🔴 NO comparte su condición de visibilidad: politica_intra_archivo sólo mira el
+			archivo, y el desempate también tiene que ofrecerse cuando los repetidos están en la
+			base (ver mostrar_desempate_por_nombre()). El caso real es el proveedor que codifica
+			igual el producto suelto y su pack (FA-NN "SILICONA NEUTRA 280 ML NEGRO" y FA-NN
+			"... X 15 BULTOS COMBINABLES"): el código no desempata, el nombre sí.
 
 			🔴 El default es false y con el default el comportamiento es idéntico al de hoy. No lo
 			cambies "porque parece mejor": la opción existe justamente porque no siempre sirve, y el
 			aviso de arriba es lo que le dice al usuario si en SU archivo va a servir.
 		-->
 		<b-form-group
-		v-if="duplicate_stats && duplicate_stats.provider_codes_duplicados_intra_archivo > 0"
+		v-if="mostrar_desempate_por_nombre"
 		label-class="ai-import-decision-title">
 			<template #label>
 				Cuando el código de proveedor coincide con más de un artículo, ¿desempatamos por el nombre?
@@ -2306,6 +2308,59 @@ export default {
 		},
 
 		/*
+		 * Misión desempate-por-nombre-codigo-repetido (9/9/2026): cuándo se le ofrece al usuario
+		 * la pregunta del desempate por nombre.
+		 *
+		 * 🔴 Esta condición era `provider_codes_duplicados_intra_archivo > 0`, o sea: sólo cuando
+		 * el código se repite DENTRO del archivo que se está subiendo. Ese es el caso menos
+		 * frecuente. El habitual es el otro: el proveedor manda una sola fila por código (este mes
+		 * sólo el pack) contra una base que ya tiene los dos artículos con ese código. Ahí el
+		 * contador intra-archivo da 0, la pregunta no se renderizaba, y esa única fila seguía
+		 * escribiendo en los dos artículos — que es exactamente el defecto que la opción vino a
+		 * resolver. El backend ya soportaba ese caso; lo que fallaba era que la pantalla nunca lo
+		 * ofrecía.
+		 *
+		 * ⚠️ `provider_codes_existentes_mismo_proveedor` NO dice "repetidos en la base": dice
+		 * cuántos códigos del archivo tienen AL MENOS UN artículo de ese proveedor. El cruce
+		 * (ExcelDuplicateStats::crossCheckProviderCodes()) agrupa por código y sólo se guarda un
+		 * booleano por proveedor, así que el conteo de códigos con MÁS DE UN artículo en la base
+		 * NO existe hoy en duplicate_stats. Se usa igual porque es un superconjunto exacto:
+		 * siempre que haya códigos repetidos en la base este número es > 0. Y ofrecerlo de más es
+		 * inocuo: el desempate del backend vive adentro del bloque de dos o más candidatos de
+		 * ArticleIndexCache::find_with_index(), así que con un solo artículo por código la opción
+		 * no cambia absolutamente nada. Preferimos una opción de más —que no hace nada— antes que
+		 * esconderla justo en el caso que la motivó.
+		 */
+		mostrar_desempate_por_nombre() {
+			if (!this.duplicate_stats) {
+				return false
+			}
+
+			/* Repetidos dentro del propio archivo: el caso original. */
+			if (this.duplicate_stats.provider_codes_duplicados_intra_archivo > 0) {
+				return true
+			}
+
+			/* Códigos del archivo que ya tienen artículos de ESTE proveedor en la base. */
+			if (this.duplicate_stats.provider_codes_existentes_mismo_proveedor > 0) {
+				return true
+			}
+
+			/*
+			 * Sin proveedor elegido, el cruce contra la base cuenta TODO como "otros proveedores"
+			 * (crossCheckProviderCodes() sólo marca "mismo" cuando hay provider_id > 0), mientras
+			 * que el matching real de find_with_index() en ese caso trata a todos los candidatos
+			 * como propios. Si no miráramos este contador acá, "Sin proveedor" volvería a esconder
+			 * la pregunta justo en el escenario que la necesita.
+			 */
+			if (!this.has_selected_provider && this.duplicate_stats.provider_codes_existentes_otros_proveedores > 0) {
+				return true
+			}
+
+			return false
+		},
+
+		/*
 		 * Misión desempate-por-nombre-codigo-repetido (9/9/2026): le adelanta al usuario si el
 		 * desempate por nombre va a servir en SU archivo, ANTES de que elija. Sin esto la opción
 		 * se elige a ciegas, que es justo lo que no queremos: el desempate sólo separa los
@@ -2318,8 +2373,31 @@ export default {
 		aviso_desempate_por_nombre() {
 			let stats = this.desempate_por_nombre
 
-			if (!stats || !stats.aplica) {
+			/* Sin el dato del backend no se dice nada: no inventamos un número ni una promesa. */
+			if (!stats) {
 				return ''
+			}
+
+			if (!stats.aplica) {
+				/*
+				 * El resumen del backend mira SÓLO las repeticiones dentro del archivo, así que
+				 * cuando la pregunta se muestra porque los repetidos están en la base (ver
+				 * mostrar_desempate_por_nombre()) no tiene nada que decir. En vez de dejar la
+				 * pregunta pelada, se dice lo único que se sabe con certeza, sin prometer nada:
+				 * en este archivo no hay códigos repetidos, y si los hay están del otro lado.
+				 *
+				 * ⚠️ El chequeo contra duplicate_stats no es decorativo: los dos conteos salen de
+				 * pasadas distintas del archivo y pueden discrepar. Si el bloque de arriba dice
+				 * "este archivo tiene 6 códigos repetidos", este aviso NO puede decir lo
+				 * contrario dos renglones más abajo — ante la duda, callarse.
+				 */
+				if (this.duplicate_stats && this.duplicate_stats.provider_codes_duplicados_intra_archivo > 0) {
+					return ''
+				}
+
+				return 'En este archivo no hay códigos de proveedor repetidos. Igual puede haber '
+					+ 'artículos ya cargados que compartan el código: si es así, el nombre es lo '
+					+ 'único que los distingue.'
 			}
 
 			/*
