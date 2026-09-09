@@ -1,0 +1,76 @@
+// Configuración por frente de la SPA de empresa: define window.__CC_CONFIG__.
+//
+// En PRODUCCIÓN este archivo NO se copia a mano: el admin lo escribe como `config.js` al lado del
+// index.html en cada deploy (DeploymentService → SpaRuntimeConfig), con los valores de ese frente.
+// El bundle es uno solo por versión; index.html carga config.js síncrono antes que el bundle y
+// src/runtime_config.js lo lee con env('VUE_APP_*'). Si una key falta acá, la SPA cae al
+// `process.env` compilado (el .env de desarrollo) y después a undefined.
+//
+// En DESARROLLO: copiar a public/config.js (está en .gitignore) o, directamente, no crearlo y usar
+// el .env / .env.local de siempre.
+//
+// Contrato:
+//   - Las keys son exactamente los 22 nombres VUE_APP_* que la SPA lee. Las 13 sin comentar son las
+//     que el admin escribe hoy en cada deploy (VUE_APP_API_URL, VUE_APP_APP_URL, las dos de Pusher y
+//     las de services.deploy.spa_build_env); las 9 comentadas son opcionales: si no vienen, el código
+//     toma su valor por defecto, igual que en producción hoy.
+//   - Todos los valores son STRINGS, también los booleanos ('true'/'false'): es lo mismo que salía
+//     del .env y el código compara contra esas cadenas.
+//   - Keys de más se ignoran (el admin también manda VUE_APP_IMAGE_URL_PROP_NAME, VUE_APP_ATTEMPT_PROP
+//     y VUE_APP_ATTEMPT_TEXT, que la SPA no lee; no rompen nada).
+window.__CC_CONFIG__ = {
+	// URL base de la API de este frente, sin barra final. En shared hosting termina en /public.
+	VUE_APP_API_URL: 'https://api-ejemplo.comerciocity.com/public',
+	// URL de este frente del SPA. Se usa para redirigir al dominio canónico cuando entran por www.
+	VUE_APP_APP_URL: 'https://ejemplo.comerciocity.com',
+
+	// Pusher (laravel-echo): key y cluster de la app de broadcasting. Sin la key la app NO MONTA:
+	// laravel-echo tira "You must pass your app key when you instantiate Pusher" antes de renderizar #app.
+	VUE_APP_PUSHER_KEY: 'xxxxxxxxxxxxxxxxxxxx',
+	VUE_APP_PUSHER_CLUSTER: 'sa1',
+	// 'false' desactiva TLS hacia Pusher (túnel/HTTP local). Cualquier otro valor, o ausente, usa TLS.
+	// VUE_APP_PUSHER_USE_TLS: 'true',
+
+	// Idioma de algunos textos de tablas y navegación: el código distingue 'es' del resto.
+	VUE_APP_IDIOM: 'en',
+	// Nombre con el que se presenta la aplicación.
+	VUE_APP_APP_NAME: 'ComercioCity',
+	// Nombre de la ruta a la que se entra después del login.
+	VUE_APP_ROUTE_INDEX: 'article',
+	// Nombre de la ruta a la que se redirige cuando no hay sesión.
+	VUE_APP_ROUTE_TO_REDIRECT_IF_UNAUTHENTICATED: 'login',
+
+	// Las cuatro banderas que siguen se leen como `typeof X != 'undefined' && X`: CUALQUIER string no
+	// vacío las activa (también 'false'). Para desactivar una: mandarla vacía ('') o no mandarla.
+	// Habilita la página de configuración propia del comercio.
+	VUE_APP_CUSTOM_CONFIGURATION_PAGE: 'true',
+	// Habilita la página de inicio.
+	VUE_APP_USE_HOME_PAGE: 'true',
+	// Muestra el desplegable de ayuda en la barra de navegación.
+	VUE_APP_USE_HELP_DROPDOWN: 'true',
+	// Carga la configuración extra del comercio (src/mixins/extra_config.js).
+	VUE_APP_HAS_EXTRA_CONFIG: 'true',
+
+	// API key de fallback de Google Custom Search para el buscador de imágenes de artículos
+	// (SearchImage.vue), usada cuando el comercio no tiene la suya. Vacía = buscador deshabilitado.
+	VUE_APP_GOOGLE_SEARCH_API_KEY: '',
+
+	// --- Opcionales: el admin no las escribe y el código tiene su valor por defecto ---------------
+	// Minutos de inactividad del usuario que expone el mixin generals (hoy sin consumidores). Ausente = false.
+	// VUE_APP_USER_LAST_ACTIVITY_MINUTES: '10',
+	// 'true' fuerza descargar todos los artículos al iniciar; cualquier otro valor lo desactiva.
+	// Ausente = manda la configuración del comercio (owner.download_articles).
+	// VUE_APP_DOWNLOAD_ARTICLES: 'true',
+	// Inputs de los formularios a ancho completo. Misma regla de las banderas: no vacío = activado.
+	// VUE_APP_INPUTS_FULL_SIZE: 'true',
+	// Desactiva la relación de aspecto fija al recortar imágenes. No vacío = activado.
+	// VUE_APP_ASPECT_RATIO_DISABLED: 'true',
+	// Tema oscuro por defecto de las tablas. No vacío = activado.
+	// VUE_APP_THEME_DARK: 'true',
+	// Tema de las tablas: 'light' (por defecto) o 'dark'.
+	// VUE_APP_APP_THEME: 'light',
+	// Oculta el panel de descarga de recursos durante los tests de navegador (Dusk).
+	// VUE_APP_TESTING_DUSK: 'true',
+	// Sin uso: solo aparece en código comentado del mixin generals.
+	// VUE_APP_CANT_MODELS_TO_SHOW: '10',
+}
