@@ -1,4 +1,5 @@
 import moment from 'moment'
+import { env } from '@/runtime_config'
 export default {
     computed: {
         has_online() {
@@ -61,7 +62,7 @@ export default {
             return this.$store.state.vender.price_type
         },
         download_articles() {  
-            let env_var = process.env.VUE_APP_DOWNLOAD_ARTICLES
+            let env_var = env('VUE_APP_DOWNLOAD_ARTICLES')
             if (typeof env_var != 'undefined') {
                 if (env_var === 'true') {
                     return true

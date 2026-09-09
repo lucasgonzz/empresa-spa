@@ -4,6 +4,7 @@ import './registerServiceWorker'
 import router from './router'
 import store from './store'
 import { apply_dark_mode_class, read_stored_dark_mode } from '@/utils/dark_mode'
+import { env } from '@/runtime_config'
 
 // Vue Scrool
 Vue.prototype.$scrollToTop = (() => {
@@ -38,10 +39,10 @@ import Echo from "laravel-echo"
 
 Vue.prototype.Echo = new Echo({
     broadcaster: 'pusher',
-    key: process.env.VUE_APP_PUSHER_KEY,
-    cluster: process.env.VUE_APP_PUSHER_CLUSTER,
+    key: env('VUE_APP_PUSHER_KEY'),
+    cluster: env('VUE_APP_PUSHER_CLUSTER'),
     // Alineado con Pusher (TLS); si usás túnel/HTTP local, podés setear VUE_APP_PUSHER_USE_TLS=false en .env
-    forceTLS: process.env.VUE_APP_PUSHER_USE_TLS === 'false' ? false : true,
+    forceTLS: env('VUE_APP_PUSHER_USE_TLS') === 'false' ? false : true,
     /**
      * Autorizador custom para canales PRIVADOS (ej: `whatsapp.{owner_id}`, grupo 137).
      * El fetch relativo por defecto de Echo pegaría a `/broadcasting/auth` en el dominio
@@ -52,7 +53,7 @@ Vue.prototype.Echo = new Echo({
     authorizer: (channel) => {
         return {
             authorize: (socket_id, callback) => {
-                axios.post(process.env.VUE_APP_API_URL + '/broadcasting/auth', {
+                axios.post(env('VUE_APP_API_URL') + '/broadcasting/auth', {
                     socket_id: socket_id,
                     channel_name: channel.name,
                 }, {
@@ -251,7 +252,7 @@ function global_api_error_interceptor(error) {
 
 // Instancia usada como Vue.prototype.$api (prefijo /api)
 const apiInstance = axios.create({
-    baseURL: process.env.VUE_APP_API_URL + '/api',
+    baseURL: env('VUE_APP_API_URL') + '/api',
     withCredentials: true
 })
 
@@ -269,7 +270,7 @@ Vue.use({
 
 
 const axiosInstance = axios.create({
-    baseURL: process.env.VUE_APP_API_URL,
+    baseURL: env('VUE_APP_API_URL'),
     withCredentials: true
 })
 
@@ -293,7 +294,7 @@ Vue.use({
 // Vue.use({
 //   install (Vue) {
 //     Vue.prototype.$axios = axios.create({
-//       baseURL: process.env.VUE_APP_API_URL,
+//       baseURL: env('VUE_APP_API_URL'),
 //       withCredentials: true
 //     })
 //   }
@@ -301,7 +302,7 @@ Vue.use({
 // Vue.use({
 //   install (Vue) {
 //     Vue.prototype.$api = axios.create({
-//       baseURL: process.env.VUE_APP_API_URL+'/api',
+//       baseURL: env('VUE_APP_API_URL')+'/api',
 //       withCredentials: true
 //     })
 //   }

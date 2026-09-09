@@ -328,6 +328,7 @@
 </template>
 <script>
 import moment from 'moment'
+import { env } from '@/runtime_config'
 export default {
 	components: {
 		// ArticulosCreados: () => import('@/common-vue/components/import/ArticulosCreados'),
@@ -825,7 +826,7 @@ export default {
 			})
 		},
 		to_excel(model) {
-			let link = process.env.VUE_APP_API_URL+'/imported-files/'+model.excel_url.split('/')[1]
+			let link = env('VUE_APP_API_URL')+'/imported-files/'+model.excel_url.split('/')[1]
 			window.open(link)
 		},
 		// modelos_creados(model) {

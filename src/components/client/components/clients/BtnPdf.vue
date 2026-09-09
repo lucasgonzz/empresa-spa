@@ -11,6 +11,7 @@
 </template>
 <script>
 import selected_filtered_source from '@/common-vue/mixins/selected_filtered_source'
+import { env } from '@/runtime_config'
 
 export default {
 	mixins: [selected_filtered_source],
@@ -26,7 +27,7 @@ export default {
 		 * @return {void}
 		 */
 		pdf() {
-			let link = process.env.VUE_APP_API_URL + '/client/pdf'
+			let link = env('VUE_APP_API_URL') + '/client/pdf'
 
 			if (this.use_filtered_source) {
 				let active_filters = this.resolve_active_filters_for_export()

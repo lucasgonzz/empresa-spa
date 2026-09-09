@@ -7,6 +7,10 @@ node_modules
 .env.*.local
 .env
 
+# Configuración por frente del SPA (window.__CC_CONFIG__). En producción la escribe el admin en cada
+# deploy al lado del index.html; en desarrollo se arma a mano desde public/config.js.example.
+public/config.js
+
 # Log files
 npm-debug.log*
 yarn-debug.log*

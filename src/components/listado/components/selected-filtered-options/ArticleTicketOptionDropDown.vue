@@ -25,6 +25,7 @@
 <script>
 import listado_articles_source from '@/mixins/listado/listado_articles_source'
 import generals from '@/mixins/generals'
+import { env } from '@/runtime_config'
 
 export default {
 	mixins: [listado_articles_source, generals],
@@ -63,7 +64,7 @@ export default {
 				return
 			}
 
-			let link = process.env.VUE_APP_API_URL + '/article/tickets-pdf/' + ids.join('-')
+			let link = env('VUE_APP_API_URL') + '/article/tickets-pdf/' + ids.join('-')
 			if (price_type_id) {
 				link += '?price_type_id=' + price_type_id
 			}

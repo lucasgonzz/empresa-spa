@@ -9,6 +9,7 @@ import vender_set_total from '@/mixins/vender_set_total'
 import axios from 'axios'
 
 import sync_sales from '@/offline/sync_sales' 
+import { env } from '@/runtime_config'
 export default {
 	mixins: [
 		chequeos, 
@@ -190,7 +191,7 @@ export default {
 				form.append('observation', att.observation || '')
 				try {
 					await axios.post(
-						process.env.VUE_APP_API_URL + '/api/sale-article-attachment',
+						env('VUE_APP_API_URL') + '/api/sale-article-attachment',
 						form,
 						{ headers: { 'Content-Type': 'multipart/form-data' } }
 					)
