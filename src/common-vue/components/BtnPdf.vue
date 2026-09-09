@@ -8,6 +8,7 @@
 	</b-button>
 </template>
 <script>
+import { env } from '@/runtime_config'
 export default {
 	props: {
 		model_name: String,
@@ -15,7 +16,7 @@ export default {
 	},
 	methods: {
 		print() {
-            var link = process.env.VUE_APP_API_URL+'/'+this.routeString(this.model_name)+'/pdf/'+this.model.id
+            var link = env('VUE_APP_API_URL')+'/'+this.routeString(this.model_name)+'/pdf/'+this.model.id
             window.open(link)
 		},
 	}

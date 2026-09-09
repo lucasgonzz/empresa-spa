@@ -1,7 +1,8 @@
 import axios from 'axios'
 import moment from 'moment'
+import { env } from '@/runtime_config'
 axios.defaults.withCredentials = true
-axios.defaults.baseURL = process.env.VUE_APP_API_URL
+axios.defaults.baseURL = env('VUE_APP_API_URL')
 
 /**
  * ¿El chat está adentro de la ventana de 24 h de Meta, o sea que se le puede mandar texto

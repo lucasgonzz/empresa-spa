@@ -564,6 +564,7 @@
 	</b-modal>
 </template>
 <script>
+import { env } from '@/runtime_config'
 /*
  * Modal de revisión de un escaneo de factura de compra (misión escaneo-factura-compra).
  *
@@ -1295,7 +1296,7 @@ export default {
 			})
 		},
 		url_imagen(orden) {
-			return process.env.VUE_APP_API_URL + '/api/provider-order-scan/' + this.uuid + '/imagen/' + orden
+			return env('VUE_APP_API_URL') + '/api/provider-order-scan/' + this.uuid + '/imagen/' + orden
 		},
 		/*
 		 * Arma el request de confirmación y lo manda.

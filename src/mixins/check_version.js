@@ -1,10 +1,11 @@
 import axios from 'axios'
+import { env } from '@/runtime_config'
 
 /**
  * Alinea axios con la misma configuración que el store de auth (cookies / API base).
  */
 axios.defaults.withCredentials = true
-axios.defaults.baseURL = process.env.VUE_APP_API_URL
+axios.defaults.baseURL = env('VUE_APP_API_URL')
 
 /**
  * Nombre del query param que transporta el token de sesión entre versiones.

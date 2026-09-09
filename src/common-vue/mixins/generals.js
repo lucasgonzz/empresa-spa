@@ -1,4 +1,5 @@
 import moment from 'moment'
+import { env } from '@/runtime_config'
 moment.locale('es')
 import numeral from 'numeral'
 import VueScreenSize from 'vue-screen-size'
@@ -63,71 +64,71 @@ export default {
             return this.$route.name
         },
         testing_dusk() {
-            return process.env.VUE_APP_TESTING_DUSK
+            return env('VUE_APP_TESTING_DUSK')
         },
         idiom() {
-            return process.env.VUE_APP_IDIOM
+            return env('VUE_APP_IDIOM')
         },
         app_name() {
-            return process.env.VUE_APP_APP_NAME
+            return env('VUE_APP_APP_NAME')
         },
 		is_local() {
-			return process.env.VUE_APP_API_URL.substring(process.env.VUE_APP_API_URL.length-5) == ':8000'
+			return env('VUE_APP_API_URL').substring(env('VUE_APP_API_URL').length-5) == ':8000'
 		},
 		route_index() {
-            return process.env.VUE_APP_ROUTE_INDEX
+            return env('VUE_APP_ROUTE_INDEX')
 		},
 		route_to_redirect_if_unauthenticated() {
-            return process.env.VUE_APP_ROUTE_TO_REDIRECT_IF_UNAUTHENTICATED
+            return env('VUE_APP_ROUTE_TO_REDIRECT_IF_UNAUTHENTICATED')
 		},
 		inputs_full_size() {
-            return typeof process.env.VUE_APP_INPUTS_FULL_SIZE != 'undefined' && process.env.VUE_APP_INPUTS_FULL_SIZE
+            return typeof env('VUE_APP_INPUTS_FULL_SIZE') != 'undefined' && env('VUE_APP_INPUTS_FULL_SIZE')
 		},
 		aspect_ratio_disabled() {
-            return typeof process.env.VUE_APP_ASPECT_RATIO_DISABLED != 'undefined' && process.env.VUE_APP_ASPECT_RATIO_DISABLED
+            return typeof env('VUE_APP_ASPECT_RATIO_DISABLED') != 'undefined' && env('VUE_APP_ASPECT_RATIO_DISABLED')
 		},
 		theme_dark() {
-            return typeof process.env.VUE_APP_THEME_DARK != 'undefined' && process.env.VUE_APP_THEME_DARK
+            return typeof env('VUE_APP_THEME_DARK') != 'undefined' && env('VUE_APP_THEME_DARK')
 		},
 		app_theme() {
-			if (typeof process.env.VUE_APP_APP_THEME != 'undefined') {
-				return process.env.VUE_APP_APP_THEME
+			if (typeof env('VUE_APP_APP_THEME') != 'undefined') {
+				return env('VUE_APP_APP_THEME')
 			}
 			return 'light'
 		},
 		custom_configuration_page() {
-			if (typeof process.env.VUE_APP_CUSTOM_CONFIGURATION_PAGE != 'undefined' && process.env.VUE_APP_CUSTOM_CONFIGURATION_PAGE) {
+			if (typeof env('VUE_APP_CUSTOM_CONFIGURATION_PAGE') != 'undefined' && env('VUE_APP_CUSTOM_CONFIGURATION_PAGE')) {
 				return true
 			}
 			return false
 		},
 		use_home_page() {
-			if (typeof process.env.VUE_APP_USE_HOME_PAGE != 'undefined' && process.env.VUE_APP_USE_HOME_PAGE) {
+			if (typeof env('VUE_APP_USE_HOME_PAGE') != 'undefined' && env('VUE_APP_USE_HOME_PAGE')) {
 				return true
 			}
 			return false
 		},
 		use_help_dropdown() {
-			if (typeof process.env.VUE_APP_USE_HELP_DROPDOWN != 'undefined' && process.env.VUE_APP_USE_HELP_DROPDOWN) {
+			if (typeof env('VUE_APP_USE_HELP_DROPDOWN') != 'undefined' && env('VUE_APP_USE_HELP_DROPDOWN')) {
 				return true
 			}
 			return false
 		},
 		has_extra_config() {
-			if (typeof process.env.VUE_APP_HAS_EXTRA_CONFIG != 'undefined' && process.env.VUE_APP_HAS_EXTRA_CONFIG) {
+			if (typeof env('VUE_APP_HAS_EXTRA_CONFIG') != 'undefined' && env('VUE_APP_HAS_EXTRA_CONFIG')) {
 				return true
 			}
 			return false
 		},
 		user_last_activity_minutes() {
-			if (typeof process.env.VUE_APP_USER_LAST_ACTIVITY_MINUTES != 'undefined') {
-				return process.env.VUE_APP_USER_LAST_ACTIVITY_MINUTES
+			if (typeof env('VUE_APP_USER_LAST_ACTIVITY_MINUTES') != 'undefined') {
+				return env('VUE_APP_USER_LAST_ACTIVITY_MINUTES')
 			}
 			return false
 		},
 		// cant_models_to_show() {
-		// 	if (typeof process.env.VUE_APP_CANT_MODELS_TO_SHOW != 'undefined') {
-		// 		return process.env.VUE_APP_CANT_MODELS_TO_SHOW
+		// 	if (typeof env('VUE_APP_CANT_MODELS_TO_SHOW') != 'undefined') {
+		// 		return env('VUE_APP_CANT_MODELS_TO_SHOW')
 		// 	}
 		// 	return 40
 		// },
@@ -457,7 +458,7 @@ export default {
 			return null
 		},
 		getImageUploadUrl(prop) {
-			let url = process.env.VUE_APP_API_URL+'/api/set-image/'
+			let url = env('VUE_APP_API_URL')+'/api/set-image/'
 			if (prop.type == 'images') {
 				url += 'has_many'
 			} else {

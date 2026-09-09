@@ -217,6 +217,7 @@
 
 </template>
 <script>
+import { env } from '@/runtime_config'
 /*
 	Cuántas ventas se muestran adentro de la tarjeta. Es el MISMO tope que usa el mensaje de
 	WhatsApp (las 5 más viejas), y esa coincidencia es el punto: la tarjeta es un eco visual de
@@ -359,7 +360,7 @@ export default {
 			return []
 		},
 		sale_pdf_url(sale) {
-			return process.env.VUE_APP_API_URL + '/sale/pdf/' + sale.id
+			return env('VUE_APP_API_URL') + '/sale/pdf/' + sale.id
 		},
 		/**
 		 * Abre el modal de recordatorio para el cliente de la fila.

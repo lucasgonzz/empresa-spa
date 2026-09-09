@@ -7,6 +7,12 @@
     <link rel="preload" rel="icon" href="<%= BASE_URL %>favicon.ico">
     <title><%= htmlWebpackPlugin.options.title %></title>
 
+    <!-- Configuración por frente (URL de la API, URL del SPA, Pusher...): define window.__CC_CONFIG__.
+         En producción la escribe el admin en cada deploy; en desarrollo se copia de config.js.example
+         (o no existe y la app cae al .env). Va síncrono y ANTES que cualquier otro script porque los
+         stores leen la URL de la API al importarse. Ver src/runtime_config.js. -->
+    <script src="<%= BASE_URL %>config.js"></script>
+
     <!-- Inter: tipografía global de la aplicación -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

@@ -105,6 +105,7 @@ id="search-image">
 </template>
 <script>
 import VueLoadImage from 'vue-load-image'
+import { env } from '@/runtime_config'
 export default {
 	components: {
 		VueLoadImage,
@@ -194,7 +195,7 @@ export default {
 			 * a la Custom Search API y por dominio/referrer HTTP) porque consume cuota
 			 * facturable, a diferencia de una key de Firebase que esta pensada para ser publica.
 			 */
-			return process.env.VUE_APP_GOOGLE_SEARCH_API_KEY
+			return env('VUE_APP_GOOGLE_SEARCH_API_KEY')
 		},
 		busquedas_disponibles() {
 			if (this.current_geocoder_counter) {

@@ -92,6 +92,7 @@
 </template>
 <script>
 import current_acounts from '@/mixins/current_acounts'
+import { env } from '@/runtime_config'
 export default {
 	name: 'CurrentAcountsNav',
 	mixins: [current_acounts],
@@ -145,7 +146,7 @@ export default {
 			this.$store.dispatch('current_acount/getModels')
 		},
 		print(detail) {
-            let link = process.env.VUE_APP_API_URL+'/current-acount/pdf/'+this.from_credit_account.id+'/'+this.cantidad_movimientos+'/'+detail
+            let link = env('VUE_APP_API_URL')+'/current-acount/pdf/'+this.from_credit_account.id+'/'+this.cantidad_movimientos+'/'+detail
             window.open(link)
 		},
 	}

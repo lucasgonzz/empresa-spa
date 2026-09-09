@@ -37,6 +37,7 @@
 <script>
 import generals from '@/mixins/generals'
 import listado_articles_source from '@/mixins/listado/listado_articles_source'
+import { env } from '@/runtime_config'
 
 /**
  * Lista plantillas PdfColumnProfile (model_name article) y abre PDF tabular.
@@ -110,7 +111,7 @@ export default {
 				return
 			}
 
-			let link = process.env.VUE_APP_API_URL + '/article/table-pdf?pdf_column_profile_id=' + profile.id
+			let link = env('VUE_APP_API_URL') + '/article/table-pdf?pdf_column_profile_id=' + profile.id
 			let query = ''
 
 			if (price_type_id) {

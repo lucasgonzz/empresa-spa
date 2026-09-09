@@ -26,6 +26,7 @@
 </template>
 <script>
 import marcar_como_terminada from '@/mixins/sale/marcar_como_terminada'
+import { env } from '@/runtime_config'
 export default {
 	mixins: [marcar_como_terminada],
 	props: {
@@ -41,7 +42,7 @@ export default {
 			if (this.view == 'confirmadas') {
 				confirmed = 1
 			}
-            let link = process.env.VUE_APP_API_URL+'/sale/pdf/'+this.sale.id+'/0/0/0/'+confirmed
+            let link = env('VUE_APP_API_URL')+'/sale/pdf/'+this.sale.id+'/0/0/0/'+confirmed
             window.open(link) 
 		},
 	}
