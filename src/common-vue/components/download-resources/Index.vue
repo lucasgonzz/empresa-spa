@@ -379,7 +379,13 @@ export default {
 		 * @returns {Promise}
 		 */
 		pedir_masivo(model_names) {
-			return this.$api.post('recursos-iniciales', {models: model_names})
+			// Si esta llamada masiva se cae por un corte de red, el .catch() de más abajo ya
+			// cae al camino de a uno (pedir_sueltos): no hace falta el cartel global de conexión
+			// acá. Si ESE camino también falla para algún modelo puntual, pasa por el getModels
+			// propio de su store —sin este flag— y el cartel sigue apareciendo si corresponde.
+			return this.$api.post('recursos-iniciales', {models: model_names}, {
+				skip_global_error_event: true,
+			})
 			.then(res => {
 				/** Cuerpo de la respuesta: {models, no_soportados, con_error}. */
 				let respuesta = res.data ? res.data : {}
