@@ -263,7 +263,6 @@
 	</div>
 </template>
 <script>
-import moment from 'moment'
 import detalle_drilldown from '@/mixins/reportes/detalle_drilldown'
 
 export default {
@@ -323,7 +322,7 @@ export default {
 					hasta: this.$store.state.reportes.mes_fin.substring(0, 7),
 				}
 			}
-			let mes_actual = moment().format('YYYY-MM')
+			let mes_actual = this.today.substring(0, 7)
 			return { desde: mes_actual, hasta: mes_actual }
 		},
 		/**
