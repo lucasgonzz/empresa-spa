@@ -1595,17 +1595,28 @@ export default {
 			desempatar_por_nombre: false,
 
 			/*
-			 * Lo que el análisis del backend adelanta sobre si el desempate por nombre va a
-			 * servir en ESTE archivo. Es lo que alimenta el aviso de la decisión de arriba; sin
-			 * él, la opción se elegiría a ciegas. Forma (AiExcelAnalyzer::resumir_desempate_por_nombre):
+			 * Lo que el análisis del backend puede afirmar MIRANDO EL ARCHIVO sobre el desempate
+			 * por nombre. Es lo que alimenta el aviso de la decisión de arriba; sin él, la opción
+			 * se elegiría a ciegas. Forma (AiExcelAnalyzer::resumir_desempate_por_nombre):
 			 *
-			 *   aplica                   -> hay al menos un código de proveedor repetido
-			 *   sirve                    -> aplica Y ninguno de esos códigos queda sin desempatar
-			 *   codigos_repetidos        -> cuántos códigos aparecen más de una vez
-			 *   codigos_que_desempata    -> de esos, cuántos tienen todos sus nombres distintos
-			 *   codigos_que_no_desempata -> de esos, cuántos repiten algún nombre
-			 *   filas_afectadas          -> filas involucradas en códigos repetidos
-			 *   ejemplos                 -> [{ codigo, veces, nombres_distintos, desempata }]
+			 *   aplica                        -> hay al menos un código de proveedor repetido EN EL ARCHIVO
+			 *   alcance                       -> qué universo miró el backend; hoy siempre 'solo_el_archivo'
+			 *   sirve_en_el_archivo           -> aplica Y ninguno de esos códigos repite nombres
+			 *   codigos_repetidos             -> cuántos códigos aparecen más de una vez
+			 *   codigos_con_nombres_distintos -> de esos, cuántos tienen todos sus nombres distintos
+			 *   codigos_con_nombres_repetidos -> de esos, cuántos repiten algún nombre
+			 *   filas_afectadas               -> filas involucradas en códigos repetidos
+			 *   ejemplos                      -> [{ codigo, veces, nombres_distintos, todos_los_nombres_distintos }]
+			 *
+			 * 🔴 Ninguna clave se llama "sirve" a secas, y no es un detalle de redacción: el
+			 * análisis mira el ARCHIVO y el desempate real compara contra los ARTÍCULOS DE LA
+			 * BASE. `alcance` es el que dice hasta dónde llega lo que este dato afirma — ver
+			 * aviso_desempate_por_nombre(), que es donde se traduce a texto.
+			 *
+			 * ⚠️ Hasta el 9/9/2026 las claves se llamaban `sirve`, `codigos_que_desempata` y
+			 * `codigos_que_no_desempata`. Se leen las dos formas mientras la API vieja pueda
+			 * estar del otro lado: sin el respaldo, contra una API sin actualizar el aviso
+			 * desaparece EN SILENCIO.
 			 */
 			desempate_por_nombre: null,
 
@@ -2406,9 +2417,17 @@ export default {
 			 * cruda; el resumen usa el normalizador del matching real y sólo cuenta las filas que
 			 * llegan al escalón del código de proveedor), así que pueden no dar igual. Mezclarlos
 			 * daría un aviso que no cierra consigo mismo, del tipo "de los 6, 4 y 3".
+			 *
+			 * Las claves nuevas van primero y las viejas quedan de respaldo: la API se mergea
+			 * antes que la SPA, pero durante esa ventana —y contra cualquier instalación que
+			 * todavía corra la anterior— el aviso tiene que seguir saliendo.
 			 */
 			let total      = Number(stats.codigos_repetidos) || 0
-			let separables = Number(stats.codigos_que_desempata)
+			let separables = Number(
+				typeof stats.codigos_con_nombres_distintos !== 'undefined'
+					? stats.codigos_con_nombres_distintos
+					: stats.codigos_que_desempata
+			)
 
 			if (total === 0 || isNaN(separables)) {
 				return ''
@@ -2433,22 +2452,39 @@ export default {
 			 * puede no desempatar ni uno si el proveedor le cambió la redacción a los nombres
 			 * entre una lista y la siguiente. Decir "se pueden separar por nombre" a secas es
 			 * prometer una certeza que este dato no afirma.
+			 *
+			 * La salvedad cuelga de `alcance`, que es el backend diciendo qué universo miró
+			 * (AiExcelAnalyzer::ALCANCE_DESEMPATE, hoy siempre 'solo_el_archivo'). El día que el
+			 * análisis consulte además la base, ese valor cambia y esta salvedad deja de
+			 * corresponder sola — sin que haya que acordarse de venir a sacarla a mano. Sin la
+			 * clave (API anterior) se asume el alcance chico, que es el que había.
 			 */
-			let salvedad = ' Para que separe de verdad, el nombre del Excel tiene que coincidir con'
-				+ ' el del artículo ya cargado: si el proveedor le cambió la redacción, esa fila se'
-				+ ' resuelve como hasta ahora y queda reportada al terminar.'
+			let solo_mira_el_archivo = !stats.alcance || stats.alcance === 'solo_el_archivo'
+
+			let salvedad = !solo_mira_el_archivo ? '' : (' Para que separe de verdad, el nombre del'
+				+ ' Excel tiene que coincidir con el del artículo ya cargado: si el proveedor le'
+				+ ' cambió la redacción, esa fila se resuelve como hasta ahora y queda reportada al'
+				+ ' terminar.')
 
 			/*
-			 * 'sirve' lo decide el backend y es estricto a propósito: sólo es true si NINGÚN
-			 * código repetido queda sin desempatar. Se lee de ahí en vez de recalcularlo acá para
+			 * Lo decide el backend y es estricto a propósito: sólo es true si NINGÚN código
+			 * repetido del archivo repite nombres. Se lee de ahí en vez de recalcularlo acá para
 			 * que las dos puntas no puedan discrepar sobre qué es "alcanza".
 			 */
-			if (stats.sirve) {
+			let todos_distintos = typeof stats.sirve_en_el_archivo !== 'undefined'
+				? stats.sirve_en_el_archivo
+				: stats.sirve
+
+			if (todos_distintos) {
 				return el_total + (plural ? ' tienen' : ' tiene')
 					+ ' nombres distintos entre sí en este archivo.' + salvedad
 			}
 
-			let sin_separar = Number(stats.codigos_que_no_desempata) || (total - separables)
+			let sin_separar = Number(
+				typeof stats.codigos_con_nombres_repetidos !== 'undefined'
+					? stats.codigos_con_nombres_repetidos
+					: stats.codigos_que_no_desempata
+			) || (total - separables)
 
 			return 'De los ' + this.numero_es(total) + ' códigos repetidos, ' + this.numero_es(separables)
 				+ (separables > 1 ? ' tienen' : ' tiene') + ' nombres distintos entre sí; '
