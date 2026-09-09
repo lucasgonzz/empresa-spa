@@ -35,6 +35,37 @@ jobs:
           git merge develop --no-ff -m "chore: release v${{ steps.version.outputs.VERSION }}"
           git push origin master
 
+      # El build del SPA sale de acá, UNA vez por versión, y viaja como asset del release: el admin
+      # lo baja en cada upgrade en vez de compilar en el VPS de producción. Va sin .env a propósito:
+      # los valores por frente (URL de la API, URL del SPA, Pusher...) los lee la SPA en runtime de
+      # config.js (ver src/runtime_config.js), así que el mismo zip sirve para todos los clientes.
+      #
+      # Si el build falla, el job corta ANTES del tag y del release: es a propósito, para que nunca
+      # exista una versión publicada sin su zip (el admin caería a compilar en el VPS, que es justo
+      # lo que se quiere evitar). Ojo: a esta altura master ya tiene el merge; se arregla en develop
+      # y se vuelve a pushear un [release:X.Y.Z], o se relanza el job si fue un fallo transitorio.
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci --no-audit --no-fund
+
+      - name: Compilar el SPA
+        # El `set NODE_OPTIONS=...` del script build de package.json es sintaxis de Windows: en Linux
+        # no exporta nada. Por eso la variable va acá (webpack 4 la necesita en Node 17 o más nuevo).
+        env:
+          NODE_OPTIONS: --openssl-legacy-provider
+        run: npm run build
+
+      - name: Empaquetar dist
+        # index.html queda en la raíz del zip: el admin lo descomprime directo en el directorio del SPA.
+        run: |
+          cd dist
+          zip -r ../empresa-spa-v${{ steps.version.outputs.VERSION }}-dist.zip .
+
       - name: Crear tag y release
         uses: softprops/action-gh-release@v2
         with:
@@ -42,5 +73,6 @@ jobs:
           name: v${{ steps.version.outputs.VERSION }}
           generate_release_notes: true
           target_commitish: master
+          files: empresa-spa-v${{ steps.version.outputs.VERSION }}-dist.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
