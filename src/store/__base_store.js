@@ -160,6 +160,17 @@ export default function __base_store(options = {}) {
 			// Si ya se pidió una vez en esta sesión: evita re-pedir en cada `created()` que la use.
 			options_loaded: false,
 			loading_options: false,
+
+			// Si el listado de este store falla por un corte de red (sin `response`), NO se
+			// muestra el cartel global "No pudimos conectarnos con el servidor" (interceptor de
+			// `main.js`, config `skip_global_error_event`).
+			//
+			// Arranca en `false` y ningún módulo lo prende salvo el que lo necesita: para todos
+			// los demás stores construidos con este factory, esto no cambia absolutamente nada.
+			// Pensado para listados DECORATIVOS de una pantalla que ya se arma sin ellos (ver
+			// `article_pdf.js`) — nunca para el listado principal de un módulo: ahí, si el pedido
+			// se cae, el cartel tiene que seguir avisando.
+			omitir_cartel_de_conexion_en_listado: false,
 		}
 
 		/**
@@ -652,7 +663,9 @@ export default function __base_store(options = {}) {
 			if (state.use_per_page) {
 				url += '?page=' + state.page + '&per_page=' + state.per_page
 			}
-			return axios.get(url)
+			return axios.get(url, {
+				skip_global_error_event: state.omitir_cartel_de_conexion_en_listado,
+			})
 			.then(res => {
 				if (state.use_per_page) {
 					let loaded_models = res.data.models.data

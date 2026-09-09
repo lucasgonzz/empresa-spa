@@ -311,9 +311,14 @@ export default {
 				url += '/'+state.until_date
 			}
 			if (state.use_per_page) {
-				url += '?page='+state.page 
+				url += '?page='+state.page
 			}
-			return axios.get(url)
+			// La preferencia de columnas es un dato decorativo de la tabla: si el pedido se cae
+			// por un corte de red, la pantalla arma igual con las columnas por defecto. No hace
+			// falta el cartel global de conexión por esto (config `skip_global_error_event` del
+			// interceptor de `main.js`). Cubre también a `pdf_column_option.js`, que reusa esta
+			// misma acción.
+			return axios.get(url, { skip_global_error_event: true })
 			.then(res => {
 				if (state.use_per_page) {
 					let loaded_models = res.data.models.data
