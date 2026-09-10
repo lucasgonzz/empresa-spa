@@ -2,6 +2,33 @@
 	<div>
 
 		<!--
+			Cuando se calculo el reporte y el boton para pedir uno nuevo (4.0.24). Desde esta version
+			el reporte se calcula una vez por noche y ya no al entrar, asi que el operador tiene que
+			poder ver de cuando son estos numeros y pedirlos de nuevo sin esperar a mañana. Va arriba
+			de los chips porque es sobre ELLOS: dice de cuando son. Mientras el job corre el boton
+			queda deshabilitado y el aviso de mas abajo es el que dice que hay algo en curso.
+
+			El boton no lleva callback a proposito: cuando llega el reporte nuevo cambia
+			`inventory_performance.created_at`, y el watcher del final de este archivo ya vuelve a
+			pedir la pagina de articulos. Pasarle `fetch_articles` la pediria dos veces.
+		-->
+		<div
+		v-if="inventory_performance"
+		class="stock-minimo-actualizacion m-b-10">
+			<span class="stock-minimo-actualizacion__texto">
+				Actualizado {{ inventory_performance_actualizado_hace }}
+			</span>
+			<b-button
+			class="stock-minimo-actualizacion__boton"
+			size="sm"
+			:disabled="inventory_performance_generating"
+			@click="actualizar_inventory_performance()">
+				<i class="bi bi-arrow-repeat m-r-5" aria-hidden="true"></i>
+				Actualizar
+			</b-button>
+		</div>
+
+		<!--
 			Resumen del reporte: solo se muestra si ya hay un reporte calculado (evita "0 articulos"
 			que seria informacion falsa).
 
@@ -406,6 +433,60 @@ export default {
 // Todos los valores salen de tokens (--toolbar-control-h, --toolbar-btn-radius, --color-border,
 // --bg-card, --bg-section, --color-text-secondary): un hexadecimal fijo deja la seccion blanca en
 // modo oscuro, que es justo lo que le pasaba al cartel azul que esta mision viene a sacar.
+
+// --- Fecha de actualizacion + boton Actualizar (4.0.24) ---------------------------------------
+// Texto a la izquierda y boton a la derecha, en una fila que envuelve: en telefono el boton baja
+// debajo del texto y con `margin-left: auto` sigue pegado a la derecha. El boton declara su aspecto
+// aca por el mismo motivo que el de Excel del modal de inventario: fuera de .view-header-toolbar un
+// b-button sin variant cae en el btn-secondary gris macizo de Bootstrap. Se copia el vocabulario
+// (tokens, no valores sueltos) mas el centrado por inline-flex de la regla neutra de
+// _toolbar_botones.sass, porque con altura fija y el line-height 1.5 de .btn el texto queda arriba.
+.stock-minimo-actualizacion
+	display: flex
+	flex-direction: row
+	align-items: center
+	flex-wrap: wrap
+	gap: 8px 12px
+
+	&__texto
+		flex: 1 1 200px
+		min-width: 0
+		font-size: 0.8125rem
+		line-height: 1.35
+		color: var(--color-text-secondary)
+
+	&__boton
+		flex-shrink: 0
+		margin-left: auto
+		display: inline-flex
+		align-items: center
+		justify-content: center
+		height: var(--toolbar-control-h)
+		padding: 0 12px
+		line-height: 1
+		border-radius: var(--toolbar-btn-radius)
+		background: var(--bg-card)
+		border: 1px solid var(--color-border)
+		color: var(--color-text-primary)
+		box-shadow: var(--toolbar-btn-shadow)
+
+		&:hover,
+		&:focus,
+		&:not(:disabled):not(.disabled):active
+			background: var(--bg-hover)
+			border-color: var(--color-border)
+			color: var(--color-text-primary)
+
+		// Deshabilitado mientras el job corre: el mismo boton, apagado. Sin esta regla Bootstrap
+		// lo pinta gris macizo con letra blanca (`.btn-secondary:disabled`).
+		&:disabled,
+		&.disabled
+			background: var(--bg-card)
+			border-color: var(--color-border)
+			color: var(--color-text-secondary)
+
+		i
+			color: var(--color-text-secondary)
 
 // --- Resumen en chips -------------------------------------------------------------------------
 // Antes era una `custom-card` con las cuatro filas apiladas. Ahora es una fila de chips que
