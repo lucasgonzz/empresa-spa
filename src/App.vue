@@ -260,8 +260,27 @@ export default {
                     this.$router.replace({name: 'login'}).catch(() => {})
                 }
             } else {
+                /**
+                 * 🔴 Primero se corta, después se arranca. Si este frente no es el que le
+                 * corresponde al usuario (`default_version` apunta a otro subdominio), lo
+                 * único que se hace es transferir la sesión e irse: ni permisos, ni
+                 * `callMethods`, ni `startMethods`, ni sincronización offline, ni cheques.
+                 *
+                 * El porqué está medido: esas ~15-18 llamadas salían en el MISMO tick que la
+                 * redirección, contra la API del frente viejo. Los dos frentes de un cliente
+                 * comparten la cookie de sesión (mismo nombre, mismo dominio) pero no el
+                 * almacén, así que cada respuesta tardía del viejo le pisaba al frente nuevo
+                 * la sesión recién iniciada — y el usuario aterrizaba con ~15 avisos de
+                 * "Unauthenticated.".
+                 *
+                 * `debe_cambiar_de_version()` es sincrónico a propósito: para cuando
+                 * `check_version()` decidía, las otras llamadas ya habían salido.
+                 */
+                if (this.debe_cambiar_de_version()) {
+                    this.ir_a_la_version_correcta()
+                    return
+                }
                 // this.check_online()
-                this.check_version()
                 this.checkPermissionForCurrentRoute()
                 this.callMethods()
                 this.listenChannels()
