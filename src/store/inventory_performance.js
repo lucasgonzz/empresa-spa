@@ -121,15 +121,22 @@ export default __base_store({
 		 * reporte nuevo entra por broadcast (ver `escuchar_inventory_performance` del mixin).
 		 *
 		 * Contra una API anterior a la 4.0.24 el endpoint no existe (404): cae al `catch`, se
-		 * loguea y `generating` queda como estaba. La pantalla no se rompe.
+		 * loguea, el interceptor global de axios muestra su aviso de error genérico (como con
+		 * cualquier request que falla) y `generating` queda como estaba. La pantalla no se rompe
+		 * y no queda ningún listener colgado, porque el mixin se suscribe al canal solo cuando
+		 * `generating` quedó en true.
+		 *
+		 * `generating` se marca con lo que contesta la API y no con un `true` fijo: si mañana el
+		 * backend contestara `false` (por ejemplo, un owner sin artículos), el botón no quedaría
+		 * deshabilitado esperando un broadcast que nunca llega.
 		 *
 		 * @param {Object} context commit
 		 * @returns {Promise}
 		 */
 		generar({commit}) {
 			return axios.post('/api/inventory-performance/generate')
-			.then(() => {
-				commit('set_generating', true)
+			.then(res => {
+				commit('set_generating', !!(res.data && res.data.generating))
 			})
 			.catch(err => {
 				console.log(err)
