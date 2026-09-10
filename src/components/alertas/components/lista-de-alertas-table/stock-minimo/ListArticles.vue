@@ -451,6 +451,11 @@ export default {
 	&__texto
 		flex: 1 1 200px
 		min-width: 0
+		// Medido el 10/9/2026 en 900 y 1366px: sin esto el texto hereda un centrado del contenedor
+		// de la seccion y queda flotando en el medio de la fila mientras el boton va a la derecha;
+		// en telefono (donde el span ocupa todo el ancho) se veia a la izquierda. Misma alineacion
+		// en los tres anchos.
+		text-align: left
 		font-size: 0.8125rem
 		line-height: 1.35
 		color: var(--color-text-secondary)
