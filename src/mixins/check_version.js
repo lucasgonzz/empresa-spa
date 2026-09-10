@@ -33,6 +33,22 @@ var LIMPIEZA_PWA_TIMEOUT_MS = 2000
 var AVISO_DIRECCION_NUEVA_MS = 30000
 
 /**
+ * Techo de tiempo para los pedidos que hay que esperar ANTES de redirigir al otro frente.
+ *
+ * Desde que el arranque se corta cuando hay que cambiar de versión, estos pedidos son lo único
+ * que corre: si uno se cuelga sin resolver, no se redirige, no arranca la aplicación y el
+ * usuario se queda mirando una pantalla muerta. Este repo no tiene timeout global de axios, así
+ * que sin esto no hay nada que lo despierte.
+ *
+ * Diez segundos: son dos operaciones cortas contra la propia API (un token en base y un cierre
+ * de sesión), y diez segundos le dan aire a un comercio con internet malo sin dejar a nadie
+ * esperando de más. Al vencerse, axios rechaza y se sigue por el camino que ya existía —
+ * redirigir igual—, así que el peor caso es que el usuario tenga que entrar a mano en el
+ * frente nuevo. Que es exactamente lo que se quiere que pueda hacer.
+ */
+var PEDIDO_DE_TRANSFERENCIA_TIMEOUT_MS = 10000
+
+/**
  * Convierte el valor guardado en `default_version` (con o sin protocolo) al `origin`
  * comparable con `window.location.origin`.
  *
@@ -424,7 +440,9 @@ export default {
 			 * la API destino lo consume al cargar el SPA correcto.
 			 */
 			axios
-				.post('/version-session-token')
+				.post('/version-session-token', null, {
+					timeout: PEDIDO_DE_TRANSFERENCIA_TIMEOUT_MS,
+				})
 				.then(function (res) {
 					var plain_token = res.data && res.data.token
 					if (!plain_token) {
@@ -442,7 +460,9 @@ export default {
 					 * cookies activas en la versión incorrecta.
 					 */
 					axios
-						.post('/logout')
+						.post('/logout', null, {
+							timeout: PEDIDO_DE_TRANSFERENCIA_TIMEOUT_MS,
+						})
 						.catch(function () {
 							/* ignorar: igualmente se redirige */
 						})
@@ -455,7 +475,9 @@ export default {
 					 * Fallback sin token: comportamiento anterior (el usuario deberá loguearse de nuevo).
 					 */
 					axios
-						.post('/logout')
+						.post('/logout', null, {
+							timeout: PEDIDO_DE_TRANSFERENCIA_TIMEOUT_MS,
+						})
 						.catch(function () {
 							/* ignorar */
 						})
