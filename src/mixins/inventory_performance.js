@@ -34,6 +34,23 @@ export default {
 		hay_articulos_stock_minimo() {
 			return !!(this.inventory_performance && this.inventory_performance.stock_minimo > 0)
 		},
+		/**
+		 * Hace cuánto se calculó el reporte vigente, en palabras ("hace 3 horas", "hace un día"),
+		 * o '' si todavía no hay ninguno. Sale de `since()` del mixin global de fechas
+		 * (common-vue/mixins/dates.js), que es moment `fromNow` con locale español.
+		 *
+		 * Es un computed, así que se recalcula cuando cambia el reporte --o sea, cuando llega uno
+		 * nuevo-- y no cada minuto: para la lectura que se le da ("esto es de anoche", "esto es
+		 * de recién") alcanza, y no hace falta un timer.
+		 *
+		 * @returns {String}
+		 */
+		inventory_performance_actualizado_hace() {
+			if (!this.inventory_performance) {
+				return ''
+			}
+			return this.since(this.inventory_performance.created_at)
+		},
 	},
 	methods: {
 		/**
@@ -48,6 +65,26 @@ export default {
 			.then(() => {
 				if (this.inventory_performance_generating) {
 					this.escuchar_inventory_performance()
+				}
+			})
+		},
+		/**
+		 * Pide la regeneración del reporte ahora (botón "Actualizar", 4.0.24) y se queda
+		 * escuchando el canal del owner para refrescar los datos apenas el job termine.
+		 *
+		 * Solo se suscribe si el backend confirmó que hay una generación en curso: si el POST
+		 * falló (API vieja sin el endpoint, sin conexión), `generating` sigue en false y no tiene
+		 * sentido esperar un evento que no va a llegar. Es el mismo criterio que
+		 * `get_inventory_performance_models`.
+		 *
+		 * @param {Function} [callback] Se ejecuta luego de recargar el reporte actualizado.
+		 * @returns {Promise}
+		 */
+		actualizar_inventory_performance(callback) {
+			return this.$store.dispatch('inventory_performance/generar')
+			.then(() => {
+				if (this.inventory_performance_generating) {
+					this.escuchar_inventory_performance(callback)
 				}
 			})
 		},

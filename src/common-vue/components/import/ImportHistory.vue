@@ -259,7 +259,15 @@
 				:items="conflictos_a_mostrar"
 				:fields="conflictos_fields">
 
-					<!-- Traduce el tipo de problema a lenguaje de usuario, sumando cuantos articulos competian cuando es ambiguo -->
+					<!--
+						Traduce el tipo de problema a lenguaje de usuario, sumando cuantos articulos
+						competian cuando es ambiguo.
+
+						🔴 'desempate_por_nombre_sin_resolver' va en la misma lista que los otros dos
+						que traen article_ids: son los articulos entre los que NO se pudo desempatar,
+						o sea a cuantos les entro la misma fila. Sin ese numero el usuario lee "no se
+						pudo separar por nombre" y no tiene forma de saber cuanto se le pisoteo.
+					-->
 					<template #cell(tipo)="data">
 						{{ tipo_conflicto_label(data.item.tipo) }}
 						<span v-if="data.item.tipo === 'ambiguo' && data.item.article_ids">
@@ -269,6 +277,9 @@
 							(sobrescrita por la fila {{ data.item.fila_ganadora }})
 						</span>
 						<span v-if="data.item.tipo === 'identificador_sin_asignar' && data.item.article_ids">
+							({{ numero_es(data.item.article_ids.length) }} artículos)
+						</span>
+						<span v-if="data.item.tipo === 'desempate_por_nombre_sin_resolver' && data.item.article_ids">
 							({{ numero_es(data.item.article_ids.length) }} artículos)
 						</span>
 					</template>
@@ -310,6 +321,28 @@
 				Las filas marcadas como "Columna de precio no aplicada" si se importaron: se
 				aplico todo menos esa columna, porque el articulo se maneja por la otra. Para
 				cambiarle el criterio hay que hacerlo desde la ficha del articulo.
+			</p>
+
+			<!--
+				🔴 Pie propio, y no el de "estas filas no se procesaron" (mision
+				desempate-por-nombre-codigo-repetido, 9/9/2026). Ese texto le decia al usuario
+				que corrigiera los codigos y reimportara SOLO esas filas: para este tipo es
+				falso dos veces. La fila se proceso —se aplico a todos los articulos que
+				comparten el codigo— y el codigo no hay que corregirlo: el codigo repetido lo
+				manda el proveedor y es justamente el motivo de la opcion. Lo unico que puede
+				destrabarlo es el NOMBRE.
+			-->
+			<p
+			v-if="hay_desempates_sin_resolver"
+			class="text-muted small m-t-15">
+				Las filas marcadas como "No se pudo separar por nombre" si se importaron, pero no
+				como pediste: el nombre del Excel no alcanzo para elegir a cual de los articulos
+				que comparten ese codigo de proveedor le correspondia, asi que la fila se aplico a
+				todos ellos y quedaron con los mismos datos. Pasa cuando el proveedor cambio la
+				redaccion del nombre entre listas, cuando dos articulos tienen el mismo codigo y
+				el mismo nombre, o cuando la fila vino sin nombre. Para separarlos, el nombre del
+				Excel tiene que coincidir con el del articulo — o se ajusta el nombre del articulo
+				desde su ficha.
 			</p>
 
 		</div>
@@ -564,13 +597,21 @@ export default {
 			return this.total_conflictos > this.conflictos_a_mostrar.length
 		},
 		/**
-		 * Tipos que NO representan una fila que no se pudo procesar (mision 44). Es el mismo
-		 * criterio con el que ActualizarBBDD::persistir_conflictos() los excluye de
-		 * conflicts_count del lado del back: si se agrega un tipo alla, va tambien aca.
+		 * Tipos que NO representan una fila que no se pudo procesar (mision 44), y que por eso
+		 * no disparan el pie de "estas filas no se procesaron".
+		 *
+		 * 🔴 Esta lista responde "¿la fila se aplico?" y NO es la misma que
+		 * $tipos_que_no_cuentan de ActualizarBBDD::persistir_conflictos(), que responde otra
+		 * pregunta: "¿esto cuenta como problema en conflicts_count?". Coincidian hasta que
+		 * aparecio 'desempate_por_nombre_sin_resolver' (mision 9/9/2026): esa fila SI se
+		 * proceso —se aplico a todos los candidatos del codigo— pero NO se aplico como el
+		 * usuario pidio, asi que alla cuenta como problema y aca es informativa. Antes de sumar
+		 * o sacar un tipo, decidi cual de las dos preguntas estas contestando.
+		 *
 		 * @returns {Array}
 		 */
 		tipos_informativos() {
-			return ['fila_sobrescrita', 'columna_de_precio_ignorada']
+			return ['fila_sobrescrita', 'columna_de_precio_ignorada', 'desempate_por_nombre_sin_resolver']
 		},
 		/**
 		 * True si entre los conflictos traidos hay alguno que de verdad no se pudo procesar.
@@ -590,6 +631,16 @@ export default {
 		hay_columnas_de_precio_ignoradas() {
 			return this.conflictos.some(function(conflicto) {
 				return conflicto.tipo === 'columna_de_precio_ignorada'
+			})
+		},
+		/**
+		 * True si hay filas donde el desempate por nombre que pidio el usuario no alcanzo
+		 * (mision desempate-por-nombre-codigo-repetido, 9/9/2026).
+		 * @returns {Boolean}
+		 */
+		hay_desempates_sin_resolver() {
+			return this.conflictos.some(function(conflicto) {
+				return conflicto.tipo === 'desempate_por_nombre_sin_resolver'
 			})
 		},
 		/**
@@ -737,6 +788,12 @@ export default {
 				// un telefono de 360px una etiqueta larga se sale de la pantalla (los chips
 				// del resumen son nowrap). Medido en la aplicacion, no supuesto.
 				columna_de_precio_ignorada: 'Columna de precio no aplicada',
+				// Nuevo (mision desempate-por-nombre-codigo-repetido, 9/9/2026): el usuario
+				// pidio desempatar por nombre y para esa fila el nombre no alcanzo. La fila SI
+				// se aplico (a todos los candidatos); el detalle honesto esta en el pie.
+				// 🔴 Sin esta entrada el fallback `labels[tipo] || tipo` le mostraba al usuario
+				// el slug crudo 'desempate_por_nombre_sin_resolver' en la tabla y en los chips.
+				desempate_por_nombre_sin_resolver: 'No se pudo separar por nombre',
 			}
 			return labels[tipo] || tipo
 		},

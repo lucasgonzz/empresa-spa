@@ -287,9 +287,11 @@ export default {
 				url += '/'+state.until_date
 			}
 			if (state.use_per_page) {
-				url += '?page='+state.page 
+				url += '?page='+state.page
 			}
-			return axios.get(url)
+			// Configuración de columnas del importador: es decorativa, la pantalla arma igual
+			// sin ella. No hace falta el cartel global de conexión (interceptor de `main.js`).
+			return axios.get(url, { skip_global_error_event: true })
 			.then(res => {
 				if (state.use_per_page) {
 					let loaded_models = res.data.models.data

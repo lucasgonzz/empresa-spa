@@ -24,14 +24,27 @@
 	id="inventory-performance"
 	@show="get_inventory_performance_models">
 
-		<!-- Fecha de calculo del reporte vigente: con reportes que pueden tener minutos de antiguedad,
-		aclarar cuando se calculo evita que "el inventario no coincide con el listado" sea un ticket
-		de soporte recurrente. -->
-		<p
+		<!-- Fecha de calculo del reporte vigente y hace cuanto fue: desde la 4.0.24 el reporte se
+		calcula una vez por noche y ya no al entrar, asi que "el inventario no coincide con el
+		listado" es lo esperable durante el dia. Decir de cuando son los numeros evita que eso sea
+		un ticket de soporte, y el boton de al lado es el camino para el que no quiere esperar a
+		mañana. Mientras el job corre el boton queda deshabilitado; el aviso de abajo es el que
+		dice que hay algo en curso, el boton no lo repite ni gira. -->
+		<div
 		v-if="inventory_performance"
 		class="inventario-fecha">
-			Calculado el {{ date(inventory_performance.created_at) }} a las {{ hour(inventory_performance.created_at) }}
-		</p>
+			<p class="inventario-fecha__texto">
+				Calculado el {{ date(inventory_performance.created_at) }} a las {{ hour(inventory_performance.created_at) }} ({{ inventory_performance_actualizado_hace }})
+			</p>
+			<b-button
+			class="inventario-fecha__actualizar"
+			size="sm"
+			:disabled="inventory_performance_generating"
+			@click="actualizar_inventory_performance()">
+				<i class="bi bi-arrow-repeat m-r-5" aria-hidden="true"></i>
+				Actualizar
+			</b-button>
+		</div>
 
 		<!-- Aviso de regeneracion en background: el reporte vigente sigue siendo util mientras se
 		recalcula, asi que esto es una nota del sistema que convive con datos validos y no una
@@ -105,10 +118,63 @@ export default {
 // en :root).
 #inventory-performance
 
+	// --- Fecha de calculo + boton Actualizar (4.0.24) ----------------------------------------
+	// Texto a la izquierda y boton a la derecha, en una fila que envuelve: en telefono el boton
+	// baja debajo del texto en vez de partirlo, y con `margin-left: auto` sigue pegado a la
+	// derecha tambien ahi. El texto puede encogerse (min-width: 0 sobre un flex: 1); el boton no.
 	.inventario-fecha
+		display: flex
+		flex-direction: row
+		align-items: center
+		flex-wrap: wrap
+		gap: 8px 12px
 		margin: 0 0 14px
-		font-size: 0.8125rem
-		color: var(--color-text-secondary)
+
+		&__texto
+			flex: 1 1 200px
+			min-width: 0
+			margin: 0
+			font-size: 0.8125rem
+			line-height: 1.35
+			color: var(--color-text-secondary)
+
+		// Mismo vocabulario que `.inventario-panel__excel` de mas abajo, y por el mismo motivo
+		// (leer el comentario de ese bloque): fuera de la barra de encabezado un b-button sin
+		// variant cae en el btn-secondary gris macizo de Bootstrap. Se suma el centrado por
+		// inline-flex de la regla neutra de _toolbar_botones.sass, porque con altura fija y el
+		// line-height 1.5 de .btn el texto quedaria pegado arriba.
+		&__actualizar
+			flex-shrink: 0
+			margin-left: auto
+			display: inline-flex
+			align-items: center
+			justify-content: center
+			height: var(--toolbar-control-h)
+			padding: 0 12px
+			line-height: 1
+			border-radius: var(--toolbar-btn-radius)
+			background: var(--bg-card)
+			border: 1px solid var(--color-border)
+			color: var(--color-text-primary)
+			box-shadow: var(--toolbar-btn-shadow)
+
+			&:hover,
+			&:focus,
+			&:not(:disabled):not(.disabled):active
+				background: var(--bg-hover)
+				border-color: var(--color-border)
+				color: var(--color-text-primary)
+
+			// Deshabilitado mientras el job corre: el mismo boton, apagado. Sin esta regla
+			// Bootstrap lo pinta gris macizo con letra blanca (`.btn-secondary:disabled`).
+			&:disabled,
+			&.disabled
+				background: var(--bg-card)
+				border-color: var(--color-border)
+				color: var(--color-text-secondary)
+
+			i
+				color: var(--color-text-secondary)
 
 	// --- Aviso de regeneracion en background --------------------------------------------------
 	// 🔴 A proposito NO usa `.text-with-icon` de common-vue/sass/_texts.sass, que es lo que tenia
