@@ -163,6 +163,40 @@ function mostrar_toast_global(tipo, mensaje) {
 }
 
 /**
+ * Ventana en la que un 401 tapa a los que vienen atrás.
+ *
+ * Cinco segundos. Cuando una sesión se cae, no se cae para un request: se cae para la ráfaga
+ * entera del arranque (~15-18 llamadas que salen en el mismo tick y resuelven en menos de un
+ * segundo, o en dos o tres si el servidor está cargado). Cinco segundos cubren la ráfaga con
+ * margen. Y es corto a propósito: si el usuario vuelve a intentar algo unos segundos después y
+ * también le da 401, se lo tiene que enterar de nuevo.
+ */
+const VENTANA_AVISO_401_MS = 5000
+
+/**
+ * Momento del último 401 que sí se avisó (epoch en ms). 0 = todavía no se avisó ninguno.
+ */
+let ultimo_aviso_401_en = 0
+
+/**
+ * ¿A este 401 le toca aviso, o llegó pegado a uno que ya se avisó?
+ *
+ * Marca el momento cuando devuelve `true`, así que se llama UNA sola vez por error.
+ *
+ * @returns {boolean}
+ */
+function debe_avisar_este_401() {
+    const ahora = Date.now()
+
+    if (ahora - ultimo_aviso_401_en < VENTANA_AVISO_401_MS) {
+        return false
+    }
+
+    ultimo_aviso_401_en = ahora
+    return true
+}
+
+/**
  * Interceptor de respuesta: errores de validación Laravel (422) → toast detallado;
  * el resto mantiene el evento global `errorEvent` (logo loading, modal legacy, etc.).
  *
@@ -241,11 +275,29 @@ function global_api_error_interceptor(error) {
     if (is_validation && !skip_validation_toast) {
         show_laravel_validation_toast(data)
     } else if (response && is_authenticated && !skip_global_error_event) {
-        // Solo emitimos el error global cuando ya hay sesión iniciada.
-        // Esto evita alerts/toasts automáticos durante el arranque o antes del login.
-        document.dispatchEvent(
-            new CustomEvent('errorEvent', { detail: error })
-        )
+        if (status === 401 && !debe_avisar_este_401()) {
+            /*
+             * 🔴 Camino deduplicado: este 401 llegó pegado a otro que ya se avisó, así que NO
+             * se despacha `errorEvent` y el usuario ve un solo aviso en vez de quince toasts
+             * de 10 segundos apilados (lo que pasa cuando se cae la sesión y falla la ráfaga
+             * entera del arranque).
+             *
+             * Pero el loading se apaga IGUAL, y acá está la trampa: el handler de `errorEvent`
+             * (common-vue/components/error/Index.vue) es el ÚNICO lugar de toda la aplicación
+             * que hace `auth/setLoading = false` ante un error. Si simplemente no se
+             * despachara el evento, el overlay quedaría tapando la aplicación entera hasta un
+             * F5. Es el mismo cuelgue que ya pasó con los errores sin `response`, atendido
+             * arriba de la misma manera.
+             */
+            store.commit('auth/setLoading', false)
+            store.commit('auth/setMessage', '')
+        } else {
+            // Solo emitimos el error global cuando ya hay sesión iniciada.
+            // Esto evita alerts/toasts automáticos durante el arranque o antes del login.
+            document.dispatchEvent(
+                new CustomEvent('errorEvent', { detail: error })
+            )
+        }
     }
     return Promise.reject(error)
 }
