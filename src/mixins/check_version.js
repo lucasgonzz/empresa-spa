@@ -15,12 +15,14 @@ var VERSION_SESSION_TOKEN_PARAM = 'version_session_token'
 /**
  * Techo de tiempo para la limpieza de la PWA vieja antes de redirigir.
  *
- * Dos segundos alcanzan de sobra para `unregister()` + `caches.delete()` (son operaciones
- * locales, sin red), y si el navegador no resuelve en ese plazo se redirige igual: dejar al
- * usuario mirando una pantalla en blanco es peor que dejarle el service worker viejo puesto,
- * que es exactamente lo que ya tiene hoy.
+ * Cubre las dos cosas que pasan adentro: esperar el `load` de la ventana (ver
+ * `esperar_a_que_la_pagina_termine_de_cargar`) y después `unregister()` + `caches.delete()`, que
+ * son operaciones locales y sin red. Tres segundos alcanzan de sobra para las dos, y si el
+ * navegador no resuelve en ese plazo se redirige igual: dejar al usuario mirando una pantalla en
+ * blanco es peor que dejarle el service worker viejo puesto, que es exactamente lo que ya tiene
+ * hoy.
  */
-var LIMPIEZA_PWA_TIMEOUT_MS = 2000
+var LIMPIEZA_PWA_TIMEOUT_MS = 3000
 
 /**
  * Cuánto dura el aviso de que la dirección de la aplicación cambió.
@@ -47,6 +49,28 @@ var AVISO_DIRECCION_NUEVA_MS = 30000
  * frente nuevo. Que es exactamente lo que se quiere que pueda hacer.
  */
 var PEDIDO_DE_TRANSFERENCIA_TIMEOUT_MS = 10000
+
+/**
+ * Config de los dos pedidos del cambio de frente (el token y el logout).
+ *
+ * Además del techo de tiempo lleva `skip_global_error_event`, la bandera que ya usa el resto de
+ * `main.js` para que el interceptor global no muestre nada. Sin ella, un timeout de estos dos
+ * pedidos le sale al usuario como *"El servidor tardó demasiado en responder. Lo que pediste
+ * puede haber quedado en curso..."* —un texto escrito para una acción que el usuario pidió— por
+ * una transferencia que él no pidió y ni sabe que existe. En el peor camino salían dos avisos,
+ * y encima viajaban con él al frente nuevo.
+ *
+ * Se devuelve un objeto nuevo en cada llamada y no una constante compartida: axios recibe el
+ * config por referencia y no hay por qué darle el mismo a dos pedidos.
+ *
+ * @returns {object}
+ */
+function config_de_pedido_de_transferencia() {
+	return {
+		timeout: PEDIDO_DE_TRANSFERENCIA_TIMEOUT_MS,
+		skip_global_error_event: true,
+	}
+}
 
 /**
  * Convierte el valor guardado en `default_version` (con o sin protocolo) al `origin`
@@ -147,12 +171,31 @@ function strip_version_session_token_from_url() {
  * @returns {boolean}
  */
 function corriendo_como_app_instalada() {
+	/**
+	 * 🔴 No alcanza con `standalone`, y este es el detalle que decide si el aviso se ve o no
+	 * se ve nunca. El aviso se muestra en el frente DESTINO, al que se llega navegando fuera
+	 * del `scope` de la app instalada (el manifest no declara `scope`, así que el scope es el
+	 * origen viejo y el destino siempre queda afuera). Chrome y Edge en Windows atienden esa
+	 * navegación con la barra de "in-app browsing" puesta, y en ese estado el modo de
+	 * presentación puede reportarse como `minimal-ui` en vez de `standalone`.
+	 *
+	 * Preguntar por los cuatro modos de app cubre las dos variantes sin ningún riesgo de falso
+	 * positivo: una pestaña común de navegador reporta `browser`, que no está en la lista.
+	 */
+	var modos_de_app_instalada = [
+		'standalone',
+		'minimal-ui',
+		'fullscreen',
+		'window-controls-overlay',
+	]
+
 	try {
-		if (
-			typeof window.matchMedia === 'function'
-			&& window.matchMedia('(display-mode: standalone)').matches
-		) {
-			return true
+		if (typeof window.matchMedia === 'function') {
+			for (var i = 0; i < modos_de_app_instalada.length; i++) {
+				if (window.matchMedia('(display-mode: ' + modos_de_app_instalada[i] + ')').matches) {
+					return true
+				}
+			}
 		}
 	} catch (e) {
 		/* Un navegador sin matchMedia no puede tener la app instalada: se sigue con iOS. */
@@ -220,6 +263,33 @@ function borrar_caches_del_origen() {
 }
 
 /**
+ * Espera a que la ventana haya terminado de cargar. Si ya cargó, resuelve enseguida.
+ *
+ * 🔴 Existe por una carrera que anulaba la limpieza sin dejar rastro. `registerServiceWorker.js`
+ * no registra el service worker al importarse: `register-service-worker` engancha el registro al
+ * evento `load` de la ventana. Y la limpieza corre cuando resuelve `auth/me`, que en la app
+ * instalada —bundle precacheado, API rápida— puede resolver ANTES de ese `load`. La secuencia
+ * quedaba: desregistrar ✓ → dispara `load` → se vuelve a registrar → redirigir. O sea, limpieza
+ * deshecha, sin error y sin síntoma. Esperando el `load` primero, el registro ya pasó y el
+ * desregistro es el que queda.
+ *
+ * Nunca rechaza. El techo de tiempo de la limpieza cubre igual el caso de un `load` que no llega.
+ *
+ * @returns {Promise<*>}
+ */
+function esperar_a_que_la_pagina_termine_de_cargar() {
+	if (!window.document || window.document.readyState === 'complete') {
+		return Promise.resolve()
+	}
+
+	return new Promise(function (resolve) {
+		window.addEventListener('load', function () {
+			resolve()
+		}, { once: true })
+	})
+}
+
+/**
  * Saca de encima la PWA de este origen antes de irse al frente correcto.
  *
  * El frente en desuso precachea su `index.html` para siempre (workbox con `skipWaiting`), así
@@ -235,10 +305,13 @@ function limpiar_pwa_de_este_origen() {
 	var limpieza
 
 	try {
-		limpieza = Promise.all([
-			desregistrar_service_workers(),
-			borrar_caches_del_origen(),
-		])
+		limpieza = esperar_a_que_la_pagina_termine_de_cargar()
+			.then(function () {
+				return Promise.all([
+					desregistrar_service_workers(),
+					borrar_caches_del_origen(),
+				])
+			})
 	} catch (e) {
 		// Un navegador con estas APIs bloqueadas puede tirar sincrónicamente al tocarlas.
 		return Promise.resolve()
@@ -303,14 +376,22 @@ export default {
 				.then(function (res) {
 					strip_version_session_token_from_url()
 
-					if (res.data.login && res.data.user) {
-						/**
-						 * Se llegó acá por una transferencia de versión: si el usuario viene
-						 * de la app instalada, la que tiene instalada es la de la dirección
-						 * VIEJA y va a seguir entrando por ahí en cada arranque.
-						 */
-						self.avisar_cambio_de_direccion_si_es_pwa()
+					/**
+					 * 🔴 El aviso va acá arriba, ANTES de mirar si el login salió, y no adentro
+					 * del camino feliz. Haber llegado con un token en la URL ya es prueba de que
+					 * esto fue una transferencia de frente: si el usuario viene de la app
+					 * instalada, la que tiene instalada apunta a la dirección VIEJA y va a
+					 * seguir entrando por ahí en cada arranque, salga o no salga el login.
+					 *
+					 * Y el caso donde MÁS hace falta es justamente el que fallaba: si el login
+					 * automático no entra, el usuario tiene que loguearse a mano acá, en una
+					 * dirección que no conoce y que su app no tiene. Sin el aviso vuelve a abrir
+					 * la PWA vieja y repite el ciclo sin enterarse nunca de que la dirección
+					 * cambió.
+					 */
+					self.avisar_cambio_de_direccion_si_es_pwa()
 
+					if (res.data.login && res.data.user) {
 						return res.data.user
 					}
 
@@ -332,6 +413,10 @@ export default {
 				})
 				.catch(function () {
 					strip_version_session_token_from_url()
+
+					// También se llegó por transferencia: mismo motivo que arriba.
+					self.avisar_cambio_de_direccion_si_es_pwa()
+
 					self.$toast.error('Error al validar el acceso a esta versión')
 					return null
 				})
@@ -345,21 +430,30 @@ export default {
 		 * instalada no se puede mudar de origen por código. Al que entra por el navegador no se
 		 * le muestra nada, porque a él no le pasa.
 		 *
+		 * 🔴 Blindado entero: esto es una cortesía y corre en el camino crítico del login por
+		 * transferencia. Si tirara, se lo comería el `.catch()` de
+		 * `consume_version_session_token_if_present()` y un login que SÍ funcionó le saldría al
+		 * usuario como "Error al validar el acceso a esta versión".
+		 *
 		 * @returns {void}
 		 */
 		avisar_cambio_de_direccion_si_es_pwa() {
-			if (!corriendo_como_app_instalada()) {
-				return
-			}
+			try {
+				if (!corriendo_como_app_instalada()) {
+					return
+				}
 
-			this.$toast.info(
-				'La dirección de tu sistema cambió a '
-				+ window.location.host
-				+ '. La aplicación que tenés instalada sigue apuntando a la anterior: abrí esta'
-				+ ' dirección en el navegador e instalala de nuevo desde ahí para entrar'
-				+ ' directo.',
-				{ duration: AVISO_DIRECCION_NUEVA_MS }
-			)
+				this.$toast.info(
+					'La dirección de tu sistema cambió a '
+					+ window.location.host
+					+ '. La aplicación que tenés instalada sigue apuntando a la anterior: abrí esta'
+					+ ' dirección en el navegador e instalala de nuevo desde ahí para entrar'
+					+ ' directo.',
+					{ duration: AVISO_DIRECCION_NUEVA_MS }
+				)
+			} catch (e) {
+				/* un aviso que no se puede mostrar no puede romper el login */
+			}
 		},
 
 		/**
@@ -431,21 +525,24 @@ export default {
 		 * @returns {void}
 		 */
 		ir_a_la_version_correcta() {
+			var self = this
+
 			var redirect_href = resolve_default_version_href(
 				this.default_version_configurada()
 			)
+
+			this.mostrar_overlay_de_transferencia()
 
 			/**
 			 * Token de un solo uso: la API origen (donde ya hay login) lo guarda en BD compartida;
 			 * la API destino lo consume al cargar el SPA correcto.
 			 */
 			axios
-				.post('/version-session-token', null, {
-					timeout: PEDIDO_DE_TRANSFERENCIA_TIMEOUT_MS,
-				})
+				.post('/version-session-token', null, config_de_pedido_de_transferencia())
 				.then(function (res) {
 					var plain_token = res.data && res.data.token
 					if (!plain_token) {
+						self.mostrar_overlay_de_transferencia()
 						redirigir_a(redirect_href)
 						return
 					}
@@ -460,13 +557,12 @@ export default {
 					 * cookies activas en la versión incorrecta.
 					 */
 					axios
-						.post('/logout', null, {
-							timeout: PEDIDO_DE_TRANSFERENCIA_TIMEOUT_MS,
-						})
+						.post('/logout', null, config_de_pedido_de_transferencia())
 						.catch(function () {
 							/* ignorar: igualmente se redirige */
 						})
 						.finally(function () {
+							self.mostrar_overlay_de_transferencia()
 							redirigir_a(target_href)
 						})
 				})
@@ -474,33 +570,47 @@ export default {
 					/**
 					 * Fallback sin token: comportamiento anterior (el usuario deberá loguearse de nuevo).
 					 */
+					self.mostrar_overlay_de_transferencia()
+
 					axios
-						.post('/logout', null, {
-							timeout: PEDIDO_DE_TRANSFERENCIA_TIMEOUT_MS,
-						})
+						.post('/logout', null, config_de_pedido_de_transferencia())
 						.catch(function () {
 							/* ignorar */
 						})
 						.finally(function () {
+							self.mostrar_overlay_de_transferencia()
 							redirigir_a(redirect_href)
 						})
 				})
 		},
 
 		/**
-		 * Composición de los dos métodos de arriba, tal como se comportaba antes: pregunta y,
-		 * si corresponde, se va. Queda para cualquier consumidor que ya llamara a
-		 * `check_version()`; App.vue usa los dos por separado porque necesita cortar el
-		 * arranque ANTES de disparar el resto de las llamadas.
+		 * Prende el overlay global con el motivo, para que la transferencia no parezca una
+		 * aplicación colgada.
+		 *
+		 * 🔴 Y se vuelve a llamar después de cada pedido, no una sola vez al principio. Dos
+		 * motivos, los dos medidos en el código:
+		 *
+		 * 1. Desde que el arranque se corta, durante la transferencia no queda NADA corriendo, y
+		 *    `auth/me` ya apagó el overlay antes de marcar la sesión como iniciada
+		 *    (`store/auth.js`: el `setLoading(false)` va antes del `setAuthenticated(true)`). Sin
+		 *    esto el usuario mira una aplicación vacía, sin spinner y sin ningún indicio de que
+		 *    algo está pasando. En el camino normal es un segundo y no se nota; con internet malo
+		 *    son hasta 22 (10 del token + 10 del logout + 2 de la limpieza de la PWA).
+		 * 2. El interceptor de `main.js` apaga el loading ante CUALQUIER error sin `response`
+		 *    —y un timeout es exactamente eso—, sin mirar `skip_global_error_event`, que ahí solo
+		 *    silencia el mensaje. O sea que un timeout del token nos apaga el overlay en el medio.
+		 *
+		 * Nadie lo apaga al final: lo apaga la navegación al otro frente.
 		 *
 		 * @returns {void}
 		 */
-		check_version() {
-			if (!this.debe_cambiar_de_version()) {
-				return
-			}
-
-			this.ir_a_la_version_correcta()
+		mostrar_overlay_de_transferencia() {
+			this.$store.commit('auth/setLoading', true)
+			this.$store.commit(
+				'auth/setMessage',
+				'Te estamos llevando a la versión actual de tu sistema...'
+			)
 		},
 	},
 }
