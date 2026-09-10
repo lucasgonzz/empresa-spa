@@ -112,6 +112,31 @@ export default __base_store({
 		},
 
 		/**
+		 * Pide al backend que vuelva a calcular el reporte de inventario del owner, ahora.
+		 *
+		 * Desde la 4.0.24 el reporte ya no se recalcula solo al entrar (se calcula una vez por
+		 * noche): este es el camino para el que no quiere esperar a mañana. El backend encola el
+		 * job y contesta `{ generating: true }`; si ya había uno en curso, contesta lo mismo sin
+		 * encolar otro, así que llamar dos veces no duplica trabajo. El aviso de que llegó el
+		 * reporte nuevo entra por broadcast (ver `escuchar_inventory_performance` del mixin).
+		 *
+		 * Contra una API anterior a la 4.0.24 el endpoint no existe (404): cae al `catch`, se
+		 * loguea y `generating` queda como estaba. La pantalla no se rompe.
+		 *
+		 * @param {Object} context commit
+		 * @returns {Promise}
+		 */
+		generar({commit}) {
+			return axios.post('/api/inventory-performance/generate')
+			.then(() => {
+				commit('set_generating', true)
+			})
+			.catch(err => {
+				console.log(err)
+			})
+		},
+
+		/**
 		 * Pide la página actual de artículos bajo el stock mínimo (endpoint paginado).
 		 * Usa `page`, `per_page` y `search` del state del propio módulo.
 		 *
