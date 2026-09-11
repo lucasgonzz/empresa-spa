@@ -28,7 +28,16 @@ export default {
 				depende de que termine para avisarle a los widgets de Reportes que el arranque
 				general ya paso.
 			*/
-			return this.getUnconfirmedOrders()
+			// Promise.resolve() al frente porque getUnconfirmedOrders() es el UNICO eslabon
+			// de esta cadena que no vive ya adentro de un .then() de otro paso: si
+			// this.has_online da false devuelve undefined (no una promesa), y undefined no
+			// tiene .catch() -- revienta sincronico, ANTES de que startMethods() llegue a
+			// retornar nada, y le tumba los ~11 pasos siguientes a cualquier empleado sin el
+			// permiso order.index (has_online = false). Encontrado por el revisor de merge
+			// el 11/9/2026, probando con un usuario sin ese permiso -- la verificacion manual
+			// con el usuario dueno (has_online siempre true) no lo hubiera mostrado nunca.
+			return Promise.resolve()
+			.then(() => this.getUnconfirmedOrders())
 			.catch(err => console.log(err))
 			.then(() => this.getProviderOrdersDaysToAdvise())
 			.catch(err => console.log(err))
