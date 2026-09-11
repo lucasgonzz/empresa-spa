@@ -1,53 +1,74 @@
 import set_employee_vender from '@/mixins/set_employee_vender'
-import inventory_performance from '@/mixins/inventory_performance'
 import cotizacion_dolar from '@/mixins/cotizacion_dolar'
 export default {
-	mixins: [set_employee_vender, inventory_performance, cotizacion_dolar],
+	mixins: [set_employee_vender, cotizacion_dolar],
 	methods: {
 		startMethods() {
 			console.log('llamando startMethods')
 
 			this.checkUserAppUrl()
-			
+
 			this.setEmployeeVender()
-			
+
 			this.init_vender_address_id()
-			
+
 			// this.checkUpdateFeaturesCookie()
-			
-			this.getUnconfirmedOrders()
-			
-			this.getProviderOrdersDaysToAdvise()
-			
-			this.get_ventas_sin_cobrar()
-
-			this.get_deposit_movements_en_curso()
-
-			this.get_buyers_and_set_messages_not_read()
-
-			if (this.is_admin) this.get_problemas_al_facturar()
-
-			this.get_articles_por_defecto()
-
-			// this.get_ultimos_articulos_actualizados()
 
 			// Red de seguridad de los pedidos online + polling de mensajes de compradores
 			this.escuchar_orders_y_messages()
 
-		this.get_inventory_performance()
+			/*
+				De aca para abajo, todo es un fetch real y quedan ENCADENADOS uno atras de otro,
+				en vez de salir los ~10 juntos en paralelo contra la API recien autenticada: esa
+				rafaga es la causa raiz del toast "Unauthenticated." apilado que reporto
+				golonorte el 11/9/2026, al rebotar de sesion entre dos frentes del VPS (plan de
+				esta mision). Cada eslabon lleva su propio catch antes del siguiente then(): si
+				uno falla no le tiene que tapar el turno al que sigue, y la promesa que devuelve
+				este metodo tiene que resolver siempre -- nunca rechazar -- porque App.vue
+				depende de que termine para avisarle a los widgets de Reportes que el arranque
+				general ya paso.
+			*/
+			return this.getUnconfirmedOrders()
+			.catch(err => console.log(err))
+			.then(() => this.getProviderOrdersDaysToAdvise())
+			.catch(err => console.log(err))
+			.then(() => this.get_ventas_sin_cobrar())
+			.catch(err => console.log(err))
+			.then(() => this.get_deposit_movements_en_curso())
+			.catch(err => console.log(err))
+			.then(() => this.get_buyers_and_set_messages_not_read())
+			.catch(err => console.log(err))
+			.then(() => {
+				if (this.is_admin) return this.get_problemas_al_facturar()
+			})
+			.catch(err => console.log(err))
+			.then(() => this.get_articles_por_defecto())
+			.catch(err => console.log(err))
+			// this.get_ultimos_articulos_actualizados()
+			.then(() => this.get_tn_failed_syncs_count())
+			.catch(err => console.log(err))
+			.then(() => this.check_synced_version_notifications())
+			.catch(err => console.log(err))
+			.then(() => this.check_excel_analysis_en_curso())
+			.catch(err => console.log(err))
+			.then(() => this.check_escaneo_factura_en_curso())
+			.catch(err => console.log(err))
+			.then(() => {
+				/*
+					Va ultimo a proposito: es el chequeo que menos urge y el que mas puede
+					tardar, porque por detras del backend sale a una API de terceros.
 
-		this.get_tn_failed_syncs_count()
-
-		this.check_synced_version_notifications()
-
-		this.check_excel_analysis_en_curso()
-
-		this.check_escaneo_factura_en_curso()
-
-		// Va ultimo a proposito: es el chequeo que menos urge y el que mas puede tardar,
-		// porque por detras del backend sale a una API de terceros.
-		this.check_cotizacion_dolar()
-
+					🔴 NO se encadena con `return` como el resto: check_cotizacion_dolar() (en
+					mixins/cotizacion_dolar.js) no devuelve su promesa, y ese archivo no esta en
+					la lista de archivos que esta mision autoriza a tocar. Se dispara aca --al
+					final de la cadena, no en paralelo con el resto-- pero la promesa que
+					devuelve startMethods() no espera a que termine. Ver el informe final de la
+					mision: si se quiere que la señal de arranque tambien cubra a este chequeo,
+					hay que agregar ese archivo a la lista autorizada.
+				*/
+				this.check_cotizacion_dolar()
+			})
+			.catch(err => console.log(err))
 		},
 		/**
 		 * Recupera el análisis de Excel con IA que el usuario haya dejado corriendo.
@@ -67,7 +88,7 @@ export default {
 		 * @return {void}
 		 */
 		check_excel_analysis_en_curso() {
-			this.$store.dispatch('excel_analysis/get_en_curso')
+			return this.$store.dispatch('excel_analysis/get_en_curso')
 			.then(run => {
 				if (!run) {
 					return
@@ -119,89 +140,48 @@ export default {
 				return
 			}
 
-			this.$store.dispatch('provider_order_scan/get_pendientes')
+			// Las dos siguen saliendo juntas (no hay dependencia entre ellas): se envuelven en
+			// Promise.all solo para que el llamador sepa cuando terminaron las dos.
+			return Promise.all([
+				this.$store.dispatch('provider_order_scan/get_pendientes'),
+				this.$store.dispatch('provider_order_scan/get_en_curso')
+				.then(run => {
+					if (!run) {
+						return
+					}
 
-			this.$store.dispatch('provider_order_scan/get_en_curso')
-			.then(run => {
-				if (!run) {
-					return
-				}
+					if (run.estado !== 'listo' && run.estado !== 'error') {
+						return
+					}
 
-				if (run.estado !== 'listo' && run.estado !== 'error') {
-					return
-				}
+					const contexto = run.contexto || {}
 
-				const contexto = run.contexto || {}
+					/*
+					 * Se arma el mismo payload que manda el broadcast, para que el modal de
+					 * aviso no tenga que saber por cuál de los dos caminos llegó. Los datos
+					 * de la compra se leen del contexto o de la raíz de la corrida, lo que
+					 * venga: el aviso no se pierde por una clave de más o de menos.
+					 */
+					this.$store.commit('global_notification/set_provider_order_scan', {
+						uuid:               run.uuid,
+						provider_order_id:  run.provider_order_id || contexto.provider_order_id,
+						estado:             run.estado,
+						error:              run.error,
+						cantidad_articulos: contexto.cantidad_articulos,
+						provider_nombre:    contexto.provider_nombre,
+					})
 
-				/*
-				 * Se arma el mismo payload que manda el broadcast, para que el modal de
-				 * aviso no tenga que saber por cuál de los dos caminos llegó. Los datos
-				 * de la compra se leen del contexto o de la raíz de la corrida, lo que
-				 * venga: el aviso no se pierde por una clave de más o de menos.
-				 */
-				this.$store.commit('global_notification/set_provider_order_scan', {
-					uuid:               run.uuid,
-					provider_order_id:  run.provider_order_id || contexto.provider_order_id,
-					estado:             run.estado,
-					error:              run.error,
-					cantidad_articulos: contexto.cantidad_articulos,
-					provider_nombre:    contexto.provider_nombre,
-				})
-
-				this.$bvModal.show('provider-order-scan-ready-notification')
-			})
+					this.$bvModal.show('provider-order-scan-ready-notification')
+				}),
+			])
 		},
 		check_synced_version_notifications() {
-			this.$store.dispatch('synced_version_notification/get_pending')
+			return this.$store.dispatch('synced_version_notification/get_pending')
 			.then(() => {
 				if (this.$store.getters['synced_version_notification/has_pending']) {
 					this.$bvModal.show('synced-version-notifications')
 				}
 			})
-		},
-		/**
-		 * Pide el reporte de inventario al iniciar el sistema y decide si mostrar
-		 * el modal de stock minimo:
-		 *
-		 * - Escenario 1 (reporte vigente): se muestra el modal de una si corresponde.
-		 * - Escenario 2 (reporte vencido o inexistente, generating: true): no se espera nada,
-		 *   se suscribe al canal de broadcast y el modal se muestra recien cuando el job
-		 *   en background termina de calcular el reporte (puede tardar minutos en cuentas grandes).
-		 *
-		 * Si show_stock_min_al_iniciar esta desactivado, el reporte igual se pide (y se
-		 * regenera si vencio) porque lo usan el modulo de Alertas y el boton Inventario.
-		 */
-		get_inventory_performance() {
-			if (!this.is_admin) return
-
-			this.$store.dispatch('inventory_performance/get_models_con_estado')
-			.then(() => {
-
-				// Escenario 1: el reporte ya estaba vigente.
-				if (this.mostrar_modal_stock_minimo()) {
-					this.$bvModal.show('articles-stock-minimo')
-					return
-				}
-
-				// Escenario 2: se esta generando en background -> esperar el broadcast.
-				if (this.inventory_performance_generating) {
-					this.escuchar_inventory_performance(() => {
-						if (this.mostrar_modal_stock_minimo()) {
-							this.$bvModal.show('articles-stock-minimo')
-						}
-					})
-				}
-			})
-		},
-		/**
-		 * Determina si corresponde mostrar el modal de stock minimo al iniciar sesion.
-		 * Se decide con el contador stock_minimo del reporte (no con la lista completa
-		 * de articulos, que ya no viaja en la respuesta del backend).
-		 *
-		 * @returns {Boolean}
-		 */
-		mostrar_modal_stock_minimo() {
-			return !!(this.owner.show_stock_min_al_iniciar && this.hay_articulos_stock_minimo)
 		},
 		escuchar_orders_y_messages() {
 			if (this.owner.online) {
@@ -256,7 +236,7 @@ export default {
 			// download_articles no dispara la descarga del catalogo completo al iniciar: eso solo pasa al entrar a LISTADO de articulos.
 			if (this.hasExtencion('articles_default_in_vender')) {
 
-				this.$api.get('articles-por-defecto')
+				return this.$api.get('articles-por-defecto')
 				.then(res => {
 					if (this.download_articles) {
 						// Computed global (mixins/generals.js), no this.owner.download_articles directo:
@@ -274,11 +254,11 @@ export default {
 			}
 		},
 		get_deposit_movements_en_curso() {
-			this.$store.dispatch('deposit_movement/en_curso/getModels')
+			return this.$store.dispatch('deposit_movement/en_curso/getModels')
 		},
 		get_ventas_sin_cobrar() {
 			if (this.owner.dias_alertar_empleados_ventas_no_cobradas) {
-				this.$store.dispatch('sale/ventas_sin_cobrar/getModels')
+				return this.$store.dispatch('sale/ventas_sin_cobrar/getModels')
 			}
 		},
 
@@ -290,7 +270,7 @@ export default {
 		get_tn_failed_syncs_count() {
 			/* Solo cargar si el usuario usa la integración con Tienda Nube */
 			if (this.hasExtencion('usa_tienda_nube')) {
-				this.$store.dispatch('sync_to_tn_article/getFailedCount')
+				return this.$store.dispatch('sync_to_tn_article/getFailedCount')
 			}
 		},
 		checkUserAppUrl() {
@@ -347,15 +327,15 @@ export default {
 		},
 		getUnconfirmedOrders() {
 			if (this.has_online) {
-				this.$store.dispatch('order/getUnconfirmedModels')
+				return this.$store.dispatch('order/getUnconfirmedModels')
 			}
 		},
 		getProviderOrdersDaysToAdvise() {
-			this.$store.dispatch('provider_order/getDaysToAdvise')
+			return this.$store.dispatch('provider_order/getDaysToAdvise')
 		},
 		get_buyers_and_set_messages_not_read() {
 			console.log('get_buyers_and_set_messages_not_read')
-			this.$store.dispatch('buyer/getModels')
+			return this.$store.dispatch('buyer/getModels')
 			.then(() => {
 				console.log('llegaron los buyers, mandando setChatsToShow')
 				this.$store.dispatch('message/setChatsToShow')
@@ -363,7 +343,7 @@ export default {
 			})
 		},
 		get_problemas_al_facturar() {
-			this.$store.dispatch('afip_ticket/get_problemas_al_facturar')
+			return this.$store.dispatch('afip_ticket/get_problemas_al_facturar')
 			.then(() => {
 				if (this.owner.show_afip_errors_al_iniciar) {
 					this.notificar_errores_afip()
