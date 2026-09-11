@@ -10,7 +10,7 @@
 				<div class="login-page__mobile-logo-wrap">
 					<img
 						class="login-page__mobile-logo"
-						src="@/assets/logo.jpg"
+						src="@/assets/isotipo-comerciocity.svg"
 						alt="Comercio City"
 					>
 				</div>
@@ -31,7 +31,7 @@
 			<header class="login-page__brand">
 				<img
 					class="login-page__logo"
-					src="@/assets/logo.jpg"
+					src="@/assets/isotipo-comerciocity.svg"
 					alt="Comercio City"
 				>
 				<span class="login-page__brand-name">Comercio City</span>

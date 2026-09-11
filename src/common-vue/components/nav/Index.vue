@@ -8,7 +8,7 @@
             <div>
                 <b-navbar-brand
                 :to="{name: route_index}">
-                    <img src="@/assets/logo.png" alt="">
+                    <img src="@/assets/isotipo-comerciocity.svg" alt="">
                 </b-navbar-brand>
 
                 <b-button

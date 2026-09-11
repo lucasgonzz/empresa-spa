@@ -1,9 +1,9 @@
 <template>
 	<b-card
 	class="form-register s-1">
-		<img 
+		<img
 		class="apretable c-p logo-reset"
-		src="@/assets/logo.png" >
+		src="@/assets/logo-comerciocity-horizontal.png" >
 		<p class="title">
 			Recuperar contraseña
 		</p>
