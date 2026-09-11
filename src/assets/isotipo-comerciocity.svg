@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="ComercioCity">
+  <title>ComercioCity — isotipo</title>
+  <defs>
+    <linearGradient id="cc-grad" x1="128" y1="8.5" x2="128" y2="247.5" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0B84F8"></stop>
+      <stop offset="1" stop-color="#3A31FC"></stop>
+    </linearGradient>
+  </defs>
+  <g id="isotipo">
+    <g id="arco" fill="none" stroke="url(#cc-grad)" stroke-width="33" stroke-linecap="butt">
+      <path id="arco-superior" d="M 61.79 49.1 A 103 103 0 0 1 187.08 43.62"></path>
+      <path id="arco-izquierdo" d="M 52.67 198.24 A 103 103 0 0 1 52.67 57.76"></path>
+      <path id="arco-inferior" d="M 217.2 179.5 A 103 103 0 0 1 61.79 206.9"></path>
+    </g>
+    <g id="barras" fill="url(#cc-grad)">
+      <rect id="barra-1" x="75.5" y="140" width="28" height="52" rx="3"></rect>
+      <rect id="barra-2" x="114" y="115" width="28" height="77" rx="3"></rect>
+      <rect id="barra-3" x="152.5" y="93" width="28" height="99" rx="3"></rect>
+    </g>
+    <path id="flecha" fill="#FA7E06" d="M 205 64 L 178.5 75 Q 193.5 76.4 195.5 92 Z"></path>
+  </g>
+</svg>

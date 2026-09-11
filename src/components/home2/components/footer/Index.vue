@@ -68,7 +68,7 @@
 			<b-col
 			class="last-column"
 			cols="12">
-				<img src="@/assets/logo.jpg" alt="">
+				<img src="@/assets/isotipo-comerciocity.svg" alt="">
 				ComercioCity - Todos los derechos reservados
 			</b-col>
 		</b-row>
