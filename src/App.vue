@@ -308,11 +308,18 @@ export default {
                 .then(() => {
                     // Uso normal del dia (fuera de un login): una navegacion posterior a
                     // Reportes no tiene que encontrarse con la señal de un arranque que ya
-                    // termino hace rato.
+                    // termino hace rato. Se limpian las dos juntas: si solo se resetea
+                    // arranque_en_curso y se deja cadena_widgets colgada, un segundo arranque
+                    // en el mismo runtime (ej. checkUserAppUrl reautenticando antes del
+                    // location.replace) encuentra la cola vieja ya resuelta y dispara el
+                    // fetch de Reportes antes de tiempo -- la misma rafaga que esto vino a
+                    // evitar, solo que del lado de Reportes.
                     if (this.$store.state.auth.arranque_en_curso === arranque) {
                         this.$store.commit('auth/set_arranque_en_curso', null)
+                        this.$store.commit('reportes/setCadenaWidgets', null)
                     }
                 })
+                .catch(err => console.log(err))
 
                 this.$store.commit('auth/set_arranque_en_curso', arranque)
 

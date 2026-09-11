@@ -268,7 +268,10 @@ export default {
 		getEstadoResultados({state, commit}) {
 			commit('setEstadoResultadosLoading', true)
 
-			axios.get('api/reportes/estado-resultados', {params: fecha_moneda_params(state, true)})
+			// El return es necesario: encolar_fetch_de_widget encadena sobre esta promesa
+			// para que el siguiente widget espere la respuesta HTTP real, no el tick en que
+			// arranca el pedido (sin return, Vuex resuelve el dispatch al toque).
+			return axios.get('api/reportes/estado-resultados', {params: fecha_moneda_params(state, true)})
 			.then(res => {
 				commit('setEstadoResultadosLoading', false)
 				commit('setEstadoResultados', res.data.estado_resultados)
@@ -285,7 +288,8 @@ export default {
 		getPosicionFiscal({state, commit}) {
 			commit('setPosicionFiscalLoading', true)
 
-			axios.get('api/reportes/posicion-fiscal', {params: fecha_moneda_params(state, false)})
+			// Return necesario -- ver comentario de getEstadoResultados, misma razon.
+			return axios.get('api/reportes/posicion-fiscal', {params: fecha_moneda_params(state, false)})
 			.then(res => {
 				commit('setPosicionFiscalLoading', false)
 				commit('setPosicionFiscal', res.data.posicion_fiscal)
@@ -302,7 +306,8 @@ export default {
 		getFlujoCaja({state, commit}) {
 			commit('setFlujoCajaLoading', true)
 
-			axios.get('api/reportes/flujo-caja', {params: fecha_moneda_params(state, true)})
+			// Return necesario -- ver comentario de getEstadoResultados, misma razon.
+			return axios.get('api/reportes/flujo-caja', {params: fecha_moneda_params(state, true)})
 			.then(res => {
 				commit('setFlujoCajaLoading', false)
 				commit('setFlujoCaja', res.data.flujo_caja)
@@ -359,7 +364,8 @@ export default {
 
 			}
 
-			axios.get(link)
+			// Return necesario -- ver comentario de getEstadoResultados, misma razon.
+			return axios.get(link)
 			.then(res => {
 				console.log('reportes/getReportes')
 				console.log(res.data)
