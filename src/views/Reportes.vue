@@ -68,7 +68,8 @@ export default {
 	},
 	created() {
 		/* Se traslada aca desde el ya eliminado components/general/Index.vue: Articulos y Graficos siguen leyendo state.reportes.model (poblado por esta action, que pega contra api/company-performance) para varios de sus graficos, asi que el fetch tiene que seguir disparandose siempre al entrar a Reportes, sin importar la seccion activa. */
-		this.$store.dispatch('reportes/getReportes')
+		/* encolar_fetch_de_widget en vez de dispatch directo: si esta pantalla es el aterrizaje de un login, este fetch se encadena con los de los 3 hijos de abajo en vez de salir junto con ellos (mision 11/9/2026, arranque secuencial). En navegacion normal durante el dia sale de inmediato, como siempre. */
+		this.$store.dispatch('reportes/encolar_fetch_de_widget', 'getReportes')
 	},
 }
 </script>

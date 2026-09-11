@@ -281,15 +281,48 @@ export default {
                     return
                 }
                 // this.check_online()
+
+                /*
+                    🔴 Encadenadas, una atras de otra, y no las ~15 juntas en paralelo contra la
+                    API recien autenticada: esa rafaga es la causa raiz del toast
+                    "Unauthenticated." apilado que reporto golonorte el 11/9/2026, al rebotar de
+                    sesion entre dos frentes del VPS (mismo mecanismo que debe_cambiar_de_version
+                    de aca arriba, pero para el caso en que NO hay que cambiar de frente). Cada
+                    eslabon atrapa su propio error para que uno que falle no le tape el turno al
+                    que sigue, y la promesa completa SIEMPRE resuelve -- nunca rechaza.
+
+                    Se guarda en auth/arranque_en_curso ANTES de checkPermissionForCurrentRoute():
+                    esa es la que puede navegar a /reportes en este mismo tick si esa pantalla es
+                    el aterrizaje por defecto, y los widgets de Reportes -- en su propio created()
+                    -- deciden si encadenan su fetch detras de esta señal o lo disparan ya mismo
+                    mirando si esto esta seteado (store/reportes/index.js).
+                */
+                let arranque = this.callMethods()
+                .catch(err => console.log(err))
+                .then(() => this.startMethods())
+                .catch(err => console.log(err))
+                .then(() => this.sincronizar_offline())
+                .catch(err => console.log(err))
+                .then(() => this.$store.dispatch('cheque/getModels'))
+                .catch(err => console.log(err))
+                .then(() => {
+                    // Uso normal del dia (fuera de un login): una navegacion posterior a
+                    // Reportes no tiene que encontrarse con la señal de un arranque que ya
+                    // termino hace rato.
+                    if (this.$store.state.auth.arranque_en_curso === arranque) {
+                        this.$store.commit('auth/set_arranque_en_curso', null)
+                    }
+                })
+
+                this.$store.commit('auth/set_arranque_en_curso', arranque)
+
+                // La navegacion es inmediata: el usuario no tiene que mirar una pantalla en
+                // blanco mientras esperan las llamadas de arriba.
                 this.checkPermissionForCurrentRoute()
-                this.callMethods()
+
+                // Setup de listeners, no son fetches: no bloquean ni forman parte de la cadena.
                 this.listenChannels()
                 this.listenChannelsLocal()
-                this.startMethods()
-
-                this.sincronizar_offline()
-                
-                this.$store.dispatch('cheque/getModels')
 
             }
         }

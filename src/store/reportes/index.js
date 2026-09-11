@@ -56,6 +56,14 @@ export default {
 		/* Moneda unica que aplica a Estado de Resultados, Flujo de Caja y Posicion Fiscal (grupo 227) */
 		moneda: 'pesos',
 
+		/**
+		 * Cola de encadenado de los 4 fetches de esta pantalla (company-performance +
+		 * estado-resultados + flujo-caja + posicion-fiscal), usada SOLO mientras hay un
+		 * arranque de sesion en curso (auth/arranque_en_curso). Fuera de ese caso queda en
+		 * null y no se usa para nada -- ver encolar_fetch_de_widget().
+		 */
+		cadena_widgets: null,
+
 		/* Estado de Resultados devengado (api/reportes/estado-resultados) */
 		estado_resultados: {},
 		estado_resultados_loading: false,
@@ -122,6 +130,11 @@ export default {
 		/* Moneda unica: 'pesos' | 'dolares' | 'consolidado' (grupo 227) */
 		setMoneda(state, value) {
 			state.moneda = value
+		},
+
+		/* Cola de encadenado de los widgets de esta pantalla. Ver el comentario de cadena_widgets en el state. */
+		setCadenaWidgets(state, value) {
+			state.cadena_widgets = value
 		},
 
 		setEstadoResultados(state, value) {
@@ -216,6 +229,38 @@ export default {
 		},
 	},
 	actions: {
+		/**
+		 * Punto de entrada unico de los 4 fetches de la pantalla de Reportes (company-performance
+		 * en Reportes.vue + estado-resultados/flujo-caja/posicion-fiscal en sus 3 hijos). Cada uno
+		 * llama a esto en su propio created() en vez de despachar su accion directo.
+		 *
+		 * - Si HAY un arranque de sesion en curso (auth/arranque_en_curso, seteado por el watch de
+		 *   `authenticated` en App.vue): esta pantalla es el aterrizaje por defecto tras un login,
+		 *   asi que el fetch se encola detras de ese arranque Y detras del widget anterior que ya
+		 *   se haya encolado -- los 4 terminan saliendo uno atras de otro, no en paralelo, que es
+		 *   justamente lo que esta mision vino a evitar (ver plan 20260911-arranque-secuencial).
+		 * - Si NO hay arranque en curso: es navegacion normal a Reportes durante el dia (el caso
+		 *   de siempre, que no se puede romper), y el fetch sale de inmediato, sin encolarse.
+		 *
+		 * @param {String} nombre_accion Accion de este mismo modulo a disparar (ej. 'getFlujoCaja').
+		 * @returns {Promise}
+		 */
+		encolar_fetch_de_widget({state, commit, dispatch, rootState}, nombre_accion) {
+			let arranque = rootState.auth.arranque_en_curso
+
+			if (!arranque) {
+				return dispatch(nombre_accion)
+			}
+
+			let cola = (state.cadena_widgets || arranque)
+			.then(() => dispatch(nombre_accion))
+			.catch(err => console.log(err))
+
+			commit('setCadenaWidgets', cola)
+
+			return cola
+		},
+
 		/**
 		 * Estado de Resultados devengado. Usa el rango de fechas del selector superior (dia actual
 		 * o rango elegido) y la moneda unica (pesos/dolares/consolidado).
