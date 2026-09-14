@@ -958,12 +958,31 @@ export default {
 		has_many_saved(model) {
 			this.$emit('has_many_saved', model)
 		},
+		/*
+			Misma funcionalidad que la consulta AFIP del buscador de VENDER
+			(SelectClient.vue -> onRequestClientAfipLookup): pega directo con $api
+			(mismos interceptores y baseURL que el resto de la app) y solo dígitos,
+			en vez de pasar por un store con axios crudo aparte.
+		*/
 		searchCUIT() {
-			this.$store.dispatch('search_by_cuit/searchByCUIT', {
-				cuit: this.model.cuit,
-				model_name: this.model_name,
-			})
-			.then(data => {
+			let digits = ('' + this.model.cuit).replace(/\D/g, '')
+			/*
+				Misma validacion que query_matches_client_afip_document_pattern en
+				search/Modal.vue: sin esto, un cuit vacio o con basura arma una URL
+				con el segmento final vacio y Laravel devuelve 404 antes de llegar
+				al mensaje de AFIP ("debe ser un CUIT... o un DNI...").
+			*/
+			if (digits.length != 11 && (digits.length < 7 || digits.length > 8)) {
+				this.$toast.error('Ingrese un CUIT (11 dígitos) o un DNI (7 u 8 dígitos) válido')
+				return
+			}
+			this.$store.commit('auth/setMessage', 'Consultando a AFIP')
+			this.$store.commit('auth/setLoading', true)
+			this.$api.get(this.model_name + '/get-afip-information-by-cuit/' + encodeURIComponent(digits))
+			.then(res => {
+				this.$store.commit('auth/setLoading', false)
+				this.$store.commit('auth/setMessage', '')
+				let data = res.data
 				if (data.hubo_un_error) {
 					this.$toast.error('Afip dice: '+data.error)
 				} else {
@@ -973,6 +992,8 @@ export default {
 				}
 			})
 			.catch(err => {
+				this.$store.commit('auth/setLoading', false)
+				this.$store.commit('auth/setMessage', '')
 				console.log(err)
 				this.$toast.error('Error al buscar CUIT')
 			})
