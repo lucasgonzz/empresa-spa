@@ -966,6 +966,16 @@ export default {
 		*/
 		searchCUIT() {
 			let digits = ('' + this.model.cuit).replace(/\D/g, '')
+			/*
+				Misma validacion que query_matches_client_afip_document_pattern en
+				search/Modal.vue: sin esto, un cuit vacio o con basura arma una URL
+				con el segmento final vacio y Laravel devuelve 404 antes de llegar
+				al mensaje de AFIP ("debe ser un CUIT... o un DNI...").
+			*/
+			if (digits.length != 11 && (digits.length < 7 || digits.length > 8)) {
+				this.$toast.error('Ingrese un CUIT (11 dígitos) o un DNI (7 u 8 dígitos) válido')
+				return
+			}
 			this.$store.commit('auth/setMessage', 'Consultando a AFIP')
 			this.$store.commit('auth/setLoading', true)
 			this.$api.get(this.model_name + '/get-afip-information-by-cuit/' + encodeURIComponent(digits))
