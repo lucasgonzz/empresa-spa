@@ -142,6 +142,10 @@ export default {
 			if (!por_ambito || typeof por_ambito != 'object') {
 				return null
 			}
+			// Un array vacio (el usuario destildo todo) cae al fallback a proposito: la tabla
+			// (display/table/Index.vue, computed `props`) ya trata una lista vacia como "todas las
+			// del modelo", y para esta vista el vacio util son sus columnas por defecto, no las 56
+			// del modelo.
 			let props = por_ambito[this.table_preference_scope]
 			return Array.isArray(props) && props.length ? props : null
 		},

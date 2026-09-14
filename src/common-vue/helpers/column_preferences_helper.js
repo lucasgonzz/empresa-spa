@@ -7,6 +7,9 @@ import generals from '@/common-vue/mixins/generals'
 import { add_article_dynamic_columns } from '@/common-vue/helpers/article_dynamic_table_columns'
 import { article_dynamic_dependencies_ready } from '@/common-vue/helpers/dynamic_column_dependencies_status'
 
+/** Relaciones mal declaradas ya avisadas por consola, por `<modelo>.<key>` (ver get_relation_column_groups). */
+let relaciones_avisadas = {}
+
 /**
  * Contexto mínimo para reutilizar métodos de generals fuera de componentes Vue.
  *
@@ -264,6 +267,22 @@ export function belongs_to_many_preference_type(parent_model_name, prop_key) {
 }
 
 /**
+ * Id del modal "Propiedades para mostrar" de un modelo, con o sin ambito de tabla.
+ *
+ * Lo arman dos componentes distintos --props-to-show/Index.vue para el boton que lo abre y
+ * props-to-show/Modal.vue para el modal-- y si divergieran el boton dejaria de abrir el modal
+ * sin ningun error. Con ambito lleva sufijo porque el listado de Ventas y Por Entregar montan
+ * cada uno su modal sobre el mismo modelo.
+ *
+ * @param {string} model_name
+ * @param {string|null} preference_scope
+ * @returns {string}
+ */
+export function props_to_show_modal_id(model_name, preference_scope) {
+	return 'props-to-show-' + model_name + (preference_scope ? '-' + preference_scope : '')
+}
+
+/**
  * Propiedades base del modelo aptas para preferencias de tabla.
  *
  * @param {Object} store
@@ -317,7 +336,7 @@ export function get_all_properties_for_model(store_context, model_name) {
  * Relaciones del modelo cuyas propiedades se ofrecen como columnas del listado (belongsTo o
  * hasOne), con las props del modelo relacionado que pueden ser una columna.
  *
- * Solo entran las props que el modelo declara con `relation_columns: true`: no se detectan
+ * Solo entran las props que el modelo declara con `related_model_columns: true`: no se detectan
  * solas por terminar en `_id`, porque hay modelos relacionados con campos que jamas tienen que
  * poder elegirse como columna (employee.visible_password, "Contraseña"). Cada relacion la
  * habilita alguien a proposito, mirando que trae el modelo del otro lado.
@@ -327,6 +346,14 @@ export function get_all_properties_for_model(store_context, model_name) {
  * en el caso belongsTo (la key termina en `_id`); en un hasOne es null y la celda solo puede
  * leerse de la relacion embebida en la respuesta.
  *
+ * El flag se llama `related_model_columns` y no `relation_columns` a proposito: `type:
+ * 'relation_columns'` ya existe en el repo y es OTRO mecanismo (columnas dinamicas de un
+ * pivote, ver deposit_movement.js y display/table/Index.vue), y `is_relation_column` es la
+ * prop que ese mecanismo emite. Lo de aca emite `is_relation_prop`.
+ *
+ * La prop padre pasa por los mismos gates que cualquier columna (extension y admin): si el
+ * dueño no tiene la extension que habilita `client_id`, tampoco se le ofrece el bloque.
+ *
  * @param {Object} store_context
  * @param {string} model_name
  * @returns {Array<{relation: string, relation_model_name: string, foreign_key: string|null, label: string, children: Array}>}
@@ -335,11 +362,14 @@ export function get_relation_column_groups(store_context, model_name) {
 	let context = build_generals_context(
 		store_context.rootState ? { state: store_context.rootState } : store_context
 	)
-	let parent_props = require('@/models/' + model_name).default.properties || []
+	let parent_props = context.check_extencions(require('@/models/' + model_name).default.properties || [])
 	let groups = []
 
 	parent_props.forEach(prop => {
-		if (!prop || !prop.relation_columns || !prop.key) {
+		if (!prop || !prop.related_model_columns || !prop.key) {
+			return
+		}
+		if (prop.if_is_admin && !context.is_admin) {
 			return
 		}
 
@@ -359,7 +389,12 @@ export function get_relation_column_groups(store_context, model_name) {
 		try {
 			related_model = require('@/models/' + relation).default
 		} catch (e) {
-			console.warn('relation_columns: no existe el modelo "' + relation + '" declarado en ' + model_name + '.' + prop.key)
+			// Una sola vez por relacion: esta funcion corre en cada apertura del modal y en cada
+			// bootstrap, y un modelo mal declarado no tiene que llenar la consola.
+			if (!relaciones_avisadas[model_name + '.' + prop.key]) {
+				relaciones_avisadas[model_name + '.' + prop.key] = true
+				console.warn('related_model_columns: no existe el modelo "' + relation + '" declarado en ' + model_name + '.' + prop.key)
+			}
 			return
 		}
 
@@ -431,6 +466,10 @@ function relation_group_row_from_group(context, group, order) {
  * (`table_scopes[ambito].default_visible_keys`). null si no hay ambito o el modelo no lo
  * declara: en ese caso el ambito usa los mismos defaults que `table`.
  *
+ * Solo admite keys de props PROPIAS del modelo: una hija de relacion (`client.name`) ahi se
+ * ignora en silencio, porque los bloques se agregan despues de resolver estas keys y siempre
+ * arrancan destildados.
+ *
  * @param {string} model_name
  * @param {string|null} ambito
  * @returns {Array<string>|null}
@@ -455,7 +494,7 @@ function scoped_default_visible_keys(model_name, ambito) {
  * Primero las propias del modelo; con un ambito declarado en el modelo, las keys de
  * `default_visible_keys` van primero y visibles (en ese orden) y el resto detras y
  * destildado, salvo las bloqueadas. Al final, una fila de grupo por relacion habilitada con
- * `relation_columns`, plegada y con todas las hijas destildadas.
+ * `related_model_columns`, plegada y con todas las hijas destildadas.
  *
  * @param {Object} store
  * @param {string} model_name

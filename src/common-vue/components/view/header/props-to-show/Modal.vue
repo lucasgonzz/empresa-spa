@@ -78,6 +78,8 @@ import {
 
 	normalize_column_preference_rows,
 
+	props_to_show_modal_id,
+
 	resolve_column_preference_rows,
 
 	table_column_preference_columns_from_store,
@@ -168,7 +170,7 @@ export default {
 
 		modal_id() {
 
-			return 'props-to-show-' + this.model_name + (this.preference_scope ? '-' + this.preference_scope : '')
+			return props_to_show_modal_id(this.model_name, this.preference_scope)
 
 		},
 

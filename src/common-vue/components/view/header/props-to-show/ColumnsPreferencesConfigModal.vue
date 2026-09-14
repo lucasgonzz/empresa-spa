@@ -124,7 +124,7 @@
 
 					<tr
 
-					v-for="row in filtered_config_rows"
+					v-for="row in filtered_config_rows_tabla"
 
 					:key="get_row_unique_id(row)"
 
@@ -293,7 +293,7 @@
 
 					</tr>
 
-					<tr v-if="!filtered_config_rows.length">
+					<tr v-if="!filtered_config_rows_tabla.length">
 						<td
 						:colspan="table_empty_colspan"
 						class="text-center text-muted columns-preferences-config__empty">
@@ -839,6 +839,28 @@ export default {
 				}
 				return this.row_matches_search(row, query)
 			})
+		},
+
+		/**
+
+		 * Filas del layout tabla (perfiles PDF): solo propias. Ese layout no dibuja bloques de
+
+		 * relacion --no tiene chevron ni hijas-- y sin este filtro un bloque saldria como una fila
+
+		 * con checkbox y sin nada adentro. Hoy ningun consumidor del layout tabla pasa grupos;
+
+		 * la guarda es para el dia que alguno lo haga.
+
+		 *
+
+		 * @returns {Array}
+
+		 */
+
+		filtered_config_rows_tabla() {
+
+			return this.filtered_config_rows.filter(row => !row.is_relation_group)
+
 		},
 
 		/**

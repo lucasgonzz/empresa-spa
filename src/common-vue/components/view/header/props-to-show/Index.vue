@@ -17,6 +17,8 @@
 	</div>
 </template>
 <script>
+import { props_to_show_modal_id } from '@/common-vue/helpers/column_preferences_helper'
+
 export default {
 	props: {
 		model_name: String,
@@ -33,7 +35,7 @@ export default {
 		// Tiene que ser el mismo id que arma Modal.vue: con ámbito lleva el sufijo, porque el
 		// listado de Ventas y Por Entregar montan cada uno su modal sobre el mismo modelo.
 		modal_id() {
-			return 'props-to-show-' + this.model_name + (this.preference_scope ? '-' + this.preference_scope : '')
+			return props_to_show_modal_id(this.model_name, this.preference_scope)
 		},
 	},
 	components: {

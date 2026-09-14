@@ -96,7 +96,7 @@ export default {
 			// del listado, en el modal "Propiedades para mostrar". Es opt-in por relacion y no una
 			// deteccion automatica de belongsTo: hay props _id cuyo modelo trae campos que nunca
 			// tienen que ser una columna (employee.visible_password, "Contraseña").
-			relation_columns: true,
+			related_model_columns: true,
 		},
 		{
 			text: 'Empleado',
