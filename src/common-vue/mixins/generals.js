@@ -896,12 +896,54 @@ export default {
 		modelsStoreFromName(model_name) {
 			return this.$store.state[model_name].models
 		},
+		/**
+		 * Modelo relacionado del que se lee una columna de relacion ("Cliente: Descripcion",
+		 * ver relation_table_prop en column_preferences_helper.js): la relacion embebida en la
+		 * respuesta si vino (sale.client), y si no, el modelo del store relacionado buscado por la
+		 * foreign key. null si no hay de donde leerlo.
+		 *
+		 * @param {Object} model Fila de la tabla (ej. la venta).
+		 * @param {Object} prop  Prop de tabla con is_relation_prop.
+		 * @returns {Object|null}
+		 */
+		relation_model_for_prop(model, prop) {
+			if (!model) {
+				return null
+			}
+			let embebido = model[prop.relation]
+			if (embebido && typeof embebido == 'object') {
+				return embebido
+			}
+			if (!prop.foreign_key || !model[prop.foreign_key]) {
+				return null
+			}
+			let store = this.$store.state[prop.relation_store]
+			if (!store || !Array.isArray(store.models)) {
+				return null
+			}
+			let del_store = store.models.find(_model => {
+				return _model.id == model[prop.foreign_key]
+			})
+			return typeof del_store != 'undefined' ? del_store : null
+		},
 		propertyText(model, prop, from_pivot = false, pivot_parent_model = null) {
 			// console.log('propertyText para '+prop.key)
 			// console.log('model ')
 			// console.log(model)
 			if (!prop || prop.key == null || prop.key === '') {
 				return ''
+			}
+			// Columna de una relacion (client.description): la celda se delega a la prop del modelo
+			// relacionado, evaluada CONTRA el modelo relacionado. Asi el formato --precio, fecha,
+			// select resuelto por store, checkbox-- es exactamente el mismo que en la ficha del
+			// cliente, sin duplicar aca ninguna de esas ramas. Sin relacionado, celda vacia y no
+			// 'S/A', por el mismo motivo que explica la rama de isRelationKey mas abajo.
+			if (prop.is_relation_prop) {
+				let relacionado = this.relation_model_for_prop(model, prop)
+				if (!relacionado) {
+					return ''
+				}
+				return this.propertyText(relacionado, prop.relation_prop)
 			}
 			if (prop.type == 'images' || prop.type == 'image') {
 				return null

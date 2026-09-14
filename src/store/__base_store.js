@@ -93,6 +93,14 @@ export default function __base_store(options = {}) {
 
 			props_to_show: [],
 
+			// Columnas de la tabla por ámbito de vista: { por_entregar: [...props] }. Existe porque
+			// una misma tabla puede mirarse desde más de una pantalla con columnas distintas sin
+			// pisar `props_to_show`, que es la del listado principal del módulo. El primer caso es
+			// Ventas > Por Entregar, que comparte el store `sale` con el listado de Ventas
+			// (preference_type `table_por_entregar`, ver column_preferences_helper.js). Arranca
+			// vacío y ningún módulo lo escribe salvo el que lo necesita.
+			props_to_show_por_ambito: {},
+
 			// Flag que indica si el estado filtered fue cargado por un buscador rápido sin usar el FilterForm (ej. el buscador general).
 			// Permite distinguir entre "filtrado por formulario" y "filtrado por buscador rápido".
 			filtered_without_filter_form: false,
@@ -200,6 +208,20 @@ export default function __base_store(options = {}) {
 	let base_mutations = {
 		set_props_to_show(state, value) {
 			state.props_to_show = value
+		},
+		/**
+		 * Fija las columnas de un ámbito de vista (ver state.props_to_show_por_ambito).
+		 * Reemplaza el objeto entero en vez de asignar la clave: una clave nueva sobre un objeto
+		 * ya observado no es reactiva en Vue 2 sin Vue.set, y la vista no se enteraría.
+		 *
+		 * @param {Object} state
+		 * @param {{ambito: string, props: Array}} value
+		 */
+		set_props_to_show_por_ambito(state, value) {
+			state.props_to_show_por_ambito = {
+				...state.props_to_show_por_ambito,
+				[value.ambito]: value.props,
+			}
 		},
 		set_route_prefix(state, value) {
 			state.route_prefix = value
