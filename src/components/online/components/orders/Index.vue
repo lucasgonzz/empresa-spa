@@ -42,6 +42,15 @@
 				<btn-whatsapp-chat
 				:phone="slotProps.model.buyer ? slotProps.model.buyer.phone : ''"
 				:display_name="slotProps.model.buyer ? slotProps.model.buyer.name : ''"></btn-whatsapp-chat>
+
+				<!--
+					Envío por correo (Zipnova): el botón se dibuja solo si el pedido trae una opción
+					de envío elegida en la tienda o un envío ya generado. Abre el modal con el
+					destinatario, la opción y el estado, y desde ahí se genera, se sincroniza, se
+					imprime la etiqueta y se cancela.
+				-->
+				<envio-btn
+				:order="slotProps.model"></envio-btn>
 			</template>
 		</view-component>
 	</div>
@@ -66,6 +75,7 @@ export default {
 		PaymentDetails: () => import('@/components/online/modals/orders/payment-details/Index'),
 		LimiteCreditoPedido: () => import('@/components/online/modals/orders/LimiteCreditoPedido'),
 		BtnWhatsappChat: () => import('@/components/common/BtnWhatsappChat'),
+		EnvioBtn: () => import('@/components/online/components/orders/envio/EnvioBtn'),
 	},
 	data() {
 		return {

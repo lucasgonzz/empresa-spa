@@ -12,10 +12,12 @@
 export default {
 	properties: [],
 	abm_descripcion: {
-		para_que_sirve: 'Conecta la tienda online con tu propia cuenta de Mercado Pago y con Zippin para los envios.',
-		implicancias: 'La conexion se hace por OAuth contra la cuenta del comercio: ya no se pegan claves a mano en ningun formulario. ComercioCity no es intermediario del cobro; la comision de cada venta se la paga el comercio directo a Mercado Pago.',
-		como_se_utiliza: 'Entra a ABM → Integraciones → Tienda online y toca Conectar en la tarjeta que corresponda. Para cortar la conexion, Desconectar en la misma tarjeta.',
-		palabras_clave: ['mercado pago', 'cobro online', 'checkout', 'zippin', 'envios', 'oauth', 'conectar', 'integraciones'],
+		para_que_sirve: 'Conecta la tienda online con tu propia cuenta de Mercado Pago para cobrar y con Zipnova (ex Zippin) para cotizar y despachar envíos por Correo Argentino, Andreani y más de 20 transportes.',
+		implicancias: 'Mercado Pago se conecta por OAuth contra la cuenta del comercio; Zipnova, pegando el API Token y el API Secret que el comercio genera en su propia cuenta de Zipnova. Ninguna clave queda a la vista después de conectar. ComercioCity no es intermediario del cobro ni del envío: la comisión de cada venta se la paga el comercio directo a Mercado Pago, y el costo del envío se lo cobra al comprador en el mismo pedido (o lo absorbe si marca envío gratis).',
+		como_se_utiliza: 'Entrá a ABM → Integraciones → Tienda online y tocá Conectar en la tarjeta que corresponda. Para Zipnova, seguí el paso a paso de la tarjeta para conseguir los dos códigos, pegalos y tocá Conectar; después elegí el depósito, completá el paquete por defecto y probá con un código postal como lo vería tu cliente. Para cortar la conexión, Desconectar en la misma tarjeta.',
+		// Las palabras clave van sin tilde a propósito: son lo que el dueño tipea en el buscador
+		// del ABM, y ahí nadie acentúa.
+		palabras_clave: ['mercado pago', 'cobro online', 'checkout', 'zipnova', 'zippin', 'andreani', 'correo argentino', 'codigo postal', 'costo de envio', 'etiqueta', 'envios', 'oauth', 'conectar', 'integraciones'],
 	},
 	singular_model_name_spanish: 'Tienda online',
 	plural_model_name_spanish: 'Tienda online',

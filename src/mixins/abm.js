@@ -147,7 +147,7 @@ export default {
 				},
 				// Integraciones externas, en tres solapas: lo que conecta el SISTEMA con otra
 				// plataforma (Mercado Libre, Tienda Nube), lo que conecta la TIENDA ONLINE
-				// (Mercado Pago, Zippin) y el bot de WHATSAPP.
+				// (Mercado Pago, Zipnova) y el bot de WHATSAPP.
 				{
 					view: 'integraciones',
 					models: [
