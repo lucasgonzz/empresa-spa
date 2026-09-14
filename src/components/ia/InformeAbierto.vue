@@ -56,7 +56,7 @@
 						:key="'pregunta-' + reporte.id"
 						:reporte="reporte"
 						@conversacion-creada="on_conversacion_creada"
-						@enviado="on_enviado"></pregunta-input>
+						@enviando="on_enviando"></pregunta-input>
 					</section>
 
 					<!-- La conversación del informe, solo si existe. En escritorio es una
@@ -211,7 +211,11 @@ export default {
 				this.cajon_abierto = true
 			}
 		},
-		on_enviado() {
+		/**
+		 * Pregunta sobre un informe que ya tiene conversación: en modo cajón se abre en
+		 * el acto (con el globo optimista adentro), sin esperar a que el POST confirme.
+		 */
+		on_enviando() {
 			if (this.es_cajon) {
 				this.cajon_abierto = true
 			}

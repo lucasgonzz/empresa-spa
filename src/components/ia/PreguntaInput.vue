@@ -90,6 +90,12 @@ export default {
 			// El globo optimista sube al toque: el input se limpia ya mismo.
 			this.texto = ''
 			this.sending = true
+			// Con conversación, el sidebar (o el cajón, en angosto) tiene que mostrarse
+			// YA, con el globo optimista, y no recién cuando el POST confirme: contra
+			// el API real el POST tarda más de lo que el ojo tolera sin respuesta.
+			if (this.con_conversacion) {
+				this.$emit('enviando')
+			}
 
 			// Sin conversación, primero se crea la del informe; con conversación, se
 			// manda directo (el sidebar ya la dejó seleccionada en ai_chat).
