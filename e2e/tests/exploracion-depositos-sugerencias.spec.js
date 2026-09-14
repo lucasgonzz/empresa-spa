@@ -35,6 +35,13 @@
 // "EXP Norte" se crea si falta y se reusa. La caja "Caja Efectivo" tiene que estar abierta
 // (la deja abierta el fixture; los circuitos de venta ya dependen de lo mismo).
 const { test, expect } = require('../fixtures')
+
+// SALTEADO ENTERO (mision modulo-ia-mostrador, 14/9/2026): la pantalla /sugerencias-de-stock ya no
+// existe. Sus sugerencias viven ahora en la carpeta Stock del mostrador del modulo IA, que redacta
+// la skill /mostrador desde Claude Code. Lo que este archivo afirmaba de CoberturaService y
+// StockSuggestionService sigue vigente en el API (tests/Feature/SugerenciasStock y
+// tests/Feature/Mostrador en empresa-api); lo que afirmaba de la INTERFAZ no tiene interfaz.
+test.skip(true, 'la vista /sugerencias-de-stock se quito el 14/9/2026 (mision modulo-ia-mostrador): las sugerencias estan en la carpeta Stock del mostrador')
 const { esperar_recursos_descargados } = require('../helpers/recursos')
 const { completar_campo, abrir_pestania, crear_desde_buscador } = require('../helpers/formulario')
 const { buscar_articulo, abrir_vender, agregar_articulo, elegir_opcion_que_contenga } = require('../helpers/vender')
