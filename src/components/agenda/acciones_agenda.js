@@ -114,6 +114,17 @@ export default {
 				return
 			}
 
+			/*
+				Candado del segundo clic, del lado del usuario. La API ya responde 409 al segundo
+				POST de la misma ocurrencia (no se duplica nada), pero un doble clic normal
+				mostraba ese aviso amarillo por un clic que el usuario dio una sola vez con
+				intencion. Mientras el primer POST no vuelva, los siguientes se ignoran.
+			*/
+			if (this.$store.state.agenda.en_curso.indexOf(ocurrencia.key) != -1) {
+				return
+			}
+			this.$store.commit('agenda/marcarEnCurso', ocurrencia.key)
+
 			let self = this
 			this.$store.dispatch('agenda/completar', {
 				pending_id: ocurrencia.pending_id,
@@ -128,10 +139,13 @@ export default {
 			})
 			.catch(error => {
 				if (error && error.status == 409) {
-					self.$toast.warning('Esta ocurrencia ya estaba marcada como hecha')
+					self.$toast.warning('Esta tarea ya estaba marcada como hecha')
 					return
 				}
 				self.$toast.error(error && error.message ? error.message : 'No se pudo marcar la tarea como hecha.')
+			})
+			.then(() => {
+				self.$store.commit('agenda/liberarEnCurso', ocurrencia.key)
 			})
 		},
 
@@ -142,11 +156,35 @@ export default {
 		 * @param {Object} ocurrencia con pending_completed_id
 		 */
 		deshacer_ocurrencia(ocurrencia) {
+			let self = this
+
+			/*
+				Una puntual hecha SIN realizada es un resto de la pantalla vieja (dejaba
+				`completado = 1` aunque se hubiera borrado el registro). No hay nada que borrar:
+				se reabre pidiendole a la API que baje el flag (PUT pending con completado false).
+			*/
 			if (!ocurrencia.pending_completed_id) {
+				this.$bvModal.msgBoxConfirm('¿Volver a pendiente "' + ocurrencia.detalle + '"?', {
+					title: 'Volver a pendiente',
+					okTitle: 'Sí, volver a pendiente',
+					cancelTitle: 'No',
+					centered: true,
+				})
+				.then(confirmado => {
+					if (!confirmado) {
+						return
+					}
+					return self.$store.dispatch('agenda/reabrir_tarea', ocurrencia.pending_id)
+					.then(() => {
+						self.$toast.success('Volvió a pendiente')
+					})
+					.catch(mensaje => {
+						self.$toast.error(mensaje)
+					})
+				})
 				return
 			}
 
-			let self = this
 			let pregunta = ocurrencia.expense_id
 				? '¿Deshacer "' + ocurrencia.detalle + '"? El gasto que se registró queda cargado; si hace falta, se borra desde Gastos.'
 				: '¿Deshacer "' + ocurrencia.detalle + '"?'

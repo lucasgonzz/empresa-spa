@@ -436,13 +436,18 @@ export default {
 		flex-wrap: wrap
 		color: var(--color-text-secondary)
 
-	&__cantidad
-		width: 90px
-		flex: none
+		// Con dos clases y el elemento a proposito: bootstrap se importa en el <style> de
+		// muchos componentes y `.form-control { width: 100% }` aparece decenas de veces en el
+		// CSS final, varias DESPUES de esta regla. Un solo `.agenda-form-tarea__cantidad`
+		// perdia y el numero ocupaba todo el ancho, con el select abajo (medido el 14/9/2026).
+		input.agenda-form-tarea__cantidad
+			width: 90px
+			flex: none
 
-	&__unidad
-		flex: 1
-		min-width: 140px
+		select.agenda-form-tarea__unidad
+			flex: 1
+			width: auto
+			min-width: 140px
 
 	&__sin-conceptos
 		font-size: 0.9rem

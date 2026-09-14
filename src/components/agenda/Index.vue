@@ -96,12 +96,32 @@ export default {
 			return null
 		},
 	},
+	watch: {
+		/*
+		 * La URL manda: un clic en "Agenda" del menu estando en Calendario navega a
+		 * /agenda/por-realizar y tiene que volver a la lista, y un enlace directo a
+		 * /agenda/realizadas tiene que abrir Realizadas aunque el componente ya este montado.
+		 */
+		'$route.params.view'(view) {
+			this.aplicar_vista_de_la_url(view)
+		},
+	},
 	created() {
-		let de_la_url = this.$route.params.view
-		let inicial = VISTAS_VALIDAS.indexOf(de_la_url) != -1 ? de_la_url : 'lista'
-		this.$store.dispatch('agenda/set_vista', inicial)
+		this.aplicar_vista_de_la_url(this.$route.params.view)
 	},
 	methods: {
+		/**
+		 * @param {String|undefined} view Segmento de la URL; lo que no sea una vista valida
+		 *                                (`por-realizar` del menu, vacio) cae en la lista.
+		 */
+		aplicar_vista_de_la_url(view) {
+			let vista = VISTAS_VALIDAS.indexOf(view) != -1 ? view : 'lista'
+			if (vista == this.vista && this.$store.state.agenda.desde) {
+				return
+			}
+			this.$store.dispatch('agenda/set_vista', vista)
+		},
+
 		/**
 		 * Cambia la vista en el store (que recarga si hace falta) y la refleja en la URL sin
 		 * agregar historial. El catch vacio es por el NavigationDuplicated de vue-router 3 cuando

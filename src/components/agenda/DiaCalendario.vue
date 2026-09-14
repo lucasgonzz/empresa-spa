@@ -12,8 +12,8 @@
 	:aria-label="'Día ' + dia.numero + (dia.ocurrencias.length ? ', ' + dia.ocurrencias.length + ' tareas' : '')"
 	:data-testid="'agenda-dia-' + dia.fecha"
 	@click="$emit('seleccionar', dia.fecha)"
-	@keydown.enter.prevent="$emit('seleccionar', dia.fecha)"
-	@keydown.space.prevent="$emit('seleccionar', dia.fecha)">
+	@keydown.enter.self.prevent="$emit('seleccionar', dia.fecha)"
+	@keydown.space.self.prevent="$emit('seleccionar', dia.fecha)">
 
 		<span class="dia-calendario__numero">
 			{{ dia.numero }}

@@ -219,8 +219,11 @@ export default {
 		flex-wrap: wrap
 		margin-bottom: 16px
 
-	&__fecha
-		width: 170px
+	// Con el elemento en el selector por lo mismo que en FormTarea: `.form-control { width: 100% }`
+	// se repite decenas de veces en el CSS final y una sola clase perdia (170px no alcanzaba y
+	// el dia quedaba cortado: "15/08/202").
+	input.agenda-realizadas__fecha
+		width: 190px
 		flex: none
 
 	&__hasta
@@ -251,6 +254,8 @@ export default {
 	&__cuerpo
 		flex: 1
 		min-width: 0
+		// #app centra todo el texto (_app_vue.sass); una fila se lee de izquierda a derecha.
+		text-align: left
 
 	&__detalle
 		color: var(--color-text-primary)
@@ -280,7 +285,7 @@ export default {
 
 @media (max-width: 575px)
 	.agenda-realizadas
-		&__fecha
+		input.agenda-realizadas__fecha
 			width: auto
 			min-width: 0
 			flex: 1

@@ -106,6 +106,16 @@ export default {
 		 * { pending_completed_id, detalle, expense_id }. La barra la limpia sola a los segundos.
 		 */
 		ultima_hecha: null,
+
+		/* Keys de las ocurrencias con un POST de completar en vuelo (candado del doble clic) */
+		en_curso: [],
+
+		/*
+		 * Numero de la ultima carga pedida. Cada cargar() lo incrementa y, al volver, descarta la
+		 * respuesta si ya no es la ultima: dos clics rapidos en las flechas del calendario podian
+		 * dejar en pantalla las ocurrencias del mes anterior con la cabecera ya en el nuevo.
+		 */
+		secuencia_carga: 0,
 	},
 	mutations: {
 		setVista(state, value) {
@@ -150,6 +160,20 @@ export default {
 		setUltimaHecha(state, value) {
 			state.ultima_hecha = value
 		},
+		marcarEnCurso(state, key) {
+			if (state.en_curso.indexOf(key) == -1) {
+				state.en_curso.push(key)
+			}
+		},
+		liberarEnCurso(state, key) {
+			let index = state.en_curso.indexOf(key)
+			if (index != -1) {
+				state.en_curso.splice(index, 1)
+			}
+		},
+		incrementarSecuenciaCarga(state) {
+			state.secuencia_carga++
+		},
 	},
 	actions: {
 		/**
@@ -187,23 +211,41 @@ export default {
 		 * estado a mano, porque una tarea recurrente editada cambia todas sus fechas futuras y
 		 * eso no se puede reconstruir del lado de la SPA.
 		 */
-		cargar({state, commit}) {
+		cargar({state, commit, dispatch}) {
 			let vista = state.vista == 'calendario' ? 'calendario' : 'lista'
 			let rango = rango_de_la_vista(vista, state.hoy, state.mes_visible)
 			commit('setRango', rango)
 			commit('setLoading', true)
+			commit('incrementarSecuenciaCarga')
+			let secuencia = state.secuencia_carga
 
 			return axios.get('api/pending-agenda/' + rango.desde + '/' + rango.hasta)
 			.then(res => {
+				// Llego una carga mas nueva mientras esta viajaba: lo que trae ya no vale.
+				if (secuencia != state.secuencia_carga) {
+					return null
+				}
 				commit('setLoading', false)
 				commit('setHoy', res.data.hoy)
 				commit('setVencidas', res.data.vencidas)
 				commit('setOcurrencias', res.data.ocurrencias)
+
+				/*
+				 * El primer rango de la lista se arma con el reloj del navegador, y "hoy" lo
+				 * decide la API (zona del comercio). Si no coinciden --usuario de viaje, reloj
+				 * adelantado-- las tareas de hoy quedaban afuera del rango pedido y tampoco eran
+				 * vencidas: desaparecian. Con el hoy ya corregido se pide una vez mas.
+				 */
+				if (vista == 'lista' && res.data.hoy && res.data.hoy != rango.desde) {
+					return dispatch('cargar')
+				}
 				return res.data
 			})
 			.catch(err => {
 				console.log(err)
-				commit('setLoading', false)
+				if (secuencia == state.secuencia_carga) {
+					commit('setLoading', false)
+				}
 				return null
 			})
 		},
@@ -283,6 +325,41 @@ export default {
 			.catch(err => {
 				console.log(err)
 				return Promise.reject(mensaje_de_error(err, 'No se pudo guardar la tarea.'))
+			})
+		},
+
+		/**
+		 * PUT pending/{id} con `completado: false`: reabre una puntual que quedo en `completado = 1`
+		 * sin realizada (resto de la pantalla vieja). La API exige el resto del body igual que en
+		 * una edicion, asi que primero se lee la tarea y se reenvia tal cual con el flag abajo.
+		 *
+		 * @param {Number} id
+		 */
+		reabrir_tarea({dispatch}, id) {
+			let config = { skip_global_error_event: true }
+			return axios.get('api/pending/' + id, config)
+			.then(res => {
+				let t = res.data.model
+				return axios.put('api/pending/' + id, {
+					detalle: t.detalle,
+					fecha_realizacion: String(t.fecha_realizacion || '').substr(0, 10),
+					es_recurrente: t.es_recurrente ? true : false,
+					unidad_frecuencia_id: t.unidad_frecuencia_id,
+					cantidad_frecuencia: t.cantidad_frecuencia,
+					fecha_fin_recurrencia: t.fecha_fin_recurrencia ? String(t.fecha_fin_recurrencia).substr(0, 10) : null,
+					expense_concept_id: t.expense_concept_id,
+					expense_amount: t.expense_amount,
+					notas: t.notas,
+					completado: false,
+				}, config)
+			})
+			.then(res => {
+				dispatch('cargar')
+				return res.data.model
+			})
+			.catch(err => {
+				console.log(err)
+				return Promise.reject(mensaje_de_error(err, 'No se pudo volver a pendiente.'))
 			})
 		},
 

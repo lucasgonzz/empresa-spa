@@ -53,7 +53,7 @@
 			<multi-payment-methods
 			v-model="expense.payment_methods"
 			:payment_method_factory="payment_method_factory"
-			parent-modal-id="agenda-completar"
+			:parent_modal_id="'agenda-completar'"
 			:show_decimal_help="false"
 			:address_id="address_id"
 			:base_moneda="base_moneda"
@@ -469,7 +469,7 @@ export default {
 		manejar_error(error) {
 			this.enviando = false
 			if (error && error.status == 409) {
-				this.$toast.warning('Esta ocurrencia ya estaba marcada como hecha')
+				this.$toast.warning('Esta tarea ya estaba marcada como hecha')
 				this.cerrar()
 				return
 			}

@@ -16,12 +16,14 @@
 		<button
 		type="button"
 		class="fila-tarea__check"
+		:class="{ 'fila-tarea__check--en-curso': en_curso }"
 		:data-testid="'agenda-completar-' + ocurrencia.key"
 		:title="titulo_check"
 		:aria-label="titulo_check"
 		@click.stop="click_check">
+			<!-- Mientras el POST viaja, el circulo ya se muestra tildado: la fila se va sola cuando llega la recarga. -->
 			<i
-			v-if="ocurrencia.completado"
+			v-if="ocurrencia.completado || en_curso"
 			class="bi bi-check-lg"></i>
 		</button>
 
@@ -77,6 +79,16 @@ export default {
 	computed: {
 		hoy() {
 			return this.$store.state.agenda.hoy
+		},
+		/**
+		 * true mientras el POST de "marcar como hecha" de ESTA ocurrencia esta en vuelo (candado
+		 * del doble clic del mixin): el circulo se pinta tildado de inmediato, sin esperar la
+		 * recarga, para que el clic tenga respuesta aunque el servidor tarde.
+		 *
+		 * @returns {Boolean}
+		 */
+		en_curso() {
+			return this.$store.state.agenda.en_curso.indexOf(this.ocurrencia.key) != -1
 		},
 		/**
 		 * "hoy", "mañana", "vence hace 3 días", "lun 21 sep". Vencida/hoy se deciden con el `hoy`
@@ -185,10 +197,17 @@ export default {
 			outline: none
 		&:focus-visible
 			box-shadow: 0 0 0 3px var(--bg-nav-hover)
+		// Tildado apenas se hace clic, mientras el POST viaja (mismo dibujo que una hecha).
+		&--en-curso
+			background: var(--color-primary)
+			border-color: var(--color-primary)
+			color: #fff
 
 	&__cuerpo
 		flex: 1
 		min-width: 0
+		// #app centra todo el texto (_app_vue.sass); una fila se lee de izquierda a derecha.
+		text-align: left
 
 	&__detalle
 		color: var(--color-text-primary)
