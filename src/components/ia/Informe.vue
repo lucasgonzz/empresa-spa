@@ -1,0 +1,193 @@
+<template>
+	<article class="informe">
+		<header class="informe__cabecera">
+			<span
+			class="informe__tipo"
+			:class="'informe__tipo--' + reporte.tipo">
+				<i :class="'bi bi-' + icono"></i>
+				{{ nombre_tipo }}
+			</span>
+			<h2 class="informe__titulo">{{ reporte.titulo || nombre_tipo }}</h2>
+			<p class="informe__fecha">{{ fecha_en_letras }}</p>
+		</header>
+
+		<!--
+			Un componente por tipo de bloque (§1.4). Los tipos que no están en el mapa se
+			ignoran (un formato futuro no rompe el informe). Todo el texto sale por la
+			interpolación normal de Vue, que escapa: cero v-html en todo el módulo.
+		-->
+		<div
+		v-if="bloques.length"
+		class="informe__bloques">
+			<component
+			v-for="(bloque, index) in bloques"
+			:key="index"
+			:is="componente_de(bloque)"
+			:bloque="bloque"></component>
+		</div>
+
+		<p
+		v-else
+		class="informe__vacio">
+			Este informe todavía no tiene contenido.
+		</p>
+	</article>
+</template>
+
+<script>
+import moment from 'moment'
+
+/**
+ * Tipo de bloque -> componente. Toda clave nueva del validador del backend
+ * (MostradorContenidoValidator) necesita su fila acá para dibujarse.
+ */
+const COMPONENTE_POR_TIPO = {
+	resumen: 'bloque-resumen',
+	cifras: 'bloque-cifras',
+	seccion: 'bloque-seccion',
+	parrafo: 'bloque-parrafo',
+	lista: 'bloque-lista',
+	tabla: 'bloque-tabla',
+	articulos: 'bloque-articulos',
+	acciones: 'bloque-acciones',
+}
+
+/**
+ * Misma tabla que Carpeta.vue (nombre e ícono por tipo de informe).
+ */
+const TIPOS = {
+	dia: { nombre: 'Rendimiento de ayer', icono: 'sun' },
+	tienda: { nombre: 'Tu tienda', icono: 'shop' },
+	compras: { nombre: 'Compras', icono: 'cart-plus' },
+	stock: { nombre: 'Stock', icono: 'boxes' },
+}
+
+export default {
+	components: {
+		BloqueResumen: () => import('@/components/ia/bloques/Resumen'),
+		BloqueCifras: () => import('@/components/ia/bloques/Cifras'),
+		BloqueSeccion: () => import('@/components/ia/bloques/Seccion'),
+		BloqueParrafo: () => import('@/components/ia/bloques/Parrafo'),
+		BloqueLista: () => import('@/components/ia/bloques/Lista'),
+		BloqueTabla: () => import('@/components/ia/bloques/Tabla'),
+		BloqueArticulos: () => import('@/components/ia/bloques/Articulos'),
+		BloqueAcciones: () => import('@/components/ia/bloques/Acciones'),
+	},
+	props: {
+		reporte: {
+			type: Object,
+			required: true,
+		},
+	},
+	computed: {
+		tipo() {
+			return TIPOS[this.reporte.tipo] || null
+		},
+		nombre_tipo() {
+			return this.tipo ? this.tipo.nombre : 'Informe'
+		},
+		icono() {
+			return this.tipo ? this.tipo.icono : 'folder'
+		},
+		/**
+		 * "sábado 13 de septiembre de 2026".
+		 */
+		fecha_en_letras() {
+			if (!this.reporte.fecha) {
+				return ''
+			}
+			return moment(this.reporte.fecha, 'YYYY-MM-DD').format('dddd D [de] MMMM [de] YYYY')
+		},
+		/**
+		 * Los bloques del contenido (§1.4), solo los de tipo conocido. El modelo trae
+		 * `contenido` ya como objeto (cast array del backend); si por alguna razón
+		 * llegara como texto JSON, se parsea; si no se puede, no hay bloques.
+		 */
+		bloques() {
+			let contenido = this.reporte.contenido
+			if (typeof contenido == 'string') {
+				try {
+					contenido = JSON.parse(contenido)
+				} catch (e) {
+					return []
+				}
+			}
+			if (!contenido || !Array.isArray(contenido.bloques)) {
+				return []
+			}
+			return contenido.bloques.filter(bloque => {
+				return bloque && typeof bloque == 'object' && COMPONENTE_POR_TIPO[bloque.tipo]
+			})
+		},
+	},
+	methods: {
+		componente_de(bloque) {
+			return COMPONENTE_POR_TIPO[bloque.tipo]
+		},
+	},
+}
+</script>
+
+<style lang="sass">
+// Tonos de las cifras y viñetas (ok / alerta), con su versión para oscuro. Se
+// declaran acá, en la raíz del informe, y los bloques los leen con var().
+.informe
+	--informe-tono-ok: #1B9E5A
+	--informe-tono-alerta: #D96A00
+	max-width: 860px
+	margin: 0 auto
+
+	&__cabecera
+		margin-bottom: 18px
+
+	// Pastilla con el tipo de informe, del color de su carpeta.
+	&__tipo
+		display: inline-flex
+		align-items: center
+		gap: 6px
+		font-size: .78rem
+		font-weight: 600
+		letter-spacing: .02em
+		text-transform: uppercase
+		padding: 4px 10px
+		border-radius: 999px
+		color: #fff
+		background: #8a94a6
+		margin-bottom: 10px
+
+		&--dia
+			background: #0B84F8
+
+		&--tienda
+			background: #3A31FC
+
+		&--compras
+			background: #1B9E5A
+
+		&--stock
+			background: #FA7E06
+
+	&__titulo
+		font-size: 1.5rem
+		font-weight: 700
+		letter-spacing: -0.015em
+		line-height: 1.25
+		margin: 0
+		color: var(--color-text-primary, #212529)
+
+	&__fecha
+		margin: 4px 0 0 0
+		font-size: .9rem
+		color: var(--color-text-secondary, #6c757d)
+
+		&::first-letter
+			text-transform: uppercase
+
+	&__vacio
+		color: var(--color-text-secondary, #6c757d)
+		margin: 10px 0
+
+html.dark-mode .informe
+	--informe-tono-ok: #57b48d
+	--informe-tono-alerta: #ffa14d
+</style>
