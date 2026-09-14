@@ -37,7 +37,7 @@
 						<hr>
 						<h5 class="m-b-5">Integraciones</h5>
 						<p class="text-muted m-b-10">
-							Mercado Pago y los envíos de Zippin se conectan desde ABM → Integraciones →
+							Mercado Pago y los envíos de Zipnova se conectan desde ABM → Integraciones →
 							Tienda online.
 						</p>
 						<b-button

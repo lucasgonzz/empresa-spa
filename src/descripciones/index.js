@@ -45,6 +45,8 @@ import vender from './vender'
 import listado from './listado'
 import importacion from './importacion'
 import agenda from './agenda'
+import alertas from './alertas'
+import sugerencias_de_stock from './sugerencias-de-stock'
 
 /* Un objeto por modulo. El orden no importa: las claves no se pisan entre modulos. */
 const modulos = {
@@ -52,6 +54,8 @@ const modulos = {
 	listado: listado,
 	importacion: importacion,
 	agenda: agenda,
+	alertas: alertas,
+	sugerencias_de_stock: sugerencias_de_stock,
 }
 
 /**

@@ -16,6 +16,7 @@
 				<b-button
 				class="btn-modulo"
 				variant="primary"
+				data-testid="sugerencias-btn-nueva"
 				@click="nueva_sugerencia">
 					<i class="bi bi-plus-lg m-r-5"></i>
 					Nueva sugerencia

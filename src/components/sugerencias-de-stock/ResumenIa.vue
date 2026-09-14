@@ -1,5 +1,8 @@
 <template>
-	<div class="resumen-ia">
+	<div
+	class="resumen-ia"
+	data-testid="sugerencia-resumen-ia"
+	:data-estado="estado || 'sin-ia'">
 
 		<!-- Escribiendose: la corrida termino y el job del resumen esta en la cola -->
 		<b-card

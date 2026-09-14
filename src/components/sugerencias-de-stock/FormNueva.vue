@@ -49,6 +49,7 @@
 			<b-button
 			class="btn-modulo"
 			variant="primary"
+			data-testid="sugerencia-form-generar"
 			:disabled="loading"
 			@click="guardar">
 				<b-spinner
