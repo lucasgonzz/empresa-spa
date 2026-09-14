@@ -10,6 +10,45 @@ import generals_model_meta from '@/common-vue/mixins/generals/model-meta'
 // Función reusada para armar las opciones del selector de PDF a imprimir en la factura
 // (mismo vocabulario que el atajo de impresión de Vender).
 import { build_vender_facturado_print_select_options } from '@/constants/vender_print_shortcut_options'
+
+/**
+ * OR entre extensiones para props declaradas con `if_has_alguna_extencion: [slug, ...]`
+ * (bloque ADITIVO de la misión zipnova-envios, 14/9/2026; mismo nombre y semántica que nav.js
+ * usa para las rutas).
+ *
+ * Devuelve true si la prop no declara la clave (no aplica el gate) o si el comercio tiene al
+ * menos una de las extensiones listadas. Si la clave viene mal armada (no es un array) se
+ * esconde la prop antes que romper el formulario entero: mismo criterio de guarda de tipo que
+ * nav.js.
+ *
+ * 🔴 Es una función de módulo y no un método del mixin A PROPÓSITO: recibe el `vm` y solo le
+ * pide `hasExtencion()`. `column_preferences_helper.js` llama `check_extencions()` con un
+ * contexto artificial que tiene `hasExtencion` y `check_has_not_extencions` y nada más, así que
+ * cualquier `this.otro_metodo()` nuevo adentro de `check_extencions` revienta ahí (medido el
+ * 14/9/2026 en el modal de columnas del Listado: "this.check_alguna_extencion is not a function").
+ *
+ * @param {Object} vm Componente (o contexto) con `hasExtencion(slug)`.
+ * @param {Object} prop Definición de la prop del modelo.
+ * @returns {Boolean}
+ */
+export function cumple_alguna_extencion(vm, prop) {
+	if (!prop || typeof prop.if_has_alguna_extencion == 'undefined' || prop.if_has_alguna_extencion === null) {
+		return true
+	}
+	if (!Array.isArray(prop.if_has_alguna_extencion)) {
+		return false
+	}
+
+	let alguna = false
+	prop.if_has_alguna_extencion.forEach(extencion => {
+		if (vm.hasExtencion(extencion)) {
+			alguna = true
+		}
+	})
+
+	return alguna
+}
+
 export default {
 	mixins: [
 		VueScreenSize.VueScreenSizeMixin,
@@ -244,13 +283,27 @@ export default {
 						props_result.push(prop)
 					}
 
+				} else if (prop.if_has_alguna_extencion) {
+
+					/*
+						Bloque ADITIVO (misión zipnova-envios, 14/9/2026): OR entre extensiones,
+						para props que tienen sentido con cualquiera de varias extensiones (peso y
+						medidas del artículo: sirven con `usa_tienda_nube` o con `online`).
+						`if_has_extencion` de arriba es un string y no contempla ese caso. Mismo
+						nombre y misma semántica que ya usa nav.js para las rutas. Va por la función
+						de módulo y no por un método: ver cumple_alguna_extencion().
+					*/
+					if (cumple_alguna_extencion(this, prop)) {
+						props_result.push(prop)
+					}
+
 				} else {
 					props_result.push(prop)
 				}
 			})
 
 			return props_result
-		},	
+		},
 		store_use_from_dates(model_name) { 
 			model_name = model_name.toLowerCase()
 			let from_dates = this.$store.state[model_name].from_dates
@@ -667,6 +720,15 @@ export default {
 			}
 			if (property.if_has_not_extencion) {
 				return this.check_has_not_extencions(property)
+			}
+			/*
+				Bloque ADITIVO (misión zipnova-envios, 14/9/2026): OR entre extensiones. Es un
+				gate y nada más: si ninguna de las extensiones está, la prop no se muestra; si
+				alguna está, siguen valiendo los chequeos de abajo (v_if, etc.). Ver
+				cumple_alguna_extencion().
+			*/
+			if (property.if_has_alguna_extencion && !cumple_alguna_extencion(this, property)) {
+				return false
 			}
 
 			if (property.v_if_prop_not_length) {
@@ -1259,6 +1321,14 @@ export default {
 			}
 		},
 		canProp(prop) {
+			/*
+				Bloque ADITIVO (misión zipnova-envios, 14/9/2026): una prop con
+				`if_has_alguna_extencion` tampoco entra a la tabla ni a las tarjetas si el
+				comercio no tiene ninguna de esas extensiones. Sin la clave, no cambia nada.
+			*/
+			if (prop.if_has_alguna_extencion && !cumple_alguna_extencion(this, prop)) {
+				return false
+			}
 			return typeof prop.can == 'undefined' || this.can(prop.can)
 		},
 		modelPlural(model, replace_guion = false) {

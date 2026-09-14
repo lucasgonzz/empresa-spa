@@ -126,6 +126,20 @@ html.dark-mode
 	// #475569 sobre --bg-card da ~1,7:1, o sea que tampoco se podia dejar el literal. Los dos modos
 	// necesitan valores distintos y ninguno de los dos es negociable.
 	--texto-seccion-reportes: var(--color-text-secondary)
+	// Panel secundario adentro de un modal. Lo escriben los tres paneles de
+	// sale-print-buttons/ImpresoraConfigModal.vue e InstalarAgenteModal.vue como
+	// var(--bg-card-secondary, <literal claro>), y hasta hoy el token no existia en NINGUN modo:
+	// en oscuro entraba el fallback CLARO (#f1f3f5 / #fff8e6) con --color-text-primary (#e8eaed)
+	// encima, o sea texto casi blanco sobre gris casi blanco. Ese era el "no se distingue lo que
+	// dice" de los dos modales de impresion.
+	//
+	// Mismo truco que los tres tokens de arriba: se declara SOLO aca y NO en :root, a proposito.
+	// En claro cada componente se queda con su literal exacto (#f1f3f5 en dos paneles y #fff8e6
+	// en el paso de atencion del instructivo), y declararlo en :root pisaria ese #fff8e6 con un
+	// gris. En oscuro apunta a --bg-section porque el panel va un escalon POR DEBAJO del modal
+	// (--bg-card), que es la misma relacion que tiene #f1f3f5 bajo el blanco en claro -- el
+	// mismo motivo por el que .bg-light/.bg-white se mandan a --bg-section mas abajo.
+	--bg-card-secondary: var(--bg-section)
 
 	// Contraparte oscura de los estados de Cajas (grupo 371). Los fondos van en rgba sobre el
 	// acento en vez de un color plano: asi se apoyan sobre --bg-card sin pelearse con el.
@@ -248,9 +262,16 @@ html.dark-mode
 			opacity: 1
 
 	// Menus y flotantes.
+	//
+	// El color va aca y no solo en .dropdown-item: bootstrap declara .dropdown-menu { color: #212529 }
+	// y <b-dropdown-text> (.b-dropdown-text) no declara color propio, HEREDA. Sin esta linea los
+	// titulos de seccion de un menu ("Tickets", "Remitos A4", "Facturas A4" del menu Imprimir de
+	// una venta) seguian casi negros sobre el fondo oscuro. Los .dropdown-item no lo sufrian porque
+	// ya tienen color propio mas abajo.
 	.dropdown-menu
 		background-color: var(--bg-card)
 		border-color: var(--color-border)
+		color: var(--color-text-primary)
 
 	.dropdown-item
 		color: var(--color-text-primary)
@@ -263,6 +284,11 @@ html.dark-mode
 
 	.dropdown-header
 		color: var(--color-text-secondary)
+
+	// A diferencia de .b-dropdown-text, a esta bootstrap le declara color: #212529 DIRECTO, asi que
+	// la herencia de .dropdown-menu de arriba no le alcanza.
+	.dropdown-item-text
+		color: var(--color-text-primary)
 
 	.popover
 		background-color: var(--bg-card)

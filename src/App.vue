@@ -61,6 +61,14 @@
             llevándose el listener puesto. Tampoco se suscribe por su cuenta.
         -->
         <aviso-descripciones-automaticas></aviso-descripciones-automaticas>
+        <!--
+            Aviso de "tu sesión se cerró en este dispositivo" (candado de sesión única, botón
+            "Cerrar la otra sesión e ingresar acá" del login). El listener del canal privado vive
+            en src/mixins/broadcast.js (mixin de este mismo componente); acá solo el modal, SIEMPRE
+            montado -a diferencia de los dos avisos de arriba, este puede llegar en cualquier
+            pantalla del sistema, no solo desde el listado de artículos.
+        -->
+        <sesion-cerrada-otro-dispositivo-modal></sesion-cerrada-otro-dispositivo-modal>
 
         <!--
             Panel de tutoriales de la demo (misión 51, corregido por la 52). El v-if es la guarda
@@ -137,6 +145,7 @@ export default {
         CotizacionDolarModal: () => import('@/components/common/cotizacion-dolar/Modal'),
         AvisoImagenesAutomaticas: () => import('@/components/common/AvisoImagenesAutomaticas'),
         AvisoDescripcionesAutomaticas: () => import('@/components/common/AvisoDescripcionesAutomaticas'),
+        SesionCerradaOtroDispositivoModal: () => import('@/components/common/SesionCerradaOtroDispositivoModal'),
         // Carga diferida: sin demo, este chunk no se descarga nunca (misión 51).
         PanelDemo: () => import('@/components/demo/PanelDemo'),
     },
