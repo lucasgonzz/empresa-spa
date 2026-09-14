@@ -218,8 +218,18 @@ export default {
 			})
 		},
 		/**
-		 * Aplica el payload liviano de `WhatsappChatUpdated` (solo id/unread_count/last_message_at)
-		 * sin pisar el resto de props (client, phone, display_name, ai_enabled) que ese evento no manda.
+		 * Aplica el payload liviano de `WhatsappChatUpdated` (id/unread_count/last_message_at/
+		 * estado_pendiente, ver el evento en empresa-api) sin pisar el resto de props (client,
+		 * phone, display_name, ai_enabled) que ese evento no manda.
+		 *
+		 * 🔴 SOLO ACTUALIZA UN CHAT QUE YA ESTÁ EN LA BANDEJA (el `if (index != -1)` no inserta).
+		 * Un cliente que escribe por PRIMERA VEZ dispara este mismo evento para un chat que
+		 * todavía no existe en `state.chats`, y acá no pasa nada: ni la fila aparece, ni
+		 * `chats_sin_responder_count` (la tarjeta roja del tablero) se entera, hasta que se
+		 * recargue el módulo. Es una limitación preexistente de esta mutación (no la introduce
+		 * la misión whatsapp-tablero-clientes) y queda fuera de este alcance arreglarla: el
+		 * payload liviano no trae `client`/`phone`/`display_name`, así que insertar acá de
+		 * verdad dejaría una fila a medias en la bandeja.
 		 */
 		patchChatFromBroadcast(state, chat_patch) {
 			let index = state.chats.findIndex(c => c.id == chat_patch.id)
@@ -350,6 +360,33 @@ export default {
 			}
 			let chat = getters.selected_chat
 			return !!chat && chat.last_inbound_simulated == 1
+		},
+		/**
+		 * Cantidad de chats sin responder (tarjeta roja del tablero, misión
+		 * whatsapp-tablero-clientes). `estado_pendiente` ya viene resuelto por el backend
+		 * (`WhatsappChatHelper::attach_estados_pendientes()` en el índice, y el broadcast en
+		 * vivo) con la prioridad aplicada: un chat con un mensaje esperando aprobación NUNCA
+		 * cuenta acá también, aunque el cliente le haya escrito último.
+		 */
+		chats_sin_responder_count(state) {
+			return state.chats.filter(c => c.estado_pendiente == 'sin_responder').length
+		},
+		/**
+		 * Cantidad de chats con una respuesta de la IA generada y esperando que el negocio la
+		 * apruebe (tarjeta amarilla del tablero).
+		 */
+		chats_esperando_aprobacion_count(state) {
+			return state.chats.filter(c => c.estado_pendiente == 'esperando_aprobacion').length
+		},
+		/**
+		 * Cantidad de chats con actividad en el día de hoy (tarjeta verde del tablero).
+		 *
+		 * Mismo criterio "es de hoy" que ya usa `ChatRow.vue::format_time()` sobre
+		 * `last_message_at`: si el ÚLTIMO mensaje del chat (entrante o saliente) fue hoy, hubo
+		 * conversación hoy — no hace falta mirar la tabla de mensajes completa.
+		 */
+		chats_hoy_count(state) {
+			return state.chats.filter(c => c.last_message_at && moment(c.last_message_at).isSame(moment(), 'day')).length
 		},
 	},
 	actions: {

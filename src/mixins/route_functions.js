@@ -106,7 +106,12 @@ export default {
 
 					this.$store.commit('sale/setFromDates', true)
 				}
-				
+
+				// El modulo va ANTES del pedido: `sale/_getModels` pide el listado paginado del día
+				// solo con modulo 'ventas'. Sin esta línea, este primer pedido salía con el modulo que
+				// hubiera quedado en el store (`deposito`, por ejemplo) y bajaba el listado entero,
+				// para que created() de Ventas.vue lo pidiera de vuelta paginado un instante después.
+				this.$store.commit('sale/set_modulo', 'ventas')
 				this.$store.dispatch('sale/getModels')
 
 				let sucursal = this.get_address_param()

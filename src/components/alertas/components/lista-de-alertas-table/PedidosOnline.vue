@@ -4,6 +4,7 @@
 		v-if="view == 'pedidos-online'">
 
 			<b-table
+			data-testid="alertas-pedidos-online-tabla"
 			v-if="pedidos_sin_confirmar.length"
 			head-variant="dark"
 			responsive
@@ -23,6 +24,7 @@
 			<!-- Estado vacío del sistema (display/EmptyState), en vez del cartel azul viejo. -->
 			<empty-state
 			v-else
+			data-testid="alertas-pedidos-online-vacio"
 			icon_class="bi bi-bag-check"
 			title="No hay pedidos sin confirmar"
 			hint="Todos los pedidos que entraron por la tienda ya están confirmados."></empty-state>

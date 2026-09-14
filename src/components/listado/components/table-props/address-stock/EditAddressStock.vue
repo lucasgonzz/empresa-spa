@@ -7,6 +7,7 @@
 			<b-form-input
 			class="input-address-stock"
 			:id="'input-address-stock-'+address.id"
+			:data-testid="'deposito-stock-'+address.id"
 			:dusk="article.name+'-'+address.id"
 			type="number"
 			@click.stop
@@ -17,10 +18,11 @@
 		<b-input-group
 		v-if="can('article.stock_min_max')"
 		prepend="Min">
-			
+
 			<b-form-input
 			class="input-address-stock"
 			:id="'input-address-stock-stock-min-'+address.id"
+			:data-testid="'deposito-stock-min-'+address.id"
 			type="number"
 			@click.stop
 			v-if="article_address"
@@ -30,10 +32,13 @@
 		<b-input-group
 		v-if="can('article.stock_min_max')"
 		prepend="Max">
-			
+
+			<!-- El id decia "-stock-min-" igual que el input de arriba (copy-paste): dos ids
+			     identicos en el DOM. Se corrige a "-stock-max-" en la exploracion de Alertas. -->
 			<b-form-input
 			class="input-address-stock"
-			:id="'input-address-stock-stock-min-'+address.id"
+			:id="'input-address-stock-stock-max-'+address.id"
+			:data-testid="'deposito-stock-max-'+address.id"
 			type="number"
 			@click.stop
 			v-if="article_address"

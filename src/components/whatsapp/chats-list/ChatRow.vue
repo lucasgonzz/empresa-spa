@@ -1,7 +1,11 @@
 <template>
 	<div
 	class="whatsapp-chat-row"
-	:class="{'whatsapp-chat-row--active': is_active}"
+	:class="{
+		'whatsapp-chat-row--active': is_active,
+		'whatsapp-chat-row--sin-responder': chat.estado_pendiente == 'sin_responder',
+		'whatsapp-chat-row--pendiente': chat.estado_pendiente == 'esperando_aprobacion',
+	}"
 	@click="$emit('select', chat)">
 		<div class="whatsapp-chat-row__main">
 			<span class="whatsapp-chat-row__name">
@@ -112,6 +116,29 @@ export default {
 	// conversacion esta parado el operador.
 	&--active,
 	&--active:hover
+		background: rgba(37, 211, 102, .12)
+		background: color-mix(in srgb, var(--wa-verde) 14%, transparent)
+	// Resaltado de "sin responder" / "esperando aprobación" (misión whatsapp-tablero-clientes):
+	// borde izquierdo + fondo sutil, mismos tokens que las tarjetas del tablero. Va como borde y
+	// no como velo de fondo fuerte para poder convivir con `--active` (el velo verde de la fila
+	// abierta) sin que los dos compitan por el mismo canal visual.
+	&--sin-responder
+		background: var(--wa-sin-responder-bg)
+		border-left: 3px solid var(--wa-sin-responder-borde)
+		&:hover
+			background: var(--wa-sin-responder-bg)
+	&--pendiente
+		background: var(--wa-pendiente-bg)
+		border-left: 3px solid var(--wa-pendiente-borde)
+		&:hover
+			background: var(--wa-pendiente-bg)
+	// La fila abierta gana el velo verde por encima del resaltado de estado: el operador ya está
+	// mirando esa conversación, así que "dónde estoy parado" pesa más que "qué le falta a esta
+	// fila". El borde izquierdo de color se conserva igual (es otro canal, no compite).
+	&--active.whatsapp-chat-row--sin-responder,
+	&--active.whatsapp-chat-row--pendiente,
+	&--active.whatsapp-chat-row--sin-responder:hover,
+	&--active.whatsapp-chat-row--pendiente:hover
 		background: rgba(37, 211, 102, .12)
 		background: color-mix(in srgb, var(--wa-verde) 14%, transparent)
 	&__main

@@ -159,7 +159,14 @@ async function cerrar_modal_de_facturas_no_autorizadas(page) {
 	}
 
 	await page.keyboard.press('Escape')
-	await expect(modal, 'el modal de facturas no autorizadas tenia que cerrarse').not.toHaveClass(/show/)
+	// La condicion de cerrado es "cero elementos CON la clase show", no "el elemento sin la
+	// clase": b-modal puede DESMONTAR el .modal al ocultarse, y not.toHaveClass sobre un
+	// elemento que ya no existe falla con "element(s) not found" -- un rojo que acusa al modal
+	// de no cerrarse justo cuando se cerro del todo (paso el 3/9/2026, exploracion de Alertas).
+	await expect(
+		page.locator('#afip-reenviar-facturas.show'),
+		'el modal de facturas no autorizadas tenia que cerrarse'
+	).toHaveCount(0)
 }
 
 module.exports = {
