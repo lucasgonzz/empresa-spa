@@ -121,25 +121,12 @@ export default {
 
 	/* ----------------------------------------------- stock mínimo por depósito (listado) */
 
-	'btn-editar-depositos': {
-		titulo: 'Editar stock por depósito',
-		que_hace: 'Abre la edición del stock, el mínimo y el máximo del artículo en cada depósito.',
-		repercute: [
-			'El valor que pongas en cada depósito queda como stock final: no se suma al actual, lo reemplaza.',
-			'El mínimo cargado acá alimenta las alertas de stock mínimo en la próxima actualización del reporte de inventario.',
-		],
-		nota_interna: 'Defecto abierto (3/9/2026): este botón hoy NO se renderiza — los slots #table-prop-* de views/Listado.vue no llegan a las celdas de la tabla del listado, así que no hay ningún camino de interfaz para configurar un stock mínimo (el campo global del artículo es not_show y la masiva no lo ofrece). El endpoint PUT article-update-addresses funciona; los specs lo usan directo.',
-	},
-
-	'btn-guardar-depositos': {
-		titulo: 'Guardar los depósitos',
-		que_hace: 'Guarda el stock, el mínimo y el máximo cargados para cada depósito.',
-		repercute: [
-			'Si el stock de un depósito cambió, genera el movimiento de stock por la diferencia.',
-			'El mínimo y el máximo se guardan tal cual; el reporte de inventario los toma cuando se vuelve a generar.',
-		],
-		nota_interna: 'Misma situación que btn-editar-depositos: hoy inalcanzable por interfaz.',
-	},
+	/*
+	 * btn-editar-depositos y btn-guardar-depositos NO van aca: los define listado.js, que es el
+	 * modulo del boton (vive en la fila del listado) y tiene la version mas completa. Las dos
+	 * exploraciones del 3/9/2026 los describieron por separado y, al mergearlas (14/9/2026), la
+	 * copia de este archivo pisaba a la de listado.js por el orden de modulos de index.js.
+	 */
 
 	'deposito-stock-min-*': {
 		titulo: 'Stock mínimo del depósito',

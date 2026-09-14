@@ -185,6 +185,7 @@ export default {
 		que_hace: 'Guarda el stock y los mínimos y máximos cargados en la fila.',
 		repercute: [
 			'Cada depósito cuyo stock cambió deja su movimiento en el historial del artículo, con la diferencia exacta.',
+			'El mínimo y el máximo se guardan tal cual; el reporte de inventario (Alertas → Stock mínimo) los toma cuando se vuelve a generar.',
 		],
 	},
 
