@@ -1,7 +1,9 @@
 import actualizar_lista_de_articulos from '@/mixins/listado/actualizar_lista_de_articulos'
+import mostrador_acceso from '@/mixins/mostrador_acceso'
 export default {
 	mixins: [
 		actualizar_lista_de_articulos,
+		mostrador_acceso,
 	],
 	methods: {
 		update_articles_after_import() {
@@ -93,12 +95,25 @@ export default {
 		 * sus vistas propias se retiraron: el modulo IA. El guard evita el
 		 * NavigationDuplicated de apretar el boton estando ya en el mostrador.
 		 *
+		 * 🔴 Solo lleva a /ia a quien puede entrar (mixin mostrador_acceso: extension
+		 * asistente_ia + dueño o acceso maestro). Estas notificaciones las recibe
+		 * cualquiera con sugerencias_inteligentes / sugerencias_compras —un empleado,
+		 * o un dueño sin asistente_ia— y hasta el chequeo del 14/9/2026 el boton lo
+		 * mandaba igual a /ia, donde se comia el cartel de "solo para el dueño" o el
+		 * de "requiere la extension". Para esa persona no hay destino: las
+		 * sugerencias viejas no tienen mas pantalla propia, asi que se le explica
+		 * donde estan ahora en vez de llevarla a una puerta cerrada.
+		 *
 		 * @param {number|null} id id de la sugerencia anunciada; hoy no se usa para
 		 *   navegar (el mostrador no tiene detalle por sugerencia), queda en la firma
 		 *   para que los dos llamadores no pierdan el dato que ya leyeron.
 		 */
 		ir_al_mostrador(id) {
 			void id
+			if (!this.puede_entrar_al_mostrador) {
+				this.$toast.info('Las sugerencias ahora están en el mostrador del dueño (módulo IA).')
+				return
+			}
 			if (this.$route.name == 'ia') {
 				return
 			}

@@ -9,7 +9,7 @@
 			mostrador/*) y en el menú (routes.js).
 		-->
 		<b-alert
-		v-if="!tiene_extension"
+		v-if="!mostrador_tiene_extension"
 		show
 		variant="warning"
 		class="m-t-15">
@@ -18,7 +18,7 @@
 		</b-alert>
 
 		<b-alert
-		v-else-if="!es_el_dueno"
+		v-else-if="!mostrador_es_el_dueno"
 		show
 		variant="warning"
 		class="m-t-15">
@@ -46,32 +46,25 @@
 </template>
 <script>
 import moment from 'moment'
+import mostrador_acceso from '@/mixins/mostrador_acceso'
 
 /**
  * Orquestador del mostrador: encabezado + escritorio de carpetas + el informe
  * abierto a pantalla completa. Los datos viven en store/mostrador.js; la
  * conversación de cada informe reusa el store ai_chat (ver SidebarConversacion).
+ *
+ * El gate (extensión asistente_ia + dueño o acceso maestro) viene del mixin
+ * mostrador_acceso: es el MISMO que usan DepositButtons y las notificaciones de
+ * sugerencias para decidir si mandan a alguien acá, así ningún punto de entrada
+ * trae a una persona que este componente después rechaza.
  */
 export default {
+	mixins: [mostrador_acceso],
 	components: {
 		Escritorio: () => import('@/components/ia/Escritorio'),
 		InformeAbierto: () => import('@/components/ia/InformeAbierto'),
 	},
 	computed: {
-		/**
-		 * hasExtencion devuelve undefined mientras auth/me no resolvió; se trata
-		 * como "no tiene" y el alert desaparece solo cuando cargan las extensiones.
-		 */
-		tiene_extension() {
-			return !!this.hasExtencion('asistente_ia')
-		},
-		/**
-		 * Solo el dueño y el acceso maestro (decisión 8 del plan). Es el mismo par
-		 * que mira check_is_owner en common-vue/mixins/nav.js para el menú.
-		 */
-		es_el_dueno() {
-			return !!(this.is_owner || (this.user && this.user.admin_access))
-		},
 		/**
 		 * "lunes 14 de septiembre": moment ya está en 'es' (common-vue/mixins/dates.js).
 		 */
@@ -111,7 +104,7 @@ export default {
 		 */
 		abrir_desde_la_ruta() {
 			let id = this.$route.params.id
-			if (!id || !this.tiene_extension || !this.es_el_dueno) {
+			if (!id || !this.puede_entrar_al_mostrador) {
 				return
 			}
 			this.abrir({ id: Number(id) })

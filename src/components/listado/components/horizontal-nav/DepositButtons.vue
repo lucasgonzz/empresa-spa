@@ -25,16 +25,21 @@
 	</b-dropdown>
 </template>
 <script>
+import mostrador_acceso from '@/mixins/mostrador_acceso'
+
 export default {
+	mixins: [mostrador_acceso],
 	methods: {
 		show_modal_sugerencias() {
-			// Con la extension de sugerencias inteligentes, el item lleva al modulo IA:
-			// desde la mision "modulo-ia-mostrador" (14/9/2026) las sugerencias de stock
-			// viven en la carpeta Stock del mostrador y la vista propia
-			// /sugerencias-de-stock ya no existe (los modales apilados siguen sin
-			// montarse para quien tiene la extension, ver stock-suggestion/Index.vue).
-			// Sin la extension, se abre el modal historico tal cual siempre.
-			if (this.hasExtencion('sugerencias_inteligentes')) {
+			// Desde la mision "modulo-ia-mostrador" (14/9/2026) las sugerencias de stock
+			// viven en la carpeta Stock del mostrador (modulo IA) y la vista propia
+			// /sugerencias-de-stock ya no existe. Pero /ia no es para cualquiera: exige
+			// la extension asistente_ia Y ser el dueño (o el acceso maestro), y ese par
+			// lo decide el mixin mostrador_acceso, no la extension
+			// sugerencias_inteligentes como hasta el chequeo del 14/9. Quien no puede
+			// entrar (un empleado, o un dueño sin asistente_ia) abre los modales
+			// historicos, que stock-suggestion/Index.vue monta justo para esa persona.
+			if (this.puede_entrar_al_mostrador) {
 				if (this.$route.name != 'ia') {
 					this.$router.push({name: 'ia'})
 				}
