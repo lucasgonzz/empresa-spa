@@ -28,6 +28,29 @@ axios.defaults.baseURL = env('VUE_APP_API_URL')
  * con `skip_global_error_event`: el error se atiende acá y no en el interceptor global.
  */
 /**
+ * Token de la ÚLTIMA apertura pedida (molde de la espera de ai_chat: los helpers lo
+ * leen, y solo abrirReporte y cerrarReporte lo incrementan). Cada abrirReporte captura
+ * el valor al salir y, cuando la respuesta llega, pinta solo si sigue siendo el vigente:
+ * si se abrió A y después B, se pinta B aunque A responda última; si se cerró (o se
+ * salió del módulo) antes de que responda, no se pinta nada. No es reactivo a
+ * propósito: nadie lo mira desde un template.
+ */
+let apertura = {
+	token: 0,
+}
+
+/**
+ * Apaga el indicador de carga del informe (el del store y el global).
+ *
+ * @param {Function} commit
+ */
+function apagar_loading_reporte(commit) {
+	commit('setLoadingReporte', false)
+	commit('auth/setLoading', false, { root: true })
+	commit('auth/setMessage', '', { root: true })
+}
+
+/**
  * Pone leido_at (si no lo tenía) en los informes de la lista cuyo id esté en `ids`.
  *
  * @param {Object} state
@@ -186,9 +209,17 @@ export default {
 		 * Rechaza si el GET falla (404: no es del dueño o no está listo), para que el
 		 * componente avise; el loading global se apaga acá en los dos caminos.
 		 *
+		 * 🔴 Solo pinta la ÚLTIMA apertura pedida (ver `apertura` arriba). Una respuesta
+		 * vencida —se abrió otro informe después, o se cerró antes de que llegara— no
+		 * toca el estado ni el loading (lo apaga la corrida vigente, o ya lo apagó
+		 * cerrarReporte) y resuelve con null sin rechazar, para que el componente no
+		 * avise de un fallo que la persona ya no está esperando.
+		 *
 		 * @param {Object} reporte { id, ... }
 		 */
 		abrirReporte({ commit }, reporte) {
+			apertura.token = apertura.token + 1
+			let token_corrida = apertura.token
 			commit('setLoadingReporte', true)
 			commit('auth/setMessage', 'Abriendo el informe', { root: true })
 			commit('auth/setLoading', true, { root: true })
@@ -196,22 +227,33 @@ export default {
 				skip_global_error_event: true,
 			})
 				.then(res => {
+					if (token_corrida !== apertura.token) {
+						return null
+					}
 					commit('setReporteAbierto', res.data.model)
 					commit('marcarLeido', reporte.id)
-					commit('setLoadingReporte', false)
-					commit('auth/setLoading', false, { root: true })
-					commit('auth/setMessage', '', { root: true })
+					apagar_loading_reporte(commit)
 					return res.data.model
 				})
 				.catch(err => {
-					commit('setLoadingReporte', false)
-					commit('auth/setLoading', false, { root: true })
-					commit('auth/setMessage', '', { root: true })
+					if (token_corrida !== apertura.token) {
+						return null
+					}
+					apagar_loading_reporte(commit)
 					console.log(err)
 					throw err
 				})
 		},
-		cerrarReporte({ commit }) {
+		/**
+		 * Cierra el informe. Invalida cualquier apertura en vuelo (su respuesta no tiene
+		 * que reabrir el overlay, ni al volver a /ia) y, si había una, apaga el loading
+		 * que esa corrida ya no va a apagar.
+		 */
+		cerrarReporte({ commit, state }) {
+			apertura.token = apertura.token + 1
+			if (state.loading_reporte) {
+				apagar_loading_reporte(commit)
+			}
 			commit('setReporteAbierto', null)
 		},
 		/**
