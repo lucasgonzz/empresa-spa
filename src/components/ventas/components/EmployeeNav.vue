@@ -63,18 +63,26 @@ export default {
 	methods: {
 		countSales(user, is_employee = true) {
 			let user_result = {...user}
-			let sales
-			if (is_employee) {
-				sales = this.sales.filter(sale => {
-					return sale.employee_id && sale.employee_id == user.id 
-				})
-			} else {
-				sales = this.sales.filter(sale => {
-					return !sale.employee_id
-				})
+			// Mismo criterio que AddressNav: en modo paginado por fecha el conteo lo da el servidor
+			// sobre el día completo (`this.sales` es una sola página); sin totales del servidor se
+			// cuenta en el navegador como siempre. `is_employee = false` es la solapa del dueño:
+			// las ventas sin empleado.
+			let cantidad = is_employee
+				? this.cantidad_del_dia_por_empleado(user.id)
+				: this.cantidad_del_dia_sin_empleado()
+			if (cantidad === null) {
+				if (is_employee) {
+					cantidad = this.sales.filter(sale => {
+						return sale.employee_id && sale.employee_id == user.id
+					}).length
+				} else {
+					cantidad = this.sales.filter(sale => {
+						return !sale.employee_id
+					}).length
+				}
 			}
-			if (sales.length) {
-				user_result.name += ' ('+ sales.length + ')'
+			if (cantidad) {
+				user_result.name += ' ('+ cantidad + ')'
 			}
 			user_result.route_value = user.name
 			return user_result
