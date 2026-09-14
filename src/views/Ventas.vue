@@ -176,6 +176,20 @@ export default {
 		this.$watch(() => this.$store.state.sale.payment_method_show_option, this.recargar_por_cambio_de_alcance)
 		this.$watch(() => this.$store.state.sale.mostrar_consolidadas, this.recargar_por_cambio_de_alcance)
 
+		// 🔴 Los catálogos de sucursales y empleados llegan DESPUÉS del created() cuando se entra
+		// por URL directa o con F5 (download-resources los baja en paralelo, con un segundo de
+		// espera): `resolve_view_scope()` corre con los stores vacíos, no encuentra al empleado de
+		// la ruta y resuelve `only_owner = true` (o no encuentra la sucursal y no manda
+		// `address_id`). El primer pedido sale con ese alcance equivocado, y como el servidor es
+		// el que recorta, nada lo corregía: la tabla quedaba vacía con los totales del dueño. Con
+		// los catálogos ya cargados se vuelve a resolver, y solo si el alcance cambió se pide de
+		// vuelta (un dueño en "todas / todos" no gasta un pedido de más).
+		this.$watch(() => this.addresses.length + '/' + this.employees.length, () => {
+			if (this.alcance_de_la_ruta_cambio()) {
+				this.recargar_por_cambio_de_alcance()
+			}
+		})
+
 		// Una venta agregada, editada o borrada desde un modal deja los totales del servidor
 		// viejos (ver `totales_desactualizados` en el store): se vuelven a pedir, sin indicador.
 		this.$watch(() => this.$store.state.sale.totales_desactualizados, (desactualizados) => {
@@ -201,6 +215,19 @@ export default {
 		 */
 		sincronizar_alcance() {
 			this.$store.commit('sale/set_alcance_de_pantalla', this.resolve_view_scope())
+		},
+		/**
+		 * true si la solapa de la ruta, resuelta con los catálogos de AHORA, difiere del alcance que
+		 * quedó en el store (el que viajó en el último pedido).
+		 *
+		 * @returns {Boolean}
+		 */
+		alcance_de_la_ruta_cambio() {
+			let nuevo = this.resolve_view_scope()
+			let actual = this.$store.state.sale.alcance_de_pantalla || {}
+			return nuevo.address_id != actual.address_id
+				|| nuevo.employee_id != actual.employee_id
+				|| !!nuevo.only_owner != !!actual.only_owner
 		},
 		/**
 		 * Cambió la solapa, una show option o "ver consolidadas": en modo paginado por fecha el
@@ -246,6 +273,13 @@ export default {
 	},
 	beforeRouteLeave(to, from, next) {
 		this.$store.commit('sale/setSelected', [])
+		// El modo paginado por fecha es de ESTA pantalla y se apaga al salir. Si quedara prendido,
+		// cualquier otra tabla con `model_name="sale"` (el modal "Ventas del artículo" del Listado,
+		// que recibe sus filas por prop) mostraría la barra de paginación con los números del día
+		// de Ventas, y un clic en una página pediría el día de vuelta. Al volver acá, la respuesta
+		// de `getModels` lo vuelve a prender.
+		this.$store.commit('sale/set_paginado_por_fecha', false)
+		this.$store.commit('sale/set_totales_del_dia', null)
 		next()
 	},
 	computed: {

@@ -90,7 +90,8 @@ export default {
 
 			if (sub_view != 'todos') {
 				let employee = this.employees.find(model => {
-					return model.name.toLowerCase() == sub_view.replaceAll('-', ' ').toLowerCase()
+					// `users.name` admite NULL: un empleado sin nombre no puede tirar el computed entero.
+					return (model.name || '').toLowerCase() == sub_view.replaceAll('-', ' ').toLowerCase()
 				})
 				if (typeof employee == 'undefined') {
 					// Caso "dueño": ventas sin empleado asignado.
@@ -256,7 +257,8 @@ export default {
 				if (sub_view != 'todos') {
 					let employee = this.employees.find(model => {
 						// console.log('comparando '+model.name.toLowerCase()+' con '+sub_view.replaceAll('-', ' ').toLowerCase())
-						return model.name.toLowerCase() == sub_view.replaceAll('-', ' ').toLowerCase()
+						// `users.name` admite NULL: un empleado sin nombre no puede tirar el computed entero.
+						return (model.name || '').toLowerCase() == sub_view.replaceAll('-', ' ').toLowerCase()
 					})
 					if (typeof employee == 'undefined') {
 						// console.log('dueño')

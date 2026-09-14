@@ -202,9 +202,18 @@ export default __base_store({
 		},
 		/**
 		 * Cambia el módulo/fuente consultada en endpoint from-date de ventas.
+		 *
+		 * Con cualquier módulo que no sea 'ventas' se apaga el modo paginado por fecha en el acto,
+		 * sin esperar a que llegue la respuesta del otro módulo: `paginado_por_fecha` lo leen la barra
+		 * de paginación y la tabla común, y en Por Entregar / Depósito, si la respuesta del módulo
+		 * tarda, la barra se mostraba un instante con los números del día de Ventas.
 		 */
 		set_modulo(state, value) {
 			state.modulo = value
+			if (value != 'ventas') {
+				state.paginado_por_fecha = false
+				state.totales_del_dia = null
+			}
 		},
 		/**
 		 * Filtro visual para ventas cobradas/no cobradas.
@@ -582,11 +591,21 @@ export default __base_store({
 					} else {
 						// Paginador de Laravel + totales del día completo.
 						commit('setModels', modelos.data)
-						commit('setTotalFilterPages', modelos.last_page)
-						commit('setTotalFilterResults', modelos.total)
-						commit('setFilterPage', modelos.current_page)
 						commit('set_totales_del_dia', res.data.totales || null)
 						commit('set_paginado_por_fecha', true)
+						// 🔴 Los números de la barra (páginas, resultados, página actual) se escriben SOLO
+						// si la pantalla sigue en modo por fecha. Si mientras este pedido viajaba el usuario
+						// pasó a modo filtrado (buscador general, "Limpiar filtros", búsqueda por N° de
+						// factura), la barra ya es de esa búsqueda: pisarla con los del día la dejaba
+						// diciendo "N resultados" del día sobre una tabla de otra cosa, y con un día en cero
+						// la hacía desaparecer. El pedido del día se dispara igual en esos flujos porque la
+						// barra emite `filtrar` ante cualquier escritura de `filter_page`, también las
+						// programáticas (hallazgo conocido desde el 8/9/2026).
+						if (!state.is_filtered) {
+							commit('setTotalFilterPages', modelos.last_page)
+							commit('setTotalFilterResults', modelos.total)
+							commit('setFilterPage', modelos.current_page)
+						}
 					}
 					apagar_indicadores()
 				})
