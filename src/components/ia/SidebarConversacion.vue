@@ -76,17 +76,30 @@ export default {
 		 * primera página.
 		 *
 		 * 🔴 seleccion_sin_recarga es la marca que deja mostrador/crearConversacion
-		 * (misma que ai_chat/createConversation): la conversación recién nace vacía y
-		 * el primer mensaje ya está subiendo como globo optimista, así que pedir la
-		 * página lo pisaría. Se consume acá, como hace el watch del panel flotante.
+		 * (misma que ai_chat/createConversation): la conversación recién nace vacía (o,
+		 * si ya existía, se acaba de cargar) y el primer mensaje ya está subiendo como
+		 * globo optimista, así que pedir la página lo pisaría. Se consume acá, como
+		 * hace el watch del panel flotante.
+		 *
+		 * Y si la conversación ya era la seleccionada y sus mensajes ya están cargados,
+		 * tampoco se recarga: ai_chat.messages es el de la seleccionada y lo mantienen
+		 * al día el evento de Echo y el polling (fetchMessage pisa solo la conversación
+		 * en pantalla), así que volver a pedir la página no trae nada nuevo y sí puede
+		 * pisar un globo optimista —el caso concreto: el panel flotante montado detrás
+		 * consumió la marca de arriba desde su propio watch antes de que este sidebar
+		 * se montara. Reabrir el mismo informe cae acá también, y es lo esperado.
 		 */
 		seleccionar() {
 			let chat = this.$store.state.ai_chat
-			if (chat.selected_conversation_id != this.conversation_id) {
+			let ya_seleccionada = chat.selected_conversation_id == this.conversation_id
+			if (!ya_seleccionada) {
 				this.$store.commit('ai_chat/setSelectedConversationId', this.conversation_id)
 			}
 			if (chat.seleccion_sin_recarga) {
 				this.$store.commit('ai_chat/setSeleccionSinRecarga', false)
+				return
+			}
+			if (ya_seleccionada && chat.messages.length) {
 				return
 			}
 			this.$store.dispatch('ai_chat/getMessages', {

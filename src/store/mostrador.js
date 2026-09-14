@@ -262,16 +262,28 @@ export default {
 		 * `ai_chat/sendMessage` mande el mensaje a ESA conversación y no cree una
 		 * suelta.
 		 *
+		 * El POST distingue dos casos por el status, y acá se tratan distinto:
+		 * - 201: la conversación recién nace, vacía. Se deja seleccionada con la lista
+		 *   de mensajes en blanco y con la marca de "sin recarga".
+		 * - 200: ya existía (se creó desde otra pestaña, o la lista de informes de esta
+		 *   pestaña es vieja y no traía el conversation_id). Tiene historia, así que sus
+		 *   mensajes se cargan ANTES de resolver: el globo optimista del mensaje que
+		 *   viene atrás se suma a esa historia en vez de quedar solo sobre una lista
+		 *   vacía que el sidebar después pisaba con la recarga.
+		 *
 		 * 🔴 setSeleccionSinRecarga(true) es la misma marca que usa
-		 * ai_chat/createConversation: le dice al que reaccione a la selección nueva (el
-		 * sidebar del informe, o el panel flotante si estuviera montado) que NO pida
-		 * mensajes, porque la conversación recién nace vacía y el GET pisaría el globo
-		 * optimista del primer mensaje.
+		 * ai_chat/createConversation: le dice al que reaccione a la selección (el
+		 * sidebar del informe, que se monta cuando setConversationId le cuelga la
+		 * conversación al informe) que NO pida mensajes, porque el GET pisaría el globo
+		 * optimista del primer mensaje. En el caso 200 se prende recién DESPUÉS de cargar,
+		 * por lo mismo. Y solo si el informe sigue abierto: si se cerró mientras el POST
+		 * viajaba, el sidebar no se monta, nadie consume la marca y quedaría colgada para
+		 * la próxima selección del panel flotante.
 		 *
 		 * @param {number} reporte_id
 		 * @returns {Promise} resuelve con la conversación.
 		 */
-		crearConversacion({ commit }, reporte_id) {
+		crearConversacion({ commit, dispatch, state }, reporte_id) {
 			// skip_global_error_event, como getReportes: la falla la atiende
 			// PreguntaInput (repone el texto y avisa con su propio toast). Sin la
 			// bandera, el interceptor de main.js además disparaba errorEvent y el
@@ -281,15 +293,38 @@ export default {
 			})
 				.then(res => {
 					let conversation = res.data.model
+					let ya_existia = res.status == 200
 					commit('ai_chat/upsertConversation', conversation, { root: true })
 					commit('ai_chat/setMessages', [], { root: true })
-					commit('ai_chat/setSeleccionSinRecarga', true, { root: true })
-					commit('ai_chat/setSelectedConversationId', conversation.id, { root: true })
-					commit('setConversationId', {
-						reporte_id: reporte_id,
-						conversation_id: conversation.id,
-					})
-					return conversation
+
+					let mensajes_listos
+					if (ya_existia) {
+						// La selección va antes del GET: ai_chat/getMessages descarta la
+						// respuesta si la conversación pedida no es la seleccionada.
+						commit('ai_chat/setSelectedConversationId', conversation.id, { root: true })
+						mensajes_listos = dispatch('ai_chat/getMessages', {
+							conversation_id: conversation.id,
+							page: 1,
+						}, { root: true })
+					} else {
+						mensajes_listos = Promise.resolve()
+					}
+
+					return mensajes_listos
+						.then(() => {
+							let informe_sigue_abierto = !!(state.reporte_abierto && state.reporte_abierto.id == reporte_id)
+							if (informe_sigue_abierto) {
+								commit('ai_chat/setSeleccionSinRecarga', true, { root: true })
+							}
+							if (!ya_existia) {
+								commit('ai_chat/setSelectedConversationId', conversation.id, { root: true })
+							}
+							commit('setConversationId', {
+								reporte_id: reporte_id,
+								conversation_id: conversation.id,
+							})
+							return conversation
+						})
 				})
 		},
 	},
