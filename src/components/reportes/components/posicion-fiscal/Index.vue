@@ -272,7 +272,9 @@ export default {
 		SkeletonCascada: () => import('@/components/reportes/components/SkeletonCascada'),
 	},
 	created() {
-		this.$store.dispatch('reportes/getPosicionFiscal')
+		// encolar_fetch_de_widget: si se llega por login, se encadena detras del arranque general
+		// y de los otros widgets de Reportes; en navegacion normal sale de inmediato, como siempre.
+		this.$store.dispatch('reportes/encolar_fetch_de_widget', 'getPosicionFiscal')
 	},
 	computed: {
 		model() {

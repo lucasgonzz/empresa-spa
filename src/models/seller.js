@@ -25,6 +25,15 @@ export default {
 			],
 		},
 		{
+			text: 'Liquidar la comision con IVA',
+			key: 'commission_with_iva',
+			type: 'checkbox',
+			value: 1,
+			descriptions: [
+				'Si esta activado (por defecto), la comision se calcula sobre el total de la venta con IVA incluido. Si esta desactivado, se resta el IVA de cada articulo vendido antes de calcular la comision del vendedor.',
+			],
+		},
+		{
 			text: 'Categorias',
 			if_has_extencion: 'comisiones_por_categoria',
 			store: 'category',

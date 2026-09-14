@@ -9,7 +9,7 @@
             toggleable="md">
                 <b-navbar-brand
                 :to="{name: 'login'}">
-                    <img src="@/assets/logo.png" alt="">
+                    <img src="@/assets/isotipo-comerciocity.svg" alt="">
                 </b-navbar-brand>
 
                 <scroll-buttons

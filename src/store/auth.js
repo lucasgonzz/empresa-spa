@@ -15,6 +15,16 @@ export default {
 		loading: false,
 		message: '',
 		online: true,
+
+		/**
+		 * Promesa de la cadena de arranque post-login (App.vue, watch de `authenticated`), o
+		 * `null` cuando no hay ninguna en curso. Mision 11/9/2026 (arranque secuencial): los
+		 * widgets de Reportes la usan para saber si tienen que esperar su turno (llegaron como
+		 * pantalla de aterrizaje de un login) o disparar su fetch ya mismo (navegacion normal
+		 * durante el dia). No es un flag boolean porque lo que hace falta no es solo saber SI
+		 * hay arranque en curso, sino poder engancharse (`.then()`) a CUANDO termina.
+		 */
+		arranque_en_curso: null,
 	},
 	getters: {
 		authenticated(state) {
@@ -27,6 +37,10 @@ export default {
 	mutations: {
 		set_online(state, value) {
 			state.online = value
+		},
+		/* Promesa de arranque en curso (o null). Ver el comentario de arranque_en_curso en el state. */
+		set_arranque_en_curso(state, value) {
+			state.arranque_en_curso = value
 		},
 		setAuthenticated(state, value) {
 			state.authenticated = value
