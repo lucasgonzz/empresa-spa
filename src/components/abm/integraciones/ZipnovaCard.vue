@@ -38,7 +38,7 @@
 					<div class="zipnova-card__campo">
 						<label
 						for="zipnova-api-token"
-						class="zipnova-card__label">API Token</label>
+						class="zipnova-card__label">Key (el código que Zipnova muestra como KEY)</label>
 						<b-form-input
 						id="zipnova-api-token"
 						type="text"
@@ -52,7 +52,7 @@
 					<div class="zipnova-card__campo">
 						<label
 						for="zipnova-api-secret"
-						class="zipnova-card__label">API Secret</label>
+						class="zipnova-card__label">Secret (el código que Zipnova muestra como SECRET)</label>
 						<b-form-input
 						id="zipnova-api-secret"
 						type="text"
@@ -105,21 +105,24 @@
 									Dentro de Configuración, entrá en "Integraciones".
 								</li>
 								<li>
-									Tocá el botón "Gestionar credenciales y webhooks".
+									Arriba de todo, en "API: Integraciones personalizadas", tocá el botón "Gestionar
+									Credenciales y Webhooks".
 								</li>
 								<li>
-									Tocá "Crear token". Zipnova te muestra dos códigos largos: uno se llama API Token
-									y el otro API Secret. Son como el usuario y la contraseña que ComercioCity va a
-									usar para hablar con Zipnova. No se los pases a nadie.
+									Tocá el botón verde "GENERAR CREDENCIALES" y después "CREAR". Zipnova te muestra
+									dos códigos largos: uno dice KEY y el otro dice SECRET. Son como el usuario y la
+									contraseña que ComercioCity va a usar para hablar con Zipnova. No se los pases a
+									nadie.
 								</li>
 								<li>
-									Copiá el API Token y pegalo en el primer casillero de acá abajo. Después copiá el
-									API Secret y pegalo en el segundo. (Para copiar: pintá el código con el mouse y
-									apretá Ctrl + C. Para pegar: hacé clic en el casillero y apretá Ctrl + V.)
+									Al lado de cada código hay un botoncito para copiarlo. Copiá la KEY y pegala en el
+									primer casillero de acá abajo; después copiá el SECRET y pegalo en el segundo.
+									(Para pegar: hacé clic en el casillero y apretá Ctrl + V.)
 								</li>
 								<li>
 									Tocá "Conectar". Si está todo bien, vas a ver el nombre de tu cuenta de Zipnova y
-									el depósito desde donde salen tus envíos.
+									el depósito desde donde salen tus envíos (es la dirección que cargaste en Zipnova
+									→ Configuración → Ubicaciones; si no aparece ninguna, cargala ahí primero).
 								</li>
 								<li>
 									Completá el "paquete por defecto": cuánto pesa y cuánto mide un paquete típico
@@ -129,6 +132,10 @@
 									Probá: escribí un código postal en "Probá cómo lo ve tu cliente" y fijate que
 									aparezcan los correos con su precio y sus días de entrega. Si aparecen, ya está:
 									tu tienda online cotiza sola.
+								</li>
+								<li>
+									Para que los envíos se generen, tu cuenta de Zipnova necesita saldo: en Zipnova,
+									tocá "Agregar crédito" y cargá un monto. Cotizar no gasta nada; generar el envío sí.
 								</li>
 							</ol>
 							<p class="m-b-0">
@@ -701,7 +708,7 @@ export default {
 		 */
 		conectar() {
 			if (!this.puede_conectar) {
-				this.error_conexion = 'Pegá los dos códigos completos: el API Token y el API Secret tienen más de '
+				this.error_conexion = 'Pegá los dos códigos completos: la KEY y el SECRET tienen más de '
 					+ this.largo_minimo_credencial + ' caracteres cada uno.'
 				return
 			}
