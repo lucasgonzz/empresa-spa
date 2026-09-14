@@ -82,6 +82,11 @@ export default {
 	mounted() {
 		this.abrir_desde_la_ruta()
 	},
+	beforeDestroy() {
+		// Salir del módulo con un informe abierto lo cierra: si no, el estado queda en el
+		// store y al volver a /ia el overlay reaparece solo.
+		this.$store.dispatch('mostrador/cerrarReporte')
+	},
 	watch: {
 		// El puente "Ver el informe" del chat puede llegar estando ya en /ia.
 		'$route.params.id'() {
@@ -90,10 +95,15 @@ export default {
 	},
 	methods: {
 		/**
-		 * Click en una carpeta del escritorio.
+		 * Click en una carpeta del escritorio. El store rechaza si el GET falla (404:
+		 * no es del dueño o no está listo); acá se avisa.
 		 */
 		abrir(reporte) {
+			let self = this
 			this.$store.dispatch('mostrador/abrirReporte', reporte)
+				.catch(function () {
+					self.$toast.error('No pudimos abrir el informe. Probá de nuevo en un momento.')
+				})
 		},
 		/**
 		 * /ia/:id abre ese informe de entrada y limpia el :id de la URL, para que un
@@ -104,7 +114,7 @@ export default {
 			if (!id || !this.tiene_extension || !this.es_el_dueno) {
 				return
 			}
-			this.$store.dispatch('mostrador/abrirReporte', { id: Number(id) })
+			this.abrir({ id: Number(id) })
 			this.$router.replace({ name: 'ia' })
 		},
 	},
