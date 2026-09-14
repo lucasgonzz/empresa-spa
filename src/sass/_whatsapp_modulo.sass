@@ -87,6 +87,23 @@
 	--wa-grabando-borde: rgba(217, 83, 79, .45)
 	--wa-grabando-acento: #d9534f
 
+	// --- Tablero (mision whatsapp-tablero-clientes, 14/9/2026) ---------------------------------
+	// Tres tarjetas fijas + resaltado de fila: cuantos clientes estan sin responder (rojo),
+	// cuantos tienen un mensaje de la IA esperando aprobacion (ambar) y cuantas conversaciones
+	// hubo hoy (usa --wa-verde de arriba, sin token propio: es "actividad", el mismo verde de
+	// marca que ya usa el boton de nuevo chat y la fila activa).
+	//
+	// Rojo y ambar son tokens PROPIOS y no un alias de --wa-grabando-*/--wa-sim-*, aunque partan
+	// del mismo tono: mismo criterio que ya separa grabacion de simulacion aca arriba --"sin
+	// responder" no tiene nada que ver con "esto es una simulacion" ni con "te estoy
+	// escuchando", solo comparten el color de partida.
+	--wa-sin-responder-bg: #fff1f0
+	--wa-sin-responder-borde: #d9534f
+	--wa-sin-responder-texto: #b02a2a
+	--wa-pendiente-bg: #fff6e5
+	--wa-pendiente-borde: #d39e00
+	--wa-pendiente-texto: #8a5b00
+
 	// --- Composer -----------------------------------------------------------------------------
 	// Fondo de la capsula donde se escribe. En claro es blanco sobre el panel gris del composer.
 	--wa-input-bg: #ffffff
@@ -122,3 +139,11 @@ html.dark-mode
 	--wa-grabando-borde: rgba(217, 83, 79, .5)
 	--wa-grabando-acento: #ff8a80
 	--wa-input-bg: #2a3942
+	// Mismo criterio que el resto del archivo: veladura translucida en vez de tinta opaca sobre
+	// el fondo oscuro, texto aclarado para mantener contraste.
+	--wa-sin-responder-bg: rgba(217, 83, 79, .16)
+	--wa-sin-responder-borde: rgba(217, 83, 79, .55)
+	--wa-sin-responder-texto: #ff8a80
+	--wa-pendiente-bg: rgba(217, 158, 0, .16)
+	--wa-pendiente-borde: rgba(217, 158, 0, .55)
+	--wa-pendiente-texto: #e0b64a
