@@ -244,13 +244,54 @@ export default {
 						props_result.push(prop)
 					}
 
+				} else if (prop.if_has_alguna_extencion) {
+
+					/*
+						Bloque ADITIVO (misión zipnova-envios, 14/9/2026): OR entre extensiones,
+						para props que tienen sentido con cualquiera de varias extensiones (peso y
+						medidas del artículo: sirven con `usa_tienda_nube` o con `online`).
+						`if_has_extencion` de arriba es un string y no contempla ese caso. Mismo
+						nombre y misma semántica que ya usa nav.js para las rutas.
+					*/
+					if (this.check_alguna_extencion(prop)) {
+						props_result.push(prop)
+					}
+
 				} else {
 					props_result.push(prop)
 				}
 			})
 
 			return props_result
-		},	
+		},
+		/**
+		 * OR entre extensiones para props declaradas con `if_has_alguna_extencion: [slug, ...]`.
+		 *
+		 * Devuelve true si la prop no declara la clave (no aplica el gate) o si el comercio tiene
+		 * al menos una de las extensiones listadas. Si la clave viene mal armada (no es un
+		 * array) se esconde la prop antes que romper el formulario entero: es el mismo criterio
+		 * de guarda de tipo que aplica nav.js con las rutas.
+		 *
+		 * @param {Object} prop Definición de la prop del modelo.
+		 * @returns {Boolean}
+		 */
+		check_alguna_extencion(prop) {
+			if (typeof prop.if_has_alguna_extencion == 'undefined' || prop.if_has_alguna_extencion === null) {
+				return true
+			}
+			if (!Array.isArray(prop.if_has_alguna_extencion)) {
+				return false
+			}
+
+			let alguna = false
+			prop.if_has_alguna_extencion.forEach(extencion => {
+				if (this.hasExtencion(extencion)) {
+					alguna = true
+				}
+			})
+
+			return alguna
+		},
 		store_use_from_dates(model_name) { 
 			model_name = model_name.toLowerCase()
 			let from_dates = this.$store.state[model_name].from_dates
@@ -667,6 +708,15 @@ export default {
 			}
 			if (property.if_has_not_extencion) {
 				return this.check_has_not_extencions(property)
+			}
+			/*
+				Bloque ADITIVO (misión zipnova-envios, 14/9/2026): OR entre extensiones. Es un
+				gate y nada más: si ninguna de las extensiones está, la prop no se muestra; si
+				alguna está, siguen valiendo los chequeos de abajo (v_if, etc.). Ver
+				check_alguna_extencion().
+			*/
+			if (property.if_has_alguna_extencion && !this.check_alguna_extencion(property)) {
+				return false
 			}
 
 			if (property.v_if_prop_not_length) {
@@ -1217,6 +1267,14 @@ export default {
 			}
 		},
 		canProp(prop) {
+			/*
+				Bloque ADITIVO (misión zipnova-envios, 14/9/2026): una prop con
+				`if_has_alguna_extencion` tampoco entra a la tabla ni a las tarjetas si el
+				comercio no tiene ninguna de esas extensiones. Sin la clave, no cambia nada.
+			*/
+			if (prop.if_has_alguna_extencion && !this.check_alguna_extencion(prop)) {
+				return false
+			}
 			return typeof prop.can == 'undefined' || this.can(prop.can)
 		},
 		modelPlural(model, replace_guion = false) {
