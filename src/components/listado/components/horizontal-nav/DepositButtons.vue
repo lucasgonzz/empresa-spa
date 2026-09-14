@@ -25,11 +25,16 @@
 export default {
 	methods: {
 		show_modal_sugerencias() {
-			// Con la extension de sugerencias inteligentes, el item lleva a la vista
-			// propia (los modales apilados se retiran para quien la tiene); sin la
-			// extension, se abre el modal historico tal cual siempre.
+			// Con la extension de sugerencias inteligentes, el item lleva al modulo IA:
+			// desde la mision "modulo-ia-mostrador" (14/9/2026) las sugerencias de stock
+			// viven en la carpeta Stock del mostrador y la vista propia
+			// /sugerencias-de-stock ya no existe (los modales apilados siguen sin
+			// montarse para quien tiene la extension, ver stock-suggestion/Index.vue).
+			// Sin la extension, se abre el modal historico tal cual siempre.
 			if (this.hasExtencion('sugerencias_inteligentes')) {
-				this.$router.push({name: 'sugerencias_stock'})
+				if (this.$route.name != 'ia') {
+					this.$router.push({name: 'ia'})
+				}
 				return
 			}
 			this.$store.dispatch('stock_suggestion/getModels')

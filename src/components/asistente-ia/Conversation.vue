@@ -81,13 +81,21 @@ import MessageBubble from '@/components/asistente-ia/MessageBubble'
 import PensandoIndicator from '@/components/asistente-ia/PensandoIndicator'
 
 /**
- * Mapa origen de la conversación -> name de la ruta del submódulo (D24). Las
- * misiones 2-5 (compras, ofertas) agregan acá su fila.
+ * Mapa origen de la conversación -> name de la ruta del submódulo (D24).
+ *
+ * `sugerencia_stock` y `sugerencia_compra` salieron del mapa en la misión
+ * "modulo-ia-mostrador" (14/9/2026): sus vistas (/sugerencias-de-stock y
+ * /sugerencias-de-compra) se borraron con el módulo IA viejo, así que para esas
+ * conversaciones el botón directamente no se muestra (mostrar_boton_de_origen
+ * corta cuando el origen no está acá). Las conversaciones siguen existiendo y se
+ * leen igual; solo no tienen adónde volver. `sugerencia_oferta` sigue: Promociones
+ * existe. `mostrador_reporte` es el puente nuevo: de la conversación de un
+ * informe del mostrador al informe (referencia_id = mostrador_reportes.id, y la
+ * ruta /ia/:id? lo abre).
  */
 const RUTA_POR_ORIGEN = {
-	sugerencia_stock: 'sugerencias_stock',
-	sugerencia_compra: 'sugerencias_compra',
 	sugerencia_oferta: 'ofertas',
+	mostrador_reporte: 'ia',
 }
 
 /**
@@ -97,15 +105,26 @@ const RUTA_POR_ORIGEN = {
  * lleva. Toda clave nueva de RUTA_POR_ORIGEN necesita su par acá.
  */
 const ETIQUETA_POR_ORIGEN = {
-	sugerencia_stock: 'Ver la sugerencia',
-	sugerencia_compra: 'Ver la sugerencia de compra',
 	sugerencia_oferta: 'Ver las ofertas sugeridas',
+	mostrador_reporte: 'Ver el informe',
 }
 
 export default {
 	components: {
 		MessageBubble,
 		PensandoIndicator,
+	},
+	props: {
+		/**
+		 * true cuando la conversación ya se está mirando desde el lugar que la originó
+		 * (el sidebar del informe abierto del mostrador, misión "modulo-ia-mostrador",
+		 * 14/9/2026): ahí el puente "Ver el informe" no tiene sentido, se está parado
+		 * sobre el informe. Desde el panel flotante queda en false y el puente sale.
+		 */
+		sin_puente: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	data() {
 		return {
@@ -258,6 +277,9 @@ export default {
 		 * principio de la conversación está cargado.
 		 */
 		mostrar_boton_de_origen(message, index) {
+			if (this.sin_puente) {
+				return false
+			}
 			if (!this.conversation || this.conversation.origen == 'usuario') {
 				return false
 			}
