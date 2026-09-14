@@ -333,7 +333,14 @@ export default {
             const session_forced_logout_channel = 'App.Models.User.' + this.user.id
             this.session_forced_logout_echo_channel = session_forced_logout_channel
             this.Echo.private(session_forced_logout_channel)
-                .notification(() => {
+                .notification((notification) => {
+                    // El canal es el automático de Laravel para CUALQUIER Notification enviada
+                    // a este User sin broadcastOn() propio -no uno dedicado a esto-, así que hay
+                    // que filtrar por tipo: una Notification nueva del día de mañana que caiga en
+                    // este mismo canal no tiene por qué significar "te expulsaron".
+                    if (notification.type !== 'App\\Notifications\\SessionForcedLogoutNotification') {
+                        return
+                    }
                     this.$bvModal.show('sesion-cerrada-otro-dispositivo')
                     // Red de contención: si el usuario no hace click en "Entendido", igual se
                     // recarga sola. El arranque post-reload es quien realmente cierra la sesión
