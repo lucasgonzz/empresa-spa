@@ -229,7 +229,24 @@ export default {
 			}
 			return ''
 		},
+		/*
+		 * 🔴 Doble fuente de los totales (14/9/2026).
+		 *
+		 * En modo paginado por fecha `state.sale.models` es UNA página del día, así que sumar acá
+		 * daría el total de esas 25 filas y no el del día: los números vienen calculados en SQL por
+		 * la API (`totales_del_dia`, ver mixins/sale.js) sobre el mismo conjunto que se está
+		 * mostrando (día o rango + solapa de sucursal/empleado + show options). Cuando no hay
+		 * totales del servidor —modo filtrado (buscador general / filtro de columna), API vieja u
+		 * otro módulo— cada computed hace EXACTAMENTE la cuenta de siempre sobre `sales_to_show`.
+		 *
+		 * Las claves del contrato son `pesos.total`, `pesos.costos`, `pesos.ganancia`,
+		 * `pesos.cuenta_corriente` (ídem en `dolares`), `cantidad` y `metodo_de_pago.total`.
+		 */
 		total_selected_payment_method() {
+			if (this.totales_del_dia) {
+				let metodo_de_pago = this.totales_del_dia.metodo_de_pago
+				return Number(metodo_de_pago ? metodo_de_pago.total : 0) || 0
+			}
 			let total = 0
 			if (this.selected_payment_method_id != 'Todos') {
 				this.sales_to_show.forEach(sale => {
@@ -242,6 +259,9 @@ export default {
 			return total
 		},
 		total_cuenta_corriente_pesos() {
+			if (this.totales_del_dia) {
+				return this.total_del_servidor('pesos', 'cuenta_corriente')
+			}
 			let total = 0
 			this.sales_to_show.forEach(model => {
 				if (
@@ -255,6 +275,9 @@ export default {
 			return total
 		},
 		total_cuenta_corriente_dolar() {
+			if (this.totales_del_dia) {
+				return this.total_del_servidor('dolares', 'cuenta_corriente')
+			}
 			let total = 0
 			this.sales_to_show.forEach(model => {
 				if (
@@ -268,6 +291,9 @@ export default {
 			return total
 		},
 		total() {
+			if (this.totales_del_dia) {
+				return this.total_del_servidor('pesos', 'total')
+			}
 			let total = 0
 			this.sales_to_show.forEach(model => {
 				if (model.moneda_id == 1) {
@@ -277,6 +303,9 @@ export default {
 			return total
 		},
 		total_cost() {
+			if (this.totales_del_dia) {
+				return this.total_del_servidor('pesos', 'costos')
+			}
 			/* Acumulador de costos para ventas en pesos. */
 			let total = 0
 			this.sales_to_show.forEach(model => {
@@ -287,6 +316,9 @@ export default {
 			return total
 		},
 		total_ganancia() {
+			if (this.totales_del_dia) {
+				return this.total_del_servidor('pesos', 'ganancia')
+			}
 			/* Acumulador de ganancia persistida para ventas en pesos. */
 			let total = 0
 			this.sales_to_show.forEach(model => {
@@ -298,6 +330,9 @@ export default {
 			return total
 		},
 		total_usd() {
+			if (this.totales_del_dia) {
+				return this.total_del_servidor('dolares', 'total')
+			}
 			/* Acumulador de total de ventas en dolares. */
 			let total = 0
 			this.sales_to_show.forEach(model => {
@@ -308,6 +343,9 @@ export default {
 			return total
 		},
 		total_cost_usd() {
+			if (this.totales_del_dia) {
+				return this.total_del_servidor('dolares', 'costos')
+			}
 			/* Acumulador de costos para ventas en dolares. */
 			let total = 0
 			this.sales_to_show.forEach(model => {
@@ -318,6 +356,9 @@ export default {
 			return total
 		},
 		total_ganancia_usd() {
+			if (this.totales_del_dia) {
+				return this.total_del_servidor('dolares', 'ganancia')
+			}
 			/* Acumulador de ganancia persistida para ventas en dolares. */
 			let total = 0
 			this.sales_to_show.forEach(model => {
@@ -329,6 +370,9 @@ export default {
 			return total
 		},
 		cantidad_ventas() {
+			if (this.totales_del_dia) {
+				return Number(this.totales_del_dia.cantidad) || 0
+			}
 			let total = 0
 			this.sales_to_show.forEach(model => {
 				total++
@@ -370,39 +414,24 @@ export default {
 			}
 		},
 		/**
-		 * Resuelve la pestaña actual (sucursal/empleado) igual que sales_to_show (mixins/sale.js).
-		 * @returns {{address_id: (number|null), employee_id: (number|null), only_owner: boolean}}
+		 * Lee un total del servidor: `grupo` es 'pesos' o 'dolares', `clave` la columna del
+		 * contrato (total / costos / ganancia / cuenta_corriente). Solo se llama con
+		 * `totales_del_dia` cargado. Devuelve 0 si el grupo o la clave no vinieron, para no
+		 * imprimir NaN en un chip.
+		 *
+		 * (`resolve_view_scope()`, que estaba acá, vive en mixins/sale.js desde el 14/9/2026;
+		 * build_export_body lo sigue llamando igual.)
+		 *
+		 * @param {string} grupo
+		 * @param {string} clave
+		 * @returns {number}
 		 */
-		resolve_view_scope() {
-			// Id de sucursal resuelto por nombre de calle (street), null si es "todas".
-			let address_id = null
-			// Id de empleado resuelto por nombre, null si es "todos" o si es el caso "dueño".
-			let employee_id = null
-			// True cuando la sub_view es una pestaña de empleado pero ninguna venta tiene employee_id (caso dueño).
-			let only_owner = false
-
-			if (this.view != 'todas') {
-				let address = this.addresses.find(model => {
-					return model.street.toLowerCase() == this.view.replaceAll('-', ' ').toLowerCase()
-				})
-				if (typeof address != 'undefined') {
-					address_id = address.id
-				}
+		total_del_servidor(grupo, clave) {
+			let grupo_de_totales = this.totales_del_dia[grupo]
+			if (!grupo_de_totales) {
+				return 0
 			}
-
-			if (this.sub_view != 'todos') {
-				let employee = this.employees.find(model => {
-					return model.name.toLowerCase() == this.sub_view.replaceAll('-', ' ').toLowerCase()
-				})
-				if (typeof employee == 'undefined') {
-					// Caso "dueño": ventas sin empleado asignado.
-					only_owner = true
-				} else {
-					employee_id = employee.id
-				}
-			}
-
-			return { address_id, employee_id, only_owner }
+			return Number(grupo_de_totales[clave]) || 0
 		},
 		/**
 		 * POST autenticado al endpoint de export; descarga el .xlsx desde la respuesta (blob).
