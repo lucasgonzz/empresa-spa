@@ -63,11 +63,12 @@ export default {
 		/**
 		 * Pide al backend desconectar una integración ya conectada.
 		 *
-		 * @param {String} provider_path Slug del proveedor bajo /api/integraciones/ (ej: 'mercadopago', 'zippin').
+		 * @param {String} provider_path Slug del proveedor bajo /api/integraciones/ (ej: 'mercadopago', 'zipnova').
+		 * @param {Object} config Config extra de axios (ej: `{skip_global_error_event: true}` cuando la tarjeta muestra su propio error).
 		 * @returns {Promise} Promesa de axios.
 		 */
-		requestIntegrationDisconnect(provider_path) {
-			return this.$api.post('integraciones/' + provider_path + '/disconnect')
+		requestIntegrationDisconnect(provider_path, config = {}) {
+			return this.$api.post('integraciones/' + provider_path + '/disconnect', null, config)
 		},
 
 		/**
@@ -94,6 +95,11 @@ export default {
 		// `{integracion}` con la misma forma que un item de `GET /api/integraciones`, más la
 		// clave `config` cuando está conectado (cuenta, depósitos, paquete por defecto, etc.).
 		// El disconnect es el genérico: `requestIntegrationDisconnect('zipnova')`.
+		//
+		// Todas van con `skip_global_error_event`: la tarjeta muestra cada error con su propio
+		// alert o toast (el `message` del 422/502), y sin la bandera el interceptor de main.js
+		// dispararía además el toast genérico y el dueño vería dos avisos del mismo hecho
+		// (medido el 14/9/2026 al verificar la tarjeta).
 
 		/**
 		 * Conecta la cuenta de Zipnova del comercio con el token y el secret que generó allá.
@@ -109,6 +115,8 @@ export default {
 			return this.$api.post('integraciones/zipnova/conectar', {
 				api_token: api_token,
 				api_secret: api_secret,
+			}, {
+				skip_global_error_event: true,
 			})
 		},
 
@@ -119,7 +127,9 @@ export default {
 		 * @returns {Promise} Promesa de axios; `res.data.integracion` trae el item actualizado.
 		 */
 		requestZipnovaConfig(payload) {
-			return this.$api.put('integraciones/zipnova/config', payload)
+			return this.$api.put('integraciones/zipnova/config', payload, {
+				skip_global_error_event: true,
+			})
 		},
 
 		/**
@@ -129,7 +139,9 @@ export default {
 		 * @returns {Promise} Promesa de axios; `res.data.integracion.config.origins` trae la lista.
 		 */
 		requestZipnovaOrigenes() {
-			return this.$api.post('integraciones/zipnova/origenes')
+			return this.$api.post('integraciones/zipnova/origenes', null, {
+				skip_global_error_event: true,
+			})
 		},
 
 		/**
@@ -149,6 +161,8 @@ export default {
 				zipcode: zipcode,
 				city: city,
 				state: state,
+			}, {
+				skip_global_error_event: true,
 			})
 		},
 	},

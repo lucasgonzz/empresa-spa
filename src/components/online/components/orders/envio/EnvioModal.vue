@@ -508,7 +508,9 @@ export default {
 			let self = this
 			self.loading_generar = true
 
-			this.$api.post('envio/generar/' + this.order.id)
+			// skip_global_error_event: el 422 se muestra acá con su mensaje; sin la bandera el
+			// interceptor de main.js sacaría ademas el toast generico (dos avisos del mismo hecho).
+			this.$api.post('envio/generar/' + this.order.id, null, { skip_global_error_event: true })
 			.then(res => {
 				self.loading_generar = false
 				if (res.data && res.data.model) {
@@ -552,7 +554,7 @@ export default {
 			let self = this
 			self.loading_sincronizar = true
 
-			this.$api.post('envio/' + this.envio.id + '/sincronizar')
+			this.$api.post('envio/' + this.envio.id + '/sincronizar', null, { skip_global_error_event: true })
 			.then(res => {
 				self.loading_sincronizar = false
 				if (res.data && res.data.model) {
@@ -579,7 +581,7 @@ export default {
 			let self = this
 			self.loading_cancelar = true
 
-			this.$api.post('envio/' + this.envio.id + '/cancelar')
+			this.$api.post('envio/' + this.envio.id + '/cancelar', null, { skip_global_error_event: true })
 			.then(res => {
 				self.loading_cancelar = false
 				if (res.data && res.data.model) {

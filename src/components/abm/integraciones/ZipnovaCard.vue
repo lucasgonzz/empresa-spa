@@ -14,7 +14,8 @@
 					v-if="connected"
 					class="integration-card__cuenta">
 						Cuenta de Zipnova: <strong>{{ config.account_name || 'sin nombre' }}</strong>
-						<span v-if="integracion.platform_user_id">(N° {{ integracion.platform_user_id }})</span>
+						<!-- El &nbsp; es el espacio: el compilador condensa el salto de línea entre los dos tags -->
+						<span v-if="integracion.platform_user_id">&nbsp;(N° {{ integracion.platform_user_id }})</span>
 					</p>
 				</div>
 				<b-badge :variant="status.variant">{{ status.text }}</b-badge>
@@ -655,7 +656,7 @@ export default {
 			this.$store.commit('auth/setMessage', 'Desconectando Zipnova')
 			this.$store.commit('auth/setLoading', true)
 
-			this.requestIntegrationDisconnect('zipnova')
+			this.requestIntegrationDisconnect('zipnova', { skip_global_error_event: true })
 			.then(res => {
 				self.loading = false
 				self.$store.commit('auth/setLoading', false)
@@ -833,6 +834,11 @@ export default {
 // 🔴 Colores solo desde los tokens de _dark_theme.sass, nunca literales: la tarjeta tiene que
 // verse bien en los dos temas sin un bloque aparte.
 .zipnova-card
+	// El ABM centra el texto de toda la pantalla y las tarjetas lo heredan; para Mercado Pago
+	// (dos renglones y un boton) pasa desapercibido, pero un paso a paso de nueve puntos y un
+	// formulario centrados no se leen. La tarjeta entera vuelve a alinear a la izquierda.
+	text-align: left
+
 	.zipnova-card__cuerpo
 		margin-top: 18px
 
