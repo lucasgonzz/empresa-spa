@@ -96,10 +96,11 @@ export default {
 		// clave `config` cuando está conectado (cuenta, depósitos, paquete por defecto, etc.).
 		// El disconnect es el genérico: `requestIntegrationDisconnect('zipnova')`.
 		//
-		// Todas van con `skip_global_error_event`: la tarjeta muestra cada error con su propio
-		// alert o toast (el `message` del 422/502), y sin la bandera el interceptor de main.js
-		// dispararía además el toast genérico y el dueño vería dos avisos del mismo hecho
-		// (medido el 14/9/2026 al verificar la tarjeta).
+		// Todas van con `skip_global_error_event` y `skip_global_validation_toast`: la tarjeta
+		// muestra cada error con su propio alert o toast (el `message` del 422/502, o los
+		// mensajes de `errors` en un 422 de validación de Laravel), y sin las banderas el
+		// interceptor de main.js dispararía además el toast genérico y el dueño vería dos avisos
+		// del mismo hecho (medido el 14/9/2026 al verificar la tarjeta).
 
 		/**
 		 * Conecta la cuenta de Zipnova del comercio con el token y el secret que generó allá.
@@ -117,6 +118,7 @@ export default {
 				api_secret: api_secret,
 			}, {
 				skip_global_error_event: true,
+				skip_global_validation_toast: true,
 			})
 		},
 
@@ -129,6 +131,7 @@ export default {
 		requestZipnovaConfig(payload) {
 			return this.$api.put('integraciones/zipnova/config', payload, {
 				skip_global_error_event: true,
+				skip_global_validation_toast: true,
 			})
 		},
 
@@ -141,6 +144,7 @@ export default {
 		requestZipnovaOrigenes() {
 			return this.$api.post('integraciones/zipnova/origenes', null, {
 				skip_global_error_event: true,
+				skip_global_validation_toast: true,
 			})
 		},
 
@@ -163,6 +167,7 @@ export default {
 				state: state,
 			}, {
 				skip_global_error_event: true,
+				skip_global_validation_toast: true,
 			})
 		},
 	},

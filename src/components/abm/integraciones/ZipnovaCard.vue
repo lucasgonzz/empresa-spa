@@ -288,7 +288,9 @@
 					<!-- Columna derecha: prueba de cotización y ayuda -->
 					<b-col lg="6">
 						<div class="zipnova-card__prueba">
-							<p class="zipnova-card__label m-b-5">Probá cómo lo ve tu cliente</p>
+							<label
+							for="zipnova-prueba-zipcode"
+							class="zipnova-card__label m-b-5">Probá cómo lo ve tu cliente</label>
 							<div class="zipnova-card__prueba-fila">
 								<b-form-input
 								id="zipnova-prueba-zipcode"
@@ -312,11 +314,21 @@
 							<div
 							v-if="prueba.needs_location"
 							class="zipnova-card__prueba-ubicacion m-t-10">
+								<label
+								for="zipnova-prueba-city"
+								class="sr-only">Localidad</label>
 								<b-form-input
+								id="zipnova-prueba-city"
+								data-testid="zipnova-prueba-city"
 								type="text"
 								placeholder="Localidad"
 								v-model.trim="prueba.city"></b-form-input>
+								<label
+								for="zipnova-prueba-state"
+								class="sr-only">Provincia</label>
 								<b-form-input
+								id="zipnova-prueba-state"
+								data-testid="zipnova-prueba-state"
 								type="text"
 								placeholder="Provincia"
 								v-model.trim="prueba.state"
@@ -414,6 +426,7 @@
 import moment from 'moment'
 import BtnLoader from '@/common-vue/components/BtnLoader'
 import IntegrationConnector from '@/mixins/integration_connector'
+import { collect_laravel_validation_messages } from '@/utils/laravel_validation_toast'
 
 /**
  * Tarjeta de estado, conexión y configuración de Zipnova (envíos), dentro de la solapa
@@ -462,6 +475,11 @@ export default {
 			// Credenciales que el dueño pega para conectar. Se vacían apenas conecta.
 			api_token: '',
 			api_secret: '',
+			// Largo mínimo de cada código (espejo del `min:8` de ZipnovaIntegracionController)
+			largo_minimo_credencial: 8,
+			// Última configuración copiada al formulario, para saber qué tocó el dueño (ver
+			// sincronizarForm())
+			config_sincronizada: null,
 			// Mensaje del 422/502 del conectar, para el alert rojo
 			error_conexion: null,
 			// El paso a paso viene ABIERTO: es la primera vez que el dueño ve esto y sin él no
@@ -496,9 +514,16 @@ export default {
 		status() {
 			return this.integrationStatusInfo(this.integracion.connected, this.integracion.expires_at)
 		},
-		// Los dos códigos pegados (Zipnova los valida; acá solo se evita mandar vacío)
+		// Los dos códigos pegados y con el largo mínimo que exige el backend (min:8). Zipnova
+		// los valida de verdad; esto es para no ir al servidor con un código recortado.
 		puede_conectar() {
-			return this.api_token.length > 0 && this.api_secret.length > 0
+			return this.api_token.length >= this.largo_minimo_credencial
+				&& this.api_secret.length >= this.largo_minimo_credencial
+		},
+		// El código postal argentino tiene entre 4 y 8 caracteres (mismo rango que valida la API)
+		zipcode_prueba_valido() {
+			let largo = this.prueba.zipcode ? this.prueba.zipcode.length : 0
+			return largo >= 4 && largo <= 8
 		},
 		// Opciones del select de depósitos, a partir de `config.origins`
 		opciones_origenes() {
@@ -548,12 +573,12 @@ export default {
 			}
 		},
 		/**
-		 * Copia `config` de la prop al formulario editable, sin pisar los defaults cuando el
+		 * Formulario armado a partir de `config` de la prop, sin pisar los defaults cuando el
 		 * backend manda una clave en null.
 		 *
-		 * @returns {void}
+		 * @returns {Object} Misma forma que formVacio().
 		 */
-		sincronizarForm() {
+		formDesdeConfig() {
 			let form = this.formVacio()
 			let config = this.config
 
@@ -574,19 +599,83 @@ export default {
 				form.envio_gratis_desde = config.envio_gratis_desde
 			}
 
-			this.form = form
+			return form
 		},
 		/**
-		 * Mensaje legible de un error de axios: el `message` del 422/502 del backend, o un texto
-		 * genérico si no vino nada.
+		 * Lleva `config` de la prop al formulario editable SIN pisar lo que el dueño está editando
+		 * y todavía no guardó.
+		 *
+		 * El watcher de `integracion` corre cada vez que el padre reemplaza el item, y eso pasa
+		 * también con "Actualizar depósitos" (que solo cambia `origins`): copiar `config` entero
+		 * le borraba al dueño el peso o el monto de envío gratis que acababa de escribir. Por eso
+		 * se compara campo por campo contra la última configuración sincronizada: si el valor del
+		 * formulario sigue siendo el que vino del servidor, se toma el nuevo; si el dueño lo tocó,
+		 * se conserva. Después de Guardar, el formulario coincide con la respuesta y queda igual.
+		 *
+		 * @returns {void}
+		 */
+		sincronizarForm() {
+			let nuevo = this.formDesdeConfig()
+			let anterior = this.config_sincronizada
+
+			if (!anterior) {
+				this.form = nuevo
+				this.config_sincronizada = nuevo
+				return
+			}
+
+			let form = this.form
+			let mezclado = this.formVacio()
+
+			mezclado.origin_id = this.valorSincronizado(form.origin_id, anterior.origin_id, nuevo.origin_id)
+			mezclado.declarar_valor = this.valorSincronizado(form.declarar_valor, anterior.declarar_valor, nuevo.declarar_valor)
+			mezclado.envio_gratis_desde = this.valorSincronizado(form.envio_gratis_desde, anterior.envio_gratis_desde, nuevo.envio_gratis_desde)
+			let claves_bulto = ['peso', 'alto', 'ancho', 'profundidad']
+			claves_bulto.forEach(clave => {
+				mezclado.bulto_default[clave] = this.valorSincronizado(form.bulto_default[clave], anterior.bulto_default[clave], nuevo.bulto_default[clave])
+			})
+
+			this.form = mezclado
+			this.config_sincronizada = nuevo
+		},
+		/**
+		 * Un campo del formulario: el valor nuevo del servidor si el dueño no lo tocó (sigue
+		 * igual al que vino la última vez), el suyo si lo editó. Se compara como texto porque los
+		 * inputs number devuelven strings y el servidor manda números.
+		 *
+		 * @param {*} del_form Lo que hay en el formulario.
+		 * @param {*} anterior Lo que vino del servidor la última vez.
+		 * @param {*} nuevo Lo que vino del servidor ahora.
+		 * @returns {*}
+		 */
+		valorSincronizado(del_form, anterior, nuevo) {
+			let a_texto = valor => (valor === null || typeof valor == 'undefined') ? '' : String(valor)
+			if (a_texto(del_form) == a_texto(anterior)) {
+				return nuevo
+			}
+			return del_form
+		},
+		/**
+		 * Mensaje legible de un error de axios: los mensajes de validación de Laravel si vienen
+		 * (`errors: {campo: [...]}`, ya traducidos por el servidor; el `message` de esos 422 es
+		 * "The given data was invalid." y no sirve), si no el `message` del 422/502 del backend,
+		 * si no un texto genérico.
 		 *
 		 * @param {Object} err Error de axios.
 		 * @param {String} fallback Texto si el backend no mandó mensaje.
 		 * @returns {String}
 		 */
 		mensajeDeError(err, fallback) {
-			if (err && err.response && err.response.data && err.response.data.message) {
-				return err.response.data.message
+			let data = err && err.response && err.response.data ? err.response.data : null
+			if (!data || typeof data != 'object') {
+				return fallback
+			}
+			let mensajes = collect_laravel_validation_messages(data)
+			if (mensajes.length) {
+				return mensajes.join(' ')
+			}
+			if (data.message) {
+				return data.message
 			}
 			return fallback
 		},
@@ -612,7 +701,8 @@ export default {
 		 */
 		conectar() {
 			if (!this.puede_conectar) {
-				this.$toast.error('Pegá los dos códigos: el API Token y el API Secret')
+				this.error_conexion = 'Pegá los dos códigos completos: el API Token y el API Secret tienen más de '
+					+ this.largo_minimo_credencial + ' caracteres cada uno.'
 				return
 			}
 
@@ -656,7 +746,7 @@ export default {
 			this.$store.commit('auth/setMessage', 'Desconectando Zipnova')
 			this.$store.commit('auth/setLoading', true)
 
-			this.requestIntegrationDisconnect('zipnova', { skip_global_error_event: true })
+			this.requestIntegrationDisconnect('zipnova', { skip_global_error_event: true, skip_global_validation_toast: true })
 			.then(res => {
 				self.loading = false
 				self.$store.commit('auth/setLoading', false)
@@ -751,8 +841,8 @@ export default {
 		 * @returns {void}
 		 */
 		cotizarPrueba() {
-			if (!this.prueba.zipcode) {
-				this.$toast.error('Escribí un código postal')
+			if (!this.zipcode_prueba_valido) {
+				this.prueba.error = 'Escribí un código postal de 4 a 8 caracteres.'
 				return
 			}
 
