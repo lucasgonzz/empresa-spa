@@ -162,6 +162,18 @@
 				</p>
 			</div>
 
+			<!--
+				Fila en `generando` dentro de la ventana: hay un request a Zipnova en curso (o que
+				acaba de salir). No hay nada que operar todavía; se ofrece volver a leer el pedido.
+			-->
+			<b-alert
+			:show="generando_vigente"
+			variant="info"
+			class="envio-modal__generando m-b-10">
+				El envío se está generando en Zipnova en este momento. Esperá unos segundos y tocá
+				<strong>Actualizar</strong>.
+			</b-alert>
+
 			<!-- Acciones -->
 			<div class="envio-modal__acciones">
 				<btn-loader
@@ -175,20 +187,31 @@
 				@clicked="generar"></btn-loader>
 
 				<btn-loader
-				v-if="envio_vivo"
+				v-if="generando_vigente"
+				:block="false"
+				:loader="loading_refrescar"
+				text="Actualizar"
+				variant="outline-primary"
+				:data-testid="'order-envio-refrescar-' + order.id"
+				@clicked="refrescar_pedido"></btn-loader>
+
+				<btn-loader
+				v-if="puede_operar"
 				:block="false"
 				:loader="loading_sincronizar"
 				text="Actualizar estado"
 				variant="outline-primary"
 				@clicked="sincronizar"></btn-loader>
 
-				<b-button
-				v-if="envio_vivo"
+				<btn-loader
+				v-if="puede_operar"
+				:block="false"
+				:loader="loading_etiqueta"
+				icon_class="bi bi-tag"
+				text="Etiqueta PDF"
 				variant="outline-primary"
-				@click="abrir_etiqueta">
-					<i class="bi bi-tag"></i>
-					Etiqueta PDF
-				</b-button>
+				:data-testid="'order-envio-etiqueta-' + order.id"
+				@clicked="abrir_etiqueta"></btn-loader>
 
 				<btn-loader
 				v-if="puede_cancelar"
@@ -204,7 +227,7 @@
 <script>
 import moment from 'moment'
 import BtnLoader from '@/common-vue/components/BtnLoader'
-import { env } from '@/runtime_config'
+import { collect_laravel_validation_messages } from '@/utils/laravel_validation_toast'
 
 /**
  * Modal "Envío" de un pedido de la tienda (misión zipnova-envios, 14/9/2026).
@@ -219,8 +242,11 @@ import { env } from '@/runtime_config'
  *   este mismo pedido, también `order/setModel`.
  * - Actualizar estado → `POST envio/{id}/sincronizar` responde `{model}` = el envío.
  * - Cancelar envío → `POST envio/{id}/cancelar` responde `{model}` = el envío.
- * - Etiqueta PDF → `GET envio/{id}/etiqueta`, abierto en otra pestaña (el PDF lo sirve la API
- *   con la sesión del navegador, misma técnica que la etiqueta de ventas).
+ * - Etiqueta PDF → `GET envio/{id}/etiqueta` por XHR con `responseType: 'blob'`, y el PDF se
+ *   abre como blob en una pestaña que se abre DENTRO del click (si se abriera después de la
+ *   respuesta, el bloqueador de ventanas emergentes la frenaría). Un `window.open` directo a la
+ *   ruta no sirve: un 422 ("la etiqueta todavía no está lista") dejaba una pestaña con JSON
+ *   crudo, y la ruta vive en `auth:sanctum`, que con una navegación depende del Referer.
  *
  * El pedido normalmente genera el envío solo al confirmarse (OrderController@update); este modal
  * es para ver el estado y para los casos donde eso falló (Zipnova caído, credenciales vencidas):
@@ -242,6 +268,11 @@ export default {
 			loading_generar: false,
 			loading_sincronizar: false,
 			loading_cancelar: false,
+			loading_etiqueta: false,
+			loading_refrescar: false,
+			// Espejo de Envio::MINUTOS_GENERANDO: una fila en `generando` más vieja que esto quedó
+			// abandonada (el PHP murió a mitad del request) y se puede volver a generar.
+			minutos_generando: 2,
 			// Espejo de Envio::ESTADOS_FINALES de empresa-api: con uno de estos no se cancela.
 			estados_finales: [
 				'cancelled',
@@ -255,7 +286,9 @@ export default {
 				'lost',
 			],
 			// Espejo de Envio::ESTADOS_REEMPLAZABLES: con uno de estos se puede generar otro.
-			estados_reemplazables: ['error', 'cancelled', 'expired'],
+			// `not_found` es Zipnova respondiendo 404 al sincronizar (lo borraron desde el panel):
+			// el backend pide "generá uno nuevo desde acá", así que acá tiene que aparecer Generar.
+			estados_reemplazables: ['error', 'not_found', 'cancelled', 'expired'],
 		}
 	},
 	computed: {
@@ -386,8 +419,11 @@ export default {
 			if (!this.envio) {
 				return 'secondary'
 			}
-			if (this.envio.status == 'error') {
+			if (this.envio.status == 'error' || this.envio.status == 'not_found') {
 				return 'danger'
+			}
+			if (this.envio.status == 'generando') {
+				return 'warning'
 			}
 			if (this.envio.status == 'cancelled' || this.envio.status == 'expired') {
 				return 'secondary'
@@ -409,21 +445,50 @@ export default {
 			}
 			return this.envio.proveedor_envio_id ? this.envio.proveedor_envio_id : ''
 		},
-		// El envío existe en Zipnova y no fue reemplazado: se puede sincronizar e imprimir
+		/**
+		 * Fila en `generando` dentro de la ventana (espejo de Envio::generando_vigente()): hay un
+		 * request a Zipnova que salió hace menos de `minutos_generando` y no volvió. Pasada la
+		 * ventana, el proceso murió y la fila se puede volver a generar. La fecha viaja en ISO
+		 * UTC (Laravel serializa con toJSON), así que la diferencia no depende del huso.
+		 */
+		generando_vigente() {
+			if (!this.envio || this.envio.status != 'generando') {
+				return false
+			}
+			let desde = this.envio.updated_at ? this.envio.updated_at : this.envio.created_at
+			if (!desde) {
+				return false
+			}
+			let minutos = moment().diff(moment(desde), 'minutes')
+			return !isNaN(minutos) && minutos < this.minutos_generando
+		},
+		/**
+		 * El envío todavía cuenta para el pedido (espejo de Envio::esta_vivo()): se está generando
+		 * ahora mismo, o existe en Zipnova y no está en un estado reemplazable. Con uno vivo no se
+		 * genera otro.
+		 */
 		envio_vivo() {
-			return !!(this.envio
-				&& this.envio.proveedor_envio_id
+			if (!this.envio) {
+				return false
+			}
+			if (this.envio.status == 'generando') {
+				return this.generando_vigente
+			}
+			return !!(this.envio.proveedor_envio_id
 				&& this.estados_reemplazables.indexOf(this.envio.status) == -1)
 		},
-		// Sin envío, o con uno que Zipnova ya cerró sin viajar / que nunca se pudo crear
+		// Existe en Zipnova (tiene id) y está vivo: se puede sincronizar e imprimir la etiqueta
+		puede_operar() {
+			return this.envio_vivo && !this.generando_vigente && !!this.envio.proveedor_envio_id
+		},
+		// Sin envío, o con uno que ya no cuenta (error, no encontrado, cerrado sin viajar,
+		// `generando` abandonado). Es exactamente lo contrario de tener uno vivo: si no, un
+		// `generando` abandonado dejaba el modal sin ningún botón.
 		puede_generar() {
-			if (!this.envio) {
-				return true
-			}
-			return this.estados_reemplazables.indexOf(this.envio.status) != -1
+			return !this.envio || !this.envio_vivo
 		},
 		puede_cancelar() {
-			return this.envio_vivo && this.estados_finales.indexOf(this.envio.status) == -1
+			return this.puede_operar && this.estados_finales.indexOf(this.envio.status) == -1
 		},
 	},
 	methods: {
@@ -461,16 +526,37 @@ export default {
 			return moment(valor).format(con_hora ? 'DD/MM/YYYY HH:mm' : 'DD/MM/YYYY')
 		},
 		/**
-		 * Mensaje legible de un error de axios: el `message` del 422 del backend o un texto
-		 * genérico.
+		 * Mensaje legible de un error de axios: los mensajes de validación de Laravel si vienen
+		 * (`errors: {campo: [...]}`, ya traducidos por el servidor; el `message` de esos 422 es
+		 * "The given data was invalid." y no sirve), si no el `message` del backend, si no un
+		 * texto genérico.
 		 *
 		 * @param {Object} err
 		 * @param {String} fallback
 		 * @returns {String}
 		 */
 		mensaje_de_error(err, fallback) {
-			if (err && err.response && err.response.data && err.response.data.message) {
-				return err.response.data.message
+			let data = err && err.response && err.response.data ? err.response.data : null
+			return this.mensaje_desde_data(data, fallback)
+		},
+		/**
+		 * Misma lógica que mensaje_de_error() pero a partir del cuerpo ya parseado (lo usa la
+		 * etiqueta, que recibe el error como blob).
+		 *
+		 * @param {Object|null} data
+		 * @param {String} fallback
+		 * @returns {String}
+		 */
+		mensaje_desde_data(data, fallback) {
+			if (!data || typeof data != 'object') {
+				return fallback
+			}
+			let mensajes = collect_laravel_validation_messages(data)
+			if (mensajes.length) {
+				return mensajes.join(' ')
+			}
+			if (data.message) {
+				return data.message
 			}
 			return fallback
 		},
@@ -510,7 +596,7 @@ export default {
 
 			// skip_global_error_event: el 422 se muestra acá con su mensaje; sin la bandera el
 			// interceptor de main.js sacaría ademas el toast generico (dos avisos del mismo hecho).
-			this.$api.post('envio/generar/' + this.order.id, null, { skip_global_error_event: true })
+			this.$api.post('envio/generar/' + this.order.id, null, { skip_global_error_event: true, skip_global_validation_toast: true })
 			.then(res => {
 				self.loading_generar = false
 				if (res.data && res.data.model) {
@@ -535,13 +621,16 @@ export default {
 		 */
 		refrescar_pedido() {
 			let self = this
+			self.loading_refrescar = true
 			this.$api.get('order/' + this.order.id)
 			.then(res => {
+				self.loading_refrescar = false
 				if (res.data && res.data.model) {
 					self.actualizar_pedido_en_store(res.data.model)
 				}
 			})
 			.catch(err => {
+				self.loading_refrescar = false
 				console.log(err)
 			})
 		},
@@ -554,7 +643,7 @@ export default {
 			let self = this
 			self.loading_sincronizar = true
 
-			this.$api.post('envio/' + this.envio.id + '/sincronizar', null, { skip_global_error_event: true })
+			this.$api.post('envio/' + this.envio.id + '/sincronizar', null, { skip_global_error_event: true, skip_global_validation_toast: true })
 			.then(res => {
 				self.loading_sincronizar = false
 				if (res.data && res.data.model) {
@@ -566,6 +655,9 @@ export default {
 				self.loading_sincronizar = false
 				console.log(err)
 				self.$toast.error(self.mensaje_de_error(err, 'No se pudo actualizar el estado del envío'))
+				// El backend cambia la fila ANTES de responder el 422 (un 404 de Zipnova la deja en
+				// `not_found`): se vuelve a leer el pedido para mostrar ese estado y sus botones.
+				self.refrescar_pedido()
 			})
 		},
 		/**
@@ -581,7 +673,7 @@ export default {
 			let self = this
 			self.loading_cancelar = true
 
-			this.$api.post('envio/' + this.envio.id + '/cancelar', null, { skip_global_error_event: true })
+			this.$api.post('envio/' + this.envio.id + '/cancelar', null, { skip_global_error_event: true, skip_global_validation_toast: true })
 			.then(res => {
 				self.loading_cancelar = false
 				if (res.data && res.data.model) {
@@ -593,17 +685,84 @@ export default {
 				self.loading_cancelar = false
 				console.log(err)
 				self.$toast.error(self.mensaje_de_error(err, 'No se pudo cancelar el envío'))
+				// Un 401 de Zipnova al cancelar sincroniza el envío antes de fallar: el estado real
+				// ya cambió en la fila y hay que volver a leerlo.
+				self.refrescar_pedido()
 			})
 		},
 		/**
-		 * Abre la etiqueta PDF en otra pestaña. La ruta vive en el grupo autenticado de
-		 * routes/api.php (por eso el `/api`); el navegador manda la cookie de sesión solo, igual
-		 * que con `sale/etiqueta-envio/pdf` en ventas.
+		 * Pide la etiqueta PDF por XHR y la abre como blob en otra pestaña.
+		 *
+		 * La pestaña se abre vacía DENTRO del click: un `window.open` que llega después de la
+		 * respuesta (asincrónica) lo frena el bloqueador de ventanas emergentes. Si la API falla
+		 * (422 "la etiqueta todavía no está lista", 404, 500) la pestaña se cierra y el mensaje
+		 * va a un toast; como el request pide blob, el cuerpo del error también llega como blob y
+		 * hay que leerlo como texto antes de parsearlo.
 		 *
 		 * @returns {void}
 		 */
 		abrir_etiqueta() {
-			window.open(env('VUE_APP_API_URL') + '/api/envio/' + this.envio.id + '/etiqueta')
+			let self = this
+			let pestania = window.open('', '_blank')
+			self.loading_etiqueta = true
+
+			this.$api.get('envio/' + this.envio.id + '/etiqueta', {
+				responseType: 'blob',
+				skip_global_error_event: true,
+				skip_global_validation_toast: true,
+			})
+			.then(res => {
+				self.loading_etiqueta = false
+				let url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+				if (pestania) {
+					pestania.location.href = url
+				} else {
+					window.open(url)
+				}
+			})
+			.catch(err => {
+				self.loading_etiqueta = false
+				if (pestania) {
+					pestania.close()
+				}
+				console.log(err)
+				self.leer_error_blob(err)
+				.then(data => {
+					self.$toast.error(self.mensaje_desde_data(data, 'No se pudo descargar la etiqueta'))
+				})
+			})
+		},
+		/**
+		 * Cuerpo de un error de axios que se pidió con `responseType: 'blob'`: el JSON viene
+		 * adentro de un Blob, se lee como texto y se parsea. Si no es JSON (o no es un blob),
+		 * devuelve null y el que llama usa su texto genérico.
+		 *
+		 * @param {Object} err Error de axios.
+		 * @returns {Promise<Object|null>}
+		 */
+		leer_error_blob(err) {
+			let data = err && err.response ? err.response.data : null
+			if (!data) {
+				return Promise.resolve(null)
+			}
+			if (typeof data == 'object' && typeof data.text != 'function') {
+				// Ya vino parseado (no era blob)
+				return Promise.resolve(data)
+			}
+			if (typeof data.text != 'function') {
+				return Promise.resolve(null)
+			}
+			return data.text()
+			.then(texto => {
+				try {
+					return JSON.parse(texto)
+				} catch (e) {
+					return null
+				}
+			})
+			.catch(() => {
+				return null
+			})
 		},
 	},
 }
@@ -687,6 +846,9 @@ export default {
 		color: var(--color-text-secondary)
 
 	.envio-modal__error
+		font-size: 0.875rem
+
+	.envio-modal__generando
 		font-size: 0.875rem
 
 	.envio-modal__acciones
