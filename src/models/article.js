@@ -698,25 +698,6 @@ export default {
 
 
 		{
-			text: 'Requiere envio',
-			key: 'requires_shipping',
-			type: 'checkbox',
-			not_show: true,
-			value: 1,
-			if_has_extencion: 'usa_tienda_nube',
-			description: 'Activalo si el producto es fisico, desactivalo si el producto es digital',
-			use_to_update: true,
-		},
-		{
-			text: 'Envio Gratis',
-			key: 'free_shipping',
-			type: 'checkbox',
-			not_show: true,
-			value: 0,
-			if_has_extencion: 'usa_tienda_nube',
-			use_to_update: true,
-		},
-		{
 			key: 'precio_promocional',
 			type: 'number',
 			not_show: true,
@@ -732,33 +713,78 @@ export default {
 			if_has_extencion: 'usa_tienda_nube',
 			description: 'Link al video del producto',
 		},
+
+
+		/*
+			Envíos (misión zipnova-envios, 14/9/2026).
+
+			Estos seis campos vivían adentro del grupo "Tienda Nube", gateados solo por
+			`usa_tienda_nube`. Ahora los usa también la tienda propia: `peso` (kg) y
+			`alto/ancho/profundidad` (cm) son lo que tienda-api le manda a Zipnova para cotizar el
+			envío, y `requires_shipping` / `free_shipping` deciden si el artículo viaja y si el
+			comercio absorbe el costo. Por eso el grupo es propio y se muestra con CUALQUIERA de
+			las dos extensiones (`if_has_alguna_extencion` es un OR). Las unidades son las que ya
+			sincroniza TiendaNubeProductService (kg y cm), no se cambian.
+		*/
 		{
+			group_title: 'Envíos (peso y medidas)',
+			if_has_alguna_extencion: ['usa_tienda_nube', 'online'],
+		},
+		{
+			text: 'Requiere envío',
+			key: 'requires_shipping',
+			type: 'checkbox',
+			not_show: true,
+			value: 1,
+			if_has_alguna_extencion: ['usa_tienda_nube', 'online'],
+			description: 'Activalo si el producto es físico, desactivalo si el producto es digital o no se envía. Si está desactivado, la tienda no lo cuenta al cotizar el envío.',
+			use_to_update: true,
+		},
+		{
+			text: 'Envío gratis',
+			key: 'free_shipping',
+			type: 'checkbox',
+			not_show: true,
+			value: 0,
+			if_has_alguna_extencion: ['usa_tienda_nube', 'online'],
+			description: 'Si todos los artículos del pedido tienen envío gratis, el comprador no paga el envío y lo absorbe el comercio.',
+			use_to_update: true,
+		},
+		{
+			text: 'Peso (kg)',
 			key: 'peso',
 			type: 'number',
 			not_show: true,
-			if_has_extencion: 'usa_tienda_nube',
-			description: 'En Kilogramos'
+			if_has_alguna_extencion: ['usa_tienda_nube', 'online'],
+			description: 'En kilogramos. Ej: 0.350 para 350 gramos. Lo usa la tienda para cotizar el envío',
+			use_to_update: true,
 		},
 		{
-			key: 'profundidad',
-			type: 'number',
-			not_show: true,
-			if_has_extencion: 'usa_tienda_nube',
-			description: 'En cm'
-		},
-		{
-			key: 'ancho',
-			type: 'number',
-			not_show: true,
-			if_has_extencion: 'usa_tienda_nube',
-			description: 'En cm'
-		},
-		{
+			text: 'Alto (cm)',
 			key: 'alto',
 			type: 'number',
 			not_show: true,
-			if_has_extencion: 'usa_tienda_nube',
-			description: 'En cm'
+			if_has_alguna_extencion: ['usa_tienda_nube', 'online'],
+			description: 'En centímetros. Lo usa la tienda para cotizar el envío',
+			use_to_update: true,
+		},
+		{
+			text: 'Ancho (cm)',
+			key: 'ancho',
+			type: 'number',
+			not_show: true,
+			if_has_alguna_extencion: ['usa_tienda_nube', 'online'],
+			description: 'En centímetros. Lo usa la tienda para cotizar el envío',
+			use_to_update: true,
+		},
+		{
+			text: 'Largo / profundidad (cm)',
+			key: 'profundidad',
+			type: 'number',
+			not_show: true,
+			if_has_alguna_extencion: ['usa_tienda_nube', 'online'],
+			description: 'En centímetros. Lo usa la tienda para cotizar el envío',
+			use_to_update: true,
 		},
 
 
