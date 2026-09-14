@@ -281,6 +281,9 @@ export default {
 			return !!(this.opcion && this.opcion.es_punto_de_retiro)
 		},
 		nombre_destinatario() {
+			if (!this.destino) {
+				return '-'
+			}
 			let partes = []
 			if (this.destino.nombre) {
 				partes.push(this.destino.nombre)
@@ -297,6 +300,9 @@ export default {
 		 */
 		direccion_destinatario() {
 			let destino = this.destino
+			if (!destino) {
+				return '-'
+			}
 			if (this.es_punto_de_retiro) {
 				let punto = this.punto_de_retiro_elegido
 				if (punto) {
