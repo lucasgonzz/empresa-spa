@@ -125,6 +125,8 @@ export default {
 	&__volver
 		appearance: none
 		border: none
+		// common-vue/sass/_inputs.sass le pone sombra a TODO <button> del sistema; acá es un link.
+		box-shadow: none
 		background: transparent
 		padding: 6px 8px 6px 0
 		font: inherit

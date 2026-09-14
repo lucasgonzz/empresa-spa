@@ -284,6 +284,8 @@ body.informe-abierto-activo
 		height: 36px
 		border: none
 		border-radius: 10px
+		// common-vue/sass/_inputs.sass le pone sombra a TODO <button> del sistema; este es un ícono pelado.
+		box-shadow: none
 		background: transparent
 		color: var(--color-text-secondary, #6c757d)
 		display: flex
