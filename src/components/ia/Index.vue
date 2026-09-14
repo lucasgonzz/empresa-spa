@@ -64,6 +64,14 @@ export default {
 		Escritorio: () => import('@/components/ia/Escritorio'),
 		InformeAbierto: () => import('@/components/ia/InformeAbierto'),
 	},
+	data() {
+		return {
+			// Id de /ia/:id que todavía no se pudo abrir porque el gate no resolvió
+			// (ver abrir_desde_la_ruta y el watch de puede_entrar_al_mostrador). null =
+			// nada pendiente.
+			apertura_pendiente: null,
+		}
+	},
 	computed: {
 		/**
 		 * "lunes 14 de septiembre": moment ya está en 'es' (common-vue/mixins/dates.js).
@@ -85,6 +93,18 @@ export default {
 		'$route.params.id'() {
 			this.abrir_desde_la_ruta()
 		},
+		/**
+		 * En una carga fría sobre /ia/:id (F5 o link directo) este componente se monta
+		 * antes de que auth/me traiga al usuario y sus extensiones, así que el gate da
+		 * false en mounted() y la apertura queda pendiente. Cuando el gate resuelve a
+		 * true, se dispara UNA vez (abrir_pendiente limpia el id). Si resuelve a false
+		 * (un empleado, o sin la extensión) se muestra el cartel y el id se descarta.
+		 */
+		puede_entrar_al_mostrador(puede) {
+			if (puede && this.apertura_pendiente) {
+				this.abrir_pendiente()
+			}
+		},
 	},
 	methods: {
 		/**
@@ -99,16 +119,37 @@ export default {
 				})
 		},
 		/**
-		 * /ia/:id abre ese informe de entrada y limpia el :id de la URL, para que un
-		 * F5 posterior vuelva al escritorio y no reabra el informe.
+		 * /ia/:id abre ese informe de entrada. Si el gate todavía no resolvió (carga
+		 * fría), el id queda pendiente y lo dispara el watch de puede_entrar_al_mostrador;
+		 * hasta entonces la URL conserva el :id, para que un F5 en el medio no lo pierda.
 		 */
 		abrir_desde_la_ruta() {
 			let id = this.$route.params.id
-			if (!id || !this.puede_entrar_al_mostrador) {
+			if (!id) {
 				return
 			}
-			this.abrir({ id: Number(id) })
-			this.$router.replace({ name: 'ia' })
+			this.apertura_pendiente = Number(id)
+			if (!this.puede_entrar_al_mostrador) {
+				return
+			}
+			this.abrir_pendiente()
+		},
+		/**
+		 * Abre el informe pendiente y limpia el :id de la URL, para que un F5 posterior
+		 * vuelva al escritorio y no reabra el informe. El id se limpia ANTES de abrir:
+		 * el replace de la ruta vuelve a disparar abrir_desde_la_ruta (sin id, corta) y
+		 * el watch del gate no tiene que encontrar nada que repetir.
+		 */
+		abrir_pendiente() {
+			let id = this.apertura_pendiente
+			this.apertura_pendiente = null
+			if (!id) {
+				return
+			}
+			this.abrir({ id: id })
+			if (this.$route.params.id) {
+				this.$router.replace({ name: 'ia' })
+			}
 		},
 	},
 }

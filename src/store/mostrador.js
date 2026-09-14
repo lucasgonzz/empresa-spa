@@ -27,6 +27,27 @@ axios.defaults.baseURL = env('VUE_APP_API_URL')
  * el módulo (plan §4). Se muestra el estado vacío, sin toast rojo. Por eso las llamadas van
  * con `skip_global_error_event`: el error se atiende acá y no en el interceptor global.
  */
+/**
+ * Pone leido_at (si no lo tenía) en los informes de la lista cuyo id esté en `ids`.
+ *
+ * @param {Object} state
+ * @param {Array<number>} ids
+ */
+function estampar_leidos(state, ids) {
+	if (!ids || !ids.length) {
+		return
+	}
+	let ahora = new Date().toISOString()
+	state.ultimos.concat(state.anteriores).forEach(reporte => {
+		// == a propósito: el id de la ruta llega como número, el de la carpeta también,
+		// pero no vale la pena que un string en algún llamador deje el punto prendido.
+		let leido = ids.some(id => id == reporte.id)
+		if (leido && !reporte.leido_at) {
+			reporte.leido_at = ahora
+		}
+	})
+}
+
 export default {
 	namespaced: true,
 	state: {
@@ -46,6 +67,13 @@ export default {
 		// | 'solo_dueno' (403) | 'error' (cualquier otra falla).
 		motivo_vacio: null,
 
+		// Ids de los informes abiertos en esta sesión. Sirve para que el punto de
+		// "nuevo" de la carpeta se apague aunque el informe se haya abierto ANTES de
+		// que llegara la lista (carga fría por /ia/:id: el GET del informe y el del
+		// escritorio salen a la vez, y marcarLeido sobre una lista vacía no marca nada).
+		// setReportes lo vuelve a aplicar cuando la lista llega.
+		leidos_en_sesion: [],
+
 		// El informe abierto a pantalla completa, con su `contenido`. null = cerrado.
 		reporte_abierto: null,
 		// true mientras se pide GET mostrador/reportes/{id}.
@@ -60,6 +88,10 @@ export default {
 		setReportes(state, payload) {
 			state.ultimos = (payload && payload.ultimos) || []
 			state.anteriores = (payload && payload.anteriores) || []
+			// Lo leído en esta sesión se re-estampa sobre la lista recién llegada: si el
+			// backend ya lo trae con leido_at, no cambia nada; si la lista es anterior a
+			// la apertura (o llegó después), el punto de "nuevo" se apaga igual.
+			estampar_leidos(state, state.leidos_en_sesion)
 		},
 		setReportesCargados(state, value) {
 			state.reportes_cargados = value
@@ -79,15 +111,15 @@ export default {
 		/**
 		 * Estampa leido_at en la lista para que el punto de "nuevo" de la carpeta se
 		 * apague al abrirla (el backend lo estampa en GET reportes/{id}; acá se refleja
-		 * sin volver a pedir la lista).
+		 * sin volver a pedir la lista). Si la lista todavía no llegó, el id queda en
+		 * leidos_en_sesion y setReportes lo estampa cuando llegue.
 		 */
 		marcarLeido(state, reporte_id) {
-			let ahora = new Date().toISOString()
-			state.ultimos.concat(state.anteriores).forEach(reporte => {
-				if (reporte.id == reporte_id && !reporte.leido_at) {
-					reporte.leido_at = ahora
-				}
-			})
+			let id = Number(reporte_id)
+			if (state.leidos_en_sesion.indexOf(id) == -1) {
+				state.leidos_en_sesion.push(id)
+			}
+			estampar_leidos(state, [id])
 		},
 		/**
 		 * Cuelga la conversación recién creada del informe: en el abierto y en la lista,
