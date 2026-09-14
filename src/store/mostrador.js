@@ -198,7 +198,13 @@ export default {
 		 * @returns {Promise} resuelve con la conversación.
 		 */
 		crearConversacion({ commit }, reporte_id) {
-			return axios.post('/api/mostrador/reportes/' + reporte_id + '/conversacion')
+			// skip_global_error_event, como getReportes: la falla la atiende
+			// PreguntaInput (repone el texto y avisa con su propio toast). Sin la
+			// bandera, el interceptor de main.js además disparaba errorEvent y el
+			// dueño veía DOS toasts por el mismo fallo.
+			return axios.post('/api/mostrador/reportes/' + reporte_id + '/conversacion', null, {
+				skip_global_error_event: true,
+			})
 				.then(res => {
 					let conversation = res.data.model
 					commit('ai_chat/upsertConversation', conversation, { root: true })
