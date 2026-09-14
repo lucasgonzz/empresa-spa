@@ -14,6 +14,8 @@
 			</h4>
 			<b-badge
 			v-if="sugerencia"
+			data-testid="sugerencia-detalle-estado"
+			:data-estado="sugerencia.status"
 			:variant="estado_variant">
 				{{ estado_texto }}
 			</b-badge>

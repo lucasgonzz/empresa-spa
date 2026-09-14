@@ -6,6 +6,7 @@
 		size="sm"
 		class="m-l-10"
 		id="btn_asignar_stock"
+		data-testid="btn-asignar-stock"
 		@click.stop="stockMovement"
 		variant="outline-primary">
 			<span

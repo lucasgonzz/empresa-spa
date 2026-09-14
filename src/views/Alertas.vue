@@ -45,7 +45,7 @@ export default {
 				},
 				{
 					name: 'Stock minimo',
-					alert: this.articles_stock_minimo.length	
+					alert: this.stock_minimo_alert_count
 				},
 			]
 
