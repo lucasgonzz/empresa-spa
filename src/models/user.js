@@ -535,31 +535,43 @@ export default {
 			group_title: 'Sugerencias inteligentes de stock',
 		},
 		/*
-		 * Configuracion de la extension 'sugerencias_inteligentes': periodicidad de la
-		 * generacion automatica y valores por defecto de cada sugerencia (los usa la
-		 * corrida automatica y precargan el form de "Nueva sugerencia" de la vista
-		 * propia). Persisten en columnas sugerencias_* de users via UserController@update,
-		 * el mismo camino que usar_condicion_fiscal_en_costeo. Sin la extension, el
-		 * grupo entero desaparece de Configuracion general.
+		 * Configuracion de la extension 'sugerencias_inteligentes': los valores por
+		 * defecto con los que se calculan los movimientos de stock sugeridos. Persisten
+		 * en columnas sugerencias_* de users via UserController@update, el mismo camino
+		 * que usar_condicion_fiscal_en_costeo. Sin la extension, el grupo entero
+		 * desaparece de Configuracion general.
+		 *
+		 * Desde la mision "modulo-ia-mostrador" (14/9/2026) estos tres defaults
+		 * (modo, origen, limite del origen) los lee TAMBIEN la carpeta Stock del
+		 * mostrador (empresa-api, Services/Mostrador/RecolectorStock.php), ademas de
+		 * los modales historicos de sugerencias del Listado: por eso siguen aca.
+		 *
+		 * Lo que se retiro es la periodicidad ('Generar sugerencias automaticamente',
+		 * columna sugerencias_periodicidad): el Kernel de empresa-api ya no agenda
+		 * sugerencias:generar, porque las carpetas Stock y Compras del mostrador
+		 * reemplazan las corridas nocturnas. El campo quedaba como un interruptor
+		 * muerto (se guardaba y no hacia nada). Se comenta y no se borra porque la
+		 * columna sigue existiendo en users y UserController@update la sigue
+		 * aceptando; ninguna otra pantalla de la SPA la lee (grep del 14/9/2026).
 		 */
-		{
-			text: 'Generar sugerencias automaticamente',
-			key: 'sugerencias_periodicidad',
-			type: 'select',
-			options: [
-				{text: 'Nunca', value: 'nunca'},
-				{text: 'Todos los dias', value: 'diaria'},
-				{text: 'Una vez por semana', value: 'semanal'},
-				{text: 'Cada quince dias', value: 'quincenal'},
-				{text: 'Una vez por mes', value: 'mensual'},
-			],
-			if_has_extencion: 'sugerencias_inteligentes',
-			descriptions: [
-				'El sistema genera solo una sugerencia de movimientos de stock con la frecuencia que elijas, a la madrugada, usando los valores por defecto de abajo.',
-				'Cuando la sugerencia queda lista te llega una notificacion para abrirla con un click.',
-				'Con "Nunca", las sugerencias se generan unicamente a mano desde la pantalla de sugerencias.',
-			],
-		},
+		// {
+		// 	text: 'Generar sugerencias automaticamente',
+		// 	key: 'sugerencias_periodicidad',
+		// 	type: 'select',
+		// 	options: [
+		// 		{text: 'Nunca', value: 'nunca'},
+		// 		{text: 'Todos los dias', value: 'diaria'},
+		// 		{text: 'Una vez por semana', value: 'semanal'},
+		// 		{text: 'Cada quince dias', value: 'quincenal'},
+		// 		{text: 'Una vez por mes', value: 'mensual'},
+		// 	],
+		// 	if_has_extencion: 'sugerencias_inteligentes',
+		// 	descriptions: [
+		// 		'El sistema genera solo una sugerencia de movimientos de stock con la frecuencia que elijas, a la madrugada, usando los valores por defecto de abajo.',
+		// 		'Cuando la sugerencia queda lista te llega una notificacion para abrirla con un click.',
+		// 		'Con "Nunca", las sugerencias se generan unicamente a mano desde la pantalla de sugerencias.',
+		// 	],
+		// },
 		{
 			text: 'Objetivo por defecto',
 			key: 'sugerencias_modo',
@@ -571,7 +583,7 @@ export default {
 			],
 			if_has_extencion: 'sugerencias_inteligentes',
 			descriptions: [
-				'Hasta donde completar el stock de cada deposito en las sugerencias generadas automaticamente (y como valor inicial al crear una a mano).',
+				'Hasta donde completar el stock de cada deposito en los movimientos que sugiere la carpeta Stock del mostrador (y como valor inicial al crear una sugerencia a mano desde el Listado).',
 				'MINIMO: sugiere stock solo para los depositos que estan por debajo de su stock minimo.',
 				'IDEAL: lleva cada deposito a su valor ideal, calculado como (minimo + maximo) / 2.',
 				'MAXIMO: lleva cada deposito hasta su stock maximo definido.',
@@ -611,37 +623,38 @@ export default {
 		},
 
 
-		{
-			group_title: 'Sugerencias inteligentes de compra',
-		},
 		/*
-		 * Configuracion de la extension 'sugerencias_compras': periodicidad de la
-		 * generacion automatica de la sugerencia de compra a proveedores (comando
-		 * compras:generar). Persiste en sugerencias_compras_periodicidad de users
-		 * via UserController@update, mismo camino que sugerencias_periodicidad de
-		 * arriba (stock). A diferencia de stock, aca no hay modo/origen/limite_origen
-		 * por defecto: los cuatro parametros del motor de compras se cargan en el
-		 * form de "Nueva sugerencia" de la vista propia, no en Configuracion general.
-		 * Sin la extension, el grupo entero desaparece de Configuracion general.
+		 * Grupo 'Sugerencias inteligentes de compra' RETIRADO en la mision
+		 * "modulo-ia-mostrador" (14/9/2026). Su unico campo era la periodicidad de la
+		 * corrida automatica de compras:generar (columna sugerencias_compras_periodicidad
+		 * de users), y el Kernel de empresa-api ya no agenda ese comando: la carpeta
+		 * Compras del mostrador reemplaza la corrida nocturna, asi que el campo era un
+		 * interruptor muerto. Se comenta y no se borra por lo mismo que el de stock: la
+		 * columna sigue en users y UserController@update la sigue aceptando; ninguna
+		 * otra pantalla de la SPA la lee (grep del 14/9/2026). Sin campos visibles,
+		 * ModelForm esconde solo el titulo del grupo, pero se comenta entero igual.
 		 */
-		{
-			text: 'Generar sugerencias de compra automaticamente',
-			key: 'sugerencias_compras_periodicidad',
-			type: 'select',
-			options: [
-				{text: 'Nunca', value: 'nunca'},
-				{text: 'Todos los dias', value: 'diaria'},
-				{text: 'Una vez por semana', value: 'semanal'},
-				{text: 'Cada quince dias', value: 'quincenal'},
-				{text: 'Una vez por mes', value: 'mensual'},
-			],
-			if_has_extencion: 'sugerencias_compras',
-			descriptions: [
-				'El sistema genera una sugerencia de compra a proveedores con la frecuencia que elijas, a la madrugada, usando los defaults del motor.',
-				'Cuando la sugerencia queda lista te llega una notificacion para abrirla con un click.',
-				'Con "Nunca", las sugerencias se generan unicamente a mano desde la pantalla de Sugerencias de compra.',
-			],
-		},
+		// {
+		// 	group_title: 'Sugerencias inteligentes de compra',
+		// },
+		// {
+		// 	text: 'Generar sugerencias de compra automaticamente',
+		// 	key: 'sugerencias_compras_periodicidad',
+		// 	type: 'select',
+		// 	options: [
+		// 		{text: 'Nunca', value: 'nunca'},
+		// 		{text: 'Todos los dias', value: 'diaria'},
+		// 		{text: 'Una vez por semana', value: 'semanal'},
+		// 		{text: 'Cada quince dias', value: 'quincenal'},
+		// 		{text: 'Una vez por mes', value: 'mensual'},
+		// 	],
+		// 	if_has_extencion: 'sugerencias_compras',
+		// 	descriptions: [
+		// 		'El sistema genera una sugerencia de compra a proveedores con la frecuencia que elijas, a la madrugada, usando los defaults del motor.',
+		// 		'Cuando la sugerencia queda lista te llega una notificacion para abrirla con un click.',
+		// 		'Con "Nunca", las sugerencias se generan unicamente a mano desde la pantalla de Sugerencias de compra.',
+		// 	],
+		// },
 
 
 		{
@@ -651,8 +664,10 @@ export default {
 		 * Configuracion de la extension 'motor_de_ofertas': periodicidad de la
 		 * generacion automatica de la corrida de ofertas personalizadas por cliente
 		 * (comando ofertas:generar). Persiste en ofertas_periodicidad de users via
-		 * UserController@update, mismo camino que las dos periodicidades de arriba
-		 * (stock y compras). Los parametros del motor se cargan en el form de
+		 * UserController@update, mismo camino que tenian las periodicidades de stock y
+		 * compras (retiradas el 14/9/2026, ver arriba). Esta SIGUE VIVA: el Kernel de
+		 * empresa-api conserva ofertas:generar a las 06:00 porque alimenta Promociones,
+		 * que quedo en Tienda Online. Los parametros del motor se cargan en el form de
 		 * "Nueva corrida" de la vista propia, no aca. Sin la extension, el grupo
 		 * entero desaparece de Configuracion general.
 		 */
