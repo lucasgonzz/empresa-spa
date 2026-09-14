@@ -12,10 +12,10 @@
 export default {
 	properties: [],
 	abm_descripcion: {
-		para_que_sirve: 'Conecta la tienda online con tu propia cuenta de Mercado Pago y con Zippin para los envios.',
-		implicancias: 'La conexion se hace por OAuth contra la cuenta del comercio: ya no se pegan claves a mano en ningun formulario. ComercioCity no es intermediario del cobro; la comision de cada venta se la paga el comercio directo a Mercado Pago.',
-		como_se_utiliza: 'Entra a ABM → Integraciones → Tienda online y toca Conectar en la tarjeta que corresponda. Para cortar la conexion, Desconectar en la misma tarjeta.',
-		palabras_clave: ['mercado pago', 'cobro online', 'checkout', 'zippin', 'envios', 'oauth', 'conectar', 'integraciones'],
+		para_que_sirve: 'Conecta la tienda online con tu propia cuenta de Mercado Pago para cobrar y con Zipnova (ex Zippin) para cotizar y despachar envios por Correo Argentino, Andreani y mas de 20 transportes.',
+		implicancias: 'Mercado Pago se conecta por OAuth contra la cuenta del comercio; Zipnova, pegando el API Token y el API Secret que el comercio genera en su propia cuenta de Zipnova. Ninguna clave queda a la vista despues de conectar. ComercioCity no es intermediario del cobro ni del envio: la comision de cada venta se la paga el comercio directo a Mercado Pago, y el costo del envio se lo cobra al comprador en el mismo pedido (o lo absorbe si marca envio gratis).',
+		como_se_utiliza: 'Entra a ABM → Integraciones → Tienda online y toca Conectar en la tarjeta que corresponda. Para Zipnova, segui el paso a paso de la tarjeta para conseguir los dos codigos, pegalos y toca Conectar; despues elegi el deposito, completa el paquete por defecto y proba con un codigo postal como lo veria tu cliente. Para cortar la conexion, Desconectar en la misma tarjeta.',
+		palabras_clave: ['mercado pago', 'cobro online', 'checkout', 'zipnova', 'zippin', 'andreani', 'correo argentino', 'codigo postal', 'costo de envio', 'etiqueta', 'envios', 'oauth', 'conectar', 'integraciones'],
 	},
 	singular_model_name_spanish: 'Tienda online',
 	plural_model_name_spanish: 'Tienda online',

@@ -1,7 +1,7 @@
 <template>
 	<div class="integraciones-tienda-online">
 		<p class="integraciones-tienda-online__intro">
-			Conectá tu propia cuenta de Mercado Pago y de Zippin para cobrar y ofrecer envíos desde tu tienda online.
+			Conectá tu propia cuenta de Mercado Pago y de Zipnova para cobrar y ofrecer envíos desde tu tienda online.
 		</p>
 
 		<div
@@ -25,21 +25,27 @@
 			No hay integraciones de tienda online disponibles para este comercio.
 		</b-alert>
 
+		<!--
+			La tarjeta de Zipnova va a todo el ancho: trae un formulario de configuración, el paso a
+			paso y la prueba de cotización, y en media columna (384px en una tablet de 768) queda
+			ilegible. Mercado Pago sigue a la mitad, como antes.
+		-->
 		<b-row v-else>
 			<b-col
 			v-for="integracion in integraciones_tienda_online"
 			:key="integracion.slug"
-			md="6"
+			:md="integracion.slug == 'zipnova' ? 12 : 6"
 			class="m-b-15">
 				<mercado-pago-card
 				v-if="integracion.slug == 'mercado_pago'"
 				:integracion="integracion"
 				@actualizar="cargarIntegraciones"></mercado-pago-card>
 
-				<zippin-card
-				v-else-if="integracion.slug == 'zippin'"
+				<zipnova-card
+				v-else-if="integracion.slug == 'zipnova'"
 				:integracion="integracion"
-				@actualizar="cargarIntegraciones"></zippin-card>
+				@actualizar="cargarIntegraciones"
+				@actualizado="reemplazarIntegracion"></zipnova-card>
 			</b-col>
 		</b-row>
 	</div>
@@ -51,9 +57,12 @@ import IntegrationConnector from '@/mixins/integration_connector'
  * Solapa "Tienda online" del ABM de Integraciones.
  *
  * Arma el layout de las tarjetas de integracion del grupo `tienda_online` (Mercado Pago y
- * Zippin) leyendo el estado real de `GET /api/integraciones`. Toda la logica de conectar y
+ * Zipnova) leyendo el estado real de `GET /api/integraciones`. Toda la logica de conectar y
  * desconectar vive en cada tarjeta; aca solo se pide el listado y se lo vuelve a pedir
- * cuando una tarjeta avisa que cambio algo.
+ * cuando una tarjeta avisa que cambio algo (`actualizar`), o se reemplaza el item en la
+ * lista cuando la tarjeta ya trae el nuevo (`actualizado`, lo usa Zipnova: sus endpoints
+ * responden con el item actualizado y asi la tarjeta no se desmonta ni pierde lo que el
+ * dueño estaba mirando).
  *
  * 🔴 El listado NUNCA trae tokens: el endpoint devuelve slug, nombre, grupo, si esta
  * conectada, cuando vence y el id de la cuenta en la plataforma. Las credenciales no salen
@@ -65,7 +74,7 @@ export default {
 	mixins: [IntegrationConnector],
 	components: {
 		MercadoPagoCard: () => import('@/components/abm/integraciones/MercadoPagoCard'),
-		ZippinCard: () => import('@/components/abm/integraciones/ZippinCard'),
+		ZipnovaCard: () => import('@/components/abm/integraciones/ZipnovaCard'),
 	},
 	data() {
 		return {
@@ -115,9 +124,35 @@ export default {
 			})
 		},
 		/**
+		 * Reemplaza en la lista el item que una tarjeta acaba de actualizar (responde el
+		 * backend con `{integracion}`), sin volver a pedir el listado entero. Si el slug no
+		 * estaba, se recarga todo por las dudas.
+		 *
+		 * @param {Object} integracion Item con la misma forma que los de GET /api/integraciones.
+		 * @returns {void}
+		 */
+		reemplazarIntegracion(integracion) {
+			if (!integracion || !integracion.slug) {
+				this.cargarIntegraciones()
+				return
+			}
+
+			let index = this.integraciones.findIndex(item => {
+				return item.slug == integracion.slug
+			})
+
+			if (index == -1) {
+				this.cargarIntegraciones()
+				return
+			}
+
+			this.integraciones.splice(index, 1, integracion)
+		},
+		/**
 		 * Muestra el resultado del OAuth cuando el proveedor devuelve al usuario a esta
 		 * pantalla con ?mp=ok|error o ?zippin=ok|error, y limpia el query param para que
-		 * el aviso no se repita si el usuario recarga.
+		 * el aviso no se repita si el usuario recarga. Lo de ?zippin queda por si algun
+		 * retorno viejo del OAuth de Zippin todavia llega aca; Zipnova no pasa por OAuth.
 		 *
 		 * No hace falta refrescar nada a mano: `cargarIntegraciones()` ya salio a pedir el
 		 * estado real en el mismo created.
@@ -176,7 +211,7 @@ export default {
 		font-size: 14px
 		line-height: 1.55
 
-// Estilos base compartidos por las tarjetas de integracion (Mercado Pago y Zippin).
+// Estilos base compartidos por las tarjetas de integracion (Mercado Pago y Zipnova).
 // Vienen de components/online/config/integrations/Index.vue, que era donde vivian antes
 // de que las integraciones se mudaran al ABM.
 //
@@ -205,7 +240,7 @@ export default {
 		padding: 20px
 
 	// Encabezado: el nombre a la izquierda y el estado a la derecha, sin que el badge
-	// se caiga abajo cuando el titulo es largo (que es lo que pasaba con "Envios (Zippin)").
+	// se caiga abajo cuando el titulo es largo (que es lo que pasaba con "Envios (Zipnova)").
 	.integration-card__header
 		display: flex
 		justify-content: space-between
