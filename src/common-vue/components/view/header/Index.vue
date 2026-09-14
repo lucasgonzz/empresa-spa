@@ -22,6 +22,7 @@
 
 				<props-to-show
 				v-if="show_btn_props_to_show"
+				:preference_scope="table_preference_scope"
 				:model_name="model_name"></props-to-show>
 
 				<!--
@@ -226,6 +227,14 @@ export default {
 			default: function () {
 				return []
 			},
+		},
+		/**
+		 * Ámbito de vista de la tabla (ej. 'por_entregar'), para que el botón de columnas guarde
+		 * una preferencia propia de esa pantalla. Ver la prop homónima en view/Index.vue.
+		 */
+		table_preference_scope: {
+			type: String,
+			default: null,
 		},
 	},
 	computed: {
