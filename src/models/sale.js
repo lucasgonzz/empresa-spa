@@ -92,6 +92,11 @@ export default {
 			// 	function: 'showClientCurrentAcount',
 			// },
 			filter_modal_position: 2,
+			// Habilita las propiedades del cliente (Nombre, Telefono, Descripcion...) como columnas
+			// del listado, en el modal "Propiedades para mostrar". Es opt-in por relacion y no una
+			// deteccion automatica de belongsTo: hay props _id cuyo modelo trae campos que nunca
+			// tienen que ser una columna (employee.visible_password, "Contraseña").
+			relation_columns: true,
 		},
 		{
 			text: 'Empleado',
@@ -416,4 +421,13 @@ export default {
 	create_model_name_spanish: 'Nueva',
 	color_display_function: true,
 	text_delete: 'la',
+	// Columnas por defecto de cada ambito de tabla (preference_type `table_<ambito>`): una misma
+	// tabla de ventas mirada desde otra pantalla, con su propia configuracion de columnas y sin
+	// pisar la del listado de Ventas (`table`). Las keys van en el orden en que arrancan visibles;
+	// el resto de las propiedades queda disponible en el modal pero destildado.
+	table_scopes: {
+		por_entregar: {
+			default_visible_keys: ['num', 'total', 'fecha_entrega', 'client_id', 'employee_id'],
+		},
+	},
 }
