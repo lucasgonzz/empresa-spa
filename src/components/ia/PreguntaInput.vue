@@ -81,6 +81,21 @@ export default {
 				}
 			})
 		},
+		/**
+		 * true si el Escape cayó en este textarea con texto escrito: InformeAbierto lo
+		 * consulta antes de cerrar, para no tirar una pregunta a medio redactar. El
+		 * elemento real del <b-form-textarea> es su $el (un <textarea>).
+		 *
+		 * @param {KeyboardEvent} event
+		 * @returns {boolean}
+		 */
+		retiene_escape(event) {
+			let textarea = this.$refs.textarea && this.$refs.textarea.$el
+			if (!textarea || !event || event.target !== textarea) {
+				return false
+			}
+			return this.texto.trim() != ''
+		},
 		send() {
 			let self = this
 			let contenido = this.texto.trim()

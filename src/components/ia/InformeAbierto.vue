@@ -2,9 +2,10 @@
 	<transition name="informe-abierto">
 		<!--
 			Overlay a pantalla completa (fondo difuminado y oscurecido, como el modal de
-			video de la demo, TarjetaClip.vue). Cierra con el botón, con Escape y con un
-			click en el fondo: el click cuenta solo si el mousedown también fue en el
-			fondo, para que seleccionar texto del informe y soltar afuera no lo cierre.
+			video de la demo, TarjetaClip.vue). Cierra con el botón, con Escape (salvo con
+			una pregunta a medio escribir, ver on_document_keydown) y con un click en el
+			fondo: el click cuenta solo si el mousedown también fue en el fondo, para que
+			seleccionar texto del informe y soltar afuera no lo cierre.
 		-->
 		<div
 		v-if="reporte"
@@ -188,10 +189,21 @@ export default {
 		on_window_resize() {
 			this.viewport_width = window.innerWidth
 		},
+		/**
+		 * Escape cierra el informe, salvo que el cursor esté en el input de pregunta
+		 * CON texto escrito: ahí cerrar tiraría lo que la persona estaba redactando
+		 * (Escape es un reflejo para salir del campo, no del informe). Con el textarea
+		 * vacío o sin foco, cierra como siempre; el botón y el click en el fondo no
+		 * cambian.
+		 */
 		on_document_keydown(event) {
-			if (event.key === 'Escape' && this.reporte) {
-				this.cerrar()
+			if (event.key !== 'Escape' || !this.reporte) {
+				return
 			}
+			if (this.$refs.pregunta && this.$refs.pregunta.retiene_escape(event)) {
+				return
+			}
+			this.cerrar()
 		},
 		on_fondo_mousedown() {
 			this.mousedown_en_el_fondo = true
