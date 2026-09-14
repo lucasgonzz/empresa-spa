@@ -24,6 +24,8 @@
 	</span>
 </template>
 <script>
+import EnvioModal from '@/components/online/components/orders/envio/EnvioModal'
+
 /**
  * Botón de fila "Envío" de Pedidos online (misión zipnova-envios, 14/9/2026).
  *
@@ -38,7 +40,10 @@
  */
 export default {
 	components: {
-		EnvioModal: () => import('@/components/online/components/orders/envio/EnvioModal'),
+		// Import estático a propósito: el botón y su modal van juntos. Con un import perezoso,
+		// un clic apenas pintada la fila (red lenta) llegaría antes de que el modal exista y
+		// `$bvModal.show()` no abriría nada. EnvioBtn ya entra perezoso desde Index.vue.
+		EnvioModal,
 	},
 	props: {
 		// El pedido de la fila, tal como viene del store (con `envio` por withAll)
