@@ -199,6 +199,8 @@ import whatsapp_template from '@/store/whatsapp_template'
 
 // Chat del asistente IA (botón flotante + panel, extensión asistente_ia).
 import ai_chat from '@/store/ai_chat'
+// El mostrador del módulo IA (escritorio de informes del dueño, misma extensión).
+import mostrador from '@/store/mostrador'
 
 import price_type_surchage from '@/store/price_type_surchage'
 
@@ -473,6 +475,7 @@ export default new Vuex.Store({
         whatsapp_template,
 
         ai_chat,
+        mostrador,
 
         price_type_surchage,
 
