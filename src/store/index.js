@@ -119,6 +119,8 @@ import afip_selected_payment_method from '@/store/afip_selected_payment_method'
 import unidad_frecuencia from '@/store/unidad_frecuencia'
 import pending from '@/store/pending'
 import pending_completed from '@/store/pending_completed'
+// Agenda de tareas (Alertas -> Agenda). No es un ABM: trabaja con ocurrencias que expande la API.
+import agenda from '@/store/agenda'
 
 import article_discount_blanco from '@/store/article_discount_blanco'
 import article_surchage from '@/store/article_surchage'
@@ -398,6 +400,7 @@ export default new Vuex.Store({
         unidad_frecuencia,
         pending,
         pending_completed,
+        agenda,
 
         article_discount_blanco,
         article_surchage,
