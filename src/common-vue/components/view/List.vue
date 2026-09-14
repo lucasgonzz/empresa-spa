@@ -108,6 +108,14 @@ export default {
 			type: Boolean,
 			default: false,
 		},
+		/**
+		 * Ámbito de vista de la tabla (ej. 'por_entregar'): las columnas salen de
+		 * `props_to_show_por_ambito[ambito]` del store. Ver la prop homónima en view/Index.vue.
+		 */
+		table_preference_scope: {
+			type: String,
+			default: null,
+		},
 	},
 	computed: {
 		to_show() {
@@ -119,7 +127,36 @@ export default {
 		models() {
 			return this.$store.state[this.model_name].models
 		},
+		/**
+		 * Columnas que ya se aplicaron para el ámbito de esta vista, o null si todavía no hay
+		 * (o el store no maneja ámbitos).
+		 *
+		 * @returns {Array|null}
+		 */
+		props_del_ambito() {
+			if (!this.table_preference_scope) {
+				return null
+			}
+			let store_state = this.$store.state[this.model_name]
+			let por_ambito = store_state ? store_state.props_to_show_por_ambito : null
+			if (!por_ambito || typeof por_ambito != 'object') {
+				return null
+			}
+			// Un array vacio (el usuario destildo todo) cae al fallback a proposito: la tabla
+			// (display/table/Index.vue, computed `props`) ya trata una lista vacia como "todas las
+			// del modelo", y para esta vista el vacio util son sus columnas por defecto, no las 56
+			// del modelo.
+			let props = por_ambito[this.table_preference_scope]
+			return Array.isArray(props) && props.length ? props : null
+		},
 		properties() {
+			// Con ámbito mandan las columnas del ámbito. El fallback a properties_to_show es lo
+			// que la vista muestra mientras la preferencia no llegó (el modal la aplica al
+			// montarse), o para siempre si el usuario no tiene ninguna guardada y el módulo no
+			// soporta ámbitos (store escrito a mano, sin props_to_show_por_ambito).
+			if (this.props_del_ambito) {
+				return this.props_del_ambito
+			}
 			if (this.properties_to_show) {
 				// console.log('properties_to_show: ')
 				// console.log(this.properties_to_show)
