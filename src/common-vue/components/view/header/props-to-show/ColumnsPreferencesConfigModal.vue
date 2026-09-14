@@ -334,6 +334,7 @@
 				'props-row--dragging': dragging_index !== null && get_config_index(row) === dragging_index,
 				'props-row--drop-before': drag_over_index === get_config_index(row) && drop_position === 'before',
 				'props-row--drop-after': drag_over_index === get_config_index(row) && drop_position === 'after',
+				'props-row--relation-group': row.is_relation_group,
 			}"
 
 			:draggable="row_is_draggable(row)"
@@ -408,7 +409,48 @@
 
 
 
+						<!--
+							Fila de una relacion (ej. "Cliente"): no es una columna, es un bloque plegable
+							de columnas del modelo relacionado. Se reordena entero con la misma manija y
+							las mismas flechas que una fila propia; adentro, las hijas van en el orden del
+							modelo relacionado y no se mueven de a una. Por eso el lugar del checkbox lo
+							ocupa el boton que lo despliega, con el conteo de hijas tildadas al lado.
+						-->
+						<button
+
+						v-if="row.is_relation_group"
+
+						type="button"
+
+						class="props-row__group-toggle"
+
+						:aria-expanded="group_is_expanded(row) ? 'true' : 'false'"
+
+						@click="toggle_group(row)">
+
+							<i
+
+							class="bi props-row__group-chevron"
+
+							:class="group_is_expanded(row) ? 'bi-chevron-down' : 'bi-chevron-right'"></i>
+
+							<span class="props-row__group-label">{{ row.label }}</span>
+
+							<b-badge
+
+							class="props-row__group-count"
+
+							pill>
+
+								{{ group_visible_count(row) }} de {{ row.children.length }}
+
+							</b-badge>
+
+						</button>
+
 						<b-form-checkbox
+
+						v-else
 
 						v-model="row.visible"
 
@@ -424,7 +466,11 @@
 
 
 
-					<div class="ancho-wrapper">
+					<div
+
+					v-if="!row.is_relation_group"
+
+					class="ancho-wrapper">
 
 						<b-form-checkbox
 
@@ -461,6 +507,75 @@
 						</b-input-group>
 
 
+
+					</div>
+
+				</div>
+
+				<!--
+					Las hijas del bloque, debajo y con sangria. Sin manija ni flechas: no se reordenan.
+					Cada una tiene su tilde y los mismos controles de ancho y salto de linea que una
+					columna propia, porque en la tabla cada hija es una columna mas.
+				-->
+				<div
+
+				v-if="row.is_relation_group && group_is_expanded(row)"
+
+				class="props-row__children">
+
+					<div
+
+					v-for="child in children_to_show(row)"
+
+					:key="child.key"
+
+					class="props-row__child d-flex align-items-center justify-content-between">
+
+						<b-form-checkbox
+
+						v-model="child.visible">
+
+							{{ child.label }}
+
+						</b-form-checkbox>
+
+						<div class="ancho-wrapper">
+
+							<b-form-checkbox
+
+							class="m-l-5"
+
+							v-model="child.wrap_content">
+
+								Salto de linea
+
+							</b-form-checkbox>
+
+
+
+							<span class="m-l-15 m-r-15">|</span>
+
+
+
+							<b-input-group
+
+							append="px">
+
+								<b-form-input
+
+								title="Ancho de la columna, en pixeles"
+
+								type="number"
+
+								min="40"
+
+								max="1200"
+
+								v-model.number="child.width"></b-form-input>
+
+							</b-input-group>
+
+						</div>
 
 					</div>
 
@@ -717,10 +832,12 @@ export default {
 			}
 			const query = this.normalize_search_text(this.search_query)
 			return this.config_rows.filter(row => {
-				const text = this.normalize_search_text(
-					`${row.name || ''} ${row.label || ''} ${row.value_resolver || ''}`
-				)
-				return text.includes(query)
+				// Un bloque de relacion entra si coincide su nombre ("Cliente") o el de alguna de
+				// sus hijas: buscar "telefono" tiene que encontrar "Cliente > Telefono".
+				if (row.is_relation_group) {
+					return this.row_matches_search(row, query) || this.children_matching_search(row, query).length > 0
+				}
+				return this.row_matches_search(row, query)
 			})
 		},
 
@@ -778,6 +895,72 @@ export default {
 				.toLowerCase()
 				.normalize('NFD')
 				.replace(/[\u0300-\u036f]/g, '')
+		},
+		/**
+		 * Si una fila (propia, de grupo o hija) coincide con el texto de busqueda ya normalizado.
+		 *
+		 * @param {Object} row
+		 * @param {string} query Texto ya pasado por normalize_search_text.
+		 * @returns {boolean}
+		 */
+		row_matches_search(row, query) {
+			const text = this.normalize_search_text(
+				`${row.name || ''} ${row.label || ''} ${row.value_resolver || ''}`
+			)
+			return text.includes(query)
+		},
+		/**
+		 * Hijas de un bloque de relacion que coinciden con la busqueda. Si coincide el nombre del
+		 * bloque, coinciden todas: el que busca "cliente" quiere ver que trae el bloque, no un
+		 * renglon cerrado que al abrirse no muestra nada.
+		 *
+		 * @param {Object} row   Fila de grupo (is_relation_group).
+		 * @param {string} query Texto ya normalizado.
+		 * @returns {Array}
+		 */
+		children_matching_search(row, query) {
+			if (this.row_matches_search(row, query)) {
+				return row.children
+			}
+			return row.children.filter(child => this.row_matches_search(child, query))
+		},
+		/**
+		 * Hijas a listar debajo de un bloque: todas sin busqueda, las que coinciden con ella si hay.
+		 *
+		 * @param {Object} row Fila de grupo.
+		 * @returns {Array}
+		 */
+		children_to_show(row) {
+			if (!this.search_query) {
+				return row.children
+			}
+			return this.children_matching_search(row, this.normalize_search_text(this.search_query))
+		},
+		/**
+		 * Un bloque se ve desplegado si el usuario lo abrio, o mientras hay una busqueda que
+		 * encuentra algo adentro: el resultado de buscar "telefono" es la hija, no el renglon
+		 * cerrado del bloque.
+		 *
+		 * @param {Object} row Fila de grupo.
+		 * @returns {boolean}
+		 */
+		group_is_expanded(row) {
+			if (row.expanded) {
+				return true
+			}
+			return !!this.search_query && this.children_to_show(row).length > 0
+		},
+		toggle_group(row) {
+			row.expanded = !row.expanded
+		},
+		/**
+		 * Cantidad de hijas tildadas del bloque, para el "n de m" del renglon plegado.
+		 *
+		 * @param {Object} row Fila de grupo.
+		 * @returns {number}
+		 */
+		group_visible_count(row) {
+			return row.children.filter(child => child.visible).length
 		},
 		get_row_unique_id(row) {
 			if (row && row.row_id) {
@@ -933,6 +1116,15 @@ export default {
 
 			this.filtered_config_rows.forEach(row => {
 
+				// En un bloque de relacion lo que se destilda son las hijas (las que se ven, si
+				// hay busqueda): el bloque en si no tiene tilde propia.
+				if (row.is_relation_group) {
+					this.children_to_show(row).forEach(child => {
+						child.visible = false
+					})
+					return
+				}
+
 				if (row.locked) {
 					return
 				}
@@ -946,6 +1138,13 @@ export default {
 		marcar_todo() {
 
 			this.filtered_config_rows.forEach(row => {
+
+				// Marcar todo es para las columnas propias del modelo. Tildar de golpe las hijas
+				// de cada relacion agregaria a la tabla una columna por cada campo del cliente,
+				// que no es lo que alguien quiere al apretar este boton.
+				if (row.is_relation_group) {
+					return
+				}
 
 				row.visible = true
 
@@ -1656,6 +1855,73 @@ export default {
 			margin-left: 0 !important
 			margin-right: 0 !important
 			color: var(--color-border)
+
+		.custom-control-label
+			font-size: 0.875rem
+			color: var(--color-text-primary)
+
+	// ═══════════════════════════════════════════════════════════════════════════════
+	// Bloque de relacion ("Cliente"): el renglon plegable y sus hijas.
+	//
+	// El renglon reusa el chasis de la fila propia (manija, flechas, borde inferior) y solo cambia
+	// lo que ocupa el lugar del checkbox: un boton de texto plano con chevron, sin fondo ni borde,
+	// para que se lea como un titulo que se abre y no como otro control mas. La misma tipografia
+	// que el label del checkbox de al lado: no es una seccion nueva, es una fila con contenido.
+	// ═══════════════════════════════════════════════════════════════════════════════
+	.props-row__group-toggle
+		display: inline-flex
+		align-items: center
+		gap: 8px
+		height: 28px
+		padding: 0 4px 0 0
+		border: none
+		background: transparent
+		box-shadow: none
+		font-size: 0.875rem
+		font-weight: 500
+		color: var(--color-text-primary)
+		cursor: pointer
+
+		&:hover
+			color: var(--color-primary)
+
+		&:focus
+			outline: none
+
+		&:focus-visible
+			outline: none
+			border-radius: 6px
+			box-shadow: 0 0 0 3px rgba(59, 130, 246, .25)
+
+	.props-row__group-chevron
+		// Mismo ancho para las dos flechas, asi el label no se corre al abrir y cerrar.
+		width: 14px
+		text-align: center
+		font-size: 0.75rem
+		color: var(--color-text-secondary)
+
+	// "n de m" en neutros: cuenta, no alerta. El badge de bootstrap viene azul o gris macizo y
+	// los dos se llevan la vista en una lista que no tiene ningun otro acento.
+	.props-row__group-count
+		font-size: 0.75rem
+		font-weight: 500
+		padding: 3px 8px
+		background: var(--bg-section)
+		border: 1px solid var(--color-border)
+		color: var(--color-text-secondary)
+
+	// Las hijas: con sangria (la manija + las dos flechas de la fila de arriba miden eso) y un
+	// borde izquierdo fino que las cuelga visualmente del bloque. Sin borde inferior propio: el
+	// separador lo pone la fila del bloque, que las contiene.
+	.props-row__children
+		margin: 4px 0 2px 34px
+		padding-left: 12px
+		border-left: 1px solid var(--color-border)
+
+	.props-row__child
+		padding: 4px 0
+		flex-wrap: nowrap
+		white-space: nowrap
 
 		.custom-control-label
 			font-size: 0.875rem
