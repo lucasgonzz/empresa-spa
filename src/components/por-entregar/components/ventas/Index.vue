@@ -19,10 +19,18 @@
 			de pendientes. Mismo defecto que ya tenian los modales de caja (ver
 			caja/modals/movimientos/Index.vue), sin arreglar aca desde el 25/7/2026.
 		-->
+		<!--
+			table_preference_scope: las columnas de esta tabla las elige el usuario (boton de
+			columnas en RangoFechas.vue) y se guardan aparte de las del listado de Ventas, como
+			`table_por_entregar`; los defaults del ambito estan en models/sale.js (table_scopes).
+			Las cinco de properties_to_show quedan solo como fallback: lo que se ve mientras la
+			preferencia no se aplico todavia.
+		-->
 		<view-component
 		:show_view_header="false"
 		:models_to_show="sales_to_show"
 		:properties_to_show="properties_to_show"
+		table_preference_scope="por_entregar"
 		show_models_if_empty
 		:listado_paginado_por_defecto="false"
 		:show_previus_days="show_previus_days"
@@ -31,6 +39,17 @@
 		model_name="sale">
 			<template #header>
 				<rango-fechas></rango-fechas>
+			</template>
+			<!--
+				El cliente como boton que abre su cuenta corriente (el <current-acounts> de arriba
+				existe para eso), igual que en el listado de Ventas. Antes lo daba el `button` de la
+				prop client_id fija de properties_to_show; con las columnas del modelo esa prop ya no
+				trae boton, y sin este slot el nombre quedaba como texto plano y el modal sin quien
+				lo abra.
+			-->
+			<template #table-prop-client_id="props">
+				<client-btn
+				:sale="props.model"></client-btn>
 			</template>
 			<template #table_right_options="props">
 				<b-button
@@ -62,8 +81,11 @@ export default {
 		Confirm: () => import('@/common-vue/components/Confirm'),
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 		SaleButtons: () => import('@/components/deposito/components/SaleButtons'),
+		ClientBtn: () => import('@/components/ventas/components/ClientBtn'),
 	},
 	computed: {
+		// Fallback de columnas hasta que se aplica la preferencia del ambito (ver el comentario
+		// del view-component). No agregar columnas aca: las nuevas van en models/sale.js.
 		properties_to_show() {
 			return [
 				{
