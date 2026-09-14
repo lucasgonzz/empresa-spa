@@ -145,7 +145,7 @@ export default {
 	'menu-depositos': {
 		titulo: 'Depósitos',
 		que_hace: 'Abre el menú de depósitos: los movimientos entre depósitos y las sugerencias de reposición.',
-		nota_interna: 'DepositButtons.vue. El item Sugerencias navega a la vista propia solo con la extension sugerencias_inteligentes; sin ella abre los modales viejos.',
+		nota_interna: 'DepositButtons.vue. Desde la mision modulo-ia-mostrador (14/9/2026) el item Sugerencias lleva al mostrador (/ia) solo a quien puede entrar (mixin mostrador_acceso: extension asistente_ia + dueño o acceso maestro); a cualquier otra persona le abre los modales historicos, aunque la cuenta tenga la extension.',
 	},
 
 	'menu-depositos-movimientos': {
@@ -159,7 +159,8 @@ export default {
 
 	'menu-depositos-sugerencias': {
 		titulo: 'Sugerencias de reposición',
-		que_hace: 'Lleva a las sugerencias de qué mover de un depósito al otro antes de comprar.',
+		que_hace: 'Abre las sugerencias de qué mover de un depósito al otro antes de comprar. Si sos el dueño y tenés el asistente IA, te lleva a la carpeta Stock del mostrador (módulo IA); si no, abre la lista de sugerencias de siempre, acá mismo en el listado.',
+		nota_interna: 'DepositButtons.show_modal_sugerencias(). El destino lo decide puede_entrar_al_mostrador (mixins/mostrador_acceso.js), no la extension sugerencias_inteligentes: un empleado de una cuenta con asistente_ia va a los modales, porque /ia le devuelve "solo para el dueño". Los modales los monta stock-suggestion/Index.vue con el mismo gate invertido. La vista propia /sugerencias-de-stock ya no existe (mision modulo-ia-mostrador, 14/9/2026).',
 	},
 
 	'btn-asignar-stock': {

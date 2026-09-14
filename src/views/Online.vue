@@ -11,7 +11,10 @@
 		<cupons></cupons>
 		<!--
 			Promociones (15/8/2026): wrapper fino del motor de ofertas por cliente.
-			Monta el MISMO componente que la vista propia del módulo IA.
+			Hasta el 14/9/2026 montaba el MISMO componente que IA -> Ofertas; con el
+			módulo IA viejo fuera del menú (misión "modulo-ia-mostrador") esta es la
+			única entrada del menú a esa pantalla. La ruta /ofertas/:id? sigue viva
+			para el puente del chat.
 		-->
 		<promociones></promociones>
 	</div>
