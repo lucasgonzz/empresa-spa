@@ -8,6 +8,19 @@
 			{{ message.contenido }}
 		</p>
 
+		<!-- Tarjetas de carga que propuso el asistente (misión asistente-ia-acciones,
+		15/9/2026): una por acción, debajo del texto y adentro de la viñeta. Las
+		'descartada' no se pintan (son de una respuesta que terminó en error). -->
+		<div
+		v-if="acciones_visibles.length"
+		class="asistente-ia-globo__acciones">
+			<accion-card
+			v-for="accion in acciones_visibles"
+			:key="accion.id"
+			:accion="accion"
+			:conversation_id="message.ai_conversation_id"></accion-card>
+		</div>
+
 		<!-- Pie solo para mensajes del usuario: el estado del envío (D41). -->
 		<div
 		v-if="es_del_usuario"
@@ -42,7 +55,12 @@
 </template>
 
 <script>
+import AccionCard from '@/components/asistente-ia/AccionCard'
+
 export default {
+	components: {
+		AccionCard,
+	},
 	props: {
 		message: {
 			type: Object,
@@ -52,6 +70,19 @@ export default {
 	computed: {
 		es_del_usuario() {
 			return this.message.rol == 'user'
+		},
+		/**
+		 * Tarjetas de carga del mensaje (misión asistente-ia-acciones, §4 del plan), sin las
+		 * 'descartada'. El criterio de qué tarjeta se ve es solo su `estado`, que ya viene
+		 * resuelto del API: acá no se repite ninguna regla del back. Un mensaje sin la clave
+		 * `acciones` (API vieja, o el assistant pendiente que devuelve el 201) no tiene
+		 * tarjetas.
+		 */
+		acciones_visibles() {
+			if (this.es_del_usuario || !Array.isArray(this.message.acciones)) {
+				return []
+			}
+			return this.message.acciones.filter(accion => accion.estado != 'descartada')
 		},
 		clases_del_globo() {
 			return {
