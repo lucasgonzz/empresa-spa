@@ -115,20 +115,35 @@ const CIERRE_POR_ESTADO = {
 }
 
 /**
- * Texto de la tarjeta cuando el POST falla SIN traer la tarjeta de vuelta (500, corte de
- * red, 404). Con 409 y 422 el API manda la tarjeta y ella misma cuenta lo que pasó (su
- * estado real o su `error_mensaje`), así que esos casos no llegan acá.
+ * Texto de la tarjeta cuando el POST falla SIN traer la tarjeta de vuelta. Con 409 y 422 el
+ * API manda la tarjeta y ella misma cuenta lo que pasó (su estado real o su
+ * `error_mensaje`), así que esos casos no llegan acá.
+ *
+ * 🔴 Sin respuesta (status 0) o con un 5xx que no es el JSON del API (la página HTML de un
+ * proxy, un 504 del hosting, un error fatal de PHP), el pedido pudo haber llegado y haberse
+ * registrado igual: la tarjeta no puede afirmar que no se registró. Solo un 500 con JSON es
+ * el catch del ejecutor, que revirtió la transacción antes de responder (§3.6 del plan). El
+ * reintento es seguro en los dos casos: si la carga ya estaba, el API responde 409 con la
+ * tarjeta confirmada y la tarjeta lo muestra.
  *
  * @param {String} verbo 'confirmar' | 'cancelar'
- * @param {Object} falla { status } con el que rechazan ai_chat/confirmarAccion y cancelarAccion
+ * @param {Object} falla { status, message, con_json } con el que rechazan ai_chat/confirmarAccion y cancelarAccion
  * @returns {String}
  */
 function texto_de_falla(verbo, falla) {
+	let status = falla ? falla.status : 0
 	// Un 404 es una conversación o una tarjeta que ya no existe (por ejemplo, la
 	// conversación se borró desde otra pestaña): "probá de nuevo" mandaría a reintentar
 	// algo que no va a andar nunca.
-	if (falla && falla.status == 404) {
+	if (status == 404) {
 		return 'Esta tarjeta ya no está disponible.'
+	}
+	let es_500_del_api = status == 500 && Boolean(falla && falla.con_json)
+	if (status == 0 || (status >= 500 && !es_500_del_api)) {
+		if (verbo == 'cancelar') {
+			return 'Se cortó la conexión y no sabemos si se canceló. Tocá Cancelar de nuevo: si ya estaba, te lo muestra.'
+		}
+		return 'Se cortó la conexión y no sabemos si se registró. Tocá Confirmar de nuevo: si ya estaba, te lo muestra.'
 	}
 	if (verbo == 'cancelar') {
 		return 'No se pudo cancelar. Probá de nuevo.'

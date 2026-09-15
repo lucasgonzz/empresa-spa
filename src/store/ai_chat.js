@@ -103,8 +103,11 @@ function terminar_espera_sin_invalidar() {
  * - 409 `accion_resuelta` y 422: TAMBIÉN traen `model` (la tarjeta en su estado real, o
  *   'propuesta' con `error_mensaje`), así que se parchea igual y resuelve: la tarjeta ya
  *   cuenta lo que pasó y no hay nada más que avisar.
- * - Cualquier otra cosa (500, 404, corte de red): la tarjeta no se toca y rechaza con
- *   { status } (0 si no hubo respuesta), para que AccionCard muestre su texto de falla.
+ * - Cualquier otra cosa (500, 404, 401/403 de los middlewares, corte de red): la tarjeta no
+ *   se toca y rechaza con { status, message, con_json } para que AccionCard elija su texto
+ *   de falla. `status` es 0 si no hubo respuesta; `con_json` dice si el cuerpo fue el JSON
+ *   del API o no (una página HTML de un proxy, un 504 del hosting), porque sin ese JSON la
+ *   tarjeta no puede afirmar que no se registró; `message` es el `message` de ese JSON.
  *
  * 🔴 `skip_global_error_event`, igual que store/mostrador.js: el error lo atiende la
  * tarjeta, y sin la bandera el interceptor de main.js además dispara errorEvent y la persona
@@ -131,14 +134,18 @@ function resolver_accion(commit, payload, verbo) {
 		.catch(err => {
 			let status = err.response ? err.response.status : 0
 			let data = err.response ? err.response.data : null
-			let trae_model = Boolean(data && data.model)
-			let ya_resuelta = status == 409 && Boolean(data) && data.code == 'accion_resuelta'
+			// axios deja el cuerpo como objeto solo si vino JSON: la página HTML de un proxy o
+			// del hosting (un 502, un 504, un error fatal de PHP) llega como texto.
+			let con_json = Boolean(data) && typeof data == 'object'
+			let message = con_json && typeof data.message == 'string' && data.message ? data.message : null
+			let trae_model = con_json && Boolean(data.model)
+			let ya_resuelta = status == 409 && con_json && data.code == 'accion_resuelta'
 			if (trae_model && (ya_resuelta || status == 422)) {
 				commit('patchAccion', data.model)
 				return data.model
 			}
 			console.log(err)
-			return Promise.reject({ status: status })
+			return Promise.reject({ status: status, message: message, con_json: con_json })
 		})
 }
 
