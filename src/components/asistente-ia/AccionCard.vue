@@ -21,10 +21,14 @@
 			</div>
 		</div>
 
+		<!-- Los íconos de la tarjeta son decorativos: el texto de al lado ya dice todo, así
+		que van con aria-hidden para que el lector de pantalla no los nombre. -->
 		<p
 		v-if="presentacion.aviso"
 		class="asistente-ia-accion__aviso">
-			<i class="bi bi-info-circle"></i>
+			<i
+			class="bi bi-info-circle"
+			aria-hidden="true"></i>
 			<span>{{ presentacion.aviso }}</span>
 		</p>
 
@@ -36,10 +40,20 @@
 		class="asistente-ia-accion__pie">
 			<p
 			v-if="error_visible"
+			role="alert"
 			class="asistente-ia-accion__error">
-				<i class="bi bi-exclamation-circle"></i>
+				<i
+				class="bi bi-exclamation-circle"
+				aria-hidden="true"></i>
 				<span>{{ error_visible }}</span>
 			</p>
+			<!-- "Registrando…" / "Cancelando…" para lectores de pantalla, en una región propia
+			y siempre montada mientras la tarjeta es propuesta: adentro del botón no se
+			anunciaría (los hijos de un botón son presentacionales), y una región que aparece
+			ya con texto tampoco se anuncia de forma confiable. -->
+			<span
+			role="status"
+			class="sr-only">{{ texto_en_curso }}</span>
 			<!-- Después de un 404 no hay nada que reintentar: la tarjeta queda con su texto y
 			sin botones. -->
 			<template v-if="!no_disponible">
@@ -77,8 +91,12 @@
 		<div
 		v-else-if="es_confirmada"
 		class="asistente-ia-accion__pie">
-			<p class="asistente-ia-accion__resultado">
-				<i class="bi bi-check-circle-fill"></i>
+			<p
+			role="status"
+			class="asistente-ia-accion__resultado">
+				<i
+				class="bi bi-check-circle-fill"
+				aria-hidden="true"></i>
 				<span>{{ texto_resultado }}</span>
 			</p>
 			<b-button
@@ -88,7 +106,9 @@
 			class="asistente-ia-accion__ver"
 			data-testid="asistente-accion-ver"
 			@click="ir_a_la_ruta">
-				<i class="bi bi-box-arrow-up-right"></i>
+				<i
+				class="bi bi-box-arrow-up-right"
+				aria-hidden="true"></i>
 				{{ ruta.texto }}
 			</b-button>
 		</div>
@@ -97,8 +117,12 @@
 		<div
 		v-else-if="cierre"
 		class="asistente-ia-accion__pie">
-			<p class="asistente-ia-accion__cierre">
-				<i :class="cierre.icono"></i>
+			<p
+			role="status"
+			class="asistente-ia-accion__cierre">
+				<i
+				:class="cierre.icono"
+				aria-hidden="true"></i>
 				<span>{{ cierre.texto }}</span>
 			</p>
 		</div>
@@ -279,6 +303,20 @@ export default {
 		},
 		texto_cancelar() {
 			return this.verbo_en_curso == 'cancelar' ? 'Cancelando…' : 'Cancelar'
+		},
+		/**
+		 * Lo que anuncia la región role="status" mientras viaja el POST. En reposo queda vacía:
+		 * una región viva se anuncia cuando su texto CAMBIA, así que el texto aparece recién
+		 * con el clic.
+		 */
+		texto_en_curso() {
+			if (this.verbo_en_curso == 'confirmar') {
+				return 'Registrando…'
+			}
+			if (this.verbo_en_curso == 'cancelar') {
+				return 'Cancelando…'
+			}
+			return ''
 		},
 		/**
 		 * `resultado` viene lleno cuando la tarjeta está 'confirmada'. Se lee con guarda:
