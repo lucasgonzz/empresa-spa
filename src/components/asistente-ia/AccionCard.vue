@@ -311,8 +311,15 @@ export default {
 				conversation_id: this.conversation_id,
 				accion: this.accion,
 			})
-				.then(function () {
+				.then(function (resultado) {
 					self.verbo_en_curso = null
+					// 422: el motivo viaja en model.error_mensaje, que ya muestra error_visible. Si
+					// ese campo llegara vacío, va el message del cuerpo: si no, la tarjeta quedaría
+					// con los botones habilitados y sin decir por qué no se registró.
+					let model = resultado ? resultado.model : null
+					if (resultado && resultado.status == 422 && model && !model.error_mensaje && resultado.message) {
+						self.error_local = resultado.message
+					}
 				})
 				.catch(function (falla) {
 					self.verbo_en_curso = null

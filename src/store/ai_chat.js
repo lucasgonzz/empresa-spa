@@ -99,10 +99,11 @@ function terminar_espera_sin_invalidar() {
  * asistente-ia-acciones, §2.4 y §2.5 del plan). Lo comparten las dos acciones porque las
  * respuestas tienen la misma forma y se atienden igual:
  *
- * - 200: se parchea la tarjeta con `model` y resuelve con él.
+ * - 200: se parchea la tarjeta con `model` y resuelve con { model, status, message: null }.
  * - 409 `accion_resuelta` y 422: TAMBIÉN traen `model` (la tarjeta en su estado real, o
- *   'propuesta' con `error_mensaje`), así que se parchea igual y resuelve: la tarjeta ya
- *   cuenta lo que pasó y no hay nada más que avisar.
+ *   'propuesta' con `error_mensaje`), así que se parchea igual y resuelve con
+ *   { model, status, message }: la tarjeta ya cuenta lo que pasó. `message` viaja por si el
+ *   `error_mensaje` de un 422 llegara vacío (AccionCard lo muestra en su lugar).
  * - Cualquier otra cosa (500, 404, 401/403 de los middlewares, corte de red): la tarjeta no
  *   se toca y rechaza con { status, message, con_json } para que AccionCard elija su texto
  *   de falla. `status` es 0 si no hubo respuesta; `con_json` dice si el cuerpo fue el JSON
@@ -129,7 +130,7 @@ function resolver_accion(commit, payload, verbo) {
 	})
 		.then(res => {
 			commit('patchAccion', res.data.model)
-			return res.data.model
+			return { model: res.data.model, status: res.status, message: null }
 		})
 		.catch(err => {
 			let status = err.response ? err.response.status : 0
@@ -142,7 +143,7 @@ function resolver_accion(commit, payload, verbo) {
 			let ya_resuelta = status == 409 && con_json && data.code == 'accion_resuelta'
 			if (trae_model && (ya_resuelta || status == 422)) {
 				commit('patchAccion', data.model)
-				return data.model
+				return { model: data.model, status: status, message: message }
 			}
 			console.log(err)
 			return Promise.reject({ status: status, message: message, con_json: con_json })
@@ -575,7 +576,7 @@ export default {
 		 * seleccionada: la tarjeta también se ve en el sidebar del informe del mostrador.
 		 *
 		 * @param {Object} payload { conversation_id, accion }
-		 * @returns {Promise} resuelve con la tarjeta ya parcheada (200, 409, 422) o rechaza con { status }.
+		 * @returns {Promise} resuelve con { model, status, message } y la tarjeta ya parcheada (200, 409, 422), o rechaza con { status, message, con_json }.
 		 */
 		confirmarAccion({ commit }, payload) {
 			return resolver_accion(commit, payload, 'confirmar')
@@ -584,7 +585,7 @@ export default {
 		 * Cancela una tarjeta de carga sin registrar nada (§2.5).
 		 *
 		 * @param {Object} payload { conversation_id, accion }
-		 * @returns {Promise} resuelve con la tarjeta ya parcheada (200, 409) o rechaza con { status }.
+		 * @returns {Promise} resuelve con { model, status, message } y la tarjeta ya parcheada (200, 409), o rechaza con { status, message, con_json }.
 		 */
 		cancelarAccion({ commit }, payload) {
 			return resolver_accion(commit, payload, 'cancelar')
