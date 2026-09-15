@@ -323,6 +323,12 @@ export default {
 	flex: 1
 	min-height: 0
 	overflow-y: auto
+	// Reserva siempre el lugar de la barra de scroll (misión asistente-ia-acciones). Sin esto,
+	// cuando la conversación empieza a scrollear aparece la barra, se come su ancho y los
+	// renglones de las tarjetas de carga (AccionCard.vue, que se acomodan por el ancho del
+	// contenedor) pueden saltar de una a dos líneas en el sidebar de 380px o a ~360px. Con
+	// barras superpuestas (teléfonos, macOS) no reserva nada, que es lo correcto.
+	scrollbar-gutter: stable
 	padding: 16px 18px 6px 18px
 
 	// 🔴 900 y no 640 (decisión de Lucas, 19/8/2026). El tope viejo lo alcanzaba el

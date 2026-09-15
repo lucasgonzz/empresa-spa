@@ -428,11 +428,12 @@ export default {
 // un ancho fijo chico y el valor baja a la línea de abajo cuando no le quedan 140px al lado.
 //
 // Los 140px no son a ojo. Con los paddings de hoy, al valor le quedan ~150px en el sidebar
-// de 380 CON barra de scroll y ~169px sin ella, ~123px en el panel de un teléfono de 360 y
-// ~320px en el panel de escritorio. El umbral tiene que caer lejos del par del sidebar: si
-// quedara entre esos dos números, los renglones saltarían de una a dos líneas justo cuando
-// la conversación empieza a scrollear. Si cambian los paddings de la viñeta o del sidebar,
-// hay que volver a medir.
+// de 380, ~123px en el panel de un teléfono de 360 y ~320px en el panel de escritorio. El
+// sidebar da ~150 fijos porque Conversation.vue reserva siempre el lugar de la barra de
+// scroll (scrollbar-gutter: stable): sin esa reserva pasaba de ~169px a ~150px en el momento
+// en que la conversación empezaba a scrollear, y un umbral entre esos dos números hacía
+// saltar los renglones de una a dos líneas. Si cambian los paddings de la viñeta o del
+// sidebar, o se saca el gutter, hay que volver a medir.
 .asistente-ia-accion
 	max-width: 460px
 	margin-top: 10px
