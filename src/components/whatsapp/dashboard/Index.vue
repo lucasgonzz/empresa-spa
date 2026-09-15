@@ -140,7 +140,11 @@ export default {
 		 * @returns {void}
 		 */
 		escuchar_embeddings_terminados() {
-			this.Echo.channel('article_embeddings.' + this.owner.id)
+			// this.owner_id (no this.owner.id): mismo computed defensivo que ya usa
+			// mixins/broadcast.js para armar este mismo nombre de canal -- owner() devuelve
+			// this.user.owner (la relacion) para un empleado, y no tiene el guard `if
+			// (!this.user)` que owner_id() si tiene.
+			this.Echo.channel('article_embeddings.' + this.owner_id)
 			.listen('.ArticleEmbeddingsBatchGenerated', () => {
 				this.pedir_estado_embeddings()
 			})
