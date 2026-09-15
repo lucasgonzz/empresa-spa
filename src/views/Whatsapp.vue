@@ -73,7 +73,13 @@ export default {
 </script>
 <style lang="sass">
 .whatsapp-module
-	height: calc(100vh - 50px)
+	// 🔴 `100vh` y no `calc(100vh - 50px)`. Los 50px no correspondían a nada: el nav de este
+	// layout es un riel vertical fijo (`NavVertical.vue`, `position: fixed`, ancho fijo) y no
+	// consume alto, y `App.vue` no tiene ninguna barra superior fija que reste ese espacio. El
+	// resultado con la resta era un hueco vacío de 50px debajo del módulo, en escritorio y en
+	// teléfono. Mismo número mágico —sin arreglar acá, fuera de alcance de esta misión— en
+	// `components/online/components/messages/Index.vue`.
+	height: 100vh
 	margin-bottom: 0 !important
 	// Escritorio y tablet (≥768px, ver CLAUDE.md — regla de los tres anchos): un tercio para la
 	// bandeja, dos tercios para el tablero, los dos a la altura completa del módulo. El sidebar
@@ -90,7 +96,7 @@ export default {
 	// de Bootstrap infla cada columna a la altura del módulo entero, así que se corrige a `auto`.
 	@media screen and (max-width: 767px)
 		height: auto
-		min-height: calc(100vh - 50px)
+		min-height: 100vh
 		// EL `order` PONE EL TABLERO ARRIBA EN TELEFONO Y NO ES COSMETICO: en el template
 		// `__chats` va ANTES que `__tablero` en el DOM (asi queda a la izquierda en
 		// desktop/tablet, donde no hay order que lo mueva). Sin esto, en telefono las
