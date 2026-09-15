@@ -40,7 +40,11 @@
 				<i class="bi bi-exclamation-circle"></i>
 				<span>{{ error_visible }}</span>
 			</p>
-			<div class="asistente-ia-accion__botones">
+			<!-- Después de un 404 no hay nada que reintentar: la tarjeta queda con su texto y
+			sin botones. -->
+			<div
+			v-if="!no_disponible"
+			class="asistente-ia-accion__botones">
 				<b-button
 				size="sm"
 				variant="outline-secondary"
@@ -138,6 +142,17 @@ function texto_de_falla(verbo, falla) {
 	if (status == 404) {
 		return 'Esta tarjeta ya no está disponible.'
 	}
+	// 401 y 403 los cortan los middlewares (auth:sanctum, check_extencion_empresa) antes de
+	// llegar al controller, así que no traen la tarjeta. Se muestra el texto del API si lo hay,
+	// salvo el "Unauthenticated." de Laravel: es el mensaje en inglés que arma el framework
+	// para auth:sanctum (el Handler de empresa-api no lo traduce), no un texto para la persona.
+	if (status == 401 || status == 403) {
+		let message = falla && falla.message ? falla.message : null
+		if (message && message != 'Unauthenticated.') {
+			return message
+		}
+		return status == 401 ? 'Tu sesión se cerró: volvé a entrar.' : 'No tenés habilitado el asistente.'
+	}
 	let es_500_del_api = status == 500 && Boolean(falla && falla.con_json)
 	if (status == 0 || (status >= 500 && !es_500_del_api)) {
 		if (verbo == 'cancelar') {
@@ -185,6 +200,9 @@ export default {
 			// y no en el store porque la tarjeta no cambió: el API no llegó a decir nada
 			// nuevo de ella.
 			error_local: null,
+			// true después de un 404: la conversación o la tarjeta ya no existen, así que se
+			// sacan los botones (reintentar no va a andar nunca).
+			no_disponible: false,
 		}
 	},
 	computed: {
@@ -282,7 +300,7 @@ export default {
 		resolver(verbo) {
 			// El segundo clic de un doble clic puede llegar antes de que Vue redibuje los
 			// botones deshabilitados: por eso se corta acá y no solo con :disabled.
-			if (this.en_curso || !this.es_propuesta) {
+			if (this.en_curso || !this.es_propuesta || this.no_disponible) {
 				return
 			}
 			let self = this
@@ -299,6 +317,9 @@ export default {
 				.catch(function (falla) {
 					self.verbo_en_curso = null
 					self.error_local = texto_de_falla(verbo, falla)
+					if (falla && falla.status == 404) {
+						self.no_disponible = true
+					}
 				})
 		},
 		/**
