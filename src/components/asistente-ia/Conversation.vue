@@ -10,7 +10,9 @@
 		</p>
 
 		<!-- Bienvenida de conversación en blanco: refleja lo que el asistente
-		puede consultar de verdad (las tools de lectura, D15). -->
+		puede consultar de verdad (las tools de lectura, D15) y, desde la misión
+		asistente-ia-acciones (15/9/2026), lo que puede proponer cargar con una
+		tarjeta que la persona confirma. -->
 		<div
 		v-else-if="!messages.length"
 		class="asistente-ia-conversacion__bienvenida">
@@ -27,6 +29,10 @@
 			<p>
 				Preguntame por el stock o el precio de un artículo, el saldo de un
 				cliente o qué se está vendiendo más.
+			</p>
+			<p>
+				También puedo cargar gastos, pagos y tareas de la agenda: te dejo una
+				tarjeta para que confirmes.
 			</p>
 		</div>
 
@@ -362,6 +368,11 @@ export default {
 			max-width: 380px
 			font-size: .9rem
 			margin: 0
+
+			// La segunda línea (lo que el asistente puede cargar, misión
+			// asistente-ia-acciones) va apenas separada de la primera: son dos ideas.
+			& + p
+				margin-top: 6px
 
 	&__bienvenida-avatar
 		width: 44px
