@@ -170,6 +170,18 @@ function modal_de_cuenta_corriente_abierto() {
 	return Boolean(document.getElementById('current-acounts'))
 }
 
+/**
+ * true si un mensaje del asistente ya está listo y trae tarjetas de carga. Es la condición
+ * para refrescar las tarjetas en 'propuesta' de los mensajes anteriores (ver
+ * refrescarTarjetasPropuestas): una respuesta con tarjetas puede haber reemplazado alguna.
+ *
+ * @param {Object} model mensaje tal cual lo devuelve GET messages/{id}
+ * @returns {Boolean}
+ */
+function trae_tarjetas(model) {
+	return Boolean(model) && model.estado == 'listo' && Array.isArray(model.acciones) && model.acciones.length > 0
+}
+
 export default {
 	namespaced: true,
 	state: {
@@ -681,6 +693,46 @@ export default {
 			}
 		},
 		/**
+		 * Vuelve a pedir los mensajes en pantalla que tienen alguna tarjeta en 'propuesta'
+		 * (arreglo tras el chequeo independiente, §4 del plan de asistente-ia-acciones).
+		 *
+		 * Por qué: cuando la persona corrige una tarjeta por chat, el API pasa la anterior a
+		 * 'reemplazada' (§3.5), pero esa tarjeta vive en OTRO mensaje que la SPA ya tenía y nadie
+		 * se lo avisa: seguía ofreciendo Confirmar hasta que la tocabas y volvía el 409. Lo
+		 * disparan fetchMessage (el camino del evento de Echo) y el polling de respaldo cuando un
+		 * mensaje del asistente pasa a 'listo' con tarjetas (trae_tarjetas).
+		 *
+		 * Un GET por mensaje, y solo de los que pueden haber cambiado: una tarjeta que ya no está
+		 * en 'propuesta' no cambia de estado por una respuesta nueva.
+		 *
+		 * @param {Object} payload { conversation_id, message_id } el mensaje que acaba de llegar (ese no se vuelve a pedir)
+		 */
+		refrescarTarjetasPropuestas({ state, commit }, payload) {
+			if (state.selected_conversation_id != payload.conversation_id) {
+				return
+			}
+			let con_propuestas = state.messages.filter(m => {
+				let tiene_propuesta = Array.isArray(m.acciones) && m.acciones.some(accion => accion.estado == 'propuesta')
+				return m.id && m.id != payload.message_id && tiene_propuesta
+			})
+			con_propuestas.forEach(m => {
+				axios.get('/api/ai-conversations/' + payload.conversation_id + '/messages/' + m.id, {
+					// Es un refresco de cortesía: si falla, no hay nada que avisarle a la persona.
+					skip_global_error_event: true,
+				})
+					.then(res => {
+						// Si mientras tanto se abrió otra conversación, no se pisa la que está en pantalla.
+						if (state.selected_conversation_id == payload.conversation_id) {
+							commit('patchMessage', res.data.model)
+						}
+					})
+					.catch(err => {
+						// La tarjeta queda como estaba; si la tocan, el 409 del API la corrige.
+						console.log(err)
+					})
+			})
+		},
+		/**
 		 * Busca UN mensaje por REST. Es la otra mitad del evento liviano
 		 * `ChatIaMensajeActualizado` (D8/D45): el broadcast avisa ids y estado, y el
 		 * texto se pide siempre por acá, autenticado. También lo usa el polling.
@@ -695,6 +747,14 @@ export default {
 					// otra, con refrescar la bandeja alcanza.
 					if (state.selected_conversation_id == payload.conversation_id) {
 						commit('patchMessage', model)
+						// Una respuesta con tarjetas puede haber reemplazado tarjetas de
+						// mensajes anteriores: se refrescan las que siguen en 'propuesta'.
+						if (trae_tarjetas(model)) {
+							dispatch('refrescarTarjetasPropuestas', {
+								conversation_id: payload.conversation_id,
+								message_id: model.id,
+							})
+						}
 					}
 					if (model.estado != 'pendiente') {
 						// La respuesta llegó (o quedó en error amigable): si el polling
@@ -753,6 +813,14 @@ export default {
 							commit('setRespuestaDemorada', false)
 							if (state.selected_conversation_id == payload.conversation_id) {
 								commit('patchMessage', model)
+								// Mismo refresco que fetchMessage: la respuesta puede haber
+								// reemplazado tarjetas de mensajes anteriores.
+								if (trae_tarjetas(model)) {
+									dispatch('refrescarTarjetasPropuestas', {
+										conversation_id: payload.conversation_id,
+										message_id: model.id,
+									})
+								}
 							}
 							dispatch('getConversations')
 							return
