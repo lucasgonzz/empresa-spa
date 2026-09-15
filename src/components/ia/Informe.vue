@@ -57,6 +57,7 @@ const COMPONENTE_POR_TIPO = {
  */
 const TIPOS = {
 	dia: { nombre: 'Rendimiento de ayer', icono: 'sun' },
+	caja: { nombre: 'Caja y vencimientos', icono: 'wallet2' },
 	tienda: { nombre: 'Tu tienda', icono: 'shop' },
 	compras: { nombre: 'Compras', icono: 'cart-plus' },
 	stock: { nombre: 'Stock', icono: 'boxes' },
@@ -157,6 +158,9 @@ export default {
 
 		&--dia
 			background: #0B84F8
+
+		&--caja
+			background: #0F766E
 
 		&--tienda
 			background: #3A31FC
