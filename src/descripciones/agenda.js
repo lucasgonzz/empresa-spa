@@ -55,7 +55,7 @@ export default {
 
 	'agenda-confirmar-gasto': {
 		titulo: 'Confirmar y registrar el gasto',
-		que_hace: 'Marca la tarea como hecha y da de alta el gasto con el concepto de la tarea, el monto y los métodos de pago indicados.',
+		que_hace: 'Marca la tarea como hecha y da de alta el gasto con la sub categoría de la tarea, el monto y los métodos de pago indicados.',
 		repercute: [
 			'Crea un gasto en Tesorería → Gastos con observación "Agenda: <tarea>", visible en los reportes de gastos.',
 			'Cada método de pago con caja mueve esa caja: se registra un egreso por el monto de esa fila.',
@@ -101,7 +101,7 @@ export default {
 			'Lo que ya se marcó como hecho no cambia.',
 			'Asociar un gasto no crea ningún gasto todavía: se crea al marcar la tarea como hecha.',
 		],
-		requiere: 'Detalle y fecha. Si se repite: cada cuánto. Si tiene gasto: el concepto (se crean en ABM → Gastos).',
+		requiere: 'Detalle y fecha. Si se repite: cada cuánto. Si tiene gasto: la sub categoría (se crean en ABM → Gastos).',
 	},
 
 	'agenda-eliminar-tarea': {
@@ -123,7 +123,7 @@ export default {
 
 	'agenda-tiene-gasto': {
 		titulo: 'Tiene un gasto asociado',
-		que_hace: 'Vincula la tarea a un concepto de gasto y un monto estimado, para que al marcarla como hecha se pregunte cómo se pagó y se registre el gasto.',
+		que_hace: 'Vincula la tarea a una sub categoría de gasto y un monto estimado, para que al marcarla como hecha se pregunte cómo se pagó y se registre el gasto.',
 		repercute: [
 			'El monto estimado es solo una sugerencia: se puede cambiar al marcar la tarea como hecha.',
 		],

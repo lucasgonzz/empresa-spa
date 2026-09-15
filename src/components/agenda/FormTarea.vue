@@ -87,7 +87,7 @@
 			<div
 			v-if="!hay_conceptos"
 			class="agenda-form-tarea__sin-conceptos">
-				Todavía no hay conceptos de gasto. Crealos en
+				Todavía no hay sub categorías de gasto. Crealas en
 				<router-link :to="{ name: 'abm', params: { view: 'gastos' } }">ABM → Gastos</router-link>
 				y volvé a esta tarea.
 			</div>
@@ -103,7 +103,7 @@
 					@change="limpiar_expense_concept_de_otra_categoria(null, gasto)"></b-form-select>
 				</b-form-group>
 
-				<b-form-group label="Concepto">
+				<b-form-group label="Sub categoría">
 					<b-form-select
 					v-model="gasto.expense_concept_id"
 					:options="opciones_concepto"
