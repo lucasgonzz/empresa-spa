@@ -39,11 +39,13 @@ export default {
 
 	'asistente-accion-ver': {
 		titulo: 'Ver lo que se registró',
-		que_hace: 'Cierra el asistente y abre la pantalla donde quedó la carga: Gastos para un gasto, la Agenda para una tarea.',
+		que_hace: 'Lleva a la pantalla donde quedó la carga: Gastos para un gasto, la Agenda para una tarea.',
 		repercute: [
-			'No registra ni cambia nada: solo lleva a esa pantalla.',
+			'Desde el panel del asistente, lo cierra. Desde la conversación de un informe del mostrador, lo que se cierra es el informe.',
+			'Si ya estás en esa pantalla no navega: la vuelve a cargar para que aparezca lo que se registró. En Gastos, si hay una búsqueda activa, no se toca.',
+			'No registra ni cambia nada.',
 			'Los pagos no tienen este botón: se ven en la cuenta corriente del cliente o del proveedor.',
 		],
-		nota_interna: 'La pantalla sale de resultado.ruta ({ name, params, texto }) que manda el API; la SPA no la decide.',
+		nota_interna: 'La pantalla sale de resultado.ruta ({ name, params, texto }) que manda el API; la SPA no la decide. La recarga es ai_chat/refrescarPantallaDeLaAccion: agenda/cargar si la agenda ya se cargo (la vista Realizadas no: su rango vive en el componente) y expense/getModels si no hay busqueda activa. Despues de Confirmar pasa lo mismo sin tocar este boton.',
 	},
 }
