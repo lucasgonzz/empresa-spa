@@ -155,10 +155,13 @@ export default {
 	border-radius: 20px
 	padding: 22px
 
-	// Cuatro carpetas en fila en escritorio; dos en tablet; una en teléfono (§2.4).
+	// Los últimos (uno por tipo; cinco desde el informe de caja): cinco carpetas en fila
+	// desde 1280px, tres entre 1025 y 1279, dos en tablet y una en teléfono (plan de
+	// mostrador-caja-vencimientos §2.1; los cortes van en las media queries del final).
+	// La grilla de "Anteriores" (--chica) no cambia.
 	&__grilla
 		display: grid
-		grid-template-columns: repeat(4, minmax(0, 1fr))
+		grid-template-columns: repeat(5, minmax(0, 1fr))
 		gap: 18px
 
 		&--chica
@@ -213,6 +216,14 @@ export default {
 
 html.dark-mode .escritorio
 	background: var(--bg-section, #272b31)
+
+// Entre 1025 y 1279 cinco carpetas quedan angostas: tres por fila. Solo la grilla de los
+// últimos (el :not): la de "Anteriores" sigue con su auto-fill, como hasta ahora. Va
+// con piso (min-width) a propósito: el :not suma especificidad y, sin el piso, le
+// ganaría en tablet al corte de dos columnas de abajo.
+@media screen and (min-width: 1025px) and (max-width: 1279px)
+	.escritorio__grilla:not(.escritorio__grilla--chica)
+		grid-template-columns: repeat(3, minmax(0, 1fr))
 
 @media screen and (max-width: 1024px)
 	.escritorio__grilla
