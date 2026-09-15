@@ -20,7 +20,7 @@
 		-->
 		<b-button
 		v-for="credit_account in model.credit_accounts"
-		class="m-l-15 btn-cuenta-corriente"
+		:class="['btn-cuenta-corriente', icon_only ? 'btn-cuenta-corriente--icono' : 'm-l-15']"
 		v-if="show(credit_account)"
 		:id="'btn-current-acount-'+model.id"
 		:data-tour="ancla_tour(credit_account)"
@@ -29,8 +29,11 @@
 		@click.stop="showCurrentAcounts(credit_account)"
 		variant="light">
 			<i class="bi bi-journal-text"></i>
-			C/C {{ credit_account.moneda.name }}
-		</b-button> 
+			<!-- El texto se saca entero, no se oculta con CSS: con icon_only el único rastro
+			del botón para quien no puede ver es el `title` de arriba, igual que el resto de
+			los botones ícono-solo del módulo de WhatsApp. -->
+			<span v-if="!icon_only">C/C {{ credit_account.moneda.name }}</span>
+		</b-button>
 	</div>
 </template>
 <script>
@@ -38,6 +41,22 @@ export default {
 	props: {
 		model_name: String,
 		model: Object,
+		// Oculta el texto y deja solo el ícono (con el `title` de siempre como única pista).
+		// Default false: los 4 consumidores existentes (tabla de clientes, de proveedores,
+		// LimiteCreditoExcedido, LimitesDeCredito) no lo pasan y no cambian.
+		icon_only: {
+			type: Boolean,
+			default: false,
+		},
+		// Id del modal que abre este botón. Default 'current-acounts', el de siempre — pasar
+		// otro es necesario solo cuando puede convivir con OTRA instancia de
+		// `current-acounts/Index.vue` ya montada en la misma página (ver el mismo prop en ese
+		// componente): con dos `<b-modal>` compartiendo id, `$bvModal.show()` les dispara el
+		// evento a las dos a la vez.
+		modal_id: {
+			type: String,
+			default: 'current-acounts',
+		},
 	},
 	methods: {
 		/**
@@ -79,7 +98,7 @@ export default {
 			this.$store.commit('current_acount/setFromModel', this.model)
 			this.$store.commit('current_acount/set_from_credit_account', credit_account)
 			this.$store.dispatch('current_acount/getModels')
-			this.$bvModal.show('current-acounts')
+			this.$bvModal.show(this.modal_id)
 		},
 	},
 }
@@ -134,4 +153,20 @@ export default {
 		margin: 0
 		line-height: 1
 		color: inherit
+
+	// Variante ícono-solo (header del sidebar de WhatsApp): cuadrado, sin el padding
+	// horizontal ni el gap que pedía el texto que ya no está.
+	&.btn-cuenta-corriente--icono
+		width: 32px
+		height: 32px
+		padding: 0
+		gap: 0
+		// El espaciado normal lo da `m-l-15` (helper global), pero en este modo no se aplica
+		// —hubiera quedado desproporcionado sobre un botón cuadrado de 32px—. El wrapper raíz
+		// del componente no es flex, así que el gap del header (`__actions`) solo separa a
+		// ESTE componente de sus hermanos, no a los dos botones (pesos/dólares) de ADENTRO. El
+		// selector de hermano adyacente separa el segundo del primero sin tocar el primero, que
+		// ya queda bien puesto por el gap del header.
+		& + &.btn-cuenta-corriente--icono
+			margin-left: 6px
 </style>
