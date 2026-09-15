@@ -11,14 +11,25 @@ axios.defaults.baseURL = env('VUE_APP_API_URL')
  * `store/whatsapp_chat.js` pero contra los endpoints nuevos de `ai-conversations`
  * (ver `AiConversationController` en empresa-api, gateados por la extensión `asistente_ia`).
  *
- * Contrato de API (fijado en el plan de la misión, D6-D9 y D17):
+ * Contrato de API (fijado en el plan de la misión, D6-D9 y D17; las tarjetas de carga, en la
+ * §2 del plan de la misión "asistente-ia-acciones", 15/9/2026):
  * - GET    ai-conversations                          -> { models: [...] }  (de la PERSONA, orden last_message_at DESC, nulls al final)
  * - POST   ai-conversations                          -> { model }
- * - DELETE ai-conversations/{id}                     -> 200 (borra la conversación y sus mensajes)
+ * - DELETE ai-conversations/{id}                     -> 200 (borra la conversación, sus mensajes y sus tarjetas)
  * - GET    ai-conversations/{id}/messages            -> { models: paginator } (page/per_page default 30 techo 200, DESC por id)
  * - POST   ai-conversations/{id}/messages            -> 201 { user_message, assistant_message }
  *                                                       | 409 { code: 'respuesta_en_curso' } si ya hay un assistant pendiente
+ *                                                       (body { contenido, acciones: true }; ver "Tarjetas de carga")
  * - GET    ai-conversations/{id}/messages/{msg_id}   -> { model } (para el aviso liviano del broadcast y el polling)
+ * - POST   ai-conversations/{id}/acciones/{accion_id}/confirmar   (sin body)
+ *                                                    -> 200 { model: AccionIa } ('confirmada', con `resultado`)
+ *                                                       | 404 { message } (conversación ajena, o tarjeta de otra conversación)
+ *                                                       | 409 { code: 'accion_resuelta', message, model } (ya no estaba 'propuesta')
+ *                                                       | 422 { message, model } (no se escribió nada: sigue 'propuesta' con `error_mensaje`)
+ *                                                       | 500 { message } (error inesperado, sin `model`)
+ * - POST   ai-conversations/{id}/acciones/{accion_id}/cancelar    (sin body)
+ *                                                    -> 200 { model: AccionIa } ('cancelada') | 404 { message }
+ *                                                       | 409 { code: 'accion_resuelta', message, model }
  * - PUT    user/set-chat-ia-preferencias             -> 200 (body { chat_ia_fab_position, chat_ia_sidebar_width, chat_ia_panel_width }, los tres opcionales)
  *
  * El evento `ChatIaMensajeActualizado` (canal privado `chat.user.{auth_user_id}`) avisa solo
@@ -28,6 +39,24 @@ axios.defaults.baseURL = env('VUE_APP_API_URL')
  * Mensajes: `rol` es 'user' | 'assistant'; `estado` (del backend) es 'listo' | 'pendiente'
  * | 'error'. Los mensajes del usuario recién enviados llevan además `estado_local`
  * ('enviando' | 'enviado' | 'error') y un `local_id` propio hasta que el POST confirme.
+ *
+ * Tarjetas de carga (misión "asistente-ia-acciones"): con `acciones: true` el asistente puede
+ * PROPONER un gasto, un pago de cliente o a proveedor, una tarea nueva, cambios en una tarea o
+ * marcar una tarea como hecha, y nada se registra hasta que la persona toca Confirmar. Cada
+ * mensaje trae `acciones: AccionIa[]` (vacío si no hay, ordenado por id):
+ *
+ *   { id, ai_message_id, tipo, estado,
+ *     presentacion: { titulo, renglones: [{ etiqueta, valor }], aviso },
+ *     resultado: null | { texto, ruta: null | { name, params, texto } },
+ *     error_mensaje, created_at }
+ *
+ * `estado` ('propuesta' | 'confirmada' | 'cancelada' | 'reemplazada' | 'vencida' | 'descartada')
+ * ya viene resuelto por el API (una propuesta de más de 24 h sale 'vencida'): la SPA mira solo
+ * eso y pinta los textos que arma el API, sin conocer la semántica de cada `tipo`. La tarjeta
+ * es `components/asistente-ia/AccionCard.vue`.
+ *
+ * Compatibilidad (§5 del plan): un API viejo ignora `acciones` y no manda tarjetas; una
+ * pestaña con la SPA vieja no lo manda y el asistente le responde de solo lectura.
  */
 
 /** Contador para acuñar `local_id` de los globos optimistas (no reactivo a propósito). */
@@ -63,6 +92,54 @@ function terminar_espera_sin_invalidar() {
 	}
 	espera.message_id = null
 	espera.conversation_id = null
+}
+
+/**
+ * POST de confirmar o cancelar una tarjeta de carga del asistente (misión
+ * asistente-ia-acciones, §2.4 y §2.5 del plan). Lo comparten las dos acciones porque las
+ * respuestas tienen la misma forma y se atienden igual:
+ *
+ * - 200: se parchea la tarjeta con `model` y resuelve con él.
+ * - 409 `accion_resuelta` y 422: TAMBIÉN traen `model` (la tarjeta en su estado real, o
+ *   'propuesta' con `error_mensaje`), así que se parchea igual y resuelve: la tarjeta ya
+ *   cuenta lo que pasó y no hay nada más que avisar.
+ * - Cualquier otra cosa (500, 404, corte de red): la tarjeta no se toca y rechaza con
+ *   { status } (0 si no hubo respuesta), para que AccionCard muestre su texto de falla.
+ *
+ * 🔴 `skip_global_error_event`, igual que store/mostrador.js: el error lo atiende la
+ * tarjeta, y sin la bandera el interceptor de main.js además dispara errorEvent y la persona
+ * ve el mismo fallo DOS veces (en la tarjeta y en un toast); con la bandera tampoco sale el
+ * toast de "No pudimos conectarnos" ante un corte de red. `skip_global_validation_toast` va
+ * de resguardo: el 422 del contrato no trae `errors`, pero si algún día los trajera, el
+ * toast de validación saltaría antes de mirar la otra bandera.
+ *
+ * @param {Function} commit commit del módulo
+ * @param {Object} payload { conversation_id, accion }
+ * @param {String} verbo 'confirmar' | 'cancelar' (es el último tramo de la URL)
+ * @returns {Promise}
+ */
+function resolver_accion(commit, payload, verbo) {
+	let url = '/api/ai-conversations/' + payload.conversation_id + '/acciones/' + payload.accion.id + '/' + verbo
+	return axios.post(url, null, {
+		skip_global_error_event: true,
+		skip_global_validation_toast: true,
+	})
+		.then(res => {
+			commit('patchAccion', res.data.model)
+			return res.data.model
+		})
+		.catch(err => {
+			let status = err.response ? err.response.status : 0
+			let data = err.response ? err.response.data : null
+			let trae_model = Boolean(data && data.model)
+			let ya_resuelta = status == 409 && Boolean(data) && data.code == 'accion_resuelta'
+			if (trae_model && (ya_resuelta || status == 422)) {
+				commit('patchAccion', data.model)
+				return data.model
+			}
+			console.log(err)
+			return Promise.reject({ status: status })
+		})
 }
 
 export default {
@@ -190,6 +267,30 @@ export default {
 			let index = state.messages.findIndex(m => m.id == message.id)
 			if (index != -1) {
 				state.messages.splice(index, 1, Object.assign({}, state.messages[index], message))
+			}
+		},
+		/**
+		 * Reemplaza UNA tarjeta de carga adentro de su mensaje con la AccionIa que devolvió
+		 * confirmar o cancelar (misión asistente-ia-acciones, §4 del plan). Ubica el mensaje
+		 * por `ai_message_id` y la tarjeta por `id`, y la cambia con splice: en Vue 2 una
+		 * asignación por índice (`acciones[i] = ...`) no redibuja, splice sí.
+		 *
+		 * Busca en `state.messages`, que es la conversación en pantalla tanto del panel
+		 * flotante como del sidebar del informe del mostrador (los dos leen de acá). Si el
+		 * mensaje ya no está (se cambió de conversación mientras viajaba el POST), no hace
+		 * nada: al volver a esa conversación la página se pide de nuevo y trae el estado real.
+		 */
+		patchAccion(state, accion) {
+			if (!accion || !accion.id) {
+				return
+			}
+			let message = state.messages.find(m => m.id == accion.ai_message_id)
+			if (!message || !Array.isArray(message.acciones)) {
+				return
+			}
+			let index = message.acciones.findIndex(a => a.id == accion.id)
+			if (index != -1) {
+				message.acciones.splice(index, 1, accion)
 			}
 		},
 		/**
@@ -403,6 +504,11 @@ export default {
 				.then(conversation_id => {
 					return axios.post('/api/ai-conversations/' + conversation_id + '/messages', {
 						contenido: contenido,
+						// Habilita las tarjetas de carga para ESTA respuesta (§2.1 del plan de
+						// asistente-ia-acciones). Va siempre en true porque esta SPA sabe
+						// pintarlas: sin la clave el API responde de solo lectura (que es lo que
+						// les pasa a las pestañas con la SPA vieja), y un API viejo la ignora.
+						acciones: true,
 					})
 						.then(res => {
 							// Conserva el local_id para que el :key del globo no cambie: si
@@ -454,6 +560,27 @@ export default {
 		retryMessage({ commit, dispatch }, message) {
 			commit('removeLocalMessage', message.local_id)
 			return dispatch('sendMessage', { contenido: message.contenido })
+		},
+		/**
+		 * Confirma una tarjeta de carga: el API registra lo que dice la tarjeta, autenticado
+		 * como la persona que hizo clic (§2.4 del plan de asistente-ia-acciones). La
+		 * conversación sale del mensaje que trae la tarjeta (`ai_conversation_id`), no de la
+		 * seleccionada: la tarjeta también se ve en el sidebar del informe del mostrador.
+		 *
+		 * @param {Object} payload { conversation_id, accion }
+		 * @returns {Promise} resuelve con la tarjeta ya parcheada (200, 409, 422) o rechaza con { status }.
+		 */
+		confirmarAccion({ commit }, payload) {
+			return resolver_accion(commit, payload, 'confirmar')
+		},
+		/**
+		 * Cancela una tarjeta de carga sin registrar nada (§2.5).
+		 *
+		 * @param {Object} payload { conversation_id, accion }
+		 * @returns {Promise} resuelve con la tarjeta ya parcheada (200, 409) o rechaza con { status }.
+		 */
+		cancelarAccion({ commit }, payload) {
+			return resolver_accion(commit, payload, 'cancelar')
 		},
 		/**
 		 * Busca UN mensaje por REST. Es la otra mitad del evento liviano
