@@ -20,7 +20,7 @@
 
 			<div class="agenda-completar__concepto">
 				<i class="bi bi-cash-coin"></i>
-				<span>Concepto del gasto</span>
+				<span>Sub categoría del gasto</span>
 				<strong>{{ nombre_concepto }}</strong>
 			</div>
 
