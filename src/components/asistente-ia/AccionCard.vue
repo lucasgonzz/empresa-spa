@@ -310,6 +310,10 @@ export default {
 			this.$store.dispatch(accion_del_store, {
 				conversation_id: this.conversation_id,
 				accion: this.accion,
+				// Qué pantalla hay a la vista, para que confirmarAccion refresque la de la carga
+				// solo si corresponde. Lo manda la tarjeta porque el store no puede importar el
+				// router: router/index.js ya importa el store.
+				ruta_actual: this.$route ? this.$route.name : null,
 			})
 				.then(function (resultado) {
 					self.verbo_en_curso = null
@@ -332,9 +336,14 @@ export default {
 		/**
 		 * Botón de `resultado.ruta` ("Ver en Gastos", "Ver en la Agenda"): cierra el panel y
 		 * navega, igual que ir_al_origen de Conversation.vue, con el mismo guard contra
-		 * NavigationDuplicated si ya se está parado en esa pantalla. El .catch es por si el
-		 * router igual rechaza: desde vue-router 3.1 push devuelve una promesa que rechaza, y
-		 * sin atraparla queda un error suelto en la consola.
+		 * NavigationDuplicated. Si ya se está parado en esa pantalla no navega: la vuelve a
+		 * cargar (ai_chat/refrescarPantallaDeLaAccion), porque ni la Agenda ni Gastos recargan
+		 * solas y cerrar el panel no alcanzaba para ver lo registrado. El .catch del push es por
+		 * si el router igual rechaza: desde vue-router 3.1 push devuelve una promesa que rechaza,
+		 * y sin atraparla queda un error suelto en la consola.
+		 *
+		 * Desde el sidebar del informe del mostrador no hay panel que cerrar: ahí lo que se
+		 * cierra, al navegar, es el informe.
 		 */
 		ir_a_la_ruta() {
 			let ruta = this.ruta
@@ -346,6 +355,10 @@ export default {
 			let params = ruta.params && !Array.isArray(ruta.params) ? ruta.params : {}
 			this.$store.commit('ai_chat/setPanelAbierto', false)
 			if (this.ya_esta_en(ruta.name, params)) {
+				this.$store.dispatch('ai_chat/refrescarPantallaDeLaAccion', {
+					accion: this.accion,
+					ruta_actual: this.$route.name,
+				})
 				return
 			}
 			let navegacion = this.$router.push({ name: ruta.name, params: params })

@@ -150,6 +150,26 @@ function resolver_accion(commit, payload, verbo) {
 		})
 }
 
+/**
+ * true si el modal de cuenta corriente (components/ventas/modals/current-acounts/Index.vue,
+ * `<b-modal id="current-acounts">`) está abierto. Lo usa refrescarPantallaDeLaAccion.
+ *
+ * 🔴 No alcanza con que el store current_acount tenga from_model y from_credit_account:
+ * nadie los limpia al cerrar el modal (medido con grep el 15/9/2026), así que después de
+ * abrir una cuenta corriente quedan cargados toda la sesión. En cambio, un BModal sin
+ * `static` no deja nada en el documento mientras está oculto (bootstrap-vue 2.23.1,
+ * modal.js: `this.isHidden ? h() : h(BVTransporter, ...)`) y el `.modal` lleva el id: si el
+ * elemento está, el modal está abierto.
+ *
+ * @returns {Boolean}
+ */
+function modal_de_cuenta_corriente_abierto() {
+	if (typeof document == 'undefined') {
+		return false
+	}
+	return Boolean(document.getElementById('current-acounts'))
+}
+
 export default {
 	namespaced: true,
 	state: {
@@ -575,11 +595,27 @@ export default {
 		 * conversación sale del mensaje que trae la tarjeta (`ai_conversation_id`), no de la
 		 * seleccionada: la tarjeta también se ve en el sidebar del informe del mostrador.
 		 *
-		 * @param {Object} payload { conversation_id, accion }
+		 * Si la tarjeta queda confirmada, avisa a la pantalla donde quedó la carga
+		 * (refrescarPantallaDeLaAccion).
+		 *
+		 * @param {Object} payload { conversation_id, accion, ruta_actual } (`ruta_actual`: name de la ruta en pantalla, lo manda la tarjeta)
 		 * @returns {Promise} resuelve con { model, status, message } y la tarjeta ya parcheada (200, 409, 422), o rechaza con { status, message, con_json }.
 		 */
-		confirmarAccion({ commit }, payload) {
+		confirmarAccion({ commit, dispatch }, payload) {
 			return resolver_accion(commit, payload, 'confirmar')
+				.then(resultado => {
+					// Un 200 confirmada dejó una carga nueva, y un 409 que devuelve la tarjeta ya
+					// confirmada es el reintento después de un corte (el primer pedido sí había
+					// llegado): en los dos casos la pantalla donde quedó la carga no se enteró.
+					let model = resultado.model
+					if (model && model.estado == 'confirmada' && (resultado.status == 200 || resultado.status == 409)) {
+						dispatch('refrescarPantallaDeLaAccion', {
+							accion: model,
+							ruta_actual: payload.ruta_actual,
+						})
+					}
+					return resultado
+				})
 		},
 		/**
 		 * Cancela una tarjeta de carga sin registrar nada (§2.5).
@@ -589,6 +625,60 @@ export default {
 		 */
 		cancelarAccion({ commit }, payload) {
 			return resolver_accion(commit, payload, 'cancelar')
+		},
+		/**
+		 * Hace que la pantalla donde quedó una carga confirmada se entere (arreglo tras el
+		 * chequeo independiente, §4 del plan de asistente-ia-acciones). Sin esto, parado en la
+		 * Agenda, "Ver en la Agenda" solo cerraba el panel y la tarea nueva no estaba:
+		 * components/agenda/Index.vue no recarga si la vista es la misma y el rango ya está
+		 * cargado, y Gastos solo carga cuando se toca un día (ControlFecha.vue).
+		 *
+		 * La pantalla sale de `resultado.ruta.name` y de nada más: la SPA no conoce la semántica
+		 * de cada tipo de tarjeta. Ninguna rama pisa lo que la persona está mirando ni dispara una
+		 * carga pesada para una pantalla que no está a la vista:
+		 *
+		 * - 'pending' -> agenda/cargar, que vuelve a pedir el rango vigente (vista, hoy y mes
+		 *   visible del store), solo si la agenda ya se cargó. `desde` es la misma señal que usa
+		 *   Agenda/Index.vue para NO recargar al volver, así que refrescarla acá aunque no esté
+		 *   montada es lo que evita encontrarla vieja al entrar; y es liviana (60 días o la
+		 *   grilla de un mes). La vista Realizadas no se refresca: su rango vive en el componente.
+		 * - 'expense' -> expense/getModels, que vuelve a pedir el día o el rango elegido
+		 *   (from_date/until_date del store), solo con la pantalla de Gastos a la vista
+		 *   (`ruta_actual`) y sin una búsqueda activa (`is_filtered`), que getModels borraría.
+		 *   A la vista y no "con modelos": un día sin gastos también es un listado cargado, y un
+		 *   rango largo que quedó guardado es una carga pesada para una pantalla que no se ve.
+		 * - pago (ruta null) -> current_acount/getModels, solo con el modal de cuenta corriente
+		 *   abierto y su cuenta cargada (from_model y from_credit_account).
+		 *
+		 * @param {Object} payload { accion, ruta_actual } la AccionIa confirmada y el name de la ruta en pantalla
+		 */
+		refrescarPantallaDeLaAccion({ rootState, dispatch }, payload) {
+			let accion = payload ? payload.accion : null
+			let ruta = accion && accion.resultado ? accion.resultado.ruta : null
+			let destino = ruta && ruta.name ? ruta.name : null
+
+			if (destino == 'pending') {
+				if (rootState.agenda && rootState.agenda.desde) {
+					dispatch('agenda/cargar', null, { root: true })
+				}
+				return
+			}
+
+			if (destino == 'expense') {
+				let gastos = rootState.expense
+				if (payload.ruta_actual == 'expense' && gastos && !gastos.is_filtered) {
+					dispatch('expense/getModels', null, { root: true })
+				}
+				return
+			}
+
+			if (!destino) {
+				let cuenta = rootState.current_acount
+				let con_cuenta = Boolean(cuenta && cuenta.from_model && cuenta.from_model.id && cuenta.from_credit_account && cuenta.from_credit_account.id)
+				if (con_cuenta && modal_de_cuenta_corriente_abierto()) {
+					dispatch('current_acount/getModels', null, { root: true })
+				}
+			}
 		},
 		/**
 		 * Busca UN mensaje por REST. Es la otra mitad del evento liviano
