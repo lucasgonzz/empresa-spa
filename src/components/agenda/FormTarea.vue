@@ -483,7 +483,7 @@ export default {
 // src/sass/_inputs.sass (radio de 5px y un foco de borde de 3px solido + halo a 0.8 de opacidad,
 // pensado para un campo suelto y no para un formulario entero). Mismos dos tokens que ya usa
 // current-acounts/pago/Index.vue (`pago-cc__campos`): no se duplican como hex nuevos.
-// Ver contexto/estilo_interfaz.md: es el patron a repetir en todo modal nuevo, no algo automatico.
+// Ver contexto/estilo_interfaz_empresa.md: es el patron a repetir en todo modal nuevo, no algo automatico.
 #agenda-form-tarea
 	.form-control,
 	.custom-select,
