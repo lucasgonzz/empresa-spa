@@ -28,11 +28,19 @@
  * índice y se mantiene al día en vivo por el broadcast `WhatsappChatUpdated`
  * (`WhatsappChatHelper::attach_estados_pendientes()` / `WhatsappChat::estado_pendiente()` en
  * empresa-api), así que el tablero queda sincronizado solo, sin pedir nada aparte.
+ *
+ * Desde la misión embeddings-estado-whatsapp-dashboard (15/9/2026) se suman hasta tres tarjetas
+ * más con el estado de los embeddings del catálogo (sin generar / desactualizados / generándose),
+ * SOLO si el comercio tiene la extensión `whatsapp_ia` (la que habilita que se generen embeddings
+ * en primer lugar: sin ella los tres números serían siempre 0/0/0, ruido y no información). A
+ * diferencia de las tres primeras, estas SÍ salen de un endpoint propio
+ * (GET api/article-embeddings/estado, store `article_embeddings_estado`), porque no hay ningún
+ * store de artículos con estos contadores ya cargado en memoria.
  */
 export default {
 	computed: {
 		tarjetas() {
-			return [
+			let tarjetas = [
 				{
 					key: 'sin_responder',
 					icono: 'bi-exclamation-circle-fill',
@@ -58,6 +66,84 @@ export default {
 					tour: 'whatsapp.tablero_conversaciones_hoy',
 				},
 			]
+
+			if (this.hasExtencion('whatsapp_ia') && this.embeddings_estado_cargado) {
+				tarjetas = tarjetas.concat([
+					{
+						key: 'embeddings_sin_generar',
+						icono: 'bi-dash-circle',
+						etiqueta: 'Artículos sin generar embedding',
+						valor: this.$store.state.article_embeddings_estado.sin_generar,
+						clase: '',
+						tour: 'whatsapp.tablero_embeddings_sin_generar',
+					},
+					{
+						key: 'embeddings_pendiente',
+						icono: 'bi-arrow-repeat',
+						etiqueta: 'Con embedding desactualizado',
+						valor: this.$store.state.article_embeddings_estado.pendiente,
+						clase: 'whatsapp-dashboard__tarjeta--pendiente',
+						tour: 'whatsapp.tablero_embeddings_pendiente',
+					},
+					{
+						key: 'embeddings_generandose',
+						icono: 'bi-cpu-fill',
+						etiqueta: 'Generándose ahora',
+						valor: this.$store.state.article_embeddings_estado.generandose,
+						clase: 'whatsapp-dashboard__tarjeta--hoy',
+						tour: 'whatsapp.tablero_embeddings_generandose',
+					},
+				])
+			}
+
+			return tarjetas
+		},
+		/**
+		 * true recién después del primer GET exitoso a article-embeddings/estado. Evita que las
+		 * tres tarjetas de embeddings destellen en "0" un instante antes de tener la respuesta
+		 * real (las tres primeras no tienen este problema: ya vienen resueltas del store de chats).
+		 */
+		embeddings_estado_cargado() {
+			return this.$store.state.article_embeddings_estado.cargado
+		},
+	},
+	created() {
+		if (this.hasExtencion('whatsapp_ia')) {
+			this.pedir_estado_embeddings()
+		}
+	},
+	methods: {
+		/**
+		 * Pide los tres contadores de embeddings y, si hay una tanda generándose, se queda
+		 * escuchando el mismo canal que ya usa el toast global de "se generaron N artículos"
+		 * (mixins/broadcast.js) para refrescar apenas esa tanda cierre. Es un listener ADICIONAL
+		 * sobre el mismo canal/evento, no un reemplazo: Echo permite varios `.listen()` sobre el
+		 * mismo canal sin pisarse, así que el toast global sigue saliendo igual.
+		 *
+		 * A propósito no se hace `Echo.leaveChannel()` si este componente se destruye antes de
+		 * que la tanda cierre: ese canal es del mixin global (permanente, dura toda la sesión), y
+		 * abandonarlo desde acá se lo cortaría también a él. El costo de no limpiar es una
+		 * recarga redundante si el usuario entra y sale de esta pantalla varias veces mientras
+		 * una tanda sigue viva -- mismo trade-off que ya acepta el mixin de inventory_performance.
+		 *
+		 * @returns {Promise}
+		 */
+		pedir_estado_embeddings() {
+			return this.$store.dispatch('article_embeddings_estado/get_estado')
+			.then(() => {
+				if (this.$store.state.article_embeddings_estado.generandose > 0) {
+					this.escuchar_embeddings_terminados()
+				}
+			})
+		},
+		/**
+		 * @returns {void}
+		 */
+		escuchar_embeddings_terminados() {
+			this.Echo.channel('article_embeddings.' + this.owner.id)
+			.listen('.ArticleEmbeddingsBatchGenerated', () => {
+				this.pedir_estado_embeddings()
+			})
 		},
 	},
 }
