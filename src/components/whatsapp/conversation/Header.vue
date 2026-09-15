@@ -5,7 +5,16 @@
 		<!-- Fila 1: quién es y las acciones sobre el chat. Es la que ya existía. -->
 		<div class="whatsapp-header__fila">
 			<div class="whatsapp-header__identity">
-				<strong class="whatsapp-header__name">
+				<!-- 🔴 v-if y no un string vacío a secas: sin nombre de cliente ni display_name,
+				`chat_name` devuelve '' (ver el computed) y ACÁ no se dibuja nada, en vez de caer
+				al teléfono como antes — que quedaba repetido con `__phone`, dos líneas abajo,
+				mostrando el mismo dato dos veces. -->
+				<strong
+				v-if="chat_name"
+				class="whatsapp-header__name"
+				:class="{'whatsapp-header__name--clickable': Boolean(chat.client)}"
+				:title="chat.client ? 'Ver ficha del cliente' : null"
+				@click="chat.client && abrir_ficha_cliente()">
 					{{ chat_name }}
 				</strong>
 				<span class="whatsapp-header__sub">
@@ -26,34 +35,35 @@
 			</div>
 
 			<div class="whatsapp-header__actions">
-				<!-- Toggle de respuesta automática por IA para este chat -->
-				<b-form-checkbox
-				switch
-				:checked="chat.ai_enabled"
-				@change="toggleAi"
-				data-tour="whatsapp.toggle_ia"
-				class="whatsapp-header__ai-toggle">
-					IA
-				</b-form-checkbox>
-
-				<!-- Cliente vinculado (clickeable para cambiar/quitar) o botón para vincular -->
+				<!-- Botón para vincular: solo mientras el chat NO tiene cliente. Una vez
+				vinculado desaparece — el nombre ya se ve como título del chat (de arriba) y ES
+				el nombre del cliente, así que un segundo botón repitiéndolo era la misma
+				duplicación que el punto del teléfono/nombre. Cambiar o quitar el vínculo ya
+				vinculado se hace desde el menú de los tres puntos, acá abajo. -->
 				<b-button
+				v-if="!chat.client"
 				size="sm"
 				variant="outline-secondary"
 				class="whatsapp-header__btn"
 				@click="$bvModal.show('whatsapp-link-client')">
 					<i class="bi bi-person"></i>
-					<!-- 🔴 El nombre va en un <span> propio y el recorte se le aplica a ÉL, no al
-					botón. `text-overflow: ellipsis` solo actúa sobre el contenido inline de un
-					contenedor de bloque: puesto sobre el botón —que es `inline-flex`— el texto es
-					un ítem flex anónimo y se corta a filo, sin los puntos. Y como el botón centra
-					su contenido, el desborde salía por los DOS lados: con un cliente de nombre
-					largo se perdían el ícono de la izquierda y el principio del nombre, y quedaba
-					un pedazo del medio. -->
 					<span class="whatsapp-header__btn-texto">
-						{{ chat.client ? chat.client.name : 'Vincular cliente' }}
+						Vincular cliente
 					</span>
 				</b-button>
+
+				<!-- Cuenta corriente del cliente vinculado: solo ícono, una por moneda (pesos
+				siempre, dólares si el negocio tiene la extensión `ventas_en_dolares` —lo decide
+				`BtnCurrentAcounts::show()`, no se repite el chequeo acá). `client_completo` es el
+				cliente con `credit_accounts` cargado (`chat.client` no la trae: `WhatsappChat`
+				solo hace `with(['client', 'user'])`), así que mientras no llegó no se dibuja
+				nada en vez de un botón que todavía no sabe qué cuentas tiene. -->
+				<btn-current-acounts
+				v-if="chat.client && client_completo"
+				:model="client_completo"
+				model_name="client"
+				icon_only
+				modal_id="whatsapp-current-acounts"></btn-current-acounts>
 
 				<b-dropdown
 				size="sm"
@@ -72,6 +82,14 @@
 						<i class="bi bi-clipboard"></i>
 						Copiar conversación
 					</b-dropdown-item>
+					<!-- Cambiar o quitar el vínculo de un chat YA vinculado. El botón de arriba
+					cubre "vincular por primera vez"; este es el que reemplaza a lo que antes
+					vivía en un botón siempre visible. Abre el mismo modal de siempre
+					(`LinkClientModal`, que ya tiene "Quitar vínculo actual" cuando hay cliente). -->
+					<b-dropdown-item v-if="chat.client" @click="$bvModal.show('whatsapp-link-client')">
+						<i class="bi bi-link-45deg"></i>
+						Cambiar vínculo con el cliente
+					</b-dropdown-item>
 				</b-dropdown>
 
 				<!-- Cierra el sidebar. Es un <button> pelado y no un b-button porque tiene que
@@ -86,10 +104,27 @@
 			</div>
 		</div>
 
-		<!-- Fila 2: las dos ayudas para redactar. Vivían en el toolbar del composer, arriba del
-		input; se mudaron acá porque son herramientas del chat, no partes del mensaje que se está
-		escribiendo, y ahí abajo competían por lugar con el clip, el micrófono y el enviar. -->
+		<!-- Fila 2: el interruptor de IA y las herramientas del chat — sugerir, plantillas y
+		simular. Sugerir/Plantillas vivían en el toolbar del composer, arriba del input; se
+		mudaron acá porque son herramientas del chat, no partes del mensaje que se está
+		escribiendo, y ahí abajo competían por lugar con el clip, el micrófono y el enviar. El
+		toggle de IA y "Simular mensaje del cliente" se sumaron el 15/9/2026: el primero vivía
+		solo en la fila 1 (apretado contra "Vincular cliente" y los tres puntos), el segundo en
+		el toolbar del composer — es el mismo criterio, todo lo que es una herramienta sobre el
+		chat entero (no sobre un mensaje puntual) vive acá. `flex-wrap: wrap` ya estaba puesto
+		para Sugerir/Plantillas: con cuatro controles en vez de dos, salta antes, y es lo que
+		Lucas pidió. -->
 		<div class="whatsapp-header__fila whatsapp-header__fila--ayudas">
+			<!-- Toggle de respuesta automática por IA para este chat -->
+			<b-form-checkbox
+			switch
+			:checked="chat.ai_enabled"
+			@change="toggleAi"
+			data-tour="whatsapp.toggle_ia"
+			class="whatsapp-header__ai-toggle">
+				IA
+			</b-form-checkbox>
+
 			<b-button
 			size="sm"
 			variant="outline-secondary"
@@ -110,6 +145,20 @@
 				<i class="bi bi-file-earmark-text"></i>
 				Plantillas
 			</b-button>
+			<!-- Simular un mensaje entrante del cliente. Se saca de acá y no de un v-if propio
+			porque es EXACTAMENTE el mismo gateo que ya usaba en Composer.vue: solo el dueño, y
+			solo si `chat_simulation_enabled` está prendido en la config del agente (apagado de
+			fábrica). -->
+			<b-button
+			v-if="is_owner && config && config.chat_simulation_enabled"
+			size="sm"
+			variant="outline-secondary"
+			class="whatsapp-header__btn"
+			title="Inyecta un mensaje como si lo hubiera escrito el cliente. No le llega nada a nadie."
+			@click="$bvModal.show('whatsapp-simulate-in-chat')">
+				<i class="bi bi-cone-striped"></i>
+				Simular mensaje del cliente
+			</b-button>
 		</div>
 
 		<link-client-modal
@@ -117,21 +166,57 @@
 
 		<summary-modal
 		:chat="chat"></summary-modal>
+
+		<simulate-in-chat-modal
+		:chat="chat"></simulate-in-chat-modal>
+
+		<!-- Cuenta corriente del cliente vinculado. `modal_id` propio: sin él, si el sidebar
+		está abierto ENCIMA de una pantalla que ya monta `current-acounts/Index.vue` (Clientes,
+		Vender, Ventas...), quedan dos `<b-modal>` con el mismo id y `$bvModal.show()` les
+		dispara el evento a las dos juntas. -->
+		<current-acounts
+		v-if="chat.client"
+		modal_id="whatsapp-current-acounts"></current-acounts>
+
+		<!-- El modal del cliente vinculado: el ABM genérico de siempre (`model_name="client"`),
+		montado suelto y con `modal_id` propio por el mismo motivo de arriba — ya hay precedente
+		de montarlo así, sin el `view-component` que lo envuelve en las pantallas de listado, en
+		`current-acounts/Index.vue` (para budget/order_production/provider_order). Lo alimenta
+		`abrir_ficha_cliente()`, que comitea `client_completo` (el mismo que usan los botones de
+		cuenta corriente de arriba) antes de mostrarlo. -->
+		<model-index
+		v-if="chat.client"
+		model_name="client"
+		modal_id="whatsapp-client-modal"></model-index>
 	</div>
 </template>
 <script>
 import moment from 'moment'
 import LinkClientModal from '@/components/whatsapp/conversation/LinkClientModal'
 import SummaryModal from '@/components/whatsapp/conversation/SummaryModal'
+import SimulateInChatModal from '@/components/whatsapp/conversation/SimulateInChatModal'
+import BtnCurrentAcounts from '@/components/common/BtnCurrentAcounts'
 export default {
 	components: {
 		LinkClientModal,
 		SummaryModal,
+		SimulateInChatModal,
+		BtnCurrentAcounts,
+		// Lazy: son modales que no todo chat necesita (solo uno vinculado a un cliente), y
+		// `current-acounts/Index.vue` en particular arrastra su propia batería de sub-modales
+		// (pagos, notas de crédito/débito, etc.) — no tiene sentido bajarla en el chunk del
+		// header si nunca se abre un chat vinculado.
+		CurrentAcounts: () => import('@/components/common/current-acounts/Index'),
+		ModelIndex: () => import('@/common-vue/components/model/Index'),
 	},
 	data() {
 		return {
 			// true mientras viaja el pedido de sugerencia (deshabilita el botón).
 			suggesting: false,
+			// Cliente vinculado, completo (con credit_accounts y el resto de withAll()). null
+			// hasta que `cargar_cliente_completo()` lo resuelve, o si el chat no está
+			// vinculado. Ver el watch de `linked_client_id`.
+			client_completo: null,
 		}
 	},
 	computed: {
@@ -167,7 +252,33 @@ export default {
 			if (this.chat.client && this.chat.client.name) {
 				return this.chat.client.name
 			}
-			return this.chat.display_name || this.chat.phone
+			// 🔴 Ya NO cae al teléfono. `__phone`, dos líneas más abajo en el template, ya lo
+			// muestra: devolverlo acá también era mostrar el mismo dato dos veces. Sin nombre
+			// de cliente ni display_name, el template esconde el <strong> entero por completo
+			// (`v-if="chat_name"`), en vez de dejarlo vacío.
+			return this.chat.display_name || ''
+		},
+		/**
+		 * Id del cliente vinculado a la conversación abierta, o null. Computed aparte —y no un
+		 * watch directo sobre la ruta 'chat.client'— porque un valor primitivo dispara el
+		 * watcher de forma confiable, sin depender de cómo Vue 2 resuelva un path anidado
+		 * sobre un computed que a su vez lee del store.
+		 *
+		 * @returns {number|null}
+		 */
+		linked_client_id() {
+			return (this.chat && this.chat.client) ? this.chat.client.id : null
+		},
+		/**
+		 * Config del agente (mismo patrón que usa `whatsapp/config/AgentConfig.vue` y
+		 * `chats-list/Index.vue`): de acá se lee `chat_simulation_enabled` para gatear
+		 * "Simular mensaje del cliente", que hasta el 15/9/2026 vivía en el toolbar del
+		 * composer con este mismo gateo.
+		 *
+		 * @returns {Object|null}
+		 */
+		config() {
+			return this.$store.state.whatsapp_bot_config.models[0] || null
 		},
 	},
 	watch: {
@@ -186,6 +297,17 @@ export default {
 		 */
 		chat_id() {
 			this.suggesting = false
+		},
+		/**
+		 * `immediate: true` para cubrir tanto el primer chat que se abre (el componente recién
+		 * se crea con uno ya vinculado) como cualquier cambio posterior: saltar a otro chat,
+		 * vincular/desvincular el que ya está abierto, o volver a uno que ya tenía cliente.
+		 */
+		linked_client_id: {
+			immediate: true,
+			handler() {
+				this.cargar_cliente_completo()
+			},
 		},
 	},
 	methods: {
@@ -243,8 +365,59 @@ export default {
 			.catch(function (err) {
 				self.suggesting = false
 				console.log(err)
-				self.$toast.error('No se pudo generar la sugerencia')
+				// 🔴 Antes de la misión del 15/9/2026 el back solo podía rechazar con "chat no
+				// encontrado" o "sin configuración de WhatsApp": cualquier otro problema volvía
+				// como 200 con suggestion vacía, y por eso este catch nunca corría para el caso
+				// que Lucas reportó. Ahora el back sí distingue el motivo (sin conexión con la
+				// IA, sin historial, la API caída, una excepción, una respuesta que era solo la
+				// foto) y lo manda en `message`: se muestra ESE texto en vez del genérico
+				// siempre que venga.
+				let data = err.response && err.response.data
+				self.$toast.error((data && data.message) || 'No se pudo generar la sugerencia')
 			})
+		},
+		/**
+		 * Trae el cliente completo (con `credit_accounts` y el resto de `Client::scopeWithAll()`)
+		 * cuando el chat abierto está vinculado a uno. `chat.client` no alcanza para los botones
+		 * de cuenta corriente ni para el modal de ficha: `WhatsappChat` solo eager-carga
+		 * `with(['client', 'user'])`, sin esas relaciones. Se pide una vez por chat+cliente (lo
+		 * dispara el watch de `linked_client_id`), no en cada render.
+		 *
+		 * @returns {void}
+		 */
+		cargar_cliente_completo() {
+			let client_id = this.linked_client_id
+			if (!client_id) {
+				this.client_completo = null
+				return
+			}
+			let self = this
+			this.$store.dispatch('client/getModel', client_id)
+			.then(function (model) {
+				// Guarda contra saltos de chat mientras el pedido viaja: si para cuando vuelve
+				// ya se abrió otro cliente (o ninguno), este resultado es viejo y no se aplica.
+				if (self.linked_client_id != client_id) {
+					return
+				}
+				self.client_completo = model
+			})
+			.catch(function (err) {
+				console.log(err)
+			})
+		},
+		/**
+		 * Abre el modal del cliente vinculado (el ABM genérico de siempre) con lo que ya se
+		 * tiene en `client_completo`. Mismo patrón que usa `display.js`/`Tr.vue` para abrir el
+		 * modal de edición desde una fila de tabla: comitear el modelo, mostrar el modal.
+		 *
+		 * @returns {void}
+		 */
+		abrir_ficha_cliente() {
+			if (!this.client_completo) {
+				return
+			}
+			this.$store.commit('client/setModel', { model: this.client_completo, properties: [] })
+			this.$bvModal.show('whatsapp-client-modal')
 		},
 		/**
 		 * Arma un texto plano `[fecha hora] Quién: mensaje` con toda la conversación cargada
@@ -348,6 +521,13 @@ export default {
 		min-width: 0
 	&__name
 		font-size: .95rem
+	// Solo cuando hay cliente vinculado (`abrir_ficha_cliente()` se llama únicamente en ese
+	// caso — ver el template): el título del chat, que en ese momento ES el nombre del
+	// cliente, se vuelve la forma de abrir su ficha.
+	&__name--clickable
+		cursor: pointer
+		&:hover
+			text-decoration: underline
 	&__sub
 		display: flex
 		flex-direction: row
