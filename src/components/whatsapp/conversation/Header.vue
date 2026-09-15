@@ -387,8 +387,16 @@ export default {
 		 */
 		cargar_cliente_completo() {
 			let client_id = this.linked_client_id
+			// 🔴 Se limpia SIEMPRE antes de pedir el nuevo, no solo cuando no hay cliente.
+			// `chat.client` (y con él `chat_name` y el nombre clickeable) cambia en el mismo
+			// tick del click en la bandeja, pero este fetch tarda lo que tarde la red. Sin
+			// limpiar acá, en esa ventana el botón de cuenta corriente y el modal de ficha
+			// seguían mostrando los datos del cliente ANTERIOR con el nombre del nuevo cliente
+			// ya escrito arriba — plata y datos de otro cliente a la vista. La guarda de abajo
+			// (`linked_client_id != client_id`) evita que una respuesta vieja PISE a la nueva,
+			// pero no alcanza para evitar que la vieja se siga mostrando mientras la nueva viaja.
+			this.client_completo = null
 			if (!client_id) {
-				this.client_completo = null
 				return
 			}
 			let self = this

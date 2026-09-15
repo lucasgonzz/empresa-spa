@@ -718,9 +718,16 @@ export default {
 		},
 		/**
 		 * Pide a la IA una sugerencia de respuesta (no se envía ni se persiste).
+		 *
+		 * 🔴 `skip_global_error_event: true`. Desde la misión whatsapp-mejoras-interfaz
+		 * (15/9/2026) el back devuelve 422 con `message` en vez de 200 con `suggestion: ''`
+		 * ante cualquier motivo de fallo (antes solo pasaba para "sin configuración"). El
+		 * catch de `Header.vue::suggest()` ya muestra ese `message` en un toast propio; sin
+		 * esta bandera, el interceptor global (`main.js`) muestra OTRO toast con el mismo
+		 * texto por encima — dos avisos idénticos por cada sugerencia que falla.
 		 */
 		suggest(context, chat_id) {
-			return axios.post('/api/whatsapp-chats/' + chat_id + '/suggest')
+			return axios.post('/api/whatsapp-chats/' + chat_id + '/suggest', {}, { skip_global_error_event: true })
 				.then(res => {
 					return res.data.suggestion
 				})
