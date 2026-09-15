@@ -18,7 +18,16 @@ export default {
 		],
 	},
 
-	'agenda-vista-lista': {
+	/*
+		🔴 Con "nav-item-" y no "agenda-vista-*" a secas: desde la mision agenda-ajustes-ux
+		(15/9/2026) estas tres pestañas las dibuja el HorizontalNav compartido
+		(common-vue/components/horizontal-nav/Index.vue), y su metodo testid() SIEMPRE antepone
+		"nav-item-" al testid que se le pasa en cada item (sea el explicito o el que arma solo del
+		nombre visible) -- no hay forma de pedirle el testid pelado. Sin el prefijo acá, el data-
+		testid real del DOM ("nav-item-agenda-vista-lista") no matcheaba ninguna clave de este
+		indice y las tres descripciones dejaban de aparecer, sin ningun error que lo avisara.
+	*/
+	'nav-item-agenda-vista-lista': {
 		titulo: 'Vista Lista',
 		que_hace: 'Muestra las tareas pendientes agrupadas por urgencia: Vencidas, Hoy, Esta semana (hasta el domingo) y Próximas (hasta 60 días).',
 		repercute: [
@@ -27,7 +36,7 @@ export default {
 		],
 	},
 
-	'agenda-vista-calendario': {
+	'nav-item-agenda-vista-calendario': {
 		titulo: 'Vista Calendario',
 		que_hace: 'Muestra el mes en una grilla de lunes a domingo con las tareas de cada día; al tocar un día, sus tareas se listan abajo para completarlas o editarlas.',
 		repercute: [
@@ -36,7 +45,7 @@ export default {
 		],
 	},
 
-	'agenda-vista-realizadas': {
+	'nav-item-agenda-vista-realizadas': {
 		titulo: 'Vista Realizadas',
 		que_hace: 'Lista lo que se marcó como hecho en un rango de fechas (últimos 30 días por defecto), con el gasto registrado si lo hubo.',
 	},
