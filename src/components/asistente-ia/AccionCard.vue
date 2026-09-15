@@ -42,26 +42,34 @@
 			</p>
 			<!-- Después de un 404 no hay nada que reintentar: la tarjeta queda con su texto y
 			sin botones. -->
-			<div
-			v-if="!no_disponible"
-			class="asistente-ia-accion__botones">
-				<b-button
-				size="sm"
-				variant="outline-secondary"
-				:disabled="en_curso"
-				data-testid="asistente-accion-cancelar"
-				@click="cancelar">
-					{{ texto_cancelar }}
-				</b-button>
-				<b-button
-				size="sm"
-				variant="primary"
-				:disabled="en_curso"
-				data-testid="asistente-accion-confirmar"
-				@click="confirmar">
-					{{ texto_confirmar }}
-				</b-button>
-			</div>
+			<template v-if="!no_disponible">
+				<!-- Mientras el asistente responde, esa respuesta puede traer la corrección de
+				esta misma tarjeta: confirmarla ahora dejaría las dos confirmables y la carga
+				duplicada. Cancelar no corre ese riesgo y sigue habilitado. -->
+				<p
+				v-if="esperando_al_asistente"
+				class="asistente-ia-accion__espera">
+					Esperá a que responda el asistente
+				</p>
+				<div class="asistente-ia-accion__botones">
+					<b-button
+					size="sm"
+					variant="outline-secondary"
+					:disabled="en_curso"
+					data-testid="asistente-accion-cancelar"
+					@click="cancelar">
+						{{ texto_cancelar }}
+					</b-button>
+					<b-button
+					size="sm"
+					variant="primary"
+					:disabled="en_curso || esperando_al_asistente"
+					data-testid="asistente-accion-confirmar"
+					@click="confirmar">
+						{{ texto_confirmar }}
+					</b-button>
+				</div>
+			</template>
 		</div>
 
 		<!-- Confirmada: el tilde y lo que registró el API; si hay una pantalla donde verlo,
@@ -243,6 +251,15 @@ export default {
 			return this.verbo_en_curso !== null
 		},
 		/**
+		 * true mientras el asistente está generando una respuesta en esta conversación (la de
+		 * pantalla: la tarjeta se pinta desde ai_chat.messages). Las tarjetas visibles son
+		 * siempre de mensajes anteriores a esa respuesta, que puede traer la corrección de
+		 * alguna: hasta que llegue, Confirmar espera (arreglo tras el chequeo independiente).
+		 */
+		esperando_al_asistente() {
+			return this.$store.getters['ai_chat/hay_respuesta_en_curso']
+		},
+		/**
 		 * La falla local manda sobre `error_mensaje` porque es la del último intento. Las dos
 		 * se muestran solo mientras la tarjeta sigue 'propuesta': si ya se resolvió, un error
 		 * viejo no dice nada.
@@ -301,6 +318,10 @@ export default {
 			// El segundo clic de un doble clic puede llegar antes de que Vue redibuje los
 			// botones deshabilitados: por eso se corta acá y no solo con :disabled.
 			if (this.en_curso || !this.es_propuesta || this.no_disponible) {
+				return
+			}
+			// Confirmar espera a que responda el asistente (ver esperando_al_asistente); Cancelar no.
+			if (verbo == 'confirmar' && this.esperando_al_asistente) {
 				return
 			}
 			let self = this
@@ -481,6 +502,15 @@ export default {
 		margin-bottom: 10px
 		font-size: .8rem
 		color: var(--btn-peligro-texto, #9c3a36)
+
+	// Nota "Esperá a que responda el asistente": alineada a la derecha, pegada a los botones,
+	// porque habla de Confirmar y no de la tarjeta.
+	&__espera
+		margin: 0 0 8px 0
+		font-size: .8rem
+		line-height: 1.4
+		text-align: right
+		color: var(--color-text-secondary, #6c757d)
 
 	&__botones
 		display: flex

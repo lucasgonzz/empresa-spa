@@ -23,7 +23,7 @@ export default {
 			'Si algo cambió desde que se armó la tarjeta (una caja sin apertura, un permiso, una tarea editada o ya hecha), no se registra nada y la tarjeta muestra el motivo.',
 			'Un segundo clic no duplica la carga.',
 		],
-		requiere: 'Que el usuario tenga permiso para cargar eso desde la pantalla correspondiente. La tarjeta vence a las 24 horas.',
+		requiere: 'Que el usuario tenga permiso para cargar eso desde la pantalla correspondiente, y que el asistente no esté respondiendo: mientras responde, Confirmar queda deshabilitado porque esa respuesta puede corregir la tarjeta. La tarjeta vence a las 24 horas.',
 		nota_interna: 'POST ai-conversations/{id}/acciones/{accion_id}/confirmar, autenticado como la persona que hace clic. El API toma un candado sobre la accion: un segundo POST responde 409 accion_resuelta sin duplicar. Un 422 no escribe nada y deja error_mensaje en la accion. La ejecucion va por ExpenseHelper::crear, CurrentAcountPagoAltaHelper::registrar, AgendaTareaHelper y AgendaCompletarHelper::completar, los mismos caminos que las pantallas.',
 	},
 
