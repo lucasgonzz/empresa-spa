@@ -2,7 +2,7 @@
 	<b-modal
 	id="agenda-completar"
 	title="Marcar como hecha"
-	size="lg"
+	size="sm"
 	modal-class="agenda-completar"
 	@show="on_show">
 
@@ -391,6 +391,12 @@ export default {
 				return
 			}
 
+			// Una fila con metodo y monto pero sin caja no mueve ninguna caja (ver el mixin): se
+			// corta antes de mandar, no despues de un 201 que ya registro el gasto a medias.
+			if (this.hay_metodo_de_pago_sin_caja(this.expense.payment_methods)) {
+				return
+			}
+
 			this.sync_cotizacion_payment_methods()
 			let total = this.total_de_filas()
 			let monto = Number(this.expense.amount) || 0
@@ -555,4 +561,21 @@ export default {
 			flex-direction: column-reverse
 			.btn
 				width: 100%
+
+// Mismo lenguaje que el resto de los modales "nuevos" (ver la nota igual en FormTarea.vue): radio
+// de 8px y foco suave en vez del default global de _inputs.sass. El bloque de metodos de pago
+// (MultiPaymentMethods) ya trae este mismo trato por su cuenta (_metodos_de_pago.sass); esto
+// alcanza a los campos que quedan afuera de ese bloque (Monto, Moneda, IVA, Observaciones), para
+// que el modal no quede la mitad prolijo y la mitad con el input de Bootstrap de siempre.
+#agenda-completar
+	.form-control,
+	.custom-select,
+	textarea.form-control
+		border-radius: var(--metodo-pago-input-radius)
+		border-width: 1px
+
+		&:focus
+			border-width: 1px
+			border-color: var(--color-primary)
+			box-shadow: 0 0 0 3px var(--metodo-pago-focus-ring)
 </style>
