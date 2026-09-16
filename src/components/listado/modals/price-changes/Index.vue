@@ -3,7 +3,8 @@
 :title="'Cambios de precios de '+article.name"
 hide-footer
 size="lg"
-id="price-changes">
+id="price-changes"
+@show="al_abrir_modal">
 	<div
 	v-if="!loading">
 		
@@ -40,19 +41,6 @@ export default {
 			price_changes: [],
 			loading: false,
 		}
-	},
-	mounted() {
-		this.$root.$on('bv::modal::show', (bvEvent, modal_id) => {
-			console.log('SE ABRIO MODAL')
-			if (modal_id == 'price-changes') {
-				console.log('y era price-changes')
-				setTimeout(() => {
-					if (!this.loading) {
-						this.getPriceChanges() 
-					}
-				}, 500)
-			}
-		})
 	},
 	computed: {
 		price_types() {
@@ -131,6 +119,16 @@ export default {
 		},
 	},
 	methods: {
+		// Se dispara con el @show del propio modal.
+		al_abrir_modal() {
+			console.log('SE ABRIO MODAL')
+			console.log('y era price-changes')
+			setTimeout(() => {
+				if (!this.loading) {
+					this.getPriceChanges()
+				}
+			}, 500)
+		},
 		getEmployee(price_change) {
 			let employee_id = price_change.employee_id
 			if (employee_id) {

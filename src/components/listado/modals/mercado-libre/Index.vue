@@ -4,8 +4,9 @@ scrollable
 id="mercado-libre"
 title="Mercado Libre"
 size="lg"
-hide-footer>
-	
+hide-footer
+@shown="cargar_info">
+
 	<h3
 	v-if="meli_category">
     	Categoria: {{ meli_category.meli_category_name }}
@@ -35,13 +36,6 @@ export default {
 			return this.$store.state.meli.meli_category
 		}
 	},
-    mounted() {
-        this.$root.$on('bv::modal::shown', (bvEvent, modalId) => {
-            if (modalId === 'mercado-libre') {
-            	this.cargar_info()
-            }
-        })
-    },
 	data() {
 		return {
 			results: null,

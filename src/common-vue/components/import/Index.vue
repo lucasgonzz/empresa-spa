@@ -10,7 +10,8 @@
 	size="lg"
 	:title="title"
 	:id="id"
-	hide-footer>
+	hide-footer
+	@show="al_abrir_modal_import">
 
 		<div
 		v-if="model_name == 'article'">
@@ -822,16 +823,6 @@ export default {
 	},
 	mounted() {
 		console.log('Modal Import mounted')
-	    this.$root.$on('bv::modal::show', (bvEvent, modalId) => {
-	        if (modalId === this.id) {
-				this.hubo_un_error = false
-				this.demora_de_todas_las_solicitud = 0
-				console.log('Se puso hubo_un_error en '+this.hubo_un_error)
-				this.set_default_columns_positions()
-				this.load_import_stores()
-				this.$store.commit('column_position/set_selected_column_position_id', 0)
-	        }
-	    })
 	},
 	watch: {
 		/*
@@ -877,6 +868,15 @@ export default {
 		},
 	},
 	methods: {
+		// Se dispara con el @show del propio modal de importacion (el que tiene :id="id").
+		al_abrir_modal_import() {
+			this.hubo_un_error = false
+			this.demora_de_todas_las_solicitud = 0
+			console.log('Se puso hubo_un_error en '+this.hubo_un_error)
+			this.set_default_columns_positions()
+			this.load_import_stores()
+			this.$store.commit('column_position/set_selected_column_position_id', 0)
+		},
 		excel_column(column, _default) {
 			// console.log('excel_column: '+column.group_title)
 			if (column.group_title) {

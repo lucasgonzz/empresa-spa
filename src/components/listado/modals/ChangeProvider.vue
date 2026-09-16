@@ -123,7 +123,16 @@ export default {
 	created() {
 		// El modal recibe sus datos por evento global, disparado desde ModelForm.vue justo
 		// antes de mostrarlo (ver "confirmProviderChange" en ModelForm.vue)
-		this.$root.$on('open-change-provider-modal', (payload) => {
+		this.$root.$on('open-change-provider-modal', this.on_open_change_provider_modal)
+	},
+	beforeDestroy() {
+		// El bus de $root es global y vive toda la sesion: sin el $off, cada vez que se vuelve
+		// a montar este componente queda otra escucha viva y el preview se pediria N veces.
+		this.$root.$off('open-change-provider-modal', this.on_open_change_provider_modal)
+	},
+	methods: {
+		// Handler del evento global: guarda los datos que manda ModelForm.vue y pide el preview
+		on_open_change_provider_modal(payload) {
 			this.article_id = payload.article_id
 			this.old_provider_id = payload.old_provider_id
 			this.old_provider_name = payload.old_provider_name
@@ -131,9 +140,7 @@ export default {
 			this.new_provider_name = payload.new_provider_name
 
 			this.getPreview()
-		})
-	},
-	methods: {
+		},
 		// Arma un texto corto por descuento, ej: "10%" o "$500"
 		discountText(discount) {
 			if (discount.percentage) {
