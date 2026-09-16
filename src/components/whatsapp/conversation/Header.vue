@@ -145,20 +145,21 @@
 				<i class="bi bi-file-earmark-text"></i>
 				Plantillas
 			</b-button>
-			<!-- Simular un mensaje entrante del cliente. Se saca de acá y no de un v-if propio
-			porque es EXACTAMENTE el mismo gateo que ya usaba en Composer.vue: solo el dueño, y
-			solo si `chat_simulation_enabled` está prendido en la config del agente (apagado de
-			fábrica). -->
-			<b-button
+			<!-- Interruptor de "modo simulación" (rediseñado 15/9/2026, reemplaza al botón que
+			abría un modal): prendido, aparece una viñeta editable al pie de la conversación
+			(`SimulatedMessageComposer.vue`, montada en `Messages.vue`) donde el operador escribe
+			los mensajes del cliente uno atrás de otro, sin volver a abrir nada. Mismo gateo que
+			tenía el botón que reemplaza: solo el dueño, y solo si `chat_simulation_enabled` está
+			prendido en la config del agente (apagado de fábrica). -->
+			<b-form-checkbox
 			v-if="is_owner && config && config.chat_simulation_enabled"
-			size="sm"
-			variant="outline-secondary"
-			class="whatsapp-header__btn"
-			title="Inyecta un mensaje como si lo hubiera escrito el cliente. No le llega nada a nadie."
-			@click="$bvModal.show('whatsapp-simulate-in-chat')">
-				<i class="bi bi-cone-striped"></i>
-				Simular mensaje del cliente
-			</b-button>
+			switch
+			:checked="simulando_en_vivo"
+			@change="toggleSimulandoEnVivo"
+			class="whatsapp-header__ai-toggle"
+			title="Prendido, escribís vos los mensajes del cliente directo en la conversación de abajo. No le llega nada a nadie.">
+				Simulación
+			</b-form-checkbox>
 		</div>
 
 		<link-client-modal
@@ -166,9 +167,6 @@
 
 		<summary-modal
 		:chat="chat"></summary-modal>
-
-		<simulate-in-chat-modal
-		:chat="chat"></simulate-in-chat-modal>
 
 		<!-- Cuenta corriente del cliente vinculado. `modal_id` propio: sin él, si el sidebar
 		está abierto ENCIMA de una pantalla que ya monta `current-acounts/Index.vue` (Clientes,
@@ -194,13 +192,11 @@
 import moment from 'moment'
 import LinkClientModal from '@/components/whatsapp/conversation/LinkClientModal'
 import SummaryModal from '@/components/whatsapp/conversation/SummaryModal'
-import SimulateInChatModal from '@/components/whatsapp/conversation/SimulateInChatModal'
 import BtnCurrentAcounts from '@/components/common/BtnCurrentAcounts'
 export default {
 	components: {
 		LinkClientModal,
 		SummaryModal,
-		SimulateInChatModal,
 		BtnCurrentAcounts,
 		// Lazy: son modales que no todo chat necesita (solo uno vinculado a un cliente), y
 		// `current-acounts/Index.vue` en particular arrastra su propia batería de sub-modales
@@ -280,6 +276,15 @@ export default {
 		config() {
 			return this.$store.state.whatsapp_bot_config.models[0] || null
 		},
+		/**
+		 * Interruptor de "modo simulación" del chat abierto. Ver el docblock del state en
+		 * `store/whatsapp_chat.js`.
+		 *
+		 * @returns {boolean}
+		 */
+		simulando_en_vivo() {
+			return this.$store.state.whatsapp_chat.simulando_en_vivo
+		},
 	},
 	watch: {
 		/**
@@ -297,6 +302,10 @@ export default {
 		 */
 		chat_id() {
 			this.suggesting = false
+			// El interruptor de simulación es de ESTE chat, no algo que se arrastra al siguiente:
+			// sin este reset, saltar a otro chat con la viñeta abierta la dejaba prendida ahí,
+			// lista para "simular" un mensaje del cliente equivocado.
+			this.$store.commit('whatsapp_chat/setSimulandoEnVivo', false)
 		},
 		/**
 		 * `immediate: true` para cubrir tanto el primer chat que se abre (el componente recién
@@ -327,6 +336,9 @@ export default {
 		},
 		openSummary() {
 			this.$bvModal.show('whatsapp-summary')
+		},
+		toggleSimulandoEnVivo(value) {
+			this.$store.commit('whatsapp_chat/setSimulandoEnVivo', value)
 		},
 		/**
 		 * Pide una sugerencia de la IA y la deja en el input del composer, editable antes de

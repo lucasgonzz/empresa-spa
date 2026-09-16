@@ -187,6 +187,16 @@ export default {
 			abierto.
 		*/
 		borrador: null,
+
+		// Interruptor de "modo simulación" del chat abierto (misión whatsapp-mejoras-interfaz,
+		// 15/9/2026). Solo controla si `SimulatedMessageComposer.vue` dibuja la viñeta editable
+		// al pie de la conversación — NO es lo mismo que el getter `chat_en_simulacion` de más
+		// abajo, que refleja si el ÚLTIMO ENTRANTE ya quedó marcado como simulado en la base.
+		// Prender este interruptor no simula nada por sí solo: recién se simula (y con eso se
+		// prende `chat_en_simulacion`) cuando el operador manda el primer mensaje por esa
+		// viñeta. Se resetea a `false` en cada cambio de chat (ver `Header.vue`, watch de
+		// `chat_id`), para no dejarlo prendido en la conversación equivocada.
+		simulando_en_vivo: false,
 	},
 	mutations: {
 		setLoadingChats(state, value) {
@@ -319,6 +329,9 @@ export default {
 		 */
 		setBorrador(state, value) {
 			state.borrador = value || null
+		},
+		setSimulandoEnVivo(state, value) {
+			state.simulando_en_vivo = Boolean(value)
 		},
 	},
 	getters: {
