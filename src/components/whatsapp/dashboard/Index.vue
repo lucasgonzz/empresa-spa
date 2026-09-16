@@ -38,6 +38,13 @@
  * store de artículos con estos contadores ya cargado en memoria.
  */
 export default {
+	data() {
+		return {
+			// Guarda de idempotencia de escuchar_embeddings_terminados(): ver el docblock de ese
+			// metodo.
+			escuchando_embeddings_terminados: false,
+		}
+	},
 	computed: {
 		tarjetas() {
 			let tarjetas = [
@@ -137,15 +144,29 @@ export default {
 			})
 		},
 		/**
+		 * Se suscribe una sola vez por montaje del componente, aunque este método se llame de
+		 * nuevo (pedir_estado_embeddings() lo vuelve a invocar cada vez que hay una tanda viva,
+		 * inclusive desde DENTRO del propio callback de este listener si ya hay una tanda nueva
+		 * apenas cierra la anterior): sin la guarda, tandas consecutivas apilarían un `.listen()`
+		 * extra por cada una sobre el mismo canal, y una tanda futura dispararía tantos refrescos
+		 * como suscripciones acumuladas. Mismo criterio que ya usa mixins/broadcast.js
+		 * (`this.embeddings_echo_channel`) para su propio listener permanente sobre este canal.
+		 *
 		 * @returns {void}
 		 */
 		escuchar_embeddings_terminados() {
-			// this.owner_id (no this.owner.id): mismo computed defensivo que ya usa
-			// mixins/broadcast.js para armar este mismo nombre de canal -- owner() devuelve
-			// this.user.owner (la relacion) para un empleado, y no tiene el guard `if
-			// (!this.user)` que owner_id() si tiene.
+			if (this.escuchando_embeddings_terminados) {
+				return
+			}
+			this.escuchando_embeddings_terminados = true
+
+			// this.owner_id, no this.owner.id: mismo computed que ya usa mixins/broadcast.js
+			// para armar este mismo nombre de canal. owner() SI tiene el guard `if (!this.user)`,
+			// pero para un empleado devuelve this.user.owner -la relacion-, que puede llegar
+			// undefined aunque this.user exista; owner_id() no depende de esa relacion.
 			this.Echo.channel('article_embeddings.' + this.owner_id)
 			.listen('.ArticleEmbeddingsBatchGenerated', () => {
+				this.escuchando_embeddings_terminados = false
 				this.pedir_estado_embeddings()
 			})
 		},
