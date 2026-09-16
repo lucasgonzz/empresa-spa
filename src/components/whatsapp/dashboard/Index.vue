@@ -176,7 +176,14 @@ export default {
 <style lang="sass">
 .whatsapp-dashboard
 	height: 100%
-	background: var(--wa-panel)
+	// 🔴 `--bg-section` y no `--wa-panel` (= `--bg-card`, blanco en modo claro): el tablero
+	// vivía con el mismo fondo que la bandeja de chats de al lado y las dos quedaban
+	// indistinguibles. `--bg-section` es el token que ya usa el resto del sistema para una
+	// superficie "un escalón por debajo" de una tarjeta blanca (headers de tabla, paneles
+	// secundarios) — mismo vocabulario, no un color inventado. Las tarjetas de adentro
+	// (`--bg-hover`, con su propio borde) siguen leyéndose por encima de este fondo en los dos
+	// temas, sin tocar nada más.
+	background: var(--bg-section)
 	padding: 24px
 	display: grid
 	grid-template-columns: repeat(3, 1fr)

@@ -46,8 +46,8 @@
 
     <sale-modal></sale-modal>
 
-    <b-modal 
-    id="current-acounts" 
+    <b-modal
+    :id="modal_id"
     data-tour="cuentas_corrientes.modal_cuenta"
     ref="current_acounts"
     :title="title" 
@@ -98,6 +98,18 @@ import BtnPagoNotaCredito from '@/components/common/current-acounts/BtnPagoNotaC
 export default {
     name: 'CurrentAcountIndex',
     mixins: [current_acounts],
+    props: {
+        // Id del `b-modal`. Default 'current-acounts', el de siempre en las ~25 pantallas que
+        // montan este componente. Un caller que pueda convivir con OTRA instancia ya montada
+        // en la misma página (el header del sidebar de WhatsApp, que puede estar abierto
+        // ENCIMA de Clientes/Vender/Ventas, que ya montan la suya) tiene que pasar uno
+        // distinto: con dos `<b-modal>` compartiendo id, `$bvModal.show()` los abre a los dos
+        // a la vez.
+        modal_id: {
+            type: String,
+            default: 'current-acounts',
+        },
+    },
     components: {
         // Modals
         Confirm,

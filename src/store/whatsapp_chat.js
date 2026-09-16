@@ -187,6 +187,16 @@ export default {
 			abierto.
 		*/
 		borrador: null,
+
+		// Interruptor de "modo simulación" del chat abierto (misión whatsapp-mejoras-interfaz,
+		// 15/9/2026). Solo controla si `SimulatedMessageComposer.vue` dibuja la viñeta editable
+		// al pie de la conversación — NO es lo mismo que el getter `chat_en_simulacion` de más
+		// abajo, que refleja si el ÚLTIMO ENTRANTE ya quedó marcado como simulado en la base.
+		// Prender este interruptor no simula nada por sí solo: recién se simula (y con eso se
+		// prende `chat_en_simulacion`) cuando el operador manda el primer mensaje por esa
+		// viñeta. Se resetea a `false` en cada cambio de chat (ver `Header.vue`, watch de
+		// `chat_id`), para no dejarlo prendido en la conversación equivocada.
+		simulando_en_vivo: false,
 	},
 	mutations: {
 		setLoadingChats(state, value) {
@@ -319,6 +329,9 @@ export default {
 		 */
 		setBorrador(state, value) {
 			state.borrador = value || null
+		},
+		setSimulandoEnVivo(state, value) {
+			state.simulando_en_vivo = Boolean(value)
 		},
 	},
 	getters: {
@@ -718,9 +731,16 @@ export default {
 		},
 		/**
 		 * Pide a la IA una sugerencia de respuesta (no se envía ni se persiste).
+		 *
+		 * 🔴 `skip_global_error_event: true`. Desde la misión whatsapp-mejoras-interfaz
+		 * (15/9/2026) el back devuelve 422 con `message` en vez de 200 con `suggestion: ''`
+		 * ante cualquier motivo de fallo (antes solo pasaba para "sin configuración"). El
+		 * catch de `Header.vue::suggest()` ya muestra ese `message` en un toast propio; sin
+		 * esta bandera, el interceptor global (`main.js`) muestra OTRO toast con el mismo
+		 * texto por encima — dos avisos idénticos por cada sugerencia que falla.
 		 */
 		suggest(context, chat_id) {
-			return axios.post('/api/whatsapp-chats/' + chat_id + '/suggest')
+			return axios.post('/api/whatsapp-chats/' + chat_id + '/suggest', {}, { skip_global_error_event: true })
 				.then(res => {
 					return res.data.suggestion
 				})
