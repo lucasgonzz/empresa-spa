@@ -23,8 +23,20 @@ const routes = [
         component: () => import('@/views/DemoIngreso'),
     },
     {
+        // Informe del mostrador abierto desde el link que llegó por WhatsApp (misión
+        // asistente-por-whatsapp, 16/9/2026). Ruta PÚBLICA: el dueño la abre desde el
+        // teléfono, en la calle, sin tipear usuario ni contraseña — decisión de Lucas en la
+        // Fase 2. Lo que la sostiene es el token de la URL: 64 caracteres al azar que el
+        // backend guarda solo hasheado, vencen a los 7 días y abren UN informe de solo
+        // lectura. Va listada abajo en `public_route_names`, y App.vue la excluye de su
+        // arranque autenticado por el mismo motivo que a `demoIngreso`.
+        path: '/informe/:token',
+        name: 'informeCompartido',
+        component: () => import('@/views/InformeCompartido'),
+    },
+    {
         path: '/recuperar-clave/:view?/:sub_view?',
-        name: 'passwordReset', 
+        name: 'passwordReset',
         component: () => import('@/common-vue/views/PasswordReset')
     },
     {
@@ -234,7 +246,10 @@ const router = new VueRouter({
 router.beforeEach((to, from, next) => {
     // Rutas públicas que deben poder accederse sin sesión iniciada.
     // 'demoIngreso' es el ingreso a la demo vía token: la vista maneja su propia autenticación.
-    const public_route_names = ['login', 'passwordReset', 'demoIngreso']
+    // 'informeCompartido' es el informe del mostrador abierto desde el link que llegó por
+    // WhatsApp (misión asistente-por-whatsapp): no inicia ninguna sesión y el que la autoriza es
+    // el token de la URL, contra la ruta pública informe-compartido/{token} del API.
+    const public_route_names = ['login', 'passwordReset', 'demoIngreso', 'informeCompartido']
 
     // Estado de sesión: `null` se trata como no autenticado (hasta que `auth/me` resuelva).
     const is_authenticated = store && store.state && store.state.auth && store.state.auth.authenticated
