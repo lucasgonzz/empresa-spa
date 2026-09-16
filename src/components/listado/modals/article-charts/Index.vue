@@ -4,7 +4,8 @@ scrollable
 id="article-charts"
 :title="model.name"
 size="lg"
-hide-footer>
+hide-footer
+@show="limpiar_resultados">
 	<nav-component
 	@getCharts="getCharts"></nav-component>
 	<div
@@ -74,12 +75,12 @@ export default {
 			loading: false,
 		}
 	},
-	mounted() {
-		this.$root.$on('bv::modal::show', (bvEvent, modalId) => {
-			this.results = null
-		})
-	},
 	methods: {
+		// Se dispara con el @show del propio modal: limpia los resultados de la busqueda
+		// anterior para que no se vean los del articulo que se miro antes.
+		limpiar_resultados() {
+			this.results = null
+		},
 		getCharts(dates) {
 			this.loading = true
 			this.$api.get('article/charts/'+this.model.id+'/'+dates.from_date+'/'+dates.until_date)

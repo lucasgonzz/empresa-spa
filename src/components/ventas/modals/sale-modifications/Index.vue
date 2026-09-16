@@ -8,6 +8,7 @@
 	hide-footer
 	size="lg"
 	:title="title"
+	@show="cargar_modificaciones"
 	id="sale-modifications">
 		<b-table
 		v-if="!loading"
@@ -105,20 +106,25 @@ export default {
 			return this.$store.state.sale.model 
 		},
 	},
-	mounted() {
-	    this.$root.$on('bv::modal::show', (bvEvent, modalId) => {
-	        if (modalId === 'sale-modifications') {
-	            if (!this.loading) {
-	                this.getSaleModifications()
-	            }
-	        }
-	    })
-	},
-	beforeDestroy() {
-	    // Desregistrar el evento al destruir el componente
-	    this.$root.$off('bv::modal::show')
-	},
 	methods: {
+		/**
+		 * Trae las modificaciones de la venta al abrirse el modal. La dispara el @show del propio
+		 * <b-modal> (show, no shown: la tabla tiene que empezar a cargarse antes del primer
+		 * pintado, que es cuando se muestra el spinner).
+		 *
+		 * 🔴 Antes esto colgaba de un this.$root.$on('bv::modal::show') registrado en mounted, y el
+		 * beforeDestroy lo daba de baja con this.$root.$off('bv::modal::show') SIN pasar el handler:
+		 * eso borra del bus global los listeners de ese evento de TODOS los componentes, no solo el
+		 * propio. Un evento del propio modal muere con el componente y no necesita baja ninguna.
+		 *
+		 * @returns {void}
+		 */
+		cargar_modificaciones() {
+			if (this.loading) {
+				return
+			}
+			this.getSaleModifications()
+		},
 		getSaleModifications() {
 			console.log('llamando getSaleModifications para la venta N° '+this.sale.num)
 			this.loading = true

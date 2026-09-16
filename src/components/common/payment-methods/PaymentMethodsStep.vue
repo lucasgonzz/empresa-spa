@@ -259,18 +259,43 @@ export default {
         },
     },
     mounted() {
-        this.$root.$on('bv::modal::shown', (bvEvent, modalId) => {
-            if (
-                modalId == 'payment-method-modal'
-                ||modalId == 'current-acounts-pago'
-            ) {
-                let payment_method = this.payment_methods[0]
-                let moneda_id = this.resolve_payment_method_moneda_id(payment_method)
-                this.set_caja_por_defecto(0, payment_method.current_acount_payment_method_id, moneda_id)
-            }
-        })
+        this.$root.$on('bv::modal::shown', this.on_modal_shown)
+    },
+    beforeDestroy() {
+        this.$root.$off('bv::modal::shown', this.on_modal_shown)
     },
     methods: {
+
+        /**
+         * Propone la caja por defecto de la primera fila cuando se abre el modal que contiene a
+         * este paso.
+         *
+         * 🔴 El listener va al bus global ($root) porque los dos modales que escucha los declaran
+         * OTROS componentes, asi que hay que desengancharlo a mano en beforeDestroy. $root vive toda
+         * la sesion: sin ese $off, y con un padre que remonta este componente con un :key nuevo en
+         * cada apertura del modal de pago (una vez por venta), quedaba un handler vivo por cada
+         * instancia muerta y la apertura N repetia el mismo trabajo N veces.
+         *
+         * Se pasa el metodo por referencia (this.on_modal_shown): Vue 2 bindea los metodos a la
+         * instancia una sola vez, asi que $on y $off reciben exactamente la misma funcion. Con una
+         * arrow inline no habria forma de desengancharla.
+         *
+         * @param {Object} bvEvent Evento de bootstrap-vue.
+         * @param {string} modalId Id del modal que se acaba de mostrar.
+         * @returns {void}
+         */
+        on_modal_shown(bvEvent, modalId) {
+            if (
+                modalId != 'payment-method-modal'
+                && modalId != 'current-acounts-pago'
+            ) {
+                return
+            }
+
+            let payment_method = this.payment_methods[0]
+            let moneda_id = this.resolve_payment_method_moneda_id(payment_method)
+            this.set_caja_por_defecto(0, payment_method.current_acount_payment_method_id, moneda_id)
+        },
 
         /**
          * Moneda efectiva del método de pago para filtrar cajas y validar compatibilidad.
