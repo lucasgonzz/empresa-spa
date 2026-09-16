@@ -23,7 +23,8 @@
 			v-for="(bloque, index) in bloques"
 			:key="index"
 			:is="componente_de(bloque)"
-			:bloque="bloque"></component>
+			:bloque="bloque"
+			@mandar-recordatorio="abrir_recordatorio"></component>
 		</div>
 
 		<p
@@ -31,11 +32,21 @@
 		class="informe__vacio">
 			Este informe todavía no tiene contenido.
 		</p>
+
+		<!--
+			Anfitrión único del recordatorio de cobro por WhatsApp: lo pide el botón de las
+			acciones `cobrar` con cliente (bloques/Acciones.vue, evento mandar-recordatorio).
+			Uno por informe y no uno por bloque de acciones, para que nunca haya dos modales
+			con el mismo id. No ocupa lugar en el informe: el modal se dibuja colgado de <body>.
+		-->
+		<recordatorio-desde-informe
+		ref="recordatorio"></recordatorio-desde-informe>
 	</article>
 </template>
 
 <script>
 import moment from 'moment'
+import RecordatorioDesdeInforme from '@/components/ia/RecordatorioDesdeInforme'
 
 /**
  * Tipo de bloque -> componente. Toda clave nueva del validador del backend
@@ -57,6 +68,7 @@ const COMPONENTE_POR_TIPO = {
  */
 const TIPOS = {
 	dia: { nombre: 'Rendimiento de ayer', icono: 'sun' },
+	caja: { nombre: 'Caja y vencimientos', icono: 'wallet2' },
 	tienda: { nombre: 'Tu tienda', icono: 'shop' },
 	compras: { nombre: 'Compras', icono: 'cart-plus' },
 	stock: { nombre: 'Stock', icono: 'boxes' },
@@ -72,6 +84,9 @@ export default {
 		BloqueTabla: () => import('@/components/ia/bloques/Tabla'),
 		BloqueArticulos: () => import('@/components/ia/bloques/Articulos'),
 		BloqueAcciones: () => import('@/components/ia/bloques/Acciones'),
+		// Directo y no en diferido: tiene que estar escuchando el show antes de que
+		// aparezca el botón que lo abre (ver RecordatorioDesdeInforme.vue).
+		RecordatorioDesdeInforme,
 	},
 	props: {
 		reporte: {
@@ -124,6 +139,19 @@ export default {
 		componente_de(bloque) {
 			return COMPONENTE_POR_TIPO[bloque.tipo]
 		},
+		/**
+		 * Botón "Mandar recordatorio por WhatsApp" de una acción `cobrar` (misión
+		 * "mostrador-caja-vencimientos"): el anfitrión abre el modal existente de
+		 * alertas > Cobros para ese cliente, encima del informe.
+		 *
+		 * @param {number} client_id
+		 */
+		abrir_recordatorio(client_id) {
+			if (!client_id || !this.$refs.recordatorio) {
+				return
+			}
+			this.$refs.recordatorio.abrir(client_id)
+		},
 	},
 }
 </script>
@@ -157,6 +185,9 @@ export default {
 
 		&--dia
 			background: #0B84F8
+
+		&--caja
+			background: #0F766E
 
 		&--tienda
 			background: #3A31FC

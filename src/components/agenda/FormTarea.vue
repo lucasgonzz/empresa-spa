@@ -477,4 +477,22 @@ export default {
 		border-color: var(--btn-peligro-texto)
 		color: var(--btn-peligro-texto)
 		box-shadow: none
+
+// Inputs del form con el mismo lenguaje que los modales "nuevos" del sistema (metodos de pago,
+// pago de cuenta corriente): radio de 8px y un anillo de foco suave, en vez del default GLOBAL de
+// src/sass/_inputs.sass (radio de 5px y un foco de borde de 3px solido + halo a 0.8 de opacidad,
+// pensado para un campo suelto y no para un formulario entero). Mismos dos tokens que ya usa
+// current-acounts/pago/Index.vue (`pago-cc__campos`): no se duplican como hex nuevos.
+// Ver contexto/estilo_interfaz_empresa.md: es el patron a repetir en todo modal nuevo, no algo automatico.
+#agenda-form-tarea
+	.form-control,
+	.custom-select,
+	textarea.form-control
+		border-radius: var(--metodo-pago-input-radius)
+		border-width: 1px
+
+		&:focus
+			border-width: 1px
+			border-color: var(--color-primary)
+			box-shadow: 0 0 0 3px var(--metodo-pago-focus-ring)
 </style>

@@ -3,9 +3,10 @@
 		<!--
 			Overlay a pantalla completa (fondo difuminado y oscurecido, como el modal de
 			video de la demo, TarjetaClip.vue). Cierra con el botón, con Escape (salvo con
-			una pregunta a medio escribir, ver on_document_keydown) y con un click en el
-			fondo: el click cuenta solo si el mousedown también fue en el fondo, para que
-			seleccionar texto del informe y soltar afuera no lo cierre.
+			una pregunta a medio escribir o con un modal abierto encima, ver
+			on_document_keydown) y con un click en el fondo: el click cuenta solo si el
+			mousedown también fue en el fondo, para que seleccionar texto del informe y
+			soltar afuera no lo cierre.
 		-->
 		<div
 		v-if="reporte"
@@ -190,14 +191,24 @@ export default {
 			this.viewport_width = window.innerWidth
 		},
 		/**
-		 * Escape cierra el informe, salvo que el cursor esté en el input de pregunta
-		 * CON texto escrito: ahí cerrar tiraría lo que la persona estaba redactando
-		 * (Escape es un reflejo para salir del campo, no del informe). Con el textarea
-		 * vacío o sin foco, cierra como siempre; el botón y el click en el fondo no
-		 * cambian.
+		 * Escape cierra el informe, salvo en dos casos:
+		 * - El cursor está en el input de pregunta CON texto escrito: ahí cerrar tiraría
+		 *   lo que la persona estaba redactando (Escape es un reflejo para salir del
+		 *   campo, no del informe). Con el textarea vacío o sin foco, cierra como siempre.
+		 * - 🔴 Hay un modal de BootstrapVue abierto encima (el recordatorio de cobro de la
+		 *   acción `cobrar`, RecordatorioDesdeInforme.vue): ese Escape es del modal. Su
+		 *   keydown (onEsc, puesto en el .modal) lo cierra pero no frena la propagación,
+		 *   así que el mismo tecleo llegaba hasta acá y cerraba también el informe de
+		 *   atrás. BootstrapVue marca el body con `modal-open` mientras haya un modal
+		 *   abierto y la saca recién después de la transición de salida, así que en este
+		 *   tecleo todavía está. Mismo corte que whatsapp/sidebar/Index.vue.
+		 * El botón y el click en el fondo no cambian.
 		 */
 		on_document_keydown(event) {
 			if (event.key !== 'Escape' || !this.reporte) {
+				return
+			}
+			if (document.body.classList.contains('modal-open')) {
 				return
 			}
 			if (this.$refs.pregunta && this.$refs.pregunta.retiene_escape(event)) {
@@ -244,11 +255,35 @@ export default {
 body.informe-abierto-activo
 	overflow: hidden
 
+	// 🔴 El recordatorio de cobro (acción `cobrar`, RecordatorioDesdeInforme.vue) se abre
+	// ENCIMA del informe. BootstrapVue cuelga cada b-modal de <body> en un div externo con
+	// id safeId('__BV_modal_outer_') y z-index INLINE (modalOuterStyle y computedAttrs en
+	// bootstrap-vue/esm/components/modal/modal.js). Ese z-index lo mide una sola vez sobre
+	// un div.modal-backdrop de prueba (getBaseZIndex, modal/helpers/modal-manager.js): con
+	// el CSS de Bootstrap da 1040 y el modal queda DETRÁS de este overlay (1062). Hoy da más
+	// (1095/1105) solo porque el CSS global de common-vue/components/support-chat pisa
+	// `body > .modal-backdrop:last-of-type`, que también le matchea al div de prueba: un
+	// efecto lateral ajeno en el que no hay que apoyarse. Por eso el escalón va fijo:
+	// overlay 1062 < modal 1064 < toasts 1066. Que en la práctica lo baje de ~1105 no deja
+	// nada encima: el botón y el overlay del chat de soporte van en 1052/1053, detrás del
+	// informe. El !important le gana al inline; sin la clase en <body> (informe cerrado) el
+	// modal vuelve a su escalón de siempre.
+	#recordatorio-cobro___BV_modal_outer_
+		z-index: 1064 !important
+
+	// Los toasts (vue-toast-notification, .v-toast en 1052 en theme-sugar.css) también
+	// quedaban detrás del overlay: el "Recordatorio encolado" o el motivo por el que no
+	// salió no se veían. Van arriba del modal, así el aviso se lee aunque siga abierto.
+	.v-toast
+		z-index: 1066
+
 .informe-abierto
 	position: fixed
 	inset: 0
 	// Arriba del botón flotante del chat (1054), del panel del chat (1055) y del
-	// modal de video de la demo (1060); abajo del LogoLoading (10000).
+	// modal de video de la demo (1060); abajo del LogoLoading (10000). Arriba de este
+	// overlay, y solo mientras está abierto: el recordatorio de cobro (1064) y los
+	// toasts (1066), ver body.informe-abierto-activo.
 	z-index: 1062
 	background: rgba(15, 18, 24, .45)
 	backdrop-filter: blur(6px)

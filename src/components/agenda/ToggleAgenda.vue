@@ -75,7 +75,13 @@ export default {
 		inset: 0
 		border-radius: 9999px
 		background: var(--toggle-track-off, #d1d5db)
-		transition: background 0.2s ease
+		// Sin borde, el apagado (gris muy claro en modo claro) se leía sin forma propia contra el
+		// fondo blanco del modal -- exactamente el "fondo blanco" que reportó Lucas al crear una
+		// tarea. El borde no cambia el color de fondo, solo le da un borde propio al control para
+		// que se lea como pastilla y no como una mancha. Mismo token que ya usa el resto de los
+		// campos del form (--color-border), en los dos estados: tambien se ve bien sobre el verde.
+		border: 1px solid var(--color-border)
+		transition: background 0.2s ease, border-color 0.2s ease
 
 	// La perilla es blanca en los dos modos, como en iOS: es un control, no una superficie.
 	&__perilla
