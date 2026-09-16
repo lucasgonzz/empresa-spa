@@ -3,6 +3,7 @@
 	title="Articulos en acopio"
 	hide-footer
 	size="lg"
+	@shown="set_local_items"
 	id="unidades-entregadas">
 
 		<b-button
@@ -80,13 +81,6 @@ export default {
 			return this.$store.state.sale.model
 		},
 	},
-    mounted() {
-        this.$root.$on('bv::modal::shown', (bvEvent, modalId) => {
-            if (modalId === 'unidades-entregadas') {
-            	this.set_local_items()
-            }
-        })
-    },
 	data() {
 		return {
 			local_items: [],
@@ -94,6 +88,16 @@ export default {
 	},
 
 	methods: {
+		/**
+		 * Rearma los renglones editables con los articulos de la venta. La dispara el @shown del
+		 * propio <b-modal>.
+		 *
+		 * Antes colgaba de un this.$root.$on('bv::modal::shown') registrado en mounted y nunca
+		 * desenganchado: el bus global vive toda la sesion, asi que cada montaje del componente
+		 * dejaba otro listener vivo y la apertura N del modal corria N veces este mismo armado.
+		 *
+		 * @returns {void}
+		 */
 		set_local_items() {
 			let items = []
 
