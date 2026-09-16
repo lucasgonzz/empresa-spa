@@ -67,12 +67,19 @@ let preferencias_pendientes = null
 let preferencias_timer_id = null
 
 /**
+ * true una vez que se comprobó que este backend no tiene todavía
+ * `GET clients/{id}/para-cuenta-corriente`. Ver `fetchClienteParaCuentaCorriente`: a partir
+ * de ahí se va derecho al endpoint viejo y no se gasta un 404 por clic.
+ */
+let sin_endpoint_de_cuenta_corriente = false
+
+/**
  * Estado de la espera de respuesta (polling de respaldo del broadcast, D46).
  * Patrón del modal de importación IA (ai-excel-import, grupos 297/299/303):
  * `token` identifica la corrida y las puertas de los helpers SOLO LO LEEN. El
  * único lugar autorizado a incrementarlo es la acción cancelarEsperaDeRespuesta;
  * las salidas naturales del polling (respuesta lista, 5 fallos de red seguidos,
- * corte a los 180s) simplemente dejan de agendar y limpian el timer.
+ * corte a los 300s) simplemente dejan de agendar y limpian el timer.
  */
 let espera = {
 	token: 0,
@@ -151,8 +158,22 @@ function resolver_accion(commit, payload, verbo) {
 }
 
 /**
- * true si el modal de cuenta corriente (components/ventas/modals/current-acounts/Index.vue,
- * `<b-modal id="current-acounts">`) está abierto. Lo usa refrescarPantallaDeLaAccion.
+ * Id del `<b-modal>` de cuenta corriente que monta el propio chat
+ * (`components/asistente-ia/CuentaCorrienteDeMencion.vue`, misión agente-ia-mano-derecha).
+ *
+ * 🔴 Tiene que ser DISTINTO de 'current-acounts', el de siempre. El chat se abre encima de
+ * cualquier pantalla, y las que ya montan `common/current-acounts/Index.vue` (Clientes,
+ * Ventas, Vender, Listado, Presupuestos y varias más) tendrían entonces dos `<b-modal>` con
+ * el mismo id: `$bvModal.show()` les dispara el evento a las dos juntas y se abren los dos,
+ * uno arriba del otro. Es el mismo problema —y la misma solución— que ya documenta el header
+ * del sidebar de WhatsApp con `whatsapp-current-acounts`.
+ *
+ * @type {String}
+ */
+export const MODAL_CUENTA_CORRIENTE_DEL_CHAT = 'asistente-ia-current-acounts'
+
+/**
+ * true si hay un modal de cuenta corriente abierto. Lo usa refrescarPantallaDeLaAccion.
  *
  * 🔴 No alcanza con que el store current_acount tenga from_model y from_credit_account:
  * nadie los limpia al cerrar el modal (medido con grep el 15/9/2026), así que después de
@@ -161,6 +182,12 @@ function resolver_accion(commit, payload, verbo) {
  * modal.js: `this.isHidden ? h() : h(BVTransporter, ...)`) y el `.modal` lleva el id: si el
  * elemento está, el modal está abierto.
  *
+ * 🔴 Se miran los DOS ids, no solo el de siempre. Desde la misión agente-ia-mano-derecha el
+ * chat monta su propio modal (ver la constante de arriba), y es el único que existe cuando
+ * la cuenta corriente se abrió desde una mención parado en una pantalla que no monta el de
+ * siempre. Con un solo id acá, confirmar un pago por el chat con ESE modal abierto no
+ * refrescaba la lista: el movimiento recién aparecía al reabrir la cuenta.
+ *
  * @returns {Boolean}
  */
 function modal_de_cuenta_corriente_abierto() {
@@ -168,6 +195,7 @@ function modal_de_cuenta_corriente_abierto() {
 		return false
 	}
 	return Boolean(document.getElementById('current-acounts'))
+		|| Boolean(document.getElementById(MODAL_CUENTA_CORRIENTE_DEL_CHAT))
 }
 
 /**
@@ -224,7 +252,7 @@ export default {
 		// `user.chat_ia_panel_width` o el default de 984.
 		panel_width: null,
 
-		// true cuando la espera de la respuesta pasó los 180s sin resolverse (el texto
+		// true cuando la espera de la respuesta pasó los 300s sin resolverse (el texto
 		// de demora lo muestra la conversación; ver R8 del plan: cola compartida).
 		respuesta_demorada: false,
 
@@ -233,6 +261,21 @@ export default {
 		// el watch del panel pediría la página de una conversación todavía vacía y
 		// el setMessages pisaría el globo optimista que acaba de subir.
 		seleccion_sin_recarga: false,
+
+		// Pedido de abrir la cuenta corriente de un cliente, puesto por el clic en una
+		// mención (MessageBubble) y atendido por CuentaCorrienteDeMencion.vue, que es
+		// quien tiene el <b-modal> montado: { client_id, nombre, token }. null = ninguno.
+		//
+		// 🔴 `token` es un contador que sube en cada clic y no decora: sin él, tocar dos
+		// veces seguidas la MISMA mención deja el objeto igual y el watch no dispara, así
+		// que después de cerrar el modal no se podría volver a abrir el mismo cliente.
+		mencion_cuenta_corriente: null,
+
+		// Fichas de artículo ya traídas, por id (la tarjeta del hover). Se llenan una sola
+		// vez por artículo y por carga de página: son datos de solo lectura que se muestran
+		// un segundo, y volver a pedirlas cada vez que el mouse pasa por encima del mismo
+		// nombre sería un request por gesto.
+		fichas_de_articulos: {},
 	},
 	getters: {
 		/**
@@ -377,6 +420,43 @@ export default {
 		},
 		setSeleccionSinRecarga(state, value) {
 			state.seleccion_sin_recarga = value
+		},
+		/**
+		 * Deja pedido que se abra la cuenta corriente de un cliente (clic en una mención).
+		 * Lo atiende CuentaCorrienteDeMencion.vue.
+		 *
+		 * @param {Object} state
+		 * @param {Object} payload { client_id, nombre }
+		 */
+		pedirCuentaCorrienteDeCliente(state, payload) {
+			if (!payload || !payload.client_id) {
+				return
+			}
+			let token = state.mencion_cuenta_corriente ? state.mencion_cuenta_corriente.token + 1 : 1
+			state.mencion_cuenta_corriente = {
+				client_id: payload.client_id,
+				nombre: payload.nombre || '',
+				token: token,
+			}
+		},
+		/**
+		 * Guarda la ficha de un artículo en la memoria de la sesión.
+		 *
+		 * Se reasigna el objeto entero en vez de escribir la clave: en Vue 2 una clave
+		 * agregada a un objeto no es reactiva, y acá hace falta que lo sea (la tarjeta del
+		 * hover se dibuja leyendo esto). Object.assign evita tener que importar Vue solo
+		 * para un $set.
+		 *
+		 * @param {Object} state
+		 * @param {Object} payload { id, ficha }
+		 */
+		setFichaDeArticulo(state, payload) {
+			if (!payload || !payload.id) {
+				return
+			}
+			let agregado = {}
+			agregado[payload.id] = payload.ficha
+			state.fichas_de_articulos = Object.assign({}, state.fichas_de_articulos, agregado)
 		},
 	},
 	actions: {
@@ -773,8 +853,10 @@ export default {
 		 * Polling de respaldo del broadcast (D46), molde ai-excel-import: token de
 		 * corrida chequeado en las CUATRO puertas (antes de la consulta, en el .then,
 		 * en el .catch y en el agendador), 5 fallos de red seguidos para rendirse,
-		 * cadencia de 3s los primeros 30s y 6s después, y corte a los 180s dejando
-		 * el aviso de demora (R8: la cola es compartida con las importaciones).
+		 * cadencia de 3s los primeros 30s y 6s después, y corte a los 300s dejando
+		 * el aviso de demora (R8: la cola es compartida con las importaciones). El
+		 * porqué de los 300s --y de con qué números del backend está atado-- está
+		 * donde se aplica el corte, en agendar_proxima_consulta().
 		 * Arranca al enviar y se apaga en cuanto el mensaje deja de estar pendiente,
 		 * por evento o por el propio polling.
 		 *
@@ -861,7 +943,25 @@ export default {
 
 				let transcurrido = Date.now() - inicio
 
-				if (transcurrido >= 180000) {
+				// 🔴 300000 (5 min) y NO 180000, y el número está ATADO a tres del backend
+				// (misión agente-ia-mano-derecha, bloque A3, 16/9/2026). La cadena, con la
+				// cuenta hecha:
+				//
+				//   timeout por llamada a Anthropic   60 s  (AsistenteIaService::TIMEOUT_SEGUNDOS)
+				//   presupuesto del loop de tools    210 s  (PRESUPUESTO_SEGUNDOS)
+				//   peor caso real           210 + 60 = 270 s  (el presupuesto se chequea ANTES
+				//                                   de cada llamada: la que está en vuelo no se corta)
+				//   timeout del job                  300 s  (ResponderMensajeChatIaJob)
+				//
+				// Este corte tiene que quedar por encima de los 270, no de los 210. Y no es
+				// cosmético: acá no se muestra solamente el aviso de demora --se llama a
+				// terminar_espera_sin_invalidar() y el polling DEJA DE PEDIR--. Con Pusher
+				// caído, una respuesta que llega a los 200 s no le aparecía nunca al dueño en
+				// esa pestaña. Con el presupuesto viejo de 150 s el agujero ya existía; con
+				// 210 se agrandaba.
+				//
+				// Si alguien toca uno de los cuatro números, tiene que tocar los cuatro.
+				if (transcurrido >= 300000) {
 					terminar_espera_sin_invalidar()
 					// El mensaje sigue 'pendiente' en el backend: el indicador de
 					// pensando queda, con el aviso de demora abajo, y si al final la
@@ -931,6 +1031,111 @@ export default {
 						console.log(err)
 					})
 			}, 500)
+		},
+		/**
+		 * Ficha de un artículo para la tarjeta del hover (§2 del contrato de la misión
+		 * agente-ia-mano-derecha): foto, precio, listas, proveedor y stock por depósito en
+		 * UN request.
+		 *
+		 * Se memoriza por id: el mouse cruza el mismo nombre varias veces mientras se lee
+		 * un mensaje, y sin esto cada pasada sería un pedido nuevo. El precio y el stock
+		 * quedan congelados hasta recargar la página, y está bien para lo que es: una
+		 * ojeada de dos segundos, no la pantalla desde la que se decide nada. El listado de
+		 * artículos y Vender siguen siendo la fuente.
+		 *
+		 * 🔴 `skip_global_error_event`: el fallo lo cuenta la propia tarjeta. Sin la
+		 * bandera, el interceptor de main.js además dispara errorEvent y la persona ve un
+		 * toast de error por pasar el mouse por encima de una palabra.
+		 *
+		 * @param {Object} contexto
+		 * @param {Number} article_id
+		 * @returns {Promise} resuelve con la ficha; rechaza sin valor útil (la tarjeta solo
+		 *                    necesita saber que no se pudo).
+		 */
+		fetchFichaArticulo({ state, commit }, article_id) {
+			if (!article_id) {
+				return Promise.reject()
+			}
+			if (state.fichas_de_articulos[article_id]) {
+				return Promise.resolve(state.fichas_de_articulos[article_id])
+			}
+			return axios.get('/api/articles/' + article_id + '/ficha-asistente', {
+				skip_global_error_event: true,
+			})
+				.then(res => {
+					// El contrato dibuja la ficha en la raíz de la respuesta, pero el resto
+					// de este API contesta { model: ... }: se aceptan las dos formas para
+					// que un ajuste en esa punta no deje la tarjeta vacía sin explicación.
+					let ficha = (res.data && res.data.model) ? res.data.model : res.data
+					commit('setFichaDeArticulo', { id: article_id, ficha: ficha })
+					return ficha
+				})
+				.catch(err => {
+					console.log(err)
+					return Promise.reject()
+				})
+		},
+		/**
+		 * El cliente completo, con sus `credit_accounts`, para abrir el modal de cuenta
+		 * corriente desde una mención (§3 del contrato).
+		 *
+		 * El camino es `GET clients/{id}/para-cuenta-corriente`, que devuelve lo justo y ya
+		 * resuelve del lado servidor qué cuentas corresponden (la de dólares solo con la
+		 * extensión `ventas_en_dolares`).
+		 *
+		 * ⚠️ Y si ese endpoint no está, se cae a `GET client/{id}` —el mismo que usa el
+		 * header del sidebar de WhatsApp por `client/getModel`, que trae el cliente con
+		 * `Client::scopeWithAll()`—. No es un adorno: los dos repos no llegan a producción
+		 * al mismo tiempo, así que puede haber esta SPA hablando con un API que todavía no
+		 * tiene la ruta. El 404 se comprueba UNA vez por carga de página y de ahí en más se
+		 * va derecho al viejo. El viejo pesa más pero trae de más, no de menos
+		 * (`limite_credito`, `current_acounts_count`), así que el modal se ve igual o mejor.
+		 *
+		 * @param {Object} contexto
+		 * @param {Number} client_id
+		 * @returns {Promise} resuelve con el cliente; rechaza sin valor útil.
+		 */
+		fetchClienteParaCuentaCorriente(contexto, client_id) {
+			if (!client_id) {
+				return Promise.reject()
+			}
+			let pedir_al_viejo = function () {
+				return axios.get('/api/client/' + client_id, { skip_global_error_event: true })
+					.then(res => {
+						return (res.data && res.data.model) ? res.data.model : res.data
+					})
+			}
+
+			if (sin_endpoint_de_cuenta_corriente) {
+				return pedir_al_viejo()
+					.catch(err => {
+						console.log(err)
+						return Promise.reject()
+					})
+			}
+
+			return axios.get('/api/clients/' + client_id + '/para-cuenta-corriente', {
+				skip_global_error_event: true,
+			})
+				.then(res => {
+					return (res.data && res.data.model) ? res.data.model : res.data
+				})
+				.catch(err => {
+					let status = err.response ? err.response.status : 0
+					// 404 y 405 son los dos que devuelve Laravel cuando la ruta no existe
+					// (según cómo esté armado el grupo). Un 403, un 500 o un corte de red
+					// NO son "no está la ruta" y no habilitan el camino viejo.
+					if (status != 404 && status != 405) {
+						console.log(err)
+						return Promise.reject()
+					}
+					sin_endpoint_de_cuenta_corriente = true
+					return pedir_al_viejo()
+						.catch(err_viejo => {
+							console.log(err_viejo)
+							return Promise.reject()
+						})
+				})
 		},
 	},
 }
