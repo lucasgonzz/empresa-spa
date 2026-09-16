@@ -456,6 +456,20 @@ export default {
 			)
 			.then(confirmado => {
 				preguntando_por_combo = false
+				/*
+					🔴 Son TRES respuestas, no dos. msgBoxConfirm de BootstrapVue RESUELVE (no
+					rechaza) con `null` cuando el cartel se cierra sin contestar: Escape, click
+					afuera o la X. Si `null` cae en el else, un Escape sin querer deja el combo
+					anotado como rechazado y no se vuelve a ofrecer hasta que el remito deje de
+					alcanzar para armarlo -- o sea que el vendedor pierde el combo en silencio por
+					apretar una tecla.
+
+					El .catch de abajo NO cubria este caso: nunca se ejecuta por un cierre, solo
+					por un error de verdad.
+				*/
+				if (confirmado === null || typeof confirmado == 'undefined') {
+					return
+				}
 				if (confirmado) {
 					self.armar_combo(candidato)
 				} else {
@@ -465,7 +479,8 @@ export default {
 				}
 			})
 			.catch(err => {
-				/* El cartel se cerro sin responder (Escape, click afuera): no se arma ni se rechaza */
+				/* Un error de verdad al abrir el cartel. El cierre sin responder NO pasa por aca:
+				   se resuelve con null y lo maneja el .then. */
 				preguntando_por_combo = false
 				console.log(err)
 			})
