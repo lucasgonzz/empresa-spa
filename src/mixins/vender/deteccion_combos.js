@@ -294,22 +294,44 @@ export function texto_de_la_pregunta(candidato) {
 */
 const DEMORA_DETECCION = 700
 
+/*
+	🔴 ESTADO DE MODULO, NO data() DEL COMPONENTE. Y esto no es un atajo.
+
+	El mixin termina mezclado en VARIOS componentes del remito a la vez -- el buscador de la
+	cabecera, el de combos y la tabla de articulos, todos pasan por mixins/vender/index.js -- y
+	cada uno tendria su propio data(). O sea: el vendedor rechaza el combo desde la tabla, agrega
+	otro articulo desde la cabecera, y el cartel vuelve a aparecer porque ESE componente no se
+	entero del rechazo. Lo mismo con el cartel abierto: dos componentes podrian abrir dos.
+
+	El remito es uno solo, asi que el estado de la deteccion tambien. Un modulo ES es un singleton,
+	y eso es exactamente lo que hace falta aca.
+*/
+
+/*
+	Combos que el vendedor rechazo. Se les levanta el rechazo cuando el remito deja de alcanzar
+	para armarlos -- o sea que si despues vuelve a alcanzar, se pregunta de nuevo. Preguntar en
+	cada tecleo es inusable, que es justo lo que Lucas pidio evitar.
+*/
+let combos_rechazados = []
+
+/* Un solo cartel a la vez */
+let preguntando_por_combo = false
+
+let timer_deteccion = null
+
+/**
+ * Deja la deteccion como recien arrancada. La llama limpiar_vender y la usan las pruebas.
+ */
+export function reiniciar_estado_de_deteccion() {
+	if (timer_deteccion) {
+		clearTimeout(timer_deteccion)
+		timer_deteccion = null
+	}
+	combos_rechazados = []
+	preguntando_por_combo = false
+}
+
 export default {
-	data() {
-		return {
-			/*
-				🔴 Guard anti-repregunta. Si el vendedor dice que NO a un combo, ese combo no se le
-				vuelve a ofrecer mientras siga armable. Se lo saca de la lista recien cuando el
-				remito deja de alcanzar para armarlo -- o sea que si despues vuelve a alcanzar, se
-				pregunta de nuevo. Preguntar en cada tecleo es inusable, que es justo lo que pidio
-				evitar Lucas.
-			*/
-			combos_rechazados: [],
-			/* Un solo cartel a la vez: si ya hay uno abierto, la deteccion no encola otro */
-			preguntando_por_combo: false,
-			timer_deteccion_combos: null,
-		}
-	},
 	methods: {
 
 		/**
@@ -355,14 +377,14 @@ export default {
 				return
 			}
 
-			if (this.timer_deteccion_combos) {
-				clearTimeout(this.timer_deteccion_combos)
+			if (timer_deteccion) {
+				clearTimeout(timer_deteccion)
 			}
 
 			let self = this
 
-			this.timer_deteccion_combos = setTimeout(() => {
-				self.timer_deteccion_combos = null
+			timer_deteccion = setTimeout(() => {
+				timer_deteccion = null
 				self.detectar_combos()
 			}, DEMORA_DETECCION)
 		},
@@ -372,7 +394,7 @@ export default {
 		 */
 		detectar_combos() {
 
-			if (!this.deteccion_de_combos_activa() || this.preguntando_por_combo) {
+			if (!this.deteccion_de_combos_activa() || preguntando_por_combo) {
 				return
 			}
 
@@ -386,12 +408,12 @@ export default {
 				dijo que no, saco el taladro y despues lo volvio a cargar, la pregunta vuelve.
 			*/
 			let armables_ahora = candidatos.map(candidato => candidato.combo.id)
-			this.combos_rechazados = this.combos_rechazados.filter(combo_id => {
+			combos_rechazados = combos_rechazados.filter(combo_id => {
 				return armables_ahora.indexOf(combo_id) != -1
 			})
 
 			let candidato = candidatos.find(_candidato => {
-				return this.combos_rechazados.indexOf(_candidato.combo.id) == -1
+				return combos_rechazados.indexOf(_candidato.combo.id) == -1
 			})
 
 			if (typeof candidato == 'undefined') {
@@ -412,7 +434,7 @@ export default {
 			let lineas = texto_de_la_pregunta(candidato)
 			let h = this.$createElement
 
-			this.preguntando_por_combo = true
+			preguntando_por_combo = true
 
 			this.$bvModal.msgBoxConfirm(
 				lineas.map(linea => h('div', { class: 'mb-1' }, linea)),
@@ -423,18 +445,18 @@ export default {
 				}
 			)
 			.then(confirmado => {
-				self.preguntando_por_combo = false
+				preguntando_por_combo = false
 				if (confirmado) {
 					self.armar_combo(candidato)
 				} else {
-					if (self.combos_rechazados.indexOf(candidato.combo.id) == -1) {
-						self.combos_rechazados.push(candidato.combo.id)
+					if (combos_rechazados.indexOf(candidato.combo.id) == -1) {
+						combos_rechazados.push(candidato.combo.id)
 					}
 				}
 			})
 			.catch(err => {
 				/* El cartel se cerro sin responder (Escape, click afuera): no se arma ni se rechaza */
-				self.preguntando_por_combo = false
+				preguntando_por_combo = false
 				console.log(err)
 			})
 		},
@@ -476,6 +498,14 @@ export default {
 				: 'el combo'
 
 			this.$toast.success('Se armo ' + cuantos + ' "' + candidato.combo.name + '"')
+
+			/*
+				Otra pasada: con el remito ya modificado puede quedar armable OTRO combo -- ese es
+				el caso de dos combos que se peleaban por el mismo articulo. No hay ciclo posible
+				con el que acaba de armarse: se consumio `veces`, que es el maximo, asi que al
+				menos uno de sus articulos quedo por debajo de lo que pide.
+			*/
+			this.programar_deteccion_de_combos()
 		},
 
 		/**
@@ -518,12 +548,7 @@ export default {
 		 * Borra el estado de la deteccion. Lo llama limpiar_vender: remito nuevo, rechazos nuevos.
 		 */
 		limpiar_deteccion_de_combos() {
-			if (this.timer_deteccion_combos) {
-				clearTimeout(this.timer_deteccion_combos)
-				this.timer_deteccion_combos = null
-			}
-			this.combos_rechazados = []
-			this.preguntando_por_combo = false
+			reiniciar_estado_de_deteccion()
 		},
 	},
 }
