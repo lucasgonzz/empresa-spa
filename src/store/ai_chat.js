@@ -224,6 +224,12 @@ export default {
 		conversations: [],
 		// true mientras se pide GET ai-conversations.
 		loading_conversations: false,
+		// Texto del fallo de la última carga de la bandeja, o '' si salió bien.
+		// Existe para que el panel NO quede vacío y mudo cuando el índice falla: el
+		// .catch de getConversations sólo hacía console.log, así que un 403 (empleado
+		// contra SoloElDuenoIa) o un corte de red se veían exactamente igual que "todavía
+		// no hay conversaciones". Lo muestra ConversationList.vue.
+		error_conversations: '',
 
 		// Id de la conversación abierta en el panel. null = conversación nueva sin crear
 		// todavía (se crea recién al enviar el primer mensaje, como en Claude).
@@ -301,6 +307,9 @@ export default {
 		},
 		setLoadingConversations(state, value) {
 			state.loading_conversations = value
+		},
+		setErrorConversations(state, value) {
+			state.error_conversations = value || ''
 		},
 		/**
 		 * Inserta o actualiza una conversación y reordena por `last_message_at`
@@ -465,6 +474,7 @@ export default {
 		 */
 		getConversations({ commit }) {
 			commit('setLoadingConversations', true)
+			commit('setErrorConversations', '')
 			return axios.get('/api/ai-conversations')
 				.then(res => {
 					commit('setLoadingConversations', false)
@@ -473,6 +483,25 @@ export default {
 				})
 				.catch(err => {
 					commit('setLoadingConversations', false)
+					/*
+						🔴 Este .catch se tragaba el fallo con un console.log y nada más, así que
+						la bandeja quedaba vacía y muda: un 403 de `SoloElDuenoIa` se veía igual
+						que una cuenta sin conversaciones. Ahora el motivo queda en el estado y
+						ConversationList.vue lo muestra en el mismo lugar del aviso.
+
+						El mensaje del backend manda cuando viene (es el que explica el caso: "Solo
+						el dueño puede usar el asistente de IA."); si no hay respuesta —corte de
+						red, timeout— se dice eso, que es lo único que se sabe.
+					*/
+					let motivo = ''
+					if (err && err.response && err.response.data && err.response.data.message) {
+						motivo = err.response.data.message
+					} else if (err && !err.response) {
+						motivo = 'No pudimos conectarnos con el servidor. Revisá tu conexión y volvé a intentar.'
+					} else {
+						motivo = 'No pudimos cargar tus conversaciones. Volvé a intentar en un momento.'
+					}
+					commit('setErrorConversations', motivo)
 					console.log(err)
 				})
 		},
