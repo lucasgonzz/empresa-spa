@@ -1,7 +1,8 @@
 import computed from '@/mixins/vender/computed'
 import vender_set_total from '@/mixins/vender_set_total'
+import deteccion_combos from '@/mixins/vender/deteccion_combos'
 export default {
-	mixins: [computed, vender_set_total],
+	mixins: [computed, vender_set_total, deteccion_combos],
 	methods: {
 		personalizar_price_en_vender() {
 
@@ -73,6 +74,14 @@ export default {
 					repetido = this.check_price_range(repetido)
 
 					this.$store.commit('vender/updateItem', repetido)
+
+					/*
+						Segundo punto donde cambia la cantidad de algo en el remito: el vendedor
+						volvio a pasar un articulo que ya estaba y se le sumo cantidad. Es
+						exactamente el caso del ejemplo de Lucas -- carga la tercera mecha y recien
+						ahi alcanza para el combo.
+					*/
+					this.programar_deteccion_de_combos()
 
 					this.setTotal()
 					this.limpiar_item()

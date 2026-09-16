@@ -66,8 +66,13 @@ export default {
 						if (!this.ya_esta_en_los_articulos_para_vender(article_to_add)) {
 							
 							this.$store.commit('vender/setItem', article_to_add)
-							
-							this.add_item_to_sale()
+
+							/*
+								En false la deteccion de combos: estos articulos los pone el sistema
+								al abrir VENDER, no el vendedor. Preguntarle si arma un combo antes
+								de que haya cargado nada seria ruido.
+							*/
+							this.add_item_to_sale(false)
 							console.log('Se agrego default article: '+article_to_add.name)
 						} else {
 						}
