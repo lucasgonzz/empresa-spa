@@ -50,6 +50,16 @@ export function motivo_de_exclusion(item) {
 		return 'tiene variante'
 	}
 
+	/*
+		Articulo marcado para escribirle el precio a mano EN CADA VENTA. Nunca va a poder entrar en
+		un combo, con precio escrito o sin el. Y tiene un motivo extra para quedar afuera: al
+		agregarlo, add_item_to_sale() le pone el foco al input de precio a los 500 ms -- si el
+		cartel apareciera justo despues, le robaria el foco al vendedor mientras va a tipear.
+	*/
+	if (item.personalizar_price_en_vender) {
+		return 'precio a mano en cada venta'
+	}
+
 	/* Precio escrito a mano en el renglon: el combo no puede representarlo */
 	if (
 		typeof item.price_vender_personalizado != 'undefined'
