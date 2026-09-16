@@ -57,7 +57,7 @@
 			</b-col>
 
 			<b-col md="6" class="m-t-10">
-				<label class="form-label">Concepto de gasto de la comisión</label>
+				<label class="form-label">Sub categoría de gasto de la comisión</label>
 				<b-form-select
 				v-model="form.expense_concept_id"
 				:options="expense_concept_options"></b-form-select>

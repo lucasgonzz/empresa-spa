@@ -18,7 +18,16 @@ export default {
 		],
 	},
 
-	'agenda-vista-lista': {
+	/*
+		🔴 Con "nav-item-" y no "agenda-vista-*" a secas: desde la mision agenda-ajustes-ux
+		(15/9/2026) estas tres pestañas las dibuja el HorizontalNav compartido
+		(common-vue/components/horizontal-nav/Index.vue), y su metodo testid() SIEMPRE antepone
+		"nav-item-" al testid que se le pasa en cada item (sea el explicito o el que arma solo del
+		nombre visible) -- no hay forma de pedirle el testid pelado. Sin el prefijo acá, el data-
+		testid real del DOM ("nav-item-agenda-vista-lista") no matcheaba ninguna clave de este
+		indice y las tres descripciones dejaban de aparecer, sin ningun error que lo avisara.
+	*/
+	'nav-item-agenda-vista-lista': {
 		titulo: 'Vista Lista',
 		que_hace: 'Muestra las tareas pendientes agrupadas por urgencia: Vencidas, Hoy, Esta semana (hasta el domingo) y Próximas (hasta 60 días).',
 		repercute: [
@@ -27,7 +36,7 @@ export default {
 		],
 	},
 
-	'agenda-vista-calendario': {
+	'nav-item-agenda-vista-calendario': {
 		titulo: 'Vista Calendario',
 		que_hace: 'Muestra el mes en una grilla de lunes a domingo con las tareas de cada día; al tocar un día, sus tareas se listan abajo para completarlas o editarlas.',
 		repercute: [
@@ -36,7 +45,7 @@ export default {
 		],
 	},
 
-	'agenda-vista-realizadas': {
+	'nav-item-agenda-vista-realizadas': {
 		titulo: 'Vista Realizadas',
 		que_hace: 'Lista lo que se marcó como hecho en un rango de fechas (últimos 30 días por defecto), con el gasto registrado si lo hubo.',
 	},
@@ -55,7 +64,7 @@ export default {
 
 	'agenda-confirmar-gasto': {
 		titulo: 'Confirmar y registrar el gasto',
-		que_hace: 'Marca la tarea como hecha y da de alta el gasto con el concepto de la tarea, el monto y los métodos de pago indicados.',
+		que_hace: 'Marca la tarea como hecha y da de alta el gasto con la sub categoría de la tarea, el monto y los métodos de pago indicados.',
 		repercute: [
 			'Crea un gasto en Tesorería → Gastos con observación "Agenda: <tarea>", visible en los reportes de gastos.',
 			'Cada método de pago con caja mueve esa caja: se registra un egreso por el monto de esa fila.',
@@ -101,7 +110,7 @@ export default {
 			'Lo que ya se marcó como hecho no cambia.',
 			'Asociar un gasto no crea ningún gasto todavía: se crea al marcar la tarea como hecha.',
 		],
-		requiere: 'Detalle y fecha. Si se repite: cada cuánto. Si tiene gasto: el concepto (se crean en ABM → Gastos).',
+		requiere: 'Detalle y fecha. Si se repite: cada cuánto. Si tiene gasto: la sub categoría (se crean en ABM → Gastos).',
 	},
 
 	'agenda-eliminar-tarea': {
@@ -123,7 +132,7 @@ export default {
 
 	'agenda-tiene-gasto': {
 		titulo: 'Tiene un gasto asociado',
-		que_hace: 'Vincula la tarea a un concepto de gasto y un monto estimado, para que al marcarla como hecha se pregunte cómo se pagó y se registre el gasto.',
+		que_hace: 'Vincula la tarea a una sub categoría de gasto y un monto estimado, para que al marcarla como hecha se pregunte cómo se pagó y se registre el gasto.',
 		repercute: [
 			'El monto estimado es solo una sugerencia: se puede cambiar al marcar la tarea como hecha.',
 		],

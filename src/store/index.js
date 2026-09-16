@@ -192,6 +192,7 @@ import pdf_column_option from '@/store/pdf_column_option'
 import pdf_column_profile from '@/store/pdf_column_profile'
 
 import platform from '@/store/platform'
+import article_embeddings_estado from '@/store/article_embeddings_estado'
 import platform_connector from '@/store/platform_connector'
 import whatsapp_bot_config from '@/store/whatsapp_bot_config'
 import whatsapp_chat from '@/store/whatsapp_chat'
@@ -470,6 +471,7 @@ export default new Vuex.Store({
 
         platform,
         platform_connector,
+        article_embeddings_estado,
         whatsapp_bot_config,
         whatsapp_chat,
         whatsapp_template,
