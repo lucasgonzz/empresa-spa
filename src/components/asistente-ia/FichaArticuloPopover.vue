@@ -477,6 +477,22 @@ export default {
 	&.bs-popover-right > .arrow::before
 		border-right-color: var(--ficha-borde)
 
+	// 🔴 Y otra vez, pero anidado bajo html.dark-mode, porque si no NO GANA. develop sumó
+	// el 16/9 (53eaad42) una regla global `html.dark-mode .popover.bs-popover-* > .arrow::after`
+	// que pesa (0,4,2); el bloque de arriba, scopeado a esta tarjeta, pesa (0,4,1) y pierde.
+	// Medido: cuerpo rgb(63,70,80) y flecha rgb(46,51,58), o sea una punta de otro color
+	// colgando de la tarjeta. Anidarlo suma la clase de la tarjeta y llega a (0,5,2).
+	// Es el mismo escalón de especificidad que ya hubo que hacer con el `background`.
+	html.dark-mode &
+		&.bs-popover-top > .arrow::after
+			border-top-color: var(--ficha-fondo)
+		&.bs-popover-bottom > .arrow::after
+			border-bottom-color: var(--ficha-fondo)
+		&.bs-popover-left > .arrow::after
+			border-left-color: var(--ficha-fondo)
+		&.bs-popover-right > .arrow::after
+			border-right-color: var(--ficha-fondo)
+
 	// Entrada corta: la tarjeta aparece después de una demora que ya se esperó, así que la
 	// animación tiene que acompañar, no sumarse.
 	&.fade
