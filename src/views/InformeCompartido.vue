@@ -9,9 +9,11 @@
 			</p>
 
 			<!--
-				Vencido y no encontrado se dicen distinto a propósito: "este link venció" le
-				dice al dueño qué hacer (pedir otro), y "no encontramos el informe" lo manda a
-				pensar que el informe se borró.
+				Los tres estados de error se dicen distinto a propósito, porque la acción que le
+				toca al dueño es distinta en cada uno. Mezclarlos es peor que no decir nada: con
+				mala señal —que es la condición NORMAL de esta pantalla, el dueño la abre desde el
+				celular en la calle— leía que su link estaba mal, le pedía otro al asistente y le
+				llegaba uno igual de "roto".
 			-->
 			<div
 			v-else-if="estado == 'vencido'"
@@ -25,7 +27,24 @@
 			</div>
 
 			<div
-			v-else-if="estado == 'error'"
+			v-else-if="estado == 'sin_conexion'"
+			class="informe-compartido__pantalla">
+				<i class="bi bi-wifi-off informe-compartido__icono"></i>
+				<p class="informe-compartido__texto">No pudimos conectarnos.</p>
+				<p class="informe-compartido__subtexto">
+					El link está bien: lo que falló fue la conexión. Probá de nuevo en un momento.
+				</p>
+				<b-button
+				variant="primary"
+				class="informe-compartido__reintentar"
+				@click="buscar">
+					<i class="bi bi-arrow-clockwise"></i>
+					Reintentar
+				</b-button>
+			</div>
+
+			<div
+			v-else-if="estado == 'no_encontrado'"
 			class="informe-compartido__pantalla">
 				<i class="bi bi-file-earmark-x informe-compartido__icono"></i>
 				<p class="informe-compartido__texto">No encontramos este informe.</p>
@@ -72,36 +91,84 @@ export default {
 	},
 	data() {
 		return {
-			// 'cargando' | 'listo' | 'vencido' | 'error'
+			// 'cargando' | 'listo' | 'vencido' | 'sin_conexion' | 'no_encontrado'
 			estado: 'cargando',
 			reporte: null,
 		}
 	},
 	mounted() {
-		let self = this
+		this.buscar()
+	},
+	methods: {
+		/**
+		 * Pide el informe. Es también lo que corre el botón Reintentar, que es el único camino de
+		 * vuelta que tiene esta pantalla: acá no hay menú, ni sesión, ni ninguna otra cosa que
+		 * tocar.
+		 *
+		 * 🔴 `skip_global_error_event`: el aviso de "no pudimos conectarnos" ya lo da la pantalla,
+		 * con el texto correcto y con el botón. Sin la bandera se suma ADEMÁS el toast global del
+		 * interceptor (src/main.js), que dice lo mismo y tapa media pantalla en un teléfono.
+		 *
+		 * Sin `async/await` (regla dura del repo): `.then()` / `.catch()` con `let self = this`.
+		 *
+		 * @returns {void}
+		 */
+		buscar() {
+			let self = this
 
-		let token = this.$route.params.token
+			let token = this.$route.params.token
 
-		if (!token) {
-			this.estado = 'error'
-			return
-		}
+			if (!token) {
+				this.estado = 'no_encontrado'
+				return
+			}
 
-		this.$axios.get('/api/informe-compartido/' + encodeURIComponent(token))
-			.then(res => {
-				if (!res || !res.data || !res.data.model) {
-					self.estado = 'error'
-					return
-				}
-				self.reporte = res.data.model
-				self.estado = 'listo'
+			this.estado = 'cargando'
+
+			this.$api.get('informe-compartido/' + encodeURIComponent(token), {
+				skip_global_error_event: true,
 			})
-			.catch(err => {
-				console.log(err)
-				// 410 es el link vencido; cualquier otra cosa (404, 500, red) es "no encontrado".
-				let status = err && err.response ? err.response.status : null
-				self.estado = status == 410 ? 'vencido' : 'error'
-			})
+				.then(res => {
+					if (!res || !res.data || !res.data.model) {
+						self.estado = 'no_encontrado'
+						return
+					}
+					self.reporte = res.data.model
+					self.estado = 'listo'
+				})
+				.catch(err => {
+					console.log(err)
+					self.estado = self.estado_del_error(err)
+				})
+		},
+		/**
+		 * Qué pantalla corresponde a cada falla.
+		 *
+		 * 🔴 SEPARAR LA RED DEL LINK ES EL PUNTO DE ESTE MÉTODO. Antes cualquier `catch` que no
+		 * fuera 410 mostraba "revisá que el link esté completo", y eso es exactamente lo que NO
+		 * hay que decirle a alguien que perdió señal: el link está bien y pedir otro no arregla
+		 * nada. Solo el 404 habla del link.
+		 *
+		 * Un error de red o un timeout de axios no traen `response` (ver el interceptor de
+		 * src/main.js), y un 5xx es un problema del servidor, no del dueño: los dos ofrecen
+		 * reintentar.
+		 *
+		 * @param {Object} err Error de axios.
+		 * @returns {String}
+		 */
+		estado_del_error(err) {
+			let status = err && err.response ? err.response.status : null
+
+			if (status === 410) {
+				return 'vencido'
+			}
+
+			if (status === 404) {
+				return 'no_encontrado'
+			}
+
+			return 'sin_conexion'
+		},
 	},
 }
 </script>
@@ -146,6 +213,14 @@ export default {
 		color: var(--color-text-secondary, #6c757d)
 		margin: 0
 		max-width: 420px
+
+	// El único botón de la pantalla. Separado del texto para que en un teléfono no quede pegado
+	// al párrafo y se toque sin querer.
+	&__reintentar
+		margin-top: 18px
+		display: inline-flex
+		align-items: center
+		gap: 8px
 
 // Con más aire cuando hay pantalla de sobra.
 @media screen and (min-width: 768px)
