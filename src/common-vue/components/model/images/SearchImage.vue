@@ -3,7 +3,8 @@
 hide-footer
 size="lg"
 title="Buscar imagenes"
-id="search-image">
+id="search-image"
+@shown="get_current_geocoder_counter">
 
 	<div class="j-between">
 		
@@ -110,22 +111,29 @@ export default {
 	components: {
 		VueLoadImage,
 	},
-	mounted() {
-		this.$root.$on('bv::modal::shown', (bvEvent, modalId) => {
-			if (modalId == 'search-image') {
-				// if (this.article.bar_code) {
-				// 	this.query = this.article.bar_code
-				// 	setTimeout(() => {
-				// 		this.search() 
-				// 	}, 300)
-				// }
-				this.get_current_geocoder_counter()
-
-				// this.flow_mode = 'auto'
-				// this.auto_select_progress = 0.6
-			}
-		})
-	},
+	/*
+	 * 🔴 El contador NO se pide desde `$root.$on('bv::modal::shown')`, se pide desde el `@shown`
+	 * del propio `<b-modal>` (arriba, en el template).
+	 *
+	 * Este componente vive adentro de `images/Index.vue`, que renderiza `ModelForm.vue` para los
+	 * props de tipo imagen: se monta de nuevo con cada apertura del modal de articulo y con cada
+	 * navegacion ‹ › entre articulos. Un listener sobre el bus global de Vue sobrevive a la
+	 * instancia que lo registro, asi que cada montaje dejaba uno mas escuchando, y la apertura N
+	 * del buscador de imagenes disparaba N requests simultaneas a `google/get-current`.
+	 *
+	 * Eso le tiro 429 "Too Many Attempts." al cliente ferretotal el 16/9/2026: 501 requests a ese
+	 * endpoint en un dia (contra 138 del siguiente mas pedido), en rafagas de ~124 con UNA sola
+	 * busqueda real de por medio. El evento del propio modal muere con el componente, asi que el
+	 * problema no puede volver por esta puerta.
+	 *
+	 * Lo que estaba parqueado adentro de aquel handler, por si alguna vez se retoma (iba junto con
+	 * el flow_mode = 'auto' que sigue comentado en data()):
+	 *
+	 *   if (this.article.bar_code) {
+	 *       this.query = this.article.bar_code
+	 *       setTimeout(() => { this.search() }, 300)
+	 *   }
+	 */
 	data() {
 		return {
 			query: '',
