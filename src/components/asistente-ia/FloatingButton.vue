@@ -30,15 +30,36 @@
 		pueda abrirlo desde cualquier lado, ej: la notificación de sugerencias. -->
 		<asistente-ia-panel
 		v-if="panel_abierto"></asistente-ia-panel>
+
+		<!-- 🔴 Lo que abren las menciones del chat (misión agente-ia-mano-derecha,
+		16/9/2026) va acá y NO adentro del panel, por dos motivos:
+
+		1. La conversación se dibuja en DOS contenedores —el panel flotante y el sidebar
+		   del informe del mostrador (`ia/SidebarConversacion.vue`)—, que montan el mismo
+		   `MessageBubble`. Este componente es el único que está montado siempre que la
+		   extensión esté prendida, así que cubre los dos de una vez sin duplicar nada.
+		2. El panel tiene `overflow: hidden` (Panel.vue:367) y el informe también
+		   (InformeAbierto.vue:256 y :308): una tarjeta flotante hija de cualquiera de los
+		   dos queda recortada contra su borde.
+
+		Los dos son livianos mientras no se usan: la tarjeta es un `b-popover` que no
+		existe hasta el primer hover, y el modal de cuenta corriente no baja su chunk
+		hasta el primer clic. -->
+		<ficha-articulo-popover></ficha-articulo-popover>
+		<cuenta-corriente-de-mencion></cuenta-corriente-de-mencion>
 	</div>
 </template>
 
 <script>
 import AsistenteIaPanel from '@/components/asistente-ia/Panel'
+import FichaArticuloPopover from '@/components/asistente-ia/FichaArticuloPopover'
+import CuentaCorrienteDeMencion from '@/components/asistente-ia/CuentaCorrienteDeMencion'
 
 export default {
 	components: {
 		AsistenteIaPanel,
+		FichaArticuloPopover,
+		CuentaCorrienteDeMencion,
 	},
 	data() {
 		return {
