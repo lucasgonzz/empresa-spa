@@ -10,7 +10,9 @@ size="lg"
 
 hide-footer
 
-modal-class="article-sales-modal">
+modal-class="article-sales-modal"
+
+@show="limpiar_resultados">
 
 
 
@@ -250,19 +252,25 @@ export default {
 
 	},
 
-	mounted() {
+	methods: {
 
-		// Al abrir el modal se reinicia el estado para forzar una nueva búsqueda
+		/**
 
-		this.$root.$on('bv::modal::show', (bvEvent, modalId) => {
+		 * Al abrir el modal se reinicia el estado para forzar una nueva búsqueda.
+
+		 * Se dispara con el @show del propio modal.
+
+		 *
+
+		 * @returns {void}
+
+		 */
+
+		limpiar_resultados() {
 
 			this.results = null
 
-		})
-
-	},
-
-	methods: {
+		},
 
 		/**
 

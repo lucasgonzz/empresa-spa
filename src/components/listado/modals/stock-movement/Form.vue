@@ -162,13 +162,21 @@ export default {
 		}
 	},
 	created() {
-		this.$root.$on('bv::modal::show', (bvEvent, modal_id) => {
-			if (modal_id == 'stock-movement') {
-				this.setDefaultAddress() 
-			}
-		})
+		// El modal 'stock-movement' lo declara el padre (stock-movement/Index.vue), asi que
+		// hay que escucharlo por el bus de $root y desuscribirse a mano.
+		this.$root.$on('bv::modal::show', this.on_modal_show)
+	},
+	beforeDestroy() {
+		// El bus de $root vive toda la sesion: sin el $off, cada montaje deja otra escucha viva.
+		this.$root.$off('bv::modal::show', this.on_modal_show)
 	},
 	methods: {
+		on_modal_show(bvEvent, modal_id) {
+			if (modal_id != 'stock-movement') {
+				return
+			}
+			this.setDefaultAddress()
+		},
 		setSelectedProvider(result) {
 			this.$set(this.article, 'provider', result.model)
 			this.article.provider_id = result.model.id
