@@ -943,7 +943,7 @@ export default {
 
 				let transcurrido = Date.now() - inicio
 
-				// 🔴 300000 (5 min) y NO 180000, y el número está ATADO a tres del backend
+				// 🔴 360000 (6 min) y NO 300000, y el número está ATADO a tres del backend
 				// (misión agente-ia-mano-derecha, bloque A3, 16/9/2026). La cadena, con la
 				// cuenta hecha:
 				//
@@ -952,6 +952,15 @@ export default {
 				//   peor caso real           210 + 60 = 270 s  (el presupuesto se chequea ANTES
 				//                                   de cada llamada: la que está en vuelo no se corta)
 				//   timeout del job                  300 s  (ResponderMensajeChatIaJob)
+				//   corte de este polling            360 s  (este número)
+				//
+				// 🔴 POR QUÉ 360 Y NO 300: 300 contra 300 es un EMPATE, no un "mayor", y este
+				// escalón tiene que ser el ÚLTIMO de la cadena. Y los dos relojes ni siquiera
+				// arrancan juntos: el de la SPA arranca AL DESPACHAR el job y el del job recién
+				// cuando el worker lo levanta, así que la espera EN LA COLA corre solo del lado
+				// de la SPA. Con los dos en 300 la SPA se rendía ANTES de que el job muriera
+				// --justo la ventana que este número tenía que cubrir--. Los 60 s de diferencia
+				// son el margen de esa cola.
 				//
 				// Este corte tiene que quedar por encima de los 270, no de los 210. Y no es
 				// cosmético: acá no se muestra solamente el aviso de demora --se llama a
@@ -960,8 +969,8 @@ export default {
 				// esa pestaña. Con el presupuesto viejo de 150 s el agujero ya existía; con
 				// 210 se agrandaba.
 				//
-				// Si alguien toca uno de los cuatro números, tiene que tocar los cuatro.
-				if (transcurrido >= 300000) {
+				// Si alguien toca uno de los cinco números, tiene que tocar los cinco.
+				if (transcurrido >= 360000) {
 					terminar_espera_sin_invalidar()
 					// El mensaje sigue 'pendiente' en el backend: el indicador de
 					// pensando queda, con el aviso de demora abajo, y si al final la
