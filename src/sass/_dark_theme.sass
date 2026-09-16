@@ -296,6 +296,52 @@ html.dark-mode
 		.popover-body
 			color: var(--color-text-primary)
 
+		// Y el encabezado, que bootstrap pinta con #f7f7f7 duro y el tema nunca tocó: en oscuro
+		// quedaba una barra casi blanca con el texto del tema encima --#e8eaed sobre #f7f7f7,
+		// ilegible-- en los seis popovers que llevan título. Va --bg-section y no --bg-card a
+		// propósito: en claro bootstrap deja el encabezado un escalón MÁS OSCURO que el cuerpo
+		// (#f7f7f7 contra #fff), y --bg-section (#272b31) guarda esa misma relación con --bg-card
+		// (#2e333a). La flecha sigue con el color del cuerpo, igual que en claro.
+		.popover-header
+			background-color: var(--bg-section)
+			color: var(--color-text-primary)
+			border-bottom-color: var(--color-border)
+
+		// La punta la dibuja bootstrap con dos pseudoelementos de color fijo: el ::after lleva el
+		// relleno (#fff) y el ::before el borde de atrás. Con solo el cuerpo tematizado quedaba un
+		// triangulito blanco colgando de una tarjeta gris oscura, y en TODOS los popovers del
+		// sistema. Los cuatro lados van porque popper elige el lado al acomodar y bootstrap-vue
+		// reescribe la clase cuando lo da vuelta.
+		//
+		// Un popover con fondo propio --el de la ficha de artículo del asistente es el caso-- tiene
+		// que declarar su flecha acá abajo, bajo html.dark-mode. Desde su propio bloque de tema
+		// claro no alcanza: `.popover.<su-clase>.bs-popover-top > .arrow::after` pesa (0,4,1) y
+		// esta regla, con el html adelante, le gana con (0,4,2).
+		&.bs-popover-top > .arrow::after
+			border-top-color: var(--bg-card)
+		&.bs-popover-bottom > .arrow::after
+			border-bottom-color: var(--bg-card)
+		&.bs-popover-left > .arrow::after
+			border-left-color: var(--bg-card)
+		&.bs-popover-right > .arrow::after
+			border-right-color: var(--bg-card)
+		&.bs-popover-top > .arrow::before
+			border-top-color: var(--color-border)
+		&.bs-popover-bottom > .arrow::before
+			border-bottom-color: var(--color-border)
+		&.bs-popover-left > .arrow::before
+			border-left-color: var(--color-border)
+		&.bs-popover-right > .arrow::before
+			border-right-color: var(--color-border)
+
+		// Empalme entre el encabezado y la flecha cuando el popover cae abajo del control.
+		// Bootstrap tapa ahí el borde inferior del encabezado con un parche de 1px de su propio
+		// color (_popover.scss:101-110, "remove the popover-header border just below the arrow"),
+		// así que si el encabezado se tematiza y el parche no, queda una rayita clara cruzando
+		// justo debajo de la punta.
+		&.bs-popover-bottom .popover-header::before
+			border-bottom-color: var(--bg-section)
+
 	.tooltip-inner
 		background-color: var(--bg-section)
 		color: var(--color-text-primary)

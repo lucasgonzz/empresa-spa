@@ -29,6 +29,22 @@
 			class="asistente-ia-lista__item"
 			:class="{ 'asistente-ia-lista__item--activa': conversation.id == selected_conversation_id }"
 			@click="seleccionar(conversation)">
+				<!--
+					Las conversaciones que arrancaron por WhatsApp se distinguen con el ícono
+					(misión asistente-por-whatsapp, 16/9/2026). Son la MISMA conversación: se
+					leen y se sigue escribiendo desde acá como cualquier otra, y no hay pantalla
+					nueva. El ícono existe para que el dueño entienda por qué aparece en la lista
+					algo que él no escribió en esta pantalla.
+
+					Una SPA vieja contra el API nuevo las ve como conversaciones comunes, sin
+					ícono, que es la degradación correcta.
+				-->
+				<span
+				v-if="conversation.origen == 'whatsapp'"
+				class="asistente-ia-lista__canal"
+				title="Esta conversación la empezaste por WhatsApp">
+					<i class="bi bi-whatsapp"></i>
+				</span>
 				<!-- Título en UNA línea con ellipsis (como Claude); sin título todavía,
 				se muestra el provisorio (D20). -->
 				<span class="asistente-ia-lista__titulo">
@@ -157,6 +173,15 @@ export default {
 
 			.asistente-ia-lista__borrar
 				opacity: 1
+
+	// El ícono del canal (hoy solo WhatsApp): chiquito, del color secundario y sin
+	// robarle lugar al título, que es lo que la persona lee para elegir.
+	&__canal
+		flex-shrink: 0
+		display: flex
+		align-items: center
+		color: var(--color-text-secondary, #6c757d)
+		font-size: .9rem
 
 	&__titulo
 		flex: 1
