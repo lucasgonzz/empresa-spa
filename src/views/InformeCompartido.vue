@@ -137,7 +137,10 @@ export default {
 					self.estado = 'listo'
 				})
 				.catch(err => {
-					console.log(err)
+					// Sin console.log: esta pantalla es PÚBLICA y la abre el dueño desde el
+					// teléfono. Lo que hay que saber ya está en `estado`, que es lo que se le
+					// muestra; volcar el error crudo a la consola de una vista sin sesión no le
+					// sirve a nadie y expone la forma de la respuesta.
 					self.estado = self.estado_del_error(err)
 				})
 		},
