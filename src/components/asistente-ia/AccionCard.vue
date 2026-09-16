@@ -155,6 +155,9 @@ const CIERRE_POR_ESTADO = {
  * API manda la tarjeta y ella misma cuenta lo que pasó (su estado real o su
  * `error_mensaje`), así que esos casos no llegan acá.
  *
+ * La excepción es un 409 SIN `model` (la fila desapareció entre la validación y la relectura):
+ * ese sí llega acá, y la tarjeta pide recargar la conversación.
+ *
  * 🔴 Sin respuesta (status 0) o con un 5xx que no es el JSON del API (la página HTML de un
  * proxy, un 504 del hosting, un error fatal de PHP), el pedido pudo haber llegado y haberse
  * registrado igual: la tarjeta no puede afirmar que no se registró. Solo un 500 con JSON es
@@ -168,6 +171,12 @@ const CIERRE_POR_ESTADO = {
  */
 function texto_de_falla(verbo, falla) {
 	let status = falla ? falla.status : 0
+	// Un 409 SIN tarjeta: la fila de la acción desapareció entre la validación y la relectura
+	// del API, así que no hay estado nuevo que pintar. Igual se sabe lo que pasó --ya estaba
+	// resuelta--, y el genérico "no se pudo registrar" diría otra cosa.
+	if (status == 409) {
+		return 'Esta tarjeta ya estaba resuelta. Recargá la conversación para verla como quedó.'
+	}
 	// Un 404 es una conversación o una tarjeta que ya no existe (por ejemplo, la
 	// conversación se borró desde otra pestaña): "probá de nuevo" mandaría a reintentar
 	// algo que no va a andar nunca.
