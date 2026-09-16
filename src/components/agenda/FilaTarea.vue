@@ -91,7 +91,7 @@ export default {
 			return this.$store.state.agenda.en_curso.indexOf(this.ocurrencia.key) != -1
 		},
 		/**
-		 * "hoy", "mañana", "vence hace 3 días", "lun 21 sep". Vencida/hoy se deciden con el `hoy`
+		 * "hoy", "mañana", "venció hace 3 días", "lun 21 sep". Vencida/hoy se deciden con el `hoy`
 		 * de la API, no con el reloj del navegador. Una fila ya hecha no "vence": muestra la fecha
 		 * a secas.
 		 *

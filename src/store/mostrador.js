@@ -76,7 +76,7 @@ export default {
 	state: {
 		model_name: 'mostrador',
 
-		// El informe más nuevo de cada tipo (máx 4, orden fijo dia, tienda, compras, stock).
+		// El informe más nuevo de cada tipo (máx 5, orden fijo dia, caja, tienda, compras, stock).
 		ultimos: [],
 		// El resto de los últimos 30 días, fecha desc.
 		anteriores: [],

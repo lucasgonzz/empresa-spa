@@ -60,9 +60,15 @@ import moment from 'moment'
  * en el <style> (carpeta--dia, etc.), donde también se declaran los dos tonos.
  * Un tipo que no esté acá (un informe futuro) cae al gris con ícono de carpeta y
  * el título que haya depositado la skill.
+ *
+ * El orden de estas claves no ordena nada: el del escritorio lo manda el backend
+ * (dia, caja, tienda, compras, stock). Se escriben igual para leerlas como se ven.
  */
 const TIPOS = {
 	dia: { nombre: 'Rendimiento de ayer', icono: 'sun' },
+	// Misión "mostrador-caja-vencimientos" (15/9/2026): el saldo de las cajas, lo que
+	// vence para pagar y lo que hay para cobrar.
+	caja: { nombre: 'Caja y vencimientos', icono: 'wallet2' },
 	tienda: { nombre: 'Tu tienda', icono: 'shop' },
 	compras: { nombre: 'Compras', icono: 'cart-plus' },
 	stock: { nombre: 'Stock', icono: 'boxes' },
@@ -123,7 +129,9 @@ export default {
 <style lang="sass">
 // Los dos tonos de cada tipo viven en custom properties para que las partes del
 // dibujo (solapa, cuerpo, tapa, punto de nuevo, foco) los lean sin repetirlos.
-// Colores del plan §2.2: dia azul, tienda violeta, compras verde, stock naranja.
+// Colores del plan §2.2: dia azul, tienda violeta, compras verde, stock naranja. Caja
+// teal (plan de mostrador-caja-vencimientos): distinto de los otros cuatro y con
+// contraste suficiente para el ícono blanco de la tapa.
 .carpeta
 	--carpeta-color: #8a94a6
 	--carpeta-color-oscuro: #6b7386
@@ -131,6 +139,10 @@ export default {
 	&--dia
 		--carpeta-color: #0B84F8
 		--carpeta-color-oscuro: #0868C4
+
+	&--caja
+		--carpeta-color: #0F766E
+		--carpeta-color-oscuro: #0B5A54
 
 	&--tienda
 		--carpeta-color: #3A31FC

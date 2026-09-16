@@ -32,13 +32,13 @@ export default {
 			],
 		},
 		{
-			text: 'Concepto de gasto de la comisión',
+			text: 'Sub categoría de gasto de la comisión',
 			key: 'expense_concept_id',
 			type: 'select',
 			use_store_models: true,
 			value: null,
 			descriptions: [
-				'Vacío = hereda el concepto configurado en la caja.',
+				'Vacío = hereda la sub categoría configurada en la caja.',
 			],
 		},
 		{
