@@ -40,6 +40,7 @@
 			con el mismo id. No ocupa lugar en el informe: el modal se dibuja colgado de <body>.
 		-->
 		<recordatorio-desde-informe
+		v-if="!solo_lectura"
 		ref="recordatorio"></recordatorio-desde-informe>
 	</article>
 </template>
@@ -92,6 +93,20 @@ export default {
 		reporte: {
 			type: Object,
 			required: true,
+		},
+		/**
+		 * Modo solo lectura (misión asistente-por-whatsapp, 16/9/2026): el MISMO informe,
+		 * abierto desde el link que llegó por WhatsApp, sin sesión iniciada.
+		 *
+		 * Lo único que apaga es el modal del recordatorio de cobro: no hay usuario del que
+		 * chequear permisos ni sesión con la que mandar un WhatsApp, y montarlo sería dejar
+		 * colgado un modal que no puede funcionar. El botón que lo abre ya no aparece solo
+		 * —bloques/Acciones.vue lo condiciona a `hasExtencion` + `can`, y sin sesión las dos
+		 * dan false—, así que esto es la segunda vuelta de la misma guarda, no la única.
+		 */
+		solo_lectura: {
+			type: Boolean,
+			default: false,
 		},
 	},
 	computed: {
@@ -147,7 +162,7 @@ export default {
 		 * @param {number} client_id
 		 */
 		abrir_recordatorio(client_id) {
-			if (!client_id || !this.$refs.recordatorio) {
+			if (this.solo_lectura || !client_id || !this.$refs.recordatorio) {
 				return
 			}
 			this.$refs.recordatorio.abrir(client_id)
