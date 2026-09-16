@@ -125,6 +125,14 @@ export default {
 	 * endpoint en un dia (contra 138 del siguiente mas pedido), en rafagas de ~124 con UNA sola
 	 * busqueda real de por medio. El evento del propio modal muere con el componente, asi que el
 	 * problema no puede volver por esta puerta.
+	 *
+	 * Lo que estaba parqueado adentro de aquel handler, por si alguna vez se retoma (iba junto con
+	 * el flow_mode = 'auto' que sigue comentado en data()):
+	 *
+	 *   if (this.article.bar_code) {
+	 *       this.query = this.article.bar_code
+	 *       setTimeout(() => { this.search() }, 300)
+	 *   }
 	 */
 	data() {
 		return {
