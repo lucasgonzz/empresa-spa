@@ -375,7 +375,6 @@ export default {
 			precio que el vendedor vio). BudgetHelper del lado API lo lee de esta misma forma.
 		*/
 		get_combos() {
-			console.log('get_combos presupuesto')
 			let combos = []
 			this.combos.forEach(combo => {
 				combos.push({
@@ -385,7 +384,6 @@ export default {
 						price: combo.price_vender,
 					}
 				})
-				console.log(combos)
 			})
 			return combos
 		},
