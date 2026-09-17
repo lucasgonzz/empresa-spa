@@ -39,13 +39,30 @@
 					hay un comentario, y el v-else depende de que el compilador de plantillas los
 					deje pegados. Dos v-if no dependen de eso.
 				-->
+				<!--
+					🔴 `type="text"`, NO `type="number"`. Medido en Chrome el 17/9/2026 tipeando de
+					verdad sobre una venta de $5.595,86:
+
+						"4000"   -> value "4000"   -> total $4.000,00   ok
+						"4.000"  -> value "4.000"  -> total $4,00       🔴
+						"4,000"  -> value "4.000"  -> total $4,00       🔴
+
+					En un input numerico el punto es el separador DECIMAL, y la coma Chrome la
+					normaliza al punto. O sea que el vendedor que escribe "4.000" queriendo cobrar
+					cuatro mil pesos cobra cuatro, y no lo va a revisar: es un numero que acaba de
+					escribir el. El parseo lo hace normalizar_monto_tipeado(), que entiende las dos
+					formas en que se escribe plata acá.
+
+					`inputmode="decimal"` deja el teclado numerico en el telefono, que es lo unico
+					que se pierde al salir de type="number".
+				-->
 				<input
 				v-if="editando_total_forzado"
 				ref="input_total_forzado"
 				v-model="total_tipeado"
-				type="number"
-				step="0.01"
-				min="0"
+				type="text"
+				inputmode="decimal"
+				autocomplete="off"
 				class="vender-context-bar__total-input"
 				data-testid="input-total-forzado"
 				aria-label="Total a cobrar"
@@ -254,16 +271,39 @@ export default {
 		},
 
 		/**
+		 * El total SIN el ajuste: el que sale de los ítems, los descuentos, los recargos, el
+		 * canje de puntos y el reparto por método de pago.
+		 *
+		 * Es la base contra la que se calcula el monto del forzado, y también la que decide si
+		 * el lápiz se dibuja.
+		 *
+		 * @returns {Number}
+		 */
+		total_base() {
+			return Number(this.total) - Number(this.forzar_total_monto || 0)
+		},
+
+		/**
 		 * El lápiz existe solo con la extensión prendida. Sin ella esta barra se comporta
 		 * exactamente como antes de la misión.
 		 *
-		 * El `total > 0` es el mismo que tenía el botón "Forzar" que este lápiz reemplaza:
-		 * forzar el total de un remito vacío no significa nada.
+		 * 🔴 EL `> 0` MIRA EL TOTAL BASE, NO EL TOTAL YA FORZADO. NO LO CAMBIES POR `this.total`.
+		 *
+		 * Con `this.total` la puerta de entrada dependía de su propio resultado, y eso deja al
+		 * vendedor encerrado: forzando el total a 0 --que la validación acepta, porque no está
+		 * vacío ni es negativo-- el total pasa a valer 0, el lápiz deja de dibujarse y la venta
+		 * queda en $0 mostrando "- Total forzado: $4.012,00" sin ninguna forma de reeditarla ni
+		 * de deshacerla. Las únicas salidas eran limpiar la venta entera o agregar un ítem, y
+		 * mientras tanto la venta estaba lista para guardarse en cero.
+		 *
+		 * Mirando la base, el lápiz sigue estando mientras haya mercadería que cobrar, sin
+		 * importar en cuánto quedó el total. Que además es lo que la condición quiere decir:
+		 * "forzar el total de un remito vacío no significa nada".
 		 *
 		 * @returns {boolean}
 		 */
 		puede_forzar_total() {
-			return this.hasExtencion('forzar_total') && this.total > 0
+			return this.hasExtencion('forzar_total') && this.total_base > 0
 		},
 
 		/**
@@ -469,13 +509,16 @@ export default {
 			this.cancelando_total_forzado = false
 
 			/*
-				🔴 REDONDEADO A CENTAVOS, NO `this.total` PELADO. El total del store es el
-				resultado de una cadena de multiplicaciones y restas en punto flotante, así que
-				bien puede valer 5599.9980000000005: puesto crudo en el input, el vendedor abre el
-				lápiz y ve ese número en pantalla, con el cliente adelante. Medido a 380px el
-				17/9/2026.
+				🔴 FORMATEADO, NO `this.total` PELADO. El total del store es el resultado de una
+				cadena de multiplicaciones y restas en punto flotante, así que bien puede valer
+				5599.9980000000005: puesto crudo en el input, el vendedor abre el lápiz y ve ese
+				número en pantalla, con el cliente adelante. Medido a 380px el 17/9/2026.
+
+				Se muestra con los separadores de acá ("5.599,86") porque es como el monto se ve en
+				todo el resto de la interfaz, y porque normalizar_monto_tipeado() lo vuelve a leer
+				sin ayuda: el vendedor puede confirmar sin tocar nada y el ajuste da cero.
 			*/
-			this.total_tipeado = Math.round(Number(this.total) * 100) / 100
+			this.total_tipeado = numero_es_con_decimales(Math.round(Number(this.total) * 100) / 100, 2)
 
 			this.editando_total_forzado = true
 
@@ -503,6 +546,96 @@ export default {
 		},
 
 		/**
+		 * Lee el monto que el vendedor escribió y lo devuelve como número.
+		 *
+		 * 🔴 ACEPTA LAS DOS FORMAS EN QUE SE ESCRIBE PLATA, NO UNA SOLA. El vendedor escribe
+		 * "4.000" queriendo cobrar cuatro mil, y también escribe "4000" y "4.000,50". Obligarlo
+		 * a usar la notación del navegador no es una opción: no va a revisar dos veces un número
+		 * que acaba de escribir él, así que un malentendido acá se cobra mal y nadie se entera.
+		 *
+		 * Las reglas, en este orden:
+		 *
+		 *   1. "4,000" / "1,234,567" (comas cada tres, sin puntos) es el formato de miles a la
+		 *      inglesa: se sacan las comas. Un importe con TRES decimales no existe en pesos, así
+		 *      que leer eso como 4 pesos sería leerlo mal.
+		 *   2. Si queda una coma, es el separador decimal de acá y los puntos son de miles.
+		 *   3. Sin coma y con puntos: son de miles si todos los grupos que siguen al primero son
+		 *      de tres dígitos ("4.000", "1.234.567"). Si no, el punto es decimal ("4000.50").
+		 *
+		 * @param {*} texto lo que hay en el input.
+		 * @returns {Number|null} el monto, o null si no es un importe válido.
+		 */
+		normalizar_monto_tipeado(texto) {
+
+			let limpio = String(texto).trim().replace(/\s/g, '').replace(/^\$/, '')
+
+			if (limpio === '') {
+				return null
+			}
+
+			if (/^\d{1,3}(,\d{3})+$/.test(limpio)) {
+				limpio = limpio.replace(/,/g, '')
+			} else if (limpio.indexOf(',') !== -1) {
+				limpio = limpio.replace(/\./g, '').replace(',', '.')
+			} else if (limpio.indexOf('.') !== -1) {
+				let partes = limpio.split('.')
+				let todos_de_tres = partes.slice(1).every(grupo => /^\d{3}$/.test(grupo))
+				if (partes.length > 2 || todos_de_tres) {
+					limpio = partes.join('')
+				}
+			}
+
+			/* Sin signo a proposito: un total negativo no es un total. */
+			if (!/^\d+(\.\d+)?$/.test(limpio)) {
+				return null
+			}
+
+			let numero = Number(limpio)
+
+			return isNaN(numero) ? null : numero
+		},
+
+		/**
+		 * Descarta el reparto del total entre varios métodos de pago.
+		 *
+		 * 🔴 POR QUE HAY QUE LIMPIARLO AL FORZAR EL TOTAL, Y POR QUE NO ALCANZA CON EL WATCHER
+		 * QUE YA EXISTE.
+		 *
+		 * El modal de multipago se limpia solo cuando cambia `sub_total` (el watcher de
+		 * vender/modals/payment-methods/select-payment-methods/Index.vue). Forzar el total NO
+		 * toca `sub_total` --y no tiene que tocarlo: el subtotal es el importe antes de todos los
+		 * descuentos, que es justo lo que Lucas pidió que quede guardado--, así que ese watcher
+		 * no se entera y el reparto queda calculado sobre un total que ya no existe.
+		 *
+		 * Medido el 17/9/2026 sobre una venta de $5.595,86 repartida en dos métodos: al forzar el
+		 * total a $5.500, `selected_payment_methods` seguía sumando $5.595,86. Esos importes son
+		 * los que PaymentMethodHelper engancha tal cual y con los que SaleCajaHelper crea el
+		 * movimiento de caja: entraban $95,86 de más a la caja por una venta de $5.500, y con
+		 * cliente en cuenta corriente el `debe` decía una cosa y los métodos de pago otra.
+		 *
+		 * El servidor NO puede validar esa suma —con cliente en cuenta corriente es legítimo que
+		 * los métodos de pago sumen menos que el total—, así que la invariante se sostiene acá:
+		 * no se guarda una venta cuyo reparto se calculó sobre un total viejo. Se descarta y se
+		 * le avisa al vendedor, que es más ruidoso que arreglarlo solo pero es honesto: el que
+		 * decide cómo se reparten los $5.500 es él, no nosotros.
+		 */
+		limpiar_reparto_de_metodos_de_pago() {
+
+			let hay_reparto = this.selected_payment_methods.length || this.modal_payment_metohds.length
+
+			if (!hay_reparto) {
+				return
+			}
+
+			this.$store.commit('vender/setSelectedPaymentMethods', [])
+			this.$store.commit('vender/set_modal_payment_methods', [])
+
+			this.$toast.warning('Cambió el total: volvé a repartirlo entre los métodos de pago', {
+				duration: 8000,
+			})
+		},
+
+		/**
 		 * Convierte el total tipeado en el monto del ajuste y recalcula la venta.
 		 */
 		confirmar_total_forzado() {
@@ -511,31 +644,36 @@ export default {
 				return
 			}
 
-			this.editando_total_forzado = false
-
 			if (this.cancelando_total_forzado) {
+				this.editando_total_forzado = false
 				return
 			}
 
-			let tipeado = String(this.total_tipeado).trim()
-
-			if (
-				tipeado === ''
-				|| isNaN(Number(tipeado))
-				|| Number(tipeado) < 0
-			) {
-				this.$toast.warning('Escribi el total que queres cobrar')
-				return
-			}
+			let total_deseado = this.normalizar_monto_tipeado(this.total_tipeado)
 
 			/*
-				El total que se ve en pantalla YA tiene aplicado el forzado anterior, si había uno.
-				Para saber cuánto hay que ajustar primero se lo saca: si no, forzar dos veces
-				seguidas iría restando sobre lo ya restado.
+				🔴 EL INPUT QUEDA ABIERTO Y ENFOCADO CUANDO EL VALOR NO SIRVE. Cerrarlo obliga al
+				vendedor a volver a buscar el lápiz para corregir un error de tipeo, con el cliente
+				esperando. La salida siempre está: Escape cancela y deja el total como estaba.
 			*/
-			let base = Number(this.total) - Number(this.forzar_total_monto || 0)
+			if (total_deseado === null) {
 
-			let monto = Number(tipeado) - base
+				this.$toast.warning('Escribi el total que queres cobrar')
+
+				let self = this
+				this.$nextTick(() => {
+					let input = self.$refs.input_total_forzado
+					if (input) {
+						input.focus()
+						input.select()
+					}
+				})
+				return
+			}
+
+			this.editando_total_forzado = false
+
+			let monto = total_deseado - this.total_base
 
 			/*
 				Redondeo a centavos. La resta en punto flotante deja colas
@@ -548,7 +686,17 @@ export default {
 				Monto cero no es un forzado: es el total que ya estaba. Va null para que la venta no
 				quede marcada como ajustada cuando no se ajustó nada.
 			*/
-			this.$store.commit('vender/set_forzar_total_monto', monto ? monto : null)
+			let monto_nuevo = monto ? monto : null
+			let monto_anterior = this.forzar_total_monto || null
+
+			if (monto_nuevo === monto_anterior) {
+				return
+			}
+
+			/* Antes del setTotal(), para que el total se recalcule ya sin los importes viejos. */
+			this.limpiar_reparto_de_metodos_de_pago()
+
+			this.$store.commit('vender/set_forzar_total_monto', monto_nuevo)
 
 			this.setTotal()
 		},
