@@ -47,9 +47,36 @@ export default {
 				{ text: 'Importar recibidos', value: 'recibido' },
 			],
 			overwrite_articles: false,
+			/*
+			 * Evita pedir el diff más de una vez por importación si el watcher de import_status
+			 * se dispara varias veces con status 'completado' (ej. un broadcast duplicado).
+			 * Se resetea apenas arranca una importación nueva de ESTA compra.
+			 */
+			diff_ya_solicitado: false,
+			/*
+			 * 🔴 Id de la compra que disparó el ÚLTIMO import confirmado desde este componente,
+			 * capturado en handleImportSuccess() — NO se lee de `this.model.id` en el watcher.
+			 * Este componente es único y persistente (montado una sola vez arriba del listado,
+			 * no por fila): `this.model` es "la compra que la pantalla tiene seleccionada ahora",
+			 * que cambia apenas el usuario mira otra fila — cosa perfectamente normal mientras un
+			 * import sigue procesándose de fondo en el worker. Comparar el watcher contra
+			 * `this.model.id` (como se hizo en un primer intento) pierde el aviso automático
+			 * apenas el usuario navega a otra compra durante esa espera. Este valor no se mueve
+			 * con la navegación, así que sigue apuntando a la compra correcta.
+			 */
+			provider_order_id_del_import_en_curso: null,
 		}
 	},
 	computed: {
+		/*
+		 * Desde la misión `import-excel-compras-chunks` (14/9/2026) la importación corre
+		 * asíncrona: este store (compartido con el import de artículos) es la única forma de
+		 * saber cuándo terminó. provider_order_id lo filtra para no reaccionar a la
+		 * importación de otra cosa.
+		 */
+		import_status() {
+			return this.$store.state.import_status.model
+		},
 		advises() {
 			return [
 				'Las celdas que esten en blanco en el excel, no actualizaran informacion ya existente de los articulos de la compra.',
@@ -100,13 +127,67 @@ export default {
 			].map((col, i) => ({ ...col, column: i + 1 }))
 		},
 	},
+	watch: {
+		/*
+		 * El diff pedido/recibido ya no viaja en la respuesta HTTP del upload (la importación
+		 * corre en la cola): se pide recién cuando este store, compartido con el import de
+		 * artículos, marca a ESTA compra como 'completado'.
+		 *
+		 * 🔴 Ojo, esto se sacó a propósito: NO se condiciona por `this.import_type`. Ese dato es
+		 * el valor ACTUAL del radio del formulario, no el tipo con el que se disparó el import
+		 * que efectivamente terminó — este componente es único y persistente (montado una sola
+		 * vez arriba del listado, no por fila), así que el usuario puede reabrir el modal para
+		 * OTRA compra o cambiar el radio a "pedido" mientras el import 'recibido' anterior sigue
+		 * procesándose en el worker. Si se comparara contra `this.import_type` acá, el diff se
+		 * habría calculado y guardado bien en el backend pero jamás se hubiera mostrado. El
+		 * propio endpoint decide si hay algo que mostrar (devuelve `diff: []` si el import que
+		 * terminó no era 'recibido'), así que alcanza con pedirlo siempre que ESTA compra
+		 * termine.
+		 *
+		 * immediate: true cubre el caso de navegar fuera de esta compra mientras el import
+		 * corre y volver después de que ya terminó — sin esto, el watcher no se dispara solo
+		 * por haber vuelto a montar el componente, y el diff quedaría pedido pero nunca
+		 * mostrado hasta el próximo cambio de status.
+		 */
+		import_status: {
+			immediate: true,
+			handler(nuevo) {
+				if (!nuevo || nuevo.provider_order_id !== this.provider_order_id_del_import_en_curso) {
+					return
+				}
+
+				if (nuevo.status === 'pendiente' || nuevo.status === 'en_proceso') {
+					this.diff_ya_solicitado = false
+					return
+				}
+
+				if (nuevo.status === 'completado' && !this.diff_ya_solicitado) {
+					this.diff_ya_solicitado = true
+					this.$store.dispatch('provider_order/getModels')
+					this.cargar_diff_de_importacion(nuevo.provider_order_id)
+				}
+			},
+		},
+	},
 	methods: {
-		handleImportSuccess(res) {
+		/*
+		 * `this.model.id` todavía es la compra correcta acá: sendRequest() recién resolvió, el
+		 * modal ni empezó a cerrarse, así que el usuario no tuvo chance de navegar a otra fila
+		 * todavía. Es el único momento seguro para capturar este valor — ver el comentario de
+		 * `provider_order_id_del_import_en_curso` en data().
+		 */
+		handleImportSuccess() {
+			this.provider_order_id_del_import_en_curso = this.model.id
 			this.$store.dispatch('provider_order/getModels')
-			if (res.data && res.data.diff) {
-				this.$store.commit('provider_order/setImportDiff', res.data.diff)
-				this.$bvModal.show('import-diff-provider-order')
-			}
+		},
+		cargar_diff_de_importacion(provider_order_id) {
+			this.$api.get('provider-order/' + provider_order_id + '/import-diff')
+			.then(res => {
+				if (res.data && res.data.diff && res.data.diff.length) {
+					this.$store.commit('provider_order/setImportDiff', res.data.diff)
+					this.$bvModal.show('import-diff-provider-order')
+				}
+			})
 		},
 	},
 }

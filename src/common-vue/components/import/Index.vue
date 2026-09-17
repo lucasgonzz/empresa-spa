@@ -1675,8 +1675,8 @@ export default {
 
 				this.$bvModal.hide(this.id)
 
-				if (!this.hubo_un_error && this.model_name == 'article') {
-					
+				if (!this.hubo_un_error && (this.model_name == 'article' || this.model_name == 'provider_order')) {
+
 					this.$toast.success('Estamos precesando tu archivo, te notificaremos cuando termine', {
 						duration: 7000
 					})
@@ -1807,10 +1807,18 @@ export default {
 			.then(res => {
 				console.log('se envio')
 				console.log(res)
-				
-				if (this.model_name == 'article') {
 
+				/*
+				 * El backend ya despachó el procesamiento a la cola (misión
+				 * `import-excel-compras-chunks`, 14/9/2026: antes solo pasaba para 'article',
+				 * porque era el único model_name que corría asíncrono). Sin esto el usuario no
+				 * ve ningún progreso hasta que la importación de la compra termina sola.
+				 */
+				if (this.model_name == 'article' || this.model_name == 'provider_order') {
 					this.load_import_status()
+				}
+
+				if (this.model_name == 'article') {
 					this.guardar_column_position()
 				}
 
