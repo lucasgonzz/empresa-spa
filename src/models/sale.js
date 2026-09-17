@@ -191,9 +191,30 @@ export default {
 			if_has_extencion: 'cajas',
 			v_if: ['save_current_acount', '==', 0],
 		},
+		/*
+			Las DOS caras de la extension forzar_total conviven en la ficha, y no es duplicado:
+
+			- `descuento` es la version vieja y guarda un PORCENTAJE. Ya no lo escribe nadie desde
+			  VENDER, pero las ventas hechas antes de esta mision lo tienen y se tienen que poder
+			  leer. Por eso no se saca ni se reinterpreta como monto: hacerlo mostraria "-12%" como
+			  si fueran 12 pesos en todo el historico.
+			- `forzar_total_monto` es la version nueva y guarda el MONTO con signo (negativo
+			  descuenta, positivo recarga).
+
+			Las dos se esconden solas cuando vienen vacias: showProperty() con check_if_is_empty
+			descarta la prop antes de llegar al gate de la extension.
+		*/
 		{
-			text: 'Descuento',
+			text: 'Descuento forzado (%)',
 			key: 'descuento',
+			not_show: true,
+			only_show: true,
+			if_has_extencion: 'forzar_total',
+		},
+		{
+			text: 'Total forzado',
+			key: 'forzar_total_monto',
+			is_price: true,
 			not_show: true,
 			only_show: true,
 			if_has_extencion: 'forzar_total',
