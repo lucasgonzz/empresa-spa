@@ -8,13 +8,16 @@ export default {
 				se copia al descuento del articulo cuando se sincroniza, asi que en la ficha del
 				articulo se lee el motivo y no solo el porcentaje.
 
-				Va como is_title porque es el titulo humano del descuento: es lo que identifica
-				la fila. Antes de esta mision el modelo no declaraba ninguna prop con is_title.
+				🔴 NO lleva is_title, aunque semanticamente sea el titulo de la fila. Este modelo
+				no declaraba ninguna prop con is_title, y agregarselo se nota en la ventana de
+				despliegue: los dos repos no llegan juntos a produccion, asi que durante horas o
+				dias la API vieja no devuelve `nombre`, viene undefined y el titulo de la tarjeta
+				de cada descuento queda EN BLANCO en telefono (ver CardComponent.vue, computed
+				`titles`). Sin is_title la tarjeta se comporta igual que hoy.
 			*/
 			text: 'Nombre',
 			key: 'nombre',
 			type: 'text',
-			is_title: true,
 		},
 		{
 			text: 'Porcentaje',

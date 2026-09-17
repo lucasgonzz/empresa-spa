@@ -84,10 +84,16 @@ id="sincronizar-descuentos-proveedor"
 				<strong>{{ total_articulos }}</strong>
 				{{ total_articulos == 1 ? 'articulo de este proveedor' : 'articulos de este proveedor' }}.
 			</p>
+			<!--
+				🔴 Dice "de este proveedor" y no "ningun descuento" a secas, porque el grupo que
+				devuelve el preview son los que no tienen descuentos tagueados A ESTE PROVEEDOR: un
+				articulo con un descuento manual, o con descuentos de otro proveedor, cae aca
+				igual. El texto viejo afirmaba que estaban limpios y no es cierto.
+			-->
 			<p
 			v-if="sin_descuentos"
 			class="text-muted m-b-5">
-				{{ sin_descuentos }} {{ sin_descuentos == 1 ? 'no tiene ningun descuento' : 'no tienen ningun descuento' }}.
+				{{ sin_descuentos }} {{ sin_descuentos == 1 ? 'no tiene descuentos de este proveedor' : 'no tienen descuentos de este proveedor' }}.
 			</p>
 			<p
 			v-if="al_dia"
@@ -114,14 +120,22 @@ id="sincronizar-descuentos-proveedor"
 				</strong>
 			</p>
 
+			<!--
+				Los dos subtextos describen el ALCANCE y no prometen el resultado final. El que
+				afirma que va a pasar es el bloque "Esto es lo que va a pasar" de mas abajo, y es
+				el unico que puede hacerlo: es el que conoce la combinacion entera.
+
+				El texto viejo de "Todos" decia que los N articulos iban a quedar con los
+				descuentos del proveedor, y con el default `saltear` eso es falso para todo el
+				grupo de los que traen descuentos de una compra, que quedan como estaban.
+			-->
 			<b-form-radio
 			class="m-b-10"
 			value="solo_con_descuentos"
 			v-model="alcance">
 				Solo los que ya tienen estos descuentos
 				<span class="d-block text-muted sincronizar-subtexto">
-					Se actualizan {{ desactualizados }}
-					{{ desactualizados == 1 ? 'articulo' : 'articulos' }}. Los otros no se tocan.
+					Alcanza solo a los articulos que hoy tienen descuentos de este proveedor.
 				</span>
 			</b-form-radio>
 
@@ -131,9 +145,9 @@ id="sincronizar-descuentos-proveedor"
 			v-model="alcance">
 				Todos los articulos de este proveedor
 				<span class="d-block text-muted sincronizar-subtexto">
-					Los {{ total_articulos }}
-					{{ total_articulos == 1 ? 'articulo va a quedar' : 'articulos van a quedar' }}
-					con los descuentos que tiene hoy el proveedor.
+					Alcanza a los {{ total_articulos }}
+					{{ total_articulos == 1 ? 'articulo' : 'articulos' }} del proveedor, tengan o no
+					descuentos hoy.
 				</span>
 			</b-form-radio>
 		</div>
@@ -361,6 +375,33 @@ export default {
 			return this.con_descuentos_de_compra > 0 && this.alcance == 'todos'
 		},
 		/*
+			🔴 La UNICA fuente de verdad de que se va a hacer con los descuentos que vinieron de
+			una compra. De aca salen las tres cosas: el body del PUT, el resumen de abajo y
+			cualquier texto que hable del tema.
+
+			El motivo es un defecto real que tuvo esta ventana: el usuario elegia "Todos", elegia
+			"Dejar solo los del proveedor", se arrepentia y volvia a "Solo los que ya tienen estos
+			descuentos". El bloque amarillo desaparecia y el resumen dejaba de nombrarlo —o sea que
+			la ventana le afirmaba que las bonificaciones de compra no se tocaban—, pero
+			`accion_sobre_compras` seguia valiendo 'pisar' en data y el PUT lo mandaba igual. La API
+			obedece, porque para ella los dos parametros son independientes a proposito, y borraba
+			bonificaciones negociadas en compras reales: un dato que no se puede reconstruir.
+
+			No se arregla con un `watch` que resetee el valor: eso deja TRES lugares diciendo lo
+			mismo (el v-if, el watch y el resumen) y alcanza con que uno se olvide. Derivandolo del
+			mismo predicado que decide si el bloque se ve, no pueden desalinearse, porque no hay
+			dos valores. Es la conclusion del informe del 4/9/2026.
+
+			Ojo: el radio sigue atado a `accion_sobre_compras` (el estado del control), asi que si
+			el usuario vuelve a "Todos" recupera lo que habia elegido. Eso ahora es seguro.
+		*/
+		accion_sobre_compras_efectiva() {
+			if (!this.mostrar_accion_sobre_compras) {
+				return 'saltear'
+			}
+			return this.accion_sobre_compras
+		},
+		/*
 			La cuenta tiene el ecommerce. Sale de la mecanica de extensiones del sistema
 			(hasExtencion vive en el mixin global de src/mixins/generals.js, el mismo que resuelve
 			los `if_has_extencion` de los modelos). Sin ecommerce, hablarle al usuario de "tu
@@ -383,16 +424,35 @@ export default {
 			let lineas = []
 			let es_todos = this.alcance == 'todos'
 
-			// Los que hoy no tienen ningun descuento: solo los alcanza el modo "todos"
+			// Los que hoy no tienen descuentos de ESTE proveedor: solo los alcanza el modo "todos"
 			if (es_todos && this.sin_descuentos) {
 				lineas.push({
 					texto: this.frase(
 						this.sin_descuentos,
-						'articulo va a recibir estos descuentos por primera vez.',
-						'articulos van a recibir estos descuentos por primera vez.'
+						'articulo va a recibir los descuentos de este proveedor por primera vez.',
+						'articulos van a recibir los descuentos de este proveedor por primera vez.'
 					),
 					grave: false,
 					cambia: true,
+				})
+
+				/*
+					⚠️ Ese grupo no son "articulos limpios": son los que no tienen descuentos
+					tagueados a ESTE proveedor. Alguno puede tener un descuento manual o de otro
+					proveedor, y los de la ficha se le apilan encima en cascada — la misma
+					multiplicacion que la ventana explica con el ejemplo del $810 para las compras,
+					pero que aca pasaria en silencio.
+
+					🔴 La frase es condicional ("Si alguno...") y va en tono neutro a proposito,
+					porque el preview NO dice cuantos de esos tienen descuentos propios: solo da el
+					total del grupo. Estimar ese numero en el cliente seria inventarlo, y un
+					contador inventado es peor que no tenerlo. Cuando la API exponga la clave, esta
+					linea puede pasar a ser precisa (con numero) y marcarse como grave.
+				*/
+				lineas.push({
+					texto: 'Si alguno de ellos tiene descuentos propios o de otro proveedor, los de este proveedor se aplican encima, uno sobre otro.',
+					grave: false,
+					cambia: false,
 				})
 			}
 
@@ -434,9 +494,15 @@ export default {
 				}
 			}
 
-			// Los que traen descuentos de una compra o un import: solo estan en juego en "todos"
-			if (es_todos && this.con_descuentos_de_compra) {
-				if (this.accion_sobre_compras == 'pisar') {
+			/*
+				Los que traen descuentos de una compra o un import. Se usan los MISMOS dos
+				computed que gobiernan el bloque amarillo y el body del PUT
+				(`mostrar_accion_sobre_compras` y `accion_sobre_compras_efectiva`), no `es_todos`
+				ni el valor crudo del radio: asi el resumen no puede decir algo distinto de lo que
+				se manda.
+			*/
+			if (this.mostrar_accion_sobre_compras) {
+				if (this.accion_sobre_compras_efectiva == 'pisar') {
 					lineas.push({
 						texto: this.frase(
 							this.con_descuentos_de_compra,
@@ -446,7 +512,7 @@ export default {
 						grave: true,
 						cambia: true,
 					})
-				} else if (this.accion_sobre_compras == 'agregar') {
+				} else if (this.accion_sobre_compras_efectiva == 'agregar') {
 					lineas.push({
 						texto: this.frase(
 							this.con_descuentos_de_compra,
@@ -567,7 +633,8 @@ export default {
 			this.$api.put('provider/'+this.provider_id+'/sincronizar-descuentos', {
 				alcance: this.alcance,
 				pisar_editados_a_mano: this.pisar_editados_a_mano,
-				accion_sobre_compras: this.accion_sobre_compras,
+				// Nunca el valor crudo del radio: va lo que la ventana efectivamente mostro
+				accion_sobre_compras: this.accion_sobre_compras_efectiva,
 			})
 			.then(res => {
 				self.saving = false
