@@ -12,15 +12,73 @@
 			el valor crudo porque el filtro `currency` lo imprime formateado y del texto no
 			siempre se puede sacar el numero. Mismo patron que Posicion Fiscal.
 		-->
+		<!--
+			🔴 El `data-monto-forzado` sigue el mismo criterio que el `data-monto` de al lado: el
+			renglon de abajo imprime el monto formateado y del texto no siempre se saca el numero.
+			Cuando no hay forzado el valor es null y Vue no dibuja el atributo, asi que su sola
+			presencia ya dice que esta venta lleva ajuste.
+		-->
 		<div
 		class="vender-context-bar__block vender-context-bar__block--total"
 		data-testid="venta-total"
 		:data-monto="total"
+		:data-monto-forzado="forzar_total_monto"
 		data-tour="vender.total">
-			<span class="vender-context-bar__total-value">{{ total | currency }}</span>
+
+			<div class="vender-context-bar__total-row">
+				<span
+				v-if="!editando_total_forzado"
+				class="vender-context-bar__total-value">{{ total | currency }}</span>
+
+				<!--
+					Input inline del total forzado (extension forzar_total): el vendedor escribe el
+					total que quiere cobrar y el sistema calcula el ajuste. Confirma con Enter o
+					saliendo del campo, cancela con Escape.
+
+					Es un v-if propio y no el v-else del <span> de arriba a proposito: entre los dos
+					hay un comentario, y el v-else depende de que el compilador de plantillas los
+					deje pegados. Dos v-if no dependen de eso.
+				-->
+				<input
+				v-if="editando_total_forzado"
+				ref="input_total_forzado"
+				v-model="total_tipeado"
+				type="number"
+				step="0.01"
+				min="0"
+				class="vender-context-bar__total-input"
+				data-testid="input-total-forzado"
+				aria-label="Total a cobrar"
+				@keydown.enter="confirmar_total_forzado"
+				@keydown.esc="cancelar_total_forzado"
+				@blur="confirmar_total_forzado">
+
+				<button
+				v-if="puede_forzar_total && !editando_total_forzado"
+				type="button"
+				class="vender-context-bar__total-edit"
+				data-testid="btn-forzar-total"
+				title="Editar el total a cobrar"
+				aria-label="Editar el total a cobrar"
+				@click="abrir_total_forzado">
+					<i class="bi bi-pencil"></i>
+				</button>
+			</div>
+
 			<span class="vender-context-bar__sub-value">
 				<!-- El singular/plural se sigue decidiendo con el valor crudo (total_unidades === 1): el formateo va solo donde se muestra. -->
 				{{ items.length }} {{ items.length === 1 ? 'producto' : 'productos' }} · {{ numero_es(total_unidades) }} {{ total_unidades === 1 ? 'unidad' : 'unidades' }}
+			</span>
+
+			<!--
+				El renglon del ajuste. Va siempre que haya monto forzado, tambien al abrir una venta
+				guardada: el vendedor tiene que poder ver que ese total no sale de los items solos.
+			-->
+			<span
+			v-if="forzar_total_monto"
+			class="vender-context-bar__forzado"
+			data-testid="renglon-total-forzado">
+				{{ signo_total_forzado }} Total forzado: {{ format_price(monto_total_forzado_absoluto) }}
 			</span>
 		</div>
 
@@ -107,8 +165,16 @@
 // argumento, y este de aca lleva la cantidad de decimales. Dos firmas con el mismo
 // nombre en el mismo archivo es una trampa para el que lo lea en seis meses.
 import { numero_es as numero_es_con_decimales } from '@/common-vue/helpers/formato_numero'
+/*
+	El mixin del calculo del total. Se importa por el mismo motivo que lo hace
+	stage-3/Discounts.vue: esta barra ahora no solo MUESTRA el total, tambien lo cambia --el lapiz
+	del total forzado-- y para eso necesita setTotal(), que es el unico lugar donde se arma el
+	numero completo (items + descuentos + recargos + puntos + metodos de pago + forzado).
+*/
+import vender_set_total from '@/mixins/vender_set_total'
 export default {
 	name: 'ContextBar',
+	mixins: [vender_set_total],
 	filters: {
 		/**
 		 * Formatea un número como moneda con dos decimales y separadores de miles.
@@ -127,6 +193,15 @@ export default {
 			pago_del_cliente: '',
 			/* Resultado del cálculo de vuelto; cadena vacía = sin calcular */
 			vuelto_calculado: '',
+			/* Si el input inline del total forzado está abierto */
+			editando_total_forzado: false,
+			/* Lo que el vendedor tipea adentro de ese input */
+			total_tipeado: '',
+			/*
+				🔴 Escape cierra el input, y cerrarlo le saca el foco: el @blur dispara igual y,
+				sin esta bandera, confirmaría justo lo que se acaba de cancelar. No sacarla.
+			*/
+			cancelando_total_forzado: false,
 		}
 	},
 	watch: {
@@ -144,6 +219,51 @@ export default {
 		 */
 		total() {
 			return this.$store.state.vender.total || 0
+		},
+
+		/**
+		 * Monto con signo del total forzado (extensión forzar_total): negativo descuenta,
+		 * positivo recarga, null es que no se forzó nada.
+		 *
+		 * Se declara acá aunque el mixin vender_set_total también lo traiga, por el mismo criterio
+		 * que `total`, `items` y `client` de este mismo bloque: en esta barra toda lectura del
+		 * store es un computed propio, para que el que la lea encuentre de dónde sale cada cosa.
+		 *
+		 * @returns {Number|null}
+		 */
+		forzar_total_monto() {
+			return this.$store.state.vender.forzar_total_monto
+		},
+
+		/**
+		 * Signo del renglón del ajuste.
+		 *
+		 * @returns {String}
+		 */
+		signo_total_forzado() {
+			return Number(this.forzar_total_monto) < 0 ? '-' : '+'
+		},
+
+		/**
+		 * Monto del ajuste sin signo, para imprimirlo al lado del signo de arriba.
+		 *
+		 * @returns {Number}
+		 */
+		monto_total_forzado_absoluto() {
+			return Math.abs(Number(this.forzar_total_monto))
+		},
+
+		/**
+		 * El lápiz existe solo con la extensión prendida. Sin ella esta barra se comporta
+		 * exactamente como antes de la misión.
+		 *
+		 * El `total > 0` es el mismo que tenía el botón "Forzar" que este lápiz reemplaza:
+		 * forzar el total de un remito vacío no significa nada.
+		 *
+		 * @returns {boolean}
+		 */
+		puede_forzar_total() {
+			return this.hasExtencion('forzar_total') && this.total > 0
 		},
 
 		/**
@@ -340,6 +460,89 @@ export default {
 				this.vuelto_calculado = ''
 			}
 		},
+
+		/**
+		 * Abre el input inline del total forzado.
+		 */
+		abrir_total_forzado() {
+
+			this.cancelando_total_forzado = false
+			this.total_tipeado = this.total
+			this.editando_total_forzado = true
+
+			/*
+				El input recién existe en el DOM en el próximo tick. Arranca con el total actual y
+				con el texto SELECCIONADO para que el vendedor tipee encima sin tener que borrar,
+				que es como se usa esto en el mostrador: con el cliente adelante.
+			*/
+			let self = this
+			this.$nextTick(() => {
+				let input = self.$refs.input_total_forzado
+				if (input) {
+					input.focus()
+					input.select()
+				}
+			})
+		},
+
+		/**
+		 * Cierra el input sin tocar el total.
+		 */
+		cancelar_total_forzado() {
+			this.cancelando_total_forzado = true
+			this.editando_total_forzado = false
+		},
+
+		/**
+		 * Convierte el total tipeado en el monto del ajuste y recalcula la venta.
+		 */
+		confirmar_total_forzado() {
+
+			if (!this.editando_total_forzado) {
+				return
+			}
+
+			this.editando_total_forzado = false
+
+			if (this.cancelando_total_forzado) {
+				return
+			}
+
+			let tipeado = String(this.total_tipeado).trim()
+
+			if (
+				tipeado === ''
+				|| isNaN(Number(tipeado))
+				|| Number(tipeado) < 0
+			) {
+				this.$toast.warning('Escribi el total que queres cobrar')
+				return
+			}
+
+			/*
+				El total que se ve en pantalla YA tiene aplicado el forzado anterior, si había uno.
+				Para saber cuánto hay que ajustar primero se lo saca: si no, forzar dos veces
+				seguidas iría restando sobre lo ya restado.
+			*/
+			let base = Number(this.total) - Number(this.forzar_total_monto || 0)
+
+			let monto = Number(tipeado) - base
+
+			/*
+				Redondeo a centavos. La resta en punto flotante deja colas
+				(4000 - 4012 = -11.999999999999545) que después viajan a una columna
+				decimal(22,2) y dejan el total corrido por un centavo del que el vendedor tipeó.
+			*/
+			monto = Math.round(monto * 100) / 100
+
+			/*
+				Monto cero no es un forzado: es el total que ya estaba. Va null para que la venta no
+				quede marcada como ajustada cuando no se ajustó nada.
+			*/
+			this.$store.commit('vender/set_forzar_total_monto', monto ? monto : null)
+
+			this.setTotal()
+		},
 	},
 }
 </script>
@@ -385,6 +588,70 @@ export default {
 	&--total
 		padding-top: 8px
 		padding-bottom: 8px
+
+		// El lápiz aparece cuando el mouse entra al bloque del total.
+		//
+		// focus-within además de hover: con opacity 0 el botón sigue siendo alcanzable con el
+		// teclado, y si no se mostrara al recibir el foco el que navega con Tab lo estaría
+		// apretando a ciegas. Y mientras el input inline está abierto el lápiz ya no existe, así
+		// que ahí lo que sostiene el focus-within es el estado de edición del bloque.
+		&:hover .vender-context-bar__total-edit, &:focus-within .vender-context-bar__total-edit
+			opacity: 1
+
+/* Fila del monto: el total y, a su derecha, el lápiz del total forzado */
+.vender-context-bar__total-row
+	display: flex
+	align-items: center
+	min-width: 0
+
+/* Lápiz del total forzado (extensión forzar_total), escondido hasta el hover */
+.vender-context-bar__total-edit
+	background: transparent
+	border: 0
+	padding: 0
+	margin-left: 10px
+	color: #198754
+	font-size: 1rem
+	line-height: 1
+	cursor: pointer
+	flex-shrink: 0
+	opacity: 0
+	transition: opacity 0.2s ease
+
+/* Input inline que reemplaza al monto mientras se edita */
+.vender-context-bar__total-input
+	width: 150px
+	max-width: 100%
+	height: 34px
+	padding: 2px 8px
+	border: 1px solid #198754
+	border-radius: 6px
+	background: var(--bg-card, #ffffff)
+	color: #198754
+	font-size: 1.4rem
+	font-weight: 700
+	line-height: 1.1
+
+/* Renglón del ajuste, debajo del subtexto de productos y unidades */
+.vender-context-bar__forzado
+	font-size: 0.72rem
+	font-weight: 600
+	color: var(--color-text-secondary, #6c757d)
+	white-space: nowrap
+	margin-top: 1px
+
+// 🔴 EN TELÉFONO NO HAY HOVER: ahí el lápiz va SIEMPRE visible, o la función directamente no
+// existe en un celular --que es donde más se usa el "pagame 4.000 y listo"--.
+//
+// Van las dos condiciones a propósito: (hover: none) cubre cualquier pantalla táctil, incluida la
+// tablet, y el max-width cubre al navegador de escritorio angosto que igual reporta hover.
+@media (hover: none)
+	.vender-context-bar__total-edit
+		opacity: 1
+
+@media screen and (max-width: 767px)
+	.vender-context-bar__total-edit
+		opacity: 1
 
 /* Valor principal (grande) de cada bloque */
 .vender-context-bar__main-value
