@@ -49,6 +49,7 @@
             :total_a_repartir="total_a_repartir"
             :base_moneda="base_moneda"
             :address_id="effective_address_id"
+            :show_retencion="show_retencion"
             :sobrante_a_repartir="sobrante_a_repartir"
             @add="add_payment_method"
             @remove="remove_payment_method"
@@ -143,6 +144,15 @@ export default {
         parent_modal_id: {
             type: String,
             default: null,
+        },
+        /**
+         * Dibuja los datos del certificado cuando el metodo elegido es una retencion sufrida.
+         * Apagada por defecto: la prende solo el modal de cobro de cuenta corriente, que es el
+         * unico circuito que los guarda (ver RetencionInfo.vue).
+         */
+        show_retencion: {
+            type: Boolean,
+            default: false,
         },
     },
     computed: {

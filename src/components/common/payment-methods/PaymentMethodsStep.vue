@@ -162,6 +162,19 @@
                         @field_change="on_check_field_change(index, $event)"
                         :payment_method="payment_method"></check-info>
 
+                        <!--
+                            Los datos del certificado de una retencion sufrida. Detras de una prop
+                            que por defecto esta APAGADA a proposito: hoy el unico circuito que
+                            guarda el certificado es el cobro de cuenta corriente
+                            (CurrentAcountController::pago). Dibujarlos siempre los mostraria
+                            tambien en Vender, donde nadie los lee, y campos que no van a ningun
+                            lado son peor que campos que faltan.
+                        -->
+                        <retencion-info
+                        v-if="show_retencion"
+                        @field_change="on_check_field_change(index, $event)"
+                        :payment_method="payment_method"></retencion-info>
+
                         <slot name="details" :payment_method="payment_method"></slot>
                     </div>
 
@@ -190,6 +203,7 @@ export default {
 
         CheckInfo: () => import('@/components/common/payment-methods/CheckInfo'),
         Cuotas: () => import('@/components/common/payment-methods/Cuotas'),
+        RetencionInfo: () => import('@/components/common/payment-methods/RetencionInfo'),
     },
     props: {
         payment_methods: {
@@ -222,6 +236,15 @@ export default {
             default: null,
         },
         address_id: Number,
+        /**
+         * Dibuja los datos del certificado cuando el metodo elegido es una retencion. Apagada por
+         * defecto: solo la prende el modal de cobro de cuenta corriente, que es el unico circuito
+         * que los guarda.
+         */
+        show_retencion: {
+            type: Boolean,
+            default: false,
+        },
     },
     computed: {
         payment_method_select_options() {
@@ -343,8 +366,40 @@ export default {
                 return false
             }
 
+            /*
+             * 🔴 Una RETENCION no entra a ninguna caja, nunca. La plata no la tiene el comercio: el
+             * cliente la deposito a su nombre en ARCA. Lo que cancela la deuda es el monto de la
+             * fila, no un ingreso de caja. Si el select se dibujara y alguien eligiera una caja,
+             * CurrentAcountPagoHelper::attachPaymentMethods() crearia el movimiento y el arqueo del
+             * dia cerraria con plata de mas que no esta en ningun lado.
+             *
+             * Es el mismo criterio con el que el back excluye al cheque en
+             * deberia_haber_impactado_caja(), y vale en todos los circuitos, no solo en el cobro:
+             * por eso NO cuelga de `show_retencion`.
+             */
+            if (this.es_retencion(payment_method)) {
+                return false
+            }
+
             // El metodo 1 es cuenta corriente: no mueve caja.
             return method_id !== 1
+        },
+
+        /**
+         * Si el metodo de pago elegido en esta fila es del tipo `retencion`. Se lee del catalogo
+         * del store, igual que lo hacen CheckInfo y RetencionInfo.
+         *
+         * @param {Object} payment_method Fila de método de pago del formulario.
+         * @returns {boolean}
+         */
+        es_retencion(payment_method) {
+            let modelo = this.$store.state.current_acount_payment_method.models.find(p => p.id == payment_method.current_acount_payment_method_id)
+
+            if (typeof modelo == 'undefined' || !modelo.type) {
+                return false
+            }
+
+            return modelo.type.slug == 'retencion'
         },
 
         /**
@@ -473,6 +528,19 @@ export default {
          */
 
         set_caja_por_defecto(index, method_id, moneda_id) {
+
+            /*
+             * 🔴 A una RETENCION no se le propone caja: se le saca. El select ya esta escondido
+             * (ver show_caja_select), pero esconderlo no alcanza — este metodo corre solo al abrir
+             * el modal, al cambiar el metodo y al cambiar la sucursal, y si el comercio tiene una
+             * caja por defecto configurada para ese metodo, el caja_id quedaria cargado en el
+             * modelo sin que nadie lo vea y el back crearia el movimiento igual. Plata en la caja
+             * que no esta en la caja.
+             */
+            if (this.es_retencion({current_acount_payment_method_id: method_id})) {
+                this.$emit('update_caja_id', index, 0)
+                return
+            }
 
             let caja_por_defecto = this.get_caja_por_defecto(method_id, this.address_id, moneda_id)
 

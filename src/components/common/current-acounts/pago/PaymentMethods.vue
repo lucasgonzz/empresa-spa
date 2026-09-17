@@ -13,6 +13,8 @@
             :base_moneda="base_moneda"
             :show_cash_box="true"
             :validate_cash_box_moneda="validate_cash_box_moneda"
+
+            :show_retencion="true"
         >
         </multi-payment-methods>
     </div>
@@ -159,8 +161,32 @@ export default {
                 // ✅ Tarjeta (ejemplo, ajustá a tu modelo real)
                 credit_card_id: 0,
                 credit_card_payment_plan_id: 0,
-                
+
                 cuota_id: 0,
+
+                /*
+                 * ✅ Retencion sufrida (mision compras-factura-manual-alicuotas, 17/9/2026).
+                 *
+                 * Los datos del certificado que da el cliente que te retiene. Van prefijados porque
+                 * comparten la fila con los del cheque: sin el prefijo, `numero` y `fecha` serian
+                 * el mismo campo para los dos.
+                 *
+                 * 🔴 El IMPORTE de la retencion NO esta aca: es el `amount` de esta misma fila, el
+                 * mismo campo que el efectivo. Por eso suma al total del cobro y cancela la deuda
+                 * entera (si te deben $100.000 y te retienen $2.000, te pagan $98.000 y la deuda se
+                 * cancela por $100.000). Un segundo campo de monto abriria la puerta a que los dos
+                 * numeros no coincidan.
+                 *
+                 * El impuesto arranca en `ganancias`, que es la retencion mas comun y la unica que
+                 * cae en un renglon informativo de la Posicion Fiscal: si el usuario no lo toca, el
+                 * dato flojo no le cambia el IVA ni el IIBB a pagar del periodo.
+                 */
+                retencion_impuesto: 'ganancias',
+                retencion_numero_certificado: '',
+                retencion_fecha: '',
+                retencion_regimen: '',
+                retencion_base_imponible: '',
+                retencion_alicuota: '',
             }
         },
 
