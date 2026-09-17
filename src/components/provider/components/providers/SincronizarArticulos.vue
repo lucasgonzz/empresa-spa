@@ -220,6 +220,62 @@ id="sincronizar-descuentos-proveedor"
 			text="Exportar Excel"></btn-loader>
 		</div>
 
+		<!--
+			El cierre de la ventana. Arriba, cada opcion explica LO SUYO; esto explica la
+			combinacion que el usuario armo, que es otra cosa: alcance, el tilde de los editados a
+			mano y que hacer con las compras son tres decisiones que se multiplican entre si, y
+			sin este bloque el usuario tiene que sumarlas de cabeza mirando tres recuadros
+			separados antes de apretar el boton.
+
+			Se rearma solo al cambiar cualquier opcion, porque sale de un computed.
+		-->
+		<div class="sincronizar-bloque sincronizar-bloque--cierre m-b-20">
+			<p class="m-b-10">
+				<strong>
+					Esto es lo que va a pasar
+				</strong>
+			</p>
+
+			<!--
+				La combinacion elegida no toca ningun articulo. Decirlo es la mitad del trabajo; la
+				otra mitad es que el boton quede deshabilitado (ver mas abajo), porque si no el
+				usuario aprieta, la ventana se cierra avisando que se esta procesando y no pasa
+				nada: parece que el sistema trabajo y no hizo nada.
+			-->
+			<p
+			v-if="no_toca_nada"
+			class="text-muted m-b-0">
+				Con estas opciones no se va a modificar ningun articulo.
+			</p>
+
+			<template v-else>
+				<ul class="sincronizar-consecuencias m-b-10">
+					<li
+					v-for="(linea, index) in consecuencias"
+					:key="index"
+					:class="linea.grave ? 'text-danger' : 'text-muted'">
+						{{ linea.texto }}
+					</li>
+				</ul>
+
+				<!--
+					🔴 La consecuencia mas importante y la que no estaba dicha en ningun lado de la
+					ventana: al re-materializar los descuentos se recalcula el costo y con el el
+					precio de venta. Un comercio que aprieta el boton creyendo que "ordena unos
+					descuentos" y termina con los precios de su ecommerce movidos tiene razon en
+					sentirse enganado por esta ventana.
+				-->
+				<p class="m-b-0">
+					<strong>
+						Sincronizar cambia el precio de venta de esos articulos.
+					</strong>
+					<span v-if="tiene_tienda_online">
+						El precio nuevo se va a ver en tu tienda online.
+					</span>
+				</p>
+			</template>
+		</div>
+
 		<div class="sincronizar-acciones">
 			<b-button
 			variant="outline-secondary"
@@ -230,6 +286,7 @@ id="sincronizar-descuentos-proveedor"
 			variant="primary"
 			:block="false"
 			:loader="saving"
+			:disabled="no_toca_nada"
 			@clicked="confirm"
 			text="Sincronizar articulos"></btn-loader>
 		</div>
@@ -303,6 +360,137 @@ export default {
 		mostrar_accion_sobre_compras() {
 			return this.con_descuentos_de_compra > 0 && this.alcance == 'todos'
 		},
+		/*
+			La cuenta tiene el ecommerce. Sale de la mecanica de extensiones del sistema
+			(hasExtencion vive en el mixin global de src/mixins/generals.js, el mismo que resuelve
+			los `if_has_extencion` de los modelos). Sin ecommerce, hablarle al usuario de "tu
+			tienda online" seria nombrarle algo que no tiene.
+		*/
+		tiene_tienda_online() {
+			return !!this.hasExtencion('online')
+		},
+		/*
+			Lo que va a pasar con la combinacion que el usuario tiene elegida AHORA. Cada linea
+			lleva:
+			  - `grave`: la pinta en rojo. Solo para las dos que destruyen o distorsionan un dato:
+			    perder una bonificacion negociada en una compra, y aplicar dos descuentos en
+			    cascada (que baja el costo mas de lo que dice la ficha).
+			  - `cambia`: si esa linea implica tocar articulos. De ahi sale `no_toca_nada`, y por
+			    eso se deriva de las lineas en vez de sumar los contadores: los grupos del preview
+			    podrian solaparse y una suma daria un numero que no es.
+		*/
+		consecuencias() {
+			let lineas = []
+			let es_todos = this.alcance == 'todos'
+
+			// Los que hoy no tienen ningun descuento: solo los alcanza el modo "todos"
+			if (es_todos && this.sin_descuentos) {
+				lineas.push({
+					texto: this.frase(
+						this.sin_descuentos,
+						'articulo va a recibir estos descuentos por primera vez.',
+						'articulos van a recibir estos descuentos por primera vez.'
+					),
+					grave: false,
+					cambia: true,
+				})
+			}
+
+			// Los que tienen descuentos de la ficha pero con otros valores: se actualizan siempre
+			if (this.desactualizados) {
+				lineas.push({
+					texto: this.frase(
+						this.desactualizados,
+						'articulo va a quedar con los descuentos actualizados.',
+						'articulos van a quedar con los descuentos actualizados.'
+					),
+					grave: false,
+					cambia: true,
+				})
+			}
+
+			// Los editados a mano dependen del tilde, no del alcance
+			if (this.editados_a_mano) {
+				if (this.pisar_editados_a_mano) {
+					lineas.push({
+						texto: this.frase(
+							this.editados_a_mano,
+							'articulo que editaste a mano se va a pisar.',
+							'articulos que editaste a mano se van a pisar.'
+						),
+						grave: false,
+						cambia: true,
+					})
+				} else {
+					lineas.push({
+						texto: this.frase(
+							this.editados_a_mano,
+							'articulo que editaste a mano no se va a tocar.',
+							'articulos que editaste a mano no se van a tocar.'
+						),
+						grave: false,
+						cambia: false,
+					})
+				}
+			}
+
+			// Los que traen descuentos de una compra o un import: solo estan en juego en "todos"
+			if (es_todos && this.con_descuentos_de_compra) {
+				if (this.accion_sobre_compras == 'pisar') {
+					lineas.push({
+						texto: this.frase(
+							this.con_descuentos_de_compra,
+							'articulo va a perder la bonificacion que se habia negociado en esa compra.',
+							'articulos van a perder la bonificacion que se habia negociado en esa compra.'
+						),
+						grave: true,
+						cambia: true,
+					})
+				} else if (this.accion_sobre_compras == 'agregar') {
+					lineas.push({
+						texto: this.frase(
+							this.con_descuentos_de_compra,
+							'articulo va a quedar con los dos descuentos aplicados uno sobre otro, asi que su costo va a bajar mas de lo que dice la ficha.',
+							'articulos van a quedar con los dos descuentos aplicados uno sobre otro, asi que su costo va a bajar mas de lo que dice la ficha.'
+						),
+						grave: true,
+						cambia: true,
+					})
+				} else {
+					lineas.push({
+						texto: this.frase(
+							this.con_descuentos_de_compra,
+							'articulo con descuentos de una compra o una importacion no se va a tocar.',
+							'articulos con descuentos de una compra o una importacion no se van a tocar.'
+						),
+						grave: false,
+						cambia: false,
+					})
+				}
+			}
+
+			// Los que ya coinciden con la ficha
+			if (this.al_dia) {
+				lineas.push({
+					texto: this.frase(
+						this.al_dia,
+						'ya esta al dia y no cambia.',
+						'ya estan al dia y no cambian.'
+					),
+					grave: false,
+					cambia: false,
+				})
+			}
+
+			return lineas
+		},
+		/*
+			Ninguna de las lineas de arriba toca un articulo. Pasa, por ejemplo, con el alcance
+			"solo los que ya tienen estos descuentos" y `desactualizados` en cero.
+		*/
+		no_toca_nada() {
+			return !this.consecuencias.some(linea => linea.cambia)
+		},
 	},
 	created() {
 		this.$root.$on(EVENTO_ABRIR, this.abrir)
@@ -319,6 +507,18 @@ export default {
 		this.$root.$off(EVENTO_ABRIR, this.abrir)
 	},
 	methods: {
+		/**
+		 * Arma "N <texto>" con la concordancia correcta. Esta ventana repite el mismo patron
+		 * siete veces y con ternarios adentro de cada push el computed se vuelve ilegible.
+		 *
+		 * @param {Number} cantidad
+		 * @param {String} en_singular texto para cantidad == 1
+		 * @param {String} en_plural texto para el resto
+		 * @return {String}
+		 */
+		frase(cantidad, en_singular, en_plural) {
+			return cantidad + ' ' + (cantidad == 1 ? en_singular : en_plural)
+		},
 		// Handler del evento global. El payload es el proveedor (el parent_model del has_many).
 		abrir(provider) {
 			if (!provider || !provider.id) {
@@ -455,6 +655,30 @@ export default {
 // El bloque de los descuentos que vinieron de una compra: es el que puede duplicar el descuento
 .sincronizar-bloque--alerta
 	background-color: rgba(255, 193, 7, 0.08)
+
+// El cierre: es el resumen de la decision, asi que pesa mas que los recuadros de arriba
+.sincronizar-bloque--cierre
+	background-color: rgba(0, 0, 0, 0.04)
+	border-left: 3px solid #3b82f6
+
+// Las consecuencias van como lista, sin los bullets del navegador ni su sangria
+.sincronizar-consecuencias
+	list-style: none
+	padding-left: 0
+	margin-bottom: 0
+
+	li
+		position: relative
+		padding-left: 14px
+		margin-bottom: 4px
+		line-height: 1.35
+
+		// El punto se dibuja a mano para que herede el color de la linea (rojo si es grave)
+		&:before
+			content: '·'
+			position: absolute
+			left: 4px
+			font-weight: 700
 
 // Subtexto de cada opcion: alineado con el texto del radio, no con el circulito
 .sincronizar-subtexto
