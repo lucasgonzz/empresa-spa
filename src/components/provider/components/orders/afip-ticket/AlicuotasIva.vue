@@ -98,10 +98,21 @@
  * Las alicuotas de IVA de una factura de compra.
  *
  * Mision `compras-factura-manual-alicuotas` (17/9/2026). Se monta desde el slot
- * `has-many-prop-provider_order_afip_ticket_ivas` (ver
- * src/components/provider/components/orders/Index.vue), o sea que reemplaza el input generico de
- * esa prop adentro del formulario de la factura -- `ModelForm.vue:87`. El label ("Alicuotas IVA") y
- * el ancho completo (`full_cols`) los sigue poniendo ModelForm: eso no se toca.
+ * `has-many-prop-provider_order_afip_ticket_ivas`, o sea que reemplaza el input generico de esa
+ * prop adentro del formulario de la factura -- `ModelForm.vue:87`. El label ("Alicuotas IVA") y el
+ * ancho completo (`full_cols`) los sigue poniendo ModelForm: eso no se toca.
+ *
+ * 🔴 EL SLOT SE DECLARA EN LAS TRES PUERTAS AL MODAL DE COMPRA, no en una sola:
+ *
+ *   - src/components/provider/components/orders/Index.vue  (la pantalla de Compras)
+ *   - src/views/Reportes.vue                               (el drill-down de un reporte)
+ *   - src/components/common/current-acounts/Index.vue      (la cuenta corriente del proveedor)
+ *
+ * Un slot solo lo puede llenar un ANCESTRO, y las tres montan el modal por su cuenta. Con la
+ * declaracion en una sola, la misma factura con los mismos datos se ve completa desde Compras y
+ * pelada desde las otras dos --sin Bruto, sin calculo en vivo y sin la leyenda del modo
+ * automatico--, que es peor que no tener la funcionalidad. Si aparece una cuarta puerta, va la
+ * misma linea.
  *
  * Hace dos cosas: monta el has_many de las alicuotas con los tres importes de calculo en vivo
  * (ver el comentario del template), y aplica el bloqueo del modo de facturacion automatico.
