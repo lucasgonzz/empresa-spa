@@ -3,6 +3,7 @@
 	title="Historial de Entregas"
 	hide-footer
 	size="lg"
+	@shown="set_models"
 	id="acopio-article-deliveries">
 		<b-table
 		head-variant="dark"
@@ -55,13 +56,6 @@ export default {
 			return items
 		}
 	},
-    mounted() {
-        this.$root.$on('bv::modal::shown', (bvEvent, modalId) => {
-            if (modalId === 'acopio-article-deliveries') {
-            	this.set_models()
-            }
-        })
-    },
 	data() {
 		return {
 			models: [],
@@ -69,6 +63,15 @@ export default {
 	},
 
 	methods: {
+		/**
+		 * Trae las entregas de la venta. La dispara el @shown del propio <b-modal>.
+		 *
+		 * Antes colgaba de un this.$root.$on('bv::modal::shown') registrado en mounted y nunca
+		 * desenganchado: el bus global vive toda la sesion, asi que cada montaje del componente
+		 * dejaba otro listener vivo y la apertura N del modal disparaba N veces este mismo GET.
+		 *
+		 * @returns {void}
+		 */
 		set_models() {
 
 			console.log('set_models')

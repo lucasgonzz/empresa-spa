@@ -144,11 +144,62 @@ export default {
 	},
 	created() {
 		this.$store.commit('sale/setFromDates', true)
-		
+
+		// Los filtros de pantalla vuelven a su valor neutro ANTES de pedir el listado. En modo
+		// paginado viajan en la query string del pedido: reiniciarlos después (como hasta el
+		// 14/9/2026) mandaba el primer pedido con las opciones que quedaron de la visita anterior,
+		// y los watchers de abajo tenían que pedirlo de vuelta.
+		this.reiniciar_filtros()
 		this.$store.commit('sale/set_modulo', 'ventas')
+		this.sincronizar_alcance()
 		this.$store.dispatch('sale/getModels')
 
-		this.reiniciar_filtros()
+		// Temporizador del refresco de totales (ver refrescar_totales_con_debounce). No va en
+		// data() porque no hace falta que sea reactivo.
+		this.timeout_refresco_totales = null
+	},
+	mounted() {
+		// 🔴 Los watchers se registran acá, con $watch, y NO en la opción `watch:`. Un watcher
+		// declarado en la opción existe desde antes de created(), y los commits de ahí arriba
+		// (reiniciar_filtros, set_alcance_de_pantalla) cambian justamente los valores observados:
+		// se dispararía en el primer tick y pediría el listado dos veces. Registrados en mounted(),
+		// esos cambios ya pasaron y solo se observa lo que haga el usuario.
+
+		// Solapa de sucursal / empleado: la ruta cambia de params sin destruir la vista.
+		this.$watch('$route.params.view', this.recargar_por_cambio_de_alcance)
+		this.$watch('$route.params.sub_view', this.recargar_por_cambio_de_alcance)
+
+		// Show options y "ver consolidadas": en modo paginado el servidor recorta y totaliza, así
+		// que cada cambio pide el día de vuelta (página 1) con el filtro en la query string.
+		this.$watch(() => this.$store.state.sale.ventas_cobradas_show_option, this.recargar_por_cambio_de_alcance)
+		this.$watch(() => this.$store.state.sale.afip_ticket_show_option, this.recargar_por_cambio_de_alcance)
+		this.$watch(() => this.$store.state.sale.payment_method_show_option, this.recargar_por_cambio_de_alcance)
+		this.$watch(() => this.$store.state.sale.mostrar_consolidadas, this.recargar_por_cambio_de_alcance)
+
+		// 🔴 Los catálogos de sucursales y empleados llegan DESPUÉS del created() cuando se entra
+		// por URL directa o con F5 (download-resources los baja en paralelo, con un segundo de
+		// espera): `resolve_view_scope()` corre con los stores vacíos, no encuentra al empleado de
+		// la ruta y resuelve `only_owner = true` (o no encuentra la sucursal y no manda
+		// `address_id`). El primer pedido sale con ese alcance equivocado, y como el servidor es
+		// el que recorta, nada lo corregía: la tabla quedaba vacía con los totales del dueño. Con
+		// los catálogos ya cargados se vuelve a resolver, y solo si el alcance cambió se pide de
+		// vuelta (un dueño en "todas / todos" no gasta un pedido de más).
+		this.$watch(() => this.addresses.length + '/' + this.employees.length, () => {
+			if (this.alcance_de_la_ruta_cambio()) {
+				this.recargar_por_cambio_de_alcance()
+			}
+		})
+
+		// Una venta agregada, editada o borrada desde un modal deja los totales del servidor
+		// viejos (ver `totales_desactualizados` en el store): se vuelven a pedir, sin indicador.
+		this.$watch(() => this.$store.state.sale.totales_desactualizados, (desactualizados) => {
+			if (desactualizados) {
+				this.refrescar_totales_con_debounce()
+			}
+		})
+	},
+	beforeDestroy() {
+		clearTimeout(this.timeout_refresco_totales)
 	},
 	methods: {
 		reiniciar_filtros() {
@@ -156,9 +207,79 @@ export default {
 			this.$store.commit('sale/setAfipTicketShowOption', 'con-y-sin-factura')
 			this.$store.commit('sale/set_payment_method_show_option', 'todos')
 		},
+		/**
+		 * Le deja al store la solapa actual resuelta a ids (address_id / employee_id / only_owner),
+		 * que es lo que `sale/_getModels` manda en la query string del modo paginado. Se resuelve
+		 * acá y no en el store porque hace falta cruzar los nombres de la ruta con los stores de
+		 * address y employee.
+		 */
+		sincronizar_alcance() {
+			this.$store.commit('sale/set_alcance_de_pantalla', this.resolve_view_scope())
+		},
+		/**
+		 * true si la solapa de la ruta, resuelta con los catálogos de AHORA, difiere del alcance que
+		 * quedó en el store (el que viajó en el último pedido).
+		 *
+		 * @returns {Boolean}
+		 */
+		alcance_de_la_ruta_cambio() {
+			let nuevo = this.resolve_view_scope()
+			let actual = this.$store.state.sale.alcance_de_pantalla || {}
+			return nuevo.address_id != actual.address_id
+				|| nuevo.employee_id != actual.employee_id
+				|| !!nuevo.only_owner != !!actual.only_owner
+		},
+		/**
+		 * Cambió la solapa, una show option o "ver consolidadas": en modo paginado por fecha el
+		 * servidor es el que recorta, así que hay que pedir el día de vuelta con el alcance nuevo.
+		 */
+		recargar_por_cambio_de_alcance() {
+			// Navegación saliente: los params de la ruta cambian ANTES de que esta vista se
+			// destruya y los watchers alcanzan a correr con la ruta nueva. Sin este corte, irse a
+			// Depósito pedía el listado de ventas una vez más.
+			if (this.$route.name != 'sale' && this.$route.name != 'VentasAll') {
+				return
+			}
+			let state = this.$store.state.sale
+			// En modo filtrado (buscador general / filtro de columna) los filtros de pantalla
+			// siguen aplicándose en el navegador sobre `filtered`, como hasta ahora.
+			if (state.is_filtered) {
+				return
+			}
+			// Con la API vieja el listado ya es el día entero y se filtra en el navegador: pedirlo
+			// de vuelta no cambia nada. La excepción es que haya un pedido en vuelo: ahí todavía no
+			// se sabe si la API pagina (`paginado_por_fecha` es el resultado del último que LLEGÓ),
+			// y volver a pedir con el alcance nuevo es lo seguro, porque la última pedida gana.
+			if (!state.paginado_por_fecha && !state.pedido_en_curso) {
+				return
+			}
+			this.sincronizar_alcance()
+			this.$store.dispatch('sale/getModels')
+		},
+		/**
+		 * Pide el refresco silencioso de los totales, agrupando ráfagas: facturar cinco ventas de
+		 * una dispara cinco `add` seguidos y tiene que salir UN pedido, no cinco.
+		 */
+		refrescar_totales_con_debounce() {
+			let self = this
+			clearTimeout(this.timeout_refresco_totales)
+			this.timeout_refresco_totales = setTimeout(function () {
+				let state = self.$store.state.sale
+				if (state.paginado_por_fecha && !state.is_filtered) {
+					self.$store.dispatch('sale/refrescar_totales_del_dia')
+				}
+			}, 400)
+		},
 	},
 	beforeRouteLeave(to, from, next) {
 		this.$store.commit('sale/setSelected', [])
+		// El modo paginado por fecha es de ESTA pantalla y se apaga al salir. Si quedara prendido,
+		// cualquier otra tabla con `model_name="sale"` (el modal "Ventas del artículo" del Listado,
+		// que recibe sus filas por prop) mostraría la barra de paginación con los números del día
+		// de Ventas, y un clic en una página pediría el día de vuelta. Al volver acá, la respuesta
+		// de `getModels` lo vuelve a prender.
+		this.$store.commit('sale/set_paginado_por_fecha', false)
+		this.$store.commit('sale/set_totales_del_dia', null)
 		next()
 	},
 	computed: {

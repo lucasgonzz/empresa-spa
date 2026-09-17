@@ -10,8 +10,9 @@ import set_employee_vender from '@/mixins/set_employee_vender'
 */
 import omitir_en_cuenta_corriente from '@/mixins/vender/omitir_en_cuenta_corriente'
 import default_articles from '@/mixins/vender/default_articles'
+import deteccion_combos from '@/mixins/vender/deteccion_combos'
 export default {
-	mixins: [start_methods, vender_set_total, set_price_type, set_employee_vender, omitir_en_cuenta_corriente, default_articles],
+	mixins: [start_methods, vender_set_total, set_price_type, set_employee_vender, omitir_en_cuenta_corriente, default_articles, deteccion_combos],
 	computed: {
 		discounts() {
 			return this.$store.state.discount.models
@@ -100,6 +101,12 @@ export default {
 
 			this.$store.commit('vender/clearPendingAttachments')
 			this.$store.commit('vender/setSaleAttachments', [])
+
+			/*
+				Remito nuevo, deteccion de combos en cero: se descarta la espera pendiente y se
+				olvidan los combos que el vendedor rechazo en la venta anterior.
+			*/
+			this.limpiar_deteccion_de_combos()
 
 			// this.$store.commit('vender/set_caja_id', 0)
 			

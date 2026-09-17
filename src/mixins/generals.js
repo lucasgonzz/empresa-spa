@@ -238,7 +238,7 @@ export default {
         expense_concept_options_de_la_categoria(prop, model) {
 
             let opciones = [
-                { value: 0, text: 'Seleccione Concepto' },
+                { value: 0, text: 'Seleccione Sub categoría' },
             ]
 
             let conceptos = this.$store.state.expense_concept.models

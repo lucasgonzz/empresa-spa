@@ -115,6 +115,42 @@
 				Olvidé mi contraseña
 			</b-link>
 		</div>
+		<!--
+			Aparece cuando el candado de sesión única rechaza el login (otro dispositivo lo tiene
+			tomado). El botón primario NO cierra sesión ahí a mano: dispara login-forzado, que
+			expulsa a ese dispositivo por broadcast (ver src/mixins/broadcast.js) y loguea acá.
+		-->
+		<b-modal
+			id="sesion-en-otro-dispositivo"
+			title="Tu cuenta está en uso en otro dispositivo"
+			:no-close-on-backdrop="true"
+			centered
+			hide-footer
+			data-testid="modal-sesion-en-otro-dispositivo"
+		>
+			<p>
+				Tu cuenta está siendo utilizada en otro dispositivo. Podés esperar
+				{{ wait_minutes }} {{ wait_minutes == 1 ? 'minuto' : 'minutos' }}, o cerrar esa
+				sesión ahora mismo para ingresar acá.
+			</p>
+			<div class="login-form__lock-modal-buttons">
+				<b-button
+					variant="secondary"
+					data-testid="cancelar-forzar-login"
+					@click="$bvModal.hide('sesion-en-otro-dispositivo')"
+				>
+					Cancelar
+				</b-button>
+				<b-button
+					variant="danger"
+					data-testid="forzar-login"
+					:disabled="forcing_login"
+					@click="forzar_login"
+				>
+					Cerrar la otra sesión e ingresar acá
+				</b-button>
+			</div>
+		</b-modal>
 	</div>
 </template>
 <script>
@@ -142,6 +178,10 @@ export default {
 				remember: 0,
 			},
 			loading: false,
+			/** Minutos que muestra el modal de candado tomado (user_last_activity_wait_minutes). */
+			wait_minutes: 0,
+			/** Evita doble click mientras /login-forzado está en vuelo. */
+			forcing_login: false,
 		}
 	},
 	computed: {
@@ -202,29 +242,12 @@ export default {
 					.then(res => {
 						this.loading = false
 						if (res.data.login) {
-							console.log('login user:')
-							console.log(res.data.user)
-							/**
-							 * Informa al usuario cuando ingresó con comandos de login maestro.
-							 */
-							if (res.data.user && res.data.user.master_login_mode == 'login') {
-								this.$toast.warning('Modo mantenimiento: no se descargaran articulos offline', {
-									duration: 6000,
-									position: 'top-right',
-								})
-							} else if (res.data.user && res.data.user.master_login_mode == 'login_full') {
-								this.$toast.success('Modo mantenimiento full: se descargaran articulos offline', {
-									duration: 6000,
-									position: 'top-right',
-								})
-							}
-							this.$store.commit('auth/setUser', res.data.user)
-							this.$store.commit('auth/setAuthenticated', true)
+							this.aplicar_login_exitoso(res.data.user)
 						} else if (res.data.user_last_activity) {
-							const waitMinutes = res.data.user_last_activity_wait_minutes || 0
-							this.$toast.error('Su cuenta esta siendo utilizada en otro dispositivo, cierre la cuenta en el otro dispositivo. En caso de que la cuenta no este siendo utilizada en el otro dispositivo, espere ' + waitMinutes + ' minutos', {
-								duration: 10000,
-							})
+							// El modal reemplaza al toast: ya explica lo mismo y, a diferencia de
+							// un toast que se autodestruye, deja la opción de forzar el ingreso.
+							this.wait_minutes = res.data.user_last_activity_wait_minutes || 0
+							this.$bvModal.show('sesion-en-otro-dispositivo')
 						} else {
 							this.$toast.error('Sus credenciales son incorrectas, controle que este ingresando desde el link correspondiente a su negocio: TU-NEGOCIO.comerciocity.com', {
 								duration: 10000,
@@ -237,6 +260,58 @@ export default {
 						this.$toast.error('Error al ingresar. Recargá la página e intentá de nuevo.')
 					})
 			}
+		},
+		/**
+		 * Botón del modal "cuenta en uso en otro dispositivo": vuelve a mandar las mismas
+		 * credenciales a /login-forzado, que expulsa al otro dispositivo por broadcast (el
+		 * listener vive en src/mixins/broadcast.js) y loguea acá en la misma respuesta.
+		 *
+		 * @returns {void}
+		 */
+		forzar_login() {
+			if (this.forcing_login) {
+				return
+			}
+			this.forcing_login = true
+			this.$axios.post('login-forzado', this.form)
+				.then(res => {
+					this.forcing_login = false
+					if (res.data.login) {
+						this.$bvModal.hide('sesion-en-otro-dispositivo')
+						this.aplicar_login_exitoso(res.data.user)
+					} else {
+						this.$toast.error('No se pudo cerrar la otra sesión. Probá de nuevo en unos segundos.', {
+							duration: 10000,
+						})
+					}
+				})
+				.catch(err => {
+					console.log(err)
+					this.forcing_login = false
+					this.$toast.error('No se pudo cerrar la otra sesión. Probá de nuevo en unos segundos.')
+				})
+		},
+		/**
+		 * Ramas compartidas por login() y forzar_login() cuando el backend confirma `login: true`:
+		 * el toast de modo mantenimiento (login maestro) y los commits al store de auth.
+		 *
+		 * @param {Object} user Usuario devuelto por /login o /login-forzado.
+		 * @returns {void}
+		 */
+		aplicar_login_exitoso(user) {
+			if (user && user.master_login_mode == 'login') {
+				this.$toast.warning('Modo mantenimiento: no se descargaran articulos offline', {
+					duration: 6000,
+					position: 'top-right',
+				})
+			} else if (user && user.master_login_mode == 'login_full') {
+				this.$toast.success('Modo mantenimiento full: se descargaran articulos offline', {
+					duration: 6000,
+					position: 'top-right',
+				})
+			}
+			this.$store.commit('auth/setUser', user)
+			this.$store.commit('auth/setAuthenticated', true)
 		},
 		/**
 		 * Valida que existan credenciales antes de llamar al servidor.
@@ -478,4 +553,14 @@ export default {
 	.login-form--split .login-form__submit--with-arrow.btn:not(:disabled) span:last-child::after
 		content: ' →'
 		margin-left: 0.15rem
+
+// Modal de "cuenta en uso en otro dispositivo": botones lado a lado en escritorio,
+// apilados en un ancho angosto para que el texto de "Cerrar la otra sesión..." no se corte.
+.login-form__lock-modal-buttons
+	display: flex
+	gap: 0.75rem
+	justify-content: flex-end
+	margin-top: 1.25rem
+	@media screen and (max-width: 480px)
+		flex-direction: column-reverse
 </style>

@@ -54,6 +54,19 @@ export default {
 		promocion_vinotecas() {
 			return this.items.filter(item => item.is_promocion_vinoteca)
 		},
+		/*
+			🔴 Sin este computed, un combo cargado en VENDER con "Guardar como presupuesto" tildado
+			rompia el guardado con un 500. El combo entra igual al remito (el unico chequeo que mira
+			guardar_como_presupuesto es el de stock) y SI suma a this.total, que viaja en el payload
+			(vender_set_total.js, bucket total_combos). Pero la clave `combos` no se mandaba, asi que
+			BudgetHelper::getTotal() recalculaba sin el combo, le daba una diferencia mayor a 3 y
+			rechazaba con "El total del presupuesto no corresponde con los productos ingresados".
+			O sea que el vendedor no veia "el combo no se guardo": veia un total descuadrado que no
+			explicaba nada.
+		*/
+		combos() {
+			return this.items.filter(item => item.is_combo)
+		},
 	},
 	methods: {
 		guardar_presupuesto() {
@@ -100,6 +113,7 @@ export default {
 				'articles'					: this.get_articles(true),
 				'services'					: this.get_services(),
 				'promocion_vinotecas'		: this.get_promocion_vinotecas(),
+				'combos'					: this.get_combos(),
 				'discount_stock'			: this.discount_stock,
 				'sale_status_id'			: this.sale_status_id,
 				'iva_aplicado'				: this.iva_aplicado,
@@ -173,6 +187,7 @@ export default {
 				'articles'					: this.get_articles(),
 				'services'					: this.get_services(),
 				'promocion_vinotecas'		: this.get_promocion_vinotecas(),
+				'combos'					: this.get_combos(),
 				'discount_stock'			: this.discount_stock,
 				'sale_status_id'			: this.sale_status_id,
 				'iva_aplicado'				: this.iva_aplicado,
@@ -353,6 +368,24 @@ export default {
 				console.log(promocion_vinotecas)
 			})
 			return promocion_vinotecas
+		},
+		/*
+			Mismo contrato que get_promocion_vinotecas(): el pivot viaja con la cantidad y el precio
+			que quedo en el remito (price_vender, no combo.price, para que el presupuesto guarde el
+			precio que el vendedor vio). BudgetHelper del lado API lo lee de esta misma forma.
+		*/
+		get_combos() {
+			let combos = []
+			this.combos.forEach(combo => {
+				combos.push({
+					id: combo.id,
+					pivot: {
+						amount: combo.amount,
+						price: combo.price_vender,
+					}
+				})
+			})
+			return combos
 		},
 
 	}

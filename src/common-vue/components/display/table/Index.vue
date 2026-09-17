@@ -917,6 +917,24 @@ export default {
 				return this.$store.dispatch('papelera/' + this.model_name + '/run_papelera_search_from_store')
 			}
 
+			// Paginación del listado del día (Ventas, 14/9/2026): si el evento lo emitió la barra de
+			// paginación y el store está mostrando el día PAGINADO por la API sin filtro activo
+			// (`paginado_por_fecha`, ver src/store/sale/index.js), la página se le pide al endpoint
+			// del día (`from-date` con `per_page`/`page`) y no a global-search, que busca en TODAS
+			// las fechas y devolvería otra cosa. La barra ya escribió la página en `filter_page`.
+			//
+			// 🔴 Se mira `origen` y no `resetear_pagina`: ordenar (<ordenar>) y cambiar el "por
+			// página" emiten los dos `filtrar` sin `resetear_pagina`, y solo el segundo es
+			// paginación. Con un filtro activo, o en un store que no declara el modo (para los demás
+			// la clave es undefined), sigue todo por el camino de siempre, incluida la paginación
+			// del modo filtrado.
+			if (opciones && opciones.origen == 'paginacion') {
+				let store_del_modelo = this.$store.state[this.model_name]
+				if (store_del_modelo && store_del_modelo.paginado_por_fecha && !store_del_modelo.is_filtered) {
+					return this.$store.dispatch(this.model_name + '/cambiar_pagina_por_fecha')
+				}
+			}
+
 			// Un solo camino para todos los filtrados del listado: global-search compone el criterio de
 			// texto del buscador general (payload persistido en el store) con los filtros de columna
 			// (state.filters, que runGlobalSearch adjunta en cada request). Antes había una bifurcación

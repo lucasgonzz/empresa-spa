@@ -41,7 +41,11 @@
 		v-if="inventory_performance"
 		class="stock-minimo-resumen m-b-15">
 
-			<div class="totales-chip totales-chip--principal">
+			<!-- data-valor / data-monto: el numero crudo, el texto visible va es-AR. -->
+			<div
+			class="totales-chip totales-chip--principal"
+			data-testid="stock-minimo-chip-bajo-minimo"
+			:data-valor="inventory_performance.stock_minimo">
 				<div class="totales-chip__icon-wrap">
 					<i class="bi bi-box-seam" aria-hidden="true"></i>
 				</div>
@@ -51,7 +55,10 @@
 				</div>
 			</div>
 
-			<div class="totales-chip">
+			<div
+			class="totales-chip"
+			data-testid="stock-minimo-chip-sin-stock"
+			:data-valor="inventory_performance.sin_stock">
 				<div class="totales-chip__icon-wrap">
 					<i class="bi bi-dash-circle" aria-hidden="true"></i>
 				</div>
@@ -68,6 +75,8 @@
 			-->
 			<div
 			class="totales-chip"
+			data-testid="stock-minimo-chip-negativo"
+			:data-valor="inventory_performance.stock_negativo"
 			:class="{ 'totales-chip--negativo': inventory_performance.stock_negativo > 0 }">
 				<div class="totales-chip__icon-wrap">
 					<i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
@@ -83,7 +92,10 @@
 				</div>
 			</div>
 
-			<div class="totales-chip">
+			<div
+			class="totales-chip"
+			data-testid="stock-minimo-chip-reposicion"
+			:data-monto="inventory_performance.costo_reposicion_stock_minimo">
 				<div class="totales-chip__icon-wrap">
 					<i class="bi bi-cash-stack" aria-hidden="true"></i>
 				</div>
@@ -106,6 +118,7 @@
 		-->
 		<div
 		v-if="inventory_performance && inventory_performance_generating"
+		data-testid="stock-minimo-aviso"
 		class="stock-minimo-aviso">
 			<i class="bi bi-arrow-repeat stock-minimo-aviso__icono" aria-hidden="true"></i>
 			<span>
@@ -126,6 +139,7 @@
 			<div class="stock-minimo-search">
 				<i class="bi bi-search stock-minimo-search__lupa" aria-hidden="true"></i>
 				<b-form-input
+				data-testid="stock-minimo-buscador"
 				v-model="search_input"
 				@input="on_search_input"
 				placeholder="Buscar por nombre, codigo de barras o codigo de proveedor"></b-form-input>
@@ -138,9 +152,33 @@
 		<!-- Caso 1: todavia no hay ningun reporte generado (ni siquiera uno viejo) y se esta calculando el primero -->
 		<empty-state
 		v-if="sin_reporte_generando"
+		data-testid="stock-minimo-vacio-generando"
 		icon_class="bi bi-hourglass-split"
 		title="Estamos calculando el reporte de inventario"
 		hint="Los datos van a aparecer solos en unos minutos, sin que tengas que recargar."></empty-state>
+
+		<!--
+			Caso 1-bis: todavia no hay ningun reporte y tampoco hay ninguno generandose (mision
+			reporte-inventario-manual, 15/9/2026). Sin este caso la pantalla queda en blanco -- ni
+			tabla, ni resumen, ni ningun aviso -- porque desde esta mision entrar aca ya no dispara
+			nada solo: el reporte se genera de noche (04:00) o con el boton. Un comercio recien dado
+			de alta puede pasar horas en este estado, asi que necesita su propio boton para no
+			depender de esperar a la madrugada.
+		-->
+		<empty-state
+		v-else-if="sin_reporte_y_sin_generar"
+		data-testid="stock-minimo-vacio-sin-generar"
+		icon_class="bi bi-box-seam"
+		title="Todavía no hay un reporte de inventario"
+		hint="Se genera solo todas las noches. Si no querés esperar, pedilo ahora.">
+			<b-button
+			class="stock-minimo-actualizacion__boton"
+			size="sm"
+			@click="actualizar_inventory_performance()">
+				<i class="bi bi-arrow-repeat m-r-5" aria-hidden="true"></i>
+				Generar ahora
+			</b-button>
+		</empty-state>
 
 		<!--
 			Caso 2: hay reporte pero la pagina actual vino vacia. Son dos situaciones distintas y por
@@ -149,6 +187,7 @@
 		-->
 		<empty-state
 		v-else-if="sin_resultados"
+		data-testid="stock-minimo-vacio-sin-resultados"
 		:icon_class="hay_busqueda_activa ? 'bi bi-search' : 'bi bi-check2-circle'"
 		:title="hay_busqueda_activa ? 'Ningún artículo coincide con la búsqueda' : 'No hay artículos con stock mínimo'"
 		:hint="hay_busqueda_activa ? 'Probá con otro nombre, código de barras o código de proveedor.' : 'Ningún artículo está por debajo del mínimo que tenés configurado.'"></empty-state>
@@ -164,6 +203,7 @@
 			</div>
 
 			<b-table
+			data-testid="stock-minimo-tabla"
 			:key="fields_signature"
 			head-variant="dark"
 			responsive
@@ -278,6 +318,17 @@ export default {
 		 */
 		sin_reporte_generando() {
 			return this.inventory_performance_generating && !this.inventory_performance
+		},
+		/**
+		 * Caso "todavia no hay ningun reporte, y tampoco hay ninguno generandose": desde que
+		 * index() dejo de disparar la primera generacion sola (mision reporte-inventario-manual,
+		 * 15/9/2026), este es el estado de un comercio recien dado de alta hasta la corrida de las
+		 * 04:00 o hasta que alguien pida el reporte a mano.
+		 *
+		 * @returns {Boolean}
+		 */
+		sin_reporte_y_sin_generar() {
+			return !this.inventory_performance && !this.inventory_performance_generating
 		},
 		/**
 		 * Caso "hay reporte pero la pagina actual vino vacia": ya sea porque no hay articulos

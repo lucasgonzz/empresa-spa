@@ -60,33 +60,6 @@ export default {
 				})
 		},
 		/**
-		 * Entrada del módulo padre "IA" de la nav (D29). Antes mandaba siempre a
-		 * Sugerencias de stock, que era su único submódulo; con "sugerencias de
-		 * compra" (15/8/2026) ya no alcanza con eso, así que decide por extensión:
-		 * stock si la tiene (prioridad histórica), si no compras, si no ofertas
-		 * (15/8/2026), y si no tiene ninguna no navega a ningún lado (el padre
-		 * tampoco debería estar visible
-		 * en ese caso, ver if_has_alguna_extencion de router/routes.js). El guard
-		 * evita el NavigationDuplicated de apretar el padre estando ya en el
-		 * listado del destino (desde un detalle sí navega).
-		 */
-		ir_a_modulo_ia() {
-			let destino = null
-			if (this.hasExtencion('sugerencias_inteligentes')) {
-				destino = 'sugerencias_stock'
-			} else if (this.hasExtencion('sugerencias_compras')) {
-				destino = 'sugerencias_compra'
-			} else if (this.hasExtencion('motor_de_ofertas')) {
-				destino = 'ofertas'
-			}
-			if (!destino) {
-				return
-			}
-			if (this.$route.name != destino || this.$route.params.id) {
-				this.$router.push({name: destino})
-			}
-		},
-		/**
 		 * Hijos de "Tienda Online" (D31). Son funciones y no entradas con name
 		 * 'online' + params porque toRoute() corta cuando el name de la ruta ya es
 		 * el actual, y estos hijos se usan justamente estando adentro de /online.
@@ -104,9 +77,10 @@ export default {
 			this.$router.push({name: 'online', params: {view: 'cupones'}})
 		},
 		/**
-		 * Promociones: la vista del motor de ofertas por cliente, montada también
-		 * abajo de Tienda Online. Es el MISMO componente que IA -> Ofertas; la
-		 * única diferencia es que acá nunca hay :id, así que siempre cae al listado.
+		 * Promociones: la vista del motor de ofertas por cliente, montada abajo de
+		 * Tienda Online. Hasta el 14/9/2026 era el MISMO componente que IA -> Ofertas;
+		 * con el módulo IA viejo fuera del menú (misión "modulo-ia-mostrador"), esta es
+		 * su única entrada. Acá nunca hay :id, así que siempre cae al listado.
 		 */
 		ir_a_online_promociones() {
 			if (this.$route.name == 'online' && this.$route.params.view == 'promociones') {
@@ -132,7 +106,12 @@ export default {
 
 					this.$store.commit('sale/setFromDates', true)
 				}
-				
+
+				// El modulo va ANTES del pedido: `sale/_getModels` pide el listado paginado del día
+				// solo con modulo 'ventas'. Sin esta línea, este primer pedido salía con el modulo que
+				// hubiera quedado en el store (`deposito`, por ejemplo) y bajaba el listado entero,
+				// para que created() de Ventas.vue lo pidiera de vuelta paginado un instante después.
+				this.$store.commit('sale/set_modulo', 'ventas')
 				this.$store.dispatch('sale/getModels')
 
 				let sucursal = this.get_address_param()

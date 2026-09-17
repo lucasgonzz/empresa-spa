@@ -4,6 +4,7 @@
 		v-if="view == 'mensajes'">
 
 			<b-table
+			data-testid="alertas-mensajes-tabla"
 			v-if="chats_sin_leer.length"
 			head-variant="dark"
 			responsive
@@ -14,6 +15,7 @@
 			<!-- Estado vacío del sistema (display/EmptyState), en vez del cartel azul viejo. -->
 			<empty-state
 			v-else
+			data-testid="alertas-mensajes-vacio"
 			icon_class="bi bi-chat-dots"
 			title="No hay mensajes sin leer"
 			hint="Cuando un cliente escriba desde la tienda, el mensaje aparece acá."></empty-state>

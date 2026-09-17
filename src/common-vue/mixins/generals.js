@@ -10,6 +10,45 @@ import generals_model_meta from '@/common-vue/mixins/generals/model-meta'
 // Función reusada para armar las opciones del selector de PDF a imprimir en la factura
 // (mismo vocabulario que el atajo de impresión de Vender).
 import { build_vender_facturado_print_select_options } from '@/constants/vender_print_shortcut_options'
+
+/**
+ * OR entre extensiones para props declaradas con `if_has_alguna_extencion: [slug, ...]`
+ * (bloque ADITIVO de la misión zipnova-envios, 14/9/2026; mismo nombre y semántica que nav.js
+ * usa para las rutas).
+ *
+ * Devuelve true si la prop no declara la clave (no aplica el gate) o si el comercio tiene al
+ * menos una de las extensiones listadas. Si la clave viene mal armada (no es un array) se
+ * esconde la prop antes que romper el formulario entero: mismo criterio de guarda de tipo que
+ * nav.js.
+ *
+ * 🔴 Es una función de módulo y no un método del mixin A PROPÓSITO: recibe el `vm` y solo le
+ * pide `hasExtencion()`. `column_preferences_helper.js` llama `check_extencions()` con un
+ * contexto artificial que tiene `hasExtencion` y `check_has_not_extencions` y nada más, así que
+ * cualquier `this.otro_metodo()` nuevo adentro de `check_extencions` revienta ahí (medido el
+ * 14/9/2026 en el modal de columnas del Listado: "this.check_alguna_extencion is not a function").
+ *
+ * @param {Object} vm Componente (o contexto) con `hasExtencion(slug)`.
+ * @param {Object} prop Definición de la prop del modelo.
+ * @returns {Boolean}
+ */
+export function cumple_alguna_extencion(vm, prop) {
+	if (!prop || typeof prop.if_has_alguna_extencion == 'undefined' || prop.if_has_alguna_extencion === null) {
+		return true
+	}
+	if (!Array.isArray(prop.if_has_alguna_extencion)) {
+		return false
+	}
+
+	let alguna = false
+	prop.if_has_alguna_extencion.forEach(extencion => {
+		if (vm.hasExtencion(extencion)) {
+			alguna = true
+		}
+	})
+
+	return alguna
+}
+
 export default {
 	mixins: [
 		VueScreenSize.VueScreenSizeMixin,
@@ -244,13 +283,27 @@ export default {
 						props_result.push(prop)
 					}
 
+				} else if (prop.if_has_alguna_extencion) {
+
+					/*
+						Bloque ADITIVO (misión zipnova-envios, 14/9/2026): OR entre extensiones,
+						para props que tienen sentido con cualquiera de varias extensiones (peso y
+						medidas del artículo: sirven con `usa_tienda_nube` o con `online`).
+						`if_has_extencion` de arriba es un string y no contempla ese caso. Mismo
+						nombre y misma semántica que ya usa nav.js para las rutas. Va por la función
+						de módulo y no por un método: ver cumple_alguna_extencion().
+					*/
+					if (cumple_alguna_extencion(this, prop)) {
+						props_result.push(prop)
+					}
+
 				} else {
 					props_result.push(prop)
 				}
 			})
 
 			return props_result
-		},	
+		},
 		store_use_from_dates(model_name) { 
 			model_name = model_name.toLowerCase()
 			let from_dates = this.$store.state[model_name].from_dates
@@ -668,6 +721,15 @@ export default {
 			if (property.if_has_not_extencion) {
 				return this.check_has_not_extencions(property)
 			}
+			/*
+				Bloque ADITIVO (misión zipnova-envios, 14/9/2026): OR entre extensiones. Es un
+				gate y nada más: si ninguna de las extensiones está, la prop no se muestra; si
+				alguna está, siguen valiendo los chequeos de abajo (v_if, etc.). Ver
+				cumple_alguna_extencion().
+			*/
+			if (property.if_has_alguna_extencion && !cumple_alguna_extencion(this, property)) {
+				return false
+			}
 
 			if (property.v_if_prop_not_length) {
 				return !model[property.v_if_prop_not_length].length
@@ -834,12 +896,54 @@ export default {
 		modelsStoreFromName(model_name) {
 			return this.$store.state[model_name].models
 		},
+		/**
+		 * Modelo relacionado del que se lee una columna de relacion ("Cliente: Descripcion",
+		 * ver relation_table_prop en column_preferences_helper.js): la relacion embebida en la
+		 * respuesta si vino (sale.client), y si no, el modelo del store relacionado buscado por la
+		 * foreign key. null si no hay de donde leerlo.
+		 *
+		 * @param {Object} model Fila de la tabla (ej. la venta).
+		 * @param {Object} prop  Prop de tabla con is_relation_prop.
+		 * @returns {Object|null}
+		 */
+		relation_model_for_prop(model, prop) {
+			if (!model) {
+				return null
+			}
+			let embebido = model[prop.relation]
+			if (embebido && typeof embebido == 'object') {
+				return embebido
+			}
+			if (!prop.foreign_key || !model[prop.foreign_key]) {
+				return null
+			}
+			let store = this.$store.state[prop.relation_store]
+			if (!store || !Array.isArray(store.models)) {
+				return null
+			}
+			let del_store = store.models.find(_model => {
+				return _model.id == model[prop.foreign_key]
+			})
+			return typeof del_store != 'undefined' ? del_store : null
+		},
 		propertyText(model, prop, from_pivot = false, pivot_parent_model = null) {
 			// console.log('propertyText para '+prop.key)
 			// console.log('model ')
 			// console.log(model)
 			if (!prop || prop.key == null || prop.key === '') {
 				return ''
+			}
+			// Columna de una relacion (client.description): la celda se delega a la prop del modelo
+			// relacionado, evaluada CONTRA el modelo relacionado. Asi el formato --precio, fecha,
+			// select resuelto por store, checkbox-- es exactamente el mismo que en la ficha del
+			// cliente, sin duplicar aca ninguna de esas ramas. Sin relacionado, celda vacia y no
+			// 'S/A', por el mismo motivo que explica la rama de isRelationKey mas abajo.
+			if (prop.is_relation_prop) {
+				let relacionado = this.relation_model_for_prop(model, prop)
+				if (!relacionado) {
+					return ''
+				}
+				return this.propertyText(relacionado, prop.relation_prop)
 			}
 			if (prop.type == 'images' || prop.type == 'image') {
 				return null
@@ -1217,6 +1321,14 @@ export default {
 			}
 		},
 		canProp(prop) {
+			/*
+				Bloque ADITIVO (misión zipnova-envios, 14/9/2026): una prop con
+				`if_has_alguna_extencion` tampoco entra a la tabla ni a las tarjetas si el
+				comercio no tiene ninguna de esas extensiones. Sin la clave, no cambia nada.
+			*/
+			if (prop.if_has_alguna_extencion && !cumple_alguna_extencion(this, prop)) {
+				return false
+			}
 			return typeof prop.can == 'undefined' || this.can(prop.can)
 		},
 		modelPlural(model, replace_guion = false) {

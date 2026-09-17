@@ -15,7 +15,7 @@
 		@hidden="onModalClosed"
 		:size="size"
 		scrollable
-		:id="model_name"
+		:id="modal_id || model_name"
 		:data-tour="ancla_tour_modal">
 
 			<template #modal-title>
@@ -193,6 +193,17 @@ export default {
 	props: {
 		model_name: {
 			type: String,
+		},
+		// Id del `b-modal`. Default null → cae al `model_name`, que es el comportamiento de
+		// siempre. Hace falta uno distinto solo cuando este componente se monta suelto (sin el
+		// `view-component` que lo envuelve en las pantallas de listado — ya hay precedente en
+		// `current-acounts/Index.vue`, que lo hace para `budget`/`order_production`/
+		// `provider_order`) Y puede convivir con OTRA instancia del mismo `model_name` ya
+		// montada en la misma página: dos `<b-modal>` con el mismo id reciben el mismo evento
+		// de `$bvModal.show()` y se abren los dos a la vez.
+		modal_id: {
+			type: String,
+			default: null,
 		},
 		model_prop: {
 			type: Object,

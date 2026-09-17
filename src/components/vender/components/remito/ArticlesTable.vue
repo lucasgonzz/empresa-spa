@@ -520,7 +520,15 @@ export default {
 						this.$store.commit('vender/replceItem', item)
 					}
 				}
-				
+
+				/*
+					Tercer punto donde cambia la cantidad de algo en el remito: el vendedor edito a
+					mano el numero de la columna Cantidad. Este input dispara en cada @keyup, asi
+					que la deteccion NO corre aca mismo: se programa, y programar_deteccion_de_combos()
+					reinicia la espera en cada tecla. Sin eso, escribir "30" preguntaria al pasar
+					por el "3".
+				*/
+				this.programar_deteccion_de_combos()
 			}
 			this.setTotal()
 		},

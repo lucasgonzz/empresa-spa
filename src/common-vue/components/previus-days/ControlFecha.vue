@@ -337,10 +337,27 @@ export default {
 			if (this.isActive(day)) {
 				clases.push('active')
 			}
-			if (!day.models.length && this.date(day.date) != this.date(this.today)) {
+			if (this.dia_sin_movimientos(day) && this.date(day.date) != this.date(this.today)) {
 				clases.push('control-fecha__dia--sin-movimientos')
 			}
 			return clases
+		},
+		/**
+		 * Si un dia de la tira no tiene movimientos.
+		 *
+		 * La API nueva de `previus-day` (14/9/2026) manda `cantidad` y un `models` con solo los ids
+		 * (antes bajaba las 7 filas completas de la semana, con todas sus relaciones, para que aca
+		 * se mirara un `.length`). La API vieja manda `models` completos y sin `cantidad`: ahi se
+		 * sigue contando el array, como siempre.
+		 *
+		 * @param {Object} day
+		 * @returns {Boolean}
+		 */
+		dia_sin_movimientos(day) {
+			if (typeof day.cantidad != 'undefined') {
+				return !Number(day.cantidad)
+			}
+			return !day.models.length
 		},
 		/** El mes se escribe en la primera celda de la semana y cada vez que cambia. */
 		muestra_mes(i) {
@@ -359,7 +376,7 @@ export default {
 			return moment(d).format('DD')
 		},
 		clickDia(day) {
-			if (!day.models.length && this.date(day.date) != this.date(this.today)) {
+			if (this.dia_sin_movimientos(day) && this.date(day.date) != this.date(this.today)) {
 				this.showNotModels()
 				return
 			}

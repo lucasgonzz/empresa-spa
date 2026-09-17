@@ -5,6 +5,7 @@ title="Actualizar precios"
 hide-footer
 size="lg"
 id="update-prices"
+@show="build_table_items"
 class="update-prices-modal">
 	<div class="update-prices-modal__body">
 
@@ -131,17 +132,16 @@ export default {
 			]
 		},
 	},
-	mounted() {
-		// Al abrir el modal se reconstruyen los renglones con los datos actuales de la venta
-		this.$root.$on('bv::modal::show', (bvEvent, modal_id) => {
-			if (modal_id == 'update-prices') {
-				this.build_table_items()
-			}
-		})
-	},
 	methods: {
 		/**
 		 * Arma la lista editable de artículos y servicios de la venta.
+		 *
+		 * La dispara el @show del propio <b-modal> (show, no shown: los renglones tienen que estar
+		 * antes del primer pintado, si no el modal entra un instante vacío y salta).
+		 *
+		 * Antes colgaba de un this.$root.$on('bv::modal::show') registrado en mounted y nunca
+		 * desenganchado: el bus global vive toda la sesión, así que cada montaje del componente
+		 * dejaba otro listener vivo y la apertura N del modal rearmaba la tabla N veces.
 		 *
 		 * @returns {void}
 		 */

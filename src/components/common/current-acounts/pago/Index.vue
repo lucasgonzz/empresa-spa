@@ -3,6 +3,7 @@
 v-if="from_model"
 id="current-acounts-pago"
 data-tour="cuentas_corrientes.modal_pago"
+@shown="enfocar_primer_monto"
 title="Pago">
 
     <!--
@@ -128,18 +129,6 @@ export default {
         PaymentMethods,
     	BtnLoader,
     },
-    mounted() {
-        this.$root.$on('bv::modal::shown', (bvEvent, modalId) => {
-            if (modalId === 'current-acounts-pago') {
-
-                setTimeout(() => {
-                    this.focus_primer_payment_method()
-                    // this.$refs.paymentMethodComponent.set_all_caja_ids()
-                }, 500)
-
-            }
-        })
-    },
     data() {
         return {
         	pago: {
@@ -183,6 +172,22 @@ export default {
         },
     },
     methods: {
+        /**
+         * Enfoca el primer monto cuando el modal termino de mostrarse.
+         *
+         * Cuelga del @shown del propio <b-modal> y no de un $root.$on: el bus global vive toda la
+         * sesion, asi que un listener registrado ahi en mounted seguia corriendo despues de que la
+         * instancia se destruia y se acumulaba uno por montaje. Un evento del componente muere con
+         * el componente.
+         *
+         * @returns {void}
+         */
+        enfocar_primer_monto() {
+            setTimeout(() => {
+                this.focus_primer_payment_method()
+                // this.$refs.paymentMethodComponent.set_all_caja_ids()
+            }, 500)
+        },
         focus_primer_payment_method() {
             let input = document.getElementsByClassName('payment-method-amount')[0]      
             if (input) {
