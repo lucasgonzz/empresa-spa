@@ -12,12 +12,17 @@ export default {
 		},
 		{
 			// Nombre del descuento tal como viene del proveedor. Lo llena el sistema al sincronizar
-			// las bonificaciones del proveedor; el usuario no lo tipea, por eso va `only_show`
-			// (ModelForm lo dibuja como texto de solo lectura, sin input).
+			// las bonificaciones del proveedor; el usuario no lo tipea.
+			//
+			// Va `not_show_on_form` y no `only_show`, igual que `provider_id` aca abajo y por la
+			// misma razon: un descuento cargado a mano NUNCA va a tener nombre —el nombre sale del
+			// descuento del proveedor—, y `only_show` le habria dejado un "Sin datos" fijo en el
+			// formulario a todas esas filas, para siempre. Se ve en la tabla, donde una celda vacia
+			// es simplemente una celda vacia.
 			text: 'Nombre',
 			key: 'nombre',
 			type: 'text',
-			only_show: true,
+			not_show_on_form: true,
 		},
 		{
 			// Clasifica el origen/motivo del descuento. Se usa para diferenciar descuentos cargados manualmente de las bonificaciones de proveedor (prompt 262/264)
