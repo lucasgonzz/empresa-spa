@@ -12,6 +12,19 @@
 		-->
 		<propagar-descuentos ref="propagar_descuentos"></propagar-descuentos>
 
+		<!--
+			Mision sincronizar-descuentos-proveedor (17/9/2026): el modal del boton "Sincronizar
+			articulos" que vive al lado de "Agregar Descuento", en la tabla de descuentos del
+			proveedor.
+
+			No lleva ref ni lo abre nadie desde aca: se abre solo, escuchando en el bus de $root
+			el evento que emite HasMany.vue a partir de la clave has_many.extra_button declarada
+			en src/models/provider.js. Tiene que ser por el bus y no por un ref porque el boton se
+			dibuja adentro del modal del formulario del proveedor, que bootstrap-vue monta en otro
+			lugar del arbol: desde alla no hay como llegar a este componente.
+		-->
+		<sincronizar-articulos></sincronizar-articulos>
+
 		<view-component
 		model_name="provider"
 		show_filter_modal
@@ -45,6 +58,7 @@ export default {
 		BtnCurrentAcounts: () => import('@/components/common/BtnCurrentAcounts'),
 		ComercioCityUser: () => import('@/components/common/ComercioCityUser'),
 		PropagarDescuentos: () => import('@/components/provider/components/providers/PropagarDescuentos'),
+		SincronizarArticulos: () => import('@/components/provider/components/providers/SincronizarArticulos'),
 	},
 	methods: {
 		/*

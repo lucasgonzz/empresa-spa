@@ -1120,7 +1120,50 @@ export default {
 			if (prop.disabled_function && this[prop.disabled_function](this.model)) {
 				return true
 			}
+			/**
+			 * Clave declarativa OPCIONAL `deshabilitado_si_hay`: nombra a OTRA propiedad del mismo
+			 * modelo, y este campo se apaga mientras esa otra tenga un valor cargado. Sirve para
+			 * pares de campos mutuamente excluyentes (ej: Porcentaje y Monto de un descuento o un
+			 * recargo de articulo, donde el backend aplica el porcentaje si lo hay y el monto
+			 * queda inerte, ignorado en silencio).
+			 *
+			 * Un modelo que NO la declara se comporta exactamente igual que antes: la clave es
+			 * opcional y no hay ningun caso especial por nombre de modelo aca adentro.
+			 *
+			 * 🔴 El campo propio tiene que estar VACIO para que se apague. Si no, una fila vieja
+			 * que quedo guardada con los dos valores (se podian cargar los dos hasta hoy) apagaba
+			 * los dos campos a la vez y nadie podia desempatarla nunca mas.
+			 *
+			 * Se saltea en el formulario de filtros (`form_to_filter`), igual que `prop.disabled`:
+			 * filtrar por los dos campos a la vez es legitimo.
+			 */
+			if (prop.deshabilitado_si_hay
+				&& !form_to_filter
+				&& !this.tiene_valor_cargado(this.model[prop.key])
+				&& this.tiene_valor_cargado(this.model[prop.deshabilitado_si_hay])) {
+				return true
+			}
 			return false
+		},
+		/**
+		 * Si un valor cuenta como "cargado" para `deshabilitado_si_hay`.
+		 *
+		 * 🔴 El chequeo es por VACIO, no por null: `''` no es null. Un input que el usuario limpio
+		 * manda `''`, y preguntando por null el campo de al lado quedaba trabado para siempre, sin
+		 * forma de cargar nada.
+		 *
+		 * El `0` tambien cuenta como VACIO, a proposito: un descuento de 0% no descuenta nada y un
+		 * recargo de $0 no recarga nada, asi que no tienen por que trabar el otro campo.
+		 *
+		 * @param {*} valor
+		 * @returns {Boolean}
+		 */
+		tiene_valor_cargado(valor) {
+			if (valor === null || typeof valor == 'undefined' || valor === '') {
+				return false
+			}
+			/* Number('') ya quedo afuera arriba; Number('texto') da NaN, que != 0 y cuenta como cargado. */
+			return Number(valor) != 0
 		},
 		/**
 		 * Texto de advertencia dinámico para un campo deshabilitado por falta de datos

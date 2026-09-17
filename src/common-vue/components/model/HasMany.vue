@@ -88,6 +88,31 @@
 			Agregar {{ singular(prop.has_many.model_name) }}
 		</b-button>
 
+		<!--
+			Hook aditivo opcional: boton extra al lado de "Agregar X", declarado en el meta del
+			prop (has_many.extra_button). No abre nada por su cuenta: emite al bus de $root el
+			evento que el modelo declara, con el modelo padre como payload, y quien escucha
+			decide que hacer.
+
+			🔴 Es una clave OPCIONAL. Un has_many que no la declara queda exactamente como
+			estaba: extra_button devuelve null y no se renderiza nada. Nada de v-if sobre el
+			model_name adentro de este componente, que lo usa TODO formulario del sistema.
+
+			Se dibuja dos veces, igual que el boton "Agregar": aca y adentro del modal
+			"Ampliar" (mas abajo). Si fuera en uno solo, el boton apareceria o desapareceria
+			segun por donde entro el usuario.
+		-->
+		<b-button
+		v-if="extra_button"
+		:data-testid="'btn-extra-has-many-' + prop.key"
+		class="m-t-15 m-l-10 has-many-extra-button"
+		@click="emit_extra_button(false)"
+		size="sm"
+		variant="outline-primary">
+			<i :class="extra_button.icon"></i>
+			{{ extra_button.text }}
+		</b-button>
+
 		<!-- Hook aditivo opcional: componente extra declarado en el meta del prop (has_many.extra_action_component). Si el prop no lo declara, extra_action_component es null y no se renderiza nada. -->
 		<component
 		v-if="extra_action_component"
@@ -116,6 +141,22 @@
 			variant="primary">
 				<i class="icon-plus"></i>
 				Agregar {{ singular(prop.has_many.model_name) }}
+			</b-button>
+
+			<!--
+				Gemelo del boton extra dentro de la vista "Ampliar". Antes de emitir cierra este
+				modal: si no, lo que abra el que escucha queda apilado sobre "Ampliar", que a su
+				vez esta sobre el formulario.
+			-->
+			<b-button
+			v-if="extra_button"
+			:data-testid="'btn-extra-ampliar-has-many-' + prop.key"
+			class="m-t-15 m-l-10 has-many-extra-button"
+			@click="emit_extra_button(true)"
+			size="sm"
+			variant="outline-primary">
+				<i :class="extra_button.icon"></i>
+				{{ extra_button.text }}
 			</b-button>
 
 			<!-- Hook aditivo opcional dentro de la vista "Ampliar": mismo componente extra que en la vista compacta. -->
@@ -222,6 +263,22 @@ export default {
 			// resuelve cada entrada de forma directa, sin escanear nada.
 			return EXTRA_ACTION_COMPONENTS[this.prop.has_many.extra_action_component] || null
 		},
+		/**
+		 * Boton extra opcional declarado en el meta del prop:
+		 *   has_many: {
+		 *       extra_button: { text: 'Sincronizar articulos', icon: 'icon-refresh', emit: 'evento' }
+		 *   }
+		 * Si no esta declarado devuelve null y no se renderiza nada: el HasMany queda igual que
+		 * siempre (cambio estrictamente aditivo, no afecta a ningun otro has_many del sistema).
+		 *
+		 * @return {Object|null}
+		 */
+		extra_button() {
+			if (!this.prop.has_many || !this.prop.has_many.extra_button || !this.prop.has_many.extra_button.emit) {
+				return null
+			}
+			return this.prop.has_many.extra_button
+		},
 		// text_delete_() {
 		// 	if (this.prop_model_to_delete) {
 		// 		return this.prop_model_to_delete.text 
@@ -250,6 +307,23 @@ export default {
 		modelSaved(model) {
 			// alert('hasMany modelSaved')
 			this.$emit('modelSaved', model)
+		},
+		/**
+		 * Dispara el hook del boton extra: emite al bus de $root el evento que declaro el
+		 * modelo, con el modelo padre como payload. Este componente no sabe —ni tiene que
+		 * saber— que se hace con eso; quien escucha vive del lado del modulo que lo declaro.
+		 *
+		 * Se usa $root y no $emit propio porque el que escucha (un modal montado en la vista
+		 * del modulo) no es ancestro de este HasMany: el has_many se dibuja adentro del modal
+		 * del formulario, que bootstrap-vue monta en otro lugar del arbol.
+		 *
+		 * @param {Boolean} from_expand_modal true si lo apreto el gemelo de la vista "Ampliar"
+		 */
+		emit_extra_button(from_expand_modal) {
+			if (from_expand_modal) {
+				this.show_expand_modal = false
+			}
+			this.$root.$emit(this.prop.has_many.extra_button.emit, this.parent_model)
 		},
 		/**
 		 * Inicia el resize: mide el track de 12 columnas (b-form-row) y el ancho real
@@ -379,5 +453,29 @@ export default {
 	height: 42px;
 	border-radius: 4px;
 	background: #3b82f6;
+}
+
+/*
+	Boton extra (hook opcional has_many.extra_button). Las reglas de abajo solo alcanzan a un
+	has_many que declare la clave: sin ella el boton no existe en el DOM.
+
+	El texto no se parte a mitad de palabra, asi que en el ancho intermedio (tablet) el boton
+	baja entero a la linea de abajo en vez de quedar apretado contra "Agregar X".
+*/
+.has-many-extra-button {
+	white-space: nowrap;
+}
+
+/*
+	En telefono los dos botones no entran en una linea: el extra pasa a ocupar el ancho
+	completo abajo del de agregar, con su margen izquierdo en cero (si no, arranca corrido).
+*/
+@media (max-width: 575px) {
+	.has-many-extra-button {
+		display: block;
+		width: 100%;
+		margin-left: 0 !important;
+		white-space: normal;
+	}
 }
 </style>
