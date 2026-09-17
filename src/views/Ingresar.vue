@@ -120,13 +120,20 @@ export default {
 	created() {
 		this.listenEditArticle()
 	},
+	beforeDestroy() {
+		// El bus de $root es global y vive toda la sesion: sin el $off, cada vez que se entra
+		// a esta vista queda otra escucha viva y el formulario se limpiaria N veces.
+		this.$root.$off('bv::modal::hide', this.on_modal_hide)
+	},
 	methods: {
 		listenEditArticle() {
-			this.$root.$on('bv::modal::hide', (bvEvent, modalId) => {
-				if (this.article.name != '' && modalId == 'edit-article') {
-					this.clearArticle()
-				}
-			})
+			// El modal 'edit-article' lo declara otro componente, asi que se escucha por el bus
+			this.$root.$on('bv::modal::hide', this.on_modal_hide)
+		},
+		on_modal_hide(bvEvent, modalId) {
+			if (this.article.name != '' && modalId == 'edit-article') {
+				this.clearArticle()
+			}
 		},
 		validate() {
 			var ok = true

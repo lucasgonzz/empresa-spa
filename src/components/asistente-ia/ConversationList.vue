@@ -17,6 +17,15 @@
 			class="asistente-ia-lista__aviso">
 				Cargando conversaciones...
 			</p>
+			<!-- El fallo de la carga va ANTES del "todavía no hay conversaciones": los dos
+			dejan la lista vacía y sin esto se veían iguales (ver `error_conversations` en
+			store/ai_chat.js). Si ya hay conversaciones en pantalla no se muestra: son las
+			de la carga anterior y siguen sirviendo. -->
+			<p
+			v-else-if="error && !conversations.length"
+			class="asistente-ia-lista__aviso asistente-ia-lista__aviso--error">
+				{{ error }}
+			</p>
 			<p
 			v-else-if="!conversations.length"
 			class="asistente-ia-lista__aviso">
@@ -29,6 +38,22 @@
 			class="asistente-ia-lista__item"
 			:class="{ 'asistente-ia-lista__item--activa': conversation.id == selected_conversation_id }"
 			@click="seleccionar(conversation)">
+				<!--
+					Las conversaciones que arrancaron por WhatsApp se distinguen con el ícono
+					(misión asistente-por-whatsapp, 16/9/2026). Son la MISMA conversación: se
+					leen y se sigue escribiendo desde acá como cualquier otra, y no hay pantalla
+					nueva. El ícono existe para que el dueño entienda por qué aparece en la lista
+					algo que él no escribió en esta pantalla.
+
+					Una SPA vieja contra el API nuevo las ve como conversaciones comunes, sin
+					ícono, que es la degradación correcta.
+				-->
+				<span
+				v-if="conversation.origen == 'whatsapp'"
+				class="asistente-ia-lista__canal"
+				title="Esta conversación la empezaste por WhatsApp">
+					<i class="bi bi-whatsapp"></i>
+				</span>
 				<!-- Título en UNA línea con ellipsis (como Claude); sin título todavía,
 				se muestra el provisorio (D20). -->
 				<span class="asistente-ia-lista__titulo">
@@ -53,6 +78,9 @@ export default {
 		},
 		loading() {
 			return this.$store.state.ai_chat.loading_conversations
+		},
+		error() {
+			return this.$store.state.ai_chat.error_conversations
 		},
 		selected_conversation_id() {
 			return this.$store.state.ai_chat.selected_conversation_id
@@ -129,6 +157,12 @@ export default {
 		padding: 14px 10px
 		margin: 0
 
+		// El aviso de fallo se lee distinto del de "todavía no hay conversaciones".
+		// El token ya es el mismo que usa AccionCard.vue para sus errores y está
+		// resuelto para modo oscuro (ver sass/_menus_desplegables.sass:228).
+		&--error
+			color: var(--btn-peligro-texto, #9c3a36)
+
 	&__item
 		width: 100%
 		display: flex
@@ -157,6 +191,15 @@ export default {
 
 			.asistente-ia-lista__borrar
 				opacity: 1
+
+	// El ícono del canal (hoy solo WhatsApp): chiquito, del color secundario y sin
+	// robarle lugar al título, que es lo que la persona lee para elegir.
+	&__canal
+		flex-shrink: 0
+		display: flex
+		align-items: center
+		color: var(--color-text-secondary, #6c757d)
+		font-size: .9rem
 
 	&__titulo
 		flex: 1

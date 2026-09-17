@@ -72,7 +72,7 @@ export function fecha_larga(fecha) {
 }
 
 /**
- * Linea secundaria de una fila: "hoy", "mañana", "vence hace 3 días", "lun 21 sep".
+ * Linea secundaria de una fila: "hoy", "mañana", "venció hace 3 días", "lun 21 sep".
  *
  * Los dias relativos se dicen solo cuando de verdad ayudan (hoy, mañana, atrasos); para
  * cualquier otra fecha el nombre del dia dice mas que "en 12 días".
@@ -93,7 +93,7 @@ export function fecha_relativa(fecha, hoy) {
 		return 'venció ayer'
 	}
 	if (dias < -1) {
-		return 'vence hace ' + Math.abs(dias) + ' días'
+		return 'venció hace ' + Math.abs(dias) + ' días'
 	}
 	return fecha_corta(fecha, hoy)
 }

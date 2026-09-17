@@ -305,6 +305,50 @@ export default {
 		},
 
 		{
+			/*
+				Calcado del bloque "Promociones" de arriba: el combo viaja en el presupuesto con el
+				mismo pivot {amount, price} y se muestra igual. `only_show` porque el presupuesto se
+				arma en VENDER, no desde este formulario -- aca se ve lo que quedo guardado.
+			*/
+			text: 'Combos',
+			store: 'combo',
+			key: 'combos',
+			type: 'search',
+			only_show: true,
+			if_has_extencion: 'combos',
+			belongs_to_many: {
+				model_name: 'combo',
+				props_to_show: [
+					{
+						text: 'Nombre',
+						key: 'name',
+						type: 'textarea',
+						show: true,
+					},
+				],
+				pivot_props_to_show: [
+					{
+						text: 'Precio',
+						key: 'price',
+						type: 'number',
+						is_price: true,
+					},
+					{
+						text: 'Cantidad',
+						key: 'amount',
+						value: '',
+						type: 'number'
+					},
+					{
+						text: 'Total',
+						key: 'total_item',
+						function: 'totalBudgetItem',
+					},
+				],
+			}
+		},
+
+		{
 			group_title: 'Descuentos y recargos'
 		},
 		{

@@ -33,6 +33,45 @@ function get_safe_clone(value) {
 }
 
 /**
+ * ¿Son la MISMA linea del remito?
+ *
+ * 🔴 El id solo no alcanza. Los items del remito salen de tablas distintas --articles, combos,
+ * services, promocion_vinotecas-- y cada una tiene su propia secuencia de ids: el combo 12 y el
+ * articulo 12 existen los dos y son cosas distintas. `removeItem` y `updateItem` matcheaban solo
+ * por `id`, asi que una colision borraba o pisaba la linea equivocada. `replceItem` ya discriminaba
+ * y este helper es ese mismo criterio, extraido para que las tres mutaciones no vuelvan a divergir.
+ *
+ * Tambien discrimina la variante: dos lineas del mismo articulo con variantes distintas son dos
+ * renglones (repetidos.js nunca las fusiona) y hasta ahora se pisaban entre ellas. Sin variante el
+ * campo vale 0, asi que el `|| 0` deja el caso normal exactamente como estaba.
+ *
+ * Es prerequisito de la deteccion automatica de combos, que justamente borra lineas de articulo y
+ * agrega una de combo en la misma pasada.
+ */
+function es_la_misma_linea(a, b) {
+	if (!a || !b) {
+		return false
+	}
+	if (a.id != b.id) {
+		return false
+	}
+	/* Cada bandera tiene que coincidir en los dos: un item sin ninguna es "suelto" y solo matchea con otro suelto */
+	if (!!a.is_article != !!b.is_article) {
+		return false
+	}
+	if (!!a.is_combo != !!b.is_combo) {
+		return false
+	}
+	if (!!a.is_service != !!b.is_service) {
+		return false
+	}
+	if (!!a.is_promocion_vinoteca != !!b.is_promocion_vinoteca) {
+		return false
+	}
+	return Number(a.article_variant_id || 0) == Number(b.article_variant_id || 0)
+}
+
+/**
  * Construye una clave corta para deduplicar eventos muy cercanos en el tiempo.
  * Se usa principalmente para evitar ruido de recálculos consecutivos.
  */
@@ -542,21 +581,7 @@ export default {
 			// Guardamos estado anterior para registrar cambios de item editado.
 			let previous_item = null
 			let index = state.items.findIndex(item => {
-				if (
-					value
-					&& item.is_article && value.is_article
-					&& item.id == value.id	
-				) {
-					return true
-				}
-				if (
-					value
-					&& item.is_combo && value.is_combo
-					&& item.id == value.id	
-				) {
-					return true
-				}
-				return false
+				return es_la_misma_linea(item, value)
 			})
 			if (index != -1) {
 				previous_item = get_safe_clone(state.items[index])
@@ -920,8 +945,17 @@ export default {
 			// Estado previo para registrar la eliminación del item.
 			const previous_items = get_safe_clone(state.items)
 			let index = state.items.findIndex(i => {
-				return i.id == item.id
+				return es_la_misma_linea(i, item)
 			})
+			/*
+				Sin esta guarda un item que no esta en la lista borraba EL ULTIMO renglon:
+				findIndex devuelve -1 y splice(-1, 1) cuenta desde el final. Antes era casi
+				inalcanzable porque el matcheo por id encontraba cualquier cosa; ahora que el
+				criterio es estricto, no encontrar nada es un desenlace posible.
+			*/
+			if (index == -1) {
+				return
+			}
 			state.items.splice(index, 1)
 			append_sale_log_entry(state, {
 				event_key: 'item_removed',
@@ -936,10 +970,14 @@ export default {
 			})
 		},
 		updateItem(state, item) {
-			const previous_item = get_safe_clone(state.items.find(art => art.id == item.id))
 			let index = state.items.findIndex(art => {
-				return art.id == item.id
+				return es_la_misma_linea(art, item)
 			})
+			/* Misma guarda que en removeItem: splice(-1, 1, item) pisaba el ultimo renglon */
+			if (index == -1) {
+				return
+			}
+			const previous_item = get_safe_clone(state.items[index])
 			state.items.splice(index, 1, item)
 			append_sale_log_entry(state, {
 				event_key: 'item_updated',

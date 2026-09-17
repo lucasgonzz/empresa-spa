@@ -3,7 +3,8 @@
 :title="'Acopios de '+article.name"
 hide-footer
 size="lg"
-id="article-acopios">
+id="article-acopios"
+@shown="get_acopios">
 	<div
 	v-if="!loading">
 
@@ -58,13 +59,6 @@ export default {
 			loading: false,
 			sales: [],
 		}
-	},
-	mounted() {
-		this.$root.$on('bv::modal::shown', (bvEvent, modalId) => {
-			if (modalId == 'article-acopios') {
-				this.get_acopios()
-			}
-		})
 	},
 	computed: {
 		article() {

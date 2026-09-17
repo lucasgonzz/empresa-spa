@@ -1,41 +1,33 @@
 <template>
 	<div class="agenda">
 
-		<div class="agenda__cabecera">
-			<h4 class="agenda__titulo">Agenda</h4>
+		<h4 class="agenda__titulo">Agenda</h4>
 
-			<!--
-				Segmented control, no pestañas: son tres formas de mirar las MISMAS tareas, no tres
-				pantallas. La activa se despega con el fondo de tarjeta y una sombra corta, como el
-				control de iOS.
-			-->
-			<div
-			class="agenda__segmentos"
-			role="tablist"
-			aria-label="Vista de la agenda">
-				<button
-				v-for="opcion in vistas"
-				:key="opcion.key"
-				type="button"
-				role="tab"
-				class="agenda__segmento"
-				:class="{ 'agenda__segmento--activo': vista == opcion.key }"
-				:aria-selected="vista == opcion.key ? 'true' : 'false'"
-				:data-testid="'agenda-vista-' + opcion.key"
-				@click="cambiar_vista(opcion.key)">
-					{{ opcion.texto }}
-				</button>
-			</div>
-
-			<b-button
-			class="btn-modulo agenda__nueva"
-			variant="primary"
-			data-testid="agenda-nueva-tarea"
-			@click="abrir_nueva_tarea(fecha_para_nueva)">
-				<i class="bi bi-plus-lg m-r-5"></i>
-				Nueva tarea
-			</b-button>
-		</div>
+		<!--
+			horizontal-nav compartido (common-vue), el mismo control que usa el resto del sistema
+			para alternar vistas de un modulo: son tres formas de mirar las MISMAS tareas, no tres
+			pantallas. "Nueva tarea" va en su slot #btn_create -no como hermano suelto- porque la
+			raiz del componente (.cont-navs) es `width: 100%`: afuera de ese slot, competir con ella
+			en un flex propio la manda a su propia fila y bloquea todo lo que venga despues.
+		-->
+		<horizontal-nav
+		class="agenda__nav"
+		:items="nav_items"
+		:selected_item_value="vista"
+		:show_display="false"
+		emitir_setSelected_al_inicio
+		@setSelected="al_elegir_vista">
+			<template #btn_create>
+				<b-button
+				class="btn-modulo agenda__nueva"
+				variant="primary"
+				data-testid="agenda-nueva-tarea"
+				@click="abrir_nueva_tarea(fecha_para_nueva)">
+					<i class="bi bi-plus-lg m-r-5"></i>
+					Nueva tarea
+				</b-button>
+			</template>
+		</horizontal-nav>
 
 		<lista v-if="vista == 'lista'"></lista>
 		<calendario v-else-if="vista == 'calendario'"></calendario>
@@ -69,6 +61,7 @@ export default {
 		FormTarea: () => import('@/components/agenda/FormTarea'),
 		ModalCompletar: () => import('@/components/agenda/ModalCompletar'),
 		BarraDeshacer: () => import('@/components/agenda/BarraDeshacer'),
+		HorizontalNav: () => import('@/common-vue/components/horizontal-nav/Index'),
 	},
 	data() {
 		return {
@@ -94,6 +87,24 @@ export default {
 				return this.$store.state.agenda.dia_seleccionado
 			}
 			return null
+		},
+		/**
+		 * Items del horizontal-nav compartido. `route_value` coincide con las claves de
+		 * VISTAS_VALIDAS para que el estado activo quede sincronizado con la `vista` del store sin
+		 * traducir nombres, y `testid` preserva los `data-testid` `agenda-vista-*` que ya leen las
+		 * descripciones de agenda.js (sin esto, HorizontalNav los arma desde el nombre visible y
+		 * cambia la convencion).
+		 *
+		 * @returns {Array}
+		 */
+		nav_items() {
+			return this.vistas.map(opcion => {
+				return {
+					name: opcion.texto,
+					route_value: opcion.key,
+					testid: 'agenda-vista-' + opcion.key,
+				}
+			})
 		},
 	},
 	watch: {
@@ -139,6 +150,13 @@ export default {
 				navegacion.catch(() => {})
 			}
 		},
+
+		/**
+		 * @param {Object} item Item de nav_items que se acaba de elegir.
+		 */
+		al_elegir_vista(item) {
+			this.cambiar_vista(item.route_value)
+		},
 	},
 }
 </script>
@@ -150,45 +168,21 @@ export default {
 	margin: 0 auto
 	padding: 15px 15px 90px
 
-	&__cabecera
-		display: flex
-		align-items: center
-		gap: 16px
-		flex-wrap: wrap
-		margin-bottom: 20px
-
 	&__titulo
-		margin: 0
+		margin: 0 0 14px
+		// #app centra todo el texto (ver el hallazgo del informe de la mision original); sin esto
+		// el titulo queda centrado apenas deja de vivir adentro de un flex, como paso al mover
+		// "Nueva tarea" al slot del horizontal-nav.
+		text-align: left
 		font-weight: 600
 		letter-spacing: -0.01em
 		color: var(--color-text-primary)
 
-	&__segmentos
-		display: inline-flex
-		padding: 3px
-		border-radius: 10px
-		background: var(--bg-section)
-		border: 1px solid var(--color-border-secondary)
-		margin-left: auto
-
-	&__segmento
-		border: 0
-		background: transparent
-		color: var(--color-text-secondary)
-		font-size: 0.875rem
-		font-weight: 500
-		padding: 6px 14px
-		border-radius: 8px
-		cursor: pointer
-		transition: background 0.15s ease, color 0.15s ease
-		&:focus
-			outline: none
-		&:focus-visible
-			box-shadow: 0 0 0 2px var(--color-primary)
-		&--activo
-			background: var(--bg-card)
-			color: var(--color-text-primary)
-			box-shadow: 0 1px 3px var(--shadow-color)
+	// El horizontal-nav compartido ya trae su propio pill y su propio "Nueva tarea" via el slot
+	// #btn_create (common-vue/sass/_horizontal_nav.sass); acá solo se le da aire debajo, antes de
+	// la lista/calendario/realizadas.
+	&__nav
+		margin-bottom: 20px
 
 	// Estados compartidos por las tres vistas
 	&__cargando
@@ -260,19 +254,7 @@ export default {
 			background: var(--btn-peligro-fondo)
 			color: var(--btn-peligro-texto)
 
-// Telefono: el titulo y el boton en una fila, el segmented control abajo a todo el ancho.
 @media (max-width: 575px)
 	.agenda
 		padding: 10px 10px 90px
-		&__cabecera
-			gap: 10px
-		&__segmentos
-			order: 3
-			width: 100%
-			margin-left: 0
-		&__segmento
-			flex: 1
-			text-align: center
-		&__nueva
-			margin-left: auto
 </style>

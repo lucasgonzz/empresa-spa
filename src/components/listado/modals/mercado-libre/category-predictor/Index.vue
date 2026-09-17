@@ -4,7 +4,8 @@ scrollable
 id="mercado-libre-category-predictor"
 title="Mercado Libre Predictor de Categoria"
 size="lg"
-hide-footer>
+hide-footer
+@shown="al_mostrar_modal">
 	<b-form-input
 	v-model="query"></b-form-input>
 
@@ -28,21 +29,18 @@ export default {
 			return this.$store.state.meli.categories_predictor
 		}
 	},
-    mounted() {
-        this.$root.$on('bv::modal::shown', (bvEvent, modalId) => {
-            if (modalId === 'mercado-libre-category-predictor') {
-            	this.set_query()
-
-            	this.get_category_predictor()
-            }
-        })
-    },
 	data() {
 		return {
 			query: null,
 		}
 	},
 	methods: {
+		// Se dispara con el @shown del propio modal, una vez que ya esta pintado.
+		al_mostrar_modal() {
+			this.set_query()
+
+			this.get_category_predictor()
+		},
 		set_query() {
 			this.query = this.model.name
 		},

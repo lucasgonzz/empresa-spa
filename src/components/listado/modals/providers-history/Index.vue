@@ -3,7 +3,8 @@
 :title="'Historial de Proveedores y Stock de '+article.name"
 hide-footer
 size="lg"
-id="providers-history">
+id="providers-history"
+@show="getProvidersHistory">
 	<div
 	v-if="!loading">
 		<b-table
@@ -79,13 +80,6 @@ export default {
 			}
 			return items 
 		}
-	},
-	created() {
-		this.$root.$on('bv::modal::show', (bvEvent, modal_id) => {
-			if (modal_id == 'providers-history') {
-				this.getProvidersHistory() 
-			}
-		})
 	},
 	methods: {
 		getProvidersHistory() {

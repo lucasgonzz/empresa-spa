@@ -7,6 +7,38 @@ export default [
 	// 	can: 'article.store',
 	// },
 	{
+		/*
+			Módulo IA: el mostrador (misión "modulo-ia-mostrador", 14/9/2026). Va PRIMERO
+			por decisión de Lucas: es el primer ítem de la barra. Reemplaza al módulo IA
+			viejo (Sugerencias / Compras / Ofertas), que salió del menú; Promociones sigue
+			entrando por Tienda Online.
+
+			Gate doble, y los dos son deliberados: `if_has_extencion: 'asistente_ia'`
+			(la misma extensión que gatea el botón flotante del chat y las rutas
+			mostrador/* del backend; no se creó una extensión nueva) y
+			`check_is_owner: true` (solo el dueño y el acceso maestro ven el módulo,
+			decisión 8 del plan; el backend devuelve 403 a un empleado).
+
+			`no_aterrizar: true` es lo que evita que ser el PRIMERO del array lo vuelva
+			la pantalla de aterrizaje después del login: redirect() de
+			common-vue/mixins/permissions.js elige la primera ruta con permiso y no mira
+			extensiones, así que sin esta marca un dueño sin la extensión caía en un
+			módulo que el menú le esconde, y el lead de la demo aterrizaba en un mostrador
+			vacío. El aterrizaje sigue siendo el de siempre (Reportes).
+
+			La ruta real vive en router/index.js (`/ia/:id?`): el :id opcional es el
+			puente desde una conversación del chat hacia su informe.
+		*/
+		text: 'IA',
+		path: '/ia',
+		name: 'ia',
+		component: '@/views/Ia',
+		icon: 'stars',
+		if_has_extencion: 'asistente_ia',
+		check_is_owner: true,
+		no_aterrizar: true,
+	},
+	{
 		text: 'Reportes',
 		path: '/reportes',
 		component: '@/views/Reportes',
@@ -322,8 +354,11 @@ export default [
 			{
 				/*
 					Promociones (motor de ofertas, 15/8/2026): va con `function:` como
-					sus hermanos, por el motivo del comentario de arriba. Es EXACTAMENTE
-					la misma pantalla que IA -> Ofertas, un componente en dos entradas.
+					sus hermanos, por el motivo del comentario de arriba. Desde la misión
+					"modulo-ia-mostrador" (14/9/2026) es la ÚNICA entrada del menú a esa
+					pantalla: la gemela IA -> Ofertas se fue con el módulo IA viejo. La
+					ruta /ofertas/:id? de router/index.js sigue existiendo (la usa el
+					puente "Ver las ofertas sugeridas" del chat).
 				*/
 				text: 'Promociones',
 				name: 'online_promociones',
@@ -333,8 +368,7 @@ export default [
 					Sin este gate, un comercio con la extension `online` pero SIN el motor
 					de ofertas ve la entrada en el menu, entra, y se come el cartel de
 					"este modulo requiere la extension" — o sea que le estamos mostrando
-					una funcion que no compro. Su gemela de IA -> Ofertas ya lo tiene, y
-					por eso ahi no pasaba. Lo detecto el chequeo independiente del 15/8/2026.
+					una funcion que no compro. Lo detecto el chequeo independiente del 15/8/2026.
 				*/
 				if_has_extencion: 'motor_de_ofertas',
 				icon: 'tag',
@@ -499,59 +533,5 @@ export default [
 		if_has_extencion: 'consultora_de_precios',
 		image_url: 'nav-icons/consulta_precios.png',
 		icon: 'graph-up-arrow',
-	},
-	{
-		/*
-			Módulo padre "IA" (misión "chat IA", 15/8/2026). El `name: 'ia'` es
-			EXPLÍCITO y propio: openItem del NavVertical compara contra route.name y
-			un padre sin name colisionaría. Va con `function:` y no con `path:`
-			porque setRoute() (common-vue/mixins/nav.js:106-140) ejecuta la función
-			antes que cualquier otra rama, y así el padre no necesita una ruta
-			propia en router/index.js.
-
-			Gate (misión "sugerencias de compra", 15/8/2026): ahora hay DOS hijos con
-			extensiones distintas, así que el padre ya NO lleva if_has_extencion
-			(showRoute trataría el array como AND, no OR, y dejaría sin ver "IA" a
-			quien solo tiene una de las dos). En su lugar lleva
-			if_has_alguna_extencion (bloque aditivo de nav.js:showRoute, OR entre
-			extensiones) y cada hijo se gatea solo con su propio if_has_extencion.
-		*/
-		text: 'IA',
-		name: 'ia',
-		function: 'ir_a_modulo_ia',
-		icon: 'stars',
-		if_has_alguna_extencion: ['sugerencias_inteligentes', 'sugerencias_compras', 'motor_de_ofertas'],
-		childrens: [
-			{
-				text: 'Sugerencias',
-				path: '/sugerencias-de-stock',
-				name: 'sugerencias_stock',
-				component: '@/views/SugerenciasDeStock',
-				// Mismo gateo que usa el backend en check_extencion_empresa: sin la
-				// extension, el modulo no aparece en el menu y el flujo viejo de modales
-				// del Listado sigue siendo el unico camino.
-				if_has_extencion: 'sugerencias_inteligentes',
-				icon: 'lightbulb',
-			},
-			{
-				text: 'Compras',
-				path: '/sugerencias-de-compra',
-				name: 'sugerencias_compra',
-				component: '@/views/SugerenciasDeCompra',
-				// Extension propia: es funcionalidad vendible aparte, mismo criterio
-				// que asistente_ia (PLAN §0-bis R8 / INSUMOS-MEDIDOS.md §12).
-				if_has_extencion: 'sugerencias_compras',
-				icon: 'cart-plus',
-			},
-			{
-				// La MISMA pantalla que Tienda Online -> Promociones, no dos vistas.
-				text: 'Ofertas',
-				path: '/ofertas',
-				name: 'ofertas',
-				component: '@/views/Ofertas',
-				if_has_extencion: 'motor_de_ofertas',
-				icon: 'tag',
-			},
-		],
 	},
 ]

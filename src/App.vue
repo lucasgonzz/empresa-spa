@@ -125,6 +125,15 @@ import { apply_dark_mode_class, store_dark_mode } from '@/utils/dark_mode'
  */
 const RUTA_INGRESO_DEMO = '/demo/ingreso'
 
+/**
+ * Prefijo de la ruta pública del informe compartido (`/informe/:token`), tal como está
+ * declarada en `router/index.js` (misión asistente-por-whatsapp, 16/9/2026).
+ *
+ * El literal se deja también allá: acá se necesita el path y allá el nombre. Es un PREFIJO y no
+ * un path exacto porque la ruta lleva el token adentro.
+ */
+const RUTA_INFORME_COMPARTIDO = '/informe/'
+
 export default {
     mixins: [app, start_methods, broadcast, check_version, offline],
     components: {
@@ -172,7 +181,14 @@ export default {
         // auth/me de arranque, resuelve "no autenticado" y el watcher de abajo manda a login
         // antes de que el token de la demo llegue a canjearse.
         // 🔴 La guarda NO puede preguntar por `$route.name` acá: ver `es_ingreso_a_la_demo()`.
-        if (this.es_ingreso_a_la_demo()) {
+        //
+        // El informe compartido (misión asistente-por-whatsapp) entra por el mismo portón y por
+        // el mismo motivo: no tiene sesión y NO la va a tener nunca. Sin esta guarda, el
+        // `auth/me` de arranque resuelve "no autenticado", `authenticated` pasa de null a false
+        // y el watch de abajo hace `router.replace({name: 'login'})` — el dueño toca el link del
+        // informe desde el teléfono y aterriza en la pantalla de login, con el informe que nunca
+        // llegó a ver. Es exactamente lo que le pasaba al lead con el link de la demo.
+        if (this.es_ingreso_a_la_demo() || this.es_informe_compartido()) {
             return
         }
         /**
@@ -233,6 +249,31 @@ export default {
             const pathname = window.location.pathname.replace(/\/+$/, '')
 
             return pathname.slice(-RUTA_INGRESO_DEMO.length) === RUTA_INGRESO_DEMO
+        },
+        /**
+         * ¿Este arranque es el informe del mostrador abierto por link (`/informe/<token>`)?
+         *
+         * Misma mecánica —y el mismo 🔴— que `es_ingreso_a_la_demo()`: en el `created()` de
+         * App.vue la navegación inicial todavía no resolvió (todas las rutas son lazy), así que
+         * `$route.name` es null y hay que mirar `window.location.pathname`.
+         *
+         * La diferencia con la demo es que acá NUNCA va a haber sesión: la demo canjea un token
+         * por una sesión iniciada, y esta vista lee un informe de solo lectura contra una ruta
+         * pública del API y se queda sin sesión para siempre. Por eso alcanza con no arrancar el
+         * `auth/me`: sin ese dispatch, `authenticated` se queda en null, el watch no dispara y
+         * nadie manda a login.
+         *
+         * Se busca el prefijo en cualquier parte del pathname, y no por sufijo como la demo,
+         * porque el token va DESPUÉS del prefijo.
+         *
+         * @returns {Boolean}
+         */
+        es_informe_compartido() {
+            if (this.$route.name === 'informeCompartido') {
+                return true
+            }
+
+            return window.location.pathname.indexOf(RUTA_INFORME_COMPARTIDO) !== -1
         },
     },
     watch: {

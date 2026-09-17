@@ -66,12 +66,35 @@
 
 		<!-- Sin reporte todavia: mostrar "0 articulos / $0 en costos" seria informacion falsa, no
 		vacia. Es un estado vacio y se dice con el vocabulario que el sistema ya tiene para eso
-		--circulo con el icono, titulo y pista debajo--, reusando el componente en vez de repetirlo. -->
+		--circulo con el icono, titulo y pista debajo--, reusando el componente en vez de repetirlo.
+
+		Dos variantes segun si hay o no una generacion en curso (mision reporte-inventario-manual,
+		15/9/2026): antes esta rama SIEMPRE decia "estamos calculando", porque entrar sin reporte
+		disparaba uno solo. Ahora index() nunca dispara nada, asi que sin el chequeo de
+		`inventory_performance_generating` un comercio recien creado (o cualquiera antes de la
+		corrida de las 04:00) veria ese mensaje para siempre, sin boton para arreglarlo -- una
+		mentira silenciosa. Con el chequeo: si de verdad hay un job corriendo (la corrida nocturna
+		recien disparada, o alguien mas ya lo pidio) se avisa eso; si no hay nada corriendo, se dice
+		la verdad y se ofrece el boton para pedirlo, via el slot de accion del estado vacio. -->
 		<empty-state
-		v-if="!inventory_performance"
+		v-if="!inventory_performance && inventory_performance_generating"
 		icon_class="bi bi-hourglass-split"
 		title="Estamos calculando el reporte de inventario"
 		hint="Los datos van a aparecer solos en unos minutos."></empty-state>
+
+		<empty-state
+		v-else-if="!inventory_performance"
+		icon_class="bi bi-box-seam"
+		title="Todavía no hay un reporte de inventario"
+		hint="Se genera solo todas las noches. Si no querés esperar, pedilo ahora.">
+			<b-button
+			class="inventario-fecha__actualizar"
+			size="sm"
+			@click="actualizar_inventory_performance()">
+				<i class="bi bi-arrow-repeat m-r-5" aria-hidden="true"></i>
+				Generar ahora
+			</b-button>
+		</empty-state>
 
 		<template v-else>
 

@@ -46,6 +46,7 @@
 						</label>
 						<b-form-input
 						id="alertas_cobros_dias"
+						data-testid="alertas-cobros-dias"
 						class="alertas-cobros__filtro-input"
 						type="number"
 						min="0"
@@ -53,6 +54,7 @@
 						v-model="dias_input"
 						@keyup.enter="aplicar_dias"></b-form-input>
 						<b-button
+						data-testid="alertas-cobros-aplicar-dias"
 						variant="outline-primary"
 						:disabled="aplicando"
 						@click="aplicar_dias">
@@ -63,7 +65,11 @@
 						</b-button>
 					</div>
 
-					<span class="alertas-cobros__contador">
+					<!-- data-clientes: el numero crudo, porque el texto visible es es-AR y pluraliza. -->
+					<span
+					class="alertas-cobros__contador"
+					data-testid="alertas-cobros-contador"
+					:data-clientes="clientes_recordables">
 						{{ numero_es(clientes_recordables) }}
 						{{ clientes_recordables == 1 ? 'cliente con ventas por cobrar' : 'clientes con ventas por cobrar' }}
 					</span>
@@ -95,6 +101,9 @@
 
 					<div
 					class="alertas-cobros__cliente"
+					data-testid="alertas-cobros-cliente"
+					:data-cliente-id="alerta.client ? alerta.client.id : 'sin-cliente'"
+					:data-ventas="alerta.ventas_sin_cobrar.length"
 					v-for="(alerta, index) in ventas_sin_cobrar"
 					:key="index">
 
@@ -117,6 +126,8 @@
 								type="button"
 								class="alertas-cobros__chip"
 								:class="{'is-usd': credit_account.moneda_id == 2}"
+								:data-testid="'alertas-cobros-chip-' + credit_account.id"
+								:data-saldo="credit_account.saldo"
 								v-for="credit_account in cuentas_del_cliente(alerta)"
 								:key="credit_account.id"
 								@click="showCurrentAcounts(alerta.client, credit_account)">
@@ -163,7 +174,14 @@
 									colapsada que se pidió, sin escribir el dato dos veces.
 								-->
 								<span class="alertas-cobros__ventas-monto-linea">
-									<span class="alertas-cobros__ventas-monto">
+									<!--
+										data-monto: debe - pagandose crudo con punto decimal, porque el
+										texto visible va formateado es-AR y con simbolo de moneda.
+									-->
+									<span
+									class="alertas-cobros__ventas-monto"
+									:data-testid="'alertas-cobros-venta-falta-' + sale.id"
+									:data-monto="Number(sale.current_acount.debe) - Number(sale.current_acount.pagandose)">
 										{{ lo_que_falta_pagarse(sale) }}
 									</span>
 									<span class="alertas-cobros__ventas-hace">
@@ -189,6 +207,7 @@
 							<button
 							type="button"
 							class="alertas-cobros__ventas-mas"
+							data-testid="alertas-cobros-ver-detalle"
 							@click="showVentasSinCobrar(alerta.ventas_sin_cobrar)">
 								{{ texto_ver_detalle(alerta) }}
 							</button>
@@ -204,6 +223,7 @@
 				-->
 				<empty-state
 				v-else
+				data-testid="alertas-cobros-vacio"
 				class="alertas-cobros__vacio"
 				icon_class="bi bi-cash-coin"
 				title="No hay ventas por cobrar"

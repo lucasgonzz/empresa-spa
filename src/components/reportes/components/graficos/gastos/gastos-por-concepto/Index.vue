@@ -2,7 +2,7 @@
 	<div 
 	class="chart-card">
 		<div class="header">
-			<h4>Gastos por concepto</h4>
+			<h4>Gastos por sub categoría</h4>
 		</div>
 
 		<chart></chart>

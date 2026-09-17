@@ -19,23 +19,6 @@
 			Chat en simulación: los envíos a WhatsApp están frenados
 		</div>
 
-		<!-- Arriba del input y en su propia fila, que es donde Lucas lo quiere. Gateado por el
-		toggle chat_simulation_enabled: apagado por default, así los clientes ya activos no ven un
-		botón nuevo que no pidieron. -->
-		<div
-		v-if="is_owner && config && config.chat_simulation_enabled"
-		class="whatsapp-composer__toolbar">
-			<b-button
-			size="sm"
-			variant="outline-warning"
-			class="whatsapp-composer__simular-btn"
-			title="Inyecta un mensaje como si lo hubiera escrito el cliente. No le llega nada a nadie."
-			@click="$bvModal.show('whatsapp-simulate-in-chat')">
-				<i class="bi bi-cone-striped"></i>
-				Simular mensaje del cliente
-			</b-button>
-		</div>
-
 		<!-- El input real nunca se ve: lo abre el botón de arriba. Es el mismo camino que usa el
 		molde de admin-spa. `accept` es la lista blanca de imágenes que acepta la Cloud API; no es
 		una validación (el navegador la puede ignorar), es para que el explorador de archivos no
@@ -192,13 +175,10 @@
 
 		<templates-modal
 		:chat="chat"></templates-modal>
-		<simulate-in-chat-modal
-		:chat="chat"></simulate-in-chat-modal>
 	</div>
 </template>
 <script>
 import TemplatesModal from '@/components/whatsapp/conversation/TemplatesModal'
-import SimulateInChatModal from '@/components/whatsapp/conversation/SimulateInChatModal'
 import audio_recorder_button from '@/mixins/audio_recorder_button'
 
 /**
@@ -218,7 +198,6 @@ const MAX_RENGLONES = 5
 export default {
 	components: {
 		TemplatesModal,
-		SimulateInChatModal,
 		BtnLoader: () => import('@/common-vue/components/BtnLoader'),
 	},
 	/*
@@ -310,15 +289,6 @@ export default {
 				return 'Grabando ' + this.audio_elapsed_label + '. Tocá para cortar y enviar'
 			}
 			return 'Tocá para grabar una nota de voz, o mantené apretado para grabar mientras lo apretás'
-		},
-		/**
-		 * Config del agente (mismo patrón que usa `whatsapp/config/AgentConfig.vue`): de acá se
-		 * lee `chat_simulation_enabled` para gatear el botón de simular del toolbar.
-		 *
-		 * @returns {Object|null}
-		 */
-		config() {
-			return this.$store.state.whatsapp_bot_config.models[0] || null
 		},
 	},
 	watch: {
@@ -855,29 +825,6 @@ export default {
 		text-align: left
 		i
 			flex-shrink: 0
-
-	// --- Fila del boton de simular ------------------------------------------------------------
-	// Queda ARRIBA del input, que es donde estaba y donde Lucas lo quiere. Ya no comparte fila con
-	// Sugerir, Plantillas y Foto: los dos primeros se mudaron al header y el clip bajo a la fila
-	// del input.
-	&__toolbar
-		display: flex
-		flex-direction: row
-		margin-bottom: 6px
-	// Misma geometria que los botones del header (32px, radio del token), para que las dos filas
-	// de controles del sidebar se lean como el mismo sistema. El `.btn` del selector le gana a
-	// `.btn-sm` por especificidad (0,2,0) contra (0,1,0).
-	&__simular-btn.btn
-		height: 32px
-		display: inline-flex
-		align-items: center
-		justify-content: center
-		gap: 5px
-		padding: 0 10px
-		font-size: .8125rem
-		line-height: 1
-		border-radius: var(--toolbar-btn-radius)
-		white-space: nowrap
 
 	// --- Previsualizacion del adjunto ---------------------------------------------------------
 	&__adjunto

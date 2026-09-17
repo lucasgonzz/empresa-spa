@@ -15,12 +15,12 @@ export default {
 			use_store_models: true,
 			on_change: 'limpiar_expense_concept_de_otra_categoria',
 			descriptions: [
-				'La categoria no se guarda a mano: sale del concepto que elijas.',
-				'Si la elegis primero, el listado de conceptos se acota a los de esa categoria.',
+				'La categoria no se guarda a mano: sale de la sub categoria que elijas.',
+				'Si la elegis primero, el listado de sub categorias se acota a los de esa categoria.',
 			],
 		},
 		{
-			text: 'Concepto',
+			text: 'Sub categoria',
 			key: 'expense_concept_id',
 			type: 'select',
 			use_store_models: true,
