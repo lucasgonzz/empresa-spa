@@ -43,6 +43,19 @@ export default {
 			this.$store.commit('vender/setItems', [])
 
 			this.$store.commit('vender/set_descuento', null)
+
+			/*
+				🔴 El total forzado se limpia JUNTO al descuento, no aparte.
+
+				Por acá pasan los cuatro caminos que terminan una venta --el boton Limpiar,
+				guardar la venta, cancelar la edicion de una venta previa y guardar un
+				presupuesto-- y el setTotal() de mas abajo es el que arma el total del remito
+				vacio. Un monto que le sobreviva a la venta anterior se le aplica a la venta
+				SIGUIENTE, que es de otro cliente y de otro importe: el vendedor veria un total
+				12 pesos mas barato sin haber pedido nada.
+			*/
+			this.$store.commit('vender/set_forzar_total_monto', null)
+
 			this.$store.commit('vender/setDiscountsId', [])
 			this.$store.commit('vender/setSurchagesId', [])
 

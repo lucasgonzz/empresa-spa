@@ -45,6 +45,10 @@ export default {
 		valor_dolar() {
 			return this.$store.state.vender.valor_dolar
 		},
+		/* Monto con signo del total forzado (extension forzar_total) */
+		forzar_total_monto() {
+			return this.$store.state.vender.forzar_total_monto
+		},
 		articles() {
 			return this.items.filter(item => item.is_article)
 		},
@@ -101,6 +105,19 @@ export default {
 					con "El total del presupuesto no corresponde con los productos ingresados".
 				*/
 				'aplicar_recargos_directo_a_items'	: this.aplicar_recargos_directo_a_items,
+
+				/*
+					🔴 El total forzado tiene que viajar, igual que el flag de arriba y por el mismo
+					motivo: `total` ya lo trae aplicado (lo suma vender_set_total.js al final de
+					setTotal()), pero BudgetHelper::getTotal() recalcula el total desde los items,
+					donde el ajuste no esta. Sin este campo la diferencia se pasa de la tolerancia y
+					el guardado rebota con "El total del presupuesto no corresponde con los
+					productos ingresados" --un mensaje que no nombra al forzado por ningun lado--.
+
+					Y lo necesita ademas para arrastrarlo a la venta cuando el presupuesto se
+					convierte, que es donde el forzado tiene que sobrevivir.
+				*/
+				'forzar_total_monto'		: this.forzar_total_monto,
 
 				'moneda_id'              	: this.moneda_id,
 				'omitir_en_cuenta_corriente'              	: this.omitir_en_cuenta_corriente,
@@ -175,6 +192,10 @@ export default {
 				// ya traen el recargo adentro, y sin este campo el back se lo vuelve a sumar y rechaza
 				// el total.
 				'aplicar_recargos_directo_a_items'	: this.aplicar_recargos_directo_a_items,
+
+				// Viaja por el mismo motivo que en actualizar(): sin el, BudgetHelper::getTotal()
+				// recalcula el total sin el ajuste y rechaza el guardado.
+				'forzar_total_monto'		: this.forzar_total_monto,
 
 				'valor_dolar'				: this.valor_dolar,
 				'omitir_en_cuenta_corriente'              	: this.omitir_en_cuenta_corriente,
