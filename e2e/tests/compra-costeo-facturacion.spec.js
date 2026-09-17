@@ -389,6 +389,28 @@ test.describe.serial('Compra: costeo, facturacion, stock, cuenta corriente y pos
 		const neto = costo_real_esperado(COSTO, BONIFICACIONES) * CANTIDAD * 2
 		const iva_facturado = redondear(neto * IVA / 100)
 
+		// 🔴 Modo de facturacion AUTOMATICO: las alicuotas las calcula el sistema a partir de los
+		// articulos, asi que no se pueden agregar, editar ni borrar, y una leyenda dice como salir
+		// (pasar la compra a Manual). El ultimo test de este archivo verifica el otro lado: con la
+		// compra en Manual, el boton vuelve y los tres importes se derivan entre si.
+		//
+		// La leyenda se busca por su texto sobre el modal entero y no con un selector de `.alert`:
+		// model/Index.vue tiene su propio cartel de aviso al guardar, y un dia que aparezca los dos
+		// selectores matchearian y el test daria un rojo que no dice nada.
+		//
+		// Y va PRIMERA, antes de las dos aserciones negativas de abajo, porque es lo que garantiza
+		// que el modal ya termino de dibujarse: un "esto no esta" sobre un modal a medio abrir pasa
+		// solo y no prueba nada.
+		await expect(
+			page.locator('#provider_order_afip_ticket'),
+			'en modo automatico tiene que aparecer la leyenda que dice como editarlas'
+		).toContainText('pasa el modo de facturacion de la compra a')
+
+		await expect(
+			page.locator('[data-testid="btn-agregar-has-many-provider_order_afip_ticket_ivas"]'),
+			'en modo automatico no se pueden agregar alicuotas'
+		).toHaveCount(0)
+
 		// 🔴 `total` DEJO DE SER UN INPUT (mision `compras-factura-manual-alicuotas`, 17/9/2026).
 		// El total de una factura es una cuenta --la suma de sus alicuotas mas las percepciones--,
 		// y ahora lo calcula el servidor (FacturaDeCompraHelper::guardar_totales), que ademas
@@ -399,22 +421,6 @@ test.describe.serial('Compra: costeo, facturacion, stock, cuenta corriente y pos
 			page.locator('[data-testid="provider_order_afip_ticket-total"]'),
 			'el total de la factura tiene que ser de solo lectura, no un input'
 		).toHaveCount(0)
-
-		// 🔴 Modo de facturacion AUTOMATICO: las alicuotas las calcula el sistema a partir de los
-		// articulos, asi que no se pueden agregar, editar ni borrar, y una leyenda dice como salir
-		// (pasar la compra a Manual). El ultimo test de este archivo verifica el otro lado: con la
-		// compra en Manual, el boton vuelve y los tres importes se derivan entre si.
-		await expect(
-			page.locator('[data-testid="btn-agregar-has-many-provider_order_afip_ticket_ivas"]'),
-			'en modo automatico no se pueden agregar alicuotas'
-		).toHaveCount(0)
-		// La leyenda se busca por su texto sobre el modal entero y no con un selector de `.alert`:
-		// model/Index.vue tiene su propio cartel de aviso al guardar, y un dia que aparezca los dos
-		// selectores matchearian y el test daria un rojo que no dice nada.
-		await expect(
-			page.locator('#provider_order_afip_ticket'),
-			'en modo automatico tiene que aparecer la leyenda que dice como editarlas'
-		).toContainText('pasa el modo de facturacion de la compra a')
 
 		// La columna BRUTO no existe en la base: es `neto + iva_importe`, calculado para mostrar.
 		// Se verifica con la alicuota que dejo la facturacion automatica.
@@ -848,14 +854,16 @@ test.describe.serial('Compra: costeo, facturacion, stock, cuenta corriente y pos
 		await abrir_pestania(page, 'provider_order', 'Facturacion')
 		await page.locator('[data-testid^="provider_order_afip_ticket-row-"]').first().click()
 
-		await expect(
-			page.locator('#provider_order_afip_ticket'),
-			'en modo manual no va la leyenda del modo automatico'
-		).not.toContainText('pasa el modo de facturacion de la compra a')
+		// El positivo va PRIMERO, y no es cosmetico: es lo que garantiza que el modal ya termino de
+		// dibujarse. Una asercion negativa sobre un modal a medio abrir pasa sola y no prueba nada.
 		await expect(
 			page.locator('[data-testid="btn-agregar-has-many-provider_order_afip_ticket_ivas"]'),
 			'en modo manual vuelve el boton de agregar alicuotas'
 		).toBeVisible()
+		await expect(
+			page.locator('#provider_order_afip_ticket'),
+			'en modo manual no va la leyenda del modo automatico'
+		).not.toContainText('pasa el modo de facturacion de la compra a')
 
 		// 3. Se abre la alicuota que dejo la facturacion automatica y se carga UNO SOLO de los tres
 		//    importes: el bruto, que es el que trae el comprobante del proveedor.
