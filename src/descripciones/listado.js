@@ -165,8 +165,8 @@ export default {
 
 	'btn-asignar-stock': {
 		titulo: 'Movimiento de stock',
-		que_hace: 'Abre el formulario para sumar o restar unidades de este artículo en un depósito (número negativo para restar).',
-		nota_interna: 'StockBtn.vue abre el modal #stock-movement. Muestra el stock global como texto del boton, o "Asignar Stock" si es null. El detalle del modal (proveedor automatico con cantidad positiva) quedo sin medir en la exploracion del 3/9/2026.',
+		que_hace: 'Abre el formulario para sumar o restar unidades de este artículo en un depósito (número negativo para restar). Se deshabilita mientras esa fila está en edición de stock por depósito (botón verde), para no usar las dos acciones a la vez.',
+		nota_interna: 'StockBtn.vue abre el modal #stock-movement. Muestra el stock global como texto del boton, o "Asignar Stock" si es null. El detalle del modal (proveedor automatico con cantidad positiva) quedo sin medir en la exploracion del 3/9/2026. Desde la mision bloqueo-boton-stock-en-edicion (17/9/2026): computed se_esta_editando_stock compara el articulo en edicion del store article/edit_addresses_stock contra el id de la fila y lo manda a :disabled.',
 	},
 
 	'btn-editar-depositos': {
