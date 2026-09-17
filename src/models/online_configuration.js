@@ -261,6 +261,12 @@ export default {
 			type: 'checkbox',
 		},
 		{
+			text: 'Mostrar boton "Comprar ahora" en la ficha del articulo',
+			key: 'mostrar_comprar_ahora',
+			type: 'checkbox',
+			description: 'Si se activa, la ficha del articulo muestra el boton "Comprar ahora", que agrega el articulo al carrito y lleva directo a terminar la compra. Si se desactiva, solo aparece "Agregar al carrito" y el comprador puede seguir navegando.',
+		},
+		{
 			text: 'Cliente envia whatsapp al negocio al finalizar pedido',
 			key: 'enviar_whatsapp_al_terminar_pedido',
 			type: 'checkbox',
