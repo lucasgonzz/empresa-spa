@@ -13,6 +13,9 @@
             :base_moneda="base_moneda"
             :show_cash_box="true"
             :validate_cash_box_moneda="validate_cash_box_moneda"
+
+            :show_retencion="true"
+            :show_datos_retencion="es_cobro_a_cliente"
         >
         </multi-payment-methods>
     </div>
@@ -48,6 +51,32 @@ export default {
     computed: {
         cajas() {
             return this.$store.state.caja.models
+        },
+        /**
+         * Si este modal es un COBRO a un cliente y no un PAGO a un proveedor. Es el mismo
+         * componente para las dos puntas y lo unico que cambia es `from_model_name`.
+         *
+         * 🔴 SOLO APAGA LOS CAMPOS DEL CERTIFICADO, NO EL METODO DE PAGO. Son dos cosas distintas
+         * y mezclarlas romperia el circuito del proveedor:
+         *
+         *   - El METODO sigue disponible en las dos puntas (`show_retencion` va en `true`), y esta
+         *     bien que asi sea. Si vos sos agente de retencion y le retenes a tu proveedor, le
+         *     pagas menos plata y le cancelas la deuda completa: exactamente la misma mecanica.
+         *   - El CERTIFICADO solo se pide al COBRAR. Cuando le pagas a un proveedor el agente de
+         *     retencion sos VOS: esa es una retencion PRACTICADA, no sufrida, y
+         *     `CurrentAcountController::guardar_retenciones_sufridas()` corta al principio con
+         *     `if ($model_name != 'client') return 0;`. Lo que se cargara ahi no se guardaria en
+         *     ningun lado.
+         *
+         * Antes los campos iban con `true` fijo y el modal de pago a proveedor dibujaba los seis,
+         * con el texto "el certificado que te dio el cliente" cuando ahi no hay ningun cliente. Es
+         * el mismo agujero que estos flags vinieron a tapar en Vender y en Gastos, en otra
+         * pantalla.
+         *
+         * @returns {Boolean}
+         */
+        es_cobro_a_cliente() {
+            return this.$store.state.current_acount.from_model_name == 'client'
         },
         /**
          * Sucursal por defecto de las cajas del modal: la que esta puesta en Vender.
@@ -159,8 +188,32 @@ export default {
                 // ✅ Tarjeta (ejemplo, ajustá a tu modelo real)
                 credit_card_id: 0,
                 credit_card_payment_plan_id: 0,
-                
+
                 cuota_id: 0,
+
+                /*
+                 * ✅ Retencion sufrida (mision compras-factura-manual-alicuotas, 17/9/2026).
+                 *
+                 * Los datos del certificado que da el cliente que te retiene. Van prefijados porque
+                 * comparten la fila con los del cheque: sin el prefijo, `numero` y `fecha` serian
+                 * el mismo campo para los dos.
+                 *
+                 * 🔴 El IMPORTE de la retencion NO esta aca: es el `amount` de esta misma fila, el
+                 * mismo campo que el efectivo. Por eso suma al total del cobro y cancela la deuda
+                 * entera (si te deben $100.000 y te retienen $2.000, te pagan $98.000 y la deuda se
+                 * cancela por $100.000). Un segundo campo de monto abriria la puerta a que los dos
+                 * numeros no coincidan.
+                 *
+                 * El impuesto arranca en `ganancias`, que es la retencion mas comun y la unica que
+                 * cae en un renglon informativo de la Posicion Fiscal: si el usuario no lo toca, el
+                 * dato flojo no le cambia el IVA ni el IIBB a pagar del periodo.
+                 */
+                retencion_impuesto: 'ganancias',
+                retencion_numero_certificado: '',
+                retencion_fecha: '',
+                retencion_regimen: '',
+                retencion_base_imponible: '',
+                retencion_alicuota: '',
             }
         },
 

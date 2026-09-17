@@ -126,7 +126,30 @@ export default {
 				value: 0,
 			}]
 
-			this.$store.state.current_acount_payment_method.models.forEach((pay, index) => {
+			/*
+				🔴 LA RETENCION NO SE OFRECE EN UNA VENTA, Y ESTE FILTRO VA ACA ADEMAS DE EN
+				`payment-methods/Index.vue` (mision `compras-factura-manual-alicuotas`, 17/9/2026).
+
+				Este select arma sus propias opciones iterando el catalogo derecho, asi que el
+				filtro del componente comun de multi-metodos NO lo cubre: son dos caminos distintos
+				a la misma lista. Medido en pantalla, elegir "Retencion" aca daba las dos cosas que
+				la mision vino a evitar — el select de Caja seguia visible ofreciendo cajas (la
+				venta impactaria en caja plata que el comercio no tiene) y no se dibujaba ningun
+				campo de certificado, asi que la retencion se perdia en silencio y no llegaba nunca
+				a la Posicion Fiscal.
+
+				Una retencion se carga al COBRAR una cuenta corriente, que es el unico circuito
+				donde `CurrentAcountController::guardar_retenciones_sufridas()` guarda el
+				certificado.
+
+				Se filtra por SLUG del tipo, no por nombre: el comercio puede renombrar el metodo
+				desde el ABM.
+			*/
+			let metodos = this.$store.state.current_acount_payment_method.models.filter(pay => {
+				return !(pay.type && pay.type.slug == 'retencion')
+			})
+
+			metodos.forEach((pay, index) => {
 				/* Número ascendente visible para elegir con teclado (1, 2, 3...) */
 				let text = (index + 1) + ' - ' + pay.name
 

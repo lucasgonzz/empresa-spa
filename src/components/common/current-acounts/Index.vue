@@ -41,8 +41,26 @@
         </template>
     </model-index>  
 
+    <!--
+        Mision `compras-factura-manual-alicuotas` (17/9/2026): el mismo slot de alicuotas que
+        declara la pantalla de Compras.
+
+        🔴 NO ES OPCIONAL Y NO ES UNA COPIA DE MAS. Un slot solo lo puede llenar un ancestro, y
+        esta es OTRA puerta al mismo modal de compra: desde la cuenta corriente del proveedor se
+        abre la misma factura con los mismos datos. Sin esta declaracion, la factura abierta desde
+        aca se cae al has_many pelado --sin la columna Bruto, sin calculo en vivo y sin la leyenda
+        del modo automatico-- y la misma pantalla se comporta distinto segun de donde se la abrio,
+        que es peor que no tener la funcionalidad.
+
+        Las tres puertas al modal de compra son `provider/components/orders/Index.vue`,
+        `views/Reportes.vue` y esta. Si aparece una cuarta, va la misma linea.
+    -->
     <model-index
-    model_name="provider_order"></model-index>  
+    model_name="provider_order">
+        <template #has-many-prop-provider_order_afip_ticket_ivas>
+            <alicuotas-iva></alicuotas-iva>
+        </template>
+    </model-index>
 
     <sale-modal></sale-modal>
 
@@ -133,6 +151,9 @@ export default {
         BtnPagoNotaCredito,
         SaldoYLimite: () => import('@/components/common/current-acounts/SaldoYLimite'),
         ModelIndex: () => import('@/common-vue/components/model/Index'),
+        // Mision `compras-factura-manual-alicuotas` (17/9/2026): las alicuotas de IVA de la factura
+        // de compra que se abre desde la cuenta corriente (ver el comentario del slot).
+        AlicuotasIva: () => import('@/components/provider/components/orders/afip-ticket/AlicuotasIva'),
         SaleDetails: () => import('@/components/ventas/modals/details/Index'),
         BudgetModalButtons: () => import('@/components/budget/components/ModalButtons'),
         OrderProductionModalButtons: () => import('@/components/produccion/components/order-productions/ModalButtons'),
