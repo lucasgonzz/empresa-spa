@@ -30,7 +30,25 @@
 		<!-- Modales de comprobante que "Ver comprobante" del detalle abre por id via show_model.
 		No se referencian desde el template: si parecen sin uso, no borrar. -->
 		<sale-modal></sale-modal>
-		<model-index model_name="provider_order"></model-index>
+		<!--
+			Mision `compras-factura-manual-alicuotas` (17/9/2026): el mismo slot de alicuotas que
+			declara la pantalla de Compras.
+
+			🔴 NO ES OPCIONAL Y NO ES UNA COPIA DE MAS. Un slot solo lo puede llenar un ancestro, y
+			esta es OTRA puerta al mismo modal de compra: el drill-down de un reporte abre la misma
+			factura con los mismos datos. Sin esta declaracion, la factura abierta desde aca se cae
+			al has_many pelado --sin la columna Bruto, sin calculo en vivo y sin la leyenda del modo
+			automatico-- y la misma pantalla se comporta distinto segun de donde se la abrio, que es
+			peor que no tener la funcionalidad.
+
+			Las tres puertas al modal de compra son `provider/components/orders/Index.vue`,
+			`common/current-acounts/Index.vue` y esta. Si aparece una cuarta, va la misma linea.
+		-->
+		<model-index model_name="provider_order">
+			<template #has-many-prop-provider_order_afip_ticket_ivas>
+				<alicuotas-iva></alicuotas-iva>
+			</template>
+		</model-index>
 		<!-- Los otros cuatro tipos que el backend devuelve en el drill-down. El grupo 319 monto solo
 		los dos de arriba y escondio el boton para estos, que era lo correcto entonces: mejor sin
 		boton que con un boton muerto. Ahora se montan, asi que el boton vuelve a aparecer y abre.
@@ -59,6 +77,9 @@ export default {
 		Puntos: () => import('@/components/reportes/components/puntos/Index'),
 		SaleModal: () => import('@/components/common/SaleModal'),
 		ModelIndex: () => import('@/common-vue/components/model/Index'),
+		// Mision `compras-factura-manual-alicuotas` (17/9/2026): las alicuotas de IVA de la factura
+		// de compra que se abre desde el drill-down de un reporte (ver el comentario del slot).
+		AlicuotasIva: () => import('@/components/provider/components/orders/afip-ticket/AlicuotasIva'),
 	},
 	computed: {
 		/* El selector de moneda unico solo tiene sentido en las 3 secciones contables nuevas */
