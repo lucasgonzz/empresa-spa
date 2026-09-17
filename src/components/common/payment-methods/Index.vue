@@ -156,11 +156,44 @@ export default {
         },
     },
     computed: {
+        /**
+         * Los metodos de pago que se ofrecen en el desplegable: los que pasa el padre, o —si no
+         * pasa ninguno— el catalogo entero del store.
+         *
+         * 🔴 SALVO LA RETENCION, QUE SE SACA DONDE NADIE GUARDA EL CERTIFICADO. Este componente lo
+         * usan Vender y Gastos ademas del cobro de cuenta corriente, y los dos primeros caen al
+         * catalogo entero. Ahi el importe de una retencion sumaria al total del comprobante y no
+         * entraria a caja (las dos cosas bien), pero
+         * CurrentAcountController::guardar_retenciones_sufridas() NO corre: no quedaria ningun
+         * certificado y esa retencion no llegaria NUNCA a la Posicion Fiscal. El comercio perderia
+         * el credito fiscal sin un solo aviso, que es exactamente el agujero que esta parte vino a
+         * tapar. `show_retencion` la habilita solo donde el certificado se guarda.
+         *
+         * El id a excluir se resuelve contra el CATALOGO del store por SLUG, no mirando
+         * `opcion.type` ni el nombre: las opciones que pasa Vender son filas decoradas con sus
+         * descuentos y no siempre traen la relacion `type`, y el nombre lo puede cambiar el
+         * comercio desde el ABM. El id es lo unico que tienen todas las formas.
+         *
+         * @returns {Array}
+         */
         __payment_method_options() {
-            if (this.payment_method_options.length) {
-                return this.payment_method_options
+            let opciones = this.payment_method_options.length
+                ? this.payment_method_options
+                : this.$store.state.current_acount_payment_method.models
+
+            if (this.show_retencion) {
+                return opciones
             }
-            return this.$store.state.current_acount_payment_method.models
+
+            let ids_de_retencion = this.$store.state.current_acount_payment_method.models
+                .filter(metodo => metodo.type && metodo.type.slug == 'retencion')
+                .map(metodo => metodo.id)
+
+            if (!ids_de_retencion.length) {
+                return opciones
+            }
+
+            return opciones.filter(opcion => ids_de_retencion.indexOf(opcion.id) === -1)
         },
 
         /**
