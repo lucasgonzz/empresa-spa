@@ -39,19 +39,30 @@ id="sincronizar-descuentos-proveedor"
 	</div>
 
 	<!--
-		El proveedor no tiene ningun descuento cargado: no hay con que sincronizar. Se avisa
-		adentro del modal y no callandose, porque aca el usuario apreto un boton a proposito:
-		no pasar nada seria un boton roto. Tampoco se le muestran los contadores, que serian
-		todos cero y no explicarian nada.
+		No hay con que sincronizar (el proveedor no tiene descuentos cargados) o no hay sobre que
+		(no tiene ningun articulo). Se avisa adentro del modal y no callandose, porque aca el
+		usuario apreto un boton a proposito: no pasar nada seria un boton roto. Y tampoco se le
+		muestran los contadores, que serian todos cero y no explicarian nada.
 	-->
 	<div
-	v-else-if="!hay_descuentos_en_la_ficha"
+	v-else-if="nada_que_sincronizar"
 	class="text-center">
-		<p class="m-b-5">
+		<p
+		v-if="!hay_descuentos_en_la_ficha"
+		class="m-b-5">
 			<strong>{{ nombre_proveedor }}</strong> no tiene descuentos cargados.
 		</p>
+		<p
+		v-else
+		class="m-b-5">
+			<strong>{{ nombre_proveedor }}</strong> no tiene ningun articulo.
+		</p>
 		<p class="text-muted m-b-20">
-			Cargale al menos uno en la tabla de descuentos y despues volve a sincronizar.
+			{{
+				hay_descuentos_en_la_ficha
+					? 'Asignale este proveedor a algun articulo y despues volve a sincronizar.'
+					: 'Cargale al menos un descuento en la tabla de abajo y despues volve a sincronizar.'
+			}}
 		</p>
 		<b-button
 		variant="primary"
@@ -275,6 +286,15 @@ export default {
 		}
 	},
 	computed: {
+		/*
+			Los dos casos en los que la ventana no tiene nada que preguntar: el proveedor no tiene
+			descuentos cargados (no hay CON que sincronizar) o no tiene ningun articulo (no hay
+			SOBRE que). En los dos, la ventana avisa en una linea en vez de mostrar una lista de
+			contadores en cero y dos opciones que no cambian nada.
+		*/
+		nada_que_sincronizar() {
+			return !this.hay_descuentos_en_la_ficha || !this.total_articulos
+		},
 		/*
 			Los descuentos que vinieron de una compra o de un import solo estan en juego en el modo
 			"todos": el otro modo ni los mira. Preguntarlo cuando no aplica seria una decision que
