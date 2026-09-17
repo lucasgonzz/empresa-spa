@@ -6,12 +6,20 @@
 //
 //   1. La compra en si (descuentos del proveedor, articulo nuevo creado al vuelo, facturacion
 //      automatica).
-//   2. La factura que esa compra genera sola, con sus percepciones y retenciones.
+//   2. La factura que esa compra genera sola, con sus percepciones y sus alicuotas de IVA --y el
+//      bloqueo del modo automatico, que no deja tocarlas a mano.
 //   3. El costeo del articulo en el listado: costo bruto -> descuentos -> costo real -> margen ->
 //      impuestos sobre ventas -> IVA -> precio final.
 //   4. El stock: que entre al deposito indicado en la compra y que deje su movimiento.
 //   5. La plata: la deuda en la cuenta corriente del proveedor, su pago, y como todo eso se ve en
-//      Posicion Fiscal (IVA credito, percepciones y retenciones sufridas).
+//      Posicion Fiscal (IVA credito y percepciones sufridas).
+//
+// 🔴 Las retenciones NO son parte de este circuito, y el test lo afirma en vez de ignorarlo (mision
+//    `compras-factura-manual-alicuotas`, 17/9/2026): una factura de COMPRA no tiene retenciones
+//    --retiene tu cliente cuando te paga, no el proveedor cuando te factura--, asi que salieron del
+//    formulario de la factura y se cargan al registrar un cobro. Los renglones siguen en Posicion
+//    Fiscal, alimentados por `retenciones_sufridas`, y el ultimo test verifica que este circuito los
+//    deje en CERO.
 //
 // Depende del fixture determinista de empresa-api
 // (database/seeders/testing/TestingFerreteriaSeeder.php):
@@ -364,7 +372,7 @@ test.describe.serial('Compra: costeo, facturacion, stock, cuenta corriente y pos
 		expect(total_en_pantalla).toBe(redondear(Number(contexto.compra.total)))
 	})
 
-	test('carga percepciones y retenciones en la factura que genero la compra', async ({ page }) => {
+	test('carga las percepciones de la factura que genero la compra y verifica el bloqueo del modo automatico', async ({ page }) => {
 		await abrir_compras_del_dia(page)
 
 		await page.locator(`[data-testid="provider_order-row-${contexto.compra.id}"]`).click()
@@ -378,28 +386,59 @@ test.describe.serial('Compra: costeo, facturacion, stock, cuenta corriente y pos
 
 		await filas.first().click()
 
-		// Los importes de la factura los pone el sistema; el test los LEE y deriva de ahi las
-		// percepciones y retenciones, en vez de hardcodear numeros. Asi siguen siendo "acordes al
-		// importe de la factura" aunque mañana cambie el costo o la cantidad de la compra.
-		// Es el value de un input: trae el numero crudo del modelo ("20691.00"), sin formatear.
-		const total = numero_de_dato(await page.locator('[data-testid="provider_order_afip_ticket-total"]').inputValue())
-		expect(redondear(total)).toBe(redondear(Number(contexto.compra.total)))
-
 		const neto = costo_real_esperado(COSTO, BONIFICACIONES) * CANTIDAD * 2
 		const iva_facturado = redondear(neto * IVA / 100)
 
-		// Importes con criterios de la operatoria real, todos derivados del comprobante:
+		// 🔴 `total` DEJO DE SER UN INPUT (mision `compras-factura-manual-alicuotas`, 17/9/2026).
+		// El total de una factura es una cuenta --la suma de sus alicuotas mas las percepciones--,
+		// y ahora lo calcula el servidor (FacturaDeCompraHelper::guardar_totales), que ademas
+		// IGNORA el `total` que mande el cliente. En pantalla quedo como valor de solo lectura, asi
+		// que ya no hay ningun input con este testid; el numero se verifica mas abajo contra la
+		// respuesta del servidor, que es el dato que despues va a leer Posicion Fiscal.
+		await expect(
+			page.locator('[data-testid="provider_order_afip_ticket-total"]'),
+			'el total de la factura tiene que ser de solo lectura, no un input'
+		).toHaveCount(0)
+
+		// 🔴 Modo de facturacion AUTOMATICO: las alicuotas las calcula el sistema a partir de los
+		// articulos, asi que no se pueden agregar, editar ni borrar, y una leyenda dice como salir
+		// (pasar la compra a Manual). El ultimo test de este archivo verifica el otro lado: con la
+		// compra en Manual, el boton vuelve y los tres importes se derivan entre si.
+		await expect(
+			page.locator('[data-testid="btn-agregar-has-many-provider_order_afip_ticket_ivas"]'),
+			'en modo automatico no se pueden agregar alicuotas'
+		).toHaveCount(0)
+		// La leyenda se busca por su texto sobre el modal entero y no con un selector de `.alert`:
+		// model/Index.vue tiene su propio cartel de aviso al guardar, y un dia que aparezca los dos
+		// selectores matchearian y el test daria un rojo que no dice nada.
+		await expect(
+			page.locator('#provider_order_afip_ticket'),
+			'en modo automatico tiene que aparecer la leyenda que dice como editarlas'
+		).toContainText('pasa el modo de facturacion de la compra a')
+
+		// La columna BRUTO no existe en la base: es `neto + iva_importe`, calculado para mostrar.
+		// Se verifica con la alicuota que dejo la facturacion automatica.
+		const bruto = page.locator('[data-testid^="celda-provider_order_afip_ticket_iva-bruto-"]')
+		await expect(bruto, 'la tabla de alicuotas tiene que traer la columna Bruto').toHaveCount(1)
+		expect(
+			numero_de_pantalla(await bruto.innerText()),
+			'el bruto de la alicuota es neto + IVA'
+		).toBe(redondear(neto + iva_facturado))
+
+		// Importes con criterios de la operatoria real, derivados del comprobante en vez de
+		// hardcodeados, asi siguen siendo "acordes al importe de la factura" aunque mañana cambie
+		// el costo o la cantidad de la compra:
 		//   - percepcion de IVA:  3% sobre el neto gravado
 		//   - percepcion de IIBB: 2% sobre el neto gravado
-		//   - retencion de IVA:   50% del IVA facturado (regimen general)
-		//   - retencion de IIBB:  2% sobre el neto gravado
-		//   - retencion de Ganancias: 2% sobre el neto gravado
+		//
+		// 🔴 Las retenciones se fueron de la factura de compra y no es una simplificacion del test:
+		// una factura de COMPRA no tiene retenciones. Quien retiene es tu cliente cuando te paga,
+		// no el proveedor cuando te factura, asi que se cargan al registrar un cobro en la cuenta
+		// corriente de un cliente y viven en `retenciones_sufridas`. El ultimo test comprueba que
+		// este circuito, que es de compra, no mueve ni un peso de esos renglones.
 		contexto.factura = {
 			percepcion_iva: redondear(neto * 3 / 100),
 			percepcion_iibb: redondear(neto * 2 / 100),
-			retencion_iva: redondear(iva_facturado * 50 / 100),
-			retencion_iibb: redondear(neto * 2 / 100),
-			retencion_ganancias: redondear(neto * 2 / 100),
 		}
 
 		// La fecha de emision es lo que fecha el comprobante para el Libro IVA y para Posicion
@@ -411,12 +450,10 @@ test.describe.serial('Compra: costeo, facturacion, stock, cuenta corriente y pos
 		// Numero de comprobante: es lo unico que el modo automatico no puede saber.
 		await page.locator('[data-testid="provider_order_afip_ticket-code"]').fill(`0001-${String(contexto.compra.num).padStart(8, '0')}`)
 
-		// Retenciones y percepciones viven en dos pestañas distintas del formulario de la factura.
-		await abrir_pestania(page, 'provider_order_afip_ticket', 'Retenciones')
-		await page.locator('[data-testid="provider_order_afip_ticket-retencion_iva"]').fill(String(contexto.factura.retencion_iva))
-		await page.locator('[data-testid="provider_order_afip_ticket-retencion_iibb"]').fill(String(contexto.factura.retencion_iibb))
-		await page.locator('[data-testid="provider_order_afip_ticket-retencion_ganancias"]').fill(String(contexto.factura.retencion_ganancias))
-
+		// Las percepciones viven en su propia pestaña. La de "Retenciones" ya no existe, y la de
+		// "Generales" --donde estan fecha, numero, totales y las alicuotas-- es nueva: hasta esta
+		// mision esos campos caian dentro de "Retenciones" por el fallback de ModelForm, que asigna
+		// al PRIMER grupo toda prop declarada antes del primer `group_title`.
 		await abrir_pestania(page, 'provider_order_afip_ticket', 'Percepciones')
 		await page.locator('[data-testid="provider_order_afip_ticket-percepcion_iva"]').fill(String(contexto.factura.percepcion_iva))
 		await page.locator('[data-testid="provider_order_afip_ticket-percepcion_iibb"]').fill(String(contexto.factura.percepcion_iibb))
@@ -429,13 +466,21 @@ test.describe.serial('Compra: costeo, facturacion, stock, cuenta corriente y pos
 
 		// Lo guardado tiene que ser lo cargado. Se compara contra la respuesta del servidor y no
 		// contra la pantalla: es el dato que despues va a leer Posicion Fiscal.
-		expect(redondear(Number(guardada.retencion_iva))).toBe(contexto.factura.retencion_iva)
-		expect(redondear(Number(guardada.retencion_iibb))).toBe(contexto.factura.retencion_iibb)
-		expect(redondear(Number(guardada.retencion_ganancias))).toBe(contexto.factura.retencion_ganancias)
 		expect(redondear(Number(guardada.percepcion_iva))).toBe(contexto.factura.percepcion_iva)
 		expect(redondear(Number(guardada.percepcion_iibb))).toBe(contexto.factura.percepcion_iibb)
-		// El IVA de la factura no lo toco nadie: lo sigue calculando el modo automatico.
+
+		// El IVA de la factura no lo toco nadie: lo sigue calculando el modo automatico. Y las
+		// percepciones NO entran aca: no son credito fiscal de IVA.
 		expect(redondear(Number(guardada.total_iva))).toBe(iva_facturado)
+
+		// 🔴 Y el total ahora SUMA las percepciones, que es el pedido del cliente: es plata que el
+		// proveedor te cobra en su factura y que le tenes que pagar, asi que aumenta lo que le
+		// debes. Que el numero salga del servidor --y no de lo que mando la pantalla-- es
+		// justamente lo que esta asercion prueba.
+		expect(
+			redondear(Number(guardada.total)),
+			'el total de la factura tiene que ser las alicuotas mas las percepciones'
+		).toBe(redondear(neto + iva_facturado + contexto.factura.percepcion_iva + contexto.factura.percepcion_iibb))
 
 		console.log('[factura] ' + JSON.stringify(contexto.factura))
 	})
@@ -713,7 +758,7 @@ test.describe.serial('Compra: costeo, facturacion, stock, cuenta corriente y pos
 		}).toPass({ timeout: 20000 })
 	})
 
-	test('Posicion Fiscal computa el IVA credito, las percepciones y las retenciones de la compra', async ({ page }) => {
+	test('Posicion Fiscal computa el IVA credito y las percepciones de la compra, y no le suma ninguna retencion', async ({ page }) => {
 		await page.goto('/reportes/posicion-fiscal')
 		await esperar_recursos_descargados(page, { abrir_panel: false })
 
@@ -733,19 +778,29 @@ test.describe.serial('Compra: costeo, facturacion, stock, cuenta corriente y pos
 		// cuenta es Responsable Inscripto y por eso el IVA NO entro al costo del articulo.
 		expect(delta('iva-credito'), 'IVA credito').toBe(iva_facturado)
 
-		// Percepciones y retenciones sufridas, tal cual se cargaron en la factura.
+		// Percepciones sufridas, tal cual se cargaron en la factura.
 		expect(delta('percepcion-iva'), 'percepciones de IVA sufridas').toBe(contexto.factura.percepcion_iva)
-		expect(delta('retencion-iva'), 'retenciones de IVA sufridas').toBe(contexto.factura.retencion_iva)
 		expect(delta('percepcion-iibb'), 'percepciones de IIBB sufridas').toBe(contexto.factura.percepcion_iibb)
-		expect(delta('retencion-iibb'), 'retenciones de IIBB sufridas').toBe(contexto.factura.retencion_iibb)
-		expect(delta('retencion-ganancias'), 'retenciones de Ganancias sufridas').toBe(contexto.factura.retencion_ganancias)
+
+		// 🔴 Y las retenciones NO se mueven, que es exactamente lo que hay que probar (mision
+		// `compras-factura-manual-alicuotas`, 17/9/2026). Los tres renglones siguen existiendo en el
+		// reporte --el primer test verifica que esten-- pero ahora se alimentan de
+		// `retenciones_sufridas`, que se carga al registrar un COBRO a un cliente. Una compra no
+		// practica ni sufre retenciones, asi que este circuito entero tiene que dejarlas en cero.
+		//
+		// La asercion es en delta y no en valor absoluto por el mismo motivo que el resto del test:
+		// el reporte acumula todo el periodo y puede haber retenciones de otro circuito.
+		expect(delta('retencion-iva'), 'una compra no puede generar retenciones de IVA').toBe(0)
+		expect(delta('retencion-iibb'), 'una compra no puede generar retenciones de IIBB').toBe(0)
+		expect(delta('retencion-ganancias'), 'una compra no puede generar retenciones de Ganancias').toBe(0)
 
 		// El saldo de IVA se arma con esos renglones y no es un numero suelto: la compra suma
-		// credito y las percepciones/retenciones suman pagos a cuenta, asi que el saldo se corre a
-		// favor en la suma de los tres. Verificarlo es lo que prueba que el reporte no solo muestra
-		// los renglones sino que los usa.
+		// credito y la percepcion de IVA suma pago a cuenta, asi que el saldo se corre a favor en la
+		// suma de los dos. Verificarlo es lo que prueba que el reporte no solo muestra los renglones
+		// sino que los usa. La retencion de IVA sigue en la formula de PosicionFiscalHelper --eso no
+		// cambio-- pero este circuito la deja en cero, asi que no suma al corrimiento.
 		const corrimiento_a_favor = redondear(
-			iva_facturado + contexto.factura.percepcion_iva + contexto.factura.retencion_iva
+			iva_facturado + contexto.factura.percepcion_iva
 		)
 		const saldo_iva = signo_del_saldo(ahora, 'saldo-iva')
 		const saldo_iva_base = signo_del_saldo(contexto.base_fiscal, 'saldo-iva')
@@ -759,6 +814,105 @@ test.describe.serial('Compra: costeo, facturacion, stock, cuenta corriente y pos
 			retencion_iibb: delta('retencion-iibb'),
 			retencion_ganancias: delta('retencion-ganancias'),
 		}))
+	})
+
+	// ── El otro lado de la factura: modo MANUAL y las tres columnas de la alicuota ──────────────
+	//
+	// 🔴 VA ULTIMO A PROPOSITO. Editar la alicuota a mano cambia el IVA de la factura, o sea que
+	// mueve los renglones de Posicion Fiscal: si corriera antes, el test del reporte mediria un
+	// delta que no es el de la compra y daria rojo sin que haya nada roto. Corriendo despues, todo
+	// lo que toca ya fue verificado.
+	test('en modo manual las alicuotas se editan y los tres importes se derivan entre si', async ({ page }) => {
+		// El bruto que "trae el comprobante". Se elige redondo para que el ida y vuelta no tenga que
+		// redondear: con 21%, 12100 da 10000 de neto exacto. Los dos esperados se derivan con la
+		// MISMA cuenta que hace la pantalla, asi que siguen valiendo si mañana cambia la alicuota.
+		const BRUTO = 12100
+		const neto_esperado = redondear(BRUTO / (1 + IVA / 100))
+		const iva_esperado = redondear(BRUTO - neto_esperado)
+
+		// 1. La compra pasa a facturacion MANUAL. Es la salida que la leyenda del modo automatico
+		//    le promete a la persona, y es de un clic: el modo vive en la compra, no en la factura.
+		await abrir_compras_del_dia(page)
+		await page.locator(`[data-testid="provider_order-row-${contexto.compra.id}"]`).click()
+		await abrir_pestania(page, 'provider_order', 'Facturacion')
+		await page.locator('[data-testid="provider_order-modo_facturacion"]').selectOption('manual')
+
+		await Promise.all([
+			page.waitForResponse(res => /\/provider-order\/\d+/.test(res.url()) && res.request().method() === 'PUT'),
+			page.locator('[data-testid="btn-guardar-provider_order"]').click(),
+		])
+
+		// 2. Se vuelve a entrar a la factura: ahora sin leyenda y con el boton de agregar.
+		await abrir_compras_del_dia(page)
+		await page.locator(`[data-testid="provider_order-row-${contexto.compra.id}"]`).click()
+		await abrir_pestania(page, 'provider_order', 'Facturacion')
+		await page.locator('[data-testid^="provider_order_afip_ticket-row-"]').first().click()
+
+		await expect(
+			page.locator('#provider_order_afip_ticket'),
+			'en modo manual no va la leyenda del modo automatico'
+		).not.toContainText('pasa el modo de facturacion de la compra a')
+		await expect(
+			page.locator('[data-testid="btn-agregar-has-many-provider_order_afip_ticket_ivas"]'),
+			'en modo manual vuelve el boton de agregar alicuotas'
+		).toBeVisible()
+
+		// 3. Se abre la alicuota que dejo la facturacion automatica y se carga UNO SOLO de los tres
+		//    importes: el bruto, que es el que trae el comprobante del proveedor.
+		await page.locator('[data-testid^="provider_order_afip_ticket_iva-row-"]').first().click()
+
+		// 🔴 NINGUNO DE LOS CUATRO CONTROLES SE DESHABILITA, NUNCA -- ni "porque ya escribiste en
+		// otro", ni por alicuota 0. El patron de campos excluyentes con :disabled es el que dejo
+		// articulos con price y percentage_gain los dos bloqueados y sin salida (ver CostInput.vue).
+		for (const campo of ['iva_id', 'neto', 'iva_importe', 'bruto']) {
+			await expect(
+				page.locator(`[data-testid="provider_order_afip_ticket_iva-${campo}"]`),
+				`"${campo}" no se puede deshabilitar nunca`
+			).toBeEnabled()
+		}
+
+		await completar_campo(page, 'provider_order_afip_ticket_iva-bruto', BRUTO)
+
+		// Los otros dos se calculan solos, en vivo, con la alicuota que hay AHORA en el formulario.
+		await expect(
+			page.locator('[data-testid="provider_order_afip_ticket_iva-neto"]'),
+			'el neto se deriva del bruto'
+		).toHaveValue(String(neto_esperado))
+		await expect(
+			page.locator('[data-testid="provider_order_afip_ticket_iva-iva_importe"]'),
+			'el importe de IVA se deriva del bruto'
+		).toHaveValue(String(iva_esperado))
+
+		// 4. Y lo que se guarda son esos dos. `bruto` no es una columna: es exactamente
+		//    neto + iva_importe, y guardarlo seria un tercer numero que se puede desincronizar.
+		const [respuesta] = await Promise.all([
+			page.waitForResponse(res => /\/provider-order-afip-ticket-iva\/\d+/.test(res.url()) && res.request().method() === 'PUT'),
+			page.locator('[data-testid="btn-guardar-provider_order_afip_ticket_iva"]').click(),
+		])
+		const alicuota = (await respuesta.json()).model
+
+		expect(redondear(Number(alicuota.neto))).toBe(neto_esperado)
+		expect(redondear(Number(alicuota.iva_importe))).toBe(iva_esperado)
+		expect(alicuota.bruto, 'el bruto no se persiste').toBeUndefined()
+
+		// 5. Y los dos totales de la factura los rehizo el SERVIDOR con la alicuota nueva: se leen
+		//    de la tabla de facturas de la compra, o sea del dato ya releido de la base.
+		await abrir_compras_del_dia(page)
+		await page.locator(`[data-testid="provider_order-row-${contexto.compra.id}"]`).click()
+		await abrir_pestania(page, 'provider_order', 'Facturacion')
+
+		const celda_total = page.locator('[data-testid^="celda-provider_order_afip_ticket-total-"]').first()
+		const celda_total_iva = page.locator('[data-testid^="celda-provider_order_afip_ticket-total_iva-"]').first()
+
+		expect(
+			numero_de_pantalla(await celda_total_iva.innerText()),
+			'el total de IVA de la factura es la suma del importe de IVA de sus alicuotas'
+		).toBe(iva_esperado)
+
+		expect(
+			numero_de_pantalla(await celda_total.innerText()),
+			'el total de la factura es la suma de sus alicuotas mas las percepciones'
+		).toBe(redondear(BRUTO + contexto.factura.percepcion_iva + contexto.factura.percepcion_iibb))
 	})
 })
 
