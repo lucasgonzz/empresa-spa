@@ -7,16 +7,18 @@
 		class="m-l-10"
 		id="btn_asignar_stock"
 		data-testid="btn-asignar-stock"
+		:disabled="se_esta_editando_stock"
+		:title="se_esta_editando_stock ? 'Terminá la edición de depósitos para asignar stock' : ''"
 		@click.stop="stockMovement"
 		variant="outline-primary">
 			<span
 			v-if="article.stock !== null">
 				{{ numero_es(article.stock) }}
-			</span> 
+			</span>
 			<span
 			v-else>
 				Asignar Stock
-			</span> 
+			</span>
 		</b-button>
 	</div>
 </template>
@@ -24,6 +26,14 @@
 export default {
 	props: {
 		article: Object,
+	},
+	computed: {
+		selected_article() {
+			return this.$store.state.article.edit_addresses_stock.article
+		},
+		se_esta_editando_stock() {
+			return this.selected_article && this.selected_article.id == this.article.id
+		}
 	},
 	methods: {
 		stockMovement() {
