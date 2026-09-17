@@ -466,6 +466,12 @@ export default {
 				seller_id: this.seller_id,
 				sub_total: this.sub_total,
 				total: this.total,
+				/*
+					Total forzado. Viaja siempre, con valor o en null: el motivo completo esta en el
+					PUT de store/vender/previus_sales.js, que es donde alguien lo va a querer sacar
+					por "limpieza".
+				*/
+				forzar_total_monto: this.$store.state.vender.forzar_total_monto,
 				fecha_entrega: this.fecha_entrega,
 				valor_dolar: this.valor_dolar,
 				observations_ocultas: this.$store.state.vender.observations_ocultas,
