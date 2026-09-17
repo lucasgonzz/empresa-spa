@@ -144,15 +144,30 @@ export default {
 		 * terminó no era 'recibido'), así que alcanza con pedirlo siempre que ESTA compra
 		 * termine.
 		 *
-		 * immediate: true cubre el caso de navegar fuera de esta compra mientras el import
-		 * corre y volver después de que ya terminó — sin esto, el watcher no se dispara solo
-		 * por haber vuelto a montar el componente, y el diff quedaría pedido pero nunca
-		 * mostrado hasta el próximo cambio de status.
+		 * 🔴 NO lleva `immediate: true`, y hasta el 17/9/2026 lo llevaba con un comentario que
+		 * decía cubrir "navegar fuera de esta compra mientras el import corre y volver después".
+		 * No lo cubría: `provider_order_id_del_import_en_curso` vive en data(), así que al
+		 * remontar el componente vuelve a null y el handler inmediato sale por el guard de abajo
+		 * sin hacer nada. Un comentario que promete algo que el código no hace es peor que no
+		 * tenerlo, porque el próximo que lea confía. Si algún día hay que cubrir ese escenario de
+		 * verdad, el id tiene que sobrevivir al remontado (store o sessionStorage), no alcanza
+		 * con disparar el watcher antes.
 		 */
 		import_status: {
-			immediate: true,
 			handler(nuevo) {
-				if (!nuevo || nuevo.provider_order_id !== this.provider_order_id_del_import_en_curso) {
+				/*
+				 * El null del id NO se compara con !==: un import de ARTÍCULOS trae
+				 * provider_order_id null, y si todavía no se disparó ninguna importación de
+				 * compra desde este componente, la propiedad también es null — `null !== null`
+				 * da false y el guard dejaba pasar, disparando un getModels() y un GET a
+				 * `provider-order/null/import-diff` cada vez que alguien terminaba de importar
+				 * su catálogo estando parado en Compras.
+				 */
+				if (!nuevo || !this.provider_order_id_del_import_en_curso) {
+					return
+				}
+
+				if (nuevo.provider_order_id !== this.provider_order_id_del_import_en_curso) {
 					return
 				}
 
@@ -181,12 +196,24 @@ export default {
 			this.$store.dispatch('provider_order/getModels')
 		},
 		cargar_diff_de_importacion(provider_order_id) {
+			let self = this
 			this.$api.get('provider-order/' + provider_order_id + '/import-diff')
 			.then(res => {
 				if (res.data && res.data.diff && res.data.diff.length) {
-					this.$store.commit('provider_order/setImportDiff', res.data.diff)
-					this.$bvModal.show('import-diff-provider-order')
+					self.$store.commit('provider_order/setImportDiff', res.data.diff)
+					self.$bvModal.show('import-diff-provider-order')
 				}
+			})
+			.catch(() => {
+				/*
+				 * El diff ya está calculado y guardado del lado del servidor: lo único que se
+				 * perdió acá es mostrarlo. Se devuelve la bandera para que un próximo aviso de
+				 * 'completado' de ESTA compra lo vuelva a pedir — sin esto, el pedido fallido
+				 * dejaba `diff_ya_solicitado` en true y el usuario se quedaba sin el diff Y sin
+				 * enterarse, porque nadie reintenta.
+				 */
+				self.diff_ya_solicitado = false
+				self.$toast.error('No pudimos mostrar la comparación de pedido y recibido. Volvé a abrir la compra para verla.')
 			})
 		},
 	},
