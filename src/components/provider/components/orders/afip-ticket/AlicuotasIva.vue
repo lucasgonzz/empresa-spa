@@ -52,7 +52,7 @@
 			que es un has_many adentro de otro has_many (compra -> factura -> alicuota). La cadena
 			de slots del andamiaje generico llega a UN solo nivel: `HasMany.vue:13-22` reenvia
 			`has-many-prop-<key>` usando las props del modelo HIJO, asi que las del NIETO
-			(`has-many-prop-neto` y companía) nunca se declaran y se pierden en el camino.
+			(`has-many-prop-neto` y compania) nunca se declaran y se pierden en el camino.
 
 			Montando `<has-many>` desde aca, este componente pasa a ser el padre directo del
 			has_many de las alicuotas, y los slots llegan por el camino normal:
