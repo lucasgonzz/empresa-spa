@@ -234,6 +234,10 @@ import BtnLoader from '@/common-vue/components/BtnLoader'
 // has_many.extra_button declarada en src/models/provider.js, con el proveedor como payload.
 const EVENTO_ABRIR = 'sincronizar-descuentos-proveedor'
 
+// El id del b-modal. Coincide con el nombre del evento por casualidad de nombre, no por regla:
+// son dos cosas distintas y se nombran aparte para que no se acoplen.
+const MODAL_ID = 'sincronizar-descuentos-proveedor'
+
 export default {
 	components: {
 		BtnLoader,
@@ -311,7 +315,7 @@ export default {
 				La ventana se abre antes del preview, con el esqueleto adentro. El usuario apreto un
 				boton: si no pasa nada hasta que responde la API, parece que el click se perdio.
 			*/
-			this.$bvModal.show(EVENTO_ABRIR)
+			this.$bvModal.show(MODAL_ID)
 
 			let self = this
 			this.$api.get('provider/'+provider.id+'/sincronizar-descuentos/preview')
@@ -397,7 +401,7 @@ export default {
 			})
 		},
 		cerrar() {
-			this.$bvModal.hide(EVENTO_ABRIR)
+			this.$bvModal.hide(MODAL_ID)
 		},
 		reset() {
 			this.provider_id = null
