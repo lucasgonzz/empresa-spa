@@ -277,6 +277,27 @@ export default {
 		descuento: null,
 
 		/*
+			Total forzado de esta venta (extension forzar_total).
+
+			Es un monto CON SIGNO que se le suma al total para llegar al total que el vendedor
+			escribio en el lapiz de la caja del total:
+
+				negativo = descuento (4.012 -> 4.000 guarda -12)
+				positivo = recargo   (4.012 -> 4.020 guarda +8)
+				null     = no se forzo nada
+
+			🔴 NO ES `descuento`. `descuento` es el campo viejo de esta misma extension y guarda
+			un PORCENTAJE (asi lo leen AfipItemCalculator y los dos PDF del lado API, y asi
+			quedaron las ventas historicas). Redefinirlo como monto corromperia en silencio todo
+			ese historico, por eso el forzado por monto viaja en su propia columna.
+
+			Se guarda el MONTO y no el total tipeado: es lo que pidio Lucas ("que cree un
+			descuento o un recargo en forma de monto") y es lo que se comporta como cualquier
+			otro descuento de venta si despues cambian los items.
+		*/
+		forzar_total_monto: null,
+
+		/*
 			Canje de puntos de esta venta (extension puntos_clientes).
 
 			puntos_canjeados: los puntos que el cliente gasta en esta venta.
@@ -657,6 +678,9 @@ export default {
 		},
 		set_descuento(state, value) {
 			state.descuento = value
+		},
+		set_forzar_total_monto(state, value) {
+			state.forzar_total_monto = value
 		},
 		set_puntos_canjeados(state, value) {
 			state.puntos_canjeados = value
@@ -1179,6 +1203,17 @@ export default {
 				valor_dolar: state.valor_dolar,
 				afip_tipo_comprobante_id: state.afip_tipo_comprobante_id,
 				descuento: state.descuento,
+				/*
+					Total forzado por monto (extension forzar_total). `total` (mas arriba en este
+					mismo payload) ya viaja CON el monto aplicado --lo aplica
+					mixins/vender_set_total.js al final de setTotal()-- y `sub_total` viaja SIN el,
+					que es justo lo que pidio Lucas: el subtotal muestra los 4.012 y el total los
+					4.000.
+
+					Viaja tambien en null cuando no hay forzado: es lo que le dice al servidor que
+					esta venta no lleva ajuste, y sin el la columna quedaria con el valor de otra.
+				*/
+				forzar_total_monto: state.forzar_total_monto,
 				/*
 					Canje de puntos. `total` (mas arriba en este mismo payload) ya viaja neteado
 					con descuento_puntos restado: lo aplica mixins/vender_set_total.js dentro de

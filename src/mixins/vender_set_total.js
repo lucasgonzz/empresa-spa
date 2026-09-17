@@ -77,6 +77,10 @@ export default {
 		descuento_puntos() {
 			return this.$store.state.vender.descuento_puntos
 		},
+		/* Monto con signo del total forzado (extension forzar_total). Negativo descuenta, positivo recarga. */
+		forzar_total_monto() {
+			return this.$store.state.vender.forzar_total_monto
+		},
 		// moneda_id() {
 		// 	return this.$store.state.vender.moneda_id 
 		// },
@@ -176,10 +180,26 @@ export default {
 
 				total = this.aplicar_payment_method_discounts_a_total_repartido_del_modal(total)
 
+				/*
+					🔴 EL TOTAL FORZADO VA ULTIMO, DESPUES DE TODO LO DEMAS. NO SUBIRLO.
+
+					La version vieja de esta extension convertia el total tipeado en un PORCENTAJE
+					y lo restaba adentro de aplicar_descuento(), o sea sobre `total_articles` y
+					nada mas. Con eso, una venta con servicios, combos o promociones NO terminaba
+					en el total que el vendedor habia forzado: despues venia la suma de los otros
+					tres buckets y el numero se iba. Lo mismo pasaba con el canje de puntos y con
+					el reparto por metodo de pago, que se aplican mas abajo.
+
+					Acá, al final de la cadena, el monto cae sobre el total completo (articulos +
+					servicios + combos + promociones + puntos + metodos de pago) y el total final
+					es exactamente el que se tipeo.
+				*/
+				total = this.aplicar_forzar_total_monto(total)
+
 				// this.set_monto_credito(total)
 
 				// total = this.aplicar_cuotas(total)
-				
+
 			}
 			this.$store.commit('vender/setSubTotal', sub_total)
 			this.$store.commit('vender/setTotal', total)
@@ -450,6 +470,75 @@ export default {
 			}
 
 			this.des.push('Total con canje de puntos: '+this.price(total))
+
+			return total
+		},
+		/**
+		 * Aplica el total forzado por monto (extension forzar_total).
+		 *
+		 * El monto es CON SIGNO: negativo descuenta, positivo recarga. Se lo suma al total ya
+		 * terminado, asi que el resultado es exactamente el numero que el vendedor tipeo en el
+		 * lapiz de la caja del total.
+		 *
+		 * 🔴 EL MONTO QUEDA FIJO, NO SE RECALCULA CUANDO CAMBIAN LOS ITEMS. Es a proposito y es
+		 * coherente con el resto de VENDER: si se fuerza 4.000 sobre 4.012 y despues se agrega un
+		 * articulo, el total pasa a ser el nuevo menos 12, con el renglon del ajuste a la vista.
+		 * Lo que NO se hace es volver a forzar el total viejo, porque eso convertiria un ajuste de
+		 * 12 pesos en un descuento de cualquier tamaño sin que nadie lo pida.
+		 *
+		 * @param {Number} total Total de la venta ya terminado (items, descuentos, recargos,
+		 *                       canje de puntos y reparto por metodo de pago incluidos).
+		 * @returns {Number} Total con el ajuste aplicado, o el mismo total si se descarto.
+		 */
+		aplicar_forzar_total_monto(total) {
+
+			/* Number() porque la columna es decimal y Laravel la serializa como string: "0.00" seria truthy. */
+			let monto = Number(this.forzar_total_monto)
+
+			if (!monto) {
+				return total
+			}
+
+			this.des.push('APLICANDO TOTAL FORZADO')
+
+			/*
+				🔴 LA GUARDA DEL TOTAL NEGATIVO. NO CONVERTIR ESTO EN UN `Math.max(0, total)`.
+				(y tampoco en un `if (total < 0) total = 0`, que es lo mismo escrito distinto)
+
+				El caso es real: el vendedor fuerza el total en 4.000 sobre una venta de 4.012
+				--o sea, un ajuste de -12-- y despues saca items hasta que quedan 10 pesos de
+				mercaderia. Con un clamp a cero, la venta se guardaria en 0 y a nadie le avisaria
+				nada: la cuenta corriente, la caja y el comprobante mostrarian una venta regalada,
+				y el vendedor solo veria un total redondo que "parecia bien".
+
+				Un total pisado a cero en silencio es plata que desaparece sin dejar rastro. Por
+				eso el ajuste se DESCARTA --el total vuelve a ser el que sale de los items-- y se
+				deja dicho en la descripcion del precio, que es donde el vendedor va a buscar por
+				que el numero no es el que esperaba.
+
+				Y se limpia tambien del store: si quedara puesto, el payload viajaria con un monto
+				que no se aplico al total, y del otro lado el prorrateo de AFIP y el renglon del
+				comprobante escalarian contra una base que no existe.
+			*/
+			if (total + monto < 0) {
+
+				this.des.push('El ajuste de '+this.price(monto)+' se descarto: con los items que quedan el total daria negativo')
+				this.des.push('Volve a forzar el total si todavia lo necesitas')
+
+				this.$store.commit('vender/set_forzar_total_monto', null)
+
+				return total
+			}
+
+			if (monto < 0) {
+				this.des.push('Total forzado: descuento de '+this.price(monto * -1))
+			} else {
+				this.des.push('Total forzado: recargo de '+this.price(monto))
+			}
+
+			total += monto
+
+			this.des.push('Total con el total forzado: '+this.price(total))
 
 			return total
 		},
