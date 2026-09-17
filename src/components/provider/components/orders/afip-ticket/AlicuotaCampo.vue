@@ -73,16 +73,24 @@ import Vue from 'vue'
  * otra derivo. Un `Vue.observable` a nivel modulo alcanza porque hay un solo modal de alicuota
  * abierto a la vez en todo el sistema.
  *
- * Y existe porque sin esto el numero se le reformatea a la persona abajo del cursor. Tipear "1000."
- * en Bruto da un ida y vuelta (neto 826,45 + iva 173,55) cuya suma es 1000, y el input volveria a
- * pintar "1000" comiendose el punto recien tipeado. Con la memoria, el campo que se esta
- * editando muestra su texto crudo y los otros dos se derivan.
+ * Y existe porque sin esto el numero se le reformatea a la persona abajo del cursor: lo que se
+ * guarda es el valor PARSEADO, y volver a pintarlo le come lo que todavia no termino de escribir.
+ * Medido: tipeando "2000.50" en Neto, sin memoria el campo vuelve como "2000.5" apenas se escribe
+ * el ultimo cero. Con la memoria, el campo que se esta editando muestra su texto crudo y los otros
+ * dos se derivan (420,11 y 2420,61).
  *
  * 🔴 NO ES UNA COLUMNA Y NO VIAJA EN NINGUN REQUEST. Es al proposito que no se escriba en el
  * modelo: `getModelToSend()` (model/Index.vue:803) hace un spread del modelo, asi que cualquier
  * clave que le agreguemos sale para la API.
+ *
+ * `modelo` guarda a QUE alicuota pertenece lo tipeado, y es lo que hace que la memoria no se le
+ * escape a la fila siguiente: al abrir otra alicuota la referencia deja de coincidir y los tres
+ * campos vuelven a derivarse solos. Se resuelve por identidad y no con un watcher que limpie la
+ * memoria a proposito -- un watcher sobre el modelo corre DESPUES del render, asi que la primera
+ * pintada de la fila nueva todavia mostraria el texto de la anterior.
  */
 const edicion = Vue.observable({
+	modelo: null,
 	campo: null,
 	texto: null,
 })
@@ -175,8 +183,9 @@ export default {
 			}
 
 			// El campo que la persona esta tipeando muestra su texto crudo, sin pasar por el
-			// redondeo del ida y vuelta.
-			if (edicion.campo == this.campo) {
+			// redondeo del ida y vuelta. La comparacion por identidad del modelo es lo que hace
+			// que lo tipeado en una alicuota no se le aparezca a la siguiente.
+			if (edicion.modelo === this.alicuota_iva && edicion.campo == this.campo) {
 				return edicion.texto
 			}
 
@@ -195,6 +204,10 @@ export default {
 		 * @returns {Number|String}
 		 */
 		bruto_derivado() {
+			if (!this.alicuota_iva) {
+				return ''
+			}
+
 			let sin_neto = this.esta_vacio(this.alicuota_iva.neto)
 			let sin_iva = this.esta_vacio(this.alicuota_iva.iva_importe)
 
@@ -272,8 +285,10 @@ export default {
 
 			let alicuota_nueva = this.get_iva_percentage_from_store(iva_id)
 
-			let campo_ancla = edicion.campo ? edicion.campo : 'neto'
-			let valor_ancla = edicion.campo ? edicion.texto : this.alicuota_iva.neto
+			let hay_memoria = edicion.modelo === this.alicuota_iva && !!edicion.campo
+
+			let campo_ancla = hay_memoria ? edicion.campo : 'neto'
+			let valor_ancla = hay_memoria ? edicion.texto : this.alicuota_iva.neto
 
 			if (this.esta_vacio(valor_ancla)) {
 				return
@@ -287,6 +302,7 @@ export default {
 		 * @param {String|Number} valor lo que acaba de tipear.
 		 */
 		set_importe(valor) {
+			edicion.modelo = this.alicuota_iva
 			edicion.campo = this.campo
 			edicion.texto = valor
 
@@ -345,22 +361,11 @@ export default {
 			this.$set(this.alicuota_iva, 'iva_importe', this.dos_decimales(numero - neto))
 		},
 	},
-	watch: {
-		/**
-		 * Al abrir otra alicuota (o al crear una nueva) se olvida que campo se estaba tipeando.
-		 *
-		 * Se dispara SOLO cuando cambia la referencia del modelo, que es lo que hace
-		 * `setModel()`: tipear hace `$set` sobre el mismo objeto y no lo despierta. Por eso no
-		 * convierte ni escribe nada -- de eso se ocupan las computeds derivadas.
-		 */
-		alicuota_iva(nuevo, viejo) {
-			if (nuevo === viejo) {
-				return
-			}
-
-			edicion.campo = null
-			edicion.texto = null
-		},
-	},
+	/*
+		🔴 Este componente NO TIENE UN SOLO WATCHER, y es a proposito.
+		Lo que se muestra sale de computeds derivadas y lo que se guarda lo escriben los dos
+		metodos que corren cuando la persona toca algo. La memoria de lo tipeado se limpia sola
+		por identidad (ver `edicion.modelo`), no por un watcher que la borre.
+	*/
 }
 </script>
