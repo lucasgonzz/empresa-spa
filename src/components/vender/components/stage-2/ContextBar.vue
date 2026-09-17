@@ -618,13 +618,15 @@ export default {
 		 * no se guarda una venta cuyo reparto se calculó sobre un total viejo. Se descarta y se
 		 * le avisa al vendedor, que es más ruidoso que arreglarlo solo pero es honesto: el que
 		 * decide cómo se reparten los $5.500 es él, no nosotros.
+		 *
+		 * @returns {boolean} si había un reparto y se descartó.
 		 */
 		limpiar_reparto_de_metodos_de_pago() {
 
 			let hay_reparto = this.selected_payment_methods.length || this.modal_payment_metohds.length
 
 			if (!hay_reparto) {
-				return
+				return false
 			}
 
 			this.$store.commit('vender/setSelectedPaymentMethods', [])
@@ -633,6 +635,8 @@ export default {
 			this.$toast.warning('Cambió el total: volvé a repartirlo entre los métodos de pago', {
 				duration: 8000,
 			})
+
+			return true
 		},
 
 		/**
@@ -673,7 +677,52 @@ export default {
 
 			this.editando_total_forzado = false
 
-			let monto = total_deseado - this.total_base
+			/*
+				El total tipeado es el que ya está en pantalla: no hay ajuste que hacer ni reparto
+				que descartar. Cubre el caso de abrir el lápiz sin querer y salir del campo, que si
+				no le borraría al vendedor un reparto que nadie pidió tocar.
+			*/
+			if (total_deseado === Math.round(Number(this.total) * 100) / 100) {
+				return
+			}
+
+			/*
+				🔴 PRIMERO SE DESARMA, DESPUÉS SE MIDE. NO CALCULAR EL MONTO CONTRA EL TOTAL QUE
+				HAY EN PANTALLA Y LIMPIAR DESPUÉS.
+
+				Confirmar el forzado destruye dos cosas que están metidas adentro de `this.total`:
+				el forzado anterior y --cuando hay reparto en varios métodos de pago-- el descuento
+				o el recargo de esos métodos, que aplica
+				vender_set_total.js::aplicar_payment_method_discounts_a_total_repartido_del_modal().
+				Medir el monto contra un total que incluye lo que el paso siguiente hace
+				desaparecer da un ajuste del tamaño de ese descuento o recargo:
+
+					venta de $10.000 repartida entre efectivo y una tarjeta con 10% de recargo
+					-> `total` en pantalla: $10.500
+					-> el vendedor fuerza a $10.400
+					-> monto = 10.400 - 10.500 = -100
+					-> se descarta el reparto, se va el recargo de $500
+					-> setTotal() da 10.000 - 100 = $9.900
+
+				El vendedor tipeó 10.400 y la venta quedaba en 9.900. No son centavos: es el
+				recargo entero, y es justo lo único que esta funcionalidad promete.
+
+				Entonces el orden es: descartar el reparto, sacar el forzado anterior, dejar que
+				setTotal() reconstruya el total limpio, y recién ahí medir contra ese número. La
+				invariante que queda es una sola y siempre vale: **el monto se mide contra el total
+				que va a quedar, no contra el que se está mirando**.
+
+				El `if` no es una optimización cosmética: sin nada que desarmar, `this.total` YA es
+				la base limpia y el setTotal() de adentro sería una recalculada al pedo.
+			*/
+			let se_descarto_reparto = this.limpiar_reparto_de_metodos_de_pago()
+
+			if (se_descarto_reparto || this.forzar_total_monto) {
+				this.$store.commit('vender/set_forzar_total_monto', null)
+				this.setTotal()
+			}
+
+			let monto = total_deseado - Number(this.total)
 
 			/*
 				Redondeo a centavos. La resta en punto flotante deja colas
@@ -686,17 +735,7 @@ export default {
 				Monto cero no es un forzado: es el total que ya estaba. Va null para que la venta no
 				quede marcada como ajustada cuando no se ajustó nada.
 			*/
-			let monto_nuevo = monto ? monto : null
-			let monto_anterior = this.forzar_total_monto || null
-
-			if (monto_nuevo === monto_anterior) {
-				return
-			}
-
-			/* Antes del setTotal(), para que el total se recalcule ya sin los importes viejos. */
-			this.limpiar_reparto_de_metodos_de_pago()
-
-			this.$store.commit('vender/set_forzar_total_monto', monto_nuevo)
+			this.$store.commit('vender/set_forzar_total_monto', monto ? monto : null)
 
 			this.setTotal()
 		},
