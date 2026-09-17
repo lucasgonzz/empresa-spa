@@ -50,6 +50,27 @@
 				<precios-incluyen-iva></precios-incluyen-iva>
 			</template>
 
+			<!--
+				Mision `compras-factura-manual-alicuotas` (17/9/2026): las alicuotas de IVA de una
+				factura de compra, con los tres importes de calculo en vivo (Neto, Importe IVA,
+				Bruto) y el bloqueo del modo de facturacion automatico.
+
+				🔴 EL SLOT SE DECLARA ACA Y NO ADENTRO DEL FORMULARIO DE LA FACTURA, y no es una
+				eleccion: un slot solo lo puede llenar un ANCESTRO. Las alicuotas son un has_many
+				adentro de otro has_many (compra -> factura -> alicuota), y este es el punto mas
+				cercano del arbol desde el que se puede alcanzar la prop de las alicuotas:
+
+					view/Index -> model/Index -> ModelForm(compra) -> HasMany(facturas)
+					-> model/Index -> ModelForm(factura) -> este slot
+
+				El nombre (`has-many-prop-` + la key de la prop del hijo) es el que arma
+				`has_many_slot_items()` en common-vue/mixins/model_functions.js, y cada eslabon ya
+				lo reenvia solo. De ahi para abajo se encarga AlicuotasIva.vue.
+			-->
+			<template #has-many-prop-provider_order_afip_ticket_ivas>
+				<alicuotas-iva></alicuotas-iva>
+			</template>
+
 		</view-component>
 	</div>
 </template>
@@ -74,6 +95,9 @@ export default {
 		// Prompt 611: control de costos brutos/netos de la compra ("precios_incluyen_iva"), con
 		// descripcion permanente
 		PreciosIncluyenIva: () => import('@/components/provider/components/orders/PreciosIncluyenIva'),
+		// Mision `compras-factura-manual-alicuotas` (17/9/2026): las alicuotas de IVA de una
+		// factura de compra (ver el comentario del slot en el template)
+		AlicuotasIva: () => import('@/components/provider/components/orders/afip-ticket/AlicuotasIva'),
 	},
 	computed: {
 		show_previus_days() {
