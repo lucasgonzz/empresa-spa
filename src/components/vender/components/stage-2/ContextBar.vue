@@ -467,7 +467,16 @@ export default {
 		abrir_total_forzado() {
 
 			this.cancelando_total_forzado = false
-			this.total_tipeado = this.total
+
+			/*
+				🔴 REDONDEADO A CENTAVOS, NO `this.total` PELADO. El total del store es el
+				resultado de una cadena de multiplicaciones y restas en punto flotante, así que
+				bien puede valer 5599.9980000000005: puesto crudo en el input, el vendedor abre el
+				lápiz y ve ese número en pantalla, con el cliente adelante. Medido a 380px el
+				17/9/2026.
+			*/
+			this.total_tipeado = Math.round(Number(this.total) * 100) / 100
+
 			this.editando_total_forzado = true
 
 			/*
@@ -604,12 +613,23 @@ export default {
 	align-items: center
 	min-width: 0
 
-/* Lápiz del total forzado (extensión forzar_total), escondido hasta el hover */
+// Lápiz del total forzado (extensión forzar_total), escondido hasta el hover.
+//
+// 🔴 EL min-width / min-height NO ES DECORACIÓN, ES EL ÁREA DE TOQUE. El ícono mide 16x16, y un
+// blanco de 16 píxeles es imposible de acertar con el dedo: en teléfono el lápiz está SIEMPRE
+// visible, así que es la única forma de entrar a la función y tiene que ser apretable. El fondo
+// sigue siendo transparente, o sea que agrandar el botón no se ve: lo único que cambia es dónde
+// se puede tocar.
 .vender-context-bar__total-edit
+	display: inline-flex
+	align-items: center
+	justify-content: center
+	min-width: 32px
+	min-height: 32px
 	background: transparent
 	border: 0
 	padding: 0
-	margin-left: 10px
+	margin-left: 4px
 	color: #198754
 	font-size: 1rem
 	line-height: 1
@@ -648,10 +668,14 @@ export default {
 @media (hover: none)
 	.vender-context-bar__total-edit
 		opacity: 1
+		min-width: 40px
+		min-height: 40px
 
 @media screen and (max-width: 767px)
 	.vender-context-bar__total-edit
 		opacity: 1
+		min-width: 40px
+		min-height: 40px
 
 /* Valor principal (grande) de cada bloque */
 .vender-context-bar__main-value
