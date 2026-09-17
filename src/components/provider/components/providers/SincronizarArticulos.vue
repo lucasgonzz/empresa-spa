@@ -5,25 +5,25 @@
 	de ese proveedor.
 
 	Es el hermano de PropagarDescuentos.vue, pero no es lo mismo:
-	  - Aquel se dispara SOLO al guardar el proveedor y solo alcanza a los articulos que YA
-	    tienen esos descuentos copiados.
-	  - Este lo dispara el usuario a proposito y puede alcanzar a TODOS los articulos del
-	    proveedor, incluidos los que hoy no tienen ningun descuento.
+
+	- Aquel se dispara SOLO al guardar el proveedor y solo alcanza a los articulos que YA tienen
+	esos descuentos copiados.
+	- Este lo dispara el usuario a proposito y puede alcanzar a TODOS los articulos del proveedor,
+	incluidos los que hoy no tienen ningun descuento.
 
 	🔴 Dos cosas que no se copian de PropagarDescuentos.vue:
 
 	1. NO se consulta la preferencia de la cuenta (users.aplicar_descuentos_proveedor_al_asignar).
-	   Esa preferencia sigue rigiendo todo lo automatico —alta de articulo, cambio de proveedor,
-	   masiva, import—, pero este boton es una accion explicita sobre un proveedor puntual y con
-	   los numeros a la vista. Gatearlo dejaria un boton mudo, que no hace nada y no explica que
-	   la causa es un tilde en otra pantalla (decision de Lucas, 17/9/2026).
+	Esa preferencia sigue rigiendo todo lo automatico —alta de articulo, cambio de proveedor,
+	masiva, import—, pero este boton es una accion explicita sobre un proveedor puntual y con los
+	numeros a la vista. Gatearlo dejaria un boton mudo, que no hace nada y no explica que la causa
+	es un tilde en otra pantalla (decision de Lucas, 17/9/2026).
 
 	2. NO se espera el resultado. La sincronizacion corre en segundo plano, como una exportacion:
-	   el modo "todos" alcanza miles de articulos y en un request eso es un timeout a mitad de
-	   camino, con parte del catalogo sincronizado y parte no. El modal confirma, avisa que se
-	   esta procesando y se cierra; el aviso de fin llega por la notificacion global de siempre.
-	   Por eso mismo el toast NO puede decir "se actualizaron N articulos": todavia no se
-	   actualizo ninguno.
+	el modo "todos" alcanza miles de articulos y en un request eso es un timeout a mitad de camino,
+	con parte del catalogo sincronizado y parte no. El modal confirma, avisa que se esta procesando
+	y se cierra; el aviso de fin llega por la notificacion global de siempre. Por eso mismo el
+	toast NO puede decir "se actualizaron N articulos": todavia no se actualizo ninguno.
 -->
 <b-modal
 title="Sincronizar los articulos de este proveedor"
