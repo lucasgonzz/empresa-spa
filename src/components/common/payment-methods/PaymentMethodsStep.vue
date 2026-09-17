@@ -171,7 +171,7 @@
                             lado son peor que campos que faltan.
                         -->
                         <retencion-info
-                        v-if="show_retencion"
+                        v-if="show_datos_retencion"
                         @field_change="on_check_field_change(index, $event)"
                         :payment_method="payment_method"></retencion-info>
 
@@ -237,11 +237,21 @@ export default {
         },
         address_id: Number,
         /**
-         * Dibuja los datos del certificado cuando el metodo elegido es una retencion. Apagada por
-         * defecto: solo la prende el modal de cobro de cuenta corriente, que es el unico circuito
-         * que los guarda.
+         * Ofrece "Retencion" en el desplegable. La usa el resto del componente; el filtro de la
+         * lista vive en `payment-methods/Index.vue`.
          */
         show_retencion: {
+            type: Boolean,
+            default: false,
+        },
+        /**
+         * Dibuja los datos del certificado cuando el metodo elegido es una retencion.
+         *
+         * 🔴 Separada de `show_retencion` a proposito: en un pago a PROVEEDOR el metodo se ofrece
+         * pero el certificado no se pide, porque esa retencion es PRACTICADA y no sufrida (el
+         * agente sos vos). Ver el comentario largo en `payment-methods/Index.vue`.
+         */
+        show_datos_retencion: {
             type: Boolean,
             default: false,
         },

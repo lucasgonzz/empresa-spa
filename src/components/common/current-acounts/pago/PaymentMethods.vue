@@ -15,6 +15,7 @@
             :validate_cash_box_moneda="validate_cash_box_moneda"
 
             :show_retencion="true"
+            :show_datos_retencion="es_cobro_a_cliente"
         >
         </multi-payment-methods>
     </div>
@@ -50,6 +51,32 @@ export default {
     computed: {
         cajas() {
             return this.$store.state.caja.models
+        },
+        /**
+         * Si este modal es un COBRO a un cliente y no un PAGO a un proveedor. Es el mismo
+         * componente para las dos puntas y lo unico que cambia es `from_model_name`.
+         *
+         * 🔴 SOLO APAGA LOS CAMPOS DEL CERTIFICADO, NO EL METODO DE PAGO. Son dos cosas distintas
+         * y mezclarlas romperia el circuito del proveedor:
+         *
+         *   - El METODO sigue disponible en las dos puntas (`show_retencion` va en `true`), y esta
+         *     bien que asi sea. Si vos sos agente de retencion y le retenes a tu proveedor, le
+         *     pagas menos plata y le cancelas la deuda completa: exactamente la misma mecanica.
+         *   - El CERTIFICADO solo se pide al COBRAR. Cuando le pagas a un proveedor el agente de
+         *     retencion sos VOS: esa es una retencion PRACTICADA, no sufrida, y
+         *     `CurrentAcountController::guardar_retenciones_sufridas()` corta al principio con
+         *     `if ($model_name != 'client') return 0;`. Lo que se cargara ahi no se guardaria en
+         *     ningun lado.
+         *
+         * Antes los campos iban con `true` fijo y el modal de pago a proveedor dibujaba los seis,
+         * con el texto "el certificado que te dio el cliente" cuando ahi no hay ningun cliente. Es
+         * el mismo agujero que estos flags vinieron a tapar en Vender y en Gastos, en otra
+         * pantalla.
+         *
+         * @returns {Boolean}
+         */
+        es_cobro_a_cliente() {
+            return this.$store.state.current_acount.from_model_name == 'client'
         },
         /**
          * Sucursal por defecto de las cajas del modal: la que esta puesta en Vender.

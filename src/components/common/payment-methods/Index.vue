@@ -50,6 +50,7 @@
             :base_moneda="base_moneda"
             :address_id="effective_address_id"
             :show_retencion="show_retencion"
+            :show_datos_retencion="show_datos_retencion"
             :sobrante_a_repartir="sobrante_a_repartir"
             @add="add_payment_method"
             @remove="remove_payment_method"
@@ -146,11 +147,28 @@ export default {
             default: null,
         },
         /**
-         * Dibuja los datos del certificado cuando el metodo elegido es una retencion sufrida.
-         * Apagada por defecto: la prende solo el modal de cobro de cuenta corriente, que es el
-         * unico circuito que los guarda (ver RetencionInfo.vue).
+         * Ofrece "Retencion" en el desplegable de metodos de pago. Apagada por defecto: la prende
+         * solo el modal de cobro/pago de cuenta corriente. En Vender y en Gastos el metodo no se
+         * ofrece, porque ahi el certificado no se guarda en ningun lado.
          */
         show_retencion: {
+            type: Boolean,
+            default: false,
+        },
+        /**
+         * Dibuja los datos del certificado cuando el metodo elegido es una retencion.
+         *
+         * 🔴 ES UNA PROP APARTE DE `show_retencion` A PROPOSITO, y la diferencia no es cosmetica:
+         * en un PAGO A PROVEEDOR el metodo SI se ofrece (si vos sos agente de retencion, le retenes
+         * al proveedor: le pagas menos plata y le cancelas la deuda completa) pero el certificado
+         * NO se pide, porque esa retencion es PRACTICADA y no sufrida — el agente sos vos, no te la
+         * hicieron a vos. `CurrentAcountController::guardar_retenciones_sufridas()` corta con
+         * `if ($model_name != 'client') return 0;`, asi que esos campos no irian a ningun lado.
+         *
+         * Una sola prop para las dos cosas obligaba a elegir entre dibujar campos que no se
+         * guardan o sacarle al proveedor un medio de pago que le corresponde.
+         */
+        show_datos_retencion: {
             type: Boolean,
             default: false,
         },
@@ -167,7 +185,14 @@ export default {
          * CurrentAcountController::guardar_retenciones_sufridas() NO corre: no quedaria ningun
          * certificado y esa retencion no llegaria NUNCA a la Posicion Fiscal. El comercio perderia
          * el credito fiscal sin un solo aviso, que es exactamente el agujero que esta parte vino a
-         * tapar. `show_retencion` la habilita solo donde el certificado se guarda.
+         * tapar. `show_retencion` la habilita solo en la cuenta corriente, que es el unico circuito
+         * con el certificado atras.
+         *
+         * ⚠️ ESTE FILTRO NO CUBRE EL SELECT PRINCIPAL DE VENDER. Ese componente
+         * (`vender/.../payment-method-afip-information/PaymentMethod.vue`) arma sus propias
+         * opciones iterando el catalogo derecho, asi que lleva el mismo filtro escrito aparte. Son
+         * dos caminos distintos a la misma lista y se descubrio mirando la pantalla, no leyendo:
+         * si aparece un tercero, va a necesitar lo suyo.
          *
          * El id a excluir se resuelve contra el CATALOGO del store por SLUG, no mirando
          * `opcion.type` ni el nombre: las opciones que pasa Vender son filas decoradas con sus
