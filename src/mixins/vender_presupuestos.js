@@ -131,7 +131,9 @@ export default {
 				'forzar_total_monto'		: this.forzar_total_monto,
 
 				'moneda_id'              	: this.moneda_id,
-				'omitir_en_cuenta_corriente'              	: this.omitir_en_cuenta_corriente,
+				// Un presupuesto va siempre a la cuenta corriente (decision de Lucas, 18/9/2026): viaja 0
+				// pase lo que pase con el store, y el back lo fija en 0 igual.
+				'omitir_en_cuenta_corriente'              	: 0,
 
 				// Id 1 es el estado "sin confirmar"
 				'budget_status_id'          : this.budget.budget_status_id,
@@ -220,7 +222,9 @@ export default {
 				'forzar_total_monto'		: this.forzar_total_monto,
 
 				'valor_dolar'				: this.valor_dolar,
-				'omitir_en_cuenta_corriente'              	: this.omitir_en_cuenta_corriente,
+				// Un presupuesto va siempre a la cuenta corriente (decision de Lucas, 18/9/2026): viaja 0
+				// pase lo que pase con el store, y el back lo fija en 0 igual.
+				'omitir_en_cuenta_corriente'              	: 0,
 
 				// Id 1 es el estado "sin confirmar"
 				'budget_status_id'          : 1, 
