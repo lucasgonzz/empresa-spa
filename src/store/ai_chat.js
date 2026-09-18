@@ -675,6 +675,11 @@ export default {
 						// pintarlas: sin la clave el API responde de solo lectura (que es lo que
 						// les pasa a las pestañas con la SPA vieja), y un API viejo la ignora.
 						acciones: true,
+					}, {
+						// `skip_navigation_cancel`: AsistenteIaFloatingButton es global (App.vue);
+						// cambiar de pantalla después de mandar no tiene que cancelar el envío
+						// (misión cartel-sin-conexion-accesorios, 18/9/2026).
+						skip_navigation_cancel: true,
 					})
 						.then(res => {
 							// Conserva el local_id para que el :key del globo no cambie: si

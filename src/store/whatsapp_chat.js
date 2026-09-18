@@ -619,9 +619,12 @@ export default {
 		 * @param {Object} payload { chat_id, body }
 		 */
 		sendMessage({ commit }, payload) {
+			// `skip_navigation_cancel`: WhatsappSidebarHost es un panel global (App.vue); cambiar
+			// de pantalla después de mandar es el uso normal y no tiene que cancelar el envío
+			// (misión cartel-sin-conexion-accesorios, 18/9/2026).
 			return axios.post('/api/whatsapp-chats/' + payload.chat_id + '/messages', {
 				body: payload.body,
-			})
+			}, { skip_navigation_cancel: true })
 				.then(res => {
 					// El backend descarta las respuestas del agente que esperaban confirmación
 					// ANTES de mandar lo que escribió el operador (es una intervención humana:
@@ -658,7 +661,8 @@ export default {
 			let form_data = new FormData()
 			form_data.append('file', payload.file)
 			form_data.append('caption', payload.caption || '')
-			return axios.post('/api/whatsapp-chats/' + payload.chat_id + '/media', form_data)
+			// `skip_navigation_cancel`: mismo motivo que sendMessage, arriba.
+			return axios.post('/api/whatsapp-chats/' + payload.chat_id + '/media', form_data, { skip_navigation_cancel: true })
 				.then(res => {
 					// Misma intervención humana que en sendMessage(): el backend descarta las
 					// respuestas del agente que esperaban confirmación antes de mandar el
