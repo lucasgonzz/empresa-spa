@@ -418,7 +418,7 @@ export default {
 
 			/*
 				🔴 Catalogo vacio: se pide de nuevo si el arranque ya termino, y si todavia no
-				termino se agenda un reintento para cuando termine (ver los dos metodos).
+				termino se agenda un reintento para cuando termine (recuperar_catalogo_de_listas_si_falta).
 
 				Va ANTES del guard de edicion, a proposito. Cuando estaba despues, editar un
 				comprobante con el catalogo vacio no disparaba nunca el re-pedido ni el reintento
@@ -428,9 +428,7 @@ export default {
 				ni el GET ni el timer commitean una lista sobre un comprobante guardado --eso lo
 				corta el guard de abajo--, solo traen el catalogo (o confirman que no hay).
 			*/
-			if (!this.price_types.length) {
-				this.pedir_catalogo_de_listas_una_vez()
-				this.agendar_reintento_de_lista()
+			if (this.recuperar_catalogo_de_listas_si_falta()) {
 				return
 			}
 
@@ -445,14 +443,24 @@ export default {
 				propuesto al abrir --la suya si el id existe, la del cliente, o la por defecto--,
 				que es lo que la venta editada ya hace desde que se abre con el catalogo cargado.
 				Sin esto el selector quedaba vacio (y en un presupuesto, ademas deshabilitado) y el
-				chequeo del guardado frenaba sin salida. Nunca se pisa una lista ya asignada.
+				chequeo del guardado frenaba sin salida. Nunca se pisa una lista ya asignada, y
+				mientras el comprobante todavia no se hidrato (previus_sale es {} durante los
+				500 ms de setPreviusSale) no se propone nada, igual que antes.
 			*/
-			if (!force_reset && this.comprobante_que_se_esta_editando()) {
+			let editando = this.$store.getters['vender/previus_sales/editando_venta_previa'] || !!this.$store.state.vender.budget
+
+			if (!force_reset && editando) {
 				if (this.$store.state.vender.price_type) {
 					return
 				}
 
-				let lista_del_comprobante = this.resolver_lista_de_comprobante_guardado(this.comprobante_que_se_esta_editando())
+				let comprobante = this.comprobante_que_se_esta_editando()
+
+				if (!comprobante) {
+					return
+				}
+
+				let lista_del_comprobante = this.resolver_lista_de_comprobante_guardado(comprobante)
 
 				if (lista_del_comprobante) {
 					this.$store.commit('vender/setPriceType', lista_del_comprobante)
@@ -466,6 +474,34 @@ export default {
 			if (price_type_para_vender) {
 				this.$store.commit('vender/setPriceType', price_type_para_vender)
 			}
+		},
+
+		/**
+		 * Si la cuenta requiere lista y el catalogo esta vacio, lo pide de nuevo (si el arranque
+		 * ya termino) y agenda el reintento (si todavia no). Devuelve true cuando el catalogo
+		 * falta, o sea cuando no hay nada que resolver todavia.
+		 *
+		 * Es el primer paso de setPriceType(), y lo llama ademas el created() de Vender.vue al
+		 * entrar a EDITAR un comprobante: ahi setPriceType() no se llama a proposito (los
+		 * defaults pisarian lo guardado), pero el re-pedido del catalogo tiene que salir igual,
+		 * o en una cuenta con el flag prendido y cero listas la confirmacion de "no hay listas"
+		 * llegaba recien con el primer Guardar, que frenaba, y pasaba el segundo.
+		 *
+		 * @returns {boolean}
+		 */
+		recuperar_catalogo_de_listas_si_falta() {
+			if (!this.requiere_lista_de_precios()) {
+				return false
+			}
+
+			if (this.price_types.length) {
+				return false
+			}
+
+			this.pedir_catalogo_de_listas_una_vez()
+			this.agendar_reintento_de_lista()
+
+			return true
 		},
 
 		/**

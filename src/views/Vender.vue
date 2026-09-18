@@ -109,6 +109,14 @@ export default {
 				this.set_omitir_en_cuenta_corriente()
 				this.set_caja_por_defecto()
 				this.$store.commit('vender/clear_sale_log')
+			} else {
+				/*
+					Editando NO se aplica ningun default (ver arriba), pero el catalogo de listas
+					se recupera igual si el arranque no lo trajo: no commitea nada sobre el
+					comprobante, solo pide el catalogo (o confirma que la cuenta no tiene listas)
+					para que el Guardar no frene por un catalogo que nunca se volvio a pedir.
+				*/
+				this.recuperar_catalogo_de_listas_si_falta()
 			}
 
 			/*
