@@ -115,6 +115,42 @@ function observar_estado_del_broadcast(echo) {
 
 observar_estado_del_broadcast(Vue.prototype.Echo)
 
+/**
+ * Cancelación de pedidos en curso al navegar entre pantallas (misión
+ * cartel-sin-conexion-accesorios, 18/9/2026).
+ *
+ * Sin esto, un pedido lento disparado desde una pantalla que el usuario ya abandonó (cambió de
+ * módulo mientras un GET pesado seguía en vuelo) resuelve igual más tarde con un error de red
+ * genérico, y `global_api_error_interceptor` no tiene forma de distinguirlo de un corte real:
+ * dispara el cartel "No pudimos conectarnos con el servidor" por algo que el usuario nunca llegó
+ * a ver como error.
+ *
+ * El token vigente vive acá (variable de módulo). El interceptor de request de más abajo se lo
+ * engancha a cualquier pedido que no traiga uno propio ya seteado; el `router.beforeEach` de acá
+ * abajo lo cancela y renueva en cada navegación.
+ */
+let cancel_token_source = axios.CancelToken.source()
+
+/**
+ * Guarda de navegación NUEVA (no reemplaza la que valida sesión en `router/index.js`, se agrega
+ * aparte): cancela los pedidos que quedaron colgados de la pantalla que el usuario abandona.
+ *
+ * El orden es crítico: cancelar y renovar el token ANTES de llamar a `next()`, nunca después. Si
+ * se cancelara después de `next()`, la pantalla nueva ya habría montado sus componentes y
+ * enganchado sus propios pedidos al token viejo — quedarían cancelados también. Yendo antes,
+ * cuando la pantalla nueva monte va a enganchar sus pedidos al token ya renovado.
+ *
+ * @param {Object} to destino de navegación (sin uso acá, lo pide la firma de Vue Router).
+ * @param {Object} from origen de navegación (sin uso acá, lo pide la firma de Vue Router).
+ * @param {Function} next callback para continuar la navegación.
+ * @returns {void}
+ */
+router.beforeEach((to, from, next) => {
+    cancel_token_source.cancel('Navegación a otra pantalla')
+    cancel_token_source = axios.CancelToken.source()
+    next()
+})
+
 // Notifications
 import VueToast from 'vue-toast-notification';
 import 'vue-toast-notification/dist/theme-sugar.css';
@@ -347,6 +383,20 @@ function global_api_error_interceptor(error) {
     return Promise.reject(error)
 }
 
+/**
+ * Interceptor de request: engancha el CancelToken vigente (ver bloque de cancelación por
+ * navegación, más arriba) a todo pedido que no traiga uno propio ya seteado.
+ *
+ * @param {import('axios').AxiosRequestConfig} config Configuración del pedido saliente.
+ * @returns {import('axios').AxiosRequestConfig}
+ */
+function global_api_cancel_token_interceptor(config) {
+    if (!config.cancelToken) {
+        config.cancelToken = cancel_token_source.token
+    }
+    return config
+}
+
 // Instancia usada como Vue.prototype.$api (prefijo /api)
 const apiInstance = axios.create({
     baseURL: env('VUE_APP_API_URL') + '/api',
@@ -357,6 +407,7 @@ apiInstance.interceptors.response.use(
     global_api_notifications_interceptor,
     global_api_error_interceptor
 )
+apiInstance.interceptors.request.use(global_api_cancel_token_interceptor)
 
 // ✅ Registramos $api como plugin (como hacías vos)
 Vue.use({
@@ -375,12 +426,14 @@ axiosInstance.interceptors.response.use(
     global_api_notifications_interceptor,
     global_api_error_interceptor
 )
+axiosInstance.interceptors.request.use(global_api_cancel_token_interceptor)
 
 // Misma lógica para el axios por defecto (stores que importan `axios` sin `create`)
 axios.interceptors.response.use(
     global_api_notifications_interceptor,
     global_api_error_interceptor
 )
+axios.interceptors.request.use(global_api_cancel_token_interceptor)
 
 Vue.use({
   install(Vue) {
