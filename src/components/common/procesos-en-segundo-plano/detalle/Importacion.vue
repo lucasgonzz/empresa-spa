@@ -130,8 +130,22 @@ export default {
 			}
 			return Number(this.proceso.porcentaje)
 		},
-		/** "Lote 3 de 12" (o "40 de 300 filas"): la etapa del contrato, o armada de total/procesados. */
+		/**
+		 * "Lote 3 de 12" (o "40 de 300 filas"): la etapa del contrato, o armada de total/procesados.
+		 *
+		 * Con la importación terminada la etapa del contrato dice "Terminado", y eso ya lo dice
+		 * el título: acá se prefiere volver a los lotes ("12 lotes · 4.500 filas"), que es lo que
+		 * Lucas pidió ver en el detalle y lo que se perdía al cerrar.
+		 */
 		etapa_texto() {
+			if (!this.activo && this.proceso.total) {
+				let unidad = this.proceso.unidad || 'lotes'
+				let texto = this.numero_es(this.proceso.total) + ' ' + unidad
+				if (unidad === 'lotes' && this.filas_procesadas !== null) {
+					texto += ' · ' + this.numero_es(this.filas_procesadas) + ' filas'
+				}
+				return texto
+			}
 			if (this.proceso.etapa) {
 				return this.proceso.etapa
 			}

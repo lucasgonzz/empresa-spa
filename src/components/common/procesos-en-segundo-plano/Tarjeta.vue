@@ -10,6 +10,7 @@
 	role="button"
 	tabindex="0"
 	:title="titulo"
+	:style="estilo_posicion"
 	@click="abrir_modal"
 	@keydown.enter.prevent="abrir_modal"
 	@keydown.space.prevent="abrir_modal"
@@ -34,6 +35,18 @@
 		v-else
 		:porcentaje="porcentaje_global"
 		:terminado="estado === 'terminado'"></ring-progress>
+
+		<!--
+			Compacta, la pildora es solo el anillo con el porcentaje: lo que Lucas pidio que
+			informe es CUANTOS hay, asi que la cantidad queda a la vista en un globito, como el
+			badge de alertas del menu. Con el texto visible sobra.
+		-->
+		<span
+		v-if="mostrar_contador"
+		class="procesos-tarjeta__contador"
+		data-testid="procesos-tarjeta-contador">
+			{{ cantidad_activos }}
+		</span>
 
 	</div>
 </transition>
@@ -75,6 +88,12 @@ export default {
 			timer_final: null,
 			/** Intervalo del respaldo por polling (null cuando la conexion esta sana). */
 			timer_respaldo: null,
+			/**
+			 * Pixeles desde arriba cuando el cartel de sincronizacion de articulos offline
+			 * (#offline-articles-progress, misma esquina) esta en pantalla: la pildora baja
+			 * hasta debajo de el. 0 = el cartel no esta, mandan las clases de CSS.
+			 */
+			offset_offline: 0,
 		}
 	},
 	computed: {
@@ -95,6 +114,29 @@ export default {
 			return !!this.$store.state.download_resources.tarjeta_visible
 		},
 		/**
+		 * true mientras el cartel "Actualizando articulos offline" esta en pantalla. Vive en el
+		 * data() del mixin offline de App.vue, que es $root: no pasa por el store.
+		 */
+		tarjeta_offline_visible() {
+			let progreso = this.$root && this.$root.offline_articles_sync_progress
+			return !!(progreso && progreso.visible)
+		},
+		/** Terminados con error que el usuario todavia no cerro. */
+		fallos_recientes() {
+			return this.$store.getters['background_processes/recientes'].filter(proceso => proceso.status === 'fallo').length
+		},
+		/** El globito con la cantidad: solo compacta (sin texto) y con algo que contar. */
+		mostrar_contador() {
+			return this.compacta && !this.hover && !this.final && this.cantidad_activos > 0
+		},
+		/** Inline solo cuando hay que esquivar el cartel offline; si no, mandan las clases. */
+		estilo_posicion() {
+			if (!this.tarjeta_offline_visible || !this.offset_offline) {
+				return null
+			}
+			return { top: this.offset_offline + 'px' }
+		},
+		/**
 		 * Mientras haya activos y los avisos en tiempo real no puedan llegar (socket caido, o el
 		 * servidor sin broadcast), el listado se pide cada 15 s. Con la conexion sana, nunca.
 		 */
@@ -111,6 +153,9 @@ export default {
 		},
 		texto() {
 			if (this.final === 'error') {
+				if (this.fallos_recientes > 1) {
+					return this.fallos_recientes + ' procesos con error'
+				}
 				return 'Proceso con error'
 			}
 			if (this.final === 'terminado') {
@@ -156,6 +201,35 @@ export default {
 			immediate: true,
 			handler(valor) {
 				this.ajustar_respaldo(valor)
+			},
+		},
+		/**
+		 * Un fallo que nadie vio no se va solo: mientras haya terminados con error sin cerrar
+		 * y nada corriendo, la pildora se queda en rojo. Es la unica puerta al modal, y un
+		 * "Proceso con error" que dura 4 segundos mientras el usuario mira otra pantalla es un
+		 * error que nunca se entero. Se va cuando los cierra (la x de la fila o "Limpiar").
+		 */
+		fallos_recientes: {
+			immediate: true,
+			handler(cantidad) {
+				if (this.cantidad_activos > 0) {
+					return
+				}
+				if (cantidad > 0) {
+					this.mostrar_final('error')
+					return
+				}
+				if (this.final === 'error') {
+					this.limpiar_timers()
+					this.visible = false
+					this.final = null
+				}
+			},
+		},
+		tarjeta_offline_visible: {
+			immediate: true,
+			handler() {
+				this.medir_cartel_offline()
 			},
 		},
 	},
@@ -214,10 +288,29 @@ export default {
 			this.visible = true
 			this.compacta = false
 
+			// El error se queda hasta que el usuario lo cierre (ver el watch de fallos_recientes).
+			if (estado_final === 'error' && this.fallos_recientes > 0) {
+				return
+			}
+
 			this.timer_final = setTimeout(() => {
 				this.visible = false
 				this.final = null
 			}, MS_MENSAJE_FINAL)
+		},
+		/**
+		 * Mide donde termina el cartel de articulos offline para ponerse debajo. Se mide y no
+		 * se hardcodea: el cartel tiene cuatro renglones y su alto depende de la fuente.
+		 */
+		medir_cartel_offline() {
+			if (!this.tarjeta_offline_visible) {
+				this.offset_offline = 0
+				return
+			}
+			this.$nextTick(() => {
+				let cartel = document.getElementById('offline-articles-progress')
+				this.offset_offline = cartel ? Math.ceil(cartel.getBoundingClientRect().bottom) + 10 : 0
+			})
 		},
 		/**
 		 * Con que termino el ultimo tramo de trabajo: si alguno de los que estaban activos aparece
@@ -328,6 +421,27 @@ export default {
 	.procesos-tarjeta__texto
 		max-width: 0
 		opacity: 0
+
+// Globito con la cantidad de procesos, pegado al anillo cuando la pildora esta compacta.
+// Mismo lenguaje que .route-alert-badge del menu (redondo, chico, con un aro del color del fondo).
+.procesos-tarjeta__contador
+	position: absolute
+	top: -4px
+	left: -4px
+	min-width: 18px
+	height: 18px
+	padding: 0 5px
+	display: inline-flex
+	align-items: center
+	justify-content: center
+	font-size: 11px
+	font-weight: 700
+	line-height: 1
+	border-radius: 999px
+	color: #fff
+	background: var(--color-primary, #007bff)
+	box-shadow: 0 0 0 2px var(--bg-card, #fff)
+	animation: procesos-tarjeta-aparecer .25s cubic-bezier(.22, .61, .36, 1)
 
 // Mientras la tarjeta de descarga de recursos del arranque (50 px de alto, en top: 14px) esta en
 // pantalla, esta baja para no pisarla.
