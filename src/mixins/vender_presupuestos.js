@@ -247,18 +247,39 @@ export default {
 			.catch(err => {
 				this.$store.commit('auth/setMessage', '')
 				this.$store.commit('auth/setLoading', false)
-				this.$toast.error('Error al guardar Presupuesto')
 				console.log(err)
 
-				if (err.response && err.response.data && err.response.data.message) {
+				/*
+					🔴 UN solo aviso por error. Este POST apaga el aviso global del interceptor
+					(skip_global_error_event, arriba), que ademas del mensaje del back calla el toast
+					de red: este catch es el unico que avisa, asi que tiene que cubrir los tres casos.
 
-					this.$toast.error(err.response.data.message, {
+					- Con mensaje del back (el 422 de la lista de precios, entre otros): solo ese.
+					  Antes salia ademas el generico "Error al guardar Presupuesto" encima.
+					- Sin `response` (servidor caido, red cortada, timeout): un mensaje de conexion,
+					  en vez del "Codigo: ERR_NETWORK. Detalle: Network Error" de cien segundos.
+					- Con respuesta pero sin mensaje: el generico con el detalle tecnico.
+				*/
+				let mensaje_del_back = err && err.response && err.response.data && err.response.data.message
+					? err.response.data.message
+					: null
+
+				if (mensaje_del_back) {
+
+					this.$toast.error(mensaje_del_back, {
 						duration: 10000
 					})
+
+				} else if (!err || !err.response) {
+
+					this.$toast.error('No pudimos conectarnos con el servidor. Lo más probable es que el presupuesto NO se haya guardado: revisá la conexión, fijate en Presupuestos y volvé a intentar.', {
+						duration: 15000,
+					})
+
 				} else {
-					
-					this.$toast.error('Codigo: '+err.code+'. Detalle: '+err.message, {
-						duration: 100000,
+
+					this.$toast.error('Error al guardar Presupuesto. Codigo: '+err.code+'. Detalle: '+err.message, {
+						duration: 15000,
 					})
 				}
 			})

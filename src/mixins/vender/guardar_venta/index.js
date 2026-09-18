@@ -160,18 +160,59 @@ export default {
 				}
 
 				this.sonido_error()
-				this.$toast.error('Error al guardar venta', {
-					duration: 10000
-				})
 
-				console.log(err.response.data.message)
-				if (err.response && err.response.data && err.response.data.message) {
+				/*
+					🔴 UN solo aviso por error, y elegido con `err.response` protegido.
 
-					this.$toast.error(err.response.data.message, {
+					Aca habia un `console.log(err.response.data.message)` FUERA de toda guarda: sin
+					`response` --servidor caido, red cortada, timeout-- tiraba TypeError adentro del
+					catch y el vendedor se quedaba con el generico "Error al guardar venta" y nada
+					mas. Se noto recien ahora porque el POST de la venta apaga el aviso global del
+					interceptor (skip_global_error_event en store/vender/vender.js), que ademas del
+					mensaje del back callaba el toast de red: este catch es el unico que avisa.
+
+					- Con mensaje del back (422 de la lista de precios, 409, etc.): solo ese. Antes
+					  salian dos toasts, el generico arriba del que decia algo.
+					- Sin `response`: no hubo respuesta del servidor. No se afirma que la venta "no se
+					  guardo" a secas: si la conexion se corto DESPUES de que el POST llego, la venta
+					  existe, y un vendedor que reintenta pasados los 5 segundos del deduplicado del
+					  back la duplica. Por eso manda a mirar Ventas antes de reintentar.
+					- Con respuesta pero sin mensaje: el generico.
+				*/
+				let mensaje_del_back = err && err.response && err.response.data && err.response.data.message
+					? err.response.data.message
+					: null
+
+				if (mensaje_del_back) {
+
+					this.$toast.error(mensaje_del_back, {
 						duration: 10000
 					})
+
+				} else if (!err || !err.response) {
+
+					let es_timeout = Boolean(
+						err
+						&& (
+							err.code === 'ECONNABORTED'
+							|| (err.message && String(err.message).indexOf('timeout') !== -1)
+						)
+					)
+
+					this.$toast.error(
+						es_timeout
+							? 'El servidor tardó demasiado en responder. La venta puede haber quedado guardada: fijate en Ventas antes de volver a intentar.'
+							: 'No pudimos conectarnos con el servidor. Lo más probable es que la venta NO se haya guardado: revisá la conexión, fijate en Ventas y volvé a intentar.',
+						{
+							duration: 15000
+						}
+					)
+
 				} else {
-					this.$toast.error(err)
+
+					this.$toast.error('Error al guardar venta', {
+						duration: 10000
+					})
 				}
 			})
 		},
