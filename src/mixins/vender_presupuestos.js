@@ -88,6 +88,17 @@ export default {
 				// en la edición); si por algún motivo no hay cliente en store, se usa el original
 				// del presupuesto como resguardo.
 				'client_id'                 : this.client ? this.client.id : this.budget.client_id,
+
+				/*
+					Viaja tambien al actualizar, no solo al crear. Hasta esta mision el PUT no lo
+					mandaba y BudgetController::update() no tocaba price_type_id, asi que un
+					presupuesto guardado sin lista (o con una que ya no corresponde) se quedaba asi
+					para siempre, y la venta que nace al confirmarlo heredaba ese null. En el back
+					la clave ausente preserva lo guardado (SPA vieja) y null explicito en una
+					cuenta con listas contesta 422.
+				*/
+				'price_type_id'				: this.get_price_type_id(),
+
 				'start_at'                  : this.budget.start_at,
 				'finish_at'                 : this.budget.finish_at,
 				'observations'              : this.observations,

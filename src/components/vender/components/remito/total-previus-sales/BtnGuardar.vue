@@ -48,13 +48,18 @@ import previus_sales from '@/mixins/vender/previus_sale/index'
 import guardar_venta from '@/mixins/vender/guardar_venta/index'
 import vender_presupuestos from '@/mixins/vender_presupuestos'
 import articulo_pendiente_de_agregar from '@/mixins/vender/articulo_pendiente_de_agregar'
+/*
+	Explicito aunque guardar_venta ya lo trae por chequeos/index.js: check() lo llama para los
+	dos caminos que NO pasan por checkear_vender(), y conviene que la dependencia se lea aca.
+*/
+import check_price_type from '@/mixins/vender/guardar_venta/chequeos/price_type'
 export default {
 	name: 'ButtonClients',
 	components: {
 		VueltoEfectivo: () => import('@/components/vender/components/remito/VueltoEfectivo'),
 		BtnLoader,
 	},
-	mixins: [previus_sales, guardar_venta, vender_presupuestos, articulo_pendiente_de_agregar],
+	mixins: [previus_sales, guardar_venta, vender_presupuestos, articulo_pendiente_de_agregar, check_price_type],
 	props: {
 		/**
 		 * Cuando es true, suprime el componente VueltoEfectivo.
@@ -102,6 +107,21 @@ export default {
 					return false
 				}
 			}
+
+			/*
+				🔴 La lista de precios se chequea ACA para los dos caminos que no pasan por
+				checkear_vender(): el presupuesto (guardar_presupuesto) y la actualizacion de una
+				venta guardada (updateSale). La venta nueva lo tiene adentro de checkear_vender().
+				Hasta esta mision un presupuesto salia sin lista en una cuenta con listas, y al
+				confirmarlo la venta nacia con las lineas a precio base.
+			*/
+			if (
+				(this.guardar_como_presupuesto || this.editando_venta_previa)
+				&& !this.check_price_type()
+			) {
+				return false
+			}
+
 			if (typeof this.previus_sale.id != 'undefined' && this.previus_sale.to_check && !this.checked) {
 				this.$toast.error('Indique la venta como checkeada')
 				return false

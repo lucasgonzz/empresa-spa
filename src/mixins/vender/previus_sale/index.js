@@ -221,18 +221,36 @@ export default {
 				this.$store.commit('vender/setClient', model.client)
 			} else {
 				this.$store.commit('vender/setClient', null)
-				this.$store.commit('vender/setPriceType', null)
 			}
 
+			/*
+				🔴 LA LISTA DE PRECIOS DEL COMPROBANTE QUE SE ESTA EDITANDO, SIEMPRE COMO OBJETO.
+
+				La que quedo guardada en el comprobante manda. Si no tiene, la del cliente: pero el
+				OBJETO del catalogo, no `client.price_type_id` pelado como se hacia hasta esta
+				mision --ese id en vender/price_type dejaba `price_type_vender.id` en undefined, y
+				un articulo agregado durante la edicion se preciaba con su final_price base--.
+
+				Y si tampoco el cliente tiene y la cuenta vende con listas, la lista por defecto del
+				comercio (mayor position, mismo criterio que el back), en vez de null: con null el
+				PUT viajaba sin lista y el articulo nuevo salia a precio base.
+
+				Lo que esta lista NO hace es re-preciar lo que ya estaba: las lineas existentes
+				conservan su pivot.price (from_pivot en vender_set_total.js), asi que resolverla
+				aca no cambia ningun importe del comprobante. Solo un articulo que se agregue en
+				esta edicion se precia con ella, y es lo que viaja en price_type_id del PUT.
+			*/
 			if (model.price_type) {
 				this.$store.commit('vender/setPriceType', model.price_type)
-			} else if (model.client && model.client.price_type_id) {
-				this.$store.commit('vender/setPriceType', model.client.price_type_id)
 			} else {
-				this.$store.commit('vender/setPriceType', null)
-			}
+				let lista = this.lista_de_precios_del_cliente(model.client)
 
-			// this.setPriceType()
+				if (!lista && this.requiere_lista_de_precios()) {
+					lista = this.lista_de_mayor_posicion()
+				}
+
+				this.$store.commit('vender/setPriceType', lista ? lista : null)
+			}
 			
 			this.$store.commit('vender/setSellerId', model.seller_id)
 			

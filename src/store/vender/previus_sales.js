@@ -144,6 +144,21 @@ export default {
 					omitir--: es lo que le dice al servidor que esta edicion saco el ajuste.
 				*/
 				forzar_total_monto: info.forzar_total_monto,
+				/*
+					🔴 LA LISTA DE PRECIOS VIAJA EN EL PUT, Y TAMBIEN EN NULL.
+
+					Se lee del store y no de `info` para que ningun llamador pueda olvidarla: es
+					lo que quedo en vender/price_type despues de abrir la venta (la guardada, la
+					del cliente o la por defecto, ver previus_sale/index.js) o de lo que el
+					vendedor eligio si pudo cambiarla.
+
+					Va tambien en null a proposito. SaleController@update mira si la clave EXISTE:
+					ausente, preserva lo guardado (es lo que manda una SPA vieja); presente y en
+					null en una cuenta que vende con listas, contesta 422 y la venta queda como
+					estaba. Omitirla "porque es null" seria justamente esconderle al back que esta
+					edicion no tiene lista.
+				*/
+				price_type_id: rootState.vender.price_type ? rootState.vender.price_type.id : null,
 				seller_id: info.seller_id,
 				fecha_entrega: info.fecha_entrega,
 				valor_dolar: info.valor_dolar,
