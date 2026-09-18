@@ -49,6 +49,27 @@
 			</button>
 		</div>
 
+		<!--
+			Chip de alerta: la cuenta vende con listas de precios y el comprobante no tiene ninguna.
+			Con la etapa 1 colapsada (edicion de una venta o un presupuesto) era lo unico que no se
+			veia: el chip de arriba solo existe con lista, asi que una venta sin lista no mostraba
+			nada raro hasta expandir la etapa, y el Guardar recien ahi frenaba. Misma accion que el
+			chip normal: expandir la etapa 1 con foco en el selector.
+		-->
+		<div
+		v-else-if="falta_lista_de_precios"
+		class="vender-summary-bar__chip vender-summary-bar__chip--alerta"
+		data-testid="chip-sin-lista-de-precios">
+			<i class="icon-exclamation vender-summary-bar__chip-icon"></i>
+			<span class="vender-summary-bar__chip-text">Sin lista de precios</span>
+			<button
+			class="vender-summary-bar__chip-edit"
+			title="Elegir lista de precios"
+			@click="expandStage1('price_type')">
+				<i class="icon-edit"></i>
+			</button>
+		</div>
+
 		<!-- Chip: Cliente (solo si hay uno seleccionado) -->
 		<div
 		v-if="client"
@@ -67,8 +88,17 @@
 </template>
 
 <script>
+/*
+	Por requiere_lista_de_precios(), que es el unico lugar donde vive la regla de "esta cuenta
+	vende con lista si o si" (flag del dueño, menos la extension de rangos por cantidad, menos
+	el catalogo confirmado vacio). El mixin no tiene data() ni hooks; sus computeds (via
+	mixins/vender/computed) no pisan los de este componente: `client` se define aca con el
+	mismo valor.
+*/
+import price_types from '@/mixins/vender/price_types'
 export default {
 	name: 'VenderStage1SummaryBar',
+	mixins: [price_types],
 	computed: {
 		/**
 		 * Sucursal (address) actualmente seleccionada en la venta.
@@ -105,6 +135,19 @@ export default {
 		},
 
 		/**
+		 * La cuenta requiere lista de precios y el comprobante en curso no tiene ninguna.
+		 *
+		 * Es un computed y no una llamada en el template para que Vue siga las dependencias de
+		 * requiere_lista_de_precios() (el catalogo, el flag del dueño, la confirmacion de
+		 * "catalogo vacio" que llega despues) y el chip aparezca o se vaya solo.
+		 *
+		 * @returns {boolean}
+		 */
+		falta_lista_de_precios() {
+			return !this.price_type_vender && this.requiere_lista_de_precios()
+		},
+
+		/**
 		 * Cliente seleccionado para la venta.
 		 *
 		 * @returns {Object|null}
@@ -124,6 +167,7 @@ export default {
 				this.selected_address
 				|| this.selected_payment_method
 				|| this.price_type_vender
+				|| this.falta_lista_de_precios
 				|| this.client
 			)
 		},
@@ -170,6 +214,16 @@ export default {
 		&--client
 			border-color: var(--color-primary, #007bff)
 			color: var(--color-primary, #007bff)
+
+		// Chip de alerta (falta la lista de precios). Los tokens --btn-peligro-* son el rojo del
+		// sistema (src/sass/_dark_theme.sass) y tienen valor en los dos modos, asi que el chip se
+		// ve en claro y en oscuro sin un color propio. Hereda el resto del chip (tamaño, radio,
+		// elipsis del texto) para que se comporte igual en los tres anchos.
+		&--alerta
+			background: var(--btn-peligro-fondo, #fdf3f2)
+			border-color: var(--btn-peligro-borde, #b4443f)
+			color: var(--btn-peligro-texto, #9c3a36)
+			font-weight: 600
 
 	/* Ícono decorativo dentro del chip */
 	&__chip-icon
