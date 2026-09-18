@@ -1,5 +1,7 @@
 import price_types from '@/mixins/vender/price_types'
 import sonido_error from '@/mixins/sonido_error'
+/* Por setTotal(): re-precia los renglones cuando la lista se resuelve recien al guardar. */
+import vender_set_total from '@/mixins/vender_set_total'
 
 /**
  * El texto del aviso, en un solo lugar. El spec e2e vender-lista-de-precios-obligatoria lo
@@ -8,7 +10,7 @@ import sonido_error from '@/mixins/sonido_error'
 export const MENSAJE_SIN_LISTA_DE_PRECIOS = 'Esta cuenta trabaja con listas de precios y la venta no tiene ninguna. Elegí una lista de precios; si no aparece ninguna, recargá la página.'
 
 export default {
-	mixins: [price_types, sonido_error],
+	mixins: [price_types, sonido_error, vender_set_total],
 	methods: {
 		/**
 		 * Guarda de UX del guardado: una cuenta que vende con listas no guarda una venta ni un
@@ -42,6 +44,40 @@ export default {
 			this.setPriceType()
 
 			if (this.price_type_vender && this.price_type_vender.id) {
+
+				/*
+					🔴 La lista se resolvio RECIEN AHORA, y el remito ya tiene renglones que se
+					preciaron sin ella (a precio base). Se re-precian a la vista (setTotal, lo mismo
+					que elegir la lista a mano) y NO se sigue guardando: el vendedor ya le dijo un
+					total al cliente y los importes acaban de cambiar abajo suyo, asi que los revisa
+					y vuelve a apretar Guardar. Seguir seria guardar "lista X" con renglones a costo
+					--lo que el back se niega a producir-- o cobrar importes que nadie miro.
+					Sin renglones no hay nada que re-preciar y se sigue.
+				*/
+				if (this.items.length) {
+
+					this.setTotal()
+
+					this.$store.commit('vender/append_sale_log', {
+						event_key: 'price_list_applied_on_save',
+						source_component: 'vender/check_price_type',
+						before: null,
+						after: {
+							price_type_id: this.price_type_vender.id,
+							items_count: this.items.length,
+						},
+						diff: null,
+					})
+
+					this.sonido_error()
+
+					this.$toast.error('Se aplicó la lista de precios ' + this.price_type_vender.name + ': revisá los importes y volvé a guardar', {
+						duration: 10000,
+					})
+
+					return false
+				}
+
 				return true
 			}
 

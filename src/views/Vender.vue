@@ -174,6 +174,19 @@ export default {
 			if (!lista || !sigue_en_el_catalogo) {
 				console.log('cambiaron los tipos de precios, llamando a setPriceType')
 				this.setPriceType()
+
+				/*
+					🔴 Si la lista recien se resolvio y el remito YA tiene renglones, se re-precian
+					ahora, a la vista del vendedor. Es lo mismo que hace elegir la lista a mano en el
+					selector (price-type/Index.vue: commit + setTotal()). Sin esto, con el catalogo
+					vacio al arrancar el vendedor escaneaba a precio base, llegaba el re-pedido, la
+					lista quedaba asignada por atras y la venta salia con "lista X" y renglones a
+					costo: justo lo que el back se niega a producir. Editando un comprobante no se
+					re-precia nada (from_pivot en vender_set_total.js conserva pivot.price).
+				*/
+				if (this.price_type_vender && this.price_type_vender.id && this.items.length) {
+					this.setTotal()
+				}
 			}
 		},
 	},
