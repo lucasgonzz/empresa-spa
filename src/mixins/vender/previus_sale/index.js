@@ -598,7 +598,14 @@ export default {
 			.catch(err => {
 				console.log(err)
 
-				/* El backend rechaza con 409 y un motivo legible (venta facturada, cerrada o con varios metodos de pago) */
+				/*
+					El backend rechaza con 409 y un motivo legible (venta facturada, cerrada o con
+					varios metodos de pago), o con 422 (sin lista de precios en una cuenta que vende
+					con listas). Se muestra el mensaje y la edicion QUEDA ABIERTA, con lo que el
+					vendedor corrigio adentro: nada de cancelPreviusSale() aca. Este catch corre
+					desde que la action del store relanza el error (antes lo tragaba con un alert y
+					el .then de arriba daba la venta por actualizada).
+				*/
 				if (
 					err.response
 					&& err.response.data
