@@ -35,7 +35,7 @@
 						class="catalog-header-preview__logo"
 						:class="{ 'catalog-header-preview__logo--placeholder': !logo_url }"
 						:style="logo_style"
-						:title="logo_url ? 'Logo del negocio' : 'Sin logo: cargalo en Mi negocio'">
+						:title="logo_url ? 'Logo del negocio' : 'Sin logo: cargalo en Configuración → General'">
 							<img
 							v-if="logo_url"
 							:src="logo_url"
@@ -43,7 +43,7 @@
 							<span
 							v-else
 							class="catalog-header-preview__logo-placeholder">
-								Sin logo: cargalo en Mi negocio
+								Sin logo: cargalo en Configuración → General
 							</span>
 							<logo-resize-handle
 							v-if="!drag_disabled"

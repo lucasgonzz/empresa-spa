@@ -99,7 +99,7 @@ export default {
 		 */
 		empty_text() {
 			if (!this.total_sources) {
-				return 'No hay datos del negocio con valor para arrastrar. Cargalos en Mi negocio.'
+				return 'No hay datos del negocio con valor para arrastrar. Cargalos en Configuración → General (Información pública del negocio).'
 			}
 			return 'Todos los datos del negocio ya están en la hoja.'
 		},
