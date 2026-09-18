@@ -1,5 +1,6 @@
 // sync_sales.js
 import db from './db'
+import moment from 'moment'
 
 export default {
     methods: {
@@ -70,7 +71,17 @@ export default {
                             delete sale_to_sync.id
                             delete sale_to_sync.created_at
 
-                            const response = await this.$api.post('/sale', sale_to_sync)
+                            /*
+                                Los dos avisos globales del interceptor de main.js se apagan para
+                                este POST: el rechazo lo avisa el catch de abajo, con la venta
+                                identificada. Sin esto, el 422 de "esta cuenta trabaja con listas de
+                                precios" --o cualquier otro rechazo-- salia como un toast generico en
+                                cada reconexion, sin decir que era una venta offline ni cual.
+                            */
+                            const response = await this.$api.post('/sale', sale_to_sync, {
+                                skip_global_error_event: true,
+                                skip_global_validation_toast: true,
+                            })
 
                             if (response.status === 200 || response.status === 201) {
 
@@ -111,6 +122,41 @@ export default {
 
                         } catch (error) {
                             console.error(`❌ Error al sincronizar venta ${sale.id}`, error)
+
+                            /*
+                                🔴 Un 4xx es un RECHAZO del servidor, y el servidor no va a cambiar
+                                de opinion en la proxima reconexion: hasta esta mision la venta se
+                                reintentaba para siempre --en cada evento `online` y en cada login--
+                                y lo unico que veia el usuario era el toast generico del handler
+                                global, sin saber que era una venta offline ni cual. Se avisa CUAL
+                                venta y por que.
+
+                                NO se borra de IndexedDB: es una venta hecha, con plata cobrada; que
+                                hacer con ella lo decide una persona, no un catch. El aviso lo dice.
+                            */
+                            let status = error && error.response ? error.response.status : null
+                            let message = error && error.response && error.response.data && error.response.data.message
+                                ? error.response.data.message
+                                : (error && error.message ? error.message : 'sin detalle')
+                            let fecha = sale.created_at ? moment(sale.created_at).format('DD/MM/YYYY HH:mm') : 'sin fecha'
+                            let total = this.price(sale.total)
+
+                            if (status && status >= 400 && status < 500) {
+                                this.$toast.error(`La venta offline del ${fecha} por ${total} fue rechazada: ${message}. Sigue guardada en este equipo.`, {
+                                    duration: 15000,
+                                    position: 'top-right',
+                                })
+                            } else {
+                                /*
+                                    Caida de red o error del servidor: no es un rechazo, se vuelve a
+                                    intentar con la proxima conexion. Se avisa igual porque el aviso
+                                    global quedo apagado para este POST y antes si se veia.
+                                */
+                                this.$toast.warning(`No se pudo sincronizar la venta offline del ${fecha} por ${total}: ${message}. Se vuelve a intentar con la proxima conexion.`, {
+                                    duration: 8000,
+                                    position: 'top-right',
+                                })
+                            }
                         }
                     }
 
