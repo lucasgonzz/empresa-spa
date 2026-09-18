@@ -68,6 +68,14 @@ export default {
 			this.$store.commit('vender/setObservationsOcultas', '')
 			this.$store.commit('vender/setGuardarComoPresupuesto', 0)
 			this.$store.commit('vender/setBudget', null)
+
+			/*
+				La lista con la que salio la venta que se esta cerrando. Se guarda ANTES de
+				limpiarla porque mas abajo, si setPriceType() no puede resolver otra, se vuelve a
+				poner esta: ver el bloque de despues de this.setPriceType().
+			*/
+			let lista_de_precios_anterior = this.$store.state.vender.price_type
+
 			this.$store.commit('vender/setPriceType', null)
 			this.$store.commit('vender/set_numero_orden_de_compra', '')
 			this.$store.commit('vender/set_omitir_en_cuenta_corriente', 0)
@@ -138,6 +146,30 @@ export default {
 			this.setEmployeeVender()
 
 			this.setPriceType()
+
+			/*
+				🔴 Si la cuenta vende con listas y setPriceType() no pudo resolver ninguna, la venta
+				nueva se queda con la lista de la venta anterior, no con null.
+
+				setPriceType() no commitea nada cuando el catalogo de listas esta vacio, y el
+				commit de null de mas arriba ya corrio: hasta esta mision, ese par dejaba la venta
+				siguiente SIN lista, con el selector oculto (se dibujaba solo si habia una lista) y
+				cada articulo preciado con su precio base. En Trama el precio base es costo + IVA
+				--todo el margen vive en las listas-- y asi salieron 24 ventas en 60 dias, siete de
+				ellas seguidas el 10/9/2026 en la misma sesion de un empleado: el catalogo no habia
+				llegado al arrancar y la primera venta que se limpio arrastro el null a todas las
+				demas. La lista anterior es la que ese mismo vendedor acababa de usar, asi que es
+				lo mas cercano a lo que espera; y si tampoco hay anterior, el chequeo del guardado
+				(chequeos/price_type.js) frena la venta con el aviso.
+			*/
+			if (
+				this.requiere_lista_de_precios()
+				&& !this.$store.state.vender.price_type
+				&& lista_de_precios_anterior
+				&& lista_de_precios_anterior.id
+			) {
+				this.$store.commit('vender/setPriceType', lista_de_precios_anterior)
+			}
 
 			/*
 				Los defaults se aplican ACA y no solo en el created() de la vista.
