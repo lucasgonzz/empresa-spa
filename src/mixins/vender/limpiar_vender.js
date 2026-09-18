@@ -113,6 +113,36 @@ export default {
 
 			this.$store.commit('vender/set_moneda_id', 1)
 
+			/*
+				🔴 Tres valores que sobrevivian de un comprobante al siguiente porque nadie los
+				limpiaba aca (auditoria del modulo, 17/9/2026):
+
+				- valor_dolar: Moneda.vue lo inicializa con owner.dollar SOLO al montarse y SOLO si
+				  es null, y abrir una venta para editarla lo pisa con la cotizacion guardada en
+				  ESA venta. Despues de editar una venta en dolares a 900, la siguiente cotizaba a
+				  900 aunque el dueño tuviera 1.400; y si la editada lo tenia en null, la siguiente
+				  cotizaba con null (un articulo con cost_in_dollars salia en $0). El POST lo manda,
+				  el back lo guarda pelado y la factura en USD lo usa. Mismo criterio que
+				  Moneda.vue::iniciar_dolar(): la cotizacion del dueño, o null si no tiene.
+				- address_id: se restaura como al loguearse (user.address_id o la cookie:
+				  start_methods::init_vender_address_id) en vez de quedarse con la sucursal del
+				  comprobante editado. La caja por defecto sale de la COOKIE (cajas.js,
+				  set_caja_por_defecto), asi que sucursal y cookie tienen que volver a coincidir:
+				  con la sucursal de otra venta en el store y la cookie en la original, el stock se
+				  descontaba de un deposito y la caja era la del otro. Primero 0, para que una
+				  cuenta sin sucursal configurada ni cookie no arrastre la anterior.
+				- send_mail: tildado en la venta anterior (o restaurado por la edicion), quedaba
+				  tildado para la siguiente y el mail al cliente salia sin que nadie lo pidiera.
+			*/
+			this.$store.commit('vender/set_valor_dolar', this.owner && this.owner.dollar ? Number(this.owner.dollar) : null)
+
+			this.$store.commit('vender/setAddressId', 0)
+			if (this.user) {
+				this.init_vender_address_id()
+			}
+
+			this.$store.commit('vender/set_send_mail', 0)
+
 			this.$store.commit('vender/set_sale_status_id', 0)
 
 			// Al limpiar vender, discount_stock vuelve al valor por defecto (true)
