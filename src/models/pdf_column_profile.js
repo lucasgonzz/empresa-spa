@@ -272,7 +272,7 @@ export default {
 			show_when_model_name: 'article',
 		},
 		{
-			text: 'Imagen de cabecera (cada página)',
+			text: 'Imagen de cabecera (banner ancho)',
 			key: 'header_image_url',
 			type: 'image',
 			show_when_model_name: 'article',
@@ -300,11 +300,29 @@ export default {
 			not_show: true,
 			not_show_on_form: true,
 		},
+		{
+			/**
+			 * Diseño del encabezado del PDF del catálogo de artículos (misión
+			 * catalogo-pdf-encabezado, 18/9/2026): logo, nombre y datos del negocio en renglones
+			 * de título + valor, con la elección de qué sale en todas las hojas y qué solo en
+			 * la primera. Columna JSON propia, separada de `header_layout` (que es el esquema
+			 * emisor/receptor de los comprobantes de venta). No tiene input visible en este form:
+			 * lo edita el diseñador de `common-vue/components/pdf/catalog-header-designer/`. Se
+			 * declara igual como propiedad del modelo para que getModelToSend() lo incluya al
+			 * crear/actualizar el perfil y no se pierda en el round-trip.
+			 */
+			text: 'Diseño del encabezado del catálogo',
+			key: 'catalog_header_layout',
+			type: 'text',
+			value: null,
+			not_show: true,
+			not_show_on_form: true,
+		},
 	],
 	abm_descripcion: {
 		para_que_sirve: 'Define perfiles de diseño para los PDFs del sistema: comprobantes de venta y listados de artículos.',
 		implicancias: 'Cada perfil controla qué columnas se imprimen, en qué orden y con qué ancho, y en los comprobantes de venta también el pie de página: totales, subtotal, comisiones, detalle de descuentos y fecha. El perfil elegido al imprimir determina cómo sale el documento.',
-		como_se_utiliza: 'Creá el perfil eligiendo el modelo (venta o artículo), configurá las columnas y las opciones del pie, y seleccioná el perfil al imprimir. Podés duplicar un perfil existente con el botón de duplicar para hacer variantes rápido.',
+		como_se_utiliza: 'Creá el perfil eligiendo el modelo (venta o artículo), configurá las columnas y las opciones del pie, y seleccioná el perfil al imprimir. Podés duplicar un perfil existente con el botón de duplicar para hacer variantes rápido. En las plantillas de artículo, el botón Diseñar encabezado permite ubicar el logo, el nombre y los datos del negocio y elegir si salen en todas las hojas o solo en la primera.',
 		palabras_clave: ['comprobante', 'columnas', 'diseño', 'impresion', 'remito', 'presupuesto'],
 	},
 	singular_model_name_spanish: 'Diseño de PDF',
