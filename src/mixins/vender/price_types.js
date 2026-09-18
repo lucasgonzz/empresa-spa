@@ -1,3 +1,4 @@
+import Vue from 'vue'
 import computed from '@/mixins/vender/computed'
 
 /*
@@ -13,14 +14,37 @@ import computed from '@/mixins/vender/computed'
 let catalogo_de_listas_ya_pedido = false
 
 /*
-	El servidor CONTESTO que la cuenta no tiene ninguna lista. Es la paridad con el
-	`PriceType::exists()` del back (PriceTypeHelper::requiere_lista_de_precios): con el flag
-	prendido y cero listas el back acepta la venta con null, y el front no puede frenarla para
-	siempre con "recarga la pagina". Solo se prende con una respuesta del servidor; una request
-	que fallo o que todavia no llego NO la prende, y ahi se sigue frenando (es el caso de Trama:
-	no se distingue "no hay listas" de "no llego el catalogo", asi que ante la duda se frena).
+	Lo que el re-pedido del catalogo dejo dicho, en un objeto REACTIVO (Vue.observable) y no en
+	dos `let`: lo leen computeds --el `show` del selector, a traves de requiere_lista_de_precios()--
+	y una variable suelta no dispara su re-evaluacion. Con el `let` la confirmacion llegaba despues
+	del flush y el selector vacio quedaba a la vista en una cuenta que no tiene listas.
+
+	- confirmado_vacio: el servidor CONTESTO que la cuenta no tiene ninguna lista. Es la paridad
+	  con el `PriceType::exists()` del back (PriceTypeHelper::requiere_lista_de_precios): con el
+	  flag prendido y cero listas el back acepta la venta con null, y el front no puede frenarla
+	  para siempre con "recarga la pagina". Solo lo prende una respuesta que trae `models` como
+	  ARRAY de largo cero; una request que fallo, que todavia no llego, o que contesto otra cosa
+	  (el HTML generico que devuelve el shared hosting saturado llega con 200 y sin `models`) NO lo
+	  prende, y ahi se sigue frenando: es el caso de Trama, donde no se distingue "no hay listas"
+	  de "no llego el catalogo", asi que ante la duda se frena.
+	- pedido_en_vuelo: el re-pedido salio y todavia no volvio. Lo mira el chequeo del guardado
+	  para no decir "recarga la pagina" cuando la respuesta esta por llegar.
 */
-let catalogo_de_listas_confirmado_vacio = false
+const estado_del_catalogo_de_listas = Vue.observable({
+	confirmado_vacio: false,
+	pedido_en_vuelo: false,
+})
+
+/*
+	El reintento diferido de setPriceType() mientras el arranque de recursos no termino. Una
+	bandera para no apilar timers (setPriceType() se llama desde muchos lados) y un tope para que
+	sea acotado: 20 intentos de 1,5 s son 30 s, que cubren un arranque lento; pasado eso, el
+	re-pedido sale igual con el primer Guardar o el primer limpiar_vender.
+*/
+let reintento_de_lista_agendado = false
+let reintentos_de_lista_hechos = 0
+const ESPERA_ENTRE_REINTENTOS_MS = 1500
+const MAXIMO_DE_REINTENTOS = 20
 
 /** El elemento raiz de common-vue/components/download-resources/Index.vue: data-estado del arranque. */
 const MARCADOR_DEL_ARRANQUE_DE_RECURSOS = '[data-testid="recursos-estado"]'
@@ -37,21 +61,19 @@ export default {
 		 * comprobante. La lectura del flag va por ownerUsesListasDePrecio(), que es como lo lee el
 		 * resto de la SPA (contempla el "1" serializado como string).
 		 *
-		 * Lo que NO mira, y es a proposito: si el catalogo de listas esta cargado. Un catalogo vacio
-		 * puede ser "la cuenta no tiene listas" o "la request del arranque no llego", y desde el
-		 * front no se distinguen. En Trama la segunda opcion costo 7 ventas seguidas a costo el
-		 * 10/9/2026, asi que ante la duda se frena y se pide recargar.
+		 * Un catalogo vacio puede ser "la cuenta no tiene listas" o "la request del arranque no
+		 * llego", y desde el front no se distinguen hasta que el servidor lo confirma. En Trama la
+		 * segunda opcion costo 7 ventas seguidas a costo el 10/9/2026, asi que mientras no haya
+		 * confirmacion se frena.
 		 *
 		 * @returns {boolean}
 		 */
 		requiere_lista_de_precios() {
 			/*
-				Paridad con el exists() del back: cuenta con el flag pero SIN listas (confirmado por
-				el servidor, ver catalogo_de_listas_confirmado_vacio) no requiere lista. Se lee
-				price_types primero, y no la bandera sola, para que los computed que llaman a esto
-				(el `show` del selector) queden atados al catalogo.
+				Paridad con el exists() del back: cuenta con el flag pero SIN listas, confirmado por
+				el servidor (ver estado_del_catalogo_de_listas), no requiere lista.
 			*/
-			if (!this.price_types.length && catalogo_de_listas_confirmado_vacio) {
+			if (!this.price_types.length && estado_del_catalogo_de_listas.confirmado_vacio) {
 				return false
 			}
 
@@ -193,6 +215,30 @@ export default {
 		},
 
 		/**
+		 * ¿Todavia hay algo que esperar antes de decirle al vendedor "recarga la pagina"?
+		 *
+		 * Si: el re-pedido esta en vuelo, o el catalogo se esta bajando por getModels, o el
+		 * arranque todavia no termino y el reintento diferido sigue vivo (pasado su tope ya no se
+		 * espera nada mas: si el marcador no llega nunca a 'listo', el aviso no puede quedarse
+		 * diciendo "proba de nuevo" para siempre).
+		 *
+		 * @returns {boolean}
+		 */
+		catalogo_de_listas_todavia_puede_llegar() {
+			if (estado_del_catalogo_de_listas.pedido_en_vuelo) {
+				return true
+			}
+
+			if (this.$store.state.price_type.loading) {
+				return true
+			}
+
+			return !catalogo_de_listas_ya_pedido
+				&& reintentos_de_lista_hechos < MAXIMO_DE_REINTENTOS
+				&& this.estado_del_arranque_de_recursos() !== 'listo'
+		},
+
+		/**
 		 * Vuelve a pedir el catalogo de listas, UNA sola vez por sesion, y solo cuando el
 		 * arranque ya dijo lo suyo.
 		 *
@@ -207,16 +253,19 @@ export default {
 		 * el catalogo esta vacio, y sin esta guarda salia un GET duplicado y la unica oportunidad
 		 * de recuperacion se gastaba en el camino normal. El arranque va a commitear el catalogo
 		 * (y el watch va a aplicar la lista) o va a fallar y marcarse 'listo': recien ahi, si el
-		 * catalogo sigue vacio, corresponde el pedido. Sin marcador todavia (la pagina recien se
-		 * recargo y el componente del arranque no monto) tampoco se pide: la proxima llamada
-		 * --el watch, limpiar_vender o el chequeo del guardado-- lo encuentra montado.
+		 * catalogo sigue vacio, corresponde el pedido. Quien vuelve a llamar cuando eso pasa es el
+		 * reintento diferido de setPriceType() (agendar_reintento_de_lista).
 		 *
-		 * No se espera la respuesta para aplicar la lista: quien reacciona es ese watch, para que
-		 * la lista se aplique aunque el componente que pidio el catalogo ya no exista. Lo unico
-		 * que se mira de la respuesta es si el servidor CONFIRMO que no hay listas (ver
-		 * catalogo_de_listas_confirmado_vacio): setModels asigna la coleccion que vino --una
-		 * referencia nueva-- solo cuando la request salio bien; si fallo, el catch del store deja
-		 * la anterior, y eso NO es una confirmacion.
+		 * 🔴 El pedido es PROPIO (this.$api.get a la misma URL que usa el store de price_type) y no
+		 * un dispatch de price_type/getModels, porque hay que mirar la RESPUESTA: el getModels del
+		 * store se come el error y resuelve igual, y su setModels(undefined) asigna un [] nuevo,
+		 * asi que desde afuera un 200 sin `models` --la pagina generica del hosting saturado-- se
+		 * veia igual que "la cuenta no tiene listas". Solo se commitea, y solo se confirma el
+		 * vacio, cuando `models` es un array.
+		 *
+		 * No se espera la respuesta para aplicar la lista: quien reacciona al commit es el watch de
+		 * Vender.vue, para que la lista se aplique aunque el componente que pidio el catalogo ya
+		 * no exista.
 		 */
 		pedir_catalogo_de_listas_una_vez() {
 			if (catalogo_de_listas_ya_pedido) {
@@ -227,25 +276,99 @@ export default {
 				return
 			}
 
-			let estado_del_arranque = this.estado_del_arranque_de_recursos()
-
-			if (estado_del_arranque !== 'listo') {
+			if (this.estado_del_arranque_de_recursos() !== 'listo') {
 				return
 			}
 
 			catalogo_de_listas_ya_pedido = true
+			estado_del_catalogo_de_listas.pedido_en_vuelo = true
 
-			let coleccion_antes = this.$store.state.price_type.models
 			let self = this
 
-			this.$store.dispatch('price_type/getModels')
-			.then(() => {
-				let coleccion_despues = self.$store.state.price_type.models
+			this.$api.get(this.routeString('price_type'))
+			.then(res => {
+				estado_del_catalogo_de_listas.pedido_en_vuelo = false
 
-				if (coleccion_despues !== coleccion_antes && !coleccion_despues.length) {
-					catalogo_de_listas_confirmado_vacio = true
+				let models = res && res.data ? res.data.models : null
+
+				if (!Array.isArray(models)) {
+					console.log('el re-pedido del catalogo de listas no trajo un array de models: no se confirma nada')
+					return
 				}
+
+				if (!models.length) {
+					estado_del_catalogo_de_listas.confirmado_vacio = true
+				}
+
+				self.$store.commit('price_type/setModels', models)
 			})
+			.catch(err => {
+				estado_del_catalogo_de_listas.pedido_en_vuelo = false
+				console.log(err)
+			})
+		},
+
+		/**
+		 * Agenda UN reintento de setPriceType() para dentro de un rato, mientras el arranque de
+		 * recursos no haya terminado.
+		 *
+		 * 🔴 Sin esto, despues de un F5 en /vender nadie volvia a llamar a setPriceType() cuando el
+		 * arranque llegaba a 'listo' salvo que el catalogo cambiara (y si cambiaba, el watch podia
+		 * correr antes de que el marcador dijera 'listo'). Dos consecuencias: en una cuenta con el
+		 * flag prendido y CERO listas, el primer Guardar de cada carga frenaba con "recarga la
+		 * pagina" y el segundo pasaba --y si el vendedor obedecia el aviso, entraba en un loop--; y
+		 * en el caso de Trama el re-pedido salia recien con el primer Guardar. Con el reintento, el
+		 * re-pedido y la confirmacion de "no hay listas" ocurren solos apenas el arranque termina.
+		 *
+		 * Acotado (MAXIMO_DE_REINTENTOS) y sin apilar timers (reintento_de_lista_agendado). Deja de
+		 * agendarse en cuanto el re-pedido sale: desde ahi manda la respuesta.
+		 */
+		agendar_reintento_de_lista() {
+			if (catalogo_de_listas_ya_pedido) {
+				return
+			}
+
+			if (reintento_de_lista_agendado) {
+				return
+			}
+
+			if (reintentos_de_lista_hechos >= MAXIMO_DE_REINTENTOS) {
+				return
+			}
+
+			reintento_de_lista_agendado = true
+
+			let self = this
+
+			setTimeout(() => {
+				reintento_de_lista_agendado = false
+				reintentos_de_lista_hechos++
+
+				/*
+					Si mientras tanto ya hay lista --la aplico el watch cuando llego el catalogo, o
+					la eligio el vendedor a mano-- no se toca: setPriceType() pisaria esa eleccion
+					con la lista por defecto.
+				*/
+				if (self.$store.state.vender.price_type) {
+					return
+				}
+
+				self.setPriceType()
+
+				/*
+					Si el reintento fue el que resolvio la lista y el remito ya tiene renglones, se
+					re-precian a la vista, igual que en el watch de Vender.vue (ver el comentario
+					ahi). setTotal() no es de este mixin: lo tiene quien lo mezcla junto a
+					vender_set_total, que son todos los que llaman a setPriceType() desde Vender.
+				*/
+				if (
+					self.$store.state.vender.price_type
+					&& self.$store.state.vender.items.length
+					&& typeof self.setTotal == 'function'
+				) {
+					self.setTotal()
+				}
+			}, ESPERA_ENTRE_REINTENTOS_MS)
 		},
 
 		/**
@@ -281,7 +404,12 @@ export default {
 			}
 
 			if (!this.price_types.length) {
+				/*
+					Catalogo vacio: se pide de nuevo si el arranque ya termino, y si todavia no
+					termino se agenda un reintento para cuando termine (ver los dos metodos).
+				*/
 				this.pedir_catalogo_de_listas_una_vez()
+				this.agendar_reintento_de_lista()
 				return
 			}
 

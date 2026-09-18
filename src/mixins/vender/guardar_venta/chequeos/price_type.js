@@ -9,6 +9,12 @@ import vender_set_total from '@/mixins/vender_set_total'
  */
 export const MENSAJE_SIN_LISTA_DE_PRECIOS = 'Esta cuenta trabaja con listas de precios y la venta no tiene ninguna. Elegí una lista de precios; si no aparece ninguna, recargá la página.'
 
+/**
+ * El aviso para cuando el catalogo de listas todavia puede llegar (el arranque no termino, o el
+ * re-pedido esta en vuelo). Tambien lleva el fragmento "listas de precios" que busca el spec.
+ */
+export const MENSAJE_LISTAS_DE_PRECIOS_EN_CAMINO = 'Estamos trayendo las listas de precios. Probá guardar de nuevo en unos segundos.'
+
 export default {
 	mixins: [price_types, sonido_error, vender_set_total],
 	methods: {
@@ -79,6 +85,37 @@ export default {
 				}
 
 				return true
+			}
+
+			/*
+				🔴 Si el catalogo TODAVIA PUEDE LLEGAR --el setPriceType() de arriba acaba de disparar
+				el re-pedido, o el arranque de recursos no termino-- el aviso no puede decir "recarga
+				la pagina": recargar tira la respuesta que esta por llegar y, en una cuenta con el
+				flag prendido y cero listas, el vendedor que obedecia el aviso entraba en un loop (el
+				primer Guardar de cada carga frenaba y el segundo pasaba). Se frena igual, con un
+				texto que dice lo que pasa: en unos segundos la lista aparece elegida, o el servidor
+				confirma que la cuenta no tiene listas y el chequeo deja de aplicar. El texto de
+				"recarga" queda para cuando el re-pedido ya volvio y sigue sin haber lista.
+			*/
+			if (this.catalogo_de_listas_todavia_puede_llegar()) {
+
+				this.$store.commit('vender/append_sale_log', {
+					event_key: 'price_list_pending_on_save',
+					source_component: 'vender/check_price_type',
+					before: null,
+					after: {
+						price_types_count: this.price_types.length,
+					},
+					diff: null,
+				})
+
+				this.sonido_error()
+
+				this.$toast.error(MENSAJE_LISTAS_DE_PRECIOS_EN_CAMINO, {
+					duration: 8000,
+				})
+
+				return false
 			}
 
 			/*
