@@ -12,6 +12,19 @@ import computed from '@/mixins/vender/computed'
 */
 let catalogo_de_listas_ya_pedido = false
 
+/*
+	El servidor CONTESTO que la cuenta no tiene ninguna lista. Es la paridad con el
+	`PriceType::exists()` del back (PriceTypeHelper::requiere_lista_de_precios): con el flag
+	prendido y cero listas el back acepta la venta con null, y el front no puede frenarla para
+	siempre con "recarga la pagina". Solo se prende con una respuesta del servidor; una request
+	que fallo o que todavia no llego NO la prende, y ahi se sigue frenando (es el caso de Trama:
+	no se distingue "no hay listas" de "no llego el catalogo", asi que ante la duda se frena).
+*/
+let catalogo_de_listas_confirmado_vacio = false
+
+/** El elemento raiz de common-vue/components/download-resources/Index.vue: data-estado del arranque. */
+const MARCADOR_DEL_ARRANQUE_DE_RECURSOS = '[data-testid="recursos-estado"]'
+
 export default {
 	mixins: [computed],
 	methods: {
@@ -32,6 +45,16 @@ export default {
 		 * @returns {boolean}
 		 */
 		requiere_lista_de_precios() {
+			/*
+				Paridad con el exists() del back: cuenta con el flag pero SIN listas (confirmado por
+				el servidor, ver catalogo_de_listas_confirmado_vacio) no requiere lista. Se lee
+				price_types primero, y no la bandera sola, para que los computed que llaman a esto
+				(el `show` del selector) queden atados al catalogo.
+			*/
+			if (!this.price_types.length && catalogo_de_listas_confirmado_vacio) {
+				return false
+			}
+
 			return this.ownerUsesListasDePrecio()
 				&& !this.hasExtencion('lista_de_precios_por_rango_de_cantidad_vendida')
 		},
@@ -149,7 +172,29 @@ export default {
 		},
 
 		/**
-		 * Vuelve a pedir el catalogo de listas, UNA sola vez por sesion.
+		 * Que dice el arranque de recursos (download-resources/Index.vue) sobre si mismo.
+		 *
+		 * El componente publica su estado SOLO en el DOM (data-estado de su elemento raiz, el
+		 * mismo contrato que usa el harness e2e); su store no lo expone. Se lee de ahi porque la
+		 * llamada masiva del arranque (POST recursos-iniciales) commitea el catalogo con setModels
+		 * directo, sin pasar por getModels, asi que `price_type.loading` no la ve.
+		 *
+		 * @returns {string} 'sin_marcador' (el componente todavia no monto: recien se recargo la
+		 *                   pagina), 'pendiente', 'descargando' o 'listo'.
+		 */
+		estado_del_arranque_de_recursos() {
+			let marcador = document.querySelector(MARCADOR_DEL_ARRANQUE_DE_RECURSOS)
+
+			if (!marcador) {
+				return 'sin_marcador'
+			}
+
+			return marcador.getAttribute('data-estado') || 'pendiente'
+		},
+
+		/**
+		 * Vuelve a pedir el catalogo de listas, UNA sola vez por sesion, y solo cuando el
+		 * arranque ya dijo lo suyo.
 		 *
 		 * El catalogo baja al arrancar (call_methods.js). Si esa request no llega, antes
 		 * `price_types` quedaba vacio toda la sesion y todas las ventas salian sin lista, sin un
@@ -157,17 +202,50 @@ export default {
 		 * hay loop: el watch de price_types() en Vender.vue vuelve a llamar a setPriceType()
 		 * cuando la coleccion cambia, y si tambien viene vacia se corta aca.
 		 *
-		 * No se espera la respuesta a proposito: quien tiene que reaccionar es ese watch, para
-		 * que la lista se aplique aunque el componente que pidio el catalogo ya no exista.
+		 * 🔴 Mientras el arranque esta en vuelo NO se pide ni se quema la bandera. Al recargar en
+		 * /vender, el created() de la vista corre antes de que conteste la llamada del arranque,
+		 * el catalogo esta vacio, y sin esta guarda salia un GET duplicado y la unica oportunidad
+		 * de recuperacion se gastaba en el camino normal. El arranque va a commitear el catalogo
+		 * (y el watch va a aplicar la lista) o va a fallar y marcarse 'listo': recien ahi, si el
+		 * catalogo sigue vacio, corresponde el pedido. Sin marcador todavia (la pagina recien se
+		 * recargo y el componente del arranque no monto) tampoco se pide: la proxima llamada
+		 * --el watch, limpiar_vender o el chequeo del guardado-- lo encuentra montado.
+		 *
+		 * No se espera la respuesta para aplicar la lista: quien reacciona es ese watch, para que
+		 * la lista se aplique aunque el componente que pidio el catalogo ya no exista. Lo unico
+		 * que se mira de la respuesta es si el servidor CONFIRMO que no hay listas (ver
+		 * catalogo_de_listas_confirmado_vacio): setModels asigna la coleccion que vino --una
+		 * referencia nueva-- solo cuando la request salio bien; si fallo, el catch del store deja
+		 * la anterior, y eso NO es una confirmacion.
 		 */
 		pedir_catalogo_de_listas_una_vez() {
 			if (catalogo_de_listas_ya_pedido) {
 				return
 			}
 
+			if (this.$store.state.price_type.loading) {
+				return
+			}
+
+			let estado_del_arranque = this.estado_del_arranque_de_recursos()
+
+			if (estado_del_arranque !== 'listo') {
+				return
+			}
+
 			catalogo_de_listas_ya_pedido = true
 
+			let coleccion_antes = this.$store.state.price_type.models
+			let self = this
+
 			this.$store.dispatch('price_type/getModels')
+			.then(() => {
+				let coleccion_despues = self.$store.state.price_type.models
+
+				if (coleccion_despues !== coleccion_antes && !coleccion_despues.length) {
+					catalogo_de_listas_confirmado_vacio = true
+				}
+			})
 		},
 
 		/**
