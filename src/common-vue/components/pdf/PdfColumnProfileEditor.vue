@@ -251,8 +251,12 @@ export default {
 
 			this.loading_catalog = true
 
+			// Catálogo de opciones PDF: dato decorativo, la pantalla arma igual sin él. No hace
+			// falta el cartel global de conexión por esto (config `skip_global_error_event` del
+			// interceptor de `main.js`).
 			this.$api.get('pdf-column-options', {
 				params: { model_name: model_name },
+				skip_global_error_event: true,
 			})
 				.then((res) => {
 					const models = res && res.data && Array.isArray(res.data.models)

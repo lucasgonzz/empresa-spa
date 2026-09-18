@@ -432,10 +432,14 @@ export default {
 		 */
 		async load_pdf_column_options_catalog() {
 			try {
+				// Catálogo de opciones PDF: dato decorativo, la pantalla arma igual sin él. No
+				// hace falta el cartel global de conexión por esto (config
+				// `skip_global_error_event` del interceptor de `main.js`).
 				const res = await this.$api.get('pdf-column-options', {
 					params: {
 						model_name: this.model_name,
 					},
+					skip_global_error_event: true,
 				})
 				this.pdf_column_options_catalog = (res.data && res.data.models) || []
 			} catch (error) {
