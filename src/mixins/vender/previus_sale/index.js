@@ -134,7 +134,30 @@ export default {
 
 					if (previus_discount.pivot.percentage != store_discount.percentage) {
 
-						store_discount.updated_percentage = store_discount.percentage
+						/*
+							🔴 El porcentaje VIGENTE del catalogo se guarda en updated_percentage UNA sola
+							vez. Si ya tiene valor es porque otro comprobante abierto antes --sin pasar
+							por limpiar_vender, que es lo unico que lo anula (limpiar_descuentos)-- ya lo
+							guardo, y lo que hay ahora en `percentage` es el porcentaje HISTORICO de ese
+							otro comprobante, no el vigente.
+
+							La secuencia que lo rompia: catalogo al 10 %; abrir la venta A (pivote 8 %)
+							dejaba updated 10 y percentage 8; ir a Ventas y abrir la venta B (pivote 5 %)
+							sin cancelar la A --setPreviusSale no limpia-- daba 5 != 8, y entonces
+							updated pasaba a 8 y percentage a 5; cancelar restauraba el 8, y el catalogo
+							quedaba al 8 % HASTA RECARGAR LA PAGINA: toda venta nueva que tildara ese
+							descuento lo aplicaba al 8 % y lo mandaba al back como vigente, y el panel
+							mostraba "8 %" como si fuera el configurado. Es la clase "estado derivado
+							guardado en su propio slot" (APRENDER_NO_PARCHEAR): el guard va sobre la
+							fuente, no sobre el que restaura.
+						*/
+						if (
+							store_discount.updated_percentage === null
+							|| typeof store_discount.updated_percentage == 'undefined'
+						) {
+							store_discount.updated_percentage = store_discount.percentage
+						}
+
 						store_discount.percentage = previus_discount.pivot.percentage
 
 					}
@@ -156,7 +179,19 @@ export default {
 
 					if (previus_surchage.pivot.percentage != store_surchage.percentage) {
 
-						store_surchage.updated_percentage = store_surchage.percentage
+						/*
+							Mismo guard, mismo motivo que en set_discounts_store_with_pivot_percetage:
+							el porcentaje vigente se guarda una sola vez, o abrir dos comprobantes
+							seguidos deja el catalogo de recargos con el porcentaje historico del
+							primero hasta recargar la pagina.
+						*/
+						if (
+							store_surchage.updated_percentage === null
+							|| typeof store_surchage.updated_percentage == 'undefined'
+						) {
+							store_surchage.updated_percentage = store_surchage.percentage
+						}
+
 						store_surchage.percentage = previus_surchage.pivot.percentage
 
 					}
