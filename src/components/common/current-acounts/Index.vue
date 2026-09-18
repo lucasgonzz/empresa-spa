@@ -321,9 +321,20 @@ export default {
 		// (`border-radius: 10px 10px 10px 0` en TableComponent.vue, y encima con la esquina de
 		// abajo a la derecha en cero): las dos curvas juntas dejan una media luna del fondo
 		// asomando en cada esquina.
+		//
+		// 🔴 EL MARGEN DEBAJO DEL ULTIMO MOVIMIENTO. Medido en la aplicacion corriendo: el wrapper
+		// media 148px con una tabla de 132px adentro -- 16px de diferencia, exactos a 1rem. Es el
+		// `margin-bottom: 1rem` que Bootstrap le pone a TODA `.table`, y que aca nadie reseteaba
+		// (b-table ya no lleva `responsive`, asi que no hay un `.table-responsive` de por medio
+		// que lo absorba). El wrapper mide lo que mide `.table-component-scroll` con `height:
+		// auto`, y ese alto incluye el margen del hijo porque `overflow: auto` crea un nuevo
+		// contexto de formato y el margen deja de colapsar con el padre. El mismo reset ya existe
+		// para `.tabla-modulo` en _controles_modulo.sass -- es el trato que le faltaba copiar a
+		// esta tabla junto con el radio.
 		.table-component-scroll .table.table-component-b-table,
 		.table-component-scroll table.table
 			border-radius: 0
+			margin-bottom: 0
 
 		// 🔴 VENCIDO al 7/9/2026: _tables.sass le PONIA a TODO tbody del sistema `border: 2px solid #DDDDDD` y un radio
 		// propio abajo (lineas 11-14). Adentro de la caja redondeada ese marco se ve como un
