@@ -54,8 +54,25 @@ export default {
 		show() {
 			return this.requiere_lista_de_precios() || !!this.price_type_vender
 		},
+		/*
+			🔴 En edicion se deshabilita SOLO si la venta que se esta editando YA TENIA lista.
+
+			Desde esta mision, abrir una venta guardada sin lista en una cuenta que vende con
+			listas le resuelve la lista por defecto (previus_sale/index.js) y el PUT la persiste.
+			Eso es lo pedido --una venta editada no puede quedar sin lista--, pero con el selector
+			deshabilitado esa lista quedaba asignada sin que el vendedor la viera como una
+			decision: la venta pasaba a decir "lista X" con renglones que se cobraron sin ella.
+			Habilitado, la ve ya elegida y la confirma o la cambia. Cambiarla no re-precia lo que
+			ya estaba (from_pivot): solo un articulo nuevo de esta edicion toma la lista.
+
+			"Tenia lista" es tenerla RESUELTA contra el catalogo (la relacion embebida, o un
+			price_type_id que exista): un id colgado --la lista se borro-- no es una lista, y
+			bloquear el selector ahi seria fijar sin decision justo lo que se quiere evitar.
+
+			Los otros dos motivos (presupuesto cargado, permiso de no cambiar la lista) no cambian.
+		*/
 		is_disabled() {
-			if (this.editando_venta_previa) {
+			if (this.editando_venta_previa && this.venta_editada_tenia_lista) {
 				return true
 			}
 
@@ -68,6 +85,23 @@ export default {
 			}
 
 			return false
+		},
+		/*
+			La venta cargada para editar, tal cual vino del servidor
+			(store/vender/previus_sales.js, `previus_sale`; es {} mientras se esta abriendo).
+		*/
+		venta_editada_tenia_lista() {
+			let venta = this.$store.state.vender.previus_sales.previus_sale
+
+			if (!venta || !venta.id) {
+				return false
+			}
+
+			if (venta.price_type && venta.price_type.id) {
+				return true
+			}
+
+			return !!this.lista_del_catalogo(venta.price_type_id)
 		},
 		price_types() {
 			return this.$store.state.price_type.models

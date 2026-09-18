@@ -37,12 +37,34 @@ export default {
 		},
 
 		/**
+		 * Una lista del catalogo, por id. Devuelve el OBJETO o null si el id no esta (es null, es
+		 * 0, o apunta a una lista que ya no existe).
+		 *
+		 * Es el unico mecanismo para pasar de un `price_type_id` pelado --el de un cliente, el de
+		 * una venta cuyo endpoint no embebio la relacion-- al objeto que espera vender/price_type.
+		 * Commitear el id pelado deja `price_type_vender.id` en undefined y todo lo que precia una
+		 * linea cae al precio base: era lo que hacia la edicion de una venta hasta esta mision.
+		 *
+		 * @param {number|string|null} price_type_id
+		 * @returns {Object|null}
+		 */
+		lista_del_catalogo(price_type_id) {
+			if (!price_type_id) {
+				return null
+			}
+
+			let lista = this.price_types.find(price_type => {
+				return price_type.id == price_type_id
+			})
+
+			return typeof lista != 'undefined' ? lista : null
+		},
+
+		/**
 		 * La lista de precios de un cliente, como OBJETO del catalogo.
 		 *
 		 * El cliente puede venir con la relacion `price_type` cargada o solo con `price_type_id`
-		 * (depende del endpoint que lo trajo). Commitear el id pelado en vender/price_type deja
-		 * `price_type_vender.id` en undefined y todo lo que precia una linea cae al precio base:
-		 * era lo que hacia la edicion de una venta hasta esta mision.
+		 * (depende del endpoint que lo trajo): en el segundo caso se resuelve contra el catalogo.
 		 *
 		 * @param {Object|null} client
 		 * @returns {Object|null}
@@ -56,17 +78,7 @@ export default {
 				return client.price_type
 			}
 
-			if (client.price_type_id) {
-				let lista = this.price_types.find(price_type => {
-					return price_type.id == client.price_type_id
-				})
-
-				if (typeof lista != 'undefined') {
-					return lista
-				}
-			}
-
-			return null
+			return this.lista_del_catalogo(client.price_type_id)
 		},
 
 		/**

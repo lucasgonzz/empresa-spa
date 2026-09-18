@@ -298,11 +298,21 @@ export default {
 				conservan su pivot.price (from_pivot en vender_set_total.js), asi que resolverla
 				aca no cambia ningun importe del comprobante. Solo un articulo que se agregue en
 				esta edicion se precia con ella, y es lo que viaja en price_type_id del PUT.
+
+				Y antes de caer a la del cliente, el propio price_type_id del comprobante resuelto
+				contra el catalogo: un endpoint que no embeba la relacion `price_type` no puede
+				hacer que una venta que TENIA lista la pierda en el PUT (o la cambie por la del
+				cliente, que puede ser otra). Si el id no esta en el catalogo --la lista se borro--,
+				la venta no tiene lista, y se sigue con el cliente y el default.
 			*/
-			if (model.price_type) {
+			if (model.price_type && model.price_type.id) {
 				this.$store.commit('vender/setPriceType', model.price_type)
 			} else {
-				let lista = this.lista_de_precios_del_cliente(model.client)
+				let lista = this.lista_del_catalogo(model.price_type_id)
+
+				if (!lista) {
+					lista = this.lista_de_precios_del_cliente(model.client)
+				}
 
 				if (!lista && this.requiere_lista_de_precios()) {
 					lista = this.lista_de_mayor_posicion()
