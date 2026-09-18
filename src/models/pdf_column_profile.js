@@ -325,6 +325,15 @@ export default {
 		como_se_utiliza: 'Creá el perfil eligiendo el modelo (venta o artículo), configurá las columnas y las opciones del pie, y seleccioná el perfil al imprimir. Podés duplicar un perfil existente con el botón de duplicar para hacer variantes rápido. En las plantillas de artículo, el botón Diseñar encabezado permite ubicar el logo, el nombre y los datos del negocio y elegir si salen en todas las hojas o solo en la primera.',
 		palabras_clave: ['comprobante', 'columnas', 'diseño', 'impresion', 'remito', 'presupuesto'],
 	},
+	/**
+	 * Sin esto, model/Index.vue le pasa al formulario una COPIA no reactiva del modelo
+	 * (`{...model}`, sin observer), y en un diseño NUEVO elegir el Modelo no re-renderizaba nada:
+	 * el editor de columnas seguía diciendo "Seleccioná el tipo de modelo", los campos con
+	 * show_when_model_name no aparecían y el botón "Diseñar encabezado" tampoco. Medido el
+	 * 18/9/2026 (misión catalogo-pdf-encabezado): `model.__ob__` ausente en el form. Con
+	 * full_reactivity el form edita el modelo del store, como ya hacen article, expense, etc.
+	 */
+	full_reactivity: true,
 	singular_model_name_spanish: 'Diseño de PDF',
 	plural_model_name_spanish: 'Diseño de PDF',
 	create_model_name_spanish: 'Nuevo Diseño de PDF',
