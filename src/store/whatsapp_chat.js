@@ -678,10 +678,14 @@ export default {
 		 * @param {Object} payload { chat_id, template_id, variables }
 		 */
 		sendTemplate({ commit }, payload) {
+			// `skip_navigation_cancel`: mismo motivo que sendMessage/sendMedia (WhatsappSidebarHost
+			// es global, App.vue) — se había quedado afuera del fix del 18/9 y TemplatesModal.vue
+			// mostraba "No se pudo enviar la plantilla" ante una cancelación por navegación, no un
+			// error real (misión widgets-globales-envio-navegacion, 18/9/2026).
 			return axios.post('/api/whatsapp-chats/' + payload.chat_id + '/send-template', {
 				template_id: payload.template_id,
 				variables: payload.variables,
-			})
+			}, { skip_navigation_cancel: true })
 				.then(res => {
 					// Misma intervención humana que en sendMessage(): el backend borra lo que
 					// el agente dejó esperando confirmación antes de mandar la plantilla.
@@ -829,7 +833,12 @@ export default {
 		 * @param {number} message_id
 		 */
 		confirmAiMessage({ commit }, message_id) {
-			return axios.put('/api/whatsapp-chats/messages/' + message_id + '/confirm')
+			// `skip_navigation_cancel`: mismo motivo que sendMessage/sendMedia/sendTemplate —
+			// confirmar es mandar, y MessageBubble.vue vive en el mismo panel global. Sin la
+			// bandera, cancelado por una navegación caía en la rama genérica de
+			// manejar_error_confirmacion() y mostraba "No se pudo completar la acción" sobre un
+			// mensaje que sí se había mandado (misión widgets-globales-envio-navegacion, 18/9/2026).
+			return axios.put('/api/whatsapp-chats/messages/' + message_id + '/confirm', null, { skip_navigation_cancel: true })
 				.then(res => {
 					commit('patchMessage', res.data.model)
 					return res.data.model
@@ -842,7 +851,12 @@ export default {
 		 * @param {number} message_id
 		 */
 		discardAiMessage({ commit }, message_id) {
-			return axios.delete('/api/whatsapp-chats/messages/' + message_id)
+			// `skip_navigation_cancel`: no es un envío, pero comparte componente y `.catch()`
+			// genérico con confirmAiMessage (MessageBubble.vue::discard() delega en la misma
+			// manejar_error_confirmacion()) — cancelado por una navegación, mostraba "No se pudo
+			// completar la acción" sobre un descarte que sí se había hecho (misión
+			// widgets-globales-envio-navegacion, 18/9/2026).
+			return axios.delete('/api/whatsapp-chats/messages/' + message_id, { skip_navigation_cancel: true })
 				.then(res => {
 					commit('removeMessage', message_id)
 					return res.data
