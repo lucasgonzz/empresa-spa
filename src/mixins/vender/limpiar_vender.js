@@ -11,8 +11,14 @@ import set_employee_vender from '@/mixins/set_employee_vender'
 import omitir_en_cuenta_corriente from '@/mixins/vender/omitir_en_cuenta_corriente'
 import default_articles from '@/mixins/vender/default_articles'
 import deteccion_combos from '@/mixins/vender/deteccion_combos'
+/*
+	El metodo de pago por defecto tambien se re-aplica ACA (ver el bloque de abajo). El mixin no
+	tiene hooks; su unico `data` (el contador de reintentos) ya lo declaran default_articles y
+	mixins/vender.js con el mismo nombre y el mismo valor.
+*/
+import default_payment_method from '@/mixins/vender/default_payment_method'
 export default {
-	mixins: [start_methods, vender_set_total, set_price_type, set_employee_vender, omitir_en_cuenta_corriente, default_articles, deteccion_combos],
+	mixins: [start_methods, vender_set_total, set_price_type, set_employee_vender, omitir_en_cuenta_corriente, default_articles, deteccion_combos, default_payment_method],
 	computed: {
 		discounts() {
 			return this.$store.state.discount.models
@@ -224,6 +230,17 @@ export default {
 			*/
 			this.set_omitir_en_cuenta_corriente()
 			this.set_default_articles()
+
+			/*
+				🔴 El metodo de pago por defecto se re-aplica aca, y no solo en resetear_vender y
+				cancelPreviusSale (que lo siguen haciendo; es idempotente). Los otros dos caminos
+				que terminan un comprobante --guardar un presupuesto y el boton Limpiar-- solo
+				llaman a limpiar_vender, y como abrir un presupuesto para editarlo deja el metodo
+				en 0 (un presupuesto no lleva metodo), la venta siguiente arrancaba en "Seleccione
+				metodo de pago". Con check_payment_methods prendido eso es un freno visible; antes
+				era una venta cobrada sin metodo ni movimiento de caja.
+			*/
+			this.setDefaultPaymentMethod(true)
 
 			/*
 				Va ultima a proposito: setPriceType() y el resto de los commits de arriba
