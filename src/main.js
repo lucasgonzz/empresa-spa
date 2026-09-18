@@ -387,11 +387,19 @@ function global_api_error_interceptor(error) {
  * Interceptor de request: engancha el CancelToken vigente (ver bloque de cancelación por
  * navegación, más arriba) a todo pedido que no traiga uno propio ya seteado.
  *
+ * Excepción: `config.skip_navigation_cancel` (misma idea que `skip_global_error_event`, revisión
+ * independiente de la misión cartel-sin-conexion-accesorios, 18/9/2026). Un pedido disparado
+ * desde un componente global montado en `App.vue` —no desde la vista de una ruta— no tiene por
+ * qué morir porque el usuario cambió de pantalla: el polling de background_processes, el polling
+ * de pedidos sin confirmar de order.js, y el envío del chat de soporte son los tres casos
+ * detectados. Sin esta bandera, esos pedidos se cancelaban con cualquier navegación ajena — en
+ * el chat de soporte eso se veía como un "no se pudo enviar" falso sobre un mensaje que sí salió.
+ *
  * @param {import('axios').AxiosRequestConfig} config Configuración del pedido saliente.
  * @returns {import('axios').AxiosRequestConfig}
  */
 function global_api_cancel_token_interceptor(config) {
-    if (!config.cancelToken) {
+    if (!config.cancelToken && !config.skip_navigation_cancel) {
         config.cancelToken = cancel_token_source.token
     }
     return config

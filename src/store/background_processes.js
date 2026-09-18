@@ -25,8 +25,12 @@ axios.defaults.baseURL = env('VUE_APP_API_URL')
  * lista queda como está; la píldora no aparece y nada más cambia.
  */
 
-/** Opciones de axios para que un 404 de la API vieja no dispare el toast global de error. */
-const OPCIONES_SILENCIOSAS = { skip_global_error_event: true }
+/**
+ * Opciones de axios: un 404 de la API vieja no dispara el toast global de error, y una
+ * navegación ajena no cancela este polling de respaldo (misión cartel-sin-conexion-accesorios,
+ * 18/9/2026 — es un widget global montado en App.vue, no la vista de una ruta).
+ */
+const OPCIONES_SILENCIOSAS = { skip_global_error_event: true, skip_navigation_cancel: true }
 
 /**
  * Milisegundos de una fecha ISO del contrato, o 0 si no vino. Para ordenar sin que un null
