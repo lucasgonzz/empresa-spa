@@ -1,7 +1,8 @@
 // import Vue from 'vue'
 import axios from 'axios'
+import { env } from '@/runtime_config'
 axios.defaults.withCredentials = true
-axios.defaults.baseURL = process.env.VUE_APP_API_URL
+axios.defaults.baseURL = env('VUE_APP_API_URL')
 
 import previus_sales from '@/store/vender/previus_sales'
 import current_acount_payment_methods from '@/store/vender/current_acount_payment_methods'
@@ -29,6 +30,45 @@ function get_safe_clone(value) {
 	} catch (error) {
 		return null
 	}
+}
+
+/**
+ * ¿Son la MISMA linea del remito?
+ *
+ * 🔴 El id solo no alcanza. Los items del remito salen de tablas distintas --articles, combos,
+ * services, promocion_vinotecas-- y cada una tiene su propia secuencia de ids: el combo 12 y el
+ * articulo 12 existen los dos y son cosas distintas. `removeItem` y `updateItem` matcheaban solo
+ * por `id`, asi que una colision borraba o pisaba la linea equivocada. `replceItem` ya discriminaba
+ * y este helper es ese mismo criterio, extraido para que las tres mutaciones no vuelvan a divergir.
+ *
+ * Tambien discrimina la variante: dos lineas del mismo articulo con variantes distintas son dos
+ * renglones (repetidos.js nunca las fusiona) y hasta ahora se pisaban entre ellas. Sin variante el
+ * campo vale 0, asi que el `|| 0` deja el caso normal exactamente como estaba.
+ *
+ * Es prerequisito de la deteccion automatica de combos, que justamente borra lineas de articulo y
+ * agrega una de combo en la misma pasada.
+ */
+function es_la_misma_linea(a, b) {
+	if (!a || !b) {
+		return false
+	}
+	if (a.id != b.id) {
+		return false
+	}
+	/* Cada bandera tiene que coincidir en los dos: un item sin ninguna es "suelto" y solo matchea con otro suelto */
+	if (!!a.is_article != !!b.is_article) {
+		return false
+	}
+	if (!!a.is_combo != !!b.is_combo) {
+		return false
+	}
+	if (!!a.is_service != !!b.is_service) {
+		return false
+	}
+	if (!!a.is_promocion_vinoteca != !!b.is_promocion_vinoteca) {
+		return false
+	}
+	return Number(a.article_variant_id || 0) == Number(b.article_variant_id || 0)
 }
 
 /**
@@ -235,6 +275,27 @@ export default {
 		permiso_existente: '',
 
 		descuento: null,
+
+		/*
+			Total forzado de esta venta (extension forzar_total).
+
+			Es un monto CON SIGNO que se le suma al total para llegar al total que el vendedor
+			escribio en el lapiz de la caja del total:
+
+				negativo = descuento (4.012 -> 4.000 guarda -12)
+				positivo = recargo   (4.012 -> 4.020 guarda +8)
+				null     = no se forzo nada
+
+			🔴 NO ES `descuento`. `descuento` es el campo viejo de esta misma extension y guarda
+			un PORCENTAJE (asi lo leen AfipItemCalculator y los dos PDF del lado API, y asi
+			quedaron las ventas historicas). Redefinirlo como monto corromperia en silencio todo
+			ese historico, por eso el forzado por monto viaja en su propia columna.
+
+			Se guarda el MONTO y no el total tipeado: es lo que pidio Lucas ("que cree un
+			descuento o un recargo en forma de monto") y es lo que se comporta como cualquier
+			otro descuento de venta si despues cambian los items.
+		*/
+		forzar_total_monto: null,
 
 		/*
 			Canje de puntos de esta venta (extension puntos_clientes).
@@ -541,21 +602,7 @@ export default {
 			// Guardamos estado anterior para registrar cambios de item editado.
 			let previous_item = null
 			let index = state.items.findIndex(item => {
-				if (
-					value
-					&& item.is_article && value.is_article
-					&& item.id == value.id	
-				) {
-					return true
-				}
-				if (
-					value
-					&& item.is_combo && value.is_combo
-					&& item.id == value.id	
-				) {
-					return true
-				}
-				return false
+				return es_la_misma_linea(item, value)
 			})
 			if (index != -1) {
 				previous_item = get_safe_clone(state.items[index])
@@ -631,6 +678,9 @@ export default {
 		},
 		set_descuento(state, value) {
 			state.descuento = value
+		},
+		set_forzar_total_monto(state, value) {
+			state.forzar_total_monto = value
 		},
 		set_puntos_canjeados(state, value) {
 			state.puntos_canjeados = value
@@ -919,8 +969,17 @@ export default {
 			// Estado previo para registrar la eliminación del item.
 			const previous_items = get_safe_clone(state.items)
 			let index = state.items.findIndex(i => {
-				return i.id == item.id
+				return es_la_misma_linea(i, item)
 			})
+			/*
+				Sin esta guarda un item que no esta en la lista borraba EL ULTIMO renglon:
+				findIndex devuelve -1 y splice(-1, 1) cuenta desde el final. Antes era casi
+				inalcanzable porque el matcheo por id encontraba cualquier cosa; ahora que el
+				criterio es estricto, no encontrar nada es un desenlace posible.
+			*/
+			if (index == -1) {
+				return
+			}
 			state.items.splice(index, 1)
 			append_sale_log_entry(state, {
 				event_key: 'item_removed',
@@ -935,10 +994,14 @@ export default {
 			})
 		},
 		updateItem(state, item) {
-			const previous_item = get_safe_clone(state.items.find(art => art.id == item.id))
 			let index = state.items.findIndex(art => {
-				return art.id == item.id
+				return es_la_misma_linea(art, item)
 			})
+			/* Misma guarda que en removeItem: splice(-1, 1, item) pisaba el ultimo renglon */
+			if (index == -1) {
+				return
+			}
+			const previous_item = get_safe_clone(state.items[index])
 			state.items.splice(index, 1, item)
 			append_sale_log_entry(state, {
 				event_key: 'item_updated',
@@ -1141,6 +1204,17 @@ export default {
 				afip_tipo_comprobante_id: state.afip_tipo_comprobante_id,
 				descuento: state.descuento,
 				/*
+					Total forzado por monto (extension forzar_total). `total` (mas arriba en este
+					mismo payload) ya viaja CON el monto aplicado --lo aplica
+					mixins/vender_set_total.js al final de setTotal()-- y `sub_total` viaja SIN el,
+					que es justo lo que pidio Lucas: el subtotal muestra los 4.012 y el total los
+					4.000.
+
+					Viaja tambien en null cuando no hay forzado: es lo que le dice al servidor que
+					esta venta no lleva ajuste, y sin el la columna quedaria con el valor de otra.
+				*/
+				forzar_total_monto: state.forzar_total_monto,
+				/*
 					Canje de puntos. `total` (mas arriba en este mismo payload) ya viaja neteado
 					con descuento_puntos restado: lo aplica mixins/vender_set_total.js dentro de
 					setTotal(). El servidor recompone el bruto sumandole descuento_puntos y con
@@ -1166,6 +1240,14 @@ export default {
 			dias_alerta_venta_no_cobrada_personalizado: state.dias_alerta_venta_no_cobrada_personalizado,
 			// Array de auditoría completo de acciones realizadas durante la venta.
 			log: state.sale_log,
+		}, {
+			/*
+				El aviso global del interceptor de main.js se apaga para este POST: el catch de
+				guardar_venta_online() ya muestra el mensaje del back (o abre el modal del limite
+				de credito). Sin esto, un 422 --el de la lista de precios, por ejemplo-- salia
+				tres veces: el generico, el del back y el del handler global.
+			*/
+			skip_global_error_event: true,
 		})
 			.then(res => {
 				console.log('vendido')

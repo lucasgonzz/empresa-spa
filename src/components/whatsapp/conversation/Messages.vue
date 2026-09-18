@@ -26,14 +26,22 @@
 			v-for="message in messages"
 			:key="message.id"
 			:message="message"></message-bubble>
+
+			<!-- Viñeta de "modo simulación": va COMO SI fuera el próximo mensaje del cliente,
+			así que tiene que quedar al final del flujo, después del último real. Su propio
+			v-if (en el interruptor "Simulación" del header) decide si se dibuja. -->
+			<simulated-message-composer
+			:chat="chat"></simulated-message-composer>
 		</div>
 	</div>
 </template>
 <script>
 import MessageBubble from '@/components/whatsapp/conversation/MessageBubble'
+import SimulatedMessageComposer from '@/components/whatsapp/conversation/SimulatedMessageComposer'
 export default {
 	components: {
 		MessageBubble,
+		SimulatedMessageComposer,
 	},
 	data() {
 		return {
@@ -48,6 +56,14 @@ export default {
 	computed: {
 		chat_id() {
 			return this.$store.state.whatsapp_chat.selected_chat_id
+		},
+		// El getter ya existía; este computed está copiado byte por byte también en
+		// Header.vue y en Composer.vue.
+		chat() {
+			return this.$store.getters['whatsapp_chat/selected_chat']
+		},
+		simulando_en_vivo() {
+			return this.$store.state.whatsapp_chat.simulando_en_vivo
 		},
 		messages() {
 			return this.$store.state.whatsapp_chat.messages
@@ -69,6 +85,19 @@ export default {
 		},
 	},
 	watch: {
+		/**
+		 * Al prender el interruptor de simulación, la viñeta nueva se dibuja al final del
+		 * flujo (ver el template): sin este scroll, en una conversación larga quedaba fuera
+		 * de la vista hasta que el operador bajara a mano.
+		 */
+		simulando_en_vivo(activo) {
+			if (!activo) {
+				return
+			}
+			this.$nextTick(() => {
+				this.scrollToBottom()
+			})
+		},
 		chat_id() {
 			// Al abrir un chat nuevo, arranca siempre desde abajo (mensaje más reciente).
 			this.$nextTick(() => {

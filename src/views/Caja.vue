@@ -30,6 +30,19 @@
 			</template>
 
 			<!--
+				Sucursal con su foto (misión foto-sucursal-y-asistente-configurable): la
+				columna mostraba solo el nombre de calle; ahora va el avatar de la sucursal al
+				lado. La foto sale de la sucursal del store (la misma que la tabla ya resuelve
+				para el nombre), así que sin sucursal asignada la celda queda vacía como antes.
+			-->
+			<template #table-prop-address_id="props">
+				<sucursal-con-foto
+				v-if="props.model.address_id"
+				:address="resolver_address(props.model)"
+				tamano="sm"></sucursal-con-foto>
+			</template>
+
+			<!--
 				El doble ! no es cosmetico: el backend puede mandar `abierta` como 1/0 y la prop
 				esta declarada Boolean, con lo cual Vue tira un warning de tipo por cada fila.
 			-->
@@ -47,6 +60,7 @@ export default {
 		HorizontalNavCenter: () => import('@/components/caja/components/horizontal-nav-center/Index'),
 		TableButtons: () => import('@/components/caja/components/table-buttons/Index'),
 		EstadoCaja: () => import('@/components/caja/components/EstadoCaja'),
+		SucursalConFoto: () => import('@/components/common/SucursalConFoto'),
 
 		SaleModal: () => import('@/components/common/SaleModal'),
 		MovimientosEntreCajas: () => import('@/components/caja/modals/movimientos-entre-cajas/Index'),
@@ -81,6 +95,27 @@ export default {
 		}
 	},
 	methods: {
+		/**
+		 * La sucursal de una caja, resuelta contra el store (la misma fuente con la que la
+		 * tabla ya arma el nombre de la columna, así trae la `image_url` si el endpoint la
+		 * manda). Si no está en el store se usa la relación embebida en la caja, y si no hay
+		 * ninguna, null (la celda queda vacía).
+		 *
+		 * @param {Object} caja Modelo caja del store.
+		 * @returns {Object|null}
+		 */
+		resolver_address(caja) {
+			if (!caja || !caja.address_id) {
+				return caja && caja.address ? caja.address : null
+			}
+			let del_store = this.$store.state.address.models.find(function (address) {
+				return address.id == caja.address_id
+			})
+			if (del_store) {
+				return del_store
+			}
+			return caja.address || null
+		},
 		/**
 		 * Determina si el usuario logueado debe ver la fila de esta caja en el módulo de tesorería.
 		 * Orden: si hay `treasury_users`, solo ellos ven; si no hay, se usa `users`; si ambas listas están vacías, todos ven.

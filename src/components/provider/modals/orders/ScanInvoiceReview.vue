@@ -564,6 +564,7 @@
 	</b-modal>
 </template>
 <script>
+import { env } from '@/runtime_config'
 /*
  * Modal de revisión de un escaneo de factura de compra (misión escaneo-factura-compra).
  *
@@ -649,9 +650,19 @@ export default {
 				{ clave: 'total', etiqueta: 'Total', tipo: 'numero' },
 				{ clave: 'percepcion_iibb', etiqueta: 'Percepción IIBB', tipo: 'numero' },
 				{ clave: 'percepcion_iva', etiqueta: 'Percepción IVA', tipo: 'numero' },
-				{ clave: 'retencion_iibb', etiqueta: 'Retención IIBB', tipo: 'numero' },
-				{ clave: 'retencion_iva', etiqueta: 'Retención IVA', tipo: 'numero' },
-				{ clave: 'retencion_ganancias', etiqueta: 'Retención Ganancias', tipo: 'numero' },
+				/*
+				 * 🔴 Acá vivían `retencion_iibb`, `retencion_iva` y `retencion_ganancias` (misión
+				 * `compras-factura-manual-alicuotas`, 17/9/2026). Se fueron porque una factura de
+				 * COMPRA no trae retenciones: quien retiene es tu cliente cuando te paga, no el
+				 * proveedor cuando te factura, así que se cargan al registrar un cobro en la cuenta
+				 * corriente de un cliente.
+				 *
+				 * La API ya hizo su mitad: el escaneo dejó de pedírselas a la IA
+				 * (`EscaneoFacturaCompraService::CAMPOS_NUMERICOS_FACTURA`) y la confirmación dejó
+				 * de escribirlas (`ProviderOrderScanController`). Dejarlas acá era pedirle a la
+				 * persona que revisara y corrigiera tres números que ya no viajan a ningún lado, y
+				 * eso es peor que no mostrarlos: la pantalla prometía un guardado que no existe.
+				 */
 			],
 		}
 	},
@@ -1021,9 +1032,7 @@ export default {
 				total: typeof factura.total === 'undefined' ? null : factura.total,
 				percepcion_iibb: typeof factura.percepcion_iibb === 'undefined' ? null : factura.percepcion_iibb,
 				percepcion_iva: typeof factura.percepcion_iva === 'undefined' ? null : factura.percepcion_iva,
-				retencion_iibb: typeof factura.retencion_iibb === 'undefined' ? null : factura.retencion_iibb,
-				retencion_iva: typeof factura.retencion_iva === 'undefined' ? null : factura.retencion_iva,
-				retencion_ganancias: typeof factura.retencion_ganancias === 'undefined' ? null : factura.retencion_ganancias,
+				/* Sin `retencion_*`: ver el comentario de `campos_factura`. */
 				campos_dudosos: factura.campos_dudosos || [],
 			}
 
@@ -1295,7 +1304,7 @@ export default {
 			})
 		},
 		url_imagen(orden) {
-			return process.env.VUE_APP_API_URL + '/api/provider-order-scan/' + this.uuid + '/imagen/' + orden
+			return env('VUE_APP_API_URL') + '/api/provider-order-scan/' + this.uuid + '/imagen/' + orden
 		},
 		/*
 		 * Arma el request de confirmación y lo manda.
@@ -1425,9 +1434,7 @@ export default {
 					total: this.factura.total,
 					percepcion_iibb: this.factura.percepcion_iibb,
 					percepcion_iva: this.factura.percepcion_iva,
-					retencion_iibb: this.factura.retencion_iibb,
-					retencion_iva: this.factura.retencion_iva,
-					retencion_ganancias: this.factura.retencion_ganancias,
+					/* Sin `retencion_*`: ver el comentario de `campos_factura`. */
 					ivas: this.ivas.map(iva => {
 						return {
 							iva_id: iva.iva_id,

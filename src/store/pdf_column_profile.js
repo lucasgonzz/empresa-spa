@@ -1,8 +1,9 @@
 import axios from 'axios'
 import base from '@/store/table_column_preference'
+import { env } from '@/runtime_config'
 
 axios.defaults.withCredentials = true
-axios.defaults.baseURL = process.env.VUE_APP_API_URL
+axios.defaults.baseURL = env('VUE_APP_API_URL')
 
 import generals from '@/common-vue/mixins/generals'
 

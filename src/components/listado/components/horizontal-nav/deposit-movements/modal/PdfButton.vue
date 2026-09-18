@@ -9,6 +9,7 @@
 	</b-button>
 </template>
 <script>
+import { env } from '@/runtime_config'
 export default {
 	computed: {
 		model() {
@@ -17,7 +18,7 @@ export default {
 	},
 	methods: {
 		print() {
-            var link = process.env.VUE_APP_API_URL+'/deposit-movement/pdf/'+this.model.id
+            var link = env('VUE_APP_API_URL')+'/deposit-movement/pdf/'+this.model.id
             window.open(link) 
 		}
 	}

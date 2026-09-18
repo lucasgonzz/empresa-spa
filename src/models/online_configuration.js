@@ -205,6 +205,12 @@ export default {
 			type: 'number',
 			description: 'Cada cuantos milisegundos se aplica el scroll automatico. Si no tiene valor, usa 1000.',
 		},
+		{
+			text: 'Mostrar catálogo de categorías en el Inicio',
+			key: 'mostrar_catalogo_categorias_home',
+			type: 'checkbox',
+			description: 'Si se activa, se muestra debajo del banner del Inicio una tarjeta por cada categoría con su logo, nombre y descripción. Al hacer clic en una categoría se filtran sus artículos, igual que desde el panel de categorías. Distinto de "Mostrar sección Catálogo en la Tienda", que controla el link del navbar.',
+		},
 
 		{
 			group_title: 'Catalogo y stock'
@@ -259,6 +265,12 @@ export default {
 			text: 'Ofrecer opcion de envio en la Tienda',
 			key: 'has_delivery',
 			type: 'checkbox',
+		},
+		{
+			text: 'Mostrar boton "Comprar ahora" en la ficha del articulo',
+			key: 'mostrar_comprar_ahora',
+			type: 'checkbox',
+			description: 'Si se activa, la ficha del articulo muestra el boton "Comprar ahora", que agrega el articulo al carrito y lleva directo a terminar la compra. Si se desactiva, solo aparece "Agregar al carrito" y el comprador puede seguir navegando.',
 		},
 		{
 			text: 'Cliente envia whatsapp al negocio al finalizar pedido',

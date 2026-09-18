@@ -3,6 +3,7 @@
 v-if="from_model"
 id="current-acounts-pago"
 data-tour="cuentas_corrientes.modal_pago"
+@shown="enfocar_primer_monto"
 title="Pago">
 
     <!--
@@ -128,18 +129,6 @@ export default {
         PaymentMethods,
     	BtnLoader,
     },
-    mounted() {
-        this.$root.$on('bv::modal::shown', (bvEvent, modalId) => {
-            if (modalId === 'current-acounts-pago') {
-
-                setTimeout(() => {
-                    this.focus_primer_payment_method()
-                    // this.$refs.paymentMethodComponent.set_all_caja_ids()
-                }, 500)
-
-            }
-        })
-    },
     data() {
         return {
         	pago: {
@@ -183,6 +172,22 @@ export default {
         },
     },
     methods: {
+        /**
+         * Enfoca el primer monto cuando el modal termino de mostrarse.
+         *
+         * Cuelga del @shown del propio <b-modal> y no de un $root.$on: el bus global vive toda la
+         * sesion, asi que un listener registrado ahi en mounted seguia corriendo despues de que la
+         * instancia se destruia y se acumulaba uno por montaje. Un evento del componente muere con
+         * el componente.
+         *
+         * @returns {void}
+         */
+        enfocar_primer_monto() {
+            setTimeout(() => {
+                this.focus_primer_payment_method()
+                // this.$refs.paymentMethodComponent.set_all_caja_ids()
+            }, 500)
+        },
         focus_primer_payment_method() {
             let input = document.getElementsByClassName('payment-method-amount')[0]      
             if (input) {
@@ -353,6 +358,18 @@ export default {
                     credit_card_id: 0,
                     credit_card_payment_plan_id: 0,
                     caja_id: 0,
+                    /*
+                     * Certificado de retencion sufrida: las mismas claves que declara el factory de
+                     * PaymentMethods.vue, para que la fila que queda despues de un pago exitoso sea
+                     * identica a la que nace con el modal. El importe NO va aca: es el `amount` de
+                     * la fila, igual que para el efectivo (ver RetencionInfo.vue).
+                     */
+                    retencion_impuesto: 'ganancias',
+                    retencion_numero_certificado: '',
+                    retencion_fecha: '',
+                    retencion_regimen: '',
+                    retencion_base_imponible: '',
+                    retencion_alicuota: '',
                 }],
             }
             this.$store.commit('current_acount/setToPay', null)

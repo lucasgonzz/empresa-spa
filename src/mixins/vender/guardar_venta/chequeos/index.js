@@ -7,6 +7,7 @@ import sale_type from '@/mixins/vender/guardar_venta/chequeos/sale_type'
 import sucursal from '@/mixins/vender/guardar_venta/chequeos/sucursal'
 import afip from '@/mixins/vender/guardar_venta/chequeos/afip'
 import limite_credito from '@/mixins/vender/guardar_venta/chequeos/limite_credito'
+import price_type from '@/mixins/vender/guardar_venta/chequeos/price_type'
 import articulo_pendiente_de_agregar from '@/mixins/vender/articulo_pendiente_de_agregar'
 export default {
 	mixins: [
@@ -19,6 +20,7 @@ export default {
 		sucursal,
 		afip,
 		limite_credito,
+		price_type,
 		articulo_pendiente_de_agregar,
 	],
 	methods: {
@@ -30,6 +32,15 @@ export default {
 			// }
 
 			if (!this.check_articulo_pendiente_de_agregar()) {
+				return false
+			}
+
+			/*
+				Va apenas despues del articulo pendiente y antes de todo lo demas: es el unico
+				chequeo del que dependen los precios de las lineas, y no tiene sentido pedir caja o
+				metodo de pago para una venta que no va a salir.
+			*/
+			if (!this.check_price_type()) {
 				return false
 			}
 

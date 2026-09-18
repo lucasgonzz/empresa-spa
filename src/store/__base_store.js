@@ -1,6 +1,7 @@
 import axios from 'axios'
+import { env } from '@/runtime_config'
 axios.defaults.withCredentials = true
-axios.defaults.baseURL = process.env.VUE_APP_API_URL
+axios.defaults.baseURL = env('VUE_APP_API_URL')
 
 import moment from 'moment'
 import generals from '@/common-vue/mixins/generals'
@@ -92,6 +93,14 @@ export default function __base_store(options = {}) {
 
 			props_to_show: [],
 
+			// Columnas de la tabla por ámbito de vista: { por_entregar: [...props] }. Existe porque
+			// una misma tabla puede mirarse desde más de una pantalla con columnas distintas sin
+			// pisar `props_to_show`, que es la del listado principal del módulo. El primer caso es
+			// Ventas > Por Entregar, que comparte el store `sale` con el listado de Ventas
+			// (preference_type `table_por_entregar`, ver column_preferences_helper.js). Arranca
+			// vacío y ningún módulo lo escribe salvo el que lo necesita.
+			props_to_show_por_ambito: {},
+
 			// Flag que indica si el estado filtered fue cargado por un buscador rápido sin usar el FilterForm (ej. el buscador general).
 			// Permite distinguir entre "filtrado por formulario" y "filtrado por buscador rápido".
 			filtered_without_filter_form: false,
@@ -168,6 +177,17 @@ export default function __base_store(options = {}) {
 			// Si ya se pidió una vez en esta sesión: evita re-pedir en cada `created()` que la use.
 			options_loaded: false,
 			loading_options: false,
+
+			// Si el listado de este store falla por un corte de red (sin `response`), NO se
+			// muestra el cartel global "No pudimos conectarnos con el servidor" (interceptor de
+			// `main.js`, config `skip_global_error_event`).
+			//
+			// Arranca en `false` y ningún módulo lo prende salvo el que lo necesita: para todos
+			// los demás stores construidos con este factory, esto no cambia absolutamente nada.
+			// Pensado para listados DECORATIVOS de una pantalla que ya se arma sin ellos (ver
+			// `article_pdf.js`) — nunca para el listado principal de un módulo: ahí, si el pedido
+			// se cae, el cartel tiene que seguir avisando.
+			omitir_cartel_de_conexion_en_listado: false,
 		}
 
 		/**
@@ -196,6 +216,20 @@ export default function __base_store(options = {}) {
 	let base_mutations = {
 		set_props_to_show(state, value) {
 			state.props_to_show = value
+		},
+		/**
+		 * Fija las columnas de un ámbito de vista (ver state.props_to_show_por_ambito).
+		 * Reemplaza el objeto entero en vez de asignar la clave: una clave nueva sobre un objeto
+		 * ya observado no es reactiva en Vue 2 sin Vue.set, y la vista no se enteraría.
+		 *
+		 * @param {Object} state
+		 * @param {{ambito: string, props: Array}} value
+		 */
+		set_props_to_show_por_ambito(state, value) {
+			state.props_to_show_por_ambito = {
+				...state.props_to_show_por_ambito,
+				[value.ambito]: value.props,
+			}
 		},
 		set_route_prefix(state, value) {
 			state.route_prefix = value
@@ -676,7 +710,9 @@ export default function __base_store(options = {}) {
 			if (state.use_per_page) {
 				url += '?page=' + state.page + '&per_page=' + state.per_page
 			}
-			return axios.get(url)
+			return axios.get(url, {
+				skip_global_error_event: state.omitir_cartel_de_conexion_en_listado,
+			})
 			.then(res => {
 				if (state.use_per_page) {
 					let loaded_models = res.data.models.data

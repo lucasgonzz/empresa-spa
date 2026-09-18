@@ -2,6 +2,33 @@
 	<div>
 
 		<!--
+			Cuando se calculo el reporte y el boton para pedir uno nuevo (4.0.24). Desde esta version
+			el reporte se calcula una vez por noche y ya no al entrar, asi que el operador tiene que
+			poder ver de cuando son estos numeros y pedirlos de nuevo sin esperar a mañana. Va arriba
+			de los chips porque es sobre ELLOS: dice de cuando son. Mientras el job corre el boton
+			queda deshabilitado y el aviso de mas abajo es el que dice que hay algo en curso.
+
+			El boton no lleva callback a proposito: cuando llega el reporte nuevo cambia
+			`inventory_performance.created_at`, y el watcher del final de este archivo ya vuelve a
+			pedir la pagina de articulos. Pasarle `fetch_articles` la pediria dos veces.
+		-->
+		<div
+		v-if="inventory_performance"
+		class="stock-minimo-actualizacion m-b-10">
+			<span class="stock-minimo-actualizacion__texto">
+				Actualizado {{ inventory_performance_actualizado_hace }}
+			</span>
+			<b-button
+			class="stock-minimo-actualizacion__boton"
+			size="sm"
+			:disabled="inventory_performance_generating"
+			@click="actualizar_inventory_performance()">
+				<i class="bi bi-arrow-repeat m-r-5" aria-hidden="true"></i>
+				Actualizar
+			</b-button>
+		</div>
+
+		<!--
 			Resumen del reporte: solo se muestra si ya hay un reporte calculado (evita "0 articulos"
 			que seria informacion falsa).
 
@@ -14,7 +41,11 @@
 		v-if="inventory_performance"
 		class="stock-minimo-resumen m-b-15">
 
-			<div class="totales-chip totales-chip--principal">
+			<!-- data-valor / data-monto: el numero crudo, el texto visible va es-AR. -->
+			<div
+			class="totales-chip totales-chip--principal"
+			data-testid="stock-minimo-chip-bajo-minimo"
+			:data-valor="inventory_performance.stock_minimo">
 				<div class="totales-chip__icon-wrap">
 					<i class="bi bi-box-seam" aria-hidden="true"></i>
 				</div>
@@ -24,7 +55,10 @@
 				</div>
 			</div>
 
-			<div class="totales-chip">
+			<div
+			class="totales-chip"
+			data-testid="stock-minimo-chip-sin-stock"
+			:data-valor="inventory_performance.sin_stock">
 				<div class="totales-chip__icon-wrap">
 					<i class="bi bi-dash-circle" aria-hidden="true"></i>
 				</div>
@@ -41,6 +75,8 @@
 			-->
 			<div
 			class="totales-chip"
+			data-testid="stock-minimo-chip-negativo"
+			:data-valor="inventory_performance.stock_negativo"
 			:class="{ 'totales-chip--negativo': inventory_performance.stock_negativo > 0 }">
 				<div class="totales-chip__icon-wrap">
 					<i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
@@ -56,7 +92,10 @@
 				</div>
 			</div>
 
-			<div class="totales-chip">
+			<div
+			class="totales-chip"
+			data-testid="stock-minimo-chip-reposicion"
+			:data-monto="inventory_performance.costo_reposicion_stock_minimo">
 				<div class="totales-chip__icon-wrap">
 					<i class="bi bi-cash-stack" aria-hidden="true"></i>
 				</div>
@@ -79,6 +118,7 @@
 		-->
 		<div
 		v-if="inventory_performance && inventory_performance_generating"
+		data-testid="stock-minimo-aviso"
 		class="stock-minimo-aviso">
 			<i class="bi bi-arrow-repeat stock-minimo-aviso__icono" aria-hidden="true"></i>
 			<span>
@@ -99,6 +139,7 @@
 			<div class="stock-minimo-search">
 				<i class="bi bi-search stock-minimo-search__lupa" aria-hidden="true"></i>
 				<b-form-input
+				data-testid="stock-minimo-buscador"
 				v-model="search_input"
 				@input="on_search_input"
 				placeholder="Buscar por nombre, codigo de barras o codigo de proveedor"></b-form-input>
@@ -111,9 +152,33 @@
 		<!-- Caso 1: todavia no hay ningun reporte generado (ni siquiera uno viejo) y se esta calculando el primero -->
 		<empty-state
 		v-if="sin_reporte_generando"
+		data-testid="stock-minimo-vacio-generando"
 		icon_class="bi bi-hourglass-split"
 		title="Estamos calculando el reporte de inventario"
 		hint="Los datos van a aparecer solos en unos minutos, sin que tengas que recargar."></empty-state>
+
+		<!--
+			Caso 1-bis: todavia no hay ningun reporte y tampoco hay ninguno generandose (mision
+			reporte-inventario-manual, 15/9/2026). Sin este caso la pantalla queda en blanco -- ni
+			tabla, ni resumen, ni ningun aviso -- porque desde esta mision entrar aca ya no dispara
+			nada solo: el reporte se genera de noche (04:00) o con el boton. Un comercio recien dado
+			de alta puede pasar horas en este estado, asi que necesita su propio boton para no
+			depender de esperar a la madrugada.
+		-->
+		<empty-state
+		v-else-if="sin_reporte_y_sin_generar"
+		data-testid="stock-minimo-vacio-sin-generar"
+		icon_class="bi bi-box-seam"
+		title="Todavía no hay un reporte de inventario"
+		hint="Se genera solo todas las noches. Si no querés esperar, pedilo ahora.">
+			<b-button
+			class="stock-minimo-actualizacion__boton"
+			size="sm"
+			@click="actualizar_inventory_performance()">
+				<i class="bi bi-arrow-repeat m-r-5" aria-hidden="true"></i>
+				Generar ahora
+			</b-button>
+		</empty-state>
 
 		<!--
 			Caso 2: hay reporte pero la pagina actual vino vacia. Son dos situaciones distintas y por
@@ -122,6 +187,7 @@
 		-->
 		<empty-state
 		v-else-if="sin_resultados"
+		data-testid="stock-minimo-vacio-sin-resultados"
 		:icon_class="hay_busqueda_activa ? 'bi bi-search' : 'bi bi-check2-circle'"
 		:title="hay_busqueda_activa ? 'Ningún artículo coincide con la búsqueda' : 'No hay artículos con stock mínimo'"
 		:hint="hay_busqueda_activa ? 'Probá con otro nombre, código de barras o código de proveedor.' : 'Ningún artículo está por debajo del mínimo que tenés configurado.'"></empty-state>
@@ -137,6 +203,7 @@
 			</div>
 
 			<b-table
+			data-testid="stock-minimo-tabla"
 			:key="fields_signature"
 			head-variant="dark"
 			responsive
@@ -251,6 +318,17 @@ export default {
 		 */
 		sin_reporte_generando() {
 			return this.inventory_performance_generating && !this.inventory_performance
+		},
+		/**
+		 * Caso "todavia no hay ningun reporte, y tampoco hay ninguno generandose": desde que
+		 * index() dejo de disparar la primera generacion sola (mision reporte-inventario-manual,
+		 * 15/9/2026), este es el estado de un comercio recien dado de alta hasta la corrida de las
+		 * 04:00 o hasta que alguien pida el reporte a mano.
+		 *
+		 * @returns {Boolean}
+		 */
+		sin_reporte_y_sin_generar() {
+			return !this.inventory_performance && !this.inventory_performance_generating
 		},
 		/**
 		 * Caso "hay reporte pero la pagina actual vino vacia": ya sea porque no hay articulos
@@ -406,6 +484,65 @@ export default {
 // Todos los valores salen de tokens (--toolbar-control-h, --toolbar-btn-radius, --color-border,
 // --bg-card, --bg-section, --color-text-secondary): un hexadecimal fijo deja la seccion blanca en
 // modo oscuro, que es justo lo que le pasaba al cartel azul que esta mision viene a sacar.
+
+// --- Fecha de actualizacion + boton Actualizar (4.0.24) ---------------------------------------
+// Texto a la izquierda y boton a la derecha, en una fila que envuelve: en telefono el boton baja
+// debajo del texto y con `margin-left: auto` sigue pegado a la derecha. El boton declara su aspecto
+// aca por el mismo motivo que el de Excel del modal de inventario: fuera de .view-header-toolbar un
+// b-button sin variant cae en el btn-secondary gris macizo de Bootstrap. Se copia el vocabulario
+// (tokens, no valores sueltos) mas el centrado por inline-flex de la regla neutra de
+// _toolbar_botones.sass, porque con altura fija y el line-height 1.5 de .btn el texto queda arriba.
+.stock-minimo-actualizacion
+	display: flex
+	flex-direction: row
+	align-items: center
+	flex-wrap: wrap
+	gap: 8px 12px
+
+	&__texto
+		flex: 1 1 200px
+		min-width: 0
+		// Medido el 10/9/2026 en 900 y 1366px: sin esto el texto hereda un centrado del contenedor
+		// de la seccion y queda flotando en el medio de la fila mientras el boton va a la derecha;
+		// en telefono (donde el span ocupa todo el ancho) se veia a la izquierda. Misma alineacion
+		// en los tres anchos.
+		text-align: left
+		font-size: 0.8125rem
+		line-height: 1.35
+		color: var(--color-text-secondary)
+
+	&__boton
+		flex-shrink: 0
+		margin-left: auto
+		display: inline-flex
+		align-items: center
+		justify-content: center
+		height: var(--toolbar-control-h)
+		padding: 0 12px
+		line-height: 1
+		border-radius: var(--toolbar-btn-radius)
+		background: var(--bg-card)
+		border: 1px solid var(--color-border)
+		color: var(--color-text-primary)
+		box-shadow: var(--toolbar-btn-shadow)
+
+		&:hover,
+		&:focus,
+		&:not(:disabled):not(.disabled):active
+			background: var(--bg-hover)
+			border-color: var(--color-border)
+			color: var(--color-text-primary)
+
+		// Deshabilitado mientras el job corre: el mismo boton, apagado. Sin esta regla Bootstrap
+		// lo pinta gris macizo con letra blanca (`.btn-secondary:disabled`).
+		&:disabled,
+		&.disabled
+			background: var(--bg-card)
+			border-color: var(--color-border)
+			color: var(--color-text-secondary)
+
+		i
+			color: var(--color-text-secondary)
 
 // --- Resumen en chips -------------------------------------------------------------------------
 // Antes era una `custom-card` con las cuatro filas apiladas. Ahora es una fila de chips que

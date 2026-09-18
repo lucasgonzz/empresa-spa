@@ -162,13 +162,45 @@ export default {
 		}
 	},
 	created() {
-		this.$root.$on('bv::modal::show', (bvEvent, modal_id) => {
-			if (modal_id == 'stock-movement') {
-				this.setDefaultAddress() 
-			}
-		})
+		// El modal 'stock-movement' lo declara el padre (stock-movement/Index.vue), asi que se
+		// escucha por el bus de $root y hay que desuscribirse a mano.
+		this.$root.$on('bv::modal::show', this.on_modal_show)
+	},
+	beforeDestroy() {
+		// El bus de $root vive toda la sesion: sin el $off, cada montaje deja otra escucha viva.
+		this.$root.$off('bv::modal::show', this.on_modal_show)
 	},
 	methods: {
+		/**
+		 * 🔴 OJO: hoy este handler NO llega a correr nunca, y no es por el $off.
+		 *
+		 * El <b-modal> del padre no lleva `static`, asi que bootstrap-vue no crea el contenido
+		 * del modal hasta que lo muestra — y emite `bv::modal::show` ANTES de crearlo. O sea que
+		 * este componente (que ES el contenido, y ademas entra por un import async) todavia no
+		 * existe cuando se emite el evento de su propia apertura: se suscribe tarde, siempre.
+		 *
+		 * Antes del 16/9/2026 parecia funcionar porque el listener de la apertura anterior seguia
+		 * vivo — pero escribia `to_address_id`, que es data() local, sobre una instancia ya
+		 * destruida. O sea que el deposito por defecto NUNCA se preselecciono en el formulario que
+		 * el usuario ve. Medido con el navegador el 16/9/2026: tres aperturas seguidas, cero
+		 * llamadas a setDefaultAddress() y `to_address_id` en 0 en las tres.
+		 *
+		 * Se deja como esta a proposito (decision de Lucas, 16/9/2026): arreglarlo haria que el
+		 * deposito venga precargado, que es un cambio de lo que el usuario ve y no corresponde
+		 * meterlo de garron en un arreglo de otra cosa. El arreglo, cuando se decida, es llamar
+		 * a setDefaultAddress() desde el created()/mounted() de ESTE componente: se crea una vez
+		 * por apertura, asi que su ciclo de vida ya es el evento que se estaba buscando.
+		 *
+		 * @param {Object} bvEvent Evento de bootstrap-vue.
+		 * @param {string} modal_id Id del modal que se esta por mostrar.
+		 * @returns {void}
+		 */
+		on_modal_show(bvEvent, modal_id) {
+			if (modal_id != 'stock-movement') {
+				return
+			}
+			this.setDefaultAddress()
+		},
 		setSelectedProvider(result) {
 			this.$set(this.article, 'provider', result.model)
 			this.article.provider_id = result.model.id

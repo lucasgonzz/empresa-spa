@@ -9,6 +9,7 @@ import model_functions from '@/common-vue/mixins/model_functions'
 import broadcast from '@/common-vue/mixins/broadcast'
 import _model_functions from '@/mixins/model_functions'
 import route_functions from '@/mixins/route_functions'
+import { env } from '@/runtime_config'
 export default {
     mixins: [
         generals,
@@ -26,7 +27,7 @@ export default {
         redirectIfWww() {
             if (location.href.indexOf("www.") > -1) {
                 console.log('tiene www')
-                location.replace(process.env.VUE_APP_APP_URL);
+                location.replace(env('VUE_APP_APP_URL'));
             }
         },
         async callMethods() {

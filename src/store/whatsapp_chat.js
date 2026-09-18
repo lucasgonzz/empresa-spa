@@ -1,7 +1,8 @@
 import axios from 'axios'
 import moment from 'moment'
+import { env } from '@/runtime_config'
 axios.defaults.withCredentials = true
-axios.defaults.baseURL = process.env.VUE_APP_API_URL
+axios.defaults.baseURL = env('VUE_APP_API_URL')
 
 /**
  * ¿El chat está adentro de la ventana de 24 h de Meta, o sea que se le puede mandar texto
@@ -186,6 +187,16 @@ export default {
 			abierto.
 		*/
 		borrador: null,
+
+		// Interruptor de "modo simulación" del chat abierto (misión whatsapp-mejoras-interfaz,
+		// 15/9/2026). Solo controla si `SimulatedMessageComposer.vue` dibuja la viñeta editable
+		// al pie de la conversación — NO es lo mismo que el getter `chat_en_simulacion` de más
+		// abajo, que refleja si el ÚLTIMO ENTRANTE ya quedó marcado como simulado en la base.
+		// Prender este interruptor no simula nada por sí solo: recién se simula (y con eso se
+		// prende `chat_en_simulacion`) cuando el operador manda el primer mensaje por esa
+		// viñeta. Se resetea a `false` en cada cambio de chat (ver `Header.vue`, watch de
+		// `chat_id`), para no dejarlo prendido en la conversación equivocada.
+		simulando_en_vivo: false,
 	},
 	mutations: {
 		setLoadingChats(state, value) {
@@ -217,8 +228,18 @@ export default {
 			})
 		},
 		/**
-		 * Aplica el payload liviano de `WhatsappChatUpdated` (solo id/unread_count/last_message_at)
-		 * sin pisar el resto de props (client, phone, display_name, ai_enabled) que ese evento no manda.
+		 * Aplica el payload liviano de `WhatsappChatUpdated` (id/unread_count/last_message_at/
+		 * estado_pendiente, ver el evento en empresa-api) sin pisar el resto de props (client,
+		 * phone, display_name, ai_enabled) que ese evento no manda.
+		 *
+		 * 🔴 SOLO ACTUALIZA UN CHAT QUE YA ESTÁ EN LA BANDEJA (el `if (index != -1)` no inserta).
+		 * Un cliente que escribe por PRIMERA VEZ dispara este mismo evento para un chat que
+		 * todavía no existe en `state.chats`, y acá no pasa nada: ni la fila aparece, ni
+		 * `chats_sin_responder_count` (la tarjeta roja del tablero) se entera, hasta que se
+		 * recargue el módulo. Es una limitación preexistente de esta mutación (no la introduce
+		 * la misión whatsapp-tablero-clientes) y queda fuera de este alcance arreglarla: el
+		 * payload liviano no trae `client`/`phone`/`display_name`, así que insertar acá de
+		 * verdad dejaría una fila a medias en la bandeja.
 		 */
 		patchChatFromBroadcast(state, chat_patch) {
 			let index = state.chats.findIndex(c => c.id == chat_patch.id)
@@ -309,6 +330,9 @@ export default {
 		setBorrador(state, value) {
 			state.borrador = value || null
 		},
+		setSimulandoEnVivo(state, value) {
+			state.simulando_en_vivo = Boolean(value)
+		},
 	},
 	getters: {
 		/**
@@ -349,6 +373,33 @@ export default {
 			}
 			let chat = getters.selected_chat
 			return !!chat && chat.last_inbound_simulated == 1
+		},
+		/**
+		 * Cantidad de chats sin responder (tarjeta roja del tablero, misión
+		 * whatsapp-tablero-clientes). `estado_pendiente` ya viene resuelto por el backend
+		 * (`WhatsappChatHelper::attach_estados_pendientes()` en el índice, y el broadcast en
+		 * vivo) con la prioridad aplicada: un chat con un mensaje esperando aprobación NUNCA
+		 * cuenta acá también, aunque el cliente le haya escrito último.
+		 */
+		chats_sin_responder_count(state) {
+			return state.chats.filter(c => c.estado_pendiente == 'sin_responder').length
+		},
+		/**
+		 * Cantidad de chats con una respuesta de la IA generada y esperando que el negocio la
+		 * apruebe (tarjeta amarilla del tablero).
+		 */
+		chats_esperando_aprobacion_count(state) {
+			return state.chats.filter(c => c.estado_pendiente == 'esperando_aprobacion').length
+		},
+		/**
+		 * Cantidad de chats con actividad en el día de hoy (tarjeta verde del tablero).
+		 *
+		 * Mismo criterio "es de hoy" que ya usa `ChatRow.vue::format_time()` sobre
+		 * `last_message_at`: si el ÚLTIMO mensaje del chat (entrante o saliente) fue hoy, hubo
+		 * conversación hoy — no hace falta mirar la tabla de mensajes completa.
+		 */
+		chats_hoy_count(state) {
+			return state.chats.filter(c => c.last_message_at && moment(c.last_message_at).isSame(moment(), 'day')).length
 		},
 	},
 	actions: {
@@ -680,9 +731,16 @@ export default {
 		},
 		/**
 		 * Pide a la IA una sugerencia de respuesta (no se envía ni se persiste).
+		 *
+		 * 🔴 `skip_global_error_event: true`. Desde la misión whatsapp-mejoras-interfaz
+		 * (15/9/2026) el back devuelve 422 con `message` en vez de 200 con `suggestion: ''`
+		 * ante cualquier motivo de fallo (antes solo pasaba para "sin configuración"). El
+		 * catch de `Header.vue::suggest()` ya muestra ese `message` en un toast propio; sin
+		 * esta bandera, el interceptor global (`main.js`) muestra OTRO toast con el mismo
+		 * texto por encima — dos avisos idénticos por cada sugerencia que falla.
 		 */
 		suggest(context, chat_id) {
-			return axios.post('/api/whatsapp-chats/' + chat_id + '/suggest')
+			return axios.post('/api/whatsapp-chats/' + chat_id + '/suggest', {}, { skip_global_error_event: true })
 				.then(res => {
 					return res.data.suggestion
 				})

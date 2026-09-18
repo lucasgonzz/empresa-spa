@@ -1,4 +1,17 @@
 import computed from '@/mixins/vender/computed'
+
+/*
+	El id del metodo de pago "Efectivo" en el catalogo current_acount_payment_methods.
+
+	No es un bug que este fijo: ese catalogo es GLOBAL, no por comercio, y lo siembra
+	CurrentAcountPaymentMethodSeeder siempre en el mismo orden (1 Cheque, 2 Debito,
+	3 Efectivo, 4 Transferencia, 5 Credito, 6 Mercado Pago, 7 Retencion), con la advertencia
+	en el propio seeder de que las filas nuevas van al final justamente porque el 1 y el 3 se
+	usan hardcodeados. Asi que el 3 es el Efectivo en todas las bases, y es el fallback del
+	formulario de cobro cuando el dueño no configuro default_current_acount_payment_method_id.
+*/
+const METODO_DE_PAGO_EFECTIVO = 3
+
 export default {
 	mixins: [computed],
     data() {
@@ -9,7 +22,7 @@ export default {
 	methods: {
 
         /**
-         * Asigna el método de pago por defecto del owner o el fallback (3).
+         * Asigna el método de pago por defecto del owner o el fallback (METODO_DE_PAGO_EFECTIVO, el Efectivo).
          * @param {boolean} force_reset true: reemplaza el método actual (tras venta o reset explícito).
          *                            false: solo asigna si aún no hay método (id 0), p. ej. al entrar a Vender.
          */
@@ -43,7 +56,7 @@ export default {
                     this.$store.commit('vender/setCurrentAcountPaymentMethodId', this.owner.default_current_acount_payment_method_id)
                 } else {
                     if (force_reset || !this.current_acount_payment_method_id) {
-                        this.$store.commit('vender/setCurrentAcountPaymentMethodId', 3)
+                        this.$store.commit('vender/setCurrentAcountPaymentMethodId', METODO_DE_PAGO_EFECTIVO)
                     }
                 }
             } else {
@@ -78,7 +91,7 @@ export default {
             }
         },
         habilitar_metodo_de_pago() {
-            this.$store.commit('vender/setCurrentAcountPaymentMethodId', 3)
+            this.$store.commit('vender/setCurrentAcountPaymentMethodId', METODO_DE_PAGO_EFECTIVO)
         },
 	}
 }

@@ -1,14 +1,22 @@
 <template>
 	<div class="asistente-ia-lista">
-		<!-- Botón grande de conversación nueva, arriba de todo (pedido de Lucas). -->
+		<!-- Botón grande de conversación nueva, arriba de todo (pedido de Lucas), y al lado el
+		engranaje que abre la configuración del agente (S3, acceso 1). -->
 		<div class="asistente-ia-lista__cabecera">
 			<b-button
-			block
+			class="asistente-ia-lista__nueva"
 			variant="primary"
 			@click="nueva_conversacion">
 				<i class="bi bi-plus-lg"></i>
 				Nueva conversación
 			</b-button>
+			<button
+			type="button"
+			class="asistente-ia-lista__config"
+			title="Configurar el asistente"
+			@click="abrir_configuracion">
+				<i class="bi bi-gear"></i>
+			</button>
 		</div>
 
 		<div class="asistente-ia-lista__scroll">
@@ -16,6 +24,15 @@
 			v-if="loading && !conversations.length"
 			class="asistente-ia-lista__aviso">
 				Cargando conversaciones...
+			</p>
+			<!-- El fallo de la carga va ANTES del "todavía no hay conversaciones": los dos
+			dejan la lista vacía y sin esto se veían iguales (ver `error_conversations` en
+			store/ai_chat.js). Si ya hay conversaciones en pantalla no se muestra: son las
+			de la carga anterior y siguen sirviendo. -->
+			<p
+			v-else-if="error && !conversations.length"
+			class="asistente-ia-lista__aviso asistente-ia-lista__aviso--error">
+				{{ error }}
 			</p>
 			<p
 			v-else-if="!conversations.length"
@@ -29,6 +46,22 @@
 			class="asistente-ia-lista__item"
 			:class="{ 'asistente-ia-lista__item--activa': conversation.id == selected_conversation_id }"
 			@click="seleccionar(conversation)">
+				<!--
+					Las conversaciones que arrancaron por WhatsApp se distinguen con el ícono
+					(misión asistente-por-whatsapp, 16/9/2026). Son la MISMA conversación: se
+					leen y se sigue escribiendo desde acá como cualquier otra, y no hay pantalla
+					nueva. El ícono existe para que el dueño entienda por qué aparece en la lista
+					algo que él no escribió en esta pantalla.
+
+					Una SPA vieja contra el API nuevo las ve como conversaciones comunes, sin
+					ícono, que es la degradación correcta.
+				-->
+				<span
+				v-if="conversation.origen == 'whatsapp'"
+				class="asistente-ia-lista__canal"
+				title="Esta conversación la empezaste por WhatsApp">
+					<i class="bi bi-whatsapp"></i>
+				</span>
 				<!-- Título en UNA línea con ellipsis (como Claude); sin título todavía,
 				se muestra el provisorio (D20). -->
 				<span class="asistente-ia-lista__titulo">
@@ -42,11 +75,18 @@
 				</span>
 			</button>
 		</div>
+
+		<!-- Footer bien abajo, como en Claude (S2): modo de pensamiento del agente + uso de
+		tokens del mes. Se dibuja solo si el API trae el consumo (degradación limpia). -->
+		<panel-footer></panel-footer>
 	</div>
 </template>
 
 <script>
 export default {
+	components: {
+		PanelFooter: () => import('@/components/asistente-ia/PanelFooter'),
+	},
 	computed: {
 		conversations() {
 			return this.$store.state.ai_chat.conversations
@@ -54,11 +94,21 @@ export default {
 		loading() {
 			return this.$store.state.ai_chat.loading_conversations
 		},
+		error() {
+			return this.$store.state.ai_chat.error_conversations
+		},
 		selected_conversation_id() {
 			return this.$store.state.ai_chat.selected_conversation_id
 		},
 	},
 	methods: {
+		/**
+		 * Abre el modal de configuración del agente (S3, acceso 1). El modal está montado
+		 * una sola vez en el botón flotante; acá solo se lo dispara por id.
+		 */
+		abrir_configuracion() {
+			this.$bvModal.show('configuracion-agente')
+		},
 		/**
 		 * Deja el panel parado en una conversación en blanco. La conversación real
 		 * se crea recién al enviar el primer mensaje (sendMessage se encarga), así
@@ -115,6 +165,34 @@ export default {
 	&__cabecera
 		flex-shrink: 0
 		padding: 12px
+		display: flex
+		align-items: stretch
+		gap: 8px
+
+	// El botón de nueva conversación ocupa el ancho que le deja el engranaje.
+	&__nueva
+		flex: 1
+		min-width: 0
+
+	// Engranaje de configuración del agente (S3). Sin sombra: el sistema se la pone a todo
+	// <button>, y acá es un control secundario al lado del principal.
+	&__config
+		flex-shrink: 0
+		width: 38px
+		border: 1px solid var(--color-border, #dee2e6)
+		border-radius: 8px
+		background: var(--bg-card, #fff)
+		color: var(--color-text-secondary, #6c757d)
+		box-shadow: none
+		display: flex
+		align-items: center
+		justify-content: center
+		font-size: 1.05rem
+		transition: background .15s ease, color .15s ease
+
+		&:hover
+			background: var(--bg-hover, #f1f3f5)
+			color: var(--color-text-primary, #212529)
 
 	&__scroll
 		flex: 1
@@ -128,6 +206,12 @@ export default {
 		text-align: center
 		padding: 14px 10px
 		margin: 0
+
+		// El aviso de fallo se lee distinto del de "todavía no hay conversaciones".
+		// El token ya es el mismo que usa AccionCard.vue para sus errores y está
+		// resuelto para modo oscuro (ver sass/_menus_desplegables.sass:228).
+		&--error
+			color: var(--btn-peligro-texto, #9c3a36)
 
 	&__item
 		width: 100%
@@ -157,6 +241,15 @@ export default {
 
 			.asistente-ia-lista__borrar
 				opacity: 1
+
+	// El ícono del canal (hoy solo WhatsApp): chiquito, del color secundario y sin
+	// robarle lugar al título, que es lo que la persona lee para elegir.
+	&__canal
+		flex-shrink: 0
+		display: flex
+		align-items: center
+		color: var(--color-text-secondary, #6c757d)
+		font-size: .9rem
 
 	&__titulo
 		flex: 1

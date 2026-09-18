@@ -40,6 +40,7 @@
 	</div>
 </template>
 <script>
+import { env } from '@/runtime_config'
 export default {
 	props: {
 		model_name: String,
@@ -55,7 +56,7 @@ export default {
 			this.$store.dispatch(this.model_name+'/getModels')
 		},
 		print() {
-			let link = process.env.VUE_APP_API_URL+'/'+this.routeString(this.model_name)+'/pdf/'+this.$store.state[this.model_name].from_date+'/'+this.$store.state[this.model_name].until_date+'/'+this.$store.state[this.model_name].selected_model.id
+			let link = env('VUE_APP_API_URL')+'/'+this.routeString(this.model_name)+'/pdf/'+this.$store.state[this.model_name].from_date+'/'+this.$store.state[this.model_name].until_date+'/'+this.$store.state[this.model_name].selected_model.id
 			console.log(link)
 			window.open(link)
 		}

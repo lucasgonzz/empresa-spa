@@ -126,6 +126,20 @@ html.dark-mode
 	// #475569 sobre --bg-card da ~1,7:1, o sea que tampoco se podia dejar el literal. Los dos modos
 	// necesitan valores distintos y ninguno de los dos es negociable.
 	--texto-seccion-reportes: var(--color-text-secondary)
+	// Panel secundario adentro de un modal. Lo escriben los tres paneles de
+	// sale-print-buttons/ImpresoraConfigModal.vue e InstalarAgenteModal.vue como
+	// var(--bg-card-secondary, <literal claro>), y hasta hoy el token no existia en NINGUN modo:
+	// en oscuro entraba el fallback CLARO (#f1f3f5 / #fff8e6) con --color-text-primary (#e8eaed)
+	// encima, o sea texto casi blanco sobre gris casi blanco. Ese era el "no se distingue lo que
+	// dice" de los dos modales de impresion.
+	//
+	// Mismo truco que los tres tokens de arriba: se declara SOLO aca y NO en :root, a proposito.
+	// En claro cada componente se queda con su literal exacto (#f1f3f5 en dos paneles y #fff8e6
+	// en el paso de atencion del instructivo), y declararlo en :root pisaria ese #fff8e6 con un
+	// gris. En oscuro apunta a --bg-section porque el panel va un escalon POR DEBAJO del modal
+	// (--bg-card), que es la misma relacion que tiene #f1f3f5 bajo el blanco en claro -- el
+	// mismo motivo por el que .bg-light/.bg-white se mandan a --bg-section mas abajo.
+	--bg-card-secondary: var(--bg-section)
 
 	// Contraparte oscura de los estados de Cajas (grupo 371). Los fondos van en rgba sobre el
 	// acento en vez de un color plano: asi se apoyan sobre --bg-card sin pelearse con el.
@@ -248,9 +262,16 @@ html.dark-mode
 			opacity: 1
 
 	// Menus y flotantes.
+	//
+	// El color va aca y no solo en .dropdown-item: bootstrap declara .dropdown-menu { color: #212529 }
+	// y <b-dropdown-text> (.b-dropdown-text) no declara color propio, HEREDA. Sin esta linea los
+	// titulos de seccion de un menu ("Tickets", "Remitos A4", "Facturas A4" del menu Imprimir de
+	// una venta) seguian casi negros sobre el fondo oscuro. Los .dropdown-item no lo sufrian porque
+	// ya tienen color propio mas abajo.
 	.dropdown-menu
 		background-color: var(--bg-card)
 		border-color: var(--color-border)
+		color: var(--color-text-primary)
 
 	.dropdown-item
 		color: var(--color-text-primary)
@@ -264,11 +285,62 @@ html.dark-mode
 	.dropdown-header
 		color: var(--color-text-secondary)
 
+	// A diferencia de .b-dropdown-text, a esta bootstrap le declara color: #212529 DIRECTO, asi que
+	// la herencia de .dropdown-menu de arriba no le alcanza.
+	.dropdown-item-text
+		color: var(--color-text-primary)
+
 	.popover
 		background-color: var(--bg-card)
 		border-color: var(--color-border)
 		.popover-body
 			color: var(--color-text-primary)
+
+		// Y el encabezado, que bootstrap pinta con #f7f7f7 duro y el tema nunca tocó: en oscuro
+		// quedaba una barra casi blanca con el texto del tema encima --#e8eaed sobre #f7f7f7,
+		// ilegible-- en los seis popovers que llevan título. Va --bg-section y no --bg-card a
+		// propósito: en claro bootstrap deja el encabezado un escalón MÁS OSCURO que el cuerpo
+		// (#f7f7f7 contra #fff), y --bg-section (#272b31) guarda esa misma relación con --bg-card
+		// (#2e333a). La flecha sigue con el color del cuerpo, igual que en claro.
+		.popover-header
+			background-color: var(--bg-section)
+			color: var(--color-text-primary)
+			border-bottom-color: var(--color-border)
+
+		// La punta la dibuja bootstrap con dos pseudoelementos de color fijo: el ::after lleva el
+		// relleno (#fff) y el ::before el borde de atrás. Con solo el cuerpo tematizado quedaba un
+		// triangulito blanco colgando de una tarjeta gris oscura, y en TODOS los popovers del
+		// sistema. Los cuatro lados van porque popper elige el lado al acomodar y bootstrap-vue
+		// reescribe la clase cuando lo da vuelta.
+		//
+		// Un popover con fondo propio --el de la ficha de artículo del asistente es el caso-- tiene
+		// que declarar su flecha acá abajo, bajo html.dark-mode. Desde su propio bloque de tema
+		// claro no alcanza: `.popover.<su-clase>.bs-popover-top > .arrow::after` pesa (0,4,1) y
+		// esta regla, con el html adelante, le gana con (0,4,2).
+		&.bs-popover-top > .arrow::after
+			border-top-color: var(--bg-card)
+		&.bs-popover-bottom > .arrow::after
+			border-bottom-color: var(--bg-card)
+		&.bs-popover-left > .arrow::after
+			border-left-color: var(--bg-card)
+		&.bs-popover-right > .arrow::after
+			border-right-color: var(--bg-card)
+		&.bs-popover-top > .arrow::before
+			border-top-color: var(--color-border)
+		&.bs-popover-bottom > .arrow::before
+			border-bottom-color: var(--color-border)
+		&.bs-popover-left > .arrow::before
+			border-left-color: var(--color-border)
+		&.bs-popover-right > .arrow::before
+			border-right-color: var(--color-border)
+
+		// Empalme entre el encabezado y la flecha cuando el popover cae abajo del control.
+		// Bootstrap tapa ahí el borde inferior del encabezado con un parche de 1px de su propio
+		// color (_popover.scss:101-110, "remove the popover-header border just below the arrow"),
+		// así que si el encabezado se tematiza y el parche no, queda una rayita clara cruzando
+		// justo debajo de la punta.
+		&.bs-popover-bottom .popover-header::before
+			border-bottom-color: var(--bg-section)
 
 	.tooltip-inner
 		background-color: var(--bg-section)

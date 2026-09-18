@@ -45,6 +45,16 @@ export default {
 			not_show: true,
 		},
 		{
+			// Columna del listado (misión zipnova-envios, 14/9/2026): en qué está el envío por
+			// correo del pedido. Sale de `order.envio` (status_name de Zipnova, con ⚠ si quedó
+			// en error), "Sin generar" si el comprador eligió una opción y todavía no se generó,
+			// "Envío propio" para el reparto del negocio y "Retiro" para el retiro por local.
+			text: 'Envío',
+			key: 'envio_estado',
+			function: 'getOrderEnvioEstado',
+			only_show: true,
+		},
+		{
 			text: 'Deposito',
 			key: 'address_id',
 			type: 'select',
@@ -80,6 +90,19 @@ export default {
 			only_show: true,
 			not_show: true,
 			v_if: ['deliver', '=', '1'],
+		},
+		{
+			// Solo en el formulario: la forma de envío que eligió el comprador en la tienda
+			// (correo · servicio · precio · fecha estimada) o la zona de reparto del negocio.
+			// Se esconde en los pedidos con retiro por local con `v_if_function` y no con `v_if`:
+			// showProperty() compara `typeof v_if == 'array'`, que nunca es cierto, así que el
+			// `v_if` de "Direccion de envio" de arriba no filtra nada (muestra "Sin datos").
+			text: 'Envío elegido',
+			key: 'envio_resumen',
+			function: 'getOrderEnvioResumen',
+			only_show: true,
+			not_show: true,
+			v_if_function: 'mostrar_order_envio_resumen',
 		},
 		// {
 		// 	text: 'Zona de envio',

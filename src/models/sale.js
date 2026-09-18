@@ -92,6 +92,11 @@ export default {
 			// 	function: 'showClientCurrentAcount',
 			// },
 			filter_modal_position: 2,
+			// Habilita las propiedades del cliente (Nombre, Telefono, Descripcion...) como columnas
+			// del listado, en el modal "Propiedades para mostrar". Es opt-in por relacion y no una
+			// deteccion automatica de belongsTo: hay props _id cuyo modelo trae campos que nunca
+			// tienen que ser una columna (employee.visible_password, "Contraseña").
+			related_model_columns: true,
 		},
 		{
 			text: 'Empleado',
@@ -186,9 +191,30 @@ export default {
 			if_has_extencion: 'cajas',
 			v_if: ['save_current_acount', '==', 0],
 		},
+		/*
+			Las DOS caras de la extension forzar_total conviven en la ficha, y no es duplicado:
+
+			- `descuento` es la version vieja y guarda un PORCENTAJE. Ya no lo escribe nadie desde
+			  VENDER, pero las ventas hechas antes de esta mision lo tienen y se tienen que poder
+			  leer. Por eso no se saca ni se reinterpreta como monto: hacerlo mostraria "-12%" como
+			  si fueran 12 pesos en todo el historico.
+			- `forzar_total_monto` es la version nueva y guarda el MONTO con signo (negativo
+			  descuenta, positivo recarga).
+
+			Las dos se esconden solas cuando vienen vacias: showProperty() con check_if_is_empty
+			descarta la prop antes de llegar al gate de la extension.
+		*/
 		{
-			text: 'Descuento',
+			text: 'Descuento forzado (%)',
 			key: 'descuento',
+			not_show: true,
+			only_show: true,
+			if_has_extencion: 'forzar_total',
+		},
+		{
+			text: 'Total forzado',
+			key: 'forzar_total_monto',
+			is_price: true,
 			not_show: true,
 			only_show: true,
 			if_has_extencion: 'forzar_total',
@@ -416,4 +442,13 @@ export default {
 	create_model_name_spanish: 'Nueva',
 	color_display_function: true,
 	text_delete: 'la',
+	// Columnas por defecto de cada ambito de tabla (preference_type `table_<ambito>`): una misma
+	// tabla de ventas mirada desde otra pantalla, con su propia configuracion de columnas y sin
+	// pisar la del listado de Ventas (`table`). Las keys van en el orden en que arrancan visibles;
+	// el resto de las propiedades queda disponible en el modal pero destildado.
+	table_scopes: {
+		por_entregar: {
+			default_visible_keys: ['num', 'total', 'fecha_entrega', 'client_id', 'employee_id'],
+		},
+	},
 }

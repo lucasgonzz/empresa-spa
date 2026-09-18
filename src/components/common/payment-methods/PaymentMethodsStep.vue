@@ -162,6 +162,19 @@
                         @field_change="on_check_field_change(index, $event)"
                         :payment_method="payment_method"></check-info>
 
+                        <!--
+                            Los datos del certificado de una retencion sufrida. Detras de una prop
+                            que por defecto esta APAGADA a proposito: hoy el unico circuito que
+                            guarda el certificado es el cobro de cuenta corriente
+                            (CurrentAcountController::pago). Dibujarlos siempre los mostraria
+                            tambien en Vender, donde nadie los lee, y campos que no van a ningun
+                            lado son peor que campos que faltan.
+                        -->
+                        <retencion-info
+                        v-if="show_datos_retencion"
+                        @field_change="on_check_field_change(index, $event)"
+                        :payment_method="payment_method"></retencion-info>
+
                         <slot name="details" :payment_method="payment_method"></slot>
                     </div>
 
@@ -190,6 +203,7 @@ export default {
 
         CheckInfo: () => import('@/components/common/payment-methods/CheckInfo'),
         Cuotas: () => import('@/components/common/payment-methods/Cuotas'),
+        RetencionInfo: () => import('@/components/common/payment-methods/RetencionInfo'),
     },
     props: {
         payment_methods: {
@@ -222,6 +236,25 @@ export default {
             default: null,
         },
         address_id: Number,
+        /**
+         * Ofrece "Retencion" en el desplegable. La usa el resto del componente; el filtro de la
+         * lista vive en `payment-methods/Index.vue`.
+         */
+        show_retencion: {
+            type: Boolean,
+            default: false,
+        },
+        /**
+         * Dibuja los datos del certificado cuando el metodo elegido es una retencion.
+         *
+         * 🔴 Separada de `show_retencion` a proposito: en un pago a PROVEEDOR el metodo se ofrece
+         * pero el certificado no se pide, porque esa retencion es PRACTICADA y no sufrida (el
+         * agente sos vos). Ver el comentario largo en `payment-methods/Index.vue`.
+         */
+        show_datos_retencion: {
+            type: Boolean,
+            default: false,
+        },
     },
     computed: {
         payment_method_select_options() {
@@ -259,18 +292,43 @@ export default {
         },
     },
     mounted() {
-        this.$root.$on('bv::modal::shown', (bvEvent, modalId) => {
-            if (
-                modalId == 'payment-method-modal'
-                ||modalId == 'current-acounts-pago'
-            ) {
-                let payment_method = this.payment_methods[0]
-                let moneda_id = this.resolve_payment_method_moneda_id(payment_method)
-                this.set_caja_por_defecto(0, payment_method.current_acount_payment_method_id, moneda_id)
-            }
-        })
+        this.$root.$on('bv::modal::shown', this.on_modal_shown)
+    },
+    beforeDestroy() {
+        this.$root.$off('bv::modal::shown', this.on_modal_shown)
     },
     methods: {
+
+        /**
+         * Propone la caja por defecto de la primera fila cuando se abre el modal que contiene a
+         * este paso.
+         *
+         * 🔴 El listener va al bus global ($root) porque los dos modales que escucha los declaran
+         * OTROS componentes, asi que hay que desengancharlo a mano en beforeDestroy. $root vive toda
+         * la sesion: sin ese $off, y con un padre que remonta este componente con un :key nuevo en
+         * cada apertura del modal de pago (una vez por venta), quedaba un handler vivo por cada
+         * instancia muerta y la apertura N repetia el mismo trabajo N veces.
+         *
+         * Se pasa el metodo por referencia (this.on_modal_shown): Vue 2 bindea los metodos a la
+         * instancia una sola vez, asi que $on y $off reciben exactamente la misma funcion. Con una
+         * arrow inline no habria forma de desengancharla.
+         *
+         * @param {Object} bvEvent Evento de bootstrap-vue.
+         * @param {string} modalId Id del modal que se acaba de mostrar.
+         * @returns {void}
+         */
+        on_modal_shown(bvEvent, modalId) {
+            if (
+                modalId != 'payment-method-modal'
+                && modalId != 'current-acounts-pago'
+            ) {
+                return
+            }
+
+            let payment_method = this.payment_methods[0]
+            let moneda_id = this.resolve_payment_method_moneda_id(payment_method)
+            this.set_caja_por_defecto(0, payment_method.current_acount_payment_method_id, moneda_id)
+        },
 
         /**
          * Moneda efectiva del método de pago para filtrar cajas y validar compatibilidad.
@@ -318,8 +376,40 @@ export default {
                 return false
             }
 
+            /*
+             * 🔴 Una RETENCION no entra a ninguna caja, nunca. La plata no la tiene el comercio: el
+             * cliente la deposito a su nombre en ARCA. Lo que cancela la deuda es el monto de la
+             * fila, no un ingreso de caja. Si el select se dibujara y alguien eligiera una caja,
+             * CurrentAcountPagoHelper::attachPaymentMethods() crearia el movimiento y el arqueo del
+             * dia cerraria con plata de mas que no esta en ningun lado.
+             *
+             * Es el mismo criterio con el que el back excluye al cheque en
+             * deberia_haber_impactado_caja(), y vale en todos los circuitos, no solo en el cobro:
+             * por eso NO cuelga de `show_retencion`.
+             */
+            if (this.es_retencion(payment_method)) {
+                return false
+            }
+
             // El metodo 1 es cuenta corriente: no mueve caja.
             return method_id !== 1
+        },
+
+        /**
+         * Si el metodo de pago elegido en esta fila es del tipo `retencion`. Se lee del catalogo
+         * del store, igual que lo hacen CheckInfo y RetencionInfo.
+         *
+         * @param {Object} payment_method Fila de método de pago del formulario.
+         * @returns {boolean}
+         */
+        es_retencion(payment_method) {
+            let modelo = this.$store.state.current_acount_payment_method.models.find(p => p.id == payment_method.current_acount_payment_method_id)
+
+            if (typeof modelo == 'undefined' || !modelo.type) {
+                return false
+            }
+
+            return modelo.type.slug == 'retencion'
         },
 
         /**
@@ -448,6 +538,19 @@ export default {
          */
 
         set_caja_por_defecto(index, method_id, moneda_id) {
+
+            /*
+             * 🔴 A una RETENCION no se le propone caja: se le saca. El select ya esta escondido
+             * (ver show_caja_select), pero esconderlo no alcanza — este metodo corre solo al abrir
+             * el modal, al cambiar el metodo y al cambiar la sucursal, y si el comercio tiene una
+             * caja por defecto configurada para ese metodo, el caja_id quedaria cargado en el
+             * modelo sin que nadie lo vea y el back crearia el movimiento igual. Plata en la caja
+             * que no esta en la caja.
+             */
+            if (this.es_retencion({current_acount_payment_method_id: method_id})) {
+                this.$emit('update_caja_id', index, 0)
+                return
+            }
 
             let caja_por_defecto = this.get_caja_por_defecto(method_id, this.address_id, moneda_id)
 

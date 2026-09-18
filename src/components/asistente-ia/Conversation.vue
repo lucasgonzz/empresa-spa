@@ -10,7 +10,9 @@
 		</p>
 
 		<!-- Bienvenida de conversación en blanco: refleja lo que el asistente
-		puede consultar de verdad (las tools de lectura, D15). -->
+		puede consultar de verdad (las tools de lectura, D15) y, desde la misión
+		asistente-ia-acciones (15/9/2026), lo que puede proponer cargar con una
+		tarjeta que la persona confirma. -->
 		<div
 		v-else-if="!messages.length"
 		class="asistente-ia-conversacion__bienvenida">
@@ -27,6 +29,10 @@
 			<p>
 				Preguntame por el stock o el precio de un artículo, el saldo de un
 				cliente o qué se está vendiendo más.
+			</p>
+			<p>
+				También puedo cargar gastos, pagos y tareas de la agenda: te dejo una
+				tarjeta para que confirmes.
 			</p>
 		</div>
 
@@ -81,13 +87,21 @@ import MessageBubble from '@/components/asistente-ia/MessageBubble'
 import PensandoIndicator from '@/components/asistente-ia/PensandoIndicator'
 
 /**
- * Mapa origen de la conversación -> name de la ruta del submódulo (D24). Las
- * misiones 2-5 (compras, ofertas) agregan acá su fila.
+ * Mapa origen de la conversación -> name de la ruta del submódulo (D24).
+ *
+ * `sugerencia_stock` y `sugerencia_compra` salieron del mapa en la misión
+ * "modulo-ia-mostrador" (14/9/2026): sus vistas (/sugerencias-de-stock y
+ * /sugerencias-de-compra) se borraron con el módulo IA viejo, así que para esas
+ * conversaciones el botón directamente no se muestra (mostrar_boton_de_origen
+ * corta cuando el origen no está acá). Las conversaciones siguen existiendo y se
+ * leen igual; solo no tienen adónde volver. `sugerencia_oferta` sigue: Promociones
+ * existe. `mostrador_reporte` es el puente nuevo: de la conversación de un
+ * informe del mostrador al informe (referencia_id = mostrador_reportes.id, y la
+ * ruta /ia/:id? lo abre).
  */
 const RUTA_POR_ORIGEN = {
-	sugerencia_stock: 'sugerencias_stock',
-	sugerencia_compra: 'sugerencias_compra',
 	sugerencia_oferta: 'ofertas',
+	mostrador_reporte: 'ia',
 }
 
 /**
@@ -97,15 +111,26 @@ const RUTA_POR_ORIGEN = {
  * lleva. Toda clave nueva de RUTA_POR_ORIGEN necesita su par acá.
  */
 const ETIQUETA_POR_ORIGEN = {
-	sugerencia_stock: 'Ver la sugerencia',
-	sugerencia_compra: 'Ver la sugerencia de compra',
 	sugerencia_oferta: 'Ver las ofertas sugeridas',
+	mostrador_reporte: 'Ver el informe',
 }
 
 export default {
 	components: {
 		MessageBubble,
 		PensandoIndicator,
+	},
+	props: {
+		/**
+		 * true cuando la conversación ya se está mirando desde el lugar que la originó
+		 * (el sidebar del informe abierto del mostrador, misión "modulo-ia-mostrador",
+		 * 14/9/2026): ahí el puente "Ver el informe" no tiene sentido, se está parado
+		 * sobre el informe. Desde el panel flotante queda en false y el puente sale.
+		 */
+		sin_puente: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	data() {
 		return {
@@ -258,6 +283,9 @@ export default {
 		 * principio de la conversación está cargado.
 		 */
 		mostrar_boton_de_origen(message, index) {
+			if (this.sin_puente) {
+				return false
+			}
 			if (!this.conversation || this.conversation.origen == 'usuario') {
 				return false
 			}
@@ -295,6 +323,12 @@ export default {
 	flex: 1
 	min-height: 0
 	overflow-y: auto
+	// Reserva siempre el lugar de la barra de scroll (misión asistente-ia-acciones). Sin esto,
+	// cuando la conversación empieza a scrollear aparece la barra, se come su ancho y los
+	// renglones de las tarjetas de carga (AccionCard.vue, que se acomodan por el ancho del
+	// contenedor) pueden saltar de una a dos líneas en el sidebar de 380px o a ~360px. Con
+	// barras superpuestas (teléfonos, macOS) no reserva nada, que es lo correcto.
+	scrollbar-gutter: stable
 	padding: 16px 18px 6px 18px
 
 	// 🔴 900 y no 640 (decisión de Lucas, 19/8/2026). El tope viejo lo alcanzaba el
@@ -340,6 +374,11 @@ export default {
 			max-width: 380px
 			font-size: .9rem
 			margin: 0
+
+			// La segunda línea (lo que el asistente puede cargar, misión
+			// asistente-ia-acciones) va apenas separada de la primera: son dos ideas.
+			& + p
+				margin-top: 6px
 
 	&__bienvenida-avatar
 		width: 44px

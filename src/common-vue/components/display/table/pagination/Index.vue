@@ -91,7 +91,17 @@ export default {
 			if (filtrado) {
 				return this.total_results > 0
 			} 
-			
+
+			// Sin filtro activo, un store puede estar mostrando el listado del día PAGINADO por la
+			// API (hoy solo `sale`, ver `paginado_por_fecha` en src/store/sale/index.js): la barra
+			// se muestra igual que en modo filtrado, con los totales que dejó esa respuesta. Es
+			// genérico a propósito: para cualquier otro store la clave es undefined y se sigue al
+			// chequeo de `use_per_page` de siempre. En papelera no aplica: su store es otro
+			// (`state.papelera[model_name]`) y no declara el modo, aunque comparta `model_name`.
+			if (!this.papelera && this.$store.state[this.model_name].paginado_por_fecha) {
+				return this.total_results > 0
+			}
+
 			/*
 				Pregunto si es article porque article tiene use_per_page=true porque se descargan los articulos al iniciar para el modo offline
 				La idea es que use_per_page sea true solo en los modelos que se manejan por fechas
@@ -161,7 +171,10 @@ export default {
 			this.$store.commit(path, 1)
 			let that = this
 			this.$nextTick(function () {
-				that.$emit('filtrar')
+				// `origen` le dice a la tabla que esto es paginación (ver filtrar() en
+				// display/table/Index.vue): ordenar también emite `filtrar` sin `resetear_pagina`,
+				// y solo uno de los dos tiene que ir al endpoint del día en modo paginado por fecha.
+				that.$emit('filtrar', { origen: 'paginacion' })
 			})
 		},
 	},
@@ -173,7 +186,7 @@ export default {
 			this.syncPerPageInputDesdeStore()
 		},
 		current_page() {
-			this.$emit('filtrar', { resetear_pagina: false })
+			this.$emit('filtrar', { resetear_pagina: false, origen: 'paginacion' })
 			return
 		},
 		currentPage() {

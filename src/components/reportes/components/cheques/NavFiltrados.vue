@@ -27,6 +27,7 @@
 	</b-col>
 </template>
 <script>
+import { env } from '@/runtime_config'
 export default {
 	computed: {
 		total() {
@@ -56,7 +57,7 @@ export default {
 				return
 			}
 
-			let link = process.env.VUE_APP_API_URL + '/cheque/excel/export?cheque_ids=' + ids.join('-')
+			let link = env('VUE_APP_API_URL') + '/cheque/excel/export?cheque_ids=' + ids.join('-')
 			window.open(link)
 		},
 		limpiar_filtro() {

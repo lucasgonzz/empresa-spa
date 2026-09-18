@@ -1,7 +1,9 @@
 import actualizar_lista_de_articulos from '@/mixins/listado/actualizar_lista_de_articulos'
+import mostrador_acceso from '@/mixins/mostrador_acceso'
 export default {
 	mixins: [
 		actualizar_lista_de_articulos,
+		mostrador_acceso,
 	],
 	methods: {
 		update_articles_after_import() {
@@ -56,11 +58,12 @@ export default {
 			}
 		},
 		/**
-		 * Abre el detalle de la sugerencia de stock que la notificacion global anuncia
-		 * como lista (extension sugerencias_inteligentes). El id viaja en el
-		 * info_to_show del payload: se acepta tanto una clave stock_suggestion_id
-		 * explicita como un value numerico, y si no se encuentra ninguno se cae al
-		 * listado, que siempre es un destino valido.
+		 * Boton "Ver sugerencia" de la notificacion de sugerencia de stock lista
+		 * (extension sugerencias_inteligentes). El id viaja en el info_to_show del
+		 * payload: se acepta tanto una clave stock_suggestion_id explicita como un
+		 * value numerico. Hasta el 14/9/2026 abria el detalle propio de la sugerencia;
+		 * hoy lleva al mostrador (ver ir_al_mostrador). El nombre del metodo es el
+		 * contrato con el backend (function_name del payload) y no se cambia.
 		 */
 		ir_a_sugerencias_de_stock() {
 			let id = null
@@ -78,16 +81,43 @@ export default {
 				})
 			}
 
-			if (id) {
-				// Si ya se esta mirando ese detalle, no hay adonde ir (y el push
-				// duplicado tiraria NavigationDuplicated).
-				if (this.$route.name == 'sugerencias_stock' && this.$route.params.id == '' + id) {
-					return
-				}
-				this.$router.push({name: 'sugerencias_stock', params: {id: '' + id}})
-			} else if (this.$route.name != 'sugerencias_stock' || this.$route.params.id) {
-				this.$router.push({name: 'sugerencias_stock'})
+			/*
+				Desde la mision "modulo-ia-mostrador" (14/9/2026) la vista propia
+				/sugerencias-de-stock no existe mas: las sugerencias viven en la carpeta
+				Stock del mostrador (modulo IA), asi que el boton lleva ahi. El id de la
+				sugerencia se sigue leyendo (arriba) para no cambiar el contrato del
+				payload, pero ya no hay detalle propio al que llevarlo.
+			*/
+			this.ir_al_mostrador(id)
+		},
+		/**
+		 * Destino comun de las notificaciones de sugerencias (stock y compra) desde que
+		 * sus vistas propias se retiraron: el modulo IA. El guard evita el
+		 * NavigationDuplicated de apretar el boton estando ya en el mostrador.
+		 *
+		 * 🔴 Solo lleva a /ia a quien puede entrar (mixin mostrador_acceso: extension
+		 * asistente_ia + dueño o acceso maestro). Estas notificaciones las recibe
+		 * cualquiera con sugerencias_inteligentes / sugerencias_compras —un empleado,
+		 * o un dueño sin asistente_ia— y hasta el chequeo del 14/9/2026 el boton lo
+		 * mandaba igual a /ia, donde se comia el cartel de "solo para el dueño" o el
+		 * de "requiere la extension". Para esa persona no hay destino: las
+		 * sugerencias viejas no tienen mas pantalla propia, asi que se le explica
+		 * donde estan ahora en vez de llevarla a una puerta cerrada.
+		 *
+		 * @param {number|null} id id de la sugerencia anunciada; hoy no se usa para
+		 *   navegar (el mostrador no tiene detalle por sugerencia), queda en la firma
+		 *   para que los dos llamadores no pierdan el dato que ya leyeron.
+		 */
+		ir_al_mostrador(id) {
+			void id
+			if (!this.puede_entrar_al_mostrador) {
+				this.$toast.info('Las sugerencias ahora están en el mostrador del dueño (módulo IA).')
+				return
 			}
+			if (this.$route.name == 'ia') {
+				return
+			}
+			this.$router.push({name: 'ia'})
 		},
 		/**
 		 * Boton "Charlar con la IA" de la notificacion de sugerencia lista (D21/D22).
@@ -123,12 +153,11 @@ export default {
 			this.abrir_chat_ia(conversation_id)
 		},
 		/**
-		 * Abre el detalle de la sugerencia de compra que la notificacion global anuncia
-		 * como lista (extension sugerencias_compras). Mismo patron que
-		 * ir_a_sugerencias_de_stock(): el id viaja en el info_to_show del payload, se
-		 * acepta tanto la clave purchase_suggestion_id explicita como un value
-		 * numerico, y si no se encuentra ninguno se cae al listado, que siempre es
-		 * un destino valido.
+		 * Boton "Ver sugerencia" de la notificacion de sugerencia de compra lista
+		 * (extension sugerencias_compras). Mismo patron que ir_a_sugerencias_de_stock():
+		 * el id viaja en el info_to_show del payload (clave purchase_suggestion_id o
+		 * value numerico) y el destino es el mostrador. El nombre del metodo es el
+		 * contrato con el backend (function_name del payload) y no se cambia.
 		 */
 		ir_a_sugerencias_de_compra() {
 			let id = null
@@ -146,16 +175,10 @@ export default {
 				})
 			}
 
-			if (id) {
-				// Si ya se esta mirando ese detalle, no hay adonde ir (y el push
-				// duplicado tiraria NavigationDuplicated).
-				if (this.$route.name == 'sugerencias_compra' && this.$route.params.id == '' + id) {
-					return
-				}
-				this.$router.push({name: 'sugerencias_compra', params: {id: '' + id}})
-			} else if (this.$route.name != 'sugerencias_compra' || this.$route.params.id) {
-				this.$router.push({name: 'sugerencias_compra'})
-			}
+			// Mismo destino que las sugerencias de stock desde el 14/9/2026: la vista
+			// /sugerencias-de-compra tampoco existe mas, la reemplaza la carpeta Compras
+			// del mostrador.
+			this.ir_al_mostrador(id)
 		},
 		/**
 		 * Boton "Charlar con la IA" de la notificacion de sugerencia de compra lista

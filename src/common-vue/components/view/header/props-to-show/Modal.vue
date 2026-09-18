@@ -14,7 +14,7 @@
 
 	title="Propiedades para mostrar"
 
-	:id="'props-to-show-'+model_name">
+	:id="modal_id">
 
 
 
@@ -72,9 +72,13 @@ import {
 
 	clear_module_filters_after_column_change,
 
+	flatten_column_preference_rows_for_save,
+
 	module_already_has_column_preferences,
 
 	normalize_column_preference_rows,
+
+	props_to_show_modal_id,
 
 	resolve_column_preference_rows,
 
@@ -98,6 +102,26 @@ export default {
 
 		model_name: String,
 
+		/**
+
+		 * Ámbito de vista de la tabla (ej. 'por_entregar'). Con ámbito, la preferencia se guarda
+
+		 * como `table_<ambito>` y se aplica a `props_to_show_por_ambito[ambito]` del store, sin
+
+		 * tocar la configuración `table` del listado principal del mismo modelo. null = como
+
+		 * siempre.
+
+		 */
+
+		preference_scope: {
+
+			type: String,
+
+			default: null,
+
+		},
+
 	},
 
 	data() {
@@ -114,15 +138,57 @@ export default {
 
 	computed: {
 
+		/**
+
+		 * @returns {string} 'table' o 'table_<ambito>'.
+
+		 */
+
+		preference_type() {
+
+			return this.preference_scope ? 'table_' + this.preference_scope : 'table'
+
+		},
+
+		ambito() {
+
+			return this.preference_scope
+
+		},
+
+		/**
+
+		 * Un id por modelo Y por ámbito: el listado de Ventas y Por Entregar montan cada uno su
+
+		 * modal sobre `sale`, y con el mismo id el boton de uno abriria el del otro.
+
+		 *
+
+		 * @returns {string}
+
+		 */
+
+		modal_id() {
+
+			return props_to_show_modal_id(this.model_name, this.preference_scope)
+
+		},
+
 		usa_props_to_show() {
 
-			if (this.$store._mutations[this.model_name+'/set_props_to_show']) {
+			// Con ámbito hace falta la mutación de ámbito, que solo tienen los stores que salen de
+
+			// __base_store; los escritos a mano no la tienen y ahí el modal no se monta.
+
+			let mutacion = this.ambito ? 'set_props_to_show_por_ambito' : 'set_props_to_show'
+
+			if (this.$store._mutations[this.model_name + '/' + mutacion]) {
 
 				return true
 
 			}
 
-			console.warn(`La mutación set_props_to_show no está definida en el store.`);
+			console.warn(`La mutación ${mutacion} no está definida en el store.`);
 
 			return false
 
@@ -168,19 +234,49 @@ export default {
 
 		sync_config_rows_only() {
 
-			let rows = resolve_column_preference_rows(this.$store, this.model_name, 'table')
+			let rows = resolve_column_preference_rows(this.$store, this.model_name, this.preference_type)
 
 
 
-			this.config_rows = rows.map(item => ({
+			this.config_rows = rows.map(item => {
 
-				...item,
+				// Un bloque de relacion se copia con sus hijas, que son las que llevan ancho y
 
-				width: item.width || fallback_column_width_px(item.key),
+				// tilde; el bloque en si no tiene ancho.
 
-				label: item.label || item.key,
+				if (item.is_relation_group) {
 
-			}))
+					return {
+
+						...item,
+
+						label: item.label || item.relation,
+
+						children: (item.children || []).map(child => ({
+
+							...child,
+
+							width: child.width || fallback_column_width_px(child.key),
+
+							label: child.label || child.relation_prop_key,
+
+						})),
+
+					}
+
+				}
+
+				return {
+
+					...item,
+
+					width: item.width || fallback_column_width_px(item.key),
+
+					label: item.label || item.key,
+
+				}
+
+			})
 
 		},
 
@@ -200,7 +296,7 @@ export default {
 
 			/* Ya aplicadas al entrar al módulo o en bootstrap de recursos: no re-disparar props. */
 
-			if (module_already_has_column_preferences(this.$store, this.model_name)) {
+			if (module_already_has_column_preferences(this.$store, this.model_name, this.ambito)) {
 
 				this.sync_config_rows_only()
 
@@ -212,7 +308,7 @@ export default {
 
 			/* Intentar aplicar desde cache global descargado al inicio. */
 
-			if (bootstrap_module_column_preferences_if_needed(this.$store, this.model_name, 'table')) {
+			if (bootstrap_module_column_preferences_if_needed(this.$store, this.model_name, this.preference_type)) {
 
 				this.sync_config_rows_only()
 
@@ -273,9 +369,9 @@ export default {
 
 
 
-			let default_rows = resolve_column_preference_rows(this.$store, this.model_name, 'table')
+			let default_rows = resolve_column_preference_rows(this.$store, this.model_name, this.preference_type)
 
-			let cached_rows = table_column_preference_columns_from_store(this.$store, this.model_name, 'table')
+			let cached_rows = table_column_preference_columns_from_store(this.$store, this.model_name, this.preference_type)
 
 
 
@@ -283,7 +379,7 @@ export default {
 
 				let rows = normalize_column_preference_rows(cached_rows, default_rows)
 
-				apply_column_preference_rows_to_module_store(self.$store, self.model_name, rows)
+				apply_column_preference_rows_to_module_store(self.$store, self.model_name, rows, self.ambito)
 
 				self.sync_config_rows_only()
 
@@ -307,7 +403,7 @@ export default {
 
 
 
-				apply_column_preference_rows_to_module_store(self.$store, self.model_name, rows)
+				apply_column_preference_rows_to_module_store(self.$store, self.model_name, rows, self.ambito)
 
 				self.sync_config_rows_only()
 
@@ -391,23 +487,11 @@ export default {
 
 			let self = this
 
-			const rows_to_save = this.config_rows
+			// Filas planas: un bloque de relacion no se guarda como fila, se guarda por sus hijas,
 
-			.filter(row => typeof row.key != 'undefined' && row.key !== null && row.key !== '')
+			// todas con el order del bloque (ver flatten_column_preference_rows_for_save).
 
-			.map((row, index) => ({
-
-				key: row.key,
-
-				visible: !!row.visible,
-
-				order: index,
-
-				width: row.width ? Number(row.width) : null,
-
-				wrap_content: !!row.wrap_content,
-
-			}))
+			const rows_to_save = flatten_column_preference_rows_for_save(this.config_rows)
 
 
 
@@ -425,7 +509,7 @@ export default {
 
 			clear_module_filters_after_column_change(this.$store, this.model_name)
 
-			apply_column_preference_rows_to_module_store(this.$store, this.model_name, rows_to_save)
+			apply_column_preference_rows_to_module_store(this.$store, this.model_name, rows_to_save, this.ambito)
 
 			this.recargar_listado_despues_de_limpiar(estaba_filtrado, payload_de_busqueda)
 
@@ -435,7 +519,7 @@ export default {
 
 			.then(function () {
 
-				self.$bvModal.hide('props-to-show-' + self.model_name)
+				self.$bvModal.hide(self.modal_id)
 
 			})
 
@@ -655,7 +739,7 @@ export default {
 
 
 
-			return self.$api.get('table-column-preference/' + self.model_name + '/table')
+			return self.$api.get('table-column-preference/' + self.model_name + '/' + self.preference_type)
 
 			.then(function (res) {
 
@@ -709,7 +793,7 @@ export default {
 
 
 
-			return self.$api.put('table-column-preference/' + self.model_name + '/table', {
+			return self.$api.put('table-column-preference/' + self.model_name + '/' + self.preference_type, {
 
 				columns: rows,
 

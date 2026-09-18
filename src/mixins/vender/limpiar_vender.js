@@ -10,8 +10,15 @@ import set_employee_vender from '@/mixins/set_employee_vender'
 */
 import omitir_en_cuenta_corriente from '@/mixins/vender/omitir_en_cuenta_corriente'
 import default_articles from '@/mixins/vender/default_articles'
+import deteccion_combos from '@/mixins/vender/deteccion_combos'
+/*
+	El metodo de pago por defecto tambien se re-aplica ACA (ver el bloque de abajo). El mixin no
+	tiene hooks; su unico `data` (el contador de reintentos) ya lo declaran default_articles y
+	mixins/vender.js con el mismo nombre y el mismo valor.
+*/
+import default_payment_method from '@/mixins/vender/default_payment_method'
 export default {
-	mixins: [start_methods, vender_set_total, set_price_type, set_employee_vender, omitir_en_cuenta_corriente, default_articles],
+	mixins: [start_methods, vender_set_total, set_price_type, set_employee_vender, omitir_en_cuenta_corriente, default_articles, deteccion_combos, default_payment_method],
 	computed: {
 		discounts() {
 			return this.$store.state.discount.models
@@ -42,6 +49,19 @@ export default {
 			this.$store.commit('vender/setItems', [])
 
 			this.$store.commit('vender/set_descuento', null)
+
+			/*
+				🔴 El total forzado se limpia JUNTO al descuento, no aparte.
+
+				Por acá pasan los cuatro caminos que terminan una venta --el boton Limpiar,
+				guardar la venta, cancelar la edicion de una venta previa y guardar un
+				presupuesto-- y el setTotal() de mas abajo es el que arma el total del remito
+				vacio. Un monto que le sobreviva a la venta anterior se le aplica a la venta
+				SIGUIENTE, que es de otro cliente y de otro importe: el vendedor veria un total
+				12 pesos mas barato sin haber pedido nada.
+			*/
+			this.$store.commit('vender/set_forzar_total_monto', null)
+
 			this.$store.commit('vender/setDiscountsId', [])
 			this.$store.commit('vender/setSurchagesId', [])
 
@@ -54,6 +74,14 @@ export default {
 			this.$store.commit('vender/setObservationsOcultas', '')
 			this.$store.commit('vender/setGuardarComoPresupuesto', 0)
 			this.$store.commit('vender/setBudget', null)
+
+			/*
+				La lista con la que salio la venta que se esta cerrando. Se guarda ANTES de
+				limpiarla porque mas abajo, si setPriceType() no puede resolver otra, se vuelve a
+				poner esta: ver el bloque de despues de this.setPriceType().
+			*/
+			let lista_de_precios_anterior = this.$store.state.vender.price_type
+
 			this.$store.commit('vender/setPriceType', null)
 			this.$store.commit('vender/set_numero_orden_de_compra', '')
 			this.$store.commit('vender/set_omitir_en_cuenta_corriente', 0)
@@ -91,6 +119,36 @@ export default {
 
 			this.$store.commit('vender/set_moneda_id', 1)
 
+			/*
+				🔴 Tres valores que sobrevivian de un comprobante al siguiente porque nadie los
+				limpiaba aca (auditoria del modulo, 17/9/2026):
+
+				- valor_dolar: Moneda.vue lo inicializa con owner.dollar SOLO al montarse y SOLO si
+				  es null, y abrir una venta para editarla lo pisa con la cotizacion guardada en
+				  ESA venta. Despues de editar una venta en dolares a 900, la siguiente cotizaba a
+				  900 aunque el dueño tuviera 1.400; y si la editada lo tenia en null, la siguiente
+				  cotizaba con null (un articulo con cost_in_dollars salia en $0). El POST lo manda,
+				  el back lo guarda pelado y la factura en USD lo usa. Mismo criterio que
+				  Moneda.vue::iniciar_dolar(): la cotizacion del dueño, o null si no tiene.
+				- address_id: se restaura como al loguearse (user.address_id o la cookie:
+				  start_methods::init_vender_address_id) en vez de quedarse con la sucursal del
+				  comprobante editado. La caja por defecto sale de la COOKIE (cajas.js,
+				  set_caja_por_defecto), asi que sucursal y cookie tienen que volver a coincidir:
+				  con la sucursal de otra venta en el store y la cookie en la original, el stock se
+				  descontaba de un deposito y la caja era la del otro. Primero 0, para que una
+				  cuenta sin sucursal configurada ni cookie no arrastre la anterior.
+				- send_mail: tildado en la venta anterior (o restaurado por la edicion), quedaba
+				  tildado para la siguiente y el mail al cliente salia sin que nadie lo pidiera.
+			*/
+			this.$store.commit('vender/set_valor_dolar', this.owner && this.owner.dollar ? Number(this.owner.dollar) : null)
+
+			this.$store.commit('vender/setAddressId', 0)
+			if (this.user) {
+				this.init_vender_address_id()
+			}
+
+			this.$store.commit('vender/set_send_mail', 0)
+
 			this.$store.commit('vender/set_sale_status_id', 0)
 
 			// Al limpiar vender, discount_stock vuelve al valor por defecto (true)
@@ -101,9 +159,23 @@ export default {
 			this.$store.commit('vender/clearPendingAttachments')
 			this.$store.commit('vender/setSaleAttachments', [])
 
+			/*
+				Remito nuevo, deteccion de combos en cero: se descarta la espera pendiente y se
+				olvidan los combos que el vendedor rechazo en la venta anterior.
+			*/
+			this.limpiar_deteccion_de_combos()
+
 			// this.$store.commit('vender/set_caja_id', 0)
 			
 			// this.$store.commit('vender/set_afip_tipo_comprobante_id', 0)
+
+			/*
+				AFIP (punto de venta, tipo de comprobante, forma de pago, permiso existente e
+				incoterms) NO se limpia aca sino en limpiar_afip() (guardar_venta/facturar.js), que
+				corre despues de guardar una venta y al cancelar la edicion de una venta previa.
+				Los cinco van juntos porque el select de incoterms solo existe con el tipo en 8:
+				limpiar uno solo de ellos desde aca dejaria la pantalla y el store desparejos.
+			*/
 
 			this.setTotal()
 
@@ -118,6 +190,30 @@ export default {
 			this.setEmployeeVender()
 
 			this.setPriceType()
+
+			/*
+				🔴 Si la cuenta vende con listas y setPriceType() no pudo resolver ninguna, la venta
+				nueva se queda con la lista de la venta anterior, no con null.
+
+				setPriceType() no commitea nada cuando el catalogo de listas esta vacio, y el
+				commit de null de mas arriba ya corrio: hasta esta mision, ese par dejaba la venta
+				siguiente SIN lista, con el selector oculto (se dibujaba solo si habia una lista) y
+				cada articulo preciado con su precio base. En Trama el precio base es costo + IVA
+				--todo el margen vive en las listas-- y asi salieron 24 ventas en 60 dias, siete de
+				ellas seguidas el 10/9/2026 en la misma sesion de un empleado: el catalogo no habia
+				llegado al arrancar y la primera venta que se limpio arrastro el null a todas las
+				demas. La lista anterior es la que ese mismo vendedor acababa de usar, asi que es
+				lo mas cercano a lo que espera; y si tampoco hay anterior, el chequeo del guardado
+				(chequeos/price_type.js) frena la venta con el aviso.
+			*/
+			if (
+				this.requiere_lista_de_precios()
+				&& !this.$store.state.vender.price_type
+				&& lista_de_precios_anterior
+				&& lista_de_precios_anterior.id
+			) {
+				this.$store.commit('vender/setPriceType', lista_de_precios_anterior)
+			}
 
 			/*
 				Los defaults se aplican ACA y no solo en el created() de la vista.
@@ -142,6 +238,17 @@ export default {
 			*/
 			this.set_omitir_en_cuenta_corriente()
 			this.set_default_articles()
+
+			/*
+				🔴 El metodo de pago por defecto se re-aplica aca, y no solo en resetear_vender y
+				cancelPreviusSale (que lo siguen haciendo; es idempotente). Los otros dos caminos
+				que terminan un comprobante --guardar un presupuesto y el boton Limpiar-- solo
+				llaman a limpiar_vender, y como abrir un presupuesto para editarlo deja el metodo
+				en 0 (un presupuesto no lleva metodo), la venta siguiente arrancaba en "Seleccione
+				metodo de pago". Con check_payment_methods prendido eso es un freno visible; antes
+				era una venta cobrada sin metodo ni movimiento de caja.
+			*/
+			this.setDefaultPaymentMethod(true)
 
 			/*
 				Va ultima a proposito: setPriceType() y el resto de los commits de arriba

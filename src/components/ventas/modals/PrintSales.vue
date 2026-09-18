@@ -43,6 +43,7 @@
 </b-modal>
 </template>
 <script>
+import { env } from '@/runtime_config'
 export default {
     name: 'PrintSales',
     data() {
@@ -64,7 +65,7 @@ export default {
             this.selected_sales.forEach(sale => {
                 sales_id_.push(sale.id)
             })
-            let link = process.env.VUE_APP_API_URL+'/sales/pdf/'+sales_id_.join('-')+'/'+this.for_commerce
+            let link = env('VUE_APP_API_URL')+'/sales/pdf/'+sales_id_.join('-')+'/'+this.for_commerce
             window.open(link)
             this.$bvModal.hide('print-sales')
             this.updateSaleImpressions()

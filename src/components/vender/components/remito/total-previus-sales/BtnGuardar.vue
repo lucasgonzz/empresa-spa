@@ -48,13 +48,18 @@ import previus_sales from '@/mixins/vender/previus_sale/index'
 import guardar_venta from '@/mixins/vender/guardar_venta/index'
 import vender_presupuestos from '@/mixins/vender_presupuestos'
 import articulo_pendiente_de_agregar from '@/mixins/vender/articulo_pendiente_de_agregar'
+/*
+	Explicito aunque guardar_venta ya lo trae por chequeos/index.js: check() lo llama para los
+	dos caminos que NO pasan por checkear_vender(), y conviene que la dependencia se lea aca.
+*/
+import check_price_type from '@/mixins/vender/guardar_venta/chequeos/price_type'
 export default {
 	name: 'ButtonClients',
 	components: {
 		VueltoEfectivo: () => import('@/components/vender/components/remito/VueltoEfectivo'),
 		BtnLoader,
 	},
-	mixins: [previus_sales, guardar_venta, vender_presupuestos, articulo_pendiente_de_agregar],
+	mixins: [previus_sales, guardar_venta, vender_presupuestos, articulo_pendiente_de_agregar, check_price_type],
 	props: {
 		/**
 		 * Cuando es true, suprime el componente VueltoEfectivo.
@@ -102,6 +107,37 @@ export default {
 					return false
 				}
 			}
+
+			/*
+				🔴 La lista de precios se chequea ACA para los dos caminos que no pasan por
+				checkear_vender(): el presupuesto (guardar_presupuesto) y la actualizacion de una
+				venta guardada (updateSale). La venta nueva lo tiene adentro de checkear_vender().
+				Hasta esta mision un presupuesto salia sin lista en una cuenta con listas, y al
+				confirmarlo la venta nacia con las lineas a precio base.
+			*/
+			if (
+				(this.guardar_como_presupuesto || this.editando_venta_previa)
+				&& !this.check_price_type()
+			) {
+				return false
+			}
+
+			/*
+				🔴 La sucursal tambien se chequea para el presupuesto, que no pasa por
+				checkear_vender(). Hasta esta tanda un presupuesto salia sin sucursal en una
+				cuenta que tiene sucursales, y al confirmarlo BudgetHelper::saveSale() le
+				arrastraba ese address_id vacio a la venta (medido: presupuesto con address_id
+				0): la venta nacia sin sucursal y el stock no se descontaba del deposito que
+				correspondia. Es el mismo check_sucursal() de la venta (chequeos/sucursal.js),
+				con el aviso nombrando al presupuesto.
+
+				check_sale_type() y check_afip() NO se corren aca a proposito: un presupuesto
+				no se factura ni lleva tipo de venta.
+			*/
+			if (this.guardar_como_presupuesto && !this.check_sucursal('del presupuesto')) {
+				return false
+			}
+
 			if (typeof this.previus_sale.id != 'undefined' && this.previus_sale.to_check && !this.checked) {
 				this.$toast.error('Indique la venta como checkeada')
 				return false

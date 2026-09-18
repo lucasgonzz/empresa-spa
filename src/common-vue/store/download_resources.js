@@ -1,6 +1,7 @@
 import axios from 'axios'
+import { env } from '@/runtime_config'
 axios.defaults.withCredentials = true
-axios.defaults.baseURL = process.env.VUE_APP_API_URL
+axios.defaults.baseURL = env('VUE_APP_API_URL')
 import call_methods from '@/mixins/call_methods'
 export default {
 	namespaced: true,

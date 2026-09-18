@@ -7,25 +7,10 @@
 			<b-button
 			size="sm"
 			variant="success"
-			class="whatsapp-chats-list__btn whatsapp-chats-list__new-btn"
+			class="whatsapp-chats-list__btn whatsapp-chats-list__btn--icono whatsapp-chats-list__new-btn"
+			title="Nuevo chat"
 			v-b-modal="'whatsapp-new-chat'">
 				<i class="bi bi-plus-lg"></i>
-				Nuevo chat
-			</b-button>
-			<!-- Simular un mensaje entrante del cliente: mismo criterio is_owner que la
-			configuración, porque el endpoint `whatsapp-bot/simulate-inbound` también es solo
-			del dueño (devuelve 403 al resto). Gateado TAMBIÉN por chat_simulation_enabled: es
-			el mismo toggle que gatea el botón equivalente dentro de la conversación
-			(conversation/Composer.vue), para que sea honesto en los dos lugares. -->
-			<b-button
-			v-if="is_owner && config && config.chat_simulation_enabled"
-			size="sm"
-			variant="outline-warning"
-			class="whatsapp-chats-list__btn whatsapp-chats-list__btn--icono"
-			data-tour="whatsapp.boton_simular"
-			title="Simular un mensaje del cliente (no le llega nada a nadie)"
-			v-b-modal="'whatsapp-simulate-inbound'">
-				<i class="bi bi-cone-striped"></i>
 			</b-button>
 
 			<!-- Configuración del agente y plantillas: solo el dueño la ve/edita (patrón is_owner del proyecto) -->
@@ -62,7 +47,6 @@
 		</div>
 
 		<new-chat-modal></new-chat-modal>
-		<simulate-inbound-modal v-if="is_owner"></simulate-inbound-modal>
 		<whatsapp-config v-if="is_owner"></whatsapp-config>
 	</div>
 </template>
@@ -70,14 +54,12 @@
 import ChatSearch from '@/components/whatsapp/chats-list/ChatSearch'
 import ChatRow from '@/components/whatsapp/chats-list/ChatRow'
 import NewChatModal from '@/components/whatsapp/chats-list/NewChatModal'
-import SimulateInboundModal from '@/components/whatsapp/chats-list/SimulateInboundModal'
 import WhatsappConfig from '@/components/whatsapp/config/Index'
 export default {
 	components: {
 		ChatSearch,
 		ChatRow,
 		NewChatModal,
-		SimulateInboundModal,
 		WhatsappConfig,
 	},
 	computed: {
@@ -89,16 +71,6 @@ export default {
 		},
 		selected_chat_id() {
 			return this.$store.state.whatsapp_chat.selected_chat_id
-		},
-		/**
-		 * Config del agente (mismo patrón que usa `whatsapp/config/AgentConfig.vue` y
-		 * `conversation/Composer.vue`): de acá se lee `chat_simulation_enabled` para gatear el
-		 * botón de simular del header, igual que su equivalente dentro de la conversación.
-		 *
-		 * @returns {Object|null}
-		 */
-		config() {
-			return this.$store.state.whatsapp_bot_config.models[0] || null
 		},
 	},
 	methods: {
@@ -130,23 +102,22 @@ export default {
 		align-items: center
 		padding: 10px 12px
 		border-bottom: 1px solid var(--wa-borde)
-		// Con el botón de simular ya son cuatro cosas en la fila. En la franja de tablet
-		// (992-1024px) la columna de chats mide unos 330px y sin permitir el salto de línea el
-		// buscador quedaba aplastado a nada.
+		// En la franja de tablet (992-1024px) la columna de chats mide unos 330px: sin permitir
+		// el salto de línea el buscador quedaba aplastado a nada.
 		flex-wrap: wrap
 		// El espaciado de la fila lo da el gap y NO el margin-right de cada botón: con los dos,
 		// el hueco entre un par de controles y el siguiente quedaba desparejo. Es la misma
 		// correccion que ya hizo _toolbar_botones.sass en la barra de encabezado.
 		gap: var(--toolbar-btn-gap)
 		row-gap: 6px
-	// Geometría compartida de los tres botones del header, copiada de .btn-modulo
+	// Geometría compartida de los botones del header, copiada de .btn-modulo
 	// (_controles_modulo.sass): alto, radio, tipografía y sombra de los mismos tokens que usa la
 	// barra de encabezado del resto del sistema, para que la bandeja deje de tener su propio
 	// dialecto visual.
 	//
-	// 🔴 A propósito NO se tocan los `variant`: el color acá es información. "Nuevo chat" es la
-	// acción principal (verde), simular es una herramienta del dueño (ámbar) y configuración es
-	// neutra. El `.btn` del selector le gana a `.btn-sm` por especificidad (0,2,0) contra (0,1,0).
+	// 🔴 A propósito NO se toca el `variant` de "Nuevo chat": el color acá es información, y
+	// verde es la acción principal de la bandeja. El `.btn` del selector le gana a `.btn-sm` por
+	// especificidad (0,2,0) contra (0,1,0).
 	&__btn.btn
 		flex-shrink: 0
 		height: var(--toolbar-control-h)

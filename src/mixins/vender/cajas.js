@@ -20,26 +20,27 @@ export default {
 			},
 		}
 	},
+	/*
+		🔴 Aca habia tres watchers (payment_methods, addresses y cajas) sobre tres computeds que
+		este mixin declaraba bajo la clave `comptued` -- un typo, asi que Vue nunca los registro
+		como computeds (tanda 2 de la mision vender-lista-obligatoria, 18/9/2026).
+
+		- `payment_methods` y `addresses` no existen en NINGUN componente que mezcle este mixin
+		  (ni en sus mixins, ni en los globales app/generals): esos dos watchers nunca corrieron y
+		  se borraron junto con el bloque `comptued`. No se renombro el bloque a `computed` a
+		  proposito: eso los habria prendido por primera vez, que es un cambio de comportamiento
+		  y no una correccion.
+		- `cajas` SI existe en todos lados, pero no por este mixin: es un computed GLOBAL
+		  (src/mixins/model_functions.js, que common-vue/mixins/app.js mete en Vue.mixin), y
+		  Caja.vue y current-acounts/pago/PaymentMethods.vue ademas declaran el suyo. Por eso
+		  este watcher esta VIVO y se queda: es el que aplica la caja por defecto cuando el
+		  catalogo de cajas llega DESPUES de montar Vender (lo normal al entrar a /vender recien
+		  logueado), y cuando se abre o cierra una caja. Sacarlo dejaba la venta nueva sin caja
+		  por defecto hasta que el operador tocara el metodo de pago o la sucursal.
+	*/
 	watch: {
-		payment_methods() {
-			this.set_caja_por_defecto()
-		},
-		addresses() {
-			this.set_caja_por_defecto()
-		},
 		cajas() {
 			this.set_caja_por_defecto()
-		},
-	},
-	comptued: {
-		payment_methods() {
-			return this.$store.state.current_acount_payment_method.models
-		},
-		addresses() {
-			return this.$store.state.address.models
-		},
-		cajas() {
-			return this.$store.state.caja.models
 		},
 	},
 	methods: {
@@ -57,12 +58,6 @@ export default {
 				mixins/vender/computed, asi que `this.editando_venta_previa` seria undefined y el
 				guard no cortaria nunca — que es exactamente el modo de falla silencioso que esta
 				mision viene a cerrar.
-
-				Ojo con los watchers de arriba: hoy no disparan nunca, porque la clave del objeto
-				que define esos computed esta escrita `comptued` (linea 34) y las tres propiedades
-				que observan no existen. Es un typo previo a esta mision y no se toca aca:
-				arreglarlo activaria tres watchers que llevan tiempo muertos, que es un cambio de
-				comportamiento y no una correccion de una linea.
 			*/
 			if (!force_reset && (this.$store.getters['vender/previus_sales/editando_venta_previa'] || !!this.$store.state.vender.budget)) {
 				return
@@ -75,10 +70,19 @@ export default {
 			let address_id = this.$cookies.get('address_id')
 
 			let payment_method_id = this.$store.state.vender.current_acount_payment_method_id
-			
+
 			let caja_id = this.get_caja_por_defecto(payment_method_id, address_id)
-			
-			if (caja_id && this.cajas.length) {
+
+			/*
+				El catalogo se lee del store y no de `this.cajas`: este mixin nunca declaro ese
+				computed (ver el bloque de arriba del watch) y hasta ahora funcionaba solo porque
+				el computed global de src/mixins/model_functions.js se llama igual. Con
+				Array.isArray no depende de que ese global exista ni de que el store ya haya
+				inicializado la coleccion.
+			*/
+			let cajas = this.$store.state.caja.models
+
+			if (caja_id && Array.isArray(cajas) && cajas.length) {
 				this.$store.commit('vender/set_caja_id', caja_id)
 			}
 		},

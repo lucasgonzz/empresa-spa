@@ -15,6 +15,51 @@ export default {
     },
 	methods: {
 
+        /**
+         * Bruto de una alicuota de IVA de una factura de compra: `neto + iva_importe`.
+         *
+         * Mision `compras-factura-manual-alicuotas` (17/9/2026). Lo declara la prop `bruto` de
+         * src/models/provider_order_afip_ticket_iva.js con `function`, y lo consume
+         * `propertyText()` (common-vue/mixins/generals.js:955), que despues le aplica el formato
+         * de precio porque la prop es `is_price`.
+         *
+         * 🔴 Existe porque `bruto` NO es una columna de la base: el modelo que devuelve la API no
+         * trae la clave, asi que sin esto la columna de la tabla saldria vacia en toda fila ya
+         * guardada. Es display puro -- no escribe nada en el modelo, no viaja en ningun request y
+         * no hay un tercer numero que se pueda desincronizar de los otros dos.
+         *
+         * Vacio (no cero) cuando la fila todavia no tiene ninguno de los dos importes: un "0,00"
+         * en una fila recien creada se lee como un dato cargado, y no lo es.
+         *
+         * @param {Object} model la alicuota (provider_order_afip_ticket_iva).
+         * @param {Object} prop la propiedad que declara esta funcion.
+         * @returns {Number|String}
+         */
+        bruto_de_alicuota_de_factura(model, prop) {
+            if (!model) {
+                return ''
+            }
+
+            let neto = Number(model.neto)
+            let iva_importe = Number(model.iva_importe)
+
+            if (isNaN(neto)) {
+                neto = 0
+            }
+            if (isNaN(iva_importe)) {
+                iva_importe = 0
+            }
+
+            let sin_neto = model.neto === null || model.neto === '' || typeof model.neto == 'undefined'
+            let sin_iva = model.iva_importe === null || model.iva_importe === '' || typeof model.iva_importe == 'undefined'
+
+            if (sin_neto && sin_iva) {
+                return ''
+            }
+
+            return neto + iva_importe
+        },
+
         show_budget_sale_status_id(prop, model) {
             return this.$store.state.sale_status.models.length
         },
@@ -493,10 +538,107 @@ export default {
          * @returns {string}
          */
         getOrderDeliverLabel(order) {
+            if (this.order_envio_opcion(order)) {
+                return 'Envío a domicilio (Zipnova)'
+            }
             if (Number(order.deliver) === 1) {
                 return 'Envio a domicilio'
             }
             return 'Retiro por local'
+        },
+        /**
+         * Opción de envío por correo que eligió el comprador (`orders.envio_opcion`, §2.4 del plan
+         * zipnova-envios), o null si el pedido no la tiene.
+         *
+         * Tolera que venga como string JSON (un backend sin el cast `array`) para que el listado
+         * no se rompa en un cliente con la SPA nueva y la API vieja.
+         *
+         * @param {object} order
+         * @returns {object|null}
+         */
+        order_envio_opcion(order) {
+            if (!order || !order.envio_opcion) {
+                return null
+            }
+            if (typeof order.envio_opcion == 'string') {
+                try {
+                    return JSON.parse(order.envio_opcion)
+                } catch (e) {
+                    return null
+                }
+            }
+            return order.envio_opcion
+        },
+        /**
+         * Columna "Envío" del listado de pedidos: en qué está el envío por correo.
+         *
+         * @param {object} order
+         * @returns {string}
+         */
+        getOrderEnvioEstado(order) {
+            if (order.envio) {
+                let texto = order.envio.status_name
+                    ? order.envio.status_name
+                    : (order.envio.status ? order.envio.status : 'Generado')
+                if (order.envio.status == 'error') {
+                    texto += ' ⚠'
+                }
+                return texto
+            }
+            if (this.order_envio_opcion(order)) {
+                return 'Sin generar'
+            }
+            if (Number(order.deliver) === 1) {
+                return 'Envío propio'
+            }
+            return 'Retiro'
+        },
+        /**
+         * "Envío elegido" del formulario del pedido: "{correo} · {servicio} · $ {precio} · llega
+         * {dd/mm}" para una opción de Zipnova, o el nombre de la zona de reparto del negocio.
+         *
+         * @param {object} order
+         * @returns {string}
+         */
+        getOrderEnvioResumen(order) {
+            let opcion = this.order_envio_opcion(order)
+            if (opcion) {
+                let partes = []
+                if (opcion.carrier_name) {
+                    partes.push(opcion.carrier_name)
+                }
+                if (opcion.service_name) {
+                    partes.push(opcion.service_name)
+                }
+                if (opcion.envio_gratis || Number(opcion.precio) === 0) {
+                    partes.push('Gratis')
+                } else if (opcion.precio) {
+                    partes.push(this.price(opcion.precio))
+                }
+                if (opcion.estimated_delivery) {
+                    partes.push('llega ' + moment(opcion.estimated_delivery).format('DD/MM'))
+                }
+                return partes.join(' · ')
+            }
+            if (order.delivery_zone && order.delivery_zone.name) {
+                let texto = order.delivery_zone.name
+                if (order.delivery_zone.price) {
+                    texto += ' · ' + this.price(order.delivery_zone.price)
+                }
+                return texto
+            }
+            return ''
+        },
+        /**
+         * `v_if_function` de "Envío elegido": solo tiene sentido en un pedido con envío a
+         * domicilio.
+         *
+         * @param {object} prop
+         * @param {object} model
+         * @returns {boolean}
+         */
+        mostrar_order_envio_resumen(prop, model) {
+            return !!model && Number(model.deliver) === 1
         },
         currentAcountStatus(current_acount) {
             if (current_acount.status == 'sin_pagar') {
