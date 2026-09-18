@@ -1,12 +1,7 @@
 import vender_mixin from '@/mixins/vender'
 import limpiar_vender from '@/mixins/vender/limpiar_vender'
-/*
-	Para volver a poner el metodo de pago por defecto despues de guardar el presupuesto, como
-	hacen resetear_vender y cancelPreviusSale. limpiar_vender no lo toca.
-*/
-import default_payment_method from '@/mixins/vender/default_payment_method'
 export default {
-	mixins: [vender_mixin, limpiar_vender, default_payment_method],
+	mixins: [vender_mixin, limpiar_vender],
 	computed: {
 		client() {
 			return this.$store.state.vender.client
@@ -156,17 +151,12 @@ export default {
 				this.$store.commit('auth/setLoading', false)
 				this.$toast.success('Presupuesto actualizado')
 				this.$store.commit('budget/add', res.data.model)
-				this.limpiar_vender()
-
 				/*
-					🔴 Como resetear_vender y cancelPreviusSale, y por lo mismo: limpiar_vender no
-					toca el metodo de pago, y abrir un presupuesto para editarlo lo deja en 0
-					(set_datos_para_actualizar_en_vender: un presupuesto no lleva metodo). Sin esto la
-					venta SIGUIENTE arrancaba con el select en "Seleccione metodo de pago" y --hasta
-					que check_payment_methods volvio a prenderse-- se guardaba asi, sin metodo ni
-					movimiento de caja.
+					limpiar_vender() vuelve a poner el metodo de pago por defecto (lo hace adentro
+					desde esta mision): abrir un presupuesto para editarlo lo deja en 0, y sin eso
+					la venta siguiente arrancaba en "Seleccione metodo de pago".
 				*/
-				this.setDefaultPaymentMethod(true)
+				this.limpiar_vender()
 			})
 			.catch(err => {
 				this.$store.commit('auth/setMessage', '')
@@ -238,6 +228,14 @@ export default {
 				'discount_stock'			: this.discount_stock,
 				'sale_status_id'			: this.sale_status_id,
 				'iva_aplicado'				: this.iva_aplicado,
+			}, {
+				/*
+					El aviso global del interceptor se apaga: el catch de abajo ya muestra el
+					mensaje del back (el 422 de la lista de precios, entre otros), y con el handler
+					global el mismo texto salia repetido. actualizar() no lo apaga a proposito:
+					confia solo en el global.
+				*/
+				skip_global_error_event: true,
 			})
 			.then(res => {
 				this.$store.commit('auth/setMessage', '')
@@ -245,9 +243,6 @@ export default {
 				this.$toast.success('Presupuesto guardado')
 				this.$store.commit('budget/add', res.data.model)
 				this.limpiar_vender()
-
-				// Mismo motivo que en actualizar(): la venta siguiente no puede quedar sin metodo.
-				this.setDefaultPaymentMethod(true)
 			})
 			.catch(err => {
 				this.$store.commit('auth/setMessage', '')
