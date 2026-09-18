@@ -291,6 +291,28 @@ export default {
 				fecha_entrega: this.$store.state.vender.fecha_entrega,
 				observations_ocultas: this.$store.state.vender.observations_ocultas,
 				dias_alerta_venta_no_cobrada_personalizado: this.$store.state.vender.dias_alerta_venta_no_cobrada_personalizado,
+
+				/*
+					🔴 Estas nueve claves tienen que ser LAS MISMAS que manda el POST online
+					(store/vender/vender.js, action vender). La venta offline se guarda con lo que
+					quedo en IndexedDB y nada mas, y SaleController::store las lee igual venga de
+					donde venga. Faltaban, y el back las defaulteaba: discount_stock e iva_aplicado
+					volvian a 1 aunque el vendedor los hubiera apagado; aplicar_recargos_directo_a_
+					items quedaba null y getTotalSale volvia a sumar los recargos al recalcular;
+					puntos_canjeados no viajaba y PuntosCanjeHelper::aplicar salia sin descontarlos,
+					con el total YA neteado por el front --el cliente cobraba el descuento y
+					conservaba los puntos--; sale_status_id, price_description, send_mail y el log
+					se perdian. Si se agrega una clave al POST online, va tambien aca.
+				*/
+				aplicar_recargos_directo_a_items: this.$store.state.vender.aplicar_recargos_directo_a_items,
+				puntos_canjeados: this.$store.state.vender.puntos_canjeados,
+				descuento_puntos: this.$store.state.vender.descuento_puntos,
+				sale_status_id: this.$store.state.vender.sale_status_id,
+				discount_stock: this.$store.state.vender.discount_stock,
+				iva_aplicado: this.$store.state.vender.iva_aplicado,
+				price_description: JSON.stringify(this.$store.state.vender.total_description),
+				send_mail: this.$store.state.vender.send_mail,
+				log: this.$store.state.vender.sale_log,
 			}
 
 			await this.save_sale_offline(sale_data)
