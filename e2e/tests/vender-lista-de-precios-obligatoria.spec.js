@@ -14,7 +14,17 @@
 //  (b) Guardada una venta, la venta SIGUIENTE sigue con esa lista: limpiar el remito no la pierde.
 //  (c) Con el catalogo de listas vacio (GET /api/price-type interceptado a `{models: []}`), el
 //      selector se ve VACIO, guardar frena con el aviso y NO sale ningun POST a /api/sale.
-//  (d) Editar una venta que quedo sin lista muestra la lista por defecto, deshabilitada.
+//  (d) Editar una venta que quedo sin lista muestra la lista por defecto, con el selector
+//      HABILITADO: el vendedor la confirma o la cambia, no se le asigna por atras.
+//  (g) Editar una venta que SI tenia lista muestra esa lista, con el selector deshabilitado.
+//
+// Y dos de la segunda tanda de la misma mision (auditoria del modulo, misma clase de bug: un
+// estado que sobrevive de un comprobante al siguiente o un chequeo que deja pasar un null):
+//
+//  (e) Una venta de contado con el metodo de pago en "Seleccione metodo de pago" frena con el
+//      aviso y no sale ningun POST (chequeos/payment_methods.js estuvo apagado desde el 4/3/2026).
+//  (f) Abrir una venta guardada con "Guardar como presupuesto" tildado apaga el toggle: el boton
+//      vuelve a decir "ACTUALIZAR venta" en vez de crear un presupuesto nuevo con sus lineas.
 //
 // ── De que fixture depende ───────────────────────────────────────────────────────────────────
 //
@@ -50,13 +60,14 @@
 //    fragmento "listas de precios" y no por el texto entero: el texto es de la interfaz y cambia.
 const { test, expect } = require('../fixtures')
 const { esperar_recursos_descargados } = require('../helpers/recursos')
-const { completar_campo, crear_desde_buscador, abrir_pestania } = require('../helpers/formulario')
+const { completar_campo, crear_desde_buscador, abrir_pestania, search_and_select } = require('../helpers/formulario')
 const { aislar_broadcasts } = require('../helpers/entorno')
 const {
 	abrir_vender,
 	agregar_articulo,
 	elegir_opcion_que_contenga,
 	abrir_modulo_del_dia,
+	poner_toggle,
 } = require('../helpers/vender')
 
 // 🔴 Sesion propia COMPARTIDA entre los tests del serial, igual que en
@@ -94,9 +105,13 @@ const COSTO = 1000
 const CANTIDAD = 2
 /** La lista que se crea y se borra para fabricar la venta sin lista de (d). */
 const LISTA_TEMPORAL = 'zz Lista temporal e2e ' + SUFIJO
+/** El cliente de (f): el toggle "Guardar como presupuesto" solo se dibuja con un cliente elegido. */
+const CLIENTE = 'zz Cliente e2e ' + SUFIJO
 
 /** Fragmento del aviso de chequeos/price_type.js (MENSAJE_SIN_LISTA_DE_PRECIOS). */
 const FRAGMENTO_DEL_AVISO = 'listas de precios'
+/** Fragmento del aviso de chequeos/payment_methods.js. */
+const FRAGMENTO_DEL_AVISO_DE_PAGO = 'metodo de pago'
 
 /** El selector de lista de Vender (price-type/Index.vue). */
 const SELECTOR = '[data-testid="venta-lista-de-precios"]'
@@ -114,6 +129,10 @@ const contexto = {
 	lista_por_defecto: null,
 	/** Id del articulo creado para esta corrida. */
 	articulo_id: null,
+	/** El cliente creado para (f), tal cual lo devolvio el POST (null si no se pudo crear). */
+	cliente: null,
+	/** La venta de (b): la que (f) abre para editar. */
+	venta: null,
 	/** La lista temporal de (d), tal cual la devolvio el POST. */
 	lista_temporal: null,
 	/** La venta de (d), guardada con la lista temporal. */
@@ -268,6 +287,54 @@ async function armar_venta_de_mostrador() {
 }
 
 /**
+ * Clickea Guardar y afirma que NO salio ningun POST a /api/sale y que aparecio el toast pedido.
+ *
+ * @param {string} fragmento_del_toast
+ * @param {string} motivo Para el mensaje del rojo.
+ * @returns {Promise<void>}
+ */
+async function guardar_tiene_que_frenar(fragmento_del_toast, motivo) {
+	/** Los POST a /api/sale que salgan mientras dura el chequeo. Tienen que ser cero. */
+	const posts = []
+	const escuchar = request => {
+		if (request.method() === 'POST' && /\/api\/sale(\?|$)/.test(request.url())) {
+			posts.push(request.url())
+		}
+	}
+	page.on('request', escuchar)
+
+	try {
+		await page.locator('[data-testid="btn-guardar-venta"]').click()
+
+		await expect(
+			page.locator('.v-toast__item').filter({ hasText: fragmento_del_toast }).first(),
+			`${motivo}: guardar tenia que frenar con el aviso "${fragmento_del_toast}"`
+		).toBeVisible({ timeout: 10000 })
+
+		// Espera deliberada y no un poll: lo que se afirma es una AUSENCIA sostenida (que ningun
+		// POST salga despues del click), y eso no tiene condicion positiva que esperar.
+		await page.waitForTimeout(1500)
+
+		expect(posts, `${motivo}: no tenia que salir ningun POST a /api/sale`).toEqual([])
+	} finally {
+		page.off('request', escuchar)
+	}
+}
+
+/**
+ * Lee un valor del store de Vender de la SPA (Vue 2 deja la instancia raiz en `#app.__vue__`).
+ *
+ * @param {string} clave Propiedad de `$store.state.vender`.
+ * @returns {Promise<any>}
+ */
+async function estado_de_vender(clave) {
+	return page.evaluate(clave => {
+		const raiz = document.querySelector('#app')
+		return raiz && raiz.__vue__ && raiz.__vue__.$store ? raiz.__vue__.$store.state.vender[clave] : null
+	}, clave)
+}
+
+/**
  * Guarda lo que haya en Vender esperando el POST de la venta, y devuelve el modelo que contesto
  * el servidor.
  *
@@ -404,6 +471,14 @@ test.describe.serial('Vender: la lista de precios es obligatoria en una cuenta c
 		expect(contexto.articulo_id, 'el POST del articulo no devolvio un modelo con id').not.toBeNull()
 
 		console.log(`[lista] articulo creado: ${ARTICULO} (id ${contexto.articulo_id})`)
+
+		// El cliente de (f), por la API: ClientController::store no valida nada, alcanza el nombre.
+		// Si no se puede crear no se frena la suite: (f) tiene un camino sin cliente.
+		const cliente = await api('POST', 'client', { name: CLIENTE })
+		contexto.cliente = (cliente.ok && cliente.cuerpo && cliente.cuerpo.model) ? cliente.cuerpo.model : null
+		console.log(contexto.cliente
+			? `[lista] cliente creado: ${CLIENTE} (id ${contexto.cliente.id})`
+			: `[lista] no se pudo crear el cliente (status ${cliente.status}); (f) va por el store`)
 	})
 
 	test('(a) al entrar a Vender el selector muestra la lista por defecto', async () => {
@@ -417,6 +492,7 @@ test.describe.serial('Vender: la lista de precios es obligatoria en una cuenta c
 		await esperar_lista_elegida(contexto.lista_por_defecto, 'antes de guardar')
 
 		const venta = await guardar_venta()
+		contexto.venta = venta
 
 		expect(
 			String(venta.price_type_id),
@@ -441,15 +517,6 @@ test.describe.serial('Vender: la lista de precios es obligatoria en una cuenta c
 			body: JSON.stringify({ models: [] }),
 		}))
 
-		/** Los POST a /api/sale que salgan mientras dura el test. Tienen que ser cero. */
-		const posts = []
-		const escuchar = request => {
-			if (request.method() === 'POST' && /\/api\/sale(\?|$)/.test(request.url())) {
-				posts.push(request.url())
-			}
-		}
-		page.on('request', escuchar)
-
 		try {
 			// Carga entera de la pagina: el catalogo baja en el arranque, y ahi lo agarra la ruta.
 			await armar_venta_de_mostrador()
@@ -460,25 +527,94 @@ test.describe.serial('Vender: la lista de precios es obligatoria en una cuenta c
 			const elegida = await lista_elegida_en_el_selector()
 			expect(elegida.value, `con el catalogo vacio el selector no podia tener nada elegido y tiene "${elegida.text}"`).toBeNull()
 
-			await page.locator('[data-testid="btn-guardar-venta"]').click()
-
-			await expect(
-				page.locator('.v-toast__item').filter({ hasText: FRAGMENTO_DEL_AVISO }).first(),
-				'guardar sin lista tenia que frenar con el aviso de listas de precios'
-			).toBeVisible({ timeout: 10000 })
-
-			// Espera deliberada y no un poll: lo que se afirma es una AUSENCIA sostenida (que ningun
-			// POST salga despues del click), y eso no tiene condicion positiva que esperar.
-			await page.waitForTimeout(1500)
-
-			expect(posts, 'no tenia que salir ningun POST a /api/sale').toEqual([])
+			await guardar_tiene_que_frenar(FRAGMENTO_DEL_AVISO, 'sin catalogo de listas')
 		} finally {
-			page.off('request', escuchar)
 			await page.unroute(es_el_catalogo)
 		}
 	})
 
-	test('(d) editar una venta sin lista muestra la lista por defecto, deshabilitada', async () => {
+	test('(e) venta de contado sin metodo de pago: guardar frena con el aviso y no sale ningun POST', async () => {
+		await armar_venta_de_mostrador()
+
+		const metodo = page.locator('[data-testid="venta-metodo-pago"]')
+		await expect(metodo).toBeVisible()
+
+		// El chequeo aplica SOLO si el comercio tiene metodos de pago cargados (una cuenta que no
+		// los usa vende sin elegir ninguno). Se mira el select, que se arma con ese catalogo.
+		const cantidad_de_metodos = await metodo.evaluate(select => {
+			return [...select.options].filter(opcion => opcion.value !== '0' && opcion.value !== '').length
+		})
+		test.skip(cantidad_de_metodos === 0, 'la cuenta no tiene metodos de pago en el catalogo: el chequeo no aplica')
+
+		// "Seleccione metodo de pago" es la opcion 0 (PaymentMethod.vue). Hasta esta mision una
+		// venta de contado pasaba con ella todos los chequeos y se guardaba sin metodo ni caja.
+		await metodo.selectOption('0')
+
+		await guardar_tiene_que_frenar(FRAGMENTO_DEL_AVISO_DE_PAGO, 'venta de contado sin metodo de pago')
+	})
+
+	test('(f) abrir una venta guardada con "Guardar como presupuesto" tildado: el boton vuelve a "ACTUALIZAR venta"', async () => {
+		// Precondicion: Vender con articulos (sin ellos el boton de guardar no se dibuja) y el
+		// toggle de presupuesto prendido en la venta EN CURSO.
+		await armar_venta_de_mostrador()
+
+		const boton = page.locator('[data-testid="btn-guardar-venta"]')
+		await expect(boton).toBeVisible()
+
+		// Camino real, si el fixture lo permite: el toggle se dibuja solo con un cliente elegido y
+		// con la extension `budgets`. La cuenta de listas no trae esa extension, asi que lo normal
+		// es caer al camino del store, que deja el MISMO estado (vender/guardar_como_presupuesto en
+		// 1): el bug es sobre ese estado sobreviviendo al abrir otra venta, no sobre el toggle.
+		let toggle_prendido = false
+
+		if (contexto.cliente) {
+			await search_and_select(page, 'select_client_vender', CLIENTE)
+
+			const toggle = page.locator('[data-testid="venta-guardar-presupuesto"]')
+
+			if (await toggle.count() > 0) {
+				await poner_toggle(page, 'venta-guardar-presupuesto')
+				toggle_prendido = true
+			}
+		}
+
+		if (!toggle_prendido) {
+			console.log('[lista] (f) sin toggle de presupuesto en pantalla (¿extension budgets?): se prende por el store')
+			await page.evaluate(() => {
+				document.querySelector('#app').__vue__.$store.commit('vender/setGuardarComoPresupuesto', 1)
+			})
+		}
+
+		await expect(boton, 'con el toggle prendido el boton tenia que ofrecer guardar el presupuesto').toHaveText(/Guardar Presupuesto/)
+
+		// Abrir una venta guardada tiene que apagarlo: es una venta, no un presupuesto.
+		await abrir_venta_para_editar(contexto.venta.id)
+
+		await expect(
+			page.locator('[data-testid="btn-guardar-venta"]'),
+			'abriendo una venta guardada el boton tenia que volver a "ACTUALIZAR venta" (con el toggle vivo crearia un presupuesto nuevo con las lineas de la venta)'
+		).toHaveText(/ACTUALIZAR venta/)
+
+		expect(
+			Number(await estado_de_vender('guardar_como_presupuesto')),
+			'vender/guardar_como_presupuesto tenia que quedar en 0 al abrir una venta guardada'
+		).toBe(0)
+	})
+
+	test('(g) editar una venta CON lista muestra esa lista y el selector sigue deshabilitado', async () => {
+		// La venta de (b) se guardo con la lista por defecto. Editandola, la lista es la que quedo
+		// guardada en ella y no se puede cambiar: cambiarla por atras cambiaria los precios de
+		// todas las lineas.
+		await abrir_venta_para_editar(contexto.venta.id)
+
+		await esperar_lista_elegida(contexto.lista_por_defecto, 'editando una venta que tenia lista')
+		await expect(
+			page.locator(SELECTOR),
+			'editando una venta que YA tenia lista el selector tiene que estar deshabilitado'
+		).toBeDisabled()
+	})
+
+	test('(d) editar una venta sin lista muestra la lista por defecto, habilitada para confirmarla', async () => {
 		// Varias navegaciones y una cola de por medio (ver el encabezado): presupuesto propio.
 		test.setTimeout(420000)
 
@@ -517,15 +653,19 @@ test.describe.serial('Vender: la lista de precios es obligatoria en una cuenta c
 		const borrada = await api('DELETE', 'price-type/' + contexto.lista_temporal.id)
 		expect(borrada.ok, `no se pudo borrar la lista temporal (status ${borrada.status})`).toBeTruthy()
 
-		// 4. Editarla: la lista que se ve es la por defecto del comercio, y no se puede cambiar.
+		// 4. Editarla: la lista que se ve es la por defecto del comercio, y el selector queda
+		//    HABILITADO. La venta no tenia lista (su id quedo colgado), asi que la que se le
+		//    resuelve es una propuesta que el vendedor confirma o cambia, no una decision tomada
+		//    por atras; con el selector bloqueado la venta pasaria a decir "lista X" con renglones
+		//    que se cobraron sin ella. (Una venta que SI tenia lista sigue bloqueada: ver (g).)
 		await abrir_venta_para_editar(contexto.venta_sin_lista.id)
 
 		await esperar_lista_elegida(contexto.lista_por_defecto, 'editando una venta que quedo sin lista')
 		await expect(
 			page.locator(SELECTOR),
-			'editando un comprobante guardado la lista no se puede cambiar'
-		).toBeDisabled()
+			'editando una venta que NO tenia lista el selector tiene que quedar habilitado, con la lista por defecto propuesta'
+		).toBeEnabled()
 
-		console.log(`[lista] venta N° ${contexto.venta_sin_lista.num} sin lista: en edicion muestra "${contexto.lista_por_defecto.name}"`)
+		console.log(`[lista] venta N° ${contexto.venta_sin_lista.num} sin lista: en edicion propone "${contexto.lista_por_defecto.name}"`)
 	})
 })
