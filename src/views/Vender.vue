@@ -154,9 +154,27 @@ export default {
 		next()
 	},
 	watch: {
+		/*
+			Antes llamaba a setPriceType() en cada recarga del catalogo, y como el catalogo se
+			vuelve a bajar desde varios lados (el PDF del listado, los perfiles de PDF de la tabla,
+			la importacion de Excel con IA), pisaba con la lista por defecto la que el vendedor
+			habia elegido a mano en el selector. Ahora este watch es ademas el camino de
+			RECUPERACION de la mision de la lista obligatoria --cuando el catalogo llego vacio,
+			setPriceType() lo pide una sola vez y espera esta señal--, asi que tiene que aplicar la
+			lista solo cuando hace falta: no hay ninguna, o la elegida ya no existe en el catalogo
+			nuevo (la borraron desde otra pestaña).
+		*/
 		price_types() {
-			console.log('cambiaron los tipos de precios, llamando a setPriceType')
-			this.setPriceType()
+			let lista = this.price_type_vender
+
+			let sigue_en_el_catalogo = !!lista && this.price_types.some(price_type => {
+				return price_type.id == lista.id
+			})
+
+			if (!lista || !sigue_en_el_catalogo) {
+				console.log('cambiaron los tipos de precios, llamando a setPriceType')
+				this.setPriceType()
+			}
 		},
 	},
 }
