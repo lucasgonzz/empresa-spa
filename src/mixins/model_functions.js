@@ -15,6 +15,51 @@ export default {
     },
 	methods: {
 
+        /**
+         * Bruto de una alicuota de IVA de una factura de compra: `neto + iva_importe`.
+         *
+         * Mision `compras-factura-manual-alicuotas` (17/9/2026). Lo declara la prop `bruto` de
+         * src/models/provider_order_afip_ticket_iva.js con `function`, y lo consume
+         * `propertyText()` (common-vue/mixins/generals.js:955), que despues le aplica el formato
+         * de precio porque la prop es `is_price`.
+         *
+         * 🔴 Existe porque `bruto` NO es una columna de la base: el modelo que devuelve la API no
+         * trae la clave, asi que sin esto la columna de la tabla saldria vacia en toda fila ya
+         * guardada. Es display puro -- no escribe nada en el modelo, no viaja en ningun request y
+         * no hay un tercer numero que se pueda desincronizar de los otros dos.
+         *
+         * Vacio (no cero) cuando la fila todavia no tiene ninguno de los dos importes: un "0,00"
+         * en una fila recien creada se lee como un dato cargado, y no lo es.
+         *
+         * @param {Object} model la alicuota (provider_order_afip_ticket_iva).
+         * @param {Object} prop la propiedad que declara esta funcion.
+         * @returns {Number|String}
+         */
+        bruto_de_alicuota_de_factura(model, prop) {
+            if (!model) {
+                return ''
+            }
+
+            let neto = Number(model.neto)
+            let iva_importe = Number(model.iva_importe)
+
+            if (isNaN(neto)) {
+                neto = 0
+            }
+            if (isNaN(iva_importe)) {
+                iva_importe = 0
+            }
+
+            let sin_neto = model.neto === null || model.neto === '' || typeof model.neto == 'undefined'
+            let sin_iva = model.iva_importe === null || model.iva_importe === '' || typeof model.iva_importe == 'undefined'
+
+            if (sin_neto && sin_iva) {
+                return ''
+            }
+
+            return neto + iva_importe
+        },
+
         show_budget_sale_status_id(prop, model) {
             return this.$store.state.sale_status.models.length
         },

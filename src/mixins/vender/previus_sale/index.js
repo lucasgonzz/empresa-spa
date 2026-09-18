@@ -355,6 +355,30 @@ export default {
 				this.$store.commit('vender/set_descuento_puntos', null)
 			}
 
+			/*
+				🔴 EL TOTAL FORZADO DE LA VENTA O DEL PRESUPUESTO QUE SE ESTA EDITANDO. VA ANTES
+				DEL setTotal() DE ABAJO, POR EL MISMO MOTIVO QUE EL CANJE DE PUNTOS.
+
+				setTotal() recalcula el total desde los items y aplica el ajuste al final leyendo
+				`vender.forzar_total_monto` del store. Si el monto no esta commiteado todavia, el
+				total vuelve al bruto: abrir para editar una venta que se habia forzado en 4.000 la
+				mostraba en 4.012, y guardar asi le cobraba al cliente 12 pesos que nadie le
+				aviso que iba a pagar. Es exactamente el agujero que tenia la version vieja de esta
+				extension, que no restauraba nada.
+
+				Se commitea siempre, tambien la rama sin forzado: abrir una venta sin ajuste
+				despues de una con ajuste tiene que dejar el campo limpio, y depender de que
+				limpiar_vender() haya pasado antes es como aparecen estos bugs.
+
+				Number() y no la verdad del valor a secas: es decimal(22,2) y Laravel lo serializa
+				como string, asi que un "0.00" seria truthy.
+			*/
+			if (Number(model.forzar_total_monto)) {
+				this.$store.commit('vender/set_forzar_total_monto', Number(model.forzar_total_monto))
+			} else {
+				this.$store.commit('vender/set_forzar_total_monto', null)
+			}
+
 			// this.$store.commit('vender/setTotal')
 			this.setTotal()
 			// Log limpio solo para cambios posteriores a la carga de la venta a editar.
@@ -442,6 +466,12 @@ export default {
 				seller_id: this.seller_id,
 				sub_total: this.sub_total,
 				total: this.total,
+				/*
+					Total forzado. Viaja siempre, con valor o en null: el motivo completo esta en el
+					PUT de store/vender/previus_sales.js, que es donde alguien lo va a querer sacar
+					por "limpieza".
+				*/
+				forzar_total_monto: this.$store.state.vender.forzar_total_monto,
 				fecha_entrega: this.fecha_entrega,
 				valor_dolar: this.valor_dolar,
 				observations_ocultas: this.$store.state.vender.observations_ocultas,

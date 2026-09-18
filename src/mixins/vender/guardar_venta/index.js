@@ -277,6 +277,17 @@ export default {
 				moneda_id: this.$store.state.vender.moneda_id,
 				valor_dolar: this.$store.state.vender.valor_dolar,
 				descuento: this.$store.state.vender.descuento,
+				/*
+					🔴 El total forzado tiene que viajar tambien por el camino offline, y por el
+					mismo motivo que la moneda y la cotizacion de aca arriba: esta venta se
+					guarda --y eventualmente se factura-- sola cuando vuelve la conexion, con lo
+					que haya quedado en IndexedDB y nada mas.
+
+					Si no queda aca, la venta se persiste con `total` forzado pero sin el campo
+					que explica de donde sale ese numero: el comprobante pierde el renglon del
+					ajuste y el prorrateo de AFIP no tiene por que escalar.
+				*/
+				forzar_total_monto: this.$store.state.vender.forzar_total_monto,
 				fecha_entrega: this.$store.state.vender.fecha_entrega,
 				observations_ocultas: this.$store.state.vender.observations_ocultas,
 				dias_alerta_venta_no_cobrada_personalizado: this.$store.state.vender.dias_alerta_venta_no_cobrada_personalizado,

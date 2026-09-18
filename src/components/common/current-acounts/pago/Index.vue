@@ -358,6 +358,18 @@ export default {
                     credit_card_id: 0,
                     credit_card_payment_plan_id: 0,
                     caja_id: 0,
+                    /*
+                     * Certificado de retencion sufrida: las mismas claves que declara el factory de
+                     * PaymentMethods.vue, para que la fila que queda despues de un pago exitoso sea
+                     * identica a la que nace con el modal. El importe NO va aca: es el `amount` de
+                     * la fila, igual que para el efectivo (ver RetencionInfo.vue).
+                     */
+                    retencion_impuesto: 'ganancias',
+                    retencion_numero_certificado: '',
+                    retencion_fecha: '',
+                    retencion_regimen: '',
+                    retencion_base_imponible: '',
+                    retencion_alicuota: '',
                 }],
             }
             this.$store.commit('current_acount/setToPay', null)

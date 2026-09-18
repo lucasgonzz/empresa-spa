@@ -130,6 +130,20 @@ export default {
 				omitir_en_cuenta_corriente: info.omitir_en_cuenta_corriente,
 				sub_total: info.sub_total,
 				total: info.total,
+				/*
+					🔴 EL TOTAL FORZADO TIENE QUE VIAJAR EN EL PUT, Y TAMBIEN EN NULL.
+
+					`total` de aca arriba ya viaja CON el ajuste aplicado --lo hace
+					mixins/vender_set_total.js al final de setTotal()-- y `sub_total` viaja sin el.
+					Pero el monto es su propia columna, y SaleController@update la reescribe con lo
+					que venga en el request: si el campo no llega, la venta se guarda con el total
+					correcto y el ajuste en null, o sea que el comprobante pierde el renglon que lo
+					explica y AfipItemCalculator se queda sin la base contra la cual prorratear.
+
+					Va tambien en null cuando no hay forzado --no es un campo opcional que se pueda
+					omitir--: es lo que le dice al servidor que esta edicion saco el ajuste.
+				*/
+				forzar_total_monto: info.forzar_total_monto,
 				seller_id: info.seller_id,
 				fecha_entrega: info.fecha_entrega,
 				valor_dolar: info.valor_dolar,

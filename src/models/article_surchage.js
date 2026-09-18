@@ -5,6 +5,10 @@ export default {
 			key: 'percentage',
 			type: 'number',
 			is_title: true,
+			// Un recargo lleva SOLO porcentaje o SOLO monto, nunca los dos: el calculo de precios
+			// usa el porcentaje si lo hay y el monto queda inerte, ignorado en silencio.
+			// Ver `deshabilitado_si_hay` en common-vue/components/model/ModelForm.vue.
+			deshabilitado_si_hay: 'amount',
 		},
 		{
 			// Clasifica el origen/motivo del recargo. Los recargos creados automaticamente por el prorrateo de flete de una compra (prompt 264) llegan con este tipo ya asignado
@@ -29,6 +33,8 @@ export default {
 			key: 'amount',
 			type: 'number',
 			is_price: true,
+			// La otra mitad de la regla: si ya hay porcentaje, el monto se apaga.
+			deshabilitado_si_hay: 'percentage',
 		},
 		{
 			text: 'Aplicar al final luego del Margen de ganancia',

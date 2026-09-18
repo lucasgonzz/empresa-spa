@@ -99,6 +99,25 @@ export default {
 			has_many: {
 				text: 'Descuento',
 				model_name: 'provider_discount',
+				/*
+					Mision sincronizar-descuentos-proveedor (17/9/2026): boton extra al lado de
+					"Agregar Descuento", que abre el modal para bajar estos descuentos a los
+					articulos del proveedor.
+
+					Va declarado aca y no adentro de HasMany.vue porque ese componente lo usa
+					TODO formulario del sistema: los descuentos del articulo, las ofertas, los
+					recargos, los articulos de una venta. La clave es opcional, y un has_many
+					que no la declara queda exactamente como estaba.
+
+					`emit` es el evento que HasMany.vue manda al bus de $root con el proveedor
+					como payload; lo escucha SincronizarArticulos.vue, montado en la vista de
+					proveedores.
+				*/
+				extra_button: {
+					text: 'Sincronizar articulos',
+					icon: 'icon-refresh',
+					emit: 'sincronizar-descuentos-proveedor',
+				},
 			}
 		},
 		// {
