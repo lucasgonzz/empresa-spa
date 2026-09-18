@@ -124,10 +124,17 @@ export default {
 		},
 		/**
 		 * true mientras el cartel "Actualizando articulos offline" esta en pantalla. Vive en el
-		 * data() del mixin offline de App.vue, que es $root: no pasa por el store.
+		 * data() del mixin offline de App.vue, no en el store, asi que se lee de la instancia de
+		 * App: es el padre directo de esta pildora (App.vue la monta), pero se sube por $parent
+		 * hasta encontrar la propiedad para no depender de ese detalle. Ojo: $root NO es App,
+		 * es la instancia pelada de main.js que renderiza a App.
 		 */
 		tarjeta_offline_visible() {
-			let progreso = this.$root && this.$root.offline_articles_sync_progress
+			let instancia = this.$parent
+			while (instancia && typeof instancia.offline_articles_sync_progress === 'undefined') {
+				instancia = instancia.$parent
+			}
+			let progreso = instancia ? instancia.offline_articles_sync_progress : null
 			return !!(progreso && progreso.visible)
 		},
 		/** Terminados con error que el usuario todavia no cerro. */
