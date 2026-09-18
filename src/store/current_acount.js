@@ -34,8 +34,16 @@ export default {
 		display: 'table',
 
 		loading: false,
+
+		// Mismo nombre y misma forma que __base_store.js: es lo que column_preferences_helper.js
+		// pide para reconocer que este módulo soporta el botón de "Propiedades para mostrar"
+		// (module_supports_props_to_show exige un Array acá, no undefined).
+		props_to_show: [],
 	},
 	mutations: {
+		set_props_to_show(state, value) {
+			state.props_to_show = value
+		},
 		/**
 		 * Guarda el valor del checkbox antes de borrar un movimiento de cuenta corriente.
 		 *

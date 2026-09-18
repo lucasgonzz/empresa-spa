@@ -24,7 +24,7 @@
 			<template v-else>
 				<!-- Botón de acceso al diseñador visual del header (prompt 441). Solo tiene
 				     sentido para perfiles de venta (comprobantes): los perfiles de artículo
-				     no tienen header configurable por este diseñador. -->
+				     tienen su propio diseñador, el del encabezado del catálogo (abajo). -->
 				<div
 				v-if="model.model_name === 'sale'"
 				class="m-b-10">
@@ -34,6 +34,20 @@
 					@click="open_header_designer">
 						<i class="icon-configuration"></i>
 						Diseñar header
+					</b-button>
+				</div>
+
+				<!-- Diseñador del encabezado del catálogo (misión catalogo-pdf-encabezado):
+				logo, nombre y datos del negocio del PDF tabla de artículos. -->
+				<div
+				v-if="model.model_name === 'article'"
+				class="m-b-10">
+					<b-button
+					size="sm"
+					variant="outline-primary"
+					@click="open_catalog_header_designer">
+						<i class="icon-configuration"></i>
+						Diseñar encabezado
 					</b-button>
 				</div>
 
@@ -60,6 +74,13 @@
 				v-if="model.model_name === 'sale'"
 				ref="header_designer"
 				:model="model"></header-designer>
+
+				<!-- Diseñador del encabezado del catálogo (modal aparte): recibe el mismo model
+				que edita este ABM y persiste catalog_header_layout -->
+				<catalog-header-designer
+				v-if="model.model_name === 'article'"
+				ref="catalog_header_designer"
+				:model="model"></catalog-header-designer>
 			</template>
 		</template>
 	</div>
@@ -68,6 +89,7 @@
 <script>
 import PdfColumnsPreferencesConfigModal from '@/common-vue/components/pdf/PdfColumnsPreferencesConfigModal.vue'
 import HeaderDesigner from '@/common-vue/components/pdf/header-designer/Index.vue'
+import CatalogHeaderDesigner from '@/common-vue/components/pdf/catalog-header-designer/Index.vue'
 
 /**
  * Editor de columnas PDF para ABM de pdf_column_profile (ventas o artículos).
@@ -79,6 +101,7 @@ export default {
 	components: {
 		PdfColumnsPreferencesConfigModal,
 		HeaderDesigner,
+		CatalogHeaderDesigner,
 	},
 	props: {
 		/**
@@ -430,6 +453,16 @@ export default {
 		open_header_designer() {
 			if (this.$refs.header_designer) {
 				this.$refs.header_designer.open()
+			}
+		},
+		/**
+		 * Abre el diseñador del encabezado del catálogo (perfiles de artículo).
+		 *
+		 * @return {void}
+		 */
+		open_catalog_header_designer() {
+			if (this.$refs.catalog_header_designer) {
+				this.$refs.catalog_header_designer.open()
 			}
 		},
 	},

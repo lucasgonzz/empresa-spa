@@ -316,18 +316,35 @@ export function get_all_properties_for_model(store_context, model_name) {
 		})
 	}
 
-	props.push({
-		key: 'created_at',
-		text: 'Creado',
-		type: 'date',
-		is_date: true,
-	})
-	props.push({
-		key: 'updated_at',
-		text: 'Actualizado',
-		type: 'date',
-		is_date: true,
-	})
+	// Genéricos, SOLO si el modelo no declaró ya una prop con esa key. La mayoría de los modelos
+	// no listan sus timestamps de Eloquent como prop propia, así que este agregado no colisiona
+	// nunca. `current_acount` sí declara su propio `created_at` ("Fecha", la fecha del
+	// movimiento, no el timestamp): sin la guarda, el push duplicaba la key y el mapa por key de
+	// normalize_column_preference_rows/build_props_to_show_from_rows se quedaba con el texto
+	// genérico, pisando el de la prop real (medido armando el modal de columnas de
+	// current_acount: la fila "Fecha" pasaba a leerse "Creado" y aparecía una segunda fila con la
+	// misma key). El mismo choque ya existía, sin que nadie lo hubiera notado, en
+	// `movimiento_caja` ("Fecha"), `apertura_caja` ("Fecha apertura") y `expense` ("Fecha"): los
+	// tres declaran su propio `created_at` Y ya tienen el botón de columnas activo desde antes de
+	// esta misión. `road_map` NO es un caso real: su `created_at`/"Creada" vive anidado adentro
+	// de `properties[].belongs_to_many.props_to_show` (la tabla de ventas embebida), no en su
+	// array de properties de nivel superior, así que get_all_properties_for_model nunca lo lee.
+	if (!props.some(prop => prop.key == 'created_at')) {
+		props.push({
+			key: 'created_at',
+			text: 'Creado',
+			type: 'date',
+			is_date: true,
+		})
+	}
+	if (!props.some(prop => prop.key == 'updated_at')) {
+		props.push({
+			key: 'updated_at',
+			text: 'Actualizado',
+			type: 'date',
+			is_date: true,
+		})
+	}
 
 	return props.filter(prop => prop.type != 'button')
 }
