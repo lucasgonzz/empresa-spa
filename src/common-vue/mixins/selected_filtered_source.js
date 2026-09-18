@@ -132,12 +132,102 @@ export default {
 			return ids
 		},
 		/**
+		 * Filas tal como las ve el usuario en la tabla ahora mismo, en el orden en que las
+		 * devolvió el backend (ahí ya está aplicado el `ordenar_de` de la columna que eligió).
+		 *
+		 * Misma regla que `display/Index.vue -> models_to_show`: mientras `is_filtered` está
+		 * prendido la tabla muestra `filtered` (ordenar una columna pasa por runGlobalSearch y
+		 * escribe ahí), y si no, `models`. Mirar siempre `models` daría el orden del listado
+		 * por defecto aunque el usuario esté viendo otro.
+		 *
+		 * @return {Array}
+		 */
+		resolve_visible_table_models() {
+			if (this.is_filtered) {
+				return this.filtered
+			}
+			return this.module_state.models || []
+		},
+		/**
+		 * Como resolve_model_ids(), pero con los ids ORDENADOS como están en la tabla, y no
+		 * en el orden en que el usuario los tildó (`addSelected` hace push, así que
+		 * `selected` guarda el orden de los clics). Los ids que no están en la página
+		 * visible (una selección que quedó de otra página) van al final, en su orden original.
+		 *
+		 * Lo usa el PDF del catálogo (ArticleTablePdfProfiles.vue) para que "seleccionados"
+		 * salga en el mismo orden que la tabla; los demás consumidores de resolve_model_ids()
+		 * (ofertas, tickets, códigos de barra) no cambian.
+		 *
+		 * @return {Array}
+		 */
+		resolve_model_ids_in_table_order() {
+			let ids = this.resolve_model_ids()
+			if (!ids.length) {
+				return ids
+			}
+
+			/* Posición de cada id en la tabla visible */
+			let position_by_id = {}
+			this.resolve_visible_table_models().forEach(function (model, index) {
+				if (model && typeof position_by_id[model.id] === 'undefined') {
+					position_by_id[model.id] = index
+				}
+			})
+
+			let in_table = []
+			let not_in_table = []
+			ids.forEach(function (id) {
+				if (typeof position_by_id[id] !== 'undefined') {
+					in_table.push(id)
+				} else {
+					not_in_table.push(id)
+				}
+			})
+
+			in_table.sort(function (a, b) {
+				return position_by_id[a] - position_by_id[b]
+			})
+
+			return in_table.concat(not_in_table)
+		},
+		/**
 		 * Criterios activos del store listos para exportación masiva por filtro.
 		 *
 		 * @return {Array}
 		 */
 		resolve_active_filters_for_export() {
 			return this.get_active_filters_for_export(this.filters)
+		},
+		/**
+		 * Filtros que SOLO tienen orden (`ordenar_de` puesto y ningún criterio de valor), para
+		 * que un endpoint que recibe `filters` pueda respetar el orden elegido en la tabla.
+		 *
+		 * No confundir con resolve_active_filters_for_export(): esa deja afuera a propósito
+		 * los filtros de solo orden, porque "ordenar no es filtrar" (ver la doctrina en
+		 * common-vue/mixins/filters.js). Estos se suman DESPUÉS de que el consumidor ya
+		 * decidió, mirando solo los de valor, que hay filtros activos: así el orden viaja al
+		 * backend sin que ordenar una columna cuente como haber filtrado. Un filtro que tiene
+		 * valor Y orden ya viaja entre los activos con su `ordenar_de`, por eso acá no entra.
+		 *
+		 * @return {Array}
+		 */
+		resolve_order_only_filters() {
+			let self = this
+			let order_only = []
+
+			this.filters.forEach(function (filter) {
+				if (!filter) {
+					return
+				}
+				let has_order = filter.ordenar_de !== null
+					&& filter.ordenar_de !== ''
+					&& typeof filter.ordenar_de !== 'undefined'
+				if (has_order && !self.filter_has_value_criteria(filter)) {
+					order_only.push(filter)
+				}
+			})
+
+			return order_only
 		},
 		/**
 		 * Persiste el origen del dropdown para modales fuera del menú.
