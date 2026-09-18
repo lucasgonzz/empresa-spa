@@ -145,6 +145,14 @@ export default function __base_store(options = {}) {
 			// criterio puesto, solo el listado inicial.
 			listado_por_defecto: false,
 
+			// Suma de saldos (pesos y dólares) de TODOS los registros que matchean el filtro vigente
+			// en el backend, sin importar la página en la que está parado el usuario. La llena
+			// runGlobalSearch con lo que devuelve globalSearch() del backend (SUM en SQL sobre el
+			// mismo WHERE que arma la tabla, sin LIMIT/OFFSET). `null` para los modelos que no tienen
+			// columnas de saldo (el backend solo lo calcula si la tabla tiene `saldo_pesos`) y para
+			// cuando todavía no corrió ninguna búsqueda.
+			saldos_filtrados: null,
+
 			/**
 			 * Origen del último dropdown masivo (filtrados vs seleccionados).
 			 * Lo usan modales globales fuera del árbol del menú desplegable.
@@ -446,6 +454,16 @@ export default function __base_store(options = {}) {
 		setTotalFilterResults(state, value) {
 			state.total_filter_results = value
 		},
+		/**
+		 * Persiste (o limpia, con `null`) la suma de saldos que devolvió el backend para el filtro
+		 * vigente. Ver la doc de `saldos_filtrados` en el state.
+		 *
+		 * @param {Object} state Estado del módulo.
+		 * @param {Object|null} value `{ saldo_pesos, saldo_dolares? }` o `null`.
+		 */
+		setSaldosFiltrados(state, value) {
+			state.saldos_filtrados = value
+		},
 		addFiltered(state, value) {
 			state.filtered = state.filtered.concat(value)
 		},
@@ -621,6 +639,7 @@ export default function __base_store(options = {}) {
 			}
 			commit('setFiltered', [])
 			commit('setIsFiltered', false)
+			commit('setSaldosFiltrados', null)
 			// Resetear el flag de buscador rápido al recargar modelos desde el servidor.
 			commit('set_filtered_without_filter_form', false)
 			// Limpiar el payload persistido del buscador general para no dejarlo colgado de una búsqueda vieja.
@@ -997,6 +1016,9 @@ export default function __base_store(options = {}) {
 					commit('setIsFiltered', true)
 					commit('setTotalFilterPages', res.data.models ? res.data.models.last_page : null)
 					commit('setTotalFilterResults', res.data.models ? res.data.models.total : 0)
+					// Suma de saldos del universo filtrado completo (sin paginar), calculada en el
+					// backend. `null` en los modelos que no tienen columnas de saldo.
+					commit('setSaldosFiltrados', res.data.saldos || null)
 					// Marca que lo que se ve salio del buscador general de texto libre y NO de un filtro
 					// estructurado. El dropdown del embudo lo lee para deshabilitar Actualizar/Eliminar masivos
 					// (OptionsDropdown.vue, ocultar_actualizar_eliminar_por_filtro).
@@ -1224,6 +1246,7 @@ export default function __base_store(options = {}) {
 			}
 			commit('setFiltered', [])
 			commit('setIsFiltered', false)
+			commit('setSaldosFiltrados', null)
 			// Resetear el flag de buscador rápido al recargar modelos desde el servidor.
 			commit('set_filtered_without_filter_form', false)
 			// Limpiar el payload persistido del buscador general para no dejarlo colgado de una búsqueda vieja.
