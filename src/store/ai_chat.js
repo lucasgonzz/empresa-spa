@@ -288,6 +288,11 @@ export default {
 		// { consumo_mes, plan, cerca, supero, pensamiento, confianza }. null = todavía no se
 		// pidió, o el endpoint no está (API viejo, 404): ahí el footer no se muestra.
 		mi_consumo: null,
+
+		// Config del agente del dueño (S3): { confianza:'cauteloso'|'resuelto',
+		// pensamiento:'agil'|'profundo' }. GET/PUT api/user/asistente-config. null = todavía
+		// no se pidió (o API viejo): el modal de configuración cae a los defaults del sistema.
+		asistente_config: null,
 	},
 	getters: {
 		/**
@@ -475,6 +480,9 @@ export default {
 		},
 		setMiConsumo(state, value) {
 			state.mi_consumo = value || null
+		},
+		setAsistenteConfig(state, value) {
+			state.asistente_config = value || null
 		},
 	},
 	actions: {
@@ -1207,6 +1215,47 @@ export default {
 				.catch(err => {
 					commit('setMiConsumo', null)
 					console.log(err)
+				})
+		},
+		/**
+		 * Trae la config del agente del dueño (S3): confianza y modo de pensamiento.
+		 *
+		 * 🔴 skip_global_error_event: contra un API viejo la ruta no existe (404) y la config
+		 * queda como estaba (null → el modal usa los defaults del sistema); sin la bandera, el
+		 * interceptor de main.js tiraría un toast al abrir el modal contra ese backend.
+		 *
+		 * @returns {Promise}
+		 */
+		fetchAsistenteConfig({ commit }) {
+			return axios.get('/api/user/asistente-config', {
+				skip_global_error_event: true,
+			})
+				.then(res => {
+					commit('setAsistenteConfig', res.data)
+					return res.data
+				})
+				.catch(err => {
+					// No se pisa lo que hubiera: si en esta sesión ya se eligió algo, queda.
+					console.log(err)
+				})
+		},
+		/**
+		 * Guarda la config del agente del dueño (S3). El error se propaga para que el modal
+		 * avise con un toast propio (por eso skip_global_error_event: no queremos ADEMÁS el
+		 * toast genérico del interceptor). Refleja en el store lo que devuelve el API, o el
+		 * payload enviado si la respuesta no trae los campos.
+		 *
+		 * @param {Object} payload { confianza, pensamiento }
+		 * @returns {Promise}
+		 */
+		guardarAsistenteConfig({ commit }, payload) {
+			return axios.put('/api/user/asistente-config', payload, {
+				skip_global_error_event: true,
+			})
+				.then(res => {
+					let data = res.data && res.data.confianza ? res.data : payload
+					commit('setAsistenteConfig', data)
+					return data
 				})
 		},
 	},

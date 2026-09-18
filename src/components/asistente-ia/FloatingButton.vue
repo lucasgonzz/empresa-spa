@@ -47,6 +47,12 @@
 		hasta el primer clic. -->
 		<ficha-articulo-popover></ficha-articulo-popover>
 		<cuenta-corriente-de-mencion></cuenta-corriente-de-mencion>
+
+		<!-- El modal de configuración del agente (S3), montado UNA sola vez acá por el mismo
+		motivo que el de cuenta corriente: los dos accesos (el engranaje de la sidebar y el
+		botón del mostrador) lo abren por id, y con una sola instancia no hay dos <b-modal>
+		con el mismo id peleándose. -->
+		<configuracion-agente></configuracion-agente>
 	</div>
 </template>
 
@@ -67,6 +73,7 @@ export default {
 		AsistenteIaPanel,
 		FichaArticuloPopover,
 		CuentaCorrienteDeMencion,
+		ConfiguracionAgente: () => import('@/components/asistente-ia/ConfiguracionAgente'),
 	},
 	data() {
 		return {
