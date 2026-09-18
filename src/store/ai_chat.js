@@ -282,6 +282,12 @@ export default {
 		// un segundo, y volver a pedirlas cada vez que el mouse pasa por encima del mismo
 		// nombre sería un request por gesto.
 		fichas_de_articulos: {},
+
+		// Consumo de IA del mes del dueño para el footer del panel (S2, misión
+		// foto-sucursal-y-asistente-configurable): GET api/mi-consumo-ia. Trae
+		// { consumo_mes, plan, cerca, supero, pensamiento, confianza }. null = todavía no se
+		// pidió, o el endpoint no está (API viejo, 404): ahí el footer no se muestra.
+		mi_consumo: null,
 	},
 	getters: {
 		/**
@@ -466,6 +472,9 @@ export default {
 			let agregado = {}
 			agregado[payload.id] = payload.ficha
 			state.fichas_de_articulos = Object.assign({}, state.fichas_de_articulos, agregado)
+		},
+		setMiConsumo(state, value) {
+			state.mi_consumo = value || null
 		},
 	},
 	actions: {
@@ -1173,6 +1182,31 @@ export default {
 							console.log(err_viejo)
 							return Promise.reject()
 						})
+				})
+		},
+		/**
+		 * Trae el consumo de IA del mes del dueño para el footer del panel (S2, misión
+		 * foto-sucursal-y-asistente-configurable): tokens/interacciones del mes contra el tope
+		 * del plan, más el modo de pensamiento activo. Lo dispara el panel al abrirse.
+		 *
+		 * 🔴 skip_global_error_event: si el API es viejo y la ruta no existe (404), el consumo
+		 * queda null y el footer NO se muestra (degradación limpia, igual que las tarjetas de
+		 * carga contra un API sin ese endpoint). Sin la bandera, el interceptor de main.js
+		 * dispararía un toast de error al abrir el panel contra un backend sin `mi-consumo-ia`.
+		 *
+		 * @returns {Promise}
+		 */
+		fetchMiConsumo({ commit }) {
+			return axios.get('/api/mi-consumo-ia', {
+				skip_global_error_event: true,
+			})
+				.then(res => {
+					commit('setMiConsumo', res.data)
+					return res.data
+				})
+				.catch(err => {
+					commit('setMiConsumo', null)
+					console.log(err)
 				})
 		},
 	},

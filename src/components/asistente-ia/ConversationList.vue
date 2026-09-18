@@ -67,11 +67,18 @@
 				</span>
 			</button>
 		</div>
+
+		<!-- Footer bien abajo, como en Claude (S2): modo de pensamiento del agente + uso de
+		tokens del mes. Se dibuja solo si el API trae el consumo (degradación limpia). -->
+		<panel-footer></panel-footer>
 	</div>
 </template>
 
 <script>
 export default {
+	components: {
+		PanelFooter: () => import('@/components/asistente-ia/PanelFooter'),
+	},
 	computed: {
 		conversations() {
 			return this.$store.state.ai_chat.conversations

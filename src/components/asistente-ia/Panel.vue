@@ -166,6 +166,10 @@ export default {
 		this.hidratar_ancho_sidebar()
 		this.hidratar_ancho_panel()
 
+		// Consumo de IA del mes para el footer de la sidebar (S2). Si el API es viejo y no
+		// tiene el endpoint, queda null y el footer no se muestra (degradación limpia).
+		this.$store.dispatch('ai_chat/fetchMiConsumo')
+
 		// Al abrir el panel: la bandeja siempre se refresca, y se cae a la última
 		// conversación con actividad salvo que ya hubiera una elegida (D44) — por
 		// ejemplo la que dejó seteada abrir_chat_ia() desde la notificación (D22).
