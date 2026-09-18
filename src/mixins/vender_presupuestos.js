@@ -88,6 +88,17 @@ export default {
 				// en la edición); si por algún motivo no hay cliente en store, se usa el original
 				// del presupuesto como resguardo.
 				'client_id'                 : this.client ? this.client.id : this.budget.client_id,
+
+				/*
+					Viaja tambien al actualizar, no solo al crear. Hasta esta mision el PUT no lo
+					mandaba y BudgetController::update() no tocaba price_type_id, asi que un
+					presupuesto guardado sin lista (o con una que ya no corresponde) se quedaba asi
+					para siempre, y la venta que nace al confirmarlo heredaba ese null. En el back
+					la clave ausente preserva lo guardado (SPA vieja) y null explicito en una
+					cuenta con listas contesta 422.
+				*/
+				'price_type_id'				: this.get_price_type_id(),
+
 				'start_at'                  : this.budget.start_at,
 				'finish_at'                 : this.budget.finish_at,
 				'observations'              : this.observations,
@@ -140,6 +151,11 @@ export default {
 				this.$store.commit('auth/setLoading', false)
 				this.$toast.success('Presupuesto actualizado')
 				this.$store.commit('budget/add', res.data.model)
+				/*
+					limpiar_vender() vuelve a poner el metodo de pago por defecto (lo hace adentro
+					desde esta mision): abrir un presupuesto para editarlo lo deja en 0, y sin eso
+					la venta siguiente arrancaba en "Seleccione metodo de pago".
+				*/
 				this.limpiar_vender()
 			})
 			.catch(err => {
@@ -162,14 +178,20 @@ export default {
 					o desde otra pestaña— mientras vos lo estas editando en VENDER.
 
 					El detalle tecnico queda solo para cuando NO hay mensaje del back y el handler
-					global no tiene nada que mostrar: caida de red, timeout, respuesta sin cuerpo.
+					global no tiene nada que mostrar: respuesta sin cuerpo, o un error que no es de
+					axios (un TypeError en el .then de arriba). La caida de red y el timeout tambien
+					van por el global (main.js muestra "No pudimos conectarnos..." para todo error de
+					axios sin `response`): acá NO se suma nada, que antes eran tres carteles por el
+					mismo corte --el del global y estos dos-- y el vendedor no sabia cual leer.
 				*/
-				let hay_mensaje_del_back = Boolean(err.response && err.response.data && err.response.data.message)
+				let hay_mensaje_del_back = Boolean(err && err.response && err.response.data && err.response.data.message)
 
-				if (!hay_mensaje_del_back) {
+				let es_corte_de_red = Boolean(err && err.isAxiosError && !err.response)
+
+				if (!hay_mensaje_del_back && !es_corte_de_red) {
 					this.$toast.error('Error al guardar Presupuesto')
 					console.log(err)
-					this.$toast.error('Codigo: '+err.code+'. Detalle: '+err.message, {
+					this.$toast.error('Codigo: '+(err ? err.code : '')+'. Detalle: '+(err ? err.message : ''), {
 						duration: 100000,
 					})
 				}
@@ -212,6 +234,14 @@ export default {
 				'discount_stock'			: this.discount_stock,
 				'sale_status_id'			: this.sale_status_id,
 				'iva_aplicado'				: this.iva_aplicado,
+			}, {
+				/*
+					El aviso global del interceptor se apaga: el catch de abajo ya muestra el
+					mensaje del back (el 422 de la lista de precios, entre otros), y con el handler
+					global el mismo texto salia repetido. actualizar() no lo apaga a proposito:
+					confia solo en el global.
+				*/
+				skip_global_error_event: true,
 			})
 			.then(res => {
 				this.$store.commit('auth/setMessage', '')
@@ -223,18 +253,51 @@ export default {
 			.catch(err => {
 				this.$store.commit('auth/setMessage', '')
 				this.$store.commit('auth/setLoading', false)
-				this.$toast.error('Error al guardar Presupuesto')
 				console.log(err)
 
-				if (err.response && err.response.data && err.response.data.message) {
+				/*
+					🔴 UN solo aviso por error. Este POST apaga el aviso global del interceptor
+					(skip_global_error_event, arriba), que ademas del mensaje del back calla el toast
+					de red: este catch es el unico que avisa, asi que tiene que cubrir los tres casos.
 
-					this.$toast.error(err.response.data.message, {
+					- Con mensaje del back (el 422 de la lista de precios, entre otros): solo ese.
+					  Antes salia ademas el generico "Error al guardar Presupuesto" encima.
+					- Error de axios sin `response` (servidor caido, red cortada, timeout): un mensaje
+					  de conexion, en vez del "Codigo: ERR_NETWORK. Detalle: Network Error" de cien
+					  segundos.
+					- Con respuesta pero sin mensaje: el generico con el detalle tecnico.
+					- Un error que NO es de axios (un TypeError en el .then de arriba, DESPUES de que
+					  el POST ya guardo): tampoco tiene `response`, y decirle "lo mas probable es que
+					  NO se haya guardado" lo manda a duplicarlo. Se distingue por isAxiosError.
+				*/
+				let mensaje_del_back = err && err.response && err.response.data && err.response.data.message
+					? err.response.data.message
+					: null
+
+				let es_error_de_red = Boolean(err && err.isAxiosError && !err.response)
+
+				if (mensaje_del_back) {
+
+					this.$toast.error(mensaje_del_back, {
 						duration: 10000
 					})
+
+				} else if (!err || !err.isAxiosError) {
+
+					this.$toast.error('Ocurrió un error inesperado al guardar. Fijate en Presupuestos si quedó guardado antes de volver a intentar; si el problema sigue, recargá la página.', {
+						duration: 15000,
+					})
+
+				} else if (es_error_de_red) {
+
+					this.$toast.error('No pudimos conectarnos con el servidor. Lo más probable es que el presupuesto NO se haya guardado: revisá la conexión, fijate en Presupuestos y volvé a intentar.', {
+						duration: 15000,
+					})
+
 				} else {
-					
-					this.$toast.error('Codigo: '+err.code+'. Detalle: '+err.message, {
-						duration: 100000,
+
+					this.$toast.error('Error al guardar Presupuesto. Codigo: '+err.code+'. Detalle: '+err.message, {
+						duration: 15000,
 					})
 				}
 			})

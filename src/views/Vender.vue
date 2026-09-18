@@ -109,6 +109,14 @@ export default {
 				this.set_omitir_en_cuenta_corriente()
 				this.set_caja_por_defecto()
 				this.$store.commit('vender/clear_sale_log')
+			} else {
+				/*
+					Editando NO se aplica ningun default (ver arriba), pero el catalogo de listas
+					se recupera igual si el arranque no lo trajo: no commitea nada sobre el
+					comprobante, solo pide el catalogo (o confirma que la cuenta no tiene listas)
+					para que el Guardar no frene por un catalogo que nunca se volvio a pedir.
+				*/
+				this.recuperar_catalogo_de_listas_si_falta()
 			}
 
 			/*
@@ -154,9 +162,40 @@ export default {
 		next()
 	},
 	watch: {
+		/*
+			Antes llamaba a setPriceType() en cada recarga del catalogo, y como el catalogo se
+			vuelve a bajar desde varios lados (el PDF del listado, los perfiles de PDF de la tabla,
+			la importacion de Excel con IA), pisaba con la lista por defecto la que el vendedor
+			habia elegido a mano en el selector. Ahora este watch es ademas el camino de
+			RECUPERACION de la mision de la lista obligatoria --cuando el catalogo llego vacio,
+			setPriceType() lo pide una sola vez y espera esta señal--, asi que tiene que aplicar la
+			lista solo cuando hace falta: no hay ninguna, o la elegida ya no existe en el catalogo
+			nuevo (la borraron desde otra pestaña).
+		*/
 		price_types() {
-			console.log('cambiaron los tipos de precios, llamando a setPriceType')
-			this.setPriceType()
+			let lista = this.price_type_vender
+
+			let sigue_en_el_catalogo = !!lista && this.price_types.some(price_type => {
+				return price_type.id == lista.id
+			})
+
+			if (!lista || !sigue_en_el_catalogo) {
+				console.log('cambiaron los tipos de precios, llamando a setPriceType')
+				this.setPriceType()
+
+				/*
+					🔴 Si la lista recien se resolvio y el remito YA tiene renglones, se re-precian
+					ahora, a la vista del vendedor. Es lo mismo que hace elegir la lista a mano en el
+					selector (price-type/Index.vue: commit + setTotal()). Sin esto, con el catalogo
+					vacio al arrancar el vendedor escaneaba a precio base, llegaba el re-pedido, la
+					lista quedaba asignada por atras y la venta salia con "lista X" y renglones a
+					costo: justo lo que el back se niega a producir. Editando un comprobante no se
+					re-precia nada (from_pivot en vender_set_total.js conserva pivot.price).
+				*/
+				if (this.price_type_vender && this.price_type_vender.id && this.items.length) {
+					this.setTotal()
+				}
+			}
 		},
 	},
 }

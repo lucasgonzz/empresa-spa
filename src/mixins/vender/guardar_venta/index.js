@@ -148,7 +148,8 @@ export default {
 					modal con los números que calculó el backend y se corta acá: sin este return
 					saldrían además los dos toasts genéricos de error encima del modal.
 				*/
-				if (err.response
+				if (err
+					&& err.response
 					&& err.response.status == 422
 					&& err.response.data
 					&& err.response.data.error_limite_credito) {
@@ -160,18 +161,72 @@ export default {
 				}
 
 				this.sonido_error()
-				this.$toast.error('Error al guardar venta', {
-					duration: 10000
-				})
 
-				console.log(err.response.data.message)
-				if (err.response && err.response.data && err.response.data.message) {
+				/*
+					🔴 UN solo aviso por error, y elegido con `err.response` protegido.
 
-					this.$toast.error(err.response.data.message, {
+					Aca habia un `console.log(err.response.data.message)` FUERA de toda guarda: sin
+					`response` --servidor caido, red cortada, timeout-- tiraba TypeError adentro del
+					catch y el vendedor se quedaba con el generico "Error al guardar venta" y nada
+					mas. Se noto recien ahora porque el POST de la venta apaga el aviso global del
+					interceptor (skip_global_error_event en store/vender/vender.js), que ademas del
+					mensaje del back callaba el toast de red: este catch es el unico que avisa.
+
+					- Con mensaje del back (422 de la lista de precios, 409, etc.): solo ese. Antes
+					  salian dos toasts, el generico arriba del que decia algo.
+					- Error de axios sin `response`: no hubo respuesta del servidor. No se afirma que
+					  la venta "no se guardo" a secas: si la conexion se corto DESPUES de que el POST
+					  llego, la venta existe, y un vendedor que reintenta pasados los 5 segundos del
+					  deduplicado del back la duplica. Por eso manda a mirar Ventas antes de reintentar.
+					- Con respuesta pero sin mensaje: el generico.
+					- Un error que NO es de axios (un TypeError en el .then de arriba, DESPUES de que
+					  el POST ya guardo y el store ya commiteo la venta) tampoco tiene `response`, y
+					  antes caia en la rama de red: "lo mas probable es que NO se haya guardado" era
+					  mentira y llevaba derecho al duplicado. Se distingue por isAxiosError: para ese
+					  caso el aviso manda a mirar Ventas sin afirmar nada.
+				*/
+				let mensaje_del_back = err && err.response && err.response.data && err.response.data.message
+					? err.response.data.message
+					: null
+
+				let es_error_de_red = Boolean(err && err.isAxiosError && !err.response)
+
+				if (mensaje_del_back) {
+
+					this.$toast.error(mensaje_del_back, {
 						duration: 10000
 					})
+
+				} else if (!err || !err.isAxiosError) {
+
+					this.$toast.error('Ocurrió un error inesperado al guardar. Fijate en Ventas si la venta quedó guardada antes de volver a intentar; si el problema sigue, recargá la página.', {
+						duration: 15000
+					})
+
+				} else if (es_error_de_red) {
+
+					let es_timeout = Boolean(
+						err
+						&& (
+							err.code === 'ECONNABORTED'
+							|| (err.message && String(err.message).indexOf('timeout') !== -1)
+						)
+					)
+
+					this.$toast.error(
+						es_timeout
+							? 'El servidor tardó demasiado en responder. La venta puede haber quedado guardada: fijate en Ventas antes de volver a intentar.'
+							: 'No pudimos conectarnos con el servidor. Lo más probable es que la venta NO se haya guardado: revisá la conexión, fijate en Ventas y volvé a intentar.',
+						{
+							duration: 15000
+						}
+					)
+
 				} else {
-					this.$toast.error(err)
+
+					this.$toast.error('Error al guardar venta', {
+						duration: 10000
+					})
 				}
 			})
 		},
@@ -291,6 +346,28 @@ export default {
 				fecha_entrega: this.$store.state.vender.fecha_entrega,
 				observations_ocultas: this.$store.state.vender.observations_ocultas,
 				dias_alerta_venta_no_cobrada_personalizado: this.$store.state.vender.dias_alerta_venta_no_cobrada_personalizado,
+
+				/*
+					🔴 Estas nueve claves tienen que ser LAS MISMAS que manda el POST online
+					(store/vender/vender.js, action vender). La venta offline se guarda con lo que
+					quedo en IndexedDB y nada mas, y SaleController::store las lee igual venga de
+					donde venga. Faltaban, y el back las defaulteaba: discount_stock e iva_aplicado
+					volvian a 1 aunque el vendedor los hubiera apagado; aplicar_recargos_directo_a_
+					items quedaba null y getTotalSale volvia a sumar los recargos al recalcular;
+					puntos_canjeados no viajaba y PuntosCanjeHelper::aplicar salia sin descontarlos,
+					con el total YA neteado por el front --el cliente cobraba el descuento y
+					conservaba los puntos--; sale_status_id, price_description, send_mail y el log
+					se perdian. Si se agrega una clave al POST online, va tambien aca.
+				*/
+				aplicar_recargos_directo_a_items: this.$store.state.vender.aplicar_recargos_directo_a_items,
+				puntos_canjeados: this.$store.state.vender.puntos_canjeados,
+				descuento_puntos: this.$store.state.vender.descuento_puntos,
+				sale_status_id: this.$store.state.vender.sale_status_id,
+				discount_stock: this.$store.state.vender.discount_stock,
+				iva_aplicado: this.$store.state.vender.iva_aplicado,
+				price_description: JSON.stringify(this.$store.state.vender.total_description),
+				send_mail: this.$store.state.vender.send_mail,
+				log: this.$store.state.vender.sale_log,
 			}
 
 			await this.save_sale_offline(sale_data)
