@@ -116,12 +116,22 @@ export default {
 		/**
 		 * Método de pago principal seleccionado para la venta.
 		 *
+		 * 🔴 Hasta el 18/9/2026 este chip NO se dibujaba nunca: leia `vender.payment_method_id`
+		 * (una clave que el store de Vender no tiene; la real es `current_acount_payment_method_id`,
+		 * la que commitea setDefaultPaymentMethod y el select de la etapa 1) y buscaba el nombre en
+		 * `payment_method.models`, que es OTRO catalogo (el de los pagos de cuenta corriente), no
+		 * el de los metodos de cobro de la venta (`current_acount_payment_method`). Las dos cosas
+		 * juntas daban siempre null, y con la etapa 1 plegada la barra no mostraba con que se
+		 * cobraba. Misma clase que el chip de la lista de precios: un estado que no se ve.
+		 *
+		 * En 0 (venta a cuenta corriente, o "Seleccione metodo de pago") no hay chip, a proposito.
+		 *
 		 * @returns {Object|null}
 		 */
 		selected_payment_method() {
-			const pm_id = this.$store.state.vender.payment_method_id
+			const pm_id = this.$store.state.vender.current_acount_payment_method_id
 			if (!pm_id) return null
-			const methods = this.$store.state.payment_method.models
+			const methods = this.$store.state.current_acount_payment_method.models || []
 			return methods.find(m => m.id == pm_id) || null
 		},
 
