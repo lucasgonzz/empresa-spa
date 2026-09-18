@@ -15,6 +15,16 @@
 
 		<sale-modal></sale-modal>
 
+		<!--
+			BtnFacturar.vue (dentro de sale-modal) no factura directo: abre este modal con
+			$bvModal.show('confirm-make-afip-tickets'). En el resto del sistema viaja siempre
+			pegado a sale-modal a traves de common/current-acounts/Index.vue, pero Tesoreria monta
+			sale-modal DIRECTO sin pasar por ahi, asi que el modal nunca existia en este arbol y el
+			click en "Emitir factura" no hacia nada (ni error, ni efecto). Ver informe
+			20260918-boton-facturar-desde-tesoreria.
+		-->
+		<confirm-afip-tickets></confirm-afip-tickets>
+
 		<view-component
 		:models_to_show="models_to_show"
 		show_models_if_empty
@@ -63,6 +73,7 @@ export default {
 		SucursalConFoto: () => import('@/components/common/SucursalConFoto'),
 
 		SaleModal: () => import('@/components/common/SaleModal'),
+		ConfirmAfipTickets: () => import('@/components/ventas/modals/afip-ticket/ConfirmAfipTickets'),
 		MovimientosEntreCajas: () => import('@/components/caja/modals/movimientos-entre-cajas/Index'),
 		Aperturas: () => import('@/components/caja/modals/aperturas/Index'),
 		Movimientos: () => import('@/components/caja/modals/movimientos/Index'),
