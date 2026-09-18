@@ -12,8 +12,11 @@
 //      elegida la lista por defecto: la de mayor `position`, y a igual position la de id mas alto
 //      (mismo criterio que ArticlePricesHelper::resolver_precio_de_venta() del back).
 //  (b) Guardada una venta, la venta SIGUIENTE sigue con esa lista: limpiar el remito no la pierde.
-//  (c) Con el catalogo de listas vacio (GET /api/price-type interceptado a `{models: []}`), el
-//      selector se ve VACIO, guardar frena con el aviso y NO sale ningun POST a /api/sale.
+//  (c) Con la request del catalogo de listas FALLIDA (el caso de Trama: el arranque no lo trajo),
+//      el selector se ve VACIO, guardar frena con el aviso y NO sale ningun POST a /api/sale.
+//      🔴 Fallida y no vacia: un catalogo que el servidor confirma vacio ya no frena (paridad con
+//      el exists() del back). Se saca `price_type` de la respuesta de POST recursos-iniciales
+//      --que es por donde baja en el arranque-- y se aborta el GET /api/price-type de repliegue.
 //  (d) Editar una venta que quedo sin lista muestra la lista por defecto, con el selector
 //      HABILITADO: el vendedor la confirma o la cambia, no se le asigna por atras.
 //  (g) Editar una venta que SI tenia lista muestra esa lista, con el selector deshabilitado.
@@ -68,6 +71,7 @@ const {
 	elegir_opcion_que_contenga,
 	abrir_modulo_del_dia,
 	poner_toggle,
+	fecha_de_hoy,
 } = require('../helpers/vender')
 
 // 🔴 Sesion propia COMPARTIDA entre los tests del serial, igual que en
@@ -381,7 +385,68 @@ async function abrir_modal_con(testid, model_name) {
  */
 async function abrir_venta_para_editar(venta_id) {
 	await abrir_modulo_del_dia(page, '/ventas/todas', { solapa: SUCURSAL })
+	await elegir_venta_del_listado_para_editar(venta_id)
+}
 
+/**
+ * Lo mismo que abrir_venta_para_editar, pero navegando ADENTRO de la SPA (router.push), sin
+ * recargar la pagina.
+ *
+ * 🔴 Hace falta para (f): abrir_modulo_del_dia hace page.goto(), que es una recarga completa, y
+ * con la recarga el store de Vuex arranca de cero --guardar_como_presupuesto vuelve a 0 solo--,
+ * asi que el caso pasaba con y sin el arreglo de callGetSale(). El estado que el bug arrastra
+ * sobrevive unicamente a una navegacion interna, que es como se mueve una persona entre Vender y
+ * el listado. Deja una marca en window que solo sobrevive si NO hubo recarga, y la verifica.
+ *
+ * @param {number|string} venta_id
+ * @returns {Promise<void>}
+ */
+async function abrir_venta_para_editar_sin_recargar(venta_id) {
+	await page.evaluate(() => {
+		window.__e2e_marca_sin_recarga = true
+	})
+
+	await page.evaluate(ruta => {
+		const raiz = document.querySelector('#app')
+		// En vue-router 3 push() devuelve una promesa que rechaza si la ruta es la misma; no es
+		// un error de este test.
+		const navegacion = raiz.__vue__.$router.push(ruta)
+		if (navegacion && typeof navegacion.catch === 'function') {
+			navegacion.catch(() => {})
+		}
+		return null
+	}, '/ventas/todas')
+
+	// El mismo recorrido que abrir_modulo_del_dia, sin el goto: el dia de hoy y la solapa de la
+	// sucursal (que solo existe si el dia ya tiene ventas de esa sucursal).
+	const hoy = page.locator(`[data-testid="control-fecha-dia"][data-fecha="${fecha_de_hoy()}"]`)
+	await expect(hoy, 'el control de fechas tenia que ofrecer el dia de hoy').toBeVisible()
+	await hoy.click()
+
+	const solapa = page.locator(`[data-testid="nav-item-${SUCURSAL}"]`)
+	try {
+		await expect(solapa).toBeVisible({ timeout: 15000 })
+		await solapa.click()
+	} catch (error) {
+		console.log(`[lista] el dia no tiene registros de la sucursal "${SUCURSAL}" todavia`)
+	}
+
+	await elegir_venta_del_listado_para_editar(venta_id)
+
+	expect(
+		await page.evaluate(() => window.__e2e_marca_sin_recarga === true),
+		'la navegacion al listado tenia que ser adentro de la SPA, sin recargar: con una recarga este caso no prueba nada'
+	).toBeTruthy()
+}
+
+/**
+ * Con el listado del dia ya en pantalla: fila de la venta -> "Actualizar venta" -> Vender con la
+ * venta adentro.
+ *
+ * @param {number|string} venta_id
+ * @returns {Promise<void>}
+ */
+async function elegir_venta_del_listado_para_editar(venta_id) {
 	// El modo seleccion tiene que estar apagado para que el click abra la venta.
 	const modo_seleccion = page.locator('[data-testid="btn-modo-seleccion"]')
 	await expect(modo_seleccion).toBeVisible()
@@ -506,30 +571,47 @@ test.describe.serial('Vender: la lista de precios es obligatoria en una cuenta c
 		await esperar_lista_elegida(contexto.lista_por_defecto, 'en la venta siguiente, recien limpiada')
 	})
 
-	test('(c) sin catalogo de listas, guardar frena con el aviso y no sale ningun POST', async () => {
-		// El catalogo vacio, como si la request del arranque no hubiera traido nada. Predicado y no
-		// glob, para no agarrar de paso /api/price-type-surchage.
+	test('(c) con la request del catalogo de listas fallida, guardar frena con el aviso y no sale ningun POST', async () => {
+		// 🔴 Se simula una request FALLIDA, no un catalogo vacio. Con el flag prendido y CERO listas
+		//    confirmadas por el servidor el front ya no frena (paridad con el exists() del back);
+		//    lo que frena es no saber, que es lo que le paso a Trama.
+		//
+		//    El catalogo baja en el arranque adentro de POST recursos-iniciales: se le saca
+		//    `price_type` a esa respuesta (el componente lo repliega a GET /api/price-type) y ese
+		//    GET se aborta. Cualquier re-pedido de recuperacion del front cae en el mismo abort.
+		//    Predicados y no globs, para no agarrar de paso /api/price-type-surchage.
+		const es_el_arranque = url => /\/api\/recursos-iniciales(\?|$)/.test(url.href)
 		const es_el_catalogo = url => /\/api\/price-type(\?|$)/.test(url.href)
 
-		await page.route(es_el_catalogo, route => route.fulfill({
-			status: 200,
-			contentType: 'application/json',
-			body: JSON.stringify({ models: [] }),
-		}))
+		await page.route(es_el_arranque, async route => {
+			const respuesta = await route.fetch()
+			let cuerpo = null
+			try {
+				cuerpo = await respuesta.json()
+			} catch (error) {
+				cuerpo = null
+			}
+			if (cuerpo && cuerpo.models && typeof cuerpo.models === 'object') {
+				delete cuerpo.models.price_type
+			}
+			await route.fulfill({ response: respuesta, json: cuerpo })
+		})
+		await page.route(es_el_catalogo, route => route.abort('failed'))
 
 		try {
-			// Carga entera de la pagina: el catalogo baja en el arranque, y ahi lo agarra la ruta.
+			// Carga entera de la pagina: el catalogo baja en el arranque, y ahi lo agarran las rutas.
 			await armar_venta_de_mostrador()
 
 			// El selector tiene que verse igual, VACIO: es la señal de que falta la lista. Antes de
 			// esta mision el grupo entero desaparecia.
 			await expect(page.locator(SELECTOR), 'el selector tenia que verse aunque no haya lista').toBeVisible()
 			const elegida = await lista_elegida_en_el_selector()
-			expect(elegida.value, `con el catalogo vacio el selector no podia tener nada elegido y tiene "${elegida.text}"`).toBeNull()
+			expect(elegida.value, `sin catalogo de listas el selector no podia tener nada elegido y tiene "${elegida.text}"`).toBeNull()
 
-			await guardar_tiene_que_frenar(FRAGMENTO_DEL_AVISO, 'sin catalogo de listas')
+			await guardar_tiene_que_frenar(FRAGMENTO_DEL_AVISO, 'con el catalogo de listas sin llegar')
 		} finally {
 			await page.unroute(es_el_catalogo)
+			await page.unroute(es_el_arranque)
 		}
 	})
 
@@ -587,8 +669,9 @@ test.describe.serial('Vender: la lista de precios es obligatoria en una cuenta c
 
 		await expect(boton, 'con el toggle prendido el boton tenia que ofrecer guardar el presupuesto').toHaveText(/Guardar Presupuesto/)
 
-		// Abrir una venta guardada tiene que apagarlo: es una venta, no un presupuesto.
-		await abrir_venta_para_editar(contexto.venta.id)
+		// Abrir una venta guardada tiene que apagarlo: es una venta, no un presupuesto. 🔴 Sin
+		// recargar la pagina: con una recarga el store arranca de cero y el caso seria vacuo.
+		await abrir_venta_para_editar_sin_recargar(contexto.venta.id)
 
 		await expect(
 			page.locator('[data-testid="btn-guardar-venta"]'),
