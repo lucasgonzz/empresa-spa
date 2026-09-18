@@ -10,9 +10,15 @@ import default_payment_method from '@/mixins/vender/default_payment_method'
 import price_ranges from '@/mixins/vender/price_ranges'
 import axios from 'axios'
 import payment_methods from '@/mixins/vender/guardar_venta/chequeos/payment_methods'
+/*
+	Por limpiar_afip(), que cancelPreviusSale() necesita (ver el comentario ahi). El mixin no
+	tiene data() ni hooks: solo computed y metodos, y ninguno choca con los componentes que
+	mezclan este mixin.
+*/
+import facturar from '@/mixins/vender/guardar_venta/facturar'
 import { env } from '@/runtime_config'
 export default {
-	mixins: [price_ranges, limpiar_vender, limpiar_actualizandose_por, price_types, vender_set_total, default_payment_method, payment_methods],
+	mixins: [price_ranges, limpiar_vender, limpiar_actualizandose_por, price_types, vender_set_total, default_payment_method, payment_methods, facturar],
 	// mixins: [vender, set_employee_vender, vender_set_total],
 	data() {
 		return {
@@ -57,6 +63,24 @@ export default {
 			this.$router.push({name: 'vender', params: {view: 'remito'}})
 		},
 		callGetSale(sale_id) {
+
+			/*
+				🔴 Lo que la venta EN CURSO tenia y no puede pasarle a la que se abre. Abrir una
+				venta guardada no pasa por limpiar_vender (setPreviusSale solo prende el flag y
+				navega), asi que estos dos sobrevivian:
+
+				- guardar_como_presupuesto: con el toggle prendido en la venta en curso, el boton
+				  pasaba a decir "Guardar Presupuesto" y BtnGuardar.saveSale() creaba un presupuesto
+				  NUEVO con las lineas de la venta abierta, y la venta quedaba sin actualizar. Una
+				  venta guardada es una venta: se apaga siempre. Un presupuesto no entra por aca
+				  (BtnActualizarEnVender lo abre por su cuenta y lo prende despues).
+				- pending_attachments: los adjuntos que el vendedor habia cargado en la venta en
+				  curso se subian, al guardar, a la venta editada (updateSale los toma del store).
+
+				Van ACA y no en set_datos_para_actualizar_en_vender, que comparte con el presupuesto.
+			*/
+			this.$store.commit('vender/setGuardarComoPresupuesto', 0)
+			this.$store.commit('vender/clearPendingAttachments')
 
 			this.$store.commit('auth/setMessage', 'Cargando venta')
 			this.$store.commit('auth/setLoading', true)
@@ -336,9 +360,22 @@ export default {
 				this.$store.commit('vender/setSelectedPaymentMethods', [])
 			}
 
-			if (model.afip_information_id) {
-				this.$store.commit('vender/setAfipInformationId', model.afip_information_id)
-			}
+			/*
+				🔴 INCONDICIONALES, no `if (model.x)`: lo que el comprobante guardado NO tiene vuelve
+				a 0 / vacio / null, en vez de heredar lo que tuviera la venta EN CURSO en el momento
+				de abrirlo (setPreviusSale no pasa por limpiar_vender, y beforeRouteLeave de
+				Vender.vue ya no cancela nada).
+
+				Con el `if`, una venta en curso con punto de venta elegido contaminaba a la que se
+				abria: el PUT manda afip_information_id y SaleController@update lo asigna pelado, asi
+				que la venta editada quedaba marcada para facturar con un punto de venta que nadie
+				eligio para ella. Lo mismo con el tipo de venta, el numero de orden de compra y la
+				fecha de entrega, que ademas mete la venta editada en "por entregar".
+
+				employee_id se deja como estaba a proposito: es un hallazgo del back (getEmployeeId
+				resuelve el 0 al empleado logueado), no de esta clase.
+			*/
+			this.$store.commit('vender/setAfipInformationId', model.afip_information_id ? model.afip_information_id : 0)
 			if (model.employee_id) {
 				this.$store.commit('vender/setEmployeeId', model.employee_id)
 			}
@@ -347,15 +384,9 @@ export default {
 			} else {
 				this.$store.commit('vender/setAddressId', 0)
 			}
-			if (model.sale_type_id) {
-				this.$store.commit('vender/setSaleTypeId', model.sale_type_id)
-			}
-			if (model.numero_orden_de_compra) {
-				this.$store.commit('vender/set_numero_orden_de_compra', model.numero_orden_de_compra)
-			}
-			if (model.fecha_entrega) {
-				this.$store.commit('vender/set_fecha_entrega', model.fecha_entrega.split('T')[0])
-			}
+			this.$store.commit('vender/setSaleTypeId', model.sale_type_id ? model.sale_type_id : 0)
+			this.$store.commit('vender/set_numero_orden_de_compra', model.numero_orden_de_compra ? model.numero_orden_de_compra : '')
+			this.$store.commit('vender/set_fecha_entrega', model.fecha_entrega ? model.fecha_entrega.split('T')[0] : null)
 			this.$store.commit('vender/set_omitir_en_cuenta_corriente', model.omitir_en_cuenta_corriente)
 
 			this.$store.commit('vender/setObservations', model.observations)
@@ -579,6 +610,16 @@ export default {
 
 			this.limpiar_vender()
 			// this.resetear_vender()
+
+			/*
+				🔴 Igual que resetear_vender, y por lo mismo. limpiar_vender no toca AFIP, y hasta
+				esta mision cancelar la edicion (que corre tambien despues de un PUT exitoso)
+				dejaba el punto de venta y el tipo de comprobante de la venta editada para la venta
+				SIGUIENTE. Como set_afip_tipo_comprobante le pone el tipo al elegir cliente y
+				check_afip pasa, resetear_vender la FACTURABA sola al guardar, con un punto de venta
+				que nadie eligio: el select se veia verde, pero nadie lo toco.
+			*/
+			this.limpiar_afip()
 
 			this.setDefaultPaymentMethod(true)
 
