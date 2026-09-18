@@ -70,6 +70,51 @@ Vue.prototype.Echo = new Echo({
     },
 });
 
+/**
+ * Estado de la conexión al broadcast, publicado en el store (misión procesos-en-segundo-plano,
+ * 18/9/2026). Alimenta el punto verde/rojo junto al nombre del usuario y el respaldo por polling
+ * de la píldora de procesos.
+ *
+ * Va acá y no en un componente porque es el ÚNICO lugar donde la conexión de Pusher existe
+ * antes que cualquier componente: Echo se crea arriba y conecta mucho antes de que resuelva la
+ * sesión. Un componente que se enganchara en su created() se perdería el estado inicial.
+ *
+ * Los estados de Pusher se reducen a los tres que muestra la interfaz: `connected` es
+ * conectado; `connecting` e `initialized` son conectando; todo lo demás (`unavailable`,
+ * `failed`, `disconnected`) es desconectado. Se chequea que el conector exista en vez de
+ * asumirlo: si algún día cambia el broadcaster, lo único que se pierde es el punto, no la app.
+ */
+function observar_estado_del_broadcast(echo) {
+    if (!echo || !echo.connector || !echo.connector.pusher || !echo.connector.pusher.connection) {
+        return
+    }
+
+    /** Conexión de Pusher, la que emite los cambios de estado. */
+    const connection = echo.connector.pusher.connection
+
+    /**
+     * @param {string} estado_pusher Estado tal como lo nombra pusher-js.
+     * @returns {string} 'conectado' | 'conectando' | 'desconectado'
+     */
+    function traducir(estado_pusher) {
+        if (estado_pusher === 'connected') {
+            return 'conectado'
+        }
+        if (estado_pusher === 'connecting' || estado_pusher === 'initialized') {
+            return 'conectando'
+        }
+        return 'desconectado'
+    }
+
+    store.commit('background_processes/setEstadoConexion', traducir(connection.state))
+
+    connection.bind('state_change', (estados) => {
+        store.commit('background_processes/setEstadoConexion', traducir(estados ? estados.current : null))
+    })
+}
+
+observar_estado_del_broadcast(Vue.prototype.Echo)
+
 // Notifications
 import VueToast from 'vue-toast-notification';
 import 'vue-toast-notification/dist/theme-sugar.css';

@@ -40,6 +40,11 @@ export default {
             });
             // Aviso en tiempo real de que entro un pedido nuevo en la tienda.
             this.escuchar_pedidos_nuevos()
+            // Refresco al reconectar Echo. Se llama ACA ademas de desde escuchar_pedidos_nuevos():
+            // aquella solo llega a engancharlo cuando el comercio tiene tienda online (sin canal de
+            // pedidos corta antes), y desde la mision procesos-en-segundo-plano el refresco lo
+            // necesita cualquier comercio, tenga tienda o no. Es idempotente: se engancha una vez.
+            this.escuchar_reconexion_de_echo()
             // Aviso por lote de que el asistente ya puede responder por articulos nuevos.
             this.escuchar_embeddings_generados()
             // Suscribe canal de soporte para chat interno con admin.
@@ -199,11 +204,14 @@ export default {
             this.escuchar_reconexion_de_echo()
         },
         /**
-         * Vuelve a pedir los pedidos sin confirmar cada vez que Echo se reconecta.
+         * Vuelve a pedir lo que el broadcast pudo haberse perdido cada vez que Echo se reconecta:
+         * los pedidos sin confirmar (si el comercio tiene tienda) y el listado de procesos en
+         * segundo plano (mision procesos-en-segundo-plano, 18/9/2026).
          *
          * 🔴 Es el agujero que el broadcast solo NO cubre: los eventos que ocurrieron mientras la
          * conexion estaba caida no se reenvian cuando vuelve. Sin esto, un pedido que entro con la
-         * pestana desconectada no aparece hasta el proximo polling.
+         * pestana desconectada no aparece hasta el proximo polling, y un proceso que termino con
+         * la pestaña desconectada quedaria "en proceso" en la pildora hasta el proximo respaldo.
          *
          * @return {void}
          */
@@ -235,8 +243,21 @@ export default {
                     this.echo_ya_estuvo_conectado = true
                     return
                 }
-                console.log('Echo reconecto: se vuelven a pedir los pedidos sin confirmar')
-                this.$store.dispatch('order/getUnconfirmedModels')
+                // Los pedidos solo si hay canal de pedidos, o sea si el comercio tiene tienda
+                // online: antes este hook solo existia en ese caso, y un comercio sin tienda no
+                // tiene por que pegarle a /order/unconfirmed/models en cada reconexion.
+                if (this.order_created_echo_channel) {
+                    console.log('Echo reconecto: se vuelven a pedir los pedidos sin confirmar')
+                    this.$store.dispatch('order/getUnconfirmedModels')
+                }
+
+                // Los procesos en segundo plano, siempre: un avance o un cierre emitido con la
+                // pestaña desconectada no se reenvia, y el listado es la unica forma de ponerse
+                // al dia. El store atrapa el 404 de una API vieja, asi que no hay que guardarlo.
+                if (this.$store.state.background_processes) {
+                    console.log('Echo reconecto: se vuelve a pedir el listado de procesos en segundo plano')
+                    this.$store.dispatch('background_processes/getModels')
+                }
             })
         },
         checkIfIsMessagesView(noti) {

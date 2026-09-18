@@ -249,6 +249,8 @@ import sync_to_tn_article from '@/store/sync_to_tn_article'
 import tag from '@/store/tag'
 
 import import_status from '@/store/import_status'
+// Procesos en segundo plano (pildora, modal y estado de la conexion al broadcast).
+import background_processes from '@/store/background_processes'
 import excel_analysis from '@/store/excel_analysis'
 import filter_history from '@/store/filter_history'
 
@@ -524,6 +526,7 @@ export default new Vuex.Store({
         tag,
 
         import_status,
+        background_processes,
         excel_analysis,
         filter_history,
 
