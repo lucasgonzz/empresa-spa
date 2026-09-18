@@ -16,7 +16,7 @@ export default {
 		que_hace: 'Muestra cuántos procesos están corriendo en segundo plano (importaciones, recálculo de precios, actualizaciones masivas...) y el avance promedio de los que se pueden medir. Al hacer click abre el detalle de todos.',
 		repercute: [
 			'Solo informa: no frena ni cambia ningún proceso.',
-			'Se achica al anillo a los 6 segundos y se vuelve a expandir al pasar el mouse. Cuando termina el último proceso avisa 4 segundos y se va sola.',
+			'Se achica al anillo (con la cantidad en un globito) a los 6 segundos y se vuelve a expandir al pasar el mouse. Cuando el último proceso termina bien avisa 4 segundos y se va sola; si alguno falló, se queda en rojo hasta que lo cierres desde el detalle.',
 		],
 		nota_interna: 'Se alimenta del canal background_processes.{owner_id} (evento .BackgroundProcessUpdated) y de GET background-processes al arrancar, al reconectar Echo y cada 15 s como respaldo si la conexión en tiempo real no está sana. Contra una API sin el endpoint (404) no aparece nunca.',
 	},

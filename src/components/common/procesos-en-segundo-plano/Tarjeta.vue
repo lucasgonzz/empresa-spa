@@ -62,6 +62,15 @@ const MS_MENSAJE_FINAL = 4000
 const MS_RESPALDO = 15000
 
 /**
+ * Cada cuanto se pide el listado mientras hay activos CON la conexion sana. Es la red para el
+ * unico aviso que no tiene siguiente: el del cierre. Si el POST del servidor a Pusher falla
+ * justo en completar() (el servidor lo atrapa a proposito y sigue), el socket del navegador
+ * esta perfecto y no llega nada: sin esto la pildora quedaba clavada en el ultimo porcentaje
+ * hasta un F5. Un avance perdido lo tapa el siguiente; el cierre, no.
+ */
+const MS_RESPALDO_CONECTADO = 60000
+
+/**
  * Pildora de arriba a la derecha con los procesos en segundo plano en curso (mision
  * procesos-en-segundo-plano, 18/9/2026). Misma familia visual que la tarjeta de descarga de
  * recursos del arranque (download-resources/Progress.vue): translucida, con el anillo de
@@ -137,11 +146,17 @@ export default {
 			return { top: this.offset_offline + 'px' }
 		},
 		/**
-		 * Mientras haya activos y los avisos en tiempo real no puedan llegar (socket caido, o el
-		 * servidor sin broadcast), el listado se pide cada 15 s. Con la conexion sana, nunca.
+		 * Mientras haya activos, el listado se vuelve a pedir cada tanto: cada 15 s si los avisos
+		 * en tiempo real no pueden llegar (socket caido, o el servidor sin broadcast), cada 60 s
+		 * con la conexion sana (ver MS_RESPALDO_CONECTADO). Sin activos, nunca.
+		 *
+		 * @returns {Number} milisegundos entre pedidos, 0 = sin respaldo.
 		 */
-		necesita_respaldo() {
-			return this.cantidad_activos > 0 && !this.conectado
+		periodo_de_respaldo() {
+			if (this.cantidad_activos === 0) {
+				return 0
+			}
+			return this.conectado ? MS_RESPALDO_CONECTADO : MS_RESPALDO
 		},
 		/**
 		 * Estado publicado en el DOM: 'activo' | 'terminado' | 'error'.
@@ -197,10 +212,10 @@ export default {
 				this.mostrar_final(this.estado_final_de(viejos))
 			}
 		},
-		necesita_respaldo: {
+		periodo_de_respaldo: {
 			immediate: true,
-			handler(valor) {
-				this.ajustar_respaldo(valor)
+			handler(periodo) {
+				this.ajustar_respaldo(periodo)
 			},
 		},
 		/**
@@ -238,7 +253,7 @@ export default {
 	},
 	beforeDestroy() {
 		this.limpiar_timers()
-		this.ajustar_respaldo(false)
+		this.ajustar_respaldo(0)
 	},
 	methods: {
 		/**
@@ -327,21 +342,22 @@ export default {
 			return hubo_error ? 'error' : 'terminado'
 		},
 		/**
-		 * Prende o apaga el respaldo por polling.
+		 * Prende, apaga o cambia de ritmo el respaldo por polling. Se reinicia entero cuando
+		 * cambia el periodo (la conexion se cayo o volvio): un setInterval no se re-tempera.
 		 *
-		 * @param {Boolean} prender
+		 * @param {Number} periodo  milisegundos, 0 = apagar.
 		 */
-		ajustar_respaldo(prender) {
-			if (prender && !this.timer_respaldo) {
-				this.timer_respaldo = setInterval(() => {
-					this.$store.dispatch('background_processes/getModels')
-				}, MS_RESPALDO)
-				return
-			}
-			if (!prender && this.timer_respaldo) {
+		ajustar_respaldo(periodo) {
+			if (this.timer_respaldo) {
 				clearInterval(this.timer_respaldo)
 				this.timer_respaldo = null
 			}
+			if (!periodo) {
+				return
+			}
+			this.timer_respaldo = setInterval(() => {
+				this.$store.dispatch('background_processes/getModels')
+			}, periodo)
 		},
 		abrir_modal() {
 			this.$bvModal.show('procesos-en-segundo-plano')

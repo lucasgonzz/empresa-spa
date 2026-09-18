@@ -53,6 +53,27 @@ function esta_terminado(proceso) {
 	return proceso.status === 'completado' || proceso.status === 'fallo'
 }
 
+/**
+ * True si `candidata` es una versión más vieja del mismo proceso que `actual` y no tiene que
+ * pisarla. Dos reglas, en este orden:
+ *
+ *  1. Un terminado nunca lo pisa un activo. `updated_at` viaja con resolución de segundos, y
+ *     el GET del detalle en vuelo puede volver con "en_proceso · 90 %" en el MISMO segundo en
+ *     que el evento dijo "completado": con la fecha sola, la respuesta que llega última gana y
+ *     la píldora queda clavada en un proceso que ya terminó.
+ *  2. Si las dos son activas (o las dos terminadas), manda la fecha, estricta.
+ *
+ * @param {Object} candidata
+ * @param {Object} actual
+ * @returns {Boolean}
+ */
+function es_mas_vieja(candidata, actual) {
+	if (esta_terminado(actual) && !esta_terminado(candidata)) {
+		return true
+	}
+	return tiempo(actual.updated_at) > tiempo(candidata.updated_at)
+}
+
 export default {
 	namespaced: true,
 	state: {
@@ -186,7 +207,7 @@ export default {
 
 			nuevos.forEach(proceso => {
 				let actual = state.models.find(modelo => modelo.id === proceso.id)
-				if (actual && tiempo(actual.updated_at) > tiempo(proceso.updated_at)) {
+				if (actual && es_mas_vieja(proceso, actual)) {
 					resultado.push(actual)
 				} else {
 					resultado.push(proceso)
@@ -223,7 +244,7 @@ export default {
 				state.models.push(proceso)
 				return
 			}
-			if (tiempo(state.models[indice].updated_at) > tiempo(proceso.updated_at)) {
+			if (es_mas_vieja(proceso, state.models[indice])) {
 				return
 			}
 			state.models.splice(indice, 1, proceso)
