@@ -1,7 +1,12 @@
 import vender_mixin from '@/mixins/vender'
 import limpiar_vender from '@/mixins/vender/limpiar_vender'
+/*
+	Para volver a poner el metodo de pago por defecto despues de guardar el presupuesto, como
+	hacen resetear_vender y cancelPreviusSale. limpiar_vender no lo toca.
+*/
+import default_payment_method from '@/mixins/vender/default_payment_method'
 export default {
-	mixins: [vender_mixin, limpiar_vender],
+	mixins: [vender_mixin, limpiar_vender, default_payment_method],
 	computed: {
 		client() {
 			return this.$store.state.vender.client
@@ -152,6 +157,16 @@ export default {
 				this.$toast.success('Presupuesto actualizado')
 				this.$store.commit('budget/add', res.data.model)
 				this.limpiar_vender()
+
+				/*
+					🔴 Como resetear_vender y cancelPreviusSale, y por lo mismo: limpiar_vender no
+					toca el metodo de pago, y abrir un presupuesto para editarlo lo deja en 0
+					(set_datos_para_actualizar_en_vender: un presupuesto no lleva metodo). Sin esto la
+					venta SIGUIENTE arrancaba con el select en "Seleccione metodo de pago" y --hasta
+					que check_payment_methods volvio a prenderse-- se guardaba asi, sin metodo ni
+					movimiento de caja.
+				*/
+				this.setDefaultPaymentMethod(true)
 			})
 			.catch(err => {
 				this.$store.commit('auth/setMessage', '')
@@ -230,6 +245,9 @@ export default {
 				this.$toast.success('Presupuesto guardado')
 				this.$store.commit('budget/add', res.data.model)
 				this.limpiar_vender()
+
+				// Mismo motivo que en actualizar(): la venta siguiente no puede quedar sin metodo.
+				this.setDefaultPaymentMethod(true)
 			})
 			.catch(err => {
 				this.$store.commit('auth/setMessage', '')
