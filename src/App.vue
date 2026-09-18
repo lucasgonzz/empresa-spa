@@ -71,6 +71,17 @@
         <sesion-cerrada-otro-dispositivo-modal></sesion-cerrada-otro-dispositivo-modal>
 
         <!--
+            Procesos en segundo plano (misión procesos-en-segundo-plano, 18/9/2026): la píldora de
+            arriba a la derecha con cuántos hay corriendo, y el modal con el detalle de todos. Van
+            gateados por `authenticated` y no por v-show: la píldora es quien pide el listado en su
+            created() (encadenado detrás del arranque de sesión), así que cada login lo vuelve a
+            pedir y cada logout lo desmonta con sus timers. El canal de broadcast lo suscribe
+            listenChannels() (common-vue/mixins/broadcast.js), no estos componentes.
+        -->
+        <procesos-tarjeta v-if="authenticated"></procesos-tarjeta>
+        <procesos-modal v-if="authenticated"></procesos-modal>
+
+        <!--
             Panel de tutoriales de la demo (misión 51, corregido por la 52). El v-if es la guarda
             que protege a los ~40 clientes reales: para un cliente el componente NO se monta, no
             se ejecuta una línea suya y no se hace ninguna llamada. Es v-if y no v-show a propósito.
@@ -155,6 +166,9 @@ export default {
         AvisoImagenesAutomaticas: () => import('@/components/common/AvisoImagenesAutomaticas'),
         AvisoDescripcionesAutomaticas: () => import('@/components/common/AvisoDescripcionesAutomaticas'),
         SesionCerradaOtroDispositivoModal: () => import('@/components/common/SesionCerradaOtroDispositivoModal'),
+        // Procesos en segundo plano: píldora y modal (ver el comentario en el template).
+        ProcesosTarjeta: () => import('@/components/common/procesos-en-segundo-plano/Tarjeta'),
+        ProcesosModal: () => import('@/components/common/procesos-en-segundo-plano/Modal'),
         // Carga diferida: sin demo, este chunk no se descarga nunca (misión 51).
         PanelDemo: () => import('@/components/demo/PanelDemo'),
     },

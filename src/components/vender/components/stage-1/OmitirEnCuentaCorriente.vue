@@ -1,8 +1,13 @@
 <template>
 	<!-- El `v-if` sobre `client` es el que manda: sin cliente elegido este toggle no existe, asi
-	que el paso del tour que lo senala va SIEMPRE despues del paso del cliente. -->
+	que el paso del tour que lo senala va SIEMPRE despues del paso del cliente.
+
+	Con "Guardar como presupuesto" prendido (o un presupuesto cargado para editar) el toggle se
+	VE pero deshabilitado, en 0 y con el texto que lo explica: un presupuesto va siempre a la
+	cuenta corriente del cliente (decision de Lucas, 18/9/2026). Hasta esa fecha el toggle
+	directamente desaparecia y el valor que tuviera viajaba igual en el presupuesto. -->
 	<div
-	v-if="client && !guardar_como_presupuesto"
+	v-if="client"
 	data-tour="vender.toggle_omitir_cuenta_corriente"
 	class="vender-toggle-row">
 
@@ -10,6 +15,7 @@
 		<label
 		class="vender-toggle"
 		:class="{ 'vender-toggle--disabled': disabled }"
+		:title="es_presupuesto ? 'Un presupuesto va siempre a la cuenta corriente del cliente' : ''"
 		for="toggle-omitir-cc">
 			<input
 			type="checkbox"
@@ -37,10 +43,26 @@ export default {
 	mixins: [default_payment_method],
 	computed: {
 		text() {
-			if (this.owner.text_omitir_cc) {
-				return this.owner.text_omitir_cc
+			let texto = this.owner.text_omitir_cc ? this.owner.text_omitir_cc : 'Omitir cuenta corriente'
+
+			/*
+				En un presupuesto el toggle esta deshabilitado y en 0, y el texto dice por que: no
+				hay hover en el telefono para leer el title.
+			*/
+			if (this.es_presupuesto) {
+				return texto + ' (no aplica a presupuestos: van siempre a la cuenta corriente)'
 			}
-			return 'Omitir cuenta corriente'
+
+			return texto
+		},
+		/**
+		 * Lo que se esta armando es un presupuesto: el toggle "Guardar como presupuesto" esta
+		 * prendido, o hay un presupuesto cargado para editar (Actualizar en VENDER).
+		 *
+		 * @returns {boolean}
+		 */
+		es_presupuesto() {
+			return !!this.guardar_como_presupuesto || this.budget !== null
 		},
 		omitir_en_cuenta_corriente: {
 			set(value) {
@@ -83,14 +105,20 @@ export default {
 			return this.$store.getters['vender/previus_sales/editando_venta_previa']
 		},
 		disabled() {
-			// if (this.budget !== null) {
-			// // if (this.previus_sale.id || this.budget !== null) {
-			// 	return true
-			// }
 			if (this.editando_venta_previa) {
-			// if (this.previus_sale.id || this.budget !== null) {
 				return true
 			}
+
+			/*
+				Un presupuesto no se puede omitir de la cuenta corriente: al confirmarlo la venta va
+				siempre a la cuenta del cliente (BudgetHelper::saveSale() en el back). El valor lo
+				pone en 0 el toggle de "Guardar como presupuesto" al prenderse (o el presupuesto
+				cargado, que nace en 0); aca solo se bloquea el control.
+			*/
+			if (this.es_presupuesto) {
+				return true
+			}
+
 			return false
 		}
 	},
