@@ -108,7 +108,13 @@ export default {
             return this.$store.state[this.model_name].models
         },
         properties() {
-            return require(`@/models/${this.model_name}`).default.properties 
+            // get_properties_to_show_ordenadas (mixin global generals/model-meta.js) lee
+            // store.state.current_acount.props_to_show, que el boton de props-to-show completa
+            // con los defaults del modelo apenas se monta (ver SaldoYLimite.vue). El fallback a
+            // get_properties_to_show cubre el instante en que ese store todavia no se pobló
+            // (cache de table_column_preference sin bajar) para no dejar la tabla sin columnas.
+            let props = this.get_properties_to_show_ordenadas(this.model_name)
+            return props.length ? props : this.get_properties_to_show(this.model_name)
         },
     },
     methods: {

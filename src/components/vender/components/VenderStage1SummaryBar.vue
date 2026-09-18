@@ -49,6 +49,27 @@
 			</button>
 		</div>
 
+		<!--
+			Chip de alerta: la cuenta vende con listas de precios y el comprobante no tiene ninguna.
+			Con la etapa 1 colapsada (edicion de una venta o un presupuesto) era lo unico que no se
+			veia: el chip de arriba solo existe con lista, asi que una venta sin lista no mostraba
+			nada raro hasta expandir la etapa, y el Guardar recien ahi frenaba. Misma accion que el
+			chip normal: expandir la etapa 1 con foco en el selector.
+		-->
+		<div
+		v-else-if="falta_lista_de_precios"
+		class="vender-summary-bar__chip vender-summary-bar__chip--alerta"
+		data-testid="chip-sin-lista-de-precios">
+			<i class="icon-exclamation vender-summary-bar__chip-icon"></i>
+			<span class="vender-summary-bar__chip-text">Sin lista de precios</span>
+			<button
+			class="vender-summary-bar__chip-edit"
+			title="Elegir lista de precios"
+			@click="expandStage1('price_type')">
+				<i class="icon-edit"></i>
+			</button>
+		</div>
+
 		<!-- Chip: Cliente (solo si hay uno seleccionado) -->
 		<div
 		v-if="client"
@@ -67,8 +88,17 @@
 </template>
 
 <script>
+/*
+	Por requiere_lista_de_precios(), que es el unico lugar donde vive la regla de "esta cuenta
+	vende con lista si o si" (flag del dueño, menos la extension de rangos por cantidad, menos
+	el catalogo confirmado vacio). El mixin no tiene data() ni hooks; sus computeds (via
+	mixins/vender/computed) no pisan los de este componente: `client` se define aca con el
+	mismo valor.
+*/
+import price_types from '@/mixins/vender/price_types'
 export default {
 	name: 'VenderStage1SummaryBar',
+	mixins: [price_types],
 	computed: {
 		/**
 		 * Sucursal (address) actualmente seleccionada en la venta.
@@ -86,12 +116,22 @@ export default {
 		/**
 		 * Método de pago principal seleccionado para la venta.
 		 *
+		 * 🔴 Hasta el 18/9/2026 este chip NO se dibujaba nunca: leia `vender.payment_method_id`
+		 * (una clave que el store de Vender no tiene; la real es `current_acount_payment_method_id`,
+		 * la que commitea setDefaultPaymentMethod y el select de la etapa 1) y buscaba el nombre en
+		 * `payment_method.models`, que es OTRO catalogo (el de los pagos de cuenta corriente), no
+		 * el de los metodos de cobro de la venta (`current_acount_payment_method`). Las dos cosas
+		 * juntas daban siempre null, y con la etapa 1 plegada la barra no mostraba con que se
+		 * cobraba. Misma clase que el chip de la lista de precios: un estado que no se ve.
+		 *
+		 * En 0 (venta a cuenta corriente, o "Seleccione metodo de pago") no hay chip, a proposito.
+		 *
 		 * @returns {Object|null}
 		 */
 		selected_payment_method() {
-			const pm_id = this.$store.state.vender.payment_method_id
+			const pm_id = this.$store.state.vender.current_acount_payment_method_id
 			if (!pm_id) return null
-			const methods = this.$store.state.payment_method.models
+			const methods = this.$store.state.current_acount_payment_method.models || []
 			return methods.find(m => m.id == pm_id) || null
 		},
 
@@ -102,6 +142,19 @@ export default {
 		 */
 		price_type_vender() {
 			return this.$store.state.vender.price_type
+		},
+
+		/**
+		 * La cuenta requiere lista de precios y el comprobante en curso no tiene ninguna.
+		 *
+		 * Es un computed y no una llamada en el template para que Vue siga las dependencias de
+		 * requiere_lista_de_precios() (el catalogo, el flag del dueño, la confirmacion de
+		 * "catalogo vacio" que llega despues) y el chip aparezca o se vaya solo.
+		 *
+		 * @returns {boolean}
+		 */
+		falta_lista_de_precios() {
+			return !this.price_type_vender && this.requiere_lista_de_precios()
 		},
 
 		/**
@@ -124,6 +177,7 @@ export default {
 				this.selected_address
 				|| this.selected_payment_method
 				|| this.price_type_vender
+				|| this.falta_lista_de_precios
 				|| this.client
 			)
 		},
@@ -170,6 +224,16 @@ export default {
 		&--client
 			border-color: var(--color-primary, #007bff)
 			color: var(--color-primary, #007bff)
+
+		// Chip de alerta (falta la lista de precios). Los tokens --btn-peligro-* son el rojo del
+		// sistema (src/sass/_dark_theme.sass) y tienen valor en los dos modos, asi que el chip se
+		// ve en claro y en oscuro sin un color propio. Hereda el resto del chip (tamaño, radio,
+		// elipsis del texto) para que se comporte igual en los tres anchos.
+		&--alerta
+			background: var(--btn-peligro-fondo, #fdf3f2)
+			border-color: var(--btn-peligro-borde, #b4443f)
+			color: var(--btn-peligro-texto, #9c3a36)
+			font-weight: 600
 
 	/* Ícono decorativo dentro del chip */
 	&__chip-icon

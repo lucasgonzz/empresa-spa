@@ -511,6 +511,7 @@ export default {
 			type: 'number',
 			filter_modal_position: 13,
 			use_to_show_in_search_modal: true,
+			use_to_update: true,
 			// table_position: 7,
 		},
 		{

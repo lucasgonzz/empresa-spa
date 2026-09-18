@@ -375,13 +375,26 @@ export default {
 				eligio para ella. Lo mismo con el tipo de venta, el numero de orden de compra y la
 				fecha de entrega, que ademas mete la venta editada en "por entregar".
 
-				employee_id se deja como estaba a proposito: es un hallazgo del back (getEmployeeId
-				resuelve el 0 al empleado logueado), no de esta clase.
 			*/
 			this.$store.commit('vender/setAfipInformationId', model.afip_information_id ? model.afip_information_id : 0)
-			if (model.employee_id) {
-				this.$store.commit('vender/setEmployeeId', model.employee_id)
-			}
+
+			/*
+				🔴 El empleado de la venta se restaura SIEMPRE, tambien cuando es null (venta del
+				dueño). Hasta la tanda 2 de vender-lista-obligatoria iba con `if (model.employee_id)`:
+				una venta del dueño abierta por un empleado dejaba en el store el id del empleado
+				logueado (lo pone setEmployeeVender), el PUT lo mandaba, y SaleController@update se
+				lo asignaba: la venta del dueño quedaba a nombre del empleado que la edito. Con el
+				null en el store, el PUT manda employee_id null y el back (que ahora preserva el
+				empleado de la venta cuando no le llega uno > 0) la deja como estaba.
+
+				El select de empleado (header-2/.../Employee.vue) esta deshabilitado en edicion y
+				tolera el null (queda sin opcion marcada, no revienta); cancelPreviusSale() vuelve a
+				poner el del usuario logueado con setEmployeeVender() para la venta siguiente. Un
+				presupuesto tambien trae employee_id (el back lo escribe al crearlo) y su PUT no lo
+				manda, asi que ahi no cambia nada.
+			*/
+			this.$store.commit('vender/setEmployeeId', model.employee_id)
+
 			if (model.address_id) {
 				this.$store.commit('vender/setAddressId', model.address_id)
 			} else {
@@ -542,7 +555,13 @@ export default {
 				afip_information_id: this.afip_information_id,
 				sale_type_id: this.sale_type_id,
 				address_id: this.address_id,
-				employee_id: this.employee_id,
+				/*
+					Del store y no del computed, como la lista de precios en el PUT: es lo que
+					set_datos_para_actualizar_en_vender() restauro de la venta (null incluido, ver
+					el comentario ahi), y asi viaja aunque quien llame no tenga el computed
+					employee_id de mixins/vender.js.
+				*/
+				employee_id: this.$store.state.vender.employee_id,
 				to_check: this.to_check,
 				checked: this.checked,
 				confirmed: this.confirmed,

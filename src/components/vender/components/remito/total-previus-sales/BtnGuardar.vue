@@ -122,6 +122,22 @@ export default {
 				return false
 			}
 
+			/*
+				🔴 La sucursal tambien se chequea para el presupuesto, que no pasa por
+				checkear_vender(). Hasta esta tanda un presupuesto salia sin sucursal en una
+				cuenta que tiene sucursales, y al confirmarlo BudgetHelper::saveSale() le
+				arrastraba ese address_id vacio a la venta (medido: presupuesto con address_id
+				0): la venta nacia sin sucursal y el stock no se descontaba del deposito que
+				correspondia. Es el mismo check_sucursal() de la venta (chequeos/sucursal.js),
+				con el aviso nombrando al presupuesto.
+
+				check_sale_type() y check_afip() NO se corren aca a proposito: un presupuesto
+				no se factura ni lleva tipo de venta.
+			*/
+			if (this.guardar_como_presupuesto && !this.check_sucursal('del presupuesto')) {
+				return false
+			}
+
 			if (typeof this.previus_sale.id != 'undefined' && this.previus_sale.to_check && !this.checked) {
 				this.$toast.error('Indique la venta como checkeada')
 				return false

@@ -32,6 +32,9 @@
 		@modelSaved="providerGuardado"
 		:show_previus_days="false">
 
+			<template #horizontal_nav_center>
+				<saldos-filtrados model_name="provider"></saldos-filtrados>
+			</template>
 
 			<template v-slot:table_left_options="slotProps">
 				<btn-current-acounts
@@ -58,6 +61,7 @@ export default {
 		BtnCurrentAcounts: () => import('@/components/common/BtnCurrentAcounts'),
 		ComercioCityUser: () => import('@/components/common/ComercioCityUser'),
 		PropagarDescuentos: () => import('@/components/provider/components/providers/PropagarDescuentos'),
+		SaldosFiltrados: () => import('@/components/common/SaldosFiltrados'),
 		SincronizarArticulos: () => import('@/components/provider/components/providers/SincronizarArticulos'),
 	},
 	methods: {

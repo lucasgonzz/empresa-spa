@@ -29,7 +29,7 @@
 			</template>
 
 		<template #horizontal_nav_center>
-			<saldos-clientes-filtrados></saldos-clientes-filtrados>
+			<saldos-filtrados model_name="client"></saldos-filtrados>
 		</template>
 
 			<template v-slot:table_left_options="slotProps">
@@ -105,7 +105,7 @@ export default {
 		ComercioCityUser: () => import('@/components/common/ComercioCityUser'),
 		CreateBuyer: () => import('@/components/client/components/clients/CreateBuyer'),
 		LimitesDeCredito: () => import('@/components/client/components/clients/LimitesDeCredito'),
-		SaldosClientesFiltrados: () => import('@/components/client/components/clients/SaldosClientesFiltrados'),
+		SaldosFiltrados: () => import('@/components/common/SaldosFiltrados'),
 		BtnPdf: () => import('@/components/client/components/clients/BtnPdf'),
 	},
 	methods: {

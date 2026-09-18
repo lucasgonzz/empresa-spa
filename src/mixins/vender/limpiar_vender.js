@@ -169,6 +169,14 @@ export default {
 			
 			// this.$store.commit('vender/set_afip_tipo_comprobante_id', 0)
 
+			/*
+				AFIP (punto de venta, tipo de comprobante, forma de pago, permiso existente e
+				incoterms) NO se limpia aca sino en limpiar_afip() (guardar_venta/facturar.js), que
+				corre despues de guardar una venta y al cancelar la edicion de una venta previa.
+				Los cinco van juntos porque el select de incoterms solo existe con el tipo en 8:
+				limpiar uno solo de ellos desde aca dejaria la pantalla y el store desparejos.
+			*/
+
 			this.setTotal()
 
 			// this.checkAddressCookie()
