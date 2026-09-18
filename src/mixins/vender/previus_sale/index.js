@@ -304,23 +304,16 @@ export default {
 				hacer que una venta que TENIA lista la pierda en el PUT (o la cambie por la del
 				cliente, que puede ser otra). Si el id no esta en el catalogo --la lista se borro--,
 				la venta no tiene lista, y se sigue con el cliente y el default.
+
+				El criterio vive en price_types.js (resolver_lista_de_comprobante_guardado) porque
+				lo usa tambien setPriceType() cuando el catalogo llega DESPUES de abrir el
+				comprobante: ahi se propone la misma lista que aca. Si el catalogo esta vacio en
+				este momento, queda null y ese camino la resuelve cuando llega.
 			*/
-			if (model.price_type && model.price_type.id) {
-				this.$store.commit('vender/setPriceType', model.price_type)
-			} else {
-				let lista = this.lista_del_catalogo(model.price_type_id)
+			let lista_del_comprobante = this.resolver_lista_de_comprobante_guardado(model)
 
-				if (!lista) {
-					lista = this.lista_de_precios_del_cliente(model.client)
-				}
+			this.$store.commit('vender/setPriceType', lista_del_comprobante ? lista_del_comprobante : null)
 
-				if (!lista && this.requiere_lista_de_precios()) {
-					lista = this.lista_de_mayor_posicion()
-				}
-
-				this.$store.commit('vender/setPriceType', lista ? lista : null)
-			}
-			
 			this.$store.commit('vender/setSellerId', model.seller_id)
 			
 			if (model.current_acount_payment_method_id) {

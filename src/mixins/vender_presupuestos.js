@@ -178,14 +178,20 @@ export default {
 					o desde otra pestaña— mientras vos lo estas editando en VENDER.
 
 					El detalle tecnico queda solo para cuando NO hay mensaje del back y el handler
-					global no tiene nada que mostrar: caida de red, timeout, respuesta sin cuerpo.
+					global no tiene nada que mostrar: respuesta sin cuerpo, o un error que no es de
+					axios (un TypeError en el .then de arriba). La caida de red y el timeout tambien
+					van por el global (main.js muestra "No pudimos conectarnos..." para todo error de
+					axios sin `response`): acá NO se suma nada, que antes eran tres carteles por el
+					mismo corte --el del global y estos dos-- y el vendedor no sabia cual leer.
 				*/
-				let hay_mensaje_del_back = Boolean(err.response && err.response.data && err.response.data.message)
+				let hay_mensaje_del_back = Boolean(err && err.response && err.response.data && err.response.data.message)
 
-				if (!hay_mensaje_del_back) {
+				let es_corte_de_red = Boolean(err && err.isAxiosError && !err.response)
+
+				if (!hay_mensaje_del_back && !es_corte_de_red) {
 					this.$toast.error('Error al guardar Presupuesto')
 					console.log(err)
-					this.$toast.error('Codigo: '+err.code+'. Detalle: '+err.message, {
+					this.$toast.error('Codigo: '+(err ? err.code : '')+'. Detalle: '+(err ? err.message : ''), {
 						duration: 100000,
 					})
 				}
@@ -256,13 +262,19 @@ export default {
 
 					- Con mensaje del back (el 422 de la lista de precios, entre otros): solo ese.
 					  Antes salia ademas el generico "Error al guardar Presupuesto" encima.
-					- Sin `response` (servidor caido, red cortada, timeout): un mensaje de conexion,
-					  en vez del "Codigo: ERR_NETWORK. Detalle: Network Error" de cien segundos.
+					- Error de axios sin `response` (servidor caido, red cortada, timeout): un mensaje
+					  de conexion, en vez del "Codigo: ERR_NETWORK. Detalle: Network Error" de cien
+					  segundos.
 					- Con respuesta pero sin mensaje: el generico con el detalle tecnico.
+					- Un error que NO es de axios (un TypeError en el .then de arriba, DESPUES de que
+					  el POST ya guardo): tampoco tiene `response`, y decirle "lo mas probable es que
+					  NO se haya guardado" lo manda a duplicarlo. Se distingue por isAxiosError.
 				*/
 				let mensaje_del_back = err && err.response && err.response.data && err.response.data.message
 					? err.response.data.message
 					: null
+
+				let es_error_de_red = Boolean(err && err.isAxiosError && !err.response)
 
 				if (mensaje_del_back) {
 
@@ -270,7 +282,13 @@ export default {
 						duration: 10000
 					})
 
-				} else if (!err || !err.response) {
+				} else if (!err || !err.isAxiosError) {
+
+					this.$toast.error('Ocurrió un error inesperado al guardar. Fijate en Presupuestos si quedó guardado antes de volver a intentar; si el problema sigue, recargá la página.', {
+						duration: 15000,
+					})
+
+				} else if (es_error_de_red) {
 
 					this.$toast.error('No pudimos conectarnos con el servidor. Lo más probable es que el presupuesto NO se haya guardado: revisá la conexión, fijate en Presupuestos y volvé a intentar.', {
 						duration: 15000,

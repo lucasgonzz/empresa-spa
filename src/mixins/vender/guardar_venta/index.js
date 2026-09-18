@@ -148,7 +148,8 @@ export default {
 					modal con los números que calculó el backend y se corta acá: sin este return
 					saldrían además los dos toasts genéricos de error encima del modal.
 				*/
-				if (err.response
+				if (err
+					&& err.response
 					&& err.response.status == 422
 					&& err.response.data
 					&& err.response.data.error_limite_credito) {
@@ -173,15 +174,22 @@ export default {
 
 					- Con mensaje del back (422 de la lista de precios, 409, etc.): solo ese. Antes
 					  salian dos toasts, el generico arriba del que decia algo.
-					- Sin `response`: no hubo respuesta del servidor. No se afirma que la venta "no se
-					  guardo" a secas: si la conexion se corto DESPUES de que el POST llego, la venta
-					  existe, y un vendedor que reintenta pasados los 5 segundos del deduplicado del
-					  back la duplica. Por eso manda a mirar Ventas antes de reintentar.
+					- Error de axios sin `response`: no hubo respuesta del servidor. No se afirma que
+					  la venta "no se guardo" a secas: si la conexion se corto DESPUES de que el POST
+					  llego, la venta existe, y un vendedor que reintenta pasados los 5 segundos del
+					  deduplicado del back la duplica. Por eso manda a mirar Ventas antes de reintentar.
 					- Con respuesta pero sin mensaje: el generico.
+					- Un error que NO es de axios (un TypeError en el .then de arriba, DESPUES de que
+					  el POST ya guardo y el store ya commiteo la venta) tampoco tiene `response`, y
+					  antes caia en la rama de red: "lo mas probable es que NO se haya guardado" era
+					  mentira y llevaba derecho al duplicado. Se distingue por isAxiosError: para ese
+					  caso el aviso manda a mirar Ventas sin afirmar nada.
 				*/
 				let mensaje_del_back = err && err.response && err.response.data && err.response.data.message
 					? err.response.data.message
 					: null
+
+				let es_error_de_red = Boolean(err && err.isAxiosError && !err.response)
 
 				if (mensaje_del_back) {
 
@@ -189,7 +197,13 @@ export default {
 						duration: 10000
 					})
 
-				} else if (!err || !err.response) {
+				} else if (!err || !err.isAxiosError) {
+
+					this.$toast.error('Ocurrió un error inesperado al guardar. Fijate en Ventas si la venta quedó guardada antes de volver a intentar; si el problema sigue, recargá la página.', {
+						duration: 15000
+					})
+
+				} else if (es_error_de_red) {
 
 					let es_timeout = Boolean(
 						err

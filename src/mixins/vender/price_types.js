@@ -285,7 +285,18 @@ export default {
 
 			let self = this
 
-			this.$api.get(this.routeString('price_type'))
+			/*
+				Con tope de tiempo y sin el aviso global del interceptor. Sin timeout (ni $api ni
+				axios traen uno) una request colgada dejaba pedido_en_vuelo prendido para siempre,
+				y el chequeo del guardado decia "estamos trayendo las listas... proba en unos
+				segundos" sin fin. Y si el re-pedido falla, el aviso que corresponde es el del
+				Guardar ("recarga la pagina"): un cartel de "no pudimos conectarnos" que aparece
+				solo, sin que el vendedor haya hecho nada, se lee como que se cayo todo el sistema.
+			*/
+			this.$api.get(this.routeString('price_type'), {
+				timeout: 15000,
+				skip_global_error_event: true,
+			})
 			.then(res => {
 				estado_del_catalogo_de_listas.pedido_en_vuelo = false
 
@@ -345,6 +356,17 @@ export default {
 				reintentos_de_lista_hechos++
 
 				/*
+					El componente que agendo el reintento ya no existe (el vendedor salio de /vender
+					antes de que venciera el timer; Vender.vue no tiene keep-alive). Sus computeds
+					quedaron congelados al destruirse, asi que seguir desde el seria leer un catalogo
+					viejo y encadenar hasta 20 timers sobre un componente muerto. El que vuelva a
+					entrar a /vender agenda el suyo.
+				*/
+				if (self._isDestroyed) {
+					return
+				}
+
+				/*
 					Si mientras tanto ya hay lista --la aplico el watch cuando llego el catalogo, o
 					la eligio el vendedor a mano-- no se toca: setPriceType() pisaria esa eleccion
 					con la lista por defecto.
@@ -386,15 +408,6 @@ export default {
 		 */
 		setPriceType(force_reset = false) {
 			/*
-				Editando un comprobante guardado, la lista de precios es la que quedo guardada en
-				el, aunque el cliente tenga otra asignada. Cambiarsela por atras cambia los precios
-				de todas las lineas.
-			*/
-			if (!force_reset && (this.$store.getters['vender/previus_sales/editando_venta_previa'] || !!this.$store.state.vender.budget)) {
-				return
-			}
-
-			/*
 				Cuenta sin listas, o con la extension de rangos por cantidad (que setea la lista por
 				linea, no por comprobante): no hay nada que resolver. Es el mismo corte que tenian
 				las compuertas de antes.
@@ -403,13 +416,48 @@ export default {
 				return
 			}
 
+			/*
+				🔴 Catalogo vacio: se pide de nuevo si el arranque ya termino, y si todavia no
+				termino se agenda un reintento para cuando termine (ver los dos metodos).
+
+				Va ANTES del guard de edicion, a proposito. Cuando estaba despues, editar un
+				comprobante con el catalogo vacio no disparaba nunca el re-pedido ni el reintento
+				(setPriceType() retornaba en el guard sin llegar aca), y en una cuenta con el flag
+				prendido y cero listas la edicion quedaba trabada para siempre en "recarga la
+				pagina": nada confirmaba el vacio por ese camino. Es seguro pedirlo en edicion:
+				ni el GET ni el timer commitean una lista sobre un comprobante guardado --eso lo
+				corta el guard de abajo--, solo traen el catalogo (o confirman que no hay).
+			*/
 			if (!this.price_types.length) {
-				/*
-					Catalogo vacio: se pide de nuevo si el arranque ya termino, y si todavia no
-					termino se agenda un reintento para cuando termine (ver los dos metodos).
-				*/
 				this.pedir_catalogo_de_listas_una_vez()
 				this.agendar_reintento_de_lista()
+				return
+			}
+
+			/*
+				Editando un comprobante guardado, la lista de precios es la que quedo guardada en
+				el, aunque el cliente tenga otra asignada. Cambiarsela por atras cambia los precios
+				de todas las lineas.
+
+				La unica excepcion es el comprobante que se ABRIO SIN LISTA porque el catalogo
+				estaba vacio en ese momento (set_datos_para_actualizar_en_vender dejo null), y el
+				catalogo llego despues: se le propone ahora exactamente la que se le hubiera
+				propuesto al abrir --la suya si el id existe, la del cliente, o la por defecto--,
+				que es lo que la venta editada ya hace desde que se abre con el catalogo cargado.
+				Sin esto el selector quedaba vacio (y en un presupuesto, ademas deshabilitado) y el
+				chequeo del guardado frenaba sin salida. Nunca se pisa una lista ya asignada.
+			*/
+			if (!force_reset && this.comprobante_que_se_esta_editando()) {
+				if (this.$store.state.vender.price_type) {
+					return
+				}
+
+				let lista_del_comprobante = this.resolver_lista_de_comprobante_guardado(this.comprobante_que_se_esta_editando())
+
+				if (lista_del_comprobante) {
+					this.$store.commit('vender/setPriceType', lista_del_comprobante)
+				}
+
 				return
 			}
 
@@ -418,6 +466,60 @@ export default {
 			if (price_type_para_vender) {
 				this.$store.commit('vender/setPriceType', price_type_para_vender)
 			}
+		},
+
+		/**
+		 * El comprobante guardado que se esta editando en Vender (el presupuesto cargado con
+		 * "Actualizar en VENDER", o la venta abierta desde Ventas), o null si es una venta nueva.
+		 *
+		 * Mientras la venta se esta abriendo (setPreviusSale prende el flag y recien 500 ms
+		 * despues hidrata) previus_sale es {}: sin `id` se devuelve null para no resolver nada
+		 * sobre un comprobante que todavia no llego.
+		 *
+		 * @returns {Object|null}
+		 */
+		comprobante_que_se_esta_editando() {
+			if (this.$store.state.vender.budget && this.$store.state.vender.budget.id) {
+				return this.$store.state.vender.budget
+			}
+
+			if (this.$store.getters['vender/previus_sales/editando_venta_previa']) {
+				let venta = this.$store.state.vender.previus_sales.previus_sale
+
+				return venta && venta.id ? venta : null
+			}
+
+			return null
+		},
+
+		/**
+		 * Con que lista se abre un comprobante GUARDADO, en este orden: la relacion `price_type`
+		 * que trajo el servidor; su `price_type_id` resuelto contra el catalogo (un id colgado
+		 * --la lista se borro-- no es una lista); la del cliente; y, solo si la cuenta requiere
+		 * lista, la por defecto del comercio. Devuelve el objeto o null.
+		 *
+		 * Es EL criterio con el que previus_sale/index.js hidrata la edicion; vive aca para que
+		 * el caso "el catalogo llego despues de abrir" (setPriceType) resuelva igual.
+		 *
+		 * @param {Object} model la venta o el presupuesto, tal cual vino del servidor
+		 * @returns {Object|null}
+		 */
+		resolver_lista_de_comprobante_guardado(model) {
+			if (model.price_type && model.price_type.id) {
+				return model.price_type
+			}
+
+			let lista = this.lista_del_catalogo(model.price_type_id)
+
+			if (!lista) {
+				lista = this.lista_de_precios_del_cliente(model.client)
+			}
+
+			if (!lista && this.requiere_lista_de_precios()) {
+				lista = this.lista_de_mayor_posicion()
+			}
+
+			return lista
 		},
 	}
 }
