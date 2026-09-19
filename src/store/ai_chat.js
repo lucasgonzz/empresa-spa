@@ -363,6 +363,39 @@ export default {
 			state.messages.push(message)
 		},
 		/**
+		 * Agrega un mensaje con id que la conversación en pantalla todavía NO tiene; si ya
+		 * está, no hace nada (misión asistente-masivas-imagenes-y-remito, 19/9/2026,
+		 * contrato §4).
+		 *
+		 * Existe por el mensaje que escribe el job de imágenes de categorías cuando termina:
+		 * llega por `ChatIaMensajeActualizado` sin que nadie haya enviado nada, así que no hay
+		 * globo optimista ni assistant pendiente del 201 al que parchear, y con patchMessage
+		 * solo se lo veía al recargar. Es a propósito que NO parchee lo que ya está: así el
+		 * 201 de sendMessage también puede usarla sin pisar con 'pendiente' un assistant que
+		 * el broadcast ya trajo 'listo' (ver el .then de sendMessage).
+		 *
+		 * No duplica: el mismo mensaje dos veces (broadcast + reconexión de Echo, dos eventos
+		 * seguidos) se encuentra por id la segunda vez. Y respeta el orden por id, que es el
+		 * cronológico: va antes del primer mensaje con id mayor si lo hay, y si no, al final
+		 * (el caso normal: es lo más nuevo de la conversación). Los globos optimistas no
+		 * tienen id todavía y no cuentan.
+		 */
+		appendMessageIfMissing(state, message) {
+			if (!message || !message.id) {
+				return
+			}
+			let ya_esta = state.messages.some(m => m.id == message.id)
+			if (ya_esta) {
+				return
+			}
+			let siguiente = state.messages.findIndex(m => m.id && Number(m.id) > Number(message.id))
+			if (siguiente == -1) {
+				state.messages.push(message)
+				return
+			}
+			state.messages.splice(siguiente, 0, message)
+		},
+		/**
 		 * Actualiza un mensaje existente por id (ej: el assistant pasó de 'pendiente'
 		 * a 'listo' vía broadcast/polling). Si no está en la conversación abierta, no hace nada.
 		 */
@@ -692,7 +725,13 @@ export default {
 									local_id: local_id,
 								}),
 							})
-							commit('appendMessage', res.data.assistant_message)
+							// "IfMissing" porque desde que fetchMessage agrega lo que no está
+							// (19/9/2026), el broadcast del assistant 'listo' puede ganarle a
+							// esta respuesta si el hosting la demora más de lo que tarda el
+							// job: ya estaría en pantalla, y volver a agregarlo dejaría dos
+							// globos, uno 'pendiente' para siempre (patchMessage parchea el
+							// primero por id) y Confirmar deshabilitado en todas las tarjetas.
+							commit('appendMessageIfMissing', res.data.assistant_message)
 							// La conversación subió al tope de la bandeja.
 							commit('upsertConversation', {
 								id: conversation_id,
@@ -877,7 +916,15 @@ export default {
 					// Solo pisa la conversación en pantalla; si el usuario ya está en
 					// otra, con refrescar la bandeja alcanza.
 					if (state.selected_conversation_id == payload.conversation_id) {
+						// Si el mensaje ya está en pantalla se actualiza; si NO está, se
+						// agrega (misión asistente-masivas-imagenes-y-remito, 19/9/2026,
+						// contrato §4): es el mensaje que escribe el job de imágenes de
+						// categorías al terminar, sin turno del usuario, con lo asignado y
+						// una tarjeta por categoría dudosa. Hasta hoy se perdía hasta
+						// recargar. El watch de messages.length de Conversation.vue baja el
+						// scroll solo, y las tarjetas que trae disparan el refresco de abajo.
 						commit('patchMessage', model)
+						commit('appendMessageIfMissing', model)
 						// Una respuesta con tarjetas puede haber reemplazado tarjetas de
 						// mensajes anteriores: se refrescan las que siguen en 'propuesta'.
 						if (trae_tarjetas(model)) {
