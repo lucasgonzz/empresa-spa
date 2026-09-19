@@ -3,9 +3,12 @@
  * (components/asistente-ia/AccionCard.vue), mision asistente-ia-acciones del 15/9/2026.
  *
  * La tarjeta aparece en el chat cuando el asistente propone un gasto, un pago de cliente o a
- * proveedor, una tarea nueva, cambios en una tarea o marcar una tarea como hecha. Nada se
- * registra hasta Confirmar. La misma tarjeta se ve en el panel flotante y en el sidebar del
- * informe del mostrador.
+ * proveedor, una tarea nueva, cambios en una tarea o marcar una tarea como hecha. Desde la
+ * mision asistente-masivas-imagenes-y-remito (19/9/2026) tambien: buscar imagenes para
+ * categorias y para articulos elegidos por un filtro, una actualizacion masiva por filtro
+ * (siempre con confirmacion) y un cambio en un diseño de PDF. Nada se registra hasta
+ * Confirmar. La misma tarjeta se ve en el panel flotante y en el sidebar del informe del
+ * mostrador.
  *
  * Cada afirmacion sale del contrato de la seccion 2 y de las reglas por tipo de la seccion 3.4
  * del plan de la mision (el API registra por el mismo camino que la pantalla); no inventar aca.
@@ -20,6 +23,7 @@ export default {
 			'Un pago de un cliente entra en la caja elegida y baja lo que debe en su cuenta corriente; un pago a un proveedor sale de la caja y baja lo que se le debe.',
 			'Una tarea nueva o un cambio en una tarea queda en la Agenda y no mueve plata.',
 			'Marcar como hecha una tarea con gasto asociado registra ese gasto, igual que desde la Agenda.',
+			'Una búsqueda de imágenes (para categorías o para artículos por filtro) o una actualización masiva por filtro se manda a procesar en segundo plano y aparece en la píldora de procesos; un cambio en un diseño de PDF se aplica en el momento. En una tarjeta de imagen de categoría el botón dice "Usar esta imagen" y deja esa foto como imagen de la categoría en el sistema y en la tienda.',
 			'Si algo cambió desde que se armó la tarjeta (una caja sin apertura, un permiso, una tarea editada o ya hecha), no se registra nada y la tarjeta muestra el motivo.',
 			'Un segundo clic no duplica la carga.',
 		],
