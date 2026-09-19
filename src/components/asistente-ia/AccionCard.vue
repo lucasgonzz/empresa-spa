@@ -458,15 +458,17 @@ export default {
 <style lang="sass">
 // Tarjeta de una carga propuesta por el asistente (misión asistente-ia-acciones, 15/9/2026).
 //
-// 🔴 El fondo es --bg-card y no otro, por el mismo razonamiento de MessageBubble.vue: la
-// tarjeta vive ADENTRO de la viñeta del asistente, que se pinta con --bg-hover, y --bg-card
-// cae del otro lado de ese relleno en los dos temas:
+// 🔴 El fondo es --bg-hover + borde. Desde que el asistente pasó a estilo lista (sin
+// relleno propio, MessageBubble.vue, 17/9/2026), la tarjeta ya no se apoya en la viñeta:
+// tiene que despegarse sola del fondo sobre el que cae, que es --bg-card en el panel
+// flotante y --bg-section en el sidebar del informe del mostrador. --bg-hover queda del
+// otro lado de esos dos en los dos temas:
 //
-//   claro:  tarjeta #fff    sobre viñeta #f1f3f5 (la tarjeta SUBE)
-//   oscuro: tarjeta #2e333a sobre viñeta #3a4048 (la tarjeta BAJA)
+//   panel   claro: tarjeta #f1f3f5 sobre panel #fff      · oscuro: #3a4048 sobre #2e333a
+//   sidebar claro: tarjeta #f1f3f5 sobre sidebar #f8f9fa · oscuro: #3a4048 sobre #272b31
 //
-// Así se despega sin sombra, que repetida en cada tarjeta ensuciaría la conversación. El
-// borde acompaña; el contraste lo pone el relleno.
+// En el sidebar claro los dos grises quedan muy cerca; ahí el borde --color-border es el
+// que la define. Sin sombra: repetida en cada tarjeta, ensuciaría la conversación.
 //
 // 🔴 Todo se acomoda por el ancho del CONTENEDOR y no del viewport: la misma tarjeta vive en
 // el panel flotante (984px por defecto, casi pantalla completa en teléfono) y en el sidebar
@@ -485,7 +487,7 @@ export default {
 	max-width: 460px
 	margin-top: 10px
 	padding: 12px 14px
-	background: var(--bg-card, #fff)
+	background: var(--bg-hover, #f1f3f5)
 	border: 1px solid var(--color-border, #dee2e6)
 	border-radius: 12px
 	color: var(--color-text-primary, #212529)

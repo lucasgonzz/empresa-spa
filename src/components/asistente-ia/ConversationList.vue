@@ -1,14 +1,22 @@
 <template>
 	<div class="asistente-ia-lista">
-		<!-- Botón grande de conversación nueva, arriba de todo (pedido de Lucas). -->
+		<!-- Botón grande de conversación nueva, arriba de todo (pedido de Lucas), y al lado el
+		engranaje que abre la configuración del agente (S3, acceso 1). -->
 		<div class="asistente-ia-lista__cabecera">
 			<b-button
-			block
+			class="asistente-ia-lista__nueva"
 			variant="primary"
 			@click="nueva_conversacion">
 				<i class="bi bi-plus-lg"></i>
 				Nueva conversación
 			</b-button>
+			<button
+			type="button"
+			class="asistente-ia-lista__config"
+			title="Configurar el asistente"
+			@click="abrir_configuracion">
+				<i class="bi bi-gear"></i>
+			</button>
 		</div>
 
 		<div class="asistente-ia-lista__scroll">
@@ -67,11 +75,18 @@
 				</span>
 			</button>
 		</div>
+
+		<!-- Footer bien abajo, como en Claude (S2): modo de pensamiento del agente + uso de
+		tokens del mes. Se dibuja solo si el API trae el consumo (degradación limpia). -->
+		<panel-footer></panel-footer>
 	</div>
 </template>
 
 <script>
 export default {
+	components: {
+		PanelFooter: () => import('@/components/asistente-ia/PanelFooter'),
+	},
 	computed: {
 		conversations() {
 			return this.$store.state.ai_chat.conversations
@@ -87,6 +102,13 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * Abre el modal de configuración del agente (S3, acceso 1). El modal está montado
+		 * una sola vez en el botón flotante; acá solo se lo dispara por id.
+		 */
+		abrir_configuracion() {
+			this.$bvModal.show('configuracion-agente')
+		},
 		/**
 		 * Deja el panel parado en una conversación en blanco. La conversación real
 		 * se crea recién al enviar el primer mensaje (sendMessage se encarga), así
@@ -143,6 +165,34 @@ export default {
 	&__cabecera
 		flex-shrink: 0
 		padding: 12px
+		display: flex
+		align-items: stretch
+		gap: 8px
+
+	// El botón de nueva conversación ocupa el ancho que le deja el engranaje.
+	&__nueva
+		flex: 1
+		min-width: 0
+
+	// Engranaje de configuración del agente (S3). Sin sombra: el sistema se la pone a todo
+	// <button>, y acá es un control secundario al lado del principal.
+	&__config
+		flex-shrink: 0
+		width: 38px
+		border: 1px solid var(--color-border, #dee2e6)
+		border-radius: 8px
+		background: var(--bg-card, #fff)
+		color: var(--color-text-secondary, #6c757d)
+		box-shadow: none
+		display: flex
+		align-items: center
+		justify-content: center
+		font-size: 1.05rem
+		transition: background .15s ease, color .15s ease
+
+		&:hover
+			background: var(--bg-hover, #f1f3f5)
+			color: var(--color-text-primary, #212529)
 
 	&__scroll
 		flex: 1

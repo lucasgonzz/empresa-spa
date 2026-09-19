@@ -154,6 +154,17 @@ export default {
 			this.$store.commit('vender/set_afip_tipo_comprobante_id', 0)
 			this.$store.commit('vender/set_forma_de_pago', '')
 			this.$store.commit('vender/set_permiso_existente', '')
+			/*
+				La condicion de venta del comprobante de exportacion (tipo 8) vuelve a su valor
+				inicial del store (0) junto con los otros dos campos de ese comprobante. Nadie la
+				limpiaba: la venta siguiente salia a AFIP con el incoterm de la anterior, y como
+				el tipo vuelve a 0 aca mismo, el select (SelectIncoterms.vue, con su propio dato
+				local) se desmontaba y no habia forma de verlo. Va ACA y no en limpiar_vender()
+				a proposito: en los caminos que solo llaman a limpiar_vender (Limpiar, guardar un
+				presupuesto) el tipo 8 queda como estaba y el select sigue montado con su valor,
+				y reiniciar el store ahi dejaria la pantalla diciendo una cosa y el POST otra.
+			*/
+			this.$store.commit('vender/set_incoterms', 0)
 		},
 		ticket_demorado() {
 			document.getElementById('loading-afip-ticket').classList.add('loading-afip-ticket-demorado')

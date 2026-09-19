@@ -282,6 +282,17 @@ export default {
 		// un segundo, y volver a pedirlas cada vez que el mouse pasa por encima del mismo
 		// nombre sería un request por gesto.
 		fichas_de_articulos: {},
+
+		// Consumo de IA del mes del dueño para el footer del panel (S2, misión
+		// foto-sucursal-y-asistente-configurable): GET api/mi-consumo-ia. Trae
+		// { consumo_mes, plan, cerca, supero, pensamiento, confianza }. null = todavía no se
+		// pidió, o el endpoint no está (API viejo, 404): ahí el footer no se muestra.
+		mi_consumo: null,
+
+		// Config del agente del dueño (S3): { confianza:'cauteloso'|'resuelto',
+		// pensamiento:'agil'|'profundo' }. GET/PUT api/user/asistente-config. null = todavía
+		// no se pidió (o API viejo): el modal de configuración cae a los defaults del sistema.
+		asistente_config: null,
 	},
 	getters: {
 		/**
@@ -466,6 +477,12 @@ export default {
 			let agregado = {}
 			agregado[payload.id] = payload.ficha
 			state.fichas_de_articulos = Object.assign({}, state.fichas_de_articulos, agregado)
+		},
+		setMiConsumo(state, value) {
+			state.mi_consumo = value || null
+		},
+		setAsistenteConfig(state, value) {
+			state.asistente_config = value || null
 		},
 	},
 	actions: {
@@ -658,6 +675,11 @@ export default {
 						// pintarlas: sin la clave el API responde de solo lectura (que es lo que
 						// les pasa a las pestañas con la SPA vieja), y un API viejo la ignora.
 						acciones: true,
+					}, {
+						// `skip_navigation_cancel`: AsistenteIaFloatingButton es global (App.vue);
+						// cambiar de pantalla después de mandar no tiene que cancelar el envío
+						// (misión cartel-sin-conexion-accesorios, 18/9/2026).
+						skip_navigation_cancel: true,
 					})
 						.then(res => {
 							// Conserva el local_id para que el :key del globo no cambie: si
@@ -1173,6 +1195,72 @@ export default {
 							console.log(err_viejo)
 							return Promise.reject()
 						})
+				})
+		},
+		/**
+		 * Trae el consumo de IA del mes del dueño para el footer del panel (S2, misión
+		 * foto-sucursal-y-asistente-configurable): tokens/interacciones del mes contra el tope
+		 * del plan, más el modo de pensamiento activo. Lo dispara el panel al abrirse.
+		 *
+		 * 🔴 skip_global_error_event: si el API es viejo y la ruta no existe (404), el consumo
+		 * queda null y el footer NO se muestra (degradación limpia, igual que las tarjetas de
+		 * carga contra un API sin ese endpoint). Sin la bandera, el interceptor de main.js
+		 * dispararía un toast de error al abrir el panel contra un backend sin `mi-consumo-ia`.
+		 *
+		 * @returns {Promise}
+		 */
+		fetchMiConsumo({ commit }) {
+			return axios.get('/api/mi-consumo-ia', {
+				skip_global_error_event: true,
+			})
+				.then(res => {
+					commit('setMiConsumo', res.data)
+					return res.data
+				})
+				.catch(err => {
+					commit('setMiConsumo', null)
+					console.log(err)
+				})
+		},
+		/**
+		 * Trae la config del agente del dueño (S3): confianza y modo de pensamiento.
+		 *
+		 * 🔴 skip_global_error_event: contra un API viejo la ruta no existe (404) y la config
+		 * queda como estaba (null → el modal usa los defaults del sistema); sin la bandera, el
+		 * interceptor de main.js tiraría un toast al abrir el modal contra ese backend.
+		 *
+		 * @returns {Promise}
+		 */
+		fetchAsistenteConfig({ commit }) {
+			return axios.get('/api/user/asistente-config', {
+				skip_global_error_event: true,
+			})
+				.then(res => {
+					commit('setAsistenteConfig', res.data)
+					return res.data
+				})
+				.catch(err => {
+					// No se pisa lo que hubiera: si en esta sesión ya se eligió algo, queda.
+					console.log(err)
+				})
+		},
+		/**
+		 * Guarda la config del agente del dueño (S3). El error se propaga para que el modal
+		 * avise con un toast propio (por eso skip_global_error_event: no queremos ADEMÁS el
+		 * toast genérico del interceptor). Refleja en el store lo que devuelve el API, o el
+		 * payload enviado si la respuesta no trae los campos.
+		 *
+		 * @param {Object} payload { confianza, pensamiento }
+		 * @returns {Promise}
+		 */
+		guardarAsistenteConfig({ commit }, payload) {
+			return axios.put('/api/user/asistente-config', payload, {
+				skip_global_error_event: true,
+			})
+				.then(res => {
+					let data = res.data && res.data.confianza ? res.data : payload
+					commit('setAsistenteConfig', data)
+					return data
 				})
 		},
 	},

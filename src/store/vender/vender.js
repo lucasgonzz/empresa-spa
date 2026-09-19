@@ -1240,6 +1240,14 @@ export default {
 			dias_alerta_venta_no_cobrada_personalizado: state.dias_alerta_venta_no_cobrada_personalizado,
 			// Array de auditoría completo de acciones realizadas durante la venta.
 			log: state.sale_log,
+		}, {
+			/*
+				El aviso global del interceptor de main.js se apaga para este POST: el catch de
+				guardar_venta_online() ya muestra el mensaje del back (o abre el modal del limite
+				de credito). Sin esto, un 422 --el de la lista de precios, por ejemplo-- salia
+				tres veces: el generico, el del back y el del handler global.
+			*/
+			skip_global_error_event: true,
 		})
 			.then(res => {
 				console.log('vendido')

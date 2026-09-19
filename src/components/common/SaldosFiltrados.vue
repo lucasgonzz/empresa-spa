@@ -1,11 +1,15 @@
 <template>
 	<!--
-		Resumen compacto de saldos acumulados de los clientes filtrados.
+		Resumen compacto de saldos acumulados de los registros filtrados (clientes o proveedores).
 		Se muestra en la barra horizontal del listado, junto al buscador rápido.
+
+		Genérico por `model_name`: ambos modelos comparten las mismas columnas `saldo_pesos` /
+		`saldo_dolares`, alimentadas por el mismo CurrentAcountHelper del backend, y el mismo
+		mecanismo de filtro (runGlobalSearch / globalSearch()) que ya persiste el total en el store.
 	-->
 	<div
 	class="saldos-filtrados"
-	v-if="filtered.length">
+	v-if="saldos_filtrados && filtered_count">
 
 		<!-- Chip de suma de saldos en pesos -->
 		<div class="saldos-filtrados__chip saldos-filtrados__chip--ars">
@@ -41,67 +45,65 @@
 </template>
 <script>
 export default {
+	props: {
+		// Nombre del modelo en snake_case ('client' o 'provider'), igual al namespace del store y
+		// al que usan BtnCurrentAcounts/ComercioCityUser para el mismo tipo de componente compartido.
+		model_name: {
+			type: String,
+			required: true,
+		},
+	},
 	computed: {
 		/**
-		 * Clientes actualmente filtrados en el listado.
+		 * Suma de saldos que calculó el backend sobre TODOS los registros que matchean el filtro
+		 * vigente (SUM en SQL, sin paginar) — no solo los de la página que se ve en pantalla.
+		 * `null` mientras no corrió ninguna búsqueda todavía.
 		 *
-		 * @returns {Array}
+		 * @returns {Object|null} `{ saldo_pesos, saldo_dolares }`
 		 */
-		filtered() {
-			return this.$store.state.client.filtered
+		saldos_filtrados() {
+			return this.$store.state[this.model_name].saldos_filtrados
 		},
 
 		/**
-		 * Cantidad de clientes incluidos en el cálculo de saldos.
+		 * Cantidad total de registros que matchean el filtro vigente (todos, no solo los de la
+		 * página actual).
 		 *
 		 * @returns {number}
 		 */
 		filtered_count() {
-			return this.filtered.length
+			return this.$store.state[this.model_name].total_filter_results || 0
 		},
 
 		/**
-		 * Texto descriptivo de cuántos clientes suman los totales mostrados.
+		 * Texto descriptivo de cuántos registros suman los totales mostrados, en español y en
+		 * minúscula ("1 cliente filtrado" / "3 proveedores filtrados").
 		 *
 		 * @returns {string}
 		 */
 		filtered_count_label() {
 			if (this.filtered_count === 1) {
-				return '1 cliente filtrado'
+				return '1 ' + this.singular(this.model_name).toLowerCase() + ' filtrado'
 			}
-			return this.filtered_count + ' clientes filtrados'
+			return this.filtered_count + ' ' + this.plural(this.model_name).toLowerCase() + ' filtrados'
 		},
 
 		/**
-		 * Suma de saldos en pesos de los clientes filtrados.
+		 * Suma de saldos en pesos de todos los registros filtrados.
 		 *
 		 * @returns {string}
 		 */
 		suma_saldos_pesos() {
-			// Acumulador del total en pesos
-			let total = 0
-
-			this.filtered.forEach(client => {
-				total += Number(client.saldo_pesos)
-			})
-
-			return this.price(total)
+			return this.price(Number(this.saldos_filtrados.saldo_pesos))
 		},
 
 		/**
-		 * Suma de saldos en dólares de los clientes filtrados.
+		 * Suma de saldos en dólares de todos los registros filtrados.
 		 *
 		 * @returns {string}
 		 */
 		suma_saldos_dolares() {
-			// Acumulador del total en dólares
-			let total = 0
-
-			this.filtered.forEach(client => {
-				total += Number(client.saldo_dolares)
-			})
-
-			return this.price(total)
+			return this.price(Number(this.saldos_filtrados.saldo_dolares))
 		},
 	},
 }

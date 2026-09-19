@@ -15,6 +15,16 @@
 
 		<sale-modal></sale-modal>
 
+		<!--
+			BtnFacturar.vue (dentro de sale-modal) no factura directo: abre este modal con
+			$bvModal.show('confirm-make-afip-tickets'). En el resto del sistema viaja siempre
+			pegado a sale-modal a traves de common/current-acounts/Index.vue, pero Tesoreria monta
+			sale-modal DIRECTO sin pasar por ahi, asi que el modal nunca existia en este arbol y el
+			click en "Emitir factura" no hacia nada (ni error, ni efecto). Ver informe
+			20260918-boton-facturar-desde-tesoreria.
+		-->
+		<confirm-afip-tickets></confirm-afip-tickets>
+
 		<view-component
 		:models_to_show="models_to_show"
 		show_models_if_empty
@@ -27,6 +37,19 @@
 			<template #table_left_options="props">
 				<table-buttons
 				:caja="props.model"></table-buttons>
+			</template>
+
+			<!--
+				Sucursal con su foto (misión foto-sucursal-y-asistente-configurable): la
+				columna mostraba solo el nombre de calle; ahora va el avatar de la sucursal al
+				lado. La foto sale de la sucursal del store (la misma que la tabla ya resuelve
+				para el nombre), así que sin sucursal asignada la celda queda vacía como antes.
+			-->
+			<template #table-prop-address_id="props">
+				<sucursal-con-foto
+				v-if="props.model.address_id"
+				:address="resolver_address(props.model)"
+				tamano="sm"></sucursal-con-foto>
 			</template>
 
 			<!--
@@ -47,8 +70,10 @@ export default {
 		HorizontalNavCenter: () => import('@/components/caja/components/horizontal-nav-center/Index'),
 		TableButtons: () => import('@/components/caja/components/table-buttons/Index'),
 		EstadoCaja: () => import('@/components/caja/components/EstadoCaja'),
+		SucursalConFoto: () => import('@/components/common/SucursalConFoto'),
 
 		SaleModal: () => import('@/components/common/SaleModal'),
+		ConfirmAfipTickets: () => import('@/components/ventas/modals/afip-ticket/ConfirmAfipTickets'),
 		MovimientosEntreCajas: () => import('@/components/caja/modals/movimientos-entre-cajas/Index'),
 		Aperturas: () => import('@/components/caja/modals/aperturas/Index'),
 		Movimientos: () => import('@/components/caja/modals/movimientos/Index'),
@@ -81,6 +106,27 @@ export default {
 		}
 	},
 	methods: {
+		/**
+		 * La sucursal de una caja, resuelta contra el store (la misma fuente con la que la
+		 * tabla ya arma el nombre de la columna, así trae la `image_url` si el endpoint la
+		 * manda). Si no está en el store se usa la relación embebida en la caja, y si no hay
+		 * ninguna, null (la celda queda vacía).
+		 *
+		 * @param {Object} caja Modelo caja del store.
+		 * @returns {Object|null}
+		 */
+		resolver_address(caja) {
+			if (!caja || !caja.address_id) {
+				return caja && caja.address ? caja.address : null
+			}
+			let del_store = this.$store.state.address.models.find(function (address) {
+				return address.id == caja.address_id
+			})
+			if (del_store) {
+				return del_store
+			}
+			return caja.address || null
+		},
 		/**
 		 * Determina si el usuario logueado debe ver la fila de esta caja en el módulo de tesorería.
 		 * Orden: si hay `treasury_users`, solo ellos ven; si no hay, se usa `users`; si ambas listas están vacías, todos ven.

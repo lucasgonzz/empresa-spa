@@ -27,5 +27,14 @@ export default {
 		resolve_article_ids() {
 			return this.resolve_model_ids()
 		},
+		/**
+		 * Alias semántico para artículos: ids en el orden en que están en la tabla visible
+		 * (ver resolve_model_ids_in_table_order en selected_filtered_source).
+		 *
+		 * @return {Array}
+		 */
+		resolve_article_ids_in_table_order() {
+			return this.resolve_model_ids_in_table_order()
+		},
 	},
 }

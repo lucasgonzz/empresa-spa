@@ -144,6 +144,21 @@ export default {
 					omitir--: es lo que le dice al servidor que esta edicion saco el ajuste.
 				*/
 				forzar_total_monto: info.forzar_total_monto,
+				/*
+					🔴 LA LISTA DE PRECIOS VIAJA EN EL PUT, Y TAMBIEN EN NULL.
+
+					Se lee del store y no de `info` para que ningun llamador pueda olvidarla: es
+					lo que quedo en vender/price_type despues de abrir la venta (la guardada, la
+					del cliente o la por defecto, ver previus_sale/index.js) o de lo que el
+					vendedor eligio si pudo cambiarla.
+
+					Va tambien en null a proposito. SaleController@update mira si la clave EXISTE:
+					ausente, preserva lo guardado (es lo que manda una SPA vieja); presente y en
+					null en una cuenta que vende con listas, contesta 422 y la venta queda como
+					estaba. Omitirla "porque es null" seria justamente esconderle al back que esta
+					edicion no tiene lista.
+				*/
+				price_type_id: rootState.vender.price_type ? rootState.vender.price_type.id : null,
 				seller_id: info.seller_id,
 				fecha_entrega: info.fecha_entrega,
 				valor_dolar: info.valor_dolar,
@@ -184,6 +199,14 @@ export default {
 			descuento_puntos: info.descuento_puntos,
 			// Auditoría de acciones realizadas en vender durante la edición de la venta.
 			log: rootState.vender.sale_log,
+		}, {
+			/*
+				El aviso global del interceptor de main.js se apaga para este PUT: el rechazo
+				(409 de venta facturada o cerrada, 422 sin lista de precios) lo muestra el catch
+				de updateSale() en previus_sale/index.js, con el mensaje del back. Sin esto el
+				mismo mensaje salia dos veces.
+			*/
+			skip_global_error_event: true,
 		})
 			.then(res => {
 				commit('sale/add', res.data.model, {root: true})
@@ -214,8 +237,17 @@ export default {
 					},
 					diff: null,
 				}, { root: true })
-				alert('Error al actualizar venta')
-				console.log(err)
+
+				/*
+					🔴 SE RELANZA. Hasta esta mision este catch se tragaba el error con un alert: la
+					promesa RESOLVIA, y en previus_sale/index.js corria el .then de updateSale()
+					--toast "Venta actualizada", subida de adjuntos y cancelPreviusSale()-- encima
+					de un 409 (venta facturada o cerrada) o del 422 nuevo de la lista de precios. O
+					sea: el back rechazaba, el vendedor leia que se actualizo, y la edicion se
+					limpiaba con lo que habia corregido adentro. El catch del mixin, que muestra el
+					mensaje del back y deja la edicion abierta, nunca llegaba a correr.
+				*/
+				return Promise.reject(err)
 			})
 		},
 	},

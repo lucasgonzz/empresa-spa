@@ -70,6 +70,87 @@ Vue.prototype.Echo = new Echo({
     },
 });
 
+/**
+ * Estado de la conexión al broadcast, publicado en el store (misión procesos-en-segundo-plano,
+ * 18/9/2026). Alimenta el punto verde/rojo junto al nombre del usuario y el respaldo por polling
+ * de la píldora de procesos.
+ *
+ * Va acá y no en un componente porque es el ÚNICO lugar donde la conexión de Pusher existe
+ * antes que cualquier componente: Echo se crea arriba y conecta mucho antes de que resuelva la
+ * sesión. Un componente que se enganchara en su created() se perdería el estado inicial.
+ *
+ * Los estados de Pusher se reducen a los tres que muestra la interfaz: `connected` es
+ * conectado; `connecting` e `initialized` son conectando; todo lo demás (`unavailable`,
+ * `failed`, `disconnected`) es desconectado. Se chequea que el conector exista en vez de
+ * asumirlo: si algún día cambia el broadcaster, lo único que se pierde es el punto, no la app.
+ */
+function observar_estado_del_broadcast(echo) {
+    if (!echo || !echo.connector || !echo.connector.pusher || !echo.connector.pusher.connection) {
+        return
+    }
+
+    /** Conexión de Pusher, la que emite los cambios de estado. */
+    const connection = echo.connector.pusher.connection
+
+    /**
+     * @param {string} estado_pusher Estado tal como lo nombra pusher-js.
+     * @returns {string} 'conectado' | 'conectando' | 'desconectado'
+     */
+    function traducir(estado_pusher) {
+        if (estado_pusher === 'connected') {
+            return 'conectado'
+        }
+        if (estado_pusher === 'connecting' || estado_pusher === 'initialized') {
+            return 'conectando'
+        }
+        return 'desconectado'
+    }
+
+    store.commit('background_processes/setEstadoConexion', traducir(connection.state))
+
+    connection.bind('state_change', (estados) => {
+        store.commit('background_processes/setEstadoConexion', traducir(estados ? estados.current : null))
+    })
+}
+
+observar_estado_del_broadcast(Vue.prototype.Echo)
+
+/**
+ * Cancelación de pedidos en curso al navegar entre pantallas (misión
+ * cartel-sin-conexion-accesorios, 18/9/2026).
+ *
+ * Sin esto, un pedido lento disparado desde una pantalla que el usuario ya abandonó (cambió de
+ * módulo mientras un GET pesado seguía en vuelo) resuelve igual más tarde con un error de red
+ * genérico, y `global_api_error_interceptor` no tiene forma de distinguirlo de un corte real:
+ * dispara el cartel "No pudimos conectarnos con el servidor" por algo que el usuario nunca llegó
+ * a ver como error.
+ *
+ * El token vigente vive acá (variable de módulo). El interceptor de request de más abajo se lo
+ * engancha a cualquier pedido que no traiga uno propio ya seteado; el `router.beforeEach` de acá
+ * abajo lo cancela y renueva en cada navegación.
+ */
+let cancel_token_source = axios.CancelToken.source()
+
+/**
+ * Guarda de navegación NUEVA (no reemplaza la que valida sesión en `router/index.js`, se agrega
+ * aparte): cancela los pedidos que quedaron colgados de la pantalla que el usuario abandona.
+ *
+ * El orden es crítico: cancelar y renovar el token ANTES de llamar a `next()`, nunca después. Si
+ * se cancelara después de `next()`, la pantalla nueva ya habría montado sus componentes y
+ * enganchado sus propios pedidos al token viejo — quedarían cancelados también. Yendo antes,
+ * cuando la pantalla nueva monte va a enganchar sus pedidos al token ya renovado.
+ *
+ * @param {Object} to destino de navegación (sin uso acá, lo pide la firma de Vue Router).
+ * @param {Object} from origen de navegación (sin uso acá, lo pide la firma de Vue Router).
+ * @param {Function} next callback para continuar la navegación.
+ * @returns {void}
+ */
+router.beforeEach((to, from, next) => {
+    cancel_token_source.cancel('Navegación a otra pantalla')
+    cancel_token_source = axios.CancelToken.source()
+    next()
+})
+
 // Notifications
 import VueToast from 'vue-toast-notification';
 import 'vue-toast-notification/dist/theme-sugar.css';
@@ -302,6 +383,28 @@ function global_api_error_interceptor(error) {
     return Promise.reject(error)
 }
 
+/**
+ * Interceptor de request: engancha el CancelToken vigente (ver bloque de cancelación por
+ * navegación, más arriba) a todo pedido que no traiga uno propio ya seteado.
+ *
+ * Excepción: `config.skip_navigation_cancel` (misma idea que `skip_global_error_event`, revisión
+ * independiente de la misión cartel-sin-conexion-accesorios, 18/9/2026). Un pedido disparado
+ * desde un componente global montado en `App.vue` —no desde la vista de una ruta— no tiene por
+ * qué morir porque el usuario cambió de pantalla: el polling de background_processes, el polling
+ * de pedidos sin confirmar de order.js, y el envío del chat de soporte son los tres casos
+ * detectados. Sin esta bandera, esos pedidos se cancelaban con cualquier navegación ajena — en
+ * el chat de soporte eso se veía como un "no se pudo enviar" falso sobre un mensaje que sí salió.
+ *
+ * @param {import('axios').AxiosRequestConfig} config Configuración del pedido saliente.
+ * @returns {import('axios').AxiosRequestConfig}
+ */
+function global_api_cancel_token_interceptor(config) {
+    if (!config.cancelToken && !config.skip_navigation_cancel) {
+        config.cancelToken = cancel_token_source.token
+    }
+    return config
+}
+
 // Instancia usada como Vue.prototype.$api (prefijo /api)
 const apiInstance = axios.create({
     baseURL: env('VUE_APP_API_URL') + '/api',
@@ -312,6 +415,7 @@ apiInstance.interceptors.response.use(
     global_api_notifications_interceptor,
     global_api_error_interceptor
 )
+apiInstance.interceptors.request.use(global_api_cancel_token_interceptor)
 
 // ✅ Registramos $api como plugin (como hacías vos)
 Vue.use({
@@ -330,12 +434,14 @@ axiosInstance.interceptors.response.use(
     global_api_notifications_interceptor,
     global_api_error_interceptor
 )
+axiosInstance.interceptors.request.use(global_api_cancel_token_interceptor)
 
 // Misma lógica para el axios por defecto (stores que importan `axios` sin `create`)
 axios.interceptors.response.use(
     global_api_notifications_interceptor,
     global_api_error_interceptor
 )
+axios.interceptors.request.use(global_api_cancel_token_interceptor)
 
 Vue.use({
   install(Vue) {

@@ -205,24 +205,21 @@ export default {
 </script>
 
 <style lang="sass">
-// Los dos roles van en viñeta, y se distinguen por la FORMA y no por dos rellenos
-// peleándose (pedido de Lucas, 19/8/2026: antes el asistente era texto suelto sobre el
-// fondo del panel y se leía desprolijo):
+// Estilo lista, sin sombras (pedido de Lucas, 17/9/2026: "no me gusta con esa sombra,
+// ponelo tipo lista"). Los dos roles se distinguen por la FORMA, como en Claude:
 //
 //   usuario   -> globo relleno con --bg-section, pegado a la derecha, angosto
-//   asistente -> tarjeta rellena con --bg-hover, pegada a la izquierda, ancha
+//   asistente -> texto suelto sobre el fondo del panel, ancho, separado del mensaje
+//                siguiente por una línea fina (border-bottom) en vez de por una viñeta
+//                rellena con sombra
 //
-// 🔴 Los dos rellenos caen a lados OPUESTOS del color del panel (--bg-card), y por eso
-// se distinguen en los dos temas sin depender del borde:
+// El usuario sigue en viñeta para que se lea de un vistazo quién habló; el que se aplana es
+// el asistente, que es el que ocupa la conversación y el que Lucas veía "con esa sombra".
 //
-//   claro:  usuario #f8f9fa y asistente #f1f3f5, los dos por DEBAJO del panel #fff
-//   oscuro: usuario #272b31 por debajo, asistente #3a4048 por ENCIMA del panel #2e333a
-//
-// El asistente NO puede llevar --bg-card: es el mismo color del panel, y en oscuro la
-// viñeta quedaba dibujada solo por un borde de rgba(255,255,255,.14) que no se lee --
-// o sea, el mensaje seguía pareciendo suelto, que es exactamente lo que se venía a
-// arreglar. --bg-hover se usa acá como superficie y no como estado de hover: es el
-// único token neutro que queda del otro lado del panel en los dos temas.
+// 🔴 Al sacarle el relleno --bg-hover a la viñeta del asistente, las tarjetas de carga
+// (AccionCard.vue) dejan de tener sobre qué apoyarse para contrastar: por eso AccionCard
+// trae ahora su propio fondo + borde (ver el comentario de su .asistente-ia-accion). Si a
+// esta viñeta se le vuelve a poner relleno, hay que revisar aquel fondo.
 //
 // Entrada sutil de abajo hacia arriba para que el mensaje "suba" a la conversación (D41).
 .asistente-ia-globo
@@ -239,16 +236,16 @@ export default {
 		padding: 9px 14px
 
 	&--asistente
-		align-self: flex-start
-		max-width: 96%
-		background: var(--bg-hover, #f1f3f5)
-		border: 1px solid var(--color-border, #dee2e6)
-		border-radius: 14px
-		padding: 9px 14px
-		// Sombra de un píxel y nada más: la viñeta tiene que despegarse del panel sin
-		// convertirse en una tarjeta flotante. Una sombra más grande, repetida en cada
-		// mensaje, ensucia toda la conversación.
-		box-shadow: 0 1px 2px var(--shadow-color, rgba(99, 99, 99, .2))
+		align-self: stretch
+		max-width: 100%
+		background: transparent
+		border: none
+		border-radius: 0
+		padding: 2px 0 14px 0
+		// La línea que separa un mensaje del siguiente: es lo que da el aspecto de lista.
+		// Sutil (--color-border-secondary) para acompañar sin marcar de más una
+		// conversación larga.
+		border-bottom: 1px solid var(--color-border-secondary, #e9ecef)
 
 	// Mientras el POST no confirmó, el globo respira en baja opacidad (D41).
 	&--enviando
@@ -257,13 +254,11 @@ export default {
 	&--error-envio
 		border-color: var(--btn-peligro-borde, #b4443f)
 
-	// Un error del lado de la IA llega como contenido amigable (D18): se lee
-	// como un mensaje más, apenas teñido para distinguirlo. Ahora que hay viñeta,
-	// el borde acompaña al texto: si no, el teñido quedaba adentro de una tarjeta
-	// de contorno neutro y no se leía como un estado distinto.
+	// Un error del lado de la IA llega como contenido amigable (D18): se lee como un
+	// mensaje más, apenas teñido para distinguirlo. El asistente ya no tiene borde de
+	// viñeta, así que el estado lo marca el color del texto.
 	&--error-respuesta
 		color: var(--caja-cerrar-texto, #9c3a36)
-		border-color: var(--btn-peligro-borde, #b4443f)
 
 	&__texto
 		margin: 0

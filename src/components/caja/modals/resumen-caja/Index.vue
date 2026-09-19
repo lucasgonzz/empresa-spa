@@ -8,13 +8,24 @@
 		<view-component
 		:show_btn_save="show_btn_save"
 		model_name="resumen_caja">
-			
+
 			<template #table_left_options="props">
 				<btn-pdf
 				model_name="resumen_caja"
 				:model="props.model"></btn-pdf>
 			</template>
-		
+
+			<!--
+				Sucursal con su foto (misión foto-sucursal-y-asistente-configurable): la
+				columna "Sucursal" mostraba solo el nombre; ahora va el avatar al lado.
+			-->
+			<template #table-prop-address_id="props">
+				<sucursal-con-foto
+				v-if="props.model.address_id"
+				:address="resolver_address(props.model)"
+				tamano="sm"></sucursal-con-foto>
+			</template>
+
 		</view-component>
 	</b-modal>
 </template>
@@ -23,6 +34,7 @@ export default {
 	components: {
 		ViewComponent: () => import('@/common-vue/components/view/Index'),
 		BtnPdf: () => import('@/common-vue/components/BtnPdf'),
+		SucursalConFoto: () => import('@/components/common/SucursalConFoto'),
 	},
 	computed: {
 		show_btn_save() {
@@ -30,6 +42,26 @@ export default {
 		},
 	},
 	methods: {
+		/**
+		 * La sucursal de un resumen, resuelta contra el store (la misma fuente con la que la
+		 * tabla arma el nombre de la columna). Trae la `image_url` si el endpoint la manda; si
+		 * no está en el store, la relación embebida; si no hay ninguna, null.
+		 *
+		 * @param {Object} resumen Fila del resumen de caja.
+		 * @returns {Object|null}
+		 */
+		resolver_address(resumen) {
+			if (!resumen || !resumen.address_id) {
+				return resumen && resumen.address ? resumen.address : null
+			}
+			let del_store = this.$store.state.address.models.find(function (address) {
+				return address.id == resumen.address_id
+			})
+			if (del_store) {
+				return del_store
+			}
+			return resumen.address || null
+		},
 		clicked(movimiento_caja) {
 
 			console.log('clicked')

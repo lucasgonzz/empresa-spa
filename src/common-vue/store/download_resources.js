@@ -9,10 +9,28 @@ export default {
 		models_to_download: [],
 		visibility: false,
 		start_download: false,
+		/**
+		 * true mientras la tarjeta de progreso de la descarga (download-resources/Progress.vue) esta
+		 * en pantalla. Lo commitea esa tarjeta cada vez que cambia su `visible`, y lo lee la pildora
+		 * de procesos en segundo plano (components/common/procesos-en-segundo-plano/Tarjeta.vue),
+		 * que comparte la misma esquina de arriba a la derecha y se corre para abajo mientras esta
+		 * este visible (mision procesos-en-segundo-plano, 18/9/2026).
+		 */
+		tarjeta_visible: false,
 	},
 	mutations: {
 		setVisibility(state) {
 			state.visibility = !state.visibility
+		},
+		/**
+		 * Publica si la tarjeta de progreso de la descarga esta en pantalla.
+		 *
+		 * @param {object} state
+		 * @param {boolean} valor
+		 * @return {void}
+		 */
+		set_tarjeta_visible(state, valor) {
+			state.tarjeta_visible = !!valor
 		},
 		/**
 		 * Abre el panel lateral de recursos.

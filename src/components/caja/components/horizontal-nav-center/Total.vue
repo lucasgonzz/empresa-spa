@@ -275,7 +275,7 @@ export default {
 <style scoped lang="sass">
 @import '@/sass/_custom.scss'
 
-// Acentos visuales por moneda (alineados con SaldosClientesFiltrados e IconCards)
+// Acentos visuales por moneda (alineados con common/SaldosFiltrados e IconCards)
 $accent-ars: #d97706
 $accent-usd: #0891b2
 

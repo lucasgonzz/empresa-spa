@@ -37,40 +37,19 @@ export default {
 		}
 	},
 	methods: {
-		add_combo(result) {
-
-			this.combo = {
-				...result.model,
-				is_combo: true,
-			}
-
-			if (this.check_stock()) {
-
-				let combo_to_add = {
-					...this.combo,
-				}
-
-				if (this.user.ask_amount_in_vender) {
-					combo_to_add.amount = ''
-				} else {
-					combo_to_add.amount = 1
-				}
-
-				this.$store.commit('vender/setArticle', combo_to_add)
-				
-				let time = 200
-				if (from_mobile) {
-					time = 700
-				}
-				if (this.user.ask_amount_in_vender) {
-					setTimeout(() => {
-						document.getElementById('article-amount').focus()
-					}, time)
-				} else {
-					this.addArticleToSale()
-				}
-			}
-		},
+		/*
+			El alta del combo elegido en el selector es setSelectedCombo() (abajo), atado a
+			@setSelected del search-component: arma el final_price con el precio del combo y entra
+			por set_item_vender(), el mismo camino que la promocion y el articulo por nombre.
+		
+			Hasta el 18/9/2026 (mision vender-lista-obligatoria, tanda 2) aca habia ademas un
+			add_combo() que nadie llamaba: commiteaba vender/setArticle (una mutacion que ya no
+			existe) y leia un from_mobile que no esta definido en ningun lado (ReferenceError).
+			Se borro para que nadie lo vuelva a atar creyendo que anda. Ojo: check_stock() --el
+			chequeo de stock de los COMPONENTES del combo con la extension
+			check_article_stock_en_vender-- solo lo llamaba ese metodo muerto: hoy el combo elegido
+			no pasa por el. Queda anotado en el informe de la mision como decision pendiente.
+		*/
 		check_stock() {
 
 			let ok = true
@@ -101,16 +80,6 @@ export default {
 
 			combo.final_price = Number(combo.price)
 			this.set_item_vender(combo)
-			
-			return
-
-			combo.final_price = Number(combo.price)
-			this.$store.commit('vender/addItem', combo)
-			if (this.editando_venta_previa) {
-				this.setItemsPrices(true, false)
-			} else {
-				this.setItemsPrices(true, false)
-			}
 		},
 	}
 }

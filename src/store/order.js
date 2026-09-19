@@ -85,7 +85,13 @@ export default __base_store({
 			/** URL del endpoint de pedidos sin confirmar para el modelo actual. */
 			let endpoint_url = '/api/' + generals.methods.routeString(state.model_name) + '/unconfirmed/models'
 
-			return axios.get(endpoint_url)
+			/*
+			 * `skip_navigation_cancel`: este polling (5 min) es la red de seguridad contra plata
+			 * perdida si Pusher se cae; no depende de qué pantalla esté abierta, así que una
+			 * navegación ajena no lo tiene que cancelar (misión cartel-sin-conexion-accesorios,
+			 * 18/9/2026).
+			 */
+			return axios.get(endpoint_url, { skip_navigation_cancel: true })
 				.then(res => {
 					commit('setUnconfirmedModels', res.data.models)
 				})
