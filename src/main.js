@@ -4,6 +4,7 @@ import './registerServiceWorker'
 import router from './router'
 import store from './store'
 import { apply_dark_mode_class, read_stored_dark_mode } from '@/utils/dark_mode'
+import { get_tab_id } from '@/utils/tab_id'
 import { env } from '@/runtime_config'
 
 // Vue Scrool
@@ -405,6 +406,21 @@ function global_api_cancel_token_interceptor(config) {
     return config
 }
 
+/**
+ * Interceptor de request: manda el id de esta pestaña en el header `X-Tab-Id` en TODAS las
+ * requests (misión candado-sesion-por-pestana, 19/9/2026). `AuthHelper::checkUserLastActivity()`
+ * lo usa, del lado del backend, solo cuando el owner activó el modo estricto -para cualquier
+ * otro caso el backend lo ignora, así que mandarlo siempre es inocuo-.
+ *
+ * @param {import('axios').AxiosRequestConfig} config Configuración del pedido saliente.
+ * @returns {import('axios').AxiosRequestConfig}
+ */
+function global_api_tab_id_interceptor(config) {
+    config.headers = config.headers || {}
+    config.headers['X-Tab-Id'] = get_tab_id()
+    return config
+}
+
 // Instancia usada como Vue.prototype.$api (prefijo /api)
 const apiInstance = axios.create({
     baseURL: env('VUE_APP_API_URL') + '/api',
@@ -416,6 +432,7 @@ apiInstance.interceptors.response.use(
     global_api_error_interceptor
 )
 apiInstance.interceptors.request.use(global_api_cancel_token_interceptor)
+apiInstance.interceptors.request.use(global_api_tab_id_interceptor)
 
 // ✅ Registramos $api como plugin (como hacías vos)
 Vue.use({
@@ -435,13 +452,17 @@ axiosInstance.interceptors.response.use(
     global_api_error_interceptor
 )
 axiosInstance.interceptors.request.use(global_api_cancel_token_interceptor)
+axiosInstance.interceptors.request.use(global_api_tab_id_interceptor)
 
-// Misma lógica para el axios por defecto (stores que importan `axios` sin `create`)
+// Misma lógica para el axios por defecto (stores que importan `axios` sin `create`, como
+// store/auth.js: es el que hace el GET /api/user de arranque, así que también necesita el
+// header X-Tab-Id)
 axios.interceptors.response.use(
     global_api_notifications_interceptor,
     global_api_error_interceptor
 )
 axios.interceptors.request.use(global_api_cancel_token_interceptor)
+axios.interceptors.request.use(global_api_tab_id_interceptor)
 
 Vue.use({
   install(Vue) {
