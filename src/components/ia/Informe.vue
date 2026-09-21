@@ -24,7 +24,11 @@
 			:key="index"
 			:is="componente_de(bloque)"
 			:bloque="bloque"
-			@mandar-recordatorio="abrir_recordatorio"></component>
+			:solo_lectura="solo_lectura"
+			@mandar-recordatorio="abrir_recordatorio"
+			@abrir-articulo="abrir_articulo"
+			@abrir-cliente="abrir_cliente"
+			@ampliar-imagen="ampliar_imagen"></component>
 		</div>
 
 		<p
@@ -42,12 +46,32 @@
 		<recordatorio-desde-informe
 		v-if="!solo_lectura"
 		ref="recordatorio"></recordatorio-desde-informe>
+
+		<!--
+			Puentes de la misión mostrador-fotos-y-modales (21/9/2026), mismo criterio que
+			RecordatorioDesdeInforme: uno por informe, nunca uno por bloque. Los dos que
+			piden datos al API se apagan en modo solo lectura (sin sesión); el lightbox no
+			pide nada (solo muestra una URL que ya vino en el contenido) y queda siempre.
+		-->
+		<abrir-articulo-desde-informe
+		v-if="!solo_lectura"
+		ref="abrirArticulo"></abrir-articulo-desde-informe>
+
+		<abrir-cliente-desde-informe
+		v-if="!solo_lectura"
+		ref="abrirCliente"></abrir-cliente-desde-informe>
+
+		<imagen-ampliada-desde-informe
+		ref="imagenAmpliada"></imagen-ampliada-desde-informe>
 	</article>
 </template>
 
 <script>
 import moment from 'moment'
 import RecordatorioDesdeInforme from '@/components/ia/RecordatorioDesdeInforme'
+import AbrirArticuloDesdeInforme from '@/components/ia/AbrirArticuloDesdeInforme'
+import AbrirClienteDesdeInforme from '@/components/ia/AbrirClienteDesdeInforme'
+import ImagenAmpliadaDesdeInforme from '@/components/ia/ImagenAmpliadaDesdeInforme'
 
 /**
  * Tipo de bloque -> componente. Toda clave nueva del validador del backend
@@ -62,6 +86,7 @@ const COMPONENTE_POR_TIPO = {
 	tabla: 'bloque-tabla',
 	articulos: 'bloque-articulos',
 	acciones: 'bloque-acciones',
+	clientes: 'bloque-clientes',
 }
 
 /**
@@ -85,9 +110,15 @@ export default {
 		BloqueTabla: () => import('@/components/ia/bloques/Tabla'),
 		BloqueArticulos: () => import('@/components/ia/bloques/Articulos'),
 		BloqueAcciones: () => import('@/components/ia/bloques/Acciones'),
+		BloqueClientes: () => import('@/components/ia/bloques/Clientes'),
 		// Directo y no en diferido: tiene que estar escuchando el show antes de que
-		// aparezca el botón que lo abre (ver RecordatorioDesdeInforme.vue).
+		// aparezca el botón que lo abre (ver RecordatorioDesdeInforme.vue). Los tres
+		// puentes nuevos son livianos (no traen el modal genérico hasta el primer click,
+		// ver su propio import() adentro) así que ir directos acá no pesa.
 		RecordatorioDesdeInforme,
+		AbrirArticuloDesdeInforme,
+		AbrirClienteDesdeInforme,
+		ImagenAmpliadaDesdeInforme,
 	},
 	props: {
 		reporte: {
@@ -166,6 +197,44 @@ export default {
 				return
 			}
 			this.$refs.recordatorio.abrir(client_id)
+		},
+		/**
+		 * Click en un artículo (tarjeta de bloques/Articulos.vue o renglón de
+		 * bloques/Lista.vue): abre su modal de edición (misión mostrador-fotos-y-modales).
+		 *
+		 * @param {number} article_id
+		 */
+		abrir_articulo(article_id) {
+			if (this.solo_lectura || !article_id || !this.$refs.abrirArticulo) {
+				return
+			}
+			this.$refs.abrirArticulo.abrir(article_id)
+		},
+		/**
+		 * Click en el nombre de un cliente (bloques/Clientes.vue): abre su modal. El
+		 * click en la deuda no pasa por acá — bloques/Clientes.vue reusa directo el
+		 * puente global de cuenta corriente (ai_chat/pedirCuentaCorrienteDeCliente).
+		 *
+		 * @param {number} client_id
+		 */
+		abrir_cliente(client_id) {
+			if (this.solo_lectura || !client_id || !this.$refs.abrirCliente) {
+				return
+			}
+			this.$refs.abrirCliente.abrir(client_id)
+		},
+		/**
+		 * Click en cualquier imagen de artículo: la amplía. A diferencia de los dos de
+		 * arriba, anda también en modo solo lectura (no pide nada al API, solo muestra
+		 * la URL que ya vino en el contenido).
+		 *
+		 * @param {{url: string, alt: string}} payload
+		 */
+		ampliar_imagen(payload) {
+			if (!payload || !payload.url || !this.$refs.imagenAmpliada) {
+				return
+			}
+			this.$refs.imagenAmpliada.abrir(payload.url, payload.alt)
 		},
 	},
 }

@@ -68,12 +68,9 @@ export default {
 				})
 			}
 
-			if (this.can('reportes.cheques')) {
-
-				items.push({
-					name: 'cheques',
-				})
-			}
+			/* Cheques ya no es una solapa de Reportes: desde la misión cheques-endoso-y-bancos
+			   (21/9/2026) es Tesorería > Cheques, con ruta propia (/cheques). La ruta vieja
+			   /reportes/cheques redirige allá (router/index.js). */
 
 			return items
 		},
@@ -97,10 +94,6 @@ export default {
 			}
 			if (item.name == 'proveedores') {
 				this.$store.dispatch('panel_control/getModels', 12)
-			}
-			if (item.name == 'cheques') {
-				this.$store.dispatch('cheque/getModels')
-				this.$router.push({params: {sub_view: 'recibido', sub_sub_view: 'pendientes'}})
 			}
 		},
 	}

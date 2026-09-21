@@ -255,35 +255,58 @@ export default {
 body.informe-abierto-activo
 	overflow: hidden
 
-	// 🔴 El recordatorio de cobro (acción `cobrar`, RecordatorioDesdeInforme.vue) se abre
-	// ENCIMA del informe. BootstrapVue cuelga cada b-modal de <body> en un div externo con
-	// id safeId('__BV_modal_outer_') y z-index INLINE (modalOuterStyle y computedAttrs en
+	// 🔴 El recordatorio de cobro (acción `cobrar`, RecordatorioDesdeInforme.vue) y los
+	// tres puentes de la misión mostrador-fotos-y-modales (imagen ampliada, modal de
+	// artículo, modal de cliente — AbrirArticuloDesdeInforme.vue,
+	// AbrirClienteDesdeInforme.vue, ImagenAmpliadaDesdeInforme.vue) se abren ENCIMA del
+	// informe. BootstrapVue cuelga cada b-modal de <body> en un div externo con id
+	// safeId('__BV_modal_outer_') y z-index INLINE (modalOuterStyle y computedAttrs en
 	// bootstrap-vue/esm/components/modal/modal.js). Ese z-index lo mide una sola vez sobre
 	// un div.modal-backdrop de prueba (getBaseZIndex, modal/helpers/modal-manager.js): con
 	// el CSS de Bootstrap da 1040 y el modal queda DETRÁS de este overlay (1062). Hoy da más
 	// (1095/1105) solo porque el CSS global de common-vue/components/support-chat pisa
 	// `body > .modal-backdrop:last-of-type`, que también le matchea al div de prueba: un
 	// efecto lateral ajeno en el que no hay que apoyarse. Por eso el escalón va fijo:
-	// overlay 1062 < modal 1064 < toasts 1066. Que en la práctica lo baje de ~1105 no deja
-	// nada encima: el botón y el overlay del chat de soporte van en 1052/1053, detrás del
-	// informe. El !important le gana al inline; sin la clase en <body> (informe cerrado) el
-	// modal vuelve a su escalón de siempre.
+	//
+	//      overlay del informe 1062 < ficha del hover (chat IA) 1063
+	//      < imagen ampliada / modal de artículo / modal de cliente (mostrador) 1064
+	//      < recordatorio de cobro 1065 < cuenta corriente (chat IA) 1066 < toasts 1067
+	//
+	// Los tres de 1064 comparten escalón A PROPÓSITO y no es un descuido: los tres los abre
+	// un click DENTRO del informe (nunca dos a la vez — el que dispara al segundo queda
+	// detrás del backdrop del primero, que bloquea el click), así que no hace falta
+	// distinguirlos entre sí; sí hace falta que los tres le ganen a la ficha del hover
+	// (1063, agregada el 16/9/2026 en asistente-ia/FichaArticuloPopover.vue) y pierdan
+	// contra el recordatorio y la cuenta corriente (que si pueden convivir con uno de
+	// estos tres abierto detrás, cuando el dueño abre el chat de la conversación del
+	// informe con un artículo o un cliente propio ya con su modal abierto).
+	//
+	// Que en la práctica lo baje de ~1105 no deja nada encima: el botón y el overlay del
+	// chat de soporte van en 1052/1053, detrás del informe. El !important le gana al
+	// inline; sin la clase en <body> (informe cerrado) el modal vuelve a su escalón de
+	// siempre.
 	#recordatorio-cobro___BV_modal_outer_
+		z-index: 1065 !important
+
+	#mostrador-imagen-ampliada___BV_modal_outer_,
+	#mostrador-article___BV_modal_outer_,
+	#mostrador-client___BV_modal_outer_
 		z-index: 1064 !important
 
 	// Los toasts (vue-toast-notification, .v-toast en 1052 en theme-sugar.css) también
 	// quedaban detrás del overlay: el "Recordatorio encolado" o el motivo por el que no
-	// salió no se veían. Van arriba del modal, así el aviso se lee aunque siga abierto.
+	// salió no se veían. Van arriba de todo lo de acá, así el aviso se lee aunque algo
+	// siga abierto.
 	.v-toast
-		z-index: 1066
+		z-index: 1067
 
 .informe-abierto
 	position: fixed
 	inset: 0
 	// Arriba del botón flotante del chat (1054), del panel del chat (1055) y del
 	// modal de video de la demo (1060); abajo del LogoLoading (10000). Arriba de este
-	// overlay, y solo mientras está abierto: el recordatorio de cobro (1064) y los
-	// toasts (1066), ver body.informe-abierto-activo.
+	// overlay, y solo mientras está abierto, el escalón completo de
+	// body.informe-abierto-activo de acá arriba.
 	z-index: 1062
 	background: rgba(15, 18, 24, .45)
 	backdrop-filter: blur(6px)
