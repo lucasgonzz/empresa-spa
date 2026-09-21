@@ -10,14 +10,25 @@
 			v-for="(item, index) in items"
 			:key="index"
 			class="informe-articulos__item"
-			:class="'informe-articulos__item--' + tono_de(item)">
-				<!-- La foto del artículo, o un placeholder con la inicial (§2.3). -->
+			:class="['informe-articulos__item--' + tono_de(item), { 'informe-articulos__item--clickeable': es_clickeable(item) }]"
+			:role="es_clickeable(item) ? 'button' : null"
+			:tabindex="es_clickeable(item) ? 0 : null"
+			@click="abrir_articulo(item)"
+			@keydown.enter="abrir_articulo(item)">
+				<!--
+					La foto del artículo, o un placeholder con la inicial (§2.3). La imagen tiene
+					su propio click con .stop (§2.1 del plan): abre la foto ampliada en vez del
+					modal del artículo que dispara el click de la tarjeta. El placeholder (sin
+					foto que ampliar) no lo intercepta: ahí el click cae en la tarjeta, como en
+					cualquier otro punto de la tarjeta.
+				-->
 				<span class="informe-articulos__foto">
 					<img
 					v-if="item.imagen_url"
 					:src="item.imagen_url"
 					alt=""
-					loading="lazy">
+					loading="lazy"
+					@click.stop="ampliar_imagen(item)">
 					<span
 					v-else
 					class="informe-articulos__inicial"
@@ -53,6 +64,17 @@ export default {
 			type: Object,
 			required: true,
 		},
+		/**
+		 * Modo solo lectura (informe compartido por WhatsApp, sin sesión — ver el
+		 * comentario de Informe.vue). Sin sesión no hay con qué pedir GET article/{id}:
+		 * la tarjeta deja de comportarse como botón, en vez de comportarse como uno y
+		 * fallar en silencio al clickearla (mismo criterio que ya usa bloques/Acciones.vue
+		 * con el botón del recordatorio, que directamente no se dibuja si no puede actuar).
+		 */
+		solo_lectura: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	computed: {
 		items() {
@@ -63,6 +85,40 @@ export default {
 		inicial_de(item) {
 			let nombre = (item && item.nombre) ? String(item.nombre).trim() : ''
 			return nombre ? nombre.charAt(0).toUpperCase() : '·'
+		},
+		/**
+		 * Si la tarjeta se comporta como botón: tiene article_id (contenido depositado
+		 * antes de esta misión no lo trae) y hay sesión para abrir el modal.
+		 *
+		 * @param {Object} item
+		 * @returns {Boolean}
+		 */
+		es_clickeable(item) {
+			return !!(item && item.article_id) && !this.solo_lectura
+		},
+		/**
+		 * Click en la tarjeta (misión mostrador-fotos-y-modales): burbujea hasta
+		 * Informe.vue, que lo reenvía al bridge que trae el artículo completo y abre su
+		 * modal.
+		 *
+		 * @param {Object} item
+		 */
+		abrir_articulo(item) {
+			if (!this.es_clickeable(item)) {
+				return
+			}
+			this.$emit('abrir-articulo', item.article_id)
+		},
+		/**
+		 * Click en la foto (con .stop en el template, para no abrir también el modal).
+		 *
+		 * @param {Object} item
+		 */
+		ampliar_imagen(item) {
+			if (!item || !item.imagen_url) {
+				return
+			}
+			this.$emit('ampliar-imagen', { url: item.imagen_url, alt: item.nombre })
 		},
 	},
 }
@@ -92,6 +148,19 @@ export default {
 		background: var(--bg-section, #f8f9fa)
 		border: 1px solid var(--color-border-secondary, #e9ecef)
 		min-width: 0
+		transition: background .12s ease
+
+		// Solo la tarjeta con article_id se comporta como botón (§2.1 del plan): un
+		// informe depositado antes de esta misión no lo trae y sigue viéndose igual.
+		&--clickeable
+			cursor: pointer
+
+			&:hover
+				background: var(--bg-hover, #f1f3f5)
+
+			&:focus-visible
+				outline: 2px solid var(--color-primary, #007bff)
+				outline-offset: 2px
 
 	&__foto
 		flex-shrink: 0
@@ -110,6 +179,9 @@ export default {
 			height: 100%
 			object-fit: cover
 			display: block
+			// Su click (con .stop en el template) amplía la foto en vez de abrir el
+			// modal: el cursor la distingue del resto de la tarjeta.
+			cursor: zoom-in
 
 	&__inicial
 		font-size: 1.2rem
