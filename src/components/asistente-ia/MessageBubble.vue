@@ -80,6 +80,7 @@
 <script>
 import AccionCard from '@/components/asistente-ia/AccionCard'
 import { segmentar_menciones } from '@/components/asistente-ia/menciones'
+import { segmentar_negrita } from '@/components/asistente-ia/formato'
 
 /**
  * Texto del `title` (y de lo que lee un lector de pantalla) de cada tipo de mención. El de
@@ -107,12 +108,20 @@ export default {
 		},
 		/**
 		 * El contenido del mensaje partido en segmentos para pintar (misión
-		 * agente-ia-mano-derecha, §1 del contrato). Cada segmento ya trae resueltos los
+		 * agente-ia-mano-derecha, §1 del contrato, + negrita de la misión
+		 * burbujas-y-negrita-asistente-ia, 21/9/2026). Cada segmento ya trae resueltos los
 		 * atributos del <span>, para que la plantilla no tenga que decidir nada.
 		 *
-		 * Los mensajes del USUARIO no se segmentan nunca: el API anota solo los del
-		 * asistente, y si algún día mandara menciones en uno del usuario, marcarle su
-		 * propio texto sería marcar lo que él mismo escribió.
+		 * Los mensajes del USUARIO no se segmentan nunca, ni por mención ni por negrita: el
+		 * API anota menciones solo en las respuestas del asistente y la IA es la única que
+		 * escribe con `**negrita**`. Marcar el texto de un mensaje del usuario sería
+		 * reinterpretar lo que él mismo tipeó.
+		 *
+		 * Cada tramo de mención (o el mensaje entero, si no hay menciones) se vuelve a
+		 * partir por `segmentar_negrita`, así una mención puede caer en negrita y un tramo
+		 * de negrita puede contener una mención sin que se pisen: son dos capas
+		 * independientes sobre el mismo texto, nunca "una gana y la otra se pierde" como sí
+		 * pasa entre menciones que se solapan entre sí.
 		 *
 		 * `mencion_id` y `tipo` viajan al DOM como `data-*` y son los que lee el listener
 		 * delegado de `FichaArticuloPopover.vue`: ese componente no conoce a este, solo
@@ -121,34 +130,48 @@ export default {
 		 * @returns {Array<Object>}
 		 */
 		segmentos_del_texto() {
-			let menciones = this.es_del_usuario ? null : this.message.menciones
-			return segmentar_menciones(this.message.contenido, menciones).map(function (segmento) {
-				if (!segmento.mencion) {
-					return {
-						texto: segmento.texto,
-						clase: null,
-						tipo: null,
-						mencion_id: null,
-						titulo: null,
-						role: null,
-						tabindex: null,
+			let es_usuario = this.es_del_usuario
+			let menciones = es_usuario ? null : this.message.menciones
+			let segmentos_de_mencion = segmentar_menciones(this.message.contenido, menciones)
+			let resultado = []
+
+			segmentos_de_mencion.forEach(function (segmento_mencion) {
+				let sub_segmentos = es_usuario
+					? [{ texto: segmento_mencion.texto, negrita: false }]
+					: segmentar_negrita(segmento_mencion.texto)
+
+				sub_segmentos.forEach(function (sub) {
+					if (!segmento_mencion.mencion) {
+						resultado.push({
+							texto: sub.texto,
+							clase: sub.negrita ? 'asistente-ia-negrita' : null,
+							tipo: null,
+							mencion_id: null,
+							titulo: null,
+							role: null,
+							tabindex: null,
+						})
+						return
 					}
-				}
-				let tipo = segmento.mencion.tipo
-				let es_clickeable = tipo == 'cliente'
-				return {
-					texto: segmento.texto,
-					clase: 'asistente-ia-mencion asistente-ia-mencion--' + tipo,
-					tipo: tipo,
-					mencion_id: segmento.mencion.id,
-					titulo: TITULO_POR_TIPO[tipo] || null,
-					// Solo lo que se ACTIVA es un botón y para el teclado. La mención de
-					// artículo no hace nada al tocarla (su tarjeta es de hover), así que
-					// dejarla como parada del tabulador sería prometer algo que no pasa.
-					role: es_clickeable ? 'button' : null,
-					tabindex: es_clickeable ? 0 : null,
-				}
+					let tipo = segmento_mencion.mencion.tipo
+					let es_clickeable = tipo == 'cliente'
+					let clase_mencion = 'asistente-ia-mencion asistente-ia-mencion--' + tipo
+					resultado.push({
+						texto: sub.texto,
+						clase: sub.negrita ? clase_mencion + ' asistente-ia-negrita' : clase_mencion,
+						tipo: tipo,
+						mencion_id: segmento_mencion.mencion.id,
+						titulo: TITULO_POR_TIPO[tipo] || null,
+						// Solo lo que se ACTIVA es un botón y para el teclado. La mención de
+						// artículo no hace nada al tocarla (su tarjeta es de hover), así que
+						// dejarla como parada del tabulador sería prometer algo que no pasa.
+						role: es_clickeable ? 'button' : null,
+						tabindex: es_clickeable ? 0 : null,
+					})
+				})
 			})
+
+			return resultado
 		},
 		/**
 		 * Tarjetas de carga del mensaje (misión asistente-ia-acciones, §4 del plan), sin las
@@ -205,47 +228,36 @@ export default {
 </script>
 
 <style lang="sass">
-// Estilo lista, sin sombras (pedido de Lucas, 17/9/2026: "no me gusta con esa sombra,
-// ponelo tipo lista"). Los dos roles se distinguen por la FORMA, como en Claude:
+// Burbuja para los dos roles (pedido de Lucas, 21/9/2026: reversión explícita del "estilo
+// lista" del 17/9/2026 — quiere maquetación de WhatsApp, cada lado con su viñeta, SIN los
+// colores de WhatsApp). Los dos usan el mismo fondo/borde/radio/padding; lo único que cambia
+// es a qué lado se pegan, que ya alcanza para leer de un vistazo quién habló:
 //
-//   usuario   -> globo relleno con --bg-section, pegado a la derecha, angosto
-//   asistente -> texto suelto sobre el fondo del panel, ancho, separado del mensaje
-//                siguiente por una línea fina (border-bottom) en vez de por una viñeta
-//                rellena con sombra
+//   usuario   -> pegado a la derecha
+//   asistente -> pegado a la izquierda
 //
-// El usuario sigue en viñeta para que se lea de un vistazo quién habló; el que se aplana es
-// el asistente, que es el que ocupa la conversación y el que Lucas veía "con esa sombra".
-//
-// 🔴 Al sacarle el relleno --bg-hover a la viñeta del asistente, las tarjetas de carga
-// (AccionCard.vue) dejan de tener sobre qué apoyarse para contrastar: por eso AccionCard
-// trae ahora su propio fondo + borde (ver el comentario de su .asistente-ia-accion). Si a
-// esta viñeta se le vuelve a poner relleno, hay que revisar aquel fondo.
+// 🔴 El fondo es --bg-section (neutro, ya usado en el resto del panel) a propósito: nada de
+// verde ni de la paleta de WhatsApp, que es lo que Lucas pidió evitar. Las tarjetas de carga
+// (AccionCard.vue) siguen apoyándose en --bg-hover, un escalón más oscuro que --bg-section en
+// los dos temas — con las dos viñetas ahora en --bg-section, ese escalón es el mismo sin
+// importar cuál de las dos lo aloja.
 //
 // Entrada sutil de abajo hacia arriba para que el mensaje "suba" a la conversación (D41).
 .asistente-ia-globo
 	margin-bottom: 14px
+	max-width: 78%
+	background: var(--bg-section, #f8f9fa)
+	border: 1px solid var(--color-border-secondary, #e9ecef)
+	border-radius: 14px
+	padding: 9px 14px
 	animation: asistente-ia-globo-entrada .18s ease-out
 	transition: opacity .15s ease
 
 	&--usuario
 		align-self: flex-end
-		max-width: 78%
-		background: var(--bg-section, #f8f9fa)
-		border: 1px solid var(--color-border-secondary, #e9ecef)
-		border-radius: 14px
-		padding: 9px 14px
 
 	&--asistente
-		align-self: stretch
-		max-width: 100%
-		background: transparent
-		border: none
-		border-radius: 0
-		padding: 2px 0 14px 0
-		// La línea que separa un mensaje del siguiente: es lo que da el aspecto de lista.
-		// Sutil (--color-border-secondary) para acompañar sin marcar de más una
-		// conversación larga.
-		border-bottom: 1px solid var(--color-border-secondary, #e9ecef)
+		align-self: flex-start
 
 	// Mientras el POST no confirmó, el globo respira en baja opacidad (D41).
 	&--enviando
@@ -255,10 +267,12 @@ export default {
 		border-color: var(--btn-peligro-borde, #b4443f)
 
 	// Un error del lado de la IA llega como contenido amigable (D18): se lee como un
-	// mensaje más, apenas teñido para distinguirlo. El asistente ya no tiene borde de
-	// viñeta, así que el estado lo marca el color del texto.
+	// mensaje más, apenas teñido para distinguirlo. Con las dos viñetas ahora con borde
+	// propio, el error tiñe también el borde (mismo criterio que --error-envio) y no solo
+	// el texto, si no quedaba como la única viñeta "neutra" en un mensaje que no lo es.
 	&--error-respuesta
 		color: var(--caja-cerrar-texto, #9c3a36)
+		border-color: var(--btn-peligro-borde, #b4443f)
 
 	&__texto
 		margin: 0
@@ -282,6 +296,12 @@ export default {
 		font-size: .8rem
 		color: var(--btn-peligro-texto, #9c3a36)
 
+// Negrita del markdown que manda la IA (misión burbujas-y-negrita-asistente-ia, 21/9/2026):
+// mismo elemento <span> que el texto suelto, solo cambia el peso — no hay nodo de más que
+// pueda meter un espacio donde `pre-wrap` lo dibujaría (ver el comentario del <p> arriba).
+.asistente-ia-negrita
+	font-weight: 600
+
 // ─── Menciones adentro del texto (misión agente-ia-mano-derecha, 16/9/2026) ──────────────
 //
 // La mención es un <span> más ADENTRO del mismo párrafo: hereda el `pre-wrap`, el
@@ -291,10 +311,10 @@ export default {
 // empujaría el interlineado de toda la conversación.
 //
 // 🔴 El realce va con un TINTE del color de acción y NO con --bg-section / --bg-hover, y es
-// por el escalón de relleno: la viñeta del asistente se pinta con --bg-hover, que en claro
-// queda más oscuro que el panel (#f1f3f5 sobre #fff) y en oscuro queda más CLARO (#3a4048
-// sobre #2e333a). Un gris fijo encima se leería hundido en un tema y elevado en el otro. Un
-// rgba del azul de acción se lee igual en los dos, que es lo único que tiene que decir: esto
+// por el escalón de relleno: las dos viñetas se pintan con --bg-section, que en claro queda
+// más oscuro que el panel (#f8f9fa sobre #fff) y en oscuro queda más CLARO (#272b31 sobre
+// #2e333a). Un gris fijo encima se leería hundido en un tema y elevado en el otro. Un rgba
+// del azul de acción se lee igual en los dos, que es lo único que tiene que decir: esto
 // no es texto común. Mismo criterio que --cc-fila-sel en el modal de cuenta corriente.
 //
 // El subrayado va por `text-decoration` y no por `border-bottom`: con un nombre que corta de
