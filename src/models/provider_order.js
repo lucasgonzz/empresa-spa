@@ -43,6 +43,14 @@ export default {
 			},
 		},
 		{
+			text: 'N° de comprobante del proveedor',
+			key: 'numero_comprobante',
+			type: 'text',
+			value: '',
+			not_show: true,
+			description: 'Si el proveedor le puso su propio numero a esta compra (remito, factura, lo que sea), cargalo aca. Va a aparecer junto al numero de esta compra en la cuenta corriente del proveedor.',
+		},
+		{
 			text: 'Moneda',
 			key: 'moneda_id',
 			type: 'select',
@@ -183,13 +191,6 @@ export default {
 				'Si una vez activada ustedes actualiza la compra y cambie el Total Final, el sistema actualizara la cuenta corriente del proveedor segun corresponda.',
 			]
 		},
-		// {
-		// 	key: 'numero_comprobante',
-		// 	type: 'text',
-		// 	value: '',
-		// 	not_show: true,
-		// 	description: 'Si esta compra fue facturada, y no vas a cargar las facturas, utiliza este campo para indicar el numero de la factura',
-		// },
 		// {
 		// 	key: 'fecha_emision_comprobante',
 		// 	type: 'date',
