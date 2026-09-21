@@ -144,6 +144,12 @@ export default {
 			description: 'Es el fondo general de la tienda, detrás de las tarjetas de productos. Antes lo definía la plantilla elegida; ahora lo elegís vos.',
 		},
 		{
+			text: 'Color del botón "Agregar al carrito"',
+			key: 'add_to_cart_button_color',
+			type: 'text',
+			description: 'Si lo dejás vacío, usa el mismo color que el resto de los botones de la tienda (el color secundario).',
+		},
+		{
 			text: 'Cantidad tarjetas en telefono',
 			key: 'cantidad_tarjetas_en_telefono',
 			type: 'number',
