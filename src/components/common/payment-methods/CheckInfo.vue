@@ -343,9 +343,10 @@ export default {
 			]
 		},
 		/**
-		 * Una opción por cheque disponible: `N° 123 · Banco Nación · $ 45.000 · vence 30/09 ·
-		 * Pérez SRL`. "Vence" es la fecha de pago (desde ahí se puede cobrar), que es lo que le
-		 * importa al que lo va a recibir.
+		 * Una opción por cheque disponible: `N° 123 · Banco Nación · $ 45.000 · pago 30/09 ·
+		 * Pérez SRL`. La fecha es la de PAGO (desde ahí se puede cobrar), y se rotula así y no
+		 * "vence": en el módulo de Cheques "vencido" es fecha_pago + 30 días, y un rótulo que
+		 * dijera "vence" con la fecha de pago se leería con ese otro significado.
 		 *
 		 * @returns {Array}
 		 */
@@ -581,7 +582,7 @@ export default {
 			partes.push('$ ' + this.price(cheque.amount))
 
 			if (cheque.fecha_pago) {
-				partes.push('vence ' + moment(cheque.fecha_pago).format('DD/MM'))
+				partes.push('pago ' + moment(cheque.fecha_pago).format('DD/MM'))
 			}
 
 			if (cheque.client && cheque.client.name) {
