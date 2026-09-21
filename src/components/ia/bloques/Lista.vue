@@ -10,9 +10,9 @@
 			v-for="(item, index) in items"
 			:key="index"
 			class="informe-lista__item"
-			:class="['informe-lista__item--' + tono_de(item), { 'informe-lista__item--clickeable': !!item.article_id }]"
-			:role="item.article_id ? 'button' : null"
-			:tabindex="item.article_id ? 0 : null"
+			:class="['informe-lista__item--' + tono_de(item), { 'informe-lista__item--clickeable': es_clickeable(item) }]"
+			:role="es_clickeable(item) ? 'button' : null"
+			:tabindex="es_clickeable(item) ? 0 : null"
 			@click="abrir_articulo(item)"
 			@keydown.enter="abrir_articulo(item)">
 				<span
@@ -47,6 +47,16 @@ export default {
 			type: Object,
 			required: true,
 		},
+		/**
+		 * Modo solo lectura (informe compartido por WhatsApp, sin sesión — ver el
+		 * comentario de Informe.vue). Mismo criterio que bloques/Articulos.vue: sin
+		 * sesión el renglón deja de comportarse como botón en vez de comportarse como
+		 * uno y fallar en silencio.
+		 */
+		solo_lectura: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	computed: {
 		items() {
@@ -55,15 +65,25 @@ export default {
 	},
 	methods: {
 		/**
+		 * Si el renglón se comporta como botón: tiene article_id (agenda, búsquedas y
+		 * contenido depositado antes de esta misión no lo traen) y hay sesión para abrir
+		 * el modal.
+		 *
+		 * @param {Object} item
+		 * @returns {Boolean}
+		 */
+		es_clickeable(item) {
+			return !!(item && item.article_id) && !this.solo_lectura
+		},
+		/**
 		 * Click en el renglón (misión mostrador-fotos-y-modales): burbujea hasta
 		 * Informe.vue, que lo reenvía al bridge que trae el artículo completo y abre su
-		 * modal. Sin article_id el renglón no es clickeable (agenda, búsquedas, y todo
-		 * contenido depositado antes de esta misión).
+		 * modal.
 		 *
 		 * @param {Object} item
 		 */
 		abrir_articulo(item) {
-			if (!item || !item.article_id) {
+			if (!this.es_clickeable(item)) {
 				return
 			}
 			this.$emit('abrir-articulo', item.article_id)

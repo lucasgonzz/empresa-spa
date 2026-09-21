@@ -10,9 +10,9 @@
 			v-for="(item, index) in items"
 			:key="index"
 			class="informe-articulos__item"
-			:class="['informe-articulos__item--' + tono_de(item), { 'informe-articulos__item--clickeable': !!item.article_id }]"
-			:role="item.article_id ? 'button' : null"
-			:tabindex="item.article_id ? 0 : null"
+			:class="['informe-articulos__item--' + tono_de(item), { 'informe-articulos__item--clickeable': es_clickeable(item) }]"
+			:role="es_clickeable(item) ? 'button' : null"
+			:tabindex="es_clickeable(item) ? 0 : null"
 			@click="abrir_articulo(item)"
 			@keydown.enter="abrir_articulo(item)">
 				<!--
@@ -64,6 +64,17 @@ export default {
 			type: Object,
 			required: true,
 		},
+		/**
+		 * Modo solo lectura (informe compartido por WhatsApp, sin sesión — ver el
+		 * comentario de Informe.vue). Sin sesión no hay con qué pedir GET article/{id}:
+		 * la tarjeta deja de comportarse como botón, en vez de comportarse como uno y
+		 * fallar en silencio al clickearla (mismo criterio que ya usa bloques/Acciones.vue
+		 * con el botón del recordatorio, que directamente no se dibuja si no puede actuar).
+		 */
+		solo_lectura: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	computed: {
 		items() {
@@ -76,15 +87,24 @@ export default {
 			return nombre ? nombre.charAt(0).toUpperCase() : '·'
 		},
 		/**
+		 * Si la tarjeta se comporta como botón: tiene article_id (contenido depositado
+		 * antes de esta misión no lo trae) y hay sesión para abrir el modal.
+		 *
+		 * @param {Object} item
+		 * @returns {Boolean}
+		 */
+		es_clickeable(item) {
+			return !!(item && item.article_id) && !this.solo_lectura
+		},
+		/**
 		 * Click en la tarjeta (misión mostrador-fotos-y-modales): burbujea hasta
 		 * Informe.vue, que lo reenvía al bridge que trae el artículo completo y abre su
-		 * modal. Sin article_id (contenido depositado antes de esta misión) la tarjeta no
-		 * es clickeable: ver la clase --clickeable y el role/tabindex condicionales.
+		 * modal.
 		 *
 		 * @param {Object} item
 		 */
 		abrir_articulo(item) {
-			if (!item || !item.article_id) {
+			if (!this.es_clickeable(item)) {
 				return
 			}
 			this.$emit('abrir-articulo', item.article_id)

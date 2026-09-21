@@ -24,6 +24,7 @@
 			:key="index"
 			:is="componente_de(bloque)"
 			:bloque="bloque"
+			:solo_lectura="solo_lectura"
 			@mandar-recordatorio="abrir_recordatorio"
 			@abrir-articulo="abrir_articulo"
 			@abrir-cliente="abrir_cliente"

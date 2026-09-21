@@ -20,8 +20,9 @@
 					se lea como el mismo gesto en todo el sistema. -->
 					<span
 					class="informe-clientes__nombre"
-					role="button"
-					tabindex="0"
+					:class="{ 'informe-clientes__nombre--clickeable': !solo_lectura }"
+					:role="solo_lectura ? null : 'button'"
+					:tabindex="solo_lectura ? null : 0"
 					@click="abrir_cliente(item)"
 					@keydown.enter="abrir_cliente(item)">
 						{{ item.nombre }}
@@ -38,9 +39,11 @@
 					</span>
 				</span>
 				<!-- La deuda es un click aparte (§2.3 del plan): abre la cuenta corriente,
-				no el modal del cliente. -->
+				no el modal del cliente. En modo solo lectura no se dibuja: sin sesión
+				CuentaCorrienteDeMencion.vue tampoco se monta (FloatingButton.vue la apaga
+				sin auth), así que hoy "no hace nada" en vez de abrir algo. -->
 				<button
-				v-if="item.deuda"
+				v-if="item.deuda && !solo_lectura"
 				type="button"
 				class="informe-clientes__deuda"
 				:title="'Ver la cuenta corriente de ' + item.nombre"
@@ -69,6 +72,17 @@ export default {
 			type: Object,
 			required: true,
 		},
+		/**
+		 * Modo solo lectura (informe compartido por WhatsApp, sin sesión — ver el
+		 * comentario de Informe.vue). Sin sesión no hay con qué abrir el modal del
+		 * cliente ni su cuenta corriente: los dos dejan de comportarse como botón, en vez
+		 * de comportarse como uno y fallar en silencio (mismo criterio que
+		 * bloques/Articulos.vue y bloques/Lista.vue).
+		 */
+		solo_lectura: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	computed: {
 		items() {
@@ -83,7 +97,7 @@ export default {
 		 * @param {Object} item
 		 */
 		abrir_cliente(item) {
-			if (!item || !item.client_id) {
+			if (this.solo_lectura || !item || !item.client_id) {
 				return
 			}
 			this.$emit('abrir-cliente', item.client_id)
@@ -99,7 +113,7 @@ export default {
 		 * @param {Object} item
 		 */
 		ver_cuenta_corriente(item) {
-			if (!item || !item.client_id) {
+			if (this.solo_lectura || !item || !item.client_id) {
 				return
 			}
 			this.$store.commit('ai_chat/pedirCuentaCorrienteDeCliente', {
@@ -160,25 +174,30 @@ export default {
 		flex-direction: column
 		gap: 1px
 
-	// Mismo tinte que la mención de cliente del chat IA (asistente-ia/MessageBubble.vue
-	// .asistente-ia-mencion--cliente): el mismo gesto visual en todo el sistema para
-	// "este texto abre a una persona".
+	// En modo solo lectura (sin sesión: informe compartido por WhatsApp) no hay con qué
+	// abrir el modal, así que el nombre queda como texto plano — sin el tinte que
+	// promete un click. Ver Informe.vue y bloques/Articulos.vue para el mismo criterio.
 	&__nombre
 		display: inline
 		font-weight: 600
-		color: var(--color-primary, #007bff)
-		cursor: pointer
-		text-decoration: underline
-		text-decoration-color: rgba(0, 123, 255, .35)
-		text-underline-offset: 2px
-		border-radius: 4px
 
-		&:hover
-			text-decoration-color: var(--color-primary, #007bff)
+		// Mismo tinte que la mención de cliente del chat IA (asistente-ia/MessageBubble.vue
+		// .asistente-ia-mencion--cliente): el mismo gesto visual en todo el sistema para
+		// "este texto abre a una persona".
+		&--clickeable
+			color: var(--color-primary, #007bff)
+			cursor: pointer
+			text-decoration: underline
+			text-decoration-color: rgba(0, 123, 255, .35)
+			text-underline-offset: 2px
+			border-radius: 4px
 
-		&:focus-visible
-			outline: 2px solid var(--color-primary, #007bff)
-			outline-offset: 2px
+			&:hover
+				text-decoration-color: var(--color-primary, #007bff)
+
+			&:focus-visible
+				outline: 2px solid var(--color-primary, #007bff)
+				outline-offset: 2px
 
 	&__linea
 		font-size: .82rem
